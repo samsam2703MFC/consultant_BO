@@ -54,6 +54,18 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/supply', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
+    /** Finanse › Faktury i koszty : przypisz nowe pozycje, zatwierdź faktury, sprawdź wzrosty cen (stanowisko Administracja i fakturowanie). */
+    public function financeInvoices()
+    {
+        $this->view('workshop/finance', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id'), 'finance_view' => 'workspace']);
+    }
+
+    /** Finanse › Koszty usług miesiąca : faktury usług po kategoriach, brakujące koszty, zamknięcie → kalkulator kosztów. */
+    public function financeCosts()
+    {
+        $this->view('workshop/finance', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id'), 'finance_view' => 'costs']);
+    }
+
     /** Dostawy surowców (Produkcja) : kto dostarcza co i kiedy — tydzień produkcji i dostawcy. */
     public function deliveries()
     {

@@ -7,11 +7,13 @@ use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\Validator;
 use App\Core\TransactionManager;
+use App\Repositories\Workshop\FinanceRepository;
 use App\Repositories\Workshop\InvoiceRepository;
 use App\Repositories\Workshop\ParamRepository;
 use App\Repositories\Workshop\SupplyRepository;
 use App\Services\Material\MaterialPriceService;
 use App\Services\Purchasing\CostOptimizationService;
+use App\Services\Workshop\Finance\CostCategories;
 use App\Services\Workshop\Referentiel\AuditTrail;
 
 /**
@@ -23,10 +25,16 @@ use App\Services\Workshop\Referentiel\AuditTrail;
  * pozycje spoza zamówienia, suma linii vs suma faktury, skok ceny wobec kartoteki. Decyzja : zaakceptowana albo reklamacja.
  * « Zatwierdź fakturę » : ceny + ilości na stan + akceptacja jednym kliknięciem ; faktura w pełni rozpoznana
  * (dostawca, zapamiętane przypisania, bez rozbieżności) przetwarzana automatycznie przy imporcie (parametry supply.invoice_auto_*).
+ * Rodzaj (27/10/2026) : surowce i opakowania (goods) zostają w Zaopatrzeniu ; usługa (service : paliwo, telefon, czynsz…) idzie
+ * do Finansów z kategorią kalkulatora kosztów i miesiącem ; odrzucona (rejected) nie dotyczy firmy. Reguła dostawcy (NIP) klasyfikuje
+ * kolejne faktury już przy imporcie.
  */
 final class InvoiceService
 {
     public const STATUSES = ['open', 'accepted', 'disputed'];
+    /** Widoki listy : surowce i opakowania, usługi (Finanse), odrzucone. */
+    public const KINDS = ['goods', 'service', 'rejected'];
+    public const CLASSIFY = ['service', 'reject', 'goods'];
     public const MAX_FILE = 5 * 1024 * 1024;
     /** Linie odczytane z tekstu (PDF, OCR) albo wpisane : edytowalne ; z KSeF / XML nie. */
     private const EDITABLE_SOURCES = ['pdf', 'ocr', 'manual'];
@@ -47,19 +55,72 @@ final class InvoiceService
         private MaterialPriceService $prices,
         private ParamRepository $params,
         private PriceHistoryService $history,
+        private CostCategories $categories,
+        private FinanceRepository $finance,
     ) {
     }
 
     // --- Lista i szczegóły ------------------------------------------------------------------------------------------
 
-    public function list(string $status, ApiContext $context): array
+    /**
+     * Lista : kind goods (surowce i opakowania : kontrola, gotowość, podpowiedź « wygląda na usługę »), service (usługi w Finansach)
+     * albo rejected (odrzucone). Liczby do przełącznika, kafelki (do walidacji, gotowe, podwyżki, usługi miesiąca), kategorie kosztów.
+     */
+    public function list(string $status, ApiContext $context, string $kind = 'goods'): array
     {
+        if (!in_array($kind, self::KINDS, true)) throw ApiException::validation([['field' => 'kind', 'code' => 'INVALID_CHOICE', 'params' => ['allowed' => implode(', ', self::KINDS)]]]);
         if (!in_array($status, ['all', ...self::STATUSES], true)) throw ApiException::validation([['field' => 'status', 'code' => 'INVALID_CHOICE', 'params' => ['allowed' => 'all, ' . implode(', ', self::STATUSES)]]]);
-        $rows = array_map(function ($i) {
-            $control = $this->control($i, $this->repo->lines((int) $i['id']));
-            return $this->summary($i) + ['control' => $control['summary'], 'ready' => $i['status'] === 'open' ? $this->readiness($i, $control) : null];
-        }, $this->repo->invoices($status === 'all' ? null : $status));
-        return ['invoices' => $rows, 'can_write' => $context->can('prod.supply.write'), 'auto' => $this->autoMode()];
+        $cats = $this->categories->all();
+        $goods = function (array $i) use ($cats) {
+            $lines = $this->repo->lines((int) $i['id']);
+            $control = $this->control($i, $lines);
+            return $this->summary($i) + ['control' => $control['summary'], 'ready' => $i['status'] === 'open' ? $this->readiness($i, $control) : null,
+                'service_guess' => $i['status'] === 'open' && empty($i['is_correction']) ? CostCategories::guess($i, $lines, $cats) : null];
+        };
+        $open = $kind === 'goods' && $status === 'open' ? null : array_map($goods, $this->repo->invoices('open'));
+        if ($kind === 'goods') {
+            $rows = $open !== null && $status === 'open' ? $open : array_map($goods, $this->repo->invoices($status === 'all' ? null : $status));
+            $open ??= $rows;
+        } else {
+            $rows = array_map(fn($i) => $this->summary($i) + $this->costInfo($i, $cats),
+                $kind === 'rejected' ? $this->repo->invoices(null, null) : $this->repo->invoices($status === 'all' ? null : $status, 'service'));
+        }
+        $month = date('Y-m');
+        return ['invoices' => $rows, 'kind' => $kind, 'counts' => $this->counts(),
+            'kpi' => ['open' => count($open), 'open_net' => round(array_sum(array_map(fn($i) => (float) ($i['total_net'] ?? 0), $open)), 2),
+                'ready' => count(array_filter($open, fn($i) => $i['ready'] && $i['ready']['ok'])),
+                'price_ups' => array_sum(array_map(fn($i) => (int) ($i['control']['price_ups'] ?? 0), $open)),
+                'services_suspected' => count(array_filter($open, fn($i) => $i['service_guess'] !== null)),
+                'services_month' => $month, 'services_month_count' => (int) array_sum(array_column($this->finance->serviceTotals([$month]), 'n')),
+                'services_open' => $this->finance->openServices()],
+            'categories' => CostCategories::present($cats), 'can_write' => $context->can('prod.supply.write'), 'can_finance' => $context->can('prod.finance.read'), 'auto' => $this->autoMode()];
+    }
+
+    /** Liczby przełącznika : surowce (do walidacji, zatwierdzone, reklamacje), usługi (do sprawdzenia, zatwierdzone), odrzucone, reguły. */
+    private function counts(): array
+    {
+        $out = ['goods' => ['open' => 0, 'accepted' => 0, 'disputed' => 0], 'service' => ['open' => 0, 'accepted' => 0], 'rejected' => 0, 'rules' => 0];
+        foreach ($this->repo->counts() as $r) {
+            if ($r['kind'] === 'rejected') $out['rejected'] += (int) $r['n'];
+            elseif (isset($out[$r['kind']][$r['status']])) $out[$r['kind']][$r['status']] += (int) $r['n'];
+        }
+        $out['rules'] = count($this->repo->rules());
+        return $out;
+    }
+
+    /** Usługa : kategoria (z etykietą), miesiąc, kwota do kosztów (PLN), reguła ; odrzucona : notatka. */
+    private function costInfo(array $i, array $cats): array
+    {
+        $cat = $i['cost_category'] !== null ? ($cats[$i['cost_category']] ?? null) : null;
+        return ['cost_category' => $i['cost_category'], 'category' => $cat ? ['code' => $cat['code'], 'label' => $cat['label'], 'group_label' => $cat['group_label']] : null,
+            'service_month' => $i['service_month'], 'cost_amount' => self::costAmount($i), 'by_rule' => $i['id_rule'] !== null, 'note' => $i['note']];
+    }
+
+    /** Kwota do kosztów (PLN) : wpisana albo suma netto faktury w PLN ; inna waluta bez kwoty = null (do uzupełnienia). */
+    public static function costAmount(array $i): ?float
+    {
+        if ($i['cost_amount'] !== null) return round((float) $i['cost_amount'], 2);
+        return ($i['currency'] ?? 'PLN') === 'PLN' && $i['total_net'] !== null ? round((float) $i['total_net'], 2) : null;
     }
 
     public function detail(int $id, ApiContext $context): array
@@ -78,24 +139,38 @@ final class InvoiceService
             $out[] = $row;
         }
         $mapped = array_values(array_unique(array_filter(array_map(fn($l) => $l['id_raw_material'] !== null ? (int) $l['id_raw_material'] : null, $lines))));
+        $goods = $i['status'] === 'open' && $i['kind'] === 'goods';
         return $this->summary($i) + [
             'note' => $i['note'], 'decided_at' => $i['decided_at'],
             'lines' => $out, 'control' => $control['summary'],
-            'ready' => $i['status'] === 'open' ? $this->readiness($i, $control) : null, 'auto' => $this->autoMode(),
+            'ready' => $goods ? $this->readiness($i, $control) : null, 'auto' => $this->autoMode(),
             // Historia cen : poprzednia cena i najtańszy dostawca z 12 miesięcy dla każdego surowca faktury.
             'price_refs' => (object) $this->history->refs($mapped, $id),
             'price_ups' => $this->presentUps($this->priceUps($lines, !empty($i['is_correction'])), $lines, $lang),
             'orders' => $i['id_supplier'] ? $this->candidates((int) $i['id_supplier'], $lines) : [],
-            'suppliers' => $i['status'] === 'open' ? $this->supplierChoices($i) : [],
+            'suppliers' => $goods ? $this->supplierChoices($i) : [],
             'text' => in_array($i['source'], ['pdf', 'ocr'], true) ? $this->repo->fileText($id) : null,
-            'can_write' => $context->can('prod.supply.write'), 'editable' => $i['status'] === 'open' && $context->can('prod.supply.write'),
-            'lines_editable' => in_array($i['source'], self::EDITABLE_SOURCES, true) && $i['status'] === 'open' && $context->can('prod.supply.write'),
+            'can_write' => $context->can('prod.supply.write'), 'editable' => $goods && $context->can('prod.supply.write'),
+            'lines_editable' => in_array($i['source'], self::EDITABLE_SOURCES, true) && $goods && $context->can('prod.supply.write'),
             // Ilości : do zamówienia (wysłane / częściowo przyjęte) albo — bez zamówienia — przez zamówienie utworzone z faktury.
             'can_receive' => $context->can('prod.supply.write') && $this->canReceive($i, $control),
             'receive_mode' => $i['id_po'] !== null ? 'order' : 'invoice',
-            'can_import_prices' => $i['status'] !== 'disputed' && empty($i['is_correction']) && $context->can('prod.supply.write') && $control['summary']['mapped'] > 0,
+            'can_import_prices' => $i['kind'] === 'goods' && !in_array($i['status'], ['disputed', 'rejected'], true) && empty($i['is_correction']) && $context->can('prod.supply.write') && $control['summary']['mapped'] > 0,
             'prices_imported_at' => $i['prices_imported_at'],
-        ];
+            // Rodzaj : podpowiedź usługi, reguła dostawcy, inne otwarte faktury tego NIP, kategorie kosztów (okno « co zrobić z tą fakturą ? »).
+            'classify' => $this->classifyInfo($i, $lines),
+        ] + ($i['kind'] !== 'goods' || $i['status'] === 'rejected' ? $this->costInfo($i, $this->categories->all()) : []);
+    }
+
+    private function classifyInfo(array $i, array $lines): array
+    {
+        $cats = $this->categories->all();
+        $rule = $i['seller_nip'] ? $this->repo->rule((string) $i['seller_nip']) : null;
+        $movable = ($i['kind'] === 'goods' && $i['status'] === 'open' && $i['prices_imported_at'] === null && $i['id_po'] === null) || $i['status'] === 'rejected' || $i['kind'] === 'service';
+        return ['movable' => $movable, 'guess' => $i['kind'] === 'goods' ? CostCategories::guess($i, $lines, $cats) : null, 'default_month' => self::monthOf($i['issue_date']) ?? date('Y-m'),
+            'rule' => $rule ? ['id' => (int) $rule['id'], 'action' => $rule['action'], 'cost_category' => $rule['cost_category']] : null,
+            'same_nip_open' => $i['seller_nip'] ? count($this->repo->openGoodsOfNip((string) $i['seller_nip'], (int) $i['id'])) : 0,
+            'categories' => CostCategories::present($cats)];
     }
 
     /**
@@ -242,7 +317,7 @@ final class InvoiceService
     /** Ilości na stan : do zamówienia (wysłane / częściowo przyjęte) albo — bez zamówienia — przez zamówienie utworzone z faktury. */
     private function canReceive(array $inv, array $control): bool
     {
-        return $inv['status'] === 'open' && empty($inv['is_correction']) && $control['summary']['mapped'] > 0
+        return $inv['status'] === 'open' && $inv['kind'] === 'goods' && empty($inv['is_correction']) && $control['summary']['mapped'] > 0
             && ($inv['id_po'] !== null ? in_array($inv['po_status'], ['sent', 'partial'], true) : $inv['id_supplier'] !== null);
     }
 
@@ -415,8 +490,12 @@ final class InvoiceService
             }
             if ($best && $best[1] >= 0.99 && $second < 0.99) $supplierId = $best[0];
         }
-        return $this->tx->execute(function () use ($p, $source, $ksefNumber, $file, $supplierId, $context) {
-            $id = $this->repo->insert(['source' => $source, 'ksef_number' => $ksefNumber, 'id_supplier' => $supplierId, 'seller_nip' => $p['seller_nip'],
+        // Reguła dostawcy (NIP) : usługa z kategorią (Finanse, miesiąc wystawienia) albo odrzucona — od razu przy imporcie.
+        $rule = $p['seller_nip'] ? $this->repo->rule((string) $p['seller_nip']) : null;
+        $kind = $rule ? ($rule['action'] === 'service' ? ['kind' => 'service', 'cost_category' => $rule['cost_category'], 'service_month' => self::monthOf($p['issue_date'] ?? null), 'id_rule' => (int) $rule['id']]
+            : ['status' => 'rejected', 'note' => 'Reguła dostawcy : odrzucona', 'id_rule' => (int) $rule['id']]) : [];
+        return $this->tx->execute(function () use ($p, $source, $ksefNumber, $file, $supplierId, $context, $kind) {
+            $id = $this->repo->insert($kind + ['source' => $source, 'ksef_number' => $ksefNumber, 'id_supplier' => $supplierId, 'seller_nip' => $p['seller_nip'],
                 'seller_name' => $p['seller_name'] !== null ? mb_substr($p['seller_name'], 0, 255) : null, 'number' => $p['number'] !== null ? mb_substr($p['number'], 0, 80) : null,
                 'issue_date' => $p['issue_date'], 'currency' => $p['currency'] ?: 'PLN', 'total_net' => $p['total_net'], 'total_gross' => $p['total_gross'],
                 // Faktura korygująca : linie « przed korektą » to nie zakupy — bez cen i stanu.
@@ -425,9 +504,11 @@ final class InvoiceService
             $this->repo->saveFile($id, $file['filename'], $file['mime'], $file['content'], $file['text']);
             if ($supplierId !== null && $p['seller_nip']) $this->repo->rememberSupplier($p['seller_nip'], $supplierId);
             $inv = $this->repo->invoice($id);
-            foreach ($p['lines'] as $k => $l) $this->repo->insertLine($id, ['line_no' => $l['line_no'] ?? $k + 1] + $l + $this->known($inv, $l));
-            $this->autoLink($id);
-            $this->audit->record($context, 'create', 'purchase_invoice', $id, null, ['source' => $source, 'ksef_number' => $ksefNumber, 'number' => $p['number'], 'lines' => count($p['lines'])]);
+            $goods = $inv['kind'] === 'goods' && $inv['status'] === 'open';
+            foreach ($p['lines'] as $k => $l) $this->repo->insertLine($id, ['line_no' => $l['line_no'] ?? $k + 1] + $l + ($goods ? $this->known($inv, $l) : []));
+            if ($goods) $this->autoLink($id);
+            $this->audit->record($context, 'create', 'purchase_invoice', $id, null, ['source' => $source, 'ksef_number' => $ksefNumber, 'number' => $p['number'], 'lines' => count($p['lines'])]
+                + ($kind ? ['rule' => $kind['id_rule'], 'kind' => $inv['kind'], 'status' => $inv['status']] : []));
             return $id;
         });
     }
@@ -733,7 +814,7 @@ final class InvoiceService
         $mode = $this->autoMode();
         if (!$mode['prices']) return null;
         $inv = $this->repo->invoice($id);
-        if ($inv === null || !$this->readiness($inv, $this->control($inv, $this->repo->lines($id)))['ok']) return null;
+        if ($inv === null || $inv['kind'] !== 'goods' || $inv['status'] !== 'open' || !$this->readiness($inv, $this->control($inv, $this->repo->lines($id)))['ok']) return null;
         try {
             return $this->runProcess($id, $mode['full'] ? self::STEPS : ['prices'], false, $context, 'auto_process');
         } catch (\Throwable $e) {
@@ -804,6 +885,7 @@ final class InvoiceService
     public function decide(int $id, array $body, ApiContext $context): array
     {
         $inv = $this->load($id);
+        if ($inv['kind'] !== 'goods' || $inv['status'] === 'rejected') throw new ApiException('INVOICE_NOT_GOODS', 409);
         $v = (new Validator($body))->only(['status', 'note'])->choice('status', self::STATUSES)->string('note', 1000, false, true);
         $v->throwIfInvalid();
         $status = $v->value('status');
@@ -814,6 +896,125 @@ final class InvoiceService
             $this->audit->record($context, 'decide', 'purchase_invoice', $id, ['status' => $inv['status']], $data);
         });
         return $this->detail($id, $context);
+    }
+
+    // --- Rodzaj faktury : surowce i opakowania ↔ usługa (Finanse) ↔ odrzucona ----------------------------------------
+
+    /**
+     * Klasyfikacja (makieta 2) : service — koszt firmy w Finansach (kategoria kalkulatora kosztów, miesiąc kosztu — domyślnie
+     * miesiąc wystawienia) ; reject — nie dotyczy firmy (notatka) ; goods — z powrotem do zaopatrzenia (zapamiętane przypisania
+     * wracają). rule : « zawsze dla tego dostawcy » (NIP) — reguła stosowana przy imporcie i od razu do innych otwartych faktur
+     * tego NIP ; goods + rule usuwa regułę. Faktura przetworzona (ceny w kartotece, zamówienie, decyzja) zostaje w zaopatrzeniu ;
+     * zamknięty miesiąc usług — najpierw go otworzyć. Linie faktury usługi / odrzuconej bez surowców (ceny i stany bez zmian).
+     */
+    public function classify(int $id, array $body, ApiContext $context): array
+    {
+        $inv = $this->load($id);
+        $v = (new Validator($body))->only(['action', 'cost_category', 'service_month', 'note', 'rule'])->choice('action', self::CLASSIFY)
+            ->string('cost_category', 40, false, true)->string('service_month', 7, false, true, '/^\d{4}-(0[1-9]|1[0-2])$/', 'INVALID_MONTH')
+            ->string('note', 500, false, true)->boolean('rule');
+        $action = $v->value('action');
+        $cats = $this->categories->all();
+        $category = $v->value('cost_category');
+        if ($action === 'service' && $category === null) $v->add('cost_category', 'REQUIRED');
+        elseif ($action === 'service' && !isset($cats[$category])) $v->add('cost_category', 'INVALID_CHOICE', ['allowed' => implode(', ', array_keys($cats))]);
+        $rule = (bool) $v->value('rule', false);
+        if ($rule && !$inv['seller_nip']) $v->add('rule', 'NO_SELLER_NIP');
+        $v->throwIfInvalid();
+        $this->assertMovable($inv, $action);
+        $month = $action === 'service' ? ($v->value('service_month') ?? self::monthOf($inv['issue_date']) ?? date('Y-m')) : null;
+        if ($month !== null && $this->finance->closed($month)) throw new ApiException('SERVICE_MONTH_CLOSED', 409, [], ['month' => $month]);
+        $note = $v->value('note');
+        $applied = [];
+        $this->tx->execute(function () use ($inv, $action, $category, $month, $note, $rule, $context, &$applied) {
+            $ruleId = null;
+            if ($rule && $action === 'goods') {
+                $r = $this->repo->rule((string) $inv['seller_nip']);
+                if ($r) {
+                    $this->repo->deleteRule((int) $r['id']);
+                    $this->audit->record($context, 'delete', 'purchase_invoice_rule', (int) $r['id'], ['seller_nip' => $r['seller_nip'], 'action' => $r['action']], null);
+                }
+            } elseif ($rule) {
+                $ruleId = $this->repo->saveRule((string) $inv['seller_nip'], $inv['seller_name'], $action === 'service' ? 'service' : 'reject', $action === 'service' ? $category : null, $context->userId);
+                $this->audit->record($context, 'save', 'purchase_invoice_rule', $ruleId, null, ['seller_nip' => $inv['seller_nip'], 'action' => $action, 'cost_category' => $category]);
+            }
+            $this->applyKind($inv, $action, $category, $month, $note, $ruleId, $context);
+            if ($ruleId !== null) {
+                foreach ($this->repo->openGoodsOfNip((string) $inv['seller_nip'], (int) $inv['id']) as $other) {
+                    $m = $action === 'service' ? (self::monthOf($other['issue_date']) ?? $month) : null;
+                    if ($m !== null && $this->finance->closed($m)) continue;
+                    $this->applyKind($other, $action, $category, $m, null, $ruleId, $context);
+                    $applied[] = (int) $other['id'];
+                }
+            }
+        });
+        return $this->detail($id, $context) + ['applied' => $applied];
+    }
+
+    /** Faktura do przeniesienia : surowce bez przetworzenia, usługa w otwartym miesiącu. */
+    private function assertMovable(array $inv, string $action): void
+    {
+        if ($inv['kind'] === 'goods' && $inv['status'] !== 'rejected' && $action !== 'goods'
+            && ($inv['status'] !== 'open' || $inv['prices_imported_at'] !== null || $inv['id_po'] !== null)) {
+            throw new ApiException('INVOICE_PROCESSED', 409);
+        }
+        if ($inv['kind'] === 'service' && $inv['service_month'] !== null && $this->finance->closed($inv['service_month'])) {
+            throw new ApiException('SERVICE_MONTH_CLOSED', 409, [], ['month' => $inv['service_month']]);
+        }
+    }
+
+    private function applyKind(array $inv, string $action, ?string $category, ?string $month, ?string $note, ?int $ruleId, ApiContext $context): void
+    {
+        $id = (int) $inv['id'];
+        if ($action === 'goods') {
+            $data = ['kind' => 'goods', 'status' => 'open', 'cost_category' => null, 'service_month' => null, 'cost_amount' => null, 'id_rule' => null, 'decided_by' => null, 'decided_at' => null];
+        } elseif ($action === 'service') {
+            $keep = $inv['kind'] === 'service' && $inv['status'] === 'accepted' && $inv['cost_category'] === $category && $inv['service_month'] === $month;
+            $data = ['kind' => 'service', 'status' => $keep ? 'accepted' : 'open', 'cost_category' => $category, 'service_month' => $month, 'id_rule' => $ruleId ?? ($inv['kind'] === 'service' ? $inv['id_rule'] : null)]
+                + ($keep ? [] : ['decided_by' => null, 'decided_at' => null]);
+        } else {
+            $data = ['status' => 'rejected', 'id_rule' => $ruleId, 'decided_by' => $context->userId, 'decided_at' => date('Y-m-d H:i:s'), 'note' => $note ?? ($ruleId !== null ? 'Reguła dostawcy : odrzucona' : $inv['note'])];
+        }
+        $this->repo->update($id, $data);
+        if ($action === 'goods') {
+            $fresh = $this->repo->invoice($id);
+            foreach ($this->repo->lines($id) as $l) {
+                $known = $l['id_raw_material'] === null ? $this->known($fresh, $l) : [];
+                if ($known) $this->repo->mapLine((int) $l['id'], $known['id_raw_material'], $known['factor']);
+            }
+            $this->autoLink($id);
+        } else {
+            $this->repo->unmapLines($id);
+        }
+        $this->audit->record($context, 'classify', 'purchase_invoice', $id, ['kind' => $inv['kind'], 'status' => $inv['status'], 'cost_category' => $inv['cost_category'], 'service_month' => $inv['service_month']],
+            ['action' => $action] + $data);
+    }
+
+    /** Reguły dostawców (NIP → zawsze usługa z kategorią albo zawsze odrzucona). */
+    public function rules(ApiContext $context): array
+    {
+        $cats = $this->categories->all();
+        return ['rules' => array_map(fn($r) => ['id' => (int) $r['id'], 'seller_nip' => $r['seller_nip'], 'seller_name' => $r['seller_name'], 'action' => $r['action'],
+            'cost_category' => $r['cost_category'], 'category' => $r['cost_category'] !== null && isset($cats[$r['cost_category']]) ? $cats[$r['cost_category']]['label'] : null,
+            'invoices' => (int) $r['invoices'], 'last_invoice' => $r['last_invoice'], 'created_by' => $r['created_by_name'], 'created_at' => $r['created_at']], $this->repo->rules()),
+            'can_write' => $context->can('prod.supply.write')];
+    }
+
+    /** Usunięcie reguły : kolejne faktury tego dostawcy wracają do zaopatrzenia (już sklasyfikowane zostają). */
+    public function deleteRule(int $id, ApiContext $context): array
+    {
+        $r = $this->repo->findRule($id) ?? throw ApiException::notFound('purchase_invoice_rule', $id);
+        $this->tx->execute(function () use ($id, $r, $context) {
+            $this->repo->deleteRule($id);
+            $this->audit->record($context, 'delete', 'purchase_invoice_rule', $id, ['seller_nip' => $r['seller_nip'], 'action' => $r['action'], 'cost_category' => $r['cost_category']], null);
+        });
+        return ['deleted' => true, 'id' => $id];
+    }
+
+    /** RRRR-MM z daty (null bez daty). */
+    public static function monthOf(?string $date): ?string
+    {
+        return $date !== null && preg_match('/^\d{4}-\d{2}/', $date) ? substr($date, 0, 7) : null;
     }
 
     /** Przyjęcie dostawy wg faktury : ilości i ceny netto z faktury do zamówienia (linie przypisane do jego surowców). */
@@ -1038,13 +1239,15 @@ final class InvoiceService
     {
         $i = $this->load($id);
         if ($i['status'] !== 'open') throw new ApiException('INVOICE_CLOSED', 409, [], ['status' => $i['status']]);
+        // Usługa (Finanse) : bez przypisań, cen i stanów — najpierw « z powrotem do zaopatrzenia ».
+        if (($i['kind'] ?? 'goods') !== 'goods') throw new ApiException('INVOICE_NOT_GOODS', 409);
         return $i;
     }
 
     private function summary(array $i): array
     {
         return [
-            'id' => (int) $i['id'], 'source' => $i['source'], 'ksef_number' => $i['ksef_number'], 'number' => $i['number'], 'issue_date' => $i['issue_date'],
+            'id' => (int) $i['id'], 'source' => $i['source'], 'kind' => $i['kind'] ?? 'goods', 'ksef_number' => $i['ksef_number'], 'number' => $i['number'], 'issue_date' => $i['issue_date'],
             'seller_nip' => $i['seller_nip'], 'seller_name' => $i['seller_name'], 'is_correction' => !empty($i['is_correction']),
             'supplier' => $i['id_supplier'] !== null ? ['id' => (int) $i['id_supplier'], 'name' => trim((string) ($i['supplier_name'] ?? ''))] : null,
             'currency' => $i['currency'], 'total_net' => $i['total_net'] !== null ? (float) $i['total_net'] : null, 'total_gross' => $i['total_gross'] !== null ? (float) $i['total_gross'] : null,

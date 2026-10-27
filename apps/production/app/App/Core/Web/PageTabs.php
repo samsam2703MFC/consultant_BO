@@ -92,6 +92,12 @@ final class PageTabs
             ['/shipments/differences', 'Różnice i problemy dostaw', 'bi-exclamation-diamond'],
             ['/archive/documents/picking-lists', 'Archiwum list kompletacyjnych', 'bi-list-check'],
         ]],
+        // Finanse (27/10/2026, stanowisko Administracja i fakturowanie) : faktury i koszty (przypisania, zatwierdzenie, wzrosty cen)
+        // i koszty usług miesiąca (faktury usług po kategoriach → kalkulator kosztów). Uprawnienia : pozycja « margins » (/finances).
+        'finance' => ['label' => 'Finanse : faktury i koszty', 'section' => 'Zakupy', 'icon' => 'bi-receipt-cutoff', 'tabs' => [
+            ['/finances/invoices', 'Faktury i koszty', 'bi-inboxes'],
+            ['/finances/costs', 'Koszty usług miesiąca', 'bi-calendar2-range'],
+        ]],
         // Aktywność w ERP i licznik stron : jedna pozycja w Administracji (N7).
         'usage' => ['label' => 'Aktywność i licznik stron', 'section' => 'Administracja', 'icon' => 'bi-activity', 'tabs' => [
             ['/organization/activity', 'Aktywność w ERP', 'bi-activity'],

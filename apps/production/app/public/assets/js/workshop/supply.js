@@ -40,7 +40,7 @@
     const badge = (status) => `<span class="badge tfb-po-${status}">${esc(t('status.' + status))}</span>`;
 
     let state = readHash();
-    const data = {needs: null, orders: null, materials: null, order: null, preview: null, invoices: null, invoice: null, mappings: null, prices: null};
+    const data = {needs: null, orders: null, materials: null, order: null, preview: null, invoices: null, invoice: null, mappings: null, rules: null, prices: null};
     let receiving = false;
 
     function readHash() {
@@ -54,8 +54,10 @@
             receive: p.get('receive') === '1',
             kind: ['all', 'raw', 'pack'].includes(p.get('kind')) ? p.get('kind') : 'all',
             only: p.get('only') !== '0',
-            inv: p.get('inv') === 'map' ? 'map' : Number(p.get('inv')) || null,
+            inv: ['map', 'rules'].includes(p.get('inv')) ? p.get('inv') : Number(p.get('inv')) || null,
             istatus: ['open', 'accepted', 'disputed', 'all'].includes(p.get('ist')) ? p.get('ist') : 'open',
+            // Rodzaj faktur : surowce i opakowania (goods), usługi → Finanse (service), odrzucone (rejected).
+            ikind: ['goods', 'service', 'rejected'].includes(p.get('ik')) ? p.get('ik') : 'goods',
             pmonths: PMONTHS.includes(Number(p.get('pm'))) ? Number(p.get('pm')) : 12,
             // #tab=stock&inventory=1 : arkusz inwentaryzacji od razu (kreator « Zamknięcie miesiąca », krok 5).
             search: '', stockMode: 'all', used: true, inventory: p.get('tab') === 'stock' && p.get('inventory') === '1',
@@ -64,7 +66,7 @@
     function writeHash() {
         const p = new URLSearchParams({tab: state.tab, date: state.date, weeks: state.weeks, status: state.status, kind: state.kind, only: state.only ? '1' : '0'});
         if (state.order) p.set('order', state.order);
-        if (state.tab === 'invoices') { p.set('ist', state.istatus); if (state.inv) p.set('inv', state.inv); }
+        if (state.tab === 'invoices') { p.set('ist', state.istatus); if (state.ikind !== 'goods') p.set('ik', state.ikind); if (state.inv) p.set('inv', state.inv); }
         if (state.tab === 'prices') p.set('pm', state.pmonths);
         history.replaceState(null, '', '#' + p.toString());
     }
@@ -92,10 +94,11 @@
             if (state.tab === 'prices') data.prices = await api.get(`/supply/prices?months=${state.pmonths}`);
             if (state.tab === 'invoices') {
                 if (state.inv === 'map') data.mappings = await api.get('/supply/mappings');
+                else if (state.inv === 'rules') data.rules = await api.get('/supply/supplier-rules');
                 else if (state.inv) {
                     data.invoice = await api.get(`/supply/invoices/${state.inv}`);
                     if (data.invoice.editable && data.invoice.lines.some(l => !l.material)) await ensureMaterials();
-                } else data.invoices = await api.get(`/supply/invoices?status=${state.istatus}`);
+                } else data.invoices = await api.get(`/supply/invoices?status=${state.ikind === 'goods' ? state.istatus : 'all'}&kind=${state.ikind}`);
             }
         } catch (err) {
             if (err.status === 404 && (state.order || state.inv)) { state.order = null; state.inv = null; return load(); }
@@ -108,7 +111,7 @@
 
     function draw() {
         const y = window.scrollY;
-        const invoices = () => state.inv === 'map' ? drawMappings() : state.inv && data.invoice ? drawInvoice() : drawInvoices();
+        const invoices = () => state.inv === 'map' ? drawMappings() : state.inv === 'rules' ? drawRules() : state.inv && data.invoice ? drawInvoice() : drawInvoices();
         const body = state.tab === 'needs' ? drawNeeds() : state.tab === 'stock' ? drawStock() : state.tab === 'prices' ? drawPrices() : state.tab === 'invoices' ? invoices()
             : (state.order && data.order ? drawOrder() : data.batch ? drawBatch() : drawOrders());
         el.innerHTML = shell(body);
@@ -116,7 +119,7 @@
         if (state.tab === 'needs') bindNeeds();
         else if (state.tab === 'stock') bindStock();
         else if (state.tab === 'prices') bindPrices();
-        else if (state.tab === 'invoices') (state.inv === 'map' ? bindMappings : state.inv && data.invoice ? bindInvoice : bindInvoices)();
+        else if (state.tab === 'invoices') (state.inv === 'map' ? bindMappings : state.inv === 'rules' ? bindRules : state.inv && data.invoice ? bindInvoice : bindInvoices)();
         else if (state.order && data.order) bindOrder();
         else if (data.batch) bindBatch();
         else bindOrders();
@@ -850,8 +853,25 @@
                     <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> ${esc(t('inv.ksef_search'))}</button>
                     <span class="small text-muted">${esc(t('inv.ksef_help'))}</span></form>
                 ${iv.ksef ? ksefTable() : ''}</div></div>` : '';
-        return `<div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">
-                <div class="btn-group btn-group-sm" role="group">${ISTATUSES.map(s => `<button type="button" class="btn ${state.istatus === s ? 'btn-primary' : 'btn-outline-primary'}" data-istatus="${s}">${esc(t('inv.filter.' + s))}</button>`).join('')}</div>
+        const k = d.kpi;
+        const cnt = d.counts;
+        // Przełącznik (makieta 1) : do walidacji / zatwierdzone (reklamacje, gdy są) ; rodzaj : surowce i opakowania, usługi → Finanse, odrzucone.
+        const segs = ['open', 'accepted', ...(cnt.goods.disputed || state.istatus === 'disputed' ? ['disputed'] : [])];
+        const toggles = `<div class="tfb-inv-toggles">
+                ${state.ikind === 'goods' ? `<div class="at-seg" role="group" aria-label="${esc(t('inv.toggle'))}">${segs.map(s => `<button type="button" class="${state.istatus === s ? 'is-on' : ''}" data-istatus="${s}" aria-pressed="${state.istatus === s}">
+                    ${esc(t('inv.seg.' + s))} <span class="tfb-num">${cnt.goods[s]}</span></button>`).join('')}</div>` : ''}
+                <div class="tfb-inv-kinds" role="group" aria-label="${esc(t('inv.kinds'))}">${['goods', 'service', 'rejected'].map(x => `<button type="button" class="tfb-inv-kind ${state.ikind === x ? 'is-on' : ''}" data-ikind="${x}" aria-pressed="${state.ikind === x}">
+                    <i class="bi ${{goods: 'bi-basket', service: 'bi-arrow-right-square', rejected: 'bi-slash-circle'}[x]}"></i> ${esc(t('inv.kind.' + x))}${x === 'goods' ? '' : ` <span class="tfb-num">${x === 'service' ? cnt.service.open + cnt.service.accepted : cnt.rejected}</span>`}</button>`).join('')}</div>
+                <a href="#tab=invoices&inv=rules" class="btn btn-sm btn-link ms-auto" data-rules><i class="bi bi-funnel"></i> ${esc(t('inv.rules', {n: cnt.rules}))}</a></div>`;
+        const tiles = `<div class="at-tiles tfb-inv-tiles">
+                <div class="at-tile ${k.open ? 'at-tile-warn' : 'at-tile-ok'}"><span class="at-tile-label">${esc(t('inv.kpi.open'))}</span><span class="at-tile-value tfb-num">${k.open}</span><span class="at-tile-meta">${esc(cur(k.open_net))}</span></div>
+                <div class="at-tile ${k.ready ? 'at-tile-ok' : ''}"><span class="at-tile-label">${esc(t('inv.kpi.ready'))}</span><span class="at-tile-value tfb-num">${k.ready}</span><span class="at-tile-meta">${esc(t('inv.kpi.ready_help'))}</span></div>
+                <div class="at-tile ${k.price_ups ? 'at-tile-danger' : ''}"><span class="at-tile-label">${esc(t('inv.kpi.price_ups'))}</span><span class="at-tile-value tfb-num">${k.price_ups}</span><span class="at-tile-meta">${esc(t('inv.kpi.price_ups_help'))}</span></div>
+                <a class="at-tile ${k.services_suspected ? 'at-tile-warn' : ''}" href="${d.can_finance ? api.root + '/finances/costs' : '#tab=invoices&ik=service'}" ${d.can_finance ? '' : 'data-ikind-link="service"'}>
+                    <span class="at-tile-label">${esc(t('inv.kpi.services'))}</span><span class="at-tile-value tfb-num">${k.services_month_count}</span>
+                    <span class="at-tile-meta">${esc(k.services_suspected ? t('inv.kpi.suspected', {n: k.services_suspected}) : t('inv.kpi.services_help', {n: k.services_open}))}</span></a></div>`;
+        if (state.ikind !== 'goods') return toggles + tiles + otherInvoices(d);
+        return toggles + tiles + `<div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">
                 ${w ? `<button type="button" class="btn btn-sm btn-primary" data-ksef-sync title="${esc(t('inv.ksef_sync_help'))}"><i class="bi bi-cloud-download"></i> ${esc(t('inv.ksef_sync'))}</button>
                 <button type="button" class="btn btn-sm ${iv.ksefOpen ? 'btn-secondary' : 'btn-outline-primary'}" data-ksef-toggle><i class="bi bi-calendar-range"></i> ${esc(t('inv.from_ksef'))}</button>
                 <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-upload"></i> ${esc(t('inv.upload'))}<input type="file" class="d-none" accept=".pdf,.xml,application/pdf,application/xml,text/xml,image/*" data-upload></label>
@@ -872,9 +892,72 @@
                     <td>${esc(fullDay(i.issue_date))}</td><td class="text-end">${esc(cur(i.total_net, i.currency))}</td>
                     <td>${i.order ? esc(i.order.code) : '—'}</td>
                     <td>${ctrlBadge(i.control)}${i.control.lines ? `<div class="small text-muted">${esc(t('inv.mapped_n', {mapped: i.control.mapped, lines: i.control.lines}))}</div>` : ''}</td>
-                    <td>${invBadge(i.status)}</td><td>${nextStep(i, w)}</td></tr>`).join('')
+                    <td>${invBadge(i.status)}</td><td>${i.service_guess && w ? serviceHint(i) : nextStep(i, w)}</td></tr>`).join('')
                     || `<tr><td colspan="8" class="text-muted">${esc(t('inv.empty'))}</td></tr>`}</tbody></table></div></div></div>`;
     }
+
+    // Faktura, która wygląda na usługę (Orlen → paliwo…) : podpowiedź i dwa przyciski — okno « co zrobić z tą fakturą ? ».
+    function serviceHint(i) {
+        return `<div class="tfb-inv-guess"><span class="small text-muted text-nowrap">${esc(t('inv.guess', {label: i.service_guess.label}))}</span>
+            <span class="d-flex gap-1"><button type="button" class="btn btn-sm btn-outline-primary text-nowrap" data-classify="${i.id}" data-action="service"><i class="bi bi-arrow-right-square"></i> ${esc(t('inv.to_finance'))}</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-classify="${i.id}" data-action="reject">${esc(t('inv.reject'))}</button></span></div>`;
+    }
+
+    // Usługi (w Finansach) i odrzucone : kategoria, miesiąc, kwota, powód ; z powrotem do zaopatrzenia.
+    function otherInvoices(d) {
+        const service = state.ikind === 'service';
+        const w = d.can_write;
+        const head = service ? `<th>${esc(t('inv.col.category'))}</th><th>${esc(t('inv.col.month'))}</th><th>${esc(t('col.status'))}</th>` : `<th>${esc(t('inv.col.reason'))}</th>`;
+        return `<p class="small text-muted mb-2">${esc(t(service ? 'inv.service_help' : 'inv.rejected_help'))}
+                ${service && d.can_finance ? `<a href="${api.root}/finances/costs">${esc(t('inv.open_finance'))}</a>` : ''}</p>
+            <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
+                <thead><tr><th>${esc(t('inv.col.number'))}</th><th>${esc(t('inv.col.seller'))}</th><th>${esc(t('inv.col.date'))}</th><th class="text-end">${esc(t('inv.col.net'))}</th>${head}<th></th></tr></thead>
+                <tbody>${d.invoices.map(i => `<tr data-open-inv="${i.id}" class="tfb-supply-click">
+                    <td><a href="#tab=invoices&inv=${i.id}"><strong>${esc(i.number || t('inv.no_number'))}</strong></a><div class="small text-muted">${esc(t('inv.source.' + i.source))}</div></td>
+                    <td>${esc(i.supplier ? i.supplier.name : (i.seller_name || '—'))}${i.seller_nip ? `<div class="small text-muted">NIP ${esc(i.seller_nip)}</div>` : ''}</td>
+                    <td class="text-nowrap">${esc(fullDay(i.issue_date))}</td><td class="text-end tfb-num">${esc(cur(i.total_net, i.currency))}</td>
+                    ${service ? `<td>${esc(i.category ? i.category.label : '—')}${i.by_rule ? ` <span class="badge tfb-inv-rule" title="${esc(t('inv.by_rule_help'))}">${esc(t('inv.by_rule'))}</span>` : ''}</td>
+                        <td class="text-nowrap">${esc(monthLabel(i.service_month))}</td><td>${invBadge(i.status === 'open' ? 'service_open' : 'service_accepted')}</td>`
+                        : `<td class="small">${esc(i.note || '—')}${i.by_rule ? ` <span class="badge tfb-inv-rule">${esc(t('inv.by_rule'))}</span>` : ''}</td>`}
+                    <td class="text-end">${w ? `<button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-to-goods="${i.id}"><i class="bi bi-arrow-counterclockwise"></i> ${esc(t('inv.to_goods'))}</button>` : ''}</td></tr>`).join('')
+                    || `<tr><td colspan="7" class="text-muted">${esc(t(service ? 'inv.service_empty' : 'inv.rejected_empty'))}</td></tr>`}</tbody></table></div></div></div>`;
+    }
+
+    const MONTHS = {pl: ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'],
+        fr: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']};
+    const monthLabel = (ym) => ym ? `${(MONTHS[api.lang] || MONTHS.pl)[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}` : '—';
+
+    // Reguły dostawców : NIP → zawsze usługa (kategoria) albo zawsze odrzucona.
+    function drawRules() {
+        const d = data.rules;
+        return `<p><a href="#tab=invoices" data-back-inv>‹ ${esc(t('inv.back'))}</a></p>
+            <p class="small text-muted mb-2">${esc(t('inv.rules_help'))}</p>
+            <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
+                <thead><tr><th>${esc(t('inv.col.seller'))}</th><th>${esc(t('inv.col.rule'))}</th><th class="text-end">${esc(t('inv.col.invoices'))}</th><th>${esc(t('inv.col.last'))}</th><th>${esc(t('inv.col.by'))}</th><th></th></tr></thead>
+                <tbody>${d.rules.map(r => `<tr><td><strong>${esc(r.seller_name || '—')}</strong><div class="small text-muted">NIP ${esc(r.seller_nip)}</div></td>
+                    <td>${r.action === 'service' ? `<span class="badge tfb-inv-service_open"><i class="bi bi-arrow-right-square"></i> ${esc(t('inv.rule_service', {category: r.category || r.cost_category || '—'}))}</span>`
+                        : `<span class="badge tfb-inv-rejected"><i class="bi bi-slash-circle"></i> ${esc(t('inv.rule_reject'))}</span>`}</td>
+                    <td class="text-end tfb-num">${r.invoices}</td><td class="text-nowrap">${esc(fullDay(r.last_invoice))}</td>
+                    <td class="small text-muted">${esc(r.created_by || '—')} · ${esc(fullDay((r.created_at || '').slice(0, 10)))}</td>
+                    <td class="text-end">${d.can_write ? `<button type="button" class="btn btn-sm btn-outline-danger" data-del-rule="${r.id}" title="${esc(t('inv.rule_delete'))}" aria-label="${esc(t('inv.rule_delete'))}"><i class="bi bi-trash"></i></button>` : ''}</td></tr>`).join('')
+                    || `<tr><td colspan="6" class="text-muted">${esc(t('inv.rules_empty'))}</td></tr>`}</tbody></table></div></div></div>`;
+    }
+
+    function bindRules() {
+        el.querySelector('[data-back-inv]').addEventListener('click', (e) => { e.preventDefault(); state.inv = null; load(); });
+        el.querySelectorAll('[data-del-rule]').forEach(b => b.addEventListener('click', async () => {
+            const r = data.rules.rules.find(x => x.id === Number(b.dataset.delRule));
+            if (!window.confirm(t('inv.confirm_rule_delete', {name: r.seller_name || r.seller_nip}))) return;
+            b.disabled = true;
+            try {
+                await api.del(`/supply/supplier-rules/${r.id}`);
+                ui.notify(true, t('deleted'));
+                load();
+            } catch (err) { ui.notify(false, errText(err)); b.disabled = false; }
+        }));
+    }
+
+    const classify = (id, action) => window.TfbInvoiceClassify.open({api, invoiceId: id, action, onDone: () => (state.inv ? openInvoice(state.inv) : load())});
 
     function ksefTable() {
         const rows = iv.ksef.invoices;
@@ -900,9 +983,18 @@
     function bindInvoices() {
         const d = data.invoices;
         el.querySelectorAll('[data-istatus]').forEach(b => b.addEventListener('click', () => { state.istatus = b.dataset.istatus; load(); }));
-        el.querySelector('[data-mappings]').addEventListener('click', (e) => { e.preventDefault(); openInvoice('map'); });
+        el.querySelectorAll('[data-ikind]').forEach(b => b.addEventListener('click', () => { state.ikind = b.dataset.ikind; load(); }));
+        el.querySelector('[data-ikind-link]')?.addEventListener('click', (e) => { e.preventDefault(); state.ikind = 'service'; load(); });
+        el.querySelector('[data-rules]').addEventListener('click', (e) => { e.preventDefault(); state.inv = 'rules'; load(); });
+        el.querySelector('[data-mappings]')?.addEventListener('click', (e) => { e.preventDefault(); openInvoice('map'); });
+        el.querySelectorAll('[data-classify]').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); classify(Number(b.dataset.classify), b.dataset.action); }));
+        el.querySelectorAll('[data-to-goods]').forEach(b => b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const inv = d.invoices.find(x => x.id === Number(b.dataset.toGoods));
+            window.TfbInvoiceClassify.toGoods({api, invoice: inv, rule: !!inv.by_rule, onDone: () => load()});
+        }));
         el.querySelectorAll('tr[data-open-inv]').forEach(tr => tr.addEventListener('click', (e) => {
-            if (e.target.closest('[data-quick-process]')) return;
+            if (e.target.closest('[data-quick-process], [data-classify], [data-to-goods]')) return;
             e.preventDefault();
             openInvoice(Number(tr.dataset.openInv));
         }));
@@ -1207,7 +1299,7 @@
             actions.push(`<button type="button" class="btn btn-sm btn-success" data-iact="accept"><i class="bi bi-check2-circle"></i> ${esc(t('inv.act.accept'))}</button>`);
             actions.push(`<button type="button" class="btn btn-sm btn-outline-danger" data-iact="dispute"><i class="bi bi-exclamation-octagon"></i> ${esc(t('inv.act.dispute'))}</button>`);
             actions.push(`<button type="button" class="btn btn-sm btn-outline-danger ms-auto" data-iact="delete"><i class="bi bi-trash"></i> ${esc(t('inv.act.delete'))}</button>`);
-        } else if (i.can_write && i.status !== 'open') {
+        } else if (i.can_write && i.status !== 'open' && i.kind === 'goods' && i.status !== 'rejected') {
             actions.push(`<button type="button" class="btn btn-sm btn-outline-secondary" data-iact="reopen"><i class="bi bi-arrow-counterclockwise"></i> ${esc(t('inv.act.reopen'))}</button>`);
         }
         const file = i.file ? `<button type="button" class="btn btn-sm btn-outline-secondary" data-iact="file"><i class="bi bi-file-earmark-text"></i> ${esc(t(iv.showFile ? 'inv.act.hide_file' : 'inv.act.show_file'))}</button>` : '';
@@ -1226,6 +1318,7 @@
                     ${idFields}
                     <div class="col-md-2"><label class="form-label small mb-0">${esc(t('inv.totals'))}</label><div>${esc(cur(i.total_net, i.currency))}
                         <span class="small text-muted">· ${esc(t('inv.gross', {v: cur(i.total_gross, i.currency)}))}</span></div></div></div>
+                ${kindBar(i)}
                 ${i.source === 'ocr' && edit ? `<div class="alert alert-warning py-2 small mb-2"><i class="bi bi-eye"></i> ${esc(t('inv.ocr.check'))}</div>` : ''}
                 ${i.is_correction ? `<div class="alert alert-secondary py-2 small mb-2"><i class="bi bi-arrow-counterclockwise"></i> ${esc(t('inv.correction_help'))}</div>` : ''}
                 ${steps(i)}
@@ -1240,6 +1333,21 @@
                 ${i.text ? `<details class="tfb-inv-text mb-2"><summary class="small">${esc(t(i.source === 'ocr' ? 'inv.ocr_text' : 'inv.pdf_text'))}</summary><pre>${esc(i.text)}</pre></details>` : ''}
                 <div class="d-flex flex-wrap gap-2 mt-2">${actions.join('')}</div></div></div>
             ${viewer}`;
+    }
+
+    // Rodzaj faktury na karcie : usługa w Finansach / odrzucona (z powrotem do zaopatrzenia) albo « to nie surowiec ? ».
+    function kindBar(i) {
+        const c = i.classify || {};
+        if (i.kind === 'service' || i.status === 'rejected') {
+            const text = i.kind === 'service' ? t('inv.kind_service', {category: i.category ? i.category.label : '—', month: monthLabel(i.service_month)}) : t('inv.kind_rejected', {note: i.note || '—'});
+            return `<div class="alert ${i.kind === 'service' ? 'alert-info' : 'alert-secondary'} py-2 small mb-2 d-flex flex-wrap align-items-center gap-2">
+                <span><i class="bi ${i.kind === 'service' ? 'bi-arrow-right-square' : 'bi-slash-circle'}"></i> ${esc(text)}${i.by_rule ? ' · ' + esc(t('inv.by_rule')) : ''}</span>
+                ${i.can_write && c.movable ? `<button type="button" class="btn btn-sm btn-outline-secondary ms-auto" data-iact="to-goods"><i class="bi bi-arrow-counterclockwise"></i> ${esc(t('inv.to_goods'))}</button>` : ''}</div>`;
+        }
+        if (!(i.can_write && c.movable && i.status === 'open')) return '';
+        return `<div class="tfb-inv-kindbar small mb-2"><span class="text-muted">${esc(c.guess ? t('inv.guess', {label: c.guess.label}) : t('inv.not_goods'))}</span>
+            <button type="button" class="btn btn-sm ${c.guess ? 'btn-outline-primary' : 'btn-link'}" data-iact="classify"><i class="bi bi-arrow-right-square"></i> ${esc(t('inv.to_finance'))}</button>
+            <button type="button" class="btn btn-sm btn-link text-secondary" data-iact="classify-reject">${esc(t('inv.reject'))}</button></div>`;
     }
 
     // Kroki faktury (pas) : dostawca → przypisanie (tylko nowe nazwy) → kontrola → ceny + stan + akceptacja.
@@ -1646,6 +1754,8 @@
                 return run(b, () => api.post(`/supply/invoices/${i.id}/decision`, {status: 'disputed', note: note.trim().slice(0, 1000) || null}), t('inv.disputed_ok'));
             }
             if (act === 'reopen') return run(b, () => api.post(`/supply/invoices/${i.id}/decision`, {status: 'open'}), t('inv.reopened_ok'));
+            if (act === 'classify' || act === 'classify-reject') return classify(i.id, act === 'classify' ? 'service' : 'reject');
+            if (act === 'to-goods') return window.TfbInvoiceClassify.toGoods({api, invoice: i, rule: !!i.by_rule, onDone: () => openInvoice(i.id)});
             if (act === 'delete') {
                 if (!window.confirm(t('inv.confirm_delete', {number: i.number || t('inv.no_number')}))) return;
                 b.disabled = true;

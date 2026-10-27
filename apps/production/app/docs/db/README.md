@@ -43,6 +43,30 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
 
+### Factures d'achat : matières, services (Finances) et rejetées (migration 116, 27/10/2026)
+
+- `n_inv.kind` : `goods` (matières et emballages, Zaopatrzenie) ou `service` (coût de l'entreprise : carburant, téléphone,
+  loyer, énergie…, Finances) ; `n_inv.status` reçoit `rejected` (ne concerne pas l'entreprise : ni achats, ni coûts).
+  Service : `cost_category` (catégorie du calculateur de coûts : `fixed:<catégorie de coût fixe>`, `media:<code média>`,
+  `log:<code logistique>`), `service_month` (AAAA-MM, défaut mois d'émission), `cost_amount` (net PLN compté, NULL = total
+  net de la facture si en PLN), `id_rule` (règle qui l'a classée). Les lignes d'un service ou d'une facture rejetée n'ont
+  pas de matière (ni prix, ni stock, ni historique des prix) ; une facture traitée (prix importés, commande liée,
+  décision) reste aux achats.
+- `n_inv_supplier_rule` : NIP du vendeur → toujours `service` (avec catégorie) ou toujours `reject`, appliquée à l'import
+  KSeF / fichier et, à l'enregistrement, aux autres factures ouvertes de ce NIP.
+- `n_service_month` : mois des coûts de services clôturé (total, qui, quand). À la clôture, les totaux des factures validées
+  vont dans le calculateur de coûts du mois (créé s'il manque) : `cost_month_fixed_cost` (une ligne par fournisseur),
+  `cost_media_month` (montant du média), `cost_month_logistics` (une ligne par type) ; les lignes manuelles de ces
+  catégories sont remplacées. `n_service_month_push` garde chaque ligne écrite et les lignes manuelles remplacées (JSON) :
+  la réouverture retire les premières et rétablit les secondes. Mois du calculateur `LOCKED` : clôture et réouverture refusées.
+- `n_service_month_mark` : « pas ce mois-ci » pour un coût attendu (catégorie + fournisseur présent le mois précédent).
+- Paramètres `finance.small_price_up_pct` (5 % : petites hausses acceptées en un clic) et `finance.service_due_day` (10 : à
+  partir de ce jour, le mois précédent des services non clôturé apparaît dans Do obsłużenia / Dzisiaj pour l'Administration).
+- Permissions `prod.finance.read` / `prod.finance.write` : rôles `prod_admin` et `direction` (pas le responsable de production).
+- Pages : Zakupy › Zaopatrzenie › Faktury (bascule À valider / Validées, type Matières / Services → Finances / Rejetées,
+  règles fournisseurs), Zakupy › Finanse : faktury i koszty (`/finances/invoices` : relier, valider, hausses de prix ;
+  `/finances/costs` : coûts de services du mois et clôture).
+
 ### Noms des produits retravaillés (migration 115, 27/10/2026)
 
 - 395 noms de `final_product` corrigés (majuscules et orthographe, variante A : typographie française ; « – » avant le

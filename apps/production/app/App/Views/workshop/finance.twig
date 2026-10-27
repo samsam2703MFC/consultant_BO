@@ -1,0 +1,17 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ finance_view == 'costs' ? 'Koszty usług miesiąca · Coûts de services du mois' : 'Faktury i koszty · Factures et coûts' }}{% endblock %}
+
+{% block content %}
+<section class="section tfb">
+    <div id="tfbFinance" class="tfb-app" data-root="{{ root }}" data-api-base="{{ api_base }}" data-user="{{ session_user }}" data-labels="supply" data-view="{{ finance_view }}" aria-live="polite">
+        <p class="text-muted">Wczytywanie… / Chargement…</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/workshop/api.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/workshop/invoice-classify.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/workshop/finance.js?v={{ asset_v() }}"></script>
+{% endblock %}

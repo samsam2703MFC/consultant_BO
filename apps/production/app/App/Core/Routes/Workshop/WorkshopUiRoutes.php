@@ -13,6 +13,9 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/workshop/sheet', ['controller' => $c, 'method' => 'sheet']);
     $r->addRoute('GET', '/workshop/manager', ['controller' => $c, 'method' => 'manager']);
     $r->addRoute('GET', '/workshop/supply', ['controller' => $c, 'method' => 'supply']);
+    // Finanse (Administracja i fakturowanie) : faktury i koszty (przypisz, zatwierdź, wzrosty cen), koszty usług miesiąca.
+    $r->addRoute('GET', '/finances/invoices', ['controller' => $c, 'method' => 'financeInvoices']);
+    $r->addRoute('GET', '/finances/costs', ['controller' => $c, 'method' => 'financeCosts']);
     $r->addRoute('GET', '/workshop/deliveries', ['controller' => $c, 'method' => 'deliveries']);
     $r->addRoute('GET', '/workshop/team-sheet', ['controller' => $c, 'method' => 'teamSheet']);
     $r->addRoute('GET', '/workshop/execution', ['controller' => $c, 'method' => 'execution']);

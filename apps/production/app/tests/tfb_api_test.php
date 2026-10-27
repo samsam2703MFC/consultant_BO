@@ -42,7 +42,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'document_order_shipping_difference', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings', 'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month', 'cost_media_section_allocation', 'cost_media_type', 'communication_message', 'communication_message_attachment', 'communication_email_account', 'erp_company_data', 'flattened_recipe_recipe', 'product_preparation_type', 'product_recipe_preparation_connection', 'product_recipe_type', 'product_recipe_preparation_step', 'product_recipe_prepare_instruction_connection', 'test_product', 'test_product_status', 'test_product_type', 'test_product_stage', 'test_product_changelog'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'document_order_shipping_difference', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings', 'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month', 'cost_media_section_allocation', 'cost_media_type', 'cost_logistics_type', 'communication_message', 'communication_message_attachment', 'communication_email_account', 'erp_company_data', 'flattened_recipe_recipe', 'product_preparation_type', 'product_recipe_preparation_connection', 'product_recipe_type', 'product_recipe_preparation_step', 'product_recipe_prepare_instruction_connection', 'test_product', 'test_product_status', 'test_product_type', 'test_product_stage', 'test_product_changelog'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -1971,6 +1971,19 @@ check($x2d['data']['order'] === null && $x2d['data']['can_receive'] && $x2d['dat
 [$s, $list] = $call('GET', '/supply/invoices?status=all', null, $access);
 $states = array_column(array_map(fn($i) => ['id' => $i['id'], 'state' => $i['control']['state']], $list['data']['invoices'] ?? []), 'state', 'id');
 check($s === 200 && ($states[$invId] ?? null) === 'gaps', 'invoice list with the control state of each invoice');
+// Rodzaj faktury (27/10/2026) : lista usług i odrzuconych, klasyfikacja przez API, Finanse tylko dla dyrekcji / administratora.
+[$s, $sl] = $call('GET', '/supply/invoices?kind=service', null, $access);
+[$s2, $bad] = $call('GET', '/supply/invoices?kind=x', null, $access);
+check($s === 200 && $sl['data']['kind'] === 'service' && isset($sl['data']['counts']['rejected'], $sl['data']['kpi']['services_suspected']) && $s2 === 422, 'invoice list by kind (goods, service, rejected)');
+[$s, $cl] = $call('POST', "/supply/invoices/{$x2['data']['id']}/classify", ['action' => 'service', 'cost_category' => 'fixed:OTHER'], $access);
+check($s === 409 && $cl['description'] === 'INVOICE_PROCESSED', 'invoice with a received order stays in supply');
+[$s] = $call('GET', '/finance/workspace', null, $access);
+[$s2, $fw] = $call('GET', '/finance/workspace', null, $direction['data']['access_token']);
+[$s3, $fm] = $call('GET', '/finance/services?month=' . date('Y-m'), null, $direction['data']['access_token']);
+[$s4] = $call('GET', '/finance/services?month=2999-01', null, $direction['data']['access_token']);
+[$s5] = $call('GET', '/supply/supplier-rules', null, $access);
+check($s === 403 && $s2 === 200 && isset($fw['data']['map'], $fw['data']['price_ups'], $fw['data']['validate']) && $s3 === 200 && $fm['data']['month'] === date('Y-m') && $s4 === 422 && $s5 === 200,
+    'Finanse: direction yes, production manager no ; month view ; supplier rules');
 [$s, $maps] = $call('GET', '/supply/mappings', null, $access);
 $m = array_column($maps['data']['mappings'] ?? [], null, 'raw_material_id')[900] ?? null;
 check($s === 200 && $m && $m['supplier_name'] === 'MĄKA PSZENNA T-65 WOREK 25KG' && $m['factor'] == 25000 && $m['supplier'] === 'Młyn test', 'mappings listed: supplier name → our material');

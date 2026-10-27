@@ -17,7 +17,7 @@ final class OpenApiSpec
     {
         $paths = [];
         foreach (WorkshopApiRoutes::routes() as [$method, $path, , , $permission]) {
-            $doc = (self::operations() + OpenApiProducts::operations() + OpenApiPlanning::operations() + OpenApiExecution::operations() + OpenApiManager::operations() + OpenApiSupply::operations())[$method . ' ' . $path] ?? null;
+            $doc = (self::operations() + OpenApiProducts::operations() + OpenApiPlanning::operations() + OpenApiExecution::operations() + OpenApiManager::operations() + OpenApiSupply::operations() + OpenApiFinance::operations())[$method . ' ' . $path] ?? null;
             if ($doc === null) {
                 throw new \LogicException("Undocumented route {$method} {$path}");
             }
@@ -37,6 +37,7 @@ final class OpenApiSpec
                         'schema' => match ($name) {
                             'code' => ['type' => 'string', 'example' => 'load.target_pct'],
                             'date' => ['type' => 'string', 'format' => 'date'],
+                            'ym' => ['type' => 'string', 'pattern' => '^\d{4}-\d{2}$', 'example' => '2026-09'],
                             default => ['type' => 'integer', 'minimum' => 1],
                         }];
                 }
@@ -89,6 +90,7 @@ final class OpenApiSpec
                 ['name' => 'phone', 'description' => 'Wejście / wyjście telefonem (kod QR tabletu) / Pointage au téléphone (QR code de la tablette)'],
                 ['name' => 'manager', 'description' => 'Kierownik produkcji : karta stanowiska, cele, raport miesięczny, premia, rozmowa, audyt kompetencji / Responsable production : fiche de poste, objectifs, suivi mensuel, prime, entretien, audit des compétences'],
                 ['name' => 'supply', 'description' => 'Zaopatrzenie : potrzeby surowców i opakowań, stany, zamówienia do dostawców, przyjęcia / Approvisionnement : besoins matières et emballages, stocks, commandes fournisseurs, réceptions'],
+                ['name' => 'finance', 'description' => 'Finanse : faktury i koszty (przypisania, zatwierdzenie, wzrosty cen), koszty usług miesiąca → kalkulator kosztów / Finances : factures et coûts, coûts de services du mois → calculateur de coûts'],
                 ['name' => 'docs', 'description' => 'OpenAPI'],
             ],
             'paths' => $paths,
@@ -199,7 +201,7 @@ final class OpenApiSpec
                 'Lang' => ['name' => 'lang', 'in' => 'query', 'required' => false, 'description' => 'Język komunikatów / Langue des messages (sinon Accept-Language)', 'schema' => ['type' => 'string', 'enum' => ['pl', 'fr']]],
             ],
             'responses' => $errorResponses,
-            'schemas' => OpenApiProducts::schemas() + OpenApiPlanning::schemas() + OpenApiExecution::schemas() + OpenApiManager::schemas() + OpenApiSupply::schemas() + [
+            'schemas' => OpenApiProducts::schemas() + OpenApiPlanning::schemas() + OpenApiExecution::schemas() + OpenApiManager::schemas() + OpenApiSupply::schemas() + OpenApiFinance::schemas() + [
                 'Error' => ['type' => 'object', 'required' => ['status', 'description', 'message', 'request_id'], 'properties' => [
                     'status' => ['type' => 'string', 'enum' => ['error']],
                     'description' => ['type' => 'string', 'example' => 'VALIDATION_FAILED'],

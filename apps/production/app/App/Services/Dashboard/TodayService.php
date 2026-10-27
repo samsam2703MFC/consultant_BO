@@ -159,6 +159,9 @@ class TodayService
                 ['invoice_unlinked', 'warning', 'bi-receipt', 'faktura zakupowa do przypisania', 'faktury zakupowe do przypisania', 'faktur zakupowych do przypisania', ['ZAKUPY', 'ADMINISTRACJA']],
                 ['invoice_price_up', 'warning', 'bi-graph-up-arrow', 'faktura z podwyżką ceny do zatwierdzenia', 'faktury z podwyżką ceny do zatwierdzenia', 'faktur z podwyżką ceny do zatwierdzenia', ['ZAKUPY', 'ADMINISTRACJA', 'KIEROWNIK_PRODUKCJI']],
                 ['inventory_old', 'info', 'bi-clipboard-check', 'inwentaryzacja surowców > 30 dni', 'inwentaryzacje surowców > 30 dni', 'inwentaryzacji surowców > 30 dni', ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
+                // Finanse : faktury usług do sprawdzenia, miesiąc kosztów usług do zamknięcia.
+                ['service_open', 'warning', 'bi-receipt-cutoff', 'faktura usługi do sprawdzenia', 'faktury usług do sprawdzenia', 'faktur usług do sprawdzenia', ['ADMINISTRACJA']],
+                ['service_month', 'warning', 'bi-calendar2-range', 'miesiąc kosztów usług do zamknięcia', 'miesiące kosztów usług do zamknięcia', 'miesięcy kosztów usług do zamknięcia', ['ADMINISTRACJA']],
             ] as [$rule, $tone, $icon, $one, $few, $many, $positions]) {
                 if (!$queue[$rule]) continue;
                 $items[] = ['tone' => $tone, 'icon' => $icon, 'count' => $queue[$rule], 'one' => $one, 'few' => $few, 'many' => $many,

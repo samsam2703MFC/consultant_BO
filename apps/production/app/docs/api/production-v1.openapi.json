@@ -54,6 +54,10 @@
             "description": "Zaopatrzenie : potrzeby surowców i opakowań, stany, zamówienia do dostawców, przyjęcia / Approvisionnement : besoins matières et emballages, stocks, commandes fournisseurs, réceptions"
         },
         {
+            "name": "finance",
+            "description": "Finanse : faktury i koszty (przypisania, zatwierdzenie, wzrosty cen), koszty usług miesiąca → kalkulator kosztów / Finances : factures et coûts, coûts de services du mois → calculateur de coûts"
+        },
+        {
             "name": "docs",
             "description": "OpenAPI"
         }
@@ -8395,7 +8399,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Contrôle par facture : state = no_lines, unmapped (lignes non reliées à une matière), no_order (pas de commande liée), gaps (écarts), clean.",
+                "description": "Contrôle par facture : state = no_lines, unmapped (lignes non reliées à une matière), no_order (pas de commande liée), gaps (écarts), clean. service_guess : la facture ressemble à un service (vendeur Orlen → carburant, Orange → téléphone… ou ≥ 60 % de la valeur des lignes), sinon null. counts : bascule (à valider / validées / réclamations, services, rejetées, règles) ; kpi : à valider (nombre, net), prêtes, hausses de prix, services suspects, services du mois ; categories : catégories du calculateur de coûts.",
                 "parameters": [
                     {
                         "name": "status",
@@ -8410,6 +8414,20 @@
                                 "disputed"
                             ],
                             "description": "défaut : open"
+                        }
+                    },
+                    {
+                        "name": "kind",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "goods",
+                                "service",
+                                "rejected"
+                            ],
+                            "description": "défaut : goods (matières et emballages) ; service : coûts de services (Finances) ; rejected : rejetées"
                         }
                     },
                     {
@@ -9815,6 +9833,228 @@
                 "x-permission": "prod.supply.write"
             }
         },
+        "/supply/invoices/{id}/classify": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Usługa → Finanse / odrzuć / z powrotem do zaopatrzenia / Service → Finances, rejeter, retour aux achats",
+                "operationId": "classifyPurchaseInvoice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "service : coût de l'entreprise (catégorie du calculateur de coûts : fixed:…, media:…, log:… ; service_month défaut = mois d'émission), la facture quitte Zaopatrzenie ; reject : ne concerne pas l'entreprise (note) ; goods : retour aux matières (correspondances mémorisées réappliquées). Lignes d'un service ou d'une facture rejetée sans matière : ni prix, ni stock. rule = true : « toujours pour ce fournisseur » (NIP) — appliquée tout de suite aux autres factures ouvertes de ce NIP (applied) et à l'import KSeF suivant ; goods + rule supprime la règle. INVOICE_PROCESSED (409) : prix importés, commande liée ou décision — la facture reste aux achats. Mois du coût AAAA-MM (pas dans le futur). SERVICE_MONTH_CLOSED (409) : mois des services clôturé — le rouvrir d'abord.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvoiceClassifyInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/supplier-rules": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Reguły dostawców (NIP → usługa / odrzucona) / Règles fournisseurs",
+                "operationId": "listSupplierRules",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierRules"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/supplier-rules/{id}": {
+            "delete": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Usuń regułę / Supprimer la règle",
+                "operationId": "deleteSupplierRule",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrderDeleted"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Les factures suivantes de ce fournisseur reviennent aux achats ; celles déjà classées restent.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
         "/supply/mappings": {
             "get": {
                 "tags": [
@@ -9872,6 +10112,940 @@
                     }
                 ],
                 "x-permission": "prod.supply.read"
+            }
+        },
+        "/finance/workspace": {
+            "get": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Faktury i koszty : przypisz, zatwierdź, sprawdź wzrosty / Factures et coûts : relier, valider, hausses",
+                "operationId": "getFinanceWorkspace",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/FinanceWorkspace"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Poste « Administracja i fakturowanie ». 1. lignes sans matière (suggestion) et factures qui ressemblent à un service ; 2. factures prêtes (un clic), avec avertissements, bloquées ; 3. hausses au-dessus du prix de base sans décision avec effet par mois (achats des 90 derniers jours ÷ 3 × hausse), petites hausses sous finance.small_price_up_pct. Les actions sont celles des factures d'achat.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.read"
+            }
+        },
+        "/finance/services": {
+            "get": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Koszty usług miesiąca / Coûts de services du mois",
+                "operationId": "getServiceMonth",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceMonth"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Factures de services du mois par catégorie : total, mois précédent, écart ; fournisseur présent le mois précédent sans facture = missing (ajouter le coût ou « pas ce mois-ci ») ; calc : montant actuel du calculateur de coûts (lignes manuelles) ; blockers (open, missing, no_amount, not_over, cost_month_locked) ; puces des 6 derniers mois.",
+                "parameters": [
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}$",
+                            "description": "défaut : mois précédent"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.read"
+            },
+            "post": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Koszt bez faktury KSeF / Coût sans facture KSeF",
+                "operationId": "createServiceCost",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Fournisseur étranger, ticket, PDF : montant net en PLN, catégorie, mois (défaut : mois de la date), fichier facultatif (PDF / JPEG / PNG ≤ 5 Mo). Saisi par les Finances : validé tout de suite. INVOICE_EXISTS (409) : même NIP et numéro. Mois du coût AAAA-MM (pas dans le futur). SERVICE_MONTH_CLOSED (409) : mois des services clôturé — le rouvrir d'abord.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ServiceCostInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.write"
+            }
+        },
+        "/finance/services/marks": {
+            "put": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "« Nie w tym miesiącu » / « Pas ce mois-ci »",
+                "operationId": "markServiceMonth",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceMonth"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "none = true : coût attendu (catégorie + fournisseur du mois précédent) sans facture ce mois-ci ; false : annulé. Mois du coût AAAA-MM (pas dans le futur). SERVICE_MONTH_CLOSED (409) : mois des services clôturé — le rouvrir d'abord.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ServiceMarkInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.write"
+            }
+        },
+        "/finance/services/{id}": {
+            "patch": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Kategoria, miesiąc, kwota PLN / Catégorie, mois, montant PLN",
+                "operationId": "updateServiceInvoice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "cost_amount : montant net en PLN compté dans les coûts (null = total net de la facture si en PLN ; obligatoire pour une autre devise). Une facture validée dont la catégorie, le mois ou le montant change revient à vérifier. Mois du coût AAAA-MM (pas dans le futur). SERVICE_MONTH_CLOSED (409) : mois des services clôturé — le rouvrir d'abord.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ServiceInvoiceInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.write"
+            },
+            "delete": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Usuń koszt wpisany ręcznie / Supprimer un coût saisi",
+                "operationId": "deleteServiceCost",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrderDeleted"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Seulement les coûts saisis à la main (SERVICE_NOT_MANUAL, 409) ; une facture KSeF se rejette. Mois du coût AAAA-MM (pas dans le futur). SERVICE_MONTH_CLOSED (409) : mois des services clôturé — le rouvrir d'abord.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.write"
+            }
+        },
+        "/finance/services/{id}/decision": {
+            "post": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Zatwierdź / do sprawdzenia / Valider / à vérifier",
+                "operationId": "decideServiceInvoice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Validée : catégorie, mois et montant PLN requis. Mois du coût AAAA-MM (pas dans le futur). SERVICE_MONTH_CLOSED (409) : mois des services clôturé — le rouvrir d'abord.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ServiceDecisionInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.write"
+            }
+        },
+        "/finance/services/{id}/classify": {
+            "post": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Z powrotem do zaopatrzenia / odrzuć / Retour aux achats, rejeter",
+                "operationId": "classifyServiceInvoice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Même action que POST /supply/invoices/{id}/classify, avec la permission des Finances.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvoiceClassifyInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.write"
+            }
+        },
+        "/finance/services/{id}/file": {
+            "get": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Plik faktury / Fichier de la facture",
+                "operationId": "getServiceInvoiceFile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceFile"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.read"
+            }
+        },
+        "/finance/months/{ym}/accept-all": {
+            "post": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Zatwierdź wszystkie faktury miesiąca / Valider toutes les factures du mois",
+                "operationId": "acceptServiceMonth",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceMonth"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Factures à vérifier avec catégorie et montant PLN ; les autres restent (left). Mois du coût AAAA-MM (pas dans le futur). SERVICE_MONTH_CLOSED (409) : mois des services clôturé — le rouvrir d'abord.",
+                "parameters": [
+                    {
+                        "name": "ym",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}$",
+                            "example": "2026-09"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.write"
+            }
+        },
+        "/finance/months/{ym}/close": {
+            "post": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Zamknij miesiąc → kalkulator kosztów / Clôturer → calculateur de coûts",
+                "operationId": "closeServiceMonth",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceMonth"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Mois terminé (SERVICE_MONTH_NOT_OVER, 409), tout validé, rien de manquant (SERVICE_MONTH_INCOMPLETE, 409). Totaux écrits dans le calculateur de coûts (mois créé s'il manque) : coûts fixes (une ligne par fournisseur), médias (montant du média), logistique (une ligne par type) ; les lignes manuelles de ces catégories sont remplacées et gardées pour la réouverture. COST_MONTH_LOCKED (409) : mois du calculateur fermé. Réponse : le mois + pushed.",
+                "parameters": [
+                    {
+                        "name": "ym",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}$",
+                            "example": "2026-09"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.write"
+            }
+        },
+        "/finance/months/{ym}/reopen": {
+            "post": {
+                "tags": [
+                    "finance"
+                ],
+                "summary": "Otwórz miesiąc usług / Rouvrir le mois des services",
+                "operationId": "reopenServiceMonth",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceMonth"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Lignes écrites depuis les factures retirées du calculateur, lignes manuelles rétablies. SERVICE_MONTH_OPEN (409) : pas clôturé ; COST_MONTH_LOCKED (409).",
+                "parameters": [
+                    {
+                        "name": "ym",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}$",
+                            "example": "2026-09"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.finance.write"
             }
         },
         "/supply/mappings/{id}": {
@@ -28559,12 +29733,21 @@
                                         }
                                     }
                                 },
+                                "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                        "goods",
+                                        "service"
+                                    ],
+                                    "description": "goods : matières et emballages (Zaopatrzenie) ; service : coût de l'entreprise (Finances)"
+                                },
                                 "status": {
                                     "type": "string",
                                     "enum": [
                                         "open",
                                         "accepted",
-                                        "disputed"
+                                        "disputed",
+                                        "rejected"
                                     ]
                                 },
                                 "file": {
@@ -28667,11 +29850,84 @@
                                             "description": "matières au-dessus du prix de base sans décision (bloquant : price_up)"
                                         }
                                     }
+                                },
+                                "service_guess": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
+                                        "label": {
+                                            "type": "string"
+                                        },
+                                        "reason": {
+                                            "type": "string",
+                                            "enum": [
+                                                "seller",
+                                                "lines"
+                                            ]
+                                        }
+                                    }
+                                },
+                                "cost_category": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "service_month": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "cost_amount": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "by_rule": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "goods",
+                            "service",
+                            "rejected"
+                        ]
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "kpi": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                },
+                                "group": {
+                                    "type": "string"
+                                },
+                                "group_label": {
+                                    "type": "string"
+                                },
+                                "label": {
+                                    "type": "string"
                                 }
                             }
                         }
                     },
                     "can_write": {
+                        "type": "boolean"
+                    },
+                    "can_finance": {
                         "type": "boolean"
                     },
                     "auto": {
@@ -28777,12 +30033,21 @@
                             }
                         }
                     },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "goods",
+                            "service"
+                        ],
+                        "description": "goods : matières et emballages (Zaopatrzenie) ; service : coût de l'entreprise (Finances)"
+                    },
                     "status": {
                         "type": "string",
                         "enum": [
                             "open",
                             "accepted",
-                            "disputed"
+                            "disputed",
+                            "rejected"
                         ]
                     },
                     "file": {
@@ -28799,6 +30064,33 @@
                     },
                     "created_at": {
                         "type": "string"
+                    },
+                    "classify": {
+                        "type": "object",
+                        "description": "fenêtre « que faire de cette facture ? » : movable, guess (service suggéré), default_month, rule (règle du NIP), same_nip_open, categories",
+                        "additionalProperties": true
+                    },
+                    "cost_category": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "service_month": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "cost_amount": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "by_rule": {
+                        "type": "boolean"
+                    },
+                    "applied": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "description": "classify : autres factures classées par la règle"
                     },
                     "note": {
                         "type": "string",
@@ -29825,6 +31117,731 @@
                     },
                     "can_write": {
                         "type": "boolean"
+                    }
+                }
+            },
+            "InvoiceClassifyInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "action"
+                ],
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "service",
+                            "reject",
+                            "goods"
+                        ]
+                    },
+                    "cost_category": {
+                        "type": "string",
+                        "maxLength": 40,
+                        "example": "log:FUEL",
+                        "description": "fixed:<catégorie de coût fixe> | media:<code média> | log:<code logistique> (liste : categories)",
+                        "nullable": true
+                    },
+                    "service_month": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                        "example": "2026-09",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true
+                    },
+                    "rule": {
+                        "type": "boolean",
+                        "description": "« toujours pour ce fournisseur » (NIP)"
+                    }
+                }
+            },
+            "SupplierRules": {
+                "type": "object",
+                "properties": {
+                    "rules": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "seller_nip": {
+                                    "type": "string"
+                                },
+                                "seller_name": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "action": {
+                                    "type": "string",
+                                    "enum": [
+                                        "service",
+                                        "reject"
+                                    ]
+                                },
+                                "cost_category": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "category": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "invoices": {
+                                    "type": "integer"
+                                },
+                                "last_invoice": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "created_by": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "created_at": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "FinanceWorkspace": {
+                "type": "object",
+                "properties": {
+                    "map": {
+                        "type": "object",
+                        "properties": {
+                            "invoices": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            },
+                            "invoices_total": {
+                                "type": "integer"
+                            },
+                            "lines_total": {
+                                "type": "integer"
+                            },
+                            "suspects": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            }
+                        }
+                    },
+                    "validate": {
+                        "type": "object",
+                        "properties": {
+                            "ready": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            },
+                            "ready_net": {
+                                "type": "number"
+                            },
+                            "warnings": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            },
+                            "blocked": {
+                                "type": "integer"
+                            },
+                            "services_open": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "price_ups": {
+                        "type": "object",
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": true,
+                                    "properties": {
+                                        "raw_material_id": {
+                                            "type": "integer"
+                                        },
+                                        "invoice_id": {
+                                            "type": "integer"
+                                        },
+                                        "change_pct": {
+                                            "type": "number"
+                                        },
+                                        "base_price": {
+                                            "type": "number"
+                                        },
+                                        "new_price": {
+                                            "type": "number"
+                                        },
+                                        "extra": {
+                                            "type": "number"
+                                        },
+                                        "monthly_quantity": {
+                                            "type": "number"
+                                        },
+                                        "monthly_extra": {
+                                            "type": "number",
+                                            "description": "zł par mois (achats des 90 derniers jours)"
+                                        },
+                                        "small": {
+                                            "type": "boolean"
+                                        },
+                                        "recipes": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            },
+                            "small_pct": {
+                                "type": "number"
+                            },
+                            "small_count": {
+                                "type": "integer"
+                            },
+                            "monthly_total": {
+                                "type": "number"
+                            },
+                            "days": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "service_month": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "kpi": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "counts": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "auto": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    },
+                    "can_finance": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ServiceInvoice": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "issue_date": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "seller_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "seller_nip": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "seller_key": {
+                        "type": "string"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "total_net": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "total_gross": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "cost_amount": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "montant net PLN compté (null : à saisir, autre devise)"
+                    },
+                    "cost_amount_set": {
+                        "type": "boolean"
+                    },
+                    "cost_category": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "service_month": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "open",
+                            "accepted"
+                        ]
+                    },
+                    "by_rule": {
+                        "type": "boolean"
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "decided_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "decided_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "file": {
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": true
+                    },
+                    "ksef_number": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "ServiceMonth": {
+                "type": "object",
+                "properties": {
+                    "month": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "prev_month": {
+                        "type": "string"
+                    },
+                    "next_month": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "closed": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "at": {
+                                "type": "string"
+                            },
+                            "by": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "total": {
+                                "type": "number"
+                            }
+                        }
+                    },
+                    "cost_month": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "status": {
+                                "type": "string",
+                                "enum": [
+                                    "OPEN",
+                                    "LOCKED"
+                                ]
+                            }
+                        }
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "label": {
+                                    "type": "string"
+                                },
+                                "group": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "group_label": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "invoices": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "integer"
+                                            },
+                                            "source": {
+                                                "type": "string"
+                                            },
+                                            "number": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "issue_date": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "seller_name": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "seller_nip": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "seller_key": {
+                                                "type": "string"
+                                            },
+                                            "currency": {
+                                                "type": "string"
+                                            },
+                                            "total_net": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "total_gross": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "cost_amount": {
+                                                "type": "number",
+                                                "nullable": true,
+                                                "description": "montant net PLN compté (null : à saisir, autre devise)"
+                                            },
+                                            "cost_amount_set": {
+                                                "type": "boolean"
+                                            },
+                                            "cost_category": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "service_month": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "open",
+                                                    "accepted"
+                                                ]
+                                            },
+                                            "by_rule": {
+                                                "type": "boolean"
+                                            },
+                                            "note": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "decided_by": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "decided_at": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "file": {
+                                                "type": "object",
+                                                "nullable": true,
+                                                "additionalProperties": true
+                                            },
+                                            "ksef_number": {
+                                                "type": "string",
+                                                "nullable": true
+                                            }
+                                        }
+                                    }
+                                },
+                                "count": {
+                                    "type": "integer"
+                                },
+                                "open": {
+                                    "type": "integer"
+                                },
+                                "total": {
+                                    "type": "number"
+                                },
+                                "prev_total": {
+                                    "type": "number"
+                                },
+                                "diff_pct": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "missing": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                },
+                                "marked": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                },
+                                "state": {
+                                    "type": "string",
+                                    "enum": [
+                                        "open",
+                                        "missing",
+                                        "done",
+                                        "none",
+                                        "empty"
+                                    ]
+                                },
+                                "calc": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "additionalProperties": true
+                                },
+                                "pushed": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "progress": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "totals": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "can_close": {
+                        "type": "boolean"
+                    },
+                    "blockers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "open",
+                                "missing",
+                                "no_amount",
+                                "not_over",
+                                "cost_month_locked"
+                            ]
+                        }
+                    },
+                    "months": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "category_list": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "without_month": {
+                        "type": "integer"
+                    },
+                    "pushed": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "accepted": {
+                        "type": "integer"
+                    },
+                    "left": {
+                        "type": "integer"
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ServiceCostInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "seller_name",
+                    "issue_date",
+                    "cost_category",
+                    "total_net"
+                ],
+                "properties": {
+                    "seller_name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "seller_nip": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "BE0123456789"
+                    },
+                    "number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "issue_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "cost_category": {
+                        "type": "string",
+                        "maxLength": 40,
+                        "example": "log:FUEL",
+                        "description": "fixed:<catégorie de coût fixe> | media:<code média> | log:<code logistique> (liste : categories)"
+                    },
+                    "service_month": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                        "example": "2026-09",
+                        "nullable": true
+                    },
+                    "total_net": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "description": "PLN"
+                    },
+                    "total_gross": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "filename": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "content_base64": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "PDF, JPEG ou PNG ≤ 5 Mo"
+                    }
+                }
+            },
+            "ServiceMarkInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "month",
+                    "cost_category",
+                    "seller_key",
+                    "none"
+                ],
+                "properties": {
+                    "month": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                        "example": "2026-09"
+                    },
+                    "cost_category": {
+                        "type": "string",
+                        "maxLength": 40,
+                        "example": "log:FUEL",
+                        "description": "fixed:<catégorie de coût fixe> | media:<code média> | log:<code logistique> (liste : categories)"
+                    },
+                    "seller_key": {
+                        "type": "string",
+                        "example": "nip:5260215088"
+                    },
+                    "none": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ServiceInvoiceInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "cost_category": {
+                        "type": "string",
+                        "maxLength": 40,
+                        "example": "log:FUEL",
+                        "description": "fixed:<catégorie de coût fixe> | media:<code média> | log:<code logistique> (liste : categories)"
+                    },
+                    "service_month": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                        "example": "2026-09"
+                    },
+                    "cost_amount": {
+                        "type": "number",
+                        "nullable": true,
+                        "minimum": 0
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "ServiceDecisionInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "status"
+                ],
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "accepted",
+                            "open"
+                        ]
                     }
                 }
             },

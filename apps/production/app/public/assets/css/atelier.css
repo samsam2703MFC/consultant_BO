@@ -2057,3 +2057,87 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .st-links a > span { flex: 1; display: grid; }
 .st-links small { color: var(--at-muted); font-size: 12.5px; }
 .st-go { color: var(--at-muted); }
+
+/* --- Faktury zakupowe : rodzaj (surowce / usługi → Finanse / odrzucone), okno « co zrobić z tą fakturą ? » (27/10/2026) --- */
+.tfb-num { font-variant-numeric: tabular-nums; }
+.at-seg button { border: 0; background: transparent; padding: 7px 14px; min-height: 38px; border-radius: 8px; font-weight: 600; font-size: .85rem; color: var(--at-muted); }
+.at-seg button.is-on { background: var(--at-surface); color: var(--at-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.at-seg button .tfb-num { margin-left: 4px; font-weight: 500; }
+.tfb-inv-toggles { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 14px; }
+.tfb-inv-kinds { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.tfb-inv-kind { border: 1px solid var(--at-line-2); background: var(--at-surface); border-radius: 8px; padding: 7px 12px; min-height: 38px; font-size: .85rem; color: var(--at-text); }
+.tfb-inv-kind:hover { border-color: var(--at-primary); color: var(--at-primary); }
+.tfb-inv-kind.is-on { border-color: var(--at-primary); background: var(--at-primary-soft); color: var(--at-primary); font-weight: 600; }
+.tfb-inv-kind .tfb-num { margin-left: 2px; }
+.tfb-inv-tiles { margin-bottom: 14px; }
+.tfb-inv-tiles .at-tile-value { font-variant-numeric: tabular-nums; }
+.tfb-inv-guess { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.tfb-inv-kindbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 10px; border: 1px dashed var(--at-line-2); border-radius: 8px; }
+.tfb-inv-rejected { background: #ece9e6; color: #5d554e; }
+.tfb-inv-service_open { background: #fff1cc; color: #7a5a00; }
+.tfb-inv-service_accepted { background: #d9efe0; color: #22663a; }
+.tfb-inv-rule { background: var(--at-bg-2); color: var(--at-muted); font-weight: 500; }
+.tfb-cls-lines td { font-size: .85rem; }
+.tfb-cls-lines td.text-end { font-variant-numeric: tabular-nums; }
+.tfb-cls-options { display: grid; gap: 10px; }
+.tfb-cls-option { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--at-line-2); border-radius: 10px; cursor: pointer; margin: 0; }
+.tfb-cls-option:has(input:checked) { border-color: var(--at-primary); background: var(--at-primary-soft); }
+.tfb-cls-option > span { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.tfb-cls-option small { color: var(--at-muted); }
+.tfb-cls-option .form-check-input { margin-top: 3px; width: 1.2em; height: 1.2em; flex: none; }
+.tfb-cls-fields { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.tfb-cls-fields > span { display: flex; flex-direction: column; min-width: 210px; }
+.tfb-cls-fields[hidden] { display: none; }
+
+/* --- Finanse : « Faktury i koszty » (3 kroki) i « Koszty usług miesiąca » (makiety 3 i 4) --- */
+.tfb-fin-month { display: flex; align-items: center; gap: 10px; padding: 12px 16px; margin-bottom: 16px; border: 1px solid var(--at-line); border-left: 3px solid var(--at-abricot);
+  border-radius: var(--at-radius-lg); background: var(--at-surface); color: var(--at-text); text-decoration: none; }
+.tfb-fin-month.is-done { border-left-color: var(--at-success); }
+.tfb-fin-month:hover { color: var(--at-text); box-shadow: 0 6px 18px rgba(34, 34, 34, 0.06); }
+.tfb-fin-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 1199px) { .tfb-fin-steps { grid-template-columns: 1fr; } }
+.tfb-fin-step .card-body { display: flex; flex-direction: column; gap: 10px; }
+.tfb-fin-step-head { display: flex; align-items: center; gap: 10px; }
+.tfb-fin-step-n { width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: var(--at-primary-soft); color: var(--at-primary); font-weight: 700; }
+.tfb-fin-sub { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--at-muted); margin: 6px 0 0; }
+.tfb-fin-sub a { color: inherit; }
+.tfb-fin-list { list-style: none; margin: 0; padding: 0; }
+.tfb-fin-list > li { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--at-line); }
+.tfb-fin-list > li:last-child { border-bottom: 0; }
+.tfb-fin-list > li .tfb-num { white-space: nowrap; }
+.tfb-fin-actions { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; flex: none; }
+.tfb-fin-actions .btn { min-height: 34px; }
+.tfb-fin-list.is-stacked > li { flex-direction: column; align-items: stretch; gap: 6px; }
+.tfb-fin-list.is-stacked .tfb-fin-actions { justify-content: flex-start; }
+.tfb-fin-invhead { font-size: .9rem; font-weight: 600; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tfb-fin-invhead a { color: var(--at-text); }
+.tfb-fin-big { display: flex; align-items: baseline; gap: 8px; }
+.tfb-fin-big > span { font-size: 26px; font-weight: 500; line-height: 1.1; white-space: nowrap; }
+.tfb-fin-big small { color: var(--at-muted); }
+.tfb-fin-small summary { cursor: pointer; font-size: .86rem; color: var(--at-muted); padding: 6px 0; }
+.tfb-fin-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; }
+.tfb-fin-chip { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 128px; padding: 8px 12px; border: 1px solid var(--at-line-2); border-radius: 10px;
+  background: var(--at-surface); color: var(--at-text); text-align: left; }
+.tfb-fin-chip small { font-size: 11.5px; color: var(--at-muted); }
+.tfb-fin-chip.is-on { border-color: var(--at-primary); box-shadow: 0 0 0 1px var(--at-primary) inset; }
+.tfb-fin-chip.is-closed small:first-of-type { color: var(--at-success); }
+.tfb-fin-chip.is-missing small:first-of-type { color: var(--at-danger); }
+.tfb-fin-progress { display: grid; grid-template-columns: minmax(220px, 1fr) auto auto; gap: 10px 24px; align-items: center; padding: 14px 16px; margin-bottom: 14px;
+  border: 1px solid var(--at-line); border-radius: var(--at-radius-lg); background: var(--at-surface); }
+.tfb-fin-progress .progress { height: 8px; margin-top: 6px; }
+.tfb-fin-total { display: flex; flex-direction: column; align-items: flex-end; }
+.tfb-fin-total > span { font-size: 22px; font-weight: 500; }
+.tfb-fin-total small { color: var(--at-muted); }
+.tfb-fin-bar-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.tfb-fin-bar-actions .btn { min-height: 38px; }
+.tfb-fin-reasons { grid-column: 1 / -1; }
+@media (max-width: 991px) { .tfb-fin-progress { grid-template-columns: 1fr; } .tfb-fin-total { align-items: flex-start; } .tfb-fin-bar-actions { justify-content: flex-start; } }
+.tfb-fin-add { margin-bottom: 14px; border-color: var(--at-primary); }
+.tfb-fin-table .tfb-fin-group th { background: var(--at-bg-2); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--at-muted); }
+.tfb-fin-table .tfb-fin-cat th { padding-top: 12px; border-bottom-color: var(--at-line-2); text-transform: none; letter-spacing: 0; font-size: .92rem; font-weight: 600; color: var(--at-text); }
+.tfb-fin-table .tfb-fin-cat th.small { font-size: .8rem; font-weight: 400; color: var(--at-muted); }
+.tfb-fin-table .tfb-fin-inv td:first-child, .tfb-fin-table .tfb-fin-missing td:first-child, .tfb-fin-table .tfb-fin-marked td:first-child { padding-left: 34px; }
+.tfb-fin-table .tfb-fin-missing { background: rgba(141, 29, 44, 0.035); }
+.tfb-fin-table .tfb-fin-marked { opacity: .72; }
+.tfb-fin-table td .btn { min-height: 34px; }
+.tfb-fin-seller { font-weight: 500; }

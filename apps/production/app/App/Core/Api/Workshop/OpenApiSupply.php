@@ -50,8 +50,11 @@ final class OpenApiSupply
             'POST /supply/orders/{id:\d+}/cancel' => ['tag' => $t, 'id' => 'cancelSupplierOrder', 'summary' => 'Anuluj zamówienie / Annuler la commande', 'response' => 'SupplierOrder', 'errors' => [404, 409]],
             'DELETE /supply/orders/{id:\d+}' => ['tag' => $t, 'id' => 'deleteSupplierOrder', 'summary' => 'Usuń szkic / Supprimer le brouillon', 'response' => 'SupplierOrderDeleted', 'errors' => [404, 409]],
             'GET /supply/invoices' => ['tag' => $t, 'id' => 'listPurchaseInvoices', 'summary' => 'Faktury zakupowe do kontroli / Factures d\'achat à contrôler', 'response' => 'PurchaseInvoices', 'errors' => [422],
-                'query' => ['status' => ['type' => 'string', 'enum' => ['all', ...InvoiceService::STATUSES], 'description' => 'défaut : open']],
-                'description' => "Contrôle par facture : state = no_lines, unmapped (lignes non reliées à une matière), no_order (pas de commande liée), gaps (écarts), clean."],
+                'query' => ['status' => ['type' => 'string', 'enum' => ['all', ...InvoiceService::STATUSES], 'description' => 'défaut : open'],
+                    'kind' => ['type' => 'string', 'enum' => InvoiceService::KINDS, 'description' => 'défaut : goods (matières et emballages) ; service : coûts de services (Finances) ; rejected : rejetées']],
+                'description' => "Contrôle par facture : state = no_lines, unmapped (lignes non reliées à une matière), no_order (pas de commande liée), gaps (écarts), clean. "
+                    . "service_guess : la facture ressemble à un service (vendeur Orlen → carburant, Orange → téléphone… ou ≥ 60 % de la valeur des lignes), sinon null. "
+                    . "counts : bascule (à valider / validées / réclamations, services, rejetées, règles) ; kpi : à valider (nombre, net), prêtes, hausses de prix, services suspects, services du mois ; categories : catégories du calculateur de coûts."],
             'POST /supply/invoices/ksef/search' => ['tag' => $t, 'id' => 'searchKsefPurchaseInvoices', 'summary' => 'Faktury w KSeF za okres / Factures KSeF de la période', 'body' => 'KsefSearchInput', 'response' => 'KsefSearchResult', 'errors' => [400, 422],
                 'description' => "Lecture seule dans KSeF (acheteur, date d'émission, < 3 mois) ; rien n'est enregistré. KSEF_UNAVAILABLE (422) : KSeF non configuré ou indisponible."],
             'POST /supply/invoices/ksef/import' => ['tag' => $t, 'id' => 'importKsefPurchaseInvoices', 'summary' => 'Import faktur z KSeF / Import de factures KSeF', 'body' => 'KsefImportInput', 'response' => 'KsefImportResult', 'ok' => 201, 'errors' => [400, 422],
@@ -145,7 +148,8 @@ final class OpenApiSupply
             'is_correction' => ['type' => 'boolean', 'description' => 'facture de correction (KSeF KOR, « faktura korygująca », total négatif) : ni prix de base, ni historique des prix, ni stock ; avertissement correction'],
             'currency' => ['type' => 'string'], 'total_net' => $nNum, 'total_gross' => $nNum,
             'order' => ['type' => 'object', 'nullable' => true, 'properties' => ['id' => ['type' => 'integer'], 'code' => ['type' => 'string'], 'status' => ['type' => 'string']]],
-            'status' => ['type' => 'string', 'enum' => InvoiceService::STATUSES], 'file' => ['type' => 'object', 'nullable' => true, 'properties' => ['filename' => ['type' => 'string'], 'mime' => ['type' => 'string']]],
+            'kind' => ['type' => 'string', 'enum' => ['goods', 'service'], 'description' => 'goods : matières et emballages (Zaopatrzenie) ; service : coût de l\'entreprise (Finances)'],
+            'status' => ['type' => 'string', 'enum' => [...InvoiceService::STATUSES, 'rejected']], 'file' => ['type' => 'object', 'nullable' => true, 'properties' => ['filename' => ['type' => 'string'], 'mime' => ['type' => 'string']]],
             'created_at' => ['type' => 'string'],
         ];
         $control = ['type' => 'object', 'properties' => [
@@ -244,8 +248,15 @@ final class OpenApiSupply
             ]],
             'SupplierOrderDeleted' => ['type' => 'object', 'properties' => ['deleted' => ['type' => 'boolean'], 'id' => ['type' => 'integer']]],
             'InvoiceFile' => ['type' => 'object', 'properties' => ['filename' => ['type' => 'string'], 'mime' => ['type' => 'string'], 'size' => ['type' => 'integer'], 'content_base64' => ['type' => 'string']]],
-            'PurchaseInvoices' => ['type' => 'object', 'properties' => ['invoices' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => $invoice + ['control' => $control, 'ready' => $ready]]], 'can_write' => ['type' => 'boolean'], 'auto' => $auto]],
+            'PurchaseInvoices' => ['type' => 'object', 'properties' => ['invoices' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => $invoice + ['control' => $control, 'ready' => $ready,
+                'service_guess' => ['type' => 'object', 'nullable' => true, 'properties' => ['code' => ['type' => 'string'], 'label' => ['type' => 'string'], 'reason' => ['type' => 'string', 'enum' => ['seller', 'lines']]]],
+                'cost_category' => $nStr, 'service_month' => $nStr, 'cost_amount' => $nNum, 'by_rule' => ['type' => 'boolean']]]],
+                'kind' => ['type' => 'string', 'enum' => InvoiceService::KINDS], 'counts' => ['type' => 'object', 'additionalProperties' => true], 'kpi' => ['type' => 'object', 'additionalProperties' => true],
+                'categories' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['code' => ['type' => 'string'], 'group' => ['type' => 'string'], 'group_label' => ['type' => 'string'], 'label' => ['type' => 'string']]]],
+                'can_write' => ['type' => 'boolean'], 'can_finance' => ['type' => 'boolean'], 'auto' => $auto]],
             'PurchaseInvoice' => ['type' => 'object', 'properties' => $invoice + [
+                'classify' => ['type' => 'object', 'description' => 'fenêtre « que faire de cette facture ? » : movable, guess (service suggéré), default_month, rule (règle du NIP), same_nip_open, categories', 'additionalProperties' => true],
+                'cost_category' => $nStr, 'service_month' => $nStr, 'cost_amount' => $nNum, 'by_rule' => ['type' => 'boolean'], 'applied' => ['type' => 'array', 'items' => ['type' => 'integer'], 'description' => 'classify : autres factures classées par la règle'],
                 'note' => $nStr, 'decided_at' => $nStr, 'control' => $control, 'text' => ['type' => 'string', 'nullable' => true, 'description' => 'texte lu dans le PDF'],
                 'lines' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'id' => ['type' => 'integer'], 'line_no' => ['type' => 'integer'], 'name' => ['type' => 'string', 'description' => 'nom chez le fournisseur'], 'code' => $nStr,

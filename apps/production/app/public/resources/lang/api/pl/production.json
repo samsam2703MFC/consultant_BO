@@ -111,7 +111,15 @@
     "DEV_TRIAL_NOT_ALLOWED": "Na etapie „{stage}” nie robi się już testu — produkt jest wprowadzany w biurze.",
     "DEV_RECIPE_NOT_READY": "Recepturę zatwierdza się po udanym teście 2 (etap teraz: „{stage}”).",
     "DEV_RECIPE_MISSING": "Produkt nie ma jeszcze receptury w ERP — biuro musi ją wybrać przed zatwierdzeniem.",
-    "DAY_CLOSED": "Produkcja tego dnia jest już zatwierdzona — poprawki tylko w ERP (kierownik produkcji)."
+    "DAY_CLOSED": "Produkcja tego dnia jest już zatwierdzona — poprawki tylko w ERP (kierownik produkcji).",
+    "INVOICE_NOT_GOODS": "To nie jest faktura surowców i opakowań (usługa w Finansach albo odrzucona) — najpierw « z powrotem do zaopatrzenia ».",
+    "INVOICE_PROCESSED": "Faktura jest już przetworzona w zaopatrzeniu (ceny, zamówienie albo decyzja) — zostaje w zaopatrzeniu.",
+    "SERVICE_MONTH_CLOSED": "Koszty usług za {month} są zamknięte — otwórz miesiąc w Finansach, aby coś zmienić.",
+    "SERVICE_MONTH_OPEN": "Miesiąc {month} nie jest zamknięty.",
+    "SERVICE_MONTH_NOT_OVER": "Miesiąc {month} jeszcze trwa — koszty usług zamyka się po jego końcu.",
+    "SERVICE_MONTH_INCOMPLETE": "Miesiąca nie można zamknąć : do sprawdzenia {open}, brakuje {missing}, bez kwoty PLN {no_amount}.",
+    "COST_MONTH_LOCKED": "Miesiąc {month} jest zamknięty w kalkulatorze kosztów — otwórz go tam najpierw.",
+    "SERVICE_NOT_MANUAL": "Usunąć można tylko koszt wpisany ręcznie — fakturę z KSeF odrzuć w Zaopatrzeniu."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -214,7 +222,9 @@
     "WASTE_PHOTO_TOO_MANY": "Najwyżej {max} zdjęcia na stratę.",
     "WASTE_PHOTO_INVALID": "Zdjęcie nie pochodzi z tego tabletu albo jest już użyte — zrób je jeszcze raz.",
     "WASTE_QTY_REQUIRED": "Podaj ilość straty do zdjęć.",
-    "INVALID_LIST": "Nieprawidłowa lista."
+    "INVALID_LIST": "Nieprawidłowa lista.",
+    "NO_SELLER_NIP": "Faktura bez NIP sprzedawcy — reguła « zawsze dla dostawcy » niemożliwa.",
+    "INVALID_NIP": "Nieprawidłowy NIP (cyfry, opcjonalnie kod kraju)."
   },
   "fields": {
     "code": "kod",
@@ -485,7 +495,18 @@
     "waste_quantity": "ilość straty",
     "waste_reason": "powód straty",
     "waste_note": "notatka straty",
-    "produced": "zrobione"
+    "produced": "zrobione",
+    "cost_category": "kategoria kosztów",
+    "service_month": "miesiąc kosztu",
+    "cost_amount": "kwota do kosztów (PLN)",
+    "action": "akcja",
+    "rule": "reguła dostawcy",
+    "seller_key": "dostawca",
+    "none": "nie w tym miesiącu",
+    "seller_name": "sprzedawca",
+    "seller_nip": "NIP sprzedawcy",
+    "total_net": "kwota netto",
+    "total_gross": "kwota brutto"
   },
   "entities": {
     "test_product": "produkt testowy",
@@ -515,7 +536,10 @@
     "purchase_invoice_line": "linia faktury",
     "purchase_invoice_mapping": "przypisanie nazwy",
     "invoice_file": "plik faktury",
-    "tour": "trasa"
+    "tour": "trasa",
+    "purchase_invoice_rule": "reguła dostawcy",
+    "service_invoice": "faktura usługi",
+    "service_month": "miesiąc kosztów usług"
   },
   "documents": {
     "team_sheet_title": "Plan zespołu",

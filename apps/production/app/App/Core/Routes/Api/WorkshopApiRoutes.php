@@ -18,6 +18,7 @@ use App\Controllers\Api\Workshop\PlanningController;
 use App\Controllers\Api\Workshop\SchedulingController;
 use App\Controllers\Api\Workshop\ShiftTemplateController;
 use App\Controllers\Api\Workshop\TeamController;
+use App\Controllers\Api\Workshop\FinanceController;
 use App\Controllers\Api\Workshop\InvoiceController;
 use App\Controllers\Api\Workshop\SupplyController;
 use App\Controllers\Api\Workshop\TimeStudyController;
@@ -175,8 +176,25 @@ final class WorkshopApiRoutes
             ['POST', '/supply/invoices/{id:\d+}/receive', InvoiceController::class, 'receive', 'prod.supply.write'],
             ['POST', '/supply/invoices/{id:\d+}/prices', InvoiceController::class, 'importPrices', 'prod.supply.write'],
             ['POST', '/supply/invoices/{id:\d+}/price-decisions', InvoiceController::class, 'decidePrices', 'prod.supply.write'],
+            // Rodzaj faktury : usługa → Finanse, odrzucona, z powrotem do zaopatrzenia ; reguły dostawców (NIP).
+            ['POST', '/supply/invoices/{id:\d+}/classify', InvoiceController::class, 'classify', 'prod.supply.write'],
+            ['GET', '/supply/supplier-rules', InvoiceController::class, 'rules', 'prod.supply.read'],
+            ['DELETE', '/supply/supplier-rules/{id:\d+}', InvoiceController::class, 'deleteRule', 'prod.supply.write'],
             ['DELETE', '/supply/invoices/{id:\d+}', InvoiceController::class, 'delete', 'prod.supply.write'],
             ['GET', '/supply/mappings', InvoiceController::class, 'mappings', 'prod.supply.read'],
+            // Finanse : « Faktury i koszty » (Administracja i fakturowanie) i koszty usług miesiąca → kalkulator kosztów.
+            ['GET', '/finance/workspace', FinanceController::class, 'workspace', 'prod.finance.read'],
+            ['GET', '/finance/services', FinanceController::class, 'month', 'prod.finance.read'],
+            ['POST', '/finance/services', FinanceController::class, 'create', 'prod.finance.write'],
+            ['PUT', '/finance/services/marks', FinanceController::class, 'mark', 'prod.finance.write'],
+            ['PATCH', '/finance/services/{id:\d+}', FinanceController::class, 'update', 'prod.finance.write'],
+            ['POST', '/finance/services/{id:\d+}/decision', FinanceController::class, 'decide', 'prod.finance.write'],
+            ['POST', '/finance/services/{id:\d+}/classify', FinanceController::class, 'classify', 'prod.finance.write'],
+            ['GET', '/finance/services/{id:\d+}/file', FinanceController::class, 'file', 'prod.finance.read'],
+            ['DELETE', '/finance/services/{id:\d+}', FinanceController::class, 'delete', 'prod.finance.write'],
+            ['POST', '/finance/months/{ym:\d{4}-\d{2}}/accept-all', FinanceController::class, 'acceptAll', 'prod.finance.write'],
+            ['POST', '/finance/months/{ym:\d{4}-\d{2}}/close', FinanceController::class, 'close', 'prod.finance.write'],
+            ['POST', '/finance/months/{ym:\d{4}-\d{2}}/reopen', FinanceController::class, 'reopen', 'prod.finance.write'],
             ['DELETE', '/supply/mappings/{id:\d+}', InvoiceController::class, 'deleteMapping', 'prod.supply.write'],
             ['GET', '/supply/prices', InvoiceController::class, 'prices', 'prod.supply.read'],
             ['GET', '/supply/materials/{id:\d+}/prices', InvoiceController::class, 'materialPrices', 'prod.supply.read'],

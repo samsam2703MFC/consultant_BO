@@ -10,12 +10,17 @@ namespace App\Repositories\Workshop;
 final class InvoiceRepository extends WorkshopRepository
 {
     protected string $table = 'n_inv';
-    protected array $writable = ['source', 'ksef_number', 'id_supplier', 'seller_nip', 'seller_name', 'number', 'issue_date', 'currency', 'total_net', 'total_gross', 'is_correction',
-        'id_po', 'status', 'note', 'decided_by', 'decided_at', 'prices_imported_at', 'prices_imported_by', 'created_by'];
+    protected array $writable = ['source', 'kind', 'cost_category', 'service_month', 'cost_amount', 'id_rule', 'ksef_number', 'id_supplier', 'seller_nip', 'seller_name', 'number',
+        'issue_date', 'currency', 'total_net', 'total_gross', 'is_correction', 'id_po', 'status', 'note', 'decided_by', 'decided_at', 'prices_imported_at', 'prices_imported_by', 'created_by'];
 
-    public function invoices(?string $status): array
+    /**
+     * Lista faktur : rodzaj goods (surowce i opakowania) albo service (koszty firmy), status (null = wszystkie poza odrzuconymi) ;
+     * $kind null = odrzucone (status rejected, każdy rodzaj).
+     */
+    public function invoices(?string $status, ?string $kind = 'goods'): array
     {
-        $where = $status === null ? '' : ' WHERE i.status = ?';
+        [$where, $params] = $kind === null ? [" WHERE i.status = 'rejected'", []]
+            : ($status === null ? [" WHERE i.kind = ? AND i.status <> 'rejected'", [$kind]] : [' WHERE i.kind = ? AND i.status = ?', [$kind, $status]]);
         return $this->all(
             'SELECT i.*, s.name AS supplier_name, p.code AS po_code, p.status AS po_status, f.filename, f.mime,
                     (SELECT COUNT(*) FROM n_inv_line l WHERE l.id_inv = i.id) AS line_count,
@@ -25,8 +30,61 @@ final class InvoiceRepository extends WorkshopRepository
              LEFT JOIN n_po p ON p.id = i.id_po
              LEFT JOIN n_inv_file f ON f.id_inv = i.id' . $where . '
              ORDER BY COALESCE(i.issue_date, DATE(i.created_at)) DESC, i.id DESC LIMIT 300',
-            $status === null ? [] : [$status]
+            $params
         );
+    }
+
+    /** Liczby do przełącznika : rodzaj × status (bez odrzuconych) i odrzucone, z sumą netto. */
+    public function counts(): array
+    {
+        return $this->all("SELECT IF(status = 'rejected', 'rejected', kind) AS kind, status, COUNT(*) AS n, COALESCE(SUM(total_net), 0) AS net FROM n_inv GROUP BY 1, 2");
+    }
+
+    /** Otwarte faktury surowców tego sprzedawcy (NIP), jeszcze nieprzetworzone : do reguły « zawsze dla dostawcy ». */
+    public function openGoodsOfNip(string $nip, int $exceptId): array
+    {
+        return $this->all("SELECT * FROM n_inv WHERE seller_nip = ? AND id <> ? AND kind = 'goods' AND status = 'open' AND prices_imported_at IS NULL AND id_po IS NULL",
+            [$nip, $exceptId]);
+    }
+
+    /** Linie bez przypisania surowca (faktura sklasyfikowana jako usługa / odrzucona : bez wpływu na ceny i stany). */
+    public function unmapLines(int $invoiceId): void
+    {
+        $this->db->prepare('UPDATE n_inv_line SET id_raw_material = NULL, factor = NULL, price_decision = NULL, price_ok_price = NULL, price_ok_by = NULL, price_ok_at = NULL WHERE id_inv = ?')
+            ->execute([$invoiceId]);
+    }
+
+    // --- Reguły dostawców (NIP → usługa albo odrzucona) ----------------------------------------------------------------
+
+    public function rule(string $nip): ?array
+    {
+        return $this->all('SELECT * FROM n_inv_supplier_rule WHERE seller_nip = ?', [$nip])[0] ?? null;
+    }
+
+    public function saveRule(string $nip, ?string $name, string $action, ?string $category, ?int $userId): int
+    {
+        $this->db->prepare('INSERT INTO n_inv_supplier_rule (seller_nip, seller_name, action, cost_category, created_by) VALUES (?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE seller_name = VALUES(seller_name), action = VALUES(action), cost_category = VALUES(cost_category)')
+            ->execute([$nip, $name !== null ? mb_substr($name, 0, 255) : null, $action, $category, $userId]);
+        return (int) $this->rule($nip)['id'];
+    }
+
+    public function rules(): array
+    {
+        return $this->all("SELECT r.*, COALESCE(NULLIF(u.displayed_name, ''), u.login) AS created_by_name,
+                                  (SELECT COUNT(*) FROM n_inv i WHERE i.seller_nip = r.seller_nip) AS invoices,
+                                  (SELECT MAX(i.issue_date) FROM n_inv i WHERE i.seller_nip = r.seller_nip) AS last_invoice
+                           FROM n_inv_supplier_rule r LEFT JOIN user u ON u.id = r.created_by ORDER BY r.action, r.seller_name, r.seller_nip");
+    }
+
+    public function findRule(int $id): ?array
+    {
+        return $this->all('SELECT * FROM n_inv_supplier_rule WHERE id = ?', [$id])[0] ?? null;
+    }
+
+    public function deleteRule(int $id): void
+    {
+        $this->db->prepare('DELETE FROM n_inv_supplier_rule WHERE id = ?')->execute([$id]);
     }
 
     public function invoice(int $id): ?array

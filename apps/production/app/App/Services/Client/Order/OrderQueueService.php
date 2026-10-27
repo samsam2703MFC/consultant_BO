@@ -36,6 +36,9 @@ final class OrderQueueService
         'invoice_unlinked' => ['label' => 'Faktura zakupowa do przypisania', 'icon' => 'bi-receipt', 'positions' => ['ZAKUPY', 'ADMINISTRACJA']],
         'invoice_price_up' => ['label' => 'Podwyżka ceny surowca do zatwierdzenia', 'icon' => 'bi-graph-up-arrow', 'positions' => ['ZAKUPY', 'ADMINISTRACJA', 'KIEROWNIK_PRODUKCJI']],
         'inventory_old' => ['label' => 'Inwentaryzacja surowców > 30 dni', 'icon' => 'bi-clipboard-check', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
+        // Finanse (27/10/2026) : faktury usług do sprawdzenia, miesiąc kosztów usług do zamknięcia (finance.service_due_day).
+        'service_open' => ['label' => 'Faktura usługi do sprawdzenia', 'icon' => 'bi-receipt-cutoff', 'positions' => ['ADMINISTRACJA']],
+        'service_month' => ['label' => 'Koszty usług miesiąca do zamknięcia', 'icon' => 'bi-calendar2-range', 'positions' => ['ADMINISTRACJA']],
         // Reklamacje i zwroty (P8) : decyzja w terminie alerts.complaint_days, zamiennik do wysłania.
         'complaint_open' => ['label' => 'Reklamacja bez decyzji', 'icon' => 'bi-chat-square-text', 'positions' => ['ADMINISTRACJA', 'JAKOSC']],
         'return_to_ship' => ['label' => 'Zamiennik do wysłania', 'icon' => 'bi-box-arrow-up', 'positions' => ['LOGISTYKA']],
@@ -257,6 +260,28 @@ final class OrderQueueService
                 'note' => trim(($inv['id_po'] === null ? 'bez zamówienia' : '') . ((int) $inv['unmapped'] ? ($inv['id_po'] === null ? ' · ' : '') . 'pozycje bez surowca : ' . (int) $inv['unmapped'] : '')),
             ], [
                 ['label' => 'Kontrola faktury', 'url' => '/workshop/supply#tab=invoices&inv=' . $id, 'primary' => true],
+                ['label' => 'Faktury i koszty', 'url' => '/finances/invoices'],
+            ]);
+        }
+        foreach ($this->repo->openServiceInvoices() as $inv) {
+            $out[] = $this->item('service_open', 'service:' . (int) $inv['id'], $inv['issue_date'] ? date('Y-m-d', strtotime($inv['issue_date'] . ' +' . self::INVOICE_DAYS . ' days')) : null, [
+                'customer' => $inv['supplier'], 'customer_id' => null, 'supplier' => true,
+                'title' => 'Faktura ' . $inv['number'] . ($inv['issue_date'] ? ' z ' . date('d.m.Y', strtotime((string) $inv['issue_date'])) : ''),
+                'detail' => number_format((float) $inv['total_net'], 2, ',', ' ') . ' ' . ($inv['currency'] ?: 'PLN') . ' netto',
+                'note' => 'koszt firmy, miesiąc ' . $inv['service_month'],
+            ], [
+                ['label' => 'Koszty usług miesiąca', 'url' => '/finances/costs#m=' . $inv['service_month'], 'primary' => true],
+            ]);
+        }
+        // Poprzedni miesiąc kosztów usług niezamknięty od finance.service_due_day (gdy są faktury usług w nim albo miesiąc wcześniej).
+        $prev = $now->modify('first day of last month')->format('Y-m');
+        $dueDay = min(28, max(1, (int) $this->params->get('finance.service_due_day', '10')));
+        if ((int) $now->format('j') >= $dueDay && !$this->repo->serviceMonthClosed($prev) && $this->repo->serviceInvoicesAround($prev) > 0) {
+            $out[] = $this->item('service_month', 'service-month:' . $prev, $now->format('Y-m-') . sprintf('%02d', $dueDay), [
+                'customer' => 'Finanse', 'customer_id' => null, 'supplier' => true,
+                'title' => 'Koszty usług ' . $prev, 'detail' => 'zatwierdź, uzupełnij brakujące i zamknij miesiąc', 'note' => 'sumy do kalkulatora kosztów (Rentowność)',
+            ], [
+                ['label' => 'Koszty usług miesiąca', 'url' => '/finances/costs#m=' . $prev, 'primary' => true],
             ]);
         }
         foreach ($this->invoices?->pendingPriceUps() ?? [] as $inv) {

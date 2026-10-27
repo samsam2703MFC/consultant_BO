@@ -19,7 +19,7 @@ final class PriceHistoryRepository extends WorkshopRepository
                     i.id_supplier, COALESCE(NULLIF(TRIM(s.name), ''), i.seller_name) AS supplier,
                     l.quantity * COALESCE(NULLIF(l.factor, 0), 1) AS qty_base, COALESCE(l.net_value, l.unit_price * l.quantity) AS net
                 FROM n_inv_line l JOIN n_inv i ON i.id = l.id_inv LEFT JOIN supplier s ON s.id = i.id_supplier
-                WHERE l.id_raw_material IS NOT NULL AND i.status <> 'disputed' AND i.is_correction = 0 AND COALESCE(i.issue_date, DATE(i.created_at)) >= ?{$in}
+                WHERE l.id_raw_material IS NOT NULL AND i.status NOT IN ('disputed', 'rejected') AND i.kind = 'goods' AND i.is_correction = 0 AND COALESCE(i.issue_date, DATE(i.created_at)) >= ?{$in}
                 ORDER BY day, i.id, l.id", [$since, ...$params]);
     }
 

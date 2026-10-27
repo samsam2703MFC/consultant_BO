@@ -140,6 +140,15 @@
                     </a>
                 </li>
 
+                {# Finanse (stanowisko Administracja i fakturowanie) : faktury i koszty + koszty usług miesiąca (PageTabs « finance ») #}
+                {% set g = page_tab_groups().finance %}
+                <li class="sidebar-item">
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
+                    </a>
+                </li>
+
                 <li class="sidebar-item">
                     <a href="{{ root }}/purchasing" class="sidebar-link">
                         <i class="bi bi-wallet2"></i>
@@ -541,6 +550,15 @@
                 <li><a href="{{ root }}/workshop/supply#tab=invoices" data-where="Zakupy › Zaopatrzenie › Faktury"><i class="bi bi-list-ol"></i> Faktura krok po kroku : dostawca → przypisanie surowców → kontrola (zamówienie, skok ceny, suma) → ceny + stan + akceptacja</a></li>
                 <li><a href="{{ root }}/other-settings#params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-robot"></i> Automat faktur zakupowych : ceny przy imporcie (supply.invoice_auto_prices), ceny + stan + akceptacja (supply.invoice_auto_full), próg skoku ceny % (supply.invoice_price_alert_pct)</a></li>
                 <li><a href="{{ root }}/workshop/supply#tab=invoices" data-where="Zakupy › Zaopatrzenie › Faktury"><i class="bi bi-graph-up-arrow"></i> Podwyżka ceny surowca na fakturze (KSeF, XML, PDF) ponad cenę bazową kalkulacji receptur : zatwierdzenie — « Nowa cena bazowa » albo « Bez zmian », kto i kiedy ; nigdy automatycznie</a></li>
+                <li><a href="{{ root }}/workshop/supply#tab=invoices" data-where="Zakupy › Zaopatrzenie › Faktury"><i class="bi bi-toggles"></i> Faktury KSeF : przełącznik « Do walidacji / Zatwierdzone » i rodzaj « Surowce i opakowania / Usługi → Finanse / Odrzucone »</a></li>
+                <li><a href="{{ root }}/workshop/supply#tab=invoices" data-where="Zakupy › Zaopatrzenie › Faktury"><i class="bi bi-slash-circle"></i> Odrzuć fakturę (nie dotyczy firmy) albo przenieś usługę do Finansów (paliwo Orlen, telefon, czynsz, prąd…) — okno « co zrobić z tą fakturą ? »</a></li>
+                <li><a href="{{ root }}/workshop/supply#tab=invoices&inv=rules" data-where="Zakupy › Zaopatrzenie › Faktury › Reguły dostawców"><i class="bi bi-funnel"></i> Reguły dostawców (NIP) : zawsze usługa → Finanse albo zawsze odrzucona — dostawca nie pojawia się w zaopatrzeniu, kolejne faktury z KSeF klasyfikowane przy imporcie</a></li>
+                <li><a href="{{ root }}/workshop/supply#tab=invoices&ik=service" data-where="Zakupy › Zaopatrzenie › Faktury › Usługi"><i class="bi bi-arrow-right-square"></i> Faktury usług przeniesione do Finansów (kategoria, miesiąc) i powrót do zaopatrzenia</a></li>
+                <li><a href="{{ root }}/finances/invoices" data-where="Zakupy › Finanse : faktury i koszty"><i class="bi bi-inboxes"></i> Faktury i koszty (Administracja i fakturowanie) : przypisz nowe pozycje faktur, zatwierdź faktury, sprawdź wzrosty cen ze skutkiem na miesiąc</a></li>
+                <li><a href="{{ root }}/finances/invoices" data-where="Zakupy › Finanse : faktury i koszty"><i class="bi bi-graph-up-arrow"></i> Wzrosty cen surowców do decyzji : akceptuj cenę / zostaw starą / negocjuj, drobne wzrosty (poniżej 5 %) jednym kliknięciem</a></li>
+                <li><a href="{{ root }}/finances/costs" data-where="Zakupy › Finanse : faktury i koszty › Koszty usług miesiąca"><i class="bi bi-calendar2-range"></i> Koszty usług miesiąca : faktury usług po kategoriach (koszty stałe, media, logistyka), porównanie z poprzednim miesiącem, brakujące koszty</a></li>
+                <li><a href="{{ root }}/finances/costs" data-where="Zakupy › Finanse : faktury i koszty › Koszty usług miesiąca"><i class="bi bi-lock"></i> Zamknij miesiąc kosztów usług → sumy do kalkulatora kosztów (Rentowność) ; « nie w tym miesiącu », otwórz ponownie</a></li>
+                <li><a href="{{ root }}/finances/costs" data-where="Zakupy › Finanse : faktury i koszty › Koszty usług miesiąca"><i class="bi bi-plus-lg"></i> Dodaj koszt bez faktury KSeF (dostawca zagraniczny, paragon, PDF) do kosztów miesiąca</a></li>
                 <li><a href="{{ root }}/client-orders/queue?rule=invoice_price_up" data-where="Sprzedaż › Do obsłużenia"><i class="bi bi-graph-up-arrow"></i> Do obsłużenia — faktury z podwyżką ceny surowca do zatwierdzenia (cena wyższa niż cena bazowa receptur)</a></li>
                 <li><a href="{{ root }}/other-settings#params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-percent"></i> Tolerancja podwyżki ceny z faktury bez zatwierdzenia (parametr supply.invoice_price_up_pct, 0 = każda podwyżka do zatwierdzenia)</a></li>
                 <li><a href="{{ root }}/workshop/supply#tab=prices" data-where="Zakupy › Zaopatrzenie › Ceny i dostawcy"><i class="bi bi-calculator"></i> Koszt własny produktu (receptury) po najwyższej zatwierdzonej cenie surowca, nie ostatniej : kolumna « Cena bazowa (koszt) », niższa cena z faktury lub oferty jej nie obniża</a></li>

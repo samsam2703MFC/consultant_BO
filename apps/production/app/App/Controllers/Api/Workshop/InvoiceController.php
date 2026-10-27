@@ -18,7 +18,10 @@ final class InvoiceController
     {
     }
 
-    public function list(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->list((string) $request->query('status', 'open'), $request->context)); }
+    public function list(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->list((string) $request->query('status', 'open'), $request->context, (string) $request->query('kind', 'goods'))); }
+    public function classify(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->classify($request->id(), $request->body(), $request->context)); }
+    public function rules(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->rules($request->context)); }
+    public function deleteRule(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->deleteRule($request->id(), $request->context)); }
     public function detail(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->detail($request->id(), $request->context)); }
     public function ksefSearch(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->ksefSearch($request->body(), $request->context)); }
     public function ksefImport(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->ksefImport($request->body(), $request->context), 201); }

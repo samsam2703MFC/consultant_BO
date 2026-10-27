@@ -45,7 +45,7 @@ class MaterialPriceChangelogRepository extends BaseRepository
         $st = $this->db->prepare("SELECT 'invoice' AS kind, COALESCE(i.issue_date, DATE(i.created_at)) AS day, i.id_supplier,
                     SUM(COALESCE(l.net_value, l.unit_price * l.quantity)) / SUM(l.quantity * COALESCE(NULLIF(l.factor, 0), 1)) AS price
                 FROM n_inv_line l JOIN n_inv i ON i.id = l.id_inv
-                WHERE l.id_raw_material = ? AND (i.status = 'accepted' OR i.prices_imported_at IS NOT NULL) AND i.status <> 'disputed' AND i.is_correction = 0
+                WHERE l.id_raw_material = ? AND (i.status = 'accepted' OR i.prices_imported_at IS NOT NULL) AND i.status <> 'disputed' AND i.kind = 'goods' AND i.is_correction = 0
                   AND COALESCE(l.price_decision, '') <> 'keep' AND l.quantity > 0 AND COALESCE(i.issue_date, DATE(i.created_at)) >= ?
                 GROUP BY i.id
                 UNION ALL

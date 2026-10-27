@@ -111,7 +111,15 @@
     "DEV_TRIAL_NOT_ALLOWED": "À l’étape « {stage} », on ne fait plus d’essai — le produit est lancé au bureau.",
     "DEV_RECIPE_NOT_READY": "La recette se valide après un second test réussi (étape actuelle : « {stage} »).",
     "DEV_RECIPE_MISSING": "Le produit n’a pas encore de recette dans l’ERP — le bureau doit la choisir avant la validation.",
-    "DAY_CLOSED": "La production de ce jour est déjà validée — corrections seulement dans l’ERP (responsable de production)."
+    "DAY_CLOSED": "La production de ce jour est déjà validée — corrections seulement dans l’ERP (responsable de production).",
+    "INVOICE_NOT_GOODS": "Ce n’est pas une facture de matières et emballages (service aux Finances ou rejetée) — d’abord « retour aux achats ».",
+    "INVOICE_PROCESSED": "La facture est déjà traitée aux achats (prix, commande ou décision) — elle reste aux achats.",
+    "SERVICE_MONTH_CLOSED": "Les coûts de services de {month} sont clôturés — rouvrez le mois dans Finances pour modifier.",
+    "SERVICE_MONTH_OPEN": "Le mois {month} n’est pas clôturé.",
+    "SERVICE_MONTH_NOT_OVER": "Le mois {month} n’est pas terminé — les coûts de services se clôturent après sa fin.",
+    "SERVICE_MONTH_INCOMPLETE": "Mois impossible à clôturer : à vérifier {open}, manquants {missing}, sans montant PLN {no_amount}.",
+    "COST_MONTH_LOCKED": "Le mois {month} est fermé dans le calculateur de coûts — rouvrez-le d’abord.",
+    "SERVICE_NOT_MANUAL": "Seul un coût saisi à la main se supprime — une facture KSeF se rejette dans Zaopatrzenie."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -214,7 +222,9 @@
     "WASTE_PHOTO_TOO_MANY": "{max} photos au maximum par perte.",
     "WASTE_PHOTO_INVALID": "Photo d’une autre tablette ou déjà utilisée — reprenez-la.",
     "WASTE_QTY_REQUIRED": "Indiquez la quantité perdue pour ces photos.",
-    "INVALID_LIST": "Liste invalide."
+    "INVALID_LIST": "Liste invalide.",
+    "NO_SELLER_NIP": "Facture sans NIP du vendeur — règle « toujours pour ce fournisseur » impossible.",
+    "INVALID_NIP": "NIP invalide (chiffres, code pays facultatif)."
   },
   "fields": {
     "code": "code",
@@ -485,7 +495,18 @@
     "waste_quantity": "quantité perdue",
     "waste_reason": "raison de la perte",
     "waste_note": "note de la perte",
-    "produced": "fait"
+    "produced": "fait",
+    "cost_category": "catégorie de coût",
+    "service_month": "mois du coût",
+    "cost_amount": "montant compté (PLN)",
+    "action": "action",
+    "rule": "règle fournisseur",
+    "seller_key": "fournisseur",
+    "none": "pas ce mois-ci",
+    "seller_name": "vendeur",
+    "seller_nip": "NIP du vendeur",
+    "total_net": "montant net",
+    "total_gross": "montant brut"
   },
   "entities": {
     "test_product": "produit test",
@@ -515,7 +536,10 @@
     "purchase_invoice_line": "ligne de facture",
     "purchase_invoice_mapping": "correspondance de nom",
     "invoice_file": "fichier de la facture",
-    "tour": "tournée"
+    "tour": "tournée",
+    "purchase_invoice_rule": "règle fournisseur",
+    "service_invoice": "facture de service",
+    "service_month": "mois des coûts de services"
   },
   "documents": {
     "team_sheet_title": "Plan de l'équipe",

@@ -38,8 +38,28 @@ final class OrderQueueRepository extends WorkshopRepository
         return $this->all("SELECT i.id, i.number, i.issue_date, COALESCE(s.name, i.seller_name) AS supplier, i.total_net, i.currency, i.id_po,
                                   (SELECT COUNT(*) FROM n_inv_line l WHERE l.id_inv = i.id AND l.id_raw_material IS NULL) AS unmapped
                            FROM n_inv i LEFT JOIN supplier s ON s.id = i.id_supplier
-                           WHERE i.status = 'open' AND (i.id_po IS NULL OR EXISTS (SELECT 1 FROM n_inv_line l WHERE l.id_inv = i.id AND l.id_raw_material IS NULL))
+                           WHERE i.status = 'open' AND i.kind = 'goods' AND (i.id_po IS NULL OR EXISTS (SELECT 1 FROM n_inv_line l WHERE l.id_inv = i.id AND l.id_raw_material IS NULL))
                            ORDER BY i.issue_date, i.id");
+    }
+
+    /** Factures de services (Finances) à vérifier. */
+    public function openServiceInvoices(): array
+    {
+        return $this->all("SELECT i.id, i.number, i.issue_date, i.service_month, COALESCE(s.name, i.seller_name) AS supplier, i.total_net, i.currency
+                           FROM n_inv i LEFT JOIN supplier s ON s.id = i.id_supplier
+                           WHERE i.kind = 'service' AND i.status = 'open' ORDER BY i.issue_date, i.id");
+    }
+
+    public function serviceMonthClosed(string $ym): bool
+    {
+        return (bool) $this->all('SELECT 1 AS x FROM n_service_month WHERE ym = ?', [$ym]);
+    }
+
+    /** Factures de services du mois ou du mois précédent (un mois de coûts à clôturer). */
+    public function serviceInvoicesAround(string $ym): int
+    {
+        $prev = date('Y-m', strtotime($ym . '-01 -1 month'));
+        return (int) ($this->all("SELECT COUNT(*) AS n FROM n_inv WHERE kind = 'service' AND status <> 'rejected' AND service_month IN (?, ?)", [$ym, $prev])[0]['n'] ?? 0);
     }
 
     /** Matières gérées sur stock dont le dernier comptage date d'avant $cutoff (ou jamais comptées). */

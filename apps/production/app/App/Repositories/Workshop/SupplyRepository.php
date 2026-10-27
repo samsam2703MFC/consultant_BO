@@ -178,7 +178,7 @@ final class SupplyRepository extends WorkshopRepository
                    SELECT p.id_supplier, l.id_raw_material, 0 FROM n_po p JOIN n_po_line l ON l.id_po = p.id WHERE p.status <> 'cancelled' AND p.created_at >= ?
                    UNION ALL
                    SELECT i.id_supplier, il.id_raw_material, 0 FROM n_inv i JOIN n_inv_line il ON il.id_inv = i.id
-                   WHERE i.id_supplier IS NOT NULL AND il.id_raw_material IS NOT NULL AND i.issue_date >= ?) x
+                   WHERE i.id_supplier IS NOT NULL AND il.id_raw_material IS NOT NULL AND i.kind = 'goods' AND i.status <> 'rejected' AND i.issue_date >= ?) x
              JOIN raw_material rm ON rm.id = x.id_raw_material
              LEFT JOIN category_material c ON c.id = rm.id_category
              GROUP BY x.id_supplier, rm.id, rm.name, rm.name_fr, c.id_group
@@ -193,7 +193,7 @@ final class SupplyRepository extends WorkshopRepository
         return $this->all(
             "SELECT p.id_supplier, r.received_on AS day FROM n_po_receipt r JOIN n_po_line l ON l.id = r.id_po_line JOIN n_po p ON p.id = l.id_po WHERE r.received_on >= ?
              UNION
-             SELECT i.id_supplier, i.issue_date FROM n_inv i WHERE i.id_supplier IS NOT NULL AND i.issue_date >= ?
+             SELECT i.id_supplier, i.issue_date FROM n_inv i WHERE i.id_supplier IS NOT NULL AND i.kind = 'goods' AND i.status <> 'rejected' AND i.issue_date >= ?
              ORDER BY 1, 2",
             [$since, $since]
         );
