@@ -256,6 +256,38 @@ function viAvecNl(array $cl): array
  * Le calcul part des réponses enregistrées et lit la checklist pour le type, le poids et le nom des modules : la
  * tablette fait exactement le même (visites.js, scoreDe) — les deux doivent rester identiques.
  */
+/**
+ * Les photos du jour, chacune une question (27/10/2026, demande de Sam : « chaque photo, il faut la réponse, type OK,
+ * écart ou autre, venant des paramètres »). Un module fixe, `photos`, commun à tous les types de visite : la façade,
+ * l'arrière et l'intérieur — ses trois questions ne s'ajoutent ni ne se retirent, mais chacune a son type de réponse,
+ * ses libellés FR et NL, sa précision, ses choix, son score et son poids (Réglages › Checklist, réglage visitesPhotos).
+ * La réponse s'enregistre comme un point de checklist (module `photos`, référence = le genre de la photo) : elle
+ * compte dans le score, et un écart part dans le rapport et dans les points proposés, comme une autre question.
+ */
+const VI_PHOTOS_REFS = [
+    'jour_facade'    => ['Façade (photo du jour)', 'Gevel (foto van de dag)'],
+    'jour_arriere'   => ['Arrière (photo du jour)', 'Achterkant (foto van de dag)'],
+    'jour_interieur' => ['Intérieur (photo du jour)', 'Binnenkant (foto van de dag)'],
+];
+
+/** Le module des photos du jour tel qu'il se règle : ses trois questions, dans l'ordre, toujours avec photo. */
+function viPhotosNormalise(mixed $m): array
+{
+    $m = is_array($m) ? $m : [];
+    $parRef = [];
+    foreach (is_array($m['points'] ?? null) ? $m['points'] : [] as $p) { if (is_array($p) && isset($p['ref'])) { $parRef[(string) $p['ref']] = $p; } }
+    $points = [];
+    foreach (VI_PHOTOS_REFS as $ref => [$fr, $nl]) {
+        $p = array_merge(['libelle' => $fr, 'libelle_nl' => $nl, 'type' => 'etat'], $parRef[$ref] ?? []);
+        if (trim((string) ($p['libelle'] ?? '')) === '') { $p['libelle'] = $fr; }
+        $points[] = array_merge($p, ['ref' => $ref, 'photo' => true]);
+    }
+    $out = viModuleNormalise(['nom' => $m['nom'] ?? 'Les photos du jour', 'nom_nl' => ($m['nom_nl'] ?? '') !== '' ? $m['nom_nl'] : 'De foto’s van de dag', 'points' => $points], 'photos');
+    foreach ($out['points'] as &$p) { $p['photo'] = true; }
+    unset($p);
+    return $out;
+}
+
 const VI_MODULES_HORS = ['xp' => ['Expérience client', 'Klantbeleving'], 'leviers' => ['Les leviers', 'De hefbomen'],
     'bureau' => ['Demandé par le bureau', 'Gevraagd door het kantoor'], 'exterieur' => ['L’extérieur', 'De buitenkant']];
 

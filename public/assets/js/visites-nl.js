@@ -295,6 +295,7 @@
     '°C': '°C', '# °C': '# °C', 'P#': 'P#', 'AAAA-MM': 'JJJJ-MM', 'Avant d’entrer': 'Vóór het binnengaan', 'CA de la semaine vs objectif': 'Omzet van de week vs doelstelling', 'CA vs objectif': 'Omzet vs doelstelling',
     'Les # points, le thermomètre en photo': 'De # punten, de thermometer op foto', 'pas dans l’ordre du jour': 'niet op de agenda', 'semaine du § au §': 'week van § tot §', 'à écrire': 'te schrijven',
     'N.v.t.': 'N.v.t.', 'N.v.t': 'N.v.t', 'Ja': 'Ja', 'Nee': 'Nee', 'Afwijking': 'Afwijking', 'Opmerking': 'Opmerking', 'Foto': 'Foto', 'Het antwoord': 'Het antwoord', 'Traffic': 'Traffic', 'Planogram': 'Planogram',
+    '# réponse à donner': '# antwoord te geven', '# réponses à donner': '# antwoorden te geven', 'une question par photo, pour toutes les visites': 'één vraag per foto, voor alle bezoeken',
     'point': 'punt', 'signature': 'handtekening', 'optionnel': 'optioneel', 'facultatif': 'optioneel', 'Annuler la visite': 'Bezoek annuleren', 'Escalader à Sam': 'Escaleren naar Sam', 'Pourquoi escalader': 'Waarom escaleren', 'Précédente': 'Vorige', 'Suivante': 'Volgende', 'pas de photo pour cette tâche': 'geen foto voor deze taak',
     'Lundi #/#': 'Maandag #/#', 'Mardi #/#': 'Dinsdag #/#', 'Mercredi #/#': 'Woensdag #/#', 'Jeudi #/#': 'Donderdag #/#', 'Vendredi #/#': 'Vrijdag #/#', 'Samedi #/#': 'Zaterdag #/#', 'Dimanche #/#': 'Zondag #/#',
   };
