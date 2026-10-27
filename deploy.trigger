@@ -1123,3 +1123,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-27T16:42:47Z production : badges en rectangles arrondis, chiffres et textes alignés (tablette tactile et ERP)
 2026-10-27T17:14:35Z production : numéros de lot sur les lignes de la recette (tablette)
 2026-10-27T17:22:42Z production : interrupteur emballages sur la recette (tablette)
+2026-10-27T17:33:39Z production : rendement du jour, Premia N-1 et vignette cobots (migrations 112, 113)
