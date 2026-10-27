@@ -14,6 +14,21 @@
 .office-section-faces .kiosk-avatar.is-in { box-shadow: 0 0 0 2px var(--k-surface), 0 0 0 4px var(--k-ok); }
 .office-section-card h2 { margin: 0 0 2px; font-size: 28px; }
 .office-section-card .kiosk-muted { margin-bottom: 18px; font-size: 17px; }
+/* Tous les groupes et toutes les personnes sur un écran : barre de groupes collante, une section par groupe. */
+.office-hero { padding: 4px 0 6px; }
+.office-hero .kiosk-ipad-time { font-size: 56px; line-height: 1; }
+.office-hero .kiosk-ipad-greet { margin-top: 6px; }
+.office-groupbar { position: sticky; top: 0; z-index: 2; display: flex; gap: 10px; overflow-x: auto; padding: 14px 2px 12px; margin: 10px 0 4px;
+  background: var(--k-bg); scrollbar-width: none; }
+.office-groupbar::-webkit-scrollbar { display: none; }
+.office-group-chip { flex: 0 0 auto; display: inline-flex; align-items: baseline; gap: 8px; min-height: 48px; padding: 10px 18px; border-radius: 999px;
+  border: 1px solid var(--k-line); background: var(--k-surface); font-size: 17px; font-weight: 600; color: inherit; }
+.office-group-chip small { font-size: 13px; font-weight: 500; color: var(--k-muted); font-variant-numeric: tabular-nums; }
+.office-group-chip.is-on { background: var(--k-primary, #8D1D2C); border-color: transparent; color: #fff; }
+.office-group-chip.is-on small { color: rgba(255,255,255,.8); }
+.office-group { margin-top: 18px; }
+.office-group-title { margin: 0 0 12px; font-size: 24px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.office-group-title small { font-size: 15px; font-weight: 500; color: var(--k-muted); font-family: inherit; }
 .office-people { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 22px 10px; }
 .office-people .kiosk-avatar.is-app { width: 92px; height: 92px; font-size: 31px; }
 .office-people .kiosk-app-name { font-size: 17px; }

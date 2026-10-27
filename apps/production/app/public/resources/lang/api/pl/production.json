@@ -106,7 +106,7 @@
     "DATA_SHEET_TOUR_NOT_FOUND": "Nie ma trasy nr {id} — usuń numer, aby dodać nową trasę.",
     "DEVICE_NOT_DRIVER": "Ten tablet nie jest tabletem kierowcy — zmień tryb tabletu w zarządzaniu tabletami.",
     "QR_OTHER_PERSON": "Ten kod QR jest dla: {name}. Ten telefon jest zarejestrowany na inną osobę — zeskanuj kod swoim telefonem.",
-    "DEVICE_NOT_OFFICE": "Ten tablet nie jest tabletem biurowym — zmień tryb tabletu w zarządzaniu tabletami.",
+    "DEVICE_NOT_OFFICE": "Tablet kierowcy nie otwiera ekranu biurowego — w zarządzaniu tabletami zmień rodzaj na « Tablet biurowy ».",
     "DEV_TRIAL_NOT_ALLOWED": "Na etapie „{stage}” nie robi się już testu — produkt jest wprowadzany w biurze.",
     "DEV_RECIPE_NOT_READY": "Recepturę zatwierdza się po udanym teście 2 (etap teraz: „{stage}”).",
     "DEV_RECIPE_MISSING": "Produkt nie ma jeszcze receptury w ERP — biuro musi ją wybrać przed zatwierdzeniem.",

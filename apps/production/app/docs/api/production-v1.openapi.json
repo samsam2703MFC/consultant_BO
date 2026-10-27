@@ -14706,7 +14706,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Tablette en mode « office » seulement (DEVICE_NOT_OFFICE, 403). Services (production_sections) avec leurs personnes actives, même sans profil de production (employee_id null, créé au premier QR) : PIN, téléphones enregistrés, entrée en cours (since), sortie du jour (left_at). id = production_employee.id.",
+                "description": "Tablette de bureau, ou tablette de production ouverte sur /office ; tablette chauffeur refusée (DEVICE_NOT_OFFICE, 403). Services (production_sections) avec leurs personnes actives, même sans profil de production (employee_id null, créé au premier QR) : PIN, téléphones enregistrés, entrée en cours (since), sortie du jour (left_at). id = production_employee.id.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"

@@ -53,5 +53,9 @@
   "signature": "Signature",
   "clear": "Effacer",
   "confirm_ok": "OK, je valide",
-  "no_section": "Sans service"
+  "no_section": "Sans service",
+  "hero_all": "Trouvez votre nom et touchez-le",
+  "all_groups": "Tous",
+  "groups": "Groupes",
+  "to_production": "Tablette de production ›"
 }

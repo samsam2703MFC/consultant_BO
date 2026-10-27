@@ -4,7 +4,7 @@ declare(strict_types=1);
  * Tablet biurowy : tablet w trybie « office » (bez grupy), działy → nazwiska (także osoby bez profilu produkcji),
  * osobisty kod QR (osoba + dzień), pierwszy skan → tylko PIN tej osoby, telefon innej osoby odrzucony
  * (QR_OTHER_PERSON), kod z innego dnia odrzucony, wejście / wyjście zatwierdzone na telefonie i potwierdzone
- * na tablecie (status), tablet pracowni odrzucony (DEVICE_NOT_OFFICE), stary QR grupy działa jak wcześniej.
+ * na tablecie (status), tablet kierowcy odrzucony (DEVICE_NOT_OFFICE ; tablet pracowni otwarty na /office działa), stary QR grupy działa jak wcześniej.
  *
  *   php tests/office_tablet_test.php
  *
@@ -108,7 +108,11 @@ try {
     $atelierId = $b['data']['id'];
     $atelier = ['X-Device-Token' => $call('POST', '/kiosk/pair', ['code' => $b['data']['pairing_code']])[1]['data']['device_token']];
     [$s, $b] = $call('GET', '/kiosk/office/sections', null, $atelier, 'fr');
-    expectOff($s === 403 && $b['description'] === 'DEVICE_NOT_OFFICE' && str_contains($b['message'], 'tablette de bureau'), 'workshop tablet cannot open the office screens');
+    expectOff($s === 200 && count($b['data']) > 0, 'a workshop tablet opened on /office shows the office screen (all groups, all people)');
+    [, $b] = $call('POST', '/kiosk/devices', ['name' => 'Tablet kierowcy', 'mode' => 'driver'], $manager);
+    $driverDev = ['X-Device-Token' => $call('POST', '/kiosk/pair', ['code' => $b['data']['pairing_code']])[1]['data']['device_token']];
+    [$s, $b] = $call('GET', '/kiosk/office/sections', null, $driverDev, 'fr');
+    expectOff($s === 403 && $b['description'] === 'DEVICE_NOT_OFFICE' && str_contains($b['message'], 'chauffeur'), 'driver tablet cannot open the office screens');
     [$s] = $call('GET', '/kiosk/office/sections', null, []);
     expectOff($s === 401, 'office screens need a paired tablet');
 
@@ -160,8 +164,8 @@ try {
     expectOff($s === 200 && $st['data']['clocked'] === false && $st['data']['clocked_in'] === false, 'tablet: nothing recorded yet');
     [$s, $b] = $call('GET', "/kiosk/office/status?employee_id={$ola}&since=today", null, $office);
     expectOff($s === 422 && $codes($b) === ['since:INVALID_DATETIME'], 'status: date-time checked');
-    [$s] = $call('GET', "/kiosk/office/status?employee_id={$ola}&since=" . rawurlencode($since), null, $atelier);
-    expectOff($s === 403, 'status only for the office tablet');
+    [$s] = $call('GET', "/kiosk/office/status?employee_id={$ola}&since=" . rawurlencode($since), null, $driverDev);
+    expectOff($s === 403, 'status not for the driver tablet');
     $olaPhoneH = ['X-Qr-Token' => $olaQr, 'X-Phone-Token' => $olaPhone];
     [$s, $me] = $call('GET', '/kiosk/phone/me', null, $olaPhoneH);
     expectOff($s === 200 && $me['data']['employee']['id'] === $ola && $me['data']['clocked_in'] === false, 'phone: my state on my QR');

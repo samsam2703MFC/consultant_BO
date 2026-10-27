@@ -85,8 +85,12 @@ final class OfficeClockService
         return null;
     }
 
+    /**
+     * Ekran biurowy (wszystkie grupy, wszystkie osoby) : tablet biurowy albo tablet pracowni otwarty na /office
+     * (27/10/2026 : tablet w biurze sparowany jako tablet grupy nie odsyła już do produkcji) ; tablet kierowcy — nie.
+     */
     private function officeDevice(ApiContext $context): void
     {
-        if (($this->repo->find((int) $context->deviceId)['mode'] ?? 'atelier') !== 'office') throw new ApiException('DEVICE_NOT_OFFICE', 403);
+        if (($this->repo->find((int) $context->deviceId)['mode'] ?? 'atelier') === 'driver') throw new ApiException('DEVICE_NOT_OFFICE', 403);
     }
 }

@@ -53,5 +53,9 @@
   "signature": "Podpis",
   "clear": "Wyczyść",
   "confirm_ok": "OK, zatwierdzam",
-  "no_section": "Bez działu"
+  "no_section": "Bez działu",
+  "hero_all": "Znajdź swoje nazwisko i dotknij go",
+  "all_groups": "Wszyscy",
+  "groups": "Grupy",
+  "to_production": "Tablet produkcji ›"
 }

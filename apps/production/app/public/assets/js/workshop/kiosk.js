@@ -226,6 +226,8 @@
         try { deviceInfo = await api('GET', '/kiosk/device'); } catch (err) { if (deviceInfo === null) deviceInfo = {group_id: null}; }
         // Tablet kierowcy i tablet biurowy : własna strona (trasa dnia ; dział → nazwisko → osobisty kod QR).
         if (deviceInfo.mode === 'driver' || deviceInfo.mode === 'office') { location.replace(root + '/' + deviceInfo.mode); return; }
+        // Tablet pracowni otwarty w biurze na /office : ekran biurowy zostaje jego stroną startową (przycisk « Tablet produkcji » cofa).
+        if (store.get('tfb.kiosk.home') === 'office') { location.replace(root + '/office'); return; }
         // Tablette générique (27/10/2026) : groupe → personne → PIN, puis la production du groupe choisi.
         const generic = !!deviceInfo.generic;
         let groups = [];

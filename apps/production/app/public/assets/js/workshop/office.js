@@ -1,6 +1,7 @@
 /*
  * Tablet biurowy / Tablette de bureau (PWA). Tablet rodzaju « Tablet biurowy » (zarządzanie tabletami), parowany tym samym
- * kodem co tablet pracowni. Osoba dotyka swojego działu, potem swojego nazwiska : tablet pokazuje jej osobisty kod QR
+ * kodem co tablet pracowni ; tablet pracowni otwarty na /office też pokazuje ten ekran i zostaje na nim. Wszystkie grupy
+ * i wszystkie osoby od razu na ekranie (pasek grup, wyszukiwanie) ; osoba dotyka swojego nazwiska : tablet pokazuje jej osobisty kod QR
  * (osoba + dzień). Osoba skanuje go swoim telefonem i zatwierdza wejście albo wyjście na telefonie (pytania, podpis) ;
  * telefon innej osoby jest odrzucany. Tablet sprawdza co 2 s, czy pointowanie jest zapisane, i wraca do działów.
  * Bez telefonu : PIN, potem pytania i podpis palcem na tablecie (pin_allowed ; kiosk.office_pin_all — wszyscy).
@@ -14,6 +15,8 @@
     const root = (el.dataset.root || '').replace(/\/$/, '');
     // Ten sam token co tablet pracowni i kierowcy : tryb tabletu decyduje o stronie.
     const DEVICE_KEY = 'tfb.kiosk.device';
+    // Tablet pracowni otwarty na /office : ekran biurowy zostaje jego stroną startową (/kiosk przekierowuje tutaj).
+    const HOME_KEY = 'tfb.kiosk.home';
     const LANG_KEY = 'tfb.lang';
     const POLL_MS = 2000;
     const QR_SCREEN_MS = 180000; // ekran kodu QR : powrót do działów po 3 min
@@ -29,6 +32,8 @@
     let paired = !!device;
     let sections = [];
     let timers = [];
+    let deviceInfo = null;
+    let filter = null; // dział wybrany w pasku (null = wszyscy)
 
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const t = (k, p) => { let s = labels[k] ?? k; for (const [a, b] of Object.entries(p || {})) s = s.split('{' + a + '}').join(String(b)); return s; };
@@ -92,7 +97,8 @@
         err.fields = (json.errors || []).map(x => x.field);
         if (err.code === 'DEVICE_UNAUTHENTICATED') { paired = false; clearTimers(); renderPairing(err.message); }
         // Tablet pracowni albo kierowcy : jego własna strona (/kiosk przekierowuje tablet kierowcy na /driver).
-        if (err.code === 'DEVICE_NOT_OFFICE') location.replace(root + '/kiosk');
+        // Tablet kierowcy : jego trasa (każdy inny tablet otwiera ekran biurowy).
+        if (err.code === 'DEVICE_NOT_OFFICE') { store.set(HOME_KEY, null); location.replace(root + '/driver'); }
         throw err;
     }
 
@@ -119,7 +125,8 @@
                 paired = true;
                 store.set(DEVICE_KEY, device);
                 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (err) { /* non pris en charge */ }
-                if (r.device.mode !== 'office') { location.replace(root + (r.device.mode === 'driver' ? '/driver' : '/kiosk')); return; }
+                if (r.device.mode === 'driver') { location.replace(root + '/driver'); return; }
+                deviceInfo = null;
                 toast(t('paired', {name: r.device.name}));
                 renderHome();
             } catch (err) { el.querySelector('[data-error]').textContent = err.message; }
@@ -127,13 +134,16 @@
         el.querySelector('[name=code]').focus();
     }
 
-    // --- Działy ----------------------------------------------------------------------------------------
+    // --- Wszystkie grupy i wszystkie osoby na jednym ekranie -----------------------------------------
     const allPeople = () => sections.flatMap(s => s.people.map(p => ({...p, section: s.name, section_id: s.id})));
 
     async function renderHome() {
         if (!paired) return renderPairing();
         clearTimers();
         try {
+            if (deviceInfo === null) deviceInfo = await api('GET', '/kiosk/device');
+            // Tablet grupy otwarty w biurze : ekran biurowy zostaje stroną startową tego tabletu (do odwołania przyciskiem).
+            if (deviceInfo.mode === 'atelier') store.set(HOME_KEY, 'office');
             // Tout le personnel : les personnes sans dział forment la section 0, nommée ici (« Bez działu » / « Sans service »).
             sections = (await api('GET', '/kiosk/office/sections')).map(x => x.name ? x : {...x, name: t('no_section')});
         } catch (err) {
@@ -143,61 +153,60 @@
             el.querySelector('[data-retry]').addEventListener('click', renderHome);
             return;
         }
+        if (filter !== null && !sections.some(x => x.id === filter)) filter = null;
         const people = allPeople();
         const present = people.filter(p => p.clocked_in).length;
         const now = new Date();
+        const toProduction = deviceInfo && deviceInfo.mode === 'atelier'
+            ? `<button type="button" class="kiosk-chip is-glass" data-to-production>${esc(t('to_production'))}</button>` : '';
         el.innerHTML = `<div class="kiosk-ipad office-home">
             <div class="kiosk-ipad-bar"><span class="kiosk-logo" aria-hidden="true">LA</span><span class="kiosk-ipad-name">${esc(t('title'))}</span>
-                <button type="button" class="kiosk-chip is-glass" data-lang>${esc(t('lang_switch'))}</button></div>
-            <section class="kiosk-ipad-hero"><div class="kiosk-ipad-time" data-clock>${now.toTimeString().slice(0, 5)}</div>
+                ${toProduction}<button type="button" class="kiosk-chip is-glass" data-lang>${esc(t('lang_switch'))}</button></div>
+            <section class="kiosk-ipad-hero office-hero"><div class="kiosk-ipad-time" data-clock>${now.toTimeString().slice(0, 5)}</div>
                 <div class="kiosk-ipad-date">${esc(longDate(now))}</div>
-                <p class="kiosk-ipad-greet">${esc(t('hero'))}</p>
+                <p class="kiosk-ipad-greet">${esc(t('hero_all'))}</p>
                 <p class="office-present">${esc(t('present_total', {n: present, total: people.length}))}</p></section>
             <input class="kiosk-search office-search" type="search" data-search placeholder="${esc(t('search'))}" aria-label="${esc(t('search'))}" autocomplete="off">
+            <nav class="office-groupbar" aria-label="${esc(t('groups'))}">
+                <button type="button" class="office-group-chip ${filter === null ? 'is-on' : ''}" data-filter="">${esc(t('all_groups'))}<small>${present}/${people.length}</small></button>
+                ${sections.map(x => `<button type="button" class="office-group-chip ${filter === x.id ? 'is-on' : ''}" data-filter="${x.id}">${esc(x.name)}<small>${x.people.filter(p => p.clocked_in).length}/${x.people.length}</small></button>`).join('')}</nav>
             <div data-home-body></div></div>`;
         const body = el.querySelector('[data-home-body]');
-        const drawSections = () => {
-            body.innerHTML = sections.length ? `<div class="office-sections">${sections.map(s => {
-                const n = s.people.filter(p => p.clocked_in).length;
-                return `<button type="button" class="office-section" data-section="${s.id}"><span class="office-section-name">${esc(s.name)}</span>
-                    <span class="office-section-meta">${esc(t('section_people', {n: s.people.length, present: n}))}</span>
-                    <span class="office-section-faces" aria-hidden="true">${s.people.slice(0, 5).map(p => avatar(p.name, p.clocked_in ? 'is-in' : '')).join('')}</span></button>`;
-            }).join('')}</div>` : `<p class="kiosk-muted">${esc(t('no_people'))}</p>`;
+        const search = el.querySelector('[data-search]');
+        // Grupy jedna pod drugą, każda ze wszystkimi osobami ; wyszukiwanie po nazwisku we wszystkich grupach.
+        const draw = () => {
+            const f = fold(search.value.trim());
+            const groups = sections.filter(x => filter === null || x.id === filter)
+                .map(x => ({...x, list: f ? x.people.filter(p => fold(p.name).includes(f)) : x.people}))
+                .filter(x => x.list.length || (!f && filter !== null));
+            body.innerHTML = groups.length ? groups.map(x => `<section class="office-group">
+                    <h2 class="office-group-title">${esc(x.name)} <small>${esc(t('section_people', {n: x.people.length, present: x.people.filter(p => p.clocked_in).length}))}</small></h2>
+                    ${x.list.length ? `<div class="kiosk-apps office-people">${x.list.map(personTile).join('')}</div>` : `<p class="kiosk-muted">${esc(t('nobody'))}</p>`}</section>`).join('')
+                : `<p class="kiosk-muted">${esc(f ? t('no_match') : t('no_people'))}</p>`;
         };
-        drawSections();
+        draw();
         body.addEventListener('click', (e) => {
-            const s = e.target.closest('[data-section]');
-            if (s) return renderSection(Number(s.dataset.section));
             const p = e.target.closest('[data-person]');
             if (p) openPerson(Number(p.dataset.person));
         });
-        // Wyszukiwanie : wszystkie działy naraz (nie trzeba pamiętać działu).
-        el.querySelector('[data-search]').addEventListener('input', (e) => {
-            const f = fold(e.target.value.trim());
-            if (!f) return drawSections();
-            const list = people.filter(p => fold(p.name).includes(f));
-            body.innerHTML = list.length ? `<div class="kiosk-apps office-people">${list.map(personTile).join('')}</div>` : `<p class="kiosk-muted">${esc(t('no_match'))}</p>`;
+        el.querySelector('.office-groupbar').addEventListener('click', (e) => {
+            const c = e.target.closest('[data-filter]');
+            if (!c) return;
+            filter = c.dataset.filter === '' ? null : Number(c.dataset.filter);
+            el.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('is-on', b === c));
+            draw();
+            el.querySelector('.office-groupbar').scrollIntoView({block: 'start', behavior: 'smooth'});
         });
+        search.addEventListener('input', draw);
+        el.querySelector('[data-to-production]')?.addEventListener('click', () => { store.set(HOME_KEY, null); location.replace(root + '/kiosk'); });
         // Stan obecności odświeżany co minutę, gdy nikt nie szuka.
-        timers.push(window.setInterval(() => { const s = el.querySelector('[data-search]'); if (s && !s.value && document.activeElement !== s) renderHome(); }, 60000));
+        timers.push(window.setInterval(() => { if (!search.value && document.activeElement !== search) renderHome(); }, 60000));
     }
 
     function personTile(p) {
         const state = p.clocked_in ? t('state_in', {time: p.since}) : p.left_at ? t('state_left', {time: p.left_at}) : (!p.has_pin && !p.phones ? t('state_no_pin') : t('state_out'));
         return `<button type="button" class="kiosk-app-person ${p.clocked_in ? 'is-in' : ''} ${!p.has_pin && !p.phones ? 'is-nopin' : ''}" data-person="${p.id}">
             ${avatar(p.name, 'is-app')}<span class="kiosk-app-name">${esc(p.name)}</span><small>${esc(state)}</small></button>`;
-    }
-
-    // --- Nazwiska działu -------------------------------------------------------------------------------
-    function renderSection(sectionId) {
-        clearTimers();
-        const s = sections.find(x => x.id === sectionId);
-        if (!s) return renderHome();
-        const back = `<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`;
-        el.innerHTML = header(back) + `<section class="kiosk-card office-section-card"><h2>${esc(s.name)}</h2><p class="kiosk-muted">${esc(t('who'))}</p>
-            ${s.people.length ? `<div class="kiosk-apps office-people">${s.people.map(personTile).join('')}</div>` : `<p class="kiosk-muted">${esc(t('nobody'))}</p>`}</section>`;
-        el.querySelector('.office-section-card').addEventListener('click', (e) => { const p = e.target.closest('[data-person]'); if (p) openPerson(Number(p.dataset.person)); });
-        idle(IDLE_MS);
     }
 
     // --- Osobisty kod QR (osoba + dzień) ---------------------------------------------------------------
