@@ -55,7 +55,11 @@ final class OutputService
     public function dayOf(int $groupId, string $day, string $lang = 'pl'): array
     {
         $catalog = [];
-        foreach ($this->repo->groupItems($groupId) as $i) $catalog[(int) $i['id']] = $this->itemRow($i);
+        $productItems = [];
+        foreach ($this->repo->groupItems($groupId) as $i) {
+            $catalog[(int) $i['id']] = $this->itemRow($i);
+            if ($i['id_final_product'] !== null) $productItems[(int) $i['id_final_product']] = (int) $i['id'];
+        }
         $batches = array_map(fn($o) => $this->batchRow($o), $this->repo->day($day, $groupId));
         $rawWastes = $this->repo->dayWaste($day, $groupId);
         $photos = $this->repo->wastePhotos(array_map(fn($w) => (int) $w['id'], $rawWastes));
@@ -112,7 +116,31 @@ final class OutputService
             'waste_photo' => ['required' => $this->photoRequired(), 'max' => $this->photoMax()],
             'categories' => array_values($categories),
             'catalog' => array_values($catalog),
+            'ordered' => $this->ordered($productItems, $catalog, $day),
+            'ordered_to' => date('Y-m-d', strtotime($day . ' +' . $this->orderedDays() . ' days')),
         ];
+    }
+
+    /**
+     * « Zakoduj produkcję » : przyciski = produkty grupy zamówione przez klientów (zamówienia otwarte, wysyłka od 7 dni
+     * wstecz — spóźnione — do dnia + kiosk.ordered_days), najbliższa wysyłka najpierw ; reszta przez wyszukiwarkę.
+     */
+    private function ordered(array $productItems, array $catalog, string $day): array
+    {
+        $rows = [];
+        $from = date('Y-m-d', strtotime($day . ' -7 days'));
+        $to = date('Y-m-d', strtotime($day . ' +' . $this->orderedDays() . ' days'));
+        foreach ($this->repo->orderedProducts(array_keys($productItems), $from, $to) as $productId => $o) {
+            $itemId = $productItems[$productId];
+            $rows[] = ['item_id' => $itemId, 'cartons' => round($o['cartons'], 2), 'next_ship' => $o['next_ship'], 'orders' => $o['orders'], 'name' => $catalog[$itemId]['name']];
+        }
+        usort($rows, fn($a, $b) => [$a['next_ship'], $a['name']] <=> [$b['next_ship'], $b['name']]);
+        return array_map(fn($r) => array_diff_key($r, ['name' => 1]), $rows);
+    }
+
+    private function orderedDays(): int
+    {
+        return max(1, min(28, (int) $this->params->get('kiosk.ordered_days', '7')));
     }
 
     /** Zdjęcie zrobione na tablecie (strata) : zapis od razu, identyfikator do przypięcia przy zatwierdzeniu linii. */

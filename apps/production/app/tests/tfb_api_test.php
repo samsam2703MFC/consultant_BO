@@ -947,6 +947,9 @@ check($s === 409 && $b['description'] === 'WASTE_CANCELLED', 'a cancelled waste 
 check($pd['data']['closed'] === null && $pd['data']['editable'], 'day not validated yet');
 check(is_array($pd['data']['categories']) && array_sum(array_column($pd['data']['categories'], 'count')) === count($pd['data']['catalog'])
     && $pd['data']['waste_photo'] === ['required' => true, 'max' => 4], 'group cards by category (buttons « Zakoduj produkcję »), waste photo rule');
+$ord = array_column($pd['data']['ordered'] ?? [], null, 'item_id')[$croissant] ?? null;
+check($ord && $ord['cartons'] == 3 && $ord['next_ship'] === $d1 && $ord['orders'] === 1 && $pd['data']['ordered_to'] === date('Y-m-d', strtotime($pd['data']['date'] . ' +7 days'))
+, 'tablet « Zakoduj produkcję »: buttons = group products ordered by customers (open orders, 3 cartons, next shipping day), the rest by search');
 // --- Zatwierdzenie linii dnia : plan → zrobione, strata (ilość, powód, zdjęcie) na tej samej linii
 [$s, $b] = $kiosk('POST', '/kiosk/photos', ['photo' => 'data:image/jpeg;base64,AAAA'], $device, $emp);
 check($s === 422 && $codes($b) === ['photo:INVALID_PHOTO'], 'waste photo must be an image');

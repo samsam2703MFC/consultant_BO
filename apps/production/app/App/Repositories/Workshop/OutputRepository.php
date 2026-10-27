@@ -28,6 +28,25 @@ final class OutputRepository extends WorkshopRepository
         return $this->all(self::ITEM . ' WHERE i.id = ?', [$id])[0] ?? null;
     }
 
+    /**
+     * Produkty w zamówieniach klientów otwartych (bez gratisów) do wysyłki między dwiema datami : kartony, najbliższa
+     * data wysyłki, liczba zamówień — przyciski « Zamówione » w « Zakoduj produkcję » na tablecie.
+     * @return array<int, array{cartons: float, next_ship: string, orders: int}> produkt ERP => zamówione
+     */
+    public function orderedProducts(array $productIds, string $from, string $to): array
+    {
+        if (!$productIds) return [];
+        $in = implode(',', array_map('intval', $productIds));
+        $out = [];
+        foreach ($this->all('SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons, MIN(co.expected_shipping_date) AS next_ship, COUNT(DISTINCT co.id) AS orders
+                FROM customer_order co JOIN customer_order_product cop ON cop.id_order = co.id
+                WHERE ' . \App\Domain\Client\Order\OpenOrders::quantitySql('co') . " AND co.expected_shipping_date BETWEEN ? AND ? AND cop.id_product IN ({$in})
+                GROUP BY cop.id_product HAVING cartons > 0", [$from, $to]) as $r) {
+            $out[(int) $r['id_product']] = ['cartons' => (float) $r['cartons'], 'next_ship' => $r['next_ship'], 'orders' => (int) $r['orders']];
+        }
+        return $out;
+    }
+
     /** @return array<int, float> karta => ilość zaplanowana na dzień (Gantt tygodnia) */
     public function planned(string $day, array $itemIds): array
     {

@@ -911,8 +911,8 @@
     }
 
     // --- Validation de la production du jour : une ligne par produit (fait | perte + photos + motif) ---------------
-    // mode « plan » : lignes du plan (+ produits hors plan) ; mode « encode » : catégories → produits en boutons, et
-    // les mêmes lignes à droite. Lignes gardées dans vstate (saisies non validées) le temps de la visite.
+    // mode « plan » : lignes du plan (+ produits hors plan) ; mode « encode » : produits commandés en boutons (le reste
+    // par la barre de recherche), et les mêmes lignes à droite. Lignes gardées dans vstate (saisies non validées).
     let vstate = null;
     function lineState(i) {
         return {
@@ -923,7 +923,7 @@
     function renderLines(day, me, mode, focus) {
         resetIdle();
         longIdle = true;
-        if (!vstate || vstate.date !== day.date) vstate = {date: day.date, lines: {}, added: [], cat: null, closeNote: '', closeError: '', gaps: false};
+        if (!vstate || vstate.date !== day.date) vstate = {date: day.date, lines: {}, added: [], search: '', closeNote: '', closeError: '', gaps: false};
         vstate.mode = mode;
         vstate.me = me || vstate.me;
         const locked = !!(day.closed && day.closed.locked);
@@ -956,15 +956,10 @@
             <button type="button" class="kiosk-btn is-primary" data-kv-all ${all.length ? '' : 'disabled'}>${icon('check')} ${esc(t('kv_validate_day'))}</button>`}</div>`;
         let body;
         if (mode === 'encode') {
-            const cats = day.categories.length ? day.categories : [{id: null, name: null, count: day.catalog.length}];
-            if (vstate.cat === null || !cats.some(c => String(c.id) === String(vstate.cat))) vstate.cat = String(cats[0].id);
-            const inList = new Set(all.map(i => i.item_id));
-            const prods = day.catalog.filter(c => String(c.category_id) === vstate.cat);
             body = `<div class="kv-crumb">${back}<div><h2>${esc(t('kv_encode_title'))}</h2><p class="kiosk-muted">${esc(t('kv_encode_page_help'))}</p></div></div>${lockedNote}
                 <div class="kv-encode">
-                    <nav class="kv-cats">${cats.map(c => `<button type="button" class="kv-cat ${String(c.id) === vstate.cat ? 'is-on' : ''}" data-kv-cat="${c.id}">${esc(c.name || t('kv_cat_other'))}<span>${c.count}</span></button>`).join('')}</nav>
-                    <div class="kv-prods">${prods.map(c => `<button type="button" class="kv-prod ${inList.has(c.item_id) ? 'is-added' : ''}" data-kv-add="${c.item_id}" ${locked ? 'disabled' : ''}>
-                        <strong>${esc(c.name)}</strong><small>${inList.has(c.item_id) ? icon('check', 'is-sm') + ' ' + esc(t('kv_in_list')) + ' · ' : ''}${c.ppc ? esc(t('kv_ppc', {n: c.ppc})) : esc(c.unit)}</small></button>`).join('') || `<p class="kiosk-muted">${esc(t('kv_cat_empty'))}</p>`}</div>
+                    <div class="kv-pick"><label class="kv-search">${icon('search', 'is-sm')}<input type="search" data-kv-search value="${esc(vstate.search)}" placeholder="${esc(t('kv_search_ph', {n: day.catalog.length}))}" autocomplete="off" enterkeyhint="search"></label>
+                        <div data-kv-picklist>${pickList(day, all, locked)}</div></div>
                     <section class="kiosk-card kv-panel"><h2>${esc(t('kv_day_lines'))}</h2><p class="kiosk-muted kv-small">${esc(t('kv_day_lines_help', {n: all.length}))}</p>
                         <div class="kv-lines is-compact">${all.map(lineHtml).join('') || `<p class="kiosk-muted">${esc(t('kv_pick_product'))}</p>`}</div></section>
                 </div>${closeBox}${foot}`;
@@ -976,6 +971,28 @@
         el.innerHTML = header(null, true) + body;
         bindLines(day, mode, all);
         if (focus) el.querySelector(`[data-line="${focus}"]`)?.scrollIntoView({block: 'center'});
+    }
+
+    // Boutons « Zakoduj produkcję » : sans recherche — produits du groupe commandés (wysyłka najbliższa najpierw) ;
+    // recherche — tous les produits du groupe (nom sans accents, tous les mots).
+    const foldTxt = (v) => String(v || '').toLowerCase().replace(/ł/g, 'l').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    function pickList(day, all, locked) {
+        const inList = new Set(all.map(i => i.item_id));
+        const byId = new Map(day.catalog.map(c => [c.item_id, c]));
+        const q = foldTxt(vstate.search).split(/\s+/).filter(Boolean);
+        const button = (c, sub) => `<button type="button" class="kv-prod ${inList.has(c.item_id) ? 'is-added' : ''}" data-kv-add="${c.item_id}" ${locked ? 'disabled' : ''}>
+            <strong>${esc(c.name)}</strong><small>${inList.has(c.item_id) ? icon('check', 'is-sm') + ' ' + esc(t('kv_in_list')) + ' · ' : ''}${sub}</small></button>`;
+        const unitText = (c) => c.ppc ? esc(t('kv_ppc', {n: c.ppc})) : esc(c.unit);
+        if (q.length) {
+            const found = day.catalog.filter(c => { const n = foldTxt(c.name + ' ' + (c.category || '')); return q.every(w => n.includes(w)); }).slice(0, 60);
+            return `<h3 class="kv-pick-title">${esc(t('kv_search_found', {n: found.length}))}</h3>
+                <div class="kv-prods">${found.map(c => button(c, `${c.category ? esc(c.category) + ' · ' : ''}${unitText(c)}`)).join('') || `<p class="kiosk-muted">${esc(t('kv_search_none'))}</p>`}</div>`;
+        }
+        const ordered = (day.ordered || []).filter(o => byId.has(o.item_id));
+        return `<h3 class="kv-pick-title">${esc(t('kv_ordered_title', {date: dateFmt(day.ordered_to).slice(0, 5)}))}</h3>
+            <div class="kv-prods">${ordered.map(o => button(byId.get(o.item_id), `${esc(t('kv_ordered_q', {n: fmt(o.cartons)}))} · ${esc(t('kv_ordered_ship', {date: dateFmt(o.next_ship).slice(0, 5)}))}`)).join('')
+                || `<p class="kiosk-muted">${esc(t('kv_ordered_none'))}</p>`}</div>
+            <p class="kiosk-muted kv-small">${icon('search', 'is-sm')} ${esc(t('kv_search_help'))}</p>`;
     }
 
     function drawLine(day, i, L, locked) {
@@ -1062,12 +1079,20 @@
             renderProduction();
         });
         el.querySelector('[data-kv-encode]')?.addEventListener('click', () => { vstate.from = 'plan'; renderLines(day, vstate.me, 'encode'); });
-        el.querySelectorAll('[data-kv-cat]').forEach(b => b.addEventListener('click', () => { vstate.cat = String(b.dataset.kvCat); redraw(); }));
-        el.querySelectorAll('[data-kv-add]').forEach(b => b.addEventListener('click', () => {
+        const bindAdd = () => el.querySelectorAll('[data-kv-add]').forEach(b => b.addEventListener('click', () => {
             const id = Number(b.dataset.kvAdd);
             if (!vstate.added.includes(id) && !all.some(i => i.item_id === id)) vstate.added.push(id);
             redraw(id);
         }));
+        bindAdd();
+        // Recherche : seule la liste des boutons est redessinée (le clavier de la tablette reste ouvert).
+        const search = el.querySelector('[data-kv-search]');
+        search?.addEventListener('input', () => {
+            resetIdle();
+            vstate.search = search.value;
+            el.querySelector('[data-kv-picklist]').innerHTML = pickList(day, all, !!(day.closed && day.closed.locked));
+            bindAdd();
+        });
         el.querySelectorAll('[data-line]').forEach(card => {
             const i = byId(card.dataset.line);
             const L = vstate.lines[i.item_id];
