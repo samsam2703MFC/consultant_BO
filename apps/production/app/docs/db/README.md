@@ -43,6 +43,15 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
 
+### Noms des produits retravaillés (migration 115, 27/10/2026)
+
+- 395 noms de `final_product` corrigés (majuscules et orthographe, variante A : typographie française ; « – » avant le
+  format, « 75 g », « ⌀ 22 cm ») d'après la simulation validée ; les 42 noms « à vérifier » sont inchangés. Mise à jour
+  par identifiant, seulement si le nom actuel est encore celui de la simulation.
+- `n_product_name_history` : ancien et nouveau nom par produit et par origine (`source`), `applied_at` NULL quand le nom
+  avait changé entre-temps (non appliqué). Retour arrière possible depuis cette table.
+- Les documents émis (WDT, WZ, proformas, factures, KSeF) et les instantanés franchisés gardent l'ancien nom.
+
 ### Compositions faites par un autre groupe (migration 114, 27/10/2026)
 
 - `n_recipe_producer.lead_days` : délai de commande de la composition (jours avant le besoin, 0 = le jour même ; NULL = sans

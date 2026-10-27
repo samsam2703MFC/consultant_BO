@@ -40,7 +40,9 @@ class GlobalSearchService
         if (mb_strlen($term) < self::MIN_LENGTH && !ctype_digit($term)) {
             $term = $q;
         }
-        $pattern = '%' . addcslashes($term, '\\%_') . '%';
+        // Słowa w kolejności, bez interpunkcji : « croissant 75 » znajduje « Croissant – 75 g », « tarte - 22 » « Tarte … ⌀ 22 cm ».
+        $words = array_values(array_filter(preg_split('/\s+/u', trim($term)) ?: [], fn($w) => preg_match('/[\p{L}\p{N}]/u', $w)));
+        $pattern = '%' . implode('%', array_map(fn($w) => addcslashes($w, '\\%_'), $words ?: [trim($term)])) . '%';
         $exact = ctype_digit($term) ? $term : '';
         $n = self::PER_TYPE;
 
