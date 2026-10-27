@@ -104,6 +104,7 @@
         'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />',
         'list-ordered': '<path d="M10 12h11" /><path d="M10 18h11" /><path d="M10 6h11" /><path d="M4 10h2" /><path d="M4 6h1v4" /><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />',
         'clock': '<circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />',
+        'info': '<circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />',
         'package': '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /><path d="M12 22V12" /><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" /><path d="m7.5 4.27 9 5.15" />',
         'shield-check': '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" />',
         'book-open': '<path d="M12 7v14" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />',
@@ -1769,14 +1770,18 @@
         } else {
             const tiers = b.tiers.filter(x => !x.below_min);
             const top = tiers.length ? tiers[tiers.length - 1].from : b.min;
-            const scale = Math.max(top * 1.12, (c.projection || 0) * 1.04, 1);
+            const ly = b.last_year && b.last_year.available ? b.last_year : null;
+            const scale = Math.max(top * 1.12, (c.projection || 0) * 1.04, ly ? ly.per_person * 1.04 : 0, 1);
             const pos = (v) => Math.min(100, Math.max(0, v / scale * 100));
             const marks = tiers.map(x => `<span class="kb-mark ${x.projected ? 'is-on' : ''}" style="left:${pos(x.from)}%"><b>${esc(zl(x.from))}</b><i>+${esc(zl(x.amount))}</i></span>`).join('');
             const tierNo = c.tier_projection !== null ? tiers.findIndex(x => x.from === b.tiers[c.tier_projection].from) + 1 : 0;
             body += `<section class="kiosk-card kb-hero"><div class="kb-figures">
                     <div><span class="kb-label">${esc(t('bonus_per_person'))}</span><strong class="kb-big">${esc(zl(c.per_person))}</strong><small class="kiosk-muted">${esc(t('bonus_per_person_sub', {revenue: zl(c.revenue_pln), people: fmt(c.people)}))}</small></div>
                     <div class="is-right"><span class="kb-label">${esc(t('bonus_projection'))}</span><strong class="kb-big is-primary">${esc(zl(c.projection))}</strong><small class="kiosk-muted">${esc(t('bonus_projection_sub'))}</small></div></div>
-                <div class="kb-bar" role="img" aria-label="${esc(t('bonus_per_person'))} ${esc(zl(c.per_person))}"><i class="kb-now" style="width:${pos(c.per_person)}%"></i><i class="kb-pace" style="left:${pos(c.per_person)}%;width:${Math.max(0, pos(c.projection) - pos(c.per_person))}%"></i>${marks}</div></section>`;
+                <div class="kb-bar" role="img" aria-label="${esc(t('bonus_per_person'))} ${esc(zl(c.per_person))}"><i class="kb-now" style="width:${pos(c.per_person)}%"></i><i class="kb-pace" style="left:${pos(c.per_person)}%;width:${Math.max(0, pos(c.projection) - pos(c.per_person))}%"></i>${marks}
+                    ${ly ? `<span class="kb-ly" style="left:${pos(ly.per_person)}%"></span>` : ''}</div>
+                ${ly ? `<p class="kb-legend"><span class="kb-ly-key" aria-hidden="true"></span>${esc(t('bonus_ly_legend', {month: month(b.last_year_ym), value: zl(ly.per_person)}))}${c.projection !== null && ly.per_person > 0
+                    ? ` · <strong class="${c.projection >= ly.per_person ? 'is-up' : 'is-down'}">${esc(t('bonus_ly_delta', {pct: (c.projection >= ly.per_person ? '+' : '−') + fmt(Math.abs(Math.round((c.projection - ly.per_person) / ly.per_person * 100)))}))}</strong>` : ''}</p>` : ''}</section>`;
             const next = b.next;
             body += `<div class="kv-tiles kb-tiles">
                 ${c.bonus_projection > 0 ? tile(t('bonus_tile_bonus'), zl(c.bonus_projection), t('bonus_tile_bonus_sub', {n: tierNo}), 'is-ok') : tile(t('bonus_tile_bonus'), '0 zł', t('bonus_tile_bonus_none', {min: zl(b.threshold)}))}
@@ -1791,6 +1796,8 @@
                     <p class="kiosk-muted kv-small">${esc(b.prorata ? t('bonus_prorata_note', {total: b.group_days}) : t('bonus_full_note'))}</p></section>`;
             }
         }
+        const info = lang === 'fr' ? (b.info_fr || b.info_pl) : b.info_pl;
+        if (info) body += `<aside class="kb-info">${icon('info', 'is-sm')}<p>${esc(info)}</p></aside>`;
         body += `<p class="kiosk-muted kv-small kb-basis">${esc(t('bonus_basis', {rate: fmt(b.rate)}))}</p>`;
         el.innerHTML = personHeader() + tabs('bonus') + body;
         if (message) toast(message);

@@ -643,6 +643,8 @@
   "bonus_tile_prev": "{month}",
   "bonus_tile_prev_sub": "ventes par personne · prime {amount}",
   "bonus_tile_prev_none": "ventes par personne · pas de prime",
+  "bonus_ly_legend": "N-1 · {month} : {value} par personne",
+  "bonus_ly_delta": "prévision {pct} %",
   "bonus_persons": "Prime de chacun (prévision)",
   "bonus_persons_me": "Votre prime (prévision)",
   "bonus_days": "{days} / {total} jours",

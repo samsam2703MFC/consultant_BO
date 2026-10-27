@@ -11733,6 +11733,184 @@
                 "x-permission": "prod.plan.validate"
             }
         },
+        "/execution/days/{date}/{group}/efficiency": {
+            "get": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Wydajność dnia grupy / Rendement du jour d'un groupe",
+                "operationId": "getDayEfficiency",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DayEfficiency"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Temps standard des pièces faites (fiche produit : personnes × minutes du lot ÷ pièces du lot, sinon gamme) ÷ temps de travail du groupe (pointages du jour − pause efficiency.break_min_per_person par personne présente − nettoyage du jour par personne). Personnes avec poste, répartition par poste, produits sans temps standard (« brak »), objectif efficiency.target_pct.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "group",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.validate"
+            }
+        },
+        "/execution/days/{date}/{group}/cleaning": {
+            "put": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Sprzątanie dnia / Nettoyage du jour",
+                "operationId": "setDayCleaning",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DayEfficiency"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Nettoyage retiré du temps de travail : 0, 15 ou 30 min par personne présente (choix du responsable, par jour et par groupe). 422 INVALID_CHOICE.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "group",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DayCleaningInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.validate"
+            }
+        },
         "/execution/waste/{id}": {
             "patch": {
                 "tags": [
@@ -13597,7 +13775,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Onglet « Premia » de la tablette (personne identifiée) : visible = false si l'onglet est coupé pour le groupe (ERP › Zespół › Premie zespołów). Ventes du groupe dans le mois (WDT du département du groupe, comme Rentowność) ÷ personnes payées dans le mois = ventes par personne, en zł au taux de la société : per_person (à ce jour) et projection (au rythme actuel). Palier atteint à partir de min (bonus.min_per_person_pln) → bonus (à ce jour) / bonus_projection par personne ; next : palier suivant, ventes du groupe manquantes d'ici la fin du mois et par jour ouvré restant. persons : prime de chacun au prorata des jours de présence (pointages) si bonus.presence_prorata ; seulement la personne connectée si bonus.show_people = 0.",
+                "description": "Onglet « Premia » de la tablette (personne identifiée) : visible = false si l'onglet est coupé pour le groupe (ERP › Zespół › Premie zespołów). Ventes du groupe dans le mois (WDT du département du groupe, comme Rentowność) ÷ personnes payées dans le mois = ventes par personne, en zł au taux de la société : per_person (à ce jour) et projection (au rythme actuel). Palier atteint à partir de min (bonus.min_per_person_pln) → bonus (à ce jour) / bonus_projection par personne ; next : palier suivant, ventes du groupe manquantes d'ici la fin du mois et par jour ouvré restant. persons : prime de chacun au prorata des jours de présence (pointages) si bonus.presence_prorata ; seulement la personne connectée si bonus.show_people = 0. last_year : même mois un an avant (N-1, trait sur la jauge) ; info_pl / info_fr : vignette (i) modifiable dans l'ERP.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -22680,6 +22858,19 @@
                     "previous": {
                         "$ref": "#/components/schemas/BonusMonth"
                     },
+                    "last_year_ym": {
+                        "type": "string"
+                    },
+                    "last_year": {
+                        "$ref": "#/components/schemas/BonusMonth"
+                    },
+                    "info_pl": {
+                        "type": "string",
+                        "description": "Informacja (i) zakładki, edytowana w ERP (pusta = brak)"
+                    },
+                    "info_fr": {
+                        "type": "string"
+                    },
                     "next": {
                         "type": "object",
                         "nullable": true,
@@ -22770,6 +22961,10 @@
                     "bonus_projection": {
                         "type": "number",
                         "nullable": true
+                    },
+                    "people_estimated": {
+                        "type": "boolean",
+                        "description": "N-1 : osoby bieżącego miesiąca (brak osób opłaconych w tamtym miesiącu)"
                     }
                 }
             },
@@ -22903,6 +23098,214 @@
                     },
                     "lines_validated": {
                         "type": "integer"
+                    },
+                    "efficiency_pct": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "Wydajność dnia (%) ; null : brak czasu pracy albo czasu normatywnego"
+                    },
+                    "efficiency_target_reached": {
+                        "type": "boolean",
+                        "nullable": true
+                    }
+                }
+            },
+            "DayCleaningInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "minutes"
+                ],
+                "properties": {
+                    "minutes": {
+                        "type": "integer",
+                        "enum": [
+                            0,
+                            15,
+                            30
+                        ]
+                    }
+                }
+            },
+            "DayEfficiency": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "target_pct": {
+                        "type": "number"
+                    },
+                    "break_min": {
+                        "type": "integer"
+                    },
+                    "cleaning_min": {
+                        "type": "integer"
+                    },
+                    "cleaning_options": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "efficiency_pct": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "target_reached": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "people": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "position": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "first_in": {
+                                    "type": "string",
+                                    "example": "2026-10-20 06:02:00"
+                                },
+                                "last_out": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "open": {
+                                    "type": "boolean"
+                                },
+                                "missing_out": {
+                                    "type": "boolean"
+                                },
+                                "clocked_min": {
+                                    "type": "number"
+                                },
+                                "break_min": {
+                                    "type": "number"
+                                },
+                                "cleaning_min": {
+                                    "type": "number"
+                                },
+                                "work_min": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "positions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "people": {
+                                    "type": "integer"
+                                },
+                                "work_min": {
+                                    "type": "number"
+                                },
+                                "pct": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "products": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "item_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "produced": {
+                                    "type": "number"
+                                },
+                                "standard_min": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "min_per_unit": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "source": {
+                                    "type": "string",
+                                    "enum": [
+                                        "batch",
+                                        "routing"
+                                    ],
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "totals": {
+                        "type": "object",
+                        "properties": {
+                            "clocked_min": {
+                                "type": "number"
+                            },
+                            "break_min": {
+                                "type": "number"
+                            },
+                            "cleaning_min": {
+                                "type": "number"
+                            },
+                            "work_min": {
+                                "type": "number"
+                            },
+                            "standard_min": {
+                                "type": "number"
+                            },
+                            "produced": {
+                                "type": "number"
+                            },
+                            "missing_standard": {
+                                "type": "integer"
+                            }
+                        }
                     }
                 }
             },

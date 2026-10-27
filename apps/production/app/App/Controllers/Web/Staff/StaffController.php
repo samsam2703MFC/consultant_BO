@@ -60,7 +60,7 @@ class StaffController extends BaseController
     /** Premie zespołów : minimum i progi (sprzedaż na osobę → premia), zakładka « Premia » tabletu dla wybranych grup. */
     public function teamBonus()
     {
-        $this->view('staff/team_bonus', $this->teamBonus->overview());
+        $this->view('staff/team_bonus', $this->teamBonus->overview() + ['info_max' => TeamBonusService::INFO_MAX]);
     }
 
     public function saveTeamBonus()

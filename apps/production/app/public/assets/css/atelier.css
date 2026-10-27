@@ -986,6 +986,7 @@ tr.at-row-new > td { background: rgba(46, 125, 79, 0.07); }
 /* Premie zespołów : minimum, progi, grupy (zakładka « Premia » tabletu) */
 .at-team-bonus .at-bonus-input { max-width: 220px; }
 .at-team-bonus .at-bonus-tiers .input-group { max-width: 190px; }
+.at-team-bonus .at-bonus-tiers .input-group input { min-width: 96px; font-variant-numeric: tabular-nums; }
 .at-team-bonus .at-bonus-tiers th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--at-muted); font-weight: 500; }
 .at-team-bonus .at-bonus-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: 1px; }
 .at-team-bonus .at-bonus-groups .form-switch .form-check-input { width: 2.6em; height: 1.4em; margin-left: 0; }
@@ -2010,6 +2011,40 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .pd-photos { display: inline-flex; gap: 4px; }
 .pd-photos img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--at-line); }
 @media (max-width: 991px) { .pd-wrap { grid-template-columns: minmax(0, 1fr); } }
+/* Wydajność dnia (makieta 2) : duży wskaźnik, sprzątanie, osoby i stanowiska obok produkcji z czasem normatywnym */
+.pd-day-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pd-eff-badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+.pd-eff-badge.is-ok { background: rgba(46, 125, 79, .12); color: var(--at-success); }
+.pd-eff-badge.is-low { background: rgba(141, 29, 44, .08); color: var(--at-primary); }
+.pd-eff { margin-bottom: 18px; font-variant-numeric: tabular-nums; }
+.pd-eff-lbl { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--at-muted); font-weight: 600; margin-bottom: 6px; }
+.pd-eff-head { display: grid; grid-template-columns: minmax(200px, 240px) minmax(0, 1fr) auto; gap: 24px; align-items: center; border: 1px solid var(--at-line); border-radius: var(--at-radius); padding: 16px 20px; background: var(--at-surface); }
+.pd-eff-big { text-align: center; border-right: 1px solid var(--at-line); padding-right: 20px; }
+.pd-eff-big strong { display: block; font-size: 52px; line-height: 1.05; font-weight: 800; letter-spacing: -.02em; }
+.pd-eff-big strong.is-ok { color: var(--at-success); }
+.pd-eff-big strong.is-warn { color: var(--at-warning); }
+.pd-eff-big strong.is-low { color: var(--at-primary); }
+.pd-eff-seg { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.pd-eff-clean { min-height: 44px; padding: 0 16px; border: 1px solid var(--at-line); border-radius: 8px; background: var(--at-surface); font-weight: 600; font-size: 14px; color: var(--at-text); }
+.pd-eff-clean.is-on { background: var(--at-primary); border-color: var(--at-primary); color: #fff; }
+.pd-eff-target { text-align: right; }
+.pd-eff-target strong { display: block; font-size: 26px; font-weight: 800; }
+.pd-tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; background: var(--at-fill, #f1ece6); color: var(--at-muted); }
+.pd-tag.is-ok { background: rgba(46, 125, 79, .12); color: var(--at-success); }
+.pd-tag.is-warn { background: rgba(183, 121, 31, .14); color: #8a5a12; }
+.pd-tag.is-low { background: rgba(141, 29, 44, .08); color: var(--at-primary); }
+.pd-eff-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.pd-eff-table th.text-end, .pd-eff-table td.text-end { white-space: nowrap; }
+.pd-eff-card { border: 1px solid var(--at-line); border-radius: var(--at-radius); padding: 14px 16px; background: var(--at-surface); min-width: 0; }
+.pd-eff-table td:first-child { min-width: 170px; }
+.pd-eff-table tfoot td { font-weight: 700; border-top: 2px solid var(--at-line); border-bottom: 0; }
+.pd-eff-bar { display: flex; height: 16px; border-radius: 6px; overflow: hidden; background: var(--at-line); }
+.pd-eff-bar i { display: block; height: 100%; }
+.pd-eff-legend { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 16px; margin-top: 10px; font-size: 14px; }
+.pd-eff-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
+.pd-lines-title { margin: 6px 0 10px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--at-muted); font-weight: 600; }
+@media (min-width: 1900px) { .pd-eff-grid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); } }
+@media (max-width: 767px) { .pd-eff-head { grid-template-columns: minmax(0, 1fr); } .pd-eff-big { border-right: 0; padding-right: 0; } .pd-eff-target { text-align: left; } }
 
 /* Ustawienia : hub à cartes (/settings) */
 .st-hub { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; align-items: start; }

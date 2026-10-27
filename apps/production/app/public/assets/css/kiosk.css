@@ -851,6 +851,16 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .kb-tiles .kv-tile { min-width: 0; }
 .kv-table tr.is-me td { background: var(--k-fill); }
 .kb-basis { margin: 12px 4px 0; }
+/* N-1 : ten sam miesiąc rok wcześniej — kreska w kolorze na wskaźniku i legenda pod progami */
+.kb-ly { position: absolute; top: -8px; bottom: -8px; width: 3px; margin-left: -1px; border-radius: 2px; background: #2F6FB0; z-index: 2; }
+.kb-hero:has(.kb-legend) { padding-bottom: 20px; }
+.kb-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 64px 6px 0; font-size: 15px; color: var(--k-muted); font-variant-numeric: tabular-nums; }
+.kb-ly-key { width: 3px; height: 18px; border-radius: 2px; background: #2F6FB0; margin-right: 4px; }
+.kb-legend strong.is-up { color: var(--k-ok); }
+.kb-legend strong.is-down { color: var(--k-danger); }
+.kb-info { display: flex; align-items: flex-start; gap: 10px; margin: 14px 0 0; padding: 12px 14px; border-radius: 10px; background: var(--k-surface); border: 1px solid var(--k-line); color: var(--k-text); }
+.kb-info svg { flex: none; margin-top: 2px; color: #2F6FB0; }
+.kb-info p { margin: 0; font-size: 15px; line-height: 1.45; }
 @media (max-width: 700px) { .kb-big { font-size: 34px; } .kb-figures .is-right { text-align: left; align-items: flex-start; } }
 
 /* --- Produkcja : flux de l'opérateur (liste à produire → produit → pièces → recette → lots → fait + rebuts) --- */

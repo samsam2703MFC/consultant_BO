@@ -643,6 +643,8 @@
   "bonus_tile_prev": "{month}",
   "bonus_tile_prev_sub": "sprzedaż na osobę · premia {amount}",
   "bonus_tile_prev_none": "sprzedaż na osobę · bez premii",
+  "bonus_ly_legend": "N-1 · {month} : {value} na osobę",
+  "bonus_ly_delta": "prognoza {pct} %",
   "bonus_persons": "Premia osób (prognoza)",
   "bonus_persons_me": "Twoja premia (prognoza)",
   "bonus_days": "{days} / {total} dni",

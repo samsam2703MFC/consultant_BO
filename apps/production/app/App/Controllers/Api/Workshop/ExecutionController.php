@@ -7,6 +7,7 @@ use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\ApiRequest;
 use App\Core\Api\Workshop\ApiResult;
 use App\Services\Workshop\Execution\ClockQuestionService;
+use App\Services\Workshop\Execution\DayEfficiencyService;
 use App\Services\Workshop\Execution\DevProductService;
 use App\Services\Workshop\Execution\ExecutionService;
 use App\Services\Workshop\Execution\KioskAuthService;
@@ -43,6 +44,7 @@ final class ExecutionController
         private KioskStockService $stock,
         private OfficeClockService $office,
         private TeamBonusService $bonus,
+        private DayEfficiencyService $efficiency,
     ) {
     }
 
@@ -146,7 +148,9 @@ final class ExecutionController
     }
 
     // Kierownik produkcji (ERP) : dni z tabletów, poprawki po zatwierdzeniu
-    public function days(ApiRequest $request): ApiResult { return ApiResult::list($this->outputs->recentDays((int) ($request->query('days') ?? 14))); }
+    public function days(ApiRequest $request): ApiResult { return ApiResult::list($this->efficiency->annotate($this->outputs->recentDays((int) ($request->query('days') ?? 14)))); }
+    public function dayEfficiency(ApiRequest $request): ApiResult { return new ApiResult($this->efficiency->day($request->id('group'), $this->dateVar($request), $request->context->translator->lang())); }
+    public function dayCleaning(ApiRequest $request): ApiResult { return new ApiResult($this->efficiency->setCleaning($request->id('group'), $this->dateVar($request), $request->body(), $request->context)); }
     public function dayDetail(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->dayOf($request->id('group'), $this->dateVar($request), $request->context->translator->lang())); }
     public function correctLine(ApiRequest $request): ApiResult
     {

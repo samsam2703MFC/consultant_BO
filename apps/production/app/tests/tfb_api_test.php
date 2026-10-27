@@ -1033,6 +1033,17 @@ check($s === 200 && $row['waste'] == 12.0 && $row['line']['waste'] == 12.0 && !$
 check($s === 409 && $b['description'] === 'WASTE_CANCELLED', 'ERP: a cancelled waste stays cancelled');
 [$s, $b] = $call('PATCH', '/execution/days/' . date('Y-m-d', strtotime('+3 days')) . '/1/items/' . $croissant, ['produced' => 1], $mt);
 check($s === 404, 'ERP: no correction of a future day');
+// Wydajność dnia : czas normatywny ÷ (odbicia − przerwa 15 min na osobę − sprzątanie), sprzątanie 0 / 15 / 30 min na osobę
+check(array_key_exists('efficiency_pct', $todayRow), 'ERP: list of days carries the efficiency of the day');
+[$s, $ef] = $call('GET', '/execution/days/' . date('Y-m-d') . '/1/efficiency', null, $mt);
+check($s === 200 && $ef['data']['break_min'] === 15 && $ef['data']['target_pct'] == 85 && $ef['data']['cleaning_min'] === 0
+    && isset($ef['data']['totals']['work_min'], $ef['data']['totals']['standard_min']) && is_array($ef['data']['positions']), 'ERP: efficiency of the day (break 15 min per person, target 85 %)');
+[$s, $ef2] = $call('PUT', '/execution/days/' . date('Y-m-d') . '/1/cleaning', ['minutes' => 30], $mt);
+$present = count(array_filter($ef2['data']['people'] ?? [], fn($p) => $p['clocked_min'] > 0));
+check($s === 200 && $ef2['data']['cleaning_min'] === 30 && ($present === 0 || $ef2['data']['totals']['cleaning_min'] > 0), 'ERP: cleaning 30 min per person taken off the working time');
+[$s, $b] = $call('PUT', '/execution/days/' . date('Y-m-d') . '/1/cleaning', ['minutes' => 20], $mt);
+check($s === 422, 'ERP: cleaning only 0, 15 or 30 min');
+$pdo->exec('DELETE FROM n_prod_day_cleaning WHERE work_date = CURDATE() AND id_group = 1');
 $weekGood = (new \App\Repositories\Workshop\WeekRepository($pdo))->produced(date('Y-m-d'), date('Y-m-d'));
 check(abs(($weekGood[$croissant] ?? 0) - (140 + 5 - 12)) < 0.001, 'week progress counts good quantity (produced − waste)');
 // --- Nowe produkty na tablecie : produkty testowe pokazane grupie (bez działu = wszystkie grupy), karta z filmem, zdjęciami, etapami

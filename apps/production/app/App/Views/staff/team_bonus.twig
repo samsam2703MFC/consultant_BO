@@ -49,6 +49,14 @@
                         <input class="form-check-input" type="checkbox" role="switch" id="bonusPeople" name="show_people" {{ show_people ? 'checked' : '' }}>
                         <label class="form-check-label" for="bonusPeople">Tablet pokazuje premię każdej osoby grupy (wyłączone : tylko własną)</label>
                     </div>
+                    <div class="at-bonus-info mt-3">
+                        <span class="form-label d-block"><i class="bi bi-info-circle"></i> Informacja (i) w zakładce « Premia » tabletu</span>
+                        <label class="form-label small text-muted mb-1" for="bonusInfoPl">Po polsku</label>
+                        <textarea id="bonusInfoPl" class="form-control" name="info_pl" rows="3" maxlength="{{ info_max }}">{{ info_pl }}</textarea>
+                        <label class="form-label small text-muted mb-1 mt-2" for="bonusInfoFr">Po francusku (tablet po francusku)</label>
+                        <textarea id="bonusInfoFr" class="form-control" name="info_fr" rows="3" maxlength="{{ info_max }}">{{ info_fr }}</textarea>
+                        <div class="form-text">Pusta = brak informacji na tablecie. Najwyżej {{ info_max }} znaków.</div>
+                    </div>
                     <div class="mt-3"><button class="btn btn-primary">Zapisz</button></div>
                 </div>
             </form>
@@ -68,6 +76,7 @@
                                     <th class="text-end">Sprzedaż / os.<div class="at-sub">{{ current_label }}</div></th>
                                     <th class="text-end">Premia / os.<div class="at-sub">prognoza</div></th>
                                     <th class="text-end">{{ previous_label }}<div class="at-sub">sprzedaż / os., premia</div></th>
+                                    <th class="text-end text-nowrap">N-1<div class="at-sub">{{ last_year_label }}</div></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -93,6 +102,13 @@
                                     <td class="text-end text-nowrap">
                                         {% if p.available %}{{ p.per_person|pln }}<div class="at-sub">{{ p.bonus > 0 ? 'premia ' ~ p.bonus|pln : 'bez premii' }}</div>{% else %}—{% endif %}
                                     </td>
+                                    {% set ly = g.last_year %}
+                                    <td class="text-end text-nowrap">
+                                        {% if ly.available %}{{ ly.per_person|pln }}
+                                            {% if c.available and ly.per_person > 0 %}{% set d = (c.projection - ly.per_person) / ly.per_person * 100 %}<div class="at-sub {{ d >= 0 ? 'text-success' : 'text-danger' }}">prognoza {{ d >= 0 ? '+' : '−' }}{{ d|abs|number_format(0, ',', ' ') }} %</div>{% endif %}
+                                            {% if ly.people_estimated %}<div class="at-sub">osoby z {{ current_label }}</div>{% endif %}
+                                        {% else %}—{% endif %}
+                                    </td>
                                 </tr>
                             {% endfor %}
                             </tbody>
@@ -101,7 +117,7 @@
                     <p class="at-profit-note">
                         Sprzedaż na osobę = ta sama liczba co na stronie <a href="{{ root }}/dashboard">Rentowność</a> : sprzedaż WDT działu grupy ÷ osoby opłacone w miesiącu,
                         w zł po kursie {{ rate|number_format(2, ',', ' ') }} z ustawień firmy. Bieżący miesiąc : « prognoza » = w obecnym tempie ({{ (elapsed * 100)|round }} % miesiąca), « dziś » = sprzedaż do dziś.
-                        Premia wypłacana za zamknięty miesiąc. Budżet personelu z % sprzedaży : <a href="{{ root }}/staff/budget">Budżet personelu i premie</a>.
+                        Premia wypłacana za zamknięty miesiąc. N-1 : ten sam miesiąc rok wcześniej (kreska na wskaźniku tabletu). Budżet personelu z % sprzedaży : <a href="{{ root }}/staff/budget">Budżet personelu i premie</a>.
                     </p>
                 </div>
             </div>
@@ -129,7 +145,8 @@
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         const tiers = [...body.querySelectorAll('tr[data-tier]')].map(tr => ({from: tr.querySelector('[data-from]').value, amount: tr.querySelector('[data-amount]').value}));
-        at.send('/ajax/staff/team-bonus', 'PUT', {min: form.min.value, prorata: form.prorata.checked, show_people: form.show_people.checked, tiers}).then((res) => {
+        at.send('/ajax/staff/team-bonus', 'PUT', {min: form.min.value, prorata: form.prorata.checked, show_people: form.show_people.checked,
+            info_pl: form.info_pl.value, info_fr: form.info_fr.value, tiers}).then((res) => {
             at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
             if (res.ok) window.setTimeout(() => window.location.reload(), 600);
         });

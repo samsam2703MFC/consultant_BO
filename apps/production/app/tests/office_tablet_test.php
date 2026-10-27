@@ -320,6 +320,8 @@ try {
     $me = array_values(array_filter($b['data']['persons'] ?? [], fn($p) => $p['me']));
     expectOff($s === 200 && $b['data']['visible'] === true && $b['data']['min'] == 30000 && array_column($b['data']['tiers'], 'amount') == [300, 600, 1000]
         && count($me) === 1 && $me[0]['id'] === 80 && array_key_exists('per_person', $b['data']['current']), 'Premia: minimum, tiers, the person marked as me');
+    expectOff(isset($b['data']['last_year']['available']) && $b['data']['last_year_ym'] === date('Y-m', strtotime(date('Y-m-01') . ' -1 year'))
+        && str_contains((string) $b['data']['info_pl'], 'Coboty') && $b['data']['info_fr'] !== '', 'Premia: same month last year (N-1) and the (i) note from the ERP');
     [$s] = $call('PATCH', '/referentiels/params/bonus.show_people', ['value' => false], $manager);
     if ($s === 200) {
         [, $b] = $call('GET', '/kiosk/bonus', null, $tpH);

@@ -17,6 +17,8 @@ use DateTimeImmutable;
  *
  * Premia osoby = premia progu × dni obecności ÷ dni pracy grupy (odbicia na tabletach) przy bonus.presence_prorata ;
  * grupa bez odbić w miesiącu : cała premia progu. Zakładka « Premia » tabletu : tylko grupy z bonus_visible.
+ * Ten sam miesiąc rok wcześniej (N-1) : kreska na wskaźniku tabletu i kolumna strony ERP ; bez osób opłaconych
+ * w tamtym miesiącu sprzedaż N-1 dzielona przez osoby bieżącego miesiąca (people_estimated).
  */
 final class TeamBonusService
 {
@@ -29,7 +31,9 @@ final class TeamBonusService
     ) {
     }
 
-    /** @return array{min:float, threshold:float, prorata:bool, show_people:bool, tiers:list<array{id:int, from:float, amount:float}>} */
+    public const INFO_MAX = 500;
+
+    /** @return array{min:float, threshold:float, prorata:bool, show_people:bool, info_pl:string, info_fr:string, tiers:list<array{id:int, from:float, amount:float}>} */
     public function settings(): array
     {
         $min = $this->params->get('bonus.min_per_person_pln', '30000');
@@ -42,6 +46,9 @@ final class TeamBonusService
             'threshold' => max($min, $first['from'] ?? $min),
             'prorata' => $this->params->get('bonus.presence_prorata', '1') === '1',
             'show_people' => $this->params->get('bonus.show_people', '1') === '1',
+            // Informacja (i) w zakładce tabletu (np. coboty nie liczą się jako osoby) ; pusta = brak.
+            'info_pl' => trim($this->params->get('bonus.info_pl', '')),
+            'info_fr' => trim($this->params->get('bonus.info_fr', '')),
             'tiers' => $tiers,
         ];
     }
@@ -75,15 +82,17 @@ final class TeamBonusService
     {
         $today ??= new DateTimeImmutable('today');
         $settings = $this->settings();
-        [$previous, $current, $rate] = $this->months($today);
+        [$previous, $current, $rate, $lastYear] = $this->months($today);
         $groups = [];
         foreach ($this->repo->groups() as $g) {
             $section = $g['id_section'] !== null ? (int) $g['id_section'] : null;
+            $now = $this->figures($current, $section, $rate, $settings);
             $groups[] = [
                 'id' => (int) $g['id'], 'name' => $g['name_pl'], 'color' => $g['color'], 'visible' => (bool) $g['bonus_visible'],
                 'section' => $section !== null,
-                'current' => $this->figures($current, $section, $rate, $settings),
+                'current' => $now,
                 'previous' => $this->figures($previous, $section, $rate, $settings),
+                'last_year' => $this->lastYear($lastYear, $section, $rate, $settings, $now),
             ];
         }
         return $settings + [
@@ -91,6 +100,7 @@ final class TeamBonusService
             'groups' => $groups,
             'current_label' => ProfitabilityService::monthLabel($current['ym']),
             'previous_label' => ProfitabilityService::monthLabel($previous['ym']),
+            'last_year_label' => ProfitabilityService::monthLabel($lastYear['ym']),
             'elapsed' => $this->profitability->period('month', $today)['elapsed'],
         ];
     }
@@ -105,7 +115,7 @@ final class TeamBonusService
         if ($group === null || !(int) $group['bonus_visible']) return null;
         $today ??= new DateTimeImmutable('today');
         $settings = $this->settings();
-        [$previous, $current, $rate] = $this->months($today);
+        [$previous, $current, $rate, $lastYear] = $this->months($today);
         $section = $group['id_section'] !== null ? (int) $group['id_section'] : null;
         $now = $this->figures($current, $section, $rate, $settings);
         $before = $this->figures($previous, $section, $rate, $settings);
@@ -143,6 +153,10 @@ final class TeamBonusService
                 'projected' => $now['projection'] !== null && $t['from'] >= $settings['min'] && $now['projection'] + 1e-6 >= $t['from']], $settings['tiers']),
             'current' => $now,
             'previous' => $before,
+            'last_year_ym' => $lastYear['ym'],
+            'last_year' => $this->lastYear($lastYear, $section, $rate, $settings, $now),
+            'info_pl' => $settings['info_pl'],
+            'info_fr' => $settings['info_fr'],
             'next' => $next,
             'prorata' => $settings['prorata'] && $presence['group_days'] > 0,
             'group_days' => $presence['group_days'],
@@ -177,10 +191,18 @@ final class TeamBonusService
             if (abs($tiers[$i]['from'] - $tiers[$i - 1]['from']) < 0.005) throw new CustomException('Dwa progi od tej samej sprzedaży na osobę.', 'errors', 422);
         }
         $flag = fn($k, $default) => array_key_exists($k, $input) ? (filter_var($input[$k], FILTER_VALIDATE_BOOLEAN) ? '1' : '0') : $default;
-        $this->tx->execute(function () use ($min, $tiers, $userId, $input, $flag) {
+        $info = [];
+        foreach (['info_pl', 'info_fr'] as $k) {
+            if (!array_key_exists($k, $input)) continue;
+            $text = trim(preg_replace('/\s+/u', ' ', (string) $input[$k]));
+            if (mb_strlen($text) > self::INFO_MAX) throw new CustomException('Informacja (i) : najwyżej ' . self::INFO_MAX . ' znaków.', 'errors', 422);
+            $info['bonus.' . $k] = $text;
+        }
+        $this->tx->execute(function () use ($min, $tiers, $userId, $input, $flag, $info) {
             $this->params->setValue('bonus.min_per_person_pln', (string) $min, $userId);
             $this->params->setValue('bonus.presence_prorata', $flag('prorata', $this->params->get('bonus.presence_prorata', '1')), $userId);
             $this->params->setValue('bonus.show_people', $flag('show_people', $this->params->get('bonus.show_people', '1')), $userId);
+            foreach ($info as $code => $text) $this->params->setValue($code, $text, $userId);
             $this->repo->replaceTiers($tiers, $userId);
         });
     }
@@ -202,13 +224,27 @@ final class TeamBonusService
         return $n;
     }
 
-    /** @return array{0:array, 1:array, 2:float} poprzedni miesiąc, bieżący, kurs EUR → zł */
+    /** @return array{0:array, 1:array, 2:float, 3:array} poprzedni miesiąc, bieżący, kurs EUR → zł, ten sam miesiąc rok wcześniej */
     private function months(DateTimeImmutable $today): array
     {
         $rate = $this->profit->eurRate();
         $rate = $rate > 0 ? $rate : 1.0;
-        $monthly = $this->profitability->monthly($today, $rate, 2);
-        return [$monthly[0], $monthly[1], $rate];
+        $monthly = $this->profitability->monthly($today, $rate, 13);
+        return [$monthly[11], $monthly[12], $rate, $monthly[0]];
+    }
+
+    /** Ten sam miesiąc rok wcześniej : sprzedaż na osobę ; bez osób w tamtym miesiącu — osoby bieżącego miesiąca. */
+    private function lastYear(array $month, ?int $section, float $rate, array $settings, array $now): array
+    {
+        $f = $this->figures($month, $section, $rate, $settings) + ['people_estimated' => false];
+        if (!$f['available'] && $f['revenue_pln'] !== null && $f['revenue_pln'] > 0 && $now['people'] !== null && $now['people'] > 0) {
+            $f['per_person'] = round($f['revenue_pln'] / $now['people']);
+            $f['projection'] = $f['per_person'];
+            $f['people'] = $now['people'];
+            $f['available'] = true;
+            $f['people_estimated'] = true;
+        }
+        return $f;
     }
 
     /** Sprzedaż grupy, osoby, sprzedaż na osobę (stan i prognoza) i premia progu w danym miesiącu serii. */

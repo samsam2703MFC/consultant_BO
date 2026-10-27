@@ -203,6 +203,8 @@ final class WorkshopApiRoutes
             ['GET', '/execution/days', ExecutionController::class, 'days', 'prod.plan.validate'],
             ['GET', '/execution/days/{date:\d{4}-\d{2}-\d{2}}/{group:\d+}', ExecutionController::class, 'dayDetail', 'prod.plan.validate'],
             ['PATCH', '/execution/days/{date:\d{4}-\d{2}-\d{2}}/{group:\d+}/items/{item:\d+}', ExecutionController::class, 'correctLine', 'prod.plan.validate'],
+            ['GET', '/execution/days/{date:\d{4}-\d{2}-\d{2}}/{group:\d+}/efficiency', ExecutionController::class, 'dayEfficiency', 'prod.plan.validate'],
+            ['PUT', '/execution/days/{date:\d{4}-\d{2}-\d{2}}/{group:\d+}/cleaning', ExecutionController::class, 'dayCleaning', 'prod.plan.validate'],
             ['PATCH', '/execution/waste/{id:\d+}', ExecutionController::class, 'cancelWaste', 'prod.plan.validate'],
             ['POST', '/kiosk/pair', ExecutionController::class, 'pair', null],
             ['GET', '/kiosk/device', ExecutionController::class, 'device', 'kiosk'],

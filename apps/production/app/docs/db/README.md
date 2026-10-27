@@ -43,6 +43,24 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
 
+### Rendement du jour d'un groupe (migration 113, 27/10/2026)
+
+- `n_prod_day_cleaning` (`work_date`, `id_group`) : nettoyage du jour choisi par le responsable dans Tablety › Zatwierdzenia
+  produkcji — 0, 15 ou 30 minutes par personne présente, retirées du temps de travail (`PUT /execution/days/{date}/{group}/cleaning`).
+- Paramètres `efficiency.break_min_per_person` (15 : pause retirée du temps pointé, par personne présente et par jour, sans
+  contrôle) et `efficiency.target_pct` (85 : objectif).
+- Rendement = temps standard des pièces faites (fiche produit : personnes × minutes du lot ÷ pièces du lot, sinon gamme
+  `StandardTime`) ÷ (pointages du jour − pause − nettoyage). Pointage sans sortie : aujourd'hui jusqu'à maintenant, jours
+  passés non compté. Répartition du temps par poste (`n_prod_employee.id_position`). `GET /execution/days/{date}/{group}/efficiency` ;
+  la liste `GET /execution/days` porte `efficiency_pct`.
+
+### Premie zespołów : vignette (i) de l'onglet « Premia » (migration 112, 27/10/2026)
+
+- Paramètres `bonus.info_pl` et `bonus.info_fr` : texte de la vignette (i) de la tablette (par défaut : les cobots ne comptent
+  pas comme des personnes du groupe), modifiable dans Zespół › Premie zespołów ; vide = pas de vignette.
+- Même mois un an avant (N-1) : trait de couleur sur la jauge de la tablette et colonne de la page ERP ; sans personnes payées
+  ce mois-là, ventes N-1 ÷ personnes du mois en cours (`people_estimated`).
+
 ### Premie zespołów : onglet « Premia » par groupe (migration 111, 27/10/2026)
 
 - `n_bonus_tier` : paliers de prime — à partir de `from_per_person_pln` de ventes par personne dans le mois, `amount_pln`
