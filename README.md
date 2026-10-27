@@ -313,8 +313,10 @@ technique ou une liste de prix devient des fiches produit dans TFBuddy, en trois
    produits partent **inactifs** par défaut (à activer au panel une fois la recette posée). Recliquer ne crée pas de
    doublon.
 
-La route de création n'était pas documentée : « Vérifier l'API » interroge les routes candidates en `OPTIONS` et lit une
-fiche existante — **sans rien écrire** — puis la fiche envoyée ne porte que des champs que l'API rend elle-même.
+**Au 27/10/2026, TFBuddy n'expose aucune route de création de produit** (Swagger : section *Products* en lecture seule).
+« Vérifier l'API » le constate — en `OPTIONS`, **sans rien écrire** — et l'écran propose alors le CSV. La demande à
+TFBuddy est rédigée dans `docs/spec-api-panel.md` §7 ; dès que `POST /products` existe, la création s'active, avec une
+fiche qui ne porte que des champs que l'API rend elle-même. Maquette : `docs/maquettes/import-produits-pdf/`.
 Détail : `docs/contrat-api.md`, section `/produits/import/*`.
 
 ## Scouting commercial

@@ -3017,6 +3017,8 @@ appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. 
   renvoyée. Arrêt net sur 401/403/404/405/5xx (la même réponse attendrait toutes les lignes) et après trois 422 de suite
   sans une création. Réponse `{ok, crees, refuses, arret, import}` ; une ligne de journal (kind `Produits`).
 
-**À confirmer chez TFBuddy** : aucune écriture produit n'avait été mesurée avant ce module — la route et les champs
-ci-dessus sont ceux que l'API rend en lecture. La vérification dit si la route existe ; le premier envoi dit si la
-fiche convient (le message d'un 422 est affiché sur la ligne).
+**Constaté le 27/10/2026 dans le Swagger de TFBuddy : aucune route de création de produit** — la section *Products* ne
+porte que des GET. Tant que `POST /products` n'existe pas, la vérification répond « POST : non » partout, l'écran le dit,
+et l'export CSV du brouillon sert à encoder à la main. La demande est rédigée dans `docs/spec-api-panel.md` §7 ; dès que
+la route existe, la création s'active sans changement de code. Le premier envoi dira si la fiche convient (le message
+d'un 422 est affiché sur la ligne).

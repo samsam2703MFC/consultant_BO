@@ -8574,6 +8574,7 @@ function tplImportProduits(c, x){
         ${btn(m.sonder, m.sondeChargement ? 'Vérification…' : 'Vérifier l’API', false)}
       </div>
       ${m.sondeErreur ? alerte('Vérification impossible : aucun compte TFBuddy configuré, ou API injoignable.', true) : ''}
+      ${m.sondeSansPost ? alerte('TFBuddy n\u2019accepte pas encore la création de produit par l\u2019API : aucune route n\u2019annonce POST. En attendant, « \u21e9 CSV » donne la liste relue à encoder dans TFBuddy ; la création s\u2019activera ici dès qu\u2019ils ouvriront POST /api/v1/products.', true) : ''}
       ${m.sonde ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">${m.sonde.map(s2 => `
         <div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:10px 12px">
           <div style="font-size:12.5px;font-weight:500">${esc(s2.nom)} <span style="font-weight:400;font-size:11.5px;color:var(--color-text-muted)">${esc(s2.base)}</span></div>

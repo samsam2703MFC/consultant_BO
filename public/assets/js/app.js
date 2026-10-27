@@ -13115,6 +13115,8 @@ class App {
         sonder: so && so.chargement ? null : () => this.piSonder(),
         sondeChargement: !!(so && so.chargement),
         sondeErreur: !!(so && !so.chargement && !sd),
+        // Aucune route n'annonce POST : TFBuddy ne crée pas de produit par l'API.
+        sondeSansPost: !!(sd && !sd.comptes.some(c => c.routes.some(r => r.post === true))),
         sonde: sd ? sd.comptes.map(c => ({
           nom: c.nom, base: c.base,
           champs: (c.envoyes || []).join(', '), lus: (c.champs || []).length,

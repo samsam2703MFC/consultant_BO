@@ -542,6 +542,69 @@ Par dépendance, pas par difficulté :
 6. **§5.1 vente par magasin.** Le plus lourd, et le plus rentable : il débloque
    trois écrans et rend la demande de prix possible.
 
+
+---
+
+## 7. Création d'un produit — `POST /products` (demande du 27/10/2026)
+
+### Pourquoi
+
+Le cockpit lit un PDF de gamme (nouveautés, catalogue fournisseur, liste de
+prix), fait relire les produits trouvés, puis doit les **créer au catalogue du
+réseau**. Maquette : `docs/maquettes/import-produits-pdf/`.
+
+Constaté dans la documentation Swagger de l'API le 27/10/2026 : la section
+*Products* ne porte que des lectures — `GET /products`, `GET /product/categories`,
+`GET /product-categories/{id}/products`, `GET /shops/{id}/products/available`.
+Les seules écritures produit (`/products/{productId}/preparation-path…`,
+`POST /product-recipe/{id}/photo`) supposent un produit qui existe déjà.
+Aujourd'hui, l'écran du cockpit s'arrête donc à un export CSV, encodé à la main
+dans TFBuddy.
+
+### 7.1 Créer
+
+```
+POST /products            compte admin (ou consultant, avec un droit dédié)
+{
+  "client_ref": "imp12-l3",
+  "name": "Bûche Pistache & Griotte - 6 pers.",
+  "id_category": 57,
+  "suggested_sale_price": 34.50,
+  "single_weight": 900,
+  "is_divisible": 1,
+  "portion_size": 6,
+  "allergene": "Gluten, Œufs, Lait, Fruits à coque",
+  "is_active": 0
+}
+```
+
+- **Les noms de champs sont ceux que `GET /products/{id}` rend déjà** (table
+  `product`). Le cockpit n'envoie que des champs présents dans une fiche lue :
+  un champ refusé par le validateur ferait échouer toute la ligne.
+- **`is_active: 0` par défaut** : un produit sans recette ne doit pas apparaître
+  en caisse. Il s'active au panel une fois la recette posée.
+- Réponse **`201`** avec la fiche complète, `id` compris. **`422`** avec le
+  champ en cause (enveloppe du §0). **`client_ref`** : idempotence du §0 — un
+  second envoi rend le produit déjà créé, il n'en crée pas un autre.
+- **`OPTIONS /products` doit annoncer `POST` dans l'en-tête `Allow`.** C'est ce
+  que lit le bouton « Vérifier l'API » du cockpit, sans rien écrire ;
+  aujourd'hui il répond `GET, HEAD, OPTIONS`.
+
+### 7.2 À trancher
+
+1. **TVA** : au produit (`tax_value_percent` n'apparaît aujourd'hui que sur
+   `/shops/{id}/products/available`) ou au magasin ?
+2. **Prix** : `suggested_sale_price` est-il bien le prix réseau, repris par
+   chaque magasin ?
+3. **Nom néerlandais** : le document de gamme le donne ; où l'écrire (alias de
+   nom, comme pour les gammes saisonnières) ?
+4. **Allergènes** : `allergene` est un texte libre, alors que le panel les
+   recalcule depuis la recette. Faut-il l'écrire à la création, ou le laisser
+   vide jusqu'à la recette ?
+
+Dès que la route existe, rien ne change côté cockpit : « Vérifier l'API » la
+détecte, et la création s'active.
+
 ---
 
 *Mesures effectuées le 17 août 2026 sur l'API de production du panel, avec le
