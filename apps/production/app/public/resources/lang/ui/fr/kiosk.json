@@ -498,11 +498,9 @@
   "kv_off_plan": "Produit hors plan",
   "kv_validate_day": "Valider la production du jour",
   "kv_encode_title": "Encoder la production",
-  "kv_encode_page_help": "Choisissez une catégorie et touchez un produit : il arrive dans la liste du jour. Sur la même ligne : fait et perte (+ photo).",
-  "kv_cat_other": "Autres / semi-finis",
+  "kv_encode_page_help": "Touchez un produit commandé par les clients : il s’ajoute à la liste du jour. Un autre produit : cherchez-le dans la barre de recherche. Sur la même ligne : fait et perte (+ photo).",
   "kv_in_list": "dans la liste",
   "kv_ppc": "{n} pcs/cart.",
-  "kv_cat_empty": "Aucun produit dans cette catégorie.",
   "kv_day_lines": "Production du jour",
   "kv_day_lines_help": "{n} prod. · à valider",
   "kv_pick_product": "Touchez un produit à gauche pour l'ajouter.",
@@ -584,5 +582,13 @@
   "groups_title": "Choisissez votre groupe",
   "groups_help": "Touchez votre groupe, puis votre nom et votre PIN.",
   "groups_none": "Aucun groupe de production actif.",
-  "group_present": "{n} en poste sur {total}"
+  "group_present": "{n} en poste sur {total}",
+  "kv_ordered_title": "Commandés par les clients (expédition jusqu’au {date})",
+  "kv_ordered_q": "commandé {n} cart.",
+  "kv_ordered_ship": "expédition {date}",
+  "kv_ordered_none": "Aucune commande des produits du groupe ces jours-là — cherchez le produit ci-dessus.",
+  "kv_search_ph": "Chercher un produit (les {n} produits du groupe)…",
+  "kv_search_found": "Résultats : {n}",
+  "kv_search_none": "Aucun produit de ce nom dans le groupe.",
+  "kv_search_help": "Un produit manque ? Tapez quelques lettres de son nom dans la recherche."
 }

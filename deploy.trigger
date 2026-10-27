@@ -1102,3 +1102,5 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-27T07:29:22Z production : section Tablety, plan des tablettes, signature obligatoire entrée / sortie
 2026-10-27T08:25:55Z visites : une réponse par photo du jour (réglée), vignettes des photos de checklist
 2026-10-27T08:48:28Z production : factures d'achat en un clic (KSeF, tout relier, valider, automatique), historique des prix au kg par fournisseur
+2026-10-27T08:57:59Z production : tablette — produits commandés en boutons et recherche
+2026-10-27T09:06:45Z tablettes ERP : production générique, bascule, chauffeur, bureau

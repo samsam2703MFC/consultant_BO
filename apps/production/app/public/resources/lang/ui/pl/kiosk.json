@@ -498,11 +498,9 @@
   "kv_off_plan": "Produkt poza planem",
   "kv_validate_day": "Zatwierdź produkcję dnia",
   "kv_encode_title": "Zakoduj produkcję",
-  "kv_encode_page_help": "Wybierz kategorię i dotknij produkt : trafia na listę dnia. Na tej samej linii : zrobione i strata (+ zdjęcie).",
-  "kv_cat_other": "Inne / półprodukty",
+  "kv_encode_page_help": "Dotknij produkt zamówiony przez klientów : trafia na listę dnia. Innego produktu szukaj w polu wyszukiwania. Na tej samej linii : zrobione i strata (+ zdjęcie).",
   "kv_in_list": "na liście",
   "kv_ppc": "{n} szt./kart.",
-  "kv_cat_empty": "Brak produktów w tej kategorii.",
   "kv_day_lines": "Produkcja dnia",
   "kv_day_lines_help": "{n} prod. · do zatwierdzenia",
   "kv_pick_product": "Dotknij produkt po lewej, żeby go dodać.",
@@ -584,5 +582,13 @@
   "groups_title": "Wybierz swoją grupę",
   "groups_help": "Dotknij swojej grupy, potem nazwiska i wpisz PIN.",
   "groups_none": "Brak aktywnych grup produkcyjnych.",
-  "group_present": "{n} obecnych z {total}"
+  "group_present": "{n} obecnych z {total}",
+  "kv_ordered_title": "Zamówione przez klientów (wysyłka do {date})",
+  "kv_ordered_q": "zamówione {n} kart.",
+  "kv_ordered_ship": "wysyłka {date}",
+  "kv_ordered_none": "Brak zamówień na produkty grupy w tych dniach — wyszukaj produkt powyżej.",
+  "kv_search_ph": "Szukaj produktu (wszystkie {n} produkty grupy)…",
+  "kv_search_found": "Wyniki wyszukiwania : {n}",
+  "kv_search_none": "Brak produktu o tej nazwie w grupie.",
+  "kv_search_help": "Brakuje produktu ? Wpisz kilka liter nazwy w polu wyszukiwania."
 }

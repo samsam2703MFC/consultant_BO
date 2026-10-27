@@ -29,6 +29,7 @@ final class ParamRules
         'trace.label_days' => [0, 7, true],
         'kiosk.office_qr_ttl_s' => [30, 600, true],
         'supply.invoice_price_alert_pct' => [1, 100, false],
+        'kiosk.ordered_days' => [1, 28, true],
     ];
 
     /** [code bas, code haut, code d'erreur API, message ERP] : la valeur haute ne peut pas être inférieure à la basse. */

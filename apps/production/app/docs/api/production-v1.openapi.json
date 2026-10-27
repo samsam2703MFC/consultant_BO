@@ -21955,6 +21955,33 @@
                         "items": {
                             "$ref": "#/components/schemas/OutputItem"
                         }
+                    },
+                    "ordered": {
+                        "type": "array",
+                        "description": "produits du groupe commandés par les clients (commandes ouvertes, expédition depuis 7 jours de retard jusqu'à ordered_to) : boutons de « Zakoduj produkcję », expédition la plus proche d'abord ; les autres produits par la recherche",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "item_id": {
+                                    "type": "integer"
+                                },
+                                "cartons": {
+                                    "type": "number"
+                                },
+                                "next_ship": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "orders": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "ordered_to": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "jour + kiosk.ordered_days"
                     }
                 }
             },
