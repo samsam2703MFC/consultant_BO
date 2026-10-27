@@ -206,5 +206,23 @@ verifie('total pondéré sur 100, questions comptées', $sc['score'] === 53 && $
 verifie('modules dans l’ordre de la checklist, puis les autres', array_column($sc['modules'], 'id') === ['hygiene', 'planogramme', 'produit', 'xp']);
 verifie('rien de noté : pas de score', viScore($cl, [['module' => 'hygiene', 'ref' => 'dit', 'etat' => 'ok']]) === ['score' => null, 'n' => 0, 'modules' => []]);
 
+
+// --- Les photos du jour, chacune une question (27/10/2026) -----------------------------------------------------
+echo "\nPhotos du jour : une question par photo\n";
+$ph = viPhotosNormalise(null);
+verifie('défaut : trois questions OK / Écart / N/A, photo attendue, FR et NL', $ph['id'] === 'photos' && array_column($ph['points'], 'ref') === ['jour_facade', 'jour_arriere', 'jour_interieur']
+    && array_column($ph['points'], 'type') === ['etat', 'etat', 'etat'] && array_column($ph['points'], 'photo') === [true, true, true]
+    && $ph['points'][0]['libelle_nl'] === 'Gevel (foto van de dag)' && $ph['nom_nl'] === 'De foto’s van de dag', json_encode($ph, JSON_UNESCAPED_UNICODE));
+$ph = viPhotosNormalise(['nom' => 'Photos', 'points' => [
+    ['ref' => 'jour_interieur', 'libelle' => 'Vitrine propre ?', 'type' => 'ouinon', 'poids' => 3],
+    ['ref' => 'jour_facade', 'libelle' => '', 'type' => 'choix', 'choix' => [['fr' => 'Propre'], ['fr' => 'Sale', 'ko' => true]], 'photo' => false],
+    ['ref' => 'ajoutee', 'libelle' => 'Une question en plus']]]);
+verifie('réglée : type, choix et poids gardés ; libellé vide → celui livré ; photo toujours attendue', $ph['points'][2]['type'] === 'ouinon' && $ph['points'][2]['poids'] === 3
+    && $ph['points'][2]['libelle'] === 'Vitrine propre ?' && $ph['points'][0]['type'] === 'choix' && count($ph['points'][0]['choix']) === 2 && $ph['points'][0]['choix'][1]['ko'] === true
+    && $ph['points'][0]['libelle'] === 'Façade (photo du jour)' && $ph['points'][0]['photo'] === true, json_encode($ph['points'], JSON_UNESCAPED_UNICODE));
+verifie('les trois questions seulement, dans l’ordre : rien ne s’ajoute ni ne se retire', array_column($ph['points'], 'ref') === ['jour_facade', 'jour_arriere', 'jour_interieur'] && $ph['nom'] === 'Photos');
+$sc = viScore(array_merge([viPhotosNormalise(null)], $cl), array_merge($pts, [['module' => 'photos', 'ref' => 'jour_facade', 'etat' => 'ok'], ['module' => 'photos', 'ref' => 'jour_arriere', 'etat' => 'ko']]));
+verifie('le score compte les photos, en tête (façade OK, arrière écart → 50)', $sc['modules'][0]['id'] === 'photos' && $sc['modules'][0]['score'] === 50 && $sc['n'] === 8, json_encode($sc['modules'][0]));
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

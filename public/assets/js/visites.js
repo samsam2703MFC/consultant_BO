@@ -30,6 +30,13 @@
   const JOURS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
   const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   const GENRES_JOUR = [['jour_facade', 'Façade'], ['jour_interieur', 'Intérieur'], ['jour_arriere', 'Arrière']];
+  // Chaque photo du jour est une question (27/10/2026) : son type de réponse et ses libellés viennent des réglages
+  // (src/visites_questions.php, viPhotosNormalise ; /visites/app → photosQuestions). Ceci n'est que le secours hors ligne.
+  const PHOTOS_Q = { id: 'photos', nom: 'Les photos du jour', nom_nl: 'De foto’s van de dag', points: [
+    { ref: 'jour_facade', libelle: 'Façade (photo du jour)', libelle_nl: 'Gevel (foto van de dag)', type: 'etat', photo: true, score: true, poids: 1 },
+    { ref: 'jour_arriere', libelle: 'Arrière (photo du jour)', libelle_nl: 'Achterkant (foto van de dag)', type: 'etat', photo: true, score: true, poids: 1 },
+    { ref: 'jour_interieur', libelle: 'Intérieur (photo du jour)', libelle_nl: 'Binnenkant (foto van de dag)', type: 'etat', photo: true, score: true, poids: 1 }] };
+  const repondu = p => !!p && (!!p.etat || p.note != null || p.valeur != null);
   const RUBRIQUES_MSP = ['Accueil', 'Produits', 'Hygiène', 'Ambiance'];
   const METEO_ECH = [['moral', 'Moral'], ['envie', 'Envie, motivation'], ['equipe', 'Climat de l’équipe'], ['relation', 'Relation avec le réseau']];
   const METEO_I = { 1: '⛈️', 2: '🌧️', 3: '☁️', 4: '🌤️', 5: '☀️' };
@@ -187,6 +194,19 @@
 .vi .notes button.on{background:var(--color-text);color:#fff}.vi .notes button.bad{background:#C0182B;color:#fff}
 .vi .act{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
 .vi .chip{font:600 11px var(--font-ui);padding:5px 9px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer}
+/* La photo d'un point de checklist : la vignette elle-même (27/10/2026, « je ne vois pas la photo »), l'heure dessus ; un toucher l'agrandit. */
+.vi .ph-v{flex:none;width:72px;height:54px;padding:0;border-radius:8px;border:.5px solid var(--color-border-secondary);background:#d8cfc3 center/cover no-repeat;position:relative;cursor:pointer}
+.vi .ph-v small{position:absolute;left:4px;bottom:3px;font:600 9.5px var(--font-ui);background:rgba(0,0,0,.55);color:#fff;padding:1px 5px;border-radius:5px}
+.vi.tab .ph-v{width:104px;height:78px;border-radius:10px}
+/* Une photo du jour et sa question (27/10/2026) : la photo, puis la réponse dessous. */
+.vi .phs.rep{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.vi .phq{display:flex;flex-direction:column;gap:8px;min-width:0}
+.vi .phq-r{display:flex;flex-direction:column;gap:8px;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
+.vi .phq-r.ko{border-color:#e8b4bb;background:#FBEDEF}
+.vi .phq-r b{font-size:13px;line-height:1.3}.vi .phq-r .aide{display:block;font-weight:500;color:var(--color-text-muted);font-size:11px;margin-top:2px}
+.vi .phq-r .l1{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.vi .phq-r input[type=text]{width:100%}
+.vi.tab .phs.rep .ph{height:200px}
 .vi .chip.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
 .vi .chip.ko{border-color:#C0182B;color:#C0182B}
 .vi .bar{height:6px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden;margin-top:4px}
@@ -830,7 +850,7 @@
       const s = this.D.seuils || {};
       // Le point proposé parle la langue de la visite : il part au franchisé tel quel.
       const l = this.lngDe(v); const T = LNG[l];
-      this.checklistDe(v).forEach(m => m.points.forEach(pt => {
+      [this.photosQ()].concat(this.checklistDe(v)).forEach(m => m.points.forEach(pt => {
         const p = pts[pt.ref]; if (!p) { return; }
         const titre = libDe(pt, l); const rep = this.reponseTxt(pt, p.reponse, l);
         if (pt.pct && p.valeur != null && p.valeur < (s.planoOrange || 80)) { out.push({ ref: pt.ref, module: m.id, titre, detail: p.valeur + ' % de conformité' + (p.causes && p.causes.length ? ' · ' + p.causes.map(c => (this.D.causes || {})[c] || c).join(', ') : ''), grave: p.valeur < (s.planoRouge || 60) }); }
@@ -1598,10 +1618,21 @@
           : `<div class="btns"><button class="btn p w" data-a="demarrer" data-v="${esc(v.id)}">${enCours ? '▶ Reprendre la visite' : '▶ Démarrer la visite'}</button></div>${v.statut === 'planifiee' ? `<div class="btns"><button class="btn w" data-a="confirmer" data-v="${esc(v.id)}">✓ Confirmer</button><button class="btn w" data-a="go" data-v="tb/${esc(v.shop)}">Tableau de bord</button></div>` : `<div class="btns"><button class="btn w" data-a="go" data-v="tb/${esc(v.shop)}">Tableau de bord</button></div>`}`);
     }
     /** Les trois photos du jour : prises, ou à prendre. */
-    photosJourHtml(shop, vEnCours, genres) {
+    photosJourHtml(shop, vEnCours, genres, avecRep) {
       const pj = this.photosJour(shop); const t = auj();
-      const jour = GENRES_JOUR.filter(([g]) => !genres || genres.includes(g)).map(([g, l]) => { const p = pj.find(x => x.genre === g && String(x.prise_a).slice(0, 10) === t); return p ? `<div class="ph" style="background-image:url('${esc(this.photoSrc(p))}')" data-a="voir" data-v="${esc(p.client_id || p.id)}"><small>${fmtH(p.prise_a)}</small>${p.attente ? '<span class="att">à envoyer</span>' : ''}</div>` : `<div class="ph vide" data-a="photo" data-v="${g}|${esc(shop)}${vEnCours ? '|' + vEnCours.id : ''}">📷 ${l}</div>`; }).join('');
-      return `<div class="cap">${genres && genres.length === 1 ? 'La photo du jour' : 'Les photos du jour'}</div><div class="phs">${jour}</div><div class="xs mu" style="margin:4px 2px">Horodatée, position si consentie, EXIF retiré à la réduction · ${pj.length ? pj.length + ' photos sur 90 j' : 'première photo'}</div>`;
+      // Au contrôle, chaque photo porte sa question : la réponse dessous, du type réglé (Réglages › Checklist).
+      const rep = avecRep && vEnCours ? g => { const q = this.photosQ().points.find(x => x.ref === g); return q ? this.photoReponseHtml(vEnCours, q) : ''; } : null;
+      const jour = GENRES_JOUR.filter(([g]) => !genres || genres.includes(g)).map(([g, l]) => { const p = pj.find(x => x.genre === g && String(x.prise_a).slice(0, 10) === t); const tuile = p ? `<div class="ph" style="background-image:url('${esc(this.photoSrc(p))}')" data-a="voir" data-v="${esc(p.client_id || p.id)}"><small>${fmtH(p.prise_a)}</small>${p.attente ? '<span class="att">à envoyer</span>' : ''}</div>` : `<div class="ph vide" data-a="photo" data-v="${g}|${esc(shop)}${vEnCours ? '|' + vEnCours.id : ''}">📷 ${l}</div>`; return rep ? `<div class="phq">${tuile}${rep(g)}</div>` : tuile; }).join('');
+      return `<div class="cap">${genres && genres.length === 1 ? 'La photo du jour' : 'Les photos du jour'}</div><div class="phs${rep ? ' rep' : ''}">${jour}</div><div class="xs mu" style="margin:4px 2px">Horodatée, position si consentie, EXIF retiré à la réduction · ${pj.length ? pj.length + ' photos sur 90 j' : 'première photo'}</div>`;
+    }
+    /** La question d'une photo du jour : son libellé, sa réponse (OK / Écart / N/A, Oui / Non, note, choix…), une remarque. */
+    photoReponseHtml(v, q) {
+      const l = this.lngDe(v); const tab = !!this.o.tablette;
+      const p = this.pointsDe(v.id)[q.ref] || {}; const k = `${esc(v.id)}|${esc(q.ref)}|photos`;
+      const [ligne, dessous] = this.reponseHtml(q, p, k, l, tab);
+      const aide = libDe({ libelle: q.aide, libelle_nl: q.aide_nl }, l);
+      return `<div class="phq-r ${p.etat === 'ko' ? 'ko' : ''}"><b>${esc(libDe(q, l))}${aide ? `<small class="aide">${esc(aide)}</small>` : ''}</b>${ligne ? `<div class="l1">${ligne}</div>` : ''}${dessous}`
+        + (typeQ(q) === 'texte' ? '' : `<input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="${LNG[l].rem}">`) + '</div>';
     }
     /** Ce qui cloche dans la boutique, d'après les actions, le planogramme, le comptoir, Google et le panel. */
     alertesDe(shop, b, B) {
@@ -1673,9 +1704,11 @@
       return `<span class="lng" data-nt>${['fr', 'nl'].map(x => `<button data-a="lng" data-v="${esc(v.id)}|${x}" class="${l === x ? 'on' : ''}">${x.toUpperCase()}</button>`).join('')}</span>`;
     }
     /** La définition d'une question, pour lire ses choix et ses bornes au moment d'y répondre. */
+    /** Les questions des photos du jour, telles que réglées. */
+    photosQ() { const m = this.D && this.D.photosQuestions; return m && Array.isArray(m.points) && m.points.length ? m : PHOTOS_Q; }
     ptDef(vid, module, ref) {
       const vis = this.visite(vid);
-      const m = ((vis ? this.checklistDe(vis) : null) || this.D.checklist || []).find(x => x.id === module);
+      const m = module === 'photos' ? this.photosQ() : ((vis ? this.checklistDe(vis) : null) || this.D.checklist || []).find(x => x.id === module);
       return (m ? m.points.find(x => x.ref === ref) : null) || {};
     }
     /** La réponse lue : le libellé des choix, le nombre et son unité, le texte. */
@@ -1733,7 +1766,7 @@
             const aide = libDe({ libelle: pt.aide, libelle_nl: pt.aide_nl }, l);
             const lib = `<b${tab ? '' : ' class="sm"'} style="flex:1">${esc(libDe(pt, l))}${aide ? `<small class="aide">${esc(aide)}</small>` : ''}</b>`;
             const photoBtn = pt.photo || phs.length ? `<button class="chip" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' ' + (phs.length > 1 ? T.photos : T.photo.toLowerCase()) : T.photo}</button>` : '';
-            const act = `<div class="act">${photoBtn}${phs.map(x => `<button class="chip" data-a="voir" data-v="${esc(x.client_id || x.id)}">${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</button>`).join('')}
+            const act = `<div class="act">${photoBtn}${phs.map(x => `<button class="ph-v" data-a="voir" data-v="${esc(x.client_id || x.id)}" style="background-image:url('${esc(this.photoSrc(x))}')"><small>${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</small></button>`).join('')}
               ${pt.pct ? Object.keys(causes).map(c => `<button class="chip ${(p.causes || []).includes(c) ? 'on' : ''}" data-a="cause" data-v="${k}|${c}">${esc(causes[c])}</button>`).join('') : ''}
               ${t === 'texte' ? '' : `<input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="${T.rem}" style="flex:1;${tab ? 'min-width:180px;padding:6px 10px' : 'min-width:120px;padding:5px 8px;font-size:12px'}">`}</div>`;
             if (tab) { return `<div class="pt t ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1">${lib}${ligne}</div>${dessous}${act}</div>`; }
@@ -1834,11 +1867,15 @@
       const modsDe = tps => mods.filter(e => e.tps === tps);
       // 1. L'extérieur : la façade et l'arrière en photo, les points qui se regardent dehors.
       const nExt = ['jour_facade', 'jour_arriere'].filter(jourPris).length;
-      etapes.push({ cle: 'photos_ext', tps: 'ext', ic: 'photo', court: 'Photos', titre: 'L’extérieur en photo', etat: nExt + ' / 2', fait: nExt >= 2, html: () => this.photosJourHtml(v.shop, v, ['jour_facade', 'jour_arriere']) });
+      // Chaque photo attend aussi sa réponse (27/10/2026) : l'étape n'est remplie que photos prises et réponses données.
+      const qPh = this.photosQ().points.map(x => x.ref);
+      const sansRep = gs => gs.filter(g => qPh.includes(g) && !repondu(pts[g])).length;
+      const rExt = sansRep(['jour_facade', 'jour_arriere']); const rInt = sansRep(['jour_interieur']);
+      etapes.push({ cle: 'photos_ext', tps: 'ext', ic: 'photo', court: 'Photos', titre: 'L’extérieur en photo', etat: nExt + ' / 2' + (rExt ? ' · ' + rExt + ' à noter' : ''), fait: nExt >= 2 && !rExt, reste: rExt, html: () => this.photosJourHtml(v.shop, v, ['jour_facade', 'jour_arriere'], true) });
       etapes.push(...modsDe('ext'));
       // 2. L'intérieur : la photo, l'expérience client, les modules de la checklist, les contrôles en photo du jour
       // (la bande du dashboard, la note rapide sous chaque photo ; faite quand plus rien n'attend une note).
-      etapes.push({ cle: 'photos_int', tps: 'int', ic: 'photo', court: 'Photo', titre: 'L’intérieur en photo', etat: jourPris('jour_interieur') ? '1 / 1' : 'à prendre', fait: jourPris('jour_interieur'), html: () => this.photosJourHtml(v.shop, v, ['jour_interieur']) });
+      etapes.push({ cle: 'photos_int', tps: 'int', ic: 'photo', court: 'Photo', titre: 'L’intérieur en photo', etat: (jourPris('jour_interieur') ? '1 / 1' : 'à prendre') + (rInt ? ' · à noter' : ''), fait: jourPris('jour_interieur') && !rInt, reste: rInt, html: () => this.photosJourHtml(v.shop, v, ['jour_interieur'], true) });
       etapes.push(...modsDe('int'));
       const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
       etapes.push({ cle: 'controles', tps: 'int', ic: 'controles', court: 'Contrôles du jour', titre: 'Les contrôles en photo du jour', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
@@ -1882,7 +1919,12 @@
       etapes.forEach(e => {
         if (e.fait || e.lu) { return; }
         if (e.module && e.n && e.n.total > 0) { const r = e.n.total - e.n.faits; e.manque = r + ' point' + (r > 1 ? 's' : '') + ' à remplir'; e.auto = true; }
-        else if (e.ic === 'photo') { e.manque = e.tps === 'ext' ? (2 - nExt) + ' photo' + (2 - nExt > 1 ? 's' : '') + ' à prendre' : 'la photo à prendre'; e.auto = true; }
+        else if (e.ic === 'photo') {
+          const aPrendre = e.tps === 'ext' ? 2 - nExt : (jourPris('jour_interieur') ? 0 : 1);
+          e.manque = aPrendre ? (e.tps === 'ext' ? aPrendre + ' photo' + (aPrendre > 1 ? 's' : '') + ' à prendre' : 'la photo à prendre')
+            : e.reste + ' réponse' + (e.reste > 1 ? 's' : '') + ' à donner';
+          e.auto = true;
+        }
         else if (e.ic === 'controles' && cq && cq.aNoter) { e.manque = cq.aNoter + ' contrôle' + (cq.aNoter > 1 ? 's' : '') + ' à noter'; e.auto = true; }
         else if (e.pistes) { e.manque = 'le pourquoi, les trois pistes et l’horizon'; }
         else if (e.revue) { e.manque = 'ce que vous avez vu et la recommandation'; }
@@ -2214,14 +2256,14 @@
     reglagesChecklistHtml(cl) {
       const n = cl.reduce((a, m) => a + m.points.length, 0);
       const opt = (val, v, lab) => `<option value="${v}" ${val === v ? 'selected' : ''}>${esc(lab)}</option>`;
-      return `<div class="cap">Checklist (${n} questions) · français et néerlandais</div>` + cl.map((m, mi) => `<div class="card rg-mod"><div class="row"><b>${esc(m.nom)}</b><input type="text" class="rg-nl" data-f="clm|${mi}|nom_nl" value="${esc(m.nom_nl || '')}" placeholder="nom en néerlandais"><span class="sp"></span><button class="chip" data-a="cl-add" data-v="${mi}">+ question</button></div>
+      return `<div class="cap">Checklist (${n} questions) · français et néerlandais</div>` + cl.map((m, mi) => `<div class="card rg-mod"><div class="row"><b>${esc(m.nom)}</b><input type="text" class="rg-nl" data-f="clm|${mi}|nom_nl" value="${esc(m.nom_nl || '')}" placeholder="nom en néerlandais"><span class="sp"></span>${m.fixe ? '<span class="xs mu">une question par photo, pour toutes les visites</span>' : `<button class="chip" data-a="cl-add" data-v="${mi}">+ question</button>`}</div>
         ${m.points.map((p, pi) => { const t = typeQ(p); const k = mi + '|' + pi;
           const choix = t === 'choix' || t === 'multi' ? `<div class="rg-ch">${(p.choix || []).map((c, ci) => `<div class="row"><input type="text" data-f="clc|${k}|${ci}|fr" value="${esc(c.fr || '')}" placeholder="réponse en français"><input type="text" data-f="clc|${k}|${ci}|nl" value="${esc(c.nl || '')}" placeholder="antwoord in het Nederlands"><button class="chip ${c.ko ? 'ko on' : ''}" data-a="clc-ko" data-v="${k}|${ci}" title="cette réponse est un écart">écart</button><button class="chip ko" data-a="clc-del" data-v="${k}|${ci}">×</button></div>`).join('')}
             <button class="chip" data-a="clc-add" data-v="${k}">+ réponse</button><span class="xs mu"> « écart » : cette réponse rend le point non conforme.</span></div>` : '';
           const nombre = t === 'nombre' ? `<div class="row rg-nb"><label>min</label><input type="number" step="any" data-f="cl|${k}|min" value="${p.min != null ? esc(p.min) : ''}"><label>max</label><input type="number" step="any" data-f="cl|${k}|max" value="${p.max != null ? esc(p.max) : ''}"><label>unité</label><input type="text" data-f="cl|${k}|unite" value="${esc(p.unite || '')}" placeholder="kg, °C, pièces…"><span class="xs mu">hors des bornes : écart</span></div>` : '';
           return `<div class="rg-q"><div class="row"><input type="text" data-f="cl|${k}|libelle" value="${esc(p.libelle)}" placeholder="la question en français"><input type="text" data-f="cl|${k}|libelle_nl" value="${esc(p.libelle_nl || '')}" placeholder="de vraag in het Nederlands"></div>
-            <div class="row"><select data-c="cl-type|${k}">${Object.keys(TYPES_Q).map(x => opt(t, x, TYPES_Q[x])).join('')}</select><button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${k}|photo" title="photo attendue">📷 photo</button>
-              <input type="text" class="rg-aide" data-f="cl|${k}|aide" value="${esc(p.aide || '')}" placeholder="précision (facultatif)"><input type="text" class="rg-aide" data-f="cl|${k}|aide_nl" value="${esc(p.aide_nl || '')}" placeholder="toelichting (optioneel)"><button class="chip ko" data-a="cl-del" data-v="${k}">×</button></div>${choix}${nombre}
+            <div class="row"><select data-c="cl-type|${k}">${Object.keys(TYPES_Q).map(x => opt(t, x, TYPES_Q[x])).join('')}</select>${m.fixe ? '' : `<button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${k}|photo" title="photo attendue">📷 photo</button>`}
+              <input type="text" class="rg-aide" data-f="cl|${k}|aide" value="${esc(p.aide || '')}" placeholder="précision (facultatif)"><input type="text" class="rg-aide" data-f="cl|${k}|aide_nl" value="${esc(p.aide_nl || '')}" placeholder="toelichting (optioneel)">${m.fixe ? '' : `<button class="chip ko" data-a="cl-del" data-v="${k}">×</button>`}</div>${choix}${nombre}
             <div class="rg-sc"><span class="cap">Score</span>${t === 'texte' ? '<span class="xs mu">le texte libre ne compte jamais dans le score</span>'
               : `<label>Compte</label><span class="seg">${[[1, 'Oui'], [0, 'Non']].map(([x, lab]) => `<button data-a="cl-score" data-v="${k}|${x}" class="${(p.score !== false) === !!x ? 'on' : ''}">${lab}</button>`).join('')}</span>
               <label>Poids</label><span class="seg${p.score === false ? ' off' : ''}">${[1, 2, 3].map(x => `<button data-a="cl-poids" data-v="${k}|${x}" class="${(Number(p.poids) || 1) === x && p.score !== false ? 'on' : ''}" ${p.score === false ? 'disabled' : ''}>×${x}</button>`).join('')}</span>`}</div></div>`; }).join('')}</div>`).join('');
@@ -2234,7 +2276,8 @@
       if (this.role !== 'admin' && !(this.role === 'consultant' && !this.o.mobile && !this.o.tablette)) { return this.hd('Réglages', '') + moi + push + hors; }
       const R = this.R;
       if (!R) { this.chargerReglages(); }
-      const cl = f.checklist || (R ? R.checklist : D.checklist) || [];
+      // Les photos du jour en tête de la checklist, comme un module fixe : trois questions, ni ajoutées ni retirées.
+      const cl = f.checklist || [Object.assign(JSON.parse(JSON.stringify((R && R.photos) || this.photosQ())), { fixe: true })].concat((R ? R.checklist : D.checklist) || []);
       const se = f.seuils || Object.assign({}, s, { etapesBloquantes: Object.assign({}, Array.isArray(s.etapesBloquantes) ? {} : s.etapesBloquantes) });
       const fq = f.frequence || Object.assign({}, D.frequence || {});
       if (!f.checklist) { f.checklist = JSON.parse(JSON.stringify(cl)); f.seuils = se; f.frequence = fq; }
@@ -2347,7 +2390,7 @@
       if (a === 'cl-del') { this.form.checklist[Number(parts[0])].points.splice(Number(parts[1]), 1); this.rendre(); return; }
       if (a === 'cl-tog') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; p[parts[2]] = !p[parts[2]]; this.rendre(); return; }
       if (a === 'se-tog') { this.form.seuils[v] = !this.form.seuils[v]; this.rendre(); return; }
-      if (a === 'save-reglages') { const f = this.form; this.ecrire({ method: 'PUT', path: '/visites/reglages', body: { checklist: f.checklist, seuils: f.seuils, frequence: f.frequence } }).then(() => { this.R = null; this.form = {}; this.recharger(); }); this.dire('Réglages enregistrés.'); return; }
+      if (a === 'save-reglages') { const f = this.form; const ph = (f.checklist || []).find(m => m.fixe); this.ecrire({ method: 'PUT', path: '/visites/reglages', body: Object.assign({ checklist: (f.checklist || []).filter(m => !m.fixe), seuils: f.seuils, frequence: f.frequence }, ph ? { photos: ph } : {}) }).then(() => { this.R = null; this.form = {}; this.recharger(); }); this.dire('Réglages enregistrés.'); return; }
       if (a === 'tick') { fetch(this.api('/visites/tick'), { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{"force":true}' }).then(r => r.json()).then(j => { const f = j.fait || {}; this.dire('Horloge : ' + (f.escalades || 0) + ' escalade(s), ' + (f.rappelsJ1 || 0) + ' rappel(s) J-1, ' + (f.rappelsJour || 0) + ' du jour' + (f.synthese ? ', synthèse' : '') + (f.mails ? ', ' + f.mails + ' mail(s)' : '') + '.'); this.R = null; this.rendre(); }).catch(() => this.dire('Horloge injoignable.')); return; }
     }
     saisie(e) {
@@ -2392,7 +2435,7 @@
     /* --- actions ------------------------------------------------------------- */
     point(vid, ref, module) {
       let p = (this.D.points || []).find(x => String(x.visite_id) === String(vid) && x.ref === ref);
-      if (!p) { const vis = this.visite(vid); const lib = (((vis ? this.checklistDe(vis) : null) || this.D.checklist || []).find(m => m.id === module) || { points: [] }).points.find(x => x.ref === ref); p = { visite_id: vid, module, ref, libelle: lib ? lib.libelle : ref, etat: '', note: null, valeur: null, commentaire: '', causes: [], reponse: null }; this.D.points.push(p); }
+      if (!p) { const vis = this.visite(vid); const lib = ((module === 'photos' ? this.photosQ() : ((vis ? this.checklistDe(vis) : null) || this.D.checklist || []).find(m => m.id === module)) || { points: [] }).points.find(x => x.ref === ref); p = { visite_id: vid, module, ref, libelle: lib ? lib.libelle : ref, etat: '', note: null, valeur: null, commentaire: '', causes: [], reponse: null }; this.D.points.push(p); }
       return p;
     }
     point_save(vid, p) {
@@ -2580,7 +2623,7 @@
     scoreDe(v) {
       if (!v) { return null; }
       const t = this.typeDe(v.type); if (t && t.dynamique) { return null; }
-      const base = t && t.checklist && t.checklist.length ? t.checklist : (this.D.checklist || []);
+      const base = [this.photosQ()].concat(t && t.checklist && t.checklist.length ? t.checklist : (this.D.checklist || []));
       const HORS = { xp: [MOD_XP.nom, MOD_XP.nom_nl], leviers: [MOD_LEVIERS.nom, MOD_LEVIERS.nom_nl], bureau: ['Demandé par le bureau', 'Gevraagd door het kantoor'], exterieur: ['L’extérieur', 'De buitenkant'] };
       const defs = {}, noms = {}, ordre = [];
       base.forEach(m => { noms[m.id] = [m.nom, m.nom_nl || '']; ordre.push(m.id); (m.points || []).forEach(pt => { defs[pt.ref] = pt; }); });
