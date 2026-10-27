@@ -98,6 +98,10 @@ final class OpenApiSupply
             'GET /supply/prices' => ['tag' => $t, 'id' => 'listMaterialPriceHistory', 'summary' => 'Historia cen surowców (za kg) / Historique des prix des matières (au kg)', 'response' => 'MaterialPriceOverview', 'errors' => [422],
                 'query' => ['months' => ['type' => 'integer', 'enum' => PriceHistoryService::MONTHS, 'description' => 'défaut : 12']],
                 'description' => "Par matière ayant un prix sur la période : dernier prix et fournisseur, variation vs le prix précédent, min. et max. avec leur fournisseur, nombre de fournisseurs. Prix en zł par unité de base (g, ml, szt) ; factor = unités de base dans l'unité affichée (kg = 1000). Sources : factures d'achat, réceptions avec prix (commandes sans facture), changements de la fiche matière."],
+            'PATCH /supply/materials/{id:\d+}/unit' => ['tag' => $t, 'id' => 'changeMaterialUnit', 'summary' => 'Jednostka surowca (kg / g / l / ml / szt) / Unité de la matière', 'body' => 'MaterialUnitInput', 'response' => 'MaterialUnitResult', 'errors' => [404, 422],
+                'description' => "Formulaire d'affectation d'une facture (« 1 OP = … »). kg et g = même unité de base (g), l et ml aussi (ml) : changed = false. Masse / volume / pièces : "
+                    . "fiche matière mise à jour tout de suite ; conditionnement et prix convertis avec le poids d'une pièce (packaging_unit_weight_g) quand il est connu (converted, ratio), "
+                    . "sinon nombres gardés (converted = false : prix à vérifier). Convertisseurs mémorisés et lignes de factures ouvertes convertis ; recettes : quantités gardées (recipes = nombre)."],
             'GET /supply/materials/{id:\d+}/prices' => ['tag' => $t, 'id' => 'getMaterialPriceHistory', 'summary' => 'Historia cen surowca według dostawcy / Historique des prix d\'une matière par fournisseur', 'response' => 'MaterialPriceHistory', 'errors' => [404, 422],
                 'query' => ['months' => ['type' => 'integer', 'enum' => PriceHistoryService::MONTHS, 'description' => 'défaut : 24']],
                 'description' => "Points (date, fournisseur, prix, quantité, facture / commande / source) pour le graphique, résumé par fournisseur (dernier, min., max., moyenne pondérée par la quantité, variation), fournisseur le moins cher sur 12 mois."],
@@ -319,6 +323,10 @@ final class OpenApiSupply
                 'catalog_price' => $nNum, 'current_supplier' => $nStr, 'last' => ['type' => 'object', 'additionalProperties' => true], 'previous' => ['type' => 'object', 'nullable' => true, 'additionalProperties' => true],
                 'change_pct' => $nNum, 'min' => ['type' => 'object', 'additionalProperties' => true], 'max' => ['type' => 'object', 'additionalProperties' => true], 'suppliers' => ['type' => 'integer'], 'points' => ['type' => 'integer'],
             ]]]]],
+            'MaterialUnitInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['unit'], 'properties' => ['unit' => ['type' => 'string', 'enum' => ['kg', 'g', 'l', 'ml', 'szt']]]],
+            'MaterialUnitResult' => ['type' => 'object', 'properties' => ['raw_material_id' => ['type' => 'integer'], 'changed' => ['type' => 'boolean'], 'converted' => ['type' => 'boolean'],
+                'base_unit' => ['type' => 'string', 'enum' => ['g', 'ml', 'szt', 'kg', 'l']], 'recipes' => ['type' => 'integer'], 'price_per_unit' => ['type' => 'number'],
+                'package_size' => ['type' => 'integer'], 'ratio' => ['type' => 'number', 'nullable' => true, 'description' => 'nouvelles unités par ancienne unité (si converti)']]],
             'MaterialPriceHistory' => ['type' => 'object', 'properties' => [
                 'material' => ['type' => 'object', 'additionalProperties' => true], 'months' => ['type' => 'integer'],
                 'suppliers' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]], 'best' => ['type' => 'object', 'nullable' => true, 'additionalProperties' => true],

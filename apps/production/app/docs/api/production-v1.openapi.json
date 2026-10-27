@@ -10115,6 +10115,91 @@
                 "x-permission": "prod.supply.read"
             }
         },
+        "/supply/materials/{id}/unit": {
+            "patch": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Jednostka surowca (kg / g / l / ml / szt) / Unité de la matière",
+                "operationId": "changeMaterialUnit",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MaterialUnitResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Formulaire d'affectation d'une facture (« 1 OP = … »). kg et g = même unité de base (g), l et ml aussi (ml) : changed = false. Masse / volume / pièces : fiche matière mise à jour tout de suite ; conditionnement et prix convertis avec le poids d'une pièce (packaging_unit_weight_g) quand il est connu (converted, ratio), sinon nombres gardés (converted = false : prix à vérifier). Convertisseurs mémorisés et lignes de factures ouvertes convertis ; recettes : quantités gardées (recipes = nombre).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MaterialUnitInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
         "/planning/week/move": {
             "post": {
                 "tags": [
@@ -28067,6 +28152,63 @@
                                 }
                             }
                         }
+                    }
+                }
+            },
+            "MaterialUnitInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "unit"
+                ],
+                "properties": {
+                    "unit": {
+                        "type": "string",
+                        "enum": [
+                            "kg",
+                            "g",
+                            "l",
+                            "ml",
+                            "szt"
+                        ]
+                    }
+                }
+            },
+            "MaterialUnitResult": {
+                "type": "object",
+                "properties": {
+                    "raw_material_id": {
+                        "type": "integer"
+                    },
+                    "changed": {
+                        "type": "boolean"
+                    },
+                    "converted": {
+                        "type": "boolean"
+                    },
+                    "base_unit": {
+                        "type": "string",
+                        "enum": [
+                            "g",
+                            "ml",
+                            "szt",
+                            "kg",
+                            "l"
+                        ]
+                    },
+                    "recipes": {
+                        "type": "integer"
+                    },
+                    "price_per_unit": {
+                        "type": "number"
+                    },
+                    "package_size": {
+                        "type": "integer"
+                    },
+                    "ratio": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "nouvelles unités par ancienne unité (si converti)"
                     }
                 }
             },

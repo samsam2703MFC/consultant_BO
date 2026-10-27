@@ -58,7 +58,7 @@ class MaterialPriceService
     }
 
     /** Źródła zmiany ceny (P21) : Ceny surowców, oferta, faktura zakupowa, nowy surowiec. */
-    public const SOURCES = ['manual', 'offer', 'invoice', 'new'];
+    public const SOURCES = ['manual', 'offer', 'invoice', 'new', 'unit'];
 
     public function update($idMaterial, $data, string $source = 'manual', ?int $userId = null)
     {
@@ -104,6 +104,23 @@ class MaterialPriceService
         return $result;
     }
 
+
+    /**
+     * Nowa jednostka surowca (27/10/2026, formularz przypisania faktury) : jednostka, opakowanie i cena już przeliczone
+     * przez wywołującego ; wpis w historii cen (źródło unit) gdy jest dostawca, koszty receptur przeliczone.
+     */
+    public function changeUnit(int $idMaterial, int $unitId, int $packageSize, float $pricePerUnit, ?int $supplierId, ?int $userId): void
+    {
+        $this->transactionManager->execute(function () use ($idMaterial, $unitId, $packageSize, $pricePerUnit, $supplierId, $userId) {
+            $this->materialRepository->update($idMaterial, ['id_unit' => $unitId, 'package_size_in_base_unit' => $packageSize, 'price_per_unit' => round($pricePerUnit, 5)]);
+            if ($supplierId !== null) {
+                $this->materialPriceChangelogRepository->insert(['id_supplier' => $supplierId, 'id_raw_material' => $idMaterial, 'pack_price' => round($pricePerUnit * $packageSize, 2),
+                    'package_size_in_base_unit' => $packageSize, 'source' => 'unit', 'id_user' => $userId ?? self::currentUserId()]);
+            }
+            return true;
+        });
+        $this->recipeCostRecalculationService->recalculateForMaterial($idMaterial);
+    }
 
     /**
      * Cena zatwierdzona z faktury zakupowej albo z zaakceptowanej oferty (27/10/2026) : cena bazowa — z niej liczony koszt

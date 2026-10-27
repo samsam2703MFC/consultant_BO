@@ -959,6 +959,48 @@ final class InvoiceService
         return ['deleted' => true, 'id' => $id];
     }
 
+    /**
+     * Jednostka surowca prosto z formularza przypisania (27/10/2026) : « 1 OP = … kg / g / szt / l / ml ». kg i g to ta sama
+     * jednostka bazowa (g), l i ml też (ml) — sama skala wyświetlania. Zmiana masa / objętość / sztuki zapisana od razu na karcie
+     * surowca : opakowanie i cena przeliczone wagą sztuki (packaging_unit_weight_g, karta BDO), gdy jest znana ; bez niej liczby
+     * zostają (converted = false : sprawdzić cenę). Receptury zachowują swoje liczby (4 g → 4 szt) — zwracana ich liczba.
+     */
+    public function changeMaterialUnit(int $materialId, array $body, ApiContext $context): array
+    {
+        $v = (new Validator($body))->only(['unit'])->choice('unit', ['kg', 'g', 'l', 'ml', 'szt']);
+        $v->throwIfInvalid();
+        $m = $this->repo->materialUnitInfo($materialId) ?? throw new ApiException('NOT_FOUND', 404);
+        $group = fn(?string $u) => in_array($u, ['g', 'kg'], true) ? 'mass' : (in_array($u, ['ml', 'l'], true) ? 'volume' : 'count');
+        $from = $group($m['unit']);
+        $to = $group($v->clean()['unit']);
+        $info = fn(bool $changed, bool $converted) => ['raw_material_id' => $materialId, 'changed' => $changed, 'converted' => $converted,
+            'base_unit' => $changed ? ['mass' => 'g', 'volume' => 'ml', 'count' => 'szt'][$to] : ($m['unit'] ?: 'szt'), 'recipes' => (int) $m['recipes']];
+        if ($from === $to) return $info(false, true) + ['price_per_unit' => (float) $m['price_per_unit'], 'package_size' => (int) $m['package_size']];
+        $base = ['mass' => 'g', 'volume' => 'ml', 'count' => 'szt'][$to];
+        $unitId = $this->repo->unitId($base) ?? throw new ApiException('NOT_FOUND', 404);
+        // Stara jednostka kg / l : najpierw w g / ml (opakowanie × 1000, cena ÷ 1000).
+        $scale = in_array($m['unit'], ['kg', 'l'], true) ? 1000.0 : 1.0;
+        $package = max(0.0, (float) $m['package_size']) * $scale;
+        $price = (float) $m['price_per_unit'] / $scale;
+        $w = $m['weight_g'] !== null && (float) $m['weight_g'] > 0 ? (float) $m['weight_g'] : null;
+        // ratio = ile nowych jednostek w jednej starej (g → szt : 1 / waga sztuki ; szt → g : waga ; g ↔ ml : 1, gęstość nieznana).
+        $ratio = null;
+        if ($to === 'count' && $w !== null) $ratio = 1 / $w;
+        elseif ($from === 'count' && $w !== null) $ratio = $w;
+        $converted = $ratio !== null;
+        if ($converted) {
+            $package = $package * $ratio;
+            $price = $price / $ratio;
+        }
+        $newPackage = $package > 0 ? max(1, (int) round($package)) : 0;
+        $this->prices->changeUnit($materialId, $unitId, $newPackage, $price, $m['id_current_supplier'] !== null ? (int) $m['id_current_supplier'] : null, $context->userId);
+        // Przeliczniki faktur (1 OP = …) w nowej jednostce, gdy przeliczenie jest znane.
+        if ($converted) $this->repo->scaleFactors($materialId, $ratio * $scale);
+        $this->audit->record($context, 'change_unit', 'raw_material', $materialId, ['unit' => $m['unit'], 'price_per_unit' => (float) $m['price_per_unit'], 'package_size' => (int) $m['package_size']],
+            ['unit' => $base, 'price_per_unit' => round($price, 5), 'package_size' => $newPackage, 'converted' => $converted]);
+        return $info(true, $converted) + ['price_per_unit' => round($price, 5), 'package_size' => $newPackage, 'ratio' => $converted ? round($ratio * $scale, 6) : null];
+    }
+
     public function mappings(ApiContext $context): array
     {
         return ['mappings' => array_map(fn($m) => ['id' => (int) $m['id'], 'supplier_key' => $m['supplier_key'], 'supplier' => $m['supplier_name_erp'] !== null ? trim((string) $m['supplier_name_erp']) : null,

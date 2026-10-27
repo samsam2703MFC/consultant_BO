@@ -39,5 +39,6 @@ final class InvoiceController
     public function processReady(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->processReady($request->body(), $request->context)); }
     public function ksefSync(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->ksefSync($request->context)); }
     public function prices(ApiRequest $request): ApiResult { return new ApiResult($this->history->overview((int) $request->query('months', '12'), $request->context->translator->lang())); }
+    public function changeMaterialUnit(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->changeMaterialUnit($request->id(), $request->body(), $request->context)); }
     public function materialPrices(ApiRequest $request): ApiResult { return new ApiResult($this->history->material($request->id(), (int) $request->query('months', '24'), $request->context->translator->lang())); }
 }

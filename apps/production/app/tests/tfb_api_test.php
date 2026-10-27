@@ -2127,6 +2127,30 @@ $response = $kernel->handle($request, '/api/v1/production/referentiels/groups');
 check($response->getStatusCode() === 400 && $response->headers->has('X-Request-Id'), 'invalid JSON → 400 with a request id');
 $request = Request::create('/api/v1/production/referentiels/groups', 'GET', [], [], [], ['HTTP_X_ACCESS_TOKEN' => $access]);
 check($kernel->handle($request, '/api/v1/production/referentiels/groups')->getStatusCode() === 200, 'X-Access-Token works behind Basic Auth');
+// --- Jednostka surowca z formularza przypisania faktury (27/10/2026) : g → szt z wagą sztuki, bez wagi, kg ↔ g bez zmiany
+$pdo->exec("INSERT INTO unit (id, name) VALUES (3, 'ml') ON DUPLICATE KEY UPDATE name = name");
+$pdo->exec("INSERT INTO raw_material (id, name, id_unit, id_current_supplier, package_size_in_base_unit, price_per_unit, packaging_unit_weight_g)
+            VALUES (930, 'Blacha papierowa test', 1, 61, 80, 0.0375, 80), (931, 'Folia test', 1, NULL, 500, 0.01, NULL)");
+$pdo->exec("INSERT INTO n_inv_mapping (supplier_key, id_supplier, name_norm, unit_norm, supplier_name, supplier_unit, id_raw_material, factor, created_by)
+            VALUES ('nip:test-unit', 61, 'tacka papierowa', 'op', 'TACKA PAPIEROWA', 'OP', 930, 4000, 1)");
+[$s, $b] = $call('PATCH', '/supply/materials/930/unit', ['unit' => 'kg'], $access);
+check($s === 200 && $b['data']['changed'] === false && $b['data']['base_unit'] === 'g', 'kg on a gram material: display scale only, nothing changed');
+[$s, $b] = $call('PATCH', '/supply/materials/930/unit', ['unit' => 'szt'], $access);
+$rm = $pdo->query("SELECT u.name AS unit, rm.package_size_in_base_unit AS pk, rm.price_per_unit AS p FROM raw_material rm JOIN unit u ON u.id = rm.id_unit WHERE rm.id = 930")->fetch();
+check($s === 200 && $b['data']['changed'] && $b['data']['converted'] && $b['data']['base_unit'] === 'szt' && $rm['unit'] === 'szt'
+    && (int) $rm['pk'] === 1 && abs((float) $rm['p'] - 3.0) < 1e-6 && abs($b['data']['ratio'] - 1 / 80) < 1e-6,
+    'g → szt with the piece weight: material card updated, 0.0375 zł/g × 80 g = 3 zł/szt, package 80 g = 1 szt');
+check(abs((float) $pdo->query("SELECT factor FROM n_inv_mapping WHERE id_raw_material = 930")->fetchColumn() - 50) < 1e-6, 'remembered invoice factor converted (4000 g → 50 szt)');
+check($pdo->query("SELECT source FROM raw_material_price_changelog WHERE id_raw_material = 930 ORDER BY id DESC LIMIT 1")->fetchColumn() === 'unit', 'unit change written to the price history (source unit)');
+[$s, $b] = $call('PATCH', '/supply/materials/931/unit', ['unit' => 'szt'], $access);
+$rm = $pdo->query("SELECT u.name AS unit, rm.package_size_in_base_unit AS pk, rm.price_per_unit AS p FROM raw_material rm JOIN unit u ON u.id = rm.id_unit WHERE rm.id = 931")->fetch();
+check($s === 200 && $b['data']['changed'] && !$b['data']['converted'] && $rm['unit'] === 'szt' && (int) $rm['pk'] === 500 && abs((float) $rm['p'] - 0.01) < 1e-9,
+    'without piece weight: unit changed, numbers kept (converted = false, price to check)');
+[$s, $b] = $call('PATCH', '/supply/materials/931/unit', ['unit' => 'tona'], $access);
+check($s === 422, 'unknown unit refused');
+[$s] = $call('PATCH', '/supply/materials/999999/unit', ['unit' => 'szt'], $access);
+check($s === 404, 'unknown material');
+
 [$s, $b] = $call('GET', '/openapi.json');
 check($s === 200 && $b['openapi'] === '3.0.3', 'OpenAPI is public');
 

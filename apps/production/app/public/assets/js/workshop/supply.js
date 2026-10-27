@@ -789,6 +789,10 @@
         price_up: 'bg-danger', price_up_accept: 'bg-success', price_up_keep: 'bg-secondary'};
     const BAD_FLAGS = ['not_in_order', 'qty_over_received', 'qty_over_ordered', 'price_over'];
     const disp = (base) => base === 'g' ? {unit: 'kg', factor: 1000} : base === 'ml' ? {unit: 'l', factor: 1000} : {unit: base || 'szt', factor: 1};
+    // Jednostki do wyboru w przeliczniku « 1 OP = … » : grupa (masa, objętość, sztuki) i skala względem jednostki bazowej.
+    const UNIT_PICK = ['kg', 'g', 'l', 'ml', 'szt'];
+    const unitGroup = (u) => ['g', 'kg'].includes(u) ? 'mass' : ['ml', 'l'].includes(u) ? 'volume' : 'count';
+    const unitScale = (u, base) => (u === 'kg' || u === 'l' ? 1000 : 1) / (base === 'kg' || base === 'l' ? 1000 : 1);
     const fullDay = (s) => s ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : '—';
     const cur = (v, c) => v === null || v === undefined ? '—' : `${n(v, 2)} ${!c || c === 'PLN' ? 'zł' : c}`;
     const signed = (v, f) => `${v > 0 ? '+' : ''}${f(v)}`;
@@ -1393,7 +1397,8 @@
             + (all.length ? `<optgroup label="${esc(t('inv.all_materials'))}">${all.map(m => `<option value="${m.id}" ${m.id === chosen ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</optgroup>` : '');
         return `<div class="tfb-inv-mapform" data-mapform="${l.id}"><select class="form-select form-select-sm mb-1" data-map-mat aria-label="${esc(t('inv.col.material'))}">${opts}</select>
             <div class="input-group input-group-sm mb-1"><span class="input-group-text">1 ${esc(l.unit || 'szt')} =</span>
-                <input class="form-control text-end" inputmode="decimal" data-map-factor placeholder="${esc(t('inv.factor_auto'))}" aria-label="${esc(t('inv.factor'))}"><span class="input-group-text" data-map-unit>—</span></div>
+                <input class="form-control text-end" inputmode="decimal" data-map-factor placeholder="${esc(t('inv.factor_auto'))}" aria-label="${esc(t('inv.factor'))}">
+                <select class="form-select tfb-unit-pick" data-map-unit aria-label="${esc(t('inv.unit_pick'))}" title="${esc(t('inv.unit_pick'))}">${UNIT_PICK.map(u => `<option value="${u}">${u}</option>`).join('')}</select></div>
             <label class="form-check small mb-1"><input class="form-check-input" type="checkbox" data-map-remember checked> ${esc(t('inv.remember'))}</label>
             <div class="d-flex flex-wrap gap-1"><button type="button" class="btn btn-sm btn-primary" data-map-save>${esc(t('inv.map'))}</button>
                 ${l.material ? `<button type="button" class="btn btn-sm btn-outline-danger" data-map-clear>${esc(t('inv.unmap'))}</button><button type="button" class="btn btn-sm btn-link" data-map-cancel>${esc(t('act.close'))}</button>` : ''}</div></div>`;
@@ -1457,19 +1462,64 @@
             const l = i.lines.find(x => x.id === Number(form.dataset.mapform));
             const select = form.querySelector('[data-map-mat]');
             const factor = form.querySelector('[data-map-factor]');
+            const unitSel = form.querySelector('[data-map-unit]');
+            const baseOf = (id) => {
+                const s = (l.suggestions || []).find(x => x.raw_material_id === id);
+                const m = data.materials ? data.materials.rows.find(x => x.id === id) : null;
+                return l.material && l.material.id === id ? l.material.base_unit : s ? s.base_unit : m ? m.base_unit : null;
+            };
             const fill = () => {
                 const id = Number(select.value) || null;
                 const s = (l.suggestions || []).find(x => x.raw_material_id === id);
-                const m = data.materials ? data.materials.rows.find(x => x.id === id) : null;
-                const base = l.material && l.material.id === id ? l.material.base_unit : s ? s.base_unit : m ? m.base_unit : null;
+                const base = baseOf(id);
                 const u = disp(base);
                 const f = l.material && l.material.id === id ? l.factor : s ? s.factor : null;
-                form.querySelector('[data-map-unit]').textContent = base ? u.unit : '—';
+                unitSel.value = u.unit;
+                unitSel.disabled = !base;
+                unitSel.dataset.prev = u.unit;
                 factor.value = f !== null && f !== undefined ? String(Math.round(f / u.factor * 10000) / 10000).replace('.', ',') : '';
                 factor.dataset.scale = u.factor;
             };
             fill();
             select.addEventListener('change', fill);
+            // Jednostka klikalna (27/10/2026) : kg ↔ g, l ↔ ml = sama skala ; masa / objętość / sztuki = zmiana na karcie surowca, od razu.
+            unitSel.addEventListener('change', async () => {
+                const id = Number(select.value) || null;
+                const base = baseOf(id);
+                const to = unitSel.value;
+                const prev = unitSel.dataset.prev;
+                if (!id || !base) return;
+                if (unitGroup(to) === unitGroup(base)) {
+                    const v = ui.num(factor.value);
+                    const scale = unitScale(to, base);
+                    if (typeof v === 'number') factor.value = String(Math.round(v * Number(factor.dataset.scale || 1) / scale * 10000) / 10000).replace('.', ',');
+                    factor.dataset.scale = scale;
+                    unitSel.dataset.prev = to;
+                    return;
+                }
+                const name = select.selectedOptions[0].textContent;
+                if (!window.confirm(t('inv.unit_confirm', {name, from: prev, to}))) { unitSel.value = prev; return; }
+                unitSel.disabled = true;
+                try {
+                    const r = await api.patch(`/supply/materials/${id}/unit`, {unit: to});
+                    // Stan lokalny : nowa jednostka bazowa wszędzie, przeliczniki w nowej jednostce (serwer przeliczył zapisane).
+                    const scaleF = (x) => { if (x && x.factor !== null && x.factor !== undefined && r.ratio) x.factor = Math.round(x.factor * r.ratio * 10000) / 10000; };
+                    if (l.material && l.material.id === id) { l.material.base_unit = r.base_unit; scaleF(l); }
+                    (l.suggestions || []).filter(x => x.raw_material_id === id).forEach(x => { x.base_unit = r.base_unit; scaleF(x); });
+                    (data.materials ? data.materials.rows : []).filter(x => x.id === id).forEach(x => { x.base_unit = r.base_unit; });
+                    fill();
+                    unitSel.value = to;
+                    unitSel.dataset.prev = to;
+                    factor.dataset.scale = unitScale(to, r.base_unit);
+                    ui.notify(true, t(r.converted ? 'inv.unit_changed' : 'inv.unit_changed_check', {name, unit: to, price: n(r.price_per_unit, 4)})
+                        + (r.recipes ? ' ' + t('inv.unit_recipes', {n: r.recipes}) : ''));
+                } catch (err) {
+                    unitSel.value = prev;
+                    ui.notify(false, err.message);
+                } finally {
+                    unitSel.disabled = false;
+                }
+            });
             const save = form.querySelector('[data-map-save]');
             save.addEventListener('click', () => {
                 const id = Number(select.value) || null;

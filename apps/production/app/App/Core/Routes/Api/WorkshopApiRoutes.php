@@ -180,6 +180,8 @@ final class WorkshopApiRoutes
             ['DELETE', '/supply/mappings/{id:\d+}', InvoiceController::class, 'deleteMapping', 'prod.supply.write'],
             ['GET', '/supply/prices', InvoiceController::class, 'prices', 'prod.supply.read'],
             ['GET', '/supply/materials/{id:\d+}/prices', InvoiceController::class, 'materialPrices', 'prod.supply.read'],
+            // Jednostka surowca z formularza przypisania faktury (kg / g / szt / l / ml) — od razu na karcie surowca.
+            ['PATCH', '/supply/materials/{id:\d+}/unit', InvoiceController::class, 'changeMaterialUnit', 'prod.supply.write'],
             ['POST', '/planning/week/move', WeekController::class, 'move', 'prod.gantt.move'],
             ['POST', '/planning/week/distribute', WeekController::class, 'distribute', 'prod.gantt.move'],
             ['POST', '/planning/week/pin', WeekController::class, 'pin', 'prod.gantt.move'],

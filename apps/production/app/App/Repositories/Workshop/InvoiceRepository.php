@@ -231,6 +231,29 @@ final class InvoiceRepository extends WorkshopRepository
                            FROM raw_material rm LEFT JOIN unit u ON u.id = rm.id_unit WHERE rm.id = ?', [$id])[0] ?? null;
     }
 
+    /** Surowiec do zmiany jednostki : jednostka, opakowanie, cena, dostawca, waga sztuki (BDO), liczba receptur. */
+    public function materialUnitInfo(int $id): ?array
+    {
+        return $this->all('SELECT rm.id, rm.name, rm.id_unit, u.name AS unit, rm.package_size_in_base_unit AS package_size, rm.price_per_unit, rm.id_current_supplier,
+                                  rm.packaging_unit_weight_g AS weight_g,
+                                  (SELECT COUNT(DISTINCT c.parent_recipe_id) FROM product_recipe_connection c WHERE c.child_ingredient_id = rm.id) AS recipes
+                           FROM raw_material rm LEFT JOIN unit u ON u.id = rm.id_unit WHERE rm.id = ?', [$id])[0] ?? null;
+    }
+
+    public function unitId(string $name): ?int
+    {
+        $id = $this->all('SELECT id FROM unit WHERE name = ?', [$name])[0]['id'] ?? null;
+        return $id !== null ? (int) $id : null;
+    }
+
+    /** Przeliczniki w nowej jednostce : zapamiętane przypisania i linie faktur bez zaimportowanych cen. */
+    public function scaleFactors(int $materialId, float $ratio): void
+    {
+        $this->db->prepare('UPDATE n_inv_mapping SET factor = ROUND(factor * ?, 4) WHERE id_raw_material = ?')->execute([$ratio, $materialId]);
+        $this->db->prepare('UPDATE n_inv_line l JOIN n_inv i ON i.id = l.id_inv SET l.factor = ROUND(l.factor * ?, 4)
+                            WHERE l.id_raw_material = ? AND l.factor IS NOT NULL AND i.prices_imported_at IS NULL AND i.status = \'open\'')->execute([$ratio, $materialId]);
+    }
+
     public function companyNip(): ?string
     {
         $r = $this->all('SELECT wdt_company_nip, wz_company_nip FROM erp_company_data ORDER BY id LIMIT 1')[0] ?? null;

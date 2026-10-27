@@ -465,5 +465,10 @@
   "prices.col.base_help": "Cena z kartoteki, z której liczony jest koszt receptur : najwyższa zatwierdzona cena (podwyżki zatwierdzone, faktury i oferty zaakceptowane), nie ostatnia.",
   "inv.correction": "korekta",
   "inv.warn.correction": "faktura korygująca (ceny i stan bez zmian)",
-  "inv.correction_help": "Faktura korygująca : linie przed korektą to nie zakupy. Nie zmienia cen bazowych surowców, historii cen ani stanu — po sprawdzeniu zaakceptuj ; ewentualną zmianę stanu lub ceny wprowadź ręcznie."
+  "inv.correction_help": "Faktura korygująca : linie przed korektą to nie zakupy. Nie zmienia cen bazowych surowców, historii cen ani stanu — po sprawdzeniu zaakceptuj ; ewentualną zmianę stanu lub ceny wprowadź ręcznie.",
+  "inv.unit_pick": "Jednostka (kliknij : kg, g, l, ml, szt)",
+  "inv.unit_confirm": "Zmienić jednostkę surowca « {name} » z {from} na {to} ? Zmiana od razu na karcie surowca (cena i opakowanie przeliczone, gdy znana jest waga sztuki). Receptury zachowują swoje ilości.",
+  "inv.unit_changed": "« {name} » : teraz w {unit} — cena {price} zł za jednostkę, karta surowca zaktualizowana.",
+  "inv.unit_changed_check": "« {name} » : teraz w {unit}. Brak wagi sztuki — sprawdź cenę na karcie surowca (zaktualizuje ją ta faktura).",
+  "inv.unit_recipes": "Receptury z tym surowcem : {n} — sprawdź ich ilości."
 }

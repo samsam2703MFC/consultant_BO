@@ -465,5 +465,10 @@
   "prices.col.base_help": "Prix de la fiche matière utilisé pour le coût des recettes : le plus haut prix validé (hausses validées, factures et offres acceptées), pas le dernier.",
   "inv.correction": "correction",
   "inv.warn.correction": "facture de correction (prix et stock inchangés)",
-  "inv.correction_help": "Facture de correction : les lignes avant correction ne sont pas des achats. Elle ne change ni les prix de base des matières, ni l’historique des prix, ni le stock — acceptez-la après contrôle ; une éventuelle correction de stock ou de prix se fait à la main."
+  "inv.correction_help": "Facture de correction : les lignes avant correction ne sont pas des achats. Elle ne change ni les prix de base des matières, ni l’historique des prix, ni le stock — acceptez-la après contrôle ; une éventuelle correction de stock ou de prix se fait à la main.",
+  "inv.unit_pick": "Unité (cliquez : kg, g, l, ml, szt)",
+  "inv.unit_confirm": "Changer l'unité de la matière « {name} » de {from} en {to} ? Le changement est fait tout de suite sur la fiche matière (prix et conditionnement convertis si le poids d'une pièce est connu). Les recettes gardent leurs quantités.",
+  "inv.unit_changed": "« {name} » : maintenant en {unit} — prix {price} zł par unité, fiche matière mise à jour.",
+  "inv.unit_changed_check": "« {name} » : maintenant en {unit}. Poids d'une pièce inconnu — vérifiez le prix sur la fiche matière (cette facture le mettra à jour).",
+  "inv.unit_recipes": "Recettes avec cette matière : {n} — vérifiez leurs quantités."
 }
