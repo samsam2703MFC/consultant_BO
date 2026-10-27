@@ -1,5 +1,5 @@
 /*
- * Tablet biurowy / Tablette de bureau (PWA). Tablet w trybie « Biuro » (zarządzanie tabletami), parowany tym samym
+ * Tablet biurowy / Tablette de bureau (PWA). Tablet rodzaju « Tablet biurowy » (zarządzanie tabletami), parowany tym samym
  * kodem co tablet pracowni. Osoba dotyka swojego działu, potem swojego nazwiska : tablet pokazuje jej osobisty kod QR
  * (osoba + dzień). Osoba skanuje go swoim telefonem i zatwierdza wejście albo wyjście na telefonie (pytania, podpis) ;
  * telefon innej osoby jest odrzucany. Tablet sprawdza co 2 s, czy pointowanie jest zapisane, i wraca do działów.
