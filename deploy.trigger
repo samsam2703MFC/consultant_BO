@@ -1113,3 +1113,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-27T13:24:36Z production : adresses /tablet/production?team=N, changer de groupe sur la tablette, /tablet/office sans renvoi
 2026-10-27T13:44:55Z production : tablette de production d'une équipe (sans barre des groupes), carte Magazyn grupy, tuiles agrandies
 2026-10-27T15:29:54Z production : tablette de production sans QR, présents seulement, un toucher → menu en bas (migration 109)
+2026-10-27T15:30:43Z resultat jour : le clic sur un magasin ouvre son dashboard operationnel dans un nouvel onglet, le petit bouton devant le nom deplie le compte de resultat
