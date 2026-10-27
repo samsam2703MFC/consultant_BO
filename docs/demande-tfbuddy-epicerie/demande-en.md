@@ -1,17 +1,26 @@
-# Request to TFBuddy — API write endpoints to encode grocery (resale) items
+# Request to TFBuddy — API write endpoints to encode grocery (resale) items (v2)
 
-To: development team of `atelierby.tfbuddy.com` · From: L’Atelier by (CEO cockpit) · 27/10/2026  
+To: development team of `atelierby.tfbuddy.com` · From: L’Atelier by (CEO cockpit) · 27/10/2026, version 2 (decisions included)  
 Base URL: `https://atelierby.tfbuddy.com/api/v1` · Versions: [français](demande-fr.md), English, [polski](demande-pl.md)
 
 ## The need
 
-The network resells **grocery items** bought and sold as-is (coffee, jams, chocolates…). The cockpit process: we scan the supplier’s PDF (catalogue, price list), a wizard reads each line, we encode and validate it step by step, and then everything must be created in TFBuddy **as one chain**:
+The network resells **grocery items** bought and sold as-is (coffee, jams, chocolates…). The cockpit process: we scan the supplier’s PDF (catalogue, price list), a wizard reads each line, we encode and validate it step by step — price, barcode, VAT, sales periods, name, ingredients and allergens in French and Dutch — and then everything must be created in TFBuddy **as one chain**:
 
 ```
-supplier ──► supplier catalogue item (SKU, pack, price) ──► material ──► recipe (1 × the material) ──► sales product (Grocery category)
+supplier ──► supplier catalogue item (SKU, EAN, pack, price) ──► material (allergens) ──► recipe (1 × the material) ──► sales product (category, max. price, periods, FR/NL)
 ```
 
-Observed in the Swagger on 27/10/2026: `material-categories`, `material-suppliers`, `materials`, `product-categories` and `products` are **read-only** (GET). None of the links in the chain can be created. The write endpoints below are the minimum the wizard needs to create the chain without re-typing anything. Field names are **the ones your GET endpoints already return** — nothing is invented.
+Observed in the Swagger on 27/10/2026: `material-categories`, `material-suppliers`, `materials`, `product-categories`, `product-availability-periods` and `products` are **read-only** (GET). None of the links in the chain can be created. The write endpoints below are the minimum the wizard needs to create the chain without re-typing anything. Field names are the ones your GET endpoints already return; **fields in bold are new** — if you name them differently, tell us and the cockpit will follow.
+
+## Decisions by L’Atelier by
+
+1. **Price**: one supplier price list, written once for **the whole network** (no per-shop list for grocery items). The sales price is a **maximum price, the same for every shop** (`max_sale_price`, VAT included): a shop may sell below it, never above.
+2. **Barcode**: the EAN is on the **product** (`ean`, scanned at the till) and on the supplier’s item. It is entered and checked (EAN-13 / EAN-8 check digit) in the wizard.
+3. **Sales VAT**: on the **product** (`tax_value_percent`), the same in every shop.
+4. **Activation**: through **availability periods** (`availability_period_ids`, ids from `GET /product-availability-periods`). The product is sold during its periods — “Permanent” for all year round. Endpoint 8 changes them afterwards.
+5. **Bilingual**: name (`name` / `name_nl`) and ingredients (`ingredients_fr` / `ingredients_nl`) in French and Dutch, on the product.
+6. **Allergens**: ticked one by one in the wizard, sent as `GET /allergens` codes on the **material** — `allergens` (contains) and `may_contain` (possible traces). The product inherits them through its recipe, like your other products.
 
 ## Common rules
 
@@ -23,42 +32,46 @@ Observed in the Swagger on 27/10/2026: `material-categories`, `material-supplier
 
 ## Endpoints
 
-| # | Endpoint | Creates / updates | Fields (names from your GET endpoints) |
+| # | Endpoint | Creates / updates | Fields (bold: new) |
 |---|---|---|---|
 | 1 | `POST /material-suppliers` · `PATCH /material-suppliers/{id}` | the supplier | `name`, `type`, `email`, `phone`, `address`, `city`, `country_code`, `tax_number`, `website_url`, `currency`, `notes` |
 | 2 | `POST /material-suppliers/{id}/catalog/products` · `PATCH …/catalog/products/{productId}` | the supplier’s catalogue item | `sku`, `name`, `ean`, `package_size`, `package_unit`, `portion_size`, `portion_unit`, `weight_grams`, `shelf_life_days`, `vat_rate`, `is_active` |
-| 3 | `POST /material-suppliers/{id}/price-lists` | the pack price, dated | `sku` (or `catalog_product_id`), `price_net`, `package_size`, `package_unit`, `vat_rate`, `valid_from`, `shop_ids` (empty = whole network) |
-| 4 | `POST /materials` · `PATCH /materials/{id}` | the material | `name`, `code`, `material_category_id`, `unit_name` (base unit : `pcs`, `g`, `kg`, `l`), `vat_rate`, `material_type`, `waste_amount_perc` |
+| 3 | `POST /material-suppliers/{id}/price-lists` | the pack price, dated | `sku` (or `catalog_product_id`), `price_net`, `package_size`, `package_unit`, `vat_rate`, `valid_from` — valid for **all shops** |
+| 4 | `POST /materials` · `PATCH /materials/{id}` | the material and its allergens | `name`, `code`, `material_category_id`, `unit_name` (base unit : `pcs`, `g`, `kg`, `l`), `vat_rate`, `material_type`, `waste_amount_perc`, **`allergens`**, **`may_contain`** (`GET /allergens` codes) |
 | 5 | `POST /material-suppliers/{id}/catalog-mappings` | the item ↔ material link | `material_id`, `catalog_product_id`, `units_per_pack` |
-| 6 | `POST /products` · `PATCH /products/{id}` | the sales product | `name`, `id_category`, `suggested_sale_price`, `tax_value_percent`, `single_weight`, `is_divisible`, `portion_size`, `allergene`, `shelf_life_minutes`, `is_active` |
+| 6 | `POST /products` · `PATCH /products/{id}` | the sales product | `name`, **`name_nl`**, `id_category`, **`max_sale_price`**, `tax_value_percent`, **`ean`**, `single_weight`, `is_divisible`, `portion_size`, **`ingredients_fr`**, **`ingredients_nl`**, `shelf_life_minutes`, **`availability_period_ids`** |
 | 7 | `PUT /products/{id}/recipe` | the product’s recipe | `yield_quantity`, `elements: [{ material_id, required_quantity, unit_name }]` |
+| 8 | `POST /product-availability-periods/{id}/products` · `DELETE …/products/{productId}` | a product’s sales periods | `product_id` |
 
-**Recommended shortcut — one atomic endpoint:**
+**Recommended shortcut — one atomic endpoint** (the one the wizard will call, line by line):
 
 ```
 POST /products/resale
 {
-  "client_ref": "imp14-l3",
+  "client_ref": "ep14-l7",
   "supplier":  { "id": 6 },                                   // or { "name": …, "tax_number": … } to create it
-  "catalog_product": { "sku": "CF-250-ARA", "name": "Café Fiesta Arabica 250 g", "ean": "5412345678901",
-                       "package_size": 12, "package_unit": "pcs", "vat_rate": 6 },
-  "price": { "price_net": 41.40, "valid_from": "2026-11-01", "shop_ids": [] },
-  "material": { "id": null, "name": "Café Fiesta Arabica 250 g", "material_category_id": 9,
-                "unit_name": "pcs", "vat_rate": 6 },                                    // id given = existing material
-  "units_per_pack": 12,
-  "product": { "name": "Fiesta Arabica - 250 g.", "id_category": 61, "suggested_sale_price": 6.90,
-               "tax_value_percent": 6, "single_weight": 250, "is_active": 0 },
+  "catalog_product": { "sku": "CS-CHOC-72", "name": "Chocolat noir 72 % 100 g", "ean": "5412345000075",
+                       "package_size": 20, "package_unit": "pcs", "vat_rate": 6 },
+  "price": { "price_net": 34.00, "valid_from": "2026-11-01" },                   // network price list: all shops
+  "material": { "id": null, "name": "Chocolat noir 72 % 100 g", "material_category_id": 11,
+                "unit_name": "pcs", "vat_rate": 6,
+                "allergens": ["milk", "soybeans"], "may_contain": ["nuts"] },   // id given = existing material (allergens ignored)
+  "units_per_pack": 20,
+  "product": { "name": "Chocolat noir 72 % - 100 g", "name_nl": "Pure chocolade 72 % - 100 g",
+               "id_category": 61, "max_sale_price": 3.20, "tax_value_percent": 6,
+               "ean": "5412345000075", "single_weight": 100,
+               "ingredients_fr": "Pâte de cacao, sucre, beurre de cacao, émulsifiant : lécithine de soja.",
+               "ingredients_nl": "Cacaomassa, suiker, cacaoboter, emulgator: sojalecithine.",
+               "availability_period_ids": [1] },                                 // 1 = “Permanent”
   "recipe_quantity": 1
 }
 → 201 { "supplier_id": 6, "catalog_product_id": 812, "material_id": 1544, "product_id": 2210, "recipe_id": 1980 }
 ```
 
-All or nothing: no orphan material is left behind if the product is rejected. This is the endpoint the cockpit wizard will call line by line; endpoints 1 to 7 remain useful for later corrections (price change, discontinued item).
+All or nothing: no orphan material is left behind if the product is rejected. Endpoints 1 to 8 remain useful for later corrections (price change, sales period, discontinued item).
 
-## To be decided
+## What we need back
 
-1. **Price**: price lists are currently per shop (`/material-suppliers/{fid}/shops/{sid}/price-lists`). Should a network-wide supplier price be written once (empty `shop_ids`) or shop by shop?
-2. **EAN**: on the supplier’s item, on the material, or on the product? The till needs it to scan the grocery item.
-3. **Sales VAT**: on the product (`tax_value_percent` currently only appears on `/shops/{id}/products/available`) or per shop?
-4. **Activation**: is a product created with `is_active: 0` activated in the panel, or should the cockpit call `PATCH /products/{id}` `{ "is_active": 1 }` after validation?
-5. **Dutch name**: where should it be stored (name alias, as for the availability periods)?
+1. The names you choose for the new fields, if they differ (`max_sale_price`, `name_nl`, `ingredients_fr`, `ingredients_nl`, product `ean`, material `allergens` / `may_contain`, `availability_period_ids`).
+2. Till behaviour above `max_sale_price`: block, or warning?
+3. A date for `POST /products/resale` (even on a test environment): the cockpit is ready and will try it right away.
