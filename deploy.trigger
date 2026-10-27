@@ -1109,3 +1109,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-27T10:12:42Z production : prix de revient au plus haut prix validé
 2026-10-27T10:27:04Z production : factures d'achat de correction (ni prix, ni stock)
 2026-10-27T11:34:28Z production : tablette de bureau, tous les groupes et toutes les personnes
+2026-10-27T13:09:16Z production : tablette de bureau, groupes en rectangles arrondis
