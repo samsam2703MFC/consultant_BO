@@ -16454,6 +16454,209 @@
                 ]
             }
         },
+        "/kiosk/complaints/summary": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Reklamacje klientów : skrót / Réclamations clients : résumé",
+                "operationId": "kioskComplaintsSummary",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskComplaintSummary"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Écran d'accueil de la tablette (sans PIN) : réclamations clients acceptées par le bureau (acceptance_status = ACCEPTED, type PRODUCT) sur les produits du groupe, reçues ces 30 derniers jours — nombre, dont 7 derniers jours, pièces, les trois dernières. Groupe du produit comme dans Stan magazynu (groupe principal de la fiche, sinon groupe du département). Rien n'est modifié.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/complaints": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Reklamacje klientów grupy / Réclamations clients du groupe",
+                "operationId": "kioskComplaints",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskComplaints"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Liste informative (lecture seule) : produit, magasin, motif, quantité, compensation, commentaire du client et réponse du bureau ; comment_tr / response_tr : traduction dans la langue de la tablette (DeepL si la clé est configurée, une fois par réclamation et par langue ; null = même langue ou pas de traducteur) ; produits les plus réclamés et motifs de la période ; new = reçue ces 7 derniers jours.",
+                "parameters": [
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                30,
+                                90,
+                                365
+                            ],
+                            "description": "période (défaut 30 jours)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/complaints/{id}/photos": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zdjęcia reklamacji / Photos de la réclamation",
+                "operationId": "kioskComplaintPhotos",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskComplaintPhotos"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Liens temporaires des photos (6 au plus) demandés au système des franchisés ; url = null quand la photo n'est pas disponible. 404 : réclamation non acceptée ou d'un autre groupe.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/bonus": {
             "get": {
                 "tags": [
@@ -25718,6 +25921,238 @@
                     "people_estimated": {
                         "type": "boolean",
                         "description": "N-1 : osoby bieżącego miesiąca (brak osób opłaconych w tamtym miesiącu)"
+                    }
+                }
+            },
+            "KioskComplaintSummary": {
+                "type": "object",
+                "properties": {
+                    "days": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "year": {
+                        "type": "integer",
+                        "description": "réclamations acceptées sur 12 mois (onglet affiché si > 0)"
+                    },
+                    "week": {
+                        "type": "integer"
+                    },
+                    "pieces": {
+                        "type": "number"
+                    },
+                    "latest": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "product": {
+                                    "type": "string"
+                                },
+                                "reason": {
+                                    "type": "string"
+                                },
+                                "date": {
+                                    "type": "string"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "KioskComplaints": {
+                "type": "object",
+                "properties": {
+                    "group": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "days": {
+                        "type": "integer"
+                    },
+                    "periods": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "lang": {
+                        "type": "string"
+                    },
+                    "translator": {
+                        "type": "boolean"
+                    },
+                    "totals": {
+                        "type": "object",
+                        "properties": {
+                            "count": {
+                                "type": "integer"
+                            },
+                            "week": {
+                                "type": "integer"
+                            },
+                            "pieces": {
+                                "type": "number"
+                            }
+                        }
+                    },
+                    "products": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "count": {
+                                    "type": "integer"
+                                },
+                                "pieces": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                },
+                                "count": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "date": {
+                                    "type": "string"
+                                },
+                                "reported_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "new": {
+                                    "type": "boolean"
+                                },
+                                "product": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "customer": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "reason": {
+                                    "type": "string",
+                                    "enum": [
+                                        "size_or_weight_issue",
+                                        "broken_packaging",
+                                        "incorrect_information",
+                                        "lack_of_conformity",
+                                        "incorrect_quantity_of_products_in_package",
+                                        "product_quality",
+                                        "other"
+                                    ]
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "compensation": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                        "REFUND",
+                                        "REPLACEMENT",
+                                        "CREDIT",
+                                        null
+                                    ]
+                                },
+                                "comment": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "comment_tr": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "response": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "response_tr": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "source_lang": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "photos": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "KioskComplaintPhotos": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "photos": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "url": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "lien temporaire (https)"
+                                }
+                            }
+                        }
                     }
                 }
             },

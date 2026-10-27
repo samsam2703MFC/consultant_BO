@@ -557,7 +557,7 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 }
 @media (max-width: 600px) {
   .kiosk-widgets { grid-template-columns: minmax(0, 1fr); }
-  .kiosk-widget.is-team, .kiosk-widget.is-today, .kiosk-widget.is-deliveries { grid-column: auto; }
+  .kiosk-widget.is-team, .kiosk-widget.is-today, .kiosk-widget.is-deliveries, .kiosk-widget.is-stock, .kiosk-widget.is-complaints { grid-column: auto; }
   .kiosk-apps { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); }
   .kiosk-avatar.is-app { width: 62px; height: 62px; font-size: 21px; }
   .kiosk-dock { gap: 8px; padding: 8px 12px; } .kiosk-dock-icon { width: 50px; height: 50px; } .kiosk-dock-app { min-width: 56px; }
@@ -961,3 +961,27 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .go-cand.is-on { border: 2px solid var(--k-primary); background: var(--k-primary-50); }
 @media (max-width: 900px) { .go-grid { grid-template-columns: minmax(0, 1fr); } .go-row { grid-template-columns: minmax(0, 1fr); } .go-actions { justify-content: flex-start; } }
 .go-row h3 .kiosk-tag, .go-comp-head h3 .kiosk-tag { margin-top: 0; font-size: 13px; padding: 3px 9px; }
+
+/* Reklamacje klientów (28/10/2026) : przyjęte przez biuro, tylko do wiadomości */
+.kiosk-widget.is-complaints { grid-column: span 2; }
+.kc-page { display: flex; flex-direction: column; gap: 14px; }
+.kv-tiles.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.kc-item { display: flex; flex-direction: column; gap: 12px; }
+.kc-item.is-new { box-shadow: inset 4px 0 0 var(--k-danger); }
+.kc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.kc-head h3 { margin: 0 0 4px; font-size: 20px; }
+.kc-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.kc-facts { display: flex; gap: 8px 20px; flex-wrap: wrap; color: var(--k-muted); font-size: 16px; }
+.kc-facts strong { color: var(--k-text); font-size: 19px; font-variant-numeric: tabular-nums; }
+.kc-quote { padding: 12px 14px; border-radius: var(--k-radius); background: var(--k-surface-2); }
+.kc-quote-label { display: block; font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--k-muted); }
+.kc-quote p { margin: 6px 0 0; font-size: 17px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.kc-original summary { margin-top: 8px; min-height: 44px; display: inline-flex; align-items: center; color: var(--k-primary); font-size: 15px; font-weight: 500; cursor: pointer; }
+.kc-original p { color: var(--k-muted); font-size: 15.5px; }
+.kc-item > .kiosk-btn { align-self: flex-start; }
+.kc-photos:empty { display: none; }
+.kc-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.kc-photos a { display: block; border-radius: var(--k-radius); overflow: hidden; background: var(--k-fill); aspect-ratio: 4 / 3; }
+.kc-photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kc-photos > p { grid-column: 1 / -1; }
+@media (max-width: 600px) { .kv-tiles.is-3 { grid-template-columns: minmax(0, 1fr); } }

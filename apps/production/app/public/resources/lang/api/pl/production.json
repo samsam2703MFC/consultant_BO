@@ -569,7 +569,8 @@
     "service_invoice": "faktura usługi",
     "service_month": "miesiąc kosztów usług",
     "buy_round": "zakupy tygodnia",
-    "supplier": "dostawca"
+    "supplier": "dostawca",
+    "complaint": "reklamacja"
   },
   "documents": {
     "team_sheet_title": "Plan zespołu",

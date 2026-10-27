@@ -100,6 +100,7 @@
 
     // Ikony Lucide (lucide.dev, licencja ISC) wbudowane w skrypt : linia, bez emoji, działają offline.
     const ICONS = {
+        'message-square-warning': '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /><path d="M12 7v2" /><path d="M12 13h.01" />',
         'moon': '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />',
         'trophy': '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />',
         'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />',
@@ -271,6 +272,8 @@
                     <div class="kiosk-widget-stats" data-stats></div><div data-today-list><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>
                 <section class="kiosk-widget is-stock" data-stock-widget hidden>${widgetHead('warehouse', 'is-soft', esc(t('kv_stock')), `<button type="button" class="kiosk-widget-link" data-stock-open>${esc(t('home_stock_all'))} ›</button>`)}
                     <div class="kiosk-widget-stats" data-stock-stats></div><div data-stock-list></div></section>
+                <section class="kiosk-widget is-complaints" data-complaints-widget hidden>${widgetHead('message-square-warning', 'is-ruby', esc(t('kc_title')), `<button type="button" class="kiosk-widget-link" data-complaints-open>${esc(t('kc_all'))} ›</button>`)}
+                    <div class="kiosk-widget-stats" data-complaints-stats></div><div data-complaints-list></div></section>
                 <section class="kiosk-widget is-dev" data-dev-widget hidden>${widgetHead('flask-conical', 'is-ruby', esc(t('home_dev_title')), '<span class="kiosk-widget-meta" data-dev-count></span>')}
                     <div class="kiosk-dev-minis" data-dev-list></div></section>
                 <section class="kiosk-widget is-deliveries" data-deliveries hidden>${widgetHead('truck', 'is-soft', esc(t('home_deliveries_title')))}<div data-delivery-list></div></section>`}</div>
@@ -303,11 +306,12 @@
         el.querySelectorAll('[data-week-open]').forEach(b => b.addEventListener('click', () => renderWeek(null, false)));
         el.querySelectorAll('[data-group]').forEach(b => b.addEventListener('click', () => { setGroup(Number(b.dataset.group)); renderHome(); }));
         if (office) drawQr();
-        const [people, w, dev, stock] = await Promise.all([
+        const [people, w, dev, stock, complaints] = await Promise.all([
             api('GET', '/kiosk/people').catch((err) => { if (!err.code) toast(err.message, true); return null; }),
             office ? Promise.resolve(null) : api('GET', '/kiosk/week').catch(() => null),
             office ? Promise.resolve(null) : api('GET', '/kiosk/development/summary').catch(() => null),
             office ? Promise.resolve(null) : api('GET', '/kiosk/stock').catch(() => null),
+            office ? Promise.resolve(null) : api('GET', '/kiosk/complaints/summary').catch(() => null),
         ]);
         const box = el.querySelector('[data-people]');
         if (!box) return;
@@ -375,6 +379,15 @@
                 el.querySelector('[data-team-hint]').textContent = t('home_stock_who');
                 teamWidget.scrollIntoView({behavior: 'smooth', block: 'nearest'});
             });
+        }
+        // Réclamations clients acceptées par le bureau (30 jours) : informatif, « Wszystkie » sans PIN.
+        if (complaints && complaints.count) {
+            el.querySelector('[data-complaints-widget]').hidden = false;
+            el.querySelector('[data-complaints-stats]').innerHTML = stat(String(complaints.count), t('kc_30d'))
+                + stat(String(complaints.week), t('kc_7d'), complaints.week ? 'is-danger' : '') + stat(fmt(complaints.pieces), t('kc_pieces'));
+            el.querySelector('[data-complaints-list]').innerHTML = `<ul class="kiosk-today-list is-untimed">${complaints.latest.map(c => `<li>
+                <span class="kiosk-today-name">${esc(c.product)}</span><span class="kiosk-today-qty">${esc(t('kc_reason_' + c.reason))} · ${esc(dm(c.date))}</span></li>`).join('')}</ul>`;
+            el.querySelector('[data-complaints-open]').addEventListener('click', () => renderComplaints(null, true));
         }
         // Nouveaux produits du groupe : étape (anneau de progression) et prochaine action ; toucher → nom + PIN → fiche.
         const products = (dev && dev.products) || [];
@@ -610,12 +623,15 @@
     // Onglets Maszyny et Nowe produkty : seulement si le groupe a des machines TRS / des produits montrés sur la tablette.
     async function loadTabExtras() {
         const s = session;
-        const [machines, dev] = await Promise.all([api('GET', '/kiosk/machines', undefined, true).catch(() => null), api('GET', '/kiosk/development', undefined, true).catch(() => null)]);
+        const [machines, dev, complaints] = await Promise.all([api('GET', '/kiosk/machines', undefined, true).catch(() => null), api('GET', '/kiosk/development', undefined, true).catch(() => null),
+            api('GET', '/kiosk/complaints/summary').catch(() => null)]);
         if (session !== s || !s) return;
         s.machines = machines ? machines.machines.length : 0;
         s.dev = dev ? dev.products.length : 0;
+        // Zakładka Reklamacje : gdy grupa miała reklamacje przyjęte przez biuro w ostatnich 12 miesiącach.
+        s.complaints = complaints ? complaints.year : 0;
         const bar = el.querySelector('.kiosk-tabs:not(.is-home)');
-        if (bar && (s.machines || s.dev)) bar.outerHTML = tabs(s.tab || 'production');
+        if (bar && (s.machines || s.dev || s.complaints)) bar.outerHTML = tabs(s.tab || 'production');
     }
 
     // PIN pour tout le monde (28/10/2026) : toucher un présent ouvre le PIN (accueil, widgets, « Zmień osobę »).
@@ -694,14 +710,14 @@
     }
 
     // --- Menu osoby : Czas pracy / Produkcja / Kontrola jakości / Receptury ---------------------------
-    const TABS = [['clock', 'clock', 'tab_clock'], ['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['recipes', 'book-open', 'tab_recipes'], ['machines', 'bot', 'tab_machines'], ['dev', 'flask-conical', 'tab_dev'], ['orders', 'handshake', 'tab_orders'], ['bonus', 'trophy', 'tab_bonus']];
+    const TABS = [['clock', 'clock', 'tab_clock'], ['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['complaints', 'message-square-warning', 'tab_complaints'], ['recipes', 'book-open', 'tab_recipes'], ['machines', 'bot', 'tab_machines'], ['dev', 'flask-conical', 'tab_dev'], ['orders', 'handshake', 'tab_orders'], ['bonus', 'trophy', 'tab_bonus']];
     const personHeader = () => header();
     function tabs(active) {
         if (session) session.tab = active;
         // Zakładki Maszyny (TRS) i Nowe produkty tylko, gdy grupa tabletu ma maszyny z TRS / produkty pokazane na tablecie.
         const shown = ([k]) => (k !== 'machines' || (session && session.machines > 0)) && (k !== 'dev' || (session && session.dev > 0))
             && (k !== 'clock' || !(deviceInfo && deviceInfo.mode === 'atelier')) && (k !== 'bonus' || (session && session.bonus))
-            && (k !== 'orders' || (session && session.orders));
+            && (k !== 'orders' || (session && session.orders)) && (k !== 'complaints' || (session && session.complaints > 0));
         return `<nav class="kiosk-tabs" role="tablist" aria-label="${esc(t('tabs'))}">${TABS.filter(shown).map(([k, ic, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
             role="tab" aria-selected="${k === active}" data-tab="${k}"><span class="kiosk-tab-icon">${icon(ic)}</span><span class="kiosk-tab-label">${esc(t(label))}</span><span class="kiosk-tab-short" aria-hidden="true">${esc(t(label + '_short'))}</span></button>`).join('')}</nav>`;
     }
@@ -710,6 +726,7 @@
         if (k === 'machines') return renderMachines(message);
         if (k === 'dev') return renderDev(message);
         if (k === 'stock') return renderStock(message);
+        if (k === 'complaints') return renderComplaints(message, false);
         if (k === 'bonus') return renderBonus(message);
         if (k === 'orders') return renderGroupOrders(message);
         return k === 'production' ? renderProduction(message) : (k === 'quality' ? renderQuality(message) : renderMe(message));
@@ -1940,6 +1957,68 @@
         el.innerHTML = personHeader() + tabs('stock') + body;
         if (message) toast(message);
         el.querySelectorAll('[data-kv-view]').forEach(b => b.addEventListener('click', () => { if (session) session.stockView = b.dataset.kvView; renderStock(); }));
+    }
+
+    // --- Reklamacje klientów (28/10/2026) : przyjęte przez biuro, na produkty grupy — tylko do wiadomości zespołu ---------
+    // Z ekranu startowego bez PIN (home = true : przycisk « Wróć », powrót sam po 2 minutach), z menu osoby jako zakładka.
+    let complaintsDays = 30;
+    async function renderComplaints(message, home) {
+        longIdle = true;
+        if (!home) resetIdle();
+        let c;
+        try {
+            c = await api('GET', '/kiosk/complaints?days=' + complaintsDays);
+        } catch (err) {
+            if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true);
+            if (home && !session) renderHome();
+            return;
+        }
+        // Entre-temps : quelqu'un s'est connecté (accueil) ou la session a pris fin (onglet).
+        if (home ? !!session : !session) return;
+        const T = c.totals;
+        const tile = (label, value, sub, cls) => `<div class="kv-tile ${cls || ''}"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(sub)}</small></div>`;
+        // Tekst klienta i odpowiedź biura : tłumaczenie na język tabletu, oryginał pod spodem.
+        const quote = (label, text, tr) => `<div class="kc-quote"><span class="kc-quote-label">${esc(label)}</span><p>${esc(tr || text)}</p>
+            ${tr ? `<details class="kc-original"><summary>${esc(t('kc_original'))}</summary><p>${esc(text)}</p></details>` : ''}</div>`;
+        const card = (i) => `<article class="kiosk-card kc-item ${i.new ? 'is-new' : ''}">
+            <header class="kc-head"><div><h3>${esc(i.product.name)}</h3>
+                <p class="kiosk-muted">${esc(i.customer || '—')} · ${esc(t('kc_reported', {date: dateFmt(i.reported_at || i.date)}))}</p></div>
+                <div class="kc-tags">${i.new ? `<span class="kiosk-pill is-danger">${esc(t('kc_new'))}</span>` : ''}<span class="kiosk-pill is-warn">${esc(t('kc_reason_' + i.reason))}</span></div></header>
+            <div class="kc-facts"><span><strong>${esc(fmt(i.quantity))}</strong> ${esc(t('kc_pcs'))}</span>${i.compensation ? `<span>${esc(t('kc_comp_' + i.compensation))}</span>` : ''}</div>
+            ${i.comment ? quote(t('kc_client_says'), i.comment, i.comment_tr) : ''}
+            ${i.response ? quote(t('kc_office_says'), i.response, i.response_tr) : ''}
+            ${i.photos ? `<button type="button" class="kiosk-btn is-small" data-kc-photos="${i.id}">${icon('image', 'is-sm')} ${esc(t('kc_photos', {n: i.photos}))}</button>
+                <div class="kc-photos" data-kc-photo-box="${i.id}"></div>` : ''}</article>`;
+        const periods = `<div class="kv-switch" role="tablist">${c.periods.map(d => `<button type="button" class="${d === c.days ? 'is-on' : ''}" data-kc-days="${d}">${esc(t('kc_days', {n: d}))}</button>`).join('')}</div>`;
+        const top = c.products.length > 1 ? `<section class="kiosk-card kv-tablecard"><h2>${esc(t('kc_top'))}</h2><table class="kv-table"><tbody>${c.products.map(p => `<tr><td><strong>${esc(p.name)}</strong></td>
+            <td class="n">${esc(t('kc_times', {n: p.count}))}</td><td class="n">${esc(fmt(p.pieces))} ${esc(t('kc_pcs'))}</td></tr>`).join('')}</tbody></table></section>` : '';
+        const body = `<div class="kc-page" data-kc-page><div class="kv-crumb is-split"><div><h2>${esc(t('kc_page_title', {group: (c.group && c.group.name) || ''}))}</h2><p class="kiosk-muted">${esc(t('kc_page_sub'))}</p></div>${periods}</div>
+            <div class="kv-tiles is-3">${tile(t('kc_tile_count'), fmt(T.count), t('kc_days', {n: c.days}))}${tile(t('kc_tile_week'), fmt(T.week), t('kc_tile_week_sub'), T.week ? 'is-danger' : '')}
+                ${tile(t('kc_tile_pieces'), fmt(T.pieces) + ' ' + t('kc_pcs'), t('kc_tile_pieces_sub'))}</div>
+            ${top}
+            ${c.items.length ? c.items.map(card).join('') : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('kc_empty', {n: c.days}))}</p></section>`}
+            ${!c.translator && c.items.some(i => i.comment) ? `<p class="kiosk-muted kv-small">${esc(t('kc_no_translator'))}</p>` : ''}</div>`;
+        el.innerHTML = (home && !session ? header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-home>‹ ${esc(t('week_back'))}</button>`) : personHeader() + tabs('complaints')) + body;
+        window.scrollTo(0, 0);
+        if (message) toast(message);
+        el.querySelector('[data-home]')?.addEventListener('click', () => renderHome());
+        el.querySelectorAll('[data-kc-days]').forEach(b => b.addEventListener('click', () => { complaintsDays = Number(b.dataset.kcDays); renderComplaints(null, home); }));
+        el.querySelectorAll('[data-kc-photos]').forEach(b => b.addEventListener('click', async () => {
+            const box = el.querySelector(`[data-kc-photo-box="${b.dataset.kcPhotos}"]`);
+            b.disabled = true;
+            box.innerHTML = `<p class="kiosk-muted">${esc(t('loading'))}</p>`;
+            try {
+                const r = await api('GET', `/kiosk/complaints/${b.dataset.kcPhotos}/photos`);
+                const shown = r.photos.filter(p => p.url);
+                box.innerHTML = shown.length ? shown.map(p => `<a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer"><img src="${esc(p.url)}" alt="${esc(t('kc_photo'))}" loading="lazy"></a>`).join('')
+                    : `<p class="kiosk-muted">${esc(t('kc_photos_none'))}</p>`;
+            } catch (err) {
+                box.innerHTML = `<p class="kiosk-muted">${esc(err.message)}</p>`;
+                b.disabled = false;
+            }
+        }));
+        // Bez osoby : powrót na ekran startowy po 2 minutach.
+        if (home && !session) window.setTimeout(() => { if (!session && el.querySelector('[data-kc-page]')) renderHome(); }, 120000);
     }
 
     // --- Premia : ventes du groupe par personne dans le mois face aux paliers (ERP › Zespół › Premie zespołów) ---------

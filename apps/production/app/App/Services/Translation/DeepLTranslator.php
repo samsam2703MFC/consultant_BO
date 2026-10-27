@@ -26,7 +26,7 @@ final class DeepLTranslator
         'it' => 'włoskiego', 'es' => 'hiszpańskiego', 'pt' => 'portugalskiego', 'cs' => 'czeskiego', 'sk' => 'słowackiego', 'uk' => 'ukraińskiego',
         'ro' => 'rumuńskiego', 'lt' => 'litewskiego', 'lv' => 'łotewskiego', 'hu' => 'węgierskiego', 'ru' => 'rosyjskiego', 'bg' => 'bułgarskiego',
         'da' => 'duńskiego', 'sv' => 'szwedzkiego', 'fi' => 'fińskiego', 'el' => 'greckiego', 'tr' => 'tureckiego'];
-    public const CONTEXTS = ['mail_in', 'mail_out', 'footer', 'communication'];
+    public const CONTEXTS = ['mail_in', 'mail_out', 'footer', 'communication', 'complaint'];
     public const MAX_CHARS = 30000;
     /** Testy : zamiast HTTP — fn(string $method, string $url, array $headers, ?array $body): array{0:int,1:string}. */
     public static ?\Closure $transport = null;

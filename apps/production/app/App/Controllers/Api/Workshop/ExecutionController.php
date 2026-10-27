@@ -14,6 +14,7 @@ use App\Services\Workshop\Execution\ExecutionService;
 use App\Services\Workshop\Execution\KioskAuthService;
 use App\Services\Workshop\Execution\KioskRecipeService;
 use App\Services\Workshop\Execution\KioskStockService;
+use App\Services\Workshop\Execution\KioskComplaintService;
 use App\Services\Workshop\Execution\KpiService;
 use App\Services\Workshop\Execution\OfficeClockService;
 use App\Services\Workshop\Execution\OeeService;
@@ -47,6 +48,7 @@ final class ExecutionController
         private TeamBonusService $bonus,
         private DayEfficiencyService $efficiency,
         private GroupOrderService $groupOrders,
+        private KioskComplaintService $complaints,
     ) {
     }
 
@@ -192,6 +194,14 @@ final class ExecutionController
     public function developmentSummary(ApiRequest $request): ApiResult { return new ApiResult($this->dev->summary($request->context)); }
     public function developmentTrial(ApiRequest $request): ApiResult { return new ApiResult($this->dev->recordTrial($request->id(), $request->body(), $request->context), 201); }
     public function developmentRecipe(ApiRequest $request): ApiResult { return new ApiResult($this->dev->confirmRecipe($request->id(), $request->context)); }
+    // Reklamacje klientów przyjęte przez biuro (tablet grupy, informacyjnie)
+    public function complaintsSummary(ApiRequest $request): ApiResult { return new ApiResult($this->complaints->summary($request->context)); }
+    public function complaints(ApiRequest $request): ApiResult
+    {
+        $days = $request->query('days');
+        return new ApiResult($this->complaints->list(is_numeric($days) ? (int) $days : null, $request->context));
+    }
+    public function complaintPhotos(ApiRequest $request): ApiResult { return new ApiResult($this->complaints->photos($request->id(), $request->context)); }
     // Kontrola jakości (tablet grupy)
     public function quality(ApiRequest $request): ApiResult { return new ApiResult($this->quality->day($request->context)); }
     public function qualityCheck(ApiRequest $request): ApiResult { return new ApiResult($this->quality->check($request->id(), $request->body(), $request->context)); }

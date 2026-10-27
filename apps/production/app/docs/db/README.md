@@ -3,7 +3,7 @@
 Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y a été déplacée le 24/10/2026 par `deploy/server.sh`, données gardées).
 
 - **121 tables d'origine** de l'ERP SL Food : noms inchangés (131 avant le nettoyage du 24/10/2026, qui a supprimé les 10 copies de sauvegarde).
-- **147 tables ajoutées** pendant le développement (27/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
+- **148 tables ajoutées** pendant le développement (28/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
 
 ## Installer / intégrer
 
@@ -43,6 +43,18 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
 
+### Tablette de groupe : réclamations clients (migration 119, 28/10/2026)
+
+- Lecture seule de `complaint` (origine) : réclamations **acceptées par le bureau** (`acceptance_status = ACCEPTED`),
+  `complaint_type = PRODUCT`, sur les produits du groupe de la tablette (groupe principal de la fiche
+  `n_prod_product_settings.id_primary_group`, sinon premier groupe actif du rayon du produit). Rien n'est modifié.
+- `n_complaint_translation` : traduction (DeepL) du commentaire du client et de la réponse du bureau dans la langue de la
+  tablette (`lang` pl / fr), une fois par réclamation et par langue ; `source_hash` (sha1 des deux textes) → nouvelle
+  traduction quand le texte change ; colonnes vides quand le texte est déjà dans la langue de la tablette.
+- `n_translation_log.context` reçoit `complaint`.
+- Photos : lien temporaire demandé au système franchise seulement quand l'équipe touche « Zdjęcia » (6 au plus).
+  API : `GET /kiosk/complaints/summary`, `GET /kiosk/complaints?days=30|90|365`, `GET /kiosk/complaints/{id}/photos`.
+
 ### Achats de la semaine : demandes d'offres, offres avec minimum, gains (migration 118, 27/10/2026)
 
 - `n_material_supplier` : fournisseurs d'un article (matière ou emballage), **1 à 3** (`sort`, `source` : `history` = rempli
@@ -75,7 +87,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   Langue absente → anglais → polonais. Page : Ustawienia › Stopki e-maili i tłumacz (`/settings/mail-footers`).
 - `n_user_mail.tr_lang`, `tr_source`, `tr_subject`, `tr_text`, `tr_at` : dernière traduction d'un e-mail reçu (rouvrir ne
   coûte rien). `n_user_mail_sent.lang` (langue du message envoyé) et `original_text` (texte avant traduction).
-- `n_translation_log` : caractères envoyés à DeepL (qui, où : `mail_in`, `mail_out`, `footer`, `communication`) ; limite
+- `n_translation_log` : caractères envoyés à DeepL (qui, où : `mail_in`, `mail_out`, `footer`, `communication`, `complaint`) ; limite
   par personne et par jour : paramètre `translate.daily_chars_per_user`.
 - `n_app_secret` : clé DeepL saisie dans les paramètres quand elle n'est pas dans `.env` (`DEEPL_API_KEY`), chiffrée
   AES-256-GCM avec le secret du serveur ; seuls les 4 derniers caractères (`hint`) sont affichés.
