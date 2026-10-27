@@ -1120,3 +1120,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-27T16:20:14Z scouting : dossier d'implantation en français ou en néerlandais, bascule FR | NL avant le téléchargement (page, carte, PDF, impression, CSV)
 2026-10-27T16:26:35Z production : onglet Premia de la tablette (paliers de ventes par personne, visibilité par groupe), Zespół › Premie zespołów
 2026-10-27T16:36:41Z production : tablette, flux de l'opérateur (liste à produire, pièces, recette, lots, produit + rebuts, validation du jour)
+2026-10-27T16:42:47Z production : badges en rectangles arrondis, chiffres et textes alignés (tablette tactile et ERP)
