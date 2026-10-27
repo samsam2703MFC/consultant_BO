@@ -20,7 +20,7 @@ Stwierdzone w Swaggerze 27.10.2026: `material-categories`, `material-suppliers`,
 3. **VAT sprzedaży**: na poziomie **produktu** (`tax_value_percent`), taki sam we wszystkich sklepach.
 4. **Aktywacja**: przez **okresy dostępności** (`availability_period_ids`, identyfikatory z `GET /product-availability-periods`). Produkt jest sprzedawany w swoich okresach — „Permanent” przez cały rok. Endpoint 8 pozwala je później zmieniać.
 5. **Dwujęzyczność**: nazwa (`name` / `name_nl`) i składniki (`ingredients_fr` / `ingredients_nl`) po francusku i po niderlandzku, w produkcie.
-6. **Alergeny**: zaznaczane pojedynczo w kreatorze, wysyłane jako kody z `GET /allergens` w **surowcu** — `allergens` (zawiera) i `may_contain` (może zawierać śladowe ilości). Produkt dziedziczy je przez recepturę, tak jak Wasze pozostałe produkty.
+6. **Alergeny**: zaznaczane pojedynczo w kreatorze, wysyłane jako kody z `GET /allergens` w **surowcu** — `allergens` (zawiera) i `may_contain` (może zawierać śladowe ilości). Produkt dziedziczy je przez recepturę, tak jak Wasze pozostałe produkty. **Istniejący** surowiec nigdy nie jest zmieniany przez kokpit: korzystają z niego inne receptury, więc jego alergeny pozostają takie, jak u Was.
 
 ## Zasady wspólne
 
@@ -55,7 +55,7 @@ POST /products/resale
   "price": { "price_net": 34.00, "valid_from": "2026-11-01" },                   // cennik sieciowy: wszystkie sklepy
   "material": { "id": null, "name": "Chocolat noir 72 % 100 g", "material_category_id": 11,
                 "unit_name": "pcs", "vat_rate": 6,
-                "allergens": ["milk", "soybeans"], "may_contain": ["nuts"] },   // podane id = istniejący surowiec (alergeny pomijane)
+                "allergens": ["milk", "soybeans"], "may_contain": ["nuts"] },   // podane id = istniejący surowiec, bez zmian
   "units_per_pack": 20,
   "product": { "name": "Chocolat noir 72 % - 100 g", "name_nl": "Pure chocolade 72 % - 100 g",
                "id_category": 61, "max_sale_price": 3.20, "tax_value_percent": 6,

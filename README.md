@@ -302,25 +302,28 @@ installée sur les tablettes : il ne change plus de nom.
 ## Épicerie depuis le PDF d'un fournisseur
 
 Écran **Produits** (Gamme · scoring), bouton « ＋ Épicerie depuis un PDF ». Le réseau revend en épicerie des articles
-achetés tels quels ; dans TFBuddy, chacun est une chaîne : **fournisseur → article du catalogue fournisseur (réf., colis,
-prix) → matière → recette (1 × la matière) → produit de vente**. On scanne le tarif du fournisseur, un assistant en cinq
-étapes l'encode et le fait valider :
+achetés tels quels ; dans TFBuddy, chacun est une chaîne : **fournisseur → article du catalogue fournisseur (réf., EAN,
+colis, prix) → matière (allergènes) → recette (1 × la matière) → produit de vente**. On scanne le tarif du fournisseur,
+un assistant en six étapes l'encode et le fait valider :
 
 1. **Document** : le PDF part à Claude **côté serveur** (clé de Paramètres › IA) ; réponse en JSON contraint par schéma.
-2. **Fournisseur** : celui du PDF, reconnu dans TFBuddy par son n° de TVA ou son nom, sinon à créer ; date du tarif.
+2. **Fournisseur** : celui du PDF, reconnu dans TFBuddy par son n° de TVA ou son nom, sinon à créer ; date du tarif,
+   unique pour tout le réseau.
 3. **Articles & matières** : colis, prix d'achat, coût de la pièce ; matière existante (même référence chez ce
-   fournisseur, ou même nom) ou nouvelle, avec sa catégorie matière.
-4. **Produits de vente** : nom, catégorie, TVA, prix ; le coefficient face à la cible de la catégorie, et le prix qui
-   l'atteindrait en un clic.
-5. **Validation** : contrôles bloquants et avertissements ; la validation est signée et fige l'encodage (« Rouvrir »
+   fournisseur, ou même nom — elle ne sera jamais modifiée) ou nouvelle, avec sa catégorie matière.
+4. **Prix de vente** : nom, catégorie, TVA, **prix maximum, le même pour tous les magasins** ; le coefficient face à la
+   cible de la catégorie, et le prix qui l'atteint en un clic.
+5. **Fiches produits** : nom et ingrédients en **français et néerlandais** (Claude peut proposer le néerlandais qui
+   manque, marqué « à relire »), **allergènes au clic** (contient, traces, ou « aucun allergène » confirmé), **code-barres
+   EAN** à la clé vérifiée, **périodes de disponibilité** qui activent le produit.
+6. **Validation** : contrôles bloquants et avertissements ; la validation est signée et fige l'encodage (« Rouvrir »
    tant que rien n'est créé).
 
 Puis la création, ligne par ligne, par **une route atomique `POST /products/resale`**. **Au 27/10/2026 elle n'existe pas** :
-le Swagger de TFBuddy ne porte que des lectures sur fournisseurs, matières et produits. « Vérifier l'API » le constate —
-en `OPTIONS`, **sans rien écrire** — et l'export CSV donne l'encodage validé à saisir à la main. La demande à TFBuddy :
-`docs/spec-api-panel.md` §7, et à transmettre telle quelle en français, anglais et polonais dans
-`docs/demande-tfbuddy-epicerie/`. Maquette : `docs/maquettes/epicerie-pdf/`. Détail : `docs/contrat-api.md`, section
-`/produits/import/*`.
+le Swagger de TFBuddy ne porte que des lectures sur fournisseurs, matières, périodes et produits. « Vérifier l'API » le
+constate — en `OPTIONS`, **sans rien écrire** — et l'export CSV donne l'encodage validé à saisir à la main. La demande à
+TFBuddy, à transmettre telle quelle en français, anglais et polonais : `docs/demande-tfbuddy-epicerie/`. Maquette :
+`docs/maquettes/epicerie-pdf/`. Détail : `docs/contrat-api.md`, section `/produits/import/*`.
 
 ## Scouting commercial
 

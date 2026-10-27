@@ -8496,9 +8496,9 @@ function tplScoring(c, x){
   </div>`;
 }
 
-/* --- Épicerie depuis le PDF d'un fournisseur : l'assistant en cinq étapes ----
-   Document → Fournisseur → Articles & matières → Produits de vente →
-   Validation. Chaque étape porte le nombre de points bloquants qui la
+/* --- Épicerie depuis le PDF d'un fournisseur : l'assistant en six étapes -----
+   Document → Fournisseur → Articles & matières → Prix de vente → Fiches
+   produits (FR/NL, allergènes, EAN, périodes) → Validation. Chaque étape porte le nombre de points bloquants qui la
    concernent ; la validation n'est possible qu'à zéro, et fige l'encodage. */
 function tplImportProduits(c, x){
   const { esc } = x;
@@ -8583,7 +8583,7 @@ function tplImportProduits(c, x){
     <table style="width:100%;min-width:1120px;border-collapse:collapse;font-size:12.5px">
       <thead><tr style="text-align:left">
         <th style="${TH2};width:28px;text-align:center"><input type="checkbox" ${m.tout ? 'checked' : ''} ${m.basculerTout ? x.C(m.basculerTout) : 'disabled'} title="Tout cocher / décocher"></th>
-        <th style="${TH2}">Produit de vente</th><th style="${TH2}">Catégorie</th><th style="${TH2}">TVA</th><th style="${TH2};text-align:right">Prix TTC</th>
+        <th style="${TH2}">Produit de vente</th><th style="${TH2}">Catégorie</th><th style="${TH2}">TVA vente</th><th style="${TH2};text-align:right" title="Le même pour tous les magasins : un magasin peut vendre en dessous, jamais au-dessus">Prix max. TTC</th>
         <th style="${TH2};text-align:right">Coût pièce HT</th><th style="${TH2};text-align:right">Coefficient</th><th style="${TH2}">Prix pour la cible</th><th style="${TH2}">État</th>
       </tr></thead>
       <tbody>${m.lignes.map(l => `<tr style="${l.inclus ? '' : 'opacity:.5'}">
@@ -8599,10 +8599,50 @@ function tplImportProduits(c, x){
         <td style="${TDp};font-size:11.5px;max-width:190px" title="${esc(l.etatTitre)}">${l.etat ? `<b style="color:${l.etatCol}">${esc(l.etat)}</b><div style="${MU};text-wrap:pretty">${esc(l.etatTitre)}</div>` : ''}${erreurs(l)}</td>
       </tr>`).join('')}</tbody>
     </table></div>
-    <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">Coefficient = prix de vente HT ÷ coût d’achat de la pièce. Vert : à la cible de la catégorie ou au-dessus ; orange : sous la cible ; rouge : marge brute sous 40 %. Chaque produit aura pour recette 1 × sa matière.</div>`;
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">Le prix est un <b>maximum, le même pour tous les magasins</b> : un magasin peut vendre en dessous, jamais au-dessus. Coefficient = prix de vente HT ÷ coût d’achat de la pièce. Vert : à la cible de la catégorie ou au-dessus ; orange : sous la cible ; rouge : marge brute sous 40 %. Chaque produit aura pour recette 1 × sa matière.</div>`;
 
-  // 5 · validation
+
+  // 5 · fiches produits : bilingue, allergènes au clic, code-barres, périodes
+  const CHIP = (actif, fond, coul) => `border:1px solid ${actif ? coul : 'var(--color-border-secondary)'};border-radius:999px;padding:3px 10px;background:${actif ? fond : 'var(--color-surface)'};color:${actif ? coul : 'var(--color-text-muted)'};font-family:var(--font-ui);font-size:11.5px;font-weight:${actif ? 600 : 400};cursor:pointer`;
+  const AUTO = '<span style="font-size:10px;font-weight:600;color:#8a5a13;background:#FBEFE0;border-radius:999px;padding:1px 7px;margin-left:6px">traduit · à relire</span>';
+  const champ = (lib, auto, html) => `<label style="display:block;font-size:11px;color:var(--color-text-muted)">${lib}${auto ? AUTO : ''}${html}</label>`;
+  const fiches = m.lignes.filter(l => l.inclus);
   const etape5 = `
+    <div style="${BOX};display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:12.5px;flex:1;min-width:280px">${m.aTraduire ? '<b>' + m.aTraduire + ' fiche(s)</b> sans leur néerlandais complet. Claude peut le proposer — nom et ingrédients, champs vides seulement ; chaque traduction reste « à relire ».' : 'Néerlandais complet sur toutes les fiches.'}</span>
+      ${btn(m.traduire && m.aTraduire ? m.traduire : null, m.traduction ? 'Traduction…' : 'Traduire en néerlandais ce qui manque', false)}
+    </div>
+    ${m.periodesTous.length ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px;font-size:12px"><span style="color:var(--color-text-muted)">Période pour tout le tarif :</span>${m.periodesTous.map(g => `<button ${x.A(g.clic)} style="${CHIP(false)}">${esc(g.nom)}</button>`).join('')}</div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">${fiches.map(l => `
+      <div style="border:0.5px solid ${l.erreurs.length && !l.cree ? '#E2B6BC' : 'var(--color-border-tertiary)'};border-radius:12px;padding:12px 14px;${l.cree ? 'opacity:.7' : ''}">
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+          <b style="font-size:13.5px">${esc(l.prodNom)}</b>
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(l.prodCatNom)}${l.prix ? ' · ' + esc(l.prix) + ' € max.' : ''}${l.tva ? ' · TVA ' + esc(l.tva) + ' %' : ''}</span>
+          <span style="flex:1"></span>${l.etat ? `<b style="font-size:11.5px;color:${l.etatCol}">${esc(l.etat)}</b>` : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+          ${champ('Nom (FR)', false, `<input value="${esc(l.prodNom)}" ${l.setProdNom ? x.C(l.setProdNom) : 'disabled'} style="${INP};width:100%;margin-top:3px">`)}
+          ${champ('Naam (NL)', l.nlAutoNom, `<input value="${esc(l.prodNomNl)}" ${l.setProdNomNl ? x.C(l.setProdNomNl) : 'disabled'} style="${INP};width:100%;margin-top:3px;${l.prodNomNl ? '' : ORANGE}">`)}
+          ${champ('Ingrédients (FR)', false, `<textarea rows="2" ${l.setIngrFr ? x.C(l.setIngrFr) : 'disabled'} style="${INP};width:100%;margin-top:3px;resize:vertical">${esc(l.ingrFr)}</textarea>`)}
+          ${champ('Ingrediënten (NL)', l.nlAutoIngr, `<textarea rows="2" ${l.setIngrNl ? x.C(l.setIngrNl) : 'disabled'} style="${INP};width:100%;margin-top:3px;resize:vertical;${l.ingrFr && !l.ingrNl ? ORANGE : ''}">${esc(l.ingrNl)}</textarea>`)}
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--color-text-muted)">Allergènes — un clic : contient, deux : traces, trois : retiré${l.matExistante ? '<span style="color:#8a5a13"> · ' + esc(l.matExistante) + '</span>' : ''}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
+          ${l.allergenes.map(a => `<button ${x.A(a.clic)} ${a.clic ? '' : 'disabled'} title="${a.etat === 'contient' ? 'Contient' : (a.etat === 'traces' ? 'Peut contenir (traces)' : 'Absent')}" style="${CHIP(!!a.etat, a.etat === 'contient' ? 'rgba(141,29,44,0.08)' : '#FBEFE0', a.etat === 'contient' ? '#8D1D2C' : '#8a5a13')}">${a.etat === 'traces' ? 'traces : ' : ''}${esc(a.nom)}</button>`).join('')}
+          <button ${x.A(l.aucunCoche ? l.basculerSans : null)} ${l.aucunCoche && l.basculerSans ? '' : 'disabled'} style="${CHIP(l.sansAllergene, '#e6f2e8', '#2d7a3e')};${l.aucunCoche ? '' : 'opacity:.4'}">${l.sansAllergene ? '✓ ' : ''}Aucun allergène</button>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:9px">
+          <label style="font-size:11px;color:var(--color-text-muted);display:flex;align-items:center;gap:7px">Code-barres EAN
+            <input value="${esc(l.ean)}" ${l.setEan ? x.C(l.setEan) : 'disabled'} inputmode="numeric" style="${INP};width:140px;font-family:monospace;${l.eanEtat === 'ko' ? 'border-color:#8D1D2C' : ''}">
+            <span style="font-size:11.5px;font-weight:600;color:${l.eanEtat === 'ok' ? '#2d7a3e' : (l.eanEtat === 'ko' ? '#8D1D2C' : '#8a5a13')}">${l.eanEtat === 'ok' ? '✓ clé valide' : (l.eanEtat === 'ko' ? '✗ clé invalide' : 'aucun')}</span></label>
+          <span style="font-size:11px;color:var(--color-text-muted)">Périodes de vente</span>
+          ${l.periodes.map(g => `<button ${x.A(g.clic)} ${g.clic ? '' : 'disabled'} title="${esc(g.titre)}" style="${CHIP(g.actif, '#e6f2e8', '#2d7a3e')}">${g.actif ? '✓ ' : ''}${esc(g.nom)}</button>`).join('') || '<span style="font-size:11.5px;color:#8D1D2C">aucune période au référentiel</span>'}
+        </div>
+        ${l.cree ? '' : erreurs(l)}
+      </div>`).join('') || '<div style="font-size:12.5px;color:var(--color-text-muted)">Aucun article coché.</div>'}</div>`;
+
+  // 6 · validation
+  const etape6 = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px">${m.recap.map(k => `
       <div style="${BOX}"><div style="${CAP}">${esc(k.k)}</div><div style="font-size:19px;font-weight:500;margin-top:4px;line-height:1.15">${esc(k.v)}</div><div style="${MU}">${esc(k.s)}</div></div>`).join('')}</div>
     <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -8638,7 +8678,7 @@ function tplImportProduits(c, x){
           </table>
         </div>`).join('')}</div>` : ''}
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px">
-        <label style="font-size:12.5px;display:flex;align-items:center;gap:7px;cursor:pointer"><input type="checkbox" ${m.actifs ? 'checked' : ''} ${x.C(m.setActifs)}> Produits actifs tout de suite <span style="color:var(--color-text-muted)">(sinon inactifs, à activer au panel)</span></label>
+        <span style="font-size:12px;color:var(--color-text-muted)">Chaque produit sera actif pendant ses périodes de vente.</span>
         <span style="flex:1"></span>
         ${btn(m.csv, '⇩ CSV', false)}
         <span title="${esc(m.creerPourquoi)}">${btn(m.creer, m.creation ? 'Création…' : 'Créer ' + m.nCreer + ' article' + (m.nCreer > 1 ? 's' : '') + ' dans TFBuddy', true)}</span>
@@ -8646,7 +8686,7 @@ function tplImportProduits(c, x){
       ${!m.creer && m.creerPourquoi && !m.creation ? `<div style="font-size:11.5px;color:var(--color-text-muted);text-align:right;margin-top:4px">${esc(m.creerPourquoi)}</div>` : ''}
     </div>`;
 
-  const corps = [etape1, etape2, etape3, etape4, etape5][m.etape - 1];
+  const corps = [etape1, etape2, etape3, etape4, etape5, etape6][m.etape - 1];
   return `
   <div ${x.A(m.close)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
   <div data-scroll="pi-import" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(1240px,96vw);max-height:92vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:22px 26px;box-sizing:border-box">
@@ -8654,14 +8694,14 @@ function tplImportProduits(c, x){
       <div>
         <div style="${CAP}">Épicerie · nouveaux articles</div>
         <div style="font-family:var(--font-display);font-size:20px;margin-top:3px">Encoder le tarif d’un fournisseur</div>
-        <div style="font-size:12px;color:var(--color-text-muted);margin-top:3px">Chaque article devient fournisseur → article → prix → matière → recette → produit de vente. Rien n’est créé avant la validation.</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin-top:3px">Chaque article devient fournisseur → article → prix → matière → recette \u2192 produit de vente, avec sa fiche en français et en néerlandais. Rien n\u2019est créé avant la validation.</div>
       </div>
       <button ${x.A(m.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">✕</button>
     </div>
     ${m.chargement ? `<div style="padding:24px;text-align:center;font-size:12.5px;color:var(--color-text-muted)">Lecture de l’état…</div>` : `
     ${stepper}
     ${m.injoignable ? alerte('API du cockpit injoignable : la lecture et la création demandent le serveur.', 'ko') : ''}
-    ${m.fige && m.etape < 5 ? alerte(m.valideTxt + ' — encodage figé ; « Rouvrir » à l’étape 5 pour le corriger.', 'ok') : ''}
+    ${m.fige && m.etape < 6 ? alerte(m.valideTxt + ' — encodage figé ; « Rouvrir » à l’étape 6 pour le corriger.', 'ok') : ''}
     ${m.err ? alerte(m.err, 'ko') : ''}
     ${m.info ? alerte(m.info, 'ok') : ''}
     <div style="margin-top:14px">${corps}</div>

@@ -7,8 +7,11 @@ declare(strict_types=1);
  * Le réseau revend en épicerie des articles achetés tels quels. Dans TFBuddy,
  * chaque article est une CHAÎNE : fournisseur → article de son catalogue (réf.,
  * colis, prix) → matière → recette (1 × la matière) → produit de vente, rangé
- * dans une catégorie. On scanne le tarif du fournisseur ; un assistant en cinq
- * étapes encode la chaîne et la fait valider :
+ * dans une catégorie. On scanne le tarif du fournisseur ; un assistant en six
+ * étapes encode la chaîne et la fait valider (décisions du 27/10/2026 : prix de
+ * vente MAXIMUM commun à tous les magasins, EAN et TVA au produit, activation
+ * par les périodes de disponibilité, nom et ingrédients en français et en
+ * néerlandais, allergènes cochés un à un) :
  *
  *  1. DOCUMENT. Le PDF part à Claude, côté serveur (la clé ne quitte jamais le
  *     cockpit) ; la réponse est un JSON contraint par schéma.
@@ -17,15 +20,20 @@ declare(strict_types=1);
  *  3. ARTICLES & MATIÈRES. Chaque article, son colis et son prix d'achat ; la
  *     matière existe déjà (rapprochée par la référence du catalogue
  *     fournisseur, puis par le nom) ou sera créée.
- *  4. PRODUITS DE VENTE. Nom, catégorie, TVA, prix ; le coefficient (prix HT ÷
- *     coût d'achat de la pièce) face à la cible de la catégorie
- *     (`price_coefficient` de /product-categories).
- *  5. VALIDATION. Des contrôles BLOQUANTS (rien ne se valide incomplet) et des
+ *  4. PRIX DE VENTE. Nom, catégorie, TVA, prix maximum (le même pour tous les
+ *     magasins) ; le coefficient (prix HT ÷ coût d'achat de la pièce) face à la
+ *     cible de la catégorie (`price_coefficient` de /product-categories).
+ *  5. FICHES PRODUITS. Nom et ingrédients en français et en néerlandais (Claude
+ *     peut PROPOSER la traduction, marquée « à relire »), allergènes cochés
+ *     (contient / traces), code-barres EAN à la clé vérifiée, périodes de
+ *     disponibilité (/product-availability-periods), qui activent le produit.
+ *  6. VALIDATION. Des contrôles BLOQUANTS (rien ne se valide incomplet) et des
  *     avertissements ; la validation est signée (qui, quand) et fige le
  *     brouillon.
  *
  * Puis la création chez TFBuddy, ligne par ligne, par UNE route atomique —
- * `POST /products/resale` — telle que demandée dans docs/spec-api-panel.md §7.
+ * `POST /products/resale` — telle que demandée à TFBuddy dans
+ * docs/demande-tfbuddy-epicerie/ (v2, en français, anglais et polonais).
  * Au 27/10/2026 elle n'existe pas : le Swagger ne porte que des GET sur
  * fournisseurs, matières et produits. La vérification (OPTIONS, rien d'écrit)
  * le constate et l'écran propose l'export CSV pour encoder à la main.
@@ -97,9 +105,17 @@ function piRefs(): array
 {
     static $r = null;
     if ($r !== null) { return $r; }
-    $r = ['catsProduit' => [], 'catsMatiere' => [], 'fournisseurs' => [], 'matieres' => [], 'produits' => []];
+    $r = ['catsProduit' => [], 'catsMatiere' => [], 'fournisseurs' => [], 'matieres' => [], 'produits' => [], 'periodes' => []];
     if (!PanelApi::configured()) { return $r; }
-    $res = PanelApi::getParallele(['mc' => '/material-categories', 'f' => '/material-suppliers', 'm' => '/materials']);
+    $res = PanelApi::getParallele(['mc' => '/material-categories', 'f' => '/material-suppliers', 'm' => '/materials',
+        'pe' => '/product-availability-periods']);
+    // Les périodes de disponibilité (les « gammes ») : elles activent le produit.
+    foreach (analyseListe($res['pe'] ?? null) as $g) {
+        $id = (int) ($g['id'] ?? 0); $nom = trim((string) ($g['name'] ?? ''));
+        if ($id <= 0 || $nom === '' || (isset($g['is_active']) && !(int) $g['is_active'])) { continue; }
+        $r['periodes'][$id] = ['nom' => $nom, 'debut' => isset($g['start_date']) ? substr((string) $g['start_date'], 0, 10) : null,
+            'fin' => isset($g['end_date']) ? substr((string) $g['end_date'], 0, 10) : null];
+    }
     foreach (PanelApi::productCategories() as $c) {
         $id = (int) ($c['id'] ?? 0);
         $nom = trim((string) ($c['name'] ?? $c['base_name'] ?? ''));
@@ -174,7 +190,12 @@ function piSchema(): array
             'categorieProduitId' => $ou('integer') + ['description' => 'Catégorie de VENTE : identifiant de la liste fournie, sinon null'],
             'categorieMatiereId' => $ou('integer') + ['description' => 'Catégorie MATIÈRE : identifiant de la liste fournie, sinon null'],
             'categorieLue'       => $ou('string') + ['description' => 'La rubrique du document'],
-            'allergenes'         => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => array_keys(PI_ALLERGENES)]],
+            'allergenes'         => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => array_keys(PI_ALLERGENES)],
+                'description' => 'Allergènes que l’article CONTIENT, d’après le document'],
+            'traces'             => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => array_keys(PI_ALLERGENES)],
+                'description' => 'Allergènes en « peut contenir » / traces éventuelles'],
+            'ingredientsFr'      => $ou('string') + ['description' => 'Liste des ingrédients en français, telle qu’écrite'],
+            'ingredientsNl'      => $ou('string') + ['description' => 'Liste des ingrédients en néerlandais, telle qu’écrite'],
             'conservation'       => $ou('string') + ['description' => 'DLUO, durée de conservation, stockage'],
             'page'               => $ou('integer'),
             'confiance'          => ['type' => 'string', 'enum' => ['haute', 'moyenne', 'faible']],
@@ -230,6 +251,8 @@ function piConsignes(): string
         . "- Une TVA générale du document (pied de page, en-tête) vaut pour chaque ligne qui n'en porte pas d'autre.\n"
         . "- categorieProduitId et categorieMatiereId : uniquement des identifiants des listes fournies, quand la"
         . " correspondance est claire ; sinon null.\n"
+        . "- Ingrédients et allergènes : seulement s'ils sont écrits ; « peut contenir » va dans traces, pas dans allergenes."
+        . " Ne traduis rien : nomNl et ingredientsNl seulement s'ils figurent en néerlandais dans le document.\n"
         . "- Le fournisseur est l'émetteur du document (en-tête, pied de page), pas le client.\n"
         . "- confiance « faible » dès qu'une valeur est devinée ou mal lisible, et dis pourquoi dans remarque.";
 }
@@ -287,6 +310,24 @@ function piFournisseur(array $f, array $refs): array
     return $out;
 }
 
+/** Un code-barres GTIN (EAN-8, UPC-A, EAN-13, GTIN-14) dont la clé est juste. */
+function piEanValide(string $c): bool
+{
+    if (!preg_match('/^(\d{8}|\d{12,14})$/', $c)) { return false; }
+    $chiffres = array_map('intval', str_split($c));
+    $cle = array_pop($chiffres);
+    $s = 0;
+    // Pondération 3, 1, 3… en partant du chiffre le plus proche de la clé.
+    foreach (array_reverse($chiffres) as $i => $d) { $s += $d * ($i % 2 === 0 ? 3 : 1); }
+    return (10 - $s % 10) % 10 === $cle;
+}
+
+/** Des codes d'allergènes connus, dans l'ordre du règlement. */
+function piAllergenes($v): array
+{
+    return array_values(array_intersect(array_keys(PI_ALLERGENES), (array) $v));
+}
+
 /**
  * Une ligne du brouillon, propre : ce que le modèle a lu OU ce que l'écran a
  * corrigé, ramené aux mêmes types et aux référentiels. Le suivi (statut, ids
@@ -315,13 +356,11 @@ function piLigne(array $p, array $refs, string $cle): array
         'confiance' => in_array($p['confiance'] ?? '', ['haute', 'moyenne', 'faible'], true) ? $p['confiance'] : null,
         'remarque' => piTexte($p['remarque'] ?? null, 300),
         'article' => [
-            'nom' => (string) piTexte($a['nom'] ?? '', 190), 'nomNl' => piTexte($a['nomNl'] ?? null, 190),
+            'nom' => (string) piTexte($a['nom'] ?? '', 190),
             'marque' => piTexte($a['marque'] ?? null, 80), 'ref' => piTexte($a['ref'] ?? null, 60),
-            'ean' => ($e = preg_replace('/\D+/', '', (string) ($a['ean'] ?? ''))) !== '' ? $e : null,
             'contenance' => $contenance, 'poidsG' => piGrammes($contenance),
             'unites' => $unites, 'prixColisHt' => $colis, 'prixUnitaireHt' => $unit, 'tva' => $tvaAchat,
             'pvc' => piNombre($a['pvc'] ?? null),
-            'allergenes' => array_values(array_intersect(array_keys(PI_ALLERGENES), (array) ($a['allergenes'] ?? []))),
             'conservation' => piTexte($a['conservation'] ?? null, 200),
             'categorieLue' => piTexte($a['categorieLue'] ?? null, 120),
         ],
@@ -333,10 +372,22 @@ function piLigne(array $p, array $refs, string $cle): array
             // Ce que le rapprochement a trouvé : l'écran propose de le reprendre.
             'trouvee' => is_array($m['trouvee'] ?? null) ? $m['trouvee'] : null,
         ],
+        // Le produit : `prixTtc` est le prix de vente MAXIMUM, le même pour tous
+        // les magasins ; la fiche (noms, ingrédients, allergènes, EAN, périodes)
+        // est bilingue. `nlAuto` marque ce que Claude a traduit et que personne
+        // n'a encore relu ; l'écran l'efface dès qu'on retouche le champ.
         'produit' => [
-            'id' => $prodId, 'nom' => (string) piTexte($d['nom'] ?? '', 190),
+            'id' => $prodId, 'nom' => (string) piTexte($d['nom'] ?? '', 190), 'nomNl' => piTexte($d['nomNl'] ?? null, 190),
             'cat' => piId($d['cat'] ?? null, $refs['catsProduit']),
             'tva' => piNombre($d['tva'] ?? null), 'prixTtc' => ($x = piNombre($d['prixTtc'] ?? null)) !== null ? round($x, 2) : null,
+            'ingredientsFr' => piTexte($d['ingredientsFr'] ?? null, 2000), 'ingredientsNl' => piTexte($d['ingredientsNl'] ?? null, 2000),
+            'allergenes' => piAllergenes($d['allergenes'] ?? []),
+            // Une trace n'est pas un « contient » : un allergène coché des deux côtés reste « contient ».
+            'traces' => array_values(array_diff(piAllergenes($d['traces'] ?? []), piAllergenes($d['allergenes'] ?? []))),
+            'sansAllergene' => !empty($d['sansAllergene']) && piAllergenes($d['allergenes'] ?? []) === [] && piAllergenes($d['traces'] ?? []) === [],
+            'ean' => ($e = preg_replace('/\D+/', '', (string) ($d['ean'] ?? ''))) !== '' ? $e : null,
+            'periodes' => array_values(array_filter(array_map('intval', (array) ($d['periodes'] ?? [])), static fn ($id) => isset($refs['periodes'][$id]))),
+            'nlAuto' => ['nom' => !empty($d['nlAuto']['nom']), 'ingredients' => !empty($d['nlAuto']['ingredients'])],
             'existe' => is_array($d['existe'] ?? null) ? $d['existe'] : null,
         ],
         'statut' => $statut,
@@ -387,7 +438,7 @@ function piControles(array $f, array $lignes, array $refs): array
         }
         if ($l['produit']['nom'] === '' || $l['produit']['cat'] === null) { $bl[] = ['etape' => 4, 'cle' => $l['cle'], 'texte' => $n . ' : le produit demande un nom et une catégorie.']; }
         if ($l['produit']['prixTtc'] === null || $l['produit']['prixTtc'] <= 0 || $l['produit']['tva'] === null) {
-            $bl[] = ['etape' => 4, 'cle' => $l['cle'], 'texte' => $n . ' : prix de vente TTC et TVA obligatoires.'];
+            $bl[] = ['etape' => 4, 'cle' => $l['cle'], 'texte' => $n . ' : prix de vente maximum TTC et TVA obligatoires.'];
         }
         $c = piChiffres($l, $refs);
         if ($c['zone'] === 'ko') { $av[] = ['etape' => 4, 'cle' => $l['cle'], 'texte' => $n . ' : coefficient × ' . number_format((float) $c['coef'], 2, ',', '') . ', marge brute sous 40 %.']; }
@@ -396,6 +447,23 @@ function piControles(array $f, array $lignes, array $refs): array
             $av[] = ['etape' => 4, 'cle' => $l['cle'], 'texte' => $n . ' : vendu au-dessus du prix conseillé par le fournisseur (' . number_format($l['article']['pvc'], 2, ',', '') . ' €).'];
         }
         if ($l['confiance'] === 'faible') { $av[] = ['etape' => 3, 'cle' => $l['cle'], 'texte' => $n . ' : lecture incertaine — ' . ($l['remarque'] ?? 'à vérifier sur le PDF') . '.']; }
+        // La fiche produit (étape 5).
+        $d = $l['produit'];
+        if (($d['nomNl'] ?? null) === null) { $bl[] = ['etape' => 5, 'cle' => $l['cle'], 'texte' => $n . ' : nom en néerlandais manquant.']; }
+        if (($d['ingredientsFr'] ?? null) !== null && ($d['ingredientsNl'] ?? null) === null) {
+            $bl[] = ['etape' => 5, 'cle' => $l['cle'], 'texte' => $n . ' : ingrédients en néerlandais manquants.'];
+        } elseif (($d['ingredientsFr'] ?? null) === null) {
+            $av[] = ['etape' => 5, 'cle' => $l['cle'], 'texte' => $n . ' : aucune liste d’ingrédients.'];
+        }
+        if (($d['allergenes'] ?? []) === [] && ($d['traces'] ?? []) === [] && empty($d['sansAllergene'])) {
+            $bl[] = ['etape' => 5, 'cle' => $l['cle'], 'texte' => $n . ' : allergènes — cochez-les, ou confirmez « aucun allergène ».'];
+        }
+        if (($d['ean'] ?? null) === null) { $av[] = ['etape' => 5, 'cle' => $l['cle'], 'texte' => $n . ' : sans code-barres, l’article ne se scannera pas en caisse.']; }
+        elseif (!piEanValide($d['ean'])) { $bl[] = ['etape' => 5, 'cle' => $l['cle'], 'texte' => $n . ' : code-barres ' . $d['ean'] . ' invalide (clé fausse).']; }
+        if (($d['periodes'] ?? []) === []) { $bl[] = ['etape' => 5, 'cle' => $l['cle'], 'texte' => $n . ' : aucune période de disponibilité — le produit ne serait jamais en vente.']; }
+        if (!empty($d['nlAuto']['nom']) || !empty($d['nlAuto']['ingredients'])) {
+            $av[] = ['etape' => 5, 'cle' => $l['cle'], 'texte' => $n . ' : néerlandais traduit par Claude, pas encore relu.'];
+        }
     }
     return ['bloquants' => $bl, 'avertissements' => $av];
 }
@@ -428,6 +496,7 @@ function piRefsEcran(array $refs): array
         'catsProduit' => $l($refs['catsProduit'], static fn ($id, $c) => ['id' => $id, 'nom' => $c['nom'], 'cible' => $c['cible']]),
         'catsMatiere' => $l($refs['catsMatiere'], static fn ($id, $n) => ['id' => $id, 'nom' => $n]),
         'fournisseurs' => $l($refs['fournisseurs'], static fn ($id, $f) => ['id' => $id, 'nom' => $f['nom'], 'ville' => $f['ville']]),
+        'periodes' => $l($refs['periodes'], static fn ($id, $g) => ['id' => $id, 'nom' => $g['nom'], 'debut' => $g['debut'], 'fin' => $g['fin']]),
     ];
 }
 
@@ -518,6 +587,9 @@ function wr_produits_import_pdf(): array
         'tarifDu' => $rep['document']['tarifDu'] ?? null, 'lu' => $lu], $refs);
     $parRef = $fid !== null ? piMatieresDuFournisseur($fid) : [];
 
+    // La période proposée d'office : « Permanent » (toute l'année), si le réseau en a une.
+    $permanent = null;
+    foreach ($refs['periodes'] as $id => $g) { if (preg_match('/permanent|toute l.ann|all year|altijd/i', $g['nom'])) { $permanent = $id; break; } }
     $lignes = []; $vus = [];
     foreach (array_slice((array) ($rep['articles'] ?? []), 0, PI_MAX_LIGNES) as $i => $a) {
         if (!is_array($a) || trim((string) ($a['nom'] ?? '')) === '') { continue; }
@@ -532,15 +604,18 @@ function wr_produits_import_pdf(): array
             // Déjà vendu, ou répété dans le document : décoché d'office.
             'inclure' => $existe === null && !isset($vus[$k]),
             'page' => $a['page'] ?? null, 'confiance' => $a['confiance'] ?? null, 'remarque' => $a['remarque'] ?? null,
-            'article' => ['nom' => $nom, 'nomNl' => $a['nomNl'] ?? null, 'marque' => $a['marque'] ?? null, 'ref' => $a['ref'] ?? null,
-                'ean' => $a['ean'] ?? null, 'contenance' => $a['contenance'] ?? null, 'unites' => $a['unitesParColis'] ?? null,
+            'article' => ['nom' => $nom, 'marque' => $a['marque'] ?? null, 'ref' => $a['ref'] ?? null,
+                'contenance' => $a['contenance'] ?? null, 'unites' => $a['unitesParColis'] ?? null,
                 'prixColisHt' => $a['prixColisHt'] ?? null, 'prixUnitaireHt' => $a['prixUnitaireHt'] ?? null,
-                'tva' => $a['tvaAchat'] ?? null, 'pvc' => $a['prixConseilleTtc'] ?? null, 'allergenes' => $a['allergenes'] ?? [],
+                'tva' => $a['tvaAchat'] ?? null, 'pvc' => $a['prixConseilleTtc'] ?? null,
                 'conservation' => $a['conservation'] ?? null, 'categorieLue' => $a['categorieLue'] ?? null],
             'matiere' => ['id' => $mat['id'] ?? null, 'via' => $via, 'nom' => $mat['nom'] ?? $nom,
                 'cat' => $a['categorieMatiereId'] ?? null, 'trouvee' => $mat !== null ? $mat + ['via' => $via] : null],
-            'produit' => ['nom' => $nom, 'cat' => $a['categorieProduitId'] ?? null, 'tva' => $a['tvaAchat'] ?? null,
-                'prixTtc' => $a['prixConseilleTtc'] ?? null, 'existe' => $existe],
+            'produit' => ['nom' => $nom, 'nomNl' => $a['nomNl'] ?? null, 'cat' => $a['categorieProduitId'] ?? null,
+                'tva' => $a['tvaAchat'] ?? null, 'prixTtc' => $a['prixConseilleTtc'] ?? null,
+                'ingredientsFr' => $a['ingredientsFr'] ?? null, 'ingredientsNl' => $a['ingredientsNl'] ?? null,
+                'allergenes' => $a['allergenes'] ?? [], 'traces' => $a['traces'] ?? [], 'ean' => $a['ean'] ?? null,
+                'periodes' => $permanent !== null ? [$permanent] : [], 'existe' => $existe],
         ], $refs, 'l' . ($i + 1));
         $vus[$k] = true;
     }
@@ -678,32 +753,40 @@ function wr_produits_import_destination(): array
     return ['ok' => true, 'destination' => piDestination()];
 }
 
-/** Le corps de POST /products/resale pour une ligne (docs/spec-api-panel.md §7.2). */
-function piCharge(int $impId, array $f, array $l, bool $actif): array
+/**
+ * Le corps de POST /products/resale pour une ligne (docs/demande-tfbuddy-epicerie/, v2). Le tarif vaut pour tout le
+ * réseau ; le prix de vente est un MAXIMUM commun à tous les magasins ; les allergènes vont sur la matière (le produit
+ * en hérite par sa recette) ; l'activation passe par les périodes de disponibilité.
+ */
+function piCharge(int $impId, array $f, array $l): array
 {
     $fid = $f['mode'] === 'existant' ? $f['id'] : $f['idCree'];
     $a = $l['article'];
+    $d = $l['produit'];
+    $nonNul = static fn (array $x) => array_filter($x, static fn ($v) => $v !== null);
+    $allergenes = ['allergens' => $d['allergenes'], 'may_contain' => $d['traces']];
     return [
         'client_ref' => 'ep' . $impId . '-' . $l['cle'],
-        'supplier' => $fid !== null ? ['id' => $fid] : array_filter(['name' => $f['nom'], 'tax_number' => $f['tva'], 'email' => $f['email'],
-            'phone' => $f['telephone'], 'address' => $f['adresse'], 'city' => $f['ville'], 'website_url' => $f['web']], static fn ($v) => $v !== null),
-        'catalog_product' => array_filter(['sku' => $a['ref'], 'name' => $a['nom'], 'ean' => $a['ean'], 'package_size' => $a['unites'] ?? 1,
-            'package_unit' => 'pcs', 'vat_rate' => $a['tva']], static fn ($v) => $v !== null),
-        'price' => ['price_net' => $a['prixColisHt'] ?? round((float) $l['coutHt'], 4), 'valid_from' => $f['tarifDu'] ?? date('Y-m-d'), 'shop_ids' => []],
+        'supplier' => $fid !== null ? ['id' => $fid] : $nonNul(['name' => $f['nom'], 'tax_number' => $f['tva'], 'email' => $f['email'],
+            'phone' => $f['telephone'], 'address' => $f['adresse'], 'city' => $f['ville'], 'website_url' => $f['web']]),
+        'catalog_product' => $nonNul(['sku' => $a['ref'], 'name' => $a['nom'], 'ean' => $d['ean'], 'package_size' => $a['unites'] ?? 1,
+            'package_unit' => 'pcs', 'vat_rate' => $a['tva']]),
+        'price' => ['price_net' => $a['prixColisHt'] ?? round((float) $l['coutHt'], 4), 'valid_from' => $f['tarifDu'] ?? date('Y-m-d')],
+        // Une matière existante n'est pas touchée : d'autres recettes l'utilisent, et changer ses allergènes
+        // changerait ceux de leurs produits sans que personne ne le voie. Ses allergènes restent ceux de TFBuddy.
         'material' => $l['matiere']['id'] !== null ? ['id' => $l['matiere']['id']]
-            : array_filter(['name' => $l['matiere']['nom'], 'material_category_id' => $l['matiere']['cat'], 'unit_name' => 'pcs',
-                'vat_rate' => $a['tva']], static fn ($v) => $v !== null),
+            : $nonNul(['name' => $l['matiere']['nom'], 'material_category_id' => $l['matiere']['cat'], 'unit_name' => 'pcs', 'vat_rate' => $a['tva']])
+              + $allergenes,
         'units_per_pack' => $a['unites'] ?? 1,
-        'product' => array_filter(['name' => $l['produit']['nom'], 'id_category' => $l['produit']['cat'],
-            'suggested_sale_price' => $l['produit']['prixTtc'], 'tax_value_percent' => $l['produit']['tva'], 'single_weight' => $a['poidsG'],
-            'allergene' => $a['allergenes'] ? implode(', ', array_map(static fn ($x) => PI_ALLERGENES[$x], $a['allergenes'])) : null,
-            'is_active' => $actif ? 1 : 0], static fn ($v) => $v !== null),
+        'product' => $nonNul(['name' => $d['nom'], 'name_nl' => $d['nomNl'], 'id_category' => $d['cat'],
+            'max_sale_price' => $d['prixTtc'], 'tax_value_percent' => $d['tva'], 'ean' => $d['ean'], 'single_weight' => $a['poidsG'],
+            'ingredients_fr' => $d['ingredientsFr'], 'ingredients_nl' => $d['ingredientsNl']]) + ['availability_period_ids' => $d['periodes']],
         'recipe_quantity' => 1,
     ];
 }
 
 /**
- * POST /produits/import/{id}/creer — `{ actifs }` : un encodage VALIDÉ part chez
+ * POST /produits/import/{id}/creer : un encodage VALIDÉ part chez
  * TFBuddy, ligne par ligne, par POST /products/resale (tout ou rien par ligne).
  * Une ligne créée garde ses identifiants et n'est jamais renvoyée. Arrêt net
  * au premier refus qui vaudrait pour toutes (route absente, droits, panne).
@@ -713,18 +796,17 @@ function wr_produits_import_creer(int $id): array
     piTables();
     $r = piRow($id);
     if ($r === null) { http_response_code(404); return ['error' => 'brouillon inconnu']; }
-    if ($r['status'] !== 'valide') { http_response_code(409); return ['error' => 'validez d’abord l’encodage (étape 5)']; }
+    if ($r['status'] !== 'valide') { http_response_code(409); return ['error' => 'validez d’abord l’encodage (étape 6)']; }
     $dest = piDestination();
     if ($dest === null) { http_response_code(409); return ['error' => 'choisissez d’abord le compte TFBuddy (« Vérifier l’API »)']; }
     $refs = piRefs();
-    $actifs = !empty(body()['actifs']);
     $f = piFournisseur(json_decode((string) $r['supplier_json'], true) ?: [], $refs);
     $lignes = (array) json_decode((string) $r['lines_json'], true);
     @set_time_limit(300);
     $crees = 0; $refuses = 0; $arret = null; $refusSeuls = 0; $noms = [];
     foreach ($lignes as $i => $l) {
         if (empty($l['inclure']) || ($l['statut'] ?? null) === 'cree') { continue; }
-        $charge = piCharge($id, $f, $l, $actifs);
+        $charge = piCharge($id, $f, $l);
         if ($dest['compte'] === 'erp') {
             ErpApi::$lastError = null;
             [$code, $res] = ErpApi::envoi('POST', PI_ROUTE, $charge);
@@ -741,7 +823,7 @@ function wr_produits_import_creer(int $id): array
             $lignes[$i]['ids'] = array_filter(['fournisseur' => $d['supplier_id'] ?? null, 'article' => $d['catalog_product_id'] ?? null,
                 'matiere' => $d['material_id'] ?? null, 'produit' => $d['product_id'] ?? null, 'recette' => $d['recipe_id'] ?? null],
                 static fn ($v) => $v !== null);
-            $lignes[$i]['message'] = 'créé le ' . date('d/m/Y à H:i') . ($actifs ? '' : ' — produit inactif');
+            $lignes[$i]['message'] = 'créé le ' . date('d/m/Y à H:i');
             // Un fournisseur créé par la première ligne sert aux suivantes.
             if ($f['mode'] === 'nouveau' && $f['idCree'] === null && isset($d['supplier_id'])) { $f['idCree'] = (int) $d['supplier_id']; }
             $crees++; $refusSeuls = 0; $noms[] = $l['produit']['nom'];
@@ -766,4 +848,63 @@ function wr_produits_import_creer(int $id): array
             . ($refuses ? ' ; ' . $refuses . ' refusé(s)' : '') . ($arret !== null ? ' ; arrêt — ' . $arret : ''));
     }
     return ['ok' => true, 'crees' => $crees, 'refuses' => $refuses, 'arret' => $arret, 'import' => piSortie(piRow($id), $refs)];
+}
+
+/**
+ * POST /produits/import/{id}/traduire — Claude PROPOSE le néerlandais qui manque (nom, ingrédients) pour les articles
+ * cochés et pas encore créés. Seuls les champs vides sont remplis ; chacun est marqué `nlAuto` (« à relire ») jusqu'à
+ * ce que quelqu'un le retouche, et la validation le rappelle.
+ */
+function wr_produits_import_traduire(int $id): array
+{
+    piTables();
+    $r = piRow($id);
+    if ($r === null) { http_response_code(404); return ['error' => 'brouillon inconnu']; }
+    if ($r['status'] === 'valide') { http_response_code(409); return ['error' => 'encodage validé : rouvrez-le pour le modifier']; }
+    if (!Anthropic::configured()) { http_response_code(503); return ['error' => 'la traduction demande la clé Anthropic — Paramètres › IA']; }
+    $refs = piRefs();
+    $lignes = (array) json_decode((string) $r['lines_json'], true);
+    $demande = [];
+    foreach ($lignes as $l) {
+        if (empty($l['inclure']) || ($l['statut'] ?? null) === 'cree') { continue; }
+        $d = $l['produit'];
+        $nom = ($d['nomNl'] ?? null) === null;
+        $ingr = ($d['ingredientsFr'] ?? null) !== null && ($d['ingredientsNl'] ?? null) === null;
+        if ($nom || $ingr) {
+            $demande[] = ['cle' => $l['cle'], 'nom' => $nom ? $d['nom'] : null, 'ingredients' => $ingr ? $d['ingredientsFr'] : null];
+        }
+    }
+    if ($demande === []) { return ['ok' => true, 'traduits' => 0, 'import' => piSortie($r, $refs)]; }
+    @set_time_limit(200);
+    $ou = static fn (string $t): array => ['anyOf' => [['type' => $t], ['type' => 'null']]];
+    $schema = ['type' => 'object', 'additionalProperties' => false, 'required' => ['traductions'], 'properties' => [
+        'traductions' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => false,
+            'required' => ['cle', 'nomNl', 'ingredientsNl'],
+            'properties' => ['cle' => ['type' => 'string'], 'nomNl' => $ou('string'), 'ingredientsNl' => $ou('string')]]]]];
+    $rep = Anthropic::json(
+        "Tu traduis en néerlandais de Belgique des noms de produits d'épicerie fine et leurs listes d'ingrédients, pour"
+        . " l'étiquetage d'un réseau de boulangeries. Les marques et noms propres restent tels quels ; une appellation"
+        . " prend sa forme néerlandaise d'usage (« Sirop de Liège » → « Luikse siroop »). Les allergènes gardent la mise en évidence"
+        . " éventuelle du texte source. Traduis seulement ce qui est donné ; null pour ce qui est null.",
+        "Traduis, ligne par ligne (même `cle`) :\n" . json_encode($demande, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), $schema);
+    if (isset($rep['erreur'])) { http_response_code(502); return ['error' => $rep['erreur']]; }
+    $parCle = [];
+    foreach ((array) ($rep['traductions'] ?? []) as $t) { if (is_array($t) && isset($t['cle'])) { $parCle[(string) $t['cle']] = $t; } }
+    $n = 0;
+    foreach ($lignes as &$l) {
+        $t = $parCle[$l['cle']] ?? null;
+        if ($t === null || ($l['statut'] ?? null) === 'cree') { continue; }
+        // Seulement les champs vides : une traduction ne remplace jamais ce qu'un humain a écrit.
+        if (($l['produit']['nomNl'] ?? null) === null && ($v = piTexte($t['nomNl'] ?? null, 190)) !== null) {
+            $l['produit']['nomNl'] = $v; $l['produit']['nlAuto']['nom'] = true; $n++;
+        }
+        if (($l['produit']['ingredientsFr'] ?? null) !== null && ($l['produit']['ingredientsNl'] ?? null) === null
+            && ($v = piTexte($t['ingredientsNl'] ?? null, 2000)) !== null) {
+            $l['produit']['ingredientsNl'] = $v; $l['produit']['nlAuto']['ingredients'] = true; $n++;
+        }
+    }
+    unset($l);
+    Db::exec('UPDATE ceo_epicerie_import SET lines_json = ?, updated_at = ? WHERE id = ?',
+        [json_encode($lignes, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), $id]);
+    return ['ok' => true, 'traduits' => $n, 'import' => piSortie(piRow($id), $refs)];
 }

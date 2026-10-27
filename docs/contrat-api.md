@@ -2986,43 +2986,55 @@ triés par groupe, catégorie, nom ; les produits inactifs sont écartés sauf `
 TTC de la pièce qui atteindrait la cible de sa catégorie, ou l'objectif du réseau, aux 5 centimes supérieurs. Relu à chaque
 appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. `sonde=1` rend les premières lignes brutes.
 
-### `/produits/import/*` — l'épicerie depuis le PDF d'un fournisseur : assistant, validation, création dans TFBuddy (27/10/2026)
+### `/produits/import/*` — l'épicerie depuis le PDF d'un fournisseur : assistant, validation, création dans TFBuddy (27/10/2026, v2)
 
 Écran Produits (Gamme · scoring), bouton « ＋ Épicerie depuis un PDF ». Le tarif d'un fournisseur (scanné ou non) devient,
-article par article, la chaîne de TFBuddy : fournisseur → article du catalogue fournisseur (réf., colis, prix) → matière →
-recette (1 × la matière) → produit de vente. Assistant en cinq étapes (document, fournisseur, articles & matières,
-produits de vente, validation) ; module `src/produits_import.php`, brouillons dans `ceo_epicerie_import` (créée au
-premier appel ; `status` brouillon | valide, `validated_by`, `validated_at`).
+article par article, la chaîne de TFBuddy : fournisseur → article du catalogue fournisseur (réf., EAN, colis, prix) →
+matière (allergènes) → recette (1 × la matière) → produit de vente (catégorie, prix maximum, périodes, fiche FR/NL).
+Assistant en six étapes : document, fournisseur, articles & matières, prix de vente, fiches produits, validation. Module
+`src/produits_import.php`, brouillons dans `ceo_epicerie_import` (créée au premier appel ; `status` brouillon | valide,
+`validated_by`, `validated_at`). Décisions du 27/10/2026 : tarif fournisseur unique pour le réseau ; prix de vente
+**maximum, le même pour tous les magasins** ; EAN et TVA de vente au produit ; activation par les **périodes de
+disponibilité** ; nom et ingrédients en français et en néerlandais ; allergènes cochés un à un (contient / traces).
 
 - `GET /produits/import` → `{ia, comptes: {erp, panel}, destination, maxOctets, refs, dernier}`. `refs` : `catsProduit
-  [{id, nom, cible}]` (catégories actives de `/product-categories`, `cible` = `price_coefficient`), `catsMatiere [{id, nom}]`
-  (`/material-categories`), `fournisseurs [{id, nom, ville}]` (`/material-suppliers`). `dernier` : le dernier brouillon.
+  [{id, nom, cible}]` (`/product-categories`, `cible` = `price_coefficient`), `catsMatiere [{id, nom}]`
+  (`/material-categories`), `fournisseurs [{id, nom, ville}]` (`/material-suppliers`), `periodes [{id, nom, debut, fin}]`
+  (`/product-availability-periods`, actives). `dernier` : le dernier brouillon.
 - `POST /produits/import/pdf` `{nom, fichier: "data:application/pdf;base64,…"}` (8 Mo au plus) : lecture par l'API
-  Anthropic (clé de Paramètres › IA, JSON contraint par schéma — `output_config.format`). Rapprochements : le
-  fournisseur par n° de TVA puis par nom ; la matière par la référence du catalogue de ce fournisseur
-  (`/material-suppliers/{id}/catalog-mappings`, `catalog_product_sku` → `material_id`), puis par nom (`/materials`) ; le
-  produit par nom (`/products`, sans casse, accents ni espace entre nombre et unité) — un produit déjà vendu, ou répété dans
-  le document, est décoché. Sans prix conseillé, le prix proposé est celui qui atteint la cible de la catégorie (aux 5
-  centimes supérieurs). Réponse `{ok, import}` ; `import` = `{id, fichier, octets, modele, document, le, statut, validePar,
-  valideLe, fournisseur: {mode: existant|nouveau, id, idCree, nom, tva, email, telephone, adresse, ville, web, tarifDu, lu},
-  lignes: [{cle, inclure, page, confiance, remarque, article: {nom, nomNl, marque, ref, ean, contenance, poidsG, unites,
-  prixColisHt, prixUnitaireHt, tva, pvc, allergenes, conservation, categorieLue}, coutHt, matiere: {id, via, nom, cat,
-  trouvee}, produit: {id, nom, cat, tva, prixTtc, existe}, chiffres: {prixHt, coef, cible, prixCible, margePct, zone},
-  statut, ids, message}], controles: {bloquants: [{etape, cle, texte}], avertissements: [...]}, recap, refs,
-  allergenesNoms}`. Coût pièce = prix du colis ÷ unités par colis (à défaut le prix unitaire écrit) ; coefficient = prix de
-  vente HT ÷ coût pièce ; zone `ko` sous × 1,67 (marge < 40 %), `att` sous la cible, `ok` au-delà. Rien n'est créé.
+  Anthropic (JSON contraint par schéma — `output_config.format`), ingrédients FR/NL, allergènes et traces compris, sans
+  rien traduire. Rapprochements : le fournisseur par n° de TVA puis par nom ; la matière par la référence du catalogue de
+  ce fournisseur (`/material-suppliers/{id}/catalog-mappings`), puis par nom (`/materials`) ; le produit par nom
+  (`/products`) — un produit déjà vendu, ou répété dans le document, est décoché. Sans prix conseillé, le prix proposé
+  atteint la cible de la catégorie ; la période « Permanent » est proposée d'office. Réponse `{ok, import}` ; `import` =
+  `{id, fichier, octets, modele, document, le, statut, validePar, valideLe, fournisseur: {mode: existant|nouveau, id,
+  idCree, nom, tva, email, telephone, adresse, ville, web, tarifDu, lu}, lignes: [{cle, inclure, page, confiance,
+  remarque, article: {nom, marque, ref, contenance, poidsG, unites, prixColisHt, prixUnitaireHt, tva, pvc, conservation,
+  categorieLue}, coutHt, matiere: {id, via, nom, cat, trouvee}, produit: {id, nom, nomNl, cat, tva, prixTtc (prix
+  maximum), ingredientsFr, ingredientsNl, allergenes, traces, sansAllergene, ean, periodes, nlAuto: {nom, ingredients},
+  existe}, chiffres: {prixHt, coef, cible, prixCible, margePct, zone}, statut, ids, message}], controles: {bloquants:
+  [{etape, cle, texte}], avertissements: [...]}, recap, refs, allergenesNoms}`.
 - `PUT /produits/import/{id}` `{fournisseur?, lignes?}` : les corrections de l'assistant ; 409 sur un encodage validé.
-- `POST /produits/import/{id}/valider` `{par}` : 422 tant qu'il reste un bloquant (fournisseur absent, coût, matière
-  nouvelle sans nom ou catégorie, produit sans nom, catégorie, prix ou TVA, produit déjà au catalogue) ; sinon l'encodage
-  est signé et figé. `POST /produits/import/{id}/rouvrir` le repasse en brouillon, sauf si un article est déjà créé (409).
+- `POST /produits/import/{id}/traduire` : Claude **propose** le néerlandais manquant (nom, ingrédients) des articles
+  cochés ; seuls les champs vides se remplissent, marqués `nlAuto` (« à relire ») jusqu'à ce qu'on les retouche. Réponse
+  `{ok, traduits, import}` ; 503 sans clé, 409 sur un encodage validé.
+- `POST /produits/import/{id}/valider` `{par}` : 422 tant qu'il reste un bloquant — fournisseur absent ; coût de la pièce ;
+  matière nouvelle sans nom ou catégorie ; produit sans nom, catégorie, prix maximum ou TVA ; produit déjà au catalogue ;
+  nom néerlandais absent ; ingrédients français sans leur néerlandais ; allergènes ni cochés ni « aucun allergène »
+  confirmé ; EAN à la clé fausse ; aucune période de disponibilité. Avertissements : coefficient sous la cible ou marge
+  sous 40 %, prix au-dessus du prix conseillé, lecture incertaine, pas d'ingrédients, pas d'EAN, néerlandais traduit
+  non relu. Validé, l'encodage est signé et figé ; `POST /produits/import/{id}/rouvrir` le repasse en brouillon, sauf si un
+  article est déjà créé (409).
 - `GET /produits/import/sonde` : `OPTIONS` (en-tête `Allow` seul) sur `/products/resale`, `/products`, `/materials`,
   `/material-suppliers`, avec chaque compte ; **n'écrit rien**. `PUT /produits/import/destination` `{compte, verifiee}`.
-- `POST /produits/import/{id}/creer` `{actifs}` : un encodage **validé** part ligne par ligne par `POST /products/resale`
-  (corps : `docs/spec-api-panel.md` §7.2 ; `client_ref` = `ep{id}-{cle}`) ; une ligne créée garde les ids rendus et n'est
-  plus renvoyée ; un fournisseur créé par la première ligne sert aux suivantes. Arrêt net sur 401/403/404/405/5xx et après
-  trois 422 de suite sans création. Réponse `{ok, crees, refuses, arret, import}` ; journal (kind `Épicerie`).
+- `POST /produits/import/{id}/creer` : un encodage **validé** part ligne par ligne par `POST /products/resale` (corps :
+  `docs/demande-tfbuddy-epicerie/`, v2 — `client_ref` = `ep{id}-{cle}` ; produit `max_sale_price`, `name_nl`,
+  `ingredients_fr`, `ingredients_nl`, `ean`, `tax_value_percent`, `availability_period_ids` ; matière NOUVELLE avec
+  `allergens` / `may_contain` — une matière existante n'est jamais modifiée). Une ligne créée garde les ids rendus et
+  n'est plus renvoyée ; un fournisseur créé par la première ligne sert aux suivantes. Arrêt net sur 401/403/404/405/5xx et
+  après trois 422 de suite sans création. Réponse `{ok, crees, refuses, arret, import}` ; journal (kind `Épicerie`).
 
-**Constaté le 27/10/2026 dans le Swagger de TFBuddy : fournisseurs, matières, catégories et produits sont en lecture
-seule.** `POST /products/resale` n'existe pas encore : la vérification le dit et l'export CSV de l'encodage validé sert à
-saisir à la main. La demande est rédigée dans `docs/spec-api-panel.md` §7 et, autonome, en français, anglais et polonais
-dans `docs/demande-tfbuddy-epicerie/`.
+**Constaté le 27/10/2026 dans le Swagger de TFBuddy : fournisseurs, matières, catégories, périodes et produits sont en
+lecture seule.** `POST /products/resale` n'existe pas encore : la vérification le dit et l'export CSV de l'encodage validé
+(chaîne complète, fiche FR/NL comprise) sert à saisir à la main. La demande, autonome : `docs/demande-tfbuddy-epicerie/`
+(français, anglais, polonais).

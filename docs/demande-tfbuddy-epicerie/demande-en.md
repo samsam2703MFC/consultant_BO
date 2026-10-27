@@ -20,7 +20,7 @@ Observed in the Swagger on 27/10/2026: `material-categories`, `material-supplier
 3. **Sales VAT**: on the **product** (`tax_value_percent`), the same in every shop.
 4. **Activation**: through **availability periods** (`availability_period_ids`, ids from `GET /product-availability-periods`). The product is sold during its periods — “Permanent” for all year round. Endpoint 8 changes them afterwards.
 5. **Bilingual**: name (`name` / `name_nl`) and ingredients (`ingredients_fr` / `ingredients_nl`) in French and Dutch, on the product.
-6. **Allergens**: ticked one by one in the wizard, sent as `GET /allergens` codes on the **material** — `allergens` (contains) and `may_contain` (possible traces). The product inherits them through its recipe, like your other products.
+6. **Allergens**: ticked one by one in the wizard, sent as `GET /allergens` codes on the **material** — `allergens` (contains) and `may_contain` (possible traces). The product inherits them through its recipe, like your other products. An **existing** material is never modified by the cockpit: other recipes use it, so its allergens stay as you have them.
 
 ## Common rules
 
@@ -55,7 +55,7 @@ POST /products/resale
   "price": { "price_net": 34.00, "valid_from": "2026-11-01" },                   // network price list: all shops
   "material": { "id": null, "name": "Chocolat noir 72 % 100 g", "material_category_id": 11,
                 "unit_name": "pcs", "vat_rate": 6,
-                "allergens": ["milk", "soybeans"], "may_contain": ["nuts"] },   // id given = existing material (allergens ignored)
+                "allergens": ["milk", "soybeans"], "may_contain": ["nuts"] },   // id given = existing material, left unchanged
   "units_per_pack": 20,
   "product": { "name": "Chocolat noir 72 % - 100 g", "name_nl": "Pure chocolade 72 % - 100 g",
                "id_category": 61, "max_sale_price": 3.20, "tax_value_percent": 6,

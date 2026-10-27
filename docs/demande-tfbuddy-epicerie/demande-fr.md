@@ -20,7 +20,7 @@ Constaté dans le Swagger le 27/10/2026 : `material-categories`, `material-suppl
 3. **TVA de vente** : au **produit** (`tax_value_percent`), la même dans tous les magasins.
 4. **Activation** : par les **périodes de disponibilité** (`availability_period_ids`, identifiants de `GET /product-availability-periods`). Le produit se vend pendant ses périodes — « Permanent » pour toute l’année. La route 8 les modifie ensuite.
 5. **Bilingue** : nom (`name` / `name_nl`) et ingrédients (`ingredients_fr` / `ingredients_nl`) en français et en néerlandais, sur le produit.
-6. **Allergènes** : cochés un par un dans l’assistant, envoyés en codes de `GET /allergens` sur la **matière** — `allergens` (contient) et `may_contain` (traces éventuelles). Le produit en hérite par sa recette, comme vos autres produits.
+6. **Allergènes** : cochés un par un dans l’assistant, envoyés en codes de `GET /allergens` sur la **matière** — `allergens` (contient) et `may_contain` (traces éventuelles). Le produit en hérite par sa recette, comme vos autres produits. Une matière **existante** n’est jamais modifiée par le cockpit : d’autres recettes l’utilisent, ses allergènes restent les vôtres.
 
 ## Règles communes
 
@@ -55,7 +55,7 @@ POST /products/resale
   "price": { "price_net": 34.00, "valid_from": "2026-11-01" },                   // tarif réseau : tous les magasins
   "material": { "id": null, "name": "Chocolat noir 72 % 100 g", "material_category_id": 11,
                 "unit_name": "pcs", "vat_rate": 6,
-                "allergens": ["milk", "soybeans"], "may_contain": ["nuts"] },   // id renseigné = matière existante (allergènes ignorés)
+                "allergens": ["milk", "soybeans"], "may_contain": ["nuts"] },   // id renseigné = matière existante, laissée telle quelle
   "units_per_pack": 20,
   "product": { "name": "Chocolat noir 72 % - 100 g", "name_nl": "Pure chocolade 72 % - 100 g",
                "id_category": 61, "max_sale_price": 3.20, "tax_value_percent": 6,

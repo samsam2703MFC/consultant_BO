@@ -246,16 +246,35 @@ final class Anthropic
             ]]],
             'output_config' => ['format' => ['type' => 'json_schema', 'schema' => $schema]],
         ];
+        return self::appelJson($corps, $c, 'document trop long pour une lecture : coupez le PDF en plusieurs parties (moins de produits par fichier)');
+    }
+
+    /**
+     * Une demande en texte, une réponse en JSON contraint par `$schema` — même
+     * mécanique que lirePdf(), sans document (ex. : traduire des fiches).
+     */
+    public static function json(string $system, string $texte, array $schema, int $maxTokens = 16000): array
+    {
+        $c = self::config();
+        if ($c['cle'] === '') { return ['erreur' => 'clé Anthropic absente — Paramètres › IA']; }
+        return self::appelJson([
+            'model' => $c['modele'], 'max_tokens' => $maxTokens, 'system' => $system,
+            'messages' => [['role' => 'user', 'content' => [['type' => 'text', 'text' => $texte]]]],
+            'output_config' => ['format' => ['type' => 'json_schema', 'schema' => $schema]],
+        ], $c, 'réponse trop longue : faites-le en plusieurs fois');
+    }
+
+    /** L'appel et la lecture d'une réponse en JSON contraint, arrêts compris. */
+    private static function appelJson(array $corps, array $c, string $tropLong): array
+    {
         [$code, $rep] = self::http($corps, $c['cle'], 300);
         if ($code < 200 || $code >= 300) {
             $det = is_array($rep) ? (string) ($rep['error']['message'] ?? json_encode($rep, JSON_UNESCAPED_UNICODE)) : (string) self::$lastError;
             return ['erreur' => 'API Anthropic → HTTP ' . $code . ($det !== '' ? ' : ' . substr($det, 0, 240) : '')];
         }
         $arret = (string) ($rep['stop_reason'] ?? '');
-        if ($arret === 'refusal') { return ['erreur' => 'le modèle a refusé de lire ce document']; }
-        if ($arret === 'max_tokens') {
-            return ['erreur' => 'document trop long pour une lecture : coupez le PDF en plusieurs parties (moins de produits par fichier)'];
-        }
+        if ($arret === 'refusal') { return ['erreur' => 'le modèle a refusé la demande']; }
+        if ($arret === 'max_tokens') { return ['erreur' => $tropLong]; }
         $txt = '';
         foreach (($rep['content'] ?? []) as $b) {
             if (($b['type'] ?? '') === 'text') { $txt .= (string) ($b['text'] ?? ''); }
