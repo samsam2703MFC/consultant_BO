@@ -572,5 +572,7 @@
   "kv_src_stock": "stock",
   "kv_col_name": "Produit",
   "kv_no_max": "pas de stock max.",
-  "kv_cap_orders": "commandes au-delà du stock"
+  "kv_cap_orders": "commandes au-delà du stock",
+  "no_pin_personal": "{name} : pas de PIN — demandez un PIN au responsable, puis scannez à nouveau le code.",
+  "register_me": "C’est mon téléphone — l’enregistrer à mon nom (PIN)"
 }

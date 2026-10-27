@@ -14008,6 +14008,224 @@
                 ]
             }
         },
+        "/kiosk/office/sections": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Tablet biurowy : działy i osoby / Tablette de bureau : services et personnes",
+                "operationId": "officeSections",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/OfficeSection"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Tablette en mode « office » seulement (DEVICE_NOT_OFFICE, 403). Services (production_sections) avec leurs personnes actives, même sans profil de production (employee_id null, créé au premier QR) : PIN, téléphones enregistrés, entrée en cours (since), sortie du jour (left_at). id = production_employee.id.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/office/qr": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Osobisty kod QR (osoba + dzień) / QR code personnel (personne + jour)",
+                "operationId": "officeQr",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OfficeQr"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "QR de la page {base}/kiosk/scan#t=<jeton> avec la tablette, la personne (emp) et le jour (day) ; valable kiosk.office_qr_ttl_s, renouvelé (refresh_s) avant. Seul le téléphone enregistré de cette personne le valide (sinon 403 QR_OTHER_PERSON), seulement ce jour-là (QR_EXPIRED) ; au premier scan, seule cette personne est proposée (PIN). since : heure du serveur, à repasser à GET /kiosk/office/status.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OfficeQrInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/office/status": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Czy wejście / wyjście zapisane? / Pointage enregistré ?",
+                "operationId": "officeStatus",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OfficeStatus"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "La tablette de bureau interroge pendant l'affichage du QR : dernier pointage (entrée ou sortie) de la personne depuis since, et si elle est présente.",
+                "parameters": [
+                    {
+                        "name": "employee_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "since",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "2026-10-27 07:58:12"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/driver/day": {
             "get": {
                 "tags": [
@@ -14584,7 +14802,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "QR frais obligatoire (présence sur place). Jeton du téléphone (kiosk.phone_token_days) rendu une fois, seul son condensé est stocké. Mêmes blocages PIN que la tablette.",
+                "description": "QR frais obligatoire (présence sur place). Jeton du téléphone (kiosk.phone_token_days) rendu une fois, seul son condensé est stocké. Mêmes blocages PIN que la tablette. QR personnel (tablette de bureau) : seulement la personne du QR (403 QR_OTHER_PERSON).",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -14650,6 +14868,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
+                "description": "QR personnel (tablette de bureau) : refusé (403 QR_OTHER_PERSON) si le téléphone est enregistré au nom d'une autre personne.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -14715,7 +14934,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Comme POST /kiosk/clock ; la tablette du QR est enregistrée comme lieu du pointage.",
+                "description": "Comme POST /kiosk/clock ; la tablette du QR est enregistrée comme lieu du pointage. QR personnel : seulement le téléphone de la personne du QR.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -22503,6 +22722,128 @@
                         "type": "string"
                     },
                     "has_pin": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "OfficePerson": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "employee_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "has_pin": {
+                        "type": "boolean"
+                    },
+                    "phones": {
+                        "type": "integer"
+                    },
+                    "clocked_in": {
+                        "type": "boolean"
+                    },
+                    "since": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "left_at": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "OfficeSection": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "people": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OfficePerson"
+                        }
+                    }
+                }
+            },
+            "OfficeQrInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "person_id",
+                    "base"
+                ],
+                "properties": {
+                    "person_id": {
+                        "type": "integer"
+                    },
+                    "base": {
+                        "type": "string",
+                        "example": "https://erp.example/production"
+                    }
+                }
+            },
+            "OfficeQr": {
+                "type": "object",
+                "properties": {
+                    "person": {
+                        "$ref": "#/components/schemas/OfficePerson"
+                    },
+                    "day": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "since": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "expires_in": {
+                        "type": "integer"
+                    },
+                    "refresh_s": {
+                        "type": "integer"
+                    },
+                    "size": {
+                        "type": "integer"
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "OfficeStatus": {
+                "type": "object",
+                "properties": {
+                    "clocked": {
+                        "type": "boolean"
+                    },
+                    "direction": {
+                        "type": "string",
+                        "enum": [
+                            "in",
+                            "out"
+                        ],
+                        "nullable": true
+                    },
+                    "at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "clocked_in": {
                         "type": "boolean"
                     }
                 }

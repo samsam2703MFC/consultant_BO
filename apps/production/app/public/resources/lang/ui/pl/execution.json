@@ -104,7 +104,9 @@
   "device_mode": "Rodzaj tabletu",
   "mode_atelier": "Tablet pracowni (grupa)",
   "mode_driver": "Tablet kierowcy",
+  "mode_office": "Tablet biurowy (dział → nazwisko → QR)",
   "vehicle": "Pojazd",
   "no_vehicle": "— pojazd wybiera kierowca —",
-  "driver_help": "Tablet kierowcy : otwórz na tablecie stronę /driver (albo /kiosk — przekierowanie) i wpisz kod. Kierowca widzi trasę dnia swojego pojazdu, potwierdza dostawy (odbiorca, podpis, zdjęcie, palety) i zgłasza problemy ; wszystko w Logistyka › Dostawy."
+  "driver_help": "Tablet kierowcy : otwórz na tablecie stronę /driver (albo /kiosk — przekierowanie) i wpisz kod. Kierowca widzi trasę dnia swojego pojazdu, potwierdza dostawy (odbiorca, podpis, zdjęcie, palety) i zgłasza problemy ; wszystko w Logistyka › Dostawy.",
+  "office_help": "Tablet biurowy : otwórz na tablecie stronę /office (albo /kiosk — przekierowanie) i wpisz kod. Osoba wybiera swój dział, potem nazwisko ; tablet pokazuje jej osobisty kod QR (osoba + dzień), który zatwierdza tylko jej telefon (wejście / wyjście). Pierwszy raz telefon prosi o PIN — nadaj go w kolumnie PIN (Czas pracy)."
 }

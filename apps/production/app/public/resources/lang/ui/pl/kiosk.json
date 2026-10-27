@@ -572,5 +572,7 @@
   "kv_src_stock": "magazyn",
   "kv_col_name": "Produkt",
   "kv_no_max": "brak stanu maks.",
-  "kv_cap_orders": "zamówienia ponad stan"
+  "kv_cap_orders": "zamówienia ponad stan",
+  "no_pin_personal": "{name} : brak PIN-u — poproś kierownika o PIN, potem zeskanuj kod ponownie.",
+  "register_me": "To mój telefon — zarejestruj go na mnie (PIN)"
 }

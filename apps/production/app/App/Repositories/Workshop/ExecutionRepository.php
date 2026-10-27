@@ -94,6 +94,38 @@ final class ExecutionRepository extends WorkshopRepository
         );
     }
 
+    /**
+     * Tablette de bureau : toutes les personnes actives, par section (production_sections) ; le profil de production
+     * (employee_id) peut manquer, il est créé au premier QR. PIN, téléphones, entrée en cours et sortie du jour.
+     */
+    public function officePeople(string $day): array
+    {
+        return $this->all(
+            "SELECT s.id AS section_id, s.name AS section_name, pe.id AS person_id, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name, e.id AS employee_id,
+                    c.pin_hash IS NOT NULL AS has_pin,
+                    (SELECT COUNT(*) FROM n_prod_phone p WHERE p.id_employee = e.id AND p.revoked_at IS NULL) AS phones,
+                    (SELECT k.clock_in FROM n_prod_clock k WHERE k.id_employee = e.id AND k.clock_out IS NULL ORDER BY k.clock_in DESC LIMIT 1) AS clocked_in_at,
+                    (SELECT MAX(k.clock_out) FROM n_prod_clock k WHERE k.id_employee = e.id AND k.clock_out >= ?) AS left_at
+             FROM production_employee pe
+             JOIN production_sections s ON s.id = pe.id_section
+             LEFT JOIN n_prod_employee e ON e.id_production_employee = pe.id
+             LEFT JOIN n_prod_employee_credential c ON c.id_employee = e.id
+             WHERE COALESCE(e.active, 1) = 1
+             ORDER BY s.id, pe.surname, pe.name",
+            [$day . ' 00:00:00']
+        );
+    }
+
+    /** Dernier pointage d'une personne depuis $since (entrée ou sortie) : la tablette de bureau confirme le QR validé. */
+    public function clockEventSince(int $employeeId, string $since): ?array
+    {
+        return $this->all(
+            'SELECT id, clock_in, clock_out FROM n_prod_clock WHERE id_employee = ? AND (clock_in >= ? OR clock_out >= ?)
+             ORDER BY COALESCE(clock_out, clock_in) DESC LIMIT 1',
+            [$employeeId, $since, $since]
+        )[0] ?? null;
+    }
+
     public function credential(int $employeeId): ?array
     {
         return $this->all('SELECT * FROM n_prod_employee_credential WHERE id_employee = ?', [$employeeId])[0] ?? null;

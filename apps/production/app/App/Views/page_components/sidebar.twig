@@ -118,6 +118,11 @@
                             </a>
                         </li>
                         <li class="submenu-item">
+                            <a href="{{ root }}/office" target="_blank" rel="noopener">
+                                <i class="bi bi-qr-code"></i> Tablet biurowy (wejście / wyjście)
+                            </a>
+                        </li>
+                        <li class="submenu-item">
                             <a href="{{ root }}/workshop/execution">
                                 <i class="bi bi-sliders"></i> Zarządzanie : tablety, PIN, czas pracy
                             </a>
@@ -504,6 +509,10 @@
                 <li><a href="{{ root }}/client-orders" data-where="Sprzedaż › Zamówienia klientów"><i class="bi bi-receipt"></i> Faktura (inna) z zamówienia : przycisk na zamówieniu — klient, produkty, ilości, ceny i VAT z cennika klienta wypełnione</a></li>
                 <li><a href="{{ root }}/invoice-documents" data-where="Sprzedaż › Proformy i faktury › Faktury inne"><i class="bi bi-receipt-cutoff"></i> Nowa faktura wypełniona z zamówienia albo z WZ (wybór na stronie faktury klienta)</a></li>
                 <li><a href="{{ root }}/materials/prices" data-where="Zakupy › Ceny surowców"><i class="bi bi-clock-history"></i> Historia cen surowca : data, dostawca, cena opakowania i za 1000 j., źródło zmiany (oferta, faktura zakupowa, ręcznie, nowy surowiec), kto</a></li>
+                <li><a href="{{ root }}/office" data-where="Produkcja › Tablet produkcji › Tablet biurowy (wejście / wyjście)"><i class="bi bi-qr-code"></i> Tablet biurowy : dział → nazwisko → osobisty kod QR (osoba + dzień), wejście / wyjście zatwierdzone własnym telefonem</a></li>
+                <li><a href="{{ root }}/workshop/execution#devices" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-tablet"></i> Nowy tablet biurowy : rodzaj « Tablet biurowy » (wszystkie działy, bez grupy), kod parowania, strona /office</a></li>
+                <li><a href="{{ root }}/workshop/execution#people" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-phone"></i> PIN dla pracowników biura (Administracja) : pierwszy skan osobistego kodu QR telefonem prosi o PIN</a></li>
+                <li><a href="{{ root }}/other-settings#params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-qr-code-scan"></i> Ważność osobistego kodu QR tabletu biurowego (parametr kiosk.office_qr_ttl_s, sekundy)</a></li>
                 <li><a href="{{ root }}/other-settings#params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-lock"></i> Ceny surowców tylko przez ofertę, fakturę albo zapytanie ofertowe (parametr prices.manual_edit = 0 : « Nowa cena » znika)</a></li>
                 <li><a href="{{ root }}/workshop/traceability" data-where="Produkcja › Produkcja › Partie i identyfikowalność"><i class="bi bi-truck"></i> Dokąd poszła partia : kartony produktu z dnia produkcji → palety → klienci, data dostawy, WZ</a></li>
                 <li><a href="{{ root }}/workshop/traceability" data-where="Produkcja › Produkcja › Partie i identyfikowalność"><i class="bi bi-exclamation-octagon"></i> Wycofanie z rynku : numer partii surowca → partie wyrobu → klienci do powiadomienia</a></li>

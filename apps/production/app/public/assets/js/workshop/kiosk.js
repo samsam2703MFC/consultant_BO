@@ -196,7 +196,7 @@
                 deviceInfo = null;
                 store.set(DEVICE_KEY, device);
                 persist();
-                if (r.device.mode === 'driver') { location.replace(root + '/driver'); return; }
+                if (r.device.mode === 'driver' || r.device.mode === 'office') { location.replace(root + '/' + r.device.mode); return; }
                 toast(t('paired', {name: r.device.name}));
                 location.hash === '#week' ? renderWeek(null, true) : renderHome();
             } catch (err) { el.querySelector('[data-error]').textContent = err.message; }
@@ -218,8 +218,8 @@
         if (deviceInfo === null) {
             try { deviceInfo = await api('GET', '/kiosk/device'); } catch (err) { deviceInfo = {group_id: null}; }
         }
-        // Tablet kierowcy : własna strona (trasa dnia, potwierdzenia dostaw).
-        if (deviceInfo.mode === 'driver') { location.replace(root + '/driver'); return; }
+        // Tablet kierowcy i tablet biurowy : własna strona (trasa dnia ; dział → nazwisko → osobisty kod QR).
+        if (deviceInfo.mode === 'driver' || deviceInfo.mode === 'office') { location.replace(root + '/' + deviceInfo.mode); return; }
         const office = !deviceInfo.group_id;
         const now = new Date();
         const widgetHead = (ic, cls, title, extra) => `<header class="kiosk-widget-head"><span class="kiosk-widget-icon ${cls}">${icon(ic)}</span><h2>${title}</h2>${extra || ''}</header>`;

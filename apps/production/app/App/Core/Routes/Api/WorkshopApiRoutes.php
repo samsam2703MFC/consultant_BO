@@ -238,6 +238,10 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/quality/batches/{id:\d+}', ExecutionController::class, 'qualityCheck', 'kiosk_employee'],
             ['POST', '/kiosk/quality/reports', ExecutionController::class, 'qualityReport', 'kiosk_employee'],
             ['GET', '/kiosk/qr', ExecutionController::class, 'qr', 'kiosk'],
+            // Tablette de bureau (mode office) : section → nom → QR personnel (personne + jour) validé au téléphone.
+            ['GET', '/kiosk/office/sections', ExecutionController::class, 'officeSections', 'kiosk'],
+            ['POST', '/kiosk/office/qr', ExecutionController::class, 'officeQr', 'kiosk'],
+            ['GET', '/kiosk/office/status', ExecutionController::class, 'officeStatus', 'kiosk'],
             // Tablet kierowcy (tablet w trybie « driver ») : trasa dnia, potwierdzenia dostaw, dokumenty — po wybraniu
             // kierowcy z listy i jego PIN-ie (/kiosk/people, /kiosk/identify), jak na tablecie pracowni.
             ['GET', '/driver/day', DriverController::class, 'day', 'kiosk_employee'],

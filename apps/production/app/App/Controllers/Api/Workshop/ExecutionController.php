@@ -13,6 +13,7 @@ use App\Services\Workshop\Execution\KioskAuthService;
 use App\Services\Workshop\Execution\KioskRecipeService;
 use App\Services\Workshop\Execution\KioskStockService;
 use App\Services\Workshop\Execution\KpiService;
+use App\Services\Workshop\Execution\OfficeClockService;
 use App\Services\Workshop\Execution\OeeService;
 use App\Services\Workshop\Execution\OutputService;
 use App\Services\Workshop\Execution\QualityService;
@@ -20,7 +21,7 @@ use App\Services\Workshop\Execution\TimesheetService;
 use App\Services\Workshop\Planning\TeamSheetService;
 use App\Services\Workshop\Supply\SupplyService;
 
-/** P7 : tablettes (appairage, identification, pointage, opérations, signatures), pointage au téléphone par QR code, heures, KPIs, cockpit. */
+/** P7 : tablettes (appairage, identification, pointage, opérations, signatures), tablette de bureau, pointage au téléphone par QR code, heures, KPIs, cockpit. */
 final class ExecutionController
 {
     use QueryFilters;
@@ -39,6 +40,7 @@ final class ExecutionController
         private ClockQuestionService $questions,
         private SupplyService $supply,
         private KioskStockService $stock,
+        private OfficeClockService $office,
     ) {
     }
 
@@ -83,6 +85,15 @@ final class ExecutionController
     public function refresh(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->refresh($request->context)); }
     public function me(ApiRequest $request): ApiResult { return new ApiResult($this->execution->me($request->context)); }
     public function qr(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->qr($request->context, (string) $request->query('base', ''))); }
+
+    // Tablette de bureau : section → nom → QR personnel (personne + jour), confirmé quand le téléphone a pointé
+    public function officeSections(ApiRequest $request): ApiResult { return ApiResult::list($this->office->sections($request->context)); }
+    public function officeQr(ApiRequest $request): ApiResult { return new ApiResult($this->office->qr($request->body(), $request->context)); }
+
+    public function officeStatus(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->office->status((int) $request->query('employee_id', '0'), (string) $request->query('since', ''), $request->context));
+    }
 
     // Téléphone (pointage par QR code)
     public function phonePeople(ApiRequest $request): ApiResult { return ApiResult::list($this->kiosk->phonePeople($request->context)); }

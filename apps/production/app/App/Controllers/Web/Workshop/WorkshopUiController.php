@@ -110,6 +110,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/driver', ['api_base' => $this->apiBase()]);
     }
 
+    /** Tablet biurowy (PWA) : dział → nazwisko → osobisty kod QR (osoba + dzień) zatwierdzany telefonem ; sama powłoka. */
+    public function office()
+    {
+        $this->view('workshop/office', ['api_base' => $this->apiBase()]);
+    }
+
     /** Telefon : wejście / wyjście po zeskanowaniu kodu QR z tabletu (strona publiczna, dane przez API). */
     public function kioskScan()
     {

@@ -30,5 +30,6 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/kiosk', ['controller' => $c, 'method' => 'kiosk']);
     $r->addRoute('GET', '/kiosk/scan', ['controller' => $c, 'method' => 'kioskScan']);
     $r->addRoute('GET', '/driver', ['controller' => $c, 'method' => 'driver']);
+    $r->addRoute('GET', '/office', ['controller' => $c, 'method' => 'office']);
     $r->addRoute('POST', '/ajax/workshop/token', ['controller' => $c, 'method' => 'token']);
 };

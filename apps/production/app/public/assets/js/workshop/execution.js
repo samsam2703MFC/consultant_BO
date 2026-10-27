@@ -93,13 +93,15 @@
         const body = el.querySelector('[data-body]');
         // Tablet kierowcy : pojazd domyślny zamiast grupy (strona /driver na tablecie).
         const vehicleOptions = (selected) => `<option value="">${esc(t('no_vehicle'))}</option>` + vehicles.map(v => `<option value="${v.id}" ${v.id === selected ? 'selected' : ''}>${esc(v.label)}${v.carrier ? ' · ' + esc(v.carrier) : ''}${v.driver ? ' · ' + esc(v.driver) : ''}</option>`).join('');
+        // Tablet biurowy : wszystkie działy (bez grupy i pojazdu), strona /office.
         const where = (d) => d.mode === 'driver'
             ? `<span class="badge bg-info-subtle text-info-emphasis">${esc(t('mode_driver'))}</span>
                <select class="form-select form-select-sm d-inline-block w-auto ms-1" data-vehicle aria-label="${esc(t('vehicle'))}">${vehicleOptions(d.vehicle_id)}</select>`
+            : d.mode === 'office' ? `<span class="badge bg-warning-subtle text-warning-emphasis">${esc(t('mode_office'))}</span>`
             : esc((groups.find(g => g.id === d.group_id) || {}).name || '—');
         body.innerHTML = `<div class="card"><div class="card-body">
             <form class="tfb-filters" data-add-device><input class="form-control form-control-sm" name="name" data-field="name" placeholder="${esc(t('device_name'))}" required maxlength="100">
-                <select class="form-select form-select-sm" name="mode" data-field="mode" aria-label="${esc(t('device_mode'))}"><option value="atelier">${esc(t('mode_atelier'))}</option><option value="driver">${esc(t('mode_driver'))}</option></select>
+                <select class="form-select form-select-sm" name="mode" data-field="mode" aria-label="${esc(t('device_mode'))}"><option value="atelier">${esc(t('mode_atelier'))}</option><option value="driver">${esc(t('mode_driver'))}</option><option value="office">${esc(t('mode_office'))}</option></select>
                 <select class="form-select form-select-sm" name="group_id" data-field="group_id">${groupOptions(null, t('no_group'))}</select>
                 <select class="form-select form-select-sm" name="vehicle_id" data-field="vehicle_id" hidden aria-label="${esc(t('vehicle'))}">${vehicleOptions(null)}</select>
                 <button class="btn btn-sm btn-primary">${esc(t('add_device'))}</button></form>
@@ -110,9 +112,9 @@
                 <td>${esc((d.last_seen_at || '—').slice(0, 16))}</td>
                 <td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary" data-repair>${esc(t('new_code'))}</button>
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle>${esc(d.active ? t('block') : t('unblock'))}</button></td></tr>`).join('') || `<tr><td colspan="5" class="text-muted">${esc(t('no_devices'))}</td></tr>`}</tbody></table></div>
-            <p class="at-profit-note">${esc(t('device_help'))}</p><p class="at-profit-note">${esc(t('driver_help'))}</p></div></div>`;
+            <p class="at-profit-note">${esc(t('device_help'))}</p><p class="at-profit-note">${esc(t('driver_help'))}</p><p class="at-profit-note">${esc(t('office_help'))}</p></div></div>`;
         const form = body.querySelector('[data-add-device]');
-        form.mode.addEventListener('change', () => { const driver = form.mode.value === 'driver'; form.group_id.hidden = driver; form.vehicle_id.hidden = !driver; });
+        form.mode.addEventListener('change', () => { const driver = form.mode.value === 'driver'; form.group_id.hidden = driver || form.mode.value === 'office'; form.vehicle_id.hidden = !driver; });
         const showCode = (r) => {
             body.querySelector('[data-code]').innerHTML = `<div class="alert alert-success tfb-exec-code"><div>${esc(t('pairing_code'))}</div><strong>${esc(r.pairing_code.slice(0, 4))}-${esc(r.pairing_code.slice(4))}</strong>
                 <div class="small">${esc(t('code_valid', {until: r.expires_at.slice(11, 16)}))}</div></div>`;
@@ -121,8 +123,9 @@
             e.preventDefault();
             try {
                 const driver = e.target.mode.value === 'driver';
+                const office = e.target.mode.value === 'office';
                 const r = await api.post('/kiosk/devices', {name: e.target.name.value.trim(), mode: e.target.mode.value,
-                    group_id: driver ? null : (Number(e.target.group_id.value) || null), vehicle_id: driver ? (Number(e.target.vehicle_id.value) || null) : null});
+                    group_id: driver || office ? null : (Number(e.target.group_id.value) || null), vehicle_id: driver ? (Number(e.target.vehicle_id.value) || null) : null});
                 await devices();
                 showCode(r);
             } catch (err) { fail(err, e.target); }

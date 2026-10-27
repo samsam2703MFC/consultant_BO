@@ -3,7 +3,8 @@
  * Strona otwierana kodem QR z tabletu (…/kiosk/scan#t=…) : kod jest ważny chwilę (obecność na miejscu).
  * Pierwszy raz : nazwisko + PIN, telefon dostaje własny token (pamięć przeglądarki). Potem WEJŚCIE / WYJŚCIE :
  * pytania ustawione przez kierownika (np. « Jestem w odzieży roboczej ») do potwierdzenia i « OK, zatwierdzam »,
- * przy wyjściu podpis palcem. „To nie ja” zapomina telefon.
+ * przy wyjściu podpis palcem. „To nie ja” zapomina telefon. Osobisty kod QR z tabletu biurowego (osoba + dzień) :
+ * od razu PIN tej osoby przy pierwszym skanie ; telefon zarejestrowany na kogoś innego jest odrzucany.
  */
 (function () {
     'use strict';
@@ -36,6 +37,8 @@
     const t = (k, p) => { let s = labels[k] ?? k; for (const [a, b] of Object.entries(p || {})) s = s.split('{' + a + '}').join(String(b)); return s; };
     const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }));
     const fmt = (n) => Number(n).toLocaleString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {maximumFractionDigits: 2});
+    // Osobisty kod QR (tablet biurowy) : jeton z osobą (emp) — tylko do wyświetlenia, serwer sprawdza sam.
+    const personalQr = () => { try { return !!JSON.parse(atob(qr.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).emp; } catch (e) { return false; } };
 
     async function loadLabels() {
         const res = await fetch(`${root}/resources/lang/ui/${lang}/kiosk.json${VERSION ? '?v=' + encodeURIComponent(VERSION) : ''}`, {credentials: 'same-origin'});
@@ -95,6 +98,10 @@
         try {
             people = await api('GET', '/kiosk/phone/people');
         } catch (err) { return message(err.message, true); }
+        // Osobisty kod QR : jedna osoba — od razu jej PIN (bez PIN-u : prośba do kierownika).
+        if (personalQr() && people.length === 1) {
+            return people[0].has_pin ? renderPin(people[0].id, people[0].name, true) : message(t('no_pin_personal', {name: people[0].name}), true);
+        }
         const box = el.querySelector('[data-people]');
         const draw = (filter) => {
             const f = filter.trim().toLowerCase();
@@ -107,7 +114,7 @@
         box.addEventListener('click', (e) => { const b = e.target.closest('[data-person]'); if (b) renderPin(Number(b.dataset.person), b.dataset.name); });
     }
 
-    function renderPin(employeeId, name) {
+    function renderPin(employeeId, name, personal) {
         let pin = '';
         el.innerHTML = header() + `<section class="kiosk-card kiosk-pin"><h2>${esc(name)}</h2><p class="kiosk-muted">${esc(t('pin_help'))}</p>
             <div class="kiosk-dots" data-dots aria-hidden="true"></div><p class="kiosk-error" data-error></p>
@@ -135,7 +142,7 @@
                 el.querySelector('[data-error]').textContent = err.message;
             }
         });
-        el.querySelector('[data-cancel]').addEventListener('click', () => renderPeople());
+        el.querySelector('[data-cancel]').addEventListener('click', () => (personal ? message(t('scan_help')) : renderPeople()));
     }
 
     // --- Un geste : ENTRÉE / SORTIE ------------------------------------------------------------------------
@@ -146,6 +153,7 @@
             me = await api('GET', '/kiosk/phone/me');
         } catch (err) {
             if (['PHONE_UNAUTHENTICATED', 'PHONE_REVOKED'].includes(err.code)) { forget(); return renderPeople(); }
+            if (err.code === 'QR_OTHER_PERSON') return renderOtherPerson(err.message);
             return message(err.message, true);
         }
         store.set(NAME_KEY, me.employee.name);
@@ -163,6 +171,13 @@
             if ((me.questions?.[direction] || []).length) renderQuestions(me.questions[direction], direction);
             else clockTap(e.currentTarget, direction, []);
         });
+    }
+
+    // Osobisty kod QR innej osoby : ten telefon jest zarejestrowany na kogoś innego. Jeśli to jednak telefon osoby
+    // z kodu (nowy właściciel), zapomina poprzednią rejestrację i prosi o PIN osoby z kodu.
+    function renderOtherPerson(text) {
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-phone-msg"><p class="kiosk-error">${esc(text)}</p>
+            <button type="button" class="kiosk-btn" data-forget>${esc(t('register_me'))}</button></section>`;
     }
 
     // Pytania przy wejściu / wyjściu : dotknięcie potwierdza punkt, « OK, zatwierdzam » gdy obowiązkowe są potwierdzone.

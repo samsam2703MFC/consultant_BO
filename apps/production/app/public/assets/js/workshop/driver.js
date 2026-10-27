@@ -171,7 +171,7 @@
                 device = r.device_token;
                 paired = true;
                 store.set(DEVICE_KEY, device);
-                if (r.device.mode !== 'driver') { location.replace(root + '/kiosk'); return; }
+                if (r.device.mode !== 'driver') { location.replace(root + (r.device.mode === 'office' ? '/office' : '/kiosk')); return; }
                 toast(t('paired', {name: r.device.name}));
                 load();
             } catch (err) { el.querySelector('[data-error]').textContent = err.message; }
