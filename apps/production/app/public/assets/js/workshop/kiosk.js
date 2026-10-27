@@ -16,6 +16,8 @@
     const root = (el.dataset.root || '').replace(/\/$/, '');
     const DEVICE_KEY = 'tfb.kiosk.device';
     const LANG_KEY = 'tfb.lang';
+    // Tablette générique (atelier sans groupe, 27/10/2026) : le groupe touché à l'accueil, gardé sur l'appareil.
+    const GROUP_KEY = 'tfb.kiosk.group';
     const store = {
         get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
         set(k, v) { try { v === null ? window.localStorage.removeItem(k) : window.localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } },
@@ -27,6 +29,7 @@
     // le stockage local, le cookie suffit : la tablette reste appairée ; le jeton n'est jamais effacé par le client.
     let paired = !!device;
     let session = null; // {token, name, id, exp}
+    let group = Number(store.get(GROUP_KEY)) || null; // groupe choisi (tablette générique) : en-tête X-Kiosk-Group
     let longIdle = false; // ekrany produkcji / partii : zdjęcia i wpisywanie trwają dłużej
     let busy = false; // aparat lub OCR w toku : bez wylogowania
     let idleTimer = null;
@@ -62,6 +65,8 @@
         const headers = {'Accept': 'application/json', 'Accept-Language': lang, 'X-Device-Token': device || ''};
         if (body !== undefined) headers['Content-Type'] = 'application/json';
         if (withEmployee && session) headers['X-Employee-Token'] = session.token;
+        // Une tablette de groupe ignore cet en-tête ; une tablette générique y lit le groupe touché à l'accueil.
+        if (group) headers['X-Kiosk-Group'] = String(group);
         let res;
         try {
             res = await fetch(base + path, {method, headers, body: body === undefined ? undefined : JSON.stringify(body), credentials: 'same-origin'});
@@ -151,7 +156,8 @@
                 <p class="kiosk-muted">${esc(new Date().toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'long', day: 'numeric', month: 'long'}))}</p></div></div>
             <div class="kiosk-head-tools"><span class="kiosk-clock" data-clock>${new Date().toTimeString().slice(0, 5)}</span>
                 <button type="button" class="kiosk-chip" data-lang><span class="kiosk-lang-long">${esc(t('lang_switch'))}</span><span class="kiosk-lang-short" aria-hidden="true">${lang === 'pl' ? 'FR' : 'PL'}</span></button>
-                ${session ? `<span class="kiosk-who">${avatar(session.name)}<span class="kiosk-who-name">${esc(session.name)}</span></span>
+                ${session ? `<button type="button" class="kiosk-btn is-small kiosk-icon-btn" data-switch aria-label="${esc(t('switch_person'))}">${icon('users')}<span class="kiosk-btn-label">${esc(t('switch_person'))}</span></button>
+                <span class="kiosk-who">${avatar(session.name)}<span class="kiosk-who-name">${esc(session.name)}</span></span>
                 <button type="button" class="kiosk-btn is-small kiosk-icon-btn" data-logout aria-label="${esc(t('logout'))}">${icon('log-out')}<span class="kiosk-btn-label">${esc(t('logout'))}</span></button>` : ''}</div></header>`
             + (nav && session ? tabs(session.tab || 'clock') : '');
     }
@@ -221,10 +227,21 @@
         }
         // Tablet kierowcy i tablet biurowy : własna strona (trasa dnia ; dział → nazwisko → osobisty kod QR).
         if (deviceInfo.mode === 'driver' || deviceInfo.mode === 'office') { location.replace(root + '/' + deviceInfo.mode); return; }
-        const office = !deviceInfo.group_id;
+        // Tablette générique (27/10/2026) : groupe → personne → PIN, puis la production du groupe choisi.
+        const generic = !!deviceInfo.generic;
+        let groups = [];
+        if (generic) {
+            try { groups = await api('GET', '/kiosk/groups'); } catch (err) { groups = []; }
+            if (!el.isConnected) return;
+            if (group && !groups.some(g => g.id === group)) setGroup(null);
+            if (!group) return renderGroups(groups);
+        }
+        const office = !generic && !deviceInfo.group_id;
         const now = new Date();
         const widgetHead = (ic, cls, title, extra) => `<header class="kiosk-widget-head"><span class="kiosk-widget-icon ${cls}">${icon(ic)}</span><h2>${title}</h2>${extra || ''}</header>`;
-        const peopleWidget = `<section class="kiosk-widget is-team" data-team-widget>${widgetHead('users', 'is-soft', esc(t(office ? 'office_people' : 'home_people_title')), '<span class="kiosk-widget-meta" data-present></span>')}
+        const groupBar = generic ? `<nav class="kiosk-groupbar" aria-label="${esc(t('groups_title'))}">${groups.map(g => `<button type="button" class="kiosk-group-chip ${g.id === group ? 'is-on' : ''}" data-group="${g.id}" style="--g:${/^#[0-9a-f]{6}$/i.test(g.color || '') ? g.color : '#8D1D2C'}">
+                <span class="kiosk-group-dot"></span>${esc(g.name)}<small>${esc(t('group_present', {n: g.present, total: g.people}))}</small></button>`).join('')}</nav>` : '';
+        const peopleWidget = `<section class="kiosk-widget is-team" data-team-widget>${widgetHead('users', 'is-soft', esc(t(office ? 'office_people' : 'home_people_title')), '<span class="kiosk-widget-meta" data-present></span>')}${groupBar}
                 <div class="kiosk-apps" data-people><p class="kiosk-muted">${esc(t('loading'))}</p></div>
                 <p class="kiosk-widget-hint" data-team-hint>${esc(t('home_team_hint'))}</p></section>`;
         const qrWidget = `<section class="kiosk-widget is-qr" data-qr-card hidden><canvas data-qr width="220" height="220" role="img" aria-label="${esc(t('qr_title'))}"></canvas>
@@ -272,6 +289,7 @@
             } catch (e) { toast(t('nfc_error'), true); }
         });
         el.querySelectorAll('[data-week-open]').forEach(b => b.addEventListener('click', () => renderWeek(null, false)));
+        el.querySelectorAll('[data-group]').forEach(b => b.addEventListener('click', () => { setGroup(Number(b.dataset.group)); renderHome(); }));
         drawQr();
         const [people, w, dev] = await Promise.all([
             api('GET', '/kiosk/people').catch((err) => { if (!err.code) toast(err.message, true); return null; }),
@@ -333,6 +351,36 @@
                 teamWidget.scrollIntoView({behavior: 'smooth', block: 'nearest'});
             });
         }
+    }
+
+    function setGroup(id) {
+        group = id || null;
+        store.set(GROUP_KEY, group ? String(group) : null);
+    }
+
+    // Tablette générique : les groupes de production en grand ; un toucher → les personnes du groupe → PIN.
+    function renderGroups(groups) {
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-groups"><h2>${esc(t('groups_title'))}</h2><p class="kiosk-muted">${esc(t('groups_help'))}</p>
+            <div class="kiosk-group-grid">${groups.length ? groups.map(g => `<button type="button" class="kiosk-group-tile" data-group="${g.id}" style="--g:${/^#[0-9a-f]{6}$/i.test(g.color || '') ? g.color : '#8D1D2C'}">
+                <span class="kiosk-group-name">${esc(g.name)}</span><small>${esc(t('group_present', {n: g.present, total: g.people}))}</small></button>`).join('')
+                : `<p class="kiosk-muted">${esc(t('groups_none'))}</p>`}</div></section>`;
+        el.querySelectorAll('[data-group]').forEach(b => b.addEventListener('click', () => { setGroup(Number(b.dataset.group)); renderHome(); }));
+    }
+
+    // Changer de personne sans quitter l'écran (27/10/2026) : les présents du groupe, un toucher → PIN → même onglet.
+    async function renderSwitch() {
+        const back = session ? session.tab || 'clock' : 'clock';
+        let people = [];
+        try { people = await api('GET', '/kiosk/people', undefined, true); } catch (err) { if (!err.code) toast(err.message, true); }
+        const others = people.filter(p => p.clocked_in && (!session || p.id !== session.id));
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-switch"><h2>${esc(t('switch_title'))}</h2><p class="kiosk-muted">${esc(t('switch_help'))}</p>
+            <div class="kiosk-apps">${others.length ? others.map(p => `<button type="button" class="kiosk-app-person is-in ${p.has_pin ? '' : 'is-nopin'}" data-person="${p.id}" data-name="${esc(p.name)}" ${p.has_pin ? '' : 'disabled'}>
+                ${avatar(p.name, 'is-app')}<span class="kiosk-app-name">${esc(p.name)}</span><small>${esc(p.has_pin ? t('home_on_shift') : t('home_no_pin_short'))}</small></button>`).join('')
+                : `<p class="kiosk-muted">${esc(t('switch_none'))}</p>`}</div>
+            <button type="button" class="kiosk-link" data-switch-cancel>${esc(t('cancel'))}</button></section>`;
+        el.querySelector('[data-switch-cancel]').addEventListener('click', () => openTab(back));
+        el.querySelector('.kiosk-apps').addEventListener('click', (e) => { const b = e.target.closest('[data-person]'); if (b && !b.disabled) renderPin({employee_id: Number(b.dataset.person), name: b.dataset.name, tab: back}); });
+        resetIdle();
     }
 
     // Kod QR wejścia / wyjścia telefonem : nowy co refresh_s sekund, tylko na ekranie głównym.
@@ -451,7 +499,12 @@
             ok.disabled = true;
             try {
                 const r = await api('POST', '/kiosk/identify', {...(who.badge ? {badge: who.badge} : {employee_id: who.employee_id}), pin});
-                session = {token: r.employee_token, id: r.employee.id, name: r.employee.name, exp: Date.now() + r.expires_in * 1000};
+                const prev = session;
+                session = {token: r.employee_token, id: r.employee.id, name: r.employee.name, exp: Date.now() + r.expires_in * 1000, group: r.group_id || null};
+                // Badge passé avant de toucher un groupe : la tablette générique suit le groupe principal de la personne.
+                if (deviceInfo && deviceInfo.generic && !group && r.group_id) setGroup(r.group_id);
+                // Bascule entre présents : l'onglet où l'on encodait, avec ce que la tablette sait déjà du groupe.
+                if (who.tab && prev) { session.machines = prev.machines; session.dev = prev.dev; openTab(who.tab); return; }
                 // Widget « Nouveaux produits » : directement la fiche du produit touché.
                 if (afterLogin) { const id = afterLogin; afterLogin = null; session.dev = 1; session.tab = 'dev'; renderDevProduct(id); } else renderMe();
             } catch (err) {
@@ -473,9 +526,10 @@
             if (e.key === 'Backspace') { pin = pin.slice(0, -1); dots(); }
             if (e.key === 'Enter') submit();
         });
-        el.querySelector('[data-cancel]').addEventListener('click', () => renderHome());
+        // Bascule annulée : retour à l'onglet de la personne encore connectée.
+        el.querySelector('[data-cancel]').addEventListener('click', () => (who.tab && session ? openTab(who.tab) : renderHome()));
         window.clearTimeout(idleTimer);
-        idleTimer = window.setTimeout(() => renderHome(), 30000);
+        idleTimer = window.setTimeout(() => (who.tab && session ? logout(t('idle_logout')) : renderHome()), 30000);
     }
 
     // --- Menu osoby : Czas pracy / Produkcja / Kontrola jakości / Receptury ---------------------------
@@ -2225,6 +2279,7 @@
         const tab = e.target.closest('[data-tab]');
         if (tab && session) { stopScan(); openTab(tab.dataset.tab); return; }
         if (e.target.closest('[data-logout]')) logout();
+        if (e.target.closest('[data-switch]') && session) { stopScan(); renderSwitch(); }
     });
     // Espace réservé au menu fixe en bas (toast au-dessus du menu).
     new MutationObserver(() => el.classList.toggle('has-nav', !!el.querySelector('.kiosk-tabs'))).observe(el, {childList: true});

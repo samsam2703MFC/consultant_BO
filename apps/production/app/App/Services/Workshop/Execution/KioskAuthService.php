@@ -47,13 +47,19 @@ final class KioskAuthService
     ) {
     }
 
-    public function context(string $deviceToken, ?string $employeeToken, string $requestId, Translator $translator): ApiContext
+    /**
+     * Contexte d'un appel de tablette. Le groupe : celui de la tablette ; sur une tablette générique (atelier sans groupe,
+     * 27/10/2026), celui que la personne a choisi en s'identifiant (jeton, claim grp), sinon le groupe touché à l'accueil
+     * (en-tête X-Kiosk-Group, groupe actif) — la production, le stock, les recettes suivent alors ce groupe.
+     */
+    public function context(string $deviceToken, ?string $employeeToken, string $requestId, Translator $translator, ?int $chosenGroup = null): ApiContext
     {
         if ($deviceToken === '') throw new ApiException('DEVICE_UNAUTHENTICATED', 401);
         $device = $this->repo->deviceByToken(hash('sha256', $deviceToken)) ?? throw new ApiException('DEVICE_UNAUTHENTICATED', 401);
         if (!(int) $device['active']) throw new ApiException('DEVICE_DISABLED', 403);
         $this->repo->touchDevice((int) $device['id']);
         $employeeId = null;
+        $tokenGroup = null;
         if ($employeeToken !== null) {
             if ($employeeToken === '') throw new ApiException('EMPLOYEE_UNAUTHENTICATED', 401);
             try {
@@ -66,9 +72,19 @@ final class KioskAuthService
                 throw new ApiException('EMPLOYEE_UNAUTHENTICATED', 401);
             }
             $employeeId = (int) $employee['id'];
+            $tokenGroup = isset($claims['grp']) && (int) $claims['grp'] > 0 ? (int) $claims['grp'] : null;
         }
         return new ApiContext($requestId, $translator, null, [], ['prod.kiosk' => true], [],
-            deviceId: (int) $device['id'], employeeId: $employeeId, deviceGroupId: $device['id_group'] !== null ? (int) $device['id_group'] : null);
+            deviceId: (int) $device['id'], employeeId: $employeeId, deviceGroupId: $this->groupOf($device, $tokenGroup, $chosenGroup));
+    }
+
+    /** Le groupe d'un appel : celui de la tablette, sinon (tablette générique) celui du jeton, sinon celui touché à l'accueil. */
+    private function groupOf(array $device, ?int $tokenGroup, ?int $chosenGroup): ?int
+    {
+        if ($device['id_group'] !== null) return (int) $device['id_group'];
+        if (($device['mode'] ?? 'atelier') !== 'atelier') return null;
+        if ($tokenGroup !== null) return $tokenGroup;
+        return $chosenGroup !== null && $this->repo->groupActive($chosenGroup) ? $chosenGroup : null;
     }
 
     // --- Responsable : tablettes et identifiants ----------------------------------------------------
@@ -186,7 +202,10 @@ final class KioskAuthService
     public function device(ApiContext $context): array
     {
         $d = $this->repo->find((int) $context->deviceId);
-        return ['id' => (int) $context->deviceId, 'name' => $d['name'] ?? null, 'group_id' => $context->deviceGroupId, 'mode' => $d['mode'] ?? 'atelier',
+        $mode = $d['mode'] ?? 'atelier';
+        // generic : tablette de production sans groupe — groupe → personne → PIN, puis la production du groupe choisi.
+        return ['id' => (int) $context->deviceId, 'name' => $d['name'] ?? null, 'group_id' => $context->deviceGroupId, 'mode' => $mode,
+            'generic' => $mode === 'atelier' && ($d['id_group'] ?? null) === null,
             'vehicle_id' => isset($d['id_carrier_vehicle']) ? (int) $d['id_carrier_vehicle'] : null];
     }
 
@@ -222,16 +241,43 @@ final class KioskAuthService
     public function people(ApiContext $context): array
     {
         $device = $this->repo->find((int) $context->deviceId);
-        $rows = ($device['mode'] ?? 'atelier') === 'driver'
-            ? ($this->repo->people(null, self::DRIVER_POSITION) ?: $this->repo->people(null))
-            : $this->repo->people($context->deviceGroupId);
-        return array_map(fn($p) => ['id' => (int) $p['id'], 'name' => $p['name'], 'has_pin' => (bool) $p['has_pin'], 'clocked_in' => $p['clocked_in_at'] !== null], $rows);
+        $drivers = [];
+        if (($device['mode'] ?? 'atelier') === 'driver') {
+            // Tablette chauffeur (27/10/2026) : tout le personnel, les chauffeurs (poste Kierowca) en tête.
+            foreach ($this->repo->people(null, self::DRIVER_POSITION) as $p) $drivers[(int) $p['id']] = $p;
+            $others = array_filter($this->repo->people(null), fn($p) => !isset($drivers[(int) $p['id']]));
+            $rows = array_merge(array_values($drivers), array_values($others));
+        } else {
+            $rows = $this->repo->people($context->deviceGroupId);
+        }
+        return array_map(fn($p) => ['id' => (int) $p['id'], 'name' => $p['name'], 'has_pin' => (bool) $p['has_pin'], 'clocked_in' => $p['clocked_in_at'] !== null,
+            'driver' => isset($drivers[(int) $p['id']])], $rows);
+    }
+
+    /**
+     * Groupes de production proposés à l'accueil d'une tablette générique (27/10/2026) : nom dans la langue de la tablette,
+     * couleur, personnes et présents. Une tablette de groupe ne propose que le sien.
+     */
+    public function groups(ApiContext $context): array
+    {
+        $device = $this->repo->find((int) $context->deviceId);
+        $fixed = isset($device['id_group']) && $device['id_group'] !== null ? (int) $device['id_group'] : null;
+        $fr = $context->translator->lang() === 'fr';
+        $out = [];
+        foreach ($this->repo->kioskGroups() as $g) {
+            if ($fixed !== null && (int) $g['id'] !== $fixed) continue;
+            $out[] = ['id' => (int) $g['id'], 'name' => $fr && trim((string) $g['name_fr']) !== '' ? $g['name_fr'] : $g['name_pl'],
+                'color' => $g['color'], 'people' => (int) $g['people'], 'present' => (int) $g['present']];
+        }
+        return $out;
     }
 
     public function identify(array $body, ApiContext $context): array
     {
         $employee = $this->authenticateEmployee($body, (int) $context->deviceId, $context);
-        return $this->employeeToken($employee, (int) $context->deviceId);
+        // Tablette générique : le groupe touché à l'accueil, à défaut le groupe principal de la personne (badge).
+        return $this->employeeToken($employee, (int) $context->deviceId, $context->deviceGroupId
+            ?? (isset($employee['id_primary_group']) && $employee['id_primary_group'] !== null ? (int) $employee['id_primary_group'] : null));
     }
 
     /**
@@ -242,21 +288,25 @@ final class KioskAuthService
     {
         $employee = $this->repo->employee((int) $context->employeeId);
         if ($employee === null || !(int) $employee['active']) throw new ApiException('EMPLOYEE_UNAUTHENTICATED', 401);
-        return $this->employeeToken($employee, (int) $context->deviceId);
+        return $this->employeeToken($employee, (int) $context->deviceId, $context->deviceGroupId);
     }
 
-    private function employeeToken(array $employee, int $deviceId): array
+    private function employeeToken(array $employee, int $deviceId, ?int $groupId = null): array
     {
         $now = time();
+        $device = $this->repo->find($deviceId);
+        // Tablette générique : le groupe choisi voyage dans le jeton (claim grp), la tablette de groupe n'en a pas besoin.
+        $claimGroup = ($device['mode'] ?? 'atelier') === 'atelier' && ($device['id_group'] ?? null) === null && $groupId !== null ? ['grp' => $groupId] : [];
         // Tablette chauffeur : la session dure la tournée (driver.session_hours) ; atelier : jeton court prolongé en activité.
-        $ttl = ($this->repo->find($deviceId)['mode'] ?? 'atelier') === 'driver'
+        $ttl = ($device['mode'] ?? 'atelier') === 'driver'
             ? max(1, min(24, (int) $this->params->get('driver.session_hours', '12'))) * 3600
             : max(30, (int) $this->params->get('kiosk.employee_token_ttl_s', '120'));
         return [
             'employee_token' => $this->jwt()->encode(['iss' => self::AUDIENCE, 'aud' => self::AUDIENCE, 'sub' => (string) $employee['id'], 'dev' => $deviceId,
-                'iat' => $now, 'nbf' => $now, 'exp' => $now + $ttl, 'jti' => bin2hex(random_bytes(8))]),
+                'iat' => $now, 'nbf' => $now, 'exp' => $now + $ttl, 'jti' => bin2hex(random_bytes(8))] + $claimGroup),
             'expires_in' => $ttl,
             'employee' => ['id' => (int) $employee['id'], 'name' => $employee['name']],
+            'group_id' => $claimGroup['grp'] ?? (($device['id_group'] ?? null) !== null ? (int) $device['id_group'] : null),
         ];
     }
 

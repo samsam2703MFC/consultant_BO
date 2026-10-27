@@ -112,6 +112,31 @@ final class DriverService
     }
 
     /** Start albo koniec trasy (kierowca z nazwiska). */
+    /**
+     * Tournées d'un jour (pojazdy z klientami), sans chauffeur identifié : la tablette les propose d'abord, puis le
+     * chauffeur et son PIN. Même jour par défaut que day() (le trajet ouvert d'hier passé minuit) ; tournée de la tablette
+     * proposée d'office.
+     */
+    public function tours(ApiContext $context, ?string $date): array
+    {
+        $device = $this->driverDevice($context);
+        $default = $device['id_carrier_vehicle'] !== null ? (int) $device['id_carrier_vehicle'] : null;
+        if ($date === null) {
+            $open = $default !== null ? $this->deliveries->openRun($default, date('Y-m-d', strtotime('-1 day'))) : null;
+            $date = $open['ship_date'] ?? date('Y-m-d');
+        }
+        $this->checkDate($date);
+        $plan = $this->logistics->day($date);
+        $fleet = array_values(array_filter($plan['fleet'], fn($v) => $v['customers'] || (int) $v['id'] === $default));
+        return [
+            'date' => $date,
+            'dates' => array_map(fn($d) => date('Y-m-d', strtotime($date . " {$d} day")), [-1, 0, 1]),
+            'default_vehicle_id' => $default,
+            'tours' => array_map(fn($v) => ['id' => (int) $v['id'], 'label' => $v['label'], 'carrier' => $v['carrier'], 'customers' => count($v['customers']),
+                'pallets' => $v['pallets'], 'departure' => $v['departure']], $fleet),
+        ];
+    }
+
     public function run(ApiContext $context, array $body): array
     {
         $device = $this->driverDevice($context);

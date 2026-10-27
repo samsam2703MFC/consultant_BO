@@ -576,5 +576,13 @@
   "no_pin_personal": "{name} : brak PIN-u — poproś kierownika o PIN, potem zeskanuj kod ponownie.",
   "register_me": "To mój telefon — zarejestruj go na mnie (PIN)",
   "sign_in_here": "Podpisz się palcem w ramce : potwierdzam wejście (lista obecności).",
-  "sign_out_here": "Podpisz się palcem w ramce : potwierdzam dzisiejsze godziny pracy."
+  "sign_out_here": "Podpisz się palcem w ramce : potwierdzam dzisiejsze godziny pracy.",
+  "switch_person": "Zmień osobę",
+  "switch_title": "Kto teraz wprowadza dane?",
+  "switch_help": "Osoby z grupy obecne w pracy. Dotknij swojego nazwiska i wpisz PIN : wracasz do tego samego ekranu.",
+  "switch_none": "Nikt inny z grupy nie jest obecny.",
+  "groups_title": "Wybierz swoją grupę",
+  "groups_help": "Dotknij swojej grupy, potem nazwiska i wpisz PIN.",
+  "groups_none": "Brak aktywnych grup produkcyjnych.",
+  "group_present": "{n} obecnych z {total}"
 }

@@ -94,24 +94,46 @@ final class ExecutionRepository extends WorkshopRepository
         );
     }
 
+    /** Groupe de production actif (tablette générique : le groupe touché à l'accueil). */
+    public function groupActive(int $id): bool
+    {
+        return (bool) $this->all('SELECT 1 AS ok FROM n_prod_group WHERE id = ? AND active = 1', [$id]);
+    }
+
     /**
-     * Tablette de bureau : toutes les personnes actives, par section (production_sections) ; le profil de production
+     * Groupes de production actifs pour l'accueil d'une tablette générique : personnes du groupe (groupe principal ou
+     * équipe active du groupe, comme people()) et présentes (entrée sans sortie).
+     */
+    public function kioskGroups(): array
+    {
+        $member = 'e.active = 1 AND (e.id_primary_group = g.id OR e.id IN (SELECT m.id_employee FROM n_prod_team_member m JOIN n_prod_team t ON t.id = m.id_team WHERE t.id_group = g.id AND t.active = 1))';
+        return $this->all(
+            "SELECT g.id, g.name_pl, g.name_fr, g.color,
+                    (SELECT COUNT(*) FROM n_prod_employee e WHERE {$member}) AS people,
+                    (SELECT COUNT(*) FROM n_prod_employee e WHERE {$member} AND EXISTS (SELECT 1 FROM n_prod_clock k WHERE k.id_employee = e.id AND k.clock_out IS NULL)) AS present
+             FROM n_prod_group g WHERE g.active = 1 ORDER BY g.sort_order, g.name_pl"
+        );
+    }
+
+    /**
+     * Tablette de bureau : tout le personnel actif, par section (production_sections) — les personnes sans section aussi
+     * (section 0, en dernier ; 27/10/2026 : « la tablette de bureau doit avoir tout le personnel ») ; le profil de production
      * (employee_id) peut manquer, il est créé au premier QR. PIN, téléphones, entrée en cours et sortie du jour.
      */
     public function officePeople(string $day): array
     {
         return $this->all(
-            "SELECT s.id AS section_id, s.name AS section_name, pe.id AS person_id, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name, e.id AS employee_id,
+            "SELECT COALESCE(s.id, 0) AS section_id, s.name AS section_name, pe.id AS person_id, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name, e.id AS employee_id,
                     c.pin_hash IS NOT NULL AS has_pin,
                     (SELECT COUNT(*) FROM n_prod_phone p WHERE p.id_employee = e.id AND p.revoked_at IS NULL) AS phones,
                     (SELECT k.clock_in FROM n_prod_clock k WHERE k.id_employee = e.id AND k.clock_out IS NULL ORDER BY k.clock_in DESC LIMIT 1) AS clocked_in_at,
                     (SELECT MAX(k.clock_out) FROM n_prod_clock k WHERE k.id_employee = e.id AND k.clock_out >= ?) AS left_at
              FROM production_employee pe
-             JOIN production_sections s ON s.id = pe.id_section
+             LEFT JOIN production_sections s ON s.id = pe.id_section
              LEFT JOIN n_prod_employee e ON e.id_production_employee = pe.id
              LEFT JOIN n_prod_employee_credential c ON c.id_employee = e.id
              WHERE COALESCE(e.active, 1) = 1
-             ORDER BY s.id, pe.surname, pe.name",
+             ORDER BY s.id IS NULL, s.id, pe.surname, pe.name",
             [$day . ' 00:00:00']
         );
     }

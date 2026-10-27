@@ -776,3 +776,19 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .kiosk-confirm-sign { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 .kiosk-confirm-sign .kiosk-sign { height: 200px; }
 .kiosk-phone .kiosk-confirm-sign .kiosk-sign { height: 180px; }
+
+/* Tablette générique (27/10/2026) : groupes en grandes tuiles, rangée de groupes au-dessus de l'équipe, bascule entre présents. */
+.kiosk-group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-top: 14px; }
+.kiosk-group-tile { --g: var(--k-primary); border: 1px solid var(--k-line); border-left: 8px solid var(--g); border-radius: var(--k-radius-lg); background: var(--k-surface); color: var(--k-text);
+  min-height: 110px; padding: 18px 16px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 6px; text-align: left; font: inherit; cursor: pointer; }
+.kiosk-group-tile:active { background: var(--k-fill); }
+.kiosk-group-name { font-family: var(--k-font-display); font-size: 1.35rem; line-height: 1.15; }
+.kiosk-group-tile small, .kiosk-group-chip small { color: var(--k-muted); font-size: .8rem; }
+.kiosk-groupbar { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 10px; }
+.kiosk-group-chip { --g: var(--k-primary); flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--k-line-2); border-radius: 999px; background: var(--k-surface);
+  color: var(--k-text); padding: 8px 14px; font: inherit; cursor: pointer; }
+.kiosk-group-chip small { margin-left: 2px; }
+.kiosk-group-chip.is-on { border-color: var(--g); box-shadow: inset 0 0 0 1px var(--g); background: var(--k-primary-50); }
+.kiosk-group-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--g); }
+.kiosk-switch .kiosk-apps { margin: 14px 0; }
+.kiosk-app-person:disabled { opacity: .45; }

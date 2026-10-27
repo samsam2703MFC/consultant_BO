@@ -38,5 +38,6 @@
   "hello": "Bonjour, {name} !",
   "bye": "Au revoir, {name} !",
   "done_back": "Retour à l’accueil…",
-  "ok": "OK"
+  "ok": "OK",
+  "no_section": "Sans service"
 }
