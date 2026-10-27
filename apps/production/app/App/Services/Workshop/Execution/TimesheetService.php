@@ -32,7 +32,11 @@ final class TimesheetService
         $to = date('Y-m-01 00:00:00', strtotime($from . ' +1 month'));
         $signatures = $this->repo->signatures($employeeId);
         $byClock = [];
-        foreach ($signatures as $s) if ($s['purpose'] === 'clock_out') $byClock[(int) $s['ref']] = $s;
+        $inByClock = [];
+        foreach ($signatures as $s) {
+            if ($s['purpose'] === 'clock_out') $byClock[(int) $s['ref']] = $s;
+            if ($s['purpose'] === 'clock_in') $inByClock[(int) $s['ref']] = $s;
+        }
         $monthly = array_values(array_filter($signatures, fn($s) => $s['purpose'] === 'timesheet_month' && $s['ref'] === $month));
         $days = [];
         $clocks = $this->repo->clocks($from, $to, $employeeId);
@@ -46,6 +50,7 @@ final class TimesheetService
                 'hours' => round(max(0, $end - $in) / 3600, 2), 'night_hours' => round(self::nightSeconds($in, $end) / 3600, 2),
                 'open' => $out === null, 'source' => $k['source'], 'note' => $k['note'], 'corrected' => $k['corrected_at'] !== null,
                 'signature_id' => isset($byClock[(int) $k['id']]) ? (int) $byClock[(int) $k['id']]['id'] : null,
+                'signature_in_id' => isset($inByClock[(int) $k['id']]) ? (int) $inByClock[(int) $k['id']]['id'] : null,
                 'answers' => self::answers($answers[(int) $k['id']] ?? []),
             ];
         }
@@ -60,6 +65,7 @@ final class TimesheetService
                 'days' => count(array_unique(array_column($days, 'date'))),
                 'open' => count($days) - count($closed),
                 'signed' => count(array_filter($days, fn($d) => $d['signature_id'] !== null)),
+                'signed_in' => count(array_filter($days, fn($d) => $d['signature_in_id'] !== null)),
             ],
             'month_signature' => $monthly ? ['id' => (int) end($monthly)['id'], 'signed_at' => end($monthly)['signed_at'], 'sha256' => end($monthly)['sha256']] : null,
         ];

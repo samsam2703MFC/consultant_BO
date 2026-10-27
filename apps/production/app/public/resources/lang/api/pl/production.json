@@ -172,6 +172,7 @@
     "INVALID_IMAGE": "Pole „{field}” musi być obrazem (PNG albo JPEG).",
     "IMAGE_TOO_LARGE": "Pole „{field}”: obraz jest za duży (maks. {max_kb} KB).",
     "SIGNATURE_REF_INVALID": "Podpis nie odnosi się do Twojego wpisu.",
+    "SIGNATURE_REQUIRED": "Podpisz się palcem w polu podpisu, potem zatwierdź.",
     "INVALID_UUID": "Nieprawidłowy identyfikator UUID.",
     "INVALID_MONTH": "Miesiąc w formacie RRRR-MM.",
     "PALLET_OVER_LAYERS": "Więcej kartonów niż warstwy × kartony na warstwę (maks. {max}).",

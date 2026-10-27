@@ -772,3 +772,7 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
     .kv-plan { flex-wrap: wrap; }
 }
 @media (max-width: 600px) { .kv-encode { grid-template-columns: minmax(0, 1fr); } .kv-cats { flex-direction: row; overflow-x: auto; } .kv-cat { flex: 0 0 auto; } .kv-sum { gap: 12px; } }
+/* Écran de validation de l'entrée / sortie : signature au doigt sous les questions (obligatoire, kiosk.signature_on_clock_in / _out). */
+.kiosk-confirm-sign { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.kiosk-confirm-sign .kiosk-sign { height: 200px; }
+.kiosk-phone .kiosk-confirm-sign .kiosk-sign { height: 180px; }

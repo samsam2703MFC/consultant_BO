@@ -6,7 +6,7 @@
   "offline": "Brak połączenia z serwerem.",
   "offline_retry": "Brak sieci — dotknij jeszcze raz (nic nie zostanie zapisane podwójnie).",
   "pair_title": "Sparuj tablet",
-  "pair_help": "Wpisz 8-znakowy kod parowania z ERP (Produkcja → Tablet produkcji → Zarządzanie). Tablet pozostaje sparowany — także po wyczyszczeniu danych przeglądarki.",
+  "pair_help": "Wpisz 8-znakowy kod parowania z ERP (Tablety → Zarządzanie). Tablet pozostaje sparowany — także po wyczyszczeniu danych przeglądarki.",
   "pair_code": "Kod parowania",
   "pair": "Sparuj",
   "paired": "Tablet sparowany: {name}",
@@ -574,5 +574,7 @@
   "kv_no_max": "brak stanu maks.",
   "kv_cap_orders": "zamówienia ponad stan",
   "no_pin_personal": "{name} : brak PIN-u — poproś kierownika o PIN, potem zeskanuj kod ponownie.",
-  "register_me": "To mój telefon — zarejestruj go na mnie (PIN)"
+  "register_me": "To mój telefon — zarejestruj go na mnie (PIN)",
+  "sign_in_here": "Podpisz się palcem w ramce : potwierdzam wejście (lista obecności).",
+  "sign_out_here": "Podpisz się palcem w ramce : potwierdzam dzisiejsze godziny pracy."
 }

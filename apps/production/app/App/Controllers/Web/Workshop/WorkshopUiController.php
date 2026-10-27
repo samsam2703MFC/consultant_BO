@@ -90,7 +90,7 @@ class WorkshopUiController extends BaseController
     }
 
     /**
-     * Tablet produkcji › Zatwierdzenia produkcji : dni zatwierdzone przez zespoły na tabletach (linie, straty ze
+     * Tablety › Zatwierdzenia produkcji : dni zatwierdzone przez zespoły na tabletach (linie, straty ze
      * zdjęciami) ; kierownik produkcji poprawia ilość zrobioną i anuluje straty (tablet po zatwierdzeniu tylko czyta).
      */
     public function productionDays()
@@ -134,7 +134,7 @@ class WorkshopUiController extends BaseController
             return;
         }
         $images = [];
-        $ids = array_filter([...array_column($sheet['days'], 'signature_id'), $sheet['month_signature']['id'] ?? null]);
+        $ids = array_filter([...array_column($sheet['days'], 'signature_id'), ...array_column($sheet['days'], 'signature_in_id'), $sheet['month_signature']['id'] ?? null]);
         foreach ($ids as $id) {
             $png = $this->timesheets->signatureImage((int) $id);
             if ($png !== null) $images[$id] = 'data:image/png;base64,' . base64_encode($png);

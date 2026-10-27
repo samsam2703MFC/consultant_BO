@@ -11574,7 +11574,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Sens déduit s'il est absent. client_uuid : rejouable sans doublon (tablette hors ligne). Une sortie ferme les temps d'opération ouverts.",
+                "description": "Sens déduit s'il est absent. client_uuid : rejouable sans doublon (tablette hors ligne). Une sortie ferme les temps d'opération ouverts. signature (PNG au doigt) obligatoire selon kiosk.signature_on_clock_in / _out (signature.in / signature.out de /kiosk/me), sinon 422 SIGNATURE_REQUIRED ; enregistrée avec le pointage (clock_in / clock_out).",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -20418,6 +20418,10 @@
                                 }
                             }
                         }
+                    },
+                    "signature": {
+                        "type": "string",
+                        "description": "data:image/png;base64,… — signature au doigt dans l'écran de validation (obligatoire selon kiosk.signature_on_clock_in / _out)"
                     }
                 }
             },
@@ -20573,8 +20577,12 @@
                     "clock": {
                         "$ref": "#/components/schemas/Clock"
                     },
-                    "signature_required": {
+                    "signed": {
                         "type": "boolean"
+                    },
+                    "signature_required": {
+                        "type": "boolean",
+                        "description": "Toujours false : la signature se donne avec le pointage"
                     }
                 }
             },
@@ -20691,6 +20699,18 @@
                     "signature_on_clock_out": {
                         "type": "boolean"
                     },
+                    "signature": {
+                        "type": "object",
+                        "properties": {
+                            "in": {
+                                "type": "boolean"
+                            },
+                            "out": {
+                                "type": "boolean"
+                            }
+                        },
+                        "description": "Signature obligatoire à l'entrée / à la sortie"
+                    },
                     "idle_logout_s": {
                         "type": "integer"
                     },
@@ -20755,6 +20775,7 @@
                     "purpose": {
                         "type": "string",
                         "enum": [
+                            "clock_in",
                             "clock_out",
                             "timesheet_month",
                             "operation"
@@ -22897,6 +22918,18 @@
                     },
                     "signature_on_clock_out": {
                         "type": "boolean"
+                    },
+                    "signature": {
+                        "type": "object",
+                        "properties": {
+                            "in": {
+                                "type": "boolean"
+                            },
+                            "out": {
+                                "type": "boolean"
+                            }
+                        },
+                        "description": "Signature obligatoire à l'entrée / à la sortie"
                     },
                     "questions": {
                         "$ref": "#/components/schemas/ClockQuestions"

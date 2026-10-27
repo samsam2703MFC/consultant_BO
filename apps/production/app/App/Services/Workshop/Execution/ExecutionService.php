@@ -44,12 +44,12 @@ final class ExecutionService
         $now ??= time();
         $employee = $this->repo->employee((int) $context->employeeId);
         $open = $this->repo->openClock((int) $context->employeeId);
-        $signOnOut = $this->params->get('kiosk.signature_on_clock_out', '1') === '1';
         return [
             'employee' => ['id' => (int) $employee['id'], 'name' => $employee['name']],
             'clocked_in' => $open !== null,
             'clock' => $open ? $this->clockRow($open, $now) : null,
-            'signature_on_clock_out' => $signOnOut,
+            'signature_on_clock_out' => $this->signatureRequired('out'),
+            'signature' => $this->signatureRules(),
             'idle_logout_s' => max(15, (int) $this->params->get('kiosk.idle_logout_s', '45')),
             'questions' => $this->questions->forKiosk($context->translator->lang() === 'fr'),
             'operations' => $this->operations($context, $now),
@@ -67,9 +67,21 @@ final class ExecutionService
             'employee' => ['id' => (int) $employee['id'], 'name' => $employee['name']],
             'clocked_in' => $open !== null,
             'clock' => $open ? $this->clockRow($open, $now) : null,
-            'signature_on_clock_out' => $this->params->get('kiosk.signature_on_clock_out', '1') === '1',
+            'signature_on_clock_out' => $this->signatureRequired('out'),
+            'signature' => $this->signatureRules(),
             'questions' => $this->questions->forKiosk($context->translator->lang() === 'fr'),
         ];
+    }
+
+    /** Signature obligatoire à l'entrée (liste de présence) et à la sortie (heures) : kiosk.signature_on_clock_in / _out. */
+    public function signatureRules(): array
+    {
+        return ['in' => $this->signatureRequired('in'), 'out' => $this->signatureRequired('out')];
+    }
+
+    private function signatureRequired(string $direction): bool
+    {
+        return $this->params->get($direction === 'in' ? 'kiosk.signature_on_clock_in' : 'kiosk.signature_on_clock_out', '1') === '1';
     }
 
     /** Opérations du jour et des 24 h à venir (et en cours) des groupes de la personne et de la tablette. */
@@ -91,7 +103,7 @@ final class ExecutionService
     public function clock(array $body, ApiContext $context, ?int $now = null): array
     {
         $now ??= time();
-        $v = (new Validator($body))->only(['direction', 'client_uuid', 'answers'])->choice('direction', ['in', 'out'], false)
+        $v = (new Validator($body))->only(['direction', 'client_uuid', 'answers', 'signature'])->choice('direction', ['in', 'out'], false)
             ->string('client_uuid', 36, false, true, '/^[0-9a-fA-F-]{36}$/', 'INVALID_UUID');
         $v->throwIfInvalid();
         $c = $v->clean();
@@ -107,18 +119,27 @@ final class ExecutionService
         if ($direction === 'out' && !$open) throw new ApiException('CLOCK_NOT_IN', 409);
         // Questions du pointage (tenue de travail, mains…) : obligatoires confirmées, sinon 422.
         $answers = $this->questions->check($direction, $body['answers'] ?? [], $context->translator->lang() === 'fr');
+        // Signature dans l'écran de validation (tablette ou téléphone) : sans elle, pas de pointage quand elle est exigée.
+        $signature = null;
+        if (isset($body['signature']) && $body['signature'] !== '') {
+            $signature = $this->decodePng($body['signature'], 'signature');
+        } elseif ($this->signatureRequired($direction)) {
+            throw ApiException::validation([['field' => 'signature', 'code' => 'SIGNATURE_REQUIRED', 'params' => []]]);
+        }
         if ($direction === 'in') {
-            $id = $this->tx->execute(function () use ($employeeId, $at, $context, $uuid, $answers) {
+            $id = $this->tx->execute(function () use ($employeeId, $at, $context, $uuid, $answers, $signature) {
                 $id = $this->repo->clockIn($employeeId, $at, $context->deviceId, $uuid);
                 $this->questions->save($id, 'in', $answers);
+                if ($signature !== null) $this->storeSignature($signature, 'clock_in', (string) $id, $context);
                 $this->audit->record($context, 'clock_in', 'clock', $id, null, ['employee_id' => $employeeId, 'device_id' => $context->deviceId]);
                 return $id;
             });
         } else {
             $id = (int) $open['id'];
-            $this->tx->execute(function () use ($id, $at, $employeeId, $context, $uuid, $answers) {
+            $this->tx->execute(function () use ($id, $at, $employeeId, $context, $uuid, $answers, $signature) {
                 $this->repo->clockOut($id, $at, $uuid);
                 $this->questions->save($id, 'out', $answers);
+                if ($signature !== null) $this->storeSignature($signature, 'clock_out', (string) $id, $context);
                 foreach ($this->repo->openLogsOfEmployee($employeeId) as $log) {
                     $this->repo->endLog((int) $log['id'], $at);
                     if (!$this->repo->openLogs((int) $log['id_operation'])) $this->repo->setOperation((int) $log['id_operation'], ['status' => 'paused']);
@@ -127,8 +148,7 @@ final class ExecutionService
             });
         }
         $row = $this->clockRow($this->repo->clock($id), $now);
-        return ['replayed' => false, 'clock' => $row,
-            'signature_required' => $direction === 'out' && $this->params->get('kiosk.signature_on_clock_out', '1') === '1'];
+        return ['replayed' => false, 'clock' => $row, 'signed' => $signature !== null, 'signature_required' => false];
     }
 
     public function start(int $operationId, array $body, ApiContext $context, ?int $now = null): array
@@ -189,27 +209,33 @@ final class ExecutionService
     public function sign(array $body, ApiContext $context): array
     {
         $v = (new Validator($body))->only(['purpose', 'ref', 'image'])
-            ->choice('purpose', ['clock_out', 'timesheet_month', 'operation'], true)->string('ref', 64, true);
+            ->choice('purpose', ['clock_in', 'clock_out', 'timesheet_month', 'operation'], true)->string('ref', 64, true);
         $v->throwIfInvalid();
         $c = $v->clean();
         $employeeId = (int) $context->employeeId;
         $refOk = match ($c['purpose']) {
-            'clock_out' => ($clock = $this->repo->clock((int) $c['ref'])) !== null && (int) $clock['id_employee'] === $employeeId,
+            'clock_in', 'clock_out' => ($clock = $this->repo->clock((int) $c['ref'])) !== null && (int) $clock['id_employee'] === $employeeId,
             'timesheet_month' => (bool) preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $c['ref']),
             'operation' => $this->scheduling->operation((int) $c['ref']) !== null,
         };
         if (!$refOk) throw ApiException::validation([['field' => 'ref', 'code' => 'SIGNATURE_REF_INVALID', 'params' => []]]);
-        $png = $this->decodePng($body['image'] ?? null);
-        $hash = hash('sha256', $png);
-        $stored = $this->storage->store($employeeId, $png, $hash);
-        $id = $this->repo->insertSignature(['id_employee' => $employeeId, 'purpose' => $c['purpose'], 'ref' => $c['ref'], 'id_device' => $context->deviceId, 'sha256' => $hash] + $stored);
-        $this->audit->record($context, 'sign', 'signature', $id, null, ['employee_id' => $employeeId, 'purpose' => $c['purpose'], 'ref' => $c['ref'], 'sha256' => $hash]);
-        return ['id' => $id, 'purpose' => $c['purpose'], 'ref' => $c['ref'], 'sha256' => $hash];
+        return $this->storeSignature($this->decodePng($body['image'] ?? null), $c['purpose'], $c['ref'], $context);
     }
 
-    private function decodePng(mixed $image): string
+    /** Image PNG signée : stockage (base ou S3), empreinte SHA-256, journal. */
+    private function storeSignature(string $png, string $purpose, string $ref, ApiContext $context): array
     {
-        $error = fn(string $code) => ApiException::validation([['field' => 'image', 'code' => $code, 'params' => ['max_kb' => intdiv(self::MAX_SIGNATURE_BYTES, 1000)]]]);
+        $employeeId = (int) $context->employeeId;
+        $hash = hash('sha256', $png);
+        $stored = $this->storage->store($employeeId, $png, $hash);
+        $id = $this->repo->insertSignature(['id_employee' => $employeeId, 'purpose' => $purpose, 'ref' => $ref, 'id_device' => $context->deviceId, 'sha256' => $hash] + $stored);
+        $this->audit->record($context, 'sign', 'signature', $id, null, ['employee_id' => $employeeId, 'purpose' => $purpose, 'ref' => $ref, 'sha256' => $hash]);
+        return ['id' => $id, 'purpose' => $purpose, 'ref' => $ref, 'sha256' => $hash];
+    }
+
+    private function decodePng(mixed $image, string $field = 'image'): string
+    {
+        $error = fn(string $code) => ApiException::validation([['field' => $field, 'code' => $code, 'params' => ['max_kb' => intdiv(self::MAX_SIGNATURE_BYTES, 1000)]]]);
         if (!is_string($image) || !preg_match('#^data:image/png;base64,([A-Za-z0-9+/=]+)$#', $image, $m)) throw $error('INVALID_IMAGE');
         if (strlen($m[1]) > self::MAX_SIGNATURE_BYTES * 4 / 3 + 4) throw $error('IMAGE_TOO_LARGE');
         $png = base64_decode($m[1], true);

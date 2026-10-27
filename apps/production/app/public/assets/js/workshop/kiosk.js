@@ -75,6 +75,7 @@
         const err = new Error(((json.errors || []).map(x => x.message).join(' ')) || json.message || t('error'));
         err.code = json.description;
         err.status = res.status;
+        err.fields = (json.errors || []).map(x => x.field);
         if (['DEVICE_UNAUTHENTICATED', 'DEVICE_DISABLED'].includes(err.code)) {
             if (err.code === 'DEVICE_UNAUTHENTICATED') paired = false;
             session = null;
@@ -516,11 +517,7 @@
                     <span class="kiosk-big-icon">${icon(me.clocked_in ? 'log-out' : 'log-in')}</span>${esc(me.clocked_in ? t('clock_out') : t('clock_in'))}</button>
                 <div class="kiosk-row"><button type="button" class="kiosk-btn is-small" data-sign-month>${icon('pen-line')} ${esc(t('sign_month'))}</button></div></section>`;
         if (message) toast(message);
-        el.querySelector('[data-clock-tap]').addEventListener('click', (e) => {
-            const direction = me.clocked_in ? 'out' : 'in';
-            if ((me.questions?.[direction] || []).length) renderQuestions(me.questions[direction], direction);
-            else clockTap(e.currentTarget, direction, []);
-        });
+        el.querySelector('[data-clock-tap]').addEventListener('click', (e) => validateClock(me, me.clocked_in ? 'out' : 'in', e.currentTarget));
         el.querySelector('[data-sign-month]').addEventListener('click', () => renderSignature('timesheet_month', new Date().toISOString().slice(0, 7), t('sign_month_help')));
     }
 
@@ -556,23 +553,37 @@
         return out.join('');
     }
 
-    // Pytania przy wejściu / wyjściu (ustawiane w zarządzaniu tabletami) : potwierdzenie i « OK, zatwierdzam ».
-    function renderQuestions(questions, direction, error) {
+    // Wejście / wyjście : ekran zatwierdzenia, gdy są pytania (ustawiane w zarządzaniu tabletami) albo podpis
+    // (kiosk.signature_on_clock_in / _out) ; inaczej jedno dotknięcie.
+    function validateClock(me, direction, button) {
+        const questions = me.questions?.[direction] || [];
+        const sign = !!me.signature?.[direction];
+        if (questions.length || sign) renderQuestions(questions, direction, null, sign);
+        else clockTap(button, direction, [], null);
+    }
+
+    // Ekran zatwierdzenia : dotknięcie potwierdza punkt, podpis palcem w ramce, « OK, zatwierdzam » gdy obowiązkowe
+    // punkty są potwierdzone i podpis złożony — bez podpisu nie ma wejścia ani wyjścia.
+    function renderQuestions(questions, direction, error, sign) {
         resetIdle();
         const yes = new Set();
         el.innerHTML = personHeader() + `<section class="kiosk-card kiosk-confirm">
                 <h2>${icon(direction === 'in' ? 'log-in' : 'log-out')} ${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}</h2>
-                <p class="kiosk-muted">${esc(t('confirm_help'))}</p>
+                ${questions.length ? `<p class="kiosk-muted">${esc(t('confirm_help'))}</p>
                 <div class="kiosk-checks">${questions.map(q => `<button type="button" class="kiosk-check" data-q="${q.id}" aria-pressed="false">
-                    <span class="kiosk-check-box" aria-hidden="true"></span><span>${esc(q.text)}${q.required ? '' : `<small>${esc(t('optional'))}</small>`}</span></button>`).join('')}</div>
-                ${error ? `<p class="kiosk-error">${esc(error)}</p>` : ''}
+                    <span class="kiosk-check-box" aria-hidden="true"></span><span>${esc(q.text)}${q.required ? '' : `<small>${esc(t('optional'))}</small>`}</span></button>`).join('')}</div>` : ''}
+                ${sign ? `<div class="kiosk-confirm-sign"><p class="kiosk-status">${esc(t(direction === 'in' ? 'sign_in_here' : 'sign_out_here'))}</p>
+                    <canvas class="kiosk-sign" data-pad width="900" height="240" aria-label="${esc(t('signature'))}"></canvas>
+                    <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div></div>` : ''}
+                <p class="kiosk-error" data-error>${esc(error || '')}</p>
                 <button type="button" class="kiosk-btn kiosk-big ${direction === 'in' ? 'is-ok' : 'is-danger'}" data-confirm>${esc(t('confirm_ok'))}</button>
                 <button type="button" class="kiosk-btn is-small" data-back>${esc(t('back'))}</button>
             </section>`;
         const ok = el.querySelector('[data-confirm]');
-        const refresh = () => { ok.disabled = questions.some(q => q.required && !yes.has(q.id)); };
+        const pad = sign ? signaturePad(el.querySelector('[data-pad]'), () => refresh()) : null;
+        const refresh = () => { ok.disabled = questions.some(q => q.required && !yes.has(q.id)) || (pad !== null && pad.empty()); };
         refresh();
-        el.querySelector('.kiosk-checks').addEventListener('click', (e) => {
+        el.querySelector('.kiosk-checks')?.addEventListener('click', (e) => {
             const b = e.target.closest('[data-q]');
             if (!b) return;
             resetIdle();
@@ -582,23 +593,44 @@
             b.setAttribute('aria-pressed', String(yes.has(id)));
             refresh();
         });
-        ok.addEventListener('click', () => clockTap(ok, direction, questions.map(q => ({question_id: q.id, yes: yes.has(q.id)}))));
+        el.querySelector('[data-clear]')?.addEventListener('click', () => { pad.clear(); refresh(); });
+        ok.addEventListener('click', () => clockTap(ok, direction, questions.map(q => ({question_id: q.id, yes: yes.has(q.id)})), pad ? pad.image() : null));
         el.querySelector('[data-back]').addEventListener('click', () => renderMe());
     }
 
-    async function clockTap(button, direction, answers) {
+    // Ramka podpisu palcem (biały PNG) : empty() — nic nie narysowano, image() — data URL do zapisania.
+    function signaturePad(canvas, onDraw) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
+        let drawing = false;
+        let strokes = 0;
+        const point = (e) => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) * canvas.width / r.width, (e.clientY - r.top) * canvas.height / r.height]; };
+        canvas.addEventListener('pointerdown', (e) => { drawing = true; strokes++; canvas.setPointerCapture(e.pointerId); const [x, y] = point(e); ctx.beginPath(); ctx.moveTo(x, y); resetIdle(); });
+        canvas.addEventListener('pointermove', (e) => { if (!drawing) return; const [x, y] = point(e); ctx.lineTo(x, y); ctx.stroke(); });
+        canvas.addEventListener('pointerup', () => { drawing = false; if (onDraw) onDraw(); });
+        return {
+            empty: () => strokes === 0,
+            clear: () => { ctx.fillRect(0, 0, canvas.width, canvas.height); strokes = 0; },
+            image: () => canvas.toDataURL('image/png'),
+        };
+    }
+
+    async function clockTap(button, direction, answers, signature) {
         button.disabled = true;
         if (!pending || pending.direction !== direction) pending = {uuid: uuid(), direction};
         try {
-            const r = await api('POST', '/kiosk/clock', {direction, client_uuid: pending.uuid, answers}, true);
+            const r = await api('POST', '/kiosk/clock', {direction, client_uuid: pending.uuid, answers, ...(signature ? {signature} : {})}, true);
             pending = null;
-            if (direction === 'out' && r.signature_required) return renderSignature('clock_out', String(r.clock.id), t('sign_out_help', {hours: fmt(r.clock.hours)}), true);
+            // Wyjście podpisane : koniec sesji na tablecie (następna osoba).
+            if (direction === 'out' && signature) return logout(t('bye', {hours: fmt(r.clock.hours)}));
             renderMe(direction === 'in' ? t('welcome') : t('bye', {hours: fmt(r.clock.hours)}));
         } catch (err) {
             button.disabled = false;
-            if (err.code === 'CLOCK_QUESTIONS_REQUIRED') {
+            // Pytania albo podpis zmienione w międzyczasie : aktualny ekran zatwierdzenia z komunikatem.
+            if (err.code === 'CLOCK_QUESTIONS_REQUIRED' || err.fields?.includes('signature')) {
                 const me = await api('GET', '/kiosk/me', undefined, true).catch(() => null);
-                if (me) return renderQuestions(me.questions?.[direction] || [], direction, err.message);
+                if (me) return renderQuestions(me.questions?.[direction] || [], direction, err.message, !!me.signature?.[direction]);
             }
             toast(err.offline ? t('offline_retry') : err.message, true);
         }
@@ -1298,10 +1330,7 @@
             catch (err) { b.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
         }));
         el.querySelector('[data-close-form]')?.addEventListener('input', resetIdle);
-        el.querySelector('[data-eod-exit]')?.addEventListener('click', (e) => {
-            if ((me.questions?.out || []).length) renderQuestions(me.questions.out, 'out');
-            else clockTap(e.currentTarget, 'out', []);
-        });
+        el.querySelector('[data-eod-exit]')?.addEventListener('click', (e) => validateClock(me, 'out', e.currentTarget));
         el.querySelector('[data-eod-next]')?.addEventListener('click', async (e) => {
             if (step < 5) return step === 1 || step === 2 ? reload(step + 1) : go(step + 1);
             const note = el.querySelector('[name=note]').value.trim();
@@ -2170,31 +2199,22 @@
     window.tfbLotCandidates = lotCandidates;
 
     // --- Podpis ----------------------------------------------------------------------------------------
-    function renderSignature(purpose, ref, help, logoutAfter) {
+    function renderSignature(purpose, ref, help) {
         resetIdle();
         el.innerHTML = header() + `<section class="kiosk-card"><h2>${esc(t('signature'))}</h2><p class="kiosk-status">${esc(help)}</p>
             <canvas class="kiosk-sign" data-pad width="900" height="260" aria-label="${esc(t('signature'))}"></canvas><p class="kiosk-error" data-error></p>
             <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-clear>${esc(t('clear'))}</button>
-                ${logoutAfter ? `<button type="button" class="kiosk-btn" data-skip>${esc(t('later'))}</button>` : `<button type="button" class="kiosk-btn" data-skip>${esc(t('cancel'))}</button>`}
+                <button type="button" class="kiosk-btn" data-skip>${esc(t('cancel'))}</button>
                 <button type="button" class="kiosk-btn is-primary" data-save>${esc(t('sign'))}</button></div></section>`;
-        const canvas = el.querySelector('[data-pad]');
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
-        let drawing = false;
-        let strokes = 0;
-        const point = (e) => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) * canvas.width / r.width, (e.clientY - r.top) * canvas.height / r.height]; };
-        canvas.addEventListener('pointerdown', (e) => { drawing = true; strokes++; canvas.setPointerCapture(e.pointerId); const [x, y] = point(e); ctx.beginPath(); ctx.moveTo(x, y); resetIdle(); });
-        canvas.addEventListener('pointermove', (e) => { if (!drawing) return; const [x, y] = point(e); ctx.lineTo(x, y); ctx.stroke(); });
-        canvas.addEventListener('pointerup', () => { drawing = false; });
-        el.querySelector('[data-clear]').addEventListener('click', () => { ctx.fillRect(0, 0, canvas.width, canvas.height); strokes = 0; });
-        el.querySelector('[data-skip]').addEventListener('click', () => logoutAfter ? logout(t('bye_short')) : renderMe());
+        const pad = signaturePad(el.querySelector('[data-pad]'));
+        el.querySelector('[data-clear]').addEventListener('click', () => pad.clear());
+        el.querySelector('[data-skip]').addEventListener('click', () => renderMe());
         el.querySelector('[data-save]').addEventListener('click', async (e) => {
-            if (!strokes) { el.querySelector('[data-error]').textContent = t('sign_first'); return; }
+            if (pad.empty()) { el.querySelector('[data-error]').textContent = t('sign_first'); return; }
             e.target.disabled = true;
             try {
-                await api('POST', '/kiosk/signatures', {purpose, ref, image: canvas.toDataURL('image/png')}, true);
-                if (logoutAfter) logout(t('signed_bye')); else renderMe(t('signed'));
+                await api('POST', '/kiosk/signatures', {purpose, ref, image: pad.image()}, true);
+                renderMe(t('signed'));
             } catch (err) { e.target.disabled = false; el.querySelector('[data-error]').textContent = err.message; }
         });
     }

@@ -65,7 +65,7 @@ final class VehicleCreationService
             }
             $pin = trim((string) ($input['driver_pin'] ?? ''));
             if ($pin !== '') {
-                // PIN już ustawiony zostaje (zmiana : Tablet produkcji › Identyfikatory i PIN).
+                // PIN już ustawiony zostaje (zmiana : Tablety › Zarządzanie › Identyfikatory i PIN).
                 if (!empty($this->execution->credential($driverId)['pin_hash'])) $problems[] = 'PIN kierowcy : już ustawiony — nie zmieniono.';
                 else if (!preg_match('/^\d{4,6}$/', $pin)) $problems[] = 'PIN kierowcy : 4 do 6 cyfr — nie zapisano.';
                 else {

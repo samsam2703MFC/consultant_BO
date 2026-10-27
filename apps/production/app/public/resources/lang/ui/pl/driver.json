@@ -7,7 +7,7 @@
   "offline": "Brak sieci.",
   "error": "Błąd — spróbuj ponownie.",
   "pair_title": "Sparuj tablet",
-  "pair_help": "Kod parowania podaje logistyka (Produkcja › Tablet produkcji › Zarządzanie › Tablety, tablet kierowcy).",
+  "pair_help": "Kod parowania podaje logistyka (Tablety › Zarządzanie › Tablety, tablet kierowcy).",
   "pair_code": "Kod",
   "pair": "Sparuj",
   "paired": "Tablet sparowany : {name}.",

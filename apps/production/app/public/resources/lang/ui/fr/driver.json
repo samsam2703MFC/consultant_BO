@@ -7,7 +7,7 @@
   "offline": "Pas de réseau.",
   "error": "Erreur — réessayez.",
   "pair_title": "Appairer la tablette",
-  "pair_help": "Le code d’appairage est donné par la logistique (Produkcja › Tablet produkcji › Zarządzanie › Tablety, tablette chauffeur).",
+  "pair_help": "Le code d’appairage est donné par la logistique (Tablety › Zarządzanie › Tablety, tablette chauffeur).",
   "pair_code": "Code",
   "pair": "Appairer",
   "paired": "Tablette appairée : {name}.",

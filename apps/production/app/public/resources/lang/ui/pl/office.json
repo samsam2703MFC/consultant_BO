@@ -6,7 +6,7 @@
   "error": "Błąd — spróbuj ponownie.",
   "retry": "Spróbuj ponownie",
   "pair_title": "Sparuj tablet",
-  "pair_help": "Kod parowania podaje kierownik (Produkcja › Tablet produkcji › Zarządzanie › Tablety, rodzaj « Tablet biurowy »).",
+  "pair_help": "Kod parowania podaje kierownik (Tablety › Zarządzanie › Tablety, rodzaj « Tablet biurowy »).",
   "pair_code": "Kod",
   "pair": "Sparuj",
   "paired": "Tablet sparowany : {name}.",

@@ -108,5 +108,19 @@
   "vehicle": "Pojazd",
   "no_vehicle": "— pojazd wybiera kierowca —",
   "driver_help": "Tablet kierowcy : otwórz na tablecie stronę /driver (albo /kiosk — przekierowanie) i wpisz kod. Kierowca widzi trasę dnia swojego pojazdu, potwierdza dostawy (odbiorca, podpis, zdjęcie, palety) i zgłasza problemy ; wszystko w Logistyka › Dostawy.",
-  "office_help": "Tablet biurowy : otwórz na tablecie stronę /office (albo /kiosk — przekierowanie) i wpisz kod. Osoba wybiera swój dział, potem nazwisko ; tablet pokazuje jej osobisty kod QR (osoba + dzień), który zatwierdza tylko jej telefon (wejście / wyjście). Pierwszy raz telefon prosi o PIN — nadaj go w kolumnie PIN (Czas pracy)."
+  "office_help": "Tablet biurowy : otwórz na tablecie stronę /office (albo /kiosk — przekierowanie) i wpisz kod. Osoba wybiera swój dział, potem nazwisko ; tablet pokazuje jej osobisty kod QR (osoba + dzień), który zatwierdza tylko jej telefon (wejście / wyjście). Pierwszy raz telefon prosi o PIN — nadaj go w kolumnie PIN (Czas pracy).",
+  "plan_title": "Plan tabletów",
+  "plan_kind": "Rodzaj",
+  "plan_page": "Strona na tablecie",
+  "plan_create": "Utwórz i pokaż kod",
+  "plan_missing": "brak",
+  "plan_missing_count": "Brakuje tabletów : {n}",
+  "plan_complete": "Wszystkie tablety są utworzone.",
+  "plan_office": "Tablet biurowy — wejście / wyjście",
+  "plan_office_name": "Tablet biurowy",
+  "plan_driver": "Tablet kierowcy",
+  "plan_driver_name": "Tablet kierowcy",
+  "plan_group": "Tablet grupy : {group}",
+  "plan_group_name": "Tablet {group}",
+  "plan_help": "Jeden tablet biurowy (wejście / wyjście osobistym kodem QR i podpisem na telefonie), jeden tablet kierowcy i jeden tablet na każdą grupę produkcji (wejście / wyjście z podpisem na tablecie, produkcja dnia). « Utwórz » daje kod parowania : otwórz na tablecie podaną stronę i wpisz kod."
 }

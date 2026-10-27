@@ -1,5 +1,5 @@
 /*
- * Tablet produkcji › Zatwierdzenia produkcji (/workshop/production-days) : dni zatwierdzone przez zespoły na tabletach.
+ * Tablety › Zatwierdzenia produkcji (/workshop/production-days) : dni zatwierdzone przez zespoły na tabletach.
  * Lista dni (grupa, zatwierdzenie, linie), szczegóły dnia jak na tablecie (plan, zrobione, straty ze zdjęciami,
  * powód braku) ; kierownik produkcji poprawia ilość zrobioną i anuluje straty (API modułu, prod.plan.validate).
  */

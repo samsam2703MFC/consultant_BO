@@ -105,36 +105,6 @@
                     </a>
                 </li>
 
-                {# Tablet produkcji pod Produkcją : sam tablet (ekran zespołu) i jego zarządzanie (tablety, PIN, czas pracy). #}
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
-                        <i class="bi bi-tablet"></i>
-                        <span>Tablet produkcji</span>
-                    </a>
-                    <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/kiosk" target="_blank" rel="noopener">
-                                <i class="bi bi-box-arrow-up-right"></i> Otwórz tablet
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/office" target="_blank" rel="noopener">
-                                <i class="bi bi-qr-code"></i> Tablet biurowy (wejście / wyjście)
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/workshop/execution">
-                                <i class="bi bi-sliders"></i> Zarządzanie : tablety, PIN, czas pracy
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/workshop/production-days">
-                                <i class="bi bi-clipboard-check"></i> Zatwierdzenia produkcji
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
 <li class="sidebar-item has-sub">
                     <a href="#" class="sidebar-link">
                         <i class="bi bi-person-badge"></i>
@@ -374,10 +344,45 @@
                     </a>
                 </li>
 
+                {# Tablety : wszystkie tablety w jednym miejscu — tablet biurowy (wejście / wyjście osobistym kodem QR), tablet
+                   każdej grupy produkcji, tablet kierowcy ; zarządzanie (parowanie, plan tabletów, PIN, czas pracy) i zatwierdzenia. #}
+                <li class="sidebar-title">Tablety</li>
+
                 <li class="sidebar-item">
-                    <a href="{{ root }}/driver" class="sidebar-link" target="_blank" rel="noopener">
-                        <i class="bi bi-tablet-landscape"></i>
-                        <span>Tablet kierowcy</span>
+                    <a href="{{ root }}/workshop/execution#devices" class="sidebar-link" data-also="/workshop/timesheet">
+                        <i class="bi bi-tablet"></i>
+                        <span>Zarządzanie : tablety, PIN, czas pracy</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                        <span>Otwórz tablet</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/office" target="_blank" rel="noopener">
+                                <i class="bi bi-qr-code"></i> Tablet biurowy (wejście / wyjście)
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/kiosk" target="_blank" rel="noopener">
+                                <i class="bi bi-people"></i> Tablet grupy produkcji
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/driver" target="_blank" rel="noopener">
+                                <i class="bi bi-truck"></i> Tablet kierowcy
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/workshop/production-days" class="sidebar-link">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span>Zatwierdzenia produkcji</span>
                     </a>
                 </li>
 
@@ -444,20 +449,20 @@
                 <li><a href="{{ root }}/dashboard/monthly" data-where="Analiza › Raport miesięczny"><i class="bi bi-envelope-paper"></i> Raport miesięczny zarządu : rentowność, marża, reklamacje, klienci, niezgodności, nowe produkty (w rozwoju i wprowadzone), tabela roku — PDF PL / FR i wysyłka e-mailem co miesiąc</a></li>
                 <li><a href="{{ root }}/test-products/pipeline" data-where="Produkt › Produkty › Nowe produkty (etapy i lista)"><i class="bi bi-kanban"></i> CRM nowych produktów : pomysł, test 1 (receptura i zdjęcia), test 2, receptura zatwierdzona na tablecie, wprowadzenie — testy planowane w biurze, potwierdzane na tablecie grupy bez ponownego wpisywania</a></li>
                 <li><a href="{{ root }}/test-products/pipeline" data-where="Produkt › Produkty › Nowe produkty (etapy i lista)"><i class="bi bi-tablet"></i> Nowe produkty na tablecie wybranej grupy : test ze zdjęciami, ilość, wynik (OK, do poprawy, nie), co zmienić, zatwierdzenie receptury</a></li>
-                <li><a href="{{ root }}/workshop/production-days" data-where="Produkcja › Tablet produkcji › Zatwierdzenia produkcji"><i class="bi bi-clipboard-check"></i> Zatwierdzenia produkcji dnia z tabletów : zrobione wobec planu, straty ze zdjęciami i powodem, powód braku — poprawki kierownika po zatwierdzeniu</a></li>
-                <li><a href="{{ root }}/workshop/production-days" data-where="Produkcja › Tablet produkcji › Zatwierdzenia produkcji"><i class="bi bi-camera"></i> Zdjęcia strat produkcji (odpady, rebuts) : ilość, powód, kto i kiedy — anulowanie straty przez kierownika</a></li>
-                <li><a href="{{ root }}/kiosk" data-where="Produkcja › Tablet produkcji"><i class="bi bi-ui-checks"></i> Tablet : zatwierdzenie produkcji z planu linia po linii (zrobione, strata ilość + zdjęcie + powód), zatwierdź dzień</a></li>
-                <li><a href="{{ root }}/kiosk" data-where="Produkcja › Tablet produkcji"><i class="bi bi-grid-3x3-gap"></i> Tablet bez planu : zakoduj produkcję — kategorie i produkty jako przyciski, zrobione i strata na tej samej linii</a></li>
-                <li><a href="{{ root }}/kiosk" data-where="Produkcja › Tablet produkcji"><i class="bi bi-box-seam"></i> Tablet : Magazyn grupy — stan, min. / maks., maksimum do produkcji, lista produkcji tygodnia</a></li>
-                <li><a href="{{ root }}/kiosk" data-where="Produkcja › Tablet produkcji"><i class="bi bi-tablet-landscape"></i> Ekran główny tabletu grupy (jak iPad) : godzina, zespół, dziś produkujemy, nowe produkty, kod QR telefonem, identyfikator, tydzień</a></li>
+                <li><a href="{{ root }}/workshop/production-days" data-where="Tablety › Zatwierdzenia produkcji"><i class="bi bi-clipboard-check"></i> Zatwierdzenia produkcji dnia z tabletów : zrobione wobec planu, straty ze zdjęciami i powodem, powód braku — poprawki kierownika po zatwierdzeniu</a></li>
+                <li><a href="{{ root }}/workshop/production-days" data-where="Tablety › Zatwierdzenia produkcji"><i class="bi bi-camera"></i> Zdjęcia strat produkcji (odpady, rebuts) : ilość, powód, kto i kiedy — anulowanie straty przez kierownika</a></li>
+                <li><a href="{{ root }}/kiosk" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-ui-checks"></i> Tablet : zatwierdzenie produkcji z planu linia po linii (zrobione, strata ilość + zdjęcie + powód), zatwierdź dzień</a></li>
+                <li><a href="{{ root }}/kiosk" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-grid-3x3-gap"></i> Tablet bez planu : zakoduj produkcję — kategorie i produkty jako przyciski, zrobione i strata na tej samej linii</a></li>
+                <li><a href="{{ root }}/kiosk" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-box-seam"></i> Tablet : Magazyn grupy — stan, min. / maks., maksimum do produkcji, lista produkcji tygodnia</a></li>
+                <li><a href="{{ root }}/kiosk" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-tablet-landscape"></i> Ekran główny tabletu grupy (jak iPad) : godzina, zespół, dziś produkujemy, nowe produkty, kod QR telefonem, identyfikator, tydzień</a></li>
                 <li><a href="{{ root }}/shipments/differences" data-where="Logistyka › Wysyłki i dokumenty"><i class="bi bi-exclamation-diamond"></i> Różnice i problemy dostaw (dostawy, wysyłka) : różnica opłacona proforma ↔ WDT (zwrot dla klienta, dopłata), problem zgłoszony przez kierowcę — odpowiedzialny, decyzja, termin, zamknięcie</a></li>
                 <li><a href="{{ root }}/logistics/deliveries" data-where="Logistyka › Dzień wysyłki › Potwierdzenia dostaw"><i class="bi bi-qr-code"></i> Kod QR trasy dla tabletu kierowcy : pojazd i dzień otwierają się po zeskanowaniu (także na raporcie trasy PDF)</a></li>
-                <li><a href="{{ root }}/workshop/execution" data-where="Produkcja › Tablet produkcji"><i class="bi bi-person-badge"></i> Tablet kierowcy : PIN kierowcy (osoby na tablecie) — kierowca wybiera się z listy i wpisuje PIN ; lista = stanowisko « Kierowca-dostawca » (Stanowiska i zadania)</a></li>
+                <li><a href="{{ root }}/workshop/execution" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-person-badge"></i> Tablet kierowcy : PIN kierowcy (osoby na tablecie) — kierowca wybiera się z listy i wpisuje PIN ; lista = stanowisko « Kierowca-dostawca » (Stanowiska i zadania)</a></li>
                 <li><a href="{{ root }}/recipes" data-where="Produkt › Produkty › Receptury"><i class="bi bi-clock-history"></i> Historia receptury : wersje « obowiązuje od », co się zmieniło w składzie (surowce, półprodukty, kompozycje), koszt surowców miesiąc po miesiącu (efekt cen i efekt składu) — przycisk « Historia » w kalkulacji receptury</a></li>
                 <li><a href="{{ root }}/other-settings#alert-params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-bell"></i> Alerty i terminy w dzwonku : reklamacja bez decyzji (po ilu dniach, alert pilny), zaległe testy nowych produktów, brak kosztów miesiąca (do którego dnia)</a></li>
                 <li><a href="{{ root }}/dashboard/groups" data-where="Analiza › Wynik grup › Tydzień : rentowność grup"><i class="bi bi-robot"></i> Godziny, produkcja, marża i sprzedaż grup w tygodniu i miesiącu, coboty, wykres 12 tygodni</a></li>
                 <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Ustawienia › Organizacja › Funkcje i zadania"><i class="bi bi-file-earmark-person"></i> Karty stanowisk (fiches de poste) : cel, obowiązki, kompetencje, wskaźniki, higiena — biuro i pracownia, PDF PL / FR</a></li>
-                <li><a href="{{ root }}/driver" data-where="Logistyka › Tablet kierowcy"><i class="bi bi-tablet-landscape"></i> Tablet kierowcy : trasa dnia, numery palet, zdjęcia przed i po rozładunku z godziną, podpis, raport PDF trasy, problemy w dostawie</a></li>
+                <li><a href="{{ root }}/driver" data-where="Tablety › Otwórz tablet › Tablet kierowcy"><i class="bi bi-tablet-landscape"></i> Tablet kierowcy : trasa dnia, numery palet, zdjęcia przed i po rozładunku z godziną, podpis, raport PDF trasy, problemy w dostawie</a></li>
                 <li><a href="{{ root }}/clients" data-where="Sprzedaż › Klienci › Klienci"><i class="bi bi-shield-lock"></i> Instrukcje dostawy klienta dla kierowcy : procedura rozładunku, alarm, klucz, zamrażarka, kontakt (zaszyfrowane)</a></li>
                 <li><a href="{{ root }}/logistics/deliveries" data-where="Logistyka › Dzień wysyłki › Potwierdzenia dostaw"><i class="bi bi-file-earmark-pdf"></i> Raport trasy PDF : zdjęcia przed / po rozładunku, podpisy, palety i ich numery</a></li>
                 <li><a href="{{ root }}/workshop/data-sheet" data-where="Produkcja › Produkcja › Tabela do wypełnienia"><i class="bi bi-file-earmark-spreadsheet"></i> Tabela do wypełnienia (Excel, import) : stanowiska i pojemności, zmiany, obsada zespołów, godziny wyjazdu tras, pojemność zamrażarki</a></li>
@@ -491,17 +496,17 @@
                 <li><a href="{{ root }}/devices/new" data-where="Ustawienia › Ustawienia › System › Urządzenia (dostęp API)"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
                 <li><a href="{{ root }}/settings/ksef/purchase-invoices" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-cloud-download"></i> Faktury zakupowe KSeF : podgląd (PDF, XML, filtry) — import i kontrola w Zaopatrzenie › Faktury</a></li>
                 <li><a href="{{ root }}/purchases" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-archive"></i> Archiwum dostaw (ręczne)</a></li>
-                <li><a href="{{ root }}/kiosk" data-where="Produkcja › Tablet produkcji › Otwórz tablet"><i class="bi bi-box-arrow-in-down"></i> Tablet : przyjęcie dostawy surowców (réception) — ilości, numer partii i data ważności ze zdjęcia etykiety, problem → niezgodność dostawcy, bez cen</a></li>
-                <li><a href="{{ root }}/kiosk" data-where="Produkcja › Tablet produkcji › Otwórz tablet"><i class="bi bi-moon"></i> Tablet : Koniec dnia (fin de journée) — partie bez numerów partii surowców, kontrola jakości, straty, maszyny w ruchu, zatwierdzenie dnia z notatką, wyjście i podpis</a></li>
+                <li><a href="{{ root }}/kiosk" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-box-arrow-in-down"></i> Tablet : przyjęcie dostawy surowców (réception) — ilości, numer partii i data ważności ze zdjęcia etykiety, problem → niezgodność dostawcy, bez cen</a></li>
+                <li><a href="{{ root }}/kiosk" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-moon"></i> Tablet : Koniec dnia (fin de journée) — partie bez numerów partii surowców, kontrola jakości, straty, maszyny w ruchu, zatwierdzenie dnia z notatką, wyjście i podpis</a></li>
                 <li><a href="{{ root }}/shipping/wizard" data-where="Logistyka › Dzień wysyłki › Wyślij dzień"><i class="bi bi-cloud-upload"></i> Wyślij WDT dnia do KSeF (wszystkie naraz, po utworzeniu dokumentów) ; statusy KSeF odświeżane co 5 minut</a></li>
                 <li><a href="{{ root }}/clients?type=active" data-where="Sprzedaż › Klienci › Klienci"><i class="bi bi-tags"></i> Cennik klienta : ceny klienta (karta klienta › Cennik klienta, menu ⋯ na liście klientów)</a></li>
                 <li><a href="{{ root }}/communication/outbox" data-where="Sprzedaż › Komunikacja"><i class="bi bi-send-exclamation"></i> Stan wysyłek (błędy e-mail, kolejka, outbox) : e-maile do klientów, które nie wyszły, wysyłki do sklepów franczyzy (proformy, reklamacje, wysyłki), e-maile automatyczne pominięte, monitoring, zamówienia ze sklepów (pobieranie, nieznany produkt, zamówienie odrzucone), domówienia → sklep — ponów jedną pozycję, rozwiązane z powodem</a></li>
                 <li><a href="{{ root }}/communication/outbox?source=automation&amp;filter=all" data-where="Sprzedaż › Komunikacja › Stan wysyłek"><i class="bi bi-lightning-charge"></i> Automatyczne e-maile : historia wysyłek, błędy i pominięte (jedna historia : Stan wysyłek + Historia wiadomości)</a></li>
                 <li><a href="{{ root }}/mail?folder=ERP" data-where="Poczta"><i class="bi bi-journal-check"></i> Wysłane z ERP (dziennik wysyłek z mojej skrzynki)</a></li>
-                <li><a href="{{ root }}/workshop/execution#questions" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-ui-checks"></i> Pytania przy wejściu i wyjściu (odzież robocza, higiena)</a></li>
-                <li><a href="{{ root }}/workshop/execution#devices" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-tablet"></i> Tablety : parowanie i blokada</a></li>
-                <li><a href="{{ root }}/workshop/execution#people" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-person-badge"></i> Identyfikatory, PIN i telefony pracowników</a></li>
-                <li><a href="{{ root }}/workshop/execution#hours" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-clock-history"></i> Godziny pracy i karty czasu pracy</a></li>
+                <li><a href="{{ root }}/workshop/execution#questions" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-ui-checks"></i> Pytania przy wejściu i wyjściu (odzież robocza, higiena)</a></li>
+                <li><a href="{{ root }}/workshop/execution#devices" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-tablet"></i> Tablety : parowanie i blokada</a></li>
+                <li><a href="{{ root }}/workshop/execution#people" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-person-badge"></i> Identyfikatory, PIN i telefony pracowników</a></li>
+                <li><a href="{{ root }}/workshop/execution#hours" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-clock-history"></i> Godziny pracy i karty czasu pracy</a></li>
                 {# Audyt 2, lot E : ustawienia w jednym miejscu, faktura z zamówienia, ceny surowców ze źródłem, dokąd poszła partia #}
                 <li><a href="{{ root }}/settings" data-where="Ustawienia › Ustawienia"><i class="bi bi-gear"></i> Wszystkie ustawienia na jednej stronie : system, organizacja, klienci i dokumenty, produkty, pracownia, logistyka, zakupy, alerty i cele, narzędzia administratora</a></li>
                 <li><a href="{{ root }}/other-settings#params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-sliders"></i> Wszystkie parametry modułu produkcji : stany, alerty, przypomnienia płatności, tablet (zdjęcia strat), ceny surowców, identyfikowalność — filtr i zapis jednej wartości</a></li>
@@ -509,9 +514,14 @@
                 <li><a href="{{ root }}/client-orders" data-where="Sprzedaż › Zamówienia klientów"><i class="bi bi-receipt"></i> Faktura (inna) z zamówienia : przycisk na zamówieniu — klient, produkty, ilości, ceny i VAT z cennika klienta wypełnione</a></li>
                 <li><a href="{{ root }}/invoice-documents" data-where="Sprzedaż › Proformy i faktury › Faktury inne"><i class="bi bi-receipt-cutoff"></i> Nowa faktura wypełniona z zamówienia albo z WZ (wybór na stronie faktury klienta)</a></li>
                 <li><a href="{{ root }}/materials/prices" data-where="Zakupy › Ceny surowców"><i class="bi bi-clock-history"></i> Historia cen surowca : data, dostawca, cena opakowania i za 1000 j., źródło zmiany (oferta, faktura zakupowa, ręcznie, nowy surowiec), kto</a></li>
-                <li><a href="{{ root }}/office" data-where="Produkcja › Tablet produkcji › Tablet biurowy (wejście / wyjście)"><i class="bi bi-qr-code"></i> Tablet biurowy : dział → nazwisko → osobisty kod QR (osoba + dzień), wejście / wyjście zatwierdzone własnym telefonem</a></li>
-                <li><a href="{{ root }}/workshop/execution#devices" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-tablet"></i> Nowy tablet biurowy : rodzaj « Tablet biurowy » (wszystkie działy, bez grupy), kod parowania, strona /office</a></li>
-                <li><a href="{{ root }}/workshop/execution#people" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-phone"></i> PIN dla pracowników biura (Administracja) : pierwszy skan osobistego kodu QR telefonem prosi o PIN</a></li>
+                <li><a href="{{ root }}/workshop/execution#devices" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-grid-1x2"></i> Plan tabletów : 1 tablet biurowy, 1 tablet kierowcy, 1 tablet na każdą grupę produkcji — brakujący utwórz jednym kliknięciem (kod parowania)</a></li>
+                <li><a href="{{ root }}/kiosk" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-pen"></i> Lista obecności : podpis palcem na tablecie grupy przy wejściu i przy wyjściu (godziny) — bez podpisu nie ma zapisu</a></li>
+                <li><a href="{{ root }}/office" data-where="Tablety › Otwórz tablet › Tablet biurowy (wejście / wyjście)"><i class="bi bi-phone"></i> Podpis palcem na telefonie przy wejściu i wyjściu (osobisty kod QR tabletu biurowego)</a></li>
+                <li><a href="{{ root }}/other-settings#params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-pen"></i> Podpis obowiązkowy przy wejściu i przy wyjściu (parametry kiosk.signature_on_clock_in, kiosk.signature_on_clock_out)</a></li>
+                <li><a href="{{ root }}/workshop/execution#hours" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-printer"></i> Karta czasu pracy (druk) : podpisy przy wejściu i przy wyjściu, podpis miesiąca</a></li>
+                <li><a href="{{ root }}/office" data-where="Tablety › Otwórz tablet › Tablet biurowy (wejście / wyjście)"><i class="bi bi-qr-code"></i> Tablet biurowy : dział → nazwisko → osobisty kod QR (osoba + dzień), wejście / wyjście zatwierdzone własnym telefonem</a></li>
+                <li><a href="{{ root }}/workshop/execution#devices" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-tablet"></i> Nowy tablet biurowy : rodzaj « Tablet biurowy » (wszystkie działy, bez grupy), kod parowania, strona /office</a></li>
+                <li><a href="{{ root }}/workshop/execution#people" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-phone"></i> PIN dla pracowników biura (Administracja) : pierwszy skan osobistego kodu QR telefonem prosi o PIN</a></li>
                 <li><a href="{{ root }}/other-settings#params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-qr-code-scan"></i> Ważność osobistego kodu QR tabletu biurowego (parametr kiosk.office_qr_ttl_s, sekundy)</a></li>
                 <li><a href="{{ root }}/other-settings#params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-lock"></i> Ceny surowców tylko przez ofertę, fakturę albo zapytanie ofertowe (parametr prices.manual_edit = 0 : « Nowa cena » znika)</a></li>
                 <li><a href="{{ root }}/workshop/traceability" data-where="Produkcja › Produkcja › Partie i identyfikowalność"><i class="bi bi-truck"></i> Dokąd poszła partia : kartony produktu z dnia produkcji → palety → klienci, data dostawy, WZ</a></li>

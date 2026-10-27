@@ -172,6 +172,7 @@
     "INVALID_IMAGE": "Le champ « {field} » doit être une image (PNG ou JPEG).",
     "IMAGE_TOO_LARGE": "Champ « {field} » : image trop grande ({max_kb} Ko max.).",
     "SIGNATURE_REF_INVALID": "La signature ne porte pas sur une de vos entrées.",
+    "SIGNATURE_REQUIRED": "Signez avec le doigt dans le cadre de signature, puis validez.",
     "INVALID_UUID": "Identifiant UUID invalide.",
     "INVALID_MONTH": "Mois au format AAAA-MM.",
     "PALLET_OVER_LAYERS": "Plus de cartons que couches × cartons par couche (max. {max}).",

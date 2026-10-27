@@ -99,7 +99,28 @@
                <select class="form-select form-select-sm d-inline-block w-auto ms-1" data-vehicle aria-label="${esc(t('vehicle'))}">${vehicleOptions(d.vehicle_id)}</select>`
             : d.mode === 'office' ? `<span class="badge bg-warning-subtle text-warning-emphasis">${esc(t('mode_office'))}</span>`
             : esc((groups.find(g => g.id === d.group_id) || {}).name || '—');
-        body.innerHTML = `<div class="card"><div class="card-body">
+        // Plan tabletów : 1 tablet biurowy (wejście / wyjście), 1 tablet kierowcy, 1 tablet na każdą grupę produkcji ;
+        // brakujący tablet tworzy się jednym kliknięciem (kod parowania), sparowany pokazuje stan i ostatnie połączenie.
+        const state = (d) => !d ? `<span class="badge bg-danger-subtle text-danger-emphasis">${esc(t('plan_missing'))}</span>`
+            : !d.active ? `<span class="badge bg-secondary">${esc(t('blocked'))}</span>`
+            : d.paired ? `<span class="badge bg-success">${esc(t('paired'))}</span> <span class="text-muted small">${esc((d.last_seen_at || '').slice(0, 16))}</span>`
+            : `<span class="badge bg-warning">${esc(d.pairing_pending ? t('waiting_pairing') : t('not_paired'))}</span>`;
+        // Kilka tabletów tego samego rodzaju : aktywny i sparowany, ostatnio połączony.
+        const pick = (filter) => list.filter(filter).sort((a, b) => (b.active - a.active) || (b.paired - a.paired) || String(b.last_seen_at || '').localeCompare(String(a.last_seen_at || '')))[0];
+        const planRows = [
+            {kind: t('plan_office'), d: pick(x => x.mode === 'office'), mode: 'office', name: t('plan_office_name'), page: '/office'},
+            {kind: t('plan_driver'), d: pick(x => x.mode === 'driver'), mode: 'driver', name: t('plan_driver_name'), page: '/driver'},
+            ...groups.filter(g => g.active !== false).map(g => ({kind: t('plan_group', {group: g.name}), d: pick(x => (x.mode || 'atelier') === 'atelier' && x.group_id === g.id), mode: 'atelier', group: g.id, name: t('plan_group_name', {group: g.name}), page: '/kiosk'})),
+        ];
+        const missing = planRows.filter(r => !r.d).length;
+        const plan = `<div class="card mb-3"><div class="card-body"><div class="d-flex flex-wrap align-items-center gap-2 mb-2"><h5 class="mb-0">${esc(t('plan_title'))}</h5>
+                <span class="text-muted small">${esc(missing ? t('plan_missing_count', {n: missing}) : t('plan_complete'))}</span></div>
+            <div class="table-responsive"><table class="table table-sm mb-0 align-middle"><thead><tr><th>${esc(t('plan_kind'))}</th><th>${esc(t('device'))}</th><th>${esc(t('state'))}</th><th>${esc(t('plan_page'))}</th><th></th></tr></thead>
+            <tbody>${planRows.map((r, i) => `<tr><td>${esc(r.kind)}</td><td>${r.d ? `<strong>${esc(r.d.name)}</strong>` : '<span class="text-muted">—</span>'}</td><td>${state(r.d)}</td>
+                <td><code>${esc(r.page)}</code></td>
+                <td class="text-end">${r.d ? '' : `<button type="button" class="btn btn-sm btn-primary" data-plan-create="${i}">${esc(t('plan_create'))}</button>`}</td></tr>`).join('')}</tbody></table></div>
+            <p class="at-profit-note mb-0">${esc(t('plan_help'))}</p></div></div>`;
+        body.innerHTML = plan + `<div class="card"><div class="card-body">
             <form class="tfb-filters" data-add-device><input class="form-control form-control-sm" name="name" data-field="name" placeholder="${esc(t('device_name'))}" required maxlength="100">
                 <select class="form-select form-select-sm" name="mode" data-field="mode" aria-label="${esc(t('device_mode'))}"><option value="atelier">${esc(t('mode_atelier'))}</option><option value="driver">${esc(t('mode_driver'))}</option><option value="office">${esc(t('mode_office'))}</option></select>
                 <select class="form-select form-select-sm" name="group_id" data-field="group_id">${groupOptions(null, t('no_group'))}</select>
@@ -130,6 +151,15 @@
                 showCode(r);
             } catch (err) { fail(err, e.target); }
         });
+        body.querySelectorAll('[data-plan-create]').forEach(b => b.addEventListener('click', async () => {
+            const r = planRows[Number(b.dataset.planCreate)];
+            b.disabled = true;
+            try {
+                const created = await api.post('/kiosk/devices', {name: r.name, mode: r.mode, group_id: r.group || null, vehicle_id: null});
+                await devices();
+                showCode(created);
+            } catch (err) { b.disabled = false; fail(err); }
+        }));
         body.querySelectorAll('[data-device] [data-vehicle]').forEach(select => select.addEventListener('change', async () => {
             try {
                 await api.patch(`/kiosk/devices/${select.closest('[data-device]').dataset.device}`, {vehicle_id: Number(select.value) || null});

@@ -6,7 +6,7 @@
   "error": "Erreur — réessayez.",
   "retry": "Réessayer",
   "pair_title": "Appairer la tablette",
-  "pair_help": "Le code d’appairage est donné par le responsable (Production › Tablette de production › Gestion › Tablettes, type « Tablette de bureau »).",
+  "pair_help": "Le code d’appairage est donné par le responsable (Tablety › Zarządzanie › Tablety, type « Tablette de bureau »).",
   "pair_code": "Code",
   "pair": "Appairer",
   "paired": "Tablette appairée : {name}.",

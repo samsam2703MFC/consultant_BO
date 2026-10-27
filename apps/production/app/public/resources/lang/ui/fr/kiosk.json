@@ -6,7 +6,7 @@
   "offline": "Pas de connexion au serveur.",
   "offline_retry": "Pas de réseau — touchez à nouveau (rien ne sera enregistré deux fois).",
   "pair_title": "Appairer la tablette",
-  "pair_help": "Saisissez le code d'appairage à 8 caractères de l'ERP (Production → Tablette de production → Gestion). La tablette reste appairée, même si les données du navigateur sont effacées.",
+  "pair_help": "Saisissez le code d'appairage à 8 caractères de l'ERP (Tablety → Zarządzanie). La tablette reste appairée, même si les données du navigateur sont effacées.",
   "pair_code": "Code d'appairage",
   "pair": "Appairer",
   "paired": "Tablette appairée : {name}",
@@ -574,5 +574,7 @@
   "kv_no_max": "pas de stock max.",
   "kv_cap_orders": "commandes au-delà du stock",
   "no_pin_personal": "{name} : pas de PIN — demandez un PIN au responsable, puis scannez à nouveau le code.",
-  "register_me": "C’est mon téléphone — l’enregistrer à mon nom (PIN)"
+  "register_me": "C’est mon téléphone — l’enregistrer à mon nom (PIN)",
+  "sign_in_here": "Signez avec le doigt dans le cadre : je confirme mon entrée (liste de présence).",
+  "sign_out_here": "Signez avec le doigt dans le cadre : je confirme mes heures de travail du jour."
 }

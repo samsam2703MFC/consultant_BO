@@ -28,7 +28,7 @@
 <h1>Karta czasu pracy — {{ sheet.employee.name }}</h1>
 <div class="meta">Miesiąc {{ sheet.month }} · {{ sheet.totals.days }} dni · {{ sheet.totals.hours|number_format(2, ',', ' ') }} h, w tym w nocy (22:00–06:00) {{ sheet.totals.night_hours|number_format(2, ',', ' ') }} h</div>
 <table>
-    <thead><tr><th>Dzień</th><th>Wejście</th><th>Wyjście</th><th class="num">Godziny</th><th class="num">W nocy</th><th>Uwagi</th><th>Podpis</th></tr></thead>
+    <thead><tr><th>Dzień</th><th>Wejście</th><th>Wyjście</th><th class="num">Godziny</th><th class="num">W nocy</th><th>Uwagi</th><th>Podpis wejście</th><th>Podpis wyjście</th></tr></thead>
     <tbody>
     {% for d in sheet.days %}
         <tr>
@@ -39,15 +39,16 @@
             <td class="num">{{ d.night_hours > 0 ? d.night_hours|number_format(2, ',', ' ') : '' }}</td>
             <td class="note">{{ d.source == 'manual' ? 'wpis ręczny' : '' }}{{ d.corrected ? ' korekta' : '' }}{{ d.note ? ' — ' ~ d.note : '' }}
                 {% for dir, a in d.answers %}<div>{{ dir == 'in' ? 'wejście' : 'wyjście' }} : potwierdzono {{ a.yes }}/{{ a.total }}{{ a.no ? ' — nie : ' ~ a.no|join(', ') : '' }}</div>{% endfor %}</td>
-            <td>{% if d.signature_id and images[d.signature_id] is defined %}<img class="sig" src="{{ images[d.signature_id] }}" alt="podpis">{% endif %}</td>
+            <td>{% if d.signature_in_id and images[d.signature_in_id] is defined %}<img class="sig" src="{{ images[d.signature_in_id] }}" alt="podpis przy wejściu">{% endif %}</td>
+            <td>{% if d.signature_id and images[d.signature_id] is defined %}<img class="sig" src="{{ images[d.signature_id] }}" alt="podpis przy wyjściu">{% endif %}</td>
         </tr>
     {% else %}
-        <tr><td colspan="7">Brak wpisów w tym miesiącu.</td></tr>
+        <tr><td colspan="8">Brak wpisów w tym miesiącu.</td></tr>
     {% endfor %}
     </tbody>
-    <tfoot><tr class="totals"><td colspan="3">Razem</td><td class="num">{{ sheet.totals.hours|number_format(2, ',', ' ') }}</td><td class="num">{{ sheet.totals.night_hours|number_format(2, ',', ' ') }}</td><td colspan="2"></td></tr></tfoot>
+    <tfoot><tr class="totals"><td colspan="3">Razem</td><td class="num">{{ sheet.totals.hours|number_format(2, ',', ' ') }}</td><td class="num">{{ sheet.totals.night_hours|number_format(2, ',', ' ') }}</td><td colspan="3"></td></tr></tfoot>
 </table>
-<p class="note">Godziny z tabletu produkcji (wejście / wyjście). Wpisy bez wyjścia nie są liczone do sumy. « Potwierdzono » : pytania przy wejściu / wyjściu (np. odzież robocza) zatwierdzone przez pracownika. Podpisy złożone na tablecie mają zapisany skrót SHA-256 (integralność).</p>
+<p class="note">Godziny z tabletu produkcji (wejście / wyjście). Wpisy bez wyjścia nie są liczone do sumy. « Potwierdzono » : pytania przy wejściu / wyjściu (np. odzież robocza) zatwierdzone przez pracownika. Podpisy przy wejściu (lista obecności) i przy wyjściu (godziny) złożone palcem na tablecie albo telefonie mają zapisany skrót SHA-256 (integralność).</p>
 <div class="sign">
     <div>Pracownik — potwierdzam godziny pracy
         {% if sheet.month_signature and images[sheet.month_signature.id] is defined %}<img src="{{ images[sheet.month_signature.id] }}" alt="podpis pracownika"><span class="note">podpisano na tablecie {{ sheet.month_signature.signed_at|date('d.m.Y H:i') }}</span>{% endif %}

@@ -15,7 +15,7 @@ final class PageTabs
         // Produkcja na jednej stronie : arkusz tygodnia (jedna linia na produkt), plan tygodnia (dni), plan zespołów
         // (druk, tablet) z listami dnia (PDF), dostawy surowców (kto dostarcza co i kiedy), partie, śledzenie produkcji (plan / zrobione / straty), jakość, stanowiska i coboty,
         // tabela do wypełnienia (Excel : dane rzeczywiste pracowni → import).
-        // Tablet produkcji i jego zarządzanie : osobna pozycja w railu pod Produkcją.
+        // Tablety (biurowy, grup, kierowcy) i ich zarządzanie : osobna sekcja « Tablety » w railu.
         // Wynik grup : miesiąc (wynik i produkcja grup) i tydzień (rentowność grup) na jednej pozycji (audyt 2, N7).
         'group_results' => ['label' => 'Wynik grup', 'section' => 'Analiza', 'icon' => 'bi-bar-chart-steps', 'tabs' => [
             ['/dashboard/results', 'Miesiąc : wynik i produkcja grup', 'bi-bar-chart-steps'],

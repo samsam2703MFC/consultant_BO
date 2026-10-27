@@ -2,8 +2,8 @@
  * Wejście / wyjście telefonem / Entrée / sortie au téléphone (P7).
  * Strona otwierana kodem QR z tabletu (…/kiosk/scan#t=…) : kod jest ważny chwilę (obecność na miejscu).
  * Pierwszy raz : nazwisko + PIN, telefon dostaje własny token (pamięć przeglądarki). Potem WEJŚCIE / WYJŚCIE :
- * pytania ustawione przez kierownika (np. « Jestem w odzieży roboczej ») do potwierdzenia i « OK, zatwierdzam »,
- * przy wyjściu podpis palcem. „To nie ja” zapomina telefon. Osobisty kod QR z tabletu biurowego (osoba + dzień) :
+ * pytania ustawione przez kierownika (np. « Jestem w odzieży roboczej ») do potwierdzenia, podpis palcem (wejście :
+ * lista obecności, wyjście : godziny ; bez podpisu nie ma zapisu) i « OK, zatwierdzam ». „To nie ja” zapomina telefon. Osobisty kod QR z tabletu biurowego (osoba + dzień) :
  * od razu PIN tej osoby przy pierwszym skanie ; telefon zarejestrowany na kogoś innego jest odrzucany.
  */
 (function () {
@@ -63,6 +63,7 @@
         if (res.ok) return json.data;
         const err = new Error(((json.errors || []).map(x => x.message).join(' ')) || json.message || t('error'));
         err.code = json.description;
+        err.fields = (json.errors || []).map(x => x.field);
         throw err;
     }
 
@@ -168,8 +169,10 @@
             <button type="button" class="kiosk-btn is-small kiosk-phone-forget" data-forget>${esc(t('not_me'))}</button>`;
         el.querySelector('[data-clock-tap]').addEventListener('click', (e) => {
             const direction = e.currentTarget.dataset.clockTap;
-            if ((me.questions?.[direction] || []).length) renderQuestions(me.questions[direction], direction);
-            else clockTap(e.currentTarget, direction, []);
+            const questions = me.questions?.[direction] || [];
+            const sign = !!me.signature?.[direction];
+            if (questions.length || sign) renderQuestions(questions, direction, null, sign);
+            else clockTap(e.currentTarget, direction, [], null);
         });
     }
 
@@ -180,22 +183,27 @@
             <button type="button" class="kiosk-btn" data-forget>${esc(t('register_me'))}</button></section>`;
     }
 
-    // Pytania przy wejściu / wyjściu : dotknięcie potwierdza punkt, « OK, zatwierdzam » gdy obowiązkowe są potwierdzone.
-    function renderQuestions(questions, direction, error) {
+    // Ekran zatwierdzenia : dotknięcie potwierdza punkt, podpis palcem w ramce ; « OK, zatwierdzam » gdy obowiązkowe
+    // punkty są potwierdzone i podpis złożony.
+    function renderQuestions(questions, direction, error, sign) {
         const yes = new Set();
         el.innerHTML = header() + `<section class="kiosk-card kiosk-confirm">
                 <h2>${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}</h2>
-                <p class="kiosk-muted">${esc(t('confirm_help'))}</p>
+                ${questions.length ? `<p class="kiosk-muted">${esc(t('confirm_help'))}</p>
                 <div class="kiosk-checks">${questions.map(q => `<button type="button" class="kiosk-check" data-q="${q.id}" aria-pressed="false">
-                    <span class="kiosk-check-box" aria-hidden="true"></span><span>${esc(q.text)}${q.required ? '' : `<small>${esc(t('optional'))}</small>`}</span></button>`).join('')}</div>
+                    <span class="kiosk-check-box" aria-hidden="true"></span><span>${esc(q.text)}${q.required ? '' : `<small>${esc(t('optional'))}</small>`}</span></button>`).join('')}</div>` : ''}
+                ${sign ? `<div class="kiosk-confirm-sign"><p class="kiosk-status">${esc(t(direction === 'in' ? 'sign_in_here' : 'sign_out_here'))}</p>
+                    <canvas class="kiosk-sign" data-pad width="700" height="320" aria-label="${esc(t('signature'))}"></canvas>
+                    <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div></div>` : ''}
                 <p class="kiosk-error" data-error>${esc(error || '')}</p>
                 <button type="button" class="kiosk-btn kiosk-big ${direction === 'in' ? 'is-ok' : 'is-danger'}" data-confirm>${esc(t('confirm_ok'))}</button>
                 <button type="button" class="kiosk-btn is-small" data-back>${esc(t('back'))}</button>
             </section>`;
         const ok = el.querySelector('[data-confirm]');
-        const refresh = () => { ok.disabled = questions.some(q => q.required && !yes.has(q.id)); };
+        const pad = sign ? signaturePad(el.querySelector('[data-pad]'), () => refresh()) : null;
+        const refresh = () => { ok.disabled = questions.some(q => q.required && !yes.has(q.id)) || (pad !== null && pad.empty()); };
         refresh();
-        el.querySelector('.kiosk-checks').addEventListener('click', (e) => {
+        el.querySelector('.kiosk-checks')?.addEventListener('click', (e) => {
             const b = e.target.closest('[data-q]');
             if (!b) return;
             const id = Number(b.dataset.q);
@@ -204,40 +212,13 @@
             b.setAttribute('aria-pressed', String(yes.has(id)));
             refresh();
         });
-        ok.addEventListener('click', () => clockTap(ok, direction, questions.map(q => ({question_id: q.id, yes: yes.has(q.id)}))));
+        el.querySelector('[data-clear]')?.addEventListener('click', () => { pad.clear(); refresh(); });
+        ok.addEventListener('click', () => clockTap(ok, direction, questions.map(q => ({question_id: q.id, yes: yes.has(q.id)})), pad ? pad.image() : null));
         el.querySelector('[data-back]').addEventListener('click', () => renderClock());
     }
 
-    async function clockTap(button, direction, answers) {
-        button.disabled = true;
-        if (!pending || pending.direction !== direction) pending = {uuid: uuid(), direction};
-        try {
-            const r = await api('POST', '/kiosk/phone/clock', {direction, client_uuid: pending.uuid, answers});
-            pending = null;
-            if (navigator.vibrate) navigator.vibrate(80);
-            if (direction === 'out' && r.signature_required) return renderSignature(String(r.clock.id), t('sign_out_help', {hours: fmt(r.clock.hours)}));
-            message(direction === 'in' ? t('welcome') : t('bye', {hours: fmt(r.clock.hours)}));
-        } catch (err) {
-            button.disabled = false;
-            if (['PHONE_UNAUTHENTICATED', 'PHONE_REVOKED'].includes(err.code)) { forget(); return renderPeople(); }
-            // Hors ligne : on garde le bouton (même client_uuid, pas de doublon) ; sinon message (QR expiré…).
-            if (err.offline) { el.querySelector('[data-error]').textContent = t('offline_retry'); return; }
-            // Pytania zmienione w międzyczasie : aktualna lista z komunikatem.
-            if (err.code === 'CLOCK_QUESTIONS_REQUIRED') {
-                const me = await api('GET', '/kiosk/phone/me').catch(() => null);
-                if (me) return renderQuestions(me.questions?.[direction] || [], direction, err.message);
-            }
-            message(err.message, true);
-        }
-    }
-
-    function renderSignature(ref, help) {
-        el.innerHTML = header() + `<section class="kiosk-card"><h2>${esc(t('signature'))}</h2><p class="kiosk-status">${esc(help)}</p>
-            <canvas class="kiosk-sign" data-pad width="700" height="320" aria-label="${esc(t('signature'))}"></canvas><p class="kiosk-error" data-error></p>
-            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button>
-                <button type="button" class="kiosk-btn is-small" data-skip>${esc(t('later'))}</button>
-                <button type="button" class="kiosk-btn is-primary" data-save>${esc(t('sign'))}</button></div></section>`;
-        const canvas = el.querySelector('[data-pad]');
+    // Ramka podpisu palcem (biały PNG) : empty() — nic nie narysowano, image() — data URL.
+    function signaturePad(canvas, onDraw) {
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
@@ -246,17 +227,34 @@
         const point = (e) => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) * canvas.width / r.width, (e.clientY - r.top) * canvas.height / r.height]; };
         canvas.addEventListener('pointerdown', (e) => { drawing = true; strokes++; canvas.setPointerCapture(e.pointerId); const [x, y] = point(e); ctx.beginPath(); ctx.moveTo(x, y); });
         canvas.addEventListener('pointermove', (e) => { if (!drawing) return; const [x, y] = point(e); ctx.lineTo(x, y); ctx.stroke(); });
-        canvas.addEventListener('pointerup', () => { drawing = false; });
-        el.querySelector('[data-clear]').addEventListener('click', () => { ctx.fillRect(0, 0, canvas.width, canvas.height); strokes = 0; });
-        el.querySelector('[data-skip]').addEventListener('click', () => message(t('bye_short')));
-        el.querySelector('[data-save]').addEventListener('click', async (e) => {
-            if (!strokes) { el.querySelector('[data-error]').textContent = t('sign_first'); return; }
-            e.target.disabled = true;
-            try {
-                await api('POST', '/kiosk/phone/signatures', {purpose: 'clock_out', ref, image: canvas.toDataURL('image/png')});
-                message(t('signed_bye'));
-            } catch (err) { e.target.disabled = false; el.querySelector('[data-error]').textContent = err.message; }
-        });
+        canvas.addEventListener('pointerup', () => { drawing = false; if (onDraw) onDraw(); });
+        return {
+            empty: () => strokes === 0,
+            clear: () => { ctx.fillRect(0, 0, canvas.width, canvas.height); strokes = 0; },
+            image: () => canvas.toDataURL('image/png'),
+        };
+    }
+
+    async function clockTap(button, direction, answers, signature) {
+        button.disabled = true;
+        if (!pending || pending.direction !== direction) pending = {uuid: uuid(), direction};
+        try {
+            const r = await api('POST', '/kiosk/phone/clock', {direction, client_uuid: pending.uuid, answers, ...(signature ? {signature} : {})});
+            pending = null;
+            if (navigator.vibrate) navigator.vibrate(80);
+            message(direction === 'in' ? t('welcome') : t('bye', {hours: fmt(r.clock.hours)}));
+        } catch (err) {
+            button.disabled = false;
+            if (['PHONE_UNAUTHENTICATED', 'PHONE_REVOKED'].includes(err.code)) { forget(); return renderPeople(); }
+            // Hors ligne : on garde l'écran (même client_uuid, pas de doublon) ; sinon message (QR expiré…).
+            if (err.offline) { el.querySelector('[data-error]').textContent = t('offline_retry'); return; }
+            // Pytania albo podpis zmienione w międzyczasie : aktualny ekran z komunikatem.
+            if (err.code === 'CLOCK_QUESTIONS_REQUIRED' || err.fields?.includes('signature')) {
+                const me = await api('GET', '/kiosk/phone/me').catch(() => null);
+                if (me) return renderQuestions(me.questions?.[direction] || [], direction, err.message, !!me.signature?.[direction]);
+            }
+            message(err.message, true);
+        }
     }
 
     el.addEventListener('click', async (e) => {

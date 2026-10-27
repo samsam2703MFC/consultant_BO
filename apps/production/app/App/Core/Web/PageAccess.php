@@ -12,7 +12,7 @@ namespace App\Core\Web;
  */
 final class PageAccess
 {
-    public const SECTIONS = ['Analiza', 'Produkcja', 'Zakupy', 'Produkt', 'Sprzedaż', 'Logistyka', 'Administracja'];
+    public const SECTIONS = ['Analiza', 'Produkcja', 'Zakupy', 'Produkt', 'Sprzedaż', 'Logistyka', 'Tablety', 'Administracja'];
 
     /** klucz => [etykieta, sekcja, prefiksy ścieżek, tylko administrator] */
     public const PAGES = [
@@ -21,7 +21,7 @@ final class PageAccess
         'margins' => ['Marże i koszty (marże, koszty produktu i działów, kalkulator, zamknięcie miesiąca)', 'Analiza', ['/finances', '/cost-calculator', '/month-close'], false],
         'production' => ['Produkcja (arkusz, plan tygodnia, plan zespołów, stany, ruchy magazynowe, partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
             ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock-movements', '/workshop/traceability', '/production', '/purchasing/nc', '/workshop/workstations', '/workshop/data-sheet'], false],
-        'tablet' => ['Tablet produkcji : zarządzanie (tablety, PIN, czas pracy, zatwierdzenia produkcji)', 'Produkcja', ['/workshop/execution', '/workshop/timesheet', '/workshop/production-days'], false],
+        'tablet' => ['Tablety : zarządzanie (tablety, PIN, czas pracy, zatwierdzenia produkcji)', 'Tablety', ['/workshop/execution', '/workshop/timesheet', '/workshop/production-days'], false],
         'supply' => ['Zaopatrzenie (zapotrzebowanie, zamówienia, faktury, stan)', 'Zakupy', ['/workshop/supply'], false],
         'purchasing' => ['Koszty surowców, oferty i zapytania', 'Zakupy', ['/purchasing'], false],
         'supplier_prices' => ['Ceny surowców i dostawcy', 'Zakupy', ['/materials/prices', '/material-suppliers'], false],
