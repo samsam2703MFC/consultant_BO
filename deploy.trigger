@@ -1128,3 +1128,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-27T18:36:51Z production : noms des produits retravaillés (migration 115, variante A) et recherche par mots
 2026-10-27T19:11:39Z production : tablette générique (maquette 2, PIN pour tout le monde, 6 groupes)
 2026-10-27T20:18:08Z production : factures KSeF — matières / services → Finances / rejetées, règles fournisseurs, coûts de services du mois, Faktury i koszty (migration 116)
+2026-10-27T21:09:08Z production : Finanse mois vide + Poczta tłumacz DeepL et stopki e-maili (migration 117)
