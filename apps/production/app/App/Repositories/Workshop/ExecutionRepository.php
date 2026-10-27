@@ -108,7 +108,7 @@ final class ExecutionRepository extends WorkshopRepository
     {
         $member = 'e.active = 1 AND (e.id_primary_group = g.id OR e.id IN (SELECT m.id_employee FROM n_prod_team_member m JOIN n_prod_team t ON t.id = m.id_team WHERE t.id_group = g.id AND t.active = 1))';
         return $this->all(
-            "SELECT g.id, g.name_pl, g.name_fr, g.color,
+            "SELECT g.id, g.name_pl, g.name_fr, g.color, g.bonus_visible,
                     (SELECT COUNT(*) FROM n_prod_employee e WHERE {$member}) AS people,
                     (SELECT COUNT(*) FROM n_prod_employee e WHERE {$member} AND EXISTS (SELECT 1 FROM n_prod_clock k WHERE k.id_employee = e.id AND k.clock_out IS NULL)) AS present
              FROM n_prod_group g WHERE g.active = 1 ORDER BY g.sort_order, g.name_pl"

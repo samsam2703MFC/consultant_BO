@@ -100,6 +100,7 @@
     // Ikony Lucide (lucide.dev, licencja ISC) wbudowane w skrypt : linia, bez emoji, działają offline.
     const ICONS = {
         'moon': '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />',
+        'trophy': '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />',
         'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />',
         'list-ordered': '<path d="M10 12h11" /><path d="M10 18h11" /><path d="M10 6h11" /><path d="M4 10h2" /><path d="M4 6h1v4" /><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />',
         'clock': '<circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />',
@@ -223,6 +224,7 @@
     // semaine). Tablette sans groupe (bureau) : le QR en grand et les noms. Un nouveau produit touché : la personne
     // choisit son nom, tape son PIN et arrive directement sur la fiche du produit.
     let deviceInfo = null;
+    let groupBonus = false; // onglet « Premia » du groupe de la tablette (ERP › Zespół › Premie zespołów)
     let afterLogin = null; // après le PIN : id produit (widget « Nouveaux produits ») ou 'stock' (widget « Magazyn grupy »)
     async function renderHome() {
         if (!paired) return renderPairing();
@@ -241,6 +243,7 @@
         try { groups = await api('GET', '/kiosk/groups'); } catch (err) { groups = []; }
         if (!el.isConnected) return;
         if (group && groups.length && !groups.some(g => g.id === group)) setGroup(null);
+        groupBonus = groups.some(g => g.id === deviceInfo.group_id && g.bonus);
         if (generic && !group) return renderGroups(groups);
         const office = !generic && !deviceInfo.group_id;
         const now = new Date();
@@ -532,7 +535,7 @@
     // Session ouverte (PIN, badge ou toucher d'un présent) : l'onglet demandé, sinon Produkcja (l'entrée se fait au bureau).
     function startSession(r, who) {
         const prev = session;
-        session = {token: r.employee_token, id: r.employee.id, name: r.employee.name, exp: Date.now() + r.expires_in * 1000, group: r.group_id || null};
+        session = {token: r.employee_token, id: r.employee.id, name: r.employee.name, exp: Date.now() + r.expires_in * 1000, group: r.group_id || null, bonus: groupBonus};
         // Badge passé avant de toucher un groupe : la tablette générique suit le groupe principal de la personne.
         if (deviceInfo && deviceInfo.generic && !group && r.group_id) setGroup(r.group_id);
         // Bascule entre présents : l'onglet où l'on encodait, avec ce que la tablette sait déjà du groupe.
@@ -568,7 +571,8 @@
 
     // Menu du bas de l'accueil : le même que celui d'une personne ; toucher → « qui ? » (ou directement le seul présent).
     function homeMenu() {
-        const items = [['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['recipes', 'book-open', 'tab_recipes']];
+        const items = [['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['recipes', 'book-open', 'tab_recipes'],
+            ...(groupBonus ? [['bonus', 'trophy', 'tab_bonus']] : [])];
         return `<nav class="kiosk-tabs is-home" aria-label="${esc(t('tabs'))}">${items.map(([k, ic, label]) => `<button type="button" class="kiosk-tab" data-home-tab="${k}">
             <span class="kiosk-tab-icon">${icon(ic)}</span><span class="kiosk-tab-label">${esc(t(label))}</span><span class="kiosk-tab-short" aria-hidden="true">${esc(t(label + '_short'))}</span></button>`).join('')}
             <button type="button" class="kiosk-tab" data-week-open><span class="kiosk-tab-icon">${icon('calendar-days')}</span><span class="kiosk-tab-label">${esc(t('home_week_all'))}</span><span class="kiosk-tab-short" aria-hidden="true">${esc(t('home_week_short'))}</span></button></nav>`;
@@ -628,13 +632,13 @@
     }
 
     // --- Menu osoby : Czas pracy / Produkcja / Kontrola jakości / Receptury ---------------------------
-    const TABS = [['clock', 'clock', 'tab_clock'], ['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['recipes', 'book-open', 'tab_recipes'], ['machines', 'bot', 'tab_machines'], ['dev', 'flask-conical', 'tab_dev']];
+    const TABS = [['clock', 'clock', 'tab_clock'], ['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['recipes', 'book-open', 'tab_recipes'], ['machines', 'bot', 'tab_machines'], ['dev', 'flask-conical', 'tab_dev'], ['bonus', 'trophy', 'tab_bonus']];
     const personHeader = () => header();
     function tabs(active) {
         if (session) session.tab = active;
         // Zakładki Maszyny (TRS) i Nowe produkty tylko, gdy grupa tabletu ma maszyny z TRS / produkty pokazane na tablecie.
         const shown = ([k]) => (k !== 'machines' || (session && session.machines > 0)) && (k !== 'dev' || (session && session.dev > 0))
-            && (k !== 'clock' || !(deviceInfo && deviceInfo.mode === 'atelier'));
+            && (k !== 'clock' || !(deviceInfo && deviceInfo.mode === 'atelier')) && (k !== 'bonus' || (session && session.bonus));
         return `<nav class="kiosk-tabs" role="tablist" aria-label="${esc(t('tabs'))}">${TABS.filter(shown).map(([k, ic, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
             role="tab" aria-selected="${k === active}" data-tab="${k}"><span class="kiosk-tab-icon">${icon(ic)}</span><span class="kiosk-tab-label">${esc(t(label))}</span><span class="kiosk-tab-short" aria-hidden="true">${esc(t(label + '_short'))}</span></button>`).join('')}</nav>`;
     }
@@ -643,6 +647,7 @@
         if (k === 'machines') return renderMachines(message);
         if (k === 'dev') return renderDev(message);
         if (k === 'stock') return renderStock(message);
+        if (k === 'bonus') return renderBonus(message);
         return k === 'production' ? renderProduction(message) : (k === 'quality' ? renderQuality(message) : renderMe(message));
     }
 
@@ -1528,6 +1533,51 @@
         el.innerHTML = personHeader() + tabs('stock') + body;
         if (message) toast(message);
         el.querySelectorAll('[data-kv-view]').forEach(b => b.addEventListener('click', () => { if (session) session.stockView = b.dataset.kvView; renderStock(); }));
+    }
+
+    // --- Premia : ventes du groupe par personne dans le mois face aux paliers (ERP › Zespół › Premie zespołów) ---------
+    async function renderBonus(message) {
+        longIdle = true;
+        resetIdle();
+        let b;
+        try { b = await api('GET', '/kiosk/bonus', undefined, true); } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        if (!b.visible) { if (session) session.bonus = false; openTab('production', t('bonus_hidden')); return; }
+        const zl = (v) => v === null || v === undefined ? '—' : `${fmt(Math.round(v))} zł`;
+        const month = (ym) => { const d = new Date(ym + '-01T12:00:00'); const m = d.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {month: 'long', year: 'numeric'}); return m.charAt(0).toUpperCase() + m.slice(1); };
+        const c = b.current;
+        const tile = (label, value, sub, cls) => `<div class="kv-tile ${cls || ''}"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(sub)}</small></div>`;
+        const groupName = lang === 'fr' ? b.group.name_fr : b.group.name_pl;
+        let body = `<div class="kv-crumb"><div><h2>${esc(t('bonus_title', {group: groupName}))}</h2><p class="kiosk-muted">${esc(t('bonus_sub', {month: month(b.ym), pct: Math.round(b.elapsed * 100)}))}</p></div></div>`;
+        if (!c.available) {
+            body += `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('bonus_none'))}</p></section>`;
+        } else {
+            const tiers = b.tiers.filter(x => !x.below_min);
+            const top = tiers.length ? tiers[tiers.length - 1].from : b.min;
+            const scale = Math.max(top * 1.12, (c.projection || 0) * 1.04, 1);
+            const pos = (v) => Math.min(100, Math.max(0, v / scale * 100));
+            const marks = tiers.map(x => `<span class="kb-mark ${x.projected ? 'is-on' : ''}" style="left:${pos(x.from)}%"><b>${esc(zl(x.from))}</b><i>+${esc(zl(x.amount))}</i></span>`).join('');
+            const tierNo = c.tier_projection !== null ? tiers.findIndex(x => x.from === b.tiers[c.tier_projection].from) + 1 : 0;
+            body += `<section class="kiosk-card kb-hero"><div class="kb-figures">
+                    <div><span class="kb-label">${esc(t('bonus_per_person'))}</span><strong class="kb-big">${esc(zl(c.per_person))}</strong><small class="kiosk-muted">${esc(t('bonus_per_person_sub', {revenue: zl(c.revenue_pln), people: fmt(c.people)}))}</small></div>
+                    <div class="is-right"><span class="kb-label">${esc(t('bonus_projection'))}</span><strong class="kb-big is-primary">${esc(zl(c.projection))}</strong><small class="kiosk-muted">${esc(t('bonus_projection_sub'))}</small></div></div>
+                <div class="kb-bar" role="img" aria-label="${esc(t('bonus_per_person'))} ${esc(zl(c.per_person))}"><i class="kb-now" style="width:${pos(c.per_person)}%"></i><i class="kb-pace" style="left:${pos(c.per_person)}%;width:${Math.max(0, pos(c.projection) - pos(c.per_person))}%"></i>${marks}</div></section>`;
+            const next = b.next;
+            body += `<div class="kv-tiles kb-tiles">
+                ${c.bonus_projection > 0 ? tile(t('bonus_tile_bonus'), zl(c.bonus_projection), t('bonus_tile_bonus_sub', {n: tierNo}), 'is-ok') : tile(t('bonus_tile_bonus'), '0 zł', t('bonus_tile_bonus_none', {min: zl(b.threshold)}))}
+                ${next ? tile(t('bonus_tile_next', {amount: zl(next.amount)}), zl(next.missing_group), next.per_day !== null && b.remaining_days > 0 ? t('bonus_tile_next_day', {value: zl(next.per_day), days: b.remaining_days}) : t('bonus_tile_next_sub'))
+                    : tile(t('bonus_tile_top'), zl(c.bonus_projection), t('bonus_tile_top_sub'), 'is-ok')}
+                ${tile(t('bonus_tile_min'), zl(b.threshold), t('bonus_tile_min_sub'))}
+                ${b.previous.available ? tile(t('bonus_tile_prev', {month: month(b.previous_ym)}), zl(b.previous.per_person), b.previous.bonus > 0 ? t('bonus_tile_prev_sub', {amount: zl(b.previous.bonus)}) : t('bonus_tile_prev_none')) : ''}</div>`;
+            if (b.persons.length) {
+                const rows = b.persons.map(p => `<tr class="${p.me ? 'is-me' : ''}"><td><strong>${esc(p.name)}</strong>${p.me ? ` <span class="kiosk-pill">${esc(t('bonus_me'))}</span>` : ''}</td>
+                    <td class="n">${b.prorata ? esc(t('bonus_days', {days: p.days, total: b.group_days})) : ''}</td><td class="n"><strong>${esc(zl(p.amount))}</strong></td></tr>`).join('');
+                body += `<section class="kiosk-card kv-tablecard"><h2>${esc(t(b.show_people ? 'bonus_persons' : 'bonus_persons_me'))}</h2><table class="kv-table"><tbody>${rows}</tbody></table>
+                    <p class="kiosk-muted kv-small">${esc(b.prorata ? t('bonus_prorata_note', {total: b.group_days}) : t('bonus_full_note'))}</p></section>`;
+            }
+        }
+        body += `<p class="kiosk-muted kv-small kb-basis">${esc(t('bonus_basis', {rate: fmt(b.rate)}))}</p>`;
+        el.innerHTML = personHeader() + tabs('bonus') + body;
+        if (message) toast(message);
     }
 
     // Koniec dnia : assistant en 6 étapes — 1 productions sans tous leurs lots matières → 2 sans contrôle qualité (OK

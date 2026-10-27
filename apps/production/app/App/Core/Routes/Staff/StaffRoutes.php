@@ -10,4 +10,8 @@ return function(RouteCollector $r) {
     $r->addRoute('PATCH', '/ajax/staff/employees/{id:\d+}/pay', ['controller' => $c, 'method' => 'savePay']);
     $r->addRoute('PUT', '/ajax/staff/bonus-pct', ['controller' => $c, 'method' => 'saveDefaultPct']);
     $r->addRoute('PATCH', '/ajax/staff/sections/{id:\d+}/bonus-pct', ['controller' => $c, 'method' => 'saveSectionPct']);
+    // Premie zespołów : progi sprzedaży na osobę, minimum, zakładka « Premia » tabletu grupy.
+    $r->addRoute('GET', '/staff/team-bonus', ['controller' => $c, 'method' => 'teamBonus']);
+    $r->addRoute('PUT', '/ajax/staff/team-bonus', ['controller' => $c, 'method' => 'saveTeamBonus']);
+    $r->addRoute('PATCH', '/ajax/staff/team-bonus/groups/{id:\d+}', ['controller' => $c, 'method' => 'teamBonusGroup']);
 };

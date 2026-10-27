@@ -233,6 +233,7 @@ final class WorkshopApiRoutes
             // Magazyn grupy : stan, min. / maks., ile wolno jeszcze wyprodukować (formuła Stanu magazynu ERP).
             // Stan magazynu grupy : też na ekranie głównym tabletu (bez PIN) — dane grupy, nie osoby.
             ['GET', '/kiosk/stock', ExecutionController::class, 'stock', 'kiosk'],
+            ['GET', '/kiosk/bonus', ExecutionController::class, 'bonus', 'kiosk_employee'],
             ['POST', '/kiosk/waste', ExecutionController::class, 'recordWaste', 'kiosk_employee'],
             ['PATCH', '/kiosk/waste/{id:\d+}', ExecutionController::class, 'updateWaste', 'kiosk_employee'],
             ['GET', '/kiosk/recipes', ExecutionController::class, 'recipes', 'kiosk_employee'],

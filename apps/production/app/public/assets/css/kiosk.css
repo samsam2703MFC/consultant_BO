@@ -823,3 +823,26 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .kiosk-group-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--g); }
 .kiosk-switch .kiosk-apps { margin: 14px 0; }
 .kiosk-app-person:disabled { opacity: .45; }
+
+/* --- Premia : ventes par personne du mois face aux paliers (makieta 1 + prime de chacun) --- */
+.kv-tile.is-ok strong { color: var(--k-ok); }
+.kb-hero { padding: 22px 24px 74px; }
+.kb-figures { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.kb-figures > div { display: flex; flex-direction: column; gap: 2px; }
+.kb-figures .is-right { text-align: right; align-items: flex-end; }
+.kb-label { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--k-muted); }
+.kb-big { font-size: 44px; font-weight: 650; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.kb-big.is-primary { color: var(--k-primary); }
+.kb-bar { position: relative; height: 28px; margin: 26px 6px 0; border-radius: 999px; background: var(--k-fill); }
+.kb-bar .kb-now { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--k-primary); }
+.kb-bar .kb-pace { position: absolute; top: 0; bottom: 0; border-radius: 0 999px 999px 0; background: repeating-linear-gradient(45deg, rgba(141, 29, 44, .35) 0 8px, rgba(141, 29, 44, .14) 8px 16px); }
+.kb-mark { position: absolute; top: -8px; bottom: -8px; width: 2px; background: var(--k-text); }
+.kb-mark b, .kb-mark i { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; font-style: normal; font-size: 14px; font-variant-numeric: tabular-nums; }
+.kb-mark b { top: 44px; font-weight: 650; }
+.kb-mark i { top: 62px; color: var(--k-primary); font-weight: 600; }
+.kb-mark.is-on { background: var(--k-ok); }
+.kb-mark.is-on i { color: var(--k-ok); }
+.kb-tiles .kv-tile { min-width: 0; }
+.kv-table tr.is-me td { background: var(--k-fill); }
+.kb-basis { margin: 12px 4px 0; }
+@media (max-width: 700px) { .kb-big { font-size: 34px; } .kb-figures .is-right { text-align: left; align-items: flex-start; } }

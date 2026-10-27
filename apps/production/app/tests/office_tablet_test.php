@@ -305,6 +305,28 @@ try {
         $call('PATCH', '/referentiels/params/kiosk.production_tap_present', ['value' => true], $manager);
     }
     expectOff((int) $pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE action = 'tap_present' AND entity_id = '80'")->fetchColumn() >= 1, 'tap login written to the audit log');
+    // --- Zakładka « Premia » (27/10/2026) : tylko grupy z bonus_visible, osoba zalogowana ; progi z migracji 111
+    $tpH = $atelier + ['X-Employee-Token' => $tp['data']['employee_token']];
+    [, $b] = $call('GET', '/kiosk/groups', null, $atelier);
+    expectOff(array_column($b['data'], null, 'id')[1]['bonus'] === false, 'Premia tab off by default');
+    [$s, $b] = $call('GET', '/kiosk/bonus', null, $tpH);
+    expectOff($s === 200 && $b['data'] === ['visible' => false], 'Premia hidden: visible = false');
+    [$s] = $call('GET', '/kiosk/bonus', null, $atelier);
+    expectOff($s === 401, 'Premia needs an identified person');
+    $pdo->exec('UPDATE n_prod_group SET bonus_visible = 1 WHERE id = 1');
+    [, $b] = $call('GET', '/kiosk/groups', null, $atelier);
+    expectOff(array_column($b['data'], null, 'id')[1]['bonus'] === true, 'Premia tab on for the group');
+    [$s, $b] = $call('GET', '/kiosk/bonus', null, $tpH);
+    $me = array_values(array_filter($b['data']['persons'] ?? [], fn($p) => $p['me']));
+    expectOff($s === 200 && $b['data']['visible'] === true && $b['data']['min'] == 30000 && array_column($b['data']['tiers'], 'amount') == [300, 600, 1000]
+        && count($me) === 1 && $me[0]['id'] === 80 && array_key_exists('per_person', $b['data']['current']), 'Premia: minimum, tiers, the person marked as me');
+    [$s] = $call('PATCH', '/referentiels/params/bonus.show_people', ['value' => false], $manager);
+    if ($s === 200) {
+        [, $b] = $call('GET', '/kiosk/bonus', null, $tpH);
+        expectOff(array_column($b['data']['persons'], 'id') === [80], 'bonus.show_people = 0: only the identified person');
+    }
+    [, $b] = $call('GET', '/kiosk/bonus', null, $tarty + ['X-Employee-Token' => $idK['data']['employee_token']]);
+    expectOff($b['data'] === ['visible' => false], 'Premia tab of another group stays hidden');
     [$s, $b] = $call('GET', '/kiosk/stock', null, $tarty);
     expectOff($s === 200 && is_array($b['data']['items']) && isset($b['data']['totals']['below_min']), 'group stock readable on the home screen without a PIN (chosen group)');
     [, $tq] = $call('GET', '/kiosk/qr?base=' . rawurlencode($base), null, $tarty);

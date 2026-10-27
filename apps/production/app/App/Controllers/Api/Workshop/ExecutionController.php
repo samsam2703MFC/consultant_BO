@@ -20,6 +20,7 @@ use App\Services\Workshop\Execution\QualityService;
 use App\Services\Workshop\Execution\TimesheetService;
 use App\Services\Workshop\Planning\TeamSheetService;
 use App\Services\Workshop\Supply\SupplyService;
+use App\Services\Staff\TeamBonusService;
 
 /** P7 : tablettes (appairage, identification, pointage, opérations, signatures), tablette de bureau, pointage au téléphone par QR code, heures, KPIs, cockpit. */
 final class ExecutionController
@@ -41,6 +42,7 @@ final class ExecutionController
         private SupplyService $supply,
         private KioskStockService $stock,
         private OfficeClockService $office,
+        private TeamBonusService $bonus,
     ) {
     }
 
@@ -135,6 +137,13 @@ final class ExecutionController
     public function validateLine(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->validateLine($request->body(), $request->context)); }
     public function uploadPhoto(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->uploadPhoto($request->body(), $request->context), 201); }
     public function stock(ApiRequest $request): ApiResult { return new ApiResult($this->stock->group($request->context)); }
+    // Zakładka « Premia » : tylko grupa z włączoną zakładką (ERP › Zespół › Premie zespołów), osoba zalogowana.
+    public function bonus(ApiRequest $request): ApiResult
+    {
+        $groupId = $request->context->deviceGroupId ?? throw new ApiException('DEVICE_WITHOUT_GROUP', 409);
+        $data = $this->bonus->forGroup($groupId, $request->context->employeeId);
+        return new ApiResult($data === null ? ['visible' => false] : ['visible' => true] + $data);
+    }
 
     // Kierownik produkcji (ERP) : dni z tabletów, poprawki po zatwierdzeniu
     public function days(ApiRequest $request): ApiResult { return ApiResult::list($this->outputs->recentDays((int) ($request->query('days') ?? 14))); }

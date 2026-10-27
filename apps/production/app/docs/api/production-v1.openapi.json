@@ -13551,6 +13551,66 @@
                 ]
             }
         },
+        "/kiosk/bonus": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Premia zespołu / Prime de l'équipe",
+                "operationId": "kioskBonus",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskBonus"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Onglet « Premia » de la tablette (personne identifiée) : visible = false si l'onglet est coupé pour le groupe (ERP › Zespół › Premie zespołów). Ventes du groupe dans le mois (WDT du département du groupe, comme Rentowność) ÷ personnes payées dans le mois = ventes par personne, en zł au taux de la société : per_person (à ce jour) et projection (au rythme actuel). Palier atteint à partir de min (bonus.min_per_person_pln) → bonus (à ce jour) / bonus_projection par personne ; next : palier suivant, ventes du groupe manquantes d'ici la fin du mois et par jour ouvré restant. persons : prime de chacun au prorata des jours de présence (pointages) si bonus.presence_prorata ; seulement la personne connectée si bonus.show_people = 0.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/waste": {
             "post": {
                 "tags": [
@@ -21145,6 +21205,10 @@
                     },
                     "own": {
                         "type": "boolean"
+                    },
+                    "bonus": {
+                        "type": "boolean",
+                        "description": "onglet « Premia » visible pour ce groupe"
                     }
                 }
             },
@@ -22531,6 +22595,181 @@
                     },
                     "bytes": {
                         "type": "integer"
+                    }
+                }
+            },
+            "KioskBonus": {
+                "type": "object",
+                "required": [
+                    "visible"
+                ],
+                "properties": {
+                    "visible": {
+                        "type": "boolean"
+                    },
+                    "group": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name_pl": {
+                                "type": "string"
+                            },
+                            "name_fr": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "ym": {
+                        "type": "string"
+                    },
+                    "previous_ym": {
+                        "type": "string"
+                    },
+                    "elapsed": {
+                        "type": "number"
+                    },
+                    "remaining_days": {
+                        "type": "integer"
+                    },
+                    "min": {
+                        "type": "number"
+                    },
+                    "threshold": {
+                        "type": "number"
+                    },
+                    "rate": {
+                        "type": "number"
+                    },
+                    "prorata": {
+                        "type": "boolean"
+                    },
+                    "group_days": {
+                        "type": "integer"
+                    },
+                    "show_people": {
+                        "type": "boolean"
+                    },
+                    "tiers": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "from": {
+                                    "type": "number"
+                                },
+                                "amount": {
+                                    "type": "number"
+                                },
+                                "below_min": {
+                                    "type": "boolean"
+                                },
+                                "reached": {
+                                    "type": "boolean"
+                                },
+                                "projected": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    },
+                    "current": {
+                        "$ref": "#/components/schemas/BonusMonth"
+                    },
+                    "previous": {
+                        "$ref": "#/components/schemas/BonusMonth"
+                    },
+                    "next": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "index": {
+                                "type": "integer"
+                            },
+                            "from": {
+                                "type": "number"
+                            },
+                            "amount": {
+                                "type": "number"
+                            },
+                            "missing_group": {
+                                "type": "number"
+                            },
+                            "missing_per_person": {
+                                "type": "number"
+                            },
+                            "per_day": {
+                                "type": "number",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "persons": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "days": {
+                                    "type": "integer"
+                                },
+                                "share": {
+                                    "type": "number"
+                                },
+                                "amount": {
+                                    "type": "number"
+                                },
+                                "me": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "BonusMonth": {
+                "type": "object",
+                "properties": {
+                    "available": {
+                        "type": "boolean"
+                    },
+                    "people": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "revenue_pln": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "per_person": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "projection": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "tier": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "tier_projection": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "bonus": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "bonus_projection": {
+                        "type": "number",
+                        "nullable": true
                     }
                 }
             },

@@ -983,6 +983,12 @@ tr.at-row-new > td { background: rgba(46, 125, 79, 0.07); }
 .at-staff-pct { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .at-staff-pct label { font-size: 13px; color: var(--at-muted); margin: 0; }
 .at-staff-pct .input-group { width: 150px; }
+/* Premie zespołów : minimum, progi, grupy (zakładka « Premia » tabletu) */
+.at-team-bonus .at-bonus-input { max-width: 220px; }
+.at-team-bonus .at-bonus-tiers .input-group { max-width: 190px; }
+.at-team-bonus .at-bonus-tiers th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--at-muted); font-weight: 500; }
+.at-team-bonus .at-bonus-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: 1px; }
+.at-team-bonus .at-bonus-groups .form-switch .form-check-input { width: 2.6em; height: 1.4em; margin-left: 0; }
 .at-staff-base { width: 140px; min-width: 120px; }
 .at-staff-people td, .at-staff-people th { vertical-align: middle; }
 .at-staff-inactive td { color: var(--at-muted); }

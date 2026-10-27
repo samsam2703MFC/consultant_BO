@@ -1,0 +1,145 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Premie zespołów{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Premie zespołów</h3>
+            <p class="text-subtitle text-muted">
+                Sprzedaż grupy w miesiącu ÷ osoby grupy = sprzedaż na osobę → próg → premia na osobę.
+                Zakładka « Premia » na tablecie produkcji tylko dla zaznaczonych grup.
+            </p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-staff at-team-bonus">
+    <div class="row g-3">
+        <div class="col-xxl-4 col-xl-5">
+            <form id="teamBonusForm" class="card" novalidate>
+                <div class="card-header"><h4 class="card-title mb-0">Minimum i progi</h4></div>
+                <div class="card-body pt-0">
+                    <label class="form-label" for="bonusMin">Sprzedaż na osobę w miesiącu, od której jest premia</label>
+                    <span class="input-group at-bonus-input">
+                        <input id="bonusMin" class="form-control text-end" name="min" inputmode="decimal" value="{{ min|number_format(0, ',', ' ') }}" required>
+                        <span class="input-group-text">zł</span>
+                    </span>
+
+                    <table class="table table-sm mt-3 mb-2 at-bonus-tiers">
+                        <thead><tr><th>Od (na osobę)</th><th>Premia na osobę</th><th></th></tr></thead>
+                        <tbody data-tiers>
+                        {% for tier in tiers %}
+                            <tr data-tier>
+                                <td><span class="input-group input-group-sm"><input class="form-control text-end" data-from inputmode="decimal" value="{{ tier.from|number_format(0, ',', ' ') }}" aria-label="Próg {{ loop.index }} : od"><span class="input-group-text">zł</span></span></td>
+                                <td><span class="input-group input-group-sm"><input class="form-control text-end" data-amount inputmode="decimal" value="{{ tier.amount|number_format(0, ',', ' ') }}" aria-label="Próg {{ loop.index }} : premia"><span class="input-group-text">zł</span></span></td>
+                                <td class="text-end"><button type="button" class="btn btn-sm btn-link text-danger" data-remove aria-label="Usuń próg"><i class="bi bi-x-lg"></i></button></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    <button type="button" class="btn btn-sm btn-light" data-add><i class="bi bi-plus-lg"></i> Dodaj próg</button>
+
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="bonusProrata" name="prorata" {{ prorata ? 'checked' : '' }}>
+                        <label class="form-check-label" for="bonusProrata">Premia osoby w proporcji do dni obecności (odbicia na tablecie)</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="bonusPeople" name="show_people" {{ show_people ? 'checked' : '' }}>
+                        <label class="form-check-label" for="bonusPeople">Tablet pokazuje premię każdej osoby grupy (wyłączone : tylko własną)</label>
+                    </div>
+                    <div class="mt-3"><button class="btn btn-primary">Zapisz</button></div>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-xxl-8 col-xl-7">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title mb-0">Grupy : zakładka « Premia » i stan miesiąca</h4></div>
+                <div class="card-body pt-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0 at-profit-table at-bonus-groups">
+                            <thead>
+                                <tr>
+                                    <th>Grupa</th>
+                                    <th class="text-center">Zakładka « Premia »</th>
+                                    <th class="text-end">Osoby</th>
+                                    <th class="text-end">Sprzedaż / os.<div class="at-sub">{{ current_label }}</div></th>
+                                    <th class="text-end">Premia / os.<div class="at-sub">prognoza</div></th>
+                                    <th class="text-end">{{ previous_label }}<div class="at-sub">sprzedaż / os., premia</div></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for g in groups %}
+                                {% set c = g.current %}
+                                {% set p = g.previous %}
+                                <tr data-group="{{ g.id }}">
+                                    <td><span class="at-bonus-dot" style="background: {{ g.color|default('#999') }}"></span><strong>{{ g.name }}</strong>
+                                        {% if not g.section %}<div class="at-sub">bez działu kosztów : brak sprzedaży</div>{% elseif not c.available %}<div class="at-sub">brak sprzedaży albo osób w miesiącu</div>{% endif %}</td>
+                                    <td class="text-center">
+                                        <div class="form-check form-switch d-inline-block m-0">
+                                            <input class="form-check-input" type="checkbox" role="switch" data-visible {{ g.visible ? 'checked' : '' }} aria-label="Zakładka « Premia » : {{ g.name }}">
+                                        </div>
+                                    </td>
+                                    <td class="text-end">{{ c.people is not null ? c.people|number_format(c.people == c.people|round ? 0 : 1, ',', ' ') : '—' }}</td>
+                                    <td class="text-end text-nowrap">
+                                        {% if c.available %}<strong>{{ c.projection|pln }}</strong><div class="at-sub">dziś {{ c.per_person|pln }}</div>{% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if c.available and c.bonus_projection > 0 %}<strong class="text-success">{{ c.bonus_projection|pln }}</strong>
+                                        {% elseif c.available %}<span class="at-sub text-nowrap">&lt; {{ threshold|pln }}</span>{% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        {% if p.available %}{{ p.per_person|pln }}<div class="at-sub">{{ p.bonus > 0 ? 'premia ' ~ p.bonus|pln : 'bez premii' }}</div>{% else %}—{% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="at-profit-note">
+                        Sprzedaż na osobę = ta sama liczba co na stronie <a href="{{ root }}/dashboard">Rentowność</a> : sprzedaż WDT działu grupy ÷ osoby opłacone w miesiącu,
+                        w zł po kursie {{ rate|number_format(2, ',', ' ') }} z ustawień firmy. Bieżący miesiąc : « prognoza » = w obecnym tempie ({{ (elapsed * 100)|round }} % miesiąca), « dziś » = sprzedaż do dziś.
+                        Premia wypłacana za zamknięty miesiąc. Budżet personelu z % sprzedaży : <a href="{{ root }}/staff/budget">Budżet personelu i premie</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const form = document.getElementById('teamBonusForm');
+    const body = form.querySelector('[data-tiers]');
+    const row = () => {
+        const tr = document.createElement('tr');
+        tr.dataset.tier = '';
+        tr.innerHTML = `<td><span class="input-group input-group-sm"><input class="form-control text-end" data-from inputmode="decimal" aria-label="Od"><span class="input-group-text">zł</span></span></td>
+            <td><span class="input-group input-group-sm"><input class="form-control text-end" data-amount inputmode="decimal" aria-label="Premia"><span class="input-group-text">zł</span></span></td>
+            <td class="text-end"><button type="button" class="btn btn-sm btn-link text-danger" data-remove aria-label="Usuń próg"><i class="bi bi-x-lg"></i></button></td>`;
+        return tr;
+    };
+    form.querySelector('[data-add]').addEventListener('click', () => { const tr = row(); body.appendChild(tr); tr.querySelector('input').focus(); });
+    body.addEventListener('click', (e) => { const b = e.target.closest('[data-remove]'); if (b) b.closest('tr').remove(); });
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const tiers = [...body.querySelectorAll('tr[data-tier]')].map(tr => ({from: tr.querySelector('[data-from]').value, amount: tr.querySelector('[data-amount]').value}));
+        at.send('/ajax/staff/team-bonus', 'PUT', {min: form.min.value, prorata: form.prorata.checked, show_people: form.show_people.checked, tiers}).then((res) => {
+            at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+            if (res.ok) window.setTimeout(() => window.location.reload(), 600);
+        });
+    });
+    document.querySelectorAll('tr[data-group] [data-visible]').forEach(input => input.addEventListener('change', () => {
+        at.send(`/ajax/staff/team-bonus/groups/${input.closest('tr').dataset.group}`, 'PATCH', {visible: input.checked}).then((res) => {
+            at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+            if (!res.ok) input.checked = !input.checked;
+        });
+    }));
+})();
+</script>
+{% endblock %}

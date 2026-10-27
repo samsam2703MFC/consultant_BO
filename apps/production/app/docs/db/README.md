@@ -43,6 +43,18 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
 
+### Premie zespołów : onglet « Premia » par groupe (migration 111, 27/10/2026)
+
+- `n_bonus_tier` : paliers de prime — à partir de `from_per_person_pln` de ventes par personne dans le mois, `amount_pln`
+  par personne (30 000 / 35 000 / 40 000 zł → 300 / 600 / 1 000 zł, à régler dans Zespół › Premie zespołów, `/staff/team-bonus`).
+- `n_prod_group.bonus_visible` (0) : onglet « Premia » de la tablette de production pour ce groupe (`GET /kiosk/bonus`,
+  personne identifiée ; `GET /kiosk/groups` renvoie `bonus`).
+- Paramètres `bonus.min_per_person_pln` (30 000 zł : minimum pour avoir une prime), `bonus.presence_prorata` (1 : prime de
+  chacun × jours de présence ÷ jours travaillés du groupe, d'après les pointages) et `bonus.show_people` (1 : la tablette montre la
+  prime de chacun ; 0 : seulement la personne connectée).
+- Ventes par personne = la colonne « Sprzedaż na osobę » de Rentowność (WDT du département du groupe ÷ personnes payées dans le
+  mois), en zł au taux de la société ; mois en cours : à ce jour et prévision au rythme actuel.
+
 ### Tablette de production : recette sur commande avec perte (migration 110, 27/10/2026)
 
 - Paramètre `kiosk.recipe_loss_pct` (2) : perte de production proposée dans « Receptura na zamówienie » (commande en

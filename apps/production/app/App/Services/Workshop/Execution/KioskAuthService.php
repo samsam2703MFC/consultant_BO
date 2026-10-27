@@ -271,7 +271,8 @@ final class KioskAuthService
         $out = [];
         foreach ($this->repo->kioskGroups() as $g) {
             $out[] = ['id' => (int) $g['id'], 'name' => $fr && trim((string) $g['name_fr']) !== '' ? $g['name_fr'] : $g['name_pl'],
-                'color' => $g['color'], 'people' => (int) $g['people'], 'present' => (int) $g['present'], 'own' => (int) $g['id'] === $fixed];
+                'color' => $g['color'], 'people' => (int) $g['people'], 'present' => (int) $g['present'], 'own' => (int) $g['id'] === $fixed,
+                'bonus' => (bool) ($g['bonus_visible'] ?? false)];
         }
         return $out;
     }
