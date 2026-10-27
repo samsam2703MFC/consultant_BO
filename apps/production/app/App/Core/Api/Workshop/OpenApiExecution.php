@@ -67,7 +67,8 @@ final class OpenApiExecution
                 'description' => "Échange le code d'appairage contre le jeton de l'appareil (à envoyer ensuite dans X-Device-Token)."],
             'GET /kiosk/people' => ['tag' => 'kiosk', 'id' => 'kioskPeople', 'summary' => 'Osoby przy tablecie / Personnes de la tablette', 'response' => 'KioskPerson', 'list' => true, 'errors' => [401, 403]],
             'POST /kiosk/identify' => ['tag' => 'kiosk', 'id' => 'identify', 'summary' => 'Identyfikacja: identyfikator lub osoba + PIN / Identification : badge ou personne + PIN', 'body' => 'IdentifyInput', 'response' => 'EmployeeToken', 'errors' => [400, 401, 403, 409, 422, 423],
-                'description' => "Jeton court (kiosk.employee_token_ttl_s) lié à la tablette, à envoyer dans X-Employee-Token. Blocage après kiosk.pin_max_attempts PIN erronés (423)."],
+                'description' => "Jeton court (kiosk.employee_token_ttl_s) lié à la tablette, à envoyer dans X-Employee-Token. Blocage après kiosk.pin_max_attempts PIN erronés (423). "
+                    . "Tablette de bureau : PIN + signature pour les personnes sans téléphone enregistré ; avec un téléphone, OFFICE_USE_PHONE (409) sauf kiosk.office_pin_all = 1."],
             'POST /kiosk/refresh' => ['tag' => 'kiosk', 'id' => 'refreshEmployee', 'summary' => 'Przedłuż sesję osoby / Prolonger la session de la personne', 'response' => 'EmployeeToken', 'errors' => [401],
                 'description' => "Nouveau jeton (kiosk.employee_token_ttl_s) tant que l'ancien est valide : la tablette prolonge la session pendant la saisie des lots ; l'inactivité déconnecte toujours."],
             'GET /kiosk/me' => ['tag' => 'kiosk', 'id' => 'kioskMe', 'summary' => 'Ja: pointowanie i operacje / Moi : pointage et opérations', 'response' => 'KioskMe', 'errors' => [401]],
@@ -400,6 +401,7 @@ final class OpenApiExecution
             'ClockQr' => ['type' => 'object', 'properties' => ['url' => $str, 'expires_in' => $int, 'refresh_s' => $int, 'size' => $int, 'rows' => ['type' => 'array', 'items' => ['type' => 'string', 'example' => '1111111010…']]]],
             'PhonePerson' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => $str, 'has_pin' => $bool]],
             'OfficePerson' => ['type' => 'object', 'properties' => ['id' => $int, 'employee_id' => $nInt, 'name' => $str, 'has_pin' => $bool, 'phones' => $int,
+                'pin_allowed' => ['type' => 'boolean', 'description' => 'pointage sur la tablette par PIN + signature (sans téléphone enregistré, ou kiosk.office_pin_all)'],
                 'clocked_in' => $bool, 'since' => $nStr, 'left_at' => $nStr]],
             'OfficeSection' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => $str, 'people' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/OfficePerson']]]],
             'OfficeQrInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['person_id', 'base'], 'properties' => ['person_id' => $int, 'base' => ['type' => 'string', 'example' => 'https://erp.example/production']]],

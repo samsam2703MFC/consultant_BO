@@ -3,6 +3,7 @@
  * kodem co tablet pracowni. Osoba dotyka swojego działu, potem swojego nazwiska : tablet pokazuje jej osobisty kod QR
  * (osoba + dzień). Osoba skanuje go swoim telefonem i zatwierdza wejście albo wyjście na telefonie (pytania, podpis) ;
  * telefon innej osoby jest odrzucany. Tablet sprawdza co 2 s, czy pointowanie jest zapisane, i wraca do działów.
+ * Bez telefonu : PIN, potem pytania i podpis palcem na tablecie (pin_allowed ; kiosk.office_pin_all — wszyscy).
  */
 (function () {
     'use strict';
@@ -71,9 +72,10 @@
         window.setTimeout(() => n.remove(), error ? 5000 : 2500);
     }
 
-    async function api(method, path, body) {
+    async function api(method, path, body, employeeToken) {
         const headers = {'Accept': 'application/json', 'Accept-Language': lang};
         if (device) headers['X-Device-Token'] = device;
+        if (employeeToken) headers['X-Employee-Token'] = employeeToken;
         if (body !== undefined) headers['Content-Type'] = 'application/json';
         let res;
         try {
@@ -87,6 +89,7 @@
         if (res.ok) return json.data;
         const err = new Error(((json.errors || []).map(x => x.message).join(' ')) || json.message || t('error'));
         err.code = json.description;
+        err.fields = (json.errors || []).map(x => x.field);
         if (err.code === 'DEVICE_UNAUTHENTICATED') { paired = false; clearTimers(); renderPairing(err.message); }
         // Tablet pracowni albo kierowcy : jego własna strona (/kiosk przekierowuje tablet kierowcy na /driver).
         if (err.code === 'DEVICE_NOT_OFFICE') location.replace(root + '/kiosk');
@@ -212,7 +215,9 @@
         const since = q.since;
         const action = p.clocked_in ? 'out' : 'in';
         const day = new Date(q.day + 'T12:00:00');
-        const help = !p.has_pin && !p.phones ? t('qr_no_pin') : (!p.phones ? t('qr_first') : t('qr_help'));
+        const help = !p.has_pin && !p.phones ? t('qr_no_pin') : (!p.phones ? t('qr_or_pin') : t('qr_help'));
+        // Bez telefonu : PIN i podpis na tablecie (osoba z telefonem — tylko gdy kiosk.office_pin_all).
+        const pinButton = p.pin_allowed ? `<button type="button" class="kiosk-btn ${p.phones ? '' : 'is-primary'} office-pin-go" data-pin-go>${esc(t(p.phones ? 'pin_instead' : 'pin_no_phone'))}</button>` : '';
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card office-qr">
                 <div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(p.name)}</h2><p class="office-qr-day">${esc(longDate(day))}</p>
                     <span class="office-action is-${action}">${esc(t(action === 'in' ? 'action_in' : 'action_out'))}${p.clocked_in && p.since ? ` · ${esc(t('state_in', {time: p.since}))}` : ''}</span></div></div>
@@ -221,8 +226,9 @@
                     <p class="kiosk-muted">${esc(t('qr_only_you'))}</p>
                     <p class="office-waiting"><span class="office-dot" aria-hidden="true"></span>${esc(t('waiting'))}</p>
                     <p class="kiosk-muted office-closes" data-closes></p>
-                    <div class="kiosk-row"><button type="button" class="kiosk-btn" data-home>${esc(t('not_me'))}</button></div></div>
+                    <div class="kiosk-row">${pinButton}<button type="button" class="kiosk-btn" data-home>${esc(t('not_me'))}</button></div></div>
             </section>`;
+        el.querySelector('[data-pin-go]')?.addEventListener('click', () => renderPin(p));
         drawQr(q);
         const until = Date.now() + QR_SCREEN_MS;
         const closes = el.querySelector('[data-closes]');
@@ -242,6 +248,114 @@
                 if (s.clocked) renderDone(p, s);
             } catch (err) { /* sieć : następna próba */ } finally { polling = false; }
         }, POLL_MS));
+    }
+
+    // --- Bez telefonu : PIN → pytania + podpis palcem → wejście / wyjście ---------------------------------
+    function renderPin(p) {
+        clearTimers();
+        let pin = '';
+        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card kiosk-pin">
+                ${avatar(p.name, 'is-lg')}<h2>${esc(p.name)}</h2><p class="kiosk-muted">${esc(t('pin_help'))}</p>
+                <div class="kiosk-dots" data-dots aria-hidden="true"></div><p class="kiosk-error" data-error></p>
+                <div class="kiosk-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => `<button type="button" class="kiosk-btn" data-digit="${d}">${d}</button>`).join('')}
+                    <button type="button" class="kiosk-btn" data-erase aria-label="${esc(t('erase'))}">⌫</button><button type="button" class="kiosk-btn" data-digit="0">0</button>
+                    <button type="button" class="kiosk-btn is-primary" data-ok>OK</button></div>
+                <button type="button" class="kiosk-btn is-small" data-home>${esc(t('cancel'))}</button></section>`;
+        const dots = () => { el.querySelector('[data-dots]').innerHTML = Array.from({length: Math.max(4, pin.length)}, (_, i) => `<span class="${i < pin.length ? 'is-on' : ''}"></span>`).join(''); };
+        dots();
+        const submit = async () => {
+            if (pin.length < 4) return;
+            const ok = el.querySelector('[data-ok]');
+            ok.disabled = true;
+            try {
+                const r = await api('POST', '/kiosk/identify', {employee_id: p.employee_id, pin});
+                const me = await api('GET', '/kiosk/me', undefined, r.employee_token);
+                renderConfirm(p, r.employee_token, me, me.clocked_in ? 'out' : 'in');
+            } catch (err) {
+                if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_OFFICE') return;
+                pin = ''; dots(); ok.disabled = false;
+                el.querySelector('[data-error]').textContent = err.message;
+            }
+        };
+        el.querySelector('.kiosk-pad').addEventListener('click', (e) => {
+            const b = e.target.closest('button');
+            if (!b) return;
+            if (b.dataset.digit !== undefined && pin.length < 6) pin += b.dataset.digit;
+            if (b.hasAttribute('data-erase')) pin = pin.slice(0, -1);
+            dots();
+            if (b.hasAttribute('data-ok')) submit();
+        });
+        idle(IDLE_MS);
+    }
+
+    // Pytania (ustawiane w zarządzaniu tabletami) i podpis palcem — obowiązkowy przy pointowaniu PIN-em na tablecie biurowym.
+    function renderConfirm(p, token, me, direction, error) {
+        clearTimers();
+        const questions = (me.questions && me.questions[direction]) || [];
+        const yes = new Set();
+        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card kiosk-confirm office-confirm">
+                <div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(p.name)}</h2>
+                    <span class="office-action is-${direction}">${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}</span></div></div>
+                ${questions.length ? `<p class="kiosk-muted">${esc(t('confirm_help'))}</p>
+                <div class="kiosk-checks">${questions.map(q => `<button type="button" class="kiosk-check" data-q="${q.id}" aria-pressed="false">
+                    <span class="kiosk-check-box" aria-hidden="true"></span><span>${esc(q.text)}${q.required ? '' : `<small>${esc(t('optional'))}</small>`}</span></button>`).join('')}</div>` : ''}
+                <div class="kiosk-confirm-sign"><p class="kiosk-status">${esc(t(direction === 'in' ? 'sign_in_here' : 'sign_out_here'))}</p>
+                    <canvas class="kiosk-sign" data-pad width="900" height="260" aria-label="${esc(t('signature'))}"></canvas>
+                    <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div></div>
+                <p class="kiosk-error" data-error>${esc(error || '')}</p>
+                <button type="button" class="kiosk-btn kiosk-big ${direction === 'in' ? 'is-ok' : 'is-danger'}" data-confirm>${esc(t('confirm_ok'))}</button>
+            </section>`;
+        const ok = el.querySelector('[data-confirm]');
+        const pad = signaturePad(el.querySelector('[data-pad]'), () => refresh());
+        const refresh = () => { ok.disabled = questions.some(q => q.required && !yes.has(q.id)) || pad.empty(); };
+        refresh();
+        el.querySelector('.kiosk-checks')?.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-q]');
+            if (!b) return;
+            const id = Number(b.dataset.q);
+            if (yes.has(id)) yes.delete(id); else yes.add(id);
+            b.classList.toggle('is-on', yes.has(id));
+            b.setAttribute('aria-pressed', String(yes.has(id)));
+            refresh();
+        });
+        el.querySelector('[data-clear]').addEventListener('click', () => { pad.clear(); refresh(); });
+        const uuid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
+        ok.addEventListener('click', async () => {
+            ok.disabled = true;
+            try {
+                const r = await api('POST', '/kiosk/clock', {direction, client_uuid: uuid, answers: questions.map(q => ({question_id: q.id, yes: yes.has(q.id)})), signature: pad.image()}, token);
+                const at = String((direction === 'out' ? r.clock.clock_out : r.clock.clock_in) || '').slice(11, 16);
+                renderDone(p, {direction, at});
+            } catch (err) {
+                // Sesja PIN wygasła (kiosk.employee_token_ttl_s) : PIN jeszcze raz ; pytania zmienione : aktualny ekran.
+                if (err.code === 'EMPLOYEE_SESSION_EXPIRED' || err.code === 'EMPLOYEE_UNAUTHENTICATED') return renderPin(p);
+                if (err.code === 'CLOCK_QUESTIONS_REQUIRED') {
+                    const fresh = await api('GET', '/kiosk/me', undefined, token).catch(() => null);
+                    if (fresh) return renderConfirm(p, token, fresh, direction, err.message);
+                }
+                ok.disabled = false;
+                el.querySelector('[data-error]').textContent = err.offline ? t('offline') : err.message;
+            }
+        });
+        idle(IDLE_MS * 2);
+    }
+
+    // Ramka podpisu palcem (biały PNG) : empty() — nic nie narysowano, image() — data URL.
+    function signaturePad(canvas, onDraw) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
+        let drawing = false;
+        let strokes = 0;
+        const point = (e) => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) * canvas.width / r.width, (e.clientY - r.top) * canvas.height / r.height]; };
+        canvas.addEventListener('pointerdown', (e) => { drawing = true; strokes++; canvas.setPointerCapture(e.pointerId); const [x, y] = point(e); ctx.beginPath(); ctx.moveTo(x, y); if (idleMs) idle(idleMs); });
+        canvas.addEventListener('pointermove', (e) => { if (!drawing) return; const [x, y] = point(e); ctx.lineTo(x, y); ctx.stroke(); });
+        canvas.addEventListener('pointerup', () => { drawing = false; if (onDraw) onDraw(); });
+        return {
+            empty: () => strokes === 0,
+            clear: () => { ctx.fillRect(0, 0, canvas.width, canvas.height); strokes = 0; },
+            image: () => canvas.toDataURL('image/png'),
+        };
     }
 
     function drawQr(q) {

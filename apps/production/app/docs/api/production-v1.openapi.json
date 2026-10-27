@@ -11871,7 +11871,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Jeton court (kiosk.employee_token_ttl_s) lié à la tablette, à envoyer dans X-Employee-Token. Blocage après kiosk.pin_max_attempts PIN erronés (423).",
+                "description": "Jeton court (kiosk.employee_token_ttl_s) lié à la tablette, à envoyer dans X-Employee-Token. Blocage après kiosk.pin_max_attempts PIN erronés (423). Tablette de bureau : PIN + signature pour les personnes sans téléphone enregistré ; avec un téléphone, OFFICE_USE_PHONE (409) sauf kiosk.office_pin_all = 1.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -23277,6 +23277,10 @@
                     },
                     "phones": {
                         "type": "integer"
+                    },
+                    "pin_allowed": {
+                        "type": "boolean",
+                        "description": "pointage sur la tablette par PIN + signature (sans téléphone enregistré, ou kiosk.office_pin_all)"
                     },
                     "clocked_in": {
                         "type": "boolean"

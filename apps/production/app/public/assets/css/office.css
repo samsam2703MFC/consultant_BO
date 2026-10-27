@@ -57,3 +57,8 @@
   .office-people { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
   .office-people .kiosk-avatar.is-app { width: 70px; height: 70px; font-size: 24px; }
 }
+
+/* Bez telefonu : PIN, potem pytania i podpis palcem na tablecie biurowym. */
+.office-pin-go { font-size: 18px; min-height: 56px; }
+.office-confirm { max-width: 980px; margin: 0 auto; width: 100%; padding: 26px; }
+.office-confirm .office-qr-who h2 { font-size: 30px; }

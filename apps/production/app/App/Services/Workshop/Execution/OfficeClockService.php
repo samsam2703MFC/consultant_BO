@@ -13,7 +13,8 @@ use App\Repositories\Workshop\ExecutionRepository;
  * Tablette de bureau (mode « office ») : la personne touche sa section (dział) puis son nom ; la tablette affiche son QR
  * personnel (personne + jour, kiosk.office_qr_ttl_s). Elle le scanne avec son téléphone enregistré et valide l'entrée ou
  * la sortie sur le téléphone (questions, signature) — le téléphone d'une autre personne est refusé (QR_OTHER_PERSON).
- * La tablette interroge /kiosk/office/status et confirme dès que le pointage est enregistré.
+ * La tablette interroge /kiosk/office/status et confirme dès que le pointage est enregistré. Sans téléphone : PIN puis
+ * questions et signature sur la tablette (pin_allowed ; kiosk.office_pin_all = 1 : pour tout le monde).
  */
 final class OfficeClockService
 {
@@ -70,6 +71,7 @@ final class OfficeClockService
         return [
             'id' => (int) $p['person_id'], 'employee_id' => $p['employee_id'] !== null ? (int) $p['employee_id'] : null, 'name' => $p['name'],
             'has_pin' => (bool) $p['has_pin'], 'phones' => (int) $p['phones'],
+            'pin_allowed' => (bool) $p['has_pin'] && ((int) $p['phones'] === 0 || $this->kiosk->officePinAll()),
             'clocked_in' => $p['clocked_in_at'] !== null, 'since' => $p['clocked_in_at'] !== null ? substr((string) $p['clocked_in_at'], 11, 5) : null,
             'left_at' => $p['clocked_in_at'] === null && $p['left_at'] !== null ? substr((string) $p['left_at'], 11, 5) : null,
         ];

@@ -82,6 +82,7 @@
     "INVOICE_UNMAPPED": "{n} poz. faktury bez przypisanego surowca — przypisz je (« Przypisz wszystkie »), potem zatwierdź.",
     "INVOICE_NO_LINES": "Faktura nie ma pozycji — dodaj linie, potem zatwierdź.",
     "INVOICE_NEEDS_CONFIRMATION": "Faktura ma rozbieżności (zamówienie, skok ceny albo suma) — potwierdź, aby zatwierdzić mimo to.",
+    "OFFICE_USE_PHONE": "Masz zarejestrowany telefon : zeskanuj kod QR swoim telefonem (PIN na tablecie biurowym tylko dla osób bez telefonu).",
     "INVOICE_CLOSED": "Faktura jest już zamknięta (status : {status}) — przywróć ją do kontroli, aby zmienić.",
     "INVOICE_LINES_READ_ONLY": "Linie faktury z KSeF / XML nie są edytowalne.",
     "INVOICE_NO_ORDER": "Faktura nie jest powiązana z zamówieniem.",

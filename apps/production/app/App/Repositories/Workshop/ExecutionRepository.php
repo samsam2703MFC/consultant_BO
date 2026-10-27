@@ -116,6 +116,12 @@ final class ExecutionRepository extends WorkshopRepository
         );
     }
 
+    /** Téléphones enregistrés (non révoqués) d'une personne : la tablette de bureau propose alors le QR, pas le PIN. */
+    public function activePhones(int $employeeId): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_prod_phone WHERE id_employee = ? AND revoked_at IS NULL', [$employeeId])[0]['n'] ?? 0);
+    }
+
     /** Dernier pointage d'une personne depuis $since (entrée ou sortie) : la tablette de bureau confirme le QR validé. */
     public function clockEventSince(int $employeeId, string $since): ?array
     {

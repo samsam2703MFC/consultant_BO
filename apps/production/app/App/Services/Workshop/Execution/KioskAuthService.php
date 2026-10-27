@@ -230,6 +230,13 @@ final class KioskAuthService
 
     public function identify(array $body, ApiContext $context): array
     {
+        // Tablette de bureau : PIN + signature pour qui n'a pas de téléphone enregistré (kiosk.office_pin_all = 1 : pour tous) ;
+        // avec un téléphone, le QR personnel validé sur le téléphone (OFFICE_USE_PHONE, avant le contrôle du PIN).
+        $device = $this->repo->find((int) $context->deviceId);
+        if (($device['mode'] ?? 'atelier') === 'office' && is_int($body['employee_id'] ?? null) && !$this->officePinAll()
+            && $this->repo->activePhones($body['employee_id']) > 0) {
+            throw new ApiException('OFFICE_USE_PHONE', 409);
+        }
         $employee = $this->authenticateEmployee($body, (int) $context->deviceId, $context);
         return $this->employeeToken($employee, (int) $context->deviceId);
     }
@@ -409,6 +416,12 @@ final class KioskAuthService
         }
         if ((int) $cred['failed_attempts'] > 0) $this->repo->saveCredential($employeeId, ['failed_attempts' => 0, 'locked_until' => null]);
         return $employee;
+    }
+
+    /** kiosk.office_pin_all : PIN + signature sur la tablette de bureau aussi pour les personnes avec un téléphone. */
+    public function officePinAll(): bool
+    {
+        return $this->params->get('kiosk.office_pin_all', '0') === '1';
     }
 
     public function badgeHash(string $badge): string

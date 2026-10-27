@@ -93,12 +93,14 @@
         const body = el.querySelector('[data-body]');
         // Tablet kierowcy : pojazd domyślny zamiast grupy (strona /driver na tablecie).
         const vehicleOptions = (selected) => `<option value="">${esc(t('no_vehicle'))}</option>` + vehicles.map(v => `<option value="${v.id}" ${v.id === selected ? 'selected' : ''}>${esc(v.label)}${v.carrier ? ' · ' + esc(v.carrier) : ''}${v.driver ? ' · ' + esc(v.driver) : ''}</option>`).join('');
-        // Tablet biurowy : wszystkie działy (bez grupy i pojazdu), strona /office.
+        // Rodzaj tabletu zmieniany na sparowanym tablecie (bez nowego kodu) : tablet grupy → biurowy (wszystkie działy, /office)
+        // albo kierowcy ; tablet grupy — jego grupa, tablet kierowcy — pojazd domyślny.
+        const modeSelect = (d) => `<select class="form-select form-select-sm d-inline-block w-auto" style="max-width:250px" data-dev-mode aria-label="${esc(t('device_mode'))}">${['atelier', 'office', 'driver']
+            .map(m => `<option value="${m}" ${(d.mode || 'atelier') === m ? 'selected' : ''}>${esc(t('mode_' + m))}</option>`).join('')}</select>`;
         const where = (d) => d.mode === 'driver'
-            ? `<span class="badge bg-info-subtle text-info-emphasis">${esc(t('mode_driver'))}</span>
-               <select class="form-select form-select-sm d-inline-block w-auto ms-1" data-vehicle aria-label="${esc(t('vehicle'))}">${vehicleOptions(d.vehicle_id)}</select>`
-            : d.mode === 'office' ? `<span class="badge bg-warning-subtle text-warning-emphasis">${esc(t('mode_office'))}</span>`
-            : esc((groups.find(g => g.id === d.group_id) || {}).name || '—');
+            ? `<select class="form-select form-select-sm d-inline-block w-auto" style="max-width:250px" data-vehicle aria-label="${esc(t('vehicle'))}">${vehicleOptions(d.vehicle_id)}</select>`
+            : d.mode === 'office' ? `<span class="small text-muted">${esc(t('office_all'))}</span>`
+            : `<select class="form-select form-select-sm d-inline-block w-auto" style="max-width:220px" data-dev-group aria-label="${esc(t('group'))}">${groupOptions(d.group_id, t('no_group'))}</select>`;
         // Plan tabletów : 1 tablet biurowy (wejście / wyjście), 1 tablet kierowcy, 1 tablet na każdą grupę produkcji ;
         // brakujący tablet tworzy się jednym kliknięciem (kod parowania), sparowany pokazuje stan i ostatnie połączenie.
         const state = (d) => !d ? `<span class="badge bg-danger-subtle text-danger-emphasis">${esc(t('plan_missing'))}</span>`
@@ -127,12 +129,12 @@
                 <select class="form-select form-select-sm" name="vehicle_id" data-field="vehicle_id" hidden aria-label="${esc(t('vehicle'))}">${vehicleOptions(null)}</select>
                 <button class="btn btn-sm btn-primary">${esc(t('add_device'))}</button></form>
             <div data-code></div>
-            <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>${esc(t('device'))}</th><th>${esc(t('group'))}</th><th>${esc(t('state'))}</th><th>${esc(t('last_seen'))}</th><th></th></tr></thead>
-            <tbody>${list.map(d => `<tr data-device="${d.id}"><td><strong>${esc(d.name)}</strong></td><td>${where(d)}</td>
+            <div class="table-responsive"><table class="table table-sm mb-0 align-middle"><thead><tr><th>${esc(t('device'))}</th><th>${esc(t('plan_kind'))}</th><th>${esc(t('group'))}</th><th>${esc(t('state'))}</th><th>${esc(t('last_seen'))}</th><th></th></tr></thead>
+            <tbody>${list.map(d => `<tr data-device="${d.id}"><td><strong>${esc(d.name)}</strong></td><td>${modeSelect(d)}</td><td>${where(d)}</td>
                 <td>${!d.active ? `<span class="badge bg-secondary">${esc(t('blocked'))}</span>` : d.paired ? `<span class="badge bg-success">${esc(t('paired'))}</span>` : `<span class="badge bg-warning">${esc(d.pairing_pending ? t('waiting_pairing') : t('not_paired'))}</span>`}</td>
                 <td>${esc((d.last_seen_at || '—').slice(0, 16))}</td>
                 <td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary" data-repair>${esc(t('new_code'))}</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle>${esc(d.active ? t('block') : t('unblock'))}</button></td></tr>`).join('') || `<tr><td colspan="5" class="text-muted">${esc(t('no_devices'))}</td></tr>`}</tbody></table></div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle>${esc(d.active ? t('block') : t('unblock'))}</button></td></tr>`).join('') || `<tr><td colspan="6" class="text-muted">${esc(t('no_devices'))}</td></tr>`}</tbody></table></div>
             <p class="at-profit-note">${esc(t('device_help'))}</p><p class="at-profit-note">${esc(t('driver_help'))}</p><p class="at-profit-note">${esc(t('office_help'))}</p></div></div>`;
         const form = body.querySelector('[data-add-device]');
         form.mode.addEventListener('change', () => { const driver = form.mode.value === 'driver'; form.group_id.hidden = driver || form.mode.value === 'office'; form.vehicle_id.hidden = !driver; });
@@ -159,6 +161,25 @@
                 await devices();
                 showCode(created);
             } catch (err) { b.disabled = false; fail(err); }
+        }));
+        body.querySelectorAll('[data-device] [data-dev-mode]').forEach(select => select.addEventListener('change', async () => {
+            const d = list.find(x => x.id === Number(select.closest('[data-device]').dataset.device));
+            const mode = select.value;
+            if (!window.confirm(t('mode_change_confirm', {name: d.name, mode: t('mode_' + mode)}))) { select.value = d.mode || 'atelier'; return; }
+            try {
+                // Tablet grupy : grupa jak dotąd albo pierwsza aktywna (do zmiany obok).
+                const group = mode === 'atelier' ? (d.group_id || (groups.find(g => g.active !== false) || {}).id || null) : null;
+                await api.patch(`/kiosk/devices/${d.id}`, {mode, ...(mode === 'atelier' ? {group_id: group} : {})});
+                ui.notify(true, t('mode_changed', {mode: t('mode_' + mode)}));
+                await devices();
+            } catch (err) { select.value = d.mode || 'atelier'; fail(err); }
+        }));
+        body.querySelectorAll('[data-device] [data-dev-group]').forEach(select => select.addEventListener('change', async () => {
+            try {
+                await api.patch(`/kiosk/devices/${select.closest('[data-device]').dataset.device}`, {group_id: Number(select.value) || null});
+                ui.notify(true, t('saved'));
+                await devices();
+            } catch (err) { fail(err); }
         }));
         body.querySelectorAll('[data-device] [data-vehicle]').forEach(select => select.addEventListener('change', async () => {
             try {

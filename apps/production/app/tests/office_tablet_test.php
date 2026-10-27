@@ -227,6 +227,35 @@ try {
     [$s, $b] = $call('GET', '/kiosk/phone/me', null, ['X-Qr-Token' => $groupQr, 'X-Phone-Token' => $olaPhone]);
     expectOff($s === 200 && $b['data']['employee']['id'] === $ola, 'group QR: any registered phone (unchanged)');
 
+    // --- Bez telefonu : PIN, pytania i podpis na tablecie biurowym ; z telefonem — kod QR (OFFICE_USE_PHONE)
+    $call('DELETE', '/kiosk/employees/80/phones', null, $manager);
+    [, $b] = $call('GET', '/kiosk/office/sections', null, $office);
+    $jan = array_values(array_filter(array_column($b['data'], null, 'id')[1]['people'], fn($p) => $p['id'] === 20))[0];
+    $olaRow = array_values(array_filter(array_column($b['data'], null, 'id')[8]['people'], fn($p) => $p['id'] === 30))[0];
+    expectOff($jan['phones'] === 0 && $jan['pin_allowed'] === true && $olaRow['phones'] === 1 && $olaRow['pin_allowed'] === false, 'PIN offered to the person without a phone only');
+    [$s, $b] = $call('POST', '/kiosk/identify', ['employee_id' => $ola, 'pin' => '4321'], $office, 'fr');
+    expectOff($s === 409 && $b['description'] === 'OFFICE_USE_PHONE' && str_contains($b['message'], 'téléphone'), 'person with a phone: QR on the phone, not the PIN');
+    [$s, $b] = $call('POST', '/kiosk/identify', ['employee_id' => 80, 'pin' => '0000'], $office);
+    expectOff($s === 401 && $b['description'] === 'PIN_INVALID', 'wrong PIN refused');
+    [$s, $id80] = $call('POST', '/kiosk/identify', ['employee_id' => 80, 'pin' => '2468'], $office);
+    $janH = $office + ['X-Employee-Token' => $id80['data']['employee_token'] ?? ''];
+    [$s2, $meJ] = $call('GET', '/kiosk/me', null, $janH);
+    expectOff($s === 200 && $s2 === 200 && $meJ['data']['clocked_in'] === false && $meJ['data']['signature']['in'] === true, 'PIN on the office tablet: session of the person, entry with signature expected');
+    [$s, $b] = $call('POST', '/kiosk/clock', ['direction' => 'in', 'answers' => $yes($meJ['data']['questions']['in'])], $janH);
+    expectOff($s === 422 && in_array('signature:SIGNATURE_REQUIRED', $codes($b), true), 'no signature, no clock in');
+    [$s, $inJ] = $call('POST', '/kiosk/clock', ['direction' => 'in', 'client_uuid' => '1d2c3b4a-5e6f-4a7b-8c9d-0e1f2a3b4c5d', 'answers' => $yes($meJ['data']['questions']['in']), 'signature' => $signature], $janH);
+    $clockJ = $pdo->query("SELECT id_device FROM n_prod_clock WHERE id = " . (int) ($inJ['data']['clock']['id'] ?? 0))->fetch();
+    expectOff($s === 200 && $inJ['data']['signed'] && (int) $clockJ['id_device'] === $officeId
+        && (int) $pdo->query("SELECT COUNT(*) FROM n_prod_signature WHERE id_employee = 80 AND purpose = 'clock_in' AND ref = '{$inJ['data']['clock']['id']}'")->fetchColumn() === 1,
+        'clock in with PIN + signature on the office tablet (signature kept, office tablet as place)');
+    [$s, $b] = $call('PATCH', '/referentiels/params/kiosk.office_pin_all', ['value' => true], $manager);
+    if ($s === 200) {
+        [, $b] = $call('GET', '/kiosk/office/sections', null, $office);
+        $olaRow = array_values(array_filter(array_column($b['data'], null, 'id')[8]['people'], fn($p) => $p['id'] === 30))[0];
+        [$s2] = $call('POST', '/kiosk/identify', ['employee_id' => $ola, 'pin' => '4321'], $office);
+        expectOff($olaRow['pin_allowed'] === true && $s2 === 200, 'kiosk.office_pin_all = 1: PIN + signature for everyone');
+    }
+
     // --- Zmiana trybu : tablet pracowni → biuro (grupa usunięta)
     [$s, $b] = $call('PATCH', "/kiosk/devices/{$atelierId}", ['mode' => 'office'], $manager);
     $row = $pdo->query("SELECT mode, id_group FROM n_prod_device WHERE id = {$atelierId}")->fetch();

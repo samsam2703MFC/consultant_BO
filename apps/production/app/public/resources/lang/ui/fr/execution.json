@@ -108,7 +108,7 @@
   "vehicle": "Véhicule",
   "no_vehicle": "— le chauffeur choisit le véhicule —",
   "driver_help": "Tablette chauffeur : ouvrez la page /driver sur la tablette (ou /kiosk — redirection) et saisissez le code. Le chauffeur voit la tournée du jour de son véhicule, confirme les livraisons (réceptionnaire, signature, photo, palettes) et signale les problèmes ; tout arrive dans Logistyka › Dostawy.",
-  "office_help": "Tablette de bureau : ouvrez la page /office sur la tablette (ou /kiosk — redirection) et saisissez le code. La personne choisit son service puis son nom ; la tablette affiche son QR personnel (personne + jour), que seul son téléphone valide (entrée / sortie). La première fois, le téléphone demande le PIN — donnez-le dans la colonne PIN (Temps de travail).",
+  "office_help": "Tablette de bureau (fixe, à l’entrée) : tous les services de l’entreprise. Ouvrez /kiosk ou /office sur la tablette et saisissez le code — ou changez le type d’une tablette déjà appairée dans la colonne « Type ». La personne choisit son service puis son nom ; la tablette affiche son QR personnel (personne + jour) à valider avec son téléphone. Sans téléphone : PIN et signature au doigt sur la tablette (PIN dans l’onglet Temps de travail).",
   "plan_title": "Plan des tablettes",
   "plan_kind": "Type",
   "plan_page": "Page sur la tablette",
@@ -122,5 +122,8 @@
   "plan_driver_name": "Tablette chauffeur",
   "plan_group": "Tablette du groupe : {group}",
   "plan_group_name": "Tablette {group}",
-  "plan_help": "Une tablette de bureau (entrée / sortie par QR personnel et signature sur le téléphone), une tablette chauffeur et une tablette par groupe de production (entrée / sortie avec signature sur la tablette, production du jour). « Créer » donne le code d’appairage : ouvrez la page indiquée sur la tablette et saisissez le code."
+  "plan_help": "Une tablette de bureau (entrée / sortie par QR personnel et signature sur le téléphone), une tablette chauffeur et une tablette par groupe de production (entrée / sortie avec signature sur la tablette, production du jour). « Créer » donne le code d’appairage : ouvrez la page indiquée sur la tablette et saisissez le code.",
+  "office_all": "tous les services · /office (QR avec le téléphone ou PIN + signature)",
+  "mode_change_confirm": "Changer le type de la tablette « {name} » en « {mode} » ? Elle reste appairée — au prochain retour à l’accueil, elle ouvre la bonne page.",
+  "mode_changed": "Type de tablette : {mode}."
 }

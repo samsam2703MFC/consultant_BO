@@ -216,9 +216,8 @@
         if (!paired) return renderPairing();
         stopWeek();
         afterLogin = null;
-        if (deviceInfo === null) {
-            try { deviceInfo = await api('GET', '/kiosk/device'); } catch (err) { deviceInfo = {group_id: null}; }
-        }
+        // Rodzaj tabletu odczytany przy każdym powrocie : zmiana w ERP (np. tablet grupy → biurowy) działa bez nowego parowania.
+        try { deviceInfo = await api('GET', '/kiosk/device'); } catch (err) { if (deviceInfo === null) deviceInfo = {group_id: null}; }
         // Tablet kierowcy i tablet biurowy : własna strona (trasa dnia ; dział → nazwisko → osobisty kod QR).
         if (deviceInfo.mode === 'driver' || deviceInfo.mode === 'office') { location.replace(root + '/' + deviceInfo.mode); return; }
         const office = !deviceInfo.group_id;

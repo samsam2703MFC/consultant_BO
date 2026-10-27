@@ -82,6 +82,7 @@
     "INVOICE_UNMAPPED": "{n} ligne(s) de la facture sans matière — reliez-les (« Tout relier »), puis validez.",
     "INVOICE_NO_LINES": "La facture n’a aucune ligne — ajoutez-les, puis validez.",
     "INVOICE_NEEDS_CONFIRMATION": "La facture présente des écarts (commande, hausse de prix ou total) — confirmez pour valider quand même.",
+    "OFFICE_USE_PHONE": "Vous avez un téléphone enregistré : scannez le QR avec votre téléphone (le PIN sur la tablette de bureau est réservé aux personnes sans téléphone).",
     "INVOICE_CLOSED": "La facture est déjà clôturée (statut : {status}) — remettez-la en contrôle pour la modifier.",
     "INVOICE_LINES_READ_ONLY": "Les lignes d’une facture KSeF / XML ne se modifient pas.",
     "INVOICE_NO_ORDER": "La facture n’est liée à aucune commande.",
