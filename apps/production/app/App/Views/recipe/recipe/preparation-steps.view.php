@@ -102,7 +102,7 @@ $editBase = [1 => '/compositions', 2 => '/semi-products'][(int) ($recipe['id_typ
                                 </span>
 
                                 <!-- Numer kroku -->
-                                <span class="step-number badge bg-primary rounded-pill fs-6 mt-1"
+                                <span class="step-number badge bg-primary fs-6 mt-1"
                                       style="min-width:2rem; height:2rem; display:inline-flex; align-items:center; justify-content:center;">
                                     <?= $step['step_number'] ?>
                                 </span>
@@ -277,7 +277,7 @@ $editBase = [1 => '/compositions', 2 => '/semi-products'][(int) ($recipe['id_typ
                     <i class="bi bi-grip-vertical"></i>
                 </span>
 
-                <span class="step-number badge bg-primary rounded-pill fs-6 mt-1"
+                <span class="step-number badge bg-primary fs-6 mt-1"
                       style="min-width:2rem;height:2rem;display:inline-flex;align-items:center;justify-content:center;">
                     ${step.step_number}
                 </span>

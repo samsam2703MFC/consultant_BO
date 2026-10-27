@@ -36,7 +36,7 @@ $templateTypes = $templateTypes ?? [
     .template-token {
         display: inline-flex;
         align-items: center;
-        border-radius: 999px;
+        border-radius: 8px;
         padding: .1rem .45rem;
         margin: 0 .1rem;
         background: #eef5ff;

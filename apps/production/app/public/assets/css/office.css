@@ -41,7 +41,7 @@
 .office-qr-who h2 { margin: 0; font-size: 34px; line-height: 1.1; }
 .office-qr-day { margin: 4px 0 8px; font-size: 18px; color: var(--k-text); }
 .office-qr-day::first-letter { text-transform: uppercase; }
-.office-action { display: inline-block; padding: 7px 14px; border-radius: 999px; font-weight: 600; font-size: 16px; }
+.office-action { display: inline-block; padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 16px; }
 .office-action.is-in { background: var(--k-ok-50); color: var(--k-ok); }
 .office-action.is-out { background: var(--k-danger-50); color: var(--k-danger); }
 .office-qr-code { grid-area: code; padding: 14px; border-radius: 24px; background: #fff; border: 1px solid var(--k-line); }

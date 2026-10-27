@@ -1,6 +1,6 @@
 /* Tablet kierowcy : układ tabletu pracowni (kiosk.css) + karty postojów, kolejka bez sieci, arkusz potwierdzenia. */
 .driver .kiosk-head h1 { font-size: 17px; }
-.driver-queue { padding: 8px 12px; border-radius: 999px; background: var(--k-warn-50); color: var(--k-warn); font-weight: 600; font-size: 14px; white-space: nowrap; }
+.driver-queue { padding: 8px 12px; border-radius: 8px; background: var(--k-warn-50); color: var(--k-warn); font-weight: 600; font-size: 14px; white-space: nowrap; }
 .driver-choose { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
 .driver-days { display: flex; gap: 8px; flex-wrap: wrap; }
 .driver-days .kiosk-chip.is-active { background: var(--k-primary); color: #fff; }
@@ -19,7 +19,7 @@
 .driver-stop-title { flex: 1; min-width: 0; }
 .driver-stop-title h3 { margin: 0 0 2px; font-size: 20px; }
 .driver-n { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; background: var(--k-primary); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 18px; }
-.driver-state { padding: 6px 10px; border-radius: 999px; background: var(--k-fill); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.driver-state { padding: 6px 10px; border-radius: 8px; background: var(--k-fill); font-size: 14px; font-weight: 600; white-space: nowrap; }
 .driver-state.is-ok { background: var(--k-ok-50); color: var(--k-ok); }
 .driver-state.is-problem { background: var(--k-danger-50); color: var(--k-danger); }
 .driver-state.is-queued { background: var(--k-warn-50); color: var(--k-warn); }

@@ -1068,8 +1068,8 @@
                 <p class="kiosk-error" data-error></p>`;
         } else {
             const pbs = open.filter(l => rx.pb[l.id] && rx.pb[l.id].on);
-            body = `<p class="kiosk-muted">${esc(t('rx_confirm_help'))}</p><table class="kiosk-table"><thead><tr><th>${esc(t('rx_col_material'))}</th><th>${esc(t('rx_col_qty'))}</th><th>${esc(t('lot_number'))}</th><th>${esc(t('lot_best_before'))}</th></tr></thead>
-                <tbody>${taken.map(l => `<tr><td>${esc(l.name)}</td><td><strong>${esc(rx.qty[l.id])} ${esc(l.unit)}</strong></td><td>${rx.lot[l.id] ? esc(rx.lot[l.id]) : `<span class="kiosk-muted">${esc(t('rx_no_lot'))}</span>`}</td><td>${rx.bb[l.id] ? esc(dm(rx.bb[l.id]) + '.' + rx.bb[l.id].slice(0, 4)) : '—'}</td></tr>`).join('')}</tbody></table>
+            body = `<p class="kiosk-muted">${esc(t('rx_confirm_help'))}</p><table class="kiosk-table"><thead><tr><th>${esc(t('rx_col_material'))}</th><th class="is-num">${esc(t('rx_col_qty'))}</th><th>${esc(t('lot_number'))}</th><th>${esc(t('lot_best_before'))}</th></tr></thead>
+                <tbody>${taken.map(l => `<tr><td>${esc(l.name)}</td><td class="is-num"><strong>${esc(rx.qty[l.id])} ${esc(l.unit)}</strong></td><td>${rx.lot[l.id] ? esc(rx.lot[l.id]) : `<span class="kiosk-muted">${esc(t('rx_no_lot'))}</span>`}</td><td>${rx.bb[l.id] ? esc(dm(rx.bb[l.id]) + '.' + rx.bb[l.id].slice(0, 4)) : '—'}</td></tr>`).join('')}</tbody></table>
                 ${pbs.length ? `<p class="kiosk-error">${icon('triangle-alert', 'is-sm')} ${esc(t('rx_nc_count', {n: pbs.length}))}</p>` : ''}
                 ${taken.length < open.length ? `<p class="kiosk-muted">${esc(t('rx_partial', {n: open.length - taken.length}))}</p>` : ''}
                 <p class="kiosk-error" data-error></p>`;
@@ -1768,7 +1768,7 @@
         } else if (step === 3) {
             const withGood = day.items.filter(i => i.good > 0);
             const lost = day.items.filter(i => i.waste > 0);
-            body = `<p class="kiosk-muted">${esc(t('eod_waste_help'))}</p>` + (lost.length ? `<table class="kiosk-table"><tbody>${lost.map(i => `<tr><td>${esc(i.name)}</td><td><strong>${esc(qty(i.waste, i))}</strong></td>
+            body = `<p class="kiosk-muted">${esc(t('eod_waste_help'))}</p>` + (lost.length ? `<table class="kiosk-table"><tbody>${lost.map(i => `<tr><td>${esc(i.name)}</td><td class="is-num"><strong>${esc(qty(i.waste, i))}</strong></td>
                 <td class="kiosk-muted">${esc(i.wastes.filter(w => !w.cancelled).map(w => t('waste_' + w.reason)).join(', '))}</td></tr>`).join('')}</tbody></table>`
                 : `<p class="kiosk-status">${esc(t('eod_waste_none'))}</p>`)
                 + (withGood.length ? `<div class="kiosk-row">${withGood.map(i => `<button type="button" class="kiosk-btn is-danger-soft is-small" data-eod-waste="${i.item_id}">− ${esc(i.name)}</button>`).join('')}</div>` : '');
@@ -1783,9 +1783,9 @@
             const short = day.items.filter(i => i.planned !== null && i.produced + 1e-6 < i.planned);
             const gaps = day.gaps.lots.length || day.gaps.qc.length;
             body = `<p class="kiosk-muted">${esc(t('day_close_help'))}</p>
-                <table class="kiosk-table"><thead><tr><th>${esc(t('day_col_product'))}</th><th>${esc(t('day_col_planned'))}</th><th>${esc(t('day_col_done'))}</th><th>${esc(t('day_col_waste'))}</th><th>${esc(t('day_col_good'))}</th></tr></thead>
-                <tbody>${day.items.map(i => `<tr class="${i.planned !== null && i.produced + 1e-6 < i.planned ? 'is-short' : ''}"><td>${esc(i.name)}</td><td>${i.planned !== null ? esc(qty(i.planned, i)) : '—'}</td>
-                    <td>${esc(qty(i.produced, i))}</td><td>${i.waste ? esc(qty(i.waste, i)) : '—'}</td><td><strong>${esc(qty(i.good, i))}</strong></td></tr>`).join('')}</tbody></table>
+                <table class="kiosk-table"><thead><tr><th>${esc(t('day_col_product'))}</th><th class="is-num">${esc(t('day_col_planned'))}</th><th class="is-num">${esc(t('day_col_done'))}</th><th class="is-num">${esc(t('day_col_waste'))}</th><th class="is-num">${esc(t('day_col_good'))}</th></tr></thead>
+                <tbody>${day.items.map(i => `<tr class="${i.planned !== null && i.produced + 1e-6 < i.planned ? 'is-short' : ''}"><td>${esc(i.name)}</td><td class="is-num">${i.planned !== null ? esc(qty(i.planned, i)) : '—'}</td>
+                    <td class="is-num">${esc(qty(i.produced, i))}</td><td class="is-num">${i.waste ? esc(qty(i.waste, i)) : '—'}</td><td class="is-num"><strong>${esc(qty(i.good, i))}</strong></td></tr>`).join('')}</tbody></table>
                 ${short.length ? `<p class="kiosk-error">${icon('triangle-alert', 'is-sm')} ${esc(t('day_short', {n: short.length}))}</p>` : ''}
                 ${gaps ? `<p class="kiosk-error">${icon('triangle-alert', 'is-sm')} ${esc(t('eod_gaps', {lots: day.gaps.lots.length, qc: day.gaps.qc.length}))}</p>` : ''}
                 <form class="kiosk-form" data-close-form><label class="is-wide">${esc(t(gaps ? 'eod_note_required' : 'day_note'))}<input name="note" maxlength="255" value="${esc(day.closed && day.closed.note || '')}" ${gaps ? 'required' : ''}></label></form>
