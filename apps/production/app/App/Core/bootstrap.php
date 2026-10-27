@@ -20,6 +20,9 @@ $builder->addDefinitions([
         ->constructorParameter('smtp', get(App\Services\Communication\GmailSmtpTransport::class)),
     // Kontrola faktur : faktury zakupowe z KSeF (odczyt) ; w testach zastępowane.
     App\Services\Workshop\Supply\KsefInvoiceSource::class => get(App\Services\Workshop\Supply\KsefPurchaseSource::class),
+    // Kolejka « Do obsłużenia » : faktury z podwyżką ceny ponad cenę bazową (parametr opcjonalny — autowiring go pomija).
+    App\Services\Client\Order\OrderQueueService::class => autowire()
+        ->constructorParameter('invoices', get(App\Services\Workshop\Supply\InvoiceService::class)),
     // SMS do klientów (logistyka) : bez skonfigurowanego dostawcy tylko zapis w historii.
     App\Services\Logistics\Sms\SmsTransport::class => get(App\Services\Logistics\Sms\LogOnlySmsTransport::class),
 

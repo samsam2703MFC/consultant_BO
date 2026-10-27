@@ -66,11 +66,13 @@ final class InvoiceRepository extends WorkshopRepository
     public function lines(int $invoiceId): array
     {
         return $this->all(
-            'SELECT l.*, rm.name AS material_name, rm.name_fr AS material_name_fr, u.name AS material_unit, rm.price_per_unit AS catalog_price, rm.package_size_in_base_unit AS package_size
+            "SELECT l.*, rm.name AS material_name, rm.name_fr AS material_name_fr, u.name AS material_unit, rm.price_per_unit AS catalog_price, rm.package_size_in_base_unit AS package_size,
+                    COALESCE(NULLIF(ok.displayed_name, ''), ok.login) AS price_ok_name
              FROM n_inv_line l
              LEFT JOIN raw_material rm ON rm.id = l.id_raw_material
              LEFT JOIN unit u ON u.id = rm.id_unit
-             WHERE l.id_inv = ? ORDER BY l.line_no, l.id',
+             LEFT JOIN user ok ON ok.id = l.price_ok_by
+             WHERE l.id_inv = ? ORDER BY l.line_no, l.id",
             [$invoiceId]
         );
     }
@@ -93,9 +95,30 @@ final class InvoiceRepository extends WorkshopRepository
         $this->db->prepare('DELETE FROM n_inv_line WHERE id_inv = ?')->execute([$invoiceId]);
     }
 
+    /** Nowe przypisanie albo przelicznik : decyzja o podwyżce ceny (inna cena za jednostkę) przestaje obowiązywać. */
     public function mapLine(int $lineId, ?int $materialId, ?float $factor): void
     {
-        $this->db->prepare('UPDATE n_inv_line SET id_raw_material = ?, factor = ? WHERE id = ?')->execute([$materialId, $factor, $lineId]);
+        $this->db->prepare('UPDATE n_inv_line SET id_raw_material = ?, factor = ?, price_decision = NULL, price_ok_price = NULL, price_ok_by = NULL, price_ok_at = NULL WHERE id = ?')
+            ->execute([$materialId, $factor, $lineId]);
+    }
+
+    /** Decyzja o podwyżce ceny surowca na fakturze (wszystkie jego linie) : accept | keep, cena zatwierdzona, kto, kiedy. */
+    public function decidePrice(int $invoiceId, int $materialId, string $decision, float $price, ?int $userId): void
+    {
+        $this->db->prepare('UPDATE n_inv_line SET price_decision = ?, price_ok_price = ?, price_ok_by = ?, price_ok_at = NOW() WHERE id_inv = ? AND id_raw_material = ?')
+            ->execute([$decision, round($price, 8), $userId, $invoiceId, $materialId]);
+    }
+
+    /** Liczba receptur (spłaszczone składniki) z danym surowcem : na ile receptur wpływa nowa cena bazowa. */
+    public function recipesUsing(array $materialIds): array
+    {
+        if (!$materialIds) return [];
+        $in = implode(',', array_fill(0, count($materialIds), '?'));
+        $out = [];
+        foreach ($this->all("SELECT material_id, COUNT(DISTINCT recipe_id) AS n FROM flattened_recipe_ingredient WHERE material_id IN ({$in}) GROUP BY material_id", array_values($materialIds)) as $r) {
+            $out[(int) $r['material_id']] = (int) $r['n'];
+        }
+        return $out;
     }
 
     public function saveFile(int $invoiceId, string $filename, string $mime, string $content, ?string $text): void

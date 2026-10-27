@@ -34,6 +34,7 @@ final class OrderQueueService
         'po_draft' => ['label' => 'Zamówienie u dostawcy niewysłane', 'icon' => 'bi-cart3', 'positions' => ['ZAKUPY']],
         'po_late' => ['label' => 'Dostawa surowców po terminie', 'icon' => 'bi-truck', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
         'invoice_unlinked' => ['label' => 'Faktura zakupowa do przypisania', 'icon' => 'bi-receipt', 'positions' => ['ZAKUPY', 'ADMINISTRACJA']],
+        'invoice_price_up' => ['label' => 'Podwyżka ceny surowca do zatwierdzenia', 'icon' => 'bi-graph-up-arrow', 'positions' => ['ZAKUPY', 'ADMINISTRACJA', 'KIEROWNIK_PRODUKCJI']],
         'inventory_old' => ['label' => 'Inwentaryzacja surowców > 30 dni', 'icon' => 'bi-clipboard-check', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
         // Reklamacje i zwroty (P8) : decyzja w terminie alerts.complaint_days, zamiennik do wysłania.
         'complaint_open' => ['label' => 'Reklamacja bez decyzji', 'icon' => 'bi-chat-square-text', 'positions' => ['ADMINISTRACJA', 'JAKOSC']],
@@ -58,6 +59,8 @@ final class OrderQueueService
         private SendStatusService $sends,
         private \App\Repositories\Client\Complaint\ReturnsRepository $returns,
         private \App\Repositories\Workshop\ParamRepository $params,
+        // Faktury z podwyżką ceny ponad cenę bazową bez decyzji (ta sama reguła co na fakturze) ; brak = pomijane.
+        private ?\App\Services\Workshop\Supply\InvoiceService $invoices = null,
     ) {}
 
     /**
@@ -254,6 +257,16 @@ final class OrderQueueService
                 'note' => trim(($inv['id_po'] === null ? 'bez zamówienia' : '') . ((int) $inv['unmapped'] ? ($inv['id_po'] === null ? ' · ' : '') . 'pozycje bez surowca : ' . (int) $inv['unmapped'] : '')),
             ], [
                 ['label' => 'Kontrola faktury', 'url' => '/workshop/supply#tab=invoices&inv=' . $id, 'primary' => true],
+            ]);
+        }
+        foreach ($this->invoices?->pendingPriceUps() ?? [] as $inv) {
+            $out[] = $this->item('invoice_price_up', 'invoice-price:' . $inv['id'], $today, [
+                'customer' => $inv['supplier'], 'customer_id' => null, 'supplier' => true,
+                'title' => 'Faktura ' . $inv['number'] . ($inv['issue_date'] ? ' z ' . date('d.m.Y', strtotime((string) $inv['issue_date'])) : ''),
+                'detail' => number_format((float) $inv['total_net'], 2, ',', ' ') . ' ' . ($inv['currency'] ?: 'PLN') . ' netto',
+                'note' => 'cena wyższa niż cena bazowa (kalkulacja receptur) : ' . $inv['materials'] . ' poz.',
+            ], [
+                ['label' => 'Zatwierdź ceny', 'url' => '/workshop/supply#tab=invoices&inv=' . $inv['id'], 'primary' => true],
             ]);
         }
         $stale = $this->repo->staleInventory($now->modify('-' . self::INVENTORY_DAYS . ' days')->format('Y-m-d'));

@@ -174,6 +174,7 @@ final class WorkshopApiRoutes
             ['POST', '/supply/invoices/{id:\d+}/decision', InvoiceController::class, 'decide', 'prod.supply.write'],
             ['POST', '/supply/invoices/{id:\d+}/receive', InvoiceController::class, 'receive', 'prod.supply.write'],
             ['POST', '/supply/invoices/{id:\d+}/prices', InvoiceController::class, 'importPrices', 'prod.supply.write'],
+            ['POST', '/supply/invoices/{id:\d+}/price-decisions', InvoiceController::class, 'decidePrices', 'prod.supply.write'],
             ['DELETE', '/supply/invoices/{id:\d+}', InvoiceController::class, 'delete', 'prod.supply.write'],
             ['GET', '/supply/mappings', InvoiceController::class, 'mappings', 'prod.supply.read'],
             ['DELETE', '/supply/mappings/{id:\d+}', InvoiceController::class, 'deleteMapping', 'prod.supply.write'],

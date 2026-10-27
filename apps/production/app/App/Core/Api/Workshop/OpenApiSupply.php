@@ -78,12 +78,18 @@ final class OpenApiSupply
                 'description' => 'Plusieurs lignes en un appel (matière + facteur) ; facteur absent : unités, poids lu dans le nom (« WOREK 25KG » → 25 000 g) ou conditionnement de la matière. remember (défaut true) : mémorisé pour le fournisseur.'],
             'POST /supply/invoices/{id:\d+}/process' => ['tag' => $t, 'id' => 'processPurchaseInvoice', 'summary' => 'Zatwierdź fakturę (ceny, stan, akceptacja) / Valider la facture (prix, stock, acceptation)', 'body' => 'InvoiceProcessInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 409, 422],
                 'description' => "En un clic et tout ou rien : prix vers les fiches matières (si pas encore importés), quantités en stock (si pas encore reçues : commande liée ou commande « reçue » créée), acceptation. prices / stock / accept (défaut true) choisissent les étapes. "
-                    . "INVOICE_NO_LINES, INVOICE_UNMAPPED, INVOICE_NO_SUPPLIER (422) ; INVOICE_NEEDS_CONFIRMATION (409) : écarts avec la commande, hausse de prix au-delà de supply.invoice_price_alert_pct ou total différent — renvoyer avec force = true. Réponse : la facture + processed."],
+                    . "INVOICE_NO_LINES, INVOICE_UNMAPPED, INVOICE_NO_SUPPLIER (422) ; INVOICE_PRICE_UP_PENDING (409) : prix d'une matière au-dessus du prix de base (fiche matière, calcul des recettes) sans décision — POST …/price-decisions d'abord, force n'y change rien ; "
+                    . "INVOICE_NEEDS_CONFIRMATION (409) : écarts avec la commande, écart de prix au-delà de supply.invoice_price_alert_pct ou total différent — renvoyer avec force = true. Réponse : la facture + processed."],
+            'POST /supply/invoices/{id:\d+}/price-decisions' => ['tag' => $t, 'id' => 'decidePurchaseInvoicePrices', 'summary' => 'Podwyżki cen : nowa cena bazowa albo bez zmian / Hausses de prix : nouveau prix de base ou inchangé', 'body' => 'InvoicePriceDecisionInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 409, 422],
+                'description' => "Une hausse au-dessus du prix de base (raw_material.price_per_unit, celui du calcul des recettes) au-delà de supply.invoice_price_up_pct (0 = toute hausse) n'est jamais appliquée automatiquement. "
+                    . "accept : le prix de la facture deviendra le prix de base (recettes recalculées) à la validation ou à l'import des prix ; keep : le prix de base ne change pas, la facture peut être acceptée. "
+                    . "raw_material_ids : matières choisies (défaut : toutes celles sans décision). Qui et quand sont gardés ; une nouvelle correspondance, un autre facteur ou un prix plus haut annulent la décision. INVOICE_NO_PRICE_UP (409) : rien à décider ; INVOICE_CLOSED (409). Réponse : la facture + decided."],
             'POST /supply/invoices/{id:\d+}/decision' => ['tag' => $t, 'id' => 'decidePurchaseInvoice', 'summary' => 'Zaakceptuj / reklamacja / Accepter / contester', 'body' => 'InvoiceDecisionInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 422]],
             'POST /supply/invoices/{id:\d+}/receive' => ['tag' => $t, 'id' => 'receiveFromPurchaseInvoice', 'summary' => 'Przyjęcie dostawy wg faktury / Réception d\'après la facture', 'response' => 'PurchaseInvoice', 'errors' => [404, 409, 422],
                 'description' => 'Quantités et prix nets de la facture enregistrés comme réception de la commande liée (lignes reliées à ses matières). Sans commande : une commande « reçue » est créée depuis la facture (les quantités entrent dans le stock) et liée à elle. INVOICE_NO_SUPPLIER, INVOICE_NOTHING_TO_RECEIVE (422).'],
             'POST /supply/invoices/{id:\d+}/prices' => ['tag' => $t, 'id' => 'importInvoicePrices', 'summary' => 'Ostatnie ceny z faktury do surowców / Derniers prix de la facture vers les matières', 'body' => 'InvoicePricesInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 409, 422],
-                'description' => "Prix net de la facture par unité de base (moyenne pondérée si plusieurs lignes d'une matière) → prix de la fiche matière, fournisseur de la facture comme fournisseur courant ; historique des prix et recalcul des coûts des recettes (comme la mise à jour manuelle). line_ids : lignes choisies (défaut : toutes les lignes reliées). Réponse : la facture + imported_prices (ancien / nouveau prix) + skipped."],
+                'description' => "Prix net de la facture par unité de base (moyenne pondérée si plusieurs lignes d'une matière) → prix de la fiche matière, fournisseur de la facture comme fournisseur courant ; historique des prix et recalcul des coûts des recettes (comme la mise à jour manuelle). line_ids : lignes choisies (défaut : toutes les lignes reliées). "
+                    . "INVOICE_PRICE_UP_PENDING (409) : hausse au-dessus du prix de base sans décision ; décision keep : matière laissée au prix de base (kept). Réponse : la facture + imported_prices (ancien / nouveau prix) + skipped + kept."],
             'DELETE /supply/invoices/{id:\d+}' => ['tag' => $t, 'id' => 'deletePurchaseInvoice', 'summary' => 'Usuń fakturę (otwartą) / Supprimer la facture (ouverte)', 'response' => 'SupplierOrderDeleted', 'errors' => [404, 409]],
             'GET /supply/mappings' => ['tag' => $t, 'id' => 'listInvoiceMappings', 'summary' => 'Przypisania nazw dostawców / Correspondances des noms fournisseurs', 'response' => 'InvoiceMappings'],
             'DELETE /supply/mappings/{id:\d+}' => ['tag' => $t, 'id' => 'deleteInvoiceMapping', 'summary' => 'Usuń przypisanie / Supprimer la correspondance', 'response' => 'SupplierOrderDeleted', 'errors' => [404]],
@@ -103,11 +109,12 @@ final class OpenApiSupply
         $nStr = ['type' => 'string', 'nullable' => true];
         $date = ['type' => 'string', 'format' => 'date'];
         $ready = ['type' => 'object', 'nullable' => true, 'description' => 'factures ouvertes : ok = prête pour « Valider la facture » et l\'automatique', 'properties' => [
-            'ok' => ['type' => 'boolean'], 'blockers' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['no_lines', 'unmapped', 'no_supplier']]],
+            'ok' => ['type' => 'boolean'], 'blockers' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['no_lines', 'unmapped', 'no_supplier', 'price_up']]],
             'warnings' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['gaps', 'price_jump', 'total_mismatch']]], 'unmapped' => ['type' => 'integer'],
+            'price_ups' => ['type' => 'integer', 'description' => 'matières au-dessus du prix de base sans décision (bloquant : price_up)'],
         ]];
-        $auto = ['type' => 'object', 'description' => 'paramètres supply.invoice_auto_prices / _full et supply.invoice_price_alert_pct', 'properties' => [
-            'prices' => ['type' => 'boolean'], 'full' => ['type' => 'boolean'], 'price_alert_pct' => $num]];
+        $auto = ['type' => 'object', 'description' => 'paramètres supply.invoice_auto_prices / _full, supply.invoice_price_alert_pct et supply.invoice_price_up_pct', 'properties' => [
+            'prices' => ['type' => 'boolean'], 'full' => ['type' => 'boolean'], 'price_alert_pct' => $num, 'price_up_pct' => $num]];
         $nDate = ['type' => 'string', 'format' => 'date', 'nullable' => true];
         $supplier = ['type' => 'object', 'nullable' => true, 'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'email' => $nStr]];
         $material = [
@@ -136,7 +143,9 @@ final class OpenApiSupply
         $control = ['type' => 'object', 'properties' => [
             'state' => ['type' => 'string', 'enum' => ['no_lines', 'unmapped', 'no_order', 'gaps', 'clean']], 'lines' => ['type' => 'integer'], 'mapped' => ['type' => 'integer'],
             'issues' => ['type' => 'integer'], 'value_gap' => $num, 'lines_net' => $num, 'total_mismatch' => ['type' => 'boolean'],
-            'price_jumps' => ['type' => 'integer', 'description' => 'lignes dont le prix au kg s\'écarte de la fiche matière de plus de supply.invoice_price_alert_pct (drapeau price_jump)'],
+            'price_jumps' => ['type' => 'integer', 'description' => 'lignes dont le prix au kg s\'écarte de la fiche matière de plus de supply.invoice_price_alert_pct (drapeau price_jump ; pas pour une hausse déjà décidée)'],
+            'price_ups' => ['type' => 'integer', 'description' => 'matières au-dessus du prix de base sans décision (lignes : drapeau price_up)'],
+            'price_ups_decided' => ['type' => 'integer', 'description' => 'hausses décidées (drapeaux price_up_accept, price_up_keep)'],
         ]];
         $lines = ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['raw_material_id', 'quantity'], 'properties' => [
             'raw_material_id' => ['type' => 'integer'], 'quantity' => ['type' => 'number', 'description' => 'unité de base, > 0'], 'unit_price' => ['type' => 'number', 'nullable' => true, 'description' => 'défaut : prix catalogue'],
@@ -242,7 +251,16 @@ final class OpenApiSupply
                 'price_refs' => ['type' => 'object', 'description' => 'par matière (id) : prix précédent (hors cette facture) et fournisseur le moins cher sur 12 mois', 'additionalProperties' => ['type' => 'object', 'properties' => [
                     'previous' => ['type' => 'object', 'nullable' => true, 'additionalProperties' => true], 'best' => ['type' => 'object', 'nullable' => true, 'additionalProperties' => true], 'suppliers' => ['type' => 'integer'],
                 ]]],
-                'processed' => ['type' => 'object', 'description' => 'POST …/process seulement', 'properties' => ['prices' => ['type' => 'integer'], 'prices_skipped' => ['type' => 'array', 'items' => ['type' => 'string']], 'stock' => ['type' => 'boolean'], 'accepted' => ['type' => 'boolean']]],
+                'price_ups' => ['type' => 'array', 'description' => 'matières dont le prix de la facture dépasse le prix de base (calcul des recettes)', 'items' => ['type' => 'object', 'properties' => [
+                    'raw_material_id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'unit' => ['type' => 'string', 'example' => 'kg'], 'factor' => $num,
+                    'base_price' => ['type' => 'number', 'description' => 'prix de base actuel, par unité de base'], 'invoice_price' => ['type' => 'number', 'description' => 'prix de la facture par unité de base (moyenne pondérée)'],
+                    'new_price' => ['type' => 'number', 'description' => 'prix de base après acceptation (prix du colis arrondi ÷ colis)'], 'change_pct' => $num, 'quantity' => $num,
+                    'extra' => ['type' => 'number', 'description' => 'surcoût sur cette facture : quantité × (prix facture − prix de base)'], 'recipes' => ['type' => 'integer', 'description' => 'recettes qui utilisent la matière'],
+                    'decision' => ['type' => 'string', 'enum' => InvoiceService::PRICE_DECISIONS, 'nullable' => true], 'decided_by' => $nStr, 'decided_at' => $nStr,
+                ]]],
+                'processed' => ['type' => 'object', 'description' => 'POST …/process seulement', 'properties' => ['prices' => ['type' => 'integer'], 'prices_skipped' => ['type' => 'array', 'items' => ['type' => 'string']],
+                    'prices_kept' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'matières laissées au prix de base (décision keep)'], 'stock' => ['type' => 'boolean'], 'accepted' => ['type' => 'boolean']]],
+                'decided' => ['type' => 'integer', 'description' => 'POST …/price-decisions seulement'],
                 'auto_processed' => ['type' => 'object', 'nullable' => true, 'description' => 'upload : traitement automatique effectué (facture entièrement reconnue)', 'additionalProperties' => true],
             ]],
             'KsefSearchInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['from', 'to'], 'properties' => ['from' => $date, 'to' => $date]],
@@ -267,6 +285,10 @@ final class OpenApiSupply
                 'remember' => ['type' => 'boolean', 'description' => 'défaut true'],
             ]],
             'InvoicePricesInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => ['line_ids' => ['type' => 'array', 'items' => ['type' => 'integer']]]],
+            'InvoicePriceDecisionInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['decision'], 'properties' => [
+                'decision' => ['type' => 'string', 'enum' => InvoiceService::PRICE_DECISIONS, 'description' => 'accept : nouveau prix de base ; keep : prix de base inchangé'],
+                'raw_material_ids' => ['type' => 'array', 'items' => ['type' => 'integer'], 'description' => 'défaut : toutes les hausses sans décision'],
+            ]],
             'InvoiceLinesMapInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['lines'], 'properties' => [
                 'lines' => ['type' => 'array', 'maxItems' => 300, 'items' => ['type' => 'object', 'required' => ['line_id', 'raw_material_id'], 'properties' => [
                     'line_id' => ['type' => 'integer'], 'raw_material_id' => ['type' => 'integer'], 'factor' => ['type' => 'number', 'nullable' => true, 'description' => 'unités de base par unité de facture ; absent : déduit'],

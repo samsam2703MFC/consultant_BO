@@ -35,6 +35,7 @@ final class InvoiceService
     /** Kroki « Zatwierdź fakturę » (domyślnie wszystkie). */
     private const STEPS = ['prices', 'stock', 'accept'];
     private ?float $alertPct = null;
+    public const PRICE_DECISIONS = ['accept', 'keep'];
 
     public function __construct(
         private InvoiceRepository $repo,
@@ -83,6 +84,7 @@ final class InvoiceService
             'ready' => $i['status'] === 'open' ? $this->readiness($i, $control) : null, 'auto' => $this->autoMode(),
             // Historia cen : poprzednia cena i najtańszy dostawca z 12 miesięcy dla każdego surowca faktury.
             'price_refs' => (object) $this->history->refs($mapped, $id),
+            'price_ups' => $this->presentUps($this->priceUps($lines), $lines, $lang),
             'orders' => $i['id_supplier'] ? $this->candidates((int) $i['id_supplier'], $lines) : [],
             'suppliers' => $i['status'] === 'open' ? $this->supplierChoices($i) : [],
             'text' => in_array($i['source'], ['pdf', 'ocr'], true) ? $this->repo->fileText($id) : null,
@@ -110,6 +112,7 @@ final class InvoiceService
         $jumps = 0;
         $gap = 0.0;
         $sum = 0.0;
+        $ups = $this->priceUps($lines);
         foreach ($lines as $l) {
             $flags = [];
             $net = $l['net_value'] !== null ? (float) $l['net_value'] : ($l['unit_price'] !== null ? (float) $l['unit_price'] * (float) $l['quantity'] : null);
@@ -128,8 +131,12 @@ final class InvoiceService
                 $catalog = $l['catalog_price'] !== null && (float) $l['catalog_price'] > 0 ? (float) $l['catalog_price'] : null;
                 $c['catalog_price'] = $catalog;
                 if ($catalog !== null && $priceBase !== null) $c['catalog_gap_pct'] = round(($priceBase - $catalog) / $catalog * 100, 2);
-                // Skok ceny wobec kartoteki : zły przelicznik albo prawdziwa podwyżka — do sprawdzenia przed zatwierdzeniem.
-                if ($c['catalog_gap_pct'] !== null && abs($c['catalog_gap_pct']) > $this->alertPct()) { $flags[] = 'price_jump'; $jumps++; }
+                // Cena wyższa niż cena bazowa (kartoteka, kalkulacja receptur) : decyzja na fakturze — nowa cena bazowa (accept)
+                // albo cena bazowa bez zmian (keep) ; bez decyzji nic nie idzie automatycznie (price_up).
+                $up = $ups[(int) $l['id_raw_material']] ?? null;
+                if ($up !== null) $flags[] = $up['decision'] === null ? 'price_up' : 'price_up_' . $up['decision'];
+                // Skok ceny wobec kartoteki : zły przelicznik albo prawdziwa podwyżka — do sprawdzenia (podwyżka z decyzją już sprawdzona).
+                if ($c['catalog_gap_pct'] !== null && abs($c['catalog_gap_pct']) > $this->alertPct() && ($up === null || $up['decision'] === null)) { $flags[] = 'price_jump'; $jumps++; }
                 if ($inv['id_po']) {
                     $pl = $po[(int) $l['id_raw_material']] ?? null;
                     if ($pl === null) $flags[] = 'not_in_order';
@@ -163,7 +170,49 @@ final class InvoiceService
         $totalMismatch = $inv['total_net'] !== null && $lines && abs((float) $inv['total_net'] - $sum) > 0.05;
         $state = !$lines ? 'no_lines' : ($mapped < count($lines) ? 'unmapped' : (!$inv['id_po'] ? 'no_order' : ($issues > 0 || $totalMismatch ? 'gaps' : 'clean')));
         return ['lines' => $out, 'summary' => ['state' => $state, 'lines' => count($lines), 'mapped' => $mapped, 'issues' => $issues, 'value_gap' => round($gap, 2),
-            'lines_net' => round($sum, 2), 'total_mismatch' => $totalMismatch, 'price_jumps' => $jumps]];
+            'lines_net' => round($sum, 2), 'total_mismatch' => $totalMismatch, 'price_jumps' => $jumps,
+            'price_ups' => count(array_filter($ups, fn($u) => $u['decision'] === null)), 'price_ups_decided' => count(array_filter($ups, fn($u) => $u['decision'] !== null))]];
+    }
+
+    /**
+     * Podwyżki według surowca : cena z faktury (ważona, za jednostkę bazową) przeniesiona do kartoteki tak jak applyPrices
+     * (cena opakowania, 2 miejsca) wyższa niż cena bazowa (raw_material.price_per_unit — kalkulacja receptur) o więcej niż
+     * supply.invoice_price_up_pct (0 = każda podwyżka). Decyzja ważna, gdy mają ją wszystkie linie surowca, a cena nie wzrosła
+     * od zatwierdzenia ; nowe przypisanie albo przelicznik ją kasuje.
+     * @return array<int, array{price: float, catalog: float, new_catalog: float, qty: float, decision: ?string, by: ?string, at: ?string}>
+     */
+    private function priceUps(array $lines): array
+    {
+        $byMaterial = [];
+        foreach ($lines as $l) if ($l['id_raw_material'] !== null) $byMaterial[(int) $l['id_raw_material']][] = $l;
+        $out = [];
+        foreach ($this->materialLines($lines) as $mid => $ml) {
+            $rows = $byMaterial[$mid];
+            $first = $rows[0];
+            $catalog = (float) ($first['catalog_price'] ?? 0);
+            if ($ml['price'] === null || $catalog <= 0) continue;
+            $new = self::catalogPrice($ml['price'], $first['material_unit'] ?? null, $first['package_size'] ?? null);
+            if ($new <= $catalog * (1 + $this->upPct() / 100) + 1e-9) continue;
+            $decisions = array_values(array_unique(array_map(fn($l) => $l['price_decision'] ?? null, $rows)));
+            $okPrice = min(array_map(fn($l) => isset($l['price_ok_price']) ? (float) $l['price_ok_price'] : 0.0, $rows));
+            $decision = count($decisions) === 1 && in_array($decisions[0], self::PRICE_DECISIONS, true) && $okPrice > 0 && $ml['price'] <= $okPrice * (1 + 1e-6) ? $decisions[0] : null;
+            $out[$mid] = ['price' => $ml['price'], 'catalog' => $catalog, 'new_catalog' => $new, 'qty' => $ml['quantity'], 'decision' => $decision,
+                'by' => $decision !== null ? ($first['price_ok_name'] ?? null) : null, 'at' => $decision !== null ? ($first['price_ok_at'] ?? null) : null];
+        }
+        return $out;
+    }
+
+    /** Cena za jednostkę bazową, jaka trafiłaby do kartoteki : cena opakowania (2 miejsca) ÷ opakowanie, 5 miejsc — jak applyPrices. */
+    private static function catalogPrice(float $price, ?string $unit, $packageSize): float
+    {
+        $package = (float) $packageSize > 0 ? (float) $packageSize : (float) CostOptimizationService::displayUnit($unit)['factor'];
+        $whole = round($package);
+        return $whole > 0 ? round(round($price * $package, 2) / $whole, 5) : $price;
+    }
+
+    private function upPct(): float
+    {
+        return max(0.0, (float) str_replace(',', '.', $this->params->get('supply.invoice_price_up_pct', '0')));
     }
 
     /**
@@ -178,11 +227,13 @@ final class InvoiceService
         if ($s['lines'] === 0) $blockers[] = 'no_lines';
         if ($s['mapped'] < $s['lines']) $blockers[] = 'unmapped';
         if ($inv['id_supplier'] === null) $blockers[] = 'no_supplier';
+        // Podwyżka ponad cenę bazową bez decyzji : ani automat, ani « Zatwierdź fakturę » (także z potwierdzeniem).
+        if (($s['price_ups'] ?? 0) > 0) $blockers[] = 'price_up';
         $warnings = [];
         if ($s['issues'] > 0 && $s['mapped'] === $s['lines']) $warnings[] = 'gaps';
         if ($s['price_jumps'] > 0) $warnings[] = 'price_jump';
         if ($s['total_mismatch']) $warnings[] = 'total_mismatch';
-        return ['ok' => !$blockers && !$warnings, 'blockers' => $blockers, 'warnings' => $warnings, 'unmapped' => $s['lines'] - $s['mapped']];
+        return ['ok' => !$blockers && !$warnings, 'blockers' => $blockers, 'warnings' => $warnings, 'unmapped' => $s['lines'] - $s['mapped'], 'price_ups' => $s['price_ups'] ?? 0];
     }
 
     /** Ilości na stan : do zamówienia (wysłane / częściowo przyjęte) albo — bez zamówienia — przez zamówienie utworzone z faktury. */
@@ -201,7 +252,7 @@ final class InvoiceService
     private function autoMode(): array
     {
         $full = $this->params->get('supply.invoice_auto_full', '0') === '1';
-        return ['prices' => $full || $this->params->get('supply.invoice_auto_prices', '1') === '1', 'full' => $full, 'price_alert_pct' => $this->alertPct()];
+        return ['prices' => $full || $this->params->get('supply.invoice_auto_prices', '1') === '1', 'full' => $full, 'price_alert_pct' => $this->alertPct(), 'price_up_pct' => $this->upPct()];
     }
 
     // --- Import ---------------------------------------------------------------------------------------------------
@@ -633,15 +684,17 @@ final class InvoiceService
         if (in_array('no_lines', $ready['blockers'], true)) throw new ApiException('INVOICE_NO_LINES', 422);
         if (in_array('unmapped', $ready['blockers'], true)) throw new ApiException('INVOICE_UNMAPPED', 422, [], ['n' => $ready['unmapped']]);
         if (in_array('no_supplier', $ready['blockers'], true)) throw new ApiException('INVOICE_NO_SUPPLIER', 422);
+        if (in_array('price_up', $ready['blockers'], true)) throw new ApiException('INVOICE_PRICE_UP_PENDING', 409, [], ['n' => $ready['price_ups']]);
         if ($ready['warnings'] && !$force) throw new ApiException('INVOICE_NEEDS_CONFIRMATION', 409, [], ['warnings' => implode(', ', $ready['warnings'])]);
         return $this->tx->execute(function () use ($id, $inv, $control, $steps, $force, $context, $action, $ready) {
-            $out = ['prices' => 0, 'prices_skipped' => [], 'stock' => false, 'accepted' => false];
+            $out = ['prices' => 0, 'prices_skipped' => [], 'prices_kept' => [], 'stock' => false, 'accepted' => false];
             // Linie bez ceny, ilości już przyjęte albo spoza zamówienia : krok pominięty, reszta wykonana.
             if (in_array('prices', $steps, true) && $inv['prices_imported_at'] === null) {
                 try {
                     $p = $this->applyPrices($inv, $this->repo->lines($id), $context);
                     $out['prices'] = count($p['changes']);
                     $out['prices_skipped'] = $p['skipped'];
+                    $out['prices_kept'] = $p['kept'];
                 } catch (ApiException $e) {
                     if ($e->errorCode() !== 'INVOICE_NO_PRICES') throw $e;
                 }
@@ -680,6 +733,65 @@ final class InvoiceService
             error_log('[invoice auto] #' . $id . ' ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Decyzja o podwyżkach ceny ponad cenę bazową : accept — cena z faktury zostanie nową ceną bazową (kalkulacja receptur)
+     * przy « Zatwierdź fakturę » / imporcie cen ; keep — cena bazowa bez zmian, faktura może być zaakceptowana.
+     * raw_material_ids : wybrane surowce (domyślnie wszystkie bez decyzji). Kto i kiedy — na liniach i w dzienniku.
+     */
+    public function decidePrices(int $id, array $body, ApiContext $context): array
+    {
+        $this->open($id);
+        $v = (new Validator($body))->only(['decision', 'raw_material_ids'])->choice('decision', self::PRICE_DECISIONS);
+        $ids = $body['raw_material_ids'] ?? null;
+        if ($ids !== null && (!is_array($ids) || !$ids || array_filter($ids, fn($x) => !is_int($x)))) $v->add('raw_material_ids', 'NOT_ARRAY');
+        $v->throwIfInvalid();
+        $ups = $this->priceUps($this->repo->lines($id));
+        $chosen = $ids === null ? array_keys(array_filter($ups, fn($u) => $u['decision'] === null)) : array_values(array_unique($ids));
+        $unknown = array_values(array_filter($chosen, fn($mid) => !isset($ups[$mid])));
+        if ($unknown) throw ApiException::validation([['field' => 'raw_material_ids', 'code' => 'INVALID_CHOICE', 'params' => ['allowed' => implode(', ', array_keys($ups)) ?: '—']]]);
+        if (!$chosen) throw new ApiException('INVOICE_NO_PRICE_UP', 409);
+        $decision = (string) $v->value('decision');
+        $this->tx->execute(function () use ($id, $chosen, $ups, $decision, $context) {
+            foreach ($chosen as $mid) $this->repo->decidePrice($id, (int) $mid, $decision, $ups[$mid]['price'], $context->userId);
+            $this->audit->record($context, 'price_decision', 'purchase_invoice', $id, null, ['decision' => $decision,
+                'materials' => array_map(fn($mid) => [(int) $mid, $ups[$mid]['catalog'], $ups[$mid]['new_catalog']], $chosen)]);
+        });
+        return $this->detail($id, $context) + ['decided' => count($chosen)];
+    }
+
+    /** Otwarte faktury z podwyżką bez decyzji (kolejka « Do obsłużenia », Dzisiaj). */
+    public function pendingPriceUps(): array
+    {
+        $out = [];
+        foreach ($this->repo->invoices('open') as $inv) {
+            $n = count(array_filter($this->priceUps($this->repo->lines((int) $inv['id'])), fn($u) => $u['decision'] === null));
+            if ($n > 0) $out[] = ['id' => (int) $inv['id'], 'number' => $inv['number'], 'issue_date' => $inv['issue_date'],
+                'supplier' => trim((string) ($inv['supplier_name'] ?? '')) ?: $inv['seller_name'], 'total_net' => $inv['total_net'], 'currency' => $inv['currency'], 'materials' => $n];
+        }
+        return $out;
+    }
+
+    /** Podwyżki do pokazania : surowiec, cena bazowa i nowa (jednostka wyświetlana), zmiana %, dopłata na tej fakturze, receptury, decyzja. */
+    private function presentUps(array $ups, array $lines, string $lang): array
+    {
+        if (!$ups) return [];
+        $recipes = $this->repo->recipesUsing(array_keys($ups));
+        $first = [];
+        foreach ($lines as $l) if ($l['id_raw_material'] !== null) $first[(int) $l['id_raw_material']] ??= $l;
+        $out = [];
+        foreach ($ups as $mid => $u) {
+            $l = $first[$mid];
+            $unit = CostOptimizationService::displayUnit($l['material_unit']);
+            $out[] = ['raw_material_id' => $mid, 'name' => $lang === 'fr' && $l['material_name_fr'] ? $l['material_name_fr'] : $l['material_name'],
+                'unit' => $unit['label'], 'factor' => $unit['factor'], 'base_price' => $u['catalog'], 'invoice_price' => round($u['price'], 8), 'new_price' => $u['new_catalog'],
+                'change_pct' => round(($u['new_catalog'] - $u['catalog']) / $u['catalog'] * 100, 2), 'quantity' => $u['qty'],
+                'extra' => round($u['qty'] * ($u['price'] - $u['catalog']), 2), 'recipes' => $recipes[$mid] ?? 0,
+                'decision' => $u['decision'], 'decided_by' => $u['by'], 'decided_at' => $u['at']];
+        }
+        usort($out, fn($a, $b) => [$a['decision'] !== null, -$a['extra']] <=> [$b['decision'] !== null, -$b['extra']]);
+        return $out;
     }
 
     public function decide(int $id, array $body, ApiContext $context): array
@@ -770,7 +882,7 @@ final class InvoiceService
         $v->throwIfInvalid();
         $rows = array_filter($this->repo->lines($id), fn($l) => $wanted === null || in_array((int) $l['id'], $wanted, true));
         $res = $this->applyPrices($inv, $rows, $context);
-        return $this->detail($id, $context) + ['imported_prices' => $res['changes'], 'skipped' => $res['skipped']];
+        return $this->detail($id, $context) + ['imported_prices' => $res['changes'], 'skipped' => $res['skipped'], 'kept' => $res['kept']];
     }
 
     /** @return array{changes: list<array>, skipped: list<string>} */
@@ -779,10 +891,16 @@ final class InvoiceService
         $id = (int) $inv['id'];
         $lines = array_filter($this->materialLines($rows), fn($l) => $l['price'] !== null && $l['price'] > 0);
         if (!$lines) throw new ApiException('INVOICE_NO_PRICES', 422);
+        // Podwyżka ponad cenę bazową : tylko po decyzji ; « keep » = cena bazowa bez zmian.
+        $ups = $this->priceUps($rows);
+        $pending = array_filter($ups, fn($u) => $u['decision'] === null);
+        if ($pending) throw new ApiException('INVOICE_PRICE_UP_PENDING', 409, [], ['n' => count($pending)]);
         $changes = [];
         $skipped = [];
+        $kept = [];
         foreach ($lines as $mid => $l) {
             $m = $this->repo->material($mid);
+            if (($ups[$mid]['decision'] ?? null) === 'keep') { $kept[] = $m['name']; continue; }
             $supplier = $inv['id_supplier'] !== null ? (int) $inv['id_supplier'] : ($m['id_current_supplier'] !== null ? (int) $m['id_current_supplier'] : null);
             $package = (float) $m['package_size'] > 0 ? (float) $m['package_size'] : (float) CostOptimizationService::displayUnit($m['unit'])['factor'];
             $packPrice = round($l['price'] * $package, 2);
@@ -798,7 +916,7 @@ final class InvoiceService
             $this->repo->update($id, ['prices_imported_at' => date('Y-m-d H:i:s'), 'prices_imported_by' => $context->userId]);
             $this->audit->record($context, 'import_prices', 'purchase_invoice', $id, null, ['materials' => array_map(fn($c) => [$c['raw_material_id'], $c['old_price'], $c['new_price']], $changes)]);
         }
-        return ['changes' => $changes, 'skipped' => $skipped];
+        return ['changes' => $changes, 'skipped' => $skipped, 'kept' => $kept];
     }
 
     /** Linie przypisane według surowca : ilość w jednostkach bazowych i cena netto za jednostkę bazową (ważona). */

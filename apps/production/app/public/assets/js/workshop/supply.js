@@ -785,7 +785,8 @@
     const STATE_CLS = {clean: 'bg-success', gaps: 'bg-danger', unmapped: 'bg-warning text-dark', no_order: 'bg-secondary', no_lines: 'bg-light text-dark'};
     const ALERT_CLS = {clean: 'alert-success', gaps: 'alert-danger', unmapped: 'alert-warning', no_order: 'alert-secondary', no_lines: 'alert-warning'};
     const FLAG_CLS = {unmapped: 'bg-warning text-dark', not_in_order: 'bg-danger', qty_over_received: 'bg-danger', qty_over_ordered: 'bg-danger',
-        qty_under_received: 'bg-warning text-dark', price_over: 'bg-danger', price_under: 'bg-success', price_jump: 'bg-warning text-dark'};
+        qty_under_received: 'bg-warning text-dark', price_over: 'bg-danger', price_under: 'bg-success', price_jump: 'bg-warning text-dark',
+        price_up: 'bg-danger', price_up_accept: 'bg-success', price_up_keep: 'bg-secondary'};
     const BAD_FLAGS = ['not_in_order', 'qty_over_received', 'qty_over_ordered', 'price_over'];
     const disp = (base) => base === 'g' ? {unit: 'kg', factor: 1000} : base === 'ml' ? {unit: 'l', factor: 1000} : {unit: base || 'szt', factor: 1};
     const fullDay = (s) => s ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : '—';
@@ -806,6 +807,7 @@
         if (r.ok) return w ? `<button type="button" class="btn btn-sm btn-success text-nowrap" data-quick-process="${i.id}"><i class="bi bi-check2-all"></i> ${esc(t('inv.act.process_short'))}</button>` : '';
         if (r.blockers.includes('no_supplier')) return `<span class="badge bg-warning text-dark">${esc(t('inv.next.supplier'))}</span>`;
         if (r.blockers.includes('unmapped')) return `<span class="badge bg-warning text-dark">${esc(t('inv.next.map', {n: r.unmapped}))}</span>`;
+        if (r.blockers.includes('price_up')) return `<span class="badge bg-danger"><i class="bi bi-graph-up-arrow"></i> ${esc(t('inv.next.price_up', {n: r.price_ups}))}</span>`;
         if (r.blockers.length) return `<span class="badge bg-light text-dark">${esc(t('inv.next.lines'))}</span>`;
         return `<span class="badge bg-warning text-dark" title="${esc(r.warnings.map(x => t('inv.warn.' + x)).join(' · '))}">${esc(t('inv.next.check'))}</span>`;
     }
@@ -887,7 +889,8 @@
 
     // Wynik « Zatwierdź fakturę » : co zrobiono (ceny, stan, akceptacja).
     const processedText = (p) => [p.prices ? t('inv.done.prices', {n: p.prices}) : null, p.stock ? t('inv.done.stock') : null, p.accepted ? t('inv.done.accepted') : null]
-        .filter(Boolean).join(' · ') + (p.prices_skipped && p.prices_skipped.length ? ' ' + t('inv.prices_skipped', {list: p.prices_skipped.join(', ')}) : '');
+        .filter(Boolean).join(' · ') + (p.prices_skipped && p.prices_skipped.length ? ' ' + t('inv.prices_skipped', {list: p.prices_skipped.join(', ')}) : '')
+        + (p.prices_kept && p.prices_kept.length ? ' ' + t('inv.prices_kept', {list: p.prices_kept.join(', ')}) : '');
 
     function bindInvoices() {
         const d = data.invoices;
@@ -1223,6 +1226,7 @@
                 <div class="alert ${ALERT_CLS[c.state] || 'alert-secondary'} py-2 small mb-2">${esc(summary)}
                     ${c.price_jumps ? `<div>${esc(t('inv.sum.price_jumps', {n: c.price_jumps, pct: n(i.auto.price_alert_pct, 0)}))}</div>` : ''}
                     ${c.total_mismatch ? `<div>${esc(t('inv.sum.total_mismatch', {lines: cur(c.lines_net, i.currency), total: cur(i.total_net, i.currency)}))}</div>` : ''}</div>
+                ${iv.editLines ? '' : priceUpBox(i)}
                 ${iv.editLines ? '' : quickAction(i)}
                 ${lines}
                 ${iv.editLines ? '' : importBox(i)}
@@ -1240,13 +1244,14 @@
         const items = [
             ['supplier', closed || !!i.supplier, i.supplier ? i.supplier.name : t('inv.step.supplier_todo')],
             ['map', closed || (c.lines > 0 && c.mapped === c.lines), c.lines && c.mapped < c.lines ? t('inv.next.map', {n: c.lines - c.mapped}) : t('inv.step.map_done', {n: c.lines})],
-            ['check', closed || (c.lines > 0 && c.mapped === c.lines && !r.warnings.length), c.mapped < c.lines ? t('inv.step.check_wait')
+            ['check', closed || (c.lines > 0 && c.mapped === c.lines && !r.warnings.length && !r.price_ups), c.mapped < c.lines ? t('inv.step.check_wait')
+                : r.price_ups ? t('inv.step.price_up', {n: r.price_ups})
                 : r.warnings.length ? r.warnings.map(x => t('inv.warn.' + x)).join(' · ') : (c.state === 'no_order' ? t('inv.state.no_order') : t('inv.state.clean'))],
             ['done', i.status === 'accepted', i.status === 'accepted' ? t('inv.status.accepted') : i.status === 'disputed' ? t('inv.status.disputed') : t('inv.step.done_todo')],
         ];
         const current = items.findIndex(x => !x[1]);
         return `<ol class="tfb-inv-steps" aria-label="${esc(t('inv.steps'))}">${items.map(([k, done, sub], idx) => {
-            const warn = k === 'check' && r.warnings.length && !closed;
+            const warn = k === 'check' && (r.warnings.length || r.price_ups) && !closed;
             return `<li class="${done ? 'is-done' : ''} ${idx === current ? 'is-current' : ''} ${warn ? 'is-warn' : ''}"><span class="tfb-inv-step-n">${done ? '<i class="bi bi-check-lg"></i>' : idx + 1}</span>
                 <span><strong>${esc(t('inv.step.' + k))}</strong><small>${esc(sub)}</small></span></li>`;
         }).join('')}</ol>`;
@@ -1262,6 +1267,7 @@
                 <span class="small text-muted">${esc(t('inv.map_all_help'))}</span></div>`;
         }
         if (r.blockers.includes('no_supplier')) return `<div class="tfb-inv-quick"><span class="small text-warning"><i class="bi bi-arrow-up"></i> ${esc(t('inv.next.supplier_help'))}</span></div>`;
+        if (r.blockers.includes('price_up')) return `<div class="tfb-inv-quick is-warn"><span class="small text-danger"><i class="bi bi-graph-up-arrow"></i> ${esc(t('inv.price_up.first', {n: r.price_ups}))}</span></div>`;
         const opt = (k, on, enabled, label) => `<label class="form-check form-check-inline small mb-0"><input class="form-check-input" type="checkbox" data-step="${k}" ${on ? 'checked' : ''} ${enabled ? '' : 'disabled'}> ${esc(label)}</label>`;
         const pricesDone = !!i.prices_imported_at;
         return `<div class="tfb-inv-quick ${r.warnings.length ? 'is-warn' : ''}">
@@ -1271,6 +1277,38 @@
                 ${opt('stock', i.can_receive, i.can_receive, i.can_receive ? t(i.receive_mode === 'order' ? 'inv.step_opt.stock_order' : 'inv.step_opt.stock') : t('inv.step_opt.stock_none'))}
                 ${opt('accept', true, true, t('inv.step_opt.accept'))}</span>
             ${r.warnings.length ? `<div class="small text-warning w-100"><i class="bi bi-exclamation-triangle"></i> ${esc(t('inv.warn_confirm', {list: r.warnings.map(x => t('inv.warn.' + x)).join(' · ')}))}</div>` : ''}</div>`;
+    }
+
+    // Ceny wyższe niż cena bazowa (kartoteka — kalkulacja receptur) : decyzja na surowiec — nowa cena bazowa albo bez zmian ;
+    // bez decyzji ani automat, ani « Zatwierdź fakturę ». Kto i kiedy zdecydował — przy surowcu.
+    function priceUpBox(i) {
+        const ups = i.price_ups || [];
+        if (!ups.length || i.prices_imported_at) return '';
+        const can = i.editable;
+        const pending = ups.filter(u => !u.decision).length;
+        const rows = ups.map(u => {
+            const r = {unit: u.unit, factor: u.factor};
+            const state = u.decision ? `<span class="badge ${u.decision === 'accept' ? 'bg-success' : 'bg-secondary'}">${esc(t('inv.price_up.' + u.decision + '_done'))}</span>
+                    <div class="small text-muted">${esc(t('inv.price_up.by', {who: u.decided_by || '—', at: u.decided_at ? fullDay(u.decided_at.slice(0, 10)) + ' ' + u.decided_at.slice(11, 16) : ''}))}</div>` : '';
+            const buttons = can ? `<div class="d-flex flex-wrap gap-1 justify-content-end">
+                    <button type="button" class="btn btn-sm ${u.decision === 'accept' ? 'btn-success' : 'btn-outline-success'}" data-pu="accept" data-pu-mat="${u.raw_material_id}" ${u.decision === 'accept' ? 'disabled' : ''}><i class="bi bi-check2"></i> ${esc(t('inv.price_up.accept'))}</button>
+                    <button type="button" class="btn btn-sm ${u.decision === 'keep' ? 'btn-secondary' : 'btn-outline-secondary'}" data-pu="keep" data-pu-mat="${u.raw_material_id}" ${u.decision === 'keep' ? 'disabled' : ''}>${esc(t('inv.price_up.keep'))}</button></div>` : '';
+            return `<tr data-pu-row="${u.raw_material_id}" class="${u.decision ? '' : 'table-warning'}"><td><strong>${esc(u.name)}</strong>
+                    <div class="small text-muted">${esc(t('inv.price_up.recipes', {n: u.recipes}))}</div></td>
+                <td class="text-end text-nowrap">${esc(unitPrice(r, u.base_price))}</td><td class="text-end text-nowrap"><strong>${esc(unitPrice(r, u.new_price))}</strong></td>
+                <td class="text-end text-nowrap text-danger">${esc(pct(u.change_pct))}</td><td class="text-end text-nowrap">${esc(signed(u.extra, money))}
+                    <div class="small text-muted">${esc(q(r, u.quantity))}</div></td>
+                <td class="text-end">${state}${buttons}</td></tr>`;
+        }).join('');
+        return `<div class="card tfb-inv-priceup mb-2 ${pending ? 'border-danger' : 'border-success'}"><div class="card-body">
+            <h6 class="tfb-team-title mb-1"><i class="bi bi-graph-up-arrow"></i> ${esc(t('inv.price_up.title'))}</h6>
+            <p class="small text-muted mb-2">${esc(t('inv.price_up.help'))}</p>
+            <div class="table-responsive"><table class="table table-sm align-middle mb-2"><thead><tr><th>${esc(t('inv.col.material'))}</th>
+                <th class="text-end">${esc(t('inv.price_up.base'))}</th><th class="text-end">${esc(t('inv.price_up.new'))}</th><th class="text-end">${esc(t('inv.col.diff'))}</th>
+                <th class="text-end">${esc(t('inv.price_up.extra'))}</th><th class="text-end">${esc(t('inv.price_up.decision'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
+            ${can && pending > 1 ? `<div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-sm btn-success" data-pu-all="accept"><i class="bi bi-check2-all"></i> ${esc(t('inv.price_up.accept_all', {n: pending}))}</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-pu-all="keep">${esc(t('inv.price_up.keep_all', {n: pending}))}</button></div>` : ''}
+            </div></div>`;
     }
 
     // Import do kartoteki : cena z faktury (netto na jednostkę surowca, ważona przy kilku liniach) wobec ceny w kartotece ;
@@ -1324,7 +1362,7 @@
                     : k.catalog_price !== null ? `<div class="small text-muted">${esc(t('catalog', {price: unitPrice(u, k.catalog_price)}))}${k.catalog_gap_pct ? ' · ' + esc(pct(k.catalog_gap_pct)) : ''}</div>` : ''}
                 ${k.price_gap_pct ? `<div class="small ${k.flags.includes('price_over') ? 'text-danger' : k.flags.includes('price_under') ? 'text-success' : 'text-muted'}">${esc(pct(k.price_gap_pct))}${k.value_gap ? ' · ' + esc(signed(k.value_gap, money)) : ''}</div>` : ''}
                 ${priceRefs(m, u, k.price_base)}</td>`;
-        return `<tr data-iline="${l.id}" class="${k.flags.some(f => BAD_FLAGS.includes(f)) ? 'table-danger' : k.flags.includes('price_jump') ? 'table-warning' : ''}">
+        return `<tr data-iline="${l.id}" class="${k.flags.some(f => BAD_FLAGS.includes(f)) ? 'table-danger' : k.flags.includes('price_jump') || k.flags.includes('price_up') ? 'table-warning' : ''}">
             <td><strong>${esc(l.name)}</strong>${l.code ? `<div class="small text-muted">${esc(l.code)}</div>` : ''}</td>
             <td class="text-end text-nowrap">${esc(n(l.quantity, 3))} ${esc(l.unit || '')}</td>
             <td class="text-end text-nowrap">${l.unit_price !== null ? esc(n(l.unit_price, 4)) : '—'}</td>
@@ -1471,6 +1509,17 @@
             if (!lines.length) { ui.notify(false, t('inv.map_all_none')); return; }
             run(e.currentTarget, () => api.put(`/supply/invoices/${i.id}/map`, {lines, remember: true}), t('inv.map_all_ok', {n: lines.length}) + (missing ? ' ' + t('inv.map_all_missing', {n: missing}) : ''));
         });
+        // Podwyżki cen : decyzja dla jednego surowca albo wszystkich bez decyzji (nowa cena bazowa / bez zmian).
+        el.querySelectorAll('[data-pu]').forEach(b => b.addEventListener('click', () => {
+            const decision = b.dataset.pu;
+            run(b, () => api.post(`/supply/invoices/${i.id}/price-decisions`, {decision, raw_material_ids: [Number(b.dataset.puMat)]}), t('inv.price_up.' + decision + '_ok', {n: 1}));
+        }));
+        el.querySelectorAll('[data-pu-all]').forEach(b => b.addEventListener('click', () => {
+            const decision = b.dataset.puAll;
+            const n = (i.price_ups || []).filter(u => !u.decision).length;
+            if (decision === 'accept' && !window.confirm(t('inv.price_up.confirm_all', {n}))) return;
+            run(b, () => api.post(`/supply/invoices/${i.id}/price-decisions`, {decision}), t('inv.price_up.' + decision + '_ok', {n}));
+        }));
         // « Zatwierdź fakturę » : wybrane kroki ; ostrzeżenia (rozbieżności, skok ceny, suma) — potwierdzenie i force.
         el.querySelector('[data-process]')?.addEventListener('click', async (e) => {
             const b = e.currentTarget;

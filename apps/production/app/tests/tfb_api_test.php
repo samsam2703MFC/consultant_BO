@@ -123,7 +123,8 @@ $builder->addDefinitions([
         public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = []): string { throw new RuntimeException('no e-mail in tests'); }
     },
 ]);
-$kernel = $builder->build()->get(WorkshopApiKernel::class);
+$container = $builder->build();
+$kernel = $container->get(WorkshopApiKernel::class);
 
 $call = function (string $method, string $path, ?array $body = null, ?string $token = null, string $lang = 'pl', string $ip = '10.0.0.1') use ($kernel): array {
     $server = ['HTTP_ACCEPT_LANGUAGE' => $lang, 'CONTENT_TYPE' => 'application/json', 'REMOTE_ADDR' => $ip];
@@ -1777,8 +1778,9 @@ check($s === 422 && $codes($b) === ['factor:OUT_OF_RANGE'], 'factor must be more
 [$s, $inv] = $call('PUT', "/supply/invoices/{$invId}/lines/{$line['id']}/map", ['raw_material_id' => 900, 'factor' => 25000], $access);
 $c = $inv['data']['lines'][0]['control'] ?? [];
 check($s === 200 && $inv['data']['order']['id'] === $flourPo['id'] && $c['quantity_base'] == 50000 && abs($c['price_gap_pct'] - 10) < 0.01
-    && $c['flags'] === ['price_over'] && $inv['data']['control']['state'] === 'gaps' && abs($inv['data']['control']['value_gap'] - 20) < 0.01,
-    'mapped (2 bags × 25 kg): linked to the flour order, quantity = received, price +10 % over the order → 20 PLN gap');
+    && $c['flags'] === ['price_up', 'price_over'] && $inv['data']['control']['state'] === 'gaps' && abs($inv['data']['control']['value_gap'] - 20) < 0.01
+    && $inv['data']['ready']['blockers'] === ['price_up'],
+    'mapped (2 bags × 25 kg): linked to the flour order, quantity = received, price +10 % over the order → 20 PLN gap ; above the base price → to validate');
 check((int) $pdo->query("SELECT COUNT(*) FROM n_inv_mapping WHERE supplier_key = 'nip:5260250274' AND id_raw_material = 900 AND factor = 25000")->fetchColumn() === 1
     && (int) $pdo->query("SELECT id_supplier FROM n_inv_supplier WHERE seller_nip = '5260250274'")->fetchColumn() === 60, 'supplier name mapping and seller NIP remembered');
 [$s, $b] = $call('POST', "/supply/invoices/{$invId}/receive", null, $access);
@@ -1969,18 +1971,36 @@ check($s === 422 && $b['description'] === 'INVOICE_UNMAPPED' && str_contains($b[
 check($s === 422 && $codes($b) === ['lines.0.raw_material_id:REFERENCE_NOT_FOUND'], 'map all: unknown material refused');
 [$s, $q1] = $call('PUT', "/supply/invoices/{$q1id}/map", ['lines' => [['line_id' => $q1line['id'], 'raw_material_id' => 900]]], $access);
 $c1 = $q1['data']['lines'][0]['control'] ?? [];
-check($s === 200 && $q1['data']['lines'][0]['factor'] == 25000 && in_array('price_jump', $c1['flags'], true) && $q1['data']['ready']['warnings'] === ['price_jump']
-    && $q1['data']['control']['price_jumps'] === 1 && (int) $pdo->query("SELECT COUNT(*) FROM n_inv_mapping WHERE supplier_key = 'nip:5260250274' AND id_raw_material = 900")->fetchColumn() === 1,
-    'map all: factor from the name (2 bags = 50 kg), remembered ; 4 zł/kg vs 2 zł/kg in the file → « price jump » to confirm');
+$up1 = $q1['data']['price_ups'][0] ?? [];
+check($s === 200 && $q1['data']['lines'][0]['factor'] == 25000 && in_array('price_jump', $c1['flags'], true) && in_array('price_up', $c1['flags'], true)
+    && $q1['data']['ready']['warnings'] === ['price_jump'] && $q1['data']['ready']['blockers'] === ['price_up'] && $q1['data']['ready']['price_ups'] === 1
+    && $q1['data']['control']['price_jumps'] === 1 && $q1['data']['control']['price_ups'] === 1 && (int) $pdo->query("SELECT COUNT(*) FROM n_inv_mapping WHERE supplier_key = 'nip:5260250274' AND id_raw_material = 900")->fetchColumn() === 1
+    && ($up1['raw_material_id'] ?? 0) === 900 && abs($up1['base_price'] - 0.002) < 1e-9 && abs($up1['new_price'] - 0.004) < 1e-9 && $up1['change_pct'] == 100 && $up1['extra'] == 100
+    && $up1['unit'] === 'kg' && is_int($up1['recipes']) && $up1['decision'] === null,
+    'map all: factor from the name (2 bags = 50 kg), remembered ; 4 zł/kg vs 2 zł/kg (base price of the recipes) → price increase to validate (+100 %, +100 zł on this invoice)');
 [$s, $b] = $call('POST', "/supply/invoices/{$q1id}/process", [], $access);
-check($s === 409 && $b['description'] === 'INVOICE_NEEDS_CONFIRMATION', 'price jump: one-click validation asks for a confirmation');
+[$s2, $b2] = $call('POST', "/supply/invoices/{$q1id}/process", ['force' => true], $access);
+[$s3, $b3] = $call('POST', "/supply/invoices/{$q1id}/prices", [], $access);
+check($s === 409 && $b['description'] === 'INVOICE_PRICE_UP_PENDING' && $s2 === 409 && $b2['description'] === 'INVOICE_PRICE_UP_PENDING' && $s3 === 409 && $b3['description'] === 'INVOICE_PRICE_UP_PENDING'
+    && abs((float) $pdo->query('SELECT price_per_unit FROM raw_material WHERE id = 900')->fetchColumn() - 0.002) < 1e-9,
+    'price above the base price: neither « Zatwierdź fakturę » (even confirmed) nor the price import before a decision — base price unchanged');
+[$s, $b] = $call('POST', "/supply/invoices/{$q1id}/price-decisions", ['decision' => 'maybe'], $access);
+[$s2, $b2] = $call('POST', "/supply/invoices/{$q1id}/price-decisions", ['decision' => 'accept', 'raw_material_ids' => [902]], $access);
+check($s === 422 && $codes($b) === ['decision:INVALID_CHOICE'] && $s2 === 422 && $codes($b2) === ['raw_material_ids:INVALID_CHOICE'], 'price decision: accept or keep, only for a material priced above its base');
+[$s, $q1] = $call('POST', "/supply/invoices/{$q1id}/price-decisions", ['decision' => 'accept'], $access);
+$c1 = $q1['data']['lines'][0]['control'] ?? [];
+check($s === 200 && $q1['data']['decided'] === 1 && $q1['data']['price_ups'][0]['decision'] === 'accept' && $q1['data']['price_ups'][0]['decided_by'] !== null
+    && in_array('price_up_accept', $c1['flags'], true) && !in_array('price_jump', $c1['flags'], true) && $q1['data']['ready']['ok'] === true
+    && $pdo->query("SELECT CONCAT(price_decision, ':', price_ok_by) FROM n_inv_line WHERE id_inv = {$q1id}")->fetchColumn() === 'accept:1'
+    && (int) $pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE action = 'price_decision' AND entity_id = {$q1id}")->fetchColumn() === 1,
+    'new base price accepted (who, when, audited): the invoice is ready, the checked increase is no longer a « price jump »');
 $stock900 = (float) $pdo->query('SELECT COALESCE(SUM(r.quantity), 0) FROM n_po_receipt r JOIN n_po_line l ON l.id = r.id_po_line WHERE l.id_raw_material = 900')->fetchColumn();
-[$s, $q1] = $call('POST', "/supply/invoices/{$q1id}/process", ['force' => true], $access);
+[$s, $q1] = $call('POST', "/supply/invoices/{$q1id}/process", [], $access);
 $received = (float) $pdo->query('SELECT COALESCE(SUM(r.quantity), 0) FROM n_po_receipt r JOIN n_po_line l ON l.id = r.id_po_line WHERE l.id_raw_material = 900')->fetchColumn() - $stock900;
-check($s === 200 && $q1['data']['status'] === 'accepted' && $q1['data']['processed'] === ['prices' => 1, 'prices_skipped' => [], 'stock' => true, 'accepted' => true]
+check($s === 200 && $q1['data']['status'] === 'accepted' && $q1['data']['processed'] === ['prices' => 1, 'prices_skipped' => [], 'prices_kept' => [], 'stock' => true, 'accepted' => true]
     && abs((float) $pdo->query('SELECT price_per_unit FROM raw_material WHERE id = 900')->fetchColumn() - 0.004) < 1e-9 && abs($received - 50000) < 0.01
     && $q1['data']['order']['status'] === 'received' && $q1['data']['ready'] === null,
-    'Zatwierdź fakturę (confirmed): price 4 zł/kg into the file, 50 kg into stock (received order created), invoice accepted — one click');
+    'Zatwierdź fakturę (after the price decision): price 4 zł/kg into the file, 50 kg into stock (received order created), invoice accepted — one click');
 [$s, $q2] = $call('POST', '/supply/invoices/upload', ['filename' => 'FV-1201.xml', 'content_base64' => base64_encode($fa('FV/1201/10/2026', 1))], $access);
 $q2id = $q2['data']['id'] ?? 0;
 check($s === 201 && $q2['data']['lines'][0]['material']['id'] === 900 && ($q2['data']['auto_processed']['prices'] ?? null) === 1 && $q2['data']['prices_imported_at'] !== null
@@ -1998,7 +2018,7 @@ $call('PATCH', '/referentiels/params/supply.invoice_auto_prices', ['value' => tr
 check($s === 201 && $q4['data']['auto_processed'] === null && $q4['data']['prices_imported_at'] === null && $q4['data']['ready']['ok'] === true, 'automatic prices off: invoice waits, ready');
 [$s, $lst] = $call('GET', '/supply/invoices', null, $access);
 $readyIds = array_column(array_filter($lst['data']['invoices'] ?? [], fn($i) => $i['ready']['ok'] ?? false), 'id');
-check($s === 200 && in_array($q2id, $readyIds, true) && in_array($q4['data']['id'], $readyIds, true) && $lst['data']['auto'] === ['prices' => true, 'full' => false, 'price_alert_pct' => 15.0],
+check($s === 200 && in_array($q2id, $readyIds, true) && in_array($q4['data']['id'], $readyIds, true) && $lst['data']['auto'] === ['prices' => true, 'full' => false, 'price_alert_pct' => 15.0, 'price_up_pct' => 0.0],
     'invoice list: ready invoices flagged, automatic mode shown');
 [$s, $pr] = $call('POST', '/supply/invoices/process-ready', [], $access);
 $doneIds = array_column($pr['data']['processed'] ?? [], 'id');
@@ -2021,6 +2041,38 @@ $r900 = array_column($ov['data']['rows'] ?? [], null, 'raw_material_id')[900] ??
 [$s3] = $call('GET', '/supply/materials/999999/prices', null, $access);
 check($s === 200 && $r900 && abs($r900['last']['price'] - 0.004) < 1e-9 && $r900['unit'] === 'kg' && $r900['suppliers'] >= 1 && $s2 === 422 && $codes($b) === ['months:INVALID_CHOICE'] && $s3 === 404,
     'price overview (12 months): last price per kg and supplier ; invalid period → 422, unknown material → 404');
+// Podwyżka przy imporcie (KSeF, plik) : nigdy automatycznie ; « bez zmian » — cena bazowa zostaje ; tolerancja supply.invoice_price_up_pct.
+$faAt = fn(string $number, int $bags, float $price) => strtr($fa($number, $bags), [
+    '<P_9A>100.00</P_9A>' => '<P_9A>' . number_format($price, 2, '.', '') . '</P_9A>',
+    '<P_11>' . ($bags * 100) . '.00</P_11>' => '<P_11>' . number_format($bags * $price, 2, '.', '') . '</P_11>',
+    '<P_13_3>' . ($bags * 100) . '.00</P_13_3>' => '<P_13_3>' . number_format($bags * $price, 2, '.', '') . '</P_13_3>',
+]);
+[$s, $q5] = $call('POST', '/supply/invoices/upload', ['filename' => 'FV-1204.xml', 'content_base64' => base64_encode($faAt('FV/1204/10/2026', 1, 101.0))], $access);
+$q5id = $q5['data']['id'] ?? 0;
+check($s === 201 && $q5['data']['auto_processed'] === null && $q5['data']['prices_imported_at'] === null && $q5['data']['ready']['blockers'] === ['price_up']
+    && $q5['data']['ready']['warnings'] === [] && abs($q5['data']['price_ups'][0]['new_price'] - 0.00404) < 1e-9 && abs((float) $pdo->query('SELECT price_per_unit FROM raw_material WHERE id = 900')->fetchColumn() - 0.004) < 1e-9,
+    'recognised invoice with a small increase (+1 %): no automatic price, waits for a decision');
+$queue = $container->get(\App\Services\Workshop\Supply\InvoiceService::class)->pendingPriceUps();
+check(in_array($q5id, array_column($queue, 'id'), true) && !in_array($q1id, array_column($queue, 'id'), true), 'invoices with an undecided increase listed for the action queue');
+[$s, $q5] = $call('POST', "/supply/invoices/{$q5id}/price-decisions", ['decision' => 'keep', 'raw_material_ids' => [900]], $access);
+[$s2, $q5] = $call('POST', "/supply/invoices/{$q5id}/process", [], $access);
+check($s === 200 && $s2 === 200 && $q5['data']['status'] === 'accepted' && $q5['data']['processed']['prices'] === 0 && count($q5['data']['processed']['prices_kept']) === 1
+    && $q5['data']['processed']['stock'] === true && abs((float) $pdo->query('SELECT price_per_unit FROM raw_material WHERE id = 900')->fetchColumn() - 0.004) < 1e-9,
+    'decision « keep »: invoice accepted and received, base price of the recipes unchanged');
+[$s, $b] = $call('POST', "/supply/invoices/{$q5id}/price-decisions", ['decision' => 'accept'], $access);
+check($s === 409 && $b['description'] === 'INVOICE_CLOSED', 'no price decision on a closed invoice');
+$call('PATCH', '/referentiels/params/supply.invoice_price_up_pct', ['value' => 2], $access);
+[$s, $q6] = $call('POST', '/supply/invoices/upload', ['filename' => 'FV-1205.xml', 'content_base64' => base64_encode($faAt('FV/1205/10/2026', 1, 101.0))], $access);
+[$s2, $q7] = $call('POST', '/supply/invoices/upload', ['filename' => 'FV-1206.xml', 'content_base64' => base64_encode($faAt('FV/1206/10/2026', 1, 106.0))], $access);
+$call('PATCH', '/referentiels/params/supply.invoice_price_up_pct', ['value' => 0], $access);
+check($s === 201 && ($q6['data']['auto_processed']['prices'] ?? null) === 1 && $s2 === 201 && $q7['data']['auto_processed'] === null && $q7['data']['ready']['blockers'] === ['price_up'],
+    'supply.invoice_price_up_pct = 2: +1 % passes automatically (new base 4,04 zł/kg), +5 % waits for a decision');
+// Nowe przypisanie / przelicznik : decyzja kasowana.
+$q7line = $q7['data']['lines'][0]['id'];
+$call('POST', "/supply/invoices/{$q7['data']['id']}/price-decisions", ['decision' => 'accept'], $access);
+[$s, $q7] = $call('PUT', "/supply/invoices/{$q7['data']['id']}/lines/{$q7line}/map", ['raw_material_id' => 900, 'factor' => 25000, 'remember' => false], $access);
+check($s === 200 && $q7['data']['price_ups'][0]['decision'] === null && $q7['data']['ready']['blockers'] === ['price_up'], 'a new mapping or factor cancels the price decision');
+$call('DELETE', "/supply/invoices/{$q7['data']['id']}", null, $access);
 $pdo->prepare('UPDATE raw_material SET price_per_unit = ?, id_current_supplier = ? WHERE id = 900')->execute([$price900['price_per_unit'], $price900['id_current_supplier']]);
 
 // Journal, en-têtes, JSON invalide, OpenAPI public
