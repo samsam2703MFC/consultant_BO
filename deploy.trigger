@@ -1122,3 +1122,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-27T16:36:41Z production : tablette, flux de l'opérateur (liste à produire, pièces, recette, lots, produit + rebuts, validation du jour)
 2026-10-27T16:42:47Z production : badges en rectangles arrondis, chiffres et textes alignés (tablette tactile et ERP)
 2026-10-27T17:14:35Z production : numéros de lot sur les lignes de la recette (tablette)
+2026-10-27T17:22:42Z production : interrupteur emballages sur la recette (tablette)
