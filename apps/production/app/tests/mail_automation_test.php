@@ -27,9 +27,9 @@ function expectMail(bool $condition, string $message): void
 final class RecordingTransport implements SmtpTransport
 {
     public array $sent = [];
-    public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = []): string
+    public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = [], ?string $footer = null): string
     {
-        $this->sent[] = compact('to', 'subject', 'body');
+        $this->sent[] = compact('to', 'subject', 'body', 'footer');
         return 'fake-' . count($this->sent);
     }
 }

@@ -13,8 +13,9 @@ class SettingsHubController extends BaseController
 {
     /** karta => [ikona, opis, [ścieżka, etykieta, ikona, opis]] */
     private const CARDS = [
-        'System' => ['bi-gear', 'Poczta, KSeF, dostęp API', [
+        'System' => ['bi-gear', 'Poczta, stopki e-maili, KSeF, dostęp API', [
             ['/communication/email-settings', 'Konto wysyłkowe ERP', 'bi-envelope-at', 'Serwer poczty, z którego wychodzą dokumenty i przypomnienia'],
+            ['/settings/mail-footers', 'Stopki e-maili i tłumacz', 'bi-translate', 'Stopka firmy w językach klientów, tłumacz DeepL (Poczta, Komunikacja)'],
             ['/settings/ksef', 'KSeF', 'bi-file-earmark-check', 'Certyfikat, środowisko, wysyłka faktur'],
             ['/devices', 'Urządzenia (dostęp API)', 'bi-display', 'Skanery i aplikacje z kluczem API'],
             ['/settings/panel-api', 'API cen w sklepach', 'bi-shop', 'Konto panelu franczyzy (ceny w sklepach w Belgii)'],

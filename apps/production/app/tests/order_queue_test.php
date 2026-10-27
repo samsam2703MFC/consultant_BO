@@ -98,7 +98,7 @@ try {
     $builder->addDefinitions([
         PDO::class => $pdo,
         App\Services\Communication\SmtpTransport::class => new class implements App\Services\Communication\SmtpTransport {
-            public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = []): string { throw new RuntimeException('no e-mail in tests'); }
+            public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = [], ?string $footer = null): string { throw new RuntimeException('no e-mail in tests'); }
         },
     ]);
     $queue = $builder->build()->get(OrderQueueService::class);

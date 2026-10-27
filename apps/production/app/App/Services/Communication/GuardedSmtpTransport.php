@@ -12,17 +12,18 @@ final class GuardedSmtpTransport implements SmtpTransport
     {
     }
 
-    public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = []): string
+    public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = [], ?string $footer = null): string
     {
         return match ($this->policy->mode()) {
-            'live' => $this->smtp->send($account, $to, $subject, $body, $messageId, $attachments),
+            'live' => $this->smtp->send($account, $to, $subject, $body, $messageId, $attachments, $footer),
             'redirect' => $this->smtp->send(
                 $account,
                 $this->policy->redirectTo(),
                 '[TEST → ' . $to . '] ' . $subject,
                 "Wiadomość testowa — pierwotny odbiorca: {$to}\n\n" . $body,
                 $messageId,
-                $attachments
+                $attachments,
+                $footer
             ),
             default => MailDeliveryPolicy::LOG_ONLY_PREFIX . $messageId,
         };

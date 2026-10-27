@@ -432,7 +432,7 @@
                 <li class="sidebar-title">Ustawienia</li>
 
                 <li class="sidebar-item">
-                    <a href="{{ root }}/settings" class="sidebar-link" data-also="/other-settings /settings/languages /settings/ksef /settings/panel-api /communication/email-settings /devices /aliases /users /organization/positions /organization/access /logistics/tours /logistics/vehicles /product-carriers /communication/document-templates /communication/templates">
+                    <a href="{{ root }}/settings" class="sidebar-link" data-also="/other-settings /settings/languages /settings/ksef /settings/panel-api /settings/mail-footers /communication/email-settings /devices /aliases /users /organization/positions /organization/access /logistics/tours /logistics/vehicles /product-carriers /communication/document-templates /communication/templates">
                         <i class="bi bi-gear-fill"></i>
                         <span>Ustawienia</span>
                     </a>
@@ -542,6 +542,11 @@
                 <li><a href="{{ root }}/client-orders/archive" data-where="Sprzedaż › Zamówienia klientów"><i class="bi bi-archive"></i> Archiwum zamówień</a></li>
                 <li><a href="{{ root }}/devices/logs" data-where="Ustawienia › Ustawienia › System › Urządzenia (dostęp API)"><i class="bi bi-journal-text"></i> Logi urządzeń</a></li>
                 <li><a href="{{ root }}/devices/new" data-where="Ustawienia › Ustawienia › System › Urządzenia (dostęp API)"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
+                <li><a href="{{ root }}/settings/mail-footers" data-where="Ustawienia › Ustawienia › System"><i class="bi bi-translate"></i> Stopki e-maili i tłumacz DeepL : stopka firmy w języku klienta (PL, FR, NL, EN) pod podpisem w Poczcie i pod e-mailami automatycznymi (dokumenty, przypomnienia, dostawy), klucz DeepL, zużycie znaków</a></li>
+                <li><a href="{{ root }}/mail" data-where="Poczta"><i class="bi bi-translate"></i> Przetłumacz e-mail od klienta (DeepL) i odpowiedz w języku klienta (karta klienta) — podpis i stopka firmy w języku wiadomości, oryginał zachowany</a></li>
+                <li><a href="{{ root }}/mail/settings" data-where="Ustawienia › Moja skrzynka"><i class="bi bi-pen"></i> Mój podpis e-mail (imię, stanowisko, telefon) — pod treścią wiadomości, nad stopką firmy</a></li>
+                <li><a href="{{ root }}/communication/messages" data-where="Sprzedaż › Komunikacja"><i class="bi bi-translate"></i> Wiadomość do klienta z szablonu (proforma, faktura, WDT, przypomnienie) : « Włącz edycję » → własny tekst → « Przetłumacz na język klienta »</a></li>
+                <li><a href="{{ root }}/other-settings#params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-translate"></i> Tłumacz i stopki : limit znaków DeepL na osobę dziennie (translate.daily_chars_per_user), stopka w Poczcie (mail.footer_user_mail) i w e-mailach automatycznych (mail.footer_system)</a></li>
                 <li><a href="{{ root }}/settings/ksef/purchase-invoices" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-cloud-download"></i> Faktury zakupowe KSeF : podgląd (PDF, XML, filtry) — import i kontrola w Zaopatrzenie › Faktury</a></li>
                 <li><a href="{{ root }}/workshop/supply#tab=invoices" data-where="Zakupy › Zaopatrzenie › Faktury"><i class="bi bi-cloud-download"></i> Pobierz nowe z KSeF jednym kliknięciem (od ostatniej faktury) — faktury zakupowe rozpoznane przetwarzane automatycznie</a></li>
                 <li><a href="{{ root }}/workshop/supply#tab=invoices" data-where="Zakupy › Zaopatrzenie › Faktury"><i class="bi bi-check2-all"></i> Zatwierdź fakturę zakupową jednym kliknięciem : ceny do kartoteki surowców + ilości na stan + akceptacja ; « Zatwierdź gotowe » dla wszystkich</a></li>

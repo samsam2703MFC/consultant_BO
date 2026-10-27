@@ -136,9 +136,28 @@ try {
 
     try { $service->send($userId, ['to' => 'zly@', 'subject' => '', 'text' => '']); expectMail(false, 'zła wiadomość'); }
     catch (CustomException $e) { expectMail(count(array_intersect(['to', 'subject', 'text'], array_keys($e->getErrors()['fields'] ?? []))) === 3, 'walidacja wysyłki'); }
-    $sent = $service->send($userId, ['to' => $customerEmail, 'subject' => "Re: Reklamacja {$run}", 'text' => "Dzień dobry,\nwysyłamy nową partię.\n\n-- \nJan Test",
+    // Tłumacz (transport testowy DeepL, nic nie wychodzi) : wiadomość przychodząca, zapamiętana przy wiadomości.
+    $deeplCalls = 0;
+    App\Services\Translation\DeepLTranslator::$transport = function ($method, $url, $headers, $body) use (&$deeplCalls) {
+        $deeplCalls++;
+        return [200, json_encode(['translations' => array_map(fn($t) => ['detected_source_language' => 'PL', 'text' => 'FR: ' . $t], $body['text'])])];
+    };
+    putenv('DEEPL_API_KEY=test-0000-1111-2222-3333:fx');
+    $service = $container->make(UserMailService::class, ['translator' => $container->make(App\Services\Translation\DeepLTranslator::class)]);
+    $t1 = $service->translate($userId, $complaint['id'], 'fr');
+    $t2 = $service->translate($userId, $complaint['id'], 'fr');
+    expectMail($t1['source'] === 'pl' && str_starts_with((string) $t1['text'], 'FR: ') && str_starts_with((string) $t1['subject'], 'FR: ') && $t2['cached'] && $deeplCalls === 1,
+        'tłumaczenie wiadomości : temat i treść, drugi raz z pamięci');
+    expectMail(($service->open($userId, $complaint['id'])['translation']['lang'] ?? null) === 'fr', 'tłumaczenie widoczne przy ponownym otwarciu');
+    expectMail($service->contactLang($userId, $customerEmail)['customer']['id'] === (int) $customer['id'], 'język odbiorcy z karty klienta');
+    $sent = $service->send($userId, ['to' => $customerEmail, 'subject' => "Re: Reklamacja {$run}", 'text' => "Bonjour,\nnous envoyons un nouveau lot.",
+        'original_text' => "Dzień dobry,\nwysyłamy nową partię.", 'lang' => 'fr', 'quote' => "Klient napisał(a) :\n> Zgniecione kartony",
         'reply_to_id' => $complaint['id'], 'attachments' => [['name' => 'protokol.pdf', 'data' => 'data:application/pdf;base64,' . base64_encode($pdf)]]]);
+    putenv('DEEPL_API_KEY');
+    App\Services\Translation\DeepLTranslator::$transport = null;
     $log = $pdo->query('SELECT * FROM n_user_mail_sent WHERE id = ' . (int) $sent['id'])->fetch();
+    expectMail($log['lang'] === 'fr' && $log['original_text'] === "Dzień dobry,\nwysyłamy nową partię." && str_starts_with((string) $log['body_text'], "Bonjour,\nnous envoyons un nouveau lot.")
+        && str_ends_with((string) $log['body_text'], "Klient napisał(a) :\n> Zgniecione kartony"), 'odpowiedź po francusku : tekst przed tłumaczeniem zachowany, cytat na końcu');
     expectMail($sent['mode'] === 'log_only' && $log['status'] === 'sent' && $log['mode'] === 'log_only' && (int) $log['id_reply_to'] === $complaint['id']
         && (int) $log['id_customer'] === (int) $customer['id'] && str_contains((string) $log['attachments'], 'protokol.pdf') && str_starts_with((string) $log['message_id'], '<'),
         'odpowiedź w trybie log_only : dziennik, klient, załącznik, nic nie wychodzi');
@@ -148,6 +167,9 @@ try {
     expectMail(true, 'global search service loads');
 } finally {
     $pdo->prepare('DELETE FROM n_user_mail_sent WHERE id_user = ?')->execute([$userId]);
+    $pdo->prepare('DELETE FROM n_translation_log WHERE id_user = ? AND created_at >= NOW() - INTERVAL 1 HOUR AND context = ?')->execute([$userId, 'mail_in']);
+    App\Services\Translation\DeepLTranslator::$transport = null;
+    putenv('DEEPL_API_KEY');
     $service->deleteMailbox($userId);
     putenv('MAIL_ALLOW_PRIVATE_HOSTS');
 }

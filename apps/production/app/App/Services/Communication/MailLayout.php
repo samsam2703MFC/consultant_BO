@@ -7,17 +7,18 @@ use App\Services\Utils\TCPDFService;
 use PHPMailer\PHPMailer\PHPMailer;
 
 /**
- * Wygląd e-maili ERP (jak wydruki) : logo SL Food i logo L'Atelier w nagłówku, treść szablonu, linia w kolorze marki.
- * Treść zostaje tekstem (szablony) ; wersja tekstowa wiadomości (AltBody) bez zmian.
+ * Wygląd e-maili ERP (jak wydruki) : logo SL Food i logo L'Atelier w nagłówku, treść szablonu, linia w kolorze marki,
+ * na dole stopka firmy w języku wiadomości (Ustawienia › Stopki e-maili), a bez niej linia « SL Food · L'Atelier By ».
  */
 final class MailLayout
 {
     private const PRODUCER_CID = 'logo-slfood';
     private const NETWORK_CID = 'logo-atelier';
 
-    public static function html(string $body): string
+    public static function html(string $body, ?string $footer = null): string
     {
         $text = nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+        $foot = $footer !== null && trim($footer) !== '' ? nl2br(htmlspecialchars(trim($footer), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) : "SL Food · L'Atelier By";
         $brand = sprintf('#%02x%02x%02x', ...TCPDFService::BRAND);
         $producer = is_file(TCPDFService::PRODUCER_LOGO) ? '<img src="cid:' . self::PRODUCER_CID . '" alt="SL Food" height="56" style="display:block;border:0;">' : '<strong>SL Food</strong>';
         $network = is_file(TCPDFService::NETWORK_LOGO) ? '<img src="cid:' . self::NETWORK_CID . '" alt="L\'Atelier By" width="170" style="display:block;border:0;">' : "<strong>L'Atelier By</strong>";
@@ -34,7 +35,7 @@ final class MailLayout
   </tr></table>
 </td></tr>
 <tr><td style="padding:24px 28px;font-size:14px;line-height:1.55;">{$text}</td></tr>
-<tr><td style="padding:12px 28px 18px 28px;border-top:1px solid #dee2e6;font-size:11px;color:#6c757d;">SL Food · L'Atelier By</td></tr>
+<tr><td style="padding:12px 28px 18px 28px;border-top:1px solid #dee2e6;font-size:11px;line-height:1.5;color:#6c757d;">{$foot}</td></tr>
 </table>
 </td></tr>
 </table>

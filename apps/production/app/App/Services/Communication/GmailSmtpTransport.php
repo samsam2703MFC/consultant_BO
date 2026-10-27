@@ -7,7 +7,7 @@ use RuntimeException;
 final class GmailSmtpTransport implements SmtpTransport
 {
     /** @param list<array{filename:string,mime_type:string,content:string}> $attachments */
-    public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = []): string
+    public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = [], ?string $footer = null): string
     {
         $mail = new PHPMailer(true);
         $mail->isSMTP();
@@ -24,9 +24,9 @@ final class GmailSmtpTransport implements SmtpTransport
         $mail->Subject = $subject;
         $mail->MessageID = $messageId;
         $mail->isHTML(true);
-        $mail->Body = MailLayout::html($body);
+        $mail->Body = MailLayout::html($body, $footer);
         MailLayout::embed($mail);
-        $mail->AltBody = $body;
+        $mail->AltBody = $body . ($footer !== null && trim($footer) !== '' ? "\n\n-- \n" . trim($footer) : '');
         foreach ($attachments as $attachment) $mail->addStringAttachment($attachment['content'], $attachment['filename'], PHPMailer::ENCODING_BASE64, $attachment['mime_type']);
         if (!$mail->send()) throw new RuntimeException('SMTP nie przyjął wiadomości.');
         return $mail->getLastMessageID() ?: $messageId;

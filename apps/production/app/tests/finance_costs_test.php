@@ -121,7 +121,7 @@ try {
             public function xml(string $ksefNumber): string { return ($this->xml)($this->docs[$ksefNumber]); }
         },
         App\Services\Communication\SmtpTransport::class => new class implements App\Services\Communication\SmtpTransport {
-            public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = []): string { throw new RuntimeException('no e-mail in tests'); }
+            public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = [], ?string $footer = null): string { throw new RuntimeException('no e-mail in tests'); }
         },
     ]);
     $container = $builder->build();

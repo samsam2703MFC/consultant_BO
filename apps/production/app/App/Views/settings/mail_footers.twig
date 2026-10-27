@@ -1,0 +1,205 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Stopki e-maili i tłumacz{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Stopki e-maili i tłumacz</h3>
+            <p class="text-subtitle text-muted">Stopka firmy w języku klienta : pod podpisem w Poczcie i pod e-mailami automatycznymi (dokumenty, przypomnienia, dostawy). Tłumacz DeepL dla Poczty i Komunikacji.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.mf-tabs{display:flex;flex-wrap:wrap;gap:4px;background:#F1EBE3;border-radius:12px;padding:4px;width:max-content;max-width:100%}
+.mf-tabs button{border:0;background:none;border-radius:9px;padding:8px 14px;font-weight:600;color:#5f5852;min-height:44px;display:inline-flex;align-items:center;gap:8px}
+.mf-tabs button.is-on{background:#8D1D2C;color:#fff}
+.mf-tabs .mf-dot{font-size:11.5px;border-radius:6px;padding:1px 7px;background:rgba(0,0,0,.08)}
+.mf-tabs button.is-on .mf-dot{background:rgba(255,255,255,.22)}
+.mf-mail{border:1px solid #E7DFD5;border-radius:14px;overflow:hidden;background:#fff}
+.mf-mail .mf-body{padding:14px 16px;font-size:14px;line-height:1.5;white-space:pre-wrap}
+.mf-mail .mf-sign{padding:0 16px 12px;color:#444;white-space:pre-wrap;font-size:14px}
+.mf-mail .mf-foot{margin:0 16px 14px;padding-top:10px;border-top:1px solid #ddd;font-size:11.5px;line-height:1.45;color:#777;white-space:pre-wrap}
+.mf-bar{height:8px;border-radius:999px;background:#EFE8DF;overflow:hidden}.mf-bar i{display:block;height:100%;background:#2E7D4F}
+.mf-steps{padding-left:1.1rem;margin:0}.mf-steps li{margin-bottom:6px}
+</style>
+<section class="section" id="mfApp" data-root="{{ root }}">
+    <p class="text-muted">Wczytywanie…</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const app = document.getElementById('mfApp');
+    const root = (app.dataset.root || '').replace(/\/$/, '');
+    const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    const fmt = (n) => Number(n || 0).toLocaleString('pl-PL');
+    const api = (method, path, body) => fetch(root + path, {method, credentials: 'same-origin', headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+        body: body === undefined ? undefined : JSON.stringify(body)}).then((r) => r.json().catch(() => ({})).then((j) => {
+            if (!r.ok) { const e = new Error(j.message || `Błąd (${r.status})`); e.fields = j.fields || null; throw e; }
+            return j;
+        }));
+    const SAMPLE = {
+        pl: 'Dzień dobry,\nw załączniku przesyłamy dokument.\n\nZ poważaniem,',
+        fr: 'Bonjour,\nveuillez trouver le document en pièce jointe.\n\nCordialement,',
+        nl: 'Goedendag,\nin de bijlage vindt u het document.\n\nMet vriendelijke groeten,',
+        en: 'Hello,\nplease find the document attached.\n\nKind regards,',
+    };
+    let s = null;
+    let lang = 'pl';
+    const values = {};
+
+    function load() {
+        api('GET', '/ajax/settings/mail-footers').then((r) => { s = r; Object.assign(values, r.footers); draw(); })
+            .catch((e) => { app.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`; });
+    }
+
+    function resolved(l) {
+        for (const k of [l, 'en', 'pl']) if ((values[k] || '').trim()) return {text: values[k].trim(), from: k};
+        return null;
+    }
+
+    function draw() {
+        const t = s.translator;
+        app.innerHTML = `<div class="row g-3"><div class="col-12 col-xl-7"><div class="card"><div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div class="mf-tabs" role="tablist">${Object.keys(s.langs).map((l) => `<button type="button" role="tab" data-l="${l}" aria-selected="${l === lang}">${l.toUpperCase()} <span class="mf-dot" data-dot="${l}"></span></button>`).join('')}</div>
+                <span class="small text-muted">${s.updated_at ? 'zapisano ' + esc(s.updated_at.slice(0, 16).replace('T', ' ')) : 'jeszcze nie zapisano'}</span></div>
+            <label class="form-label fw-semibold" for="mfText" data-label></label>
+            <textarea class="form-control" id="mfText" rows="7" maxlength="${s.max}"></textarea>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                <div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-outline-secondary btn-sm" data-company><i class="bi bi-building"></i> Wstaw dane firmy</button>
+                ${t.configured ? '<button type="button" class="btn btn-outline-primary btn-sm" data-translate><i class="bi bi-translate"></i> Przetłumacz z polskiego</button>' : ''}</div>
+                <span class="small text-muted"><span data-count></span> / ${s.max}</span></div>
+            <div class="small mt-1" data-msg-tr></div>
+            <div class="ml-err text-danger small" data-err></div>
+            <hr>
+            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="mfUser" ${s.user_mail ? 'checked' : ''}>
+                <label class="form-check-label" for="mfUser"><strong>Poczta</strong> — pod podpisem w wiadomościach wysyłanych z ERP</label></div>
+            <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="mfSystem" ${s.system ? 'checked' : ''}>
+                <label class="form-check-label" for="mfSystem"><strong>E-maile automatyczne</strong> — dokumenty, przypomnienia płatności, informacje o dostawie (w języku klienta)</label></div>
+            <p class="small text-muted">Brak stopki w danym języku → angielska, potem polska. Twój podpis osobisty (imię, telefon) : <a href="${root}/mail/settings">Moja skrzynka</a>.</p>
+            <div class="d-flex flex-wrap gap-2 align-items-center"><button type="button" class="btn btn-primary" data-save><i class="bi bi-check2"></i> Zapisz stopki</button><span class="small" data-msg></span></div>
+        </div></div></div>
+        <div class="col-12 col-xl-5">
+            <div class="card"><div class="card-header"><h4 class="card-title mb-0" data-ptitle></h4></div><div class="card-body"><div class="mf-mail">
+                <div class="mf-body" data-pbody></div><div class="mf-sign" data-psign></div><div class="mf-foot" data-pfoot></div></div>
+                <p class="small text-muted mt-2 mb-0" data-pnote></p></div></div>
+            <div class="card"><div class="card-header"><h4 class="card-title mb-0"><i class="bi bi-translate"></i> Tłumacz DeepL</h4></div><div class="card-body small">${translator(t)}</div></div>
+        </div></div>`;
+        app.querySelectorAll('[data-l]').forEach((b) => b.addEventListener('click', () => { values[lang] = ta().value; lang = b.dataset.l; tab(); }));
+        ta().addEventListener('input', () => { values[lang] = ta().value; refresh(); });
+        app.querySelector('[data-company]').addEventListener('click', () => {
+            if (ta().value.trim() && !window.confirm('Zastąpić obecny tekst danymi firmy ?')) return;
+            ta().value = s.suggestions[lang] || ''; values[lang] = ta().value; refresh();
+        });
+        const tr = app.querySelector('[data-translate]');
+        if (tr) tr.addEventListener('click', translate);
+        app.querySelector('[data-save]').addEventListener('click', save);
+        bindKey();
+        tab();
+    }
+
+    function bindKey() {
+        const saveKey = (key) => {
+            const msg = app.querySelector('[data-keymsg]');
+            if (msg) msg.textContent = 'Sprawdzanie klucza w DeepL…';
+            return api('PUT', '/ajax/settings/mail-footers/deepl-key', {key}).then((t) => { values[lang] = ta().value; s.translator = t; draw(); })
+                .catch((e) => { if (msg) msg.textContent = (e.fields && e.fields.key) || e.message; else window.alert(e.message); });
+        };
+        const btn = app.querySelector('[data-savekey]');
+        if (btn) btn.addEventListener('click', () => { const v = app.querySelector('#mfKey').value.trim(); if (v) saveKey(v); });
+        const ch = app.querySelector('[data-changekey]');
+        if (ch) ch.addEventListener('click', () => { app.querySelector('[data-keyform]').hidden = false; app.querySelector('#mfKey').focus(); });
+        const del = app.querySelector('[data-delkey]');
+        if (del) del.addEventListener('click', () => { if (window.confirm('Usunąć klucz DeepL ? Tłumacz zostanie wyłączony.')) saveKey(''); });
+    }
+
+    function keyForm(t, change) {
+        if (!t.can_set_key) return '<p class="text-muted mb-0">Klucz wpisuje administrator.</p>';
+        return `<div class="${change ? 'mt-2' : ''}" data-keyform ${change ? 'hidden' : ''}><label class="form-label fw-semibold mb-1" for="mfKey">Klucz API DeepL</label>
+            <div class="d-flex gap-2"><input class="form-control" id="mfKey" type="password" autocomplete="off" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx">
+            <button type="button" class="btn btn-primary text-nowrap" data-savekey>Zapisz i sprawdź</button></div>
+            <div class="form-text">Zaszyfrowany w bazie, nigdy nie wraca do przeglądarki (widać tylko 4 ostatnie znaki).</div><div class="small text-danger" data-keymsg></div></div>`;
+    }
+
+    function translator(t) {
+        if (!t.configured) {
+            return `<p class="mb-2"><span class="badge bg-secondary">wyłączony</span> Przyciski « Przetłumacz » w Poczcie i w Komunikacji pojawią się po dodaniu klucza.</p>
+                <ol class="mf-steps"><li>Konto <strong>DeepL API</strong> (deepl.com/pro-api) — do e-maili klientów zalecany plan <strong>Pro</strong> (DeepL nie przechowuje tekstów).</li>
+                <li>W koncie DeepL : <em>Klucze API</em> → skopiuj klucz.</li>
+                <li>Wklej go poniżej (albo administrator serwera : <code>DEEPL_API_KEY=…</code> w pliku .env ERP).</li></ol>${keyForm(t, false)}`;
+        }
+        const u = t.usage;
+        const src = t.source === 'env' ? `klucz z pliku .env serwera (…${esc(t.hint || '')})`
+            : `klucz …${esc(t.hint || '')} wpisany w Ustawieniach${t.can_set_key ? ' · <button type="button" class="btn btn-link btn-sm p-0" data-changekey>zmień</button> · <button type="button" class="btn btn-link btn-sm p-0 text-danger" data-delkey>usuń</button>' : ''}`;
+        const pct = u && u.limit ? Math.min(100, Math.round(u.count / u.limit * 100)) : 0;
+        return `<p class="mb-1"><span class="badge bg-success">włączony</span> DeepL API ${t.plan === 'free' ? 'Free' : 'Pro'}</p><p class="text-muted mb-2">${src}</p>
+            ${t.source === 'settings' ? keyForm(t, true) : ''}
+            ${t.plan === 'free' ? '<p class="text-warning mb-2">Plan Free : do korespondencji z klientami zalecany plan Pro (teksty nie są przechowywane przez DeepL).</p>' : ''}
+            ${u ? `<div class="d-flex justify-content-between"><span>Konto DeepL (okres rozliczeniowy)</span><span>${fmt(u.count)}${u.limit ? ' z ' + fmt(u.limit) : ''} znaków</span></div><div class="mf-bar my-1"><i style="width:${pct}%"></i></div>` : '<p class="text-muted mb-1">Licznik konta DeepL niedostępny.</p>'}
+            <div class="d-flex justify-content-between mt-2"><span>W ERP w tym miesiącu</span><span>${fmt(t.month.count)} tłumaczeń · ${fmt(t.month.chars)} znaków</span></div>
+            <div class="d-flex justify-content-between"><span>Limit na osobę</span><span>${fmt(t.daily_cap)} znaków dziennie</span></div>`;
+    }
+
+    const ta = () => app.querySelector('#mfText');
+
+    function tab() {
+        app.querySelectorAll('[data-l]').forEach((b) => { b.classList.toggle('is-on', b.dataset.l === lang); b.setAttribute('aria-selected', b.dataset.l === lang ? 'true' : 'false'); });
+        app.querySelector('[data-label]').textContent = `Stopka — ${s.langs[lang]}`;
+        ta().value = values[lang] || '';
+        const tr = app.querySelector('[data-translate]');
+        if (tr) tr.hidden = lang === 'pl';
+        app.querySelector('[data-msg-tr]').textContent = '';
+        refresh();
+    }
+
+    function refresh() {
+        Object.keys(s.langs).forEach((l) => { app.querySelector(`[data-dot="${l}"]`).textContent = (values[l] || '').trim() ? '✓' : 'pusta'; });
+        app.querySelector('[data-count]').textContent = ta().value.length;
+        const r = resolved(lang);
+        app.querySelector('[data-ptitle]').textContent = `Podgląd e-maila (${lang.toUpperCase()})`;
+        app.querySelector('[data-pbody]').textContent = SAMPLE[lang];
+        app.querySelector('[data-psign]').textContent = s.signature || s.sender || '';
+        app.querySelector('[data-pfoot]').textContent = r ? r.text : "SL Food · L'Atelier By";
+        app.querySelector('[data-pnote]').textContent = !r ? 'Bez stopki : e-maile automatyczne mają linię « SL Food · L\'Atelier By », Poczta nic nie dodaje.'
+            : (r.from !== lang ? `Brak stopki ${lang.toUpperCase()} : użyta ${r.from.toUpperCase()}.` : '');
+    }
+
+    function translate(e) {
+        const btn = e.currentTarget;
+        const msg = app.querySelector('[data-msg-tr]');
+        const src = (values.pl || '').trim();
+        if (!src) { msg.className = 'small mt-1 text-danger'; msg.textContent = 'Najpierw wpisz stopkę po polsku (zakładka PL).'; return; }
+        if (ta().value.trim() && !window.confirm('Zastąpić obecny tekst tłumaczeniem polskiej stopki ?')) return;
+        btn.disabled = true;
+        msg.className = 'small mt-1 text-muted'; msg.textContent = 'Tłumaczenie…';
+        api('POST', '/ajax/translate', {text: src, target: lang, source: 'pl', context: 'footer'}).then((r) => {
+            ta().value = r.text; values[lang] = r.text; refresh();
+            msg.className = 'small mt-1 text-success'; msg.textContent = 'Przetłumaczono — sprawdź i zapisz.';
+        }).catch((err) => { msg.className = 'small mt-1 text-danger'; msg.textContent = err.message; })
+            .finally(() => { btn.disabled = false; });
+    }
+
+    function save() {
+        values[lang] = ta().value;
+        const msg = app.querySelector('[data-msg]');
+        app.querySelector('[data-err]').textContent = '';
+        msg.className = 'small text-muted'; msg.textContent = 'Zapisywanie…';
+        api('PUT', '/ajax/settings/mail-footers', {footers: values, user_mail: app.querySelector('#mfUser').checked, system: app.querySelector('#mfSystem').checked})
+            .then((r) => { s = r; Object.assign(values, r.footers); msg.className = 'small text-success'; msg.textContent = 'Zapisano.'; refresh(); })
+            .catch((err) => {
+                msg.className = 'small text-danger'; msg.textContent = err.message;
+                const f = err.fields || {};
+                const first = Object.keys(f)[0];
+                if (first) app.querySelector('[data-err]').textContent = first.replace('footer_', '').toUpperCase() + ' : ' + f[first];
+            });
+    }
+
+    load();
+})();
+</script>
+{% endblock %}

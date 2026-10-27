@@ -81,6 +81,7 @@
                         <div class="d-flex gap-2">
                             <button id="toggle-edit" type="button" class="btn btn-outline-secondary">Włącz edycję</button>
                             <button id="reset-template-content" type="button" class="btn btn-outline-secondary d-none">Przywróć szablon</button>
+                            <button id="translate-body" type="button" class="btn btn-outline-primary d-none"><i class="bi bi-translate"></i> <span>Przetłumacz</span></button>
                             <button id="save-draft" type="button" class="btn btn-outline-primary">Zapisz szkic</button>
                             <button id="queue-email" type="button" class="btn btn-primary">Przekaż do wysyłki</button>
                         </div>
@@ -111,6 +112,9 @@ const saveEndpoint = <?= json_encode($save_endpoint ?? '', JSON_HEX_TAG | JSON_H
 const queueSuccessRedirect = <?= json_encode($queue_success_redirect ?? (ROOT . '/proforma-documents'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
 const queueSuccessRedirectLabel = <?= json_encode($queue_success_redirect_label ?? 'Przejdź do przeglądu proform', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
 const communicationMessagesUrl = <?= json_encode(ROOT . '/communication/messages', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+const translateUrl = <?= json_encode(ROOT . '/ajax/translate', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+const translateButton = document.getElementById('translate-body');
+let translatorReady = false;
 const recipientInput = document.getElementById('recipient');
 const saveDraftButton = document.getElementById('save-draft');
 const queueEmailButton = document.getElementById('queue-email');
@@ -135,6 +139,11 @@ function setEditing(enabled) {
     bodyInput.readOnly = !enabled;
     editButton.textContent = enabled ? 'Zakończ edycję' : 'Włącz edycję';
     resetTemplateButton.classList.toggle('d-none', !enabled);
+    // Własny tekst (np. po polsku) → język klienta wybrany wyżej (DeepL, tylko gdy klucz jest na serwerze).
+    if (translateButton) {
+        translateButton.classList.toggle('d-none', !(enabled && translatorReady));
+        translateButton.querySelector('span').textContent = 'Przetłumacz na ' + (languageSelect.selectedOptions[0]?.textContent || '').trim().toLowerCase();
+    }
     editFeedback.textContent = enabled
         ? 'Edytujesz lokalną kopię wiadomości. Zmiany nie modyfikują szablonu.'
         : 'Treść pochodzi z wybranego szablonu.';
@@ -181,6 +190,37 @@ if (editButton && resetTemplateButton) {
     resetTemplateButton.addEventListener('click', () => {
         renderSelectedTemplate();
         setEditing(false);
+    });
+}
+
+if (translateButton) {
+    fetch(translateUrl + '/status', {credentials: 'same-origin', headers: {'Accept': 'application/json'}})
+        .then(r => r.ok ? r.json() : {}).then(s => { translatorReady = !!s.configured; setEditing(isEditing); }).catch(() => {});
+    translateButton.addEventListener('click', async () => {
+        const target = languageSelect.value;
+        translateButton.disabled = true;
+        editFeedback.textContent = 'Tłumaczenie…';
+        editFeedback.className = 'text-muted small';
+        try {
+            const call = async (text) => {
+                if (!text.trim()) return {text};
+                const r = await fetch(translateUrl, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+                    body: JSON.stringify({text, target, context: 'communication'})});
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(data.message || 'Tłumaczenie nie powiodło się.');
+                return data;
+            };
+            const [body, subject] = await Promise.all([call(bodyInput.value), call(subjectInput.value)]);
+            bodyInput.value = body.text;
+            subjectInput.value = subject.text;
+            editFeedback.textContent = 'Przetłumaczono' + (body.source_label ? ' z ' + body.source_label : '') + ' — sprawdź treść przed wysłaniem.';
+            editFeedback.className = 'text-success small';
+        } catch (error) {
+            editFeedback.textContent = error.message;
+            editFeedback.className = 'text-danger small';
+        } finally {
+            translateButton.disabled = false;
+        }
     });
 }
 

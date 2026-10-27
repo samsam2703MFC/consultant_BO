@@ -13,7 +13,8 @@ final class UserMailRepository extends WorkshopRepository
     public const MAILBOX_FIELDS = ['email', 'display_name', 'provider', 'imap_host', 'imap_port', 'imap_security', 'imap_username', 'imap_secret',
         'smtp_host', 'smtp_port', 'smtp_security', 'smtp_username', 'smtp_secret', 'tls_verify', 'signature', 'sent_folder', 'last_sync_at', 'last_error'];
     private const MAIL_FIELDS = ['id_user', 'folder', 'uid_validity', 'uid', 'message_id', 'in_reply_to', 'from_email', 'from_name', 'to_list', 'cc_list',
-        'subject', 'sent_at', 'size', 'seen', 'answered', 'flagged', 'has_attachments', 'snippet', 'body_text', 'id_customer', 'id_supplier'];
+        'subject', 'sent_at', 'size', 'seen', 'answered', 'flagged', 'has_attachments', 'snippet', 'body_text', 'id_customer', 'id_supplier',
+        'tr_lang', 'tr_source', 'tr_subject', 'tr_text', 'tr_at'];
 
     public function mailbox(int $userId): ?array
     {
@@ -121,7 +122,7 @@ final class UserMailRepository extends WorkshopRepository
 
     public function mail(int $userId, int $id): ?array
     {
-        return $this->all('SELECT m.*, c.company AS customer_name, s.name AS supplier_name FROM n_user_mail m
+        return $this->all('SELECT m.*, c.company AS customer_name, c.communication_lang AS customer_lang, s.name AS supplier_name FROM n_user_mail m
                            LEFT JOIN customer c ON c.id = m.id_customer LEFT JOIN supplier s ON s.id = m.id_supplier
                            WHERE m.id = ? AND m.id_user = ?', [$id, $userId])[0] ?? null;
     }
@@ -149,7 +150,7 @@ final class UserMailRepository extends WorkshopRepository
     public function sentList(int $userId, string $q, int $offset, int $limit): array
     {
         [$where, $params] = $this->searchWhere($q, 's', ['subject', 'to_list', 'body_text'], ['subject', 'to_list']);
-        $rows = $this->all("SELECT s.id, s.to_list, s.cc_list, s.subject, s.body_text, s.attachments, s.mode, s.status, s.error, s.created_at, s.id_customer, c.company AS customer_name
+        $rows = $this->all("SELECT s.id, s.to_list, s.cc_list, s.subject, s.body_text, s.lang, s.original_text, s.attachments, s.mode, s.status, s.error, s.created_at, s.id_customer, c.company AS customer_name
                             FROM n_user_mail_sent s LEFT JOIN customer c ON c.id = s.id_customer
                             WHERE s.id_user = ? {$where} ORDER BY s.id DESC LIMIT " . (int) $limit . ' OFFSET ' . (int) $offset, array_merge([$userId], $params));
         $total = (int) ($this->all("SELECT COUNT(*) AS n FROM n_user_mail_sent s WHERE s.id_user = ? {$where}", array_merge([$userId], $params))[0]['n'] ?? 0);
@@ -166,6 +167,15 @@ final class UserMailRepository extends WorkshopRepository
                                 ORDER BY active DESC, id DESC LIMIT 1', [$like, $like, $like])[0]['id'] ?? null;
         $supplier = $this->all('SELECT id FROM supplier WHERE LOWER(email) LIKE ? ORDER BY is_active DESC, id DESC LIMIT 1', [$like])[0]['id'] ?? null;
         return ['id_customer' => $customer !== null ? (int) $customer : null, 'id_supplier' => $supplier !== null ? (int) $supplier : null];
+    }
+
+    /** Klient po adresie e-mail i jego język korespondencji (karta klienta) — język odpowiedzi w Poczcie. */
+    public function customerByEmail(string $email): ?array
+    {
+        $id = $this->contact($email)['id_customer'];
+        if ($id === null) return null;
+        $row = $this->all('SELECT id, company, communication_lang FROM customer WHERE id = ?', [$id])[0] ?? null;
+        return $row ? ['id' => (int) $row['id'], 'name' => $row['company'], 'lang' => strtolower((string) $row['communication_lang']) ?: null] : null;
     }
 
     /** Wyszukiwarka z górnego paska : wiadomości użytkownika (odebrane i wysłane ze skrzynki). */

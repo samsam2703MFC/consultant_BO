@@ -6,13 +6,17 @@ namespace App\Services\Mail;
 use App\Exceptions\CustomException;
 use App\Repositories\Mail\UserMailRepository;
 use App\Services\Communication\MailDeliveryPolicy;
+use App\Services\Translation\DeepLTranslator;
+use App\Services\Translation\LanguageGuess;
 use PHPMailer\PHPMailer\PHPMailer;
 use RuntimeException;
 
 /**
  * Poczta użytkownika ERP : własna skrzynka (Ustawienia › Moja skrzynka e-mail), odbiór IMAP, odczyt, załączniki,
  * odpowiedź i nowa wiadomość z jego adresu przez SMTP. Wysyłka zgodnie z trybem serwera (MAIL_DELIVERY_MODE :
- * na kopii testowej nic nie wychodzi, wiadomość trafia tylko do dziennika « Wysłane z ERP »).
+ * na kopii testowej nic nie wychodzi, wiadomość trafia tylko do dziennika « Wysłane z ERP »). Tłumacz DeepL : wiadomość
+ * przychodząca na język użytkownika, odpowiedź na język klienta (karta klienta) ; pod treścią podpis i stopka firmy
+ * w języku wiadomości (Ustawienia › Stopki e-maili i tłumacz), potem cytat.
  */
 final class UserMailService
 {
@@ -38,8 +42,13 @@ final class UserMailService
     private const MAX_ATTACHMENTS_BYTES = 5 * 1024 * 1024;
     /** Większa wiadomość nie jest otwierana w ERP (pamięć serwera) : tylko zapisany tekst. */
     private const MAX_OPEN_BYTES = 25 * 1024 * 1024;
+    /** Tłumaczenie wiadomości przychodzącej : najwyżej tyle znaków treści (reszta zostaje w oryginale). */
+    private const TRANSLATE_CHARS = 20000;
+    /** Języki wiadomości wysyłanej (stopka, tłumaczenie). */
+    public const LANGS = ['pl' => 'PL', 'fr' => 'FR', 'nl' => 'NL', 'en' => 'EN', 'de' => 'DE'];
 
-    public function __construct(private UserMailRepository $repo, private MailboxSecretCipher $cipher)
+    public function __construct(private UserMailRepository $repo, private MailboxSecretCipher $cipher, private MailFooterService $footers,
+                                private DeepLTranslator $translator)
     {
     }
 
@@ -57,6 +66,9 @@ final class UserMailService
             'folders' => self::FOLDERS,
             'counts' => $box === null ? [] : $this->repo->folderCounts($userId),
             'delivery' => ['mode' => $policy->mode(), 'label' => $policy->label()],
+            'translator' => ['configured' => $this->translator->configured(), 'to' => DeepLTranslator::TO, 'from' => DeepLTranslator::FROM],
+            'langs' => self::LANGS,
+            'footers' => array_map(fn($l) => $this->footers->forUserMail($l), array_combine(array_keys(self::LANGS), array_keys(self::LANGS))),
         ];
     }
 
@@ -222,6 +234,7 @@ final class UserMailService
             $rows = array_map(fn($s) => ['id' => (int) $s['id'], 'kind' => 'erp', 'to' => $s['to_list'], 'cc' => $s['cc_list'], 'subject' => $s['subject'],
                 'date' => $s['created_at'], 'snippet' => mb_substr(trim(preg_replace('/\s+/u', ' ', (string) $s['body_text']) ?? ''), 0, 200), 'body' => $s['body_text'],
                 'attachments' => json_decode((string) $s['attachments'], true) ?: [], 'mode' => $s['mode'], 'status' => $s['status'], 'error' => $s['error'],
+                'lang' => $s['lang'] ?? null, 'original' => $s['original_text'] ?? null,
                 'customer' => $s['id_customer'] ? ['id' => (int) $s['id_customer'], 'name' => $s['customer_name']] : null], $r['rows']);
         } else {
             $folder = $folder === 'SENT' ? 'SENT' : 'INBOX';
@@ -261,14 +274,46 @@ final class UserMailService
                 'has_attachments' => count(array_filter($parsed->attachments, fn($a) => !$a['inline'])) > 0 ? 1 : 0];
         }
         $this->repo->updateMail($id, $update);
+        $text = $parsed?->plainText() ?? (string) $mail['body_text'];
         return self::listRow(['seen' => 1] + $mail) + [
+            'lang' => ['customer' => $mail['customer_lang'] ? strtolower((string) $mail['customer_lang']) : null, 'guess' => LanguageGuess::guess($text)],
+            'translation' => $mail['tr_text'] !== null ? self::translation($mail) : null,
             'cc' => $mail['cc_list'], 'message_id' => $mail['message_id'],
-            'text' => $parsed?->plainText() ?? (string) $mail['body_text'],
+            'text' => $text,
             'html' => $parsed?->html !== null ? self::inlineImages($parsed) : null,
             'attachments' => $parsed === null ? [] : array_values(array_map(fn($a) => ['index' => $a['index'], 'filename' => $a['filename'], 'mime' => $a['mime'], 'size' => $a['size']],
                 array_filter($parsed->attachments, fn($a) => !$a['inline']))),
             'offline' => $offline,
         ];
+    }
+
+    /**
+     * Tłumaczenie wiadomości przychodzącej (temat + treść) na język użytkownika ; zapamiętane przy wiadomości,
+     * więc ponowne otwarcie nic nie kosztuje.
+     */
+    public function translate(int $userId, int $id, string $target): array
+    {
+        $this->box($userId);
+        $mail = $this->repo->mail($userId, $id) ?? throw new CustomException('Nie znaleziono wiadomości.', 'errors', 404);
+        if (!isset(DeepLTranslator::TARGETS[$target])) $target = 'pl';
+        if ($mail['tr_text'] !== null && $mail['tr_lang'] === $target) return self::translation($mail) + ['cached' => true];
+        $text = (string) $mail['body_text'];
+        $truncated = mb_strlen($text) > self::TRANSLATE_CHARS;
+        if ($truncated) $text = mb_substr($text, 0, self::TRANSLATE_CHARS);
+        [$subject, $body] = $this->translator->translate([(string) $mail['subject'], $text], $target, 'mail_in', $userId);
+        $fields = ['tr_lang' => $target, 'tr_source' => $body['source'] ?? $subject['source'], 'tr_subject' => mb_substr($subject['text'], 0, 500) ?: null,
+            'tr_text' => $body['text'] . ($truncated ? "\n\n[…]" : ''), 'tr_at' => date('Y-m-d H:i:s')];
+        $this->repo->updateMail($id, $fields);
+        return self::translation($fields) + ['cached' => false, 'truncated' => $truncated];
+    }
+
+    /** Odbiorca nowej wiadomości : klient z karty (nazwa, język korespondencji). */
+    public function contactLang(int $userId, string $email): array
+    {
+        $this->box($userId);
+        $first = self::emails($email)[0] ?? null;
+        $customer = $first ? $this->repo->customerByEmail($first) : null;
+        return ['customer' => $customer, 'lang' => $customer['lang'] ?? null];
     }
 
     /** @return array{filename:string, mime:string, content:string} */
@@ -310,6 +355,11 @@ final class UserMailService
         if ($subject === '' || mb_strlen($subject) > 300) $errors['subject'] = 'Temat : od 1 do 300 znaków.';
         $text = str_replace("\r\n", "\n", (string) ($in['text'] ?? ''));
         if (trim($text) === '' || mb_strlen($text) > 100000) $errors['text'] = 'Treść : od 1 do 100 000 znaków.';
+        $quote = trim(str_replace("\r\n", "\n", (string) ($in['quote'] ?? '')));
+        if (mb_strlen($quote) > 100000) $quote = mb_substr($quote, 0, 100000);
+        $lang = strtolower((string) ($in['lang'] ?? 'pl'));
+        if (!isset(self::LANGS[$lang])) $lang = 'pl';
+        $original = trim(str_replace("\r\n", "\n", (string) ($in['original_text'] ?? '')));
         $files = [];
         $total = 0;
         foreach (array_slice(is_array($in['attachments'] ?? null) ? $in['attachments'] : [], 0, 11) as $i => $a) {
@@ -342,9 +392,10 @@ final class UserMailService
             $mail->addCustomHeader('In-Reply-To', $reply['message_id']);
             $mail->addCustomHeader('References', $reply['message_id']);
         }
+        $body = self::compose($text, $box['signature'] ?? null, $this->footers->forUserMail($lang), $quote);
         $mail->isHTML(true);
-        $mail->Body = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5">' . nl2br(htmlspecialchars($text, ENT_QUOTES, 'UTF-8')) . '</div>';
-        $mail->AltBody = $text;
+        $mail->Body = $body['html'];
+        $mail->AltBody = $body['text'];
         foreach ($files as $f) $mail->addStringAttachment($f['content'], $f['name']);
 
         $status = 'sent';
@@ -365,7 +416,8 @@ final class UserMailService
         $contact = $this->repo->contact($to[0] ?? '');
         $logId = $this->repo->logSent([
             'id_user' => $userId, 'to_list' => mb_substr(implode(', ', $to), 0, 1000), 'cc_list' => $cc ? mb_substr(implode(', ', $cc), 0, 1000) : null,
-            'subject' => mb_substr($subject, 0, 500), 'body_text' => $text,
+            'subject' => mb_substr($subject, 0, 500), 'body_text' => $body['text'], 'lang' => $lang,
+            'original_text' => $original !== '' && $original !== trim($text) ? mb_substr($original, 0, 100000) : null,
             'attachments' => $files ? json_encode(array_map(fn($f) => ['name' => $f['name'], 'size' => $f['size']], $files), JSON_UNESCAPED_UNICODE) : null,
             'id_reply_to' => $reply['id'] ?? null, 'message_id' => $mail->MessageID, 'mode' => $policy->mode(), 'status' => $status, 'error' => $error,
             'id_customer' => $contact['id_customer'],
@@ -503,6 +555,34 @@ final class UserMailService
             $html = str_ireplace('cid:' . $a['cid'], 'data:' . $a['mime'] . ';base64,' . base64_encode($a['content']), $html);
         }
         return $html;
+    }
+
+    /**
+     * Treść wysyłana : tekst użytkownika, podpis (« -- »), stopka firmy (mniejsza, szara) i cytat (odpowiedź, przekazanie).
+     * @return array{text:string, html:string}
+     */
+    public static function compose(string $text, ?string $signature, ?string $footer, ?string $quote): array
+    {
+        $esc = fn(string $s) => nl2br(htmlspecialchars($s, ENT_QUOTES, 'UTF-8'));
+        $text = rtrim($text);
+        $signature = trim((string) $signature);
+        $footer = trim((string) $footer);
+        $quote = trim((string) $quote);
+        $plain = $text . ($signature !== '' ? "\n\n-- \n" . $signature : '') . ($footer !== '' ? "\n\n" . $footer : '') . ($quote !== '' ? "\n\n" . $quote : '');
+        $quoteHtml = implode("\n", array_map(fn($l) => preg_replace('/^> ?/', '', $l) ?? $l, explode("\n", $quote)));
+        $html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222">' . $esc($text)
+            . ($signature !== '' ? '<div style="margin-top:16px;color:#444">' . $esc($signature) . '</div>' : '')
+            . ($footer !== '' ? '<div style="margin-top:16px;padding-top:10px;border-top:1px solid #ddd;font-size:11px;line-height:1.45;color:#777">' . $esc($footer) . '</div>' : '')
+            . ($quote !== '' ? '<div style="margin-top:18px;padding-left:12px;border-left:3px solid #ddd;color:#666">' . $esc($quoteHtml) . '</div>' : '')
+            . '</div>';
+        return ['text' => $plain, 'html' => $html];
+    }
+
+    private static function translation(array $m): array
+    {
+        $source = $m['tr_source'] ? strtolower((string) $m['tr_source']) : null;
+        return ['lang' => $m['tr_lang'], 'source' => $source, 'source_label' => $source ? DeepLTranslator::label($source) : null,
+            'target_label' => DeepLTranslator::label((string) $m['tr_lang'], false), 'subject' => $m['tr_subject'], 'text' => $m['tr_text']];
     }
 
     private static function listRow(array $m): array

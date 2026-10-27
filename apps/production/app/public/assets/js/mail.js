@@ -3,6 +3,8 @@
  * Skrzynka : foldery (Odebrane, Wysłane, Wysłane z ERP), lista z wyszukiwaniem pełnotekstowym, odczyt (HTML w ramce
  * bez skryptów i bez obrazów z internetu, dopóki użytkownik ich nie pokaże), załączniki, odpowiedź, przekazanie,
  * nowa wiadomość z załącznikami. Synchronizacja przy otwarciu i co 2 minuty, gdy strona jest widoczna.
+ * Tłumacz DeepL : wiadomość przychodząca na język użytkownika (tfb.lang : pl / fr), odpowiedź na język klienta (karta
+ * klienta, inaczej język wiadomości) ; podpis, stopka firmy w języku wiadomości i cytat dodaje serwer pod treścią.
  */
 (function () {
     'use strict';
@@ -40,6 +42,13 @@
         var d = new Date(String(value || '').replace(' ', 'T'));
         return isNaN(d) ? (value || '') : d.toLocaleString('pl-PL', { dateStyle: 'medium', timeStyle: 'short' });
     }
+    function uiLang() {
+        try { return window.localStorage.getItem('tfb.lang') === 'fr' ? 'fr' : 'pl'; } catch (e) { return 'pl'; }
+    }
+    function canTranslate() { return !!(state && state.translator && state.translator.configured); }
+    function toLabel(code) { return (state.translator.to || {})[code] || String(code || '').toUpperCase(); }
+    var PO = { pl: 'polsku', fr: 'francusku', nl: 'niderlandzku', en: 'angielsku', de: 'niemiecku' };
+    function fromLabel(code) { return (state.translator.from || {})[code] || String(code || '').toUpperCase(); }
     function size(n) { return n > 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' kB'; }
     function headerButtons(show) {
         document.querySelectorAll('[data-sync], [data-compose]').forEach(function (b) { b.hidden = !show; });
@@ -179,6 +188,9 @@
     function readMail(m) {
         var reader = app.querySelector('[data-reader]');
         var remote = /<img[^>]+src=["']?https?:/i.test(m.html || '');
+        var target = uiLang();
+        var guess = m.lang && m.lang.guess;
+        var foreign = !!guess && guess !== target;
         reader.innerHTML = '<div class="ml-head"><h4>' + esc(m.subject || '(bez tematu)') + '</h4><div class="ml-meta">'
             + '<div><strong>Od :</strong> ' + esc(m.from_name ? m.from_name + ' <' + m.from + '>' : m.from) + contactLinks(m) + '</div>'
             + '<div><strong>Do :</strong> ' + esc(m.to || '') + '</div>' + (m.cc ? '<div><strong>DW :</strong> ' + esc(m.cc) + '</div>' : '')
@@ -188,7 +200,10 @@
             + '<button type="button" class="btn btn-sm btn-outline-secondary" data-reply-all><i class="bi bi-reply-all"></i> Odpowiedz wszystkim</button>'
             + '<button type="button" class="btn btn-sm btn-outline-secondary" data-forward><i class="bi bi-forward"></i> Przekaż</button>'
             + (m.html ? '<button type="button" class="btn btn-sm btn-link" data-plain>Pokaż jako tekst</button>' : '')
-            + (remote ? '<button type="button" class="btn btn-sm btn-link" data-remote>Pokaż obrazy z internetu</button>' : '') + '</div></div>'
+            + (remote ? '<button type="button" class="btn btn-sm btn-link" data-remote>Pokaż obrazy z internetu</button>' : '')
+            + (canTranslate() ? '<button type="button" class="btn btn-sm ' + (foreign ? 'btn-outline-primary' : 'btn-link') + '" data-translate><i class="bi bi-translate"></i> '
+                + esc(foreign ? 'Przetłumacz z ' + fromLabel(guess) : 'Przetłumacz na ' + toLabel(target)) + '</button>' : '') + '</div></div>'
+            + '<div class="ml-tr" data-tr hidden></div>'
             + '<div class="ml-body" data-body></div>'
             + (m.attachments.length ? '<div class="ml-files">' + m.attachments.map(function (a) {
                 return '<a class="ml-file" href="' + esc(root) + '/mail/messages/' + m.id + '/attachments/' + a.index + '"><i class="bi bi-paperclip"></i> ' + esc(a.filename)
@@ -207,12 +222,34 @@
             body.appendChild(frame);
         }
         function showText() { body.innerHTML = '<pre class="ml-text">' + esc(m.text || '') + '</pre>'; }
-        if (m.html) showHtml(false); else showText();
+        var trBox = reader.querySelector('[data-tr]');
+        function showOriginal() { trBox.hidden = true; if (m.html) showHtml(false); else showText(); }
+        function showTranslation(t) {
+            var same = t.source && t.source === t.lang;
+            trBox.hidden = false;
+            trBox.innerHTML = '<i class="bi bi-translate"></i><span>' + esc(same ? 'Wiadomość jest już po ' + (PO[t.lang] || t.lang) + '.'
+                : 'Przetłumaczono' + (t.source ? ' z ' + fromLabel(t.source) : '') + ' na ' + toLabel(t.lang) + ' (DeepL).') + '</span>'
+                + '<button type="button" class="btn btn-sm btn-link p-0" data-orig>Pokaż oryginał</button>';
+            body.innerHTML = (t.subject ? '<div class="ml-trsubj"><strong>Temat :</strong> ' + esc(t.subject) + '</div>' : '') + '<pre class="ml-text">' + esc(t.text || '') + '</pre>';
+            trBox.querySelector('[data-orig]').addEventListener('click', showOriginal);
+        }
+        if (m.translation && m.translation.lang === target) showTranslation(m.translation); else showOriginal();
+        var trBtn = reader.querySelector('[data-translate]');
+        if (trBtn) trBtn.addEventListener('click', function () {
+            trBtn.disabled = true;
+            var label = trBtn.innerHTML;
+            trBtn.textContent = 'Tłumaczenie…';
+            api('POST', '/ajax/mail/messages/' + m.id + '/translate', { target: target }).then(function (t) {
+                m.translation = t;
+                showTranslation(t);
+            }).catch(function (e) { status(e.message, true); }).then(function () { trBtn.disabled = false; trBtn.innerHTML = label; });
+        });
         reader.querySelector('[data-reply]').addEventListener('click', function () { compose(replyDraft(m, false)); });
         reader.querySelector('[data-reply-all]').addEventListener('click', function () { compose(replyDraft(m, true)); });
         reader.querySelector('[data-forward]').addEventListener('click', function () {
-            compose({ subject: (/^(fwd|pd):/i.test(m.subject || '') ? '' : 'Pd: ') + (m.subject || ''), text: signature() + '\n\n---------- Przekazana wiadomość ----------\nOd : ' + m.from
-                + '\nData : ' + full(m.date) + '\nTemat : ' + (m.subject || '') + '\n\n' + (m.text || ''), note: m.attachments.length ? 'Załączniki oryginału nie są przekazywane automatycznie.' : '' });
+            compose({ subject: (/^(fwd|pd):/i.test(m.subject || '') ? '' : 'Pd: ') + (m.subject || ''), text: '', quote: '---------- Przekazana wiadomość ----------\nOd : ' + m.from
+                + '\nData : ' + full(m.date) + '\nTemat : ' + (m.subject || '') + '\n\n' + (m.text || ''), lang: 'pl',
+                note: m.attachments.length ? 'Załączniki oryginału nie są przekazywane automatycznie.' : '' });
         });
         var plain = reader.querySelector('[data-plain]');
         if (plain) plain.addEventListener('click', function () { var t = plain.textContent === 'Pokaż jako tekst'; if (t) showText(); else showHtml(false); plain.textContent = t ? 'Pokaż oryginał' : 'Pokaż jako tekst'; });
@@ -225,13 +262,25 @@
         var mode = { live: 'Wysłano', redirect: 'Wysłano na adres testowy', log_only: 'Tylko zapisano (serwer testowy : nic nie wyszło)' }[m.mode] || m.mode;
         reader.innerHTML = '<div class="ml-head"><h4>' + esc(m.subject) + '</h4><div class="ml-meta"><div><strong>Do :</strong> ' + esc(m.to) + contactLinks(m) + '</div>'
             + (m.cc ? '<div><strong>DW :</strong> ' + esc(m.cc) + '</div>' : '') + '<div><strong>Data :</strong> ' + esc(full(m.date)) + '</div>'
-            + '<div><strong>Stan :</strong> ' + (m.status === 'failed' ? '<span class="text-danger">błąd : ' + esc(m.error || '') + '</span>' : esc(mode)) + '</div></div></div>'
-            + '<div class="ml-body"><pre class="ml-text">' + esc(m.body) + '</pre></div>'
+            + '<div><strong>Stan :</strong> ' + (m.status === 'failed' ? '<span class="text-danger">błąd : ' + esc(m.error || '') + '</span>' : esc(mode)) + '</div>'
+            + (m.lang ? '<div><strong>Język :</strong> ' + esc(toLabel(m.lang)) + (m.original ? ' · przetłumaczone <button type="button" class="btn btn-sm btn-link p-0" data-original>pokaż tekst przed tłumaczeniem</button>' : '') + '</div>' : '')
+            + '</div></div>'
+            + '<div class="ml-body"><pre class="ml-text" data-erpbody>' + esc(m.body) + '</pre></div>'
             + (m.attachments.length ? '<div class="ml-files">' + m.attachments.map(function (a) { return '<span class="ml-file"><i class="bi bi-paperclip"></i> ' + esc(a.name) + ' <span class="text-muted">' + size(a.size) + '</span></span>'; }).join('') + '</div>' : '');
+        var ob = reader.querySelector('[data-original]');
+        if (ob) ob.addEventListener('click', function () {
+            var pre = reader.querySelector('[data-erpbody]');
+            var showing = ob.dataset.on === '1';
+            pre.textContent = showing ? m.body : m.original;
+            ob.dataset.on = showing ? '' : '1';
+            ob.textContent = showing ? 'pokaż tekst przed tłumaczeniem' : 'pokaż wysłany tekst';
+        });
     }
 
-    function signature() {
-        return state.mailbox.signature ? '\n\n-- \n' + state.mailbox.signature : '';
+    /** Język odpowiedzi : karta klienta → język oryginału (DeepL) → rozpoznany → polski. */
+    function replyLang(m) {
+        var l = (m.lang && m.lang.customer) || (m.translation && m.translation.source) || (m.lang && m.lang.guess) || 'pl';
+        return state.langs[l] ? l : 'pl';
     }
 
     function replyDraft(m, all) {
@@ -239,12 +288,14 @@
         var to = view.folder === 'SENT' ? (m.to || '') : m.from;
         var cc = all ? [m.to, m.cc].filter(Boolean).join(', ').split(/,\s*/).filter(function (a) { return a && a.toLowerCase() !== me && a !== to; }).join(', ') : '';
         var quoted = (m.text || '').split('\n').map(function (l) { return '> ' + l; }).join('\n');
-        return { to: to, cc: cc, subject: (/^(re|odp):/i.test(m.subject || '') ? '' : 'Re: ') + (m.subject || ''), reply_to_id: m.id,
-            text: signature() + '\n\n' + full(m.date) + ', ' + (m.from_name || m.from) + ' napisał(a) :\n' + quoted };
+        return { to: to, cc: cc, subject: (/^(re|odp):/i.test(m.subject || '') ? '' : 'Re: ') + (m.subject || ''), reply_to_id: m.id, text: '',
+            quote: full(m.date) + ', ' + (m.from_name || m.from) + ' napisał(a) :\n' + quoted, lang: replyLang(m),
+            lang_source: m.lang && m.lang.customer ? 'karta klienta' + (m.customer && m.customer.name ? ' : ' + m.customer.name : '') : (m.translation || (m.lang && m.lang.guess) ? 'język wiadomości' : '') };
     }
 
     function compose(draft) {
-        draft = draft || { text: signature() };
+        draft = draft || { text: '', lang: 'pl' };
+        var original = null;
         var old = document.querySelector('.ml-compose');
         if (old) old.remove();
         var files = [];
@@ -257,7 +308,13 @@
             + '<label class="small">Do<input class="form-control form-control-sm" name="to" value="' + esc(draft.to || '') + '" placeholder="adres@firma.pl, …"></label><div class="ml-err" data-err="to"></div>'
             + '<label class="small">DW<input class="form-control form-control-sm" name="cc" value="' + esc(draft.cc || '') + '"></label><div class="ml-err" data-err="cc"></div>'
             + '<label class="small">Temat<input class="form-control form-control-sm" name="subject" maxlength="300" value="' + esc(draft.subject || '') + '"></label><div class="ml-err" data-err="subject"></div>'
-            + '<textarea class="form-control" name="text" aria-label="Treść">' + esc(draft.text || '') + '</textarea><div class="ml-err" data-err="text"></div>'
+            + '<textarea class="form-control" name="text" aria-label="Treść" placeholder="Twoja wiadomość…">' + esc(draft.text || '') + '</textarea><div class="ml-err" data-err="text"></div>'
+            + '<div class="ml-langbar"><i class="bi bi-translate"></i><label class="small mb-0">Język wiadomości <select class="form-select form-select-sm d-inline-block w-auto" data-lang>'
+            + Object.keys(state.langs).map(function (k) { return '<option value="' + k + '"' + (k === (draft.lang || 'pl') ? ' selected' : '') + '>' + esc(toLabel(k)) + '</option>'; }).join('')
+            + '</select></label><span class="small text-muted" data-langsrc>' + esc(draft.lang_source ? '(' + draft.lang_source + ')' : '') + '</span>'
+            + (canTranslate() ? '<button type="button" class="btn btn-sm btn-outline-primary ms-auto" data-trbtn></button>' : '')
+            + '</div><div class="small" data-trinfo></div>'
+            + '<div class="ml-tail"><span data-taillabel></span> <button type="button" class="btn btn-sm btn-link p-0" data-tailshow>Pokaż</button></div><pre class="ml-tailtext" data-tailtext hidden></pre>'
             + '<div><label class="btn btn-sm btn-outline-secondary mb-0"><i class="bi bi-paperclip"></i> Załącz pliki<input type="file" multiple hidden data-files></label> <span class="small text-muted">najwyżej 5 MB razem</span></div>'
             + '<div data-file-list class="d-flex flex-wrap gap-1"></div><div class="ml-err" data-err="attachments"></div>'
             + (draft.note ? '<div class="small text-muted">' + esc(draft.note) + '</div>' : '') + '</div>'
@@ -267,6 +324,53 @@
         ta.focus();
         ta.setSelectionRange(0, 0);
         panel.querySelector('[data-close]').addEventListener('click', function () { panel.remove(); });
+        var langSel = panel.querySelector('[data-lang]');
+        var trBtn = panel.querySelector('[data-trbtn]');
+        var trInfo = panel.querySelector('[data-trinfo]');
+        function tail() {
+            var lang = langSel.value;
+            var footer = (state.footers || {})[lang];
+            var parts = [], names = [];
+            if (state.mailbox.signature) { parts.push('-- \n' + state.mailbox.signature); names.push('podpis'); }
+            if (footer) { parts.push(footer); names.push('stopka (' + lang.toUpperCase() + ')'); }
+            if (draft.quote) { parts.push(draft.quote); names.push(draft.reply_to_id ? 'cytat' : 'przekazana wiadomość'); }
+            panel.querySelector('[data-taillabel]').textContent = names.length ? 'Pod treścią : ' + names.join(' · ') : 'Bez podpisu i stopki.';
+            panel.querySelector('[data-tailshow]').hidden = !names.length;
+            panel.querySelector('[data-tailtext]').textContent = parts.join('\n\n');
+            if (trBtn) trBtn.textContent = 'Przetłumacz na ' + toLabel(lang);
+        }
+        tail();
+        langSel.addEventListener('change', function () { panel.querySelector('[data-langsrc]').textContent = ''; tail(); });
+        panel.querySelector('[data-tailshow]').addEventListener('click', function (e) {
+            var pre = panel.querySelector('[data-tailtext]');
+            pre.hidden = !pre.hidden;
+            e.currentTarget.textContent = pre.hidden ? 'Pokaż' : 'Ukryj';
+        });
+        if (trBtn) trBtn.addEventListener('click', function () {
+            if (!ta.value.trim()) { trInfo.textContent = 'Najpierw napisz wiadomość.'; trInfo.className = 'small text-danger'; return; }
+            trBtn.disabled = true;
+            trInfo.textContent = 'Tłumaczenie…'; trInfo.className = 'small text-muted';
+            var before = ta.value;
+            api('POST', '/ajax/translate', { text: before, target: langSel.value, context: 'mail_out' }).then(function (r) {
+                if (original === null) original = before;
+                ta.value = r.text;
+                trInfo.className = 'small text-success';
+                trInfo.innerHTML = esc(r.source && r.source === r.target ? 'Tekst jest już po ' + (PO[r.target] || r.target) + '.' : 'Przetłumaczono' + (r.source_label ? ' z ' + r.source_label : '') + ' na ' + r.target_label + ' — sprawdź przed wysłaniem.')
+                    + ' <button type="button" class="btn btn-sm btn-link p-0" data-undo>Cofnij</button>';
+                trInfo.querySelector('[data-undo]').addEventListener('click', function () { ta.value = original; original = null; trInfo.textContent = ''; });
+            }).catch(function (e) { trInfo.textContent = e.message; trInfo.className = 'small text-danger'; })
+                .then(function () { trBtn.disabled = false; });
+        });
+        // Nowa wiadomość : język z karty klienta po wpisaniu adresu.
+        panel.querySelector('[name="to"]').addEventListener('change', function (e) {
+            if (draft.reply_to_id || !e.target.value.trim()) return;
+            api('GET', '/ajax/mail/contact-lang?email=' + encodeURIComponent(e.target.value)).then(function (r) {
+                if (!r.lang || !state.langs[r.lang]) return;
+                langSel.value = r.lang;
+                panel.querySelector('[data-langsrc]').textContent = '(karta klienta' + (r.customer && r.customer.name ? ' : ' + r.customer.name : '') + ')';
+                tail();
+            }).catch(function () {});
+        });
         function drawFiles() {
             panel.querySelector('[data-file-list]').innerHTML = files.map(function (f, i) {
                 return '<span class="ml-file"><i class="bi bi-paperclip"></i> ' + esc(f.name) + ' <span class="text-muted">' + size(f.size) + '</span> <button type="button" class="btn btn-sm btn-link p-0" data-drop="' + i + '" aria-label="Usuń">×</button></span>';
@@ -289,6 +393,7 @@
             btn.disabled = true;
             panel.querySelector('[data-cstatus]').textContent = 'Wysyłanie…';
             api('POST', '/ajax/mail/send', { to: f('to'), cc: f('cc'), subject: f('subject'), text: f('text'), reply_to_id: draft.reply_to_id || null,
+                lang: langSel.value, quote: draft.quote || '', original_text: original,
                 attachments: files.map(function (x) { return { name: x.name, data: x.data }; }) }).then(function (r) {
                 panel.remove();
                 status(r.message || 'Wysłano.');

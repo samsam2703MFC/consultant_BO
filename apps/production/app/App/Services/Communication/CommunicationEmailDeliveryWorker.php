@@ -5,6 +5,7 @@ use App\Repositories\Communication\CommunicationMessageAttachmentRepository;
 use App\Repositories\Communication\CommunicationMessageRepository;
 use App\Repositories\Communication\EmailAccountRepository;
 use App\Repositories\Document\Proforma\ProformaRepository;
+use App\Services\Mail\MailFooterService;
 
 final class CommunicationEmailDeliveryWorker
 {
@@ -16,7 +17,8 @@ final class CommunicationEmailDeliveryWorker
         private EmailAccountRepository $accounts,
         private SmtpTransport $transport,
         private MailDeliveryPolicy $policy,
-        private ProformaRepository $proformas
+        private ProformaRepository $proformas,
+        private MailFooterService $footers
     ) {}
 
     /** Processes up to $limit queued messages and returns counters. */
@@ -60,7 +62,8 @@ final class CommunicationEmailDeliveryWorker
                 $message['subject_text'],
                 $message['body_text'],
                 $message['message_id_header'],
-                $this->attachments->forMessage((int)$message['id'])
+                $this->attachments->forMessage((int)$message['id']),
+                $this->footers->forMessage($message)
             );
             $this->messages->markSent((int)$message['id'], $providerId);
             // Proforma naprawdę wysłana klientowi (nie tryb zapisu) : status « wysłana » na liście proform i w Dzisiaj.

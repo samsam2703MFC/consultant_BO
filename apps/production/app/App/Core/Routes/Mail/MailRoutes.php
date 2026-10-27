@@ -16,4 +16,15 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/ajax/mail/messages', ['controller' => $c, 'method' => 'messages']);
     $r->addRoute('GET', '/ajax/mail/messages/{id:\d+}', ['controller' => $c, 'method' => 'message']);
     $r->addRoute('POST', '/ajax/mail/send', ['controller' => $c, 'method' => 'send']);
+    // Tłumacz DeepL (klucz DEEPL_API_KEY w .env serwera) : wiadomość przychodząca, odpowiedź w języku klienta, dowolny tekst.
+    $r->addRoute('POST', '/ajax/mail/messages/{id:\d+}/translate', ['controller' => $c, 'method' => 'translateMessage']);
+    $r->addRoute('GET', '/ajax/mail/contact-lang', ['controller' => $c, 'method' => 'contactLang']);
+    $r->addRoute('GET', '/ajax/translate/status', ['controller' => $c, 'method' => 'translateStatus']);
+    $r->addRoute('POST', '/ajax/translate', ['controller' => $c, 'method' => 'translateText']);
+    // Ustawienia › Stopki e-maili i tłumacz (administrator)
+    $f = App\Controllers\Web\Settings\MailFooterController::class;
+    $r->addRoute('GET', '/settings/mail-footers', ['controller' => $f, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/settings/mail-footers', ['controller' => $f, 'method' => 'state']);
+    $r->addRoute('PUT', '/ajax/settings/mail-footers', ['controller' => $f, 'method' => 'save']);
+    $r->addRoute('PUT', '/ajax/settings/mail-footers/deepl-key', ['controller' => $f, 'method' => 'saveKey']);
 };

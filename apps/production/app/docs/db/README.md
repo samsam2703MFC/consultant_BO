@@ -43,6 +43,19 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
 
+### Poczta : traducteur DeepL et pieds de mail (migration 117, 27/10/2026)
+
+- `n_mail_footer` : pied de page de l'entreprise par langue (`pl`, `fr`, `nl`, `en`), texte sans HTML. Ajouté sous la
+  signature dans Poczta (paramètre `mail.footer_user_mail`) et sous les e-mails automatiques de Komunikacja (paramètre
+  `mail.footer_system`, langue du modèle puis de la fiche client) à la place de la ligne « SL Food · L'Atelier By ».
+  Langue absente → anglais → polonais. Page : Ustawienia › Stopki e-maili i tłumacz (`/settings/mail-footers`).
+- `n_user_mail.tr_lang`, `tr_source`, `tr_subject`, `tr_text`, `tr_at` : dernière traduction d'un e-mail reçu (rouvrir ne
+  coûte rien). `n_user_mail_sent.lang` (langue du message envoyé) et `original_text` (texte avant traduction).
+- `n_translation_log` : caractères envoyés à DeepL (qui, où : `mail_in`, `mail_out`, `footer`, `communication`) ; limite
+  par personne et par jour : paramètre `translate.daily_chars_per_user`.
+- `n_app_secret` : clé DeepL saisie dans les paramètres quand elle n'est pas dans `.env` (`DEEPL_API_KEY`), chiffrée
+  AES-256-GCM avec le secret du serveur ; seuls les 4 derniers caractères (`hint`) sont affichés.
+
 ### Factures d'achat : matières, services (Finances) et rejetées (migration 116, 27/10/2026)
 
 - `n_inv.kind` : `goods` (matières et emballages, Zaopatrzenie) ou `service` (coût de l'entreprise : carburant, téléphone,

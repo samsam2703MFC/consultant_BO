@@ -4,13 +4,17 @@ namespace App\Controllers\Web\Mail;
 use App\Core\Web\BaseController;
 use App\Exceptions\CustomException;
 use App\Services\Mail\UserMailService;
+use App\Services\Translation\DeepLTranslator;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
-/** Poczta użytkownika : skrzynka (odebrane, wysłane, wysłane z ERP), odczyt, odpowiedź, nowa wiadomość ; ustawienia skrzynki. */
+/**
+ * Poczta użytkownika : skrzynka (odebrane, wysłane, wysłane z ERP), odczyt, odpowiedź, nowa wiadomość ; ustawienia skrzynki.
+ * Tłumacz DeepL : wiadomość przychodząca, tekst odpowiedzi (język klienta), stopki i treść w Komunikacji.
+ */
 class MailController extends BaseController
 {
-    public function __construct(private UserMailService $mail) {}
+    public function __construct(private UserMailService $mail, private DeepLTranslator $translator) {}
 
     public function index()
     {
@@ -63,6 +67,34 @@ class MailController extends BaseController
     public function send()
     {
         return $this->run(fn() => $this->mail->send($this->userId(), $this->getJson(Request::createFromGlobals())));
+    }
+
+    public function translateMessage($id)
+    {
+        return $this->run(fn() => $this->mail->translate($this->userId(), (int) $id, (string) ($this->getJson(Request::createFromGlobals())['target'] ?? 'pl')));
+    }
+
+    public function contactLang()
+    {
+        return $this->run(fn() => $this->mail->contactLang($this->userId(), mb_substr((string) ($_GET['email'] ?? ''), 0, 1000)));
+    }
+
+    public function translateStatus()
+    {
+        return $this->run(fn() => ['configured' => $this->translator->configured(), 'to' => DeepLTranslator::TO]);
+    }
+
+    /** Dowolny tekst (odpowiedź, stopka, treść wiadomości w Komunikacji) na wybrany język. */
+    public function translateText()
+    {
+        return $this->run(function () {
+            $in = $this->getJson(Request::createFromGlobals());
+            $target = strtolower((string) ($in['target'] ?? ''));
+            $source = isset($in['source']) ? strtolower((string) $in['source']) : null;
+            $r = $this->translator->translate([(string) ($in['text'] ?? '')], $target, (string) ($in['context'] ?? 'mail_out'), $this->userId(), $source)[0];
+            return $r + ['source_label' => $r['source'] ? DeepLTranslator::label($r['source']) : null, 'target' => $target,
+                'target_label' => DeepLTranslator::label($target, false)];
+        });
     }
 
     public function attachment($id, $index)

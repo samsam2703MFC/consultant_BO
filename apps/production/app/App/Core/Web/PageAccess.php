@@ -46,7 +46,7 @@ final class PageAccess
         'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka', ['/shipping', '/shipments', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
         'archive' => ['Archiwum list kompletacyjnych', 'Logistyka', ['/archive'], false],
         'positions' => ['Funkcje i zadania, protokoły', 'Administracja', ['/organization', '/task-forms'], false],
-        'settings' => ['Ustawienia (użytkownicy, aliasy, języki, e-mail, KSeF, licznik stron, inne)', 'Administracja',
+        'settings' => ['Ustawienia (użytkownicy, aliasy, języki, e-mail, stopki e-maili i tłumacz, KSeF, licznik stron, inne)', 'Administracja',
             ['/users', '/aliases', '/settings', '/communication/email-settings', '/other-settings'], false],
         'devices' => ['Urządzenia (dostęp API)', 'Administracja', ['/devices'], false],
         'manager' => ['Kierownik produkcji : stanowisko, cele, raport, premia, rozmowa, audyt', 'Administracja', ['/workshop/manager'], true],

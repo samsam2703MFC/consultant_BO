@@ -88,7 +88,7 @@ try {
     $builder = new DI\ContainerBuilder();
     // Aucun envoi possible : le transport du test refuse tout.
     $builder->addDefinitions([PDO::class => $pdo, App\Services\Communication\SmtpTransport::class => new class implements App\Services\Communication\SmtpTransport {
-        public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = []): string { throw new RuntimeException('no e-mail in tests'); }
+        public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = [], ?string $footer = null): string { throw new RuntimeException('no e-mail in tests'); }
     }]);
     $container = $builder->build();
     $supply = $container->get(SupplyService::class);
