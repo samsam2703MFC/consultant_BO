@@ -806,7 +806,7 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .or-calc { margin: 0; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .or-make strong { font-size: 34px; line-height: 1.1; color: var(--k-primary); font-variant-numeric: tabular-nums; }
 .or-custom input { width: 56px; border: 0; background: transparent; font: inherit; text-align: right; }
-.or-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start; }
+.or-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .or-foot { text-align: center; margin: 12px 0 0; }
 /* Lignes cliquables : un ingrédient = une ligne (recette sur commande et lots de la partie). */
 .or-grid .kiosk-rec-lines li[data-mat] { cursor: pointer; border-radius: 10px; }
@@ -885,3 +885,17 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .kf-today .kiosk-batches { margin: 10px 0; }
 .kf-batch-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 700px) { .kf-row { grid-template-columns: minmax(0, 1fr) auto; } .kf-state { grid-column: 1 / -1; text-align: left; max-width: none; } .kf-go { display: none; } .kf-day { flex-wrap: wrap; } }
+
+/* --- Recette sur commande : numéro de lot de chaque matière première sur sa ligne (au doigt) --- */
+.or-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.or-lots { font-size: 15px; font-weight: 600; color: var(--k-danger); }
+.or-lots.is-ok { color: var(--k-ok); }
+.kiosk-rec-lines > li.or-lotline { grid-template-columns: minmax(0, 1fr) minmax(90px, auto) minmax(220px, 300px); row-gap: 8px; }
+.or-lotfield { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.or-lotfield input[name=lot] { flex: 1; min-width: 0; height: 48px; border: 2px solid var(--k-line-2); border-radius: 10px; padding: 0 12px; font: inherit; font-size: 17px; font-weight: 600; text-transform: uppercase; background: #fff; color: var(--k-text); }
+.or-lotfield input[name=lot]::placeholder { text-transform: none; font-weight: 500; color: var(--k-muted); }
+.or-lotline.is-ok .or-lotfield input[name=lot] { border-color: var(--k-ok); }
+.or-lotbtn { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 10px; border: 0; background: var(--k-fill); color: var(--k-text); display: grid; place-items: center; cursor: pointer; }
+.or-lotbtn.is-on { background: var(--k-ok-50); color: var(--k-ok); }
+.or-lotline .kiosk-ocr { grid-column: 1 / -1; }
+@media (max-width: 1000px) { .kiosk-rec-lines > li.or-lotline { grid-template-columns: minmax(0, 1fr) minmax(90px, auto); } .or-lotline .or-lotfield { grid-column: 1 / -1; } }

@@ -1322,7 +1322,21 @@
         };
         // Mnożnik drzewa : karton (sztuki ÷ sztuki w kartonie), kg albo liczba receptur.
         const fOf = (q) => ppc ? q / ppc : q;
+        // Numéros de lot saisis sur les lignes (matière => {lot, bb, photo, ocr}), enregistrés avec la partie à « Zatwierdź ».
+        const lots = {};
+        const collect = () => el.querySelectorAll('[data-lot-line]').forEach(li => {
+            const v = lots[li.dataset.lotLine] = lots[li.dataset.lotLine] || {};
+            v.lot = li.querySelector('[name=lot]').value.trim();
+            v.bb = li.querySelector('[name=bb]').value || '';
+        });
+        const count = () => {
+            const ids = [...new Set([...el.querySelectorAll('[data-lot-line]')].map(li => li.dataset.lotLine))];
+            const done = ids.filter(m => lots[m] && (lots[m].lot || lots[m].photo)).length;
+            const box = el.querySelector('[data-or-lots]');
+            if (box) { box.textContent = ids.length ? t('or_lots_count', {n: done, total: ids.length}) : ''; box.classList.toggle('is-ok', ids.length > 0 && done === ids.length); }
+        };
         const draw = () => {
+            collect();
             const make = toMake();
             const fI = fOf(make);
             const fP = fOf(base());
@@ -1350,13 +1364,14 @@
                         ${ppc ? `<small class="kiosk-muted">${esc(cartonsOf(make, {ppc, unit: r.unit}))}</small>` : ''}</div>
                 </section>
                 <div class="or-grid">
-                    <section class="kiosk-card"><h2>${esc(t('or_ingredients'))}</h2>
-                        ${subs.map(l => recBlock(l, fI, 0)).join('')}
-                        ${mats.length ? `<ul class="kiosk-rec-lines">${mats.map(l => lineRow(l, fI)).join('')}</ul>` : ''}
+                    <section class="kiosk-card"><h2 class="or-h">${esc(t('or_ingredients'))} <span class="or-lots" data-or-lots></span></h2>
+                        ${subs.map(l => recBlock(l, fI, 0, lots)).join('')}
+                        ${mats.length ? `<ul class="kiosk-rec-lines">${mats.map(l => lineRow(l, fI, lots)).join('')}</ul>` : ''}
                         ${!subs.length && !mats.length ? `<p class="kiosk-muted">${esc(t('rec_no_tree'))}</p>` : ''}</section>
                     ${pack.length ? `<section class="kiosk-card"><h2>${esc(t('or_packaging'))}</h2><ul class="kiosk-rec-lines">${pack.map(l => lineRow(l, fP)).join('')}</ul>
                         <p class="kiosk-muted kv-small">${esc(t('or_packaging_help'))}</p></section>` : ''}
                 </div>`;
+            count();
         };
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-back>‹ ${esc(t('back'))}</button>`, true) + `
             <section class="kiosk-card or-title"><div><h2>${esc(i.name)}</h2><span class="or-pill">${esc(t('or_title'))}</span></div>
@@ -1364,12 +1379,45 @@
             <div data-or-body></div>
             <p class="kiosk-muted or-foot">${esc(t('or_validate_help'))}</p>`;
         draw();
-        el.querySelector('[data-back]').addEventListener('click', back);
+        el.querySelector('[data-back]').addEventListener('click', () => { stopScan(); back(); });
         const body = el.querySelector('[data-or-body]');
         let batch = null;
         const id = uuid();
+        // Même matière à plusieurs endroits de l'arbre : un seul numéro de lot, recopié sur ses lignes.
+        const sync = (li) => {
+            const m = li.dataset.lotLine;
+            const lot = li.querySelector('[name=lot]').value;
+            const bb = li.querySelector('[name=bb]').value;
+            el.querySelectorAll(`[data-lot-line="${m}"]`).forEach(x => {
+                if (x !== li) { x.querySelector('[name=lot]').value = lot; x.querySelector('[name=bb]').value = bb; }
+                x.classList.toggle('is-ok', lot.trim() !== '' || !!(lots[m] && lots[m].photo));
+            });
+            collect();
+            count();
+        };
+        body.addEventListener('input', (e) => { resetIdle(); const li = e.target.closest('[data-lot-line]'); if (li && e.target.name === 'lot') sync(li); });
+        body.addEventListener('change', async (e) => {
+            const input = e.target.closest('[data-or-photo]');
+            if (!input) return;
+            const li = input.closest('[data-lot-line]');
+            const file = input.files && input.files[0];
+            input.value = '';
+            busy = false;
+            if (!file) return;
+            const slot = lots[li.dataset.lotLine] = lots[li.dataset.lotLine] || {};
+            await photo(li, file, slot);
+            li.querySelector('.or-lotbtn:last-child')?.classList.toggle('is-on', !!slot.photo);
+            sync(li);
+        });
+        body.addEventListener('click', (e) => {
+            if (e.target.closest('.or-lotfield label')) { stopScan(); busy = true; resetIdle(); }
+            const sc = e.target.closest('[data-or-scan]');
+            if (sc) { const li = sc.closest('[data-lot-line]'); scan(li, lots[li.dataset.lotLine] = lots[li.dataset.lotLine] || {}); }
+        });
         // Zatwierdź (przycisk albo dotknięcie składnika) : partia z ilością do zrobienia, potem numer partii składnika.
         const go = async (material, btn) => {
+            stopScan();
+            collect();
             if (batch) return renderBatch(batch.id, null, null, material);
             const q = toMake();
             if (!window.confirm(t('or_confirm', {q: fmt(q), u: ppc ? r.unit : (r.basis === 'kg' ? 'kg' : r.unit), name: i.name}))) return;
@@ -1377,8 +1425,20 @@
             try {
                 batch = await api('POST', '/kiosk/production', {item_id: i.item_id, quantity: Math.round(q * 1000) / 1000, client_uuid: id}, true);
                 if (session && session.flowQ) delete session.flowQ[i.item_id];
-                renderBatch(batch.id, t('or_saved', {lot: batch.lot_code}), batch, material);
-            } catch (err) { if (btn) btn.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
+            } catch (err) { if (btn) btn.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); return; }
+            // Lots saisis sur les lignes : enregistrés un par un ; un échec n'arrête pas les autres (à compléter sur la partie).
+            let fresh = batch, saved = 0, failed = 0;
+            for (const [m, v] of Object.entries(lots)) {
+                if (!v.lot && !v.photo) continue;
+                try {
+                    fresh = await api('PUT', `/kiosk/production/${batch.id}/lots/${m}`, {lot_number: v.lot || null, best_before: v.bb || null, ...(v.photo ? {photo: v.photo} : {}), ...(v.ocr ? {ocr_text: v.ocr} : {})}, true);
+                    saved++;
+                } catch (err) { failed++; }
+            }
+            const order = fresh.ingredients ? [...fresh.ingredients.filter(x => !x.packaging), ...fresh.ingredients.filter(x => x.packaging)] : [];
+            const next = material !== null && material !== undefined ? material : ((order.find(x => !x.lot_number) || {}).material_id ?? -1);
+            const msg = saved ? t('or_saved_lots', {lot: batch.lot_code, n: saved}) : t('or_saved', {lot: batch.lot_code});
+            renderBatch(batch.id, failed ? msg + ' · ' + t('or_lots_failed', {n: failed}) : msg, fresh.ingredients ? fresh : null, next);
         };
         body.addEventListener('click', (e) => {
             resetIdle();
@@ -1874,11 +1934,22 @@
 
     // Grupa, która przygotowuje półprodukt (inna grupa : wyróżniona).
     const producerBadge = (p) => p ? `<span class="kiosk-rec-group ${p.other ? 'is-other' : ''}" style="--g:${esc(p.color || '#8D1D2C')}">${icon('users', 'is-sm')} ${esc(p.other ? t('rec_made_by', {group: p.name}) : t('rec_made_here', {group: p.name}))}</span>` : '';
-    const lineRow = (l, f) => `<li ${l.material_id ? `data-mat="${l.material_id}"` : ''}><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`;
+    // lots (recette sur commande) : matière première avec son numéro de lot sur la ligne (à la main, photo + OCR, scan).
+    const lineRow = (l, f, lots) => {
+        const q = `<span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span>`;
+        if (!lots || !l.material_id || l.packaging) return `<li ${l.material_id ? `data-mat="${l.material_id}"` : ''}><span>${esc(l.name)}</span>${q}</li>`;
+        const v = lots[l.material_id] || {};
+        return `<li class="or-lotline ${v.lot ? 'is-ok' : ''}" data-lot-line="${l.material_id}"><span>${esc(l.name)}</span>${q}
+            <span class="or-lotfield"><input name="lot" autocomplete="off" autocapitalize="characters" maxlength="64" placeholder="${esc(t('or_lot_ph'))}" value="${esc(v.lot || '')}" aria-label="${esc(t('lot_number'))} : ${esc(l.name)}">
+                <input name="bb" type="hidden" value="${esc(v.bb || '')}">
+                ${canScan() ? `<button type="button" class="or-lotbtn" data-or-scan aria-label="${esc(t('lot_scan'))}">${icon('scan-line')}</button>` : ''}
+                <label class="or-lotbtn ${v.photo ? 'is-on' : ''}" aria-label="${esc(t('lot_photo'))}">${icon('camera')}<input type="file" accept="image/*" capture="environment" data-or-photo hidden></label></span>
+            <div class="kiosk-ocr" data-ocr hidden></div></li>`;
+    };
 
     // Półprodukt / kompozycja : karta z ilością, grupą, etapami przygotowania i składnikami (zagnieżdżone półprodukty niżej).
     // Przygotowuje inna grupa : karta zwinięta, bo grupa bierze gotowe.
-    function recBlock(l, f, depth) {
+    function recBlock(l, f, depth, lots) {
         const n = l.node;
         const materials = n ? n.lines.filter(x => x.kind === 'material' && !x.packaging) : [];
         const subs = n ? n.lines.filter(x => x.kind === 'recipe') : [];
@@ -1888,8 +1959,8 @@
             <div class="kiosk-rec-block-body">
                 ${other ? `<p class="kiosk-rec-note">${icon('users', 'is-sm')} ${esc(t('rec_ready_from', {group: l.producer.name}))}</p>` : ''}
                 ${n && n.steps.length ? `<ol class="kiosk-rec-steps">${n.steps.map(st => `<li>${esc(st)}</li>`).join('')}</ol>` : ''}
-                ${materials.length ? `<ul class="kiosk-rec-lines">${materials.map(x => lineRow(x, f)).join('')}</ul>` : ''}
-                ${subs.map(x => recBlock(x, f, depth + 1)).join('')}
+                ${materials.length ? `<ul class="kiosk-rec-lines">${materials.map(x => lineRow(x, f, other ? null : lots)).join('')}</ul>` : ''}
+                ${subs.map(x => recBlock(x, f, depth + 1, other ? null : lots)).join('')}
                 ${!n ? `<p class="kiosk-muted">${esc(t('rec_no_tree'))}</p>` : ''}
             </div></details>`;
     }
