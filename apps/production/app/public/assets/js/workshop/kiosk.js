@@ -836,13 +836,161 @@
     async function renderProduction(message) {
         longIdle = true;
         resetIdle();
-        let day, me, w;
-        try {
-            [day, me, w] = await Promise.all([api('GET', '/kiosk/production', undefined, true), api('GET', '/kiosk/me', undefined, true).catch(() => null),
-                api('GET', '/kiosk/week').catch(() => null)]);
-        } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        try { await loadFlow(); } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        drawProduction(flow.day, flow.me, message);
+    }
+
+    // --- Produkcja (27/10/2026, « le bon flow ») : liste à produire de la semaine et des commandes (sans bascule
+    // MTO / MTS) → produit : pièces à produire (message au-delà des commandes + stock max.) → recette avec le % de perte
+    // → numéro de lot de chaque ingrédient → production faite : pièces produites + rebuts → en fin de journée, la
+    // validation de la production (assistant « Koniec dnia »).
+    let flow = null; // {day, me, week, stock}
+    async function loadFlow() {
+        const [day, me, w, stock] = await Promise.all([api('GET', '/kiosk/production', undefined, true), api('GET', '/kiosk/me', undefined, true).catch(() => null),
+            api('GET', '/kiosk/week').catch(() => null), api('GET', '/kiosk/stock').catch(() => null)]);
         prodWeek = w && w.teams && w.teams[0] ? {today: w.today, deliveries: w.teams[0].deliveries || []} : null;
-        drawProduction(day, me, message);
+        flow = {day, me, week: w, stock};
+        return flow;
+    }
+    // Une ligne par produit : liste de la semaine (commandes + stock), commandes au-delà du stock, production du jour.
+    // Ordre : en cours aujourd'hui, plan du jour, semaine (premier jour prévu), commandes (prochaine expédition).
+    function flowRows(day, only) {
+        const team = flow && flow.week && flow.week.teams ? flow.week.teams[0] : null;
+        const stock = new Map(((flow && flow.stock && flow.stock.items) || []).filter(x => x.item_id).map(x => [x.item_id, x]));
+        const cat = new Map(day.catalog.map(c => [c.item_id, c]));
+        const today = new Map(day.items.map(i => [i.item_id, i]));
+        const rows = new Map();
+        const row = (id, name) => {
+            if (!rows.has(id)) rows.set(id, {id, item: {item_id: id, name, unit: 'szt', ppc: null, ...(cat.get(id) || {}), ...(today.get(id) || {})},
+                week: null, stock: stock.get(id) || null, today: today.get(id) || null, sort: '9'});
+            return rows.get(id);
+        };
+        const first = (r, key) => { if (key < r.sort) r.sort = key; };
+        (team ? team.products : []).forEach(x => { if (x.item_id && x.need > 0) { const r = row(x.item_id, x.name); r.week = x; first(r, '2' + ((x.days || [])[0] || x.due_date || '9')); } });
+        stock.forEach(x => { if (x.orders_over_stock_cartons > 0) first(row(x.item_id, x.name), '3' + (x.next_shipping || '9')); });
+        today.forEach(i => {
+            if (i.batches.some(b => !b.cancelled) || i.produced > 0 || i.line) first(row(i.item_id, i.name), '0');
+            else if (i.planned !== null) first(row(i.item_id, i.name), '1');
+        });
+        if (only) return row(only, (cat.get(only) || {}).name || '');
+        return [...rows.values()].sort((a, b) => a.sort.localeCompare(b.sort) || a.item.name.localeCompare(b.item.name));
+    }
+    const dayTag = (date) => `${t('weekday_' + (((new Date(date + 'T12:00:00').getDay() + 6) % 7) + 1))} ${dm(date)}`;
+    function flowRow(r) {
+        const i = r.item, d = r.today;
+        const tags = [];
+        if (d && d.planned !== null) tags.push(`<span class="kiosk-tag is-ship">${esc(t('kf_tag_today', {q: cq(d.planned, d)}))}</span>`);
+        if (r.week) tags.push(`<span class="kiosk-tag">${esc(t('kf_tag_week', {q: cq(r.week.need, i)}))}${(r.week.days || []).length ? ' · ' + esc(r.week.days.slice(0, 2).map(dayTag).join(', ')) : ''}</span>`);
+        if (r.stock && r.stock.orders_over_stock_cartons > 0) tags.push(`<span class="kiosk-tag is-late">${esc(t('kf_tag_orders', {q: fmt(r.stock.orders_over_stock_cartons), date: r.stock.next_shipping ? dm(r.stock.next_shipping) : '—'}))}</span>`);
+        const open = d ? d.batches.filter(b => !b.cancelled) : [];
+        const lots = open.find(b => b.lots_total && b.lots_done < b.lots_total);
+        let state = t('kf_state_todo'), cls = '';
+        if (d && d.line) { state = t('kf_state_ok', {q: qty(d.line.produced, d)}); cls = 'is-ok'; }
+        else if (lots) { state = t('kf_state_lots', {lot: lots.lot_code, done: lots.lots_done, total: lots.lots_total}); cls = 'is-progress'; }
+        else if (d && d.produced > 0) { state = t('kf_state_done', {q: qty(d.produced, d)}); cls = 'is-progress'; }
+        return `<button type="button" class="kiosk-card kf-row ${cls}" data-flow-item="${r.id}"><div class="kf-main"><h3>${esc(i.name)}</h3>
+            <p class="kiosk-muted">${esc([i.category, i.ppc ? t('kv_ppc', {n: i.ppc}) : i.unit].filter(Boolean).join(' · '))}</p>${tags.length ? `<div class="kf-tags">${tags.join('')}</div>` : ''}</div>
+            <span class="kf-state">${cls === 'is-ok' ? icon('circle-check', 'is-sm') + ' ' : ''}${esc(state)}</span><span class="kf-go">${icon('chevron-right')}</span></button>`;
+    }
+
+    // Produit : ce qu'il faut (semaine, commandes, stock, maximum), la production du jour (lots, fin), puis « combien de
+    // pièces ? » → recette (% de perte) → partie et lots des ingrédients.
+    async function renderFlowItem(id, message) {
+        longIdle = true;
+        resetIdle();
+        try { await loadFlow(); } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        const day = flow.day;
+        const r = flowRows(day, id);
+        const i = r.item, d = r.today, s = r.stock;
+        const locked = !!(day.closed && day.closed.locked);
+        const step = i.ppc || 1;
+        const allowed = s && i.ppc ? s.allowed_cartons * i.ppc : null;
+        // Proposition : reste du plan du jour, sinon reste de la semaine, sinon commandes au-delà du stock, sinon 1 carton.
+        const propose = () => {
+            const done = d ? d.produced : 0;
+            if (d && d.planned !== null && d.planned - done > 1e-6) return d.planned - done;
+            if (r.week && r.week.need - done > 1e-6) return r.week.need - done;
+            if (s && s.orders_over_stock_cartons > 0 && i.ppc) return s.orders_over_stock_cartons * i.ppc;
+            return step;
+        };
+        const st = (session && session.flowQ && session.flowQ[id]) || {q: Math.max(step, Math.ceil(propose() / step - 1e-9) * step)};
+        const tile = (label, value, sub, cls) => `<div class="kv-tile ${cls || ''}"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(sub)}</small></div>`;
+        const kart = (c) => `${fmt(c)} ${t('prod_cartons_short')}`;
+        const over = (q) => allowed !== null && q > allowed + 1e-6;
+        const warn = (q) => allowed === 0 ? t('kf_over_none') : t('kf_over', {q: `${fmt(q)} ${i.unit}`, max: `${fmt(allowed)} ${i.unit}`});
+        const open = d ? d.batches.filter(b => !b.cancelled) : [];
+        const today = d && (open.length || d.produced > 0 || d.line) ? `<section class="kiosk-card kf-today"><h2>${esc(t('kf_today_title'))}</h2>
+            ${batchTiles(d)}
+            ${open.length ? `<ul class="kiosk-batches">${open.map(b => `<li><button type="button" class="kiosk-batch" data-batch="${b.id}"><strong>${esc(b.lot_code)}</strong>
+                <span>${esc(qty(b.quantity, d))}</span><span class="kiosk-muted">${esc(hhmm(b.created_at))}${b.employee ? ' · ' + esc(b.employee) : ''}</span>
+                <span class="kiosk-lots ${b.lots_total && b.lots_done >= b.lots_total ? 'is-ok' : 'is-todo'}">${esc(t('prod_lots', {done: b.lots_done ?? 0, total: b.lots_total ?? 0}))}</span></button></li>`).join('')}</ul>` : ''}
+            ${d.line ? `<p class="kiosk-status">${icon('circle-check', 'is-sm')} ${esc(t('kf_line_ok', {q: qty(d.line.produced, d), w: d.waste ? qty(d.waste, d) : '0'}))}</p>` : ''}
+            ${!locked && day.editable ? `<button type="button" class="kiosk-btn is-primary" data-kf-finish>${icon('check')} ${esc(t(d.line ? 'kf_finish_again' : 'kf_finish'))}</button>` : ''}</section>` : '';
+        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-back>‹ ${esc(t('kf_back'))}</button>`, true) + `
+            <section class="kiosk-card or-title"><div><h2>${esc(i.name)}</h2><span class="or-pill">${esc([i.category, i.ppc ? t('kv_ppc', {n: i.ppc}) : i.unit].filter(Boolean).join(' · '))}</span></div></section>
+            <div class="kv-tiles">
+                ${tile(t('kf_info_week'), r.week ? cq(r.week.need, i) : '—', r.week ? t('kf_info_week_sub', {o: cq(r.week.direct || 0, i), s: cq(r.week.stock || 0, i)}) : t('kf_info_week_none'))}
+                ${tile(t('kf_info_orders'), s ? kart(s.ordered_cartons) : '—', s && s.orders_over_stock_cartons > 0 ? t('kf_info_orders_sub', {q: fmt(s.orders_over_stock_cartons), date: s.next_shipping ? dm(s.next_shipping) : '—'}) : t('kf_info_orders_ok'), s && s.orders_over_stock_cartons > 0 ? 'is-danger' : '')}
+                ${tile(t('kf_info_stock'), s ? kart(s.stock_cartons) : '—', s ? t('kf_info_stock_sub', {min: s.min_cartons ?? '—', max: s.max_cartons ?? '—'}) : '')}
+                ${tile(t('kf_info_max'), allowed !== null ? `${fmt(allowed)} ${i.unit}` : '—', s && i.ppc ? t('kf_info_max_sub', {c: fmt(s.allowed_cartons)}) : t('kf_info_max_none'))}
+            </div>
+            ${today}
+            ${locked ? `<p class="kiosk-status kv-locked">${icon('circle-check', 'is-sm')} ${esc(t('kv_locked_help'))}</p>` : `<section class="kiosk-card kf-qty">
+                <h2>${esc(t(open.length ? 'kf_qty_more' : 'kf_qty_title'))}</h2><p class="kiosk-muted">${esc(t('kf_qty_help'))}</p>
+                <div class="kf-qty-row"><div class="kv-step is-lg"><button type="button" data-kf-step="-1" aria-label="−">${icon('minus')}</button>
+                    <input class="kv-num" data-kf-q inputmode="numeric" value="${esc(fmt(st.q).replace(/\s/g, ''))}" aria-label="${esc(t('kf_qty_title'))}">
+                    <button type="button" data-kf-step="1" aria-label="+">${icon('plus')}</button><small>${esc(i.unit)}</small></div>
+                    <p class="kv-cartons" data-kf-cartons>${esc(cartonsOf(st.q, i))}</p></div>
+                <p class="kv-hint is-bad" data-kf-warn ${over(st.q) ? '' : 'hidden'}>${icon('triangle-alert', 'is-sm')} <span>${esc(warn(st.q))}</span></p>
+                <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-primary kf-next" data-kf-next>${esc(t(i.has_recipe === false ? 'kf_save_batch' : 'kf_next'))} ${icon('chevron-right')}</button></div></section>`}`;
+        if (message) toast(message);
+        const keep = () => { if (session) { session.flowQ = session.flowQ || {}; session.flowQ[id] = st; } };
+        const input = el.querySelector('[data-kf-q]');
+        const refresh = () => {
+            const c = el.querySelector('[data-kf-cartons]');
+            if (c) c.textContent = cartonsOf(st.q, i);
+            const w = el.querySelector('[data-kf-warn]');
+            if (w) { w.hidden = !over(st.q); w.querySelector('span').textContent = warn(st.q); }
+        };
+        const read = () => { const n = Number(String(input.value).replace(',', '.').replace(/\s/g, '')); return Number.isFinite(n) && n > 0 ? r3(n) : null; };
+        el.querySelector('[data-back]').addEventListener('click', () => renderProduction());
+        el.querySelectorAll('[data-kf-step]').forEach(b => b.addEventListener('click', () => {
+            resetIdle();
+            st.q = Math.max(step, r3((read() ?? st.q) + Number(b.dataset.kfStep) * step));
+            input.value = String(st.q);
+            keep();
+            refresh();
+        }));
+        input?.addEventListener('input', () => { resetIdle(); const n = read(); if (n !== null) { st.q = n; keep(); refresh(); } });
+        el.querySelectorAll('[data-batch]').forEach(b => b.addEventListener('click', () => renderBatch(Number(b.dataset.batch))));
+        el.querySelector('[data-kf-finish]')?.addEventListener('click', () => finishItem(id));
+        el.querySelector('[data-kf-next]')?.addEventListener('click', async (e) => {
+            const q = read();
+            if (q === null) { input.focus(); return; }
+            st.q = q;
+            keep();
+            if (i.has_recipe !== false) return renderOrderRecipe(day, i, {pieces: q, allowed, back: () => renderFlowItem(id)});
+            // Sans recette : la partie directement (pas de lots d'ingrédients).
+            if (!window.confirm(t('or_confirm', {q: fmt(q), u: i.unit, name: i.name}))) return;
+            e.currentTarget.disabled = true;
+            try {
+                const b = await api('POST', '/kiosk/production', {item_id: id, quantity: q, client_uuid: uuid()}, true);
+                if (session && session.flowQ) delete session.flowQ[id];
+                renderFlowItem(id, t('or_saved', {lot: b.lot_code}));
+            } catch (err) { e.currentTarget.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
+        });
+    }
+
+    // Production faite : pièces produites (toutes les parties du jour) et rebuts — la ligne de validation du produit seule.
+    async function finishItem(id) {
+        let day;
+        try { day = await api('GET', '/kiosk/production', undefined, true); } catch (err) { toast(err.message, true); return; }
+        const i = day.items.find(x => x.item_id === id);
+        if (!i) return renderFlowItem(id);
+        if (!vstate || vstate.date !== day.date) vstate = freshV(day.date);
+        vstate.lines[id] = {...lineState(i), produced: r3(i.produced), editing: true};
+        vstate.focus = id;
+        renderLines(day, flow ? flow.me : null, 'single', id);
     }
 
     // Dostawy surowców zespołu : zamówienia u dostawców w tygodniu z surowcami, których zespół potrzebuje
@@ -988,66 +1136,48 @@
         });
     }
 
-    // Accueil Produkcja : carte du plan (→ page de validation), plan du jour et pertes, raccourcis (encoder sans plan,
-    // stock du groupe, liste de production), puis les lots du jour (numéros de lots matières) et les livraisons.
+    // Accueil Produkcja : la liste à produire (une ligne par produit), un autre produit (recherche), la journée
+    // (validation de la production du jour), puis les livraisons et les opérations.
     function drawProduction(day, me, message) {
         const tot = day.totals || {};
         const closed = day.closed;
         const locked = !!(closed && closed.locked);
-        const planned = day.items.filter(i => i.planned !== null);
+        const rows = flowRows(day);
+        const week = flow && flow.week;
         const lines = day.items.filter(i => i.line).length;
-        const lost = day.items.filter(i => i.waste > 0);
-        const pct = planned.length ? Math.round(planned.filter(i => i.line || i.produced + 1e-6 >= i.planned).length / planned.length * 100) : 0;
-        const plannedCartons = planned.reduce((a, i) => a + (i.ppc ? i.planned / i.ppc : 0), 0);
-        const head = planned.length
-            ? `<section class="kiosk-card kv-plan ${locked ? 'is-closed' : ''}" data-open-validate role="button" tabindex="0">
-                <span class="kv-plan-icon">${icon(locked ? 'circle-check' : 'clipboard-check')}</span>
-                <div class="kv-plan-body"><h2>${esc(t(locked ? 'kv_plan_closed_title' : 'kv_plan_title'))}</h2>
-                    <p class="kiosk-muted">${esc(t('kv_plan_meta', {n: planned.length, cartons: fmt(Math.round(plannedCartons)), done: lines, total: day.items.length}))}${tot.waste ? ' · ' + esc(t('day_waste', {q: fmt(tot.waste), pct: fmt(tot.waste_pct ?? 0)})) : ''}</p>
-                    ${locked ? `<p class="kiosk-dayhead-state">${icon('circle-check', 'is-sm')} ${esc(t('day_closed', {time: hhmm(closed.at), name: closed.employee || ''}))}${closed.note ? ' · ' + esc(closed.note) : ''}</p>` : `<div class="kiosk-bar"><span style="width:${pct}%"></span></div>`}</div>
-                <button type="button" class="kiosk-btn ${locked ? '' : 'is-primary'} kv-plan-go" data-open-validate>${esc(t(locked ? 'kv_plan_view' : 'kv_plan_go'))} ${icon('chevron-right')}</button></section>`
-            : `<section class="kiosk-card kv-plan is-empty ${locked ? 'is-closed' : ''}"><span class="kv-plan-icon">${icon('layout-grid')}</span>
-                <div class="kv-plan-body"><h2>${esc(t(locked ? 'kv_plan_closed_title' : 'kv_noplan_title'))}</h2><p class="kiosk-muted">${esc(t(locked ? 'kv_locked_help' : 'kv_noplan_help'))}</p></div>
-                <button type="button" class="kiosk-btn ${locked ? '' : 'is-primary'} kv-plan-go" data-open-encode>${esc(t(locked ? 'kv_plan_view' : 'kv_encode'))} ${icon('chevron-right')}</button></section>`;
-        const planList = planned.length ? `<section class="kiosk-card"><h2 class="kv-h">${esc(t('kv_plan_day'))}</h2><ul class="kv-list">${planned.map(i => {
-            const done = i.line ? i.line.produced : i.produced;
-            const cls = i.line ? 'is-ok' : (done > 0 ? 'is-warn' : '');
-            return `<li><span>${i.line ? icon('circle-check', 'is-sm') + ' ' : ''}${esc(i.name)}</span><span class="kiosk-pill ${cls}">${esc(cq(done, i, true))} / ${esc(cq(i.planned, i))}</span></li>`;
-        }).join('')}${day.items.filter(i => i.planned === null).map(i => `<li><span>${esc(i.name)}</span><span class="kiosk-pill is-warn">${esc(t('kv_off_plan_q', {q: cq(i.produced, i)}))}</span></li>`).join('')}</ul></section>` : '';
-        const lostList = `<section class="kiosk-card"><h2 class="kv-h">${esc(t('kv_waste_today'))}</h2>${lost.length ? `<ul class="kv-list">${lost.flatMap(i => i.wastes.filter(w => !w.cancelled).map(w =>
-            `<li><span>${esc(i.name)} · ${esc(t('waste_' + w.reason))}</span><span class="kiosk-pill is-danger">${esc(fmt(w.quantity))} ${esc(i.unit)}${w.photos && w.photos.length ? ' · ' + w.photos.length + ' ' + icon('camera', 'is-sm') : ''}</span></li>`)).join('')}</ul>`
-            : `<p class="kiosk-muted">${esc(t('kv_waste_none'))}</p>`}<p class="kiosk-muted kv-small">${esc(t(day.waste_photo && day.waste_photo.required ? 'kv_waste_rule_photo' : 'kv_waste_rule'))}</p></section>`;
-        const batches = day.items.filter(i => i.batches.length);
-        el.innerHTML = personHeader() + tabs('production') + head + `
-            <div class="kv-grid2">${planList || lostList}${planList ? lostList : ''}</div>
+        const doneCartons = day.items.reduce((a, i) => a + (i.ppc ? i.produced / i.ppc : 0), 0);
+        el.innerHTML = personHeader() + tabs('production') + `
+            <div class="kv-crumb"><div><h2>${esc(t('kf_title', {group: day.group.name}))}</h2><p class="kiosk-muted">${esc(week ? t('kf_sub', {from: dm(week.week_start), to: dm(week.week_end)}) : t('kf_sub_noweek'))}</p></div></div>
+            <section class="kiosk-card kf-day ${locked ? 'is-closed' : ''}"><span class="kv-plan-icon">${icon(locked ? 'circle-check' : 'clipboard-check')}</span>
+                <div class="kv-plan-body"><h2>${esc(t('kf_day_title'))}</h2><p class="kiosk-muted">${esc(t('kf_day_meta', {c: fmt(Math.round(doneCartons * 10) / 10), done: lines, total: day.items.length}))}${tot.waste ? ' · ' + esc(t('day_waste', {q: fmt(tot.waste), pct: fmt(tot.waste_pct ?? 0)})) : ''}</p>
+                    ${locked ? `<p class="kiosk-dayhead-state">${icon('circle-check', 'is-sm')} ${esc(t('day_closed', {time: hhmm(closed.at), name: closed.employee || ''}))}${closed.note ? ' · ' + esc(closed.note) : ''}</p>` : ''}</div>
+                ${!locked && day.editable && day.items.length ? `<button type="button" class="kiosk-btn is-primary" data-close-day>${icon('moon')} ${esc(t('kf_end_day'))}</button>` : ''}</section>
+            <h2 class="kv-section">${esc(t('kf_list_title'))}</h2>
+            <div class="kf-list">${rows.map(flowRow).join('') || `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('kf_empty'))}</p></section>`}</div>
+            ${locked ? '' : `<section class="kiosk-card kf-other"><h2>${esc(t('kf_other'))}</h2><label class="kv-search">${icon('search', 'is-sm')}<input type="search" data-kf-search placeholder="${esc(t('kv_search_ph', {n: day.catalog.length}))}" autocomplete="off" enterkeyhint="search"></label>
+                <div class="kf-found" data-kf-found></div></section>`}
             <div class="kv-shortcuts">
-                <button type="button" class="kv-shortcut" data-open-encode><span class="kv-shortcut-icon">${icon('layout-grid')}</span><strong>${esc(t('kv_encode'))}</strong><span>${esc(t('kv_encode_help'))}</span></button>
+                <button type="button" class="kv-shortcut" data-open-validate><span class="kv-shortcut-icon">${icon('clipboard-check')}</span><strong>${esc(t('kf_all_lines'))}</strong><span>${esc(t('kf_all_lines_help'))}</span></button>
                 <button type="button" class="kv-shortcut" data-open-stock="stock"><span class="kv-shortcut-icon">${icon('warehouse')}</span><strong>${esc(t('kv_stock'))}</strong><span>${esc(t('kv_stock_help'))}</span></button>
-                <button type="button" class="kv-shortcut" data-open-stock="list"><span class="kv-shortcut-icon">${icon('list-ordered')}</span><strong>${esc(t('kv_list'))}</strong><span>${esc(t('kv_list_help'))}</span></button>
             </div>
-            ${batches.length ? `<h2 class="kv-section">${esc(t('kv_batches_title'))}</h2><p class="kiosk-muted kv-small">${esc(t('kv_batches_help'))}</p>
-            <div class="kiosk-prod">${batches.map(i => `<article class="kiosk-card kiosk-prod-item" data-item="${i.item_id}">
-                <div class="kiosk-prod-head"><div><h3>${esc(i.name)}</h3><div class="kiosk-muted">${esc(t('prod_done', {q: qty(i.produced, i)}))}${i.waste ? ' · ' + esc(t('prod_waste', {q: qty(i.waste, i)})) : ''}</div></div>
-                    ${day.editable ? `<div class="kiosk-prod-actions"><button type="button" class="kiosk-btn is-small" data-new="${i.item_id}">＋ ${esc(t('prod_batch'))}</button></div>` : ''}</div>
-                ${batchTiles(i)}
-                <ul class="kiosk-batches">${i.batches.map(b => `<li class="${b.cancelled ? 'is-cancelled' : ''}">
-                    <button type="button" class="kiosk-batch" data-batch="${b.id}"><strong>${esc(b.lot_code)}</strong>
-                    <span>${esc(qty(b.quantity, i))}</span><span class="kiosk-muted">${esc(hhmm(b.created_at))}${b.employee ? ' · ' + esc(b.employee) : ''}</span>
-                    <span class="kiosk-lots ${b.cancelled ? '' : (b.lots_total && b.lots_done >= b.lots_total ? 'is-ok' : 'is-todo')}">${b.cancelled ? esc(t('prod_cancelled')) : esc(t('prod_lots', {done: b.lots_done ?? 0, total: b.lots_total ?? 0}))}</span></button></li>`).join('')}</ul>
-            </article>`).join('')}</div>` : ''}
-            ${day.editable && day.items.length ? `<div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-close-day>${icon('moon')} ${esc(t('kv_end_day'))}</button></div>` : ''}
             ${deliveriesCard()}
             ${operationsCard(me)}`;
         if (message) toast(message);
-        const find = (id) => day.items.find(i => i.item_id === id) || day.catalog.find(c => c.item_id === id);
         bindOperations(me);
-        el.querySelectorAll('[data-open-validate]').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); renderLines(day, me, 'plan'); }));
-        el.querySelector('section[data-open-validate]')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') renderLines(day, me, 'plan'); });
-        el.querySelectorAll('[data-open-encode]').forEach(b => b.addEventListener('click', () => renderLines(day, me, 'encode')));
+        el.querySelectorAll('[data-flow-item]').forEach(b => b.addEventListener('click', () => renderFlowItem(Number(b.dataset.flowItem))));
+        const search = el.querySelector('[data-kf-search]');
+        search?.addEventListener('input', () => {
+            resetIdle();
+            const q = foldTxt(search.value).split(/\s+/).filter(Boolean);
+            const found = q.length ? day.catalog.filter(c => { const n = foldTxt(c.name + ' ' + (c.category || '')); return q.every(w => n.includes(w)); }).slice(0, 30) : [];
+            const box = el.querySelector('[data-kf-found]');
+            box.innerHTML = q.length ? (found.map(c => `<button type="button" class="kv-prod" data-flow-item="${c.item_id}"><strong>${esc(c.name)}</strong><small>${esc([c.category, c.ppc ? t('kv_ppc', {n: c.ppc}) : c.unit].filter(Boolean).join(' · '))}</small></button>`).join('')
+                || `<p class="kiosk-muted">${esc(t('kv_search_none'))}</p>`) : '';
+            box.querySelectorAll('[data-flow-item]').forEach(b => b.addEventListener('click', () => renderFlowItem(Number(b.dataset.flowItem))));
+        });
+        el.querySelector('[data-open-validate]')?.addEventListener('click', () => renderLines(day, me, 'plan'));
         el.querySelectorAll('[data-open-stock]').forEach(b => b.addEventListener('click', () => { if (session) session.stockView = b.dataset.openStock; openTab('stock'); }));
         el.querySelectorAll('[data-receive-order]').forEach(b => b.addEventListener('click', () => renderReceive(Number(b.dataset.receiveOrder))));
-        el.querySelectorAll('[data-new]').forEach(b => b.addEventListener('click', () => renderNewBatch(find(Number(b.dataset.new)))));
-        el.querySelectorAll('[data-batch]').forEach(b => b.addEventListener('click', () => renderBatch(Number(b.dataset.batch))));
         el.querySelector('[data-close-day]')?.addEventListener('click', () => renderEndDay(day, me, 1));
         // Retour d'une action ouverte depuis l'assistant « Koniec dnia » (lots, NC, perte) : on reprend à son étape.
         if (resumeEndDay) { const back = resumeEndDay; resumeEndDay = null; renderEndDay(day, me, back); }
@@ -1076,6 +1206,7 @@
     // mode « plan » : lignes du plan (+ produits hors plan) ; mode « encode » : produits commandés en boutons (le reste
     // par la barre de recherche), et les mêmes lignes à droite. Lignes gardées dans vstate (saisies non validées).
     let vstate = null;
+    const freshV = (date) => ({date, lines: {}, added: [], search: '', closeNote: '', closeError: '', gaps: false});
     function lineState(i) {
         return {
             id: i.item_id, produced: i.line ? i.line.produced : (i.planned !== null ? Math.max(i.planned, i.produced) : i.produced),
@@ -1085,7 +1216,7 @@
     function renderLines(day, me, mode, focus) {
         resetIdle();
         longIdle = true;
-        if (!vstate || vstate.date !== day.date) vstate = {date: day.date, lines: {}, added: [], search: '', closeNote: '', closeError: '', gaps: false};
+        if (!vstate || vstate.date !== day.date) vstate = freshV(day.date);
         vstate.mode = mode;
         vstate.me = me || vstate.me;
         const locked = !!(day.closed && day.closed.locked);
@@ -1117,7 +1248,13 @@
             ${locked ? '' : `${mode === 'plan' ? `<button type="button" class="kiosk-btn" data-kv-encode>＋ ${esc(t('kv_off_plan'))}</button>` : ''}
             <button type="button" class="kiosk-btn is-primary" data-kv-all ${all.length ? '' : 'disabled'}>${icon('check')} ${esc(t('kv_validate_day'))}</button>`}</div>`;
         let body;
-        if (mode === 'encode') {
+        if (mode === 'single') {
+            const one = all.filter(i => i.item_id === focus);
+            body = `<div class="kv-crumb"><button type="button" class="kiosk-btn is-small kv-back" data-kv-back>${icon('chevron-left')} ${esc(one[0] ? one[0].name : t('tab_production'))}</button>
+                <div><h2>${esc(t('kf_finish_title'))}</h2><p class="kiosk-muted">${esc(t('kf_finish_help'))}</p></div></div>${lockedNote}
+                <div class="kv-vhead"><span>${esc(t('kv_col_product'))}</span><span>${esc(t('day_col_done'))}</span><span>${esc(t('kv_col_waste'))}</span><span></span></div>
+                <div class="kv-lines">${one.map(lineHtml).join('')}</div>`;
+        } else if (mode === 'encode') {
             body = `<div class="kv-crumb">${back}<div><h2>${esc(t('kv_encode_title'))}</h2><p class="kiosk-muted">${esc(t('kv_encode_page_help'))}</p></div></div>${lockedNote}
                 <div class="kv-encode">
                     <div class="kv-pick"><label class="kv-search">${icon('search', 'is-sm')}<input type="search" data-kv-search value="${esc(vstate.search)}" placeholder="${esc(t('kv_search_ph', {n: day.catalog.length}))}" autocomplete="off" enterkeyhint="search"></label>
@@ -1162,20 +1299,23 @@
     // Receptura na zamówienie (27/10/2026, makieta 1) : zamówione kartony × sztuki w kartonie + strata produkcyjna
     // (0 / 2 / 5 % albo inna) → sztuki do zrobienia i składniki ; opakowania na zamówienie (bez straty).
     // « Zatwierdź » : partia z ilością do zrobienia, potem numer partii każdego składnika (zdjęcie worka, OCR albo ręcznie).
-    async function renderOrderRecipe(day, i) {
+    async function renderOrderRecipe(day, i, opts) {
+        opts = opts || {};
         longIdle = true;
         resetIdle();
         let r;
         try { r = await api('GET', `/kiosk/recipes/${i.item_id}`, undefined, true); } catch (err) { toast(err.message, true); return; }
         const ppc = r.basis === 'carton' ? r.ppc : null;
         const ordered = (day.ordered || []).filter(o => o.item_id === i.item_id).reduce((s, o) => s + (Number(o.cartons) || 0), 0);
+        // Flux Produkcja : les pièces déjà choisies (pas de cartons à saisir).
+        const pieces = opts.pieces !== undefined && opts.pieces !== null;
         const st = {
-            cartons: ppc ? (ordered > 0 ? ordered : (i.planned ? Math.max(1, Math.ceil(i.planned / ppc - 1e-9)) : 1)) : null,
-            qty: ppc ? null : (i.planned || (r.basis === 'kg' ? r.recipe_yield : 1) || 1),
+            cartons: ppc && !pieces ? (ordered > 0 ? ordered : (i.planned ? Math.max(1, Math.ceil(i.planned / ppc - 1e-9)) : 1)) : null,
+            qty: pieces ? opts.pieces : (ppc ? null : (i.planned || (r.basis === 'kg' ? r.recipe_yield : 1) || 1)),
             loss: Number(day.recipe_loss_pct ?? 2),
         };
-        const back = () => renderLines(day, vstate.me, vstate.mode, i.item_id);
-        const base = () => ppc ? st.cartons * ppc : st.qty;
+        const back = opts.back || (() => renderLines(day, vstate.me, vstate.mode, i.item_id));
+        const base = () => ppc && !pieces ? st.cartons * ppc : st.qty;
         const toMake = () => {
             const q = base() * (1 + st.loss / 100);
             return ppc || r.unit === 'szt' ? Math.ceil(q - 1e-9) : Math.round(q * 1000) / 1000;
@@ -1193,8 +1333,12 @@
             const custom = ![0, 2, 5].some(v => Math.abs(st.loss - v) < 1e-9);
             el.querySelector('[data-or-body]').innerHTML = `
                 <section class="kiosk-card or-head">
-                    <div class="or-col"><span class="kv-lbl">${esc(t('or_order'))}</span>
-                        ${ppc ? `<div class="kv-step"><button type="button" data-or-step="-1" aria-label="−">${icon('minus')}</button><input class="kv-num" data-or-cartons inputmode="numeric" value="${st.cartons}">
+                    <div class="or-col"><span class="kv-lbl">${esc(t(pieces ? 'kf_or_pieces' : 'or_order'))}</span>
+                        ${ppc && pieces ? `<div class="kv-step"><button type="button" data-or-pstep="-1" aria-label="−">${icon('minus')}</button><input class="kv-num" data-or-pieces inputmode="numeric" value="${st.qty}">
+                            <button type="button" data-or-pstep="1" aria-label="+">${icon('plus')}</button><small>${esc(r.unit)}</small></div>
+                            <p class="or-calc">${esc(cartonsOf(st.qty, {ppc, unit: r.unit}))}</p>
+                            ${opts.allowed !== undefined && opts.allowed !== null && st.qty > opts.allowed + 1e-6 ? `<p class="kv-hint is-bad">${icon('triangle-alert', 'is-sm')} ${esc(opts.allowed === 0 ? t('kf_over_none') : t('kf_over', {q: fmt(st.qty) + ' ' + r.unit, max: fmt(opts.allowed) + ' ' + r.unit}))}</p>` : ''}`
+                        : ppc ? `<div class="kv-step"><button type="button" data-or-step="-1" aria-label="−">${icon('minus')}</button><input class="kv-num" data-or-cartons inputmode="numeric" value="${st.cartons}">
                             <button type="button" data-or-step="1" aria-label="+">${icon('plus')}</button><small>${esc(t('prod_cartons_short'))}</small></div>
                             <p class="or-calc">${esc(t('or_calc', {c: fmt(st.cartons), ppc, q: fmt(base()), u: r.unit}))}</p>`
                         : `<div class="kv-step"><input class="kv-num" data-or-qty inputmode="decimal" value="${String(st.qty).replace('.', ',')}"><small>${esc(r.basis === 'kg' ? 'kg' : (r.basis === 'recipe' ? t('or_recipes') : r.unit))}</small></div>`}
@@ -1232,6 +1376,7 @@
             if (btn) btn.disabled = true;
             try {
                 batch = await api('POST', '/kiosk/production', {item_id: i.item_id, quantity: Math.round(q * 1000) / 1000, client_uuid: id}, true);
+                if (session && session.flowQ) delete session.flowQ[i.item_id];
                 renderBatch(batch.id, t('or_saved', {lot: batch.lot_code}), batch, material);
             } catch (err) { if (btn) btn.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
         };
@@ -1241,12 +1386,15 @@
             if (line) return go(Number(line.dataset.mat), null);
             const step = e.target.closest('[data-or-step]');
             if (step) { st.cartons = Math.max(1, st.cartons + Number(step.dataset.orStep)); return draw(); }
+            const pstep = e.target.closest('[data-or-pstep]');
+            if (pstep) { st.qty = Math.max(ppc, st.qty + Number(pstep.dataset.orPstep) * ppc); return draw(); }
             const loss = e.target.closest('[data-or-loss]');
             if (loss) { st.loss = Number(loss.dataset.orLoss); return draw(); }
         });
         body.addEventListener('change', (e) => {
             const n = (v) => Number(String(v).replace(',', '.').replace(/\s/g, ''));
             if (e.target.matches('[data-or-cartons]')) { const v = Math.round(n(e.target.value)); if (Number.isFinite(v) && v > 0) st.cartons = v; return draw(); }
+            if (e.target.matches('[data-or-pieces]')) { const v = Math.round(n(e.target.value)); if (Number.isFinite(v) && v > 0) st.qty = v; return draw(); }
             if (e.target.matches('[data-or-qty]')) { const v = n(e.target.value); if (Number.isFinite(v) && v > 0) st.qty = v; return draw(); }
             if (e.target.matches('[data-or-loss-custom]')) { const v = n(e.target.value); if (Number.isFinite(v) && v >= 0 && v <= 50) st.loss = v; return draw(); }
         });
@@ -1335,6 +1483,7 @@
         const redraw = (focus) => renderLines(day, vstate.me, vstate.mode, focus);
         const byId = (id) => all.find(i => i.item_id === Number(id));
         el.querySelector('[data-kv-back]')?.addEventListener('click', () => {
+            if (mode === 'single') return renderFlowItem(vstate.focus);
             if (mode === 'encode' && vstate.from === 'plan') { vstate.from = null; return renderLines(day, vstate.me, 'plan'); }
             renderProduction();
         });
@@ -1379,13 +1528,17 @@
                     if (L.error) return redraw(i.item_id);
                     L.busy = true;
                     ok.disabled = true;
+                    let saved = false;
                     try {
                         day = await sendLine(day, i, L);
                         const fresh = day.items.find(x => x.item_id === i.item_id);
                         vstate.lines[i.item_id] = fresh ? lineState(fresh) : lineState(i);
                         vstate.added = vstate.added.filter(x => x !== i.item_id);
-                        toast(t('kv_line_saved', {name: i.name}));
+                        saved = true;
                     } catch (err) { L.busy = false; L.error = err.offline ? t('offline_retry') : err.message; }
+                    // Fin d'une production (flux) : retour à la liste à produire.
+                    if (saved && vstate.mode === 'single') return renderProduction(t('kv_line_saved', {name: i.name}));
+                    if (saved) toast(t('kv_line_saved', {name: i.name}));
                     return renderLines(day, vstate.me, vstate.mode, i.item_id);
                 }
             });
@@ -2226,41 +2379,6 @@
         form.description.focus();
     }
 
-    function renderNewBatch(item) {
-        resetIdle();
-        // Z partią produkcyjną : jedna partia naraz (albo reszta, gdy mniej niż partia).
-        const rest = item.planned !== null && item.planned !== undefined ? Math.max(0, item.planned - (item.produced || 0)) : 0;
-        const left = item.batch ? (rest > 0 ? Math.min(rest, item.batch) : item.batch) : rest;
-        const cartons = item.ppc ? Math.floor(left / item.ppc) : 0;
-        const loose = item.ppc ? Math.round(left - cartons * item.ppc) : left;
-        el.innerHTML = header() + `<section class="kiosk-card"><h2>${esc(t('prod_new', {name: item.name}))}</h2>
-            <form class="kiosk-form" data-new-batch>
-                ${item.ppc ? `<label>${esc(t('prod_cartons', {ppc: item.ppc}))}<input name="cartons" inputmode="numeric" value="${cartons || ''}"></label>
-                    <label>${esc(t('prod_loose', {unit: item.unit}))}<input name="loose" inputmode="decimal" value="${loose || ''}"></label>`
-                    : `<label>${esc(t('prod_quantity', {unit: item.unit}))}<input name="loose" inputmode="decimal" value="${left ? fmt(left) : ''}"></label>`}
-                <p class="kiosk-status" data-total></p>
-            </form><p class="kiosk-error" data-error></p>
-            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-cancel>${esc(t('cancel'))}</button>
-                <button type="button" class="kiosk-btn is-primary" data-save>${esc(t('prod_save'))}</button></div></section>`;
-        const form = el.querySelector('[data-new-batch]');
-        const num = (v) => { const n = Number(String(v || '').replace(',', '.').replace(/\s/g, '')); return Number.isFinite(n) ? n : NaN; };
-        const total = () => (item.ppc ? num(form.cartons.value) * item.ppc : 0) + num(form.loose.value);
-        const show = () => { const q = total(); el.querySelector('[data-total]').textContent = Number.isFinite(q) && q > 0 ? t('prod_total', {q: qty(q, item)}) : ''; };
-        form.addEventListener('input', () => { resetIdle(); show(); });
-        show();
-        const id = uuid();
-        el.querySelector('[data-cancel]').addEventListener('click', () => renderProduction());
-        el.querySelector('[data-save]').addEventListener('click', async (e) => {
-            const q = total();
-            if (!Number.isFinite(q) || q <= 0) { el.querySelector('[data-error]').textContent = t('prod_qty_required'); return; }
-            e.target.disabled = true;
-            try {
-                const b = await api('POST', '/kiosk/production', {item_id: item.item_id, quantity: Math.round(q * 1000) / 1000, client_uuid: id}, true);
-                renderBatch(b.id, t('prod_saved', {lot: b.lot_code}), b);
-            } catch (err) { e.target.disabled = false; el.querySelector('[data-error]').textContent = err.offline ? t('offline_retry') : err.message; }
-        });
-    }
-
     // Partia : surowce i opakowania z receptury, numer partii (wpisany, « jak ostatnio » albo OCR ze zdjęcia etykiety).
     async function renderBatch(id, message, preloaded, focus) {
         stopScan();
@@ -2292,7 +2410,8 @@
             <section class="kiosk-card kiosk-batch-head ${b.cancelled ? 'is-cancelled' : ''}"><div><h2>${esc(item.name)}</h2>
                 <p class="kiosk-status">${esc(t('prod_batch_line', {lot: b.lot_code, q: qty(b.quantity, item)}))}${b.cancelled ? ' · ' + esc(t('prod_cancelled')) : ''}</p>
                 <p class="kiosk-muted">${esc(t('prod_lots', {done: b.lots_done, total: b.lots_total}))}${b.employee ? ' · ' + esc(b.employee) : ''} · ${esc(hhmm(b.created_at))}</p></div>
-                ${b.editable ? `<button type="button" class="kiosk-btn is-small is-danger-soft" data-cancel-batch>${esc(t('prod_cancel'))}</button>` : ''}</section>
+                ${b.editable ? `<div class="kf-batch-actions">${b.cancelled ? '' : `<button type="button" class="kiosk-btn is-primary" data-kf-finish>${icon('check')} ${esc(t('kf_finish_short'))}</button>`}
+                    <button type="button" class="kiosk-btn is-small is-danger-soft" data-cancel-batch>${esc(t('prod_cancel'))}</button></div>` : ''}</section>
             ${b.ingredients.length ? '' : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('prod_no_recipe'))}</p></section>`}
             ${ingredients.length ? `<h2 class="kiosk-section">${esc(t('lot_ingredients'))}</h2>${ingredients.map(row).join('')}` : ''}
             ${packaging.length ? `<details class="kiosk-section" ${packaging.some(g => g.lot_number || g.material_id === open) ? 'open' : ''}><summary>${esc(t('lot_packaging', {n: packaging.length}))}</summary>${packaging.map(row).join('')}</details>` : ''}`;
@@ -2305,7 +2424,8 @@
             if (!was) { card.classList.add('is-open'); card.querySelector('.kiosk-lot-body').hidden = false; card.scrollIntoView({block: 'center', behavior: 'smooth'}); }
             resetIdle();
         }));
-        el.querySelector('[data-back]').addEventListener('click', () => { stopScan(); renderProduction(); });
+        el.querySelector('[data-back]').addEventListener('click', () => { stopScan(); if (resumeEndDay || !b.item_id) renderProduction(); else renderFlowItem(b.item_id); });
+        el.querySelector('[data-kf-finish]')?.addEventListener('click', () => { stopScan(); finishItem(b.item_id); });
         el.querySelector('[data-cancel-batch]')?.addEventListener('click', async (e) => {
             if (!window.confirm(t('prod_cancel_confirm', {lot: b.lot_code}))) return;
             e.target.disabled = true;

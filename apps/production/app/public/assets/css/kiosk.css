@@ -846,3 +846,36 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .kv-table tr.is-me td { background: var(--k-fill); }
 .kb-basis { margin: 12px 4px 0; }
 @media (max-width: 700px) { .kb-big { font-size: 34px; } .kb-figures .is-right { text-align: left; align-items: flex-start; } }
+
+/* --- Produkcja : flux de l'opérateur (liste à produire → produit → pièces → recette → lots → fait + rebuts) --- */
+.kf-day { display: flex; gap: 18px; align-items: center; }
+.kf-day .kv-plan-icon { width: 54px; height: 54px; border-radius: 16px; }
+.kf-day.is-closed .kv-plan-icon { background: var(--k-ok); }
+.kf-day .kiosk-btn { flex: 0 0 auto; }
+.kf-list { display: grid; gap: 10px; }
+.kf-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 14px; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; padding: 16px 18px; border: 1px solid var(--k-line); }
+.kf-row:active { transform: scale(.995); }
+.kf-row h3 { margin: 0; font-size: 20px; }
+.kf-row .kiosk-muted { margin: 2px 0 0; font-size: 14px; }
+.kf-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.kf-tags .kiosk-tag { margin-top: 0; background: var(--k-fill); font-size: 13.5px; }
+.kf-tags .kiosk-tag.is-ship { background: #dbe8f5; }
+.kf-tags .kiosk-tag.is-late { background: var(--k-danger-50); color: var(--k-danger); }
+.kf-state { font-size: 15px; font-weight: 600; color: var(--k-muted); text-align: right; max-width: 260px; }
+.kf-row.is-progress { border-left: 5px solid var(--k-warn); }
+.kf-row.is-progress .kf-state { color: var(--k-warn); }
+.kf-row.is-ok { border-left: 5px solid var(--k-ok); }
+.kf-row.is-ok .kf-state { color: var(--k-ok); }
+.kf-go { color: var(--k-muted); }
+.kf-other h2 { margin: 0 0 10px; font-size: 19px; }
+.kf-found { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 10px; }
+.kf-found:empty { display: none; }
+.kf-qty h2, .kf-today h2 { margin: 0 0 4px; font-size: 21px; }
+.kf-qty-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 14px 0 6px; }
+.kv-step.is-lg button { width: 64px; height: 64px; }
+.kv-step.is-lg .kv-num { width: 150px; height: 64px; font-size: 30px; }
+.kf-qty .kv-hint { margin: 8px 0 0; }
+.kf-next { min-height: 58px; font-size: 18px; padding: 0 22px; display: inline-flex; align-items: center; gap: 6px; }
+.kf-today .kiosk-batches { margin: 10px 0; }
+.kf-batch-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 700px) { .kf-row { grid-template-columns: minmax(0, 1fr) auto; } .kf-state { grid-column: 1 / -1; text-align: left; max-width: none; } .kf-go { display: none; } .kf-day { flex-wrap: wrap; } }
