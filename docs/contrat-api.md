@@ -2951,6 +2951,13 @@ repli, sans API ou si le serveur n'atteint pas Overpass.
   `estimationsCols`, `estimationsNote`, `terrain` (≤ 12 × 2), `fluxMesures` (≤ 6 × 4 : axe, véhicules/jour, sens, source · date),
   `terrainNote` et `motOutil` (« l'outil repère, l'étude confirme ») ; les distances des concurrents portent la distance par
   la route quand l'écran l'a (`0,4 km · 1,3 km par la route`).
+- `POST /scouting/dossier.pdf` accepte aussi `lang` (`fr` par défaut, ou `nl`) : la langue choisie dans la barre du
+  dossier (bascule FR | NL), avant le téléchargement. L'écran envoie alors toutes ses chaînes en néerlandais, dans la
+  forme du plan d'expansion (`€ 1.379.045`, `15,6%`, dates `nl-BE` ; provinces et arrondissements de
+  `scouting-plan-i18n.js`, genres de l'étude locale traduits, commune sous son nom local) ; le serveur traduit ses
+  libellés fixes, le pied de page (`genereLib` « Gegenereerd op », comme le plan) et nomme le fichier
+  `vestigingsdossier-{commune}-{date}.pdf`. L'impression et le CSV suivent la même langue ; le choix est gardé dans le
+  navigateur pour le dossier suivant.
 - `tiles` : inventaire seulement ; `GET /scouting/tiles/{secteur}` renvoie le JSON `{ t, c, b, p }` déposé
   par le navigateur (communes, commerces, nœuds `place`). 404 si le secteur n'est pas en cache.
 

@@ -1117,3 +1117,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-27T15:43:34Z production : unité cliquable dans l'affectation des factures (kg / g / l / ml / szt), fiche matière mise à jour
 2026-10-27T15:51:04Z production : tablette, « Zrobione » en pièces avec équivalent en cartons
 2026-10-27T15:59:04Z production : recette sur commande (cartons × pièces + perte), lots des ingrédients ligne par ligne (migration 110)
+2026-10-27T16:20:14Z scouting : dossier d'implantation en français ou en néerlandais, bascule FR | NL avant le téléchargement (page, carte, PDF, impression, CSV)

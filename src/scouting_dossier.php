@@ -18,20 +18,23 @@ function wr_scouting_dossier_pdf(): array
 {
     $d = scoutingDossierValide(body());
     if ($d === null) { http_response_code(422); return ['error' => 'dossier incomplet : commune et chiffres attendus']; }
-    $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'
+    $nl = $d['lang'] === 'nl';
+    $doc = '<!doctype html><html lang="' . $d['lang'] . '"><head><meta charset="utf-8"><title>'
         . htmlspecialchars($d['titre'], ENT_QUOTES, 'UTF-8') . '</title></head><body>'
         . scoutingDossierHtml($d) . '</body></html>';
     $pdf = rapPdfRendu($doc, [
         'magasin' => $d['commune'],
-        'rapport' => 'Étude d’implantation',
-        'genere' => date('d/m/Y à H:i'),
+        'rapport' => $nl ? 'Vestigingsstudie' : 'Étude d’implantation',
+        // le pied de page dans la langue du dossier, comme le plan d'expansion
+        'genere' => date(scoutingPlanLib($d['lang'])['dateHeure']),
+        'genereLib' => scoutingPlanLib($d['lang'])['genere'],
         'envoye' => '',
     ]);
     if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
     journalAdd('CEO', 'Scouting', $d['commune'],
-        'Dossier d’implantation édité — ' . $d['commune'] . ' · ' . $d['zone'] . ' · score ' . $d['score'] . '/100');
+        'Dossier d’implantation édité' . ($nl ? ' en néerlandais' : '') . ' — ' . $d['commune'] . ' · ' . $d['zone'] . ' · score ' . $d['score'] . '/100');
     header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="dossier-implantation-' . scoutingSlug($d['commune'])
+    header('Content-Disposition: attachment; filename="' . ($nl ? 'vestigingsdossier-' : 'dossier-implantation-') . scoutingSlug($d['commune'])
         . '-' . date('Y-m-d') . '.pdf"');
     echo $pdf;
     exit;
@@ -78,8 +81,11 @@ function scoutingDossierValide(array $b): ?array
     }
     $notes = [];
     foreach ((array) ($b['notes'] ?? []) as $n) { if (is_scalar($n) && trim((string) $n) !== '') { $notes[] = $s($n, 500); } if (count($notes) >= 6) { break; } }
+    // la langue du dossier, choisie à l'écran avant le téléchargement : FR ou NL
+    $nl = ($b['lang'] ?? '') === 'nl';
     return [
-        'titre' => $s($b['titre'] ?? ($commune . ' — étude d’implantation'), 160),
+        'lang' => $nl ? 'nl' : 'fr',
+        'titre' => $s($b['titre'] ?? ($commune . ($nl ? ' — vestigingsstudie' : ' — étude d’implantation')), 160),
         'commune' => $commune,
         'geo' => $s($b['geo'] ?? '', 160),
         'date' => $s($b['date'] ?? date('d/m/Y'), 60),
@@ -93,7 +99,7 @@ function scoutingDossierValide(array $b): ?array
         // la page de garde : à 5 et 10 minutes en voiture, trois lignes sur
         // le magasin, le CA prévu avec la montée en charge
         'garde' => $lignes($b['garde'] ?? [], 4, 6, 60),
-        'gardeCols' => $lignes([$b['gardeCols'] ?? []], 3, 1, 40)[0] ?? ['5 min en voiture', '10 min en voiture', 'Zone étudiée'],
+        'gardeCols' => $lignes([$b['gardeCols'] ?? []], 3, 1, 40)[0] ?? ($nl ? ['5 min met de auto', '10 min met de auto', 'Bestudeerde zone'] : ['5 min en voiture', '10 min en voiture', 'Zone étudiée']),
         'gardeLignes' => $lignes($b['gardeLignes'] ?? [], 3, 6, 200),
         'rampe' => $lignes($b['rampe'] ?? [], 5, 5, 60),
         'rampeNote' => $s($b['rampeNote'] ?? '', 400),
@@ -114,7 +120,7 @@ function scoutingDossierValide(array $b): ?array
         'reseau' => $lignes($b['reseau'] ?? [], 12, 12, 160),
         'reseauNote' => $s($b['reseauNote'] ?? '', 1400),
         'montee' => $s($b['montee'] ?? '', 500),
-        'monteeCols' => $lignes([$b['monteeCols'] ?? []], 4, 1, 30)[0] ?? ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Année 4 et + · 100 %'],
+        'monteeCols' => $lignes([$b['monteeCols'] ?? []], 4, 1, 30)[0] ?? ($nl ? ['Jaar 1 · 70%', 'Jaar 2 · 80%', 'Jaar 3 · 90%', 'Jaar 4 en later · 100%'] : ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Année 4 et + · 100 %']),
         'monteeRows' => $lignes($b['monteeRows'] ?? [], 6, 12, 80),
         'cartes' => (static function ($v) use ($s, $lignes): array {
             $out = [];
@@ -156,7 +162,7 @@ function scoutingDossierValide(array $b): ?array
         // construite par temps de parcours), le relevé terrain de la zone, les flux mesurés, et le mot sur
         // ce que l'outil fait et ne fait pas.
         'estimations' => $lignes($b['estimations'] ?? [], 4, 10, 120),
-        'estimationsCols' => $lignes([$b['estimationsCols'] ?? []], 3, 1, 50)[0] ?? ['Rayon', 'Zone construite', 'Lecture'],
+        'estimationsCols' => $lignes([$b['estimationsCols'] ?? []], 3, 1, 50)[0] ?? ($nl ? ['Straal', 'Opgebouwde zone', 'Duiding'] : ['Rayon', 'Zone construite', 'Lecture']),
         'estimationsNote' => $s($b['estimationsNote'] ?? '', 900),
         'terrain' => $lignes($b['terrain'] ?? [], 2, 12, 320),
         'fluxMesures' => $lignes($b['fluxMesures'] ?? [], 4, 6, 90),
@@ -169,6 +175,8 @@ function scoutingDossierValide(array $b): ?array
 function scoutingDossierHtml(array $d): string
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    // les libellés fixes, dans la langue du dossier ; le reste arrive traduit de l'écran
+    $L = static fn (string $fr, string $nl): string => ($d['lang'] ?? 'fr') === 'nl' ? $nl : $fr;
     $logo = rapLogoDataUri();
     $css = '<style>
       .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
@@ -230,7 +238,7 @@ function scoutingDossierHtml(array $d): string
         . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">'
             : '<strong style="font-size:12pt">L’Atelier by</strong>') . '</td>'
-        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Étude d’implantation<br>éditée le ' . $e($d['date']) . '</td>'
+        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">' . $L('Étude d’implantation<br>éditée le ', 'Vestigingsstudie<br>opgemaakt op ') . $e($d['date']) . '</td>'
         . '</tr></table>'
         . '<table width="100%" cellpadding="0" cellspacing="0"><tr><td valign="top">'
         . '<div class="serif h1">' . $e($d['titre']) . '</div>'
@@ -250,19 +258,19 @@ function scoutingDossierHtml(array $d): string
     // elle porte sa légende, et la page doit tenir en une
     $garde = $d['garde'] !== [];
     if ($d['carte'] !== '') {
-        $h .= ($garde ? '' : '<div class="sec">Situation</div>') . '<img class="carte" src="' . $d['carte'] . '" alt="">'
-            . '<div class="legende"' . ($garde ? ' style="margin-bottom:3mm"' : '') . '>' . $e($d['carteNote'] !== '' ? $d['carteNote'] : 'Fond de carte © OpenStreetMap.') . '</div>';
+        $h .= ($garde ? '' : '<div class="sec">' . $L('Situation', 'Ligging') . '</div>') . '<img class="carte" src="' . $d['carte'] . '" alt="">'
+            . '<div class="legende"' . ($garde ? ' style="margin-bottom:3mm"' : '') . '>' . $e($d['carteNote'] !== '' ? $d['carteNote'] : $L('Fond de carte © OpenStreetMap.', 'Achtergrondkaart © OpenStreetMap.')) . '</div>';
     }
 
     // La page de garde : sous la carte, à 5 et 10 minutes en voiture, le
     // magasin en trois lignes, le CA prévu avec la montée en charge. Le reste
     // du dossier commence sur la page suivante.
     if ($d['garde'] !== [] || $d['gardeLignes'] !== [] || $d['rampe'] !== []) {
-        $h .= '<div class="sec">En bref</div>';
+        $h .= '<div class="sec">' . $L('En bref', 'In het kort') . '</div>';
         if ($d['garde'] !== [] || $d['gardeLignes'] !== []) {
             $h .= '<table class="t garde" cellpadding="0" cellspacing="0">';
             if ($d['garde'] !== []) {
-                $c = $d['gardeCols'] + ['5 min en voiture', '10 min en voiture', 'Zone étudiée'];
+                $c = $d['gardeCols'] + [$L('5 min en voiture', '5 min met de auto'), $L('10 min en voiture', '10 min met de auto'), $L('Zone étudiée', 'Bestudeerde zone')];
                 $h .= '<tr><th class="l"></th><th class="v5">' . $e($c[0]) . '</th><th class="v10">' . $e($c[1]) . '</th><th>' . $e($c[2]) . '</th></tr>';
                 foreach ($d['garde'] as $r) {
                     $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td><td class="v5" style="white-space:nowrap"><b>' . $e($r[1]) . '</b></td>'
@@ -276,7 +284,7 @@ function scoutingDossierHtml(array $d): string
             $h .= '</table>';
         }
         if ($d['rampe'] !== []) {
-            $h .= '<table class="t garde" cellpadding="0" cellspacing="0"><tr><th class="l">CA prévu TTC · montée en charge</th><th>Par semaine</th><th>Par mois</th><th>Sur l’année</th><th>Clients / jour</th></tr>';
+            $h .= '<table class="t garde" cellpadding="0" cellspacing="0"><tr><th class="l">' . $L('CA prévu TTC · montée en charge', 'Geplande omzet incl. btw · aanloop') . '</th><th>' . $L('Par semaine', 'Per week') . '</th><th>' . $L('Par mois', 'Per maand') . '</th><th>' . $L('Sur l’année', 'Op jaarbasis') . '</th><th>' . $L('Clients / jour', 'Klanten / dag') . '</th></tr>';
             $n = count($d['rampe']);
             foreach ($d['rampe'] as $i => $r) {
                 $h .= '<tr' . ($i === $n - 1 ? ' class="tot"' : '') . '><td class="l">' . $e($r[0]) . '</td><td style="white-space:nowrap">' . $e($r[1]) . '</td>'
@@ -288,7 +296,7 @@ function scoutingDossierHtml(array $d): string
     }
 
     if ($d['essentiel'] !== []) {
-        $h .= '<div class="sec">L’essentiel</div><table class="grille" cellpadding="0" cellspacing="0"><tr>';
+        $h .= '<div class="sec">' . $L('L’essentiel', 'Kerncijfers') . '</div><table class="grille" cellpadding="0" cellspacing="0"><tr>';
         $w = (int) floor(100 / max(1, count($d['essentiel'])));
         foreach ($d['essentiel'] as $t) {
             $h .= '<td width="' . $w . '%" valign="top" class="tile"><div class="k">' . $e($t[0]) . '</div>'
@@ -298,8 +306,8 @@ function scoutingDossierHtml(array $d): string
     }
 
     if ($d['marche'] !== []) {
-        $h .= '<div class="sec">Le marché</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
-            . '<th class="l">Mesure</th><th>Valeur</th><th class="l" style="padding-left:6mm">Source · calcul</th></tr>';
+        $h .= '<div class="sec">' . $L('Le marché', 'De markt') . '</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
+            . '<th class="l">' . $L('Mesure', 'Maatstaf') . '</th><th>' . $L('Valeur', 'Waarde') . '</th><th class="l" style="padding-left:6mm">' . $L('Source · calcul', 'Bron · berekening') . '</th></tr>';
         foreach ($d['marche'] as $r) {
             $h .= '<tr><td class="l">' . $e($r[0]) . '</td><td style="white-space:nowrap"><b>' . $e($r[1]) . '</b></td>'
                 . '<td class="l mut" style="padding-left:6mm">' . $e($r[2]) . '</td></tr>';
@@ -308,9 +316,9 @@ function scoutingDossierHtml(array $d): string
     }
 
     if ($d['estimations'] !== []) {
-        $c = $d['estimationsCols'] + ['Rayon', 'Zone construite', 'Lecture'];
-        $h .= '<div class="sec">Deux estimations</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
-            . '<th class="l">Mesure</th><th>' . $e($c[0]) . '</th><th class="v5">' . $e($c[1]) . '</th><th class="l" style="padding-left:6mm">' . $e($c[2]) . '</th></tr>';
+        $c = $d['estimationsCols'] + [$L('Rayon', 'Straal'), $L('Zone construite', 'Opgebouwde zone'), $L('Lecture', 'Duiding')];
+        $h .= '<div class="sec">' . $L('Deux estimations', 'Twee ramingen') . '</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
+            . '<th class="l">' . $L('Mesure', 'Maatstaf') . '</th><th>' . $e($c[0]) . '</th><th class="v5">' . $e($c[1]) . '</th><th class="l" style="padding-left:6mm">' . $e($c[2]) . '</th></tr>';
         foreach ($d['estimations'] as $r) {
             $h .= '<tr><td class="l">' . $e($r[0]) . '</td><td style="white-space:nowrap">' . $e($r[1]) . '</td><td class="v5" style="white-space:nowrap"><b>' . $e($r[2]) . '</b></td>'
                 . '<td class="l mut" style="padding-left:6mm">' . $e($r[3]) . '</td></tr>';
@@ -318,7 +326,7 @@ function scoutingDossierHtml(array $d): string
         $h .= '</table>' . ($d['estimationsNote'] !== '' ? '<div class="methode">' . $e($d['estimationsNote']) . '</div>' : '');
     }
 
-    $h .= '<div class="sec">La concurrence, en détail</div>';
+    $h .= '<div class="sec">' . $L('La concurrence, en détail', 'De concurrentie in detail') . '</div>';
     if ($d['concurrenceNote'] !== '') { $h .= '<div class="methode" style="color:#221E1A">' . $e($d['concurrenceNote']) . '</div>'; }
     if ($d['ecartesNote'] !== '') { $h .= '<div class="methode">' . $e($d['ecartesNote']) . '</div>'; }
     if ($d['cartes'] !== []) {
@@ -326,14 +334,14 @@ function scoutingDossierHtml(array $d): string
         foreach ($d['cartes'] as $i => $c) {
             $r = $c['ligne']; $f = $c['fiche']; $fort = !empty($r[6]); $ch = (string) ($r[7] ?? '');
             $h .= '<table class="ccard' . ($fort ? ' fort' : '') . '" width="100%" cellpadding="0" cellspacing="0">'
-                . '<tr><td class="chead" colspan="2"><span class="mut">' . ($i + 1) . '</span> <b>' . $e($r[0]) . '</b>' . ($ch !== '' ? ' <span class="mut">· chaîne ' . $e($ch) . '</span>' : '')
+                . '<tr><td class="chead" colspan="2"><span class="mut">' . ($i + 1) . '</span> <b>' . $e($r[0]) . '</b>' . ($ch !== '' ? ' <span class="mut">· ' . $L('chaîne', 'keten') . ' ' . $e($ch) . '</span>' : '')
                 . ' <span class="mut">' . $e($r[1]) . '</span>'
-                . '<span class="chiffres">' . $e($r[2]) . ' &nbsp;·&nbsp; ' . ($r[3] === '—' ? 'sans note' : $e($r[3]) . ' ★') . ' &nbsp;·&nbsp; ' . $e($r[4]) . ' &nbsp;·&nbsp; force ' . $e($r[5]) . ' &nbsp;·&nbsp; <span class="' . ($fort ? 'acc' : 'mut') . '">' . ($fort ? '<b>concurrent fort</b>' : 'concurrent') . '</span></span></td></tr>';
+                . '<span class="chiffres">' . $e($r[2]) . ' &nbsp;·&nbsp; ' . ($r[3] === '—' ? $L('sans note', 'zonder score') : $e($r[3]) . ' ★') . ' &nbsp;·&nbsp; ' . $e($r[4]) . ' &nbsp;·&nbsp; ' . $L('force', 'sterkte') . ' ' . $e($r[5]) . ' &nbsp;·&nbsp; <span class="' . ($fort ? 'acc' : 'mut') . '">' . ($fort ? '<b>' . $L('concurrent fort', 'sterke concurrent') . '</b>' : 'concurrent') . '</span></span></td></tr>';
             if ($f !== null) {
                 $h .= '<tr>';
-                if ($f['photo'] !== '') { $h .= '<td class="gphoto" valign="top"><img src="' . $f['photo'] . '" alt="">' . ($f['photoAuteur'] !== '' ? '<div class="gcred">photo : ' . $e($f['photoAuteur']) . '</div>' : '') . '</td>'; }
+                if ($f['photo'] !== '') { $h .= '<td class="gphoto" valign="top"><img src="' . $f['photo'] . '" alt="">' . ($f['photoAuteur'] !== '' ? '<div class="gcred">' . $L('photo : ', 'foto: ') . $e($f['photoAuteur']) . '</div>' : '') . '</td>'; }
                 $h .= '<td valign="top" class="gtxt"' . ($f['photo'] === '' ? ' colspan="2"' : '') . '>';
-                if ($f['avis'] === []) { $h .= '<div class="mut" style="font-size:7.8pt">Aucun avis rendu par Google.</div>'; }
+                if ($f['avis'] === []) { $h .= '<div class="mut" style="font-size:7.8pt">' . $L('Aucun avis rendu par Google.', 'Geen reviews teruggegeven door Google.') . '</div>'; }
                 foreach ($f['avis'] as $a) {
                     $h .= '<div class="gavis"><b>' . $e($a[1]) . ' ★</b> <span class="mut">' . $e($a[0]) . ' · ' . $e($a[2]) . '</span>' . ($a[3] !== '' ? ' — ' . $e($a[3]) : '') . '</div>';
                 }
@@ -343,16 +351,16 @@ function scoutingDossierHtml(array $d): string
         }
         if ($d['googleNote'] !== '') { $h .= '<div class="methode">' . $e($d['googleNote']) . '</div>'; }
     } elseif ($d['concurrence'] === []) {
-        $h .= '<p class="ok" style="font-size:9pt;margin:0 0 5mm">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>';
+        $h .= '<p class="ok" style="font-size:9pt;margin:0 0 5mm">' . $L('Aucune boulangerie ni pâtisserie relevée dans la zone.', 'Geen bakkerij of banketbakkerij gevonden in de zone.') . '</p>';
     } else {
         $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr>'
-            . '<th class="l">Commerce</th><th class="l">Commune · adresse</th><th>Distance</th><th>Note / 5</th><th class="l">Taille (avis)</th><th>Force</th><th class="l" style="padding-left:3mm">Lecture</th></tr>';
+            . '<th class="l">' . $L('Commerce', 'Zaak') . '</th><th class="l">' . $L('Commune · adresse', 'Gemeente · adres') . '</th><th>' . $L('Distance', 'Afstand') . '</th><th>' . $L('Note / 5', 'Score / 5') . '</th><th class="l">' . $L('Taille (avis)', 'Grootte (reviews)') . '</th><th>' . $L('Force', 'Sterkte') . '</th><th class="l" style="padding-left:3mm">' . $L('Lecture', 'Duiding') . '</th></tr>';
         foreach ($d['concurrence'] as $r) {
             $fort = !empty($r[6]);
             $ch = (string) ($r[7] ?? '');
             $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td><td class="l mut">' . $e($r[1]) . '</td>'
                 . '<td style="white-space:nowrap">' . $e($r[2]) . '</td><td>' . $e($r[3]) . '</td><td class="l mut">' . $e($r[4]) . '</td><td>' . $e($r[5]) . '</td>'
-                . '<td class="l ' . ($fort ? 'acc' : 'mut') . '" style="padding-left:3mm">' . ($fort ? '<b>concurrent fort</b>' : 'concurrent') . ($ch !== '' ? ' · chaîne ' . $e($ch) : '') . '</td></tr>';
+                . '<td class="l ' . ($fort ? 'acc' : 'mut') . '" style="padding-left:3mm">' . ($fort ? '<b>' . $L('concurrent fort', 'sterke concurrent') . '</b>' : 'concurrent') . ($ch !== '' ? ' · ' . $L('chaîne', 'keten') . ' ' . $e($ch) : '') . '</td></tr>';
         }
         $h .= '</table>';
     }
@@ -360,14 +368,14 @@ function scoutingDossierHtml(array $d): string
     // Le relevé terrain de la zone : ce qu'aucun outil ne voit — la visite, la
     // visibilité, l'accès, les flux comptés sur les axes.
     if ($d['terrain'] !== [] || $d['fluxMesures'] !== []) {
-        $h .= '<div class="sec">Le relevé terrain</div>';
+        $h .= '<div class="sec">' . $L('Le relevé terrain', 'De terreinverkenning') . '</div>';
         if ($d['terrain'] !== []) {
             $h .= '<table class="t" cellpadding="0" cellspacing="0">';
             foreach ($d['terrain'] as $r) { $h .= '<tr class="kv"><td class="l" style="width:34mm;white-space:nowrap"><b>' . $e($r[0]) . '</b></td><td class="l">' . $e($r[1]) . '</td></tr>'; }
             $h .= '</table>';
         }
         if ($d['fluxMesures'] !== []) {
-            $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">Axe</th><th>Véhicules / jour</th><th class="l" style="padding-left:4mm">Sens</th><th class="l" style="padding-left:4mm">Source · date</th></tr>';
+            $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">' . $L('Axe', 'As') . '</th><th>' . $L('Véhicules / jour', 'Voertuigen / dag') . '</th><th class="l" style="padding-left:4mm">' . $L('Sens', 'Richting') . '</th><th class="l" style="padding-left:4mm">' . $L('Source · date', 'Bron · datum') . '</th></tr>';
             foreach ($d['fluxMesures'] as $r) { $h .= '<tr><td class="l"><b>' . $e($r[0]) . '</b></td><td style="white-space:nowrap">' . $e($r[1]) . '</td><td class="l mut" style="padding-left:4mm">' . $e($r[2]) . '</td><td class="l mut" style="padding-left:4mm">' . $e($r[3]) . '</td></tr>'; }
             $h .= '</table>';
         }
@@ -377,13 +385,13 @@ function scoutingDossierHtml(array $d): string
     // (Les fiches Google vivent désormais dans la liste des concurrents ; ceci ne
     // sert plus qu'à un ancien client qui enverrait encore avisGoogle.)
     if ($d['avisGoogle'] !== [] && $d['cartes'] === []) {
-        $h .= '<div class="sec">Ce que Google dit des concurrents les plus proches</div>';
+        $h .= '<div class="sec">' . $L('Ce que Google dit des concurrents les plus proches', 'Wat Google zegt over de dichtstbijzijnde concurrenten') . '</div>';
         foreach ($d['avisGoogle'] as $f) {
             $h .= '<table class="gcard" width="100%" cellpadding="0" cellspacing="0"><tr>';
-            if ($f['photo'] !== '') { $h .= '<td class="gphoto" valign="top"><img src="' . $f['photo'] . '" alt="">' . ($f['photoAuteur'] !== '' ? '<div class="gcred">photo : ' . $e($f['photoAuteur']) . '</div>' : '') . '</td>'; }
-            $h .= '<td valign="top" class="gtxt"><div class="gnom">' . $e($f['nom']) . ' <span class="gnote">' . $e($f['note']) . ' ★</span> <span class="mut">' . (int) $f['n'] . ' avis' . ($f['dist'] !== '' ? ' · à ' . $e($f['dist']) : '') . '</span></div>'
+            if ($f['photo'] !== '') { $h .= '<td class="gphoto" valign="top"><img src="' . $f['photo'] . '" alt="">' . ($f['photoAuteur'] !== '' ? '<div class="gcred">' . $L('photo : ', 'foto: ') . $e($f['photoAuteur']) . '</div>' : '') . '</td>'; }
+            $h .= '<td valign="top" class="gtxt"><div class="gnom">' . $e($f['nom']) . ' <span class="gnote">' . $e($f['note']) . ' ★</span> <span class="mut">' . (int) $f['n'] . $L(' avis', ' reviews') . ($f['dist'] !== '' ? $L(' · à ', ' · op ') . $e($f['dist']) : '') . '</span></div>'
                 . ($f['adresse'] !== '' ? '<div class="gadr">' . $e($f['adresse']) . '</div>' : '');
-            if ($f['avis'] === []) { $h .= '<div class="mut" style="font-size:7.8pt;margin-top:1mm">Aucun avis rendu par Google.</div>'; }
+            if ($f['avis'] === []) { $h .= '<div class="mut" style="font-size:7.8pt;margin-top:1mm">' . $L('Aucun avis rendu par Google.', 'Geen reviews teruggegeven door Google.') . '</div>'; }
             foreach ($f['avis'] as $a) {
                 $h .= '<div class="gavis"><b>' . $e($a[1]) . ' ★</b> <span class="mut">' . $e($a[0]) . ' · ' . $e($a[2]) . '</span>' . ($a[3] !== '' ? ' — ' . $e($a[3]) : '') . '</div>';
             }
@@ -414,27 +422,27 @@ function scoutingDossierHtml(array $d): string
         if ($note !== '') { $h .= '<div class="legende" style="margin-top:-3mm">' . $e($note) . '</div>'; }
     };
     if ($d['indirecte'] !== [] || $d['tissu'] !== [] || $d['zonings'] !== [] || $d['ecoles'] !== [] || $d['flux'] !== []) {
-        $bandes = ['Genre', '< 1 km', '< 2 km', '< 3 km', 'Dans le rayon', 'Le plus proche'];
-        $liste('La concurrence indirecte', $d['indirecte'], $bandes, 'Ni supermarché, ni sandwicherie, ni salon de thé relevés dans le rayon.', $d['indirecteNote'], 1, true);
+        $bandes = [$L('Genre', 'Soort'), '< 1 km', '< 2 km', '< 3 km', $L('Dans le rayon', 'Binnen de straal'), $L('Le plus proche', 'Dichtstbijzijnde')];
+        $liste($L('La concurrence indirecte', 'De indirecte concurrentie'), $d['indirecte'], $bandes, $L('Ni supermarché, ni sandwicherie, ni salon de thé relevés dans le rayon.', 'Geen supermarkt, broodjeszaak of theesalon gevonden binnen de straal.'), $d['indirecteNote'], 1, true);
         if ($d['tissu'] !== []) {
-            $h .= '<div class="sec">Le tissu économique</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
-                . '<th class="l">Famille</th><th>Entreprises</th><th class="l" style="padding-left:6mm">Ce qu’on y compte</th></tr>';
+            $h .= '<div class="sec">' . $L('Le tissu économique', 'Het economisch weefsel') . '</div><table class="t" cellpadding="0" cellspacing="0"><tr>'
+                . '<th class="l">' . $L('Famille', 'Familie') . '</th><th>' . $L('Entreprises', 'Bedrijven') . '</th><th class="l" style="padding-left:6mm">' . $L('Ce qu’on y compte', 'Wat er meetelt') . '</th></tr>';
             foreach ($d['tissu'] as $r) {
                 $h .= '<tr><td class="l">' . $e($r[0]) . '</td><td style="white-space:nowrap"><b>' . $e($r[1]) . '</b></td>'
                     . '<td class="l mut" style="padding-left:6mm">' . $e($r[2]) . '</td></tr>';
             }
             $h .= '</table>';
         }
-        $liste('Les zonings et parcs d’activité', $d['zonings'], ['Zone', 'Genre', 'Distance', 'Surface', 'Entreprises'], 'Aucun zoning ni parc d’activité cartographié dans le rayon.');
-        $liste('Les écoles', $d['ecoles'], ['Niveau', '< 1 km', '< 2 km', '< 3 km', 'Dans le rayon', 'La plus proche'], 'Aucune école cartographiée dans le rayon.', $d['ecolesNote'], 1, true);
-        $liste('Les générateurs de flux', $d['flux'], $bandes, 'Ni gare, ni hôpital, ni administration, ni centre sportif relevés dans le rayon.', $d['fluxNote'], 1, true);
+        $liste($L('Les zonings et parcs d’activité', 'Bedrijventerreinen en bedrijvenparken'), $d['zonings'], ['Zone', $L('Genre', 'Soort'), $L('Distance', 'Afstand'), $L('Surface', 'Oppervlakte'), $L('Entreprises', 'Bedrijven')], $L('Aucun zoning ni parc d’activité cartographié dans le rayon.', 'Geen bedrijventerrein of bedrijvenpark in kaart gebracht binnen de straal.'));
+        $liste($L('Les écoles', 'De scholen'), $d['ecoles'], ['Niveau', '< 1 km', '< 2 km', '< 3 km', $L('Dans le rayon', 'Binnen de straal'), $L('La plus proche', 'Dichtstbijzijnde')], $L('Aucune école cartographiée dans le rayon.', 'Geen school in kaart gebracht binnen de straal.'), $d['ecolesNote'], 1, true);
+        $liste($L('Les générateurs de flux', 'De publiekstrekkers'), $d['flux'], $bandes, $L('Ni gare, ni hôpital, ni administration, ni centre sportif relevés dans le rayon.', 'Geen station, ziekenhuis, administratie of sportcentrum gevonden binnen de straal.'), $d['fluxNote'], 1, true);
         if ($d['etudeNote'] !== '') { $h .= '<div class="methode">' . $e($d['etudeNote']) . '</div>'; }
     }
 
     if ($d['reseau'] !== []) {
-        $h .= '<div class="sec">Le réseau : prévu et réel — semaine, mois, année</div>';
+        $h .= '<div class="sec">' . $L('Le réseau : prévu et réel — semaine, mois, année', 'Het netwerk: gepland en werkelijk — week, maand, jaar') . '</div>';
         if ($d['montee'] !== '') {
-            $h .= '<div class="motfin" style="margin:0 0 3mm;font-size:8.8pt"><div class="k" style="color:#8D1D2C;margin-bottom:1.2mm">La montée en charge</div>' . $e($d['montee']);
+            $h .= '<div class="motfin" style="margin:0 0 3mm;font-size:8.8pt"><div class="k" style="color:#8D1D2C;margin-bottom:1.2mm">' . $L('La montée en charge', 'De aanloop') . '</div>' . $e($d['montee']);
             if ($d['monteeRows'] !== []) {
                 $h .= '<table class="t mini" cellpadding="0" cellspacing="0" style="margin:2.5mm 0 0"><tr><th class="l"></th>';
                 foreach ($d['monteeCols'] as $c) { $h .= '<th>' . $e($c) . '</th>'; }
@@ -442,7 +450,7 @@ function scoutingDossierHtml(array $d): string
                 foreach ($d['monteeRows'] as $i => $r) {
                     $cur = (int) ($r[5] ?? 0);
                     $h .= '<tr><td class="l' . ($i === 0 ? ' ok' : '') . '">' . $e($r[0]) . '</td>';
-                    foreach ([1, 2, 3, 4] as $k) { $h .= '<td' . ($cur === $k ? ' class="cur"' : '') . ' style="white-space:nowrap">' . $e($r[$k]) . ($cur === $k ? '<div class="curk">en cours</div>' : '') . '</td>'; }
+                    foreach ([1, 2, 3, 4] as $k) { $h .= '<td' . ($cur === $k ? ' class="cur"' : '') . ' style="white-space:nowrap">' . $e($r[$k]) . ($cur === $k ? '<div class="curk">' . $L('en cours', 'lopend') . '</div>' : '') . '</td>'; }
                     $h .= '</tr>';
                 }
                 $h .= '</table>';
@@ -450,25 +458,26 @@ function scoutingDossierHtml(array $d): string
             $h .= '</div>';
         }
         $h .= '<table class="t reseau" cellpadding="0" cellspacing="0"><tr>'
-            . '<th class="l">Magasin</th><th class="l"></th><th>Par semaine</th><th>Par mois</th><th>Sur l’année</th><th>Cible de l’année</th><th>Réel / cible</th><th>Réel / plan</th></tr>';
+            . '<th class="l">' . $L('Magasin', 'Winkel') . '</th><th class="l"></th><th>' . $L('Par semaine', 'Per week') . '</th><th>' . $L('Par mois', 'Per maand') . '</th><th>' . $L('Sur l’année', 'Op jaarbasis') . '</th><th>' . $L('Cible de l’année', 'Jaardoel') . '</th><th>' . $L('Réel / cible', 'Werkelijk / doel') . '</th><th>' . $L('Réel / plan', 'Werkelijk / plan') . '</th></tr>';
         foreach ($d['reseau'] as $i => $r) {
             $sens = (string) ($r[10] ?? '');
             // deux lignes par magasin, prévu puis réel ; une seule sans réel
             $reel = ($r[2] ?? '—') !== '—' || ($r[4] ?? '—') !== '—' || ($r[6] ?? '—') !== '—';
             $sp = $reel ? ' rowspan="2"' : '';
-            $h .= '<tr class="' . ($reel ? 'p' : 'seul') . '"><td class="l"' . $sp . '><b>' . $e($r[0]) . '</b></td><td class="l mut lib">prévu</td>';
+            $h .= '<tr class="' . ($reel ? 'p' : 'seul') . '"><td class="l"' . $sp . '><b>' . $e($r[0]) . '</b></td><td class="l mut lib">' . $L('prévu', 'gepland') . '</td>';
             foreach ([1, 3, 5] as $k) { $h .= '<td class="' . ($i === 0 ? 'ok' : '') . '">' . $e($r[$k]) . '</td>'; }
             $h .= '<td' . $sp . '><b>' . $e($r[7]) . '</b></td>'
                 . '<td' . $sp . '><span class="hl' . ($sens === 'pos' ? ' pos' : ($sens === 'neg' ? ' neg' : '')) . '">' . $e($r[8]) . '</span></td>'
                 . '<td class="mut"' . $sp . '>' . $e($r[9]) . '</td></tr>';
             if ($reel) {
-                $h .= '<tr class="r"><td class="l mut lib">réel</td>';
+                $h .= '<tr class="r"><td class="l mut lib">' . $L('réel', 'werkelijk') . '</td>';
                 foreach ([2, 4, 6] as $k) { $h .= '<td><b>' . $e($r[$k]) . '</b></td>'; }
                 $h .= '</tr>';
             }
         }
         $h .= '</table>' . ($d['reseauNote'] !== '' ? '<div class="legende" style="color:#221E1A;margin-bottom:1.5mm">' . $e($d['reseauNote']) . '</div>' : '')
-            . '<div class="legende">Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.</div>';
+            . '<div class="legende">' . $L('Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.',
+                'Alles incl. btw. Het geplande (het plan): de realistische geplande jaaromzet ingevoerd in “Magasins du réseau”, anders die van de marktstudie — gedeeld door 52 voor de week, door 12 voor de maand. Het werkelijke: de omzet incl. btw uit de maandelijkse P&L van het panel, aangevuld met de kassaverkopen (brutobedragen na kortingen) voor de maanden zonder P&L — gemiddelde van de beschikbare afgesloten maanden (maximaal twaalf), herleid naar de week en geëxtrapoleerd naar twaalf maanden voor het jaar. Het jaardoel: de trede van de fase (70, 80, 90 of 100% van het plan). Werkelijk / doel, uitgelicht, is het verschil dat telt; werkelijk / plan toont de weg die nog rest.') . '</div>';
     }
 
     foreach ($d['notes'] as $n) {
@@ -476,7 +485,7 @@ function scoutingDossierHtml(array $d): string
     }
 
     if ($d['hypotheses'] !== []) {
-        $h .= '<div class="sec">Les hypothèses au moment de l’édition</div><table class="t" cellpadding="0" cellspacing="0">';
+        $h .= '<div class="sec">' . $L('Les hypothèses au moment de l’édition', 'De aannames op het moment van opmaak') . '</div><table class="t" cellpadding="0" cellspacing="0">';
         $cols = array_chunk($d['hypotheses'], (int) ceil(count($d['hypotheses']) / 2));
         $n = max(array_map('count', $cols));
         for ($i = 0; $i < $n; $i++) {
@@ -491,11 +500,11 @@ function scoutingDossierHtml(array $d): string
     }
 
     if ($d['sources'] !== '') {
-        $h .= '<div class="methode"><b style="color:#221E1A">Sources.</b> ' . $e($d['sources']) . '</div>';
+        $h .= '<div class="methode"><b style="color:#221E1A">' . $L('Sources.', 'Bronnen.') . '</b> ' . $e($d['sources']) . '</div>';
     }
-    if ($d['motOutil'] !== '') { $h .= '<div class="methode" style="color:#221E1A"><b>L’outil repère, l’étude confirme.</b> ' . $e($d['motOutil']) . '</div>'; }
+    if ($d['motOutil'] !== '') { $h .= '<div class="methode" style="color:#221E1A"><b>' . $L('L’outil repère, l’étude confirme.', 'De tool spoort op, de studie bevestigt.') . '</b> ' . $e($d['motOutil']) . '</div>'; }
     if ($d['motFin'] !== '') {
-        $h .= '<div class="motfin"><div class="k" style="color:#8D1D2C;margin-bottom:1.5mm">À lire avant de signer</div>' . $e($d['motFin']) . '</div>';
+        $h .= '<div class="motfin"><div class="k" style="color:#8D1D2C;margin-bottom:1.5mm">' . $L('À lire avant de signer', 'Te lezen vóór ondertekening') . '</div>' . $e($d['motFin']) . '</div>';
     }
     return $h . '</div>';
 }
