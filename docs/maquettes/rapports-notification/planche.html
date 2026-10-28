@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Rapports : mail ou notification</title><link rel="stylesheet" href="/public/assets/ds/global.css"><style>
+body{margin:0;background:#EAE4DC;font-family:var(--font-ui);color:#222}.w{width:2400px;margin:0 auto;padding:24px}h1{font:400 30px var(--font-display);margin:0 0 4px}.sous{font-size:13px;color:#555;margin-bottom:18px;line-height:1.5;max-width:1900px}
+.g{display:grid;grid-template-columns:130px repeat(4,minmax(0,1fr));gap:14px 18px;align-items:stretch}
+.rl{font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:#666;padding-top:14px;line-height:1.5}
+.c{background:#fff;border-radius:14px;padding:14px 16px}
+.c h2{font:400 22px var(--font-display);margin:0}.c h2 span{color:#8D1D2C;margin-right:8px}
+.c p{font-size:12.5px;color:#444;margin:6px 0 0;line-height:1.45}
+.c img{width:100%;display:block;border:.5px solid rgba(0,0,0,.12);border-radius:8px}
+.cap{font-size:11px;color:#777;margin:5px 0 10px}
+h4{font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 4px}h4+ul{margin-bottom:10px}
+ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.5}ul.p li::marker{color:#2D7A3E}ul.m li::marker{color:#C0182B}ul.d li::marker{color:#8D1D2C}
+.neuf{display:inline-block;outline:2px dashed #d9a520;outline-offset:2px;border-radius:4px;padding:0 4px}
+</style></head><body><div class="w">
+<h1>Rapports automatisés : par mail ou par notification</h1>
+<div class="sous">Demande du 28/10/2026 : dans les rapports automatisés, un interrupteur <b>Mail / Notification</b> ; en notification, l’envoi passe par l’API existante du panel (<code>POST /notifications</code>, celle des relances de commandes) et le magasin la voit sur son <b>dashboard opérationnel</b>.
+Les écrans sont ceux du jour, greffés : le cockpit (Reporting, compositeur du « Rapport franchisé — la semaine ») et le dashboard d’Atelier by - Halle le mardi 6 octobre 2026 à 10:45. <span class="neuf">Le liseré doré pointillé</span> marque ce qui est nouveau.</div>
+<div class="g">
+  <div></div>
+  <div class="c"><h2><span>A</span>Un bandeau</h2><p>Un interrupteur Mail / Notification dans le compositeur. Le magasin voit un bandeau en tête de l’onglet Opérationnel : le rapport, ses points par levier, « Ouvrir le rapport » et « Lu ».</p></div>
+  <div class="c"><h2><span>B</span>Une boîte « Rapports reçus »</h2><p>L’interrupteur sur chaque ligne de la liste des rapports récurrents. Sur le dashboard, une carte des rapports des 30 derniers jours, nouveaux en tête, lus et non lus.</p></div>
+  <div class="c"><h2><span>C</span>Une liste à cocher</h2><p>Trois choix : Mail, Notification, Les deux. Sous les tuiles du moment, chaque point du rapport devient une ligne à cocher « Fait », par levier, avec l’avancement (2 / 7).</p></div>
+  <div class="c"><h2><span>D</span>Une cloche</h2><p>L’interrupteur et le choix des écrans : cloche du dashboard, cloche du panel, téléphone (push). Sur le dashboard, une cloche « Messages » ouvre un tiroir : les rapports et les autres messages du panel.</p></div>
+
+  <div class="rl">Le magasin<br>dashboard opérationnel</div>
+  <div class="c"><img src="a-dashboard.png" alt=""><div class="cap">le bandeau, entre la semaine et l’objectif du jour</div></div>
+  <div class="c"><img src="b-dashboard.png" alt=""><div class="cap">la carte, après le duel chiffre par chiffre</div></div>
+  <div class="c"><img src="c-dashboard.png" alt=""><div class="cap">la liste, juste sous les tuiles du moment</div></div>
+  <div class="c"><img src="d-dashboard-ferme.png" alt=""><div class="cap">la cloche et ses 2 non lus, à côté de « Relire »</div><img src="d-dashboard.png" alt=""><div class="cap">le tiroir ouvert</div></div>
+
+  <div class="rl">Le cockpit<br>Reporting automatisé</div>
+  <div class="c"><img src="a-reporting.png" alt=""><div class="cap">5 · Générer, envoyer : « Envoyer par », magasins, visibilité, priorité ; le consultant garde sa copie par email</div></div>
+  <div class="c"><img src="b-reporting.png" alt=""><div class="cap">la liste : « Envoi » Mail / Notification sur chaque rapport ; « Notifier » à la place d’« Envoyer »</div></div>
+  <div class="c"><img src="c-reporting.png" alt=""><div class="cap">Mail, Notification ou Les deux ; relance à J+2 ; l’aperçu de ce que reçoit Halle</div></div>
+  <div class="c"><img src="d-reporting.png" alt=""><div class="cap">« Où » : cloche du dashboard, cloche du panel, téléphone (push)</div></div>
+
+  <div class="rl">Ce que ça apporte<br>ce que ça coûte</div>
+  <div class="c"><h4>Apporte</h4><ul class="p"><li>le plus simple, à coder comme à lire</li><li>le reste du dashboard ne bouge pas</li><li>la même notification arrive dans la cloche du panel</li></ul>
+    <h4>Coûte</h4><ul class="m"><li>un rapport à la fois, le plus récent</li><li>une fois « Lu », il disparaît : pas d’historique</li><li>le détail reste dans le PDF</li></ul></div>
+  <div class="c"><h4>Apporte</h4><ul class="p"><li>l’historique : le rapport de la semaine passée se retrouve</li><li>le canal de chaque rapport se change depuis la liste, sans le compositeur</li><li>lu / non lu, par magasin</li></ul>
+    <h4>Coûte</h4><ul class="m"><li>une carte de plus dans un dashboard déjà long</li><li>les points restent dans le PDF</li></ul></div>
+  <div class="c"><h4>Apporte</h4><ul class="p"><li>le rapport devient du travail suivi : le cockpit sait ce qui est traité, et quand</li><li>pas de PDF à ouvrir au magasin</li><li>l’aperçu montre au CEO ce que le magasin recevra</li></ul>
+    <h4>Coûte</h4><ul class="m"><li>le plus de développement</li><li>prend de la place en haut du dashboard</li><li>certains points se constatent plus qu’ils ne se « font » (passage clients −7 %)</li></ul></div>
+  <div class="c"><h4>Apporte</h4><ul class="p"><li>rien ne s’ajoute au dashboard</li><li>un seul endroit pour tous les messages du magasin</li><li>le push réveille le téléphone (l’abonnement existe déjà pour l’alerte de stock)</li></ul>
+    <h4>Coûte</h4><ul class="m"><li>se voit moins : il faut penser à ouvrir la cloche</li><li>le push dépend des appareils abonnés</li></ul></div>
+
+  <div class="rl">À développer</div>
+  <div class="c"><ul class="d"><li>le canal sur le rapport (mail, notification)</li><li>à l’envoi, un <code>POST /notifications</code> par magasin, lien vers le PDF</li><li>le bandeau lit <code>/ventes/notifications</code> (source « rapport »)</li><li>« Lu » gardé au cockpit</li></ul></div>
+  <div class="c"><ul class="d"><li>tout A</li><li>la liste des envois par magasin sur 30 jours, lue dans les générations du cockpit</li><li>les points par levier gardés sur chaque génération</li></ul></div>
+  <div class="c"><ul class="d"><li>tout A</li><li>les points gardés un par un, par magasin</li><li>« Fait » enregistré (une écriture nouvelle) et lu au cockpit</li><li>la relance J+2 dans le cron horaire</li></ul></div>
+  <div class="c"><ul class="d"><li>tout A</li><li>le tiroir : tous les messages du panel (la lecture existe)</li><li>le push par <code>push.php</code> (existe)</li></ul></div>
+</div></div></body></html>
