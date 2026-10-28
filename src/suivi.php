@@ -609,7 +609,14 @@ function suDossier(string $shop): array
             ensureFrMeteo();
             $m = Db::row('SELECT * FROM con_franchise_meteo WHERE shop_id = ? ORDER BY le DESC, id DESC LIMIT 1', [$shop]);
             if ($m) {
-                $l[] = date('d/m', strtotime((string) $m['le'])) . ' : moral ' . ($m['moral'] ?? '—') . ' / 5, équipe ' . ($m['equipe'] ?? '—') . ' / 5';
+                $l[] = date('d/m', strtotime((string) $m['le'])) . ' : moral ' . ($m['moral'] ?? '—') . ' / 5, équipe ' . ($m['equipe'] ?? '—') . ' / 5'
+                    . (isset($m['finances']) && $m['finances'] !== null ? ', finances ' . (int) $m['finances'] . ' / 5' : '');
+                // Les finances (28/10/2026) : paiements à jour, ou ce qui est en retard et le détail donné par le franchisé.
+                if (function_exists('frMeteoPaiements')) {
+                    $pm = frMeteoPaiements($m);
+                    if ($pm['payeATemps'] === true) { $l[] = 'paiements : tout est payé à temps'; }
+                    if ($pm['payeATemps'] === false) { $l[] = 'paiements en retard' . ($pm['retardsLib'] ? ' (' . implode(', ', $pm['retardsLib']) . ')' : '') . ' : ' . mb_substr($pm['retardsInfo'], 0, 220); }
+                }
                 foreach (suJson($m['demandes']) as $d) { if (!empty($d['texte'])) { $l[] = 'demande : « ' . $d['texte'] . ' »'; } }
                 if (!empty($m['inquietudes'])) { $l[] = 'inquiétude : ' . mb_substr((string) $m['inquietudes'], 0, 160); }
             }

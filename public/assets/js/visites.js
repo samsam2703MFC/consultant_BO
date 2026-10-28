@@ -40,6 +40,11 @@
   const RUBRIQUES_MSP = ['Accueil', 'Produits', 'Hygiène', 'Ambiance'];
   const METEO_ECH = [['moral', 'Moral'], ['envie', 'Envie, motivation'], ['equipe', 'Climat de l’équipe'], ['relation', 'Relation avec le réseau']];
   const METEO_I = { 1: '⛈️', 2: '🌧️', 3: '☁️', 4: '🌤️', 5: '☀️' };
+  // Les finances du franchisé (28/10/2026) : comment il se sent financièrement, puis tout est-il payé à temps — sinon
+  // ce qui est en retard et le détail, obligatoire (mêmes codes que FR_METEO_RETARDS, src/franchises.php).
+  const METEO_FIN = [[5, '☀️', 'À l’aise'], [4, '🌤️', 'Ça va'], [3, '☁️', 'Juste'], [2, '🌧️', 'Tendu'], [1, '⛈️', 'Très inquiet']];
+  const RETARDS = [['atelier', 'Factures L’Atelier'], ['fournisseurs', 'Autres fournisseurs'], ['loyer', 'Loyer'], ['salaires', 'Salaires, ONSS'],
+    ['impots', 'TVA, impôts'], ['banque', 'Banque, leasing'], ['autre', 'Autre']];
   const EXECUTION = { standards: 'Standards appliqués', raccourcis: 'Quelques raccourcis', ecarts: 'Écarts fréquents' };
   const CLIENTS = { satisfaits: 'Satisfaits', mitiges: 'Mitigés', insatisfaits: 'Insatisfaits' };
 
@@ -95,9 +100,10 @@
 .vi .ob{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:.5px solid var(--color-border-tertiary);background:var(--color-surface)}
 .vi .ob.ok{background:#F0F7F2;border-color:#BFDCC6}.vi .ob.ko{background:#FBEDEF;border-color:#e8b4bb}
 .vi .ob .nm{flex:1;min-width:0;display:flex;flex-direction:column}.vi .ob .nm b{font-size:12.5px;line-height:1.25}.vi .ob .nm small{font-size:10.5px}
-.vi .ob .yn{display:inline-grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--color-background-secondary);border-radius:9px;padding:2px;flex:none}
-.vi .ob .yn button{border:none;background:none;border-radius:7px;padding:6px 12px;font:700 12px var(--font-ui);color:var(--color-text-muted);cursor:pointer;min-width:46px}
-.vi .ob .yn button.ok{background:#2d7a3e;color:#fff}.vi .ob .yn button.ko{background:#C0182B;color:#fff}
+.vi .ob .yn,.vi .fin .yn{display:inline-grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--color-background-secondary);border-radius:9px;padding:2px;flex:none}
+.vi .ob .yn button,.vi .fin .yn button{border:none;background:none;border-radius:7px;padding:6px 12px;font:700 12px var(--font-ui);color:var(--color-text-muted);cursor:pointer;min-width:46px}
+.vi .ob .yn button.ok,.vi .fin .yn button.ok{background:#2d7a3e;color:#fff}.vi .ob .yn button.ko,.vi .fin .yn button.ko{background:#C0182B;color:#fff}
+.vi .fin .yn button{padding:8px 18px;font-size:13px;min-width:60px}
 .vi .bq-t td{vertical-align:middle}.vi .bq{display:inline-grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--color-background-secondary);border-radius:9px;padding:2px;min-width:120px}
 .vi .bq button{border:none;background:none;border-radius:7px;padding:5px 12px;font:600 11.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer}.vi .bq button.on{background:var(--color-primary);color:#fff}
 .vi .pnl{margin-top:14px;padding-top:12px;border-top:.5px solid var(--color-border-tertiary)}
@@ -1808,6 +1814,24 @@
       if (!finie && v.budgetCa) { this.vbPistesDansPlan(v.budgetCa); }
       f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.meteo = v.meteo || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || '';
     }
+    /** Ce qui manque à l'étape Météo : le temps, la réponse sur les paiements, et le détail s'ils ne sont pas à temps. */
+    meteoManque(f) {
+      if (!(meteoDe(f.meteo) || f.mt_ok)) { return 'la météo du franchisé'; }
+      if (f.mt_paye !== 0 && f.mt_paye !== 1) { return 'dire si tout est payé à temps'; }
+      if (f.mt_paye === 0 && !String(f.mt_retards_info || '').trim()) { return 'ce qui n’est pas payé à temps, en détail'; }
+      return null;
+    }
+    /** Les finances du franchisé (28/10/2026) : son ressenti, tout est-il payé à temps, sinon quoi et le détail. Interne. */
+    financesHtml(f) {
+      const non = f.mt_paye === 0;
+      return `<div class="cap">Finances</div><div class="card fin"><div class="sm mu" style="margin-bottom:6px">Comment il se sent financièrement</div>
+        <div class="meteo">${METEO_FIN.map(([n, ic, l]) => `<button data-a="form" data-v="mt_finances|${n}" class="${f.mt_finances === n ? 'on' : ''}"><span class="i">${ic}</span><b>${esc(l)}</b></button>`).join('')}</div>
+        <div class="row" style="margin-top:12px;gap:10px"><span style="flex:1"><b class="sm">Tout est payé à temps ?</b><br><span class="xs mu">factures L’Atelier, fournisseurs, loyer, salaires, taxes</span></span>
+          <span class="yn">${[[1, 'Oui', 'ok'], [0, 'Non', 'ko']].map(([n, l, c]) => `<button data-a="form" data-v="mt_paye|${n}" class="${f.mt_paye === n ? c : ''}">${l}</button>`).join('')}</span></div>
+        ${non ? `<div class="sm mu" style="margin:12px 0 6px">Ce qui est en retard</div><div class="row" style="flex-wrap:wrap;gap:6px">${RETARDS.map(([k, l]) => `<button class="chip ${(f.mt_retards || []).includes(k) ? 'on' : ''}" data-a="mt-retard" data-v="${k}">${esc(l)}</button>`).join('')}</div>
+          <textarea data-f="form|mt_retards_info" placeholder="Obligatoire : quoi, combien, depuis quand, ce qu’il prévoit (échéancier, aide demandée)" style="margin-top:8px">${esc(f.mt_retards_info || '')}</textarea>` : ''}
+        <div class="xs mu" style="margin-top:8px">Interne : reste entre le consultant et le bureau, jamais dans le rapport.</div></div>`;
+    }
     /** La météo du franchisé, en fin de contrôle : cinq temps, un toucher. */
     meteoHtml(f) {
       return `<div class="cap">Météo du franchisé</div><div class="card"><div class="meteo">${METEO.map(([n, ic, l, aide]) => `<button data-a="form" data-v="meteo|${n}" class="${f.meteo === n ? 'on' : ''}"><span class="i">${ic}</span><b>${esc(l)}</b><small>${esc(aide)}</small></button>`).join('')}</div></div>`;
@@ -1907,8 +1931,9 @@
       const npa = (f.pa || []).filter(a => a.titre && a.titre.trim()).length;
       etapes.push({ tps: 'dev', ic: 'plan', court: 'Points', titre: 'Points à travailler', etat: npa + ' proposé' + (npa > 1 ? 's' : ''), fait: !!this.ouvert['pa:' + v.id], lu: 'pa:' + v.id, html: () => '<div class="card sm mu">Proposés d’après les non-conformes et les pistes du franchisé. Ils partent chez lui avec le rapport, si le bureau les garde.</div>' + this.planFormHtml(v, f) });
       // 6. La météo du franchisé (le temps en un toucher, gardé sur la visite, puis le détail facultatif), la fin signée.
-      const mt = meteoDe(f.meteo);
-      etapes.push({ cle: 'meteo', tps: 'fin', ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne'), fait: !!(mt || f.mt_ok), html: () => this.meteoHtml(f) + this.meteoDetailHtml(v) });
+      const mt = meteoDe(f.meteo); const mtManque = this.meteoManque(f);
+      etapes.push({ cle: 'meteo', tps: 'fin', ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: (mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne')) + (f.mt_paye === 0 ? ' · paiements en retard' : ''),
+        fait: !mtManque, mtManque, html: () => this.meteoHtml(f) + this.financesHtml(f) + this.meteoDetailHtml(v) });
       etapes.push({ tps: 'fin', ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig && f.sigC ? 'signée des deux' : f.sig || f.sigC ? '1 signature sur 2' : 'signatures, envoi au bureau', fait: false, html: () => this.finHtml(v) });
       const ORD = this.tempsOrdre(); const rangT = k => ORD.findIndex(t => t[0] === k);
       etapes.sort((a, b) => rangT(a.tps) - rangT(b.tps));
@@ -1928,7 +1953,7 @@
         else if (e.ic === 'controles' && cq && cq.aNoter) { e.manque = cq.aNoter + ' contrôle' + (cq.aNoter > 1 ? 's' : '') + ' à noter'; e.auto = true; }
         else if (e.pistes) { e.manque = 'le pourquoi, les trois pistes et l’horizon'; }
         else if (e.revue) { e.manque = 'ce que vous avez vu et la recommandation'; }
-        else if (e.ic === 'meteo') { e.manque = 'la météo du franchisé'; }
+        else if (e.ic === 'meteo') { e.manque = e.mtManque || 'la météo du franchisé'; }
         else if (e.cle === 'checklist') { e.manque = 'la checklist du consultant'; }
       });
       etapes.forEach(e => { if (e.fait) { e.auto = true; } e.bloquante = !!e.manque && this.etapeBloquante(e.cle); });
@@ -1938,7 +1963,7 @@
       // Une étape bloquante pas encore remplie arrête tout ce qui la suit : on n'ouvre pas une étape au-delà.
       const bloq = etapes.findIndex(e => e.bloquante);
       if (bloq >= 0 && cur > bloq && this.ouvert[cle] != null) { cur = bloq; this.ouvert[cle] = bloq; }
-      this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), chiffres: etapes.findIndex(e => e.chiffres), pistes: etapes.findIndex(e => e.pistes), visite: v.id, cur, lus: etapes.map(e => e.lu || null),
+      this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), chiffres: etapes.findIndex(e => e.chiffres), pistes: etapes.findIndex(e => e.pistes), meteo: etapes.findIndex(e => e.cle === 'meteo'), visite: v.id, cur, lus: etapes.map(e => e.lu || null),
         bloq: etapes.map(e => e.bloquante ? '« ' + e.court + ' » : ' + e.manque : null) };
       const faits = etapes.filter(e => e.fait).length;
       this.etapeAutoSuivre(v, etapes, cur);
@@ -1963,6 +1988,8 @@
     allerEtape(n) {
       const E = this._etapes; if (!E) { return; }
       const vis = this.visite(E.visite); let vers = Math.max(0, Math.min(E.n - 1, n));
+      // Le détail des retards se tape sans redessiner l'écran : « Suivant » relit ce qui manque à la météo.
+      if (E.meteo >= 0 && E.cur === E.meteo && E.bloq && this.etapeBloquante('meteo')) { const m = this.meteoManque(this.form); E.bloq[E.meteo] = m ? '« Météo » : ' + m : null; }
       // En avant, la première étape bloquante pas remplie arrête le saut (Suivant, la barre du bas, les étapes en tête).
       if (vers > E.cur && E.bloq) {
         const i = E.bloq.findIndex((b, k) => b && k >= E.cur && k < vers);
@@ -2234,7 +2261,7 @@
         ['suivi', null, 'Dossier du bureau'], ...mods.filter(m => m[2] === 'suivi').map(m => [m[2], m[0], m[1]]), ['suivi', null, 'Les points décidés aux visites précédentes'], ['suivi', 'checklist', 'Checklist du consultant (panel)'],
         ['analyse', null, 'KPI et santé du magasin'], ...mods.filter(m => m[2] === 'analyse').map(m => [m[2], m[0], m[1]]), ['analyse', null, 'Les tâches des derniers mois'],
         ['dev', 'pistes', 'Le CA sous le budget : pourquoi et trois pistes'], ['dev', 'constat', 'Vu sur place et recommandation'], ['dev', null, 'Points à travailler'],
-        ['fin', 'meteo', 'Météo du franchisé'], ['fin', null, 'Fin de visite'], ['*', 'mod:*', 'Les autres modules de checklist (nouveaux types, revisites)']];
+        ['fin', 'meteo', 'Météo du franchisé et ses finances'], ['fin', null, 'Fin de visite'], ['*', 'mod:*', 'Les autres modules de checklist (nouveaux types, revisites)']];
       const ORD = this.tempsOrdre(this.form.seuils && this.form.seuils.ordreTemps);
       const nomT = k => k === '*' ? '—' : (ORD.findIndex(x => x[0] === k) + 1) + ' · ' + (TEMPS.find(x => x[0] === k) || ['', ''])[1];
       lignes.sort((a, b) => (a[0] === '*' ? 99 : ORD.findIndex(x => x[0] === a[0])) - (b[0] === '*' ? 99 : ORD.findIndex(x => x[0] === b[0])));
@@ -2374,6 +2401,7 @@
       if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), 3) }); this.rendre(); return; }
       if (a === 'terminer') { this.terminer(v); return; }
       if (a === 'meteo') { this.meteo(v); this.rendre(); return; }
+      if (a === 'mt-retard') { const r = this.form.mt_retards = this.form.mt_retards || []; const i = r.indexOf(v); if (i >= 0) { r.splice(i, 1); } else { r.push(v); } this.rendre(); return; }
       if (a === 'sig-effacer') { this.form[v === 'sigC' ? 'sigC' : 'sig'] = null; this.rendre(); return; }
       if (a === 'ck') { this.ckF[parts[0]] = Object.assign(this.ckF[parts[0]] || {}, { etat: (this.ckF[parts[0]] || {}).etat === parts[1] ? '' : parts[1] }); this.rendre(); return; }
       if (a === 'ck-save') { this.ckSauver(v); return; }
@@ -2494,6 +2522,11 @@
         this.dire('Le CA est à plus de ' + String(this.VB[v.shop].seuil).replace('.', ',') + ' % sous le budget : notez d’abord pourquoi, les trois pistes du franchisé et l’horizon.');
         this.rendre(); return;
       }
+      if (f.mt_paye === 0 && !String(f.mt_retards_info || '').trim()) {
+        const E = this._etapes; if (E && E.meteo >= 0) { this.ouvert[E.cle] = E.meteo; }
+        this.dire('Des paiements sont en retard : notez d’abord quoi et le détail, dans la météo du franchisé.');
+        this.rendre(); return;
+      }
       const plans = (f.pa || []).filter(a => a.titre && a.titre.trim()).map(a => ({ client_id: a.cid, shop: v.shop, visite_id: v.id, ref: a.ref || null, titre: a.titre.trim(), detail: a.detail || '', priorite: a.priorite, assigne: a.assigne, echeance: a.echeance || null, campagne_id: Number(a.campagne_id) > 0 ? Number(a.campagne_id) : null, statut: 'propose' }));
       if (plans.length) {
         plans.forEach(p => this.D.plans.push(Object.assign({ id: p.client_id, cree_par: this.qui(), cree_le: maintenant(), maj_le: maintenant(), retard: 0, age: 0, attente: true }, p)));
@@ -2524,7 +2557,14 @@
       const body = { client_id: f.mt_cid || (f.mt_cid = uuid()), shop: v.shop, consultant: this.moi || v.consultant || '', qui: this.qui(),
         demandes: f.mt_demandes || '', envies: f.mt_envies || '', inquietudes: f.mt_inquietudes || '', note: f.mt_note || '' };
       METEO_ECH.forEach(([k]) => { body[k] = f['mt_' + k] || null; });
-      const vide = !METEO_ECH.some(([k]) => body[k]) && !['demandes', 'envies', 'inquietudes', 'note'].some(k => body[k].trim());
+      // Les finances : le ressenti, la réponse sur les paiements, et s'ils ne sont pas à temps, quoi et le détail (obligatoire).
+      body.finances = f.mt_finances || null;
+      if (f.mt_paye === 0 || f.mt_paye === 1) { body.paye_a_temps = f.mt_paye; }
+      if (f.mt_paye === 0) {
+        body.retards = (f.mt_retards || []).slice(); body.retards_info = String(f.mt_retards_info || '').trim();
+        if (!body.retards_info) { this.dire('Des paiements sont en retard : notez quoi, combien, depuis quand.'); return false; }
+      } else if (!silencieux && f.mt_paye !== 1 && this.etapeBloquante('meteo')) { this.dire('Répondez d’abord : tout est-il payé à temps ?'); return false; }
+      const vide = !METEO_ECH.some(([k]) => body[k]) && !body.finances && body.paye_a_temps == null && !['demandes', 'envies', 'inquietudes', 'note'].some(k => body[k].trim());
       if (vide) { if (!silencieux) { this.dire('La météo est vide.'); } return false; }
       this.ecrire({ method: 'POST', path: '/franchises/meteo', body });
       f.mt_ok = true; if (!silencieux) { this.dire('Météo enregistrée.'); }
