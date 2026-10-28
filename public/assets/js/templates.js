@@ -152,6 +152,7 @@ export function render(c, x){
       ${c.isPlan ? tplPlan(c, x) : ''}
       ${c.isDemarchage ? tplDemarchage(c, x) : ''}
       ${c.isNewsletter || c.isNewsletterShop ? tplNewsletter(c, x) : ''}
+      ${c.isMD ? tplMetaDonnee(c, x) : ''}
       ${c.isProspection ? tplProspection(c, x) : ''}
       ${c.isProspectionMobile ? tplProspectionMobile(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
@@ -10400,6 +10401,13 @@ function tplNewsletter(c, x){
     ${c.prSansMagasin && shop ? '<div style="font-size:12px;color:var(--color-text-muted)">Aucun magasin pointé sur la carte.</div>' : ''}
     <div id="newsletter-root" style="min-height:400px"></div>
   </div>`;
+}
+
+/* --- MétaDonnée : module à part (assets/js/metadonnee.js), monté après le rendu ---
+ * Les quatre écrans du sous-menu partagent ce seul nœud d'accueil ; le module
+ * reçoit l'étape (mdFormulaires, mdMapping, mdLeads, mdSms). */
+function tplMetaDonnee(c, x){
+  return `<div data-screen="metadonnee"><div id="metadonnee-root" style="min-height:400px"></div></div>`;
 }
 
 /* --- Prospection : module à part (assets/js/prospection.js), monté après le rendu --- */

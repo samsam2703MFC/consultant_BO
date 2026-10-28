@@ -44,6 +44,14 @@ return [
         'graphVersion' => 'v21.0',
     ],
 
+    // MétaDonnée — SMS au gérant du magasin à chaque lead Meta (SMSAPI, comme le CRM).
+    // Jeton OAuth avec la permission « sms » ; plateforme .com (internationale) ou .pl.
+    // Il peut aussi se saisir à l'écran (MétaDonnée → 4. Alertes SMS), qui prime.
+    'smsapi' => [
+        'token' => getenv('SMSAPI_TOKEN') ?: null,
+        'base'  => getenv('SMSAPI_BASE') ?: 'https://api.smsapi.com',
+    ],
+
     // Jeu de démonstration. false (défaut) : base vide, prête pour les vraies
     // données — aucune donnée fictive n'est chargée. true (ou COCKPIT_SEED=1) :
     // charge sql/seed.sql (réseau belge de démo) si la base est vide.

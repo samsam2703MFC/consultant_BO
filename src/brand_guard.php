@@ -801,6 +801,12 @@ function wr_bg_webhook(string $corps, ?string $signature): array
             $faits[] = ['post' => $ev['post'], 'erreur' => $e->getMessage()];
         }
     }
+    // Le même abonnement de page porte aussi le champ `leadgen` : les formulaires
+    // de prospects vont à MétaDonnée (src/metadonnee.php), signature déjà vérifiée.
+    if (function_exists('mdWebhook')) {
+        try { foreach (mdWebhook($payload) as $l) { $faits[] = ['leadgen' => $l]; } }
+        catch (Throwable $e) { $faits[] = ['leadgen' => ['erreur' => $e->getMessage()]]; }
+    }
     return ['ok' => true, 'faits' => $faits];
 }
 

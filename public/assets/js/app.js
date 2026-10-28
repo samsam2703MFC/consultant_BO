@@ -295,6 +295,8 @@ class App {
       journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
       demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
       prospection: 'prospection', prospectionMobile: 'prospection-mobile',
+      // MétaDonnée (28/10/2026) : les formulaires Meta et Instagram vers l'ERP du franchisé.
+      mdFormulaires: 'metadonnee-formulaires', mdMapping: 'metadonnee-mapping', mdLeads: 'metadonnee-leads', mdSms: 'metadonnee-sms',
       tablette: 'tablette-vendeuses',
       posts: 'controle-posts-facebook', brandGuard: 'brand-guard', offres: 'offres-canaux', invendus: 'invendus-poubelle',
       productionPlan: 'production-plan', productionSuivi: 'production-suivi', productionParams: 'production-parametres', productionCloture: 'production-cloture', productionFours: 'production-fours',
@@ -619,6 +621,13 @@ class App {
     if (this.state.ready && (this.state.screen === 'newsletter' || this.state.screen === 'newsletterShop') && window.CockpitNewsletter){
       const role = this.state.screen === 'newsletter' ? 'brand' : String((this.dmMagasin() || {}).id || '');
       if (role) window.CockpitNewsletter.mount(document.getElementById('newsletter-root'), { role, apiBase: API_BASE, imgDir: 'assets/img/newsletter/', notify: msg => this.notify(msg) });
+    }
+    // MétaDonnée : une instance pour les quatre écrans du sous-menu ; ses étapes changent d'écran,
+    // ses compteurs (retards, mappings à faire) remontent en pastilles du rail.
+    if (this.state.ready && ['mdFormulaires', 'mdMapping', 'mdLeads', 'mdSms'].includes(this.state.screen) && window.CockpitMetaDonnee){
+      window.CockpitMetaDonnee.mount(document.getElementById('metadonnee-root'), { vue: this.state.screen, apiBase: API_BASE, notify: msg => this.notify(msg),
+        go: id => this.setState({ screen: id, railOuvert: false }),
+        onResume: b => { const a = this.state.mdBadges || {}; if (a.retard !== b.retard || a.mapping !== b.mapping) this.setState({ mdBadges: b }); } });
     }
 
     // L'écran est posé : on relève ce qu'il AFFICHE de cliquable (voir
@@ -967,6 +976,10 @@ class App {
       remarquesOperateurs: ['Remarques aux opérateurs', 'Les remarques faites depuis la modale des invendus sur une pièce jetée pour un problème de qualité : l’opérateur qui a produit, la pièce, l’heure, le motif. Par magasin et par opérateur, pour l’entretien d’évaluation.'],
       offres: ['Offres et canaux', 'Ce que les promotions et les bundles rapportent, magasin par magasin, et par où passent les commandes : comptoir, click & collect, livraison. Les bundles sont les produits de la catégorie « Bundle & Promotion » du panel, lus dans les tickets ; les promotions sont celles posées sur les jours creux, face aux quatre semaines d’avant.'],
       invendus: ['Invendus et poubelle', 'Ce que les magasins jettent, déclaré en caisse : les pièces, leur coût de production (retranché du résultat), la valeur de vente perdue, les motifs, et les produits les plus jetés du réseau. Les reports au lendemain n\u2019ont pas de route de lecture dans le panel.'],
+      mdFormulaires: ['MétaDonnée — 1. Formulaires', 'Les formulaires de prospects des pages Facebook et Instagram du réseau. On choisit ceux qu\u2019on suit et leur magasin : un formulaire non suivi ne laisse rien entrer.'],
+      mdMapping: ['MétaDonnée — 2. Mapping ERP', 'Chaque question du formulaire trouve sa place dans un champ de l\u2019ERP (atelierby.tfbuddy.com), avec sa règle. Ce qui partira se lit à gauche, sur le dernier lead reçu.'],
+      mdLeads: ['MétaDonnée — 3. Suivi des leads', 'Ce que l\u2019ERP dit de chaque lead, relu toutes les 10 minutes : vu, contacté, bureau créé, bureau connecté. Pas vu à temps ou pas rappelé : en retard.'],
+      mdSms: ['MétaDonnée — 4. Alertes SMS', 'Le SMS au gérant du magasin à chaque nouveau lead, la relance s\u2019il ne l\u2019a pas ouvert, l\u2019e-mail au consultant s\u2019il n\u2019est pas rappelé.'],
       productionParams: ['Production — 1. Paramètres', 'Par jour de la semaine, le nombre de cuissons et la production minimum de la 1re cuisson ; les cuissons et leur part de la journée ; les catégories (cuissons, plaques, préparées la veille, se gardent au lendemain) ; les produits obligatoires et leurs jours.'],
       productionPlan: ['Production — 2. Plan de production', 'Section › catégorie › produit : vendu à J\u22127 (en magasin, webshop, commandes magasin), à produire pour la 1re période, à préparer pour la 2e cuisson et les suivantes, à préparer pour la 1re cuisson du lendemain — en pièces, en plaques et en chiffre d\u2019affaires.'],
       productionSuivi: ['Production — 3. Validation et suivi', 'Ce qui est réellement sorti du four, cuisson par cuisson ; le stock de chaque produit heure par heure, vendu d\u2019après les tickets et projeté d\u2019après les 6 derniers mêmes jours, et le manque prévu.'],
@@ -1400,6 +1413,10 @@ class App {
         ['demarchage', 'Développement commercial', 0],
         ['prospection', 'Prospection', 0],
         ['prospectionMobile', 'Prospection mobile', 0],
+        // MétaDonnée (demande du 28/10/2026, maquette A) : les formulaires de prospects Meta et
+        // Instagram jusqu'à l'ERP du franchisé, en quatre étapes — module à part (metadonnee.js).
+        { sub: 'MétaDonnée', children: [['mdFormulaires', '1 · Formulaires', 0], ['mdMapping', '2 · Mapping ERP', (S.mdBadges || {}).mapping || 0],
+          ['mdLeads', '3 · Suivi des leads', (S.mdBadges || {}).retard || 0], ['mdSms', '4 · Alertes SMS', 0]] },
         // Le book des vendeuses : une application à part (tablette/), comme
         // Prospection mobile — l'écran donne ses liens, un aperçu et l'état
         // des données que le BO lui sert.
@@ -1448,11 +1465,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isMD', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO'].forEach(k => common[k] = false);
     const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }

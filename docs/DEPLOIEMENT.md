@@ -322,3 +322,26 @@ renouvellement automatique à vérifier) avant d'équiper les tablettes.
 `tablette/img/__absent__.png` répond 404, `api/cockpit/tablette/book` porte
 `"products":[`. Le contrôle de syntaxe `node --check` ignore `public/tablette/`
 (bundle Vite, comme `public/assistant/`).
+
+## MétaDonnée — formulaires Meta et Instagram vers l'ERP du franchisé
+
+Rail → ERP franchisé → MétaDonnée (1 · Formulaires, 2 · Mapping ERP, 3 · Suivi des leads, 4 · Alertes SMS).
+Contrat : `docs/contrat-api.md`, « MétaDonnée ».
+
+- **Meta** : le même accès que le Brand Guard (`META_SYSTEM_TOKEN`, `META_APP_SECRET`, `META_VERIFY_TOKEN`).
+  Le System User doit porter `leads_retrieval`, `pages_manage_metadata`, `pages_show_list`,
+  `pages_read_engagement` (et `ads_management` pour lire la campagne d'un lead), et l'application doit avoir
+  l'accès aux prospects de chaque page (Business Manager → la page → Accès aux prospects). Dans l'application
+  Meta, l'abonnement Webhooks « Page » garde la même adresse que le Brand Guard
+  (`…/api/cockpit/marketing/brand-guard/webhook/meta`) avec le champ **`leadgen`** coché en plus de `feed` ;
+  chaque page s'y abonne depuis l'étape 1 (« Abonner »), sans perdre son `feed`.
+- **ERP** : le compte API du panel (Paramètres → compte consultant). Les routes `POST/GET /consultant/leads`
+  sont à créer côté panel ; elles se règlent à l'étape 2. L'envoi automatique est **éteint** à l'installation.
+- **SMS** : SMSAPI, jeton OAuth avec la permission « sms » — `config/config.php` (`smsapi.token`), variable
+  `SMSAPI_TOKEN`, ou saisi à l'étape 4. Les SMS sont **éteints** à l'installation ; la Belgique doit être autorisée
+  sur le compte SMSAPI (code 112 sinon).
+- **Horloge** : `bin/metadonnee_cron.sh`, toutes les 5 minutes, ligne posée par `bin/deploy.sh` dans
+  `/etc/cron.d/cockpit-rapports` (jeton `mdJeton` lu en base, né à la première ouverture du module).
+- **Vérifier** : « 🔍 Tester les connexions » (lecture seule, sur chaque écran du module) et, à l'étape 2,
+  « Envoyer un lead d'essai » (un lead TEST réellement envoyé puis relu : à supprimer dans l'ERP).
+  Kit d'essai hors ligne : `tools/metadonnee-essai/LISEZMOI.md`.

@@ -65,7 +65,9 @@ final class MetaGraph
 
     private static function base(): string
     {
-        return 'https://graph.facebook.com/' . self::config()['version'];
+        // Essais locaux : META_GRAPH_BASE vers un faux serveur Graph (la même variable que le CRM).
+        $b = rtrim((string) (getenv('META_GRAPH_BASE') ?: 'https://graph.facebook.com'), '/');
+        return $b . '/' . self::config()['version'];
     }
 
     /**

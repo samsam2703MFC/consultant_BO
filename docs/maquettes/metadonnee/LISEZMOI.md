@@ -7,7 +7,12 @@ chaque réponse dans un champ de l'ERP (atelierby.tfbuddy.com) et y envoie le le
 l'ERP à intervalles réguliers pour voir si le franchisé l'a traité, et prévient le franchisé par SMS
 à chaque nouveau lead : un bureau qui veut se faire livrer, et qui doit finir connecté au webshop.
 
-Trois façons d'organiser le même module, à choisir :
+**Choix du 28/10/2026 : la maquette A**, implémentée (`src/metadonnee.php`, `public/assets/js/metadonnee.js`) ;
+les écrans réels, capturés contre le kit d'essai (`tools/metadonnee-essai/`), sont dans `ecrans/` :
+`1-formulaires.png` (avec « Tester les connexions » ouvert), `2-mapping.png`, `2b-lead-essai.png`,
+`3-suivi-leads.png` (un lead déplié), `4-alertes-sms.png`.
+
+Les trois façons d'organiser le même module qui avaient été proposées :
 
 | Fichier | Variante | Sous-menu | L'écran montré |
 |---|---|---|---|
