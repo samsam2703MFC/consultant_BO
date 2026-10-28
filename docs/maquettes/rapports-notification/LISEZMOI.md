@@ -1,6 +1,32 @@
 # Rapports automatisés : par mail ou par notification
 
-**Statut : maquettes du 28/10/2026, à décider.**
+**Statut : retour du 28/10/2026 maquetté (ci-dessous) ; le codage attend la lecture de l'API
+des notifications du panel.**
+
+## Retour du 28/10/2026
+
+« Rajouter l'option SMS. Multibouton : Notification, SMS, Mail. C'est seulement une notification.
+À valider et écrire dans le log (voir API notification atelierby.tfbuddy.com). »
+
+| Capture | Ce qu'elle montre |
+|---|---|
+| `retour-reporting.png` | le compositeur : **Envoyer par** en multibouton (🔔 Notification, 💬 SMS, ✉ Mail, plusieurs à la fois) ; la priorité de la notification ; **le magasin doit la valider** ; le texte du SMS (116 / 160 caractères, un SMS par magasin) ; la copie email du consultant |
+| `retour-liste.png` | la liste des rapports : le multibouton sur chaque rapport, et sous les rapports notifiés, **Validé** : chaque magasin, validé (quand) ou à valider, lu dans le log de la dernière notification |
+| `retour-dashboard.png` | le magasin : seulement une notification, un bandeau en tête de l'onglet Opérationnel, « À valider », avec « Ouvrir le rapport » et **✓ Valider** ; elle reste affichée tant qu'elle n'est pas validée |
+| `retour-dashboard-valide.png` | après « Valider » : la notification se referme sur l'heure de la validation, écrite dans le log |
+
+Les heures de validation de Corbais et Gosselies sont des exemples.
+
+Ce qui reste à lire dans l'API du panel (atelierby.tfbuddy.com) avant de coder — l'hôte n'est
+pas joignable depuis l'environnement où les maquettes ont été faites, et le dépôt ne documente
+que `POST /notifications` et `GET /shops/{id}/notifications` :
+
+- la route qui **valide** une notification pour un magasin, et celle qui **lit son log** ;
+- l'envoi des **SMS** : le panel en envoie-t-il (route, fournisseur) ? Le cockpit n'a aucun
+  fournisseur SMS branché (`src/newsletter_envoi.php`) ;
+- le **numéro** du magasin à utiliser.
+
+## Les quatre premières variantes
 
 Demande du 28/10/2026 : dans les rapports automatisés, ajouter un interrupteur **Mail /
 Notification**. En notification, l'envoi passe par l'API existante et la notification se montre

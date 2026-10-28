@@ -107,6 +107,13 @@ const CSS_DASH = `
 .rn-m .pts li i{width:8px;height:8px;border-radius:2px;margin-top:4px;flex:none}
 .rn-m .ac{display:flex;gap:7px;margin-top:10px}
 .rn-tiroir .pied{margin-top:auto;padding:10px 18px 14px;font-size:10.5px;color:var(--color-text-muted)}
+/* Retour du 28/10 — une notification, à valider */
+.rn-band .canaux{display:flex;gap:5px;margin-left:auto}
+.rn-band .canal{font:600 10.5px var(--font-ui);border-radius:999px;padding:3px 9px;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);color:#555;white-space:nowrap}
+.rn-band .att{display:inline-block;font:700 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;background:#D97706;color:#fff;border-radius:999px;padding:2px 8px;margin-right:6px;vertical-align:1px}
+.rn-band.valide{background:#f0f7f2;border-color:#cfe3d5;border-left-color:#2d7a3e}
+.rn-band.valide .rn-ic{background:#2d7a3e}
+.rn-band.valide .k{color:#2d7a3e}
 `;
 
 const dashboard = {
@@ -185,6 +192,31 @@ const dashboard = {
     document.body.insertAdjacentHTML('beforeend', h);
     return '.rn-cloche';
   },
+  /* Retour du 28/10 — seulement une notification, que le magasin valide. Elle reste en tête de
+   * l'onglet tant qu'elle n'est pas validée. */
+  E: (R) => {
+    const h = `<div class="rn-band rn-neuf">
+      <span class="rn-ic">${ICO.cloche}</span>
+      <div><div class="k"><span class="att">À valider</span>Notification · reçue ${R.recu}</div>
+        <div class="t"><b>${R.nom}</b>${R.resume} — ${R.periode}</div></div>
+      <div class="canaux"><span class="canal">🔔 dashboard + panel</span><span class="canal">💬 aussi par SMS</span></div>
+      <button class="db-btn">Ouvrir le rapport</button><button class="db-btn prim">✓ Valider</button>
+    </div>`;
+    document.querySelector('.db-frise').insertAdjacentHTML('afterend', h);
+    return '.rn-band';
+  },
+  /* Validée : la ligne se referme sur l'heure de la validation, écrite dans le log. */
+  F: (R) => {
+    const h = `<div class="rn-band valide rn-neuf">
+      <span class="rn-ic">✓</span>
+      <div><div class="k">Notification validée · aujourd’hui à 10:45</div>
+        <div class="t"><b>${R.nom}</b>${R.periode} — validation écrite dans le log de la notification</div></div>
+      <div class="canaux"><span class="canal">reçue ${R.recuC}</span></div>
+      <button class="db-btn">Ouvrir le rapport</button>
+    </div>`;
+    document.querySelector('.db-frise').insertAdjacentHTML('afterend', h);
+    return '.rn-band';
+  },
 };
 
 /* ------------------------------------------------------------------------------------------- */
@@ -200,6 +232,8 @@ window.RN = {
   ligne: (h, neuf) => '<div class="' + (neuf ? 'rn-neuf' : '') + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px">' + h + '</div>',
   puce: (t, on) => '<span style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:500;' + (on ? 'background:rgba(45,122,62,0.10);color:#2d7a3e;border:0.5px solid rgba(45,122,62,0.25)' : 'background:var(--color-surface);border:0.5px solid var(--color-border-secondary);color:var(--color-text-muted)') + '">' + t + '</span>',
   cases: (libs) => libs.map(([t, on]) => '<span style="display:inline-flex;align-items:center;gap:7px;border-radius:8px;padding:6px 11px;font-size:11.5px;font-weight:500;' + (on ? 'border:1.5px solid var(--color-primary);background:var(--color-surface)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)') + '"><span style="width:14px;height:14px;border-radius:4px;display:inline-grid;place-items:center;font-size:10px;color:#fff;' + (on ? 'background:var(--color-primary)' : 'border:1px solid var(--color-border-secondary)') + '">' + (on ? '✓' : '') + '</span>' + t + '</span>').join(''),
+  multi: (libs, petit) => '<span style="display:inline-flex;gap:5px;flex-wrap:wrap">' + libs.map(([t, on]) => '<span style="display:inline-block;border-radius:8px;padding:' + (petit ? '4px 10px' : '7px 13px') + ';font-size:' + (petit ? '10.5' : '11.5') + 'px;font-weight:700;white-space:nowrap;cursor:pointer;'
+    + (on ? 'background:var(--color-primary);color:#fff;border:0.5px solid var(--color-primary)' : 'background:var(--color-surface);border:0.5px solid var(--color-border-secondary);color:var(--color-text-muted)') + '">' + (on ? '✓ ' : '') + t + '</span>').join('') + '</span>',
   trouve: (sel, re) => [...document.querySelectorAll(sel)].find(e => re.test(e.textContent.trim())),
 };`;
 const CSS_COCKPIT = `.rn-neuf{outline:2px dashed #d9a520;outline-offset:4px;border-radius:6px}`;
@@ -273,6 +307,67 @@ const cockpit = {
     a.annuaire.insertAdjacentHTML('beforebegin', RN.ligne(RN.lab('Copie email') + RN.aide('la version complète, pour le consultant'), true));
     a.envoyer.textContent = '🔔 Notifier les magasins';
     a.envoyer.classList.add('rn-neuf');
+  },
+  /* Retour du 28/10 — le multibouton Notification · SMS · Mail (plusieurs à la fois), la
+   * validation exigée du magasin, et le texte du SMS. Ici : notification et SMS, pas de mail. */
+  E: (MAGS) => {
+    const a = compoAncres();
+    a.mode.insertAdjacentHTML('beforebegin', RN.ligne(RN.lab('Envoyer par', true) + RN.multi([['🔔 Notification', true], ['💬 SMS', true], ['✉ Mail', false]])
+      + RN.aide('plusieurs à la fois · chaque magasin reçoit SA version ; sans matière, il ne reçoit rien'), true));
+    a.mode.querySelectorAll('button')[1].textContent = 'Un envoi par magasin';
+    a.mode.lastElementChild.textContent = '';
+    const sms = 'L’Atelier by — rapport de la semaine du 28/09 au 04/10 : 7 points à traiter. Ouvrez votre dashboard pour le valider.';
+    a.carnet.outerHTML = '<div class="rn-neuf" style="margin-bottom:11px">'
+      + RN.ligne(RN.lab('Magasins') + MAGS.map(m => RN.puce('✓ ' + m.replace(/^Atelier by( [^-]+)? - /, ''), true)).join('') + RN.aide('le périmètre choisi en « 2 · Les magasins »'))
+      + RN.ligne(RN.lab('🔔 Notification') + RN.seg(['Info', 'Attention', 'Urgent'], 1) + RN.aide('sur le dashboard opérationnel et dans la cloche du panel'))
+      + RN.ligne(RN.lab('Validation') + RN.cases([['Le magasin doit la valider', true]])
+        + RN.aide('elle reste affichée jusqu’à la validation ; chaque validation est écrite dans le log de la notification (qui, quand)'))
+      + '<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:9px">' + RN.lab('💬 SMS')
+      + '<div style="flex:1;max-width:640px"><div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-surface);padding:8px 10px;font-size:12px;line-height:1.45">' + sms + '</div>'
+      + '<div style="display:flex;gap:10px;margin-top:4px">' + RN.aide(sms.length + ' / 160 caractères · 1 SMS par magasin') + RN.aide('au numéro du magasin dans le panel') + '</div></div></div>'
+      + '</div>';
+    a.annuaire.insertAdjacentHTML('beforebegin', RN.ligne(RN.lab('Copie email') + RN.aide('la version complète, pour le consultant'), true));
+    a.envoyer.textContent = '🔔 💬 Notifier et envoyer le SMS';
+    a.envoyer.classList.add('rn-neuf');
+  },
+  /* La liste : le multibouton sur chaque rapport, et la validation de chaque magasin, lue dans le
+   * log de la dernière notification. */
+  F: (MAGS) => {
+    const lignes = [...document.querySelectorAll('span')].filter(s => s.style.fontSize === '13px' && s.style.fontWeight === '500')
+      .map(s => s.closest('div[style*="flex-direction:column"], div[style*="flex-direction: column"]')).filter(Boolean);
+    const CANAUX = {
+      'Rapport franchisé — la semaine': [true, true, false],
+      'Tâches sous le seuil — la veille': [true, false, false],
+      'Rapport CEO — la semaine': [false, false, true],
+      'Commandes fournisseurs — chaque matin': [false, false, true],
+    };
+    const VALID = [['Corbais', 'validée lun. 05/10 à 08:12', true], ['Gosselies', 'validée lun. 05/10 à 09:40', true], ['Halle', 'à valider', false], ['Sombreffe', 'à valider', false]];
+    const etiq = t => '<span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);width:62px;flex:none">' + t + '</span>';
+    lignes.forEach(L => {
+      const nom = L.querySelector('span').textContent.trim();
+      const c = CANAUX[nom];
+      const a = [...L.children].find(x => /^À/.test(x.textContent.trim()) && x.querySelector('input'));
+      if (!c || !a) { return; }
+      const multi = '<span class="rn-neuf" style="display:inline-flex;align-items:center;gap:8px">' + etiq('Envoi')
+        + RN.multi([['🔔 Notification', c[0]], ['💬 SMS', c[1]], ['✉ Mail', c[2]]], true) + '</span>';
+      if (c[2]) { a.insertAdjacentHTML('afterbegin', multi); return; }
+      const actif = [...L.querySelectorAll('span')].find(x => /^(Actif|Inactif)$/.test(x.textContent.trim()));
+      const freq = actif.previousElementSibling;
+      freq.textContent = freq.textContent.replace('un email par magasin', 'un envoi par magasin');
+      const env = [...L.querySelectorAll('button')].find(b => b.textContent.trim() === 'Envoyer');
+      if (env) { env.textContent = 'Envoyer'; }
+      const copie = a.querySelector('input').value;
+      const dernierVide = /sans matière/.test(L.textContent);
+      a.outerHTML = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + multi
+        + '<span style="font-size:10.5px;color:var(--color-text-muted);margin-left:6px">' + MAGS.map(m => m.replace(/^Atelier by( [^-]+)? - /, '')).join(' · ')
+        + ' · à valider par le magasin' + (copie ? ' · copie email : ' + copie : '') + '</span></div>'
+        + '<div class="rn-neuf" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' + etiq('Validé')
+        + (dernierVide ? '<span style="font-size:10.5px;color:var(--color-text-muted)">dernier envoi sans matière — rien à valider</span>'
+          : VALID.map(([m, q, ok]) => '<span style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:600;'
+            + (ok ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:#FBEFE0;color:#8a5a13') + '">' + (ok ? '✓ ' : '⏳ ') + m + ' <span style="font-weight:500">· ' + q + '</span></span>').join('')
+            + '<span style="font-size:10.5px;font-weight:600;color:var(--color-primary);margin-left:4px">le log ›</span>')
+        + '</div>';
+    });
   },
   /* B — l'interrupteur sur chaque ligne de la liste des rapports récurrents, au début de la ligne
    * des destinataires : en notification, les adresses laissent la place aux magasins notifiés. */

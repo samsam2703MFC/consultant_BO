@@ -21,6 +21,10 @@ async function greffer(p, css) {
 }
 const boite = (p, sel) => p.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return { x: r.x, y: r.y + scrollY, w: r.width, h: r.height }; }, sel);
 
+/* Les noms des captures : A à D les quatre variantes, E et F le retour du 28/10. */
+const NOM = { E: { dashboard: 'retour-dashboard', reporting: 'retour-reporting' }, F: { dashboard: 'retour-dashboard-valide', reporting: 'retour-liste' } };
+const nomDe = (v, ecran) => (NOM[v] ? NOM[v][ecran] : v.toLowerCase() + '-' + ecran) + '.png';
+
 async function dashboard(b, v, mes) {
   const p = await B.page(b, 1440, 950);
   await p.goto(DASH);
@@ -28,7 +32,7 @@ async function dashboard(b, v, mes) {
   await greffer(p, V.CSS_DASH);
   const sel = await p.evaluate(k => window.V_DASH[k](RAPPORT), v);
   await p.waitForTimeout(300);
-  const f = path.join(ICI, v.toLowerCase() + '-dashboard.png');
+  const f = path.join(ICI, nomDe(v, 'dashboard'));
   if (v === 'D') {
     // Le tiroir ouvert, puis la cloche seule (le tiroir la recouvre).
     await p.screenshot({ path: f });
@@ -36,8 +40,8 @@ async function dashboard(b, v, mes) {
     const r = await boite(p, '.op-mnt');
     await p.screenshot({ path: path.join(ICI, 'd-dashboard-ferme.png'), fullPage: true, clip: { x: 0, y: 0, width: 1440, height: Math.ceil(r.y + r.h + 18) } });
   } else {
-    // A : le bandeau et ce qui le suit jusqu'aux tuiles du moment ; B et C : jusqu'à la carte.
-    const r = await boite(p, v === 'A' ? '.op-mnt' : sel);
+    // A et E : le bandeau et ce qui le suit jusqu'aux tuiles du moment ; B, C et F : jusqu'à la carte.
+    const r = await boite(p, v === 'A' || v === 'E' ? '.op-mnt' : sel);
     await p.screenshot({ path: f, fullPage: true, clip: { x: 0, y: 0, width: 1440, height: Math.ceil(r.y + r.h + 18) } });
   }
   mes[v + '-dashboard'] = p.erreurs;
@@ -48,7 +52,8 @@ async function cockpit(b, v, mes) {
   const p = await B.page(b, 1440, 2300, true);
   await p.goto(COCKPIT);
   await pret(p);
-  if (v !== 'B') {
+  const liste = v === 'B' || v === 'F';
+  if (!liste) {
     // Le compositeur, en modification du rapport franchisé (un envoi par magasin).
     await p.locator('button', { hasText: 'Modifier' }).first().click();
     await p.waitForTimeout(700);
@@ -66,8 +71,8 @@ async function cockpit(b, v, mes) {
     const t = [...document.querySelectorAll('div')].find(d => /^5 · Générer, envoyer, ou enregistrer/.test(d.textContent.trim()) && d.children.length === 1);
     const c = t.parentElement.getBoundingClientRect();
     return { x: 236, y: c.top - 16, w: 1440 - 236, h: c.height + 32 };
-  }, v === 'B');
-  await p.screenshot({ path: path.join(ICI, v.toLowerCase() + '-reporting.png'), clip: { x: r.x, y: r.y, width: r.w, height: r.h } });
+  }, liste);
+  await p.screenshot({ path: path.join(ICI, nomDe(v, 'reporting')), clip: { x: r.x, y: r.y, width: r.w, height: r.h } });
   mes[v + '-reporting'] = p.erreurs;
   await p.context().close();
 }
@@ -77,7 +82,7 @@ async function cockpit(b, v, mes) {
   const b = await B.navigateur();
   const mes = {};
   try {
-    for (const v of ['A', 'B', 'C', 'D']) {
+    for (const v of ['A', 'B', 'C', 'D', 'E', 'F']) {
       await cockpit(b, v, mes);
       await dashboard(b, v, mes);
     }
