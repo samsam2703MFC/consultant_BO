@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A — MétaDonnée · assistant en 4 étapes</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="md.css">
+<script src="coque.js"></script>
+</head><body><script>
+/* A — Quatre écrans dans l'ordre du travail (comme « Gestion de production ») : 1 Formulaires · 2 Mapping ERP ·
+   3 Suivi des leads · 4 Alertes SMS. Ici l'écran 2 : on choisit le formulaire à gauche, on place chaque
+   question dans un champ de l'ERP au milieu, on voit à droite ce qui partira — et ce qui suivra. */
+const etapes = `<div class="steps">
+  <div class="step fait"><span class="n">✓</span><div><b>1 · Formulaires</b><small>4 suivis sur 6 · 1 à valider</small></div></div>
+  <div class="step on"><span class="n">2</span><div><b>2 · Mapping ERP</b><small>Gosselies : 9 questions placées sur 10</small></div></div>
+  <div class="step"><span class="n">3</span><div><b>3 · Suivi des leads</b><small>108 en 30 j · 3 en retard</small></div></div>
+  <div class="step"><span class="n">4</span><div><b>4 · Alertes SMS</b><small>4 magasins · relance à 2 h</small></div></div>
+</div>`;
+
+const forms = `<div class="carte"><h3>Formulaires<small>Meta · 5 pages</small><span class="d lien">↻ Relire</span></h3>
+  ${MD.forms.map((f, i) => `<div class="form ${i === 0 ? 'on' : ''} ${f.off ? 'off' : ''}"><span class="r"></span>
+    <div class="c"><b>${f.nom}</b><small style="display:flex;gap:8px;align-items:center;margin-top:5px"><span style="width:44px;flex:0 0 auto">${pf(f.pf)}</span>${pill(f.etat[0], f.etat[1], 88)}<span style="overflow:hidden;text-overflow:ellipsis">${f.dernier}</span></small></div>
+    <span class="nb" title="Leads sur 30 jours">${f.n}</span></div>`).join('')}
+</div>`;
+
+const L = (q, cle, val, champ, regle, opt) => {
+  opt = opt || {};
+  return `<tr${opt.on ? ' class="on"' : ''}><td><b style="font-size:12.5px">${q}</b><small><code>${cle}</code></small></td>
+    <td style="max-width:230px">${val}</td><td class="fl">→</td>
+    <td><span class="sel ${opt.manque ? 'manque' : ''}" style="width:230px">${champ}</span></td>
+    <td>${regle ? pill(regle[0], regle[1], 118, regle[2]) : vide(118)}</td></tr>`;
+};
+const mapping = `<div class="carte"><h3>Lunch au bureau — Gosselies<small>10 questions · dernier lead : Fiduciaire Delvaux, 10:24</small><span class="d">${pf(['fb', 'ig'])}</span></h3>
+<table class="mat"><thead><tr><th>Question du formulaire</th><th>Dernière réponse</th><th></th><th>Champ de l’ERP</th><th>Règle</th></tr></thead><tbody>
+${L('Nom complet', 'full_name', 'Claire Mertens', 'contact.first_name + last_name', ['bl', 'coupé en deux', 'Prénom = le premier mot'])}
+${L('E-mail', 'email', 'c.mertens@fiduciaire-delvaux.be', 'contact.email', ['bl', 'adresse réparée', 'Espaces, majuscules, « mailto: » retirés — la lecture du CRM'])}
+${L('Numéro de téléphone', 'phone_number', '+32 476 12 34 56', 'contact.phone', ['plein', 'obligatoire', 'Sans téléphone, l’ERP refuse le lead (422) et le SMS ne peut rien dire'])}
+${L('Nom de l’entreprise', 'company_name', 'Fiduciaire Delvaux &amp; associés', 'company.name', ['plein', 'obligatoire'])}
+${L('Fonction', 'job_title', 'Office manager', 'contact.role', null)}
+${L('Code postal', 'zip', '6041', 'company.zip', ['ru', '→ magasin', 'Sert aussi l’affectation quand le formulaire couvre plusieurs magasins'])}
+${L('Combien de personnes au bureau ?', 'combien_de_personnes…', '35', 'lead.headcount', ['bl', 'nombre entier', 'Une tranche (« 26 à 50 ») devient son milieu'])}
+${L('Que souhaitez-vous ?', 'que_souhaitez_vous', 'Un lunch tous les jours', 'lead.need', ['bl', 'table ↓', 'Voir « Correspondance des réponses »'])}
+${L('Pour quand ?', 'pour_quand', 'Dès le 4 novembre', 'lead.wanted_date', ['bl', 'date si lisible', 'Sinon le texte part en note'])}
+${L('Un mot pour nous ?', 'un_mot_pour_nous', '« Nous avons 3 végétariens »', '— choisir un champ —', ['att', 'non placé', 'Sans champ, la réponse part dans lead.note'], { manque: true, on: true })}
+<tr class="gp"><td colspan="5">Ajoutés par le cockpit</td></tr>
+${L('Magasin', '—', 'Gosselies', 'shop_id = 12', ['ru', 'formulaire'])}
+${L('Plateforme, formulaire, campagne', 'platform · form · campaign', 'Instagram · Lunch au bureau… · Lunch Charleroi oct.', 'lead.source', null)}
+${L('N° du lead chez Meta', 'id', '…8841', 'meta_lead_id', ['gr', 'jamais 2 fois', 'Clé d’unicité : un lead relu par le rattrapage ne crée pas de doublon dans l’ERP'])}
+${L('Consentement', 'custom_disclaimer', 'oui', 'lead.consent', ['plein', 'obligatoire', 'Sans accord coché, rien ne part (RGPD)'])}
+</tbody></table></div>`;
+
+const envoi = `<div class="carte"><h3>Ce qui partira<small>le dernier lead, avec ce mapping</small></h3>
+<div class="code"><span class="c">POST /api/v1/consultant/leads</span>
+{ <span class="k">"meta_lead_id"</span>: <span class="s">"…8841"</span>,
+  <span class="k">"shop_id"</span>: <span class="n">12</span>,
+  <span class="k">"source"</span>: { <span class="k">"platform"</span>: <span class="s">"ig"</span>,
+    <span class="k">"form"</span>: <span class="s">"Lunch au bureau — Gosselies"</span> },
+  <span class="k">"company"</span>: { <span class="k">"name"</span>: <span class="s">"Fiduciaire Delvaux…"</span>,
+    <span class="k">"zip"</span>: <span class="s">"6041"</span> },
+  <span class="k">"contact"</span>: { <span class="k">"first_name"</span>: <span class="s">"Claire"</span>,
+    <span class="k">"last_name"</span>: <span class="s">"Mertens"</span>,
+    <span class="k">"phone"</span>: <span class="s">"+32476123456"</span> },
+  <span class="k">"lead"</span>: { <span class="k">"headcount"</span>: <span class="n">35</span>,
+    <span class="k">"need"</span>: <span class="s">"daily_lunch"</span>,
+    <span class="k">"wanted_date"</span>: <span class="s">"2026-11-04"</span>,
+    <span class="k">"note"</span>: <span class="s">"Nous avons 3 végétariens"</span> } }</div>
+<div class="rep">✓ Essai à 10:26 · 201 · lead L-20488 « nouveau » dans l’ERP de Gosselies</div>
+<div style="display:flex;gap:8px;margin-top:10px"><span class="btn s xs">Essayer sur le dernier lead</span><span class="btn s xs">Sur un autre…</span></div>
+</div>`;
+
+const ensuite = `<div class="carte"><h3>Ensuite<small>pour ce formulaire</small></h3>
+  <div class="regle"><b>Arrivée</b><span class="v">webhook Meta, à la seconde ${pill('gr', 'filet 1×/h', 84, 'Rattrapage sur 3 jours, comme le CRM')}</span></div>
+  <div class="regle"><b>Vers l’ERP</b><span class="v">tout de suite ${pill('ok', '✓ mapping', 84)}</span></div>
+  <div class="regle"><b>SMS</b><span class="v"><span class="tog on"></span> gérante de Gosselies · 0476 •• •• 12</span></div>
+  <div class="regle"><b>Statut relu</b><span class="v">toutes les 10 min, 30 jours</span></div>
+  <div class="regle"><b>Pas vu à 2 h</b><span class="v">relance SMS · à 24 h : Sam V. par e-mail</span></div>
+  <div class="tel" style="margin-top:10px"><div class="de">SMS · expéditeur AtelierBy</div>
+    <div class="bulle">L'Atelier by - Nouveau lead bureau : Fiduciaire Delvaux, 35 pers., 6041. Claire Mertens 0476 12 34 56. A traiter : atelierby.tfbuddy.com/l/20488</div>
+    <div class="cpt"><span>modèle : 4 · Alertes SMS</span><span>144 / 160 · 1 SMS</span></div></div>
+</div>`;
+
+const correspondance = `<div class="carte"><h3>Correspondance des réponses<small>« Que souhaitez-vous ? » → <code style="font-size:11px">lead.need</code></small></h3>
+<table class="mat"><thead><tr><th>Réponse chez Meta</th><th></th><th>Code de l’ERP</th><th>Leads</th></tr></thead><tbody>
+<tr><td>Un lunch tous les jours</td><td class="fl">→</td><td><span class="sel" style="width:150px">daily_lunch</span></td><td>27</td></tr>
+<tr><td>Des plateaux pour nos réunions</td><td class="fl">→</td><td><span class="sel" style="width:150px">meeting_trays</span></td><td>11</td></tr>
+<tr><td>Un petit-déjeuner d’équipe</td><td class="fl">→</td><td><span class="sel" style="width:150px">team_breakfast</span></td><td>5</td></tr>
+<tr><td>Autre (texte libre)</td><td class="fl">→</td><td><span class="sel" style="width:150px">other + note</span></td><td>2</td></tr>
+</tbody></table></div>`;
+
+const affectation = `<div class="carte"><h3>Affectation au magasin<small>formulaire → magasin, sinon code postal</small></h3>
+<table class="mat"><thead><tr><th>Formulaire ou codes postaux</th><th></th><th>Magasin</th><th>30 j</th></tr></thead><tbody>
+<tr><td>Lunch au bureau — Gosselies</td><td class="fl">→</td><td><span class="sel" style="width:128px">Gosselies</span></td><td>45</td></tr>
+<tr><td>Lunch au bureau — Halle</td><td class="fl">→</td><td><span class="sel" style="width:128px">Halle</span></td><td>31</td></tr>
+<tr><td>Petit-déj d’équipe — Sombreffe</td><td class="fl">→</td><td><span class="sel" style="width:128px">Sombreffe</span></td><td>9</td></tr>
+<tr class="gp"><td colspan="4">Plateaux réunion — réseau · par code postal</td></tr>
+<tr><td>1300 – 1499 · Brabant wallon</td><td class="fl">→</td><td><span class="sel" style="width:128px">Corbais</span></td><td>21</td></tr>
+<tr><td>1500 – 1999 · Brabant flamand</td><td class="fl">→</td><td><span class="sel" style="width:128px">Halle</span></td><td>0</td></tr>
+<tr><td>Hors zone</td><td class="fl">→</td><td><span class="sel manque" style="width:128px">à attribuer (consultant)</span></td><td>2</td></tr>
+</tbody></table></div>`;
+
+coque(`${etapes}
+<div class="titre"><h1>Mapping ERP</h1><span class="ss">un formulaire, un mapping · enregistré le 21/10 par Sam V.</span></div>
+<div class="grille" style="grid-template-columns:360px minmax(0,1fr)"><div class="grille">${forms}${envoi}</div>${mapping}</div>
+<div class="grille" style="grid-template-columns:minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr);margin-top:16px">${ensuite}${correspondance}${affectation}</div>`,
+{ lettre: 'A — assistant en 4 étapes', enfants: [['1 · Formulaires'], ['2 · Mapping ERP', true], ['3 · Suivi des leads', false, 3], ['4 · Alertes SMS']],
+  boutons: ['Annuler', 'Enregistrer le mapping'] });
+</script></body></html>
