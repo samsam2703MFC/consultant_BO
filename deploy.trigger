@@ -1134,3 +1134,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-28T05:47:25Z météo du franchisé : finances
 2026-10-28T09:42:31Z production : logistyka i pakowanie (ekran paletyzacji, pakowanie, załadunek → tablet kierowcy)
 2026-10-28T10:05:31Z production : tablet pakowania (/tablet/packing), rail : tylko link
+2026-10-28T10:15:56Z production : migracja 121 poprawiona (MySQL 8)
