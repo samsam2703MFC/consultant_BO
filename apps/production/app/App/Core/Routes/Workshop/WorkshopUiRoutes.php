@@ -41,6 +41,8 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/tablet/production', ['controller' => $c, 'method' => 'kiosk']);
     $r->addRoute('GET', '/tablet/office', ['controller' => $c, 'method' => 'office']);
     $r->addRoute('GET', '/tablet/driver', ['controller' => $c, 'method' => 'driver']);
+    // Tablet pakowania (28/10/2026) : kartony, sztuki, czas, licznik spakowanych — każdy sparowany tablet.
+    $r->addRoute('GET', '/tablet/packing', ['controller' => $c, 'method' => 'packing']);
     $r->addRoute('GET', '/kiosk', ['controller' => $c, 'method' => 'kiosk']);
     $r->addRoute('GET', '/kiosk/scan', ['controller' => $c, 'method' => 'kioskScan']);
     $r->addRoute('GET', '/driver', ['controller' => $c, 'method' => 'driver']);

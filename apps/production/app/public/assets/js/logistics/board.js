@@ -1,7 +1,6 @@
 /*
- * Logistyka i pakowanie (28/10/2026) : trzy ekrany dnia wysyłki na tablet i biuro.
+ * Logistyka i pakowanie (28/10/2026) : ekrany dnia wysyłki na tablet i biuro (pakowanie : osobny tablet /tablet/packing).
  *  - live    : paletyzacja na żywo (odświeżanie co 10 s) — na klienta : na paletach / gotowe (stan + spakowane) / brak ;
- *  - packing : pakowanie — kartony, sztuki, czas, licznik − / + i « Gotowe » na produkt, osoby, czy zdążymy przed wyjazdem ;
  *  - loading : załadunek — naczepa (miejsca palet), klienci w kolejności rozładunku, przeciągnij paletę na miejsce,
  *              klienta w kolejności / na inny pojazd / poza pojazd (mysz i palec, albo dotknij i dotknij), plan na tablet kierowcy.
  */
@@ -73,7 +72,7 @@
             <div class="lg-kpi"><span>Gotowe do położenia</span><strong class="is-ready">${fmt(T.ready)} <small>kart.</small></strong>
                 <small>na stanie ${fmt(T.stock)}${T.packed ? ' · spakowane ' + fmt(T.packed) : ''} — weź i połóż na paletę</small></div>
             <div class="lg-kpi ${T.missing ? 'is-alert' : 'is-done'}"><span>Brak — nie ma na stanie</span><strong class="${T.missing ? 'is-missing' : 'is-ok'}">${fmt(T.missing)} <small>kart.</small></strong>
-                <small>${T.missing ? 'do spakowania przed ' + esc(s.departure) + ' (Pakowanie)' : 'wszystko jest na stanie albo na paletach'}</small></div></div>`;
+                <small>${T.missing ? 'do spakowania przed ' + esc(s.departure) + ' (tablet pakowania)' : 'wszystko jest na stanie albo na paletach'}</small></div></div>`;
         const alerts = s.alerts.length ? `<div class="lg-alerts">${s.alerts.map(a => a.type === 'no_pallet'
             ? `<span class="lg-pill is-bad">⚠ ${esc(a.customer)} : jeszcze żadnej palety</span>`
             : `<span class="lg-pill is-bad">⚠ ${esc(a.customer)} : ${fmt(a.cartons)} kart. nie ma na stanie (${a.products.map(esc).join(', ')}…)</span>`).join('')}</div>` : '';
@@ -115,58 +114,6 @@
             </tbody></table></div></div>`;
         el.querySelector('[data-back]').addEventListener('click', () => { detail = null; renderLive(); });
         el.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => { detailFilter = b.dataset.filter; renderLive(); }));
-    }
-
-    // ============================================================== Pakowanie
-    let people = null;
-    function renderPacking() {
-        const s = state;
-        const T = s.totals;
-        people ??= Math.max(1, s.people.present || 1);
-        const finish = new Date(serverNow().getTime() + T.seconds / people * 1000);
-        const deadline = new Date(`${date}T${s.departure}:00`);
-        const margin = (deadline - finish) / 1000;
-        const kpi = `<div class="lg-kpis is-4">
-            <div class="lg-kpi"><span>Kartony do spakowania</span><strong>${fmt(T.remaining)}</strong><small>${T.products} ${plural(T.products, 'produkt', 'produkty', 'produktów')} · ${T.done} gotowe</small></div>
-            <div class="lg-kpi"><span>Sztuki</span><strong>${fmt(T.pieces)}</strong><small>kartony × sztuki w kartonie</small></div>
-            <div class="lg-kpi"><span>Czas (≈)</span><strong>${hm(T.seconds)}</strong>
-                <small class="lg-people">Osoby : <button type="button" class="btn btn-light btn-sm" data-people="-1" aria-label="Mniej osób">−</button> <b>${people}</b>
-                <button type="button" class="btn btn-light btn-sm" data-people="1" aria-label="Więcej osób">+</button> → ${hm(T.seconds / people)}</small></div>
-            <div class="lg-kpi ${T.remaining === 0 || margin >= 0 ? 'is-done' : 'is-alert'}"><span>Zdążymy przed ${esc(s.departure)} ?</span>
-                <strong class="${T.remaining === 0 || margin >= 0 ? 'is-ok' : 'is-missing'}">${T.remaining === 0 ? 'Gotowe' : (margin >= 0 ? 'Tak' : 'Nie')}</strong>
-                <small>${T.remaining === 0 ? 'nic do pakowania' : (margin >= 0 ? `koniec ok. ${finish.toTimeString().slice(0, 5)} · zapas ${hm(margin)}` : `koniec ok. ${finish.toTimeString().slice(0, 5)} · brakuje ${hm(-margin)} — więcej osób`)}</small></div></div>`;
-        let cat = null;
-        const rows = s.items.map(i => {
-            const head = i.category !== cat ? `<li class="lg-cat">${esc(cat = i.category || 'Bez kategorii')}</li>` : '';
-            return head + `<li class="lg-pack ${i.done ? 'is-done' : (i.packed ? 'is-go' : '')}" data-product="${i.product_id}">
-                <div class="lg-pack-name"><b>${esc(i.name)}</b><small>${i.clients.map(c => esc(c.name) + ' ' + fmt(c.cartons)).join(' · ') || 'na stanie — etykiety'}</small></div>
-                <div class="lg-num"><strong>${fmt(i.remaining)}</strong><small>kart.${i.need !== i.remaining ? ' z ' + fmt(i.need) : ''}</small></div>
-                <div class="lg-num"><strong>${fmt(i.pieces)}</strong><small>szt. (${i.ppc}/kart.)</small></div>
-                <div class="lg-num"><strong>${i.done ? '—' : (i.norm ? '' : '≈ ') + hm(i.seconds)}</strong><small>${i.norm ? 'norma' : 'bez normy'}</small></div>
-                <div class="lg-ctr">${i.done ? `<span class="lg-pill is-ok">✓ Spakowane ${fmt(i.packed)}</span><button type="button" class="btn btn-light" data-set="0">Cofnij</button>`
-                    : `<button type="button" class="btn btn-light" data-step="-1" ${i.packed ? '' : 'disabled'} aria-label="Mniej">−</button><span class="lg-cnt"><b>${fmt(i.packed)}</b>/${fmt(i.need)}</span>
-                       <button type="button" class="btn btn-light" data-step="1" aria-label="Więcej">+</button><button type="button" class="btn btn-primary" data-set="${i.need}">Gotowe</button>`}</div></li>`;
-        }).join('');
-        el.innerHTML = `<div class="lg-strip"><span class="lg-pill">👥 ${s.people.present} ${plural(s.people.present, 'osoba', 'osoby', 'osób')} na zmianie (${esc(s.people.group)})</span>
-                <span class="lg-pill is-warn">${esc(untilDeparture(s.departure))}</span></div>` + kpi
-            + (s.items.length ? `<div class="card lg-packlist"><ul>${rows}</ul></div>` : '<p class="at-empty">Nic do pakowania — wszystko jest na stanie albo na paletach.</p>')
-            + `<p class="at-profit-note">Do spakowania = zamówione − na paletach − na stanie (najpierw dla pierwszych klientów trasy). Czas wg normy « Pakowanie » z karty produktu
-                (${T.with_norm} ${plural(T.with_norm, 'produkt', 'produkty', 'produktów')} z normą) ; bez normy średnia : ${fmt(s.average_norm.fixed)} s + ${fmt(s.average_norm.per_piece, 1)} s na sztukę.
-                Spakowane kartony pokazuje ekran paletyzacji jako gotowe, aż pojawią się na stanie.</p>`;
-        el.querySelectorAll('[data-people]').forEach(b => b.addEventListener('click', () => { people = Math.max(1, Math.min(20, people + Number(b.dataset.people))); renderPacking(); }));
-        el.querySelectorAll('[data-product]').forEach(row => {
-            const item = s.items.find(i => i.product_id === Number(row.dataset.product));
-            row.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => setPacked(item, Math.max(0, item.packed + Number(b.dataset.step)))));
-            row.querySelectorAll('[data-set]').forEach(b => b.addEventListener('click', () => setPacked(item, Number(b.dataset.set))));
-        });
-    }
-    async function setPacked(item, packed) {
-        busy = true;
-        const res = await at.send(`/ajax/logistics/packing/${item.product_id}`, 'PUT', {date, packed});
-        busy = false;
-        if (!res.ok) return at.notify(false, res.message || 'Błąd');
-        state = res.data;
-        renderPacking();
     }
 
     // ============================================================== Załadunek
@@ -362,11 +309,9 @@
     function render() {
         if (!state) return;
         if (board === 'live') renderLive();
-        if (board === 'packing') renderPacking();
         if (board === 'loading') renderLoading();
     }
     render();
     if (board === 'live') every(10, () => reload());
-    if (board === 'packing') every(30, () => reload());
     if (board === 'loading') every(30, () => { if (!drag && picked === null) reload(`&vehicle=${state.vehicle ? state.vehicle.id : ''}`); });
 })();

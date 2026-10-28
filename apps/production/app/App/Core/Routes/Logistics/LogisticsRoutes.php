@@ -9,14 +9,13 @@ return function(RouteCollector $r) {
     $r->addRoute('GET', '/logistics/vehicles', ['controller' => $c, 'method' => 'vehicles']);
     $r->addRoute('GET', '/logistics/tours', ['controller' => $c, 'method' => 'tours']);
     $r->addRoute('GET', '/logistics/loading-list', ['controller' => $c, 'method' => 'loadingList']);
-    // Logistyka i pakowanie (28/10/2026) : paletyzacja na żywo, pakowanie, załadunek ciężarówki → tablet kierowcy.
+    // Logistyka i pakowanie (28/10/2026) : paletyzacja na żywo, załadunek ciężarówki → tablet kierowcy ; pakowanie to osobny
+    // tablet (/tablet/packing, sparowany jak inne tablety) — dawny adres przekierowany (dzień zachowany).
     $b = App\Controllers\Web\Logistics\LogisticsBoardController::class;
     $r->addRoute('GET', '/logistics/live', ['controller' => $b, 'method' => 'live']);
-    $r->addRoute('GET', '/logistics/packing', ['controller' => $b, 'method' => 'packing']);
+    $r->addRoute('GET', '/logistics/packing', ['redirect' => '/tablet/packing']);
     $r->addRoute('GET', '/logistics/loading', ['controller' => $b, 'method' => 'loading']);
     $r->addRoute('GET', '/ajax/logistics/live', ['controller' => $b, 'method' => 'liveData']);
-    $r->addRoute('GET', '/ajax/logistics/packing', ['controller' => $b, 'method' => 'packingData']);
-    $r->addRoute('PUT', '/ajax/logistics/packing/{id:\d+}', ['controller' => $b, 'method' => 'setPacked']);
     $r->addRoute('GET', '/ajax/logistics/loading', ['controller' => $b, 'method' => 'loadingData']);
     $r->addRoute('PUT', '/ajax/logistics/loading', ['controller' => $b, 'method' => 'saveLoading']);
     $r->addRoute('POST', '/ajax/logistics/loading/send', ['controller' => $b, 'method' => 'sendLoading']);

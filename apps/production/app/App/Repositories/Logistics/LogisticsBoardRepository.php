@@ -137,11 +137,11 @@ final class LogisticsBoardRepository extends WorkshopRepository
         return $out;
     }
 
-    public function savePacking(string $date, int $productId, int $packed, int $baseCount, ?int $userId): void
+    public function savePacking(string $date, int $productId, int $packed, int $baseCount, ?int $userId, ?int $deviceId = null): void
     {
-        $this->db->prepare('INSERT INTO n_packing_count (ship_date, id_product, packed, base_count, updated_by) VALUES (?, ?, ?, ?, ?)
-                            ON DUPLICATE KEY UPDATE packed = VALUES(packed), updated_by = VALUES(updated_by)')
-            ->execute([$date, $productId, $packed, $baseCount, $userId]);
+        $this->db->prepare('INSERT INTO n_packing_count (ship_date, id_product, packed, base_count, updated_by, updated_device) VALUES (?, ?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE packed = VALUES(packed), updated_by = VALUES(updated_by), updated_device = VALUES(updated_device)')
+            ->execute([$date, $productId, $packed, $baseCount, $userId, $deviceId]);
     }
 
     public function productExists(int $id): bool

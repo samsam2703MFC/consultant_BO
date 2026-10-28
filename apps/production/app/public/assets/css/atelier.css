@@ -2250,7 +2250,7 @@ button.tfb-buy-box.is-on { box-shadow: none; background: var(--at-primary); back
 .lg-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 8px; font-size: 13.5px; font-weight: 500; background: var(--lg-fill); color: var(--at-muted); white-space: nowrap; }
 .lg-pill.is-ok { background: rgba(46, 125, 79, .10); color: var(--lg-ok); } .lg-pill.is-warn { background: rgba(242, 201, 160, .45); color: var(--at-on-abricot); }
 .lg-pill.is-bad { background: rgba(196, 30, 58, .08); color: var(--lg-bad); }
-.lg-kpis { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; margin-bottom: 12px; } .lg-kpis.is-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.lg-kpis { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
 .lg-kpi { background: #fff; border: 1px solid var(--at-line); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
 .lg-kpi > span { font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--at-muted); }
 .lg-kpi strong { font-size: 32px; font-weight: 600; line-height: 1.1; } .lg-kpi strong small { font-size: 16px; color: var(--at-muted); font-weight: 500; }
@@ -2282,15 +2282,6 @@ button.tfb-buy-box.is-on { box-shadow: none; background: var(--at-primary); back
 .lg-switch button.is-on { background: #fff; color: var(--at-text); box-shadow: 0 2px 8px rgba(34, 34, 34, .08); } .lg-switch .at-sub { margin-left: auto; }
 .lg-table td, .lg-table th { vertical-align: middle; font-variant-numeric: tabular-nums; } .lg-table tr.is-missing td:first-child { box-shadow: inset 4px 0 0 var(--lg-bad); }
 .lg-num-bad { color: var(--lg-bad); font-weight: 600; }
-.lg-packlist { padding: 6px 14px; } .lg-packlist ul { list-style: none; margin: 0; padding: 0; }
-.lg-cat { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--at-muted); padding: 10px 4px 4px; }
-.lg-pack { display: grid; grid-template-columns: minmax(0, 1fr) 90px 130px 100px 300px; align-items: center; gap: 10px; padding: 8px 4px; border-top: 1px solid var(--at-line); }
-.lg-pack.is-done { opacity: .6; } .lg-pack.is-go { background: rgba(242, 201, 160, .18); border-radius: 10px; }
-.lg-pack-name b { display: block; font-size: 16px; } .lg-pack-name small { color: var(--at-muted); font-size: 12.5px; }
-.lg-num { text-align: right; } .lg-num strong { display: block; font-size: 19px; font-weight: 600; } .lg-num small { color: var(--at-muted); font-size: 12px; }
-.lg-ctr { display: flex; align-items: center; gap: 6px; justify-content: flex-end; } .lg-ctr .btn { min-height: 48px; min-width: 48px; font-size: 18px; }
-.lg-cnt { min-width: 64px; text-align: center; color: var(--at-muted); } .lg-cnt b { font-size: 20px; color: var(--at-text); }
-.lg-people .btn { min-height: 36px; min-width: 36px; padding: 2px 8px; }
 .lg-vtabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .lg-vtab { border: 0; border-radius: 12px; padding: 9px 14px; min-height: 52px; background: var(--lg-fill); text-align: left; color: var(--at-muted); }
 .lg-vtab b { display: block; color: var(--at-text); } .lg-vtab small { font-size: 12.5px; } .lg-vtab.is-on { background: #fff; box-shadow: 0 2px 8px rgba(34, 34, 34, .08); outline: 2px solid var(--at-primary); }
@@ -2322,5 +2313,5 @@ button.tfb-buy-box.is-on { box-shadow: none; background: var(--at-primary); back
 .is-dragging { opacity: .35; } body.lg-dragging { user-select: none; cursor: grabbing; }
 body.lg-kiosk #sidebar, body.lg-kiosk #main > header, body.lg-kiosk #appNotificationBanner, body.lg-kiosk footer, body.lg-kiosk .at-page-tabs { display: none !important; }
 body.lg-kiosk #main { margin-left: 0 !important; padding-top: 12px; }
-@media (max-width: 1100px) { .lg-load { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); } .lg-side { grid-column: 1 / -1; order: 3; } .lg-pack { grid-template-columns: minmax(0, 1fr) 80px 110px 90px; } .lg-ctr { grid-column: 1 / -1; } }
-@media (max-width: 760px) { .lg-kpis, .lg-kpis.is-4 { grid-template-columns: minmax(0, 1fr); } .lg-load { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 1100px) { .lg-load { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); } .lg-side { grid-column: 1 / -1; order: 3; } }
+@media (max-width: 760px) { .lg-kpis { grid-template-columns: minmax(0, 1fr); } .lg-load { grid-template-columns: minmax(0, 1fr); } }

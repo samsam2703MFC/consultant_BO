@@ -216,8 +216,8 @@ final class LogisticsBoardService
         ];
     }
 
-    /** Licznik pakowania produktu (0–9999 kartonów) ; przy pierwszym wpisie zapamiętany stan kartonów produktu. */
-    public function setPacked(string $date, int $productId, mixed $packed, ?int $userId): array
+    /** Licznik pakowania produktu (0–9999 kartonów) ; przy pierwszym wpisie zapamiętany stan kartonów produktu ; kto : użytkownik ERP albo tablet. */
+    public function setPacked(string $date, int $productId, mixed $packed, ?int $userId, ?int $deviceId = null): array
     {
         $this->checkDate($date);
         if (!$this->repo->productExists($productId)) throw new CustomException('Nie znaleziono produktu.', 'errors', 404);
@@ -226,7 +226,7 @@ final class LogisticsBoardService
         }
         $current = $this->repo->packing($date)[$productId] ?? null;
         $base = $current['base_count'] ?? ($this->repo->stockOrPallet([$productId])[$productId] ?? 0);
-        $this->repo->savePacking($date, $productId, (int) $packed, (int) $base, $userId);
+        $this->repo->savePacking($date, $productId, (int) $packed, (int) $base, $userId, $deviceId);
         return $this->packing($date);
     }
 

@@ -43,6 +43,13 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
 
+### Tablette d'emballage (migration 121, 28/10/2026)
+
+- L'emballage n'est plus une page de l'ERP : tablette autonome `/tablet/packing` (appairée comme les autres tablettes,
+  toute tablette appairée, sans PIN) ; l'ancienne adresse `/logistics/packing` y redirige (jour gardé).
+- `n_packing_count.updated_device` : tablette qui a saisi le compteur (`updated_by` = utilisateur ERP, vide depuis la tablette).
+- API : `GET /kiosk/packing?date=`, `PUT /kiosk/packing/{produit}` (`{date, packed}` 0–9999).
+
 ### Logistique et emballage : palettisation, emballage, chargement du camion (migration 120, 28/10/2026)
 
 - Lecture seule des tables d'origine : cartons commandés (`customer_order_product.quantity_carton`, commandes à charger),

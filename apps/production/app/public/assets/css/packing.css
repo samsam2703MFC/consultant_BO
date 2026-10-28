@@ -1,0 +1,41 @@
+/* Tablet pakowania (28/10/2026) : dzień wysyłki, 4 liczby, lista produktów z licznikiem − / + / Gotowe. */
+.pk-days { display: flex; gap: 8px; flex-wrap: wrap; }
+.pk-days .kiosk-chip { min-height: 48px; padding: 8px 16px; }
+.pk-days .kiosk-chip.is-active { background: var(--k-primary); color: #fff; }
+.pk-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.pk-kpi { display: flex; flex-direction: column; gap: 4px; }
+.pk-kpi > span { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--k-muted); }
+.pk-kpi strong { font-size: 34px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.pk-kpi small { font-size: 14px; color: var(--k-muted); }
+.pk-kpi.is-ok strong { color: var(--k-ok); }
+.pk-kpi.is-late { box-shadow: inset 0 0 0 2px var(--k-danger); }
+.pk-kpi.is-late strong { color: var(--k-danger); }
+.pk-people { display: flex; align-items: center; gap: 8px; }
+.pk-people .kiosk-btn { min-width: 48px; min-height: 48px; padding: 0; font-size: 22px; }
+.pk-people b { min-width: 56px; text-align: center; font-variant-numeric: tabular-nums; }
+.pk-list { padding: 4px 0; }
+.pk-list ul { list-style: none; margin: 0; padding: 0; }
+.pk-cat { padding: 14px 16px 6px; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--k-muted); }
+.pk-row { display: grid; grid-template-columns: minmax(0, 1fr) 90px 110px 90px auto; gap: 12px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--k-line); }
+.pk-row.is-go { background: var(--k-warn-50); }
+.pk-row.is-done { opacity: .62; }
+.pk-name { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pk-name b { font-size: 18px; }
+.pk-name small { font-size: 14px; color: var(--k-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk-num { text-align: right; display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+.pk-num strong { font-size: 22px; }
+.pk-num small { font-size: 13px; color: var(--k-muted); }
+.pk-ctr { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.pk-ctr .kiosk-btn { min-height: 48px; }
+.pk-step { min-width: 52px; padding: 0; font-size: 24px; }
+.pk-cnt { min-width: 84px; text-align: center; font-variant-numeric: tabular-nums; font-size: 16px; color: var(--k-muted); }
+.pk-cnt b { font-size: 22px; color: var(--k-text); }
+.pk-done { padding: 8px 12px; border-radius: 8px; background: var(--k-ok-50); color: var(--k-ok); font-weight: 600; }
+.pk-empty { font-size: 18px; margin: 0; }
+.pk-note { font-size: 13px; }
+@media (max-width: 1000px) {
+    .pk-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pk-row { grid-template-columns: minmax(0, 1fr) 80px 100px; }
+    .pk-row .pk-num:nth-of-type(4) { display: none; }
+    .pk-ctr { grid-column: 1 / -1; justify-content: flex-start; }
+}

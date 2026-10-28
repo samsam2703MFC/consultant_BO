@@ -14,6 +14,7 @@ use App\Controllers\Api\Workshop\GroupController;
 use App\Controllers\Api\Workshop\ItemController;
 use App\Controllers\Api\Workshop\ManagerController;
 use App\Controllers\Api\Workshop\OpenApiController;
+use App\Controllers\Api\Workshop\PackingController;
 use App\Controllers\Api\Workshop\ParamController;
 use App\Controllers\Api\Workshop\PlanningController;
 use App\Controllers\Api\Workshop\SchedulingController;
@@ -308,6 +309,9 @@ final class WorkshopApiRoutes
             ['POST', '/driver/run', DriverController::class, 'run', 'kiosk_employee'],
             ['GET', '/driver/loading', DriverController::class, 'loading', 'kiosk_employee'],
             ['POST', '/driver/loading/checks', DriverController::class, 'loadingCheck', 'kiosk_employee'],
+            // Tablet pakowania (28/10/2026) : każdy sparowany tablet, bez PIN.
+            ['GET', '/kiosk/packing', PackingController::class, 'show', 'kiosk'],
+            ['PUT', '/kiosk/packing/{id:\d+}', PackingController::class, 'set', 'kiosk'],
             ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk_employee'],
             ['POST', '/driver/photos', DriverController::class, 'photo', 'kiosk_employee'],
             ['GET', '/driver/report', DriverController::class, 'report', 'kiosk_employee'],

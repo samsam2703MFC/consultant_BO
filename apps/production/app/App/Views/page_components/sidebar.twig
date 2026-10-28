@@ -342,8 +342,8 @@
 
                 <li class="sidebar-title">Logistyka i pakowanie</li>
 
-                {# Logistyka i pakowanie (28/10/2026) : ekran paletyzacji na żywo (tablet na rampie), pakowanie (kartony, sztuki, czas),
-                   załadunek ciężarówki (przeciągnij palety i klientów → plan na tablet kierowcy). #}
+                {# Logistyka i pakowanie (28/10/2026) : ekran paletyzacji na żywo (tablet na rampie), załadunek ciężarówki (przeciągnij
+                   palety i klientów → plan na tablet kierowcy) ; pakowanie = osobny tablet (link, sparowany jak inne tablety). #}
                 <li class="sidebar-item">
                     <a href="{{ root }}/logistics/live" class="sidebar-link">
                         <i class="bi bi-grid-3x3-gap"></i>
@@ -351,9 +351,9 @@
                     </a>
                 </li>
                 <li class="sidebar-item">
-                    <a href="{{ root }}/logistics/packing" class="sidebar-link">
-                        <i class="bi bi-box2"></i>
-                        <span>Pakowanie</span>
+                    <a href="{{ root }}/tablet/packing" class="sidebar-link" target="_blank" rel="noopener">
+                        <i class="bi bi-tablet-landscape"></i>
+                        <span>Tablet pakowania</span>
                     </a>
                 </li>
                 <li class="sidebar-item">
@@ -417,6 +417,11 @@
                         <li class="submenu-item">
                             <a href="{{ root }}/tablet/driver" target="_blank" rel="noopener">
                                 <i class="bi bi-truck"></i> Tablet kierowcy
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/tablet/packing" target="_blank" rel="noopener">
+                                <i class="bi bi-box2"></i> Tablet pakowania
                             </a>
                         </li>
                     </ul>
@@ -493,8 +498,9 @@
                 <li><a href="{{ root }}/test-products/pipeline" data-where="Produkt › Produkty › Nowe produkty (etapy i lista)"><i class="bi bi-rocket-takeoff"></i> Wprowadź produkt testowy : kreator produktu wypełniony z testu (nazwa, kategoria, dział, etykieta, receptura) i powiązanie testu z nowym produktem</a></li>
                 <li><a href="{{ root }}/logistics/live" data-where="Logistyka i pakowanie › Ekran paletyzacji"><i class="bi bi-grid-3x3-gap"></i> Ekran paletyzacji na żywo (tablet na rampie, pełny ekran) : co jest na paletach, co gotowe w magazynie, czego brakuje — klient po kliencie, alarmy, odświeżanie co 10 s</a></li>
                 <li><a href="{{ root }}/logistics/live" data-where="Logistyka i pakowanie › Ekran paletyzacji"><i class="bi bi-exclamation-triangle"></i> Brakuje do wysyłki : produkty zamówione, ale nie na palecie i nie w magazynie (do spakowania), klienci bez żadnej palety przed wyjazdem</a></li>
-                <li><a href="{{ root }}/logistics/packing" data-where="Logistyka i pakowanie › Pakowanie"><i class="bi bi-box2"></i> Pakowanie dnia : kartony i sztuki do spakowania na produkt, czas wg normy « Pakowanie » (Etapy i czasy), osoby, koniec pakowania vs wyjazd ciężarówki</a></li>
-                <li><a href="{{ root }}/logistics/packing" data-where="Logistyka i pakowanie › Pakowanie"><i class="bi bi-check2-square"></i> Licznik spakowanych kartonów (− / + / Gotowe) : informacyjny, nie tworzy kartonów w magazynie — etykiety jak dotąd</a></li>
+                <li><a href="{{ root }}/tablet/packing" target="_blank" rel="noopener" data-where="Logistyka i pakowanie › Tablet pakowania"><i class="bi bi-box2"></i> Tablet pakowania (tablette emballage) : kartony i sztuki do spakowania na produkt, czas wg normy « Pakowanie » (Etapy i czasy), osoby, koniec pakowania vs wyjazd ciężarówki</a></li>
+                <li><a href="{{ root }}/tablet/packing" target="_blank" rel="noopener" data-where="Logistyka i pakowanie › Tablet pakowania"><i class="bi bi-check2-square"></i> Licznik spakowanych kartonów na tablecie pakowania (− / + / Gotowe) : informacyjny, nie tworzy kartonów w magazynie — etykiety jak dotąd</a></li>
+                <li><a href="{{ root }}/workshop/execution#devices" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-link-45deg"></i> Tablet pakowania : adres /tablet/packing — każdy sparowany tablet (np. tablet grupy Pakowanie), bez PIN</a></li>
                 <li><a href="{{ root }}/logistics/loading" data-where="Logistyka i pakowanie › Załadunek ciężarówki"><i class="bi bi-truck-flatbed"></i> Załadunek ciężarówki : przeciągnij klientów na pojazd i w kolejności dostaw, palety na miejsca naczepy (pierwsza dostawa przy drzwiach), « Ułóż automatycznie »</a></li>
                 <li><a href="{{ root }}/logistics/loading" data-where="Logistyka i pakowanie › Załadunek ciężarówki"><i class="bi bi-send"></i> Wyślij plan załadunku na tablet kierowcy (wersje) : kierowca odhacza palety załadowane, biuro widzi postęp</a></li>
                 <li><a href="{{ root }}/tablet/driver" data-where="Tablety › Otwórz tablet › Tablet kierowcy"><i class="bi bi-truck"></i> Tablet kierowcy : plan załadunku z biura — naczepa z miejscami palet, kolejność rozładunku, « załadowana » dotknięciem</a></li>
@@ -535,7 +541,7 @@
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-arrow-left-right"></i> Tablet produkcji jednej grupy : adres /tablet/production?team=N — osoby grupy, produkcja dnia, magazyn ; inna grupa = inny adres</a></li>
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-calculator"></i> Tablet : Receptura na zamówienie — kartony × sztuki w kartonie + strata produkcyjna (0 / 2 / 5 % / inna) → sztuki do zrobienia i składniki ; « Zatwierdź » → partia i numery partii składników (zdjęcie worka, OCR, ręcznie)</a></li>
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-box-seam"></i> Ekran główny tabletu : karta « Magazyn grupy » (poniżej minimum, wolno jeszcze zrobić, produkty) — « Cały magazyn » po PIN</a></li>
-                <li><a href="{{ root }}/workshop/execution#devices" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-link-45deg"></i> Adresy tabletów : /tablet/production?team=N (grupa N), /tablet/office (biuro), /tablet/driver (kierowca) — linki w planie tabletów</a></li>
+                <li><a href="{{ root }}/workshop/execution#devices" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-link-45deg"></i> Adresy tabletów : /tablet/production?team=N (grupa N), /tablet/office (biuro), /tablet/driver (kierowca), /tablet/packing (pakowanie) — linki w planie tabletów</a></li>
                 <li><a href="{{ root }}/shipments/differences" data-where="Logistyka i pakowanie › Wysyłki i dokumenty"><i class="bi bi-exclamation-diamond"></i> Różnice i problemy dostaw (dostawy, wysyłka) : różnica opłacona proforma ↔ WDT (zwrot dla klienta, dopłata), problem zgłoszony przez kierowcę — odpowiedzialny, decyzja, termin, zamknięcie</a></li>
                 <li><a href="{{ root }}/logistics/deliveries" data-where="Logistyka i pakowanie › Dzień wysyłki › Potwierdzenia dostaw"><i class="bi bi-qr-code"></i> Kod QR trasy dla tabletu kierowcy : pojazd i dzień otwierają się po zeskanowaniu (także na raporcie trasy PDF)</a></li>
                 <li><a href="{{ root }}/workshop/execution" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-person-badge"></i> Tablet kierowcy : PIN kierowcy (osoby na tablecie) — kierowca wybiera się z listy i wpisuje PIN ; lista = stanowisko « Kierowca-dostawca » (Stanowiska i zadania)</a></li>

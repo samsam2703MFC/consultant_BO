@@ -134,6 +134,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/driver', ['api_base' => $this->apiBase()]);
     }
 
+    /** Tablet pakowania (PWA) : pakowanie dnia wysyłki (kartony, sztuki, czas, licznik) ; sama powłoka, dane przez API z tokenem tabletu. */
+    public function packing()
+    {
+        $this->view('workshop/packing', ['api_base' => $this->apiBase()]);
+    }
+
     /** Tablet biurowy (PWA) : dział → nazwisko → osobisty kod QR (osoba + dzień) zatwierdzany telefonem ; sama powłoka. */
     public function office()
     {

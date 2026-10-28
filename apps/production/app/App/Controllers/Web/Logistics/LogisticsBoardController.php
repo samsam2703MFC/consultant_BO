@@ -7,7 +7,7 @@ use App\Services\Logistics\LogisticsBoardService;
 use App\Services\Logistics\LogisticsService;
 use Symfony\Component\HttpFoundation\Request;
 
-/** Logistyka i pakowanie : ekran paletyzacji na żywo, pakowanie, załadunek ciężarówki (plan na tablet kierowcy). */
+/** Logistyka i pakowanie : ekran paletyzacji na żywo, załadunek ciężarówki (plan na tablet kierowcy) ; pakowanie = tablet /tablet/packing. */
 class LogisticsBoardController extends BaseController
 {
     use JsonErrors;
@@ -19,11 +19,6 @@ class LogisticsBoardController extends BaseController
         $this->page('logistics/live', fn($d) => $this->board->live($d));
     }
 
-    public function packing()
-    {
-        $this->page('logistics/packing', fn($d) => $this->board->packing($d));
-    }
-
     public function loading()
     {
         $vehicle = (int) ($_GET['vehicle'] ?? 0) ?: null;
@@ -33,17 +28,6 @@ class LogisticsBoardController extends BaseController
     public function liveData()
     {
         return $this->respond(fn() => ['data' => $this->board->live($this->date())]);
-    }
-
-    public function packingData()
-    {
-        return $this->respond(fn() => ['data' => $this->board->packing($this->date())]);
-    }
-
-    public function setPacked($id)
-    {
-        $in = $this->input();
-        return $this->respond(fn() => ['message' => 'Zapisano.', 'data' => $this->board->setPacked((string) ($in['date'] ?? ''), (int) $id, $in['packed'] ?? null, $this->userId())]);
     }
 
     public function loadingData()

@@ -164,6 +164,24 @@ try {
     expectDrv($s === 422 && in_array('loaded:REQUIRED', $codes($b), true), 'checks validated');
     [, $b] = $call('GET', '/driver/day', null, $driver);
     expectDrv($b['data']['loading']['version'] === 1 && $b['data']['loading']['loaded'] === 1, 'route screen shows the loading progress');
+
+    // --- Tablet pakowania (28/10/2026) : każdy sparowany tablet, bez PIN ; licznik zapisuje tablet
+    [$s, $b] = $call('GET', '/kiosk/packing?date=' . $today, null, []);
+    expectDrv($s === 401 && $b['description'] === 'DEVICE_UNAUTHENTICATED', 'packing tablet needs a paired device');
+    $tablet = ['X-Device-Token' => $driver['X-Device-Token']];
+    [$s, $b] = $call('GET', '/kiosk/packing?date=' . $today, null, $tablet);
+    $item = $b['data']['items'][0] ?? null;
+    expectDrv($s === 200 && $b['data']['date'] === $today && $item['product_id'] === 500 && $item['need'] === 50 && $item['pieces'] === 50 * 60
+        && $item['clients'][0]['name'] === 'Boulangerie Test' && $b['data']['totals']['remaining'] === 50, 'packing day: 50 cartons of the croissant to pack, for whom');
+    [$s, $b] = $call('PUT', '/kiosk/packing/500', ['date' => $today, 'packed' => 20], $tablet);
+    expectDrv($s === 200 && $b['data']['items'][0]['packed'] === 20 && $b['data']['items'][0]['remaining'] === 30
+        && (int) $pdo->query("SELECT updated_device FROM n_packing_count WHERE id_product = 500")->fetchColumn() > 0, 'packing counter saved by the tablet');
+    [$s, $b] = $call('PUT', '/kiosk/packing/500', ['date' => $today, 'packed' => 10000], $tablet);
+    expectDrv($s === 422 && $codes($b) === ['packed:OUT_OF_RANGE'], 'packing counter limited to 9999');
+    [$s] = $call('PUT', '/kiosk/packing/99999', ['date' => $today, 'packed' => 1], $tablet);
+    expectDrv($s === 404, 'unknown product refused');
+    [$s] = $call('GET', '/kiosk/packing?date=20.10.2026', null, $tablet);
+    expectDrv($s === 422, 'bad date refused');
     $stop = $day['stops'][0];
     expectDrv($stop['name'] === 'Boulangerie Test' && $stop['address'] === 'Rue Haute 12, 1000 Bruxelles, BE' && $stop['phone'] === '+32 2 000 00 00'
         && $stop['pallets'] === 2 && $stop['status'] === null, 'stop: address, phone, pallets (50 cartons / 48 per pallet)');
