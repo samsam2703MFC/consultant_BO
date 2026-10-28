@@ -45,7 +45,7 @@ try {
     foreach (['n_prod_param', 'carrier', 'carrier_vehicle', 'n_vehicle', 'n_tour', 'n_tour_vehicle', 'n_tour_customer', 'n_shipping_assignment', 'customer', 'customer_order',
                  'customer_order_product', 'final_product', 'palets_delivery', 'document_cmr', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'raw_material',
                  'category_product', 'carton_stock', 'carton_pallet_connection', 'n_pallet_entry', 'n_packing_count', 'n_load_plan', 'n_load_check', 'n_prod_item',
-                 'n_prod_routing_step', 'n_prod_group', 'n_prod_employee', 'n_prod_team', 'n_prod_team_member', 'n_prod_clock', 'user'] as $table) {
+                 'n_prod_routing_step', 'n_prod_group', 'n_prod_employee', 'n_prod_team', 'n_prod_team_member', 'n_prod_clock', 'user', 'production_employee'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -81,6 +81,7 @@ try {
     $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr) VALUES (7, 'PAKOWANIE', 'Pakowanie', 'Emballage')");
     $pdo->exec("INSERT INTO n_prod_employee (id, id_production_employee, id_primary_group, active) VALUES (1, 1, 7, 1), (2, 2, 7, 1), (3, 3, 7, 1)");
     $pdo->exec("INSERT INTO n_prod_clock (id_employee, clock_in, clock_out) VALUES (1, NOW(), NULL), (2, NOW(), NULL), (3, NOW() - INTERVAL 5 HOUR, NOW())");
+    $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (1, 'Marek', 'Nowak', 0, 1), (2, 'Ola', 'Kowal', 0, 1), (3, 'Piotr', 'Lis', 0, 1)");
 
     $new = fn() => new LogisticsBoardService(new LogisticsService(new LogisticsRepository($pdo), new ParamRepository($pdo)), new LogisticsBoardRepository($pdo), new ParamRepository($pdo));
     $board = $new();
@@ -198,6 +199,34 @@ try {
     expectBoard($sent['version'] === 2 && !$sent['changed'] && $sent['loaded'] === 1
         && array_keys((new LogisticsBoardRepository($pdo))->checks($d, 1)) === [1], 'wersja 2 : potwierdzenie miejsca 3 skasowane, miejsce 1 zostaje');
     expectBoard(array_column($board->driverPlan($d, 1)['slots'], 'slot') === [1, 2, 4, 6], 'kierowca widzi nowy układ');
+
+    // --- Paletyzacja (tablet pakowania, tryb « Paletyzacja ») : pojazd → klienci w kolejności, wpisy, operator, cofnięcie
+    $p = $board->pallets($d, 1);
+    $a = $p['clients'][0];
+    expectBoard(array_column($p['vehicles'], 'id') === [1] && $p['vehicle_id'] === 1 && array_column($p['clients'], 'id') === [1, 2] && $p['customer_id'] === 1,
+        'pojazd 1 : klienci A, B w kolejności rozładunku ; pierwszy z resztą wybrany');
+    expectBoard(array_column($a['lines'], 'name') === ['Bagietka', 'Croissant'] && $a['lines'][1]['on_pallet'] === 10 && $a['lines'][1]['left'] === 60
+        && $a['ordered'] === 100 && $a['left'] === 85, 'A : Croissant 10 na palecie (4 + 6), zostało 60 ; razem zostało 85');
+    expectBoard(array_column(((array) $p['entries'])[10], 'cartons') === [4, 6] && array_column($p['people'], 'name') === ['Marek Nowak', 'Ola Kowal'],
+        'wpisy A (4 + 6) ; operatorzy = osoby obecne');
+    $all = $board->pallets($d, null, 3);
+    expectBoard($all['vehicle_id'] === null && array_column($all['clients'], 'id') === [1, 2, 3] && $all['customer_id'] === 3 && $all['clients'][2]['n'] === 3,
+        'wszyscy klienci dnia : A, B, potem C bez pojazdu ; wybrany C');
+    expectBoard($board->pallets($d, 99)['vehicle_id'] === null, 'nieznany pojazd : wszyscy klienci');
+    $board->addPalletEntry($d, 1, 10, 12, 1, 7, null);
+    $p = $board->pallets($d, 1, 1);
+    $croissant = ((array) $p['entries'])[10];
+    $last = $croissant[count($croissant) - 1];
+    expectBoard($p['clients'][0]['lines'][1]['on_pallet'] === 22 && $p['clients'][0]['lines'][1]['left'] === 48 && $last['cartons'] === 12 && $last['who'] === 'Marek Nowak'
+        && $last['source'] === 'tablet', 'operator Marek kładzie 12 kartonów : 4 + 6 + 12 = 22, zostało 48');
+    expectBoard($board->live($d)['totals']['on_pallet'] === 18 + 12, 'ekran paletyzacji widzi wpis z tabletu');
+    expectBoard(!$board->ordered($d, 2, 11) && $refused(fn() => $board->addPalletEntry($d, 2, 11, 1, null, 7, null)), 'produkt niezamówiony przez klienta odrzucony');
+    expectBoard($refused(fn() => $board->addPalletEntry($d, 1, 10, 0, null, 7, null)) && $refused(fn() => $board->addPalletEntry($d, 1, 10, 1000, null, 7, null))
+        && $refused(fn() => $board->addPalletEntry($d, 1, 10, 1, 99, 7, null)), 'kartony 1–999, operator istniejący');
+    expectBoard($board->deletePalletEntry($last['id']) === ['date' => $d, 'customer_id' => 1] && $board->pallets($d, 1, 1)['clients'][0]['lines'][1]['on_pallet'] === 10
+        && $board->deletePalletEntry($last['id']) === null, 'cofnięcie ostatniego wpisu : znów 10 ; drugi raz nic');
+    $pdo->exec("INSERT INTO n_pallet_entry (ship_date, id_customer, id_product, cartons, source) VALUES ('{$d}', 1, 11, 2, 'erp')");
+    expectBoard($board->deletePalletEntry((int) $pdo->lastInsertId()) === null, 'wpis z ERP nie cofa się z tabletu');
 
     echo "logistics_board_test: OK\n";
 } finally {

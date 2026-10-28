@@ -230,6 +230,90 @@ final class LogisticsBoardService
         return $this->packing($date);
     }
 
+    // --- Paletyzacja (tablet pakowania, tryb « Paletyzacja ») ----------------------------------------
+
+    /**
+     * Klienci dnia (pojazd albo wszyscy) w kolejności trasy, produkty zamówione : zamówione, na palecie (skan + wpisy
+     * z tabletu), zostało ; wybrany klient z wpisami (1 + 2 + 32 + 1 …) ; osoby obecne (operator) ; pojazdy dnia.
+     */
+    public function pallets(string $date, ?int $vehicleId = null, ?int $customerId = null): array
+    {
+        $this->checkDate($date);
+        $s = $this->state($date);
+        $day = $s['day'];
+        $vehicles = [];
+        foreach ($day['fleet'] as $t) {
+            if (!$t['customers']) continue;
+            $vehicles[] = ['id' => (int) $t['id'], 'label' => $t['label'], 'carrier' => $t['carrier'], 'departure' => $t['departure'], 'customers' => count($t['customers'])];
+        }
+        if ($vehicleId !== null && !in_array($vehicleId, array_column($vehicles, 'id'), true)) $vehicleId = null;
+        $clients = [];
+        foreach ($s['customers'] as $cid => $c) {
+            if (!$c['lines'] || ($vehicleId !== null && ($c['vehicle']['id'] ?? null) !== $vehicleId)) continue;
+            $lines = array_map(fn($l) => ['product_id' => $l['product_id'], 'name' => $l['name'], 'category' => $l['category'], 'ppc' => $l['ppc'],
+                'ordered' => $l['ordered'], 'on_pallet' => $l['on_pallet'], 'scanned' => $l['scanned'], 'entered' => $l['entered'],
+                'left' => max(0, $l['ordered'] - $l['on_pallet']), 'over' => max(0, $l['on_pallet'] - $l['ordered'])], $c['lines']);
+            // Kolejność stała (kategoria, nazwa) — wiersz nie skacze po dodaniu ; gotowe na końcu.
+            usort($lines, fn($a, $b) => [$a['left'] === 0, (string) $a['category'], $a['name']] <=> [$b['left'] === 0, (string) $b['category'], $b['name']]);
+            $ordered = $this->sum($lines, 'ordered');
+            $left = $this->sum($lines, 'left');
+            $clients[] = ['id' => $cid, 'n' => count($clients) + 1, 'name' => $c['name'], 'town' => $c['town'], 'vehicle' => $c['vehicle'],
+                'ordered' => $ordered, 'on_pallet' => $ordered - $left, 'left' => $left, 'lines' => $lines];
+        }
+        $ids = array_column($clients, 'id');
+        if ($customerId === null || !in_array($customerId, $ids, true)) {
+            $open = array_values(array_filter($clients, fn($c) => $c['left'] > 0));
+            $customerId = $open[0]['id'] ?? ($ids[0] ?? null);
+        }
+        $entries = [];
+        if ($customerId !== null) {
+            foreach ($this->repo->palletEntries($date, $customerId) as $e) {
+                $entries[(int) $e['id_product']][] = ['id' => (int) $e['id'], 'cartons' => (int) $e['cartons'], 'at' => $e['created_at'], 'who' => $e['who'] ?: null, 'source' => $e['source']];
+            }
+        }
+        $truck = null;
+        foreach ($day['fleet'] as $t) if ((int) $t['id'] === $vehicleId) $truck = $t;
+        return [
+            'date' => $date, 'dates' => $day['dates'], 'now' => date('Y-m-d H:i:s'),
+            'departure' => $truck['departure'] ?? $this->departure($day),
+            'vehicles' => $vehicles, 'vehicle_id' => $vehicleId, 'clients' => $clients, 'customer_id' => $customerId,
+            'entries' => (object) $entries, 'people' => $this->repo->presentPeople(),
+        ];
+    }
+
+    /** Kartony położone na paletę (tablet) : klient i produkt z zamówień dnia, 1–999, operator (osoba aktywna). */
+    public function addPalletEntry(string $date, int $customerId, int $productId, int $cartons, ?int $employeeId, ?int $deviceId, ?int $userId): void
+    {
+        $this->checkDate($date);
+        if ($cartons < 1 || $cartons > 999) throw new CustomException('Liczba kartonów : od 1 do 999.', 'errors', 422);
+        if (!$this->ordered($date, $customerId, $productId)) throw new CustomException('Ten klient nie zamówił tego produktu na ten dzień.', 'errors', 422);
+        if ($employeeId !== null && !$this->repo->employeeActive($employeeId)) throw new CustomException('Nie znaleziono osoby.', 'errors', 422);
+        $this->repo->addPalletEntry($date, $customerId, $productId, $cartons, $employeeId, $deviceId, $userId);
+    }
+
+    /** Czy klient zamówił produkt na ten dzień (zamówienia do załadunku). */
+    public function ordered(string $date, int $customerId, int $productId): bool
+    {
+        foreach ($this->repo->orderLines($date) as $l) {
+            if ((int) $l['id_customer'] === $customerId && (int) $l['id_product'] === $productId) return true;
+        }
+        return false;
+    }
+
+    public function employeeActive(int $id): bool
+    {
+        return $this->repo->employeeActive($id);
+    }
+
+    /** Cofnięcie wpisu z tabletu (skanów nie można cofnąć tutaj). @return array{date:string, customer_id:int}|null */
+    public function deletePalletEntry(int $id): ?array
+    {
+        $e = $this->repo->palletEntry($id);
+        if ($e === null || $e['source'] !== 'tablet') return null;
+        $this->repo->deletePalletEntry($id);
+        return ['date' => $e['ship_date'], 'customer_id' => (int) $e['id_customer']];
+    }
+
     // --- Załadunek ciężarówki ------------------------------------------------------------------------
 
     public function loading(string $date, ?int $vehicleId = null): array

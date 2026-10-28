@@ -229,6 +229,7 @@
     "DRIVER_DATE_OUT_OF_RANGE": "Pole „{field}”: dzień wysyłki od tygodnia wstecz do jutra.",
     "DRIVER_PHOTO_LIMIT": "Pole „{field}”: najwyżej {max} zdjęć tego rodzaju u klienta.",
     "DRIVER_LOAD_SLOT_UNKNOWN": "Pole „{field}”: miejsca {slot} nie ma w wysłanym planie załadunku — odśwież plan.",
+    "PALLET_PRODUCT_NOT_ORDERED": "Pole „{field}”: ten klient nie zamówił tego produktu na ten dzień.",
     "LINE_SHORT_NOTE_REQUIRED": "Zrobiono mniej niż plan ({planned}) — wpisz powód.",
     "WASTE_PHOTO_REQUIRED": "Zrób zdjęcie straty.",
     "WASTE_PHOTO_TOO_MANY": "Najwyżej {max} zdjęcia na stratę.",
@@ -571,7 +572,8 @@
     "service_month": "miesiąc kosztów usług",
     "buy_round": "zakupy tygodnia",
     "supplier": "dostawca",
-    "complaint": "reklamacja"
+    "complaint": "reklamacja",
+    "pallet_entry": "wpis paletyzacji"
   },
   "documents": {
     "team_sheet_title": "Plan zespołu",

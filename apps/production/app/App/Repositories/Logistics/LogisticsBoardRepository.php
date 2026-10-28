@@ -149,6 +149,58 @@ final class LogisticsBoardRepository extends WorkshopRepository
         return (bool) $this->all('SELECT 1 AS x FROM final_product WHERE id = ?', [$id]);
     }
 
+    // --- Paletyzacja (wpisy z tabletu) -----------------------------------------------------------------
+
+    /** @return list<array> wpisy dnia klienta : produkt, kartony, kiedy, kto (operator), źródło */
+    public function palletEntries(string $date, int $customerId): array
+    {
+        return $this->all(
+            "SELECT pe.id, pe.id_product, pe.cartons, pe.created_at, pe.source, TRIM(CONCAT(COALESCE(p.name, ''), ' ', COALESCE(p.surname, ''))) AS who
+             FROM n_pallet_entry pe
+             LEFT JOIN n_prod_employee e ON e.id = pe.id_employee
+             LEFT JOIN production_employee p ON p.id = e.id_production_employee
+             WHERE pe.ship_date = ? AND pe.id_customer = ? ORDER BY pe.id",
+            [$date, $customerId]
+        );
+    }
+
+    public function palletEntry(int $id): ?array
+    {
+        return $this->all('SELECT * FROM n_pallet_entry WHERE id = ?', [$id])[0] ?? null;
+    }
+
+    public function addPalletEntry(string $date, int $customerId, int $productId, int $cartons, ?int $employeeId, ?int $deviceId, ?int $userId): int
+    {
+        $this->db->prepare("INSERT INTO n_pallet_entry (ship_date, id_customer, id_product, cartons, source, id_employee, id_user, id_device) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+            ->execute([$date, $customerId, $productId, $cartons, $userId !== null && $deviceId === null ? 'erp' : 'tablet', $employeeId, $userId, $deviceId]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function deletePalletEntry(int $id): void
+    {
+        $this->db->prepare('DELETE FROM n_pallet_entry WHERE id = ?')->execute([$id]);
+    }
+
+    public function employeeActive(int $id): bool
+    {
+        return (bool) $this->all('SELECT 1 AS x FROM n_prod_employee WHERE id = ? AND active = 1', [$id]);
+    }
+
+    /** @return list<array{id:int, name:string, group:?string, since:string}> osoby obecne (odbite, bez wyjścia) — operator tabletu */
+    public function presentPeople(): array
+    {
+        return array_map(fn($r) => ['id' => (int) $r['id'], 'name' => $r['name'], 'group' => $r['grp'], 'since' => $r['since']], $this->all(
+            "SELECT e.id, TRIM(CONCAT(p.name, ' ', p.surname)) AS name, g.name_pl AS grp, MIN(k.clock_in) AS since
+             FROM n_prod_clock k
+             JOIN n_prod_employee e ON e.id = k.id_employee AND e.active = 1
+             JOIN production_employee p ON p.id = e.id_production_employee
+             LEFT JOIN n_prod_group g ON g.id = e.id_primary_group
+             WHERE k.clock_out IS NULL
+             GROUP BY e.id, p.name, p.surname, g.name_pl
+             ORDER BY name"
+        ));
+    }
+
     // --- Plan naczepy ----------------------------------------------------------------------------------
 
     public function plan(string $date, int $vehicleId): ?array

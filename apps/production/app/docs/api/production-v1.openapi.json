@@ -18645,6 +18645,242 @@
                 ]
             }
         },
+        "/kiosk/pallets": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Tablet pakowania : paletyzacja / Tablette d'emballage : palettisation",
+                "operationId": "kioskPallets",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Pallets"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Toute tablette appairée : clients (ordre de la tournée), produits commandés — commandé, sur palette (scan des palettes + saisies de la tablette), reste ; saisies du client affiché (1 + 2 + 32 + 1…), personnes pointées (opérateur), véhicules du jour.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "jour d'expédition (défaut : prochain jour avec commandes)"
+                        }
+                    },
+                    {
+                        "name": "vehicle_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "transport (vide : tous les clients du jour)"
+                        }
+                    },
+                    {
+                        "name": "customer_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "client affiché (défaut : premier client avec du reste)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/pallets/entries": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Kartony na paletę / Cartons posés sur palette",
+                "operationId": "kioskPalletAdd",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Pallets"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "cartons 1–999 ; produit commandé par ce client ce jour (sinon PALLET_PRODUCT_NOT_ORDERED) ; employee_id = opérateur choisi (personne active). Réponse : la vue du client.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PalletEntryInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/pallets/entries/{id}": {
+            "delete": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Cofnij wpis / Annuler une saisie",
+                "operationId": "kioskPalletDelete",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Pallets"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Seulement une saisie de la tablette (les cartons scannés sur palette ne s'annulent pas ici).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "vehicle_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "transport de la vue renvoyée"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/driver/stops": {
             "post": {
                 "tags": [
@@ -24350,6 +24586,198 @@
                             },
                             "per_piece": {
                                 "type": "number"
+                            }
+                        }
+                    }
+                }
+            },
+            "PalletEntryInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "customer_id",
+                    "product_id",
+                    "cartons"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "customer_id": {
+                        "type": "integer"
+                    },
+                    "product_id": {
+                        "type": "integer"
+                    },
+                    "cartons": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 999
+                    },
+                    "employee_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "vehicle_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                }
+            },
+            "PalletLine": {
+                "type": "object",
+                "properties": {
+                    "product_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "ppc": {
+                        "type": "integer"
+                    },
+                    "ordered": {
+                        "type": "integer"
+                    },
+                    "on_pallet": {
+                        "type": "integer"
+                    },
+                    "scanned": {
+                        "type": "integer"
+                    },
+                    "entered": {
+                        "type": "integer"
+                    },
+                    "left": {
+                        "type": "integer"
+                    },
+                    "over": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "Pallets": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "dates": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "now": {
+                        "type": "string",
+                        "example": "2026-10-20 06:02:00"
+                    },
+                    "departure": {
+                        "type": "string"
+                    },
+                    "vehicles": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "label": {
+                                    "type": "string"
+                                },
+                                "carrier": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "departure": {
+                                    "type": "string"
+                                },
+                                "customers": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "vehicle_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "customer_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "clients": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "n": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "town": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "ordered": {
+                                    "type": "integer"
+                                },
+                                "on_pallet": {
+                                    "type": "integer"
+                                },
+                                "left": {
+                                    "type": "integer"
+                                },
+                                "lines": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/PalletLine"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "entries": {
+                        "type": "object",
+                        "description": "produit → saisies {id, cartons, at, who, source}",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "people": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "group": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "since": {
+                                    "type": "string",
+                                    "example": "2026-10-20 06:02:00"
+                                }
                             }
                         }
                     }

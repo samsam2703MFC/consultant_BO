@@ -49,6 +49,11 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   toute tablette appairée, sans PIN) ; l'ancienne adresse `/logistics/packing` y redirige (jour gardé).
 - `n_packing_count.updated_device` : tablette qui a saisi le compteur (`updated_by` = utilisateur ERP, vide depuis la tablette).
 - API : `GET /kiosk/packing?date=`, `PUT /kiosk/packing/{produit}` (`{date, packed}` 0–9999).
+- Mode « Paletyzacja » de la même tablette (interrupteur discret dans l'en-tête, mémorisé sur la tablette) : opérateur
+  (personnes pointées), transport (véhicule du jour ou tous les clients), clients, produits commandés — commandé / sur palette /
+  reste ; cartons posés saisis au pavé numérique → `n_pallet_entry` (`source = tablet`, `id_employee` = opérateur,
+  `id_device`) ; annuler la dernière saisie de la tablette (les cartons scannés ne s'annulent pas ici). API :
+  `GET /kiosk/pallets?date=&vehicle_id=&customer_id=`, `POST /kiosk/pallets/entries`, `DELETE /kiosk/pallets/entries/{id}`.
 
 ### Logistique et emballage : palettisation, emballage, chargement du camion (migration 120, 28/10/2026)
 

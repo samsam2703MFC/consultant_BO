@@ -1,9 +1,12 @@
 /*
  * Tablet pakowania / Tablette d'emballage (PWA, 28/10/2026). Parowanie tym samym kodem co inne tablety (Tablety ›
- * Zarządzanie) ; każdy sparowany tablet, bez PIN. Dzień wysyłki : produkty do spakowania (zamówione − na paletach −
- * na stanie, w kolejności trasy), kartony, sztuki, czas wg normy « Pakowanie », osoby, czy zdążymy przed wyjazdem ;
- * licznik spakowanych kartonów − / + / « Gotowe » / « Cofnij » (informacyjny : nie tworzy kartonów w magazynie).
- * Odświeżanie co 30 s.
+ * Zarządzanie) ; każdy sparowany tablet, bez PIN. Dwa tryby (przełącznik w nagłówku, zapamiętany na tablecie) :
+ *  - Pakowanie : produkty do spakowania (zamówione − na paletach − na stanie, w kolejności trasy), kartony, sztuki,
+ *    czas wg normy « Pakowanie », osoby, czy zdążymy przed wyjazdem ; licznik − / + / « Gotowe » / « Cofnij »
+ *    (informacyjny : nie tworzy kartonów w magazynie) ; odświeżanie co 30 s.
+ *  - Paletyzacja : operator (osoby obecne), transport (pojazd albo wszyscy klienci dnia), klienci u góry, produkty
+ *    zamówione przez klienta : zamówione / na palecie / zostało ; dotknięcie wiersza → szczegóły (skan + 1 + 2 + 32 = …),
+ *    « + » → klawiatura (1, 5, 10, reszta) → kartony na paletę ; cofnięcie ostatniego wpisu ; odświeżanie co 15 s.
  */
 (function () {
     'use strict';
@@ -15,26 +18,45 @@
     // Ten sam token co inne tablety : tablet sparowany raz działa też tutaj.
     const DEVICE_KEY = 'tfb.kiosk.device';
     const LANG_KEY = 'tfb.lang';
+    const MODE_KEY = 'tfb.packing.mode';
+    const VEHICLE_KEY = 'tfb.packing.vehicle';
+    const OPERATOR_KEY = 'tfb.packing.operator';
+    const COLORS = ['#2E7D4F', '#1f4f7a', '#8D1D2C', '#C17A2A', '#6b4c9a', '#00838f', '#9c4a22', '#5d6d1e'];
     const store = {
         get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
         set(k, v) { try { v === null ? window.localStorage.removeItem(k) : window.localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } },
     };
+    const query = new URLSearchParams(location.search);
     let lang = store.get(LANG_KEY) === 'fr' ? 'fr' : 'pl';
     let labels = {};
     let device = store.get(DEVICE_KEY);
-    let data = null;
-    let date = (new URLSearchParams(location.search).get('date') || '').match(/^\d{4}-\d{2}-\d{2}$/) ? new URLSearchParams(location.search).get('date') : null;
+    let mode = ['pack', 'pallets'].includes(query.get('mode')) ? query.get('mode') : (store.get(MODE_KEY) === 'pallets' ? 'pallets' : 'pack');
+    let data = null;   // pakowanie
+    let pal = null;    // paletyzacja
+    let date = (query.get('date') || '').match(/^\d{4}-\d{2}-\d{2}$/) ? query.get('date') : null;
     let people = null;
     let busy = false;
     let skew = 0;
+    // Paletyzacja : wybory na tablecie.
+    let vehicle = store.get(VEHICLE_KEY) ? Number(store.get(VEHICLE_KEY)) || null : null;
+    let operator = Number(store.get(OPERATOR_KEY)) || null;
+    let customer = null;
+    let product = null;     // wiersz otwarty z boku
+    let panel = null;       // 'detail' | 'pad'
+    let pad = '';
+    let drop = null;        // 'vehicle' | 'operator'
 
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const t = (k, p) => { let s = labels[k] ?? k; for (const [a, b] of Object.entries(p || {})) s = s.split('{' + a + '}').join(String(b)); return s; };
     const fmt = (n) => Number(n || 0).toLocaleString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {maximumFractionDigits: 0});
     const hm = (s) => { const m = Math.max(0, Math.round(s / 60)); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`; };
     const hhmm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const time = (iso) => String(iso || '').slice(11, 16);
     const dayLabel = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'short', day: 'numeric', month: 'short'});
     const serverNow = () => new Date(Date.now() + skew);
+    const color = (n) => COLORS[((n || 1) - 1) % COLORS.length];
+    const initials = (name) => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase();
+    const current = () => (mode === 'pack' ? data : pal);
 
     async function loadLabels() {
         const res = await fetch(`${root}/resources/lang/ui/${lang}/packing.json${VERSION ? '?v=' + encodeURIComponent(VERSION) : ''}`, {credentials: 'same-origin'});
@@ -63,16 +85,28 @@
         if (res.ok) return json.data;
         const err = new Error(((json.errors || []).map(x => x.message).join(' ')) || json.message || t('error'));
         err.code = json.description;
-        if (err.code === 'DEVICE_UNAUTHENTICATED') { device = null; data = null; store.set(DEVICE_KEY, null); renderPairing(); }
+        if (err.code === 'DEVICE_UNAUTHENTICATED') { device = null; data = null; pal = null; store.set(DEVICE_KEY, null); renderPairing(); }
         throw err;
     }
 
     function header() {
-        const sub = data ? t('subtitle_day', {day: dayLabel(data.date), time: data.departure}) : t('subtitle');
-        return `<header class="kiosk-head"><div class="kiosk-brand"><div class="kiosk-logo">LA</div><div><h1>${esc(t('title'))}</h1>
+        const s = current();
+        const sub = s ? t(mode === 'pack' ? 'subtitle_day' : 'subtitle_pallets', {day: dayLabel(s.date), time: s.departure}) : t('subtitle');
+        const paired = device || data || pal;
+        const sw = paired ? `<div class="pk-switch" role="radiogroup" aria-label="${esc(t('mode'))}">
+                ${['pack', 'pallets'].map(m => `<button type="button" role="radio" aria-checked="${m === mode}" class="${m === mode ? 'is-on' : ''}" data-mode="${m}">${esc(t(m === 'pack' ? 'mode_pack' : 'mode_pallets'))}</button>`).join('')}</div>` : '';
+        return `<header class="kiosk-head"><div class="kiosk-brand"><div class="kiosk-logo">LA</div><div><h1>${esc(t(mode === 'pack' ? 'title' : 'title_pallets'))}</h1>
                 <p class="kiosk-muted">${esc(sub)}</p></div></div>
-            <div class="kiosk-head-tools">${device || data ? `<button type="button" class="kiosk-chip" data-refresh aria-label="${esc(t('refresh'))}">↻</button>` : ''}
+            <div class="kiosk-head-tools">${sw}${paired ? `<button type="button" class="kiosk-chip" data-refresh aria-label="${esc(t('refresh'))}">↻</button>` : ''}
                 <button type="button" class="kiosk-chip" data-lang>${esc(t('lang_switch'))}</button></div></header>`;
+    }
+
+    function daysNav(s) {
+        // Dni : wczoraj … kolejne dni z zamówieniami (najwyżej 5 przycisków).
+        const today = new Date(new Date(s.now.slice(0, 10) + 'T12:00:00').getTime() - 86400000).toISOString().slice(0, 10);
+        const days = (s.dates || []).filter(d => d.ship_date >= today).slice(0, 5);
+        if (!days.some(d => d.ship_date === s.date)) days.unshift({ship_date: s.date});
+        return `<nav class="pk-days" aria-label="${esc(t('day'))}">${days.map(d => `<button type="button" class="kiosk-chip ${d.ship_date === s.date ? 'is-active' : ''}" data-date="${d.ship_date}">${esc(dayLabel(d.ship_date))}</button>`).join('')}</nav>`;
     }
 
     function renderPairing(message) {
@@ -96,19 +130,32 @@
     // Bez tokenu w pamięci przeglądarki : serwer zna tablet z ciasteczka parowania (tablet zostaje sparowany).
     async function load() {
         try {
-            data = await api('GET', '/kiosk/packing' + (date ? '?date=' + encodeURIComponent(date) : ''));
-            date = data.date;
-            skew = Date.parse(data.now.replace(' ', 'T')) - Date.now();
-            if (people === null) people = Math.max(1, data.people.present || 1);
+            if (mode === 'pack') {
+                data = await api('GET', '/kiosk/packing' + (date ? '?date=' + encodeURIComponent(date) : ''));
+                date = data.date;
+                if (people === null) people = Math.max(1, data.people.present || 1);
+            } else {
+                const q = new URLSearchParams();
+                if (date) q.set('date', date);
+                if (vehicle) q.set('vehicle_id', String(vehicle));
+                if (customer) q.set('customer_id', String(customer));
+                setPal(await api('GET', '/kiosk/pallets' + (q.toString() ? '?' + q : '')));
+            }
+            skew = Date.parse(current().now.replace(' ', 'T')) - Date.now();
             render();
         } catch (err) {
             if (err.code === 'DEVICE_UNAUTHENTICATED') return;
-            if (data) toast(err.message, true); else el.innerHTML = header() + `<section class="kiosk-card"><p class="kiosk-error">${esc(err.message)}</p>
+            if (current()) toast(err.message, true); else el.innerHTML = header() + `<section class="kiosk-card"><p class="kiosk-error">${esc(err.message)}</p>
                 <button type="button" class="kiosk-btn" data-refresh>${esc(t('retry'))}</button></section>`;
         }
     }
 
     function render() {
+        if (mode === 'pack') renderPack(); else renderPallets();
+    }
+
+    // ============================================================== Pakowanie
+    function renderPack() {
         const s = data;
         const T = s.totals;
         const finish = new Date(serverNow().getTime() + T.seconds / people * 1000);
@@ -116,11 +163,6 @@
         const margin = (deadline - finish.getTime()) / 1000;
         const gone = T.remaining > 0 && deadline < serverNow().getTime();
         const ok = T.remaining === 0 || margin >= 0;
-        // Dni : wczoraj … kolejne dni z zamówieniami (najwyżej 5 przycisków).
-        const today = new Date(new Date(s.now.slice(0, 10) + 'T12:00:00').getTime() - 86400000).toISOString().slice(0, 10);
-        const days = (s.dates || []).filter(d => d.ship_date >= today).slice(0, 5);
-        if (!days.some(d => d.ship_date === s.date)) days.unshift({ship_date: s.date});
-        const chips = days.map(d => `<button type="button" class="kiosk-chip ${d.ship_date === s.date ? 'is-active' : ''}" data-date="${d.ship_date}">${esc(dayLabel(d.ship_date))}</button>`).join('');
         const kpi = `<section class="pk-kpis">
             <div class="kiosk-card pk-kpi"><span>${esc(t('to_pack'))}</span><strong>${fmt(T.remaining)}</strong><small>${esc(t('cartons'))} · ${esc(t('products_done', {n: T.products, done: T.done}))}</small></div>
             <div class="kiosk-card pk-kpi"><span>${esc(t('pieces'))}</span><strong>${fmt(T.pieces)}</strong><small>${esc(t('pieces_help'))}</small></div>
@@ -145,10 +187,9 @@
                        <button type="button" class="kiosk-btn pk-step" data-step="1" aria-label="${esc(t('more'))}">+</button>
                        <button type="button" class="kiosk-btn is-primary" data-set="${i.need}">${esc(t('done'))}</button>`}</div></li>`;
         }).join('');
-        el.innerHTML = header() + `<nav class="pk-days" aria-label="${esc(t('day'))}">${chips}</nav>` + kpi
+        el.innerHTML = header() + daysNav(s) + kpi
             + (s.items.length ? `<section class="kiosk-card pk-list"><ul>${rows}</ul></section>` : `<section class="kiosk-card"><p class="pk-empty">${esc(t('empty'))}</p></section>`)
             + `<p class="kiosk-muted pk-note">${esc(t('note', {n: T.with_norm, fixed: fmt(s.average_norm.fixed), piece: String(s.average_norm.per_piece).replace('.', ',')}))}</p>`;
-        el.querySelectorAll('[data-date]').forEach(b => b.addEventListener('click', () => { date = b.dataset.date; people = null; load(); }));
         el.querySelectorAll('[data-people]').forEach(b => b.addEventListener('click', () => { people = Math.max(1, Math.min(20, people + Number(b.dataset.people))); render(); }));
         el.querySelectorAll('[data-product]').forEach(row => {
             const item = s.items.find(i => i.product_id === Number(row.dataset.product));
@@ -169,16 +210,201 @@
         } finally { busy = false; }
     }
 
+    // ============================================================== Paletyzacja
+    function setPal(s) {
+        pal = s;
+        date = s.date;
+        vehicle = s.vehicle_id;
+        customer = s.customer_id;
+        if (product && !clientNow()?.lines.some(l => l.product_id === product)) { product = null; panel = null; }
+    }
+    const clientNow = () => (pal ? pal.clients.find(c => c.id === customer) : null);
+    const operatorNow = () => (pal ? pal.people.find(p => p.id === operator) : null);
+
+    function renderPallets() {
+        const s = pal;
+        const c = clientNow();
+        const op = operatorNow();
+        const truck = s.vehicles.find(v => v.id === s.vehicle_id);
+        const bar = `<div class="pp-bar">
+            <button type="button" class="pp-sel ${op ? '' : 'is-empty'}" data-drop="operator" aria-haspopup="listbox"><span class="pp-av" style="background:${op ? '#8D1D2C' : 'var(--k-fill-2)'}">${op ? esc(initials(op.name)) : '?'}</span>
+                <span><b>${esc(op ? op.name : t('operator_none'))}</b><small>${esc(t('operator'))}</small></span><span class="pp-chev">▾</span></button>
+            <span class="pp-live">${esc(t('live'))}</span>
+            <button type="button" class="pp-sel pp-right" data-drop="vehicle" aria-haspopup="listbox"><span class="pp-ico">⛟</span>
+                <span><b>${esc(truck ? truck.label : t('all_clients'))}</b><small>${esc(truck ? `${truck.carrier || ''} · ${t('n_clients', {n: truck.customers})}` : t('all_clients_help'))}</small></span><span class="pp-chev">▾</span></button></div>`;
+        const clients = s.clients.length ? `<nav class="pp-clients" aria-label="${esc(t('clients'))}">${s.clients.map(x => `<button type="button" class="pp-client ${x.id === customer ? 'is-on' : ''}" style="--c:${color(x.n)}" data-customer="${x.id}">
+                <span class="pp-cname"><span class="pp-no">${x.n}</span>${esc(x.name)}</span>
+                <span class="pp-bar-p"><i style="width:${x.ordered ? Math.round(x.on_pallet / x.ordered * 100) : 0}%"></i></span>
+                <small>${esc(t('client_progress', {on: fmt(x.on_pallet), ordered: fmt(x.ordered), left: fmt(x.left)}))}</small></button>`).join('')}</nav>` : '';
+        let list = `<section class="kiosk-card"><p class="pk-empty">${esc(t('nothing_ordered'))}</p></section>`;
+        if (c) {
+            const open = c.lines.filter(l => l.left > 0);
+            list = `<section class="kiosk-card pp-list"><div class="pp-head"><span>${esc(t('col_product'))}</span><span>${esc(t('col_ordered'))}</span><span>${esc(t('col_on'))}</span><span>${esc(t('col_left'))}</span><span></span></div>
+                ${c.lines.map(l => `<div class="pp-row ${l.left === 0 ? 'is-done' : ''} ${l.product_id === product ? 'is-sel' : ''}" data-line="${l.product_id}">
+                    <div class="pp-pn"><b>${esc(l.name)}</b><small>${esc(l.category || '')}${l.ppc ? ' · ' + esc(t('pcs_per', {n: l.ppc})) : ''}</small></div>
+                    <div class="pp-n">${fmt(l.ordered)}</div><div class="pp-n">${l.on_pallet ? fmt(l.on_pallet) : '—'}</div>
+                    <div class="pp-n pp-rem ${l.left === 0 ? 'is-zero' : ''}">${l.left === 0 ? (l.over ? '+' + fmt(l.over) : '✓') : fmt(l.left)}</div>
+                    <button type="button" class="pp-plus ${l.left === 0 ? 'is-ok' : ''}" data-plus="${l.product_id}" aria-label="${esc(t('add'))}">${l.left === 0 ? '✓' : '+'}</button></div>`).join('')}
+                <div class="pp-sum">${open.length ? esc(t('left_sum', {n: fmt(c.left), p: open.length})) : esc(t('all_on'))}</div></section>`;
+        }
+        el.innerHTML = header() + daysNav(s) + bar + clients + `<div class="pp-main ${panel ? 'has-side' : ''}">${list}${panel && c ? side(c) : ''}</div>` + dropdown();
+        bindPallets();
+    }
+
+    function side(c) {
+        const l = c.lines.find(x => x.product_id === product);
+        if (!l) return '';
+        const head = `<div class="pp-side-head"><div><h3>${esc(l.name)}</h3><p class="kiosk-muted">${esc(c.name)} · ${esc(t('ordered_n', {n: fmt(l.ordered)}))}</p></div>
+            <button type="button" class="pp-x" data-close aria-label="${esc(t('close'))}">✕</button></div>`;
+        if (panel === 'pad') {
+            const n = Number(pad || 0);
+            const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'C'].map(k => `<button type="button" class="pp-k" data-key="${k}">${k}</button>`).join('');
+            return `<aside class="kiosk-card pp-side" aria-label="${esc(t('putting'))}">${head}
+                <div class="pp-big"><small>${esc(t('putting'))}</small><strong>${fmt(n)}</strong><small>${esc(t('cartons_short'))}</small></div>
+                ${l.left > 0 && n > l.left ? `<p class="pp-warn">${esc(t('more_than_left', {n: fmt(l.left)}))}</p>` : ''}
+                <div class="pp-quick">${[1, 5, 10].map(q => `<button type="button" class="kiosk-btn" data-quick="${q}">${q}</button>`).join('')}
+                    ${l.left > 0 ? `<button type="button" class="kiosk-btn is-primary" data-quick="${l.left}">${esc(t('rest', {n: fmt(l.left)}))}</button>` : ''}</div>
+                <div class="pp-pad">${keys}</div>
+                <button type="button" class="kiosk-btn is-primary pp-add" data-add ${n > 0 ? '' : 'disabled'}>${esc(n > 0 ? t('add_n', {n: fmt(n)}) : t('type_number'))}</button></aside>`;
+        }
+        const entries = (pal.entries || {})[l.product_id] || [];
+        const chips = [];
+        if (l.scanned) chips.push(`<span class="pp-chip is-scan" title="${esc(t('scan_help'))}">${esc(t('scan'))} ${fmt(l.scanned)}</span>`);
+        entries.forEach(e => chips.push(`<span class="pp-chip">${fmt(e.cartons)}</span>`));
+        const eq = chips.length ? `<div class="pp-eq">${chips.join('<span>+</span>')}<span>=</span><span class="pp-tot">${fmt(l.on_pallet)}</span></div>` : `<p class="kiosk-muted">${esc(t('no_entries'))}</p>`;
+        const last = [...entries].reverse().find(e => e.source === 'tablet');
+        return `<aside class="kiosk-card pp-side">${head}${eq}
+            <div class="pp-big pp-two"><div><small>${esc(t('col_on'))}</small><strong>${fmt(l.on_pallet)}</strong></div><div><small>${esc(t('col_left'))}</small><strong class="${l.left ? 'is-left' : 'is-ok'}">${l.left ? fmt(l.left) : '✓'}</strong></div></div>
+            <ul class="pp-entries">${l.scanned ? `<li><span><b>${fmt(l.scanned)}</b> ${esc(t('cartons_short'))}</span><span class="kiosk-muted">${esc(t('scan_help'))}</span></li>` : ''}
+                ${entries.map(e => `<li><span><b>+${fmt(e.cartons)}</b> ${esc(t('cartons_short'))}</span><span class="kiosk-muted">${esc(time(e.at))}${e.who ? ' · ' + esc(e.who) : ''}</span></li>`).join('')}</ul>
+            <div class="pp-actions"><button type="button" class="kiosk-btn" data-undo="${last ? last.id : ''}" ${last ? '' : 'disabled'}>↶ ${esc(t('undo_last'))}</button>
+                <button type="button" class="kiosk-btn is-primary" data-pad>+ ${esc(t('add'))}</button></div></aside>`;
+    }
+
+    function dropdown() {
+        if (!drop) return '';
+        let items;
+        if (drop === 'vehicle') {
+            items = pal.vehicles.map(v => `<button type="button" class="pp-opt ${v.id === pal.vehicle_id ? 'is-on' : ''}" data-vehicle="${v.id}"><span class="pp-ico">⛟</span>
+                    <span><b>${esc(v.label)}</b><small>${esc(`${v.carrier || ''} · ${t('departure_at', {time: v.departure})} · ${t('n_clients', {n: v.customers})}`)}</small></span>${v.id === pal.vehicle_id ? '<span class="pp-check">✓</span>' : ''}</button>`).join('')
+                + `${pal.vehicles.length ? '<div class="pp-sep"></div>' : ''}<button type="button" class="pp-opt ${pal.vehicle_id === null ? 'is-on' : ''}" data-vehicle=""><span class="pp-ico">☰</span>
+                    <span><b>${esc(t('all_clients'))}</b><small>${esc(t('all_clients_help'))}</small></span>${pal.vehicle_id === null ? '<span class="pp-check">✓</span>' : ''}</button>`;
+        } else {
+            items = pal.people.length ? pal.people.map(p => `<button type="button" class="pp-opt ${p.id === operator ? 'is-on' : ''}" data-operator="${p.id}"><span class="pp-av">${esc(initials(p.name))}</span>
+                    <span><b>${esc(p.name)}</b><small>${esc([p.group, t('since', {time: time(p.since)})].filter(Boolean).join(' · '))}</small></span>${p.id === operator ? '<span class="pp-check">✓</span>' : ''}</button>`).join('')
+                : `<p class="kiosk-muted pp-none">${esc(t('no_people'))}</p>`;
+        }
+        return `<div class="pp-dim" data-dim></div><div class="kiosk-card pp-drop ${drop === 'operator' ? 'is-left' : ''}" role="listbox">${items}</div>`;
+    }
+
+    function bindPallets() {
+        el.querySelectorAll('[data-drop]').forEach(b => b.addEventListener('click', () => { drop = drop === b.dataset.drop ? null : b.dataset.drop; renderPallets(); }));
+        const dim = el.querySelector('[data-dim]');
+        if (dim) dim.addEventListener('click', () => { drop = null; renderPallets(); });
+        el.querySelectorAll('[data-vehicle]').forEach(b => b.addEventListener('click', () => {
+            vehicle = b.dataset.vehicle ? Number(b.dataset.vehicle) : null;
+            store.set(VEHICLE_KEY, vehicle ? String(vehicle) : null);
+            drop = null; customer = null; product = null; panel = null;
+            load();
+        }));
+        el.querySelectorAll('[data-operator]').forEach(b => b.addEventListener('click', () => {
+            operator = Number(b.dataset.operator);
+            store.set(OPERATOR_KEY, String(operator));
+            drop = null;
+            renderPallets();
+        }));
+        el.querySelectorAll('[data-customer]').forEach(b => b.addEventListener('click', () => {
+            customer = Number(b.dataset.customer); product = null; panel = null;
+            load();
+        }));
+        el.querySelectorAll('[data-line]').forEach(r => r.addEventListener('click', (e) => {
+            if (e.target.closest('[data-plus]')) return;
+            product = Number(r.dataset.line); panel = 'detail';
+            renderPallets();
+        }));
+        el.querySelectorAll('[data-plus]').forEach(b => b.addEventListener('click', () => openPad(Number(b.dataset.plus))));
+        const close = el.querySelector('[data-close]');
+        if (close) close.addEventListener('click', () => { product = null; panel = null; renderPallets(); });
+        const padBtn = el.querySelector('[data-pad]');
+        if (padBtn) padBtn.addEventListener('click', () => openPad(product));
+        el.querySelectorAll('[data-key]').forEach(b => b.addEventListener('click', () => {
+            const k = b.dataset.key;
+            if (k === 'C') pad = '';
+            else if (k === '⌫') pad = pad.slice(0, -1);
+            else if (pad.length < 3) pad = (pad + k).replace(/^0+/, '');
+            renderPallets();
+        }));
+        el.querySelectorAll('[data-quick]').forEach(b => b.addEventListener('click', () => { pad = String(Math.min(999, Number(b.dataset.quick))); renderPallets(); }));
+        const add = el.querySelector('[data-add]');
+        if (add) add.addEventListener('click', addEntry);
+        const undo = el.querySelector('[data-undo]');
+        if (undo) undo.addEventListener('click', () => undoEntry(Number(undo.dataset.undo)));
+    }
+
+    function openPad(pid) {
+        // Operator najpierw (gdy są osoby na zmianie) : kto położył kartony.
+        if (pal.people.length && !operatorNow()) { toast(t('choose_operator_first'), true); drop = 'operator'; renderPallets(); return; }
+        product = pid; panel = 'pad'; pad = '';
+        renderPallets();
+    }
+
+    async function addEntry() {
+        const n = Number(pad || 0);
+        const l = clientNow()?.lines.find(x => x.product_id === product);
+        if (busy || !n || !l) return;
+        busy = true;
+        try {
+            setPal(await api('POST', '/kiosk/pallets/entries', {date, customer_id: customer, product_id: product, cartons: n,
+                employee_id: operatorNow() ? operator : null, vehicle_id: vehicle}));
+            toast(t('added', {n: fmt(n), product: l.name}));
+            panel = 'detail'; pad = '';
+            render();
+        } catch (err) {
+            if (err.code !== 'DEVICE_UNAUTHENTICATED') toast(err.message, true);
+        } finally { busy = false; }
+    }
+
+    async function undoEntry(id) {
+        const l = clientNow()?.lines.find(x => x.product_id === product);
+        const e = ((pal.entries || {})[product] || []).find(x => x.id === id);
+        if (busy || !id || !e || !window.confirm(t('confirm_undo', {n: fmt(e.cartons), product: l ? l.name : ''}))) return;
+        busy = true;
+        try {
+            setPal(await api('DELETE', `/kiosk/pallets/entries/${id}${vehicle ? '?vehicle_id=' + vehicle : ''}`));
+            toast(t('undone', {n: fmt(e.cartons)}));
+            render();
+        } catch (err) {
+            if (err.code !== 'DEVICE_UNAUTHENTICATED') toast(err.message, true);
+        } finally { busy = false; }
+    }
+
     el.addEventListener('click', async (e) => {
         if (e.target.closest('[data-lang]')) {
             lang = lang === 'pl' ? 'fr' : 'pl';
             store.set(LANG_KEY, lang);
             await loadLabels();
-            data ? render() : load();
+            current() ? render() : load();
         }
         if (e.target.closest('[data-refresh]')) load();
+        const m = e.target.closest('[data-mode]');
+        if (m && m.dataset.mode !== mode) {
+            mode = m.dataset.mode;
+            store.set(MODE_KEY, mode);
+            drop = null; panel = null; product = null;
+            current() ? render() : null;
+            load();
+        }
+        const d = e.target.closest('[data-date]');
+        if (d) { date = d.dataset.date; people = null; customer = null; product = null; panel = null; load(); }
     });
-    window.setInterval(() => { if (data && !busy && document.visibilityState === 'visible' && navigator.onLine) load(); }, 30000);
+    // Odświeżanie : pakowanie co 30 s, paletyzacja co 15 s (nie w trakcie wpisywania ani przy otwartej liście).
+    let tick = 0;
+    window.setInterval(() => {
+        tick++;
+        if (!current() || busy || document.visibilityState !== 'visible' || !navigator.onLine) return;
+        if (mode === 'pack' && tick % 2 === 0) load();
+        if (mode === 'pallets' && panel !== 'pad' && !drop) load();
+    }, 15000);
 
     loadLabels().then(load);
 })();

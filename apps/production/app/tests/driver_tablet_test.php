@@ -182,6 +182,27 @@ try {
     expectDrv($s === 404, 'unknown product refused');
     [$s] = $call('GET', '/kiosk/packing?date=20.10.2026', null, $tablet);
     expectDrv($s === 422, 'bad date refused');
+
+    // --- Tablet pakowania, tryb « Paletyzacja » : klienci, kartony na paletę (operator), cofnięcie
+    [$s, $b] = $call('GET', '/kiosk/pallets?date=' . $today, null, []);
+    expectDrv($s === 401, 'pallets need a paired device');
+    [$s, $b] = $call('GET', '/kiosk/pallets?date=' . $today . '&vehicle_id=5', null, $tablet);
+    $line = $b['data']['clients'][0]['lines'][0] ?? null;
+    expectDrv($s === 200 && $b['data']['vehicle_id'] === 5 && $b['data']['customer_id'] === 3 && $line['product_id'] === 500 && $line['ordered'] === 50 && $line['left'] === 50,
+        'pallets: the client of the truck, 50 cartons to put on pallets');
+    [$s, $b] = $call('POST', '/kiosk/pallets/entries', ['date' => $today, 'customer_id' => 3, 'product_id' => 500, 'cartons' => 12, 'employee_id' => 80, 'vehicle_id' => 5], $tablet);
+    $line = $b['data']['clients'][0]['lines'][0];
+    $entry = $b['data']['entries']['500'][0] ?? null;
+    expectDrv($s === 201 && $line['on_pallet'] === 12 && $line['left'] === 38 && $entry['cartons'] === 12 && $entry['who'] === 'Jan Kowal'
+        && (int) $pdo->query('SELECT id_device FROM n_pallet_entry WHERE id = ' . (int) $entry['id'])->fetchColumn() > 0, '12 cartons on the pallet by Jan, saved with the tablet');
+    [$s, $b] = $call('POST', '/kiosk/pallets/entries', ['date' => $today, 'customer_id' => 3, 'product_id' => 999, 'cartons' => 1], $tablet, 'fr');
+    expectDrv($s === 422 && $codes($b) === ['product_id:PALLET_PRODUCT_NOT_ORDERED'] && str_contains($b['errors'][0]['message'], 'commandé'), 'product not ordered by the client refused');
+    [$s, $b] = $call('POST', '/kiosk/pallets/entries', ['date' => $today, 'customer_id' => 3, 'product_id' => 500, 'cartons' => 0], $tablet);
+    expectDrv($s === 422 && $codes($b) === ['cartons:OUT_OF_RANGE'], 'cartons 1–999');
+    [$s, $b] = $call('DELETE', '/kiosk/pallets/entries/' . (int) $entry['id'] . '?vehicle_id=5', null, $tablet);
+    expectDrv($s === 200 && $b['data']['clients'][0]['lines'][0]['on_pallet'] === 0, 'last entry undone');
+    [$s] = $call('DELETE', '/kiosk/pallets/entries/' . (int) $entry['id'], null, $tablet);
+    expectDrv($s === 404, 'undo twice: not found');
     $stop = $day['stops'][0];
     expectDrv($stop['name'] === 'Boulangerie Test' && $stop['address'] === 'Rue Haute 12, 1000 Bruxelles, BE' && $stop['phone'] === '+32 2 000 00 00'
         && $stop['pallets'] === 2 && $stop['status'] === null, 'stop: address, phone, pallets (50 cartons / 48 per pallet)');

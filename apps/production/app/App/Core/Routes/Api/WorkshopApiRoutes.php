@@ -309,9 +309,12 @@ final class WorkshopApiRoutes
             ['POST', '/driver/run', DriverController::class, 'run', 'kiosk_employee'],
             ['GET', '/driver/loading', DriverController::class, 'loading', 'kiosk_employee'],
             ['POST', '/driver/loading/checks', DriverController::class, 'loadingCheck', 'kiosk_employee'],
-            // Tablet pakowania (28/10/2026) : każdy sparowany tablet, bez PIN.
+            // Tablet pakowania (28/10/2026) : pakowanie i paletyzacja — każdy sparowany tablet, bez PIN.
             ['GET', '/kiosk/packing', PackingController::class, 'show', 'kiosk'],
             ['PUT', '/kiosk/packing/{id:\d+}', PackingController::class, 'set', 'kiosk'],
+            ['GET', '/kiosk/pallets', PackingController::class, 'pallets', 'kiosk'],
+            ['POST', '/kiosk/pallets/entries', PackingController::class, 'addPallet', 'kiosk'],
+            ['DELETE', '/kiosk/pallets/entries/{id:\d+}', PackingController::class, 'deletePallet', 'kiosk'],
             ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk_employee'],
             ['POST', '/driver/photos', DriverController::class, 'photo', 'kiosk_employee'],
             ['GET', '/driver/report', DriverController::class, 'report', 'kiosk_employee'],
