@@ -78,8 +78,8 @@ final class PageTabs
         ]],
         // Dzień wysyłki : jeden dzień logistyki w kolejności — załadunek (trasy, pojazdy, palety), dokumenty WZ / CMR / WDT
         // (Wyślij dzień), wydruki dla kierowców, powiadomienia klientów, potwierdzenia dostaw z tabletu kierowcy.
-        'shipping_day' => ['label' => 'Dzień wysyłki', 'section' => 'Logistyka', 'icon' => 'bi-calendar-check', 'tabs' => [
-            ['/logistics', 'Załadunek', 'bi-stack', true],   // /logistics/week, /vehicles, /tours : osobne strony
+        'shipping_day' => ['label' => 'Dzień wysyłki', 'section' => 'Logistyka i pakowanie', 'icon' => 'bi-calendar-check', 'tabs' => [
+            ['/logistics', 'Plan dnia', 'bi-stack', true],   // /logistics/week, /vehicles, /tours : osobne strony
             ['/shipping/wizard', 'Wyślij dzień', 'bi-send-check'],
             ['/logistics/documents', 'Dokumenty dla kierowców', 'bi-printer'],
             ['/logistics/notices', 'Powiadomienia klientów', 'bi-chat-dots'],
@@ -87,7 +87,7 @@ final class PageTabs
         ]],
         // Jedna lista wysyłek z filtrem rodzaju dokumentu (dawniej Wysyłki, Dokumenty transportowe i Archiwum WZ / CMR / WDT / różnic)
         // oraz archiwum list kompletacyjnych ; pozycja « Wysyłka › Wysyłki i dokumenty » w railu.
-        'shipments' => ['label' => 'Wysyłki i dokumenty', 'section' => 'Logistyka', 'icon' => 'bi-truck', 'tabs' => [
+        'shipments' => ['label' => 'Wysyłki i dokumenty', 'section' => 'Logistyka i pakowanie', 'icon' => 'bi-truck', 'tabs' => [
             ['/shipments', 'Wysyłki i dokumenty', 'bi-truck'],
             ['/shipments/differences', 'Różnice i problemy dostaw', 'bi-exclamation-diamond'],
             ['/archive/documents/picking-lists', 'Archiwum list kompletacyjnych', 'bi-list-check'],

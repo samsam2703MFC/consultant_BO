@@ -105,5 +105,21 @@
   "no_tours": "Aucune tournée planifiée ce jour",
   "driver": "Chauffeur",
   "drivers_group": "Chauffeurs",
-  "others_group": "Autres personnes"
+  "others_group": "Autres personnes",
+  "loading_plan_n": "Plan de chargement · {loaded}/{total}",
+  "loading_plan_none": "Pas de plan de chargement du bureau",
+  "back_route": "Tournée",
+  "loaded_n": "Chargées {loaded}/{total}",
+  "plan_version": "Plan du bureau · version {version} · {time}",
+  "cab": "CABINE",
+  "door": "PORTES",
+  "unload_order": "Ordre de déchargement",
+  "pallets_n": "{n} palettes",
+  "near_door": "près des portes",
+  "near_cab": "près de la cabine",
+  "middle": "milieu",
+  "planned_pallet": "palette",
+  "slot_short": "place {slot}",
+  "slot_label": "Place {slot}, arrêt {stop}",
+  "loading_help": "Touchez la palette quand elle est à sa place dans la remorque (touchez encore pour annuler). Le bureau voit le chargement en direct."
 }

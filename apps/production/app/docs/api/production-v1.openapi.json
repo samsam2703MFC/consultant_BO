@@ -18340,6 +18340,158 @@
                 ]
             }
         },
+        "/driver/loading": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Plan załadunku naczepy / Plan de chargement de la remorque",
+                "operationId": "driverLoading",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DriverLoading"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Plan envoyé par le bureau (Logistyka i pakowanie › Załadunek ciężarówki) : places 1…N (1 = cabine, rangées de « columns »), client, numéro d'arrêt, numéro de palette scannée ou palette prévue (null), places chargées. plan = null tant que le bureau n'a rien envoyé.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "jour d'expédition (défaut : aujourd'hui)"
+                        }
+                    },
+                    {
+                        "name": "vehicle_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "défaut : véhicule de la tablette"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/driver/loading/checks": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Miejsce załadowane / Place chargée",
+                "operationId": "driverLoadingCheck",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DriverLoading"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "loaded = true : la palette est à sa place ; false : annulé. Seulement les places du plan envoyé (DRIVER_LOAD_SLOT_UNKNOWN). Un nouvel envoi du plan annule les places dont le contenu a changé.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DriverLoadingCheckInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/driver/stops": {
             "post": {
                 "tags": [
@@ -23772,6 +23924,124 @@
                     }
                 }
             },
+            "DriverLoadingCheckInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "vehicle_id",
+                    "slot",
+                    "loaded"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "vehicle_id": {
+                        "type": "integer"
+                    },
+                    "slot": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 99
+                    },
+                    "loaded": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "DriverLoadSlot": {
+                "type": "object",
+                "properties": {
+                    "slot": {
+                        "type": "integer"
+                    },
+                    "customer_id": {
+                        "type": "integer"
+                    },
+                    "stop": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "pallet_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "loaded": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "DriverLoading": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "vehicle_id": {
+                        "type": "integer"
+                    },
+                    "plan": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "version": {
+                                "type": "integer"
+                            },
+                            "sent_at": {
+                                "type": "string"
+                            },
+                            "places": {
+                                "type": "integer"
+                            },
+                            "columns": {
+                                "type": "integer"
+                            },
+                            "loaded": {
+                                "type": "integer"
+                            },
+                            "total": {
+                                "type": "integer"
+                            },
+                            "slots": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/DriverLoadSlot"
+                                }
+                            },
+                            "stops": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "customer_id": {
+                                            "type": "integer"
+                                        },
+                                        "stop": {
+                                            "type": "integer",
+                                            "nullable": true
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "town": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "slots": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/DriverLoadSlot"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "DriverRun": {
                 "type": "object",
                 "properties": {
@@ -24041,6 +24311,25 @@
                             }
                         ],
                         "nullable": true
+                    },
+                    "loading": {
+                        "type": "object",
+                        "nullable": true,
+                        "description": "plan de chargement envoyé : version, places chargées / total",
+                        "properties": {
+                            "version": {
+                                "type": "integer"
+                            },
+                            "sent_at": {
+                                "type": "string"
+                            },
+                            "loaded": {
+                                "type": "integer"
+                            },
+                            "total": {
+                                "type": "integer"
+                            }
+                        }
                     },
                     "stops": {
                         "type": "array",

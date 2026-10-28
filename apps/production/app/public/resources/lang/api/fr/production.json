@@ -228,6 +228,7 @@
     "DRIVER_CUSTOMER_NOT_PLANNED": "Le client {id} n’a pas de livraison ce jour-là.",
     "DRIVER_DATE_OUT_OF_RANGE": "Champ « {field} » : jour d’expédition d’une semaine en arrière à demain.",
     "DRIVER_PHOTO_LIMIT": "Champ « {field} » : au plus {max} photos de ce type chez le client.",
+    "DRIVER_LOAD_SLOT_UNKNOWN": "Champ « {field} » : la place {slot} n'est pas dans le plan de chargement envoyé — actualisez le plan.",
     "LINE_SHORT_NOTE_REQUIRED": "Moins que le plan ({planned}) — indiquez la raison.",
     "WASTE_PHOTO_REQUIRED": "Prenez une photo de la perte.",
     "WASTE_PHOTO_TOO_MANY": "{max} photos au maximum par perte.",

@@ -84,14 +84,17 @@ final class LogisticsService
         $products = [];
         foreach ($lines as $l) {
             $id = (int) $l['id_customer'];
+            // Karta « 1 / 1 / 1 » (wartość domyślna kreatora, 1 karton na paletę) : jak brak danych — nie liczy się palety na każdy karton.
+            $placeholder = (int) $l['cpp'] === 1 && (int) $l['cpl'] <= 1 && (int) $l['lpp'] <= 1;
+            if ($placeholder) $l['cpp'] = 0;
             $byCustomer[$id] ??= ['id' => $id, 'name' => $l['customer'], 'town' => $l['town'], 'country' => $l['country'], 'orders' => [], 'lines' => []];
             $byCustomer[$id]['orders'][(int) $l['order_id']] = (int) $l['status'];
             $byCustomer[$id]['lines'][] = $l;
             $cpp = (int) $l['cpp'];
             $layers = (int) $l['cpl'] * (int) $l['lpp'];
             if ($cpp <= 0 || ($layers > 0 && $layers !== $cpp)) {
-                $products[(int) $l['product_id']] = ['id' => (int) $l['product_id'], 'name' => $l['product'], 'cpp' => $cpp ?: null, 'cpl' => (int) $l['cpl'] ?: null, 'lpp' => (int) $l['lpp'] ?: null,
-                    'issue' => $cpp <= 0 ? 'missing' : 'layers'];
+                $products[(int) $l['product_id']] = ['id' => (int) $l['product_id'], 'name' => $l['product'], 'cpp' => $placeholder ? 1 : ($cpp ?: null), 'cpl' => (int) $l['cpl'] ?: null, 'lpp' => (int) $l['lpp'] ?: null,
+                    'issue' => $cpp <= 0 ? 'missing' : 'layers', 'placeholder' => $placeholder];
             }
         }
 

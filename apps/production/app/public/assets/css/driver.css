@@ -66,3 +66,19 @@
 /* Connexion (27/10/2026) : tournée puis chauffeur, chaque liste avec son intitulé. */
 .driver-login .driver-field { display: flex; flex-direction: column; gap: 4px; width: 100%; max-width: 420px; text-align: left; font-size: 14px; color: var(--k-muted); }
 .driver-login .driver-field + .driver-field { margin-top: 10px; }
+/* Plan załadunku (28/10/2026) : naczepa z góry (kabina u góry, drzwi na dole), przystanki w kolejności rozładunku. */
+.driver-load { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: 16px; align-items: start; }
+.driver-truck { display: flex; flex-direction: column; gap: 8px; }
+.driver-cab { text-align: center; font-size: 13px; font-weight: 700; letter-spacing: .08em; color: var(--k-muted); padding: 6px; border-radius: 8px; background: var(--k-fill); }
+.driver-floor { display: grid; gap: 6px; padding: 8px; border: 2px solid var(--k-line); border-radius: var(--k-radius); }
+.driver-slot { min-height: 34px; border-radius: 8px; border: 1px dashed var(--k-line); background: transparent; font-size: 15px; font-variant-numeric: tabular-nums; }
+.driver-slot.is-full { min-height: 52px; border: 2px solid var(--c); background: color-mix(in srgb, var(--c) 14%, #fff); color: var(--c); cursor: pointer; }
+.driver-slot.is-loaded { background: var(--c); color: #fff; }
+.driver-load-stops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.driver-load-stops li { display: flex; gap: 12px; align-items: flex-start; padding: 10px; border-left: 6px solid var(--c); border-radius: 8px; background: var(--k-fill); }
+.driver-load-stops .driver-n { background: var(--c); }
+.driver-load-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.driver-load-pids { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.driver-pid { min-height: 44px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--c); background: var(--k-surface); color: var(--c); font-size: 15px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.driver-pid.is-loaded { background: var(--c); color: #fff; }
+@media (max-width: 760px) { .driver-load { grid-template-columns: 1fr; } }

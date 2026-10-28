@@ -3,7 +3,7 @@
 Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y a été déplacée le 24/10/2026 par `deploy/server.sh`, données gardées).
 
 - **121 tables d'origine** de l'ERP SL Food : noms inchangés (131 avant le nettoyage du 24/10/2026, qui a supprimé les 10 copies de sauvegarde).
-- **148 tables ajoutées** pendant le développement (28/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
+- **152 tables ajoutées** pendant le développement (28/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
 
 ## Installer / intégrer
 
@@ -42,6 +42,29 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 ### Tablette chauffeur (migration 082, 26/10/2026)
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
+
+### Logistique et emballage : palettisation, emballage, chargement du camion (migration 120, 28/10/2026)
+
+- Lecture seule des tables d'origine : cartons commandés (`customer_order_product.quantity_carton`, commandes à charger),
+  cartons scannés sur les palettes du jour (`palets_delivery` → `carton_pallet_connection` → `carton_stock`), stock libre
+  (`carton_stock.status = 1`). Rien n'est modifié dans ces tables.
+- `n_pallet_entry` : cartons posés sur palette saisis sur une tablette (jour, client, produit, nombre, source `tablet` / `erp`,
+  personne, appareil) ; comptés avec les cartons scannés dans « sur palette ».
+- `n_packing_count` : compteur d'emballage du jour par produit (`packed`) — **informatif**, ne crée aucun carton en stock ;
+  `base_count` = cartons du produit en stock ou sur palette à la première saisie : les cartons étiquetés ensuite sont retirés
+  du compteur (pas de double comptage).
+- `n_load_plan` : plan de la remorque par jour et véhicule — `layout` (brouillon, JSON : place, client, n° de palette ;
+  NULL = automatique), `sent_layout` + `version` + `sent_at` / `sent_by` (version envoyée à la tablette chauffeur).
+- `n_load_check` : place chargée confirmée par le chauffeur (jour, véhicule, place) ; effacée pour les places modifiées
+  quand le bureau envoie une nouvelle version.
+- Le client → véhicule et l'ordre des arrêts du chargement écrivent le même `n_shipping_assignment` que « Plan dnia ».
+- Fiche produit 1 / 1 / 1 (carton par couche, couches, cartons par palette = valeur par défaut) : traitée comme donnée
+  palette **manquante** (signalée à corriger), et non comme 1 carton par palette.
+- Places de la remorque : `n_vehicle.pallet_places`, sinon paramètre `logistics.default_pallet_places` (33) ; groupe
+  d'emballage : paramètre `logistics.packing_group` (défaut `PAKOWANIE`) ; norme d'emballage : étape « Pakowanie » de la
+  fiche (`n_prod_routing_step`), sinon moyenne des normes.
+- API tablette chauffeur : `GET /driver/loading?date=&vehicle_id=`, `POST /driver/loading/checks`
+  (`{date, vehicle_id, slot, loaded}`) ; `GET /driver/day` → `loading` (version, chargées / total).
 
 ### Tablette de groupe : réclamations clients (migration 119, 28/10/2026)
 

@@ -306,6 +306,8 @@ final class WorkshopApiRoutes
             ['GET', '/driver/tours', DriverController::class, 'tours', 'kiosk'],
             ['GET', '/driver/day', DriverController::class, 'day', 'kiosk_employee'],
             ['POST', '/driver/run', DriverController::class, 'run', 'kiosk_employee'],
+            ['GET', '/driver/loading', DriverController::class, 'loading', 'kiosk_employee'],
+            ['POST', '/driver/loading/checks', DriverController::class, 'loadingCheck', 'kiosk_employee'],
             ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk_employee'],
             ['POST', '/driver/photos', DriverController::class, 'photo', 'kiosk_employee'],
             ['GET', '/driver/report', DriverController::class, 'report', 'kiosk_employee'],

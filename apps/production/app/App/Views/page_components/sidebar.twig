@@ -340,7 +340,28 @@
                     </a>
                 </li>
 
-                <li class="sidebar-title">Logistyka</li>
+                <li class="sidebar-title">Logistyka i pakowanie</li>
+
+                {# Logistyka i pakowanie (28/10/2026) : ekran paletyzacji na żywo (tablet na rampie), pakowanie (kartony, sztuki, czas),
+                   załadunek ciężarówki (przeciągnij palety i klientów → plan na tablet kierowcy). #}
+                <li class="sidebar-item">
+                    <a href="{{ root }}/logistics/live" class="sidebar-link">
+                        <i class="bi bi-grid-3x3-gap"></i>
+                        <span>Ekran paletyzacji</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="{{ root }}/logistics/packing" class="sidebar-link">
+                        <i class="bi bi-box2"></i>
+                        <span>Pakowanie</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="{{ root }}/logistics/loading" class="sidebar-link">
+                        <i class="bi bi-truck-flatbed"></i>
+                        <span>Załadunek ciężarówki</span>
+                    </a>
+                </li>
 
                 <li class="sidebar-item">
                     <a href="{{ root }}/logistics/week" class="sidebar-link">
@@ -470,10 +491,17 @@
                 <li><a href="{{ root }}/products/new-with-recipe" data-where="Produkt › Produkty"><i class="bi bi-window-plus"></i> Kreator produktu : nowy półprodukt w oknie z kroku Receptura (wraca do kreatora i jest wybrany)</a></li>
                 <li><a href="{{ root }}/workshop/products" data-where="Produkt › Produkty › Karty produktów"><i class="bi bi-currency-euro"></i> Karta produktu, krok « Ceny i zatwierdzenie » (ceny i zgodność) : cena standardowa, kopia ceny do klientów bez ceny, opakowanie PPWR, sprzedawalność w Belgii</a></li>
                 <li><a href="{{ root }}/test-products/pipeline" data-where="Produkt › Produkty › Nowe produkty (etapy i lista)"><i class="bi bi-rocket-takeoff"></i> Wprowadź produkt testowy : kreator produktu wypełniony z testu (nazwa, kategoria, dział, etykieta, receptura) i powiązanie testu z nowym produktem</a></li>
-                <li><a href="{{ root }}/logistics" data-where="Logistyka › Dzień wysyłki"><i class="bi bi-list-ol"></i> Dzień wysyłki : 7 etapów dnia po kolei — plan (trasy, pojazdy), załadunek palet, powiadomienia klientów, dokumenty WZ / CMR / WDT, KSeF i sklepy, kierowcy (wydruki, tablet), po dostawie (potwierdzenia, problemy)</a></li>
+                <li><a href="{{ root }}/logistics/live" data-where="Logistyka i pakowanie › Ekran paletyzacji"><i class="bi bi-grid-3x3-gap"></i> Ekran paletyzacji na żywo (tablet na rampie, pełny ekran) : co jest na paletach, co gotowe w magazynie, czego brakuje — klient po kliencie, alarmy, odświeżanie co 10 s</a></li>
+                <li><a href="{{ root }}/logistics/live" data-where="Logistyka i pakowanie › Ekran paletyzacji"><i class="bi bi-exclamation-triangle"></i> Brakuje do wysyłki : produkty zamówione, ale nie na palecie i nie w magazynie (do spakowania), klienci bez żadnej palety przed wyjazdem</a></li>
+                <li><a href="{{ root }}/logistics/packing" data-where="Logistyka i pakowanie › Pakowanie"><i class="bi bi-box2"></i> Pakowanie dnia : kartony i sztuki do spakowania na produkt, czas wg normy « Pakowanie » (Etapy i czasy), osoby, koniec pakowania vs wyjazd ciężarówki</a></li>
+                <li><a href="{{ root }}/logistics/packing" data-where="Logistyka i pakowanie › Pakowanie"><i class="bi bi-check2-square"></i> Licznik spakowanych kartonów (− / + / Gotowe) : informacyjny, nie tworzy kartonów w magazynie — etykiety jak dotąd</a></li>
+                <li><a href="{{ root }}/logistics/loading" data-where="Logistyka i pakowanie › Załadunek ciężarówki"><i class="bi bi-truck-flatbed"></i> Załadunek ciężarówki : przeciągnij klientów na pojazd i w kolejności dostaw, palety na miejsca naczepy (pierwsza dostawa przy drzwiach), « Ułóż automatycznie »</a></li>
+                <li><a href="{{ root }}/logistics/loading" data-where="Logistyka i pakowanie › Załadunek ciężarówki"><i class="bi bi-send"></i> Wyślij plan załadunku na tablet kierowcy (wersje) : kierowca odhacza palety załadowane, biuro widzi postęp</a></li>
+                <li><a href="{{ root }}/tablet/driver" data-where="Tablety › Otwórz tablet › Tablet kierowcy"><i class="bi bi-truck"></i> Tablet kierowcy : plan załadunku z biura — naczepa z miejscami palet, kolejność rozładunku, « załadowana » dotknięciem</a></li>
+                <li><a href="{{ root }}/logistics" data-where="Logistyka i pakowanie › Dzień wysyłki"><i class="bi bi-list-ol"></i> Dzień wysyłki : 7 etapów dnia po kolei — plan (trasy, pojazdy), załadunek palet, powiadomienia klientów, dokumenty WZ / CMR / WDT, KSeF i sklepy, kierowcy (wydruki, tablet), po dostawie (potwierdzenia, problemy)</a></li>
                 <li><a href="{{ root }}/client-orders/archive" data-where="Sprzedaż › Zamówienia klientów"><i class="bi bi-send-check"></i> Status zamówień automatycznie : « W transporcie » po Wyślij dzień, « Zrealizowane » po potwierdzeniu dostawy przez kierowcę (archiwum zamówień, powiadom sklep)</a></li>
                 <li><a href="{{ root }}/communication/outbox?source=shipment&amp;filter=all" data-where="Sprzedaż › Komunikacja › Stan wysyłek"><i class="bi bi-shop"></i> Powiadomienia « wysłane » do sklepów franczyzy : kolejka po Wyślij dzień (co 5 minut), ponów jedną pozycję</a></li>
-                <li><a href="{{ root }}/logistics/notices" data-where="Logistyka › Dzień wysyłki › Powiadomienia klientów"><i class="bi bi-chat-dots"></i> Jedno powiadomienie o dostawie na klienta i kanał (e-mail, SMS) : automat i strona nie wysyłają dwa razy — « wyślij ponownie »</a></li>
+                <li><a href="{{ root }}/logistics/notices" data-where="Logistyka i pakowanie › Dzień wysyłki › Powiadomienia klientów"><i class="bi bi-chat-dots"></i> Jedno powiadomienie o dostawie na klienta i kanał (e-mail, SMS) : automat i strona nie wysyłają dwa razy — « wyślij ponownie »</a></li>
                 <li><a href="{{ root }}/workshop/stock/mts" data-where="Produkcja › Magazyn › Zapas MTS"><i class="bi bi-boxes"></i> Zapas MTS : kartony, palety i wartość zapasu wg grupy i kategorii, stan dziś, CSV</a></li>
                 <li><a href="{{ root }}/dashboard/monthly" data-where="Analiza › Raport miesięczny"><i class="bi bi-envelope-paper"></i> Raport miesięczny zarządu : rentowność, marża, reklamacje, klienci, niezgodności, nowe produkty (w rozwoju i wprowadzone), tabela roku — PDF PL / FR i wysyłka e-mailem co miesiąc</a></li>
                 <li><a href="{{ root }}/test-products/pipeline" data-where="Produkt › Produkty › Nowe produkty (etapy i lista)"><i class="bi bi-kanban"></i> CRM nowych produktów : pomysł, test 1 (receptura i zdjęcia), test 2, receptura zatwierdzona na tablecie, wprowadzenie — testy planowane w biurze, potwierdzane na tablecie grupy bez ponownego wpisywania</a></li>
@@ -508,8 +536,8 @@
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-calculator"></i> Tablet : Receptura na zamówienie — kartony × sztuki w kartonie + strata produkcyjna (0 / 2 / 5 % / inna) → sztuki do zrobienia i składniki ; « Zatwierdź » → partia i numery partii składników (zdjęcie worka, OCR, ręcznie)</a></li>
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-box-seam"></i> Ekran główny tabletu : karta « Magazyn grupy » (poniżej minimum, wolno jeszcze zrobić, produkty) — « Cały magazyn » po PIN</a></li>
                 <li><a href="{{ root }}/workshop/execution#devices" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-link-45deg"></i> Adresy tabletów : /tablet/production?team=N (grupa N), /tablet/office (biuro), /tablet/driver (kierowca) — linki w planie tabletów</a></li>
-                <li><a href="{{ root }}/shipments/differences" data-where="Logistyka › Wysyłki i dokumenty"><i class="bi bi-exclamation-diamond"></i> Różnice i problemy dostaw (dostawy, wysyłka) : różnica opłacona proforma ↔ WDT (zwrot dla klienta, dopłata), problem zgłoszony przez kierowcę — odpowiedzialny, decyzja, termin, zamknięcie</a></li>
-                <li><a href="{{ root }}/logistics/deliveries" data-where="Logistyka › Dzień wysyłki › Potwierdzenia dostaw"><i class="bi bi-qr-code"></i> Kod QR trasy dla tabletu kierowcy : pojazd i dzień otwierają się po zeskanowaniu (także na raporcie trasy PDF)</a></li>
+                <li><a href="{{ root }}/shipments/differences" data-where="Logistyka i pakowanie › Wysyłki i dokumenty"><i class="bi bi-exclamation-diamond"></i> Różnice i problemy dostaw (dostawy, wysyłka) : różnica opłacona proforma ↔ WDT (zwrot dla klienta, dopłata), problem zgłoszony przez kierowcę — odpowiedzialny, decyzja, termin, zamknięcie</a></li>
+                <li><a href="{{ root }}/logistics/deliveries" data-where="Logistyka i pakowanie › Dzień wysyłki › Potwierdzenia dostaw"><i class="bi bi-qr-code"></i> Kod QR trasy dla tabletu kierowcy : pojazd i dzień otwierają się po zeskanowaniu (także na raporcie trasy PDF)</a></li>
                 <li><a href="{{ root }}/workshop/execution" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-person-badge"></i> Tablet kierowcy : PIN kierowcy (osoby na tablecie) — kierowca wybiera się z listy i wpisuje PIN ; lista = stanowisko « Kierowca-dostawca » (Stanowiska i zadania)</a></li>
                 <li><a href="{{ root }}/recipes" data-where="Produkt › Produkty › Receptury"><i class="bi bi-clock-history"></i> Historia receptury : wersje « obowiązuje od », co się zmieniło w składzie (surowce, półprodukty, kompozycje), koszt surowców miesiąc po miesiącu (efekt cen i efekt składu) — przycisk « Historia » w kalkulacji receptury</a></li>
                 <li><a href="{{ root }}/other-settings#alert-params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-bell"></i> Alerty i terminy w dzwonku : reklamacja bez decyzji (po ilu dniach, alert pilny), zaległe testy nowych produktów, brak kosztów miesiąca (do którego dnia)</a></li>
@@ -517,7 +545,7 @@
                 <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Ustawienia › Organizacja › Funkcje i zadania"><i class="bi bi-file-earmark-person"></i> Karty stanowisk (fiches de poste) : cel, obowiązki, kompetencje, wskaźniki, higiena — biuro i pracownia, PDF PL / FR</a></li>
                 <li><a href="{{ root }}/tablet/driver" data-where="Tablety › Otwórz tablet › Tablet kierowcy"><i class="bi bi-tablet-landscape"></i> Tablet kierowcy : trasa dnia, numery palet, zdjęcia przed i po rozładunku z godziną, podpis, raport PDF trasy, problemy w dostawie</a></li>
                 <li><a href="{{ root }}/clients" data-where="Sprzedaż › Klienci › Klienci"><i class="bi bi-shield-lock"></i> Instrukcje dostawy klienta dla kierowcy : procedura rozładunku, alarm, klucz, zamrażarka, kontakt (zaszyfrowane)</a></li>
-                <li><a href="{{ root }}/logistics/deliveries" data-where="Logistyka › Dzień wysyłki › Potwierdzenia dostaw"><i class="bi bi-file-earmark-pdf"></i> Raport trasy PDF : zdjęcia przed / po rozładunku, podpisy, palety i ich numery</a></li>
+                <li><a href="{{ root }}/logistics/deliveries" data-where="Logistyka i pakowanie › Dzień wysyłki › Potwierdzenia dostaw"><i class="bi bi-file-earmark-pdf"></i> Raport trasy PDF : zdjęcia przed / po rozładunku, podpisy, palety i ich numery</a></li>
                 <li><a href="{{ root }}/workshop/data-sheet" data-where="Produkcja › Produkcja › Tabela do wypełnienia"><i class="bi bi-file-earmark-spreadsheet"></i> Tabela do wypełnienia (Excel, import) : stanowiska i pojemności, zmiany, obsada zespołów, godziny wyjazdu tras, pojemność zamrażarki</a></li>
                 <li><a href="{{ root }}/workshop/stock-movements" data-where="Produkcja › Magazyn › Ruchy magazynowe"><i class="bi bi-arrow-left-right"></i> Ruchy magazynowe produktów gotowych (magazyn, kartony) : stan na początek i koniec okresu, przyjęcia z produkcji, wydania do klientów, wartość zapasu, kartony przeterminowane, palety, które czekają, partie i daty ważności (FEFO), CSV</a></li>
                 <li><a href="{{ root }}/workshop/deliveries" data-where="Produkcja › Produkcja › Dostawy surowców"><i class="bi bi-truck"></i> Kto dostarcza co i kiedy : dostawcy surowców i opakowań, dni dostaw</a></li>
@@ -532,8 +560,8 @@
                 <li><a href="{{ root }}/month-close" data-where="Analiza › Marże i koszty › Zamknięcie miesiąca"><i class="bi bi-lock"></i> Zamknij miesiąc kosztów i wyślij raport miesięczny (PDF po zamknięciu, wysyłka automatyczna)</a></li>
                 <li><a href="{{ root }}/communication/payment-reminders" data-where="Sprzedaż › Przypomnienia płatności"><i class="bi bi-alarm"></i> Przypomnienia automatyczne (poziom 1 i 2) : wysyłka bez kliknięcia proform nieopłaconych po terminie, w języku klienta — domyślnie wyłączone</a></li>
                 <li><a href="{{ root }}/communication/payment-reminders" data-where="Sprzedaż › Przypomnienia płatności"><i class="bi bi-check2-all"></i> Oznacz kilka proform jako opłacone naraz (zaznacz i « Opłacone »)</a></li>
-                <li><a href="{{ root }}/shipments/differences" data-where="Logistyka › Wysyłki i dokumenty"><i class="bi bi-cart-plus"></i> Domówienie brakujących produktów z różnicy wysyłki albo ponowna dostawa po problemie kierowcy (zamówienie wypełnione, gratis) — zamyka się samo po WDT</a></li>
-                <li><a href="{{ root }}/shipments/differences" data-where="Logistyka › Wysyłki i dokumenty"><i class="bi bi-exclamation-octagon"></i> Niezgodność klienta (NC) z różnicy wysyłki albo problemu dostawy — jedno kliknięcie, termin 7 dni</a></li>
+                <li><a href="{{ root }}/shipments/differences" data-where="Logistyka i pakowanie › Wysyłki i dokumenty"><i class="bi bi-cart-plus"></i> Domówienie brakujących produktów z różnicy wysyłki albo ponowna dostawa po problemie kierowcy (zamówienie wypełnione, gratis) — zamyka się samo po WDT</a></li>
+                <li><a href="{{ root }}/shipments/differences" data-where="Logistyka i pakowanie › Wysyłki i dokumenty"><i class="bi bi-exclamation-octagon"></i> Niezgodność klienta (NC) z różnicy wysyłki albo problemu dostawy — jedno kliknięcie, termin 7 dni</a></li>
                 <li><a href="{{ root }}/client-complaints/to-ship" data-where="Sprzedaż › Zwroty › Do wysłania"><i class="bi bi-box-arrow-up"></i> Produkty zastępcze do wysłania (reklamacje uznane) : klient, produkt, ilość — « Wysłane » samo po WZ, przypomnienie w kreatorze Wyślij dzień</a></li>
                 <li><a href="{{ root }}/client-orders" data-where="Sprzedaż › Zamówienia klientów"><i class="bi bi-signpost-split"></i> Oś statusu zamówienia z akcją na każdym kroku : wystaw proformę, wyślij proformę, listy produkcyjne, wyślij dzień, dostarczone, różnica, oznacz jako opłaconą</a></li>
                 <li><a href="{{ root }}/workshop/buy" data-where="Zakupy › Zakupy tygodnia"><i class="bi bi-basket2"></i> Cotygodniowe zakupy surowców i opakowań na uzupełnienie stanów (kreator 3 kroki : co kupić, komu i jak, wyślij) — zapas +5 % / +10 %</a></li>
@@ -588,7 +616,7 @@
                 <li><a href="{{ root }}/purchases" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-archive"></i> Archiwum dostaw (ręczne)</a></li>
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-box-arrow-in-down"></i> Tablet : przyjęcie dostawy surowców (réception) — ilości, numer partii i data ważności ze zdjęcia etykiety, problem → niezgodność dostawcy, bez cen</a></li>
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-moon"></i> Tablet : Koniec dnia (fin de journée) — partie bez numerów partii surowców, kontrola jakości, straty, maszyny w ruchu, zatwierdzenie dnia z notatką, wyjście i podpis</a></li>
-                <li><a href="{{ root }}/shipping/wizard" data-where="Logistyka › Dzień wysyłki › Wyślij dzień"><i class="bi bi-cloud-upload"></i> Wyślij WDT dnia do KSeF (wszystkie naraz, po utworzeniu dokumentów) ; statusy KSeF odświeżane co 5 minut</a></li>
+                <li><a href="{{ root }}/shipping/wizard" data-where="Logistyka i pakowanie › Dzień wysyłki › Wyślij dzień"><i class="bi bi-cloud-upload"></i> Wyślij WDT dnia do KSeF (wszystkie naraz, po utworzeniu dokumentów) ; statusy KSeF odświeżane co 5 minut</a></li>
                 <li><a href="{{ root }}/clients?type=active" data-where="Sprzedaż › Klienci › Klienci"><i class="bi bi-tags"></i> Cennik klienta : ceny klienta (karta klienta › Cennik klienta, menu ⋯ na liście klientów)</a></li>
                 <li><a href="{{ root }}/communication/outbox" data-where="Sprzedaż › Komunikacja"><i class="bi bi-send-exclamation"></i> Stan wysyłek (błędy e-mail, kolejka, outbox) : e-maile do klientów, które nie wyszły, wysyłki do sklepów franczyzy (proformy, reklamacje, wysyłki), e-maile automatyczne pominięte, monitoring, zamówienia ze sklepów (pobieranie, nieznany produkt, zamówienie odrzucone), domówienia → sklep — ponów jedną pozycję, rozwiązane z powodem</a></li>
                 <li><a href="{{ root }}/communication/outbox?source=automation&amp;filter=all" data-where="Sprzedaż › Komunikacja › Stan wysyłek"><i class="bi bi-lightning-charge"></i> Automatyczne e-maile : historia wysyłek, błędy i pominięte (jedna historia : Stan wysyłek + Historia wiadomości)</a></li>

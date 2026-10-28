@@ -48,6 +48,7 @@ final class DriverService
         private ShippingDocumentService $documents,
         private CustomerDeliveryInfoService $deliveryInfo,
         private OrderFulfilmentService $fulfilment,
+        private LogisticsBoardService $board,
     ) {
     }
 
@@ -99,6 +100,7 @@ final class DriverService
             'vehicle' => $vehicle ? $vehicle + ['departure' => $truck['departure'] ?? null, 'loading_from' => $truck['loading_from'] ?? null,
                 'pallets' => $truck['pallets'] ?? 0, 'weight_kg' => $truck['weight_kg'] ?? 0, 'places' => $truck['places'] ?? null] : null,
             'run' => $run ? ['driver_name' => $run['driver_name'], 'started_at' => $run['started_at'], 'finished_at' => $run['finished_at']] : null,
+            'loading' => $vehicleId !== null ? $this->board->driverSummary($date, $vehicleId) : null,
             'stops' => $stops,
             'counts' => [
                 'stops' => count($stops),
@@ -109,6 +111,36 @@ final class DriverService
             'max_photos' => $this->maxPhotos(),
             'reasons' => array_map(fn($k) => ['code' => $k, 'label' => self::REASON_LABELS[$k][$context->translator->lang() === 'fr' ? 1 : 0]], self::REASONS),
         ];
+    }
+
+    /**
+     * Plan załadunku wysłany z biura (Logistyka i pakowanie › Załadunek ciężarówki) : miejsca naczepy z klientem, numerem
+     * przystanku i palety, załadowane miejsca. plan = null, dopóki biuro nie wyśle planu dla pojazdu.
+     */
+    public function loading(ApiContext $context, ?string $date, ?int $vehicleId): array
+    {
+        $device = $this->driverDevice($context);
+        $vehicleId ??= $device['id_carrier_vehicle'] !== null ? (int) $device['id_carrier_vehicle'] : null;
+        if ($vehicleId === null) throw ApiException::validation([['field' => 'vehicle_id', 'code' => 'REQUIRED', 'params' => []]]);
+        $date ??= date('Y-m-d');
+        $this->checkDate($date);
+        return ['date' => $date, 'vehicle_id' => $vehicleId, 'plan' => $this->board->driverPlan($date, $vehicleId)];
+    }
+
+    /** Miejsce naczepy załadowane (paleta na swoim miejscu) albo cofnięte. */
+    public function loadingCheck(ApiContext $context, array $body): array
+    {
+        $device = $this->driverDevice($context);
+        $v = (new Validator($body))->only(['date', 'vehicle_id', 'slot', 'loaded'])
+            ->date('date', true, false)->integer('vehicle_id', true, 1)->integer('slot', true, 1, 99)->boolean('loaded', true);
+        $v->throwIfInvalid();
+        $date = $v->value('date');
+        $this->checkDate($date);
+        $vehicleId = (int) $v->value('vehicle_id');
+        $slot = (int) $v->value('slot');
+        $plan = $this->board->driverCheck($date, $vehicleId, $slot, (bool) $v->value('loaded'), (int) $device['id'], $context->employeeId)
+            ?? throw ApiException::validation([['field' => 'slot', 'code' => 'DRIVER_LOAD_SLOT_UNKNOWN', 'params' => ['slot' => $slot]]]);
+        return ['date' => $date, 'vehicle_id' => $vehicleId, 'plan' => $plan];
     }
 
     /** Start albo koniec trasy (kierowca z nazwiska). */

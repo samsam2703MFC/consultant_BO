@@ -12,7 +12,7 @@ namespace App\Core\Web;
  */
 final class PageAccess
 {
-    public const SECTIONS = ['Analiza', 'Produkcja', 'Zakupy', 'Produkt', 'Sprzedaż', 'Logistyka', 'Tablety', 'Administracja'];
+    public const SECTIONS = ['Analiza', 'Produkcja', 'Zakupy', 'Produkt', 'Sprzedaż', 'Logistyka i pakowanie', 'Tablety', 'Administracja'];
 
     /** klucz => [etykieta, sekcja, prefiksy ścieżek, tylko administrator] */
     public const PAGES = [
@@ -42,9 +42,9 @@ final class PageAccess
         'client_volume' => ['Klienci : wolumen i marża (N / N-1, marża, należności)', 'Sprzedaż', ['/finances/clients'], false],
         'returns' => ['Zwroty', 'Sprzedaż', ['/client-complaints'], false],
         'communication' => ['Komunikacja (dystrybucja dokumentów i e-maile automatyczne, wzory dokumentów i e-maili, wiadomości)', 'Sprzedaż', ['/communication'], false],
-        'logistics' => ['Logistyka (tydzień, załadunek dnia, dokumenty dostawy, trasy i pojazdy)', 'Logistyka', ['/logistics'], false],
-        'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka', ['/shipping', '/shipments', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
-        'archive' => ['Archiwum list kompletacyjnych', 'Logistyka', ['/archive'], false],
+        'logistics' => ['Logistyka i pakowanie (ekran paletyzacji, pakowanie, załadunek ciężarówki, tydzień, plan dnia, dokumenty dostawy, trasy i pojazdy)', 'Logistyka i pakowanie', ['/logistics'], false],
+        'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka i pakowanie', ['/shipping', '/shipments', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
+        'archive' => ['Archiwum list kompletacyjnych', 'Logistyka i pakowanie', ['/archive'], false],
         'positions' => ['Funkcje i zadania, protokoły', 'Administracja', ['/organization', '/task-forms'], false],
         'settings' => ['Ustawienia (użytkownicy, aliasy, języki, e-mail, stopki e-maili i tłumacz, KSeF, licznik stron, inne)', 'Administracja',
             ['/users', '/aliases', '/settings', '/communication/email-settings', '/other-settings'], false],

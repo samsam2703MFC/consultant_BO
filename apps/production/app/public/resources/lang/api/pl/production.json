@@ -228,6 +228,7 @@
     "DRIVER_CUSTOMER_NOT_PLANNED": "Klient {id} nie ma dostawy w tym dniu.",
     "DRIVER_DATE_OUT_OF_RANGE": "Pole „{field}”: dzień wysyłki od tygodnia wstecz do jutra.",
     "DRIVER_PHOTO_LIMIT": "Pole „{field}”: najwyżej {max} zdjęć tego rodzaju u klienta.",
+    "DRIVER_LOAD_SLOT_UNKNOWN": "Pole „{field}”: miejsca {slot} nie ma w wysłanym planie załadunku — odśwież plan.",
     "LINE_SHORT_NOTE_REQUIRED": "Zrobiono mniej niż plan ({planned}) — wpisz powód.",
     "WASTE_PHOTO_REQUIRED": "Zrób zdjęcie straty.",
     "WASTE_PHOTO_TOO_MANY": "Najwyżej {max} zdjęcia na stratę.",

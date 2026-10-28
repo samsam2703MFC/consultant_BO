@@ -46,7 +46,7 @@ final class ShippingDayService
         $state = fn(int $done, int $of, bool $warn = false) => $warn ? 'warn' : ($of > 0 && $done >= $of ? 'done' : ($done > 0 ? 'current' : 'todo'));
         $steps = [
             ['label' => 'Plan : trasy i pojazdy', 'detail' => $count($planned, $total) . ' klientów z pojazdem', 'state' => $state($planned, $total), 'url' => '/logistics' . $q],
-            ['label' => 'Załadunek palet', 'detail' => $count($loaded, $total) . ' klientów zeskanowanych', 'state' => $state($loaded, $total), 'url' => '/logistics/loading-list' . $q],
+            ['label' => 'Załadunek palet', 'detail' => $count($loaded, $total) . ' klientów zeskanowanych', 'state' => $state($loaded, $total), 'url' => '/logistics/live' . $q],
             ['label' => 'Powiadomienia klientów', 'detail' => $count($notified, $total) . ' powiadomionych', 'state' => $state($notified, $total), 'url' => '/logistics/notices' . $q],
             ['label' => 'Dokumenty WZ / CMR / WDT', 'detail' => $count($documents, $total) . ' klientów (Wyślij dzień)', 'state' => $state($documents, $total), 'url' => '/shipping/wizard' . $q],
             ['label' => 'KSeF i sklepy', 'detail' => ($shipments ? "KSeF {$accepted} / " . count($shipments) : 'KSeF —')

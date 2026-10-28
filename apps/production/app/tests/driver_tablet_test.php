@@ -48,7 +48,7 @@ try {
                  'erp_company_data', 'flattened_recipe_recipe', 'product_preparation_type', 'product_recipe_preparation_connection', 'product_recipe_type',
                  'product_recipe_preparation_step', 'product_recipe_prepare_instruction_connection', 'test_product', 'test_product_status', 'test_product_type',
                  'test_product_stage', 'test_product_changelog',
-                 'final_product_ppwr_sales_packaging', 'carton_dimension', 'palets_delivery', 'document_cmr', 'document_wz', 'shipment_log', 'app_notification'] as $table) {
+                 'final_product_ppwr_sales_packaging', 'carton_dimension', 'palets_delivery', 'carton_pallet_connection', 'document_cmr', 'document_wz', 'shipment_log', 'app_notification'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -146,6 +146,24 @@ try {
     [$s, $day] = $call('GET', '/driver/day', null, $driver);
     $day = $day['data'];
     expectDrv($s === 200 && $day['date'] === $today && $day['vehicle']['label'] === 'DW 12345' && count($day['stops']) === 1, 'day of the device vehicle');
+
+    // --- Plan załadunku z biura (28/10/2026) : brak planu, wysłany, palety odhaczone, nieznane miejsce
+    expectDrv($day['loading'] === null, 'no loading plan sent yet');
+    [$s, $b] = $call('GET', '/driver/loading', null, $driver);
+    expectDrv($s === 200 && $b['data']['vehicle_id'] === 5 && $b['data']['plan'] === null, 'loading plan: nothing sent yet');
+    $container->get(App\Services\Logistics\LogisticsBoardService::class)->sendLoading(['date' => $today, 'vehicle_id' => 5], 1);
+    [$s, $b] = $call('GET', '/driver/loading?date=' . $today . '&vehicle_id=5', null, $driver);
+    $plan = $b['data']['plan'];
+    expectDrv($s === 200 && $plan['version'] === 1 && $plan['total'] >= 1 && $plan['loaded'] === 0 && $plan['stops'][0]['name'] === 'Boulangerie Test'
+        && $plan['stops'][0]['stop'] === 1 && $plan['slots'][0]['slot'] === 1, 'loading plan sent by the office: slots and stops');
+    [$s, $b] = $call('POST', '/driver/loading/checks', ['date' => $today, 'vehicle_id' => 5, 'slot' => 1, 'loaded' => true], $driver);
+    expectDrv($s === 200 && $b['data']['plan']['loaded'] === 1 && $b['data']['plan']['slots'][0]['loaded'] === true, 'pallet place checked as loaded');
+    [$s, $b] = $call('POST', '/driver/loading/checks', ['date' => $today, 'vehicle_id' => 5, 'slot' => 99, 'loaded' => true], $driver, 'fr');
+    expectDrv($s === 422 && $codes($b) === ['slot:DRIVER_LOAD_SLOT_UNKNOWN'] && str_contains($b['errors'][0]['message'], '99'), 'place outside the plan refused');
+    [$s, $b] = $call('POST', '/driver/loading/checks', ['date' => $today, 'vehicle_id' => 5, 'slot' => 0], $driver);
+    expectDrv($s === 422 && in_array('loaded:REQUIRED', $codes($b), true), 'checks validated');
+    [, $b] = $call('GET', '/driver/day', null, $driver);
+    expectDrv($b['data']['loading']['version'] === 1 && $b['data']['loading']['loaded'] === 1, 'route screen shows the loading progress');
     $stop = $day['stops'][0];
     expectDrv($stop['name'] === 'Boulangerie Test' && $stop['address'] === 'Rue Haute 12, 1000 Bruxelles, BE' && $stop['phone'] === '+32 2 000 00 00'
         && $stop['pallets'] === 2 && $stop['status'] === null, 'stop: address, phone, pallets (50 cartons / 48 per pallet)');

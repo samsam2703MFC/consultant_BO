@@ -248,6 +248,7 @@
                     ${!run.started_at ? `<button type="button" class="kiosk-btn is-primary" data-run="start">${esc(t('start_run'))}</button>`
                         : !run.finished_at ? `<span class="kiosk-muted">${esc(t('started', {time: hhmm(run.started_at)}))}</span><button type="button" class="kiosk-btn" data-run="finish">${esc(t('finish_run'))}</button>`
                         : `<span class="driver-state is-ok">${esc(t('finished', {from: hhmm(run.started_at), to: hhmm(run.finished_at)}))}</span>`}
+                    <button type="button" class="kiosk-btn ${d.loading && d.loading.loaded < d.loading.total ? 'is-primary' : ''}" data-loading ${d.loading ? '' : 'disabled'}>⛟ ${esc(d.loading ? t('loading_plan_n', {loaded: d.loading.loaded, total: d.loading.total}) : t('loading_plan_none'))}</button>
                     <button type="button" class="kiosk-btn" data-docs>${esc(t('documents'))}</button>
                     <button type="button" class="kiosk-btn" data-report>${esc(t('report_pdf'))}</button></div></section>` : '';
         const choose = `<section class="driver-choose">
@@ -296,6 +297,8 @@
                 load();
             } catch (err) { b.disabled = false; toast(err.message, true); }
         }));
+        const loadingBtn = el.querySelector('[data-loading]');
+        if (loadingBtn) loadingBtn.addEventListener('click', openLoading);
         const docs = el.querySelector('[data-docs]');
         if (docs) docs.addEventListener('click', () => openFile('/driver/documents?date=' + encodeURIComponent(date), docs));
         const report = el.querySelector('[data-report]');
@@ -310,6 +313,47 @@
             if (before) before.addEventListener('click', () => takePhoto(s, 'before').then(ok => { if (ok) render(); }));
             bindReveal(card);
         });
+    }
+
+    // --- Plan załadunku (28/10/2026) : naczepa z biura, palety na miejscach, « załadowana » dotknięciem ---------------
+    const STOP_COLORS = ['#2E7D4F', '#1f4f7a', '#8D1D2C', '#C17A2A', '#6b4c9a', '#00838f', '#9c4a22', '#5d6d1e'];
+    const stopColor = (n) => STOP_COLORS[((n || 1) - 1) % STOP_COLORS.length];
+    async function openLoading() {
+        let res;
+        try {
+            res = await api('GET', `/driver/loading?date=${encodeURIComponent(date)}&vehicle_id=${vehicle}`);
+        } catch (err) { toast(err.message, true); return; }
+        renderLoading(res.plan);
+    }
+    function renderLoading(plan) {
+        if (!plan) { toast(t('loading_plan_none'), true); render(); return; }
+        const bySlot = {};
+        plan.slots.forEach(x => { bySlot[x.slot] = x; });
+        const cells = [];
+        for (let slot = 1; slot <= plan.places; slot++) {
+            const x = bySlot[slot];
+            cells.push(x ? `<button type="button" class="driver-slot is-full ${x.loaded ? 'is-loaded' : ''}" style="--c:${stopColor(x.stop)}" data-slot="${slot}" data-loaded="${x.loaded ? 1 : 0}"
+                aria-label="${esc(t('slot_label', {slot, stop: x.stop || '?'}))}"><b>${x.loaded ? '✓ ' : ''}${x.pallet_id ? 'P' + x.pallet_id : (x.stop || '•')}</b></button>` : '<span class="driver-slot"></span>');
+        }
+        const stops = plan.stops.map(st => `<li style="--c:${stopColor(st.stop)}"><span class="driver-n">${st.stop || '?'}</span><div class="driver-load-info"><b>${esc(st.name)}</b>
+            <small class="kiosk-muted">${esc(st.town || '')} · ${esc(t('pallets_n', {n: st.slots.length}))} · ${esc(st.stop === 1 ? t('near_door') : (st.stop === plan.stops.length ? t('near_cab') : t('middle')))}</small>
+            <div class="driver-load-pids">${st.slots.map(x => `<button type="button" class="driver-pid ${x.loaded ? 'is-loaded' : ''}" data-slot="${x.slot}" data-loaded="${x.loaded ? 1 : 0}">${x.loaded ? '✓ ' : ''}${x.pallet_id ? 'P' + x.pallet_id : esc(t('planned_pallet'))} · ${esc(t('slot_short', {slot: x.slot}))}</button>`).join('')}</div></div>
+            <span class="driver-state ${st.slots.every(x => x.loaded) ? 'is-ok' : (st.slots.some(x => x.loaded) ? 'is-arrived' : '')}">${esc(t('loaded_n', {loaded: st.slots.filter(x => x.loaded).length, total: st.slots.length}))}</span></li>`).join('');
+        el.innerHTML = header() + `<section class="driver-choose"><button type="button" class="kiosk-chip" data-back>‹ ${esc(t('back_route'))}</button>
+                <span class="driver-state ${plan.loaded === plan.total ? 'is-ok' : 'is-arrived'}">${esc(t('loaded_n', {loaded: plan.loaded, total: plan.total}))}</span>
+                <span class="kiosk-muted">${esc(t('plan_version', {version: plan.version, time: hhmm(plan.sent_at)}))}</span></section>
+            <div class="driver-load"><section class="kiosk-card driver-truck"><div class="driver-cab">${esc(t('cab'))}</div>
+                <div class="driver-floor" style="grid-template-columns:repeat(${plan.columns}, 1fr)">${cells.join('')}</div><div class="driver-cab">${esc(t('door'))}</div></section>
+                <section class="kiosk-card"><h2>${esc(t('unload_order'))}</h2><ol class="driver-load-stops">${stops}</ol><p class="kiosk-muted">${esc(t('loading_help'))}</p></section></div>`;
+        el.querySelector('[data-back]').addEventListener('click', () => render());
+        el.querySelectorAll('[data-slot]').forEach(b => b.addEventListener('click', async () => {
+            b.disabled = true;
+            try {
+                const r = await api('POST', '/driver/loading/checks', {date, vehicle_id: vehicle, slot: Number(b.dataset.slot), loaded: b.dataset.loaded !== '1'});
+                if (data) data.loading = {version: r.plan.version, sent_at: r.plan.sent_at, loaded: r.plan.loaded, total: r.plan.total};
+                renderLoading(r.plan);
+            } catch (err) { b.disabled = false; toast(err.message, true); }
+        }));
     }
 
     /** PDF z API (JSON base64) : otwarcie w nowej karcie. */

@@ -28,6 +28,19 @@ final class DriverController
         return new ApiResult($this->driver->tours($request->context, $this->date($request, false)));
     }
 
+    /** Plan załadunku naczepy wysłany z biura (miejsca, palety, przystanki, załadowane). */
+    public function loading(ApiRequest $request): ApiResult
+    {
+        $vehicle = $request->query('vehicle_id');
+        return new ApiResult($this->driver->loading($request->context, $this->date($request, false),
+            $vehicle !== null && ctype_digit($vehicle) ? (int) $vehicle : null));
+    }
+
+    public function loadingCheck(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->driver->loadingCheck($request->context, $request->body()));
+    }
+
     public function run(ApiRequest $request): ApiResult
     {
         return new ApiResult($this->driver->run($request->context, $request->body()));

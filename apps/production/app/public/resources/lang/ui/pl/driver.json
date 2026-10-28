@@ -105,5 +105,21 @@
   "no_tours": "Brak tras zaplanowanych na ten dzień",
   "driver": "Kierowca",
   "drivers_group": "Kierowcy",
-  "others_group": "Pozostałe osoby"
+  "others_group": "Pozostałe osoby",
+  "loading_plan_n": "Plan załadunku · {loaded}/{total}",
+  "loading_plan_none": "Brak planu załadunku z biura",
+  "back_route": "Trasa",
+  "loaded_n": "Załadowane {loaded}/{total}",
+  "plan_version": "Plan z biura · wersja {version} · {time}",
+  "cab": "KABINA",
+  "door": "DRZWI",
+  "unload_order": "Kolejność rozładunku",
+  "pallets_n": "{n} palet",
+  "near_door": "przy drzwiach",
+  "near_cab": "przy kabinie",
+  "middle": "środek",
+  "planned_pallet": "paleta",
+  "slot_short": "miejsce {slot}",
+  "slot_label": "Miejsce {slot}, przystanek {stop}",
+  "loading_help": "Dotknij paletę, gdy stoi na swoim miejscu w naczepie (dotknij jeszcze raz, aby cofnąć). Biuro widzi załadunek na żywo."
 }
