@@ -591,7 +591,10 @@ function wr_consultants_checklists(): array
 }
 
 /* --- La météo du franchisé : moral, envie, équipe, relation, ses envies, ses demandes, ses inquiétudes ------------ */
-const FR_METEO_ECHELLES = ['moral' => 'Moral', 'envie' => 'Envie, motivation', 'equipe' => 'Climat de l’équipe', 'relation' => 'Relation avec le réseau'];
+const FR_METEO_ECHELLES = ['moral' => 'Moral', 'envie' => 'Envie, motivation', 'equipe' => 'Climat de l’équipe', 'relation' => 'Relation avec le réseau', 'finances' => 'Comment il se sent financièrement'];
+// Les finances du franchisé (28/10/2026) : tout est-il payé à temps ? Sinon, ce qui est en retard et le détail (obligatoire).
+const FR_METEO_RETARDS = ['atelier' => 'Factures L’Atelier', 'fournisseurs' => 'Autres fournisseurs', 'loyer' => 'Loyer', 'salaires' => 'Salaires, ONSS',
+    'impots' => 'TVA, impôts', 'banque' => 'Banque, leasing', 'autre' => 'Autre'];
 function ensureFrMeteo(): void
 {
     static $fait = false;
@@ -608,6 +611,10 @@ function ensureFrMeteo(): void
         envie TINYINT NULL,
         equipe TINYINT NULL,
         relation TINYINT NULL,
+        finances TINYINT NULL,
+        paye_a_temps TINYINT NULL,
+        retards VARCHAR(255) NULL,
+        retards_info TEXT NULL,
         envies TEXT NULL,
         demandes TEXT NULL,
         inquietudes TEXT NULL,
@@ -617,13 +624,30 @@ function ensureFrMeteo(): void
         UNIQUE KEY u_client (client_id),
         KEY k_shop (shop_id, le)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Les finances (28/10/2026), arrivées après la table : ajoutées si elles manquent.
+    $sansFin = true;
+    try { $sansFin = Db::row("SHOW COLUMNS FROM con_franchise_meteo LIKE 'paye_a_temps'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    if ($sansFin) {
+        foreach (['finances TINYINT NULL', 'paye_a_temps TINYINT NULL', 'retards VARCHAR(255) NULL', 'retards_info TEXT NULL'] as $col) {
+            try { Db::exec('ALTER TABLE con_franchise_meteo ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
+        }
+    }
+}
+/** Les paiements d'une météo : à jour, en retard (quoi, le détail) ou pas demandé. */
+function frMeteoPaiements(array $r): array
+{
+    $p = isset($r['paye_a_temps']) && $r['paye_a_temps'] !== null ? (int) $r['paye_a_temps'] === 1 : null;
+    $codes = $p === false ? array_values(array_filter((array) json_decode((string) ($r['retards'] ?? ''), true), fn ($c) => is_string($c) && isset(FR_METEO_RETARDS[$c]))) : [];
+    return ['payeATemps' => $p, 'retards' => $codes, 'retardsLib' => array_map(fn ($c) => FR_METEO_RETARDS[$c], $codes),
+        'retardsInfo' => $p === false ? (string) ($r['retards_info'] ?? '') : ''];
 }
 function frMeteoLigne(array $r, array $taches): array
 {
     $dem = json_decode((string) ($r['demandes'] ?? ''), true);
     $dem = is_array($dem) ? $dem : [];
     $out = ['id' => (int) $r['id'], 'le' => (string) $r['le'], 'consultant' => (string) $r['consultant_nom'], 'creePar' => (string) $r['cree_par']];
-    foreach (array_keys(FR_METEO_ECHELLES) as $k) { $out[$k] = $r[$k] !== null ? (int) $r[$k] : null; }
+    foreach (array_keys(FR_METEO_ECHELLES) as $k) { $out[$k] = isset($r[$k]) && $r[$k] !== null ? (int) $r[$k] : null; }
+    $out += frMeteoPaiements($r);
     $out['envies'] = (string) ($r['envies'] ?? ''); $out['inquietudes'] = (string) ($r['inquietudes'] ?? ''); $out['note'] = (string) ($r['note'] ?? '');
     $out['demandes'] = array_map(function ($d) use ($taches) {
         $tid = isset($d['tache']) ? (int) $d['tache'] : null; $t = $tid ? ($taches[$tid] ?? null) : null;
@@ -652,8 +676,8 @@ function ep_franchises_meteo(): array
     $ouvertes = 0;
     foreach ($meteos as $m) { foreach ($m['demandes'] as $d) { if ($d['statut'] === 'a_faire' || $d['statut'] === 'en_cours') { $ouvertes++; } } }
     $tendance = [];
-    foreach (array_reverse(array_slice($meteos, 0, 12)) as $m) { $tendance[] = ['le' => $m['le'], 'moral' => $m['moral'], 'envie' => $m['envie'], 'equipe' => $m['equipe'], 'relation' => $m['relation']]; }
-    return ['shop' => $shop, 'magasin' => $mags[$shop], 'lu' => date('Y-m-d H:i'), 'echelles' => FR_METEO_ECHELLES,
+    foreach (array_reverse(array_slice($meteos, 0, 12)) as $m) { $tendance[] = ['le' => $m['le'], 'moral' => $m['moral'], 'envie' => $m['envie'], 'equipe' => $m['equipe'], 'relation' => $m['relation'], 'finances' => $m['finances'], 'payeATemps' => $m['payeATemps']]; }
+    return ['shop' => $shop, 'magasin' => $mags[$shop], 'lu' => date('Y-m-d H:i'), 'echelles' => FR_METEO_ECHELLES, 'retardsTypes' => FR_METEO_RETARDS,
         'derniere' => $meteos[0] ?? null, 'meteos' => $meteos, 'tendance' => $tendance, 'demandesOuvertes' => $ouvertes];
 }
 /** POST /franchises/meteo — une météo ; chaque demande peut devenir une tâche du consultant (échéance J+7). */
@@ -672,6 +696,11 @@ function wr_franchises_meteo(): array
         if ($ech[$k] !== null) { $rien = false; }
     }
     $txt = static fn ($k) => mb_substr(trim((string) ($b[$k] ?? '')), 0, 4000);
+    // Tout est-il payé à temps ? 1 oui, 0 non (alors le détail est obligatoire), absent = pas demandé.
+    $paye = isset($b['paye_a_temps']) && in_array((string) (is_bool($b['paye_a_temps']) ? (int) $b['paye_a_temps'] : $b['paye_a_temps']), ['0', '1'], true) ? (int) $b['paye_a_temps'] : null;
+    $retards = $paye === 0 ? array_values(array_unique(array_filter((array) ($b['retards'] ?? []), fn ($c) => is_string($c) && isset(FR_METEO_RETARDS[$c])))) : [];
+    if ($paye === 0 && $txt('retards_info') === '') { http_response_code(422); return ['error' => 'ce qui n’est pas payé à temps : le détail est obligatoire']; }
+    if ($paye !== null) { $rien = false; }
     $demandes = is_array($b['demandes'] ?? null) ? $b['demandes'] : preg_split('/\R/u', (string) ($b['demandes'] ?? ''));
     $demandes = array_values(array_filter(array_map(fn ($d) => mb_substr(trim((string) (is_array($d) ? ($d['texte'] ?? '') : $d)), 0, 300), $demandes), fn ($d) => $d !== ''));
     if ($rien && $demandes === [] && $txt('envies') === '' && $txt('inquietudes') === '' && $txt('note') === '') { http_response_code(422); return ['error' => 'météo vide']; }
@@ -680,8 +709,9 @@ function wr_franchises_meteo(): array
     if ($cons === '') { $cons = (string) (consultantIdCompte() ?? ''); }
     $consNom = $cons !== '' ? viConsultantNom($cons) : '';
     $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO con_franchise_meteo (client_id, shop_id, le, consultant_id, consultant_nom, moral, envie, equipe, relation, envies, demandes, inquietudes, note, cree_par, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-        [$cid, $shop, $le, $cons, $consNom, $ech['moral'], $ech['envie'], $ech['equipe'], $ech['relation'], $txt('envies') ?: null, '[]', $txt('inquietudes') ?: null, $txt('note') ?: null, viQui($b), $now]);
+    Db::exec('INSERT INTO con_franchise_meteo (client_id, shop_id, le, consultant_id, consultant_nom, moral, envie, equipe, relation, finances, paye_a_temps, retards, retards_info, envies, demandes, inquietudes, note, cree_par, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [$cid, $shop, $le, $cons, $consNom, $ech['moral'], $ech['envie'], $ech['equipe'], $ech['relation'], $ech['finances'], $paye, $paye === 0 ? json_encode($retards) : null,
+            $paye === 0 ? $txt('retards_info') : null, $txt('envies') ?: null, '[]', $txt('inquietudes') ?: null, $txt('note') ?: null, viQui($b), $now]);
     $id = (int) Db::pdo()->lastInsertId();
     $dem = []; $creees = 0;
     $enTaches = !array_key_exists('taches', $b) || !empty($b['taches']);
@@ -696,7 +726,8 @@ function wr_franchises_meteo(): array
         $dem[] = ['texte' => $d, 'tache' => $tid];
     }
     Db::exec('UPDATE con_franchise_meteo SET demandes = ? WHERE id = ?', [json_encode($dem, JSON_UNESCAPED_UNICODE), $id]);
-    if (function_exists('journalAdd')) { try { journalAdd(viQui($b), 'franchise', null, 'Météo du franchisé ' . (viMagasins()[$shop]['court'] ?? $shop) . ' : moral ' . ($ech['moral'] ?? '—') . ' / 5, ' . count($dem) . ' demande(s)'); } catch (Throwable $e) { /* le journal ne bloque pas */ } }
+    if (function_exists('journalAdd')) { try { journalAdd(viQui($b), 'franchise', null, 'Météo du franchisé ' . (viMagasins()[$shop]['court'] ?? $shop) . ' : moral ' . ($ech['moral'] ?? '—') . ' / 5, ' . count($dem) . ' demande(s)'
+        . ($paye === 0 ? ', paiements en retard' : '')); } catch (Throwable $e) { /* le journal ne bloque pas */ } }
     $r = Db::row('SELECT * FROM con_franchise_meteo WHERE id = ?', [$id]);
     return ['ok' => true, 'meteo' => frMeteoLigne($r, []), 'taches' => $creees];
 }
