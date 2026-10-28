@@ -224,5 +224,15 @@ verifie('les trois questions seulement, dans l’ordre : rien ne s’ajoute ni n
 $sc = viScore(array_merge([viPhotosNormalise(null)], $cl), array_merge($pts, [['module' => 'photos', 'ref' => 'jour_facade', 'etat' => 'ok'], ['module' => 'photos', 'ref' => 'jour_arriere', 'etat' => 'ko']]));
 verifie('le score compte les photos, en tête (façade OK, arrière écart → 50)', $sc['modules'][0]['id'] === 'photos' && $sc['modules'][0]['score'] === 50 && $sc['n'] === 8, json_encode($sc['modules'][0]));
 
+// --- Les finances du franchisé, dans la météo (28/10/2026) -----------------------------------------------------
+echo "\nMétéo du franchisé : finances\n";
+require __DIR__ . '/../src/franchises.php';
+$pm = frMeteoPaiements(['paye_a_temps' => 0, 'retards' => '["loyer","inconnu","atelier"]', 'retards_info' => 'Loyer d’octobre pas payé']);
+verifie('pas payé à temps : les retards connus seulement, leurs libellés, le détail', $pm['payeATemps'] === false && $pm['retards'] === ['loyer', 'atelier']
+    && $pm['retardsLib'] === ['Loyer', 'Factures L’Atelier'] && $pm['retardsInfo'] === 'Loyer d’octobre pas payé', json_encode($pm, JSON_UNESCAPED_UNICODE));
+verifie('payé à temps : ni retard ni détail', frMeteoPaiements(['paye_a_temps' => 1, 'retards' => '["loyer"]', 'retards_info' => 'ancien']) === ['payeATemps' => true, 'retards' => [], 'retardsLib' => [], 'retardsInfo' => '']);
+verifie('pas demandé (météo d’avant) : ni oui ni non', frMeteoPaiements(['moral' => 3])['payeATemps'] === null);
+verifie('le ressenti financier est une échelle de la météo (1 à 5)', isset(FR_METEO_ECHELLES['finances']) && count(FR_METEO_RETARDS) === 7);
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

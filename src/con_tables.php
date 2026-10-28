@@ -41,7 +41,7 @@ const CON_TABLES = [
         'api' => ['chemin' => '/consultant/todos', 'cle' => 'id', 'filtres' => ['consultant_id', 'shop_id', 'visite_id', 'statut']]],
     'con_consultant_checklist' => ['ancien' => 'ceo_consultant_checklist', 'famille' => 'Consultant', 'quoi' => 'Ce que le consultant remplit des checklists du cadre, par magasin et par jour',
         'api' => ['chemin' => '/consultant/checklist-answers', 'cle' => 'id', 'filtres' => ['shop_id', 'jour', 'membership_id']]],
-    'con_franchise_meteo'      => ['ancien' => 'ceo_franchise_meteo', 'famille' => 'Consultant', 'quoi' => 'La météo du franchisé notée en fin de visite : moral, envie, équipe, relation, demandes',
+    'con_franchise_meteo'      => ['ancien' => 'ceo_franchise_meteo', 'famille' => 'Consultant', 'quoi' => 'La météo du franchisé notée en fin de visite : moral, envie, équipe, relation, finances, paiements à temps (sinon quoi et le détail), demandes',
         'api' => ['chemin' => '/consultant/franchisee-mood', 'cle' => 'id', 'filtres' => ['shop_id', 'date_from', 'date_to']]],
     'con_consultant'           => ['ancien' => 'ceo_consultant', 'famille' => 'Consultant', 'quoi' => 'Les consultants d’une installation autonome (sans panel) : nom, rôle, TJM, charge',
         'api' => ['chemin' => '/panel/consultants', 'cle' => 'id', 'filtres' => []]],
