@@ -1132,3 +1132,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-27T22:06:09Z production : Zakupy tygodnia (kreator, zapytania ofertowe, oferty z minimum, wyniki), migracja 118
 2026-10-27T23:08:37Z production : tablette de groupe — réclamations clients acceptées par le bureau (migration 119)
 2026-10-28T05:47:25Z météo du franchisé : finances
+2026-10-28T09:42:31Z production : logistyka i pakowanie (ekran paletyzacji, pakowanie, załadunek → tablet kierowcy)
