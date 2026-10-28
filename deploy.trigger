@@ -1136,3 +1136,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-28T10:05:31Z production : tablet pakowania (/tablet/packing), rail : tylko link
 2026-10-28T10:15:56Z production : migracja 121 poprawiona (MySQL 8)
 2026-10-28T11:16:39Z production : tablet pakowania — tryb Paletyzacja
+2026-10-28T11:33:10Z production : tablet pakowania — nagłówek w jednej linii
