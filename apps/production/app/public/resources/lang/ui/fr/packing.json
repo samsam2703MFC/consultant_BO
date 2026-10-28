@@ -55,7 +55,6 @@
   "all_clients_help": "sans tri par transport",
   "n_clients": "{n} clients",
   "departure_at": "départ {time}",
-  "live": "En direct",
   "clients": "Clients",
   "col_product": "Produit (commandé par le client)",
   "col_ordered": "Commandé",
@@ -82,5 +81,7 @@
   "close": "Fermer",
   "choose_operator_first": "Choisissez d’abord qui palettise.",
   "nothing_ordered": "Pas de commande à palettiser ce jour.",
-  "since": "depuis {time}"
+  "since": "depuis {time}",
+  "transport": "Transport",
+  "all_short": "Tous les clients"
 }

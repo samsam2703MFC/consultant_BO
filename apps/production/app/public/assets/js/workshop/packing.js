@@ -89,24 +89,39 @@
         throw err;
     }
 
+    // Nagłówek w jednej linii (makieta 2) : logo | dni (segmenty) | operator (pastylka, paletyzacja) · tryb · ↻ · język.
     function header() {
         const s = current();
-        const sub = s ? t(mode === 'pack' ? 'subtitle_day' : 'subtitle_pallets', {day: dayLabel(s.date), time: s.departure}) : t('subtitle');
-        const paired = device || data || pal;
-        const sw = paired ? `<div class="pk-switch" role="radiogroup" aria-label="${esc(t('mode'))}">
-                ${['pack', 'pallets'].map(m => `<button type="button" role="radio" aria-checked="${m === mode}" class="${m === mode ? 'is-on' : ''}" data-mode="${m}">${esc(t(m === 'pack' ? 'mode_pack' : 'mode_pallets'))}</button>`).join('')}</div>` : '';
-        return `<header class="kiosk-head"><div class="kiosk-brand"><div class="kiosk-logo">LA</div><div><h1>${esc(t(mode === 'pack' ? 'title' : 'title_pallets'))}</h1>
-                <p class="kiosk-muted">${esc(sub)}</p></div></div>
-            <div class="kiosk-head-tools">${sw}${paired ? `<button type="button" class="kiosk-chip" data-refresh aria-label="${esc(t('refresh'))}">↻</button>` : ''}
+        const title = t(mode === 'pack' ? 'title' : 'title_pallets');
+        if (!s) {
+            return `<header class="kiosk-head"><div class="kiosk-brand"><div class="kiosk-logo">LA</div><div><h1>${esc(title)}</h1>
+                <p class="kiosk-muted">${esc(t('subtitle'))}</p></div></div>
+                <div class="kiosk-head-tools">${device ? `<button type="button" class="kiosk-chip" data-refresh aria-label="${esc(t('refresh'))}">↻</button>` : ''}
+                <button type="button" class="kiosk-chip" data-lang>${esc(t('lang_switch'))}</button></div></header>`;
+        }
+        const op = mode === 'pallets' ? operatorNow() : null;
+        const who = mode === 'pallets' ? `<button type="button" class="pk-avatar ${op ? '' : 'is-empty'}" data-drop="operator" aria-haspopup="listbox"
+                title="${esc(op ? op.name : t('operator_none'))}" aria-label="${esc(t('operator'))} : ${esc(op ? op.name : t('operator_none'))}">${op ? esc(initials(op.name)) : '?'}</button><span class="pk-gap"></span>` : '';
+        const sw = `<div class="pk-switch" role="radiogroup" aria-label="${esc(t('mode'))}">
+                ${['pack', 'pallets'].map(m => `<button type="button" role="radio" aria-checked="${m === mode}" class="${m === mode ? 'is-on' : ''}" data-mode="${m}">${esc(t(m === 'pack' ? 'mode_pack' : 'mode_pallets'))}</button>`).join('')}</div>`;
+        return `<header class="kiosk-head pk-head"><div class="kiosk-logo" title="${esc(title)}">LA</div><h1 class="pk-sr">${esc(title)}</h1>${daySeg(s)}
+            <div class="kiosk-head-tools">${who}${sw}<button type="button" class="kiosk-chip" data-refresh aria-label="${esc(t('refresh'))}">↻</button>
                 <button type="button" class="kiosk-chip" data-lang>${esc(t('lang_switch'))}</button></div></header>`;
     }
 
-    function daysNav(s) {
-        // Dni : wczoraj … kolejne dni z zamówieniami (najwyżej 5 przycisków).
-        const today = new Date(new Date(s.now.slice(0, 10) + 'T12:00:00').getTime() - 86400000).toISOString().slice(0, 10);
-        const days = (s.dates || []).filter(d => d.ship_date >= today).slice(0, 5);
+    // Dni jako segmenty (jak przełącznik trybu) : wczoraj … kolejne dni z zamówieniami, najwyżej 4.
+    function daySeg(s) {
+        const today = s.now.slice(0, 10);
+        const yesterday = new Date(new Date(today + 'T12:00:00').getTime() - 86400000).toISOString().slice(0, 10);
+        const days = (s.dates || []).filter(d => d.ship_date >= yesterday).slice(0, 4);
         if (!days.some(d => d.ship_date === s.date)) days.unshift({ship_date: s.date});
-        return `<nav class="pk-days" aria-label="${esc(t('day'))}">${days.map(d => `<button type="button" class="kiosk-chip ${d.ship_date === s.date ? 'is-active' : ''}" data-date="${d.ship_date}">${esc(dayLabel(d.ship_date))}</button>`).join('')}</nav>`;
+        const label = (iso) => {
+            const d = new Date(iso + 'T12:00:00');
+            const wd = d.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'short'});
+            return `${wd} ${d.getDate()}${iso.slice(0, 7) === today.slice(0, 7) ? '' : '.' + String(d.getMonth() + 1).padStart(2, '0')}`;
+        };
+        return `<nav class="pk-dayseg" aria-label="${esc(t('day'))}">${days.map(d => `<button type="button" class="${d.ship_date === s.date ? 'is-on' : ''}" aria-pressed="${d.ship_date === s.date}"
+            data-date="${d.ship_date}" title="${esc(dayLabel(d.ship_date))}">${esc(label(d.ship_date))}</button>`).join('')}</nav>`;
     }
 
     function renderPairing(message) {
@@ -187,7 +202,7 @@
                        <button type="button" class="kiosk-btn pk-step" data-step="1" aria-label="${esc(t('more'))}">+</button>
                        <button type="button" class="kiosk-btn is-primary" data-set="${i.need}">${esc(t('done'))}</button>`}</div></li>`;
         }).join('');
-        el.innerHTML = header() + daysNav(s) + kpi
+        el.innerHTML = header() + kpi
             + (s.items.length ? `<section class="kiosk-card pk-list"><ul>${rows}</ul></section>` : `<section class="kiosk-card"><p class="pk-empty">${esc(t('empty'))}</p></section>`)
             + `<p class="kiosk-muted pk-note">${esc(t('note', {n: T.with_norm, fixed: fmt(s.average_norm.fixed), piece: String(s.average_norm.per_piece).replace('.', ',')}))}</p>`;
         el.querySelectorAll('[data-people]').forEach(b => b.addEventListener('click', () => { people = Math.max(1, Math.min(20, people + Number(b.dataset.people))); render(); }));
@@ -224,18 +239,14 @@
     function renderPallets() {
         const s = pal;
         const c = clientNow();
-        const op = operatorNow();
         const truck = s.vehicles.find(v => v.id === s.vehicle_id);
-        const bar = `<div class="pp-bar">
-            <button type="button" class="pp-sel ${op ? '' : 'is-empty'}" data-drop="operator" aria-haspopup="listbox"><span class="pp-av" style="background:${op ? '#8D1D2C' : 'var(--k-fill-2)'}">${op ? esc(initials(op.name)) : '?'}</span>
-                <span><b>${esc(op ? op.name : t('operator_none'))}</b><small>${esc(t('operator'))}</small></span><span class="pp-chev">▾</span></button>
-            <span class="pp-live">${esc(t('live'))}</span>
-            <button type="button" class="pp-sel pp-right" data-drop="vehicle" aria-haspopup="listbox"><span class="pp-ico">⛟</span>
-                <span><b>${esc(truck ? truck.label : t('all_clients'))}</b><small>${esc(truck ? `${truck.carrier || ''} · ${t('n_clients', {n: truck.customers})}` : t('all_clients_help'))}</small></span><span class="pp-chev">▾</span></button></div>`;
-        const clients = s.clients.length ? `<nav class="pp-clients" aria-label="${esc(t('clients'))}">${s.clients.map(x => `<button type="button" class="pp-client ${x.id === customer ? 'is-on' : ''}" style="--c:${color(x.n)}" data-customer="${x.id}">
+        // Transport = pierwsza kafelka paska klientów (makieta 2).
+        const tile = `<button type="button" class="pp-truck" data-drop="vehicle" aria-haspopup="listbox"><small>⛟ ${esc(t('transport'))} ▾</small>
+                <b>${esc(truck ? truck.label : t('all_short'))}</b><small>${esc(t('departure_at', {time: s.departure}))}</small></button>`;
+        const clients = `<div class="pp-top">${tile}<nav class="pp-clients" aria-label="${esc(t('clients'))}">${s.clients.map(x => `<button type="button" class="pp-client ${x.id === customer ? 'is-on' : ''}" style="--c:${color(x.n)}" data-customer="${x.id}">
                 <span class="pp-cname"><span class="pp-no">${x.n}</span>${esc(x.name)}</span>
                 <span class="pp-bar-p"><i style="width:${x.ordered ? Math.round(x.on_pallet / x.ordered * 100) : 0}%"></i></span>
-                <small>${esc(t('client_progress', {on: fmt(x.on_pallet), ordered: fmt(x.ordered), left: fmt(x.left)}))}</small></button>`).join('')}</nav>` : '';
+                <small>${esc(t('client_progress', {on: fmt(x.on_pallet), ordered: fmt(x.ordered), left: fmt(x.left)}))}</small></button>`).join('')}</nav></div>`;
         let list = `<section class="kiosk-card"><p class="pk-empty">${esc(t('nothing_ordered'))}</p></section>`;
         if (c) {
             const open = c.lines.filter(l => l.left > 0);
@@ -247,7 +258,7 @@
                     <button type="button" class="pp-plus ${l.left === 0 ? 'is-ok' : ''}" data-plus="${l.product_id}" aria-label="${esc(t('add'))}">${l.left === 0 ? '✓' : '+'}</button></div>`).join('')}
                 <div class="pp-sum">${open.length ? esc(t('left_sum', {n: fmt(c.left), p: open.length})) : esc(t('all_on'))}</div></section>`;
         }
-        el.innerHTML = header() + daysNav(s) + bar + clients + `<div class="pp-main ${panel ? 'has-side' : ''}">${list}${panel && c ? side(c) : ''}</div>` + dropdown();
+        el.innerHTML = header() + clients + `<div class="pp-main ${panel ? 'has-side' : ''}">${list}${panel && c ? side(c) : ''}</div>` + dropdown();
         bindPallets();
     }
 
@@ -294,7 +305,7 @@
                     <span><b>${esc(p.name)}</b><small>${esc([p.group, t('since', {time: time(p.since)})].filter(Boolean).join(' · '))}</small></span>${p.id === operator ? '<span class="pp-check">✓</span>' : ''}</button>`).join('')
                 : `<p class="kiosk-muted pp-none">${esc(t('no_people'))}</p>`;
         }
-        return `<div class="pp-dim" data-dim></div><div class="kiosk-card pp-drop ${drop === 'operator' ? 'is-left' : ''}" role="listbox">${items}</div>`;
+        return `<div class="pp-dim" data-dim></div><div class="kiosk-card pp-drop ${drop === 'vehicle' ? 'is-left' : ''}" role="listbox">${items}</div>`;
     }
 
     function bindPallets() {

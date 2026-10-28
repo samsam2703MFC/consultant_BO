@@ -1,7 +1,4 @@
 /* Tablet pakowania (28/10/2026) : dzień wysyłki, 4 liczby, lista produktów z licznikiem − / + / Gotowe. */
-.pk-days { display: flex; gap: 8px; flex-wrap: wrap; }
-.pk-days .kiosk-chip { min-height: 48px; padding: 8px 16px; }
-.pk-days .kiosk-chip.is-active { background: var(--k-primary); color: #fff; }
 .pk-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .pk-kpi { display: flex; flex-direction: column; gap: 4px; }
 .pk-kpi > span { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--k-muted); }
@@ -40,25 +37,29 @@
     .pk-ctr { grid-column: 1 / -1; justify-content: flex-start; }
 }
 
+/* Nagłówek w jednej linii (makieta 2, 28/10/2026) : logo | dni w segmentach | operator · tryb · ↻ · język. */
+.pk-head { gap: 10px; }
+.pk-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.pk-dayseg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--k-fill); gap: 2px; margin-right: auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.pk-dayseg button { border: 0; background: transparent; color: var(--k-muted); font: inherit; font-size: 14px; font-weight: 600; min-height: 38px; padding: 6px 10px; border-radius: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pk-dayseg button.is-on { background: var(--k-surface); color: var(--k-text); box-shadow: 0 1px 3px rgba(34, 34, 34, .12); }
+.pk-avatar { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--k-primary); color: #fff; font: inherit; font-weight: 700; font-size: 14px; box-shadow: 0 0 0 3px var(--k-surface), 0 0 0 4px var(--k-line); }
+.pk-avatar.is-empty { background: var(--k-surface); color: var(--k-primary); box-shadow: 0 0 0 2px var(--k-primary); font-size: 18px; }
+.pk-gap { width: 1px; height: 28px; background: var(--k-line); margin: 0 2px; }
+
 /* Przełącznik trybu (dyskretny) : Pakowanie | Paletyzacja. */
 .pk-switch { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--k-fill); gap: 2px; }
 .pk-switch button { border: 0; background: transparent; color: var(--k-muted); font: inherit; font-size: 14px; font-weight: 600; min-height: 38px; padding: 6px 12px; border-radius: 8px; }
 .pk-switch button.is-on { background: var(--k-surface); color: var(--k-text); box-shadow: 0 1px 3px rgba(34, 34, 34, .12); }
 
-/* Paletyzacja (makiety p1–p5) : operator | na żywo | transport, klienci, lista, szczegóły / klawiatura z boku. */
-.pp-bar { display: flex; align-items: center; gap: 10px; }
-.pp-sel { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 14px 6px 8px; border-radius: 12px; border: 1px solid var(--k-line); background: var(--k-surface); font: inherit; text-align: left; max-width: 46%; }
-.pp-sel.is-empty { border-color: var(--k-primary); box-shadow: 0 0 0 2px var(--k-primary-50); }
-.pp-sel span:not(.pp-av):not(.pp-ico):not(.pp-chev) { display: flex; flex-direction: column; min-width: 0; }
-.pp-sel b { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pp-sel small { font-size: 12.5px; color: var(--k-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pp-right { margin-left: auto; }
-.pp-chev { color: var(--k-muted); margin-left: 4px; }
+/* Paletyzacja (makiety p1–p5) : transport + klienci, lista, szczegóły / klawiatura z boku ; operator w nagłówku. */
 .pp-ico { font-size: 22px; width: 36px; text-align: center; }
 .pp-av { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; background: var(--k-primary); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
-.pp-live { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--k-ok); }
-.pp-live::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--k-ok); }
-.pp-clients { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+.pp-top { display: flex; gap: 8px; align-items: stretch; }
+.pp-truck { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 150px; max-width: 220px; padding: 8px 12px; border-radius: 14px; border: 1px dashed var(--k-line-2); background: transparent; font: inherit; text-align: left; }
+.pp-truck b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-truck small { font-size: 12.5px; color: var(--k-muted); white-space: nowrap; }
+.pp-clients { flex: 1; min-width: 0; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
 .pp-client { flex: 1 0 190px; max-width: 280px; border: 0; border-radius: 14px; padding: 10px 12px; background: var(--k-fill); text-align: left; font: inherit; display: flex; flex-direction: column; gap: 6px; min-height: 64px; }
 .pp-client.is-on { background: var(--k-surface); box-shadow: 0 2px 10px rgba(34, 34, 34, .10); outline: 2px solid var(--c); }
 .pp-cname { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -111,8 +112,8 @@
 .pp-add { min-height: 60px; font-size: 19px; }
 .pp-warn { margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--k-warn-50); color: var(--k-warn); font-weight: 600; font-size: 14px; }
 .pp-dim { position: fixed; inset: 0; z-index: 30; background: rgba(34, 34, 34, .18); }
-.pp-drop { position: fixed; z-index: 31; top: 150px; right: max(16px, calc((100vw - 1180px) / 2 + 16px)); width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 180px); overflow-y: auto; padding: 8px; box-shadow: 0 16px 40px rgba(34, 34, 34, .25); }
-.pp-drop.is-left { right: auto; left: max(16px, calc((100vw - 1180px) / 2 + 16px)); width: min(380px, calc(100vw - 32px)); }
+.pp-drop { position: fixed; z-index: 31; top: 70px; right: max(16px, calc((100vw - 1180px) / 2 + 16px)); width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 180px); overflow-y: auto; padding: 8px; box-shadow: 0 16px 40px rgba(34, 34, 34, .25); }
+.pp-drop.is-left { top: 150px; right: auto; left: max(16px, calc((100vw - 1180px) / 2 + 16px)); width: min(440px, calc(100vw - 32px)); }
 .pp-opt { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; border: 0; border-radius: 12px; background: transparent; font: inherit; text-align: left; min-height: 56px; }
 .pp-opt.is-on { background: var(--k-bg-2); }
 .pp-opt > span:nth-child(2) { display: flex; flex-direction: column; min-width: 0; }
@@ -125,6 +126,6 @@
     .pp-side { z-index: 25; left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 82vh; border-radius: 18px 18px 0 0; box-shadow: 0 -10px 30px rgba(34, 34, 34, .25); }
     .pp-head, .pp-row { grid-template-columns: minmax(0, 1fr) 84px 84px 84px 60px; }
     .pp-head { font-size: 10.5px; letter-spacing: .02em; }
-    .pp-sel { max-width: 44%; }
-    .pk-switch button { padding: 6px 8px; font-size: 13px; }
+    .pk-switch button, .pk-dayseg button { padding: 6px 8px; font-size: 13px; }
+    .pp-truck { min-width: 120px; }
 }

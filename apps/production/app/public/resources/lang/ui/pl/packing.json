@@ -55,7 +55,6 @@
   "all_clients_help": "bez podziału na transport",
   "n_clients": "{n} klientów",
   "departure_at": "wyjazd {time}",
-  "live": "Na żywo",
   "clients": "Klienci",
   "col_product": "Produkt (zamówione przez klienta)",
   "col_ordered": "Zamówione",
@@ -82,5 +81,7 @@
   "close": "Zamknij",
   "choose_operator_first": "Najpierw wybierz, kto paletyzuje.",
   "nothing_ordered": "Brak zamówień do paletyzacji na ten dzień.",
-  "since": "od {time}"
+  "since": "od {time}",
+  "transport": "Transport",
+  "all_short": "Wszyscy klienci"
 }
