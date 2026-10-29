@@ -1152,3 +1152,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-29T11:48:19Z production : karta z filmu — reel 400 → watch/?v=, opis bez napisów interfejsu
 2026-10-29T12:21:48Z production : koszt i cena — nasze receptury (kompozycje, półprodukty) w « Nasz surowiec », wyszukiwarka
 2026-10-29T16:47:14Z production : plan logistyki na 12 tygodni (prognoza palet, ciężarówki, święta PL/BE, urlopy)
+2026-10-29T18:03:25Z 201 debug testeur : recette au carton, recette du test, semi-produit en fenêtre, opakowanie, postes, prix ×3, écran gotowe (migration 127)
