@@ -1,0 +1,111 @@
+/* Repost automatique — trois maquettes dans la coque du module Marketing
+ * (/marketing/ : barre latérale 246 px, écran du module Social sur fond beige).
+ * Jetons repris de marketing/src/styles/global.css et des écrans « SA *.dc.html ». */
+@font-face { font-family: 'Gotham'; src: url('../../../public/assets/ds/fonts/Gotham_Light.otf') format('opentype'); font-weight: 300; }
+@font-face { font-family: 'Gotham'; src: url('../../../public/assets/ds/fonts/Gotham_Regular_New.otf') format('opentype'); font-weight: 400; }
+@font-face { font-family: 'Gotham'; src: url('../../../public/assets/ds/fonts/Gotham_Medium.otf') format('opentype'); font-weight: 500 700; }
+@font-face { font-family: 'Vank'; src: url('../../../public/assets/ds/fonts/GC_Vank.ttf') format('truetype'); }
+
+:root {
+  --ink: #1c1a17; --muted: #7a736a; --line: #e6e0d8; --paper: #faf7f2; --accent: #8D1D2C;
+  --muted-2: #5c5852; --faint: #B8B2A8; --bg: #EAE4DC; --beige: #F4EFE8; --txt: #222222; --txt-m: #666666;
+  --ok: #0F6B4A; --ok-bg: #E6F2EC; --val: #8A4B00; --val-bg: #FBEDE4; --ref: #8D1D2C; --ref-bg: #F6E3E5;
+  --err: #B3261E; --err-bg: #FDE4E1; --excl: #8A847C; --excl-bg: #F1ECE5; --prog: #2F5D8A; --prog-bg: #E7EEF6;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Gotham', system-ui, sans-serif; color: var(--txt); background: var(--bg); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font-family: inherit; }
+
+/* --- Coque du Marketing ---------------------------------------------------- */
+.ws { display: flex; min-height: 100vh; }
+.sb { flex: 0 0 246px; background: #fff; border-right: 1px solid var(--line); padding-bottom: 24px; }
+.sb__head { padding: 20px 16px 8px; }
+.sb__head img { height: 26px; display: block; }
+.sb__kick { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-top: 9px; }
+.sb__back { padding: 6px 12px 4px; }
+.sb__back span { display: flex; align-items: center; gap: 9px; background: var(--paper); border-radius: 10px; padding: 11px 13px; font-size: 13px; color: var(--muted-2); }
+.sb__brand { margin: 10px 12px 0; padding: 8px 10px; font-size: 13px; font-weight: 600; background: #FBF9F5; border-radius: 9px; }
+.sb__groups { padding: 2px 12px 0; }
+.sb__grp { margin-top: 18px; }
+.sb__lab { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); font-weight: 500; padding: 0 10px 8px; }
+.sb__act { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 12px 8px; padding: 9px 12px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 500; font-size: 13px; }
+.sb__it { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 9px; font-size: 13px; color: var(--muted-2); }
+.sb__it.on { background: rgba(141, 29, 44, .08); color: var(--accent); }
+.sb__it .nv { margin-left: auto; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.sb svg { flex: 0 0 auto; }
+
+/* --- L'écran --------------------------------------------------------------- */
+/* Le corps en Gotham Light, comme le cockpit : le « Regular » livré est presque aussi gras que le Medium. */
+.mn { font-weight: 300; flex: 1 1 auto; min-width: 0; padding: 20px 24px 32px; display: flex; flex-direction: column; gap: 14px; }
+.mq { background: #232220; color: #F2C9A0; border-radius: 8px; padding: 8px 12px; font-size: 12px; line-height: 1.45; }
+.mq b { color: #fff; font-weight: 500; }
+.hd { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.hd__t { display: flex; flex-direction: column; gap: 4px; }
+.kick { font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--txt-m); }
+h1 { font-family: 'Vank', 'Gotham'; font-weight: 400; font-size: 30px; line-height: 1.1; margin: 0; color: #232220; }
+h2 { font-size: 15px; font-weight: 500; margin: 0; }
+.hd__a { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card { background: #fff; border-radius: 10px; border: .5px solid rgba(34, 34, 34, .10); padding: 16px; }
+.sub { font-size: 12px; color: var(--txt-m); line-height: 1.45; }
+.mini { font-size: 11px; color: var(--excl); line-height: 1.4; }
+.btn { display: inline-flex; align-items: center; gap: 6px; background: #fff; color: var(--txt); border: .5px solid rgba(34, 34, 34, .18); border-radius: 8px; padding: 8px 13px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.btn.p { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.s { padding: 5px 10px; font-size: 12px; }
+.btn.l { border: none; background: none; padding: 0; color: var(--accent); font-size: 12px; }
+.on-off { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: .5px solid rgba(34, 34, 34, .18); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 500; }
+.sw { width: 30px; height: 17px; border-radius: 999px; background: #CFC8BE; position: relative; flex: 0 0 auto; display: inline-block; }
+.sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .2); }
+.sw.on { background: var(--ok); }
+.sw.on::after { left: 15px; }
+.sw.sm { width: 24px; height: 14px; }
+.sw.sm::after { width: 10px; height: 10px; }
+.sw.sm.on::after { left: 12px; }
+.ck { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #B8B2A8; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; font-size: 11px; color: #fff; }
+.ck.on { background: var(--accent); border-color: var(--accent); }
+.seg { display: inline-flex; background: var(--beige); border-radius: 8px; padding: 3px; gap: 2px; }
+.seg span { border-radius: 6px; padding: 7px 13px; font-size: 13px; font-weight: 500; color: var(--txt-m); }
+.seg span.on { background: #fff; color: var(--accent); box-shadow: 0 1px 3px rgba(35, 34, 32, .15); }
+.sel { font-size: 12px; border: .5px solid rgba(34, 34, 34, .18); border-radius: 6px; padding: 4px 8px; background: #fff; display: inline-flex; align-items: center; gap: 6px; }
+.sel::after { content: '▾'; font-size: 10px; color: var(--txt-m); }
+.tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; border-radius: 999px; padding: 2px 8px; background: var(--beige); color: var(--muted-2); white-space: nowrap; }
+.tag.kw { background: #F6E3E5; color: var(--accent); }
+
+/* Avatars : la marque, les Pages des boutiques */
+.av { width: 30px; height: 30px; border-radius: 50%; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--accent); background: #F2C9A0; }
+.av.br { background: var(--accent); color: #fff; font-family: 'Vank', 'Gotham'; font-weight: 400; font-size: 13px; }
+.av.sm { width: 22px; height: 22px; font-size: 9px; }
+.nw { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 4px; font-size: 9px; font-weight: 600; color: #fff; flex: 0 0 auto; }
+.nw.fb { background: #1877F2; }
+.nw.ig { background: linear-gradient(45deg, #F58529, #DD2A7B 55%, #8134AF); }
+.nw.off { background: #D8D1C7; }
+
+/* Vignette du post de la marque */
+.th { width: 54px; height: 54px; border-radius: 8px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.th img { width: 78%; height: 78%; object-fit: contain; }
+.th i { position: absolute; right: 3px; bottom: 3px; font-style: normal; font-size: 8.5px; font-weight: 600; color: #fff; background: rgba(35, 34, 32, .72); border-radius: 4px; padding: 1px 4px; }
+.th.lg { width: 70px; height: 70px; }
+
+/* Statut d'un repost */
+.st { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 3px 8px; font-size: 11px; font-weight: 500; white-space: nowrap; line-height: 1.3; }
+.st.ok { background: var(--ok-bg); color: var(--ok); }
+.st.val { background: var(--val-bg); color: var(--val); }
+.st.ref { background: var(--ref-bg); color: var(--ref); }
+.st.err { background: var(--err-bg); color: var(--err); }
+.st.excl { background: var(--excl-bg); color: var(--excl); }
+.st.prog { background: var(--prog-bg); color: var(--prog); }
+.st b { font-weight: 600; }
+.leg { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--txt-m); align-items: center; }
+
+/* Chiffres */
+.tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.tile { background: #fff; border-radius: 10px; border: .5px solid rgba(34, 34, 34, .10); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.tile .k { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--txt-m); }
+.tile .v { font-size: 24px; font-weight: 500; color: var(--ink); }
+.tile .v small { font-size: 12px; color: var(--txt-m); font-weight: 400; margin-left: 4px; }
+.tile .s { font-size: 11.5px; color: var(--txt-m); line-height: 1.4; }
+.tile.ok .v { color: var(--ok); } .tile.val .v { color: var(--val); } .tile.ref .v { color: var(--ref); } .tile.err .v { color: var(--err); }
+.tile.ill { border-style: dashed; }
+
+.alert { display: flex; align-items: center; gap: 12px; background: var(--err-bg); color: #6E1A14; border-radius: 10px; padding: 10px 14px; font-size: 13px; }
+.alert .ic { width: 26px; height: 26px; border-radius: 50%; background: var(--err); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; flex: 0 0 auto; }
+.alert small { display: block; font-size: 12px; color: #8C3B33; margin-top: 1px; }
