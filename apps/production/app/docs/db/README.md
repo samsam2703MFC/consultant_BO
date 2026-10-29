@@ -43,6 +43,15 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
 
+### Un seul assistant « Nowy produkt testowy » (migration 123, 29/10/2026)
+
+- `/test-products/new` réunit l'ancien formulaire de produit test et l'assistant « Z filmu » : source = lien Facebook /
+  Pinterest, fichier vidéo, fiche .docx ou **« Sam pomysł »** (produit créé tout de suite, sans fiche, étape Pomysł,
+  tablette du groupe — remplace aussi le formulaire rapide de la page Etapy). `/test-products/from-video[/{id}]` redirige.
+- `n_dev_card` reçoit `id_category` (`category_product`), `label_type` (0 petite, 1 grande étiquette) et `id_type`
+  (`test_product_type`, NULL = Produkt) : champs de l'ancien formulaire, optionnels, recopiés dans `test_product` à
+  l'enregistrement (et après correction). Statut du produit test : toujours « Propozycja » à la création (les étapes suivent).
+
 ### Nouveau produit depuis un film : karta technologiczna (migration 122, 29/10/2026)
 
 - `n_dev_card` : une carte par produit test (`id_test_product` UNIQUE, CASCADE ; vide tant que le brouillon n'est pas

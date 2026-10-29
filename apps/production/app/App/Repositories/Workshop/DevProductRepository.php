@@ -63,10 +63,17 @@ final class DevProductRepository extends WorkshopRepository
             ->execute([$id, ...array_values($data)]);
     }
 
-    public function createTestProduct(string $name, ?int $sectionId): int
+    /** Produkt testowy (status « Propozycja ») ; kategoria, typ i etykieta z kreatora (opcjonalne). */
+    public function createTestProduct(string $name, ?int $sectionId, ?int $categoryId = null, int $typeId = 1, ?int $labelType = null): int
     {
-        $this->db->prepare('INSERT INTO test_product (name, id_section, id_status, id_type) VALUES (?, ?, 1, 1)')->execute([$name, $sectionId]);
+        $this->db->prepare('INSERT INTO test_product (name, id_section, id_category, id_status, id_type, label_type) VALUES (?, ?, ?, 1, ?, ?)')
+            ->execute([$name, $sectionId, $categoryId, $typeId, $labelType]);
         return (int) $this->db->lastInsertId();
+    }
+
+    public function setTestProductDetails(int $id, ?int $categoryId, int $typeId, ?int $labelType): void
+    {
+        $this->db->prepare('UPDATE test_product SET id_category = ?, id_type = ?, label_type = ? WHERE id = ?')->execute([$categoryId, $typeId, $labelType, $id]);
     }
 
     public function renameTestProduct(int $id, string $name): void

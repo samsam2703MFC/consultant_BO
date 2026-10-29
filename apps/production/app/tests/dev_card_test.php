@@ -186,13 +186,15 @@ $prevKey = getenv('ANTHROPIC_API_KEY');
 try {
     foreach (['n_dev_card', 'n_dev_card_frame', 'n_ai_prompt', 'n_prod_group', 'n_prod_param', 'n_app_secret', 'test_product', 'test_product_status', 'test_product_type',
                  'production_sections', 'product_recipe', 'n_dev_product', 'n_dev_product_photo', 'n_dev_trial', 'n_dev_trial_photo', 'n_prod_employee', 'production_employee',
-                 'final_product', 'user', 'test_product_changelog', 'test_product_stage', 'n_mgr_launch'] as $table) {
+                 'final_product', 'user', 'test_product_changelog', 'test_product_stage', 'n_mgr_launch', 'category_product'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
     $pdo->exec("SET SESSION sql_mode = ''");
     $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, color, sort_order, id_section, active) VALUES (1, 'PIEK', 'Piekarnia', 'Boulangerie', '#C17A2A', 1, NULL, 1), (2, 'OLD', 'Stara', 'Ancienne', '#999', 2, NULL, 0)");
     $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES ('ai.model', 'claude-sonnet-5-5', 'claude-opus-5-5', 'string')");
+    $pdo->exec("INSERT INTO test_product_type (id, name) VALUES (1, 'Produkt'), (3, 'Pakowanie')");
+    $pdo->exec("INSERT INTO category_product (id, name) VALUES (5, 'Pieczywo słone')");
 
     $history = [];
     $queue = [];
@@ -230,6 +232,22 @@ try {
     expectCard($state['status'] === 'draft' && $state['source']['kind'] === 'file' && $state['season_quarters'] === [1, 4] && $state['forecast']['year'] === 3120, 'szkic : plik wideo, sezon Q1 + Q4, 3 120 szt./rok');
     expectCard($pdo->query("SELECT season_quarters FROM n_dev_card WHERE id = {$id}")->fetchColumn() === '1,4', 'szkic : kwartały zapisane « 1,4 »');
     expectFail(fn() => $svc->generate($id), 409, 'generowanie bez klucza Anthropic');
+    expectCard($state['id_category'] === null && $state['id_type'] === 1 && $state['label_type'] === 0, 'szkic : bez kategorii, typ Produkt, etykieta mała (domyślnie)');
+    $e = expectFail(fn() => $svc->create(['id_category' => 999, 'id_type' => 2, 'label_type' => 3] + $base, 7), 422, 'szczegóły : błędne pola');
+    expectCard(array_keys($e->getErrors()['fields']) === ['id_category', 'id_type', 'label_type'], 'szczegóły : kategoria, typ, etykieta sprawdzone');
+    $repo = $c->get(App\Repositories\Workshop\DevCardRepository::class);
+    expectCard(array_column($repo->categories(), 'name') === ['Pieczywo słone'] && array_map('intval', array_column($repo->types(), 'id')) === [1, 3], 'kreator : kategorie i typy');
+
+    // « Sam pomysł » : produkt od razu, bez karty (dawny formularz /test-products/new i szybki formularz etapów).
+    $idea = $svc->createProduct(['name' => 'Rogalik z pistacją', 'id_group' => 1, 'weekly_sales' => 60, 'seasonal' => true, 'quarters' => [4],
+        'id_category' => 5, 'id_type' => 3, 'label_type' => 1, 'notes' => 'Na święta', 'target_date' => '2026-12-01'], 7);
+    $row = $pdo->query("SELECT tp.name, tp.id_category, tp.id_type, tp.label_type, tp.id_status, d.stage, d.on_tablet, d.id_group, d.weekly_sales, d.season_quarters, d.notes, d.target_date
+        FROM test_product tp JOIN n_dev_product d ON d.id_test_product = tp.id WHERE tp.id = " . (int) $idea['product_id'])->fetch();
+    expectCard($idea['url'] === '/test-products/' . $idea['product_id'] . '/tablet' && $row['name'] === 'Rogalik z pistacją' && (int) $row['id_category'] === 5
+        && (int) $row['id_type'] === 3 && (int) $row['label_type'] === 1 && (int) $row['id_status'] === 1, 'sam pomysł : produkt testowy z kategorią, typem i etykietą');
+    expectCard($row['stage'] === 'idea' && (int) $row['on_tablet'] === 1 && (int) $row['weekly_sales'] === 60 && $row['season_quarters'] === '4'
+        && $row['notes'] === 'Na święta' && $row['target_date'] === '2026-12-01', 'sam pomysł : etap Pomysł, tablet grupy, prognoza Q4, opis, data');
+    expectFail(fn() => $svc->createProduct(['target_date' => '2026-02-31'] + $base, 7), 422, 'sam pomysł : zła data', 'target_date');
 
     // Klatki z przeglądarki.
     $frames = [];
@@ -311,9 +329,12 @@ try {
     expectCard($tablet['cover'] === $tablet['photos'][0]['src'] && $tablet['footer'] === CardSchema::FOOTER, 'tablet : okładka = ostatnie zdjęcie, stopka');
     $sheet = $c->get(DevProductService::class)->sheet($pid);
     expectCard($sheet['card']['id'] === $id && $sheet['product']['forecast']['year'] === 10400, 'karta produktu w biurze : karta i prognoza');
-    $state = $svc->update($id, ['name' => 'Pogacza skręcana', 'id_group' => 1, 'weekly_sales' => 50, 'seasonal' => true, 'quarters' => [4]], 7);
-    $dev = $pdo->query("SELECT d.weekly_sales, d.season_quarters, tp.name FROM n_dev_product d JOIN test_product tp ON tp.id = d.id_test_product WHERE d.id_test_product = {$pid}")->fetch();
+    $tp = $pdo->query("SELECT id_category, id_type, label_type FROM test_product WHERE id = {$pid}")->fetch();
+    expectCard($tp['id_category'] === null && (int) $tp['id_type'] === 1 && (int) $tp['label_type'] === 0, 'zapis : produkt testowy z domyślnymi szczegółami');
+    $state = $svc->update($id, ['name' => 'Pogacza skręcana', 'id_group' => 1, 'weekly_sales' => 50, 'seasonal' => true, 'quarters' => [4], 'id_category' => 5, 'id_type' => 3, 'label_type' => 1], 7);
+    $dev = $pdo->query("SELECT d.weekly_sales, d.season_quarters, tp.name, tp.id_category, tp.id_type, tp.label_type FROM n_dev_product d JOIN test_product tp ON tp.id = d.id_test_product WHERE d.id_test_product = {$pid}")->fetch();
     expectCard($dev['name'] === 'Pogacza skręcana' && (int) $dev['weekly_sales'] === 50 && $dev['season_quarters'] === '4', 'poprawki po zapisie → produkt w rozwoju');
+    expectCard((int) $dev['id_category'] === 5 && (int) $dev['id_type'] === 3 && (int) $dev['label_type'] === 1 && $state['category'] === 'Pieczywo słone' && $state['type'] === 'Pakowanie', 'poprawki po zapisie : kategoria, typ, etykieta');
     expectFail(fn() => $svc->delete($id), 409, 'zapisanej karty nie usuwa się z kreatora');
 
     // Import gotowej karty .docx.

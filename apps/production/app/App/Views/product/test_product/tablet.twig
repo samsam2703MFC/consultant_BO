@@ -54,7 +54,7 @@
             <span class="ms-auto d-flex gap-2 flex-wrap">
                 <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/test-products/cards/{{ card.id }}/card.docx"><i class="bi bi-file-earmark-word"></i> .docx</a>
                 <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/test-products/cards/{{ card.id }}/card.pdf?inline=1" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
-                <a class="btn btn-sm btn-outline-primary" href="{{ root }}/test-products/from-video/{{ card.id }}"><i class="bi bi-pencil"></i> Popraw kartę</a></span></div>
+                <a class="btn btn-sm btn-outline-primary" href="{{ root }}/test-products/new/{{ card.id }}"><i class="bi bi-pencil"></i> Popraw kartę</a></span></div>
         <div class="card-body pt-0">
             <div class="at-devcard-facts">
                 <div><small>Wydajność</small>{{ card.card.yield ?: '—' }}</div><div><small>Pieczenie</small>{{ card.card.baking ?: '—' }}</div><div><small>Czas</small>{{ card.card.time ?: '—' }}</div>

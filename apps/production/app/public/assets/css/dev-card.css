@@ -186,3 +186,15 @@ aside .dc-card:first-child { margin-top: 0; }
 .dc-choice:has(> :only-child) { grid-template-columns: 1fr; }
 iframe.dc-print { position: fixed; right: 0; bottom: 0; width: 1px; height: 1px; border: 0; opacity: 0; pointer-events: none; }
 @media (max-width: 560px) { .dc-choice { grid-template-columns: 1fr; } }
+
+/* Jeden kreator [197] : 4 źródła (link, plik, .docx, sam pomysł) i pola dawnego formularza (kategoria, etykieta, typ) */
+.dc-seg-wrap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; }
+.dc-seg-wrap span { min-width: 0; padding: 0 8px; text-align: center; }
+@media (max-width: 720px) { .dc-seg-wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dc-date { max-width: 190px; min-height: 44px; }
+.dc-more { margin-top: 14px; border-top: 1px solid rgba(34, 34, 34, .08); padding-top: 10px; }
+.dc-more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 6px; font-weight: 500; color: var(--at-muted); list-style: none; }
+.dc-more > summary::-webkit-details-marker { display: none; }
+.dc-more > summary::before { content: '›'; display: inline-block; transition: transform .15s; font-size: 18px; }
+.dc-more[open] > summary::before { transform: rotate(90deg); }
+.dc-more > summary small { font-weight: 400; }

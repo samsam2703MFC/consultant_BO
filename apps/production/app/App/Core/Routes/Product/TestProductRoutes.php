@@ -9,16 +9,6 @@ return function(RouteCollector $r) {
         'method'     => 'overview'
     ]);
 
-    $r->addRoute('GET', '/test-products/new', [
-        'controller' => App\Controllers\Web\Product\TestProductController::class,
-        'method'     => 'newProduct'
-    ]);
-
-    $r->addRoute('POST', '/test-products/new', [
-        'controller' => App\Controllers\Web\Product\TestProductController::class,
-        'method'     => 'newProduct'
-    ]);
-
     $r->addRoute('GET', '/test-products/{id:\d+}/edit', [
         'controller' => App\Controllers\Web\Product\TestProductController::class,
         'method'     => 'editProduct'
@@ -142,10 +132,14 @@ return function(RouteCollector $r) {
     $r->addRoute('POST', '/ajax/test-products/{id:\d+}/photos', ['controller' => $d, 'method' => 'addPhoto']);
     $r->addRoute('DELETE', '/ajax/test-products/{id:\d+}/photos/{photoId:\d+}', ['controller' => $d, 'method' => 'deletePhoto']);
 
-    // Nowy produkt z filmu [196] : link + prompt → asystent AI (klucz Anthropic z Ustawień) → karta technologiczna (.docx, PDF, tablet).
+    // Jeden kreator « Nowy produkt testowy » [196, 197] : film (link Facebook / Pinterest, plik), gotowa karta .docx albo
+    // sam pomysł → asystent AI (klucz Anthropic z Ustawień) → karta technologiczna (.docx, PDF, tablet) ; dawne adresy przekierowane.
     $v = App\Controllers\Web\Product\DevCardController::class;
-    $r->addRoute('GET', '/test-products/from-video', ['controller' => $v, 'method' => 'page']);
-    $r->addRoute('GET', '/test-products/from-video/{id:\d+}', ['controller' => $v, 'method' => 'page']);
+    $r->addRoute('GET', '/test-products/new', ['controller' => $v, 'method' => 'page']);
+    $r->addRoute('GET', '/test-products/new/{id:\d+}', ['controller' => $v, 'method' => 'page']);
+    $r->addRoute('GET', '/test-products/from-video', ['controller' => $v, 'method' => 'legacy']);
+    $r->addRoute('GET', '/test-products/from-video/{id:\d+}', ['controller' => $v, 'method' => 'legacy']);
+    $r->addRoute('POST', '/ajax/dev-cards/product', ['controller' => $v, 'method' => 'createProduct']);
     $r->addRoute('GET', '/test-products/cards/{id:\d+}/card.docx', ['controller' => $v, 'method' => 'docx']);
     $r->addRoute('GET', '/test-products/cards/{id:\d+}/card.pdf', ['controller' => $v, 'method' => 'pdf']);
     $r->addRoute('POST', '/ajax/dev-cards', ['controller' => $v, 'method' => 'create']);

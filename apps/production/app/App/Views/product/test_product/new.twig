@@ -1,15 +1,15 @@
 {% extends "layouts/base.twig" %}
 
-{% block title %}Nowy produkt z filmu{% endblock %}
+{% block title %}Nowy produkt testowy{% endblock %}
 
 {% block head %}<link rel="stylesheet" href="{{ root }}/assets/css/dev-card.css?v={{ asset_v() }}">{% endblock %}
 
 {% block page_heading %}
     <div class="page-heading at-profit-head">
         <div class="page-title">
-            <h3><i class="bi bi-stars"></i> Nowy produkt z filmu</h3>
-            <p class="text-subtitle text-muted">Wklej link do filmu, wpisz nazwę, wybierz grupę i sprzedaż. ERP sam zrobi kartę technologiczną
-                (przepis po polsku i zdjęcia etapów) i wyśle ją na tablet grupy albo wydrukuje — do wyboru.</p>
+            <h3><i class="bi bi-stars"></i> Nowy produkt testowy</h3>
+            <p class="text-subtitle text-muted">Z filmu (link Facebook / Pinterest albo plik), z gotowej karty .docx albo sam pomysł.
+                Z filmu ERP sam zrobi kartę technologiczną (przepis po polsku i zdjęcia etapów) — na tablet grupy albo do druku.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a class="btn btn-outline-primary" href="{{ root }}/test-products/pipeline"><i class="bi bi-kanban"></i> Wszystkie nowe produkty</a>
@@ -18,10 +18,11 @@
 {% endblock %}
 
 {% block content %}
-{# Kreator : 1 film i produkt → 2 generowanie (odczyt linku, klatki z filmu w przeglądarce, asystent AI) → 3 karta i tablet. #}
+{# Jeden kreator nowego produktu testowego [196, 197] : 1 przepis i produkt → 2 generowanie (odczyt linku, klatki z filmu
+   w przeglądarce, asystent AI) → 3 karta i tablet ; « Sam pomysł » : produkt od razu, bez karty. #}
 <section class="section dc" id="devCard">
     <ol class="at-steps" data-steps>
-        <li data-step="1"><span>Film i produkt</span></li>
+        <li data-step="1"><span>Przepis i produkt</span></li>
         <li data-step="2"><span>Generowanie</span></li>
         <li data-step="3"><span>Karta i tablet</span></li>
     </ol>

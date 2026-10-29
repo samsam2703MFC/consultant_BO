@@ -38,7 +38,8 @@ final class DevCardService
     /** Strona kreatora : grupy, szkice do dokończenia, stan asystenta AI. */
     public function page(?int $userId, ?int $cardId = null): array
     {
-        return ['groups' => $this->cards->groups(), 'drafts' => array_map(fn($c) => ['id' => (int) $c['id'], 'name' => $c['name'], 'status' => $c['status'],
+        return ['groups' => $this->cards->groups(), 'categories' => $this->cards->categories(), 'types' => $this->cards->types(),
+            'drafts' => array_map(fn($c) => ['id' => (int) $c['id'], 'name' => $c['name'], 'status' => $c['status'],
             'updated_at' => $c['updated_at']], $this->cards->drafts()), 'ai' => $this->ai->state($userId), 'card' => $cardId ? $this->state($cardId) : null];
     }
 
@@ -78,8 +79,44 @@ final class DevCardService
         $q = array_values(array_unique(array_filter(array_map('intval', (array) ($in['quarters'] ?? [])), fn($x) => $x >= 1 && $x <= 4)));
         sort($q);
         if ($seasonal && !$q) $f['quarters'] = 'Produkt sezonowy : zaznacz co najmniej jeden kwartał.';
+        // Pola dawnego formularza produktu testowego (opcjonalne) : kategoria, typ, etykieta.
+        $cat = ($in['id_category'] ?? '') === '' || ($in['id_category'] ?? null) === null ? null
+            : filter_var($in['id_category'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($cat === false || ($cat !== null && !in_array($cat, array_map(fn($r) => (int) $r['id'], $this->cards->categories()), true))) $f['id_category'] = 'Nieznana kategoria.';
+        $type = filter_var($in['id_type'] ?? 1, FILTER_VALIDATE_INT);
+        if ($type === false || !in_array($type, array_map(fn($r) => (int) $r['id'], $this->cards->types()), true)) $f['id_type'] = 'Nieznany typ produktu.';
+        $label = filter_var($in['label_type'] ?? 0, FILTER_VALIDATE_INT);
+        if (!in_array($label, [0, 1], true)) $f['label_type'] = 'Etykieta : mała albo duża.';
         if ($f) throw new CustomException('Popraw zaznaczone pola.', 'errors', 422, ['fields' => $f]);
-        return ['name' => $name, 'id_group' => $group, 'weekly_sales' => $weekly, 'season_quarters' => $seasonal && count($q) < 4 ? implode(',', $q) : null];
+        return ['name' => $name, 'id_group' => $group, 'weekly_sales' => $weekly, 'season_quarters' => $seasonal && count($q) < 4 ? implode(',', $q) : null,
+            'id_category' => $cat, 'id_type' => $type, 'label_type' => $label];
+    }
+
+    /**
+     * « Sam pomysł » : produkt testowy bez karty (dawny formularz /test-products/new i szybki formularz etapów) —
+     * od razu w etapie Pomysł na tablecie grupy ; kartę można dodać później.
+     * @return array{product_id:int, url:string}
+     */
+    public function createProduct(array $in, ?int $userId): array
+    {
+        $fields = $this->fields($in);
+        $notes = trim((string) ($in['notes'] ?? ''));
+        $target = trim((string) ($in['target_date'] ?? ''));
+        $f = [];
+        if (mb_strlen($notes) > 5000) $f['notes'] = 'Opis : najwyżej 5000 znaków.';
+        if ($target !== '' && (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $target, $m) || !checkdate((int) $m[2], (int) $m[3], (int) $m[1]))) $f['target_date'] = 'Data RRRR-MM-DD.';
+        if ($f) throw new CustomException('Popraw zaznaczone pola.', 'errors', 422, ['fields' => $f]);
+        $group = null;
+        foreach ($this->cards->groups() as $g) if ((int) $g['id'] === $fields['id_group']) $group = $g;
+        $id = $this->tx->execute(function () use ($fields, $group, $notes, $target, $userId) {
+            $pid = $this->products->createTestProduct($fields['name'], $group['id_section'] !== null ? (int) $group['id_section'] : null,
+                $fields['id_category'], $fields['id_type'], $fields['label_type']);
+            $this->products->saveDev($pid, ['on_tablet' => 1, 'id_group' => $fields['id_group'], 'stage' => 'idea', 'stage_changed_at' => date('Y-m-d H:i:s'),
+                'target_date' => $target !== '' ? $target : null, 'notes' => $notes !== '' ? $notes : null,
+                'weekly_sales' => $fields['weekly_sales'], 'season_quarters' => $fields['season_quarters'], 'updated_by' => $userId]);
+            return $pid;
+        });
+        return ['product_id' => $id, 'url' => '/test-products/' . $id . '/tablet'];
     }
 
     /** Krok 2 : odczyt linku (opis, autor, okładka, adres wideo) ; ściana logowania = uwaga, nie błąd. */
@@ -249,7 +286,8 @@ final class DevCardService
         foreach ($this->cards->groups() as $g) if ((int) $g['id'] === (int) $c['id_group']) $group = $g;
         if ($group === null) throw new CustomException('Wybierz grupę.', 'errors', 422, ['fields' => ['id_group' => 'Wybierz grupę.']]);
         $productId = $this->tx->execute(function () use ($id, $c, $group, $card, $userId, $onTablet) {
-            $pid = $this->products->createTestProduct((string) $c['name'], $group['id_section'] !== null ? (int) $group['id_section'] : null);
+            $pid = $this->products->createTestProduct((string) $c['name'], $group['id_section'] !== null ? (int) $group['id_section'] : null,
+                $c['id_category'] !== null ? (int) $c['id_category'] : null, $c['id_type'] !== null ? (int) $c['id_type'] : 1, $c['label_type'] !== null ? (int) $c['label_type'] : null);
             $notes = 'Karta technologiczna z filmu' . ($card['author'] !== '' ? ' (wg ' . $card['author'] . ')' : '') . '. Gramatury do sprawdzenia w teście.';
             $this->products->saveDev($pid, ['on_tablet' => $onTablet ? 1 : 0, 'id_group' => (int) $group['id'], 'stage' => 'idea', 'stage_changed_at' => date('Y-m-d H:i:s'),
                 'notes' => $notes, 'video_url' => in_array($c['source_kind'], ['facebook', 'pinterest'], true) ? mb_substr((string) $c['source_url'], 0, 500) : null,
@@ -276,6 +314,7 @@ final class DevCardService
     {
         $this->products->renameTestProduct($productId, (string) $data['name']);
         $this->products->saveDev($productId, ['id_group' => $data['id_group'], 'weekly_sales' => $data['weekly_sales'], 'season_quarters' => $data['season_quarters'], 'updated_by' => $userId]);
+        $this->products->setTestProductDetails($productId, $data['id_category'], $data['id_type'], $data['label_type']);
     }
 
     // --- Pliki ---------------------------------------------------------------------------------------
@@ -333,6 +372,8 @@ final class DevCardService
             'generation_ms' => $c['generation_ms'] !== null ? (int) $c['generation_ms'] : null,
             'product_id' => $c['id_test_product'] !== null ? (int) $c['id_test_product'] : null, 'product_name' => $c['product_name'],
             'on_tablet' => (bool) (int) $c['on_tablet'],
+            'id_category' => $c['id_category'] !== null ? (int) $c['id_category'] : null, 'category' => $c['category_name'],
+            'id_type' => $c['id_type'] !== null ? (int) $c['id_type'] : 1, 'type' => $c['type_name'], 'label_type' => (int) ($c['label_type'] ?? 0),
             'footer' => CardSchema::FOOTER,
         ];
     }

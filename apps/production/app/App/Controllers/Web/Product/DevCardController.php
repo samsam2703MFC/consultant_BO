@@ -26,7 +26,20 @@ class DevCardController extends BaseController
         // Kreator dostaje tylko stan asystenta (bez końcówki klucza) : włączony, model, prompt, czy administrator.
         $data['ai'] = ['configured' => $ai['configured'], 'model' => $ai['model'], 'model_label' => AiSettings::MODELS[$ai['model']] ?? $ai['model'],
             'prompt' => $ai['prompt'], 'is_admin' => $ai['is_admin']];
-        $this->view('product/test_product/from_video', ['boot' => json_encode($data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)]);
+        $this->view('product/test_product/new', ['boot' => json_encode($data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)]);
+    }
+
+    /** Dawny adres kreatora z filmu → jeden kreator /test-products/new. */
+    public function legacy($id = null)
+    {
+        header('Location: ' . ROOT . '/test-products/new' . ($id !== null ? '/' . (int) $id : ''), true, 301);
+        exit;
+    }
+
+    /** « Sam pomysł » : produkt testowy bez karty. */
+    public function createProduct()
+    {
+        return $this->run(fn() => $this->cards->createProduct($this->input(), $this->userId()), 201);
     }
 
     public function create()

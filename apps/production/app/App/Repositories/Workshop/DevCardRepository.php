@@ -11,12 +11,16 @@ final class DevCardRepository extends WorkshopRepository
 {
     protected string $table = 'n_dev_card';
     protected array $writable = ['id_test_product', 'status', 'source_kind', 'source_url', 'source_author', 'source_title', 'source_text', 'source_info',
-        'video_url', 'name', 'id_group', 'weekly_sales', 'season_quarters', 'card_json', 'model', 'id_prompt', 'usage_json', 'generated_at', 'generation_ms', 'created_by'];
+        'video_url', 'name', 'id_group', 'weekly_sales', 'season_quarters', 'id_category', 'label_type', 'id_type', 'card_json', 'model', 'id_prompt', 'usage_json',
+        'generated_at', 'generation_ms', 'created_by'];
 
     private const CARD = 'SELECT c.*, g.name_pl AS group_pl, g.name_fr AS group_fr, g.color AS group_color, tp.name AS product_name,
-            COALESCE(d.on_tablet, 0) AS on_tablet, (SELECT COUNT(*) FROM n_dev_card_frame f WHERE f.id_card = c.id) AS frame_count
+            COALESCE(d.on_tablet, 0) AS on_tablet, cp.name AS category_name, tt.name AS type_name,
+            (SELECT COUNT(*) FROM n_dev_card_frame f WHERE f.id_card = c.id) AS frame_count
         FROM n_dev_card c
         LEFT JOIN n_prod_group g ON g.id = c.id_group
+        LEFT JOIN category_product cp ON cp.id = c.id_category
+        LEFT JOIN test_product_type tt ON tt.id = c.id_type
         LEFT JOIN test_product tp ON tp.id = c.id_test_product
         LEFT JOIN n_dev_product d ON d.id_test_product = c.id_test_product';
 
@@ -114,6 +118,18 @@ final class DevCardRepository extends WorkshopRepository
     }
 
     // --- Produkt w rozwoju ----------------------------------------------------------------------------
+
+    /** Kategorie produktów (opcjonalnie w kreatorze ; przy wprowadzeniu produktu). */
+    public function categories(): array
+    {
+        return $this->all('SELECT id, name FROM category_product ORDER BY name');
+    }
+
+    /** Typy produktu testowego (Produkt, Pakowanie…). */
+    public function types(): array
+    {
+        return $this->all('SELECT id, name FROM test_product_type ORDER BY id');
+    }
 
     public function groups(): array
     {

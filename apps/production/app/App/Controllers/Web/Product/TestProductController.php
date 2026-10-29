@@ -41,33 +41,6 @@ class TestProductController extends BaseController
         $this->testProductTypeService = $testProductTypeService;
     }
 
-    public function newProduct()
-    {
-        $data['production_sections'] = $this->productionSectionService->getAll();
-        $data['category_product'] = $this->productCategoryService->findAll();
-        $data['product_status'] = $this->testProductStatusService->findAll();
-        $data['product_type'] = $this->testProductTypeService->findAll();
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if ($this->testProductService->validate($_POST)) {
-                $dataToInsert = $_POST;
-
-                $newId = $this->handleAction(function () use ($dataToInsert) {
-                    return $this->testProductService->insert($dataToInsert);
-                }, default: false);
-
-                if ($newId) {
-                    header('Location: ' . ROOT . '/test-products');
-                    exit;
-                }
-            } else {
-                $data['old_data'] = $_POST;
-            }
-        }
-
-        $this->view("product/test_product/new", $data);
-    }
-
     public function editProduct($id)
     {
         $data['production_sections'] = $this->productionSectionService->getAll();
