@@ -18,6 +18,12 @@ return function(RouteCollector $r) {
         'method'     => 'newSemiProduct'
     ]);
 
+    // Kreator produktu [201] : krótki formularz w oknie modalnym (nazwa, grupa, surowce) — półprodukt od razu w recepturze.
+    $r->addRoute('POST', '/ajax/semi-products/quick', [
+        'controller' => App\Controllers\Web\Recipe\SemiProductController::class,
+        'method'     => 'ajaxQuick'
+    ]);
+
     $r->addRoute('GET', '/semi-products/{id:\d+}/edit', [
         'controller' => App\Controllers\Web\Recipe\SemiProductController::class,
         'method'     => 'editSemiProduct'

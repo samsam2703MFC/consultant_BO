@@ -13,7 +13,14 @@ final class ProductCommercialRepository extends WorkshopRepository
 
     public function product(int $id): ?array
     {
-        return $this->all('SELECT id, name, standard_price, ppc, active FROM final_product WHERE id = ?', [$id])[0] ?? null;
+        return $this->all('SELECT id, name, standard_price, ppc, active, COALESCE(pre_calculated_raw_price_per_carton, 0) AS cost_carton, id_recipe FROM final_product WHERE id = ?', [$id])[0] ?? null;
+    }
+
+    /** Karta nowego produktu (krok « Koszt i cena ») testu wprowadzonego jako ten produkt — podpowiedź ceny [201]. */
+    public function devCard(int $productId): ?array
+    {
+        return $this->all('SELECT c.* FROM n_dev_card c JOIN n_dev_product d ON d.id_test_product = c.id_test_product
+            WHERE d.id_final_product = ? AND c.cost_pc_pln IS NOT NULL ORDER BY c.cost_at DESC, c.id DESC LIMIT 1', [$productId])[0] ?? null;
     }
 
     /** Aktywni klienci z ceną produktu w cenniku (NULL = brak) ; franczyza ma cennik w systemie franczyzy. */

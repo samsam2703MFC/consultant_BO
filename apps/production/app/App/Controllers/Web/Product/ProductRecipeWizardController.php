@@ -2,11 +2,13 @@
 namespace App\Controllers\Web\Product;
 
 use App\Core\Web\BaseController;
+use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
 use App\Services\Employee\Section\ProductionSectionService;
 use App\Services\Material\MaterialService;
 use App\Services\Product\Category\ProductCategoryService;
 use App\Services\Product\ProductRecipeWizardService;
+use App\Services\Product\RecipeUnitCheckService;
 use App\Services\Recipe\PreparationService;
 use App\Services\Recipe\RecipeService;
 use App\Services\Recipe\SemiProductService;
@@ -18,6 +20,8 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class ProductRecipeWizardController extends BaseController
 {
+    use JsonErrors;
+
     public function __construct(
         private ProductRecipeWizardService $wizard,
         private RecipeService              $recipeService,
@@ -27,7 +31,10 @@ class ProductRecipeWizardController extends BaseController
         private SemiProductService         $semiProductService,
         private PreparationService         $preparationService,
         private \App\Services\Workshop\Execution\DevProductService $dev,
-        private \App\Repositories\Workshop\RecipeProducerRepository $producers
+        private \App\Repositories\Workshop\RecipeProducerRepository $producers,
+        private RecipeUnitCheckService     $unitCheck,
+        private \App\Services\DevCard\DevCardCostService $cardCost,
+        private \App\Repositories\Workshop\DevCardRepository $cards
     )
     {
     }
@@ -59,7 +66,7 @@ class ProductRecipeWizardController extends BaseController
 
     /**
      * POST /ajax/recipes/draft-cost  {materials:[{id, quantity}], semi_products:[{id, quantity}]}
-     * Koszt surowców szkicu receptury na 1 szt. Tylko odczyt.
+     * Koszt surowców szkicu receptury dla wpisanych ilości (kreator : na 1 karton albo na 1 szt.). Tylko odczyt.
      */
     public function ajaxDraftCost()
     {
@@ -140,6 +147,28 @@ class ProductRecipeWizardController extends BaseController
         return $this->json($created + ['redirect' => ROOT . '/workshop/products#/product/' . $created['id_product'] . '?step=2']);
     }
 
+    /** GET /ajax/products/recipe-check : produkty, których receptura wygląda na 1 sztukę zamiast 1 kartonu [201]. */
+    public function ajaxUnitCheck()
+    {
+        try {
+            return $this->json(['data' => $this->unitCheck->list()]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** POST /ajax/products/{id}/recipe-check {action: scale|keep} : × sztuk w kartonie albo « już na karton ». */
+    public function ajaxUnitDecide($id)
+    {
+        try {
+            $in = $this->getJson(Request::createFromGlobals()) ?: [];
+            $res = $this->unitCheck->decide((int) $id, (string) ($in['action'] ?? ''), user('id') ? (int) user('id') : null);
+            return $this->json(['data' => $res, 'message' => $res['decision'] === 'scaled' ? 'Receptura przeliczona na 1 karton.' : 'Zapisano : receptura już na karton.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     /** Kreator z produktu testowego : pola i linie receptury testu (ilości całkowite jak w kreatorze). */
     private function testPrefill(int $testId): ?array
     {
@@ -149,6 +178,36 @@ class ProductRecipeWizardController extends BaseController
         $lines = static fn($rows) => array_values(array_map(static fn($r) => ['id' => (int) $r['id'], 'quantity' => max(1, (int) round((float) $r['quantity']))], $rows ?: []));
         $prefill['materials'] = $prefill['id_recipe'] ? $lines($this->recipeService->getRecipeMaterials($prefill['id_recipe'])) : [];
         $prefill['semi_products'] = $prefill['id_recipe'] ? $lines($this->recipeService->getRecipeSFP($prefill['id_recipe'])) : [];
+        // Test bez receptury : składniki z karty technologicznej (krok « Koszt i cena ») — kreator przelicza je na 1 karton.
+        $prefill['card'] = !$prefill['materials'] && !$prefill['semi_products'] ? $this->cardPrefill($testId) : null;
         return $prefill;
+    }
+
+    /**
+     * Składniki karty technologicznej przypisane do surowców / receptur, ilości na całą partię karty (yield_pcs sztuk) ;
+     * bez przypisania = pominięte (nazwy w podpowiedzi). null = brak karty albo przypisań.
+     */
+    private function cardPrefill(int $testId): ?array
+    {
+        $c = $this->cards->forProduct($testId);
+        if (!$c || $c['card_json'] === null) return null;
+        try {
+            $cost = $this->cardCost->cost((int) $c['id']);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        $m = [];
+        $r = [];
+        $skipped = [];
+        foreach ($cost['lines'] as $l) {
+            if ($l['id_raw_material'] !== null && $l['qty'] > 0) $m[(int) $l['id_raw_material']] = ($m[(int) $l['id_raw_material']] ?? 0) + (float) $l['qty'];
+            elseif ($l['id_recipe'] !== null && $l['qty'] > 0) $r[(int) $l['id_recipe']] = ($r[(int) $l['id_recipe']] ?? 0) + (float) $l['qty'];
+            elseif ($l['status'] !== 'free') $skipped[] = (string) $l['name'];
+        }
+        if (!$m && !$r) return null;
+        $names = array_column($cost['recipes'], 'name', 'id');
+        $pairs = static fn(array $x) => array_map(static fn($id, $q) => ['id' => $id, 'quantity' => round($q, 3), 'name' => $names[$id] ?? null], array_keys($x), array_values($x));
+        return ['id' => (int) $c['id'], 'name' => (string) $cost['name'], 'yield_pcs' => $cost['yield_pcs'], 'materials' => $pairs($m), 'semi_products' => $pairs($r),
+            'skipped' => $skipped, 'check' => (int) $cost['counts']['check'] + (int) $cost['counts']['auto']];
     }
 }

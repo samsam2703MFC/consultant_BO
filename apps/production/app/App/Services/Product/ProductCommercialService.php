@@ -14,8 +14,12 @@ use App\Services\Finances\StorePrice\StoreSellabilityService;
  */
 final class ProductCommercialService
 {
-    public function __construct(private ProductCommercialRepository $repo, private StoreSellabilityService $sellability)
-    {
+    public function __construct(
+        private ProductCommercialRepository $repo,
+        private StoreSellabilityService $sellability,
+        private \App\Services\DevCard\DevCardCostService $cardCost,
+        private \App\Repositories\Workshop\DevCardRepository $cards,
+    ) {
     }
 
     public function summary(int $productId): array
@@ -38,8 +42,35 @@ final class ProductCommercialService
                 'missing' => array_map(fn($c) => ['id' => (int) $c['id'], 'name' => $c['name']], $missing)],
             'ppwr' => $ppwr ? ['status' => $ppwr['verification_status'], 'unit' => $ppwr['sales_unit_name'], 'complete' => $ppwr['verification_status'] === 'COMPLETE'] : null,
             'belgium' => $be ? ['verdict' => $be['verdict'], 'coef' => $be['coef'], 'piece' => $be['piece'], 'store' => $be['store']['name'] ?? null,
-                'max_carton' => $be['max_carton']] : null,
+                'store_net' => $be['store']['net'] ?? null, 'max_carton' => $be['max_carton']] : null,
+            'belgium_params' => array_intersect_key($this->sellability->params(), ['multiplier' => 1, 'limit' => 1]),
+            'suggest' => $this->suggest($p),
         ];
+    }
+
+    /**
+     * Podpowiedź ceny standardowej [201] : koszt surowców / karton (receptura) × współczynnik (2,5 · 3 · 4 z Ustawień,
+     * domyślny 3) ÷ kurs EUR, zaokrąglone do 0,10 € ; z karty nowego produktu : cena fabryczna / szt. × sztuk w kartonie.
+     */
+    private function suggest(array $p): array
+    {
+        $params = $this->cardCost->pricingParams();
+        $rate = $this->cards->eurRate();
+        $cost = (float) $p['cost_carton'];
+        $ppc = (int) $p['ppc'];
+        $round = static fn(float $v) => round(round($v / 0.1) * 0.1, 2);
+        $options = [];
+        if ($cost > 0 && $rate) {
+            foreach ($params['coefs'] as $k) $options[] = ['coef' => $k, 'price' => $round($cost * $k / $rate), 'default' => abs($k - $params['coef']) < 0.001];
+        }
+        $card = null;
+        $c = $this->repo->devCard((int) $p['id']);
+        if ($c !== null && $ppc > 0) {
+            $sum = $this->cardCost->summary($c);
+            if ($sum && $sum['factory_eur'] !== null) $card = ['piece' => $sum['factory_eur'], 'ppc' => $ppc, 'coef' => $sum['factory_coef'], 'price' => $round($sum['factory_eur'] * $ppc), 'name' => (string) $c['name']];
+        }
+        return ['cost_carton_pln' => round($cost, 2), 'cost_carton_eur' => $rate && $cost > 0 ? round($cost / $rate, 2) : null, 'rate' => $rate,
+            'coef' => $params['coef'], 'options' => $options, 'card' => $card, 'has_recipe' => $p['id_recipe'] !== null];
     }
 
     /** @return array{copied:int, summary:array} */

@@ -76,6 +76,10 @@
             listData = {group, erp, cards: cards.data, overview};
         }
         drawList(params);
+        // Z ekranu « gotowe » [201] : wiersz produktu zaznaczony.
+        const focus = params.get('focus');
+        const tr = focus ? el.querySelector(`tr[data-row="${CSS.escape(focus)}"]`) : null;
+        if (tr) { tr.classList.add('tfb-row-focus'); tr.scrollIntoView({block: 'center'}); }
     }
 
     function drawList(params) {
@@ -867,14 +871,24 @@
         const e = item.erp;
         const lg = item.logistics || {computed: {}};
         const c = lg.computed || {};
-        const field = (name, value) => `<label>${esc(t('l.' + name))}<input class="form-control" name="${name}" data-field="${name}" inputmode="numeric" value="${value ? value : ''}"></label>`;
+        // Sztuka → opakowanie → karton [201] : podpowiedź pod polami sztuki i kartonu.
+        const HELP = ['weight', 'ppb', 'bpc', 'ppc'];
+        const field = (name, value) => `<label>${esc(t('l.' + name))}<input class="form-control" name="${name}" data-field="${name}" inputmode="numeric" value="${value ? value : ''}">${HELP.includes(name) ? `<small class="form-text">${esc(t('l.' + name + '_help'))}</small>` : ''}</label>`;
         const choice = (name, values, current) => `<label>${esc(t('l.' + name))}<select class="form-select" name="${name}" data-field="${name}"><option value="">—</option>
             ${values.map(v => `<option value="${v}" ${current === v ? 'selected' : ''}>${esc(t('l.' + name + '.' + v))}</option>`).join('')}</select></label>`;
         const out = (label, value) => `<div class="tfb-calc"><span>${esc(label)}</span><strong>${value}</strong></div>`;
         const kg = (v) => v === null || v === undefined ? '—' : ui.fmt(v, v < 10 ? 2 : 1, api.lang) + ' kg';
         body.innerHTML = `${info}<form class="tfb-form" data-form>
             <h5 class="tfb-full">${esc(t('l.title_units'))}</h5>
+            <div class="tfb-full tfb-chain">
+                <div><i class="bi bi-circle" aria-hidden="true"></i><strong>${esc(t('l.chain_piece'))}</strong><small data-chain-weight></small></div>
+                <i class="bi bi-arrow-right tfb-chain-arrow" aria-hidden="true"></i>
+                <div><i class="bi bi-bag" aria-hidden="true"></i><strong>${esc(t('l.chain_pack'))}</strong><small>${esc(t('l.chain_pack_kinds'))}</small></div>
+                <i class="bi bi-arrow-right tfb-chain-arrow" aria-hidden="true"></i>
+                <div><i class="bi bi-box-seam" aria-hidden="true"></i><strong>${esc(t('l.chain_carton'))}</strong><small>${esc(t('l.chain_carton_note'))}</small></div>
+            </div>
             ${field('weight', e.weight)}${field('ppb', e.ppb)}${field('bpc', e.bpc)}${field('ppc', e.ppc)}
+            <p class="tfb-full tfb-pack-check" data-pack-check aria-live="polite"></p>
             <h5 class="tfb-full">${esc(t('l.title_pallet'))}</h5>
             ${field('cpl', e.cpl)}${field('lpp', e.lpp)}${field('cpp', e.cpp)}
             ${choice('pallet_type', ['eur', 'industrial', 'other'], lg.pallet_type)}${choice('storage', ['frozen', 'chilled', 'ambient'], lg.storage)}
@@ -896,6 +910,19 @@
         form.cpp.addEventListener('input', () => { form.cpp.dataset.touched = '1'; });
         form.cpl.addEventListener('input', syncPallet);
         form.lpp.addEventListener('input', syncPallet);
+        // Sprawdzenie : sztuk w opakowaniu × opakowań w kartonie = sztuk w kartonie (nie blokuje zapisu).
+        const packCheck = () => {
+            const out = body.querySelector('[data-pack-check]');
+            const num = (f) => { const v = ui.num(form[f].value); return typeof v === 'number' ? v : 0; };
+            const [a, b, c, w] = [num('ppb'), num('bpc'), num('ppc'), num('weight')];
+            body.querySelector('[data-chain-weight]').textContent = w ? t('l.chain_weight', {g: ui.fmt(w, 0, api.lang)}) : '';
+            if (!a || !b) { out.textContent = c && !a ? t('l.check_loose') : ''; out.className = 'tfb-full tfb-pack-check text-muted'; return; }
+            const ok = !c || c === a * b;
+            out.textContent = t(ok ? 'l.check_ok' : 'l.check_bad', {a, b, c: a * b, ppc: c});
+            out.className = 'tfb-full tfb-pack-check ' + (ok ? 'text-success' : 'text-warning');
+        };
+        ['ppb', 'bpc', 'ppc', 'weight'].forEach(f => form[f].addEventListener('input', packCheck));
+        packCheck();
         form.addEventListener('submit', async (ev) => {
             ev.preventDefault();
             ui.clearErrors(form);
@@ -1146,6 +1173,32 @@
                 <div class="tfb-step-grid">${input('fixed_time_s', t('r.fixed'), 'decimal')}${input('variable_time_s', t('r.variable'), 'decimal')}${input('capacity_per_pass', t('r.capacity'), 'decimal')}</div>
                 <p class="form-text mb-0" data-cobot-compare>${esc(compare(s, a))}</p><p class="form-text mb-0">${esc(t('r.cobot_help'))}</p></div>`;
         };
+        // Stanowiska alternatywne [201] : przyciski (jedno dotknięcie = dodaj / usuń) pogrupowane wg rodzaju, szukaj, « Wybrane » z ✕.
+        const altSearch = {};
+        const altOpen = {};
+        const wsLabel = (w) => `${w.collaborative ? '🤖 ' : ''}${w.code} — ${w.name}`;
+        const altPicker = (s, i) => {
+            const pool = state.workstations.filter(w => w.id !== s.workstation_id);
+            const chosen = s.alternatives.map(a => state.workstations.find(w => w.id === a.workstation_id)).filter(Boolean);
+            const types = [...new Set(pool.map(w => w.type || ''))];
+            return `<div class="tfb-wide tfb-alt" data-alt-box="${i}" data-field="steps.${i}.alternatives">
+                <div class="tfb-alt-head"><strong>${esc(t('r.alternatives'))}</strong> <span class="badge bg-light text-dark">${esc(t('r.alt_chosen', {n: chosen.length}))}</span></div>
+                <div class="tfb-alt-chosen">${chosen.length ? chosen.map(w => `<button type="button" class="tfb-alt-chip" data-alt-toggle="${w.id}" data-write aria-label="${esc(t('r.alt_remove', {name: w.name}))}">${esc(wsLabel(w))} <i class="bi bi-x" aria-hidden="true"></i></button>`).join('')
+                    : `<span class="text-muted small">${esc(t('r.alt_none'))}</span>`}</div>
+                <div class="tfb-alt-tools"><input class="form-control form-control-sm tfb-alt-search" type="search" data-alt-search value="${esc(altSearch[i] || '')}" placeholder="${esc(t('r.alt_search'))}" aria-label="${esc(t('r.alt_search'))}">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-alt-expand aria-expanded="${altOpen[i] ? 'true' : 'false'}">${esc(t(altOpen[i] ? 'r.alt_hide' : 'r.alt_show', {n: pool.length}))}</button></div>
+                <div class="tfb-alt-groups" data-alt-groups>${types.map(ty => `<div class="tfb-alt-group" data-alt-group><small>${esc(ty ? t('ws.' + ty) : '—')}</small><div>
+                    ${pool.filter(w => (w.type || '') === ty).map(w => { const on = s.alternatives.some(a => a.workstation_id === w.id);
+                        return `<button type="button" class="tfb-alt-btn ${on ? 'is-on' : ''}" data-alt-toggle="${w.id}" data-write aria-pressed="${on}" data-alt-name="${esc((w.code + ' ' + w.name).toLowerCase())}">${on ? '<i class="bi bi-check2" aria-hidden="true"></i> ' : ''}${esc(wsLabel(w))}</button>`; }).join('')}</div></div>`).join('')}</div>
+                <p class="form-text mb-0">${esc(t('r.alt_help'))}</p></div>`;
+        };
+        // Lista wszystkich stanowisk zwinięta : rozwija ją przycisk albo wpisane szukanie.
+        const filterAlt = (box) => {
+            const q = (box.querySelector('[data-alt-search]').value || '').trim().toLowerCase();
+            box.querySelector('[data-alt-groups]').hidden = q === '' && !altOpen[box.dataset.altBox];
+            box.querySelectorAll('.tfb-alt-btn').forEach(b => { b.hidden = q !== '' && !b.dataset.altName.includes(q); });
+            box.querySelectorAll('[data-alt-group]').forEach(g => { g.hidden = ![...g.querySelectorAll('.tfb-alt-btn')].some(b => !b.hidden); });
+        };
         const draw = () => {
             body.innerHTML = `<p class="form-text">${esc(t('r.help'))}</p><form data-form>
                 <div class="tfb-batch">
@@ -1177,7 +1230,7 @@
                         <label>${esc(t('r.delay'))}<input class="form-control form-control-sm" inputmode="decimal" data-k="delay_min" data-field="steps.${i}.delay_after_s" value="${s.delay_after_s ? s.delay_after_s / 60 : ''}"></label>
                         <label>${esc(t('r.delay_ws'))}<select class="form-select form-select-sm" data-k="delay_workstation_id" data-field="steps.${i}.delay_workstation_id"><option value="">${esc(t('r.none_ws'))}</option>${wsOptions(s.delay_workstation_id, delayFilter)}</select></label>
                         <label>${esc(t('r.cleaning'))}<input class="form-control form-control-sm" inputmode="decimal" data-k="cleaning_min" data-field="steps.${i}.cleaning_time_s" value="${s.cleaning_time_s ? s.cleaning_time_s / 60 : ''}"></label>
-                        <label class="tfb-wide">${esc(t('r.alternatives'))}<select class="form-select form-select-sm" multiple size="3" data-k="alternatives" data-field="steps.${i}.alternatives">${wsOptions(null, w => w.id !== s.workstation_id).replace(/<option value="(\d+)"/g, (m, id) => s.alternatives.some(a => a.workstation_id === Number(id)) ? `<option value="${id}" selected` : m)}</select></label>
+                        ${altPicker(s, i)}
                     </div>${s.alternatives.map((a, j) => cobotBlock(s, a, i, j)).join('')}</div>`).join('')}
                 <button type="button" class="btn btn-outline-primary btn-sm" data-add data-write><i class="bi bi-plus"></i> ${esc(t('r.add_step'))}</button>
                 ${nav(6)}</form>`;
@@ -1187,8 +1240,34 @@
                 form.batch_cartons.addEventListener('input', () => { const c = ui.num(form.batch_cartons.value); if (c === null || typeof c === 'number') form.batch.value = c === null ? '' : Math.round(c * ppc); });
                 form.batch.addEventListener('input', () => { const q = ui.num(form.batch.value); form.batch_cartons.value = typeof q === 'number' ? String(Math.round(q / ppc * 100) / 100).replace('.', ',') : ''; });
             }
-            form.addEventListener('input', collect);
+            form.addEventListener('input', (e) => {
+                const box = e.target.closest('[data-alt-box]');
+                if (box && e.target.matches('[data-alt-search]')) { altSearch[box.dataset.altBox] = e.target.value; filterAlt(box); return; }
+                collect();
+            });
             form.addEventListener('change', (e) => { collect(); if (['workstation_id', 'alternatives'].includes(e.target.dataset.k)) draw(); });
+            form.querySelectorAll('[data-alt-box]').forEach(filterAlt);
+            form.addEventListener('click', (e) => {
+                const exp = e.target.closest('[data-alt-expand]');
+                if (exp) {
+                    const box = exp.closest('[data-alt-box]');
+                    const i = box.dataset.altBox;
+                    altOpen[i] = !altOpen[i];
+                    exp.setAttribute('aria-expanded', altOpen[i] ? 'true' : 'false');
+                    exp.textContent = t(altOpen[i] ? 'r.alt_hide' : 'r.alt_show', {n: box.querySelectorAll('.tfb-alt-btn').length});
+                    filterAlt(box);
+                    return;
+                }
+                const b = e.target.closest('[data-alt-toggle]');
+                if (!b || b.disabled) return;
+                collect();
+                const s = steps[Number(b.closest('[data-alt-box]').dataset.altBox)];
+                const id = Number(b.dataset.altToggle);
+                s.alternatives = s.alternatives.some(a => a.workstation_id === id) ? s.alternatives.filter(a => a.workstation_id !== id) : [...s.alternatives, {workstation_id: id}];
+                const y = window.scrollY;
+                draw();
+                window.scrollTo(0, y);
+            });
             form.querySelector('[data-add]').addEventListener('click', () => { collect(); steps.push({name_pl: '', name_fr: '', fixed_time_s: 0, variable_time_s: 0, operators_required: 1, alternatives: []}); draw(); });
             form.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => { collect(); steps.splice(Number(b.closest('[data-index]').dataset.index), 1); draw(); }));
             form.querySelectorAll('[data-move]').forEach(b => b.addEventListener('click', () => {
@@ -1372,17 +1451,55 @@
             return j;
         };
         const tag = (ok, text) => `<span class="badge ${ok ? 'bg-light-success text-success' : 'bg-light-warning text-warning'}">${esc(text)}</span>`;
+        // Kwoty zawsze z 2 miejscami (24,50 €), współczynnik z 1 (× 3,0).
+        const fixed = (v, d) => Number(v).toLocaleString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL', {minimumFractionDigits: d, maximumFractionDigits: d});
+        const eur = (v) => fixed(v, 2) + ' €';
+        let current = null;
+        // Belgia dla wpisanej ceny (przed zapisem) : cena sklepu netto ÷ (cena kartonu ÷ sztuk w kartonie).
+        const beHtml = (s, price) => {
+            const be = s.belgium;
+            if (!be) return tag(false, t('c.be.none'));
+            if (be.store_net === null || be.store_net === undefined || !(price > 0) || !(s.ppc > 0) || price === s.standard_price) {
+                return tag(be.verdict === 'ok', t('c.be.' + be.verdict)) + (be.coef !== null ? ' <span class="text-muted">' + esc(t('c.be_coef', {coef: String(be.coef).replace('.', ',')})) + '</span>' : '');
+            }
+            const coef = Math.round(be.store_net / (price / s.ppc) * 100) / 100;
+            const p = s.belgium_params || {multiplier: 2.5, limit: 2};
+            const verdict = coef >= p.multiplier ? 'ok' : (coef >= p.limit ? 'warn' : 'bad');
+            return tag(verdict === 'ok', t('c.be.' + verdict)) + ' <span class="text-muted">' + esc(t('c.be_coef', {coef: String(coef).replace('.', ',')})) + ' · ' + esc(t('c.be_preview')) + '</span>';
+        };
+        const shareHtml = (s, price) => {
+            const g = s.suggest;
+            return g && g.cost_carton_eur && price > 0 ? esc(t('c.share', {pct: ui.fmt(g.cost_carton_eur / price * 100, 0, api.lang)})) : '';
+        };
+        // Podpowiedź ceny [201] : koszt surowców / karton × 2,5 · 3 · 4 (domyślnie × 3) i cena z karty nowego produktu.
+        const suggestHtml = (s) => {
+            const g = s.suggest;
+            if (!g) return '';
+            const cost = g.cost_carton_pln > 0
+                ? `${esc(fixed(g.cost_carton_pln, 2))} zł${g.cost_carton_eur ? ' = ' + esc(eur(g.cost_carton_eur)) + ' ' + esc(t('c.rate', {rate: ui.fmt(g.rate, 4, api.lang)})) : ''} · <span data-share>${shareHtml(s, s.standard_price)}</span>`
+                : `<span class="text-muted">${esc(t(g.has_recipe ? 'c.cost_zero' : 'c.cost_none'))}</span>`;
+            const chips = [...g.options.map(o => `<button type="button" class="tfb-suggest ${o.default ? 'is-default' : ''}" data-suggest="${o.price}">× ${esc(fixed(o.coef, 1))} → <strong>${esc(eur(o.price))}</strong>${o.default ? ` <small>${esc(t('c.default'))}</small>` : ''}</button>`),
+                ...(g.card ? [`<button type="button" class="tfb-suggest" data-suggest="${g.card.price}" title="${esc(t('c.card_help', {piece: eur(g.card.piece), ppc: g.card.ppc}))}">${esc(t('c.from_card'))} → <strong>${esc(eur(g.card.price))}</strong> <small>${esc(eur(g.card.piece))} × ${g.card.ppc}</small></button>`] : [])];
+            return `<div class="tfb-commercial-row"><strong>${esc(t('c.cost'))}</strong><div>${cost}</div></div>
+                ${chips.length ? `<div class="tfb-commercial-row"><strong>${esc(t('c.suggest'))}</strong><div><div class="tfb-suggests">${chips.join('')}</div><p class="form-text mb-0">${esc(t('c.suggest_help'))}</p></div></div>` : ''}`;
+        };
         const draw = (s) => {
+            current = s;
             const be = s.belgium;
             const c = s.clients;
+            // Bez ceny : wpisana podpowiedź domyślna (× 3) — do sprawdzenia i zapisu.
+            const def = s.standard_price > 0 || !s.suggest ? null : (s.suggest.options.find(o => o.default) || null);
+            const shown = s.standard_price > 0 ? s.standard_price : (def ? def.price : '');
             box.innerHTML = `<h5 class="mt-1 mb-1">${esc(t('c.title'))}</h5><p class="form-text mt-0">${esc(t('c.help'))}</p>
                 <div class="tfb-commercial">
+                    ${suggestHtml(s)}
                     <div class="tfb-commercial-row"><strong>${esc(t('c.price'))}</strong>
                         <div class="d-flex flex-wrap gap-2 align-items-center">
-                            <input class="form-control form-control-sm" style="max-width: 130px" type="number" min="0.01" step="0.01" inputmode="decimal" data-price value="${s.standard_price > 0 ? s.standard_price : ''}" aria-label="${esc(t('c.price'))}">
+                            <input class="form-control form-control-sm" style="max-width: 130px" type="number" min="0.01" step="0.01" inputmode="decimal" data-price value="${shown}" aria-label="${esc(t('c.price'))}">
                             <span>${esc(t('c.per_carton'))}</span>
                             <button type="button" class="btn btn-sm btn-outline-primary" data-save-price>${esc(t('save'))}</button>
                             ${s.standard_price > 0 ? '' : tag(false, t('c.price_missing'))}
+                            ${def ? `<span class="form-text w-100 m-0">${esc(t('c.prefilled', {coef: fixed(def.coef, 1)}))}</span>` : ''}
                         </div></div>
                     <div class="tfb-commercial-row"><strong>${esc(t('c.clients'))}</strong>
                         <div>${esc(t('c.clients_state', {with: c.with_price, total: c.direct, fr: c.franchise}))}
@@ -1392,12 +1509,29 @@
                         <div>${s.ppwr && s.ppwr.complete ? tag(true, t('c.ppwr_ok', {unit: s.ppwr.unit || ''})) : tag(false, t('c.ppwr_todo'))}
                             <a class="ms-2" href="${api.root}/ppwr/sales-packaging">${esc(t('c.open'))}</a></div></div>
                     <div class="tfb-commercial-row"><strong>${esc(t('c.be'))}</strong>
-                        <div>${be ? tag(be.verdict === 'ok', t('c.be.' + be.verdict)) + (be.coef !== null ? ' <span class="text-muted">' + esc(t('c.be_coef', {coef: String(be.coef).replace('.', ',')})) + '</span>' : '') : tag(false, t('c.be.none'))}
+                        <div><span data-be>${beHtml(s, Number(shown) || 0)}</span>
                             <a class="ms-2" href="${api.root}/finances/product-margin?product_id=${productId}">${esc(t('c.open'))}</a></div></div>
                 </div>`;
         };
+        // Wpisana cena (ręcznie albo z podpowiedzi) : udział surowców i Belgia przeliczone przed zapisem.
+        const preview = () => {
+            if (!current) return;
+            const price = parseFloat(String(box.querySelector('[data-price]').value).replace(',', '.')) || 0;
+            const be = box.querySelector('[data-be]');
+            if (be) be.innerHTML = beHtml(current, price);
+            const share = box.querySelector('[data-share]');
+            if (share) share.innerHTML = shareHtml(current, price);
+        };
+        box.addEventListener('input', (e) => { if (e.target.matches('[data-price]')) preview(); });
         try { draw((await call(base + '/commercial')).data); } catch (err) { box.innerHTML = `<p class="text-danger">${esc(err.message)}</p>`; return; }
         box.addEventListener('click', async (e) => {
+            const sug = e.target.closest('[data-suggest]');
+            if (sug) {
+                box.querySelector('[data-price]').value = sug.dataset.suggest;
+                box.querySelectorAll('[data-suggest]').forEach(b => b.classList.toggle('is-picked', b === sug));
+                preview();
+                return;
+            }
             const save = e.target.closest('[data-save-price]');
             const copy = e.target.closest('[data-copy]');
             if (!save && !copy) return;
@@ -1430,9 +1564,49 @@
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            try { await api.post(`/produits/items/${item.id}/validate`); ui.notify(true, t('saved')); location.hash = `#/item/${item.id}/8?r=${Date.now()}`; }
+            try { await api.post(`/produits/items/${item.id}/validate`); ui.notify(true, t('saved')); await stepDone(body, item.id); }
             catch (err) { fail(form, err); }
         });
+    }
+
+    // Po « Zatwierdź kartę » [201] : ekran « gotowe » — podsumowanie (grupa, tryb, cena, koszt) i dalsze kroki.
+    async function stepDone(body, id) {
+        const item = state.item = await api.get(`/produits/items/${id}`);
+        let c = null;
+        if (item.final_product_id) {
+            try {
+                const r = await fetch(`${api.root}/ajax/products/${item.final_product_id}/commercial`, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+                if (r.ok) c = (await r.json()).data;
+            } catch (err) { c = null; }
+        }
+        const st = item.settings;
+        const ppc = item.erp && item.erp.ppc > 0 ? item.erp.ppc : 0;
+        const mode = st.mode === 'MTS' ? t('v.done_mts', {max: st.stock_max !== null && st.stock_max !== undefined && ppc ? ui.fmt(st.stock_max / ppc, 0, api.lang) : '—'}) : t('st.mto');
+        const price = c && c.standard_price > 0 ? c.standard_price : null;
+        const g = c && c.suggest ? c.suggest : null;
+        const todo = [];
+        if (c && !price) todo.push(t('v.todo_price'));
+        if (c && !(c.ppwr && c.ppwr.complete)) todo.push(t('v.todo_ppwr'));
+        if (c && c.clients.missing.length) todo.push(t('v.todo_clients', {n: c.clients.missing.length}));
+        const fact = (label, value) => `<div><small>${esc(label)}</small><strong>${value}</strong></div>`;
+        const money = (v) => Number(v).toLocaleString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        body.innerHTML = `<div class="tfb-done">
+            <div class="tfb-done-head"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><div><h5 class="mb-1">${esc(t('v.done_title'))}</h5>
+                <p class="text-muted mb-0">${esc(item.name)} · ${esc(t('v.done_meta', {date: (st.validated_at || '').slice(0, 16)}))}</p></div></div>
+            <div class="tfb-done-facts">
+                ${fact(t('v.done_group'), esc(groupName(st.primary_group_id)) + ' · ' + esc(mode))}
+                ${fact(t('c.price'), price ? esc(money(price)) + ' € / ' + esc(t('m.carton')) : '<span class="text-warning">—</span>')}
+                ${fact(t('c.cost'), g && g.cost_carton_pln > 0 ? esc(money(g.cost_carton_pln)) + ' zł' + (price && g.cost_carton_eur ? ' · ' + esc(t('c.share', {pct: ui.fmt(g.cost_carton_eur / price * 100, 0, api.lang)})) : '') : '—')}
+            </div>
+            <div class="tfb-done-actions">
+                <a class="btn btn-primary" href="#/item/${item.id}/1"><i class="bi bi-card-text"></i> ${esc(t('v.open_card'))}</a>
+                <a class="btn btn-outline-primary" href="#/?search=${encodeURIComponent(item.name)}&focus=${item.final_product_id ? 'p' + item.final_product_id : 's' + item.id}"><i class="bi bi-list-ul"></i> ${esc(t('v.list'))}</a>
+                <a class="btn btn-outline-primary" href="${esc(api.root)}/workshop/sheet"><i class="bi bi-table"></i> ${esc(t('v.plan'))}</a>
+                <a class="btn btn-outline-secondary" href="#/item/${item.id}/8?r=${Date.now()}"><i class="bi bi-pencil"></i> ${esc(t('v.fix'))}</a>
+            </div>
+            ${todo.length ? `<p class="form-text mb-0">${esc(t('v.todo', {items: todo.join(', ')}))}</p>` : ''}
+        </div>`;
+        body.scrollIntoView({block: 'start', behavior: 'smooth'});
     }
 
     // --- Routage par ancre -----------------------------------------------------------

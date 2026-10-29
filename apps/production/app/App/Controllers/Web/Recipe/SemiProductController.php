@@ -104,6 +104,41 @@ class SemiProductController extends BaseController
     }
 
 
+    /**
+     * POST /ajax/semi-products/quick {name, group_id, materials:[{id, quantity}]} — kreator produktu [201] : półprodukt
+     * (1 szt., jak formularz) z surowcami i grupą, która go robi ; ta sama walidacja i zapis (spłaszczenie, koszt).
+     */
+    public function ajaxQuick()
+    {
+        $in = $this->getJson(\Symfony\Component\HttpFoundation\Request::createFromGlobals()) ?: [];
+        $name = trim((string) ($in['name'] ?? ''));
+        if ($name === '' || mb_strlen($name) > 255) return $this->json(['message' => 'Nazwa : od 1 do 255 znaków.', 'errors' => ['name' => 'Wprowadź nazwę']], 422);
+        $known = array_flip(array_map('intval', array_column($this->materialService->getAll() ?: [], 'id')));
+        $materials = [];
+        foreach (is_array($in['materials'] ?? null) ? $in['materials'] : [] as $l) {
+            $id = filter_var($l['id'] ?? null, FILTER_VALIDATE_INT);
+            $qty = filter_var($l['quantity'] ?? null, FILTER_VALIDATE_INT);
+            if ($id === false || !isset($known[$id])) return $this->json(['message' => 'Nieznany surowiec.'], 422);
+            if ($qty === false || $qty <= 0 || $qty > 2147483647) return $this->json(['message' => 'Ilość surowca : liczba całkowita większa od zera.'], 422);
+            if (isset($materials[$id])) return $this->json(['message' => 'Ten sam surowiec występuje dwa razy.'], 422);
+            $materials[$id] = ['id' => $id, 'quantity' => $qty];
+        }
+        if (!$materials) return $this->json(['message' => 'Dodaj co najmniej jeden surowiec.'], 422);
+        $group = filter_var($in['group_id'] ?? null, FILTER_VALIDATE_INT);
+        if ($group !== false && $group !== null && !$this->producers->groupExists($group)) return $this->json(['message' => 'Nieznana grupa.'], 422);
+        $data = ['name' => $name, 'material_data' => $materials];
+        if (!$this->semiProductService->validate($data)) return $this->json(['message' => implode(' ', $this->semiProductService->errors())], 422);
+        try {
+            $newId = (int) $this->semiProductService->insert($data);
+            $problems = $group ? $this->extras->save($newId, ['producer_group_id' => (string) $group], true, user('id') ? (int) user('id') : null) : [];
+        } catch (\Throwable $e) {
+            error_log('[semi-quick] ' . $e->getMessage());
+            return $this->json(['message' => 'Nie udało się zapisać półproduktu.'], 500);
+        }
+        return $this->json(['message' => 'Półprodukt « ' . $name . ' » utworzony.' . ($problems ? ' ' . implode(' ', $problems) : ''),
+            'data' => ['id' => $newId, 'name' => $name, 'unit_name' => 'szt', 'group_id' => $group ?: null]], 201);
+    }
+
     public function editSemiProduct($id)
     {
         $data['units'] = $this->unitService->getSmallUnit();

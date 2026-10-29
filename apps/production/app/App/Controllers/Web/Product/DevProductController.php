@@ -77,6 +77,15 @@ class DevProductController extends BaseController
         }
     }
 
+    public function setRecipe($id)
+    {
+        try {
+            return $this->json(['message' => 'Zapisano recepturę testu.', 'data' => $this->dev->setRecipe((int) $id, $this->getJson(Request::createFromGlobals()) ?: [])]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     public function trialPhoto($photoId)
     {
         return $this->image($this->dev->trialPhoto((int) $photoId));

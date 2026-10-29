@@ -113,8 +113,9 @@
                                 <div class="col-2"></div>
                                 <div class="col-8">
                                     <button class="btn btn-warning">Zapisz</button>
-                                    <a href="<?= ROOT ?>/test-products" role="button"
+                                    <a href="<?= htmlspecialchars($back_url ?? ROOT . '/test-products', ENT_QUOTES) ?>" role="button"
                                        class="btn btn-secondary float-end">Powrót</a>
+                                    <p class="text-muted small mt-2 mb-0">Recepturę testu wybierasz na karcie produktu testowego (karta « Receptura »).</p>
                                 </div>
                             </div>
                         </form>

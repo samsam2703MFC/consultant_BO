@@ -13,7 +13,8 @@ final class DevProductRepository extends WorkshopRepository
     protected string $table = 'n_dev_product';
 
     private const PRODUCT = "SELECT tp.id, tp.name, tp.id_recipe, tp.id_section, tp.id_status, tp.id_type, tp.create_timestamp,
-            st.name AS status_name, ty.name AS type_name, ps.name AS section_name, pr.name AS recipe_name,
+            st.name AS status_name, ty.name AS type_name, ps.name AS section_name,
+            COALESCE(NULLIF(TRIM(pr.name), ''), (SELECT MIN(rf.name) FROM final_product rf WHERE rf.id_recipe = pr.id)) AS recipe_name,
             COALESCE(d.on_tablet, 0) AS on_tablet, d.video_url, d.notes, d.updated_at,
             d.id_group, COALESCE(d.stage, CASE tp.id_status WHEN 2 THEN 'launch' WHEN 3 THEN 'launched' ELSE 'idea' END) AS stage, d.stage_changed_at, d.target_date, d.weekly_sales, d.season_quarters, d.recipe_confirmed_at, d.id_final_product,
             g.name_pl AS group_pl, g.name_fr AS group_fr, g.color AS group_color, fp.name AS final_product_name,
@@ -168,10 +169,11 @@ final class DevProductRepository extends WorkshopRepository
         return $this->all('SELECT id, name_pl, name_fr, color, id_section FROM n_prod_group WHERE active = 1 ORDER BY sort_order, name_pl');
     }
 
-    /** @return list<array{id:int, name:string}> produkty ERP do powiązania przy wprowadzeniu (najnowsze pierwsze) */
+    /** @return list<array{id:int, name:string, category:?string}> produkty ERP do powiązania przy wprowadzeniu (najnowsze pierwsze) */
     public function finalProducts(): array
     {
-        return $this->all('SELECT id, name FROM final_product WHERE active = 1 ORDER BY create_timestamp DESC, name LIMIT 1500');
+        return $this->all('SELECT fp.id, fp.name, cp.name AS category FROM final_product fp LEFT JOIN category_product cp ON cp.id = fp.id_category
+            WHERE fp.active = 1 ORDER BY fp.create_timestamp DESC, fp.name LIMIT 1500');
     }
 
     public function finalProductExists(int $id): bool
@@ -184,6 +186,46 @@ final class DevProductRepository extends WorkshopRepository
     {
         $this->db->prepare('INSERT INTO n_mgr_launch (id_product, launch_date, updated_by) SELECT ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM n_mgr_launch WHERE id_product = ?)')
             ->execute([$finalProductId, $date, $userId, $finalProductId]);
+    }
+
+    /** Receptura produktu ERP (wprowadzenie : receptura testu = receptura produktu) [201]. */
+    public function finalProductRecipe(int $finalProductId): ?int
+    {
+        $id = $this->all('SELECT id_recipe FROM final_product WHERE id = ?', [$finalProductId])[0]['id_recipe'] ?? null;
+        return $id !== null ? (int) $id : null;
+    }
+
+    public function setTestProductRecipe(int $id, ?int $recipeId): void
+    {
+        $this->db->prepare('UPDATE test_product SET id_recipe = ? WHERE id = ?')->execute([$recipeId, $id]);
+    }
+
+    public function recipeExists(int $recipeId): bool
+    {
+        return (bool) $this->all('SELECT 1 AS x FROM product_recipe WHERE id = ?', [$recipeId]);
+    }
+
+    /**
+     * Receptury do wyboru na karcie testu (szukaj : nazwa, rodzaj, #numer) : kompozycje, półprodukty, produkty (nazwa produktu).
+     * @return list<array{id:int, name:string, type:string, lines:int}>
+     */
+    public function recipeChoices(): array
+    {
+        return $this->all("SELECT pr.id, COALESCE(NULLIF(TRIM(pr.name), ''), fp.name, CONCAT('Receptura #', pr.id)) AS name, COALESCE(t.name, '') AS type,
+                (SELECT COUNT(*) FROM product_recipe_connection c WHERE c.parent_recipe_id = pr.id) AS `lines`
+            FROM product_recipe pr
+            LEFT JOIN product_recipe_type t ON t.id = pr.id_type
+            LEFT JOIN (SELECT id_recipe, MIN(name) AS name FROM final_product WHERE id_recipe IS NOT NULL GROUP BY id_recipe) fp ON fp.id_recipe = pr.id
+            ORDER BY name, pr.id");
+    }
+
+    /** Receptura na karcie testu : składniki, koszt surowców, produkt ERP z tą recepturą (1 karton = ppc szt.). */
+    public function recipeInfo(int $recipeId): ?array
+    {
+        return $this->all("SELECT pr.id, pr.id_type, pr.yield_quantity, pr.precalculated_material_cost AS cost, COALESCE(u.name, '') AS unit,
+                (SELECT COUNT(*) FROM product_recipe_connection c WHERE c.parent_recipe_id = pr.id) AS `lines`,
+                (SELECT fp.ppc FROM final_product fp WHERE fp.id_recipe = pr.id ORDER BY fp.id LIMIT 1) AS ppc
+            FROM product_recipe pr LEFT JOIN unit u ON u.id = pr.id_unit WHERE pr.id = ?", [$recipeId])[0] ?? null;
     }
 
     /** Pola test_product bez złączeń (kategoria, etykieta) — kreator produktu z testu. */

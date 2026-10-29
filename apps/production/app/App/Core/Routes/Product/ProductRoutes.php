@@ -22,6 +22,17 @@ return function(RouteCollector $r) {
         'method'     => 'ajaxCreate'
     ]);
 
+    // Receptura produktu = 1 karton [201] : lista receptur « na 1 sztukę » do sprawdzenia i decyzja (× sztuk w kartonie / już na karton).
+    $r->addRoute('GET', '/ajax/products/recipe-check', [
+        'controller' => App\Controllers\Web\Product\ProductRecipeWizardController::class,
+        'method'     => 'ajaxUnitCheck'
+    ]);
+
+    $r->addRoute('POST', '/ajax/products/{id:\d+}/recipe-check', [
+        'controller' => App\Controllers\Web\Product\ProductRecipeWizardController::class,
+        'method'     => 'ajaxUnitDecide'
+    ]);
+
     $r->addRoute('POST', '/products/new', [
         'controller' => App\Controllers\Web\Product\ProductController::class,
         'method'     => 'newProduct'

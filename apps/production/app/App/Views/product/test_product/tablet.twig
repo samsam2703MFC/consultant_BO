@@ -13,7 +13,7 @@
                 Testy i recepturę zespół potwierdza na tablecie — tu widać wynik, bez ponownego wpisywania.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a class="btn btn-outline-primary" href="{{ root }}/test-products/{{ product.id }}/edit"><i class="bi bi-pencil"></i> Produkt testowy i receptura</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/test-products/{{ product.id }}/edit?from=card"><i class="bi bi-pencil"></i> Dane produktu testowego</a>
             <a class="btn btn-outline-primary" href="{{ root }}/test-products/{{ product.id }}/changelogs"><i class="bi bi-clock-history"></i> Dziennik</a>
             <a class="btn btn-outline-secondary" href="{{ root }}/test-products/pipeline"><i class="bi bi-kanban"></i> Wszystkie etapy</a>
         </div>
@@ -142,12 +142,44 @@
     <div class="row g-3">
         <div class="col-lg-6">
             <div class="card h-100">
-                <div class="card-header"><h4 class="card-title">Receptura</h4></div>
+                <div class="card-header"><h4 class="card-title">Receptura{% if stage == 'launched' and product.recipe_id %} <span class="at-sub">— produkt wprowadzony</span>{% endif %}</h4></div>
                 <div class="card-body pt-0">
+                    {# Receptura testu [201] : po wprowadzeniu = receptura produktu ERP ; przed — wybór na miejscu (szukaj) albo z karty technologicznej. #}
+                    {% set card_lines = 0 %}
+                    {% if card and card.card %}{% for g in card.card.ingredients ?? [] %}{% set card_lines = card_lines + (g.items ?? [])|length %}{% endfor %}{% endif %}
                     {% if product.recipe_id %}
-                        <p class="mb-2"><a href="{{ root }}/recipes/{{ product.recipe_id }}/edit">{{ product.recipe_name }}</a> · <a href="{{ root }}/recipes/{{ product.recipe_id }}/calculation">kalkulacja</a></p>
-                    {% else %}
-                        <p class="mb-2"><span class="at-pill at-pill-warn">Brak receptury</span> Wybierz ją w <a href="{{ root }}/test-products/{{ product.id }}/edit">« Produkt testowy »</a> — tablet pokaże składniki, a zespół ją zatwierdzi.</p>
+                        <div class="at-dev-recipe">
+                            <p class="mb-1"><strong>{{ product.recipe_name ?: 'Receptura #' ~ product.recipe_id }}</strong>
+                                <span class="at-pill {{ stage == 'launched' ? 'at-pill-ok' : '' }}">{{ stage == 'launched' ? 'receptura produktu ERP' : 'powiązana' }}</span></p>
+                            {% if recipe_info %}<p class="at-sub mb-2">{{ recipe_info.lines }} składników{% if recipe_info.id_type == 3 and recipe_info.ppc %} · 1 karton = {{ recipe_info.ppc }} szt.{% endif %}
+                                · koszt surowców <span class="tfb-num">{{ recipe_info.cost|number_format(2, ',', ' ') }} zł</span>{{ recipe_info.id_type == 3 ? ' / karton' : ' / ' ~ recipe_info.yield_quantity ~ ' ' ~ recipe_info.unit }}</p>{% endif %}
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a class="btn btn-outline-primary" href="{{ root }}/recipes/{{ product.recipe_id }}/calculation"><i class="bi bi-calculator"></i> Kalkulacja</a>
+                                <a class="btn btn-outline-secondary" href="{{ root }}/recipes/{{ product.recipe_id }}/edit"><i class="bi bi-pencil"></i> Edytuj recepturę</a>
+                                {% if stage != 'launched' %}<button type="button" class="btn btn-link" data-recipe-change>Zmień</button>{% endif %}
+                            </div>
+                        </div>
+                    {% elseif stage == 'launched' %}
+                        <p class="mb-2"><span class="at-pill at-pill-warn">Brak receptury</span> Produkt ERP nie ma jeszcze receptury — dodaj ją w Karcie produktu (krok « Receptura »).</p>
+                    {% endif %}
+                    {% if stage != 'launched' %}
+                        <form id="recipeForm" class="at-dev-recipe-pick"{{ product.recipe_id ? ' hidden' : '' }}>
+                            <label class="form-label" for="recipePick">{{ product.recipe_id ? 'Inna receptura' : 'Receptura testu' }}</label>
+                            <select id="recipePick" name="id_recipe">
+                                <option value="">Szukaj receptury : nazwa, kompozycja, półprodukt, #numer…</option>
+                                {% for r in recipes %}<option value="{{ r.id }}" {{ r.id == product.recipe_id ? 'selected' : '' }}>{{ r.name }} · {{ r.type ?: 'receptura' }} · #{{ r.id }}</option>{% endfor %}
+                            </select>
+                            <div class="d-flex gap-2 flex-wrap mt-2">
+                                <button class="btn btn-primary" type="submit"><i class="bi bi-link-45deg"></i> Powiąż recepturę</button>
+                                {% if product.recipe_id %}<button class="btn btn-outline-danger" type="button" data-recipe-clear>Odłącz recepturę</button>{% endif %}
+                            </div>
+                        </form>
+                        {% if not product.recipe_id and card_lines > 0 %}
+                            <a class="btn btn-outline-primary mt-2" href="{{ root }}/products/new-with-recipe?from_test={{ product.id }}"><i class="bi bi-plus-lg"></i> Utwórz z karty technologicznej ({{ card_lines }} składników)</a>
+                            <p class="at-sub mt-1 mb-2">Kreator produktu ze składnikami kroku « Koszt i cena » karty, przeliczonymi na 1 karton — po zapisie test jest « Wprowadzony », a receptura powiązana.</p>
+                        {% elseif not product.recipe_id %}
+                            <p class="at-sub mt-2 mb-2">Tablet pokaże składniki wybranej receptury, a zespół ją zatwierdzi.</p>
+                        {% endif %}
                     {% endif %}
                     {% if product.recipe_confirmed_at %}
                         <p class="mb-0"><i class="bi bi-patch-check text-success"></i> Zatwierdzona na tablecie {{ product.recipe_confirmed_at|date('d.m.Y H:i') }}{% if product.recipe_confirmed_name %} — {{ product.recipe_confirmed_name }}{% endif %}.</p>
@@ -169,9 +201,11 @@
                         <details class="mt-2">
                             <summary class="at-sub">Produkt już istnieje w ERP ? Powiąż test z nim</summary>
                             <form id="launchForm" class="d-flex gap-2 flex-wrap align-items-end mt-2">
-                                <label class="at-purch-label" style="flex: 1 1 260px">Produkt ERP
-                                    <input class="form-control" name="final_product" list="finalProducts" placeholder="Szukaj produktu…" autocomplete="off"></label>
-                                <datalist id="finalProducts">{% for fp in final_products %}<option value="{{ fp.name }} · #{{ fp.id }}"></option>{% endfor %}</datalist>
+                                <label class="at-purch-label" style="flex: 1 1 320px">Produkt ERP
+                                    <select name="final_product" id="launchProduct">
+                                        <option value="">Szukaj w nazwie, kategorii albo #numerze…</option>
+                                        {% for fp in final_products %}<option value="{{ fp.id }}">{{ fp.name }} · {{ fp.category ?: 'bez kategorii' }} · #{{ fp.id }}</option>{% endfor %}
+                                    </select></label>
                                 <button class="btn btn-outline-primary" type="submit"><i class="bi bi-link-45deg"></i> Powiąż i wprowadź</button>
                             </form>
                         </details>
@@ -254,10 +288,31 @@
     const launchForm = document.getElementById('launchForm');
     if (launchForm) launchForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const m = /#(\d+)\s*$/.exec(launchForm.final_product.value);
-        if (!m) { at.notify(false, 'Wybierz produkt ERP z listy.'); return; }
+        const pid = Number(launchForm.final_product.value);
+        if (!pid) { at.notify(false, 'Wybierz produkt ERP z listy.'); return; }
         if (!confirm('Wprowadzić produkt ? Zniknie z tabletu.')) return;
-        at.send(`/ajax/test-products/${id}/launch`, 'PUT', {final_product_id: Number(m[1])}).then(done);
+        at.send(`/ajax/test-products/${id}/launch`, 'PUT', {final_product_id: pid}).then(done);
+    });
+    // Listy z wyszukiwarką [201] : produkt ERP (nazwa · kategoria · #id) i receptura testu (nazwa · rodzaj · #id).
+    const pick = (el) => {
+        if (!el || typeof Choices !== 'function') return null;
+        el.dataset.choicesInited = '1';
+        return new Choices(el, {searchEnabled: true, shouldSort: false, itemSelectText: '', searchResultLimit: 30, searchPlaceholderValue: 'Szukaj…',
+            noResultsText: 'Brak wyników', fuseOptions: {threshold: 0.3, ignoreLocation: true}});
+    };
+    // Choices ładuje się po bloku skryptów strony : inicjalizacja po DOMContentLoaded.
+    document.addEventListener('DOMContentLoaded', () => { pick(document.getElementById('launchProduct')); pick(document.getElementById('recipePick')); });
+    const recipeForm = document.getElementById('recipeForm');
+    if (recipeForm) recipeForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const rid = Number(recipeForm.id_recipe.value);
+        if (!rid) { at.notify(false, 'Wybierz recepturę z listy.'); return; }
+        at.send(`/ajax/test-products/${id}/recipe`, 'PUT', {id_recipe: rid}).then(done);
+    });
+    document.querySelector('[data-recipe-change]')?.addEventListener('click', (e) => { recipeForm.hidden = false; e.target.hidden = true; });
+    document.querySelector('[data-recipe-clear]')?.addEventListener('click', () => {
+        if (!confirm('Odłączyć recepturę od testu ? Tablet nie pokaże składników.')) return;
+        at.send(`/ajax/test-products/${id}/recipe`, 'PUT', {id_recipe: null}).then(done);
     });
     // Zdjęcie zmniejszone w przeglądarce do JPEG (najdłuższy bok 1600 px).
     const shrink = (file) => new Promise((resolve, reject) => {

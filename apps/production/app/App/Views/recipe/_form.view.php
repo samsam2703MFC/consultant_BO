@@ -67,7 +67,7 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                                 Po zapisie przejdziesz do receptury produktu (krok 2), z tym półproduktem już na liście.
                             <?php elseif ($isNew): ?>
                                 <strong>Receptura produktu « <?= $e($card['name']) ?> »</strong> — krok 2 z 2.
-                                Surowce i półprodukty na 1 szt. ; po zapisie wrócisz do Karty produktu (krok « Receptura »).
+                                Surowce i półprodukty na 1 karton (cały produkt sprzedawany<?= !empty($card['ppc']) ? ' : ' . (int) $card['ppc'] . ' szt.' : '' ?>) ; po zapisie wrócisz do Karty produktu (krok « Receptura »).
                             <?php else: ?>
                                 <strong>Receptura produktu « <?= $e($card['name']) ?> »</strong> — po zapisie wrócisz do Karty produktu (krok « Receptura »).
                             <?php endif; ?>

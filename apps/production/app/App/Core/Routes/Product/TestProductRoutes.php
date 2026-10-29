@@ -125,6 +125,7 @@ return function(RouteCollector $r) {
     $r->addRoute('DELETE', '/ajax/test-products/{id:\d+}/trials/{trialId:\d+}', ['controller' => $d, 'method' => 'cancelTrial']);
     $r->addRoute('PUT', '/ajax/test-products/{id:\d+}/stage', ['controller' => $d, 'method' => 'setStage']);
     $r->addRoute('PUT', '/ajax/test-products/{id:\d+}/launch', ['controller' => $d, 'method' => 'launch']);
+    $r->addRoute('PUT', '/ajax/test-products/{id:\d+}/recipe', ['controller' => $d, 'method' => 'setRecipe']);
     $r->addRoute('GET', '/test-products/trial-photos/{photoId:\d+}', ['controller' => $d, 'method' => 'trialPhoto']);
     $r->addRoute('GET', '/test-products/{id:\d+}/tablet', ['controller' => $d, 'method' => 'tablet']);
     $r->addRoute('GET', '/test-products/photos/{photoId:\d+}', ['controller' => $d, 'method' => 'photo']);

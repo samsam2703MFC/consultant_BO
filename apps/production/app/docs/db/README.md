@@ -3,7 +3,7 @@
 Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y a été déplacée le 24/10/2026 par `deploy/server.sh`, données gardées).
 
 - **121 tables d'origine** de l'ERP SL Food : noms inchangés (131 avant le nettoyage du 24/10/2026, qui a supprimé les 10 copies de sauvegarde).
-- **163 tables ajoutées** pendant le développement (29/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
+- **164 tables ajoutées** pendant le développement (29/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
 
 ## Installer / intégrer
 
@@ -65,6 +65,27 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   en Belgique (magasin ÷ usine) avec les seuils de `n_store_price_config` (× 2,5 / 2,2).
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
+
+### Recette d'un produit = 1 carton, retours du testeur (migration 127, 29/10/2026)
+
+- **Recette d'un produit fini = 1 carton** (le produit vendu entier) : le calcul de recette et les marges la lisent
+  ainsi (`precalculated_material_cost` → `final_product.pre_calculated_raw_price_per_carton`). L'assistant « Nowy
+  produkt z recepturą » demandait la recette « pour 1 pièce » : il demande maintenant le carton, avec un interrupteur
+  « je saisis pour 1 pièce » qui multiplie les quantités par les pièces par carton à l'enregistrement.
+- `n_recipe_unit_check` : décisions sur les recettes déjà enregistrées qui ressemblent à 1 pièce (masse des matières en
+  g / ml de la recette aplatie ≈ poids d'une pièce, < 35 % du carton ; ou produit créé pendant une visite de
+  l'assistant d'après `n_activity_view` avec une masse < 50 % du carton). Rien n'est modifié sans décision : `scaled`
+  (quantités × `factor` = pièces par carton, nouvelle version de recette, aplatissement, étiquette, coût et marges
+  recalculés) ou `kept` (déjà au carton) ; `cost_before` garde le coût d'avant. Recette partagée par plusieurs produits
+  ou utilisée dans une autre recette : correction manuelle seulement.
+- **Produit test lancé** : `test_product.id_recipe` = recette du produit ERP (au lancement, et rattrapage des tests
+  déjà lancés sans recette par la migration). Avant le lancement, la recette du test se choisit sur la fiche du test
+  (liste avec recherche) ; sans recette, l'assistant produit reprend les ingrédients de l'étape « Koszt i cena » de la
+  fiche technique (quantités du lot de la fiche ramenées à 1 carton).
+- Prix standard (fiche produit, étape « Ceny i zatwierdzenie ») : suggestions coût matières / carton × 2,5 · 3 · 4
+  (`new_product.factory_coefs`, défaut × 3) ÷ `exchange_rate_euro`, arrondies à 0,10 €, et prix usine de la fiche du
+  nouveau produit (`n_dev_card.cost_pc_pln` × coefficient ÷ cours × pièces par carton) ; rien n'est enregistré sans
+  « Zapisz ».
 
 ### Planning logistique sur 12 semaines (migration 126, 29/10/2026)
 

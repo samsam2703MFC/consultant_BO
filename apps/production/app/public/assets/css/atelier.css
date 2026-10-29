@@ -2331,3 +2331,46 @@ body.lg-kiosk #main { margin-left: 0 !important; padding-top: 12px; }
 .at-devcard-prices div { background: var(--at-bg-2); }
 .at-devcard-prices b { font-size: 18px; font-weight: 500; }
 @media (max-width: 767px) { .at-devcard-facts { grid-template-columns: 1fr; } }
+/* Kreator produktu [201] : receptura na 1 karton, ilości wpisywane na karton albo na sztukę (× sztuk w kartonie). */
+.pw-per { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.pw-per-label { font-weight: 600; font-size: .9rem; }
+.pw-per .at-seg button { min-height: 44px; }
+.pw-per-x { font-weight: 500; color: var(--at-muted); }
+.at-wizard tfoot .at-run-msg, .at-wizard td.text-end { font-variant-numeric: tabular-nums; }
+.pw-check { display: flex; gap: 10px; align-items: flex-start; }
+.pw-check-table td { vertical-align: middle; }
+.pw-check-table td .at-run-msg { display: block; }
+.pw-check-table .btn { min-height: 44px; }
+/* Karta produktu [201] : sztuka → opakowanie → karton, stanowiska alternatywne (przyciski), podpowiedź ceny, ekran « gotowe ». */
+.tfb-chain { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-bottom: 4px; }
+.tfb-chain > div { flex: 1 1 150px; display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; padding: 10px 12px; border: 1px solid var(--at-line); border-radius: 10px; background: var(--at-bg-2); }
+.tfb-chain > div > .bi { grid-row: span 2; font-size: 1.3rem; color: var(--at-primary); }
+.tfb-chain small { color: var(--at-muted); font-size: 12px; }
+.tfb-chain-arrow { align-self: center; color: var(--at-muted); }
+.tfb-pack-check { margin: -4px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; min-height: 1.2em; }
+.tfb-alt { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--at-line); border-radius: 10px; }
+.tfb-alt-chosen { display: flex; flex-wrap: wrap; gap: 6px; }
+.tfb-alt-chip { border: 1px solid var(--at-primary); background: var(--at-surface); color: var(--at-primary); border-radius: 8px; padding: 6px 10px; min-height: 44px; font-size: .85rem; font-weight: 600; }
+.tfb-alt-search { max-width: 320px; }
+.tfb-alt-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.tfb-alt-group > small { display: block; text-transform: uppercase; letter-spacing: .04em; color: var(--at-muted); font-size: 11px; margin-bottom: 4px; }
+.tfb-alt-group > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.tfb-alt-btn { border: 1px solid var(--at-line); background: var(--at-surface); border-radius: 8px; padding: 6px 10px; min-height: 44px; font-size: .85rem; text-align: left; }
+.tfb-alt-btn.is-on { border-color: var(--at-primary); background: var(--at-bg-2); color: var(--at-primary); font-weight: 600; }
+.tfb-suggests { display: flex; flex-wrap: wrap; gap: 6px; }
+.tfb-suggest { border: 1px solid var(--at-line); background: var(--at-surface); border-radius: 8px; padding: 6px 12px; min-height: 44px; font-variant-numeric: tabular-nums; }
+.tfb-suggest small { color: var(--at-muted); }
+.tfb-suggest.is-default { border-color: var(--at-primary); }
+.tfb-suggest.is-picked { background: var(--at-bg-2); border-color: var(--at-primary); color: var(--at-primary); }
+.tfb-done-head { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+.tfb-done-head > .bi { font-size: 2.2rem; color: var(--at-success, #2e7d32); }
+.tfb-done-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; font-variant-numeric: tabular-nums; }
+.tfb-done-facts > div { background: var(--at-bg-2); border-radius: 10px; padding: 10px 12px; }
+.tfb-done-facts small { display: block; color: var(--at-muted); font-size: 12px; }
+.tfb-done-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.tfb-done-actions .btn { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+tr.tfb-row-focus > td { background: #fdf6ea; }
+.tfb-step-grid .tfb-alt.tfb-wide { grid-column: 1 / -1; }
+.tfb-alt-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tfb-alt-tools .btn { min-height: 38px; }
+.tfb-done-head > .bi { flex: none; width: 2.4rem; height: 2.4rem; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }

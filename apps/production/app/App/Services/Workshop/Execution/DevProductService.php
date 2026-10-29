@@ -254,7 +254,22 @@ final class DevProductService
             $this->repo->saveDev($id, ['stage' => 'launched', 'stage_changed_at' => date('Y-m-d H:i:s'), 'id_final_product' => $productId, 'on_tablet' => 0, 'updated_by' => $userId]);
             $this->repo->setTestProductStatus($id, 3);
             $this->repo->recordLaunch($productId, date('Y-m-d'), $userId);
+            // Receptura testu = receptura produktu ERP (karta testu pokazuje recepturę wprowadzonego produktu) [201].
+            $recipe = $this->repo->finalProductRecipe($productId);
+            if ($recipe !== null) $this->repo->setTestProductRecipe($id, $recipe);
         });
+        return $this->sheet($id);
+    }
+
+    /** Receptura testu wybrana na karcie (szukaj) ; null = zdjęta. Produkt wprowadzony : receptura produktu ERP. [201] */
+    public function setRecipe(int $id, array $input): array
+    {
+        $p = $this->repo->product($id) ?? throw new CustomException('Nie znaleziono produktu testowego.', 'errors', 404);
+        if ($p['stage'] === 'launched') throw new CustomException('Produkt wprowadzony : receptura to receptura produktu ERP — zmień ją w edycji receptury.', 'errors', 422);
+        $raw = $input['id_recipe'] ?? null;
+        $recipeId = $raw === null || $raw === '' ? null : filter_var($raw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($recipeId === false || ($recipeId !== null && !$this->repo->recipeExists($recipeId))) throw new CustomException('Wybierz recepturę z listy.', 'errors', 422);
+        $this->repo->setTestProductRecipe($id, $recipeId);
         return $this->sheet($id);
     }
 
@@ -295,6 +310,9 @@ final class DevProductService
             'trials' => array_map(fn($tr) => $this->presentTrial($tr, 0) + ['photos' => array_map(fn($ph) => ['id' => (int) $ph['id'], 'taken_at' => $ph['taken_at']], $photos[(int) $tr['id']] ?? [])], $trials),
             'groups' => $this->repo->groups(),
             'final_products' => $p['stage'] === 'launched' ? [] : $this->repo->finalProducts(),
+            // Receptura na karcie [201] : wybór z wyszukiwarką (przed wprowadzeniem) i opis wybranej (składniki, koszt, karton).
+            'recipes' => $p['stage'] === 'launched' ? [] : $this->repo->recipeChoices(),
+            'recipe_info' => $p['id_recipe'] !== null ? $this->repo->recipeInfo((int) $p['id_recipe']) : null,
             'photos' => $this->repo->photos($id), 'stages' => $this->repo->stages($id)];
     }
 

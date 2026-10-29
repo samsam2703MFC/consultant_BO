@@ -58,7 +58,8 @@ class TestProductController extends BaseController
                 }, default: false);
 
                 if ($success) {
-                    header('Location: ' . ROOT . '/test-products');
+                    // Z karty produktu testowego (?from=card) : powrót na kartę, nie na listę [201].
+                    header('Location: ' . ROOT . (($_GET['from'] ?? '') === 'card' ? '/test-products/' . (int) $id . '/tablet' : '/test-products'));
                     exit;
                 }
             } else {
@@ -66,6 +67,7 @@ class TestProductController extends BaseController
             }
         }
 
+        $data['back_url'] = ROOT . (($_GET['from'] ?? '') === 'card' ? '/test-products/' . (int) $id . '/tablet' : '/test-products');
         $this->view("product/test_product/edit", $data);
     }
 

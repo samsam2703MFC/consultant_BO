@@ -26,9 +26,12 @@
          data-from-test="{{ from_test|json_encode }}">
     {% if from_test %}
         <div class="at-note at-note-safe mb-3"><i class="bi bi-rocket-takeoff"></i>
-            <strong>Wprowadzenie produktu testowego « {{ from_test.name }} ».</strong> Nazwa, kategoria, dział, etykieta{{ from_test.recipe_name ? ' i receptura « ' ~ from_test.recipe_name ~ ' »' : '' }} są już wpisane z testu — uzupełnij opakowanie i sprawdź.
+            <strong>Wprowadzenie produktu testowego « {{ from_test.name }} ».</strong> Nazwa, kategoria, dział, etykieta{{ from_test.recipe_name ? ' i receptura « ' ~ from_test.recipe_name ~ ' »' : (from_test.card ? ' i składniki karty technologicznej (przeliczone na 1 karton po kroku « Logistyka »)' : '') }} są już wpisane z testu — uzupełnij opakowanie i sprawdź.
             Po zapisie test przechodzi na etap « Wprowadzony » i jest powiązany z nowym produktem.</div>
     {% endif %}
+
+    {# Receptury zapisane « na 1 sztukę » przed poprawką [201] : lista do sprawdzenia (× sztuk w kartonie albo « już na karton »). #}
+    <div class="at-note at-note-warn mb-3 pw-check" id="pwCheck" hidden></div>
 
     <ol class="at-steps at-steps-compact" aria-label="Kroki kreatora">
         <li data-step-tab="1"><span>Produkt</span></li>
@@ -97,15 +100,16 @@
             {# --- 2. Opakowanie i waga ------------------------------------------------- #}
             <div class="at-step" data-step="2" hidden>
                 <h4 class="at-step-title">Opakowanie, paleta i waga</h4>
-                <p class="at-step-lead">Liczby całkowite większe od zera — ta sama walidacja co Karta produktu. Opakowanie : 0 albo puste = bez opakowania. Stan minimalny jest opcjonalny.</p>
+                <p class="at-step-lead">Liczby całkowite większe od zera — ta sama walidacja co Karta produktu. Stan minimalny jest opcjonalny.
+                    <strong>Sztuka → opakowanie (torebka, worek, tacka, folia) → karton</strong> : karton to, co kupuje klient ; bez opakowania = 0 albo puste.</p>
                 <div class="row g-3">
                     {% set fields = [
                         ['weight', 'Waga produktu (g)', 'Waga jednej sztuki'],
                         ['shelf_life', 'Przydatność do spożycia (dni)', ''],
                         ['stock_minimum', 'Minimalny stan magazynowy (kartony, opcjonalnie)', 'Puste = na zamówienie (MTO) ; podany = na zapas (MTS)'],
-                        ['ppb', 'Sztuk w opakowaniu', '0 = bez opakowania'],
-                        ['bpc', 'Opakowań w kartonie', '0 = bez opakowania'],
-                        ['ppc', 'Sztuk w kartonie', ''],
+                        ['ppb', 'Sztuk w opakowaniu', 'ile sztuk w jednej torebce / worku / tacce ; 0 = sztuki luzem w kartonie'],
+                        ['bpc', 'Opakowań w kartonie', 'ile torebek / worków / tacek w jednym kartonie'],
+                        ['ppc', 'Sztuk w kartonie', 'karton = to, co kupuje klient (cena, zamówienia, palety)'],
                         ['cpl', 'Kartonów na warstwie palety', ''],
                         ['lpp', 'Warstw na palecie', ''],
                         ['cpp', 'Kartonów na palecie', '']
@@ -116,7 +120,7 @@
                             <label class="form-label" for="pw_{{ f[0] }}">{{ f[1] }}</label>
                             <input class="form-control" type="number" min="{{ optional ? 0 : 1 }}" step="1" inputmode="numeric" id="pw_{{ f[0] }}" data-field="{{ f[0] }}"{{ optional ? '' : ' required' }}>
                             <div class="invalid-feedback"></div>
-                            <small class="at-run-msg" data-hint="{{ f[0] }}">{{ f[2] }}</small>
+                            <small class="at-run-msg" data-hint="{{ f[0] }}" data-default="{{ f[2] }}">{{ f[2] }}</small>
                         </div>
                     {% endfor %}
                 </div>
@@ -124,8 +128,17 @@
 
             {# --- 3. Receptura ------------------------------------------------------------- #}
             <div class="at-step" data-step="3" hidden>
-                <h4 class="at-step-title">Receptura na 1 sztukę</h4>
-                <p class="at-step-lead">Surowce w jednostce bazowej (g, ml, szt.), półprodukty w ich jednostce. Koszt liczony jak na stronie kalkulacji receptury.</p>
+                <h4 class="at-step-title">Receptura na 1 karton</h4>
+                <p class="at-step-lead">Cały produkt sprzedawany : <strong>1 karton = <span data-ppc-label>…</span> szt.</strong> (« Sztuk w kartonie » z kroku « Logistyka »).
+                    Surowce w jednostce bazowej (g, ml, szt.), półprodukty w ich jednostce. Koszt liczony jak na stronie kalkulacji receptury i w marżach (receptura na 1 karton).</p>
+                {# Receptura zapisana = 1 karton (kalkulacja, marże) ; « 1 sztukę » mnoży ilości × sztuk w kartonie przy zapisie. #}
+                <div class="pw-per mb-3">
+                    <span class="pw-per-label">Ilości wpisuję na :</span>
+                    <div class="at-seg" role="radiogroup" aria-label="Ilości wpisuję na">
+                        <button type="button" role="radio" data-per="carton" class="is-on" aria-checked="true">1 karton</button>
+                        <button type="button" role="radio" data-per="piece" aria-checked="false">1 sztukę <span class="pw-per-x" data-ppc-times></span></button>
+                    </div>
+                </div>
                 <div class="row g-3 align-items-end">
                     <div class="col-12 col-lg-6">
                         <div class="d-flex gap-2 align-items-end">
@@ -152,7 +165,7 @@
                             </div>
                             <button type="button" class="btn btn-outline-primary" id="pwAddSemi"><i class="bi bi-plus"></i> Dodaj</button>
                         </div>
-                        <button type="button" class="btn btn-link px-0 mt-1" id="pwNewSemi"><i class="bi bi-window-plus"></i> Nowy półprodukt (w oknie — wraca tutaj)</button>
+                        <button type="button" class="btn btn-link px-0 mt-1" id="pwNewSemi"><i class="bi bi-plus-lg"></i> Nowy półprodukt</button>
                     </div>
                 </div>
                 <div id="pwLines" class="mt-3"></div>
@@ -196,6 +209,64 @@
         </div>
     </div>
 </section>
+
+<div class="modal fade" id="pwSemiModal" tabindex="-1" aria-labelledby="pwSemiTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form class="modal-content" id="pwSemiForm" novalidate>
+            <div class="modal-header">
+                <div><h5 class="modal-title" id="pwSemiTitle">Nowy półprodukt</h5>
+                    <p class="at-sub mb-0">Zapis bez opuszczania kreatora — półprodukt od razu wybrany w recepturze. Składniki na 1 szt. półproduktu (jak w formularzu półproduktu).</p></div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-7">
+                        <label class="form-label" for="pwSemiName">Nazwa</label>
+                        <input class="form-control" id="pwSemiName" maxlength="255" required placeholder="np. Krem czekoladowy do drożdżówek">
+                        <div class="invalid-feedback">Wprowadź nazwę</div>
+                    </div>
+                    <div class="col-12 col-md-5">
+                        <label class="form-label" for="pwSemiGroup">Grupa, która go robi</label>
+                        <select class="form-select" id="pwSemiGroup"></select>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex gap-2 align-items-end">
+                            <div class="flex-grow-1">
+                                <label class="form-label" for="pwSemiMat">Składniki (szukaj surowca)</label>
+                                <select id="pwSemiMat"></select>
+                            </div>
+                            <div style="width: 120px;">
+                                <label class="form-label" for="pwSemiMatQty">Ilość <span data-unit="semi-mat"></span></label>
+                                <input class="form-control" type="number" min="1" step="1" id="pwSemiMatQty">
+                            </div>
+                            <button type="button" class="btn btn-outline-primary" id="pwSemiMatAdd"><i class="bi bi-plus"></i> Dodaj</button>
+                        </div>
+                    </div>
+                    <div class="col-12" id="pwSemiLines"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <span class="at-wizard-hint me-auto" id="pwSemiHint" aria-live="polite"></span>
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Anuluj</button>
+                <button type="submit" class="btn btn-primary" id="pwSemiSave"><i class="bi bi-check2"></i> Utwórz i dodaj do receptury</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="pwCheckModal" tabindex="-1" aria-labelledby="pwCheckTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div><h5 class="modal-title" id="pwCheckTitle">Receptury do sprawdzenia : 1 sztuka czy 1 karton ?</h5>
+                    <p class="at-sub mb-0">Kalkulacja i marże czytają recepturę produktu jako 1 karton. Te receptury wyglądają na 1 sztukę (masa składników ≈ waga sztuki) — koszt kartonu w marżach jest wtedy za niski.
+                        « × sztuk w kartonie » mnoży ilości surowców i półproduktów (nowa wersja receptury, koszt i marże przeliczone) ; « Już na karton » zostawia recepturę bez zmian.</p></div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+            </div>
+            <div class="modal-body" id="pwCheckBody"></div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -220,8 +291,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const STEP_OF = { name: 1, id_category: 1, id_section: 1, label_type: 1 };
     NUMERIC.forEach((f) => { STEP_OF[f] = 2; });
 
-    const state = { step: 1, lines: [], preps: [], cost: null, saving: false };
-    let costTimer = null, costSeq = 0;
+    // per : ilości wpisane na 1 karton (receptura zapisana tak jak jest) albo na 1 sztukę (× sztuk w kartonie przy zapisie).
+    const state = { step: 1, lines: [], preps: [], cost: null, saving: false, per: 'carton' };
+    let costTimer = null, costSeq = 0, costBusy = null;
 
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const zl = (n) => Number(n || 0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
@@ -250,19 +322,90 @@ document.addEventListener('DOMContentLoaded', function () {
     const semiChoices = choices(semiSel, semiHtml, 'Wybierz półprodukt…');
     document.getElementById('pwPrep').innerHTML = '<option value="">Wybierz…</option>' + PREPS.map((p) => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('');
 
-    // Nowy półprodukt w osobnym oknie (formularz półproduktu w trzech zakładkach) : po zapisie wraca na listę i jest wybrany.
-    document.getElementById('pwNewSemi').addEventListener('click', () => {
-        window.open('{{ root }}/semi-products/new?popup=1', 'pw_semi', 'width=1180,height=860');
+    // Nowy półprodukt [201] : okno modalne z krótkim formularzem (nazwa, grupa, surowce) — zapis AJAX, półprodukt od razu wybrany.
+    const semiModalEl = document.getElementById('pwSemiModal');
+    // Bootstrap tej wersji nie ma getOrCreateInstance.
+    const modalOf = (el) => typeof bootstrap === 'undefined' ? null : (bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el));
+    const semiModal = modalOf(semiModalEl);
+    const semiForm = document.getElementById('pwSemiForm');
+    const semiHint = document.getElementById('pwSemiHint');
+    const semiMatSel = document.getElementById('pwSemiMat');
+    const semiMatChoices = choices(semiMatSel, materialHtml, 'Wybierz surowiec…');
+    const semiDraft = { lines: [], cost: null };
+    document.getElementById('pwSemiGroup').innerHTML = '<option value="">— nie ustawiono —</option>' + GROUPS.map((g) => '<option value="' + g.id + '">' + esc(g.name_pl) + '</option>').join('');
+    const setSemiHint = (t, err) => { semiHint.textContent = t || ''; semiHint.classList.toggle('is-error', !!err); };
+    semiMatSel.addEventListener('change', () => {
+        const m = MATERIALS.find((x) => +x.id === +semiMatSel.value);
+        semiModalEl.querySelector('[data-unit="semi-mat"]').textContent = m ? '(' + m.unit_name + ')' : '';
     });
-    window.addEventListener('message', (e) => {
-        if (e.origin !== window.location.origin || !e.data || e.data.type !== 'semi-created') return;
-        const s = e.data.semi;
-        if (!SEMI.some((x) => +x.id === +s.id)) SEMI.push(s);
-        const label = s.name + ' (' + s.unit_name + ')';
-        if (semiChoices) semiChoices.setChoices([{ value: String(s.id), label: label, selected: true }], 'value', 'label', false);
-        else { semiSel.insertAdjacentHTML('beforeend', '<option value="' + s.id + '">' + esc(label) + '</option>'); semiSel.value = String(s.id); }
+    document.getElementById('pwNewSemi').addEventListener('click', () => {
+        semiForm.reset();
+        semiDraft.lines = [];
+        semiDraft.cost = null;
+        if (semiMatChoices) semiMatChoices.setChoiceByValue('');
+        document.getElementById('pwSemiName').classList.remove('is-invalid');
+        setSemiHint('');
+        renderSemiLines();
+        if (semiModal) semiModal.show(); else semiModalEl.hidden = false;
+        setTimeout(() => document.getElementById('pwSemiName').focus(), 200);
+    });
+    document.getElementById('pwSemiMatAdd').addEventListener('click', () => {
+        const q = document.getElementById('pwSemiMatQty');
+        const m = MATERIALS.find((x) => +x.id === +semiMatSel.value);
+        if (!m) { setSemiHint('Wybierz surowiec.', true); return; }
+        if (!/^[1-9]\d*$/.test(String(q.value).trim())) { setSemiHint('Podaj ilość — liczbę całkowitą większą od zera.', true); return; }
+        if (semiDraft.lines.some((l) => +l.id === +m.id)) { setSemiHint('„' + m.name + '” jest już na liście.', true); return; }
+        semiDraft.lines.push({ id: +m.id, name: m.name, unit: m.unit_name, quantity: +q.value });
+        q.value = '';
+        if (semiMatChoices) semiMatChoices.setChoiceByValue(''); else semiMatSel.value = '';
+        semiModalEl.querySelector('[data-unit="semi-mat"]').textContent = '';
+        setSemiHint('');
+        renderSemiLines();
+        semiCost();
+    });
+    function renderSemiLines() {
+        const el = document.getElementById('pwSemiLines');
+        if (!semiDraft.lines.length) { el.innerHTML = '<p class="at-empty mb-0">Brak składników — dodaj surowce powyżej.</p>'; return; }
+        const price = (l) => { const c = semiDraft.cost && semiDraft.cost.lines.find((x) => +x.id === +l.id); return c ? zl(c.price) : '…'; };
+        el.innerHTML = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Surowiec</th><th class="text-end" style="width:150px">Ilość</th><th class="text-end">Koszt</th><th></th></tr></thead><tbody>' +
+            semiDraft.lines.map((l, i) => '<tr><td>' + esc(l.name) + '</td><td class="text-end">' + esc(l.quantity) + ' ' + esc(l.unit) + '</td><td class="text-end">' + price(l) + '</td>' +
+                '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-dark" data-semi-remove="' + i + '" aria-label="Usuń: ' + esc(l.name) + '"><i class="bi bi-x"></i></button></td></tr>').join('') +
+            '</tbody><tfoot><tr><td colspan="2"><strong>Razem · 1 szt. półproduktu</strong></td><td class="text-end"><strong>' + (semiDraft.cost ? zl(semiDraft.cost.total) : '…') + '</strong></td><td></td></tr></tfoot></table></div>';
+    }
+    document.getElementById('pwSemiLines').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-semi-remove]');
+        if (!b) return;
+        semiDraft.lines.splice(+b.dataset.semiRemove, 1);
+        renderSemiLines();
+        semiCost();
+    });
+    async function semiCost() {
+        if (!semiDraft.lines.length) { semiDraft.cost = null; return; }
+        const res = await api('/ajax/recipes/draft-cost', { method: 'POST', data: { materials: semiDraft.lines.map((l) => ({ id: l.id, quantity: l.quantity })), semi_products: [] } });
+        if (res.ok) { semiDraft.cost = res.data; renderSemiLines(); }
+    }
+    semiForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('pwSemiName');
+        name.classList.toggle('is-invalid', !name.value.trim());
+        if (!name.value.trim()) { setSemiHint('Wprowadź nazwę.', true); name.focus(); return; }
+        if (!semiDraft.lines.length) { setSemiHint('Dodaj co najmniej jeden surowiec.', true); return; }
+        const btn = document.getElementById('pwSemiSave');
+        btn.disabled = true;
+        setSemiHint('Zapisywanie…');
+        const res = await api('/ajax/semi-products/quick', { method: 'POST', data: { name: name.value.trim(), group_id: document.getElementById('pwSemiGroup').value || null,
+            materials: semiDraft.lines.map((l) => ({ id: l.id, quantity: l.quantity })) } });
+        btn.disabled = false;
+        if (!res.ok || !res.data || !res.data.id) { setSemiHint(res.message || 'Nie udało się zapisać półproduktu.', true); return; }
+        const sp = res.data;
+        if (!SEMI.some((x) => +x.id === +sp.id)) SEMI.push(sp);
+        if (sp.group_id) PRODUCERS[sp.id] = +sp.group_id;
+        const label = sp.name + ' (' + sp.unit_name + ')';
+        if (semiChoices) semiChoices.setChoices([{ value: String(sp.id), label: label, selected: true }], 'value', 'label', false);
+        else { semiSel.insertAdjacentHTML('beforeend', '<option value="' + sp.id + '">' + esc(label) + '</option>'); semiSel.value = String(sp.id); }
         semiSel.dispatchEvent(new Event('change'));
-        setHint('Półprodukt « ' + s.name + ' » utworzony — podaj ilość i kliknij « Dodaj ».');
+        if (semiModal) semiModal.hide();
+        setHint('Półprodukt « ' + sp.name + ' » utworzony — podaj ilość na karton i kliknij « Dodaj ».');
         document.getElementById('pwSemiQty').focus();
     });
 
@@ -337,6 +480,10 @@ document.addEventListener('DOMContentLoaded', function () {
     nextBtn.addEventListener('click', async () => {
         if (state.step < LAST) {
             if (!checkStep(state.step)) return;
+            if (state.step === 2 && state.cardPending) applyCard();
+            // Podsumowanie z aktualnym kosztem (ostatnia zmiana receptury mogła jeszcze nie być policzona).
+            if (state.step === 4 && costTimer) { clearTimeout(costTimer); costTimer = null; await loadCost(true); }
+            else if (state.step === 4 && costBusy) { await costBusy; await new Promise((r) => setTimeout(r, 0)); }
             if (state.step === 4) renderSummary();
             show(state.step + 1);
             return;
@@ -351,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const f = e.target.dataset && e.target.dataset.field;
         if (f && e.target.classList.contains('is-invalid')) markError(f, '');
         if (['ppb', 'bpc', 'ppc', 'cpl', 'lpp', 'cpp'].includes(f)) packagingHints();
-        if (f === 'ppc') renderLines();
+        if (f === 'ppc') { renderPer(); renderLines(); }
     });
 
     // Podpowiedzi spójności (nie blokują): ppc = ppb × bpc, cpp = cpl × lpp.
@@ -359,11 +506,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const n = (f) => parseInt(val(f), 10) || 0;
         const pair = (target, a, b, label) => {
             const el = box.querySelector('[data-hint="' + target + '"]');
-            if (!n(a) || !n(b)) { el.textContent = ''; el.className = 'at-run-msg'; return; }
+            if (!n(a) || !n(b)) { el.textContent = el.dataset.default || ''; el.className = 'at-run-msg'; return; }
             const product = n(a) * n(b);
             const ok = !n(target) || n(target) === product;
-            el.textContent = label + ': ' + n(a) + ' × ' + n(b) + ' = ' + product + (ok ? '' : ' — różni się od wpisanej wartości');
-            el.className = 'at-run-msg' + (ok ? '' : ' text-warning');
+            el.textContent = (ok ? '✓ ' : '') + label + ': ' + n(a) + ' × ' + n(b) + ' = ' + product + (ok ? '' : ' — różni się od wpisanej wartości (' + n(target) + ')');
+            el.className = 'at-run-msg' + (ok ? ' text-success' : ' text-warning');
         };
         pair('ppc', 'ppb', 'bpc', 'Wg opakowań');
         pair('cpp', 'cpl', 'lpp', 'Wg warstw');
@@ -401,15 +548,49 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    const ppcNow = () => parseInt(val('ppc'), 10) || 0;
+    // Mnożnik do kartonu : 1 (ilości na karton) albo sztuk w kartonie (ilości na 1 szt.).
+    const factor = () => state.per === 'piece' ? Math.max(1, ppcNow()) : 1;
+
+    function renderPer() {
+        const ppc = ppcNow();
+        box.querySelector('[data-ppc-label]').textContent = ppc || '…';
+        box.querySelector('[data-ppc-times]').textContent = ppc ? '(× ' + ppc + ' przy zapisie)' : '';
+        box.querySelectorAll('[data-per]').forEach((b) => {
+            const on = b.dataset.per === state.per;
+            b.classList.toggle('is-on', on);
+            b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+    }
+    box.querySelectorAll('[data-per]').forEach((b) => b.addEventListener('click', () => {
+        if (state.per === b.dataset.per) return;
+        state.per = b.dataset.per;
+        renderPer();
+        renderLines();
+        const ppc = ppcNow();
+        setHint(state.per === 'piece'
+            ? 'Ilości liczone na 1 sztukę — przy zapisie × ' + (ppc || '?') + ' (receptura zapisana na 1 karton).'
+            : 'Ilości liczone na 1 karton (cały produkt sprzedawany).');
+    }));
+
+    // Stopka : koszt surowców na karton (to zapisze się w kalkulacji i w marżach) + sztuka informacyjnie.
+    function footHtml() {
+        const ppc = ppcNow();
+        const total = state.cost ? state.cost.total : null;
+        const carton = total === null ? null : total * factor();
+        const piece = carton === null || !ppc ? null : carton / ppc;
+        return '<tr><td colspan="3"><strong>Koszt surowców / karton</strong><span class="at-run-msg">cały produkt sprzedawany' + (state.per === 'piece' && ppc ? ' : 1 szt. × ' + ppc : '') + '</span></td>' +
+            '<td class="text-end"><strong data-total>' + (carton === null ? '…' : zl(carton)) + '</strong><span class="at-run-msg" data-piece>' + (ppc ? 'na 1 szt. ' + (piece === null ? '…' : zl(piece)) : '') + '</span></td><td></td></tr>';
+    }
+
     function renderLines() {
         const el = document.getElementById('pwLines');
         if (!state.lines.length) {
             el.innerHTML = '<p class="at-empty">Receptura jest pusta. Dodaj surowce lub półprodukty powyżej.</p>';
             return;
         }
-        const ppc = parseInt(val('ppc'), 10) || 0;
-        const total = state.cost ? state.cost.total : null;
-        el.innerHTML = '<div class="table-responsive"><table class="table"><thead><tr><th>Składnik</th><th>Rodzaj</th><th style="width:150px">Ilość</th><th class="text-end">Koszt</th><th></th></tr></thead><tbody>' +
+        const per = state.per === 'piece' ? 'szt.' : 'karton';
+        el.innerHTML = '<div class="table-responsive"><table class="table"><thead><tr><th>Składnik</th><th>Rodzaj</th><th style="width:150px">Ilość / ' + per + '</th><th class="text-end">Koszt / ' + per + '</th><th></th></tr></thead><tbody>' +
             state.lines.map((l, i) => '<tr>' +
                 '<td>' + esc(l.name) + '</td>' +
                 '<td><span class="at-pill ' + (l.type === 'material' ? '' : 'at-pill-warn') + '">' + (l.type === 'material' ? 'surowiec' : 'półprodukt') + '</span>' + (l.type === 'material' ? '' : producerSelect(l)) + '</td>' +
@@ -417,8 +598,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td class="text-end">' + (l.price === null ? '<span class="text-muted">…</span>' : zl(l.price)) + '</td>' +
                 '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-dark" data-remove="' + i + '" aria-label="Usuń: ' + esc(l.name) + '"><i class="bi bi-x"></i></button></td>' +
                 '</tr>').join('') +
-            '</tbody><tfoot><tr><td colspan="3"><strong>Koszt surowców (szkic)</strong>' + (ppc ? '<span class="at-run-msg">na karton (' + ppc + ' szt.): ' + (total === null ? '…' : zl(total * ppc)) + '</span>' : '') + '</td>' +
-            '<td class="text-end"><strong>' + (total === null ? '…' : zl(total)) + '</strong><span class="at-run-msg">na 1 szt.</span></td><td></td></tr></tfoot></table></div>';
+            '</tbody><tfoot>' + footHtml() + '</tfoot></table></div>';
     }
 
     // Półprodukt : grupa, która go robi — zapis od razu (dla wszystkich produktów z tym półproduktem ; tablet zamawia u niej).
@@ -453,7 +633,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function scheduleCost(keepInputs) {
         clearTimeout(costTimer);
-        costTimer = setTimeout(() => loadCost(keepInputs), 300);
+        costTimer = setTimeout(() => { costTimer = null; loadCost(keepInputs); }, 300);
     }
 
     async function loadCost(keepInputs) {
@@ -462,8 +642,10 @@ document.addEventListener('DOMContentLoaded', function () {
             materials: state.lines.filter((l) => l.type === 'material').map((l) => ({ id: l.id, quantity: l.quantity })),
             semi_products: state.lines.filter((l) => l.type === 'semi_product').map((l) => ({ id: l.id, quantity: l.quantity }))
         };
-        const res = await api('/ajax/recipes/draft-cost', { method: 'POST', data: payload });
+        costBusy = api('/ajax/recipes/draft-cost', { method: 'POST', data: payload });
+        const res = await costBusy;
         if (seq !== costSeq) return;   // starsza odpowiedź
+        costBusy = null;
         if (!res.ok) { setHint('Nie udało się policzyć kosztu.', true); return; }
         state.cost = res.data;
         state.lines.forEach((l) => {
@@ -475,12 +657,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const rows = document.querySelectorAll('#pwLines tbody tr');
             state.lines.forEach((l, i) => { if (rows[i]) rows[i].cells[3].textContent = zl(l.price); });
             const foot = document.querySelector('#pwLines tfoot');
-            if (foot) {
-                const ppc = parseInt(val('ppc'), 10) || 0;
-                foot.querySelector('td.text-end strong').textContent = zl(state.cost.total);
-                const perCarton = foot.querySelector('td .at-run-msg');
-                if (perCarton && ppc) perCarton.textContent = 'na karton (' + ppc + ' szt.): ' + zl(state.cost.total * ppc);
-            }
+            if (foot) foot.innerHTML = footHtml();
         } else {
             renderLines();
         }
@@ -525,8 +702,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function optionText(name) { const s = field(name); return s.selectedOptions[0] ? s.selectedOptions[0].textContent.trim() : ''; }
 
     function renderSummary() {
-        const ppc = parseInt(val('ppc'), 10) || 0;
-        const total = state.cost ? state.cost.total : 0;
+        const ppc = ppcNow();
+        const k = factor();
+        const total = (state.cost ? state.cost.total : 0) * k;
         const row = (label, value) => '<tr><th style="width:45%">' + esc(label) + '</th><td>' + value + '</td></tr>';
         document.getElementById('pwSummary').innerHTML = '<div class="row g-3">' +
             '<div class="col-12 col-lg-6"><table class="table table-sm"><tbody>' +
@@ -540,9 +718,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 row('Opakowanie', esc(val('ppb')) + ' szt. × ' + esc(val('bpc')) + ' opak. · ' + esc(val('ppc')) + ' szt./karton') +
                 row('Paleta', esc(val('cpl')) + ' kart./warstwa × ' + esc(val('lpp')) + ' warstw · ' + esc(val('cpp')) + ' kart./paleta') +
             '</tbody></table></div>' +
-            '<div class="col-12 col-lg-6"><table class="table table-sm"><thead><tr><th>Składnik</th><th class="text-end">Ilość</th><th class="text-end">Koszt</th></tr></thead><tbody>' +
-                state.lines.map((l) => '<tr><td>' + esc(l.name) + '</td><td class="text-end">' + esc(l.quantity) + ' ' + esc(l.unit) + '</td><td class="text-end">' + zl(l.price) + '</td></tr>').join('') +
-            '</tbody><tfoot><tr><td><strong>Koszt surowców</strong></td><td></td><td class="text-end"><strong>' + zl(total) + '</strong><span class="at-run-msg">' + (ppc ? zl(total * ppc) + ' / karton' : '') + '</span></td></tr></tfoot></table>' +
+            '<div class="col-12 col-lg-6"><p class="mb-1"><strong>Receptura na 1 karton</strong> (cały produkt sprzedawany' + (ppc ? ' : ' + ppc + ' szt.' : '') + ')' +
+                (k > 1 ? ' — ilości wpisane na 1 szt. × ' + k : '') + '</p>' +
+            '<table class="table table-sm"><thead><tr><th>Składnik</th><th class="text-end">Ilość / karton</th><th class="text-end">Koszt / karton</th></tr></thead><tbody>' +
+                state.lines.map((l) => '<tr><td>' + esc(l.name) + '</td><td class="text-end">' + esc(+l.quantity * k) + ' ' + esc(l.unit) + '</td><td class="text-end">' + zl((l.price || 0) * k) + '</td></tr>').join('') +
+            '</tbody><tfoot><tr><td><strong>Koszt surowców / karton</strong></td><td></td><td class="text-end"><strong>' + zl(total) + '</strong><span class="at-run-msg">' + (ppc ? 'na 1 szt. ' + zl(total / ppc) : '') + '</span></td></tr></tfoot></table>' +
             '<p class="mb-1"><strong>Czynności:</strong> ' + (state.preps.length ? state.preps.map((p) => esc(p.name) + ' (' + fmtTime(Math.round(p.minutes * 60)) + ')').join(', ') : '<span class="text-muted">brak</span>') + '</p>' +
             '</div></div>';
     }
@@ -555,12 +735,13 @@ document.addEventListener('DOMContentLoaded', function () {
         setHint('Zapisywanie…');
         const product = { label_type: val('label_type') };
         ['name', 'id_category', 'id_section'].concat(NUMERIC).forEach((f) => { product[f] = val(f); });
+        const k = factor();   // receptura zapisana na 1 karton
         const res = await api('/ajax/products/with-recipe', {
             method: 'POST',
             data: {
                 product: product,
-                materials: state.lines.filter((l) => l.type === 'material').map((l) => ({ id: l.id, quantity: l.quantity })),
-                semi_products: state.lines.filter((l) => l.type === 'semi_product').map((l) => ({ id: l.id, quantity: l.quantity })),
+                materials: state.lines.filter((l) => l.type === 'material').map((l) => ({ id: l.id, quantity: +l.quantity * k })),
+                semi_products: state.lines.filter((l) => l.type === 'semi_product').map((l) => ({ id: l.id, quantity: +l.quantity * k })),
                 preparations: state.preps.map((p) => ({ id: p.id, duration_second: Math.round(p.minutes * 60) })),
                 from_test: FROM_TEST ? FROM_TEST.test_id : null
             }
@@ -581,6 +762,28 @@ document.addEventListener('DOMContentLoaded', function () {
         setHint(res.message || 'Nie udało się zapisać (kod ' + res.status + '). Nic nie zostało zapisane.', true);
     }
 
+    // Składniki karty technologicznej (test bez receptury) : ilości partii karty (yield_pcs szt.) → 1 karton (sztuk w kartonie).
+    function applyCard() {
+        const c = state.cardPending;
+        state.cardPending = null;
+        const ppc = ppcNow();
+        const y = +c.yield_pcs || 0;
+        const k = y && ppc ? ppc / y : 1;
+        const skipped = (c.skipped || []).slice();
+        [['material', c.materials || [], MATERIALS], ['semi_product', c.semi_products || [], SEMI]].forEach(([type, rows, list]) => rows.forEach((r) => {
+            const item = list.find((x) => +x.id === +r.id);
+            if (!item) { skipped.push(r.name || '#' + r.id); return; }
+            if (state.lines.some((l) => l.type === type && +l.id === +r.id)) return;
+            state.lines.push({ type, id: +r.id, name: item.name, unit: item.unit_name, quantity: Math.max(1, Math.round(+r.quantity * k)), price: null });
+        }));
+        state.per = 'carton';
+        renderPer();
+        renderLines();
+        scheduleCost();
+        setTimeout(() => setHint('Składniki z karty « ' + c.name + ' » : ' + (y && ppc ? 'partia karty (' + y + ' szt.) przeliczona na 1 karton (' + ppc + ' szt.)' : 'ilości całej partii karty (wydajność nieznana) — sprawdź, czy to 1 karton') +
+            (skipped.length ? '. Bez przypisania, pominięte : ' + skipped.join(', ') : '') + '.'), 350);
+    }
+
     // « Wprowadź » z produktu testowego : pola i receptura testu (bez ponownego wpisywania).
     const FROM_TEST = JSON.parse(box.dataset.fromTest || 'null');
     if (FROM_TEST) {
@@ -598,8 +801,56 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
         if (state.lines.length) scheduleCost();
+        if (FROM_TEST.card) state.cardPending = FROM_TEST.card;
     }
 
+    /* --- Receptury « na 1 sztukę » do sprawdzenia [201] -------------------------------- */
+    const notify = (ok, m) => (typeof showSnack === 'function' ? showSnack(ok, m, m) : window.alert(m));
+    const checkBox = document.getElementById('pwCheck');
+    const checkModalEl = document.getElementById('pwCheckModal');
+    let checkRows = [];
+    function renderCheck() {
+        checkBox.hidden = !checkRows.length;
+        if (!checkRows.length) return;
+        const n = checkRows.length;
+        checkBox.innerHTML = '<i class="bi bi-exclamation-triangle"></i><div><strong>' + n + (n === 1 ? ' produkt' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? ' produkty' : ' produktów')) +
+            ' : receptura może być na 1 sztukę zamiast na 1 karton</strong> — koszt kartonu w marżach za niski. ' +
+            '<button type="button" class="btn btn-sm btn-outline-dark ms-1" data-check-open>Sprawdź</button></div>';
+        document.getElementById('pwCheckBody').innerHTML = '<div class="table-responsive"><table class="table pw-check-table"><thead><tr><th>Produkt</th><th>Dlaczego</th>' +
+            '<th class="text-end">Koszt / karton teraz</th><th class="text-end">Po × szt.</th><th></th></tr></thead><tbody>' +
+            checkRows.map((r) => '<tr data-check-row="' + r.id + '"><td><a href="{{ root }}/recipes/' + r.id_recipe + '/calculation" target="_blank" rel="noopener">' + esc(r.name) + '</a>' +
+                '<span class="at-run-msg">#' + r.id + ' · ' + r.ppc + ' szt. w kartonie · ' + esc(String(r.created).slice(0, 10)) + '</span></td>' +
+                '<td>' + esc(r.reason) + (r.blocked ? '<span class="at-run-msg text-warning">' + esc(r.blocked) + '</span>' : '') + '</td>' +
+                '<td class="text-end">' + zl(r.cost) + '</td><td class="text-end"><strong>' + zl(r.cost_scaled) + '</strong></td>' +
+                '<td class="text-end text-nowrap"><button type="button" class="btn btn-sm btn-primary" data-check="scale" data-id="' + r.id + '"' + (r.blocked ? ' disabled title="' + esc(r.blocked) + '"' : '') + '>× ' + r.ppc + ' (na karton)</button> ' +
+                '<button type="button" class="btn btn-sm btn-outline-dark" data-check="keep" data-id="' + r.id + '">Już na karton</button></td></tr>').join('') +
+            '</tbody></table></div>';
+    }
+    checkBox.addEventListener('click', (e) => {
+        if (!e.target.closest('[data-check-open]')) return;
+        const m = modalOf(checkModalEl); if (m) m.show();
+    });
+    checkModalEl.addEventListener('click', async (e) => {
+        const b = e.target.closest('[data-check]');
+        if (!b || b.disabled) return;
+        const row = checkRows.find((r) => +r.id === +b.dataset.id);
+        if (!row) return;
+        if (b.dataset.check === 'scale' && !confirm('Pomnożyć ilości receptury « ' + row.name + ' » × ' + row.ppc + ' (1 karton) ? Koszt kartonu : ' + zl(row.cost) + ' → ok. ' + zl(row.cost_scaled) + '.')) return;
+        b.closest('tr').querySelectorAll('button').forEach((x) => { x.disabled = true; });
+        const res = await api('/ajax/products/' + row.id + '/recipe-check', { method: 'POST', data: { action: b.dataset.check } });
+        if (!res.ok) {
+            b.closest('tr').querySelectorAll('button').forEach((x) => { x.disabled = x.dataset.check === 'scale' && !!row.blocked; });
+            notify(false, res.message || 'Nie udało się zapisać.');
+            return;
+        }
+        checkRows = checkRows.filter((r) => +r.id !== +row.id);
+        renderCheck();
+        notify(true, (res.message || 'Zapisano.') + (res.data && res.data.decision === 'scaled' ? ' Koszt / karton : ' + zl(res.data.cost_after) + '.' : ''));
+        if (!checkRows.length && modalOf(checkModalEl)) modalOf(checkModalEl).hide();
+    });
+    api('/ajax/products/recipe-check').then((res) => { if (res.ok && Array.isArray(res.data)) { checkRows = res.data; renderCheck(); } });
+
+    renderPer();
     renderLines();
     renderPreps();
     show(1);
