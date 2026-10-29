@@ -14,7 +14,8 @@ declare(strict_types=1);
  *  - « code »    : un code pour tous (campagne SHARED, `shared_code`), saisi ou généré, un nombre d'utilisations au plus ;
  *  - « uniques » : N codes d'une utilisation chacun (campagne UNIQUE, codes/generate) ;
  *  - « clients » : un code personnel par client du magasin (campagne UNIQUE, requires_customer, un code par client avec
- *                  son id_customer, une utilisation) — les clients se lisent au panel (GET /shops/{id}/clients).
+ *                  son id_customer, une utilisation) — les clients se lisent au panel (GET /shops/{id}/clients), à
+ *                  choisir parmi les comptes B2B du magasin ou ses particuliers (29/10/2026, `?type=b2b|b2c`).
  *
  * L'ordre d'écriture, appris par l'essai du 24/10/2026 (dépôt WebShop, VOUCHERS_ERP.md §2) :
  *   1. la promotion écrite INACTIVE et relue (pmPanelEnvoyer sans activer) ;
@@ -157,9 +158,10 @@ function pbCibleDe(array $camp): string
 /**
  * Le bon d'une promotion, relu au panel, pour l'assistant et la liste : {campagne, nom, statut, actif, cible, code,
  * limite, codes: [{id, code, statut, client, nomClient, usages, limite}], nCodes, nActifs, utilisations, complete,
- * manque}. `$noms` : {id client → nom}, pour nommer les codes des clients. Null : la campagne ne se lit pas.
+ * manque}. `$clients` : {id client → client du magasin (pbClientCourt)}, pour nommer les codes des clients et dire
+ * lesquels sont B2B. Null : la campagne ne se lit pas.
  */
-function pbLire(int $campId, array $noms = []): ?array
+function pbLire(int $campId, array $clients = []): ?array
 {
     $f = pbFiche($campId);
     if ($f === null) { return null; }
@@ -170,7 +172,8 @@ function pbLire(int $campId, array $noms = []): ?array
         foreach (pbCodes($campId) as $k) {
             $cl = (int) ($k['id_customer'] ?? 0);
             $codes[] = ['id' => (int) ($k['id'] ?? 0), 'code' => (string) ($k['code'] ?? ''), 'statut' => strtoupper((string) ($k['status'] ?? '')),
-                'client' => $cl > 0 ? $cl : null, 'nomClient' => $cl > 0 ? ($noms[$cl] ?? null) : null,
+                'client' => $cl > 0 ? $cl : null, 'nomClient' => $cl > 0 ? ($clients[$cl]['nom'] ?? null) : null,
+                'b2bClient' => $cl > 0 && isset($clients[$cl]) ? (bool) $clients[$cl]['b2b'] : null,
                 'usages' => (int) ($k['usage_count'] ?? 0), 'limite' => isset($k['usage_limit']) ? (int) $k['usage_limit'] : null];
         }
     }
@@ -344,28 +347,34 @@ function pbEnvoyer(array $d, ?int $panelId, bool $envoi, ?int $campAvant): array
 
 /* --- les clients du magasin -------------------------------------------------------------------------------- */
 
-/** Les clients du magasin au panel (500 par page, 2 000 au plus), gardés le temps de la requête. */
-function pbClientsDuMagasin(int $shop): ?array
+/**
+ * Les deux sortes de clients qu'un bon peut viser (29/10/2026, Sam : « choisir un client B2B ou un client normal
+ * (rattaché au magasin) »). Le panel les sépare lui-même : `GET /shops/{id}/clients?type=b2b` rend les comptes B2B du
+ * magasin, toute autre valeur de `type` (ici `b2c`) ses particuliers — lu par la sonde du 29/10/2026
+ * (tools/sonde_clients_bon.php : au magasin 2, 706 B2B et 7 935 particuliers).
+ */
+const PB_TYPES = ['b2b' => 'b2b', 'particulier' => 'b2c'];
+/** Une page du panel : `limit` n'est tenu qu'avec `offset` (sans lui, tout vient d'un coup, 10 Mo au magasin 2). */
+const PB_PAGE_CLIENTS = 500;
+/** 80 pages au plus (40 000 clients) : une boucle sans fin si le panel ignorait `offset`. */
+const PB_PAGES_MAX = 80;
+/** La liste lue au panel se garde dix minutes : chercher lettre après lettre ne relit pas 16 pages à chaque frappe. */
+const PB_CLIENTS_TTL = 600;
+
+/** Le type demandé (« b2b », « particulier ») ; tout le reste : les deux. */
+function pbType($v): ?string
 {
-    static $garde = [];
-    if (isset($garde[$shop])) { return $garde[$shop]; }
-    if (!class_exists('ErpApi') || !ErpApi::disponible()) { return null; }
-    $out = [];
-    for ($off = 0; $off < 2000; $off += 500) {
-        $r = ErpApi::sondeGet('/shops/' . $shop . '/clients?limit=500&offset=' . $off);
-        if ($r['code'] < 200 || $r['code'] >= 300) { if ($off === 0) { return null; } break; }
-        $l = pbItems($r['corps']);
-        foreach ($l as $c) { if (is_array($c) && (int) ($c['id'] ?? 0) > 0) { $out[(int) $c['id']] = $c; } }
-        if (count($l) < 500) { break; }
-    }
-    return $garde[$shop] = $out;
+    $v = strtolower(trim((string) $v));
+    return isset(PB_TYPES[$v]) ? $v : null;
 }
 
-/** Le nom d'un client du panel : prénom et nom, sinon la société, sinon son numéro. */
+/** Le nom d'un client du panel : la société d'un B2B, sinon prénom et nom, sinon la société, sinon son numéro. */
 function pbNomClient(array $c): string
 {
+    $soc = trim((string) ($c['company_name'] ?? ''));
+    if (!empty($c['is_b2b']) && $soc !== '') { return $soc; }
     $n = trim(trim((string) ($c['name'] ?? '')) . ' ' . trim((string) ($c['surname'] ?? '')));
-    return $n !== '' ? $n : (trim((string) ($c['company_name'] ?? '')) ?: 'client n° ' . (int) ($c['id'] ?? 0));
+    return $n !== '' ? $n : ($soc ?: 'client n° ' . (int) ($c['id'] ?? 0));
 }
 
 /** Un e-mail montré à moitié (« j…@exemple.be »), pour distinguer deux homonymes sans l'exposer. */
@@ -377,28 +386,127 @@ function pbMasquer(?string $mail, ?string $tel): ?string
 }
 
 /**
- * GET /exploitation/promos-magasin/clients?shop=4&q=dup — les clients du magasin, lus au panel, pour le bon : nom,
- * société, ville, B2B, un contact masqué. 30 au plus ; deux lettres au moins pour chercher.
+ * Un client du panel réduit à ce que le bon montre et cherche : {id, nom, soc, personne, tva, ville, b2b, ailleurs,
+ * contact, r}. `soc` : la société d'un particulier qui en porte une ; `personne` : la personne derrière un B2B ;
+ * `ailleurs` : son magasin principal (`id_main_shop`) en est un autre ; `r` : le texte cherché (nom, société, e-mail,
+ * téléphone, ville, code postal, TVA, code client), en minuscules, avec les chiffres seuls du téléphone et de la TVA.
+ */
+function pbClientCourt(array $c, int $shop): array
+{
+    $b2b = !empty($c['is_b2b']);
+    $soc = trim((string) ($c['company_name'] ?? ''));
+    $pers = trim(trim((string) ($c['name'] ?? '')) . ' ' . trim((string) ($c['surname'] ?? '')));
+    $tva = trim((string) ($c['tax_number'] ?? ''));
+    $tel = (string) ($c['phone_e164'] ?? $c['phone'] ?? '');
+    $champs = [$c['name'] ?? '', $c['surname'] ?? '', $soc, $c['email'] ?? '', $c['phone'] ?? '', $c['city'] ?? '', $c['zip'] ?? '', $tva, $c['client_code'] ?? '',
+        preg_replace('/\D+/', '', $tel), preg_replace('/\D+/', '', $tva)];
+    $main = (int) ($c['id_main_shop'] ?? 0);
+    return ['id' => (int) $c['id'], 'nom' => pbNomClient($c), 'soc' => !$b2b && $soc !== '' ? $soc : null,
+        'personne' => $b2b && $soc !== '' && $pers !== '' ? $pers : null, 'tva' => $b2b && $tva !== '' ? $tva : null,
+        'ville' => trim((string) ($c['city'] ?? '')) ?: null, 'b2b' => $b2b, 'ailleurs' => $main > 0 && $main !== $shop,
+        'contact' => pbMasquer($c['email'] ?? null, $c['phone'] ?? null),
+        'r' => mb_strtolower(implode(' ', array_map(static fn ($v) => trim((string) $v), $champs)))];
+}
+
+/**
+ * Les clients d'un magasin d'un type (« b2b », « particulier »), lus au panel par pages de 500 (la première seule, puis
+ * quatre de front), réduits (pbClientCourt) et gardés dix minutes : [id => client]. Null : le panel ne répond pas. Un
+ * client fusionné dans un autre (`merged_into_id`), bloqué ou inactif ne reçoit pas de bon.
+ */
+function pbClientsDuType(int $shop, string $type): ?array
+{
+    static $garde = [];
+    $cle = 'pbClients:' . $shop . ':' . $type;
+    if (isset($garde[$cle])) { return $garde[$cle]; }
+    $c = function_exists('setting') ? setting($cle) : null;
+    if (is_array($c) && is_array($c['l'] ?? null) && (int) ($c['lu'] ?? 0) > time() - PB_CLIENTS_TTL) {
+        $out = [];
+        foreach ($c['l'] as $x) { if (is_array($x) && (int) ($x['id'] ?? 0) > 0) { $out[(int) $x['id']] = $x; } }
+        return $garde[$cle] = $out;
+    }
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { return null; }
+    $out = []; $partiel = false;
+    // La première page seule (les B2B d'un magasin tiennent souvent dans une), puis quatre de front.
+    for ($page = 0, $n = 1; $page < PB_PAGES_MAX; $page += $n, $n = 4) {
+        $ch = [];
+        for ($i = $page; $i < min($page + $n, PB_PAGES_MAX); $i++) {
+            $ch[$i] = '/shops/' . $shop . '/clients?type=' . PB_TYPES[$type] . '&limit=' . PB_PAGE_CLIENTS . '&offset=' . ($i * PB_PAGE_CLIENTS);
+        }
+        $fin = false;
+        foreach (ErpApi::getParallele($ch) as $i => $corps) {
+            // Une page refusée en route : la liste vaut pour cette fois, sans se garder (la suivante relira tout).
+            if ($corps === null) { if ($i === 0) { return null; } $fin = $partiel = true; break; }
+            $l = pbItems($corps);
+            foreach ($l as $x) {
+                if (!is_array($x) || (int) ($x['id'] ?? 0) <= 0 || !empty($x['merged_into_id']) || !empty($x['blocked']) || (isset($x['active']) && !$x['active'])) { continue; }
+                // Le panel trie ses B2B devant : un filtre `type` ignoré mêlerait les deux, on ne garde que le type demandé.
+                if (!empty($x['is_b2b']) !== ($type === 'b2b')) { continue; }
+                $out[(int) $x['id']] = pbClientCourt($x, $shop);
+            }
+            if (count($l) < PB_PAGE_CLIENTS) { $fin = true; break; }
+        }
+        if ($fin) { break; }
+    }
+    if (!$partiel) {
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['lu' => time(), 'l' => array_values($out)], JSON_UNESCAPED_UNICODE)]);
+        } catch (Throwable $e) { /* sans la garde, la recherche relira le panel : plus lente, toujours juste */ }
+    }
+    return $garde[$cle] = $out;
+}
+
+/** Les clients du magasin, B2B et particuliers : [id => client]. Null : ni l'un ni l'autre ne se lit au panel. */
+function pbClientsDuMagasin(int $shop): ?array
+{
+    $b = pbClientsDuType($shop, 'b2b');
+    $p = pbClientsDuType($shop, 'particulier');
+    return $b === null && $p === null ? null : ($b ?? []) + ($p ?? []);
+}
+
+/**
+ * Les textes cherchés : en minuscules ; un numéro (TVA, téléphone : « BE 0123.456 », « 0470 12 34 ») en chiffres seuls, et
+ * sans son zéro de tête — le panel garde les téléphones au format international (« +32470… »).
+ */
+function pbRecherches(string $q): array
+{
+    $q = mb_strtolower(trim($q));
+    // « BE 0477.472.701 » : le préfixe de pays d'une TVA tombe avec les points et les espaces.
+    if (preg_match('/^(?:[a-z]{2}\s*)?\+?[\d\s.\/-]{3,}$/', $q) !== 1 || preg_match_all('/\d/', $q) < 3) { return [$q]; }
+    $q = preg_replace('/\D+/', '', $q);
+    $sans = ltrim($q, '0');
+    return $sans !== $q && strlen($sans) >= 6 ? [$q, $sans] : [$q];
+}
+
+/**
+ * GET /exploitation/promos-magasin/clients?shop=4&type=b2b|particulier&q=dup — les clients du magasin, lus au panel,
+ * pour le bon : les comptes B2B (société, TVA, la personne) ou les particuliers rattachés au magasin (nom, ville),
+ * un contact masqué. 30 au plus, triés par nom ; deux lettres au moins pour chercher — sauf les B2B, qui se
+ * parcourent sans texte. Sans `type` : les deux (la forme d'avant le 29/10/2026).
  */
 function ep_promos_magasin_clients(): array
 {
     $shop = (int) ($_GET['shop'] ?? 0);
     if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
-    $q = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
-    $tous = pbClientsDuMagasin($shop);
-    if ($tous === null) { http_response_code(502); return ['error' => 'clients du magasin illisibles au panel' . (ErpApi::$lastError ? ' : ' . ErpApi::$lastError : '')]; }
+    $type = pbType($_GET['type'] ?? '');
+    $qs = pbRecherches((string) ($_GET['q'] ?? ''));
+    $q = $qs[0];
+    $listes = [];
+    foreach ($type !== null ? [$type] : array_keys(PB_TYPES) as $t) { $listes[$t] = pbClientsDuType($shop, $t); }
+    if (!array_filter($listes, static fn ($l) => $l !== null)) {
+        http_response_code(502); return ['error' => 'clients du magasin illisibles au panel' . (ErpApi::$lastError ? ' : ' . ErpApi::$lastError : '')];
+    }
+    $tous = [];
+    foreach ($listes as $l) { $tous += $l ?? []; }
     $l = [];
-    if (mb_strlen($q) >= 2) {
+    if (mb_strlen($q) >= 2 || ($type === 'b2b' && $q === '')) {
         foreach ($tous as $c) {
-            $tx = mb_strtolower(implode(' ', array_map('strval', [$c['name'] ?? '', $c['surname'] ?? '', $c['company_name'] ?? '', $c['email'] ?? '', $c['phone'] ?? '', $c['city'] ?? ''])));
-            if (!str_contains($tx, $q)) { continue; }
-            $l[] = ['id' => (int) $c['id'], 'nom' => pbNomClient($c), 'soc' => trim((string) ($c['company_name'] ?? '')) ?: null, 'ville' => trim((string) ($c['city'] ?? '')) ?: null,
-                'b2b' => !empty($c['is_b2b']), 'contact' => pbMasquer($c['email'] ?? null, $c['phone'] ?? null)];
-            if (count($l) >= 30) { break; }
+            if ($q !== '' && !array_filter($qs, static fn ($x) => str_contains((string) $c['r'], $x))) { continue; }
+            $l[] = array_diff_key($c, ['r' => 1]);
         }
         usort($l, static fn ($a, $b) => strcmp(mb_strtolower($a['nom']), mb_strtolower($b['nom'])));
     }
-    return ['shop' => (string) $shop, 'total' => count($tous), 'clients' => $l];
+    return ['shop' => (string) $shop, 'type' => $type, 'total' => count($tous), 'trouves' => count($l), 'clients' => array_slice($l, 0, 30),
+        'nB2b' => isset($listes['b2b']) ? count($listes['b2b']) : null, 'nParticuliers' => isset($listes['particulier']) ? count($listes['particulier']) : null];
 }
 
 /* --- le bon d'une promotion, relu et basculé depuis la liste ---------------------------------------------------- */
@@ -425,9 +533,7 @@ function ep_promos_magasin_bon(): array
     $shop = (int) ($_GET['shop'] ?? 0);
     [, $camp, $code, $err] = pbDuMagasin($shop, $_GET['id'] ?? '');
     if ($err !== null) { http_response_code($code); return ['error' => $err]; }
-    $noms = [];
-    foreach ((pbClientsDuMagasin($shop) ?? []) as $cid => $c) { $noms[$cid] = pbNomClient($c); }
-    $b = pbLire($camp, $noms);
+    $b = pbLire($camp, pbClientsDuMagasin($shop) ?? []);
     if ($b === null) { http_response_code(502); return ['error' => 'bon illisible au panel'];  }
     return ['ok' => true, 'bon' => $b];
 }
