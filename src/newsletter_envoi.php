@@ -76,7 +76,7 @@ function ensureNewsletterEnvoi(): void
         . 'shop_id VARCHAR(16) NULL,'
         . 'KEY k_camp (campagne_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    foreach (['headlines_json TEXT NULL', 'ctas_json TEXT NULL', 'image VARCHAR(40) NULL', 'started_at DATETIME NULL', 'finished_at DATETIME NULL', 'auto_dernier DATE NULL', 'campagne_id INT NULL'] as $col) {
+    foreach (['headlines_json TEXT NULL', 'ctas_json TEXT NULL', 'image VARCHAR(40) NULL', 'started_at DATETIME NULL', 'finished_at DATETIME NULL', 'auto_dernier DATE NULL', 'campagne_id INT NULL', 'lien VARCHAR(500) NULL'] as $col) {
         try { Db::exec('ALTER TABLE mar_nl_campagne ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
     }
     if ((string) setting('nlJeton', '') === '') {
@@ -245,13 +245,38 @@ function nlTexte(array $camp, string $champ, string $lang): string
     return (string) ($j[$lang] ?? $j['fr'] ?? reset($j) ?: '');
 }
 
+/**
+ * Le lien du bouton d'une campagne (29/10/2026) : l'adresse http(s) où mène le
+ * clic suivi (/c/{token}), par exemple le webshop ouvert sur le magasin, le
+ * code du bon déjà saisi :
+ *   https://webshop.atelierby.be/?shop=2&mode=collect&voucher=TUBIZE2
+ * {{code}} (ou {{code_promo}}) y devient le voucher du destinataire. Rend
+ * l'adresse nettoyée, '' sans lien (le lien commun `nlLienWebshop` s'applique),
+ * null si elle n'est pas valable.
+ */
+function nlLienValide(mixed $v): ?string
+{
+    $l = trim((string) $v);
+    if ($l === '') { return ''; }
+    if (mb_strlen($l) > 500 || !preg_match('#^https?://#i', $l)) { return null; }
+    return filter_var(nlLienCible($l, 'CODE1234'), FILTER_VALIDATE_URL) !== false ? $l : null;
+}
+
+/** L'adresse où mène le clic : {{code}} remplacé par le voucher du destinataire (vide sans voucher). */
+function nlLienCible(string $lien, ?string $voucher): string
+{
+    return str_replace(['{{code_promo}}', '{{code}}'], rawurlencode((string) $voucher), $lien);
+}
+
 /** Le HTML d'un mail : en-tête rubis, visuel, titre, corps, bouton, pied — styles en ligne, images en URL absolue. */
 function nlRendre(array $camp, string $lang, array $contact, ?string $voucher, ?string $token): string
 {
     $base = nlBase();
     $img = (string) ($camp['image'] ?? '');
     $exp = Db::row('SELECT * FROM mar_nl_magasin WHERE shop_id = ?', [$camp['sender_shop_id']]) ?: ['sender_name' => "L'Atelier By", 'sender_email' => '', 'nom' => ''];
-    $lien = $token ? $base . '/api/cockpit/marketing/newsletter/c/' . $token : $base;
+    // Un vrai envoi passe par le clic suivi, qui mène au lien de la campagne ; un test (sans jeton) y mène tout droit.
+    $propre = nlLienValide($camp['lien'] ?? '');
+    $lien = $token ? $base . '/api/cockpit/marketing/newsletter/c/' . $token : ($propre ? nlLienCible($propre, $voucher) : $base);
     $unsub = $token ? $base . '/api/cockpit/marketing/newsletter/u/' . $token : '#';
     $pixel = $token ? '<img src="' . htmlspecialchars($base . '/api/cockpit/marketing/newsletter/o/' . $token, ENT_QUOTES) . '" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0">' : '';
     $sub = function (string $t) use ($contact, $voucher, $lien, $base): string {
@@ -542,9 +567,12 @@ function nlSuivi(string $quoi, string $token): void
         $cible = rapBaseUrl();
         if ($e) {
             if ($e['clicked_at'] === null) { Db::exec('UPDATE mar_nl_envoi SET clicked_at = NOW(), opened_at = COALESCE(opened_at, NOW()) WHERE id = ?', [(int) $e['id']]); }
-            $camp = Db::row('SELECT sender_shop_id FROM mar_nl_campagne WHERE id = ?', [(int) $e['campagne_id']]);
+            // Le lien de la campagne (le code du destinataire mis à la place de {{code}}), sinon le lien commun.
+            $camp = Db::row('SELECT lien FROM mar_nl_campagne WHERE id = ?', [(int) $e['campagne_id']]);
+            $propre = nlLienValide($camp['lien'] ?? '');
             $lien = (string) setting('nlLienWebshop', '');
-            if ($lien !== '') { $cible = $lien; }
+            if ($propre) { $cible = nlLienCible($propre, $e['voucher']); }
+            elseif ($lien !== '') { $cible = $lien; }
         }
         header('Location: ' . ($cible !== '' ? $cible : '/'), true, 302);
         exit;
@@ -569,7 +597,8 @@ function nlEnvoyerTest(array $b, string $role): array
     $lang = in_array($b['lang'] ?? '', NL_LANGUES, true) ? $b['lang'] : 'fr';
     $camp = ['id' => 0, 'sender_shop_id' => mb_substr((string) ($b['sender'] ?? $role), 0, 16), 'template_id' => (string) ($b['templateId'] ?? 'blank'), 'image' => nlImage((string) ($b['templateId'] ?? '')),
         'subjects_json' => json_encode([$lang => (string) ($b['subject'] ?? '')], JSON_UNESCAPED_UNICODE), 'bodies_json' => json_encode([$lang => (string) ($b['body'] ?? '')], JSON_UNESCAPED_UNICODE),
-        'headlines_json' => json_encode([$lang => (string) ($b['headline'] ?? '')], JSON_UNESCAPED_UNICODE), 'ctas_json' => json_encode([$lang => (string) ($b['cta'] ?? '')], JSON_UNESCAPED_UNICODE), 'max_vouchers' => 0];
+        'headlines_json' => json_encode([$lang => (string) ($b['headline'] ?? '')], JSON_UNESCAPED_UNICODE), 'ctas_json' => json_encode([$lang => (string) ($b['cta'] ?? '')], JSON_UNESCAPED_UNICODE), 'max_vouchers' => 0,
+        'lien' => nlLienValide($b['lien'] ?? '') ?? ''];
     $contact = ['prenom' => 'Marie', 'email' => ''];
     $html = nlRendre($camp, $lang, $contact, !empty($b['voucher']) ? 'TEST1234' : null, null);
     $sujet = '[TEST] ' . str_replace(['{{prénom}}', '{{prenom}}'], 'Marie', (string) ($b['subject'] ?? ''));

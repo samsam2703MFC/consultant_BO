@@ -3030,8 +3030,20 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
 - Vue **marque** (`brand`) : tous les magasins, segments et campagnes. Vue **magasin** : ses segments (`shop` = lui ou `""`),
   ses campagnes (créées par lui ou parties de son adresse), son magasin seul dans `magasins`.
 - `magasins[].status` ∈ `verified` | `warmup` | `unverified` ; `canSend` : la marque autorise ou bloque l'envoi du franchisé.
-- `POST /newsletter/campagnes` `{ role, name, segment, langs[], templateId, channel, subjects{}, bodies{}, sms{}, headlines{}, ctas{}, sendMode, trigger?, date, time, maxVouchers?, sender, testSent?, status? }`
+- `POST /newsletter/campagnes` `{ role, name, segment, langs[], templateId, channel, subjects{}, bodies{}, sms{}, headlines{}, ctas{}, sendMode, trigger?, date, time, maxVouchers?, sender, testSent?, status?, lien? }`
   → `{ ok, campagne }`. Franchisé : refusé si bloqué (403), segment d'un autre magasin (403), mode `auto` (403), expéditeur autre que le sien (403).
+- **Le lien du bouton (29/10/2026, `mar_nl_campagne.lien`).** Demande de Sam : « un lien magique à mettre dans la newsletter,
+  webshop.atelierby.be ». Chaque campagne peut porter l'adresse où mène son bouton (`lien`, rendu dans `campagnes[].lien`) :
+  `https`/`http`, 500 signes au plus, sinon **422**. `{{code}}` (ou `{{code_promo}}`) y devient le voucher du destinataire,
+  encodé ; sans voucher, le paramètre reste vide. Vide : le lien commun (`nlLienWebshop`, sinon le cockpit), comme avant.
+  Le lien type, celui que propose l'assistant (« Webshop · Corbais », étape Texte) :
+  `https://webshop.atelierby.be/?shop=2&mode=collect&voucher=TUBIZE2` — le webshop lit `shop`, `mode` et `voucher` à
+  l'ouverture (`parseDeepLink()`, dépôt WebShop) : le magasin est choisi et le code arrive saisi au panier, le client
+  l'applique et le serveur du webshop le vérifie. **Le webshop n'accepte que ses propres bons** (table `ws_vouchers` ; dépôt
+  WebShop, `VOUCHERS_ERP.md` §4) : ni les codes de la newsletter (`mar_nl_voucher`), ni ceux d'un bon de promotion du magasin
+  écrit à l'ERP (`promos_bons.php`). Le code du lien est donc celui d'un bon créé au webshop.
+  Le bouton d'un vrai envoi passe toujours par le clic suivi (`/newsletter/c/{token}`), qui redirige vers ce lien ; un mail de
+  test (sans jeton) y mène tout droit. Tests : `php bin/tests_newsletter.php`.
 - `DELETE /newsletter/campagnes/{id}` : brouillon ou programmée ; une campagne envoyée reste (409). Franchisé : les siennes seulement.
 - `POST /newsletter/segments` (marque seule) `{ name, src, shop, product, period, minBasket, count, rule }` → `{ ok, segment }` ; la règle est gardée en `rules_json`.
 - `PUT /newsletter/magasins/{id}` `{ role, senderName?, email?, status?, canSend? }` : le franchisé ne touche qu'à son nom et son adresse ;
@@ -3048,14 +3060,14 @@ ne sont pas raccordées — la réponse le dit (`test: true`).
   `GET /newsletter/contacts/lots`, `DELETE /newsletter/contacts/lots/{lot}`.
 - `PUT /newsletter/reglages` (marque) `{ dispatch?, testAdresses?, domaine? }`. `dispatch: true` exige un SMTP configuré ;
   tant qu'il est faux, **rien ne part** (mode test), la réponse de `/newsletter` porte `test: true`.
-- `POST /newsletter/test` `{ subject, body, headline, cta, templateId, lang, sender, voucher }` : le mail rendu part aux adresses de test
+- `POST /newsletter/test` `{ subject, body, headline, cta, templateId, lang, sender, voucher, lien? }` : le mail rendu part aux adresses de test
   (`nlTestAdresses`, sinon l'expéditeur SMTP), même en mode test → `{ ok, simule, adresses, erreur }`.
 - `POST /newsletter/campagnes/{id}/envoyer` : la date passe à maintenant et l'horloge passe ; `POST /newsletter/tick` (marque) : l'horloge à la demande.
 - `GET /newsletter/cron?jeton=…` (`nlJeton`, cron toutes les 5 minutes par `bin/newsletter_cron.sh`) : campagnes dues par lots de 100 par minute
   (500 par passage), statut `sched → live → sent` ; automatisations évaluées une fois par jour (`dormant45` : dernier achat il y a 45 jours
   exactement ; `birthday` : J-3 ; `firstOffice` : compte office créé il y a 2 jours ; `third` : deux mails déjà reçus ; `season` : J-7 avant la
   date de la campagne). Jamais deux mails au même contact le même jour, jamais deux fois la même campagne.
-- Suivi, routes publiques : `GET /newsletter/o/{token}` (pixel), `GET /newsletter/c/{token}` (clic → redirection vers `nlLienWebshop` ou le cockpit),
+- Suivi, routes publiques : `GET /newsletter/o/{token}` (pixel), `GET /newsletter/c/{token}` (clic → redirection vers le lien de la campagne, son `{{code}}` remplacé par le voucher de l'envoi ; sinon `nlLienWebshop` ou le cockpit),
   `GET /newsletter/u/{token}` (désinscription en un clic). Les stats d'une campagne envoyée viennent de `mar_nl_envoi` (`stats.reel`).
 - Vouchers : codes uniques (8 caractères, `mar_nl_voucher`) générés au départ jusqu'à `maxVouchers` ; `POST /newsletter/vouchers/{code}/utiliser` les encaisse.
 - Non branchés, et dits tels quels dans Paramètres : SMS (aucun fournisseur), Stripe. La déclinaison sur les réseaux (LinkedIn, Instagram,

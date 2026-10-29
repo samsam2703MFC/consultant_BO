@@ -255,7 +255,8 @@ function nlCampagneRow(array $r): array
         'templateId' => $r['template_id'], 'channel' => $r['channel'], 'subjects' => nlJson($r['subjects_json'], []), 'bodies' => nlJson($r['bodies_json'], []), 'sms' => nlJson($r['sms_json'], []),
         'social' => nlJson($r['social_json'], []), 'sendMode' => $r['send_mode'], 'trigger' => $r['trigger_rule'], 'sendAt' => $r['send_at'], 'maxVouchers' => $r['max_vouchers'] !== null ? (int) $r['max_vouchers'] : null,
         'sender' => $r['sender_shop_id'], 'status' => $r['statut'], 'testSent' => (int) $r['test_sent'] === 1, 'stats' => is_array($stats) ? $stats : [], 'exemple' => (int) $r['exemple'] === 1,
-        'createdBy' => $r['created_by'], 'createdAt' => $r['created_at'], 'campagneId' => isset($r['campagne_id']) && $r['campagne_id'] !== null ? (int) $r['campagne_id'] : null];
+        'createdBy' => $r['created_by'], 'createdAt' => $r['created_at'], 'campagneId' => isset($r['campagne_id']) && $r['campagne_id'] !== null ? (int) $r['campagne_id'] : null,
+        'lien' => (string) ($r['lien'] ?? '')];
 }
 
 /**
@@ -367,6 +368,8 @@ function wr_newsletter_campagne_post(): array
     $maxV = isset($b['maxVouchers']) && $b['maxVouchers'] !== '' && $b['maxVouchers'] !== null ? max(0, min(100000, (int) $b['maxVouchers'])) : null;
     $nom = mb_substr(trim((string) ($b['name'] ?? '')), 0, 160);
     if ($nom === '') { http_response_code(422); return ['error' => 'nom attendu']; }
+    $lien = nlLienValide($b['lien'] ?? '');
+    if ($lien === null) { http_response_code(422); return ['error' => 'Lien du bouton : une adresse complète qui commence par https:// ({{code}} pour le code du destinataire).']; }
     $social = null;
     if (isset($b['social']) && is_array($b['social'])) {
         $s = [];
@@ -376,12 +379,12 @@ function wr_newsletter_campagne_post(): array
         }
         $social = json_encode($s, JSON_UNESCAPED_UNICODE);
     }
-    Db::exec('INSERT INTO mar_nl_campagne (nom, source_id, segment_id, langues, template_id, channel, subjects_json, bodies_json, sms_json, social_json, send_mode, trigger_rule, send_at, max_vouchers, sender_shop_id, statut, test_sent, stats_json, exemple, created_by, created_at, updated_at, headlines_json, ctas_json, image)'
-        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,0,?,NOW(),NOW(),?,?,?)',
+    Db::exec('INSERT INTO mar_nl_campagne (nom, source_id, segment_id, langues, template_id, channel, subjects_json, bodies_json, sms_json, social_json, send_mode, trigger_rule, send_at, max_vouchers, sender_shop_id, statut, test_sent, stats_json, exemple, created_by, created_at, updated_at, headlines_json, ctas_json, image, lien)'
+        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,0,?,NOW(),NOW(),?,?,?,?)',
         [$nom, $seg['source_id'], $segId, nlLangues($b['langs'] ?? 'fr'), $tpl, $channel,
             nlTextesParLangue($b['subjects'] ?? null, 200), nlTextesParLangue($b['bodies'] ?? null, 20000), nlTextesParLangue($b['sms'] ?? null, 400), $social,
             $mode, $trig, $sendAt, $maxV, $sender, $statut, !empty($b['testSent']) ? 1 : 0, $role,
-            nlTextesParLangue($b['headlines'] ?? null, 200), nlTextesParLangue($b['ctas'] ?? null, 80), nlImage($tpl)]);
+            nlTextesParLangue($b['headlines'] ?? null, 200), nlTextesParLangue($b['ctas'] ?? null, 80), nlImage($tpl), $lien !== '' ? $lien : null]);
     $id = (int) Db::pdo()->lastInsertId();
     // La campagne marketing qu'elle sert (portail Marketing) : le lien que les dates ne faisaient que deviner.
     $campagne = (int) ($b['campagne'] ?? 0);
