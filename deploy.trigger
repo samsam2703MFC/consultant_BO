@@ -1137,3 +1137,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-28T10:15:56Z production : migracja 121 poprawiona (MySQL 8)
 2026-10-28T11:16:39Z production : tablet pakowania — tryb Paletyzacja
 2026-10-28T11:33:10Z production : tablet pakowania — nagłówek w jednej linii
+2026-10-29T06:34:17Z production : MétaDonnée — formulaires Meta et Instagram vers l'ERP du franchisé (flux Meta du CRM recopié), suivi, SMS
