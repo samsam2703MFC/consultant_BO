@@ -91,7 +91,7 @@ final class DevCardService
         $text = trim((string) $c['source_text']) !== '' ? $c['source_text'] : $r['text']; // opis wklejony przez operatora ma pierwszeństwo
         $this->cards->save($id, ['source_url' => $r['url'], 'source_author' => $r['author'], 'source_title' => $r['title'], 'source_text' => $text,
             'video_url' => $r['video'], 'source_info' => json_encode(['login_wall' => $r['login_wall'], 'has_text' => $r['text'] !== null, 'has_video' => $r['video'] !== null,
-                'source_link' => $r['source_link'], 'notes' => $r['notes'], 'read_at' => date('Y-m-d H:i:s')], JSON_UNESCAPED_UNICODE)]);
+                'video_sd' => $r['video_sd'] ?? null, 'source_link' => $r['source_link'], 'notes' => $r['notes'], 'read_at' => date('Y-m-d H:i:s')], JSON_UNESCAPED_UNICODE)]);
         if ($img = $this->reader->image($r['image'])) {
             $this->cards->deleteFrames($id, 'cover');
             $size = @getimagesizefromstring($img['bytes']);
@@ -108,7 +108,16 @@ final class DevCardService
         $tmp = tempnam(sys_get_temp_dir(), 'devcard');
         try {
             @set_time_limit(300);
-            $bytes = $this->reader->downloadVideo((string) $c['video_url'], $tmp);
+            try {
+                $bytes = $this->reader->downloadVideo((string) $c['video_url'], $tmp);
+            } catch (CustomException $e) {
+                // Długi film : plik HD ponad limit → wersja SD (wystarczy do klatek), jeśli Facebook ją podał.
+                $sd = (json_decode((string) $c['source_info'], true) ?: [])['video_sd'] ?? null;
+                if ($e->getCode() !== 413 || !is_string($sd) || $sd === '') {
+                    throw $e->getCode() === 413 ? new CustomException('Film za duży (ponad ' . round(SourceReader::MAX_VIDEO_BYTES / 1_000_000) . ' MB) — dodaj krótszy plik wideo albo kontynuuj bez klatek.', 'errors', 413) : $e;
+                }
+                $bytes = $this->reader->downloadVideo($sd, $tmp);
+            }
             header('Content-Type: video/mp4');
             header('Content-Length: ' . $bytes);
             header('Cache-Control: no-store');

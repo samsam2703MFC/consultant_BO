@@ -127,7 +127,7 @@ expectFail(fn() => SourceReader::detect('https://facebook.com.evil.example/reel/
 expectFail(fn() => SourceReader::detect('javascript:alert(1)'), 422, 'link nie-http', 'url');
 $fbHtml = '<html><head><meta property="og:title" content="Kıvrık Poğaça | By Chef Burcin | Facebook"><meta property="og:description" content="Kısa açıklama…">'
     . '<meta content="https://scontent.xx.fbcdn.net/v/cover.jpg" property="og:image"></head><body><script>{"message":{"text":"Kıvrık Poğaça\\n500 gr un, 300 ml süt, 10 gr tuz \\u0026 maya"},'
-    . '"owner":{"__typename":"Page","id":"1","name":"Chefburcinarda"},"browser_native_hd_url":"https:\/\/video.xx.fbcdn.net\/v\/t42.mp4?_nc=1&oh=2"}</script></body></html>';
+    . '"owner":{"__typename":"Page","id":"1","name":"Chefburcinarda"},"browser_native_hd_url":"https:\/\/video.xx.fbcdn.net\/v\/t42.mp4?_nc=1&oh=2","browser_native_sd_url":"https:\/\/video.xx.fbcdn.net\/v\/t42sd.mp4?oh=3"}</script></body></html>';
 $calls = [];
 SourceReader::$transport = function (string $url, int $max) use (&$calls, $fbHtml) {
     $calls[] = $url;
@@ -149,7 +149,7 @@ $r = $reader->read('https://fb.watch/abc');
 expectCard($r['kind'] === 'facebook' && $r['url'] === 'https://www.facebook.com/reel/123', 'Facebook : przekierowanie fb.watch → reel');
 expectCard($r['text'] === "Kıvrık Poğaça\n500 gr un, 300 ml süt, 10 gr tuz & maya", 'Facebook : pełny opis zamiast skróconego og:description');
 expectCard($r['author'] === 'Chefburcinarda', 'Facebook : autor ' . $r['author']);
-expectCard($r['video'] === 'https://video.xx.fbcdn.net/v/t42.mp4?_nc=1&oh=2', 'Facebook : adres wideo HD odkodowany');
+expectCard($r['video'] === 'https://video.xx.fbcdn.net/v/t42.mp4?_nc=1&oh=2' && $r['video_sd'] === 'https://video.xx.fbcdn.net/v/t42sd.mp4?oh=3', 'Facebook : wideo HD + zapasowe SD (długi film)');
 expectCard($r['image'] === 'https://scontent.xx.fbcdn.net/v/cover.jpg' && !$r['login_wall'], 'Facebook : okładka, bez ściany logowania');
 $wall = $reader->read('https://fb.watch/wall');
 expectCard($wall['login_wall'] && $wall['text'] === null && $wall['video'] === null && str_contains(implode(' ', $wall['notes']), 'ścianę logowania'), 'Facebook : ściana logowania = uwaga, okładka zostaje');
