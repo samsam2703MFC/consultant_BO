@@ -15,10 +15,11 @@ final class DevProductRepository extends WorkshopRepository
     private const PRODUCT = "SELECT tp.id, tp.name, tp.id_recipe, tp.id_section, tp.id_status, tp.id_type, tp.create_timestamp,
             st.name AS status_name, ty.name AS type_name, ps.name AS section_name, pr.name AS recipe_name,
             COALESCE(d.on_tablet, 0) AS on_tablet, d.video_url, d.notes, d.updated_at,
-            d.id_group, COALESCE(d.stage, CASE tp.id_status WHEN 2 THEN 'launch' WHEN 3 THEN 'launched' ELSE 'idea' END) AS stage, d.stage_changed_at, d.target_date, d.recipe_confirmed_at, d.id_final_product,
+            d.id_group, COALESCE(d.stage, CASE tp.id_status WHEN 2 THEN 'launch' WHEN 3 THEN 'launched' ELSE 'idea' END) AS stage, d.stage_changed_at, d.target_date, d.weekly_sales, d.season_quarters, d.recipe_confirmed_at, d.id_final_product,
             g.name_pl AS group_pl, g.name_fr AS group_fr, g.color AS group_color, fp.name AS final_product_name,
             TRIM(CONCAT(COALESCE(ce.name, ''), ' ', COALESCE(ce.surname, ''))) AS recipe_confirmed_name,
             (SELECT COUNT(*) FROM n_dev_product_photo ph WHERE ph.id_test_product = tp.id) AS photo_count,
+            (SELECT COUNT(*) FROM n_dev_card dc WHERE dc.id_test_product = tp.id AND dc.card_json IS NOT NULL) AS has_card,
             (SELECT COUNT(*) FROM n_dev_trial tr WHERE tr.id_test_product = tp.id AND tr.status = 'done') AS trials_done,
             (SELECT tr.result FROM n_dev_trial tr WHERE tr.id_test_product = tp.id AND tr.status = 'done' ORDER BY tr.trial_no DESC LIMIT 1) AS last_result,
             (SELECT tr.done_at FROM n_dev_trial tr WHERE tr.id_test_product = tp.id AND tr.status = 'done' ORDER BY tr.trial_no DESC LIMIT 1) AS last_trial_at,
@@ -66,6 +67,11 @@ final class DevProductRepository extends WorkshopRepository
     {
         $this->db->prepare('INSERT INTO test_product (name, id_section, id_status, id_type) VALUES (?, ?, 1, 1)')->execute([$name, $sectionId]);
         return (int) $this->db->lastInsertId();
+    }
+
+    public function renameTestProduct(int $id, string $name): void
+    {
+        $this->db->prepare('UPDATE test_product SET name = ? WHERE id = ?')->execute([$name, $id]);
     }
 
     public function setTestProductStatus(int $id, int $status): void

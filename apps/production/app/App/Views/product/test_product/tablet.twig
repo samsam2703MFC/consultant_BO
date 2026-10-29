@@ -46,6 +46,35 @@
         </div>
     </div>
 
+    {# Karta technologiczna z filmu i prognoza sprzedaży [196]. #}
+    {% if card and card.card %}
+    <div class="card at-devcard">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2"><h4 class="card-title mb-0"><i class="bi bi-file-earmark-richtext"></i> Karta technologiczna</h4>
+            <span class="at-sub">{{ card.card.title }}{% if card.card.author %} · wg {{ card.card.author }}{% endif %}</span>
+            <span class="ms-auto d-flex gap-2 flex-wrap">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/test-products/cards/{{ card.id }}/card.docx"><i class="bi bi-file-earmark-word"></i> .docx</a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/test-products/cards/{{ card.id }}/card.pdf?inline=1" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                <a class="btn btn-sm btn-outline-primary" href="{{ root }}/test-products/from-video/{{ card.id }}"><i class="bi bi-pencil"></i> Popraw kartę</a></span></div>
+        <div class="card-body pt-0">
+            <div class="at-devcard-facts">
+                <div><small>Wydajność</small>{{ card.card.yield ?: '—' }}</div><div><small>Pieczenie</small>{{ card.card.baking ?: '—' }}</div><div><small>Czas</small>{{ card.card.time ?: '—' }}</div>
+            </div>
+            <p class="at-sub mb-2">{{ card.card.ingredients|reduce((n, g) => n + g.items|length, 0) }} składników · {{ card.card.steps|length }} kroków · {{ card.card.photos|length }} zdjęć etapów — na tablecie grupy w karcie produktu.</p>
+            {% set fr = {} %}{% for f in card.frames %}{% set fr = fr|merge({('f' ~ f.id): f}) %}{% endfor %}
+            <div class="at-devcard-photos">{% for p in card.card.photos %}{% set f = fr['f' ~ p.frame_id] ?? null %}{% if f %}<figure><img src="{{ root }}{{ f.src }}" alt="" loading="lazy"><figcaption><b>{{ loop.index }}.</b> {{ p.caption }}</figcaption></figure>{% endif %}{% endfor %}</div>
+        </div>
+    </div>
+    {% endif %}
+    {% if product.forecast.weekly is not null %}
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0"><i class="bi bi-graph-up"></i> Prognoza sprzedaży</h4></div>
+        <div class="card-body pt-0"><table class="table table-sm at-devcard-q mb-0"><thead><tr><th></th>{% for q in 1..4 %}<th class="text-end">Q{{ q }}</th>{% endfor %}<th class="text-end">Rok</th></tr></thead>
+            <tbody><tr><td>{{ product.forecast.weekly|number_format(0, ',', ' ') }} szt./tydz. × 13{{ product.forecast.seasonal ? ' · sezon' : ' · cały rok' }}</td>
+            {% for q in 1..4 %}<td class="text-end {{ product.forecast.per_quarter[q] ? '' : 'text-muted' }}">{{ product.forecast.per_quarter[q] ? product.forecast.per_quarter[q]|number_format(0, ',', ' ') : '—' }}</td>{% endfor %}
+            <td class="text-end fw-semibold">{{ product.forecast.year|number_format(0, ',', ' ') }}</td></tr></tbody></table></div>
+    </div>
+    {% endif %}
+
     <div class="card">
         <div class="card-header"><h4 class="card-title">Testy receptury</h4>
             <p class="at-sub mb-0">Zaplanowany test pojawia się na tablecie grupy. Zespół robi go i potwierdza : zdjęcia (z godziną), ilość, wynik, co zmienić.

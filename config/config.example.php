@@ -44,6 +44,13 @@ return [
         'graphVersion' => 'v21.0',
     ],
 
+    // MétaDonnée — SMS au gérant du magasin à chaque lead Meta (SMSAPI, comme le CRM).
+    // Jeton OAuth avec la permission « sms » ; plateforme .com (internationale) ou .pl.
+    // Il peut aussi se saisir à l'écran (MétaDonnée → 4. Alertes SMS), qui prime.
+    'smsapi' => [
+        'token' => getenv('SMSAPI_TOKEN') ?: null,
+        'base'  => getenv('SMSAPI_BASE') ?: 'https://api.smsapi.com',
+    ],
     // SMS (14/10/2026) : la vendeuse reçoit un SMS quand elle gagne une prime (Équipe & ventes ›
     // Paramètres, « SMS à la réussite »). Un compte Twilio : SID, jeton, et l'expéditeur (un numéro
     // Twilio au format +32…, ou un nom alphanumérique de 11 caractères au plus). Sans ces trois valeurs,

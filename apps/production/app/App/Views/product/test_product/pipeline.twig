@@ -15,6 +15,8 @@
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <button class="btn btn-primary" type="button" data-toggle-new><i class="bi bi-plus-lg"></i> Nowy produkt</button>
+            {# Nowy produkt z filmu [196] : link Facebook / Pinterest + prompt → karta technologiczna (asystent AI). #}
+            <a class="btn btn-outline-primary" href="{{ root }}/test-products/from-video"><i class="bi bi-stars"></i> Z filmu (karta technologiczna)</a>
             {# Etapy i lista na jednej zakładce Produktów : przełącznik (audyt 2, N7). #}
             <div class="btn-group" role="group" aria-label="Widok">
                 <a class="btn btn-primary" href="{{ root }}/test-products/pipeline" aria-current="page"><i class="bi bi-kanban"></i> Etapy</a>
@@ -75,6 +77,7 @@
                 {% if p.dev.target_date and c.code not in ['launched', 'stopped'] %}
                     <span class="at-pipe-date {{ p.dev.target_date < 'now'|date('Y-m-d') ? 'is-late' : '' }}"><i class="bi bi-flag"></i> {{ p.dev.target_date|date('d.m.Y') }}</span>
                 {% endif %}
+                {% if p.has_card or p.weekly_sales %}<span class="at-pipe-meta">{% if p.has_card %}<span><i class="bi bi-file-earmark-richtext"></i> karta technologiczna</span>{% endif %}{% if p.weekly_sales %}<span>{{ p.weekly_sales|number_format(0, ',', ' ') }} szt./tydz.{{ p.seasonal ? ' · sezon' : '' }}</span>{% endif %}</span>{% endif %}
                 {% if not p.on_tablet and c.code not in ['launched', 'stopped'] %}<span class="at-pipe-off"><i class="bi bi-tablet"></i> niewidoczny na tablecie</span>{% endif %}
             </a>
             {% else %}

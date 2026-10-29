@@ -985,3 +985,33 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .kc-photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .kc-photos > p { grid-column: 1 / -1; }
 @media (max-width: 600px) { .kv-tiles.is-3 { grid-template-columns: minmax(0, 1fr); } }
+
+/* Karta technologiczna z filmu [196] : nagłówek z okładką, pasek moreli (wydajność, pieczenie, czas), składniki z ilością
+   w kolumnie (wyrównaną do prawej), kroki numerowane, zdjęcia etapów (dotknięcie = powiększenie). */
+.kiosk-tk h3 { margin: 18px 0 8px; font-size: 19px; font-weight: 650; letter-spacing: -.01em; }
+.kiosk-tk-head { display: flex; gap: 16px; align-items: center; }
+.kiosk-tk-head img { width: 72px; height: 96px; object-fit: cover; border-radius: 12px; flex: none; }
+.kiosk-tk-head h2 { margin: 0 0 4px; font-size: 22px; display: flex; align-items: center; gap: 10px; }
+.kiosk-tk-head h2 .k-ico { color: var(--k-primary); }
+.kiosk-tk-facts { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 10px; margin-top: 14px; }
+.kiosk-tk-fact { background: var(--k-abricot-50); border-radius: var(--k-radius); padding: 12px 14px; }
+.kiosk-tk-fact small { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--k-primary); margin-bottom: 4px; }
+.kiosk-tk-fact b { font-size: 17px; font-weight: 500; line-height: 1.3; }
+.kiosk-tk-cols { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; }
+.kiosk-tk-sub { margin: 12px 0 4px; font-size: 13px; font-weight: 650; letter-spacing: .06em; color: var(--k-primary); }
+.kiosk-tk-ing { width: 100%; border-collapse: collapse; font-size: 17px; }
+.kiosk-tk-ing td { padding: 7px 0; border-bottom: 1px solid var(--k-line); vertical-align: top; }
+.kiosk-tk-ing td:first-child { width: 96px; text-align: right; padding-right: 14px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kiosk-tk-steps { list-style: none; margin: 0; padding: 0; counter-reset: tk; }
+.kiosk-tk-steps li { counter-increment: tk; display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--k-line); font-size: 17px; line-height: 1.4; }
+.kiosk-tk-steps li:last-child { border-bottom: 0; }
+.kiosk-tk-steps li::before { content: counter(tk); flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--k-primary); color: #fff; display: grid; place-items: center; font-weight: 650; font-size: 16px; }
+.kiosk-tk-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.kiosk-tk-photo { border: 0; background: none; padding: 0; text-align: left; color: var(--k-text); }
+.kiosk-tk-photo img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 12px; display: block; }
+.kiosk-tk-photo span { display: block; font-size: 14px; margin-top: 6px; }
+.kiosk-tk-photo b { color: var(--k-primary); }
+.kiosk-tk-foot { font-size: 13px; margin: 14px 0 0; }
+@media (max-width: 820px) {
+  .kiosk-tk-facts, .kiosk-tk-cols { grid-template-columns: 1fr; }
+}

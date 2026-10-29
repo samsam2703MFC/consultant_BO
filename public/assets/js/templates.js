@@ -146,6 +146,7 @@ export function render(c, x){
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isFid ? tplFidelite(c, x) : ''}
+      ${c.isMD ? tplMetaDonnee(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
       ${c.isApiModule ? tplApiModule(c, x) : ''}
       ${c.isPromoTab ? tplPromoTableau(c, x) : ''}${c.isPromoEd ? tplPromoEdition(c, x) : ''}
@@ -7977,6 +7978,13 @@ function tplManque(c, x){
  * L'aperçu vient en dernier, hors de la grille du haut : la fusion du rendu
  * compare les nœuds par position, et ce qui bouge au-dessus (la progression des
  * photos, une relecture) ne doit pas recréer l'iframe — elle se rechargerait. */
+/* --- MétaDonnée : les quatre écrans du sous-menu ------------------------------ */
+/* Le module (metadonnee.js) tient son propre DOM : le gabarit ne pose que
+   l'ancre, qu'app.js lui rend après chaque rendu. */
+function tplMetaDonnee(){
+  return `<div data-screen="metadonnee"><div id="metadonnee-root" style="min-height:400px"></div></div>`;
+}
+
 function tplTablette(c, x){
   const { esc } = x;
   const T = c.tb;

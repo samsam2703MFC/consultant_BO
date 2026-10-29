@@ -53,6 +53,7 @@ final class PageAccess
         'access' => ['Uprawnienia funkcji', 'Administracja', ['/organization/access'], true],
         'activity' => ['Aktywność w ERP (sesje, strony, kliknięcia, koszt czasu)', 'Administracja', ['/organization/activity'], true],
         'panel_api' => ['API cen w sklepach (konto panelu franczyzy)', 'Administracja', ['/settings/panel-api'], true],
+        'ai' => ['Asystent AI (klucz Anthropic, model, prompt karty technologicznej)', 'Administracja', ['/settings/ai'], true],
     ];
 
     /** Strony startowe do wyboru dla stanowiska (logo, logowanie) : Dzisiaj dla produkcji, Rentowność dla kierownictwa. */

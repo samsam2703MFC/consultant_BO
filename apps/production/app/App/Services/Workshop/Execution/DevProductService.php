@@ -9,6 +9,8 @@ use App\Core\Api\Workshop\Validator;
 use App\Core\TransactionManager;
 use App\Exceptions\CustomException;
 use App\Repositories\Workshop\DevProductRepository;
+use App\Services\DevCard\CardSchema;
+use App\Services\DevCard\DevCardService;
 use App\Services\Notification\AppNotificationService;
 use App\Services\Utils\DataUrlImage;
 
@@ -48,6 +50,7 @@ final class DevProductService
         private KioskRecipeService $recipes,
         private TransactionManager $tx,
         private AppNotificationService $notifications,
+        private DevCardService $cards,
     ) {
     }
 
@@ -91,6 +94,7 @@ final class DevProductService
             'photos' => array_map(fn($ph) => ['id' => (int) $ph['id'], 'caption' => $ph['caption'],
                 'src' => DataUrlImage::toDataUrl($ph['mime'], $ph['image'])], $this->repo->photosWithImage($id)),
             'recipe' => $p['id_recipe'] !== null ? $this->recipes->tree((int) $p['id_recipe'], $fr) : null,
+            'card' => $this->cards->forTablet($id),
         ];
     }
 
@@ -283,7 +287,9 @@ final class DevProductService
         return ['product' => $this->row($p) + ['notes' => $p['notes'], 'video_url' => $p['video_url'], 'video' => self::video($p['video_url']),
                 'dev' => $this->devState($p, 0), 'target_date' => $p['target_date'], 'group_id' => $p['id_group'] !== null ? (int) $p['id_group'] : null,
                 'recipe_confirmed_at' => $p['recipe_confirmed_at'], 'recipe_confirmed_name' => $p['recipe_confirmed_name'] ?: null,
-                'final_product_id' => $p['id_final_product'] !== null ? (int) $p['id_final_product'] : null, 'final_product_name' => $p['final_product_name']],
+                'final_product_id' => $p['id_final_product'] !== null ? (int) $p['id_final_product'] : null, 'final_product_name' => $p['final_product_name'],
+                'forecast' => CardSchema::forecast($p['weekly_sales'] !== null ? (int) $p['weekly_sales'] : null, $p['season_quarters'])],
+            'card' => $this->cards->forProduct($id),
             'flow' => array_map(fn($code) => ['code' => $code, 'label' => self::STAGES[$code][0], 'state' => $this->flowState($code, $p['stage'])], self::FLOW),
             'stage_choices' => array_map(fn($code) => ['code' => $code, 'label' => self::STAGES[$code][0]], array_diff(array_keys(self::STAGES), ['launched'])),
             'trials' => array_map(fn($tr) => $this->presentTrial($tr, 0) + ['photos' => array_map(fn($ph) => ['id' => (int) $ph['id'], 'taken_at' => $ph['taken_at']], $photos[(int) $tr['id']] ?? [])], $trials),
@@ -352,7 +358,8 @@ final class DevProductService
         return ['id' => (int) $p['id'], 'name' => trim((string) $p['name']), 'status' => $p['status_name'], 'status_id' => $p['id_status'] !== null ? (int) $p['id_status'] : null,
             'type' => $p['type_name'], 'section' => $p['section_name'], 'recipe_id' => $p['id_recipe'] !== null ? (int) $p['id_recipe'] : null,
             'recipe_name' => $p['recipe_name'], 'on_tablet' => (bool) $p['on_tablet'], 'has_video' => !empty($p['video_url']),
-            'photo_count' => (int) $p['photo_count'], 'has_notes' => !empty($p['notes'])];
+            'photo_count' => (int) $p['photo_count'], 'has_notes' => !empty($p['notes']), 'has_card' => !empty($p['has_card']),
+            'weekly_sales' => $p['weekly_sales'] !== null ? (int) $p['weekly_sales'] : null, 'seasonal' => $p['season_quarters'] !== null];
     }
 
     /** Etap rozwoju i następny krok (tablet, biuro). */

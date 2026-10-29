@@ -27644,11 +27644,103 @@
                     "has_notes": {
                         "type": "boolean"
                     },
+                    "has_card": {
+                        "type": "boolean",
+                        "description": "karta technologiczna z filmu / fiche technique depuis une vidéo"
+                    },
+                    "weekly_sales": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "prognoza sztuk na tydzień / prévision de pièces par semaine"
+                    },
+                    "seasonal": {
+                        "type": "boolean",
+                        "description": "sprzedaż tylko w wybranych kwartałach / vendu seulement certains trimestres"
+                    },
                     "stage": {
                         "$ref": "#/components/schemas/DevStage"
                     },
                     "dev": {
                         "$ref": "#/components/schemas/DevState"
+                    }
+                }
+            },
+            "DevCard": {
+                "type": "object",
+                "nullable": true,
+                "description": "Karta technologiczna z filmu (asystent AI albo import .docx) / Fiche technique depuis une vidéo",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "original_name": {
+                        "type": "string"
+                    },
+                    "author": {
+                        "type": "string"
+                    },
+                    "yield": {
+                        "type": "string"
+                    },
+                    "baking": {
+                        "type": "string"
+                    },
+                    "time": {
+                        "type": "string"
+                    },
+                    "ingredients": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "group": {
+                                    "type": "string"
+                                },
+                                "items": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "qty": {
+                                                "type": "string"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "photos": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "caption": {
+                                    "type": "string"
+                                },
+                                "src": {
+                                    "type": "string",
+                                    "description": "data:image/jpeg;base64,…"
+                                }
+                            }
+                        }
+                    },
+                    "cover": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "data:image/…;base64,…"
+                    },
+                    "footer": {
+                        "type": "string"
                     }
                 }
             },
@@ -28047,6 +28139,9 @@
                                     }
                                 ],
                                 "nullable": true
+                            },
+                            "card": {
+                                "$ref": "#/components/schemas/DevCard"
                             }
                         }
                     }
