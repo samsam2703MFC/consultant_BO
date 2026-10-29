@@ -72,6 +72,53 @@ scTitre('compte admin ERP du cockpit');
 if (!ErpApi::disponible()) { echo "  ⇒ aucun identifiant ni jeton : sonde impossible\n"; exit(1); }
 echo '  base=', ErpApi::config()['base'], "\n";
 
+// ── La vitesse de la liste des particuliers (29/10/2026, après #76) ──────────────────────────────────────────────
+// La route en ligne a mis 12,8 s à froid pour les 7 935 particuliers du magasin 2 (16 pages de 500, quatre de front).
+// D'où vient le temps, et la mémoire de PHP-FPM tient-elle une lecture d'un seul tenant (10 Mo) ? Lecture seule.
+$passage = 'vitesse';   // « tout » : rejouer aussi les relevés du matin ci-dessous
+scTitre('la mémoire de PHP-FPM (fichiers de configuration, en lecture)');
+foreach (array_merge(glob('/etc/php/*/fpm/php.ini') ?: [], glob('/etc/php/*/fpm/pool.d/*.conf') ?: []) as $f) {
+    foreach (file($f, FILE_IGNORE_NEW_LINES) ?: [] as $l) {
+        if (preg_match('/^\s*[^;#].*memory_limit/', $l)) { printf("  %-40s %s\n", $f, trim($l)); }
+    }
+}
+echo '  cockpit : ', trim((string) shell_exec("grep -rn 'memory_limit' " . escapeshellarg($dir) . "/.htaccess " . escapeshellarg($dir) . "/.user.ini 2>/dev/null | head -3")) ?: 'rien dans .htaccess ni .user.ini', "\n";
+if (!function_exists('pbClientCourt')) { require "$dir/src/promos_bons.php"; }
+try {
+    $g = Db::row("SELECT LENGTH(value) n FROM ceo_app_setting WHERE `key` = 'pbClients:2:particulier'");
+    echo '  garde pbClients:2:particulier dans ceo_app_setting : ', $g === null ? 'absente' : intdiv((int) $g['n'], 1024) . ' ko', "\n";
+} catch (Throwable $e) { echo '  garde illisible : ', mb_substr($e->getMessage(), 0, 120), "\n"; }
+
+scTitre('magasin 2, particuliers : une lecture, des pages');
+$m0 = memory_get_usage(); $t = microtime(true);
+$r = ErpApi::sondeGet('/shops/2/clients?type=b2c');
+$s = microtime(true) - $t; $l = scItems($r['corps']);
+printf("  d'un seul tenant (?type=b2c)          HTTP %d · %5d lignes · %5.1f s · mémoire +%d Mo (pic %d Mo)\n", $r['code'], count($l), $s,
+    intdiv(memory_get_usage() - $m0, 1048576), intdiv(memory_get_peak_usage() - $m0, 1048576));
+$t = microtime(true); $court = [];
+foreach ($l as $x) { if (is_array($x)) { $court[] = pbClientCourt($x, 2); } }
+$sc = microtime(true) - $t; $t = microtime(true); $js = json_encode(['lu' => time(), 'l' => $court], JSON_UNESCAPED_UNICODE); $se = microtime(true) - $t;
+printf("  réduction pbClientCourt %5.2f s · JSON de la garde %d ko en %5.2f s\n", $sc, intdiv(strlen($js), 1024), $se);
+unset($r, $l, $court, $js);
+$t = microtime(true); $n = 0; $p = 0;
+for ($off = 0; $off < 20000; $off += 500) {
+    $r = ErpApi::sondeGet('/shops/2/clients?type=b2c&limit=500&offset=' . $off); $p++;
+    $k = count(scItems($r['corps'])); $n += $k; unset($r);
+    if ($k < 500) { break; }
+}
+printf("  pages de 500, l'une après l'autre      %2d pages · %5d lignes · %5.1f s\n", $p, $n, microtime(true) - $t);
+foreach ([2, 4] as $front) {
+    $ch = [];
+    for ($i = 0; $i < 4; $i++) { $ch[$i] = '/shops/2/clients?type=b2c&limit=500&offset=' . ($i * 500); }
+    $t = microtime(true); $o = ErpApi::getParallele($ch, $front);
+    printf("  4 pages, %d de front (getParallele)     %5d lignes · %5.1f s\n", $front, array_sum(array_map(static fn ($c) => count(scItems($c)), $o)), microtime(true) - $t);
+    unset($o);
+}
+$t = microtime(true); $r = ErpApi::sondeGet('/shops/2/clients?type=b2c&limit=500&offset=7500');
+printf("  une page du fond (offset 7500)         %5d lignes · %5.1f s\n", count(scItems($r['corps'])), microtime(true) - $t);
+unset($r);
+if ($passage !== 'tout') { printf("\n  mémoire PHP au plus haut : %d Mo\n\n=== FIN SONDE CLIENTS DU BON ===\n", intdiv(memory_get_peak_usage(true), 1048576)); exit(0); }
+
 foreach ([2, 4] as $shop) {
     scTitre("magasin $shop : GET /shops/$shop/clients");
     $tous = scGet("/shops/$shop/clients");
