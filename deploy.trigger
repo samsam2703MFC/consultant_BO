@@ -1149,3 +1149,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-29T10:45:02Z production : nowy produkt — krok 4 « Koszt i cena » (surowce, cena fabryczna i w sklepie, cobot), migracja 124
 2026-10-29T10:58:59Z production : karta z filmu — kroki z klatek (opis z samymi składnikami)
 2026-10-29T11:07:29Z production : koszt i cena — gramatura w nawiasie (cup), wydajność w kulkach
+2026-10-29T11:48:19Z production : karta z filmu — reel 400 → watch/?v=, opis bez napisów interfejsu
