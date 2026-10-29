@@ -102,18 +102,18 @@ final class LogisticsPlanController extends BaseController
     }
 
     /** Kalendarz tras [207] : trasa ciężarówki zmieniona w kalendarzu (początek, fazy). */
-    public function saveTrip($week, $id)
+    public function saveTrip($week, $id, $no = 1)
     {
-        return $this->respond(function () use ($week, $id) {
-            $this->trips->save((string) $week, (int) $id, $this->input(), $this->userId());
+        return $this->respond(function () use ($week, $id, $no) {
+            $this->trips->save((string) $week, (int) $id, $this->input(), $this->userId(), (int) $no);
             return ['message' => 'Zapisano trasę.', 'data' => $this->plans->plan($this->from())];
         });
     }
 
-    public function resetTrip($week, $id)
+    public function resetTrip($week, $id, $no = 1)
     {
-        return $this->respond(function () use ($week, $id) {
-            $this->trips->reset((string) $week, (int) $id);
+        return $this->respond(function () use ($week, $id, $no) {
+            $this->trips->reset((string) $week, (int) $id, (int) $no);
             return ['message' => 'Trasa z szablonu.', 'data' => $this->plans->plan($this->from())];
         });
     }
@@ -124,6 +124,12 @@ final class LogisticsPlanController extends BaseController
             $n = $this->trips->insertRest((string) $week, $this->userId());
             return ['message' => $n ? "Przerwy i odpoczynki wstawione : {$n} × trasa." : 'Trasy z szablonu mają już przerwy i odpoczynki.', 'data' => $this->plans->plan($this->from())];
         });
+    }
+
+    /** Tras (zmian) ciężarówki z kierowcą w tygodniu — domyślnie [208] (standard 1). */
+    public function setVehicleTrips($id)
+    {
+        return $this->respond(fn() => ['message' => 'Zapisano liczbę tras w tygodniu.', 'data' => $this->plans->setVehicleTrips((int) $id, $this->input()['trips_per_week'] ?? null, $this->userId(), $this->from())]);
     }
 
     public function saveTripTemplate()

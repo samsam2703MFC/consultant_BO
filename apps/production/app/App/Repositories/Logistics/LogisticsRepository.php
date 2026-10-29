@@ -13,14 +13,14 @@ use App\Repositories\Workshop\WorkshopRepository;
 final class LogisticsRepository extends WorkshopRepository
 {
     protected string $table = 'n_vehicle';
-    protected array $writable = ['pallet_places', 'max_load_kg', 'departure_time', 'active', 'notes', 'updated_by'];
+    protected array $writable = ['pallet_places', 'max_load_kg', 'departure_time', 'trips_per_week', 'active', 'notes', 'updated_by'];
 
     public function vehicles(): array
     {
         return $this->all(
             'SELECT cv.id, cv.id_carrier, c.name AS carrier, c.active AS carrier_active, cv.regis_num,
                     TRIM(CONCAT(cv.driver_name, " ", cv.driver_surname)) AS driver, cv.driver_phone,
-                    v.pallet_places, v.max_load_kg, TIME_FORMAT(v.departure_time, "%H:%i") AS departure_time,
+                    v.pallet_places, v.max_load_kg, TIME_FORMAT(v.departure_time, "%H:%i") AS departure_time, COALESCE(v.trips_per_week, 1) AS trips_per_week,
                     COALESCE(v.active, 0) AS active, v.notes, v.id_carrier_vehicle IS NOT NULL AS configured, v.id_driver
              FROM carrier_vehicle cv JOIN carrier c ON c.id = cv.id_carrier
              LEFT JOIN n_vehicle v ON v.id_carrier_vehicle = cv.id

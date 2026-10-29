@@ -162,6 +162,12 @@ body.lp-dragging { cursor: grabbing; user-select: none; }
 .kc-who { padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; justify-content: center; }
 .kc-who b { font-size: 14px; } .kc-who small { color: var(--at-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .kc-man { font-size: 11.5px; color: #8a5512; }
+/* [208] Tras w tygodniu na ciężarówce (standard 1). */
+.kc-per-l { margin-top: 6px; }
+.kc-per { display: inline-flex; align-items: center; gap: 3px; background: var(--at-bg-2); border-radius: 10px; padding: 3px; align-self: flex-start; }
+.kc-per button { border: 0; background: transparent; border-radius: 8px; min-width: 44px; min-height: 44px; font-size: 13px; font-weight: 700; color: var(--at-muted); font-variant-numeric: tabular-nums; }
+.kc-per button.on { background: #fff; color: var(--at-text); box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+.kc-row.is-multi .kc-track { min-height: 132px; }
 .kc-link { border: 0; background: none; padding: 0; color: var(--at-primary); text-decoration: underline; font-size: 11.5px; min-height: 24px; }
 .kc-track { position: relative; min-height: 96px; }
 .kc-row.is-month .kc-track { min-height: 56px; }

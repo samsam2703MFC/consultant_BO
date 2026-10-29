@@ -66,6 +66,24 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Planning logistique : nombre de tournées par semaine (migration 131, 29/10/2026)
+
+- `n_vehicle.trips_per_week` (1 à 4, défaut 1) : nombre de tournées (shifts) que le chauffeur fait avec le camion
+  dans la semaine — standard : une tournée par chauffeur par semaine. Réglable dans **Pojazdy** (colonne « Tras /
+  tydz. » et étape Pojemność de l'assistant) et dans le **Kalendarz tras** (boutons 1 2 3 4 sous le camion,
+  `PUT /ajax/logistics/plan/vehicles/{id}/trips`).
+- `n_logistics_plan_vehicle.trips` : exception pour une semaine (⚙ de la case camion × semaine dans la Tablica) ;
+  NULL = valeur du camion.
+- Capacité de la semaine dans la Tablica = places du camion × tournées (`places`, `places_per_trip`, `trips` de la
+  case) ; la répartition automatique remplit jusqu'à cette capacité.
+- `n_logistics_trip.trip_no` (clé semaine + camion + n°) : un trajet par tournée. Clients répartis dans l'ordre des
+  arrêts jusqu'aux places du camion, la dernière tournée prend le reste ; tournée suivante = fin de la précédente
+  (repos journalier 11 h au lieu du repos hebdomadaire), arrondie au quart d'heure ; repos hebdomadaire après la
+  dernière. Contrôle supplémentaire : conduite de la semaine ≤ 56 h (`WEEK_DRIVE`) ; avertissement si une tournée
+  modifiée commence avant la fin de la précédente (`OVERLAP`). Routes : `PUT|DELETE
+  /ajax/logistics/plan/trips/{semaine}/{camion}/{n°}`.
+- Validation de la semaine : jour d'expédition du client = jour de départ de la tournée qui le décharge.
+
 ### Planning logistique : calendrier des trajets (migration 130, 29/10/2026)
 
 - Onglet **« Kalendarz tras »** de `/logistics/plan` (à côté de Prognoza, `#trasy`) : une ligne par camion, frise

@@ -1095,6 +1095,7 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .at-logi-num { width: 90px; }
 .at-logi-kg { width: 120px; }
 .at-logi-time { width: 110px; }
+.at-logi-trips { width: 76px; min-height: 36px; }
 .at-logi-add { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; }
 @media (max-width: 991px) { .at-logi-add { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 575px) { .at-logi-add { grid-template-columns: 1fr; } }

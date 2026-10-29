@@ -613,6 +613,12 @@ final class LogisticsService
             if ($time !== '' && !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $time)) throw new CustomException('Godzina wyjazdu: GG:MM.', 'errors', 422);
             $data['departure_time'] = $time === '' ? null : $time . ':00';
         }
+        if (array_key_exists('trips_per_week', $input)) {
+            // Plan logistyki [208] : tras (zmian) ciężarówki z kierowcą w tygodniu — standard 1.
+            $trips = filter_var($input['trips_per_week'], FILTER_VALIDATE_INT);
+            if ($trips === false || $trips < 1 || $trips > 4) throw new CustomException('Tras w tygodniu : od 1 do 4.', 'errors', 422);
+            $data['trips_per_week'] = $trips;
+        }
         if (array_key_exists('active', $input)) $data['active'] = filter_var($input['active'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
         if (array_key_exists('notes', $input)) $data['notes'] = mb_substr(trim((string) $input['notes']), 0, 255) ?: null;
         return $data;

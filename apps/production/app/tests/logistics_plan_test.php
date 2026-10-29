@@ -277,6 +277,45 @@ try {
     $t = array_values(array_filter($svc->plan(null, $today)['trips'], fn($t) => $t['week_start'] === '2026-11-30' && $t['vehicle_id'] === 11))[0];
     expectPlan($t['start_at'] === '2026-12-01 04:30' && $t['phases'][0]['m'] === 45, 'szablon : załadunek 4:30, 45 min');
     expectPlanFail(fn() => $trips->saveTemplate(['departure_time' => '25:00', 'load_min' => -1], 7), 422, 'szablon : walidacja');
+    // Tras w tygodniu [208] : ciężarówka 3 miejsca × 2 trasy → 6 miejsc ; Alfa (3) w trasie 1, Beta (2) w trasie 2 po odpoczynku dobowym.
+    $pdo->exec("UPDATE n_vehicle SET pallet_places = 3 WHERE id_carrier_vehicle = 11");
+    $svc->saveLoads([['week_start' => '2026-12-07', 'customer_id' => 1, 'vehicle_id' => 11, 'pallets' => 3], ['week_start' => '2026-12-07', 'customer_id' => 2, 'vehicle_id' => 11, 'pallets' => 2]], 7);
+    $p = $svc->setVehicleTrips(11, '2', 7, null);
+    $cell = array_column($p['vehicles'], null, 'id')[11]['cells']['2026-12-07'];
+    expectPlan(array_column($p['vehicles'], null, 'id')[11]['trips_per_week'] === 2 && $cell['trips'] === 2 && $cell['places_per_trip'] === 3 && $cell['places'] === 6 && !$cell['trips_override'], 'tras / tydz. 2 : miejsca tygodnia 3 × 2 = 6');
+    $wk = array_values(array_filter($p['trips'], fn($t) => $t['week_start'] === '2026-12-07' && $t['vehicle_id'] === 11));
+    expectPlan(count($wk) === 2 && $wk[0]['trip_no'] === 1 && $wk[1]['trip_no'] === 2 && $wk[0]['trips'] === 2 && $wk[0]['places'] === 3, 'dwie trasy w tygodniu, po 3 miejsca');
+    expectPlan(array_column($wk[0]['stops'], 'client_id') === [1, 2] && $wk[0]['pallets'] === 3 && $wk[1]['pallets'] === 2 && $wk[0]['clients'] === 1 && $wk[1]['clients'] === 1, 'podział : Alfa (3) w trasie 1, Beta (2) w trasie 2');
+    expectPlan($wk[0]['start_at'] === '2026-12-08 04:30' && end($wk[0]['phases'])['k'] === 'rest' && end($wk[0]['phases'])['m'] === 660 && end($wk[1]['phases'])['k'] === 'weekly', 'trasa 1 : wyjazd wt 4:30 (szablon), koniec odpoczynkiem dobowym ; trasa 2 : odpoczynek tygodniowy');
+    expectPlan($wk[1]['start_at'] >= $wk[0]['end_at'] && (int) substr($wk[1]['start_at'], 14, 2) % 15 === 0 && !$wk[1]['warnings'], 'trasa 2 : po końcu trasy 1 (pełny kwadrans), bez ostrzeżeń');
+    $week = array_column($wk[1]['checks'], null, 'code');
+    expectPlan(isset($week['WEEK_DRIVE']) && $week['WEEK_DRIVE']['level'] === 'ok' && $week['WEEK_DRIVE']['value'] === 2 * ($p['trip_template']['drive_out_min'] + $p['trip_template']['drive_back_min']) && !isset(array_column($wk[0]['checks'], null, 'code')['WEEK_DRIVE']), 'jazda w tygodniu : 2 × (tam + powrót) ≤ 56 h (na ostatniej trasie)');
+    // Trasa 2 zmieniona ręcznie przed końcem trasy 1 → ostrzeżenie ; za dużo jazdy w tygodniu → kontrola.
+    $trips->save('2026-12-07', 11, ['start_at' => '2026-12-08 08:00', 'phases' => [['k' => 'drive', 'm' => 270], ['k' => 'brk', 'm' => 45], ['k' => 'drive', 'm' => 270], ['k' => 'unload', 'm' => 30, 'client_id' => 2]]], 7, 2);
+    $wk = array_values(array_filter($svc->plan(null, $today)['trips'], fn($t) => $t['week_start'] === '2026-12-07' && $t['vehicle_id'] === 11));
+    expectPlan($wk[1]['manual'] && !$wk[0]['manual'] && array_column($wk[1]['warnings'], 'code') === ['OVERLAP'] && $wk[1]['warnings'][0]['no'] === 2, 'trasa 2 ręczna przed końcem trasy 1 : ostrzeżenie OVERLAP');
+    $trips->reset('2026-12-07', 11, 2);
+    $wk = array_values(array_filter($svc->plan(null, $today)['trips'], fn($t) => $t['week_start'] === '2026-12-07' && $t['vehicle_id'] === 11));
+    expectPlan(!$wk[1]['manual'] && !$wk[1]['warnings'], 'trasa 2 : przywróć szablon');
+    // Zatwierdzenie : dzień wysyłki Bety = wyjazd trasy 2.
+    $svc->approve('2026-12-07', 7, null);
+    $days = $pdo->query("SELECT id_customer, ship_date FROM n_shipping_assignment WHERE ship_date BETWEEN '2026-12-07' AND '2026-12-13' AND id_carrier_vehicle = 11 ORDER BY id_customer")->fetchAll(PDO::FETCH_KEY_PAIR);
+    expectPlan(($days[1] ?? null) === '2026-12-08' && ($days[2] ?? null) === substr($wk[1]['start_at'], 0, 10) && $days[2] > '2026-12-08', 'zatwierdzenie : Alfa wt 8.12, Beta w dniu wyjazdu trasy 2 (' . ($days[2] ?? '-') . ')');
+    // Wyjątek tygodnia (⚙ Tablica) : 1 trasa → wszyscy w jednej trasie (ostatnia bierze resztę).
+    $p = $svc->saveVehicleWeek('2026-12-07', 11, ['driver_id' => null, 'unavailable' => false, 'trips' => '1'], 7);
+    $cell = array_column($p['vehicles'], null, 'id')[11]['cells']['2026-12-07'];
+    $wk = array_values(array_filter($p['trips'], fn($t) => $t['week_start'] === '2026-12-07' && $t['vehicle_id'] === 11));
+    expectPlan($cell['trips'] === 1 && $cell['trips_override'] && $cell['places'] === 3 && count($wk) === 1 && $wk[0]['clients'] === 2 && end($wk[0]['phases'])['k'] === 'weekly', 'wyjątek tygodnia : 1 trasa, 3 miejsca, obaj klienci');
+    $p = $svc->saveVehicleWeek('2026-12-07', 11, ['driver_id' => null, 'unavailable' => false, 'trips' => ''], 7);
+    expectPlan(array_column($p['vehicles'], null, 'id')[11]['cells']['2026-12-07']['trips'] === 2 && !$pdo->query("SELECT COUNT(*) FROM n_logistics_plan_vehicle WHERE week_start = '2026-12-07' AND id_carrier_vehicle = 11")->fetchColumn(), 'wyjątek usunięty : znów 2 trasy (bez wiersza tygodnia)');
+    $pdo->exec("INSERT INTO carrier_vehicle (id, id_carrier, regis_num) VALUES (13, 1, 'NEW 4')");
+    expectPlanFail(fn() => $svc->setVehicleTrips(11, 5, 7), 422, 'tras / tydz. : od 1 do 4');
+    expectPlanFail(fn() => $svc->setVehicleTrips(13, 2, 7), 404, 'tras / tydz. : ciężarówka bez pojemności');
+    expectPlanFail(fn() => $svc->saveVehicleWeek('2026-12-07', 11, ['trips' => 9], 7), 422, 'wyjątek tygodnia : od 1 do 4');
+    expectPlanFail(fn() => $trips->save('2026-12-07', 11, ['start_at' => '2026-12-08 06:00', 'phases' => [['k' => 'load', 'm' => 10]]], 7, 5), 422, 'trasa : numer od 1 do 4');
+    expectPlanFail(fn() => $c->get(\App\Services\Logistics\LogisticsService::class)->saveVehicle(11, ['pallet_places' => 3, 'trips_per_week' => 0], 7), 422, 'Pojazdy : tras w tygodniu od 1 do 4');
+    $c->get(\App\Services\Logistics\LogisticsService::class)->saveVehicle(11, ['pallet_places' => 33, 'trips_per_week' => '1'], 7);
+    expectPlan((int) $pdo->query('SELECT trips_per_week FROM n_vehicle WHERE id_carrier_vehicle = 11')->fetchColumn() === 1, 'Pojazdy : zapis tras w tygodniu');
     // Inny zakres (?from).
     $p = $svc->plan('2026-12-02', $today);
     expectPlan($p['weeks'][0]['week_start'] === '2026-11-30' && $p['range']['prev'] === '2026-11-02', 'zakres od tygodnia daty from');

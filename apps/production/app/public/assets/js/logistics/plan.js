@@ -145,10 +145,10 @@
         const cmap = C();
         for (const v of P.vehicles) {
             html += `<div class="lp-rl lp-truck"><span class="lp-av">${esc(initials(v.driver.name || v.label))}</span><div><b>${esc(v.label)}</b>
-                <span>${esc(v.carrier || '')} · ${v.places}${v.places_known ? '' : ' ?'} m.${v.active ? '' : ' · nieaktywna'}</span><span>${esc(v.driver.name || 'kierowca przewoźnika')}</span></div></div>`;
+                <span>${esc(v.carrier || '')} · ${v.places}${v.places_known ? '' : ' ?'} m.${v.trips_per_week > 1 ? ` × ${v.trips_per_week} trasy / tydz.` : ''}${v.active ? '' : ' · nieaktywna'}</span><span>${esc(v.driver.name || 'kierowca przewoźnika')}</span></div></div>`;
             for (const w of P.weeks) {
                 const cell = v.cells[w.week_start];
-                const gear = `<button type="button" class="lp-gear" data-vw="${v.id}|${w.week_start}" title="Kierowca / dostępność w tym tygodniu" aria-label="Kierowca i dostępność ${esc(v.label)} tydzień ${w.iso_week}"><i class="bi bi-gear"></i></button>`;
+                const gear = `<button type="button" class="lp-gear" data-vw="${v.id}|${w.week_start}" title="Kierowca, dostępność i trasy w tym tygodniu" aria-label="Kierowca, dostępność i trasy ${esc(v.label)} tydzień ${w.iso_week}"><i class="bi bi-gear"></i></button>`;
                 const chips = cell.customers.map(id => chip(cmap[id], w.week_start)).join('');
                 if (!cell.usable && !chips) {
                     const why = cell.absent ? `urlop<br>${esc(cell.driver.name)}` : (cell.unavailable ? 'niedostępna' : 'nieaktywna');
@@ -156,7 +156,7 @@
                     continue;
                 }
                 const note = cell.absent ? `<span class="lp-warn">urlop : ${esc(cell.driver.name)}</span>` : (cell.unavailable ? '<span class="lp-warn">niedostępna</span>'
-                    : (cell.driver_override ? `<span class="lp-sub">${esc(cell.driver.name)}</span>` : ''));
+                    : (cell.driver_override ? `<span class="lp-sub">${esc(cell.driver.name)}</span>` : (cell.trips > 1 ? `<span class="lp-sub">${cell.trips} trasy</span>` : '')));
                 html += `<div class="lp-cell${target(w.week_start)}" data-drop="vehicle" data-vehicle="${v.id}" data-week="${w.week_start}">${chips}
                     ${chips ? fill(cell.pallets, cell.places) : `<span class="lp-free">wolna · ${cell.places} m.</span>`}<div class="lp-cell-foot">${note}${gear}</div></div>`;
             }
@@ -307,9 +307,13 @@
             <label class="lp-field"><span>Kierowca w tym tygodniu</span><select class="form-select" name="driver_id">
                 <option value="">Kierowca pojazdu (${esc(v.driver.name || 'przewoźnik')})</option>
                 ${P.drivers.map(d => `<option value="${d.id}" ${cell.driver_override && cell.driver.id === d.id ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}</select></label>
+            <label class="lp-field"><span>Tras w tym tygodniu (zmiany kierowcy)</span><select class="form-select" name="trips">
+                <option value="">Jak zwykle : ${v.trips_per_week} ${v.trips_per_week > 1 ? 'trasy' : 'trasa'} / tydz.</option>
+                ${[1, 2, 3, 4].map(n => `<option value="${n}" ${cell.trips_override && cell.trips === n ? 'selected' : ''}>${n} ${n > 1 ? 'trasy' : 'trasa'} w tym tygodniu</option>`).join('')}</select>
+                <small>Standard : 1 trasa na kierowcę na tydzień. Miejsca tygodnia = miejsca × trasy ; zmiana na stałe : Kalendarz tras albo Pojazdy.</small></label>
             <label class="lp-check"><input type="checkbox" name="unavailable" ${cell.unavailable ? 'checked' : ''}> Ciężarówka niedostępna w tym tygodniu</label>`;
         modal(`${v.label} · tydzień ${w.iso_week}`, body, async (form) => {
-            const res = await api(`/ajax/logistics/plan/weeks/${ws}/vehicles/${vid}`, 'PUT', { driver_id: form.driver_id.value || null, unavailable: form.unavailable.checked });
+            const res = await api(`/ajax/logistics/plan/weeks/${ws}/vehicles/${vid}`, 'PUT', { driver_id: form.driver_id.value || null, unavailable: form.unavailable.checked, trips: form.trips.value || null });
             return !!res;
         });
     }
@@ -483,7 +487,7 @@
         m = s.match(/^(\d+)\s*(?:min|m)?$/);
         return m ? Number(m[1]) : null;
     };
-    const tripKey = (t) => `${t.week_start}|${t.vehicle_id}`;
+    const tripKey = (t) => `${t.week_start}|${t.vehicle_id}|${t.trip_no || 1}`;
     const tripsOf = (ws) => (P.trips || []).filter(t => t.week_start === ws);
     const curWeek = () => {
         if (tv.week && W()[tv.week]) return tv.week;
@@ -500,11 +504,13 @@
         CONT_DRIVE: `jazda bez przerwy maks. ${dur(c.value)} (≤ 4 h 30)`,
         DAY_DRIVE: `jazda dzienna maks. ${dur(c.value)} (≤ 9 h, 2× w tyg. 10 h)`,
         DAILY_REST: `odpoczynek dobowy min. ${dur(c.value)} (≥ 11 h, skrócony 9 h)`,
+        WEEK_DRIVE: `jazda w tygodniu ${dur(c.value)} (≤ 56 h)`,
     }[c.code] || c.code);
     const warnText = (w) => ({
         MISSING: `brak rozładunku : ${(w.names || []).join(', ')}`,
         EXTRA: `nie na tej ciężarówce : ${(w.names || []).join(', ')}`,
         SHIP_DATE: `wyjazd w planie : ${w.date ? wd(w.date) + ' ' + dm(w.date) : ''}`,
+        OVERLAP: `trasa ${w.no} zaczyna się przed końcem poprzedniej (z odpoczynkiem 11 h)`,
     }[w.code] || w.code);
 
     function tripRange() {
@@ -555,19 +561,26 @@
         vids.forEach(vid => {
             const list = rowsBy[vid];
             const t = list[0];
-            const ph = month ? null : phasesOf(t);
             const segs = list.map(x => phasesOf(x).map((p, i) => seg(x, p, i, tv.sel && tv.sel.key === tripKey(x) && tv.sel.i === i)).join('')).join('');
+            const veh = V()[vid];
+            const per = veh ? veh.trips_per_week : 1;
             let info = `<b>${esc(t.label)}</b><small>${esc(t.driver || '—')}</small>`;
             if (!month) {
-                const arrive = ph.find(p => p.k === 'unload');
-                const home = ph.filter(p => p.k !== 'weekly').at(-1);
-                info += `<small>${t.pallets} / ${t.places} pal. · ${t.clients} klientów</small>
-                    <small>wyjazd ${dlab(ph[0].s)} ${hm(ph[0].s)}${arrive ? ' · u klienta ' + hm(arrive.s) : ''}${home ? ` · baza ${dlab(home.e)} ${hm(home.e)}` : ''}</small>
-                    ${t.manual ? `<span class="kc-man">zmieniona ręcznie · <button type="button" class="kc-link" data-trip-reset="${tripKey(t)}">przywróć szablon</button></span>` : ''}`;
-            } else info += `<small>${list.length} × trasa</small>`;
-            const chips = month ? '' : `<div class="kc-chk">${t.checks.map(c => `<span class="kc-chip ${c.level === 'ok' ? '' : c.level}">${c.level === 'ok' ? '✓' : '⚠'} ${esc(checkText(c))}</span>`).join('')}
-                ${t.warnings.map(x => `<span class="kc-chip bad">⚠ ${esc(warnText(x))}</span>`).join('')}${tv.draft && tv.draft.key === tripKey(t) ? '<span class="kc-chip warn">niezapisane zmiany</span>' : ''}</div>`;
-            rows += `<div class="kc-row ${month ? 'is-month' : ''}" data-trip-row="${vid}"><div class="kc-who">${info}</div><div class="kc-track" data-track="${vid}">${segs}${chips}</div></div>`;
+                const multi = list.length > 1;
+                info += list.map(x => {
+                    const xp = phasesOf(x);
+                    const arrive = xp.find(p => p.k === 'unload');
+                    const home = xp.filter(p => !['weekly', 'rest', 'brk'].includes(p.k)).at(-1);
+                    return `<small>${multi ? `<b>Trasa ${x.trip_no}</b> · ` : ''}${x.pallets} / ${x.places} pal. · ${x.clients} klientów</small>
+                        <small>wyjazd ${dlab(xp[0].s)} ${hm(xp[0].s)}${arrive ? ` · u klienta ${dlab(arrive.s)} ${hm(arrive.s)}` : ''}${home ? ` · baza ${dlab(home.e)} ${hm(home.e)}` : ''}</small>
+                        ${x.manual ? `<span class="kc-man">zmieniona ręcznie · <button type="button" class="kc-link" data-trip-reset="${tripKey(x)}">przywróć szablon</button></span>` : ''}`;
+                }).join('');
+                info += veh ? `<small class="kc-per-l">Tras w tygodniu (standard 1)</small><div class="kc-per" role="group" aria-label="Tras w tygodniu ${esc(t.label)}">${[1, 2, 3, 4].map(n => `<button type="button" data-per="${vid}|${n}" class="${per === n ? 'on' : ''}" aria-pressed="${per === n}">${n}</button>`).join('')}</div>
+                    ${veh.cells[ws] && veh.cells[ws].trips_override ? `<small class="kc-man">w tym tygodniu : ${veh.cells[ws].trips} (⚙ Tablica)</small>` : ''}` : '';
+            } else info += `<small>${list.length} × trasa${per > 1 ? ` · ${per} / tydz.` : ''}</small>`;
+            const chips = month ? '' : `<div class="kc-chk">${list.map(x => x.checks.map(c => `<span class="kc-chip ${c.level === 'ok' ? '' : c.level}">${c.level === 'ok' ? '✓' : '⚠'} ${list.length > 1 && c.code !== 'WEEK_DRIVE' ? 'T' + x.trip_no + ' ' : ''}${esc(checkText(c))}</span>`).join('')
+                    + x.warnings.map(w2 => `<span class="kc-chip bad">⚠ ${esc(warnText(w2))}</span>`).join('') + (tv.draft && tv.draft.key === tripKey(x) ? '<span class="kc-chip warn">niezapisane zmiany</span>' : '')).join('')}</div>`;
+            rows += `<div class="kc-row ${month ? 'is-month' : ''} ${list.length > 1 && !month ? 'is-multi' : ''}" data-trip-row="${vid}"><div class="kc-who">${info}</div><div class="kc-track" data-track="${vid}">${segs}${chips}</div></div>`;
         });
         const label = tv.zoom === 'day' ? dlab(from) : `${month ? '' : 'tydz. ' + w.iso_week + ' · '}${dlab(from)} → ${dlab(to - 1)}`;
         view.innerHTML = `<div class="kc-bar">
@@ -583,7 +596,8 @@
             </div>
             <p class="lp-hint">Trasa = szablon (załadunek, jazda tam, rozładunek u klientów w kolejności trasy, powrót, odpoczynek tygodniowy ; przerwy co 4 h 30 i odpoczynek dobowy 11 h wstawiane same)
                 od dnia wyjazdu tygodnia. Przeciągnij blok, aby go przesunąć (pierwszy blok = godzina wyjazdu), przeciągnij prawy brzeg, aby zmienić czas, dotknij bloku, aby zmienić rodzaj, klienta, kolejność, dodać albo usunąć fazę.
-                Kontrola czasu pracy kierowcy (UE 561/2006) po każdym zapisie.</p>`;
+                Kontrola czasu pracy kierowcy (UE 561/2006) po każdym zapisie. Tras / tydz. : standard 1 trasa na kierowcę na tydzień ; przy 2–4 trasach klienci dzieleni według miejsc,
+                następna trasa po odpoczynku dobowym 11 h, jazda w tygodniu ≤ 56 h.</p>`;
         view.dataset.from = from; view.dataset.to = to; view.dataset.width = width;
         if (tv.sel && !month) renderPopover();
     }
@@ -608,7 +622,7 @@
         const left = Math.min(Math.max(232, 232 + (p.s - Number(view.dataset.from)) / (Number(view.dataset.to) - Number(view.dataset.from)) * width), 232 + width - 340);
         const clients = [...t.stops.map(s => [s.client_id, s.client]), ...(p.client_id && !t.stops.some(s => s.client_id === p.client_id) ? [[p.client_id, p.client || '#' + p.client_id]] : [])];
         box.innerHTML = `<div class="kc-pop" style="left:${left}px;top:${(row ? row.offsetTop + row.offsetHeight - 6 : 60)}px" role="dialog" aria-label="Faza trasy">
-            <div class="kc-pop-h"><b>${esc(k.label)}${p.client ? ' · ' + esc(p.client) : ''}</b><span class="kc-chip">${esc(t.label)}</span></div>
+            <div class="kc-pop-h"><b>${esc(k.label)}${p.client ? ' · ' + esc(p.client) : ''}</b><span class="kc-chip">${esc(t.label)}${t.trips > 1 ? ' · trasa ' + t.trip_no : ''}</span></div>
             <div class="kc-pop-g">
                 <label>Faza<select class="form-select" data-pop="k">${Object.entries(KIND).map(([key, x]) => `<option value="${key}" ${p.k === key ? 'selected' : ''}>${x.label}</option>`).join('')}</select></label>
                 ${p.k === 'unload' ? `<label>Klient<select class="form-select" data-pop="client">${clients.map(([id, n]) => `<option value="${id}" ${p.client_id === id ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>` : '<span></span>'}
@@ -627,8 +641,8 @@
     async function saveDraft() {
         const d = tv.draft;
         if (!d) return;
-        const [ws, vid] = d.key.split('|');
-        const res = await api(`/ajax/logistics/plan/trips/${ws}/${vid}`, 'PUT', { start_at: d.start_at, phases: d.phases.map(p => ({ k: p.k, m: p.m, ...(p.k === 'unload' ? { client_id: p.client_id } : {}) })) });
+        const [ws, vid, no] = d.key.split('|');
+        const res = await api(`/ajax/logistics/plan/trips/${ws}/${vid}/${no}`, 'PUT', { start_at: d.start_at, phases: d.phases.map(p => ({ k: p.k, m: p.m, ...(p.k === 'unload' ? { client_id: p.client_id } : {}) })) });
         if (res) tv.draft = null;
     }
 
@@ -648,18 +662,23 @@
         if (b.matches('[data-trip-tpl]')) { openTripTemplate(); return; }
         if (b.matches('[data-trip-rest]')) { b.disabled = true; tv.draft = null; tv.sel = null; await api(`/ajax/logistics/plan/trips/${curWeek()}/rest`, 'POST', {}); return; }
         if (b.dataset.tripReset) {
-            const [ws, vid] = b.dataset.tripReset.split('|');
-            if (await ask('Przywrócić trasę z szablonu ? Zmiany ręczne tej trasy zostaną usunięte.', 'Przywróć')) { tv.draft = null; tv.sel = null; await api(`/ajax/logistics/plan/trips/${ws}/${vid}`, 'DELETE'); }
+            const [ws, vid, no] = b.dataset.tripReset.split('|');
+            if (await ask('Przywrócić trasę z szablonu ? Zmiany ręczne tej trasy zostaną usunięte.', 'Przywróć')) { tv.draft = null; tv.sel = null; await api(`/ajax/logistics/plan/trips/${ws}/${vid}/${no}`, 'DELETE'); }
+            return;
+        }
+        if (b.dataset.per) {
+            const [vid, n] = b.dataset.per.split('|');
+            await api(`/ajax/logistics/plan/vehicles/${vid}/trips`, 'PUT', { trips_per_week: Number(n) });
             return;
         }
         if (b.dataset.seg) {
             if (segDrag && segDrag.moved) return;
             const parts = b.dataset.seg.split('|');
-            const key = parts[0] + '|' + parts[1];
+            const key = parts.slice(0, 3).join('|');
             if (tv.zoom === 'month') { tv.zoom = '4d'; tv.week = parts[0]; }
             if (tv.draft && tv.draft.key !== key && !(await ask('Zapisać zmiany poprzedniej trasy ?', 'Zapisz'))) tv.draft = null;
             else if (tv.draft && tv.draft.key !== key) await saveDraft();
-            tv.sel = { key, i: Number(parts[2]) };
+            tv.sel = { key, i: Number(parts[3]) };
             renderTrips();
             return;
         }
@@ -719,11 +738,11 @@
         const s = e.target.closest('[data-seg]');
         if (!s) return;
         const parts = s.dataset.seg.split('|');
-        const key = parts[0] + '|' + parts[1];
+        const key = parts.slice(0, 3).join('|');
         if (tv.draft && tv.draft.key !== key) return;
         const t = tripByKey(key);
         const d = startDraft(t);
-        segDrag = { key, i: Number(parts[2]), mode: e.target.closest('[data-resize]') ? 'resize' : 'move', x0: e.clientX, moved: false,
+        segDrag = { key, i: Number(parts[3]), mode: e.target.closest('[data-resize]') ? 'resize' : 'move', x0: e.clientX, moved: false,
             start0: d.start_at, m0: d.phases.map(p => p.m), track: s.closest('[data-track]') };
         s.setPointerCapture(e.pointerId);
     });

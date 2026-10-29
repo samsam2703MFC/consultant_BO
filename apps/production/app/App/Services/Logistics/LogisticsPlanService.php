@@ -129,10 +129,24 @@ final class LogisticsPlanService
             if ($driver === false || !$this->repo->employeeExists($driver)) throw new CustomException('Nie znaleziono kierowcy.', 'errors', 404);
         } else $driver = null;
         $off = filter_var($input['unavailable'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $this->tx->execute(function () use ($week, $vehicleId, $driver, $off, $userId) {
-            $this->repo->saveVehicleWeek($week, $vehicleId, $driver, $off, $userId);
+        $trips = $input['trips'] ?? null;
+        if ($trips !== null && $trips !== '') {
+            $trips = filter_var($trips, FILTER_VALIDATE_INT);
+            if ($trips === false || $trips < 1 || $trips > 4) throw new CustomException('Tras w tygodniu : od 1 do 4.', 'errors', 422);
+        } else $trips = null;
+        $this->tx->execute(function () use ($week, $vehicleId, $driver, $off, $trips, $userId) {
+            $this->repo->saveVehicleWeek($week, $vehicleId, $driver, $off, $userId, $trips);
             $this->repo->unapprove($week);
         });
+        return $this->plan($from);
+    }
+
+    /** Tras (zmian) ciężarówki z kierowcą w tygodniu — domyślnie dla wszystkich tygodni [208] (standard 1). */
+    public function setVehicleTrips(int $vehicleId, mixed $trips, ?int $userId, ?string $from = null): array
+    {
+        $n = filter_var($trips, FILTER_VALIDATE_INT);
+        if ($n === false || $n < 1 || $n > 4) throw new CustomException('Tras w tygodniu : od 1 do 4.', 'errors', 422);
+        if (!$this->repo->setVehicleTrips($vehicleId, $n, $userId)) throw new CustomException('Najpierw ustaw ciężarówkę w Pojazdach i pojemności.', 'errors', 404);
         return $this->plan($from);
     }
 
@@ -350,13 +364,19 @@ final class LogisticsPlanService
         $saved = 0;
         $kept = 0;
         $weeks = 0;
-        $this->tx->execute(function () use ($plan, $week, $userId, &$saved, &$kept, &$weeks) {
+        // Dzień wyjazdu klienta : wyjazd trasy, która go rozładowuje (2. trasa tygodnia [208] wyjeżdża później).
+        $tripDay = [];
+        foreach ($plan['trips'] ?? [] as $t) {
+            foreach ($t['phases'] as $p) if ($p['k'] === 'unload' && isset($p['client_id'])) $tripDay[$t['week_start']][$t['vehicle_id']][(int) $p['client_id']] ??= substr($t['start_at'], 0, 10);
+        }
+        $this->tx->execute(function () use ($plan, $week, $userId, $tripDay, &$saved, &$kept, &$weeks) {
             foreach ($plan['weeks'] as $w) {
                 if ($week !== null && $w['week_start'] !== $week) continue;
                 foreach ($plan['customers'] as $c) {
                     $cell = $c['cells'][$w['week_start']];
                     if ($cell['vehicle_id'] === null || $cell['pallets'] <= 0) continue;
-                    $this->repo->planAssignment($w['ship_date'], $c['id'], $cell['vehicle_id'], $userId) ? $saved++ : $kept++;
+                    $day = $tripDay[$w['week_start']][$cell['vehicle_id']][$c['id']] ?? $w['ship_date'];
+                    $this->repo->planAssignment($day, $c['id'], $cell['vehicle_id'], $userId) ? $saved++ : $kept++;
                 }
                 $this->repo->saveWeek($w['week_start'], ['approved_at' => date('Y-m-d H:i:s'), 'approved_by' => $userId], $userId);
                 $weeks++;
@@ -508,7 +528,9 @@ final class LogisticsPlanService
                 : ['id' => null, 'name' => trim((string) $v['driver']) ?: null, 'external' => true];
             $cells = [];
             foreach ($weeks as $ws) {
-                $vw = $vehicleWeeks[$ws][$vid] ?? ['id_driver' => null, 'unavailable' => false];
+                $vw = $vehicleWeeks[$ws][$vid] ?? ['id_driver' => null, 'unavailable' => false, 'trips' => null];
+                // Tras (zmian) w tygodniu [208] : wyjątek tygodnia albo ciężarówka (standard 1) ; miejsca tygodnia = miejsca × trasy.
+                $trips = max(1, min(4, (int) ($vw['trips'] ?? 0) ?: (int) ($v['trips_per_week'] ?? 1)));
                 $driver = $vw['id_driver'] !== null && isset($drivers[$vw['id_driver']])
                     ? ['id' => $vw['id_driver'], 'name' => $drivers[$vw['id_driver']]['name'], 'external' => false] : $defaultDriver;
                 $absent = null;
@@ -524,11 +546,13 @@ final class LogisticsPlanService
                     if ($cell['vehicle_id'] === $vid && $cell['pallets'] > 0) { $pallets += $cell['pallets']; $list[] = $c['id']; }
                 }
                 $cells[$ws] = ['driver' => $driver, 'driver_override' => $vw['id_driver'] !== null, 'absent' => $absent, 'unavailable' => $vw['unavailable'],
-                    'usable' => (bool) (int) $v['active'] && !$vw['unavailable'] && $absent === null, 'places' => $places, 'pallets' => $pallets, 'customers' => $list,
-                    'fill_pct' => $places > 0 ? round($pallets / $places * 100) : null];
+                    'usable' => (bool) (int) $v['active'] && !$vw['unavailable'] && $absent === null, 'places' => $places * $trips, 'places_per_trip' => $places,
+                    'trips' => $trips, 'trips_override' => ($vw['trips'] ?? null) !== null, 'pallets' => $pallets, 'customers' => $list,
+                    'fill_pct' => $places > 0 ? round($pallets / ($places * $trips) * 100) : null];
             }
             $vehicles[] = ['id' => $vid, 'label' => trim((string) $v['regis_num']) ?: ('#' . $vid), 'carrier' => $v['carrier'], 'places' => $places,
-                'places_known' => $v['pallet_places'] !== null, 'active' => (bool) (int) $v['active'], 'driver' => $defaultDriver, 'departure' => $v['departure_time'], 'cells' => $cells];
+                'places_known' => $v['pallet_places'] !== null, 'active' => (bool) (int) $v['active'], 'driver' => $defaultDriver, 'departure' => $v['departure_time'],
+                'trips_per_week' => max(1, (int) ($v['trips_per_week'] ?? 1)), 'cells' => $cells];
         }
 
         // Sumy tygodni.
@@ -544,7 +568,7 @@ final class LogisticsPlanService
                 else $unCustomers++;
             }
             $places = 0;
-            foreach ($vehicles as $v) if ($v['cells'][$ws]['usable']) $places += $v['places'];
+            foreach ($vehicles as $v) if ($v['cells'][$ws]['usable']) $places += $v['cells'][$ws]['places'];
             $w += ['pallets' => $total, 'assigned' => $assigned, 'unassigned' => $total - $assigned, 'unassigned_customers' => $unCustomers, 'places' => $places,
                 'over' => $total > $places];
             foreach ($vehicles as $v) {

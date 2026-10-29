@@ -109,21 +109,30 @@ final class LogisticsPlanRepository extends WorkshopRepository
     public function vehicleWeeks(string $from, string $to): array
     {
         $out = [];
-        foreach ($this->all('SELECT week_start, id_carrier_vehicle, id_driver, unavailable FROM n_logistics_plan_vehicle WHERE week_start BETWEEN ? AND ?', [$from, $to]) as $r) {
-            $out[$r['week_start']][(int) $r['id_carrier_vehicle']] = ['id_driver' => $r['id_driver'] !== null ? (int) $r['id_driver'] : null, 'unavailable' => (bool) (int) $r['unavailable']];
+        foreach ($this->all('SELECT week_start, id_carrier_vehicle, id_driver, unavailable, trips FROM n_logistics_plan_vehicle WHERE week_start BETWEEN ? AND ?', [$from, $to]) as $r) {
+            $out[$r['week_start']][(int) $r['id_carrier_vehicle']] = ['id_driver' => $r['id_driver'] !== null ? (int) $r['id_driver'] : null, 'unavailable' => (bool) (int) $r['unavailable'],
+                'trips' => $r['trips'] !== null ? (int) $r['trips'] : null];
         }
         return $out;
     }
 
-    public function saveVehicleWeek(string $week, int $vehicleId, ?int $driverId, bool $unavailable, ?int $userId): void
+    public function saveVehicleWeek(string $week, int $vehicleId, ?int $driverId, bool $unavailable, ?int $userId, ?int $trips = null): void
     {
-        if ($driverId === null && !$unavailable) {
+        if ($driverId === null && !$unavailable && $trips === null) {
             $this->db->prepare('DELETE FROM n_logistics_plan_vehicle WHERE week_start = ? AND id_carrier_vehicle = ?')->execute([$week, $vehicleId]);
             return;
         }
-        $this->db->prepare('INSERT INTO n_logistics_plan_vehicle (week_start, id_carrier_vehicle, id_driver, unavailable, updated_by) VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE id_driver = VALUES(id_driver), unavailable = VALUES(unavailable), updated_by = VALUES(updated_by)')
-            ->execute([$week, $vehicleId, $driverId, $unavailable ? 1 : 0, $userId]);
+        $this->db->prepare('INSERT INTO n_logistics_plan_vehicle (week_start, id_carrier_vehicle, id_driver, unavailable, trips, updated_by) VALUES (?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE id_driver = VALUES(id_driver), unavailable = VALUES(unavailable), trips = VALUES(trips), updated_by = VALUES(updated_by)')
+            ->execute([$week, $vehicleId, $driverId, $unavailable ? 1 : 0, $trips, $userId]);
+    }
+
+    /** Tras (zmian) ciężarówki z kierowcą w tygodniu — domyślnie [208]. @return bool ciężarówka ustawiona w Pojazdach */
+    public function setVehicleTrips(int $vehicleId, int $trips, ?int $userId): bool
+    {
+        if (!$this->all('SELECT 1 FROM n_vehicle WHERE id_carrier_vehicle = ?', [$vehicleId])) return false;
+        $this->db->prepare('UPDATE n_vehicle SET trips_per_week = ?, updated_by = ? WHERE id_carrier_vehicle = ?')->execute([$trips, $userId, $vehicleId]);
+        return true;
     }
 
     // --- Dodatkowe palety, współczynniki --------------------------------------------------------------
@@ -238,28 +247,28 @@ final class LogisticsPlanRepository extends WorkshopRepository
 
     // --- Kalendarz tras [207] -----------------------------------------------------------------------------
 
-    /** @return array<string, array<int, array{start_at:string, phases:array}>> tydzień => pojazd => trasa zmieniona ręcznie */
+    /** @return array<string, array<int, array<int, array{start_at:string, phases:array}>>> tydzień => pojazd => nr trasy => trasa zmieniona ręcznie */
     public function trips(string $from, string $to): array
     {
         $out = [];
-        foreach ($this->all('SELECT week_start, id_carrier_vehicle, DATE_FORMAT(start_at, "%Y-%m-%d %H:%i") AS start_at, phases FROM n_logistics_trip WHERE week_start BETWEEN ? AND ?', [$from, $to]) as $r) {
+        foreach ($this->all('SELECT week_start, id_carrier_vehicle, trip_no, DATE_FORMAT(start_at, "%Y-%m-%d %H:%i") AS start_at, phases FROM n_logistics_trip WHERE week_start BETWEEN ? AND ?', [$from, $to]) as $r) {
             $phases = json_decode((string) $r['phases'], true);
-            if (is_array($phases)) $out[$r['week_start']][(int) $r['id_carrier_vehicle']] = ['start_at' => $r['start_at'], 'phases' => $phases];
+            if (is_array($phases)) $out[$r['week_start']][(int) $r['id_carrier_vehicle']][(int) $r['trip_no']] = ['start_at' => $r['start_at'], 'phases' => $phases];
         }
         return $out;
     }
 
-    public function saveTrip(string $week, int $vehicleId, string $startAt, array $phases, ?int $userId): void
+    public function saveTrip(string $week, int $vehicleId, string $startAt, array $phases, ?int $userId, int $tripNo = 1): void
     {
-        $this->db->prepare('INSERT INTO n_logistics_trip (week_start, id_carrier_vehicle, start_at, phases, updated_by) VALUES (?, ?, ?, ?, ?)
+        $this->db->prepare('INSERT INTO n_logistics_trip (week_start, id_carrier_vehicle, trip_no, start_at, phases, updated_by) VALUES (?, ?, ?, ?, ?, ?)
                             ON DUPLICATE KEY UPDATE start_at = VALUES(start_at), phases = VALUES(phases), updated_by = VALUES(updated_by)')
-            ->execute([$week, $vehicleId, $startAt, json_encode(array_values($phases), JSON_UNESCAPED_UNICODE), $userId]);
+            ->execute([$week, $vehicleId, $tripNo, $startAt, json_encode(array_values($phases), JSON_UNESCAPED_UNICODE), $userId]);
     }
 
-    public function deleteTrip(string $week, int $vehicleId): bool
+    public function deleteTrip(string $week, int $vehicleId, int $tripNo = 1): bool
     {
-        $st = $this->db->prepare('DELETE FROM n_logistics_trip WHERE week_start = ? AND id_carrier_vehicle = ?');
-        $st->execute([$week, $vehicleId]);
+        $st = $this->db->prepare('DELETE FROM n_logistics_trip WHERE week_start = ? AND id_carrier_vehicle = ? AND trip_no = ?');
+        $st->execute([$week, $vehicleId, $tripNo]);
         return $st->rowCount() > 0;
     }
 

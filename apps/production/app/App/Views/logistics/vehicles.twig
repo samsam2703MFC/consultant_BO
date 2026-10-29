@@ -60,6 +60,9 @@
                             <input class="form-control" name="max_load_kg" id="v_kg" type="number" min="1" max="60000" placeholder="np. 24000" data-nullable></div>
                         <div class="col-6 col-md-4"><label class="form-label" for="v_departure">Wyjazd</label>
                             <input class="form-control" type="time" name="departure_time" id="v_departure" data-nullable></div>
+                        <div class="col-6 col-md-4"><label class="form-label" for="v_trips">Tras w tygodniu</label>
+                            <select class="form-select" name="trips_per_week" id="v_trips">{% for n in 1..4 %}<option value="{{ n }}">{{ n }}{{ n == 1 ? ' (standard)' : '' }}</option>{% endfor %}</select>
+                            <div class="form-text">Ile tras (zmian) kierowca robi tą ciężarówką w tygodniu ; miejsca tygodnia = miejsca × trasy.</div></div>
                     </div>
                 </section>
 
@@ -115,7 +118,7 @@
         <div class="card-body pt-0">
             <div class="table-responsive">
                 <table class="table mb-0 at-logi-vehicles">
-                    <thead><tr><th>Pojazd</th><th>Miejsca paletowe</th><th>Ładowność (kg)</th><th>Wyjazd</th><th class="text-center">W użyciu</th><th></th></tr></thead>
+                    <thead><tr><th>Pojazd</th><th>Miejsca paletowe</th><th>Ładowność (kg)</th><th>Wyjazd</th><th>Tras / tydz.</th><th class="text-center">W użyciu</th><th></th></tr></thead>
                     <tbody>
                     {% for v in vehicles %}
                         <tr data-vehicle="{{ v.id }}" class="{{ v.carrier_active ? '' : 'at-staff-inactive' }}{{ created is defined and created and created.id == v.id ? ' at-row-new' : '' }}">
@@ -124,6 +127,8 @@
                             <td><input class="form-control form-control-sm at-logi-num" name="pallet_places" inputmode="numeric" value="{{ v.pallet_places }}" placeholder="{{ default_places }}" aria-label="Miejsca paletowe {{ v.regis_num }}"></td>
                             <td><input class="form-control form-control-sm at-logi-kg" name="max_load_kg" inputmode="numeric" value="{{ v.max_load_kg }}" placeholder="bez kontroli" aria-label="Ładowność {{ v.regis_num }}"></td>
                             <td><input class="form-control form-control-sm at-logi-time" type="time" name="departure_time" value="{{ v.departure_time }}" aria-label="Wyjazd {{ v.regis_num }}"><div class="at-sub">puste = {{ default_departure }}</div></td>
+                            <td><select class="form-select form-select-sm at-logi-trips" name="trips_per_week" aria-label="Tras w tygodniu {{ v.regis_num }}">{% for n in 1..4 %}<option value="{{ n }}" {{ (v.trips_per_week ?? 1) == n ? 'selected' : '' }}>{{ n }}</option>{% endfor %}</select>
+                                {% if (v.trips_per_week ?? 1) > 1 %}<div class="at-sub">{{ (v.pallet_places ?: default_places) * v.trips_per_week }} m. / tydz.</div>{% endif %}</td>
                             <td class="text-center"><input type="checkbox" class="form-check-input" name="active" {{ v.active ? 'checked' : '' }} aria-label="W użyciu {{ v.regis_num }}"></td>
                             <td><button type="button" class="btn btn-sm {{ v.configured ? 'btn-outline-primary' : 'btn-primary' }}" data-save>{{ v.configured ? 'Zapisz' : 'Ustaw pojemność' }}</button></td>
                         </tr>
@@ -131,7 +136,8 @@
                     </tbody>
                 </table>
             </div>
-            <p class="at-profit-note">Miejsca paletowe w paletach EUR (120 × 80). Ładowność pusta = waga nie jest sprawdzana. Godzina wyjazdu ustala koniec załadunku (minus czas załadunku) dla klientów pojazdu.</p>
+            <p class="at-profit-note">Miejsca paletowe w paletach EUR (120 × 80). Ładowność pusta = waga nie jest sprawdzana. Godzina wyjazdu ustala koniec załadunku (minus czas załadunku) dla klientów pojazdu.
+                Tras / tydz. : standard 1 trasa na kierowcę na tydzień ; 2–4 trasy mnożą miejsca tygodnia w planie logistyki (Kalendarz tras : następna trasa po odpoczynku dobowym, jazda ≤ 56 h w tygodniu).</p>
         </div>
     </div>
 </section>
@@ -177,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pallet_places: value('pallet_places').value.trim() || value('pallet_places').placeholder,
             max_load_kg: value('max_load_kg').value.trim(),
             departure_time: value('departure_time').value,
+            trips_per_week: value('trips_per_week').value,
             active: value('active').checked,
         }).then(res => {
             at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
