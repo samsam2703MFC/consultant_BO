@@ -130,7 +130,7 @@ expectFail(fn() => SourceReader::detect('https://facebook.com.evil.example/reel/
 expectFail(fn() => SourceReader::detect('javascript:alert(1)'), 422, 'link nie-http', 'url');
 $fbHtml = '<html><head><meta property="og:title" content="Kıvrık Poğaça | By Chef Burcin | Facebook"><meta property="og:description" content="Kısa açıklama…">'
     . '<meta content="https://scontent.xx.fbcdn.net/v/cover.jpg" property="og:image"></head><body><script>{"message":{"text":"Kıvrık Poğaça\\n500 gr un, 300 ml süt, 10 gr tuz \\u0026 maya"},'
-    . '"owner":{"__typename":"Page","id":"1","name":"Chefburcinarda"},"browser_native_hd_url":"https:\/\/video.xx.fbcdn.net\/v\/t42.mp4?_nc=1&oh=2","browser_native_sd_url":"https:\/\/video.xx.fbcdn.net\/v\/t42sd.mp4?oh=3"}</script></body></html>';
+    . '"owner":{"__typename":"Page","id":"1","name":"Chefburcinarda"},"related":{"message":{"text":"Powiązane strony"}},"browser_native_hd_url":"https:\/\/video.xx.fbcdn.net\/v\/t42.mp4?_nc=1&oh=2","browser_native_sd_url":"https:\/\/video.xx.fbcdn.net\/v\/t42sd.mp4?oh=3"}</script></body></html>';
 $calls = [];
 SourceReader::$transport = function (string $url, int $max) use (&$calls, $fbHtml) {
     $calls[] = $url;
@@ -140,6 +140,11 @@ SourceReader::$transport = function (string $url, int $max) use (&$calls, $fbHtm
         $url === 'https://fb.watch/wall' => [302, '', 'https://www.facebook.com/login/?next=reel'],
         $url === 'https://www.facebook.com/login/?next=reel' => [200, '<html><form id="login_form"></form><meta property="og:image" content="https://scontent.xx.fbcdn.net/c.jpg"></html>', null],
         $url === 'https://fb.watch/evil' => [302, '', 'https://evil.example/steal'],
+        // Reel odrzucony przez Facebooka (400) → watch/?v= → /autor/videos/ ; 666 : odrzucony też przez watch.
+        in_array($url, ['https://www.facebook.com/reel/1544604460773833', 'https://www.facebook.com/reel/6660000000'], true) => [400, '', null],
+        $url === 'https://www.facebook.com/watch/?v=1544604460773833' => [302, '', 'https://www.facebook.com/autor/videos/1544604460773833/'],
+        $url === 'https://www.facebook.com/autor/videos/1544604460773833/' => [200, $fbHtml, null],
+        $url === 'https://www.facebook.com/watch/?v=6660000000' => [400, '', null],
         str_starts_with($url, 'https://pin.it/') => [301, '', 'https://pl.pinterest.com/pin/77/'],
         $url === 'https://pl.pinterest.com/pin/77/' => [200, '<meta property="og:title" content="Cinnamon rolls"><meta property="og:description" content="Best rolls"><meta name="pinterestapp:source" content="https://blog.example/rolls">'
             . '<script>{"pinner":{"full_name":"Baker Ann"},"videos":{"video_list":{"V_720P":{"width":720,"url":"https:\/\/v1.pinimg.com\/videos\/mc\/720p\/aa\/bb.mp4"}}}}</script>', null],
@@ -158,6 +163,19 @@ expectCard($r['image'] === 'https://scontent.xx.fbcdn.net/v/cover.jpg' && !$r['l
 $wall = $reader->read('https://fb.watch/wall');
 expectCard($wall['login_wall'] && $wall['text'] === null && $wall['video'] === null && str_contains(implode(' ', $wall['notes']), 'ścianę logowania'), 'Facebook : ściana logowania = uwaga, okładka zostaje');
 expectFail(fn() => $reader->read('https://fb.watch/evil'), 422, 'przekierowanie poza Facebooka');
+$r = $reader->read('https://www.facebook.com/reel/1544604460773833');
+expectCard($r['url'] === 'https://www.facebook.com/autor/videos/1544604460773833/' && $r['video'] !== null && $r['author'] === 'Chefburcinarda', 'Facebook : reel odrzucony (400) → ten sam film przez watch/?v=');
+SourceReader::$transport = (function (Closure $base) {
+    return fn(string $url, int $max) => $url === 'https://www.facebook.com/reel/777777777'
+        ? [200, '<meta property="og:description" content="Tarif yorumda"><script>{"message":{"text":"Powiązane strony"}}</script>', null] : $base($url, $max);
+})(SourceReader::$transport);
+$short = $reader->read('https://www.facebook.com/reel/777777777');
+expectCard($short['text'] === 'Tarif yorumda' && str_contains(implode(' ', $short['notes']), 'Opis bez przepisu'), 'Facebook : krótki opis (przepis w komentarzach) → uwaga, bez napisów interfejsu');
+$e = expectFail(fn() => $reader->read('https://www.facebook.com/reel/6660000000'), 502, 'Facebook : reel i watch odrzucone');
+expectCard(str_contains($e->getMessage(), 'Facebook odrzucił link (HTTP 400)'), 'Facebook : czytelny komunikat ' . $e->getMessage());
+expectCard(SourceReader::watchUrl('https://www.facebook.com/igney/videos/1544604460773833/') === 'https://www.facebook.com/watch/?v=1544604460773833'
+    && SourceReader::watchUrl('https://www.facebook.com/watch?v=1544604460773833&ref=x') === 'https://www.facebook.com/watch/?v=1544604460773833'
+    && SourceReader::watchUrl('https://www.facebook.com/share/r/abc/') === null && SourceReader::watchUrl('https://pin.it/1234567') === null, 'Facebook : numer filmu z reel / videos / watch');
 $pin = $reader->read('https://pin.it/q');
 expectCard($pin['kind'] === 'pinterest' && $pin['video'] === 'https://v1.pinimg.com/videos/mc/720p/aa/bb.mp4' && $pin['author'] === 'Baker Ann', 'Pinterest : wideo 720p i autor');
 expectCard($pin['source_link'] === 'https://blog.example/rolls' && str_contains($pin['notes'][0], 'nie zawiera pełnego przepisu'), 'Pinterest : źródło i uwaga o przepisie');

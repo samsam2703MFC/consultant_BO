@@ -58,12 +58,23 @@ final class SourceReader
         if ($out['title'] !== null) {
             $out['title'] = preg_replace('~^[^|]*\b(?:wyświetle\w*|reakcj\w*|views?|reactions?|vues|réactions)\b[^|]*\|\s*~iu', '', $out['title']);
         }
-        // Opis : najdłuższy z og:description i tekstów posta w danych strony (og:description bywa skrócony).
+        // Opis : najdłuższy z og:description i tekstów posta w danych strony (og:description bywa skrócony). Tekst ze strony
+        // tylko, gdy zaczyna się jak og:description albo ma co najmniej 40 znaków — nie krótkie napisy interfejsu
+        // (« Powiązane strony »).
         $texts = array_filter([$meta['og:description'] ?? null, $meta['description'] ?? null]);
+        $squash = fn(string $t) => mb_strtolower(trim((string) preg_replace('~\s+~u', ' ', $t)));
+        $start = mb_substr($squash((string) ($meta['og:description'] ?? $meta['description'] ?? '')), 0, 20);
         foreach (['~"message":\{"text":"((?:[^"\\\\]|\\\\.)*)"~', '~"description":\{"text":"((?:[^"\\\\]|\\\\.)*)"~'] as $re) {
-            if (preg_match_all($re, $html, $m)) foreach ($m[1] as $raw) $texts[] = self::jsonString($raw);
+            if (!preg_match_all($re, $html, $m)) continue;
+            foreach ($m[1] as $raw) {
+                $t = self::jsonString($raw);
+                if ($start === '' || str_starts_with($squash($t), $start) || mb_strlen(trim($t)) >= 40) $texts[] = $t;
+            }
         }
         $out['text'] = self::longest($texts);
+        if ($out['text'] !== null && mb_strlen(trim($out['text'])) < 40) {
+            $out['notes'][] = 'Opis bez przepisu (« ' . trim($out['text']) . ' », np. przepis w komentarzach) : kroki i składniki z filmu, gramatury do uzupełnienia.';
+        }
         foreach (['~"owner":\{"__typename":"(?:User|Page)"[^{}]*?"name":"((?:[^"\\\\]|\\\\.)*)"~', '~"actors":\[\{[^{}]*?"name":"((?:[^"\\\\]|\\\\.)*)"~',
                      '~"video_owner":\{[^{}]*?"name":"((?:[^"\\\\]|\\\\.)*)"~'] as $re) {
             if (preg_match($re, $html, $m)) { $out['author'] = self::jsonString($m[1]); break; }
@@ -137,7 +148,8 @@ final class SourceReader
     /** Strona z przekierowaniami (każde sprawdzone : https, domena Facebooka / Pinteresta). @return array{0:string html, 1:string final url} */
     private function page(string $url): array
     {
-        for ($hop = 0; $hop < 6; $hop++) {
+        $fallback = false;
+        for ($hop = 0; $hop < 7; $hop++) {
             $host = strtolower((string) parse_url($url, PHP_URL_HOST));
             if (strtolower((string) parse_url($url, PHP_URL_SCHEME)) !== 'https' || !(self::hostIn($host, self::PAGE_HOSTS) || self::isPinterest($host))) {
                 throw new CustomException('Link przekierowuje poza Facebooka / Pinteresta — nie otwieramy go.', 'errors', 422);
@@ -147,11 +159,31 @@ final class SourceReader
                 $url = self::absolute($location, $url);
                 continue;
             }
+            // Facebook odrzuca czasem adres reela (HTTP 400) : ten sam film przez watch/?v=… (→ /autor/videos/…), raz.
+            if ($status !== 200 && !$fallback && ($watch = self::watchUrl($url)) !== null) {
+                [$url, $fallback] = [$watch, true];
+                continue;
+            }
             if ($status === 404) throw new CustomException('Strona nie istnieje (404) — sprawdź link.', 'errors', 422);
-            if ($status !== 200) throw new CustomException('Strona odpowiedziała błędem HTTP ' . $status . '.', 'errors', 502);
+            if ($status !== 200) {
+                throw new CustomException(self::hostIn($host, ['facebook.com', 'fb.watch', 'fb.com'])
+                    ? 'Facebook odrzucił link (HTTP ' . $status . ') — spróbuj ponownie za chwilę albo wklej opis ręcznie / dodaj plik wideo.'
+                    : 'Strona odpowiedziała błędem HTTP ' . $status . '.', 'errors', 502);
+            }
             return [$body, $url];
         }
         throw new CustomException('Za dużo przekierowań.', 'errors', 502);
+    }
+
+    /** Film Facebooka (reel, /videos/, watch?v=) → https://www.facebook.com/watch/?v={id} ; null, gdy brak numeru filmu. */
+    public static function watchUrl(string $url): ?string
+    {
+        if (!self::hostIn(strtolower((string) parse_url($url, PHP_URL_HOST)), ['facebook.com', 'fb.com'])) return null;
+        if (preg_match('~/(?:reel|videos(?:/[^/?#]+)?)/(\d{6,})~', (string) parse_url($url, PHP_URL_PATH), $m)
+            || preg_match('~(?:^|&)v=(\d{6,})~', (string) parse_url($url, PHP_URL_QUERY), $m)) {
+            return 'https://www.facebook.com/watch/?v=' . $m[1];
+        }
+        return null;
     }
 
     /** @return array{0:int, 1:string, 2:?string} status, treść (pusta, gdy zapisana do $dest), Location */
