@@ -19,7 +19,8 @@ ul{margin:0;padding-left:17px;font:300 12px/1.5 var(--font-ui);color:#333}
 ul b{font-weight:500}
 ul.p li::marker{color:#2D7A3E}ul.m li::marker{color:#8D1D2C}ul.d li::marker{color:#D97706}
 code{font:500 11px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);padding:0 3px;border-radius:3px}
-.var{margin-top:26px;display:grid;grid-template-columns:240px repeat(6,1fr);gap:16px;align-items:start}
+.var{margin-top:26px;display:grid;grid-template-columns:240px repeat(4,1fr);gap:16px;align-items:start}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.trio img{border-radius:3px}
 .var .t{font:300 12.5px/1.5 var(--font-ui);color:#444}
 .var .t b{display:block;font:400 18px var(--font-display);color:#222;margin-bottom:4px}
 .var figure{margin:0;min-width:0}.var img{width:100%;display:block;border-radius:3px;box-shadow:0 2px 10px rgba(0,0,0,.15);background:#fff}.var figcaption{font:500 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#666;margin-top:6px}
@@ -57,25 +58,26 @@ code{font:500 11px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);
    <li>Coordonnées légales et IBAN au pied de chaque page.</li></ul>
   <h4>Limites</h4><ul class="m">
    <li>Bandeau et encadré pleins : de l’encre à l’impression.</li>
-   <li>16 libellés nouveaux à traduire (12 pour A, 18 pour C).</li></ul></div>
- <div><img src="c.jpg" alt=""><h2><span class="l">C</span> Carnet d’événement</h2>
-  <p>L’offre racontée depuis l’événement du client : un volet beige (jour J, livraison, client, magasin, règlement) et une colonne qui se lit comme une carte.</p>
+   <li>16 libellés nouveaux à traduire (12 pour A, 15 à 17 pour C).</li></ul></div>
+ <div><div class="trio"><img src="c1.jpg" alt=""><img src="c2.jpg" alt=""><img src="c3.jpg" alt=""></div><h2><span class="l">C</span> Carnet d’événement</h2>
+  <p>L’offre racontée depuis l’événement du client, en trois versions simples : tout se range dans des rectangles aux coins arrondis. Le détail : <code>planche-c.jpg</code>.</p>
+  <ul class="p">
+   <li><b>C1 — le volet en cartes</b> : à gauche le jour J en rubis, le lieu, le client, le magasin, le règlement ; à droite la sélection.</li>
+   <li><b>C2 — une colonne</b> : une grande carte pour la date et le titre, trois cartes, la sélection dans une carte.</li>
+   <li><b>C3 — une carte par produit</b> : la quantité en pastille, le total sur une bande rubis.</li></ul>
   <h4>Ce que ça apporte</h4><ul class="p">
-   <li>Le plus chaleureux, le plus « traiteur » : la date en grand, une ligne manuscrite, le titre en Vank.</li>
+   <li>Le plus « traiteur » : la date d’abord, la remarque du client mise en avant.</li>
    <li>Une ligne par produit : quantité × prix (barré, remisé), remise en pastille, TVAC et HTVA.</li>
-   <li>La remarque du client mise en avant ; total à payer et bon pour accord comme en B.</li></ul>
+   <li>Total à payer et bon pour accord comme en B.</li></ul>
   <h4>Limites</h4><ul class="m">
    <li>Le plus loin du document actuel.</li>
-   <li>Moins de lignes par page : une offre de 30 produits prend 3 pages, contre 2 pour A et B.</li>
-   <li>Le volet beige est un aplat à l’impression.</li></ul></div>
+   <li>Moins de produits par page : une offre de 30 lignes prend 3 pages, contre 2 pour A et B.</li></ul></div>
 </div>
 <div class="var">
- <div class="t"><b>Les mêmes, autrement</b>Retrait en magasin : la livraison cède la place à l’adresse du magasin, les frais disparaissent du total. Offre de 30 lignes : la page 2 garde son décor et le tableau y reprend son en-tête. À trancher pour B et C : les frais de livraison sont-ils TVAC ? Le total à payer les ajoute tels quels.</div>
+ <div class="t"><b>Les mêmes, autrement</b>Retrait en magasin : la livraison cède la place à l’adresse du magasin, les frais disparaissent du total. Offre de 30 lignes : la page 2 garde son décor et le tableau y reprend son en-tête. Les variantes de C sont sur <code>planche-c.jpg</code>. À trancher pour B et C : les frais de livraison sont-ils TVAC ? Le total à payer les ajoute tels quels.</div>
  <figure><img src="a-retrait.jpg" alt=""><figcaption>A · retrait</figcaption></figure>
  <figure><img src="b-retrait.jpg" alt=""><figcaption>B · retrait</figcaption></figure>
- <figure><img src="c-retrait.jpg" alt=""><figcaption>C · retrait</figcaption></figure>
  <figure><img src="a-long-2.jpg" alt=""><figcaption>A · 30 lignes, page 2</figcaption></figure>
  <figure><img src="b-long-2.jpg" alt=""><figcaption>B · 30 lignes, page 2</figcaption></figure>
- <figure><img src="c-long-2.jpg" alt=""><figcaption>C · 30 lignes, page 2</figcaption></figure>
 </div>
 </div></body></html>

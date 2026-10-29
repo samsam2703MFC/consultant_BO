@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * Produit les devis des maquettes avec TCPDF — le moteur d'OfferService :
- * avant (le document d'aujourd'hui) et les propositions A, B, C, chacune en
+ * avant (le document d'aujourd'hui) et les propositions A, B, C1, C2, C3, chacune en
  * trois variantes (livraison, retrait, offre longue sur deux pages), en PDF
  * et en JPG.
  *
@@ -55,7 +55,9 @@ $documents = [
     'avant' => fn(array $o, array $s) => (new OffreAvant())->document($o, $s),
     'a' => fn(array $o, array $s) => (new OffrePdfA($o, $s, '€'))->rendre(),
     'b' => fn(array $o, array $s) => (new OffrePdfB($o, $s, '€'))->rendre(),
-    'c' => fn(array $o, array $s) => (new OffrePdfC($o, $s, '€'))->rendre(),
+    'c1' => fn(array $o, array $s) => (new OffrePdfC1($o, $s, '€'))->rendre(),
+    'c2' => fn(array $o, array $s) => (new OffrePdfC2($o, $s, '€'))->rendre(),
+    'c3' => fn(array $o, array $s) => (new OffrePdfC3($o, $s, '€'))->rendre(),
 ];
 $seulement = $argv[1] ?? null;
 foreach ($documents as $id => $fabrique) {

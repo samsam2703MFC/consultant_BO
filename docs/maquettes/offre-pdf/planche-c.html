@@ -1,0 +1,65 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Le devis : C en trois versions</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><style>
+body{margin:0;background:#EAE4DC;font-family:var(--font-ui);color:#222}
+.pl{width:1760px;padding:30px 36px 36px;box-sizing:border-box}
+.u{font:500 11px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:#8D1D2C}
+h1{font:400 32px var(--font-display);margin:6px 0 8px}
+.acc{font:300 13.5px/1.55 var(--font-ui);color:#444;max-width:1380px;margin:0 0 22px}
+.acc b{font-weight:500;color:#222}
+.g{display:grid;grid-template-columns:repeat(3,1fr);gap:30px}
+.g>div{min-width:0}
+.g img{width:100%;display:block;border-radius:6px;box-shadow:0 2px 14px rgba(0,0,0,.16);background:#fff}
+h2{font:400 24px var(--font-display);margin:16px 0 4px;display:flex;align-items:baseline;gap:8px}
+h2 .l{font:500 11px var(--font-ui);letter-spacing:.08em;color:#fff;background:#8D1D2C;border-radius:999px;padding:3px 9px;position:relative;top:-3px}
+.g p{font:300 13px/1.5 var(--font-ui);color:#444;margin:0 0 8px}
+h4{font:500 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:#666;margin:10px 0 4px}
+ul{margin:0;padding-left:17px;font:300 12.5px/1.5 var(--font-ui);color:#333}
+ul.p li::marker{color:#2D7A3E}ul.m li::marker{color:#8D1D2C}
+code{font:500 11px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);padding:0 3px;border-radius:3px}
+.var{margin-top:28px;display:grid;grid-template-columns:230px repeat(6,1fr);gap:14px;align-items:start}
+.var .t{font:300 12.5px/1.5 var(--font-ui);color:#444}
+.var .t b{display:block;font:400 18px var(--font-display);color:#222;margin-bottom:4px}
+.var figure{margin:0;min-width:0}.var img{width:100%;display:block;border-radius:3px;box-shadow:0 2px 10px rgba(0,0,0,.15);background:#fff}
+.var figcaption{font:500 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#666;margin-top:6px}
+</style></head><body><div class="pl" id="planche">
+<span class="u">Maquettes · le devis des magasins · proposition C revue · 29/10/2026</span>
+<h1>C — Carnet d’événement, en trois versions plus simples</h1>
+<p class="acc">Même idée — l’offre racontée depuis l’événement du client —, moins d’effets : <b>ni ligne manuscrite, ni pointillés, ni aplat pleine hauteur</b>. Tout se range dans des <b>rectangles aux coins arrondis</b> (rayon 3 mm). Les trois portent les mêmes éléments : le jour J, le client, le lieu, le magasin, la sélection (quantité × prix barré puis remisé, remise en pastille, TVAC et HTVA), la remarque du client, le total à payer livraison comprise, le bon pour accord. Rendues par TCPDF, sur la même offre <b>illustrée</b> que A et B ; chacune tient sur une page.</p>
+<div class="g">
+ <div><img src="c1.jpg" alt=""><h2><span class="l">C1</span> Le volet en cartes</h2>
+  <p>À gauche une pile de cartes : le jour J en rubis, l’adresse de livraison, le client, le magasin, le règlement. À droite la sélection en lignes simples, la remarque et le total côte à côte, les conditions, le bon pour accord.</p>
+  <h4>Ce que ça apporte</h4><ul class="p">
+   <li>La plus proche de la première version de C, sans l’aplat beige.</li>
+   <li>La date se repère d’abord ; l’IBAN a sa carte, en bas à gauche.</li>
+   <li>De la marge sur la page : la plus tolérante aux remarques et conditions longues.</li></ul>
+  <h4>Limites</h4><ul class="m">
+   <li>Colonne de droite plus étroite : les noms longs passent sur deux lignes.</li>
+   <li>Les cartes de gauche ne servent qu’en page 1.</li></ul></div>
+ <div><img src="c2.jpg" alt=""><h2><span class="l">C2</span> Une colonne</h2>
+  <p>Une grande carte beige : la date dans une tuile blanche, le titre, le jour et le mode. Trois cartes (client, livraison, magasin), la sélection dans une seule carte, la remarque et le total, puis conditions et bon pour accord dans une dernière carte.</p>
+  <h4>Ce que ça apporte</h4><ul class="p">
+   <li>Se lit de haut en bas, dans l’ordre des questions du client : quand, pour qui, où, quoi, combien.</li>
+   <li>Pleine largeur : les noms de produits tiennent sur une ligne.</li></ul>
+  <h4>Limites</h4><ul class="m">
+   <li>La plus juste en hauteur : dès 8 produits environ, la dernière carte passe en page 2.</li>
+   <li>Beaucoup de beige : la page paraît plus chargée que C1 et C3.</li></ul></div>
+ <div><img src="c3.jpg" alt=""><h2><span class="l">C3</span> Une carte par produit</h2>
+  <p>Le titre, puis la date et le mode en pastilles ; trois cartes ; chaque produit dans sa carte, la quantité dans une pastille blanche ; le total sur une bande rubis ; remarque, conditions et bon pour accord en trois cartes.</p>
+  <h4>Ce que ça apporte</h4><ul class="p">
+   <li>La plus lisible ligne à ligne : la quantité saute aux yeux.</li>
+   <li>Le total à payer se voit d’un coup d’œil ; le numéro d’offre dans un badge rubis.</li>
+   <li>Blanc et aéré : en haut et en bas, les cartes ne sont que des contours.</li></ul>
+  <h4>Limites</h4><ul class="m">
+   <li>Un rectangle par produit : une offre de 30 lignes empile beaucoup de cartes.</li>
+   <li>Remarque et conditions dans des colonnes étroites.</li></ul></div>
+</div>
+<div class="var">
+ <div class="t"><b>Retrait et offre longue</b>En retrait, la pastille dit « Retrait en magasin », la carte du lieu donne l’adresse du magasin et les frais quittent le total. Sur 30 lignes, la page 2 garde son en-tête (C1 : la carte « suite » à gauche ; C2 : la sélection reprend dans une nouvelle carte ; C3 : le badge rubis).</div>
+ <figure><img src="c1-retrait.jpg" alt=""><figcaption>C1 · retrait</figcaption></figure>
+ <figure><img src="c2-retrait.jpg" alt=""><figcaption>C2 · retrait</figcaption></figure>
+ <figure><img src="c3-retrait.jpg" alt=""><figcaption>C3 · retrait</figcaption></figure>
+ <figure><img src="c1-long-2.jpg" alt=""><figcaption>C1 · 30 lignes, page 2</figcaption></figure>
+ <figure><img src="c2-long-2.jpg" alt=""><figcaption>C2 · 30 lignes, page 2</figcaption></figure>
+ <figure><img src="c3-long-2.jpg" alt=""><figcaption>C3 · 30 lignes, page 2</figcaption></figure>
+</div>
+</div></body></html>

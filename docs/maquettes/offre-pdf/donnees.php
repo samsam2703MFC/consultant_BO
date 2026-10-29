@@ -121,6 +121,6 @@ function libelles_offre(): array
         'including_vat' => 'dont TVA', 'total_to_pay' => 'Total à payer', 'your_selection' => 'Votre sélection',
         'your_notes' => 'Vos remarques', 'agreement' => 'Bon pour accord', 'agreement_date' => 'Date',
         'agreement_signature' => 'Nom et signature', 'payment' => 'Règlement', 'continued' => 'suite',
-        'at_the_shop' => 'Au magasin', 'prepared_for_you' => 'Préparé avec soin, pour vous',
+        'at_the_shop' => 'Au magasin',
     ];
 }

@@ -31,13 +31,12 @@ final class OffreCharte
     // les TrueType convertis. Light, Medium et Black sont les seules graisses
     // livrées qui portent le « € ».
     public const LIGHT = 'gothamlight', MEDIUM = 'gothammedium', BLACK = 'gothamblack',
-        VANK = 'gc_vank', SCRIPT = 'playwritedevalight';
+        VANK = 'gc_vank';
     public const POLICES = [
         self::LIGHT  => 'polices/Gotham-Light.ttf',
         self::MEDIUM => 'polices/Gotham-Medium.ttf',
         self::BLACK  => 'polices/Gotham-Black.ttf',
         self::VANK   => '../../../public/assets/ds/fonts/GC_Vank.ttf',
-        self::SCRIPT => '../../../public/assets/ds/fonts/PlaywriteDEVA-Light.ttf',
     ];
 
     /** Dossier des définitions TCPDF des polices (K_PATH_FONTS en production). */
@@ -48,7 +47,7 @@ final class OffreCharte
     /** Horodatage du document — figé pour les maquettes, l'heure courante sinon. */
     public static ?int $maintenant = null;
 
-    /** Déclare les cinq polices au document (les convertit au premier passage). */
+    /** Déclare les quatre polices au document (les convertit au premier passage). */
     public static function polices(TCPDF $pdf): void
     {
         if (!is_dir(self::$dossierPolices)) {
@@ -272,6 +271,22 @@ trait OffreMiseEnPage
         $this->Cell($w, $h, $txt, 0, 0, 'C', false, '', 0, false, 'T', 'M');
         $this->setFontSpacing(0);
         return $w;
+    }
+
+    /** La même pastille, posée depuis sa gauche. */
+    private function pastilleG(float $xGauche, float $yMilieu, string $txt, array $fond, array $encre, float $taille = 6.3): float
+    {
+        $this->police(OffreCharte::MEDIUM, $taille, $encre, '', 0.2);
+        $w = $this->GetStringWidth($txt) + 3.6;
+        return $this->pastille($xGauche + $w, $yMilieu, $txt, $fond, $encre, $taille);
+    }
+
+    /** Un rectangle aux coins arrondis : un fond, un contour, ou les deux. */
+    private function carte(float $x, float $y, float $w, float $h, ?array $fond, ?array $contour = null, float $rayon = 3.0): void
+    {
+        $style = $fond && $contour ? 'DF' : ($fond ? 'F' : 'D');
+        $trait = $contour ? ['width' => 0.35, 'color' => $contour, 'dash' => 0, 'cap' => 'butt'] : [];
+        $this->RoundedRect($x, $y, $w, $h, $rayon, '1111', $style, $trait, $fond ?? []);
     }
 
     /** Reste-t-il h mm avant le pied de page ? Sinon, page suivante. */
