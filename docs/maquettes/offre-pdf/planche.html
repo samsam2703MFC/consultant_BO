@@ -1,0 +1,81 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Le devis des magasins : trois propositions</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><style>
+body{margin:0;background:#EAE4DC;font-family:var(--font-ui);color:#222}
+.pl{width:1760px;padding:30px 36px 36px;box-sizing:border-box}
+.u{font:500 11px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:#8D1D2C}
+h1{font:400 32px var(--font-display);margin:6px 0 8px}
+.acc{font:300 13.5px/1.55 var(--font-ui);color:#444;max-width:1380px;margin:0 0 22px}
+.acc b{font-weight:500;color:#222}
+.g{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.g>div{min-width:0}
+.g img{width:100%;display:block;border-radius:4px;box-shadow:0 2px 12px rgba(0,0,0,.16);background:#fff}
+.av img{opacity:.92}
+h2{font:400 22px var(--font-display);margin:14px 0 4px;display:flex;align-items:baseline;gap:8px}
+h2 .l{font:500 11px var(--font-ui);letter-spacing:.08em;color:#fff;background:#8D1D2C;border-radius:999px;padding:3px 9px;position:relative;top:-3px}
+.av h2 .l{background:#666}
+.g p{font:300 12.5px/1.5 var(--font-ui);color:#444;margin:0 0 8px}
+h4{font:500 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:#666;margin:10px 0 4px}
+ul{margin:0;padding-left:17px;font:300 12px/1.5 var(--font-ui);color:#333}
+ul b{font-weight:500}
+ul.p li::marker{color:#2D7A3E}ul.m li::marker{color:#8D1D2C}ul.d li::marker{color:#D97706}
+code{font:500 11px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);padding:0 3px;border-radius:3px}
+.var{margin-top:26px;display:grid;grid-template-columns:240px repeat(6,1fr);gap:16px;align-items:start}
+.var .t{font:300 12.5px/1.5 var(--font-ui);color:#444}
+.var .t b{display:block;font:400 18px var(--font-display);color:#222;margin-bottom:4px}
+.var figure{margin:0;min-width:0}.var img{width:100%;display:block;border-radius:3px;box-shadow:0 2px 10px rgba(0,0,0,.15);background:#fff}.var figcaption{font:500 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#666;margin-top:6px}
+</style></head><body><div class="pl" id="planche">
+<span class="u">Maquettes · le devis des magasins (« offre commerciale ») · 29/10/2026</span>
+<h1>Le devis que les magasins envoient, aux couleurs de L’Atelier by — trois propositions</h1>
+<p class="acc">Le PDF que produit <code>OfferService::getPDF()</code> porte encore le thème <b>or et anthracite</b> de l’ancienne identité, en DejaVu Sans. Les trois propositions reprennent la charte du design system — <b>rubis #8D1D2C, abricot #F2C9A0, beige #EAE4DC, Gotham et Vank</b> — et sont <b>dessinées par TCPDF lui-même</b>, le moteur du service : ce qui est montré ici est ce que le service produira, et chaque classe se branche à la place des méthodes <code>render*()</code> d’aujourd’hui. Même offre pour les quatre, <b>illustrée</b> : un lunch d’entreprise livré, sept lignes dont trois remisées (client, adresses et montants inventés).</p>
+<div class="g">
+ <div class="av"><img src="avant.jpg" alt=""><h2><span class="l">AUJOURD’HUI</span> Or et anthracite</h2>
+  <p>Le rendu du code actuel, recopié tel quel, sur la même offre.</p>
+  <h4>Défauts relevés sur ce rendu</h4><ul class="m">
+   <li><b>« Séminaire d&amp;#039;équipe »</b> : <code>htmlspecialchars()</code> dans un <code>Cell()</code> — toute apostrophe du nom de l’offre s’imprime en code.</li>
+   <li>Un nom de produit long déborde sur les colonnes Qté et P.U.</li>
+   <li>Montants à l’anglaise (<code>1.20€</code>, <code>584.02€</code>), « 0% » sur les lignes sans remise.</li>
+   <li>Deux colonnes « Total (brut) » qui ne comptent pas la même chose.</li>
+   <li>Le pied de page se pose sur le commentaire quand la page est pleine ; en page 2, le tableau repart sans en-tête.</li>
+   <li>Les frais de livraison ne sont dans aucun total.</li></ul></div>
+ <div><img src="a.jpg" alt=""><h2><span class="l">A</span> Épurée</h2>
+  <p>Le document d’aujourd’hui — mêmes blocs, même ordre, mêmes huit colonnes — réimprimé dans la charte : papier blanc, le rubis pour seule couleur.</p>
+  <h4>Ce que ça apporte</h4><ul class="p">
+   <li>Le plus petit pas : pas un montant de plus ni de moins.</li>
+   <li>Des en-têtes qui disent ce qu’ils comptent : avant remise, après remise, HTVA, TVAC.</li>
+   <li>Montants à droite, au format belge ; « — » sans remise ; « dont TVA » sous le total.</li>
+   <li>Le moins d’encre : s’imprime bien, même en noir et blanc.</li></ul>
+  <h4>Limites</h4><ul class="m">
+   <li>Huit colonnes restent denses.</li>
+   <li>Ni total à payer livraison comprise, ni bon pour accord.</li>
+   <li>La marque reste discrète.</li></ul></div>
+ <div><img src="b.jpg" alt=""><h2><span class="l">B</span> Bandeau rubis</h2>
+  <p>La marque d’abord : bandeau rubis et logo blanc, trois cartes (le magasin, le client, le jour J), un tableau à six colonnes, l’encadré du total.</p>
+  <h4>Ce que ça apporte</h4><ul class="p">
+   <li>Reconnaissable au premier coup d’œil, dans une boîte mail comme sur un bureau.</li>
+   <li>Six colonnes : le prix barré puis remisé et la pastille de remise remplacent « total avant remise » et « P.U. après remise ».</li>
+   <li><b>Total à payer, livraison comprise</b>, et la case « Bon pour accord » à signer et renvoyer.</li>
+   <li>Coordonnées légales et IBAN au pied de chaque page.</li></ul>
+  <h4>Limites</h4><ul class="m">
+   <li>Bandeau et encadré pleins : de l’encre à l’impression.</li>
+   <li>16 libellés nouveaux à traduire (12 pour A, 18 pour C).</li></ul></div>
+ <div><img src="c.jpg" alt=""><h2><span class="l">C</span> Carnet d’événement</h2>
+  <p>L’offre racontée depuis l’événement du client : un volet beige (jour J, livraison, client, magasin, règlement) et une colonne qui se lit comme une carte.</p>
+  <h4>Ce que ça apporte</h4><ul class="p">
+   <li>Le plus chaleureux, le plus « traiteur » : la date en grand, une ligne manuscrite, le titre en Vank.</li>
+   <li>Une ligne par produit : quantité × prix (barré, remisé), remise en pastille, TVAC et HTVA.</li>
+   <li>La remarque du client mise en avant ; total à payer et bon pour accord comme en B.</li></ul>
+  <h4>Limites</h4><ul class="m">
+   <li>Le plus loin du document actuel.</li>
+   <li>Moins de lignes par page : une offre de 30 produits prend 3 pages, contre 2 pour A et B.</li>
+   <li>Le volet beige est un aplat à l’impression.</li></ul></div>
+</div>
+<div class="var">
+ <div class="t"><b>Les mêmes, autrement</b>Retrait en magasin : la livraison cède la place à l’adresse du magasin, les frais disparaissent du total. Offre de 30 lignes : la page 2 garde son décor et le tableau y reprend son en-tête. À trancher pour B et C : les frais de livraison sont-ils TVAC ? Le total à payer les ajoute tels quels.</div>
+ <figure><img src="a-retrait.jpg" alt=""><figcaption>A · retrait</figcaption></figure>
+ <figure><img src="b-retrait.jpg" alt=""><figcaption>B · retrait</figcaption></figure>
+ <figure><img src="c-retrait.jpg" alt=""><figcaption>C · retrait</figcaption></figure>
+ <figure><img src="a-long-2.jpg" alt=""><figcaption>A · 30 lignes, page 2</figcaption></figure>
+ <figure><img src="b-long-2.jpg" alt=""><figcaption>B · 30 lignes, page 2</figcaption></figure>
+ <figure><img src="c-long-2.jpg" alt=""><figcaption>C · 30 lignes, page 2</figcaption></figure>
+</div>
+</div></body></html>
