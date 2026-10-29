@@ -11,7 +11,9 @@ declare(strict_types=1);
  * ou chez SMSAPI : la lecture des réponses d'un lead, les règles du mapping
  * (nom, téléphone, tranche, date, code, consentement), le magasin par code
  * postal, la lecture des statuts de l'ERP, le webhook `leadgen`, le retard, le
- * plan des SMS et des escalades, le texte du SMS, l'appel SMSAPI.
+ * plan des SMS et des escalades, le texte du SMS, l'appel SMSAPI ; et le flux
+ * Meta recopié du CRM : « Connecter et tester » (qui ne détourne jamais le
+ * webhook du CRM), la lecture d'un lead et ses replis, les coordonnées.
  */
 
 // --- doublures : pas de base, pas de réglage, pas de journal ---------------------
@@ -19,7 +21,12 @@ final class Db
 {
     public static function rows(string $sql, array $a = []): array { return []; }
     public static function row(string $sql, array $a = []): ?array { return null; }
-    public static function exec(string $sql, array $a = []): int { return 0; }
+    public static function exec(string $sql, array $a = []): int
+    {
+        // Un réglage écrit se relit (mdSettingSet) : le bilan de la connexion, le jeton échangé.
+        if (str_starts_with($sql, 'INSERT INTO ceo_app_setting')) { $GLOBALS['REGLAGES'][$a[0]] = json_decode((string) $a[1], true); }
+        return 0;
+    }
     public static function config(): array { return []; }
 }
 $REGLAGES = [];
@@ -27,7 +34,6 @@ function setting(string $k, mixed $d = null): mixed { global $REGLAGES; return $
 function journalAdd(string $actor, string $kind, ?string $project, string $message): void {}
 function body(): array { return []; }
 
-require __DIR__ . '/../src/meta_graph.php';
 require __DIR__ . '/../src/metadonnee.php';
 
 $ok = 0; $ko = 0;
@@ -172,7 +178,81 @@ $wh = ['object' => 'page', 'entry' => [['id' => '111', 'changes' => [
 ]]]];
 verifie('un lead lu, le post ignoré', mdLeadsDuWebhook($wh) === [['lead' => '999', 'form' => '777', 'page' => '111']]);
 verifie('autre objet → rien', mdLeadsDuWebhook(['object' => 'user'] + $wh) === []);
-verifie('la lecture des posts (Brand Guard) ignore le leadgen', MetaGraph::postsDuWebhook($wh) === [['page' => '111', 'post' => '111_1']]);
+$corps = (string) json_encode($wh);
+verifie('signature du webhook : la bonne passe', meta_signature_ok($corps, 'sha256=' . hash_hmac('sha256', $corps, 'secret-app'), 'secret-app'));
+verifie('signature du webhook : une autre clé refusée', !meta_signature_ok($corps, 'sha256=' . hash_hmac('sha256', $corps, 'autre'), 'secret-app'));
+verifie('signature du webhook : sans clé, tout est refusé', !meta_signature_ok($corps, 'sha256=' . hash_hmac('sha256', $corps, ''), ''));
+
+// --- 6b. le flux Meta du CRM, recopié ---------------------------------------------------------------
+echo "Meta : Connecter et tester, lecture d'un lead\n";
+/** Un faux Graph : chaque appel est noté ; `$rappel` = l'adresse de rappel de l'application chez Meta. */
+$appels = [];
+$fauxGraph = static function (string $rappel) use (&$appels): callable {
+    return static function (string $m, string $p, array $q, ?string $t) use (&$appels, $rappel): array {
+        $appels[] = "$m $p";
+        $ok = static fn (array $d): array => ['ok' => true, 'code' => 200, 'data' => $d, 'error' => null];
+        if ($p === 'debug_token') {
+            return $ok(['data' => $q['input_token'] === 'tok-systeme'
+                ? ['is_valid' => true, 'app_id' => '42', 'type' => 'SYSTEM_USER', 'expires_at' => 0, 'scopes' => ['leads_retrieval', 'pages_manage_metadata', 'pages_show_list', 'pages_read_engagement', 'pages_manage_ads', 'ads_management']]
+                : ['is_valid' => true, 'app_id' => '42', 'type' => 'PAGE', 'expires_at' => 0, 'profile_id' => '501']]);
+        }
+        if ($p === '501' && str_contains((string) ($q['fields'] ?? ''), 'access_token')) { return $ok(['id' => '501', 'name' => "L'Atelier by", 'access_token' => 'tok-page']); }
+        if ($p === '501') { return $ok(['id' => '501', 'name' => "L'Atelier by"]); }
+        if ($p === '501/leadgen_forms') { return $ok(['data' => []]); }
+        if ($p === '501/subscribed_apps') { return $m === 'POST' ? $ok(['success' => true]) : $ok(['data' => [['id' => '42', 'name' => 'Atelier', 'subscribed_fields' => ['leadgen']]]]); }
+        if ($p === '42/subscriptions' && $m === 'GET') { return $ok(['data' => $rappel !== '' ? [['object' => 'page', 'callback_url' => $rappel, 'fields' => [['name' => 'leadgen']]]] : []]); }
+        if ($p === '42/subscriptions' && $m === 'POST') { return $ok(['success' => true]); }
+        return ['ok' => false, 'code' => 400, 'data' => [], 'error' => 'Meta (100) : inconnu ' . $p];
+    };
+};
+$regler = static function (string $rappel) use (&$REGLAGES): void {
+    $REGLAGES = ['mdMeta' => ['appId' => '42', 'pageId' => '501', 'verify' => 'verif', 'rappel' => $rappel], 'mdMetaSecret' => 'secret-app', 'mdMetaJeton' => 'tok-systeme'];
+};
+
+$regler('https://cockpit.atelierby.be/api/cockpit/metadonnee/meta/leads');
+$appels = [];
+MdMeta::$transport = $fauxGraph('https://franchise.atelierby.be/api/meta/leads');
+$r = mdMetaConnecter();
+$rappelEtape = array_values(array_filter($r['etapes'], static fn ($e) => $e['titre'] === 'Adresse de rappel'))[0] ?? [];
+verifie('webhook déjà au CRM : jamais détourné (aucun POST sur l’application)', !in_array('POST 42/subscriptions', $appels, true), implode(', ', $appels));
+verifie('… et le Cockpit passe en relève', $r['ok'] && mdMetaMode() === 'releve' && str_contains((string) ($rappelEtape['detail'] ?? ''), 'franchise.atelierby.be'), json_encode($r['etapes'], JSON_UNESCAPED_UNICODE));
+verifie('jeton d’utilisateur système échangé contre celui de la Page, gardé à sa place', ($REGLAGES['mdMetaJeton'] ?? '') === 'tok-page');
+verifie('la Page abonnée au champ leadgen (vérifié après coup)', in_array('POST 501/subscribed_apps', $appels, true) && in_array('GET 501/subscribed_apps', $appels, true));
+
+$regler('https://cockpit.atelierby.be/api/cockpit/metadonnee/meta/leads');
+$appels = [];
+MdMeta::$transport = $fauxGraph('');
+$r = mdMetaConnecter();
+verifie('adresse libre et en https : prise, mode webhook', $r['ok'] && in_array('POST 42/subscriptions', $appels, true) && mdMetaMode() === 'webhook');
+
+$regler('https://185.180.206.46/consulant_bo/api/cockpit/metadonnee/meta/leads');
+$appels = [];
+MdMeta::$transport = $fauxGraph('');
+$r = mdMetaConnecter();
+verifie('adresse sur une IP : Meta la refuserait, rien n’est demandé, relève', $r['ok'] && !in_array('POST 42/subscriptions', $appels, true) && mdMetaMode() === 'releve');
+
+$REGLAGES = ['mdMeta' => ['appId' => '42', 'pageId' => '', 'verify' => 'v'], 'mdMetaSecret' => '', 'mdMetaJeton' => ''];
+$r = mdMetaConnecter();
+verifie('réglages incomplets : dit ce qui manque', !$r['ok'] && str_contains($r['etapes'][0]['detail'], 'ID de la Page') && str_contains($r['etapes'][0]['detail'], 'clé secrète'));
+
+$lus = [];
+MdMeta::$transport = static function (string $m, string $p, array $q, ?string $t) use (&$lus): array {
+    $lus[] = (string) ($q['fields'] ?? '');
+    return str_contains((string) ($q['fields'] ?? ''), 'ad_id')
+        ? ['ok' => false, 'code' => 400, 'data' => [], 'error' => 'Meta (200) : permission ads_management']
+        : ['ok' => true, 'code' => 200, 'data' => ['created_time' => '2026-10-29T08:00:00+0000', 'form_id' => '9001', 'field_data' => []], 'error' => null];
+};
+$lead = mdLireLead('7101', 'tok-page');
+verifie('sans ads_management : le lead relu sans la campagne plutôt que perdu', ($lead['id'] ?? '') === '7101' && ($lead['form_id'] ?? '') === '9001' && count($lus) === 3, implode(' | ', $lus));
+
+$fCoord = ['form_id' => '9009', 'nom' => 'Bureau', 'mapping_le' => null, 'valeurs_json' => null,
+    'questions_json' => json_encode([['key' => 'societe', 'label' => 'Votre société', 'type' => 'CUSTOM'], ['key' => 'comment_vous_joindre_?', 'label' => 'Comment vous joindre ?', 'type' => 'CUSTOM'],
+        ['key' => 'numero_de_gsm', 'label' => 'Numéro de GSM', 'type' => 'CUSTOM']])];
+$v = mdChampsRapides([['key' => 'societe', 'label' => 'Votre société', 'valeur' => 'Fiduciaire Delvaux'], ['key' => 'comment_vous_joindre_?', 'label' => 'Comment vous joindre ?', 'valeur' => 'Jean.Dupont @ exemple.be'],
+    ['key' => 'numero_de_gsm', 'label' => 'Numéro de GSM', 'valeur' => '0476 12 34 56']], $fCoord);
+verifie('coordonnées : l’adresse trouvée dans n’importe quelle réponse (lecture du CRM)', $v['email'] === 'jean.dupont@exemple.be', (string) $v['email']);
+verifie('coordonnées : le GSM au format international', $v['telephone'] === '+32476123456', (string) $v['telephone']);
+MdMeta::$transport = null;
 
 // --- 7. retard, SMS, escalade ---------------------------------------------------------------------------
 echo "Retard, SMS, escalade\n";

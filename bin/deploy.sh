@@ -557,7 +557,7 @@ chmod +x "$TARGET_DIR/bin/metadonnee_cron.sh"
   # minute ; en mode test elle ne fait rien partir et le dit).
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/newsletter_cron.sh >/dev/null 2>&1"
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/visites_cron.sh >/dev/null 2>&1"
-  echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/metadonnee_cron.sh >/dev/null 2>&1"
+  echo "* * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/metadonnee_cron.sh >/dev/null 2>&1"
 } > /etc/cron.d/cockpit-rapports
 # cron refuse un fichier de /etc/cron.d écrivable par un autre que root.
 chown root:root /etc/cron.d/cockpit-rapports

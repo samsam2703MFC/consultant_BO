@@ -124,6 +124,13 @@ try {
         }
     }
 
+    // MétaDonnée : le webhook `leadgen`, recopié du CRM — public lui aussi, gardé
+    // par le jeton de vérification (GET) et la signature de l'application (POST).
+    if ($path === '/metadonnee/meta/leads') {
+        if ($method === 'GET') { mdWebhookVerif(); exit; }
+        if ($method === 'POST') { mdWebhookRecu((string) file_get_contents('php://input'), (string) ($_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '')); exit; }
+    }
+
     // « Mes primes » dans l'app worker : la personne se présente avec SON jeton d'employé, que le
     // panel confirme — la fiche rendue est la sienne, personne d'autre (src/primes.php).
     if ($method === 'GET' && $path === '/ventes/moi' && primesVoieApp()) {
@@ -701,7 +708,8 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/metadonnee/erp/test') { return wr_md_erp_test(); }
     if ($method === 'POST' && $path === '/metadonnee/erp/essai') { return wr_md_erp_essai(); }
     if ($method === 'POST' && $path === '/metadonnee/sonde') { return wr_md_sonde(); }
-    if ($method === 'POST' && preg_match('#^/metadonnee/pages/(\d{1,30})/abonner$#', $path, $m)) { return wr_md_page_abonner($m[1]); }
+    if ($method === 'PUT' && $path === '/metadonnee/meta') { return wr_md_meta_put(); }
+    if ($method === 'POST' && $path === '/metadonnee/meta/connecter') { return wr_md_meta_connecter(); }
     if ($method === 'POST' && preg_match('#^/facebook/posts/([\w-]+)/controle$#', $path, $m)) { return wr_fb_controle($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/facebook/posts/([\w-]+)$#', $path, $m)) { return wr_fb_decision($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/facebook/posts/([\w-]+)/ecarts/(\d+)$#', $path, $m)) { return wr_fb_ecart_patch($m[1], (int) $m[2]); }

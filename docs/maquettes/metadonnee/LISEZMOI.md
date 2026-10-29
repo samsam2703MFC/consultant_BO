@@ -25,6 +25,8 @@ Ce qui est commun aux trois :
 - **Meta** : la lecture du CRM, déjà éprouvée (`meta_graph.php` : Graph API v25.0, webhook
   `leadgen`, jeton d'utilisateur système, permission `leads_retrieval`, rattrapage horaire sur
   3 jours, réparation des adresses e-mail). Un formulaire non suivi ne crée rien dans l'ERP.
+  Mise en œuvre (29/10/2026) : le flux du CRM est recopié dans le Cockpit, avec les mêmes réglages ;
+  l'adresse de rappel de l'application reste au CRM, et le Cockpit relève ses formulaires toutes les 2 min.
 - **ERP** : deux routes à écrire avec l'équipe du panel (`docs/spec-api-panel.md`) :
   `POST /api/v1/consultant/leads`, idempotente sur le n° de lead Meta, et
   `GET /api/v1/consultant/leads?since=`, qui rend les statuts. Les statuts proposés sont

@@ -328,19 +328,24 @@ renouvellement automatique à vérifier) avant d'équiper les tablettes.
 Rail → ERP franchisé → MétaDonnée (1 · Formulaires, 2 · Mapping ERP, 3 · Suivi des leads, 4 · Alertes SMS).
 Contrat : `docs/contrat-api.md`, « MétaDonnée ».
 
-- **Meta** : le même accès que le Brand Guard (`META_SYSTEM_TOKEN`, `META_APP_SECRET`, `META_VERIFY_TOKEN`).
-  Le System User doit porter `leads_retrieval`, `pages_manage_metadata`, `pages_show_list`,
-  `pages_read_engagement` (et `ads_management` pour lire la campagne d'un lead), et l'application doit avoir
-  l'accès aux prospects de chaque page (Business Manager → la page → Accès aux prospects). Dans l'application
-  Meta, l'abonnement Webhooks « Page » garde la même adresse que le Brand Guard
-  (`…/api/cockpit/marketing/brand-guard/webhook/meta`) avec le champ **`leadgen`** coché en plus de `feed` ;
-  chaque page s'y abonne depuis l'étape 1 (« Abonner »), sans perdre son `feed`.
+- **Meta** : rien à régler chez Meta — c'est la connexion du CRM (atelier-espace-candidat), dont le flux est
+  recopié ici (`src/crm/meta_graph.php` = copie identique de `app/crm/api/lib/meta_graph.php`). À l'étape 1,
+  carte « Connexion Meta », recopier les réglages du CRM (Paramètres → Intégrations → Formulaires Facebook /
+  Instagram) : ID et clé secrète de l'application, ID de la Page, jeton de l'utilisateur système ; puis
+  « 🔌 Connecter et tester » (jeton vérifié et échangé contre celui de la Page, Page, formulaires, abonnement
+  `leadgen`). Une application Meta n'a qu'UNE adresse de rappel : elle reste au CRM, le Cockpit ne la détourne
+  jamais et relève ses formulaires toutes les 2 minutes. Pour un webhook à la seconde, une application Meta
+  dédiée au Cockpit (adresse `…/api/cockpit/metadonnee/meta/leads`, en https sur un nom de domaine) : le même
+  bouton la branche. Côté CRM, les formulaires suivis ici restent « non validés » (pas de candidats) ; l'équipe
+  reçoit une fois par formulaire l'alerte « formulaire non validé ».
+  Le CRM a vu son application bloquée par Meta en oct. 2026 (« API access blocked ») : tant que c'est le cas,
+  la sonde le dit et aucun lead ne passe — par ici comme par le CRM.
 - **ERP** : le compte API du panel (Paramètres → compte consultant). Les routes `POST/GET /consultant/leads`
   sont à créer côté panel ; elles se règlent à l'étape 2. L'envoi automatique est **éteint** à l'installation.
 - **SMS** : SMSAPI, jeton OAuth avec la permission « sms » — `config/config.php` (`smsapi.token`), variable
   `SMSAPI_TOKEN`, ou saisi à l'étape 4. Les SMS sont **éteints** à l'installation ; la Belgique doit être autorisée
   sur le compte SMSAPI (code 112 sinon).
-- **Horloge** : `bin/metadonnee_cron.sh`, toutes les 5 minutes, ligne posée par `bin/deploy.sh` dans
+- **Horloge** : `bin/metadonnee_cron.sh`, chaque minute (un passage en cours bloque le suivant), ligne posée par `bin/deploy.sh` dans
   `/etc/cron.d/cockpit-rapports` (jeton `mdJeton` lu en base, né à la première ouverture du module).
 - **Vérifier** : « 🔍 Tester les connexions » (lecture seule, sur chaque écran du module) et, à l'étape 2,
   « Envoyer un lead d'essai » (un lead TEST réellement envoyé puis relu : à supprimer dans l'ERP).

@@ -2992,24 +2992,28 @@ Sous-menu « MétaDonnée » du rail (ERP franchisé), maquette A : quatre écra
 `mdLeads`, `mdSms`, un module (`public/assets/js/metadonnee.js`), un serveur (`src/metadonnee.php`). Tables
 créées à la première utilisation : `ceo_md_form` (formulaires, suivi, magasin, mapping), `ceo_md_lead` (un lead
 Meta, son état côté cockpit, son statut relu dans l'ERP, ses SMS), `ceo_md_shop` (SMS du magasin),
-`ceo_md_journal` (le cycle). Réglages : `mdReglages` (erp, sms, meta, cp), `mdSmsJeton` (jamais renvoyé),
-`mdPages`, `mdCycle`, `mdJeton` (horloge).
+`ceo_md_journal` (le cycle). Réglages : `mdReglages` (erp, sms, meta, cp), `mdMeta` (ID de l'application et de
+la Page, adresse de rappel, jeton de vérification, bilan de la dernière connexion), `mdMetaSecret`, `mdMetaJeton`,
+`mdSmsJeton` (jamais renvoyés), `mdCycle`, `mdJeton` (horloge).
 
 **Lectures**
 
-- `GET /metadonnee` — tout ce que les quatre écrans lisent : `statut` (meta, erp, sms, smtp, cron, webhook),
-  `reglages`, `champs` (les champs de l'ERP et leur règle), `besoins`, `statuts`, `pages`, `formulaires[]`
+- `GET /metadonnee` — tout ce que les quatre écrans lisent : `statut` (meta — configuré, Page, mode `webhook`|`releve`,
+  dernière connexion —, erp, sms, smtp, cron), `reglages`, `champs` (les champs de l'ERP et leur règle), `besoins`, `statuts`, `formulaires[]`
   (questions avec dernière réponse et suggestion, mapping enregistré ou `null`, `mappingSuggere`, `valeurs`,
   `champsNeufs`, leads 30 j, `fb`/`ig`, `ignores`), `magasins[]` (SMS et chiffres 30 j), `resume`, `journal`.
 - `GET /metadonnee/leads?filtre=tous|pas_vus|retard|a_attribuer|a_corriger|attente|contactes|connectes|perdus&shop=&form=&q=&jours=30&limite=150`
   → `{filtre, comptes, total, leads[]}`.
 - `GET /metadonnee/leads/{id}` → `{lead, reponses[{key,label,valeur,champ}], payload, journal}`.
-- `GET /metadonnee/cron?jeton=` — l'horloge (bin/metadonnee_cron.sh, toutes les 5 min).
+- `GET /metadonnee/cron?jeton=` — l'horloge (bin/metadonnee_cron.sh, chaque minute).
 
 **Écritures**
 
-- `POST /metadonnee/formulaires/relire` — les formulaires de chaque page du System User (`/{page}/leadgen_forms`)
-  et l'abonnement des pages au champ `leadgen`. Un nouveau formulaire arrive NON suivi, magasin suggéré.
+- `PUT /metadonnee/meta` `{appId?, pageId?, secret?, jeton?, rappel?}` — les réglages Meta du CRM, recopiés (un secret
+  vide n'efface rien). `POST /metadonnee/meta/connecter` — « Connecter et tester » : `{ok, etapes[{titre, ok, detail}], meta}` ;
+  l'adresse de rappel de l'application n'est prise que libre (ou déjà la nôtre), en https sur un nom de domaine.
+- `POST /metadonnee/formulaires/relire` — les formulaires de la Page (`/{page}/leadgen_forms`, questions comprises).
+  Un nouveau formulaire arrive NON suivi, magasin suggéré.
 - `PUT /metadonnee/formulaires/{id}` — `{suivi?, affectation?: magasin|cp, shopId?, mapping?: {question: champ|ignorer}, valeurs?: {question: {réponse: code}}, par?}`.
   Enregistrer le mapping libère les leads qui l'attendaient (`liberes`).
 - `POST /metadonnee/formulaires/{id}/rattrapage` `{jours}` — l'historique d'un formulaire (90 j au plus chez Meta).
@@ -3018,13 +3022,15 @@ Meta, son état côté cockpit, son statut relu dans l'ERP, ses SMS), `ceo_md_sh
 - `POST /metadonnee/leads/{id}/envoyer` — renvoyer à l'ERP (idempotent). `POST /metadonnee/leads/{id}/sms` — relancer le gérant.
 - `POST /metadonnee/tick` — le cycle tout de suite. `PUT /metadonnee/reglages` `{erp?, sms?, meta?, cp?, smsJeton?}`.
 - `PUT /metadonnee/magasins/{id}` `{smsOn, smsTel, smsNom, escaladeEmail}`. `POST /metadonnee/sms/test` `{tel}`.
-- `POST /metadonnee/pages/{id}/abonner` — abonne la page à `leadgen` en GARDANT ses champs (le `feed` du Brand Guard).
 - **Tester les connexions** : `POST /metadonnee/sonde` (lecture seule : Meta, ERP, SMSAPI `GET /profile`, SMTP, horloge),
   `POST /metadonnee/erp/test` (la route des statuts répond-elle ?), `POST /metadonnee/erp/essai` `{shopId}` (un lead
   **TEST** envoyé pour de vrai puis relu — réponses brutes à l'écran ; il reste dans l'ERP, à y supprimer).
 
-**Webhook** : le même que le Brand Guard (`/marketing/brand-guard/webhook/meta`, signature `X-Hub-Signature-256`) ;
-les changements `leadgen` y vont à `mdWebhook()`. Un lead d'un formulaire non suivi est seulement compté.
+**Arrivée des leads** : le flux du CRM, recopié. Webhook PUBLIC `GET|POST /metadonnee/meta/leads` (hub.challenge avec
+le jeton de vérification ; signature `X-Hub-Signature-256` avec la clé secrète, sinon 403 ; réponse immédiate puis
+lecture du lead en trois jeux de champs, comme `fl_meta_traiter`) — quand l'application est au Cockpit. Sinon (son
+webhook va au CRM) : relève des formulaires suivis toutes les 2 min sur un jour. Filet horaire sur 3 jours dans les
+deux cas. Un lead d'un formulaire non suivi n'est pas lu : il est seulement compté.
 
 **À créer côté panel (atelierby.tfbuddy.com/api/v1, compte consultant)** — les routes sont des réglages
 (étape 2 → Connexion ERP) ; défauts :

@@ -1,7 +1,7 @@
 <?php
 // Faux Meta Graph + faux panel (ERP) + faux SMSAPI pour l'essai local de MétaDonnée (voir LISEZMOI.md).
 //   php -S 127.0.0.1:8098 tools/metadonnee-essai/router.php
-// L'état (leads Meta, leads reçus par l'ERP, SMS partis, abonnements, appels) vit dans etat/, hors Git.
+// L'état (leads Meta, leads reçus par l'ERP, SMS partis, abonnements, adresse de rappel, appels) vit dans etat/, hors Git.
 declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 $E = __DIR__ . '/etat';
@@ -15,10 +15,28 @@ $journal = function (string $l) use ($E) { file_put_contents("$E/appels.log", da
 $journal("$m $uri " . ($_SERVER['QUERY_STRING'] ?? ''));
 
 /* ---------------- Graph ---------------- */
+// UNE Page (celle du CRM) et l'application 4242 ; jeton d'utilisateur système `tok-system`, échangé contre `tok-page-501`.
+// L'adresse de rappel de l'application est d'office celle du CRM : etat/rappel-libre.flag la libère.
 if (preg_match('#^/graph/v[\d.]+/(.+)$#', $uri, $g)) {
     $p = $g[1];
-    $pages = ['501' => "L'Atelier by", '502' => "L'Atelier by Gosselies", '503' => "L'Atelier by Halle", '504' => "L'Atelier by Sombreffe", '505' => "L'Atelier by Knokke"];
-    if ($p === 'me/accounts') { $out(['data' => array_map(fn ($id, $n) => ['id' => (string) $id, 'name' => $n, 'access_token' => 'tok-page-' . $id], array_keys($pages), $pages)]); return; }
+    $q = $m === 'POST' ? $_POST : $_GET;
+    if ($p === 'debug_token') {
+        $in = (string) ($q['input_token'] ?? '');
+        $scopes = ['leads_retrieval', 'pages_manage_metadata', 'pages_show_list', 'pages_read_engagement', 'pages_manage_ads', 'ads_management'];
+        if ($in === 'tok-system') { $out(['data' => ['is_valid' => true, 'app_id' => '4242', 'application' => 'Atelier by', 'type' => 'SYSTEM_USER', 'expires_at' => 0, 'scopes' => $scopes]]); return; }
+        if ($in === 'tok-page-501') { $out(['data' => ['is_valid' => true, 'app_id' => '4242', 'type' => 'PAGE', 'profile_id' => '501', 'expires_at' => 0, 'scopes' => $scopes]]); return; }
+        $out(['data' => ['is_valid' => false, 'error' => ['message' => 'Invalid OAuth access token.']]]); return;
+    }
+    if ($p === 'oauth/access_token') {
+        if (($q['client_secret'] ?? '') !== 'secret-app') { $out(['error' => ['message' => 'Error validating client secret.', 'code' => 101]], 400); return; }
+        $out(['access_token' => '4242|app', 'token_type' => 'bearer']); return;
+    }
+    if ($p === '4242/subscriptions') {
+        $libre = is_file("$E/rappel-libre.flag");
+        $sub = $lire('app_subscriptions.json', $libre ? [] : [['object' => 'page', 'callback_url' => 'https://franchise.atelierby.be/api/meta/leads', 'active' => true, 'fields' => [['name' => 'leadgen', 'version' => 'v25.0']]]]);
+        if ($m === 'POST') { $sub = [['object' => 'page', 'callback_url' => (string) ($q['callback_url'] ?? ''), 'active' => true, 'fields' => [['name' => 'leadgen']]]]; $ecrire('app_subscriptions.json', $sub); $out(['success' => true]); return; }
+        $out(['data' => $sub]); return;
+    }
     $qBureau = [
         ['key' => 'full_name', 'label' => 'Nom complet', 'type' => 'FULL_NAME'],
         ['key' => 'email', 'label' => 'E-mail', 'type' => 'EMAIL'],
@@ -35,22 +53,29 @@ if (preg_match('#^/graph/v[\d.]+/(.+)$#', $uri, $g)) {
     ];
     $qSomb = $qBureau;
     if (is_file("$E/allergies.flag")) { $qSomb[] = ['key' => 'allergies_?', 'label' => 'Des allergies à signaler ?', 'type' => 'CUSTOM']; }
+    // Les formulaires de la Page : ceux des bureaux (pour le Cockpit) à côté de ceux des candidats (pour le CRM).
     $forms = [
-        '502' => [['id' => '9001', 'name' => 'Lunch au bureau — Gosselies', 'status' => 'ACTIVE', 'locale' => 'fr_FR', 'leads_count' => 52, 'questions' => $qBureau]],
-        '503' => [['id' => '9002', 'name' => 'Lunch au bureau — Halle', 'status' => 'ACTIVE', 'locale' => 'fr_FR', 'leads_count' => 37, 'questions' => $qBureau]],
-        '501' => [['id' => '9003', 'name' => 'Plateaux réunion — réseau', 'status' => 'ACTIVE', 'locale' => 'fr_FR', 'leads_count' => 26, 'questions' => $qBureau],
-                  ['id' => '9006', 'name' => 'Concours « La Fève d’Or »', 'status' => 'ARCHIVED', 'locale' => 'fr_FR', 'leads_count' => 412,
-                   'questions' => [['key' => 'full_name', 'type' => 'FULL_NAME'], ['key' => 'email', 'type' => 'EMAIL'], ['key' => 'numero_du_ticket', 'label' => 'Numéro du ticket', 'type' => 'CUSTOM']]]],
-        '504' => [['id' => '9004', 'name' => 'Petit-déj d’équipe — Sombreffe', 'status' => 'ACTIVE', 'locale' => 'fr_FR', 'leads_count' => 11, 'questions' => $qSomb]],
-        '505' => [['id' => '9005', 'name' => 'Ouverture Knokke — liste d’attente', 'status' => 'ACTIVE', 'locale' => 'nl_BE', 'leads_count' => 0,
-                   'questions' => [['key' => 'full_name', 'type' => 'FULL_NAME'], ['key' => 'email', 'type' => 'EMAIL'], ['key' => 'phone_number', 'type' => 'PHONE']]]],
+        ['id' => '9001', 'name' => 'Lunch au bureau — Gosselies', 'status' => 'ACTIVE', 'locale' => 'fr_FR', 'leads_count' => 52, 'questions' => $qBureau],
+        ['id' => '9002', 'name' => 'RECRUTEMENT B2B HALLE', 'status' => 'ACTIVE', 'locale' => 'fr_FR', 'leads_count' => 37, 'questions' => $qBureau],
+        ['id' => '9003', 'name' => 'Plateaux réunion — réseau', 'status' => 'ACTIVE', 'locale' => 'fr_FR', 'leads_count' => 26, 'questions' => $qBureau],
+        ['id' => '9004', 'name' => 'Petit-déj d’équipe — Sombreffe', 'status' => 'ACTIVE', 'locale' => 'fr_FR', 'leads_count' => 11, 'questions' => $qSomb],
+        ['id' => '9007', 'name' => 'FRANCHISE ANDERLUES', 'status' => 'ACTIVE', 'locale' => 'fr_FR', 'leads_count' => 64,
+         'questions' => [['key' => 'full_name', 'type' => 'FULL_NAME'], ['key' => 'email', 'type' => 'EMAIL'], ['key' => 'phone_number', 'type' => 'PHONE'],
+             ['key' => 'quel_emplacement_?', 'label' => 'Quel emplacement ?', 'type' => 'CUSTOM']]],
+        ['id' => '9006', 'name' => 'Concours « La Fève d’Or »', 'status' => 'ARCHIVED', 'locale' => 'fr_FR', 'leads_count' => 412,
+         'questions' => [['key' => 'full_name', 'type' => 'FULL_NAME'], ['key' => 'email', 'type' => 'EMAIL'], ['key' => 'numero_du_ticket', 'label' => 'Numéro du ticket', 'type' => 'CUSTOM']]],
     ];
-    if (preg_match('#^(\d+)/subscribed_apps$#', $p, $x)) {
-        $abo = $lire('abonnements.json', ['502' => ['feed'], '503' => ['feed', 'leadgen']]);
-        if ($m === 'POST') { $abo[$x[1]] = explode(',', (string) ($_POST['subscribed_fields'] ?? '')); $ecrire('abonnements.json', $abo); $out(['success' => true]); return; }
-        $out(['data' => isset($abo[$x[1]]) ? [['id' => 'app1', 'name' => 'Cockpit', 'subscribed_fields' => $abo[$x[1]]]] : []]); return;
+    if ($p === '501') {
+        if (str_contains((string) ($q['fields'] ?? ''), 'access_token')) { $out(['id' => '501', 'name' => "L'Atelier by", 'access_token' => 'tok-page-501']); return; }
+        $out(['id' => '501', 'name' => "L'Atelier by"]); return;
     }
-    if (preg_match('#^(\d+)/leadgen_forms$#', $p, $x)) { $out(['data' => $forms[$x[1]] ?? []]); return; }
+    if ($p === '501/subscribed_apps') {
+        // Le CRM et le Cockpit partagent l'application 4242 : un seul abonnement de la Page pour eux deux.
+        $abo = $lire('abonnements.json', ['4242' => ['leadgen']]);
+        if ($m === 'POST') { $abo['4242'] = array_values(array_unique(array_merge($abo['4242'] ?? [], explode(',', (string) ($q['subscribed_fields'] ?? ''))))); $ecrire('abonnements.json', $abo); $out(['success' => true]); return; }
+        $out(['data' => array_map(fn ($id, $f) => ['id' => (string) $id, 'name' => 'Atelier by', 'subscribed_fields' => $f], array_keys($abo), $abo)]); return;
+    }
+    if ($p === '501/leadgen_forms') { $out(['data' => $forms]); return; }
     $leads = $lire('leads_meta.json', []);
     if (preg_match('#^(\d+)/leads$#', $p, $x)) {
         $f = json_decode((string) ($_GET['filtering'] ?? '[]'), true);

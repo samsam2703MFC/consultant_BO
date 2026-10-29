@@ -9,8 +9,8 @@ declare(strict_types=1);
  *
  * Le chemin d'un lead, de bout en bout :
  *
- *  1. FORMULAIRES — les formulaires de chaque page que le System User voit
- *     (`/{page}/leadgen_forms`). On CHOISIT ceux qu'on suit : un formulaire non
+ *  1. FORMULAIRES — les formulaires de la Page (`/{page}/leadgen_forms`), lus
+ *     avec la connexion Meta du CRM, recopiée. On CHOISIT ceux qu'on suit : un formulaire non
  *     suivi (un concours, un recrutement) ne laisse rien entrer, pas même une
  *     donnée personnelle en base — son lead est seulement compté ;
  *  2. MAPPING — chaque question d'un formulaire suivi trouve sa place dans un
@@ -29,19 +29,26 @@ declare(strict_types=1);
  *     (SMSAPI, comme le CRM), entre 8 h et 20 h ; une relance s'il ne l'a pas
  *     ouvert ; le consultant un e-mail s'il n'est toujours pas rappelé.
  *
- * Arrivée : le webhook `leadgen` des pages — le même point d'entrée que le
- * Brand Guard, qui y reçoit `feed` — et un rattrapage horaire sur trois jours.
- * L'horloge : bin/metadonnee_cron.sh toutes les 5 minutes.
+ * Meta : le flux du CRM (atelier-espace-candidat), recopié — mêmes réglages,
+ * même « Connecter et tester », même webhook signé, même lecture d'un lead
+ * (src/crm/meta_graph.php est la copie identique de sa bibliothèque ; voir
+ * « Meta : le flux du CRM, recopié » plus bas). Arrivée : le webhook
+ * `/metadonnee/meta/leads` quand l'application est au Cockpit ; sinon (elle
+ * envoie déjà ses leads au CRM) une relève toutes les 2 minutes. Dans les deux
+ * cas, un filet horaire sur trois jours. L'horloge : bin/metadonnee_cron.sh
+ * chaque minute.
  *
- * Secrets : le jeton Meta est celui du Brand Guard (System User, hors base),
- * l'ERP passe par le compte API du panel (PanelApi) ; seul le jeton SMSAPI
- * peut être saisi à l'écran (réglage `mdSmsJeton`, jamais renvoyé). Les routes
- * de l'ERP sont des réglages : elles restent à écrire côté panel
- * (docs/contrat-api.md, « MétaDonnée »).
+ * Secrets : la clé de l'application et le jeton de la Page se saisissent à
+ * l'écran (réglages `mdMetaSecret`, `mdMetaJeton`), comme le jeton SMSAPI
+ * (`mdSmsJeton`) — aucun n'est jamais renvoyé ; l'ERP passe par le compte API
+ * du panel (PanelApi). Les routes de l'ERP sont des réglages : elles restent à
+ * écrire côté panel (docs/contrat-api.md, « MétaDonnée »).
  *
- * `MdErp::$transport`, `MdSms::$transport` et `MetaGraph::$transport`
+ * `MdErp::$transport`, `MdSms::$transport` et `MdMeta::$transport`
  * s'injectent : bin/tests_metadonnee.php vérifie la logique sans réseau.
  */
+
+require_once __DIR__ . '/crm/meta_graph.php';
 
 /** Les champs de l'ERP qu'une question peut remplir : clé → [libellé, règle]. */
 const MD_CHAMPS = [
@@ -194,7 +201,8 @@ function mdReglagesDefaut(): array
             // Sans apostrophe typographique ni accent hors GSM : 160 caractères par SMS, pas 70.
             'modele' => "L'Atelier by - Lead bureau : {entreprise}, {personnes} pers., {cp}. {contact} {telephone}. ERP : {lien_erp}",
             'modeleRelance' => "L'Atelier by - Rappel : le lead {entreprise} ({cp}) attend depuis {attente}. A traiter : {lien_erp}"],
-        'meta' => ['rattrapageJours' => 3, 'rattrapageMin' => 60],
+        // releveMin : quand l'application envoie son webhook au CRM, le Cockpit relève ses formulaires à ce rythme.
+        'meta' => ['rattrapageJours' => 3, 'rattrapageMin' => 60, 'releveMin' => 2],
         // Les plages de codes postaux d'un formulaire « par code postal » : [{de, a, shopId, libelle}].
         // Un shopId vide = « à attribuer » par le consultant.
         'cp' => [],
@@ -366,18 +374,11 @@ function mdCouperNom(string $v): array
     return [$p[0], $p[1] ?? ''];
 }
 
-/** L'adresse e-mail, réparée de ce qui ne la change pas (espaces, majuscules, mailto:, ponctuation). */
+/** L'adresse e-mail, réparée de ce qui ne la change pas : la lecture du CRM (meta_email_propre). */
 function mdEmailPropre(string $v): ?string
 {
-    $e = mb_strtolower(trim($v));
-    $e = (string) preg_replace('/^mailto:/', '', $e);
-    $e = str_replace(['@,', ',@'], '@', $e);
-    $re = '/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/';
-    // L'adresse telle quelle d'abord (elle peut être dans une phrase), puis sans ses espaces (« jean @ exemple.be »).
-    foreach ([$e, (string) preg_replace('/\s+/u', '', $e)] as $essai) {
-        if (preg_match($re, $essai, $m)) { return rtrim($m[0], '.'); }
-    }
-    return null;
+    $e = meta_email_propre($v);
+    return $e !== '' ? $e : null;
 }
 
 /** Le téléphone au format international ; un numéro belge sans indicatif prend +32. */
@@ -885,14 +886,25 @@ function mdEvaluer(array $l, array $f, array $reg): array
     return ['a_envoyer', '', (string) $f['shop_id'], 'formulaire'];
 }
 
-/** Les champs lus d'un lead pour la liste : entreprise, contact, téléphone, e-mail, code postal. */
+/**
+ * Les champs lus d'un lead pour la liste : entreprise, contact, téléphone,
+ * e-mail, code postal — par le mapping ; ce qu'il ne donne pas, par la lecture
+ * des coordonnées du CRM (meta_lead_coord : champ standard, puis question qui
+ * en parle et en a la forme — « Votre adresse mail », « Numéro de GSM »).
+ */
 function mdChampsRapides(array $reponses, array $f): array
 {
     $t = mdTransformer($reponses, mdMappingEffectif($f), mdJson($f['valeurs_json'] ?? null));
     $p = $t['payload'];
+    $flat = [];
+    foreach ($reponses as $r) { if (($r['key'] ?? '') !== 'consentement') { $flat[mb_strtolower(trim((string) $r['key']))] = (string) ($r['valeur'] ?? ''); } }
+    $co = meta_lead_coord($flat);
     $contact = trim(($p['contact']['first_name'] ?? '') . ' ' . ($p['contact']['last_name'] ?? ''));
+    if ($contact === '') { $contact = trim($co['first'] . ' ' . $co['last']); }
     return ['entreprise' => $p['company']['name'] ?? null, 'contact' => $contact !== '' ? $contact : null,
-        'telephone' => $p['contact']['phone'] ?? null, 'email' => $p['contact']['email'] ?? null, 'cp' => $p['company']['zip'] ?? null];
+        'telephone' => $p['contact']['phone'] ?? ($co['phone'] !== '' ? mdTelE164($co['phone']) : null),
+        'email' => $p['contact']['email'] ?? ($co['email'] !== '' ? $co['email'] : null),
+        'cp' => $p['company']['zip'] ?? ($co['cp'] !== '' ? $co['cp'] : null)];
 }
 
 /** Le corps envoyé à l'ERP. Les groupes vides partent en objets, pas en listes. */
@@ -937,116 +949,339 @@ function mdListe(mixed $res): array
     return [];
 }
 
-/* --- Meta : formulaires, leads, webhook ------------------------------------------------- */
+/* --- Meta : le flux du CRM, recopié --------------------------------------------------- */
 
-/** Les pages que le System User voit : page_id → {token, nom, shopId suggéré}. */
-function mdPagesMeta(): array
+/*
+ * Le flux Meta est celui du CRM (atelier-espace-candidat), recopié ici : mêmes
+ * réglages (ID et clé secrète de l'application, ID et jeton de la Page), même
+ * « Connecter et tester » (/meta/connect de app/crm/api/index.php), même
+ * webhook (/meta/leads de l'API franchise : hub.challenge, signature
+ * X-Hub-Signature-256) et même lecture d'un lead (fl_meta_traiter : trois jeux
+ * de champs, meta_lead_coord). src/crm/meta_graph.php est une COPIE IDENTIQUE
+ * de app/crm/api/lib/meta_graph.php : la reprendre telle quelle quand le CRM la
+ * change (META_LECTEUR_V).
+ *
+ * Une différence, voulue : une application Meta n'a qu'UNE adresse de rappel
+ * pour les pages. Si celle des réglages envoie déjà ses leads ailleurs (au
+ * CRM), « Connecter et tester » ne la détourne pas : le Cockpit relève alors
+ * ses formulaires toutes les 2 minutes (mode « relève »). Avec une application
+ * à lui, le webhook arrive ici à la seconde (mode « webhook ») et la relève
+ * redevient le filet horaire.
+ */
+
+/** Les appels Graph du module : `meta_graph()` du CRM, ou un faux (bin/tests_metadonnee.php). */
+final class MdMeta
 {
-    $mags = mdMagasins();
-    $bg = [];
-    try {
-        foreach (Db::rows('SELECT page_id, shop_id, boutique FROM brand_guard_pages WHERE page_id IS NOT NULL') as $r) { $bg[(string) $r['page_id']] = $r; }
-    } catch (Throwable $e) { $bg = []; }
-    $out = [];
-    foreach (MetaGraph::tokensPages() as $id => $p) {
-        $shop = null;
-        if (isset($bg[$id])) { $shop = isset($mags[(string) $bg[$id]['shop_id']]) ? (string) $bg[$id]['shop_id'] : mdSuggererMagasin((string) $bg[$id]['boutique'], $mags); }
-        $sid = $shop ?? mdSuggererMagasin($p['nom'], $mags);
-        $out[(string) $id] = ['token' => $p['token'], 'nom' => $p['nom'], 'shopId' => $sid !== null ? (string) $sid : null];
+    /** @var null|callable(string, string, array, ?string): array */
+    public static $transport = null;
+
+    /** @return array{ok: bool, code: int, data: array, error: ?string} */
+    public static function graph(string $method, string $path, array $params = [], ?string $token = null): array
+    {
+        if (self::$transport !== null) { return (self::$transport)($method, $path, $params, $token); }
+        return meta_graph($method, $path, $params, $token);
     }
-    return $out;
+}
+
+/** L'adresse de rappel proposée : celle du Cockpit, route du webhook. */
+function mdMetaRappelAuto(): string
+{
+    $b = function_exists('rapBaseUrl') ? rtrim(rapBaseUrl(), '/') : '';
+    return $b !== '' ? $b . '/api/cockpit/metadonnee/meta/leads' : '';
 }
 
 /**
- * Relit chez Meta les formulaires de toutes les pages, et l'abonnement de
- * chaque page au champ `leadgen`. Un formulaire déjà connu garde son suivi, son
- * magasin et son mapping ; un nouveau arrive NON suivi, magasin suggéré.
+ * Les réglages Meta. Les secrets (clé de l'application, jeton de la Page)
+ * vivent à part et ne repartent jamais vers l'écran ; le jeton de
+ * vérification du webhook naît au premier appel.
+ */
+function mdMetaCfg(): array
+{
+    $m = setting('mdMeta', []);
+    $m = is_array($m) ? $m : [];
+    if ((string) ($m['verify'] ?? '') === '') { $m['verify'] = 'atelierby-' . bin2hex(random_bytes(12)); mdSettingSet('mdMeta', $m); }
+    $saisi = trim((string) ($m['rappel'] ?? ''));
+    return [
+        'appId' => (string) preg_replace('/\D/', '', (string) ($m['appId'] ?? '')),
+        'pageId' => (string) preg_replace('/\D/', '', (string) ($m['pageId'] ?? '')),
+        'secret' => (string) setting('mdMetaSecret', ''),
+        'jeton' => (string) setting('mdMetaJeton', ''),
+        'verify' => (string) $m['verify'],
+        'rappel' => $saisi !== '' ? $saisi : mdMetaRappelAuto(),
+        'rappelSaisi' => $saisi !== '',
+        'connexion' => is_array($m['connexion'] ?? null) ? $m['connexion'] : null,
+    ];
+}
+
+function mdMetaConfigure(?array $c = null): bool
+{
+    $c ??= mdMetaCfg();
+    return $c['pageId'] !== '' && $c['jeton'] !== '';
+}
+
+/** « webhook » : l'application envoie ses leads au Cockpit ; « releve » : ailleurs (le CRM), ou nulle part. */
+function mdMetaMode(?array $c = null): string
+{
+    $c ??= mdMetaCfg();
+    return (string) ($c['connexion']['mode'] ?? '') === 'webhook' ? 'webhook' : 'releve';
+}
+
+/** Ce que l'écran en lit : jamais un secret, seulement s'il est là. */
+function mdMetaStatut(): array
+{
+    $c = mdMetaCfg();
+    $cx = $c['connexion'];
+    return ['configure' => mdMetaConfigure($c), 'appId' => $c['appId'], 'pageId' => $c['pageId'], 'secret' => $c['secret'] !== '', 'jeton' => $c['jeton'] !== '',
+        'verify' => $c['verify'], 'rappel' => $c['rappel'], 'rappelSaisi' => $c['rappelSaisi'], 'rappelAuto' => mdMetaRappelAuto(),
+        'mode' => mdMetaMode($c), 'pageNom' => (string) ($cx['pageNom'] ?? ''), 'rappelApp' => (string) ($cx['rappelApp'] ?? ''),
+        'connexion' => $cx !== null ? ['le' => $cx['le'] ?? null, 'ok' => !empty($cx['ok']), 'etapes' => $cx['etapes'] ?? []] : null];
+}
+
+/**
+ * Une adresse que Meta acceptera : https, sur un nom de domaine (la règle du
+ * CRM, meta_callback_refus, sans celle du domaine commun). La raison, ou null.
+ */
+function mdMetaRefusRappel(string $cb): ?string
+{
+    $p = parse_url($cb);
+    if (!is_array($p) || strtolower((string) ($p['scheme'] ?? '')) !== 'https') { return "elle n'est pas en https"; }
+    $h = strtolower((string) ($p['host'] ?? ''));
+    if ($h === '' || $h[0] === '[' || filter_var($h, FILTER_VALIDATE_IP) || !str_contains($h, '.')) { return 'elle ne désigne pas un nom de domaine'; }
+    return null;
+}
+
+/**
+ * « 🔌 Connecter et tester » — le geste du CRM, pas à pas : le jeton (lu par
+ * Meta avec la clé de NOTRE application, prolongé s'il est court, échangé
+ * contre celui de la Page), la Page, ses formulaires (relus dans la liste),
+ * l'abonnement de la Page au champ `leadgen` (vérifié après coup), puis
+ * l'adresse de rappel de l'application — prise seulement si elle est libre ou
+ * déjà la nôtre. Le bilan est gardé : l'écran le remontre.
+ */
+function mdMetaConnecter(): array
+{
+    mdTables();
+    $c = mdMetaCfg();
+    ['appId' => $appId, 'pageId' => $page, 'secret' => $secret, 'jeton' => $jeton, 'rappel' => $cb] = $c;
+    $etapes = [];
+    $mode = 'releve';
+    $pageNom = '';
+    $rappelApp = '';
+    $fin = function () use (&$etapes, &$mode, &$pageNom, &$rappelApp): array {
+        $ok = !in_array(false, array_column($etapes, 'ok'), true);
+        $m = setting('mdMeta', []);
+        $m = is_array($m) ? $m : [];
+        $m['connexion'] = ['le' => date('Y-m-d H:i:s'), 'ok' => $ok, 'etapes' => $etapes, 'mode' => $mode, 'pageNom' => $pageNom, 'rappelApp' => $rappelApp];
+        mdSettingSet('mdMeta', $m);
+        mdJournal('meta', 'Connexion Meta ' . ($ok ? 'vérifiée' : 'incomplète') . ($pageNom !== '' ? ' — « ' . $pageNom . ' »' : '')
+            . ' · ' . ($mode === 'webhook' ? 'webhook au Cockpit' : 'relève toutes les 2 min'));
+        return ['ok' => $ok, 'etapes' => $etapes, 'meta' => mdMetaStatut()];
+    };
+    $manque = array_keys(array_filter(['ID de la Page' => $page === '', 'jeton' => $jeton === '', "ID de l'application" => $appId === '', "clé secrète de l'application" => $secret === '']));
+    if ($manque) { $etapes[] = ['titre' => 'Réglages', 'ok' => false, 'detail' => 'À renseigner : ' . implode(', ', $manque) . ' — les mêmes que dans le CRM (Paramètres → Intégrations → Formulaires Facebook / Instagram).']; return $fin(); }
+    $appTok = $appId . '|' . $secret;
+
+    // 1. Le jeton, lu par Meta avec le jeton de NOTRE application.
+    $dbg = MdMeta::graph('GET', 'debug_token', ['input_token' => $jeton], $appTok);
+    if (!$dbg['ok']) {
+        $etapes[] = ['titre' => 'Jeton', 'ok' => false, 'detail' => 'Vérification impossible — ' . $dbg['error'] . " On poursuit avec le jeton tel quel, sans pouvoir garantir qu'il appartient à votre application."];
+    } else {
+        $info = (array) ($dbg['data']['data'] ?? []);
+        $type = strtoupper((string) ($info['type'] ?? ''));
+        if (empty($info['is_valid'])) {
+            $pourquoi = trim((string) ($info['error']['message'] ?? ''));
+            $etapes[] = ['titre' => 'Jeton', 'ok' => false, 'detail' => 'Jeton invalide ou expiré' . ($pourquoi !== '' ? " ($pourquoi)" : '') . " — générez-en un nouveau (Business Suite → Utilisateurs système → Générer un jeton, en choisissant votre application)."];
+            return $fin();
+        }
+        if ((string) ($info['app_id'] ?? '') !== $appId) {
+            $autre = trim((string) ($info['application'] ?? ''));
+            $etapes[] = ['titre' => 'Jeton', 'ok' => false, 'detail' => 'Ce jeton a été créé pour une autre application (souvent « Graph API Explorer ») — régénérez-le en choisissant votre application.' . ($autre !== '' ? " Application du jeton : « $autre »." : '')];
+            return $fin();
+        }
+        $scopes = array_map('strval', (array) ($info['scopes'] ?? []));
+        $absents = array_values(array_diff(['leads_retrieval', 'pages_manage_metadata', 'pages_show_list', 'pages_read_engagement', 'pages_manage_ads'], $scopes));
+        $notes = [];
+        $exp = (int) ($info['expires_at'] ?? 0);
+        // Jeton d'utilisateur court (Explorateur de l'API Graph) : prolongé AVANT
+        // d'en tirer le jeton de la Page, qui n'expire alors plus.
+        $prolonge = false;
+        if ($type !== 'PAGE' && $exp > 0) {
+            $l = MdMeta::graph('GET', 'oauth/access_token', ['grant_type' => 'fb_exchange_token', 'client_id' => $appId, 'client_secret' => $secret, 'fb_exchange_token' => $jeton]);
+            $long = $l['ok'] ? trim((string) ($l['data']['access_token'] ?? '')) : '';
+            if ($long !== '') { $jeton = $long; $prolonge = true; $exp = isset($l['data']['expires_in']) ? time() + (int) $l['data']['expires_in'] : 0; }
+        }
+        if ($type !== 'PAGE') {
+            if ($prolonge) { $notes[] = 'Prolongé' . ($exp > 0 ? ' jusqu\'au ' . date('d/m/Y', $exp) : '') . ' pour en tirer un jeton de Page durable.'; }
+            elseif ($exp > 0) { $notes[] = 'Expire le ' . date('d/m/Y à H:i', $exp) . " — pas prolongé (clé secrète de l'application ?)."; }
+            else { $notes[] = "N'expire jamais."; }
+        } elseif ($exp <= 0) { $notes[] = "N'expire jamais."; }
+        else { $notes[] = 'Expire le ' . date('d/m/Y à H:i', $exp) . '.'; }
+        if (!in_array('ads_management', $scopes, true)) { $notes[] = '⚠ Sans ads_management, les leads arriveront sans le nom de leur campagne.'; }
+        $genre = $type === 'PAGE' ? 'Jeton de Page' : "Jeton d'utilisateur";
+        $etapes[] = $absents
+            ? ['titre' => 'Jeton', 'ok' => false, 'detail' => 'Permission' . (count($absents) > 1 ? 's manquantes' : ' manquante') . ' : ' . implode(', ', $absents) . ' — régénérez le jeton en les cochant. ' . implode(' ', $notes)]
+            : ['titre' => 'Jeton', 'ok' => true, 'detail' => "$genre de votre application, permissions requises présentes. " . implode(' ', $notes)];
+
+        // 2. Formulaires et abonnement exigent un jeton de PAGE : échangé une fois, gardé à sa place.
+        if ($type !== 'PAGE') {
+            $x = MdMeta::graph('GET', $page, ['fields' => 'id,name,access_token'], $jeton);
+            $pt = $x['ok'] ? trim((string) ($x['data']['access_token'] ?? '')) : '';
+            if ($pt === '') {
+                $etapes[] = ['titre' => 'Jeton de la Page', 'ok' => false, 'detail' => "Ce jeton est celui d'un utilisateur : Meta n'a pas donné celui de la Page" . ($x['ok'] ? '' : ' (' . rtrim((string) $x['error'], '.') . ')')
+                    . ". L'utilisateur système doit avoir la Page parmi ses ressources (Business Suite → Utilisateurs système → Attribuer des ressources → Pages, contrôle total), puis régénérez son jeton."];
+                return $fin();
+            }
+            if ($pt !== $c['jeton']) { mdSettingSet('mdMetaJeton', $pt); }
+            $jeton = $pt;
+            $dp = MdMeta::graph('GET', 'debug_token', ['input_token' => $pt], $appTok);
+            $pexp = $dp['ok'] ? (int) ($dp['data']['data']['expires_at'] ?? 0) : -1;
+            $etapes[] = ['titre' => 'Jeton de la Page', 'ok' => true, 'detail' => "Jeton d'utilisateur converti en jeton de la Page « " . (string) ($x['data']['name'] ?? $page) . ' » et enregistré à sa place.'
+                . ($pexp === 0 ? " Il n'expire pas." : ($pexp > 0 ? ' ⚠ Il expire le ' . date('d/m/Y à H:i', $pexp) . " : collez le jeton d'un utilisateur système." : ''))];
+        } elseif (isset($info['profile_id']) && (string) $info['profile_id'] !== $page) {
+            $etapes[] = ['titre' => 'Jeton de la Page', 'ok' => false, 'detail' => "Ce jeton est celui d'une autre Page (" . (string) $info['profile_id'] . ", pas $page) — régénérez-le pour la bonne Page, ou corrigez l'ID de la Page."];
+            return $fin();
+        }
+    }
+
+    // 3. La Page.
+    $r = MdMeta::graph('GET', $page, ['fields' => 'id,name'], $jeton);
+    $etapes[] = ['titre' => 'Page Facebook', 'ok' => $r['ok'], 'detail' => $r['ok'] ? '« ' . ($r['data']['name'] ?? $page) . ' » — le jeton y donne accès.' : (string) $r['error']];
+    if (!$r['ok']) { return $fin(); }
+    $pageNom = (string) ($r['data']['name'] ?? '');
+
+    // 4. Ses formulaires, relus dans la liste de l'étape 1.
+    try {
+        $f = mdRelireFormulaires();
+        $etapes[] = ['titre' => 'Formulaires de prospects', 'ok' => empty($f['error']), 'detail' => !empty($f['error']) ? (string) $f['error']
+            : ($f['formulaires'] ? $f['formulaires'] . ' formulaire(s) lisible(s)' . ($f['nouveaux'] ? ', dont ' . $f['nouveaux'] . ' nouveau(x) — non suivi(s) tant qu’on ne les coche pas' : '') . '.'
+                : 'Aucun formulaire sur la Page pour l’instant.')];
+    } catch (Throwable $e) { $etapes[] = ['titre' => 'Formulaires de prospects', 'ok' => false, 'detail' => $e->getMessage()]; }
+
+    // 5. Abonner la Page… puis VÉRIFIER : Meta répond « success » même quand le
+    //    jeton appartient à une autre application. Sans effet sur ce que la
+    //    Page envoie déjà au CRM (l'abonnement est par application).
+    $a = MdMeta::graph('POST', "$page/subscribed_apps", ['subscribed_fields' => 'leadgen'], $jeton);
+    if (!$a['ok']) { $etapes[] = ['titre' => 'Page abonnée aux leads', 'ok' => false, 'detail' => (string) $a['error']]; }
+    else {
+        $v = MdMeta::graph('GET', "$page/subscribed_apps", ['fields' => 'id,name,subscribed_fields'], $jeton);
+        $nous = null; $autres = [];
+        foreach ($v['ok'] ? (array) ($v['data']['data'] ?? []) : [] as $app) {
+            if (!is_array($app)) { continue; }
+            if ((string) ($app['id'] ?? '') === $appId) { $nous = $app; } else { $autres[] = '« ' . (string) ($app['name'] ?? ($app['id'] ?? '?')) . ' »'; }
+        }
+        $champs = $nous ? array_map(static fn ($x) => is_array($x) ? (string) ($x['name'] ?? '') : (string) $x, (array) ($nous['subscribed_fields'] ?? [])) : [];
+        if (!$v['ok']) { $res = [false, 'Abonnement demandé, mais impossible de le vérifier — ' . $v['error']]; }
+        elseif (!$nous) { $res = [false, "Votre application ($appId) n'est pas parmi celles abonnées à la Page" . ($autres ? ' (' . implode(', ', $autres) . ')' : '') . ' : le jeton appartient sans doute à une autre application.']; }
+        elseif (!in_array('leadgen', $champs, true)) { $res = [false, 'Votre application est abonnée à la Page, mais pas au champ « leadgen ».']; }
+        else { $res = [true, 'La Page envoie ses nouveaux leads à votre application (abonnement « leadgen » vérifié).']; }
+        $etapes[] = ['titre' => 'Page abonnée aux leads', 'ok' => $res[0], 'detail' => $res[1]];
+    }
+
+    // 6. L'adresse de rappel de l'APPLICATION : une seule pour toutes ses pages.
+    //    Déjà donnée à une autre adresse (le CRM) : on ne la détourne pas.
+    $s = MdMeta::graph('GET', "$appId/subscriptions", [], $appTok);
+    foreach ($s['ok'] ? (array) ($s['data']['data'] ?? []) : [] as $sub) {
+        if (is_array($sub) && ($sub['object'] ?? '') === 'page') { $rappelApp = trim((string) ($sub['callback_url'] ?? '')); }
+    }
+    $refus = mdMetaRefusRappel($cb);
+    if (!$s['ok']) {
+        $etapes[] = ['titre' => 'Adresse de rappel', 'ok' => false, 'detail' => "Impossible de lire l'adresse de rappel de l'application — " . $s['error'] . ' Le Cockpit relève ses formulaires toutes les 2 minutes.'];
+    } elseif ($rappelApp !== '' && rtrim($rappelApp, '/') !== rtrim($cb, '/')) {
+        $etapes[] = ['titre' => 'Adresse de rappel', 'ok' => true, 'detail' => "L'application envoie déjà les leads de ses pages à $rappelApp (le CRM) : le Cockpit ne la détourne pas — il relève ses formulaires toutes les 2 minutes. Pour un webhook à la seconde, une application Meta à lui."];
+    } elseif ($refus !== null) {
+        $etapes[] = ['titre' => 'Adresse de rappel', 'ok' => true, 'detail' => "Meta n'accepterait pas l'adresse du Cockpit ($cb) : $refus. Le Cockpit relève ses formulaires toutes les 2 minutes."];
+    } else {
+        $p = MdMeta::graph('POST', "$appId/subscriptions", ['object' => 'page', 'callback_url' => $cb, 'fields' => 'leadgen', 'verify_token' => $c['verify'], 'include_values' => 'true'], $appTok);
+        if ($p['ok']) { $mode = 'webhook'; $rappelApp = $cb; }
+        $etapes[] = ['titre' => 'Adresse de rappel', 'ok' => $p['ok'], 'detail' => $p['ok'] ? "Meta a vérifié $cb et y enverra chaque lead à la seconde." : $p['error'] . " (adresse : $cb) — en attendant, relève toutes les 2 minutes."];
+    }
+    return $fin();
+}
+
+/**
+ * Relit chez Meta les formulaires de la Page (questions comprises). Un
+ * formulaire déjà connu garde son suivi, son magasin et son mapping ; un
+ * nouveau arrive NON suivi, magasin suggéré d'après son nom.
  */
 function mdRelireFormulaires(): array
 {
     mdTables();
-    if (!MetaGraph::configured()) { return ['error' => 'jeton Meta absent (META_SYSTEM_TOKEN, voir docs/brand-guard.md)']; }
-    $pages = mdPagesMeta();
-    $n = 0; $neufs = 0; $infoPages = [];
+    $c = mdMetaCfg();
+    if (!mdMetaConfigure($c)) { return ['error' => 'connexion Meta à régler (étape 1 : ID de la Page et jeton, comme dans le CRM)']; }
+    $page = $c['pageId'];
+    $p = MdMeta::graph('GET', $page, ['fields' => 'name'], $c['jeton']);
+    $pageNom = $p['ok'] ? (string) ($p['data']['name'] ?? '') : (string) ($c['connexion']['pageNom'] ?? '');
+    $n = 0; $neufs = 0;
     $maintenant = date('Y-m-d H:i:s');
-    foreach ($pages as $pageId => $pg) {
-        $abo = ['abonne' => null, 'champs' => []];
-        try {
-            $r = MetaGraph::http('GET', $pageId . '/subscribed_apps', ['access_token' => $pg['token']]);
-            foreach ((array) ($r['data'] ?? []) as $app) { $abo['champs'] = array_values(array_unique(array_merge($abo['champs'], (array) ($app['subscribed_fields'] ?? [])))); }
-            $abo['abonne'] = in_array('leadgen', $abo['champs'], true);
-        } catch (Throwable $e) { $abo['erreur'] = $e->getMessage(); }
-        $infoPages[] = ['id' => (string) $pageId, 'nom' => $pg['nom'], 'shopId' => $pg['shopId']] + $abo;
-        $params = ['access_token' => $pg['token'], 'limit' => 100,
-            'fields' => 'id,name,status,locale,leads_count,created_time,questions{key,label,type,options}'];
-        $chemin = $pageId . '/leadgen_forms';
-        for ($p = 0; $p < 10; $p++) {
-            try { $r = MetaGraph::http('GET', $chemin, $params); }
-            catch (Throwable $e) { mdJournal('erreur', 'Formulaires de « ' . $pg['nom'] . ' » illisibles : ' . $e->getMessage()); break; }
-            foreach ((array) ($r['data'] ?? []) as $fm) {
-                $fid = (string) ($fm['id'] ?? '');
-                if ($fid === '') { continue; }
-                $qs = mdQuestions((array) ($fm['questions'] ?? []));
-                $existe = mdForm($fid);
-                if ($existe === null) {
-                    $neufs++;
-                    $shop = mdSuggererMagasin((string) ($fm['name'] ?? ''), mdMagasins()) ?? $pg['shopId'];
-                    Db::exec('INSERT INTO ceo_md_form (form_id, page_id, page_nom, nom, statut_meta, locale, questions_json, leads_meta, shop_id, relu_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
-                        [$fid, $pageId, $pg['nom'], (string) ($fm['name'] ?? ''), (string) ($fm['status'] ?? ''), (string) ($fm['locale'] ?? ''),
-                            json_encode($qs, JSON_UNESCAPED_UNICODE), isset($fm['leads_count']) ? (int) $fm['leads_count'] : null, $shop, $maintenant]);
-                } else {
-                    Db::exec('UPDATE ceo_md_form SET page_id = ?, page_nom = ?, nom = ?, statut_meta = ?, locale = ?, questions_json = ?, leads_meta = ?, relu_le = ? WHERE form_id = ?',
-                        [$pageId, $pg['nom'], (string) ($fm['name'] ?? ''), (string) ($fm['status'] ?? ''), (string) ($fm['locale'] ?? ''),
-                            json_encode($qs, JSON_UNESCAPED_UNICODE), isset($fm['leads_count']) ? (int) $fm['leads_count'] : null, $maintenant, $fid]);
-                }
-                $n++;
+    $r = MdMeta::graph('GET', "$page/leadgen_forms", ['limit' => 100, 'fields' => 'id,name,status,locale,leads_count,created_time,questions{key,label,type,options}'], $c['jeton']);
+    for ($i = 0; $r['ok'] && $i < 10; $i++) {
+        foreach ((array) ($r['data']['data'] ?? []) as $fm) {
+            $fid = (string) ($fm['id'] ?? '');
+            if ($fid === '') { continue; }
+            $qs = mdQuestions((array) ($fm['questions'] ?? []));
+            if (mdForm($fid) === null) {
+                $neufs++;
+                Db::exec('INSERT INTO ceo_md_form (form_id, page_id, page_nom, nom, statut_meta, locale, questions_json, leads_meta, shop_id, relu_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                    [$fid, $page, $pageNom, (string) ($fm['name'] ?? ''), (string) ($fm['status'] ?? ''), (string) ($fm['locale'] ?? ''),
+                        json_encode($qs, JSON_UNESCAPED_UNICODE), isset($fm['leads_count']) ? (int) $fm['leads_count'] : null, mdSuggererMagasin((string) ($fm['name'] ?? ''), mdMagasins()), $maintenant]);
+            } else {
+                Db::exec('UPDATE ceo_md_form SET page_id = ?, page_nom = ?, nom = ?, statut_meta = ?, locale = ?, questions_json = ?, leads_meta = ?, relu_le = ? WHERE form_id = ?',
+                    [$page, $pageNom, (string) ($fm['name'] ?? ''), (string) ($fm['status'] ?? ''), (string) ($fm['locale'] ?? ''),
+                        json_encode($qs, JSON_UNESCAPED_UNICODE), isset($fm['leads_count']) ? (int) $fm['leads_count'] : null, $maintenant, $fid]);
             }
-            $next = $r['paging']['next'] ?? null;
-            if (!is_string($next) || $next === '') { break; }
-            $chemin = $next; $params = [];
+            $n++;
         }
+        $next = (string) ($r['data']['paging']['next'] ?? '');
+        if ($next === '') { break; }
+        $r = MdMeta::graph('GET', $next);
     }
-    mdSettingSet('mdPages', $infoPages);
-    mdJournal('meta', count($pages) . ' page(s), ' . $n . ' formulaire(s) relus chez Meta' . ($neufs ? ' dont ' . $neufs . ' nouveau(x), non suivi(s)' : ''));
-    return ['ok' => true, 'pages' => count($pages), 'formulaires' => $n, 'nouveaux' => $neufs];
+    if (!$r['ok']) { mdJournal('erreur', 'Formulaires illisibles chez Meta : ' . $r['error']); return ['error' => (string) $r['error'], 'formulaires' => $n, 'nouveaux' => $neufs]; }
+    mdJournal('meta', $n . ' formulaire(s) relus chez Meta' . ($pageNom !== '' ? ' (« ' . $pageNom . ' »)' : '') . ($neufs ? ' dont ' . $neufs . ' nouveau(x), non suivi(s)' : ''));
+    return ['ok' => true, 'formulaires' => $n, 'nouveaux' => $neufs];
 }
 
-/** Un lead lu chez Meta. Sans `ads_management`, on le relit sans la campagne plutôt que de le perdre. */
-function mdLireLead(string $leadId, string $token): array
+/**
+ * Un lead lu chez Meta. Les champs de la publicité demandent une permission
+ * de plus (ads_management) : trois lectures, de la plus riche à la plus sûre —
+ * comme fl_meta_traiter — plutôt que de perdre le lead.
+ */
+function mdLireLead(string $leadId, string $jeton): array
 {
-    $champs = 'id,created_time,field_data,platform,form_id,custom_disclaimer_responses';
-    try {
-        return MetaGraph::http('GET', $leadId, ['access_token' => $token, 'fields' => $champs . ',campaign_name,ad_name']);
-    } catch (MetaIndisponible $e) {
-        return MetaGraph::http('GET', $leadId, ['access_token' => $token, 'fields' => $champs]);
+    $champs = 'created_time,field_data,custom_disclaimer_responses,form_id,platform,is_organic';
+    $r = ['ok' => false, 'error' => 'lecture impossible'];
+    foreach ([',ad_id,ad_name,campaign_id,campaign_name', ',ad_id,campaign_id', ''] as $pub) {
+        $r = MdMeta::graph('GET', $leadId, ['fields' => $champs . $pub], $jeton);
+        if ($r['ok']) { return ['id' => $leadId] + (array) $r['data']; }
     }
+    throw new RuntimeException((string) $r['error']);
 }
 
-/** Les leads d'un formulaire depuis une date (pagination suivie, 2 000 au plus). */
-function mdLeadsFormulaire(string $formId, string $token, int $depuis): array
+/** Les leads d'un formulaire depuis une date (pagination suivie, 2 000 au plus), même repli sur les champs. */
+function mdLeadsFormulaire(string $formId, string $jeton, int $depuis): array
 {
-    $champs = 'id,created_time,field_data,platform,form_id,custom_disclaimer_responses';
-    $params = ['access_token' => $token, 'limit' => 100, 'fields' => $champs . ',campaign_name,ad_name',
-        'filtering' => json_encode([['field' => 'time_created', 'operator' => 'GREATER_THAN', 'value' => $depuis]])];
-    $chemin = $formId . '/leads';
+    $champs = 'id,created_time,field_data,custom_disclaimer_responses,form_id,platform,is_organic';
+    $filtre = json_encode([['field' => 'time_created', 'operator' => 'GREATER_THAN', 'value' => $depuis]]);
+    $r = ['ok' => false, 'error' => 'lecture impossible'];
+    foreach ([',ad_id,ad_name,campaign_id,campaign_name', ''] as $pub) {
+        $r = MdMeta::graph('GET', "$formId/leads", ['fields' => $champs . $pub, 'limit' => 100, 'filtering' => $filtre], $jeton);
+        if ($r['ok']) { break; }
+    }
+    if (!$r['ok']) { throw new RuntimeException((string) $r['error']); }
     $out = [];
     for ($p = 0; $p < 20; $p++) {
-        try { $r = MetaGraph::http('GET', $chemin, $params); }
-        catch (MetaIndisponible $e) {
-            if ($p === 0 && str_contains((string) ($params['fields'] ?? ''), 'campaign_name')) { $params['fields'] = $champs; $p--; continue; }
-            throw $e;
-        }
-        foreach ((array) ($r['data'] ?? []) as $l) { $out[] = $l; }
-        $next = $r['paging']['next'] ?? null;
-        if (!is_string($next) || $next === '' || ($r['data'] ?? []) === []) { break; }
-        $chemin = $next; $params = [];
+        foreach ((array) ($r['data']['data'] ?? []) as $l) { if (is_array($l)) { $out[] = $l; } }
+        $next = (string) ($r['data']['paging']['next'] ?? '');
+        if ($next === '' || ($r['data']['data'] ?? []) === []) { break; }
+        $r = MdMeta::graph('GET', $next);
+        if (!$r['ok']) { break; }
     }
     return $out;
 }
 
 /**
  * Range un lead lu chez Meta. Un numéro déjà reçu ne crée rien (webhook et
- * rattrapage se recouvrent exprès). Rend ['id'] et 'deja' s'il était connu.
+ * relève se recouvrent exprès) : l'INSERT IGNORE tranche, même quand deux
+ * appels arrivent à la même milliseconde. Rend ['id'] et 'deja' s'il était connu.
  */
 function mdEnregistrerLead(array $raw, array $f, string $via): array
 {
@@ -1057,66 +1292,116 @@ function mdEnregistrerLead(array $raw, array $f, string $via): array
     $reps = mdReponses($raw, mdQuestionsDe($f));
     $vite = mdChampsRapides($reps, $f);
     $ts = isset($raw['created_time']) ? strtotime((string) $raw['created_time']) : false;
-    $recu = date('Y-m-d H:i:s', $ts !== false ? $ts : time());
+    $recu = date('Y-m-d H:i:s', $ts !== false ? min($ts, time()) : time());
     $pf = strtolower((string) ($raw['platform'] ?? ''));
     $pf = in_array($pf, ['fb', 'ig'], true) ? $pf : (str_starts_with($pf, 'insta') ? 'ig' : (str_starts_with($pf, 'face') ? 'fb' : ''));
     $ligne = ['cp' => $vite['cp'], 'shop_par' => null, 'shop_id' => null];
     [$etat, $motif, $shop, $par] = mdEvaluer($ligne, $f, mdReglages());
-    Db::exec('INSERT IGNORE INTO ceo_md_lead (meta_lead_id, form_id, page_id, plateforme, campagne, annonce, recu_le, lu_le, via, reponses_json,'
+    $neuf = Db::exec('INSERT IGNORE INTO ceo_md_lead (meta_lead_id, form_id, page_id, plateforme, campagne, annonce, recu_le, lu_le, via, reponses_json,'
         . ' entreprise, contact, telephone, email, cp, shop_id, shop_par, etat, motif) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$mid, (string) $f['form_id'], (string) ($f['page_id'] ?? ''), $pf, isset($raw['campaign_name']) ? mb_substr((string) $raw['campaign_name'], 0, 200) : null,
             isset($raw['ad_name']) ? mb_substr((string) $raw['ad_name'], 0, 200) : null, $recu, date('Y-m-d H:i:s'), $via,
             json_encode($reps, JSON_UNESCAPED_UNICODE), $vite['entreprise'], $vite['contact'], $vite['telephone'], $vite['email'], $vite['cp'],
-            $shop, $par, $etat, $motif !== '' ? $motif : null]);
+            $shop, $par, $etat, $motif !== '' ? $motif : null]) > 0;
     $id = (int) (Db::row('SELECT id FROM ceo_md_lead WHERE meta_lead_id = ?', [$mid])['id'] ?? 0);
+    if (!$neuf) { return ['id' => $id, 'deja' => true]; }
     Db::exec('UPDATE ceo_md_form SET dernier_lead = GREATEST(COALESCE(dernier_lead, ?), ?) WHERE form_id = ?', [$recu, $recu, (string) $f['form_id']]);
     mdJournal('lead', 'Lead reçu — ' . ($vite['entreprise'] ?: ($vite['contact'] ?: 'sans nom')) . ' (' . ($pf === 'ig' ? 'Instagram' : ($pf === 'fb' ? 'Facebook' : 'Meta'))
-        . ', « ' . $f['nom'] . ' »)' . ($etat === 'attente' || $etat === 'a_attribuer' ? ' · ' . $motif : ''), $id);
+        . ', « ' . $f['nom'] . ' », ' . $via . ')' . ($etat === 'attente' || $etat === 'a_attribuer' ? ' · ' . $motif : ''), $id);
     return ['id' => $id, 'etat' => $etat];
 }
 
 /**
- * Le rattrapage : les leads des N derniers jours de chaque formulaire SUIVI.
- * Un formulaire tout juste suivi récupère ainsi son historique (Meta n'en
- * garde que 90 jours).
+ * La relève : les leads des N derniers jours de chaque formulaire SUIVI. En
+ * mode « relève » c'est elle qui fait arriver les leads (toutes les 2 min, sur
+ * un jour) ; sinon le filet horaire derrière le webhook, sur trois jours. Un
+ * formulaire tout juste suivi récupère ainsi son historique (Meta en garde 90 j).
  */
-function mdRattrapage(int $jours, ?string $formId = null): array
+function mdRattrapage(int $jours, ?string $formId = null, string $via = 'rattrapage'): array
 {
     mdTables();
-    if (!MetaGraph::configured()) { return ['error' => 'jeton Meta absent']; }
+    $c = mdMetaCfg();
+    if (!mdMetaConfigure($c)) { return ['error' => 'connexion Meta à régler (étape 1)']; }
     $jours = max(1, min(90, $jours));
     $forms = $formId !== null ? array_filter([mdForm($formId)]) : Db::rows('SELECT * FROM ceo_md_form WHERE suivi = 1');
     if (!$forms) { return ['ok' => true, 'formulaires' => 0, 'nouveaux' => 0]; }
-    $tokens = MetaGraph::tokensPages();
-    $neufs = 0; $vus = 0; $lus = 0;
+    $neufs = 0; $vus = 0; $lus = 0; $ids = [];
     foreach ($forms as $f) {
-        $tk = $tokens[(string) $f['page_id']]['token'] ?? null;
-        if ($tk === null) { mdJournal('erreur', 'Formulaire « ' . $f['nom'] . ' » : sa page n’est plus rattachée au System User'); continue; }
-        try { $leads = mdLeadsFormulaire((string) $f['form_id'], $tk, time() - $jours * 86400); }
+        try { $leads = mdLeadsFormulaire((string) $f['form_id'], $c['jeton'], time() - $jours * 86400); }
         catch (Throwable $e) { mdJournal('erreur', 'Leads de « ' . $f['nom'] . ' » illisibles : ' . $e->getMessage()); continue; }
         $lus++;
         foreach ($leads as $raw) {
             $vus++;
-            $r = mdEnregistrerLead($raw, $f, 'rattrapage');
-            if (!empty($r['id']) && empty($r['deja'])) { $neufs++; }
+            $r = mdEnregistrerLead($raw, $f, $via);
+            if (!empty($r['id']) && empty($r['deja'])) { $neufs++; $ids[] = (int) $r['id']; }
         }
     }
-    mdJournal('rattrapage', 'Meta, ' . $jours . ' j, ' . $lus . ' formulaire(s) · ' . ($neufs ? $neufs . ' lead(s) manqué(s) récupéré(s)' : 'aucun lead manqué'));
-    return ['ok' => true, 'formulaires' => $lus, 'vus' => $vus, 'nouveaux' => $neufs];
+    if ($neufs || $via !== 'releve') {
+        mdJournal('rattrapage', ($via === 'releve' ? 'Relève' : 'Rattrapage') . ' Meta, ' . $jours . ' j, ' . $lus . ' formulaire(s) · '
+            . ($neufs ? $neufs . ' nouveau(x) lead(s)' : 'aucun lead manqué'));
+    }
+    return ['ok' => true, 'formulaires' => $lus, 'vus' => $vus, 'nouveaux' => $neufs, 'ids' => $ids];
 }
 
 /**
- * Le webhook `leadgen` (appelé par wr_bg_webhook, signature déjà vérifiée).
- * Le lead d'un formulaire non suivi est seulement compté ; celui d'un formulaire
- * suivi est lu, rangé, envoyé et signalé tout de suite.
+ * GET /metadonnee/meta/leads — Meta vérifie l'adresse de rappel (hub.challenge,
+ * rendu tel quel si le jeton de vérification est le bon). PHP lit « hub.mode »
+ * en hub_mode.
  */
-function mdWebhook(array $payload): array
+function mdWebhookVerif(): void
 {
-    $evs = mdLeadsDuWebhook($payload);
-    if (!$evs) { return []; }
     mdTables();
+    $attendu = mdMetaCfg()['verify'];
+    if (($_GET['hub_mode'] ?? '') === 'subscribe' && $attendu !== '' && hash_equals($attendu, (string) ($_GET['hub_verify_token'] ?? ''))) {
+        header('Content-Type: text/plain; charset=utf-8');
+        echo preg_replace('/[^A-Za-z0-9_\-]/', '', (string) ($_GET['hub_challenge'] ?? ''));
+        return;
+    }
+    http_response_code(403);
+    echo json_encode(['error' => 'forbidden']);
+}
+
+/**
+ * POST /metadonnee/meta/leads — le webhook `leadgen`, signé avec la clé
+ * secrète de l'application (sinon 403). Meta attend sa réponse vite : on
+ * répond d'abord, on lit les leads ensuite (même fermeture de la réponse que
+ * l'API franchise, qui tourne aussi sous mod_php). Le lead d'un formulaire
+ * non suivi n'est pas même lu : il est compté, rien n'entre en base.
+ */
+function mdWebhookRecu(string $brut, string $signature): void
+{
+    mdTables();
+    if (!meta_signature_ok($brut, $signature, mdMetaCfg()['secret'])) {
+        mdJournal('erreur', 'Webhook Meta refusé : signature invalide (ou clé secrète absente)');
+        http_response_code(403);
+        echo json_encode(['error' => 'bad_signature']);
+        return;
+    }
+    $evs = mdLeadsDuWebhook((array) json_decode($brut, true));
+    ignore_user_abort(true);
+    @set_time_limit(120);
+    $json = (string) json_encode(['ok' => true, 'leads' => count($evs)]);
+    while (ob_get_level() > 0) { ob_end_clean(); }
+    @ini_set('zlib.output_compression', '0');
+    http_response_code(200);
+    ob_start();
+    echo $json;
+    header('Content-Type: application/json');
+    header('Content-Length: ' . ob_get_length());
+    header('Connection: close');
+    if (function_exists('apache_setenv')) { @apache_setenv('no-gzip', '1'); }
+    while (ob_get_level() > 0) { ob_end_flush(); }
+    flush();
+    if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); }
+    elseif (function_exists('litespeed_finish_request')) { litespeed_finish_request(); }
+    mdWebhookTraiter($evs);
+}
+
+/** Les leads annoncés par le webhook : lus, rangés, envoyés et signalés tout de suite. */
+function mdWebhookTraiter(array $evs): array
+{
     $faits = [];
-    $tokens = null;
+    $c = mdMetaCfg();
     foreach ($evs as $ev) {
         $f = $ev['form'] !== '' ? mdForm($ev['form']) : null;
         if ($f === null && $ev['form'] !== '') {
@@ -1130,43 +1415,15 @@ function mdWebhook(array $payload): array
             continue;
         }
         try {
-            $tokens = $tokens ?? MetaGraph::tokensPages();
-            $tk = $tokens[$ev['page']]['token'] ?? null;
-            if ($tk === null) { throw new MetaIndisponible('page ' . $ev['page'] . ' non rattachée au System User'); }
-            $r = mdEnregistrerLead(mdLireLead($ev['lead'], $tk), $f, 'webhook');
+            $r = mdEnregistrerLead(mdLireLead($ev['lead'], $c['jeton']), $f, 'webhook');
             if (!empty($r['id']) && empty($r['deja'])) { $r['suite'] = mdTraiterNouveau((int) $r['id']); }
             $faits[] = ['lead' => $ev['lead']] + $r;
         } catch (Throwable $e) {
-            mdJournal('erreur', 'Lead ' . $ev['lead'] . ' non lu : ' . $e->getMessage() . ' — le rattrapage horaire le reprendra');
+            mdJournal('erreur', 'Lead ' . $ev['lead'] . ' non lu : ' . $e->getMessage() . ' — la relève le reprendra');
             $faits[] = ['lead' => $ev['lead'], 'erreur' => $e->getMessage()];
         }
     }
     return $faits;
-}
-
-/** Abonne une page au champ `leadgen` sans retirer ce qu'elle reçoit déjà (le `feed` du Brand Guard). */
-function mdAbonnerPage(string $pageId): array
-{
-    mdTables();
-    $pages = MetaGraph::tokensPages();
-    $tk = $pages[$pageId]['token'] ?? null;
-    if ($tk === null) { http_response_code(404); return ['error' => 'page non rattachée au System User']; }
-    $champs = ['leadgen'];
-    try {
-        $r = MetaGraph::http('GET', $pageId . '/subscribed_apps', ['access_token' => $tk]);
-        foreach ((array) ($r['data'] ?? []) as $app) { $champs = array_merge($champs, (array) ($app['subscribed_fields'] ?? [])); }
-    } catch (Throwable $e) { /* pas lisible : on abonne quand même au leadgen */ }
-    $champs = array_values(array_unique($champs));
-    try {
-        MetaGraph::http('POST', $pageId . '/subscribed_apps', ['access_token' => $tk, 'subscribed_fields' => implode(',', $champs)]);
-    } catch (Throwable $e) { http_response_code(502); return ['error' => $e->getMessage()]; }
-    $info = setting('mdPages', []);
-    foreach (is_array($info) ? $info : [] as $i => $p) {
-        if ((string) ($p['id'] ?? '') === $pageId) { $info[$i]['abonne'] = true; $info[$i]['champs'] = $champs; }
-    }
-    mdSettingSet('mdPages', is_array($info) ? $info : []);
-    mdJournal('meta', 'Page « ' . $pages[$pageId]['nom'] . ' » abonnée aux leads (' . implode(', ', $champs) . ')');
-    return ['ok' => true, 'champs' => $champs];
 }
 
 /* --- le traitement : ERP, relecture, SMS ------------------------------------------------- */
@@ -1402,9 +1659,10 @@ function mdEscalader(array $l, array $mag, array $reg): void
 }
 
 /**
- * Le cycle (horloge toutes les 5 minutes, ou « Lancer maintenant ») :
- * rattrapage Meta (au plus une fois par heure), leads en attente réévalués,
- * envoi à l'ERP, relecture des statuts (toutes les 10 min), SMS et escalades.
+ * Le cycle (horloge chaque minute, ou « Lancer maintenant ») : la relève Meta
+ * (toutes les 2 min sur un jour quand le webhook va au CRM ; le filet horaire
+ * sur trois jours dans tous les cas), leads en attente réévalués, envoi à
+ * l'ERP, relecture des statuts (toutes les 10 min), SMS et escalades.
  */
 function mdCycle(bool $force = false): array
 {
@@ -1414,10 +1672,20 @@ function mdCycle(bool $force = false): array
     if (!is_array($etat)) { $etat = []; }
     $t = time();
     $bilan = [];
-    if (MetaGraph::configured() && ($force || $t - (int) ($etat['rattrapage'] ?? 0) >= 60 * max(15, (int) $reg['meta']['rattrapageMin']))) {
-        try { $bilan['meta'] = mdRattrapage((int) $reg['meta']['rattrapageJours']); }
-        catch (Throwable $e) { $bilan['meta'] = ['error' => $e->getMessage()]; mdJournal('erreur', 'Rattrapage Meta : ' . $e->getMessage()); }
-        $etat['rattrapage'] = $t;
+    if (mdMetaConfigure()) {
+        $filet = $force || $t - (int) ($etat['rattrapage'] ?? 0) >= 60 * max(15, (int) $reg['meta']['rattrapageMin']);
+        $releve = mdMetaMode() === 'releve' && $t - (int) ($etat['releve'] ?? 0) >= 60 * max(1, (int) $reg['meta']['releveMin']) - 5;
+        if ($filet || $releve) {
+            try {
+                $r = $filet ? mdRattrapage((int) $reg['meta']['rattrapageJours']) : mdRattrapage(1, null, 'releve');
+                // Ce qui arrive par la relève part tout de suite, comme par le webhook.
+                foreach ($r['ids'] ?? [] as $id) { mdTraiterNouveau((int) $id); }
+                unset($r['ids']);
+                $bilan['meta'] = $r;
+            } catch (Throwable $e) { $bilan['meta'] = ['error' => $e->getMessage()]; mdJournal('erreur', 'Relève Meta : ' . $e->getMessage()); }
+            $etat['releve'] = $t;
+            if ($filet) { $etat['rattrapage'] = $t; }
+        }
     }
     $bilan['reevaluation'] = mdReevaluer();
     if (!empty($reg['erp']['envoiActif'])) { $bilan['envoi'] = mdEnvoyerEnAttente(40); }
@@ -1533,19 +1801,17 @@ function ep_md(): array
     $base = function_exists('rapBaseUrl') ? rtrim(rapBaseUrl(), '/') : '';
     return [
         'statut' => [
-            'meta' => MetaGraph::statut(),
+            'meta' => mdMetaStatut(),
             'erp' => ['configure' => MdErp::configured(), 'base' => class_exists('PanelApi') ? (string) (PanelApi::config()['base'] ?? '') : ''],
             'sms' => ['configure' => MdSms::configured(), 'base' => MdSms::config()['base'], 'jetonSaisi' => (string) setting('mdSmsJeton', '') !== ''],
             'smtp' => class_exists('Smtp') && Smtp::configured(),
             'cron' => ['dernier' => is_array($cycle) && !empty($cycle['dernier']) ? date('Y-m-d H:i:s', (int) $cycle['dernier']) : null,
                 'bilan' => is_array($cycle) ? ($cycle['bilan'] ?? null) : null,
                 'url' => $base . '/api/cockpit/metadonnee/cron?jeton=…'],
-            'webhook' => $base . '/api/cockpit/marketing/brand-guard/webhook/meta',
         ],
         'reglages' => $reg,
         'champs' => array_map(static fn ($k, $v) => ['cle' => $k, 'libelle' => $v[0], 'regle' => $v[1], 'requis' => in_array($k, MD_REQUIS, true)], array_keys(MD_CHAMPS), MD_CHAMPS),
         'besoins' => MD_BESOINS, 'statuts' => MD_STATUTS,
-        'pages' => setting('mdPages', []) ?: [],
         'formulaires' => $formulaires,
         'magasins' => $magasins,
         'resume' => mdStats($rows, $reg, $t),
@@ -1612,9 +1878,10 @@ function ep_md_lead(int $id): array
 /** POST /metadonnee/formulaires/relire */
 function wr_md_formulaires_relire(): array
 {
-    try { return mdRelireFormulaires(); }
-    catch (MetaTokenExpire $e) { http_response_code(502); return ['error' => 'jeton Meta expiré : ' . $e->getMessage()]; }
-    catch (Throwable $e) { http_response_code(502); return ['error' => $e->getMessage()]; }
+    try { $r = mdRelireFormulaires(); }
+    catch (Throwable $e) { $r = ['error' => $e->getMessage()]; }
+    if (!empty($r['error'])) { http_response_code(502); }
+    return $r;
 }
 
 /**
@@ -1812,6 +2079,7 @@ function wr_md_reglages_put(): array
         $m = is_array($cur['meta'] ?? null) ? $cur['meta'] : [];
         if (isset($b['meta']['rattrapageJours'])) { $m['rattrapageJours'] = $int($b['meta']['rattrapageJours'], 1, 90); }
         if (isset($b['meta']['rattrapageMin'])) { $m['rattrapageMin'] = $int($b['meta']['rattrapageMin'], 15, 1440); }
+        if (isset($b['meta']['releveMin'])) { $m['releveMin'] = $int($b['meta']['releveMin'], 1, 60); }
         $cur['meta'] = $m;
     }
     if (array_key_exists('cp', $b)) {
@@ -1876,10 +2144,43 @@ function wr_md_sms_test(): array
     return ['ok' => true, 'id' => $info, 'texte' => $texte];
 }
 
-/** POST /metadonnee/pages/{id}/abonner */
-function wr_md_page_abonner(string $pageId): array
+/**
+ * PUT /metadonnee/meta — {appId?, pageId?, secret?, jeton?, rappel?}. Les
+ * réglages du CRM, recopiés : un secret n'est remplacé que si une valeur est
+ * envoyée (jamais effacé par le champ vide d'un écran rechargé) ; `rappel`
+ * vide = l'adresse proposée.
+ */
+function wr_md_meta_put(): array
 {
-    try { return mdAbonnerPage($pageId); }
+    mdTables();
+    $b = body();
+    $m = setting('mdMeta', []);
+    $m = is_array($m) ? $m : [];
+    $faits = [];
+    foreach (['appId' => "ID de l'application", 'pageId' => 'ID de la Page'] as $k => $lib) {
+        if (!array_key_exists($k, $b)) { continue; }
+        $v = trim((string) $b[$k]);
+        if ($v !== '' && !preg_match('/^\d{3,40}$/', $v)) { http_response_code(422); return ['error' => "$lib : des chiffres seulement"]; }
+        if ($v !== (string) ($m[$k] ?? '')) { $m[$k] = $v; $faits[] = $lib; }
+    }
+    if (array_key_exists('rappel', $b)) {
+        $v = trim((string) $b['rappel']);
+        if ($v !== '' && !preg_match('#^https?://#i', $v)) { http_response_code(422); return ['error' => 'adresse de rappel : une adresse http(s) complète'] ; }
+        $m['rappel'] = $v;
+    }
+    mdSettingSet('mdMeta', $m);
+    foreach (['secret' => ['mdMetaSecret', "clé secrète de l'application"], 'jeton' => ['mdMetaJeton', 'jeton']] as $k => [$cle, $lib]) {
+        $v = trim((string) ($b[$k] ?? ''));
+        if ($v !== '') { mdSettingSet($cle, $v); $faits[] = $lib; }
+    }
+    if ($faits) { mdJournal('reglage', 'Connexion Meta : ' . implode(', ', $faits) . ' enregistré(s)'); }
+    return ['ok' => true, 'meta' => mdMetaStatut()];
+}
+
+/** POST /metadonnee/meta/connecter — « 🔌 Connecter et tester ». */
+function wr_md_meta_connecter(): array
+{
+    try { return mdMetaConnecter(); }
     catch (Throwable $e) { http_response_code(502); return ['error' => $e->getMessage()]; }
 }
 
@@ -1909,29 +2210,43 @@ function mdSonde(): array
     $reg = mdReglages();
     $blocs = [];
     $m = [];
-    $st = MetaGraph::statut();
-    if (!$st['configure']) { $m[] = ['ko', 'Jeton du System User', 'absent — META_SYSTEM_TOKEN ou config/config.php (meta.systemToken), voir docs/brand-guard.md']; }
-    else {
-        try {
-            $pages = MetaGraph::tokensPages();
-            $m[] = [$pages ? 'ok' : 'ko', 'Jeton du System User', count($pages) . ' page(s) visible(s)' . ($pages ? '' : ' — rattacher les pages au System User dans le Business Manager')];
-            $nF = 0; $abo = 0; $err = [];
-            foreach (array_slice($pages, 0, 12, true) as $id => $p) {
-                try { $r = MetaGraph::http('GET', $id . '/leadgen_forms', ['access_token' => $p['token'], 'fields' => 'id', 'limit' => 100]); $nF += count((array) ($r['data'] ?? [])); }
-                catch (Throwable $e) { $err[] = $p['nom'] . ' : ' . $e->getMessage(); }
-                try {
-                    $r = MetaGraph::http('GET', $id . '/subscribed_apps', ['access_token' => $p['token']]);
-                    foreach ((array) ($r['data'] ?? []) as $app) { if (in_array('leadgen', (array) ($app['subscribed_fields'] ?? []), true)) { $abo++; break; } }
-                } catch (Throwable $e) { /* la ligne des formulaires le dit déjà */ }
-            }
-            $m[] = [$err ? 'att' : 'ok', 'Formulaires de prospects', $nF . ' formulaire(s) lisible(s)'
-                . ($err ? ' — ' . implode(' ; ', array_slice($err, 0, 2)) . ' (permission leads_retrieval ? accès aux prospects de la page ?)' : '')];
-            $m[] = [$pages && $abo === count($pages) ? 'ok' : 'att', 'Pages abonnées aux leads', $abo . ' / ' . count($pages)
-                . ($abo < count($pages) ? ' — sans abonnement, les leads n’arrivent que par le rattrapage horaire (étape 1 : « Abonner aux leads »)' : '')];
-        } catch (MetaTokenExpire $e) { $m[] = ['ko', 'Jeton du System User', 'expiré ou révoqué : ' . $e->getMessage()]; }
-        catch (Throwable $e) { $m[] = ['ko', 'Jeton du System User', $e->getMessage()]; }
+    $c = mdMetaCfg();
+    if (!mdMetaConfigure($c) || $c['appId'] === '' || $c['secret'] === '') {
+        $m[] = ['ko', 'Connexion Meta', "à régler (étape 1) : ID et clé secrète de l'application, ID et jeton de la Page — les mêmes que dans le CRM"];
+    } else {
+        // Les maillons de la sonde du CRM (meta_sonde), en lecture seule.
+        $appTok = $c['appId'] . '|' . $c['secret'];
+        $cle = MdMeta::graph('GET', 'oauth/access_token', ['client_id' => $c['appId'], 'client_secret' => $c['secret'], 'grant_type' => 'client_credentials']);
+        $m[] = [$cle['ok'] ? 'ok' : 'ko', "Clé de l'application", $cle['ok'] ? 'acceptée par Meta' : (string) $cle['error']];
+        $dbg = MdMeta::graph('GET', 'debug_token', ['input_token' => $c['jeton']], $appTok);
+        $info = $dbg['ok'] ? (array) ($dbg['data']['data'] ?? []) : [];
+        $exp = (int) ($info['expires_at'] ?? 0);
+        $m[] = !$dbg['ok'] ? ['ko', 'Jeton de la Page', (string) $dbg['error']]
+            : (empty($info['is_valid']) ? ['ko', 'Jeton de la Page', 'invalide ou expiré — un nouveau jeton, puis « Connecter et tester »']
+            : [!in_array('leads_retrieval', array_map('strval', (array) ($info['scopes'] ?? [])), true) ? 'ko' : ($exp > 0 && $exp - time() < 7 * 86400 ? 'att' : 'ok'), 'Jeton de la Page',
+                (!in_array('leads_retrieval', array_map('strval', (array) ($info['scopes'] ?? [])), true) ? 'sans leads_retrieval — ' : 'valide — ')
+                . ($exp > 0 ? 'expire le ' . date('d/m/Y', $exp) : "n'expire pas")]);
+        $pg = MdMeta::graph('GET', $c['pageId'], ['fields' => 'name'], $c['jeton']);
+        $m[] = [$pg['ok'] ? 'ok' : 'ko', 'La Page', $pg['ok'] ? '« ' . (string) ($pg['data']['name'] ?? $c['pageId']) . ' »' : (string) $pg['error']];
+        $fo = MdMeta::graph('GET', $c['pageId'] . '/leadgen_forms', ['fields' => 'id', 'limit' => 100], $c['jeton']);
+        $m[] = [$fo['ok'] ? 'ok' : 'ko', 'Formulaires de prospects', $fo['ok'] ? count((array) ($fo['data']['data'] ?? [])) . ' lisible(s)'
+            : $fo['error'] . ' (accès aux prospects : Business Suite → Paramètres → Intégrations → Accès aux prospects)'];
+        $sa = MdMeta::graph('GET', $c['pageId'] . '/subscribed_apps', ['fields' => 'id,name,subscribed_fields'], $c['jeton']);
+        $abo = false;
+        foreach ($sa['ok'] ? (array) ($sa['data']['data'] ?? []) : [] as $app) {
+            if (!is_array($app) || (string) ($app['id'] ?? '') !== $c['appId']) { continue; }
+            $abo = in_array('leadgen', array_map(static fn ($x) => is_array($x) ? (string) ($x['name'] ?? '') : (string) $x, (array) ($app['subscribed_fields'] ?? [])), true);
+        }
+        $m[] = [$abo ? 'ok' : 'att', 'Page abonnée aux leads', $abo ? 'champ leadgen, pour cette application' : 'non vérifiée — « Connecter et tester » l’abonne'];
+        $su = MdMeta::graph('GET', $c['appId'] . '/subscriptions', [], $appTok);
+        $ou = '';
+        foreach ($su['ok'] ? (array) ($su['data']['data'] ?? []) : [] as $x) { if (is_array($x) && ($x['object'] ?? '') === 'page') { $ou = (string) ($x['callback_url'] ?? ''); } }
+        $chezNous = $ou !== '' && rtrim($ou, '/') === rtrim($c['rappel'], '/');
+        $m[] = !$su['ok'] ? ['att', 'Webhook', 'adresse de rappel illisible : ' . $su['error'] . ' — relève toutes les ' . (int) $reg['meta']['releveMin'] . ' min']
+            : [$chezNous ? 'ok' : 'att', 'Webhook', $chezNous ? 'au Cockpit (' . $ou . ') : chaque lead à la seconde'
+                : ($ou !== '' ? 'chez ' . $ou . ' (le CRM) — le Cockpit relève ses formulaires toutes les ' . (int) $reg['meta']['releveMin'] . ' min'
+                    : 'aucune adresse — le Cockpit relève ses formulaires toutes les ' . (int) $reg['meta']['releveMin'] . ' min')];
     }
-    $m[] = [$st['secretDefini'] ? 'ok' : 'ko', 'Signature du webhook', $st['secretDefini'] ? 'clé secrète de l’app présente' : 'clé secrète absente (META_APP_SECRET) : le webhook refuse tout'];
     $blocs[] = ['nom' => 'Meta', 'etapes' => $m];
 
     $e = [];
@@ -1960,7 +2275,7 @@ function mdSonde(): array
 
     $cy = setting('mdCycle', []);
     $d = is_array($cy) && !empty($cy['dernier']) ? (int) $cy['dernier'] : 0;
-    $blocs[] = ['nom' => 'Horloge', 'etapes' => [[$d && time() - $d < 20 * 60 ? 'ok' : 'att', 'bin/metadonnee_cron.sh, toutes les 5 min',
+    $blocs[] = ['nom' => 'Horloge', 'etapes' => [[$d && time() - $d < 5 * 60 ? 'ok' : 'att', 'bin/metadonnee_cron.sh, chaque minute',
         $d ? 'dernier passage le ' . date('d/m à H:i', $d) : 'jamais passée — la ligne cron est posée par bin/deploy.sh']]];
     mdJournal('reglage', 'Connexions testées');
     return ['at' => date('Y-m-d H:i:s'), 'blocs' => $blocs];

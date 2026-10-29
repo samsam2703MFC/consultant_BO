@@ -1,9 +1,10 @@
 /* MétaDonnée — les formulaires de prospects Facebook et Instagram (Meta Lead
- * Ads) des pages du réseau, jusqu'à l'ERP du franchisé (maquette A retenue le
+ * Ads) de la Page, jusqu'à l'ERP du franchisé (maquette A retenue le
  * 28/10/2026 : un sous-menu en quatre étapes, sous « ERP franchisé ») :
  *
- *   1 · Formulaires     — les formulaires de chaque page ; on choisit ceux qu'on
- *                         suit et leur magasin ; les pages s'abonnent aux leads ;
+ *   1 · Formulaires     — la connexion Meta du CRM, recopiée (« Connecter et
+ *                         tester ») ; les formulaires de la Page, ceux qu'on suit
+ *                         et leur magasin ;
  *   2 · Mapping ERP     — chaque question dans un champ de l'ERP, ce qui partira,
  *                         la traduction des réponses en codes, le magasin par code postal ;
  *   3 · Suivi des leads — ce que l'ERP dit du traitement : vu, contacté, bureau
@@ -181,7 +182,7 @@
       this.base = this.opts.apiBase || ((window.COCKPIT_API_BASE) || (location.pathname.replace(/[^/]*$/, '') + 'api/cockpit'));
       this.el = document.createElement('div'); this.el.className = 'md';
       this.s = { vue: this.opts.vue || 'mdFormulaires', data: null, err: '', chargement: false, lu: 0, busy: '',
-        formSel: null, br: {}, apercu: {}, cpBr: null, erpBr: null, smsBr: null, jeton: '', telTest: '', magBr: {},
+        formSel: null, br: {}, apercu: {}, cpBr: null, erpBr: null, smsBr: null, metaBr: null, jeton: '', telTest: '', magBr: {},
         leads: null, leadsErr: '', filtre: 'tous', shopF: '', formF: '', q: '', ouvert: null, detail: {}, attrib: {} };
       this.el.addEventListener('click', e => this.onClick(e));
       this.el.addEventListener('change', e => this.onChange(e));
@@ -227,7 +228,7 @@
     }
 
     /* --- lectures dérivées ------------------------------------------------------ */
-    d() { return this.s.data || { formulaires: [], magasins: [], pages: [], champs: [], besoins: {}, reglages: { erp: {}, sms: {}, meta: {}, cp: [] }, resume: {}, journal: [], statut: { meta: {}, erp: {}, sms: {}, cron: {} } }; }
+    d() { return this.s.data || { formulaires: [], magasins: [], champs: [], besoins: {}, reglages: { erp: {}, sms: {}, meta: {}, cp: [] }, resume: {}, journal: [], statut: { meta: {}, erp: {}, sms: {}, cron: {} } }; }
     maintenant() { return ts(this.d().maintenant) || Date.now(); }
     ilYa(s) { const t = ts(s); if (t == null) return '—'; const ms = this.maintenant() - t; if (ms < 60000) return 'à l’instant'; if (ms < 3600000) return 'il y a ' + duree(ms); const auj = new Date(this.maintenant()).toDateString(); const d = new Date(t);
       if (d.toDateString() === auj) return hm(s); const hier = new Date(this.maintenant() - 86400000).toDateString(); return (d.toDateString() === hier ? 'hier ' : jm(s) + ' ') + hm(s); }
@@ -287,9 +288,11 @@
     etat() {
       const st = this.d().statut, reg = this.d().reglages;
       const cron = st.cron || {};
-      const vieux = cron.dernier ? (this.maintenant() - ts(cron.dernier)) > 20 * 60000 : true;
+      const vieux = cron.dernier ? (this.maintenant() - ts(cron.dernier)) > 5 * 60000 : true;
       return `<div class="md-etat">
-        <span><i class="feu ${st.meta.configure ? '' : 'r'}"></i><b>Meta</b> ${st.meta.configure ? 'jeton du System User' + (st.meta.secretDefini ? ' · webhook signé' : ' · ⚠ clé secrète absente') : '⚠ jeton Meta absent'}</span>
+        <span><i class="feu ${st.meta.configure ? (st.meta.connexion && st.meta.connexion.ok ? '' : 'o') : 'r'}"></i><b>Meta</b> ${st.meta.configure
+          ? esc(st.meta.pageNom ? '« ' + st.meta.pageNom + ' »' : 'Page ' + st.meta.pageId) + (st.meta.mode === 'webhook' ? ' · webhook' : ' · relève ' + esc(reg.meta.releveMin || 2) + ' min')
+          : '⚠ connexion à régler (étape 1)'}</span>
         <span><i class="feu ${st.erp.configure ? (reg.erp.envoiActif ? '' : 'o') : 'r'}"></i><b>ERP</b> ${st.erp.configure ? esc((st.erp.base || '').replace(/^https?:\/\//, '')) + (reg.erp.envoiActif ? ' · envoi automatique' : ' · envoi éteint') : '⚠ compte API du panel non configuré'}</span>
         <span><i class="feu ${st.sms.configure ? (reg.sms.actif ? '' : 'o') : 'r'}"></i><b>SMS</b> ${st.sms.configure ? (reg.sms.actif ? 'SMSAPI · allumés' : 'SMSAPI · éteints') : '⚠ jeton SMSAPI absent'}</span>
         <span><i class="feu ${vieux ? 'o' : ''}"></i><b>Horloge</b> ${cron.dernier ? 'passage ' + esc(this.ilYa(cron.dernier)) : 'jamais passée'}</span>
@@ -326,25 +329,45 @@
             ${f.suivi && !f.leads30 ? `<br><button class="lien" data-a="historique" data-v="${esc(f.id)}" title="Les leads des 30 derniers jours chez Meta (Meta en garde 90)">↻ Récupérer 30 jours</button>` : ''}</td>
         </tr>`;
       }).join('');
-      const pages = (d.pages || []).map(p => `<div class="journal">
-          <span class="t" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b>${esc(p.nom)}</b><br><span class="mini">${esc(p.shopId ? this.nomMag(p.shopId) : 'page de la marque')}</span></span>
-          ${p.abonne ? pill('ok', '✓ leads reçus', 100, 'Abonnée au champ leadgen : chaque lead arrive à la seconde') : p.abonne === false ? pill('att', 'pas abonnée', 100, 'Les leads n’arrivent que par le rattrapage horaire') : pill('gr', 'illisible', 100, p.erreur || '')}
-          <span style="width:74px;text-align:right;flex:0 0 auto">${p.abonne ? '' : `<button class="btn s xs" data-a="abonner" data-v="${esc(p.id)}" title="Abonner la page au champ leadgen (sans retirer ce qu’elle reçoit déjà)">Abonner</button>`}</span>
-        </div>`).join('');
       const suivis = d.formulaires.filter(f => f.suivi).length;
       return `<div class="grille" style="grid-template-columns:minmax(0,1fr) 380px">
         <div class="carte"><h3>Formulaires<small>${d.formulaires.length} chez Meta · ${suivis} suivi${suivis > 1 ? 's' : ''} · leads sur 30 jours</small>
           <span class="d"><button class="btn s xs" data-a="relire" ${this.s.busy ? 'disabled' : ''}>↻ Relire chez Meta</button></span></h3>
           ${d.formulaires.length ? `<table class="t"><thead><tr><th>Suivre</th><th>Formulaire</th><th>Où</th><th style="text-align:right">Leads</th><th style="text-align:right">Chez Meta</th><th>Dernier</th><th>Magasin</th><th>État</th><th></th></tr></thead><tbody>${lignes}</tbody></table>`
-            : `<div class="vides">Aucun formulaire lu. ${d.statut.meta.configure ? '« Relire chez Meta » les lit sur chaque page du System User.' : 'Le jeton Meta du System User manque (META_SYSTEM_TOKEN, voir docs/brand-guard.md).'}</div>`}
+            : `<div class="vides">Aucun formulaire lu. ${d.statut.meta.configure ? '« Relire chez Meta » lit ceux de la Page.' : 'Réglez d’abord la connexion Meta (à droite), comme dans le CRM, puis « Connecter et tester ».'}</div>`}
         </div>
         <div class="grille">
-          <div class="carte"><h3>Pages Meta<small>abonnement aux leads</small></h3>${pages || '<div class="mini">Aucune page lue.</div>'}
-            <div class="mini" style="margin-top:10px">Adresse du webhook (celle du Brand Guard, champ <code>leadgen</code>) :<br><code>${esc(d.statut.webhook)}</code></div></div>
+          ${this.carteMeta()}
           <div class="carte"><h3>Sans magasin<small>formulaire « par code postal »</small></h3>
             <div class="mini">Un formulaire de la marque couvre plusieurs magasins : le code postal du bureau choisit, d’après les plages réglées à l’étape 2. Sans plage, le lead attend « à attribuer ».</div></div>
         </div>
       </div>`;
+    }
+
+    /** La connexion Meta : les réglages et le « Connecter et tester » du CRM, recopiés. */
+    carteMeta() {
+      const s = this.s, m = this.d().statut.meta || {};
+      const b = s.metaBr || (s.metaBr = { appId: m.appId || '', pageId: m.pageId || '', secret: '', jeton: '', rappel: m.rappelSaisi ? m.rappel : '' });
+      const sale = b.appId !== (m.appId || '') || b.pageId !== (m.pageId || '') || !!b.secret || !!b.jeton || b.rappel !== (m.rappelSaisi ? m.rappel : '');
+      const cx = m.connexion;
+      const champ = (k, lib, type, ph) => `<div class="regle"><b>${lib}</b><span class="v"><input type="${type}" data-f="meta-${k}" data-i="meta" data-k="${k}" value="${esc(b[k])}" placeholder="${esc(ph)}" autocomplete="off" style="width:100%"></span></div>`;
+      const mode = !m.configure ? '' : m.mode === 'webhook'
+        ? pill('ok', 'webhook au Cockpit', 150, 'L’application envoie chaque lead ici, à la seconde ; la relève horaire reste en filet')
+        : pill('att', 'relève toutes les ' + (this.d().reglages.meta.releveMin || 2) + ' min', 150, m.rappelApp ? 'Le webhook de l’application va à ' + m.rappelApp + ' (le CRM) : le Cockpit ne le détourne pas, il relit ses formulaires' : 'Pas de webhook vers le Cockpit : il relit ses formulaires');
+      const etapes = cx && cx.etapes && cx.etapes.length ? `<div style="margin-top:12px">${cx.etapes.map(e => `<div class="journal">${pill(e.ok ? 'ok' : 'plein', e.ok ? '✓' : '✕', 24)}<span class="t"><b style="font-size:12px">${esc(e.titre)}</b><br><span class="mini">${esc(e.detail)}</span></span></div>`).join('')}
+        <div class="mini" style="margin-top:4px">Testée ${esc(this.ilYa(cx.le))}</div></div>` : '';
+      return `<div class="carte"><h3>Connexion Meta<small>${m.pageNom ? '« ' + esc(m.pageNom) + ' »' : 'les réglages du CRM'}</small><span class="d">${mode}</span></h3>
+        <div class="mini" style="margin-bottom:8px">Les mêmes que dans le CRM : Paramètres → Intégrations → Formulaires Facebook / Instagram.</div>
+        ${champ('appId', 'ID de l’application', 'text', '1234567890')}
+        ${champ('secret', 'Clé secrète', 'password', m.secret ? '•••••• enregistrée' : 'clé secrète de l’application')}
+        ${champ('pageId', 'ID de la Page', 'text', '1234567890')}
+        ${champ('jeton', 'Jeton', 'password', m.jeton ? '•••••• enregistré (jeton de la Page)' : 'jeton de l’utilisateur système')}
+        ${champ('rappel', 'Adresse de rappel', 'text', m.rappelAuto || 'https://…/api/cockpit/metadonnee/meta/leads')}
+        <div class="regle"><b>Jeton de vérification</b><span class="v" style="display:flex;gap:6px;min-width:0"><input type="text" value="${esc(m.verify || '')}" readonly style="flex:1;min-width:0;color:var(--color-text-muted)"><button class="btn s xs" data-a="copier" data-v="${esc(m.verify || '')}">Copier</button></span></div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn s xs" data-a="metaEnregistrer" ${sale && !s.busy ? '' : 'disabled'}>Enregistrer</button>
+          <button class="btn xs" data-a="metaConnecter" ${s.busy ? 'disabled' : ''} title="Le jeton (lu par Meta, échangé contre celui de la Page), la Page, ses formulaires, l’abonnement aux leads, l’adresse de rappel — sans jamais détourner celle du CRM">🔌 Connecter et tester</button>
+        </div>${etapes}</div>`;
     }
 
     /* --- 2 · mapping ------------------------------------------------------------------- */
@@ -645,7 +668,14 @@
         case 'vue': if (this.opts.go) this.opts.go(v); else { this.setVue(v); this.render(); } break;
         case 'tick': this.act(W('POST', '/metadonnee/tick'), r => 'Cycle passé — ' + this.bilan(r.bilan), () => { this.charger(); if (s.vue === 'mdLeads') this.chargerLeads(); }); break;
         case 'relire': this.act(W('POST', '/metadonnee/formulaires/relire'), r => r.formulaires + ' formulaire(s) relu(s)' + (r.nouveaux ? ', ' + r.nouveaux + ' nouveau(x), non suivi(s)' : '')); break;
-        case 'abonner': this.act(W('POST', '/metadonnee/pages/' + v + '/abonner'), 'Page abonnée aux leads'); break;
+        case 'copier': if (navigator.clipboard) navigator.clipboard.writeText(v).then(() => this.notify('Copié'), () => this.notify('⚠ Copie impossible')); break;
+        case 'metaEnregistrer': this.act(W('PUT', '/metadonnee/meta', this.metaCorps()), 'Connexion Meta enregistrée', () => { s.metaBr = null; return this.charger(); }); break;
+        case 'metaConnecter': {
+          const corps = this.metaCorps();
+          this.act(W('PUT', '/metadonnee/meta', corps).then(() => W('POST', '/metadonnee/meta/connecter')),
+            r => r.ok ? '✓ Connexion Meta vérifiée' : '⚠ Connexion incomplète : voir les étapes', () => { s.metaBr = null; return this.charger(); });
+          break;
+        }
         case 'suivre': { const f = this.form(v); this.act(W('PUT', '/metadonnee/formulaires/' + v, { suivi: !f.suivi }), (f.suivi ? 'Plus suivi : ' : 'Suivi : ') + f.nom); break; }
         case 'historique': this.act(W('POST', '/metadonnee/formulaires/' + v + '/rattrapage', { jours: 30 }), r => (r.nouveaux || 0) + ' lead(s) récupéré(s) sur 30 jours'); break;
         case 'versMapping': s.formSel = v; if (this.opts.go) this.opts.go('mdMapping'); else { this.setVue('mdMapping'); this.render(); } this.apercuPlus(); break;
@@ -687,6 +717,14 @@
         case 'magEnregistrer': { const b = s.magBr[v]; this.act(W('PUT', '/metadonnee/magasins/' + v, { smsOn: b.on, smsTel: b.tel, smsNom: b.nom, escaladeEmail: b.escaladeEmail }), 'Magasin enregistré', () => { delete s.magBr[v]; return this.charger(); }); break; }
       }
     }
+    /** Ce qui part au serveur : un secret laissé vide n'est pas envoyé (il garde l'enregistré). */
+    metaCorps() {
+      const b = this.s.metaBr || {};
+      const c = { appId: (b.appId || '').trim(), pageId: (b.pageId || '').trim(), rappel: (b.rappel || '').trim() };
+      if (b.secret) c.secret = b.secret.trim();
+      if (b.jeton) c.jeton = b.jeton.trim();
+      return c;
+    }
     rafraichirLead(id) { delete this.s.detail[id]; return Promise.all([this.charger(), this.chargerLeads()]).then(() => { if (this.s.ouvert === Number(id)) this.chargerDetail(id); }); }
     bilan(b) {
       if (!b) return 'rien';
@@ -721,6 +759,7 @@
       if (i === 'q') { s.q = t.value; clearTimeout(this._q); this._q = setTimeout(() => this.chargerLeads(), 300); return; }
       if (i === 'sms') { s.smsBr[t.dataset.k] = t.value; this.render(); return; }
       if (i === 'jeton') { s.jeton = t.value; this.render(); return; }
+      if (i === 'meta') { s.metaBr[t.dataset.k] = t.value; this.render(); return; }
       if (i === 'telTest') { s.telTest = t.value; this.render(); return; }
     }
   }

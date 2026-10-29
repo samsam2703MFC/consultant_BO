@@ -6,8 +6,8 @@ budget par magasin (théorique / budget / réel), marge & maîtrise des coûts,
 encodage du budget, scoring produits, projets (kanban par famille, fiche,
 rétroplanning), tâches consultants, contrôle des posts Facebook des magasins,
 reporting automatisé, journal et paramètres ; MétaDonnée — les formulaires de prospects Facebook et
-Instagram jusqu'à l'ERP du franchisé, le suivi de leur traitement et les SMS au gérant
-(`src/metadonnee.php`, `docs/DEPLOIEMENT.md`).
+Instagram jusqu'à l'ERP du franchisé (par la connexion Meta du CRM, dont le flux est recopié), le suivi de
+leur traitement et les SMS au gérant (`src/metadonnee.php`, `docs/DEPLOIEMENT.md`).
 
 Implémentation du design **Claude Design « Cockpit CEO cliquable complet »**
 (bundle de handoff) — design system **L'Atelier by** (Gotham / Vank, couleurs

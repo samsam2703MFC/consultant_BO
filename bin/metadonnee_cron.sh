@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 #
-# Appelé toutes les 5 minutes par /etc/cron.d/cockpit-rapports (posé par
-# bin/deploy.sh) : l'horloge de MétaDonnée — rattrapage des leads Meta (une fois
-# par heure), envoi à l'ERP, relecture des statuts (toutes les 10 min), SMS aux
-# franchisés et e-mails d'escalade. Le jeton (mdJeton) est lu EN BASE au moment
-# de l'appel — rien de secret dans le crontab ni ici.
+# Appelé chaque minute par /etc/cron.d/cockpit-rapports (posé par
+# bin/deploy.sh) : l'horloge de MétaDonnée — relève des leads Meta (toutes les
+# 2 min quand le webhook de l'application va au CRM ; filet horaire sinon),
+# envoi à l'ERP, relecture des statuts (toutes les 10 min), SMS aux franchisés
+# et e-mails d'escalade. Le jeton (mdJeton) est lu EN BASE au moment de
+# l'appel — rien de secret dans le crontab ni ici. Un passage encore en cours
+# (relecture longue) : le suivant ne démarre pas par-dessus.
 set -euo pipefail
+exec 9>"${TMPDIR:-/tmp}/cockpit-metadonnee.lock"
+flock -n 9 || exit 0
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ALIAS_PATH="${ALIAS_PATH:-/consulant_bo}"
 JETON="$(php -r '
