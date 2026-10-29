@@ -1141,3 +1141,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-29T07:15:49Z production : nouveau produit depuis un film — karta technologiczna (reel Facebook / Pinterest → asystent AI → .docx, PDF, tablette), Ustawienia › Asystent AI, migracja 122
 2026-10-29T08:19:00Z production : Asystent AI — diagnostic SDK / api.anthropic.com au déploiement
 2026-10-29T08:19:08Z promotions : bon, client B2B ou client du magasin (#76)
+2026-10-29T08:30:53Z production : karta z filmu — wybór tablet / wydruk
