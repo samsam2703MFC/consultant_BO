@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services\Workshop\Product;
 
+use App\Domain\Logistics\PalletLayout;
 use App\Domain\Product\ProductLogistics;
 use App\Domain\Stock\ToProduce;
 use App\Core\Api\Workshop\ApiContext;
@@ -39,12 +40,13 @@ final class ItemService
     /** Postes où l'étape a une température (four, pousse, froid, surgélation). */
     private const TEMPERATURE_TYPES = ['four', 'fermentation', 'froid', 'surgelation'];
     /** Palettes : hauteur du support (mm) et poids à vide (kg) pour la hauteur et le poids brut. */
-    private const PALLETS = ['eur' => ['length_mm' => 1200, 'width_mm' => 800, 'base_mm' => 144, 'tare_kg' => 25.0],
-        'industrial' => ['length_mm' => 1200, 'width_mm' => 1000, 'base_mm' => 144, 'tare_kg' => 30.0]];
+    private const PALLETS = PalletLayout::PALLETS;
+    /** Kreator karty : 1 Produkt, 2 Opakowanie, 3 Paleta [205], 4 Receptura, 5 Tryb, 6 Grupa, 7 Etapy, 8 Kontrola czasów, 9 Zatwierdzenie. */
+    public const WIZARD_STEPS = 9;
     private const SETTINGS_FIELDS = ['mode', 'never_frozen', 'bake_state', 'stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple', 'batch_people', 'batch_minutes',
         'shelf_life_workshop_days', 'shelf_life_shop_days', 'primary_group_id', 'wizard_step', 'stock_calculated'];
     private const LOGISTICS_FIELDS = ['weight', 'ppc', 'ppb', 'bpc', 'cpl', 'lpp', 'cpp', 'carton_length_mm', 'carton_width_mm', 'carton_height_mm',
-        'carton_tare_g', 'carton_type', 'carton_ean', 'pallet_type', 'storage'];
+        'carton_tare_g', 'carton_type', 'carton_ean', 'pallet_type', 'storage', 'carton_id', 'pallet_max_height_mm', 'pallet_max_kg', 'pallet_overhang_mm'];
     private const STEP_FIELDS = ['id', 'name_pl', 'name_fr', 'workstation_id', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass',
         'operators_required', 'min_level_order', 'delay_after_s', 'delay_workstation_id', 'cleaning_required', 'cleaning_time_s', 'temperature_c', 'alternatives'];
     private const ALT_FIELDS = ['workstation_id', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'priority'];
@@ -441,7 +443,7 @@ final class ItemService
             ->decimal('shelf_life_workshop_days', false, 0, 3650, true)
             ->decimal('shelf_life_shop_days', false, 0, 3650, true)
             ->integer('primary_group_id', false, 1, null, true)
-            ->integer('wizard_step', false, 1, 8)
+            ->integer('wizard_step', false, 1, self::WIZARD_STEPS)
             ->boolean('stock_calculated');
         if ($v->value('primary_group_id') !== null && !$this->groups->exists($v->value('primary_group_id'))) {
             $v->add('primary_group_id', 'REFERENCE_NOT_FOUND', ['id' => $v->value('primary_group_id')]);
@@ -519,7 +521,13 @@ final class ItemService
             ->choice('carton_type', self::CARTON_TYPES, false, true)
             ->string('carton_ean', 14, false, true, '/^[0-9]{8,14}$/', 'INVALID_EAN')
             ->choice('pallet_type', self::PALLET_TYPES, false, true)
-            ->choice('storage', self::STORAGES, false, true);
+            ->choice('storage', self::STORAGES, false, true)
+            ->integer('carton_id', false, 1, PHP_INT_MAX, true)
+            ->integer('pallet_max_height_mm', false, 300, 3000, true)
+            ->integer('pallet_max_kg', false, 50, 3000, true)
+            ->integer('pallet_overhang_mm', false, 0, 100, true);
+        // Karton z katalogu [205] : musi istnieć (wymiary i tara przychodzą z kreatora, kopia katalogu).
+        if ($v->provided('carton_id') && $v->value('carton_id') !== null && !$this->items->cartonExists((int) $v->value('carton_id'))) $v->add('carton_id', 'NOT_FOUND');
         // Palette : jamais plus de cartons que couches × cartons par couche (valeurs finales).
         $final = fn(string $f) => $v->provided($f) ? $v->value($f) : $row[$f];
         $cpl = $final('cpl');
@@ -531,6 +539,7 @@ final class ItemService
         $data = $v->clean();
         $erp = array_intersect_key($data, array_flip(['weight', 'ppc', 'ppb', 'bpc', 'cpl', 'lpp', 'cpp']));
         $own = array_diff_key($data, $erp);
+        if (array_key_exists('carton_id', $own)) { $own['id_carton'] = $own['carton_id']; unset($own['carton_id']); }
         $before = array_intersect_key($row, $data);
         $this->tx->execute(function () use ($id, $row, $erp, $own, $before, $data, $context) {
             if ($erp) $this->items->updateErpLogistics((int) $row['id_final_product'], $erp);
@@ -720,7 +729,7 @@ final class ItemService
             throw ApiException::validation(array_map(fn($c) => ['field' => $c['field'], 'code' => $c['code']], $missing));
         }
         $this->tx->execute(function () use ($id, $context) {
-            $this->items->saveSettings($id, ['status' => 'validated', 'wizard_step' => 8, 'validated_at' => date('Y-m-d H:i:s'), 'validated_by' => $context->userId, 'updated_by' => $context->userId]);
+            $this->items->saveSettings($id, ['status' => 'validated', 'wizard_step' => self::WIZARD_STEPS, 'validated_at' => date('Y-m-d H:i:s'), 'validated_by' => $context->userId, 'updated_by' => $context->userId]);
             $this->audit->record($context, 'validate', 'item', $id, null, null);
         });
         return $this->get($id, $context);
@@ -877,6 +886,10 @@ final class ItemService
             $labourPerCarton = $calc['labour_s_per_unit'] === null ? null : round($calc['labour_s_per_unit'] * $ppc, 1);
         }
         return [
+            'carton_id' => $int($row['id_carton'] ?? null),
+            'pallet_max_height_mm' => $int($row['pallet_max_height_mm'] ?? null),
+            'pallet_max_kg' => $int($row['pallet_max_kg'] ?? null),
+            'pallet_overhang_mm' => isset($row['pallet_overhang_mm']) ? (int) $row['pallet_overhang_mm'] : null,
             'carton_length_mm' => $int($row['carton_length_mm']),
             'carton_width_mm' => $int($row['carton_width_mm']),
             'carton_height_mm' => $height,

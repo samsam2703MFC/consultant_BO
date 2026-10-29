@@ -86,7 +86,7 @@ class RecipeController extends BaseController
             }
             $data['for_product'] = $forProduct;
             $data['selected_product'] = (int) $forProduct['id'];
-            $data['card_url'] = $this->productService->cardUrl((int) $forProduct['id'], 3);
+            $data['card_url'] = $this->productService->cardUrl((int) $forProduct['id'], 4);
             $data['old_data']['sfp_data'] = $this->addedSemiProduct([]);
         }
 
@@ -99,7 +99,7 @@ class RecipeController extends BaseController
                 if ($newRecipeId) {
                     $this->saveExtras((int) $newRecipeId, true);
 
-                    header('Location: ' . ($forProduct ? $this->productService->cardUrl((int) $dataToInsert['final_product'], 3) : ROOT . '/recipes/' . $newRecipeId . '/calculation'));
+                    header('Location: ' . ($forProduct ? $this->productService->cardUrl((int) $dataToInsert['final_product'], 4) : ROOT . '/recipes/' . $newRecipeId . '/calculation'));
                     exit;
                 }
 
@@ -153,7 +153,7 @@ class RecipeController extends BaseController
         $fromCard = !empty($_GET['product']) && !empty($data['product_data']['id']);
         if ($fromCard) {
             $data['for_product'] = $data['product_data'];
-            $data['card_url'] = $this->productService->cardUrl((int) $data['product_data']['id'], 3);
+            $data['card_url'] = $this->productService->cardUrl((int) $data['product_data']['id'], 4);
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

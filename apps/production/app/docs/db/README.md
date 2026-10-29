@@ -66,6 +66,30 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Kartony i palety : catalogue des cartons et étape « Paleta » de la fiche produit (migration 129, 29/10/2026)
+
+- **Rail Produkt › Kartony i palety** (`/products/cartons`) : un carton = un article d'emballage de la liste des matières
+  (`raw_material` : nom, prix, fournisseur, poids du carton `packaging_unit_weight_g`, le même que dans BDO). `n_carton`
+  (clé `id_raw_material`) ajoute les dimensions extérieures (mm), la **charge maximale** (kg de contenu), le type
+  (klapowy, fasonowy, klejony, inny), une note et actif / archivé. Catalogue de départ : articles « karton… », cartons de
+  `carton_dimension` et cartons de vente PPWR ; dimensions reprises de `carton_dimension` (table ERP), sinon des
+  dimensions PPWR. À l'enregistrement, les dimensions sont aussi écrites dans `carton_dimension` (id = article).
+- Pour chaque carton : disposition sur palette EUR 1200 × 800 ou industrielle 1200 × 1000 (`App\Domain\Logistics\PalletLayout` :
+  couche uniforme ou en deux blocs, débord autorisé, couches jusqu'à la hauteur max. palette comprise et au poids brut
+  max.), produits dans ce carton (carton choisi dans l'étape « Paleta », sinon carton de vente PPWR, sinon le carton de la
+  recette) avec contrôle : contenu (pièces × poids) ≤ charge max., cartons par couche / hauteur / poids de la palette
+  enregistrés dans l'ERP (`final_product.cpl`, `lpp`, `cpp`) possibles avec ce carton.
+- **Fiche produit, nouvelle étape 3 « Paleta »** (maquette 1) : carton du catalogue ou dimensions libres, contraintes
+  (hauteur max., poids max., débord), trois propositions (le plus par palette, gerbage de 2 palettes dans le camion si
+  plus de cartons par place, palettisation actuelle de l'ERP avec ses erreurs), vue de dessus de la couche, vue de côté
+  avec règle, chiffres (cartons, hauteur, poids, volume, camion de 33 places, ventes par semaine, palettes par mois).
+  Enregistrement : `cpl`, `lpp`, `cpp` dans l'ERP ; `n_prod_item_logistics.id_carton`, dimensions et tare copiées,
+  `pallet_max_height_mm`, `pallet_max_kg`, `pallet_overhang_mm` (NULL = paramètres). L'étape 2 s'appelle « Opakowanie »
+  (pièce → emballage → carton, conservation) ; l'assistant passe de 8 à 9 étapes : les étapes enregistrées ≥ 3 sont
+  décalées de 1 et `ck_tfb_settings_step` accepte 1 à 9.
+- Paramètres (`n_prod_param`) : `logistics.pallet_max_height_mm` (1800), `logistics.pallet_max_kg` (1000),
+  `logistics.pallet_overhang_mm` (0), `logistics.truck_inner_height_mm` (2550 ; gerbage quand 2 palettes + 100 mm tiennent).
+
 ### Planning logistique : Allemagne en transit, « Wszystko do rozplanowania » (migration 128, 29/10/2026)
 
 - **Allemagne (DE) = pays traversé** : le camion PL → BE passe par l'Allemagne, où les camions n'ont pas le droit de

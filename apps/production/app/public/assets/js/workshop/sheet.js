@@ -113,7 +113,7 @@
             const low = mts && r.available !== null && r.stock_min !== null && r.available < r.stock_min;
             const days = r.days.map(d => `<span title="${esc(d)}">${esc(dayName(d))}</span>`).join(', ');
             return sep + `<tr data-item="${r.item_id}" class="${r.to_produce > 0 ? '' : 'is-idle'}">
-                <td><a href="${esc(api.root)}/workshop/products#/item/${r.item_id}/4"><strong>${esc(r.name)}</strong></a>${r.item_type === 'semi' ? ` <span class="badge bg-light text-dark">${esc(t('semi'))}</span>` : ''}
+                <td><a href="${esc(api.root)}/workshop/products#/item/${r.item_id}/5"><strong>${esc(r.name)}</strong></a>${r.item_type === 'semi' ? ` <span class="badge bg-light text-dark">${esc(t('semi'))}</span>` : ''}
                     <div class="tfb-sheet-calc">${esc(calc(r))}</div></td>
                 <td class="text-center">${r.item_type === 'product' ? `<div class="form-check form-switch d-inline-block m-0" title="${esc(r.never_frozen ? t('never_frozen') : t('mode_help'))}">
                     <input class="form-check-input" type="checkbox" role="switch" data-mode ${mts ? 'checked' : ''} ${r.never_frozen || !editable ? 'disabled' : ''} aria-label="${esc(t('mode_mts'))}"></div>

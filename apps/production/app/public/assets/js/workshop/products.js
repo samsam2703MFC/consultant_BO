@@ -13,7 +13,7 @@
     const api = new WorkshopApi(el);
     const esc = ui.esc;
     const state = {groups: [], workstations: [], erp: {categories: [], sections: [], label_types: [0, 1]}, item: null, studies: {}};
-    const STEPS = 8;
+    const STEPS = 9;
 
     try {
         await api.init();
@@ -102,7 +102,7 @@
         const opened = openCats();
         const isOpen = (c) => search !== '' || category !== '' || opened.has(c.key);
         const batchOf = (r) => r.semi ? r.card.settings.batch_multiple : r.i.batch;
-        const link = (r) => r.card ? `#/item/${r.card.id}/${r.card.settings.status === 'validated' ? 7 : Math.max(1, r.card.settings.wizard_step)}` : `#/product/${r.i.final_product_id}`;
+        const link = (r) => r.card ? `#/item/${r.card.id}/${r.card.settings.status === 'validated' ? 8 : Math.max(1, r.card.settings.wizard_step)}` : `#/product/${r.i.final_product_id}`;
         // Menu ⋯ produktu : dawna lista produktów ERP (receptura, karta techniczna, pracochłonność, aktywność, usunięcie).
         const root = esc(api.root || '');
         const more = (i) => `<div class="at-more"><button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="${esc(t('row.more'))}" title="${esc(t('row.more'))}"><i class="bi bi-three-dots"></i></button>
@@ -353,7 +353,7 @@
         const row = (i) => {
             const noPpc = !i.ppc;
             return `<tr data-fp="${i.final_product_id}" class="${i.mode === 'MTS' ? 'tfb-stock-mts' : ''}">
-                <td><a href="${i.id ? `#/item/${i.id}/4` : `#/product/${i.final_product_id}`}"><strong>${esc(i.name)}</strong></a>${i.erp_active ? '' : ` <span class="badge bg-secondary">${esc(t('erp.inactive'))}</span>`}${i.has_card ? '' : ` <span class="badge bg-light text-muted" title="${esc(t('st.no_card_help'))}">${esc(t('st.no_card'))}</span>`}
+                <td><a href="${i.id ? `#/item/${i.id}/5` : `#/product/${i.final_product_id}`}"><strong>${esc(i.name)}</strong></a>${i.erp_active ? '' : ` <span class="badge bg-secondary">${esc(t('erp.inactive'))}</span>`}${i.has_card ? '' : ` <span class="badge bg-light text-muted" title="${esc(t('st.no_card_help'))}">${esc(t('st.no_card'))}</span>`}
                     <div class="small text-muted">${esc(groupName(i.group_id))}${i.ppc ? ' · ' + esc(t('st.ppc', {ppc: i.ppc})) : ''}</div></td>
                 <td class="text-center"><div class="form-check form-switch d-inline-block m-0" title="${esc(i.never_frozen ? t('f.never_frozen') : t('st.toggle_help'))}">
                     <input class="form-check-input" type="checkbox" role="switch" data-mts ${i.mode === 'MTS' ? 'checked' : ''} ${i.never_frozen ? 'disabled' : ''} aria-label="${esc(t('mode.MTS'))}"></div>
@@ -559,7 +559,7 @@
                     <th class="text-end" title="${esc(t('lv.coverage_help'))}">${esc(t('lv.coverage'))}</th>
                     <th class="text-end" title="${esc(t('lv.to_produce_help'))}">${esc(t('lv.to_produce'))}</th></tr></thead>
                 <tbody>${rows.map(i => `<tr data-fp="${i.final_product_id}" class="${i.below_min ? 'tfb-level-low' : ''}">
-                    <td><a href="${i.id ? `#/item/${i.id}/4` : `#/product/${i.final_product_id}`}"><strong>${esc(i.name)}</strong></a><div class="small text-muted">${esc(i.category)} · ${esc(groupName(i.group_id))}${i.ppc ? ' · ' + esc(t('st.ppc', {ppc: i.ppc})) : ''}</div></td>
+                    <td><a href="${i.id ? `#/item/${i.id}/5` : `#/product/${i.final_product_id}`}"><strong>${esc(i.name)}</strong></a><div class="small text-muted">${esc(i.category)} · ${esc(groupName(i.group_id))}${i.ppc ? ' · ' + esc(t('st.ppc', {ppc: i.ppc})) : ''}</div></td>
                     <td class="text-center"><div class="form-check form-switch d-inline-block m-0" title="${esc(i.never_frozen ? t('f.never_frozen') : t('st.toggle_help'))}">
                         <input class="form-check-input" type="checkbox" role="switch" data-mts ${i.mode === 'MTS' ? 'checked' : ''} ${i.never_frozen ? 'disabled' : ''} aria-label="${esc(t('mode.MTS'))}"></div></td>
                     <td class="text-end">${n(i.free_cartons)}${i.palletised_cartons ? `<div class="small text-muted" title="${esc(t('lv.palletised_help'))}">${esc(t('lv.palletised', {c: n(i.palletised_cartons)}))}</div>` : ''}</td>
@@ -677,7 +677,7 @@
                 <a href="#/item/${id}/${n}" ${n === step ? 'aria-current="step"' : ''}><span>${esc(t('step.' + n))}</span></a></li>`).join('')}</ol>
             <div class="card"><div class="card-body" data-step-body></div></div>`;
         const body = el.querySelector('[data-step-body]');
-        const renderers = {1: stepProduct, 2: stepArticle, 3: stepBom, 4: stepMode, 5: stepGroup, 6: stepRouting, 7: stepTimes, 8: stepValidate};
+        const renderers = {1: stepProduct, 2: stepArticle, 3: stepPallet, 4: stepBom, 5: stepMode, 6: stepGroup, 7: stepRouting, 8: stepTimes, 9: stepValidate};
         await renderers[step](body, item, ro);
         if (ro) body.querySelectorAll('input, select, textarea, button[data-write]').forEach(x => x.disabled = true);
     }
@@ -890,26 +890,14 @@
             ${field('weight', e.weight)}${field('ppb', e.ppb)}${field('bpc', e.bpc)}${field('ppc', e.ppc)}
             <p class="tfb-full tfb-pack-check" data-pack-check aria-live="polite"></p>
             <h5 class="tfb-full">${esc(t('l.title_pallet'))}</h5>
-            ${field('cpl', e.cpl)}${field('lpp', e.lpp)}${field('cpp', e.cpp)}
-            ${choice('pallet_type', ['eur', 'industrial', 'other'], lg.pallet_type)}${choice('storage', ['frozen', 'chilled', 'ambient'], lg.storage)}
+            ${choice('storage', ['frozen', 'chilled', 'ambient'], lg.storage)}
             <div class="tfb-full tfb-calcs">
                 ${out(t('l.carton_net'), kg(c.carton_net_kg))}
-                ${out(t('l.pallet_units'), c.pallet_units ? ui.fmt(c.pallet_units, 0, api.lang) : '—')}
-                ${out(t('l.pallet_gross'), kg(c.pallet_gross_kg ?? c.pallet_net_kg))}
                 ${out(t('l.labour_carton'), c.labour_s_per_carton ? ui.duration(c.labour_s_per_carton, api) : '—')}
             </div>
             <p class="form-text tfb-full">${esc(t('help.logistics'))}</p>
             ${nav(2)}</form>`;
         const form = body.querySelector('[data-form]');
-        // Cartons par palette proposés = couches × cartons par couche, tant que l'utilisateur ne l'a pas saisi.
-        const syncPallet = () => {
-            const cpl = ui.num(form.cpl.value);
-            const lpp = ui.num(form.lpp.value);
-            if (cpl && lpp && !form.cpp.dataset.touched) form.cpp.value = cpl * lpp;
-        };
-        form.cpp.addEventListener('input', () => { form.cpp.dataset.touched = '1'; });
-        form.cpl.addEventListener('input', syncPallet);
-        form.lpp.addEventListener('input', syncPallet);
         // Sprawdzenie : sztuk w opakowaniu × opakowań w kartonie = sztuk w kartonie (nie blokuje zapisu).
         const packCheck = () => {
             const out = body.querySelector('[data-pack-check]');
@@ -928,13 +916,181 @@
             ui.clearErrors(form);
             const data = {};
             // Champs de l'ERP : un champ vide garde la valeur de l'ERP ; champs de la fiche : vide = effacé.
-            for (const f of ['weight', 'ppb', 'bpc', 'ppc', 'cpl', 'lpp', 'cpp']) { const v = ui.num(form[f].value); if (v !== null) data[f] = v; }
-            for (const f of ['pallet_type', 'storage']) data[f] = form[f].value || null;
+            for (const f of ['weight', 'ppb', 'bpc', 'ppc']) { const v = ui.num(form[f].value); if (v !== null) data[f] = v; }
+            data.storage = form.storage.value || null;
             try {
                 await api.put(`/produits/items/${item.id}/logistics`, data);
                 await saveSettings(form, {}, 3);
             } catch (err) { fail(form, err); }
         });
+    }
+
+    // --- 3. Paleta [205] (makieta 1) : karton z katalogu Kartony i palety, ograniczenia, propozycje układu, widok z góry
+    // i z boku, zapis kartonów na warstwę / warstw / na paletę w ERP. Obliczenia : /ajax/pallet/plan (App\Domain\Logistics\PalletLayout).
+    async function stepPallet(body, item) {
+        if (item.item_type !== 'product') { body.innerHTML = `<p class="text-muted">${esc(t('pal.semi'))}</p>${nav(3, false)}`; return; }
+        const web = async (path) => {
+            const r = await fetch(`${api.root}${path}`, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+            const j = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(j.message || r.statusText);
+            return j.data;
+        };
+        body.innerHTML = `<p class="text-muted">${esc(t('loading'))}</p>`;
+        let info;
+        try { info = await web(`/ajax/products/${item.final_product_id}/pallet`); }
+        catch (err) { body.innerHTML = `<div class="alert alert-warning">${esc(err.message)}</div>${nav(3, false)}`; return; }
+        const e = item.erp, lg = item.logistics || {};
+        const f = (v, d = 0) => ui.fmt(v, d, api.lang);
+        const ppc = Number(e.ppc) || 0, net = ppc && Number(e.weight) ? ppc * Number(e.weight) / 1000 : null;
+        const byId = Object.fromEntries(info.cartons.map(c => [c.id, c]));
+        const st = {
+            // Karton : wybrany w tym kroku, inaczej własne wymiary karty, inaczej karton PPWR / z receptury.
+            carton: lg.carton_id ?? (lg.carton_length_mm ? null : info.carton_id) ?? null,
+            pallet: ['eur', 'industrial'].includes(lg.pallet_type) ? lg.pallet_type : 'eur',
+            choice: null, plan: null,
+        };
+        if (st.carton !== null && !byId[st.carton]) st.carton = null;
+        const own = {l: lg.carton_length_mm, w: lg.carton_width_mm, h: lg.carton_height_mm, tare: lg.carton_tare_g};
+        const cartonOpt = (c) => `<option value="${c.id}" ${st.carton === c.id ? 'selected' : ''}>${esc(c.name)}${c.length_mm ? ` (${c.length_mm} × ${c.width_mm} × ${c.height_mm})` : ''}${c.active ? '' : ' · ' + esc(t('pal.archived'))}</option>`;
+        const inp = (name, label, value, attrs = '') => `<label>${esc(label)}<input class="form-control" name="${name}" inputmode="numeric" value="${value ?? ''}" ${attrs}></label>`;
+        const L = info.limits, Dflt = info.defaults;
+        body.innerHTML = `<form class="pm-wrap" data-form>
+            <div class="pm-head"><div><h5>${esc(t('pal.title'))}</h5><small class="text-muted" data-pal-sub></small></div>
+                <div class="ct-seg" role="group">${['eur', 'industrial'].map(p => `<button type="button" data-pallet="${p}" class="${st.pallet === p ? 'on' : ''}">${esc(t('l.pallet_type.' + p))}</button>`).join('')}</div></div>
+            <div class="pm-row">
+                <div class="pm-card"><h6>${esc(t('pal.carton'))} · <a href="${esc(api.root)}/products/cartons${st.carton ? '?id=' + st.carton : ''}" target="_blank" rel="noopener">${esc(t('pal.catalog_link'))}</a></h6>
+                    <div class="pm-in pm-c4b"><label>${esc(t('pal.from_list'))}<select class="form-select" name="carton"><option value="">${esc(t('pal.own'))}</option>${info.cartons.map(cartonOpt).join('')}</select></label>
+                    ${inp('length_mm', t('pal.length'), '')}${inp('width_mm', t('pal.width'), '')}${inp('height_mm', t('pal.height'), '')}</div></div>
+                <div class="pm-card"><h6>${esc(t('pal.limits'))}</h6>
+                    <div class="pm-in pm-c3">${inp('max_height_mm', t('pal.max_h'), L.max_height_mm)}${inp('max_kg', t('pal.max_kg'), L.max_kg)}${inp('overhang_mm', t('pal.overhang'), L.overhang_mm)}</div></div>
+            </div>
+            <div data-pal-result></div>
+            <div class="pm-foot"><a class="btn btn-outline-secondary" href="#/item/${item.id}/2">${esc(t('back'))}</a>
+                <span class="text-muted small" data-pal-line></span>
+                <button type="submit" class="btn btn-primary" data-write>${esc(t('pal.save'))}</button></div>
+        </form>`;
+        const form = body.querySelector('[data-form]');
+        const res = body.querySelector('[data-pal-result]');
+        const fillCarton = () => {
+            const c = st.carton !== null ? byId[st.carton] : null;
+            const v = c ? {l: c.length_mm, w: c.width_mm, h: c.height_mm} : own;
+            form.length_mm.value = v.l ?? ''; form.width_mm.value = v.w ?? ''; form.height_mm.value = v.h ?? '';
+            ['length_mm', 'width_mm', 'height_mm'].forEach(n => { form[n].readOnly = !!c; });
+        };
+        const tare = () => { const c = st.carton !== null ? byId[st.carton] : null; return c ? c.tare_g : own.tare; };
+        const maxLoad = () => { const c = st.carton !== null ? byId[st.carton] : null; return c ? c.max_load_kg : null; };
+        const vals = () => ({
+            length_mm: ui.num(form.length_mm.value), width_mm: ui.num(form.width_mm.value), height_mm: ui.num(form.height_mm.value),
+            max_height_mm: ui.num(form.max_height_mm.value), max_kg: ui.num(form.max_kg.value), overhang_mm: ui.num(form.overhang_mm.value) ?? 0,
+        });
+        const issue = (i) => t('pal.' + i.code, Object.fromEntries(Object.entries(i.params).map(([k, v]) => [k, typeof v === 'number' ? f(v, k === 'kg' ? 1 : 0) : v])));
+        const chosen = () => {
+            const p = st.plan;
+            if (!p) return {cpl: e.cpl, lpp: e.lpp, cpp: e.cpp};
+            if (st.choice === 'stack' && p.stack) return {cpl: p.per_layer, lpp: p.stack.layers, cpp: p.stack.cartons};
+            if (st.choice === 'erp') return {cpl: e.cpl, lpp: e.lpp, cpp: e.cpp};
+            return {cpl: p.per_layer, lpp: p.max.layers, cpp: p.max.cartons};
+        };
+        const draw = () => {
+            const p = st.plan;
+            const kgC = net !== null ? net + (tare() || 0) / 1000 : null;
+            const ml = maxLoad();
+            body.querySelector('[data-pal-sub]').innerHTML = esc(t('pal.sub', {name: item.name, ppc: ppc || '—', kg: kgC !== null ? f(kgC, 2) : '—'}))
+                + (ml !== null && net !== null ? ` · <span class="${net > ml ? 'ct-bad' : 'text-success'}">${esc(t(net > ml ? 'pal.over_load' : 'pal.load_ok', {net: f(net, 2), max: f(ml, 1)}))}</span>` : '');
+            const ch = chosen();
+            body.querySelector('[data-pal-line]').textContent = ch.cpl && ch.lpp ? t('pal.save_line', {cpl: ch.cpl, lpp: ch.lpp, cpp: ch.cpp}) : '';
+            if (!p) { res.innerHTML = `<p class="pm-check bad">${esc(t('pal.no_dims'))}</p>`; return; }
+            const erpEmpty = !(e.cpl > 0 && e.lpp > 0);
+            const erpBad = !erpEmpty && p.erp_check.length > 0;
+            const prop = (key, tag, tagCls, big, lines, disabled = false) => `<button type="button" class="pm-prop ${st.choice === key ? 'on' : ''} ${key === 'erp' && erpBad ? 'bad' : ''}" data-choice="${key}" ${disabled ? 'disabled' : ''}>
+                <span class="pm-tag ${tagCls}">${esc(tag)}</span><span class="big">${big}</span>${lines.map(x => `<small>${x}</small>`).join('')}</button>`;
+            const line = (o) => esc(t('pal.line', {h: f(o.height_mm), kg: o.gross_kg !== null ? f(o.gross_kg) : '—', place: f(o.per_place)}));
+            const props = [
+                prop('max', t('pal.p_max'), '', `${p.per_layer} × ${p.max.layers} = ${p.max.cartons}`, [esc(t('pal.layers_x')), line(p.max)]),
+                p.stack ? prop('stack', t('pal.p_stack'), 'ok', `${p.per_layer} × ${p.stack.layers} = ${p.stack.cartons}`,
+                    [esc(t('pal.stack_line', {h: f(p.stack_height_mm)})), esc(t('pal.line', {h: f(p.stack.height_mm), kg: p.stack.gross_kg !== null ? f(p.stack.gross_kg) : '—', place: f(p.stack.per_place)}))
+                        + ` <b>(+${Math.round((p.stack.per_place / Math.max(1, p.max.per_place) - 1) * 100)} %)</b>`]) : '',
+                prop('erp', t('pal.p_erp'), erpBad ? 'bad' : (erpEmpty ? '' : 'ok'), erpEmpty ? '—' : `${e.cpl} × ${e.lpp} = ${e.cpp}`,
+                    erpEmpty ? [esc(t('pal.erp_empty'))] : (erpBad ? p.erp_check.map(i => esc(issue(i))) : [esc(t('pal.erp_ok'))]), erpEmpty),
+            ].join('');
+            const cur = chosen();
+            const layers = cur.lpp || 0, cartons = cur.cpp || 0, height = p.base_mm + layers * p.carton.height_mm;
+            const gross = kgC !== null ? cartons * kgC + p.pallet_tare_kg : null;
+            const vol = p.pallet_length_mm * p.pallet_width_mm * height / 1e9, cvol = cartons * p.carton.length_mm * p.carton.width_mm * p.carton.height_mm / 1e9;
+            const perPlace = st.choice === 'stack' ? cartons * 2 : cartons;
+            const weekly = info.weekly_cartons, perPallet = cartons || p.max.cartons;
+            const tile = (label, value, sub) => `<div class="pm-tile"><span>${esc(label)}</span><strong>${value}</strong><em>${sub}</em></div>`;
+            const ps = {...p, rects: p.rects};
+            res.innerHTML = `<h6 class="pm-title">${esc(t('pal.props'))}</h6><div class="pm-props">${props}</div>
+                <div class="pm-views" style="margin-top:16px">
+                    <div class="pm-card"><h6>${esc(t('pal.top', {n: p.per_layer, pct: f(p.floor_pct)}))}</h6>${PalletViews.top(ps, 520)}<div class="pm-cap">${esc(t('pal.top_cap'))}</div></div>
+                    <div class="pm-card"><h6>${esc(t('pal.side', {l: layers, h: f(height)}))}</h6>${PalletViews.side(ps, layers, {width: 470, stack: !!p.stack})}</div>
+                </div>
+                <div class="pm-tiles" style="margin-top:16px">
+                    ${tile(t('pal.t_cartons'), f(cartons), esc(t('pal.t_cartons_sub', {n: cur.cpl || 0, l: layers, pcs: f(cartons * ppc)})))}
+                    ${tile(t('pal.t_height'), f(height) + ' mm', esc(t('pal.t_height_sub', {pct: f(height / p.limits.max_height_mm * 100), max: f(p.limits.max_height_mm)})))}
+                    ${tile(t('pal.t_weight'), gross !== null ? f(gross) + ' kg' : '—', gross !== null ? esc(t('pal.t_weight_sub', {net: f(cartons * net), tare: f(p.pallet_tare_kg)})) : '')}
+                    ${tile(t('pal.t_volume'), f(vol, 2) + ' m³', esc(t('pal.t_volume_sub', {v: f(cvol, 2), pct: f(vol ? cvol / (p.pallet_length_mm * p.pallet_width_mm * (height - p.base_mm) / 1e9) * 100 : 0)})))}
+                    ${tile(t('pal.t_truck', {places: info.places}), f(info.places * perPlace), esc(p.stack ? t('pal.t_truck_stack', {n: f(info.places * p.stack.per_place)}) : t('pal.t_truck_nostack')))}
+                    ${tile(t('pal.t_sales'), f(weekly, 1), esc(t('pal.t_sales_sub', {p: f(perPallet ? weekly / perPallet : 0, 2), weeks: info.weeks})))}
+                    ${tile(t('pal.t_month'), f(perPallet ? weekly * 52 / 12 / perPallet : 0, 1), esc(t('pal.t_month_sub', {n: f(weekly * 52 / 12)})))}
+                    ${tile(t('pal.t_load'), net !== null ? f(net, 2) + ' kg' : '—', esc(maxLoad() !== null ? t('pal.t_load_sub', {max: f(maxLoad(), 1)}) : t('pal.t_load_none')))}
+                </div>`;
+        };
+        let timer = null, seq = 0;
+        const refresh = async () => {
+            const v = vals();
+            if (!(v.length_mm > 0 && v.width_mm > 0 && v.height_mm > 0)) { st.plan = null; draw(); return; }
+            const qs = new URLSearchParams({...Object.fromEntries(Object.entries(v).map(([k, x]) => [k, x ?? ''])), tare_g: tare() ?? '', pallet: st.pallet,
+                net_kg: net ?? '', cpl: e.cpl || 0, lpp: e.lpp || 0, cpp: e.cpp || 0});
+            const my = ++seq;
+            try {
+                const p = await web('/ajax/pallet/plan?' + qs);
+                if (my !== seq) return;
+                st.plan = p;
+                if (st.choice === null) st.choice = e.cpl > 0 && e.lpp > 0 && p.erp_check.length === 0 ? 'erp' : 'max';
+                if (st.choice === 'stack' && !p.stack) st.choice = 'max';
+            } catch (err) { st.plan = null; }
+            draw();
+        };
+        const later = () => { clearTimeout(timer); timer = setTimeout(refresh, 250); };
+        form.carton.addEventListener('change', () => {
+            if (st.carton === null) own.l = ui.num(form.length_mm.value), own.w = ui.num(form.width_mm.value), own.h = ui.num(form.height_mm.value);
+            st.carton = form.carton.value ? Number(form.carton.value) : null;
+            fillCarton(); refresh();
+        });
+        ['length_mm', 'width_mm', 'height_mm', 'max_height_mm', 'max_kg', 'overhang_mm'].forEach(n => form[n].addEventListener('input', later));
+        body.querySelectorAll('[data-pallet]').forEach(b => b.addEventListener('click', () => {
+            st.pallet = b.dataset.pallet;
+            body.querySelectorAll('[data-pallet]').forEach(x => x.classList.toggle('on', x === b));
+            refresh();
+        }));
+        res.addEventListener('click', (ev) => {
+            const b = ev.target.closest('[data-choice]');
+            if (!b || b.disabled) return;
+            st.choice = b.dataset.choice;
+            draw();
+        });
+        form.addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            ui.clearErrors(form);
+            const v = vals();
+            const c = st.carton !== null ? byId[st.carton] : null;
+            const ch = chosen();
+            const data = {pallet_type: st.pallet, carton_id: st.carton,
+                carton_length_mm: v.length_mm, carton_width_mm: v.width_mm, carton_height_mm: v.height_mm,
+                pallet_max_height_mm: v.max_height_mm && v.max_height_mm !== Dflt.max_height_mm ? v.max_height_mm : null,
+                pallet_max_kg: v.max_kg && v.max_kg !== Dflt.max_kg ? v.max_kg : null,
+                pallet_overhang_mm: v.overhang_mm !== Dflt.overhang_mm ? v.overhang_mm : null};
+            if (c && c.tare_g !== null) data.carton_tare_g = Math.round(c.tare_g);
+            if (ch.cpl > 0 && ch.lpp > 0 && st.plan) { data.cpl = ch.cpl; data.lpp = ch.lpp; data.cpp = ch.cpp; }
+            try {
+                await api.put(`/produits/items/${item.id}/logistics`, data);
+                await saveSettings(form, {}, 4);
+            } catch (err) { fail(form, err); }
+        });
+        fillCarton();
+        await refresh();
     }
 
     function stepMode(body, item) {
@@ -975,7 +1131,7 @@
                 <span class="form-text" data-suggest-info>${esc(t('m.suggest_help'))}</span>
                 <span class="form-text tfb-suggest-last" data-suggest-last>${esc(s.stock_calc_at ? t('m.suggest_last', {date: new Date(String(s.stock_calc_at).replace(' ', 'T')).toLocaleString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}) : t('m.suggest_never'))}</span></div>` : ''}
             <p class="form-text tfb-full">${esc(t('help.mts'))}</p>
-            ${nav(4)}</form>`;
+            ${nav(5)}</form>`;
         const form = body.querySelector('[data-form]');
         // Kartony ↔ sztuki : zmiana jednego pola przelicza drugie.
         const fillCartons = (f) => { if (ppc && form[f + '_cartons']) form[f + '_cartons'].value = cartons(ui.num(form[f].value)); };
@@ -1062,7 +1218,7 @@
             for (const f of PAIRED) data[f] = ui.num(form[f].value);
             data.batch_multiple = form.batch_multiple.value.trim() === '' ? null : ui.num(form.batch_multiple.value);
             if (calculated) data.stock_calculated = true;
-            saveSettings(form, data, 5);
+            saveSettings(form, data, 6);
         });
     }
 
@@ -1074,7 +1230,7 @@
                 <option value="">—</option>${state.groups.map(g => `<option value="${g.id}" ${s.primary_group_id === g.id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select></label>
             ${product ? `<label>${esc(t('f.bake_state'))}<select class="form-select" name="bake_state" data-field="bake_state"><option value="">—</option>
                 ${['none', 'par_baked', 'baked'].map(b => `<option value="${b}" ${s.bake_state === b ? 'selected' : ''}>${esc(t('bake.' + b))}</option>`).join('')}</select></label>` : ''}
-            ${nav(5)}</form>`;
+            ${nav(6)}</form>`;
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -1082,13 +1238,13 @@
                 primary_group_id: form.primary_group_id.value ? Number(form.primary_group_id.value) : null,
             };
             if (product) data.bake_state = form.bake_state.value || null;
-            saveSettings(form, data, 6);
+            saveSettings(form, data, 7);
         });
     }
 
     function stepBom(body, item) {
         if (!item.bom.length) {
-            body.innerHTML = `${recipeLinks(item)}${item.recipe_id ? `<p class="text-muted">${esc(t('bom.empty'))}</p>` : ''}${nav(3, false)}`;
+            body.innerHTML = `${recipeLinks(item)}${item.recipe_id ? `<p class="text-muted">${esc(t('bom.empty'))}</p>` : ''}${nav(4, false)}`;
             return;
         }
         // Kompozycja : która grupa ją robi i z jakim wyprzedzeniem się ją zamawia (tablet innej grupy zamawia u niej).
@@ -1105,7 +1261,7 @@
                 <td>${esc(b.name)} <span class="text-muted">(${esc(t('bom.kind.' + b.child_kind))})</span></td>
                 <td class="text-end">${ui.fmt(b.quantity, 3, api.lang)} ${esc(b.unit || '')}</td>
                 <td><input class="form-control form-control-sm" inputmode="decimal" data-field="losses.${i}.loss_pct" value="${b.loss_pct}"></td>${comp ? producerCells(b, i) : ''}</tr>`).join('')}</tbody>
-            </table></div>${comp ? `<p class="text-muted small mb-2">${esc(t('bom.producer_help'))}</p>` : ''}${nav(3)}</form>`;
+            </table></div>${comp ? `<p class="text-muted small mb-2">${esc(t('bom.producer_help'))}</p>` : ''}${nav(4)}</form>`;
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1121,7 +1277,7 @@
             });
             try {
                 await api.put(`/produits/items/${item.id}/bom-losses`, {losses});
-                await saveSettings(form, {}, 4);
+                await saveSettings(form, {}, 5);
             } catch (err) { fail(form, err); }
         });
     }
@@ -1233,7 +1389,7 @@
                         ${altPicker(s, i)}
                     </div>${s.alternatives.map((a, j) => cobotBlock(s, a, i, j)).join('')}</div>`).join('')}
                 <button type="button" class="btn btn-outline-primary btn-sm" data-add data-write><i class="bi bi-plus"></i> ${esc(t('r.add_step'))}</button>
-                ${nav(6)}</form>`;
+                ${nav(7)}</form>`;
             const form = body.querySelector('[data-form]');
             // Partia : kartony ↔ sztuki (zapis w sztukach).
             if (ppc) {
@@ -1349,7 +1505,7 @@
             });
             try {
                 await api.put(`/produits/items/${item.id}/routing`, {steps: payload});
-                await saveSettings(form, {batch_multiple: batch}, 7);
+                await saveSettings(form, {batch_multiple: batch}, 8);
             } catch (err) { fail(form, err); }
         };
         draw();
@@ -1369,7 +1525,7 @@
 
     async function stepTimes(body, item) {
         if (!item.routing.length) {
-            body.innerHTML = `<p class="text-muted">${esc(t('r.empty'))}</p>${nav(7, false)}`;
+            body.innerHTML = `<p class="text-muted">${esc(t('r.empty'))}</p>${nav(8, false)}`;
             return;
         }
         body.innerHTML = `<div data-summary></div><div class="tfb-samples">${item.durations.map(d => `<div class="tfb-sample"><h6>${esc(t('t.quantity'))}: ${ui.fmt(d.quantity, 0, api.lang)} ${esc(item.base_unit)}</h6>${durationTable(d)}</div>`).join('')}</div>
@@ -1379,7 +1535,7 @@
             ${item.routing.map(s => `<details class="tfb-study" data-step="${s.id}"><summary><strong>${s.step_no}. ${esc(s.name)}</strong>
                 <span class="text-muted">${esc(s.workstation.name)} · ${ui.fmt((s.fixed_time_s || 0) / 60, 2, api.lang)} ${esc(t('unit.min'))} ${esc(t('t.component.fixed'))} · ${ui.fmt(s.variable_time_s, 3, api.lang)} ${esc(t('unit.s'))} ${esc(t('t.component.variable'))}</span></summary>
                 <div data-study-body>${esc(t('loading'))}</div></details>`).join('')}
-            ${nav(7, false)}`;
+            ${nav(8, false)}`;
         productionSummary(body.querySelector('[data-summary]'), item);
         body.querySelector('[data-qty]').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1436,7 +1592,7 @@
             try {
                 await api.post(`/produits/routing-steps/${stepId}/apply-standard`, {component: b.dataset.apply});
                 ui.notify(true, t('saved'));
-                location.hash = `#/item/${state.item.id}/7?r=${Date.now()}`;
+                location.hash = `#/item/${state.item.id}/8?r=${Date.now()}`;
             } catch (err) { fail(null, err); }
         }));
     }
@@ -1559,7 +1715,7 @@
         const ready = item.checklist.every(c => c.ok);
         body.innerHTML = `${item.final_product_id ? '<section class="tfb-commercial-box" data-commercial></section>' : ''}<ul class="tfb-checklist">${item.checklist.map(c => `<li class="${c.ok ? 'ok' : 'ko'}"><i class="bi ${c.ok ? 'bi-check-circle' : 'bi-x-circle'}"></i> ${esc(label(c))}</li>`).join('')}</ul>
             ${item.settings.status === 'validated' ? `<p class="text-success">${esc(t('v.validated', {date: (item.settings.validated_at || '').slice(0, 16)}))}</p>` : (ready ? `<p>${esc(t('v.ready'))}</p>` : '')}
-            <form data-form>${nav(8, t('v.validate'))}</form>`;
+            <form data-form>${nav(9, t('v.validate'))}</form>`;
         if (item.final_product_id) commercialBlock(body.querySelector('[data-commercial]'), item.final_product_id);
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', async (e) => {
@@ -1602,7 +1758,7 @@
                 <a class="btn btn-primary" href="#/item/${item.id}/1"><i class="bi bi-card-text"></i> ${esc(t('v.open_card'))}</a>
                 <a class="btn btn-outline-primary" href="#/?search=${encodeURIComponent(item.name)}&focus=${item.final_product_id ? 'p' + item.final_product_id : 's' + item.id}"><i class="bi bi-list-ul"></i> ${esc(t('v.list'))}</a>
                 <a class="btn btn-outline-primary" href="${esc(api.root)}/workshop/sheet"><i class="bi bi-table"></i> ${esc(t('v.plan'))}</a>
-                <a class="btn btn-outline-secondary" href="#/item/${item.id}/8?r=${Date.now()}"><i class="bi bi-pencil"></i> ${esc(t('v.fix'))}</a>
+                <a class="btn btn-outline-secondary" href="#/item/${item.id}/9?r=${Date.now()}"><i class="bi bi-pencil"></i> ${esc(t('v.fix'))}</a>
             </div>
             ${todo.length ? `<p class="form-text mb-0">${esc(t('v.todo', {items: todo.join(', ')}))}</p>` : ''}
         </div>`;

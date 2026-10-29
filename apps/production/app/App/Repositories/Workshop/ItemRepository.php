@@ -22,7 +22,8 @@ final class ItemRepository extends WorkshopRepository
         'shelf_life_workshop_days', 'shelf_life_shop_days', 'id_primary_group', 'status', 'wizard_step', 'validated_at', 'validated_by', 'updated_by', 'bake_state', 'stock_calc_at'];
     private const STEP = ['step_no', 'name_pl', 'name_fr', 'id_workstation', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass',
         'operators_required', 'min_level_order', 'delay_after_s', 'delay_id_workstation', 'cleaning_required', 'cleaning_time_s', 'temperature_c'];
-    private const LOGISTICS = ['carton_length_mm', 'carton_width_mm', 'carton_height_mm', 'carton_tare_g', 'carton_type', 'carton_ean', 'pallet_type', 'storage', 'updated_by'];
+    private const LOGISTICS = ['carton_length_mm', 'carton_width_mm', 'carton_height_mm', 'carton_tare_g', 'carton_type', 'carton_ean', 'pallet_type', 'storage', 'updated_by',
+        'id_carton', 'pallet_max_height_mm', 'pallet_max_kg', 'pallet_overhang_mm'];
     /** Champs logistiques de l'ERP (final_product) modifiables depuis la fiche. */
     private const ERP_LOGISTICS = ['weight', 'ppc', 'ppb', 'bpc', 'cpl', 'lpp', 'cpp'];
     private const ALT = ['id_workstation', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'priority'];
@@ -34,6 +35,7 @@ final class ItemRepository extends WorkshopRepository
             s.shelf_life_workshop_days, s.shelf_life_shop_days, s.id_primary_group, s.status, s.wizard_step,
             s.validated_at, s.validated_by, s.updated_at AS settings_updated_at,
             lg.carton_length_mm, lg.carton_width_mm, lg.carton_height_mm, lg.carton_tare_g, lg.carton_type, lg.carton_ean, lg.pallet_type, lg.storage,
+            lg.id_carton, lg.pallet_max_height_mm, lg.pallet_max_kg, lg.pallet_overhang_mm,
             (SELECT COUNT(*) FROM n_prod_routing_step r WHERE r.id_item = i.id) AS step_count
         FROM n_prod_item i
         LEFT JOIN final_product fp ON fp.id = i.id_final_product
@@ -156,6 +158,12 @@ final class ItemRepository extends WorkshopRepository
     }
 
     /** Kartony produktu wysłane (WDT bez duplikatów) w ostatnich $days dniach, bez dzisiaj. */
+    /** Karton z katalogu Kartony i palety [205]. */
+    public function cartonExists(int $id): bool
+    {
+        return (bool) $this->all('SELECT 1 FROM n_carton WHERE id_raw_material = ?', [$id]);
+    }
+
     public function shippedCartons(int $finalProductId, int $days): float
     {
         return (float) ($this->all(

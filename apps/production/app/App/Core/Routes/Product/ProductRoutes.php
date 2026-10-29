@@ -88,4 +88,15 @@ return function(RouteCollector $r) {
         'controller' => App\Controllers\Web\Product\ProductExportController::class,
         'method'     => 'export'
     ]);
+
+    // Kartony i palety [205] : katalog kartonów (wymiary, waga, maks. ładunek, układ na palecie, produkty) ; krok « Paleta ».
+    $ct = App\Controllers\Web\Product\CartonController::class;
+    $r->addRoute('GET', '/products/cartons', ['controller' => $ct, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/products/cartons', ['controller' => $ct, 'method' => 'data']);
+    $r->addRoute('GET', '/ajax/products/cartons/candidates', ['controller' => $ct, 'method' => 'candidates']);
+    $r->addRoute('POST', '/ajax/products/cartons', ['controller' => $ct, 'method' => 'add']);
+    $r->addRoute('GET', '/ajax/products/cartons/{id:\d+}', ['controller' => $ct, 'method' => 'show']);
+    $r->addRoute('PUT', '/ajax/products/cartons/{id:\d+}', ['controller' => $ct, 'method' => 'save']);
+    $r->addRoute('GET', '/ajax/pallet/plan', ['controller' => $ct, 'method' => 'plan']);
+    $r->addRoute('GET', '/ajax/products/{id:\d+}/pallet', ['controller' => $ct, 'method' => 'product']);
 };

@@ -92,7 +92,7 @@ class ProductService {
         return $this->finalProductRepository->getById($id);
     }
 
-    /** Karta produktu (kreator /workshop/products) otwarta na danym kroku ; krok 3 = Receptura i straty. */
+    /** Karta produktu (kreator /workshop/products) otwarta na danym kroku ; krok 4 = Receptura i straty (3 = Paleta [205]). */
     public function cardUrl(int $id, int $step = 1): string
     {
         return ROOT . '/workshop/products#/product/' . $id . ($step > 1 ? '?step=' . $step : '');

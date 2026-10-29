@@ -74,7 +74,7 @@ final class OpenApiProducts
                 'batch_people' => $num, 'batch_minutes' => $num,
                 'stock_calc_at' => ['type' => 'string', 'nullable' => true, 'description' => 'dernier calcul des stocks min./max. depuis les ventes'],
                 'shelf_life_workshop_days' => $num, 'shelf_life_shop_days' => $num, 'primary_group_id' => $int,
-                'status' => ['type' => 'string', 'enum' => ItemService::STATUSES], 'wizard_step' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 8],
+                'status' => ['type' => 'string', 'enum' => ItemService::STATUSES], 'wizard_step' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 9],
                 'validated_at' => ['type' => 'string', 'nullable' => true],
             ]],
             'ItemSummary' => ['type' => 'object', 'properties' => [
@@ -88,6 +88,8 @@ final class OpenApiProducts
             ]],
             'Item' => ['allOf' => [['$ref' => '#/components/schemas/ItemSummary'], ['type' => 'object', 'properties' => [
                 'logistics' => ['type' => 'object', 'nullable' => true, 'description' => 'produit seulement', 'properties' => [
+                    'carton_id' => ['type' => 'integer', 'nullable' => true, 'description' => 'carton du catalogue Kartony i palety (raw_material.id)'],
+                    'pallet_max_height_mm' => $int, 'pallet_max_kg' => $int, 'pallet_overhang_mm' => $int,
                     'carton_length_mm' => $int, 'carton_width_mm' => $int, 'carton_height_mm' => $int, 'carton_tare_g' => $int,
                     'carton_type' => ['type' => 'string', 'nullable' => true], 'carton_ean' => ['type' => 'string', 'nullable' => true],
                     'pallet_type' => ['type' => 'string', 'nullable' => true], 'storage' => ['type' => 'string', 'nullable' => true],
@@ -143,7 +145,7 @@ final class OpenApiProducts
                 'batch_minutes' => ['type' => 'number', 'nullable' => true, 'description' => 'durée d\'un lot en minutes ; avec batch_people et batch_multiple : heures = lots × personnes × durée (au lieu de la gamme)'],
                 'shelf_life_workshop_days' => $num, 'shelf_life_shop_days' => $num, 'primary_group_id' => $int,
                 'stock_calculated' => ['type' => 'boolean', 'description' => 'true : stocks issus du calcul sur les ventes → stock_calc_at = maintenant'],
-                'wizard_step' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 8],
+                'wizard_step' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 9],
             ]],
             'ItemProductInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
                 'name' => ['type' => 'string', 'maxLength' => 255], 'category_id' => ['type' => 'integer', 'minimum' => 1], 'section_id' => ['type' => 'integer', 'minimum' => 1],
@@ -249,6 +251,10 @@ final class OpenApiProducts
                 'carton_ean' => ['type' => 'string', 'pattern' => '^[0-9]{8,14}$', 'nullable' => true],
                 'pallet_type' => ['type' => 'string', 'enum' => ItemService::PALLET_TYPES, 'nullable' => true],
                 'storage' => ['type' => 'string', 'enum' => ItemService::STORAGES, 'nullable' => true],
+                'carton_id' => ['type' => 'integer', 'nullable' => true, 'description' => 'carton du catalogue Kartony i palety (raw_material.id) ; 404 NOT_FOUND sinon'],
+                'pallet_max_height_mm' => ['type' => 'integer', 'minimum' => 300, 'maximum' => 3000, 'nullable' => true, 'description' => 'hauteur max palette comprise ; null = paramètre'],
+                'pallet_max_kg' => ['type' => 'integer', 'minimum' => 50, 'maximum' => 3000, 'nullable' => true, 'description' => 'poids brut max ; null = paramètre'],
+                'pallet_overhang_mm' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100, 'nullable' => true, 'description' => 'débord autorisé de chaque côté ; null = paramètre'],
             ]],
             'RoutingInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['steps'], 'properties' => [
                 'steps' => ['type' => 'array', 'maxItems' => 30, 'items' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['name_pl', 'workstation_id'], 'properties' => [

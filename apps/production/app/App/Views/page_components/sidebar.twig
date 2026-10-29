@@ -200,6 +200,14 @@
                     </a>
                 </li>
 
+                {# Kartony i palety [205] : rodzaje kartonów (wymiary, waga, maks. ładunek), układ na palecie, produkty w kartonie #}
+                <li class="sidebar-item">
+                    <a href="{{ root }}/products/cartons" class="sidebar-link">
+                        <i class="bi bi-box2"></i>
+                        <span>Kartony i palety</span>
+                    </a>
+                </li>
+
                 <li class="sidebar-item has-sub">
                     <a href="#" class="sidebar-link">
                         <i class="bi bi-stack"></i>
@@ -499,7 +507,9 @@
                 <li><a href="{{ root }}/products/new-with-recipe" data-where="Produkt › Produkty"><i class="bi bi-box-seam"></i> Kreator produktu : receptura na 1 karton (cały produkt sprzedawany) — ilości na karton albo na 1 sztukę × sztuk w kartonie, koszt surowców / karton</a></li>
                 <li><a href="{{ root }}/products/new-with-recipe" data-where="Produkt › Produkty"><i class="bi bi-exclamation-triangle"></i> Receptury do sprawdzenia : 1 sztuka czy 1 karton (koszt kartonu w marżach za niski) — × sztuk w kartonie albo « już na karton »</a></li>
                 <li><a href="{{ root }}/test-products/pipeline" data-where="Produkt › Produkty › Nowe produkty (etapy i lista)"><i class="bi bi-journal-check"></i> Receptura produktu testowego : wybór z wyszukiwarką na karcie testu, utwórz z karty technologicznej (kreator), po wprowadzeniu receptura produktu ERP</a></li>
-                <li><a href="{{ root }}/workshop/products" data-where="Produkt › Produkty › Karty produktów"><i class="bi bi-bag"></i> Karta produktu, krok « Logistyka » : sztuka → opakowanie (torebka, worek, tacka, folia) → karton, sprawdzenie sztuk w opakowaniu × opakowań w kartonie</a></li>
+                <li><a href="{{ root }}/workshop/products" data-where="Produkt › Produkty › Karty produktów"><i class="bi bi-bag"></i> Karta produktu, krok « Opakowanie » : sztuka → opakowanie (torebka, worek, tacka, folia) → karton, sprawdzenie sztuk w opakowaniu × opakowań w kartonie</a></li>
+                <li><a href="{{ root }}/products/cartons" data-where="Produkt › Kartony i palety"><i class="bi bi-box2"></i> Kartony i palety : rodzaje kartonów, wymiary, waga kartonu, maksymalny ładunek (kg), ile kartonów na palecie EUR / przemysłowej, wysokość palety, produkty w kartonie (za ciężkie, układ z ERP)</a></li>
+                <li><a href="{{ root }}/workshop/products" data-where="Produkt › Produkty › Karty produktów"><i class="bi bi-grid-3x3"></i> Karta produktu, krok « Paleta » : karton z katalogu, kartony na warstwę × warstwy, wysokość palety, waga, widok z góry i z boku, piętrowanie w ciężarówce, zapis układu w ERP</a></li>
                 <li><a href="{{ root }}/workshop/products" data-where="Produkt › Produkty › Karty produktów"><i class="bi bi-diagram-3"></i> Stanowiska alternatywne etapu : przyciski (jedno dotknięcie = dodaj / usuń), szukaj stanowiska, wybrane z ✕</a></li>
                 <li><a href="{{ root }}/workshop/products" data-where="Produkt › Produkty › Karty produktów"><i class="bi bi-lightbulb"></i> Podpowiedź ceny standardowej : koszt surowców / karton × 2,5 · 3 · 4 (domyślnie × 3) ÷ kurs EUR, cena z karty nowego produktu, sprzedawalność w Belgii przed zapisem</a></li>
                 <li><a href="{{ root }}/workshop/products" data-where="Produkt › Produkty › Karty produktów"><i class="bi bi-check-circle"></i> Po zatwierdzeniu karty produktu : ekran « gotowe » — grupa, tryb, cena, koszt i dalsze kroki (lista produktów, arkusz tygodnia, popraw kartę)</a></li>

@@ -555,7 +555,7 @@
     // Kolumny partii : sztuk w partii (karta, « Etapy i czasy ») i liczba partii w tygodniu (w górę do pełnych),
     // z tym, ile już jest na dniach ; bez partii — « — » z odnośnikiem do karty.
     function batchCells(p) {
-        if (!p.batch) return `<td class="text-end"><a class="text-muted small" href="${esc(api.root)}/workshop/products#/item/${p.item_id}/6" title="${esc(t('week.batch_set'))}">—</a></td><td class="text-end text-muted">—</td>`;
+        if (!p.batch) return `<td class="text-end"><a class="text-muted small" href="${esc(api.root)}/workshop/products#/item/${p.item_id}/7" title="${esc(t('week.batch_set'))}">—</a></td><td class="text-end text-muted">—</td>`;
         const total = Math.ceil(p.quantity / p.batch - 1e-6);
         const placed = p.slots.reduce((a, x) => a + x.quantity, 0) / p.batch;
         const partial = p.quantity / p.batch % 1 > 0.001 && p.quantity / p.batch % 1 < 0.999;

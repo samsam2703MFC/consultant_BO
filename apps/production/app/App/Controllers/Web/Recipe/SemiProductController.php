@@ -71,7 +71,7 @@ class SemiProductController extends BaseController
         $forProduct = $productId > 0 ? ($this->productService->getById($productId) ?: null) : null;
         if ($forProduct) {
             $data['for_product'] = $forProduct;
-            $data['card_url'] = $this->productService->cardUrl($productId, 3);
+            $data['card_url'] = $this->productService->cardUrl($productId, 4);
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

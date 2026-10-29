@@ -29,7 +29,7 @@ final class PageAccess
         'employees' => ['Zespół : pracownicy produkcji', 'Produkcja', ['/production-employees'], false],
         'budget' => ['Zespół : budżet personelu i premie', 'Produkcja', ['/staff'], false],
         'product_cards' => ['Produkty : karty produktów (lista, kategorie, MTO / MTS, stany)', 'Produkt', ['/workshop/products'], false],
-        'products' => ['Produkty : receptury, półprodukty, kompozycje, produkty w rozwoju', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/semi-products', '/compositions'], false],
+        'products' => ['Produkty : receptury, półprodukty, kompozycje, produkty w rozwoju, kartony i palety', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/semi-products', '/compositions'], false],
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],

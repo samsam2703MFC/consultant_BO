@@ -400,7 +400,7 @@ check($s === 422 && $codes($b) === ['bake_state:INVALID_CHOICE'], 'baking state 
 [$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['bake_state' => 'baked'], $access);
 check($s === 200 && $b['data']['settings']['bake_state'] === 'baked', 'baking state saved');
 [$s, $b] = $call('POST', "/produits/items/{$itemId}/validate", null, $access);
-check($s === 200 && $b['data']['settings']['status'] === 'validated' && $b['data']['settings']['wizard_step'] === 8, 'sheet validated (baked, oven in the routing)');
+check($s === 200 && $b['data']['settings']['status'] === 'validated' && $b['data']['settings']['wizard_step'] === 9, 'sheet validated (baked, oven in the routing)');
 [$s, $ps] = $call('GET', "/produits/items/{$itemId}/production-summary", null, $dir);
 check($s === 200 && $ps['data']['reference']['kind'] === 'pallet' && $ps['data']['reference']['quantity'] == 60 * 48 && $ps['data']['per_hour'] > 0
     && count($ps['data']['steps']) === count($b['data']['routing']) && $ps['data']['steps'][0]['start_s'] == 0, 'production summary: pieces per hour for one pallet, steps from the start');
