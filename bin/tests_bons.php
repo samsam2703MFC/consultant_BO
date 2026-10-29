@@ -36,6 +36,8 @@ function ep_analyse_produits_coefficients(): array
     ]];
 }
 function catalogueCouts(): array { return []; }
+/** Une nouvelle requête : la garde des clients du temps de la requête oubliée (celle de ceo_app_setting reste). */
+function pbOublierGarde(): void { unset($GLOBALS['pbClientsGarde']); }
 
 /** Le panel en doublure : promotions « X + Y », campagnes de bons et leurs codes, clients des magasins. */
 final class ErpApi
@@ -59,8 +61,10 @@ final class ErpApi
         ['id' => 14, 'name' => 'Paul', 'surname' => 'Dumont', 'city' => 'Mons', 'email' => 'paul@exemple.be', 'is_b2b' => 0, 'id_main_shop' => 5],
         ['id' => 15, 'name' => 'Ancien', 'surname' => 'Dubois', 'city' => 'Halle', 'is_b2b' => 0, 'id_main_shop' => 4, 'merged_into_id' => 11],
     ], 5 => [['id' => 51, 'name' => 'Zoé', 'surname' => 'Autre', 'city' => 'Mons', 'is_b2b' => 0, 'id_main_shop' => 5]]];
-    /** Les lectures de la liste des clients d'un magasin (la garde de dix minutes les épargne). */
+    /** Les lectures de la liste des clients d'un magasin (la garde d'une heure les épargne). */
     public static int $lecturesClients = 0;
+    /** Faux : le panel refuse la lecture d'un seul tenant (sans `offset`) — le cockpit doit passer aux pages. */
+    public static bool $clientsEnBloc = true;
     public static function disponible(): bool { return self::$actif; }
     private static function ok($c = [], int $code = 200): array { return ['code' => $code, 'corps' => $c, 'erreur' => null]; }
     private static function ko(int $code, string $desc, array $errs = []): array
@@ -204,6 +208,7 @@ final class ErpApi
             // Comme le panel (sonde du 29/10/2026) : `type=b2b` les B2B, toute autre valeur les particuliers, sans `type`
             // les deux, B2B devant ; `limit` n'est tenu qu'avec `offset` — sans lui, tout vient d'un coup.
             self::$lecturesClients++;
+            if (!self::$clientsEnBloc && !isset($q['offset'])) { return self::ko(500, 'Allowed memory size exhausted'); }
             $l = self::$clients[(int) $x[1]] ?? [];
             if (isset($q['type'])) { $l = array_values(array_filter($l, static fn ($c) => !empty($c['is_b2b']) === ($q['type'] === 'b2b'))); }
             else { usort($l, static fn ($a, $b) => (int) !empty($b['is_b2b']) <=> (int) !empty($a['is_b2b'])); }
@@ -293,8 +298,8 @@ $_GET = ['shop' => '4', 'q' => 'd']; $cl = ep_promos_magasin_clients();
 verifie('une lettre : rien (deux au moins)', $cl['clients'] === []);
 $_GET = ['shop' => '5', 'q' => 'du']; $cl = ep_promos_magasin_clients(); $_GET = [];
 verifie('un autre magasin : ses clients seulement', $cl['clients'] === [], $cl);
-verifie('sans type : les B2B et les particuliers, chacun lu au panel avec son filtre', in_array('GET /shops/5/clients?type=b2b&limit=500&offset=0', ErpApi::$appels, true)
-    && in_array('GET /shops/5/clients?type=b2c&limit=500&offset=0', ErpApi::$appels, true), array_values(array_filter(ErpApi::$appels, static fn ($a) => str_contains($a, '/clients'))));
+verifie('sans type : les B2B et les particuliers, chacun lu au panel avec son filtre, d’un seul tenant', in_array('GET /shops/5/clients?type=b2b', ErpApi::$appels, true)
+    && in_array('GET /shops/5/clients?type=b2c', ErpApi::$appels, true) && !array_filter(ErpApi::$appels, static fn ($a) => str_contains($a, '/shops/5/clients?type=b2c&limit')), array_values(array_filter(ErpApi::$appels, static fn ($a) => str_contains($a, '/clients'))));
 
 echo "Client B2B ou client du magasin (29/10/2026)\n";
 $_GET = ['shop' => '4', 'type' => 'b2b', 'q' => '']; $cl = ep_promos_magasin_clients();
@@ -318,14 +323,31 @@ for ($i = 1; $i <= 2300; $i++) { ErpApi::$clients[2][] = ['id' => 30000 + $i, 'n
 ErpApi::$clients[2][] = ['id' => 39999, 'name' => 'Zénobie', 'surname' => 'Lointaine', 'city' => 'Gosselies', 'is_b2b' => 0, 'id_main_shop' => 2];
 ErpApi::$lecturesClients = 0;
 $_GET = ['shop' => '2', 'type' => 'particulier', 'q' => 'lointaine']; $cl = ep_promos_magasin_clients();
-verifie('un grand magasin : le particulier du fond de la liste se trouve (une page, puis quatre de front)', array_column($cl['clients'], 'nom') === ['Zénobie Lointaine']
-    && $cl['nParticuliers'] === 2301 && ErpApi::$lecturesClients === 5, [$cl['nParticuliers'], ErpApi::$lecturesClients]);
+verifie('un grand magasin : le particulier du fond de la liste se trouve, en une seule lecture', array_column($cl['clients'], 'nom') === ['Zénobie Lointaine']
+    && $cl['nParticuliers'] === 2301 && ErpApi::$lecturesClients === 1 && preg_match('/^\d\d:\d\d$/', (string) $cl['lu']) === 1 && is_int($cl['ms']), $cl + ['lectures' => ErpApi::$lecturesClients]);
 $_GET = ['shop' => '2', 'type' => 'particulier', 'q' => 'client n12']; $cl = ep_promos_magasin_clients();
-verifie('chercher lettre après lettre : la liste gardée, le panel pas relu', ErpApi::$lecturesClients === 5 && $cl['trouves'] === 111 && count($cl['clients']) === 30, [ErpApi::$lecturesClients, $cl['trouves']]);
+verifie('chercher lettre après lettre : la liste gardée, le panel pas relu', ErpApi::$lecturesClients === 1 && $cl['trouves'] === 111 && count($cl['clients']) === 30, [ErpApi::$lecturesClients, $cl['trouves']]);
 $_GET = ['shop' => '2', 'type' => 'particulier', 'q' => '0470 00 07 77']; $cl = ep_promos_magasin_clients();
 verifie('un téléphone tapé à la belge (0470 …) face au format du panel (+32470…)', array_column($cl['clients'], 'nom') === ['Client N777'], $cl);
 $_GET = ['shop' => '2', 'type' => 'b2b', 'q' => 'société 299']; $cl = ep_promos_magasin_clients(); $_GET = [];
-verifie('les B2B du grand magasin : les 300, lus à part, en une page', array_column($cl['clients'], 'nom') === ['Société 299'] && $cl['nB2b'] === 300 && ErpApi::$lecturesClients === 6, [$cl, ErpApi::$lecturesClients]);
+verifie('un compte rond (300 B2B) : le panel a peut-être coupé, les pages vérifient', array_column($cl['clients'], 'nom') === ['Société 299'] && $cl['nB2b'] === 300
+    && ErpApi::$lecturesClients === 3 && in_array('GET /shops/2/clients?type=b2b&limit=500&offset=0', ErpApi::$appels, true), [$cl, ErpApi::$lecturesClients]);
+// La garde vieille de plus d'une heure : relue. Plus jeune : gardée — sauf « relire » (frais=1).
+$GLOBALS['reglages']['pbClients:2:particulier']['lu'] = time() - 3000;
+ErpApi::$clients[2][] = ['id' => 39998, 'name' => 'Nouvelle', 'surname' => 'Venue', 'is_b2b' => 0, 'id_main_shop' => 2];
+pbOublierGarde();
+$_GET = ['shop' => '2', 'type' => 'particulier', 'q' => 'nouvelle']; $cl = ep_promos_magasin_clients();
+verifie('une garde de cinquante minutes vaut encore : le client créé depuis n’y est pas', $cl['clients'] === [] && ErpApi::$lecturesClients === 3, $cl);
+$_GET = ['shop' => '2', 'type' => 'particulier', 'q' => 'nouvelle', 'frais' => '1']; $cl = ep_promos_magasin_clients();
+verifie('« relire » : le panel relu, le nouveau client trouvé', array_column($cl['clients'], 'nom') === ['Nouvelle Venue'] && ErpApi::$lecturesClients === 4, $cl);
+$GLOBALS['reglages']['pbClients:2:particulier']['lu'] = time() - 3700; pbOublierGarde();
+$_GET = ['shop' => '2', 'type' => 'particulier', 'q' => 'nouvelle']; $cl = ep_promos_magasin_clients();
+verifie('une garde de plus d’une heure : relue au panel', ErpApi::$lecturesClients === 5, ErpApi::$lecturesClients);
+ErpApi::$clientsEnBloc = false; pbOublierGarde(); unset($GLOBALS['reglages']['pbClients:2:particulier']);
+$_GET = ['shop' => '2', 'type' => 'particulier', 'q' => 'lointaine']; $cl = ep_promos_magasin_clients(); $_GET = [];
+verifie('la lecture d’un seul tenant refusée : les pages de 500 prennent le relais', array_column($cl['clients'], 'nom') === ['Zénobie Lointaine'] && $cl['nParticuliers'] === 2302
+    && in_array('GET /shops/2/clients?type=b2c&limit=500&offset=2000', ErpApi::$appels, true), [$cl['nParticuliers'], ErpApi::$lecturesClients]);
+ErpApi::$clientsEnBloc = true;
 $GLOBALS['corps'] = $promo('Fidèles · Halle', ['on' => true, 'cible' => 'clients', 'clients' => [['id' => 11, 'nom' => 'Anne Dupont'], ['id' => 12, 'nom' => 'Marc Durand']]]);
 $r = wr_promos_magasin();
 $c = $campDe(33); $k = $codesDe($c['id'] ?? 0);
