@@ -3982,7 +3982,7 @@
         <div class="db-mini">Chaque code ne sert qu’une fois. ${A && A.cible === 'uniques' ? 'Le bon en a ' + A.nCodes + ' : un nombre plus grand en ajoute, jamais moins.' : 'Ils se lisent après l’enregistrement : ⋯ › Voir les codes du bon.'}</div>`;
     } else {
       const R = W.bonRech || {}, b2b = pmBonType(W) === 'b2b';
-      h += `<div class="pm-f" style="margin-top:12px"><label>Type de client</label><span class="pm-seg">${PM_BON_TYPES.map(([k, lib]) => `<button type="button" class="${pmBonType(W) === k ? 'on' : ''}" data-pmbtype="${k}">${lib}</button>`).join('')}</span>
+      h += `<div class="pm-f" style="margin-top:12px"><label>Type de client</label><span class="pm-seg">${PM_BON_TYPES.map(([k, lib]) => `<button type="button" class="${pmBonType(W) === k ? 'on' : ''}" data-pmbtype="${k}">${lib}${(R.nb || {})[k] != null ? ' (' + Number(R.nb[k]).toLocaleString('fr-BE') + ')' : ''}</button>`).join('')}</span>
         <span class="db-mini">${b2b ? 'Les comptes B2B du magasin au panel : une société, son n° de TVA.' : 'Les clients particuliers rattachés au magasin au panel.'} Un même bon peut mêler les deux.</span></div>
         <div class="pm-f" style="margin-top:10px"><label>${b2b ? 'Chercher un client B2B' : 'Chercher un client du magasin'} <small class="db-mini">${b2b ? 'société, n° de TVA, personne, e-mail, ville' : 'nom, e-mail, téléphone, ville'} — lus au panel</small></label><input class="pm-in" type="search" placeholder="${b2b ? 'la liste, ou tapez pour filtrer…' : '2 lettres au moins…'}" value="${esc(R.q || '')}" data-pmbq="1" autocomplete="off"></div>
         <div class="pm-bres" id="pm-bres">${pmBonResultats(W)}</div>
@@ -3998,6 +3998,8 @@
   const pmBonType = W => ((W.bonRech || {}).type === 'b2b' ? 'b2b' : 'particulier');
   /** Une recherche à lancer : deux lettres au moins ; la liste des B2B, elle, se parcourt sans texte. */
   const pmBonCherchable = (q, type) => String(q || '').trim().length >= 2 || (type === 'b2b' && !String(q || '').trim());
+  /** La liste se garde une heure au cockpit : son heure de lecture, et « relire » pour un client créé depuis en caisse. */
+  const pmBonLu = R => R.luA ? `<div class="db-mini">Liste du panel lue à ${esc(R.luA)} · <button type="button" class="pm-lien" data-pmbfrais="1">relire</button></div>` : '';
   /** Les clients trouvés au panel, moins ceux déjà dans le bon. */
   function pmBonResultats(W) {
     const R = W.bonRech || {}, b = W.d.bon, type = pmBonType(W), q = String(R.q || '').trim();
@@ -4007,11 +4009,12 @@
     const genre = type === 'b2b' ? 'client B2B' : 'client particulier';
     const parmi = R.total != null ? ' (parmi ' + R.total + ' ' + genre + (R.total > 1 ? 's' : '') + ' du magasin)' : '';
     const L = (R.clients || []).filter(c => !b.clients.some(o => +o.id === +c.id));
-    if (!L.length) { return `<div class="db-mini">${(R.clients || []).length ? 'Tous déjà dans le bon.' : (q ? 'Aucun ' + genre + ' du magasin pour « ' + esc(q) + ' »' + parmi : 'Aucun client B2B au panel pour ce magasin') + '.'}</div>`; }
-    const plus = R.trouves > (R.clients || []).length ? `<div class="db-mini">${R.clients.length} sur ${R.trouves} : tapez pour affiner.</div>` : '';
+    if (!L.length) { return `<div class="db-mini">${(R.clients || []).length ? 'Tous déjà dans le bon.' : (q ? 'Aucun ' + genre + ' du magasin pour « ' + esc(q) + ' »' + parmi : 'Aucun client B2B au panel pour ce magasin') + '.'}</div>` + pmBonLu(R); }
+    const plus = (R.trouves > (R.clients || []).length ? `<div class="db-mini">${R.clients.length} sur ${R.trouves} : tapez pour affiner.</div>` : '') + pmBonLu(R);
     return L.map(c => `<button type="button" class="pm-bcl" data-pmbadd="${c.id}"><span><b>${esc(c.nom)}</b>${c.personne ? ' · ' + esc(c.personne) : ''}${c.soc ? ' · ' + esc(c.soc) : ''}${c.tva ? ' · <span class="mu">TVA ' + esc(c.tva) + '</span>' : ''}${c.ville ? ' · ' + esc(c.ville) : ''}${c.contact ? ' <span class="mu">' + esc(c.contact) + '</span>' : ''}${c.ailleurs ? ' <span class="mu">· magasin principal : un autre</span>' : ''}</span>${c.b2b ? '<span class="pm-chip b">B2B</span>' : ''}<span class="pm-plus">+ Ajouter</span></button>`).join('') + plus;
   }
   function pmBrancherBonRes(el) {
+    el.querySelectorAll('[data-pmbfrais]').forEach(x => x.addEventListener('click', () => { const W = S.pmW; if (W) { pmBonChercher((W.bonRech || {}).q || '', true); } }));
     el.querySelectorAll('[data-pmbadd]').forEach(x => x.addEventListener('click', () => {
       const W = S.pmW; if (!W) { return; }
       const c = ((W.bonRech || {}).clients || []).find(o => String(o.id) === x.dataset.pmbadd);
@@ -4023,7 +4026,7 @@
    * La recherche des clients du magasin au panel, un quart de seconde après la frappe ; la dernière réponse gagne. Le type
    * (particuliers du magasin, ou B2B) part avec elle : le panel lit les deux listes à part (`?type=b2b|b2c`).
    */
-  function pmBonChercher(q) {
+  function pmBonChercher(q, frais) {
     const W = S.pmW; if (!W) { return; }
     const R = W.bonRech = Object.assign(W.bonRech || {}, { q }), el = () => document.getElementById('pm-bres');
     clearTimeout(R.t);
@@ -4031,11 +4034,33 @@
     if (!pmBonCherchable(q, type)) { R.clients = []; R.err = null; R.charge = false; R.lu = null; if (el()) { el().innerHTML = ''; } return; }
     R.charge = true; if (el()) { el().innerHTML = pmBonResultats(W); }
     R.t = setTimeout(() => {
-      lire('/exploitation/promos-magasin/clients?shop=' + encodeURIComponent(S.shop) + '&type=' + type + '&q=' + encodeURIComponent(q.trim()))
-        .then(j => { if (n === R.n) { R.clients = j.clients || []; R.total = j.total; R.trouves = j.trouves; R.lu = cle; R.err = null; } })
+      lire('/exploitation/promos-magasin/clients?shop=' + encodeURIComponent(S.shop) + '&type=' + type + '&q=' + encodeURIComponent(q.trim()) + (frais ? '&frais=1' : ''))
+        .then(j => { pmBonCompter(R, j); if (n === R.n) { R.clients = j.clients || []; R.total = j.total; R.trouves = j.trouves; R.luA = j.lu || null; R.lu = cle; R.err = null; } })
         .catch(e => { if (n === R.n) { R.err = e.message; } })
         .finally(() => { if (n !== R.n || S.pmW !== W) { return; } R.charge = false; const x = el(); if (x) { x.innerHTML = pmBonResultats(W); pmBrancherBonRes(x); } });
     }, 250);
+  }
+  /** Le nombre de clients de chaque type, retenu de chaque réponse (les boutons « Particuliers du magasin (7 935) »). */
+  function pmBonCompter(R, j) {
+    R.nb = R.nb || {};
+    if (j.nB2b != null) { R.nb.b2b = j.nB2b; }
+    if (j.nParticuliers != null) { R.nb.particulier = j.nParticuliers; }
+  }
+  /**
+   * Les particuliers lus d'avance (29/10/2026) : la première lecture du panel prend quelques secondes au grand magasin ;
+   * lancée dès que « Des clients » s'affiche, elle est faite quand on a tapé deux lettres. Une fois par assistant.
+   */
+  function pmBonPrechauffer(W) {
+    const R = W.bonRech = W.bonRech || {};
+    if (R.chaud) { return; }
+    R.chaud = true;
+    lire('/exploitation/promos-magasin/clients?shop=' + encodeURIComponent(S.shop) + '&type=particulier&q=')
+      .then(j => {
+        pmBonCompter(R, j);
+        // Les boutons se redessinent sans toucher au champ de recherche (ni à la frappe en cours).
+        const seg = $.querySelector('[data-pmbtype]'); if (seg && S.pmW === W) { seg.parentElement.querySelectorAll('[data-pmbtype]').forEach(b => { const k = b.dataset.pmbtype; const lib = (PM_BON_TYPES.find(o => o[0] === k) || [])[1]; if (lib && R.nb[k] != null) { b.textContent = lib + ' (' + Number(R.nb[k]).toLocaleString('fr-BE') + ')'; } }); }
+      })
+      .catch(() => { R.chaud = false; });
   }
   /** Une promotion qui a un bon, reprise dans l'assistant : son bon relu au panel (distribution, code, clients). */
   function pmBonCharger(W, id) {
@@ -4448,7 +4473,7 @@
       rendre(); pmBonChercher((W.bonRech.q || '')); const q = $.querySelector('[data-pmbq]'); if (q) { q.focus(); }
     });
     on('[data-pmbrm]', 'click', el => { d.bon.clients = d.bon.clients.filter(c => String(c.id) !== el.dataset.pmbrm); rendre(); });
-    const bres = document.getElementById('pm-bres'); if (bres) { pmBrancherBonRes(bres); }
+    const bres = document.getElementById('pm-bres'); if (bres) { pmBrancherBonRes(bres); if (S.pmW && d.bon.on && d.bon.cible === 'clients') { pmBonPrechauffer(S.pmW); } }
   }
 
   function rendre() {

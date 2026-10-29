@@ -1145,3 +1145,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-29T08:49:48Z production : karta z filmu — repli SD pour les longs films
 2026-10-29T08:58:35Z production : karta z filmu — titre sans compteur
 2026-10-29T09:49:09Z production : un seul assistant Nowy produkt testowy (/test-products/new), migracja 123, szybki przycisk
+2026-10-29T09:54:32Z promotions : bon, clients lus d'un seul tenant, gardés une heure (#77)
