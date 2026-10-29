@@ -127,5 +127,23 @@ if ($r[1] !== []) {
 }
 scLigne('/clients?type=b2b&limit=500&offset=0', scGet('/clients?type=b2b&limit=500&offset=0'), 2);
 
+// ── Après la mise en ligne de #76 : la route du bon, telle que l'écran l'appelle (des comptes, aucun nom) ─────────
+scTitre('la route du bon en ligne : GET /exploitation/promos-magasin/clients');
+foreach ([['shop=2&type=b2b&q=', 'B2B du magasin 2, sans texte (froid)'], ['shop=2&type=b2b&q=', 'B2B du magasin 2, sans texte (gardé)'],
+    ['shop=2&type=particulier&q=ma', 'particuliers du magasin 2, « ma » (froid)'], ['shop=2&type=particulier&q=mar', 'particuliers du magasin 2, « mar » (gardé)'],
+    ['shop=4&type=b2b&q=', 'B2B du magasin 4'], ['shop=4&type=particulier&q=an', 'particuliers du magasin 4, « an »']] as [$qs, $lib]) {
+    $t = microtime(true);
+    $ctx = stream_context_create(['http' => ['timeout' => 90, 'ignore_errors' => true]]);
+    $raw = @file_get_contents('http://185.180.206.46/consulant_bo/api/cockpit/exploitation/promos-magasin/clients?' . $qs, false, $ctx);
+    $s = microtime(true) - $t;
+    $code = isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m) ? (int) $m[1] : 0;
+    $j = is_string($raw) ? json_decode($raw, true) : null;
+    if (!is_array($j) || !isset($j['clients'])) { printf("  %-44s HTTP %d · %5.1f s · %s\n", $lib, $code, $s, mb_substr((string) $raw, 0, 200)); continue; }
+    $cl = $j['clients'];
+    printf("  %-44s HTTP %d · %5.1f s · total %5d · trouvés %5d · rendus %2d · B2B %2d · ailleurs %d · nB2b %s · nParticuliers %s\n", $lib, $code, $s,
+        $j['total'] ?? -1, $j['trouves'] ?? -1, count($cl), count(array_filter($cl, static fn ($c) => !empty($c['b2b']))),
+        count(array_filter($cl, static fn ($c) => !empty($c['ailleurs']))), json_encode($j['nB2b'] ?? null), json_encode($j['nParticuliers'] ?? null));
+}
+
 printf("\n  mémoire PHP au plus haut : %d Mo (memory_limit du CLI : %s)\n", intdiv(memory_get_peak_usage(true), 1048576), ini_get('memory_limit'));
 echo "\n=== FIN SONDE CLIENTS DU BON ===\n";
