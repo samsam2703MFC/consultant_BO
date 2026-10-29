@@ -1156,3 +1156,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-29T18:48:43Z 202 plan logistyki : Niemcy (DE) przejazd, wszystko do rozplanowania (migration 128)
 2026-10-29T19:56:49Z 205 kartony i palety (katalog, krok Paleta w karcie produktu, migration 129)
 2026-10-29T20:17:56Z 207 plan logistyki : kalendarz tras (fazy, przerwy UE, edycja, szablon ; migration 130)
+2026-10-29T20:59:11Z [208] plan logistique : nombre de tournées par semaine par camion / chauffeur (migration 131)
