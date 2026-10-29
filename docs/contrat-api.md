@@ -2543,10 +2543,10 @@ leurs clients vivent au panel, relus à la demande ; le numéro de la campagne n
 - La réponse porte `bon` relu (forme de `GET …/bon` ci-dessous) ; `demandes[].bon` vaut `{campagne}` quand la
   promotion est en `VOUCHER_ONLY`, null sinon. La liste montre une puce « bon » et une colonne « Bon » (lien « codes »).
 
-`GET /exploitation/promos-magasin/clients?shop=4&type=b2b|particulier&q=dup` — les clients du magasin, lus au panel,
+`GET /exploitation/promos-magasin/clients?shop=4&type=b2b|particulier&q=dup[&frais=1]` — les clients du magasin, lus au panel,
 pour choisir ceux du bon (29/10/2026 : « un client B2B ou un client normal, rattaché au magasin ») :
 
-    { shop, type, total, trouves, nB2b, nParticuliers,
+    { shop, type, total, trouves, nB2b, nParticuliers, lu: "09:50", ms,
       clients: [ { id, nom, soc, personne, tva, ville, b2b, ailleurs, contact } ] }   // 30 au plus, triés par nom
 
 - `type=b2b` : les comptes B2B du magasin (`GET /shops/{shop}/clients?type=b2b`) ; `nom` est la société, `personne`
@@ -2560,10 +2560,16 @@ pour choisir ceux du bon (29/10/2026 : « un client B2B ou un client normal, rat
   téléphones au format international). Un client fusionné (`merged_into_id`), bloqué ou inactif n'est pas proposé.
 - `contact` est un e-mail ou un téléphone montré à moitié (« j…@exemple.be »), pour distinguer deux homonymes.
 - La lecture au panel, mesurée par la sonde du 29/10/2026 (`tools/sonde_clients_bon.php`) : `limit` n'est tenu
-  qu'avec `offset` (sans lui, tout vient d'un coup — 8 641 clients et 10 Mo au magasin 2) et les B2B viennent devant.
-  Le cockpit lit donc par pages de 500 (`limit` + `offset`, la première seule puis quatre de front), sans plafond
-  (avant : 2 000, si bien qu'au magasin 2 seuls 1 294 des 7 935 particuliers se trouvaient), et garde la liste réduite
-  dix minutes dans `ceo_app_setting` (`pbClients:{shop}:{type}`). Panel illisible : 502.
+  qu'avec `offset` (sans lui, tout vient d'un coup — 8 641 clients et 10 Mo au magasin 2) et les B2B viennent devant ;
+  avant le 29/10, le bon s'arrêtait à 2 000 lignes (au magasin 2, 1 294 des 7 935 particuliers se trouvaient).
+- Le cockpit lit chaque type d'un seul tenant (`?type=b2c` : 7 935 particuliers en 2,2 s, +53 Mo au plus haut — la
+  limite de mémoire PHP relevée à 512 Mo s'il le faut ; seize pages de 500 l'une après l'autre prenaient 8,1 s). Les
+  pages (`limit` + `offset`, la première seule puis quatre de front) restent le repli : lecture d'un tenant refusée,
+  ou compte rond (multiple de 50 : le panel aurait coupé).
+- La liste réduite se garde **une heure** dans `ceo_app_setting` (`pbClients:{shop}:{type}`). `lu` : l'heure de la
+  lecture au panel (« Liste du panel lue à 09:50 · relire ») ; `frais=1` relit le panel (un client créé en caisse
+  entre-temps). `ms` : la durée de la réponse. L'écran lit les particuliers d'avance dès que « Des clients »
+  s'affiche, et montre le nombre de chaque type sur son bouton. Panel illisible : 502.
 
 Dans `GET …/bon` ci-dessous, chaque code porte aussi `b2bClient` (true, false, ou null quand le client n'est plus au
 magasin).

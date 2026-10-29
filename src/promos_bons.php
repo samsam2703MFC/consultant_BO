@@ -354,12 +354,15 @@ function pbEnvoyer(array $d, ?int $panelId, bool $envoi, ?int $campAvant): array
  * (tools/sonde_clients_bon.php : au magasin 2, 706 B2B et 7 935 particuliers).
  */
 const PB_TYPES = ['b2b' => 'b2b', 'particulier' => 'b2c'];
-/** Une page du panel : `limit` n'est tenu qu'avec `offset` (sans lui, tout vient d'un coup, 10 Mo au magasin 2). */
+/** Une page du repli : `limit` n'est tenu qu'avec `offset` (sans lui, tout vient d'un coup, 10 Mo au magasin 2). */
 const PB_PAGE_CLIENTS = 500;
 /** 80 pages au plus (40 000 clients) : une boucle sans fin si le panel ignorait `offset`. */
 const PB_PAGES_MAX = 80;
-/** La liste lue au panel se garde dix minutes : chercher lettre après lettre ne relit pas 16 pages à chaque frappe. */
-const PB_CLIENTS_TTL = 600;
+/**
+ * La liste lue au panel se garde une heure (dix minutes jusqu'au 29/10/2026 : la première recherche des 7 935
+ * particuliers du magasin 2 prenait 12,8 s à chaque fois). Un client créé en caisse entre-temps : « relire » (`frais`).
+ */
+const PB_CLIENTS_TTL = 3600;
 
 /** Le type demandé (« b2b », « particulier ») ; tout le reste : les deux. */
 function pbType($v): ?string
@@ -408,45 +411,73 @@ function pbClientCourt(array $c, int $shop): array
         'r' => mb_strtolower(implode(' ', array_map(static fn ($v) => trim((string) $v), $champs)))];
 }
 
-/**
- * Les clients d'un magasin d'un type (« b2b », « particulier »), lus au panel par pages de 500 (la première seule, puis
- * quatre de front), réduits (pbClientCourt) et gardés dix minutes : [id => client]. Null : le panel ne répond pas. Un
- * client fusionné dans un autre (`merged_into_id`), bloqué ou inactif ne reçoit pas de bon.
- */
-function pbClientsDuType(int $shop, string $type): ?array
+/** Assez de mémoire pour lire une liste d'un seul tenant : la limite relevée à 512 Mo si elle est plus basse. */
+function pbMemoire(): void
 {
-    static $garde = [];
+    $l = strtolower(trim((string) ini_get('memory_limit')));
+    if ($l === '' || $l === '-1') { return; }
+    $n = (int) $l * match (substr($l, -1)) { 'g' => 1024 ** 3, 'm' => 1024 ** 2, 'k' => 1024, default => 1 };
+    if ($n < 512 * 1024 ** 2) { @ini_set('memory_limit', '512M'); }
+}
+
+/** Les clients d'une réponse du panel ajoutés à $out (fusionnés, bloqués, inactifs et l'autre type écartés). Rend leur nombre lu. */
+function pbAjouterClients(array &$out, $corps, int $shop, string $type): int
+{
+    $l = pbItems($corps);
+    foreach ($l as $x) {
+        if (!is_array($x) || (int) ($x['id'] ?? 0) <= 0 || !empty($x['merged_into_id']) || !empty($x['blocked']) || (isset($x['active']) && !$x['active'])) { continue; }
+        // Le panel trie ses B2B devant : un filtre `type` ignoré mêlerait les deux, on ne garde que le type demandé.
+        if (!empty($x['is_b2b']) !== ($type === 'b2b')) { continue; }
+        $out[(int) $x['id']] = pbClientCourt($x, $shop);
+    }
+    return count($l);
+}
+
+/**
+ * Les clients d'un magasin d'un type (« b2b », « particulier »), lus au panel, réduits (pbClientCourt) et gardés une
+ * heure : [id => client]. `$frais` : relus au panel, la garde passée outre. Null : le panel ne répond pas. Un client
+ * fusionné dans un autre (`merged_into_id`), bloqué ou inactif ne reçoit pas de bon.
+ *
+ * D'un seul tenant d'abord : la sonde du 29/10/2026 a lu les 7 935 particuliers du magasin 2 en 2,2 s (+53 Mo au plus
+ * haut), contre 8,1 s en seize pages de 500 l'une après l'autre. Les pages (`limit` + `offset`, la première seule puis
+ * quatre de front) restent le repli : une lecture d'un tenant refusée, ou un compte rond — le panel aurait coupé.
+ */
+function pbClientsDuType(int $shop, string $type, bool $frais = false): ?array
+{
+    // Gardée aussi le temps de la requête (« Voir les codes » lit les deux types) ; une variable globale, que les tests vident.
+    $garde = &$GLOBALS['pbClientsGarde'];
     $cle = 'pbClients:' . $shop . ':' . $type;
-    if (isset($garde[$cle])) { return $garde[$cle]; }
-    $c = function_exists('setting') ? setting($cle) : null;
+    if (isset($garde[$cle]) && !$frais) { return $garde[$cle]; }
+    $c = !$frais && function_exists('setting') ? setting($cle) : null;
     if (is_array($c) && is_array($c['l'] ?? null) && (int) ($c['lu'] ?? 0) > time() - PB_CLIENTS_TTL) {
         $out = [];
         foreach ($c['l'] as $x) { if (is_array($x) && (int) ($x['id'] ?? 0) > 0) { $out[(int) $x['id']] = $x; } }
+        $GLOBALS['pbClientsLu'][$cle] = (int) $c['lu'];
         return $garde[$cle] = $out;
     }
     if (!class_exists('ErpApi') || !ErpApi::disponible()) { return null; }
     $out = []; $partiel = false;
-    // La première page seule (les B2B d'un magasin tiennent souvent dans une), puis quatre de front.
-    for ($page = 0, $n = 1; $page < PB_PAGES_MAX; $page += $n, $n = 4) {
-        $ch = [];
-        for ($i = $page; $i < min($page + $n, PB_PAGES_MAX); $i++) {
-            $ch[$i] = '/shops/' . $shop . '/clients?type=' . PB_TYPES[$type] . '&limit=' . PB_PAGE_CLIENTS . '&offset=' . ($i * PB_PAGE_CLIENTS);
-        }
-        $fin = false;
-        foreach (ErpApi::getParallele($ch) as $i => $corps) {
-            // Une page refusée en route : la liste vaut pour cette fois, sans se garder (la suivante relira tout).
-            if ($corps === null) { if ($i === 0) { return null; } $fin = $partiel = true; break; }
-            $l = pbItems($corps);
-            foreach ($l as $x) {
-                if (!is_array($x) || (int) ($x['id'] ?? 0) <= 0 || !empty($x['merged_into_id']) || !empty($x['blocked']) || (isset($x['active']) && !$x['active'])) { continue; }
-                // Le panel trie ses B2B devant : un filtre `type` ignoré mêlerait les deux, on ne garde que le type demandé.
-                if (!empty($x['is_b2b']) !== ($type === 'b2b')) { continue; }
-                $out[(int) $x['id']] = pbClientCourt($x, $shop);
+    pbMemoire();
+    $r = ErpApi::sondeGet('/shops/' . $shop . '/clients?type=' . PB_TYPES[$type]);
+    $n = $r['code'] >= 200 && $r['code'] < 300 && is_array($r['corps']) ? pbAjouterClients($out, $r['corps'], $shop, $type) : -1;
+    unset($r);
+    if ($n < 0 || ($n > 0 && $n % 50 === 0)) {
+        $out = [];
+        for ($page = 0, $k = 1; $page < PB_PAGES_MAX; $page += $k, $k = 4) {
+            $ch = [];
+            for ($i = $page; $i < min($page + $k, PB_PAGES_MAX); $i++) {
+                $ch[$i] = '/shops/' . $shop . '/clients?type=' . PB_TYPES[$type] . '&limit=' . PB_PAGE_CLIENTS . '&offset=' . ($i * PB_PAGE_CLIENTS);
             }
-            if (count($l) < PB_PAGE_CLIENTS) { $fin = true; break; }
+            $fin = false;
+            foreach (ErpApi::getParallele($ch) as $i => $corps) {
+                // Une page refusée en route : la liste vaut pour cette fois, sans se garder (la suivante relira tout).
+                if ($corps === null) { if ($i === 0) { return null; } $fin = $partiel = true; break; }
+                if (pbAjouterClients($out, $corps, $shop, $type) < PB_PAGE_CLIENTS) { $fin = true; break; }
+            }
+            if ($fin) { break; }
         }
-        if ($fin) { break; }
     }
+    $GLOBALS['pbClientsLu'][$cle] = time();
     if (!$partiel) {
         try {
             Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['lu' => time(), 'l' => array_values($out)], JSON_UNESCAPED_UNICODE)]);
@@ -478,20 +509,21 @@ function pbRecherches(string $q): array
 }
 
 /**
- * GET /exploitation/promos-magasin/clients?shop=4&type=b2b|particulier&q=dup — les clients du magasin, lus au panel,
+ * GET /exploitation/promos-magasin/clients?shop=4&type=b2b|particulier&q=dup[&frais=1] — les clients du magasin, lus au panel,
  * pour le bon : les comptes B2B (société, TVA, la personne) ou les particuliers rattachés au magasin (nom, ville),
  * un contact masqué. 30 au plus, triés par nom ; deux lettres au moins pour chercher — sauf les B2B, qui se
  * parcourent sans texte. Sans `type` : les deux (la forme d'avant le 29/10/2026).
  */
 function ep_promos_magasin_clients(): array
 {
+    $t0 = microtime(true);
     $shop = (int) ($_GET['shop'] ?? 0);
     if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
     $type = pbType($_GET['type'] ?? '');
     $qs = pbRecherches((string) ($_GET['q'] ?? ''));
     $q = $qs[0];
     $listes = [];
-    foreach ($type !== null ? [$type] : array_keys(PB_TYPES) as $t) { $listes[$t] = pbClientsDuType($shop, $t); }
+    foreach ($type !== null ? [$type] : array_keys(PB_TYPES) as $t) { $listes[$t] = pbClientsDuType($shop, $t, !empty($_GET['frais'])); }
     if (!array_filter($listes, static fn ($l) => $l !== null)) {
         http_response_code(502); return ['error' => 'clients du magasin illisibles au panel' . (ErpApi::$lastError ? ' : ' . ErpApi::$lastError : '')];
     }
@@ -505,7 +537,10 @@ function ep_promos_magasin_clients(): array
         }
         usort($l, static fn ($a, $b) => strcmp(mb_strtolower($a['nom']), mb_strtolower($b['nom'])));
     }
+    // L'heure de la plus ancienne des listes lues : « liste du panel lue à 9 h 50 · relire ».
+    $lus = array_filter(array_map(static fn ($t) => $GLOBALS['pbClientsLu']['pbClients:' . $shop . ':' . $t] ?? null, array_keys(array_filter($listes, static fn ($x) => $x !== null))));
     return ['shop' => (string) $shop, 'type' => $type, 'total' => count($tous), 'trouves' => count($l), 'clients' => array_slice($l, 0, 30),
+        'lu' => $lus ? date('H:i', min($lus)) : null, 'ms' => (int) round(1000 * (microtime(true) - $t0)),
         'nB2b' => isset($listes['b2b']) ? count($listes['b2b']) : null, 'nParticuliers' => isset($listes['particulier']) ? count($listes['particulier']) : null];
 }
 
