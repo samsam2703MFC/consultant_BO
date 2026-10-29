@@ -1,5 +1,15 @@
 # Repost automatique — trois maquettes
 
+> **Retenue : B** (29/10/2026), **codée** dans le module Social : `src/repost.php`
+> (guet de la Page de la marque, file, validation du franchisé), écran
+> `public/SA Repost.dc.html` (onglets Suivi, Réglage, Côté franchisé), carte
+> « Le réseau vous propose » du Calendrier franchisé ; entrée « Repost
+> automatique » du menu du Marketing (`src/lib/navigation.ts`). Dépôts `social`
+> et `marketing`, branche `claude/inspiring-lovelace-g6goqf`. Écarts avec la
+> maquette : la sixième tuile (portée) n'est pas là — Meta ne la donne pas sans
+> lire chaque repost un par un ; Instagram ne compte que si les boutiques ont
+> leur propre compte (le réseau est en Instagram unique).
+
 Demande du 29/10/2026 : dans le Marketing (`/marketing/`), **une gestion du
 repost automatique** — quand la marque publie sur sa Page Facebook ou son
 Instagram, le post est repris par les Pages des boutiques.
