@@ -1154,3 +1154,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-29T16:47:14Z production : plan logistyki na 12 tygodni (prognoza palet, ciężarówki, święta PL/BE, urlopy)
 2026-10-29T18:03:25Z 201 debug testeur : recette au carton, recette du test, semi-produit en fenêtre, opakowanie, postes, prix ×3, écran gotowe (migration 127)
 2026-10-29T18:48:43Z 202 plan logistyki : Niemcy (DE) przejazd, wszystko do rozplanowania (migration 128)
+2026-10-29T19:56:49Z 205 kartony i palety (katalog, krok Paleta w karcie produktu, migration 129)
