@@ -42,6 +42,9 @@ $pl = Holidays::forYear(2026, 'PL');
 $be = Holidays::forYear(2026, 'BE');
 expectPlan(isset($pl['2026-12-24'], $pl['2026-06-04'], $pl['2026-05-24'], $pl['2026-01-06']) && !isset(Holidays::forYear(2024, 'PL')['2024-12-24']), 'PL : Wigilia (od 2025), Boże Ciało, Zielone Świątki, Trzech Króli');
 expectPlan(isset($be['2026-05-14'], $be['2026-05-25'], $be['2026-07-21'], $be['2026-11-11']) && !isset($be['2026-12-26']) && !isset($be['2026-01-06']), 'BE : Wniebowstąpienie, Zielone Świątki, 21.07, 11.11 ; bez 26.12 i 6.01');
+$de = Holidays::forYear(2026, 'DE');
+expectPlan(isset($de['2026-04-03'], $de['2026-04-06'], $de['2026-05-14'], $de['2026-05-25'], $de['2026-10-03'], $de['2026-12-26']) && !isset($de['2026-06-04']) && !isset($de['2026-11-01']) && count($de) === 9,
+    'DE : Wielki Piątek, Wielkanoc pn, Wniebowstąpienie, Zielone Świątki pn, 3.10, 26.12 ; bez regionalnych (Boże Ciało, 1.11)');
 $b = Holidays::between('2026-11-01', '2026-12-31', ['PL', 'BE'], ['2026-11-11' => ['BE' => ['name' => 'x', 'off' => false]], '2026-12-07' => ['PL' => ['name' => 'Zamknięcie', 'off' => true]]]);
 expectPlan(isset($b['2026-11-11']['PL']) && !isset($b['2026-11-11']['BE']) && $b['2026-12-07']['PL'] === 'Zamknięcie' && count($b['2026-12-25']) === 2, 'święta : pominięte BE 11.11, dodany dzień wolny, 25.12 w obu krajach');
 expectPlan(Plan::roundUp(10.2) === 10 && Plan::roundUp(10.3) === 11 && Plan::roundUp(0.15) === 0 && Plan::roundUp(0.46) === 1 && Plan::roundUp(3.0) === 3, 'zaokrąglenie : w górę z tolerancją 0,2');
@@ -184,7 +187,24 @@ try {
     expectPlan(array_column($p['weeks'], null, 'week_start')['2026-11-09']['ship_date'] === '2026-11-09', 'przywrócone : wyjazd pn 9.11');
     $p = $svc->saveHoliday(['day' => '2026-11-24', 'country' => 'PL', 'name' => 'Zamknięcie zakładu', 'off' => true], 7);
     expectPlan(array_column($p['weeks'], null, 'week_start')['2026-11-23']['ship_date'] === '2026-11-23' && in_array('Zamknięcie zakładu', array_column($p['holidays'], 'name'), true), 'dzień wolny PL wt 24.11 : wyjazd pn 23.11');
-    expectPlanFail(fn() => $svc->saveHoliday(['day' => '2026-11-24', 'country' => 'DE', 'name' => 'x'], 7), 422, 'kraj : PL albo BE');
+    expectPlanFail(fn() => $svc->saveHoliday(['day' => '2026-11-24', 'country' => 'NL', 'name' => 'x'], 7), 422, 'kraj : PL, BE albo DE');
+    // DE = kraj przejazdu (parametr domyślnie « DE ») : święto regionalne dodane ręcznie śr 18.11 (dostawa tyg. 47) → zakaz ruchu, wyjazd pn 16.11.
+    expectPlan($p['params']['transit_countries'] === ['DE'] && array_column($p['weeks'], null, 'week_start')['2026-11-16']['ship_date'] === '2026-11-17', 'DE przejazd : tydz. 47 wyjazd wt 17.11 (bez święta DE)');
+    $p = $svc->saveHoliday(['day' => '2026-11-18', 'country' => 'DE', 'name' => 'Dzień Pokuty (Saksonia)', 'off' => true], 7);
+    $w47 = array_column($p['weeks'], null, 'week_start')['2026-11-16'];
+    expectPlan($w47['ship_date'] === '2026-11-16' && str_contains((string) $w47['shifted'], 'przejazd 18.11') && str_contains((string) $w47['shifted'], 'zakaz ruchu ciężarówek'), 'DE 18.11 : ' . $w47['shifted']);
+    expectPlan(in_array(['date' => '2026-11-18', 'country' => 'DE', 'name' => 'Dzień Pokuty (Saksonia)', 'source' => 'manual', 'skipped' => false], $p['holidays'], true)
+        && in_array('DE', array_column($w47['holidays'], 'country'), true), 'DE na liście świąt i w tygodniu');
+    $p = $svc->saveHoliday(['day' => '2026-11-18', 'country' => 'DE', 'off' => false, 'name' => 'Jedziemy'], 7);
+    expectPlan(array_column($p['weeks'], null, 'week_start')['2026-11-16']['ship_date'] === '2026-11-17', 'DE « Jedziemy » : wyjazd znowu wt 17.11');
+    $p = $svc->saveHoliday(['day' => '2026-11-18', 'country' => 'DE', 'name' => 'Dzień Pokuty (Saksonia)', 'off' => true], 7);
+    $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES ('logistics.plan_transit_countries', 'DE', 'DE', 'string')");
+    $c->get(\App\Repositories\Workshop\ParamRepository::class)->setValue('logistics.plan_transit_countries', '', 7);
+    $p = $svc->plan(null, $today);
+    expectPlan($p['params']['transit_countries'] === [] && array_column($p['weeks'], null, 'week_start')['2026-11-16']['ship_date'] === '2026-11-17' && !in_array('DE', array_column($p['holidays'], 'country'), true),
+        'parametr pusty : bez kraju przejazdu, DE nie liczone');
+    $c->get(\App\Repositories\Workshop\ParamRepository::class)->setValue('logistics.plan_transit_countries', 'de, BE, xx', 7);
+    expectPlan($svc->plan(null, $today)['params']['transit_countries'] === ['DE'], 'parametr « de, BE, xx » → [DE] (bez kraju dostawy i nieznanych)');
     // Urlopy.
     $p = $svc->addAbsence(['employee_id' => 2, 'date_from' => '2026-11-16', 'date_to' => '2026-11-18', 'reason' => 'choroba'], 7);
     expectPlan(array_column($p['vehicles'], null, 'id')[10]['cells']['2026-11-16']['absent'] !== null && count($p['absences']) === 2, 'zastępca też na urlopie : DX 1 znowu nie jedzie');
@@ -209,6 +229,20 @@ try {
     expectPlan(array_column($p['weeks'], null, 'week_start')['2026-11-02']['approved_at'] === null, 'zmiana w zatwierdzonym tygodniu : zatwierdzenie do ponowienia');
     $p = $svc->approve(null, 7);
     expectPlan($p['result']['weeks'] === 12 && $p['kpis']['approved'] === 12, 'zatwierdź 12 tygodni');
+    $as = $pdo->query("SELECT CONCAT(id_customer, ':', id_carrier_vehicle, ':', plan_set) FROM n_shipping_assignment WHERE ship_date = '2026-11-04' ORDER BY id_customer")->fetchAll(PDO::FETCH_COLUMN);
+    expectPlan($as === ['1:12:0', '2:11:1'], 'ponowne zatwierdzenie : Beta (z planu) → WX 2, Alfa (ręcznie) bez zmian (' . implode(', ', $as) . ')');
+    // « Wszystko do rozplanowania » : ciężarówki zdjęte od dziś, palety ręczne zostają, tygodnie do ponownego zatwierdzenia, pojazdy dnia z planu zdjęte.
+    $pdo->exec("INSERT INTO n_logistics_plan_load (week_start, id_customer, pallets, id_carrier_vehicle) VALUES ('2026-10-26', 1, NULL, 11)");
+    $p = $svc->resetLoads(7, null);
+    $r = $p['result'];
+    expectPlan($r['cleared'] > 0 && $r['weeks'] === 12 && $r['unapproved'] === 12 && $p['kpis']['approved'] === 0 && $p['kpis']['unassigned'] === $p['kpis']['total'], "reset : {$r['cleared']} × klient zdjęty, 12 tyg. do zatwierdzenia");
+    expectPlan(!array_filter(array_merge(...array_map(fn($c) => array_column($c['cells'], 'vehicle_id'), $p['customers']))), 'reset : nikt na ciężarówce');
+    expectPlan(array_column($p['customers'], null, 'id')[2]['cells']['2026-11-23']['source'] === 'manual' && array_column($p['customers'], null, 'id')[2]['cells']['2026-11-23']['pallets'] === 4, 'reset : palety wpisane ręcznie zostają');
+    expectPlan((int) $pdo->query("SELECT id_carrier_vehicle FROM n_logistics_plan_load WHERE week_start = '2026-10-26' AND id_customer = 1")->fetchColumn() === 11, 'reset : tydzień przeszły bez zmian');
+    $as = $pdo->query("SELECT CONCAT(id_customer, ':', COALESCE(id_carrier_vehicle, '-')) FROM n_shipping_assignment WHERE ship_date >= '2026-11-02' ORDER BY ship_date, id_customer")->fetchAll(PDO::FETCH_COLUMN);
+    expectPlan($as === ['1:12'], 'reset : pojazdy dnia z planu zdjęte, wybór ręczny w Dniu wysyłki zostaje (' . implode(', ', $as) . ')');
+    $p = $svc->resetLoads(7, null);
+    expectPlan($p['result']['cleared'] === 0 && $p['result']['unapproved'] === 0, 'reset drugi raz : nic do zdjęcia');
     // Inny zakres (?from).
     $p = $svc->plan('2026-12-02', $today);
     expectPlan($p['weeks'][0]['week_start'] === '2026-11-30' && $p['range']['prev'] === '2026-11-02', 'zakres od tygodnia daty from');

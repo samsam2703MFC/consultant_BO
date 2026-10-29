@@ -5,7 +5,7 @@
  *   układ na następne, zatwierdź (pojazdy klientów na dzień wyjazdu).
  * Prognoza : klienci × tygodnie (N-1 × współczynnik, bez N-1 średnia 3 mies., zamówione, wpisane), współczynnik klienta
  *   albo dla wszystkich, dodatkowe palety tygodnia (% , co roku).
- * Święta i kierowcy : dzień wyjazdu tygodnia, dni wolne PL / BE (pomiń, dodaj), urlopy kierowców.
+ * Święta i kierowcy : dzień wyjazdu tygodnia, dni wolne PL / BE / DE — przejazd, zakaz ruchu ciężarówek [202] (pomiń, dodaj), urlopy kierowców.
  */
 (function () {
     const root = document.getElementById('logisticsPlan');
@@ -33,6 +33,9 @@
         w.holidays.forEach(h => { (days[h.date] ??= []).push(h); });
         return Object.entries(days).map(([d, hs]) => `<span class="lp-hol" title="${esc(hs.map(h => h.country + ' : ' + h.name).join(' · '))}">${dm(d)} ${hs.map(h => h.country).join('·')}</span>`).join('');
     };
+    // Kraje przejazdu (DE) : « DE » albo « DE, AT ».
+    const transit = () => (P.params.transit_countries || []).join(', ');
+    const countriesText = () => [P.params.departure_country, P.params.delivery_country, ...(P.params.transit_countries || [])].join(', ');
     const fieldText = (res) => { const f = Object.values(res.fields || {}); return f.length ? ' ' + f.join(' ') : ''; };
 
     async function api(url, method, data, quiet) {
@@ -70,7 +73,7 @@
             tile('Palet na tydzień', num(k.avg, 1), `średnio w ${P.weeks.length} tygodniach`)
             + tile('Szczyt', num(k.peak), k.peak_week ? `tydzień ${k.peak_week}` : '—', 'is-warn')
             + tile('Palet w planie', num(k.total), `${P.customers.length} klientów`)
-            + tile('Dni świąt', num(k.holiday_days), `pn–pt, ${P.params.departure_country} i ${P.params.delivery_country}`, k.holiday_days ? 'is-bad' : '')
+            + tile('Dni świąt', num(k.holiday_days), `pn–pt, ${countriesText()}`, k.holiday_days ? 'is-bad' : '')
             + tile('Do rozplanowania', num(k.unassigned) + ' pal.', k.absent_drivers ? `${k.absent_drivers} × kierowca na urlopie` : `${k.approved} z ${P.weeks.length} tyg. zatwierdzonych`, k.unassigned ? 'is-bad' : 'is-ok');
     }
 
@@ -118,7 +121,8 @@
         const cs = P.customers;
         const target = (ws) => picked && picked.week === ws ? ' is-target' : '';
         let html = `<div class="lp-toolbar"><div class="lp-legend">${cs.map(c => `<span><i style="background:${c.color}"></i>${esc(c.short)} <small>${num(c.avg, 1)}</small></span>`).join('')}</div>
-            <div class="lp-actions"><button type="button" class="btn btn-outline-primary lp-big" data-auto><i class="bi bi-magic"></i> Rozdziel automatycznie</button>
+            <div class="lp-actions"><button type="button" class="btn btn-outline-secondary lp-big" data-reset ${cs.some(c => Object.values(c.cells).some(x => x.vehicle_id !== null)) ? '' : 'disabled'}><i class="bi bi-arrow-counterclockwise"></i> Wszystko do rozplanowania</button>
+            <button type="button" class="btn btn-outline-primary lp-big" data-auto><i class="bi bi-magic"></i> Rozdziel automatycznie</button>
             <button type="button" class="btn btn-primary lp-big" data-approve-all><i class="bi bi-check2-all"></i> Zatwierdź ${P.weeks.length} tygodni</button></div></div>`;
         if (!P.vehicles.length) {
             html += `<p class="lp-hint">Brak aktywnej ciężarówki : <a href="${at.root}/logistics/vehicles">Pojazdy i pojemność</a> (aktywny, miejsca paletowe, kierowca).</p>`;
@@ -233,6 +237,13 @@
         const b = e.target.closest('button');
         if (b) {
             if (b.matches('[data-auto]')) { b.disabled = true; await api('/ajax/logistics/plan/auto', 'POST', {}); return; }
+            if (b.matches('[data-reset]')) {
+                if (await ask('Zdjąć wszystkich klientów z ciężarówek (tygodnie od dziś) ? Wrócą do « Do rozplanowania ». Palety wpisane ręcznie zostają ; zatwierdzone tygodnie trzeba będzie zatwierdzić ponownie.', 'Wszystko do rozplanowania')) {
+                    b.disabled = true;
+                    if (!(await api('/ajax/logistics/plan/reset', 'POST', {}))) b.disabled = false;
+                }
+                return;
+            }
             if (b.matches('[data-approve-all]')) {
                 if (await ask(`Zatwierdzić ${P.weeks.length} tygodni ? Pojazdy klientów zostaną zapisane na dni wyjazdu (bez zmiany wyborów zrobionych ręcznie w Dniu wysyłki).`, 'Zatwierdź')) {
                     await api('/ajax/logistics/plan/approve', 'POST', { week_start: null });
@@ -353,7 +364,7 @@
             <div class="lp-scroll"><table class="lp-fc"><thead><tr><th>Klient</th><th class="n">Śr. 3 mies.</th><th class="n">Wsp. N-1</th>${head}</tr></thead>
             <tbody>${rows || `<tr><td colspan="${weeks.length + 3}" class="at-empty">Brak klientów z wysyłkami w ostatnich 3 miesiącach.</td></tr>`}</tbody>
             <tfoot><tr><th>Dodatkowe palety<small>święta, akcje — % prognozy</small></th><td></td><td></td>${ev}</tr>
-                <tr><th>Święta<small>${P.params.departure_country} wyjazd · ${P.params.delivery_country} dostawa</small></th><td></td><td></td>${hol}</tr>
+                <tr><th>Święta<small>${P.params.departure_country} wyjazd · ${P.params.delivery_country} dostawa${transit() ? ' · ' + transit() + ' przejazd' : ''}</small></th><td></td><td></td>${hol}</tr>
                 <tr class="lp-total"><th>Razem palet<small>miejsca w dostępnych ciężarówkach</small></th><td></td><td></td>${tot}</tr></tfoot></table></div>
             <p class="lp-hint">Palety tygodnia = palety tego samego tygodnia rok temu (N-1) × współczynnik klienta (pusty = trend : średnio na tydzień w ostatnich 3 miesiącach ÷ te same tygodnie rok temu) ;
             bez N-1 w tym tygodniu : średnia z ostatnich ${P.params.avg_weeks} tygodni. Zamówienia złożone na tydzień zastępują prognozę. Palety liczone jak w Dniu wysyłki (karta produktu : kartony na paletę, palety mieszane).
@@ -400,7 +411,7 @@
         const hol = P.holidays.map(h => {
             const act = h.skipped ? `<button type="button" class="btn btn-outline-secondary btn-sm" data-hol="${h.date}|${h.country}|remove">Przywróć</button>`
                 : (h.source === 'manual' ? `<button type="button" class="btn btn-outline-danger btn-sm" data-hol="${h.date}|${h.country}|remove">Usuń</button>`
-                    : `<button type="button" class="btn btn-outline-secondary btn-sm" data-hol="${h.date}|${h.country}|skip">Pracujemy</button>`);
+                    : `<button type="button" class="btn btn-outline-secondary btn-sm" data-hol="${h.date}|${h.country}|skip">${(P.params.transit_countries || []).includes(h.country) ? 'Jedziemy' : 'Pracujemy'}</button>`);
             return `<tr class="${h.skipped ? 'lp-dim' : ''}"><td>${wd(h.date)} ${dm(h.date)}</td><td><span class="lp-hol">${h.country}</span></td>
                 <td>${esc(h.name)}${h.skipped ? ' <small>(pominięte)</small>' : (h.source === 'manual' ? ' <small>(dodane)</small>' : '')}</td><td class="n">${act}</td></tr>`;
         }).join('');
@@ -408,12 +419,12 @@
             <td class="n"><button type="button" class="btn btn-outline-danger btn-sm" data-abs="${a.id}" aria-label="Usuń urlop ${esc(a.employee)}"><i class="bi bi-trash"></i></button></td></tr>`).join('');
         view.innerHTML = `<div class="lp-cols">
             <div class="lp-card"><h4>Wyjazd w tygodniu</h4><p class="lp-hint">Zwykle ${DAYS[P.params.ship_weekday]} ; dostawa = wyjazd + ${P.params.delivery_days} dz. Gdy w dniu wyjazdu święto ${P.params.departure_country}
-                albo w dniu dostawy święto ${P.params.delivery_country} (lub niedziela) — wyjazd przesunięty sam (najpierw wcześniej w tygodniu).</p>
+                albo w dniu dostawy święto ${P.params.delivery_country} (lub niedziela)${transit() ? `, albo po drodze święto ${transit()} (zakaz ruchu ciężarówek od wyjazdu do dostawy)` : ''} — wyjazd przesunięty sam (najpierw wcześniej w tygodniu).</p>
                 <div class="lp-scroll"><table class="lp-tbl"><thead><tr><th>Tydz.</th><th>Wyjazd</th><th>Dostawa</th><th>Uwagi</th></tr></thead><tbody>${weeks}</tbody></table></div></div>
-            <div><div class="lp-card"><h4>Święta i dni wolne</h4><p class="lp-hint">Święta ustawowe ${P.params.departure_country} i ${P.params.delivery_country} liczone same. « Pracujemy » : święto pominięte w planie.</p>
+            <div><div class="lp-card"><h4>Święta i dni wolne</h4><p class="lp-hint">Święta ustawowe ${countriesText()} liczone same${transit() ? ` (${transit()} : święta ogólnokrajowe — regionalne, np. Boże Ciało w NRW, dodaj niżej)` : ''}. « Pracujemy » / « Jedziemy » : święto pominięte w planie.</p>
                 <table class="lp-tbl"><tbody>${hol || '<tr><td class="at-empty">Brak świąt w tych tygodniach.</td></tr>'}</tbody></table>
                 <form class="lp-form" data-hol-add><input class="form-control" type="date" name="day" required aria-label="Dzień"><select class="form-select" name="country" aria-label="Kraj">
-                    <option value="${P.params.departure_country}">${P.params.departure_country} (wyjazd)</option><option value="${P.params.delivery_country}">${P.params.delivery_country} (dostawa)</option></select>
+                    <option value="${P.params.departure_country}">${P.params.departure_country} (wyjazd)</option><option value="${P.params.delivery_country}">${P.params.delivery_country} (dostawa)</option>${(P.params.transit_countries || []).map(c => `<option value="${c}">${c} (przejazd)</option>`).join('')}</select>
                     <input class="form-control" name="name" maxlength="80" placeholder="np. zamknięcie zakładu" required aria-label="Nazwa"><button type="submit" class="btn btn-outline-primary lp-big">Dodaj dzień wolny</button></form></div>
             <div class="lp-card"><h4>Urlopy kierowców</h4><p class="lp-hint">Ciężarówka kierowcy na urlopie nie jedzie w dniu wyjazdu — na Tablicy ⚙ : kierowca na zastępstwo.</p>
                 <table class="lp-tbl"><tbody>${abs || '<tr><td class="at-empty">Brak urlopów.</td></tr>'}</tbody></table>

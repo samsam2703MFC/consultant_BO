@@ -82,6 +82,17 @@ final class LogisticsPlanRepository extends WorkshopRepository
             $this->all('SELECT week_start, id_customer, pallets, id_carrier_vehicle FROM n_logistics_plan_load WHERE week_start BETWEEN ? AND ?', [$from, $to]));
     }
 
+    /** « Wszystko do rozplanowania » : ciężarówki zdjęte w tygodniach (palety wpisane ręcznie zostają). @return int klientów zdjętych */
+    public function clearVehicles(array $weeks): int
+    {
+        if (!$weeks) return 0;
+        $in = implode(', ', array_fill(0, count($weeks), '?'));
+        $st = $this->db->prepare("UPDATE n_logistics_plan_load SET id_carrier_vehicle = NULL WHERE id_carrier_vehicle IS NOT NULL AND week_start IN ({$in})");
+        $st->execute($weeks);
+        $this->db->prepare("DELETE FROM n_logistics_plan_load WHERE pallets IS NULL AND id_carrier_vehicle IS NULL AND week_start IN ({$in})")->execute($weeks);
+        return $st->rowCount();
+    }
+
     /** Palety i / albo ciężarówka klienta w tygodniu (tylko podane pola) ; pusty wiersz usunięty. */
     public function saveLoad(string $week, int $customerId, array $data, ?int $userId): void
     {
@@ -233,12 +244,25 @@ final class LogisticsPlanRepository extends WorkshopRepository
      */
     public function planAssignment(string $date, int $customerId, int $vehicleId, ?int $userId): bool
     {
-        $row = $this->all('SELECT vehicle_set FROM n_shipping_assignment WHERE ship_date = ? AND id_customer = ?', [$date, $customerId])[0] ?? null;
-        if ($row !== null && (int) $row['vehicle_set']) return false;
-        $this->db->prepare('INSERT INTO n_shipping_assignment (ship_date, id_customer, id_tour, tour_set, id_carrier_vehicle, vehicle_set, stop_order, updated_by)
-            VALUES (?, ?, NULL, 0, ?, 1, NULL, ?)
-            ON DUPLICATE KEY UPDATE id_carrier_vehicle = VALUES(id_carrier_vehicle), vehicle_set = 1, updated_by = VALUES(updated_by)')
+        $row = $this->all('SELECT vehicle_set, plan_set FROM n_shipping_assignment WHERE ship_date = ? AND id_customer = ?', [$date, $customerId])[0] ?? null;
+        if ($row !== null && (int) $row['vehicle_set'] && !(int) $row['plan_set']) return false;
+        $this->db->prepare('INSERT INTO n_shipping_assignment (ship_date, id_customer, id_tour, tour_set, id_carrier_vehicle, vehicle_set, plan_set, stop_order, updated_by)
+            VALUES (?, ?, NULL, 0, ?, 1, 1, NULL, ?)
+            ON DUPLICATE KEY UPDATE id_carrier_vehicle = VALUES(id_carrier_vehicle), vehicle_set = 1, plan_set = 1, updated_by = VALUES(updated_by)')
             ->execute([$date, $customerId, $vehicleId, $userId]);
         return true;
+    }
+
+    /**
+     * Pojazdy dnia zapisane z planu (plan_set = 1) w dniach od $from do $to zdjęte : dzień wraca do trasy klienta ;
+     * wybory ręczne w Dniu wysyłki / Załadunku bez zmian. @return int pozycji zdjętych
+     */
+    public function clearPlanAssignments(string $from, string $to): int
+    {
+        $st = $this->db->prepare('DELETE FROM n_shipping_assignment WHERE plan_set = 1 AND tour_set = 0 AND stop_order IS NULL AND ship_date BETWEEN ? AND ?');
+        $st->execute([$from, $to]);
+        $up = $this->db->prepare('UPDATE n_shipping_assignment SET id_carrier_vehicle = NULL, vehicle_set = 0, plan_set = 0 WHERE plan_set = 1 AND ship_date BETWEEN ? AND ?');
+        $up->execute([$from, $to]);
+        return $st->rowCount() + $up->rowCount();
     }
 }

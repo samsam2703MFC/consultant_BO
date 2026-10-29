@@ -21,6 +21,7 @@ return function(RouteCollector $r) {
     $r->addRoute('DELETE', '/ajax/logistics/plan/absences/{id:\d+}', ['controller' => $pl, 'method' => 'deleteAbsence']);
     $r->addRoute('PUT', '/ajax/logistics/plan/holidays', ['controller' => $pl, 'method' => 'saveHoliday']);
     $r->addRoute('POST', '/ajax/logistics/plan/auto', ['controller' => $pl, 'method' => 'autoDispatch']);
+    $r->addRoute('POST', '/ajax/logistics/plan/reset', ['controller' => $pl, 'method' => 'resetLoads']);
     $r->addRoute('POST', '/ajax/logistics/plan/approve', ['controller' => $pl, 'method' => 'approve']);
     $r->addRoute('GET', '/logistics/vehicles', ['controller' => $c, 'method' => 'vehicles']);
     $r->addRoute('GET', '/logistics/tours', ['controller' => $c, 'method' => 'tours']);

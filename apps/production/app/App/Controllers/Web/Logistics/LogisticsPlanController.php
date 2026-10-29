@@ -90,6 +90,16 @@ final class LogisticsPlanController extends BaseController
         });
     }
 
+    public function resetLoads()
+    {
+        return $this->respond(function () {
+            $d = $this->plans->resetLoads($this->userId(), $this->from());
+            $r = $d['result'];
+            return ['message' => $r['cleared'] ? "Do rozplanowania : {$r['cleared']} × klient zdjęty z ciężarówki ({$r['weeks']} tyg.)"
+                . ($r['unapproved'] ? ", {$r['unapproved']} tyg. do ponownego zatwierdzenia." : '.') : 'Nikt nie był na ciężarówce — wszystko już do rozplanowania.', 'data' => $d];
+        });
+    }
+
     public function copyWeek($week)
     {
         return $this->respond(function () use ($week) {

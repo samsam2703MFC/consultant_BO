@@ -66,6 +66,22 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Planning logistique : Allemagne en transit, « Wszystko do rozplanowania » (migration 128, 29/10/2026)
+
+- **Allemagne (DE) = pays traversé** : le camion PL → BE passe par l'Allemagne, où les camions n'ont pas le droit de
+  rouler les jours fériés. Paramètre `logistics.plan_transit_countries` (défaut `DE`, liste séparée par des virgules,
+  vide = aucun) : un férié DE entre le jour de départ et le jour de livraison décale le départ comme un férié PL / BE
+  (motif « przejazd 18.11 — … (DE, zakaz ruchu ciężarówek) »). Fériés DE calculés : seulement les fériés nationaux
+  (1.01, Vendredi saint, lundi de Pâques, 1.05, Ascension, lundi de Pentecôte, 3.10, 25.12, 26.12) ; les fériés
+  régionaux (Fête-Dieu, Toussaint en NRW…) s'ajoutent à la main (onglet « Święta i kierowcy », pays « DE (przejazd) »),
+  « Jedziemy » ignore un férié DE. `n_logistics_holiday.country` accepte PL, BE, DE.
+- **« Wszystko do rozplanowania »** (onglet Tablica, à côté de « Rozdziel automatycznie ») : tous les clients enlevés des
+  camions dans les semaines dont le départ est aujourd'hui ou plus tard (`n_logistics_plan_load.id_carrier_vehicle` →
+  NULL, palettes saisies à la main conservées) ; semaines validées → à revalider.
+- `n_shipping_assignment.plan_set` : 1 = véhicule du jour écrit par la validation du plan. Une nouvelle validation peut
+  le changer et « Wszystko do rozplanowania » l'enlève (le jour revient à la tournée du client) ; un choix fait à la
+  main dans Dzień wysyłki ou Załadunek remet `plan_set` à 0 et n'est jamais touché par le plan.
+
 ### Recette d'un produit = 1 carton, retours du testeur (migration 127, 29/10/2026)
 
 - **Recette d'un produit fini = 1 carton** (le produit vendu entier) : le calcul de recette et les marges la lisent

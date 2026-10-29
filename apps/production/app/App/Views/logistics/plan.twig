@@ -9,7 +9,7 @@
         <div class="page-title">
             <h3><i class="bi bi-calendar-range"></i> Plan logistyki — {{ plan.params.weeks }} tygodni</h3>
             <p class="text-subtitle text-muted">Palety klienta na tydzień : ten sam tydzień rok temu (N-1) × współczynnik, bez N-1 średnia z 3 miesięcy ;
-                zamówienia już złożone zamiast prognozy. Klientów przeciągasz na ciężarówki ; święta PL / BE i urlopy kierowców liczone same.</p>
+                zamówienia już złożone zamiast prognozy. Klientów przeciągasz na ciężarówki ; święta PL / BE (i DE na trasie : zakaz ruchu ciężarówek) oraz urlopy kierowców liczone same.</p>
         </div>
         <div class="lp-nav" data-nav></div>
     </div>
@@ -17,7 +17,7 @@
 
 {% block content %}
 {# Plan logistyki [200] : Tablica (ciężarówki × tygodnie, przeciągnij klientów), Prognoza (klienci × tygodnie, współczynnik,
-   dodatkowe palety), Święta i kierowcy (wyjazd tygodnia, dni wolne PL / BE, urlopy). Dane : /ajax/logistics/plan. #}
+   dodatkowe palety), Święta i kierowcy (wyjazd tygodnia, dni wolne PL / BE / DE — przejazd [202], urlopy). Dane : /ajax/logistics/plan. #}
 <section class="section lp" id="logisticsPlan">
     <div class="lp-tabs" role="tablist" aria-label="Widok planu">
         <button type="button" role="tab" data-tab="board"><i class="bi bi-truck"></i> Tablica</button>

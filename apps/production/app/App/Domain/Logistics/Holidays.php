@@ -4,12 +4,14 @@ declare(strict_types=1);
 namespace App\Domain\Logistics;
 
 /**
- * Święta ustawowe (dni wolne od pracy) w Polsce (wyjazd, produkcja) i w Belgii (dostawa u klientów) [200].
- * PL : także Wigilia (od 2025). Święta ruchome od Wielkanocy (algorytm gregoriański, bez rozszerzenia calendar).
+ * Święta ustawowe (dni wolne od pracy) w Polsce (wyjazd, produkcja), w Belgii (dostawa u klientów) [200]
+ * i w Niemczech (przejazd : zakaz ruchu ciężarówek w święta) [202].
+ * PL : także Wigilia (od 2025). DE : tylko święta ogólnokrajowe (regionalne, np. Boże Ciało w NRW, dodaje się ręcznie).
+ * Święta ruchome od Wielkanocy (algorytm gregoriański, bez rozszerzenia calendar).
  */
 final class Holidays
 {
-    public const COUNTRIES = ['PL', 'BE'];
+    public const COUNTRIES = ['PL', 'BE', 'DE'];
 
     /** @return array<string, string> data Y-m-d => nazwa (po polsku) */
     public static function forYear(int $year, string $country): array
@@ -44,6 +46,17 @@ final class Holidays
                 "{$year}-11-01" => 'Wszystkich Świętych',
                 "{$year}-11-11" => 'Rocznica rozejmu (Armistice)',
                 "{$year}-12-25" => 'Boże Narodzenie',
+            ],
+            'DE' => [
+                "{$year}-01-01" => 'Nowy Rok',
+                $e(-2) => 'Wielki Piątek',
+                $e(1) => 'Poniedziałek Wielkanocny',
+                "{$year}-05-01" => 'Święto Pracy',
+                $e(39) => 'Wniebowstąpienie',
+                $e(50) => 'Poniedziałek Zielonych Świątek',
+                "{$year}-10-03" => 'Dzień Jedności Niemiec',
+                "{$year}-12-25" => 'Boże Narodzenie',
+                "{$year}-12-26" => 'Drugi dzień Bożego Narodzenia',
             ],
             default => [],
         };

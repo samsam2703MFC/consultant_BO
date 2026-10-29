@@ -211,7 +211,7 @@ final class LogisticsPlanService
     {
         $day = self::date((string) ($input['day'] ?? ''));
         $country = strtoupper(trim((string) ($input['country'] ?? '')));
-        if (!in_array($country, Holidays::COUNTRIES, true)) throw new CustomException('Kraj : PL albo BE.', 'errors', 422, ['fields' => ['country' => 'PL albo BE.']]);
+        if (!in_array($country, Holidays::COUNTRIES, true)) throw new CustomException('Kraj : ' . implode(', ', Holidays::COUNTRIES) . '.', 'errors', 422, ['fields' => ['country' => implode(', ', Holidays::COUNTRIES) . '.']]);
         if (filter_var($input['remove'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
             $this->repo->deleteHoliday($day, $country);
             return $this->plan($from);
@@ -282,6 +282,35 @@ final class LogisticsPlanService
         return $out;
     }
 
+    /**
+     * « Wszystko do rozplanowania » [202] : wszyscy klienci zdjęci z ciężarówek w tygodniach planu od dziś (wyjazd ≥ dziś) ;
+     * palety wpisane ręcznie zostają. Tygodnie zatwierdzone : do ponownego zatwierdzenia, pojazdy dnia zapisane z planu
+     * zdjęte (wybory ręczne w Dniu wysyłki bez zmian).
+     */
+    public function resetLoads(?int $userId, ?string $from = null): array
+    {
+        $today = $this->today ?? date('Y-m-d');
+        $plan = $this->plan($from);
+        $weeks = array_values(array_filter($plan['weeks'], fn($w) => $w['ship_date'] >= $today));
+        $cleared = 0;
+        $days = 0;
+        $unapproved = 0;
+        if ($weeks) {
+            $this->tx->execute(function () use ($weeks, $today, &$cleared, &$days, &$unapproved) {
+                $cleared = $this->repo->clearVehicles(array_column($weeks, 'week_start'));
+                foreach ($weeks as $w) {
+                    if ($w['approved_at'] === null) continue;
+                    $this->repo->unapprove($w['week_start']);
+                    $unapproved++;
+                }
+                $days = $this->repo->clearPlanAssignments(max($today, $weeks[0]['week_start']), date('Y-m-d', strtotime(end($weeks)['week_start'] . ' +6 days')));
+            });
+        }
+        $out = $this->plan($from);
+        $out['result'] = ['cleared' => $cleared, 'weeks' => count($weeks), 'unapproved' => $unapproved, 'days' => $days];
+        return $out;
+    }
+
     /** Układ tygodnia (klient → ciężarówka) na następne tygodnie planu — tylko klienci jeszcze bez ciężarówki. */
     public function copyWeek(string $week, ?int $userId, ?string $from = null): array
     {
@@ -349,6 +378,7 @@ final class LogisticsPlanService
         $coefDefault = $this->param('logistics.plan_coef_default', '1', self::COEF_MIN, self::COEF_MAX);
         $depCountry = strtoupper($this->params->get('logistics.plan_departure_country', 'PL'));
         $delCountry = strtoupper($this->params->get('logistics.plan_delivery_country', 'BE'));
+        $transit = $this->transitCountries([$depCountry, $delCountry]);
         $defaultPlaces = max(1, (int) $this->params->get('logistics.default_pallet_places', '33'));
 
         $weeks = [];
@@ -395,17 +425,17 @@ final class LogisticsPlanService
 
         // Tygodnie : święta, wyjazd, wydarzenie.
         $manualHolidays = $this->repo->holidays($weeks[0], date('Y-m-d', strtotime($end . ' +7 days')));
-        $holidays = Holidays::between($weeks[0], date('Y-m-d', strtotime($end . ' +7 days')), array_values(array_unique([$depCountry, $delCountry])), $manualHolidays);
+        $holidays = Holidays::between($weeks[0], date('Y-m-d', strtotime($end . ' +7 days')), array_values(array_unique([$depCountry, $delCountry, ...$transit])), $manualHolidays);
         $saved = $this->repo->weeks($weeks[0], end($weeks));
         $events = $this->repo->events();
         $weekRows = [];
         foreach ($weeks as $ws) {
             $row = $saved[$ws] ?? null;
-            [$ship, $reason, $stuck] = $this->shipDate($ws, $shipWeekday, $deliveryDays, $holidays, $depCountry, $delCountry);
+            [$ship, $reason, $stuck] = $this->shipDate($ws, $shipWeekday, $deliveryDays, $holidays, $depCountry, $delCountry, $transit);
             $manual = $row !== null && $row['ship_date'] !== null;
             $shipDate = $manual ? $row['ship_date'] : $ship;
             $warnings = [];
-            if ($manual && ($why = $this->blocked($shipDate, $deliveryDays, $holidays, $depCountry, $delCountry)) !== null) $warnings[] = 'Wyjazd ' . self::dm($shipDate) . ' : ' . $why . '.';
+            if ($manual && ($why = $this->blocked($shipDate, $deliveryDays, $holidays, $depCountry, $delCountry, $transit)) !== null) $warnings[] = 'Wyjazd ' . self::dm($shipDate) . ' : ' . $why . '.';
             if (!$manual && $stuck) $warnings[] = $reason . '.';
             $hol = [];
             for ($d = 0; $d < 7; $d++) {
@@ -536,13 +566,13 @@ final class LogisticsPlanService
             'range' => ['from' => $weeks[0], 'to' => $end, 'prev' => date('Y-m-d', strtotime($weeks[0] . ' -4 weeks')), 'next' => date('Y-m-d', strtotime($weeks[0] . ' +4 weeks')),
                 'current' => $current, 'default_start' => self::monday(date('Y-m-d', strtotime($today . ' +7 days')))],
             'params' => ['weeks' => $n, 'ship_weekday' => $shipWeekday, 'delivery_days' => $deliveryDays, 'avg_weeks' => $avgWeeks, 'coef_default' => $coefDefault,
-                'departure_country' => $depCountry, 'delivery_country' => $delCountry, 'default_places' => $defaultPlaces],
+                'departure_country' => $depCountry, 'delivery_country' => $delCountry, 'transit_countries' => $transit, 'default_places' => $defaultPlaces],
             'weeks' => $rows,
             'customers' => $customers,
             'vehicles' => $vehicles,
             'drivers' => array_values(array_filter($drivers, fn($d) => $d['active'])),
             'absences' => array_map(fn($a) => $a + ['employee' => $drivers[$a['id_employee']]['name'] ?? ('#' . $a['id_employee'])], $this->repo->absences($today, date('Y-m-d', strtotime($end . ' +1 year')))),
-            'holidays' => $this->holidayList($weeks[0], $end, [$depCountry, $delCountry], $holidays, $manualHolidays),
+            'holidays' => $this->holidayList($weeks[0], $end, [$depCountry, $delCountry, ...$transit], $holidays, $manualHolidays),
             'events' => array_values(array_filter($events, fn($e) => $e['yearly'] || ($e['week_start'] >= $weeks[0] && $e['week_start'] <= end($weeks)))),
             'kpis' => [
                 'avg' => $rows ? round(array_sum($totals) / count($totals), 1) : 0.0, 'peak' => $rows ? $rows[$peak]['pallets'] : 0, 'peak_week' => $rows ? $rows[$peak]['iso_week'] : null,
@@ -572,30 +602,48 @@ final class LogisticsPlanService
      * Wyjazd domyślny tygodnia : zwykły dzień, a gdy zablokowany (święto wyjazdu, święto / niedziela w dniu dostawy) —
      * najbliższy wcześniejszy dzień roboczy w tygodniu, potem późniejszy. @return array{0:string, 1:?string, 2:bool} data, powód, brak wolnego dnia
      */
-    private function shipDate(string $monday, int $weekday, int $deliveryDays, array $holidays, string $dep, string $del): array
+    private function shipDate(string $monday, int $weekday, int $deliveryDays, array $holidays, string $dep, string $del, array $transit = []): array
     {
         $default = date('Y-m-d', strtotime($monday . ' +' . ($weekday - 1) . ' days'));
-        $why = $this->blocked($default, $deliveryDays, $holidays, $dep, $del);
+        $why = $this->blocked($default, $deliveryDays, $holidays, $dep, $del, $transit);
         if ($why === null) return [$default, null, false];
         $order = [];
         for ($d = $weekday - 1; $d >= 1; $d--) $order[] = $d;
         for ($d = $weekday + 1; $d <= 5; $d++) $order[] = $d;
         foreach ($order as $d) {
             $day = date('Y-m-d', strtotime($monday . ' +' . ($d - 1) . ' days'));
-            if ($this->blocked($day, $deliveryDays, $holidays, $dep, $del) === null) return [$day, self::dm($default) . ' : ' . $why . ' → wyjazd ' . self::weekday($day) . ' ' . self::dm($day), false];
+            if ($this->blocked($day, $deliveryDays, $holidays, $dep, $del, $transit) === null) return [$day, self::dm($default) . ' : ' . $why . ' → wyjazd ' . self::weekday($day) . ' ' . self::dm($day), false];
         }
         return [$default, self::dm($default) . ' : ' . $why . ' — brak wolnego dnia w tym tygodniu', true];
     }
 
-    /** Powód, dla którego dzień nie nadaje się na wyjazd, albo null. */
-    private function blocked(string $day, int $deliveryDays, array $holidays, string $dep, string $del): ?string
+    /**
+     * Powód, dla którego dzień nie nadaje się na wyjazd, albo null. Kraje przejazdu (DE) : święto od dnia wyjazdu
+     * do dnia dostawy = zakaz ruchu ciężarówek po drodze [202].
+     */
+    private function blocked(string $day, int $deliveryDays, array $holidays, string $dep, string $del, array $transit = []): ?string
     {
         if ((int) date('N', strtotime($day)) >= 6) return 'weekend';
         if (isset($holidays[$day][$dep])) return $holidays[$day][$dep] . ' (' . $dep . ')';
         $delivery = date('Y-m-d', strtotime($day . " +{$deliveryDays} days"));
         if (isset($holidays[$delivery][$del])) return 'dostawa ' . self::dm($delivery) . ' — ' . $holidays[$delivery][$del] . ' (' . $del . ')';
+        for ($i = 0; $i <= $deliveryDays; $i++) {
+            $d = date('Y-m-d', strtotime($day . " +{$i} days"));
+            foreach ($transit as $c) if (isset($holidays[$d][$c])) return 'przejazd ' . self::dm($d) . ' — ' . $holidays[$d][$c] . ' (' . $c . ', zakaz ruchu ciężarówek)';
+        }
         if ((int) date('N', strtotime($delivery)) === 7) return 'dostawa w niedzielę';
         return null;
+    }
+
+    /** Kraje przejazdu z parametru (np. « DE »), bez kraju wyjazdu i dostawy. @return list<string> */
+    private function transitCountries(array $exclude): array
+    {
+        $raw = strtoupper((string) $this->params->get('logistics.plan_transit_countries', 'DE'));
+        $out = [];
+        foreach (preg_split('/[\s,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY) as $c) {
+            if (in_array($c, Holidays::COUNTRIES, true) && !in_array($c, $exclude, true) && !in_array($c, $out, true)) $out[] = $c;
+        }
+        return $out;
     }
 
     /** Wydarzenie tygodnia : wpisane na ten tydzień albo powtarzane co roku (ten sam tydzień ISO, najnowsze). */

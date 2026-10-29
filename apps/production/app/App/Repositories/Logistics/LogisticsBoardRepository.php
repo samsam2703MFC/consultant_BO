@@ -262,7 +262,7 @@ final class LogisticsBoardRepository extends WorkshopRepository
     public function setVehicleStop(string $date, int $customerId, ?int $vehicleId, ?int $stop, ?int $userId): void
     {
         $this->db->prepare('INSERT INTO n_shipping_assignment (ship_date, id_customer, id_tour, tour_set, id_carrier_vehicle, vehicle_set, stop_order, updated_by) VALUES (?, ?, NULL, 0, ?, 1, ?, ?)
-                            ON DUPLICATE KEY UPDATE id_carrier_vehicle = VALUES(id_carrier_vehicle), vehicle_set = 1, stop_order = VALUES(stop_order), updated_by = VALUES(updated_by)')
+                            ON DUPLICATE KEY UPDATE id_carrier_vehicle = VALUES(id_carrier_vehicle), vehicle_set = 1, plan_set = 0, stop_order = VALUES(stop_order), updated_by = VALUES(updated_by)')
             ->execute([$date, $customerId, $vehicleId, $stop, $userId]);
     }
 

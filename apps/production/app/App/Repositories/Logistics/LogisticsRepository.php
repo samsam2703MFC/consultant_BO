@@ -276,7 +276,7 @@ final class LogisticsRepository extends WorkshopRepository
         $this->db->prepare(
             'INSERT INTO n_shipping_assignment (ship_date, id_customer, id_tour, tour_set, id_carrier_vehicle, vehicle_set, stop_order, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE id_tour = VALUES(id_tour), tour_set = VALUES(tour_set), id_carrier_vehicle = VALUES(id_carrier_vehicle),
-                                     vehicle_set = VALUES(vehicle_set), stop_order = VALUES(stop_order), updated_by = VALUES(updated_by)'
+                                     vehicle_set = VALUES(vehicle_set), plan_set = 0, stop_order = VALUES(stop_order), updated_by = VALUES(updated_by)'
         )->execute([$date, $customerId, $tourSet ? $tourId : null, $tourSet ? 1 : 0, $vehicleSet ? $vehicleId : null, $vehicleSet ? 1 : 0, $stop, $userId]);
     }
 
