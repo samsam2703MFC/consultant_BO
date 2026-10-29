@@ -3,7 +3,7 @@
 Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y a été déplacée le 24/10/2026 par `deploy/server.sh`, données gardées).
 
 - **121 tables d'origine** de l'ERP SL Food : noms inchangés (131 avant le nettoyage du 24/10/2026, qui a supprimé les 10 copies de sauvegarde).
-- **156 tables ajoutées** pendant le développement (29/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
+- **163 tables ajoutées** pendant le développement (29/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
 
 ## Installer / intégrer
 
@@ -65,6 +65,32 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   en Belgique (magasin ÷ usine) avec les seuils de `n_store_price_config` (× 2,5 / 2,2).
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
+
+### Planning logistique sur 12 semaines (migration 126, 29/10/2026)
+
+Page Logistyka i pakowanie › Ciężarówki : plan i tydzień › **Plan 12 tygodni** (`/logistics/plan`), trois onglets :
+tableau camions × semaines (clients glissés sur un camion de la même semaine), prévision (clients × semaines), fériés
+et chauffeurs.
+
+- **Palettes d'un client par semaine** (comptées comme la journée d'expédition : `PalletCalculator` sur chaque envoi
+  client + jour, puis somme de la semaine) : commandes déjà passées pour la semaine ; sinon palettes saisies à la main ;
+  sinon palettes de la même semaine ISO l'an dernier (N-1) × coefficient du client ; sans N-1 cette semaine-là :
+  moyenne des 13 dernières semaines (`logistics.plan_avg_weeks`, 3 mois). Coefficient = saisi
+  (`n_logistics_customer_coef`) ou tendance (moyenne par semaine avec envoi sur les 3 derniers mois ÷ mêmes semaines
+  l'an dernier, bornée 0,3–5) ou `logistics.plan_coef_default`. × palettes supplémentaires de la semaine (événement en %,
+  éventuellement répété chaque année sur la même semaine ISO). Arrondi au-dessus avec une tolérance de 0,2 palette.
+  Clients du plan : envois dans les 3 derniers mois, ou commande / saisie dans les semaines du plan.
+- **Départ** : jour habituel (`logistics.plan_ship_weekday`, mardi), décalé automatiquement (d'abord plus tôt dans la
+  semaine) quand c'est férié au pays de départ (`logistics.plan_departure_country`, PL) ou quand la livraison
+  (départ + `logistics.plan_delivery_days`) tombe un férié au pays de livraison (BE) ou un dimanche. Fériés légaux PL
+  (dont la Wigilia depuis 2025) et BE calculés (`App\Domain\Logistics\Holidays`, Pâques comprise).
+- **Tables** : `n_logistics_plan_week` (départ choisi à la main, validation), `n_logistics_plan_load` (client × semaine :
+  palettes saisies, camion), `n_logistics_plan_vehicle` (camion × semaine : chauffeur de remplacement, indisponible),
+  `n_logistics_event` (palettes supplémentaires %, `yearly`), `n_logistics_customer_coef`, `n_logistics_absence`
+  (congés des chauffeurs `n_prod_employee`), `n_logistics_holiday` (jour chômé ajouté ou férié légal ignoré).
+- **Validation d'une semaine** : le camion de chaque client est écrit dans `n_shipping_assignment` pour le jour de
+  départ (Dzień wysyłki, Załadunek) — sauf si un camion y a déjà été choisi à la main. Toute modification d'une semaine
+  validée la remet « à valider ».
 
 ### Nouveau produit : nos recettes dans « Nasz surowiec » (migration 125, 29/10/2026)
 

@@ -85,6 +85,12 @@ final class PageTabs
             ['/logistics/notices', 'Powiadomienia klientów', 'bi-chat-dots'],
             ['/logistics/deliveries', 'Potwierdzenia dostaw', 'bi-clipboard2-check'],
         ]],
+        // Ciężarówki : plan na 12 tygodni (prognoza palet, klienci na ciężarówkach, święta, urlopy kierowców) [200] i tydzień
+        // z zamówień (ciężarówki dzień po dniu, wypełnienie).
+        'trucks' => ['label' => 'Ciężarówki : plan i tydzień', 'section' => 'Logistyka i pakowanie', 'icon' => 'bi-calendar-range', 'tabs' => [
+            ['/logistics/plan', 'Plan 12 tygodni', 'bi-calendar-range'],
+            ['/logistics/week', 'Tydzień : ciężarówki', 'bi-calendar-week'],
+        ]],
         // Jedna lista wysyłek z filtrem rodzaju dokumentu (dawniej Wysyłki, Dokumenty transportowe i Archiwum WZ / CMR / WDT / różnic)
         // oraz archiwum list kompletacyjnych ; pozycja « Wysyłka › Wysyłki i dokumenty » w railu.
         'shipments' => ['label' => 'Wysyłki i dokumenty', 'section' => 'Logistyka i pakowanie', 'icon' => 'bi-truck', 'tabs' => [

@@ -8,7 +8,7 @@ declare(strict_types=1);
  *  - « Oznacz jako wysłane i powiadom » : même règle ; livraison confirmée par le chauffeur → « Zrealizowane » ;
  *  - file des avis : sans clé valable rien ne part, un échec est reporté (adresse locale fermée, aucun envoi externe) ;
  *  - avis de livraison : un seul par client, jour et canal (automate et page), « wyślij ponownie » seulement à la main ;
- *  - onglets : Dzień wysyłki (sans /logistics/week), Magazyn, Opakowania.
+ *  - onglets : Dzień wysyłki (sans /logistics/week, onglet « Ciężarówki » avec le plan 12 tygodni [200]), Magazyn, Opakowania.
  *
  *   php tests/audit2_lot_b_test.php
  *
@@ -34,7 +34,8 @@ function expectLotB(bool $condition, string $message): void
 
 // --- Sans base : onglets et règle des avis de livraison
 $tab = fn(string $p) => ($g = PageTabs::forPath($p)) ? $g['key'] . ':' . (array_values(array_filter($g['tabs'], fn($t) => $t['active']))[0]['url'] ?? '') : null;
-expectLotB($tab('/logistics') === 'shipping_day:/logistics' && $tab('/logistics/week') === null && $tab('/logistics/tours') === null
+expectLotB($tab('/logistics') === 'shipping_day:/logistics' && $tab('/logistics/week') === 'trucks:/logistics/week' && $tab('/logistics/plan') === 'trucks:/logistics/plan'
+    && $tab('/logistics/tours') === null
     && $tab('/shipping/wizard') === 'shipping_day:/shipping/wizard' && $tab('/logistics/deliveries') === 'shipping_day:/logistics/deliveries', 'Dzień wysyłki: 5 tabs, week / tours stay apart');
 expectLotB($tab('/workshop/stock') === 'warehouse:/workshop/stock' && $tab('/workshop/stock/mts') === 'warehouse:/workshop/stock/mts'
     && $tab('/workshop/stock-movements') === 'warehouse:/workshop/stock-movements' && $tab('/workshop/products') === 'products:/workshop/products', 'Magazyn tabs');

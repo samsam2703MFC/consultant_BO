@@ -1,0 +1,36 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Plan logistyki — 12 tygodni{% endblock %}
+
+{% block head %}<link rel="stylesheet" href="{{ root }}/assets/css/logistics-plan.css?v={{ asset_v() }}">{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3><i class="bi bi-calendar-range"></i> Plan logistyki — {{ plan.params.weeks }} tygodni</h3>
+            <p class="text-subtitle text-muted">Palety klienta na tydzień : ten sam tydzień rok temu (N-1) × współczynnik, bez N-1 średnia z 3 miesięcy ;
+                zamówienia już złożone zamiast prognozy. Klientów przeciągasz na ciężarówki ; święta PL / BE i urlopy kierowców liczone same.</p>
+        </div>
+        <div class="lp-nav" data-nav></div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# Plan logistyki [200] : Tablica (ciężarówki × tygodnie, przeciągnij klientów), Prognoza (klienci × tygodnie, współczynnik,
+   dodatkowe palety), Święta i kierowcy (wyjazd tygodnia, dni wolne PL / BE, urlopy). Dane : /ajax/logistics/plan. #}
+<section class="section lp" id="logisticsPlan">
+    <div class="lp-tabs" role="tablist" aria-label="Widok planu">
+        <button type="button" role="tab" data-tab="board"><i class="bi bi-truck"></i> Tablica</button>
+        <button type="button" role="tab" data-tab="forecast"><i class="bi bi-graph-up"></i> Prognoza</button>
+        <button type="button" role="tab" data-tab="calendar"><i class="bi bi-calendar-event"></i> Święta i kierowcy</button>
+    </div>
+    <div class="lp-kpis" data-kpis></div>
+    <div data-view><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="logisticsPlanBoot">{{ boot|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include "page_components/ajax_helpers.twig" %}
+<script src="{{ root }}/assets/js/logistics/plan.js?v={{ asset_v() }}"></script>
+{% endblock %}

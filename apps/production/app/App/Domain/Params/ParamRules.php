@@ -13,6 +13,12 @@ final class ParamRules
     /** code => [min, max, entier ?] */
     public const RANGES = [
         'stock.suggest_weeks' => [1, 52, true],
+        // Plan logistyki [200]
+        'logistics.plan_weeks' => [4, 26, true],
+        'logistics.plan_ship_weekday' => [1, 5, true],
+        'logistics.plan_delivery_days' => [0, 3, true],
+        'logistics.plan_avg_weeks' => [4, 26, true],
+        'logistics.plan_coef_default' => [0.3, 5, false],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.suggest_max_weeks' => [0.5, 52, false],
         'alerts.complaint_days' => [1, 60, true],

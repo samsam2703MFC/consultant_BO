@@ -363,10 +363,12 @@
                     </a>
                 </li>
 
+                {# Ciężarówki : plan 12 tygodni [200] i tydzień z zamówień (PageTabs « trucks ») #}
+                {% set g = page_tab_groups().trucks %}
                 <li class="sidebar-item">
-                    <a href="{{ root }}/logistics/week" class="sidebar-link">
-                        <i class="bi bi-calendar-week"></i>
-                        <span>Tydzień: ciężarówki</span>
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
                     </a>
                 </li>
 
@@ -511,6 +513,9 @@
                 <li><a href="{{ root }}/tablet/packing?mode=pallets" target="_blank" rel="noopener" data-where="Logistyka i pakowanie › Tablet pakowania"><i class="bi bi-grid-3x3-gap"></i> Tablet pakowania, tryb Paletyzacja (tablette palettisation) : operator, transport, klienci, produkty zamówione / na palecie / zostało, + i klawiatura, szczegóły 1 + 2 + 32 = …, cofnij ostatnie</a></li>
                 <li><a href="{{ root }}/workshop/execution#devices" data-where="Tablety › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-link-45deg"></i> Tablet pakowania : adres /tablet/packing — każdy sparowany tablet (np. tablet grupy Pakowanie), bez PIN</a></li>
                 <li><a href="{{ root }}/logistics/loading" data-where="Logistyka i pakowanie › Załadunek ciężarówki"><i class="bi bi-truck-flatbed"></i> Załadunek ciężarówki : przeciągnij klientów na pojazd i w kolejności dostaw, palety na miejsca naczepy (pierwsza dostawa przy drzwiach), « Ułóż automatycznie »</a></li>
+                <li><a href="{{ root }}/logistics/plan" data-where="Logistyka i pakowanie › Ciężarówki : plan i tydzień › Plan 12 tygodni"><i class="bi bi-calendar-range"></i> Plan logistyki na 12 tygodni : prognoza palet na tydzień (N-1 × współczynnik, bez N-1 średnia z 3 miesięcy), klienci przeciągani na ciężarówki, rozdziel automatycznie, zatwierdź tydzień</a></li>
+                <li><a href="{{ root }}/logistics/plan#prognoza" data-where="Logistyka i pakowanie › Plan 12 tygodni › Prognoza"><i class="bi bi-graph-up"></i> Prognoza palet klientów : średnia, współczynnik N-1 (trend), dodatkowe palety na święta (Boże Narodzenie, Mikołaj, Nowy Rok) co roku</a></li>
+                <li><a href="{{ root }}/logistics/plan#swieta" data-where="Logistyka i pakowanie › Plan 12 tygodni › Święta i kierowcy"><i class="bi bi-calendar-event"></i> Święta PL i BE, dzień wyjazdu przesunięty, dni wolne (zamknięcie zakładu), urlopy kierowców, kierowca na zastępstwo</a></li>
                 <li><a href="{{ root }}/logistics/loading" data-where="Logistyka i pakowanie › Załadunek ciężarówki"><i class="bi bi-send"></i> Wyślij plan załadunku na tablet kierowcy (wersje) : kierowca odhacza palety załadowane, biuro widzi postęp</a></li>
                 <li><a href="{{ root }}/tablet/driver" data-where="Tablety › Otwórz tablet › Tablet kierowcy"><i class="bi bi-truck"></i> Tablet kierowcy : plan załadunku z biura — naczepa z miejscami palet, kolejność rozładunku, « załadowana » dotknięciem</a></li>
                 <li><a href="{{ root }}/logistics" data-where="Logistyka i pakowanie › Dzień wysyłki"><i class="bi bi-list-ol"></i> Dzień wysyłki : 7 etapów dnia po kolei — plan (trasy, pojazdy), załadunek palet, powiadomienia klientów, dokumenty WZ / CMR / WDT, KSeF i sklepy, kierowcy (wydruki, tablet), po dostawie (potwierdzenia, problemy)</a></li>

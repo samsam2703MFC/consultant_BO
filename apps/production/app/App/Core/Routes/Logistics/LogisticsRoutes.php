@@ -6,6 +6,22 @@ return function(RouteCollector $r) {
 
     $r->addRoute('GET', '/logistics', ['controller' => $c, 'method' => 'day']);
     $r->addRoute('GET', '/logistics/week', ['controller' => $c, 'method' => 'week']);
+    // Plan logistyki na 12 tygodni [200] : prognoza palet, ciężarówki (przeciągnij), święta PL / BE, urlopy kierowców.
+    $pl = App\Controllers\Web\Logistics\LogisticsPlanController::class;
+    $r->addRoute('GET', '/logistics/plan', ['controller' => $pl, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/logistics/plan', ['controller' => $pl, 'method' => 'data']);
+    $r->addRoute('PUT', '/ajax/logistics/plan/loads', ['controller' => $pl, 'method' => 'saveLoads']);
+    $r->addRoute('PUT', '/ajax/logistics/plan/weeks/{week:\d{4}-\d{2}-\d{2}}', ['controller' => $pl, 'method' => 'saveWeek']);
+    $r->addRoute('PUT', '/ajax/logistics/plan/weeks/{week:\d{4}-\d{2}-\d{2}}/vehicles/{id:\d+}', ['controller' => $pl, 'method' => 'saveVehicleWeek']);
+    $r->addRoute('POST', '/ajax/logistics/plan/weeks/{week:\d{4}-\d{2}-\d{2}}/copy', ['controller' => $pl, 'method' => 'copyWeek']);
+    $r->addRoute('PUT', '/ajax/logistics/plan/coef', ['controller' => $pl, 'method' => 'saveCoef']);
+    $r->addRoute('PUT', '/ajax/logistics/plan/events', ['controller' => $pl, 'method' => 'saveEvent']);
+    $r->addRoute('DELETE', '/ajax/logistics/plan/events/{id:\d+}', ['controller' => $pl, 'method' => 'deleteEvent']);
+    $r->addRoute('POST', '/ajax/logistics/plan/absences', ['controller' => $pl, 'method' => 'addAbsence']);
+    $r->addRoute('DELETE', '/ajax/logistics/plan/absences/{id:\d+}', ['controller' => $pl, 'method' => 'deleteAbsence']);
+    $r->addRoute('PUT', '/ajax/logistics/plan/holidays', ['controller' => $pl, 'method' => 'saveHoliday']);
+    $r->addRoute('POST', '/ajax/logistics/plan/auto', ['controller' => $pl, 'method' => 'autoDispatch']);
+    $r->addRoute('POST', '/ajax/logistics/plan/approve', ['controller' => $pl, 'method' => 'approve']);
     $r->addRoute('GET', '/logistics/vehicles', ['controller' => $c, 'method' => 'vehicles']);
     $r->addRoute('GET', '/logistics/tours', ['controller' => $c, 'method' => 'tours']);
     $r->addRoute('GET', '/logistics/loading-list', ['controller' => $c, 'method' => 'loadingList']);
