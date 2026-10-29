@@ -95,7 +95,24 @@ echo '  base=', ErpApi::config()['base'], "\n";
 // La route en ligne a mis 12,8 s à froid pour les 7 935 particuliers du magasin 2 (16 pages de 500, quatre de front).
 // D'où vient le temps, et la mémoire de PHP-FPM tient-elle une lecture d'un seul tenant (10 Mo) ? Lecture seule.
 // « vitesse » : la mesure ci-dessous ; « en-ligne » : la route après une mise en ligne ; « tout » : aussi les relevés du matin.
-$passage = 'en-ligne';
+$passage = 'fichiers';
+if ($passage === 'fichiers') {
+    // 29/10/2026 : Sam ne voit pas le choix B2B / particuliers à l'Édition. Ce que le serveur SERT, par le web comme le navigateur.
+    scTitre('les fichiers servis (dashboard du cadre d\'Édition, rail du cockpit)');
+    foreach (['dashboard/dashboard.js' => ['PM_BON_TYPES', 'data-pmbtype', 'pmBonPrechauffer', 'data-pmbfrais', 'Particuliers du magasin'],
+        'dashboard/index.html' => ['dashboard.js'], 'assets/js/promotions-vals.js' => ['embed=promos']] as $f => $mots) {
+        $ctx = stream_context_create(['http' => ['timeout' => 30, 'ignore_errors' => true, 'header' => "Cache-Control: no-cache\r\n"]]);
+        $raw = (string) @file_get_contents('http://185.180.206.46/consulant_bo/' . $f, false, $ctx);
+        $h = implode(' | ', array_filter($http_response_header ?? [], static fn ($l) => preg_match('/^(HTTP|Cache-Control|Last-Modified|ETag|Content-Length)/i', $l)));
+        printf("  %-30s %6d octets · %s\n", $f, strlen($raw), $h);
+        foreach ($mots as $m) { printf("      %-28s %s\n", $m, str_contains($raw, $m) ? 'présent' : 'ABSENT'); }
+    }
+    $disque = $dir . '/dashboard/dashboard.js';
+    printf("  sur le disque : %s · %s · modifié le %s\n", $disque, is_file($disque) ? filesize($disque) . ' octets' : 'absent', is_file($disque) ? date('Y-m-d H:i:s', filemtime($disque)) : '—');
+    echo '  PM_BON_TYPES sur le disque : ', is_file($disque) && str_contains((string) file_get_contents($disque), 'PM_BON_TYPES') ? 'présent' : 'ABSENT', "\n";
+    echo "\n=== FIN SONDE CLIENTS DU BON ===\n";
+    exit(0);
+}
 if ($passage === 'en-ligne') {
     // La sonde peut partir pendant la mise en ligne : elle attend que la route rende `ms` (#77), sept minutes au plus.
     for ($i = 0, $pret = false; $i < 28 && !$pret; $i++) {
