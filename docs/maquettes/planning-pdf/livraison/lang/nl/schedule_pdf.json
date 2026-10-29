@@ -1,0 +1,18 @@
+{
+  "title": "Rooster",
+  "whole_shop": "Hele winkel",
+  "unassigned": "Zonder sectie",
+  "time": "Uur",
+  "weekdays": [
+    "Maandag",
+    "Dinsdag",
+    "Woensdag",
+    "Donderdag",
+    "Vrijdag",
+    "Zaterdag",
+    "Zondag"
+  ],
+  "hour_unit": "u",
+  "generated": "Gegenereerd op",
+  "week": "Week"
+}

@@ -1,0 +1,18 @@
+{
+  "title": "Schedule",
+  "whole_shop": "Whole shop",
+  "unassigned": "No section",
+  "time": "Time",
+  "weekdays": [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday"
+  ],
+  "hour_unit": "h",
+  "generated": "Generated on",
+  "week": "Week"
+}

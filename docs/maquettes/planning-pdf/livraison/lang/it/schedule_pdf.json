@@ -1,0 +1,18 @@
+{
+  "title": "Pianificazione",
+  "whole_shop": "Tutto il negozio",
+  "unassigned": "Senza sezione",
+  "time": "Ora",
+  "weekdays": [
+    "Lunedì",
+    "Martedì",
+    "Mercoledì",
+    "Giovedì",
+    "Venerdì",
+    "Sabato",
+    "Domenica"
+  ],
+  "hour_unit": "h",
+  "generated": "Generato il",
+  "week": "Settimana"
+}

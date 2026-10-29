@@ -1,0 +1,18 @@
+{
+  "title": "Grafik",
+  "whole_shop": "Cały sklep",
+  "unassigned": "Bez sekcji",
+  "time": "Godz.",
+  "weekdays": [
+    "Poniedziałek",
+    "Wtorek",
+    "Środa",
+    "Czwartek",
+    "Piątek",
+    "Sobota",
+    "Niedziela"
+  ],
+  "hour_unit": "h",
+  "generated": "Wygenerowano",
+  "week": "Tydzień"
+}
