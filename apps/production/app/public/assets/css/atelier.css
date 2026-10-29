@@ -2326,4 +2326,8 @@ body.lg-kiosk #main { margin-left: 0 !important; padding-top: 12px; }
 .at-devcard-photos figcaption { font-size: 12px; margin-top: 3px; }
 .at-devcard-photos b { color: var(--at-primary); }
 .at-devcard-q td, .at-devcard-q th { font-variant-numeric: tabular-nums; }
+/* Koszt i cena [198] : koszt na sztukę, cena fabryczna, cena w sklepie. */
+.at-devcard-prices { grid-template-columns: repeat(3, minmax(0, 1fr)); font-variant-numeric: tabular-nums; }
+.at-devcard-prices div { background: var(--at-bg-2); }
+.at-devcard-prices b { font-size: 18px; font-weight: 500; }
 @media (max-width: 767px) { .at-devcard-facts { grid-template-columns: 1fr; } }

@@ -12,7 +12,8 @@ final class DevCardRepository extends WorkshopRepository
     protected string $table = 'n_dev_card';
     protected array $writable = ['id_test_product', 'status', 'source_kind', 'source_url', 'source_author', 'source_title', 'source_text', 'source_info',
         'video_url', 'name', 'id_group', 'weekly_sales', 'season_quarters', 'id_category', 'label_type', 'id_type', 'card_json', 'model', 'id_prompt', 'usage_json',
-        'generated_at', 'generation_ms', 'created_by'];
+        'generated_at', 'generation_ms', 'created_by', 'cost_json', 'yield_pcs', 'factory_coef', 'store_mult', 'store_price_eur', 'cost_pc_pln', 'cost_at',
+        'cobot', 'cobot_steps'];
 
     private const CARD = 'SELECT c.*, g.name_pl AS group_pl, g.name_fr AS group_fr, g.color AS group_color, tp.name AS product_name,
             COALESCE(d.on_tablet, 0) AS on_tablet, cp.name AS category_name, tt.name AS type_name,
@@ -140,6 +141,48 @@ final class DevCardRepository extends WorkshopRepository
     public function fileNo(int $cardId): int
     {
         return (int) ($this->all("SELECT COUNT(*) AS n FROM n_dev_card WHERE status = 'saved' AND id <= ?", [$cardId])[0]['n'] ?? 0);
+    }
+
+    // --- Koszt i cena [198] -----------------------------------------------------------------------------
+
+    /**
+     * Surowce do przypisania (bez opakowań) : jednostka bazowa, cena za jednostkę bazową (najwyższa zatwierdzona —
+     * ta sama co w kalkulacji receptur) i w ilu recepturach jest używany (remisy przy dopasowaniu nazw).
+     */
+    public function costMaterials(): array
+    {
+        return $this->all('SELECT r.id, r.name, COALESCE(u.name, \'g\') AS unit, r.price_per_unit, COALESCE(x.n, 0) AS uses
+            FROM raw_material r
+            LEFT JOIN unit u ON u.id = r.id_unit
+            LEFT JOIN (SELECT child_ingredient_id AS id, COUNT(DISTINCT parent_recipe_id) AS n FROM product_recipe_connection
+                WHERE child_ingredient_id IS NOT NULL GROUP BY child_ingredient_id) x ON x.id = r.id
+            WHERE r.is_part_of_package = 0
+            ORDER BY r.name, r.id');
+    }
+
+    /** Pamięć przypisań : klucz nazwy składnika → surowiec. */
+    public function ingredientMemory(): array
+    {
+        try {
+            return array_column($this->all('SELECT name_key, id_raw_material FROM n_dev_ingredient_map'), 'id_raw_material', 'name_key');
+        } catch (\PDOException) {
+            return []; // przed migracją 124
+        }
+    }
+
+    public function rememberIngredient(string $key, string $name, int $materialId, ?int $userId): void
+    {
+        $this->db->prepare('INSERT INTO n_dev_ingredient_map (name_key, name, id_raw_material, updated_by) VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE name = VALUES(name), uses = IF(id_raw_material = VALUES(id_raw_material), uses + 1, 1),
+                id_raw_material = VALUES(id_raw_material), updated_by = VALUES(updated_by)')
+            ->execute([$key, mb_substr($name, 0, 255), $materialId, $userId]);
+    }
+
+    /** Kurs EUR (Ustawienia › Pozostałe) ; null gdy nieustawiony. */
+    public function eurRate(): ?float
+    {
+        $r = (float) ($this->all('SELECT exchange_rate_euro FROM erp_company_other_settings ORDER BY id LIMIT 1')[0]['exchange_rate_euro'] ?? 0);
+        return $r > 0 ? $r : null;
     }
 
     // --- Prompt ----------------------------------------------------------------------------------------

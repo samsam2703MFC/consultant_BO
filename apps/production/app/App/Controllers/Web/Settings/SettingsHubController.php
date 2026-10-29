@@ -37,6 +37,7 @@ class SettingsHubController extends BaseController
         'Produkty' => ['bi-box-seam', 'Kategorie, marże docelowe, etykiety', [
             ['/workshop/products#/categories', 'Kategorie produktów i marże docelowe', 'bi-tags', 'Kategorie, cele marży'],
             ['/settings/languages', 'Języki etykiet', 'bi-fonts', 'Języki tłumaczeń na etykietach'],
+            ['/other-settings#new-product-params', 'Ceny nowych produktów', 'bi-calculator', 'Współczynniki ceny fabrycznej (2,5 · 3 · 4) i mnożniki ceny w sklepie (× 3 · 4 · 5)'],
         ]],
         'Pracownia' => ['bi-gear-wide-connected', 'Tablety, stanowiska robocze, dane pracowni', [
             ['/workshop/execution', 'Tablety, PIN i czas pracy', 'bi-tablet', 'Tablety grup, kody PIN, pytania przy wejściu'],

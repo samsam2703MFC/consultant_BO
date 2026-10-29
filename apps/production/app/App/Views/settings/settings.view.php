@@ -140,6 +140,49 @@
             </div>
         </div>
 
+        <?php
+            // Ceny nowych produktów [198] : listy z n_prod_param (« 2.5,3,4 ») pokazane po polsku (« 2,5 ; 3 ; 4 »).
+            $np = $new_product_params ?? [];
+            $npList = fn(string $v) => implode(' ; ', array_map(fn($x) => str_replace('.', ',', $x), array_filter(explode(',', $v), fn($x) => $x !== '')));
+            $npNum = fn(string $v) => str_replace('.', ',', $v);
+        ?>
+        <div class="card" id="new-product-params">
+            <div class="card-header">
+                <h4 class="card-title mb-0">Ceny nowych produktów</h4>
+                <p class="text-muted small mb-0">Kreator « Nowy produkt testowy », krok « Koszt i cena » : cena fabryczna = koszt surowców na sztukę × współczynnik ;
+                    cena w sklepie (netto) = cena fabryczna × mnożnik. Operator wybiera wartość z listy ; domyślna jest zaznaczona.</p>
+            </div>
+            <div class="card-body">
+                <form class="row g-3 align-items-end" id="newProductParamsForm">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="npCoefs">Współczynniki ceny fabrycznej (oddziel średnikiem)</label>
+                        <input class="form-control" id="npCoefs" name="new_product.factory_coefs" value="<?= htmlspecialchars($npList((string) ($np['new_product.factory_coefs'] ?? '2.5,3,4'))) ?>">
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label" for="npCoef">Domyślny</label>
+                        <input class="form-control" id="npCoef" name="new_product.factory_coef" inputmode="decimal" value="<?= htmlspecialchars($npNum((string) ($np['new_product.factory_coef'] ?? '3'))) ?>">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="npMults">Mnożniki ceny w sklepie (oddziel średnikiem)</label>
+                        <input class="form-control" id="npMults" name="new_product.store_mults" value="<?= htmlspecialchars($npList((string) ($np['new_product.store_mults'] ?? '3,4,5'))) ?>">
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label" for="npMult">Domyślny</label>
+                        <input class="form-control" id="npMult" name="new_product.store_mult" inputmode="decimal" value="<?= htmlspecialchars($npNum((string) ($np['new_product.store_mult'] ?? '4'))) ?>">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="npRound">Zaokrąglenie ceny w sklepie (EUR)</label>
+                        <input class="form-control" id="npRound" name="new_product.store_round_eur" inputmode="decimal" value="<?= htmlspecialchars($npNum((string) ($np['new_product.store_round_eur'] ?? '0.1'))) ?>">
+                    </div>
+                    <div class="col-12 col-md-3 d-grid">
+                        <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Zapisz ceny nowych produktów</button>
+                    </div>
+                    <div class="col-12 form-text">Przykład : koszt surowców 0,95 zł/szt. × 3,0 = 2,85 zł ≈ 0,68 € (cena fabryczna) ; × 4 = 2,72 € → 2,70 € w sklepie.
+                        Sprzedawalność w Belgii (sklep ÷ fabryka) — progi w Marże i koszty.</div>
+                </form>
+            </div>
+        </div>
+
     </section>
 </div>
 
@@ -152,6 +195,20 @@
         new FormData(form).forEach((v, k) => { body[k] = v; });
         form.querySelectorAll('.is-invalid').forEach(i => i.classList.remove('is-invalid'));
         const res = await fetch('<?= ROOT ?>/ajax/settings/alert-params', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}, body: JSON.stringify(body)});
+        const json = await res.json().catch(() => ({}));
+        Object.keys(json.errors || {}).forEach(k => { const i = form.querySelector('[name="' + k + '"]'); if (i) i.classList.add('is-invalid'); });
+        const msg = json.message || json.error || 'Błąd zapisu.';
+        if (typeof Swal !== 'undefined') Swal.fire({icon: json.ok ? 'success' : 'error', text: msg}); else alert(msg);
+    });
+
+    // Ceny nowych produktów [198] (n_prod_param) : współczynniki fabryki, mnożniki sklepu, zaokrąglenie.
+    document.getElementById('newProductParamsForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const form = e.target;
+        const body = {};
+        new FormData(form).forEach((v, k) => { body[k] = v; });
+        form.querySelectorAll('.is-invalid').forEach(i => i.classList.remove('is-invalid'));
+        const res = await fetch('<?= ROOT ?>/ajax/settings/new-product-params', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}, body: JSON.stringify(body)});
         const json = await res.json().catch(() => ({}));
         Object.keys(json.errors || {}).forEach(k => { const i = form.querySelector('[name="' + k + '"]'); if (i) i.classList.add('is-invalid'); });
         const msg = json.message || json.error || 'Błąd zapisu.';

@@ -3,7 +3,7 @@
 Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y a été déplacée le 24/10/2026 par `deploy/server.sh`, données gardées).
 
 - **121 tables d'origine** de l'ERP SL Food : noms inchangés (131 avant le nettoyage du 24/10/2026, qui a supprimé les 10 copies de sauvegarde).
-- **155 tables ajoutées** pendant le développement (29/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
+- **156 tables ajoutées** pendant le développement (29/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
 
 ## Installer / intégrer
 
@@ -42,6 +42,29 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 ### Tablette chauffeur (migration 082, 26/10/2026)
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
+
+### Nouveau produit : étape « Koszt i cena » (migration 124, 29/10/2026)
+
+- 4ᵉ étape de l'assistant `/test-products/new` (après la fiche) : la recette de la fiche (IA ou .docx) est rapprochée de
+  nos matières (`raw_material`, sans les emballages) — mots du nom sans descriptions, racines polonaises (mąki ↔ mąka,
+  soli ↔ sól, cukru ↔ cukier ; mak ≠ mąka), quelques synonymes (kaşar → ser żółty), quantités converties dans l'unité
+  de la matière (g, ml, szt ; cuillère ≈ 15 g, cuillère à café ≈ 5 g, verre ≈ 250 ml, œuf ≈ 55 g, « na sztukę » × pièces
+  de la fournée, levure sèche → fraîche × 3), eau sans coût. Coût de ligne = quantité × `price_per_unit` (prix le plus
+  haut validé, comme le calcul des recettes) ; matière absente : prix estimé en zł/kg.
+- `n_dev_card` reçoit `cost_json` (lignes : clé du texte de la fiche, matière, quantité, prix estimé, statut `auto` /
+  `check` / `ok` / `missing` / `estimate` / `free`, remarque), `yield_pcs` (pièces de la fournée, lue dans « Wydajność »),
+  `factory_coef` (prix usine = coût matières par pièce × coefficient), `store_mult` (prix magasin HT = prix usine ×
+  multiplicateur), `store_price_eur` (prix magasin final arrondi ou saisi), `cost_pc_pln`, `cost_at`, `cobot`
+  (`yes` / `no` / `check`) et `cobot_steps` (étapes du cobot, séparées par « | »). Une ligne de la fiche modifiée est
+  rapprochée à nouveau ; les autres gardent le choix enregistré.
+- `n_dev_ingredient_map` : mémoire des choix de l'opérateur (`name_key` = nom de l'ingrédient sans accents ni
+  descriptions → `id_raw_material`, `uses`) ; utilisée en premier sur les fiches suivantes.
+- Paramètres (`n_prod_param`, Ustawienia › Pozostałe › Ceny nowych produktów) : `new_product.factory_coefs` (2.5,3,4)
+  et `new_product.factory_coef` (3), `new_product.store_mults` (3,4,5) et `new_product.store_mult` (4),
+  `new_product.store_round_eur` (0,10 €). Cours EUR : `erp_company_other_settings.exchange_rate_euro` ; vendabilité
+  en Belgique (magasin ÷ usine) avec les seuils de `n_store_price_config` (× 2,5 / 2,2).
+- Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
+  magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
 ### Un seul assistant « Nowy produkt testowy » (migration 123, 29/10/2026)
 

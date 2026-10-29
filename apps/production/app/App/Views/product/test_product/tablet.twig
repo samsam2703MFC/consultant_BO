@@ -64,6 +64,26 @@
             <div class="at-devcard-photos">{% for p in card.card.photos %}{% set f = fr['f' ~ p.frame_id] ?? null %}{% if f %}<figure><img src="{{ root }}{{ f.src }}" alt="" loading="lazy"><figcaption><b>{{ loop.index }}.</b> {{ p.caption }}</figcaption></figure>{% endif %}{% endfor %}</div>
         </div>
     </div>
+    {# Koszt i cena [198] : ostatni zapis kroku 4 kreatora (receptura karty → nasze surowce). #}
+    {% set pr = card.pricing %}
+    <div class="card at-devcard-cost">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2"><h4 class="card-title mb-0"><i class="bi bi-calculator"></i> Koszt i cena</h4>
+            {% if pr and pr.at %}<span class="at-sub">policzone {{ pr.at|date('d.m.Y') }}</span>{% endif %}
+            <a class="btn btn-sm btn-outline-primary ms-auto" href="{{ root }}/test-products/new/{{ card.id }}#koszt"><i class="bi bi-calculator"></i> {{ pr and pr.cost_pc_pln is not null ? 'Popraw koszt i cenę' : 'Policz koszt i cenę' }}</a></div>
+        <div class="card-body pt-0">
+            {% if pr and pr.cost_pc_pln is not null %}
+            <div class="at-devcard-facts at-devcard-prices">
+                <div><small>Koszt surowców / szt.</small><b>{{ pr.cost_pc_pln|number_format(2, ',', ' ') }} zł</b>{% if pr.cost_pc_eur is not null %} · {{ pr.cost_pc_eur|number_format(2, ',', ' ') }} €{% endif %}</div>
+                <div><small>Cena fabryczna</small><b>{{ pr.factory_eur is not null ? pr.factory_eur|number_format(2, ',', ' ') ~ ' €' : '—' }}</b> (× {{ pr.factory_coef|number_format(1, ',', ' ') }})</div>
+                <div><small>Cena w sklepie (netto)</small><b>{{ pr.store_eur is not null ? pr.store_eur|number_format(2, ',', ' ') ~ ' €' : '—' }}</b> (× {{ pr.store_mult|number_format(pr.store_mult == pr.store_mult|round ? 0 : 1, ',', ' ') }})
+                    {% if pr.ratio is not null %}<span class="at-pill {{ pr.verdict == 'ok' ? 'at-pill-ok' : (pr.verdict == 'warn' ? 'at-pill-warn' : 'at-pill-danger') }}">{{ pr.verdict == 'ok' ? '✓' : (pr.verdict == 'warn' ? 'na granicy' : 'za drogo') }} × {{ pr.ratio|number_format(2, ',', ' ') }}</span>{% endif %}</div>
+            </div>
+            {% else %}
+            <p class="at-sub mb-2">Nie policzone : przypisz składniki karty do naszych surowców — ERP policzy koszt na sztukę, cenę fabryczną i cenę w sklepie.</p>
+            {% endif %}
+            {% if pr and pr.cobot %}<p class="mb-0"><b>Cobot :</b> {{ {'yes': 'tak', 'no': 'nie', 'check': 'do sprawdzenia'}[pr.cobot] }}{% if pr.cobot_steps|length %} — {{ pr.cobot_steps|join(', ') }}{% endif %}</p>{% endif %}
+        </div>
+    </div>
     {% endif %}
     {% if product.forecast.weekly is not null %}
     <div class="card">

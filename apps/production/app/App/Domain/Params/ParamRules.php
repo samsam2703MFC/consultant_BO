@@ -30,6 +30,9 @@ final class ParamRules
         'kiosk.office_qr_ttl_s' => [30, 600, true],
         'supply.invoice_price_alert_pct' => [1, 100, false],
         'kiosk.ordered_days' => [1, 28, true],
+        'new_product.factory_coef' => [1, 10, false],
+        'new_product.store_mult' => [1, 10, false],
+        'new_product.store_round_eur' => [0, 1, false],
     ];
 
     /** [code bas, code haut, code d'erreur API, message ERP] : la valeur haute ne peut pas être inférieure à la basse. */

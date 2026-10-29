@@ -6,7 +6,8 @@ declare(strict_types=1);
  * Facebook / Pinterest (opis, autor, wideo, ściana logowania, przekierowania i domeny — bez sieci), wywołanie asystenta AI
  * przez SDK Anthropic (kształt zapytania, odmowa, ucięcie, błędy HTTP — odpowiedzi z MockHandler, bez sieci) i cały
  * kreator na bazie jednorazowej : szkic, klatki, generowanie, poprawki, zapis → produkt w rozwoju, tablet, .docx / PDF,
- * import gotowej karty.
+ * import gotowej karty. Krok « Koszt i cena » [198] : rdzenie nazw, ilości (łyżki, sztuki, « na sztukę »), wydajność,
+ * listy współczynników ; na bazie : przypisania do surowców, pamięć wyborów, ceny (fabryka, sklep, sprzedawalność), cobot.
  *
  *   php tests/dev_card_test.php
  *
@@ -24,7 +25,9 @@ use App\Services\DevCard\AiSettings;
 use App\Services\DevCard\CardDocx;
 use App\Services\DevCard\CardGenerator;
 use App\Services\DevCard\CardSchema;
+use App\Services\DevCard\DevCardCostService;
 use App\Services\DevCard\DevCardService;
+use App\Services\DevCard\IngredientMatcher as IM;
 use App\Services\DevCard\SourceReader;
 use App\Services\Workshop\Execution\DevProductService;
 use GuzzleHttp\Handler\MockHandler;
@@ -168,6 +171,31 @@ $meta = SourceReader::meta('<meta content="A &amp; B" property="og:title"><META 
 expectCard($meta['og:title'] === 'A & B' && $meta['description'] === 'x', 'meta : oba porządki atrybutów, encje');
 SourceReader::$transport = null;
 
+// --- 3b. Koszt i cena [198] : nazwy, ilości, wydajność (bez bazy) --------------------------------------------
+$w = fn(string $x) => IM::words($x)[0];
+expectCard(IM::sameStem($w('mąki'), $w('Mąka')) && IM::sameStem($w('soli'), $w('Sól')) && IM::sameStem($w('cukru'), $w('cukier'))
+    && IM::sameStem($w('czosnku'), $w('Czosnek')) && IM::sameStem($w('pomidorowego'), $w('pomidory')), 'rdzenie : mąki ↔ mąka, soli ↔ sól, cukru ↔ cukier, czosnku ↔ czosnek, pomidorowego ↔ pomidory');
+expectCard(!IM::sameStem($w('maku'), $w('Mąka')) && !IM::sameStem($w('mak'), $w('mąka')) && !IM::sameStem($w('pasty'), $w('pasteryzowane'))
+    && !IM::sameStem($w('sucuku'), $w('sucre')) && !IM::sameStem($w('musu'), $w('muszkatołowa')), 'rdzenie : mak ≠ mąka, pasty ≠ pasteryzowane, sucuk ≠ sucre');
+expectCard(IM::nameKey('startego kaşaru (lub ementalera)') === 'kasaru' && IM::mainPart('1 ząbek czosnku, pieprz, oregano') === '1 ząbek czosnku', 'nazwa : klucz bez opisów i nawiasu, pierwszy składnik linii');
+expectCard(IM::isFree('wody') && IM::isFree('odrobina wrzątku') && IM::isFree('kostki lodu') && !IM::isFree('wody różanej'), 'woda i lód : bez kosztu');
+$q = IM::parseQty('½ łyżeczki');
+expectCard($q['amount'] === 2.5 && $q['kind'] === 'g' && $q['approx'], 'ilość : ½ łyżeczki ≈ 2,5 g');
+expectCard(IM::parseQty('2-3 łyżki')['amount'] === 37.5 && IM::parseQty('1 kg')['amount'] === 1000.0 && IM::parseQty('1,5 l') === ['amount' => 1500.0, 'kind' => 'ml', 'approx' => false, 'word' => 'l'],
+    'ilość : 2–3 łyżki = 37,5 g, 1 kg = 1000 g, 1,5 l = 1500 ml');
+expectCard(IM::parseQty('1', 'plaster sera na sztukę')['amount'] === 20.0 && IM::parseQty('')['kind'] === null && IM::parseQty('1 kostka')['kind'] === 'kostka', 'ilość : jednostka w nazwie (plaster ≈ 20 g), brak ilości, kostka');
+$t = IM::toMaterial(IM::parseQty('1'), 'g', 'jajko', 'jajka');
+expectCard($t['qty'] === 55.0 && $t['known'] && $t['note'] === '1 szt. ≈ 55 g', 'sztuki → gramy : jajko ≈ 55 g');
+$t = IM::toMaterial(IM::parseQty('7 g'), 'g', 'drożdży instant', 'Drożdże');
+expectCard($t['qty'] === 21.0 && str_contains((string) $t['note'], 'suche → świeże × 3'), 'drożdże instant → świeże × 3');
+expectCard(IM::toMaterial(IM::parseQty('1'), 'g', 'parówka', 'Szynka')['known'] && !IM::toMaterial(IM::parseQty(''), 'g', 'miód', 'miód')['known']
+    && IM::toMaterial(IM::parseQty('300 g'), 'kg', 'mąki', 'Mąka')['qty'] === 0.3 && IM::toMaterial(IM::parseQty('2'), 'szt', 'jajka', 'Jajko L')['qty'] === 2.0, 'jednostka surowca : kg, szt, brak ilości');
+expectCard(IM::perPiece('1 parówka na sztukę') && !IM::perPiece('mąki'), '« na sztukę » rozpoznane');
+expectCard(IM::yieldPieces('2 płaty 35×45 cm ≈ 16 szt.') === 16 && IM::yieldPieces('8 bułeczek') === 8 && IM::yieldPieces('ok. 20-24 sztuk') === 22
+    && IM::yieldPieces('blacha 30x40') === null && IM::yieldPieces('≈ 12 muffinów') === 12, 'wydajność : sztuki z tekstu karty');
+expectCard(DevCardCostService::parseList('2,5 ; 3 ; 4') === [2.5, 3.0, 4.0] && DevCardCostService::parseList('4,3,2.5') === [2.5, 3.0, 4.0]
+    && DevCardCostService::parseList('0.5,3') === null && DevCardCostService::parseList('1;2;3;4;5;6;7') === null && DevCardCostService::parseList('') === null, 'listy współczynników : przecinek dziesiętny, zakres 1–10, najwyżej 6');
+
 // --- 4. Baza jednorazowa + asystent AI (SDK, MockHandler) -------------------------------------------------
 $dsn = getenv('TFB_TEST_DSN') ?: 'mysql:unix_socket=/run/mysqld/mysqld.sock';
 $source = getenv('TFB_TEST_SOURCE_DB') ?: 'erp';
@@ -186,7 +214,8 @@ $prevKey = getenv('ANTHROPIC_API_KEY');
 try {
     foreach (['n_dev_card', 'n_dev_card_frame', 'n_ai_prompt', 'n_prod_group', 'n_prod_param', 'n_app_secret', 'test_product', 'test_product_status', 'test_product_type',
                  'production_sections', 'product_recipe', 'n_dev_product', 'n_dev_product_photo', 'n_dev_trial', 'n_dev_trial_photo', 'n_prod_employee', 'production_employee',
-                 'final_product', 'user', 'test_product_changelog', 'test_product_stage', 'n_mgr_launch', 'category_product'] as $table) {
+                 'final_product', 'user', 'test_product_changelog', 'test_product_stage', 'n_mgr_launch', 'category_product',
+                 'raw_material', 'unit', 'product_recipe_connection', 'erp_company_other_settings', 'n_store_price_config', 'n_dev_ingredient_map'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -195,6 +224,15 @@ try {
     $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES ('ai.model', 'claude-sonnet-5-5', 'claude-opus-5-5', 'string')");
     $pdo->exec("INSERT INTO test_product_type (id, name) VALUES (1, 'Produkt'), (3, 'Pakowanie')");
     $pdo->exec("INSERT INTO category_product (id, name) VALUES (5, 'Pieczywo słone')");
+    // Koszt [198] : surowce (cena za g / ml), użycie w recepturach (remis), kurs EUR, progi sprzedawalności.
+    $pdo->exec("INSERT INTO unit (id, name) VALUES (3, 'g'), (4, 'ml'), (5, 'szt')");
+    $pdo->exec("INSERT INTO raw_material (id, name, id_unit, price_per_unit, is_part_of_package) VALUES (1, 'Mąka pszenna T65', 3, 0.004, 0), (2, 'Mleko 3,2 %', 4, 0.0026, 0),
+        (3, 'jajka', 3, 0.0137, 0), (4, 'Sól', 3, 0.0013, 0), (5, 'Drożdże', 3, 0.0064, 0), (6, 'Masło', 3, 0.022, 0), (7, 'Ser żółty', 3, 0.02, 0),
+        (8, 'Mak', 3, 0.03, 0), (9, 'Folia na ser', 3, 0.01, 1), (10, 'Mąka żytnia', 3, 0.005, 0)");
+    $pdo->exec("INSERT INTO product_recipe_connection (id, parent_recipe_id, child_ingredient_id, quantity) VALUES (1, 100, 1, 1), (2, 101, 1, 1)");
+    $pdo->exec("INSERT INTO erp_company_other_settings (id, exchange_rate_euro) VALUES (1, 4.00)");
+    $pdo->exec("INSERT INTO n_store_price_config (id, multiplier, limit_coef, reserve_coef) VALUES (1, 2.50, 2.20, 3.20)");
+    $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES ('new_product.factory_coefs', '2,5 ; 3 ; 4', '2.5,3,4', 'string')");
 
     $history = [];
     $queue = [];
@@ -346,6 +384,71 @@ try {
     expectCard(array_column($imp['card']['photos'], 'caption') === ['Rozsmarować', 'Efekt'] && $imp['card']['photos'][0]['frame_id'] === $imp['frames'][0]['id'], 'import .docx : zdjęcia jako klatki');
     $svc->delete($imp['id']);
     expectCard((int) $pdo->query('SELECT COUNT(*) FROM n_dev_card_frame WHERE id_card = ' . (int) $imp['id'])->fetchColumn() === 0, 'usunięcie szkicu : klatki skasowane');
+
+    // Koszt i cena [198] : karta → surowce, ceny, zapis, pamięć wyborów, cobot.
+    $costCard = CardSchema::normalize(['title' => 'Pogacza', 'yield' => '≈ 16 szt.', 'baking' => '180 °C', 'time' => '1 h', 'steps' => ['Wyrobić', 'Skręcić'],
+        'ingredients' => [['group' => 'CIASTO', 'items' => [['qty' => '500 g', 'name' => 'mąki'], ['qty' => '300 ml', 'name' => 'letniego mleka'], ['qty' => '1', 'name' => 'jajko'],
+            ['qty' => '10 g', 'name' => 'soli'], ['qty' => '7 g', 'name' => 'drożdży instant'], ['qty' => '50 g', 'name' => 'masła · 5 g soli']]],
+            ['group' => 'NADZIENIE', 'items' => [['qty' => '100 g', 'name' => 'startego kaşaru (lub ementalera)'], ['qty' => '100 g', 'name' => 'sucuku'],
+            ['qty' => '250 ml', 'name' => 'wody'], ['qty' => '1', 'name' => 'plaster sera na sztukę']]]], 'photos' => [], 'notes' => []]);
+    $tmp = tempnam(sys_get_temp_dir(), 'imp');
+    file_put_contents($tmp, CardDocx::build($costCard, []));
+    $cc = $svc->importDocx(['name' => 'Pogacza (koszt)', 'id_group' => 1, 'weekly_sales' => 100], $tmp, 7);
+    @unlink($tmp);
+    $costs = $c->get(DevCardCostService::class);
+    $k = $costs->cost($cc['id']);
+    $by = [];
+    foreach ($k['lines'] as $l) $by[$l['name']] = $l;
+    expectCard(count($k['lines']) === 11 && isset($by['masła'], $by['soli']), 'koszt : 11 linii (« 50 g masła · 5 g soli » rozdzielone)');
+    expectCard($by['mąki']['id_raw_material'] === 1 && $by['mąki']['status'] === 'auto' && $by['mąki']['qty'] === 500.0, 'mąki → Mąka pszenna (częściej w recepturach), nie Mak : auto 500 g');
+    expectCard($by['letniego mleka']['id_raw_material'] === 2 && $by['jajko']['qty'] === 55.0 && $by['masła']['id_raw_material'] === 6 && $by['masła']['qty'] === 50.0, 'mleko, jajko 55 g, masło 50 g');
+    expectCard($by['drożdży instant']['status'] === 'check' && $by['drożdży instant']['qty'] === 21.0, 'drożdże instant : × 3, do sprawdzenia');
+    expectCard($by['startego kaşaru (lub ementalera)']['id_raw_material'] === 7 && $by['startego kaşaru (lub ementalera)']['status'] === 'check', 'kaşar → Ser żółty (synonim) : do sprawdzenia');
+    expectCard($by['sucuku']['status'] === 'missing' && $by['sucuku']['id_raw_material'] === null && $by['wody']['status'] === 'free', 'sucuk : brak ; woda : bez kosztu');
+    expectCard($by['plaster sera na sztukę']['id_raw_material'] === 7 && $by['plaster sera na sztukę']['qty'] === 320.0 && str_contains((string) $by['plaster sera na sztukę']['note'], '× 16 szt.'), 'plaster sera na sztukę : 20 g × 16 szt.');
+    expectCard(!in_array(9, array_column($k['materials'], 'id'), true) && $k['yield_pcs'] === 16 && $k['rate'] === 4.0, 'lista bez opakowań, partia 16 z karty, kurs 4,00');
+    expectCard($k['total_pln'] === 13.19 && abs($k['cost_pc_pln'] - 0.8242) < 0.0001, 'koszt : partia 13,19 zł, sztuka 0,8242 zł (ilość × najwyższa cena)');
+    expectCard($k['factory']['coefs'] === [2.5, 3.0, 4.0] && $k['factory']['coef'] === 3.0 && $k['store']['mult'] === 4.0 && abs($k['factory']['price_eur'] - 0.6182) < 0.0001,
+        'fabryka : × 3,0 domyślnie (lista « 2,5 ; 3 ; 4 » z parametru) → 0,6182 €');
+    expectCard($k['store']['final_eur'] === 2.5 && $k['sellability']['verdict'] === 'ok' && $k['sellability']['ratio'] === 4.04 && $k['food_share']['factory_pct'] === 33.3,
+        'sklep : 0,6182 × 4 → 2,50 € (zaokrąglenie 0,10), sklep ÷ fabryka 4,04 ≥ 2,5, surowce 33,3 % fabryki');
+    $lines = array_map(fn($l) => ['key' => $l['key'], 'id_raw_material' => $l['id_raw_material'], 'qty' => $l['qty'], 'price_kg' => null, 'status' => $l['status']], $k['lines']);
+    $set = function (array $lines, string $name, array $v) use ($k): array {
+        foreach ($k['lines'] as $i => $l) if ($l['name'] === $name) $lines[$i] = $v + $lines[$i];
+        return $lines;
+    };
+    $in = ['yield_pcs' => 20, 'factory_coef' => 4, 'store_mult' => 3, 'store_price_eur' => null, 'cobot' => 'yes', 'cobot_steps' => ['Skręcanie', 'Skręcanie', 'Pakowanie']];
+    $e = expectFail(fn() => $costs->save($cc['id'], ['lines' => $set($lines, 'mąki', ['id_raw_material' => 9])] + $in, 7), 422, 'koszt : opakowanie zamiast surowca');
+    expectCard(array_keys($e->getErrors()['fields']) === ['lines.0'], 'koszt : błąd w linii 0');
+    $e = expectFail(fn() => $costs->save($cc['id'], ['lines' => $lines, 'factory_coef' => 0.5, 'store_mult' => 11, 'cobot' => 'może'] + $in, 7), 422, 'koszt : współczynnik, mnożnik, cobot');
+    expectCard(array_keys($e->getErrors()['fields']) === ['factory_coef', 'store_mult', 'cobot'], 'koszt : pola współczynnik, mnożnik, cobot');
+    $lines = $set($lines, 'sucuku', ['price_kg' => 45]);
+    $lines = $set($lines, 'startego kaşaru (lub ementalera)', ['status' => 'ok']);
+    $k = $costs->save($cc['id'], ['lines' => $lines] + $in, 7);
+    $by = [];
+    foreach ($k['lines'] as $l) $by[$l['name']] = $l;
+    expectCard($by['sucuku']['status'] === 'estimate' && $by['sucuku']['cost'] === 4.5 && $by['startego kaşaru (lub ementalera)']['status'] === 'ok', 'zapis : sucuk szacunkowo 45 zł/kg (4,50 zł), kaşar potwierdzony');
+    expectCard($k['yield_pcs'] === 20 && $k['factory']['coef'] === 4.0 && $k['store']['mult'] === 3.0 && $k['cobot'] === 'yes' && $k['cobot_steps'] === ['Skręcanie', 'Pakowanie'], 'zapis : partia 20, × 4, × 3, cobot (bez powtórzeń)');
+    $row = $pdo->query('SELECT store_price_eur, ROUND(cost_pc_pln, 4) AS pc, cobot_steps FROM n_dev_card WHERE id = ' . (int) $cc['id'])->fetch();
+    expectCard((float) $row['pc'] === round((13.1874 + 4.5) / 20, 4) && (float) $row['store_price_eur'] === $k['store']['final_eur'] && $row['cobot_steps'] === 'Skręcanie|Pakowanie', 'zapis : koszt na sztukę, cena końcowa, etapy cobota w bazie');
+    expectCard((int) $pdo->query("SELECT id_raw_material FROM n_dev_ingredient_map WHERE name_key = 'kasaru'")->fetchColumn() === 7
+        && (int) $pdo->query("SELECT COUNT(*) FROM n_dev_ingredient_map")->fetchColumn() === 1, 'pamięć : tylko potwierdzony wybór (kaşaru → Ser żółty)');
+    $p = $svc->state($cc['id'])['pricing'];
+    expectCard($p['factory_coef'] === 4.0 && $p['store_eur'] === $k['store']['final_eur'] && $p['cobot'] === 'yes' && $p['verdict'] === $k['sellability']['verdict'], 'stan karty : podsumowanie kosztu i ceny');
+    $k = $costs->save($cc['id'], ['lines' => $lines, 'store_price_eur' => '3,90'] + $in, 7);
+    expectCard($k['store']['final_eur'] === 3.9 && $k['store']['manual'], 'cena końcowa wpisana ręcznie : 3,90 €');
+    // Zmiana tekstu karty : nowa podpowiedź tylko dla zmienionej linii.
+    $svc->update($cc['id'], ['card' => ['ingredients_text' => "CIASTO:\n600 g mąki\n100 g sucuku"]], 7);
+    $k = $costs->cost($cc['id']);
+    expectCard(count($k['lines']) === 2 && $k['lines'][0]['qty'] === 600.0 && $k['lines'][0]['status'] === 'auto' && $k['lines'][1]['status'] === 'estimate', 'karta zmieniona : nowa linia od nowa, sucuk z zapisu');
+    // Druga karta : kaşar od razu z pamięci.
+    $tmp = tempnam(sys_get_temp_dir(), 'imp');
+    file_put_contents($tmp, CardDocx::build($costCard, []));
+    $cc2 = $svc->importDocx(['name' => 'Pogacza 2', 'id_group' => 1, 'weekly_sales' => 100], $tmp, 7);
+    @unlink($tmp);
+    $kas = array_values(array_filter($costs->cost($cc2['id'])['lines'], fn($l) => str_contains($l['name'], 'kaşaru')))[0];
+    expectCard($kas['id_raw_material'] === 7 && $kas['status'] === 'auto' && str_contains((string) $kas['note'], 'zapamiętane'), 'druga karta : kaşar → Ser żółty z pamięci');
+    expectFail(fn() => $costs->cost($state['id'] + 9999), 404, 'koszt : nieznana karta');
 
     // Prompt w wersjach (zapis — administrator — sprawdzany na stronie ; tutaj wersje w repozytorium).
     $c->get(App\Repositories\Workshop\DevCardRepository::class)->addPrompt('dev_card', 'Nowy prompt testowy ' . str_repeat('x', 60), 7);

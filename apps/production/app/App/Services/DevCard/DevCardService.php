@@ -30,6 +30,7 @@ final class DevCardService
         private CardGenerator $generator,
         private AiSettings $ai,
         private TransactionManager $tx,
+        private DevCardCostService $costs,
     ) {
     }
 
@@ -374,6 +375,7 @@ final class DevCardService
             'on_tablet' => (bool) (int) $c['on_tablet'],
             'id_category' => $c['id_category'] !== null ? (int) $c['id_category'] : null, 'category' => $c['category_name'],
             'id_type' => $c['id_type'] !== null ? (int) $c['id_type'] : 1, 'type' => $c['type_name'], 'label_type' => (int) ($c['label_type'] ?? 0),
+            'pricing' => $this->costs->summary($c), // krok 4 « Koszt i cena » [198] : ostatni zapis
             'footer' => CardSchema::FOOTER,
         ];
     }

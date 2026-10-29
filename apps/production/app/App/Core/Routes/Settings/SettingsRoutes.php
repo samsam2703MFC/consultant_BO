@@ -24,6 +24,12 @@ return function(RouteCollector $r) {
         'method'     => 'saveAlertParams'
     ]);
 
+    // Ceny nowych produktów [198] : współczynniki fabryki, mnożniki sklepu, zaokrąglenie.
+    $r->addRoute('POST', '/ajax/settings/new-product-params', [
+        'controller' => App\Controllers\Web\Settings\SettingsController::class,
+        'method'     => 'saveNewProductParams'
+    ]);
+
     $r->addRoute('GET', '/settings/ksef', [
         'controller' => App\Controllers\Web\Settings\KsefSettingsController::class,
         'method' => 'index'

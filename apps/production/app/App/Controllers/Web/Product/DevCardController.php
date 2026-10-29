@@ -4,6 +4,7 @@ namespace App\Controllers\Web\Product;
 use App\Core\Web\BaseController;
 use App\Exceptions\CustomException;
 use App\Services\DevCard\AiSettings;
+use App\Services\DevCard\DevCardCostService;
 use App\Services\DevCard\DevCardService;
 use App\Services\Organization\PageAccessService;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -15,7 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class DevCardController extends BaseController
 {
-    public function __construct(private DevCardService $cards, private AiSettings $ai, private PageAccessService $access)
+    public function __construct(private DevCardService $cards, private AiSettings $ai, private PageAccessService $access, private DevCardCostService $costs)
     {
     }
 
@@ -86,6 +87,17 @@ class DevCardController extends BaseController
     public function save($id)
     {
         return $this->run(fn() => $this->cards->save((int) $id, $this->userId(), filter_var($this->input()['tablet'] ?? true, FILTER_VALIDATE_BOOLEAN)));
+    }
+
+    /** Krok 4 « Koszt i cena » [198] : receptura karty → surowce, koszt, ceny, cobot. */
+    public function cost($id)
+    {
+        return $this->run(fn() => $this->costs->cost((int) $id));
+    }
+
+    public function saveCost($id)
+    {
+        return $this->run(fn() => $this->costs->save((int) $id, $this->input(), $this->userId()));
     }
 
     public function delete($id)

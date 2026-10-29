@@ -5,7 +5,9 @@
  *    kategoria, typ i etykieta (pola dawnego formularza produktu testowego).
  * 2. Generowanie : odczyt linku (serwer, bez logowania), klatki wycięte tutaj w przeglądarce (wideo pobrane przez serwer
  *    z Facebooka / Pinteresta albo plik operatora — nie wysyłamy całego filmu), asystent AI (klucz Anthropic na serwerze).
- * 3. Karta i tablet : podgląd A4 / tabletu, poprawki tekstu i zdjęć, .docx / PDF, zapis → produkt na tablecie grupy.
+ * 3. Karta : podgląd A4 / tabletu, poprawki tekstu i zdjęć, .docx / PDF.
+ * 4. Koszt i cena [198] : receptura z karty → nasze surowce → koszt na sztukę, cena fabryczna (× współczynnik),
+ *    cena w sklepie (fabryka × mnożnik), cobot ; zapis → produkt na tablecie grupy albo karta do druku.
  */
 (function () {
     const root = document.getElementById('devCard');
@@ -495,15 +497,15 @@
                 <dt>Rok</dt><dd><b>${fmt(c.forecast.year)} szt.</b></dd>
                 ${c.category ? `<dt>Kategoria</dt><dd>${esc(c.category)}</dd>` : ''}
                 ${Number(c.id_type || 1) !== 1 ? `<dt>Typ</dt><dd>${esc(c.type || '')}</dd>` : ''}
-                ${Number(c.label_type) === 1 ? '<dt>Etykieta</dt><dd>duża</dd>' : ''}</dl></div>
+                ${Number(c.label_type) === 1 ? '<dt>Etykieta</dt><dd>duża</dd>' : ''}
+                ${pricingRows(c.pricing)}</dl></div>
             <div class="dc-act">
                 ${saved ? `<a class="btn btn-primary dc-big" href="${at.root}/test-products/${c.product_id}/tablet"><i class="bi bi-box-arrow-up-right"></i> Otwórz produkt</a>
                     <div class="dc-choice">${c.on_tablet ? '' : `<button type="button" class="btn btn-outline-primary dc-big" data-save="tablet"><i class="bi bi-tablet"></i> Wyślij też na tablet</button>`}
-                        <button type="button" class="btn btn-outline-primary dc-big" data-print><i class="bi bi-printer"></i> Drukuj kartę</button></div>`
-                    : `<p class="dc-label dc-m0">Co zrobić z kartą ?</p>
-                    <div class="dc-choice"><button type="button" class="btn btn-primary dc-big" data-save="tablet"><i class="bi bi-tablet"></i> Wyślij na tablet ${esc(c.group || '')}</button>
-                        <button type="button" class="btn btn-outline-primary dc-big" data-save="print"><i class="bi bi-printer"></i> Drukuj kartę</button></div>
-                    <p class="dc-hint dc-m0">Oba zapisują produkt w Nowe produkty → Pomysł. Wydruk : bez tabletu (można wysłać później).</p>`}
+                        <button type="button" class="btn btn-outline-primary dc-big" data-print><i class="bi bi-printer"></i> Drukuj kartę</button>
+                        <button type="button" class="btn btn-outline-primary dc-big" data-cost><i class="bi bi-calculator"></i> Koszt i cena</button></div>`
+                    : `<button type="button" class="btn btn-primary dc-big" data-cost>Dalej : koszt i cena <i class="bi bi-arrow-right"></i></button>
+                    <p class="dc-hint dc-m0">Ostatni krok : surowce z karty → nasze surowce, ceny, cobot ; potem tablet albo druk.</p>`}
                 <div class="dc-act-row"><a class="btn btn-outline-secondary" href="${at.root}/test-products/cards/${c.id}/card.docx"><i class="bi bi-file-earmark-word"></i> .docx</a>
                     <a class="btn btn-outline-secondary" href="${at.root}/test-products/cards/${c.id}/card.pdf?inline=1" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
                     ${c.source.kind !== 'docx' ? `<button type="button" class="btn btn-outline-secondary" data-regen ${S.ai.configured ? '' : 'disabled'}>↻ Jeszcze raz</button>` : ''}</div>
@@ -533,6 +535,7 @@
             savePhotos(photos, true);
         }));
         view.querySelectorAll('[data-save]').forEach(b => b.addEventListener('click', () => save(b.dataset.save)));
+        view.querySelectorAll('[data-cost]').forEach(b => b.addEventListener('click', openCost));
         view.querySelector('[data-print]')?.addEventListener('click', printCard);
         view.querySelector('[data-regen]')?.addEventListener('click', () => {
             if (!window.confirm('Wygenerować kartę ponownie ? Poprawki tekstu i zdjęć zostaną zastąpione.')) return;
@@ -544,6 +547,16 @@
             if (!res.ok) return at.notify(false, res.message);
             location.href = at.root + '/test-products/new';
         });
+    }
+
+    /** Koszt i cena (krok 4) w podsumowaniu produktu : koszt / szt., fabryka, sklep, cobot. */
+    function pricingRows(p) {
+        if (!p) return '';
+        const cob = { yes: 'tak', no: 'nie', check: 'do sprawdzenia' }[p.cobot];
+        return `${p.cost_pc_pln !== null ? `<dt>Koszt / szt.</dt><dd><b>${money(p.cost_pc_pln, 'zł')}</b></dd>` : ''}
+            ${p.factory_eur !== null ? `<dt>Fabryka</dt><dd><b>${money(p.factory_eur, '€')}</b> (× ${num(p.factory_coef, 1)})</dd>` : ''}
+            ${p.store_eur !== null ? `<dt>Sklep</dt><dd><b>${money(p.store_eur, '€')}</b>${p.ratio !== null ? ` <span class="dc-pill ${p.verdict === 'ok' ? 'ok' : 'w'}">× ${num(p.ratio)}</span>` : ''}</dd>` : ''}
+            ${cob ? `<dt>Cobot</dt><dd>${cob}${p.cobot_steps.length ? ' — ' + esc(p.cobot_steps.join(', ')) : ''}</dd>` : ''}`;
     }
 
     /** Szkic bez karty (np. przerwane generowanie) : kontynuacja od brakującego kroku. */
@@ -677,12 +690,290 @@
             <p class="dc-a4-foot">${esc(c.footer || '')}</p></article></div>`;
     }
 
+    // --- Krok 4 : koszt i cena [198] --------------------------------------------------------------------
+    // Receptura z karty → nasze surowce (podpowiedzi serwera, wybór operatora zapamiętany), ilość w jednostce surowca,
+    // koszt partii i sztuki ; cena fabryczna = koszt × współczynnik ; cena w sklepie netto = fabryka × mnożnik ; cobot.
+
+    const ST = { auto: ['ok', '✓ auto'], ok: ['ok', '✓'], check: ['w', '? sprawdź'], missing: ['bad', '✗ brak'], estimate: ['w', '≈ szacunek'], free: ['', 'bez kosztu'] };
+    const num = (n, d = 2) => Number(n || 0).toLocaleString('pl-PL', { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/ /g, ' ');
+    const money = (n, unit) => n === null || n === undefined || !Number.isFinite(Number(n)) ? '—' : num(n) + ' ' + unit;
+    const parseNum = (v) => { const x = parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return Number.isFinite(x) ? x : null; };
+    const qtyText = (q) => String(Math.round(Number(q || 0) * 100) / 100).replace('.', ',');
+    const roundTo = (v, step) => v === null ? null : (step > 0 ? Math.round(Math.round(v / step) * step * 100) / 100 : Math.round(v * 100) / 100);
+    let C = null;
+    let dirty = false;
+    window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+    async function openCost() {
+        steps(4);
+        view.innerHTML = '<p class="at-empty">Liczę koszt surowców…</p>';
+        const res = await api(`/ajax/dev-cards/${S.card.id}/cost`, 'GET');
+        if (!res.ok) { at.notify(false, res.message); return renderResult(); }
+        setCost(res.data);
+        history.replaceState(null, '', `${at.root}/test-products/new/${S.card.id}#koszt`);
+        renderCost();
+    }
+
+    function setCost(data) {
+        C = data;
+        C.byId = Object.fromEntries(C.materials.map(m => [m.id, m]));
+        C.factory.coefs = [...new Set([...C.factory.coefs, C.factory.coef].map(Number))].sort((a, b) => a - b);
+        C.store.mults = [...new Set([...C.store.mults, C.store.mult].map(Number))].sort((a, b) => a - b);
+        dirty = false;
+    }
+
+    function lineCost(l) {
+        if (l.id_raw_material) { const m = C.byId[l.id_raw_material]; return m ? l.qty * m.price : 0; }
+        return l.status === 'estimate' && l.price_kg !== null ? l.qty * l.price_kg / 1000 : 0;
+    }
+
+    function totals() {
+        const total = C.lines.reduce((a, l) => a + lineCost(l), 0);
+        const pc = C.yield_pcs > 0 ? total / C.yield_pcs : null;
+        const rate = C.rate;
+        const fEur = pc !== null && rate ? pc * C.factory.coef / rate : null;
+        const sEur = fEur !== null ? fEur * C.store.mult : null;
+        const final = C.store.manual ? C.store.final_eur : roundTo(sEur, C.store.round);
+        const ratio = fEur && final ? final / fEur : null;
+        return { total, pc, pcEur: pc !== null && rate ? pc / rate : null, fPln: pc !== null ? pc * C.factory.coef : null, fEur, sEur, final, ratio,
+            verdict: ratio === null ? 'none' : ratio >= C.sellability.multiplier ? 'ok' : (ratio >= C.sellability.limit ? 'warn' : 'bad'),
+            shareF: 100 / C.factory.coef, shareS: pc !== null && rate && final ? pc / rate / final * 100 : null };
+    }
+
+    function lineRow(i) {
+        const l = C.lines[i];
+        const sugg = (l.suggestions || []).filter(id => C.byId[id]);
+        const inSugg = sugg.includes(Number(l.id_raw_material));
+        const opt = (m, sel) => `<option value="${m.id}" ${sel && Number(l.id_raw_material) === m.id ? 'selected' : ''}>${esc(m.name)}</option>`;
+        const m = l.id_raw_material ? C.byId[l.id_raw_material] : null;
+        const [cls, label] = ST[l.status] || ST.check;
+        const price = m ? `<span class="dc-price">${esc(m.price_label)}</span>` : (l.status === 'free' ? ''
+            : `<span class="dc-qty dc-pkg"><input class="form-control" data-pkg inputmode="decimal" value="${l.price_kg !== null ? qtyText(l.price_kg) : ''}" placeholder="cena" aria-label="Cena szacunkowa zł/kg"><small>zł/kg</small></span>`);
+        return `<tr data-line="${i}" class="st-${l.status}">
+            <td class="src"><b>${esc(l.qty_text)}</b> ${esc(l.name)}${l.note ? `<span class="dc-why">${esc(l.note)}</span>` : ''}</td>
+            <td><div class="dc-sel"><select class="form-select" data-mat aria-label="Surowiec : ${esc(l.src)}">
+                    <option value="" ${!l.id_raw_material && l.status !== 'free' ? 'selected' : ''}>— brak w ERP (cena szacunkowa) —</option>
+                    <option value="free" ${l.status === 'free' ? 'selected' : ''}>— bez kosztu (woda) —</option>
+                    ${sugg.length ? `<optgroup label="Podpowiedzi">${sugg.map(id => opt(C.byId[id], true)).join('')}</optgroup>` : ''}
+                    <optgroup label="Wszystkie surowce">${C.materials.map(x => opt(x, !inSugg)).join('')}</optgroup></select>
+                <div class="dc-sel-meta"><button type="button" class="dc-st ${cls}" data-st title="${['check', 'auto'].includes(l.status) ? 'Dotknij, aby potwierdzić' : ''}">${label}</button>${price}</div></div></td>
+            <td class="n"><span class="dc-qty"><input class="form-control" data-qty inputmode="decimal" value="${qtyText(l.qty)}" aria-label="Ilość"><small>${esc(m ? m.unit : 'g')}</small></span></td>
+            <td class="n" data-cost></td></tr>`;
+    }
+
+    function renderCost() {
+        steps(4);
+        const c = S.card;
+        const saved = c.status === 'saved';
+        const groups = [];
+        C.lines.forEach((l, i) => {
+            if (!groups.length || groups[groups.length - 1].name !== l.group) groups.push({ name: l.group, rows: [] });
+            groups[groups.length - 1].rows.push(i);
+        });
+        view.innerHTML = `<div class="dc-grid dc-grid-cost"><div>
+            <div class="dc-card"><h4 class="dc-h"><span class="dc-num">1</span>Surowce : karta → nasze surowce <span class="dc-pill ok dc-ml" data-progress-label></span></h4>
+                <div class="dc-prog"><i data-progress></i></div>
+                <div class="dc-map-wrap"><table class="dc-map"><thead><tr><th>Z karty</th><th>Nasz surowiec</th><th class="n">Ilość</th><th class="n">Koszt</th></tr></thead>
+                <tbody>${groups.map(g => `${g.name ? `<tr class="grp"><td colspan="4">${esc(g.name)}</td></tr>` : ''}${g.rows.map(lineRow).join('')}`).join('')}</tbody>
+                <tfoot><tr><td colspan="3"><label class="dc-yield">Partia : <input class="form-control" name="yield_pcs" inputmode="numeric" value="${C.yield_pcs ?? ''}" aria-label="Sztuk z partii"> szt.</label>
+                    ${C.yield_text ? `<small>z karty : « ${esc(C.yield_text)} »</small>` : ''}</td><td class="n" data-total></td></tr>
+                    <tr class="pc"><td colspan="3">Koszt surowców na sztukę</td><td class="n" data-pc></td></tr></tfoot></table></div>
+                <p class="dc-hint">Podpowiedzi według nazw, wybór zapamiętany dla następnych kart. Cena surowca = najwyższa zatwierdzona (jak w kalkulacji receptur).
+                    Brak surowca : wybierz z listy, wpisz cenę szacunkową albo <a href="${at.root}/materials/new" target="_blank" rel="noopener">dodaj surowiec</a>
+                    i <button type="button" class="dc-link dc-inline" data-reload>odśwież listę</button>.</p></div>
+            <div class="dc-card"><h4 class="dc-h"><span class="dc-num">2</span>Cobot</h4>
+                <span class="dc-label">Czy produkt jest cobotyzowalny ?</span>
+                <div class="dc-seg dc-seg-sm" role="radiogroup" aria-label="Cobot">${[['yes', 'Tak'], ['no', 'Nie'], ['check', 'Do sprawdzenia']].map(([v, l]) =>
+                    `<label><input type="radio" name="cobot" value="${v}" ${C.cobot === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
+                <div data-cobot-steps ${C.cobot === 'yes' ? '' : 'hidden'}><span class="dc-label dc-mt">Które etapy może robić cobot ?</span>
+                    <div class="dc-chips">${C.step_choices.map(s => `<label class="dc-chip"><input type="checkbox" name="cobot_steps" value="${esc(s)}" ${C.cobot_steps.includes(s) ? 'checked' : ''}><span>${esc(s)}</span></label>`).join('')}</div></div>
+                <p class="dc-hint">Widoczne przy produkcie. Stanowisko z cobotem i kadencję ustawisz po teście (Ustawienia › Stanowiska robocze i coboty).</p></div>
+            <div class="dc-nav"><button type="button" class="btn btn-outline-secondary dc-big" data-back-card>‹ Karta</button></div>
+        </div>
+        <aside><div class="dc-card dc-sticky"><h4 class="dc-h"><i class="bi bi-calculator"></i> Cena</h4>
+            <div class="dc-tiles">
+                <div class="dc-tile"><small>Koszt surowców / szt.</small><b data-k="pc"></b><span data-k="pcEur"></span></div>
+                <div class="dc-tile"><small>Cena fabryczna / szt. = koszt × współczynnik</small>
+                    <div class="dc-xrow">${C.factory.coefs.map(v => `<button type="button" class="dc-coef" data-coef="${v}">${num(v, 1)}</button>`).join('')}</div>
+                    <b data-k="f"></b><span data-k="fPln"></span></div>
+                <div class="dc-tile"><small>Cena w sklepie netto / szt. = fabryka × mnożnik</small>
+                    <div class="dc-xrow">${C.store.mults.map(v => `<button type="button" class="dc-coef" data-mult="${v}">× ${num(v, v % 1 ? 1 : 0)}</button>`).join('')}</div>
+                    <b data-k="s"></b></div>
+                <div class="dc-tile dc-tile-hl"><small>Cena końcowa w sklepie (zaokrąglona, do zmiany)</small>
+                    <span class="dc-final"><input class="form-control" data-final inputmode="decimal" aria-label="Cena końcowa w sklepie (€)"><b>€</b></span>
+                    <span class="dc-pill" data-verdict></span></div>
+            </div>
+            <div class="dc-kpis"><span class="dc-pill" data-k="shareF"></span><span class="dc-pill" data-k="shareS"></span></div>
+            <p class="dc-hint">Współczynniki i mnożniki : ${S.ai.is_admin ? `<a href="${at.root}/other-settings#new-product-params">Ustawienia › Pozostałe › Ceny nowych produktów</a>` : 'Ustawienia › Pozostałe › Ceny nowych produktów'}
+                · kurs EUR ${C.rate ? num(C.rate) : '— (nieustawiony)'} · sprzedawalność : sklep ÷ fabryka ≥ ${num(C.sellability.multiplier, 1)}.</p>
+            <div class="dc-act">${saved ? `<button type="button" class="btn btn-primary dc-big" data-save-cost><i class="bi bi-check-lg"></i> Zapisz koszt i cenę</button>
+                    <a class="btn btn-outline-primary dc-big" href="${at.root}/test-products/${c.product_id}/tablet"><i class="bi bi-box-arrow-up-right"></i> Otwórz produkt</a>`
+                : `<p class="dc-label dc-m0">Zapisz produkt i kartę :</p>
+                    <div class="dc-choice"><button type="button" class="btn btn-primary dc-big" data-finish="tablet"><i class="bi bi-tablet"></i> Wyślij na tablet ${esc(c.group || '')}</button>
+                    <button type="button" class="btn btn-outline-primary dc-big" data-finish="print"><i class="bi bi-printer"></i> Drukuj kartę</button></div>
+                    <p class="dc-hint dc-m0">Koszt i ceny zapisują się razem z produktem (Nowe produkty → Pomysł).</p>`}</div>
+        </div></aside></div>`;
+        bindCost();
+        refreshCost();
+    }
+
+    function refreshCost() {
+        const t = totals();
+        view.querySelectorAll('[data-line]').forEach(tr => { tr.querySelector('[data-cost]').textContent = money(lineCost(C.lines[Number(tr.dataset.line)]), 'zł'); });
+        const done = C.lines.filter(l => ['auto', 'ok', 'free'].includes(l.status)).length;
+        const auto = C.lines.filter(l => l.status === 'auto').length;
+        view.querySelector('[data-progress]').style.width = (C.lines.length ? done / C.lines.length * 100 : 0) + '%';
+        view.querySelector('[data-progress-label]').textContent = `${done} z ${C.lines.length} gotowe` + (auto ? ` · ${auto} automatycznie` : '');
+        view.querySelector('[data-total]').textContent = money(t.total, 'zł');
+        view.querySelector('[data-pc]').textContent = t.pc !== null ? money(t.pc, 'zł') : 'podaj liczbę sztuk';
+        const k = (name, v) => { const el = view.querySelector(`[data-k="${name}"]`); if (el) el.textContent = v; };
+        k('pc', t.pc !== null ? money(t.pc, 'zł') : '—');
+        k('pcEur', t.pcEur !== null ? money(t.pcEur, '€') : '');
+        k('f', money(t.fEur, '€'));
+        k('fPln', t.fPln !== null ? money(t.fPln, 'zł') : '');
+        k('s', money(t.sEur, '€'));
+        k('shareF', `Surowce ${num(t.shareF, 0)} % ceny fabrycznej`);
+        k('shareS', t.shareS !== null ? `${num(t.shareS, 1)} % ceny w sklepie` : '— % ceny w sklepie');
+        view.querySelectorAll('[data-coef]').forEach(b => b.classList.toggle('on', Number(b.dataset.coef) === Number(C.factory.coef)));
+        view.querySelectorAll('[data-mult]').forEach(b => b.classList.toggle('on', Number(b.dataset.mult) === Number(C.store.mult)));
+        const fin = view.querySelector('[data-final]');
+        if (document.activeElement !== fin) fin.value = t.final !== null ? num(t.final) : '';
+        const v = view.querySelector('[data-verdict]');
+        v.className = 'dc-pill ' + ({ ok: 'ok', warn: 'w', bad: 'bad' }[t.verdict] || '');
+        v.textContent = t.ratio === null ? 'sprzedawalność : —' : `${t.verdict === 'ok' ? '✓' : (t.verdict === 'warn' ? 'na granicy' : 'za drogo')} × ${num(t.ratio)}`;
+        v.title = `Sklep ÷ fabryka ; cel ≥ ${num(C.sellability.multiplier, 1)}, na granicy od ${num(C.sellability.limit, 1)}`;
+    }
+
+    // Tabela : zdarzenia delegowane (wiersz przerysowany po zmianie surowca nie potrzebuje nowych nasłuchów).
+    function bindCost() {
+        const touch = () => { dirty = true; refreshCost(); };
+        const tbody = view.querySelector('.dc-map tbody');
+        const lineOf = (el) => Number(el.closest('tr').dataset.line);
+        const redraw = (i) => { view.querySelector(`[data-line="${i}"]`).outerHTML = lineRow(i); touch(); };
+        tbody.addEventListener('change', (e) => {
+            const el = e.target;
+            if (el.matches('[data-mat]')) {
+                const i = lineOf(el);
+                const l = C.lines[i];
+                if (el.value === 'free') Object.assign(l, { id_raw_material: null, status: 'free', note: null });
+                else if (el.value === '') Object.assign(l, { id_raw_material: null, status: l.price_kg !== null ? 'estimate' : 'missing', note: null });
+                else Object.assign(l, { id_raw_material: Number(el.value), status: 'ok', note: null });
+                redraw(i);
+            } else if (el.matches('[data-qty]')) {
+                // Ilość wpisana : linia sprawdzona, uwaga « Podaj ilość » znika.
+                const i = lineOf(el);
+                const l = C.lines[i];
+                const was = [l.status, l.note];
+                if (l.qty > 0 && /^Podaj/.test(l.note || '')) l.note = null;
+                if (l.id_raw_material && l.status === 'check') l.status = 'ok';
+                if (was[0] !== l.status || was[1] !== l.note) redraw(i);
+            }
+        });
+        tbody.addEventListener('input', (e) => {
+            const el = e.target;
+            if (el.matches('[data-qty]')) {
+                C.lines[lineOf(el)].qty = Math.max(0, parseNum(el.value) ?? 0);
+                touch();
+            } else if (el.matches('[data-pkg]')) {
+                const tr = el.closest('tr');
+                const l = C.lines[lineOf(el)];
+                l.price_kg = parseNum(el.value);
+                l.status = l.price_kg !== null ? 'estimate' : 'missing';
+                tr.className = 'st-' + l.status;
+                const [cls, label] = ST[l.status];
+                const st = tr.querySelector('[data-st]');
+                st.className = 'dc-st ' + cls;
+                st.textContent = label;
+                touch();
+            }
+        });
+        tbody.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-st]');
+            if (!b) return;
+            const i = lineOf(b);
+            const l = C.lines[i];
+            if (['check', 'auto'].includes(l.status) && l.id_raw_material) { l.status = 'ok'; redraw(i); }
+        });
+        view.querySelector('[name=yield_pcs]').addEventListener('input', (e) => { const n = parseInt(String(e.target.value).replace(/\D/g, ''), 10); C.yield_pcs = n > 0 ? n : null; touch(); });
+        view.querySelectorAll('[name=cobot]').forEach(r => r.addEventListener('change', () => {
+            C.cobot = r.value;
+            view.querySelector('[data-cobot-steps]').hidden = C.cobot !== 'yes';
+            dirty = true;
+        }));
+        view.querySelectorAll('[name=cobot_steps]').forEach(cb => cb.addEventListener('change', () => {
+            C.cobot_steps = [...view.querySelectorAll('[name=cobot_steps]:checked')].map(x => x.value);
+            dirty = true;
+        }));
+        view.querySelectorAll('[data-coef]').forEach(b => b.addEventListener('click', () => { C.factory.coef = Number(b.dataset.coef); C.store.manual = false; touch(); }));
+        view.querySelectorAll('[data-mult]').forEach(b => b.addEventListener('click', () => { C.store.mult = Number(b.dataset.mult); C.store.manual = false; touch(); }));
+        const fin = view.querySelector('[data-final]');
+        fin.addEventListener('input', () => { C.store.final_eur = parseNum(fin.value); C.store.manual = C.store.final_eur !== null; touch(); });
+        fin.addEventListener('blur', refreshCost);
+        view.querySelector('[data-back-card]').addEventListener('click', async () => {
+            if (dirty && !(await saveCost(true))) return;
+            const res = await api(`/ajax/dev-cards/${S.card.id}`, 'GET');
+            if (res.ok) S.card = res.data;
+            history.replaceState(null, '', `${at.root}/test-products/new/${S.card.id}`);
+            renderResult();
+        });
+        view.querySelector('[data-reload]').addEventListener('click', async () => {
+            if (dirty && !(await saveCost(true))) return;
+            openCost();
+        });
+        view.querySelector('[data-save-cost]')?.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            btn.disabled = true;
+            if (await saveCost(false)) renderCost();
+            else btn.disabled = false;
+        });
+        view.querySelectorAll('[data-finish]').forEach(b => b.addEventListener('click', () => finish(b.dataset.finish)));
+    }
+
+    function costPayload() {
+        const t = totals();
+        return { lines: C.lines.map(l => ({ key: l.key, id_raw_material: l.id_raw_material, qty: l.qty, price_kg: l.price_kg, status: l.status })),
+            yield_pcs: C.yield_pcs, factory_coef: C.factory.coef, store_mult: C.store.mult, store_price_eur: t.final,
+            cobot: C.cobot || null, cobot_steps: C.cobot === 'yes' ? C.cobot_steps : [] };
+    }
+
+    async function saveCost(quiet) {
+        const res = await api(`/ajax/dev-cards/${S.card.id}/cost`, 'PUT', costPayload());
+        if (!res.ok) {
+            const f = Object.values(res.fields || {});
+            at.notify(false, (res.message || 'Błąd') + (f.length ? ' ' + f.join(' ') : ''));
+            return false;
+        }
+        setCost(res.data);
+        if (!quiet) at.notify(true, 'Zapisano koszt i cenę.');
+        return true;
+    }
+
+    // Zapis kroku 4 + produktu : « tablet » albo « print » (jak w kroku 3 dawniej).
+    async function finish(mode) {
+        const btns = view.querySelectorAll('[data-finish]');
+        btns.forEach(b => { b.disabled = true; });
+        try {
+            if (!(await saveCost(true))) return;
+            const res = await api(`/ajax/dev-cards/${S.card.id}/save`, 'POST', { tablet: mode === 'tablet' });
+            if (!res.ok) return at.notify(false, res.message);
+            S.card = res.data;
+            if (mode === 'print') {
+                at.notify(true, 'Zapisano — karta otwiera się do druku (produkt bez tabletu).');
+                printCard();
+            } else at.notify(true, `Zapisano — produkt jest na tablecie grupy ${S.card.group || ''}.`);
+            renderCost();
+        } finally {
+            btns.forEach(b => { b.disabled = false; });
+        }
+    }
+
     // --- Pomocnicze ------------------------------------------------------------------------------------
 
     function secs(t0) { return Math.round((Date.now() - t0) / 1000) + ' s'; }
     function dmy(s) { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}.${m[2]}.${m[1]}` : ''; }
     function clock(ms) { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
 
-    // Start : nowa karta albo szkic / karta z adresu (/test-products/new/{id}).
-    if (S.card) renderResult(); else renderForm();
+    // Start : nowa karta albo szkic / karta z adresu (/test-products/new/{id}, krok 4 : #koszt).
+    if (S.card && S.card.card && location.hash === '#koszt') openCost();
+    else if (S.card) renderResult(); else renderForm();
 })();

@@ -198,3 +198,60 @@ iframe.dc-print { position: fixed; right: 0; bottom: 0; width: 1px; height: 1px;
 .dc-more > summary::before { content: '›'; display: inline-block; transition: transform .15s; font-size: 18px; }
 .dc-more[open] > summary::before { transform: rotate(90deg); }
 .dc-more > summary small { font-weight: 400; }
+
+/* Krok 4 « Koszt i cena » [198] : tabela karta → surowce, kalkulator ceny przyklejony z prawej (makieta 2). */
+.dc-grid-cost { grid-template-columns: minmax(0, 1fr) 380px; }
+.dc-sticky { position: sticky; top: 16px; }
+.dc-ml { margin-left: auto; }
+.dc-prog { height: 8px; border-radius: 6px; background: rgba(34, 34, 34, .08); overflow: hidden; margin: -4px 0 14px; }
+.dc-prog i { display: block; height: 100%; width: 0; background: var(--at-success); transition: width .2s; }
+.dc-map-wrap { overflow-x: auto; }
+.dc-map { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
+.dc-map th { font-size: 11.5px; color: var(--at-muted); font-weight: 500; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--at-line); white-space: nowrap; }
+.dc-map td { padding: 7px 10px; border-bottom: 1px solid var(--at-line); vertical-align: middle; }
+.dc-map .n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dc-map th.n { text-align: right; }
+.dc-map .grp td { background: var(--at-bg-2); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; color: var(--at-muted); padding: 6px 10px; }
+.dc-map .src { min-width: 130px; }
+.dc-map .src b { font-weight: 500; }
+.dc-why { display: block; font-size: 11.5px; color: #6b4420; margin-top: 3px; }
+.dc-sel { min-width: 200px; }
+.dc-sel select { width: 100%; min-height: 44px; border-radius: 10px; font-size: 14px; }
+.dc-sel-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.dc-price { color: var(--at-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.dc-pkg input { width: 72px; min-height: 32px; }
+.st-check .dc-sel select, .st-estimate .dc-sel select { border-color: #D9A92B; background-color: #fffaf0; }
+.st-missing .dc-sel select { border-color: #c0392b; background-color: #fff5f4; }
+.dc-st { flex: none; border: 0; border-radius: 6px; padding: 3px 8px; min-height: 28px; font-size: 11.5px; font-weight: 600; white-space: nowrap; background: rgba(34, 34, 34, .06); color: var(--at-muted); cursor: default; }
+.dc-st.ok { background: rgba(46, 125, 79, .12); color: var(--at-success); }
+.dc-st.w { background: rgba(242, 201, 160, .6); color: #6b4420; cursor: pointer; }
+.dc-st.bad { background: rgba(192, 57, 43, .12); color: #a0281c; }
+.st-auto .dc-st { cursor: pointer; }
+.dc-qty { display: inline-flex; align-items: center; gap: 6px; }
+.dc-qty input { width: 84px; min-height: 40px; text-align: right; border-radius: 8px; font-variant-numeric: tabular-nums; }
+.dc-qty small { color: var(--at-muted); min-width: 20px; text-align: left; }
+.dc-map tfoot td { font-weight: 600; border-bottom: 0; padding-top: 10px; }
+.dc-map tfoot tr.pc td { font-weight: 500; }
+.dc-map tfoot tr.pc td.n { font-size: 16px; font-weight: 600; }
+.dc-map tfoot small { display: block; font-weight: 400; color: var(--at-muted); margin-top: 4px; }
+.dc-yield { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
+.dc-yield input { width: 80px; min-height: 40px; text-align: right; border-radius: 8px; font-weight: 600; }
+.dc-inline { padding: 0; font-size: inherit; }
+.dc-tiles { display: grid; gap: 10px; }
+.dc-tile { border: 1px solid var(--at-line); border-radius: 14px; padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; }
+.dc-tile > small { grid-column: 1 / -1; color: var(--at-muted); font-size: 12px; }
+.dc-tile > b { font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; text-align: right; grid-column: 2; }
+.dc-tile > span:not(.dc-final):not(.dc-pill) { grid-column: 1 / -1; text-align: right; color: var(--at-muted); font-size: 12.5px; }
+.dc-tile:first-child > b { grid-column: 1 / -1; text-align: left; }
+.dc-tile:first-child > span { text-align: left !important; }
+.dc-tile-hl { border-color: var(--at-primary); box-shadow: inset 0 0 0 1px var(--at-primary); }
+.dc-xrow { display: flex; gap: 6px; flex-wrap: wrap; }
+.dc-coef { min-width: 56px; min-height: 44px; border: 1px solid var(--at-line-2); border-radius: 10px; background: #fff; font-size: 14px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.dc-coef.on { border-color: var(--at-primary); background: var(--at-primary-soft); box-shadow: inset 0 0 0 1px var(--at-primary); font-weight: 600; }
+.dc-coef:focus-visible { outline: 3px solid rgba(141, 29, 44, .3); }
+.dc-final { display: inline-flex; align-items: center; gap: 8px; }
+.dc-final input { width: 120px; min-height: 48px; font-size: 22px; font-weight: 500; text-align: right; border-radius: 10px; font-variant-numeric: tabular-nums; }
+.dc-final b { font-size: 18px; font-weight: 500; }
+.dc-pill.bad { background: rgba(192, 57, 43, .12); color: #a0281c; }
+.dc-kpis { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+@media (max-width: 1100px) { .dc-grid-cost { grid-template-columns: 1fr; } .dc-sticky { position: static; } }

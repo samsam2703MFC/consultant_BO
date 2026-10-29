@@ -152,6 +152,8 @@ return function(RouteCollector $r) {
     $r->addRoute('GET', '/ajax/dev-cards/{id:\d+}', ['controller' => $v, 'method' => 'show']);
     $r->addRoute('PUT', '/ajax/dev-cards/{id:\d+}', ['controller' => $v, 'method' => 'update']);
     $r->addRoute('POST', '/ajax/dev-cards/{id:\d+}/save', ['controller' => $v, 'method' => 'save']);
+    $r->addRoute('GET', '/ajax/dev-cards/{id:\d+}/cost', ['controller' => $v, 'method' => 'cost']);
+    $r->addRoute('PUT', '/ajax/dev-cards/{id:\d+}/cost', ['controller' => $v, 'method' => 'saveCost']);
     $r->addRoute('DELETE', '/ajax/dev-cards/{id:\d+}', ['controller' => $v, 'method' => 'delete']);
     // Ustawienia › Asystent AI : klucz Anthropic (zaszyfrowany, tylko 4 ostatnie znaki widoczne), model, prompt w wersjach.
     $r->addRoute('GET', '/settings/ai', ['controller' => $v, 'method' => 'settings']);
