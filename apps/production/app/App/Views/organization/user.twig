@@ -1,0 +1,85 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ member.displayed_name ?: member.login }} · karta{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>{{ member.displayed_name ?: member.login }}</h3>
+            <p class="text-subtitle text-muted"><a href="{{ root }}/organization/positions">Funkcje i zadania</a> · karta użytkownika</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-org">
+    <div class="row">
+        <div class="col-12 col-xl-4">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Dane</h4></div>
+                <div class="card-body pt-0">
+                    <dl class="at-dl">
+                        <dt>Login</dt><dd>{{ member.login }}</dd>
+                        <dt>Imię i nazwisko</dt><dd>{{ member.name }} {{ member.surname }}</dd>
+                        <dt>E-mail</dt><dd>{{ member.email ?: '—' }}</dd>
+                        <dt>Telefon</dt><dd>{{ member.phone ?: '—' }}</dd>
+                    </dl>
+                    <form id="assignForm" class="mt-3">
+                        <label class="at-purch-label">Stanowisko
+                            <select class="form-select" name="position_id" data-nullable>
+                                <option value="">— brak —</option>
+                                {% for p in positions %}<option value="{{ p.id }}" {{ member.id_position == p.id ? 'selected' : '' }}>{{ p.name_pl }}</option>{% endfor %}
+                            </select>
+                        </label>
+                        <label class="at-purch-label mt-2">Od<input class="form-control" type="date" name="since" value="{{ member.since }}"></label>
+                        <button class="btn btn-primary mt-2" type="submit">Zapisz stanowisko</button>
+                    </form>
+                    {% if member.position_description %}<p class="at-sub mt-3">{{ member.position_description }}</p>{% endif %}
+                    <form id="moduleRoleForm" class="mt-3">
+                        <label class="at-purch-label">Rola w module produkcji
+                            <select class="form-select" name="role_code" data-nullable {{ module.can_set ? '' : 'disabled' }}>
+                                <option value="">— brak dostępu —</option>
+                                {% for r in module.roles %}<option value="{{ r.code }}" {{ module.current == r.code ? 'selected' : '' }}>{{ r.name_pl }}</option>{% endfor %}
+                            </select>
+                        </label>
+                        <p class="at-sub mt-1 mb-0">Planowanie, tablety i moduł kierownika produkcji. Kierownik produkcji = wgląd i wpisy miesięczne, bez ustalania celów i wynagrodzenia.</p>
+                        {% if module.can_set %}<button class="btn btn-outline-primary mt-2" type="submit">Zapisz rolę</button>{% else %}<p class="at-sub mt-1">Rolę nadaje administrator produkcji.</p>{% endif %}
+                    </form>
+                    <p class="at-sub mt-3">Konto (login, hasło, uprawnienia): <a href="{{ root }}/users">Użytkownicy systemu</a>.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Ostatnio wykonane</h4></div>
+                <div class="card-body pt-0">
+                    {% if history %}
+                    <ul class="at-history">
+                        {% for h in history %}
+                            <li><span class="badge {{ h.status == 'done' ? 'bg-success' : 'bg-secondary' }}">{{ h.status == 'done' ? 'zrobione' : 'pominięte' }}</span>
+                                {{ h.title_pl }} <span class="at-sub">{{ h.period_key }} · {{ h.done_by_name ?: '—' }}{{ h.done_at ? ', ' ~ h.done_at|date('d.m H:i') : '' }}{{ h.note ? ' · „' ~ h.note ~ '”' : '' }}</span>{% if h.form_id %} <a href="{{ root }}/task-forms/{{ h.form_id }}"><i class="bi bi-journal-check"></i> protokół</a>{% endif %}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}<p class="at-empty">Jeszcze nic.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-8">
+            {% include 'page_components/ajax_helpers.twig' %}
+            {% if member.id_position %}
+                {% include 'organization/_board.twig' %}
+            {% else %}
+                <div class="card"><div class="card-body"><p class="at-empty mb-0">Bez stanowiska: wybierz je po lewej, a zadania stanowiska pojawią się tutaj.</p></div></div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    at.bindForm(document.getElementById('assignForm'), '/ajax/organization/users/{{ member.id }}/position', 'PUT');
+    {% if module.can_set %}at.bindForm(document.getElementById('moduleRoleForm'), '/ajax/organization/users/{{ member.id }}/module-role', 'PUT');{% endif %}
+})();
+</script>
+{% endblock %}

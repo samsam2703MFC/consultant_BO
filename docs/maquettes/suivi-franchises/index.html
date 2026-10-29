@@ -1,0 +1,1060 @@
+<title>Suivi des franchisés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- Maquette « Suivi des franchisés » (24/10/2026). Dans le menu existant « Franchisés · évaluation et suivi » : un sous-menu « Suivi des franchisés », cinq entrées :
+     Tableau de bord (ordinateur : préparer, adapter, envoyer les rapports), Visite sur tablette, Client mystère,
+     Page du franchisé, Qui fait quoi (admin). Consultants fictifs, magasins réels, photos de Gosselies.
+     Écran direct : #tableau, #tablette, #msp, #franchise, #admin. Captures : capturer.cjs. -->
+<style>
+/* Mise en page : la coque du cockpit — rail fixe à gauche, zone de travail beige, cartes blanches ;
+   la visite se montre dans un cadre de tablette, la page du franchisé dans un cadre de téléphone large.
+   Un seul thème, clair, volontairement : c'est celui du cockpit. */
+:root {
+  --rouge: #8D1D2C;        /* Ruby Red : actions, entrée active */
+  --rouge-pale: #EFE3DE;
+  --abricot: #F2C9A0;
+  --beige: #EAE4DC;        /* fond de page */
+  --beige-2: #F4EFE8;      /* champs, surfaces secondaires */
+  --rail: #F5F1EB;
+  --blanc: #FFFFFF;
+  --encre: #222222;
+  --gris: #666666;
+  --trait: rgba(34, 34, 34, 0.10);
+  --trait-2: rgba(34, 34, 34, 0.18);
+  --ok: #2D7A3E;  --ok-bg: #E6F2E9;
+  --att: #B26A00; --att-bg: #FBEFE0;
+  --ko: #C0182B;  --ko-bg: #F7E4E6;
+  --info: #3D5A8A; --info-bg: #E6ECF5;
+  --vio: #5B3D9E; --vio-bg: #EEE6FA;
+  --jaune: #E0A526;
+  --bezel: #1D1D1F;
+  --ombre: 0 1px 0 rgba(0, 0, 0, 0.04);
+  --f-ui: 'Gotham', 'Helvetica Neue', Arial, sans-serif;
+  --f-titre: 'Vank', 'Gotham', 'Arial Narrow', sans-serif;
+  color-scheme: light;
+}
+@font-face { font-family: 'Gotham'; font-weight: 300; font-display: swap; src: url('fonts/Gotham_Light.otf') format('opentype'), url('../../../public/assets/ds/fonts/Gotham_Light.otf') format('opentype'); }
+@font-face { font-family: 'Gotham'; font-weight: 400; font-display: swap; src: url('fonts/Gotham_Regular_New.otf') format('opentype'), url('../../../public/assets/ds/fonts/Gotham_Regular_New.otf') format('opentype'); }
+@font-face { font-family: 'Gotham'; font-weight: 500; font-display: swap; src: url('fonts/Gotham_Medium.otf') format('opentype'), url('../../../public/assets/ds/fonts/Gotham_Medium.otf') format('opentype'); }
+@font-face { font-family: 'Gotham'; font-weight: 600; font-display: swap; src: url('fonts/Gotham_Regular.otf') format('opentype'), url('../../../public/assets/ds/fonts/Gotham_Regular.otf') format('opentype'); }
+@font-face { font-family: 'Gotham'; font-weight: 700; font-display: swap; src: url('fonts/Gotham_Black.otf') format('opentype'), url('../../../public/assets/ds/fonts/Gotham_Black.otf') format('opentype'); }
+@font-face { font-family: 'Vank'; font-weight: 400; font-display: swap; src: url('fonts/GC_Vank.ttf') format('truetype'), url('../../../public/assets/ds/fonts/GC_Vank.ttf') format('truetype'); }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { background: var(--beige); color: var(--encre); }
+body { font-family: var(--f-ui); font-size: 13px; line-height: 1.45; }
+table { font-size: inherit; }
+button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--rouge); outline-offset: 2px; }
+h1, h2, h3 { text-wrap: balance; font-weight: 400; }
+.num, td, .tuile .v { font-variant-numeric: tabular-nums; }
+
+/* ---------- coque ---------- */
+.app { display: flex; min-height: 100vh; }
+.rail { width: 266px; flex: 0 0 266px; background: var(--rail); border-right: 0.5px solid var(--trait); padding: 22px 14px 24px max(14px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 16px; }
+.rail .logo img { width: 170px; display: block; }
+.rail .pr { font: 600 10.5px var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gris); margin-top: 7px; }
+.rail .cherche { background: var(--beige-2); border: 0.5px solid var(--trait-2); border-radius: 9px; height: 32px; display: flex; align-items: center; padding: 0 10px; color: var(--gris); font-size: 12px; }
+.rail nav { display: flex; flex-direction: column; gap: 16px; }
+.rail .sec { display: flex; flex-direction: column; gap: 2px; }
+.rail .sec > b { font: 700 11px var(--f-ui); letter-spacing: 0.09em; text-transform: uppercase; padding: 0 10px 6px; display: flex; align-items: center; gap: 7px; }
+.rail .sec > b em { font: 700 8.5px var(--f-ui); font-style: normal; letter-spacing: 0.08em; background: var(--rouge); color: var(--blanc); border-radius: 999px; padding: 2px 6px; }
+.rail .it { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; border: none; background: transparent; border-radius: 8px; padding: 8px 10px; font: 300 13px var(--f-ui); color: var(--encre); }
+.rail .it:hover { background: rgba(141, 29, 44, 0.05); }
+.rail .it.on { background: rgba(141, 29, 44, 0.08); color: var(--rouge); font-weight: 500; }
+.rail .it .ico { width: 18px; text-align: center; color: var(--gris); font-size: 12px; }
+.rail .it.on .ico { color: var(--rouge); }
+.rail .it .lib { flex: 1; display: flex; align-items: center; gap: 8px; }
+.rail .it small { display: block; font-size: 10.5px; color: var(--gris); font-weight: 300; }
+.rail .bdg { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--rouge); color: var(--blanc); font-size: 10px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; }
+.rail .groupe { background: var(--blanc); border: 0.5px solid var(--trait); border-radius: 12px; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.rail .groupe .it.on { background: var(--rouge-pale); }
+.rail .eteint .it { color: var(--gris); }
+.rail .sm { display: flex; flex-direction: column; gap: 2px; }
+.rail .sub { display: flex; align-items: center; gap: 7px; width: 100%; text-align: left; border: none; background: transparent; border-radius: 8px; padding: 8px 10px; font: 300 13px var(--f-ui); color: var(--encre); }
+.rail .sub:hover { background: rgba(141, 29, 44, 0.05); }
+.rail .sub .chev { font-size: 9px; color: var(--gris); width: 8px; flex: 0 0 auto; }
+.rail .sub .lib { flex: 1; }
+.rail .sub em { font: 700 8.5px var(--f-ui); font-style: normal; letter-spacing: 0.08em; text-transform: uppercase; background: var(--rouge); color: var(--blanc); border-radius: 999px; padding: 2px 6px; }
+.rail .sub em.dep { background: var(--abricot); color: #6B4420; }
+.rail .sub em.gris { background: var(--beige-2); color: var(--gris); }
+.rail .enf { display: flex; flex-direction: column; gap: 2px; margin-left: 14px; }
+.rail .enf .it { font-size: 12.5px; }
+.rail .eteint .sub { color: var(--gris); }
+.rail .ext { font-size: 10px; color: var(--gris); }
+.rail .bas-rail { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 12px 6px 0; border-top: 0.5px solid var(--trait); }
+.rail .av { width: 30px; height: 30px; border-radius: 50%; background: var(--rouge); color: var(--blanc); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; }
+
+main { flex: 1; min-width: 0; padding-block: 22px 48px; padding-left: max(28px, env(safe-area-inset-left, 0px)); padding-right: max(28px, env(safe-area-inset-right, 0px)); }
+.page { max-width: 1400px; display: flex; flex-direction: column; gap: 16px; }
+.topmob { display: none; }
+.voile { display: none; }
+
+/* ---------- en-tête d'écran ---------- */
+.crumb { font: 600 10.5px var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gris); }
+.tete { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.tete > div { flex: 1 1 520px; min-width: 0; }
+.tete h1 { font: 400 32px/1.05 var(--f-titre); margin: 4px 0 6px; }
+.tete p { margin: 0; color: var(--gris); font-size: 13.5px; max-width: 70ch; }
+.etiquette { font: 600 11px var(--f-ui); background: #FFF6E9; border: 0.5px solid var(--abricot); color: #6B4420; border-radius: 10px; padding: 8px 12px; }
+.barre { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--blanc); border-radius: 14px; padding: 10px 14px; box-shadow: var(--ombre); }
+.barre .etat { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--gris); min-width: 0; }
+.barre .etat i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: 0 0 auto; }
+.barre .sp { flex: 1; }
+.btn { border: 0.5px solid var(--trait-2); background: var(--blanc); border-radius: 999px; padding: 8px 14px; font: 600 12.5px var(--f-ui); color: var(--encre); white-space: nowrap; }
+.btn:hover { border-color: var(--encre); }
+.btn.p { background: var(--rouge); border-color: var(--rouge); color: var(--blanc); }
+.btn.p:hover { background: #761624; }
+.btn.s { padding: 6px 11px; font-size: 11.5px; }
+.btn.ok { border-color: var(--ok); color: var(--ok); }
+.btn.ko { border-color: var(--ko); color: var(--ko); }
+.sel { border: 0.5px solid var(--trait-2); border-radius: 999px; padding: 7px 28px 7px 12px; font: 600 12.5px var(--f-ui); background: var(--blanc) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23222' stroke-width='1.4'/%3E%3C/svg%3E") no-repeat right 11px center; appearance: none; }
+.onglets { display: inline-flex; flex-wrap: wrap; gap: 2px; background: var(--blanc); border: 0.5px solid var(--trait); border-radius: 12px; padding: 3px; align-self: flex-start; max-width: 100%; }
+.onglets button { border: none; background: transparent; border-radius: 9px; padding: 8px 15px; font: 600 12.5px var(--f-ui); display: inline-flex; align-items: center; gap: 7px; }
+.onglets button.on { background: var(--rouge); color: var(--blanc); }
+.onglets button span { font-size: 10px; border-radius: 999px; padding: 1px 6px; background: rgba(0, 0, 0, 0.08); }
+.onglets button.on span { background: rgba(255, 255, 255, 0.25); }
+
+/* ---------- briques ---------- */
+.tuiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 12px; }
+.tuile { background: var(--blanc); border-radius: 14px; padding: 13px 15px; box-shadow: var(--ombre); display: flex; flex-direction: column; gap: 3px; }
+.tuile.chaud { background: #FFF8EE; border: 0.5px solid var(--abricot); }
+.tuile .k { font: 600 10.5px var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gris); }
+.tuile .v { font: 400 30px/1.05 var(--f-titre); }
+.tuile .v.ko { color: var(--ko); } .tuile .v.att { color: var(--att); } .tuile .v.ok { color: var(--ok); }
+.tuile .s { font-size: 11.5px; color: var(--gris); }
+.carte { background: var(--blanc); border-radius: 14px; padding: 16px 18px; box-shadow: var(--ombre); min-width: 0; }
+.carte > h2 { font: 400 21px/1.1 var(--f-titre); margin: 0 0 4px; }
+.carte > h2 small { font: 500 12px var(--f-ui); color: var(--gris); margin-left: 8px; }
+.carte > .aide { color: var(--gris); font-size: 12px; margin: 0 0 12px; }
+.lab { font: 600 10.5px var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gris); }
+.mu { color: var(--gris); }
+.xs { font-size: 11px; }
+.deux { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.deux.egal { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.ligne { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ligne .sp { flex: 1; }
+.feu { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+.feu.r { background: var(--ko); } .feu.o { background: var(--jaune); } .feu.v { background: var(--ok); }
+.pil { display: inline-flex; align-items: center; gap: 4px; font: 700 9.5px var(--f-ui); letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; white-space: nowrap; background: var(--beige-2); color: var(--encre); }
+.pil.P0 { background: var(--ko); color: var(--blanc); } .pil.P1 { background: var(--jaune); color: #3A2A00; } .pil.P2 { background: var(--beige-2); color: var(--encre); }
+.pil.ok { background: var(--ok-bg); color: var(--ok); } .pil.att { background: var(--att-bg); color: var(--att); } .pil.ko { background: var(--ko-bg); color: var(--ko); }
+.pil.info { background: var(--info-bg); color: var(--info); } .pil.vio { background: var(--vio-bg); color: var(--vio); }
+.pil.neuf { background: var(--rouge); color: var(--blanc); }
+.src { font: 600 10px var(--f-ui); color: var(--info); background: var(--info-bg); border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
+.defile { overflow-x: auto; min-width: 0; }
+table.t { width: 100%; border-collapse: collapse; }
+table.t th { font: 600 10px var(--f-ui); letter-spacing: 0.09em; text-transform: uppercase; color: var(--gris); text-align: left; padding: 7px 10px; border-bottom: 0.5px solid var(--trait); white-space: nowrap; vertical-align: bottom; }
+table.t td { padding: 10px; border-bottom: 0.5px solid var(--trait); vertical-align: top; }
+table.t tr:last-child td { border-bottom: none; }
+table.t td small { display: block; color: var(--gris); font-size: 11px; margin-top: 2px; }
+table.t tr.on td { background: #FBF4F1; }
+.fin { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+.chk { display: inline-flex; align-items: center; gap: 8px; }
+.chk input { accent-color: var(--rouge); width: 15px; height: 15px; margin: 0; }
+.champ { background: var(--beige-2); border: 0.5px solid var(--trait-2); border-radius: 9px; padding: 9px 11px; width: 100%; resize: vertical; min-height: 40px; line-height: 1.45; }
+.champ:focus { background: var(--blanc); }
+.inp { border: 0.5px solid var(--trait-2); border-radius: 8px; background: var(--blanc); padding: 6px 8px; width: 64px; text-align: right; font-weight: 600; }
+.repris { font-size: 11.5px; color: var(--gris); border-top: 0.5px solid var(--trait-2); padding-top: 12px; }
+.repris b { color: var(--encre); font-weight: 600; }
+
+/* ---------- tableau de bord ---------- */
+.pipe { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.colp { background: var(--beige-2); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.colp > header { display: flex; align-items: baseline; gap: 8px; padding: 2px 4px 4px; }
+.colp > header b { font: 600 12.5px var(--f-ui); }
+.colp > header span { font-size: 11px; color: var(--gris); }
+.colp > header .n { margin-left: auto; font: 700 11px var(--f-ui); background: var(--blanc); border-radius: 999px; padding: 1px 8px; }
+.vc { text-align: left; width: 100%; background: var(--blanc); border: 0.5px solid var(--trait); border-radius: 11px; padding: 10px 11px; display: flex; flex-direction: column; gap: 4px; }
+.vc:hover { border-color: var(--trait-2); box-shadow: 0 2px 10px rgba(34, 34, 34, 0.07); }
+.vc.choisi { border-color: var(--rouge); box-shadow: inset 0 0 0 1px var(--rouge); }
+.vc .m { font-weight: 600; font-size: 13.5px; display: flex; align-items: center; gap: 7px; }
+.vc .ty { font-size: 11.5px; }
+.vc .q { font-size: 11px; color: var(--gris); }
+.vc .ech { font-size: 11px; font-weight: 600; }
+.vc .ech.ko { color: var(--ko); } .vc .ech.att { color: var(--att); } .vc .ech.ok { color: var(--ok); }
+.barrette { height: 4px; background: var(--beige-2); border-radius: 4px; overflow: hidden; }
+.barrette i { display: block; height: 100%; background: var(--rouge); border-radius: 4px; }
+.bloc { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 11px 0; border-top: 0.5px solid var(--trait); }
+.bloc:first-of-type { border-top: none; }
+.bloc .tx { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.bloc .tx b { font-weight: 600; }
+.bloc .tx .ligne { gap: 6px; }
+.interne { border-left: 3px solid var(--vio); padding-left: 10px; }
+.pt { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; }
+.pt + .pt { border-top: 0.5px dashed var(--trait-2); }
+.ajout { color: var(--rouge); font-weight: 600; font-size: 12px; background: none; border: none; padding: 6px 0 0; }
+.vignettes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.vign { position: relative; border-radius: 9px; overflow: hidden; aspect-ratio: 3 / 4; max-width: 100%; background: var(--beige-2); }
+.vign img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vign .chk { position: absolute; top: 6px; left: 6px; background: rgba(255, 255, 255, 0.92); border-radius: 6px; padding: 3px 6px; font-size: 10.5px; font-weight: 600; }
+.vign.exclu img { opacity: 0.35; }
+.vign .leg { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 7px 5px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.6)); color: var(--blanc); font-size: 10.5px; font-weight: 600; }
+.puce { display: inline-flex; align-items: center; gap: 5px; border: 0.5px solid var(--trait-2); background: var(--blanc); border-radius: 999px; padding: 5px 10px; font-size: 11.5px; font-weight: 600; }
+.puce.on { background: var(--encre); border-color: var(--encre); color: var(--blanc); }
+.apercu { background: var(--beige); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.apercu .mini { background: var(--blanc); border-radius: 10px; padding: 10px 12px; font-size: 12px; }
+.apercu .mini h4 { margin: 0 0 4px; font: 400 16px var(--f-titre); }
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.duo figure { margin: 0; position: relative; }
+.duo figcaption { position: absolute; top: 6px; left: 6px; font: 700 9.5px var(--f-ui); letter-spacing: 0.06em; text-transform: uppercase; background: rgba(255, 255, 255, 0.92); border-radius: 6px; padding: 3px 7px; }
+.corr { border: 0.5px solid var(--trait); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.corr + .corr { margin-top: 12px; }
+
+/* ---------- tablette ---------- */
+.tab-cadre { background: var(--bezel); border-radius: 30px; padding: 16px; max-width: 1180px; width: 100%; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22); }
+.tab-ecran { background: var(--beige); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; min-height: 700px; }
+.tab-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--rail); border-bottom: 0.5px solid var(--trait); flex-wrap: wrap; }
+.tab-bar img { height: 18px; }
+.tab-bar .t { font: 400 17px/1.1 var(--f-titre); }
+.tab-bar .d { font-size: 11px; color: var(--gris); }
+.tab-bar .sp { flex: 1; }
+.tab-bar .hl { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; background: var(--att-bg); color: var(--att); border-radius: 999px; padding: 4px 10px; }
+.tab-bar .hl i { width: 7px; height: 7px; border-radius: 50%; background: var(--att); }
+.tab-corps { display: grid; grid-template-columns: 238px minmax(0, 1fr); flex: 1; min-height: 0; }
+.etapes { background: var(--blanc); border-right: 0.5px solid var(--trait); padding: 12px 10px; display: flex; flex-direction: column; gap: 3px; }
+.etapes .lab { padding: 4px 8px 8px; }
+.et { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 9px; align-items: center; width: 100%; text-align: left; border: none; background: transparent; border-radius: 10px; padding: 8px; }
+.et:hover { background: var(--beige-2); }
+.et.on { background: var(--rouge-pale); }
+.et .n { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; background: var(--beige-2); color: var(--gris); }
+.et.fait .n { background: var(--ok); color: var(--blanc); }
+.et.on .n { background: var(--rouge); color: var(--blanc); }
+.et b { display: block; font-weight: 600; font-size: 12.5px; }
+.et small { display: block; color: var(--gris); font-size: 10.5px; }
+.tab-main { padding: 16px 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.tab-main h2 { font: 400 22px/1.1 var(--f-titre); margin: 0; }
+.tab-main .hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.tab-main .hd .sp { flex: 1; }
+.tc { background: var(--blanc); border-radius: 13px; padding: 12px 14px; border: 0.5px solid var(--trait); }
+.tc .mod { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.tc .mod b { font-weight: 600; }
+.pc { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 0.5px solid var(--trait); }
+.pc .q { min-width: 0; }
+.pc .q small { display: block; color: var(--gris); font-size: 11px; }
+.seg { display: inline-flex; border: 0.5px solid var(--trait-2); border-radius: 10px; overflow: hidden; }
+.seg button { border: none; background: var(--blanc); padding: 8px 12px; font-weight: 600; font-size: 12px; min-height: 38px; }
+.seg button + button { border-left: 0.5px solid var(--trait-2); }
+.seg button.ok { background: var(--ok); color: var(--blanc); }
+.seg button.ko { background: var(--ko); color: var(--blanc); }
+.seg button.na { background: var(--gris); color: var(--blanc); }
+.photo-btn { border: 0.5px solid var(--trait-2); background: var(--blanc); border-radius: 10px; min-height: 38px; padding: 0 12px; min-width: 60px; font-weight: 600; font-size: 12px; }
+.bureau { color: var(--rouge); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.trois { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.echelle { display: flex; gap: 6px; flex-wrap: wrap; }
+.echelle button { border: 0.5px solid var(--trait-2); background: var(--blanc); border-radius: 10px; min-width: 46px; min-height: 40px; font-size: 16px; }
+.echelle button.on { background: var(--encre); color: var(--blanc); border-color: var(--encre); }
+.signature { border: 1.5px dashed var(--trait-2); border-radius: 12px; height: 120px; display: flex; align-items: center; justify-content: center; color: var(--gris); background: var(--blanc); position: relative; overflow: hidden; }
+.signature svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tab-pied { display: flex; gap: 10px; justify-content: space-between; padding: 10px 18px 14px; border-top: 0.5px solid var(--trait); background: var(--rail); }
+.circuit { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.circuit > div { background: var(--blanc); border-radius: 12px; padding: 11px 12px; display: flex; flex-direction: column; gap: 4px; position: relative; min-width: 0; }
+.circuit .ou { font: 700 9.5px var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase; }
+.circuit .ou.b { color: var(--info); } .circuit .ou.t { color: var(--rouge); } .circuit .ou.f { color: #78554B; }
+.circuit .n2 { font: 400 24px/1 var(--f-titre); color: var(--gris); }
+.circuit b { font-weight: 600; font-size: 12.5px; }
+
+/* ---------- page du franchisé ---------- */
+.fr-zone { display: grid; grid-template-columns: minmax(0, 760px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.fr-page { background: var(--beige); border: 10px solid var(--bezel); border-radius: 26px; overflow: hidden; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2); }
+.fr-hd { background: var(--blanc); padding: 14px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid var(--trait); }
+.fr-hd img { height: 20px; }
+.fr-hd .t { font: 400 18px/1.1 var(--f-titre); }
+.fr-hd .sp { flex: 1; }
+.fr-hd .av { width: 32px; height: 32px; border-radius: 50%; background: #78554B; color: var(--blanc); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.fr-corps { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.fr-corps h3 { font: 400 20px/1.1 var(--f-titre); margin: 4px 2px 0; }
+.fr-k { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.fr-k > div { background: var(--blanc); border-radius: 12px; padding: 11px 12px; }
+.fr-k .v { font: 400 24px/1.1 var(--f-titre); }
+.ptf { background: var(--blanc); border-radius: 13px; padding: 12px 14px; display: flex; flex-direction: column; gap: 7px; border: 0.5px solid var(--trait); }
+.ptf.urg { border-color: var(--ko); box-shadow: inset 3px 0 0 var(--ko); }
+.ptf .ti { font-weight: 600; font-size: 14px; }
+.ptf .vu { font-size: 12px; background: var(--beige-2); border-radius: 9px; padding: 8px 10px; }
+.rap { background: var(--blanc); border-radius: 13px; border: 0.5px solid var(--trait); overflow: hidden; }
+.rap .rl { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px 14px; border-top: 0.5px solid var(--trait); }
+.rap .rl:first-child { border-top: none; }
+.rap .rl .d { font-weight: 600; }
+.rap .ouvert { background: #FBF8F4; padding: 12px 14px 14px; border-top: 0.5px solid var(--trait); display: flex; flex-direction: column; gap: 8px; }
+.rap .ouvert p { margin: 0; }
+.cote { display: flex; flex-direction: column; gap: 12px; }
+
+/* ---------- admin ---------- */
+table.t select.sel { padding-top: 5px; padding-bottom: 5px; font-size: 12px; max-width: 100%; }
+.droit { text-align: center; }
+.droit input { accent-color: var(--rouge); width: 16px; height: 16px; }
+.regle { display: grid; grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 0; border-top: 0.5px solid var(--trait); }
+.regle:first-of-type { border-top: none; }
+.regle .rq { color: var(--gris); }
+.regle .rv { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.radio { display: inline-flex; align-items: center; gap: 6px; margin-right: 12px; }
+.radio input { accent-color: var(--rouge); margin: 0; }
+
+.toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--encre); color: var(--blanc); border-radius: 999px; padding: 10px 18px; font-size: 12.5px; font-weight: 600; z-index: 60; max-width: calc(100% - 32px); text-align: center; }
+
+/* ---------- largeurs ---------- */
+@media (max-width: 1260px) {
+  .pipe { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .circuit { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fr-zone { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 1080px) {
+  .deux, .deux.egal { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 960px) {
+  .rail { position: fixed; left: 0; top: 0; bottom: 0; z-index: 50; transform: translateX(-105%); transition: transform 0.2s ease; overflow-y: auto; padding-top: max(22px, env(safe-area-inset-top, 0px)); }
+  .app.rail-ouvert .rail { transform: none; box-shadow: 0 0 40px rgba(0, 0, 0, 0.25); }
+  .app.rail-ouvert .voile { display: block; position: fixed; inset: 0; background: rgba(34, 34, 34, 0.35); z-index: 40; }
+  .topmob { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .topmob button { border: 0.5px solid var(--trait-2); background: var(--blanc); border-radius: 10px; height: 36px; padding: 0 12px; font-weight: 600; }
+  .topmob span { font: 400 18px var(--f-titre); }
+  .tab-corps { grid-template-columns: minmax(0, 1fr); }
+  .etapes { flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 0.5px solid var(--trait); }
+  .etapes .lab { display: none; }
+  .et { flex: 0 0 auto; width: auto; grid-template-columns: 24px auto; }
+  .et small { display: none; }
+}
+@media (max-width: 640px) {
+  main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .tete h1 { font-size: 26px; }
+  .pipe { grid-template-columns: minmax(0, 1fr); }
+  .circuit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .trois, .fr-k { grid-template-columns: minmax(0, 1fr); }
+  .vignettes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tab-cadre { padding: 8px; border-radius: 18px; }
+  .tab-ecran { border-radius: 12px; min-height: 0; }
+  .pc { grid-template-columns: minmax(0, 1fr); }
+  .regle { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .fr-page { border-width: 6px; border-radius: 18px; }
+  .rap .rl { grid-template-columns: 56px minmax(0, 1fr); }
+  .rap .rl .btn { grid-column: 2; justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) { .rail { transition: none; } }
+</style>
+
+<div class="app" id="app">
+  <aside class="rail" id="rail" aria-label="Rail du cockpit">
+    <div class="logo"><img src="logo.png" alt="L’Atelier by"><div class="pr">Pilotage réseau</div></div>
+    <div class="cherche">Rechercher partout…</div>
+    <nav>
+      <div class="sec eteint"><b>Pilotage</b>
+        <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Résultat</span></button>
+        <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Performance</span></button>
+        <button class="it" data-toast="Page à part, inchangée"><span class="lib">Dashboard magasin <span class="ext">↗</span></span></button>
+      </div>
+      <!-- Le menu existant « Franchisés · évaluation et suivi » reçoit tout : le nouveau sous-menu
+           « Suivi des franchisés » (quatre entrées) et un sous-menu « Budget » transféré de Magasins.
+           Les deux anciens sous-menus restent tels quels pour l'instant (on affine après). -->
+      <div class="sec"><b>Franchisés · évaluation et suivi</b>
+        <button class="it" data-toast="Écran existant, à sa place"><span class="lib">Fiche franchisé</span></button>
+        <button class="it" data-toast="Écran existant, à sa place"><span class="lib">Scoring du trimestre</span></button>
+        <div class="sm">
+          <button class="sub" data-a="sm" aria-expanded="true"><span class="chev">▾</span><span class="lib">Suivi des franchisés</span><em>nouveau</em></button>
+          <div class="enf groupe">
+            <button class="it on" data-ecran="tableau"><span class="lib"><span class="ico">▦</span><span>Tableau de bord<small>ordinateur · préparer, adapter, envoyer</small></span></span><span class="bdg">4</span></button>
+            <button class="it" data-ecran="tablette"><span class="lib"><span class="ico">▭</span><span>Visite sur tablette<small>en magasin, même hors ligne</small></span></span></button>
+            <button class="it" data-ecran="msp"><span class="lib"><span class="ico">◎</span><span>Client mystère<small>rapports, encodage, suites</small></span></span><span class="bdg">1</span></button>
+            <button class="it" data-ecran="franchise"><span class="lib"><span class="ico">◧</span><span>Page du franchisé<small>ses rapports, ses points</small></span></span></button>
+            <button class="it" data-ecran="admin"><span class="lib"><span class="ico">⚙</span><span>Qui fait quoi<small>admin · rôles et délais</small></span></span></button>
+          </div>
+        </div>
+        <div class="sm">
+          <button class="sub" data-a="sm" aria-expanded="true"><span class="chev">▾</span><span class="lib">Budget</span><em class="dep">transféré</em></button>
+          <div class="enf">
+            <button class="it" data-toast="Écran existant, transféré de Magasins › Budget (onglet Suivi)"><span class="lib">Suivi budget</span></button>
+            <button class="it" data-toast="Écran existant, transféré de Magasins › Budget (onglet Encodage)"><span class="lib">Encodage du budget</span></button>
+            <button class="it" data-toast="Écran existant, transféré de Magasins › Budget (onglet Paramètres)"><span class="lib">Paramètres du budget</span></button>
+          </div>
+        </div>
+        <div class="sm eteint">
+          <button class="sub" data-a="sm" aria-expanded="false"><span class="chev">▸</span><span class="lib">Suivi journalier et opérations</span><span class="bdg">6</span></button>
+          <div class="enf" hidden>
+            <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Tâches et contrôles photo</span><span class="bdg">6</span></button>
+            <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Objectifs</span></button>
+            <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Remarques opérateurs</span></button>
+            <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Note Google et avis</span></button>
+            <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Reporting automatisé</span></button>
+          </div>
+        </div>
+        <div class="sm eteint">
+          <button class="sub" data-a="sm" aria-expanded="false"><span class="chev">▸</span><span class="lib">Suivi de terrain</span><em class="gris">à affiner</em></button>
+          <div class="enf" hidden>
+            <button class="it" data-toast="Repris dans Suivi des franchisés : planning et réseau au tableau de bord, cadre de visite dans Qui fait quoi"><span class="lib">Gestion consultant</span></button>
+            <button class="it" data-toast="Repris dans Suivi des franchisés : Visite sur tablette"><span class="lib">Visites <span class="ext">↗</span></span></button>
+            <button class="it" data-toast="Déplacé dans Suivi des franchisés › Client mystère"><span class="lib">Client mystère</span></button>
+            <button class="it" data-toast="Repris dans le dossier de visite et la checklist de la tablette"><span class="lib">Conformité du comptoir</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="sec eteint"><b>Magasins</b>
+        <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Analyse magasin</span></button>
+        <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Jours creux</span></button>
+        <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Invendus et poubelle</span></button>
+        <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Plan de développement</span></button>
+        <button class="it" data-toast="Écran existant, inchangé"><span class="lib">Scouting — où ouvrir</span></button>
+      </div>
+      <div class="sec eteint"><b>Produits · Centrale · Marque · ERP</b>
+        <button class="it" data-toast="Sections existantes, inchangées"><span class="lib">…</span></button>
+      </div>
+    </nav>
+    <div class="bas-rail"><div class="av">SV</div><div><div style="font-size:12px;font-weight:500">Sam V.</div><div class="xs mu">CEO · consultant</div></div></div>
+  </aside>
+  <div class="voile" data-a="rail"></div>
+
+  <main>
+    <div class="topmob"><button data-a="rail" aria-label="Ouvrir le rail">☰ Menu</button><span>Suivi des franchisés</span></div>
+
+    <!-- =================================================================== 1. TABLEAU DE BORD -->
+    <section class="page ecran" id="e-tableau">
+      <div class="tete">
+        <div>
+          <div class="crumb">Franchisés · évaluation et suivi › Suivi des franchisés › Tableau de bord</div>
+          <h1>Tableau de bord du suivi</h1>
+          <p>Sur l’ordinateur : préparer les visites, adapter les rapports que la tablette renvoie, puis les envoyer aux franchisés. La visite elle-même se fait sur la tablette.</p>
+        </div>
+        <div class="etiquette">maquette · samedi 24/10/2026 · consultants fictifs, magasins réels</div>
+      </div>
+      <div class="barre">
+        <div class="etat"><i></i>4 magasins · 3 consultants · visites, rapports et points relus à 08:20</div><span class="sp"></span>
+        <select class="sel" id="tb-sem" aria-label="Semaine"><option>Semaine du 26 au 30 octobre</option><option>Semaine du 2 au 6 novembre</option></select>
+        <select class="sel" id="tb-cons" aria-label="Consultant"><option>Tous les consultants</option><option>Sam V.</option><option>Nadia K.</option><option>Youssef B.</option></select>
+        <button class="btn" data-toast="Maquette : export des rapports du mois">Exporter</button>
+        <button class="btn p" data-toast="Maquette : le formulaire de planification (type, consultant, date) charge la checklist du type">Planifier une visite</button>
+      </div>
+      <div class="onglets" role="tablist">
+        <button class="on" data-tab="ensemble">Vue d’ensemble</button>
+        <button data-tab="preparer">Préparer <span>3</span></button>
+        <button data-tab="adapter">Adapter et envoyer <span>2</span></button>
+        <button data-tab="points">Points et corrections <span>2</span></button>
+      </div>
+
+      <!-- Vue d'ensemble -->
+      <div class="tabp col" data-panneau="ensemble">
+        <div class="tuiles">
+          <div class="tuile"><span class="k">Visites cette semaine</span><span class="v">4</span><span class="s">3 à préparer · 1 prête sur la tablette</span></div>
+          <div class="tuile chaud"><span class="k">Rapports à adapter</span><span class="v ko">2</span><span class="s">Corbais à envoyer avant 17:12 (48 h)</span></div>
+          <div class="tuile"><span class="k">Rapports envoyés · octobre</span><span class="v">6</span><span class="s">5 lus par le franchisé · 1 pas encore</span></div>
+          <div class="tuile"><span class="k">Points ouverts chez les franchisés</span><span class="v att">8</span><span class="s">2 P0 · 3 en retard</span></div>
+          <div class="tuile"><span class="k">Corrections à valider</span><span class="v">2</span><span class="s">photos envoyées par les franchisés</span></div>
+        </div>
+
+        <div class="carte">
+          <h2>Les visites, de la préparation à l’envoi<small>une carte par visite · cliquez pour l’ouvrir</small></h2>
+          <p class="aide">Une visite traverse quatre colonnes : le bureau prépare, la tablette visite, le bureau adapte le brouillon et l’envoie. Les délais viennent de « Qui fait quoi ».</p>
+          <div class="pipe">
+            <div class="colp"><header><b>À préparer</b><span>ordinateur</span><span class="n">3</span></header>
+              <button class="vc choisi" data-go="preparer"><span class="m"><span class="feu r"></span>Halle</span><span class="ty">Bilan trimestriel · mar 27/10 · 10:00</span><span class="q">Sam V. · dossier 4 / 6</span><div class="barrette"><i style="width:66%"></i></div><span class="ech att">prêt attendu le 25/10 (J−2)</span></button>
+              <button class="vc" data-go="preparer"><span class="m"><span class="feu o"></span>Sombreffe</span><span class="ty">Régulière · mer 28/10 · 14:00</span><span class="q">Youssef B. · dossier 1 / 6</span><div class="barrette"><i style="width:16%"></i></div><span class="ech ko">visite due depuis 7 jours</span></button>
+              <button class="vc" data-go="preparer"><span class="m"><span class="feu r"></span>Halle</span><span class="ty">Hygiène et qualité · ven 30/10 · 09:00</span><span class="q">Nadia K. · dossier assemblé tout seul</span><div class="barrette"><i style="width:50%"></i></div><span class="ech">prêt attendu le 28/10</span></button>
+            </div>
+            <div class="colp"><header><b>Sur la tablette</b><span>en visite</span><span class="n">1</span></header>
+              <button class="vc" data-ecran="tablette"><span class="m"><span class="feu o"></span>Gosselies</span><span class="ty">Suivi plan d’action · lun 26/10 · 09:30</span><span class="q">Sam V. · envoyée le 23/10 à 16:05</span><span class="ech ok">ordre du jour reçu par le franchisé</span></button>
+              <div class="xs mu" style="padding:2px 4px">Pendant la visite, la carte montre l’avancement de la checklist. Hors ligne, elle se met à jour au retour du réseau.</div>
+            </div>
+            <div class="colp"><header><b>Rapport à adapter</b><span>ordinateur</span><span class="n">2</span></header>
+              <button class="vc" data-go="adapter"><span class="m"><span class="feu v"></span>Corbais</span><span class="ty">Bilan trimestriel · jeu 22/10</span><span class="q">Sam V. · brouillon reçu le 22/10 à 17:12 · 2 points</span><span class="ech ko">à envoyer avant aujourd’hui 17:12</span></button>
+              <button class="vc" data-go="adapter"><span class="m"><span class="feu o"></span>Gosselies</span><span class="ty">Hygiène et qualité · ven 23/10</span><span class="q">Nadia K. · brouillon reçu le 23/10 à 11:40 · 1 point</span><span class="ech att">à envoyer avant demain 11:40</span></button>
+            </div>
+            <div class="colp"><header><b>Envoyé</b><span>octobre</span><span class="n">6</span></header>
+              <button class="vc" data-ecran="franchise"><span class="m"><span class="feu r"></span>Halle</span><span class="ty">Production · mer 21/10</span><span class="q">Youssef B. · envoyé le 22/10 · 3 points</span><span class="ech ok">lu le 22/10 · 1 correction envoyée</span></button>
+              <button class="vc" data-ecran="franchise"><span class="m"><span class="feu o"></span>Gosselies</span><span class="ty">Régulière · lun 19/10</span><span class="q">Sam V. · envoyé le 20/10 · 2 points</span><span class="ech ok">lu le 20/10</span></button>
+              <button class="vc" data-ecran="franchise"><span class="m"><span class="feu o"></span>Sombreffe</span><span class="ty">Client mystère · jeu 15/10</span><span class="q">Nadia K. · envoyé le 16/10 · 2 points</span><span class="ech ko">pas encore lu · relance faite le 19/10</span></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="carte">
+          <h2>Les franchisés<small>le feu, le dernier rapport, ce qui reste à travailler</small></h2>
+          <div class="defile">
+            <table class="t">
+              <thead><tr><th>Franchisé</th><th>Dernière visite</th><th>Dernier rapport</th><th>Points ouverts</th><th>Prochaine visite</th><th>Cadre d’octobre</th><th>Scoring Q3</th></tr></thead>
+              <tbody>
+                <tr class="on"><td><span class="ligne"><span class="feu r"></span><b>Halle</b></span><small>Sam V. · P0 en retard</small></td><td>21/10 · production<small>11 / 14 conformes</small></td><td><span class="pil ok">lu</span><small>envoyé le 22/10</small></td><td><b>3</b> · 1 P0<small>1 photo à valider</small></td><td>27/10 · bilan Q3<small>Sam V.</small></td><td>3 / 4<small>hygiène le 30/10</small></td><td>15,8 / 20</td></tr>
+                <tr><td><span class="ligne"><span class="feu o"></span><b>Gosselies</b></span><small>Sam V.</small></td><td>23/10 · hygiène<small>11 / 12 conformes</small></td><td><span class="pil att">à adapter</span><small>brouillon du 23/10</small></td><td><b>2</b> · P1, P2<small>1 photo à valider</small></td><td>26/10 · suivi plan<small>Sam V.</small></td><td>2 / 2</td><td>16,4 / 20</td></tr>
+                <tr><td><span class="ligne"><span class="feu v"></span><b>Corbais</b></span><small>Nadia K.</small></td><td>22/10 · bilan Q3<small>9 / 10 conformes</small></td><td><span class="pil att">à adapter</span><small>avant 17:12</small></td><td><b>1</b> · P2</td><td>17/11 · régulière<small>Nadia K.</small></td><td>1 / 1</td><td>17,2 / 20</td></tr>
+                <tr><td><span class="ligne"><span class="feu o"></span><b>Sombreffe</b></span><small>Youssef B. · visite due</small></td><td>15/10 · client mystère<small>62 / 80</small></td><td><span class="pil ko">pas lu</span><small>envoyé le 16/10</small></td><td><b>2</b> · 1 P0<small>escaladé à Sam V.</small></td><td>28/10 · régulière<small>Youssef B.</small></td><td>0 / 1</td><td>13,5 / 20</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="xs mu" style="margin:10px 0 0">Le feu reste celui du module Visites : P0 ouvert, note Google, planogramme, visite due. Le scoring se lit, il se calcule toujours dans « Scoring du trimestre ».</p>
+        </div>
+        <div class="repris"><b>Repris de l’existant</b> · le tableau des franchisés de la Fiche franchisé · Mon planning et Réseau de Gestion consultant · l’agenda et le portfolio de l’app Visites · la synthèse de Sam (/visites/synthese).</div>
+      </div>
+
+      <!-- Préparer -->
+      <div class="tabp col" data-panneau="preparer" hidden>
+        <div class="barre">
+          <div class="etat" style="color:var(--encre)"><span class="feu r"></span><b>Halle · Bilan trimestriel</b> · mardi 27/10 · 10:00 – 12:00 · Sam V.</div><span class="sp"></span>
+          <select class="sel" id="prep-v" aria-label="Visite à préparer"><option>Halle · bilan · 27/10</option><option>Sombreffe · régulière · 28/10</option><option>Halle · hygiène · 30/10</option></select>
+        </div>
+        <div class="deux">
+          <div class="carte">
+            <h2>Le dossier de visite<small>assemblé tout seul · rien à ressaisir</small></h2>
+            <p class="aide">Chaque bloc est lu là où il vit. Coché, il part sur la tablette et s’affiche à l’étape « Dossier du bureau ».</p>
+            <div class="bloc"><label class="chk"><input type="checkbox" id="d1" checked></label><div class="tx"><div class="ligne"><b>Santé du magasin</b><span class="src">Fiche franchisé · santé</span></div><span>CA d’octobre à <b>96 %</b> du budget à date · part B2B 31 % (règle des 40 %) · invendus 3,8 % du CA · note Google 4,3, 12 avis en octobre · 2<sup>e</sup> du réseau au CA par heure.</span></div></div>
+            <div class="bloc"><label class="chk"><input type="checkbox" id="d2" checked></label><div class="tx"><div class="ligne"><b>Points ouverts</b><span class="src">Plans d’action</span></div><span><span class="pil P0">P0</span> vitrine salée à 7 °C, ouvert le 21/10, en retard d’un jour · <span class="pil P1">P1</span> comptoir viennoiserie, photo de correction à valider · <span class="pil P2">P2</span> étiquettes de prix des tartes, à reprendre.</span></div></div>
+            <div class="bloc"><label class="chk"><input type="checkbox" id="d3" checked></label><div class="tx"><div class="ligne"><b>Tâches et contrôles photo</b><span class="src">Tâches et contrôles photo</span></div><span>Octobre : 78 % des tâches rendues · obligatoires manquées 3 jours · 2 photos à noter.</span></div></div>
+            <div class="bloc"><label class="chk"><input type="checkbox" id="d4" checked></label><div class="tx"><div class="ligne"><b>Scoring du trimestre</b><span class="src">Scoring du trimestre</span></div><span>Q3 : <b>15,8 / 20</b> (Q2 : 14,1) · rapport A4 envoyé le 01/10 · le bilan le présente au franchisé.</span></div></div>
+            <div class="bloc"><label class="chk"><input type="checkbox" id="d5"></label><div class="tx"><div class="ligne"><b>Client mystère et comptoir</b><span class="src">Client mystère</span><span class="src">Conformité du comptoir</span></div><span>MSP Q3 : 68 / 80 · planogramme tenu à 86 % · 2 obligatoires sans place au comptoir.</span></div></div>
+            <div class="bloc interne"><label class="chk"><input type="checkbox" id="d6" checked></label><div class="tx"><div class="ligne"><b>Dernière météo du franchisé</b><span class="src">Fin de visite · météo</span><span class="pil vio">interne</span></div><span>06/10 : moral 3 / 5 · demande « de l’aide pour recruter le week-end ». Reste entre le bureau et le consultant, jamais montré au franchisé.</span></div></div>
+          </div>
+          <div class="col">
+            <div class="carte">
+              <h2>Ce que la tablette emportera</h2>
+              <p class="aide">Le type de visite donne la durée et la checklist. Le bureau ajoute ses points : ils apparaissent en tête de la checklist, marqués « demandé par le bureau ».</p>
+              <div class="ligne" style="margin-bottom:10px"><span class="lab" style="width:100%">Type de visite</span><select class="sel" id="prep-type" aria-label="Type de visite"><option>Bilan trimestriel</option><option>Régulière</option><option>Production</option><option>Hygiène et qualité</option><option>Client mystère</option><option>Suivi plan d’action</option><option>Revisite</option></select><span class="mu xs">120 min · checklist Bilan · 10 points</span><span class="src">Cadre de visite</span></div>
+              <div class="lab">Points ajoutés par le bureau</div>
+              <div class="pt"><label class="chk"><input type="checkbox" id="b1" checked></label><span>Contrôler la vitrine salée sur place <span class="mu">(P0 du 21/10)</span></span></div>
+              <div class="pt"><label class="chk"><input type="checkbox" id="b2" checked></label><span>Relire le P&amp;L de septembre : food cost 40,3 %</span></div>
+              <div class="pt"><label class="chk"><input type="checkbox" id="b3" checked></label><span>Parler du recrutement du week-end <span class="mu">(météo du 06/10)</span></span></div>
+              <button class="ajout" data-toast="Maquette : un point libre, ajouté à la checklist de cette visite">+ ajouter un point</button>
+              <div class="lab" style="margin-top:14px">Documents joints</div>
+              <div class="ligne" style="margin-top:6px"><span class="puce">📄 Scoring Q3 · A4</span><span class="puce">📄 P&amp;L septembre</span><span class="puce">📄 Rapport du 21/10</span></div>
+              <div class="lab" style="margin-top:14px">Ordre du jour au franchisé</div>
+              <div class="pt"><label class="chk"><input type="checkbox" id="b4" checked></label><span>Envoyé tout seul le dimanche 25/10 à 8:00 (J−2) : l’heure, la durée, les 3 sujets du bureau, sans la météo.</span></div>
+              <div class="fin"><button class="btn p" data-toast="Maquette : dossier envoyé sur la tablette de Sam V. — la carte passe dans « Sur la tablette »">Envoyer sur la tablette de Sam V.</button><button class="btn" data-toast="Maquette : brouillon de préparation enregistré">Enregistrer</button></div>
+              <p class="xs mu" style="margin:10px 0 0">La tablette garde le dossier hors ligne. Il se met à jour tout seul jusqu’au début de la visite.</p>
+            </div>
+          </div>
+        </div>
+        <div class="repris"><b>Repris de l’existant</b> · la Santé du magasin et le Benchmark réseau de la Fiche franchisé · les types de visite et leurs checklists du Cadre de visite · les tâches « avant » de Gestion consultant · le lien Google Agenda et l’invitation .ics à la planification.</div>
+      </div>
+
+      <!-- Adapter et envoyer -->
+      <div class="tabp col" data-panneau="adapter" hidden>
+        <div class="barre">
+          <div class="etat" style="color:var(--encre)"><span class="feu v"></span><b>Corbais · Bilan trimestriel</b> · jeudi 22/10 · Sam V.</div>
+          <span class="pil att">brouillon de la tablette · 22/10 17:12</span><span class="pil ko">à envoyer avant 17:12 aujourd’hui</span><span class="sp"></span>
+          <select class="sel" id="adp-v" aria-label="Rapport à adapter"><option>Corbais · bilan · 22/10</option><option>Gosselies · hygiène · 23/10</option></select>
+        </div>
+        <div class="deux">
+          <div class="carte">
+            <h2>Le rapport<small>écrit sur place, relu ici</small></h2>
+            <p class="aide">La tablette a rempli chaque partie. On corrige le ton, on choisit les points et les photos qui partent, on garde le reste en interne.</p>
+            <div class="col" style="gap:12px">
+              <div><div class="lab">En une phrase</div><textarea class="champ" id="r1" rows="2">Un trimestre solide : 17,2 / 20, le meilleur du réseau. Le pain manque en fin de journée.</textarea></div>
+              <div><div class="lab">Ce qui va bien</div><textarea class="champ" id="r2" rows="2">Comptoir tenu à 94 %, équipe stable depuis l’été, note Google en hausse à 4,6.</textarea></div>
+              <div><div class="lab">Vu sur place</div><div class="ligne" style="margin-top:6px"><span class="puce on">Énergie de l’équipe 4 / 5</span><span class="puce on">Standards appliqués</span><span class="puce on">Clients satisfaits</span></div></div>
+              <div><div class="lab">Le vrai problème</div><div class="ligne" style="margin:6px 0"><span class="puce on">Approvisionnement</span><span class="puce">Production</span><span class="puce">Équipe</span><span class="puce">Prix</span></div><textarea class="champ" id="r3" rows="2">Rupture des pains spéciaux dès 16:30, trois jours sur cinq : la commande du matin est encore calée sur septembre.</textarea></div>
+              <div><div class="lab">Recommandation</div><textarea class="champ" id="r4" rows="2">Remonter la commande de pains spéciaux de 15 % du mercredi au samedi, et relire l’effet à la visite du 17/11.</textarea></div>
+              <div>
+                <div class="lab">Points à travailler</div>
+                <div class="defile"><table class="t">
+                  <thead><tr><th>Part</th><th>Priorité</th><th>Point</th><th>Échéance</th><th>Qui</th></tr></thead>
+                  <tbody>
+                    <tr><td><label class="chk"><input type="checkbox" id="pa1" checked></label></td><td><span class="pil P1">P1</span></td><td>Commande de pains spéciaux +15 %, du mercredi au samedi</td><td>29/10</td><td>franchisé</td></tr>
+                    <tr><td><label class="chk"><input type="checkbox" id="pa2" checked></label></td><td><span class="pil P2">P2</span></td><td>Afficher l’objectif de la campagne de novembre en arrière-boutique</td><td>02/11</td><td>équipe</td></tr>
+                    <tr><td><label class="chk"><input type="checkbox" id="pa3"></label></td><td><span class="pil vio">interne</span></td><td>Proposer Corbais comme magasin pilote pour la gamme d’hiver<small>décoché : reste au bureau</small></td><td>—</td><td>Sam V.</td></tr>
+                  </tbody>
+                </table></div>
+              </div>
+              <div>
+                <div class="lab" style="margin-bottom:6px">Photos · 3 sur 4 partent</div>
+                <div class="vignettes">
+                  <div class="vign"><img src="photos/1206.jpg" alt="Comptoir pâtisserie"><label class="chk"><input type="checkbox" id="ph1" checked>part</label><span class="leg">comptoir · 94 %</span></div>
+                  <div class="vign"><img src="photos/1209.jpg" alt="Comptoir tartes et quiches"><label class="chk"><input type="checkbox" id="ph2" checked>part</label><span class="leg">tartes et quiches</span></div>
+                  <div class="vign"><img src="photos/1211.jpg" alt="Vitrine salée"><label class="chk"><input type="checkbox" id="ph3" checked>part</label><span class="leg">vitrine salée</span></div>
+                  <div class="vign exclu"><img src="photos/1214.jpg" alt="Entrée du magasin"><label class="chk"><input type="checkbox" id="ph4">part</label><span class="leg">entrée · floue</span></div>
+                </div>
+              </div>
+              <div class="xs mu">Checklist du bilan : 9 / 10 conformes · le détail point par point est joint au PDF.</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="carte">
+              <h2>Ce que recevra Corbais</h2>
+              <div class="apercu">
+                <div class="mini"><h4>Rapport de visite · 22/10</h4><div class="mu xs">Bilan trimestriel avec Sam V. · 9 / 10 conformes</div><p style="margin:6px 0 0">Un trimestre solide : 17,2 / 20, le meilleur du réseau. Le pain manque en fin de journée.</p></div>
+                <div class="mini"><div class="lab" style="margin-bottom:4px">2 points à travailler</div><div class="ligne"><span class="pil P1">P1</span>Commande de pains spéciaux +15 % · 29/10</div><div class="ligne" style="margin-top:4px"><span class="pil P2">P2</span>Objectif de campagne affiché · 02/11</div></div>
+                <div class="mini xs mu">+ 3 photos · ce qui va bien · la recommandation. Ni la météo, ni le point interne.</div>
+              </div>
+            </div>
+            <div class="carte">
+              <h2>L’envoi</h2>
+              <div class="regle"><span class="rq">À</span><span class="rv">le gérant de Corbais · page du franchisé + courriel avec PDF</span></div>
+              <div class="regle"><span class="rq">En copie</span><span class="rv">Nadia K., consultante responsable</span></div>
+              <div class="regle"><span class="rq">Qui envoie</span><span class="rv">Sam V., le consultant de la visite <span class="src">Qui fait quoi</span></span></div>
+              <div class="regle"><span class="rq">Délai</span><span class="rv"><span class="pil ko">reste 8 h 50</span> sur 48 h</span></div>
+              <div class="fin"><button class="btn p" data-toast="Maquette : rapport envoyé à Corbais — 2 points ouverts dans sa page, Nadia K. en copie">Envoyer le rapport</button><button class="btn" data-toast="Maquette : aperçu du PDF">Aperçu PDF</button><button class="btn" data-toast="Maquette : brouillon enregistré">Enregistrer</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="repris"><b>Repris de l’existant</b> · la review de fin de visite de l’app Visites (vu sur place, le vrai problème, recommandation) · le plan d’action P0 à P2 avec assigné et échéance · les photos de visite · la note VISIT écrite au panel à la clôture.</div>
+      </div>
+
+      <!-- Points et corrections -->
+      <div class="tabp col" data-panneau="points" hidden>
+        <div class="deux">
+          <div class="carte">
+            <h2>Corrections à valider<small>2 photos envoyées par les franchisés</small></h2>
+            <p class="aide">Le franchisé envoie sa photo depuis sa page. Accepter la valide ; le consultant la ferme sur place à la visite suivante.</p>
+            <div class="corr">
+              <div class="ligne"><span class="pil P1">P1</span><b>Halle · comptoir viennoiserie à 72 %</b><span class="sp"></span><span class="xs mu">photo du 23/10 à 07:48</span></div>
+              <div class="duo"><figure><img src="photos/1209.jpg" alt="Comptoir à la visite du 21/10" style="border-radius:9px;aspect-ratio:4/3;object-fit:cover;width:100%"><figcaption>visite · 21/10</figcaption></figure><figure><img src="photos/1206.jpg" alt="Comptoir corrigé le 23/10" style="border-radius:9px;aspect-ratio:4/3;object-fit:cover;width:100%"><figcaption>correction · 23/10</figcaption></figure></div>
+              <div class="xs">« Rangée viennoiserie remise au plan, croissants devant. » <span class="mu">— le franchisé</span></div>
+              <div class="ligne"><button class="btn s ok" data-toast="Maquette : correction acceptée — le point passe à « validé »">Accepter</button><button class="btn s ko" data-toast="Maquette : à reprendre, avec un nouveau délai et un mot au franchisé">À reprendre</button></div>
+            </div>
+            <div class="corr">
+              <div class="ligne"><span class="pil P2">P2</span><b>Gosselies · PLV de novembre posée</b><span class="sp"></span><span class="xs mu">photo du 24/10 à 08:55</span></div>
+              <div class="duo"><figure><img src="photos/1211.jpg" alt="Vitrine à la visite du 19/10" style="border-radius:9px;aspect-ratio:4/3;object-fit:cover;width:100%"><figcaption>visite · 19/10</figcaption></figure><figure><img src="photos/1267.jpg" alt="Vitrine corrigée le 24/10" style="border-radius:9px;aspect-ratio:4/3;object-fit:cover;width:100%"><figcaption>correction · 24/10</figcaption></figure></div>
+              <div class="ligne"><button class="btn s ok" data-toast="Maquette : correction acceptée">Accepter</button><button class="btn s ko" data-toast="Maquette : à reprendre">À reprendre</button></div>
+            </div>
+          </div>
+          <div class="carte">
+            <h2>Tous les points ouverts<small>8 · les plus urgents d’abord</small></h2>
+            <div class="defile"><table class="t">
+              <thead><tr><th></th><th>Magasin · point</th><th>Échéance</th><th>État</th></tr></thead>
+              <tbody>
+                <tr><td><span class="pil P0">P0</span></td><td><b>Sombreffe</b> · 3 obligatoires absentes du comptoir<small>client mystère du 15/10</small></td><td>20/10<small style="color:var(--ko)">retard 4 j</small></td><td><span class="pil ko">escaladé à Sam V.</span></td></tr>
+                <tr><td><span class="pil P0">P0</span></td><td><b>Halle</b> · vitrine salée à 7 °C<small>production du 21/10</small></td><td>23/10<small style="color:var(--ko)">retard 1 j</small></td><td><span class="pil att">ouvert</span></td></tr>
+                <tr><td><span class="pil P2">P2</span></td><td><b>Halle</b> · étiquettes de prix des tartes<small>production du 21/10</small></td><td>22/10<small style="color:var(--ko)">retard 2 j</small></td><td><span class="pil vio">à reprendre</span></td></tr>
+                <tr><td><span class="pil P1">P1</span></td><td><b>Halle</b> · comptoir viennoiserie à 72 %</td><td>26/10</td><td><span class="pil info">photo reçue</span></td></tr>
+                <tr><td><span class="pil P1">P1</span></td><td><b>Gosselies</b> · recuisson de 15 h non faite<small>régulière du 19/10</small></td><td>27/10</td><td><span class="pil att">ouvert</span></td></tr>
+                <tr><td><span class="pil P2">P2</span></td><td><b>Gosselies</b> · PLV de novembre</td><td>28/10</td><td><span class="pil info">photo reçue</span></td></tr>
+                <tr><td><span class="pil P2">P2</span></td><td><b>Corbais</b> · fiche allergènes du comptoir à jour</td><td>30/10</td><td><span class="pil att">ouvert</span></td></tr>
+                <tr><td><span class="pil P2">P2</span></td><td><b>Sombreffe</b> · saluer chaque client à l’entrée<small>client mystère du 15/10</small></td><td>31/10</td><td><span class="pil att">ouvert</span></td></tr>
+              </tbody>
+            </table></div>
+          </div>
+        </div>
+        <div class="repris"><b>Repris de l’existant</b> · la vue admin « À valider » de l’app Visites (avant / photo du franchisé, Accepter / À reprendre) · la machine à états du plan d’action (ouvert, attente, validé, reprendre, fermé, escalade) · l’escalade à Sam.</div>
+      </div>
+    </section>
+
+    <!-- =================================================================== 2. TABLETTE -->
+    <section class="page ecran" id="e-tablette" hidden>
+      <div class="tete">
+        <div>
+          <div class="crumb">Franchisés · évaluation et suivi › Suivi des franchisés › Visite sur tablette</div>
+          <h1>Visite sur tablette</h1>
+          <p>En magasin, tout se fait sur la tablette du consultant. Le dossier préparé au bureau arrive tout seul, la checklist se remplit sur place même sans réseau, et le brouillon du rapport repart au bureau à la fin.</p>
+        </div>
+      </div>
+      <div class="barre">
+        <div class="etat"><i></i>L’écran ci-dessous est celui de la tablette, en cours de visite</div><span class="sp"></span>
+        <select class="sel" id="tab-qui" aria-label="Tablette de"><option>Tablette de Sam V.</option><option>Tablette de Nadia K.</option><option>Tablette de Youssef B.</option></select>
+        <button class="btn" data-toast="Maquette : lien d’installation à ouvrir sur la tablette (application installable, hors ligne)">Installer sur une tablette</button>
+        <button class="btn p" data-toast="Maquette : ouvre l’application tablette dans un nouvel onglet">Ouvrir l’application ↗</button>
+      </div>
+
+      <div class="tab-cadre">
+        <div class="tab-ecran">
+          <div class="tab-bar">
+            <img src="logo.png" alt="L’Atelier by">
+            <div><div class="t">Halle · Bilan trimestriel</div><div class="d">mardi 27/10 · commencée à 10:04 · Sam V.</div></div>
+            <span class="sp"></span>
+            <span class="hl"><i></i>hors ligne · 4 en attente</span>
+            <button class="btn s" data-toast="Maquette : la file part dès que le réseau revient">Synchroniser</button>
+          </div>
+          <div class="tab-corps">
+            <div class="etapes" id="etapes">
+              <div class="lab">La visite · 8 étapes</div>
+              <button class="et fait" data-et="1"><span class="n">✓</span><span><b>Arrivée · photo du jour</b><small>3 / 3 photos</small></span></button>
+              <button class="et fait" data-et="2"><span class="n">✓</span><span><b>Dossier du bureau</b><small>lu · 3 points demandés</small></span></button>
+              <button class="et on" data-et="3"><span class="n">3</span><span><b>Checklist · Bilan</b><small>7 / 13 points</small></span></button>
+              <button class="et" data-et="4"><span class="n">4</span><span><b>Contrôles photo</b><small>2 à noter</small></span></button>
+              <button class="et" data-et="5"><span class="n">5</span><span><b>Vu sur place</b><small>à écrire</small></span></button>
+              <button class="et" data-et="6"><span class="n">6</span><span><b>Points à travailler</b><small>2 proposés</small></span></button>
+              <button class="et" data-et="7"><span class="n">7</span><span><b>Météo du franchisé</b><small>interne</small></span></button>
+              <button class="et" data-et="8"><span class="n">8</span><span><b>Fin de visite</b><small>signature, envoi au bureau</small></span></button>
+            </div>
+            <div class="tab-main">
+              <!-- étape 1 -->
+              <div class="etp" data-etp="1" hidden>
+                <div class="hd"><h2>Arrivée · photo du jour</h2><span class="sp"></span><span class="mu xs">étape 1 / 8</span></div>
+                <p class="mu" style="margin:0">Trois photos à l’arrivée, toujours les mêmes cadrages : on compare visite après visite.</p>
+                <div class="trois">
+                  <div class="vign" style="aspect-ratio:4/3"><img src="photos/1214.jpg" alt="Entrée"><span class="leg">entrée · 10:05</span></div>
+                  <div class="vign" style="aspect-ratio:4/3"><img src="photos/1213.jpg" alt="Intérieur"><span class="leg">intérieur · 10:06</span></div>
+                  <div class="vign" style="aspect-ratio:4/3"><img src="photos/1206.jpg" alt="Comptoir"><span class="leg">comptoir · 10:06</span></div>
+                </div>
+              </div>
+              <!-- étape 2 -->
+              <div class="etp" data-etp="2" hidden>
+                <div class="hd"><h2>Dossier du bureau</h2><span class="sp"></span><span class="mu xs">préparé le 25/10 · étape 2 / 8</span></div>
+                <div class="tc"><div class="mod"><b>Les 3 points demandés par le bureau</b></div><div>Contrôler la vitrine salée (P0 du 21/10) · relire le P&amp;L de septembre · parler du recrutement du week-end.</div></div>
+                <div class="trois">
+                  <div class="tc"><div class="lab">Santé</div><div style="font:400 24px var(--f-titre)">96 %</div><div class="xs mu">CA d’octobre / budget à date · B2B 31 %</div></div>
+                  <div class="tc"><div class="lab">Scoring Q3</div><div style="font:400 24px var(--f-titre)">15,8 / 20</div><div class="xs mu">Q2 : 14,1 · 2<sup>e</sup> du réseau</div></div>
+                  <div class="tc"><div class="lab">Points ouverts</div><div style="font:400 24px var(--f-titre);color:var(--ko)">3</div><div class="xs mu">1 P0 en retard · 1 photo à valider</div></div>
+                </div>
+                <div class="tc interne"><div class="mod"><b>Dernière météo</b><span class="pil vio">interne</span></div><div class="xs">06/10 : moral 3 / 5 · « de l’aide pour recruter le week-end ».</div></div>
+              </div>
+              <!-- étape 3 -->
+              <div class="etp" data-etp="3">
+                <div class="hd"><h2>Checklist · Bilan trimestriel</h2><span class="sp"></span><span class="mu xs">7 / 13 · étape 3 / 8</span></div>
+                <div class="tc">
+                  <div class="mod"><b>Demandé par le bureau</b><span class="pil neuf">3</span></div>
+                  <div class="pc"><div class="q">Vitrine salée à moins de 4 °C<small><span class="bureau">bureau</span> · P0 du 21/10 · relevé : 6,5 °C</small></div><div class="seg"><button>Conforme</button><button class="ko">Non conforme</button><button>N/A</button></div><button class="photo-btn">📷 1</button></div>
+                  <div class="pc"><div class="q">P&amp;L de septembre relu avec le franchisé<small><span class="bureau">bureau</span> · food cost 40,3 %</small></div><div class="seg"><button class="ok">Conforme</button><button>Non conforme</button><button>N/A</button></div><button class="photo-btn">📷</button></div>
+                  <div class="pc"><div class="q">Recrutement du week-end abordé<small><span class="bureau">bureau</span> · météo du 06/10</small></div><div class="seg"><button>Conforme</button><button>Non conforme</button><button>N/A</button></div><button class="photo-btn">📷</button></div>
+                </div>
+                <div class="tc">
+                  <div class="mod"><b>Scoring et objectifs</b><span class="mu xs">4 / 5</span></div>
+                  <div class="pc"><div class="q">Scoring Q3 présenté, poste par poste</div><div class="seg"><button class="ok">Conforme</button><button>Non conforme</button><button>N/A</button></div><button class="photo-btn">📷</button></div>
+                  <div class="pc"><div class="q">Objectifs produits de novembre posés<small>tartes 25 / jour, campagne de novembre</small></div><div class="seg"><button class="ok">Conforme</button><button>Non conforme</button><button>N/A</button></div><button class="photo-btn">📷</button></div>
+                  <div class="pc"><div class="q">Plan de développement relu</div><div class="seg"><button class="ok">Conforme</button><button>Non conforme</button><button>N/A</button></div><button class="photo-btn">📷</button></div>
+                </div>
+                <div class="tc">
+                  <div class="mod"><b>Comptoir et assortiment</b><span class="mu xs">1 / 5 · lu dans le cockpit</span></div>
+                  <div class="pc"><div class="q">Planogramme tenu<small>86 % d’après le cockpit · à confirmer à l’œil</small></div><div class="seg"><button class="ok">Conforme</button><button>Non conforme</button><button>N/A</button></div><button class="photo-btn">📷 2</button></div>
+                  <div class="pc"><div class="q">Les 2 obligatoires sans place sont au comptoir</div><div class="seg"><button>Conforme</button><button>Non conforme</button><button>N/A</button></div><button class="photo-btn">📷</button></div>
+                </div>
+              </div>
+              <!-- étape 4 -->
+              <div class="etp" data-etp="4" hidden>
+                <div class="hd"><h2>Contrôles photo du jour</h2><span class="sp"></span><span class="mu xs">ce que l’équipe a rendu depuis 6:30 · étape 4 / 8</span></div>
+                <div class="vignettes">
+                  <div class="vign"><img src="photos/1206.jpg" alt="Comptoir pâtisserie"><span class="leg">07:12 · comptoir · tenue</span></div>
+                  <div class="vign"><img src="photos/1209.jpg" alt="Tartes et quiches"><span class="leg">07:40 · tartes · à noter</span></div>
+                  <div class="vign"><img src="photos/1211.jpg" alt="Vitrine salée"><span class="leg">08:05 · vitrine salée · à noter</span></div>
+                  <div class="vign"><img src="photos/1267.jpg" alt="Tartes"><span class="leg">09:30 · tartes · tenue</span></div>
+                </div>
+                <p class="xs mu" style="margin:0">Lecture seule : la note se pose toujours dans le panel.</p>
+              </div>
+              <!-- étape 5 -->
+              <div class="etp" data-etp="5" hidden>
+                <div class="hd"><h2>Vu sur place</h2><span class="sp"></span><span class="mu xs">étape 5 / 8</span></div>
+                <div class="tc"><div class="lab">Énergie de l’équipe</div><div class="echelle" style="margin-top:6px"><button>1</button><button>2</button><button class="on">3</button><button>4</button><button>5</button></div></div>
+                <div class="tc"><div class="lab">Le vrai problème</div><div class="ligne" style="margin:6px 0"><span class="puce on">Production</span><span class="puce">Équipe</span><span class="puce on">Équipement</span><span class="puce">Accueil</span><span class="puce">Prix</span></div><textarea class="champ" id="t5" rows="2">La vitrine salée ne descend pas sous 6 °C : le joint de porte est fendu.</textarea></div>
+                <div class="tc"><div class="lab">Recommandation</div><textarea class="champ" id="t6" rows="2">Changer le joint cette semaine ; d’ici là, la vitrine salée passe en froid maximum et on relève la température à 11 h et 15 h.</textarea></div>
+              </div>
+              <!-- étape 6 -->
+              <div class="etp" data-etp="6" hidden>
+                <div class="hd"><h2>Points à travailler</h2><span class="sp"></span><span class="mu xs">proposés d’après les non-conformes · étape 6 / 8</span></div>
+                <div class="tc"><div class="ligne"><span class="pil P0">P0</span><b>Changer le joint de la vitrine salée</b><span class="sp"></span><span class="xs mu">échéance 29/10 · franchisé</span></div><div class="xs mu" style="margin-top:4px">remplace le P0 du 21/10 · photo de correction demandée</div></div>
+                <div class="tc"><div class="ligne"><span class="pil P1">P1</span><b>Placer les 2 obligatoires au comptoir</b><span class="sp"></span><span class="xs mu">échéance 03/11 · équipe</span></div></div>
+                <button class="ajout" data-toast="Maquette : un point libre">+ ajouter un point</button>
+              </div>
+              <!-- étape 7 -->
+              <div class="etp" data-etp="7" hidden>
+                <div class="hd"><h2>Météo du franchisé</h2><span class="pil vio">interne</span><span class="sp"></span><span class="mu xs">étape 7 / 8</span></div>
+                <p class="mu" style="margin:0">Comment il se sent. Reste entre le consultant et le bureau ; chaque demande devient une tâche du consultant à J+7.</p>
+                <div class="tc"><div class="lab">Moral</div><div class="echelle" style="margin-top:6px"><button>⛈</button><button>🌧</button><button class="on">⛅</button><button>🌤</button><button>☀</button></div></div>
+                <div class="tc"><div class="lab">Climat de l’équipe</div><div class="echelle" style="margin-top:6px"><button>⛈</button><button>🌧</button><button>⛅</button><button class="on">🌤</button><button>☀</button></div></div>
+                <div class="tc"><div class="lab">Ses demandes</div><textarea class="champ" id="t7" rows="2">Une annonce commune du réseau pour les étudiants du week-end.</textarea></div>
+              </div>
+              <!-- étape 8 -->
+              <div class="etp" data-etp="8" hidden>
+                <div class="hd"><h2>Fin de visite</h2><span class="sp"></span><span class="mu xs">étape 8 / 8</span></div>
+                <div class="trois">
+                  <div class="tc"><div class="lab">Checklist</div><div style="font:400 24px var(--f-titre)">11 / 13</div><div class="xs mu">2 non conformes</div></div>
+                  <div class="tc"><div class="lab">Points proposés</div><div style="font:400 24px var(--f-titre)">2</div><div class="xs mu">1 P0 · 1 P1</div></div>
+                  <div class="tc"><div class="lab">Photos</div><div style="font:400 24px var(--f-titre)">9</div><div class="xs mu">partent à la synchro</div></div>
+                </div>
+                <div class="tc"><div class="lab" style="margin-bottom:6px">Le franchisé a vu le résumé · signature</div><div class="signature"><svg viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true"><path d="M40 80 C 70 30, 90 100, 120 60 S 170 40, 190 75 S 240 95, 270 50 S 330 70, 360 55" fill="none" stroke="#222222" stroke-width="2.2" stroke-linecap="round"/></svg></div></div>
+                <button class="btn p" style="align-self:flex-start" data-toast="Maquette : visite terminée — le brouillon part au bureau, Sam V. l’adapte et l’envoie sous 48 h">Terminer · le brouillon part au bureau</button>
+              </div>
+            </div>
+          </div>
+          <div class="tab-pied"><button class="btn" data-a="prec">‹ Étape précédente</button><button class="btn p" data-a="suiv">Étape suivante ›</button></div>
+        </div>
+      </div>
+
+      <div class="carte">
+        <h2>Le circuit d’une visite<small>ce qui se fait où</small></h2>
+        <div class="circuit" style="margin-top:10px">
+          <div><span class="n2">1</span><span class="ou b">Ordinateur</span><b>Préparer</b><span class="xs mu">le dossier s’assemble, le bureau ajoute ses points, l’ordre du jour part à J−2</span></div>
+          <div><span class="n2">2</span><span class="ou t">Tablette</span><b>Visiter</b><span class="xs mu">photo du jour, checklist du type, vu sur place, points, météo, signature</span></div>
+          <div><span class="n2">3</span><span class="ou b">Ordinateur</span><b>Adapter et envoyer</b><span class="xs mu">le brouillon est relu, les points et photos choisis, envoyé sous 48 h</span></div>
+          <div><span class="n2">4</span><span class="ou f">Page du franchisé</span><b>Travailler ses points</b><span class="xs mu">il lit son rapport et envoie la photo de chaque correction</span></div>
+          <div><span class="n2">5</span><span class="ou b">Ordinateur</span><b>Valider</b><span class="xs mu">accepter la photo, ou « à reprendre » avec un nouveau délai</span></div>
+          <div><span class="n2">6</span><span class="ou t">Tablette</span><b>Fermer sur place</b><span class="xs mu">à la visite suivante, le consultant confirme et ferme le point</span></div>
+        </div>
+      </div>
+      <div class="repris"><b>Repris de l’existant</b> · l’app Visites (PWA visites/ : agenda, fiche, checklist par modules, photos, review, plan d’action, file hors ligne avec client_id) · la Fiche franchisé en mode tablette (?app=consultant : agenda, checklist du consultant, santé, benchmark, météo) · les contrôles en photo dans le contrôle guidé. Les deux applications n’en font plus qu’une.</div>
+    </section>
+
+
+    <!-- =================================================================== 3. CLIENT MYSTÈRE -->
+    <section class="page ecran" id="e-msp" hidden>
+      <div class="tete">
+        <div>
+          <div class="crumb">Franchisés · évaluation et suivi › Suivi des franchisés › Client mystère</div>
+          <h1>Client mystère</h1>
+          <p>Tout le client mystère au même endroit : les rapports magasin par magasin, l’encodage du rapport reçu, les points qui en sortent et le contrôle sur place à la visite suivante.</p>
+        </div>
+        <div class="etiquette">un seul encodage · le scoring, le feu, la tablette et le franchisé le lisent</div>
+      </div>
+      <div class="barre">
+        <div class="etat"><i></i>Derniers rapports reçus : Sombreffe le 15/10 · Q4 : 3 passages encore attendus en décembre</div><span class="sp"></span>
+        <select class="sel" id="msp-tri" aria-label="Trimestre"><option>Derniers passages</option><option>Q4 2026</option><option>Q3 2026</option><option>Q2 2026</option></select>
+        <button class="btn" data-toast="Maquette : export des rapports et des notes">Exporter</button>
+        <button class="btn p" data-toast="Maquette : ouvre l’encodage ci-dessous, vide">Encoder un rapport</button>
+      </div>
+      <div class="tuiles">
+        <div class="tuile"><span class="k">Réseau · derniers passages</span><span class="v">68,8 / 80</span><span class="s">4,3 / 5 au scoring · passages précédents : 67,3</span></div>
+        <div class="tuile chaud"><span class="k">Rubrique en alerte</span><span class="v ko">1</span><span class="s">Sombreffe · accueil 11 / 20 (seuil 12)</span></div>
+        <div class="tuile"><span class="k">Points issus du client mystère</span><span class="v att">2</span><span class="s">ouverts · 1 P0 · Sombreffe</span></div>
+        <div class="tuile"><span class="k">Relevés corrigés sur place</span><span class="v ok">3 / 4</span><span class="s">contrôlés à la visite suivante</span></div>
+      </div>
+
+      <div class="carte">
+        <h2>Les rapports, magasin par magasin<small>le dernier passage, ses rubriques sur 20, ce qui a suivi</small></h2>
+        <div class="defile"><table class="t">
+          <thead><tr><th>Magasin</th><th>Dernier passage</th><th>Note</th><th>Accueil</th><th>Produits</th><th>Hygiène</th><th>Ambiance</th><th>Précédent</th><th>Ce qui a suivi</th><th>Rapport</th></tr></thead>
+          <tbody>
+            <tr class="on"><td><span class="ligne"><span class="feu o"></span><b>Sombreffe</b></span><small>Youssef B.</small></td><td>15/10 · Q4<small>envoyé le 16/10 · pas lu</small></td><td><b>62 / 80</b><small>3,9 / 5</small></td><td><span class="pil ko">11</span></td><td>14</td><td>18</td><td>19</td><td>66<small style="color:var(--ko)">−4 · Q3</small></td><td>2 points ouverts, 1 P0<small>contrôle à la visite du 28/10</small></td><td><button class="btn s" data-toast="Maquette : le PDF du rapport">PDF</button></td></tr>
+            <tr><td><span class="ligne"><span class="feu r"></span><b>Halle</b></span><small>Sam V.</small></td><td>15/09 · Q3<small>lu le 16/09</small></td><td><b>68 / 80</b><small>4,3 / 5</small></td><td>16</td><td>18</td><td>17</td><td>17</td><td>61<small style="color:var(--ok)">+7 · Q2</small></td><td>3 relevés, 2 corrigés<small>visite du 06/10 · ambiance sonore à revoir</small></td><td><button class="btn s" data-toast="Maquette : le PDF du rapport">PDF</button></td></tr>
+            <tr><td><span class="ligne"><span class="feu o"></span><b>Gosselies</b></span><small>Sam V.</small></td><td>22/09 · Q3<small>lu le 22/09</small></td><td><b>71 / 80</b><small>4,4 / 5</small></td><td>18</td><td>18</td><td>17</td><td>18</td><td>70<small>+1 · Q2</small></td><td>1 relevé, corrigé<small>visite du 19/10</small></td><td><button class="btn s" data-toast="Maquette : le PDF du rapport">PDF</button></td></tr>
+            <tr><td><span class="ligne"><span class="feu v"></span><b>Corbais</b></span><small>Nadia K.</small></td><td>18/09 · Q3<small>lu le 19/09</small></td><td><b>74 / 80</b><small>4,6 / 5</small></td><td>19</td><td>19</td><td>18</td><td>18</td><td>72<small style="color:var(--ok)">+2 · Q2</small></td><td>rien à reprendre</td><td><button class="btn s" data-toast="Maquette : le PDF du rapport">PDF</button></td></tr>
+          </tbody>
+        </table></div>
+        <p class="xs mu" style="margin:10px 0 0">Une rubrique sous 12 / 20 met le feu du magasin au rouge (seuil réglable). La note sur 5 est celle du poste Client mystère du scoring du trimestre.</p>
+      </div>
+
+      <div class="deux">
+        <div class="carte">
+          <h2>Encoder un rapport<small>Sombreffe · passage du 15/10</small></h2>
+          <p class="aide">Le rapport arrive en PDF de l’agence. On encode la note et les rubriques une seule fois ; tout le reste se remplit tout seul.</p>
+          <div class="regle"><span class="rq">Magasin et trimestre</span><span class="rv"><select class="sel" id="msp-shop" aria-label="Magasin"><option>Sombreffe</option><option>Halle</option><option>Gosselies</option><option>Corbais</option></select><select class="sel" id="msp-q" aria-label="Trimestre du passage"><option>Q4 2026</option><option>Q3 2026</option></select><span class="mu">passage le 15/10</span></span></div>
+          <div class="regle"><span class="rq">Note obtenue</span><span class="rv"><input class="inp" id="msp-ob" value="62" aria-label="Obtenu"> sur <input class="inp" id="msp-max" value="80" aria-label="Maximum"> <span class="mu">soit 3,9 / 5 au scoring</span></span></div>
+          <div class="regle"><span class="rq">Rubriques, sur 20</span><span class="rv">Accueil <input class="inp" id="msp-r1" value="11" aria-label="Accueil" style="border-color:var(--ko);color:var(--ko)"> Produits <input class="inp" id="msp-r2" value="14" aria-label="Produits"> Hygiène <input class="inp" id="msp-r3" value="18" aria-label="Hygiène"> Ambiance <input class="inp" id="msp-r4" value="19" aria-label="Ambiance"></span></div>
+          <div class="regle"><span class="rq">Ce que l’agence relève</span><span class="rv" style="width:100%"><textarea class="champ" id="msp-com" rows="2">Pas de salutation à l’entrée, attente de 4 minutes sans contact. Trois références obligatoires absentes du comptoir à 11 h.</textarea></span></div>
+          <div class="regle"><span class="rq">Le rapport PDF</span><span class="rv"><span class="puce">📄 MSP-Sombreffe-2026-10-15.pdf · 1,2 Mo</span><button class="btn s" data-toast="Maquette : remplacer le PDF (8 Mo au plus)">Remplacer</button></span></div>
+          <div class="lab" style="margin-top:12px">Ce qui suit l’encodage</div>
+          <div class="pt"><label class="chk"><input type="checkbox" id="msp-s1" checked></label><span>Créer les points à travailler : <span class="pil P0">P0</span> 3 obligatoires absentes du comptoir · <span class="pil P2">P2</span> saluer chaque client à l’entrée</span></div>
+          <div class="pt"><label class="chk"><input type="checkbox" id="msp-s2" checked></label><span>Ajouter le contrôle à la prochaine visite (28/10, Youssef B.) : les 3 questions du client mystère dans la checklist</span></div>
+          <div class="pt"><label class="chk"><input type="checkbox" id="msp-s3" checked></label><span>Montrer le rapport et la note au franchisé, dans sa page</span></div>
+          <div class="pt"><label class="chk"><input type="checkbox" id="msp-s4"></label><span>Planifier une visite « Client mystère » à part (45 min, Opérations et qualité)</span></div>
+          <div class="fin"><button class="btn p" data-toast="Maquette : rapport encodé — scoring Q4, feu de Sombreffe, 2 points et la checklist du 28/10 mis à jour">Enregistrer le rapport</button><button class="btn" data-toast="Maquette : supprimer ce rapport et son PDF">Supprimer</button></div>
+        </div>
+        <div class="col">
+          <div class="carte">
+            <h2>Où il se lit ensuite</h2>
+            <div class="pt">→ <span><b>Scoring du trimestre</b> : le poste Client mystère (sur 5), un des quatre postes</span></div>
+            <div class="pt">→ <span><b>Feu du magasin</b> : rouge si une rubrique passe sous 12 / 20</span></div>
+            <div class="pt">→ <span><b>Dossier de visite</b> : la note, les rubriques et les relevés, au tableau de bord</span></div>
+            <div class="pt">→ <span><b>Tablette</b> : les questions de contrôle à la visite suivante</span></div>
+            <div class="pt">→ <span><b>Page du franchisé</b> : son rapport, ses points</span></div>
+          </div>
+          <div class="carte">
+            <h2>Le contrôle sur la tablette</h2>
+            <p class="aide">À la visite qui suit un passage, le module Client mystère de la checklist demande si le relevé est corrigé.</p>
+            <div class="pt"><span class="pil">1</span><span>Hygiène : ce que le rapport a relevé est corrigé</span></div>
+            <div class="pt"><span class="pil">2</span><span>Accueil : conforme au rapport</span></div>
+            <div class="pt"><span class="pil">3</span><span>Ambiance : bruit, musique, propreté visible</span></div>
+            <p class="xs mu" style="margin:8px 0 0">Le type de visite « Client mystère » (45 min, 8 points) reste disponible pour un contrôle à part.</p>
+          </div>
+        </div>
+      </div>
+      <div class="repris"><b>Repris de l’existant</b> · Scoring du trimestre › Client mystère (encodage obtenu / maximum, rubriques, commentaire, PDF : /scoring/msp, ceo_scoring_msp) · le rapport client mystère de l’app Visites (POST /msp, ceo_msp, rubrique sous 12 / 20 au feu) · le module Client mystère de la checklist · le type de visite Client mystère · l’entrée Suivi de terrain › Client mystère. Les deux encodages n’en font plus qu’un.</div>
+    </section>
+
+    <!-- =================================================================== 4. PAGE DU FRANCHISÉ -->
+    <section class="page ecran" id="e-franchise" hidden>
+      <div class="tete">
+        <div>
+          <div class="crumb">Franchisés · évaluation et suivi › Suivi des franchisés › Page du franchisé</div>
+          <h1>Page du franchisé</h1>
+          <p>Ce que le franchisé voit avec son lien : ses rapports de visite et les points qu’il doit travailler. Il envoie la photo de chaque correction d’ici.</p>
+        </div>
+      </div>
+      <div class="barre">
+        <div class="etat" style="min-width:0"><span class="mu">Lien de Halle :</span>&nbsp;<code style="font-size:11.5px;overflow-wrap:anywhere">…/cockpit/suivi/?shop=4&amp;jeton=7f3a…</code></div><span class="sp"></span>
+        <select class="sel" id="fr-shop" aria-label="Aperçu comme"><option>Aperçu comme Halle</option><option>Aperçu comme Gosselies</option><option>Aperçu comme Corbais</option><option>Aperçu comme Sombreffe</option></select>
+        <button class="btn" data-copie="…/cockpit/suivi/?shop=4&amp;jeton=7f3a">Copier le lien</button>
+        <button class="btn p" data-toast="Maquette : le lien part par courriel au gérant de Halle">Envoyer le lien au franchisé</button>
+      </div>
+      <div class="fr-zone">
+        <div class="fr-page">
+          <div class="fr-hd"><img src="logo.png" alt="L’Atelier by"><div><div class="t">Halle · Mon suivi</div><div class="xs mu">mis à jour à 08:20</div></div><span class="sp"></span><div class="av">HA</div></div>
+          <div class="fr-corps">
+            <div class="fr-k">
+              <div><div class="lab">À travailler</div><div class="v" style="color:var(--ko)">3 points</div><div class="xs mu">1 urgent, en retard</div></div>
+              <div><div class="lab">Prochaine visite</div><div class="v">mar 27/10</div><div class="xs mu">10:00 · bilan du trimestre avec Sam V.</div></div>
+              <div><div class="lab">Dernier rapport</div><div class="v">21/10</div><div class="xs mu">production · 11 / 14</div></div>
+            </div>
+
+            <h3>Mes points à travailler</h3>
+            <div class="ptf urg">
+              <div class="ligne"><span class="pil P0">urgent</span><span class="ti">Vitrine salée à 7 °C</span><span class="sp"></span><span class="xs" style="color:var(--ko);font-weight:600">échéance 23/10 · en retard d’un jour</span></div>
+              <div class="vu"><b>Ce que Youssef a vu le 21/10 :</b> la vitrine salée affichait 7 °C à 11 h ; elle doit rester sous 4 °C.</div>
+              <div class="ligne"><button class="btn p s" data-toast="Maquette : l’appareil photo s’ouvre, la photo part au bureau pour validation">📷 Envoyer la photo de correction</button><span class="xs mu">ou un mot si ce n’est pas une photo</span></div>
+            </div>
+            <div class="ptf">
+              <div class="ligne"><span class="pil P1">important</span><span class="ti">Comptoir viennoiserie remis au plan</span><span class="sp"></span><span class="pil info">photo envoyée le 23/10 · en attente</span></div>
+              <div class="xs mu">Le bureau valide votre photo ; le consultant confirme sur place à la prochaine visite.</div>
+            </div>
+            <div class="ptf">
+              <div class="ligne"><span class="pil P2">à faire</span><span class="ti">Étiquettes de prix des tartes</span><span class="sp"></span><span class="pil vio">à reprendre</span></div>
+              <div class="vu"><b>Retour du bureau, 23/10 :</b> la photo ne montre pas la deuxième rangée. Nouvelle échéance le 26/10.</div>
+              <div class="ligne"><button class="btn s" data-toast="Maquette : nouvelle photo">📷 Renvoyer une photo</button></div>
+            </div>
+            <div class="xs mu" style="padding:0 2px">Validés ce mois : 2 · PLV d’octobre, fiche allergènes.</div>
+
+            <h3>Mes rapports de visite</h3>
+            <div class="rap">
+              <div class="rl"><span class="d">21/10</span><span>Production · Youssef B.<br><span class="xs mu">11 / 14 conformes · 3 points</span></span><button class="btn s" data-a="rap">Fermer ▴</button></div>
+              <div class="ouvert" id="rap-ouvert">
+                <p><b>En une phrase.</b> La production suit le plan ; la vitrine salée et l’étiquetage des tartes sont à reprendre.</p>
+                <p><b>Ce qui va bien.</b> Recuisson de 15 h faite, clôture du soir complète, invendus à 3,8 % du CA.</p>
+                <p><b>Recommandation.</b> Faire contrôler la vitrine salée cette semaine et relever la température deux fois par jour.</p>
+                <div class="vignettes" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="vign" style="aspect-ratio:4/3"><img src="photos/1211.jpg" alt="Vitrine salée"><span class="leg">vitrine salée</span></div><div class="vign" style="aspect-ratio:4/3"><img src="photos/1209.jpg" alt="Comptoir tartes"><span class="leg">tartes</span></div><div class="vign" style="aspect-ratio:4/3"><img src="photos/1206.jpg" alt="Comptoir"><span class="leg">comptoir</span></div></div>
+                <div class="ligne"><button class="btn s" data-toast="Maquette : PDF du rapport">Télécharger le PDF</button><span class="pil ok">lu le 22/10</span></div>
+              </div>
+              <div class="rl"><span class="d">06/10</span><span>Régulière · Sam V.<br><span class="xs mu">21 / 23 conformes · 2 points, fermés</span></span><button class="btn s" data-toast="Maquette : ouvre le rapport">Lire</button></div>
+              <div class="rl"><span class="d">24/09</span><span>Hygiène et qualité · Nadia K.<br><span class="xs mu">10 / 12 conformes · 1 point, fermé</span></span><button class="btn s" data-toast="Maquette : ouvre le rapport">Lire</button></div>
+              <div class="rl"><span class="d">15/09</span><span>Client mystère<br><span class="xs mu">68 / 80 · accueil et ambiance sonore relevés</span></span><button class="btn s" data-toast="Maquette : ouvre le rapport">Lire</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="cote">
+          <div class="carte">
+            <h2>Ce qu’il ne voit pas</h2>
+            <p class="aide" style="margin-bottom:6px">Réglé dans « Qui fait quoi ».</p>
+            <div class="pt">✕ <span>la météo du franchisé et ses demandes</span></div>
+            <div class="pt">✕ <span>les points décochés au bureau, marqués « interne »</span></div>
+            <div class="pt">✕ <span>le dossier de préparation et les notes du consultant</span></div>
+            <div class="pt">✕ <span>les autres magasins</span></div>
+          </div>
+          <div class="carte">
+            <h2>Ce qui revient au bureau</h2>
+            <div class="pt">→ <span>sa photo de correction : dans <b>Points et corrections</b>, à valider</span></div>
+            <div class="pt">→ <span>un rapport ouvert : il passe à « lu » dans le tableau de bord</span></div>
+            <div class="pt">→ <span>un rapport pas lu après 3 jours : relance par courriel</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="repris"><b>Repris de l’existant</b> · la vue franchisé de l’app Visites (?shop= : mon plan d’action, photo de correction, ma boutique) · la page du franchisé dashboard/suivi.html?shop= (ce qu’il a à faire, sur place, le journal). Les deux pages n’en font plus qu’une.</div>
+    </section>
+
+    <!-- =================================================================== 5. QUI FAIT QUOI -->
+    <section class="page ecran" id="e-admin" hidden>
+      <div class="tete">
+        <div>
+          <div class="crumb">Franchisés · évaluation et suivi › Suivi des franchisés › Qui fait quoi</div>
+          <h1>Qui fait quoi</h1>
+          <p>La page admin du suivi. Par magasin : qui prépare, qui visite, qui adapte le rapport, qui l’envoie, qui valide les corrections. Comme pour les primes, tout se règle ici ; le tableau de bord et la tablette appliquent.</p>
+        </div>
+        <div class="etiquette">admin · réglages datés</div>
+      </div>
+      <div class="tuiles">
+        <div class="tuile"><span class="k">Magasins couverts</span><span class="v">4 / 4</span><span class="s">chacun a un responsable</span></div>
+        <div class="tuile"><span class="k">Cadre d’octobre</span><span class="v">8 / 11</span><span class="s">visites faites · 3 planifiées</span></div>
+        <div class="tuile"><span class="k">Délai moyen d’envoi</span><span class="v ok">31 h</span><span class="s">règle : 48 h · 1 envoi hors délai</span></div>
+        <div class="tuile"><span class="k">Corrections validées</span><span class="v">en 14 h</span><span class="s">en moyenne · règle : 24 h</span></div>
+      </div>
+
+      <div class="carte">
+        <h2>Par magasin<small>une ligne par franchisé</small></h2>
+        <p class="aide">« Selon le type » : le type de visite dit quel profil la fait (le Cadre de visite). « Le consultant de la visite » : celui qui l’a faite.</p>
+        <div class="defile"><table class="t">
+          <thead><tr><th>Magasin</th><th>Visites au cadre</th><th>Prépare</th><th>Visite</th><th>Adapte le rapport</th><th>Valide l’envoi</th><th>Valide les corrections</th><th>En copie</th></tr></thead>
+          <tbody>
+            <tr><td><b>Halle</b><small>responsable Sam V.</small></td><td>4 / mois<small>2 régulières, production, hygiène · bilan / trim.</small></td><td><select class="sel" id="h1"><option>Sam V.</option><option>Nadia K.</option><option>Youssef B.</option></select></td><td><select class="sel" id="h2"><option>selon le type</option><option>Sam V.</option></select></td><td><select class="sel" id="h3"><option>le consultant de la visite</option><option>Sam V.</option></select></td><td><select class="sel" id="h4"><option>Sam V.</option><option>le consultant de la visite</option></select></td><td><select class="sel" id="h5"><option>Lucie D. · admin</option><option>le consultant responsable</option></select></td><td>Youssef B., Nadia K.</td></tr>
+            <tr><td><b>Gosselies</b><small>responsable Sam V.</small></td><td>2 / mois<small>régulière, hygiène · bilan / trim.</small></td><td><select class="sel" id="g1"><option>Sam V.</option><option>Nadia K.</option></select></td><td><select class="sel" id="g2"><option>selon le type</option></select></td><td><select class="sel" id="g3"><option>le consultant de la visite</option></select></td><td><select class="sel" id="g4"><option>le consultant de la visite</option><option>Sam V.</option></select></td><td><select class="sel" id="g5"><option>Lucie D. · admin</option></select></td><td>Nadia K.</td></tr>
+            <tr><td><b>Corbais</b><small>responsable Nadia K.</small></td><td>1 / mois<small>régulière · client mystère et bilan / trim.</small></td><td><select class="sel" id="c1"><option>Nadia K.</option><option>Sam V.</option></select></td><td><select class="sel" id="c2"><option>selon le type</option></select></td><td><select class="sel" id="c3"><option>le consultant de la visite</option></select></td><td><select class="sel" id="c4"><option>le consultant de la visite</option></select></td><td><select class="sel" id="c5"><option>Nadia K.</option><option>Lucie D. · admin</option></select></td><td>Sam V.</td></tr>
+            <tr class="on"><td><b>Sombreffe</b><small>responsable Youssef B.</small></td><td>1 / mois<small>régulière · client mystère et bilan / trim.</small></td><td><select class="sel" id="s1"><option>Youssef B.</option><option>Sam V.</option></select></td><td><select class="sel" id="s2"><option>selon le type</option></select></td><td><select class="sel" id="s3"><option>le consultant de la visite</option></select></td><td><select class="sel" id="s4"><option>Sam V.</option><option>le consultant de la visite</option></select><small>Youssef n’envoie pas seul</small></td><td><select class="sel" id="s5"><option>Lucie D. · admin</option></select></td><td>Nadia K.</td></tr>
+          </tbody>
+        </table></div>
+        <div class="fin"><button class="ajout" style="padding:0" data-toast="Maquette : ouvre le Cadre de visite (types, nombre par mois, profils, checklists)">Régler le cadre de visite ›</button></div>
+      </div>
+
+      <div class="deux egal">
+        <div class="carte">
+          <h2>Les personnes et leurs droits</h2>
+          <p class="aide">Ce que chacun peut faire, partout où il intervient.</p>
+          <div class="defile"><table class="t">
+            <thead><tr><th>Personne</th><th class="droit">Préparer</th><th class="droit">Visiter</th><th class="droit">Adapter</th><th class="droit">Envoyer</th><th class="droit">Valider</th><th class="droit">Régler</th></tr></thead>
+            <tbody>
+              <tr><td><b>Sam V.</b><small>Stratégie et Développement</small></td><td class="droit"><input type="checkbox" id="p11" checked aria-label="Préparer"></td><td class="droit"><input type="checkbox" id="p12" checked aria-label="Visiter"></td><td class="droit"><input type="checkbox" id="p13" checked aria-label="Adapter"></td><td class="droit"><input type="checkbox" id="p14" checked aria-label="Envoyer"></td><td class="droit"><input type="checkbox" id="p15" checked aria-label="Valider"></td><td class="droit"><input type="checkbox" id="p16" checked aria-label="Régler"></td></tr>
+              <tr><td><b>Nadia K.</b><small>Opérations et qualité</small></td><td class="droit"><input type="checkbox" id="p21" checked aria-label="Préparer"></td><td class="droit"><input type="checkbox" id="p22" checked aria-label="Visiter"></td><td class="droit"><input type="checkbox" id="p23" checked aria-label="Adapter"></td><td class="droit"><input type="checkbox" id="p24" checked aria-label="Envoyer"></td><td class="droit"><input type="checkbox" id="p25" checked aria-label="Valider"></td><td class="droit"><input type="checkbox" id="p26" aria-label="Régler"></td></tr>
+              <tr><td><b>Youssef B.</b><small>Produit et production</small></td><td class="droit"><input type="checkbox" id="p31" checked aria-label="Préparer"></td><td class="droit"><input type="checkbox" id="p32" checked aria-label="Visiter"></td><td class="droit"><input type="checkbox" id="p33" checked aria-label="Adapter"></td><td class="droit"><input type="checkbox" id="p34" aria-label="Envoyer"></td><td class="droit"><input type="checkbox" id="p35" aria-label="Valider"></td><td class="droit"><input type="checkbox" id="p36" aria-label="Régler"></td></tr>
+              <tr><td><b>Lucie D.</b><small>Admin réseau, au bureau</small></td><td class="droit"><input type="checkbox" id="p41" checked aria-label="Préparer"></td><td class="droit"><input type="checkbox" id="p42" aria-label="Visiter"></td><td class="droit"><input type="checkbox" id="p43" aria-label="Adapter"></td><td class="droit"><input type="checkbox" id="p44" checked aria-label="Envoyer"></td><td class="droit"><input type="checkbox" id="p45" checked aria-label="Valider"></td><td class="droit"><input type="checkbox" id="p46" checked aria-label="Régler"></td></tr>
+              <tr><td><b>Chaque franchisé</b><small>par son lien</small></td><td colspan="6" class="mu">lit ses rapports, envoie ses photos de correction</td></tr>
+            </tbody>
+          </table></div>
+          <button class="ajout" data-toast="Maquette : les consultants sont lus dans le panel ; un admin s’ajoute ici">+ une personne</button>
+        </div>
+        <div class="carte">
+          <h2>Règles et délais</h2>
+          <p class="aide">Les délais pilotent les couleurs du tableau de bord et les relances.</p>
+          <div class="regle"><span class="rq">Dossier de visite prêt</span><span class="rv"><input class="inp" id="r-prep" value="2" aria-label="Jours avant la visite"> jours avant la visite</span></div>
+          <div class="regle"><span class="rq">Ordre du jour au franchisé</span><span class="rv"><label class="radio"><input type="radio" name="odj" id="odj1" checked>envoyé tout seul à J−2</label><label class="radio"><input type="radio" name="odj" id="odj2">à la main</label></span></div>
+          <div class="regle"><span class="rq">Rapport envoyé sous</span><span class="rv"><input class="inp" id="r-env" value="48" aria-label="Heures"> h après la fin de la visite</span></div>
+          <div class="regle"><span class="rq">Rapport pas adapté à temps</span><span class="rv"><label class="radio"><input type="radio" name="tard" id="tard1" checked>rappel, puis au responsable</label><label class="radio"><input type="radio" name="tard" id="tard2">envoyé tel quel</label></span></div>
+          <div class="regle"><span class="rq">Délai d’un point</span><span class="rv">P0 <input class="inp" id="r-p0" value="2" aria-label="Délai P0"> j · P1 <input class="inp" id="r-p1" value="7" aria-label="Délai P1"> j · P2 <input class="inp" id="r-p2" value="14" aria-label="Délai P2"> j</span></div>
+          <div class="regle"><span class="rq">Photo de correction validée sous</span><span class="rv"><input class="inp" id="r-val" value="24" aria-label="Heures"> h</span></div>
+          <div class="regle"><span class="rq">Escalade à Sam V.</span><span class="rv">P0 en retard de plus de <input class="inp" id="r-esc" value="3" aria-label="Jours"> jours</span></div>
+          <div class="regle"><span class="rq">Le franchisé voit</span><span class="rv"><label class="chk"><input type="checkbox" id="v1" checked>ses rapports</label><label class="chk"><input type="checkbox" id="v2" checked>ses points et photos</label><label class="chk"><input type="checkbox" id="v3" checked>la prochaine visite</label><label class="chk"><input type="checkbox" id="v4">son scoring</label><span class="xs mu" style="width:100%">jamais : la météo, les points internes</span></span></div>
+          <div class="fin"><button class="btn p" data-toast="Maquette : règles enregistrées, en vigueur pour les visites planifiées à partir d’aujourd’hui">Enregistrer les règles</button><button class="btn" data-ecran="franchise">Aperçu de la page du franchisé</button></div>
+          <p class="xs mu" style="margin:10px 0 0">Les règles sont datées : une visite suit celles en vigueur le jour où elle est planifiée.</p>
+        </div>
+      </div>
+      <div class="repris"><b>Repris de l’existant</b> · le Cadre de visite de Gestion consultant (types, nombre par mois, profil, checklist, consultant) · l’affectation consultant ↔ magasins · les rôles consultant, franchisé, admin de l’app Visites · les réglages viFrequence, viChecklist et les seuils du feu. Mis en page comme les Paramètres des primes.</div>
+    </section>
+
+    <footer class="page xs mu" style="margin-top:22px">Maquette · consultants fictifs, magasins réels · photos de Gosselies du 01/10/2026 à titre d’illustration · rien n’est branché : chaque bouton dit ce qu’il ferait.</footer>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function () {
+  const app = document.getElementById('app');
+  const ecrans = ['tableau', 'tablette', 'msp', 'franchise', 'admin'];
+  const toast = document.getElementById('toast');
+  let minuterie = null;
+  function dire(t) {
+    toast.textContent = t; toast.hidden = false;
+    clearTimeout(minuterie); minuterie = setTimeout(() => { toast.hidden = true; }, 3200);
+  }
+  function montrer(e) {
+    if (ecrans.indexOf(e) < 0) { e = 'tableau'; }
+    ecrans.forEach(x => { document.getElementById('e-' + x).hidden = x !== e; });
+    document.querySelectorAll('.rail .it[data-ecran]').forEach(b => b.classList.toggle('on', b.dataset.ecran === e));
+    app.classList.remove('rail-ouvert');
+    window.scrollTo(0, 0);
+  }
+  function onglet(t) {
+    document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+    document.querySelectorAll('[data-panneau]').forEach(p => { p.hidden = p.dataset.panneau !== t; });
+  }
+  let etape = 3;
+  function aller(n) {
+    etape = Math.max(1, Math.min(8, n));
+    document.querySelectorAll('.et').forEach(b => {
+      const k = +b.dataset.et;
+      b.classList.toggle('on', k === etape);
+      b.classList.toggle('fait', k < etape);
+      b.querySelector('.n').textContent = k < etape ? '✓' : String(k);
+    });
+    document.querySelectorAll('.etp').forEach(p => { p.hidden = +p.dataset.etp !== etape; });
+  }
+  document.addEventListener('click', ev => {
+    const el = ev.target.closest('button, [data-a]');
+    if (!el) { return; }
+    if (el.dataset.ecran) { montrer(el.dataset.ecran); return; }
+    if (el.dataset.tab) { onglet(el.dataset.tab); return; }
+    if (el.dataset.go) { montrer('tableau'); onglet(el.dataset.go); window.scrollTo(0, 0); return; }
+    if (el.dataset.et) { aller(+el.dataset.et); return; }
+    if (el.dataset.a === 'prec') { aller(etape - 1); return; }
+    if (el.dataset.a === 'suiv') { aller(etape + 1); return; }
+    if (el.dataset.a === 'rail') { app.classList.toggle('rail-ouvert'); return; }
+    if (el.dataset.a === 'sm') { const enf = el.nextElementSibling; enf.hidden = !enf.hidden; el.setAttribute('aria-expanded', String(!enf.hidden)); el.querySelector('.chev').textContent = enf.hidden ? '▸' : '▾'; return; }
+    if (el.dataset.a === 'rap') { const o = document.getElementById('rap-ouvert'); o.hidden = !o.hidden; el.textContent = o.hidden ? 'Lire ▾' : 'Fermer ▴'; return; }
+    if (el.dataset.copie) {
+      const t = el.dataset.copie;
+      try { navigator.clipboard.writeText(t).then(() => dire('Lien copié'), () => dire('Copie refusée : sélectionnez le lien à la main')); }
+      catch (e) { dire('Copie refusée : sélectionnez le lien à la main'); }
+      return;
+    }
+    if (el.dataset.toast) { dire(el.dataset.toast); return; }
+    // Les boutons de la checklist : un choix par point.
+    const seg = el.closest('.seg');
+    if (seg) { const i = [...seg.children].indexOf(el); seg.querySelectorAll('button').forEach(b => { b.className = ''; }); el.className = ['ok', 'ko', 'na'][i]; return; }
+    const ech = el.closest('.echelle');
+    if (ech) { ech.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === el)); return; }
+    if (el.classList.contains('puce') || el.classList.contains('photo-btn')) { return; }
+  });
+  // Les puces (vrai problème, vu sur place) se cochent au toucher.
+  document.querySelectorAll('.puce').forEach(p => { if (p.tagName === 'SPAN') { p.setAttribute('role', 'button'); p.tabIndex = 0; p.addEventListener('click', () => p.classList.toggle('on')); } });
+  window.maquette = { montrer, onglet, aller };
+  let h = '';
+  try { h = (location.hash || '').slice(1); } catch (e) { h = ''; }
+  montrer(h || 'tableau');
+})();
+</script>

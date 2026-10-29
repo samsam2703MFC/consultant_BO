@@ -1,0 +1,188 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Pojazdy i pojemność{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Pojazdy i pojemność</h3>
+            <p class="text-subtitle text-muted">Miejsca paletowe, ładowność i godzina wyjazdu pojazdów przewoźników</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/logistics"><i class="bi bi-stack"></i> Załadunek dnia</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/logistics/tours"><i class="bi bi-signpost-split"></i> Trasy</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-logi">
+    {% if created is defined and created %}
+        {% set cv = vehicles|filter(v => v.id == created.id)|first %}
+        <div class="at-note at-note-safe mb-3" role="status">
+            <i class="bi bi-check-circle"></i>
+            <div><strong>Pojazd dodany{{ cv ? ' : ' ~ cv.regis_num : '' }}.</strong> Pojemność, kierowca i trasy są zapisane.
+                {% if created.problems %}<div class="text-danger mt-1">{% for p in created.problems %}{{ p }}{% if not loop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+                <div class="mt-1">Do uzupełnienia :
+                    <a href="{{ root }}/logistics/documents">QR trasy dla tabletu kierowcy</a>
+                    {% if cv and not cv.tours %} · <a href="{{ root }}/logistics/tours">trasa pojazdu</a>{% endif %}
+                    · <a href="{{ root }}/workshop/execution#people">PIN i telefon kierowcy</a>
+                    · <a href="{{ root }}/product-carriers">dane przewoźnika (CMR)</a></div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0">Nowy pojazd i kierowca</h4></div>
+        <div class="card-body">
+            <form id="addVehicle" data-at-steps class="at-form-steps" autocomplete="off">
+                <section data-step="Przewoźnik i pojazd">
+                    <h4 class="at-step-title">Przewoźnik i pojazd</h4>
+                    <p class="at-step-lead">Pojazd należy do przewoźnika z ERP (dane na CMR). Brak przewoźnika ? <a href="{{ root }}/product-carriers">Wysyłka › Przewoźnicy</a>.</p>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6"><label class="form-label" for="v_carrier">Przewoźnik *</label>
+                            <select class="form-select" name="carrier_id" id="v_carrier" required>
+                                <option value="">— wybierz —</option>
+                                {% for c in carriers %}<option value="{{ c.id }}" {{ preselect_carrier == c.id ? 'selected' : '' }}>{{ c.name }}</option>{% endfor %}
+                            </select></div>
+                        <div class="col-12 col-md-6"><label class="form-label" for="v_regis">Nr rejestracyjny *</label>
+                            <input class="form-control" name="regis_num" id="v_regis" maxlength="60" required placeholder="DX 02760"></div>
+                    </div>
+                </section>
+
+                <section data-step="Pojemność" hidden>
+                    <h4 class="at-step-title">Pojemność i wyjazd</h4>
+                    <p class="at-step-lead">Miejsca w paletach EUR (120 × 80) ; ładowność pusta = waga nie jest sprawdzana ; wyjazd pusty = z trasy, inaczej {{ default_departure }}.</p>
+                    <div class="row g-3">
+                        <div class="col-6 col-md-4"><label class="form-label" for="v_places">Miejsca paletowe *</label>
+                            <input class="form-control" name="pallet_places" id="v_places" type="number" min="1" max="100" value="{{ default_places }}" required></div>
+                        <div class="col-6 col-md-4"><label class="form-label" for="v_kg">Ładowność (kg)</label>
+                            <input class="form-control" name="max_load_kg" id="v_kg" type="number" min="1" max="60000" placeholder="np. 24000" data-nullable></div>
+                        <div class="col-6 col-md-4"><label class="form-label" for="v_departure">Wyjazd</label>
+                            <input class="form-control" type="time" name="departure_time" id="v_departure" data-nullable></div>
+                    </div>
+                </section>
+
+                <section data-step="Kierowca" hidden>
+                    <h4 class="at-step-title">Kierowca</h4>
+                    <p class="at-step-lead">Pracownik = ta sama osoba na liście tabletu kierowcy (PIN) i na CMR. Kierowca przewoźnika : wpisz go ręcznie.</p>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6"><label class="form-label" for="v_driver">Kierowca</label>
+                            <select class="form-select" name="driver_employee_id" id="v_driver">
+                                <option value="">— kierowca przewoźnika (wpisz) —</option>
+                                {% if drivers %}<optgroup label="Kierowcy-dostawcy">{% for d in drivers %}<option value="{{ d.id }}" data-pin="{{ d.has_pin ? 1 : 0 }}">{{ d.name }}</option>{% endfor %}</optgroup>{% endif %}
+                                {% if other_employees %}<optgroup label="Inni pracownicy">{% for d in other_employees %}<option value="{{ d.id }}" data-pin="{{ d.has_pin ? 1 : 0 }}" data-other>{{ d.name }}</option>{% endfor %}</optgroup>{% endif %}
+                            </select></div>
+                        <div class="col-12 col-md-6" data-driver-external><label class="form-label" for="v_dname">Imię i nazwisko</label>
+                            <div class="input-group"><input class="form-control" name="driver_name" id="v_dname" placeholder="Imię"><input class="form-control" name="driver_surname" placeholder="Nazwisko" aria-label="Nazwisko kierowcy" data-summary-label="Nazwisko"></div></div>
+                        <div class="col-6 col-md-3"><label class="form-label" for="v_dphone">Telefon</label>
+                            <input class="form-control" name="driver_phone" id="v_dphone" type="tel"></div>
+                        <div class="col-6 col-md-3"><label class="form-label" for="v_demail">E-mail</label>
+                            <input class="form-control" type="email" name="driver_email" id="v_demail" maxlength="120" data-nullable></div>
+                        <div class="col-6 col-md-3" data-driver-pin hidden><label class="form-label" for="v_dpin">PIN tabletu (4–6 cyfr)</label>
+                            <input class="form-control" type="password" inputmode="numeric" pattern="\d{4,6}" maxlength="6" name="driver_pin" id="v_dpin" autocomplete="new-password" data-summary-label="PIN kierowcy"></div>
+                        <div class="col-12 col-md-6 d-flex align-items-end" data-driver-position hidden>
+                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="driver_set_position" id="v_dpos" checked>
+                                <label class="form-check-label" for="v_dpos">Stanowisko « Kierowca-dostawca » (lista tabletu kierowcy)</label></div></div>
+                    </div>
+                </section>
+
+                <section data-step="Trasy" hidden>
+                    <h4 class="at-step-title">Trasy</h4>
+                    <p class="at-step-lead">Trasy, którymi jeździ pojazd (klienci trasy trafiają na ten pojazd w załadunku dnia). Można pominąć.</p>
+                    <div class="at-check-grid">
+                        {% for t in tour_choices %}
+                            <label class="form-check"><input class="form-check-input" type="checkbox" name="tour_ids[]" value="{{ t.id }}" data-summary-group="Trasy"> <span class="form-check-label">{{ t.name }}{{ t.active ? '' : ' (nieaktywna)' }}</span></label>
+                        {% else %}
+                            <p class="text-muted mb-0">Brak tras — <a href="{{ root }}/logistics/tours">utwórz trasę</a>.</p>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section data-step="Podsumowanie" data-at-steps-summary hidden>
+                    <h4 class="at-step-title">Podsumowanie</h4>
+                    <p class="at-step-lead">Sprawdź i dodaj pojazd. Pojawi się na liście poniżej.</p>
+                    <div data-at-steps-summary-body></div>
+                </section>
+
+                <button class="btn btn-success" type="submit" data-at-steps-submit><i class="bi bi-check2"></i> Dodaj pojazd</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0">Pojazdy</h4></div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table mb-0 at-logi-vehicles">
+                    <thead><tr><th>Pojazd</th><th>Miejsca paletowe</th><th>Ładowność (kg)</th><th>Wyjazd</th><th class="text-center">W użyciu</th><th></th></tr></thead>
+                    <tbody>
+                    {% for v in vehicles %}
+                        <tr data-vehicle="{{ v.id }}" class="{{ v.carrier_active ? '' : 'at-staff-inactive' }}{{ created is defined and created and created.id == v.id ? ' at-row-new' : '' }}">
+                            <td><strong>{{ v.regis_num ?: '—' }}</strong><div class="at-sub">{{ v.carrier }}{{ v.driver ? ' · ' ~ v.driver : '' }}{% if v.id_driver %} <i class="bi bi-tablet" title="Kierowca z listy pracowników (tablet kierowcy)"></i>{% endif %}{{ v.carrier_active ? '' : ' · przewoźnik nieaktywny' }}</div>
+                                <div class="at-sub">{% if v.tours %}<i class="bi bi-signpost-split"></i> {{ v.tours|join(', ') }}{% else %}<a href="{{ root }}/logistics/tours">bez trasy</a>{% endif %}</div></td>
+                            <td><input class="form-control form-control-sm at-logi-num" name="pallet_places" inputmode="numeric" value="{{ v.pallet_places }}" placeholder="{{ default_places }}" aria-label="Miejsca paletowe {{ v.regis_num }}"></td>
+                            <td><input class="form-control form-control-sm at-logi-kg" name="max_load_kg" inputmode="numeric" value="{{ v.max_load_kg }}" placeholder="bez kontroli" aria-label="Ładowność {{ v.regis_num }}"></td>
+                            <td><input class="form-control form-control-sm at-logi-time" type="time" name="departure_time" value="{{ v.departure_time }}" aria-label="Wyjazd {{ v.regis_num }}"><div class="at-sub">puste = {{ default_departure }}</div></td>
+                            <td class="text-center"><input type="checkbox" class="form-check-input" name="active" {{ v.active ? 'checked' : '' }} aria-label="W użyciu {{ v.regis_num }}"></td>
+                            <td><button type="button" class="btn btn-sm {{ v.configured ? 'btn-outline-primary' : 'btn-primary' }}" data-save>{{ v.configured ? 'Zapisz' : 'Ustaw pojemność' }}</button></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="at-profit-note">Miejsca paletowe w paletach EUR (120 × 80). Ładowność pusta = waga nie jest sprawdzana. Godzina wyjazdu ustala koniec załadunku (minus czas załadunku) dla klientów pojazdu.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/at-form-steps.js?v={{ asset_v() }}"></script>
+<script>
+// Kreator pojazdu : kierowca-pracownik ukrywa nazwisko (z karty pracownika), pokazuje PIN (gdy go nie ma)
+// i stanowisko (inni pracownicy) ; zapis po ostatnim kroku (po sprawdzeniu kroków) → lista z nowym pojazdem.
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('addVehicle');
+    const driver = form.querySelector('#v_driver');
+    const toggle = () => {
+        const opt = driver.selectedOptions[0];
+        const employee = driver.value !== '';
+        form.querySelector('[data-driver-external]').hidden = employee;
+        form.querySelector('[data-driver-pin]').hidden = !employee || opt.dataset.pin === '1';
+        form.querySelector('[data-driver-position]').hidden = !employee || !('other' in opt.dataset);
+        if (!employee || opt.dataset.pin === '1') form.querySelector('#v_dpin').value = '';
+    };
+    driver.addEventListener('change', toggle);
+    toggle();
+    form.addEventListener('submit', (e) => {
+        if (e.defaultPrevented) return;
+        e.preventDefault();
+        const button = form.querySelector('[data-at-steps-submit]');
+        button.disabled = true;
+        const data = at.formData(form);
+        if (form.querySelector('[data-driver-position]').hidden) delete data.driver_set_position;
+        at.send('/ajax/logistics/vehicles', 'POST', data).then(res => {
+            button.disabled = false;
+            if (!res.ok) return at.showErrors(form, res);
+            window.location.href = at.root + '/logistics/vehicles?created=' + encodeURIComponent(res.data.id);
+        });
+    });
+});
+(() => {
+    document.querySelectorAll('tr[data-vehicle]').forEach(row => row.querySelector('[data-save]').addEventListener('click', () => {
+        const value = (n) => row.querySelector(`[name=${n}]`);
+        at.send(`/ajax/logistics/vehicles/${row.dataset.vehicle}`, 'PUT', {
+            pallet_places: value('pallet_places').value.trim() || value('pallet_places').placeholder,
+            max_load_kg: value('max_load_kg').value.trim(),
+            departure_time: value('departure_time').value,
+            active: value('active').checked,
+        }).then(res => {
+            at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+            if (res.ok) window.setTimeout(() => window.location.reload(), 500);
+        });
+    }));
+})();
+</script>
+{% endblock %}

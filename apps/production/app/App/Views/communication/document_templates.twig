@@ -1,0 +1,85 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Wzory dokumentów{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Wzory dokumentów</h3>
+            <p class="text-subtitle text-muted">Każdy wydruk w stylu SL Food, producenta zatwierdzonego przez L'Atelier By. Dokument dla klienta ma etykiety po polsku i w języku klienta (karta klienta). Przykłady na danych fikcyjnych.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="row g-3">
+        <div class="col-12 col-xl-5">
+            {% for group, documents in groups %}
+                <div class="card mb-3">
+                    <div class="card-header pb-2"><h4 class="card-title mb-0">{{ group }}</h4></div>
+                    <div class="list-group list-group-flush">
+                        {% for doc in documents %}
+                            <div class="list-group-item" data-doc="{{ doc.key }}">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div>
+                                        <div class="fw-semibold">{{ doc.label }}</div>
+                                        <div class="small text-muted">{{ doc.description }}</div>
+                                        <div class="small mt-1">
+                                            <a class="at-link" href="{{ root }}{{ doc.where }}"><i class="bi bi-box-arrow-up-right"></i> Gdzie w ERP</a>
+                                            {% if doc.live %} · <a class="at-link" href="{{ root }}{{ doc.live }}" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> Wydruk z bieżących danych</a>{% endif %}
+                                        </div>
+                                    </div>
+                                    {% if doc.languages %}
+                                    <div class="btn-group btn-group-sm flex-shrink-0" role="group" aria-label="Język przykładu">
+                                        {% for code in doc.languages %}
+                                            <button type="button" class="btn btn-outline-secondary" data-preview="{{ doc.key }}" data-lang="{{ code }}" title="Przykład : {{ languages[code] }}">{{ code|upper }}</button>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <span class="badge bg-light text-muted flex-shrink-0">PL · dane bieżące</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="col-12 col-xl-7">
+            <div class="card" style="position: sticky; top: 1rem;">
+                <div class="card-header d-flex justify-content-between align-items-center pb-2">
+                    <h4 class="card-title mb-0" id="docPreviewTitle">Podgląd</h4>
+                    <a class="btn btn-sm btn-outline-dark" id="docPreviewOpen" href="#" target="_blank" rel="noopener" hidden><i class="bi bi-box-arrow-up-right"></i> Otwórz PDF</a>
+                </div>
+                <div class="card-body pt-0">
+                    <iframe id="docPreview" title="Podgląd dokumentu" style="width: 100%; height: 78vh; border: 1px solid var(--bs-border-color); border-radius: .5rem; background: #f8f9fa;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var frame = document.getElementById('docPreview');
+    var open = document.getElementById('docPreviewOpen');
+    var title = document.getElementById('docPreviewTitle');
+    function show(btn) {
+        var url = '{{ root }}/communication/document-templates/' + btn.dataset.preview + '.pdf?lang=' + btn.dataset.lang;
+        frame.src = url;
+        open.href = url;
+        open.hidden = false;
+        title.textContent = btn.closest('[data-doc]').querySelector('.fw-semibold').textContent + ' · ' + btn.dataset.lang.toUpperCase();
+        document.querySelectorAll('[data-preview]').forEach(function (b) { b.classList.toggle('active', b === btn); });
+    }
+    document.querySelectorAll('[data-preview]').forEach(function (btn) {
+        btn.addEventListener('click', function () { show(btn); });
+    });
+    var first = document.querySelector('[data-preview][data-lang="fr"]') || document.querySelector('[data-preview]');
+    if (first) show(first);
+})();
+</script>
+{% endblock %}

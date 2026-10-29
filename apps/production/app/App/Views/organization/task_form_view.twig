@@ -1,0 +1,74 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ definition.label }} {{ form.meeting_date|date('d.m.Y') }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>{{ definition.label }}</h3>
+            <p class="text-subtitle text-muted">{{ form.meeting_date|day_pl }} · {{ form.title_pl }}{{ form.status != 'final' ? ' · szkic' : '' }}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-primary" data-print><i class="bi bi-printer"></i> Drukuj</button>
+            <a class="btn btn-outline-primary" href="{{ root }}/my-tasks/{{ form.id_occurrence }}/form"><i class="bi bi-pencil"></i> Edytuj</a>
+            <a class="btn btn-outline-secondary" href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-print-area">
+    <div class="card">
+        <div class="card-body">
+            <h4 class="mb-1">{{ definition.label }} — {{ form.meeting_date|date('d.m.Y') }}</h4>
+            <p class="at-sub mb-3">Sporządził(a) : {{ form.updated_by_name ?: form.created_by_name ?: '—' }}{{ form.updated_at ? ' · ' ~ form.updated_at|date('d.m.Y H:i') : '' }}</p>
+            <p class="mb-1"><strong>Uczestnicy :</strong> {{ participants ? participants|join(', ') : '—' }}</p>
+            {% if guests %}<p class="mb-1"><strong>Goście :</strong> {{ guests }}</p>{% endif %}
+        </div>
+    </div>
+
+    {% if follow_up %}
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Śledzenie produkcji {{ follow_up.from|date('d.m') }} – {{ follow_up.to|date('d.m.Y') }}</h4></div>
+        <div class="card-body pt-0">{% include 'production/_follow_up.twig' with {f: follow_up} %}</div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Ustalenia</h4></div>
+        <div class="card-body pt-0">
+            {% for t in topics %}
+                <h6 class="mt-2 mb-1">{{ t.label }}</h6>
+                <p class="mb-2" style="white-space: pre-line">{{ t.text }}</p>
+            {% else %}<p class="at-empty mb-0">Brak wpisów.</p>{% endfor %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Działania</h4></div>
+        <div class="card-body pt-0">
+            {% if actions %}
+            <table class="table table-sm at-tform-actions">
+                <thead><tr><th>Działanie</th><th>Kto</th><th>Termin</th><th>Stan</th></tr></thead>
+                <tbody>{% for a in actions %}<tr class="{{ a.status == 'done' ? 'is-done' : '' }}"><td>{{ a.title }}</td><td>{{ a.user_name ?: '—' }}</td><td>{{ a.due_date ? a.due_date|date('d.m.Y') : '—' }}</td>
+                    <td>{{ a.status == 'done' ? 'zrobione' ~ (a.done_at ? ' ' ~ a.done_at|date('d.m') : '') : 'otwarte' }}</td></tr>{% endfor %}</tbody>
+            </table>
+            {% else %}<p class="at-empty">Bez nowych działań.</p>{% endif %}
+            {% if closed %}
+                <h6 class="mt-3">Zamknięte na tym zebraniu (z poprzednich)</h6>
+                <ul class="mb-0">{% for a in closed %}<li>{{ a.title }} <span class="at-sub">{{ a.user_name ?: '' }} · z {{ a.meeting_date|date('d.m.Y') }}</span></li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelector('[data-print]').addEventListener('click', () => {
+    document.body.classList.add('at-printing');
+    window.print();
+    window.setTimeout(() => document.body.classList.remove('at-printing'), 500);
+});
+</script>
+{% endblock %}

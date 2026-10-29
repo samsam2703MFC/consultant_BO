@@ -1,0 +1,110 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Nowe produkty : etapy{% endblock %}
+
+{% set by = {} %}
+{% for c in columns %}{% set by = by|merge({(c.code): c.items|length}) %}{% endfor %}
+{% set active = by.idea + by.test1 + by.test2 + by.recipe %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3><i class="bi bi-kanban"></i> Nowe produkty : od pomysłu do wprowadzenia</h3>
+            <p class="text-subtitle text-muted">Biuro planuje test (data, wskazówki, grupa) ; zespół robi go na tablecie swojej grupy i potwierdza jeden raz : zdjęcia, ilość, wynik, co zmienić.
+                Recepturę zatwierdza też na tablecie — bez ponownego wpisywania w biurze.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-primary" type="button" data-toggle-new><i class="bi bi-plus-lg"></i> Nowy produkt</button>
+            {# Etapy i lista na jednej zakładce Produktów : przełącznik (audyt 2, N7). #}
+            <div class="btn-group" role="group" aria-label="Widok">
+                <a class="btn btn-primary" href="{{ root }}/test-products/pipeline" aria-current="page"><i class="bi bi-kanban"></i> Etapy</a>
+                <a class="btn btn-outline-primary" href="{{ root }}/test-products"><i class="bi bi-list"></i> Lista</a>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-pipe">
+    <div class="at-tiles">
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-lightbulb"></i> W rozwoju</span><span class="at-tile-value">{{ active }}</span><span class="at-tile-meta">pomysł, test 1, test 2, receptura</span></div>
+        <div class="at-tile {{ by.recipe ? 'at-tile-warn' : '' }}"><span class="at-tile-label"><i class="bi bi-journal-check"></i> Receptura do zatwierdzenia</span><span class="at-tile-value">{{ by.recipe }}</span><span class="at-tile-meta">zespół potwierdza na tablecie</span></div>
+        <div class="at-tile {{ by.launch ? 'at-tile-warn' : '' }}"><span class="at-tile-label"><i class="bi bi-rocket-takeoff"></i> Do wprowadzenia</span><span class="at-tile-value">{{ by.launch }}</span><span class="at-tile-meta">połącz z produktem ERP</span></div>
+        <div class="at-tile at-tile-ok"><span class="at-tile-label"><i class="bi bi-check2-circle"></i> Wprowadzone</span><span class="at-tile-value">{{ by.launched }}</span><span class="at-tile-meta">data w module kierownika produkcji</span></div>
+    </div>
+
+    <div class="card" id="newCard" hidden>
+        <div class="card-header"><h4 class="card-title">Nowy produkt w rozwoju</h4>
+            <p class="at-sub mb-0">Produkt pojawia się od razu na tablecie wybranej grupy (zakładka « Nowe produkty »). Recepturę wybierzesz później w karcie produktu.</p></div>
+        <div class="card-body pt-0">
+            <form id="newForm" class="at-purch-form">
+                <label class="at-purch-label at-purch-wide">Nazwa produktu<input class="form-control" name="name" maxlength="255" required></label>
+                <label class="at-purch-label">Grupa (jej tablet)
+                    <select class="form-select" name="id_group" required>
+                        <option value="">— wybierz —</option>
+                        {% for g in groups %}<option value="{{ g.id }}" {{ g.id == group_id ? 'selected' : '' }}>{{ g.name_pl }}</option>{% endfor %}
+                    </select></label>
+                <label class="at-purch-label">Data docelowa (wprowadzenie)<input class="form-control" type="date" name="target_date"></label>
+                <label class="at-purch-label at-purch-wide" style="grid-column: 1 / -1">Pomysł, cel, na co uważać (widzi zespół)<textarea class="form-control" name="notes" rows="3" maxlength="5000"></textarea></label>
+                <div class="at-purch-actions"><span class="at-sub">Następny krok : zaplanuj test 1 w karcie produktu.</span><button class="btn btn-primary" type="submit">Dodaj</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="at-pipe-filters" role="navigation" aria-label="Grupa">
+        <a class="at-pipe-filter {{ group_id ? '' : 'active' }}" href="{{ root }}/test-products/pipeline">Wszystkie grupy</a>
+        {% for g in groups %}
+            <a class="at-pipe-filter {{ g.id == group_id ? 'active' : '' }}" href="{{ root }}/test-products/pipeline?group={{ g.id }}"><span class="at-pipe-dot" style="background: {{ g.color ?: '#999' }}"></span>{{ g.name_pl }}</a>
+        {% endfor %}
+    </div>
+
+    <div class="at-pipe-board">
+        {% for c in columns %}
+        {% set limit = c.code in ['launched', 'stopped'] ? 8 : 200 %}
+        <div class="at-pipe-col at-pipe-col-{{ c.code }}">
+            <h5 class="at-pipe-col-title">{{ c.label }} <span class="at-pipe-count">{{ c.items|length }}</span></h5>
+            {% for p in c.items|slice(0, limit) %}
+            <a class="at-pipe-card" href="{{ root }}/test-products/{{ p.id }}/tablet">
+                <strong>{{ p.name }}</strong>
+                <span class="at-pipe-meta">
+                    {% if p.dev.group %}<span class="at-pipe-group"><span class="at-pipe-dot" style="background: {{ p.dev.group.color ?: '#999' }}"></span>{{ p.dev.group.name }}</span>{% elseif p.section %}<span class="at-pipe-group">{{ p.section }}</span>{% endif %}
+                    {% if p.dev.trials_done %}<span>{{ p.dev.trials_done }} {{ p.dev.trials_done == 1 ? 'test' : 'testy' }}</span>{% endif %}
+                    {% if p.dev.last_result %}<span class="at-pill {{ {ok: 'at-pill-ok', fix: 'at-pill-warn', ko: 'at-pill-danger'}[p.dev.last_result.code] }}">{{ p.dev.last_result.label }}</span>{% endif %}
+                </span>
+                {% if p.dev.next %}<span class="at-pipe-next"><i class="bi bi-arrow-right-circle"></i> {{ p.dev.next.label }}</span>{% endif %}
+                {% if p.dev.target_date and c.code not in ['launched', 'stopped'] %}
+                    <span class="at-pipe-date {{ p.dev.target_date < 'now'|date('Y-m-d') ? 'is-late' : '' }}"><i class="bi bi-flag"></i> {{ p.dev.target_date|date('d.m.Y') }}</span>
+                {% endif %}
+                {% if not p.on_tablet and c.code not in ['launched', 'stopped'] %}<span class="at-pipe-off"><i class="bi bi-tablet"></i> niewidoczny na tablecie</span>{% endif %}
+            </a>
+            {% else %}
+            <p class="at-empty">—</p>
+            {% endfor %}
+            {% if c.items|length > limit %}<a class="at-sub" href="{{ root }}/test-products">+ {{ c.items|length - limit }} na liście</a>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include "page_components/ajax_helpers.twig" %}
+<script>
+(function () {
+    const card = document.getElementById('newCard');
+    const form = document.getElementById('newForm');
+    document.querySelector('[data-toggle-new]').addEventListener('click', () => { card.hidden = !card.hidden; if (!card.hidden) form.name.focus(); });
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button[type=submit]');
+        btn.disabled = true;
+        at.send('/ajax/test-products/quick', 'POST', {name: form.name.value, id_group: form.id_group.value, target_date: form.target_date.value || null, notes: form.notes.value})
+            .then(res => {
+                at.notify(res.ok, res.message || (res.ok ? 'Dodano' : 'Błąd'));
+                btn.disabled = false;
+                if (res.ok && res.data) location.href = '{{ root }}' + res.data.url;
+            });
+    });
+})();
+</script>
+{% endblock %}

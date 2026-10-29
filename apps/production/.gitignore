@@ -1,0 +1,32 @@
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Environment
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Sensitive files
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Dependencies
+**/node_modules/
+**/vendor/
+
+# Runtime data
+**/logs/
+**/cache/
+
+# Logs (données de commandes) — jamais dans Git
+*.log
+**/cron_log.txt

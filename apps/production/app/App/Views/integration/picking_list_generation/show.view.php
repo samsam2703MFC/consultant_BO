@@ -1,0 +1,9 @@
+<?php $this->view('page_components/header'); ?>
+<?php $products = !empty($generation['products_snapshot_json']) ? (json_decode($generation['products_snapshot_json'], true) ?: []) : []; ?>
+<div class="page-heading"><div class="page-title"><h3>Wydruk listy kompletacyjnej #<?= (int) ($generation['id'] ?? 0) ?></h3></div>
+<section class="section"><div class="card"><div class="card-body">
+    <?php if ($generation): ?><dl class="row"><dt class="col-sm-3">Data</dt><dd class="col-sm-9"><?= htmlspecialchars($generation['generated_at']) ?></dd><dt class="col-sm-3">Źródło</dt><dd class="col-sm-9"><?= htmlspecialchars($generation['source']) ?></dd><dt class="col-sm-3">Autor</dt><dd class="col-sm-9"><?= htmlspecialchars($generation['source'] === 'api' ? ($generation['device_name'] ?? 'usunięte urządzenie') : ($generation['user_name'] ?? 'brak użytkownika')) ?></dd><dt class="col-sm-3">Zamówienia</dt><dd class="col-sm-9"><code><?= htmlspecialchars($generation['selected_order_ids_json']) ?></code></dd></dl>
+    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Zamówienie</th><th>Wysyłka</th><th>Klient</th><th>Kategoria</th><th>Produkt</th><th>Kartony</th></tr></thead><tbody><?php foreach ($products as $product): ?><tr><td><?= (int) $product['order_id'] ?></td><td><?= htmlspecialchars($product['shipping_date'] ?? '') ?></td><td><?= htmlspecialchars($product['customer'] ?? '') ?></td><td><?= htmlspecialchars($product['category_name'] ?? '') ?></td><td><?= htmlspecialchars($product['product_name'] ?? '') ?></td><td><?= htmlspecialchars((string) ($product['quantity_carton'] ?? '')) ?></td></tr><?php endforeach; ?></tbody></table></div>
+    <?php endif; ?><a class="btn btn-secondary" href="<?= ROOT ?>/settings/picking-list-generations">Wróć</a>
+</div></div></section></div>
+<?php $this->view('page_components/footer'); ?>

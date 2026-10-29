@@ -1,0 +1,80 @@
+/* Tablette de bureau : mise en page de la tablette de l'atelier (kiosk.css) — services en grandes tuiles, noms en
+   avatars, QR personnel en grand avec le nom, le jour et l'action attendue, confirmation plein écran. */
+.office-home { padding-bottom: 32px; }
+.office-present { margin: 6px 0 0; font-size: 16px; color: var(--k-muted); font-variant-numeric: tabular-nums; }
+.office-search { max-width: 520px; margin: 0 auto; display: block; background: var(--k-surface); border-radius: 14px; min-height: 52px; }
+.office-sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+.office-section { border: 1px solid var(--k-line); background: var(--k-surface); border-radius: 20px; padding: 22px 20px 18px; min-height: 150px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; color: var(--k-text); box-shadow: 0 8px 24px rgba(34, 34, 34, .05); }
+.office-section:active { transform: scale(.97); }
+.office-section-name { font-family: var(--k-font-display); font-size: 26px; line-height: 1.15; }
+.office-section-meta { font-size: 15px; color: var(--k-muted); font-variant-numeric: tabular-nums; }
+.office-section-faces { display: flex; margin-top: auto; padding-top: 8px; }
+.office-section-faces .kiosk-avatar { width: 34px; height: 34px; font-size: 12.5px; margin-right: -8px; box-shadow: 0 0 0 2px var(--k-surface); }
+.office-section-faces .kiosk-avatar.is-in { box-shadow: 0 0 0 2px var(--k-surface), 0 0 0 4px var(--k-ok); }
+.office-section-card h2 { margin: 0 0 2px; font-size: 28px; }
+.office-section-card .kiosk-muted { margin-bottom: 18px; font-size: 17px; }
+/* Tous les groupes et toutes les personnes sur un écran : barre de groupes collante, une section par groupe. */
+.office-hero { padding: 4px 0 6px; }
+.office-hero .kiosk-ipad-time { font-size: 56px; line-height: 1; }
+.office-hero .kiosk-ipad-greet { margin-top: 6px; }
+.office-groupbar { position: sticky; top: 0; z-index: 2; display: flex; gap: 10px; overflow-x: auto; padding: 14px 2px 12px; margin: 10px 0 4px;
+  background: var(--k-bg); scrollbar-width: none; }
+.office-groupbar::-webkit-scrollbar { display: none; }
+.office-group-chip { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px;
+  min-width: 136px; min-height: 66px; padding: 10px 16px; border-radius: var(--k-radius, 12px); border: 1px solid var(--k-line-2);
+  background: var(--k-surface); font-size: 17px; font-weight: 600; line-height: 1.2; text-align: left; color: inherit; }
+.office-group-chip small { font-size: 13.5px; font-weight: 500; color: var(--k-muted); font-variant-numeric: tabular-nums; }
+.office-group-chip.is-on { background: var(--k-primary, #8D1D2C); border-color: transparent; color: #fff; }
+.office-group-chip.is-on small { color: rgba(255,255,255,.8); }
+.office-group { margin-top: 18px; }
+.office-group-title { margin: 0 0 12px; font-size: 24px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.office-group-title small { font-size: 15px; font-weight: 500; color: var(--k-muted); font-family: inherit; }
+.office-people { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 22px 10px; }
+.office-people .kiosk-avatar.is-app { width: 92px; height: 92px; font-size: 31px; }
+.office-people .kiosk-app-name { font-size: 17px; }
+.office-people small { font-size: 13.5px; }
+
+/* QR personnel */
+.office-qr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "who code" "text code"; gap: 18px 32px; align-items: start; padding: 28px; }
+.office-qr-who { grid-area: who; display: flex; gap: 18px; align-items: center; }
+.office-qr-who h2 { margin: 0; font-size: 34px; line-height: 1.1; }
+.office-qr-day { margin: 4px 0 8px; font-size: 18px; color: var(--k-text); }
+.office-qr-day::first-letter { text-transform: uppercase; }
+.office-action { display: inline-block; padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 16px; }
+.office-action.is-in { background: var(--k-ok-50); color: var(--k-ok); }
+.office-action.is-out { background: var(--k-danger-50); color: var(--k-danger); }
+.office-qr-code { grid-area: code; padding: 14px; border-radius: 24px; background: #fff; border: 1px solid var(--k-line); }
+.office-qr-code canvas { display: block; width: min(380px, 42vw); height: min(380px, 42vw); image-rendering: pixelated; }
+.office-qr-text { grid-area: text; display: flex; flex-direction: column; gap: 10px; }
+.office-qr-help { margin: 0; font-size: 21px; line-height: 1.35; }
+.office-waiting { margin: 6px 0 0; display: flex; gap: 10px; align-items: center; font-size: 17px; font-weight: 500; color: var(--k-primary); }
+.office-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--k-primary); animation: office-pulse 1.2s ease-in-out infinite; }
+@keyframes office-pulse { 0%, 100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+.office-closes { font-size: 15px; font-variant-numeric: tabular-nums; }
+
+/* Confirmation */
+.office-done { text-align: center; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.office-done-mark { width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; font-size: 64px; color: #fff; background: var(--k-ok); }
+.office-done.is-out .office-done-mark { background: var(--k-primary); }
+.office-done h2 { margin: 8px 0 0; font-size: 34px; }
+.office-done-text { margin: 0; font-size: 22px; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 820px) {
+  .office-qr { grid-template-columns: minmax(0, 1fr); grid-template-areas: "who" "code" "text"; justify-items: center; text-align: center; }
+  .office-qr-who { flex-direction: column; }
+  .office-qr-code canvas { width: min(340px, 80vw); height: min(340px, 80vw); }
+  .office-waiting { justify-content: center; }
+  .office-qr .kiosk-row { justify-content: center; }
+}
+@media (max-width: 600px) {
+  .office-sections { grid-template-columns: minmax(0, 1fr); }
+  .office-section { min-height: 0; }
+  .office-people { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  .office-people .kiosk-avatar.is-app { width: 70px; height: 70px; font-size: 24px; }
+}
+
+/* Bez telefonu : PIN, potem pytania i podpis palcem na tablecie biurowym. */
+.office-pin-go { font-size: 18px; min-height: 56px; }
+.office-confirm { max-width: 980px; margin: 0 auto; width: 100%; padding: 26px; }
+.office-confirm .office-qr-who h2 { font-size: 30px; }

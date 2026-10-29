@@ -20,7 +20,7 @@ declare(strict_types=1);
  *  - il COMPTE : conformité, score, sauvages, règles violées, par boutique et
  *    par période — et l'écrit au journal et au rapport du lundi.
  *
- * La charte vit en base (`brand_guard_rules`), éditable : le prompt se
+ * La charte vit en base (`mar_bg_regle`), éditable : le prompt se
  * construit à partir des règles actives et chaque verdict enregistre la
  * VERSION de charte qui l'a produit — un verdict de juin se relit avec la
  * charte de juin. La règle de décision est appliquée ICI, après le modèle :
@@ -51,7 +51,7 @@ function bgTables(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS brand_guard_pages ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_bg_page ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'shop_id VARCHAR(8) NULL,'
         . 'boutique VARCHAR(80) NOT NULL,'
@@ -66,7 +66,7 @@ function bgTables(): void
         . 'actif TINYINT(1) NOT NULL DEFAULT 1,'
         . 'KEY idx_page (page_id), KEY idx_shop (shop_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS brand_guard_rules ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_bg_regle ('
         . 'code VARCHAR(40) PRIMARY KEY,'
         . 'famille VARCHAR(60) NOT NULL,'
         . 'libelle VARCHAR(160) NOT NULL,'
@@ -76,7 +76,7 @@ function bgTables(): void
         . 'rang SMALLINT UNSIGNED NOT NULL DEFAULT 0,'
         . 'maj_le DATETIME NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS brand_guard_checks ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_bg_controle ('
         . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'
         . 'post_id VARCHAR(16) NULL,'
         . 'fb_post_id VARCHAR(64) NULL,'
@@ -105,19 +105,19 @@ function bgTables(): void
 /** La charte de démonstration et les six pages, posées si les tables sont vides. */
 function bgSemer(): void
 {
-    $n = (int) (Db::row('SELECT COUNT(*) AS n FROM brand_guard_rules')['n'] ?? 0);
+    $n = (int) (Db::row('SELECT COUNT(*) AS n FROM mar_bg_regle')['n'] ?? 0);
     if ($n === 0) {
         $rang = 0;
         foreach (bgCharteDemo() as $r) {
-            Db::exec('INSERT INTO brand_guard_rules (code, famille, libelle, description, gravite, actif, rang, maj_le) VALUES (?,?,?,?,?,1,?,?)',
+            Db::exec('INSERT INTO mar_bg_regle (code, famille, libelle, description, gravite, actif, rang, maj_le) VALUES (?,?,?,?,?,1,?,?)',
                 [$r[0], $r[1], $r[2], $r[3], $r[4], ++$rang, date('Y-m-d H:i:s')]);
         }
     }
-    $n = (int) (Db::row('SELECT COUNT(*) AS n FROM brand_guard_pages')['n'] ?? 0);
+    $n = (int) (Db::row('SELECT COUNT(*) AS n FROM mar_bg_page')['n'] ?? 0);
     if ($n === 0) {
         foreach (bgPagesReseau() as $p) {
             $shop = Db::row('SELECT id FROM ceo_shop WHERE name LIKE ? ORDER BY id LIMIT 1', ['%' . $p[0] . '%']);
-            Db::exec('INSERT INTO brand_guard_pages (shop_id, boutique, franchise, page_url) VALUES (?,?,?,?)',
+            Db::exec('INSERT INTO mar_bg_page (shop_id, boutique, franchise, page_url) VALUES (?,?,?,?)',
                 [$shop['id'] ?? null, $p[0], $p[1], $p[2]]);
         }
     }
@@ -191,7 +191,7 @@ function bgCharteDemo(): array
 function bgRegles(bool $toutes = false): array
 {
     bgTables();
-    $rows = Db::rows('SELECT * FROM brand_guard_rules' . ($toutes ? '' : ' WHERE actif = 1') . ' ORDER BY rang, code');
+    $rows = Db::rows('SELECT * FROM mar_bg_regle' . ($toutes ? '' : ' WHERE actif = 1') . ' ORDER BY rang, code');
     return array_map(static fn ($r) => ['code' => (string) $r['code'], 'famille' => (string) $r['famille'],
         'libelle' => (string) $r['libelle'], 'description' => (string) $r['description'],
         'gravite' => (string) $r['gravite'], 'actif' => (bool) $r['actif'], 'rang' => (int) $r['rang']], $rows);
@@ -338,7 +338,7 @@ function bgControler(string $texte, array $images, ?string $boutique, array $med
 function bgEnregistrer(array $v, array $ctx): int
 {
     bgTables();
-    Db::exec('INSERT INTO brand_guard_checks (post_id, fb_post_id, shop_id, boutique, source, sauvage, statut, score, ecarts_json, message, charte_version, moteur, modele, images_json, lien, publie_le, texte, created_at)
+    Db::exec('INSERT INTO mar_bg_controle (post_id, fb_post_id, shop_id, boutique, source, sauvage, statut, score, ecarts_json, message, charte_version, moteur, modele, images_json, lien, publie_le, texte, created_at)
               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [
         $ctx['postId'] ?? null, $ctx['fbPostId'] ?? null, $ctx['shopId'] ?? null, $ctx['boutique'] ?? null,
         $ctx['source'], !empty($ctx['sauvage']) ? 1 : 0, $v['statut'], (int) $v['score'],
@@ -368,7 +368,7 @@ function bgEstSauvage(string $fbPostId, array $idsConnus): bool
 /* --- flux « avant » : la demande ---------------------------------------------- */
 
 /**
- * Le contrôle d'une demande de post (ceo_fb_post) : appelé à la soumission et
+ * Le contrôle d'une demande de post (mar_social_post) : appelé à la soumission et
  * à chaque resoumission, depuis le module existant.
  *
  *  - bloqué   ⇒ la demande est refusée par l'agent : elle ne part pas, le
@@ -410,7 +410,7 @@ function bgIdsConnus(): array
 {
     try {
         return array_map(static fn ($r) => (string) $r['fb_post_id'],
-            Db::rows('SELECT fb_post_id FROM ceo_fb_post WHERE fb_post_id IS NOT NULL AND fb_post_id <> \'\''));
+            Db::rows('SELECT fb_post_id FROM mar_social_post WHERE fb_post_id IS NOT NULL AND fb_post_id <> \'\''));
     } catch (PDOException $e) { return []; }
 }
 
@@ -425,17 +425,17 @@ function bgResoudrePages(bool $forcer = false): array
     // Sans token, l'identifiant se lit par la voie publique : la page est
     // connue, elle reste « à connecter » tant que ses posts ne se lisent pas.
     $avecToken = MetaGraph::configured();
-    foreach (Db::rows('SELECT * FROM brand_guard_pages WHERE actif = 1') as $p) {
+    foreach (Db::rows('SELECT * FROM mar_bg_page WHERE actif = 1') as $p) {
         if (!$forcer && $p['page_id'] !== null && $p['statut_connexion'] === 'connectee') { continue; }
         try {
             $r = MetaGraph::resoudrePage((string) $p['page_url']);
             $statut = $avecToken ? 'connectee' : 'a_connecter';
             $note = $avecToken ? null : 'identifiant trouvé (' . $r['id'] . ') — lecture des posts en attente du token Meta (META_SYSTEM_TOKEN)';
-            Db::exec("UPDATE brand_guard_pages SET page_id = ?, page_nom = ?, statut_connexion = ?, derniere_erreur = ? WHERE id = ?",
+            Db::exec("UPDATE mar_bg_page SET page_id = ?, page_nom = ?, statut_connexion = ?, derniere_erreur = ? WHERE id = ?",
                 [$r['id'], $r['nom'], $statut, $note, (int) $p['id']]);
             $out[] = ['boutique' => $p['boutique'], 'ok' => true, 'pageId' => $r['id'], 'source' => $r['source'] ?? 'graph'];
         } catch (Throwable $e) {
-            Db::exec("UPDATE brand_guard_pages SET statut_connexion = 'a_connecter', derniere_erreur = ? WHERE id = ?",
+            Db::exec("UPDATE mar_bg_page SET statut_connexion = 'a_connecter', derniere_erreur = ? WHERE id = ?",
                 [mb_substr($e->getMessage(), 0, 300), (int) $p['id']]);
             journalAdd('Brand Guard', 'Connexion', $p['boutique'], 'Page Facebook non résolue : ' . $e->getMessage());
             $out[] = ['boutique' => $p['boutique'], 'ok' => false, 'erreur' => $e->getMessage()];
@@ -451,7 +451,7 @@ function bgResoudrePages(bool $forcer = false): array
 function bgAuditerPost(array $page, array $post, ?array $idsConnus = null): ?array
 {
     if ($post['id'] === '') { return null; }
-    $deja = Db::row('SELECT id FROM brand_guard_checks WHERE fb_post_id = ? AND source = \'apres\'', [$post['id']]);
+    $deja = Db::row('SELECT id FROM mar_bg_controle WHERE fb_post_id = ? AND source = \'apres\'', [$post['id']]);
     if ($deja !== null) { return null; }
     $idsConnus = $idsConnus ?? bgIdsConnus();
     $sauvage = bgEstSauvage($post['id'], $idsConnus);
@@ -502,7 +502,7 @@ function bgArchiverImages(int $checkId, array $urls): array
         $out[] = ['url' => $u, 'copie' => $copie];
     }
     if ($out !== []) {
-        Db::exec('UPDATE brand_guard_checks SET images_json = ? WHERE id = ?', [json_encode($out, JSON_UNESCAPED_UNICODE), $checkId]);
+        Db::exec('UPDATE mar_bg_controle SET images_json = ? WHERE id = ?', [json_encode($out, JSON_UNESCAPED_UNICODE), $checkId]);
     }
     return $out;
 }
@@ -522,7 +522,7 @@ function bgNotifierSauvage(int $checkId, array $page, array $post, array $v): vo
         $envoye = Smtp::envoyer($a, '[Brand Guard] Post sauvage — ' . $page['boutique'], $html);
     }
     // La notification d'application : le badge du rail et le journal, lus par tous.
-    Db::exec('UPDATE brand_guard_checks SET notifie_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), $checkId]);
+    Db::exec('UPDATE mar_bg_controle SET notifie_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), $checkId]);
     journalAdd('Brand Guard', 'Alerte', (string) $page['boutique'],
         'Alerte post sauvage ' . ($envoye ? 'envoyée par mail à ' . $a : ($a === '' ? '(pas d’adresse d’alerte : réglage brandGuard.mailAlerte)' : '(courrier non configuré)')));
 }
@@ -532,8 +532,8 @@ function bgSauvagesBoutique(?string $shopId, string $boutique, int $jours): int
 {
     $depuis = date('Y-m-d H:i:s', time() - $jours * 86400);
     $r = $shopId !== null
-        ? Db::row('SELECT COUNT(*) AS n FROM brand_guard_checks WHERE sauvage = 1 AND shop_id = ? AND created_at >= ?', [$shopId, $depuis])
-        : Db::row('SELECT COUNT(*) AS n FROM brand_guard_checks WHERE sauvage = 1 AND boutique = ? AND created_at >= ?', [$boutique, $depuis]);
+        ? Db::row('SELECT COUNT(*) AS n FROM mar_bg_controle WHERE sauvage = 1 AND shop_id = ? AND created_at >= ?', [$shopId, $depuis])
+        : Db::row('SELECT COUNT(*) AS n FROM mar_bg_controle WHERE sauvage = 1 AND boutique = ? AND created_at >= ?', [$boutique, $depuis]);
     return (int) ($r['n'] ?? 0);
 }
 
@@ -555,10 +555,10 @@ function bgAuditer(int $jours = 7): array
     }
     $ids = bgIdsConnus();
     $n = 0; $c = 0; $s = 0; $erreurs = [];
-    foreach (Db::rows("SELECT * FROM brand_guard_pages WHERE actif = 1 AND statut_connexion = 'connectee' AND page_id IS NOT NULL") as $p) {
+    foreach (Db::rows("SELECT * FROM mar_bg_page WHERE actif = 1 AND statut_connexion = 'connectee' AND page_id IS NOT NULL") as $p) {
         $tk = $tokens[(string) $p['page_id']]['token'] ?? null;
         if ($tk === null) {
-            Db::exec("UPDATE brand_guard_pages SET statut_connexion = 'erreur', derniere_erreur = ? WHERE id = ?",
+            Db::exec("UPDATE mar_bg_page SET statut_connexion = 'erreur', derniere_erreur = ? WHERE id = ?",
                 ['la page n’est pas rattachée au System User (absente de /me/accounts)', (int) $p['id']]);
             $erreurs[] = $p['boutique'] . ' : page non rattachée au Business Manager';
             continue;
@@ -570,12 +570,12 @@ function bgAuditer(int $jours = 7): array
                 if ($r === null) { continue; }
                 $c++; if ($r['sauvage']) { $s++; }
             }
-            Db::exec("UPDATE brand_guard_pages SET derniere_sync = ?, derniere_erreur = NULL WHERE id = ?", [date('Y-m-d H:i:s'), (int) $p['id']]);
+            Db::exec("UPDATE mar_bg_page SET derniere_sync = ?, derniere_erreur = NULL WHERE id = ?", [date('Y-m-d H:i:s'), (int) $p['id']]);
         } catch (MetaTokenExpire $e) {
-            Db::exec("UPDATE brand_guard_pages SET statut_connexion = 'erreur', derniere_erreur = ? WHERE id = ?", ['token expiré : ' . mb_substr($e->getMessage(), 0, 250), (int) $p['id']]);
+            Db::exec("UPDATE mar_bg_page SET statut_connexion = 'erreur', derniere_erreur = ? WHERE id = ?", ['token expiré : ' . mb_substr($e->getMessage(), 0, 250), (int) $p['id']]);
             $erreurs[] = $p['boutique'] . ' : token expiré';
         } catch (Throwable $e) {
-            Db::exec("UPDATE brand_guard_pages SET derniere_erreur = ? WHERE id = ?", [mb_substr($e->getMessage(), 0, 300), (int) $p['id']]);
+            Db::exec("UPDATE mar_bg_page SET derniere_erreur = ? WHERE id = ?", [mb_substr($e->getMessage(), 0, 300), (int) $p['id']]);
             $erreurs[] = $p['boutique'] . ' : ' . $e->getMessage();
         }
     }
@@ -620,7 +620,7 @@ function ep_bg_checks(): array
     if (($_GET['sauvage'] ?? '') !== '') { $w[] = 'sauvage = ?'; $a[] = in_array($_GET['sauvage'], ['1', 'true', 'oui'], true) ? 1 : 0; }
     if (in_array($_GET['source'] ?? '', ['avant', 'apres'], true)) { $w[] = 'source = ?'; $a[] = $_GET['source']; }
     $limit = max(1, min(500, (int) ($_GET['limit'] ?? 200)));
-    $rows = Db::rows('SELECT * FROM brand_guard_checks' . ($w ? ' WHERE ' . implode(' AND ', $w) : '') . ' ORDER BY created_at DESC, id DESC LIMIT ' . $limit, $a);
+    $rows = Db::rows('SELECT * FROM mar_bg_controle' . ($w ? ' WHERE ' . implode(' AND ', $w) : '') . ' ORDER BY created_at DESC, id DESC LIMIT ' . $limit, $a);
     return ['checks' => array_map('bgCheckLigne', $rows), 'charteVersion' => bgCharteVersion()];
 }
 
@@ -650,12 +650,12 @@ function wr_bg_rules_put(): array
     $avant = bgCharteVersion();
     $pdo = Db::pdo(); $pdo->beginTransaction();
     try {
-        Db::exec('DELETE FROM brand_guard_rules');
+        Db::exec('DELETE FROM mar_bg_regle');
         $rang = 0;
         foreach ($regles as $r) {
             $code = preg_replace('/[^a-z0-9\-]/', '', strtolower((string) ($r['code'] ?? '')));
             if ($code === '') { continue; }
-            Db::exec('INSERT INTO brand_guard_rules (code, famille, libelle, description, gravite, actif, rang, maj_le) VALUES (?,?,?,?,?,?,?,?)', [
+            Db::exec('INSERT INTO mar_bg_regle (code, famille, libelle, description, gravite, actif, rang, maj_le) VALUES (?,?,?,?,?,?,?,?)', [
                 $code, mb_substr(trim((string) ($r['famille'] ?? 'Autre')), 0, 60), mb_substr(trim((string) ($r['libelle'] ?? $code)), 0, 160),
                 (string) ($r['description'] ?? ''), isset(BG_GRAVITES[$r['gravite'] ?? '']) ? $r['gravite'] : 'majeur',
                 array_key_exists('actif', $r) && !$r['actif'] ? 0 : 1, ++$rang, date('Y-m-d H:i:s')]);
@@ -674,7 +674,7 @@ function ep_bg_pages(): array
     return ['pages' => array_map(static fn ($p) => ['id' => (int) $p['id'], 'magasinId' => $p['shop_id'], 'boutique' => $p['boutique'],
             'franchise' => $p['franchise'], 'pageUrl' => $p['page_url'], 'pageId' => $p['page_id'], 'pageNom' => $p['page_nom'],
             'statut' => $p['statut_connexion'], 'erreur' => $p['derniere_erreur'], 'derniereSync' => $p['derniere_sync'],
-            'webhook' => (bool) $p['webhook_abonne'], 'actif' => (bool) $p['actif']], Db::rows('SELECT * FROM brand_guard_pages ORDER BY boutique')),
+            'webhook' => (bool) $p['webhook_abonne'], 'actif' => (bool) $p['actif']], Db::rows('SELECT * FROM mar_bg_page ORDER BY boutique')),
         'meta' => MetaGraph::statut(), 'anthropic' => class_exists('Anthropic') ? Anthropic::statut() : null,
         'mailAlerte' => (string) ((setting('brandGuard') ?: [])['mailAlerte'] ?? '')];
 }
@@ -689,12 +689,12 @@ function wr_bg_pages_put(): array
         $vals = [($p['magasinId'] ?? '') !== '' ? (string) $p['magasinId'] : null, mb_substr(trim((string) ($p['boutique'] ?? '')), 0, 80),
             mb_substr(trim((string) ($p['franchise'] ?? '')), 0, 120), mb_substr($url, 0, 300), !empty($p['actif']) || !isset($p['actif']) ? 1 : 0];
         if (($p['id'] ?? 0) > 0) {
-            $anc = Db::row('SELECT page_url FROM brand_guard_pages WHERE id = ?', [(int) $p['id']]);
+            $anc = Db::row('SELECT page_url FROM mar_bg_page WHERE id = ?', [(int) $p['id']]);
             // Une URL qui change invalide la résolution : la page se relira.
             $reset = $anc !== null && (string) $anc['page_url'] !== $url ? ", page_id = NULL, statut_connexion = 'a_connecter', derniere_erreur = NULL" : '';
-            Db::exec('UPDATE brand_guard_pages SET shop_id = ?, boutique = ?, franchise = ?, page_url = ?, actif = ?' . $reset . ' WHERE id = ?', array_merge($vals, [(int) $p['id']]));
+            Db::exec('UPDATE mar_bg_page SET shop_id = ?, boutique = ?, franchise = ?, page_url = ?, actif = ?' . $reset . ' WHERE id = ?', array_merge($vals, [(int) $p['id']]));
         } elseif ($vals[1] !== '') {
-            Db::exec('INSERT INTO brand_guard_pages (shop_id, boutique, franchise, page_url, actif) VALUES (?,?,?,?,?)', $vals);
+            Db::exec('INSERT INTO mar_bg_page (shop_id, boutique, franchise, page_url, actif) VALUES (?,?,?,?,?)', $vals);
         }
     }
     if (array_key_exists('mailAlerte', $b)) {
@@ -714,7 +714,7 @@ function ep_bg_stats(): array
     $out = ['periodes' => [], 'charteVersion' => bgCharteVersion(), 'meta' => MetaGraph::statut(),
         'anthropic' => class_exists('Anthropic') ? Anthropic::statut() : null];
     foreach ($periodes as $j) { $out['periodes'][(string) $j] = bgStatsPeriode($j); }
-    $out['sauvagesATraiter'] = (int) (Db::row('SELECT COUNT(*) AS n FROM brand_guard_checks WHERE sauvage = 1 AND created_at >= ?', [date('Y-m-d H:i:s', time() - 30 * 86400)])['n'] ?? 0);
+    $out['sauvagesATraiter'] = (int) (Db::row('SELECT COUNT(*) AS n FROM mar_bg_controle WHERE sauvage = 1 AND created_at >= ?', [date('Y-m-d H:i:s', time() - 30 * 86400)])['n'] ?? 0);
     return $out;
 }
 
@@ -722,7 +722,7 @@ function ep_bg_stats(): array
 function bgStatsPeriode(int $jours): array
 {
     $depuis = date('Y-m-d H:i:s', time() - $jours * 86400);
-    $rows = Db::rows('SELECT shop_id, boutique, source, sauvage, statut, score, ecarts_json FROM brand_guard_checks WHERE created_at >= ?', [$depuis]);
+    $rows = Db::rows('SELECT shop_id, boutique, source, sauvage, statut, score, ecarts_json FROM mar_bg_controle WHERE created_at >= ?', [$depuis]);
     $par = []; $regles = []; $tot = ['n' => 0, 'conformes' => 0, 'score' => 0, 'sauvages' => 0];
     foreach ($rows as $r) {
         $k = (string) ($r['boutique'] ?? '—');
@@ -784,7 +784,7 @@ function wr_bg_webhook(string $corps, ?string $signature): array
     $faits = [];
     $tokens = null; $ids = null;
     foreach (MetaGraph::postsDuWebhook($payload) as $ev) {
-        $page = Db::row("SELECT * FROM brand_guard_pages WHERE page_id = ? AND actif = 1", [$ev['page']]);
+        $page = Db::row("SELECT * FROM mar_bg_page WHERE page_id = ? AND actif = 1", [$ev['page']]);
         if ($page === null) { $faits[] = ['post' => $ev['post'], 'ignore' => 'page inconnue ' . $ev['page']]; continue; }
         try {
             $tokens = $tokens ?? MetaGraph::tokensPages();
@@ -795,7 +795,7 @@ function wr_bg_webhook(string $corps, ?string $signature): array
             $ids = $ids ?? bgIdsConnus();
             $r = bgAuditerPost($page, MetaGraph::normaliser($raw), $ids);
             $faits[] = ['post' => $ev['post'], 'controle' => $r === null ? 'déjà contrôlé' : $r['statut'], 'sauvage' => $r['sauvage'] ?? null];
-            Db::exec('UPDATE brand_guard_pages SET webhook_abonne = 1, derniere_sync = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $page['id']]);
+            Db::exec('UPDATE mar_bg_page SET webhook_abonne = 1, derniere_sync = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $page['id']]);
         } catch (Throwable $e) {
             journalAdd('Brand Guard', 'Webhook', (string) $page['boutique'], 'Post ' . $ev['post'] . ' non contrôlé : ' . $e->getMessage());
             $faits[] = ['post' => $ev['post'], 'erreur' => $e->getMessage()];
@@ -861,7 +861,7 @@ function ep_bg_cron(): array
 function bgRapportQuotidien(array $audit): array
 {
     $depuis = date('Y-m-d H:i:s', time() - 24 * 3600);
-    $rows = Db::rows("SELECT * FROM brand_guard_checks WHERE source = 'apres' AND created_at >= ? ORDER BY sauvage DESC, score ASC, created_at DESC", [$depuis]);
+    $rows = Db::rows("SELECT * FROM mar_bg_controle WHERE source = 'apres' AND created_at >= ? ORDER BY sauvage DESC, score ASC, created_at DESC", [$depuis]);
     $aTraiter = array_values(array_filter($rows, static fn ($r) => (int) $r['sauvage'] === 1 || $r['statut'] !== 'conforme'));
     $conformes = count($rows) - count($aTraiter);
     $s = setting('brandGuard') ?: [];
@@ -899,7 +899,7 @@ function bgRapportHebdo(): array
 {
     $st = bgStatsPeriode(7);
     $depuis = date('Y-m-d H:i:s', time() - 7 * 86400);
-    $rows = Db::rows('SELECT * FROM brand_guard_checks WHERE created_at >= ? ORDER BY sauvage DESC, score ASC, created_at DESC LIMIT 200', [$depuis]);
+    $rows = Db::rows('SELECT * FROM mar_bg_controle WHERE created_at >= ? ORDER BY sauvage DESC, score ASC, created_at DESC LIMIT 200', [$depuis]);
     $h = '<h2 style="font-family:sans-serif">Brand Guard — semaine au ' . date('d/m/Y') . '</h2>'
         . '<p>' . $st['controles'] . ' post(s) contrôlé(s) · conformité ' . ($st['tauxConformite'] ?? '—') . ' % · score moyen ' . ($st['scoreMoyen'] ?? '—') . '/100 · <b>' . $st['sauvages'] . ' post(s) sauvage(s)</b>.</p>';
     if ($st['boutiques']) {

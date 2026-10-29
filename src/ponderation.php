@@ -51,6 +51,18 @@ function pjPoids(): ?array
 }
 
 /**
+ * L'heure d'adoption des poids en vigueur (0 sans poids adoptés). Un calcul du Résultat gardé
+ * en cache avant cette heure porte les objectifs de l'ancienne pondération : il n'est plus frais
+ * (rcServi, tobCacheLu) et se recalcule au premier affichage.
+ */
+function pjAdopteTs(): int
+{
+    $p = pjPoids();
+    $t = $p !== null && $p['adopteLe'] !== '' ? strtotime($p['adopteLe']) : false;
+    return $t !== false ? (int) $t : 0;
+}
+
+/**
  * La part d'UN jour dans sa semaine, en fraction (0,135 pour 13,5 %).
  * Rend null si aucun poids n'est adopté — l'appelant le dit à l'écran.
  */

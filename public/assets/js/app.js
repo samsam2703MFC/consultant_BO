@@ -6,8 +6,14 @@
  */
 import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, apiTraces, apiTracesRaz, joinPerf } from './api.js';
 import { render as tplRender, tplPsImpression } from './templates.js';
-import { valsGC, valsFF, valsRO } from './franchises-vals.js';
+import { valsFF, valsCQM } from './franchises-vals.js';
+import { valsSvTableau, valsSvTablette, valsSvMsp, valsSvFranchise, valsSvAdmin, valsSvSources } from './suivi-vals.js';
+import { valsClientsAnnee } from './clients-annee-vals.js';
+import { valsFidelite } from './fidelite-vals.js';
+import { valsPromoTableau, valsPromoEdition, promosBadges, peMonter } from './promotions-vals.js';
 import { Scouting } from './scouting.js';
+// MétaDonnée : un module à part, qui tient son DOM (window.CockpitMetaDonnee) — monté après chaque rendu.
+import './metadonnee.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
 // prêtent (la fiche franchisé) replient le menu en tiroir et grossissent leurs cibles tactiles.
@@ -173,6 +179,63 @@ function fusionne(v, n){
   }
 }
 
+/* L'icône d'une prime faite dans l'assistant (16/10/2026) : un PNG de 128 px, déposé ensuite comme les autres
+   (POST /ventes/primes-icone). Un emoji se dessine ; une photo se recadre au carré (le centre), se réduit et
+   s'arrondit aux coins. */
+const PR_EMOJIS = ['🏷️', '🥐', '🍰', '🥧', '🍪', '🍫', '☕', '🥖', '🥗', '🍓', '🎁', '🎉', '⭐', '🔥'];
+function prIconeEmoji(em){
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d'); if (!x) { return ''; }
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = '100px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+  x.fillText(em, 64, 72);
+  return c.toDataURL('image/png');
+}
+/* Le logo d'un sponsor (16/10/2026) : réduit pour tenir dans 256 px, sans le recadrer, fond transparent gardé. */
+function prLogo(fichier){
+  return new Promise((ok, ko) => {
+    const lu = new FileReader();
+    lu.onerror = ko;
+    lu.onload = () => {
+      const img = new Image();
+      img.onerror = ko;
+      img.onload = () => {
+        const w = img.naturalWidth || 256, h = img.naturalHeight || 256;
+        const k = Math.min(1, 256 / Math.max(w, h));
+        const c = document.createElement('canvas'); c.width = Math.max(16, Math.round(w * k)); c.height = Math.max(16, Math.round(h * k));
+        const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
+        x.drawImage(img, 0, 0, c.width, c.height);
+        ok(c.toDataURL('image/png'));
+      };
+      img.src = lu.result;
+    };
+    lu.readAsDataURL(fichier);
+  });
+}
+function prIconePhoto(fichier){
+  return new Promise((ok, ko) => {
+    const lu = new FileReader();
+    lu.onerror = ko;
+    lu.onload = () => {
+      const img = new Image();
+      img.onerror = ko;
+      img.onload = () => {
+        const cote = Math.min(img.naturalWidth, img.naturalHeight);
+        if (!cote) { ko(new Error('vide')); return; }
+        const c = document.createElement('canvas'); c.width = c.height = 128;
+        const x = c.getContext('2d');
+        const r = 26;
+        x.beginPath(); x.moveTo(r, 0); x.arcTo(128, 0, 128, 128, r); x.arcTo(128, 128, 0, 128, r); x.arcTo(0, 128, 0, 0, r); x.arcTo(0, 0, 128, 0, r); x.closePath(); x.clip();
+        x.imageSmoothingQuality = 'high';
+        x.drawImage(img, (img.naturalWidth - cote) / 2, (img.naturalHeight - cote) / 2, cote, cote, 0, 0, 128, 128);
+        ok(c.toDataURL('image/png'));
+      };
+      img.src = lu.result;
+    };
+    lu.readAsDataURL(fichier);
+  });
+}
+
 class App {
   constructor(root){
     this.root = root;
@@ -191,14 +254,21 @@ class App {
       // Suivi : la période affichée, les données du serveur, et le
       // brouillon de traitement par signalement.
       suiviPeriode: 'semaine', suiviData: null, suiviNote: {},
-      // Contrôle des posts Facebook : filtres de l'écran, brouillon de décision
-      // par post (`fbVal`, envoyé au clic seulement) et modale de soumission.
-      fbStore: 'tous', fbEtat: 'À traiter', fbVal: {}, fbNew: null,
       // Brand Guard : la période du tableau de bord (7, 30, 90 jours).
       bgJours: 30,
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
       pwaType: 'gestion:month', pwaScope: 'all', gate: null,
       repCible: null, repRech: null, repBusy: false, pdCat: 'Toutes les catégories', pdSort: 'score' };
+    // La page du franchisé (23/10/2026) : « #/primes?shop=3 » ouvre les primes de ce magasin. « ?shop=3 » avant
+    // l'ancre (lien de la PR #33) passe dans l'ancre, seule à dire le magasin ensuite : sans quoi il collerait à l'adresse
+    // et la page admin ne se rouvrirait plus.
+    const shopAvant = (new URLSearchParams(location.search).get('shop') || '').trim();
+    if (shopAvant) {
+      const reste = new URLSearchParams(location.search); reste.delete('shop');
+      const h = String(location.hash || '');
+      const ancre = (!h || /^#\/?(primes|primes-app-worker)?(\?|$)/.test(h)) && !App.shopDeAdresse() ? '#/' + App.ADRESSES.primesApp + '?shop=' + encodeURIComponent(shopAvant) : h;
+      try { history.replaceState(null, '', location.pathname + (reste.toString() ? '?' + reste : '') + ancre); } catch (e) { /* adresse inchangée */ }
+    }
     this._h = [];
     this._tt = null;
     this._lastEn = null;
@@ -207,28 +277,30 @@ class App {
     const depart = this.ecranDeAdresse();
     if (depart) {
       // Tableau des magasins, Objectifs de CA et Marge & coûts sont devenus
-      // les trois onglets de Performance : leur adresse ouvre l'onglet.
-      if (App.PERF_ONGLETS[depart]) { this.state.pfOnglet = depart; this.state.screen = 'performance'; }
-      else { this.state.screen = depart; }
+      // des onglets de Résultat (16/10/2026) : leur adresse ouvre l'onglet.
+      if (App.PERF_ONGLETS[depart]) { this.state.rjOnglet = App.PERF_ONGLETS[depart]; this.state.screen = 'resultatJour'; }
+      else { this.state.screen = depart; Object.assign(this.state, this.etatDeAdresse(depart)); }
       // Arrivé par une adresse retirée, l'URL se remet d'aplomb : on ne laisse
       // pas « #/stock » dans la barre d'un écran qui n'est plus le stock.
-      const juste = this.adresseDe(depart);
+      const juste = this.adresseDe(this.state.screen);
       if (location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
     }
     // Reculer dans l'historique doit reculer d'écran. Le changement qu'on
     // provoque nous-même est ignoré : sinon chaque navigation se rejouerait.
-    // L'application Production intégrée renvoie le jour choisi dans sa barre des jours : le
-    // cockpit le retient (sans se redessiner) pour la garder sur ce jour d'une page à l'autre.
-    window.addEventListener('message', e => {
-      if (e.origin !== location.origin || !e.data || typeof e.data.pfDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(e.data.pfDate)) { return; }
-      this.gpDateVu = e.data.pfDate;
-    });
     window.addEventListener('hashchange', () => {
       if (this._hashInterne === location.hash) { this._hashInterne = null; return; }
       const id = this.ecranDeAdresse();
       if (!id) { return; }
-      if (App.PERF_ONGLETS[id]) { this.setState({ screen: 'performance', pfOnglet: id, hmHover: null }); return; }
-      if (id !== this.state.screen) { this.setState({ screen: id, hmHover: null }); return; }
+      if (App.PERF_ONGLETS[id]) {
+        this.setState({ screen: 'resultatJour', rjOnglet: App.PERF_ONGLETS[id], rpSel: null, hmHover: null });
+        const juste = this.adresseDe('resultatJour');
+        if (location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
+        return;
+      }
+      if (id !== this.state.screen) { this.setState(Object.assign({ screen: id, hmHover: null }, this.etatDeAdresse(id))); return; }
+      // Même écran, autre magasin dans l'adresse (« ?shop=3 » changé à la main) : la page suit.
+      const etat = this.etatDeAdresse(id);
+      if (Object.keys(etat).some(k => String(this.state[k] ?? '') !== String(etat[k] ?? ''))) { this.setState(Object.assign({ prB2b: undefined, prWiz: undefined, prEdit: undefined, prChoix: null }, etat)); return; }
       // Même écran, mais adresse retirée (« #/stock » alors qu'on est déjà sur
       // les commandes) : la barre d'adresse se remet d'aplomb, sans quoi elle
       // afficherait un écran qui n'existe plus.
@@ -267,56 +339,109 @@ class App {
    * sien : rien ne se casse si un écran naît sans qu'on y pense.
    */
   static get ADRESSES(){
+    // Sans tiret (24/10/2026, Sam : « réorganiser le nav bar pour ne pas avoir de - dans les liens ») : un mot, ou la
+    // page puis sa sous-page (« budget/encodage »). Les anciennes adresses mènent toujours au bon écran
+    // (ADRESSES_ANCIENNES) et la barre se remet aussitôt sur la nouvelle.
     return {
-      taches: 'taches-consultants', resultatJour: 'resultat', exploitation: 'pl-magasins',
-      performance: 'performance', magasins: 'magasins', heatmap: 'heatmap', objectifs: 'objectifs', marge: 'marge',
-      reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
-      budgetparam: 'budget-parametres', plan: 'plan-developpement', catalogue: 'catalogue', assortiment: 'assortiment',
-      planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
-      usage: 'usage-catalogue', anaprod: 'analyse-produits', prixvolume: 'prix-volume',
-      manque: 'manque-a-gagner',
-      analysemag: 'analyse-magasin',
-      ventes: 'target-ventes',
+      resultatJour: 'resultat',
+      magasins: 'magasins', objectifs: 'objectifs', marge: 'marge',
+      reputation: 'reputation', budget: 'budget', encodage: 'budget/encodage',
+      budgetparam: 'budget/parametres', catalogue: 'catalogue', assortiment: 'assortiment',
+      planogramme: 'planogramme', analyse: 'analyse',
+      anaprod: 'catalogue/analyse', prixvolume: 'catalogue/prix',
+      manque: 'catalogue/manque',
+      ventes: 'equipe',
+      // Les promotions (26/10/2026) : une section du rail, sortie de l'onglet d'Analyse magasin et du dashboard magasin.
+      promoTableau: 'promotions', promoEdition: 'promotions/edition',
       croisements: 'croisements',
-      caAchats: 'commandes', caFacturation: 'facturation',
-      caReglages: 'centrale-reglages', caDemande: 'demandes', caCampagnes: 'centrale-campagnes',
-      projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
-      bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits', creux: 'jours-creux', scoringTri: 'scoring-trimestre',
-      suivi: 'suivi-taches', controle: 'controle-taches', suiviMensuel: 'suivi-mensuel', kpiTable: 'table-kpi', reporting: 'reporting',
+      projets: 'projets', fonds: 'fonds',
+      mktTypes: 'parametres/campagnes', mktObjectifs: 'objectifs/produits', scoringTri: 'fiche/scoring', clientMystere: 'parametres/mystere',
+      suivi: 'suivi/taches', controle: 'suivi/controles', suiviMensuel: 'suivi/mois', kpiTable: 'parametres/kpi', reporting: 'reporting',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
       // #/parametres depuis un signet résolvait vers un écran inconnu et
       // l'affichage tombait — « rendu impossible », page blanche.
-      diagnostic: 'diagnostic', parametres: 'parametres', usageConsole: 'usage-console',
+      diagnostic: 'diagnostic', parametres: 'parametres', usageConsole: 'journal/usage',
       // Ces trois-là n'avaient PAS d'adresse, et le défaut « garde son
       // identifiant » ne suffisait pas : `ecranDeAdresse` n'accepte un
       // identifiant nu que s'il est CLÉ de cette table. L'ancre affichait
       // donc « #/journal » — que rouvrir ramenait aux tâches, sans un mot.
-      journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
-      demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
-      prospection: 'prospection', prospectionMobile: 'prospection-mobile',
+      journal: 'journal', scoring: 'parametres/scoring', scouting: 'scouting',
+      tablette: 'tablette',
+      // La fidélité du client (24/10/2026) : le programme et l'analyse des clients.
+      fidelite: 'fidelity',
+      // Les primes de l'app worker (16/10/2026) : la page admin, et celle d'un magasin avec « ?shop=4 ».
+      primesApp: 'primes',
+      // L'API du module (24/10/2026) : « #/api », et une source avec « ?source=panel ».
+      apiModule: 'api',
+      brandGuard: 'brandguard', invendus: 'invendus', inventaires: 'inventaires',
       // MétaDonnée (28/10/2026) : les formulaires Meta et Instagram vers l'ERP du franchisé.
       mdFormulaires: 'metadonnee-formulaires', mdMapping: 'metadonnee-mapping', mdLeads: 'metadonnee-leads', mdSms: 'metadonnee-sms',
-      tablette: 'tablette-vendeuses',
-      posts: 'controle-posts-facebook', brandGuard: 'brand-guard', offres: 'offres-canaux', invendus: 'invendus-poubelle',
-      productionPlan: 'production-plan', productionSuivi: 'production-suivi', productionParams: 'production-parametres', productionCloture: 'production-cloture', productionFours: 'production-fours',
       // Franchisés · évaluation et suivi (09/10/2026)
-      gestionConsultant: 'gestion-consultant', ficheFranchise: 'fiche-franchise', remarquesOperateurs: 'remarques-operateurs',
+      ficheFranchise: 'fiche', controlesQualite: 'qualite',
+      // Suivi des franchisés (24/10/2026) : le tableau de bord du bureau, la tablette, le client mystère, la page du franchisé, qui fait quoi.
+      suiviTableau: 'franchises', suiviTablette: 'franchises/tablette', suiviMsp: 'franchises/mystere', suiviFranchise: 'franchises/page', suiviAdmin: 'franchises/quifaitquoi', suiviSources: 'franchises/sources',
     };
+  }
+  /** Les adresses d'avant le 24/10/2026, avec un tiret : un signet ou un lien envoyé les ouvre toujours. */
+  static get ADRESSES_ANCIENNES(){
+    return { 'budget-encodage': 'encodage', 'budget-parametres': 'budgetparam', 'analyse-produits': 'anaprod', 'prix-volume': 'prixvolume',
+      'manque-a-gagner': 'manque', 'target-ventes': 'ventes', 'types-campagne': 'mktTypes', 'objectifs-produits': 'mktObjectifs',
+      'scoring-trimestre': 'scoringTri', 'client-mystere': 'clientMystere', 'suivi-taches': 'suivi', 'controle-taches': 'controle',
+      'suivi-mensuel': 'suiviMensuel', 'table-kpi': 'kpiTable', 'usage-console': 'usageConsole', 'scoring-reglages': 'scoring',
+      'tablette-vendeuses': 'tablette', 'primes-app-worker': 'primesApp', 'brand-guard': 'brandGuard', 'invendus-poubelle': 'invendus',
+      'fiche-franchise': 'ficheFranchise', 'controles-qualite': 'controlesQualite' };
   }
   /**
    * Les adresses d'écrans RETIRÉS. Un signet ou un lien envoyé par courriel
    * survit à une réorganisation : il mène là où le contenu a déménagé, plutôt
    * que de rouvrir l'accueil sans rien dire.
    */
-  /** Les trois onglets de Performance, et le drapeau de chacun. */
+  /**
+   * Les anciens écrans de Performance et l'onglet de Résultat qui les tient
+   * (16/10/2026) : le mois clos sous le Mois, la trajectoire dans l'Année, la
+   * marge dans Marge & coûts.
+   */
   static get PERF_ONGLETS(){
-    return { magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge' };
+    return { magasins: 'mois', objectifs: 'annee', marge: 'marge' };
   }
+  /** Les onglets de Résultat venus de Performance : ils n'ont pas de lecture de période. */
+  static get RJ_TEMPS_LONG(){ return ['annee', 'horizons', 'marge']; }
   static get ADRESSES_RETIREES(){
-    return { stock: 'caAchats', 'commandes-franchises': 'caAchats', 'resultat-du-jour': 'resultatJour',
+    return { 'resultat-du-jour': 'resultatJour', performance: 'resultatJour',
+      // L'onglet Promotions d'Analyse magasin (lecture seule) : le Tableau d'analyse le remplace (26/10/2026).
+      promosMag: 'promoTableau',
+      // Les remarques aux opérateurs, retirées (16/10/2026) : elles restent lisibles par magasin dans la fiche.
+      'remarques-operateurs': 'ficheFranchise', remarquesOperateurs: 'ficheFranchise',
+      // La centrale d'achat, Offres et canaux et Jours creux, retirés (16/10/2026) : l'accueil.
+      'jours-creux': 'resultatJour', creux: 'resultatJour',
+      commandes: 'resultatJour', stock: 'resultatJour', 'commandes-franchises': 'resultatJour', demandes: 'resultatJour',
+      facturation: 'resultatJour', 'centrale-reglages': 'resultatJour', 'centrale-campagnes': 'resultatJour', 'offres-canaux': 'resultatJour',
       // L'application consultant a quitté le rail : elle vit sur le téléphone (visites/).
-      'app-consultant': 'suivi', 'app-plans-action': 'suivi', 'app-synthese': 'suivi', 'app-mobile': 'suivi', 'app-reglages': 'suivi' };
+      'app-consultant': 'suivi', 'app-plans-action': 'suivi', 'app-synthese': 'suivi', 'app-mobile': 'suivi', 'app-reglages': 'suivi',
+      // L'onglet « Leviers » a quitté Analyse magasin (16/10/2026) : son adresse
+      // ouvre désormais le premier onglet restant, Équipe & ventes.
+      'analyse-magasin': 'ventes', analysemag: 'ventes',
+      // Écrans sans entrée, retirés (16/10/2026) : leur contenu vit ailleurs.
+      'taches-consultants': 'ficheFranchise', taches: 'ficheFranchise',
+      // Gestion consultant et Plan de développement, retirés (18/10/2026, demande de Sam) : la fiche, l'accueil.
+      'gestion-consultant': 'ficheFranchise', gestionConsultant: 'ficheFranchise',
+      'plan-developpement': 'resultatJour', plan: 'resultatJour',
+      // Scoring, Sous seuil et Par magasin : le Catalogue les reprend (18/10/2026, une liste et sa fiche).
+      scoring: 'catalogue', produits: 'catalogue', 'sous-seuil': 'catalogue', seuil: 'catalogue', 'usage-catalogue': 'catalogue', usage: 'catalogue',
+      'pl-magasins': 'resultatJour', exploitation: 'resultatJour', heatmap: 'resultatJour',
+    };
+  }
+  /**
+   * Les adresses d'écrans partis dans une application à part (16/10/2026) :
+   * l'ancien lien ouvre l'application, à la bonne page.
+   */
+  static get ADRESSES_SORTIES(){
+    return { 'production-parametres': 'production/?page=params', 'production-plan': 'production/?page=plan', 'production-suivi': 'production/?page=plan',
+      'production-cloture': 'production/?page=cloture', 'production-fours': 'production/?page=fours',
+      prospection: 'prospection/', 'prospection-mobile': 'prospection/', 'developpement-commercial': 'prospection/',
+      // Les posts : le portail social (/social, à côté du cockpit) ; les newsletters : le Marketing (/marketing/).
+      'controle-posts-facebook': '../social/', newsletter: '../marketing/', 'newsletter-magasin': '../marketing/' };
   }
   /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
   ecranDeAdresse(){
@@ -324,23 +449,57 @@ class App {
     if (!brut) { return ''; }
     const t = App.ADRESSES;
     for (const id of Object.keys(t)) { if (t[id] === brut) { return id; } }
+    if (App.ADRESSES_ANCIENNES[brut]) { return App.ADRESSES_ANCIENNES[brut]; }
     if (App.ADRESSES_RETIREES[brut]) { return App.ADRESSES_RETIREES[brut]; }
+    if (App.ADRESSES_SORTIES[brut]) { location.replace(location.pathname.replace(/[^/]*$/, '') + App.ADRESSES_SORTIES[brut]); return ''; }
     // Un identifiant technique reste accepté : les liens d'avant continuent
     // de fonctionner.
     return Object.prototype.hasOwnProperty.call(t, brut) ? brut : '';
   }
-  /** L'adresse d'un écran, pour un lien à copier. */
+  /**
+   * L'adresse d'un écran, pour un lien à copier. La page franchisé des primes porte son magasin (23/10/2026, Sam :
+   * « dans la barre il doit y avoir l'id shop, je le changerai à la main pour vérifier ») : #/primes?shop=3 ;
+   * sans magasin, c'est la page admin.
+   */
   adresseDe(id){
-    return '#/' + (App.ADRESSES[id] || id);
+    const base = '#/' + (App.ADRESSES[id] || id);
+    if (id === 'primesApp' && this.state.prSection === 'franchise' && this.state.prShop) { return base + '?shop=' + encodeURIComponent(this.state.prShop); }
+    if (id === 'apiModule' && this.state.apiSrc) { return base + '?source=' + encodeURIComponent(this.state.apiSrc); }
+    // L'édition des promotions porte son magasin (26/10/2026) : #/promotions/edition?shop=4.
+    if (id === 'promoEdition' && this.state.peShop) { return base + '?shop=' + encodeURIComponent(this.state.peShop); }
+    return base;
+  }
+  /** Le magasin écrit dans l'ancre : « #/primes?shop=3 » ; '' sans lui. */
+  static shopDeAdresse(){
+    return (new URLSearchParams(String(location.hash || '').split('?')[1] || '').get('shop') || '').trim();
+  }
+  /** Ce que l'adresse dit en plus de l'écran : le magasin de la page franchisé des primes. */
+  etatDeAdresse(id){
+    if (id === 'promoEdition') {
+      // « ?shop=4&ouvrir=p21 » : le magasin, et ce que l'assistant ouvre (voir promoEditer, promotions-vals.js).
+      const a = new URLSearchParams(String(location.hash || '').split('?')[1] || ''), shop = (a.get('shop') || '').trim(), o = (a.get('ouvrir') || '').trim();
+      return Object.assign(shop ? { peShop: shop, peSrcShop: shop } : {}, o ? { peOuvrir: o } : {});
+    }
+    if (id === 'apiModule') { return { apiSrc: (new URLSearchParams(String(location.hash || '').split('?')[1] || '').get('source') || '').trim() }; }
+    if (id !== 'primesApp') { return {}; }
+    const shop = App.shopDeAdresse();
+    return shop ? { prSection: 'franchise', prShop: shop } : { prSection: 'marque' };
+  }
+  /** Remet l'adresse d'aplomb sans ajouter de pas à l'historique (un magasin choisi par défaut). */
+  adresseSansHistorique(){
+    const cible = this.adresseDe(this.state.screen);
+    if (location.hash !== cible) { try { history.replaceState(null, '', cible); } catch (e) { /* adresse inchangée */ } }
   }
   setState(patch){
     const avant = this.state.screen;
+    const avantAdr = location.hash;
     Object.assign(this.state, typeof patch === 'function' ? patch(this.state) : patch);
     // L'ancre suit l'écran — et l'historique avec elle : le bouton « retour »
     // du navigateur ramène à l'écran précédent, ce qu'on attend d'une adresse.
-    if (this.state.screen !== avant) {
+    // Les primes suivent aussi leur page (admin ou franchisé) et leur magasin.
+    if (this.state.screen !== avant || this.state.screen === 'primesApp' || this.state.screen === 'apiModule' || this.state.screen === 'promoEdition') {
       const cible = this.adresseDe(this.state.screen);
-      if (location.hash !== cible) { this._hashInterne = cible; location.hash = cible; }
+      if (avantAdr !== cible && location.hash !== cible) { this._hashInterne = cible; location.hash = cible; }
     }
     this.render();
   }
@@ -612,16 +771,6 @@ class App {
       if (!this.scouting) this.scouting = new Scouting(this);
       this.scouting.mount(document.getElementById('scouting-root'));
     }
-    // Prospection et Newsletter sont des modules à part (partagés avec la page
-    // mobile) : ils tiennent leur DOM, on les ré-attache après chaque rendu.
-    if (this.state.ready && this.state.screen === 'prospection' && window.CockpitProspection){
-      const m = this.dmMagasin();
-      if (m) window.CockpitProspection.mount(document.getElementById('prospection-root'), { shop: String(m.id), apiBase: API_BASE, mobile: false, leafletDir: 'assets/vendor/leaflet/' });
-    }
-    if (this.state.ready && (this.state.screen === 'newsletter' || this.state.screen === 'newsletterShop') && window.CockpitNewsletter){
-      const role = this.state.screen === 'newsletter' ? 'brand' : String((this.dmMagasin() || {}).id || '');
-      if (role) window.CockpitNewsletter.mount(document.getElementById('newsletter-root'), { role, apiBase: API_BASE, imgDir: 'assets/img/newsletter/', notify: msg => this.notify(msg) });
-    }
     // MétaDonnée : une instance pour les quatre écrans du sous-menu ; ses étapes changent d'écran,
     // ses compteurs (retards, mappings à faire) remontent en pastilles du rail.
     if (this.state.ready && ['mdFormulaires', 'mdMapping', 'mdLeads', 'mdSms'].includes(this.state.screen) && window.CockpitMetaDonnee){
@@ -629,7 +778,8 @@ class App {
         go: id => this.setState({ screen: id, railOuvert: false }),
         onResume: b => { const a = this.state.mdBadges || {}; if (a.retard !== b.retard || a.mapping !== b.mapping) this.setState({ mdBadges: b }); } });
     }
-
+    // L'édition des promotions : la hauteur du cadre suit l'assistant.
+    if (this.state.ready && this.state.screen === 'promoEdition') { peMonter(this); }
     // L'écran est posé : on relève ce qu'il AFFICHE de cliquable (voir
     // `usageInventaire`). Après la fusion, jamais avant : c'est le DOM vivant
     // qu'on inventorie, pas la chaîne rendue.
@@ -778,7 +928,7 @@ class App {
   fD(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) : ''; }
   fDA(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : ''; }   // année RÉELLE de la date, jamais figée
   fDY(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(2, 4) : ''; }
-  pill(pct){ const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
+  pill(pct){ const base = 'display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:500;';
     if (pct == null || !isFinite(pct)) return base + 'background:var(--color-background-secondary);color:var(--color-text-muted)';
     if (pct >= 1) return base + 'background:rgba(45,122,62,0.12);color:#2d7a3e';
     if (pct >= 0.92) return base + 'background:rgba(193,122,42,0.16);color:#8a5a13';
@@ -788,7 +938,7 @@ class App {
     return { txt: (up ? '▲ +' : '▼ ') + (v * 100).toFixed(1).replace('.', ',') + ' %' + (suffix || ''), st: 'font-size:12px;font-weight:500;color:' + (up ? '#2d7a3e' : '#8D1D2C') }; }
   mix(a, b, t){ const h = x => [parseInt(x.slice(1, 3), 16), parseInt(x.slice(3, 5), 16), parseInt(x.slice(5, 7), 16)]; const A = h(a), B = h(b); return 'rgb(' + A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',') + ')'; }
   statutStyle(s){ const m = { 'À lancer': ['#EAE4DC', '#666666'], 'En cours': ['#F2C9A0', '#6b4420'], 'En retard': ['#8D1D2C', '#ffffff'], 'En pause': ['#F4EFE8', '#666666'], 'Terminé': ['#2d7a3e', '#ffffff'], 'Abandonné': ['#666666', '#ffffff'] }[s] || ['#F4EFE8', '#666666'];
-    return 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:' + m[0] + ';color:' + m[1]; }
+    return 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:500;background:' + m[0] + ';color:' + m[1]; }
   pStatut(p){ return this.state.statutOv[p.id] || p.statut; }
   pFamille(p){ return this.state.familleOv[p.id] || p.famille || 'Organisation & coûts'; }
   open(){ return this.D.stores.filter(s => s.status === 'Ouvert'); }
@@ -819,11 +969,23 @@ class App {
   }
   moisPartiel(){ return this.moisIdxComplet() !== this.moisIdx(); }
   moisLabel(){ return (this.M && this.M.MOIS && this.M.MOIS[this.moisIdx()]) || ''; }
+  jourJ(){ const t = (this.M && this.M.TODAY) ? new Date(this.M.TODAY + 'T12:00:00') : new Date(); return isNaN(t) ? new Date() : t; }
+  /* La part du mois m de l'exercice qui est écoulée (22/10/2026) : 1 pour un
+     mois clos, jour / jours du mois pour le mois en cours. Le réel du mois en
+     cours s'arrête à aujourd'hui ; sa cible doit s'arrêter au même jour, sinon
+     octobre comptait 31 jours de cible face à 22 jours de ventes. */
+  partMois(m){ const y = this.exo(), t = this.jourJ();
+    if (t.getFullYear() !== y || t.getMonth() !== m) { return 1; }
+    return t.getDate() / new Date(y, m + 1, 0).getDate(); }
+  /* « au 22/10 » quand le dernier mois du réel est en cours, « à fin septembre » sinon. */
+  moisLong(m){ return ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][m] || ''; }
+  libADate(){ const mi = this.moisIdx(), t = this.jourJ();
+    return this.partMois(mi) < 1 ? 'au ' + String(t.getDate()).padStart(2, '0') + '/' + String(t.getMonth() + 1).padStart(2, '0') : 'à fin ' + this.moisLong(mi); }
   ownerOf(t){ const c = t.owner.t === 'c'; const p = (c ? this.D.consultants : this.D.suppliers).find(x => x.id === t.owner.id); return { nom: p.nom, email: p.email, type: c ? 'Consultant' : 'Fournisseur' }; }
   taskState(t){ if (t.done) return t.done <= t.due ? 'Livrée à temps' : 'Livrée en retard';
     return t.due < this.M.TODAY ? 'En retard' : 'En cours'; }
   taskPillSt(st){ const m = { 'Livrée à temps': ['rgba(45,122,62,0.12)', '#2d7a3e'], 'Livrée en retard': ['rgba(193,122,42,0.16)', '#8a5a13'], 'En retard': ['rgba(141,29,44,0.12)', '#8D1D2C'], 'En cours': ['var(--color-background-secondary)', '#666666'] }[st];
-    return 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:500;white-space:nowrap;background:' + m[0] + ';color:' + m[1]; }
+    return 'display:inline-block;padding:3px 9px;border-radius:8px;font-size:11.5px;font-weight:500;white-space:nowrap;background:' + m[0] + ';color:' + m[1]; }
   tasksFlat(){ const out = []; for (const p of this.D.projects) for (const t of p.taches) out.push({ t, p, st: this.taskState(t), o: this.ownerOf(t) }); return out; }
   ownerStats(){ const map = {}; for (const x of this.tasksFlat()){ const k = x.t.owner.t + ':' + x.t.owner.id; map[k] = map[k] || { done: 0, onTime: 0, lateNow: [], lateEver: 0 };
     if (x.t.done){ map[k].done++; if (x.t.done <= x.t.due) map[k].onTime++; else map[k].lateEver++; }
@@ -869,40 +1031,19 @@ class App {
   seuils(){ const d = (this.meta && this.meta.seuils) || {};
     return { f: this.state.sFood != null ? +this.state.sFood : d.food,
       l: this.state.sLabour != null ? +this.state.sLabour : d.labour, o: d.overhead }; }
-  /* --- contrôle des posts Facebook ------------------------------------------
-   * Les libellés, gravités et familles viennent du pack de règles (M.FB) et
-   * les cinq niveaux de notes de M.SIGNAL : rien n'est redéclaré ici.
-   */
-  fbPosts(){ return (this.D && this.D.fbPosts) || []; }
-  /** Les posts qui attendent une action : le badge de la navigation. */
-  fbAttente(){ return this.fbPosts().filter(p => p.statut === 'a_controler' || p.statut === 'a_valider'); }
-  fbSeuil(){ const f = (this.M && this.M.FB) || {}; return f.seuil || 4; }
-  fbNiv(n){ const S = ((this.M && this.M.SIGNAL) || {}).niveaux || [];
-    return S.find(l => l.n === n) || { n, nom: n + '/5', couleur: '#666666', aide: '' }; }
-  fbEtats(){ return { a_controler: ['À contrôler', '#8a5a13'], a_valider: ['À valider', '#8D1D2C'],
-    refuse: ['Refusé', '#8D1D2C'], valide: ['Validé', '#2d7a3e'], publie: ['Publié', '#2d7a3e'], brouillon: ['Brouillon', '#666666'] }; }
-  fbGrav(g){ return { 1: ['mineur', '#D97706'], 2: ['majeur', '#C0182B'], 3: ['critique', '#8D1D2C'] }[g] || ['mineur', '#666666']; }
-  /**
-   * La note d'un post depuis ses écarts — miroir de fbNote() (src/fbcontrole.php).
-   *
-   * L'autorité reste le serveur : en mode API, la note affichée est celle qu'il
-   * renvoie. Cette copie ne sert qu'à garder l'écran cohérent quand on écarte
-   * un écart en mode démonstration, où aucune requête ne partira jamais. Si la
-   * règle de calcul change, elle change dans les deux — d'où le rappel ici.
-   */
-  fbNoteLocale(ecarts){
-    const r = (ecarts || []).filter(e => e.statut !== 'ignore');
-    if (!r.length) return 5;
-    const pire = Math.max(...r.map(e => e.gravite));
-    if (pire >= 3) return 1;
-    if (pire === 2) return 2;
-    return r.length >= 3 ? 3 : 4;
-  }
   openRelTask(x){ const tpl = this.state.tpl; const late = x.st === 'En retard'; const base = this.D.emailTemplates[late ? 1 : 0]; const corps = (tpl[base.id] || base.corps);
     const sub = s => s.replace('{tache}', x.t.nom).replace('{projet}', x.p.nom).replace('{echeance}', this.fDA(x.t.due)).replace('{destinataire}', x.o.nom).replace('{zone}', '');
     this.setState({ rel: { kind: 'task', id: x.t.id, projet: x.p.nom, to: x.o.nom, email: x.o.email, sujet: sub(base.sujet), corps: sub(corps) } }); }
   /* --- valeurs de rendu (port de renderVals) --------------------------------- */
   renderVals(){
+    // L'ancien écran Scoring du trimestre vit dans la fiche (B2, 16/10/2026) : son classement en est
+    // « Le réseau » (l'encodage du client mystère est dans Paramètres). Un ancien lien y mène.
+    if (this.state.screen === 'scoringTri') {
+      this.state.screen = 'ficheFranchise';
+      this.state.ffOnglet = 'reseau';
+      const juste = this.adresseDe('ficheFranchise');
+      if (typeof location !== 'undefined' && location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
+    }
     const S = this.state;
     if (S.gate){
       const g = S.gate;
@@ -939,9 +1080,7 @@ class App {
     };
     const titles = {
       brandGuard: ['Paramètres — Brand Guard', 'La charte de marque, règle par règle, et la page Facebook de chaque magasin. Le contrôle des posts relit la charte telle qu’elle est ici : chaque changement fait une nouvelle version.'],
-      posts: ['Contrôle des posts Facebook', 'Chaque post soumis par un magasin est relu par l’agent — charte, mentions légales, rédaction, visuel, diffusion. Il note et liste les écarts ; vous validez ou refusez avant publication.'],
       scouting: ['Scouting commercial', '11 provinces et régions · boulangeries OpenStreetMap · population OSM/StatBel · zones d’exclusion et zones prioritaires · modèle CA GeoConsulting (Halle, 08-2024).'],
-      analysemag: ['Analyse magasin', 'Un magasin, trois leviers chiffrés par mois et par an : l’assortiment qui lui manque, les catégories où il est en retrait du réseau, les prix sous les autres — puis le plan qui fusionne le tout. Estimations à comportement constant, jamais un objectif contractuel.'],
       croisements: ['Croisements', 'Deux familles — catégorie ou produit — et la lecture : sur les tickets qui contiennent A, la part qui contient aussi B. Par mois, réseau et magasin par magasin, vendeuse par vendeuse au clic. Les combos qui servent s’enregistrent et reviennent chaque mois.'],
       ventes: ['Target de vente & classement', 'Qui vend le mieux, personne par personne — au CA par heure prestée du planning, jamais au CA brut. Le panier et les lignes par ticket complètent la lecture ; chaque mois, la marque prime la meilleure de chaque magasin et la meilleure du réseau.'],
       anaprod: ['Produits × magasins', 'Chaque référence, où elle se vend : une jauge par magasin face à la moyenne réseau — vert au-dessus, rouge en dessous, le delta en %, les « jamais vendu » et les éteints qui sautent aux yeux. Cliquez une référence pour sa fiche de vie — courbe fine par magasin, moyenne réseau et an dernier. Lu en direct chez le panel, tranche par tranche.'],
@@ -950,80 +1089,73 @@ class App {
       usage: ['Usage du catalogue', 'Ce que chaque magasin vend du catalogue réseau, mois par mois. Ouvrez un magasin, puis un groupe, puis une sous-catégorie : les références qu’il vend, celles qui lui manquent, et par combien d’autres magasins chaque absente est vendue.'],
       seuil: ['Références sous seuil', 'Sortir d’un coup toutes les références dont le score passe sous un seuil, pour arbitrer la gamme. Le score est celui de l’écran de scoring — même calcul, même pondération.'],
       diagnostic: ['Diagnostic API', 'Ce que le cockpit ne peut pas afficher, écran par écran, et les appels qui dépassent deux secondes — ceux dont l’API amont doit être améliorée.'],
-      caCampagnes: ['Campagnes commerciales', 'Campagnes du cockpit marketing et contrôle des flux fournisseurs. Lecture seule : une campagne ne s’écrit jamais depuis la centrale.'],
-      caDemande: ['Demande de prix', 'Négociation fournisseur en quatre étapes : sélection, consolidation, demande, suivi.'],
-      caAchats: ['Commandes', 'Les commandes des magasins chez leurs fournisseurs, de l’envoi à la livraison. Un fournisseur se relance par courrier à tout moment.'],
-      caCommandes: ['Commandes', 'Les commandes des magasins chez leurs fournisseurs.'],
-      caFacturation: ['Facturation magasins', 'Factures des magasins, TVA calculée ligne à ligne, relances.'],
-      caReglages: ['Paramètres — Centrale d’achat', 'Moteur de marge (commission de marque, TVA par défaut, objectifs de négociation) et référentiel fournisseurs.'],
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
-      catalogue: ['Catalogue produit', 'Les références du réseau avec leur prix, leur coût matière et leurs DEUX marges : brute, puis nette après commission de marque — celle que pilote la centrale d\u2019achat. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
+      catalogue: ['Catalogue', 'Quatre questions, une liste, une fiche : ce qu’il faut retirer de la gamme, où l’on vend moins que le réseau, si les prix sont tenus, ce qui décroche. Un clic sur une référence ouvre sa fiche.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
-      mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
-      mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
-      demarchage: ['Développement commercial', 'La liste de démarchage du magasin : les lieux qui rassemblent du monde autour de lui — entreprises, écoles, santé, administrations, formation, funéraire, sport, hôtels, commerces en zoning — relevés dans OpenStreetMap. On coche, on date la visite, on note le retour ; une annotation part au CRM marketing.'],
-      newsletter: ['Newsletter — marque', 'Campagnes email et SMS aux clients captés en boutique : segments, modèles, vouchers, automatisations. La vue de la marque : tout, y compris les paramètres et les droits des franchisés. Mode test : aucun envoi ne part.'],
-      newsletterShop: ['Newsletter — magasin', 'La newsletter telle que le franchisé la voit : ses segments, sa campagne, son adresse d\u2019expéditeur — si la marque l\u2019y autorise. Choisissez le magasin pour voir sa vue. Mode test : aucun envoi ne part.'],
-      prospection: ['Prospection', 'La liste de démarchage du magasin, créée d\u2019un tap parmi les lieux relevés autour de lui ; le statut de chaque lieu (à visiter, visité, à rappeler, RDV, client, refus), la visite datée, la note qui part au CRM ; la carte des concentrations et le calcul de pénétration et de CA possible par secteur. Gardé au serveur : la même liste sur le téléphone.'],
-      prospectionMobile: ['Prospection mobile', 'La même liste, sur le téléphone du franchisé : ma liste et l\u2019annotation en tournée, la carte, le CA. Une page à part, à ouvrir sur le téléphone — le lien de chaque magasin est ici.'],
+      promoTableau: ['Tableau d’analyse', 'Quelle promotion est utilisée dans quel magasin, et ce qu’elle pèse dans le CA du magasin et dans le CA général — lues au panel et dans les tickets.'],
+      promoEdition: ['Édition', 'Le formulaire du dashboard magasin, avec le magasin à choisir : une promotion « X achetés + Y » s’écrit au panel, réservée au magasin, sans validation.'],
+      apiModule: ['API du module', 'Primes et application employé : ce que chaque page lit et écrit, d’où viennent les données, et ce que chaque route répond à l’instant.'],
+      primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
+      fidelite: ['Fidélité', 'Les points, les cartes à tampons, les bons et les cadeaux du client : ce qui les déclenche, quand les points comptent double, ce que le programme coûte. Et ce que les clients en font : qui revient, à quel rythme, pour quel type d’achat.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
-      resultatJour: ['Résultat', 'La journée, la semaine et le mois du réseau, face à l\u2019objectif et au compte de résultat. L\u2019objectif vient du budget mensuel réparti par la pondération réseau des jours ; l\u2019écart se lit aussi en clients manquants. Ouvrez une ligne pour le détail du magasin.'],
+      resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
-      mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
+      clientMystere: ['Client mystère', 'Le rapport client mystère reçu, magasin par magasin et par trimestre : « obtenu / maximum », ramené sur 5 pour le poste Client mystère du scoring, avec son PDF.'],
       scoringTri: ['Scoring du trimestre', 'Quatre postes de cinq points, magasin par magasin : la note Google, les tâches du panel, le client mystère, le budget — sur 20, lu en étoiles. Le rapport A4 part à chaque magasin le premier jour du trimestre suivant.'],
-      gestionConsultant: ['Gestion consultant', 'Le planning du consultant tous magasins, ses tâches de toutes sources (visites, plans d’action, panel, helpdesk, perso), le réseau consultants × magasins, et le cadre de visite : par magasin, combien de visites, de quel type, par quel profil, avec quelle checklist. Chaque type de visite porte sa checklist et ses tâches à faire ; l’agenda Google suit par flux ICS et invitations.'],
-      ficheFranchise: ['Franchisés · évaluation et suivi', 'Par franchisé : ce que les données disent chaque jour, ce que le consultant constate sur place. Une tuile se déplie sur son détail, « Tout voir » ouvre la liste complète.'],
-      remarquesOperateurs: ['Remarques aux opérateurs', 'Les remarques faites depuis la modale des invendus sur une pièce jetée pour un problème de qualité : l’opérateur qui a produit, la pièce, l’heure, le motif. Par magasin et par opérateur, pour l’entretien d’évaluation.'],
-      offres: ['Offres et canaux', 'Ce que les promotions et les bundles rapportent, magasin par magasin, et par où passent les commandes : comptoir, click & collect, livraison. Les bundles sont les produits de la catégorie « Bundle & Promotion » du panel, lus dans les tickets ; les promotions sont celles posées sur les jours creux, face aux quatre semaines d’avant.'],
+      ficheFranchise: ['Fiche & scoring', 'Par franchisé : le scoring du trimestre en tête, puis ce que les données disent chaque jour et ce que le consultant constate sur place. Le réseau : le classement et le benchmark dans une seule table.'],
+      controlesQualite: ['Contrôles qualité du mois', ''],
+      inventaires: ['Entre deux inventaires', 'Par magasin, entre deux inventaires : ce qui est sorti du stock (compté au début + livré − compté à la fin) face à ce que la caisse et la poubelle expliquent, ramené aux matières par les recettes. La justesse des ventes en %, matière par matière, jour par jour et inventaire par inventaire.'],
+      suiviTableau: ['Suivi des franchisés · visites', ''],
+      suiviTablette: ['Visite sur tablette', 'L’application du consultant en visite (controle/), la même hors ligne : photo du jour, dossier du bureau, checklist du type, contrôles photo, points à travailler, météo du franchisé, signature. À la fin, le brouillon part au bureau.'],
+      suiviMsp: ['Client mystère', 'Les passages du client mystère, magasin par magasin : la note, les rubriques sur 20, le passage précédent et ce qui a suivi. Un seul encodage par passage, rangé dans son trimestre : il nourrit le feu, le scoring, la visite suivante et la page du franchisé.'],
+      suiviFranchise: ['Page du franchisé', 'La page que le franchisé ouvre avec son lien, sans mot de passe : ses points à travailler et l’envoi de sa photo de correction, ses chiffres de chaque jour, ses rapports de visite, sa prochaine visite annoncée, le journal. L’aperçu ne marque rien comme lu.'],
+      suiviSources: ['Sources et API', 'Les consultants et les visites, source par source : ce qui vient du panel atelierby.tfbuddy.com, ce qui vit dans les tables locales con_, ce qui se lit dans la base TFBuddy sans API — et les API à ouvrir au panel pour tout passer en lecture et en écriture, avec la structure de chaque table.'],
+      suiviAdmin: ['Qui fait quoi', 'Par magasin, qui prépare, qui adapte le rapport, qui l’envoie, qui valide les corrections, qui est en copie, à quelle adresse et dans quelle langue ; les personnes et leurs droits ; les délais ; les visites annoncées ou inopinées ; les courriels aux franchisés dans les quatre langues.'],
       invendus: ['Invendus et poubelle', 'Ce que les magasins jettent, déclaré en caisse : les pièces, leur coût de production (retranché du résultat), la valeur de vente perdue, les motifs, et les produits les plus jetés du réseau. Les reports au lendemain n\u2019ont pas de route de lecture dans le panel.'],
       mdFormulaires: ['MétaDonnée — 1. Formulaires', 'Les formulaires de prospects Facebook et Instagram de la Page, par la connexion Meta du CRM. On choisit ceux qu\u2019on suit et leur magasin : un formulaire non suivi ne laisse rien entrer.'],
       mdMapping: ['MétaDonnée — 2. Mapping ERP', 'Chaque question du formulaire trouve sa place dans un champ de l\u2019ERP (atelierby.tfbuddy.com), avec sa règle. Ce qui partira se lit à gauche, sur le dernier lead reçu.'],
       mdLeads: ['MétaDonnée — 3. Suivi des leads', 'Ce que l\u2019ERP dit de chaque lead, relu toutes les 10 minutes : vu, contacté, bureau créé, bureau connecté. Pas vu à temps ou pas rappelé : en retard.'],
       mdSms: ['MétaDonnée — 4. Alertes SMS', 'Le SMS au gérant du magasin à chaque nouveau lead, la relance s\u2019il ne l\u2019a pas ouvert, l\u2019e-mail au consultant s\u2019il n\u2019est pas rappelé.'],
-      productionParams: ['Production — 1. Paramètres', 'Par jour de la semaine, le nombre de cuissons et la production minimum de la 1re cuisson ; les cuissons et leur part de la journée ; les catégories (cuissons, plaques, préparées la veille, se gardent au lendemain) ; les produits obligatoires et leurs jours.'],
-      productionPlan: ['Production — 2. Plan de production', 'Section › catégorie › produit : vendu à J\u22127 (en magasin, webshop, commandes magasin), à produire pour la 1re période, à préparer pour la 2e cuisson et les suivantes, à préparer pour la 1re cuisson du lendemain — en pièces, en plaques et en chiffre d\u2019affaires.'],
-      productionSuivi: ['Production — 3. Validation et suivi', 'Ce qui est réellement sorti du four, cuisson par cuisson ; le stock de chaque produit heure par heure, vendu d\u2019après les tickets et projeté d\u2019après les 6 derniers mêmes jours, et le manque prévu.'],
-      productionFours: ['Production — 5. Fours', 'Le Gantt des fours du jour : les fournées de chaque cuisson, four par four, enchaînées pour sortir à l’ouverture de la vente ; les fours du magasin et la cuisson de chaque catégorie (four, température, durée, pièces par plaque).'],
-      productionCloture: ['Production — 4. Clôture', 'En fin de journée, produit par produit : ce qui reste, ce qui se garde pour demain (le stock de départ du plan du lendemain) et ce qui se jette (à déclarer en caisse).'],
-      creux: ['Jours creux', 'Où le magasin ne vend pas, et ce qu’on y fait : la carte jour × heure de ses ventes, le créneau cliqué, le levier, la promotion chiffrée avec ses marges — puis ce qu’elle a changé sur le créneau, face aux quatre semaines d’avant.'],
+      mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
-      bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
-      production: ['Suivi de production', 'Ce qui a été produit et ce qui a été jeté, par boutique et par référence. Le taux de perte se calcule sur les ventes, pas sur les fournées déclarées.'],
-      exploitation: ['Exploitation', 'Le P&L court de chaque magasin : chiffre d\u2019affaires du jour, de la semaine et du mois, avec le budget en regard du réel.'], taches: ['Tâches consultants', 'Ce qui attend le consultant : tâches photographiées à noter, ses propres tâches, projets en retard, alertes de marge. Puis sa liste, filtrable par intervenant et par magasin.'], magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], heatmap: ['Heatmap mensuelle', 'Une ligne par magasin, une colonne par mois. Repérez d’un coup d’œil les sur- et sous-performances.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], plan: ['Plan de développement', 'Comment chaque franchisé va développer son chiffre : la rampe à 5 ans de l’étude, l’engagement de l’année déposé par le franchisé et validé par le consultant, les actions pour y arriver, puis le rituel trimestriel — constat, annotations du franchisé, du consultant et de la marque, et ce qui est mis en route. Le PDF reprend l’ensemble.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], performance: ['Performance', 'Comment évoluent les magasins, sur le temps long : le dernier mois clos (marge, CA contre cible, tickets, panier, douze mois de clients par jour et de ticket moyen), l\u2019année et les horizons à 3 et 5 ans, puis la marge et la maîtrise des coûts avec les leviers à traiter. Pour la journée, la semaine et le mois en cours : Résultat.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets de développement', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets de développement', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
+    // La page du franchisé (?shop=) : rien de la marque ni des sponsors, pas même dans l'en-tête.
+    if (S.screen === 'primesApp' && S.prSection === 'franchise') { common.screenTitle = 'Primes du magasin'; common.screenSub = 'Ce que tes vendeuses gagnent dans l’app : les primes de la marque et des sponsors qui tournent chez toi, et celles que tu poses pour ton magasin.'; }
     common.ecran = S.screen; common.railOuvert = !!S.railOuvert; common.railBascule = () => this.setState({ railOuvert: !this.state.railOuvert });
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
-      caAchats: ['Achats', 'Ce que les magasins commandent, ce qu’on négocie et ce que la centrale met en avant : les commandes de l’envoi à la livraison, les demandes de prix aux fournisseurs, et les campagnes commerciales.',
-        [['caAchats', 'Commandes'], ['caDemande', 'Demande de prix'], ['caCampagnes', 'Campagnes commerciales']]],
-      mktCampagnes: ['Campagnes', 'Les campagnes du réseau : qui occupe quel mois, la liste et leurs statuts, ce qu’elles devraient rapporter, et ce qu’elles ont changé.',
-        [['mktCalendrier', 'Calendrier'], ['mktCampagnes', 'Campagnes'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
         [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
       parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
-        [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['caReglages', 'Centrale d’achat'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
+        [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['clientMystere', 'Client mystère'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
       journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API ne rendent pas.',
         [['journal', 'Journal'], ['usageConsole', 'Usage de la console'], ['diagnostic', 'Diagnostic API']]],
-      analysemag: ['Analyse magasin', 'Un magasin, quatre lectures : les leviers chiffrés, qui vend et combien par heure prestée, ce que les clients achètent ensemble, et ce que Google en dit.',
-        [['analysemag', 'Leviers'], ['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
-      budget: ['Budget', 'Le budget du réseau : ce qui est tenu mois par mois, ce qui s’encode, et les règles qui le calculent.',
-        [['budget', 'Suivi'], ['encodage', 'Encodage'], ['budgetparam', 'Paramètres']]],
-      catalogue: ['Catalogue', 'Une seule liste, trois lectures : la fiche et ses deux marges, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
-        [['catalogue', 'Fiches'], ['assortiment', 'Assortiment obligatoire'], ['planogramme', 'Comptoir']]],
-      produits: ['Gamme · scoring', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.',
-        [['produits', 'Scoring'], ['seuil', 'Sous seuil']]],
-      anaprod: ['Où ça se vend', 'Chaque référence face à chaque magasin. Par référence : la jauge de chaque magasin face à la moyenne réseau. Par magasin : ce qu’il vend du catalogue et ce qui lui manque. En euros : ce que chaque absence lui coûte. Prix × volume : le prix que chaque magasin encaisse, face à ce qu’il vend.',
-        [['anaprod', 'Par référence'], ['usage', 'Par magasin'], ['manque', 'En euros · manque à gagner'], ['prixvolume', 'Prix × volume']]],
-      analyse: ['Dans le temps', titles.analyse[1], null] };
-    const grp = Object.keys(GROUPES).find(k => k === S.screen || (GROUPES[k][2] || []).some(o => o[0] === S.screen));
+      // L'onglet Promotions est parti dans la section Promotions du rail (26/10/2026).
+      ventes: ['Analyse magasin', 'Un magasin, trois lectures : qui vend et combien par heure prestée, ce que les clients achètent ensemble, ce que Google en dit.',
+        [['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
+      // Budget : trois entrées du sous-menu Budget (24/10/2026), chacune son titre — plus d'onglets.
+      // Le Catalogue n'a plus d'onglets (18/10/2026, maquette « A + D ») : une liste et sa fiche (valsCatalogue). Le
+      // comptoir reçoit l'assortiment obligatoire, qui se tient là où on place les produits.
+      planogramme: ['Comptoir · planogramme', 'Le comptoir standard et ce que chaque boutique doit tenir.',
+        [['planogramme', 'Comptoir', titles.planogramme[1]], ['assortiment', 'Assortiment obligatoire', titles.assortiment[1]]]] };
+    // Écrans sans onglet propre : ils allument l'onglet qui les porte (le calendrier est une vue des campagnes).
+    const ecranOnglet = S.screen;
+    const grp = Object.keys(GROUPES).find(k => k === ecranOnglet || (GROUPES[k][2] || []).some(o => o[0] === ecranOnglet));
     if (grp) {
-      common.screenTitle = GROUPES[grp][0]; common.screenSub = GROUPES[grp][1];
+      const onglet = (GROUPES[grp][2] || []).find(o => o[0] === ecranOnglet);
+      common.screenTitle = GROUPES[grp][0]; common.screenSub = (onglet && onglet[2]) || GROUPES[grp][1];
       const cat0 = this.D.prodCatalogue || [];
       const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0 };
-      common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: S.screen === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
+      common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: ecranOnglet === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
       if (!common.ongletsEcran.length) { common.ongletsEcran = null; }
+    }
+    // Les lectures détaillées, ouvertes depuis la fiche d'une référence du Catalogue (18/10/2026) : un retour, pas d'onglets.
+    const DETAIL_CAT = { anaprod: 'Une référence, magasin par magasin', prixvolume: 'Prix × volume', analyse: 'Dans le temps', manque: 'Manque à gagner' };
+    if (DETAIL_CAT[S.screen]) {
+      common.ongletsEcran = [{ nom: '‹ Catalogue', on: false, go: goTo('catalogue'), badge: 0 }, { nom: DETAIL_CAT[S.screen], on: true, go: goTo(S.screen), badge: 0 }];
     }
     // Les limites API se replient en une puce : les chiffres passent devant.
     common.lacOuvert = !!S.lacOuvert;
@@ -1147,7 +1279,7 @@ class App {
       common.ntWho = e => set('who', e.target.value);
       common.ntDue = e => set('due', e.target.value);
       common.ntObjectif = (D.crm[proj.id] && D.crm[proj.id].objectif) || proj.valeurTxt;
-      const cb = act => 'border:0.5px solid ' + (act ? 'var(--color-primary)' : 'var(--color-border-secondary)') + ';cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:8px 16px;border-radius:999px;background:' + (act ? 'var(--color-primary)' : 'transparent') + ';color:' + (act ? '#fff' : 'var(--color-text)');
+      const cb = act => 'border:0.5px solid ' + (act ? 'var(--color-primary)' : 'var(--color-border-secondary)') + ';cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:8px 16px;border-radius:8px;background:' + (act ? 'var(--color-primary)' : 'transparent') + ';color:' + (act ? '#fff' : 'var(--color-text)');
       common.ntCols = ['À faire', 'En cours', 'En retard'].map(c => ({ nom: c, pick: () => set('col', c), st: cb(f.col === c) }));
       const ch = own && own.charge != null ? own.nom + ' est chargé à ' + own.charge + ' % ce trimestre.' : '';
       const nOpen = this.tasksFlat().filter(x => (x.t.owner.t + ':' + x.t.owner.id) === f.who && !x.t.done).length;
@@ -1197,7 +1329,7 @@ class App {
     common.npLevChips = (M.LEVIERS || []).map(l => { const on = S.np && S.np.lev === l.slug;
       return { slug: l.slug, nom: l.nom, desc: l.desc || '', couleur: l.color || '#666',
         st: 'display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:var(--font-ui);'
-          + 'font-size:12.5px;padding:7px 13px;border-radius:999px;'
+          + 'font-size:12.5px;padding:7px 13px;border-radius:8px;'
           + (on ? 'border:1px solid ' + (l.color || '#666') + ';background:' + (l.color || '#666') + '1f;font-weight:500;color:var(--color-text)'
                 : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)'),
         dotSt: 'width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:' + (l.color || '#666'),
@@ -1215,7 +1347,7 @@ class App {
         return { np: Object.assign({}, f2, { axe: ax, jalons: jal }) }; }); };
     common.npValeur = npSet('valeur'); common.npValeurTxt = npSet('valeurTxt'); common.npKpi = npSet('kpi');
     const npPrio = p => () => this.setState(s2 => ({ np: Object.assign({}, s2.np, { prio: p }) }));
-    const npPrioSt = p => 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:8px 16px;border-radius:999px;' + (S.np && S.np.prio === p ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)');
+    const npPrioSt = p => 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:8px 16px;border-radius:8px;' + (S.np && S.np.prio === p ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)');
     common.npPrioH = npPrio('Haute'); common.npPrioM = npPrio('Moyenne'); common.npPrioB = npPrio('Basse');
     common.npPrioHSt = npPrioSt('Haute'); common.npPrioMSt = npPrioSt('Moyenne'); common.npPrioBSt = npPrioSt('Basse');
     const npRow = (list, i, k) => e => this.setState(s2 => { const arr = s2.np[list].slice(); arr[i] = Object.assign({}, arr[i], { [k]: e.target.value }); return { np: Object.assign({}, s2.np, { [list]: arr }) }; });
@@ -1345,111 +1477,137 @@ class App {
       // Un seul écran de pilotage : Résultat — jour, semaine, mois. Les
       // tâches consultants et le P&L magasins restent accessibles par leur
       // adresse, mais ce qu'on y lisait chaque matin vit désormais ici.
-      // Deux entrées, deux cycles : Résultat répond à « où en est-on ce
-      // mois-ci ? », Performance à « comment évolue-t-on ? » — le mois clos,
-      // l'année, la marge.
+      // Résultat répond aussi à « comment évolue-t-on ? » (16/10/2026) : le
+      // mois clos, l'année, les horizons et la marge y sont des onglets —
+      // Performance n'a plus d'entrée.
       ['Pilotage', [
         ['resultatJour', 'Résultat', 0],
-        ['performance', 'Performance', 0],
         // La page la plus regardée du réseau n'avait pas d'entrée : on
         // l'atteignait par son adresse. Elle vit hors du cockpit, d'où l'onglet.
         ['ext:dashboard/', 'Dashboard magasin ↗', 0]]],
       // Tout ce qui évalue et suit le franchisé, réuni (demande du 09/10/2026),
       // en deux volets : ce que les données disent chaque jour, sans aller sur
       // place ; ce que le consultant constate sur place. Le scoring du
-      // trimestre est la synthèse des deux, la fiche les réunit par magasin.
+      // trimestre est la synthèse des deux : depuis le 16/10/2026 (B2), il est en tête de
+      // la fiche, et le classement du réseau en est un onglet — une seule entrée.
       ['Franchisés · évaluation et suivi', [
-        ['ficheFranchise', 'Fiche franchisé', 0],
-        ['scoringTri', 'Scoring du trimestre', 0],
+        ['ficheFranchise', 'Fiche & scoring', 0, ['scoringTri']],
+        // Suivi des franchisés (24/10/2026) : le contrôle sur le terrain par tablette, réuni — le tableau
+        // de bord du bureau (préparer, adapter et envoyer les rapports, valider les corrections), l'application
+        // en visite (controle/), le client mystère, la page que voit le franchisé, et qui fait quoi.
+        { sub: 'Suivi des franchisés', children: [
+          ['suiviTableau', 'Visites', (S.svT && S.svT.d && S.svT.d.kpis) ? (S.svT.d.kpis.aAdapter || 0) + (S.svT.d.kpis.corrections || 0) : 0],
+          ['suiviTablette', 'Visite sur tablette', 0],
+          ['suiviMsp', 'Client mystère', 0],
+          ['suiviFranchise', 'Page du franchisé', 0],
+          ['suiviAdmin', 'Qui fait quoi', 0],
+          // Sources et API (26/10/2026) : le panel TFBuddy, les tables locales con_, et les API qui manquent pour tout passer par le panel.
+          ['suiviSources', 'Sources et API', 0]] },
+        // Le budget, sorti de Magasins (24/10/2026) : trois entrées au lieu d'un écran à trois onglets.
+        { sub: 'Budget', children: [
+          ['budget', 'Suivi budget', 0],
+          ['encodage', 'Encodage du budget', 0],
+          ['budgetparam', 'Paramètres du budget', 0]] },
         { sub: 'Suivi journalier et opérations', children: [
           ['suivi', 'Tâches et contrôles photo', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
+          ['controlesQualite', 'Contrôles qualité du mois', 0],
           ['mktObjectifs', 'Objectifs', 0],
-          ['remarquesOperateurs', 'Remarques opérateurs', 0],
           ['reputation', 'Note Google et avis', 0],
-          ['reporting', 'Reporting automatisé', 0]] },
-        { sub: 'Suivi de terrain', children: [
-          ['gestionConsultant', 'Gestion consultant', 0],
-          ['ext:visites/?role=admin', 'Visites ↗', 0],
-          ['scoringTri', 'Client mystère', 0, null, { sqVue: 'msp' }],
-          ['assortiment', 'Conformité du comptoir', 0]] }]],
+          ['reporting', 'Reporting automatisé', 0]] }]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).
-      // Trois questions : comment va ce magasin (leviers, équipe, panier,
-      // réputation), quel budget il tient, où il va sur trois ans.
+      // Trois questions : comment va ce magasin (équipe, panier, réputation),
+      // quel budget il tient, où il va sur trois ans.
       ['Magasins', [
-        ['analysemag', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['ventes', 'croisements']],
-        ['budget', 'Budget', 0, ['encodage', 'budgetparam']],
-        ['creux', 'Jours creux', 0],
+        ['ventes', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['croisements']],
         // Le suivi du franchisé ne garde que la part des invendus dans le CA (09/10/2026) :
         // le détail — pièces, motifs, produits — reste ici, sous Magasins.
         ['invendus', 'Invendus et poubelle', 0],
-        ['plan', 'Plan de développement', 0],
+        // Entre deux inventaires (12/10/2026) : les sorties du stock face aux ventes et à la poubelle.
+        ['inventaires', 'Inventaires', 0],
         ['scouting', 'Scouting — où ouvrir', 0]]],
-      // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
-      // Quatre questions, quatre entrées : le produit tel qu'il est (catalogue,
-      // assortiment, comptoir — trois onglets d'une même liste), ce qu'il vaut
-      // (scoring, dont le seuil est un filtre), où il se vend (par référence,
-      // par magasin, en euros), et comment il évolue. Les anciens écrans
-      // restent à leur adresse : l'entrée qui les couvre s'allume pour eux.
+      // Deux entrées (18/10/2026) : le Catalogue — quatre questions, une liste,
+      // une fiche ; ses lectures détaillées (une référence magasin par magasin,
+      // prix × volume, dans le temps, manque à gagner) s'ouvrent de la fiche — et
+      // le Comptoir, avec l'assortiment obligatoire. L'entrée qui couvre un écran
+      // s'allume pour lui.
+      // Les badges : au Catalogue, les références que le scoring propose
+      // d'effacer ; au Comptoir, les obligatoires qui n'y ont pas encore de place.
       ['Produits', [
-        ['catalogue', 'Catalogue', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment', 'planogramme']],
-        ['produits', 'Gamme · scoring', (this._pdDcs || {}).effacer || 0, ['seuil']],
-        ['anaprod', 'Où ça se vend', 0, ['usage', 'manque', 'prixvolume']],
-        ['analyse', 'Dans le temps', 0]]],
-      ['Centrale d’achat', [
-        ['caAchats', 'Achats', 0, ['caDemande', 'caCampagnes']],
-        ['caFacturation', 'Facturation magasins', 0]]],
+        ['catalogue', 'Catalogue', (this._pdDcs || {}).effacer || 0,
+          ['anaprod', 'manque', 'prixvolume', 'analyse']],
+        ['planogramme', 'Comptoir · planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment']]]],
+      // Les promotions (26/10/2026, maquette A de docs/maquettes/promotions-cockpit) : sorties du dashboard magasin, qui
+      // ne fait plus que les lire. L'Édition (l'assistant du dashboard, le magasin au choix) et le Tableau d'analyse
+      // (toutes les promotions de tous les magasins). Les badges, une fois lues : les brouillons à reprendre, les
+      // promotions en caisse sous le repère ×2. Un menu du rail au même niveau que Produits (Sam, 26/10/2026) : son
+      // titre de section, ses deux entrées.
+      ['Promotions', [
+        ['promoEdition', 'Édition', promosBadges(this).brouillons],
+        ['promoTableau', 'Tableau d’analyse', promosBadges(this).sousRepere]]],
       // Ce que la marque investit (projets, fonds) et ce qu'elle met en avant
       // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
       // l'autre — les deux anciennes sections n'en font qu'une.
+      // Le marketing réuni (demande du 13/10/2026) : les posts Facebook (venus de
+      // « Contrôle ») et les newsletters (venues d'« ERP franchisé ») rejoignent les
+      // campagnes, et le module Marketing (marketing/) les lit tous ensemble —
+      // calendrier commun, ce qui demande un geste, la vue d'un magasin. Depuis le
+      // 16/10/2026, posts et newsletters ne vivent plus que là ; Offres et canaux
+      // est retiré, comme la Centrale d'achat.
       ['Marque & marketing', [
-        ['mktCampagnes', 'Campagnes', 0, ['mktCalendrier', 'bxcampagnes', 'mesure']],
-        ['offres', 'Offres et canaux', 0],
+        // L'entrée Marketing (#/marketing, la page « Aujourd'hui ») a quitté le rail (23/10/2026, Sam).
+        // Le Marketing lui-même (dépôt marketing, servi à /marketing/ à côté du cockpit) : campagnes et leur
+        // assistant, réseaux sociaux, publicités Meta. Il s'ouvre dans un onglet à part.
+        ['ext:../marketing/', 'Marketing ↗', 0],
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
-      // en attendant — la prospection autour du magasin, sa lettre.
+      // en attendant — la prospection autour du magasin, sa tablette.
+      // Sa lettre est partie avec le marketing (Marque & marketing → Canaux).
       ['ERP franchisé', [
-        ['demarchage', 'Développement commercial', 0],
-        ['prospection', 'Prospection', 0],
-        ['prospectionMobile', 'Prospection mobile', 0],
+        // La liste de démarchage vit dans son application (prospection/, 16/10/2026) :
+        // mise en page bureau sur grand écran, mobile sur le téléphone.
+        ['ext:prospection/', 'Prospection ↗', 0],
         // MétaDonnée (demande du 28/10/2026, maquette A) : les formulaires de prospects Meta et
         // Instagram jusqu'à l'ERP du franchisé, en quatre étapes — module à part (metadonnee.js).
         { sub: 'MétaDonnée', children: [['mdFormulaires', '1 · Formulaires', 0], ['mdMapping', '2 · Mapping ERP', (S.mdBadges || {}).mapping || 0],
           ['mdLeads', '3 · Suivi des leads', (S.mdBadges || {}).retard || 0], ['mdSms', '4 · Alertes SMS', 0]] },
-        // Le book des vendeuses : une application à part (tablette/), comme
-        // Prospection mobile — l'écran donne ses liens, un aperçu et l'état
-        // des données que le BO lui sert.
+        // Le book des vendeuses : une application à part (tablette/) — l'écran
+        // donne ses liens, un aperçu et l'état des données que le BO lui sert.
         ['tablette', 'Tablette vendeuses', 0],
-        // L'app des employés (demande du 06/10/2026) : horaire, tâches, profil — une application à
-        // part (employee/), aux couleurs de la marque ; l'entrée mène à sa connexion.
-        ['ext:employee/auth', 'App worker ↗', 0],
-        ['newsletter', 'Newsletter', 0],
-        ['newsletterShop', 'Newsletter magasin', 0],
-        // La gestion de production du franchisé (demande du 03/10/2026) : un sous-menu à elle,
-        // par magasin et par jour — le plan, le suivi avant chaque cuisson, les paramètres.
-        { sub: 'Gestion de production', children: [['productionParams', '1 · Paramètres', 0], ['productionPlan', '2 · Plan de production', 0], ['productionSuivi', '3 · Validation et suivi', 0], ['productionCloture', '4 · Clôture', 0], ['productionFours', '5 · Fours', 0]] }]],
-      ['Contrôle', [
-        ['posts', 'Contrôle posts Facebook', this.fbAttente().length]]],
+        // La fidélité du client (24/10/2026, maquettes docs/maquettes/fidelite : le Programme de C, les Clients de B).
+        ['fidelite', 'Fidélité', 0]]],
+      // L'application employé (23/10/2026, Sam) : le rail est le bac à sable du dev, qui prend d'ici les trois
+      // pièces pour les intégrer à l'ERP — la page admin (les primes de la marque et des sponsors, les promotions,
+      // les moyennes), la page du franchisé (les primes qu'il pose pour son magasin) et l'application elle-même
+      // (employee/ : horaire, tâches, primes, profil ; l'entrée mène à sa connexion). Remplace « App worker ↗ »
+      // et le sous-menu « Primes · module app worker » d'ERP franchisé.
+      ['Application employé', [
+        ['primesApp', 'Page admin', 0, [], { prSection: 'marque', prShop: '' }],
+        ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise', prShop: '' }],
+        ['ext:employee/auth', 'Application ↗', 0],
+        // Ce que le module appelle, source par source, et ce que chaque route répond à l'instant (24/10/2026, Sam).
+        // Le badge : les routes en erreur, une fois la page ouverte.
+        { sub: 'API du module', children: [['apiModule', 'Vue d’ensemble', 0, [], { apiSrc: '' }]].concat(
+          [['cockpit', 'Cockpit'], ['panel', 'Panel tfbuddy'], ['erp', 'ERP admin'], ['base', 'Base partagée'], ['sms', 'SMS · Twilio']]
+            .map(([cle, nom]) => ['apiModule', nom, ((this._apiL || {}).erreurs || {})[cle] || 0, [], { apiSrc: cle }])) }]],
+        // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
       ['Administration', [
-        ['parametres', 'Paramètres', 0, ['scoring', 'caReglages', 'mktTypes', 'kpiTable', 'brandGuard']],
+        ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
+    // Une entrée peut mener hors du cockpit (« ext: », dans un onglet à part — la page tablette n'est pas un
+    // écran de la console, elle vit à côté), couvrir des écrans alias (c[3]) ou poser un état en plus de
+    // l'écran (c[4], ex. l'onglet Client mystère, la page admin ou franchisé de l'application employé).
+    const cExt = c => c[0].indexOf('ext:') === 0;
+    // Le magasin de la page franchisé (prShop) ne compte pas : l'entrée reste allumée quel que soit le magasin.
+    const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).filter(k => k !== 'prShop').every(k => (S[k] || ({ sqVue: 'tableau', prSection: 'marque' }[k] || '')) === c[4][k]));
+    const cGo = c => cExt(c) ? () => window.open(c[0].slice(4), '_blank', 'noopener') : (c[4] ? () => this.setState(Object.assign({ screen: c[0], railOuvert: false }, c[4])) : goTo(c[0]));
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
       if (Array.isArray(it)) {
-        // « ext: » mène hors du cockpit, dans un onglet à part — la page
-        // tablette n'est pas un écran de la console, elle vit à côté.
-        const ext = it[0].indexOf('ext:') === 0;
-        return { type: 'leaf', label: it[1], badge: it[2] || false,
-          go: ext ? () => window.open(it[0].slice(4), '_blank', 'noopener') : goTo(it[0]),
-          st: navSt(!ext && (S.screen === it[0] || (it[3] || []).indexOf(S.screen) >= 0), false) };
+        return { type: 'leaf', label: it[1], badge: it[2] || false, go: cGo(it), st: navSt(cActif(it), false) };
       }
-      // Un enfant peut mener hors du cockpit (« ext: »), couvrir des écrans alias
-      // (c[3]) ou poser un état en plus de l'écran (c[4], ex. l'onglet Client mystère).
-      const cExt = c => c[0].indexOf('ext:') === 0;
-      const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).every(k => (S[k] || (k === 'sqVue' ? 'tableau' : '')) === c[4][k]));
-      const cGo = c => cExt(c) ? () => window.open(c[0].slice(4), '_blank', 'noopener') : (c[4] ? () => this.setState(Object.assign({ screen: c[0], railOuvert: false }, c[4])) : goTo(c[0]));
       const childActive = it.children.some(cActif);
       const open = (S.navOpen && S.navOpen[it.sub] != null) ? S.navOpen[it.sub] : childActive;
       return { type: 'sub', label: it.sub, open, chevron: open ? '▾' : '▸',
@@ -1465,32 +1623,29 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isMD', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO'].forEach(k => common[k] = false);
-    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
-      assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
-      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD'].forEach(k => common[k] = false);
+    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
+      assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
+      mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
+      mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
-    if (String(S.screen || '').startsWith('ca') && S.screen !== 'catalogue') { common.isCentrale = true; }
-    // Performance : un écran, trois onglets — chacun garde ses valeurs et son
-    // gabarit d'origine, l'écran ne fait que les réunir.
-    common.isPerf = S.screen === 'performance';
-    if (common.isPerf) {
-      const on = App.PERF_ONGLETS[S.pfOnglet] ? S.pfOnglet : 'magasins';
-      common[App.PERF_ONGLETS[on]] = true;
-      common.pfOnglet = on;
-      common.pfOnglets = [['magasins', 'Mois clos'], ['objectifs', 'Année · 3 ans · 5 ans'], ['marge', 'Marge & coûts']].map(o => ({
-        cle: o[0], nom: o[1], on: on === o[0], go: () => this.setState({ pfOnglet: o[0] }) }));
-      common.pfOngletTxt = {
-        magasins: 'Le dernier mois clos de chaque magasin : marge, CA contre cible, tickets, panier — puis clients par jour et ticket moyen, mois par mois.',
-        objectifs: 'La trajectoire : cible annuelle, réel cumulé, projection de fin d’année, et les horizons à 3 et 5 ans.',
-        marge: 'Où se gagne et se perd la marge, sur le dernier mois complet : matière, main-d’œuvre, frais généraux, CA par ETP — et les leviers à traiter.' }[on];
+    if (key) { common[key] = true; }
+    // Résultat reprend Performance (16/10/2026) : chaque onglet venu de
+    // Performance garde ses valeurs et son gabarit d'origine. Le mois clos se
+    // lit sous le Mois ; l'Année fixe l'horizon à un an, 3 et 5 ans le quitte.
+    if (S.screen === 'resultatJour') {
+      const rj = S.rjOnglet || 'jour';
+      if (rj === 'mois') { common.isMagasins = true; }
+      if (rj === 'annee') { common.isObjectifs = true; if (S.horizon !== 'h1') { this.state.horizon = 'h1'; } }
+      if (rj === 'horizons') { common.isObjectifs = true; if (S.horizon !== 'h3' && S.horizon !== 'h5') { this.state.horizon = 'h3'; } }
+      if (rj === 'marge') { common.isMarge = true; }
     }
-    else if (key) { common[key] = true; }
     // Quitter un écran arme sa prochaine relecture : y revenir doit relire la
     // base, pas réafficher ce qui avait été lu la première fois.
     if (this._perfEcran && this._perfEcran !== S.screen) { this._perfEcran = null; }
+    if (common.isObjectifs || common.isMarge || common.isMagasins) { common.perfEtat = this.perfAssure(); }
 
     // --- magasins
     if (common.isMagasins){
@@ -1567,9 +1722,9 @@ class App {
       };
     }
 
-    // --- heatmap
-    // La heatmap vit aussi sous Résultat › Mois : douze mois sous le tableau du mois.
-    if (common.isHeatmap || (common.isRJour && (S.rjOnglet || 'jour') === 'mois')){
+    // --- heatmap : douze mois sous le tableau du mois, dans Résultat › Mois
+    // (l'écran Heatmap à part est retiré, 16/10/2026).
+    if (common.isRJour && (S.rjOnglet || 'jour') === 'mois'){
       const E = this.exo();
       const year = (S.hmYear === E - 1) ? E - 1 : E;
       // Le mode « % d'atteinte » suppose des objectifs encodés. Tant qu'il n'y
@@ -1670,6 +1825,13 @@ class App {
     // --- objectifs
     if (common.isObjectifs){
       const hz = S.horizon;
+      const pe = common.perfEtat;
+      common.perfMsg = pe === 'lecture' ? 'Lecture des chiffres de l’année au panel… (jusqu’à une minute ; l’écran se remplit seul)'
+        : pe === 'echec' ? 'Les chiffres de l’année n’ont pas pu être lus au panel : les montants ci-dessous ne sont pas les vrais.'
+        : pe === 'vide' ? 'Le panel n’a renvoyé aucun chiffre pour ' + (this.exo() - 1) + ' et ' + this.exo() + ' : les montants ci-dessous ne sont pas les vrais.' : '';
+      common.perfMsgSt = 'border-radius:10px;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:14px;'
+        + (pe === 'lecture' ? 'background:#F4EFE8;color:#5d554d' : 'background:#FBEFE7;color:#8A3F14;font-weight:500');
+      common.perfRelire = pe === 'echec' || pe === 'vide' ? () => this.perfRelire() : null;
       const E = this.exo(), MI = this.moisIdx(), NM = this.nMois();
       common.hz1 = () => this.setState({ horizon: 'h1' }); common.hz3 = () => this.setState({ horizon: 'h3' }); common.hz5 = () => this.setState({ horizon: 'h5' });
       common.hz1St = this.tabBtn(hz === 'h1'); common.hz3St = this.tabBtn(hz === 'h3'); common.hz5St = this.tabBtn(hz === 'h5');
@@ -1685,21 +1847,33 @@ class App {
         // d'atteinte : deux mois de budget encodés contre huit mois de réel,
         // soit une performance contre presque rien.
         const cibleDe = c => (c && c.caT) ? c.caT : ((c && c.theo) ? c.theo : 0);
+        // Le réel court jusqu'à aujourd'hui : la cible du mois en cours n'en
+        // compte que les jours écoulés.
+        const fMI = this.partMois(MI), aDate = this.libADate();
+        common.objReelLib = 'Réel ' + aDate;
+        const jJ = this.jourJ().getDate(), mL = this.moisLong(MI);
+        common.objPartTxt = fMI < 1 ? 'Cible ' + (/^[aeiou]/.test(mL) ? 'd’' : 'de ') + mL + ' comptée pour ' + jJ + (jJ > 1 ? ' jours' : ' jour') + ' sur ' + Math.round(jJ / fMI) + ', comme le réel.' : '';
         let reelT = 0, prorataT = 0, cibleT = 0;
         const rows = this.open().map(s => { const cible = s.perf[E].reduce((a, r) => a + cibleDe(r), 0);
-          let reel = 0, pro = 0; for (let m = 0; m <= MI; m++){ reel += s.perf[E][m].ca; pro += cibleDe(s.perf[E][m]); }
+          let reel = 0, pro = 0; for (let m = 0; m <= MI; m++){ reel += s.perf[E][m].ca; pro += cibleDe(s.perf[E][m]) * (m === MI ? fMI : 1); }
           reelT += reel; prorataT += pro; cibleT += cible; const att = pro > 0 ? reel / pro : null;
           const t = att == null ? { txt: '', st: 'color:var(--color-text-muted)' } : this.trend(att, 1);
           // D'où vient la cible : validée, ou reprise de l'étude. Les deux ne
           // se valent pas, et la ligne doit pouvoir le dire.
           const nBud = s.perf[E].filter(r => r.caT).length;
-          return { nom: s.nom, cible: cible > 0 ? this.fK(cible) : '',
+          return { _id: String(s.id), nom: s.nom, cible: cible > 0 ? this.fK(cible) : '',
             source: nBud === 12 ? '' : (nBud > 0 ? nBud + ' mois validés, le reste théorique' : 'théorique'),
             reel: this.fK(reel), prorata: pro > 0 ? this.fK(pro) : '', ecart: t.txt, ecartSt: t.st,
             att: att == null ? '' : this.fP(att, 0), attSt: att == null ? 'color:var(--color-text-muted)' : this.pill(att), _att: att || 0,
             goBudget: () => this.setState({ bStore: s.id, screen: 'budget' }) }; });
         rows.sort((a, b) => b._att - a._att);
         common.objRows = rows;
+        // Les clients mois par mois face à l'an passé (24/10/2026) : la carte, et sa colonne dans le
+        // tableau — un clic sur une ligne choisit le magasin du graphique, un second revient au réseau.
+        valsClientsAnnee(this, common, rows.map(r => r._id));
+        rows.forEach(r => { const pm = common.clAn.parMagasin;
+          r.clients = pm ? (pm[r._id] || null) : undefined; r.clOn = common.clAn.sel === r._id;
+          r.clSel = () => this.setState({ clAnSel: this.state.clAnSel === r._id ? 'reseau' : r._id }); });
         // La cible RÉSEAU vient des objectifs encodés (écran Objectifs) ; sans
         // eux, elle valait « 0,0 M€ » à côté d'un tableau qui, lui, affichait
         // 2,5 M€ de cibles magasins. On additionne alors les magasins, et on
@@ -1709,7 +1883,8 @@ class App {
         common.objCibleSrc = cibleReseau > 0 ? '' : 'somme des magasins — aucune cible réseau encodée';
         common.objReel = this.fM(reelT); common.objProrata = this.fM(prorataT);
         const att = reelT / prorataT; common.objAtt = this.fP(att); common.objAttSt = 'font-weight:700;color:' + (att >= 1 ? '#2d7a3e' : att >= 0.92 ? '#8a5a13' : '#8D1D2C');
-        let resteCible = 0;
+        // Le reste de l'année : les jours à venir du mois en cours, puis les mois suivants.
+        let resteCible = this.open().reduce((a, s2) => a + cibleDe(s2.perf[E][MI]), 0) * (1 - fMI);
         for (let m = MI + 1; m < 12; m++) {
           resteCible += this.open().reduce((a, s2) => a + cibleDe(s2.perf[E][m]), 0);
         }
@@ -1724,21 +1899,23 @@ class App {
         // <polyline> reçoit des points NaN/Infinity. On trace quand même le réel.
         const mxv = Math.max(ac, cumR.length ? Math.max.apply(null, cumR) : 0, 1);
         const px = m => 20 + m * (620 / 11); const py = v => 195 - (isFinite(v) ? v : 0) / mxv * 175;
-        const pts = arr => arr.map((v, m) => px(m).toFixed(0) + ',' + py(v).toFixed(0)).filter(p => !/NaN|Infinity/.test(p)).join(' ');
-        common.trajCible = ac > 0 ? pts(cumC) : '';
-        common.trajReel = pts(cumR);
+        // Le dernier point du réel se pose au jour d'aujourd'hui, pas en fin de mois.
+        const xM = m => Math.max(0, m === MI ? px(MI - 1 + fMI) : px(m));
+        const pts = (arr, x) => arr.map((v, m) => x(m).toFixed(0) + ',' + py(v).toFixed(0)).filter(p => !/NaN|Infinity/.test(p)).join(' ');
+        common.trajCible = ac > 0 ? pts(cumC, px) : '';
+        common.trajReel = pts(cumR, xM);
         const budAn = this.open().reduce((a, s) => a + s.perf[E].reduce((b, r) => b + (r.caT || 0), 0), 0);
         common.cumBudget = this.fM(budAn); common.cumReel = this.fM(reelT);
         // Le nombre de mois de RÉEL, pas les mois de budget du premier magasin
         // venu : l'étiquette disait « 2 mois » sous un réel qui en couvrait huit.
         const moisReel = M.MOIS.filter((_, m) => this.open().some(s2 => s2.perf[E][m].ca != null)).length;
         common.cumLabel = 'Budget validé ' + this.meta.exercice + ' — ' + this.open().length + ' magasins';
-        common.cumReelLabel = 'Réel encodé' + (moisReel ? ' (' + moisReel + ' mois)' : '');
+        common.cumReelLabel = fMI < 1 ? 'Réel ' + aDate : 'Réel encodé' + (moisReel ? ' (' + moisReel + ' mois)' : '');
         common.objNote = (this.meta.notes || {}).objectifsOuverture || '';
         const ec = reelT - prorataT;
         common.cumEcart = (ec >= 0 ? '+' : '−') + this.fK(Math.abs(ec)) + ' (' + (ec >= 0 ? '+' : '−') + this.fP(Math.abs(reelT / prorataT - 1)) + ')';
         common.cumEcartSt = 'font-weight:500;color:' + (ec >= 0 ? '#2d7a3e' : '#8D1D2C');
-        const sous = this.open().filter(s => { let r = 0, p = 0; for (let m = 0; m <= MI; m++){ r += s.perf[E][m].ca; p += s.perf[E][m].caT; } return r < p; }).length;
+        const sous = this.open().filter(s => { let r = 0, p = 0; for (let m = 0; m <= MI; m++){ r += s.perf[E][m].ca; p += s.perf[E][m].caT * (m === MI ? fMI : 1); } return r < p; }).length;
         common.cumSous = sous + ' / ' + this.open().length;
       } else {
         // Sans cible réseau encodée, l'horizon reste 3 ou 5 ans — pas l'exercice.
@@ -1819,30 +1996,33 @@ class App {
 
     // --- référentiel produit (partie franchiseur)
     if (common.isCat || common.isAsso) this.valsReferentiel(common);
+    // Le Catalogue (18/10/2026) : la liste et sa fiche, avec les gestes du scoring (seuils, PDF, revue, détail du score).
+    if (common.isCat) { this.valsProduits(common); this.catCharge(); this.valsCatalogue(common); }
     if (common.isAsso) this.valsAssortiment(common);
     // Le planogramme est lu dès qu'une fiche de présentation est ouverte, d'où
     // qu'elle vienne : l'assortiment ouvre la même fiche, et sans le plan elle
     // n'aurait aucun emplacement à proposer.
     if (common.isPlano) { this.valsPlanoStd(common); this._psCommon = common; }
     if (common.isFonds) this.valsFonds(common);
-    if (common.isMktCal || common.isMktCamp || common.isMktTypes) this.valsMkt(common);
-    if (common.isProd) this.valsProduction(common);
+    if (common.isMktTypes) this.valsMkt(common);
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
     if (common.isAnaprod) { this.apCharge(false); this.valsAnaprod(common); }
     if (common.isPxv) { this.pxvCharge(false); this.valsPxv(common); }
-    if (common.isCentrale) this.valsCentrale(common);
     this.valsLacunes(common);
     if (common.isDiag) { this.coCharge(); this.valsDiag(common); }
-    if (common.isSeuil) this.valsSeuil(common);
-    // --- exploitation (P&L court des magasins)
-    if (common.isExploit) this.valsExploitation(common);
     // --- réputation digitale (lecture paresseuse : l'écran la demande en s'ouvrant)
     if (common.isReput) { this.repCharge(); this.valsReputation(common); }
     // --- résultat du jour (lecture paresseuse, une volée d'appels par date)
     if (common.isRJour) {
       this.valsResultatOnglets(common);
       if (common.rjOnglet === 'jour') { this.rjCharge(false); this.valsResultatJour(common); }
-      else { this.rpCharge(false); this.valsResultatPeriode(common); }
+      else if (!App.RJ_TEMPS_LONG.includes(common.rjOnglet)) { this.rpCharge(false); this.valsResultatPeriode(common); }
+      // Le sélecteur d'horizon de la trajectoire change d'onglet : 1 an, c'est l'Année.
+      if (common.isObjectifs) {
+        common.hz1 = () => this.setState({ rjOnglet: 'annee', horizon: 'h1' });
+        common.hz3 = () => this.setState({ rjOnglet: 'horizons', horizon: 'h3' });
+        common.hz5 = () => this.setState({ rjOnglet: 'horizons', horizon: 'h5' });
+      }
     }
     // --- suivi budget magasin
     // Relu à CHAQUE ouverture de l'écran : ce tableau est la lecture du budget,
@@ -1855,46 +2035,40 @@ class App {
     // même modèle de charges. Une seule fonction, deux gabarits.
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
-    if (common.isPlan) { this.pdvCharge(false); this.valsPlan(common); }
-    if (common.isDemarchage) { this.dmCharge(false); this.valsDemarchage(common); }
-    if (common.isProspection || common.isProspectionMobile || common.isNewsletterShop) { this.dmCharge(false); this.valsProspection(common); }
     if (common.isTablette) { this.tbCharge(false); this.tbSonde(false); this.valsTablette(common); }
-    if (common.isBxc) this.valsBxc(common);
     if (common.isMktObj) this.valsMktObj(common);
-    if (common.isCreux) this.valsCreux(common);
     if (common.isScoringTri) this.valsScoring(common);
-    if (common.isUsage) { this.usageCharge(); this.valsUsage(common); }
+    // Le client mystère s'encode ici, dans Paramètres (16/10/2026) : le formulaire de l'ancien écran Scoring.
+    if (common.isCltMyst) { if (S.sqVue !== 'msp') { this.state.sqVue = 'msp'; } this.valsScoring(common); }
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
-    if (common.isAnm) { this.anmCharge(); this.valsAnm(common); }
     if (common.isVentes) { this.ventesCharge(); this.crossCharge(); this.valsVentes(common); this.valsCross(common); }
+    if (common.isPrimesApp) { this.valsPrimesParams(common); }
+    if (common.isApiModule) { this.valsApiModule(common); }
+    if (common.isFid) { valsFidelite(this, common); }
+    if (common.isPromoTab) { valsPromoTableau(this, common); }
+    if (common.isPromoEd) { valsPromoEdition(this, common); }
     if (common.isCrois) { this.croisCharge(); this.valsCrois(common); }
-    if (common.isMesure) {
-      // L'écran s'ouvre sur la LECTURE ; le paramétrage complet reste à un clic.
-      common.mesSimple = this.state.mesSimple !== false;
-      if (common.mesSimple) { this.valsMesureComp(common); }
-      else { this.valsMesure(common); common.mesRetour = () => this.setState({ mesSimple: true }); }
-    }
     // --- scoring produits
-    if (common.isProduits) this.valsProduits(common);
-    // --- marge — aussi sur le P&L magasins : la carte des ratios y est reprise
-    if (common.isMarge || common.isExploit) this.valsMarge(common);
+    // --- marge
+    if (common.isMarge) this.valsMarge(common);
     // --- projets
     if (common.isProjets) this.valsProjets(common, projEff);
     // --- contrôle des tâches (checklists consultants du panel)
     if (common.isControle) { this.iaStatut(); this.valsControle(common); }
     if (common.isSuiviM) this.valsSuiviM(common);
     if (common.isKpiT) this.valsKpiT(common);
-    // --- tâches consultants
-    if (common.isTaches) this.valsTaches(common, flat);
     // --- contrôle des posts Facebook
-    if (common.isPosts) this.valsPosts(common);
     if (common.isBrandGuard) this.valsBrandGuard(common);
-    if (common.isOffres) this.valsOffres(common);
     if (common.isInvendus) this.valsInvendus(common);
-    if (common.isGC) valsGC(this, common);
+    if (common.isInventaires) this.valsInventaires(common);
     if (common.isFF) valsFF(this, common);
-    if (common.isRO) valsRO(this, common);
-    if (common.isGP) this.valsGP(common);
+    if (common.isCQM) valsCQM(this, common);
+    if (common.isSvTableau) valsSvTableau(this, common);
+    if (common.isSvTablette) valsSvTablette(this, common);
+    if (common.isSvMsp) valsSvMsp(this, common);
+    if (common.isSvFranchise) valsSvFranchise(this, common);
+    if (common.isSvAdmin) valsSvAdmin(this, common);
+    if (common.isSvSources) valsSvSources(this, common);
     // --- reporting
     if (common.isReporting) this.valsReporting(common, navDef, titles);
     // --- suivi des tâches
@@ -1952,7 +2126,10 @@ class App {
     const bud = (D.budgets || []).find(b => b.storeId === st.id) || { charges: [] };
     const P = st.perf[this.meta.exercice];
     common.bExercice = this.meta.exercice;
-    common.bCumMois = this.moisLabel();
+    // Le cumul s'arrête au jour d'aujourd'hui quand le dernier mois est en cours :
+    // son budget n'en compte que les jours écoulés, comme le réel.
+    const MIb = this.moisIdx(), fMIb = this.partMois(MIb), pb = m => (m === MIb ? fMIb : 1);
+    common.bCumMois = (fMIb < 1 ? this.jourJ().getDate() + ' ' : '') + this.moisLabel().toLowerCase();
     common.bEncodes = (bud.moisEncodes || 0) + ' / ' + (bud.moisTotal || 12);
     common.bDernier = bud.dernierEncodage ? this.fD(bud.dernierEncodage) + '/' + bud.dernierEncodage.slice(0, 4) : '';
     common.bStore = st.id;
@@ -1960,7 +2137,7 @@ class App {
     common.bStoreOpts = this.open().map(x => ({ id: x.id, nom: x.nom }));
     common.bMeta = st.code + ' · ' + st.zone + ' · franchisé ' + st.fr;
     const budgetAn = P.reduce((a, r) => a + (r.caT || 0), 0);
-    let reel = 0, pro = 0; for (let m = 0; m <= this.moisIdx(); m++){ reel += P[m].ca; pro += P[m].caT; }
+    let reel = 0, pro = 0; for (let m = 0; m <= MIb; m++){ reel += P[m].ca; pro += P[m].caT * pb(m); }
     common.bBudgetAn = this.fE(budgetAn);
     const sg = v => (v >= 0 ? '+' : '−') + this.fE(Math.abs(v));
     const sgp = v => (v >= 0 ? '+' : '−') + this.fP(Math.abs(v));
@@ -2001,7 +2178,7 @@ class App {
         return vs.length ? vs.reduce((a, v) => a + v, 0) : null;
       }) : null;
       budgetAnC = Pc.reduce((a, r) => a + r.caT, 0);
-      reelC = 0; proC = 0; for (let m = 0; m <= this.moisIdx(); m++){ reelC += Pc[m].ca; proC += Pc[m].caT; }
+      reelC = 0; proC = 0; for (let m = 0; m <= MIb; m++){ reelC += Pc[m].ca; proC += Pc[m].caT * pb(m); }
     }
     const theoAnC = theoC2 ? theoC2.reduce((a, v) => a + (v || 0), 0) : null;
 
@@ -2014,7 +2191,7 @@ class App {
       budSt: r.caT ? 'width:16px;height:' + h(r.caT) + 'px;background:#D8CEC2;border-radius:3px 3px 0 0'
         : 'width:16px;height:2px;background:var(--color-border-secondary)',
       reelSt: r.ca == null ? 'width:16px;height:2px;background:var(--color-border-secondary)' : 'width:16px;height:' + h(r.ca) + 'px;background:var(--color-primary);border-radius:3px 3px 0 0' }));
-    common.bMoisCols = M.MOIS.map((nom, i) => ({ nom, st: i <= 6 ? 'color:var(--color-text);font-weight:500' : 'color:var(--color-text-muted)' }));
+    common.bMoisCols = M.MOIS.map((nom, i) => ({ nom, st: i <= MIb ? 'color:var(--color-text);font-weight:500' : 'color:var(--color-text-muted)' }));
     // Zéro n'est pas une valeur ici : un mois budgété à 0 € n'existe pas en
     // boutique, c'est un mois qu'on n'a pas encodé. On l'affiche comme tel.
     const fn = v => (v == null || v === 0) ? '' : Math.round(v).toLocaleString('fr-BE');
@@ -2028,17 +2205,18 @@ class App {
     // Un écart contre un mois NON ENCODÉ n'est pas un écart : « +167 353 € »
     // contre un budget absent laissait croire à une performance, alors qu'il
     // n'y avait rien à battre. Zéro compte donc comme une absence, ici aussi.
-    const ecPair = (a, b) => Pc.map((r, i) => { const av = a(r, i), bv = b(r, i);
+    // `aDate` : l'écart du RÉEL au mois en cours se mesure aux jours écoulés de sa cible.
+    const ecPair = (a, b, aDate) => Pc.map((r, i) => { const av = a(r, i), b0 = b(r, i), bv = (b0 != null && aDate) ? b0 * pb(i) : b0;
       const v = (av == null || bv == null || bv === 0) ? null : av - bv;
       return { txt: v == null ? '' : sg(v).replace(' €', ''), st: ecSt(v),
         pct: v == null ? '' : sgp(av / bv - 1), pctSt: pctSt(v) }; });
-    common.bLigneEc = ecPair(r => r.ca, r => r.caT);
-    common.bEcTheo = theoC2 ? ecPair(r => r.ca, (r, i) => theoC2[i]) : [];
+    common.bLigneEc = ecPair(r => r.ca, r => r.caT, true);
+    common.bEcTheo = theoC2 ? ecPair(r => r.ca, (r, i) => theoC2[i], true) : [];
     common.bEcBudTheo = theoC2 ? ecPair(r => r.caT, (r, i) => theoC2[i]) : [];
     const totPair = (av, bv) => { const v = av - bv;
       return { txt: sg(v).replace(' €', ''), st: 'padding:9px 6px 9px 14px;text-align:right;white-space:nowrap;font-weight:500;border-left:0.5px solid var(--color-border-tertiary);color:' + col(v),
         pct: sgp(av / bv - 1), pctSt: pctSt(v) }; };
-    const theoCumC = theoC2 ? theoC2.slice(0, 7).reduce((a, v) => a + v, 0) : 0;
+    const theoCumC = theoC2 ? theoC2.slice(0, MIb + 1).reduce((a, v, m) => a + (v || 0) * pb(m), 0) : 0;
     common.bTotEcPair = totPair(reelC, proC);
     common.bTotEcTheo = theoC2 ? totPair(reelC, theoCumC) : null;
     common.bTotEcBudTheo = theoC2 ? totPair(budgetAnC, theoAnC) : null;
@@ -2106,8 +2284,8 @@ class App {
     let mgTotRes = 0, ecTotRes = 0, resReel = 0, resBud = 0, resTheo = 0;
     const sgK = v => (v >= 0 ? '+' : '−') + this.fK(Math.abs(v));
     common.bParMag = perStore.map(x2 => {
-      let r7 = 0, b7 = 0; for (let m = 0; m <= this.moisIdx(); m++){ r7 += x2.P[m].ca; b7 += x2.P[m].caT; }
-      const t7 = x2.theoM ? x2.theoM.slice(0, this.nMois()).reduce((a, v) => a + v, 0) : null;
+      let r7 = 0, b7 = 0; for (let m = 0; m <= MIb; m++){ r7 += x2.P[m].ca; b7 += x2.P[m].caT * pb(m); }
+      const t7 = x2.theoM ? x2.theoM.slice(0, MIb + 1).reduce((a, v, m) => a + (v || 0) * pb(m), 0) : null;
       const ecB = r7 - b7, ecT = t7 == null ? null : r7 - t7, mq = ecT != null && ecT < 0 ? -ecT : 0;
       mgTotRes += mq; ecTotRes += ecB; resReel += r7; resBud += b7; resTheo += (t7 || 0);
       return { nom: x2.s.nom, zone: x2.s.zone,
@@ -2122,7 +2300,7 @@ class App {
         mq: mq ? this.fK(mq) : '',
         mqPct: mq && t7 ? this.fP(mq / t7, 1) + ' du théorique' : '',
         mqSt: 'padding:9px 6px 9px 14px;text-align:right;white-space:nowrap;font-weight:500;border-left:0.5px solid var(--color-border-tertiary);color:' + (mq ? 'var(--pkg-abricot)' : 'var(--color-text-muted)'),
-        barSt: 'display:block;height:5px;border-radius:999px;background:var(--pkg-abricot);width:' + (t7 ? Math.min(100, Math.round(100 * mq / t7)) : 0) + '%',
+        barSt: 'display:block;height:5px;border-radius:8px;background:var(--pkg-abricot);width:' + (t7 ? Math.min(100, Math.round(100 * mq / t7)) : 0) + '%',
         select: () => this.setState({ bStore: x2.s.id }) }; });
     common.bResReal = resTheo ? this.fP(resReel / resTheo, 0) : '';
     common.bResRealSt = 'padding:10px 6px;text-align:right;white-space:nowrap;font-weight:500;color:' + (resTheo ? col(resReel - resTheo) : 'var(--color-text-muted)');
@@ -2322,138 +2500,6 @@ class App {
      Le calendrier des campagnes posé sur la courbe du budget, puis le détail
      magasin par magasin de la campagne regardée : ce qu'elle vise, ce qu'elle
      a donné. Les objectifs s'écrivent à la saisie, comme le budget. */
-  valsBxc(common){
-    const S = this.state, M = this.M;
-    this.bxcCharge(false);
-    const b = S.bxc || {};
-    const d = b.d || {};
-    common.bxcChargement = !!b.chargement && !b.d;
-    common.bxcIndispo = d.indispo ? (d.raison || 'Module marketing absent') : '';
-    common.bxcExo = String(S.bxcExo || this.exo());
-    common.bxcExoOpts = [-1, 0, 1].map(k => ({ v: String(this.exo() + k), nom: String(this.exo() + k) + (k === 0 ? ' · en cours' : '') }));
-    common.setBxcExo = e => this.setState({ bxcExo: e.target.value, bxcCamp: 0 });
-
-    // La courbe des douze mois et les bandes de campagne ont été RETIRÉES :
-    // douze barres de budget ne disaient rien de la campagne qu'on regarde, et
-    // la bande servait de sélecteur là où la liste déroulante suffit. L'écran
-    // répond maintenant à une seule question — cette campagne suffit-elle à
-    // tenir le budget de chaque magasin.
-    common.bxcCampOpts = (d.campagnes || []).map(c2 => ({ v: String(c2.id),
-      nom: c2.nom + ' · ' + (c2.debut || '').slice(5) + ' → ' + (c2.fin || '').slice(5) }));
-    common.bxcCampSel = String((d.campagne || {}).id || '');
-    common.setBxcCamp = e => this.setState({ bxcCamp: parseInt(e.target.value, 10) || 0 });
-    common.bxcCampNom = (d.campagne || {}).nom || '';
-    common.bxcCampPeriode = d.campagne ? 'du ' + d.campagne.debut.split('-').reverse().join('/') + ' au ' + d.campagne.fin.split('-').reverse().join('/') : '';
-    common.bxcRealiseNote = d.campagne
-      ? (d.realiseDispo
-        ? 'Réalisé lu jusqu’au ' + String(d.realiseJusquau || '').split('-').reverse().join('/') + ' (panel).'
-        : 'Aucun réalisé : la campagne n’a pas commencé, ou le compte du panel n’est pas configuré.')
-      : '';
-
-    // Le tableau : une ligne par magasin du périmètre.
-    const dr = S.bxcDraft || {};
-    const cle = sid => (d.campagne || {}).id + ':' + sid;
-    const num = v => { const n2 = parseFloat(String(v).replace(',', '.')); return isNaN(n2) ? 0 : n2; };
-    let tB = 0, tO = 0, tR = 0, aucunR = true;
-    common.bxcLignes = (d.lignes || []).map(l => {
-      const saisi = dr[cle(l.shopId)];
-      const o = saisi != null ? (String(saisi).trim() === '' ? null : num(saisi)) : l.objectif;
-      const pct = o != null && l.budgetPeriode ? Math.round(1000 * (o / l.budgetPeriode - 1)) / 10 : null;
-      const ec = o != null && l.realise != null ? l.realise - o : null;
-      const att = o != null && l.realise != null && o > 0 ? Math.round(100 * l.realise / o) : null;
-      tB += l.budgetPeriode || 0; tO += o || 0; tR += l.realise || 0;
-      if (l.realise != null) { aucunR = false; }
-      // La cible de la jauge : l'objectif saisi s'il existe, le budget de la
-      // période sinon. Le trait doit répondre à « la campagne suffit-elle à
-      // tenir ce qu'on attend du magasin », et c'est cela qu'on attend.
-      const cible = o != null ? o : (l.budgetPeriode || null);
-      const attendu = l.attendu != null ? l.attendu : null;
-      const attAtt = (attendu != null && cible) ? Math.round(100 * attendu / cible) : null;
-      return {
-        nom: l.nom,
-        budget: l.budgetPeriode != null ? this.fE(l.budgetPeriode) : '',
-        // L'effet attendu, terme par terme — un total sans ses termes ne se
-        // discute pas.
-        panier: l.panier != null ? this.fEd(l.panier) : '',
-        panierRepli: l.baseSource === 'repli',
-        plus: l.clientsJourPlus != null
-          ? (l.clientsJourPlus >= 0 ? '+' : '−') + Math.abs(l.clientsJourPlus).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '',
-        // Le nombre de CLIENTS sur la période : c'est ce qu'on annonce en
-        // boutique. « 145 par jour » ne se retient pas, « 4 350 en septembre »
-        // si — et l'écart entre les deux colonnes est ce que la campagne doit
-        // aller chercher.
-        clientsA1: l.clientsA1 != null ? l.clientsA1.toLocaleString('fr-BE') : '',
-        clientsA1Note: l.clientsA1Source === 'repli' ? '3 derniers mois' : '',
-        clientsPrevus: l.clientsPrevus != null ? l.clientsPrevus.toLocaleString('fr-BE') : '',
-        base: l.base != null ? this.fE(l.base) : '',
-        baseNote: l.baseSource === 'repli' ? '3 derniers mois' : '',
-        gain: l.gain != null ? '+' + this.fE(l.gain) : '',
-        attendu: attendu != null ? this.fE(attendu) : '',
-        attAtt: attAtt == null ? '' : attAtt + ' %',
-        attAttSt: attAtt == null ? 'color:var(--color-text-muted)'
-          : (attAtt >= 100 ? 'background:rgba(45,122,62,.12);color:#2d7a3e' : 'background:rgba(141,29,44,.12);color:#8D1D2C')
-            + ';font-weight:600;padding:2px 9px;border-radius:999px;font-size:10.5px',
-        source: l.source === 'theorique' ? 'théorique' : (l.source === 'budget' ? '' : 'non encodé'),
-        objectif: saisi != null ? saisi : (l.objectif != null ? Math.round(l.objectif) : ''),
-        setObjectif: e => { const v = e.target.value;
-          this.setState(s2 => ({ bxcDraft: Object.assign({}, s2.bxcDraft, { [cle(l.shopId)]: v }) }));
-          this.autoEnreg('bxc' + (d.campagne || {}).id, () => this.bxcEcrire(d.campagne.id)); },
-        pct: pct == null ? '' : (pct >= 0 ? '+' : '−') + String(Math.abs(pct)).replace('.', ',') + ' %',
-        realise: l.realise != null ? this.fE(l.realise) : '',
-        ecart: ec == null ? '' : (ec >= 0 ? '+' : '−') + this.fE(Math.abs(ec)),
-        ecartCol: ec == null ? 'var(--color-text-muted)' : (ec >= 0 ? '#2d7a3e' : '#8D1D2C'),
-        atteinte: att == null ? '' : att + ' %',
-        barre: att == null ? 0 : Math.max(2, Math.min(100, att)),
-        barreCol: att == null ? '#DED6C9' : (att >= 100 ? '#2d7a3e' : (att >= 95 ? '#C17A2A' : '#8D1D2C')),
-      };
-    });
-    // Les jauges : une échelle COMMUNE à tous les magasins. Cadrer chacun sur
-    // son propre objectif comparerait des atteintes, pas des volumes — et le
-    // réseau ne saurait plus lequel pèse.
-    const ef = d.effet || {};
-    const maxi = Math.max.apply(null, (d.lignes || []).map(l =>
-      Math.max(l.attendu || 0, l.budgetPeriode || 0, dr[cle(l.shopId)] != null ? num(dr[cle(l.shopId)]) : (l.objectif || 0))).concat([1])) * 1.04;
-    common.bxcJauges = (d.lignes || []).map(l => {
-      const saisi = dr[cle(l.shopId)];
-      const o = saisi != null ? (String(saisi).trim() === '' ? null : num(saisi)) : l.objectif;
-      const cible = o != null ? o : (l.budgetPeriode || null);
-      const pc = v => Math.max(0, Math.min(100, 100 * (v || 0) / maxi));
-      return {
-        nom: l.nom,
-        vide: l.attendu == null,
-        base: pc(l.base), gain: pc(l.gain), gaugeGauche: pc(l.base),
-        obj: cible ? pc(cible) : null,
-        objTxt: cible ? 'objectif ' + this.fE(cible) : '',
-        detail: l.base != null && l.gain != null
-          ? this.fE(l.base) + ' + ' + this.fE(l.gain) + ' = ' + this.fE(l.attendu)
-          : 'effet non calculable — relevé manquant',
-      };
-    });
-    common.bxcEffet = {
-      base: ef.base != null ? this.fE(ef.base) : '',
-      gain: ef.gain != null ? '+' + this.fE(ef.gain) : '',
-      attendu: ef.attendu != null ? this.fE(ef.attendu) : '',
-      objectif: tB ? this.fE(tB) : '',
-      clientsA1: ef.clientsA1 != null ? ef.clientsA1.toLocaleString('fr-BE') : '',
-      clientsPrevus: ef.clientsPrevus != null ? ef.clientsPrevus.toLocaleString('fr-BE') : '',
-      pct: ef.pct != null ? (ef.pct >= 0 ? '+' : '−') + Math.abs(ef.pct) + ' %' : '',
-      jours: ef.jours || 0,
-      note: 'Panier moyen des 3 derniers mois clos'
-        + (ef.panierDu ? ' (' + this.fD(ef.panierDu) + ' → ' + this.fD(ef.panierAu) + ')' : '')
-        + ', lu sur la caisse au jour le jour. Le gain attendu est ce panier multiplié par les clients par jour visés en plus, sur les '
-        + (ef.jours || 0) + ' jours de la campagne — pas une prévision de saison.',
-      sansBase: ef.sansBase || 0,
-    };
-    common.bxcTotBudget = tB ? this.fE(tB) : '';
-    common.bxcTotObjectif = tO ? this.fE(tO) : '';
-    common.bxcTotRealise = aucunR ? '' : this.fE(tR);
-    common.bxcTotEcart = (!aucunR && tO) ? ((tR - tO >= 0 ? '+' : '−') + this.fE(Math.abs(tR - tO))) : '';
-    common.bxcTotEcartCol = (tR - tO) >= 0 ? '#2d7a3e' : '#8D1D2C';
-    common.bxcTotPct = tO && tB ? ((tO / tB - 1) >= 0 ? '+' : '−') + this.fP(Math.abs(tO / tB - 1), 1) : '';
-    common.bxcEtat = this.autoTxt('bxc' + ((d.campagne || {}).id || 0));
-    common.bxcAucune = !d.campagne && !common.bxcChargement && !common.bxcIndispo;
-  }
-
   /** Les objectifs saisis, écrits en base sans ligne de journal. */
   /* --- objectifs produits d'une campagne : le multiselect, l'objectif en pièces par magasin, la jauge --- */
   valsMktObj(common){
@@ -2607,244 +2653,6 @@ class App {
     }, 350);
   }
 
-  /* --- jours creux : la carte, l'assistant en cinq étapes, les promotions adoptées, le catalogue des mécaniques --- */
-  cxShopId(){
-    const o = this.open(); const id = String(this.state.cxShop || '');
-    return o.some(s => String(s.id) === id) ? id : (o[0] ? String(o[0].id) : '');
-  }
-  cxCharge(force){
-    const sid = this.cxShopId(); if (!sid) { return; }
-    const cle = sid + ':' + (this.state.cxSem || 4);
-    if (this._cxEnCours === cle) { return; }
-    if (!force && this.state.cx && this.state.cx.cle === cle) { return; }
-    this._cxEnCours = cle;
-    this.setState({ cx: { cle, chargement: true, d: (this.state.cx || {}).d || null } });
-    readOne('/creux?shop=' + sid + '&semaines=' + (this.state.cxSem || 4))
-      .then(d => { this._cxEnCours = null; this.setState({ cx: { cle, chargement: false, d: d || null } }); })
-      .catch(() => { this._cxEnCours = null; this.setState({ cx: { cle, chargement: false, d: null } }); });
-  }
-  cxPromosCharge(force){
-    const cle = this.state.cxTous ? '*' : this.cxShopId();
-    if (this._cxPEnCours === cle) { return; }
-    if (!force && this.state.cxPromos && this.state.cxPromos.cle === cle) { return; }
-    this._cxPEnCours = cle;
-    this.setState({ cxPromos: { cle, chargement: true, d: (this.state.cxPromos || {}).d || null } });
-    readOne('/promo' + (cle === '*' ? '' : '?shop=' + cle))
-      .then(d => { this._cxPEnCours = null; this.setState({ cxPromos: { cle, chargement: false, d: d || null } }); })
-      .catch(() => { this._cxPEnCours = null; this.setState({ cxPromos: { cle, chargement: false, d: null } }); });
-  }
-  cxMecsCharge(force){
-    if (this._cxMEnCours) { return; }
-    if (!force && this.state.cxMecs && this.state.cxMecs.d) { return; }
-    this._cxMEnCours = true;
-    this.setState({ cxMecs: { chargement: true, d: (this.state.cxMecs || {}).d || null } });
-    readOne('/promo/mecaniques')
-      .then(d => { this._cxMEnCours = false; this.setState({ cxMecs: { chargement: false, d: d || null } }); })
-      .catch(() => { this._cxMEnCours = false; this.setState({ cxMecs: { chargement: false, d: null } }); });
-  }
-  cxPropsCharge(force){
-    const S = this.state, sel = S.cxSel;
-    if (!sel || !sel.jours.length || !sel.heures.length || !S.cxLevier) { return; }
-    const cle = [this.cxShopId(), S.cxLevier, sel.jours.join(','), sel.heures[0], sel.heures[sel.heures.length - 1]].join('|');
-    if (this._cxPrEnCours === cle) { return; }
-    if (!force && S.cxProps && S.cxProps.cle === cle) { return; }
-    this._cxPrEnCours = cle;
-    this.setState({ cxProps: { cle, chargement: true, d: null } });
-    readOne('/promo/propositions?shop=' + this.cxShopId() + '&levier=' + S.cxLevier + '&jours=' + sel.jours.join(',') + '&hde=' + sel.heures[0] + '&ha=' + sel.heures[sel.heures.length - 1])
-      .then(d => { this._cxPrEnCours = null; this.setState({ cxProps: { cle, chargement: false, d: d || null } }); })
-      .catch(() => { this._cxPrEnCours = null; this.setState({ cxProps: { cle, chargement: false, d: null } }); });
-  }
-  /** Ce que vaut un bloc jours × heures, lu dans les cases déjà chargées. */
-  cxStats(jours, heures){
-    const d = ((this.state.cx || {}).d) || {}; const cells = d.cells || {}; const moy = d.moyenne || 0;
-    let ca = 0, tk = 0, n = 0, manque = 0;
-    jours.forEach(wd => heures.forEach(h => { const c = cells[wd + ':' + h] || { ca: 0, tk: 0 }; ca += c.ca; tk += c.tk; n++; manque += Math.max(0, (d.seuil || .7) * moy - c.ca); }));
-    const caH = n ? ca / n : 0, tkH = n ? tk / n : 0;
-    const sections = []; heures.forEach(h => { const s = h < 11 ? 'matin' : (h < 14 ? 'midi' : 'apres-midi'); if (!sections.includes(s)) { sections.push(s); } });
-    return { caH, tkH, panier: tkH > 0 ? caH / tkH : null, part: moy > 0 ? 100 * caH / moy : null, potentiel: Math.round(manque * 4.3), sections, cases: n };
-  }
-  cxNomBloc(jours, heures){
-    const J = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-    const j = jours.slice().sort((a, b) => a - b);
-    const lib = j.join(',') === '1,2,3,4,5' ? 'Lundi → vendredi' : (j.length === 7 ? 'Tous les jours' : j.map(w => J[w]).join(', '));
-    return heures.length ? lib + ', ' + heures[0] + ' – ' + (heures[heures.length - 1] + 1) + ' h' : lib;
-  }
-  cxPlage(a, b){ const h = []; for (let x = a; x <= b; x++) { h.push(x); } return h; }
-  /** Un clic sur une case : la plage creuse autour d'elle ; un second jour s'ajoute, une heure hors plage l'étend. */
-  cxClicCase(wd, h){
-    const S = this.state, d = (S.cx || {}).d || {}, cells = d.cells || {}, seuil = (d.seuil || .7) * (d.moyenne || 0);
-    const bas = (w, hh) => !!cells[w + ':' + hh] && cells[w + ':' + hh].ca < seuil;
-    const sel = S.cxSel;
-    if (!sel || !sel.jours.length) {
-      let a = h, b = h;
-      if (bas(wd, h)) { while (bas(wd, a - 1)) { a--; } while (bas(wd, b + 1)) { b++; } }
-      this.setState({ cxSel: { jours: [wd], heures: this.cxPlage(a, b) }, cxEtape: 3, cxLevier: null, cxChoix: null });
-      return;
-    }
-    const jours = sel.jours.includes(wd) ? sel.jours.filter(x => x !== wd) : sel.jours.concat([wd]).sort((p, q) => p - q);
-    let heures = sel.heures;
-    if (!heures.includes(h)) { heures = this.cxPlage(Math.min(h, heures[0]), Math.max(h, heures[heures.length - 1])); }
-    this.setState({ cxSel: { jours: jours.length ? jours : [wd], heures }, cxEtape: 3, cxLevier: null, cxChoix: null });
-  }
-  cxToggleHeure(h){
-    const sel = this.state.cxSel || { jours: [1, 2, 3, 4, 5], heures: [] };
-    let a = sel.heures[0], b = sel.heures[sel.heures.length - 1];
-    if (!sel.heures.length) { a = b = h; }
-    else if (h < a) { a = h; } else if (h > b) { b = h; }
-    else if (h === a && a < b) { a++; } else if (h === b && a < b) { b--; } else if (h > a && h < b) { b = h; }
-    this.setState({ cxSel: { jours: sel.jours, heures: this.cxPlage(a, b) }, cxLevier: null, cxChoix: null });
-  }
-  cxToggleJour(wd){
-    const sel = this.state.cxSel || { jours: [], heures: [14, 15, 16, 17] };
-    const jours = sel.jours.includes(wd) ? sel.jours.filter(x => x !== wd) : sel.jours.concat([wd]).sort((p, q) => p - q);
-    this.setState({ cxSel: { jours, heures: sel.heures }, cxLevier: null, cxChoix: null });
-  }
-  cxDates(){
-    const S = this.state;
-    if (S.cxDu && S.cxAu) { return [S.cxDu, S.cxAu]; }
-    const t = new Date(this.M && this.M.TODAY ? this.M.TODAY : Date.now());
-    const lun = new Date(t); lun.setDate(t.getDate() + ((8 - t.getDay()) % 7 || 7));
-    const fin = new Date(lun); fin.setDate(lun.getDate() + 13);
-    const iso = x => x.toISOString().slice(0, 10);
-    return [S.cxDu || iso(lun), S.cxAu || iso(fin)];
-  }
-  cxLib(sel){ const s = String(sel || ''); const i = s.indexOf('|'); return i >= 0 ? s.slice(i + 1) : s.slice(2); }
-  cxType(sel){ const t = String(sel || '').slice(0, 2); return t === 'g:' ? 'groupe' : (t === 'c:' ? 'catégorie' : 'produit'); }
-  /** La recherche du multiselect (déclencheur, article), pour la fiche ou la promotion en préparation. */
-  cxRecherche(cle, q){
-    clearTimeout(this._cxT);
-    this.setState({ cxQ: { cle, q } });
-    const t = (q || '').trim();
-    if (t.length < 2) { this.setState({ cxRes: null }); return; }
-    this._cxT = setTimeout(() => {
-      readOne('/promo/recherche?q=' + encodeURIComponent(t)).then(r => {
-        if (!this.state.cxQ || this.state.cxQ.q.trim() !== t) { return; }
-        this.setState({ cxRes: { cle, q: t, resultats: (r || {}).resultats || [] } });
-      });
-    }, 300);
-  }
-  cxMultiToggle(objKey, champ, r){
-    const obj = Object.assign({}, this.state[objKey] || {});
-    const liste = (obj[champ] || []).slice();
-    const sel = r.type === 'produit' ? r.sel + '|' + r.nom : r.sel;
-    const i = liste.findIndex(x => String(x).split('|')[0] === r.sel);
-    if (i >= 0) { liste.splice(i, 1); } else { liste.push(sel); }
-    obj[champ] = liste;
-    this.setState({ [objKey]: obj });
-  }
-  cxMultiRetirer(objKey, champ, sel){
-    const obj = Object.assign({}, this.state[objKey] || {});
-    obj[champ] = (obj[champ] || []).filter(x => x !== sel);
-    this.setState({ [objKey]: obj });
-  }
-  cxChoisir(p){
-    const m = p.mecanique, ch = p.chiffres || {};
-    this.setState({ cxChoix: m.id, cxForm: { mecaniqueId: m.id, nom: m.nom, type: m.type, regle: m.regle, offre: m.offre, prix: ch.prix != null ? String(ch.prix).replace('.', ',') : (m.prix != null ? String(m.prix).replace('.', ',') : ''),
-      remisePct: m.remisePct != null ? String(m.remisePct) : '', declencheur: (m.declencheur || []).slice(), article: (m.article || []).slice(), canaux: (m.canaux || []).slice(), note: m.note || '', cible: '' }, cxRes: null, cxQ: null });
-  }
-  cxAdopter(statut){
-    const S = this.state, f = S.cxForm, sel = S.cxSel, [du, au] = this.cxDates();
-    if (!f || !sel) { return; }
-    const corps = Object.assign({}, f, { shop: this.cxShopId(), levier: S.cxLevier, jours: sel.jours, heureDe: sel.heures[0], heureA: sel.heures[sel.heures.length - 1], du, au, statut });
-    this.setState({ cxBusy: true });
-    this.api('POST', '/promo', corps).then(r => {
-      this.setState({ cxBusy: false });
-      if (!r || r.ok === false) { return; }
-      this.notify(statut === 'brouillon' ? 'Brouillon enregistré' : 'Promotion adoptée — le dashboard du magasin l’affiche dès maintenant');
-      this.setState({ cxVue: 'promos', cxEtape: 2, cxSel: null, cxLevier: null, cxChoix: null, cxForm: null, cxTous: false });
-      this.cxPromosCharge(true);
-    });
-  }
-  cxPromoStatut(id, statut){
-    this.api('PUT', '/promo/' + id, { statut }).then(r => { if (r && r.ok !== false) { this.cxPromosCharge(true); } });
-  }
-  cxPromoSuppr(id){
-    if (!window.confirm('Effacer ce brouillon ?')) { return; }
-    this.api('DELETE', '/promo/' + id, {}).then(r => { if (r && r.ok !== false) { this.cxPromosCharge(true); } });
-  }
-  cxMecOuvrir(m){
-    this.setState({ cxMecEdit: m ? Object.assign({}, m, { prix: m.prix != null ? String(m.prix).replace('.', ',') : '', remisePct: m.remisePct != null ? String(m.remisePct) : '', margeMin: m.margeMin != null ? String(m.margeMin) : '' })
-      : { id: null, code: '', levier: 'trafic', type: 'bundle', nom: '', regle: '', habitude: '', sections: ['apres-midi'], jours: ['lun', 'mar', 'mer', 'jeu', 'ven'], declencheur: [], article: [], offre: 'prix bundle', prix: '', remisePct: '', margeMin: '55', mesure: '', canaux: ['Écran caisse', 'Affiche A4'], caisse: '', note: '', margeGarde: true, actif: true }, cxRes: null, cxQ: null });
-  }
-  cxMecChamp(k, v){ const e = Object.assign({}, this.state.cxMecEdit || {}); e[k] = v; this.setState({ cxMecEdit: e }); }
-  cxMecBascule(k, v){ const e = Object.assign({}, this.state.cxMecEdit || {}); const l = (e[k] || []).slice(); const i = l.indexOf(v); if (i >= 0) { l.splice(i, 1); } else { l.push(v); } e[k] = l; this.setState({ cxMecEdit: e }); }
-  cxMecEnreg(){
-    const e = this.state.cxMecEdit; if (!e) { return; }
-    if (!(e.nom || '').trim()) { this.notify('Un nom, au moins'); return; }
-    const corps = Object.assign({}, e); delete corps.id; delete corps.enCours; delete corps.majLe; delete corps.majPar;
-    this.setState({ cxBusy: true });
-    this.api(e.id ? 'PUT' : 'POST', e.id ? '/promo/mecaniques/' + e.id : '/promo/mecaniques', corps).then(r => {
-      this.setState({ cxBusy: false });
-      if (!r || r.ok === false) { return; }
-      this.notify('Mécanique enregistrée');
-      this.setState({ cxMecEdit: r.mecanique ? Object.assign({}, r.mecanique, { prix: r.mecanique.prix != null ? String(r.mecanique.prix).replace('.', ',') : '', remisePct: r.mecanique.remisePct != null ? String(r.mecanique.remisePct) : '', margeMin: r.mecanique.margeMin != null ? String(r.mecanique.margeMin) : '' }) : null });
-      this.cxMecsCharge(true);
-    });
-  }
-  cxMecDupliquer(id){ this.api('POST', '/promo/mecaniques/' + id + '/dupliquer', {}).then(r => { if (r && r.ok !== false) { this.notify('Variante créée'); this.cxMecsCharge(true); if (r.mecanique) { this.cxMecOuvrir(r.mecanique); } } }); }
-  cxMecSuppr(m){
-    if (!window.confirm('Supprimer « ' + m.nom + ' » ? Une mécanique utilisée par une promotion en cours sera refusée : désactivez-la plutôt.')) { return; }
-    this.api('DELETE', '/promo/mecaniques/' + m.id, {}).then(r => { if (r && r.ok !== false) { this.notify('Mécanique supprimée'); this.setState({ cxMecEdit: null }); this.cxMecsCharge(true); } });
-  }
-  /* --- offres et canaux : les deux lectures réseau, sur la période choisie --- */
-  ocCharge(force){
-    // Une lecture par période, gardée : revenir sur « Aujourd’hui » ne relit pas ; « Relire » si.
-    const per = this.state.ocPeriode || 'jour', M = this.state.oc || {}, b = M[per];
-    if (!force && b && (b.d || b.chargement)) { return; }
-    if (this._ocEnCours === per && !force) { return; }
-    this._ocEnCours = per;
-    this.setState({ oc: Object.assign({}, M, { [per]: { chargement: true, d: b ? b.d : null } }) });
-    Promise.all([readOne('/exploitation/canaux?periode=' + per).catch(() => null), readOne('/exploitation/offres?periode=' + per).catch(() => null)])
-      .then(([canaux, offres]) => { this._ocEnCours = null; this.setState({ oc: Object.assign({}, this.state.oc || {}, { [per]: { chargement: false, d: { canaux, offres } } }) }); });
-  }
-  valsOffres(common){
-    const S = this.state, per = S.ocPeriode || 'jour';
-    this.ocCharge(false);
-    const b = (S.oc || {})[per] || {}, d = b.d || {}, C = d.canaux && !d.canaux.error ? d.canaux : null, O = d.offres && !d.offres.error ? d.offres : null;
-    const nf = (n, dd) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: dd || 0, maximumFractionDigits: dd || 0 });
-    const fE = n => n == null ? '—' : nf(Math.round(n)) + ' €';
-    const fU = n => n == null ? '—' : nf(n, 2) + ' €';
-    const fP = n => n == null ? '—' : nf(n, 1) + ' %';
-    const fD = v => v ? v.slice(8, 10) + '/' + v.slice(5, 7) : '';
-    const libPer = { jour: 'du jour', '7': 'des 7 jours', '30': 'des 30 jours' }[per];
-    const oc = { periode: per, libPer,
-      periodes: [['jour', 'Aujourd’hui'], ['7', '7 jours'], ['30', '30 jours']].map(([v, nom]) => ({ v, nom, on: per === v, choisir: () => this.setState({ ocPeriode: v }) })),
-      chargement: !!b.chargement && !b.d, rafraichir: () => this.ocCharge(true),
-      date: C ? C.date : (O ? O.date : ''), du: C ? C.du : '', au: C ? C.au : '',
-      indispo: !b.chargement && b.d && !C && !O ? 'Lecture impossible — API injoignable.' : '', kpi: [], mags: [], reseau: null, offres: [], cols: [], vide: '', canauxVide: '', okpi: null };
-    const pluriel = (n, u) => n + ' ' + u + (n > 1 ? 's' : '');
-    if (C && C.reseau) {
-      const R = C.reseau, tot = R.total || 0;
-      const w = v => tot > 0 ? (100 * v / tot).toFixed(1) : '0';
-      oc.mags = (C.magasins || []).map(m => { const t = m.total || 0; const pw = v => t > 0 ? (100 * v / t).toFixed(1) : '0'; return { nom: m.nom, comptoir: fE(m.comptoir), lu: m.joursLus > 0, indispo: !!m.indispo, cc: m.cc.n ? fE(m.cc.ca) : '', ccN: m.cc.n, liv: m.liv.n ? fE(m.liv.ca) : '', livN: m.liv.n, part: m.cc.n + m.liv.n ? fP(m.part) : '', wC: pw(m.comptoir), wW: pw(m.cc.ca), wL: pw(m.liv.ca), tickets: m.tickets }; });
-      oc.reseau = { comptoir: fE(R.comptoir), cc: fE(R.cc.ca), liv: fE(R.liv.ca), part: fP(R.part), wC: w(R.comptoir), wW: w(R.cc.ca), wL: w(R.liv.ca) };
-      const nW = R.cc.n + R.liv.n;
-      oc.kpi.push(['Webshop · réseau', fE(R.webshop), (R.part != null ? fP(R.part) + ' du CA ' + libPer : '—') + ' · ' + pluriel(nW, 'commande') + (R.vendent ? ' · ' + pluriel(R.vendent, 'magasin') + ' vend' + (R.vendent > 1 ? 'ent' : '') + ' en ligne' : '')]);
-      oc.kpi.push(['Click & collect', fE(R.cc.ca), R.cc.n ? pluriel(R.cc.n, 'commande') + ' · panier ' + fU(R.cc.ca / R.cc.n) : 'aucune commande ' + libPer]);
-      oc.kpi.push(['Livraison', fE(R.liv.ca), R.liv.n ? pluriel(R.liv.n, 'commande') + ' · panier ' + fU(R.liv.ca / R.liv.n) + (R.livrent ? ' · ' + pluriel(R.livrent, 'magasin') + ' livre' + (R.livrent > 1 ? 'nt' : '') : '') : 'aucune livraison ' + libPer]);
-      if (!nW) { oc.canauxVide = 'Aucune commande webshop ' + libPer + ' : tout passe au comptoir.'; }
-    }
-    if (O) {
-      const K = O.kpi || {}, M = O.magasins || [];
-      oc.cols = M.map(m => ({ shop: m.shop, nom: m.nom }));
-      const nAj = (O.offres || []).filter(o => Object.values(o.magasins || {}).some(v => v.verdict === 'ajuster' || v.verdict === 'arreter')).length;
-      oc.kpi.push(['Offres actives', String((K.bundles || 0) + (K.promos || 0)), pluriel(K.bundles || 0, 'bundle') + ' · ' + pluriel(K.promos || 0, 'promotion') + (nAj ? ' · ' + nAj + ' à ajuster quelque part' : '')]);
-      oc.kpi.push(['CA des offres', fE(K.ca), (K.part != null ? fP(K.part) + ' du CA ' + libPer : '—') + (per !== 'jour' && K.caJour ? ' · aujourd’hui ' + fE(K.caJour) : '')]);
-      const VERD = { garder: ['Garder', 'ok'], ajuster: ['Ajuster', 'att'], arreter: ['Arrêter', 'ko'], tot: ['Trop tôt', 'tot'] };
-      oc.offres = (O.offres || []).map(o => {
-        const dlt = v => v.delta == null ? '' : (v.delta >= 0 ? '+' : '−') + nf(Math.abs(v.delta)) + ' % ';
-        const cells = M.map(m => { const v = o.magasins[m.shop]; if (!v) { return { txt: '', verdict: '' }; } const verd = VERD[v.verdict] || VERD.tot; return { txt: v.pieces != null ? nf(v.pieces) : fE(v.ca), sous: v.pieces != null ? fE(v.ca) : '', verdict: verd[1], titre: m.nom + ' : ' + verd[0] + ' · ' + dlt(v) + (v.mot || '') }; });
-        const comptes = {}; Object.values(o.magasins).forEach(v => { comptes[v.verdict] = (comptes[v.verdict] || 0) + 1; });
-        const verdicts = ['garder', 'ajuster', 'arreter', 'tot'].filter(k => comptes[k]).map(k => ({ lib: VERD[k][0], cls: VERD[k][1], n: comptes[k] }));
-        const premier = Object.values(o.magasins)[0] || {};
-        return { type: o.type, typeLib: o.type === 'bundle' ? 'Bundle' : 'Promo', nom: o.nom, regle: o.regle || '', canaux: (o.canaux || []).map(c => ({ lib: { comptoir: 'Comptoir', cc: 'Click & collect', liv: 'Livraison', webshop: 'Webshop' }[c] || c, cls: { comptoir: 'c', cc: 'w', liv: 'l', webshop: 'w' }[c] || 'c' })),
-          cells, total: o.pieces ? nf(o.pieces) : fE(o.ca), totalSous: o.pieces ? fE(o.ca) : '', verdicts, mot: Object.keys(o.magasins).length === 1 ? dlt(premier) + (premier.mot || '') : '' };
-      });
-      if (!oc.offres.length) { oc.vide = 'Aucune offre ' + libPer + ' : pas de bundle vendu dans les tickets, pas de promotion posée sur les jours creux.'; }
-      oc.okpi = K;
-    }
-    common.oc = oc;
-  }
   /* --- invendus et poubelle : une lecture réseau sur la période choisie --- */
   ivCharge(force){
     const per = this.state.ivPeriode || 'jour', M = this.state.iv || {}, b = M[per];
@@ -2891,196 +2699,181 @@ class App {
     }
     common.iv = iv;
   }
-  /* --- gestion de production : la page du dashboard en mode intégré, un magasin, un jour --- */
-  valsGP(common){
-    const S = this.state, ms = this.open();
-    const aujD = new Date(), iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    const auj = iso(aujD);
-    const shop = String(S.gpShop || (ms[0] ? ms[0].id : '4'));
-    const onglet = { productionPlan: 'plan', productionSuivi: 'suivi', productionParams: 'params', productionCloture: 'cloture', productionFours: 'fours' }[S.screen] || 'plan';
-    // Le plan et les fours se préparent jusqu'à 7 jours à l'avance ; la validation et la clôture s'arrêtent à aujourd'hui.
-    const max = onglet === 'plan' || onglet === 'fours' ? (() => { const x = new Date(aujD); x.setDate(x.getDate() + 7); return iso(x); })() : auj;
-    // Le jour se choisit dans la page (sa barre des jours) ; le cockpit garde le dernier choisi.
-    const jourDe = () => { let d = /^\d{4}-\d{2}-\d{2}$/.test(this.gpDateVu || '') ? this.gpDateVu : auj; if (d > max) { d = max; } return d; };
-    const date = jourDe();
-    common.gp = { onglet, date,
-      magasins: ms.map(m => ({ id: String(m.id), nom: m.nom, on: String(m.id) === shop })),
-      setShop: e => this.setState({ gpShop: e.target.value }),
-      src: 'production/?embed=1&shop=' + encodeURIComponent(shop) + '&date=' + date + '&page=' + onglet,
-      // Le jour choisi dans la page depuis le dernier rendu : lu au clic.
-      pleinEcran: () => { window.open('production/?shop=' + encodeURIComponent(shop) + '&date=' + jourDe() + '&page=' + onglet, '_blank', 'noopener'); } };
-  }
-  valsCreux(common){
-    const S = this.state;
-    const vue = S.cxVue || 'creux';
-    common.cxVue = vue;
-    common.cxVues = [['creux', 'Les creux'], ['promos', 'Promotions'], ['catalogue', 'Catalogue des mécaniques']].map(([v, nom]) => ({ v, nom, on: vue === v, choisir: () => { this.setState({ cxVue: v }); } }));
-    common.cxShopOpts = this.open().map(s => ({ id: String(s.id), nom: s.name || s.nom || String(s.id), on: String(s.id) === this.cxShopId() }));
-    common.setCxShop = e => this.setState({ cxShop: e.target.value, cxSel: null, cxEtape: 2, cxLevier: null, cxChoix: null, cxForm: null, cxProps: null });
-    common.cxSem = String(S.cxSem || 4);
-    common.setCxSem = e => this.setState({ cxSem: parseInt(e.target.value, 10) || 4 });
-    common.cxNomShop = (common.cxShopOpts.find(o => o.on) || {}).nom || '';
-    const fE = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE') + ' €';
-    const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
-    if (vue === 'creux') { this.cxCharge(false); }
-    if (vue === 'promos') { this.cxPromosCharge(false); }
-    if (vue === 'catalogue') { this.cxMecsCharge(false); }
-    const jf = s => (s || '').split('-').reverse().join('/');
-    const J = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-    const LEV = { trafic: '🚶', panier: '🧺', experience: '✨', ecouler: '🗑️' };
-    const coul = idx => idx == null ? ['#efe9e1', true] : idx < .45 ? ['#F08A2C', false] : idx < .7 ? ['#e8c9a0', true] : idx < 1 ? ['#6aa84f', false] : ['#2d7a3e', false];
-
-    /* --- la carte et l'assistant --- */
-    const b = S.cx || {}, d = b.d || {};
-    common.cxChargement = !!b.chargement && !b.d;
-    common.cxIndispo = !b.chargement && !b.d && S.cx ? 'Lecture impossible — API injoignable.' : (d.error || '');
-    const sel = S.cxSel && S.cxSel.jours.length && S.cxSel.heures.length ? S.cxSel : null;
-    const etape = sel ? (S.cxChoix ? 5 : (S.cxLevier ? (S.cxEtape >= 5 ? 5 : 4) : Math.max(3, S.cxEtape || 3))) : 2;
-    if (sel && S.cxEtape >= 4 && !S.cxLevier) { /* on revient au choix du levier */ }
-    common.cxEtape = etape;
-    const st = sel ? this.cxStats(sel.jours, sel.heures) : null;
-    const [du, au] = this.cxDates();
-    common.cxEtapes = [['Magasin', common.cxNomShop.split(' - ').pop()], ['Créneau', sel ? this.cxNomBloc(sel.jours, sel.heures) : ''], ['Paramètres', sel ? 'du ' + jf(du) + ' au ' + jf(au) : ''], ['Levier', S.cxLevier ? ((d.leviers || {})[S.cxLevier] || {}).nom || S.cxLevier : ''], ['Promotion', S.cxForm ? S.cxForm.nom : '']]
-      .map((e, i) => { const n = i + 1; const fait = (n === 1) || (n === 2 && sel) || (n === 3 && sel && etape > 3) || (n === 4 && S.cxLevier && etape > 4) || (n === 5 && false);
-        return { n, nom: e[0], val: e[1] || (n === etape ? 'en cours…' : 'à choisir'), cls: fait ? 'fait' : (n === etape ? 'cur' : 'avenir'),
-          aller: n === 2 ? () => this.setState({ cxEtape: 2, cxLevier: null, cxChoix: null, cxForm: null }) : n === 3 ? () => this.setState({ cxEtape: 3, cxLevier: null, cxChoix: null, cxForm: null }) : n === 4 ? () => this.setState({ cxEtape: 4, cxChoix: null, cxForm: null }) : null }; });
-    if (d.cells) {
-      const moy = d.moyenne || 0;
-      common.cxHeures = d.heures || [];
-      common.cxMoyenne = fE(moy);
-      common.cxPeriode = 'du ' + jf(d.du) + ' au ' + jf(d.au) + ' · ' + d.joursLus + ' jours lus';
-      common.cxLignes = [1, 2, 3, 4, 5, 6, 7].map(wd => ({ nom: J[wd], ouvert: !!(d.ouverts || {})[wd],
-        cases: common.cxHeures.map(h => { const c = d.cells[wd + ':' + h]; const idx = c && moy ? c.ca / moy : null; const [fond, clair] = coul(idx);
-          return { fond, clair, ca: c ? nf(c.ca) : '', tk: c ? nf(c.tk) + ' cl.' : '', vide: !c, on: !!(sel && sel.jours.includes(wd) && sel.heures.includes(h)), clic: () => this.cxClicCase(wd, h) }; }) }));
-      common.cxBlocs = (d.blocs || []).map(bl => ({ nom: bl.nom, caH: fE(bl.caH), tkH: nf(bl.tkH), panier: nf(bl.panier, 1) + ' €', part: nf(bl.part) + ' %', partCls: bl.part < 45 ? 'ko' : 'att', potentiel: fE(bl.potentiel),
-        on: !!(sel && sel.jours.join(',') === bl.jours.join(',') && sel.heures.join(',') === bl.heures.join(',')), choisir: () => this.setState({ cxSel: { jours: bl.jours.slice(), heures: bl.heures.slice() }, cxEtape: 3, cxLevier: null, cxChoix: null, cxForm: null }) }));
-      common.cxMidi = d.midi ? { tkH: nf(d.midi.tkH), panier: nf(d.midi.panier, 1) + ' €' } : null;
-      common.cxReseau = (d.reseau || []).map(r => ({ nom: r.nom, moyenne: fE(r.moyenne), bloc: r.bloc ? r.bloc.nom : '—', caH: r.bloc ? fE(r.bloc.caH) : '', part: r.bloc ? nf(r.bloc.part) + ' %' : '', partCls: r.bloc && r.bloc.part < 45 ? 'ko' : 'att', barre: r.bloc ? Math.min(100, r.bloc.part) : 0, potentiel: r.bloc ? fE(r.bloc.potentiel) : '', on: String(r.id) === this.cxShopId(), choisir: () => this.setState({ cxShop: String(r.id), cxSel: null, cxEtape: 2, cxLevier: null, cxChoix: null, cxForm: null }) }));
-      common.cxPotReseau = fE((d.reseau || []).reduce((a, r) => a + ((r.bloc || {}).potentiel || 0), 0));
-    }
-    common.cxSel = sel ? { nom: this.cxNomBloc(sel.jours, sel.heures), caH: fE(st.caH), tkH: nf(st.tkH), panier: st.panier != null ? nf(st.panier, 1) + ' €' : '—', part: st.part != null ? nf(st.part) + ' %' : '—', partCls: st.part != null && st.part < 45 ? 'ko' : 'att', potentiel: fE(st.potentiel), cases: st.cases, sections: st.sections,
-      heures: (d.heures || []).map(h => ({ h, on: sel.heures.includes(h), clic: () => this.cxToggleHeure(h) })),
-      jours: [1, 2, 3, 4, 5, 6, 7].map(wd => ({ nom: J[wd], on: sel.jours.includes(wd), clic: () => this.cxToggleJour(wd) })),
-      du, au, setDu: e => this.setState({ cxDu: e.target.value }), setAu: e => this.setState({ cxAu: e.target.value }),
-      nHeures: sel.heures.length * sel.jours.length * Math.max(1, Math.round((new Date(au) - new Date(du)) / 86400000 / 7 + .49)),
-      effacer: () => this.setState({ cxSel: null, cxEtape: 2, cxLevier: null, cxChoix: null, cxForm: null }),
-      levier: () => this.setState({ cxEtape: 4 }) } : null;
-    common.cxSemaine = () => this.setState({ cxSel: { jours: [1, 2, 3, 4, 5], heures: (sel ? sel.heures : [14, 15, 16, 17]) }, cxEtape: 3, cxLevier: null, cxChoix: null, cxForm: null });
-
-    /* --- étape 4 : le levier --- */
-    if (sel && st) {
-      const midi = d.midi || {};
-      const rT = midi.tkH ? st.tkH / midi.tkH : 1, rP = midi.panier && st.panier ? st.panier / midi.panier : 1;
-      const fit = { trafic: rT < .5 ? 3 : (rT < .75 ? 2 : 1), panier: rP < .7 ? 3 : (rP < .85 ? 2 : 1), experience: st.sections.includes('apres-midi') ? 2 : 1, ecouler: st.sections.includes('apres-midi') && sel.heures[sel.heures.length - 1] >= 15 ? 2 : 1 };
-      const pq = { trafic: nf(st.tkH) + ' clients / h contre ' + nf(midi.tkH) + ' le midi', panier: 'panier ' + (st.panier != null ? nf(st.panier, 1) : '—') + ' € contre ' + nf(midi.panier, 1) + ' € le midi', experience: 'l’équipe est en poste, le temps de parler existe', ecouler: 'à mesurer avec les pertes du panel' };
-      const ex = { trafic: 'précommande, offre annoncée, rendez-vous du jour', panier: 'bundle, prix rond, l’article suggéré en caisse', experience: 'dégustation, atelier, produit de la semaine, jeu', ecouler: 'happy hour, panier de fin de journée, 3 pour 2' };
-      common.cxLeviers = Object.keys(d.leviers || {}).map(k => ({ cle: k, ic: LEV[k] || '', nom: d.leviers[k].nom, quoi: d.leviers[k].quoi, kpi: d.leviers[k].kpi, ex: ex[k] || '', fit: fit[k] || 1, fitLib: (fit[k] === 3 ? 'très adapté' : fit[k] === 2 ? 'adapté' : 'à vérifier') + ' · ' + (pq[k] || ''), on: S.cxLevier === k, choisir: () => { this.setState({ cxLevier: k, cxEtape: 4, cxChoix: null, cxForm: null }); } }));
-      common.cxLevierNom = S.cxLevier ? ((d.leviers || {})[S.cxLevier] || {}).nom : '';
-      common.cxVersPromotion = S.cxLevier ? () => { this.setState({ cxEtape: 5 }); this.cxPropsCharge(false); } : null;
-    }
-
-    /* --- étape 5 : la promotion --- */
-    if (sel && S.cxLevier && etape === 5) {
-      this.cxPropsCharge(false);
-      const pb = S.cxProps || {}, pd = pb.d || {};
-      common.cxPropsChargement = !!pb.chargement;
-      common.cxPropsFenetre = pd.fenetre ? 'ventes lues du ' + jf(pd.fenetre.du) + ' au ' + jf(pd.fenetre.au) + ' sur le créneau, ' + pd.fenetre.joursLus + ' jours ouverts' + (pd.fenetre.manquants ? ' · ' + pd.fenetre.manquants + ' jour(s) non lus' : '') : '';
-      common.cxProps = (pd.propositions || []).map(p => { const m = p.mecanique, ch = p.chiffres || {}, a = p.article || {}; return {
-        id: m.id, code: m.code, nom: m.nom, regle: m.regle, type: m.type, on: S.cxChoix === m.id, jourOk: p.jourOk,
-        marge: ch.margeApres != null ? nf(ch.margeApres) + ' %' : (a.margePct != null ? nf(a.margePct) + ' %' : 'non mesurée'), margeCls: ch.margeGardee === false ? 'att' : (ch.margeApres != null ? 'ok' : 'mu'),
-        margeS: ch.remisePct ? 'après −' + nf(ch.remisePct) + ' %' : (a.margePct != null ? 'recette connue' : 'coût matière inconnu'),
-        seuil: ch.seuilParJour != null ? '+' + nf(ch.seuilParJour, 1) + ' / j' : '—', seuilS: ch.seuilParJour != null ? 'ventes en plus pour payer la remise' : (ch.remisePct ? 'non calculable' : 'pas de remise'),
-        deja: a.parJour != null ? nf(a.parJour) + ' / j' : '—', dejaS: a.refs ? a.refs + ' réf. de l’article sur le créneau' : 'article absent des ventes du créneau',
-        attache: p.attache ? nf(p.attache.taux) + ' %' : '—', attacheS: p.attache ? 'attache mesurée, ' + p.attache.mois : 'attache non mesurée',
-        choisir: () => this.cxChoisir(p) }; });
-      const f = S.cxForm;
-      common.cxForm = f ? {
-        nom: f.nom, setNom: e => this.setState({ cxForm: Object.assign({}, f, { nom: e.target.value }) }),
-        regle: f.regle, setRegle: e => this.setState({ cxForm: Object.assign({}, f, { regle: e.target.value }) }),
-        offres: ['prix bundle', 'remise %', 'article offert', '3 pour 2', 'aucune remise'].map(o => ({ v: o, on: f.offre === o })), setOffre: e => this.setState({ cxForm: Object.assign({}, f, { offre: e.target.value }) }),
-        prix: f.prix, setPrix: e => this.setState({ cxForm: Object.assign({}, f, { prix: e.target.value }) }),
-        remisePct: f.remisePct, setRemise: e => this.setState({ cxForm: Object.assign({}, f, { remisePct: e.target.value }) }),
-        declencheur: (f.declencheur || []).map(s => ({ sel: s, lib: this.cxLib(s), type: this.cxType(s), retirer: () => this.cxMultiRetirer('cxForm', 'declencheur', s) })),
-        article: (f.article || []).map(s => ({ sel: s, lib: this.cxLib(s), type: this.cxType(s), retirer: () => this.cxMultiRetirer('cxForm', 'article', s) })),
-        canaux: ['Écran caisse', 'Affiche A4', 'Facebook', 'Newsletter', 'SMS'].map(c => ({ nom: c, on: (f.canaux || []).includes(c), clic: () => { const l = (f.canaux || []).slice(); const i = l.indexOf(c); if (i >= 0) { l.splice(i, 1); } else { l.push(c); } this.setState({ cxForm: Object.assign({}, f, { canaux: l }) }); } })),
-        note: f.note, setNote: e => this.setState({ cxForm: Object.assign({}, f, { note: e.target.value }) }),
-        cible: f.cible, setCible: e => this.setState({ cxForm: Object.assign({}, f, { cible: e.target.value }) }),
-        ou: this.cxNomBloc(sel.jours, sel.heures) + ' · du ' + jf(du) + ' au ' + jf(au) + ' · ' + common.cxNomShop,
-        adopter: () => this.cxAdopter('en_cours'), brouillon: () => this.cxAdopter('brouillon'), busy: !!S.cxBusy,
-      } : null;
-      common.cxMultiForm = this.cxMultiVals('cxForm');
-    }
-
-    /* --- les promotions --- */
-    if (vue === 'promos') {
-      const pb = S.cxPromos || {}, pd = pb.d || {};
-      common.cxPromosChargement = !!pb.chargement && !pb.d;
-      common.cxTous = !!S.cxTous;
-      common.cxBasculeTous = () => { this.setState({ cxTous: !S.cxTous }); };
-      const VER = { tot: ['trop tôt', 'mu'], garder: ['garder', 'ok'], ajuster: ['ajuster', 'att'], arreter: ['arrêter ou déplacer', 'ko'] };
-      const STAT = { brouillon: 'brouillon', en_cours: 'en cours', terminee: 'terminée', arretee: 'arrêtée' };
-      common.cxPromos = (pd.promos || []).map(p => { const e = p.effet || {}; const v = VER[e.verdict] || VER.tot; return {
-        id: p.id, nom: p.nom, magasin: (p.magasin || '').split(' - ').pop(), levier: ((pd.leviers || {})[p.levier] || {}).nom || p.levier, ic: LEV[p.levier] || '', type: p.type,
-        creneau: this.cxNomBloc(p.jours, this.cxPlage(p.heureDe, p.heureA)), periode: 'du ' + jf(p.du) + ' au ' + jf(p.au), statut: STAT[p.statut] || p.statut, statutCls: p.statut === 'en_cours' ? (p.active ? 'ok' : 'mu') : (p.statut === 'arretee' ? 'ko' : 'mu'),
-        ref: p.ref && p.ref.caH != null ? fE(p.ref.caH) + ' / h · ' + nf(p.ref.tkH) + ' cl. / h' : 'référence inconnue',
-        depuis: e.caH != null ? fE(e.caH) + ' / h · ' + nf(e.tkH) + ' cl. / h' : 'pas encore de jour lu',
-        deltaCa: e.deltaCaPct != null ? (e.deltaCaPct >= 0 ? '+ ' : '− ') + nf(Math.abs(e.deltaCaPct)) + ' %' : '—', deltaCls: e.deltaCaPct == null ? 'mu' : (e.deltaCaPct >= 8 ? 'ok' : (e.deltaCaPct >= -3 ? 'att' : 'ko')),
-        deltaTk: e.deltaTkPct != null ? (e.deltaTkPct >= 0 ? '+ ' : '− ') + nf(Math.abs(e.deltaTkPct)) + ' % clients' : '', joursLus: e.joursLus || 0,
-        verdict: p.statut === 'en_cours' ? v[0] : '', verdictCls: v[1], regle: p.regle, note: p.note, canaux: (p.canaux || []).join(' · '),
-        terminer: p.statut === 'en_cours' ? () => this.cxPromoStatut(p.id, 'terminee') : null, arreter: p.statut === 'en_cours' ? () => this.cxPromoStatut(p.id, 'arretee') : null,
-        reprendre: p.statut !== 'en_cours' ? () => this.cxPromoStatut(p.id, 'en_cours') : null, effacer: p.statut === 'brouillon' ? () => this.cxPromoSuppr(p.id) : null }; });
-      common.cxNouvelle = () => this.setState({ cxVue: 'creux', cxEtape: 2, cxSel: null, cxLevier: null, cxChoix: null, cxForm: null });
-    }
-
-    /* --- le catalogue --- */
-    if (vue === 'catalogue') {
-      const mb = S.cxMecs || {}, md = mb.d || {};
-      common.cxMecsChargement = !!mb.chargement && !mb.d;
-      const liste = md.mecaniques || [];
-      common.cxMecsN = liste.length; common.cxMecsActives = liste.filter(m => m.actif).length;
-      common.cxMecsLeviers = Object.keys(md.leviers || {}).map(k => ({ cle: k, ic: LEV[k] || '', nom: md.leviers[k].nom, quoi: md.leviers[k].quoi,
-        mecaniques: liste.filter(m => m.levier === k).map(m => ({ id: m.id, code: m.code, nom: m.nom, actif: m.actif, enCours: m.enCours, on: !!(S.cxMecEdit && S.cxMecEdit.id === m.id), ouvrir: () => this.cxMecOuvrir(m) })) }));
-      common.cxMecNouvelle = () => this.cxMecOuvrir(null);
-      const e = S.cxMecEdit;
-      common.cxMecEdit = e ? {
-        id: e.id, titre: e.id ? 'Modifier « ' + e.nom + ' »' : 'Nouvelle mécanique', code: e.code || '', usage: e.enCours ? 'utilisée par ' + e.enCours + ' promotion(s) en cours' : (e.id ? 'aucune promotion en cours ne s’en sert' : ''), maj: e.majLe ? 'modifiée le ' + jf((e.majLe || '').slice(0, 10)) + (e.majPar ? ' par ' + e.majPar : '') : '',
-        nom: e.nom || '', setNom: ev => this.cxMecChamp('nom', ev.target.value),
-        leviers: Object.keys(md.leviers || {}).map(k => ({ v: k, nom: md.leviers[k].nom, on: e.levier === k })), setLevier: ev => this.cxMecChamp('levier', ev.target.value),
-        types: (md.types || []).map(t => ({ v: t, on: e.type === t })), setType: ev => this.cxMecChamp('type', ev.target.value),
-        regle: e.regle || '', setRegle: ev => this.cxMecChamp('regle', ev.target.value),
-        habitude: e.habitude || '', setHabitude: ev => this.cxMecChamp('habitude', ev.target.value),
-        sections: Object.keys(md.sections || {}).map(k => ({ v: k, nom: md.sections[k], on: (e.sections || []).includes(k), clic: () => this.cxMecBascule('sections', k) })),
-        jours: (md.jours || []).map(j => ({ v: j, on: (e.jours || []).includes(j), clic: () => this.cxMecBascule('jours', j) })),
-        declencheur: (e.declencheur || []).map(s => ({ sel: s, lib: this.cxLib(s), type: this.cxType(s), retirer: () => this.cxMultiRetirer('cxMecEdit', 'declencheur', s) })),
-        article: (e.article || []).map(s => ({ sel: s, lib: this.cxLib(s), type: this.cxType(s), retirer: () => this.cxMultiRetirer('cxMecEdit', 'article', s) })),
-        offres: (md.offres || []).map(o => ({ v: o, on: e.offre === o })), setOffre: ev => this.cxMecChamp('offre', ev.target.value),
-        prix: e.prix || '', setPrix: ev => this.cxMecChamp('prix', ev.target.value), remisePct: e.remisePct || '', setRemise: ev => this.cxMecChamp('remisePct', ev.target.value), margeMin: e.margeMin || '', setMargeMin: ev => this.cxMecChamp('margeMin', ev.target.value),
-        mesure: e.mesure || '', setMesure: ev => this.cxMecChamp('mesure', ev.target.value),
-        canaux: (md.canaux || []).map(c => ({ nom: c, on: (e.canaux || []).includes(c), clic: () => this.cxMecBascule('canaux', c) })),
-        caisse: e.caisse || '', setCaisse: ev => this.cxMecChamp('caisse', ev.target.value),
-        note: e.note || '', setNote: ev => this.cxMecChamp('note', ev.target.value),
-        margeGarde: !!e.margeGarde, basculeMarge: () => this.cxMecChamp('margeGarde', !e.margeGarde),
-        actif: !!e.actif, setActif: v => this.cxMecChamp('actif', v),
-        enreg: () => this.cxMecEnreg(), dupliquer: e.id ? () => this.cxMecDupliquer(e.id) : null, suppr: e.id ? () => this.cxMecSuppr(e) : null, fermer: () => this.setState({ cxMecEdit: null, cxRes: null, cxQ: null }), busy: !!S.cxBusy,
-      } : null;
-      common.cxMultiMec = this.cxMultiVals('cxMecEdit');
-    }
-  }
-  /** Les deux barres de recherche d'un objet (déclencheur, article) : la saisie, les résultats, ce qui est coché. */
-  cxMultiVals(objKey){
-    const S = this.state, obj = S[objKey] || {};
-    const out = {};
-    ['declencheur', 'article'].forEach(champ => {
-      const cle = objKey + ':' + champ;
-      const q = S.cxQ && S.cxQ.cle === cle ? S.cxQ.q : '';
-      const res = S.cxRes && S.cxRes.cle === cle && S.cxRes.q === q.trim() ? S.cxRes : null;
-      const coches = {}; (obj[champ] || []).forEach(s => { coches[String(s).split('|')[0]] = true; });
-      const groupes = [];
-      (res ? res.resultats : []).forEach(r => { let g = groupes.find(x => x.type === r.type); if (!g) { g = { type: r.type, nom: r.type === 'groupe' ? 'Groupes' : (r.type === 'catégorie' ? 'Catégories' : 'Produits'), items: [] }; groupes.push(g); }
-        g.items.push({ sel: r.sel, nom: r.nom, info: r.info || '', on: !!coches[r.sel], clic: () => this.cxMultiToggle(objKey, champ, r) }); });
-      out[champ] = { id: 'cx-q-' + objKey + '-' + champ, q, saisir: e => this.cxRecherche(cle, e.target.value), enCours: q.trim().length >= 2 && !res, groupes, vide: !!res && !res.resultats.length, fermer: () => this.setState({ cxQ: null, cxRes: null }) };
+  /* --- entre deux inventaires : ce qui est sorti du stock face à la caisse et à la poubelle (12/10/2026) --- */
+  inShop(){ const ms = this.open(), s = String(this.state.inShop || ''); return ms.some(m => String(m.id) === s) ? s : String(ms[0] ? ms[0].id : '4'); }
+  inListe(force){
+    const sid = this.inShop(), L = this.state.inL || {};
+    if (!force && L[sid]) { return; }
+    this.setState({ inL: Object.assign({}, L, { [sid]: { chargement: true, d: L[sid] ? L[sid].d : null } }) });
+    readOne('/stock/inventaires?shop=' + sid).then(d => {
+      this.setState({ inL: Object.assign({}, this.state.inL || {}, { [sid]: { d: d || { error: 'injoignable' } } }) });
+      if (d && d.paires) { this.inHistorique(sid); }
     });
-    return out;
+  }
+  inEcart(sid, de, a, force){
+    const k = sid + ':' + de + ':' + a, E = this.state.inE || {};
+    if (!force && E[k]) { return; }
+    this.setState({ inE: Object.assign({}, E, { [k]: { chargement: true } }) });
+    readOne('/stock/inventaires/ecart?shop=' + sid + '&de=' + de + '&a=' + a).then(d => {
+      this.setState({ inE: Object.assign({}, this.state.inE || {}, { [k]: { d: d || { error: 'calcul impossible' } } }) });
+    });
+  }
+  // L'historique : les semaines que le serveur n'a pas encore calculées se calculent une à une, la plus récente d'abord.
+  inHistorique(sid){
+    if (this._inHist === sid) { return; }
+    this._inHist = sid;
+    const suite = () => {
+      const L = ((this.state.inL || {})[sid] || {}).d;
+      const p = L && L.paires ? L.paires.find(x => !x.resume && !x.echec) : null;
+      if (!p || this.inShop() !== sid || this.state.screen !== 'inventaires') { this._inHist = null; return; }
+      readOne('/stock/inventaires/ecart?shop=' + sid + '&de=' + p.de + '&a=' + p.a + '&resume=1').then(r => {
+        const L2 = ((this.state.inL || {})[sid] || {}).d;
+        if (!L2) { this._inHist = null; return; }
+        const paires = L2.paires.map(x => x.de === p.de && x.a === p.a ? Object.assign({}, x, r && r.resume ? { resume: r.resume } : { echec: true }) : x);
+        this.setState({ inL: Object.assign({}, this.state.inL || {}, { [sid]: { d: Object.assign({}, L2, { paires }) } }) });
+        suite();
+      });
+    };
+    suite();
+  }
+  // La paire affichée : celle choisie, sinon le dernier inventaire qui a un prédécesseur de même source, et
+  // celui d'environ quatre semaines plus tôt (une semaine seule est bruitée : les livraisons tombent autour du comptage).
+  inChoix(l){
+    const S = this.state, ids = l.map(x => x.id);
+    let a = S.inA && ids.includes(S.inA) ? S.inA : null;
+    let de = S.inDe && ids.includes(S.inDe) ? S.inDe : null;
+    if (!a) { for (let i = 0; i + 1 < l.length; i++) { if (l.slice(i + 1).some(y => y.source === l[i].source)) { a = l[i].id; break; } } }
+    const B = l.find(x => x.id === a);
+    if (B && (!de || de === a)) {
+      const t = s => new Date(s.replace(' ', 'T')).getTime();
+      const cand = l.filter(x => x.source === B.source && x.at < B.at);
+      const pick = cand.find(x => t(x.at) <= t(B.at) - 25 * 86400000) || cand[cand.length - 1];
+      de = pick ? pick.id : null;
+    }
+    return [de, a];
+  }
+  valsInventaires(common){
+    const S = this.state, sid = this.inShop();
+    this.inListe(false);
+    const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+    const fE = n => n == null ? '—' : (n < 0 ? '−' : '') + nf(Math.abs(Math.round(n))) + ' €';
+    const fEs = n => n == null ? '—' : (n > 0 ? '+' : n < 0 ? '−' : '') + nf(Math.abs(Math.round(n))) + ' €';
+    const fP = n => n == null ? '—' : nf(n, 1) + ' %';
+    // les quantités dans l'unité de base du panel : grammes et millilitres passent en kg et en litres
+    const fQ = (n, u, signe) => {
+      if (n == null) { return '—'; }
+      const s = signe ? (n > 0 ? '+' : n < 0 ? '−' : '') : (n < 0 ? '−' : ''), a = Math.abs(n);
+      if (u === 'g') { return a >= 1000 ? s + nf(a / 1000, 1) + ' kg' : s + nf(a) + ' g'; }
+      if (u === 'ml') { return a >= 1000 ? s + nf(a / 1000, 1) + ' l' : s + nf(a) + ' ml'; }
+      return s + nf(a, a < 10 && a % 1 ? 1 : 0);
+    };
+    const jf = s => s ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(0, 4) : '';
+    const jh = s => s ? s.slice(8, 10) + '/' + s.slice(5, 7) + ' ' + s.slice(11, 16) : '';
+    const JS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+    const jour = s => { const d = new Date(s.slice(0, 10) + 'T12:00:00'); return JS[d.getDay()] + ' ' + s.slice(8, 10) + '/' + s.slice(5, 7); };
+    const Lb = (S.inL || {})[sid] || {}, L = Lb.d && !Lb.d.error ? Lb.d : null;
+    const l = L ? (L.inventaires || []) : [];
+    const [de, a] = this.inChoix(l);
+    const inv = { sid, magasins: this.open().map(m => ({ id: String(m.id), nom: m.nom || m.name || String(m.id), on: String(m.id) === sid })),
+      setShop: e => this.setState({ inShop: e.target.value, inDe: null, inA: null, inOuvert: null }),
+      chargement: !!Lb.chargement && !Lb.d, indispo: Lb.d && Lb.d.error ? 'Lecture impossible : ' + Lb.d.error : '',
+      de, a, options: l.map(x => ({ id: x.id, lib: jh(x.at) + ' · ' + x.n + ' matières' + (x.source === 'releve' ? ' · relevé' : ''), source: x.source })),
+      optionsDe: [],
+      setDe: e => this.setState({ inDe: e.target.value, inOuvert: null }), setA: e => this.setState({ inA: e.target.value, inDe: null, inOuvert: null }),
+      raccourcis: [], filtres: [], lignes: [], kpi: [], suite: null, histo: [], qualite: [], alertes: [], sansRecette: [], releve: '' };
+    // les raccourcis de période : une, quatre ou douze semaines avant l'inventaire de fin
+    const B = l.find(x => x.id === a);
+    // le début se choisit parmi les inventaires de même source, plus anciens que la fin
+    inv.optionsDe = B ? inv.options.filter(o => o.source === B.source && (l.find(x => x.id === o.id) || {}).at < B.at) : [];
+    if (B) {
+      const t = s => new Date(s.replace(' ', 'T')).getTime();
+      const cand = l.filter(x => x.source === B.source && x.at < B.at);
+      [[1, '1 semaine'], [4, '4 semaines'], [12, '12 semaines']].forEach(([n, lib]) => {
+        const pick = n === 1 ? cand[0] : (cand.find(x => t(x.at) <= t(B.at) - (7 * n - 3) * 86400000) || cand[cand.length - 1]);
+        if (pick) { inv.raccourcis.push({ lib, on: pick.id === de, choisir: () => this.setState({ inDe: pick.id, inA: a, inOuvert: null }) }); }
+      });
+    }
+    if (L) {
+      const R = L.releve || {};
+      const evs = (R.evenements || []).filter(e => e.type === 'inventaire');
+      inv.releve = R.actif ? 'Relevé en direct depuis le ' + jh(R.depuis) + (R.dernier ? ' · dernier passage ' + jh(R.dernier) : '') + ' · ' + (evs.length ? evs.length + ' inventaire' + (evs.length > 1 ? 's' : '') + ' relevé' + (evs.length > 1 ? 's' : '') + ' (le dernier : ' + jh(evs[0].at) + ')' : 'aucun inventaire relevé encore') : 'Relevé en direct pas encore démarré';
+      inv.finCopie = L.finCopie ? jf(L.finCopie) : '';
+      const nReleve = l.filter(x => x.source === 'releve').length;
+      if (nReleve < 2) { inv.alertes.push(['info', 'Les inventaires d’octobre se calculent dès le prochain : le panel ne rend pas ses inventaires passés, le cockpit relève le stock toutes les cinq minutes depuis le ' + jf(R.depuis || '') + '. La copie du panel s’arrête au ' + inv.finCopie + ' : ce sont ces semaines-là qu’on lit pour l’instant.']); }
+      // l'historique : une barre par semaine
+      const H = (L.paires || []).slice().reverse();
+      inv.histo = H.map(p => { const r = p.resume; const sansL = !!(r && r.nQualite > 0 && r.livraisons === 0); const j = r && !sansL ? r.justesse : null;
+        return { de: p.de, a: p.a, lib: jf(p.aAt).slice(0, 5), titre: jh(p.deAt) + ' → ' + jh(p.aAt) + (sansL ? ' · aucune livraison enregistrée : non calculable' : r ? ' · justesse ' + fP(j) + ' · sorti sans explication ' + fE(r.manquant) : p.echec ? ' · non calculable' : ' · calcul…'),
+          h: j == null ? (sansL ? 4 : 0) : Math.max(2, Math.min(100, j)) * 0.8, val: j == null ? (p.echec ? '×' : r ? '—' : '…') : nf(j),
+          cls: j == null ? 'na' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko', on: p.de === de && p.a === a,
+          choisir: () => this.setState({ inDe: p.de, inA: p.a, inOuvert: null }) }; });
+    }
+    // l'écart de la paire choisie
+    if (de && a) {
+      this.inEcart(sid, de, a, false);
+      const Eb = (S.inE || {})[sid + ':' + de + ':' + a] || {}, E = Eb.d && !Eb.d.error ? Eb.d : null;
+      inv.calcul = !!Eb.chargement && !Eb.d;
+      inv.erreur = Eb.d && Eb.d.error ? Eb.d.error : '';
+      inv.recalculer = () => this.inEcart(sid, de, a, true);
+      if (E) {
+        const T = E.totaux;
+        inv.periode = 'du ' + jh(E.de.at) + ' au ' + jh(E.a.at) + ' · ' + nf(E.jours, 1) + ' jours' + (E.semaines > 1 ? ' · ' + E.semaines + ' inventaires' : '') + (E.source === 'releve' ? ' · relevé en direct' : ' · copie du panel');
+        const Q0 = E.qualite || [];
+        const sansLivr0 = E.source === 'copie' && Q0.length > 0 && Q0.every(q => !q.livraisons);
+        const j = sansLivr0 ? null : T.justesse;
+        inv.justesse = { val: sansLivr0 ? 'non calculable' : fP(j), cls: j == null ? 'na' : j >= 95 ? 'ok' : j >= 85 ? 'moy' : 'ko',
+          sous: sansLivr0 ? 'aucune livraison enregistrée dans le panel sur la période : le stock n’a pas d’entrées, ses sorties ne se mesurent pas'
+            : j == null ? 'aucune matière fiable sur la période' : 'sur ' + T.nFiables + ' matières fiables : ' + fE(T.fiableSorties) + ' sortis du stock, dont ' + fE(T.fiableCouvert) + ' expliqués par la caisse et la poubelle et ' + fE(T.manquant) + ' sans explication' };
+        inv.kpi = [
+          ['Sorti sans explication', fE(T.manquant), 'ko', 'stock sorti sans vente ni poubelle déclarée : poubelle non encodée, vente non tapée, casse, personnel'],
+          ['Vendu au-delà du stock', fE(T.excedent), 'sur', 'ventes et poubelle que le stock ne montre pas : livraison hors panel, recette trop lourde, comptage'],
+          ['Sorties qu’aucune vente n’explique', fE(T.sansRecetteSorties), 'moy', T.nSansRecette + ' matière' + (T.nSansRecette > 1 ? 's' : '') + ' sortie' + (T.nSansRecette > 1 ? 's' : '') + ' qu’aucune recette vendue ne consomme'],
+          ['Ventes sans recette', fE(T.caSansRecette), 'moy', fP(T.ca ? 100 * T.caSansRecette / T.ca : null) + ' du CA de la période (' + fE(T.ca) + ') : ces produits ne consomment rien au panel']];
+        inv.bilan = [['Stock au début', fE(T.debut)], ['+ Livré', fE(T.entrees)], ['− Stock à la fin', fE(T.fin)], ['= Sorti du stock', fE(T.sorties)], ['Vendu (recettes)', fE(T.ventes)], ['Jeté (poubelle)', fE(T.poubelle)]];
+        // la qualité des semaines : livraisons enregistrées, comptage
+        const Q = E.qualite || [];
+        const sansLivr = Q.length && Q.every(q => !q.livraisons);
+        if (sansLivr && E.source === 'copie') { inv.alertes.push(['ko', 'Aucune livraison n’est enregistrée dans le panel pour ce magasin sur la période : ce qui entre en stock n’y est pas encodé, les sorties ne se calculent pas. Tant que les livraisons ne passent pas par les commandes du panel, ces chiffres ne disent rien.']); }
+        inv.qualite = Q.map(q => ({ periode: jh(q.de) + ' → ' + jh(q.a), livraisons: q.livraisons, comptees: q.compteesB, inchangees: q.inchangeesB,
+          note: [q.livraisons ? q.livraisons + ' livraison' + (q.livraisons > 1 ? 's' : '') + ' enregistrée' + (q.livraisons > 1 ? 's' : '') : 'aucune livraison enregistrée', q.compteesB + ' matières comptées', q.effacement ? 'solde effacé avant comptage' : (q.inchangeesB ? q.inchangeesB + ' inchangées au comptage' : ''), q.inventaireRecopie ? 'inventaire recopié ?' : ''].filter(Boolean).join(' · '),
+          cls: !q.livraisons ? 'ko' : q.inventaireRecopie ? 'moy' : 'ok' }));
+        (E.notes || []).forEach(n => inv.alertes.push(['info', n]));
+        inv.sansRecette = (E.sansRecette || []).map(p => ({ nom: p.nom, q: nf(p.q), ca: fE(p.ca) }));
+        // la suite des jours : livré, sorti par les ventes, jeté
+        const jours = E.suite || [];
+        const mx = Math.max(1, ...jours.map(d => Math.max(d.livre, d.vendu + d.jete)));
+        inv.suite = { jours: jours.map(d => ({ lib: jour(d.date), livre: fE(d.livre), vendu: fE(d.vendu), jete: fE(d.jete), hL: (100 * d.livre / mx).toFixed(1), hV: (100 * d.vendu / mx).toFixed(1), hJ: (100 * d.jete / mx).toFixed(1),
+          titre: jour(d.date) + ' · livré ' + fE(d.livre) + ' · vendu ' + fE(d.vendu) + ' · jeté ' + fE(d.jete) + (d.reports ? ' · reporté ' + nf(d.reports) + ' pièces' : '') })), max: fE(mx) };
+        // les matières, par statut
+        const STAT = { fiable: 'fiable', sansRecette: 'aucune vente', surplus: 'au-delà du stock', aVerifier: 'à vérifier', calme: 'sans mouvement' };
+        const filtre = S.inFiltre || 'manquant';
+        const garde = m => filtre === 'tout' ? true : filtre === 'manquant' ? (m.statut === 'fiable' && m.ecart > 0) : filtre === 'surplus' ? (m.statut === 'surplus' || (m.statut === 'fiable' && m.ecart < 0)) : m.statut === filtre;
+        const M = E.matieres || [];
+        const compte = f => M.filter(m => f === 'tout' ? true : f === 'manquant' ? (m.statut === 'fiable' && m.ecart > 0) : f === 'surplus' ? (m.statut === 'surplus' || (m.statut === 'fiable' && m.ecart < 0)) : m.statut === f).length;
+        inv.filtres = [['manquant', 'Sorti sans explication'], ['surplus', 'Au-delà du stock'], ['sansRecette', 'Aucune vente'], ['aVerifier', 'À vérifier'], ['tout', 'Toutes']]
+          .map(([v, lib]) => ({ lib, n: compte(v), on: filtre === v, choisir: () => this.setState({ inFiltre: v, inOuvert: null }) }));
+        const ouvert = S.inOuvert;
+        const tri = filtre === 'surplus' ? (x, y) => ((x.valeur || {}).ecart || 0) - ((y.valeur || {}).ecart || 0) : (x, y) => Math.abs((y.valeur || {}).ecart || 0) - Math.abs((x.valeur || {}).ecart || 0);
+        inv.lignes = M.filter(garde).sort(tri).map(m => {
+          const v = m.valeur || {}, u = m.unite;
+          const typeMv = { livraison: 'livré', attendu: 'solde attendu au comptage', correction: 'correction', retour: 'retour' };
+          return { id: m.id, nom: m.nom, categorie: m.categorie, statut: STAT[m.statut] || m.statut, stCls: m.statut,
+            debut: fQ(m.debut, u) + (m.compteDebut ? '' : '*'), entrees: m.entrees ? fQ(m.entrees, u, true) : '—', fin: fQ(m.fin, u), sorties: fQ(m.sorties, u),
+            ventes: fQ(m.ventes, u), poubelle: m.poubelle ? fQ(m.poubelle, u) : '—', ecart: fQ(m.ecart, u, true), ecartE: v.ecart != null ? fEs(v.ecart) : '—',
+            ecCls: m.ecart > 0 ? 'ko' : m.ecart < 0 ? 'sur' : '', justesse: fP(m.justesse), prix: m.prix != null ? nf(m.prix * (u === 'g' || u === 'ml' ? 1000 : 1), 2) + ' € / ' + (u === 'g' ? 'kg' : u === 'ml' ? 'l' : 'pce') : 'prix inconnu',
+            ouvert: ouvert === m.id, basculer: () => this.setState({ inOuvert: ouvert === m.id ? null : m.id }),
+            mouvements: (m.mouvements || []).map(x => ({ quand: jh(x[0]), quoi: typeMv[x[1]] || x[1], q: fQ(x[2], u, x[1] !== 'attendu') })),
+            produits: (m.produits || []).map(p => ({ nom: p.nom, q: fQ(p.q, u) })),
+            lecture: m.statut === 'fiable' ? (m.ecart > 0 ? fQ(m.ecart, u) + ' sortis sans vente ni poubelle (' + fEs(v.ecart) + ')' : fQ(-m.ecart, u) + ' vendus ou jetés de plus que ce qui est sorti du stock') :
+              m.statut === 'sansRecette' ? 'Aucune vente de la période ne consomme cette matière : une recette manque (portion, bundle) ou tout a été jeté sans être déclaré.' :
+              m.statut === 'surplus' ? 'Vendue sans être sortie du stock : livraison hors panel, ou recette qui en compte trop.' :
+              m.statut === 'aVerifier' ? 'Vendu et sorti ne sont pas du même ordre (rapport de plus de 6) : unité de comptage ou recette à vérifier.' : '' };
+        });
+        inv.nLignes = M.length;
+        inv.methode = E.methode;
+      }
+    }
+    common.inv = inv;
   }
 
   /* --- Scoring du trimestre : quatre postes de cinq points par magasin ------------- */
@@ -3229,18 +3022,6 @@ class App {
         histChargement: !!hb.chargement, hist: (hd.msp || []).map(h => ({ tri: 'T' + h.trimestre.slice(6) + ' ' + h.trimestre.slice(0, 4), recu: nf(h.obtenu, 0) + ' / ' + nf(h.maximum, 0), sur5: nf(h.v), pct: h.v == null ? 0 : h.v / 5 * 100, fichier: this.sqFichierUrl(h.fichier) })),
       };
     }
-  }
-
-  bxcEcrire(campagneId){
-    const dr = this.state.bxcDraft || {};
-    const objectifs = {};
-    Object.keys(dr).forEach(k => {
-      const [cid, sid] = k.split(':');
-      if (String(cid) === String(campagneId)) { objectifs[sid] = dr[k]; }
-    });
-    if (!Object.keys(objectifs).length) { return true; }
-    return this.api('PUT', '/marketing/campagnes/' + campagneId + '/objectifs?journal=0', { objectifs })
-      .then(r => !(!r || r.ok === false));
   }
 
   /* --- encodage du budget ----------------------------------------------------- */
@@ -4034,6 +3815,25 @@ class App {
     this.rafraichirBudget();
   }
 
+  /**
+   * `/stores/perf` manqué au chargement (22/10/2026) : la lecture a dépassé les
+   * 20 s du chargement, ou a échoué. Les écrans de l'année montraient alors
+   * des zéros partout, budgets compris, sans rien dire. On relit sans délai
+   * imposé, une fois ; l'écran dit qu'il lit, ou que la lecture a échoué.
+   * Rend 'ok', 'lecture', 'echec' (pas de réponse) ou 'vide' (réponse sans ligne).
+   */
+  perfAssure(){
+    if ((this.D.perfRaw || []).length) { return 'ok'; }
+    if (this._perfLu) { return this._perfLu; }
+    this._perfLu = 'lecture';
+    readOne('/stores/perf?granularite=mois&annees=' + (this.exo() - 1) + ',' + this.exo()).then(p => {
+      if (p && p.length) { this.poserPerf(p); this._perfLu = null; } else { this._perfLu = p ? 'vide' : 'echec'; }
+      this.setState({});
+    });
+    return 'lecture';
+  }
+  perfRelire(){ this._perfLu = null; this.setState({}); }
+
   rafraichirBudget(){
     clearTimeout(this._majBudT);
     this._majBudT = setTimeout(() => {
@@ -4111,17 +3911,6 @@ class App {
         this.setState({});
       });
   }
-  /* « Nécessaire » : la référence se garde quoi qu'en disent la marge et le
-     score. Un clic bascule, l'enregistrement part tout de suite. */
-  pdPoserNecessaire(id, on){
-    return this.api('PUT', '/products/' + encodeURIComponent(String(id)) + '/necessaire', { necessaire: !!on })
-      .then(r => {
-        if (r && r.ok === false) { this.notify(r.error || 'Non enregistré'); return; }
-        const p = (this.D.products || []).find(x => String(x.id) === String(id));
-        if (p) { p.necessaire = !!on; }
-        this.setState({});
-      });
-  }
   pdOpenDetail(id){
     this.setState({ pdDet: { id } });
     if (!this._pdPer) { this._pdPer = {}; }
@@ -4132,28 +3921,6 @@ class App {
       this.setState({});
     });
   }
-  /**
-   * Écran Exploitation — le P&L court des magasins.
-   *
-   * Le serveur a déjà tranché les questions délicates (quel jour montrer,
-   * quel objectif au prorata) : on n'en refait aucune ici. L'écran se borne à
-   * mettre en forme, et à distinguer trois états que la donnée impose —
-   * mois clos, mois partiellement encodé, mois sans budget.
-   */
-  /**
-   * Tableau N vs N-1 de toutes les boutiques.
-   * Chargé à l'ouverture de l'écran puis à chaque changement de période ; une
-   * seule requête réseau, jamais une par magasin.
-   */
-  exChargeReseau(per){
-    if (this._exReseauEnCours === per) return;
-    this._exReseauEnCours = per;
-    this.setState({ exReseau: { per, chargement: true, d: null } });
-    readOne('/exploitation/reseau?periode=' + per)
-      .then(d => { this._exReseauEnCours = null;
-        this.setState(s => (s.exReseau && s.exReseau.per === per)
-          ? { exReseau: { per, chargement: false, d: d || null } } : {}); });
-  }
   /** Rapports réels (table ceo_rapport) : définitions + dernières générations. */
   /** Budget × Campagnes : lu à l'ouverture de l'écran, et à chaque changement
    *  de campagne ou d'exercice — le réalisé vient du panel, il ne se devine pas. */
@@ -4161,478 +3928,6 @@ class App {
      Trois vues sur un même écran : le PARAMÉTRAGE (ce qu'on mesure et contre
      quoi), les RÉSULTATS (avant / après, net du témoin) et les PRODUITS promus.
      Tout ce qui se saisit s'écrit à la frappe, comme le reste du cockpit. */
-  mesCharge(force){
-    const cle = String(this.state.mesCamp || 0);
-    if (this._mesEnCours === cle) { return; }
-    if (!force && this.state.mes && this.state.mes.cle === cle) { return; }
-    this._mesEnCours = cle;
-    this.setState({ mes: { cle, chargement: true, d: (this.state.mes || {}).d || null } });
-    readOne('/marketing/mesure' + (this.state.mesCamp ? '?campagne=' + this.state.mesCamp : ''))
-      .then(d => { this._mesEnCours = null; this.setState({ mes: { cle, chargement: false, d: d || null } }); })
-      .catch(() => { this._mesEnCours = null; this.setState({ mes: { cle, chargement: false, d: null } }); });
-  }
-  /**
-   * La LECTURE SIMPLE d'une campagne : une requête, un indicateur.
-   *
-   * Elle vit à côté de l'ancienne : le paramétrage (témoin, placebo, relevés
-   * Facebook) reste joignable, mais l'écran s'ouvre sur la question qu'on se
-   * pose vraiment — ce que la campagne a changé, magasin par magasin.
-   */
-  mesCompCharge(force){
-    const cle = String(this.state.mesCamp || 0) + '|' + (this.state.mesMesure || 'trafic')
-      + '|' + (this.state.mesDu || '') + '|' + (this.state.mesAu || '');
-    if (this._mesCompEnCours === cle) { return; }
-    if (!force && this.state.mesComp && this.state.mesComp.cle === cle) { return; }
-    this._mesCompEnCours = cle;
-    this.setState({ mesComp: { cle, chargement: true, d: (this.state.mesComp || {}).d || null } });
-    const q = [];
-    if (this.state.mesCamp) { q.push('campagne=' + this.state.mesCamp); }
-    if (this.state.mesMesure) { q.push('mesure=' + this.state.mesMesure); }
-    if (this.state.mesDu && this.state.mesAu) {
-      q.push('du=' + this.state.mesDu); q.push('au=' + this.state.mesAu);
-    }
-    readOne('/marketing/mesure/comparaison' + (q.length ? '?' + q.join('&') : ''))
-      .then(d => { this._mesCompEnCours = null;
-        this.setState({ mesComp: { cle, chargement: false, d: d || null } }); })
-      .catch(() => { this._mesCompEnCours = null;
-        this.setState({ mesComp: { cle, chargement: false, d: null } }); });
-  }
-  /**
-   * Une courbe hebdomadaire en SVG : cette année pleine, le N-1 en pointillé,
-   * la campagne en bande. Les deux séries partagent la MÊME échelle — deux
-   * échelles feraient croire à un écart qui n'existe pas.
-   */
-  mesCourbe(courbe, courbeN1, iDeb, iFin){
-    const L = 236, H = 46;
-    const vals = courbe.concat(courbeN1).map(p => p.v).filter(v => v != null);
-    if (vals.length < 2) { return ''; }
-    const max = Math.max(...vals) * 1.06, min = Math.min(...vals) * 0.94;
-    const n = Math.max(courbe.length, courbeN1.length, 2);
-    const X = i => 2 + i * (L - 4) / (n - 1);
-    const Y = v => 3 + (H - 6) * (1 - (v - min) / (max - min || 1));
-    const trace = serie => serie.map((p, i) => (p.v == null ? '' : (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.v).toFixed(1)))
-      .filter(Boolean).join(' ').replace(/^L/, 'M');
-    const bande = (iDeb >= 0 && iFin >= iDeb)
-      ? `<rect x="${X(iDeb).toFixed(1)}" y="1" width="${(X(iFin) - X(iDeb)).toFixed(1)}" height="${H - 2}" fill="rgba(141,29,44,0.10)" stroke="rgba(141,29,44,0.30)"/>` : '';
-    return `<svg viewBox="0 0 ${L} ${H}" style="width:${L}px;height:${H}px;display:block">${bande}
-      <path d="${trace(courbeN1)}" fill="none" stroke="#c9b8a8" stroke-width="1.6" stroke-dasharray="3 2"/>
-      <path d="${trace(courbe)}" fill="none" stroke="var(--color-primary)" stroke-width="2"/></svg>`;
-  }
-  /** Le paramétrage part champ par champ : ce qui n'est pas envoyé n'est pas touché. */
-  mesEcrire(id, champ, valeur){
-    return this.api('PUT', '/marketing/mesure/' + id + '?journal=0', { [champ]: valeur })
-      .then(r => !(!r || r.ok === false));
-  }
-  mesReleve(id, shopId, phase, valeur){
-    return this.api('PUT', '/marketing/mesure/' + id + '/releve?journal=0',
-      { shopId: String(shopId), phase, abonnes: valeur })
-      .then(r => !(!r || r.ok === false));
-  }
-
-  /**
-   * L'écran simple : une rangée par magasin, deux périodes contre leur N-1.
-   *
-   * Rien n'est recalculé ici — les écarts et l'effet net viennent du serveur,
-   * qui les tient sur les jours OUVERTS. Refaire le calcul à l'écran finirait
-   * par donner deux chiffres pour la même campagne.
-   */
-  valsMesureComp(common){
-    const S = this.state;
-    this.mesCompCharge(false);
-    const b = S.mesComp || {};
-    const d = b.d || {};
-    common.mcChargement = !!b.chargement && !b.d;
-    common.mcRecalcul = !!b.chargement && !!b.d;
-    common.mcIndispo = d.indispo ? (d.raison || 'Module marketing absent') : (d.vide || '');
-    const camp = d.campagne || null;
-    common.mcCampOpts = (d.campagnes || []).map(c => ({ v: String(c.id),
-      nom: c.nom + ' · ' + this.fD(c.debut) + ' → ' + this.fD(c.fin) }));
-    common.mcCampSel = String((camp || {}).id || '');
-    common.mcCampSet = e => this.setState({ mesCamp: parseInt(e.target.value, 10) || 0 });
-    common.mcAvance = () => this.setState({ mesSimple: false });
-    if (!camp) { common.mcVide = true; return; }
-    common.mcVide = false;
-    common.mcNom = camp.nom;
-    common.mcType = camp.type || '';
-
-    // L'indicateur. Les volumes promus sont proposés — et l'écran dit
-    // pourquoi ils retombent sur le trafic plutôt que de les cacher.
-    const mesure = d.mesure || S.mesMesure || 'trafic';
-    common.mcMesures = [['trafic', 'Trafic — clients'], ['panier', 'Panier moyen'],
-      ['ca', 'Chiffre d’affaires'], ['produits', 'Produits promus']]
-      .map(([v, nom]) => ({ v, nom, on: v === (S.mesMesure || 'trafic'),
-        go: () => this.setState({ mesMesure: v }) }));
-    const unite = S.mesUnite === 'periode' ? 'periode' : 'jour';
-    common.mcUnites = [['jour', 'Par jour'], ['periode', 'Sur la période']]
-      .map(([v, nom]) => ({ v, nom, on: v === unite, go: () => this.setState({ mesUnite: v }) }));
-    common.mcParJour = unite === 'jour';
-
-    const f = d.fenetres || {};
-    common.mcFen = {
-      avant: this.fD(f.avantDu) + ' → ' + this.fD(f.avantAu),
-      pendant: this.fD(f.pendantDu) + ' → ' + this.fD(f.pendantAu),
-      avantN1: this.fD(f.avantN1Du) + ' → ' + this.fD(f.avantN1Au),
-      pendantN1: this.fD(f.pendantN1Du) + ' → ' + this.fD(f.pendantN1Au),
-      jours: f.jours || 0,
-      aVenir: (f.aVenir || 0) > 0 ? (f.aVenir + ' jour(s) de campagne encore à venir — non comptés') : '',
-    };
-    // La période mesurée se choisit : celle de la campagne, ou la sienne. Une
-    // date incomplète n'est pas envoyée — la moitié d'une borne ne veut rien
-    // dire, et relancer la lecture à chaque frappe coûterait une lecture du
-    // panel par caractère.
-    common.mcPasCommencee = !!d.pasCommencee;
-    common.mcLibre = !!d.libre;
-    common.mcDu = S.mesDu || (f.pendantDu || '');
-    common.mcAu = S.mesAu || (f.pendantAu || '');
-    common.mcDuSet = e => this.setState({ mesDu: e.target.value });
-    common.mcAuSet = e => this.setState({ mesAu: e.target.value });
-    common.mcLibreRaz = (S.mesDu || S.mesAu) ? () => this.setState({ mesDu: '', mesAu: '' }) : null;
-    common.mcSource = d.source || '';
-    common.mcMotifs = d.motifs || [];
-    common.mcPerimetre = (d.perimetre || []).join(' · ');
-    // Réseau ou local : c'est ce qui décide s'il y a un témoin. Le dire évite
-    // de chercher une ligne « hors campagne » qui n'a pas lieu d'être.
-    common.mcScope = d.scope === 'reseau' ? 'Campagne réseau — tous les magasins'
-      : (d.scope === 'locale' ? 'Campagne locale' : '');
-
-    // Le format d'une valeur : un panier et un chiffre d'affaires sont des
-    // euros, le trafic des clients — et « par jour » ne veut pas dire la même
-    // chose qu'« au total ».
-    const fmt = (v, total) => {
-      if (v == null) { return ''; }
-      if (mesure === 'panier') { return this.fU(v); }
-      if (mesure === 'ca') { return total ? this.fE(v) : this.fU(v); }
-      return total ? Math.round(v).toLocaleString('fr-BE') : (Math.round(v * 10) / 10).toString().replace('.', ',');
-    };
-    common.mcUniteTxt = mesure === 'panier' ? '' : (mesure === 'ca' ? '' : (unite === 'jour' ? 'cl./j' : 'clients'));
-    // Le panier ne se cumule pas : c'est déjà une moyenne. La bascule
-    // « sur la période » n'a donc pas de sens pour lui, et on le dit.
-    common.mcUniteInutile = mesure === 'panier';
-
-    // Où commence la campagne sur la courbe : par la DATE de chaque semaine.
-    // À défaut (dates absentes), par le compte des semaines de la fenêtre
-    // « avant » — la bande doit tomber juste, sinon elle désigne la mauvaise
-    // période et se lit comme un effet qui n'a pas eu lieu.
-    const prem = (d.magasins || [])[0] || d.temoin || null;
-    let iDeb = prem ? (prem.courbe || []).findIndex(p2 => p2.du && p2.du >= f.pendantDu) : -1;
-    if (iDeb < 0 && f.avantDu && f.pendantDu) {
-      const j = Math.round((new Date(f.pendantDu) - new Date(f.avantDu)) / 86400000);
-      iDeb = j > 0 ? Math.round(j / 7) : -1;
-    }
-    const iFin = prem ? (prem.courbe || []).length - 1 : -1;
-    const pc = v => v == null ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
-    const col = v => v == null ? 'var(--color-text-muted)' : (v >= 0 ? '#2d7a3e' : 'var(--color-primary)');
-    const tem = d.temoin || null;
-    const bruit = tem && tem.net != null ? Math.abs(tem.net) : null;
-
-    const ligne = m => {
-      const val = (bloc) => common.mcParJour && !common.mcUniteInutile ? bloc.n : (bloc.totalN != null ? bloc.totalN : bloc.n);
-      const valN1 = (bloc) => common.mcParJour && !common.mcUniteInutile ? bloc.n1 : (bloc.totalN1 != null ? bloc.totalN1 : bloc.n1);
-      const total = !common.mcParJour && !common.mcUniteInutile;
-      return {
-        id: m.id, nom: m.nom, netN: m.net,
-        courbe: this.mesCourbe(m.courbe || [], m.courbeN1 || [], iDeb, iFin),
-        avant: { v: fmt(val(m.avant), total), n1: fmt(valN1(m.avant), total),
-          ecart: pc(m.avant.ecart), col: col(m.avant.ecart) },
-        pendant: { v: fmt(val(m.pendant), total), n1: fmt(valN1(m.pendant), total),
-          ecart: pc(m.pendant.ecart), col: col(m.pendant.ecart) },
-        periode: { v: fmt(m.pendant.totalN, true), n1: fmt(m.pendant.totalN1, true) },
-        net: pc(m.net), netCol: col(m.net),
-        // Un effet plus petit que le bruit du réseau n'est pas une preuve :
-        // l'écran le marque au lieu de laisser lire une victoire.
-        faible: m.net != null && bruit != null && Math.abs(m.net) < bruit * 3 && m.role !== 'hors',
-        hors: m.role === 'hors',
-        manque: m.pendant.n == null ? 'pas encore de ventes sur la période'
-          : (m.avant.ecart == null || m.pendant.ecart == null ? 'N-1 absent : l’écart ne peut pas se calculer' : ''),
-      };
-    };
-    const tousMag = (d.magasins || []).map(ligne);
-    common.mcMagasins = tousMag.filter(m => !m.hors);
-    // Les magasins hors campagne gardent leur rangée, sous un intertitre : ils
-    // ne sont pas la campagne, mais ils sont le réseau.
-    common.mcHors = tousMag.filter(m => m.hors);
-    common.mcTemoin = tem ? Object.assign(ligne(tem), { magasins: tem.magasins }) : null;
-    common.mcBruitTxt = tem && tem.net != null
-      ? 'Effet net du témoin : ' + pc(tem.net) + ' — tout ce qui reste dans cette marge n’est pas un effet de campagne.'
-      : 'Aucun magasin hors campagne : sans témoin, la saison et la météo restent dans la mesure.';
-  }
-  valsMesure(common){
-    const S = this.state;
-    this.mesCharge(false);
-    const b = S.mes || {};
-    const d = b.d || {};
-    common.mesChargement = !!b.chargement && !b.d;
-    // Un recalcul prend plusieurs secondes (une lecture du panel par magasin et
-    // par mois). Sans ce mot, changer de témoin donne l'impression que le clic
-    // n'a rien fait — et on reclique.
-    common.mesRecalcul = !!b.chargement && !!b.d;
-    common.mesIndispo = d.indispo ? (d.raison || 'Module marketing absent') : (d.vide || '');
-    const camp = d.campagne || null;
-    common.mesCampOpts = (d.campagnes || []).map(c => ({ v: String(c.id),
-      nom: c.nom + ' · ' + (c.debut || '').split('-').reverse().join('/') + ' → ' + (c.fin || '').split('-').reverse().join('/') }));
-    common.mesCampSel = String((camp || {}).id || '');
-    common.setMesCamp = e => this.setState({ mesCamp: parseInt(e.target.value, 10) || 0 });
-    if (!camp) { common.mesVide = true; return; }
-    common.mesVide = false;
-    common.mesNom = camp.nom;
-    common.mesType = camp.type;
-    common.mesStatut = camp.statut;
-    const jf = s => (s || '').split('-').reverse().join('/');
-    common.mesPeriode = 'du ' + jf(camp.debut) + ' au ' + jf(camp.fin);
-    common.mesSource = d.source || '';
-    common.mesMotifs = d.motifs || [];
-
-    // Une campagne pas encore commencée s'ouvre sur son paramétrage ; une
-    // campagne en cours ou finie, sur ses résultats.
-    common.mesVue = S.mesVue || (((d.fenetres || {}).camp || {}).commencee ? 'resultats' : 'param');
-    common.mesVues = [['param', 'Paramétrage'], ['resultats', 'Résultats'], ['produits', 'Produits promus']]
-      .map(([v, nom]) => ({ v, nom, on: common.mesVue === v, choisir: () => this.setState({ mesVue: v }) }));
-
-    const P = d.param || {}, R = d.reseau || {};
-    // Les fenêtres manquent quand la lecture n'a pas abouti : l'écran de
-    // paramétrage doit rester ouvrable, sinon un panel muet emporte tout
-    // l'écran au lieu de dire ce qu'il ne sait pas.
-    const vide = { du: '', au: '', jours: 0 };
-    const F = Object.assign({ ref: vide, camp: vide, rem: vide, temoin: vide, pre: vide }, d.fenetres || {});
-    ['ref', 'camp', 'rem', 'temoin', 'pre'].forEach(k => { F[k] = Object.assign({}, vide, F[k] || {}); });
-    if (!d.fenetres) { common.mesFenetresVides = true; }
-    // ── vue A : paramétrage
-    // `relire` : les champs qui changent les FENÊTRES rechargent l'écran une
-    // fois écrits — les autres non, pour ne pas déplacer le curseur en cours
-    // de frappe.
-    const champ = (cle, val, relire) => ({ val: val == null ? '' : String(val),
-      set: e => { const v = e.target.value;
-        this.autoEnreg('mes' + cle + camp.id, () => this.mesEcrire(camp.id, cle, v)
-          .then(ok => { if (ok && relire) { this.mesCharge(true); } return ok; })); } });
-    common.mesRef = { du: F.ref.du, au: F.ref.au, jours: F.ref.jours,
-      duCh: champ('refDebut', F.ref.du, true), auCh: champ('refFin', F.ref.au, true) };
-    common.mesCamp2 = { du: F.camp.du, au: F.camp.au, jours: F.camp.jours,
-      ecoulee: F.camp.ecoulee, encours: !!F.camp.encours, commencee: !!F.camp.commencee };
-    common.mesRem = { jours: F.rem.jours, du: F.rem.du, au: F.rem.au, dispo: !!F.rem.dispo,
-      ch: champ('remanenceJours', F.rem.jours, true) };
-    common.mesPre = { du: F.pre.du, au: F.pre.au };
-    common.mesN1 = { on: !!P.n1, bascule: () => this.mesEcrire(camp.id, 'n1', !P.n1).then(() => this.mesCharge(true)) };
-
-    const enCamp = (d.magasins || []).filter(m => m.role === 'campagne');
-    const temSel = P.temoins || [];
-    const mode = P.temoinMode || 'auto';
-    common.mesTemoinAuto = mode === 'auto';
-    common.mesTemoinMode = mode;
-    // Trois régimes de témoin, dont le réseau complet — utile quand presque
-    // tout le réseau est en campagne : la référence devient « ce qu'a fait le
-    // réseau », au prix d'une dilution qu'on annonce.
-    const poser = v => this.mesEcrire(camp.id, 'temoins', v).then(() => this.mesCharge(true));
-    common.mesTemoinModes = [
-      { v: 'auto', nom: 'Magasins hors campagne', on: mode === 'auto', choisir: () => poser([]) },
-      { v: 'reseau', nom: 'Réseau complet', on: mode === 'reseau', choisir: () => poser('reseau') },
-      { v: 'choix', nom: 'Sélection', on: mode === 'choix', choisir: () => poser(
-          (d.magasins || []).filter(m => m.role !== 'campagne').map(m => m.id)) }
-    ];
-    common.mesTemoinDilue = P.temoinDilue || 0;
-    common.mesTemoinNote = mode === 'reseau'
-      ? (P.temoinDilue
-        ? 'Témoin dilué : il contient ' + P.temoinDilue + ' magasin' + (P.temoinDilue > 1 ? 's' : '') + ' en campagne. L’écart net est MINORÉ — l’effet réel est au moins celui affiché.'
-        : 'Le réseau complet sert de référence.')
-      : (mode === 'auto' ? 'Choix automatique : tous les magasins hors campagne.' : 'Sélection manuelle.');
-    common.mesMagasins = (d.magasins || []).map(m => ({ id: m.id, nom: m.nom, role: m.role,
-      enCampagne: m.role === 'campagne', temoin: !!m.dansTemoin,
-      fige: mode === 'reseau',
-      bascule: (mode === 'reseau' || m.role === 'campagne') ? null : () => {
-        const cur = temSel.filter(i => i !== m.id);
-        if (cur.length === temSel.length) { cur.push(m.id); }
-        poser(cur);
-      } }));
-    // Le bandeau des résultats dit lequel des trois témoins a servi : lire un
-    // écart net sans savoir contre quoi il est mesuré n'apprend rien.
-    common.mesTemoinNoms = mode === 'reseau'
-      ? ('réseau complet' + (P.temoinDilue ? ' (dilué par ' + P.temoinDilue + ' magasin' + (P.temoinDilue > 1 ? 's' : '') + ' en campagne — écart minoré)' : ''))
-      : ((d.temoinLignes || []).map(l => l.nom).join(', ') || 'aucun');
-    common.mesPerimNoms = enCamp.map(m => m.nom).join(', ');
-
-    const pct = v => v == null ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
-    const pt = v => v == null ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' pt';
-    const col = v => v == null ? 'var(--color-text-muted)' : (v > 0.05 ? '#2d7a3e' : (v < -0.05 ? 'var(--color-primary)' : 'var(--color-text)'));
-    const gC = (R.campagne || {}), gT = (R.temoin || {});
-    const base = (gC.ref || {});
-    common.mesIndics = [
-      { nom: 'Trafic', detail: 'tickets / jour', src: 'caisse — par magasin, par jour',
-        base: base.ticketsJour == null ? '' : base.ticketsJour.toLocaleString('fr-BE'),
-        gran: 'par magasin', cible: champ('cibleTrafic', P.cibleTrafic), unite: '%' },
-      { nom: 'Panier moyen', detail: 'CA / ticket', src: 'caisse — par magasin, par jour',
-        base: base.panier == null ? '' : this.fEd(base.panier),
-        gran: 'par magasin', cible: champ('ciblePanier', P.ciblePanier), unite: '%' },
-      { nom: 'CA / jour', detail: 'trafic × panier', src: 'caisse — par magasin, par jour',
-        base: this.fE(base.caJour), gran: 'par magasin', cible: champ('cibleCa', P.cibleCa), unite: '%' },
-      { nom: 'Produits promus', detail: 'volume vendu', src: 'panel — références',
-        base: (d.produits || []).length ? (d.produits.reduce((a, p) => a + (p.ref || 0), 0)).toLocaleString('fr-BE') + ' u' : '',
-        gran: 'réseau seulement', alerte: true, cible: champ('ciblePromo', P.ciblePromo), unite: '%' },
-      { nom: 'Abonnés Facebook', detail: 'relevé manuel', src: 'saisie — 2 champs',
-        base: (d.fb || {}).avant == null ? '' : d.fb.avant.toLocaleString('fr-BE'),
-        gran: 'par page', cible: champ('cibleFb', P.cibleFb), unite: 'abonnés' }
-    ];
-    common.mesCout = champ('cout', P.cout, true);
-    common.mesMarge = champ('margePct', P.margePct == null ? 63 : P.margePct, true);
-    common.mesProduitsTxt = champ('produits', P.produits, true);
-    common.mesGele = P.geleLe ? ('gelée le ' + String(P.geleLe).slice(0, 16).replace('T', ' ')) : '';
-    common.mesGeler = () => this.api('POST', '/marketing/mesure/' + camp.id + '/gel', {})
-      .then(() => this.mesCharge(true));
-    common.mesDegeler = () => this.api('POST', '/marketing/mesure/' + camp.id + '/gel', { annuler: 1 })
-      .then(() => this.mesCharge(true));
-
-    // Relevé Facebook — deux nombres par page, saisis à la main.
-    common.mesFbLignes = ((d.fb || {}).lignes || []).map(l => ({
-      nom: l.nom, shopId: l.shopId,
-      avant: { val: l.avant == null ? '' : String(l.avant),
-        set: e => { const v = e.target.value;
-          this.autoEnreg('fbA' + camp.id + l.shopId, () => this.mesReleve(camp.id, l.shopId, 'avant', v).then(ok => { if (ok) this.mesCharge(true); return ok; })); } },
-      apres: { val: l.apres == null ? '' : String(l.apres),
-        set: e => { const v = e.target.value;
-          this.autoEnreg('fbP' + camp.id + l.shopId, () => this.mesReleve(camp.id, l.shopId, 'apres', v).then(ok => { if (ok) this.mesCharge(true); return ok; })); } },
-      delta: l.delta == null ? '' : (l.delta >= 0 ? '+' : '−') + Math.abs(l.delta).toLocaleString('fr-BE'),
-      deltaCol: col(l.delta)
-    }));
-
-    // ── vue B : résultats
-    const V = R.verdict || {};
-    common.mesVerdict = { niveau: V.niveau || 'insuffisant', txt: V.txt || '',
-      libelle: { probant: 'Effet probant', indicatif: 'Indicatif', negatif: 'Effet négatif', insuffisant: 'Pas encore mesurable' }[V.niveau || 'insuffisant'],
-      valeur: R.netCa == null ? '' : pt(R.netCa),
-      st: V.niveau === 'probant' ? 'background:#E6F2E9;color:#2d7a3e'
-        : V.niveau === 'negatif' ? 'background:#F7E4E6;color:var(--color-primary)'
-        : V.niveau === 'indicatif' ? 'background:#FBEFE0;color:#C17A2A' : 'background:#EDEAE5;color:var(--color-text-muted)' };
-    const tuile = (nom, val, avant, dv, tv, nv, note) => ({ nom, val,
-      avant: avant, d: pct(dv), dCol: col(dv),
-      temoin: tv == null ? '' : 'témoin ' + pct(tv), net: nv == null ? '' : 'net ' + pt(nv),
-      netCol: col(nv), note: note || '' });
-    const camp2 = gC.camp || {}, ref2 = gC.ref || {};
-    common.mesTuiles = [
-      tuile('Trafic — tickets / jour', camp2.ticketsJour == null ? '' : camp2.ticketsJour.toLocaleString('fr-BE'),
-        ref2.ticketsJour == null ? '' : 'avant ' + ref2.ticketsJour.toLocaleString('fr-BE'),
-        R.dTrafic, R.tTrafic, R.netTrafic),
-      tuile('Panier moyen', this.fEd(camp2.panier), 'avant ' + this.fEd(ref2.panier), R.dPanier, R.tPanier, R.netPanier,
-        (R.netTrafic > 0 && R.netPanier < 0) ? 'la promo attire, mais dilue le ticket' : ''),
-      tuile('CA / jour', this.fE(camp2.caJour), 'avant ' + this.fE(ref2.caJour), R.dCa, R.tCa, R.netCa,
-        R.euros == null ? '' : 'soit ' + (R.euros >= 0 ? '+' : '−') + this.fE(Math.abs(R.euros)) + ' sur la période'),
-      tuile('Produits promus — volume',
-        (d.produits || []).length ? (d.produits.reduce((a, p) => a + (p.camp || 0), 0)).toLocaleString('fr-BE') + ' u' : '',
-        (d.produits || []).length ? 'avant ' + (d.produits.reduce((a, p) => a + (p.ref || 0), 0)).toLocaleString('fr-BE') + ' u' : '',
-        null, null, null, 'réseau — pas de détail magasin'),
-      tuile('Abonnés Facebook', (d.fb || {}).apres == null ? '' : d.fb.apres.toLocaleString('fr-BE'),
-        (d.fb || {}).avant == null ? 'relevé « avant » manquant' : 'avant ' + d.fb.avant.toLocaleString('fr-BE'),
-        null, null, null,
-        (d.fb || {}).delta == null ? '' : ((d.fb.delta >= 0 ? '+' : '−') + Math.abs(d.fb.delta) + ' abonnés'))
-    ];
-
-    // La courbe : indice 100 = moyenne de la fenêtre de référence, pour que
-    // deux groupes de tailles différentes se lisent sur la même échelle.
-    const S2 = d.serie || [];
-    const W = 1120, H = 190, PB = 26, PT = 8;
-    const vals = S2.map(p => p.campIdx).concat(S2.map(p => p.temoinIdx)).filter(v => v != null);
-    const hi = vals.length ? Math.max.apply(null, vals) : 0;
-    const lo = vals.length ? Math.min.apply(null, vals) : 0;
-    const max = hi * 1.06, min = Math.max(0, lo * 0.94);
-    const px = i => (S2.length < 2 ? 0 : (i * (W - 12) / (S2.length - 1)) + 6).toFixed(1);
-    const py = v => (PT + (H - PB - PT) * (1 - (v - min) / ((max - min) || 1))).toFixed(1);
-    const trace = cle => {
-      let dd = '', ouvert = false;
-      S2.forEach((p, i) => {
-        if (p[cle] == null) { ouvert = false; return; }
-        dd += (ouvert ? ' L' : ' M') + px(i) + ' ' + py(p[cle]); ouvert = true;
-      });
-      return dd.trim();
-    };
-    const bande = phase => {
-      const idx = S2.map((p, i) => p.phase === phase ? i : -1).filter(i => i >= 0);
-      if (!idx.length) return null;
-      const a = +px(idx[0]), b2 = +px(idx[idx.length - 1]);
-      return { x: a.toFixed(1), w: Math.max(1, b2 - a).toFixed(1), milieu: ((a + b2) / 2).toFixed(0) };
-    };
-    common.mesCourbe = { W, H, base: (H - PB).toFixed(1),
-      vide: !vals.length,
-      camp: trace('campIdx'), temoin: trace('temoinIdx'),
-      hautBande: (H - PB - PT).toFixed(1), yBande: PT,
-      bandes: [
-        Object.assign({ nom: 'AVANT-RÉFÉRENCE', fill: 'rgba(34,34,34,0.03)', col: 'var(--color-text-muted)' }, bande('pre') || {}),
-        Object.assign({ nom: 'RÉFÉRENCE', fill: 'rgba(34,34,34,0.06)', col: 'var(--color-text-muted)' }, bande('ref') || {}),
-        Object.assign({ nom: 'CAMPAGNE', fill: 'rgba(141,29,44,0.07)', col: 'var(--color-primary)' }, bande('camp') || {}),
-        Object.assign({ nom: 'RÉMANENCE', fill: 'rgba(201,162,39,0.13)', col: '#8a6d12' }, bande('rem') || {})
-      ].filter(b3 => b3.x != null),
-      cent: py(100) };
-
-    common.mesLignes = (d.lignes || []).map(l => ({
-      nom: l.nom,
-      trafAv: l.ref.ticketsJour == null ? '' : l.ref.ticketsJour.toLocaleString('fr-BE') + ' /j',
-      trafPd: l.camp.ticketsJour == null ? '' : l.camp.ticketsJour.toLocaleString('fr-BE') + ' /j',
-      dTraf: pct(l.dTrafic), dTrafCol: col(l.dTrafic),
-      dPan: pct(l.dPanier), dPanCol: col(l.dPanier),
-      net: pct(l.netCa == null ? l.dCa : l.netCa), netCol: col(l.netCa == null ? l.dCa : l.netCa),
-      euros: l.euros == null ? '' : (l.euros >= 0 ? '+' : '−') + this.fE(Math.abs(l.euros)),
-      eurosCol: col(l.euros)
-    }));
-    common.mesTemLignes = (d.temoinLignes || []).map(l => ({
-      nom: l.nom,
-      trafAv: l.ref.ticketsJour == null ? '' : l.ref.ticketsJour.toLocaleString('fr-BE') + ' /j',
-      trafPd: l.camp.ticketsJour == null ? '' : l.camp.ticketsJour.toLocaleString('fr-BE') + ' /j',
-      dTraf: pct(l.dTrafic), dPan: pct(l.dPanier), dCa: pct(l.dCa)
-    }));
-    common.mesRenta = {
-      euros: R.euros == null ? '' : (R.euros >= 0 ? '+' : '−') + this.fE(Math.abs(R.euros)),
-      marge: R.marge == null ? '' : this.fE(R.marge),
-      margePct: (P.margePct == null ? 63 : P.margePct).toString().replace('.', ',') + ' %',
-      cout: R.cout == null ? '' : this.fE(R.cout),
-      gain: R.gain == null ? '' : (R.gain >= 0 ? '+' : '−') + this.fE(Math.abs(R.gain)),
-      gainCol: col(R.gain),
-      retour: R.retour == null ? '' : R.retour.toFixed(2).replace('.', ',') + ' ×',
-      manque: R.cout == null ? 'coût de la campagne à saisir dans le paramétrage' : ''
-    };
-    common.mesRemanence = { pct: pct(R.remanence), col: col(R.remanence),
-      dispo: !!F.rem.dispo,
-      txt: !F.rem.dispo ? ('à lire à partir du ' + jf(F.rem.du))
-        : (R.remanence == null ? 'pas encore de données'
-          : (R.remanence < -0.5 ? 'le trafic est retombé sous la base : une partie des achats a été avancée, pas créée'
-            : 'le niveau tient après la campagne')) };
-    common.mesBruit = R.bruit == null ? '' : ('variation habituelle mesurée sur la période précédente : '
-      + Math.abs(R.bruit).toFixed(1).replace('.', ',') + ' pt');
-
-    // ── vue C : produits promus
-    common.mesProduitsNote = d.produitsNote || '';
-    const pj = v => v == null ? '' : v.toLocaleString('fr-BE');
-    const maxQ = Math.max.apply(null, [1].concat((d.produits || []).map(p => Math.max(p.refJour || 0, p.campJour || 0))));
-    common.mesProduits = (d.produits || []).map(p => {
-      const rep = p.reponse;
-      const score = rep == null ? { t: '', st: 'background:#EDEAE5;color:var(--color-text-muted)' }
-        : rep >= 25 ? { t: 'A — répond fort', st: 'background:#E6F2E9;color:#2d7a3e' }
-        : rep >= 10 ? { t: 'B — répond', st: 'background:#E6F2E9;color:#2d7a3e' }
-        : rep >= 2 ? { t: 'C — peu sensible', st: 'background:#FBEFE0;color:#C17A2A' }
-        : { t: 'D — insensible', st: 'background:#F7E4E6;color:var(--color-primary)' };
-      if (rep != null && p.remanence != null && p.remanence < -8 && rep > 0) {
-        score.t = 'C — vend d’avance'; score.st = 'background:#FBEFE0;color:#C17A2A';
-      }
-      return { sku: p.sku, nom: p.nom, categorie: p.categorie, source: p.source,
-        ref: pj(p.ref), camp: pj(p.camp), rem: pj(p.rem), n1: pj(p.n1),
-        refJour: p.refJour == null ? '' : p.refJour.toLocaleString('fr-BE'),
-        campJour: p.campJour == null ? '' : p.campJour.toLocaleString('fr-BE'),
-        reponse: pct(rep), reponseCol: col(rep),
-        n1Var: pct(p.n1Var), remanence: pct(p.remanence), remanenceCol: col(p.remanence),
-        score,
-        hRef: Math.round(100 * (p.refJour || 0) / maxQ),
-        hCamp: Math.round(100 * (p.campJour || 0) / maxQ),
-        connu: !!p.connu };
-    });
-  }
-
-  bxcCharge(force){
-    const cle = (this.state.bxcExo || this.exo()) + ':' + (this.state.bxcCamp || 0);
-    if (this._bxcEnCours === cle) { return; }
-    if (!force && this.state.bxc && this.state.bxc.cle === cle) { return; }
-    this._bxcEnCours = cle;
-    this.setState({ bxc: { cle, chargement: true, d: (this.state.bxc || {}).d || null } });
-    readOne('/marketing/budget-campagnes?exercice=' + (this.state.bxcExo || this.exo())
-      + (this.state.bxcCamp ? '&campagne=' + this.state.bxcCamp : ''))
-      .then(d => { this._bxcEnCours = null; this.setState({ bxc: { cle, chargement: false, d: d || null } }); })
-      .catch(() => { this._bxcEnCours = null; this.setState({ bxc: { cle, chargement: false, d: null } }); });
-  }
-
   rapCharge(force){
     if (this._rapEnCours) return;
     if (!force && this.state.rapGen) return;
@@ -4659,14 +3954,6 @@ class App {
       .then(d => { this._exRentEnCours = null;
         this.setState(s => (s.exRent && s.exRent.per === per)
           ? { exRent: { per, chargement: false, d: d || null } } : {}); });
-  }
-  /** Ouvre le détail d'un magasin : lecture ponctuelle, hors chargement initial. */
-  exOpen(id, nom){
-    const per = this.state.exPeriode || 'mois';
-    this.setState({ exDetail: { id, nom, per, chargement: true, d: null } });
-    readOne('/exploitation/magasin?id=' + encodeURIComponent(id) + '&periode=' + per)
-      .then(d => this.setState(s => (s.exDetail && s.exDetail.id === id)
-        ? { exDetail: Object.assign({}, s.exDetail, { chargement: false, d: d || null }) } : {}));
   }
   /**
    * Catalogue, assortiment et planogramme : trois lectures d'une même liste.
@@ -4757,10 +4044,10 @@ class App {
 
     common.refLignes = lignes.slice(0, 400).map(p => ({
       ref: String(p.ref), nom: p.nom, categorie: p.categorie || '',
-      // Voir aussi : la même référence dans le scoring, dans « où ça se vend », au comptoir.
+      // Voir aussi : la même référence dans le scoring, dans « par référence », au comptoir — des onglets du Catalogue (18/10/2026).
       voir: [
-        { nom: 'gamme', titre: 'Son score et sa décision', go: () => this.setState({ screen: 'produits', pdQ: String(p.nom || p.ref), pdDec: '' }) },
-        { nom: 'où ça se vend', titre: 'Sa jauge magasin par magasin', go: () => this.setState({ screen: 'anaprod', apQ: String(p.nom || p.ref), apFiche: null }) },
+        { nom: 'scoring', titre: 'Son score et sa décision', go: () => this.setState({ screen: 'produits', pdQ: String(p.nom || p.ref), pdDec: '' }) },
+        { nom: 'par référence', titre: 'Sa jauge magasin par magasin', go: () => this.setState({ screen: 'anaprod', apQ: String(p.nom || p.ref), apFiche: null }) },
         { nom: p.zone ? 'comptoir' : 'placer', titre: p.zone ? 'Sa place au comptoir' : 'Pas encore placée : la poser sur le comptoir standard', go: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(p.nom || p.ref), psLibres: false, psSel: null }) }],
       groupe: p.groupe || '',
       gamme: (p.periods || []).length ? (p.periods.length > 1 ? p.periods.length + ' gammes' : p.periods[0]) : '',
@@ -4787,7 +4074,7 @@ class App {
       scoreSt: (() => { const s = scores && scores[String(p.ref)];
         if (!s || !common.refVerdict) { return 'color:var(--color-text-muted)'; }
         const v = common.refVerdict(s.score);
-        return 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:500;'
+        return 'display:inline-block;padding:2px 9px;border-radius:8px;font-size:11.5px;font-weight:500;'
           + 'background:' + v[2] + ';color:' + v[1];
       })(),
       must: !!p.must, qmin: p.qmin || 0,
@@ -4829,6 +4116,314 @@ class App {
     common.refEchelle = this.paliersMarge();
     common.refSansMarge = cat.filter(p => p.margePct == null).length;
     return common;
+  }
+  /**
+   * Le Catalogue (18/10/2026, maquette « A + D » choisie par Sam : « plus concis, le moins redondant possible »). Quatre
+   * questions en tête, une seule liste, une seule fiche — à la place de neuf onglets qui montraient plusieurs fois la même
+   * chose (le score trois fois, le volume par magasin cinq fois, ce qu'un magasin ne vend pas trois fois). Chaque chiffre
+   * a UNE source : le score et la décision de pdCalcule (le même calcul que partout), la marge nette après commission du
+   * catalogue, le manque à gagner de /produits/manque, le prix encaissé de /analyse/prix-volume, la tendance de
+   * /analyse/produits. La fiche garde toutes les écritures d'avant : fiche de production, revue ★, nécessaire, détail du
+   * score (projets, arrêt du produit), perte par magasin ; les seuils et les PDF sont dans la barre d'outils.
+   */
+  catCharge(){ this.manqueCharge(); this.pxvCharge(false); this.apCharge(false); this.aoSaisonsCharge(); }
+  valsCatalogue(common){
+    const S = this.state, D = this.D;
+    const c2 = this.pdCalcule(), SC = this.scoringCfg();
+    const cat = D.prodCatalogue || [];
+    const catDe = new Map(cat.map(p => [String(p.ref), p]));
+    const eur = v => v == null ? '—' : (+v).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const eur0 = v => v == null ? '—' : Math.round(v).toLocaleString('fr-BE') + ' €';
+    const pct = v => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(Math.round(v)) + ' %';
+    const nb = v => Math.round(v || 0).toLocaleString('fr-BE');
+    const court = n2 => String(n2 || '').split(' - ').pop().trim();
+    // --- les sources des questions, lues en tâche de fond (null = pas encore lu, false = illisible)
+    const pxv = (D.pxv || {})[S.pxMois || 1];
+    const pxOk = pxv && !pxv.indispo && Array.isArray(pxv.refs);
+    const pxDe = new Map(); if (pxOk) { pxv.refs.forEach(r => pxDe.set(String(r.pid), r)); }
+    const moisMq = S.mqMois || 6;
+    const mq = (this._manque || {})[moisMq + '|' + (S.mqGroupe || '')];
+    const mqOk = mq && !mq.motif && mq.reseau;
+    const mqDe = new Map(); if (mq) { (mq.references || []).forEach(r => mqDe.set(String(r.ref), r)); }
+    const ap = (D.aprod || {})[S.apMois || 3];
+    const apOk = ap && !ap.indispo && Array.isArray(ap.produits);
+    const apDe = new Map(); if (apOk) { ap.produits.forEach(p => apDe.set(String(p.pid), p)); }
+    const nT = apOk ? (ap.tranches || []).length : 0;
+    const joursAp = apOk && Array.isArray(ap.jours) && ap.jours.length === nT ? ap.jours : Array(nT).fill(ap && ap.pas === 'semaine' ? 7 : 30);
+    // La série réseau d'une référence, en pièces par jour, tranche par tranche.
+    const serieDe = pid => { const p = apDe.get(String(pid)); if (!p) { return null; }
+      return Array.from({ length: nT }, (_, i) => Object.values(p.parShop || {}).reduce((a, s) => a + ((s || [])[i] || 0), 0) / Math.max(1, joursAp[i])); };
+    // La tendance : la moyenne par jour de la seconde moitié de la période face à la première (réseau entier). Sous 30
+    // pièces sur la période, pas de tendance : quelques pièces ne font pas une pente.
+    const tendDe = pid => {
+      const p = apDe.get(String(pid)); const s = serieDe(pid);
+      if (!p || !s || nT < 4 || (p.total || 0) < 30) { return null; }
+      const h = Math.floor(nT / 2), m = arr => arr.reduce((a, v) => a + v, 0) / Math.max(1, arr.length);
+      const avant = m(s.slice(0, h)), apres = m(s.slice(nT - h));
+      return avant > 0 ? 100 * (apres / avant - 1) : null;
+    };
+    // La part de chaque référence dans les ventes du réseau (18/10/2026, demande de Sam) : son chiffre ÷ celui de toutes.
+    const caTot = (c2.base || []).reduce((a, x) => a + (x.ca || 0), 0);
+    const decCle = s => s.necessaire ? 'garder' : (Math.round(s.score) > SC.garder ? 'garder' : (Math.round(s.score) >= SC.modifier ? 'modifier' : 'effacer'));
+    // --- une ligne par référence : celles qui ont un score, puis celles du catalogue sans vente sur la période
+    const ligne = (k, s, p) => {
+      const pid = p && p.pwaId != null ? String(p.pwaId) : null;
+      const px = pid ? pxDe.get(pid) : null, mqr = mqDe.get(k) || null;
+      return { k, s, p, pid, nom: (s && s.nom) || (p && p.nom) || k, catNom: (p && p.categorie) || (s && s.cat) || '',
+        prix: s && s.prix != null ? s.prix : (p ? p.prix : null),
+        // La marge nette (18/10/2026, définition de Sam) : (prix de vente moyen − coût matière première) ÷ prix de vente
+        // moyen — celle du score (pdCalcule, `mp`). Sans vente sur la période, pas de prix moyen : pas de marge.
+        mnPct: s && s.mp != null ? s.mp * 100 : null,
+        vol: s ? s.vol || 0 : 0, part: s && caTot > 0 ? 100 * (s.ca || 0) / caTot : null, score: s ? s.score : null, dec: s ? decCle(s) : null,
+        mags: s ? s.mags || 0 : 0, sansVente: !s || !!s.sansVente,
+        tend: pid ? tendDe(pid) : null, px, mq: mqr, mqMois: mqr ? mqr.eur / moisMq : null,
+        // Le rang (18/10/2026) : celui du score, au chiffre d'affaires — sur toute la gamme, et dans sa catégorie.
+        rangG: s && !s.sansVente ? s.rangGlobal : null, rangC: s && !s.sansVente ? s.rang : null, nbC: s ? s.nbCat : null,
+        // Les saisons du panel (gammes saisonnières, /production/saisons) ; `saisonnier` : dans aucune gamme permanente.
+        saisons: p && Array.isArray(p.saisons) ? p.saisons.map(String) : [], saisonnier: !!(p && p.saisonnier) };
+    };
+    const vus = new Set(), L = [];
+    (c2.base || []).forEach(s => { const k = String(s.id); vus.add(k); L.push(ligne(k, s, catDe.get(k))); });
+    cat.forEach(p => { const k = String(p.ref); if (!vus.has(k)) { vus.add(k); L.push(ligne(k, null, p)); } });
+
+    // --- les quatre questions
+    const vue = ['retirer', 'manque', 'prix', 'baisse'].includes(S.catVue) ? S.catVue : 'tout';
+    const effacer = L.filter(l => l.dec === 'effacer'), sansV = effacer.filter(l => l.sansVente).length;
+    const prixEcart = L.filter(l => l.px && l.px.ecart >= 10);
+    const baisse = L.filter(l => l.tend != null && l.tend <= -15);
+    const lu = (ok, src) => ok ? null : (src === undefined || src === null ? 'lecture…' : 'indisponible');
+    common.catTuiles = [
+      { k: 'retirer', q: 'Que retirer de la gamme ?', v: effacer.length + ' référence' + (effacer.length > 1 ? 's' : ''), cls: effacer.length ? 'ko' : 'ok',
+        s: 'décision « Effacer » : score sous ' + Math.round(SC.modifier) + (sansV ? ' · dont ' + sansV + ' sans vente' : '') },
+      { k: 'manque', q: 'Où vend-on moins que le réseau ?', v: lu(mqOk, mq) || eur0(mq.reseau.parMois) + '/mois', cls: '',
+        s: mqOk ? 'manque à gagner : ' + nb(mq.reseau.refs) + ' références absentes quelque part · ' + moisMq + ' mois' : ((mq && mq.motif) || 'les références que d’autres magasins vendent') },
+      { k: 'prix', q: 'Les prix sont-ils tenus ?', v: lu(pxOk, pxv) || prixEcart.length + ' écart' + (prixEcart.length > 1 ? 's' : ''), cls: prixEcart.length ? 'am' : 'ok',
+        s: pxOk ? 'prix encaissé : 10 % ou plus entre magasins · ' + (pxv.periode || '') : 'le prix encaissé de chaque magasin' },
+      { k: 'baisse', q: 'Qu’est-ce qui décroche ?', v: lu(apOk, ap) || baisse.length + ' en baisse', cls: baisse.length ? 'ko' : 'ok',
+        s: apOk ? '−15 % ou pire : les ' + (S.apMois || 3) + ' derniers mois, la 2e moitié face à la 1re' : 'la tendance de chaque référence' },
+    ].map(t => Object.assign(t, { on: vue === t.k, choisir: () => this.setState({ catVue: vue === t.k ? 'tout' : t.k, catFiche: null, catTri: null }) }));
+    common.catVue = vue;
+    // La lecture détaillée de la question choisie : un lien, pas un onglet.
+    common.catLienVue = { manque: ['Le manque à gagner, magasin par magasin ›', 'manque'], prix: ['Le prix encaissé, magasin par magasin ›', 'prixvolume'],
+      baisse: ['Groupes et catégories dans le temps, face à l’an dernier ›', 'analyse'] }[vue] || null;
+    if (common.catLienVue) { const ecr = common.catLienVue[1]; common.catLienVue = { txt: common.catLienVue[0], go: () => this.setState({ screen: ecr, catFiche: null }) }; }
+
+    // --- filtres, tri, colonnes
+    const q = (S.catQ || '').trim().toLowerCase();
+    const cats = [...new Set(L.map(l => l.catNom).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+    const catSel = cats.includes(S.catCat) ? S.catCat : '';
+    common.catQ = S.catQ || '';
+    common.catPoserQ = e => this.setState({ catQ: e.target.value });
+    common.catCats = [{ v: '', lib: 'Toutes les catégories', on: !catSel }].concat(cats.map(c3 => ({ v: c3, lib: c3, on: c3 === catSel })));
+    // La catégorie choisie vaut aussi pour le PDF de la catégorie (le même menu que l'ancien écran de scoring).
+    common.catPoserCat = e => this.setState({ catCat: e.target.value, pdCat: e.target.value || 'Toutes les catégories' });
+    // Les saisons du panel : leurs noms (emoji compris), et le filtre « une saison » ou « hors saison ».
+    const sais = (((D.prodSaisons || {}).saisons) || []).map(g => ({ id: String(g.id), nom: ((g.emoji ? g.emoji + ' ' : '') + (g.nom || '')).trim() }));
+    const nomSais = new Map(sais.map(g => [g.id, g.nom]));
+    L.forEach(l => { l.saisonsTxt = l.saisons.map(id => nomSais.get(id)).filter(Boolean).join(', '); });
+    const saisSel = S.catSaison === 'hors' || sais.some(g => g.id === S.catSaison) ? S.catSaison : '';
+    common.catSaisons = [{ v: '', lib: 'Toutes les saisons', on: !saisSel }, { v: 'hors', lib: 'Hors saison (toute l’année)', on: saisSel === 'hors' }]
+      .concat(sais.map(g => ({ v: g.id, lib: g.nom, on: g.id === saisSel })));
+    common.catPoserSaison = e => this.setState({ catSaison: e.target.value });
+    let F = L.filter(l => (!catSel || l.catNom === catSel) && (!q || l.nom.toLowerCase().includes(q) || l.k.includes(q))
+      && (!saisSel || (saisSel === 'hors' ? !l.saisons.length : l.saisons.includes(saisSel))));
+    if (vue === 'retirer') { F = F.filter(l => l.dec === 'effacer').sort((a, b) => (a.score || 0) - (b.score || 0)); }
+    else if (vue === 'manque') { F = F.filter(l => l.mq).sort((a, b) => b.mq.eur - a.mq.eur); }
+    else if (vue === 'prix') { F = F.filter(l => l.px && l.px.ecart >= 10).sort((a, b) => b.px.ecart - a.px.ecart); }
+    else if (vue === 'baisse') { F = F.filter(l => l.tend != null && l.tend <= -15).sort((a, b) => a.tend - b.tend); }
+    else { F.sort((a, b) => (b.score == null ? -1 : b.score) - (a.score == null ? -1 : a.score) || a.nom.localeCompare(b.nom, 'fr')); }
+    // Le tri d'une colonne (18/10/2026) : la flèche de l'en-tête — un clic trie, un second inverse ; une question le remet
+    // à son ordre. Les cases vides restent en bas, dans les deux sens.
+    const TRI = { nom: [l => l.nom.toLowerCase(), 1], saison: [l => l.saisonsTxt || null, 1], prix: [l => l.prix, -1], mn: [l => l.mnPct, -1],
+      vol: [l => l.sansVente ? null : l.vol, -1], part: [l => l.sansVente ? null : l.part, -1], rang: [l => l.rangG, 1], rangCat: [l => l.rangC == null ? null : l.rangC + (l.rangG || 0) / 1e6, 1], score: [l => l.score, -1],
+      mags: [l => l.s ? l.mags : null, -1], tend: [l => l.tend, -1], extra: [l => vue === 'manque' ? l.mqMois : (l.px ? l.px.ecart : null), -1],
+      dec: [l => l.dec ? { garder: 0, modifier: 1, effacer: 2 }[l.dec] : null, 1], oblig: [l => l.p ? (l.p.must ? 0 : 1) : null, 1] };
+    const tri = S.catTri && TRI[S.catTri.col] ? S.catTri : null;
+    if (tri) {
+      const [cle, sens0] = TRI[tri.col], sens = tri.inv ? -sens0 : sens0;
+      F.sort((a, b) => { const va = cle(a), vb = cle(b);
+        if (va == null || va === '') { return vb == null || vb === '' ? 0 : 1; } if (vb == null || vb === '') { return -1; }
+        return (typeof va === 'string' ? va.localeCompare(vb, 'fr') : va - vb) * sens; });
+    }
+    const colonne = (k, lib, titre, num) => ({ k, lib, titre: titre || '', num: !!num,
+      fleche: tri && tri.col === k ? ((TRI[k][1] === 1) !== !!tri.inv ? '▲' : '▼') : '↕', on: !!(tri && tri.col === k),
+      trier: () => this.setState({ catTri: tri && tri.col === k ? { col: k, inv: !tri.inv } : { col: k, inv: false } }) });
+    common.catCols = [colonne('nom', 'Référence'), colonne('saison', 'Saison', 'La gamme saisonnière du panel où elle est vendue'),
+      colonne('prix', 'Prix', 'Prix de vente moyen encaissé', true), colonne('mn', 'Marge nette', '(prix de vente moyen − coût matière première) ÷ prix de vente moyen', true),
+      colonne('vol', 'Volume', c2.periode, true), colonne('part', 'Part des ventes', 'Sa part du chiffre d’affaires de toutes les références du réseau, sur la période', true),
+      colonne('rang', 'Rang', 'Au chiffre d’affaires, sur toute la gamme', true),
+      colonne('rangCat', 'Rang catégorie', 'Au chiffre d’affaires, dans sa catégorie', true),
+      colonne('score', 'Score', 'Le score du réseau : volume, marge, perte, comptoir, revue', true), colonne('mags', 'Magasins', 'Magasins qui l’ont vendue sur la période', true),
+      colonne('tend', 'Tendance', 'La 2e moitié de la période face à la 1re, réseau entier', true)]
+      .concat(vue === 'manque' || vue === 'prix' ? [colonne('extra', vue === 'manque' ? 'Manque / mois' : 'Prix min – max', '', true)] : [])
+      .concat([colonne('dec', 'Décision'), colonne('oblig', 'Obligatoire', 'Imposée en boutique (l’assortiment) et gardée au score — un clic suffit')]);
+    common.catCompte = F.length + ' / ' + L.length + ' références';
+    // Remettre tous les filtres d'un clic (18/10/2026) : recherche, catégorie, saison, question, tri.
+    common.catFiltre = !!(q || catSel || saisSel || vue !== 'tout' || tri);
+    common.catReinit = () => this.setState({ catQ: '', catCat: '', pdCat: 'Toutes les catégories', catSaison: '', catVue: 'tout', catTri: null, catFiche: null });
+    common.catColExtra = vue === 'manque' ? 'Manque / mois' : (vue === 'prix' ? 'Prix min – max' : '');
+    common.catPeriode = c2.periode || '';
+    common.catFenetres = [['mois', 'Mois clos'], ['trimestre', 'Trimestre'], ['annee', '12 mois']]
+      .map(f => ({ nom: f[1], on: (S.pdFenetre || 'mois') === f[0], choisir: () => this.pdChoisirFenetre(f[0]) }));
+    const DEC = { garder: ['Garder', 'ok'], modifier: ['Modifier', 'a'], effacer: ['Effacer', 'ko'] };
+    const nbOuv = c2.nbOuv || 1;
+    // Obligatoire ou pas, d'un geste (18/10/2026) : l'interrupteur de la ligne et la case de la fiche écrivent l'assortiment
+    // (toute l'année, le minimum gardé) ; retirer une obligatoire se confirme.
+    const basculerOblig = (p, nom) => () => {
+      const on = !p.must;
+      if (!on && !window.confirm('Retirer « ' + nom + ' » de l’assortiment obligatoire ?' + (p.saison != null ? ' Elle l’est pendant une saison.' : ''))) { this.setState({}); return; }
+      this.aoPoser(String(p.ref), on ? { must: true, saison: null, qmin: p.qmin || 0 } : { must: false },
+        '« ' + nom + ' » ' + (on ? 'obligatoire toute l’année' : 'retirée de l’assortiment obligatoire'));
+    };
+    // Le 20/80 à imprimer (18/10/2026) : les références qui font ensemble 80 % du chiffre du réseau sur la période du score,
+    // la plus grosse d'abord, et pour elles le prix encaissé et les pièces de chaque magasin — /analyse/prix-volume sur la
+    // même étendue (mois clos, trimestre, 12 mois) ; puis le 20/80 de chaque catégorie et l'assortiment proposé. Le serveur
+    // met en page (POST /products/pareto.pdf).
+    common.catPareto = () => {
+      const mPx = { mois: 1, trimestre: 3, annee: 12 }[S.pdFenetre || 'mois'] || 1;
+      const vendues = L.filter(l => l.s && !l.sansVente && (l.s.ca || 0) > 0).sort((a, b) => b.s.ca - a.s.ca);
+      const caT = vendues.reduce((a, l) => a + l.s.ca, 0), n = vendues.length;
+      if (!caT) { this.notify('Aucune vente sur la période : rien à imprimer.'); return; }
+      const top = []; let cum = 0;
+      for (const l of vendues) { top.push(l); cum += l.s.ca; if (cum >= 0.8 * caT) { break; } }
+      let c3 = 0; const cumuls = vendues.map(l => (c3 += l.s.ca) / caT * 100);
+      const courbe = Array.from({ length: 101 }, (_, k) => { const i = Math.round(k / 100 * n) - 1; return i < 0 ? 0 : Math.round(cumuls[Math.min(n - 1, i)] * 10) / 10; });
+      // Toute la gamme (18/10/2026, demande de Sam) : le serveur en tire le 20/80 de chaque catégorie et l'assortiment
+      // proposé — le 20/80 de la catégorie, 6 classiques au score de la période, 2 saisonnières par saison au score des
+      // 12 derniers mois (`an` : leur saison y est, quelle que soit la période de l'écran).
+      const gamme = an => { const de = new Map(((an && an.base) || []).map(x => [String(x.id), x]));
+        return L.map(l => { const y = de.get(l.k), vend = y && !y.sansVente && (y.ca || 0) > 0;
+          return { k: l.k, nom: l.nom, cat: l.catNom || '', ca: l.s && !l.sansVente ? Math.round(l.s.ca || 0) : 0, mn: l.mnPct == null ? null : Math.round(l.mnPct),
+            score: l.score == null ? null : Math.round(l.score * 10) / 10, decision: l.dec ? DEC[l.dec][0] : '', oblig: !!(l.p && l.p.must),
+            saisonnier: !!l.saisonnier, saisons: l.saisons, scoreAn: vend ? Math.round(y.score * 10) / 10 : null, caAn: vend ? Math.round(y.ca) : 0 }; }); };
+      const saisons = (((D.prodSaisons || {}).saisons) || []).map(g => ({ id: String(g.id), nom: ((g.emoji ? g.emoji + ' ' : '') + (g.nom || '')).trim(),
+        du: g.fenetre ? g.fenetre.du : null, au: g.fenetre ? g.fenetre.au : null }));
+      const douzeMois = () => (S.pdFenetre || 'mois') === 'annee' ? Promise.resolve(c2)
+        : (this._pdAnnee && Date.now() - this._pdAnnee.le < 3600000 ? Promise.resolve(this._pdAnnee.c)
+          : readOne('/products/scoring?fenetre=annee').then(d => { if (!Array.isArray(d)) { return null; } const c = this.pdCalcule(d); this._pdAnnee = { le: Date.now(), c }; return c; }).catch(() => null));
+      const envoyer = (px, an) => {
+        const refs = new Map(((px && px.refs) || []).map(r => [String(r.pid), r]));
+        const corps = { periode: c2.periode || '', periodePrix: px && px.periode ? px.periode : '', seuil: 80, caTotal: caT, totalRefs: n, courbe,
+          refs: gamme(an), saisons, saisonsLues: !!an, classiques: 6, parSaison: 2,
+          magasins: ((px && px.magasins) || []).map(m => ({ id: String(m.id), nom: m.court || court(m.nom) })),
+          lignes: top.map(l => { const r = l.pid ? refs.get(String(l.pid)) : null;
+            return { nom: l.nom, cat: l.catNom, ca: Math.round(l.s.ca), vol: Math.round(l.vol), prix: l.prix, mn: l.mnPct == null ? null : Math.round(l.mnPct),
+              score: l.score == null ? null : Math.round(l.score), decision: l.dec ? DEC[l.dec][0] : '', oblig: !!(l.p && l.p.must),
+              med: r ? r.med : null, ecart: r ? r.ecart : null, mag: r ? r.mag : {} }; }) };
+        fetch(this.apiBase() + '/products/pareto.pdf', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(corps) })
+          .then(r => { if (!r.ok) { return r.json().catch(() => ({})).then(j => { throw new Error(j.error || ('HTTP ' + r.status)); }); } return r.blob(); })
+          .then(bl => { const u = URL.createObjectURL(bl); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); })
+          .catch(err => this.notify('PDF indisponible : ' + err.message));
+      };
+      const px0 = (D.pxv || {})[mPx];
+      const prix = px0 ? Promise.resolve(px0.indispo ? null : px0)
+        : readOne('/analyse/prix-volume?mois=' + mPx).then(d => { if (!D.pxv) { D.pxv = {}; } if (d) { D.pxv[mPx] = d; } return d && !d.indispo ? d : null; }).catch(() => null);
+      if (!px0 || ((S.pdFenetre || 'mois') !== 'annee' && !this._pdAnnee)) { this.notify('Lecture des prix par magasin et des 12 derniers mois…'); }
+      Promise.all([prix, douzeMois()]).then(([px, an]) => envoyer(px, an));
+    };
+    common.catLignes = F.slice(0, 250).map(l => ({
+      k: l.k, nom: l.nom, sous: [l.catNom, l.p && l.p.finLe ? 'fin le ' + this.fD(l.p.finLe) : '', l.sansVente ? 'sans vente' : ''].filter(Boolean).join(' · '),
+      prix: eur(l.prix), mn: l.mnPct == null ? '—' : Math.round(l.mnPct) + ' %', mnCls: l.mnPct == null ? 'mu' : (l.mnPct < 40 ? 'ko' : ''),
+      vol: l.sansVente ? '0' : nb(l.vol),
+      part: l.part == null || l.sansVente ? '—' : (l.part < 0.1 ? '< 0,1 %' : l.part.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %'), score: l.score == null ? '—' : String(Math.round(l.score)),
+      scoreCls: l.score == null ? 'mu' : (l.dec === 'garder' ? 'ok' : (l.dec === 'modifier' ? 'am' : 'ko')),
+      mags: l.s ? l.mags + '/' + nbOuv : '—', tend: pct(l.tend), tendCls: l.tend == null ? 'mu' : (l.tend >= 0 ? 'ok' : 'ko'),
+      dec: l.dec ? DEC[l.dec][0] : '', decCls: l.dec ? DEC[l.dec][1] : '',
+      rang: l.rangG == null ? '—' : l.rangG + ' / ' + (c2.base || []).length, rangCat: l.rangC == null ? '—' : l.rangC + ' / ' + l.nbC, rangCatNom: l.rangC == null ? '' : l.catNom,
+      saison: l.saisonsTxt || (l.saisons.length ? 'saison du panel' : ''), saisonSeule: l.saisonnier,
+      oblig: l.p ? !!l.p.must : null, obligSaison: !!(l.p && l.p.must && l.p.saison != null),
+      basculerOblig: l.p ? basculerOblig(l.p, l.nom) : null,
+      extra: vue === 'manque' && l.mq ? eur0(l.mqMois) + ' · absente chez ' + l.mq.nAbsente : (vue === 'prix' && l.px ? eur(l.px.min) + ' – ' + eur(l.px.max) + ' (' + Math.round(l.px.ecart) + ' %)' : ''),
+      on: S.catFiche === l.k,
+      ouvrir: () => this.setState({ catFiche: S.catFiche === l.k ? null : l.k, catOnglet: S.catOnglet || 'magasins' }) }));
+    common.catTronque = F.length > 250 ? F.length - 250 : 0;
+    common.catVide = !L.length;
+    // Les seuils de décision et les PDF : ceux de l'ancien écran de scoring (valsProduits), au même endroit pour tous.
+    common.catSeuilGarder = String(Math.round(SC.garder));
+    common.catSeuilModifier = String(Math.round(SC.modifier));
+    common.catExporter = () => {
+      const sep = ';', cel = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+      const t = [['Référence', 'Catégorie', 'Saison', 'Prix', 'Marge nette %', 'Volume', 'Part des ventes %', 'Rang', 'Rang en catégorie', 'Score', 'Magasins', 'Tendance %', 'Décision', 'Manque €/mois', 'Écart de prix %'].map(cel).join(sep)]
+        .concat(F.map(l => [l.nom, l.catNom, l.saisonsTxt || '', l.prix == null ? '' : String(l.prix).replace('.', ','), l.mnPct == null ? '' : Math.round(l.mnPct), Math.round(l.vol), l.part == null ? '' : String(Math.round(l.part * 10) / 10).replace('.', ','),
+          l.rangG == null ? '' : l.rangG, l.rangC == null ? '' : l.rangC + ' / ' + l.nbC,
+          l.score == null ? '' : Math.round(l.score), l.mags, l.tend == null ? '' : Math.round(l.tend), l.dec ? DEC[l.dec][0] : '',
+          l.mqMois == null ? '' : Math.round(l.mqMois), l.px ? Math.round(l.px.ecart) : ''].map(cel).join(sep)));
+      const bl = new Blob(['﻿' + t.join('\r\n')], { type: 'text/csv;charset=utf-8' }), u = URL.createObjectURL(bl), a = document.createElement('a');
+      a.href = u; a.download = 'catalogue.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 30000);
+    };
+
+    // --- la fiche d'une référence
+    const l = S.catFiche ? L.find(x => x.k === S.catFiche) : null;
+    if (!l) { common.catFiche = null; return; }
+    const s = l.s, p = l.p, onglet = ['magasins', 'marges', 'temps', 'fiche'].includes(S.catOnglet) ? S.catOnglet : 'magasins';
+    const mqShop = {}; ((mq && mq.magasins) || []).forEach(m => { const t = (m.top || []).find(x => String(x.ref) === l.k); if (t) { mqShop[String(m.id)] = t; } });
+    const pm = (s && s.parMagasin) || [];
+    const vols = pm.map(m => m.vol || 0).filter(v => v > 0), moyV = vols.length ? vols.reduce((a, v) => a + v, 0) / vols.length : 0;
+    const fiche = {
+      nom: l.nom, sous: [l.catNom, eur(l.prix), l.score == null ? '' : 'score ' + Math.round(l.score)].filter(Boolean).join(' · '),
+      dec: l.dec ? DEC[l.dec][0] : '', decCls: l.dec ? DEC[l.dec][1] : '',
+      fermer: () => this.setState({ catFiche: null }),
+      onglets: [['magasins', 'Magasins'], ['marges', 'Marges'], ['temps', 'Dans le temps'], ['fiche', 'Fiche']]
+        .map(([k2, n2]) => ({ nom: n2, on: onglet === k2, choisir: () => this.setState({ catOnglet: k2 }) })),
+      onglet,
+      // Les gestes d'avant, au même endroit : la revue, nécessaire, le détail du score (projets, arrêt), la fiche de production.
+      revue: s ? [1, 2, 3, 4, 5].map(n2 => ({ n: n2, pleine: s.revue != null && n2 <= s.revue, poser: () => this.pdPoserRevue(s.id, s.revue === n2 ? null : n2) })) : null,
+      // Une seule case (18/10/2026) : « Obligatoire » — imposée en boutique (l'assortiment) et gardée au score.
+      obligatoire: p ? !!p.must : null,
+      basculerObligatoire: p ? basculerOblig(p, l.nom) : null,
+      detailScore: s ? () => this.pdOpenDetail(s.id) : null,
+      ouvrirProduction: p ? () => this.refOpen(p, 'fiche') : null,
+      comptoir: () => this.setState({ screen: 'planogramme', psVue: 'plan', psQ: String(l.nom), psLibres: false, psSel: null }),
+    };
+    if (onglet === 'magasins') {
+      const ids = new Set(pm.map(m => String(m.sid)));
+      ((pxv && pxv.magasins) || []).forEach(m => ids.add(String(m.id)));
+      const nomDe = {}; pm.forEach(m => { nomDe[String(m.sid)] = court(m.nom); }); ((pxv && pxv.magasins) || []).forEach(m => { nomDe[String(m.id)] ||= m.court || court(m.nom); });
+      fiche.magasins = [...ids].map(sid => {
+        const m = pm.find(x => String(x.sid) === sid), v = m ? m.vol || 0 : 0;
+        const e = moyV > 0 && v > 0 ? 100 * (v / moyV - 1) : null;
+        const pxm = l.px && l.px.mag ? l.px.mag[sid] : null, mqm = mqShop[sid];
+        return { nom: nomDe[sid] || ('magasin ' + sid), vol: v ? nb(v) + ' pcs' : (mqm ? 'jamais vendue' : '—'), volCls: v ? '' : 'ko',
+          w: moyV > 0 && v > 0 ? Math.max(4, Math.min(100, 50 * v / moyV)) : 0, barCls: e == null ? '' : (e >= 0 ? 'ok' : 'ko'), ecart: e == null ? '' : pct(e),
+          prix: pxm && pxm.p != null ? eur(pxm.p) + (l.px.med ? ' · ' + pct(100 * (pxm.p / l.px.med - 1)) : '') : '',
+          manque: mqm ? eur0(mqm.eur / Math.max(1, mqm.mois || 1)) + '/mois' : '', v };
+      }).sort((a, b) => b.v - a.v);
+      fiche.magasinsNote = (moyV ? 'Pièces sur la période du score face à la moyenne des magasins qui la vendent' : 'Pas de volume par magasin sur cette période')
+        + (l.px ? ' · prix encaissé, face au prix réseau (' + eur(l.px.med) + ')' : '') + (Object.keys(mqShop).length ? ' · manque à gagner là où elle manque' : '') + '.';
+      fiche.versVie = l.pid ? () => { this.apChargeAd(+l.pid); this.setState({ screen: 'anaprod', apFiche: +l.pid, apQ: '', catFiche: null }); } : null;
+      fiche.versPrix = l.px ? () => this.setState({ screen: 'prixvolume', pxFiche: l.px.pid, catFiche: null }) : null;
+    } else if (onglet === 'marges') {
+      const W = c2.W, wt = W.v + W.m + W.perte + W.comptoir + W.rev || 1, w = x => Math.round(100 * x / wt) + ' %';
+      fiche.lignesMarge = [
+        ['Prix de vente moyen (encaissé)', s && s.prix != null ? eur(s.prix) : '—'], ['Prix au catalogue', p && p.prix != null ? eur(p.prix) : '—'],
+        ['Coût matière première', s && s.mu != null ? eur(s.prix - s.mu) : (p && p.mat != null ? eur(p.mat) : '—')],
+        ['Marge nette (prix moyen − matière)', s && s.mp != null ? Math.round(s.mp * 100) + ' % · ' + eur(s.mu) + ' la pièce' : '—'],
+        ['Commission de marque', p && p.commission != null ? eur(p.commission) + ' la pièce' : '—'],
+        ['Chiffre et marge sur la période', s ? eur0(s.ca) + (s.mg != null ? ' · ' + eur0(s.mg) : '') : '—'],
+      ].map(([k2, v2]) => ({ k: k2, v: v2 }));
+      fiche.criteres = s ? [['Volume vendu', s.sVol, w(W.v)], ['Marge nette (prix moyen − matière)', s.sMg, w(W.m)], ['Taux de perte', s.sPerte, w(W.perte)],
+        ['Présence au comptoir', s.sComptoir, w(W.comptoir)], ['Revue ★', s.sRev, w(W.rev)]]
+        .map(([n2, v2, p2]) => ({ nom: n2, poids: p2, note: v2 == null ? 'pas de donnée' : Math.round(v2) + ' / 100', w: v2 == null ? 0 : Math.max(2, Math.round(v2)), mu: v2 == null })) : [];
+      fiche.perte = s && s.perte != null ? this.fP(s.perte, 1) : '';
+      fiche.versPerte = s && s.perte != null ? () => this.pdOpenWaste(s.id, s.nom) : null;
+    } else if (onglet === 'temps') {
+      const se = l.pid ? serieDe(l.pid) : null;
+      if (se && se.length) {
+        const max = Math.max(...se, 0.01), W2 = 330, H2 = 90, dx = W2 / Math.max(1, se.length - 1);
+        fiche.courbe = se.map((v, i) => (i * dx).toFixed(1) + ',' + (H2 - 6 - (v / max) * (H2 - 14)).toFixed(1)).join(' ');
+        fiche.courbeMax = (Math.round(max * 10) / 10).toLocaleString('fr-BE') + ' pcs/j';
+        fiche.courbeDe = (ap.tranches || [])[0] || ''; fiche.courbeA = (ap.tranches || [])[nT - 1] || '';
+      }
+      fiche.tendance = l.tend == null ? 'pas assez de ventes pour une tendance' : pct(l.tend) + ' : la 2e moitié des ' + (S.apMois || 3) + ' derniers mois face à la 1re';
+      fiche.versAnalyse = () => this.setState({ screen: 'analyse', catFiche: null });
+    } else {
+      fiche.prod = p ? [['Obligatoire', p.must ? 'oui' + (p.qmin ? ' · ' + p.qmin + ' minimum' : '') : 'non'], ['DLV', p.dlv ? p.dlv + ' h' : '—'],
+        ['Préparation · cuisson · finition', [p.prep, p.cuisson, p.fin].map(v2 => (v2 || 0) + ' min').join(' · ')],
+        ['Batch minimum · multiple', (p.bmin || 0) + ' · ' + (p.bmult || 1)], ['Four', p.four ? String(p.four) : '—'], ['Profil de vente', p.profil || '—'],
+        ['Fin de gamme', p.finLe ? this.fD(p.finLe) + '/' + String(p.finLe).slice(0, 4) : '—'],
+        ['Comptoir', p.zone ? [p.zone, p.meuble, p.niveau].filter(Boolean).join(' · ') : 'pas encore placée']].map(([k2, v2]) => ({ k: k2, v: v2 })) : null;
+    }
+    common.catFiche = fiche;
   }
   /** Ouvre l'édition d'une référence — fiche de production ou emplacement. */
   refOpen(p, mode){
@@ -5140,49 +4735,6 @@ class App {
           this.notify('« ' + e.nom + ' » enregistré');
         });
       });
-  }
-  /** Suivi de production — produit, jeté, motifs, par boutique et référence. */
-  valsProduction(common){
-    const S = this.state;
-    const d = S.prodSuivi;
-    if (!d && !this._prodEnCours){
-      this._prodEnCours = true;
-      readOne('/production/suivi').then(r => { this._prodEnCours = false;
-        this.setState({ prodSuivi: r || { vide: true } }); });
-    }
-    common.prChargement = !d;
-    if (!d) return common;
-    common.prPeriode = (d.du || '') + ' → ' + (d.au || '');
-    common.prAvert = d.avertissement || '';
-    const r = d.reseau || {};
-    common.prReseau = [
-      { l: 'vendu', v: (r.vendu || 0).toLocaleString('fr-BE') },
-      { l: 'jeté', v: (r.jete || 0).toLocaleString('fr-BE') },
-      { l: 'taux de perte', v: r.taux == null ? '' : this.fP(r.taux, 1) },
-      { l: 'fournées déclarées', v: (r.produit || 0).toLocaleString('fr-BE') }
-    ];
-    const tx = t => t == null ? 'var(--color-text-muted)'
-      : (t >= 0.08 ? 'var(--color-primary)' : t >= 0.05 ? '#C17A2A' : '#2d7a3e');
-    common.prMagasins = (d.magasins || []).map(m => ({
-      magasin: m.magasin, vendu: (m.vendu || 0).toLocaleString('fr-BE'),
-      jete: (m.jete || 0).toLocaleString('fr-BE'),
-      taux: m.taux == null ? '' : this.fP(m.taux, 1), col: tx(m.taux),
-      // « Journal non tenu » n'est pas « zéro fournée » : la distinction décide
-      // de ce qu'on va dire au franchisé.
-      note: m.journalTenu ? '' : 'journal des fournées non tenu'
-    }));
-    const mx = Math.max.apply(null, (d.produits || []).map(p => p.jete || 0).concat([1]));
-    common.prProduits = (d.produits || []).slice(0, 20).map(p => ({
-      nom: p.nom, jete: (p.jete || 0).toLocaleString('fr-BE'),
-      vendu: (p.vendu || 0).toLocaleString('fr-BE'),
-      taux: p.taux == null ? '' : this.fP(p.taux, 1), col: tx(p.taux),
-      w: Math.max(2, 100 * (p.jete || 0) / mx).toFixed(0) + '%'
-    }));
-    common.prMotifs = (d.motifs || []).map(m => ({
-      motif: m.motif || '', quantite: (m.quantite || 0).toLocaleString('fr-BE'),
-      lignes: (m.lignes || 0).toLocaleString('fr-BE')
-    }));
-    return common;
   }
   /**
    * Analyse dans le temps — une catégorie ou une référence, sur un horizon.
@@ -5607,9 +5159,7 @@ class App {
     });
   }
   /* La carte des sources : d'où vient ce que chaque écran affiche. Établie
-   * chaque nuit dans le code — une liste tenue à la main mentirait.
-   * Le nom ne peut pas commencer par « ca » : la Centrale d'achat a déjà son
-   * caCharge(), et la dernière définition d'une classe écrase la première. */
+   * chaque nuit dans le code — une liste tenue à la main mentirait. */
   carteCharge(){
     if (this._carteEnCours || this.D.carte) { return; }
     this._carteEnCours = true;
@@ -5656,7 +5206,7 @@ class App {
       return {
         nom: c2.nom, quoi: c2.quoi,
         etat: txt,
-        etatSt: 'font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:'
+        etatSt: 'font-size:10.5px;font-weight:600;border-radius:8px;padding:2px 9px;white-space:nowrap;background:'
           + coul + '1f;color:' + coul,
         succes: c2.dernierSucces ? this.fD(c2.dernierSucces.slice(0, 10)) + ' à ' + c2.dernierSucces.slice(11, 16) : '',
         appel: c2.dernierAppel ? this.fD(c2.dernierAppel.slice(0, 10)) + ' à ' + c2.dernierAppel.slice(11, 16) : '',
@@ -5765,9 +5315,9 @@ class App {
   }
   valsLacunes(common){
     this.lacunes();
-    const ecr = { magasins: 'magasins', marge: 'marge', exploitation: 'exploitation',
+    const ecr = { magasins: 'magasins', marge: 'marge',
       parametres: 'parametres', assortiment: 'assortiment', catalogue: 'catalogue',
-      produits: 'produits', analyse: 'analyse', controle: 'controle' }[this.state.screen === 'performance' ? (this.state.pfOnglet || 'magasins') : this.state.screen];
+      produits: 'produits', analyse: 'analyse', controle: 'controle' }[this.state.screen === 'resultatJour' ? ({ mois: 'magasins', marge: 'marge' })[this.state.rjOnglet || 'jour'] : this.state.screen];
     const l = ((this.D.lacunes || {})[ecr] || []);
     common.lacunes = l.map(o => ({ champ: o.champ, quoi: o.quoi, source: o.source,
       // « manque API » quand il faut réclamer, « à renseigner » quand il faut
@@ -5775,21 +5325,6 @@ class App {
       etiquette: o.type === 'saisie' ? 'à renseigner' : 'manque API',
       api: o.type !== 'saisie' }));
     return common;
-  }
-  /**
-   * Centrale d'achat — dix écrans, un seul gabarit.
-   *
-   * Chaque écran charge sa route et rend le MÊME objet : des colonnes, des
-   * lignes, un état. Quand la source manque, l'état vaut « attente » et les
-   * colonnes portent, à la place des données, le champ attendu et son API.
-   * Le tableau devient alors la spécification du branchement — on voit d'un
-   * coup d'œil ce qui reste à obtenir, sans rouvrir le document de cadrage.
-   */
-  caRoute(){
-    return { caCampagnes: '/centrale/campagnes', caDemande: '/centrale/demandes',
-      caAchats: '/centrale/achats', caCommandes: '/centrale/commandes',
-      caFacturation: '/centrale/facturation',
-      caReglages: '/centrale/reglages' }[this.state.screen];
   }
   /* --- fonds marketing & redevances ------------------------------------------ */
 
@@ -6234,345 +5769,6 @@ class App {
     const camps = mk.campagnes || [];
     const recharge = () => { this.D.mkt = null; this.setState({}); };
 
-    // --- calendrier : une ligne par campagne, une barre sur ses mois.
-    const annee = S.mkAnnee || new Date((camps[0] || {}).debut || this.M.TODAY).getFullYear();
-    common.mkAnnee = String(annee);
-    common.mkAnneePrec = () => this.setState({ mkAnnee: annee - 1 });
-    common.mkAnneeSuiv = () => this.setState({ mkAnnee: annee + 1 });
-    common.mkMois = (this.M.MOIS || []);
-    common.mkCalLignes = camps
-      .filter(c2 => c2.debut && c2.fin)
-      .filter(c2 => +String(c2.debut).slice(0, 4) <= annee && +String(c2.fin).slice(0, 4) >= annee)
-      .map(c2 => {
-        const d0 = new Date(c2.debut + 'T00:00:00'), f0 = new Date(c2.fin + 'T00:00:00');
-        const m1 = d0.getFullYear() < annee ? 0 : d0.getMonth();
-        const m2 = f0.getFullYear() > annee ? 11 : f0.getMonth();
-        return { id: c2.id, nom: c2.nom, type: c2.type || '',
-          couleur: c2.typeCouleur || '#8D1D2C',
-          statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
-          debut: this.fD(c2.debut), fin: this.fD(c2.fin),
-          col1: m1 + 1, col2: m2 + 2,
-          ouvrir: () => this.setState({ mkEdit: this.mkVersForm(c2) }) };
-      });
-    common.mkCalVide = !common.mkCalLignes.length;
-
-    // --- liste des campagnes.
-    common.mkCampagnes = camps.map(c2 => ({
-      id: c2.id, nom: c2.nom, type: c2.type || '', typeCouleur: c2.typeCouleur || '#666',
-      scope: c2.scope === 'LOCALE' ? 'Locale' : 'Réseau',
-      statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
-      periode: (c2.debut ? this.fD(c2.debut) : '') + ' → ' + (c2.fin ? this.fD(c2.fin) : ''),
-      budget: this.fE(c2.budget), depense: c2.depense ? this.fE(c2.depense) : '',
-      nBoutiques: c2.nBoutiques,
-      editer: () => this.setState({ mkEdit: this.mkVersForm(c2) }),
-      note: () => this.mkNoteOuvrir(c2.id),
-      // L'assistant s'ouvre pour TOUTE campagne, pas seulement les brouillons.
-      // Il était réservé aux brouillons — « une planifiée se corrige dans la
-      // carte » —, mais la carte ne porte ni l'offre, ni les canaux, ni les
-      // documents joints : une campagne lancée n'avait plus aucun moyen d'être
-      // modifiée. L'assistant réécrit désormais le statut qu'elle a.
-      reprendre: () => {
-        window.location.assign(new URL('assistant/?id=' + c2.id, window.location.href).href);
-      },
-      reprendreNom: c2.statut === 'draft' ? 'Reprendre' : 'Assistant',
-      supprimer: () => {
-        if (!window.confirm('Supprimer définitivement la campagne « ' + c2.nom + ' » ?')) { return; }
-        this.api('DELETE', '/marketing/campagne/' + c2.id).then(r => {
-          if (r && r.ok === false) { return; }
-          this.notify('Campagne supprimée'); recharge();
-        });
-      },
-    }));
-    common.mkVide = !camps.length;
-    // La création rapide est retirée : toute campagne naît COMPLÈTE, dans
-    // l'assistant. La carte d'édition ne sert plus qu'à corriger l'existant.
-
-    // --- vignettes « en attente » : brouillons et planifiées, à finir ou à
-    // lancer. Illustration, nom complet, levier du type — trois par rangée.
-    const parTypeId = {};
-    (mk.types || []).forEach(t => { parTypeId[String(t.id)] = t; });
-    const imageSrc = im => !im ? null
-      : (im.startsWith('http') || im.startsWith('/')) ? im : 'assistant/' + im;
-    common.mkAttente = camps
-      .filter(c2 => c2.statut === 'draft' || c2.statut === 'planned')
-      .map(c2 => {
-        const t = parTypeId[String(c2.typeId)] || {};
-        return { id: c2.id, nom: c2.nom, image: imageSrc(c2.image),
-          couleur: c2.typeCouleur || '#8D1D2C', type: c2.type || '',
-          levier: t.levier || '',
-          statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
-          periode: (c2.debut ? this.fD(c2.debut) : '') + ' → ' + (c2.fin ? this.fD(c2.fin) : ''),
-          // La vignette ouvre l'assistant : c'est là que tout se règle, y
-          // compris pour une campagne déjà planifiée.
-          ouvrir: () => { window.location.assign(new URL('assistant/?id=' + c2.id, window.location.href).href); },
-          corriger: () => this.setState({ mkEdit: this.mkVersForm(c2) }),
-          // La note pour les franchisés : une page A4, imprimable, et le
-          // courrier qui la porte. Bouton à part sur la vignette — ouvrir la
-          // campagne et l'expliquer au réseau ne sont pas le même geste.
-          note: () => this.mkNoteOuvrir(c2.id) };
-      });
-    // --- la note de campagne : une page A4 pour le réseau, et le courrier
-    // qui la porte. Chargée à l'ouverture, jamais avant : elle interroge le
-    // panel pour la référence de l'an dernier.
-    const nt = S.mkNote;
-    const ntPatch = pl => this.setState(s2 => ({ mkNote: Object.assign({}, s2.mkNote, pl) }));
-    common.mkNote = !nt ? null : {
-      chargement: !!nt.chargement,
-      err: nt.err || '',
-      fermer: () => this.setState({ mkNote: null }),
-      titre: (nt.d && nt.d.campagne ? nt.d.campagne.nom : 'Note de campagne'),
-      onglet: nt.onglet || 'note',
-      versNote: () => ntPatch({ onglet: 'note' }),
-      versMail: () => ntPatch({ onglet: 'mail' }),
-      versJournal: () => ntPatch({ onglet: 'journal' }),
-      stNote: this.tabBtn((nt.onglet || 'note') === 'note'),
-      stMail: this.tabBtn(nt.onglet === 'mail'),
-      stJournal: this.tabBtn(nt.onglet === 'journal'),
-    };
-    if (nt && nt.d && !nt.chargement) {
-      const D2 = nt.d, camp = D2.campagne || {};
-      const dest = nt.dest || (D2.destinataires || []).map(x2 => Object.assign({}, x2, { on: !!x2.adresse }));
-      const cfg = nt.cfg || Object.assign({}, D2.config || {});
-      const setDest = (i, pl) => ntPatch({ dest: dest.map((x2, j) => j === i ? Object.assign({}, x2, pl) : x2) });
-      const setCfg = k => e => ntPatch({ cfg: Object.assign({}, cfg, { [k]: e.target.value }) });
-      const prets = dest.filter(x2 => x2.on && x2.adresse);
-
-      Object.assign(common.mkNote, {
-        // L'aperçu EST le fichier : la page imprimée et le PDF joint sortent du
-        // même HTML, produit par le serveur. Deux rendus auraient fini par
-        // montrer deux choses.
-        apercu: D2.apercuPdf || '',
-        // Le mot du responsable : la seule partie de la page écrite par
-        // quelqu'un. Signé du consultant connecté — nom et fonction —, et la
-        // signature reste modifiable : le mot peut être celui du franchiseur.
-        mot: (nt.mot != null ? nt.mot : ((D2.mot || {}).texte || '')),
-        setMot: e => ntPatch({ mot: e.target.value }),
-        motNom: (nt.motNom != null ? nt.motNom : ((D2.mot || {}).nom || '')),
-        setMotNom: e => ntPatch({ motNom: e.target.value }),
-        motFonction: (nt.motFonction != null ? nt.motFonction : ((D2.mot || {}).fonction || '')),
-        setMotFonction: e => ntPatch({ motFonction: e.target.value }),
-        motEtat: nt.motEtat || '',
-        enregistrerMot: () => {
-          ntPatch({ motEtat: 'en-cours' });
-          this.api('PUT', '/marketing/campagne/' + camp.id + '/note-mot', {
-            texte: (nt.mot != null ? nt.mot : ((D2.mot || {}).texte || '')),
-            nom: (nt.motNom != null ? nt.motNom : ((D2.mot || {}).nom || '')),
-            fonction: (nt.motFonction != null ? nt.motFonction : ((D2.mot || {}).fonction || '')),
-          }).then(r => {
-            if (!r || r.error) { ntPatch({ motEtat: '', err: (r && r.error) || 'Mot non enregistré.' }); return; }
-            // La page se recharge : l'aperçu EST le fichier, il doit porter le
-            // mot qu'on vient d'écrire.
-            this.mkNoteOuvrir(camp.id, 'note');
-          });
-        },
-        apercuMail: D2.apercuMail || '',
-        sousTitre: (camp.type || '') + ' · ' + (camp.portee || '') + ' · '
-          + (camp.du ? this.fD(camp.du) : '') + ' → ' + (camp.fin || camp.au ? this.fD(camp.au) : ''),
-        moteurPdf: !!D2.moteurPdf,
-        // Sans moteur sur le serveur, on le DIT : le navigateur imprime le même
-        // document, et personne n'attend un fichier qui ne viendra pas.
-        moteurNote: D2.moteurPdf ? ''
-          : 'Aucun moteur PDF sur ce serveur : « Imprimer » produit le même document depuis le navigateur (choisissez « Enregistrer en PDF »). Le courrier partira sans pièce jointe, et le dira.',
-        imprimer: () => {
-          const f = document.getElementById('note-apercu');
-          if (f && f.contentWindow) { f.contentWindow.focus(); f.contentWindow.print(); }
-        },
-        telecharger: !D2.moteurPdf ? null : () => {
-          try { window.open(API_BASE + '/marketing/campagne/' + camp.id + '/note.pdf', '_blank'); } catch (e2) {}
-        },
-        fichier: D2.fichier || '',
-        // Ce qui partira EN PLUS de la note : les documents cochés dans
-        // l'assistant. En lecture seule ici — ils se gèrent là où on les
-        // dépose, sinon la même case se règlerait à deux endroits.
-        annexes: (camp.annexes || []).filter(a => a.enMail).map(a => ({
-          nom: a.nom, type: a.type || '', taille: a.tailleTxt,
-          perdu: !a.existe,
-        })),
-        annexesNon: (camp.annexes || []).filter(a => !a.enMail).length,
-        dest: dest.map((x2, i) => ({
-          magasin: x2.magasin, franchise: x2.franchise || '',
-          adresse: x2.adresse, on: !!x2.on,
-          manque: !x2.adresse,
-          setAdresse: e => setDest(i, { adresse: e.target.value, on: !!e.target.value }),
-          basculer: () => setDest(i, { on: !x2.on }),
-        })),
-        // Les copies : l'agence de la campagne et les consultants. Une liste à
-        // cocher, pas un champ libre — une adresse retapée à chaque envoi finit
-        // par partir chez quelqu'un d'autre.
-        // L'agence d'abord, les consultants ensuite : ce ne sont pas les mêmes
-        // destinataires — l'une produit la campagne, les autres la suivent.
-        copiesAgence: (nt.copies || (D2.copies || [])).map((x2, i) => Object.assign({}, x2, { i }))
-          .filter(x2 => x2.groupe === 'agence').map(x2 => ({
-            nom: x2.nom, adresse: x2.adresse, role: x2.role, on: !!x2.on,
-            sansAdresse: !!x2.sansAdresse,
-            basculer: x2.sansAdresse ? null : () => ntPatch({ copies: (nt.copies || (D2.copies || []))
-              .map((y, j) => j === x2.i ? Object.assign({}, y, { on: !y.on }) : y) }),
-          })),
-        copiesConsultants: (nt.copies || (D2.copies || [])).map((x2, i) => Object.assign({}, x2, { i }))
-          .filter(x2 => x2.groupe !== 'agence').map(x2 => ({
-            nom: x2.nom, adresse: x2.adresse, role: x2.role, on: !!x2.on, sansAdresse: false,
-            basculer: () => ntPatch({ copies: (nt.copies || (D2.copies || []))
-              .map((y, j) => j === x2.i ? Object.assign({}, y, { on: !y.on }) : y) }),
-          })),
-        copiesVide: !(D2.copies || []).length,
-        nPrets: prets.length,
-        sansAdresse: dest.filter(x2 => !x2.adresse).map(x2 => x2.magasin),
-        // L'agence : nom, site et logo. Le logo est LU dans le navigateur et
-        // envoyé en data-URI — le serveur ne reçoit pas de fichier à ranger,
-        // et l'image part avec la lettre au lieu d'être un lien vers un
-        // cockpit auquel le destinataire n'a pas accès.
-        agenceNom: (cfg.agence || {}).nom || '',
-        setAgenceNom: e => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { nom: e.target.value }) }) }),
-        agenceSite: (cfg.agence || {}).site || '',
-        setAgenceSite: e => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { site: e.target.value }) }) }),
-        agenceEmail: (cfg.agence || {}).email || '',
-        setAgenceEmail: e => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { email: e.target.value }) }) }),
-        agenceLogo: (cfg.agence || {}).logo || '',
-        agenceLogoErr: nt.logoErr || '',
-        setAgenceLogo: e => {
-          const f = e.target.files && e.target.files[0];
-          if (!f) { return; }
-          if (f.size > 500000) { ntPatch({ logoErr: 'Logo trop lourd (' + Math.round(f.size / 1024) + ' Ko) : 500 Ko au plus.' }); return; }
-          const r = new FileReader();
-          r.onload = () => ntPatch({ logoErr: '', cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { logo: String(r.result) }) }) });
-          r.onerror = () => ntPatch({ logoErr: 'Fichier illisible.' });
-          r.readAsDataURL(f);
-        },
-        retirerLogo: !((cfg.agence || {}).logo) ? null
-          : () => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { logo: '' }) }) }),
-        visuelNote: (D2.visuel && D2.visuel.present)
-          ? 'Le visuel de la campagne est repris en tête de note et en annexe, page 2 du PDF.'
-          : ((D2.visuel && D2.visuel.motif)
-            ? 'Pas d’annexe : ' + D2.visuel.motif + '.'
-            : 'Cette campagne n’a pas de visuel : la note sort sans annexe. Ajoutez-en un dans l’assistant, étape « Photos produits ».'),
-        expediteur: cfg.expediteur || '', setExpediteur: setCfg('expediteur'),
-        sujet: cfg.sujet || '', setSujet: setCfg('sujet'),
-        intro: cfg.intro || '', setIntro: setCfg('intro'),
-        pied: cfg.pied || '', setPied: setCfg('pied'),
-        html: cfg.html || '', setHtml: setCfg('html'),
-        gabaritOuvert: !!nt.gabarit,
-        basculerGabarit: () => ntPatch({ gabarit: !nt.gabarit }),
-        variables: '{{campagne}} {{type}} {{du}} {{au}} {{magasin}} {{franchise}} {{objectif}} {{cible}} {{budget}}',
-        enregistrerGabarit: () => {
-          this.api('PUT', '/marketing/note-config', {
-            expediteur: cfg.expediteur, sujet: cfg.sujet, intro: cfg.intro,
-            pied: cfg.pied, html: cfg.html, agence: cfg.agence || {},
-            copies: (nt.copies || (D2.copies || [])).filter(x2 => x2.on).map(x2 => x2.adresse),
-          }).then(r => {
-            if (r && r.error) { ntPatch({ err: r.error }); return; }
-            this.notify('Gabarit du courrier enregistré');
-            this.mkNoteOuvrir(camp.id, nt.onglet);
-          });
-        },
-        envoi: nt.envoi || '',
-        // Le bouton n'envoie plus à l'aveugle : il ouvre le FORMULAIRE de
-        // validation — chaque magasin avec sa case et son adresse, les copies,
-        // et c'est la confirmation qui poste. Un window.confirm ne montrait
-        // ni qui, ni où.
-        envoyer: prets.length === 0 || nt.envoi === 'en-cours' ? null : () => ntPatch({ valider: true, err: '' }),
-        validation: !nt.valider ? null : (() => {
-          const extras = nt.extras || [];
-          const copiesT = nt.copies || (D2.copies || []);
-          const nTot = prets.length + extras.length;
-          return {
-            titre: 'Valider l’envoi — ' + camp.nom,
-            expediteur: cfg.expediteur || 'l’adresse marketing',
-            lignes: dest.map((x2, i) => ({
-              magasin: x2.magasin, franchise: x2.franchise || '',
-              adresse: x2.adresse || '', manque: !x2.adresse,
-              on: !!x2.on && !!x2.adresse,
-              basculer: x2.adresse ? () => setDest(i, { on: !x2.on }) : null,
-            })),
-            // Les POSITIONS AJOUTÉES à la main : une adresse de plus (un
-            // consultant, un intérim, la marque…) reçoit la note réseau,
-            // sans entrer au carnet des magasins.
-            extras: extras.map((a2, i) => ({ adresse: a2,
-              retirer: () => ntPatch({ extras: extras.filter((y, j) => j !== i) }) })),
-            saisie: nt.extraSaisie || '',
-            poserSaisie: e => ntPatch({ extraSaisie: e.target.value }),
-            ajouter: () => {
-              const a2 = (nt.extraSaisie || '').trim();
-              if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a2)) { this.notify('Adresse illisible — rien d’ajouté'); return; }
-              if (!extras.includes(a2)) { ntPatch({ extras: extras.concat([a2]), extraSaisie: '' }); }
-            },
-            // Les copies (agence, consultants) se cochent ICI aussi : la
-            // validation montre tout ce qui partira, rien d'implicite.
-            copies: copiesT.map((x2, i) => ({ nom: x2.nom, role: x2.role || '',
-              adresse: x2.adresse || '', on: !!x2.on, sansAdresse: !!x2.sansAdresse,
-              basculer: x2.sansAdresse ? null : () => ntPatch({ copies: copiesT.map((y, j) => j === i ? Object.assign({}, y, { on: !y.on }) : y) }) })),
-            n: nTot,
-            annuler: () => ntPatch({ valider: false }),
-            confirmer: nTot === 0 ? null : () => {
-              ntPatch({ envoi: 'en-cours', err: '', valider: false });
-              this.api('POST', '/marketing/campagne/' + camp.id + '/note',
-                { destinataires: prets.map(x2 => ({ id: x2.id, adresse: x2.adresse, magasin: x2.magasin, franchise: x2.franchise }))
-                    .concat(extras.map(a2 => ({ id: '', adresse: a2, magasin: 'Destinataire ajouté', franchise: '' }))),
-                  copies: copiesT.filter(x2 => x2.on).map(x2 => x2.adresse) })
-                .then(r => {
-                  if (!r || r.error) { ntPatch({ envoi: '', err: (r && r.error) || 'Envoi refusé.' }); return; }
-                  this.notify(r.message || 'Note envoyée');
-                  this.mkNoteOuvrir(camp.id, 'journal');
-                });
-            },
-          };
-        })(),
-        journal: (D2.journal || []).map(e2 => ({
-          quand: e2.quand, type: e2.type,
-          etat: e2.type === 'envoye' ? 'Envoyée' : 'Échec',
-          etatSt: 'font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:999px;'
-            + (e2.type === 'envoye' ? 'background:rgba(45,122,62,.12);color:#2d7a3e' : 'background:rgba(141,29,44,.12);color:#8D1D2C'),
-          destinataire: e2.destinataire || '', detail: e2.detail || '', sujet: e2.sujet || '',
-        })),
-        journalVide: !(D2.journal || []).length,
-      });
-    }
-
-    // L'assistant COMPLET (cadrage, offre, objectifs, prix, photos, budget,
-    // communication, planning, récap, leads) est désormais HÉBERGÉ PAR LE
-    // COCKPIT (page /assistant/, API /api/marketing/) : il travaille sur les
-    // mêmes tables, et survivra à la suppression du module marketing.
-    // Navigation directe, PAS de nouvel onglet : l'assistant ramène ici par
-    // « ← Retour au cockpit », par « Annuler » et à la publication.
-    common.mkAssistant = () => {
-      window.location.assign(new URL('assistant/', window.location.href).href);
-    };
-
-    // --- formulaire (création et correction, même carte).
-    const ed = S.mkEdit;
-    const patch = pl => this.setState(s2 => ({ mkEdit: Object.assign({}, s2.mkEdit, pl) }));
-    common.mkEdit = !ed ? null : {
-      id: ed.id, titre: ed.id ? 'Corriger la campagne' : 'Nouvelle campagne',
-      nom: ed.nom, setNom: e => patch({ nom: e.target.value }),
-      types: (mk.types || []).filter(t => t.actif || String(t.id) === String(ed.typeId))
-        .map(t => ({ id: String(t.id), nom: t.nom, on: String(t.id) === String(ed.typeId) })),
-      setType: e => patch({ typeId: e.target.value }),
-      statuts: (mk.statuts || []).map(st => ({ code: st.code, nom: st.nom, on: st.code === ed.statut,
-        pick: () => patch({ statut: st.code }) })),
-      scopes: [['RESEAU', 'Réseau'], ['LOCALE', 'Locale']].map(([v, nom]) => ({ v, nom, on: ed.scope === v,
-        pick: () => patch({ scope: v }) })),
-      debut: ed.debut || '', setDebut: e => patch({ debut: e.target.value }),
-      fin: ed.fin || '', setFin: e => patch({ fin: e.target.value }),
-      budget: ed.budget, setBudget: e => patch({ budget: e.target.value }),
-      busy: !!ed.busy, err: ed.err || '',
-      fermer: () => this.setState({ mkEdit: null }),
-      envoyer: () => {
-        const f2 = this.state.mkEdit || {};
-        if (!String(f2.nom || '').trim()) { patch({ err: 'Le nom de la campagne est requis.' }); return; }
-        patch({ busy: true, err: '' });
-        const corps = { nom: String(f2.nom).trim(), typeId: f2.typeId || null, scope: f2.scope,
-          statut: f2.statut, debut: f2.debut || '', fin: f2.fin || '',
-          budget: parseFloat(String(f2.budget || '0').replace(',', '.')) || 0 };
-        this.api(f2.id ? 'PATCH' : 'POST', '/marketing/campagne' + (f2.id ? '/' + f2.id : ''), corps)
-          .then(r => {
-            if (!r || r.ok === false) { patch({ busy: false, err: (r && r.error) || 'refusé' }); return; }
-            this.setState({ mkEdit: null });
-            this.notify(f2.id ? 'Campagne corrigée' : 'Campagne créée');
-            this.log('Campagne', corps.nom, f2.id ? 'Corrigée depuis le pilotage' : 'Créée depuis le pilotage');
-            recharge();
-          });
-      },
-    };
-
     // --- référentiel des types.
     //
     // Le formulaire porte les mêmes champs et les mêmes règles que celui du
@@ -6607,7 +5803,7 @@ class App {
       // recopié.
       iconePath: t.iconePath || (t.icone && parIcone[t.icone] ? parIcone[t.icone].path : null),
       levier: t.levier || '', levierCouleur: t.levierCouleur || null,
-      levierSt: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:'
+      levierSt: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:8px;padding:2px 9px;white-space:nowrap;background:'
         + (t.levierCouleur || '#78746e') + '1f;color:' + (t.levierCouleur || '#666666'),
       actif: t.actif, nCampagnes: t.nCampagnes,
       premier: i === 0, dernier: i === (mk.types || []).length - 1,
@@ -6681,61 +5877,6 @@ class App {
       },
     };
   }
-  /* --- usage du catalogue ------------------------------------------------ */
-
-  /**
-   * Lit l'usage du catalogue — et le détail d'un magasin quand il est ouvert.
-   *
-   * Deux routes, deux chargements : le tableau tient en une requête, le détail
-   * pèse sept cents lignes par magasin et n'est demandé qu'au clic. Les
-   * réponses sont mises en cache par clé de filtre — rouvrir le même magasin
-   * ne relit pas.
-   */
-  usageCharge(){
-    const S = this.state;
-    const cle = (S.usMois || 6) + '|' + (S.usGroupe || '');
-    if (!this._usage) { this._usage = {}; }
-    if (this._usage[cle] === undefined && !this._usageEnCours) {
-      this._usageEnCours = true;
-      readOne('/produits/utilisation?mois=' + (S.usMois || 6)
-        + (S.usGroupe ? '&groupe=' + encodeURIComponent(S.usGroupe) : ''))
-        .then(d => { this._usageEnCours = false; this._usage[cle] = (d && !d.error) ? d : null; this.setState({}); })
-        .catch(() => { this._usageEnCours = false; this._usage[cle] = null; this.setState({}); });
-    }
-    const sid = S.usShop;
-    if (!sid) { return; }
-    const cleD = sid + '|' + cle;
-    if (!this._usageDet) { this._usageDet = {}; }
-    if (this._usageDet[cleD] === undefined && !this._usageDetEnCours) {
-      this._usageDetEnCours = true;
-      readOne('/produits/utilisation/magasin?shop=' + encodeURIComponent(sid)
-        + '&mois=' + (S.usMois || 6)
-        + (S.usGroupe ? '&groupe=' + encodeURIComponent(S.usGroupe) : ''))
-        .then(d => { this._usageDetEnCours = false; this._usageDet[cleD] = (d && !d.error) ? d : null; this.setState({}); })
-        .catch(() => { this._usageDetEnCours = false; this._usageDet[cleD] = null; this.setState({}); });
-    }
-  }
-
-  /**
-   * L'analyse d'un magasin : une lecture par magasin et par durée.
-   *
-   * Le serveur rend les quatre étapes d'un coup — leviers et plan viennent du
-   * même calcul, et un wizard qui rechargerait entre deux étapes pourrait
-   * afficher un plan qui ne correspond plus aux leviers montrés avant.
-   */
-  anmCharge(){
-    const S = this.state;
-    const cle = (S.anmShop || '') + '|' + (S.anmMois || 6);
-    if (!this._anm) { this._anm = {}; }
-    if (this._anm[cle] === undefined && !this._anmEnCours) {
-      this._anmEnCours = true;
-      readOne('/magasin/analyse?mois=' + (S.anmMois || 6)
-        + (S.anmShop ? '&shop=' + encodeURIComponent(S.anmShop) : ''))
-        .then(d => { this._anmEnCours = false; this._anm[cle] = (d && !d.error) ? d : null; this.setState({}); })
-        .catch(() => { this._anmEnCours = false; this._anm[cle] = null; this.setState({}); });
-    }
-  }
-
   /** Le classement des ventes : une lecture par mois, la fiche au clic. */
   ventesCharge(){
     const S = this.state;
@@ -7063,134 +6204,1209 @@ class App {
   }
 
   /**
-   * Paramètres des primes de l'app worker (06/10/2026, maquette B) : la prime magasin (des euros par
-   * heure prestée selon le palier d'atteinte de l'objectif du mois) et les ventes croisées (cible par
-   * magasin, paliers), avec l'aperçu du mois en cours d'un magasin. Ce qu'on tape reste un brouillon
-   * jusqu'à « Enregistrer » : les paliers se règlent ensemble.
+   * Paramètres des primes de l'app worker (14/10/2026) : la liste des primes — targets, catégories,
+   * promos du panel — avec UNE récompense chacune (50 € par défaut) ; les promotions du panel à
+   * suivre ; les moyennes par magasin pour régler les seuils au plus juste, avec la cible de ventes
+   * croisées de chaque magasin en face. Bats ton record et la meilleure vendeuse se montrent, réglés
+   * dans Targets & primes. Ce qu'on tape reste un brouillon jusqu'à « Enregistrer ».
    */
   valsPrimesParams(common){
     const S = this.state;
-    const shop = S.prShop || '';
-    const cle = shop || '_';
     const court = nom => String(nom || '').split(' - ').pop();
-    if (!this._pr) { this._pr = {}; }
-    if (this._pr[cle] === undefined && !this._prEnCours) {
-      this._prEnCours = true;
-      readOne('/ventes/primes-reglages' + (shop ? '?shop=' + shop : ''))
-        .then(d => { this._prEnCours = false; this._pr[cle] = (d && !d.error) ? d : null; if (d && d.shop && !shop) { this._pr[d.shop] = this._pr[cle]; } this.setState({}); })
-        .catch(() => { this._prEnCours = false; this._pr[cle] = null; this.setState({}); });
-    }
-    const d = this._pr[cle];
+    if (!this._prL) { this._prL = {}; }
+    // Une lecture par clé, une seule à la fois ; null : la lecture a échoué.
+    const lire = (cle, url) => {
+      if (this._prL[cle] === undefined && !this._prL['~' + cle]) {
+        this._prL['~' + cle] = true;
+        readOne(url).then(x => { this._prL['~' + cle] = false; this._prL[cle] = (x && !x.error) ? x : null; this.setState({}); })
+          .catch(() => { this._prL['~' + cle] = false; this._prL[cle] = null; this.setState({}); });
+      }
+      return this._prL[cle];
+    };
+    const d = lire('reglages', '/ventes/primes-reglages');
+    // Deux entrées du rail (23/10/2026) : les primes de la marque (avec les promotions et les moyennes), ou
+    // celles des franchisés seules.
+    common.prSection = S.prSection === 'franchise' ? 'franchise' : 'marque';
+    const n = S.prMoyN || 3;
+    const moy = lire('moy' + n, '/ventes/primes-moyennes?n=' + n);
+    const promos = lire('promos', '/ventes/primes-promos' + (S.prPromosFrais ? '?frais=1' : ''));
     common.prChargement = d === undefined;
     common.prMotif = d === null ? 'Les paramètres des primes n’ont pas pu être lus.' : '';
     if (!d) { return; }
-    const eur = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE') + ' €');
-    const n1 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
-    const n2 = v => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
-    const mag = S.prMag || { paliers: d.magasin.paliers.map(p => Object.assign({}, p)), heuresMin: d.magasin.heuresMin };
-    const cr = S.prCr || { cibleDefaut: d.croisees.cibleDefaut, cibles: Object.assign({}, d.croisees.cibles), paliers: d.croisees.paliers.map(p => Object.assign({}, p)), minTickets: d.croisees.minTickets };
-    const enregistrer = (chemin, corps, quoi) => this.api('POST', chemin, corps).then(r => {
-      if (r && r.ok === false) { return; }
-      this.notify(quoi + ' enregistrés — ils valent dès ce mois');
-      this._pr = {}; this.setState({ prMag: undefined, prCr: undefined });
-    });
-    const hEq = d.apercu ? d.apercu.heuresEquipe : 0;
-    common.prMag = {
-      paliers: mag.paliers.map((p, i) => ({
-        pct: String(p.pct), eh: String(p.eh), lib: p.lib || '',
-        equipe: hEq > 0 ? eur(p.eh * hEq) : '',
-        poserPct: e => { const v = num(e.target.value); if (v != null) { mag.paliers[i].pct = Math.round(v); } this.setState({ prMag: mag }); },
-        poserEh: e => { const v = num(e.target.value); if (v != null) { mag.paliers[i].eh = Math.round(v * 100) / 100; } this.setState({ prMag: mag }); },
-        poserLib: e => { mag.paliers[i].lib = e.target.value; this.setState({ prMag: mag }); },
-        retirer: () => { mag.paliers.splice(i, 1); this.setState({ prMag: mag }); },
-      })),
-      ajouter: () => { const der = mag.paliers[mag.paliers.length - 1] || { pct: 95, eh: 0.5 }; mag.paliers.push({ pct: der.pct + 5, eh: Math.round((der.eh + 0.5) * 100) / 100, lib: '' }); this.setState({ prMag: mag }); },
-      heuresMin: String(mag.heuresMin),
-      poserHeuresMin: e => { const v = num(e.target.value); if (v != null) { mag.heuresMin = Math.max(0, Math.round(v)); } this.setState({ prMag: mag }); },
-      enregistrer: () => enregistrer('/ventes/prime-magasin', { paliers: mag.paliers, heuresMin: mag.heuresMin }, 'Paliers de la prime magasin'),
-      modifie: JSON.stringify(mag) !== JSON.stringify({ paliers: d.magasin.paliers, heuresMin: d.magasin.heuresMin }),
+    const fr = (v, k) => (v == null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: k, maximumFractionDigits: k }));
+    const pc = v => (v == null ? '' : fr(v, 1) + ' %');
+    const num = v => { const x = parseFloat(String(v).replace(',', '.')); return isNaN(x) ? null : x; };
+    const jj = s => (s ? s.slice(8, 10) + '/' + s.slice(5, 7) : '');
+    const nomMag = {}; (d.magasins || []).forEach(m => { nomMag[m.id] = court(m.nom); });
+    const dates = p => (p.du || p.au ? (p.du ? jj(p.du) : '…') + ' → ' + (p.au ? jj(p.au) : '…') : 'sans dates');
+    const mags = p => ((p.shops || []).length ? p.shops.map(s => nomMag[s] || s).join(', ') : 'tous');
+    const sorte = p => ({ xy: 'X + Y offert', quantite: 'Prix par quantité', remise: 'Remise programmée', produits: 'Produits choisis' }[p.sorte] || 'Bundle');
+    // Pourquoi aucune promotion : le compte qui les lit, et ce qu'il a reçu.
+    const PR_MOTIF = () => {
+      const er = (promos && promos.erreurs) || [];
+      const refus = er.some(x => x.code === 403);
+      if (promos && promos.compte === 'admin') {
+        return refus ? 'Le compte admin ERP n’a pas le droit de lire les promotions (403) : à ouvrir côté panel pour ce compte.'
+          : 'Le compte admin ERP n’a pas pu se connecter' + (er[0] && er[0].erreur ? ' (' + er[0].erreur + ')' : '') + ' : vérifiez-le dans Paramètres → Compte admin ERP (API TFBuddy).';
+      }
+      return 'Les promotions ne se lisent qu’avec un compte admin du panel (le compte consultant reçoit 403) : renseignez-le dans Paramètres → Compte admin ERP (API TFBuddy).';
     };
-    const mes = d.mesures || {};
-    common.prCr = {
-      cibleDefaut: String(cr.cibleDefaut),
-      poserCibleDefaut: e => { const v = num(e.target.value); if (v != null) { cr.cibleDefaut = v; } this.setState({ prCr: cr }); },
-      magasins: (d.magasins || []).map(m => ({
-        id: m.id, nom: court(m.nom),
-        cible: cr.cibles[m.id] != null ? String(cr.cibles[m.id]) : '',
-        effective: (cr.cibles[m.id] != null ? cr.cibles[m.id] : cr.cibleDefaut) + ' %' + (cr.cibles[m.id] != null ? '' : ' (réseau)'),
-        mesure: mes[m.id] && mes[m.id].taux != null ? n1(mes[m.id].taux) + ' %' : '',
-        mesureSub: mes[m.id] && mes[m.id].jours ? (mes[m.id].jours + ' j · ' + (mes[m.id].tickets || 0).toLocaleString('fr-BE') + ' tickets') : 'pas encore moissonné',
-        poser: e => { const v = num(e.target.value); if (v == null || v <= 0) { delete cr.cibles[m.id]; } else { cr.cibles[m.id] = v; } this.setState({ prCr: cr }); },
-      })),
-      paliers: cr.paliers.map((p, i) => ({
-        plus: String(p.plus), m: String(p.m),
-        poserPlus: e => { const v = num(e.target.value); if (v != null) { cr.paliers[i].plus = v; } this.setState({ prCr: cr }); },
-        poserM: e => { const v = num(e.target.value); if (v != null) { cr.paliers[i].m = Math.round(v); } this.setState({ prCr: cr }); },
-        retirer: () => { cr.paliers.splice(i, 1); this.setState({ prCr: cr }); },
-      })),
-      ajouter: () => { const der = cr.paliers[cr.paliers.length - 1] || { plus: -5, m: 10 }; cr.paliers.push({ plus: der.plus + 5, m: der.m + 30 }); this.setState({ prCr: cr }); },
-      minTickets: String(cr.minTickets),
-      poserMinTickets: e => { const v = num(e.target.value); if (v != null) { cr.minTickets = Math.max(0, Math.round(v)); } this.setState({ prCr: cr }); },
-      enregistrer: () => {
-        const cibles = {};
-        (d.magasins || []).forEach(m => { cibles[m.id] = cr.cibles[m.id] != null ? cr.cibles[m.id] : ''; });
-        enregistrer('/ventes/croisees', { cibleDefaut: cr.cibleDefaut, cibles, paliers: cr.paliers, minTickets: cr.minTickets }, 'Réglages des ventes croisées');
+
+    // Le brouillon : la liste des primes, et les réglages des ventes croisées (cible par défaut, par magasin, minimum de tickets).
+    const app = S.prApp || JSON.parse(JSON.stringify(d.app));
+    const re = () => this.setState({ prApp: app });
+    const cr0 = { cibleDefaut: d.croisees.cibleDefaut, minTickets: d.croisees.minTickets, cibles: Object.assign({}, d.croisees.cibles) };
+    const cr = S.prCr || JSON.parse(JSON.stringify(cr0));
+    const reCr = () => this.setState({ prCr: cr });
+    const appModifie = JSON.stringify(app) !== JSON.stringify(d.app);
+    const crModifie = JSON.stringify(cr) !== JSON.stringify(cr0);
+    const finir = quoi => { this.notify(quoi + ' — valables dès ce mois'); this._prL = {}; this.setState({ prApp: undefined, prCr: undefined }); };
+    const enregistrerCr = () => this.api('POST', '/ventes/croisees', { cibleDefaut: cr.cibleDefaut, minTickets: cr.minTickets,
+      cibles: Object.assign({}, ...(d.magasins || []).map(m => ({ [m.id]: cr.cibles[m.id] != null ? cr.cibles[m.id] : '' }))) });
+
+    // La moyenne du réseau en face de chaque seuil.
+    const R = moy ? moy.reseau : null;
+    // La note Google : la moyenne des fiches du réseau, et combien de magasins tiennent le seuil.
+    const notes = Object.values((d.google || {}).notes || {}).filter(v => v != null);
+    const moyGoogle = e => (!notes.length ? '' : fr(notes.reduce((a, b) => a + b, 0) / notes.length, 1) + ' ★ · '
+      + notes.filter(v => v + 1e-9 >= (+e.seuil || 4.5)).length + ' / ' + notes.length + ' magasins au seuil');
+    // Un target du magasin (23/10/2026) se lit comme celui de la marque dont il prend la mesure (« base »).
+    const kDe = e => (e.type === 'cible' ? e.base : e.cle);
+    const moyDe = e => {
+      if (kDe(e) === 'google') { return moyGoogle(e); }
+      if (!R) { return ''; }
+      if (kDe(e) === 'croisees') { return [R.croisees != null ? pc(R.croisees) : '', R.ticketsVendeuse != null ? R.ticketsVendeuse.toLocaleString('fr-BE') + ' tickets / vend.' : ''].filter(Boolean).join(' · '); }
+      if (kDe(e) === 'objectif') { return R.atteinte != null ? pc(R.atteinte) + ' de l’objectif' : ''; }
+      if (e.type === 'categorie') { const v = (R.pieces || {})[e.cle]; return v != null ? fr(v, 0) + ' pcs / vend.' : ''; }
+      if (e.type === 'promo') { const p = (moy.promos || []).find(x => x.cle === e.cle); return p && p.reseau != null ? fr(p.reseau, 0) + ' / vend. depuis le début' : ''; }
+      return '';
+    };
+    // La même moyenne, pour UN magasin (la page franchisé, 23/10/2026) : ses chiffres à lui.
+    const moyMagDe = sid => (moy ? (moy.magasins || []).find(m => String(m.id) === String(sid)) || null : null);
+    const moyDeMag = (e, sid) => {
+      if (kDe(e) === 'google') { const v = ((d.google || {}).notes || {})[sid]; return v != null ? fr(v, 1) + ' ★ aujourd’hui' : ''; }
+      const M = moyMagDe(sid);
+      if (!M) { return ''; }
+      if (kDe(e) === 'croisees') { const ci = cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut; return [M.croisees != null ? pc(M.croisees) : '', e.type === 'cible' ? '' : 'cible du magasin ' + fr(+ci, 1) + ' %'].filter(Boolean).join(' · '); }
+      if (kDe(e) === 'objectif') { return M.atteinte != null ? pc(M.atteinte) + ' de l’objectif' : ''; }
+      if (e.type === 'categorie') { const v = (M.pieces || {})[e.cle]; return v != null ? fr(v, 0) + ' pcs / vend.' : ''; }
+      if (e.type === 'promo') { const p = (moy.promos || []).find(x => x.cle === e.cle); const v = p ? (p.magasins || {})[sid] : null; return v != null ? fr(v, 0) + ' / vend. depuis le début' : ''; }
+      return '';
+    };
+    const emo = e => (kDe(e) === 'croisees' ? '🛍️' : kDe(e) === 'objectif' ? '🏪' : kDe(e) === 'google' ? '⭐' : e.type === 'promo' ? '🏷️' : e.type === 'b2b' ? '🤝' : '👑');
+    // La prime B2B en clair (23/10/2026, src/primes_b2b.php) : « 5 % HT de chaque commande pendant 3 mois ».
+    const tauxTxt = t => fr(+t, (+t) % 1 ? 1 : 0);
+    const b2bPhrase = e => (e.mode === 'fixe' ? (e.montant ?? 30) + ' € à sa 1re commande'
+      : tauxTxt(e.taux ?? 5) + ' % HT ' + (e.duree === 'premiere' ? 'de sa 1re commande' : e.duree === 'sans' ? 'de chaque commande, sans limite' : 'de chaque commande pendant ' + (e.duree ?? 3) + ' mois'));
+    // Les icônes déposées (public/uploads/primes) : servies à côté du cockpit, à la place de l'emoji dans l'app.
+    const racine = API_BASE.replace(/api\/cockpit\/?$/, '');
+    const icone = x => ({
+      icone: x.icone ? racine + x.icone : '',
+      poserIcone: ev => {
+        const f = ev.target.files && ev.target.files[0];
+        ev.target.value = '';
+        if (!f) { return; }
+        if (f.size > 1048576) { this.notify('Icône trop lourde — 1 Mo au maximum'); return; }
+        const lu = new FileReader();
+        lu.onload = () => this.api('POST', '/ventes/primes-icone', { data: lu.result }).then(r => {
+          if (!r || r.ok === false || !r.icone) { return; }
+          x.icone = r.icone; re();
+        });
+        lu.readAsDataURL(f);
       },
-      modifie: JSON.stringify(cr) !== JSON.stringify({ cibleDefaut: d.croisees.cibleDefaut, cibles: d.croisees.cibles, paliers: d.croisees.paliers, minTickets: d.croisees.minTickets }),
-      mesuresMois: d.mesuresMois || '',
+      retirerIcone: () => { x.icone = ''; re(); },
+    });
+    const typLib = { target: 'Target', cible: 'Target', categorie: 'Catégorie', promo: 'Promo', classement: 'Classement', b2b: 'B2B' };
+    // Le tableau ne s'édite plus (16/10/2026) : l'interrupteur actif / éteint s'enregistre tout de suite, le reste se
+    // modifie dans l'assistant (une promo) ou dans la fenêtre de réglage (targets, catégories, record, meilleure).
+    const sauver = quoi => this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste, externes: app.externes, sms: app.sms })
+      .then(r => { if (r && r.ok === false) { return; } finir(quoi); });
+    // La période d'une prime (16/10/2026) : la sienne (catégorie, target) ou celle de sa promotion ; face au mois en cours.
+    const tAuj = new Date();
+    const debM = tAuj.getFullYear() + '-' + String(tAuj.getMonth() + 1).padStart(2, '0') + '-01';
+    const finM = tAuj.getFullYear() + '-' + String(tAuj.getMonth() + 1).padStart(2, '0') + '-' + String(new Date(tAuj.getFullYear(), tAuj.getMonth() + 1, 0).getDate()).padStart(2, '0');
+    const jjA = v => (v ? v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) : '');
+    const periodeDe = x => { const du = x.type === 'promo' ? (x.promo || {}).du : x.du; const au = x.type === 'promo' ? (x.promo || {}).au : x.au;
+      return { du: du || null, au: au || null, txt: du && au ? 'du ' + jjA(du) + ' au ' + jjA(au) : du ? 'dès le ' + jjA(du) : au ? 'jusqu’au ' + jjA(au) : '',
+        etat: du && du > finM ? 'à venir' : au && au < debM ? 'terminée' : '' }; };
+    const payeurTxt = x => (x.famille === 'magasin' ? (nomMag[x.shop] || x.shop || 'Magasin') + ' — le magasin' : x.payeur === 'sponsor' && x.sponsor ? 'Sponsor · ' + x.sponsor : 'Marque');
+    const lignes = [];
+    app.liste.forEach((e, i) => {
+      const L = Object.assign(icone(e), { type: e.type === 'cible' ? 'target' : e.type, typLib: typLib[e.type], emo: emo(e), lib: e.lib || '', actif: !!e.actif, classement: !!e.classement, montant: String(e.montant ?? app.recompense),
+        externe: false, peutRetirer: e.type !== 'target', peutClasser: e.type !== 'target' && e.type !== 'cible' || e.cle === 'croisees', moyenne: moyDe(e), libLibre: e.type !== 'target',
+        qui: kDe(e) === 'croisees' ? 'chacune à la cible' : (kDe(e) === 'objectif' || kDe(e) === 'google') ? 'chacune au planning' : e.regle === 'seuil' ? 'chacune au seuil'
+          : e.regle === 'magasin' ? 'le magasin, partagée entre ses vendeuses' : e.regle === 'vendeuse' ? 'chacune à son objectif' : '1re du magasin',
+        poserActif: ev => { e.actif = !!ev.target.checked; re(); },
+        poserClassement: ev => { e.classement = !!ev.target.checked; re(); },
+        poserMontant: ev => { const v = num(ev.target.value); if (v != null) { e.montant = Math.max(0, Math.round(v)); } re(); },
+        poserLib: ev => { e.lib = ev.target.value; re(); },
+        poser: (cle, entier) => ev => { const v = entier ? num(ev.target.value) : ev.target.value; if (v != null) { e[cle] = entier ? Math.max(0, Math.round(v)) : v; } re(); },
+        retirer: () => { app.liste.splice(i, 1); re(); },
+        payeur: e.payeur || 'marque', sponsor: e.sponsor || '',
+        // La famille (16/10/2026) : la marque (ou un sponsor), ou le franchisé pour son magasin.
+        famille: e.famille === 'magasin' ? 'magasin' : 'marque', shop: e.shop || '', shopNom: nomMag[e.shop] || e.shop || '',
+        poserPayeur: ev => { e.payeur = ev.target.value; re(); }, poserSponsor: ev => { e.sponsor = ev.target.value; re(); },
+        periodeTxt: e.type === 'promo' ? '' : periodeDe(e).txt, etatPeriode: periodeDe(e).etat,
+        payeurTxt: payeurTxt(e), montantTxt: e.cadeau ? '🎁 ' + e.cadeau.nom + (e.cadeau.valeur ? ' (valeur ' + e.cadeau.valeur + ' €)' : '') : (e.montant ?? app.recompense) + ' €' + (e.type === 'promo' && e.regle === 'magasin' ? ' par magasin' : ''),
+        basculer: ev => { e.actif = !!ev.target.checked; sauver('« ' + (e.lib || e.cle) + ' » ' + (e.actif ? 'activée' : 'éteinte')); },
+        modifier: () => this.setState(e.type === 'promo' || e.type === 'categorie' ? { prWiz: wizDe(e) } : { prEdit: e.type === 'cible' ? editCible(e) : editDe(e) }),
+        // Pour la page d'un magasin : où la prime tourne, sa moyenne et son objectif dans ce magasin.
+        typeE: e.type, shops: e.type === 'promo' ? ((e.promo || {}).shops || []).map(String) : [], moyMag: sid => moyDeMag(e, sid),
+        objectifMag: sid => (e.objectifs && e.objectifs[sid] != null ? 'objectif du magasin : ' + e.objectifs[sid] + ' pcs' + (e.regle === 'vendeuse' && e.objVend && e.objVend[sid] ? ' · ' + e.objVend[sid] + ' par vendeuse' : '') : '') });
+      // Ce qui compte, en clair (le tableau ne s'édite plus).
+      const regleTxt = { seuil: (e.minPieces || 0) + ' pcs (seuil)', premiere: e.minPieces ? e.minPieces + ' pcs min.' : '' };
+      const hMinC = k => (k.heuresMin || 0) > 0 ? ' · ' + k.heuresMin + ' h min.' : '';
+      const hMin = k => (k.heuresMin ?? 20) > 0 ? ' · ' + (k.heuresMin ?? 20) + ' h min.' : '';
+      L.texte = e.cle === 'croisees' ? 'tickets à 2 articles ou plus' + (e.categorie ? ' avec ' + e.categorie : '') + ' · taux ≥ cible du magasin (défaut ' + fr(cr.cibleDefaut, 1) + ' %)' + (cr.minTickets > 0 ? ' · ' + cr.minTickets + ' tickets min.' : '')
+          + (Object.keys(cr.cibles).length ? ' · ' + Object.keys(cr.cibles).length + ' magasin(s) avec sa cible' : '')
+        : e.cle === 'objectif' ? 'CA ≥ ' + (e.pct ?? 100) + ' % de l’objectif' + hMin(e)
+        : e.cle === 'google' ? 'note Google du magasin ≥ ' + fr(e.seuil ?? 4.5, 1) + ' ★' + hMin(e)
+        // Un target du magasin (23/10/2026) : son déclencheur à lui.
+        : e.type === 'cible' ? (e.base === 'croisees' ? 'ventes croisées ≥ ' + fr(+e.cible, 1) + ' % (cible du magasin)' + ((e.minTickets || 0) > 0 ? ' · ' + e.minTickets + ' tickets min.' : '')
+          : e.base === 'objectif' ? 'CA du magasin ≥ ' + e.pct + ' % de l’objectif du mois' + hMinC(e) : 'note Google du magasin ≥ ' + fr(+e.seuil, 1) + ' ★' + hMinC(e))
+        : e.type === 'categorie' ? 'produits « ' + (e.motif || '') + ' »' + (e.regle === 'seuil' ? ' · chacune à ' + (e.minPieces || 0) + ' pcs' : (e.minPieces ?? 10) > 0 ? ' · ' + (e.minPieces ?? 10) + ' pcs min.' : '')
+        : e.type === 'promo' ? [(e.promo || {}).nom, sorte(e.promo || {}), dates(e.promo || {}), mags(e.promo || {}), { api: 'panel', cockpit: 'créée dans le cockpit' }[(e.promo || {}).source]].filter(Boolean).join(' · ')
+          + (e.regle === 'magasin' || e.regle === 'vendeuse' ? '' : regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] ? ' · ' + regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] : '')
+        : '';
+      if (e.type === 'b2b') {
+        // La prime B2B : un nouveau client pro, la vendeuse de sa 1re commande ; elle se modifie dans sa fenêtre à elle.
+        Object.assign(L, { qui: 'la vendeuse de sa 1re commande', peutClasser: false, moyenne: '',
+          texte: 'nouveau client pro · ' + b2bPhrase(e) + (e.min ? ' · dès ' + e.min + ' € HT' : '') + (e.plafond ? ' · plafond ' + e.plafond + ' € par client' : ''),
+          montantTxt: e.mode === 'fixe' ? (e.montant ?? 30) + ' € par client' : tauxTxt(e.taux ?? 5) + ' % HT',
+          modifier: () => this.setState({ prB2b: b2bDe(e) }) });
+      }
+      if (e.cle === 'croisees') {
+        Object.assign(L, { champs: 'croisees', cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets), nCibles: Object.keys(cr.cibles).length,
+          categorie: e.categorie || '', categories: [''].concat(d.categories || []).concat(e.categorie && !(d.categories || []).includes(e.categorie) ? [e.categorie] : []),
+          poserCategorie: ev => { e.categorie = ev.target.value; re(); },
+          poserCibleDefaut: ev => { const v = num(ev.target.value); if (v != null) { cr.cibleDefaut = v; } reCr(); },
+          poserMinTickets: ev => { const v = num(ev.target.value); if (v != null) { cr.minTickets = Math.max(0, Math.round(v)); } reCr(); } });
+      } else if (e.cle === 'objectif') {
+        Object.assign(L, { champs: 'objectif', pct: String(e.pct ?? 100), heuresMin: String(e.heuresMin ?? 20) });
+      } else if (e.cle === 'google') {
+        Object.assign(L, { champs: 'google', seuil: String(e.seuil ?? 4.5), heuresMin: String(e.heuresMin ?? 20),
+          poserSeuil: ev => { const v = num(ev.target.value); if (v != null) { e.seuil = Math.max(1, Math.min(5, Math.round(v * 10) / 10)); } re(); } });
+      } else if (e.type === 'categorie') {
+        Object.assign(L, { champs: 'categorie', motif: e.motif || '', minPieces: String(e.minPieces ?? 10) });
+      } else if (e.type === 'promo') {
+        const p = e.promo || {};
+        Object.assign(L, { champs: 'promo', minPieces: String(e.minPieces ?? 1), promoNom: p.nom || '', promoSorte: sorte(p), promoDates: dates(p), promoMags: mags(p),
+          promoSource: { api: 'panel', cockpit: 'créée dans le cockpit' }[p.source] || p.source, promoVide: !(p.ids || []).length,
+          // La règle (16/10/2026) : la 1re du magasin, ou chaque vendeuse au-dessus du seuil.
+          regle: ['seuil', 'magasin', 'vendeuse'].includes(e.regle) ? e.regle : 'premiere',
+          // Sur objectif (16/10/2026, posées par l'assistant) : le magasin ou chaque vendeuse — offertes seulement si la prime a ses objectifs.
+          regles: [['premiere', 'la 1re du magasin'], ['seuil', 'chaque vendeuse au seuil']].concat(e.objectifs ? [['magasin', 'objectif du magasin'], ['vendeuse', 'objectif par vendeuse']] : []),
+          surObjectif: e.regle === 'magasin' || e.regle === 'vendeuse',
+          objectifsTxt: e.objectifs ? Object.keys(e.objectifs).map(sid => (nomMag[sid] || sid) + ' ' + e.objectifs[sid] + (e.regle === 'vendeuse' && e.objVend && e.objVend[sid] ? ' (' + e.objVend[sid] + ' / vend.)' : '')).join(' · ')
+            + (e.pct != null ? ' — ' + (e.pct >= 0 ? '+' : '') + e.pct + ' % sur l’an dernier' : '') : '',
+          poserRegle: ev => { const v = ev.target.value; e.regle = ['seuil', 'magasin', 'vendeuse'].includes(v) && (v === 'seuil' || e.objectifs) ? v : 'premiere'; re(); } });
+      }
+      lignes.push(L);
+      // Bats ton record après les ventes croisées, la meilleure vendeuse après l'objectif : réglés ailleurs, montrés ici.
+      const ext = cle => { app.externes = app.externes || {}; app.externes[cle] = app.externes[cle] || { payeur: 'marque', sponsor: '', icone: '' }; const x = app.externes[cle];
+        return Object.assign(icone(x), { payeur: x.payeur || 'marque', sponsor: x.sponsor || '', poserPayeur: ev => { x.payeur = ev.target.value; re(); }, poserSponsor: ev => { x.sponsor = ev.target.value; re(); },
+          payeurTxt: payeurTxt(x), modifier: () => this.setState({ prEdit: editDe(null, cle) }) }); };
+      if (e.cle === 'croisees' && (d.record || {}).eurDixieme > 0) {
+        lignes.push(Object.assign(ext('record'), { externe: true, type: 'target', typLib: 'Target', emo: '🚀', lib: 'Bats ton record', texte: 'lignes par ticket au-dessus du record 12 mois, dès + 0,2',
+          montant: d.record.eurDixieme + ' € par dixième' + (d.record.maxDixiemes > 1 ? ', ' + d.record.maxDixiemes + ' au plus' : ''),
+          qui: 'chacune', moyenne: R && R.lignesTicket != null ? fr(R.lignesTicket, 2) + ' lignes / ticket' : '',
+          shops: [], moyMag: sid => { const M = moyMagDe(sid); return M && M.lignesTicket != null ? fr(M.lignesTicket, 2) + ' lignes / ticket' : ''; }, objectifMag: () => '' }));
+      }
+      if (e.cle === 'objectif' && (d.meilleure || {}).magasin > 0) {
+        lignes.push(Object.assign(ext('meilleure'), { externe: true, type: 'classement', typLib: 'Classement', emo: '🏆', lib: 'Meilleure vendeuse', texte: 'CA par heure prestée, pondéré par les heures',
+          montant: d.meilleure.magasin + ' € magasin · ' + d.meilleure.reseau + ' € réseau', qui: '1re du magasin, du réseau', moyenne: '',
+          shops: [], moyMag: () => '', objectifMag: () => '' }));
+      }
+    });
+    // L'assistant « Nouvelle prime promotion » (16/10/2026) : quatre étapes — les produits (une barre de recherche sur
+    // les catégories, les sous-catégories et les produits du catalogue, ou une promotion de l'API du panel), la période
+    // et les magasins, qui gagne et combien, le nom et l'aperçu. Le serveur relit les produits de la sélection.
+    const W = S.prWiz;
+    // L'API promotions : lue, refusée (403) ou muette.
+    const PR_ERR = () => (promos === undefined ? '' : promos === null ? 'Les promotions du panel n’ont pas pu être lues.'
+      : promos.api ? '' : PR_MOTIF() + ' En attendant : « Choisir les produits ».');
+    const ymd = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+    const moisDe = decal => { const t = new Date(); const a = new Date(t.getFullYear(), t.getMonth() + decal, 1); const b = new Date(t.getFullYear(), t.getMonth() + decal + 1, 0); return [ymd(a), ymd(b)]; };
+    const [suivDu, suivAu] = moisDe(1);
+    // famille « marque » : la marque ou un sponsor, tout le réseau ou des magasins ; « magasin » : la prime d'un franchisé, un magasin, payée par lui.
+    const wizNeuf = (famille, shop, api) => ({ etape: 1, onglet: api ? 'panel' : 'produits', q: '', sel: [], api: api || null, periode: 'suivant', du: suivDu, au: suivAu,
+      magsMode: 'tous', mags: [], regle: 'magasin', pct: '10', obj: {}, minPieces: '10', montant: String(app.recompense), payeur: famille === 'magasin' ? 'magasin' : 'marque', sponsor: '', nom: '', nomTouche: false, envoi: false,
+      famille: famille === 'magasin' ? 'magasin' : 'marque', shop: shop || '', icone: null,
+      // Un seul assistant (16/10/2026) : une promotion (des produits sur une période) ou une catégorie (chaque mois, les
+      // produits dont le nom contient un mot) ; un franchisé ne pose que des promotions.
+      sorte: 'promo', motif: '', cPer: 'toujours', cdu: '', cau: '',
+      // Ce qu'on gagne (16/10/2026) : de l'argent ou un cadeau ; une ligne de description ; le sponsor (logo, site, une ligne).
+      gain: 'argent', cadeauNom: '', cadeauValeur: '', description: '', sponsorLogo: null, sponsorLogoExist: '', sponsorSite: '', sponsorTexte: '' });
+    // Rouvrir une promo dans l'assistant (16/10/2026) : tout prérempli ; « edit » garde sa clé, le serveur refait ses produits.
+    // Les détails déjà posés d'une prime rouverte : cadeau, description, sponsor.
+    const infosDe = e => ({ gain: e.cadeau ? 'cadeau' : 'argent', cadeauNom: e.cadeau ? e.cadeau.nom : '', cadeauValeur: e.cadeau && e.cadeau.valeur != null ? String(e.cadeau.valeur) : '',
+      description: e.description || '', sponsorLogoExist: e.sponsorLogo || '', sponsorSite: e.sponsorSite || '', sponsorTexte: e.sponsorTexte || '' });
+    const wizDe = e => Object.assign(wizDe0(e), infosDe(e));
+    const wizDe0 = e => {
+      if (e.type === 'categorie') {
+        return Object.assign(wizNeuf(e.famille === 'magasin' ? 'magasin' : 'marque', e.shop || ''), { edit: e.cle, sorte: 'categorie', motif: e.motif || '', regle: e.regle === 'seuil' ? 'seuil' : 'premiere', minPieces: String(e.minPieces ?? 10),
+          cPer: e.du || e.au ? 'dates' : 'toujours', cdu: e.du || '', cau: e.au || '',
+          montant: String(e.montant ?? app.recompense), payeur: e.famille === 'magasin' ? 'magasin' : (e.payeur === 'sponsor' ? 'sponsor' : 'marque'), sponsor: e.sponsor || '', nom: e.lib || '', nomTouche: true, iconeExist: e.icone || '' });
+      }
+      const p = e.promo || {};
+      const W0 = wizNeuf(e.famille === 'magasin' ? 'magasin' : 'marque', e.shop || '', p.source === 'api' ? p : null);
+      const obj = {}; Object.keys(e.objectifs || {}).forEach(k => { obj[k] = String(e.objectifs[k]); });
+      return Object.assign(W0, { edit: e.cle, onglet: p.source === 'api' ? 'panel' : 'produits',
+        sel: p.source === 'cockpit' ? (p.sel || []).map(z => ({ t: z.t, v: z.v, lib: z.lib })) : [],
+        periode: 'libre', du: p.du || W0.du, au: p.au || W0.au, magsMode: (p.shops || []).length && e.famille !== 'magasin' ? 'choix' : 'tous', mags: (p.shops || []).slice(),
+        regle: ['seuil', 'magasin', 'vendeuse'].includes(e.regle) ? e.regle : 'premiere', pct: e.pct != null ? String(e.pct) : '10', obj,
+        minPieces: String(e.minPieces ?? 10), montant: String(e.montant ?? app.recompense), payeur: e.payeur === 'sponsor' ? 'sponsor' : (e.famille === 'magasin' ? 'magasin' : 'marque'),
+        sponsor: e.sponsor || '', nom: e.lib || '', nomTouche: true, iconeExist: e.icone || '' });
     };
-    const kc = S.prK || JSON.parse(JSON.stringify(d.concours || { actif: true, liste: [] }));
-    const kRe = () => this.setState({ prK: kc });
-    common.prK = {
-      actif: !!kc.actif,
-      poserActif: e => { kc.actif = !!e.target.checked; kRe(); },
-      liste: (kc.liste || []).map((q, i) => ({
-        cle: q.cle || '', lib: q.lib || '', motif: q.motif || '', magasin: String(q.magasin ?? 50), reseau: String(q.reseau ?? 100), minPieces: String(q.minPieces ?? 10),
-        poser: cle => e => { const v = cle === 'lib' || cle === 'motif' ? e.target.value : num(e.target.value); if (v != null) { q[cle] = cle === 'lib' || cle === 'motif' ? v : Math.max(0, Math.round(v)); } kRe(); },
-        retirer: () => { kc.liste.splice(i, 1); kRe(); },
-      })),
-      ajouter: () => { kc.liste = kc.liste || []; if (kc.liste.length < 4) { kc.liste.push({ cle: '', lib: '', motif: '', magasin: 50, reseau: 100, minPieces: 10 }); } kRe(); },
-      peutAjouter: (kc.liste || []).length < 4,
-      enregistrer: () => this.api('POST', '/ventes/concours', { actif: !!kc.actif, liste: (kc.liste || []).map(q => ({ cle: q.cle || undefined, lib: q.lib, motif: q.motif, magasin: q.magasin, reseau: q.reseau, minPieces: q.minPieces })) }).then(r => {
-        if (r && r.ok === false) { return; }
-        this.notify('Concours enregistrés');
-        this._pr = {}; this.setState({ prK: undefined });
+    common.prWiz = null;
+    if (W) {
+      const reW = () => this.setState({ prWiz: W });
+      const cat = lire('catalogue', '/ventes/primes-catalogue');
+      const sansAccent = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const q = sansAccent(W.q.trim());
+      const pris = it => W.sel.some(z => z.t === it.t && z.v === it.v);
+      const basculer = it => () => { const i = W.sel.findIndex(z => z.t === it.t && z.v === it.v); if (i >= 0) { W.sel.splice(i, 1); } else { W.sel.push(it); } W.api = null; reW(); };
+      const surligne = (nom) => { if (!q) { return [{ t: nom, m: false }]; } const n = sansAccent(nom); const i = n.indexOf(q); return i < 0 ? [{ t: nom, m: false }] : [{ t: nom.slice(0, i), m: false }, { t: nom.slice(i, i + q.length), m: true }, { t: nom.slice(i + q.length), m: false }]; };
+      const SEP = '\u0000';
+      const itemG = g => ({ t: 'groupe', v: g.nom, lib: g.nom, n: g.n });
+      const itemC = c2 => ({ t: 'categorie', v: c2.groupe + SEP + c2.nom, lib: c2.nom, n: c2.n, sous: c2.groupe });
+      const itemP = pr => ({ t: 'produit', v: String(pr.id), lib: pr.nom, n: 1, sous: pr.cat });
+      const vue = it => Object.assign({}, it, { morceaux: surligne(it.lib), pris: pris(it), basculer: basculer(it) });
+      let res = { groupes: [], categories: [], produits: [] };
+      if (cat) {
+        if (!q) { res.groupes = cat.groupes.map(itemG).map(vue); }
+        else {
+          res.groupes = cat.groupes.filter(g => sansAccent(g.nom).includes(q)).slice(0, 5).map(itemG).map(vue);
+          res.categories = cat.categories.filter(c2 => sansAccent(c2.nom).includes(q)).slice(0, 8).map(itemC).map(vue);
+          res.produits = cat.produits.filter(pr => sansAccent(pr.nom).includes(q)).slice(0, 10).map(itemP).map(vue);
+        }
+      }
+      // Les produits comptés : l'union de la sélection, lue ici pour l'affichage (le serveur la relit).
+      const prodsSel = !cat ? [] : cat.produits.filter(pr => W.sel.some(z => (z.t === 'groupe' && pr.grp === z.v) || (z.t === 'categorie' && (pr.grp + SEP + pr.cat) === z.v) || (z.t === 'produit' && String(pr.id) === z.v)));
+      // Une catégorie : les produits dont le nom contient le mot (une expression, sans tenir compte des majuscules, comme au serveur).
+      const estCat = W.sorte === 'categorie';
+      let reMotif = null; let motifErr = '';
+      if (estCat && W.motif.trim()) { try { reMotif = new RegExp(W.motif.trim(), 'iu'); } catch (er) { motifErr = 'Ce mot n’est pas lisible : enlevez les signes spéciaux.'; } }
+      const prodsMotif = estCat && reMotif && cat ? cat.produits.filter(pr => reMotif.test(pr.nom)) : [];
+      const compte = estCat ? prodsMotif.length : prodsSel.length;
+      const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+      const nomDefaut = () => (estCat ? (W.motif.trim() ? 'Queen of ' + cap(W.motif.trim().replace(/[^\p{L} ]/gu, '')) + (/s$/i.test(W.motif.trim()) ? '' : 's') : 'Queen of …')
+        : W.api ? W.api.nom : (W.sel.length ? 'Promo ' + W.sel.map(z => z.lib).slice(0, 2).join(' + ') : 'Promo'));
+      if (!W.nomTouche) { W.nom = nomDefaut(); }
+      const fam = W.famille === 'magasin';
+      // Les magasins où la prime d'un franchisé peut se poser : tous, ou ceux de la promotion du panel choisie.
+      const tourne = (p, sid) => !(p.shops || []).length || p.shops.includes(sid);
+      const magsPermis = (d.magasins || []).filter(m => !W.api || tourne(W.api, m.id));
+      const du = W.api ? W.api.du : W.du; const au = W.api ? W.api.au : W.au;
+      const shops = fam ? (W.shop ? [W.shop] : []) : W.api ? (W.api.shops || []) : (W.magsMode === 'tous' ? [] : W.mags);
+      const nbMags = fam ? 1 : (shops.length || (d.magasins || []).length);
+      const montant = num(W.montant); const minP = num(W.minPieces);
+      // Le tableau par magasin (16/10/2026) : ce que chaque magasin a vendu des produits choisis sur la même période l'an
+      // dernier (à défaut, au rythme des 4 dernières semaines), l'objectif = cela + x %, ses vendeuses (moyenne des mois
+      // récents) et l'objectif de chacune. Lu à l'étape 3, quand les produits, la période et les magasins sont posés.
+      const surObj = W.regle === 'magasin' || W.regle === 'vendeuse';
+      const idsSel = estCat ? prodsMotif.map(pr => pr.id) : W.api ? (W.api.ids || []) : prodsSel.map(pr => pr.id);
+      const shopsRef = shops.length ? shops : (d.magasins || []).map(m => m.id);
+      const urlRef = '/ventes/primes-reference?ids=' + idsSel.join(',') + '&du=' + (du || '') + '&au=' + (au || '') + '&shops=' + shopsRef.join(',');
+      const refL = W.etape >= 3 && idsSel.length ? lire('ref:' + urlRef, urlRef) : undefined;
+      const refDe = {}; ((refL && refL.magasins) || []).forEach(m => { refDe[m.id] = m; });
+      const vendDe = {}; (moy ? moy.magasins : []).forEach(m => { if (m.vendeuses > 0) { vendDe[m.id] = m.vendeuses; } });
+      const pct = num(W.pct);
+      const objDe = sid => { const t = W.obj[sid]; if (t != null && String(t).trim() !== '') { const v = num(t); return v != null && v > 0 ? Math.ceil(v) : null; }
+        const r = refDe[sid]; return r && r.ref != null && pct != null ? Math.max(1, Math.ceil(r.ref * (1 + pct / 100))) : null; };
+      const tableau = shopsRef.map(sid => {
+        const r = refDe[sid] || {}; const o = objDe(sid); const v = vendDe[sid] || null;
+        return { id: sid, nom: nomMag[sid] || sid, n1: r.n1 != null ? fr(r.n1, 0) : '—', recent: r.source === 'recent' ? fr(r.recent, 0) : '', source: r.source || '',
+          obj: o != null ? String(o) : '', objTouche: W.obj[sid] != null && String(W.obj[sid]).trim() !== '', vend: v != null ? fr(v, 1) : '—',
+          parVend: o != null ? String(Math.max(1, Math.ceil(o / Math.max(1, v || 1)))) : '', parVendN1: r.ref != null && v ? fr(r.ref / v, 0) : '—',
+          poserObj: ev => { W.obj[sid] = ev.target.value; reW(); } };
+      });
+      const objOk = shopsRef.length > 0 && shopsRef.every(sid => objDe(sid) != null);
+      const nVendTot = shopsRef.reduce((a, sid) => a + (vendDe[sid] || 0), 0);
+      // Une promotion du panel sans dates compte tant qu'elle tourne.
+      const datesOk = W.api ? (!du || !au || au >= du) : (!!du && !!au && au >= du);
+      const magsOk = fam ? magsPermis.some(m => m.id === W.shop) : (W.api || W.magsMode === 'tous' || W.mags.length > 0);
+      const catDatesOk = W.cPer === 'toujours' || ((!!W.cdu || !!W.cau) && (!W.cdu || !W.cau || W.cau >= W.cdu));
+      const estCadeau = W.gain === 'cadeau';
+      const ok = [null, estCat ? prodsMotif.length > 0 : (W.sel.length > 0 || !!W.api), estCat ? catDatesOk : (datesOk && magsOk), (estCadeau ? W.cadeauNom.trim() !== '' : (montant != null && montant > 0)) && (surObj ? objOk : (minP != null && minP >= (W.regle === 'seuil' ? 1 : 0))) && (fam || W.payeur !== 'sponsor' || W.sponsor.trim() !== ''), W.nom.trim() !== ''];
+      const jjmm = v => (v ? v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) : '…');
+      const gainTxt = () => (estCadeau ? '🎁 ' + (W.cadeauNom.trim() || 'un cadeau') + (num(W.cadeauValeur) ? ' (valeur ' + num(W.cadeauValeur) + ' €)' : '') : (montant || 0) + ' €');
+      const resume = estCat ? [
+        ['Produits', 'dont le nom contient « ' + W.motif.trim() + ' » · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
+        ['Période', W.cPer === 'dates' ? 'chaque mois' + (W.cdu ? ' dès le ' + jjmm(W.cdu) : '') + (W.cau ? ' jusqu’au ' + jjmm(W.cau) : '') : 'chaque mois, sans fin'],
+        fam ? ['Magasin', (nomMag[W.shop] || W.shop || '…') + ' — prime du franchisé'] : ['Magasins', 'tous (' + (d.magasins || []).length + ')'],
+        ['Gagne', W.regle === 'seuil' ? 'chaque vendeuse à ' + (minP || 0) + ' pcs ou plus' : (fam ? 'la 1re du magasin' : 'la 1re de chaque magasin') + (minP ? ', ' + minP + ' pcs min.' : '')],
+        ['Récompense', gainTxt() + ' · offerte par ' + (fam ? 'le magasin' : W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]] : [
+        ['Produits', W.api ? 'la promotion « ' + W.api.nom + ' » du panel' : W.sel.map(z => z.lib + (z.t === 'produit' ? '' : ' (' + (z.n || 0) + ')')).join(' + ') + ' · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
+        ['Période', !du && !au ? 'sans dates — tant que la promotion tourne' : jjmm(du) + ' → ' + jjmm(au)],
+        fam ? ['Magasin', (nomMag[W.shop] || W.shop || '…') + ' — prime du franchisé'] : ['Magasins', shops.length ? shops.map(sid => nomMag[sid] || sid).join(', ') : 'tous (' + (d.magasins || []).length + ')'],
+        ['Gagne', W.regle === 'magasin' ? 'le magasin, s’il atteint son objectif' + (pct != null ? ' (' + (pct >= 0 ? '+' : '') + pct + ' % sur l’an dernier)' : '') + ' — partagée entre ses vendeuses'
+          : W.regle === 'vendeuse' ? 'chaque vendeuse qui atteint son objectif' + (pct != null ? ' (' + (pct >= 0 ? '+' : '') + pct + ' % sur l’an dernier)' : '')
+          : W.regle === 'seuil' ? 'chaque vendeuse à ' + (minP || 0) + ' pcs ou plus' : (fam ? 'la 1re du magasin' : 'la 1re de chaque magasin') + (minP ? ', ' + minP + ' pcs min.' : '')],
+        ['Récompense', gainTxt() + (W.regle === 'magasin' && !estCadeau ? ' par magasin' : '') + ' · offerte par ' + (fam ? 'le magasin' : W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]];
+      // Le cadeau, la description, le sponsor ; l'icône et le logo se déposent ensemble avant l'enregistrement.
+      const details = () => ({ cadeau: estCadeau ? { nom: W.cadeauNom.trim(), valeur: num(W.cadeauValeur) } : null, description: W.description.trim(),
+        sponsorSite: W.payeur === 'sponsor' ? W.sponsorSite.trim() : '', sponsorTexte: W.payeur === 'sponsor' ? W.sponsorTexte.trim() : '',
+        sponsorLogo: W.payeur === 'sponsor' ? W.sponsorLogoExist : '' });
+      const logoNeuf = () => W.payeur === 'sponsor' && !!W.sponsorLogo;
+      const deposer = () => Promise.all([W.icone ? this.api('POST', '/ventes/primes-icone', { data: W.icone.data }) : Promise.resolve(null),
+        logoNeuf() ? this.api('POST', '/ventes/primes-icone', { data: W.sponsorLogo.data }) : Promise.resolve(null)]);
+      const creer = () => {
+        if (W.envoi) { return; }
+        if (estCat) {
+          const ancienneC = W.edit ? app.liste.find(x => x.cle === W.edit) : null;
+          const eC = { type: 'categorie', cle: W.edit || '', lib: W.nom.trim(), motif: W.motif.trim(), minPieces: Math.max(0, Math.round(minP || 0)), montant: Math.round(montant || 0),
+            regle: W.regle === 'seuil' ? 'seuil' : 'premiere',
+            du: W.cPer === 'dates' && W.cdu ? W.cdu : null, au: W.cPer === 'dates' && W.cau ? W.cau : null,
+            actif: ancienneC ? !!ancienneC.actif : true, classement: ancienneC ? ancienneC.classement !== false : true,
+            payeur: fam ? 'magasin' : (W.payeur === 'sponsor' ? 'sponsor' : 'marque'), sponsor: !fam && W.payeur === 'sponsor' ? W.sponsor.trim() : '', icone: W.iconeExist || '',
+            famille: fam ? 'magasin' : 'marque', shop: fam ? W.shop : '' };
+          Object.assign(eC, details());
+          W.envoi = true; reW();
+          deposer().then(([ri, rl]) => {
+            if ((W.icone && (!ri || ri.ok === false || !ri.icone)) || (logoNeuf() && (!rl || rl.ok === false || !rl.icone))) { W.envoi = false; reW(); return; }
+            if (ri && ri.icone) { eC.icone = ri.icone; }
+            if (rl && rl.icone) { eC.sponsorLogo = rl.icone; }
+            const liste = ancienneC ? app.liste.map(x => (x.cle === W.edit ? eC : x)) : app.liste.concat([eC]);
+            this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste, externes: app.externes, sms: app.sms }).then(r => {
+              if (r && r.ok === false) { W.envoi = false; reW(); return; }
+              this.setState({ prWiz: undefined });
+              finir('Prime « ' + W.nom.trim() + ' » ' + (ancienneC ? 'modifiée' : 'créée'));
+            });
+          });
+          return;
+        }
+        // Sur objectif : l'objectif de chaque magasin, ses vendeuses, l'an dernier, le % (le serveur en tire l'objectif par vendeuse).
+        const objectifs = {}; const vendeuses = {}; const ref = {};
+        if (surObj) { shopsRef.forEach(sid => { objectifs[sid] = objDe(sid); if (vendDe[sid]) { vendeuses[sid] = vendDe[sid]; } if (refDe[sid] && refDe[sid].ref != null) { ref[sid] = refDe[sid].ref; } }); }
+        const base = { type: 'promo', lib: W.nom.trim(), montant: Math.round(montant), minPieces: surObj ? 0 : Math.round(minP || 0), regle: W.regle,
+          objectifs: surObj ? objectifs : undefined, vendeuses: surObj ? vendeuses : undefined, n1: surObj ? ref : undefined, pct: surObj ? pct : undefined,
+          payeur: fam ? 'magasin' : W.payeur, sponsor: fam ? '' : W.sponsor, actif: true, classement: true, famille: W.famille, shop: fam ? W.shop : '' };
+        // Rouverte : elle garde sa clé, son état, son classement, son icône ; « refaire » demande au serveur de relire ses produits.
+        const ancienne = W.edit ? app.liste.find(x => x.cle === W.edit) : null;
+        if (ancienne) { Object.assign(base, { cle: W.edit, refaire: true, actif: !!ancienne.actif, classement: ancienne.classement !== false, icone: W.iconeExist || '' }); }
+        const e = W.api ? Object.assign(base, { ref: { source: W.api.source, id: W.api.id }, promo: W.api })
+          : Object.assign(base, { ref: { source: 'cockpit' }, promo: { source: 'cockpit', sel: W.sel.map(z => ({ t: z.t, v: z.v, lib: z.lib })), du, au, shops, nom: W.nom.trim() } });
+        // Rouverte : la promo d'avant reste celle du serveur ; la nouvelle sélection part à côté (« promo_neuve »).
+        if (ancienne && !W.api) { e.promo_neuve = e.promo; e.promo = ancienne.promo; }
+        Object.assign(e, details());
+        W.envoi = true; reW();
+        // L'icône choisie (un emoji ou une photo, déjà en PNG) et le logo du sponsor se déposent d'abord : la prime garde leurs chemins.
+        deposer().then(([ri, rl]) => {
+          if ((W.icone && (!ri || ri.ok === false || !ri.icone)) || (logoNeuf() && (!rl || rl.ok === false || !rl.icone))) { W.envoi = false; reW(); return; }
+          if (ri && ri.icone) { e.icone = ri.icone; }
+          if (rl && rl.icone) { e.sponsorLogo = rl.icone; }
+          const liste = ancienne ? app.liste.map(x => (x.cle === W.edit ? e : x)) : app.liste.concat([e]);
+          this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste, externes: app.externes, sms: app.sms }).then(r => {
+            if (r && r.ok === false) { W.envoi = false; reW(); return; }
+            this.setState({ prWiz: undefined });
+            finir('Prime « ' + W.nom.trim() + ' » ' + (ancienne ? 'modifiée' : 'créée'));
+          });
+        });
+      };
+      common.prWiz = {
+        etape: W.etape, onglet: W.onglet, q: W.q, chargement: cat === undefined, catMotif: cat === null ? 'Le catalogue n’a pas pu être lu.' : '',
+        res, vide: !!q && cat && !res.groupes.length && !res.categories.length && !res.produits.length, parcourir: !q,
+        sel: W.sel.map(z => ({ type: { groupe: 'Catégorie', categorie: 'Sous-catégorie', produit: 'Produit' }[z.t], lib: z.lib, n: z.t === 'produit' ? '' : String(z.n || ''), retirer: basculer(z) })),
+        titre: W.edit ? 'Modifier « ' + (W.nom || 'la prime') + ' »' : fam ? 'Nouvelle prime du magasin' : 'Nouvelle prime', fam, edit: !!W.edit,
+        // La sorte de prime, à l'étape 1 d'une prime neuve de la marque.
+        // Un franchisé pose aussi des catégories pour son magasin (23/10/2026).
+        categorie: estCat, sortes: W.edit ? null : [['promo', '🏷️', 'Promotion', 'Des produits choisis, sur une période : une promo du panel ou la vôtre.'],
+          ['categorie', '👑', 'Catégorie', 'Chaque mois, les produits dont le nom contient un mot : « tarte », « quiche »…']].map(([v, e, nom, txt]) => ({ e, nom, txt, on: W.sorte === v,
+          choisir: () => { W.sorte = v; if (v === 'categorie') { W.regle = 'premiere'; } else { W.regle = 'magasin'; } W.nomTouche = false; reW(); } })),
+        cPer: W.cPer, cdu: W.cdu, cau: W.cau, catDatesOk,
+        cPers: [['toujours', 'Tous les mois, sans fin'], ['dates', 'Entre deux dates']].map(([v, nom]) => ({ nom, on: W.cPer === v, choisir: () => { W.cPer = v; reW(); } })),
+        poserCdu: ev => { W.cdu = ev.target.value; reW(); }, poserCau: ev => { W.cau = ev.target.value; reW(); },
+        motif: W.motif, motifErr, motifN: prodsMotif.length, motifEx: prodsMotif.slice(0, 12).map(pr => ({ nom: pr.nom, cat: pr.cat })), poserMotif: ev => { W.motif = ev.target.value; reW(); },
+        iconeExist: W.iconeExist ? racine + W.iconeExist : '',
+        supprimer: W.edit ? () => { if (!window.confirm('Supprimer la prime « ' + (W.nom || '') + ' » ?')) { return; } app.liste = app.liste.filter(x => x.cle !== W.edit); this.setState({ prWiz: undefined }); sauver('Prime supprimée'); } : null,
+        compte, api: W.api, apiErreur: PR_ERR(), apiListe: (promos ? promos.liste : []).filter(p => (p.ids || []).length && (!fam || !W.shop || tourne(p, W.shop)) && (!W.edit || !W.api || p.id === W.api.id)).map(p => ({ nom: p.nom, sorte: sorte(p), dates: dates(p), magasins: mags(p), pris: !!(W.api && W.api.id === p.id && W.api.source === p.source),
+          choisir: () => { W.api = (W.api && W.api.id === p.id) ? null : p; W.sel = []; if (fam && W.api && W.shop && !tourne(W.api, W.shop)) { W.shop = ''; } reW(); } })),
+        periode: W.periode, du, au, apiDates: !!W.api, magsMode: W.magsMode, mags: (d.magasins || []).map(m => ({ id: m.id, nom: court(m.nom), on: W.magsMode === 'tous' || W.mags.includes(m.id),
+          basculer: () => { W.magsMode = 'choix'; const i = W.mags.indexOf(m.id); if (i >= 0) { W.mags.splice(i, 1); } else { W.mags.push(m.id); } reW(); } })),
+        regle: W.regle, minPieces: W.minPieces, montant: W.montant, payeur: W.payeur, sponsor: W.sponsor, nom: W.nom, resume, nbMags,
+        // Objectif du magasin : une prime par magasin (16/10/2026) ; par vendeuse : une par vendeuse.
+        plafond: estCadeau ? gainTxt() + (W.regle === 'seuil' || surObj ? ' pour chaque gagnante' : ' pour la 1re de chaque magasin') : W.regle === 'magasin' ? shopsRef.length + ' magasin' + (shopsRef.length > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + shopsRef.length * (montant || 0) + ' € au plus'
+          : surObj ? (nVendTot ? '≈ ' + fr(nVendTot, 0) + ' vendeuses × ' + (montant || 0) + ' € = ' + Math.round(nVendTot * (montant || 0)) + ' € au plus' : (montant || 0) + ' € par vendeuse')
+          : W.regle === 'seuil' ? (montant || 0) + ' € par vendeuse au seuil' : fam ? (montant || 0) + ' € au plus, payés par le magasin' : nbMags + ' magasin' + (nbMags > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + (nbMags * (montant || 0)) + ' € au plus',
+        // Rouverte, la prime d'un franchisé reste à son magasin (sa clé le porte).
+        // Sur la page d'un magasin (23/10/2026), la prime est la sienne : le magasin est fixé.
+        magsUn: magsPermis.filter(m => (!W.edit || !fam || m.id === W.shop) && (common.prSection !== 'franchise' || String(m.id) === String(S.prShop))).map(m => ({ nom: court(m.nom), on: W.shop === m.id, choisir: () => { W.shop = m.id; reW(); } })),
+        ok: ok[W.etape], envoi: W.envoi,
+        pas: ['Produits', estCat ? 'Chaque mois' : 'Période & magasins', 'Qui gagne', 'Nom & aperçu'].map((nom, i) => ({ n: i + 1, nom, on: W.etape === i + 1, fait: W.etape > i + 1, aller: W.etape > i + 1 ? () => { W.etape = i + 1; reW(); } : null })),
+        poserQ: ev => { W.q = ev.target.value; reW(); },
+        // Rouverte : une promo du panel reste la sienne, une promo du cockpit garde le choix des produits.
+        onglets: [['produits', 'Choisir les produits'], ['panel', 'Promotions du panel (API)']].filter(([v]) => !W.edit || (W.api ? v === 'panel' : v === 'produits')).map(([v, nom]) => ({ nom, on: W.onglet === v, choisir: () => { W.onglet = v; reW(); } })),
+        periodes: [['mois', 'Ce mois-ci'], ['suivant', 'Le mois prochain'], ['libre', 'Dates libres']].map(([v, nom]) => ({ nom, on: W.periode === v,
+          choisir: () => { W.periode = v; if (v !== 'libre') { [W.du, W.au] = moisDe(v === 'mois' ? 0 : 1); } reW(); } })),
+        poserDu: ev => { W.du = ev.target.value; W.periode = 'libre'; reW(); }, poserAu: ev => { W.au = ev.target.value; W.periode = 'libre'; reW(); },
+        tousMags: () => { W.magsMode = 'tous'; W.mags = []; reW(); }, choisirMags: () => { W.magsMode = 'choix'; W.mags = (d.magasins || []).map(m => m.id); reW(); },
+        surObj, colVend: W.regle !== 'magasin', tableau, refChargement: W.etape >= 3 && idsSel.length > 0 && refL === undefined, refMotif: refL === null ? 'Les ventes de l’an dernier n’ont pas pu être lues.' : (!idsSel.length ? 'Aucun produit compté : pas de tableau.' : ''),
+        refPeriode: refL ? jjmm(refL.du1) + ' → ' + jjmm(refL.au1) : '', refRecent: !!(refL && (refL.magasins || []).some(m => m.source === 'recent')), pct: W.pct,
+        poserPct: ev => { W.pct = ev.target.value; reW(); }, effacerObj: () => { W.obj = {}; reW(); }, objTouches: Object.keys(W.obj).some(k => String(W.obj[k]).trim() !== ''),
+        objPreview: (() => { const o = shopsRef.map(objDe).filter(v => v != null); return o.length ? (W.regle === 'vendeuse' ? Math.max(1, Math.ceil(o[0] / Math.max(1, vendDe[shopsRef[0]] || 1))) : o[0]) : null; })(),
+        regles: [['magasin', '🏪', 'Objectif du magasin', 'Le magasin atteint son objectif : une prime pour le magasin, partagée entre ses vendeuses du mois.'],
+          ['vendeuse', '👤', 'Objectif par vendeuse', 'Chaque vendeuse a son objectif (celui du magasin ÷ ses vendeuses) : celles qui l’atteignent gagnent.'],
+          ['premiere', '👑', 'La 1re de chaque magasin', 'La vendeuse qui a vendu le plus de pièces dans son magasin sur la période.'],
+          ['seuil', '🎯', 'Chaque vendeuse au-dessus d’un seuil', 'Toutes celles qui atteignent le nombre de pièces fixé.']].filter(([v]) => !estCat || v === 'premiere' || v === 'seuil').map(([v, e, nom, txt]) => ({ e, nom, txt, on: W.regle === v,
+          choisir: () => { W.regle = v; if (v === 'seuil' && (num(W.minPieces) || 0) < 1) { W.minPieces = '20'; } reW(); } })),
+        poserMin: ev => { W.minPieces = ev.target.value; reW(); }, poserMontant: ev => { W.montant = ev.target.value; reW(); },
+        // Une prime de la marque : la marque ou un sponsor. Celle d'un franchisé : son magasin, sans choix.
+        payeurs: fam ? [] : [['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, nom]) => ({ nom, on: W.payeur === v, choisir: () => { W.payeur = v; reW(); } })),
+        poserSponsor: ev => { W.sponsor = ev.target.value; reW(); },
+        poserNom: ev => { W.nom = ev.target.value; W.nomTouche = true; reW(); },
+        // L'icône (16/10/2026) : un emoji dessiné en PNG, ou une photo recadrée au carré, réduite à 128 px, coins arrondis.
+        icone: W.icone ? W.icone.data : (W.iconeExist ? racine + W.iconeExist : ''), iconeSorte: W.icone ? W.icone.sorte : '',
+        emojis: PR_EMOJIS.map(em => ({ em, on: !!(W.icone && W.icone.sorte === 'emoji' && W.icone.em === em),
+          choisir: () => { const data = prIconeEmoji(em); if (data) { W.icone = { sorte: 'emoji', em, data }; reW(); } } })),
+        poserPhoto: ev => {
+          const f = ev.target.files && ev.target.files[0];
+          ev.target.value = '';
+          if (!f) { return; }
+          if (!/^image\//.test(f.type)) { this.notify('Une image, s’il te plaît (photo JPEG, PNG, WebP)'); return; }
+          prIconePhoto(f).then(data => { W.icone = { sorte: 'photo', data }; reW(); }).catch(() => this.notify('Cette photo n’a pas pu être lue'));
+        },
+        retirerIcone: () => { W.icone = null; W.iconeExist = ''; reW(); },
+        gain: W.gain, estCadeau, cadeauNom: W.cadeauNom, cadeauValeur: W.cadeauValeur,
+        gains: [['argent', '💶', 'Argent'], ['cadeau', '🎁', 'Cadeau']].map(([v, e, nom]) => ({ e, nom, on: W.gain === v, choisir: () => { W.gain = v; reW(); } })),
+        poserCadeauNom: ev => { W.cadeauNom = ev.target.value; reW(); }, poserCadeauValeur: ev => { W.cadeauValeur = ev.target.value; reW(); },
+        description: W.description, poserDescription: ev => { W.description = ev.target.value; reW(); },
+        sponsorSite: W.sponsorSite, sponsorTexte: W.sponsorTexte, poserSponsorSite: ev => { W.sponsorSite = ev.target.value; reW(); }, poserSponsorTexte: ev => { W.sponsorTexte = ev.target.value; reW(); },
+        logo: W.sponsorLogo ? W.sponsorLogo.data : (W.sponsorLogoExist ? racine + W.sponsorLogoExist : ''),
+        poserLogo: ev => { const fi = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!fi) { return; }
+          if (!/^image\//.test(fi.type)) { this.notify('Une image, s’il te plaît (PNG, JPEG, WebP, SVG)'); return; }
+          prLogo(fi).then(data => { W.sponsorLogo = { data }; reW(); }).catch(() => this.notify('Ce logo n’a pas pu être lu')); },
+        retirerLogo: () => { W.sponsorLogo = null; W.sponsorLogoExist = ''; reW(); },
+        fermer: () => this.setState({ prWiz: undefined }),
+        precedent: () => { W.etape = Math.max(1, W.etape - 1); reW(); },
+        suivant: () => { if (ok[W.etape]) { W.etape = Math.min(4, W.etape + 1); reW(); } },
+        creer,
+      };
+    }
+
+    // La fenêtre de réglage (16/10/2026) : une prime qui n'est pas une promo — un target, une catégorie, Bats ton record,
+    // la meilleure vendeuse — se modifie ici, comme l'assistant : ses réglages, qui paie, son icône. « ext » : record ou meilleure.
+    const editDe = (e, ext) => {
+      const x = ext ? ((app.externes || {})[ext] || {}) : (e || {});
+      const nouveau = !e && !ext;
+      return { cle: e ? e.cle : '', ext: ext || '', type: ext ? 'ext' : (nouveau ? 'categorie' : (e.type === 'target' ? e.cle : e.type)), nouveau,
+        // Les conditions (17/10/2026) : un interrupteur chacune ; coupée, elle vaut 0 et ne compte plus.
+        champs: nouveau ? { lib: '', motif: '', minPieces: '10', condP: true, montant: String(app.recompense), classement: true, description: '' }
+          : { lib: x.lib || '', motif: x.motif || '', description: x.description || '', minPieces: String(x.minPieces || 10), condP: (x.minPieces ?? 10) > 0,
+            montant: String(x.montant ?? app.recompense), classement: x.classement !== false,
+            categorie: x.categorie || '', pct: String(x.pct ?? 100), heuresMin: String(x.heuresMin || 20), condH: (x.heuresMin ?? 20) > 0, seuil: String(x.seuil ?? 4.5),
+            cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets || 30), condT: cr.minTickets > 0, du: x.du || '', au: x.au || '' },
+        payeur: x.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: x.sponsor || '', icone: null, iconeExist: x.icone || '', envoi: false };
+    };
+    // Un target du magasin (23/10/2026, Sam : « tout doit être paramétrable, déclencheur et autre ») : ventes croisées,
+    // objectif CA ou note Google, posé par le franchisé pour SON magasin — son nom, son déclencheur, sa condition, sa
+    // récompense ou un cadeau, sa période, sa description, son icône. Payé par le magasin.
+    const CIBLE_NOM = { croisees: 'Ventes croisées', objectif: 'Objectif magasin', google: 'Note Google' };
+    const editCible = (e, base, shop) => {
+      const x = e || {}; const b0 = e ? e.base : base; const sid = e ? e.shop : shop;
+      return { cle: x.cle || '', ext: '', type: 'cible', base: b0, shop: String(sid || ''), nouveau: !e,
+        champs: { lib: x.lib || CIBLE_NOM[b0] || '', cible: String(x.cible ?? (cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut)), minTickets: String(x.minTickets ?? 30), condT: (x.minTickets ?? 30) > 0,
+          pct: String(x.pct ?? 100), seuil: String(x.seuil ?? 4.5), heuresMin: String(x.heuresMin || 20), condH: (x.heuresMin ?? 20) > 0,
+          montant: String(x.montant ?? app.recompense), cadeauOn: !!x.cadeau, cadeauNom: x.cadeau ? x.cadeau.nom : '', cadeauValeur: x.cadeau && x.cadeau.valeur != null ? String(x.cadeau.valeur) : '',
+          du: x.du || '', au: x.au || '', description: x.description || '' },
+        payeur: 'magasin', sponsor: '', icone: null, iconeExist: x.icone || '', envoi: false };
+    };
+    const PE = S.prEdit;
+    common.prEdit = null;
+    if (PE) {
+      const reE = () => this.setState({ prEdit: PE });
+      const f = PE.champs;
+      const ch = (cle, lib, sorte, plus) => Object.assign({ cle, lib, sorte, valeur: f[cle] == null ? '' : String(f[cle]), coche: !!f[cle],
+        poser: ev => { f[cle] = sorte === 'case' ? !!ev.target.checked : ev.target.value; reE(); } }, plus || {});
+      const montantCh = ch('montant', 'Récompense', 'nombre', { unite: '€', pas: 5 });
+      // La période (16/10/2026) : vide, sans début ni fin — la prime tourne tous les mois.
+      const periodeCh = [ch('du', 'Du (vide : sans début)', 'date'), ch('au', 'Au (vide : sans fin)', 'date')];
+      // La ligne de description (17/10/2026) : le conseil que la vendeuse lit dans la fiche de la prime, dans l'app.
+      const DESC_INDICE = { croisees: 'Toujours proposer un produit en plus', objectif: 'Chaque vente compte : le magasin gagne ensemble',
+        google: 'Demande un avis 5★ aux clients contents', categorie: 'Mets-les en avant au comptoir',
+        record: 'Un article de plus par ticket, et ton record tombe', meilleure: 'La vendeuse qui vend le plus du mois' };
+      const descCh = ch('description', 'Description dans l’app', 'texte', { indice: DESC_INDICE[PE.ext || (PE.type === 'cible' ? PE.base : PE.type)] || '', large: true, max: 160 });
+      // Le gain d'un target du magasin : de l'argent, ou un cadeau.
+      const gainCh = PE.type !== 'cible' ? [] : (f.cadeauOn ? [ch('cadeauOn', 'Un cadeau à la place de l’argent', 'case'), ch('cadeauNom', 'Le cadeau', 'texte', { indice: 'un bon resto' }), ch('cadeauValeur', 'Sa valeur', 'nombre', { unite: '€', pas: 5 })]
+        : [montantCh, ch('cadeauOn', 'Un cadeau à la place de l’argent', 'case')]);
+      const cibleCh = PE.type !== 'cible' ? [] : [ch('lib', 'Nom dans l’app', 'texte', { indice: CIBLE_NOM[PE.base] })].concat(
+        PE.base === 'croisees' ? [ch('cible', 'Cible du magasin : taux de ventes croisées', 'nombre', { unite: '%', pas: 0.5 })]
+          : PE.base === 'objectif' ? [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif du mois', pas: 1 })]
+          : [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 })], gainCh, periodeCh, [descCh]);
+      const champs = { cible: cibleCh, croisees: [ch('categorie', 'Une vente croisée : 2 articles ou plus, dont un de', 'choix', { options: [['', 'toutes catégories']].concat((d.categories || []).map(k => [k, k])).concat(f.categorie && !(d.categories || []).includes(f.categorie) ? [[f.categorie, f.categorie]] : []) }),
+          ch('cibleDefaut', 'Cible par défaut (taux)', 'nombre', { unite: '%', pas: 0.5 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh].concat(periodeCh, descCh),
+        objectif: [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif', pas: 1 }), montantCh].concat(periodeCh, descCh),
+        google: [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 }), montantCh].concat(periodeCh, descCh),
+        categorie: [ch('lib', 'Nom dans l’app', 'texte', { indice: 'Queen of …' }), ch('motif', 'Les produits dont le nom contient', 'texte', { indice: 'tarte' }),
+          ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh, descCh],
+        ext: [descCh] }[PE.type] || [];
+      const condH = { cle: 'condH', champ: 'heuresMin', lib: 'Un minimum d’heures au planning dans le mois', unite: 'h', pas: 1 };
+      const condT = { cle: 'condT', champ: 'minTickets', lib: 'Un minimum de tickets dans le mois', unite: 'tickets', pas: 5 };
+      const conditions = ({ objectif: [condH], google: [condH], cible: PE.base === 'croisees' ? [condT] : [condH],
+        croisees: [condT],
+        categorie: [{ cle: 'condP', champ: 'minPieces', lib: 'Un minimum de pièces pour être classée', unite: 'pcs', pas: 1 }] }[PE.type] || [])
+        .map(k => ({ lib: k.lib, unite: k.unite, pas: k.pas, cle: k.champ, on: !!f[k.cle], valeur: String(f[k.champ] ?? ''),
+          basculer: ev => { f[k.cle] = !!ev.target.checked; reE(); }, poser: ev => { f[k.champ] = ev.target.value; reE(); } }));
+      // Une condition allumée garde au moins 1 ; éteinte, 0.
+      const cond = (on, v, defaut) => on ? Math.max(1, Math.round(num(v) ?? defaut)) : 0;
+      const ok = (PE.type !== 'categorie' || (String(f.lib).trim() !== '' && String(f.motif).trim() !== '')) && (!f.du || !f.au || f.au >= f.du)
+        && (PE.type !== 'cible' || (String(f.lib).trim() !== '' && (f.cadeauOn ? String(f.cadeauNom).trim() !== '' : (num(f.montant) || 0) > 0)));
+      const entier = v => { const n = num(v); return n == null ? null : n; };
+      const enregistrer = () => {
+        if (PE.envoi || !ok) { return; }
+        PE.envoi = true; reE();
+        const ic = PE.icone ? this.api('POST', '/ventes/primes-icone', { data: PE.icone.data }) : Promise.resolve(null);
+        ic.then(ri => {
+          if (PE.icone && (!ri || ri.ok === false || !ri.icone)) { PE.envoi = false; reE(); return; }
+          const icone = ri && ri.icone ? ri.icone : PE.iconeExist;
+          const qui = { payeur: PE.payeur, sponsor: PE.payeur === 'sponsor' ? PE.sponsor.trim() : '', description: String(f.description || '').trim().slice(0, 160) };
+          let suite = Promise.resolve({ ok: true });
+          if (PE.type === 'cible') {
+            // Un target du magasin : neuf, il rejoint la liste ; rouvert, il garde sa clé (le magasin y est).
+            const ancienne = PE.nouveau ? null : app.liste.find(x => x.cle === PE.cle);
+            const e = { type: 'cible', base: PE.base, cle: PE.nouveau ? '' : PE.cle, famille: 'magasin', shop: PE.shop, payeur: 'magasin', sponsor: '',
+              lib: String(f.lib).trim(), actif: ancienne ? !!ancienne.actif : true, icone, montant: Math.max(0, Math.round(entier(f.montant) ?? app.recompense)),
+              cadeau: f.cadeauOn ? { nom: String(f.cadeauNom).trim(), valeur: entier(f.cadeauValeur) } : null,
+              du: f.du || null, au: f.au || null, description: String(f.description || '').trim().slice(0, 160) };
+            if (PE.base === 'croisees') { Object.assign(e, { cible: entier(f.cible) ?? 50, minTickets: cond(f.condT, f.minTickets, 30) }); }
+            if (PE.base === 'objectif') { Object.assign(e, { pct: Math.round(entier(f.pct) ?? 100), heuresMin: cond(f.condH, f.heuresMin, 20) }); }
+            if (PE.base === 'google') { Object.assign(e, { seuil: entier(f.seuil) ?? 4.5, heuresMin: cond(f.condH, f.heuresMin, 20) }); }
+            app.liste = ancienne ? app.liste.map(x => (x.cle === PE.cle ? e : x)) : app.liste.concat([e]);
+          } else if (PE.ext) {
+            app.externes = app.externes || {};
+            app.externes[PE.ext] = Object.assign({}, app.externes[PE.ext] || {}, qui, { icone });
+          } else {
+            const e = PE.nouveau ? { type: 'categorie', cle: '', actif: true } : app.liste.find(x => x.cle === PE.cle);
+            if (!e) { PE.envoi = false; reE(); return; }
+            Object.assign(e, qui, { icone, montant: Math.max(0, Math.round(entier(f.montant) ?? e.montant ?? app.recompense)) });
+            if (['croisees', 'objectif', 'google'].includes(PE.type)) { Object.assign(e, { du: f.du || null, au: f.au || null }); }
+            if (PE.type === 'categorie') { Object.assign(e, { lib: String(f.lib).trim(), motif: String(f.motif).trim(), minPieces: cond(f.condP, f.minPieces, 10), classement: !!f.classement }); }
+            if (PE.type === 'objectif') { Object.assign(e, { pct: Math.round(entier(f.pct) ?? 100), heuresMin: cond(f.condH, f.heuresMin, 20) }); }
+            if (PE.type === 'google') { Object.assign(e, { seuil: entier(f.seuil) ?? 4.5, heuresMin: cond(f.condH, f.heuresMin, 20) }); }
+            if (PE.type === 'croisees') {
+              Object.assign(e, { categorie: f.categorie || '', classement: !!f.classement });
+              cr.cibleDefaut = entier(f.cibleDefaut) ?? cr.cibleDefaut; cr.minTickets = cond(f.condT, f.minTickets, 30);
+              suite = enregistrerCr();
+            }
+            if (PE.nouveau) { app.liste.push(e); }
+          }
+          suite.then(r1 => {
+            if (r1 && r1.ok === false) { PE.envoi = false; reE(); return; }
+            this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste, externes: app.externes, sms: app.sms }).then(r => {
+              if (r && r.ok === false) { PE.envoi = false; reE(); return; }
+              this.setState({ prEdit: undefined });
+              finir(PE.nouveau ? 'Catégorie créée' : 'Prime modifiée');
+            });
+          });
+        });
+      };
+      const nomE = PE.ext === 'record' ? 'Bats ton record' : PE.ext === 'meilleure' ? 'Meilleure vendeuse' : (f.lib || (app.liste.find(x => x.cle === PE.cle) || {}).lib || '');
+      common.prEdit = {
+        titre: PE.type === 'cible' ? (PE.nouveau ? 'Nouvelle prime du magasin · ' + (CIBLE_NOM[PE.base] || '') : 'Modifier « ' + nomE + ' »') + ' — ' + (nomMag[PE.shop] || 'shop ' + PE.shop)
+          : PE.nouveau ? 'Nouvelle prime catégorie' : 'Modifier « ' + nomE + ' »', champs, conditions, ok, envoi: PE.envoi,
+        payeurFixe: PE.type === 'cible' ? 'Le magasin — ' + (nomMag[PE.shop] || 'shop ' + PE.shop) : '',
+        note: PE.ext ? 'Son montant se règle dans Analyse magasin → Équipe & ventes → Targets & primes.' : PE.type === 'croisees' ? 'La cible de chaque magasin se règle plus bas, dans les moyennes par magasin.'
+          : PE.type === 'cible' ? ({ croisees: 'Une vente croisée se compte comme pour la marque : un ticket à 2 articles ou plus. Chaque vendeuse au-dessus de la cible gagne.',
+            objectif: 'L’objectif du mois du magasin (son budget). Tant que le mois court, l’atteinte se lit au rythme actuel. Chaque vendeuse au planning gagne.',
+            google: 'La note de la fiche Google du magasin. Chaque vendeuse au planning gagne quand le magasin tient la note.' }[PE.base] || '') : '',
+        // Une prime du magasin est payée par le magasin, sans choix.
+        payeurs: PE.type === 'cible' ? [] : [['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, nom]) => ({ nom, on: PE.payeur === v, choisir: () => { PE.payeur = v; reE(); } })),
+        payeur: PE.payeur, sponsor: PE.sponsor, poserSponsor: ev => { PE.sponsor = ev.target.value; reE(); },
+        icone: PE.icone ? PE.icone.data : (PE.iconeExist ? racine + PE.iconeExist : ''),
+        emojis: PR_EMOJIS.map(em => ({ em, on: !!(PE.icone && PE.icone.sorte === 'emoji' && PE.icone.em === em), choisir: () => { const data = prIconeEmoji(em); if (data) { PE.icone = { sorte: 'emoji', em, data }; reE(); } } })),
+        poserPhoto: ev => { const fi = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!fi) { return; }
+          if (!/^image\//.test(fi.type)) { this.notify('Une image, s’il te plaît (photo JPEG, PNG, WebP)'); return; }
+          prIconePhoto(fi).then(data => { PE.icone = { sorte: 'photo', data }; reE(); }).catch(() => this.notify('Cette photo n’a pas pu être lue')); },
+        retirerIcone: () => { PE.icone = null; PE.iconeExist = ''; reE(); },
+        supprimer: (PE.type === 'categorie' || PE.type === 'cible') && !PE.nouveau ? () => { if (!window.confirm('Supprimer la prime « ' + nomE + ' » ?')) { return; } app.liste = app.liste.filter(x => x.cle !== PE.cle); this.setState({ prEdit: undefined }); sauver('Prime supprimée'); } : null,
+        enregistrer, fermer: () => this.setState({ prEdit: undefined }),
+      };
+    }
+
+    // La prime B2B en une phrase (23/10/2026, l'option D) : pour la marque, ou pour un magasin ; le serveur relit tout.
+    const b2bNeuf = (famille, shop) => ({ edit: null, famille, shop: shop || '', mode: 'pct', valeur: '5', taux: 5, montant: 30, duree: 3, plafond: '', min: '',
+      lib: 'Ramène un client pro', du: ymd(new Date()), au: '', plus: false, envoi: false, actif: true, icone: '', payeur: 'marque', sponsor: '' });
+    const b2bDe = e => ({ edit: e.cle, famille: e.famille === 'magasin' ? 'magasin' : 'marque', shop: e.shop || '', mode: e.mode === 'fixe' ? 'fixe' : 'pct',
+      valeur: e.mode === 'fixe' ? String(e.montant ?? 30) : String(e.taux ?? 5).replace('.', ','), taux: e.taux ?? 5, montant: e.montant ?? 30, duree: e.duree ?? 3,
+      plafond: e.plafond ? String(e.plafond) : '', min: e.min ? String(e.min) : '', lib: e.lib || 'Ramène un client pro', du: e.du || '', au: e.au || '',
+      plus: false, envoi: false, actif: e.actif !== false, icone: e.icone || '', payeur: e.payeur || 'marque', sponsor: e.sponsor || '' });
+    const BB = S.prB2b;
+    common.prB2b = null;
+    if (BB) {
+      const reB = () => this.setState({ prB2b: BB });
+      const v = num(BB.valeur);
+      const valOk = v != null && v > 0 && v <= (BB.mode === 'fixe' ? 5000 : 50);
+      const tx = BB.mode === 'pct' && valOk ? Math.round(v * 2) / 2 : (+BB.taux || 5);
+      const mt = BB.mode === 'fixe' && valOk ? Math.round(v) : (+BB.montant || 30);
+      const DUREES = [['premiere', 'de sa 1re commande'], ['1', 'de chaque commande pendant 1 mois'], ['3', 'de chaque commande pendant 3 mois'],
+        ['12', 'de chaque commande pendant 12 mois'], ['sans', 'de chaque commande, sans limite']];
+      // L'exemple chiffré : une école qui commande 400 € HT par mois.
+      const ex = 400; const par = BB.mode === 'fixe' ? mt : tx / 100 * ex;
+      const nMois = BB.mode === 'fixe' || BB.duree === 'premiere' ? 1 : BB.duree === 'sans' ? 12 : +BB.duree;
+      const plaf = num(BB.plafond);
+      const tot = plaf && plaf > 0 ? Math.min(par * nMois, plaf) : par * nMois;
+      const eu = y => fr(y, y % 1 ? 2 : 0) + ' €';
+      const exemple = BB.mode === 'fixe' ? 'Chaque nouveau client pro : <b>' + eu(mt) + '</b> pour la vendeuse qui encaisse sa 1re commande.'
+        : 'Une école qui commande <b>' + eu(ex) + ' HT</b> par mois : <b>' + eu(par) + '</b> par commande, <b>' + eu(tot) + '</b> pour la vendeuse'
+          + (BB.duree === 'sans' ? ' sur un an' : BB.duree === 'premiere' ? '' : ' en ' + BB.duree + ' mois') + (plaf && plaf > 0 && par * nMois > plaf ? ' (plafond)' : '') + '.';
+      const ok = valOk && (BB.famille !== 'magasin' || !!BB.shop) && (!BB.du || !BB.au || BB.au >= BB.du);
+      const enregistrer = () => {
+        if (!ok || BB.envoi) { return; }
+        BB.envoi = true; reB();
+        const pl = num(BB.plafond); const mi = num(BB.min);
+        const cle = BB.edit || ('b2b' + Array.from(crypto.getRandomValues(new Uint8Array(4))).map(o => o.toString(16).padStart(2, '0')).join(''));
+        const e = { type: 'b2b', cle, famille: BB.famille, shop: BB.famille === 'magasin' ? BB.shop : '', payeur: BB.famille === 'magasin' ? 'magasin' : BB.payeur, sponsor: BB.sponsor,
+          lib: String(BB.lib || '').trim() || 'Ramène un client pro', actif: BB.actif, mode: BB.mode, taux: tx, montant: mt, duree: BB.mode === 'fixe' ? 'premiere' : BB.duree,
+          plafond: pl && pl > 0 ? Math.round(pl) : 0, min: mi && mi > 0 ? Math.round(mi) : 0, du: BB.du || null, au: BB.au || null, icone: BB.icone || '' };
+        const i = app.liste.findIndex(y => y.cle === BB.edit);
+        if (BB.edit && i >= 0) { app.liste[i] = Object.assign({}, app.liste[i], e); } else { app.liste.push(e); }
+        this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste, externes: app.externes, sms: app.sms }).then(r => {
+          if (r && r.ok === false) { BB.envoi = false; reB(); return; }
+          this.setState({ prB2b: undefined });
+          finir(BB.edit ? 'Prime B2B modifiée' : 'Prime B2B créée');
+        });
+      };
+      const champB = cle => ev => { BB[cle] = ev.target.value; reB(); };
+      common.prB2b = {
+        titre: BB.edit ? 'Modifier la prime B2B' : 'Nouvelle prime B2B', edit: !!BB.edit, mode: BB.mode, valeur: BB.valeur, duree: String(BB.duree),
+        dureeTxt: (DUREES.find(([k]) => k === String(BB.duree)) || DUREES[2])[1], durees: DUREES, exemple, ok, envoi: BB.envoi,
+        plus: BB.plus, lib: BB.lib, plafond: BB.plafond, min: BB.min, du: BB.du, au: BB.au,
+        magasins: BB.famille === 'magasin' && !BB.edit && !BB.shopFixe ? (d.magasins || []).map(m => [m.id, nomMag[m.id] || m.nom]) : null, shop: BB.shop,
+        magasinNom: BB.famille === 'magasin' ? (nomMag[BB.shop] || (BB.shop ? 'Magasin ' + BB.shop : '')) : 'toute la marque',
+        poserValeur: ev => { BB.valeur = String(ev.target.value).replace(/[^\d.,]/g, '').slice(0, 5); const w = num(BB.valeur);
+          if (w != null && w > 0) { if (BB.mode === 'fixe') { BB.montant = Math.round(w); } else { BB.taux = Math.round(w * 2) / 2; } } reB(); },
+        poserMode: ev => { BB.mode = ev.target.value === 'fixe' ? 'fixe' : 'pct'; BB.valeur = BB.mode === 'fixe' ? String(BB.montant || 30) : String(BB.taux || 5).replace('.', ','); reB(); },
+        poserDuree: ev => { const k = ev.target.value; BB.duree = k === 'premiere' || k === 'sans' ? k : (parseInt(k, 10) || 3); reB(); },
+        poserShop: champB('shop'), poserLib: champB('lib'), poserPlafond: champB('plafond'), poserMin: champB('min'), poserDu: champB('du'), poserAu: champB('au'),
+        basculerPlus: () => { BB.plus = !BB.plus; reB(); },
+        supprimer: BB.edit ? () => { if (!window.confirm('Supprimer la prime « ' + BB.lib + ' » ?')) { return; } app.liste = app.liste.filter(y => y.cle !== BB.edit); this.setState({ prB2b: undefined }); sauver('Prime B2B supprimée'); } : null,
+        enregistrer, fermer: () => this.setState({ prB2b: undefined }),
+      };
+    }
+
+    // Le choix du mois et l'année des primes (24/10/2026, Sam : « un month picker », « un récapitulatif de l'année par prime
+    // et par personne, par magasin et sur la page réseau »). Les mois partent de janvier 2026, le 1er des primes de l'app.
+    const MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+    const MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const auj = new Date(); const mAuj = auj.getFullYear() + '-' + String(auj.getMonth() + 1).padStart(2, '0'); const yAuj = auj.getFullYear();
+    const M_DEBUT = '2026-01'; const Y_DEBUT = 2026;
+    const decale = (m, n) => { const x = new Date(+m.slice(0, 4), +m.slice(5, 7) - 1 + n, 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); };
+    const libMois = m => MOIS_L[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4);
+    // Un mois : ‹ octobre 2026 ›, et au toucher la grille des douze mois (ceux à venir, et d'avant 2026, grisés).
+    const pickerMois = (m, cle) => {
+      const ouvert = !!S[cle + 'Pick']; const yG = S[cle + 'PickY'] || +m.slice(0, 4);
+      const aller = v => () => this.setState({ [cle + 'Mois']: v, [cle + 'Pick']: false });
+      return { lib: libMois(m), enCours: m === mAuj, ouvert,
+        prec: m > M_DEBUT ? aller(decale(m, -1)) : null, suiv: m < mAuj ? aller(decale(m, 1)) : null,
+        ouvrir: () => this.setState({ [cle + 'Pick']: !ouvert, [cle + 'PickY']: +m.slice(0, 4) }), fermer: () => this.setState({ [cle + 'Pick']: false }),
+        an: yG, anPrec: yG > Y_DEBUT ? () => this.setState({ [cle + 'PickY']: yG - 1 }) : null, anSuiv: yG < yAuj ? () => this.setState({ [cle + 'PickY']: yG + 1 }) : null,
+        grille: MOIS_C.map((nom, i) => { const v = yG + '-' + String(i + 1).padStart(2, '0');
+          return { nom, on: v === m, enCours: v === mAuj, choisir: v >= M_DEBUT && v <= mAuj ? aller(v) : null }; }) };
+    };
+    const pickerAn = (y, cle) => ({ lib: String(y), enCours: y === yAuj,
+      prec: y > Y_DEBUT ? () => this.setState({ [cle]: y - 1 }) : null, suiv: y < yAuj ? () => this.setState({ [cle]: y + 1 }) : null });
+    // L'année : une colonne par prime gagnée, une ligne par vendeuse (ou par magasin), ce qu'elle a touché et combien de
+    // mois ; un toucher sur l'en-tête trie, un 2e inverse. Les totaux suivent les colonnes montrées (le filtre).
+    const eurA = v => (+v).toLocaleString('fr-BE', { minimumFractionDigits: (+v) % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €';
+    const payeurLib = p => (p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : p.payeur === 'magasin' ? 'le magasin' : 'la marque');
+    const pl = (n, mot) => n + ' ' + mot + (n > 1 && !/s$/.test(mot) ? 's' : '');
+    const anneeVue = (A, cleTri, o) => {
+      if (!A) { return { cols: [], lignes: [], total: '', periode: '', barres: [] }; }
+      const cols = (A.primes || []).filter(o.filtre || (() => true));
+      const tri0 = S[cleTri] || { col: 'total', sens: -1 };
+      const tri = tri0.col === 'nom' || tri0.col === 'total' || cols.some(p => p.cle === tri0.col) ? tri0 : { col: 'total', sens: -1 };
+      const totalDe = r => cols.reduce((t, p) => t + (((r.cases || {})[p.cle] || {}).montant || 0), 0);
+      const val = r => (tri.col === 'nom' ? String(r.nom) : tri.col === 'total' ? totalDe(r) : ((r.cases || {})[tri.col] ? r.cases[tri.col].montant * 1000 + r.cases[tri.col].fois : -1));
+      const src = (o.magasins ? A.magasins : A.personnes) || [];
+      const rangs = src.filter(r => cols.some(p => (r.cases || {})[p.cle])).sort((a, b) => {
+        const xa = val(a); const xb = val(b); const c = typeof xa === 'string' ? xa.localeCompare(xb, 'fr') : xa - xb;
+        return c * tri.sens || totalDe(b) - totalDe(a) || String(a.nom).localeCompare(String(b.nom), 'fr');
+      });
+      const colTri = col => { const on = tri.col === col;
+        return { fleche: on ? (tri.sens < 0 ? '↓' : '↑') : '', aria: on ? (tri.sens < 0 ? 'descending' : 'ascending') : 'none',
+          trier: () => this.setState({ [cleTri]: { col, sens: on ? -tri.sens : (col === 'nom' ? 1 : -1) } }) }; };
+      const caseAn = c => (!c ? null : { haut: c.montant > 0 ? eurA(c.montant) : '✓ cadeau',
+        bas: o.magasins ? pl(c.gagnantes, 'vendeuse') + ' · ' + pl(c.fois, 'fois') : pl(c.fois, 'mois') });
+      const mois = A.mois || [];
+      const maxM = Math.max(1, ...mois.map(x => +x.total || 0));
+      return {
+        periode: mois.length ? libMois(mois[0].m).split(' ')[0] + ' → ' + libMois(mois[mois.length - 1].m) + (mois[mois.length - 1].enCours ? ' (en cours)' : '') : '',
+        total: eurA(rangs.reduce((t, r) => t + totalDe(r), 0)), triNom: colTri('nom'), triTotal: colTri('total'),
+        cols: cols.map(p => ({ cle: p.cle, lib: p.lib, payeur: payeurLib(p), duMagasin: p.payeur === 'magasin', tri: colTri(p.cle),
+          somme: eurA(p.total) + ' · ' + pl(p.gagnantes, 'gagnante') })),
+        lignes: rangs.map(r => ({ nom: r.nom, total: eurA(totalDe(r)), cases: cols.map(p => caseAn((r.cases || {})[p.cle])),
+          sous: o.magasins ? pl(r.gagnantes, 'vendeuse') + ' primée' + (r.gagnantes > 1 ? 's' : '') : [o.reseau ? r.magasinNom : '', pl(r.mois, 'mois') + ' primé' + (r.mois > 1 ? 's' : '')].filter(Boolean).join(' · ') })),
+        // Le réseau : ce qui a été gagné mois par mois, en barres fines.
+        barres: mois.filter(x => x.total != null).map(x => ({ lib: MOIS_C[+x.m.slice(5, 7) - 1].replace('.', ''), titre: libMois(x.m) + ' · ' + eurA(x.total || 0), h: Math.round(100 * (+x.total || 0) / maxM), enCours: !!x.enCours })),
+      };
+    };
+
+    // Les deux familles (16/10/2026) : la marque et ses sponsors d'un côté, les franchisés — magasin par magasin — de l'autre.
+    const filtreMag = S.prMag || '';
+    const lignesMag = lignes.filter(l => l.famille === 'magasin');
+    // L'année du réseau (24/10/2026) : par magasin ou par vendeuse, sur la page admin seule.
+    const vueAnR = S.prAnVue === 'vendeuses' ? 'vendeuses' : 'magasins';
+    const yAnR = S.prAnY || yAuj;
+    const anR = common.prSection !== 'franchise' ? lire('an:' + yAnR, '/ventes/primes-annee?y=' + yAnR) : null;
+    const anneeReseau = common.prSection === 'franchise' ? null : Object.assign({
+      chargement: anR === undefined, motif: anR === null ? 'L’année des primes n’a pas pu être calculée.' : '', picker: pickerAn(yAnR, 'prAnY'),
+      vues: [['magasins', 'Par magasin'], ['vendeuses', 'Par vendeuse']].map(([k, nom]) => ({ nom, on: k === vueAnR, choisir: () => this.setState({ prAnVue: k }) })),
+    }, anneeVue(anR, vueAnR === 'magasins' ? 'prAnTriM' : 'prAnTriV', { magasins: vueAnR === 'magasins', reseau: true }));
+    common.prApp = {
+      annee: anneeReseau,
+      lignes: lignes.filter(l => l.famille !== 'magasin'),
+      lignesMag: lignesMag.filter(l => !filtreMag || l.shop === filtreMag),
+      magsFiltre: [{ nom: 'Tous les magasins', n: lignesMag.length, on: !filtreMag, choisir: () => this.setState({ prMag: '' }) }]
+        .concat((d.magasins || []).map(m => ({ nom: court(m.nom), n: lignesMag.filter(l => l.shop === m.id).length, on: filtreMag === m.id, choisir: () => this.setState({ prMag: m.id }) }))),
+      magFiltreNom: filtreMag ? (nomMag[filtreMag] || 'Magasin ' + filtreMag) : '',
+      nouvelleMag: () => this.setState({ prWiz: wizNeuf('magasin', filtreMag) }),
+      nouvelleB2b: () => this.setState({ prB2b: b2bNeuf('marque', '') }),
+      nouvelleB2bMag: () => this.setState({ prB2b: b2bNeuf('magasin', filtreMag) }),
+      recompense: String(app.recompense),
+      sms: !!(app.sms && app.sms.actif), smsConfigure: !!d.smsConfigure,
+      poserSms: ev => { app.sms = { actif: !!ev.target.checked }; re(); },
+      poserRecompense: ev => { const v = num(ev.target.value); if (v != null) { app.recompense = Math.max(0, Math.round(v)); } re(); },
+      ajouterCategorie: () => this.setState({ prEdit: editDe(null, null) }),
+      versPromos: () => { const el = document.querySelector('[data-pr="promos"]'); if (el) { el.scrollIntoView({ behavior: 'smooth' }); } },
+      nouvelle: () => this.setState({ prWiz: wizNeuf('marque') }),
+      modifie: appModifie || crModifie,
+      enregistrer: () => {
+        const suite = crModifie ? enregistrerCr() : Promise.resolve({ ok: true });
+        suite.then(r1 => {
+          if (r1 && r1.ok === false) { return; }
+          if (!appModifie) { finir('Ventes croisées enregistrées'); return; }
+          this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste, externes: app.externes, sms: app.sms }).then(r => {
+            if (r && r.ok === false) { return; }
+            finir('Primes de l’app enregistrées');
+          });
+        });
+      },
+    };
+
+    // Les promotions du panel : celles qui ont déjà leur prime, les autres en un geste.
+    const prises = {}; const prisesMag = {};
+    app.liste.filter(e => e.type === 'promo').forEach(e => { const p = e.promo || {}; const k = (e.ref ? e.ref.source + ':' + e.ref.id : p.source + ':' + p.id);
+      if (e.famille === 'magasin') { prisesMag[k + ':' + (e.shop || '')] = e; } else { prises[k] = e; } });
+    common.prPromos = {
+      chargement: promos === undefined, motif: promos === null ? 'Les promotions n’ont pas pu être lues.' : '',
+      // L'API promotions du panel, et elle seule (16/10/2026) : plus de repli sur les bundles du catalogue.
+      // Lues avec le compte admin ERP (16/10/2026) : les promotions ne vivent que sous /admin, le compte consultant reçoit 403.
+      erreur: promos && (promos.erreurs || []).length ? 'API promotions du panel (' + (promos.compte === 'admin' ? 'compte admin ERP' : promos.compte === 'consultant' ? 'compte consultant' : 'aucun compte') + ') : '
+        + promos.erreurs.map(x => x.chemin.replace('/admin/promotions/', '').replace(/\?.*$/, '') + ' ' + (x.code ? 'HTTP ' + x.code : (x.erreur || 'injoignable'))).join(' · ') + (promos.api ? '' : ' — ' + PR_MOTIF()) : '',
+      liste: (promos ? promos.liste : []).map(p => {
+        const e = prises[p.source + ':' + p.id];
+        // Une promotion d'un seul magasin : celle d'un franchisé — sa prime peut être celle du magasin.
+        const seul = (p.shops || []).length === 1 ? p.shops[0] : '';
+        const eMag = seul ? prisesMag[p.source + ':' + p.id + ':' + seul] : null;
+        return { nom: p.nom, sorte: sorte(p), prix: p.prix != null ? fr(p.prix, 2) + ' €' : '', dates: dates(p), magasins: mags(p), portee: seul ? 'magasin' : 'réseau',
+          statutMag: eMag ? (eMag.actif ? 'prime du magasin' : 'prime du magasin éteinte') : '',
+          ajouterMag: !seul || eMag || !(p.ids || []).length ? null : () => this.setState({ prWiz: Object.assign(wizNeuf('magasin', seul, p), { etape: 2 }) }),
+          source: 'panel', produits: (p.ids || []).length ? (p.ids.length + ' produit' + (p.ids.length > 1 ? 's' : '')) : 'produit introuvable',
+          comptable: (p.ids || []).length > 0, statut: e ? (e.actif ? 'prime active' : 'prime éteinte') : '',
+          // « + prime » : l'assistant, la promotion déjà choisie (16/10/2026).
+          ajouter: e || !(p.ids || []).length ? null : () => this.setState({ prWiz: Object.assign(wizNeuf('marque', '', p), { etape: 2 }) }) };
       }),
-      modifie: JSON.stringify(kc) !== JSON.stringify(d.concours || {}),
+      relire: () => { delete this._prL.promos; this.setState({ prPromosFrais: true }); },
     };
-    const gg = S.prG || Object.assign({}, d.google || {});
-    common.prG = {
-      actif: !!gg.actif, neutre: String(gg.neutre ?? ''), pente: String(gg.pente ?? ''), min: String(gg.min ?? ''), max: String(gg.max ?? ''), porte: gg.porte || 'app',
-      poserActif: e => { gg.actif = !!e.target.checked; this.setState({ prG: gg }); },
-      poser: cle => e => { const v = num(e.target.value); if (v != null) { gg[cle] = v; } this.setState({ prG: gg }); },
-      poserPorte: e => { gg.porte = e.target.value === 'tout' ? 'tout' : 'app'; this.setState({ prG: gg }); },
-      exemples: [4.0, 4.3, 4.5, 4.7, 4.9].map(n => ({ note: n.toFixed(1).replace('.', ','), coef: Math.max(+gg.min || 0, Math.min(+gg.max || 9, 1 + (n - (+gg.neutre || 4.5)) * (+gg.pente || 0))).toFixed(2).replace('.', ',') })),
-      enregistrer: () => this.api('POST', '/ventes/prime-google', { actif: !!gg.actif, neutre: gg.neutre, pente: gg.pente, min: gg.min, max: gg.max, porte: gg.porte }).then(r => {
-        if (r && r.ok === false) { return; }
-        this.notify('Coefficient Google enregistré');
-        this._pr = {}; this.setState({ prG: undefined });
-      }),
-      modifie: JSON.stringify(gg) !== JSON.stringify(d.google || {}),
+
+    // Les moyennes par magasin : régler chaque seuil au plus juste, la cible de ventes croisées en face.
+    const ecart = S.prEcart != null ? S.prEcart : 3;
+    const cats = moy ? (moy.categories || []) : [];
+    const prs = moy ? (moy.promos || []) : [];
+    const ligneMoy = m => ({ vendeuses: fr(m.vendeuses, 1), tickets: m.tickets != null ? m.tickets.toLocaleString('fr-BE') : '', ticketsVendeuse: m.ticketsVendeuse != null ? m.ticketsVendeuse.toLocaleString('fr-BE') : '',
+      ticketMoyen: m.ticketMoyen != null ? fr(m.ticketMoyen, 2) + ' €' : '', lignes: fr(m.lignesTicket, 2), croisees: pc(m.croisees), atteinte: pc(m.atteinte),
+      pieces: cats.map(c => fr((m.pieces || {})[c.cle], 0)) });
+    common.prMoy = {
+      ns: [1, 3, 6].map(k => ({ nom: k + ' mois', on: k === n, choisir: () => this.setState({ prMoyN: k }) })),
+      chargement: moy === undefined, motif: moy === null ? 'Les moyennes n’ont pas pu être calculées.' : '',
+      periode: moy ? moy.mois.map(x => x.lib).join(', ') : '', nMois: n + ' mois',
+      croiseesCat: (d.croisees || {}).categorie || '',
+      cats: cats.map(c => c.lib), promos: prs.map(p => ({ lib: p.lib, du: p.du ? jj(p.du) : '' })),
+      lignes: !moy ? [] : moy.magasins.map(m => Object.assign(ligneMoy(m), {
+        nom: court(m.nom), promos: prs.map(p => fr((p.magasins || {})[m.id], 0)),
+        cible: cr.cibles[m.id] != null ? String(cr.cibles[m.id]) : '', defaut: String(cr.cibleDefaut),
+        proposee: m.croisees != null ? Math.round(m.croisees + ecart) + ' %' : '',
+        poserCible: ev => { const v = num(ev.target.value); if (v == null || v <= 0) { delete cr.cibles[m.id]; } else { cr.cibles[m.id] = v; } reCr(); } })),
+      reseau: !moy ? null : Object.assign(ligneMoy(moy.reseau), { promos: prs.map(p => fr(p.reseau, 0)) }),
+      ecart: String(ecart), poserEcart: ev => { const v = num(ev.target.value); this.setState({ prEcart: v == null ? 3 : v }); },
+      appliquer: () => { (moy ? moy.magasins : []).forEach(m => { if (m.croisees != null) { cr.cibles[m.id] = Math.round(m.croisees + ecart); } }); reCr(); },
+      modifie: crModifie,
+      enregistrer: () => enregistrerCr().then(r => { if (r && r.ok === false) { return; } finir('Cibles de ventes croisées enregistrées'); }),
+      csv: () => {
+        if (!moy) { return; }
+        const t = [['Magasin', 'Vendeuses', 'Tickets par mois', 'Tickets par vendeuse', 'Ticket moyen', 'Lignes par ticket', 'Ventes croisées', 'Objectif atteint']
+          .concat(cats.map(c => c.lib + ' par vendeuse'), prs.map(p => p.lib + ' par vendeuse'), ['Cible ventes croisées'])];
+        const ligne = (nom, m, pr, cible) => [nom, m.vendeuses, m.tickets, m.ticketsVendeuse, m.ticketMoyen, m.lignesTicket, m.croisees, m.atteinte]
+          .concat(cats.map(c => (m.pieces || {})[c.cle]), pr, [cible]).map(v => (v == null ? '' : String(v).replace('.', ',')));
+        moy.magasins.forEach(m => t.push(ligne(court(m.nom), m, prs.map(p => (p.magasins || {})[m.id]), cr.cibles[m.id] != null ? cr.cibles[m.id] : cr.cibleDefaut)));
+        t.push(ligne('Réseau', moy.reseau, prs.map(p => p.reseau), cr.cibleDefaut));
+        const csv = '﻿' + t.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        a.download = 'moyennes-magasins-' + n + '-mois.csv';
+        document.body.appendChild(a); a.click(); a.remove();
+      },
     };
-    common.prShops = (d.magasins || []).map(m => ({ id: m.id, nom: court(m.nom), on: (shop || d.shop) === m.id, choisir: () => this.setState({ prShop: m.id }) }));
-    const a = d.apercu;
-    common.prApercu = !a ? null : {
-      nom: court(((d.magasins || []).find(m => m.id === (shop || d.shop)) || {}).nom || ''), lib: d.lib,
-      objectif: a.objectif != null ? eur(a.objectif) : 'pas d’objectif encodé',
-      source: a.objectifSource === 'budget' ? 'le budget' : (a.objectifSource === 'theorique' ? 'le CA théorique' : ''),
-      ca: eur(a.ca), atteinte: a.atteinte != null ? n1(a.atteinte) + ' %' : '',
-      projection: a.projection != null ? eur(a.projection) : '', atteinteProj: a.atteinteProj != null ? n1(a.atteinteProj) + ' %' : '',
-      rythme: a.moySem != null ? eur(a.moySem) + ' les jours de semaine' + (a.moyWe != null ? ', ' + eur(a.moyWe) + ' le week-end' : '') : '',
-      joursRestants: a.joursRestants, heuresEquipe: n1(a.heuresEquipe) + ' h', personnes: a.personnes,
-      planningJusquau: a.planningJusquau ? ' · planning saisi jusqu’au ' + a.planningJusquau.split('-').reverse().join('/') : '',
-      palier: a.palier ? a.palier.pct + ' % · ' + n2(a.palier.eh) + ' €/h' : 'aucun palier au rythme actuel',
-      paliers: (a.paliers || []).map(p => ({ pct: p.pct + ' %', lib: p.lib, atteint: p.atteint, eh: n2(p.eh) + ' €/h', equipe: eur(p.equipe),
-        manque: p.atteint ? 'atteint au rythme actuel' : (p.manque != null ? eur(p.manque) + (p.parJour ? ' · ' + eur(p.parJour) + ' par jour' : '') : '') })),
-      pctEnv: (a.objectif > 0 && a.paliers && a.paliers[1]) ? n2(100 * a.paliers[1].equipe / a.objectif) + ' % de l’objectif' : '',
-      google: a.google && a.google.actif ? (a.google.note != null ? 'note Google ' + n1(a.google.note) + ' (' + a.google.avis + ' avis) → × ' + n2(a.google.coef) : 'pas encore de note Google : coefficient 1') : '',
+
+    // La page franchisé (23/10/2026, Sam : « le panneau de contrôle des primes pour son magasin ») : UN magasin, celui de
+    // l'adresse (#/primes?shop=3). Les primes de la marque et des sponsors qui y tournent, à lire ; les siennes,
+    // à poser avec les données du magasin ; ses moyennes face au réseau ; les promotions du panel qui y tournent.
+    common.prFr = null;
+    if (common.prSection === 'franchise') {
+      const ids = (d.magasins || []).map(m => String(m.id));
+      let sid = S.prShop != null ? String(S.prShop) : '';
+      if (!sid) {
+        // Arrivé par le rail sans magasin : le dernier ouvert, sinon le premier ; l'adresse le dit aussitôt.
+        let memo = ''; try { memo = localStorage.getItem('cockpit.prShop') || ''; } catch (e) { /* navigation privée */ }
+        sid = ids.includes(memo) ? memo : (ids[0] || '');
+        this.state.prShop = sid; this.adresseSansHistorique();
+      }
+      const connu = ids.includes(sid);
+      if (connu) { try { localStorage.setItem('cockpit.prShop', sid); } catch (e) { /* navigation privée */ } }
+      // Le titre de la page, c'est le magasin (23/10/2026, « compresser ») : son nom, puis shop id et note Google.
+      if (connu) {
+        common.screenTitle = nomMag[sid] || 'Magasin ' + sid;
+        common.screenSub = 'Primes du magasin · shop ' + sid + (d.google && d.google.notes && d.google.notes[sid] != null ? ' · note Google ' + fr(d.google.notes[sid], 1) + ' ★' : '');
+      }
+      const M = moyMagDe(sid);
+      const tourneIci = l => !(l.shops || []).length || l.shops.includes(sid);
+      const marque = lignes.filter(l => l.famille !== 'magasin' && (l.externe || l.actif) && l.etatPeriode !== 'terminée' && tourneIci(l))
+        .map(l => Object.assign({}, l, { moyenne: l.moyMag ? l.moyMag(sid) : '', moyLib: 'ce magasin', objectifTxt: l.objectifMag ? l.objectifMag(sid) : '' }));
+      const siennes = lignes.filter(l => l.famille === 'magasin' && String(l.shop) === sid)
+        .map(l => Object.assign({}, l, { moyenne: l.moyMag ? l.moyMag(sid) : '', moyLib: 'ce magasin', objectifTxt: l.objectifMag ? l.objectifMag(sid) : '' }));
+      const promosIci = (promos ? promos.liste : []).filter(p => !(p.shops || []).length || p.shops.map(String).includes(sid)).map(p => {
+        const eMag = prisesMag[p.source + ':' + p.id + ':' + sid]; const eMarque = prises[p.source + ':' + p.id];
+        return { nom: p.nom, sorte: sorte(p), prix: p.prix != null ? fr(p.prix, 2) + ' €' : '', dates: dates(p), portee: (p.shops || []).length ? 'ce magasin' : 'tout le réseau',
+          produits: (p.ids || []).length ? (p.ids.length + ' produit' + (p.ids.length > 1 ? 's' : '')) : 'produit introuvable', comptable: (p.ids || []).length > 0,
+          marque: eMarque ? (eMarque.actif ? 'prime de la marque' : 'prime de la marque éteinte') : '',
+          statutMag: eMag ? (eMag.actif ? 'prime du magasin' : 'prime du magasin éteinte') : '',
+          ajouter: eMag || !(p.ids || []).length ? null : () => this.setState({ prWiz: Object.assign(wizNeuf('magasin', sid, p), { etape: 2 }) }) };
+      });
+      // L'équipe face à ses primes (23/10/2026, Sam : « la liste des primes, qui les a et à quel niveau ») : une ligne par
+      // vendeuse, une colonne par prime de Mes primes, ce que chacune y voit ; ce mois-ci ou le mois dernier.
+      // Le mois se choisit (24/10/2026, un month picker) ; « Année » montre le récapitulatif de l'année du magasin.
+      const vueEq = S.prEqVue === 'annee' ? 'annee' : 'mois';
+      const mEq = S.prEqMois && S.prEqMois >= M_DEBUT && S.prEqMois <= mAuj ? S.prEqMois : mAuj;
+      const yEq = S.prEqAn || yAuj;
+      const eq = connu && vueEq === 'mois' ? lire('eq:' + sid + ':' + mEq, '/ventes/primes-equipe?shop=' + encodeURIComponent(sid) + '&m=' + mEq) : null;
+      const anEq = connu && vueEq === 'annee' ? lire('an:' + yEq + ':' + sid, '/ventes/primes-annee?y=' + yEq + '&shop=' + encodeURIComponent(sid)) : null;
+      const fx = (v, k) => fr(+v, Number.isInteger(+v) ? 0 : k);
+      const valTxt = (u, v) => (v == null ? '' : u === 'pct' ? fx(v, 1) + ' %' : u === 'lpt' ? fr(+v, 2) + ' art./ticket' : u === 'note' ? fr(+v, 1) + ' ★'
+        : u === 'pcs' ? fx(v, 1) + ' pcs' : u === 'eur' ? Math.round(v).toLocaleString('fr-BE') + ' €' : u === 'score' ? 'score ' + fx(v, 1) : fx(v, 1));
+      const eurEq = v => (+v).toLocaleString('fr-BE', { minimumFractionDigits: (+v) % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €';
+      const motifEq = { pas_compte: 'pas encore compté', sans_vente: 'aucune vente', min_tickets: 'pas assez de tickets', heures: 'sous le min. d’heures',
+        pas_record: 'pose son 1er record', pas_objectif: 'pas d’objectif', pas_note: 'pas de note', pas_classee: 'pas encore classée' };
+      const recompense = p => (p.type === 'b2b' ? (p.mode === 'fixe' ? (p.fixe || 0) + ' € · 1re commande' : tauxTxt(p.taux) + ' % · ' + (p.duree === 'premiere' ? '1re commande' : p.duree === 'sans' ? 'sans limite' : p.duree + ' mois'))
+        : p.cadeau ? 'cadeau · ' + p.cadeau : (p.max ? 'jusqu’à ' : '') + p.montant + ' €');
+      const caseEq = (p, k, clos) => {
+        if (!k) { return { ton: 'hors', haut: '', bas: '' }; }
+        const u = p.unite; const v = valTxt(u, k.val);
+        const place = k.rang ? k.rang + (k.rang === 1 ? 're' : 'e') + (k.sur ? ' / ' + k.sur : '') : '';
+        if (p.type === 'b2b') {
+          const cl = k.clients ? k.clients + ' client' + (k.clients > 1 ? 's' : '') + ' pro' : 'aucun client pro';
+          return k.gain > 0 ? { ton: 'gagne', haut: '✓ ' + eurEq(k.gain), bas: cl } : { ton: 'vide', haut: '—', bas: cl };
+        }
+        if (k.etat === 'gagne') { return { ton: 'gagne', haut: '✓ ' + (k.gain > 0 ? eurEq(k.gain) : p.cadeau ? 'cadeau' : 'gagnée'), bas: [v, place].filter(Boolean).join(' · '), niveau: 100 }; }
+        if (k.etat === 'tete') { return { ton: 'tete', haut: 'en tête', bas: [v, k.avance1 != null ? '+' + k.avance1 + ' sur la 2e' : place].filter(Boolean).join(' · '), niveau: 100 }; }
+        if (k.etat === 'vide' || k.etat === 'sans_vente' || k.val == null) { return { ton: 'vide', haut: '—', bas: motifEq[k.motif] || (clos ? 'pas gagnée' : '') }; }
+        if (k.etat === 'rang' || (k.rang && k.cible == null)) {
+          return { ton: clos ? 'perdu' : 'route', haut: place || v, bas: [place ? v : '', k.pour1 ? k.pour1 + ' pcs pour la 1re' : ''].filter(Boolean).join(' · '), niveau: k.niveau };
+        }
+        const obj = k.cible != null ? (p.base === 'objectif' ? 'objectif ' : 'cible ') + valTxt(u, k.cible) : '';
+        return { ton: clos ? 'perdu' : 'route', haut: (p.base === 'objectif' && !clos ? 'proj. ' : '') + v, bas: k.motif === 'min_tickets' ? motifEq.min_tickets : obj, niveau: k.niveau };
+      };
+      const filtreEq = S.prEqFiltre === 'magasin' ? 'magasin' : 'toutes';
+      const colsEq = eq ? (eq.primes || []).filter(p => filtreEq === 'toutes' || p.payeur === 'magasin') : [];
+      // Le tri au clic sur un en-tête (23/10/2026) : la vendeuse de A à Z, l'acquis, ou une prime — gagnée d'abord (le
+      // gain), puis en tête, puis le chemin fait vers l'objectif et la place ; un 2e clic inverse. Par défaut : l'acquis.
+      // Une prime que le filtre cache : l'acquis reprend la main.
+      const tri0 = S.prEqTri || { col: 'acquis', sens: -1 };
+      const triEq = tri0.col === 'nom' || tri0.col === 'acquis' || colsEq.some(p => p.cle === tri0.col) ? tri0 : { col: 'acquis', sens: -1 };
+      const forceEq = (p, k) => {
+        if (!k) { return -1; }
+        if (k.etat === 'gagne' || (p.type === 'b2b' && k.gain > 0)) { return 4e6 + k.gain * 100 + Math.min(99, +k.val || 0); }
+        if (k.etat === 'tete') { return 3e6 + Math.min(999, +k.val || 0); }
+        if (k.etat === 'vide' || k.etat === 'sans_vente' || k.val == null) { return 0; }
+        return 1e6 + (k.niveau || 0) * 1e3 + (k.rang ? 100 - k.rang : 0) + Math.min(99, +k.val || 0) / 100;
+      };
+      const pTri = colsEq.find(p => p.cle === triEq.col);
+      const valTri = v => (triEq.col === 'nom' ? v.nom : pTri ? forceEq(pTri, (v.cases || {})[pTri.cle]) : v.acquis);
+      const rangsEq = eq ? (eq.vendeuses || []).slice().sort((a, b) => {
+        const xa = valTri(a); const xb = valTri(b);
+        const c = typeof xa === 'string' ? xa.localeCompare(xb, 'fr') : xa - xb;
+        return c * triEq.sens || b.acquis - a.acquis || a.nom.localeCompare(b.nom, 'fr');
+      }) : [];
+      const colTri = col => {
+        const on = triEq.col === col;
+        return { fleche: on ? (triEq.sens < 0 ? '↓' : '↑') : '', aria: on ? (triEq.sens < 0 ? 'descending' : 'ascending') : 'none',
+          trier: () => this.setState({ prEqTri: { col, sens: on ? -triEq.sens : (col === 'nom' ? 1 : -1) } }) };
+      };
+      const equipe = {
+        triNom: colTri('nom'), triAcquis: colTri('acquis'),
+        vue: vueEq, vues: [['mois', 'Mois'], ['annee', 'Année']].map(([k, nom]) => ({ nom, on: k === vueEq, choisir: () => this.setState({ prEqVue: k, prEqPick: false }) })),
+        picker: pickerMois(mEq, 'prEq'),
+        annee: vueEq !== 'annee' ? null : Object.assign({ chargement: anEq === undefined, motif: anEq === null && connu ? 'L’année du magasin n’a pas pu être calculée.' : '', picker: pickerAn(yEq, 'prEqAn') },
+          anneeVue(anEq, 'prEqTriAn', { filtre: p => filtreEq === 'toutes' || p.payeur === 'magasin' })),
+        chargement: vueEq === 'mois' && eq === undefined, motif: vueEq === 'mois' && eq === null && connu ? 'Les fiches de l’équipe n’ont pas pu être lues.' : '',
+        enCours: !!(eq && eq.enCours), lib: eq ? eq.lib : '', quand: eq && eq.quand ? new Date(eq.quand * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '',
+        filtres: [['toutes', 'Toutes les primes'], ['magasin', 'Celles du magasin']].map(([k, nom]) => ({ nom, on: k === filtreEq, choisir: () => this.setState({ prEqFiltre: k }) })),
+        primes: colsEq.map(p => ({ cle: p.cle, lib: p.lib, tri: colTri(p.cle), recompense: recompense(p), payeur: p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : p.payeur === 'magasin' ? 'le magasin' : 'la marque',
+          duMagasin: p.payeur === 'magasin', compte: p.gagnees + ' / ' + p.vendeuses, compteLong: p.gagnees + ' vendeuse' + (p.gagnees > 1 ? 's' : '') + ' sur ' + p.vendeuses + ' l’' + (p.gagnees > 1 ? 'ont' : 'a') + ' gagnée' })),
+        vendeuses: eq ? rangsEq.map(v => ({ nom: v.nom, sous: [v.heures != null ? fx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).join(' · '),
+          total: v.acquis > 0 ? eurEq(v.acquis) : '—', cases: colsEq.map(p => caseEq(p, (v.cases || {})[p.cle], !eq.enCours)) })) : [],
+      };
+      const ent = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
+      const cible = cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut;
+      const stat = (lib, v, vr, sous) => ({ lib, v: v || '—', reseau: vr ? 'réseau ' + vr : '', sous: sous || '' });
+      // Vendeuses et tickets : le réseau en fait la somme ; face à un magasin, la moyenne par magasin.
+      const nMagMoy = moy ? (moy.magasins || []).length : 0;
+      const parMag = v => (v != null && nMagMoy ? v / nMagMoy : null);
+      common.prFr = {
+        id: sid, nom: nomMag[sid] || '', connu,
+        magasins: (d.magasins || []).map(m => ({ id: String(m.id), nom: court(m.nom), aller: () => this.setState({ prShop: String(m.id) }) })),
+        marque, siennes, nSiennesMax: 6, equipe,
+        // Les primes de la marque, repliées par défaut : le tableau de l'équipe les montre déjà en colonnes.
+        marqueOuvert: !!S.prFrMarque, basculerMarque: () => this.setState({ prFrMarque: !this.state.prFrMarque }),
+        // « + Nouvelle prime du magasin » : la sorte d'abord (23/10/2026) — promotion, catégorie, ventes croisées, objectif CA, note Google, clients pro.
+        nouvelle: connu ? () => this.setState({ prChoix: sid }) : null,
+        note: d.google && d.google.notes && d.google.notes[sid] != null ? fr(d.google.notes[sid], 1) + ' ★' : '',
+        moyChargement: moy === undefined, moyMotif: moy === null ? 'Les moyennes n’ont pas pu être calculées.' : (moy && !M ? 'Pas de moyennes pour ce magasin sur ' + n + ' mois.' : ''),
+        ns: [1, 3, 6].map(k => ({ nom: k + ' mois', on: k === n, choisir: () => this.setState({ prMoyN: k }) })), periode: moy ? moy.mois.map(x => x.lib).join(', ') : '',
+        donnees: !M ? [] : [
+          stat('Vendeuses', fr(M.vendeuses, 1), R && parMag(R.vendeuses) != null ? fr(parMag(R.vendeuses), 1) + ' par magasin' : '', 'par mois'),
+          stat('Tickets', ent(M.tickets), R && parMag(R.tickets) != null ? ent(parMag(R.tickets)) + ' par magasin' : '', 'par mois'),
+          stat('Tickets par vendeuse', ent(M.ticketsVendeuse), R ? ent(R.ticketsVendeuse) : '', 'par mois'),
+          stat('Ticket moyen', M.ticketMoyen != null ? fr(M.ticketMoyen, 2) + ' €' : '', R && R.ticketMoyen != null ? fr(R.ticketMoyen, 2) + ' €' : ''),
+          stat('Lignes par ticket', fr(M.lignesTicket, 2), R ? fr(R.lignesTicket, 2) : ''),
+          stat('Ventes croisées', pc(M.croisees), R ? pc(R.croisees) : '', 'cible du magasin ' + fr(+cible, 1) + ' %'),
+          stat('Objectif atteint', pc(M.atteinte), R ? pc(R.atteinte) : '', 'CA du mois'),
+        ],
+        pieces: !M ? [] : cats.map(c => ({ lib: c.lib, v: fr((M.pieces || {})[c.cle], 0) || '—', reseau: R ? fr((R.pieces || {})[c.cle], 0) : '' })),
+        promosVend: !M ? [] : prs.map(p => ({ lib: p.lib, du: p.du ? jj(p.du) : '', v: fr((p.magasins || {})[sid], 0) || '—', reseau: fr(p.reseau, 0) })),
+        promos: { chargement: promos === undefined, motif: promos === null ? 'Les promotions n’ont pas pu être lues.' : (promos && !promos.api ? PR_MOTIF() : ''), liste: promosIci, relire: () => { delete this._prL.promos; this.setState({ prPromosFrais: true }); } },
+      };
+      // Le choix de la sorte : six de chaque au plus par magasin (le serveur tient la même borne).
+      common.prChoix = null;
+      if (S.prChoix && connu) {
+        const n = t => siennes.filter(l => (t === 'cible' ? l.typeE === 'cible' : l.typeE === t)).length;
+        const plein = t => n(t) >= 6;
+        const aller = patch => () => this.setState(Object.assign({ prChoix: null }, patch));
+        common.prChoix = { titre: 'Nouvelle prime du magasin — ' + (nomMag[sid] || 'shop ' + sid), fermer: () => this.setState({ prChoix: null }),
+          options: [
+            ['promo', '🏷️', 'Promotion', 'Des produits sur une période : une promotion du panel ou vos produits. Gagne : la 1re, chacune au seuil, l’objectif du magasin ou de chaque vendeuse.', { prWiz: wizNeuf('magasin', sid) }],
+            ['categorie', '👑', 'Catégorie', 'Chaque mois, les produits dont le nom contient un mot (« tarte », « quiche »…) : la 1re du magasin ou chacune au seuil.', { prWiz: Object.assign(wizNeuf('magasin', sid), { sorte: 'categorie', regle: 'premiere' }) }],
+            ['cible', '🛍️', 'Ventes croisées', 'Les tickets à 2 articles ou plus : chaque vendeuse au-dessus de la cible du magasin.', { prEdit: editCible(null, 'croisees', sid) }],
+            ['cible', '🏪', 'Objectif CA', 'Le CA du magasin face à son objectif du mois : chaque vendeuse au planning.', { prEdit: editCible(null, 'objectif', sid) }],
+            ['cible', '⭐', 'Note Google', 'La note de la fiche Google du magasin : chaque vendeuse au planning.', { prEdit: editCible(null, 'google', sid) }],
+            // La prime B2B du magasin : sa fenêtre à elle, le magasin tenu.
+            ['b2b', '🤝', 'Clients pro · B2B', 'Un nouveau client pro (école, entreprise…) : la vendeuse qui encaisse sa 1re commande, un montant fixe ou un pourcentage de ses commandes.', { prB2b: Object.assign(b2bNeuf('magasin', sid), { shopFixe: true }) }],
+          ].map(([t, e, nom, txt, patch]) => ({ e, nom, txt, plein: plein(t), choisir: plein(t) ? null : aller(patch) })) };
+      }
+    }
+    this.valsGrandsPrix(common);
+  }
+
+  /*
+   * Les grands prix de l'année (23/10/2026, src/grands_prix.php) : un onglet de l'écran des primes. La vitrine (maquette
+   * B) — une carte par grand prix, le lot, qui l'offre, le top 3 — et la création de la maquette D : le défi, le prix,
+   * qui l'offre, qui peut gagner et la saison. Page admin : ceux de la marque pour tout le réseau, ceux des franchisés à
+   * lire ; page franchisé : ceux de la marque à lire (avec la mieux classée du magasin), les siens à poser.
+   */
+  /* --- L'API du module (24/10/2026, Sam : « un sous-menu dans le rail qui indique quelles API sont utilisées pour le
+   * module entier », avec l'état en direct) ---------------------------------------------------------------------
+   * Ce que le module des primes et l'application employé appellent, source par source, et ce que chaque route répond
+   * à l'instant : GET /ventes/primes-api (src/api_module.php), gardé une minute ; « Retester » resonde. Le rail porte
+   * une entrée par source (apiSrc, « #/api?source=panel ») ; la page filtre aussi par page et par mot. */
+  valsApiModule(common){
+    const S = this.state;
+    const L = this._apiL || (this._apiL = { d: undefined, enCours: false, erreurs: {} });
+    const charger = frais => {
+      L.enCours = true;
+      readOne('/ventes/primes-api' + (frais ? '?frais=1' : '')).then(x => {
+        L.enCours = false; L.d = x && !x.error && Array.isArray(x.sources) ? x : null;
+        L.erreurs = {}; (L.d ? L.d.sources : []).forEach(s => { L.erreurs[s.cle] = (s.compte || {}).erreur || 0; });
+        this.setState({});
+      }).catch(() => { L.enCours = false; L.d = null; this.setState({}); });
     };
-    common.prRecord = d.record || {}; common.prMeilleure = d.meilleure || {};
+    // La première lecture part du rendu : pas de setState ici, la réponse en fera un.
+    if (L.d === undefined && !L.enCours) { charger(false); }
+    const d = L.d || null;
+    const src = S.apiSrc || '';
+    const page = S.apiPage || '';
+    const q = String(S.apiQ || '').trim().toLowerCase();
+    const PAGES = (d && d.pages) || { admin: 'Page admin', franchise: 'Page franchisé', app: 'Application' };
+    const pl = (n, u) => n + ' ' + u + (n > 1 ? 's' : '');
+    const heure = d && d.quand ? new Date(d.quand * 1000) : null;
+    const duree = d && d.ms != null ? (d.ms >= 1000 ? String(Math.round(d.ms / 100) / 10).replace('.', ',') + ' s' : d.ms + ' ms') : '';
+    const sources = d ? d.sources : [];
+    const garde = r => (!page || r.pages.indexOf(page) >= 0)
+      && (!q || (r.r + ' ' + r.dit + ' ' + r.etat.texte).toLowerCase().indexOf(q) >= 0);
+    const vues = sources.filter(s => !src || s.cle === src).map(s => {
+      const groupes = s.groupes.map(g => ({ nom: g.nom, routes: g.routes.filter(garde).map(r => ({
+        m: r.m, r: r.r, dit: r.dit, garde: r.garde, niveau: r.etat.niveau, texte: r.etat.texte,
+        pages: r.pages.map(k => ({ cle: k, nom: k === 'app' ? 'App' : (k === 'admin' ? 'Admin' : 'Franchisé') })) })) }))
+        .filter(g => g.routes.length);
+      const n = groupes.reduce((a, g) => a + g.routes.length, 0);
+      return { cle: s.cle, nom: s.nom, hote: s.hote, dit: s.dit, note: s.note, etat: s.etat, groupes, n,
+        compte: (n < s.n ? n + ' sur ' : '') + pl(s.n, s.unite) + (s.compte.erreur ? ' · ' + s.compte.erreur + ' en erreur' : '') };
+    }).filter(s => s.n);
+    common.am = {
+      chargement: !d && L.enCours, echec: L.d === null && !L.enCours, resonde: !!d && L.enCours,
+      quand: heure ? 'sondé à ' + String(heure.getHours()).padStart(2, '0') + ':' + String(heure.getMinutes()).padStart(2, '0') + (duree ? ' · en ' + duree : '') : '',
+      retester: () => { if (!L.enCours) { charger(true); this.setState({}); } },
+      etats: sources.reduce((o, s) => { o[s.cle] = s.etat; return o; }, {}),
+      tuiles: sources.map(s => ({ cle: s.cle, nom: s.nom, n: s.n, unite: s.unite + (s.n > 1 ? 's' : ''), resume: s.resume, etat: s.etat,
+        bilan: s.compte.erreur ? pl(s.compte.erreur, 'erreur') : (s.compte.alerte ? pl(s.compte.alerte, 'alerte') : (s.compte.lent ? pl(s.compte.lent, 'lente') : 'tout répond')),
+        on: src === s.cle, aller: () => this.setState({ apiSrc: src === s.cle ? '' : s.cle }) })),
+      pages: [['', 'Toutes les pages']].concat(Object.keys(PAGES).map(k => [k, PAGES[k]])).map(([k, nom]) => ({ nom, on: page === k, aller: () => this.setState({ apiPage: k }) })),
+      q: S.apiQ || '', poserQ: e => this.setState({ apiQ: e.target.value }),
+      filtre: src ? (sources.find(s => s.cle === src) || {}).nom || '' : '', toutVoir: () => this.setState({ apiSrc: '', apiPage: '', apiQ: '' }),
+      sources: vues, vide: !!d && !vues.length,
+    };
+  }
+  valsGrandsPrix(common){
+    const S = this.state;
+    const tab = S.prOnglet === 'gp' ? 'gp' : 'mois';
+    common.prOnglets = [['mois', 'Primes du mois'], ['gp', 'Grands prix de l’année']].map(([k, nom]) => ({ nom, on: k === tab, nouveau: k === 'gp',
+      choisir: () => this.setState({ prOnglet: k, prGpForm: undefined }) }));
+    common.prGp = null;
+    if (tab !== 'gp') { return; }
+    const FRd = common.prFr;
+    const shop = FRd ? String(FRd.id) : '';
+    if (!this._gpL) { this._gpL = {}; }
+    const cle = 'gp:' + shop;
+    if (this._gpL[cle] === undefined && !this._gpL['~' + cle]) {
+      this._gpL['~' + cle] = true;
+      readOne('/ventes/grands-prix' + (shop ? '?shop=' + encodeURIComponent(shop) : '')).then(x => { this._gpL['~' + cle] = false; this._gpL[cle] = (x && !x.error) ? x : null; this.setState({}); })
+        .catch(() => { this._gpL['~' + cle] = false; this._gpL[cle] = null; this.setState({}); });
+    }
+    const G = this._gpL[cle];
+    const recharger = () => { this._gpL = {}; this.setState({}); };
+    const G0 = { chargement: G === undefined, motif: G === null ? 'Les grands prix n’ont pas pu être lus.' : '', franchise: !!FRd };
+    if (!G) { common.prGp = G0; return; }
+    const fr = (v, k) => (v == null ? '' : Number(v).toLocaleString('fr-BE', { minimumFractionDigits: k || 0, maximumFractionDigits: k || 0 }));
+    const jj = v => (v ? v.slice(8, 10) + '/' + v.slice(5, 7) : '');
+    const jjA = v => (v ? jj(v) + '/' + v.slice(0, 4) : '');
+    const racine = API_BASE.replace(/api\/cockpit\/?$/, '');
+    const court = nom => String(nom || '').split(' - ').pop();
+    const initiales = nom => String(nom || '').split(/[\s.]+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    const offertTxt = g => (g.payeur === 'sponsor' ? 'Sponsor · ' + g.sponsor : g.payeur === 'magasin' ? 'Offert par le magasin' : 'Offert par la marque');
+    const seuilTxt = g => (g.seuil == null ? '' : fr(g.seuil) + (g.seuilSorte === 'tickets' ? ' tickets' : ' h') + ' min.'
+      + (g.saison.etat === 'en_cours' && g.seuilCourant != null ? ' (' + fr(g.seuilCourant) + ' à ce jour)' : ''));
+    const etatTxt = g => (g.saison.etat === 'a_venir' ? 'commence le ' + jjA(g.du) : g.saison.etat === 'finie' ? 'terminé le ' + jjA(g.au) : 'fin le ' + jj(g.au) + ' · J − ' + g.saison.joursRestants);
+    const carte = (g, lecture) => {
+      const pro = g.defi === 'magasin';
+      const top = (g.classement || []).slice(0, 3).map(l => ({ rang: l.rang, nom: pro ? court(l.nom) : l.nom, ini: initiales(pro ? court(l.nom) : l.nom),
+        sous: pro ? '' : court(l.magasin), txt: l.txt, detail: l.detail }));
+      return { id: g.id, defi: g.defi, emo: g.emo, titre: g.titre, lot: g.lot, valeurTxt: fr(g.valeur) + ' €', photo: g.photo ? racine + g.photo : '',
+        offert: offertTxt(g), site: g.payeur === 'sponsor' && g.sponsorSite ? g.sponsorSite : '', defiLib: g.defiLib, regle: g.regle, seuil: seuilTxt(g),
+        etat: g.saison.etat, etatTxt: etatTxt(g), part: g.saison.part, actif: g.actif, top,
+        vide: g.saison.etat === 'a_venir' ? 'Le classement s’ouvre le ' + jjA(g.du) + '.' : !g.actif ? 'Éteint : personne ne le voit.' : g.motif ? 'Données incomplètes : ' + g.motif + '.' : 'Personne de classé pour l’instant' + (g.horsSeuil ? ' (' + g.horsSeuil + ' sous le minimum)' : '') + '.',
+        pied: [g.enCourse ? g.enCourse + (pro ? ' magasins classés' : ' en course') : '', g.horsSeuil && g.enCourse ? g.horsSeuil + ' sous le minimum' : '', g.jusqua ? 'tickets lus jusqu’au ' + jj(g.jusqua) : ''].filter(Boolean).join(' · '),
+        gagnant: g.saison.etat === 'finie' && top.length ? top[0] : null,
+        ici: g.ici ? { rang: g.ici.rang, nom: g.ici.nom, txt: g.ici.txt } : null, iciVide: lecture && FRd && !g.ici && g.saison.etat !== 'a_venir' && g.defi !== 'magasin',
+        portee: g.portee, shopNom: g.shopNom && !FRd ? court(g.shopNom) : '',
+        modifier: lecture ? null : () => this.setState({ prGpForm: formDe(g) }),
+        basculer: lecture ? null : ev => this.api('POST', '/ventes/grands-prix', { id: g.id, actif: !!ev.target.checked }).then(r => { if (r && r.ok !== false) { this.notify('« ' + g.titre + ' » ' + (ev.target.checked ? 'activé' : 'éteint')); recharger(); } }) };
+    };
+    const reseau = G.liste.filter(g => g.portee === 'reseau');
+    const mag = G.liste.filter(g => g.portee === 'magasin');
+    const enJeu = l => l.filter(g => g.actif && g.saison.etat === 'en_cours');
+    const annee = G.annee;
+    const deLAnnee = enJeu(FRd ? G.liste : reseau);
+    const sponsors = new Set(deLAnnee.filter(g => g.payeur === 'sponsor').map(g => g.sponsor));
+    const fin = deLAnnee.map(g => g.saison.joursRestants).filter(v => v > 0);
+    // Le formulaire (maquette D) : le défi, le prix, qui l'offre, qui peut gagner et la saison.
+    const nouveauForm = () => ({ id: 0, portee: FRd ? 'magasin' : 'reseau', shop: shop || null, defi: 'vendeuse', titre: '', lot: '', valeur: '', payeur: FRd ? 'magasin' : 'marque',
+      sponsor: '', sponsorSite: '', photo: '', seuil: '', saison: 'annee', annee: String(annee), du: annee + '-01', au: annee + '-12', actif: true, envoi: false, envoiPhoto: false });
+    const formDe = g => ({ id: g.id, portee: g.portee, shop: g.shop, defi: g.defi, titre: g.titre, lot: g.lot, valeur: String(g.valeur), payeur: g.payeur, sponsor: g.sponsor,
+      sponsorSite: g.sponsorSite, photo: g.photo, seuil: g.seuil != null ? String(g.seuil) : '', saison: g.du.slice(5) === '01-01' && g.au.slice(5) === '12-31' && g.du.slice(0, 4) === g.au.slice(0, 4) ? 'annee' : 'mois',
+      annee: g.du.slice(0, 4), du: g.du.slice(0, 7), au: g.au.slice(0, 7), actif: g.actif, envoi: false, envoiPhoto: false });
+    let F = null;
+    if (S.prGpForm) {
+      const W = S.prGpForm;
+      const reF = () => this.setState({ prGpForm: W });
+      const D = G.defis.find(x => x.cle === W.defi) || G.defis[0];
+      const nomMagF = W.shop ? court(((G.magasins || []).find(m => m.id === String(W.shop)) || {}).nom || 'shop ' + W.shop) : '';
+      const poser = k => ev => { W[k] = ev.target.value; reF(); };
+      const du = W.saison === 'annee' ? W.annee + '-01-01' : W.du + '-01';
+      const auM = W.saison === 'annee' ? W.annee + '-12' : W.au;
+      const au = auM + '-' + String(new Date(+auM.slice(0, 4), +auM.slice(5, 7), 0).getDate()).padStart(2, '0');
+      const val = parseFloat(String(W.valeur).replace(',', '.'));
+      const manque = W.titre.trim().length < 3 ? 'l’intitulé du prix' : !(val >= 0) ? 'sa valeur' : W.payeur === 'sponsor' && !W.sponsor.trim() ? 'le nom du sponsor'
+        : W.saison === 'mois' && !(W.du && W.au && W.au >= W.du) ? 'la saison' : '';
+      const corps = () => ({ id: W.id || undefined, portee: W.portee, shop: W.shop, defi: W.defi, titre: W.titre, lot: W.lot, valeur: val, payeur: W.payeur, sponsor: W.sponsor,
+        sponsorSite: W.sponsorSite, photo: W.photo, seuil: D.seuil ? (W.seuil === '' ? D.defaut : +W.seuil) : null, du, au, actif: W.actif });
+      F = {
+        titre: (W.id ? 'Modifier le grand prix' : 'Nouveau grand prix') + ' — ' + (W.portee === 'magasin' ? nomMagF : 'tout le réseau'),
+        defis: G.defis.filter(x => W.portee !== 'magasin' || !x.reseauSeul).map(x => ({ emo: x.emo, lib: x.lib, regle: x.regle, on: x.cle === W.defi,
+          choisir: () => { W.defi = x.cle; if (!x.seuil) { W.seuil = ''; } reF(); } })),
+        photo: W.photo ? racine + W.photo : '', envoiPhoto: W.envoiPhoto,
+        poserPhoto: ev => {
+          const f = ev.target.files && ev.target.files[0];
+          ev.target.value = '';
+          if (!f) { return; }
+          if (!/^image\/(png|jpeg|webp)$/.test(f.type)) { this.notify('Photo : PNG, JPEG ou WebP'); return; }
+          // Ramenée à 1 400 px au plus, en JPEG : sous le méga-octet qu'accepte le serveur.
+          const img = new Image(); const url = URL.createObjectURL(f);
+          img.onload = () => {
+            const k = Math.min(1, 1400 / Math.max(img.width, img.height));
+            const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+            cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+            W.envoiPhoto = true; reF();
+            this.api('POST', '/ventes/primes-icone', { data: cv.toDataURL('image/jpeg', 0.84) }).then(r => {
+              W.envoiPhoto = false;
+              if (r && r.ok !== false && r.icone) { W.photo = r.icone; }
+              reF();
+            });
+          };
+          img.onerror = () => { URL.revokeObjectURL(url); this.notify('Photo illisible'); };
+          img.src = url;
+        },
+        retirerPhoto: () => { W.photo = ''; reF(); },
+        intitule: W.titre, lot: W.lot, valeur: W.valeur, poserTitre: poser('titre'), poserLot: poser('lot'), poserValeur: poser('valeur'),
+        payeurs: (W.portee === 'magasin' ? [['magasin', 'Le magasin'], ['sponsor', 'Un sponsor']] : [['marque', 'La marque'], ['sponsor', 'Un sponsor']])
+          .map(([v, nom]) => ({ nom, on: W.payeur === v, choisir: () => { W.payeur = v; reF(); } })),
+        sponsor: W.payeur === 'sponsor', nomSponsor: W.sponsor, site: W.sponsorSite, poserSponsor: poser('sponsor'), poserSite: poser('sponsorSite'),
+        qui: W.portee === 'magasin' ? 'les vendeuses de ' + nomMagF : W.defi === 'magasin' ? 'les magasins du réseau — l’équipe gagnante fête' : 'les vendeuses de tout le réseau',
+        seuilSorte: D.seuil, seuil: W.seuil, seuilDefaut: D.defaut != null ? String(D.defaut) : '', poserSeuil: poser('seuil'),
+        seuilLib: D.seuil === 'tickets' ? 'Tickets au minimum sur la saison' : 'Heures prestées au minimum sur la saison',
+        saisons: [['annee', 'Toute l’année'], ['mois', 'Des mois choisis']].map(([v, nom]) => ({ nom, on: W.saison === v, choisir: () => { W.saison = v; reF(); } })),
+        saisonAnnee: W.saison === 'annee', annees: [annee, annee + 1].map(a => ({ v: String(a), on: W.annee === String(a) })), poserAnnee: poser('annee'),
+        du: W.du, au: W.au, poserDu: poser('du'), poserAu: poser('au'),
+        resume: 'du ' + jjA(du) + ' au ' + jjA(au) + (D.seuil ? ' · le minimum monte avec la saison' : ''),
+        manque, envoi: W.envoi, edit: !!W.id,
+        fermer: () => this.setState({ prGpForm: undefined }),
+        enregistrer: () => {
+          if (manque || W.envoi) { return; }
+          W.envoi = true; reF();
+          this.api('POST', '/ventes/grands-prix', corps()).then(r => {
+            W.envoi = false;
+            if (!r || r.ok === false) { reF(); return; }
+            this.notify((W.id ? 'Grand prix modifié' : 'Grand prix publié') + ' — « ' + W.titre.trim() + ' »');
+            this._gpL = {}; this.setState({ prGpForm: undefined });
+          });
+        },
+        supprimer: W.id ? () => {
+          if (!window.confirm('Retirer « ' + W.titre + ' » ? Son classement disparaît avec lui.')) { return; }
+          this.api('POST', '/ventes/grands-prix/retirer', { id: W.id }).then(r => { if (r && r.ok !== false) { this.notify('Grand prix retiré'); this._gpL = {}; this.setState({ prGpForm: undefined }); } });
+        } : null,
+      };
+    }
+    const vitrine = (l, lecture) => l.map(g => carte(g, lecture));
+    common.prGp = Object.assign(G0, {
+      annee, franchise: !!FRd, shopNom: FRd ? FRd.nom : '',
+      kpis: [
+        { lib: 'En jeu', v: fr(deLAnnee.reduce((a, g) => a + g.valeur, 0)) + ' €', sous: deLAnnee.length + ' grand' + (deLAnnee.length > 1 ? 's' : '') + ' prix en cours' },
+        { lib: 'Jours restants', v: fin.length ? 'J − ' + Math.min(...fin) : '—', sous: fin.length ? 'avant la fin de la première saison' : '' },
+        { lib: 'En course', v: fr(deLAnnee.reduce((a, g) => Math.max(a, g.defi === 'magasin' ? 0 : g.enCourse), 0)), sous: 'vendeuses classées au plus' },
+        { lib: 'Sponsors', v: String(sponsors.size), sous: [...sponsors].slice(0, 3).join(', ') },
+      ],
+      nouveau: () => this.setState({ prGpForm: nouveauForm() }),
+      reseau: vitrine(reseau, !!FRd), magasin: vitrine(mag, false),
+      magasinTitre: FRd ? 'Les grands prix du magasin' : 'Grands prix des franchisés',
+      form: F,
+    });
   }
 
   valsVentes(common){
@@ -7205,11 +7421,11 @@ class App {
     // Deux sous-pages : les RÉSULTATS (podium, tops, classement, primes
     // débloquées) et les TARGETS (tous les réglages au même endroit). Lire ne
     // se mélange pas avec régler.
-    const onglet = S.tvOnglet || 'resultats';
+    // Les paramètres des primes de l'app ont quitté ces onglets (16/10/2026) : ERP franchisé → Marketing franchisé.
+    const onglet = S.tvOnglet === 'targets' ? 'targets' : 'resultats';
     common.tvOnglet = onglet;
-    common.tvOnglets = [['resultats', 'Résultats'], ['targets', 'Targets & primes'], ['parametres', 'Paramètres']]
+    common.tvOnglets = [['resultats', 'Résultats'], ['targets', 'Targets & primes']]
       .map(([v, nom]) => ({ nom, on: onglet === v, choisir: () => this.setState({ tvOnglet: v }) }));
-    if (onglet === 'parametres') { this.valsPrimesParams(common); }
     common.tvChargement = d === undefined;
     common.tvMotif = d === null ? 'Le classement n’a pas pu être calculé.' : ((d && d.motif) || '');
     common.tvMoisPills = ((d && d.mois) || []).map(m => ({
@@ -7253,24 +7469,33 @@ class App {
       lib: pm ? pm.lib : '', enCours: !!(pm && pm.enCours),
       magasins: !pm ? [] : (pm.magasins || []).filter(m => !filtre || m.id === filtre).map(m => ({
         nom: court(m.nom), objectif: m.objectif != null ? eur(m.objectif) : 'pas d’objectif',
-        atteinte: m.atteinte != null ? nb1(m.atteinte) + ' %' : '', palier: m.palier ? m.palier.pct + ' % · ' + n2(m.palier.eh) + ' €/h' : 'aucun palier',
-        equipe: eur(m.equipe), heures: nb1(m.heuresEquipe) + ' h · ' + m.personnes + ' pers.', cible: 'cible ' + nb1(m.cible) + ' %',
-        google: m.google && m.google.actif && m.google.note != null ? 'Google ' + nb1(m.google.note) + ' → × ' + n2(m.google.coef) : '',
+        atteinte: m.atteinte != null ? nb1(m.atteinte) + ' %' : '', palier: m.palier ? m.palier.pct + ' % atteint · ' + eur(m.palier.montant) + ' par personne' : 'pas atteint',
+        equipe: eur(m.equipe), heures: (m.eligibles ?? m.personnes) + ' pers. · ' + nb1(m.heuresEquipe) + ' h', cible: 'cible ' + nb1(m.cible) + ' %',
+        google: m.google && m.google.actif && m.google.note != null ? 'Google ' + nb1(m.google.note) + ' ★' + (m.google.atteint ? ' · ' + eur(m.google.montant) + ' × ' + m.google.eligibles + ' pers.' : ' · sous ' + nb1(m.google.seuil)) : '',
       })),
       personnes: !pm ? [] : (pm.personnes || []).filter(l => !filtre || l.shopId === filtre).map(l => ({
         nom: l.nom, magasin: court(l.magasinNom), heures: nb1(l.heures) + ' h',
         croisees: l.croisees.taux != null ? nb1(l.croisees.taux) + ' %' : '', croiseesM: l.croisees.montant > 0 ? eur(l.croisees.montant) : '',
         record: l.record.lt != null ? nb1(l.record.lt) + (l.record.record != null ? ' / ' + nb1(l.record.record) : '') : '', recordM: l.record.montant > 0 ? eur(l.record.montant) : '',
-        meilleure: l.meilleure > 0 ? eur(l.meilleure) : '', magasinM: l.magasin > 0 ? n2(l.magasin) + ' €' : '',
-        concours: l.concours && l.concours.pieces ? Object.keys(l.concours.pieces).map(k => Math.round(l.concours.pieces[k]).toLocaleString('fr-BE') + ' ' + k).join(' · ') + ((l.concours.titres || []).length ? ' · ' + l.concours.titres.map(t => '👑 ' + t.lib + ' ' + (t.niveau === 'reseau' ? 'réseau' : 'magasin')).join(', ') : '') : '',
+        meilleure: l.meilleure > 0 ? eur(l.meilleure) : '', magasinM: l.magasin > 0 ? eur(l.magasin) : '', googleM: l.google > 0 ? eur(l.google) : '',
+        // Les targets posés par son magasin (23/10/2026), payés par lui.
+        cibles: l.cibles && (l.cibles.liste || []).length ? l.cibles.liste.map(t => t.lib + (t.cadeau ? ' 🎁' : '')).join(', ') : '', ciblesM: l.cibles && l.cibles.montant > 0 ? eur(l.cibles.montant) : '',
+        concours: l.concours && l.concours.pieces ? Object.keys(l.concours.pieces).map(k => Math.round(l.concours.pieces[k]).toLocaleString('fr-BE') + ' ' + k).join(' · ') + ((l.concours.titres || []).length ? ' · ' + l.concours.titres.map(t => '👑 ' + t.lib).join(', ') : '') : '',
         concoursM: l.concours && l.concours.montant > 0 ? eur(l.concours.montant) : '',
+        promo: l.promo && l.promo.pieces ? Object.keys(l.promo.pieces).map(k => Math.round(l.promo.pieces[k]).toLocaleString('fr-BE') + ' ' + ((((pm.promos || {}).liste || []).find(q => q.cle === k) || {}).lib || k)).join(' · ') + ((l.promo.titres || []).length ? ' · 👑' : '') : '',
+        promoM: l.promo && l.promo.montant > 0 ? eur(l.promo.montant) : '',
+        // Les clients pro (la prime B2B, 23/10/2026) : combien elle en a ramené, ce qu'ils rapportent ce mois-là.
+        b2b: l.b2b && l.b2b.clients ? l.b2b.clients + ' client' + (l.b2b.clients > 1 ? 's' : '') : '', b2bM: l.b2b && l.b2b.montant > 0 ? eur(l.b2b.montant) : '',
         total: l.total > 0 ? n2(l.total) + ' €' : '—', prime: l.total > 0,
-        coef: l.coef != null && Math.abs(l.coef - 1) > 1e-9 ? '× ' + n2(l.coef) : '',
       })),
-      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), magasin: n2(pm.totaux.magasin) + ' €', total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
-      concoursLib: pm && pm.concours && pm.concours.liste ? pm.concours.liste.map(k => k.lib).join(' · ') : 'Concours', concoursActif: !!(pm && pm.concours && pm.concours.actif),
+      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), promo: eur(pm.totaux.promo || 0), magasin: eur(pm.totaux.magasin), google: eur(pm.totaux.google || 0), cibles: eur(pm.totaux.cibles || 0), b2b: eur(pm.totaux.b2b || 0), total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
+      ciblesActif: !!(pm && (pm.personnes || []).some(l => l.cibles && (l.cibles.liste || []).length)),
+      concoursLib: pm && pm.concours && pm.concours.liste ? pm.concours.liste.map(k => k.lib).join(' · ') : 'Catégories', concoursActif: !!(pm && pm.concours && pm.concours.actif),
+      promosLib: pm && pm.promos && pm.promos.liste ? pm.promos.liste.map(k => k.lib).join(' · ') : 'Promos', promosActif: !!(pm && pm.promos && pm.promos.actif),
+      b2bActif: !!(pm && pm.b2b && pm.b2b.actif),
       note: !pm ? '' : (pm.croiseesComplet ? 'Ventes croisées comptées sur tout le mois.' : 'Ventes croisées comptées sur ' + pm.croiseesJours + ' jour(s) : la moisson horaire complète le reste.'),
-      enregistre: pm && pm.enregistre ? ('Enregistrées le ' + (pm.enregistre.quand || '') + (pm.enregistre.appWorker && pm.enregistre.appWorker.total != null ? ' · ventes croisées et prime magasin : ' + n2(pm.enregistre.appWorker.total) + ' € pour ' + (pm.enregistre.appWorker.personnes || []).length + ' personne(s)' : '')) : '',
+      parPayeur: !pm || !pm.totaux || !pm.totaux.parPayeur ? '' : Object.keys(pm.totaux.parPayeur).map(k => (k.startsWith('sponsor:') ? 'sponsor ' + k.slice(8) : k) + ' ' + eur(pm.totaux.parPayeur[k])).join(' · '),
+      enregistre: pm && pm.enregistre ? ('Enregistrées le ' + (pm.enregistre.quand || '') + (pm.enregistre.appWorker && pm.enregistre.appWorker.total != null ? ' · primes de l’app : ' + n2(pm.enregistre.appWorker.total) + ' € pour ' + (pm.enregistre.appWorker.personnes || []).length + ' personne(s)' : '')) : '',
     };
 
     // La prime s'enregistre ici : le calcul désigne, l'humain confirme.
@@ -7364,112 +7589,6 @@ class App {
         prime: m.prime || '',
       })),
     };
-  }
-
-  valsAnm(common){
-    const S = this.state;
-    const d = (this._anm || {})[(S.anmShop || '') + '|' + (S.anmMois || 6)];
-    const court = nom => String(nom || '').split(' - ').pop();
-    const eur = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE') + ' €');
-    const nb = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
-    const pc = v => (v == null ? '' : v.toFixed(1).replace('.', ',') + ' %');
-    const px = v => (v == null ? '' : v.toFixed(2).replace('.', ',') + ' €');
-
-    common.anmChargement = d === undefined;
-    common.anmMotif = d === null ? 'L’analyse n’a pas pu être calculée.' : ((d && d.motif) || '');
-    common.anmShops = ((d && d.shops) || []).map(x => ({ id: String(x.id), nom: court(x.nom),
-      // Les identifiants voyagent tantôt en nombre, tantôt en chaîne selon la
-      // couche qui les a produits : on compare des chaînes, ou on compare rien.
-      on: String((d && d.shop) ?? '') === String(x.id) }));
-    common.anmChoisir = e => this.setState({ anmShop: e.target.value, anmEtape: 1 });
-    common.anmDurees = [3, 6, 12].map(v => ({ nom: v + ' mois', on: v === (S.anmMois || 6),
-      choisir: () => this.setState({ anmMois: v }) }));
-
-    const etape = S.anmEtape || 1;
-    common.anmEtapes = [[1, 'Vue d’ensemble'], [2, 'Catégories'], [3, 'Prix'], [4, 'Le plan'], [5, 'Le PDF']]
-      .map(([v, nom]) => ({ v, nom, on: etape === v, fait: v < etape,
-        choisir: () => this.setState({ anmEtape: v }) }));
-    common.anmEtape = etape;
-    common.anmPrec = etape > 1 ? () => this.setState({ anmEtape: etape - 1 }) : null;
-    common.anmSuiv = etape < 5 ? () => this.setState({ anmEtape: etape + 1 }) : null;
-    // L'étape Prix vit sans la caisse locale : lue chez le panel, elle part
-    // avec le motif quand le reste de l'analyse ne peut pas se calculer.
-    common.anmPrixSeul = !!(d && d.motif && d.prixSeul && d.levier3);
-    if (d && d.levier3) {
-      const l3p = d.levier3;
-      common.anmNom = court(d.nom);
-      common.anmPrix = (l3p.refs || []).map(r => ({
-        nom: r.nom, groupe: r.groupe, prix: px(r.prix), prixReseau: px(r.prixReseau),
-        ecart: '− ' + Math.abs(r.ecartPct).toFixed(1).replace('.', ',') + ' %',
-        fort: r.ecartPct <= -8,
-        volMois: nb(r.volMois) + ' u', gainMois: eur(r.gainMois), gainAn: eur(r.gainAn),
-      }));
-      common.anmPrixReste = l3p.resteN ? '+ ' + l3p.resteN + ' autres références — '
-        + eur(l3p.resteMois) + ' / mois' : '';
-      common.anmPrixSource = l3p.source || '';
-      common.anmPrixTotal = l3p.nb ? l3p.nb + ' référence(s) · + ' + eur(l3p.potMois) + ' / mois — ' + eur(l3p.potAn) + ' / an, à volume constant' : '';
-    }
-    if (!d || d.motif) { return; }
-
-    const k = d.kpis, l1 = d.levier1, l2 = d.levier2, l3 = d.levier3;
-    common.anmNom = court(d.nom);
-    common.anmKpis = [
-      { lbl: 'CA — ' + d.n + ' mois', v: eur(k.ca), sub: eur(k.caMois) + ' / mois' },
-      { lbl: 'Panier', v: px(k.panier), sub: 'réseau : ' + px(k.panierReseau) },
-      { lbl: 'Assortiment vendu', v: nb(k.refsVendues), sub: 'meilleur magasin : ' + nb(k.refsMax) + ' références' },
-      { lbl: 'Potentiel identifié', v: '+ ' + eur(k.totalMois) + ' / mois',
-        sub: eur(k.totalAn) + ' / an — ' + pc(k.partCa) + ' du CA actuel', accent: true },
-    ];
-    common.anmLeviers = [
-      { lbl: 'Levier 1 — Assortiment', mois: l1.retenuMois, an: l1.retenuAn,
-        regle: 'en rattrapant la moitié du manque (' + eur(l1.manque) + ' sur ' + d.n + ' mois)',
-        note: nb(l1.refs) + ' références que les autres vendent et pas lui — le détail est à l’écran « Manque à gagner ».',
-        aller: null },
-      { lbl: 'Levier 2 — Catégories à pousser', mois: l2.potMois, an: l2.potAn,
-        regle: 'en revenant à la part réseau',
-        note: l2.enRetrait + ' catégorie(s) où sa part du CA est sous celle des autres — étape 2.',
-        aller: () => this.setState({ anmEtape: 2 }) },
-      { lbl: 'Levier 3 — Prix sous le réseau', mois: l3.potMois, an: l3.potAn,
-        regle: 'à volume constant',
-        note: l3.nb + ' référence(s) vendues sous le prix des autres, sans volume supérieur — étape 3.',
-        aller: () => this.setState({ anmEtape: 3 }) },
-    ].map(x => ({ ...x, moisTxt: '+ ' + eur(x.mois) + ' / mois', anTxt: eur(x.an) + ' / an — ' + x.regle }));
-
-    common.anmGroupes = (l2.groupes || []).map(g => ({
-      nom: g.nom, part: pc(g.part), partReseau: pc(g.partReseau),
-      delta: (g.delta > 0 ? '+ ' : '− ') + Math.abs(g.delta).toFixed(1).replace('.', ',') + ' pts',
-      retrait: g.potMois > 0, force: g.force,
-      potMois: g.potMois > 0 ? eur(g.potMois) : (g.force ? 'sa force' : 'au niveau'),
-      potAn: g.potMois > 0 ? eur(g.potAn) : '',
-      // Les deux barres partagent l'échelle de la plus grande part de la
-      // liste : comparer des barres normalisées chacune sur soi ne dit rien.
-      barre: g.part, barreReseau: g.partReseau,
-    }));
-    const maxPart = Math.max(1, ...common.anmGroupes.map(g => Math.max(g.barre, g.barreReseau)));
-    common.anmGroupes.forEach(g => { g.barre = Math.round(100 * g.barre / maxPart);
-      g.barreReseau = Math.round(100 * g.barreReseau / maxPart); });
-
-    common.anmPlan = (d.plan || []).map(a => ({
-      rang: a.rang, action: a.action, levier: a.levier,
-      mois: eur(a.eurMois), an: eur(a.eurAn), cumul: eur(a.cumulAn),
-    }));
-    common.anmPlanTotal = d.plan && d.plan.length
-      ? 'Plan complet : + ' + eur(d.plan.reduce((t, a) => t + a.eurMois, 0)) + ' / mois — '
-        + eur(d.plan[d.plan.length - 1].cumulAn) + ' / an si tout est tenu.'
-      : '';
-    common.anmSource = d.source || '';
-    common.anmPdfHref = API_BASE + '/magasin/analyse.pdf?shop=' + encodeURIComponent(d.shop)
-      + '&mois=' + (S.anmMois || 6);
-    common.anmPdfNom = 'analyse-' + court(d.nom).toLowerCase() + '.pdf';
-    // Ce que le PDF contient, énuméré depuis les données AFFICHÉES : la
-    // promesse de l'étape 5 ne peut pas diverger de ce qu'on vient de lire.
-    common.anmPdfContenu = [
-      'La synthèse : CA, panier, assortiment, et le potentiel de ' + eur(k.totalMois) + ' / mois — ' + eur(k.totalAn) + ' / an',
-      'Les trois leviers, chacun par mois et par an',
-      'Le mix par catégorie face au réseau (' + (common.anmGroupes || []).length + ' catégories)',
-      'Les prix sous le réseau (' + (d.levier3.nb || 0) + ' références, gain à volume constant)',
-      'Le plan : ' + (d.plan || []).length + ' actions classées, avec le cumul annuel',
-    ];
   }
 
   /**
@@ -7574,152 +7693,6 @@ class App {
     common.mqGammes = !d.horsGamme ? '' : (nb(d.horsGamme)
       + ' référence(s) de gammes saisonnières fermées sur la période sont écartées : '
       + Object.keys(d.gammesEcartees || {}).slice(0, 4).join(', ') + '.');
-  }
-
-  valsUsage(common){
-    const S = this.state;
-    const mois = S.usMois || 6;
-    const cle = mois + '|' + (S.usGroupe || '');
-    const d = (this._usage || {})[cle];
-    const court = nom => String(nom || '').split(' - ').pop();
-    const nb = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
-    const pc = v => (v == null ? '' : v.toFixed(1).replace('.', ',') + ' %');
-    // Vert au-dessus de 60 %, ambre au-dessus de 40, bordeaux en dessous : les
-    // mêmes paliers que le reste du cockpit.
-    const teinte = p => p == null ? 'var(--color-text-muted)' : (p >= 60 ? '#2d7a3e' : (p >= 40 ? '#C17A2A' : '#8D1D2C'));
-
-    common.usChargement = d === undefined;
-    common.usMotif = d === null ? 'L’usage du catalogue n’a pas pu être lu.' : ((d && d.motif) || '');
-    common.usDurees = [3, 6, 12].map(v => ({ v, nom: v + ' mois', on: v === mois,
-      choisir: () => this.setState({ usMois: v }) }));
-    common.usGroupes = [{ nom: 'Tous groupes', v: '', on: !S.usGroupe, choisir: () => this.setState({ usGroupe: '' }) }]
-      .concat(((d && d.groupes) || []).map(g => ({ nom: g, v: g, on: S.usGroupe === g,
-        choisir: () => this.setState({ usGroupe: g }) })));
-
-    if (!d) { common.usMois = []; common.usLignes = []; return; }
-
-    common.usSource = d.source || '';
-    // Une bûche non vendue en juillet n'est pas une bûche délaissée : sa gamme
-    // était fermée. On l'écarte du calcul, et on dit laquelle — un chiffre
-    // corrigé sans être expliqué se lit comme un chiffre faux.
-    common.usGammes = !d.horsGamme ? '' : (nb(d.horsGamme)
-      + ' référence(s) de gammes saisonnières fermées sur ces ' + mois + ' mois sont écartées du calcul : '
-      + Object.keys(d.gammesEcartees || {}).slice(0, 5).join(', ')
-      + '. Ne pas les avoir vendues n’est pas un manque du magasin.');
-    common.usKpis = [
-      { lbl: 'Catalogue', v: nb(d.catalogue), sub: 'références ouvertes sur la période'
-        + (d.groupe ? ' — groupe ' + d.groupe : '') },
-      { lbl: 'Vendues par le réseau', v: nb((d.reseau || {}).refs), sub: pc((d.reseau || {}).taux) + ' du catalogue' },
-      { lbl: 'Jamais vendues', v: nb((d.reseau || {}).jamais), sub: 'par aucun magasin, sur ' + mois + ' mois', accent: true,
-        // La tuile donne le compte ; la liste, elle, se traite. Elle part en
-        // réunion catalogue : chaque référence est à relancer ou à sortir.
-        lien: API_BASE + '/produits/utilisation/jamais.pdf?mois=' + mois
-          + (S.usGroupe ? '&groupe=' + encodeURIComponent(S.usGroupe) : ''),
-        lienNom: 'Liste PDF' },
-      { lbl: 'Meilleur magasin', v: pc(Math.max.apply(null, (d.magasins || []).map(m => m.tauxPeriode || 0))),
-        sub: court((d.magasins || []).reduce((a, b) => (b.tauxPeriode || 0) > (a.tauxPeriode || 0) ? b : a, {}).nom) },
-    ];
-    common.usEntetes = (d.mois || []).map(m => m.lib);
-    common.usLignes = (d.magasins || []).map(m => ({
-      id: m.id, nom: court(m.nom), complet: m.nom,
-      ouvert: S.usShop === m.id,
-      basculer: () => this.setState({ usShop: S.usShop === m.id ? null : m.id }),
-      mois: (m.mois || []).map(x => ({
-        // Un mois en cours SANS ligne de ticket n'est pas un mois à zéro : la
-        // caisse ne l'a pas encore chargé, et l'écran le dit.
-        v: (x.encours && !x.refs) ? '' : nb(x.refs),
-        sub: (x.encours && !x.refs) ? 'non chargé' : pc(x.taux),
-        st: (x.encours && !x.refs) ? 'color:#b8b2a8' : '',
-      })),
-      refs: nb(m.refsPeriode), taux: pc(m.tauxPeriode),
-      tauxCol: teinte(m.tauxPeriode), barre: Math.max(2, Math.min(100, m.tauxPeriode || 0)),
-      manquantes: m.manquantes,
-    }));
-
-    // --- le détail du magasin ouvert.
-    const sid = S.usShop;
-    const det = sid ? (this._usageDet || {})[sid + '|' + cle] : undefined;
-    // Le même tri aux deux niveaux : trier les groupes par « à rattraper » et
-    // leurs catégories par ordre alphabétique ne se lirait pas.
-    const t = S.usTri || 'rattraper';
-    const ordre = (a, b) => t === 'catalogue' ? b.catalogue - a.catalogue
-      : t === 'nom' ? a.nom.localeCompare(b.nom, 'fr')
-      : (b.aRattraper - a.aRattraper || b.catalogue - a.catalogue);
-    common.usDetail = !sid ? null : {
-      chargement: det === undefined,
-      err: det === null ? 'Le détail de ce magasin n’a pas pu être lu.' : ((det && det.motif) || ''),
-      nom: det ? det.nom : '',
-      resume: det ? (nb(det.vendues) + ' vendues · ' + nb(det.aRattraper) + ' à rattraper · '
-        + nb(det.orphelines) + ' que personne ne vend') : '',
-      tri: S.usTri || 'rattraper',
-      tris: [['rattraper', 'À rattraper'], ['catalogue', 'Catalogue'], ['nom', 'A → Z']].map(([v, nom]) => ({
-        v, nom, on: (S.usTri || 'rattraper') === v, choisir: () => this.setState({ usTri: v }) })),
-      groupes: !det ? [] : (det.groupes || []).slice().sort(ordre).map(g => ({
-        nom: g.nom,
-        catalogue: nb(g.catalogue), vendues: nb(g.nVendues), taux: pc(g.taux),
-        col: teinte(g.taux), barre: Math.max(2, Math.min(100, g.taux || 0)),
-        aRattraper: g.aRattraper,
-        sous: g.nCategories + (g.nCategories > 1 ? ' sous-catégories' : ' sous-catégorie'),
-        ouvert: S.usGrp === g.nom,
-        basculer: () => this.setState({ usGrp: S.usGrp === g.nom ? null : g.nom, usCat: null }),
-        categories: (g.categories || []).slice().sort(ordre).map(c => this.usageCategorie(c, g.nom, nb, pc, teinte)),
-      })),
-    };
-  }
-
-  /**
-   * Une sous-catégorie du détail magasin : la ligne, et ses deux colonnes.
-   *
-   * La clé d'ouverture porte le groupe : deux groupes peuvent contenir une
-   * catégorie du même nom, et l'ouvrir dans l'un déplierait l'autre.
-   */
-  usageCategorie(c, groupe, nb, pc, teinte){
-    const S = this.state;
-    const cle = groupe + ' ¦ ' + c.nom;
-    return {
-      nom: c.nom, groupe,
-      catalogue: nb(c.catalogue), vendues: nb(c.nVendues), taux: pc(c.taux),
-      col: teinte(c.taux), barre: Math.max(2, Math.min(100, c.taux || 0)),
-      aRattraper: c.aRattraper,
-      ouverte: S.usCat === cle,
-      basculer: () => this.setState({ usCat: S.usCat === cle ? null : cle }),
-      nVendues: nb(c.nVendues), nAbsentes: nb(c.nNonVendues), orphelines: nb(c.orphelines),
-      // Douze lignes de chaque côté : au-delà, on ne lit plus, on fait
-      // défiler. Le compte complet reste dans l'en-tête de la colonne.
-      listeVendues: (c.vendues || []).slice(0, 12).map(x => ({ nom: x.nom, droite: nb(x.quantite) + ' u' })),
-      listeAbsentes: (c.nonVendues || []).slice(0, 12).map(x => ({
-        nom: x.nom,
-        droite: x.ailleurs ? 'vendue par ' + x.ailleurs : 'personne',
-        st: x.ailleurs ? 'color:var(--color-primary)' : 'color:var(--color-text-muted)' })),
-      resteVendues: Math.max(0, c.nVendues - 12),
-      resteAbsentes: Math.max(0, c.nNonVendues - 12),
-    };
-  }
-
-  /**
-   * Ouvre la note d'une campagne — la page A4 et le courrier qui la porte.
-   *
-   * Chargée À L'OUVERTURE et pas avant : la note lit la référence de l'an
-   * dernier sur le panel, et la calculer pour toutes les campagnes de l'écran
-   * coûterait quarante appels pour une seule qu'on ouvrira.
-   */
-  mkNoteOuvrir(id, onglet){
-    this.setState({ mkNote: { id, chargement: true, onglet: onglet || 'note' } });
-    readOne('/marketing/campagne/' + id + '/note').then(d => {
-      this.setState(s2 => (s2.mkNote && s2.mkNote.id === id)
-        ? { mkNote: { id, chargement: false, onglet: onglet || 'note',
-            d: (d && !d.error) ? d : null,
-            err: (d && d.error) ? d.error : (d ? '' : 'Note indisponible.') } }
-        : {});
-    }).catch(() => this.setState(s2 => (s2.mkNote && s2.mkNote.id === id)
-      ? { mkNote: { id, chargement: false, onglet: onglet || 'note', d: null, err: 'Note indisponible.' } } : {}));
-  }
-
-  /** La campagne telle que le formulaire la mange. */
-  mkVersForm(c2){
-    return { id: c2.id, nom: c2.nom, typeId: c2.typeId ? String(c2.typeId) : '',
-      scope: c2.scope, statut: c2.statut, debut: c2.debut || '', fin: c2.fin || '',
-      budget: c2.budget ? String(c2.budget) : '' };
   }
 
   /* --- fonds : écrire depuis le pilotage réseau ------------------------------ */
@@ -7960,19 +7933,31 @@ class App {
     // 1. Les écrans eux-mêmes, avec leur description.
     const ecrans = [];
     navDef.forEach(g => (g[1] || []).forEach(it => {
-      const push = (id, label, section) => {
+      const push = (id, label, section, etat) => {
         const aide = ((titles || {})[id] || [])[1] || '';
         if (trouve(colle(label, section, aide))) {
           // Une entrée « ext: » vit hors du cockpit : elle s'ouvre dans un
           // onglet, comme depuis le rail. goTo() en faisait un écran inconnu —
           // chercher « Dashboard » ouvrait une page blanche.
+          // Une entrée qui pose un état (Paramètres primes franchisé) le pose aussi d'ici.
           ecrans.push({ titre: label, detail: section,
-            aller: id.indexOf('ext:') === 0 ? () => window.open(id.slice(4), '_blank', 'noopener') : goTo(id) });
+            aller: id.indexOf('ext:') === 0 ? () => window.open(id.slice(4), '_blank', 'noopener')
+              : etat ? () => this.setState(Object.assign({ screen: id, hmHover: null, railOuvert: false }, etat)) : goTo(id) });
         }
       };
       if (Array.isArray(it)) { push(it[0], it[1], g[0]); }
-      else { (it.children || []).forEach(c => push(c[0], c[1], g[0] + ' · ' + it.sub)); }
+      else { (it.children || []).forEach(c => push(c[0], c[1], [g[0], it.sub].filter(Boolean).join(' · '), c[4])); }
     }));
+    // Les écrans tenus en onglets d'une entrée (Scoring, Prix × volume, Dans le temps dans le Catalogue, 18/10/2026) :
+    // trouvables par leur nom, sous l'entrée qui les tient — une fois chacun.
+    const vus = new Set();
+    navDef.forEach(g => (g[1] || []).forEach(it => (Array.isArray(it) ? [it] : (it.children || [])).forEach(c => vus.add(c[0]))));
+    navDef.forEach(g => (g[1] || []).forEach(it => (Array.isArray(it) ? [it] : (it.children || [])).forEach(c => (c[3] || []).forEach(id => {
+      if (vus.has(id) || !(titles || {})[id]) { return; }
+      vus.add(id);
+      const aide = titles[id][1] || '';
+      if (trouve(colle(titles[id][0], g[0], c[1], aide))) { ecrans.push({ titre: titles[id][0], detail: g[0] + ' · ' + c[1], aller: goTo(id) }); }
+    }))));
     ajoute('Écrans', coupe(ecrans));
 
     // 2. Références du catalogue produit.
@@ -7997,7 +7982,7 @@ class App {
     // 4. Magasins.
     const mags = (D.stores || []).filter(s => trouve(colle(s.nom, s.ville, s.zone, s.id))).map(s => ({
       titre: s.nom, detail: [s.ville, s.zone].filter(Boolean).join(' · '),
-      aller: () => this.setState({ screen: 'performance', pfOnglet: 'magasins', gq: '' }) }));
+      aller: () => this.setState({ screen: 'resultatJour', rjOnglet: 'mois', rpSel: null, gq: '' }) }));
     ajoute('Magasins', coupe(mags));
 
     // 5. Projets et leurs tâches.
@@ -8046,9 +8031,10 @@ class App {
   /* --- planogramme : le comptoir, ses emplacements, ses consignes ------------ */
 
   /* --- résultat du jour ------------------------------------------------------
-   * Une journée, tous les magasins, un compte de résultat par ligne. Ouvrir une
-   * ligne déplie le détail du magasin : cascade du résultat, ventilation par
-   * catégorie, indicateurs de vente et place du jour dans le mois.
+   * Une journée, tous les magasins, un compte de résultat par ligne. Cliquer une
+   * ligne ouvre le dashboard du magasin (nouvel onglet) ; le ▸ devant le nom
+   * déplie ici son détail : cascade du résultat, ventilation par catégorie,
+   * indicateurs de vente et place du jour dans le mois.
    *
    * Lecture paresseuse et cache PAR DATE : reculer d'un jour puis revenir ne
    * redemande rien au panel — chaque date coûte une volée d'appels.
@@ -8067,7 +8053,7 @@ class App {
     const fU = v => (v == null ? '' : v.toFixed(2).replace('.', ',') + ' €');
     const pct = v => String(v).replace('.', ',') + ' %';
     const cli = n => fI(n) + ' client' + (n > 1 ? 's' : '');
-    const base = 'Pro = tickets portés par un client dont la fiche panel est professionnelle (is_client_b2b) ; comptoir = le reste du CA.';
+    const base = 'Pro = tickets portés par un client dont la fiche panel est professionnelle (is_client_b2b) avec un numéro de TVA valide ; comptoir = le reste du CA.';
     if (m.caPro == null) {
       return { caCpt: '—', caCptSous: '', caCptSous2: '', caPro: '—', caProSous: '', caProSous2: '',
         proTitre: m.proJours ? 'Aucun des ' + m.proJours + ' jours ouverts n’est encore lu : les tickets se relèvent au cron, chaque heure.' : 'Tickets du jour non lus chez le panel : le split attend la prochaine lecture.' };
@@ -8110,51 +8096,6 @@ class App {
     return null;
   }
 
-  /* Les réclamations matière : lues chez le panel, jamais recalculées. Une
-     seule lecture, gardée — l'écran des fournisseurs y revient souvent. */
-  reclCharge(force){
-    const mois = this.state.reclMois == null ? 3 : this.state.reclMois;
-    const cle = String(mois);
-    if (this._reclEnCours === cle) { return; }
-    if (this.D.recl && this.D.recl.cle === cle && !force) { return; }
-    this._reclEnCours = cle;
-    if (!this.D.recl) { this.setState({ reclChargement: true }); }
-    readOne('/fournisseurs/reclamations?mois=' + mois).then(d => {
-      this._reclEnCours = null; this.D.recl = Object.assign({ cle }, d || { indispo: true });
-      this.setState({ reclChargement: false });
-    }).catch(() => { this._reclEnCours = null; this.D.recl = { cle, indispo: true };
-      this.setState({ reclChargement: false }); });
-  }
-
-  /* La photo de contrôle d'une tâche née d'une note : cliché et repères, lus
-     une fois puis gardés. Une tâche sans origine ne déclenche aucun appel. */
-  srcCharge(src){
-    if (!src || !src.taskId || !src.date) { return null; }
-    const cle = src.shopId + '/' + src.taskId + '/' + src.date;
-    if (!this.D.srcPhoto) { this.D.srcPhoto = {}; }
-    if (this.D.srcPhoto[cle] !== undefined) { return this.D.srcPhoto[cle]; }
-    this.D.srcPhoto[cle] = null;
-    readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(src.shopId)
-      + '&task=' + encodeURIComponent(src.taskId) + '&date=' + encodeURIComponent(src.date))
-      .then(d => { this.D.srcPhoto[cle] = d || { erreur: true }; this.setState({ srcMaj: cle }); })
-      .catch(() => { this.D.srcPhoto[cle] = { erreur: true }; this.setState({ srcMaj: cle }); });
-    return null;
-  }
-
-  /* Le lien de la photo est SIGNÉ et expire. Le navigateur ne l'apprend qu'à la
-     fin de la requête : on écoute son échec plutôt que d'afficher une icône
-     cassée surmontée de cadres flottants. */
-  srcSurveille(cle){
-    setTimeout(() => {
-      const img = document.querySelector('[data-tphoto="' + cle + '"]');
-      if (!img) { return; }
-      if (!this.D.srcPhotoErr) { this.D.srcPhotoErr = {}; }
-      const rate = () => { if (!this.D.srcPhotoErr[cle]) {
-        this.D.srcPhotoErr[cle] = true; this.setState({ srcErr: cle }); } };
-      if (img.complete) { if (!img.naturalWidth) { rate(); } return; }
-      img.addEventListener('error', rate, { once: true });
-    }, 0);
-  }
 
   /* Le classement des tâches du jour — lu chez le panel, pas recalculé.
      Chargé à part du résultat du jour : il vit sur la même date mais sur une
@@ -8894,135 +8835,10 @@ class App {
       }
     }
   }
-  /* --- Plan de développement : l'engagement annuel, le rituel trimestriel ---- */
-  pdvCle(){
-    const shops = this.open();
-    const st = shops.find(x => x.id === (this.state.pdvShop || this.state.bStore)) || shops[0];
-    return (st ? st.id : '') + '|' + (this.state.pdvAn || this.exo());
-  }
-  pdvCharge(force){
-    const cle = this.pdvCle();
-    const [shop, an] = cle.split('|');
-    if (!shop) { return; }
-    if (!this.D.plan) { this.D.plan = {}; }
-    if (!this._pdvEnCours) { this._pdvEnCours = {}; }
-    if (this._pdvEnCours[cle]) { return; }
-    if (this.D.plan[cle] && !force) { return; }
-    this._pdvEnCours[cle] = true;
-    readOne('/plan?shop=' + encodeURIComponent(shop) + '&exercice=' + encodeURIComponent(an)).then(d => {
-      this._pdvEnCours[cle] = false;
-      this.D.plan[cle] = d || { erreur: true };
-      this.setState({});
-    });
-  }
-  /** Une écriture du plan, puis la relecture : l'écran ne devine jamais l'état du serveur. */
-  pdvEcrire(path, body){
-    const qui = (this.meta && this.meta.utilisateur && this.meta.utilisateur.nom) || '';
-    this.setState({ pdvBusy: true, pdvErr: '' });
-    return this.api('POST', path, Object.assign({ par: qui }, body)).then(r => {
-      if (!r || r.ok === false) { this.setState({ pdvBusy: false, pdvErr: (r && r.error) || 'refus du serveur' }); return null; }
-      this.setState({ pdvBusy: false });
-      this.pdvCharge(true);
-      return r;
-    });
-  }
-  /* --- Développement commercial : la liste de démarchage d'un magasin ----
-   * Les lieux viennent de GET /scouting/demarchage (OpenStreetMap, autour du
-   * magasin) ; ce que le franchisé en fait — coché, date de visite, retour,
-   * note — tient pour l'instant dans le navigateur (localStorage), par
-   * magasin : le prototype se juge à l'écran avant d'écrire en base.
-   */
-  static get DM_FAMILLES(){
-    return [['bureaux', 'Entreprises & bureaux'], ['industrie', 'Industrie'], ['ecoles', 'Écoles'], ['sante', 'Santé'], ['administration', 'Administrations'],
-      ['formation', 'Formation'], ['funeraire', 'Funéraire'], ['sport', 'Sport & loisirs'], ['evenements', 'Hôtels & événements'], ['commerces', 'Commerces en zoning'], ['artisans', 'Artisans']];
-  }
-  static get DM_RETOURS(){
-    return [['', '—'], ['rappeler', 'À rappeler'], ['rdv', 'RDV pris'], ['interesse', 'Intéressé'], ['refus', 'Pas intéressé'], ['client', 'Client']];
-  }
-  dmMagasins(){
-    const R = this.D.dmReseau || null;
-    return R ? (R.magasins || []).filter(m => m.lat != null && m.lng != null) : [];
-  }
-  dmMagasin(){
-    const ms = this.dmMagasins();
-    return ms.find(m => String(m.id) === String(this.state.dmShop)) || ms.find(m => m.ouvert) || ms[0] || null;
-  }
-  dmCle(){ const m = this.dmMagasin(); return m ? m.id + '|' + (this.state.dmR || 5000) : ''; }
-  dmCharge(force){
-    if (!this.D.dmReseau && !this._dmReseauEnCours) {
-      this._dmReseauEnCours = true;
-      readOne('/scouting/reseau').then(r => { this._dmReseauEnCours = false; this.D.dmReseau = r || { magasins: [] }; this.setState({}); });
-      return;
-    }
-    const m = this.dmMagasin();
-    if (!m) { return; }
-    const cle = this.dmCle();
-    if (!this.D.dm) { this.D.dm = {}; }
-    if (!this._dmEnCours) { this._dmEnCours = {}; }
-    if (this._dmEnCours[cle] || (this.D.dm[cle] && !force)) { return; }
-    this._dmEnCours[cle] = true;
-    const r = this.state.dmR || 5000;
-    readOne('/scouting/demarchage?lat=' + m.lat.toFixed(5) + '&lng=' + m.lng.toFixed(5) + '&r=' + r + (force ? '&force=1' : '')).then(d => {
-      this._dmEnCours[cle] = false;
-      this.D.dm[cle] = d || { erreur: true };
-      this.setState({});
-    });
-  }
-  /**
-   * Ce que le franchisé a fait de chaque lieu, par magasin — AU SERVEUR
-   * (/prospection/{shop}), la réserve que tient le module Prospection : le
-   * même lieu coché ici l'est sur le téléphone du franchisé. Sans le module
-   * (script absent), l'écran garde l'état en mémoire le temps de la page.
-   */
-  dmEtat(){
-    const P = window.CockpitProspection;
-    const m = this.dmMagasin();
-    if (P && m) {
-      // La réserve arrive du serveur après le premier rendu : on se fait
-      // prévenir une fois, et l'écran se redessine avec les cases cochées.
-      if (!this._dmAbonne) { this._dmAbonne = true; P.chargerOffres(false); P.ecouter(() => { if (/^(demarchage|prospection|prospectionMobile)$/.test(this.state.screen)) this.setState({}); }); }
-      const tout = {}; tout[m.id] = P.etat(m.id); return tout;
-    }
-    if (!this._dmEtat) { this._dmEtat = {}; }
-    return this._dmEtat;
-  }
-  dmSet(shopId, id, patch){
-    const P = window.CockpitProspection;
-    if (P) {
-      const d = (this.D.dm || {})[this.dmCle()];
-      const l = d && (d.lieux || []).find(x => x.id === id);
-      P.set(shopId, id, patch, l && l.nom).then(() => this.setState({}));
-      this.setState({});
-      return;
-    }
-    const tout = this.dmEtat();
-    const par = tout[shopId] || (tout[shopId] = {});
-    const cur = par[id] || (par[id] = { coche: false, visite: '', retour: '', note: '' });
-    Object.assign(cur, patch);
-    if (patch.note !== undefined || patch.retour !== undefined || patch.visite !== undefined) { cur.le = new Date().toISOString().slice(0, 10); }
-    if (!cur.coche && !cur.visite && !cur.retour && !cur.note) { delete par[id]; }
-    this.setState({});
-  }
-  /** Les écrans Prospection, Prospection mobile et Newsletter magasin : le magasin choisi, le lien mobile. */
-  valsProspection(common){
-    const ms = this.dmMagasins();
-    const m = this.dmMagasin();
-    common.prChargement = !this.D.dmReseau;
-    common.prMagasins = ms.map(x => ({ id: String(x.id), nom: x.nom, on: m && String(x.id) === String(m.id) }));
-    common.prSetMagasin = e => this.setState({ dmShop: e.target.value });
-    common.prSansMagasin = !!this.D.dmReseau && !m;
-    common.prMagasin = m ? { id: String(m.id), nom: m.nom } : null;
-    const base = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
-    common.prLienMobile = m ? base + 'prospection/?shop=' + encodeURIComponent(String(m.id)) : '';
-    common.prLiens = ms.map(x => ({ id: String(x.id), nom: x.nom, url: base + 'prospection/?shop=' + encodeURIComponent(String(x.id)), on: m && String(x.id) === String(m.id) }));
-    common.prCopier = () => { try { navigator.clipboard.writeText(common.prLienMobile); this.notify('Lien copié — à ouvrir sur le téléphone du franchisé.'); } catch (e) { this.notify('Copie impossible : sélectionnez le lien.'); } };
-  }
-
   /* --- Tablette vendeuses ------------------------------------------------------
    * Le book des vendeuses est une application à part, servie depuis tablette/
-   * (compilée dans le dépôt pwa_sales_tablet, puis copiée ici). Comme pour
-   * Prospection mobile, l'écran donne le lien de chaque magasin et un aperçu en
-   * ligne. Il y ajoute l'état des données que le BO sert à la tablette
+   * (compilée dans le dépôt pwa_sales_tablet, puis copiée ici). L'écran donne
+   * le lien de chaque magasin et un aperçu en ligne. Il y ajoute l'état des données que le BO sert à la tablette
    * (GET /tablette/book), un bouton pour les recalculer, et la récupération des
    * photos du panel (POST /tablette/photos, par lots, tant qu'il en reste).
    */
@@ -9469,292 +9285,6 @@ class App {
         + (rv.semaine && rv.semaine.parTicket != null ? ' (' + art(rv.semaine.parTicket, 2) + ' cette semaine)' : '') + '.';
     }
   }
-  valsDemarchage(common){
-    const S = this.state;
-    const ms = this.dmMagasins();
-    const m = this.dmMagasin();
-    common.dmChargement = !this.D.dmReseau;
-    common.dmMagasins = ms.map(x => ({ id: String(x.id), nom: x.nom, on: m && String(x.id) === String(m.id) }));
-    common.dmSetMagasin = e => this.setState({ dmShop: e.target.value });
-    common.dmR = String(S.dmR || 5000);
-    common.dmRayons = [['3000', '3 km'], ['5000', '5 km'], ['8000', '8 km'], ['12000', '12 km']].map(([v, l]) => ({ v, l, on: v === String(S.dmR || 5000) }));
-    common.dmSetR = e => this.setState({ dmR: +e.target.value });
-    common.dmVue = S.dmVue === 'cartes' ? 'cartes' : 'tableau';
-    common.dmVues = [['tableau', 'Tableau'], ['cartes', 'Fiches']].map(([v, l]) => ({ v, l, on: v === common.dmVue, go: () => this.setState({ dmVue: v }) }));
-    common.dmGrand = !!S.dmGrand;
-    common.dmToggleGrand = () => this.setState({ dmGrand: !S.dmGrand });
-    common.dmSeul = !!S.dmSeul;
-    common.dmToggleSeul = () => this.setState({ dmSeul: !S.dmSeul });
-    common.dmQ = S.dmQ || '';
-    common.dmSetQ = e => this.setState({ dmQ: e.target.value });
-    common.dmRefresh = () => this.dmCharge(true);
-    common.dmSansMagasin = !!this.D.dmReseau && !m;
-    common.dmLieux = []; common.dmFamilles = []; common.dmGroupes = []; common.dmResume = null; common.dmNote = '';
-    if (!m) { return; }
-    const d = (this.D.dm || {})[this.dmCle()];
-    common.dmLecture = !d;
-    common.dmErreur = !!(d && (d.erreur || d.error));
-    common.dmErreurTxt = d && d.error ? d.error : 'La lecture de /scouting/demarchage a échoué — voir Diagnostic API.';
-    if (!d || common.dmErreur) { return; }
-    const etat = this.dmEtat()[m.id] || {};
-    const fams = App.DM_FAMILLES;
-    const nomFam = Object.fromEntries(fams);
-    const actives = S.dmFam && S.dmFam.length ? S.dmFam : fams.map(f => f[0]);
-    const q = (S.dmQ || '').trim().toLowerCase();
-    // la boulangerie du franchisé et les autres boulangeries ne sont pas des prospects
-    const brut = (d.lieux || []).filter(l => !/bakery|pastry/.test(l.genre) && !/atelier by/i.test(l.nom));
-    const compte = {};
-    brut.forEach(l => { compte[l.famille] = (compte[l.famille] || 0) + 1; });
-    common.dmFamilles = fams.filter(f => compte[f[0]]).map(f => ({ k: f[0], l: f[1], n: compte[f[0]], on: actives.includes(f[0]),
-      go: () => { const cur = (S.dmFam && S.dmFam.length ? S.dmFam : fams.map(x => x[0])); const nx = cur.includes(f[0]) ? cur.filter(k => k !== f[0]) : cur.concat([f[0]]); this.setState({ dmFam: nx.length === fams.length ? [] : nx }); } }));
-    common.dmToutesFam = () => this.setState({ dmFam: [] });
-    const fD = d2 => this.fD(d2);
-    const retours = Object.fromEntries(App.DM_RETOURS);
-    const lieux = brut.filter(l => actives.includes(l.famille))
-      .filter(l => !S.dmGrand || l.grand === true)
-      .filter(l => !q || (l.nom + ' ' + l.genre + ' ' + l.adresse + ' ' + (l.zoning || '')).toLowerCase().includes(q))
-      .filter(l => !S.dmSeul || (etat[l.id] && etat[l.id].coche))
-      .map(l => {
-        const e = etat[l.id] || {};
-        const maps = 'https://www.google.com/maps/search/?api=1&query=' + l.lat + ',' + l.lng;
-        return {
-          id: l.id, nom: l.nom, genre: l.genre, famille: l.famille, fam: nomFam[l.famille] || l.famille,
-          adresse: l.adresse || '', sansAdresse: !l.adresse, tel: l.tel || '', site: l.site || '', mail: l.mail || '', maps,
-          zoning: l.zoning || '', dist: l.dKm.toFixed(1).replace('.', ',') + ' km',
-          taille: l.personnes != null ? l.personnes + ' ' + l.personnesDe : (l.grand === true ? '≥ 20 pers. (probable)' : (l.grand === false ? '< 20 pers. (probable)' : 'taille inconnue')),
-          offre: (() => { const P = window.CockpitProspection; if (!P) return ''; const o = P.offreParId(P.offreDe(l, e.offre)); return o ? o.nom : ''; })(),
-          tailleCoul: l.grand === true ? '#2d7a3e' : (l.grand === false ? 'var(--color-text-muted)' : '#C17A2A'),
-          coche: !!e.coche, visite: e.visite || '', retour: e.retour || '', retourTxt: retours[e.retour || ''] || '', note: e.note || '',
-          crm: !!(e.note && e.note.trim()), le: e.le ? fD(e.le) : '',
-          setCoche: ev => this.dmSet(m.id, l.id, { coche: !!ev.target.checked }),
-          setVisite: ev => this.dmSet(m.id, l.id, { visite: ev.target.value }),
-          setRetour: ev => this.dmSet(m.id, l.id, { retour: ev.target.value }),
-          setNote: ev => this.dmSet(m.id, l.id, { note: ev.target.value }),
-        };
-      });
-    common.dmLieux = lieux;
-    // les fiches, par famille, dans l'ordre des familles
-    common.dmGroupes = fams.map(f => ({ k: f[0], l: f[1], lieux: lieux.filter(l => l.famille === f[0]) })).filter(g => g.lieux.length);
-    const coches = brut.filter(l => etat[l.id] && etat[l.id].coche);
-    const visites = brut.filter(l => etat[l.id] && etat[l.id].visite);
-    const annotes = brut.filter(l => etat[l.id] && etat[l.id].note && etat[l.id].note.trim());
-    common.dmResume = { total: brut.length, montre: lieux.length, coches: coches.length, visites: visites.length, annotes: annotes.length,
-      adresses: brut.filter(l => l.adresse).length, zonings: d.zonings || 0 };
-    common.dmRetours = App.DM_RETOURS.map(([v, l]) => ({ v, l }));
-    common.dmExporter = () => {
-      const P = window.CockpitProspection;
-      const offreNom = l => { if (!P) return ''; const o = P.offreParId(P.offreDe(l, (etat[l.id] || {}).offre)); return o ? o.nom : ''; };
-      const lignes = [['Lieu', 'Type', 'Genre', 'Offre', 'Adresse', 'Téléphone', 'Site', 'Distance (km)', 'Taille', 'Zoning', 'Coché', 'Visite', 'Retour', 'Note']];
-      brut.filter(l => etat[l.id] && etat[l.id].coche).forEach(l => { const e = etat[l.id]; lignes.push([l.nom, nomFam[l.famille] || l.famille, l.genre, offreNom(l), l.adresse, l.tel, l.site, String(l.dKm).replace('.', ','), l.personnes != null ? l.personnes + ' ' + l.personnesDe : (l.grand === true ? '≥ 20 pers.' : ''), l.zoning || '', 'oui', e.visite || '', retours[e.retour || ''] || '', e.note || '']); });
-      const csv = '﻿' + lignes.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
-      const a = document.createElement('a');
-      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-      a.download = 'demarchage-' + String(m.nom).toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + new Date().toISOString().slice(0, 10) + '.csv';
-      a.click();
-      this.notify('Liste exportée — ' + lignes.length + ' lieux');
-    };
-    common.dmCrm = () => this.notify(annotes.length ? annotes.length + ' annotation(s) à envoyer au CRM marketing — branchement à décider' : 'Aucune annotation : rien à envoyer au CRM');
-    common.dmNote = 'Lieux relevés dans OpenStreetMap' + (d.osm ? ' (données du ' + new Date(d.osm).toLocaleDateString('fr-BE') + ')' : '') + ', dans un rayon de ' + ((S.dmR || 5000) / 1000) + ' km autour du magasin'
-      + (d.releve ? ', relevé ' + (d.cache ? 'gardé depuis le ' : 'du ') + new Date(String(d.releve).replace(' ', 'T')).toLocaleDateString('fr-BE') : '')
-      + '. Taille : ce que la carte dit (employés, élèves, lits) ; sinon la vraisemblance du genre — un hôpital, une école, un site industriel rassemblent plus de vingt personnes, un cabinet ou un artisan rarement. Adresse absente : lieu cartographié sans adresse, le lien Maps mène au point.';
-  }
-
-  valsPlan(common){
-    const S = this.state, D = this.D;
-    const shops = this.open();
-    const st = shops.find(x => x.id === (S.pdvShop || S.bStore)) || shops[0];
-    const an = +(S.pdvAn || this.exo());
-    common.pdvStore = st ? st.id : ''; common.pdvStoreOpts = shops.map(x => ({ id: x.id, nom: x.nom }));
-    common.setPlStore = e => this.setState({ pdvShop: e.target.value, pdvRituel: null, pdvActEdit: null, pdvDraft: {} });
-    common.pdvAn = String(an);
-    common.pdvAnOpts = [an - 1, an, an + 1].map(a => ({ v: String(a), nom: String(a) }));
-    common.setPlAn = e => this.setState({ pdvAn: +e.target.value, pdvRituel: null, pdvActEdit: null, pdvDraft: {} });
-    common.pdvMeta = st ? (st.code + ' · ' + st.zone + ' · franchisé ' + st.fr) : '';
-    common.pdvBusy = !!S.pdvBusy; common.pdvErr = S.pdvErr || '';
-    const d = (D.plan || {})[this.pdvCle()];
-    common.pdvChargement = !d; common.pdvErreur = !!(d && (d.erreur || d.error));
-    common.pdvErreurTxt = d && d.error ? d.error : 'La lecture de /plan a échoué — voir Diagnostic API.';
-    common.pdvRampe = []; common.pdvEng = null; common.pdvAnnee = null; common.pdvActions = null; common.pdvTrims = []; common.pdvRituel = null; common.pdvActEdit = null;
-    if (!d || common.pdvErreur) { return; }
-    const fK = n => this.fK(n), fE = n => this.fE(n);
-    const fS = n => n == null ? '' : ((n >= 0 ? '+' : '−') + fK(Math.abs(n)));
-    const fPct1 = n => n == null ? '' : ((n >= 0 ? '+' : '−') + Math.abs(n).toFixed(1).replace('.', ',') + ' %');
-    const fCl = n => n == null ? '' : ((n > 0 ? '−' : '+') + Math.abs(n).toLocaleString('fr-BE'));
-    const coul = n => n == null ? 'var(--color-text-muted)' : (n >= 0 ? '#2d7a3e' : '#C0182B');
-    const draft = S.pdvDraft || {};
-    const engs = d.engagements || {};
-    const qui = (this.meta && this.meta.utilisateur && this.meta.utilisateur.nom) || '';
-    common.pdvPdfHref = API_BASE + '/plan.pdf?shop=' + encodeURIComponent(st.id) + '&exercice=' + an + '&trimestre=' + ((S.pdvRituel && S.pdvRituel.t) || S.pdvSel || d.trimestreCourant);
-    common.pdvMagasin = d.magasin;
-    common.pdvSansEtude = !(d.rampe && d.rampe.potentiel);
-    common.pdvGoEtude = () => this.setState({ screen: 'budgetparam', encStore: st.id });
-
-    // ── La rampe : cinq années, chacune avec son engagement.
-    common.pdvRampe = (d.rampe.annees || []).map(a => {
-      const en = engs[String(a.an)] || null;
-      const cur = a.an === an;
-      return { an: String(a.an), cur, ca: fK(a.ca),
-        lib: a.maturite ? 'maturité' : 'année ' + a.anneeExploitation + ' · ' + a.coef + ' %',
-        eng: en && en.objectif ? fK(en.objectif) + (en.statut === 'brouillon' ? ' (brouillon)' : ' engagé') : '',
-        sous: cur ? 'réalisé ' + fK(d.annee.realise) + (d.annee.projection ? ' · proj. ' + fK(d.annee.projection) : '') : '',
-        signe: !en || en.statut === 'brouillon' ? (a.an > an ? 'à engager en janvier ' + a.an : (a.an === an ? 'à engager' : '')) : (en.statut === 'valide' ? '✓ engagé le ' + this.fD(en.engageLe) + ' · validé le ' + this.fD(en.valideLe) : '✓ engagé le ' + this.fD(en.engageLe) + ' — à valider'),
-        signeCol: !en || en.statut === 'brouillon' ? 'var(--color-primary)' : '#2d7a3e',
-        go: () => this.setState({ pdvAn: a.an, pdvRituel: null, pdvActEdit: null, pdvDraft: {} }) };
-    });
-
-    // ── L'engagement de l'année : ce qui est enregistré, ou le brouillon en cours.
-    const en = engs[String(an)] || { objectif: null, rampe: null, motif: '', statut: 'brouillon' };
-    const rampeAn = d.annee.rampe;
-    const objDraft = draft.objectif != null ? draft.objectif : (en.objectif != null ? Math.round(en.objectif) : (rampeAn != null ? Math.round(rampeAn) : ''));
-    const motifDraft = draft.motif != null ? draft.motif : (en.motif || '');
-    const setD = k => e => { const v = e.target.value; this.setState(s2 => ({ pdvDraft: Object.assign({}, s2.pdvDraft, { [k]: v }) })); };
-    const sauverEng = statut => () => {
-      if (S.pdvBusy) { return; }
-      this.pdvEcrire('/plan/engagement', { shop: st.id, exercice: an, objectif: objDraft === '' ? '' : +objDraft, rampe: rampeAn, motif: motifDraft, statut })
-        .then(r => { if (r) { this.setState({ pdvDraft: {} }); this.notify(statut !== en.statut ? (statut === 'valide' ? 'Engagement validé' : 'Engagement déposé') : (statut === 'brouillon' ? 'Brouillon enregistré' : 'Engagement mis à jour')); } });
-    };
-    const ecartRampe = (rampeAn != null && objDraft !== '' && +objDraft > 0) ? +objDraft - rampeAn : null;
-    common.pdvEng = {
-      objectif: objDraft, rampe: rampeAn != null ? fE(rampeAn) : '—', motif: motifDraft,
-      setObjectif: setD('objectif'), setMotif: setD('motif'),
-      ecartRampe: ecartRampe == null ? '' : (Math.abs(ecartRampe) < 500 ? 'sur la rampe' : (ecartRampe > 0 ? '+' : '−') + fK(Math.abs(ecartRampe)) + (ecartRampe > 0 ? ' au-dessus de la rampe' : ' sous la rampe')),
-      statut: en.statut, statutTxt: { brouillon: 'Brouillon — pas encore déposé', engage: 'Déposé par le franchisé, à valider par le consultant', valide: 'Engagé et validé' }[en.statut],
-      statutCol: en.statut === 'valide' ? '#2d7a3e' : (en.statut === 'engage' ? '#B26A00' : 'var(--color-text-muted)'),
-      signes: [en.engageLe ? 'déposé le ' + this.fDA(en.engageLe) + (en.engagePar ? ' par ' + en.engagePar : '') : '', en.valideLe ? 'validé le ' + this.fDA(en.valideLe) + (en.validePar ? ' par ' + en.validePar : '') : ''].filter(Boolean).join(' · '),
-      modifie: draft.objectif != null || draft.motif != null,
-      // « Enregistrer » garde le statut acquis : un engagement validé ne redevient pas brouillon.
-      brouillon: sauverEng(en.statut || 'brouillon'), deposer: sauverEng('engage'), valider: sauverEng('valide'),
-      peutDeposer: objDraft !== '' && +objDraft > 0,
-    };
-    // ── Où en est l'engagement.
-    const A = d.annee;
-    const objA = A.objectif;
-    common.pdvAnnee = {
-      objectif: objA != null ? fK(objA) : '—', realise: fK(A.realise),
-      attendu: (A.objectifSource === 'rampe' ? 'rampe de l’étude, à engager' : '') + (A.attendu != null ? (A.objectifSource === 'rampe' ? ' · ' : '') + fK(A.attendu) + ' attendus à ce jour' : (A.budgetMensuelTotal ? 'budgets mensuels : ' + fK(A.budgetMensuelTotal) : '')),
-      ecart: A.ecart != null ? fS(A.ecart) : '—', ecartCol: coul(A.ecart),
-      projection: A.projection != null ? fK(A.projection) : '—',
-      projSous: (A.projection != null && objA != null) ? fS(A.projection - objA) + (A.objectifSource === 'rampe' ? ' sur la rampe' : ' sur l’engagement') : 'au rythme actuel',
-      projCol: (A.projection != null && objA != null) ? coul(A.projection - objA) : 'var(--color-text-muted)',
-      wReel: objA ? Math.max(0, Math.min(100, 100 * A.realise / objA)).toFixed(1) : '0',
-      wAtt: (objA && A.attendu != null) ? Math.max(0, Math.min(100, 100 * A.attendu / objA)).toFixed(1) : '0',
-      partEcoulee: A.partEcoulee != null ? String(A.partEcoulee).replace('.', ',') + ' % de l’année écoulée' : '',
-    };
-
-    // ── Les actions, en trois colonnes.
-    const stNom = { alancer: 'à lancer', encours: 'en cours', fait: 'fait', abandonne: 'abandonné' };
-    const stSt = { alancer: 'background:var(--color-background-secondary);color:var(--color-text-muted)', encours: 'background:#FBEFE0;color:#8a5a1c', fait: 'background:#E3EFE6;color:#2d7a3e', abandonne: 'background:#F6E4E7;color:var(--color-primary)' };
-    const acts = d.actions || [];
-    const ligneAct = a => ({ id: a.id, libelle: a.libelle, effet: a.effetAn != null ? '+ ' + fK(a.effetAn) : '', trimestre: a.trimestre ? 'T' + a.trimestre : (a.dateLancement ? this.fD(a.dateLancement) : ''),
-      statut: a.statut, statutTxt: stNom[a.statut] || a.statut, statutSt: stSt[a.statut] || '', responsable: a.responsable || '', mesure: a.mesure || '', constate: a.effetConstate || '',
-      editer: () => this.setState({ pdvActEdit: Object.assign({}, a) }) });
-    const effetTotal = acts.filter(a => a.statut !== 'abandonne').reduce((s2, a) => s2 + (a.effetAn || 0), 0);
-    common.pdvActions = {
-      alancer: acts.filter(a => a.statut === 'alancer').map(ligneAct), encours: acts.filter(a => a.statut === 'encours').map(ligneAct),
-      fait: acts.filter(a => a.statut === 'fait').map(ligneAct), abandonne: acts.filter(a => a.statut === 'abandonne').map(ligneAct),
-      effetTotal: '+ ' + fK(effetTotal), n: acts.length,
-      ajouter: () => this.setState({ pdvActEdit: { id: 0, libelle: '', effetAn: '', trimestre: d.trimestreCourant, statut: 'alancer', responsable: 'franchisé', dateLancement: '', mesure: '', effetConstate: '' } }),
-    };
-    // La fiche d'une action (modale) : chaque champ écrit dans le brouillon, le bouton enregistre.
-    const ae = S.pdvActEdit;
-    if (ae) {
-      const setA = k => e => { const v = e.target.value; this.setState(s2 => ({ pdvActEdit: Object.assign({}, s2.pdvActEdit, { [k]: v }) })); };
-      common.pdvActEdit = {
-        titre: ae.id ? 'Modifier l’action' : 'Nouvelle action',
-        libelle: ae.libelle || '', effetAn: ae.effetAn == null ? '' : ae.effetAn, trimestre: String(ae.trimestre || ''), statut: ae.statut || 'alancer',
-        responsable: ae.responsable || '', dateLancement: ae.dateLancement || '', mesure: ae.mesure || '', effetConstate: ae.effetConstate || '',
-        setLibelle: setA('libelle'), setEffet: setA('effetAn'), setTrimestre: setA('trimestre'), setStatut: setA('statut'), setResponsable: setA('responsable'), setDate: setA('dateLancement'), setMesure: setA('mesure'), setConstate: setA('effetConstate'),
-        statuts: Object.keys(stNom).map(k => ({ v: k, nom: stNom[k], on: k === (ae.statut || 'alancer') })),
-        trimestres: [['', '—'], ['1', 'T1'], ['2', 'T2'], ['3', 'T3'], ['4', 'T4']].map(t => ({ v: t[0], nom: t[1], on: String(ae.trimestre || '') === t[0] })),
-        fermer: () => this.setState({ pdvActEdit: null }), rien: () => {},
-        enregistrer: () => { if (S.pdvBusy) { return; }
-          this.pdvEcrire('/plan/action', { shop: st.id, exercice: an, id: ae.id || 0, libelle: ae.libelle, effetAn: ae.effetAn, trimestre: ae.trimestre, statut: ae.statut, responsable: ae.responsable, dateLancement: ae.dateLancement, mesure: ae.mesure, effetConstate: ae.effetConstate })
-            .then(r => { if (r) { this.setState({ pdvActEdit: null }); } }); },
-        supprimer: ae.id ? () => { if (S.pdvBusy) { return; } this.pdvEcrire('/plan/action', { shop: st.id, exercice: an, id: ae.id, supprimer: true }).then(r => { if (r) { this.setState({ pdvActEdit: null }); } }); } : null,
-        peut: String(ae.libelle || '').trim() !== '',
-      };
-    }
-
-    // ── Les trimestres : constat, voix, état du rituel.
-    const VOIX = [['franchise', 'Franchisé', 'var(--color-primary)'], ['consultant', 'Consultant', '#B26A00'], ['marque', 'Marque', '#2d7a3e']];
-    const periode = { 1: 'jan – mar', 2: 'avr – juin', 3: 'juil – sep', 4: 'oct – déc' };
-    const sel = S.pdvSel || d.trimestreCourant;
-    common.pdvTrims = (d.trimestres || []).map(t => {
-      const notes = t.notes || {};
-      const nVoix = VOIX.filter(v => notes[v[0]] && notes[v[0]].texte).length;
-      const rv = t.revue || { etape: 1 };
-      return { t: t.t, label: t.label, periode: periode[t.t], ouvert: t.t === sel,
-        etat: t.clos ? 'clos' : (t.enCours ? 'en cours' : 'à venir'), futur: t.futur,
-        kpi: t.ecartPct != null ? fPct1(t.ecartPct) : (t.objectif != null ? 'objectif ' + fK(t.objectif) : '—'), kpiCol: t.ecartPct != null ? coul(t.ecartPct) : 'var(--color-text-muted)',
-        sous: t.realise != null ? fK(t.realise) + (t.attendu != null ? ' / ' + fK(t.attendu) : '') + (t.clients != null ? ' · ' + fCl(t.clients) + ' clients' : '') : (t.objectif != null ? '' : 'pas de budget'),
-        ratios: [t.food != null ? 'food ' + String(t.food).replace('.', ',') + ' %' : '', t.labour != null ? 'labour ' + String(t.labour).replace('.', ',') + ' %' : '', t.netPct != null ? 'résultat ' + String(t.netPct).replace('.', ',') + ' %' : ''].filter(Boolean).join(' · '),
-        voix: VOIX.map(v => ({ cle: v[0], nom: v[1], coul: v[2], texte: notes[v[0]] ? notes[v[0]].texte : '', signe: notes[v[0]] && notes[v[0]].le ? (notes[v[0]].par ? notes[v[0]].par + ' · ' : '') + this.fD(notes[v[0]].le) : '' })),
-        suite: notes.suite ? notes.suite.texte : '',
-        revueTxt: rv.valideLe ? 'revue validée le ' + this.fD(rv.valideLe) + (rv.validePar ? ' par ' + rv.validePar : '') : (nVoix || rv.etape > 1 ? 'revue en cours — étape ' + rv.etape + ' / 5 · ' + nVoix + ' voix sur 3' : (t.futur ? '' : 'revue à faire')),
-        revueCol: rv.valideLe ? '#2d7a3e' : (t.futur ? 'var(--color-text-muted)' : '#B26A00'),
-        ouvrir: () => this.setState({ pdvSel: t.t === sel ? 0 : t.t }),
-        rituel: t.futur ? null : () => this.setState({ pdvRituel: { t: t.t, etape: Math.min(5, Math.max(1, rv.etape || 1)) }, pdvDraft: {} }),
-        pdf: API_BASE + '/plan.pdf?shop=' + encodeURIComponent(st.id) + '&exercice=' + an + '&trimestre=' + t.t };
-    });
-
-    // ── Le rituel : cinq étapes sur le trimestre choisi.
-    const R = S.pdvRituel;
-    if (R) {
-      const t = (d.trimestres || []).find(x => x.t === R.t);
-      if (t) {
-        const notes = t.notes || {};
-        const etape = R.etape || 1;
-        const draftVoix = k => draft['voix.' + k] != null ? draft['voix.' + k] : (notes[k] ? notes[k].texte : '');
-        const sauverVoix = () => {
-          const ecr = ['franchise', 'consultant', 'marque', 'suite'].filter(k => draft['voix.' + k] != null && draft['voix.' + k] !== (notes[k] ? notes[k].texte : ''));
-          return ecr.reduce((p, k) => p.then(() => this.api('POST', '/plan/trimestre', { shop: st.id, exercice: an, trimestre: t.t, auteur: k, texte: draft['voix.' + k], par: qui })), Promise.resolve());
-        };
-        const aller = n => () => { if (S.pdvBusy) { return; }
-          this.setState({ pdvBusy: true, pdvErr: '' });
-          sauverVoix().then(() => this.api('POST', '/plan/revue', { shop: st.id, exercice: an, trimestre: t.t, etape: n, par: qui }))
-            .then(() => { this.setState({ pdvBusy: false, pdvRituel: { t: t.t, etape: n }, pdvDraft: {} }); this.pdvCharge(true); })
-            .catch(e => this.setState({ pdvBusy: false, pdvErr: 'Enregistrement refusé — ' + (e && e.message ? e.message : e) })); };
-        const actsT = acts.filter(a => a.statut !== 'abandonne' || a.trimestre === t.t);
-        const manque = ['franchise', 'consultant', 'marque', 'suite'].filter(k => !String(draftVoix(k)).trim());
-        common.pdvRituel = {
-          t: t.t, label: t.label + ' · ' + periode[t.t], etape,
-          etapes: [[1, 'Constat'], [2, 'Actions du trimestre'], [3, 'Annotations'], [4, 'Prochain trimestre'], [5, 'Validation & PDF']].map(e2 => ({ n: e2[0], nom: e2[1], on: e2[0] === etape, ok: e2[0] < etape })),
-          fermer: () => this.setState({ pdvRituel: null, pdvDraft: {} }), rien: () => {},
-          precedent: etape > 1 ? aller(etape - 1) : null, suivant: etape < 5 ? aller(etape + 1) : null,
-          suivantTxt: etape < 5 ? 'Étape ' + (etape + 1) + ' : ' + ['', 'constat', 'actions du trimestre', 'annotations', 'prochain trimestre', 'validation'][etape + 1] + ' ›' : '',
-          constat: [
-            { l: 'Objectif ' + t.label.split(' ')[0], v: t.objectif != null ? fK(t.objectif) : '—', s: t.attendu != null && t.enCours ? 'attendu ' + fK(t.attendu) + ' à ce jour' : 'budget mensuel réparti' },
-            { l: 'Réalisé', v: t.realise != null ? fK(t.realise) : '—', s: t.ecart != null ? fS(t.ecart) + ' · ' + fPct1(t.ecartPct) : (t.moisRealises + ' mois de chiffre'), col: coul(t.ecart) },
-            { l: 'Clients manquants', v: t.clients != null ? fCl(t.clients) : '—', s: t.panier != null ? 'écart ÷ panier ' + this.fU(t.panier) : '', col: coul(t.ecart), vif: t.clients != null && t.clients > 0 },
-            { l: 'Ratios', v: t.food != null ? String(t.food).replace('.', ',') + ' %' : '—', s: 'food cost' + (t.labour != null ? ' · labour ' + String(t.labour).replace('.', ',') + ' %' : '') + (t.netPct != null ? ' · résultat ' + String(t.netPct).replace('.', ',') + ' %' : '') },
-          ],
-          // Étape 2 : chaque action se met à jour sur place — statut et effet constaté.
-          actions: actsT.map(a => ({ id: a.id, libelle: a.libelle, effet: a.effetAn != null ? '+ ' + fK(a.effetAn) + '/an' : '', trimestre: a.trimestre ? 'T' + a.trimestre : '',
-            statut: a.statut, statuts: Object.keys(stNom).map(k => ({ v: k, nom: stNom[k], on: k === a.statut })), statutSt: stSt[a.statut] || '',
-            setStatut: e => { const v = e.target.value; this.pdvEcrire('/plan/action', Object.assign({}, a, { shop: st.id, exercice: an, statut: v })); },
-            constate: a.effetConstate || '',
-            setConstate: e => { const v = e.target.value; if (v === (a.effetConstate || '')) { return; } this.pdvEcrire('/plan/action', Object.assign({}, a, { shop: st.id, exercice: an, effetConstate: v })); },
-          })),
-          ajouterAction: common.pdvActions.ajouter,
-          // Étape 3 : les trois voix. Étape 4 : la suite.
-          voix: VOIX.map(v => ({ cle: v[0], nom: v[1], coul: v[2], val: draftVoix(v[0]), set: setD('voix.' + v[0]), signe: notes[v[0]] && notes[v[0]].le ? (notes[v[0]].par ? notes[v[0]].par + ' · ' : '') + this.fD(notes[v[0]].le) : '' })),
-          suite: draftVoix('suite'), setSuite: setD('voix.suite'),
-          suivantes: acts.filter(a => a.statut === 'alancer' || a.statut === 'encours').map(ligneAct),
-          suivantLabel: t.t < 4 ? 'T' + (t.t + 1) + ' ' + an : 'T1 ' + (an + 1),
-          // Étape 5 : ce qui manque, la validation, le PDF.
-          manque: manque.map(k => ({ franchise: 'la voix du franchisé', consultant: 'la voix du consultant', marque: 'la voix de la marque', suite: 'ce qui est mis en route au prochain trimestre' }[k])),
-          valide: !!(t.revue && t.revue.valideLe), valideTxt: t.revue && t.revue.valideLe ? 'Revue validée le ' + this.fDA(t.revue.valideLe) + (t.revue.validePar ? ' par ' + t.revue.validePar : '') : '',
-          valider: () => { if (S.pdvBusy) { return; }
-            this.setState({ pdvBusy: true, pdvErr: '' });
-            sauverVoix().then(() => this.api('POST', '/plan/revue', { shop: st.id, exercice: an, trimestre: t.t, valider: true, par: qui }))
-              .then(r => { if (r && r.ok !== false) { this.notify('Revue ' + t.label + ' validée'); this.setState({ pdvBusy: false, pdvDraft: {} }); this.pdvCharge(true); } else { this.setState({ pdvBusy: false, pdvErr: (r && r.error) || 'refus du serveur' }); } })
-              .catch(e => this.setState({ pdvBusy: false, pdvErr: 'Validation refusée — ' + (e && e.message ? e.message : e) })); },
-          pdf: API_BASE + '/plan.pdf?shop=' + encodeURIComponent(st.id) + '&exercice=' + an + '&trimestre=' + t.t,
-          brouillon: Object.keys(draft).some(k => k.startsWith('voix.')) ? 'modifications non enregistrées — elles partent à l’étape suivante' : '',
-        };
-      }
-    }
-  }
 
   valsResultatOnglets(common){
     const S = this.state, D = this.D;
@@ -9767,14 +9297,11 @@ class App {
       semaine: !!(D.rper || {})[this.rpCle('semaine')], mois: !!(D.rper || {})[this.rpCle('mois')] };
     pret.reseau = !!((D.rres || {})[this.rrCle()]);
     if (on === 'reseau') { this.rrCharge(false); common.rr = this.rrVals(); }
-    common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['reseau', 'Analyse réseau']].map(o => ({
+    // Lus au chargement (/stores/perf, budgets, cibles) — ou relus quand le chargement les a manqués.
+    pret.annee = pret.horizons = pret.marge = this.perfAssure() !== 'lecture';
+    common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['horizons', '3 et 5 ans'], ['marge', 'Marge & coûts'], ['reseau', 'Trafic clients']].map(o => ({
       cle: o[0], nom: o[1], on: on === o[0], etat: pret[o[0]] ? 'pret' : 'lecture',
       go: () => this.setState({ rjOnglet: o[0], rpSel: null }) }));
-    common.rjOngletTxt = {
-      jour: 'La journée, magasin par magasin, face à l’objectif du jour et au compte de résultat.',
-      semaine: 'La semaine : l’objectif, ce qui est fait, ce qui reste — et en combien de clients.',
-      mois: 'Le mois : le budget, le compte de résultat, et douze mois d’histoire.',
-      reseau: 'Le réseau : les clients, période après période, face au N-1 — et qui fait l’écart.' }[on];
     // Le fil de progression : une lecture = un tiers. Le chrono tourne tant
     // qu'une lecture est en cours — une attente muette paraît deux fois plus
     // longue qu'une attente qui compte.
@@ -9797,7 +9324,9 @@ class App {
     if (rj && rj.estAujourdhui && this._rjLuA && Date.now() - this._rjLuA > 600000 && !this._rjEnCours) { this.rjCharge(true); }
     if (!this._rjTick60) { this._rjTick60 = setInterval(() => { if (this.state.screen === 'resultatJour') { this.setState({}); } }, 60000); }
   }
-  /* --- Analyse réseau : les clients du réseau face au N-1, trois étendues --- */
+  /* --- Trafic clients (ex-Analyse réseau) : les clients du réseau face au N-1, trois étendues. Depuis le 19/10/2026
+     (maquettes A + B choisies par Sam) : douze semaines, la bande d'écart entre les courbes, la carte des écarts magasin
+     × période et la courbe d'un magasin au clic. --- */
   rrCle(){ return (this.state.rrVue || 'semaine'); }
   rrCharge(force){
     const cle = this.rrCle();
@@ -9805,7 +9334,7 @@ class App {
     if (!this._rrEnCours) { this._rrEnCours = {}; }
     if (this._rrEnCours[cle] || (this.D.rres[cle] && !force)) { return; }
     this._rrEnCours[cle] = true;
-    readOne('/ventes/reseau?vue=' + cle).then(d => {
+    readOne('/ventes/reseau?vue=' + cle + (cle === 'semaine' ? '&n=13' : '')).then(d => {
       this.D.rres[cle] = (d && d.periodes) ? d : { erreur: (d && d.error) || 'lecture impossible' };
     }).catch(e => { this.D.rres[cle] = { erreur: (e && e.message) || 'lecture impossible' }; })
       .finally(() => { this._rrEnCours[cle] = false; this.setState({}); });
@@ -9832,7 +9361,14 @@ class App {
       if (w.n1 != null) { pts1.push({ x: X(i), y: Y(w.n1), v: fI(w.n1), dy: up ? 16 : -9 }); }
       if (!mini) { labels.push({ x: X(i), t: w.lab + (w.enCours ? ' · en cours' : ''), cur: !!w.enCours }); }
     });
-    return { Wd, Hh, ml, mr, grad, pts, pts1, labels, hb: Hh - 8, mini: !!mini };
+    // La bande entre les deux courbes, semaine par semaine : bleue au-dessus du N-1, orange en dessous.
+    const bande = [];
+    for (let i = 0; i < W.length - 1; i++) {
+      const a = W[i], b = W[i + 1];
+      if (a.n == null || b.n == null || a.n1 == null || b.n1 == null) { continue; }
+      bande.push({ p: X(i) + ',' + Y(a.n) + ' ' + X(i + 1) + ',' + Y(b.n) + ' ' + X(i + 1) + ',' + Y(b.n1) + ' ' + X(i) + ',' + Y(a.n1), up: a.n + b.n >= a.n1 + b.n1 });
+    }
+    return { Wd, Hh, ml, mr, grad, pts, pts1, labels, bande, hb: Hh - 8, mini: !!mini };
   }
   /** Les barres jumelles d'une année : chaque mois de N à côté du même mois de N-1. */
   rrBarres(W){
@@ -9860,22 +9396,36 @@ class App {
   }
   rrVals(){
     const S = this.state, vue = this.rrCle();
-    const D = (this.D.rres || {})[vue];
-    const NOMV = { semaine: 'Semaine', mois: 'Mois', annee: 'Année' };
+    const D0 = (this.D.rres || {})[vue];
+    const NOMV = { semaine: '12 semaines', mois: '6 mois', annee: 'Année' };
     const out = { vue, onglets: ['semaine', 'mois', 'annee'].map(k => ({ cle: k, nom: NOMV[k], on: k === vue, go: () => this.setState({ rrVue: k }) })),
-      chargement: !D, erreur: D && D.erreur ? D.erreur : '' };
-    if (!D || D.erreur) { return out; }
+      chargement: !D0, erreur: D0 && D0.erreur ? D0.erreur : '' };
+    if (!D0 || D0.erreur) { return out; }
+    // Les douze semaines closes (19/10/2026) : la semaine en cours, servie un jour ou deux, ferait plonger la courbe et
+    // fausserait les cumuls — elle reste dans l'onglet Semaine. On la retire ici, magasins et totaux compris.
+    let D = D0;
+    if (vue === 'semaine' && D0.periodes.some(p => p.enCours)) {
+      const k = D0.periodes.map(p => !p.enCours);
+      const somme = (ps, f) => ps.reduce((a, p) => { const v = f(p); return v ? { ca: a.ca + (v.ca || 0), tickets: a.tickets + (v.tickets || 0), jours: a.jours + (v.jours || 0) } : a; }, { ca: 0, tickets: 0, jours: 0 });
+      D = Object.assign({}, D0, { periodes: D0.periodes.filter((p, i) => k[i]), magasins: D0.magasins.map(m => { const ps = m.periodes.filter((p, i) => k[i]);
+        return Object.assign({}, m, { periodes: ps, total: somme(ps, p => p.source ? p : null), totalN1: m.totalN1 && ps.some(p => p.n1) ? somme(ps, p => p.n1) : null }); }) });
+    }
     const fI = n => Math.round(n || 0).toLocaleString('fr-BE');
     const fE = n => this.fE(n);
     const fK = n => Math.abs(n) >= 10000 ? (n / 1000).toFixed(1).replace('.', ',') + ' k€' : fE(n);
     const pc = (a, b) => b ? 100 * a / b : 0;
-    const sg = v => (v >= 0 ? '+' : '−') + Math.abs(Math.round(v));
-    const col = v => v >= 3 ? '#2d7a3e' : (v <= -3 ? '#C0182B' : '#8a6508');
+    const sg = v => { const r = Math.round(v); return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r); };
+    // Bleu au-dessus du N-1, orange en dessous (lisibles par les daltoniens), gris autour de zéro.
+    const col = v => v >= 3 ? '#2E6DB4' : (v <= -3 ? '#C0632B' : '#8b8177');
     const dd = j => j.slice(8, 10) + '/' + j.slice(5, 7);
     const unite = vue === 'semaine' ? 'semaines' : 'mois';
     const P = D.periodes.filter(p => !p.futur);
     const lus = P.filter(p => p.tickets > 0 || p.n1);
-    const W = P.map(p => ({ lab: p.lab, enCours: p.enCours, futur: p.futur, n: p.tickets > 0 ? p.tickets : null, n1: p.n1 ? p.n1.tickets : null, nComp: p.n1 ? p.n1.ticketsComp : null }));
+    // La courbe compare des magasins comparables : 2026 = les magasins qui ont un N-1, pour que la bande et les écarts
+    // disent la même chose (un magasin de moins d'un an gonflerait 2026 sans rien en face).
+    const avecComp = P.some(p => p.n1);
+    const W = P.map(p => ({ lab: p.lab, enCours: p.enCours, futur: p.futur, n: avecComp ? (p.n1 && p.n1.ticketsComp > 0 ? p.n1.ticketsComp : null) : (p.tickets > 0 ? p.tickets : null),
+      n1: p.n1 ? p.n1.tickets : null, nComp: p.n1 ? p.n1.ticketsComp : null }));
     const MOISL = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     const dates = p => vue === 'semaine' ? (p.du.slice(5, 7) === p.au.slice(5, 7) ? p.du.slice(8, 10) : dd(p.du)) + '→' + dd(p.au) : dd(p.du) + '→' + dd(p.enCours ? D.aujourdhui : p.au);
     // Les totaux du réseau et à périmètre comparable.
@@ -9895,7 +9445,7 @@ class App {
       { k: 'Clients · ' + nP + ' ' + (vue === 'semaine' ? 'semaines' : 'mois'), v: fI(n), s: mags.length + ' magasins · ' + fK(ca) + ' de CA', cls: '' },
       eT != null ? { k: 'Clients vs N-1', v: sg(eT) + ' %', s: fI(nC) + ' contre ' + fI(n1) + ' · ' + comp.length + ' magasin' + (comp.length > 1 ? 's' : '') + ' comparable' + (comp.length > 1 ? 's' : ''), cls: eT >= 0 ? 'good' : 'bad' }
         : { k: 'Clients vs N-1', v: '—', s: 'aucun magasin comparable', cls: '' },
-      cur ? { k: (vue === 'semaine' ? 'Semaine' : 'Mois') + (cur.enCours ? ' en cours' : ' · dernier'), v: fI(cur.tickets), s: (eP != null ? sg(eP) + ' % vs ' + prev.lab : '') + (cur.enCours ? (eP != null ? ' · ' : '') + cur.joursServis + ' jours servis' : ''), cls: eP == null ? '' : (eP >= 0 ? 'good' : 'bad') } : { k: 'En cours', v: '—', s: '', cls: '' },
+      cur ? { k: cur.enCours ? (vue === 'semaine' ? 'Semaine en cours' : 'Mois en cours') : (vue === 'semaine' ? 'Dernière semaine' : 'Dernier mois'), v: fI(cur.tickets), s: (eP != null ? sg(eP) + ' % vs ' + prev.lab : '') + (cur.enCours ? (eP != null ? ' · ' : '') + cur.joursServis + ' jours servis' : ''), cls: eP == null ? '' : (eP >= 0 ? 'good' : 'bad') } : { k: 'En cours', v: '—', s: '', cls: '' },
       { k: 'Panier moyen', v: n ? (ca / n).toFixed(2).replace('.', ',') + ' €' : '—', s: n1 ? 'N-1 : ' + (ca1 / n1).toFixed(2).replace('.', ',') + ' €' : '', cls: '' },
       eCa != null ? { k: 'CA vs N-1', v: sg(eCa) + ' %', s: fK(caC) + ' contre ' + fK(ca1) + ' · périmètre comparable', cls: eCa >= 0 ? 'good' : 'bad' } : { k: 'CA vs N-1', v: '—', s: '', cls: '' },
       { k: 'Magasins en hausse', v: comp.length ? hausse.length + ' / ' + comp.length : '—', s: hausse.length ? hausse.map(m => this.rrCourt(m.nom)).join(', ') + ' au-dessus du N-1' : (comp.length ? 'aucun au-dessus du N-1' : ''), cls: comp.length ? (hausse.length * 2 >= comp.length ? 'good' : 'bad') : '' },
@@ -9924,11 +9474,39 @@ class App {
       const mini = this.rrCourbe(m.periodes.filter(p => !p.futur).map(p => ({ n: p.source ? p.tickets : null, n1: p.n1 ? p.n1.tickets : null })), true);
       return { nom: m.nom, t, clients: fI(t), n1: t1 ? fI(t1) : '—', eco: e == null ? '' : sg(e) + ' %', coul: e == null ? '' : col(e), sansN1: !t1,
         cur: pCur && pCur.source ? fI(pCur.tickets) : '—', ecoCur: eC == null ? '' : sg(eC) + ' %', coulCur: eC == null ? '' : col(eC),
-        ca: fK(m.total.ca), part: n ? Math.round(100 * t / n) + ' %' : '—', mini };
-    }).sort((a, b) => b.t - a.t).map((l, i) => Object.assign(l, { rang: i + 1 }));
+        ca: fK(m.total.ca), part: n ? Math.round(100 * t / n) + ' %' : '—', mini, e };
+    }).sort((a, b) => (a.e == null ? 1e9 : a.e) - (b.e == null ? 1e9 : b.e) || b.t - a.t).map((l, i) => Object.assign(l, { rang: i + 1 }));
     out.totalLigne = { clients: fI(n), n1: n1 ? fI(n1) : '—', eco: eT == null ? '' : sg(eT) + ' %', coul: eT == null ? '' : col(eT),
       cur: cur ? fI(cur.tickets) : '—', ecoCur: cur && cur.n1 ? sg(pc(cur.n1.ticketsComp - cur.n1.tickets, cur.n1.tickets)) + ' %' : '', coulCur: cur && cur.n1 ? col(pc(cur.n1.ticketsComp - cur.n1.tickets, cur.n1.tickets)) : '', ca: fK(ca) };
     out.curLab = cur ? cur.lab : '';
+    // La carte des écarts (maquette B, 19/10/2026) : chaque magasin, chaque période, face au N-1 — le chiffre toujours
+    // écrit, la couleur pour repérer ; celui qui décroche le plus en tête, le réseau au-dessus. Un clic ouvre sa courbe.
+    const fond = e => { if (e == null) { return '#F4EFE8'; } const a = 0.08 + Math.min(1, Math.abs(e) / 12) * 0.55;
+      return (e >= 0 ? 'rgba(46,109,180,' : 'rgba(192,99,43,') + a.toFixed(2) + ')'; };
+    const sg1 = v => (v > 0.05 ? '+' : v < -0.05 ? '−' : '') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
+    const cel = (e, futur, titre) => futur ? { txt: '', fond: 'transparent', encre: '', titre: '' }
+      : { txt: e == null ? '—' : sg1(e), fond: fond(e), encre: e != null && Math.abs(e) >= 8 ? '#fff' : 'var(--color-text)', titre: titre || '' };
+    const perC = D.periodes.map(p => ({ lab: p.lab, dates: vue === 'semaine' ? dd(p.du) : (vue === 'annee' ? '' : p.du.slice(0, 4)), enCours: p.enCours, futur: p.futur }));
+    const lmag = mags.map(m => {
+      const tC = m.periodes.reduce((a, p) => a + (p.n1 && p.source ? p.tickets : 0), 0), t1 = m.totalN1 ? m.totalN1.tickets : null;
+      const e = t1 ? pc(tC - t1, t1) : null;
+      return { id: m.id, nom: this.rrCourt(m.nom), clients: fI(m.total.tickets) + ' clients', e, on: S.rrMag === m.id,
+        cases: m.periodes.map((p, i) => { const f = D.periodes[i].futur; const v = p.n1 && p.source && p.n1.tickets ? pc(p.tickets - p.n1.tickets, p.n1.tickets) : null;
+          return cel(v, f, p.source ? fI(p.tickets) + ' clients' + (p.n1 ? ' · N-1 : ' + fI(p.n1.tickets) : ' · pas de N-1') : 'pas de vente lue'); }),
+        total: cel(e, false), ouvrir: () => this.setState({ rrMag: S.rrMag === m.id ? null : m.id }) };
+    }).sort((a, b) => (a.e == null ? 1e9 : a.e) - (b.e == null ? 1e9 : b.e));
+    out.carte = { cols: perC, lignes: lmag,
+      reseau: { nom: 'Réseau', clients: fI(n) + ' clients', cases: D.periodes.map(p => cel(p.n1 && p.n1.tickets ? pc(p.n1.ticketsComp - p.n1.tickets, p.n1.tickets) : null, p.futur,
+        p.n1 ? fI(p.n1.ticketsComp) + ' clients (magasins comparables) · N-1 : ' + fI(p.n1.tickets) : '')), total: cel(eT, false) },
+      echelle: [-12, -8, -4, 0, 4, 8, 12].map(e => e === 0 ? '#EEE9E2' : fond(e)), unite: vue === 'semaine' ? 'semaine' : 'mois' };
+    const mSel = S.rrMag ? mags.find(m => m.id === S.rrMag) : null;
+    if (mSel) {
+      const Wm = mSel.periodes.map((p, i) => ({ lab: D.periodes[i].lab, enCours: D.periodes[i].enCours, futur: D.periodes[i].futur, n: p.source && p.tickets > 0 ? p.tickets : null,
+        n1: p.n1 ? p.n1.tickets : null, nComp: p.n1 && p.source ? p.tickets : null })).filter(w => vue === 'annee' || !w.futur);
+      const lm = lmag.find(l => l.id === mSel.id);
+      out.magCourbe = { nom: this.rrCourt(mSel.nom), e: lm && lm.e != null ? sg1(lm.e) + ' sur l’étendue' : (mSel.n1Motif || 'pas de N-1'),
+        annee: vue === 'annee', svg: vue === 'annee' ? this.rrBarres(Wm) : this.rrCourbe(Wm, false), fermer: () => this.setState({ rrMag: null }) };
+    }
     // Qui fait l'écart : les clients gagnés ou perdus face au N-1, sur la
     // période en cours et sur l'étendue — magasins comparables seulement.
     const ecarts = (f) => { const rows = comp.map(m => ({ nom: this.rrCourt(m.nom), v: f(m) })).filter(r => r.v != null).sort((a, b) => a.v - b.v);
@@ -9939,6 +9517,8 @@ class App {
     out.ecartCurLab = cur ? cur.lab : '';
     out.ecartTotLab = vue === 'annee' ? 'cumul de l’année' : nP + ' ' + unite + ' cumulé' + (vue === 'semaine' ? 'es' : 's');
     out.sousTitre = mags.length + ' magasins · ' + (vue === 'annee' ? D.du.slice(0, 4) + ' face à ' + (D.du.slice(0, 4) - 1) : lus[0].lab + ' → ' + (cur ? cur.lab : '')) + ' · clients face au N-1';
+    out.comparables = avecComp && sans.length > 0;
+    out.nPer = nP;
     out.source = D.source || '';
     out.n1Motif = out.avecN1 ? '' : 'aucun magasin n’a de N-1 sur cette étendue';
     return out;
@@ -9963,6 +9543,191 @@ class App {
       if (v.date) { this.D.rper[vue + '|' + v.date] = v; }
       this.setState({ rpMaj: (v.cache && v.cache.le ? new Date(v.cache.le) : new Date()).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) });
     });
+  }
+  /**
+   * Les six leviers, magasin par magasin, sous le tableau de Résultat › Mois (21/10/2026, Sam).
+   * Une lecture par mois affiché — GET /leviers/magasins, la même réponse que le dashboard
+   * magasin — gardée ensuite ; le serveur la garde un quart d'heure.
+   */
+  levCharge(annee, mois, force){
+    const cle = annee + '-' + mois;
+    if (!this._lev) { this._lev = {}; }
+    if (this._levEnCours === cle || (this._lev[cle] && !force)) { return; }
+    this._levEnCours = cle;
+    readOne('/leviers/magasins?annee=' + annee + '&mois=' + mois + '&_cache=900' + (force ? '&rafraichir=1' : '')).then(d => {
+      this._levEnCours = null;
+      this._lev[cle] = d && d.magasins ? d : { erreur: (d && d.error) || 'La lecture de /leviers/magasins a échoué — voir Diagnostic API.' };
+      this.setState({});
+    });
+  }
+  /**
+   * La carte des six leviers : « Le mois » (le mois choisi, à date s'il est en cours, face au
+   * même mois de l'année d'avant et au réseau) ou « Cumul de l'année » (janvier → le dernier
+   * mois clos, face aux mêmes mois). Chaque cellule dit sa valeur, sa pastille (seuils de la
+   * Table KPI), ce qu'elle compare et l'écart ; quand l'écart porte sur moins de mois que la
+   * valeur (ouverture, frais non saisis, périmètre du réseau), elle dit les deux chiffres
+   * comparés. La Récurrence reste vide : elle attend sa mesure.
+   */
+  valsLeviers(du){
+    const S = this.state;
+    const annee = +du.slice(0, 4), mois = +du.slice(5, 7);
+    this.levCharge(annee, mois);
+    const L = (this._lev || {})[annee + '-' + mois];
+    const out = { chargement: !L, erreur: L && L.erreur ? L.erreur : '' };
+    if (!L || L.erreur) { return out; }
+    if (!L.magasins.length) { out.erreur = 'Aucun magasin n’a de P&L pour ce mois : les six leviers se liront quand il sera saisi.'; return out; }
+    const vue = S.levVue === 'mois' || !L.cumulAu ? 'mois' : 'cumul', cumul = vue === 'cumul';
+    out.onglets = [['mois', 'Le mois'], ['cumul', 'Cumul de l’année']].map(o => ({ nom: o[1], on: vue === o[0],
+      off: o[0] === 'cumul' && !L.cumulAu, go: () => this.setState({ levVue: o[0] }) }));
+
+    const nf = n => Math.round(n).toLocaleString('fr-BE');
+    const dc = (n, d) => n.toFixed(d).replace('.', ',');
+    const sg = (n, d, u) => (n > 0 ? '+' : (n < 0 ? '−' : '±')) + dc(Math.abs(n), d) + u;
+    const nomMois = (m, long) => new Date(2000, m - 1, 15).toLocaleDateString('fr-BE', { month: long ? 'long' : 'short' });
+    const moisAn = (ym, long) => nomMois(+ym.slice(5, 7), long) + ' ' + ym.slice(0, 4);
+    // L'écart est bon quand il y a plus de clients, une meilleure note, un coût plus bas.
+    const puce = (d, dec, u, hausseBonne) => d == null ? null : { txt: sg(d, dec, u), ton: d === 0 ? 'z' : ((d > 0) === hausseBonne ? 'b' : 'm') };
+    const neutre = txt => ({ txt, ton: 'z' });
+    const pct = v => dc(v, 1) + ' %';
+    const etendue = l => l.length ? nomMois(l[0]) + ' → ' + nomMois(l[l.length - 1]) : '';
+    const xpN1 = L.googleN1Des ? neutre('N-1 : ' + moisAn(L.googleN1Des)) : neutre('pas de N-1');
+    // La Récurrence (23/10/2026) : le taux de retour des clients PWA — tant que la période n'est pas entièrement
+    // relevée, la case dit où en est la lecture plutôt qu'un taux sur une partie des jours.
+    const pl = (n, mot) => n + ' ' + mot + (n > 1 && !/s$/.test(mot) ? 's' : '');
+    const casRec = x => {
+      if (!x) { return { v: '—', mu: true, n1: 'pas encore relevé' }; }
+      if (!x.complet) { return { v: '—', mu: true, n1: 'relevé en cours', tags: x.jours ? ['tickets lus : ' + x.joursLus + ' / ' + x.jours + ' jours'] : [] }; }
+      // Le taux de tous les clients identifiés en caisse (hors pro), puis celui des seuls clients PWA (23/10/2026).
+      const p = x.pwa || {};
+      const lignePwa = 'PWA : ' + (p.clients ? dc(p.v, 0) + ' % (' + p.revenus + ' / ' + p.clients + ')' : (x.inconnus ? 'aucun client parmi les fiches lues' : 'aucun client'));
+      if (!x.clients) { return { v: '—', mu: true, n1: 'aucun client identifié en caisse' }; }
+      const tags = [];
+      if (x.n1 != null) { tags.push('N-1 ' + dc(x.n1, 0) + ' %'); }
+      if (x.partTickets != null) { tags.push(dc(x.partTickets, 1) + ' % des tickets'); }
+      tags.push(lignePwa);
+      if (x.inconnus) { tags.push(pl(x.inconnus, 'fiche') + ' à lire'); }
+      return { v: dc(x.v, 0) + ' %', pas: x.niveau, n1: x.revenus + ' / ' + pl(x.clients, 'client') + ' identifié' + (x.clients > 1 ? 's' : ''), puce: x.n1 != null ? puce(x.delta, 1, ' pt', true) : neutre('pas de N-1'), tags };
+    };
+
+    const colonnes = (L.leviers || []).map(l => ({ cle: l.cle, nom: l.nom, couleur: l.couleur, vide: l.vide,
+      mesure: l.vide ? 'à définir' : (l.cle === 'trafic' ? (cumul ? 'clients' : 'clients par jour') : (l.cle === 'xp' ? 'note Google · avis' : (l.cle === 'recurrence' ? 'clients identifiés revenus' : l.mesureMois))) }));
+    const COUTS = ['food', 'labour', 'overhead'];
+    const NOM_COUT = { food: 'coût matière', labour: 'main-d’œuvre', overhead: 'frais généraux' };
+
+    const celluleMag = (g, cle) => {
+      if (cle === 'recurrence') { return casRec(((cumul ? g.cumul : g.mois) || {}).recurrence); }
+      const ouvLib = g.ouverture ? 'ouvert en ' + moisAn(g.ouverture, true) : 'pas de N-1';
+      if (cle === 'xp') {
+        const x = (cumul ? g.cumul : g.mois).xp || {};
+        if (x.v == null) { return { v: '—', mu: true, n1: cumul ? 'pas de fiche Google' : 'pas de relevé ce mois-là' }; }
+        return { v: dc(x.v, 1) + ' ★', pas: x.niveau, n1: nf(x.avis || 0) + ' avis', puce: x.n1 != null ? puce(x.delta, 2, '', true) : xpN1 };
+      }
+      if (!cumul) {
+        const x = g.mois[cle] || {};
+        if (cle === 'trafic') {
+          if (x.v == null) { return { v: '—', mu: true, n1: 'pas de P&L ce mois' }; }
+          if (g.mois.ouverture) { return { v: nf(x.v), n1: 'mois d’ouverture', puce: neutre('pas comparable') }; }
+          const tags = x.ecartReseau != null ? ['réseau ' + sg(x.ecartReseau, 0, ' %')] : [];
+          if (x.n1 == null) { return { v: nf(x.v), pas: x.niveau, n1: ouvLib, puce: neutre('pas de N-1'), tags }; }
+          return { v: nf(x.v), pas: x.niveau, n1: 'N-1 ' + nf(x.n1), puce: puce(x.delta, 1, ' %', true), tags };
+        }
+        const ym = L.annee + '-' + String(L.mois).padStart(2, '0'), ym1 = (L.annee - 1) + '-' + String(L.mois).padStart(2, '0');
+        const alertes = cle === 'food' ? (g.horsNorme || []).filter(h => h.mois === ym || h.mois === ym1).map(h => '⚠ ' + moisAn(h.mois) + ' : ' + pct(h.v) + ' — à vérifier') : [];
+        if (x.nonSaisi) { return { v: '—', mu: true, n1: 'pas saisi', puce: neutre('hors du réseau') }; }
+        if (x.v == null) { return { v: '—', mu: true, n1: 'pas de P&L ce mois' }; }
+        if (x.n1 == null) { return { v: pct(x.v), pas: x.niveau, n1: g.mois.ouverture ? 'mois d’ouverture' : ouvLib, puce: neutre(g.mois.ouverture ? 'pas comparable' : 'pas de N-1'), alertes }; }
+        return { v: pct(x.v), pas: x.niveau, n1: 'N-1 ' + pct(x.n1), puce: puce(x.delta, 1, ' pt', false), alertes };
+      }
+      const c = g.cumul, mc = c.moisComparables || [];
+      const memesMois = mc.length && mc.length < L.cumulAu ? 'mêmes mois : ' + etendue(mc) : '';
+      if (cle === 'trafic') {
+        const x = c.trafic;
+        if (x.comp == null) { return { v: nf(x.v), n1: ouvLib, puce: neutre('pas de N-1') }; }
+        if (memesMois) { return { v: nf(x.v), n1: nf(x.comp) + ' vs ' + nf(x.n1), puce: puce(x.delta, 1, ' %', true), tags: [memesMois] }; }
+        return { v: nf(x.v), n1: 'N-1 ' + nf(x.n1), puce: puce(x.delta, 1, ' %', true) };
+      }
+      const x = c[cle] || {};
+      const alertes = cle === 'food' ? (g.horsNorme || []).filter(h => +h.mois.slice(5, 7) <= L.cumulAu).map(h => '⚠ ' + moisAn(h.mois) + ' : ' + pct(h.v)) : [];
+      if (x.v == null) { return { v: '—', mu: true, n1: 'pas saisi' }; }
+      if (x.comp == null || x.n1 == null) { return { v: pct(x.v), pas: x.niveau, n1: mc.length ? 'pas saisi l’an dernier' : ouvLib, puce: neutre('pas de N-1'), alertes }; }
+      const tag = x.moisCompares < mc.length ? 'sur ' + x.moisCompares + ' mois saisis les deux années' : memesMois;
+      if (tag) { return { v: pct(x.v), pas: x.niveau, n1: pct(x.comp) + ' vs ' + pct(x.n1), puce: puce(x.delta, 1, ' pt', false), tags: [tag], alertes }; }
+      return { v: pct(x.v), pas: x.niveau, n1: 'N-1 ' + pct(x.n1), puce: puce(x.delta, 1, ' pt', false), alertes };
+    };
+
+    const R = cumul ? L.reseau.cumul : L.reseau.mois;
+    const nMag = L.magasins.length;
+    const celluleRes = cle => {
+      if (cle === 'recurrence') { return casRec(R.recurrence); }
+      const x = R[cle] || {};
+      if (cle === 'xp') { return x.v == null ? { v: '—', mu: true, n1: 'pas de relevé ce mois-là' } : { v: dc(x.v, 2) + ' ★', pas: x.niveau, n1: nf(x.avis || 0) + ' avis', puce: xpN1 }; }
+      if (x.v == null) { return { v: '—', mu: true }; }
+      const v = cle === 'trafic' ? nf(x.v) : pct(x.v);
+      const f = n => cle === 'trafic' ? nf(n) : pct(n);
+      const p = cle === 'trafic' ? puce(x.delta, 1, ' %', true) : puce(x.delta, 1, ' pt', false);
+      if (x.comp == null || x.n1 == null) { return { v, pas: x.niveau, n1: 'pas de N-1' }; }
+      return { v, pas: x.niveau, n1: f(x.comp) + ' vs ' + f(x.n1), puce: p, tags: ['à périmètre constant'] };
+    };
+    const cases = cel => colonnes.map(c => c.vide ? { v: '—', mu: true, tags: ['à définir'] } : cel(c.cle));
+    out.colonnes = colonnes;
+    out.lignes = L.magasins.filter(g => cumul ? g.cumul : true).map(g => ({ nom: g.ville || g.nom, sous: g.nom + (g.franchise ? ' · ' + g.franchise : ''), cases: cases(cle => celluleMag(g, cle)) }));
+    out.reseau = { nom: 'Réseau', sous: nMag + ' magasins · ' + (cumul ? 'total clients' : 'moyenne par magasin') + ' · coûts pondérés au CA', cases: cases(celluleRes) };
+
+    const moisLib = moisAn(L.annee + '-' + String(L.mois).padStart(2, '0'), true);
+    if (cumul) {
+      out.titre = 'Les six leviers — cumul ' + L.annee;
+      out.sousTitre = 'janvier → ' + nomMois(L.cumulAu, true) + ', face aux mêmes mois de ' + (L.annee - 1) + (L.moisEnCours ? ' · le mois en cours n’entre pas' : '');
+    } else {
+      out.titre = 'Les six leviers — ' + moisLib;
+      out.sousTitre = (L.moisEnCours ? 'à date (' + L.jours + ' jours), ' : '') + 'face à ' + moisAn((L.annee - 1) + '-' + String(L.mois).padStart(2, '0'), true) + ' et au réseau';
+    }
+    out.anneeN1 = L.annee - 1;
+
+    // Les notes : ce qui rend une comparaison partielle, nommé magasin par magasin.
+    const notes = [];
+    const nomG = g => g.ville || g.nom;
+    if (cumul) {
+      const part = L.magasins.filter(g => g.cumul && (g.cumul.moisComparables || []).length > 0 && g.cumul.moisComparables.length < L.cumulAu);
+      const sans = L.magasins.filter(g => g.cumul && !(g.cumul.moisComparables || []).length);
+      if (part.length || sans.length) {
+        notes.push({ lead: 'Comparaison à mois égaux.', txt: [...part.map(g => nomG(g) + (g.ouverture ? ' (ouvert en ' + moisAn(g.ouverture, true) + ')' : '') + ' se compare sur ' + etendue(g.cumul.moisComparables)),
+          ...sans.map(g => nomG(g) + (g.ouverture ? ' (ouvert en ' + moisAn(g.ouverture, true) + ')' : '') + ' n’a pas encore de N-1')].join(' ; ') + '. Le réseau compare les magasins sur leurs mois communs.' });
+      }
+      const oh = L.magasins.filter(g => g.cumul && g.cumul.overhead && g.cumul.overhead.comp != null && g.cumul.overhead.moisCompares < (g.cumul.moisComparables || []).length);
+      if (oh.length) { notes.push({ lead: 'Frais généraux :', txt: 'à 0 % certains mois du P&L, ils n’étaient pas saisis — l’écart ne porte que sur les mois saisis les deux années (' + oh.map(g => nomG(g) + ' ' + g.cumul.overhead.moisCompares + ' mois').join(', ') + ').' }); }
+    } else {
+      const sans = L.magasins.filter(g => !g.mois.ouverture && g.mois.trafic.v != null && g.mois.trafic.n1 == null);
+      const ouv = L.magasins.filter(g => g.mois.ouverture);
+      if (sans.length || ouv.length) { notes.push({ lead: 'Comparaison au même mois.', txt: [...ouv.map(g => nomG(g) + ' ouvre ce mois-là : mois partiel, il ne se compare pas'), ...sans.map(g => nomG(g) + (g.ouverture ? ' (ouvert en ' + moisAn(g.ouverture, true) + ')' : '') + ' n’a pas encore de N-1')].join(' ; ') + '. Le réseau face au N-1 ne compte que les magasins comparables.' }); }
+      const ns = L.magasins.filter(g => COUTS.some(k => g.mois[k] && g.mois[k].nonSaisi));
+      if (ns.length) { notes.push({ lead: 'Pas encore saisi :', txt: ns.map(g => nomG(g) + ' — ' + COUTS.filter(k => g.mois[k] && g.mois[k].nonSaisi).map(k => NOM_COUT[k]).join(', ')).join(' ; ') + ' (à 0 % au P&L du mois). ' + (ns.length > 1 ? 'Ces magasins sortent' : 'Il sort') + ' de la moyenne du réseau pour ce coût.' }); }
+      if (L.moisEnCours) { notes.push({ lead: moisLib.charAt(0).toUpperCase() + moisLib.slice(1) + ' est en cours :', txt: 'chiffres à date (' + L.jours + ' jours) ; le trafic se lit en clients par jour, pour comparer à un mois plein. La pastille du trafic suit l’écart au réseau.' }); }
+    }
+    const hors = L.magasins.flatMap(g => (g.horsNorme || []).map(h => nomG(g) + ' ' + moisAn(h.mois, true) + ' (' + pct(h.v) + ')'));
+    if (hors.length) { notes.push({ lead: 'Food cost :', txt: (hors.length > 1 ? hors.length + ' mois hors norme' : 'un mois hors norme') + ' dans le P&L du panel, à vérifier : ' + hors.join(', ') + '.' }); }
+    notes.push({ lead: 'Expérience client', txt: '= la note Google de la fiche' + (L.googleN1Des ? ' ; elle se relève chaque mois, le premier N-1 viendra en ' + moisAn(L.googleN1Des, true) + '.' : ' ; pas encore de relevé mensuel, donc pas de N-1.') });
+    if (colonnes.some(c => c.vide)) { notes.push({ lead: 'Récurrence :', txt: 'laissée vide pour l’instant — la colonne attend sa mesure.' }); }
+    else if (colonnes.some(c => c.cle === 'recurrence')) {
+      const rr = R.recurrence;
+      const rpw = (rr && rr.pwa) || {};
+      notes.push({ lead: 'Récurrence', txt: '= le taux de retour des clients identifiés en caisse : parmi les clients rattachés à leurs tickets (hors pro) sur la période, la part venus au moins deux jours différents. En dessous, le même taux pour les seuls clients de l’app (compte PWA sur leur fiche du panel).'
+        + (rr && rr.complet && rr.clients ? ' Au réseau : ' + rr.revenus + ' sur ' + pl(rr.clients, 'client') + (rr.partTickets != null ? ', ' + dc(rr.partTickets, 1) + ' % des tickets' : '') + ' ; clients PWA : ' + (rpw.clients ? rpw.revenus + ' sur ' + rpw.clients : 'aucun identifié en caisse') + '.' : '') });
+      // Qui sont les clients identifiés en caisse : la répartition dit pourquoi le taux porte sur peu de clients, ou sur aucun.
+      const rp = rr && rr.repartition;
+      if (rp && rr.clients) {
+        const can = Object.entries(rp.canaux || {}).slice(0, 4).map(([k, n]) => k + ' ' + n).join(', ');
+        notes.push({ lead: 'Clients identifiés en caisse' + (cumul ? '' : ' ce mois') + ' (hors pro) :', txt: rr.clients + ' au réseau — ' + (rpw.clients || 0) + ' avec un compte PWA, ' + rp.sansApp + ' sans app'
+          + (rp.statutInconnu ? ', ' + rp.statutInconnu + ' sans statut sur la fiche' : '') + (rr.inconnus ? ', ' + pl(rr.inconnus, 'fiche') + ' encore à lire' : '')
+          + ' ; ' + rp.fidelite + ' en fidélité active, ' + rp.connectes + ' déjà connectés à un compte en ligne, ' + rp.webshop + ' clients du webshop' + (can ? ' ; origine des fiches : ' + can : '') + '.' });
+      }
+      const enCours = L.magasins.filter(g => { const x = ((cumul ? g.cumul : g.mois) || {}).recurrence; return x && !x.complet; });
+      if (enCours.length) { notes.push({ lead: 'Relevé en cours :', txt: 'les tickets se relisent au cron, du plus récent au ' + (L.recurrence && L.recurrence.debut ? (+L.recurrence.debut.slice(8) === 1 ? '1er' : +L.recurrence.debut.slice(8)) + ' ' + nomMois(+L.recurrence.debut.slice(5, 7), true) + ' ' + L.recurrence.debut.slice(0, 4) : '1er janvier') + ' — ' + enCours.map(g => { const x = (cumul ? g.cumul : g.mois).recurrence; return nomG(g) + ' ' + x.joursLus + ' / ' + x.jours + ' jours'; }).join(', ') + '. Le taux s’affiche quand la période est entière.' }); }
+      if (!(L.recurrence && L.recurrence.kpi)) { notes.push({ lead: 'Pas de pastille pour la Récurrence :', txt: 'créez dans la Table KPI un KPI « Clients identifiés venus au moins deux jours ÷ Clients identifiés en caisse, hors pro », échelle %, avec ses seuils (et « Clients PWA venus au moins deux jours ÷ Clients PWA identifiés en caisse » pour le taux PWA).' }); }
+      if (L.magasins.every(g => { const x = ((cumul ? g.cumul : g.mois) || {}).recurrence; return !x || x.n1 == null; })) { notes.push({ lead: 'Récurrence sans N-1 :', txt: 'le relevé commence au ' + (L.recurrence && L.recurrence.debut ? (+L.recurrence.debut.slice(8) === 1 ? '1er' : +L.recurrence.debut.slice(8)) + ' ' + nomMois(+L.recurrence.debut.slice(5, 7), true) + ' ' + L.recurrence.debut.slice(0, 4) : '1er janvier') + ' ; le premier N-1 viendra un an plus tard.' }); }
+    }
+    out.notes = notes;
+    out.seuilsKpi = () => this.setState({ screen: 'kpiTable' });
+    return out;
   }
   /**
    * Les périodes de la semaine d'un magasin — matin 6 – 10 h, midi 11 – 14 h,
@@ -10174,10 +9939,12 @@ class App {
     common.rpMois = vue === 'mois'; common.rpSemaine = vue === 'semaine';
     common.rpLignes = []; common.rpDetail = null; common.rpTuiles = []; common.rpJours = []; common.rpReseau = null;
     common.rpMaj = S.rpMaj === 'en-cours' ? 'lecture…' : (S.rpMaj ? 'lu à ' + S.rpMaj : '');
-    common.rpRefresh = () => this.rpCharge(true, undefined, true);
+    common.rpRefresh = () => { this.rpCharge(true, undefined, true); if (vue === 'mois' && r && r.du) { this.levCharge(+r.du.slice(0, 4), +r.du.slice(5, 7), true); } };
     common.rpRegler = () => this.setState({ screen: 'budgetparam' });
+    common.lev = null;
     common.rpChargementTxt = vue === 'semaine' ? 'Lecture de la semaine…' : 'Lecture du mois…';
     if (!r || common.rpErreur) { return; }
+    if (vue === 'mois' && r.du) { common.lev = this.valsLeviers(r.du); }
 
     const seuils = r.seuils || { food: 32, labour: 33, overhead: 13.5 };
     const fE = n => this.fE(n);
@@ -10310,11 +10077,11 @@ class App {
     // l'ont passé, et il y en a au moins deux — un seul magasin n'est pas un
     // réseau, et la fête serait celle de sa propre ligne.
     common.rpTous = tousAtteints(common.rpLignes);
-    common.rpNote = r.source || '';
+    common.rpNote = '';
     common.rpEntetes = vue === 'semaine'
       ? ['Magasin', 'Objectif', 'Réalisé', 'Comptoir', 'Pro B2B', 'Attendu à ce jour', 'Écart', 'Clients manquants']
       : ['Magasin', 'Budget', 'Ventes', 'Comptoir', 'Pro B2B', 'Attendu à ce jour', 'Écart', 'Clients manquants'];
-    common.rpInvite = !sel ? 'Ouvrez une ligne : ce qu’il manque et en combien de clients, ce qu’il faut pour tenir l’objectif, le compte de résultat, et le mois du magasin.' : '';
+    common.rpInvite = '';
     // Le résultat net jour par jour (le panel ne le sert que pour le mois en
     // cours) se lit ici, mais ne s'affiche que dans le drop du magasin : la
     // page reste une table, le détail vit dans la ligne qu'on ouvre. Et le
@@ -10577,8 +10344,16 @@ class App {
         // Objectif passé : la ligne le porte, l'écran s'en sert pour le feu.
         avecObjectif: !!m.ouvert && m.objectifAtteinte != null,
         atteint: !!m.ouvert && m.objectifAtteinte != null && m.objectifAtteinte >= 1,
-        // Une ligne fermée reste cliquable : le détail dira pourquoi elle l'est.
-        ouvrir: () => this.setState({ rjSel: actif ? null : m.shopId }),
+        // La ligne ouvre le DASHBOARD du magasin, vue Opérationnel, à la date
+        // regardée, dans un nouvel onglet (demande du 27/10/2026, maquette A de
+        // docs/maquettes/resultat-vers-dashboard). Adresse relative, comme
+        // « Dashboard magasin ↗ » du menu : elle suit le cockpit où qu'il soit servi.
+        ouvrir: () => window.open('dashboard/?shop=' + encodeURIComponent(m.shopId) + '&vue=ops&date=' + jour, '_blank', 'noopener'),
+        dashTitre: 'Ouvrir le dashboard de ' + m.magasin + ' — opérationnel du ' + this.fD(jour) + ', nouvel onglet',
+        // Le compte de résultat du magasin se déplie au ▸ devant le nom. Une
+        // ligne fermée le garde : le détail dira pourquoi elle l'est.
+        deplier: () => this.setState({ rjSel: actif ? null : m.shopId }),
+        deplierTitre: actif ? 'Replier le compte de résultat' : 'Compte de résultat du jour, sous le tableau',
         // Cliquer la sparkline ouvre la MODALE du CA heure par heure — la
         // délégation prend le data-h le plus proche, la ligne ne bascule pas.
         voirHeures: (m.heures || []).some(h2 => h2.ca > 0)
@@ -10683,9 +10458,7 @@ class App {
 
     // Aucune ventilation sur la page elle-même : les treemaps ne vivent que
     // dans le détail qu'on ouvre. La page reste une table, lisible d'un trait.
-    common.rjInvite = (!magSel && ouverts.length)
-      ? 'Ouvrez une ligne du tableau pour le compte de résultat du magasin, sa ventilation par catégorie et la place du jour dans son mois.'
-      : '';
+    common.rjInvite = '';
 
     common.rjEchelle = [['#C0182B', '≤ -15 %'], ['#D97706', '-15 à -3 %'], ['#C9A227', 'stable'],
       ['#5f9e5f', '+3 à +15 %'], ['#2d7a3e', '≥ +15 %'], ['#B9B2A8', 'sans référence']]
@@ -10880,7 +10653,7 @@ class App {
     if (this._repEnCours) { return; }
     if (this.D.reput && !force) { return; }
     this._repEnCours = true;
-    readOne('/reputation').then(d => { this._repEnCours = false;
+    readOne('/marketing/avis').then(d => { this._repEnCours = false;
       this.D.reput = d || { erreur: true }; this.setState({}); });
   }
   /** L'or des étoiles pour 5, puis vert, orange et les deux rouges. Une seule
@@ -10921,7 +10694,7 @@ class App {
     common.repSync = () => {
       if (S.repBusy) { return; }
       this.setState({ repBusy: true });
-      this.api('POST', '/reputation/sync', {}).then(async r2 => {
+      this.api('POST', '/marketing/avis/sync', {}).then(async r2 => {
         const j = r2 && r2.json ? await r2.json().catch(() => null) : null;
         this.setState({ repBusy: false });
         // « Synchronisation impossible » tout court ne dit rien : montrer ce
@@ -10970,7 +10743,7 @@ class App {
             pct: lus ? (part * 100).toFixed(0) + ' %' : '',
             // Une part non nulle garde au moins un filet visible : à 1 % sur
             // 200 avis, une barre à 1 px se confond avec l'absence de barre.
-            jaugeSt: 'height:7px;border-radius:999px;background:' + this.COUL_ETOILE[l.note]
+            jaugeSt: 'height:7px;border-radius:8px;background:' + this.COUL_ETOILE[l.note]
               + ';width:' + (l.n === 0 ? 0 : Math.max(2, part * 100)) + '%',
             etoileSt: 'font-size:11px;color:' + this.COUL_ETOILE[l.note] + ';line-height:1',
           };
@@ -11021,7 +10794,7 @@ class App {
         synchro: m.synchro ? 'maj ' + this.fD(m.synchro.slice(0, 10)) : '',
         hasUrl: !!m.url, url: m.url || '#',
         badge: sans ? 'Sans note' : (ok ? 'À la cible' : (m.ecart > 0 ? '+' : '') + fN(m.ecart)),
-        badgeSt: 'font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:'
+        badgeSt: 'font-size:10.5px;font-weight:600;border-radius:8px;padding:2px 9px;white-space:nowrap;background:'
           + (sans ? 'var(--color-background-secondary);color:var(--color-text-muted)'
             : (ok ? 'rgba(45,122,62,.12);color:#2d7a3e' : 'rgba(141,29,44,.10);color:#8D1D2C')),
         // La phrase que le CEO cherche : combien d'avis parfaits pour revenir à
@@ -11041,7 +10814,7 @@ class App {
           q: (m.nom || '').replace(/\s+—\s+/g, ' ') + (m.ville ? ' ' + m.ville : ''), candidats: null, busy: false } }),
         detacher: () => {
           if (!window.confirm('Détacher la fiche Google de « ' + m.nom + ' » ? Les avis déjà rapatriés sont conservés.')) { return; }
-          this.api('PUT', '/reputation/' + m.id + '/fiche', { placeId: '' }).then(() => {
+          this.api('PUT', '/marketing/avis/' + m.id + '/fiche', { placeId: '' }).then(() => {
             this.D.reput = null; this.repCharge(true); this.notify('Fiche détachée'); });
         },
         jauges: jauges(m.repartition, m.avis),
@@ -11055,7 +10828,7 @@ class App {
           // ne rend pas les réponses du magasin — écrire « Sans réponse »
           // partout serait une affirmation fausse, pas une information.
           repondu: a.repondu === true,
-          reponduSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:1px 7px;white-space:nowrap;background:rgba(45,122,62,.10);color:#2d7a3e',
+          reponduSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-radius:8px;padding:1px 7px;white-space:nowrap;background:rgba(45,122,62,.10);color:#2d7a3e',
           reponduTxt: 'Répondu',
         })),
       };
@@ -11071,7 +10844,7 @@ class App {
         const q = (this.state.repRech || {}).q || '';
         if (!q.trim()) { return; }
         this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: true, err: '' }) }));
-        readOne('/reputation/recherche?q=' + encodeURIComponent(q)).then(d => {
+        readOne('/marketing/avis/recherche?q=' + encodeURIComponent(q)).then(d => {
           this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: false,
             candidats: (d && d.candidats) || [],
             err: d ? '' : 'Recherche impossible — vérifiez la clé Google dans Paramètres.' }) }));
@@ -11084,7 +10857,7 @@ class App {
         note: c.note == null ? 'sans note' : c.note.toFixed(1).replace('.', ',') + '★ · ' + (c.avis || 0) + ' avis',
         choisir: () => {
           this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: true }) }));
-          this.api('PUT', '/reputation/' + rr.magasinId + '/fiche', { placeId: c.placeId }).then(async r2 => {
+          this.api('PUT', '/marketing/avis/' + rr.magasinId + '/fiche', { placeId: c.placeId }).then(async r2 => {
             const j = r2 && r2.json ? await r2.json().catch(() => null) : null;
             if (!j || j.error) {
               this.setState(s2 => ({ repRech: Object.assign({}, s2.repRech, { busy: false, err: (j && j.error) || 'Raccordement refusé.' }) }));
@@ -11730,338 +11503,6 @@ class App {
     }
   }
 
-  caCharge(){
-    const S = this.state, ecr = S.screen, r = this.caRoute();
-    if (!r) { return; }
-    const per = S.caPeriode || '30j';
-    this._caEnCours = this._caEnCours || {};
-    const lire = (cle, chemin) => {
-      if ((this.state.caData || {})[cle] || this._caEnCours[cle]) { return; }
-      this._caEnCours[cle] = true;
-      readOne(chemin).then(d => { this._caEnCours[cle] = false;
-        this.setState(s2 => ({ caData: Object.assign({}, s2.caData,
-          { [cle]: d || { etat: 'erreur', motif: 'API injoignable' } }) })); });
-    };
-    lire(ecr + '|' + per, r);
-    // L'écran des commandes tient les DEUX bouts : ce que le franchisé demande
-    // (réquisitions) et ce que le fournisseur doit servir (commandes). Deux
-    // routes, un seul écran — les séparer obligeait à naviguer pour suivre une
-    // même commande.
-    if (ecr === 'caAchats') { lire('caCommandes|' + per, '/centrale/commandes'); }
-  }
-  valsCentrale(common){
-    const S = this.state;
-    // « Commandes franchisés » a rejoint « Commandes » : un
-    // ancien lien ou un signet doit continuer à mener quelque part.
-    // « Commandes franchisés » et « Stock » ont été retirés : un ancien lien ou
-    // un signet doit continuer à mener quelque part.
-    if (S.screen === 'caCommandes' || S.screen === 'caStock') {
-      this.setState({ screen: 'caAchats' }); return;
-    }
-    const ecr = S.screen;
-    const per = S.caPeriode || '30j';
-    this.caCharge();
-    const d = (S.caData || {})[ecr + '|' + per];
-    common.caEcran = ecr;
-    common.caChargement = !d;
-    // Ce que l'écran est en train de lire, dit en clair pendant l'attente.
-    common.caTitre = { caAchats: 'Commandes',
-      caFacturation: 'Facturation magasins', caReglages: 'Réglages de la centrale',
-      caDemande: 'Demandes', caCommandes: 'Commandes' }[ecr] || 'Lecture en cours';
-    common.caChargeTxt = ecr === 'caAchats'
-      ? 'Lecture des commandes chez le panel, magasin par magasin — quelques secondes.'
-      : 'Lecture des données de la centrale…';
-    common.caEtat = d ? (d.etat || 'ok') : '';
-    common.caMotif = d && d.motif ? d.motif : '';
-    common.caSource = d && d.source ? d.source : '';
-    common.caTitreSrc = d && d.titre ? d.titre : '';
-    // Le bandeau « Reste à brancher » affiche des phrases ; un endpoint peut
-    // aussi livrer des lacunes structurées {champ, quoi, source} — aplaties ici.
-    common.caManquants = ((d && d.manquants) || []).map(m2 => typeof m2 === 'string' ? m2
-      : ((m2.champ || '') + ' — ' + (m2.quoi || '') + (m2.source ? ' (' + m2.source + ')' : '')));
-    common.caPeriode = per;
-    const onglet = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;'
-      + 'padding:6px 14px;border-radius:8px;'
-      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
-            : 'background:transparent;color:var(--color-text-muted)');
-    common.caPerBtns = null;
-
-    // --- écrans sans source : la table est rendue, colonne par colonne
-    common.caAttendu = (d && d.etat === 'attente' && d.colonnes) ? d.colonnes.map(c => ({
-      col: c.col, champ: c.champ, src: c.src, note: c.note || '',
-      // Une colonne déjà servie ailleurs n'est pas un manque : la distinguer
-      // évite de redemander ce que le cockpit possède déjà.
-      dispo: /déjà disponible|déjà connus|déjà|calcul local/i.test(c.src || '') })) : null;
-
-    common.caKpis = null; common.caCols = null; common.caRows = null; common.caParams = null;
-    if (!d || d.etat === 'attente') { return common; }
-
-    // Les branches Cockpit, Catalogue et Analyse des ventes ont été retirées
-    // avec leurs entrées de rail : elles doublaient P&L magasins, le Référentiel
-    // produit et le Tableau des magasins, en rendant moins que ces derniers.
-    if (ecr === 'caReglages') {
-      common.caParams = d.params || null;
-      // Un référentiel vide n'est pas une API manquante : il est vide, et
-      // confondre les deux enverrait chercher une source qui existe déjà.
-      common.caRien = 'Aucun fournisseur au référentiel du cockpit — la table existe, elle n’est pas remplie.';
-      common.caCols = ['Fournisseur', 'Périmètre', 'Courriel', 'RFA %', 'Redevance centrale %'];
-      common.caRows = (d.fournisseurs || []).map(f => ({ cells: [
-        { t: f.nom }, { t: f.perimetre || '', mut: true }, { t: f.email || '', mut: true },
-        { t: 'manque API', vide: true }, { t: 'manque API', vide: true } ] }));
-    } else if (ecr === 'caDemande') {
-      common.caCols = ['Demande', 'Fournisseur', 'Base', 'Période', 'Quantité', 'Prix cible', 'Statut'];
-      common.caRows = (d.lignes || []).map(x => ({ cells: [
-        { t: '#' + x.id }, { t: x.fournisseur || '' }, { t: x.base, mut: true },
-        { t: (x.du || '') + ' → ' + (x.au || ''), mut: true },
-        { t: Math.round(x.qte).toLocaleString('fr-BE'), num: true },
-        { t: this.fU(x.cible), num: true }, { t: x.statut } ] }));
-      common.caRien = 'Aucune demande enregistrée. Le parcours de création en quatre étapes exige les ventes par référence ET par magasin : le volume vendu rendu par l’API est réseau, identique d’un magasin à l’autre — mesuré, 5165 unités dans les quatre boutiques.';
-    } else if (ecr === 'caCommandes') {
-      // Filtre à bascule sur le statut : cliquer un badge le sélectionne,
-      // re-cliquer revient à « toutes ». Les compteurs se calculent sur le
-      // jeu complet, pas sur le filtre — sinon ils mentent dès qu'on filtre.
-      const lgs = d.lignes || [];
-      const fSt = S.caCmdStatut || '';
-      const nSt = code => lgs.filter(x => x.statut === code).length;
-      common.caChips = [['PENDING', 'En attente', '#8a5a13', 'rgba(193,122,42,0.16)'],
-                        ['REALISED', 'Réalisée', '#2d7a3e', 'rgba(45,122,62,0.12)']]
-        .map(([code, nom, texte, fond]) => ({ nom: nom + ' · ' + nSt(code), texte, fond,
-          on: fSt === code,
-          pick: () => this.setState({ caCmdStatut: fSt === code ? '' : code }) }));
-      // L'écran se lit PAR FOURNISSEUR : une carte par fournisseur, ses 5
-      // dernières commandes, l'attente en évidence. Le filtre de statut
-      // s'applique aux lignes de chaque carte.
-      common.caFournGroupes = (d.parFournisseur || []).map(g => ({
-        nom: g.fournisseur,
-        special: g.fournisseur === 'À répartir' || g.fournisseur === 'Sans fournisseur',
-        resume: g.enAttente
-          ? g.enAttente + ' en attente · ' + this.fE(g.valeurAttente)
-          : 'rien en attente',
-        resumeCol: g.enAttente ? '#8a5a13' : '#2d7a3e',
-        resumeFond: g.enAttente ? 'rgba(193,122,42,0.16)' : 'rgba(45,122,62,0.12)',
-        note: g.total > 5 ? 'les 5 dernières sur ' + g.total : g.total + ' commande' + (g.total > 1 ? 's' : ''),
-        commandes: (g.commandes || []).filter(x => !fSt || x.statut === fSt).map(x => ({
-          id: '#' + x.id, magasin: x.magasin, debut: x.debut || '',
-          statut: x.statut === 'PENDING' ? 'En attente' : (x.statut === 'REALISED' ? 'Réalisée' : (x.statut || '')),
-          col: x.statut === 'PENDING' ? '#8a5a13' : '#2d7a3e',
-          valeur: this.fE(x.valeur), par: x.par || '' })),
-      })).filter(g => g.commandes.length);
-      common.caRien = fSt ? 'Aucune réquisition « ' + (fSt === 'PENDING' ? 'en attente' : 'réalisée') + ' ».'
-        : 'Aucune réquisition matière remontée par le panel.';
-      // La ventilation actionnable : une ligne = UNE commande à passer chez UN
-      // fournisseur, avec ses références et son montant estimé.
-      common.caTable2 = (d.aCommander && d.aCommander.length) ? {
-        titre: 'À commander maintenant — une commande par fournisseur',
-        cols: ['Magasin', 'Fournisseur', 'Références à commander', 'Montant estimé (HT)'],
-        rows: d.aCommander.map(a => ({ cells: [
-          { t: a.magasin, mut: true }, { t: a.fournisseur },
-          { t: String(a.nbRefs), num: true }, { t: this.fU(a.montant), num: true } ] })),
-      } : null;
-    } else if (ecr === 'caAchats') {
-      // ── Ce que les franchisés ont demandé, et qui attend leur validation.
-      //    Même écran que le suivi fournisseur : une commande se suit d'un
-      //    bout à l'autre, de la demande du magasin à la livraison.
-      const dc = (S.caData || {})['caCommandes|' + per] || null;
-      const relF = (dc || {}).relancesFranchise || {};
-      const lgsF = ((dc || {}).lignes || []).filter(l => l.statut === 'PENDING');
-      common.caFrChargement = !dc;
-      common.caFrN = lgsF.length;
-      common.caFrValeur = this.fE(lgsF.reduce((a, l) => a + (+l.valeur || 0), 0));
-      common.caFrLignes = lgsF.slice(0, 40).map(l => ({
-        id: l.id, magasin: l.magasin || '',
-        fournisseur: (l.fournisseurs || []).join(' + ') || '',
-        debut: l.debut ? this.fD(l.debut) : '',
-        // Depuis quand ça attend : c'est ce chiffre qui fait agir, pas la date.
-        attente: l.debut ? Math.max(0, Math.round((Date.now() - new Date(l.debut)) / 86400000)) : null,
-        valeur: this.fE(l.valeur || 0), par: l.par || '',
-        relanceLe: (relF[String(l.id)] || {}).quand || '',
-        relancer: () => {
-          if (this.state.caFrRel === l.id) { return; }
-          this.setState({ caFrRel: l.id });
-          this.api('POST', '/centrale/commandes/relance-franchise', { id: l.id }).then(r2 => {
-            this.setState({ caFrRel: null });
-            this.notify(!r2 || r2.ok === false
-              ? ('Rappel refusé — ' + ((r2 && (r2.erreur || r2.error)) || 'notification impossible'))
-              : ('Notification envoyée à ' + (r2.magasin || 'ce magasin')
-                 + (r2.notification ? ' (#' + r2.notification + ')' : '')));
-            if (r2 && r2.ok) {
-              this.setState(s2 => { const cd = Object.assign({}, s2.caData);
-                Object.keys(cd).filter(k => k.startsWith('caCommandes|')).forEach(k => { delete cd[k]; });
-                return { caData: cd }; });
-            }
-          });
-        },
-        enCours: this.state.caFrRel === l.id,
-      }));
-      common.caFrTronque = lgsF.length > 40 ? lgsF.length - 40 : 0;
-
-      // ── Le suivi des commandes : 2 dernières par magasin chez chaque
-      //    fournisseur, avec leur avancement. C'est ce qui traîne qui compte,
-      //    donc les fournisseurs en retard remontent (tri fait côté serveur).
-      const sv = d.suivi || {};
-      const svK = sv.kpis || null;
-      const fSv = S.caSvFiltre || '';
-      const jf = z => !z ? '' : String(z).slice(5).split('-').reverse().join('.');
-      const garde = o => !fSv
-        || (fSv === 'cours' && o.etape < 4 && !o.bloque)
-        || (fSv === 'retard' && o.retardJours != null)
-        || (fSv === 'livre' && o.etape === 4);
-      // L'horodatage vient en SECONDES ; une valeur illisible ne doit pas
-      // s'afficher « Invalid Date » — mieux vaut ne rien dire.
-      const majD = sv.quand ? new Date((+sv.quand || 0) * 1000) : null;
-      const maj = (majD && isFinite(majD.getTime()) && majD.getTime() > 0) ? majD : null;
-      // Le nombre de fournisseurs peut manquer : on le compte alors sur les
-      // groupes affichés plutôt que d'écrire « undefined fournisseur(s) ».
-      const nFourn = svK && svK.fournisseurs != null ? svK.fournisseurs : (sv.groupes || []).length;
-      common.caSvKpis = svK ? [
-        ['Commandes en cours', String(svK.enCours), nFourn + ' fournisseur(s) · ' + svK.total + ' commandes suivies', ''],
-        ['En retard', String(svK.retard), 'livraison prévue dépassée', svK.retard ? '#8D1D2C' : ''],
-        ['Sans réponse fournisseur', String(svK.aAccepter), 'envoyée, pas encore acceptée', svK.aAccepter ? '#8a5a13' : ''],
-        ['Lecture', sv.lues ? String(sv.lues) : '', 'commandes lues' + (maj ? ' · ' + maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : ''), ''],
-      ] : null;
-      // La fenêtre des courriers : ce qui est parti, à qui, et ce qu'il citait.
-      const sm = S.svMails || null;
-      common.caSvMails = !sm ? null : {
-        fournisseur: sm.fournisseur, commande: sm.cle,
-        chargement: !!sm.chargement,
-        note: (sm.d || {}).note || '',
-        resume: (sm.d && sm.d.envois)
-          ? sm.d.envois + ' rappel(s) · depuis le ' + this.fD(sm.d.depuis)
-            + (sm.d.dernier ? ' · dernier le ' + this.fD(sm.d.dernier) : '')
-          : 'Aucun rappel en cours pour ce fournisseur.',
-        lignes: ((sm.d || {}).courriers || []).map(c2 => ({
-          quand: c2.quand, sujet: c2.sujet || c2.detail || '',
-          vers: c2.destinataire || '', copie: c2.copie || '',
-          reqs: (c2.reqs || []).length ? 'réquisitions ' + c2.reqs.join(', ') : '',
-          echec: c2.type === 'echec', clos: c2.type === 'clos',
-          detail: c2.detail || '',
-        })),
-        vide: !((sm.d || {}).courriers || []).length,
-        fermer: () => this.setState({ svMails: null }),
-      };
-      common.caSvChips = svK ? [['', 'Toutes', svK.total], ['cours', 'En cours', svK.enCours],
-          ['retard', 'En retard', svK.retard], ['livre', 'Livrées', svK.total - svK.enCours]]
-        .map(([v, nom, n]) => ({ nom: nom + ' · ' + n, on: fSv === v,
-          pick: () => this.setState({ caSvFiltre: fSv === v ? '' : v }) })) : null;
-      // Le clic sur une commande ouvre les COURRIERS envoyés à son fournisseur.
-      const svCourriers = (fournisseur, cle) => () => {
-        this.setState({ svMails: { fournisseur, cle, chargement: true, d: null } });
-        readOne('/centrale/commandes/mail/courriers?fournisseur=' + encodeURIComponent(fournisseur))
-          .then(d2 => this.setState(s2 => (s2.svMails && s2.svMails.cle === cle)
-            ? { svMails: Object.assign({}, s2.svMails, { chargement: false, d: d2 || null }) } : {}));
-      };
-      common.caSvGroupes = (sv.groupes || []).map(g => ({
-        nom: g.fournisseur,
-        // Le rappel au fournisseur part tout seul chaque jour ; ce bouton sert
-        // à le faire partir MAINTENANT, pour ce fournisseur-là.
-        mailer: () => {
-          if (this.state.caSvMail === g.fournisseur) { return; }
-          this.setState({ caSvMail: g.fournisseur });
-          this.api('POST', '/centrale/commandes/mail/envoyer', { fournisseur: g.fournisseur }).then(r2 => {
-            this.setState({ caSvMail: null });
-            this.notify(!r2 || r2.ok === false
-              ? ('Courrier non envoyé — ' + ((r2 && (r2.erreur || r2.error)) || 'échec'))
-              : ('Rappel envoyé à ' + g.fournisseur + (r2.vers ? ' · ' + r2.vers : '')));
-          });
-        },
-        mailEnCours: this.state.caSvMail === g.fournisseur,
-        meta: g.nbMagasins + ' magasin' + (g.nbMagasins > 1 ? 's' : '') + ' · ' + g.nbCommandes + ' commande' + (g.nbCommandes > 1 ? 's' : ''),
-        alerte: g.retard ? g.retard + ' en retard' : (g.sansReponse ? g.sansReponse + ' sans réponse' : 'à jour'),
-        alerteCol: g.retard ? '#8D1D2C' : (g.sansReponse ? '#8a5a13' : '#2d7a3e'),
-        commandes: (g.commandes || []).filter(garde).map(o => ({
-          magasin: o.magasin, cle: o.cle, date: jf(o.date),
-          livraison: jf(o.livraisonPrevue), livraisonCol: o.retardJours != null ? '#8D1D2C' : '',
-          segs: [1, 2, 3, 4].map(n => o.bloque && n === o.etape ? 'ko'
-            : (o.etape === 4 || n < o.etape ? 'on' : (n === o.etape ? 'cur' : ''))),
-          libelle: o.libelle,
-          libelleCol: o.bloque || o.retardJours != null ? '#8D1D2C' : (o.etape === 4 ? '#2d7a3e' : '#8a5a13'),
-          badge: o.retardJours != null ? 'retard ' + o.retardJours + ' j' : '',
-          geste: o.geste || '', source: o.source || '',
-          courriers: svCourriers(g.fournisseur, o.cle),
-          // Relance : la cloche n'apparaît que si la commande attend encore
-          // le fournisseur. Elle crée une NOTIFICATION dans l'ERP, pas un mail.
-          relancable: o.etape < 4 && !o.bloque,
-          relanceLe: o.relanceLe || '',
-          relanceTitre: o.relanceLe ? 'Relancé le ' + o.relanceLe + ' — relancer à nouveau'
-            : 'Relancer : créer une notification « commande à valider »',
-          relancer: () => {
-            if (this.state.svRelance === o.cle) { return; }
-            this.setState({ svRelance: o.cle });
-            this.api('POST', '/centrale/achats/relance', { id: o.id }).then(r => {
-              this.setState({ svRelance: null });
-              if (r && r.ok) {
-                this.notify('Notification envoyée — ' + (r.fournisseur || '') + (r.notification ? ' (#' + r.notification + ')' : ''));
-                this.log('Centrale', o.cle, 'Relance fournisseur envoyée');
-                // Le cache d'écran est vidé pour cette clé : la ligne
-                // réaffiche « relancé le … » sans recharger la page.
-                this.setState(s2 => {
-                  const cd = Object.assign({}, s2.caData);
-                  Object.keys(cd).filter(k => k.startsWith('caAchats|')).forEach(k => { delete cd[k]; });
-                  return { caData: cd };
-                });
-              } else { this.notify((r && (r.erreur || r.error)) || 'Relance impossible.'); }
-            });
-          },
-          relanceEnCours: S.svRelance === o.cle,
-        })),
-      })).filter(g => g.commandes.length);
-      // Le suivi est mémorisé 5 min ; ce bouton relit l'API sans attendre —
-      // un statut qui vient de changer se voit tout de suite.
-      common.caSvBusy = !!S.caSvBusy;
-      common.caSvMaj = maj ? maj.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '';
-      common.caSvRafraichir = () => {
-        if (this.state.caSvBusy) { return; }
-        this.setState({ caSvBusy: true });
-        readOne('/centrale/achats?refresh=1').then(d2 => {
-          this.setState(s2 => {
-            const cle = 'caAchats|' + (s2.caPeriode || '30j');
-            return { caSvBusy: false,
-              caData: d2 ? Object.assign({}, s2.caData, { [cle]: d2 }) : s2.caData };
-          });
-          this.notify(d2 ? 'Suivi actualisé' : 'Actualisation impossible — API injoignable');
-        });
-      };
-      common.caSvRien = sv.indispo || (fSv ? 'Aucune commande dans ce filtre.'
-        : 'Aucune commande lisible sur l’API.');
-    } else if (ecr === 'caFacturation') {
-      // Factures de redevances émises aux magasins, l'impayé en tête et en
-      // couleur ; les abonnements TFBuddy en second tableau.
-      const fmtD = v => v ? this.fD(v) : '';
-      common.caCols = ['Facture', 'Magasin', 'Émise', 'Échéance', 'Montant', 'Paiement', 'Relance'];
-      common.caRows = (d.redevances || []).map(x => {
-        const enRetard = x.paiement !== 'paid' && x.echeance && x.echeance < (this.M && this.M.TODAY || '');
-        return { cells: [
-          { t: x.numero }, { t: x.magasin, mut: true },
-          { t: fmtD(x.emise), mut: true },
-          { t: fmtD(x.echeance), col: enRetard ? '#8D1D2C' : '' },
-          { t: this.fU(x.montant), num: true },
-          { t: x.paiement === 'paid' ? 'payée' + (x.payeLe ? ' le ' + this.fD(x.payeLe) : '')
-              : (enRetard ? 'impayée — en retard' : 'impayée'),
-            col: x.paiement === 'paid' ? '#2d7a3e' : (enRetard ? '#8D1D2C' : '#8a5a13') },
-          { t: x.relanceLe ? this.fD(x.relanceLe) : '', mut: true } ] };
-      });
-      common.caRien = 'Aucune facture de redevances émise.';
-      common.caTable2 = (d.abonnements && d.abonnements.length) ? {
-        titre: 'Abonnements TFBuddy par magasin (Stripe)',
-        cols: ['Magasin', 'Offre', 'Montant', 'Payé', 'Statut'],
-        rows: d.abonnements.map(a => ({ cells: [
-          { t: a.magasin || '' }, { t: a.offre || '', mut: true },
-          { t: this.fU(a.montant), num: true }, { t: this.fU(a.paye), num: true },
-          { t: a.statut || '', mut: a.statut === 'paid' } ] })),
-      } : null;
-      // --- CA du réseau, mois par mois avec cumul : l'assiette des redevances.
-      const M3 = (this.M && this.M.MOIS) || [];
-      common.caTable2 = (d.caMensuel && d.caMensuel.length) ? {
-        titre: 'Chiffre d’affaires réseau ' + (d.exercice || '') + ' — cumul par mois',
-        cols: ['Mois', 'CA du mois', 'Cumul année'],
-        rows: d.caMensuel.map(m2 => ({ cells: [
-          { t: (M3[m2.mois - 1] || String(m2.mois)) + (m2.enCours ? ' (en cours)' : ''), mut: !!m2.enCours },
-          { t: m2.ca != null ? this.fE(m2.ca) : '', num: true },
-          { t: this.fE(m2.cumul), num: true } ] })),
-      } : null;
-    }
-    return common;
-  }
   /**
    * Vocabulaire analysable, chargé à l'ouverture de l'écran et une seule fois.
    * Il coûte deux appels amont : hors du chargement général, qui en fait déjà
@@ -12081,277 +11522,6 @@ class App {
     this.setState({ anBusy: true });
     readOne('/produits/analyse?type=' + type + '&cle=' + encodeURIComponent(cle) + '&granularite=' + gran)
       .then(d => this.setState({ anBusy: false, anData: d || { motif: 'API injoignable' } }));
-  }
-  valsExploitation(common){
-    const D = this.D, E = D.exploitation || {};
-    const MOIS1 = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-    common.exJour = E.jour || '';
-    common.exAvertissement = E.avertissement || '';
-    common.exBase = E.objectifBase || '';
-    common.exVide = !(E.magasins || []).length;
-    const cumule = this.state.exCumul === true;
-    common.exCumul = cumule;
-    common.exVueMois = () => this.setState({ exCumul: false });
-    common.exVueCumul = () => this.setState({ exCumul: true });
-    const ongl = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;'
-      + 'padding:5px 12px;border-radius:8px;'
-      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
-            : 'background:transparent;color:var(--color-text-muted)');
-    common.exVueNom = cumule ? 'Cumulé' : 'Par mois';
-    common.exStMois = ongl(!cumule);
-    common.exStCumul = ongl(cumule);
-    common.exLegendeReel = cumule ? 'réel cumulé' : 'réel du mois';
-    common.exLegendeCible = cumule ? 'cible cumulée' : 'budget du mois (le contenant)';
-    common.exLegendeOr = cumule ? '' : 'au-dessus du budget';
-    // --- N vs N-1, toutes boutiques
-    const rp = (this.state.exNvPer || 'mois');
-    const rz = this.state.exReseau;
-    if (!rz || rz.per !== rp) { setTimeout(() => this.exChargeReseau(rp), 0); }
-    const ongN = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;'
-      + 'padding:4px 11px;border-radius:7px;'
-      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
-            : 'background:transparent;color:var(--color-text-muted)');
-    common.exNvBtns = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année']]
-      .map(b => ({ label: b[1], st: ongN(rp === b[0]),
-        go: () => { this.setState({ exNvPer: b[0] }); this.exChargeReseau(b[0]); } }));
-    common.exNv = {
-      chargement: !rz || rz.chargement,
-      motif: rz && rz.d ? (rz.d.motif || '') : '',
-      periode: rz && rz.d ? (rz.d.du || '') + ' → ' + (rz.d.au || '') : '',
-      source: rz && rz.d ? (rz.d.source || '') : '',
-      lignes: (rz && rz.d && rz.d.magasins ? rz.d.magasins : []).map(m => ({
-        magasin: m.magasin,
-        n: m.n == null ? '' : (Math.abs(m.n) >= 100000 ? this.fK(m.n) : this.fE(m.n)),
-        n1: m.n1 == null ? '' : (Math.abs(m.n1) >= 100000 ? this.fK(m.n1) : this.fE(m.n1)),
-        // Pas d'écart sans N-1 : une boutique ouverte cette année n'a pas
-        // « 0 % de croissance », elle n'a pas d'an dernier.
-        ecart: m.ecart == null ? '' : (m.ecart > 0 ? '+' : '') + m.ecart.toFixed(1).replace('.', ',') + ' %',
-        col: m.ecart == null ? 'var(--color-text-muted)' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
-        pt: m.ecart == null ? 'transparent' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)') }))
-    };
-    this.valsRentabilite(common, 'semaine');
-    // Détail d'un magasin. Chaque bloc porte son état : « ok » quand l'API a
-    // répondu, « attente » sinon. Aucun chiffre n'est fabriqué pour combler —
-    // un écran qui annonce ce qui lui manque vaut mieux qu'un écran rempli
-    // d'une source qu'on n'a pas voulue.
-    const S2 = this.state, det = S2.exDetail;
-    common.exPer = S2.exPeriode || 'mois';
-    common.exSetPer = p => () => {
-      this.setState({ exPeriode: p });
-      if (S2.exDetail) { this.exOpen(S2.exDetail.id, S2.exDetail.nom); }
-    };
-    const ongP = on => 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;'
-      + 'padding:4px 11px;border-radius:7px;'
-      + (on ? 'background:var(--color-primary);color:#fff;font-weight:500'
-            : 'background:transparent;color:var(--color-text-muted)');
-    common.exPerBtns = [['jour', 'Aujourd\u2019hui'], ['semaine', 'Semaine'], ['mois', 'Mois']]
-      .map(p => ({ cle: p[0], label: p[1], st: ongP(common.exPer === p[0]), go: common.exSetPer(p[0]) }));
-    common.exDetail = det ? {
-      nom: det.nom, chargement: det.chargement,
-      close: () => this.setState({ exDetail: null }),
-      du: det.d ? det.d.du : null, au: det.d ? det.d.au : null,
-      blocs: det.d && det.d.blocs ? Object.keys(det.d.blocs).map(k => {
-        const b = det.d.blocs[k], D2 = b.donnees;
-        const o = { cle: k, titre: b.titre, attente: b.etat !== 'ok',
-          motif: b.motif || '', source: b.source || '', avert: b.avertissement || '',
-          lignes: [], tuiles: null, cascade: null, cats: null, rang: null };
-        if (b.etat !== 'ok') return o;
-        if (k === 'kpis'){
-          o.tuiles = [
-            { l: 'CA de la période', v: this.fE(D2.ca) },
-            { l: 'tickets', v: D2.tickets == null ? '' : D2.tickets.toLocaleString('fr-BE') },
-            { l: 'panier moyen', v: this.fEd(D2.panier) },
-            { l: 'produits / client', v: D2.produitsParClient == null ? '' : String(D2.produitsParClient) }];
-        } else if (k === 'pnl'){
-          const p = x => x && x.pct != null ? x.pct.toFixed(1).replace('.', ',') + ' %' : '';
-          const v = x => x && x.valeur != null ? this.fE(x.valeur) : '';
-          o.cascade = [
-            { l: 'Chiffre d\u2019affaires', v: this.fE(D2.ca), p: '', fort: true },
-            { l: 'Food cost', v: v(D2.food), p: p(D2.food) },
-            { l: 'Main-d\u2019œuvre', v: v(D2.labour), p: p(D2.labour) },
-            { l: 'Frais généraux', v: v(D2.overhead), p: p(D2.overhead) },
-            { l: 'Résultat', v: v(D2.result), p: p(D2.result), fort: true }];
-          // La période RENDUE par l'API, pas celle demandée : si elle diffère,
-          // l'écran doit le montrer plutôt que de laisser croire au contraire.
-          o.lignes = (D2.du && D2.au) ? [{ k: 'période rendue', v: D2.du + ' → ' + D2.au }] : [];
-        } else if (k === 'categories'){
-          const mx = Math.max.apply(null, D2.map(c => c.ca || 0).concat([1]));
-          // Couleur = niveau de MARGE, largeur = poids dans le CA : deux
-          // informations, deux canaux. Sans marge connue, la barre reste
-          // neutre — une catégorie grise dit « on ne sait pas », une catégorie
-          // verte par défaut dirait « tout va bien ».
-          const tm = m => this.echelleMarge(m);
-          o.cats = D2.slice(0, 12).map(c => ({ nom: c.categorie, ca: this.fE(c.ca),
-            part: c.partCa == null ? '' : this.fP(c.partCa, 0),
-            w: Math.max(2, 100 * (c.ca || 0) / mx).toFixed(0) + '%',
-            col: tm(c.margePct),
-            marge: c.margePct == null ? '' : 'marge ' + c.margePct.toFixed(0) + ' %',
-            delta: c.delta == null ? '' : (c.delta > 0 ? '+' : '') + c.delta.toFixed(1).replace('.', ',') + ' %',
-            deltaC: c.delta == null ? 'var(--color-text-muted)' : (c.delta >= 0 ? '#2d7a3e' : 'var(--color-primary)') }));
-          o.sansMarge = D2.every(c => c.margePct == null);
-          o.echelle = this.paliersMarge();
-        } else if (k === 'reseau'){
-          const av = D2.filter(r => r.panier != null).map(r => r.panier);
-          const moy = av.length ? av.reduce((a, b2) => a + b2, 0) / av.length : null;
-          o.rang = { moyenne: this.fEd(moy),
-            lignes: D2.slice().sort((a, b2) => (b2.panier || 0) - (a.panier || 0)).map(r => ({
-              magasin: r.magasin, moi: r.moi, panier: this.fEd(r.panier),
-              ppc: r.produitsParClient == null ? '' : String(r.produitsParClient) })) };
-        }
-        return o;
-      }) : []
-    } : null;
-    const an = E.mois ? +E.mois.slice(0, 4) : this.exo();
-    const mc = E.mois ? +E.mois.slice(5, 7) : 12;
-
-    // Atteinte : sans objectif on ne rend PAS une pastille rouge — on dit que
-    // le budget manque. Un magasin non budgété n'est pas un magasin en échec.
-    const att = a => a == null
-      ? { txt: 'sans budget', st: 'background:#EDEAE5;color:var(--color-text-muted)' }
-      : { txt: this.fP(a, 0),
-          st: a >= 1 ? 'background:#E6F2E9;color:#2d7a3e'
-             : a >= 0.9 ? 'background:#FBEFE0;color:#C17A2A'
-             : 'background:#F7E4E6;color:var(--color-primary)' };
-    const jauge = a => {
-      if (a == null) return { w: '0%', c: 'transparent' };
-      return { w: Math.min(100, 100 * a).toFixed(0) + '%',
-        c: a >= 1 ? '#2d7a3e' : a >= 0.9 ? '#C17A2A' : 'var(--color-primary)' };
-    };
-
-    const r = E.reseau || {};
-    const rm = r.mois || {};
-    common.exRes = { ca: this.fE(rm.ca), clients: rm.tickets == null ? '' : rm.tickets.toLocaleString('fr-BE'),
-      panier: rm.panier == null ? '' : this.fEd(rm.panier), objectif: this.fE(rm.objectif),
-      att: att(rm.atteinte), jauge: jauge(rm.atteinte) };
-
-    common.exMagasins = (E.magasins || []).map(m => {
-      // Série mensuelle : le réel vient de la perf déjà chargée (une seule
-      // source pour tout le cockpit), pas d'un second appel.
-      const st = (D.stores || []).find(s => String(s.id) === String(m.shopId));
-      const ligne = (st && st.perf && st.perf[an]) ? st.perf[an] : [];
-      const reels = [], buds = [];
-      for (let i = 0; i < 12; i++){
-        const c = ligne[i] || {};
-        reels.push(c.ca != null && c.ca > 0 ? c.ca : null);
-        // Le budget mensuel est normalisé sous `caT` par joinPerf, pas sous
-        // `caBudget` : lire la mauvaise clé ne lève aucune erreur, elle rend
-        // simplement « budget non encodé » sur un magasin qui en a un.
-        // Et à défaut de budget négocié, le CA THÉORIQUE de l'étude fait
-        // contenant — sinon Corbais, qui n'a que deux mois validés mais douze
-        // mois de théorique, n'avait aucun repère à l'écran.
-        buds.push(c.caT != null && c.caT > 0 ? c.caT
-          : (c.theo != null && c.theo > 0 ? c.theo : null));
-      }
-      const nb = buds.filter(b => b != null).length;
-      const nbValide = ligne.filter(c => c && c.caT).length;
-      // Vue cumulée. Cumuler huit mois de réel face à deux mois de budget
-      // comparerait deux choses différentes : le cumul du budget ne court donc
-      // que sur les mois budgétés, et le réel cumulé se restreint aux MÊMES
-      // mois dès qu'un budget existe. Sans budget, le cumul du réel garde tout
-      // son sens et reste affiché seul.
-      const cumR = [], cumB = [];
-      let aR = 0, aB = 0;
-      for (let i = 0; i < 12; i++){
-        // Le réel cumule TOUS les mois connus : c'est la trajectoire du
-        // magasin, et la restreindre aux seuls mois budgétés privait celui qui
-        // a le plus de données de sa courbe — l'inverse du but recherché.
-        // Ne rien reporter en revanche sur un mois sans donnée : prolonger le
-        // cumul jusqu'à décembre faisait paraître l'exercice déjà bouclé.
-        if (reels[i] != null){ aR += reels[i]; cumR.push(aR); } else { cumR.push(null); }
-        // La cible ne court que sur les mois réellement encodés. Elle s'arrête
-        // donc visiblement plus tôt que le réel quand le budget est partiel —
-        // c'est ce décrochage qui dit de ne pas comparer les deux extrémités,
-        // et la mention sous le graphique le nomme.
-        if (buds[i] != null){ aB += buds[i]; cumB.push(aB); } else { cumB.push(null); }
-      }
-      const serie = (rs, bs) => {
-        const vals = rs.concat(bs).filter(v => v != null);
-        const hi = vals.length ? Math.max.apply(null, vals) * 1.15 : 0;
-        const W = 300, H = 70, PB = 12, sw = W / 12;
-        const y = v => (H - PB) * (1 - v / hi);
-        const barres = [], reperes = [], labels = [];
-        for (let i = 0; i < 12; i++){
-          const cx = i * sw, bx = (cx + sw * 0.18).toFixed(2), bw = (sw * 0.64).toFixed(2);
-          // Tout mois à partir du dernier mois de caisse est incomplet — pas
-          // seulement celui-ci. Une barre pleine sur un mois tronqué se lit
-          // comme un effondrement, et c'est le contraire de ce qu'elle dit.
-          const partiel = (i + 1) >= mc;
-          const bud = bs[i], reel = rs[i];
-          // Le BUDGET est le contenant, le réel le remplit. Un trait noir
-          // au-dessus d'une barre demandait de comparer deux hauteurs ; un
-          // verre à moitié plein se lit sans y penser — et les mois à venir
-          // gardent leur contenant vide, qui attend son réel.
-          if (hi > 0 && bud != null && bud > 0){
-            barres.push({ x: bx, y: y(bud).toFixed(2), w: bw,
-              h: Math.max((H - PB) - y(bud), 1).toFixed(2), fill: 'rgba(34,34,34,0.07)' });
-          }
-          if (hi > 0 && reel != null && reel > 0){
-            const dedans = (bud != null && bud > 0) ? Math.min(reel, bud) : reel;
-            barres.push({ x: bx, y: y(dedans).toFixed(2), w: bw,
-              h: Math.max((H - PB) - y(dedans), 1).toFixed(2),
-              fill: partiel ? 'url(#exhach)' : 'var(--color-primary)' });
-            // Ce qui dépasse le budget sort en or, au-dessus du contenant.
-            if (bud != null && bud > 0 && reel > bud){
-              barres.push({ x: bx, y: y(reel).toFixed(2), w: bw,
-                h: Math.max(y(bud) - y(reel), 1).toFixed(2), fill: '#C9A227' });
-            }
-          }
-          labels.push({ x: (cx + sw / 2).toFixed(2), y: H - 3,
-            t: MOIS1[i], c: (i + 1) === mc ? 'var(--color-primary)' : 'var(--color-text-muted)' });
-        }
-        return { vide: !vals.length, W: W, H: H,
-          grille: hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(2), w: W })) : [],
-          barres: barres, reperes: reperes, labels: labels,
-          max: hi > 0 ? this.fK(hi / 1.15) : '' };
-      };
-      // Le cumulé se lit en trajectoire, pas en volumes : deux courbes, réel
-      // plein et cible pointillée, comme l'écran Objectifs de CA. Empiler des
-      // barres cumulées répondait « combien » quand la question est « où en
-      // est-on ». Même langage visuel d'un écran à l'autre, sinon deux
-      // graphiques qui disent la même chose paraissent dire autre chose.
-      const courbes = (rs, bs) => {
-        const vals = rs.concat(bs).filter(v => v != null);
-        const hi = vals.length ? Math.max.apply(null, vals) * 1.15 : 0;
-        const W = 300, H = 70, PB = 12, sw = W / 12;
-        const y = v => (H - PB) * (1 - v / hi);
-        const pts = arr => arr.map((v, i) => v == null ? null
-          : ((i + 0.5) * sw).toFixed(2) + ',' + y(v).toFixed(2))
-          .filter(Boolean).join(' ');
-        const labels = [];
-        for (let i = 0; i < 12; i++){
-          labels.push({ x: ((i + 0.5) * sw).toFixed(2), y: H - 3,
-            t: MOIS1[i], c: (i + 1) === mc ? 'var(--color-primary)' : 'var(--color-text-muted)' });
-        }
-        return { vide: !vals.length, W: W, H: H, courbe: true,
-          grille: hi > 0 ? [0.5, 1].map(f => ({ y: y(hi * f).toFixed(2), w: W })) : [],
-          reel: pts(rs), cible: pts(bs), barres: [], reperes: [], labels: labels,
-          base: (H - PB).toFixed(2),
-          max: hi > 0 ? this.fK(hi / 1.15) : '' };
-      };
-      const g = cumule ? courbes(cumR, cumB) : serie(reels, buds);
-      const vals = reels.concat(buds).filter(v => v != null);
-      return { shopId: m.shopId, magasin: m.magasin,
-        ouvrir: () => this.exOpen(m.shopId, m.magasin),
-        // Dire d'où vient la cible : un objectif repris du théorique n'est pas
-        // un budget négocié, et la carte ne doit pas laisser croire l'inverse.
-        objMois: this.fE(m.moisPlein) + (m.budgetSource === 'theorique' ? ' (théorique)' : ''),
-        jourCa: this.fE(m.jour.ca), jourClients: (m.jour.tickets || 0).toLocaleString('fr-BE'),
-        jourPanier: m.jour.panier == null ? '' : this.fEd(m.jour.panier),
-        semCa: this.fE(m.semaine.ca), semJauge: jauge(m.semaine.atteinte),
-        moisCa: this.fE(m.mois.ca), moisJauge: jauge(m.mois.atteinte),
-        att: att(m.mois.atteinte),
-        gVide: g.vide, gW: g.W, gH: g.H, gCourbe: !!g.courbe,
-        gReel: g.reel || '', gCible: g.cible || '', gBase: g.base || 0,
-        gGrille: g.grille, gBarres: g.barres, gReperes: g.reperes, gLabels: g.labels,
-        gMax: g.max,
-        gNote: !nb ? 'budget non encodé'
-             : cumule ? ('cible partielle : ' + nb + ' mois encodés sur 12')
-             : (nbValide === nb ? 'budget encodé sur ' + nb + ' mois'
-               : (nbValide ? nbValide + ' mois validés, ' + (nb - nbValide) + ' repris du théorique'
-                 : 'contenant : CA théorique de l’étude')),
-        exercice: an };
-    });
-    return common;
   }
   /**
    * Aplatit une réponse d'API en lignes « libellé / valeur ».
@@ -12406,7 +11576,8 @@ class App {
    * dériver : deux écrans annonçant deux scores pour la même référence
    * ne se contredisent pas franchement, ils se contredisent discrètement.
    */
-  pdCalcule(){
+  pdCalcule(produits){
+    // `produits` : une autre fenêtre de ventes que celle de l'écran (les 12 mois des saisonnières du PDF 20/80).
     const D = this.D;
     const W = this.poids();
     const wtTot = (W.v + W.m + W.perte + W.comptoir + W.rev) || 1;
@@ -12425,7 +11596,10 @@ class App {
     // Le coût produit n'est pas exposé par la base partagée (API panel uniquement) :
     // quand `coutUnit` est absent, marge unitaire / taux de marge / marge brute
     // restent à null et n'entrent pas dans le score (recalculé sur volume + position).
-    const base = (D.products || []).map(p => {
+    // « Obligatoire » (18/10/2026 : « nécessaire » y est fondu) : une référence de l'assortiment obligatoire se garde
+    // quoi qu'en disent la marge et le score. Le drapeau garde son nom, `necessaire`, dans le calcul et les PDF.
+    const oblig = {}; (D.prodCatalogue || []).forEach(c => { if (c.must) { oblig[String(c.ref)] = true; } });
+    const base = (produits || D.products || []).map(p => {
       const _id = p.id;
       // Sans prix (référence au catalogue mais sans vente sur la période), pas
       // de marge calculable : null, jamais un « prix zéro moins le coût ».
@@ -12443,7 +11617,7 @@ class App {
         jete: p.jete != null ? p.jete : null, motifPerte: p.motifPerte || '',
         comptoir: p.presenceComptoir != null ? p.presenceComptoir : null,
         revue: p.revue != null ? +p.revue : null, revuePar: p.revuePar || '', revueLe: p.revueLe || '',
-        necessaire: !!p.necessaire,
+        necessaire: !!p.necessaire || !!oblig[String(_id)],
         ca: (p.volume || 0) * (p.prix || 0), mg: mu == null ? null : p.volume * mu, mags: p.magasins, pen: (p.magasins || 0) / nbOuv }; });
     const maxVol = Math.max.apply(null, base.map(p => p.vol)) || 1;
     const mps = base.map(p => p.mp).filter(v => v != null);
@@ -12482,7 +11656,7 @@ class App {
       // sous le seuil bas, modifier entre les deux.
       // Décidé sur le score ARRONDI — celui qu'on lit : un 49,6 affiché « 50 »
       // ne peut pas être « à effacer » à l'écran et « à modifier » sur le PDF.
-      // « Nécessaire » prime : la référence se garde quoi qu'en disent la
+      // « Obligatoire » prime : la référence se garde quoi qu'en disent la
       // marge et le score — le cinquième champ le dit pour l'affichage.
       decision: (s, nec) => nec ? ['Garder', '#2d7a3e', '#e6f2e8', '#2d7a3e', true]
         : Math.round(s) > SC.garder ? ['Garder', '#2d7a3e', '#e6f2e8', '#bfdcc5', false]
@@ -12491,93 +11665,6 @@ class App {
       verdict: s => s >= SC.moteur ? ['Moteur de gamme', '#2d7a3e', 'rgba(45,122,62,0.12)']
         : s >= SC.conforter ? ['À conforter', '#8a5a13', 'rgba(193,122,42,0.16)']
         : ['À arbitrer', '#8D1D2C', 'rgba(141,29,44,0.10)'] };
-  }
-  /**
-   * Extraction sous seuil — arbitrer une gamme entière, pas une référence.
-   *
-   * L'écran de scoring trie ; celui-ci COUPE. On fixe un seuil, on obtient la
-   * liste de tout ce qui passe dessous, avec de quoi comprendre pourquoi :
-   * le critère le plus faible de chaque référence est nommé. Sans lui, on sait
-   * qu'une référence est mauvaise sans savoir sur quoi agir — baisser un coût,
-   * corriger une perte ou la déréférencer ne sont pas la même décision.
-   */
-  valsSeuil(common){
-    const S = this.state;
-    const _c = this.pdCalcule();
-    const { base, SC, verdict } = _c;
-    // Défaut : le seuil « à conforter » du réglage de scoring. Reprendre le
-    // barème existant évite d'introduire un troisième seuil concurrent.
-    const seuil = S.sqSeuil != null ? +S.sqSeuil : Math.round(SC.conforter);
-    common.sqSeuil = seuil;
-    common.sqSetSeuil = e => { const v = Math.max(0, Math.min(100, +e.target.value || 0));
-      this.setState({ sqSeuil: v }); };
-    common.sqPond = _c.pond;
-    common.sqRepere = 'seuils du réglage : à conforter ' + Math.round(SC.conforter)
-      + ' · moteur de gamme ' + Math.round(SC.moteur);
-    common.sqTotal = base.length;
-
-    const cats = [...new Set(base.map(p => p.cat).filter(Boolean))].sort();
-    common.sqCat = S.sqCat || 'Toutes les catégories';
-    common.sqCatOptions = ['Toutes les catégories'].concat(cats);
-    common.sqSetCat = e => this.setState({ sqCat: e.target.value });
-
-    const tris = [['score', 'Score croissant'], ['scoreDesc', 'Score décroissant'],
-      ['ca', 'CA réseau décroissant'], ['vol', 'Volume décroissant'],
-      ['perte', 'Taux de perte décroissant'], ['cat', 'Catégorie']];
-    common.sqTri = S.sqTri || 'score';
-    common.sqTriOptions = tris.map(t => ({ val: t[0], nom: t[1] }));
-    common.sqSetTri = e => this.setState({ sqTri: e.target.value });
-
-    let l = base.filter(p => p.score < seuil
-      && (common.sqCat === 'Toutes les catégories' || p.cat === common.sqCat));
-    const tri = common.sqTri;
-    l.sort((a, b) => tri === 'scoreDesc' ? b.score - a.score
-      : tri === 'ca' ? b.ca - a.ca
-      : tri === 'vol' ? b.vol - a.vol
-      : tri === 'perte' ? ((b.perte == null ? -1 : b.perte) - (a.perte == null ? -1 : a.perte))
-      : tri === 'cat' ? (String(a.cat).localeCompare(String(b.cat)) || a.score - b.score)
-      : a.score - b.score);
-
-    // Le critère le PLUS FAIBLE, parmi ceux qui sont réellement mesurés. Un
-    // critère absent ne peut pas être le point faible : il n'entre pas au score.
-    const faible = p => {
-      const c = [['volume', p.sVol], ['marge nette', p.sMg], ['perte', p.sPerte], ['comptoir', p.sComptoir], ['revue', p.sRev]]
-        .filter(x => x[1] != null);
-      if (!c.length) { return ''; }
-      c.sort((a, b) => a[1] - b[1]);
-      return c[0][0] + ' (' + Math.round(c[0][1]) + '/100)';
-    };
-    const caTot = base.reduce((a, p) => a + p.ca, 0) || 1;
-    common.sqCaPart = this.fP(l.reduce((a, p) => a + p.ca, 0) / caTot, 1);
-    common.sqNb = l.length;
-    common.sqLignes = l.map(p => { const v = verdict(p.score);
-      return { nom: p.nom, cat: p.cat || '',
-        score: Math.round(p.score),
-        scoreCol: p.score < SC.conforter ? 'var(--color-primary)' : '#B87512',
-        verdict: v[0], vFond: v[2], vCol: v[1],
-        vol: Math.round(p.vol).toLocaleString('fr-BE'),
-        ca: this.fK(p.ca),
-        marge: p.mp == null ? 'manque API' : this.fP(p.mp, 0),
-        margeVide: p.mp == null,
-        perte: p.perte == null ? 'manque API' : this.fP(p.perte, 1),
-        perteVide: p.perte == null,
-        mags: p.mags + ' / ' + Math.round(p.mags / (p.pen || 1)),
-        faible: faible(p) }; });
-    // Exporter est le geste attendu : on arbitre une gamme sur un tableur, pas
-    // dans un navigateur. Point-virgule et BOM pour qu'Excel FR ouvre droit.
-    common.sqExport = () => {
-      const t = [['Référence', 'Catégorie', 'Score', 'Verdict', 'Volume', 'CA réseau',
-        'Taux de marge', 'Taux de perte', 'Critère le plus faible']];
-      common.sqLignes.forEach(r => t.push([r.nom, r.cat, r.score, r.verdict, r.vol, r.ca,
-        r.margeVide ? '' : r.marge, r.perteVide ? '' : r.perte, r.faible]));
-      const csv = '﻿' + t.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-      a.download = 'references-sous-' + seuil + '.csv';
-      document.body.appendChild(a); a.click(); a.remove();
-      this.log('Export', '', 'Références sous seuil ' + seuil + ' — ' + common.sqLignes.length + ' ligne(s)');
-    };
-    return common;
   }
   /**
    * Ce que le tableau des produits va chercher en tâche de fond, une fois :
@@ -12655,7 +11742,7 @@ class App {
       ['posC',  'Pos. catégorie', 'right', 1, 'Rang par CA dans la catégorie'],
       ['score', 'Score',          'right', -1],
       ['revue', 'Revue ★',        'center', -1, 'Votre revue franchiseur, 1 à 5 étoiles — un clic pose la note, un second clic sur la même l’enlève. Elle pèse dans le score.'],
-      ['necessaire', 'Nécessaire', 'center', -1, 'Cochée : la référence se garde quoi qu’en disent la marge et le score (produit d’appel, pièce de gamme, obligation d’enseigne)'],
+      ['necessaire', 'Obligatoire', 'center', -1, 'L’assortiment obligatoire : la référence se garde quoi qu’en disent la marge et le score'],
       ['decision', 'Décision',    'center', -1, 'Garder au-dessus du seuil haut, effacer sous le seuil bas, modifier entre les deux — « nécessaire » prime'],
     ];
     common.pdCols = colDefs.map(c2 => ({
@@ -12713,7 +11800,7 @@ class App {
       return c2 !== 0 ? c2 * sdir : b.score - a.score;
     });
     const caProd = base.reduce((a, p) => a + p.ca, 0) || 1;
-    const bar = (v, col) => 'display:block;height:5px;border-radius:999px;background:' + col + ';width:' + Math.max(3, Math.min(100, Math.round(v))) + '%';
+    const bar = (v, col) => 'display:block;height:5px;border-radius:8px;background:' + col + ';width:' + Math.max(3, Math.min(100, Math.round(v))) + '%';
     const eur = v => v == null ? '' : v.toFixed(2).replace('.', ',') + ' €';
     // La ligne, à plat : une seule ligne par référence, aucun graphique — la
     // couleur ne reste que sur trois signaux (taux de marge, perte, score).
@@ -12822,7 +11909,6 @@ class App {
         // « Nécessaire » : une case, cochée = gardée quoi qu'en disent la
         // marge et le score. Enregistrée aussitôt, comme la revue.
         necessaire: !!p.necessaire,
-        basculerNecessaire: () => this.pdPoserNecessaire(p.id, !p.necessaire),
         decision: dc[0], dcCol: dc[1], dcFond: dc[2], dcBord: dc[3], dcNec: !!dc[4],
         dcTitre: dc[4] ? 'Nécessaire : gardée quoi qu’en disent la marge et le score' : 'Décision selon le score et vos seuils' }; });
     // --- détail d'une référence : le score décomposé, et les deux suites
@@ -12955,7 +12041,7 @@ class App {
             : (m.taux >= 0.10 ? 'color:#8D1D2C;font-weight:600' : m.taux >= 0.05 ? 'color:#8a5a13;font-weight:600' : 'color:#2d7a3e;font-weight:500'),
           detail: m.taux == null ? 'Référence non proposée ici' : ((m.jete || 0).toLocaleString('fr-BE') + ' jeté(s) / ' + (m.vendu || 0).toLocaleString('fr-BE') + ' vendu(s)'),
           motif: m.motif || '', caPerdu: m.caPerdu != null ? this.fE(m.caPerdu) : '',
-          barSt: 'display:block;height:5px;border-radius:999px;background:' + (m.taux == null ? 'var(--color-border-secondary)' : m.taux >= 0.10 ? '#8D1D2C' : m.taux >= 0.05 ? '#C17A2A' : '#2d7a3e')
+          barSt: 'display:block;height:5px;border-radius:8px;background:' + (m.taux == null ? 'var(--color-border-secondary)' : m.taux >= 0.10 ? '#8D1D2C' : m.taux >= 0.05 ? '#C17A2A' : '#2d7a3e')
             + ';width:' + Math.max(m.taux ? 3 : 0, Math.min(100, (m.taux || 0) * 100 * 5)) + '%',
         })),
         note: avecTaux.length > 1
@@ -12983,12 +12069,12 @@ class App {
     // « null % » : le mot « null » n'est pas une valeur, et une pastille verte
     // sur une donnée manquante se lit comme une performance.
     const pct = v => (v == null || !isFinite(v)) ? '' : String(v).replace('.', ',') + ' %';
-    const rat = (v, seuil) => { const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
+    const rat = (v, seuil) => { const base = 'display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:500;';
       if (v == null || !isFinite(v)) { return base + 'background:var(--color-background-secondary);color:var(--color-text-muted)'; }
       return v > seuil ? base + 'background:rgba(141,29,44,0.12);color:#8D1D2C' : v > seuil - 1.5 ? base + 'background:rgba(193,122,42,0.16);color:#8a5a13' : base + 'background:rgba(45,122,62,0.10);color:#2d7a3e'; };
     const seuilEtp = this.seuilCaEtp();
     common.mgSeuilEtp = this.fE(seuilEtp);
-    const caEtpPill = v => { const base = 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;';
+    const caEtpPill = v => { const base = 'display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:500;';
       return v < seuilEtp ? base + 'background:rgba(141,29,44,0.12);color:#8D1D2C' : v < seuilEtp * 1.08 ? base + 'background:rgba(193,122,42,0.16);color:#8a5a13' : base + 'background:rgba(45,122,62,0.10);color:#2d7a3e'; };
     const rows = this.open().map(st => { const r = st.perf[E][MI], n1 = st.perf[E - 1][MI];
       const mp26 = r.marge / r.ca, mp25 = n1.marge / n1.ca; const tv = this.trend(mp26, mp25);
@@ -13002,7 +12088,7 @@ class App {
         food: pct(r.food), foodSt: rat(r.food, s.f), labour: pct(r.labour), labourSt: rat(r.labour, s.l), ov: pct(r.overhead), ovSt: rat(r.overhead, s.o),
         caEtp: caEtp == null ? '' : this.fE(caEtp),
         etp: etp == null ? 'ETP inconnu' : (etp.toFixed(1).replace('.', ',') + ' ETP' + (r.heures != null ? ' · ' + Math.round(r.heures) + ' h' : '')),
-        caEtpSt: caEtp == null ? 'display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;color:var(--color-text-muted)' : caEtpPill(caEtp),
+        caEtpSt: caEtp == null ? 'display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;color:var(--color-text-muted)' : caEtpPill(caEtp),
         statut: nAl === 0 ? 'OK' : nAl + (nAl > 1 ? ' leviers à traiter' : ' levier à traiter') + (st.risk ? ' · sous-perf. 3 mois consécutifs' : '') }; });
     rows.sort((a, b) => b._mp - a._mp);
     common.mgRows = rows;
@@ -13133,28 +12219,6 @@ class App {
   }
   /* Ouvre le détail d'une tâche : photo de réalisation + notation. Le détail
      vient de l'API du panel (la base ne porte ni le nom ni la photo). */
-  /**
-   * Ramène un contrôle masqué dans la liste du jour.
-   *
-   * Le calcul propose, l'humain dispose : un nouveau gérant, des travaux, une
-   * réclamation — aucune moyenne ne les voit venir. La réouverture tient une
-   * cadence complète, sinon le prochain rendu l'effacerait.
-   */
-  ctrlRouvrir(shopId, taskId, nom){
-    if (!window.confirm('Remettre « ' + nom + ' » dans les contrôles du jour ?')) { return; }
-    write(this.source, 'PUT', '/taches/maitrise', { shopId: +shopId, taskId: +taskId, action: 'rouvrir' })
-      .then(r => {
-        if (!r || r.ok === false) { this.notify('Non rouvert — ' + ((r && r.error) || 'refusé')); return; }
-        this.notify('Contrôle rouvert — « ' + nom + ' »');
-        // Relecture de la MÊME journée : la liste doit montrer la tâche
-        // revenue, pas attendre un changement de date.
-        const d = (this.D.pwaTasks || {}).date || '';
-        readOne('/pwa/tasks' + (d ? '?date=' + encodeURIComponent(d) : '')).then(pt => {
-          if (pt) { this.D.pwaTasks = pt; }
-          this.setState({});
-        });
-      });
-  }
   ctrlOpenTask(shopId, taskId, date, tacheNom){
     this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, note: null, comment: '', envoi: false, rep: [] } });
     readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
@@ -13499,35 +12563,33 @@ class App {
   /**
    * Les cartes d'une boutique : l'état de chaque tâche, sa photo et ses
    * repères, dans l'ordre du dashboard — les écarts d'abord, les non rendues
-   * en fin de piste. Les tâches maîtrisées restent sous leur bandeau.
+   * en fin de piste. Toute photo rendue est à noter (18/10/2026 : plus de
+   * contrôle par exception, une tâche ne sort plus de la liste).
    */
   ctrlCartes(s, pt, garde, seuil, nomNiveau){
     const S = this.state;
     const P = this.ctrlPhotosLire(s.shopId, pt.date);
     const ph = {}; ((P && P.photos) || []).forEach(p => { if (/^https:\/\//.test(String(p.photo || ''))) { ph[String(p.taskId)] = p; } });
-    const RANG = { nc: 0, ctl: 1, ok: 2, mai: 3, ko: 4, mu: 5 };
+    const RANG = { nc: 0, ctl: 1, ok: 2, ko: 3, mu: 4 };
     const hh = v => v ? String(v).slice(11, 16) : '';
     const etat = t => {
       if (t.note != null) {
         if (t.note >= seuil && t.accepte !== false) { return { c: 'ok', bd: t.note + '/5' }; }
         return { c: 'nc', bd: t.note + '/5 · ' + String(nomNiveau(t.note)).split(/[—–-]/).pop().trim().toLowerCase() };
       }
-      // Maîtrisée (contrôle par exception) : sa photo reste dans le rail (10/10/2026), marquée, sans être à noter.
-      if (t.maitrise && t.maitrise.masquee && t.statut !== 'nonRendue') { return { c: 'mai', bd: 'maîtrisée' }; }
       if (t.statut === 'aControler' || t.statut === 'aValider') { return { c: 'ctl', bd: 'à contrôler' }; }
       if (t.statut === 'sansPhoto') { return { c: 'mu', bd: 'sans photo' }; }
       return { c: 'ko', bd: 'non rendue' };
     };
     const nom = t => String(t.tache || ('Tâche #' + t.taskId)).replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
     const cl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '');
-    // Toutes les photos du jour, celles des tâches maîtrisées comprises (10/10/2026) : la liste « à noter » les écarte, le rail non.
-    const L = (s.taches || []).filter(garde).filter(t => !(t.maitrise && t.maitrise.masquee) || t.statut !== 'nonRendue')
+    const L = (s.taches || []).filter(garde)
       .map(t => Object.assign({ e: etat(t), p: ph[String(t.taskId)] || null }, t))
       .sort((a, b) => (RANG[a.e.c] - RANG[b.e.c]) || String(a.faitLe || '9').localeCompare(String(b.faitLe || '9')) || nom(a).localeCompare(nom(b)));
     const nb = c => L.filter(t => t.e.c === c).length;
     const choix = (S.ctrlPuce || {})[String(s.shopId)] || 'tout';
     const puceSel = choix !== 'tout' && !nb(choix) ? 'tout' : choix;
-    const puces = [['tout', 'Tout', null, L.length], ['nc', 'Écarts', '#D97706', nb('nc')], ['ctl', 'À contrôler', '#2F5D8A', nb('ctl')], ['ok', 'Conformes', '#2d7a3e', nb('ok')], ['mai', 'Maîtrisées', '#5b6b78', nb('mai')], ['ko', 'Non rendues', '#C0182B', nb('ko')], ['mu', 'Sans photo', '#a59d93', nb('mu')]]
+    const puces = [['tout', 'Tout', null, L.length], ['nc', 'Écarts', '#D97706', nb('nc')], ['ctl', 'À contrôler', '#2F5D8A', nb('ctl')], ['ok', 'Conformes', '#2d7a3e', nb('ok')], ['ko', 'Non rendues', '#C0182B', nb('ko')], ['mu', 'Sans photo', '#a59d93', nb('mu')]]
       .filter(f => f[3]).map(f => ({ nom: f[1], coul: f[2], nb: f[3], on: puceSel === f[0],
         pick: () => this.setState(s2 => ({ ctrlPuce: Object.assign({}, s2.ctrlPuce, { [String(s.shopId)]: f[0] }) })) }));
     const F = puceSel === 'tout' ? L : L.filter(t => t.e.c === puceSel);
@@ -13550,7 +12612,6 @@ class App {
       const constat = t.e.c === 'nc' ? (reps.map(r => r.txt).filter(Boolean).join(', ') || t.comment || 'écart relevé') + note
         : t.e.c === 'ok' ? 'conforme' + note
         : t.e.c === 'ctl' ? 'photo déposée, pas encore notée'
-        : t.e.c === 'mai' ? 'maîtrisée' + (t.maitrise && t.maitrise.moyenne != null ? ' · ' + String(t.maitrise.moyenne).replace('.', ',') + ' / 5' : '') + (t.maitrise && t.maitrise.recontrole ? ' · re-contrôle le ' + this.fD(t.maitrise.recontrole) : '')
         : t.e.c === 'mu' ? 'rendue sans photo' : (cl(t) || 'non rendue');
       return { e: t.e.c, badge: t.e.bd, nom: nom(t), heure: hh(t.faitLe),
         meta: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hh(t.faitLe) : hh(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : '')),
@@ -13617,7 +12678,7 @@ class App {
     const mkRep = r => ({ nom: r.nom, aide: r.aide || '', nb: String(r.nb),
       pct: r.pct + ' %', txt: r.nb + ' · ' + r.pct + ' %',
       dotSt: 'width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:' + r.couleur,
-      barSt: 'display:block;height:5px;border-radius:999px;background:' + r.couleur + ';width:' + Math.max(r.nb > 0 ? 3 : 0, Math.min(100, r.pct)) + '%' });
+      barSt: 'display:block;height:5px;border-radius:8px;background:' + r.couleur + ';width:' + Math.max(r.nb > 0 ? 3 : 0, Math.min(100, r.pct)) + '%' });
     // Le filtre d'état, le même pour la liste et pour les photos.
     const garde = t =>
         common.ctrlOnly === 'tous' ? true
@@ -13655,27 +12716,13 @@ class App {
                  + (t.faitePar ? ' · ' + t.faitePar : ''))
               : '',
             btnLabel: t.valide ? 'Renoter' : 'Noter',
-            btnSt: 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;border:0.5px solid ' + (t.valide ? 'var(--color-border-secondary);background:transparent;color:var(--color-text-muted)' : 'transparent;background:var(--color-primary);color:#fff'),
+            btnSt: 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 14px;border-radius:8px;border:0.5px solid ' + (t.valide ? 'var(--color-border-secondary);background:transparent;color:var(--color-text-muted)' : 'transparent;background:var(--color-primary);color:#fff'),
             toggle: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
             open: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache),
-            // Contrôle par exception : maîtrisée, la tâche sort de la liste du
-            // jour — sans disparaître. Le motif et la date de re-contrôle
-            // restent lisibles, et un bouton la ramène tout de suite.
-            maitrisee: !!(t.maitrise && t.maitrise.masquee),
-            maitriseMotif: (t.maitrise && t.maitrise.motif) || '',
-            maitriseMoy: (t.maitrise && t.maitrise.moyenne != null)
-              ? String(t.maitrise.moyenne).replace('.', ',') + ' / 5 sur ' + t.maitrise.nb + ' contrôles' : '',
-            recontrole: (t.maitrise && t.maitrise.recontrole) ? 'Re-contrôle le ' + this.fD(t.maitrise.recontrole) : '',
-            rouvrir: () => this.ctrlRouvrir(s.shopId, t.taskId, t.tache),
           }));
-        const aFaire = taches.filter(t => !t.maitrisee);
-        const masquees = taches.filter(t => t.maitrisee);
         return { shop: s.shop, shopId: s.shopId, nTaches: (s.taches || []).length,
           nValid: (s.taches || []).filter(x => x.valide).length,
-          taches: aFaire, masquees, nMasquees: masquees.length,
-          // Une boutique dont TOUT est maîtrisé n'est pas vide : elle est au
-          // vert. Le dire vaut mieux que de la faire disparaître de l'écran.
-          vide: aFaire.length === 0 && masquees.length === 0 };
+          taches, vide: taches.length === 0 };
       }).filter(s => !(common.ctrlOnly !== 'tous' && s.vide));
     common.ctrlShops = shops;
     common.ctrlEmpty = shops.length === 0;
@@ -13688,9 +12735,6 @@ class App {
       const brut = {}; (pt.shops || []).forEach(s2 => { brut[String(s2.shopId)] = s2; });
       shops.forEach(s2 => { s2.cq = this.ctrlCartes(brut[String(s2.shopId)] || { shopId: s2.shopId, taches: [] }, pt, garde, seuilC, nomNiveau); });
     }
-    common.ctrlMasqTout = !!S.ctrlMasqTout;
-    common.ctrlMasqPlier = () => this.setState({ ctrlMasqTout: !S.ctrlMasqTout });
-    common.ctrlMasqTotal = shops.reduce((a, s2) => a + s2.nMasquees, 0);
 
     common.ctrlConsultants = (pt.consultants || []).map(c => ({
       nom: c.nom, avis: String(c.avis), refuses: String(c.refuses), valides: String(c.valides),
@@ -13764,7 +12808,7 @@ class App {
             pick: () => this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { note: lv.n }) })) }; }),
         verdict: (() => { const n2 = dt.note || this.ctrlNoteDeduite(dt.rep);
           return n2 == null ? '' : (n2 >= ((M.SIGNAL || {}).seuil || 4) ? 'Conforme' : 'Non conforme'); })(),
-        verdictSt: dt.note == null ? '' : 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+        verdictSt: dt.note == null ? '' : 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:500;'
           + (dt.note >= ((M.SIGNAL || {}).seuil || 4) ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(141,29,44,0.12);color:#8D1D2C'),
         commentRequis: (dt.note || this.ctrlNoteDeduite(dt.rep) || 99) < ((M.SIGNAL || {}).seuil || 4),
         produit: d.produit || '', photoRef: d.photoRef || null,
@@ -13889,7 +12933,6 @@ class App {
                   this.notify((r && r.error) || 'Réclamation refusée'); return;
                 }
                 patch({ busy: false, fait: r.id || true, ouvert: false });
-                this.D.recl = null;   // l'écran fournisseurs se relira
                 this.notify('Réclamation déposée' + (r.id ? ' (#' + r.id + ')' : ''));
               });
             },
@@ -14649,7 +13692,7 @@ class App {
         .concat(p.taches.map(t => ({ k: p.id + ':' + t.id, type: 'Tâche', nom: t.nom, due: t.due, done: t.done, obj: t })))
         .sort((a, b) => a.due < b.due ? -1 : 1);
       const nReste = steps.filter(e => !e.done).length;
-      return { nom: p.nom, levs: p.leviers, fin: this.fD(p.fin), av: Math.round(av * 100) + ' %', avSt: 'height:100%;border-radius:999px;background:var(--color-primary);width:' + (av * 100) + '%',
+      return { nom: p.nom, levs: p.leviers, fin: this.fD(p.fin), av: Math.round(av * 100) + ' %', avSt: 'height:100%;border-radius:8px;background:var(--color-primary);width:' + (av * 100) + '%',
         statut: st, statutSt: this.statutStyle(st),
         alerte: st === 'En retard' ? 'échéance dépassée' : (lateT ? lateT + ' tâche(s) en retard' : false),
         ouvert, rienReste: ouvert && steps.length === 0,
@@ -14689,274 +13732,6 @@ class App {
           this.log('Famille', p.nom, 'Famille passée de « ' + this.pFamille(p) + ' » à « ' + fa + ' » (kanban)'); this.notify('« ' + p.nom + ' » → ' + fa); } }; });
   }
 
-  /* --- tâches consultants --------------------------------------------------------- */
-  valsTaches(common, flat){
-    const S = this.state, D = this.D, M = this.M;
-    // --- Tableau de bord du consultant : ce qui l'attend, en cinq tuiles.
-    // Une tuile ne s'allume que si elle demande une action — un cadre coloré
-    // devant un compteur à zéro use l'attention pour rien, et le jour où un
-    // vrai retard apparaît il ne se distingue plus.
-    const PT = (D.pwaTasks || {}).totals || {};
-    const enRetard = flat.filter(t => !t.t.done && t.t.due < M.TODAY).length;
-    const aNoter = flat.filter(t => !!t.t.done && (t.t.note === null || t.t.note === undefined)).length;
-    const nProjLate = (D.projects || []).filter(pr => (pr.taches || [])
-      .some(t => !t.done && t.due && t.due < M.TODAY)).length;
-    const tuile = (cle, n, lib, sous, ecran, urgent) => ({
-      cle, n, lib, sous,
-      valeur: n == null ? '' : Math.round(n).toLocaleString('fr-BE'),
-      vif: !!n && urgent,
-      col: (!!n && urgent) ? 'var(--color-primary)' : (n ? 'var(--color-text)' : 'var(--color-text-muted)'),
-      // La tuile emmène AVEC son filtre : arriver sur la liste complète après
-      // avoir cliqué « à contrôler » oblige à refaire à la main le tri qu'on
-      // vient de demander.
-      go: ecran ? () => this.setState(Object.assign({ screen: ecran },
-        cle === 'controler' ? { ctrlOnly: 'acontroler', ctrlShop: 'Toutes les boutiques' }
-        : cle === 'sansPhoto' ? { ctrlOnly: 'sansphoto', ctrlShop: 'Toutes les boutiques' } : {})) : null });
-    // --- P&L court par magasin : où en est chacun sur le mois EN COURS.
-    // La source est l'API, pas la caisse en base : celle-ci s'arrête au dernier
-    // jour encodé (mesuré : 34 jours de retard), et un mois clos ne répond pas
-    // à « où en sont-ils aujourd'hui ».
-    this.tkReseau();
-    const R = this.D.tkReseau || null;
-    common.tkPnlEtat = R ? (R.etat || 'attente') : 'chargement';
-    common.tkPnlPeriode = R && R.du ? (this.fD(R.du) + ' → ' + this.fD(R.au)) : '';
-    const budgets = (D.budgets || []);
-    const objDe = id => { const b = budgets.find(x => String(x.storeId || x.shopId || x.id) === String(id));
-      const v = b ? (b.caObjectifMois != null ? b.caObjectifMois : (b.caT != null ? b.caT : null)) : null;
-      return (v != null && isFinite(v) && v > 0) ? +v : null; };
-    const mags = ((R && R.magasins) || []).slice().sort((a, b) => (b.n || 0) - (a.n || 0));
-    const hi = Math.max.apply(null, mags.map(m => m.n || 0).concat([1]));
-    common.tkPnl = mags.map(m => {
-      const obj = objDe(m.shopId);
-      const att = obj ? (m.n || 0) / obj : null;
-      return { nom: m.magasin, ca: this.fMt(m.n),
-        // Une barre relative au plus gros magasin, faute d'objectif : elle
-        // compare les tailles, et l'écran ne prétend pas mesurer une atteinte
-        // qui n'existe pas.
-        barre: 'display:block;height:6px;border-radius:999px;background:var(--color-primary);width:'
-          + Math.max(3, Math.round(100 * (m.n || 0) / hi)) + '%',
-        n1: m.n1 ? this.fMt(m.n1) : '',
-        ecart: m.ecart == null ? '' : (m.ecart >= 0 ? '+' : '') + String(m.ecart).replace('.', ',') + ' %',
-        ecartCol: m.ecart == null ? 'var(--color-text-muted)' : (m.ecart >= 0 ? '#2d7a3e' : 'var(--color-primary)'),
-        tickets: m.tickets ? Math.round(m.tickets).toLocaleString('fr-BE') : '',
-        panier: m.panier ? this.fU(m.panier) : '',
-        obj: obj ? this.fMt(obj) : null,
-        att: att == null ? null : this.fP(att, 0),
-        attCol: att == null ? '' : (att >= 0.95 ? '#2d7a3e' : att >= 0.8 ? '#B87512' : 'var(--color-primary)') };
-    });
-    common.tkPnlSansObj = common.tkPnl.filter(x => !x.obj).length;
-    common.tkPnlTotal = common.tkPnl.length;
-
-    common.tkTuiles = [
-      tuile('controler', PT.aControler || 0, 'À contrôler',
-        'tâches photographiées, en attente de note', 'controle', true),
-      tuile('sansPhoto', PT.sansPhoto || 0, 'Rendues sans photo',
-        'faites, mais rien à juger', 'controle', false),
-      tuile('mesTaches', enRetard, 'Mes tâches en retard',
-        'échéance dépassée, non rendues', null, true),
-      tuile('aNoter', aNoter, 'À noter',
-        'mes tâches rendues, pas encore évaluées', null, false),
-      tuile('projets', nProjLate, 'Projets en retard',
-        'au moins un jalon dépassé', 'projets', true)
-    ];
-
-    // Le compte connecté EST un consultant : ses tâches sont les siennes, et
-    // c'est ce qu'il vient voir. L'identifiant vient du panel (la position du
-    // compte qui interroge), pas d'un rapprochement de noms — « Sam V. » et
-    // « Sam Verheyden » ne se ressemblent que pour un humain.
-    const moiId = ((this.meta || {}).utilisateur || {}).consultantId || null;
-    const moi = moiId ? (D.consultants || []).find(c => String(c.id) === String(moiId)) : null;
-    common.tkMoi = moi ? moi.nom : '';
-    common.tkMoiVal = moi ? 'c:' + moi.id : '';
-    common.tkMoiOn = !!moi && S.tkWho === 'c:' + moi.id;
-    common.tkMoiGo = moi ? () => this.setState({ tkWho: common.tkMoiOn ? 'all' : 'c:' + moi.id }) : null;
-    common.tkMoiN = moi ? flat.filter(x => (x.t.owner.t + ':' + x.t.owner.id) === 'c:' + moi.id && !x.t.done).length : 0;
-    common.tkWho = S.tkWho;
-    common.setTkWho = e => this.setState({ tkWho: e.target.value });
-    common.tkPeople = [{ val: 'all', nom: 'Tous les intervenants' }]
-      .concat(D.consultants.map(c => ({ val: 'c:' + c.id,
-        nom: c.nom + ' — ' + c.role + (String(c.id) === String(moiId) ? ' (moi)' : '') })))
-      .concat(D.suppliers.map(s => ({ val: 's:' + s.id, nom: s.nom + ' — Fournisseur' })));
-    common.tkStore = S.tkStore;
-    common.setTkStore = e => this.setState({ tkStore: e.target.value });
-    common.tkStores = [{ val: 'tous', nom: 'Tous les magasins' }, { val: 'reseau', nom: 'Tâches réseau (sans magasin)' }]
-      .concat(D.stores.map(s => ({ val: s.id, nom: s.nom })));
-    const mine = flat.filter(x => (S.tkWho === 'all' || (x.t.owner.t + ':' + x.t.owner.id) === S.tkWho)
-      && (S.tkStore === 'tous' || (S.tkStore === 'reseau' ? !x.t.magasin : x.t.magasin === S.tkStore)));
-    const SG = M.SIGNAL || { seuil: 4, niveaux: [], familles: [] };
-    const seuil = SG.seuil || 4;
-    const niv = n => (SG.niveaux || []).find(l => l.n === n) || { n, nom: n + '/5', couleur: '#666', aide: '' };
-    // Une tâche livrée mais pas encore notée attend une décision : c'est le
-    // seul état que la case à cocher ne savait pas exprimer.
-    const aValider = x => !!x.t.done && (x.t.note === null || x.t.note === undefined);
-    const validee = x => x.t.note !== null && x.t.note !== undefined;
-    const nValid = mine.filter(validee).length;
-    const nAttente = mine.filter(aValider).length;
-    const nRetard = mine.filter(x => !x.t.done && x.t.due < M.TODAY).length;
-    const notes = mine.filter(validee).map(x => x.t.note);
-    const moy = notes.length ? (notes.reduce((a, b) => a + b, 0) / notes.length) : null;
-    const nSignal = mine.filter(x => x.t.signalement && x.t.signalement.ouvert).length;
-    common.tkResume = mine.length + ' tâches · ' + nAttente + ' à valider · ' + nValid + ' validées'
-      + (moy !== null ? ' · note moyenne ' + moy.toFixed(1).replace('.', ',') : '')
-      + (nSignal ? ' · ' + nSignal + ' signalement' + (nSignal > 1 ? 's' : '') + ' ouvert' + (nSignal > 1 ? 's' : '') : '')
-      + (nRetard ? ' · ' + nRetard + ' en retard' : '');
-    common.tkVide = mine.length === 0;
-    const ordre = mine.slice().sort((a, b) => (validee(a) ? 1 : 0) - (validee(b) ? 1 : 0) || (a.t.due < b.t.due ? -1 : 1));
-    const mk = (x, i) => { const done = !!x.t.done, late = !done && x.t.due < M.TODAY, ouvert = !!S.openInfo['tk:' + x.t.id];
-      const crm = D.crm[x.p.id];
-      const mag = x.t.magasin ? (D.stores.find(s => s.id === x.t.magasin) || {}).nom : null;
-      const note = validee(x) ? x.t.note : null, sig = x.t.signalement;
-      const l = note !== null ? niv(note) : null;
-      // Le brouillon de la ligne : la note ne part qu'au clic sur « Valider ».
-      const d = S.tkVal['tk:' + x.t.id] || { note: note, famille: '', type: '', commentaire: '' };
-      const dn = d.note, dl = dn ? niv(dn) : null, sous = !!dn && dn < seuil;
-      const fams = SG.familles || [];
-      const famCour = d.famille || (fams[0] || {}).nom || '';
-      const typs = ((fams.find(f => f.nom === famCour) || {}).types) || [];
-      const maj = f => this.setState(s2 => ({ tkVal: Object.assign({}, s2.tkVal, { ['tk:' + x.t.id]: Object.assign({}, d, f) }) }));
-      // Le passif de l'intervenant : valider sans lui, c'est valider de mémoire.
-      const sien = mine.filter(y => y.o.nom === x.o.nom);
-      const sesNotes = sien.filter(validee).map(y => y.t.note);
-      const sesSig = sien.filter(y => y.t.signalement && y.t.signalement.ouvert).length;
-      return { nom: x.t.nom, qui: x.o.nom, projet: x.p.nom, ouvert, hasMag: !!mag, magasin: mag || '',
-        due: note !== null ? 'Validée le ' + this.fD(x.t.done) : done ? (x.t.renduePar ? 'Annoncée le ' : 'Cochée le ') + this.fD(x.t.done)
-          : (late ? 'En retard depuis le ' : 'Pour le ') + this.fD(x.t.due),
-        rowSt: i === 0 ? '' : 'border-top:0.5px solid var(--color-border-tertiary)',
-        nomSt: 'font-size:13px;font-weight:500;line-height:1.4;' + (note !== null ? 'color:var(--color-text-muted)' : ''),
-        dueSt: 'flex:0 0 auto;font-size:11.5px;font-weight:500;white-space:nowrap;margin-top:1px;color:' + (late ? '#8D1D2C' : note !== null ? l.couleur : 'var(--color-text-muted)'),
-        // La case garde son sens d'origine — « livrée » — et la note s'y ajoute.
-        boxSt: 'flex:0 0 auto;width:17px;height:17px;margin-top:1px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border:1px ' + (done && note === null ? 'dashed #8D1D2C' : 'solid ' + (done ? '#2d7a3e' : 'var(--color-border-secondary)')) + ';background:' + (note !== null ? '#2d7a3e' : 'transparent') + ';color:' + (note !== null ? '#fff' : '#8D1D2C'),
-        boxTxt: note !== null ? '✓' : done ? '?' : '',
-        // La pastille de niveau, sur la ligne repliée.
-        hasLvl: note !== null,
-        lvlTxt: note !== null ? l.nom : '',
-        lvlSt: note !== null ? 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px 2px 4px;white-space:nowrap;background:' + l.couleur + '1f;color:' + l.couleur : '',
-        lvlNum: note !== null ? String(note) : '',
-        lvlNumSt: note !== null ? 'width:15px;height:15px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;background:' + l.couleur : '',
-        hasSig: !!(sig && sig.ouvert),
-        sigTxt: sig && sig.ouvert ? 'Signalement · ' + sig.famille + ' · ' + sig.type : '',
-        sigSt: 'display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:rgba(141,29,44,.10);color:#8D1D2C',
-        chevSt: 'flex:0 0 auto;font-size:11px;color:var(--color-text-muted);transition:transform 0.15s;transform:rotate(' + (ouvert ? '180deg' : '0deg') + ')',
-        rows: [{ k: 'Attendu', v: x.t.desc || crm && crm.objectif || x.p.valeurTxt || '' },
-          { k: 'Intervenant', v: x.o.nom + ' — ' + x.o.type }, { k: 'Contact', v: x.o.email },
-          { k: 'Échéance', v: this.fD(x.t.due) + (done ? ' · rendue le ' + this.fD(x.t.done) : late ? ' · dépassée' : '') },
-          { k: 'Budget', v: x.t.budget !== null && x.t.budget !== undefined ? this.fE(x.t.budget) : '' },
-          { k: 'Remise', v: done ? (x.t.renduePar ? 'Annoncée par ' + x.t.renduePar + ' le ' + this.fD(x.t.done) : 'Cochée par la direction le ' + this.fD(x.t.done)) : 'Pas encore annoncée' },
-          { k: 'Mot du consultant', v: x.t.noteRemise || '' },
-          { k: 'Relance', v: x.t.relance ? 'Envoyée le ' + this.fD(x.t.relance) : 'Aucune' },
-          { k: 'Projet', v: x.p.nom }, { k: 'Magasin', v: mag || 'Réseau — aucun magasin' }]
-          .concat(x.t.panelNote ? [{ k: 'Panel', v: 'Note #' + x.t.panelNote + ' déposée sur le magasin — visible par le consultant' }] : []),
-        // La photo qui a motivé la demande, avec ses repères. Chargée seulement
-        // quand la ligne est dépliée : une liste de trente tâches ne doit pas
-        // déclencher trente lectures d'API.
-        photo: (() => {
-          const src = x.t.source;
-          if (!src) { return null; }
-          const d2 = ouvert ? this.srcCharge(src) : null;
-          const jf = s2 => String(s2 || '').split('-').reverse().join('/');
-          if (!ouvert) { return { attente: true, titre: 'Photo de contrôle du ' + jf(src.date) }; }
-          if (!d2) { return { chargement: true, titre: 'Photo de contrôle du ' + jf(src.date) }; }
-          if (d2.erreur || !d2.photo) {
-            return { vide: true, titre: 'Photo de contrôle du ' + jf(src.date),
-              motif: d2.erreur ? 'lecture impossible' : 'aucune photo sur cette tâche de contrôle' };
-          }
-          const NIV = { 1: '#8D1D2C', 2: '#C17A2A', 3: '#C9A227', 4: '#6b8f4e', 5: '#2d7a3e' };
-          // `reperes` est un OBJET {liste, maj, auteur}, pas un tableau : appeler
-          // `.map` dessus jetait dans le calcul des valeurs, et l'écran restait
-          // figé sur « lecture de la photo… » sans rien dire.
-          const brut = (d2.reperes && Array.isArray(d2.reperes.liste)) ? d2.reperes.liste
-            : (Array.isArray(d2.reperes) ? d2.reperes : []);
-          const rep = brut.map(r => ({
-            n: r.n, txt: r.txt || '',
-            coul: NIV[r.niveau] || '#8D1D2C',
-            boxSt: 'position:absolute;left:' + (r.x * 100).toFixed(2) + '%;top:' + (r.y * 100).toFixed(2)
-              + '%;width:' + (r.l * 100).toFixed(2) + '%;height:' + (r.h * 100).toFixed(2)
-              + '%;border:2px solid ' + (NIV[r.niveau] || '#8D1D2C') + ';border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.25)',
-            numSt: 'position:absolute;left:-1px;top:-1px;transform:translate(-40%,-40%);width:17px;height:17px;border-radius:50%;'
-              + 'display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;background:'
-              + (NIV[r.niveau] || '#8D1D2C') }));
-          const cle = src.shopId + '/' + src.taskId + '/' + src.date;
-          const perdue = !!(this.D.srcPhotoErr || {})[cle];
-          if (!perdue) { this.srcSurveille(cle); }
-          return { titre: 'Photo de contrôle du ' + jf(src.date),
-            url: d2.photo, cle, imgErr: perdue,
-            imgErrTxt: 'Le lien signé de la photo a expiré ou le stockage du panel est injoignable. Rouvrez la tâche dans Contrôle des tâches pour en obtenir un neuf.',
-            tache: d2.tache || ('Tâche #' + src.taskId),
-            // Les cadres disparaissent avec la photo, PAS les remarques : ce que
-            // le consultant doit reprendre se lit même sans le cliché.
-            reperes: rep,
-            nRep: rep.length,
-            legende: rep.length
-              ? rep.length + ' repère' + (rep.length > 1 ? 's' : '') + ' posé' + (rep.length > 1 ? 's' : '') + ' au contrôle'
-                + ((d2.reperes || {}).auteur ? ' par ' + d2.reperes.auteur : '')
-              : 'aucun repère posé sur cette photo',
-            avis: d2.avis && d2.avis.note != null
-              ? ('notée ' + d2.avis.note + '/5' + (d2.avis.comment ? ' — ' + d2.avis.comment : ''))
-              : '' };
-        })(),
-        // Supprimer une tâche : une note envoyée par erreur, un essai, un
-        // doublon. Le journal en garde la trace — c'est lui la mémoire.
-        supprimer: () => {
-          if (!window.confirm('Supprimer la tâche « ' + x.t.nom + ' » ?\n\nSes signalements éventuels partent avec elle. Le journal en garde la trace.')) { return; }
-          this.api('DELETE', '/projects/' + x.p.id + '/tasks/' + x.t.id, {}).then(r => {
-            if (!r || r.ok === false) { this.notify((r && r.error) || 'Suppression refusée'); return; }
-            readOne('/projects').then(pj => { if (pj) { this.D.projects = pj; } this.setState({ tkSuppr: x.t.id }); });
-            this.notify('Tâche supprimée' + (r.signalements ? ' — ' + r.signalements + ' signalement(s) fermé(s)' : ''));
-          });
-        },
-        histo: [{ k: 'Ce mois', v: sesNotes.length ? sesNotes.length + ' tâche' + (sesNotes.length > 1 ? 's' : '') + ' validée' + (sesNotes.length > 1 ? 's' : '') + ' · note moyenne ' + (sesNotes.reduce((a, b) => a + b, 0) / sesNotes.length).toFixed(1).replace('.', ',') : 'Aucune tâche validée' },
-          { k: 'Signalements', v: sesSig ? sesSig + ' ouvert' + (sesSig > 1 ? 's' : '') : 'Aucun ouvert' }],
-        // --- le panneau de validation
-        vOuvert: done,
-        vNote: dn || 0,
-        starSt: n => 'border:0;background:none;padding:0 1px;font-size:25px;line-height:1;cursor:pointer;color:' + (dn && n <= dn ? dl.couleur : '#d9d2c8'),
-        setNote: n => maj({ note: n === dn ? null : n }),
-        hasLvb: !!dn,
-        lvbTxt: dl ? dl.nom : '', lvbNum: dn ? String(dn) : '', lvbAide: dl ? dl.aide : '',
-        lvbSt: dl ? 'margin-top:7px;border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;background:' + dl.couleur + '1f;color:' + dl.couleur : '',
-        lvbNumSt: dl ? 'width:19px;height:19px;border-radius:50%;color:#fff;font-style:normal;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + dl.couleur : '',
-        sousSeuil: sous,
-        sousTxt: sous ? dl.nom.replace('Non conforme — ', '') + ' — ' + dn + '/5' : '',
-        fams: fams.map(f => f.nom), famCour,
-        // Changer de famille remet le type à zéro : « Cuisson » sous « Budget »
-        // n'existe pas, et un couple impossible passerait sans bruit.
-        setFam: e => maj({ famille: e.target.value, type: '' }),
-        typs, typCour: d.type || typs[0] || '',
-        setTyp: e => maj({ type: e.target.value }),
-        commentaire: d.commentaire || '',
-        setCom: e => maj({ commentaire: e.target.value }),
-        boutonTxt: sous ? 'Valider et signaler' : 'Valider la tâche',
-        peutValider: !!dn && (!sous || (famCour && (d.type || typs[0]))),
-        valider: e => { e.stopPropagation();
-          if (!dn) { this.notify('Choisissez une note avant de valider'); return; }
-          const fa = sous ? famCour : null, ty = sous ? (d.type || typs[0]) : null;
-          if (sous && (!fa || !ty)) { this.notify('Famille et type de problème obligatoires'); return; }
-          x.t.note = dn; x.t.done = x.t.done || M.TODAY;
-          if (sous) { x.t.signalement = { note: dn, famille: fa, type: ty, comment: d.commentaire || null, statut: 'nouveau', ouvert: true, creeLe: M.TODAY, creePar: 'CEO' }; }
-          this.api('PATCH', '/projects/' + x.p.id + '/tasks/' + x.t.id,
-            { note: dn, famille: fa, type: ty, commentaire: d.commentaire || null, done: x.t.done, par: 'CEO' });
-          this.log('Validation', x.p.nom, 'Tâche « ' + x.t.nom + ' » validée ' + dn + '/5 — ' + dl.nom + ' (' + x.o.nom + ')');
-          if (sous) { this.log('Signalement', x.p.nom, 'Signalement ouvert sur « ' + x.t.nom + ' » — ' + fa + ' · ' + ty); }
-          this.setState(s2 => ({ tkVal: Object.assign({}, s2.tkVal, { ['tk:' + x.t.id]: undefined }),
-            openInfo: Object.assign({}, s2.openInfo, { ['tk:' + x.t.id]: false }) }));
-          this.notify('« ' + x.t.nom + ' » ' + dn + '/5 — ' + dl.nom); this.forceUpdate(); },
-        toggleOpen: () => this.setState(s2 => ({ openInfo: Object.assign({}, s2.openInfo, { ['tk:' + x.t.id]: !s2.openInfo['tk:' + x.t.id] }) })),
-        check: e => { e.stopPropagation();
-          // La case ne dit plus que « rendue » : dénoter se fait par les étoiles.
-          const nv = done ? null : M.TODAY;
-          x.t.done = nv; if (nv === null) { x.t.note = null; }
-          this.api('PATCH', '/projects/' + x.p.id + '/tasks/' + x.t.id, nv === null ? { done: null, note: null } : { done: nv });
-          this.log('Tâche', x.p.nom, 'Tâche « ' + x.t.nom + ' » ' + (done ? 'rouverte' : 'rendue le ' + this.fD(M.TODAY)) + ' (' + x.o.nom + ')');
-          this.notify('« ' + x.t.nom + ' » ' + (done ? 'rouverte' : 'rendue')); this.forceUpdate(); } }; };
-    const grp = [['En retard', '#8D1D2C', x => !x.t.done && x.t.due < M.TODAY],
-      ['À valider', '#8D1D2C', aValider],
-      ['À faire', '#8a5a13', x => !x.t.done && x.t.due >= M.TODAY],
-      ['Validées', '#2d7a3e', validee]];
-    common.tkGroups = grp.map(([nom, couleur, f]) => { const items = ordre.filter(f);
-      return { nom, couleur, n: items.length, items: items.map((x, i) => mk(x, i)),
-        dotSt: 'width:6px;height:6px;border-radius:999px;background:' + couleur }; }).filter(g => g.n > 0);
-  }
-
   /* --- suivi des tâches ------------------------------------------------------------- */
   /**
    * Ce qui a été validé sur la période, et les signalements à traiter.
@@ -14981,7 +13756,7 @@ class App {
       st: 'border:0.5px solid ' + (S.suiviPeriode === v ? 'var(--color-primary)' : 'var(--color-border-secondary)')
         + ';background:' + (S.suiviPeriode === v ? 'var(--color-primary)' : 'transparent')
         + ';color:' + (S.suiviPeriode === v ? '#fff' : 'var(--color-text)')
-        + ';border-radius:999px;padding:5px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer' }));
+        + ';border-radius:8px;padding:5px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer' }));
 
     const d = S.suiviData;
     if (d === null) { this.chargerSuivi(S.suiviPeriode); common.suChargement = true; return; }
@@ -15000,7 +13775,7 @@ class App {
     const tot = Object.values(d.repartition).reduce((a, b) => a + b, 0) || 1;
     common.suBarres = [5, 4, 3, 2, 1].map(n => { const l = niv(n), v = d.repartition[n] || 0;
       return { nom: l.nom, n: String(v), pct: Math.round(v / tot * 100),
-        barSt: 'height:7px;border-radius:999px;background:' + l.couleur + ';width:' + Math.round(v / tot * 100) + '%',
+        barSt: 'height:7px;border-radius:8px;background:' + l.couleur + ';width:' + Math.round(v / tot * 100) + '%',
         libSt: 'font-size:11.5px;font-weight:500;color:' + l.couleur }; });
 
     common.suGens = d.parIntervenant.map(x => ({
@@ -15036,9 +13811,9 @@ class App {
         aCommentaire: (g.comment || '').trim() !== '',
         age: jours(g.creeLe), ouvert: g.ouvert,
         lvlTxt: l.nom, lvlNum: String(g.note),
-        lvlSt: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px 2px 4px;white-space:nowrap;background:' + l.couleur + '1f;color:' + l.couleur,
+        lvlSt: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:8px;padding:2px 9px 2px 4px;white-space:nowrap;background:' + l.couleur + '1f;color:' + l.couleur,
         lvlNumSt: 'width:15px;height:15px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;background:' + l.couleur,
-        etat, etatSt: 'font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;background:' + etatC + '1f;color:' + etatC,
+        etat, etatSt: 'font-size:10.5px;font-weight:600;border-radius:8px;padding:2px 9px;background:' + etatC + '1f;color:' + etatC,
         rowSt: 'display:flex;gap:12px;padding:12px 16px;border-bottom:0.5px solid var(--color-border-tertiary)'
           + (g.ouvert ? ';border-left:3px solid ' + l.couleur : ''),
         note: brouillon, majNote,
@@ -15114,7 +13889,7 @@ class App {
         gravSt: 'font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-background-secondary);font-family:var(--font-ui);color:' + gc(r.gravite) + ';font-weight:600',
         rowSt: 'border-top:0.5px solid var(--color-border-tertiary);vertical-align:top' + (r.actif ? '' : ';opacity:0.55'),
         actifTxt: r.actif ? 'Active' : 'Inactive',
-        actifSt: 'cursor:pointer;font-size:10px;font-weight:500;border-radius:999px;padding:3px 9px;white-space:nowrap;border:none;font-family:var(--font-ui);'
+        actifSt: 'cursor:pointer;font-size:10px;font-weight:500;border-radius:8px;padding:3px 9px;white-space:nowrap;border:none;font-family:var(--font-ui);'
           + (r.actif ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
         set: k => e => setDraft(d => { d[r.i][k] = e.target.value; }),
         toggle: () => setDraft(d => { d[r.i].actif = !d[r.i].actif; }),
@@ -15157,7 +13932,7 @@ class App {
         url, placeholder: 'https://www.facebook.com/…', setUrl: setP(cle, 'pageUrl'), setFranchise: setP(cle, 'franchise'),
         modifie: !!pDraft[cle],
         etat: statut === 'connectee' ? 'Connectée' : statut === 'erreur' ? 'Erreur' : statut === 'absente' ? 'Pas de page' : 'À connecter',
-        etatSt: 'font-size:10px;font-weight:500;border-radius:999px;padding:3px 9px;white-space:nowrap;'
+        etatSt: 'font-size:10px;font-weight:500;border-radius:8px;padding:3px 9px;white-space:nowrap;'
           + (statut === 'connectee' ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : statut === 'erreur' ? 'background:rgba(192,24,43,0.12);color:#C0182B' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
         detail: base ? (base.erreur || (base.pageId ? 'id ' + base.pageId + (base.derniereSync ? ' · lue le ' + String(base.derniereSync).slice(0, 16) : '') : '')) : '' };
     };
@@ -15186,293 +13961,6 @@ class App {
       },
       annuler: () => this.setState({ bgPagesDraft: null, bgMail: null }),
     };
-  }
-
-  /* --- contrôle des posts Facebook -------------------------------------------------- */
-  valsPosts(common){
-    const S = this.state, D = this.D, M = this.M;
-    const FB = M.FB || { seuil: 4, familles: [], regles: [] };
-    const seuil = this.fbSeuil(), etats = this.fbEtats();
-    const posts = this.fbPosts();
-
-    common.fbStore = S.fbStore;
-    common.setFbStore = e => this.setState({ fbStore: e.target.value });
-    common.fbStores = [{ val: 'tous', nom: 'Tous les magasins' }, { val: 'reseau', nom: 'Posts réseau (sans magasin)' }]
-      .concat(D.stores.map(s => ({ val: s.id, nom: s.nom })));
-    const aTraiter = p => p.statut === 'a_controler' || p.statut === 'a_valider';
-    const filtres = { 'À traiter': aTraiter, 'Traités': p => !aTraiter(p), 'Tous': () => true };
-    common.fbEtatBtns = Object.keys(filtres).map(nom => ({ nom, go: () => this.setState({ fbEtat: nom }), st: this.tabBtn(S.fbEtat === nom) }));
-
-    const mine = posts.filter(p => (S.fbStore === 'tous' || (S.fbStore === 'reseau' ? !p.magasinId : p.magasinId === S.fbStore))
-      && filtres[S.fbEtat](p));
-    const nAttente = mine.filter(aTraiter).length;
-    const notes = mine.filter(p => p.decision.note !== null && p.decision.note !== undefined).map(p => p.decision.note);
-    const moy = notes.length ? notes.reduce((a, b) => a + b, 0) / notes.length : null;
-    const nRefus = mine.filter(p => p.statut === 'refuse').length;
-    // Les désaccords entre l'agent et le CEO : c'est le chiffre qui dit si le
-    // pack de règles est bien calibré. Trop d'écarts, et ce sont les règles
-    // qu'il faut reprendre, pas les franchisés.
-    const nDiverge = mine.filter(p => p.decision.note != null && p.agent.note != null && p.decision.note !== p.agent.note).length;
-    common.fbResume = mine.length + ' post' + (mine.length > 1 ? 's' : '') + ' · ' + nAttente + ' en attente'
-      + (moy !== null ? ' · note moyenne ' + moy.toFixed(1).replace('.', ',') : '')
-      + (nRefus ? ' · ' + nRefus + ' refusé' + (nRefus > 1 ? 's' : '') : '')
-      + (nDiverge ? ' · ' + nDiverge + ' décision' + (nDiverge > 1 ? 's' : '') + ' hors avis de l’agent' : '');
-    common.fbVide = mine.length === 0;
-    common.fbNewOpen = () => this.setState({ fbNew: { magasinId: (D.stores[0] || {}).id || '', auteur: '', format: 'Photo',
-      message: '', lien: '', visuel: '', alt: '', largeur: '1440', publierLe: M.TODAY, heure: '09:00' } });
-
-    const mk = (p, i) => {
-      const ouvert = !!S.openInfo['fb:' + p.id];
-      const [etatNom, etatCoul] = etats[p.statut] || ['—', '#666666'];
-      const an = p.agent.note, al = an != null ? this.fbNiv(an) : null;
-      const dn0 = p.decision.note, dl = dn0 != null ? this.fbNiv(dn0) : null;
-      const ecartsOuverts = (p.ecarts || []).filter(e => e.statut !== 'ignore');
-      const pire = ecartsOuverts.length ? ecartsOuverts.reduce((a, b) => a.gravite >= b.gravite ? a : b) : null;
-      // Le brouillon : la note de l'agent est reprise par défaut — le CEO
-      // contresigne ou corrige, il ne resaisit pas.
-      const d = S.fbVal['fb:' + p.id] || { note: dn0 != null ? dn0 : an,
-        famille: (p.decision.famille || (pire && pire.famille) || ''), type: (p.decision.type || (pire && pire.type) || ''),
-        commentaire: p.decision.commentaire || '' };
-      const dn = d.note, dnl = dn ? this.fbNiv(dn) : null;
-      const fams = FB.familles || [];
-      const famCour = d.famille || (fams[0] || {}).nom || '';
-      const typs = ((fams.find(f => f.nom === famCour) || {}).types) || [];
-      const typCour = d.type || typs[0] || '';
-      const maj = f => this.setState(s2 => ({ fbVal: Object.assign({}, s2.fbVal, { ['fb:' + p.id]: Object.assign({}, d, f) }) }));
-      const pill = (txt, coul) => ({ txt, st: 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:' + coul + '1f;color:' + coul });
-      const notePill = (n, l) => 'display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px 2px 4px;white-space:nowrap;background:' + l.couleur + '1f;color:' + l.couleur;
-      const noteNum = l => 'width:15px;height:15px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;font-style:normal;background:' + l.couleur;
-
-      // Une décision ne se prend que sur un post contrôlé. Sur un post déjà
-      // décidé, elle se reprend : un refus se lève, une validation se retire —
-      // tant que le post n'est pas publié.
-      const decidable = p.statut === 'a_valider' || p.statut === 'valide' || p.statut === 'refuse';
-      const envoyer = (decision) => {
-        if (!dn) { this.notify('Choisissez une note avant de décider'); return; }
-        const motif = decision === 'refuse' || dn < seuil;
-        if (motif && (!famCour || !typCour)) { this.notify('Famille et type obligatoires pour ' + (decision === 'refuse' ? 'refuser' : 'valider sous ' + seuil + '/5')); return; }
-        p.statut = decision === 'valide' ? 'valide' : 'refuse';
-        p.decision = { note: dn, famille: motif ? famCour : null, type: motif ? typCour : null,
-          commentaire: d.commentaire || null, le: M.TODAY + ' ' + new Date().toTimeString().slice(0, 5), par: 'CEO' };
-        this.api('PATCH', '/facebook/posts/' + p.id, { decision, note: dn,
-          famille: motif ? famCour : null, type: motif ? typCour : null, commentaire: d.commentaire || null, par: 'CEO' });
-        this.log(decision === 'valide' ? 'Validation' : 'Refus', p.magasin || '—',
-          'Post « ' + this.fbTitre(p.message) + ' » ' + (decision === 'valide' ? 'validé' : 'refusé') + ' ' + dn + '/5'
-          + (motif ? ' — ' + famCour + ' · ' + typCour : '')
-          + (an != null && an !== dn ? ' (agent : ' + an + '/5)' : ''));
-        this.setState(s2 => ({ fbVal: Object.assign({}, s2.fbVal, { ['fb:' + p.id]: undefined }) }));
-        this.notify('Post ' + (decision === 'valide' ? 'validé' : 'refusé') + ' ' + dn + '/5 — ' + dnl.nom);
-      };
-
-      return {
-        id: p.id, ouvert,
-        toggleOpen: () => this.setState(s2 => ({ openInfo: Object.assign({}, s2.openInfo, { ['fb:' + p.id]: !s2.openInfo['fb:' + p.id] }) })),
-        rowSt: i === 0 ? '' : 'border-top:0.5px solid var(--color-border-tertiary)',
-        format: p.format, auteur: p.auteur, magasin: p.magasin || 'Réseau',
-        extrait: this.fbTitre(p.message, 150), message: p.message,
-        etat: etatNom, etatSt: pill(etatNom, etatCoul).st,
-        quand: p.publierLe ? 'Publication ' + this.fD(p.publierLe.slice(0, 10)) + ' à ' + p.publierLe.slice(11, 16) : 'Sans date',
-        quandSt: 'flex:0 0 auto;font-size:11.5px;font-weight:500;white-space:nowrap;color:var(--color-text-muted)',
-        chevSt: 'flex:0 0 auto;font-size:11px;color:var(--color-text-muted);transition:transform 0.15s;transform:rotate(' + (ouvert ? '180deg' : '0deg') + ')',
-        // Deux notes, jamais confondues : ce que l'agent propose, ce que le CEO signe.
-        hasAgent: an != null, agentTxt: an != null ? 'Agent · ' + al.nom : '', agentNum: an != null ? String(an) : '',
-        agentSt: an != null ? notePill(an, al) : '', agentNumSt: an != null ? noteNum(al) : '',
-        agentResume: p.agent.resume || 'Post non encore contrôlé.',
-        hasDecision: dn0 != null, decisionTxt: dn0 != null ? 'CEO · ' + dl.nom : '', decisionNum: dn0 != null ? String(dn0) : '',
-        decisionSt: dn0 != null ? notePill(dn0, dl) : '', decisionNumSt: dn0 != null ? noteNum(dl) : '',
-        nEcarts: ecartsOuverts.length,
-        ecartsSt: 'display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:rgba(141,29,44,.10);color:#8D1D2C',
-        // --- le détail
-        rows: [{ k: 'Magasin', v: p.magasin || 'Réseau — aucun magasin' }, { k: 'Auteur', v: p.auteur },
-          { k: 'Format', v: p.format }, { k: 'Soumis le', v: p.soumisLe ? this.fD(p.soumisLe.slice(0, 10)) + ' à ' + p.soumisLe.slice(11, 16) : '—' },
-          { k: 'Publication prévue', v: p.publierLe ? this.fD(p.publierLe.slice(0, 10)) + ' à ' + p.publierLe.slice(11, 16) : 'Sans date' },
-          { k: 'Lien', v: p.lien || 'Aucun' },
-          { k: 'Contrôles', v: p.agent.passages ? p.agent.passages + ' passage' + (p.agent.passages > 1 ? 's' : '') + (p.agent.le ? ', dernier le ' + this.fD(p.agent.le.slice(0, 10)) : '') : 'Jamais contrôlé' },
-          { k: 'Décision', v: dn0 != null ? dl.nom + ' (' + dn0 + '/5) — ' + p.decision.par + ' le ' + this.fD((p.decision.le || '').slice(0, 10)) : 'En attente' },
-          { k: 'Publication', v: p.publie.le ? 'Publié le ' + this.fD(p.publie.le.slice(0, 10)) + (p.publie.fbId ? ' · id ' + p.publie.fbId : '') : 'Non publié' }],
-        medias: (p.medias || []).map(m2 => ({ nom: m2.nom, dim: (m2.largeur || '?') + '×' + (m2.hauteur || '?') + ' px',
-          alt: m2.alt || 'Texte alternatif absent',
-          altSt: 'font-size:11px;' + (m2.alt ? 'color:var(--color-text-muted)' : 'color:#8D1D2C;font-weight:500') })),
-        sansMedia: !(p.medias || []).length,
-        commentaireDecision: p.decision.commentaire || '',
-        ecarts: (p.ecarts || []).map(e => { const [gn, gc] = this.fbGrav(e.gravite); const off = e.statut === 'ignore';
-          return { type: e.type, famille: e.famille, regle: e.regle, message: e.message, extrait: e.extrait || '',
-            hasExtrait: !!e.extrait, ignore: off,
-            gravTxt: gn, gravSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-radius:999px;padding:2px 7px;white-space:nowrap;background:' + gc + (off ? '14' : '1f') + ';color:' + gc,
-            ligneSt: 'display:flex;flex-direction:column;gap:3px;padding:8px 0;border-top:0.5px solid var(--color-border-tertiary);' + (off ? 'opacity:0.55' : ''),
-            toggleTxt: off ? 'Rétablir' : 'Écarter',
-            // Écarter, c'est accorder une dérogation tracée — l'écart reste
-            // visible, il sort seulement du calcul de la note.
-            toggle: () => { const nv = off ? 'ouvert' : 'ignore';
-              e.statut = nv;
-              p.agent.note = this.fbNoteLocale(p.ecarts);
-              this.api('PATCH', '/facebook/posts/' + p.id + '/ecarts/' + e.id, { statut: nv, par: 'CEO' });
-              this.log('Contrôle', p.magasin || '—', 'Écart « ' + e.type + ' » ' + (off ? 'rouvert' : 'écarté')
-                + ' sur « ' + this.fbTitre(p.message) + ' » — note de l’agent ' + p.agent.note + '/5');
-              this.notify('Écart ' + (off ? 'rouvert' : 'écarté') + ' — note de l’agent ' + p.agent.note + '/5');
-              this.forceUpdate(); } }; }),
-        // --- panneau de décision
-        vOuvert: decidable,
-        vNote: dn || 0,
-        starSt: n => 'border:0;background:none;padding:0 1px;font-size:25px;line-height:1;cursor:pointer;color:' + (dn && n <= dn ? dnl.couleur : '#d9d2c8'),
-        setNote: n => maj({ note: n === dn ? null : n }),
-        hasLvb: !!dn, lvbTxt: dnl ? dnl.nom : '', lvbNum: dn ? String(dn) : '', lvbAide: dnl ? dnl.aide : '',
-        lvbSt: dnl ? 'margin-top:7px;border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;background:' + dnl.couleur + '1f;color:' + dnl.couleur : '',
-        lvbNumSt: dnl ? 'width:19px;height:19px;border-radius:50%;color:#fff;font-style:normal;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + dnl.couleur : '',
-        motifTxt: 'Motif — obligatoire sous ' + seuil + '/5 et pour tout refus',
-        sousSeuil: !!dn && dn < seuil,
-        fams: fams.map(f => f.nom), famCour,
-        // Changer de famille remet le type à zéro : « Créneau interdit » sous
-        // « Visuel » n'existe pas, et un couple impossible passerait sans bruit.
-        setFam: e => maj({ famille: e.target.value, type: '' }),
-        typs, typCour, setTyp: e => maj({ type: e.target.value }),
-        commentaire: d.commentaire || '', setCom: e => maj({ commentaire: e.target.value }),
-        peutValider: !!dn && (dn >= seuil || (famCour && typCour)),
-        peutRefuser: !!dn && !!famCour && !!typCour,
-        valider: e => { e.stopPropagation(); envoyer('valide'); },
-        refuser: e => { e.stopPropagation(); envoyer('refuse'); },
-        validerTxt: dn && dn < seuil ? 'Valider par dérogation' : 'Valider',
-        // Le contrôle tourne côté serveur : une seule implémentation des règles,
-        // donc rien à faire en mode démonstration — et l'écran le dit.
-        peutControler: p.statut !== 'publie',
-        controler: async e => { e.stopPropagation();
-          if (this.source !== 'api'){ this.notify('L’agent de contrôle tourne côté serveur — indisponible en mode démonstration.'); return; }
-          const r = await this.api('POST', '/facebook/posts/' + p.id + '/controle', {});
-          if (!r || !r.ok){ this.notify('Contrôle impossible — API injoignable.'); return; }
-          const j = await r.json();
-          await this.loadData();
-          const c = j.controle || {};
-          this.notify('Post contrôlé — ' + c.note + '/5 · ' + (c.resume || '')); },
-        estValide: p.statut === 'valide',
-        publier: e => { e.stopPropagation();
-          p.statut = 'publie'; p.publie = { le: M.TODAY + ' ' + new Date().toTimeString().slice(0, 5), fbId: null };
-          this.api('PATCH', '/facebook/posts/' + p.id, { statut: 'publie', par: 'CEO' });
-          this.log('Publication', p.magasin || '—', 'Post « ' + this.fbTitre(p.message) + ' » marqué publié');
-          this.notify('Post marqué publié'); this.forceUpdate(); }
-      };
-    };
-
-    const grp = [['À contrôler', '#8a5a13', p => p.statut === 'a_controler'],
-      ['À valider', '#8D1D2C', p => p.statut === 'a_valider'],
-      ['Refusés', '#8D1D2C', p => p.statut === 'refuse'],
-      ['Validés — à publier', '#2d7a3e', p => p.statut === 'valide'],
-      ['Publiés', '#666666', p => p.statut === 'publie'],
-      ['Brouillons', '#666666', p => p.statut === 'brouillon']];
-    common.fbGroups = grp.map(([nom, couleur, f]) => { const items = mine.filter(f);
-      return { nom, couleur, n: items.length, items: items.map((p, i) => mk(p, i)),
-        dotSt: 'width:6px;height:6px;border-radius:999px;background:' + couleur }; }).filter(g => g.n > 0);
-
-    // --- le pack de règles, tel qu'il est en service
-    const parFam = {};
-    for (const r of FB.regles || []){ (parFam[r.famille] = parFam[r.famille] || []).push(r); }
-    common.fbSeuilTxt = 'Publiable à partir de ' + seuil + '/5 — en dessous, la validation est une dérogation motivée.';
-    common.fbRegleFams = Object.keys(parFam).map(fam => ({
-      nom: fam, n: parFam[fam].filter(r => r.actif).length + '/' + parFam[fam].length,
-      regles: parFam[fam].map(r => { const [gn, gc] = this.fbGrav(r.gravite);
-        return { nom: r.nom, aide: r.aide || '', gravTxt: gn,
-          gravSt: 'font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-radius:999px;padding:2px 7px;white-space:nowrap;background:' + gc + '1f;color:' + gc,
-          nomSt: 'font-size:12px;font-weight:500;' + (r.actif ? '' : 'color:var(--color-text-muted);text-decoration:line-through'),
-          actifTxt: r.actif ? 'Active' : 'Inactive',
-          actifSt: 'cursor:pointer;font-size:10px;font-weight:500;border-radius:999px;padding:2px 8px;white-space:nowrap;'
-            + (r.actif ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
-          // Le pack entier repart : le serveur stocke un réglage, pas un delta.
-          toggle: () => { r.actif = !r.actif;
-            this.api('PUT', '/parametres/fbControle', { valeur: FB });
-            this.log('Paramètre', '—', 'Règle de contrôle « ' + r.nom + ' » ' + (r.actif ? 'activée' : 'désactivée'));
-            this.notify('Règle « ' + r.nom + ' » ' + (r.actif ? 'activée' : 'désactivée')); this.forceUpdate(); } }; })
-    }));
-    common.fbEchelle = (((M.SIGNAL || {}).niveaux) || []).map(l => ({ n: l.n, nom: l.nom, aide: l.aide,
-      numSt: 'width:17px;height:17px;border-radius:50%;color:#fff;font-size:9.5px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;background:' + l.couleur,
-      nomSt: 'font-size:11.5px;font-weight:500;color:' + l.couleur }));
-
-    // --- Brand Guard : la charte relue par le modèle, les pages, les chiffres.
-    //     Les chiffres viennent du serveur (/marketing/brand-guard/stats) ;
-    //     rien ne se recalcule ici, le rapport du lundi lit les mêmes.
-    const bgS = D.bgStats, bgP = D.bgPages;
-    const per = bgS && bgS.periodes ? (bgS.periodes[String(S.bgJours)] || bgS.periodes['30']) : null;
-    const sCoul = v => v == null ? '#666666' : v >= 90 ? '#2d7a3e' : v >= 75 ? '#D97706' : '#C0182B';
-    common.bg = {
-      absent: !bgS,
-      version: bgS ? bgS.charteVersion : '—',
-      claude: !!(bgS && bgS.anthropic && bgS.anthropic.configure),
-      meta: !!(bgS && bgS.meta && bgS.meta.configure),
-      etatTxt: !bgS ? 'Brand Guard injoignable.'
-        : (bgS.anthropic && bgS.anthropic.configure ? 'Charte relue par ' + bgS.anthropic.modele : 'Sans clé Anthropic : règles mécaniques seules')
-          + ' · ' + (bgS.meta && bgS.meta.configure ? 'Meta connecté (' + bgS.meta.version + ')' : 'Meta non connecté — META_SYSTEM_TOKEN absent'),
-      periodes: [7, 30, 90].map(j => ({ j, nom: j + ' j', on: S.bgJours === j, go: () => this.setState({ bgJours: j }),
-        st: 'border:none;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:500;padding:4px 10px;'
-          + (S.bgJours === j ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)') })),
-      controles: per ? per.controles : 0,
-      taux: per && per.tauxConformite != null ? per.tauxConformite + ' %' : '—', tauxCoul: sCoul(per ? per.tauxConformite : null),
-      score: per && per.scoreMoyen != null ? per.scoreMoyen + '/100' : '—', scoreCoul: sCoul(per ? per.scoreMoyen : null),
-      sauvages: per ? per.sauvages : 0, sauvagesCoul: per && per.sauvages ? '#C0182B' : '#2d7a3e',
-      boutiques: per ? per.boutiques.map(b => ({ nom: b.boutique || '—', n: b.controles,
-        taux: b.tauxConformite != null ? b.tauxConformite + ' %' : '—', tauxCoul: sCoul(b.tauxConformite),
-        score: b.scoreMoyen != null ? b.scoreMoyen : '—', sauvages: b.sauvages,
-        sauvagesSt: 'font-size:11px;font-weight:600;color:' + (b.sauvages ? '#C0182B' : 'var(--color-text-muted)'),
-        top: (b.topRegles || []).map(r => r.libelle + ' (' + r.n + ')').join(' · ') })) : [],
-      topRegles: per ? (per.topRegles || []).map(r => ({ nom: r.libelle, n: r.n })) : [],
-      pages: bgP && bgP.pages ? bgP.pages.map(p => ({ nom: p.boutique, franchise: p.franchise || '', url: p.pageUrl,
-        etat: p.statut === 'connectee' ? 'Connectée' : p.statut === 'erreur' ? 'Erreur' : 'À connecter',
-        etatSt: 'font-size:10px;font-weight:500;border-radius:999px;padding:2px 8px;white-space:nowrap;'
-          + (p.statut === 'connectee' ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : p.statut === 'erreur' ? 'background:rgba(192,24,43,0.12);color:#C0182B' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
-        detail: p.erreur || (p.derniereSync ? 'lu le ' + p.derniereSync.slice(0, 16) : (p.pageId ? 'id ' + p.pageId : 'URL à saisir')) })) : [],
-      // Résoudre : chaque URL devient un page_id — le serveur fait l'appel, le token ne quitte pas le serveur.
-      resoudre: async () => {
-        this.notify('Résolution des pages en cours…');
-        const r = await this.api('PUT', '/marketing/brand-guard/pages', { resoudre: true });
-        if (r && r.pages) { D.bgPages = r; }
-        const res = r && r.resolution;
-        this.notify(res && res.motif ? res.motif : res ? (res.pages || []).filter(x => x.ok).length + ' page(s) résolue(s) sur ' + (res.pages || []).length : 'Résolution impossible');
-        this.forceUpdate();
-      },
-      resoudreSt: 'border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;padding:5px 11px;border-radius:999px',
-    };
-
-    // --- modale de soumission (un post arrive normalement du magasin ;
-    //     ici, de quoi en soumettre un et voir l'agent travailler)
-    const nw = S.fbNew;
-    common.fbNew = nw && {
-      magasinId: nw.magasinId, format: nw.format, auteur: nw.auteur, message: nw.message, lien: nw.lien,
-      visuel: nw.visuel, alt: nw.alt, largeur: nw.largeur, publierLe: nw.publierLe, heure: nw.heure,
-      stores: D.stores.map(s => ({ val: s.id, nom: s.nom })),
-      formats: ['Photo', 'Carrousel', 'Vidéo', 'Texte', 'Lien', 'Événement'],
-      nbCar: nw.message.trim().length + ' caractères',
-      set: (k, e) => this.setState(s2 => ({ fbNew: Object.assign({}, s2.fbNew, { [k]: e.target.value }) })),
-      close: () => this.setState({ fbNew: null }),
-      peut: nw.message.trim().length > 0,
-      submit: async () => {
-        if (!nw.message.trim()){ this.notify('Le message est vide'); return; }
-        const medias = nw.visuel.trim() ? [{ nom: nw.visuel.trim(), type: 'image', alt: nw.alt.trim() || null, largeur: +nw.largeur || null, hauteur: null }] : [];
-        const mag = D.stores.find(s => s.id === nw.magasinId);
-        const payload = { magasinId: nw.magasinId, auteur: nw.auteur.trim() || (mag ? mag.fr : 'Franchisé'), format: nw.format,
-          message: nw.message.trim(), lien: nw.lien.trim() || null, medias, publierLe: nw.publierLe + ' ' + nw.heure + ':00', statut: 'a_controler' };
-        this.setState({ fbNew: null });
-        this.log('Post Facebook', mag ? mag.nom : '—', 'Post « ' + this.fbTitre(payload.message) + ' » soumis au contrôle');
-        const r = await this.api('POST', '/facebook/posts', payload);
-        if (!r || !r.ok){
-          // Mode démonstration : le post entre « à contrôler », sans écart —
-          // l'agent, lui, vit côté serveur.
-          this.fbPosts().unshift({ id: 'fbx' + Date.now(), magasinId: payload.magasinId, magasin: mag ? mag.nom : null,
-            auteur: payload.auteur, format: payload.format, message: payload.message, lien: payload.lien, medias,
-            publierLe: payload.publierLe.slice(0, 16), soumisLe: M.TODAY + ' ' + new Date().toTimeString().slice(0, 5),
-            statut: 'a_controler', agent: { note: null, resume: null, le: null, passages: 0 }, ecarts: [],
-            decision: { note: null, famille: null, type: null, commentaire: null, le: null, par: null }, publie: { le: null, fbId: null } });
-          this.notify('Post soumis — l’agent le contrôlera côté serveur.'); this.forceUpdate(); return;
-        }
-        const j = await r.json();
-        await this.loadData();
-        const c = j.controle || {};
-        this.notify('Post soumis et contrôlé — ' + c.note + '/5 · ' + (c.resume || ''));
-      }
-    };
-  }
-
-  /** Les premiers mots d'un post — pour les lignes repliées et le journal. */
-  fbTitre(message, max){
-    const m = String(message || '').replace(/\s+/g, ' ').trim();
-    const n = max || 60;
-    return m.length > n ? m.slice(0, n) + '…' : m;
   }
 
   /* --- reporting -------------------------------------------------------------------- */
@@ -15516,11 +14004,50 @@ class App {
     const motRun = s3 => ({ envoye: 'envoyé', vide: 'sans matière', erreur: 'erreur' })[s3] || (s3 ? 'généré' : '');
     // « 2026-08-21 17:28 » → « 21/08 à 17:28 », l'écriture du reste du cockpit.
     const dateRun = t => t ? (this.fD(String(t).slice(0, 10)) + ' à ' + String(t).slice(11, 16)) : '';
-    const stRun = s3 => 'display:inline-block;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:600;'
+    const stRun = s3 => 'display:inline-block;padding:1px 8px;border-radius:8px;font-size:10.5px;font-weight:600;'
       + (s3 === 'envoye' ? 'background:rgba(45,122,62,0.10);color:#2d7a3e'
         : s3 === 'vide' ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
         : s3 === 'erreur' ? 'background:rgba(141,29,44,0.12);color:#8D1D2C'
         : 'background:#FBEFE0;color:#8a5a13');
+    // L'envoi ponctuel du CA net d'un mois, tous les magasins (22/10/2026, Sam : « net pas brut ») : le mois se lit
+    // par lots au panel (TTC − TVA, ticket par ticket) ; l'écran relit tant que ça avance, puis l'envoi s'ouvre.
+    const cn = S.caNet || {};
+    const cnMois = cn.mois || (() => { const t = new Date(); t.setDate(1); t.setMonth(t.getMonth() - 1); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); })();
+    const cnCharge = (mois, force) => {
+      const c0 = this.state.caNet || {};
+      if (!force && c0.mois === mois && (c0.d || c0.chargement)) { return; }
+      this.setState({ caNet: Object.assign({}, c0, { mois, chargement: true, d: c0.mois === mois ? c0.d : null, msg: force ? c0.msg : null }) });
+      readOne('/rapports/ca-net?mois=' + mois).then(d => {
+        const c1 = this.state.caNet || {};
+        if (c1.mois !== mois) { return; }
+        const essais = (c1.essais || 0) + 1, avance = !c1.d || (d && d.aLire < c1.d.aLire);
+        this.setState({ caNet: Object.assign({}, c1, { chargement: false, d: d || { error: 'injoignable' }, essais }) });
+        if (d && !d.complet && !d.indispo && avance && essais < 12) { setTimeout(() => { const c2 = this.state.caNet || {}; if (c2.mois === mois && this.state.screen === 'reporting') { cnCharge(mois, true); } }, 800); }
+      });
+    };
+    cnCharge(cnMois, false);
+    const cd = cn.mois === cnMois && cn.d && !cn.d.error && !cn.d.indispo ? cn.d : null;
+    const eur = v => Number(v || 0).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const cnA = cn.a || (cd && cd.adresses && cd.adresses[0]) || '';
+    common.caNet = {
+      mois: cnMois, libelle: cd ? cd.libelle : '', chargement: !cd && !(cn.d && (cn.d.error || cn.d.indispo)),
+      erreur: cn.d && cn.d.error ? 'Le CA du mois ne se lit pas : ' + cn.d.error : (cn.d && cn.d.indispo ? cn.d.motif : ''),
+      moisOpts: ((cd && cd.moisDispo) || [{ v: cnMois, nom: cnMois }]).map(o => ({ v: o.v, nom: o.nom, on: o.v === cnMois })),
+      setMois: e => { this.setState({ caNet: { mois: e.target.value, a: cn.a } }); },
+      adresses: ((cd && cd.adresses) || []).map(a => ({ v: a, nom: a, on: a === cnA })), setA: e => this.setState({ caNet: Object.assign({}, cn, { a: e.target.value }) }),
+      lignes: cd ? cd.magasins.map(m => ({ nom: m.nom.split(' - ').pop(), net: eur(m.net), tva: eur(m.tva), brut: eur(m.brut), tickets: Number(m.tickets).toLocaleString('fr-BE'), lu: m.joursLus < m.jours ? m.joursLus + ' / ' + m.jours + ' j' : '' })) : [],
+      reseau: cd ? { net: eur(cd.reseau.net), tva: eur(cd.reseau.tva), brut: eur(cd.reseau.brut), tickets: Number(cd.reseau.tickets).toLocaleString('fr-BE') } : null,
+      etat: !cd ? '' : (!cd.complet ? 'Lecture des tickets au panel : ' + cd.aLire + ' journée(s) magasin restent à lire…' : (cd.sansTva ? cd.sansTva + ' ticket(s) sans TVA au panel : le net ne se calcule pas.' : 'Mois entièrement lu · du ' + this.fD(cd.du) + ' au ' + this.fD(cd.au))),
+      pret: !!cd && cd.complet && !cd.sansTva && !!cnA && !!cd.smtp && !cn.envoi, smtp: cd ? cd.smtp : true, envoi: !!cn.envoi, msg: cn.msg || null,
+      sansAdresse: !!cd && !(cd.adresses || []).length,
+      envoyer: () => {
+        if (!cd || cn.envoi) { return; }
+        this.setState({ caNet: Object.assign({}, cn, { envoi: true, msg: null, a: cnA }) });
+        write('api', 'POST', '/rapports/ca-net/envoyer', { mois: cnMois, a: cnA }).then(r => {
+          const c1 = this.state.caNet || {};
+          this.setState({ caNet: Object.assign({}, c1, { envoi: false, msg: r.ok ? { ok: true, txt: 'Envoyé à ' + r.a + ' : « ' + r.sujet + ' ».' } : { ok: false, txt: 'Pas envoyé : ' + (r.error || 'HTTP ' + r.status) } }) });
+        });
+      } };
     common.rapGen = {
       chargement: !rz || rz.chargement,
       cronUrl: (rd && rd.cronUrl) || '',
@@ -15535,7 +14062,7 @@ class App {
           freq: freqLabel(r) + (r.parMagasin ? ' · un chapitre par magasin' : '')
             + (r.envoiMode === 'par-magasin' ? ' · un email par magasin' : ''),
           actifTxt: r.actif ? 'Actif' : 'Inactif',
-          actifSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;cursor:pointer;'
+          actifSt: 'display:inline-block;padding:2px 9px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;'
             + (r.actif ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
           toggleActif: () => this.api('PUT', '/rapports/' + r.id, { actif: !r.actif }).then(() => this.rapCharge(true)),
           dernier: r.dernier ? ('Dernier : ' + dateRun(r.dernier.le)) : 'Jamais généré',
@@ -15879,7 +14406,7 @@ class App {
     // liste de ce qui existe. Il ne suffit pas : voir HORS_RAIL juste après.
     const noms = {}, famille = {};
     (this._navDef || []).forEach(g => (g[1] || []).forEach(it => {
-      if (it && it.sub) { (it.children || []).forEach(ch => { noms[ch[0]] = ch[1]; famille[ch[0]] = g[0] + ' › ' + it.sub; }); }
+      if (it && it.sub) { (it.children || []).forEach(ch => { noms[ch[0]] = ch[1]; famille[ch[0]] = [g[0], it.sub].filter(Boolean).join(' › '); }); }
       else if (it) { noms[it[0]] = it[1]; famille[it[0]] = g[0]; }
     }));
     /* Le rail n'est pas l'inventaire complet. Des écrans gardent une ADRESSE
@@ -16117,7 +14644,7 @@ class App {
     common.logTout = logTout;
     common.logPlier = rows.length > LOG_N ? () => this.setState({ logTout: !logTout }) : null;
     common.logRows = visibles.map(l => { const c = tCl[l.type] || ['var(--color-background-secondary)', '#666666'];
-      return { ts: l.ts, qui: l.qui, type: l.type, projet: l.projet, msg: l.msg, typeSt: 'display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;background:' + c[0] + ';color:' + c[1] }; });
+      return { ts: l.ts, qui: l.qui, type: l.type, projet: l.projet, msg: l.msg, typeSt: 'display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500;background:' + c[0] + ';color:' + c[1] }; });
 
     // --- e-mails partis du cockpit : rapports et commandes fournisseur,
     //     réunis par /journal/mails. Chargé à l'ouverture de l'écran.
@@ -16143,9 +14670,9 @@ class App {
       dest: m2.dest || '', detail: m2.detail || '',
       // Le sort de l'envoi d'abord : un e-mail en échec se voit sans lire.
       etat: m2.ok ? 'Envoyé' : 'Échec',
-      etatSt: 'display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;'
+      etatSt: 'display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500;'
         + (m2.ok ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:rgba(141,29,44,0.12);color:#8D1D2C'),
-      srcSt: 'display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;'
+      srcSt: 'display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500;'
         + (m2.source === 'Achat' ? 'background:rgba(193,122,42,0.16);color:#8a5a13' : 'background:rgba(99,102,241,0.12);color:#4649c4'),
     }));
     common.exportCsv = () => { const csv = 'horodatage;auteur;type;projet;evenement\n' + rows.map(l => [l.ts, l.qui, l.type, l.projet, '"' + l.msg.replace(/"/g, '""') + '"'].join(';')).join('\n');
@@ -16167,7 +14694,7 @@ class App {
     common.paPassPlaceholder = paSt.motDePasseDefini ? '•••••••• (inchangé)' : 'Mot de passe du compte';
     common.paEtat = paSt.configure ? 'Compte configuré' : 'Compte non configuré';
     common.paEtatCourt = paSt.configure ? '' : 'compte API à configurer';
-    common.paEtatSt = 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+    common.paEtatSt = 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:500;'
       + (paSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13');
     common.paMsg = pa.msg || '';
     common.paMsgSt = 'margin-top:10px;font-size:12px;font-weight:500;color:' + (pa.ok ? '#2d7a3e' : '#8D1D2C');
@@ -16206,7 +14733,7 @@ class App {
     common.erPass = er.password || '';
     common.erPassPlaceholder = erSt.motDePasseDefini ? '•••••••• (inchangé)' : 'Mot de passe du compte admin';
     common.erEtat = erSt.configure ? 'Compte configuré' : 'Compte non configuré';
-    common.erEtatSt = 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+    common.erEtatSt = 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:500;'
       + (erSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13');
     common.erMsg = er.msg || '';
     common.erMsgSt = 'margin-top:10px;font-size:12px;font-weight:500;color:' + (er.ok ? '#2d7a3e' : '#8D1D2C');
@@ -16463,7 +14990,7 @@ class App {
     common.setRepCible = e => {
       const v = Math.min(5, Math.max(1, parseFloat(String(e.target.value).replace(',', '.')) || 4.5));
       this.setState({ repCible: v });
-      this.api('PUT', '/parametres/reputationCible', { valeur: v })
+      this.api('PUT', '/marketing/avis/cible', { valeur: v })
         .then(() => { this.D.reput = null; this.repCharge(true); });
       this.log('Paramètre', '', 'Cible de note Google portée à ' + String(v).replace('.', ','));
     };
@@ -16487,7 +15014,7 @@ class App {
         ? (smSt.source === 'crm' ? 'Réglages repris du CRM candidat · ' : 'Configuré · ') + (smSt.hote || '')
           + (smSt.motDePasseDefini ? ' · mot de passe en place' : ' · sans authentification')
         : 'Non configuré',
-      etatSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
+      etatSt: 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:500;'
         + (smSt.configure ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13'),
       setHote: smSet('hote'), setPort: smSet('port'), setSecurite: smSet('securite'),
       setUtilisateur: smSet('utilisateur'), setMdp: smSet('motDePasse'),
@@ -16511,189 +15038,6 @@ class App {
           this.setState(s2 => ({ smDraft: Object.assign({}, s2.smDraft, { busy: false, ok: !!(r && r.ok),
             msg: (r && (r.message || r.error)) || 'Test impossible.' }) })));
       },
-    };
-
-    // --- relance « commande à valider » : le texte de la notification créée
-    // par la cloche du Suivi fournisseurs (POST /notifications côté ERP).
-    if (!this._rlLu) { this._rlLu = true; readOne('/centrale/achats/relance').then(st => { this.D.rlEtat = st || null; this.setState({}); }); }
-    const rlEt = this.D.rlEtat || {};
-    const rlCf = rlEt.config || {};
-    const rlD = S.rlDraft || {};
-    const rlVal = (k, def) => rlD[k] != null ? rlD[k] : (rlCf[k] != null ? String(rlCf[k]) : def);
-    const rlSet = k => e => { const v = e.target.value; this.setState(s2 => ({ rlDraft: Object.assign({}, s2.rlDraft, { [k]: v }) })); };
-    common.rl = {
-      titre: rlVal('titre', ''), message: rlVal('message', ''),
-      priorite: rlVal('priorite', 'warning'), actionLabel: rlVal('actionLabel', ''),
-      actionUrl: rlVal('actionUrl', ''), jours: rlVal('jours', '7'),
-      variables: (rlEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
-      envoyees: rlEt.envoyees || 0,
-      busy: !!rlD.busy, msg: rlD.msg || '',
-      msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (rlD.ok ? '#2d7a3e' : '#8D1D2C'),
-      setTitre: rlSet('titre'), setMessage: rlSet('message'), setPriorite: rlSet('priorite'),
-      setActionLabel: rlSet('actionLabel'), setActionUrl: rlSet('actionUrl'), setJours: rlSet('jours'),
-      save: () => {
-        this.setState(s2 => ({ rlDraft: Object.assign({}, s2.rlDraft, { busy: true, msg: '' }) }));
-        this.api('PUT', '/parametres/caRelanceCommande', { valeur: {
-          titre: rlVal('titre', ''), message: rlVal('message', ''), priorite: rlVal('priorite', 'warning'),
-          actionLabel: rlVal('actionLabel', ''), actionUrl: rlVal('actionUrl', ''),
-          jours: parseInt(rlVal('jours', '7'), 10) || 7 } }).then(r => {
-          const ok = !(r && r.ok === false); this._rlLu = false;
-          this.setState(s2 => ({ rlDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.rlDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
-          if (ok) { this.log('Paramètre', '', 'Template de relance commande mis à jour'); }
-        });
-      },
-    };
-
-    // --- e-mail « commande fournisseur » (centrale d'achat) : template + journal.
-    // Groupé ici avec la machine SMTP — tout ce qui touche au courrier vit dans
-    // Paramètres. L'envoi automatique tourne avec le cron des rapports.
-    if (!this._caMailLu) { this._caMailLu = true; readOne('/centrale/commandes/mail').then(st => { this.D.caMailEtat = st || null; this.setState({}); }); }
-    const cmEt = this.D.caMailEtat || {};
-    const cmCf = cmEt.config || {};
-    const cmD = S.cmDraft || {};
-    const cmVal = (k, def) => cmD[k] != null ? cmD[k] : (cmCf[k] != null ? String(cmCf[k]) : def);
-    const cmSet = k => e => { const v = e.target.value; this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { [k]: v }) })); };
-    const cmActif = cmD.actif != null ? cmD.actif : !!cmCf.actif;
-    common.cm = {
-      actif: cmActif,
-      expediteur: cmVal('expediteur', 'Centrale d’achat <achats@atelierby.be>'),
-      setExpediteur: cmSet('expediteur'),
-      // Le SQUELETTE HTML, éditable comme le reste. Vide = celui d'origine.
-      html: cmVal('html', ''),
-      setHtml: cmSet('html'),
-      htmlOuvert: !!cmD.htmlOuvert,
-      htmlBascule: () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { htmlOuvert: !(s2.cmDraft || {}).htmlOuvert }) })),
-      htmlDefaut: cmEt.squelette ? () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft,
-        { html: cmEt.squelette, msg: 'Squelette d’origine repris — enregistrez pour le garder.', ok: true }) })) : null,
-      variablesHtml: (cmEt.variablesHtml || []).map(v => '{{' + v + '}}').join(' · '),
-      // L'aperçu montre le gabarit EN COURS D'ÉDITION, pas celui enregistré :
-      // on regarde ce qu'on vient d'écrire, avant de l'enregistrer.
-      apercuUrl: this.apiBase() + '/centrale/commandes/mail/apercu'
-        + '?sujet=' + encodeURIComponent(cmVal('sujet', ''))
-        + '&corps=' + encodeURIComponent(cmVal('corps', ''))
-        + '&html=' + encodeURIComponent(cmVal('html', '')),
-      apercuOuvert: !!cmD.apercuOuvert,
-      apercuBascule: () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { apercuOuvert: !(s2.cmDraft || {}).apercuOuvert }) })),
-      destinataire: cmVal('destinataire', 'achats@atelierby.be'),
-      copie: cmVal('copie', ''), sujet: cmVal('sujet', ''), corps: cmVal('corps', ''),
-      variables: (cmEt.variables || []).map(v => '{{' + v + '}}').join(' · '),
-      smtpPret: !!cmEt.smtpPret,
-      dernier: cmEt.dernier ? ('Dernier passage : ' + (cmEt.dernier.quand || '').replace('T', ' ').slice(0, 16)
-        + ' · ' + (cmEt.dernier.envoyes || 0) + ' envoyé(s)'
-        + (cmEt.dernier.echecs ? ' · ' + cmEt.dernier.echecs + ' échec(s)' : '')) : 'Jamais passé — le cron horaire des rapports le déclenche.',
-      journal: (cmEt.journal || []).map(j => ({ quand: j.quand || '',
-        type: { recu: 'Commande reçue', envoye: 'E-mail envoyé', relance: 'Relance envoyée',
-          essai: 'Essai', echec: 'Échec' }[j.type] || (j.type || ''),
-        col: j.type === 'echec' ? '#8D1D2C'
-          : (j.type === 'envoye' || j.type === 'relance') ? '#2d7a3e' : 'var(--color-text)',
-        detail: j.detail || '', destinataire: j.destinataire || '' })),
-      busy: !!cmD.busy, msg: cmD.msg || '',
-      msgSt: 'margin-top:10px;font-size:12px;font-weight:500;color:' + (cmD.ok ? '#2d7a3e' : '#8D1D2C'),
-      etatTxt: cmActif ? (cmEt.smtpPret ? 'Actif' : 'Actif — SMTP à configurer') : 'Inactif',
-      etatSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;'
-        + (cmActif && cmEt.smtpPret ? 'background:rgba(45,122,62,0.12);color:#2d7a3e' : 'background:rgba(193,122,42,0.16);color:#8a5a13'),
-      toggle: () => this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { actif: !cmActif }) })),
-      setDestinataire: cmSet('destinataire'), setCopie: cmSet('copie'), setSujet: cmSet('sujet'), setCorps: cmSet('corps'),
-      save: () => {
-        this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: true, msg: '' }) }));
-        this.api('PUT', '/parametres/caMailCommande', { valeur: {
-          actif: cmActif, expediteur: cmVal('expediteur', ''),
-          destinataire: cmVal('destinataire', ''), copie: cmVal('copie', ''),
-          sujet: cmVal('sujet', ''), corps: cmVal('corps', ''), html: cmVal('html', ''),
-          // Ce qui ne se règle pas à l'écran doit SURVIVRE à un enregistrement :
-          // la fenêtre de relance et la borne de lignes vivent dans le même
-          // réglage, les omettre les remettrait à zéro.
-          fenetreJours: (cmEt.config || {}).fenetreJours, maxLignes: (cmEt.config || {}).maxLignes } }).then(r => {
-          const ok = !(r && r.ok === false);
-          this._caMailLu = false;
-          this.setState(s2 => ({ cmDraft: ok ? { msg: 'Enregistré.', ok: true } : Object.assign({}, s2.cmDraft, { busy: false, ok: false, msg: 'Échec de l’enregistrement.' }) }));
-          if (ok) { this.log('Paramètre', '', 'Template e-mail commande fournisseur mis à jour'); }
-        });
-      },
-      // L'essai part où on veut : l'envoyer à la centrale depuis la centrale
-      // ne prouve pas qu'un fournisseur recevra quoi que ce soit.
-      testVers: cmD.testVers != null ? cmD.testVers : '',
-      setTestVers: cmSet('testVers'),
-      test: () => {
-        this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: true, msg: '' }) }));
-        this.api('POST', '/centrale/commandes/mail/test', { vers: (cmD.testVers || '').trim() }).then(r => {
-          this._caMailLu = false;
-          this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { busy: false, ok: !!(r && r.ok),
-            msg: r && r.ok ? 'Essai envoyé à ' + (r.destinataire || '') + '.' : (r && (r.erreur || r.error)) || 'Essai impossible.' }) }));
-        });
-      },
-      // Le carnet d'adresses : les fournisseurs qui ont une commande en
-      // attente, et à qui l'on doit donc écrire. Ni le panel ni le référentiel
-      // local ne portent leur adresse — elle se saisit ici.
-      fenetre: (cmEt.fenetreJours || 30) + ' jours',
-      // Classer : dire ICI que ces réquisitions sont traitées, pour que le
-      // rappel automatique cesse de les compter. L'ERP n'est pas touché — le
-      // dire, sinon on croirait la commande acceptée côté fournisseur.
-      classeesN: (cmEt.classees || {}).n || 0,
-      classeesTxt: ((cmEt.classees || {}).n || 0)
-        ? ((cmEt.classees || {}).n + ' réquisition(s) classées'
-           + ((cmEt.classees || {}).quand ? ' le ' + this.fD(String((cmEt.classees || {}).quand).slice(0, 10)) : '')
-           + ((cmEt.classees || {}).par ? ' par ' + (cmEt.classees || {}).par : ''))
-        : '',
-      enAttenteN: (cmEt.fournisseurs || []).reduce((a, f) => a + (f.commandes || 0) + (f.anciennes || 0), 0),
-      classer: () => {
-        const n = (cmEt.fournisseurs || []).reduce((a, f) => a + (f.commandes || 0) + (f.anciennes || 0), 0);
-        if (!window.confirm('Classer toutes les réquisitions en attente ?\n\n'
-          + 'Elles ne seront plus relancées automatiquement. Rien n’est modifié dans l’ERP : '
-          + 'le fournisseur n’est pas averti, et la cloche du Suivi fournisseurs reste disponible '
-          + 'pour relancer à la main. Ce classement se défait.')) { return; }
-        this.api('POST', '/centrale/commandes/mail/classer', {}).then(r => {
-          this._caMailLu = false;
-          this.notify(!r || r.ok === false
-            ? ('Classement refusé — ' + ((r && (r.error || r.erreur)) || 'écriture impossible'))
-            : ((r.classees || 0) + ' réquisition(s) classées — plus de rappel automatique'));
-          this.setState({});
-        });
-      },
-      rouvrir: ((cmEt.classees || {}).n || 0) ? () => {
-        if (!window.confirm('Rouvrir les réquisitions classées ? Elles redeviendront relançables.')) { return; }
-        this.api('POST', '/centrale/commandes/mail/classer', { rouvrir: true }).then(r => {
-          this._caMailLu = false;
-          this.notify(r && r.ok !== false ? 'Classement annulé' : 'Annulation refusée');
-          this.setState({});
-        });
-      } : null,
-      fournisseurs: (cmEt.fournisseurs || []).map(f => ({
-        nom: f.nom, commandes: f.commandes, total: this.fU(f.total || 0),
-        // Ce qui dort dans l'ERP : compté, jamais relancé. Le taire ferait
-        // croire que le fournisseur n'a rien en souffrance.
-        anciennes: f.anciennes
-          ? f.anciennes + ' ancienne(s) · ' + this.fU(f.anciennesTotal || 0)
-            + (f.plusRecenteAncienne ? ' · la plus récente ' + this.fD(f.plusRecenteAncienne) : '')
-          : '',
-        email: (cmD['mail:' + f.cle] != null) ? cmD['mail:' + f.cle] : (f.email || ''),
-        source: f.source === 'panel' ? 'du panel' : '',
-        sans: !f.email,
-        relance: f.dernier ? ('relancé le ' + this.fD(f.dernier) + ' · ' + f.envois + ' rappel(s)') : 'jamais relancé',
-        set: e => { const v = e.target.value;
-          this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft, { ['mail:' + f.cle]: v }) })); },
-        enregistrer: () => {
-          const v = String((this.state.cmDraft || {})['mail:' + f.cle] != null
-            ? (this.state.cmDraft || {})['mail:' + f.cle] : (f.email || '')).trim();
-          this.api('PUT', '/centrale/fournisseurs/mail', { nom: f.nom, email: v }).then(r => {
-            this._caMailLu = false;
-            this.notify(!r || r.ok === false
-              ? ('Adresse refusée — ' + ((r && (r.error || r.erreur)) || 'écriture impossible'))
-              : (v ? f.nom + ' → ' + v : 'Adresse retirée pour ' + f.nom));
-            this.setState({});
-          });
-        },
-      })),
-      sansAdresse: cmEt.sansAdresse || 0,
-      // Un gabarit enregistré avant le regroupement parle de « la » commande
-      // et de « le » magasin : il tient encore, mais il ne dit plus ce que le
-      // courrier fait. On le signale, et on propose de reprendre le nôtre.
-      vieux: !!cmEt.gabaritVieux,
-      restaurer: cmEt.defauts ? () => {
-        const d2 = cmEt.defauts;
-        this.setState(s2 => ({ cmDraft: Object.assign({}, s2.cmDraft,
-          { sujet: d2.sujet, corps: d2.corps, msg: 'Gabarit d’origine repris — enregistrez pour le garder.', ok: true }) }));
-      } : null,
     };
 
     // --- catalogue des KPI : le référentiel (ceo_kpi_def) qui pilote les
@@ -16723,7 +15067,7 @@ class App {
         sortie: k.sortie || 'tableau',
         setSortie: e => kMaj(k.id, { sortie: e.target.value }, 'Sortie de « ' + k.nom + ' » : ' + e.target.value),
         actif: !!k.actif, actifTxt: k.actif ? 'Actif' : 'Inactif',
-        actifSt: 'display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:500;cursor:pointer;white-space:nowrap;'
+        actifSt: 'display:inline-block;padding:2px 9px;border-radius:8px;font-size:10.5px;font-weight:500;cursor:pointer;white-space:nowrap;'
           + (k.actif ? 'background:rgba(45,122,62,0.10);color:#2d7a3e' : 'background:var(--color-background-secondary);color:var(--color-text-muted)'),
         toggle: () => kMaj(k.id, { actif: !k.actif }, '« ' + k.nom + ' » ' + (k.actif ? 'désactivé' : 'activé')),
         supprimable: !!k.supprimable,
@@ -16773,7 +15117,7 @@ class App {
     common.cad = {
       chargement: !cdD,
       actifTxt: cdReg.actif === false ? 'Désactivée' : 'Activée',
-      actifSt: 'display:inline-block;padding:3px 11px;border-radius:999px;font-size:11.5px;font-weight:500;cursor:pointer;'
+      actifSt: 'display:inline-block;padding:3px 11px;border-radius:8px;font-size:11.5px;font-weight:500;cursor:pointer;'
         + (cdReg.actif === false ? 'background:var(--color-background-secondary);color:var(--color-text-muted)' : 'background:rgba(45,122,62,0.12);color:#2d7a3e'),
       toggle: () => cdMaj({ actif: cdReg.actif === false }, 'Cadence dynamique ' + (cdReg.actif === false ? 'activée' : 'désactivée')),
       serie: cdReg.serie != null ? String(cdReg.serie) : '5',
@@ -16811,7 +15155,7 @@ class App {
             : l.serieEnCours ? ' · série ' + l.serieEnCours + '/' + (cdReg.serie || 5) : ''),
           prochain: cdDate(l.prochain) + (l.du ? ' — dû' : ''), du: !!l.du,
           mouvTxt: mTxt + (l.mouvementDate ? ' (' + cdDate(l.mouvementDate) + ')' : ''),
-          mouvSt: 'display:inline-block;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap;' + mSt };
+          mouvSt: 'display:inline-block;padding:3px 10px;border-radius:8px;font-size:10.5px;font-weight:600;white-space:nowrap;' + mSt };
       }),
       apiNote: (cdD && cdD.apiPost && cdD.apiPost.note) || '',
       apiPre: cdD && cdD.apiPost

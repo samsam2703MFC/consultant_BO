@@ -15,6 +15,8 @@
 <link rel="stylesheet" href="assets/ds/global.css">
 <link rel="stylesheet" href="assets/css/app.css">
 <link rel="stylesheet" href="assets/css/controles-photo.css">
+<link rel="stylesheet" href="assets/css/fidelite.css">
+<link rel="stylesheet" href="assets/css/promotions.css">
 <script>
 // L'application tablette du consultant (10/10/2026) : ?app=consultant ouvre la fiche franchisé en plein écran,
 // installable sur l'écran d'accueil (manifeste dédié). Le cockpit reste le même ailleurs.
@@ -23,16 +25,13 @@
     if (new URLSearchParams(location.search).get('app') !== 'consultant') { return; }
     document.documentElement.setAttribute('data-app', 'consultant');
     var l = document.createElement('link'); l.rel = 'manifest'; l.href = 'consultant.webmanifest'; document.head.appendChild(l);
-    if (!location.hash || location.hash === '#' || location.hash === '#/') { location.hash = '#/fiche-franchise'; }
+    if (!location.hash || location.hash === '#' || location.hash === '#/') { location.hash = '#/fiche'; }
   } catch (e) { /* sans app : le cockpit */ }
 })();
 </script>
 </head>
 <body>
 <div id="app"><div style="padding:60px;color:#666;font-size:13px;font-family:sans-serif">Chargement des données du réseau…</div></div>
-<script src="assets/js/prospection.js"></script>
-<script src="assets/js/newsletter.js"></script>
-<script src="assets/js/metadonnee.js"></script>
 <script type="module" src="assets/js/app.js"></script>
 </body>
 </html>

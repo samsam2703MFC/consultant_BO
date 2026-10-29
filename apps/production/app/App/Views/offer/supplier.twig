@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#8D1D2C">
+<title>{{ t.title }}{% if offer %} · {{ offer.company }}{% endif %}</title>
+<link rel="icon" href="{{ root }}/assets/images/atelier-logo.png" type="image/png">
+<style>
+  :root { --red: #8D1D2C; --ink: #1d1d1f; --muted: #6e6e73; --line: #e5e5ea; --bg: #f5f5f7; --card: #fff; --ok: #1f7a3d; --okbg: #e8f5ec; --bad: #b42318; --badbg: #fdecea; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 48px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  header img { width: 40px; height: 40px; border-radius: 10px; }
+  header .co { font-weight: 600; }
+  header .code { color: var(--muted); font-size: 14px; }
+  h1 { font-size: 24px; margin: 4px 0 6px; }
+  p.lead { color: var(--muted); margin: 0 0 16px; }
+  .box { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; }
+  .meta { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 15px; }
+  .meta dt { color: var(--muted); }
+  .meta dd { margin: 0; }
+  .msg { border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; font-weight: 500; }
+  .msg.ok { background: var(--okbg); color: var(--ok); }
+  .msg.bad { background: var(--badbg); color: var(--bad); }
+  .item h2 { font-size: 17px; margin: 0 0 2px; }
+  .item .qty { color: var(--muted); font-size: 15px; margin-bottom: 10px; font-variant-numeric: tabular-nums; }
+  .item.err { border-color: var(--bad); }
+  .item.closed { opacity: .6; }
+  .badge { display: inline-block; border-radius: 6px; padding: 2px 8px; font-size: 13px; font-weight: 600; background: var(--okbg); color: var(--ok); margin-left: 6px; vertical-align: 2px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  .grid .full { grid-column: 1 / -1; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  label b { color: var(--ink); font-weight: 600; }
+  input { width: 100%; min-height: 48px; border: 1px solid #c7c7cc; border-radius: 10px; padding: 10px 12px; font: inherit; background: #fff; text-align: right; font-variant-numeric: tabular-nums; }
+  input[type=date], input.text { text-align: left; }
+  input:focus { outline: 2px solid var(--red); outline-offset: 1px; border-color: transparent; }
+  input.price { font-size: 18px; font-weight: 600; }
+  button { width: 100%; min-height: 52px; border: 0; border-radius: 12px; background: var(--red); color: #fff; font: 600 17px/1 inherit; font-family: inherit; cursor: pointer; margin-top: 8px; }
+  .foot { color: var(--muted); font-size: 13px; text-align: center; margin-top: 16px; }
+  @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+{% if offer is null %}
+  <h1>{{ t.title }}</h1>
+  <div class="msg bad">{{ t.unknown }}</div>
+{% else %}
+  <header>
+    <img src="{{ root }}/assets/images/atelier-logo.png" alt="">
+    <div><div class="co">{{ offer.company }}</div><div class="code">{{ offer.code }} · {{ offer.supplier }}</div></div>
+  </header>
+  <h1>{{ t.title }}</h1>
+  {% if saved is not null %}<div class="msg ok" role="status">{{ t.saved|format(saved) }}</div>
+  {% elseif message == 'expired' or offer.expired %}<div class="msg bad" role="alert">{{ t.expired }}</div>
+  {% elseif message %}<div class="msg bad" role="alert">{{ attribute(t, message) }}</div>
+  {% elseif offer.responded_at %}<div class="msg ok">{{ t.answered }} · {{ offer.responded_at|date('d.m.Y H:i') }}</div>{% endif %}
+  {% if not offer.expired %}<p class="lead">{{ t.intro }}</p>{% endif %}
+  <div class="box">
+    <dl class="meta">
+      <dt>{{ t.conditions }}</dt><dd>{{ offer.conditions }}</dd>
+      {% if offer.deadline %}<dt>{{ t.deadline }}</dt><dd>{{ offer.deadline|date('d.m.Y H:i') }}</dd>{% endif %}
+    </dl>
+  </div>
+  <form method="post" action="{{ root }}/offer/{{ token }}" novalidate>
+  {% for l in offer.lines %}
+    {% set v = values[l.id] ?? {} %}
+    {% set o = l.offer ?? {} %}
+    {% set off = offer.expired or l.closed %}
+    <section class="box item{% if l.id in error_lines %} err{% endif %}{% if l.closed %} closed{% endif %}">
+      <h2>{{ l.name }}{% if l.closed %}<span class="badge">{{ t.closed }}</span>{% endif %}</h2>
+      <div class="qty">{{ t.qty }} : <b>{{ l.quantity|number_format(l.quantity == l.quantity|round ? 0 : 2, ',', ' ') }} {{ l.unit }}</b>{% if l.package %} · {{ t.pack }} {{ l.package|number_format(l.package == l.package|round ? 0 : 2, ',', ' ') }} {{ l.unit }}{% endif %}</div>
+      <div class="grid">
+        <div class="{% if not offer.ask_double %}full{% endif %}">
+          <label for="p{{ l.id }}"><b>{{ t.price|format(l.unit) }}</b></label>
+          <input class="price" id="p{{ l.id }}" name="offers[{{ l.id }}][price]" inputmode="decimal" autocomplete="off" value="{{ v.price ?? (o.price ?? '') }}"{% if off %} disabled{% endif %}>
+        </div>
+        {% if offer.ask_double %}
+        <div>
+          <label for="d{{ l.id }}">{{ t.double|format(l.unit) }}</label>
+          <input id="d{{ l.id }}" name="offers[{{ l.id }}][price_double]" inputmode="decimal" autocomplete="off" value="{{ v.price_double ?? (o.price_double ?? '') }}"{% if off %} disabled{% endif %}>
+        </div>
+        {% endif %}
+        <div>
+          <label for="q{{ l.id }}">{{ t.min_qty|format(l.unit) }}</label>
+          <input id="q{{ l.id }}" name="offers[{{ l.id }}][min_qty]" inputmode="decimal" autocomplete="off" value="{{ v.min_qty ?? (o.min_qty ?? '') }}"{% if off %} disabled{% endif %}>
+        </div>
+        <div>
+          <label for="m{{ l.id }}">{{ t.min_value }}</label>
+          <input id="m{{ l.id }}" name="offers[{{ l.id }}][min_value]" inputmode="decimal" autocomplete="off" value="{{ v.min_value ?? (o.min_value ?? '') }}"{% if off %} disabled{% endif %}>
+        </div>
+        <div>
+          <label for="n{{ l.id }}">{{ t.min_note }}</label>
+          <input class="text" id="n{{ l.id }}" name="offers[{{ l.id }}][min_note]" maxlength="60" autocomplete="off" value="{{ v.min_note ?? (o.min_note ?? '') }}"{% if off %} disabled{% endif %}>
+        </div>
+        <div>
+          <label for="w{{ l.id }}">{{ t.delivery }}</label>
+          <input type="date" id="w{{ l.id }}" name="offers[{{ l.id }}][delivery_date]" value="{{ v.delivery_date ?? (o.delivery_date ?? '') }}"{% if off %} disabled{% endif %}>
+        </div>
+      </div>
+    </section>
+  {% endfor %}
+  {% if not offer.expired %}<button type="submit">{{ t.send }}</button>{% endif %}
+  </form>
+  <div class="foot">{{ offer.company }}</div>
+{% endif %}
+</div>
+</body>
+</html>
