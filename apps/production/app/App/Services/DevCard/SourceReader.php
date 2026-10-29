@@ -48,12 +48,16 @@ final class SourceReader
         [$html, $final] = $this->page($d['url']);
         $meta = self::meta($html);
         $out = ['kind' => $d['kind'], 'url' => $final, 'author' => null, 'title' => $meta['og:title'] ?? null, 'text' => null,
-            'image' => $meta['og:image'] ?? null, 'video' => null, 'login_wall' => false, 'source_link' => null, 'notes' => []];
+            'image' => $meta['og:image'] ?? null, 'video' => null, 'video_sd' => null, 'login_wall' => false, 'source_link' => null, 'notes' => []];
         return $d['kind'] === 'facebook' ? $this->facebook($html, $meta, $out) : $this->pinterest($html, $meta, $out);
     }
 
     private function facebook(string $html, array $meta, array $out): array
     {
+        // Tytuł bez licznika na początku (« 9,2 tys. wyświetleń · 398 reakcji | … », « 12K views · 1.1K reactions | … »).
+        if ($out['title'] !== null) {
+            $out['title'] = preg_replace('~^[^|]*\b(?:wyświetle\w*|reakcj\w*|views?|reactions?|vues|réactions)\b[^|]*\|\s*~iu', '', $out['title']);
+        }
         // Opis : najdłuższy z og:description i tekstów posta w danych strony (og:description bywa skrócony).
         $texts = array_filter([$meta['og:description'] ?? null, $meta['description'] ?? null]);
         foreach (['~"message":\{"text":"((?:[^"\\\\]|\\\\.)*)"~', '~"description":\{"text":"((?:[^"\\\\]|\\\\.)*)"~'] as $re) {
@@ -67,13 +71,16 @@ final class SourceReader
         if ($out['author'] === null && isset($meta['og:title']) && preg_match('~(?:\||·)\s*(?:By\s+)?([^|·]+?)\s*(?:\|\s*Facebook)?$~u', $meta['og:title'], $m)) {
             $out['author'] = trim($m[1]) !== 'Facebook' ? trim($m[1]) : null;
         }
-        foreach (['browser_native_hd_url', 'playable_url_quality_hd', 'browser_native_sd_url', 'playable_url'] as $k) {
-            if (preg_match('~"' . $k . '":"((?:[^"\\\\]|\\\\.)+)"~', $html, $m)) {
-                $out['video'] = self::jsonString($m[1]);
-                if (str_contains($k, 'sd') || $k === 'playable_url') $out['notes'][] = 'Wideo w jakości SD (brak wersji 720p).';
-                break;
-            }
-        }
+        // HD do klatek ; wersja SD obok — zapas, gdy plik HD (długi film) przekracza limit pobierania.
+        $find = function (array $keys) use ($html): ?string {
+            foreach ($keys as $k) if (preg_match('~"' . $k . '":"((?:[^"\\\\]|\\\\.)+)"~', $html, $m)) return self::jsonString($m[1]);
+            return null;
+        };
+        $hd = $find(['browser_native_hd_url', 'playable_url_quality_hd']);
+        $sd = $find(['browser_native_sd_url', 'playable_url']);
+        $out['video'] = $hd ?? $sd;
+        $out['video_sd'] = $hd !== null && $sd !== null && $sd !== $hd ? $sd : null;
+        if ($hd === null && $sd !== null) $out['notes'][] = 'Wideo w jakości SD (brak wersji 720p).';
         $out['video'] ??= $meta['og:video:secure_url'] ?? $meta['og:video:url'] ?? $meta['og:video'] ?? null;
         $loginWall = str_contains($out['url'], '/login') || (str_contains($html, 'id="login_form"') && $out['text'] === null && $out['video'] === null);
         if ($loginWall) {
@@ -223,14 +230,16 @@ final class SourceReader
 
     private static function clean(array $out): array
     {
-        foreach (['author', 'title', 'text', 'image', 'video', 'source_link'] as $k) {
+        foreach (['author', 'title', 'text', 'image', 'video', 'video_sd', 'source_link'] as $k) {
             if (is_string($out[$k])) $out[$k] = trim($out[$k]) !== '' ? trim($out[$k]) : null;
         }
         if ($out['text'] !== null) $out['text'] = mb_substr($out['text'], 0, 20000);
         if ($out['author'] !== null) $out['author'] = mb_substr($out['author'], 0, 255);
         if ($out['title'] !== null) $out['title'] = mb_substr($out['title'], 0, 500);
-        if ($out['video'] !== null) {
-            try { self::assertFileHost($out['video']); } catch (CustomException) { $out['video'] = null; }
+        foreach (['video', 'video_sd'] as $k) {
+            if ($out[$k] !== null) {
+                try { self::assertFileHost($out[$k]); } catch (CustomException) { $out[$k] = null; }
+            }
         }
         return $out;
     }

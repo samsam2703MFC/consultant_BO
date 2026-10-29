@@ -1,7 +1,8 @@
 /*
- * Nowy produkt z filmu [196] — kreator karty technologicznej.
- * 1. Film i produkt : link Facebook / Pinterest (albo plik wideo, albo gotowa karta .docx), nazwa, grupa, sprzedaż ± na
- *    tydzień, sezon (kwartały → tabela kwartałów i roku).
+ * Nowy produkt testowy [196, 197] — jeden kreator (/test-products/new) : karta technologiczna z filmu albo sam pomysł.
+ * 1. Przepis i produkt : link Facebook / Pinterest (albo plik wideo, gotowa karta .docx, albo « Sam pomysł » — produkt
+ *    od razu, bez karty), nazwa, grupa, sprzedaż ± na tydzień, sezon (kwartały → tabela kwartałów i roku) ; opcjonalnie
+ *    kategoria, typ i etykieta (pola dawnego formularza produktu testowego).
  * 2. Generowanie : odczyt linku (serwer, bez logowania), klatki wycięte tutaj w przeglądarce (wideo pobrane przez serwer
  *    z Facebooka / Pinteresta albo plik operatora — nie wysyłamy całego filmu), asystent AI (klucz Anthropic na serwerze).
  * 3. Karta i tablet : podgląd A4 / tabletu, poprawki tekstu i zdjęć, .docx / PDF, zapis → produkt na tablecie grupy.
@@ -12,7 +13,8 @@
     const boot = JSON.parse(document.getElementById('devCardBoot').textContent || '{}');
     const view = root.querySelector('[data-view]');
     const esc = at.esc;
-    const S = { groups: boot.groups || [], drafts: boot.drafts || [], ai: boot.ai || {}, card: boot.card || null, mode: 'link', file: null, preview: 'a4', editing: false };
+    const S = { groups: boot.groups || [], categories: boot.categories || [], types: boot.types || [], drafts: boot.drafts || [], ai: boot.ai || {},
+        card: boot.card || null, mode: new URLSearchParams(location.search).get('mode') === 'idea' ? 'idea' : 'link', file: null, preview: 'a4', editing: false };
     const Q = { 1: 'sty–mar', 2: 'kwi–cze', 3: 'lip–wrz', 4: 'paź–gru' };
     const fmt = (n) => String(Math.round(Number(n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); // 1 560 : spacja co 3 cyfry (także 4-cyfrowe)
     const BATCH = 6;
@@ -49,11 +51,12 @@
         const quarters = c.season_quarters || [1, 2, 3, 4];
         const ai = S.ai;
         view.innerHTML = `<form class="dc-grid" data-form novalidate><div>
-            ${edit ? '' : `<div class="dc-card"><h4 class="dc-h"><span class="dc-num">1</span>Film z przepisem</h4>
-                <div class="dc-seg" role="radiogroup" aria-label="Źródło">
-                    <label><input type="radio" name="mode" value="link" ${S.mode === 'link' ? 'checked' : ''}><span><i class="bi bi-link-45deg"></i> Link</span></label>
+            ${edit ? '' : `<div class="dc-card"><h4 class="dc-h"><span class="dc-num">1</span>Skąd przepis ?</h4>
+                <div class="dc-seg dc-seg-wrap" role="radiogroup" aria-label="Źródło">
+                    <label><input type="radio" name="mode" value="link" ${S.mode === 'link' ? 'checked' : ''}><span><i class="bi bi-link-45deg"></i> Link do filmu</span></label>
                     <label><input type="radio" name="mode" value="file" ${S.mode === 'file' ? 'checked' : ''}><span><i class="bi bi-film"></i> Plik wideo</span></label>
                     <label><input type="radio" name="mode" value="docx" ${S.mode === 'docx' ? 'checked' : ''}><span><i class="bi bi-file-earmark-word"></i> Gotowa karta .docx</span></label>
+                    <label><input type="radio" name="mode" value="idea" ${S.mode === 'idea' ? 'checked' : ''}><span><i class="bi bi-lightbulb"></i> Sam pomysł</span></label>
                 </div>
                 <div class="dc-field" data-only="link"><label class="dc-label" for="dcUrl">Link do filmu (Facebook reel albo pin Pinterest)</label>
                     <div class="dc-input-wrap"><i class="bi bi-link-45deg"></i><input class="form-control dc-input" id="dcUrl" name="url" type="url" inputmode="url" placeholder="https://www.facebook.com/reel/…" autocomplete="off"><span class="dc-pill" data-kind hidden></span></div>
@@ -66,11 +69,16 @@
                 <div class="dc-field" data-only="docx" hidden><label class="dc-label" for="dcDocx">Karta technologiczna w Wordzie (np. 01_Pogacza_sucuk_kaszar.docx)</label>
                     <input class="form-control dc-input" id="dcDocx" name="docx" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                     <p class="dc-hint">Karta jest wczytywana bez asystenta AI : tytuł, wydajność, pieczenie, czas, składniki, kroki i zdjęcia etapów.</p></div>
+                <div class="dc-field" data-only="idea" hidden><label class="dc-label" for="dcNotes">Pomysł, cel, na co uważać (widzi zespół na tablecie) — opcjonalnie</label>
+                    <textarea class="form-control dc-text" id="dcNotes" name="notes" rows="4" maxlength="5000" placeholder="np. bułeczka z sezonowym owocem, cena docelowa, inspiracja…"></textarea>
+                    <div class="dc-row dc-tight dc-mt"><label class="dc-label dc-m0" for="dcTarget">Data docelowa (wprowadzenie)</label>
+                        <input class="form-control dc-date" id="dcTarget" name="target_date" type="date"></div>
+                    <p class="dc-hint">Produkt powstaje od razu (etap Pomysł, tablet grupy) — bez karty. Kartę z filmu albo .docx można dodać później.</p></div>
                 <div class="dc-prompt" data-only="link file"><i class="bi bi-file-earmark-text"></i><div><strong>Prompt : Karta technologiczna z reela</strong>
                     <small>Odczyt linku → zdjęcia etapów → przepis po polsku → karta A4 · ${ai.prompt && ai.prompt.created_at ? 'wersja z ' + esc(dmy(ai.prompt.created_at)) : 'wersja domyślna'}</small></div>
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-show-prompt>Pokaż</button></div>
                 <pre class="dc-prompt-body" data-prompt hidden>${esc(ai.prompt ? ai.prompt.body : '')}</pre>
-                ${ai.is_admin ? `<p class="dc-hint"><a href="${at.root}/settings/ai">Zmień prompt lub model w Ustawieniach › Asystent AI</a></p>` : ''}
+                ${ai.is_admin ? `<p class="dc-hint" data-only="link file"><a href="${at.root}/settings/ai">Zmień prompt lub model w Ustawieniach › Asystent AI</a></p>` : ''}
             </div>`}
             <div class="dc-card"><h4 class="dc-h"><span class="dc-num">${edit ? '1' : '2'}</span>Produkt</h4>
                 <div class="dc-field"><label class="dc-label" for="dcName">Nazwa produktu (w ERP i na tablecie)</label>
@@ -78,6 +86,16 @@
                 <div class="dc-field"><span class="dc-label">Grupa, która robi test i produkcję</span>
                     <div class="dc-chips" data-field="id_group">${S.groups.map(g => `<label class="dc-chip"><input type="radio" name="id_group" value="${g.id}" ${Number(c.id_group) === Number(g.id) ? 'checked' : ''}>
                         <span><i style="background:${esc(g.color || '#999')}"></i>${esc(g.name_pl)}</span></label>`).join('')}</div></div>
+                <details class="dc-more" ${c.id_category || Number(c.id_type || 1) !== 1 || Number(c.label_type || 0) === 1 ? 'open' : ''}><summary>Kategoria, etykieta, typ <small>(opcjonalnie)</small></summary>
+                    <div class="dc-field"><label class="dc-label" for="dcCat">Kategoria produktu</label>
+                        <select class="form-select dc-input" id="dcCat" name="id_category"><option value="">— wybierzesz przy wprowadzeniu —</option>
+                        ${S.categories.map(k => `<option value="${k.id}" ${Number(c.id_category) === Number(k.id) ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>
+                    <div class="dc-row"><div><span class="dc-label">Etykieta</span><div class="dc-seg dc-seg-sm">
+                        <label><input type="radio" name="label_type" value="0" ${Number(c.label_type || 0) === 0 ? 'checked' : ''}><span>Mała</span></label>
+                        <label><input type="radio" name="label_type" value="1" ${Number(c.label_type || 0) === 1 ? 'checked' : ''}><span>Duża</span></label></div></div>
+                    <div><span class="dc-label">Typ</span><div class="dc-chips" data-field="id_type">${S.types.map(t => `<label class="dc-chip"><input type="radio" name="id_type" value="${t.id}" ${Number(c.id_type || 1) === Number(t.id) ? 'checked' : ''}>
+                        <span>${esc(t.name)}</span></label>`).join('')}</div></div></div>
+                </details>
             </div>
             <div class="dc-card"><h4 class="dc-h"><span class="dc-num">${edit ? '2' : '3'}</span>Sprzedaż (szacunkowo)</h4>
                 <div class="dc-row">
@@ -102,18 +120,19 @@
         </div>
         <aside>${edit ? summaryAside() : `
             <div class="dc-card"><h4 class="dc-h">Co powstanie</h4><ul class="dc-list">
-                <li><i class="bi bi-file-earmark-richtext"></i><div><strong>Karta technologiczna A4</strong><small>.docx do edycji + PDF, styl L’Atelier By (jak karty testowe)</small></div></li>
-                <li><i class="bi bi-tablet"></i><div><strong>Na tablecie grupy</strong><small>zakładka « Nowe produkty » : składniki, kroki, zdjęcia etapów, film</small></div></li>
+                <li data-only="link file docx"><i class="bi bi-file-earmark-richtext"></i><div><strong>Karta technologiczna A4</strong><small>.docx do edycji + PDF, styl L’Atelier By (jak karty testowe)</small></div></li>
+                <li data-only="link file docx"><i class="bi bi-tablet"></i><div><strong>Na tablecie grupy albo do druku</strong><small>do wyboru na końcu : tablet (zakładka « Nowe produkty » : składniki, kroki, zdjęcia etapów, film) albo karta A4 na papier</small></div></li>
+                <li data-only="idea"><i class="bi bi-tablet"></i><div><strong>Na tablecie grupy od razu</strong><small>zakładka « Nowe produkty » : nazwa, opis, data ; kartę z filmu albo .docx dodasz później</small></div></li>
                 <li><i class="bi bi-kanban"></i><div><strong>Nowy produkt w etapach</strong><small>Pomysł → Test 1 (zespół robi test na tablecie i dodaje zdjęcia)</small></div></li>
                 <li><i class="bi bi-graph-up"></i><div><strong>Prognoza sprzedaży</strong><small data-forecast-text></small></div></li></ul></div>
-            <div class="dc-card"><h4 class="dc-h">Asystent AI</h4><dl class="dc-kv">
+            <div class="dc-card" data-only="link file"><h4 class="dc-h">Asystent AI</h4><dl class="dc-kv">
                 <dt>Klucz Anthropic</dt><dd>${ai.configured ? '<span class="dc-pill ok">✓ zapisany</span>' : '<span class="dc-pill w">brak klucza</span>'}</dd>
                 <dt>Model</dt><dd>${esc(ai.model_label || ai.model || '')}</dd>
                 <dt>Prompt</dt><dd>${ai.prompt && ai.prompt.created_at ? 'wersja z ' + esc(dmy(ai.prompt.created_at)) : 'domyślny'}</dd></dl>
                 <p class="dc-hint">${ai.configured ? 'Klucz jest tylko na serwerze : nie ma go w przeglądarce ani w kodzie.'
                     : 'Bez klucza karta z filmu nie powstanie — gotową kartę .docx można wczytać. ' + (ai.is_admin ? `<a href="${at.root}/settings/ai">Dodaj klucz w Ustawieniach › Asystent AI</a>` : 'Klucz dodaje administrator (Ustawienia › Asystent AI).')}</p></div>
             ${S.drafts.length ? `<div class="dc-card"><h4 class="dc-h">Szkice do dokończenia</h4><ul class="dc-drafts">${S.drafts.map(d =>
-                `<li><a href="${at.root}/test-products/from-video/${d.id}">${esc(d.name)}</a><small>${esc(dmy(d.updated_at))} · ${d.status === 'ready' ? 'karta gotowa' : 'szkic'}</small></li>`).join('')}</ul></div>` : ''}`}
+                `<li><a href="${at.root}/test-products/new/${d.id}">${esc(d.name)}</a><small>${esc(dmy(d.updated_at))} · ${d.status === 'ready' ? 'karta gotowa' : 'szkic'}</small></li>`).join('')}</ul></div>` : ''}`}
         </aside></form>`;
         const form = view.querySelector('[data-form]');
         const refresh = () => {
@@ -131,10 +150,12 @@
                 form.querySelectorAll('[data-only]').forEach(el => { el.hidden = !el.dataset.only.split(' ').includes(mode); });
                 const btn = form.querySelector('[data-submit]');
                 const hint = form.querySelector('[data-ai-hint]');
-                const needsAi = mode !== 'docx';
-                btn.innerHTML = mode === 'docx' ? '<i class="bi bi-file-earmark-arrow-up"></i> Wczytaj kartę' : '<i class="bi bi-stars"></i> Generuj kartę';
+                const needsAi = mode === 'link' || mode === 'file';
+                btn.innerHTML = mode === 'docx' ? '<i class="bi bi-file-earmark-arrow-up"></i> Wczytaj kartę'
+                    : mode === 'idea' ? '<i class="bi bi-check-lg"></i> Utwórz produkt' : '<i class="bi bi-stars"></i> Generuj kartę';
                 btn.disabled = needsAi && !S.ai.configured;
-                hint.innerHTML = needsAi ? (S.ai.configured ? 'Klucz Anthropic ✓ · zwykle 1–2 min' : '<span class="text-danger">Brak klucza Anthropic</span>') : 'Bez asystenta AI';
+                hint.innerHTML = needsAi ? (S.ai.configured ? 'Klucz Anthropic ✓ · zwykle 1–2 min' : '<span class="text-danger">Brak klucza Anthropic</span>')
+                    : mode === 'idea' ? 'Bez karty · od razu na tablecie grupy' : 'Bez asystenta AI';
                 const kind = kindOf(form.elements.url.value.trim());
                 const pill = form.querySelector('[data-kind]');
                 pill.hidden = !form.elements.url.value.trim();
@@ -164,7 +185,7 @@
         if (edit) form.querySelector('[data-cancel]').addEventListener('click', (e) => { e.preventDefault(); renderResult(); });
         form.addEventListener('submit', (e) => { e.preventDefault(); submit(form, edit); });
         refresh();
-        if (!edit) form.elements.url.focus();
+        if (!edit) (S.mode === 'link' ? form.elements.url : form.elements.name).focus();
     }
 
     function fields(form) {
@@ -175,6 +196,9 @@
             weekly_sales: String(form.elements.weekly_sales.value).replace(/\D/g, '') || '0',
             seasonal,
             quarters: seasonal ? [...form.querySelectorAll('[name="quarters[]"]:checked')].map(i => Number(i.value)) : [],
+            id_category: form.elements.id_category.value || null,
+            label_type: (form.querySelector('[name=label_type]:checked') || {}).value || '0',
+            id_type: (form.querySelector('[name=id_type]:checked') || {}).value || '1',
         };
     }
 
@@ -206,6 +230,13 @@
                 return renderResult();
             }
             const mode = form.querySelector('[name=mode]:checked').value;
+            if (mode === 'idea') {
+                const res = await api('/ajax/dev-cards/product', 'POST', { ...data, notes: form.elements.notes.value.trim(), target_date: form.elements.target_date.value || null });
+                if (!res.ok) return fieldErrors(form, res);
+                at.notify(true, 'Utworzono produkt — jest na tablecie grupy (etap Pomysł).');
+                location.href = at.root + res.data.url;
+                return;
+            }
             if (mode === 'docx') {
                 const file = form.elements.docx.files[0];
                 if (!file) return fieldErrors(form, { message: 'Wybierz plik .docx.', fields: {} });
@@ -216,7 +247,7 @@
                 const res = await r.json().catch(() => ({ message: `Błąd serwera (HTTP ${r.status}).` }));
                 if (!r.ok) return fieldErrors(form, res);
                 S.card = res.data;
-                history.replaceState(null, '', `${at.root}/test-products/from-video/${S.card.id}`);
+                history.replaceState(null, '', `${at.root}/test-products/new/${S.card.id}`);
                 at.notify(true, 'Wczytano kartę.');
                 return renderResult();
             }
@@ -232,7 +263,7 @@
             const res = await api('/ajax/dev-cards', 'POST', data);
             if (!res.ok) return fieldErrors(form, res);
             S.card = res.data;
-            history.replaceState(null, '', `${at.root}/test-products/from-video/${S.card.id}`);
+            history.replaceState(null, '', `${at.root}/test-products/new/${S.card.id}`);
             run();
         } finally {
             btn.disabled = false;
@@ -440,7 +471,8 @@
         const notes = card.notes || [];
         view.innerHTML = `<div class="dc-grid dc-grid-result"><div>
             <div class="dc-card"><h4 class="dc-h"><span class="dc-num is-ok">✓</span>${saved ? 'Zapisano przy produkcie' : 'Karta gotowa'}</h4>
-                ${saved ? `<p class="dc-saved"><i class="bi bi-tablet"></i> Produkt « ${esc(c.product_name || c.name)} » jest na tablecie grupy ${esc(c.group || '')} (Nowe produkty → Pomysł).</p>` : ''}
+                ${saved ? (c.on_tablet ? `<p class="dc-saved"><i class="bi bi-tablet"></i> Produkt « ${esc(c.product_name || c.name)} » jest na tablecie grupy ${esc(c.group || '')} (Nowe produkty → Pomysł).</p>`
+                    : `<p class="dc-saved"><i class="bi bi-printer"></i> Produkt « ${esc(c.product_name || c.name)} » zapisany w Nowe produkty → Pomysł, bez tabletu (karta do druku).</p>`) : ''}
                 <dl class="dc-kv">
                     <dt>Źródło</dt><dd>${c.source.url ? `<a href="${esc(c.source.url)}" target="_blank" rel="noopener noreferrer">${esc(c.source.kind === 'pinterest' ? 'Pinterest' : 'Facebook')}</a>` : esc({ file: 'Plik wideo', docx: 'Karta .docx', text: 'Opis wklejony' }[c.source.kind] || '')}${c.source.author ? ' · ' + esc(c.source.author) : ''}</dd>
                     ${c.model ? `<dt>Asystent AI</dt><dd>${esc(c.model)}${c.generation_ms ? ' · ' + Math.round(c.generation_ms / 1000) + ' s' : ''}</dd>` : ''}
@@ -460,10 +492,18 @@
                 <dt>Grupa</dt><dd><span class="dc-chip-static"><i style="background:${esc(c.group_color || groupColor(c.id_group))}"></i>${esc(c.group || groupName(c.id_group))}</span></dd>
                 <dt>Sprzedaż</dt><dd>${fmt(c.weekly_sales)} szt./tydz.</dd>
                 <dt>Sezon</dt><dd>${c.seasonal ? (c.forecast.quarters || []).map(q => 'Q' + q).join(' + ') + ' · ' + fmt((c.weekly_sales || 0) * 13) + ' szt./kwartał' : 'cały rok'}</dd>
-                <dt>Rok</dt><dd><b>${fmt(c.forecast.year)} szt.</b></dd></dl></div>
+                <dt>Rok</dt><dd><b>${fmt(c.forecast.year)} szt.</b></dd>
+                ${c.category ? `<dt>Kategoria</dt><dd>${esc(c.category)}</dd>` : ''}
+                ${Number(c.id_type || 1) !== 1 ? `<dt>Typ</dt><dd>${esc(c.type || '')}</dd>` : ''}
+                ${Number(c.label_type) === 1 ? '<dt>Etykieta</dt><dd>duża</dd>' : ''}</dl></div>
             <div class="dc-act">
-                ${saved ? `<a class="btn btn-primary dc-big" href="${at.root}/test-products/${c.product_id}/tablet"><i class="bi bi-box-arrow-up-right"></i> Otwórz produkt</a>`
-                    : `<button type="button" class="btn btn-primary dc-big" data-save><i class="bi bi-tablet"></i> Zapisz i wyślij na tablet ${esc(c.group || '')}</button>`}
+                ${saved ? `<a class="btn btn-primary dc-big" href="${at.root}/test-products/${c.product_id}/tablet"><i class="bi bi-box-arrow-up-right"></i> Otwórz produkt</a>
+                    <div class="dc-choice">${c.on_tablet ? '' : `<button type="button" class="btn btn-outline-primary dc-big" data-save="tablet"><i class="bi bi-tablet"></i> Wyślij też na tablet</button>`}
+                        <button type="button" class="btn btn-outline-primary dc-big" data-print><i class="bi bi-printer"></i> Drukuj kartę</button></div>`
+                    : `<p class="dc-label dc-m0">Co zrobić z kartą ?</p>
+                    <div class="dc-choice"><button type="button" class="btn btn-primary dc-big" data-save="tablet"><i class="bi bi-tablet"></i> Wyślij na tablet ${esc(c.group || '')}</button>
+                        <button type="button" class="btn btn-outline-primary dc-big" data-save="print"><i class="bi bi-printer"></i> Drukuj kartę</button></div>
+                    <p class="dc-hint dc-m0">Oba zapisują produkt w Nowe produkty → Pomysł. Wydruk : bez tabletu (można wysłać później).</p>`}
                 <div class="dc-act-row"><a class="btn btn-outline-secondary" href="${at.root}/test-products/cards/${c.id}/card.docx"><i class="bi bi-file-earmark-word"></i> .docx</a>
                     <a class="btn btn-outline-secondary" href="${at.root}/test-products/cards/${c.id}/card.pdf?inline=1" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
                     ${c.source.kind !== 'docx' ? `<button type="button" class="btn btn-outline-secondary" data-regen ${S.ai.configured ? '' : 'disabled'}>↻ Jeszcze raz</button>` : ''}</div>
@@ -492,7 +532,8 @@
             const photos = S.card.card.photos.map((p, i) => i === Number(inp.dataset.cap) ? { ...p, caption: inp.value } : p);
             savePhotos(photos, true);
         }));
-        view.querySelector('[data-save]')?.addEventListener('click', save);
+        view.querySelectorAll('[data-save]').forEach(b => b.addEventListener('click', () => save(b.dataset.save)));
+        view.querySelector('[data-print]')?.addEventListener('click', printCard);
         view.querySelector('[data-regen]')?.addEventListener('click', () => {
             if (!window.confirm('Wygenerować kartę ponownie ? Poprawki tekstu i zdjęć zostaną zastąpione.')) return;
             run();
@@ -501,7 +542,7 @@
             if (!window.confirm('Usunąć ten szkic karty ?')) return;
             const res = await api(`/ajax/dev-cards/${c.id}`, 'DELETE');
             if (!res.ok) return at.notify(false, res.message);
-            location.href = at.root + '/test-products/from-video';
+            location.href = at.root + '/test-products/new';
         });
     }
 
@@ -513,7 +554,7 @@
         else row('read', 'skip', c.source.kind === 'file' ? 'Plik wideo z komputera' : 'Opis wklejony ręcznie');
         const n = c.frames.filter(f => f.kind === 'frame').length;
         row('frames', n ? 'done' : 'todo', n ? `${n} klatek z filmu` : (c.source.kind === 'file' ? 'Wybierz plik wideo ponownie, aby wyciąć klatki' : ''));
-        const box = actions(`<a class="btn btn-outline-secondary dc-big" href="${at.root}/test-products/from-video">Nowa karta</a><span class="dc-sp"></span>
+        const box = actions(`<a class="btn btn-outline-secondary dc-big" href="${at.root}/test-products/new">Nowa karta</a><span class="dc-sp"></span>
             ${c.source.kind === 'file' && !n ? '<input type="file" accept="video/*" class="form-control dc-input" data-refile>' : ''}
             <button type="button" class="btn btn-primary dc-big" data-continue ${S.ai.configured ? '' : 'disabled'}><i class="bi bi-stars"></i> Kontynuuj</button>`);
         box.querySelector('[data-refile]')?.addEventListener('change', (e) => { S.file = e.target.files[0] || null; });
@@ -549,15 +590,35 @@
         }));
     }
 
-    async function save() {
-        const btn = view.querySelector('[data-save]');
-        btn.disabled = true;
-        const res = await api(`/ajax/dev-cards/${S.card.id}/save`, 'POST', {});
-        btn.disabled = false;
+    // « tablet » : produkt na tablecie grupy ; « print » : produkt bez tabletu i karta A4 od razu do druku.
+    async function save(mode) {
+        const btns = view.querySelectorAll('[data-save]');
+        btns.forEach(b => { b.disabled = true; });
+        const res = await api(`/ajax/dev-cards/${S.card.id}/save`, 'POST', { tablet: mode === 'tablet' });
+        btns.forEach(b => { b.disabled = false; });
         if (!res.ok) return at.notify(false, res.message);
         S.card = res.data;
-        at.notify(true, `Zapisano — produkt jest na tablecie grupy ${S.card.group || ''}.`);
+        if (mode === 'print') {
+            at.notify(true, 'Zapisano — karta otwiera się do druku (produkt bez tabletu).');
+            printCard();
+        } else at.notify(true, `Zapisano — produkt jest na tablecie grupy ${S.card.group || ''}.`);
         renderResult();
+    }
+
+    // Druk karty A4 (PDF) : okno drukowania przeglądarki ; gdy przeglądarka go nie otworzy — PDF w nowej karcie.
+    function printCard() {
+        const url = `${at.root}/test-products/cards/${S.card.id}/card.pdf?inline=1`;
+        document.querySelector('iframe.dc-print')?.remove();
+        const frame = document.createElement('iframe');
+        frame.className = 'dc-print';
+        frame.setAttribute('aria-hidden', 'true');
+        frame.addEventListener('load', () => {
+            setTimeout(() => {
+                try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch { window.open(url, '_blank', 'noopener'); }
+            }, 300);
+        });
+        frame.src = url;
+        document.body.appendChild(frame);
     }
 
     function drawPreview() {
@@ -622,6 +683,6 @@
     function dmy(s) { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}.${m[2]}.${m[1]}` : ''; }
     function clock(ms) { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
 
-    // Start : nowa karta albo szkic / karta z adresu (/test-products/from-video/{id}).
+    // Start : nowa karta albo szkic / karta z adresu (/test-products/new/{id}).
     if (S.card) renderResult(); else renderForm();
 })();
