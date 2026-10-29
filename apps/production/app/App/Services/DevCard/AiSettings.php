@@ -179,6 +179,9 @@ TXT;
             throw new CustomException('Anthropic odpowiedział błędem ' . ($e->status ?? '?') . ' — spróbuj później.', 'errors', 502);
         } catch (APIConnectionException) {
             throw new CustomException('Brak połączenia z api.anthropic.com z serwera.', 'errors', 502);
+        } catch (\Throwable $e) {
+            // Inny błąd biblioteki : komunikat dla administratora zamiast « błąd serwera » (bez treści zapytania).
+            throw new CustomException('Nie udało się sprawdzić klucza (' . (new \ReflectionClass($e))->getShortName() . ') — spróbuj ponownie.', 'errors', 502);
         }
     }
 

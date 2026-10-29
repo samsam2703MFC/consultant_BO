@@ -553,3 +553,25 @@ perf_diag() {
   fi
 }
 perf_diag || true
+
+# Asystent AI [196] : la bibliothèque Anthropic se charge-t-elle avec le PHP du serveur, et le serveur joint-il
+# api.anthropic.com ? Appel avec une fausse clé : « refusée (401) » = réseau, TLS et SDK en ordre. Aucune vraie clé
+# n'est lue ni affichée ; on dit seulement si une clé est enregistrée dans Ustawienia › Asystent AI (et quand).
+ai_diag() {
+  local out saved
+  out="$(cd "$ERP_TARGET/app/public" && timeout 40 "$PHPBIN" -r '
+    require "vendor/autoload.php";
+    try {
+      $c = new Anthropic\Client(apiKey: "sk-ant-diag-0000000000000000000000", requestOptions: Anthropic\RequestOptions::with(maxRetries: 0,
+        transporter: new GuzzleHttp\Client(["timeout" => 20, "connect_timeout" => 10])));
+      $c->models->list(limit: 1);
+      echo "réponse inattendue (fausse clé acceptée)";
+    } catch (Anthropic\Core\Exceptions\AuthenticationException $e) { echo "OK : api.anthropic.com joint, fausse clé refusée (401)";
+    } catch (Anthropic\Core\Exceptions\APIConnectionException $e) { echo "ÉCHEC réseau : " . substr($e->getMessage(), 0, 160);
+    } catch (Throwable $e) { echo "ÉCHEC " . get_class($e) . " : " . substr($e->getMessage(), 0, 160); }
+  ' 2>&1 | tail -c 400)" || out="ÉCHEC (PHP) ${out}"
+  log "Asystent AI — PHP $("$PHPBIN" -r 'echo PHP_VERSION;') + SDK Anthropic : ${out}"
+  saved="$("${ADMIN[@]}" -N "${ERP_DB_NAME}" -e "SELECT CONCAT('oui, enregistrée le ', updated_at) FROM n_app_secret WHERE code = 'anthropic_api_key'" 2>/dev/null || true)"
+  log "Asystent AI — clé Anthropic dans Ustawienia : ${saved:-non}"
+}
+ai_diag || true
