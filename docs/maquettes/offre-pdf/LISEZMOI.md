@@ -1,6 +1,7 @@
 # Le devis des magasins aux couleurs de L'Atelier by — trois propositions
 
-**Statut : propositions à valider. Rien n'est branché dans le panel.**
+**Statut : C2 retenue le 29/10/2026. L'intégration est prête dans
+[`integration/`](integration/LISEZMOI.md) ; rien n'est encore branché dans le panel.**
 
 La demande : refaire le visuel des offres (devis) que les magasins envoient à
 leurs clients, produites par `OfferService::getPDF()` (panel, TCPDF). Le
@@ -113,49 +114,10 @@ pour A et B).
 
 ## Brancher la proposition retenue (dans le panel)
 
-1. **Les classes** : `commun.php` (charte + outils) et la proposition retenue,
-   dans le namespace du panel (p. ex. `App\Api\Repositories\Utils`), avec
-   `use App\Api\Core\Language;` — `getTranslation()` et `TCPDFModel` existent
-   déjà. Dans `OffreCharte::POLICES`, mettre les chemins des TTF du serveur.
-2. **`getPDF()`** : remplacer tout ce qui va de `// Configuration PDF` au
-   `$filename = …` par
-   ```php
-   $pdf = (new OffrePdfB($offerData, $shopData, $currencySymbol))->rendre();
-   ```
-   puis supprimer `renderHeader()` … `renderFooter()` et
-   `fillProfessionalTable()`. Le reste (contrôles, nom du fichier, `Output`)
-   ne change pas.
-3. **Les polices** : Gotham n'est livrée qu'en OpenType **CFF**, que TCPDF ne lit
-   pas ; `polices/` en porte les TrueType convertis (`polices/otf2ttf.py`, avec
-   fontTools). **Light, Medium et Black** sont les seules graisses livrées qui
-   portent le « € » (`Gotham_Regular.otf` et `Gotham_Regular_New.otf` sont des
-   Black sans « € »). Vank est déjà en TrueType
-   (`public/assets/ds/fonts/GC_Vank.ttf`). TCPDF en tire ses définitions une fois
-   (`TCPDF_FONTS::addTTFfont()`, fait par `OffreCharte::polices()` dans
-   `OffreCharte::$dossierPolices`) puis embarque un sous-ensemble : un devis
-   pèse ~95 Ko. Gotham est marquée « aperçu et impression » (fsType 4) :
-   l'embarquer dans un PDF est permis.
-4. **Les logos** : `public/assets/img/logo.png` (A, C) et
-   `public/assets/img/newsletter/logo-white.png` (B), PNG transparents (TCPDF a
-   besoin de GD ou d'Imagick pour la transparence). Les déposer sous
-   `SHARED_FILES_URL/franchise-images/` à côté de `pdf-logo.jpg` et pointer
-   `OffreCharte::$logo` / `$logoBlanc` dessus.
-5. **Les libellés** (groupe `offer`) à créer — valeurs françaises dans
-   `donnees.php` (`libelles_offre()`) :
-   - A (12) : `attention_of`, `before_discount`, `commercial_offer`, `continued`,
-     `event_date`, `excl_vat`, `for`, `from`, `incl_vat`, `including_vat`,
-     `issued_on`, `offer_no` ;
-   - B (16) : `agreement`, `agreement_date`, `agreement_signature`,
-     `attention_of`, `continued`, `excl_vat`, `for`, `from`, `incl_vat`,
-     `issued_on`, `offer_no`, `the_day`, `total_to_pay`, `unit_price`, `vat`,
-     `your_notes` ;
-   - C (15 à 17) : `agreement`, `agreement_date`, `agreement_signature`,
-     `attention_of`, `continued`, `excl_vat`, `for`, `incl_vat`, `issued_on`,
-     `prepared_by`, `total_to_pay`, `vat`, `your_notes`, `your_selection` ;
-     plus `the_day` (C1, C2), `at_the_shop` et `payment` (C1), `offer_no` (C3).
-6. Les dates longues (« jeudi 12 novembre 2026 ») passent par
-   `IntlDateFormatter` dans la langue de l'appel (fr_BE, nl_BE, en_GB, pl_PL),
-   à défaut `d/m/Y`. Les montants sont au format belge (`1 234,56 €`).
+C2 retenue : tout est dans [`integration/`](integration/LISEZMOI.md) — la
+classe `OfferPdf` (un seul fichier), `OfferService.php` modifié, les polices à
+poser, les quinze libellés en fr / nl / en, et `verifier.php` qui fait tourner
+le service modifié de bout en bout.
 
 ## Régénérer
 
