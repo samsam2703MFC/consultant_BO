@@ -191,6 +191,9 @@ expectCard($t['qty'] === 21.0 && str_contains((string) $t['note'], 'suche → ś
 expectCard(IM::toMaterial(IM::parseQty('1'), 'g', 'parówka', 'Szynka')['known'] && !IM::toMaterial(IM::parseQty(''), 'g', 'miód', 'miód')['known']
     && IM::toMaterial(IM::parseQty('300 g'), 'kg', 'mąki', 'Mąka')['qty'] === 0.3 && IM::toMaterial(IM::parseQty('2'), 'szt', 'jajka', 'Jajko L')['qty'] === 2.0, 'jednostka surowca : kg, szt, brak ilości');
 expectCard(IM::perPiece('1 parówka na sztukę') && !IM::perPiece('mąki'), '« na sztukę » rozpoznane');
+expectCard(IM::parseQty('2½ cup (ok. 310 g)')['amount'] === 310.0 && IM::parseQty('½ cup + ⅓ cup + ⅓ cup (ok. 280 ml)') === ['amount' => 280.0, 'kind' => 'ml', 'approx' => true, 'word' => null]
+    && IM::parseQty('1 łyżeczka (5 ml)')['amount'] === 5.0 && IM::parseQty('1 cup')['amount'] === 240.0, 'reel : gramatura w nawiasie ważniejsza niż « cup », 1 cup ≈ 240 ml');
+expectCard(IM::isFree('wody (dodawać stopniowo)') && IM::yieldPieces('nie podano (ok. 20 kulek z wersji chrupiącej)') === 20, 'reel : woda z dopiskiem, wydajność « 20 kulek »');
 expectCard(IM::yieldPieces('2 płaty 35×45 cm ≈ 16 szt.') === 16 && IM::yieldPieces('8 bułeczek') === 8 && IM::yieldPieces('ok. 20-24 sztuk') === 22
     && IM::yieldPieces('blacha 30x40') === null && IM::yieldPieces('≈ 12 muffinów') === 12, 'wydajność : sztuki z tekstu karty');
 expectCard(DevCardCostService::parseList('2,5 ; 3 ; 4') === [2.5, 3.0, 4.0] && DevCardCostService::parseList('4,3,2.5') === [2.5, 3.0, 4.0]

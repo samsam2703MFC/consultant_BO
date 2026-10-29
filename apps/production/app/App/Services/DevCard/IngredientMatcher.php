@@ -47,7 +47,7 @@ final class IngredientMatcher
         ['~^(kg|kilogram\w*)$~u', 'g', 1000, false], ['~^(dag|dkg)$~u', 'g', 10, false], ['~^(g|gr|gram\w*)$~u', 'g', 1, false],
         ['~^(l|litr\w*)$~u', 'ml', 1000, false], ['~^(ml|mililitr\w*)$~u', 'ml', 1, false], ['~^(cl)$~u', 'ml', 10, false],
         ['~^(łyżecz\w*|lyzecz\w*|łyż\.?\s*mała|tsp)$~u', 'g', 5, true], ['~^(łyż\w*|lyz\w*|ł\.|tbsp)$~u', 'g', 15, true],
-        ['~^(szklan\w*)$~u', 'ml', 250, true], ['~^(szczypt\w*)$~u', 'g', 1, true], ['~^(garś\w*|gars\w*)$~u', 'g', 30, true],
+        ['~^(szklan\w*)$~u', 'ml', 250, true], ['~^(cups?)$~u', 'ml', 240, true], ['~^(szczypt\w*)$~u', 'g', 1, true], ['~^(garś\w*|gars\w*)$~u', 'g', 30, true],
         ['~^(ząb\w*|zab\w*)$~u', 'g', 5, true], ['~^(plast\w*)$~u', 'g', 20, true], ['~^(szt\.?|sztuk\w*)$~u', 'szt', 1, false],
     ];
 
@@ -155,7 +155,7 @@ final class IngredientMatcher
 
     public static function isFree(string $name): bool
     {
-        $w = array_map(fn($x) => $x[0], self::words($name));
+        $w = array_map(fn($x) => $x[0], self::words(self::mainPart($name)));
         return $w !== [] && !array_diff($w, self::FREE);
     }
 
@@ -234,6 +234,13 @@ final class IngredientMatcher
             if (preg_match('~^(kost\w*)$~u', $m[1])) $qty .= ' ' . $m[1];
         }
         $s = trim(strtr(mb_strtolower($qty, 'UTF-8'), ['½' => ' 0.5', '¼' => ' 0.25', '¾' => ' 0.75', '⅓' => ' 0.333', '⅔' => ' 0.667']));
+        // Gramatura w nawiasie (« 2½ cup (ok. 310 g) », « 1 łyżeczka (5 ml) ») : ważniejsza niż miara kuchenna.
+        if (preg_match('/\((?:ok\.?|około|ca\.?|≈|~)?\s*(\d+(?:[.,]\d+)?)\s*(?:[-–]\s*(\d+(?:[.,]\d+)?)\s*)?(kg|g|ml|l)\b/u', $s, $m)) {
+            $a = (float) str_replace(',', '.', $m[1]);
+            if (isset($m[2]) && $m[2] !== '') $a = ($a + (float) str_replace(',', '.', $m[2])) / 2;
+            $per = ['kg' => 1000, 'g' => 1, 'ml' => 1, 'l' => 1000][$m[3]];
+            return ['amount' => $a * $per, 'kind' => in_array($m[3], ['ml', 'l'], true) ? 'ml' : 'g', 'approx' => true, 'word' => null];
+        }
         $s = (string) preg_replace('/\b(ok\.?|około|ca\.?|~)\s*/u', '', $s);
         $s = (string) preg_replace('/\bpół\b/u', '0.5', $s);
         $amount = null;
@@ -318,7 +325,7 @@ final class IngredientMatcher
     public static function yieldPieces(string $yield): ?int
     {
         $y = mb_strtolower($yield, 'UTF-8');
-        if (preg_match('/(\d+)\s*(?:[-–]\s*(\d+)\s*)?(?:szt|sztuk|kawał|porcj|bułecz|bulecz|rogal|muffin|pączk|paczk|ciastek|ciasteczek|babecz|drożdżów|precl|pizz|kawałk)/u', $y, $m)) {
+        if (preg_match('/(\d+)\s*(?:[-–]\s*(\d+)\s*)?(?:szt|sztuk|kawał|porcj|bułecz|bulecz|bułek|rogal|muffin|pączk|paczk|ciastek|ciasteczek|babecz|drożdżów|precl|pizz|kawałk|kul|plack|naleśnik|gofr)/u', $y, $m)) {
             $n = isset($m[2]) && $m[2] !== '' ? intdiv((int) $m[1] + (int) $m[2], 2) : (int) $m[1];
             return $n > 0 ? $n : null;
         }
