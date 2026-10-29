@@ -103,7 +103,7 @@
         <aside>${edit ? summaryAside() : `
             <div class="dc-card"><h4 class="dc-h">Co powstanie</h4><ul class="dc-list">
                 <li><i class="bi bi-file-earmark-richtext"></i><div><strong>Karta technologiczna A4</strong><small>.docx do edycji + PDF, styl L’Atelier By (jak karty testowe)</small></div></li>
-                <li><i class="bi bi-tablet"></i><div><strong>Na tablecie grupy</strong><small>zakładka « Nowe produkty » : składniki, kroki, zdjęcia etapów, film</small></div></li>
+                <li><i class="bi bi-tablet"></i><div><strong>Na tablecie grupy albo do druku</strong><small>do wyboru na końcu : tablet (zakładka « Nowe produkty » : składniki, kroki, zdjęcia etapów, film) albo karta A4 na papier</small></div></li>
                 <li><i class="bi bi-kanban"></i><div><strong>Nowy produkt w etapach</strong><small>Pomysł → Test 1 (zespół robi test na tablecie i dodaje zdjęcia)</small></div></li>
                 <li><i class="bi bi-graph-up"></i><div><strong>Prognoza sprzedaży</strong><small data-forecast-text></small></div></li></ul></div>
             <div class="dc-card"><h4 class="dc-h">Asystent AI</h4><dl class="dc-kv">
@@ -440,7 +440,8 @@
         const notes = card.notes || [];
         view.innerHTML = `<div class="dc-grid dc-grid-result"><div>
             <div class="dc-card"><h4 class="dc-h"><span class="dc-num is-ok">✓</span>${saved ? 'Zapisano przy produkcie' : 'Karta gotowa'}</h4>
-                ${saved ? `<p class="dc-saved"><i class="bi bi-tablet"></i> Produkt « ${esc(c.product_name || c.name)} » jest na tablecie grupy ${esc(c.group || '')} (Nowe produkty → Pomysł).</p>` : ''}
+                ${saved ? (c.on_tablet ? `<p class="dc-saved"><i class="bi bi-tablet"></i> Produkt « ${esc(c.product_name || c.name)} » jest na tablecie grupy ${esc(c.group || '')} (Nowe produkty → Pomysł).</p>`
+                    : `<p class="dc-saved"><i class="bi bi-printer"></i> Produkt « ${esc(c.product_name || c.name)} » zapisany w Nowe produkty → Pomysł, bez tabletu (karta do druku).</p>`) : ''}
                 <dl class="dc-kv">
                     <dt>Źródło</dt><dd>${c.source.url ? `<a href="${esc(c.source.url)}" target="_blank" rel="noopener noreferrer">${esc(c.source.kind === 'pinterest' ? 'Pinterest' : 'Facebook')}</a>` : esc({ file: 'Plik wideo', docx: 'Karta .docx', text: 'Opis wklejony' }[c.source.kind] || '')}${c.source.author ? ' · ' + esc(c.source.author) : ''}</dd>
                     ${c.model ? `<dt>Asystent AI</dt><dd>${esc(c.model)}${c.generation_ms ? ' · ' + Math.round(c.generation_ms / 1000) + ' s' : ''}</dd>` : ''}
@@ -462,8 +463,13 @@
                 <dt>Sezon</dt><dd>${c.seasonal ? (c.forecast.quarters || []).map(q => 'Q' + q).join(' + ') + ' · ' + fmt((c.weekly_sales || 0) * 13) + ' szt./kwartał' : 'cały rok'}</dd>
                 <dt>Rok</dt><dd><b>${fmt(c.forecast.year)} szt.</b></dd></dl></div>
             <div class="dc-act">
-                ${saved ? `<a class="btn btn-primary dc-big" href="${at.root}/test-products/${c.product_id}/tablet"><i class="bi bi-box-arrow-up-right"></i> Otwórz produkt</a>`
-                    : `<button type="button" class="btn btn-primary dc-big" data-save><i class="bi bi-tablet"></i> Zapisz i wyślij na tablet ${esc(c.group || '')}</button>`}
+                ${saved ? `<a class="btn btn-primary dc-big" href="${at.root}/test-products/${c.product_id}/tablet"><i class="bi bi-box-arrow-up-right"></i> Otwórz produkt</a>
+                    <div class="dc-choice">${c.on_tablet ? '' : `<button type="button" class="btn btn-outline-primary dc-big" data-save="tablet"><i class="bi bi-tablet"></i> Wyślij też na tablet</button>`}
+                        <button type="button" class="btn btn-outline-primary dc-big" data-print><i class="bi bi-printer"></i> Drukuj kartę</button></div>`
+                    : `<p class="dc-label dc-m0">Co zrobić z kartą ?</p>
+                    <div class="dc-choice"><button type="button" class="btn btn-primary dc-big" data-save="tablet"><i class="bi bi-tablet"></i> Wyślij na tablet ${esc(c.group || '')}</button>
+                        <button type="button" class="btn btn-outline-primary dc-big" data-save="print"><i class="bi bi-printer"></i> Drukuj kartę</button></div>
+                    <p class="dc-hint dc-m0">Oba zapisują produkt w Nowe produkty → Pomysł. Wydruk : bez tabletu (można wysłać później).</p>`}
                 <div class="dc-act-row"><a class="btn btn-outline-secondary" href="${at.root}/test-products/cards/${c.id}/card.docx"><i class="bi bi-file-earmark-word"></i> .docx</a>
                     <a class="btn btn-outline-secondary" href="${at.root}/test-products/cards/${c.id}/card.pdf?inline=1" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
                     ${c.source.kind !== 'docx' ? `<button type="button" class="btn btn-outline-secondary" data-regen ${S.ai.configured ? '' : 'disabled'}>↻ Jeszcze raz</button>` : ''}</div>
@@ -492,7 +498,8 @@
             const photos = S.card.card.photos.map((p, i) => i === Number(inp.dataset.cap) ? { ...p, caption: inp.value } : p);
             savePhotos(photos, true);
         }));
-        view.querySelector('[data-save]')?.addEventListener('click', save);
+        view.querySelectorAll('[data-save]').forEach(b => b.addEventListener('click', () => save(b.dataset.save)));
+        view.querySelector('[data-print]')?.addEventListener('click', printCard);
         view.querySelector('[data-regen]')?.addEventListener('click', () => {
             if (!window.confirm('Wygenerować kartę ponownie ? Poprawki tekstu i zdjęć zostaną zastąpione.')) return;
             run();
@@ -549,15 +556,35 @@
         }));
     }
 
-    async function save() {
-        const btn = view.querySelector('[data-save]');
-        btn.disabled = true;
-        const res = await api(`/ajax/dev-cards/${S.card.id}/save`, 'POST', {});
-        btn.disabled = false;
+    // « tablet » : produkt na tablecie grupy ; « print » : produkt bez tabletu i karta A4 od razu do druku.
+    async function save(mode) {
+        const btns = view.querySelectorAll('[data-save]');
+        btns.forEach(b => { b.disabled = true; });
+        const res = await api(`/ajax/dev-cards/${S.card.id}/save`, 'POST', { tablet: mode === 'tablet' });
+        btns.forEach(b => { b.disabled = false; });
         if (!res.ok) return at.notify(false, res.message);
         S.card = res.data;
-        at.notify(true, `Zapisano — produkt jest na tablecie grupy ${S.card.group || ''}.`);
+        if (mode === 'print') {
+            at.notify(true, 'Zapisano — karta otwiera się do druku (produkt bez tabletu).');
+            printCard();
+        } else at.notify(true, `Zapisano — produkt jest na tablecie grupy ${S.card.group || ''}.`);
         renderResult();
+    }
+
+    // Druk karty A4 (PDF) : okno drukowania przeglądarki ; gdy przeglądarka go nie otworzy — PDF w nowej karcie.
+    function printCard() {
+        const url = `${at.root}/test-products/cards/${S.card.id}/card.pdf?inline=1`;
+        document.querySelector('iframe.dc-print')?.remove();
+        const frame = document.createElement('iframe');
+        frame.className = 'dc-print';
+        frame.setAttribute('aria-hidden', 'true');
+        frame.addEventListener('load', () => {
+            setTimeout(() => {
+                try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch { window.open(url, '_blank', 'noopener'); }
+            }, 300);
+        });
+        frame.src = url;
+        document.body.appendChild(frame);
     }
 
     function drawPreview() {

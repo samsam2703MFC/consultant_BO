@@ -72,7 +72,7 @@ class DevCardController extends BaseController
 
     public function save($id)
     {
-        return $this->run(fn() => $this->cards->save((int) $id, $this->userId()));
+        return $this->run(fn() => $this->cards->save((int) $id, $this->userId(), filter_var($this->input()['tablet'] ?? true, FILTER_VALIDATE_BOOLEAN)));
     }
 
     public function delete($id)

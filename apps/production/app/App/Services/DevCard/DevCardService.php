@@ -222,20 +222,27 @@ final class DevCardService
     }
 
     /** Krok 6 : produkt w rozwoju (etap Pomysł, tablet grupy, prognoza, link do filmu) + karta powiązana. */
-    public function save(int $id, ?int $userId): array
+    /**
+     * Zapis przy produkcie w rozwoju. $onTablet : karta na tablecie grupy (true) albo tylko wydruk (false — produkt
+     * niewidoczny na tablecie, PDF do druku). Ponowny zapis z $onTablet = true wysyła już zapisaną kartę na tablet.
+     */
+    public function save(int $id, ?int $userId, bool $onTablet = true): array
     {
         $c = $this->card($id);
-        if ($c['status'] === 'saved' && $c['id_test_product']) return $this->state($id) + ['url' => '/test-products/' . $c['id_test_product'] . '/tablet'];
+        if ($c['status'] === 'saved' && $c['id_test_product']) {
+            if ($onTablet && !(int) $c['on_tablet']) $this->products->saveDev((int) $c['id_test_product'], ['on_tablet' => 1, 'updated_by' => $userId]);
+            return $this->state($id) + ['url' => '/test-products/' . $c['id_test_product'] . '/tablet'];
+        }
         $card = json_decode((string) $c['card_json'], true);
         if (!is_array($card)) throw new CustomException('Najpierw wygeneruj kartę (albo wgraj gotową .docx).', 'errors', 422);
         CardSchema::assertComplete($card);
         $group = null;
         foreach ($this->cards->groups() as $g) if ((int) $g['id'] === (int) $c['id_group']) $group = $g;
         if ($group === null) throw new CustomException('Wybierz grupę.', 'errors', 422, ['fields' => ['id_group' => 'Wybierz grupę.']]);
-        $productId = $this->tx->execute(function () use ($id, $c, $group, $card, $userId) {
+        $productId = $this->tx->execute(function () use ($id, $c, $group, $card, $userId, $onTablet) {
             $pid = $this->products->createTestProduct((string) $c['name'], $group['id_section'] !== null ? (int) $group['id_section'] : null);
             $notes = 'Karta technologiczna z filmu' . ($card['author'] !== '' ? ' (wg ' . $card['author'] . ')' : '') . '. Gramatury do sprawdzenia w teście.';
-            $this->products->saveDev($pid, ['on_tablet' => 1, 'id_group' => (int) $group['id'], 'stage' => 'idea', 'stage_changed_at' => date('Y-m-d H:i:s'),
+            $this->products->saveDev($pid, ['on_tablet' => $onTablet ? 1 : 0, 'id_group' => (int) $group['id'], 'stage' => 'idea', 'stage_changed_at' => date('Y-m-d H:i:s'),
                 'notes' => $notes, 'video_url' => in_array($c['source_kind'], ['facebook', 'pinterest'], true) ? mb_substr((string) $c['source_url'], 0, 500) : null,
                 'weekly_sales' => $c['weekly_sales'] !== null ? (int) $c['weekly_sales'] : null, 'season_quarters' => $c['season_quarters'], 'updated_by' => $userId]);
             $this->cards->save($id, ['id_test_product' => $pid, 'status' => 'saved', 'video_url' => null]);
@@ -316,6 +323,7 @@ final class DevCardService
             'model' => $c['model'], 'usage' => json_decode((string) $c['usage_json'], true), 'generated_at' => $c['generated_at'],
             'generation_ms' => $c['generation_ms'] !== null ? (int) $c['generation_ms'] : null,
             'product_id' => $c['id_test_product'] !== null ? (int) $c['id_test_product'] : null, 'product_name' => $c['product_name'],
+            'on_tablet' => (bool) (int) $c['on_tablet'],
             'footer' => CardSchema::FOOTER,
         ];
     }

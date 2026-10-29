@@ -61,7 +61,9 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   `n_app_secret` `anthropic_api_key`, chiffrée (comme les mots de passe des boîtes mail), saisie par un administrateur dans
   Ustawienia › Asystent AI (`/settings/ai`), ou variable d'environnement `ANTHROPIC_API_KEY` du serveur.
 - Pages : `/test-products/from-video` (assistant), `/test-products/cards/{id}/card.docx` et `card.pdf` ; la carte apparaît
-  sur la fiche du produit en développement (bureau) et sur la tablette du groupe.
+  sur la fiche du produit en développement (bureau) et sur la tablette du groupe. À l'enregistrement, l'opérateur choisit :
+  « Wyślij na tablet » (`n_dev_product.on_tablet` = 1) ou « Drukuj kartę » (`on_tablet` = 0, PDF A4 ouvert pour l'impression ;
+  « Wyślij też na tablet » ensuite, ou l'interrupteur de la fiche produit).
 
 ### Tablette d'emballage (migration 121, 28/10/2026)
 

@@ -179,3 +179,10 @@ aside .dc-card:first-child { margin-top: 0; }
   .dc-a4 { aspect-ratio: auto; }
   .dc-tab-facts, .dc-tab-cols { grid-template-columns: 1fr; }
 }
+
+/* Zapis : tablet albo wydruk (dwa duże przyciski obok siebie) */
+.dc-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dc-choice .dc-big { min-height: 52px; white-space: normal; }
+.dc-choice:has(> :only-child) { grid-template-columns: 1fr; }
+iframe.dc-print { position: fixed; right: 0; bottom: 0; width: 1px; height: 1px; border: 0; opacity: 0; pointer-events: none; }
+@media (max-width: 560px) { .dc-choice { grid-template-columns: 1fr; } }

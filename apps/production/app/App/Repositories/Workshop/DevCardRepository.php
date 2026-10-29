@@ -14,10 +14,11 @@ final class DevCardRepository extends WorkshopRepository
         'video_url', 'name', 'id_group', 'weekly_sales', 'season_quarters', 'card_json', 'model', 'id_prompt', 'usage_json', 'generated_at', 'generation_ms', 'created_by'];
 
     private const CARD = 'SELECT c.*, g.name_pl AS group_pl, g.name_fr AS group_fr, g.color AS group_color, tp.name AS product_name,
-            (SELECT COUNT(*) FROM n_dev_card_frame f WHERE f.id_card = c.id) AS frame_count
+            COALESCE(d.on_tablet, 0) AS on_tablet, (SELECT COUNT(*) FROM n_dev_card_frame f WHERE f.id_card = c.id) AS frame_count
         FROM n_dev_card c
         LEFT JOIN n_prod_group g ON g.id = c.id_group
-        LEFT JOIN test_product tp ON tp.id = c.id_test_product';
+        LEFT JOIN test_product tp ON tp.id = c.id_test_product
+        LEFT JOIN n_dev_product d ON d.id_test_product = c.id_test_product';
 
     public function card(int $id): ?array
     {

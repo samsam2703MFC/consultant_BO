@@ -293,11 +293,15 @@ try {
     expectCard(str_starts_with($pdf['bytes'], '%PDF') && str_ends_with($pdf['name'], '.pdf'), 'pliki : PDF');
 
     // Zapis → produkt w rozwoju.
-    $saved = $svc->save($id, 7);
+    // Wybór : najpierw « Drukuj kartę » (produkt bez tabletu), potem « Wyślij też na tablet ».
+    $saved = $svc->save($id, 7, false);
     $pid = $saved['product_id'];
-    expectCard($saved['status'] === 'saved' && $saved['url'] === "/test-products/{$pid}/tablet", 'zapis : produkt ' . $pid);
+    expectCard($saved['status'] === 'saved' && $saved['url'] === "/test-products/{$pid}/tablet" && $saved['on_tablet'] === false, 'zapis do druku : produkt ' . $pid . ' bez tabletu');
     $dev = $pdo->query("SELECT d.*, tp.name, tp.id_type FROM n_dev_product d JOIN test_product tp ON tp.id = d.id_test_product WHERE d.id_test_product = {$pid}")->fetch();
-    expectCard($dev['name'] === 'Pogacza' && (int) $dev['id_type'] === 1 && (int) $dev['on_tablet'] === 1 && (int) $dev['id_group'] === 1 && $dev['stage'] === 'idea', 'zapis : produkt testowy, tablet grupy, etap Pomysł');
+    expectCard($dev['name'] === 'Pogacza' && (int) $dev['id_type'] === 1 && (int) $dev['on_tablet'] === 0 && (int) $dev['id_group'] === 1 && $dev['stage'] === 'idea', 'zapis do druku : produkt testowy, etap Pomysł, niewidoczny na tablecie');
+    $again = $svc->save($id, 7);
+    expectCard($again['product_id'] === $pid && $again['on_tablet'] === true
+        && (int) $pdo->query("SELECT on_tablet FROM n_dev_product WHERE id_test_product = {$pid}")->fetchColumn() === 1, 'wyślij też na tablet : ten sam produkt, widoczny na tablecie');
     expectCard((int) $dev['weekly_sales'] === 200 && $dev['season_quarters'] === null && $dev['video_url'] === null && str_contains($dev['notes'], 'Chefburcinarda'), 'zapis : prognoza, bez filmu (plik), notatka');
     expectCard(array_column($svc->state($id)['frames'], 'id') === [$fids[1]], 'zapis : klatki niewybrane usunięte');
     expectCard($svc->save($id, 7)['product_id'] === $pid, 'zapis : drugi raz bez nowego produktu');
