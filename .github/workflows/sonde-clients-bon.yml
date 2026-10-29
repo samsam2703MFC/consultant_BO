@@ -30,7 +30,8 @@ env:
 jobs:
   sonde:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    # 12 et non 8 : la sonde « en-ligne » attend jusqu'à sept minutes la fin d'une mise en ligne.
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@v4

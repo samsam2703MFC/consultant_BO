@@ -68,6 +68,25 @@ function scLigne(string $ch, array $g, int $shop): void
         $meta !== [] ? ' · méta ' . implode(',', $meta) : '', $err !== null ? ' · ' . $err : '');
 }
 
+/** La route du bon en ligne, telle que l'écran l'appelle : des comptes et des durées, aucun nom. */
+function scEnLigne(array $appels): void
+{
+    scTitre('la route du bon en ligne : GET /exploitation/promos-magasin/clients');
+    foreach ($appels as [$qs, $lib]) {
+        $t = microtime(true);
+        $ctx = stream_context_create(['http' => ['timeout' => 90, 'ignore_errors' => true]]);
+        $raw = @file_get_contents('http://185.180.206.46/consulant_bo/api/cockpit/exploitation/promos-magasin/clients?' . $qs, false, $ctx);
+        $s = microtime(true) - $t;
+        $code = isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m) ? (int) $m[1] : 0;
+        $j = is_string($raw) ? json_decode($raw, true) : null;
+        if (!is_array($j) || !isset($j['clients'])) { printf("  %-46s HTTP %d · %5.1f s · %s\n", $lib, $code, $s, mb_substr((string) $raw, 0, 200)); continue; }
+        $cl = $j['clients'];
+        printf("  %-46s HTTP %d · %5.1f s (serveur %s ms) · lue à %s · total %5d · trouvés %5d · rendus %2d · B2B %2d · nB2b %s · nParticuliers %s\n", $lib, $code, $s,
+            json_encode($j['ms'] ?? null), json_encode($j['lu'] ?? null), $j['total'] ?? -1, $j['trouves'] ?? -1, count($cl),
+            count(array_filter($cl, static fn ($c) => !empty($c['b2b']))), json_encode($j['nB2b'] ?? null), json_encode($j['nParticuliers'] ?? null));
+    }
+}
+
 scTitre('compte admin ERP du cockpit');
 if (!ErpApi::disponible()) { echo "  ⇒ aucun identifiant ni jeton : sonde impossible\n"; exit(1); }
 echo '  base=', ErpApi::config()['base'], "\n";
@@ -75,7 +94,25 @@ echo '  base=', ErpApi::config()['base'], "\n";
 // ── La vitesse de la liste des particuliers (29/10/2026, après #76) ──────────────────────────────────────────────
 // La route en ligne a mis 12,8 s à froid pour les 7 935 particuliers du magasin 2 (16 pages de 500, quatre de front).
 // D'où vient le temps, et la mémoire de PHP-FPM tient-elle une lecture d'un seul tenant (10 Mo) ? Lecture seule.
-$passage = 'vitesse';   // « tout » : rejouer aussi les relevés du matin ci-dessous
+// « vitesse » : la mesure ci-dessous ; « en-ligne » : la route après une mise en ligne ; « tout » : aussi les relevés du matin.
+$passage = 'en-ligne';
+if ($passage === 'en-ligne') {
+    // La sonde peut partir pendant la mise en ligne : elle attend que la route rende `ms` (#77), sept minutes au plus.
+    for ($i = 0, $pret = false; $i < 28 && !$pret; $i++) {
+        $j = json_decode((string) @file_get_contents('http://185.180.206.46/consulant_bo/api/cockpit/exploitation/promos-magasin/clients?shop=4&type=b2b&q=',
+            false, stream_context_create(['http' => ['timeout' => 30, 'ignore_errors' => true]])), true);
+        $pret = is_array($j) && array_key_exists('ms', $j);
+        if (!$pret) { sleep(15); }
+    }
+    echo $pret ? "  la route rend « ms » : #77 est en ligne\n" : "  ⇒ #77 pas en ligne après sept minutes : mesure de l'ancienne route\n";
+    // Après #77 : lue d'un seul tenant, gardée une heure. « frais » force la première lecture à froid.
+    scEnLigne([['shop=2&type=particulier&q=&frais=1', 'particuliers du magasin 2, relus (froid)'], ['shop=2&type=particulier&q=ma', 'particuliers du magasin 2, « ma » (gardé)'],
+        ['shop=2&type=particulier&q=mar', 'particuliers du magasin 2, « mar » (gardé)'], ['shop=2&type=b2b&q=&frais=1', 'B2B du magasin 2, relus (froid)'],
+        ['shop=2&type=b2b&q=', 'B2B du magasin 2 (gardé)'], ['shop=4&type=particulier&q=an&frais=1', 'particuliers du magasin 4, « an » (froid)'],
+        ['shop=4&type=b2b&q=', 'B2B du magasin 4']]);
+    printf("\n  mémoire PHP au plus haut : %d Mo\n\n=== FIN SONDE CLIENTS DU BON ===\n", intdiv(memory_get_peak_usage(true), 1048576));
+    exit(0);
+}
 scTitre('la mémoire de PHP-FPM (fichiers de configuration, en lecture)');
 foreach (array_merge(glob('/etc/php/*/fpm/php.ini') ?: [], glob('/etc/php/*/fpm/pool.d/*.conf') ?: []) as $f) {
     foreach (file($f, FILE_IGNORE_NEW_LINES) ?: [] as $l) {
@@ -173,24 +210,6 @@ if ($r[1] !== []) {
     echo '    id_main_shop : ', scRep($r[1], 'id_main_shop'), "\n";
 }
 scLigne('/clients?type=b2b&limit=500&offset=0', scGet('/clients?type=b2b&limit=500&offset=0'), 2);
-
-// ── Après la mise en ligne de #76 : la route du bon, telle que l'écran l'appelle (des comptes, aucun nom) ─────────
-scTitre('la route du bon en ligne : GET /exploitation/promos-magasin/clients');
-foreach ([['shop=2&type=b2b&q=', 'B2B du magasin 2, sans texte (froid)'], ['shop=2&type=b2b&q=', 'B2B du magasin 2, sans texte (gardé)'],
-    ['shop=2&type=particulier&q=ma', 'particuliers du magasin 2, « ma » (froid)'], ['shop=2&type=particulier&q=mar', 'particuliers du magasin 2, « mar » (gardé)'],
-    ['shop=4&type=b2b&q=', 'B2B du magasin 4'], ['shop=4&type=particulier&q=an', 'particuliers du magasin 4, « an »']] as [$qs, $lib]) {
-    $t = microtime(true);
-    $ctx = stream_context_create(['http' => ['timeout' => 90, 'ignore_errors' => true]]);
-    $raw = @file_get_contents('http://185.180.206.46/consulant_bo/api/cockpit/exploitation/promos-magasin/clients?' . $qs, false, $ctx);
-    $s = microtime(true) - $t;
-    $code = isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m) ? (int) $m[1] : 0;
-    $j = is_string($raw) ? json_decode($raw, true) : null;
-    if (!is_array($j) || !isset($j['clients'])) { printf("  %-44s HTTP %d · %5.1f s · %s\n", $lib, $code, $s, mb_substr((string) $raw, 0, 200)); continue; }
-    $cl = $j['clients'];
-    printf("  %-44s HTTP %d · %5.1f s · total %5d · trouvés %5d · rendus %2d · B2B %2d · ailleurs %d · nB2b %s · nParticuliers %s\n", $lib, $code, $s,
-        $j['total'] ?? -1, $j['trouves'] ?? -1, count($cl), count(array_filter($cl, static fn ($c) => !empty($c['b2b']))),
-        count(array_filter($cl, static fn ($c) => !empty($c['ailleurs']))), json_encode($j['nB2b'] ?? null), json_encode($j['nParticuliers'] ?? null));
-}
 
 printf("\n  mémoire PHP au plus haut : %d Mo (memory_limit du CLI : %s)\n", intdiv(memory_get_peak_usage(true), 1048576), ini_get('memory_limit'));
 echo "\n=== FIN SONDE CLIENTS DU BON ===\n";
