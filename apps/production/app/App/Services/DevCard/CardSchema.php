@@ -80,6 +80,14 @@ final class CardSchema
     public static function normalize(array $c): array
     {
         $s = fn($v, int $max) => mb_substr(trim(preg_replace('~[ \t]+~u', ' ', str_replace(["\r\n", "\r"], "\n", (string) $v))), 0, $max);
+        // Nagłówek (wydajność, pieczenie, czas) : za długi tekst ucięty na ostatnim słowie, z « … ».
+        $head = function ($v, int $max) use ($s): string {
+            $full = $s($v, 10000);
+            if (mb_strlen($full) <= $max) return $full;
+            $cut = mb_substr($full, 0, $max - 1);
+            $sp = mb_strrpos($cut, ' ');
+            return rtrim($sp !== false && $sp > $max / 2 ? mb_substr($cut, 0, $sp) : $cut, ' ,;:–-') . '…';
+        };
         $groups = [];
         foreach (array_slice((array) ($c['ingredients'] ?? []), 0, 12) as $g) {
             if (!is_array($g)) continue;
@@ -101,8 +109,8 @@ final class CardSchema
         }
         $notes = array_values(array_filter(array_map(fn($x) => $s($x, 300), array_slice((array) ($c['notes'] ?? []), 0, 10)), fn($x) => $x !== ''));
         return ['v' => 1, 'title' => $s($c['title'] ?? '', 160), 'original_name' => $s($c['original_name'] ?? '', 160), 'author' => $s($c['author'] ?? '', 120),
-            'source_language' => $s($c['source_language'] ?? '', 8), 'yield' => $s($c['yield'] ?? '', 160), 'baking' => $s($c['baking'] ?? '', 160),
-            'time' => $s($c['time'] ?? '', 200), 'ingredients' => $groups, 'steps' => $steps, 'photos' => $photos, 'notes' => $notes];
+            'source_language' => $s($c['source_language'] ?? '', 8), 'yield' => $head($c['yield'] ?? '', 160), 'baking' => $head($c['baking'] ?? '', 160),
+            'time' => $head($c['time'] ?? '', 200), 'ingredients' => $groups, 'steps' => $steps, 'photos' => $photos, 'notes' => $notes];
     }
 
     /** Karta gotowa do zapisu : tytuł, składniki i kroki. */

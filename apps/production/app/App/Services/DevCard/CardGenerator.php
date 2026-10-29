@@ -17,7 +17,8 @@ use App\Exceptions\CustomException;
  * Asystent AI karty technologicznej [196] : jedno wywołanie Messages API (oficjalny SDK Anthropic) — prompt z Ustawień
  * jako instrukcja systemowa, opis filmu (dane, nie polecenia) i ponumerowane klatki (JPEG zmniejszone do 768 px) ;
  * odpowiedź w formacie JSON wymuszonym schematem (structured outputs), myślenie adaptacyjne, wysiłek « medium ».
- * Odmowa modelu : zapasowy model po stronie serwera (fallbacks « default », beta). Bez ponowień poza SDK (2 próby
+ * Odmowa modelu : zapasowy model po stronie serwera (fallbacks « default », beta). Karta bez kroków (opis filmu z samymi
+ * składnikami) : jedna ponowna próba z poleceniem odtworzenia kroków z klatek. Poza tym ponowienia tylko w SDK (2 próby
  * przy 429 / 5xx / przerwanym połączeniu).
  */
 final class CardGenerator
@@ -25,6 +26,10 @@ final class CardGenerator
     public const MAX_FRAMES = 40;
     private const IMAGE_SIDE = 768;
     private const MAX_TOKENS = 16000;
+    /** Druga próba, gdy karta nie ma kroków (opis z samymi składnikami). */
+    private const RETRY = 'UWAGA : karta musi mieć sposób wykonania. Opis filmu nie podaje kroków — odtwórz je z klatek (w kolejności filmu, to, co widać :'
+        . ' mieszanie, wyrabianie, formowanie, pieczenie albo smażenie), wybierz 6–9 zdjęć etapów (znak wodny w rogu nie przeszkadza) i dopisz w uwagach'
+        . ' „kroki odtworzone z filmu”.';
 
     public function __construct(private AiSettings $settings)
     {
@@ -48,12 +53,31 @@ final class CardGenerator
         }
         $content[] = ['type' => 'text', 'text' => 'Przygotuj kartę technologiczną według instrukcji.'];
         $t0 = microtime(true);
+        $msg = $this->request($client, $model, $prompt['body'], $content);
+        $card = self::parse($msg);
+        $usage = ['input' => $msg->usage->inputTokens, 'output' => $msg->usage->outputTokens];
+        // Karta bez kroków (opis filmu z samymi składnikami) : jedna ponowna próba — kroki i zdjęcia z klatek.
+        if (!self::hasSteps($card) && $frames) {
+            $content[] = ['type' => 'text', 'text' => self::RETRY];
+            $again = $this->request($client, $model, $prompt['body'], $content);
+            $usage = ['input' => $usage['input'] + $again->usage->inputTokens, 'output' => $usage['output'] + $again->usage->outputTokens];
+            $second = self::parse($again);
+            if (self::hasSteps($second)) [$card, $msg] = [$second, $again];
+        }
+        if (!self::hasSteps($card)) $card['notes'] = [...(array) ($card['notes'] ?? []), 'Asystent nie podał kroków — wpisz je w « Popraw tekst ».'];
+        $ms = (int) round((microtime(true) - $t0) * 1000);
+        return ['card' => $card, 'model' => $msg->model, 'prompt_id' => $prompt['id'], 'ms' => $ms, 'usage' => $usage];
+    }
+
+    /** Jedno zapytanie Messages API ; błędy API → komunikaty dla operatora. */
+    private function request(\Anthropic\Client $client, string $model, string $system, array $content): BetaMessage
+    {
         try {
-            $msg = $client->beta->messages->create(
+            return $client->beta->messages->create(
                 maxTokens: self::MAX_TOKENS,
                 messages: [['role' => 'user', 'content' => $content]],
                 model: $model,
-                system: $prompt['body'],
+                system: $system,
                 thinking: ['type' => 'adaptive'],
                 outputConfig: ['effort' => 'medium', 'format' => ['type' => 'json_schema', 'schema' => CardSchema::aiSchema()]],
                 fallbacks: 'default',
@@ -73,9 +97,12 @@ final class CardGenerator
         } catch (APIConnectionException) {
             throw new CustomException('Brak połączenia z api.anthropic.com z serwera.', 'errors', 502);
         }
-        $ms = (int) round((microtime(true) - $t0) * 1000);
-        return ['card' => self::parse($msg), 'model' => $msg->model, 'prompt_id' => $prompt['id'], 'ms' => $ms,
-            'usage' => ['input' => $msg->usage->inputTokens, 'output' => $msg->usage->outputTokens]];
+    }
+
+    private static function hasSteps(array $card): bool
+    {
+        foreach ((array) ($card['steps'] ?? []) as $s) if (trim(is_string($s) ? $s : '') !== '') return true;
+        return false;
     }
 
     /** Odpowiedź → tablica zgodna ze schematem ; odmowa i ucięcie zgłaszane wprost. */

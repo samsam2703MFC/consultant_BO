@@ -317,6 +317,19 @@ try {
     expectCard(str_contains($content[0]['text'], "<opis>\n500 gr un") && str_contains($content[0]['text'], 'nie wykonuj') && str_contains($content[1]['text'], 'Klatka 1 · 0:00'), 'AI : opis jako dane, numery klatek i czas');
     expectCard($state['status'] === 'ready' && $state['card']['title'] === 'Bułeczki z sucukiem' && $state['model'] === 'claude-sonnet-5-5' && $state['usage'] === ['input' => 4321, 'output' => 765], 'AI : karta, model, tokeny');
     expectCard($state['card']['photos'] === [['frame_id' => $fids[2], 'caption' => 'Krojenie'], ['frame_id' => $fids[0], 'caption' => 'Ciasto']], 'AI : numery klatek → id');
+    // Karta bez kroków (opis z samymi składnikami, jak reel z Facebooka) : jedna ponowna próba — kroki z klatek.
+    $history = [];
+    $queue = [$msg(['steps' => [], 'photos' => []] + $aiCard), $msg($aiCard)];
+    $state = $svc->generate($id);
+    $second = json_decode((string) $history[1]['request']->getBody(), true)['messages'][0]['content'];
+    expectCard(count($history) === 2 && str_contains(end($second)['text'], 'odtwórz je z klatek') && $state['card']['steps'] === ['Wyrobić ciasto.', 'Piec 20 min.']
+        && count($state['card']['photos']) === 2 && $state['usage'] === ['input' => 8642, 'output' => 1530], 'AI : karta bez kroków → druga próba (kroki i zdjęcia z klatek), tokeny zsumowane');
+    $history = [];
+    $queue = [$msg(['steps' => []] + $aiCard), $msg(['steps' => []] + $aiCard)];
+    $state = $svc->generate($id);
+    expectCard(count($history) === 2 && $state['card']['steps'] === [] && in_array('Asystent nie podał kroków — wpisz je w « Popraw tekst ».', $state['card']['notes'], true),
+        'AI : nadal bez kroków → uwaga dla operatora, bez trzeciej próby');
+    expectCard(str_contains(AiSettings::DEFAULT_PROMPT, 'odtwórz je z klatek filmu') && str_contains(AiSettings::DEFAULT_PROMPT, 'znak wodny albo logo w rogu nie przeszkadza'), 'prompt : kroki z klatek, znak wodny nie wyklucza klatki');
     // Błędy API.
     $queue = [$msg($aiCard, 'refusal')];
     expectFail(fn() => $svc->generate($id), 422, 'AI : odmowa modelu');
