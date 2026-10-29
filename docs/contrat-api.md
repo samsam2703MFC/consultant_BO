@@ -3514,6 +3514,74 @@ triés par groupe, catégorie, nom ; les produits inactifs sont écartés sauf `
 TTC de la pièce qui atteindrait la cible de sa catégorie, ou l'objectif du réseau, aux 5 centimes supérieurs. Relu à chaque
 appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. `sonde=1` rend les premières lignes brutes.
 
+### MétaDonnée — formulaires Meta et Instagram → ERP du franchisé (28/10/2026)
+
+Sous-menu « MétaDonnée » du rail (ERP franchisé), maquette A : quatre écrans `mdFormulaires`, `mdMapping`,
+`mdLeads`, `mdSms`, un module (`public/assets/js/metadonnee.js`), un serveur (`src/metadonnee.php`). Tables
+créées à la première utilisation : `ceo_md_form` (formulaires, suivi, magasin, mapping), `ceo_md_lead` (un lead
+Meta, son état côté cockpit, son statut relu dans l'ERP, ses SMS), `ceo_md_shop` (SMS du magasin),
+`ceo_md_journal` (le cycle). Réglages : `mdReglages` (erp, sms, meta, cp), `mdMeta` (ID de l'application et de
+la Page, adresse de rappel, jeton de vérification, bilan de la dernière connexion), `mdMetaSecret`, `mdMetaJeton`,
+`mdSmsJeton` (jamais renvoyés), `mdCycle`, `mdJeton` (horloge).
+
+**Lectures**
+
+- `GET /metadonnee` — tout ce que les quatre écrans lisent : `statut` (meta — configuré, Page, mode `webhook`|`releve`,
+  dernière connexion —, erp, sms, smtp, cron), `reglages`, `champs` (les champs de l'ERP et leur règle), `besoins`, `statuts`, `formulaires[]`
+  (questions avec dernière réponse et suggestion, mapping enregistré ou `null`, `mappingSuggere`, `valeurs`,
+  `champsNeufs`, leads 30 j, `fb`/`ig`, `ignores`), `magasins[]` (SMS et chiffres 30 j), `resume`, `journal`.
+- `GET /metadonnee/leads?filtre=tous|pas_vus|retard|a_attribuer|a_corriger|attente|contactes|connectes|perdus&shop=&form=&q=&jours=30&limite=150`
+  → `{filtre, comptes, total, leads[]}`.
+- `GET /metadonnee/leads/{id}` → `{lead, reponses[{key,label,valeur,champ}], payload, journal}`.
+- `GET /metadonnee/cron?jeton=` — l'horloge (bin/metadonnee_cron.sh, chaque minute).
+
+**Écritures**
+
+- `PUT /metadonnee/meta` `{appId?, pageId?, secret?, jeton?, rappel?}` — les réglages Meta du CRM, recopiés (un secret
+  vide n'efface rien). `POST /metadonnee/meta/connecter` — « Connecter et tester » : `{ok, etapes[{titre, ok, detail}], meta}` ;
+  l'adresse de rappel de l'application n'est prise que libre (ou déjà la nôtre), en https sur un nom de domaine.
+- `POST /metadonnee/formulaires/relire` — les formulaires de la Page (`/{page}/leadgen_forms`, questions comprises).
+  Un nouveau formulaire arrive NON suivi, magasin suggéré.
+- `PUT /metadonnee/formulaires/{id}` — `{suivi?, affectation?: magasin|cp, shopId?, mapping?: {question: champ|ignorer}, valeurs?: {question: {réponse: code}}, par?}`.
+  Enregistrer le mapping libère les leads qui l'attendaient (`liberes`).
+- `POST /metadonnee/formulaires/{id}/rattrapage` `{jours}` — l'historique d'un formulaire (90 j au plus chez Meta).
+- `POST /metadonnee/apercu` `{formId, mapping, valeurs, leadId?}` — ce qui partirait, sans rien envoyer : `{route, payload, manques, avertissements, consentement, magasin}`.
+- `PUT /metadonnee/leads/{id}` `{shopId, envoyer?}` — attribution à la main (puis envoi).
+- `POST /metadonnee/leads/{id}/envoyer` — renvoyer à l'ERP (idempotent). `POST /metadonnee/leads/{id}/sms` — relancer le gérant.
+- `POST /metadonnee/tick` — le cycle tout de suite. `PUT /metadonnee/reglages` `{erp?, sms?, meta?, cp?, smsJeton?}`.
+- `PUT /metadonnee/magasins/{id}` `{smsOn, smsTel, smsNom, escaladeEmail}`. `POST /metadonnee/sms/test` `{tel}`.
+- **Tester les connexions** : `POST /metadonnee/sonde` (lecture seule : Meta, ERP, SMSAPI `GET /profile`, SMTP, horloge),
+  `POST /metadonnee/erp/test` (la route des statuts répond-elle ?), `POST /metadonnee/erp/essai` `{shopId}` (un lead
+  **TEST** envoyé pour de vrai puis relu — réponses brutes à l'écran ; il reste dans l'ERP, à y supprimer).
+
+**Arrivée des leads** : le flux du CRM, recopié. Webhook PUBLIC `GET|POST /metadonnee/meta/leads` (hub.challenge avec
+le jeton de vérification ; signature `X-Hub-Signature-256` avec la clé secrète, sinon 403 ; réponse immédiate puis
+lecture du lead en trois jeux de champs, comme `fl_meta_traiter`) — quand l'application est au Cockpit. Sinon (son
+webhook va au CRM) : relève des formulaires suivis toutes les 2 min sur un jour. Filet horaire sur 3 jours dans les
+deux cas. Un lead d'un formulaire non suivi n'est pas lu : il est seulement compté.
+
+**À créer côté panel (atelierby.tfbuddy.com/api/v1, compte consultant)** — les routes sont des réglages
+(étape 2 → Connexion ERP) ; défauts :
+
+`POST /consultant/leads` — idempotent sur `meta_lead_id` (un second envoi rend 409 ou 200 avec le même `id`) ;
+400/422 = refus sur le contenu (le cockpit ne rejoue pas, le consultant corrige) ; 5xx = rejoué (5 min, 10, 20… 6 h).
+
+```json
+{ "meta_lead_id": "1234567890", "shop_id": 12,
+  "source": { "channel": "meta_leadgen", "platform": "ig", "form_id": "9001", "form": "Lunch au bureau — Gosselies",
+              "page": "L'Atelier by Gosselies", "campaign": "Lunch Charleroi · oct.", "ad": "Carrousel lunch", "received_at": "2026-10-28T10:24:00+01:00" },
+  "company": { "name": "Fiduciaire Delvaux & associés", "zip": "6041", "city": "…", "vat": "…", "address": "…" },
+  "contact": { "first_name": "Claire", "last_name": "Mertens", "email": "c.mertens@…", "phone": "+32476123456", "role": "Office manager" },
+  "lead":    { "headcount": 35, "need": "daily_lunch", "wanted_date": "2026-11-04", "consent": true, "note": "Nous avons 3 végétariens" } }
+```
+Réponse attendue : `{"id": "L-20488", "status": "new"}` (aussi lu sous `data`, `lead` ; `lead_id`, `reference` ; `statut`, `state`).
+Un lead d'essai porte `"test": true` et `meta_lead_id` `TEST-…`.
+
+`GET /consultant/leads?ids=L-20488,L-20489` → une liste (à la racine ou sous `data`/`items`/`leads`) de
+`{id, meta_lead_id, status, seen_at, contacted_at, connected_at}`. `status` : `new`, `seen`, `contacted`
+(ou `quote`, `meeting`, `trial`), `office_created`, `office_connected` (ou `won`, `converted`), `lost`
+(ou `cancelled`) — les équivalents français (`nouveau`, `vu`, `contacte`, `bureau_cree`, `bureau_connecte`, `perdu`)
+sont lus aussi. « Bureau connecté » = le bureau a son compte au webshop (office + tournée validés).
 **La modale d'une catégorie en deux onglets (10/10/2026, maquette A).** Le (i) d'un groupe ou d'une catégorie ouvre deux onglets. « 12 dernières semaines » : la courbe du magasin face à la moyenne par magasin du réseau, la tendance du magasin en pointillé (droite des moindres carrés sur les semaines closes) et, sous l'axe, l'écart de chaque semaine à la précédente (▲▼ %) ; à côté, la tendance des 4 dernières semaines closes face aux 4 d'avant, la même pour le réseau, la pente par semaine, la meilleure et la plus faible semaine, la semaine en cours, l'écart au réseau . Le tableau des sous-catégories a été retiré (10/10/2026). « La journée · 6 h – 18 h » : les ventes de chaque heure du jour choisi (bleu) face à la moyenne des 6 derniers mêmes jours (gris), l'heure en cours au trait rouge ; à côté, le vendu, la moyenne à la même heure, l'écart, l'heure forte, la part d'avant midi et celle d'habitude, une journée moyenne. CA ou pièces. Plus de tableau de chiffres : un clic sur une semaine ou une heure montre ses valeurs dans une mini-vignette (un second clic la retire ; la fiche produit aussi). Nouveau `GET /analyse/categories/journee?shop=&niveau=groupe|categorie&nom=&date=` : `{date, jourNom, maintenant (le jour même), jours (les mêmes jours lus), manquants, heures: [{h 6…17, ca, q, moyCa, moyQ}]}`, lu dans les relevés de tickets (`svProduitsJour`), un jour sans aucune vente au magasin ne compte pas dans la moyenne.
 
 **Tablette (10/10/2026).** Sous 760 px, les vignettes des jours de la frise gardent le montant entier (sans « € » ni « obj. »). La jauge de l'objectif du jour : quand le jour, J−7 ou la projection dépasse l'objectif, l'échelle s'allonge jusqu'au plus haut et l'objectif devient un repère sur les deux pistes, son montant sous l'axe à sa place ; le trait « journée écoulée » se place sur l'objectif au prorata de la journée.

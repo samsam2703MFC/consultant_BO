@@ -12,6 +12,8 @@ import { valsClientsAnnee } from './clients-annee-vals.js';
 import { valsFidelite } from './fidelite-vals.js';
 import { valsPromoTableau, valsPromoEdition, promosBadges, peMonter } from './promotions-vals.js';
 import { Scouting } from './scouting.js';
+// MétaDonnée : un module à part, qui tient son DOM (window.CockpitMetaDonnee) — monté après chaque rendu.
+import './metadonnee.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
 // prêtent (la fiche franchisé) replient le menu en tiroir et grossissent leurs cibles tactiles.
@@ -373,6 +375,8 @@ class App {
       // L'API du module (24/10/2026) : « #/api », et une source avec « ?source=panel ».
       apiModule: 'api',
       brandGuard: 'brandguard', invendus: 'invendus', inventaires: 'inventaires',
+      // MétaDonnée (28/10/2026) : les formulaires Meta et Instagram vers l'ERP du franchisé.
+      mdFormulaires: 'metadonnee-formulaires', mdMapping: 'metadonnee-mapping', mdLeads: 'metadonnee-leads', mdSms: 'metadonnee-sms',
       // Franchisés · évaluation et suivi (09/10/2026)
       ficheFranchise: 'fiche', controlesQualite: 'qualite',
       // Suivi des franchisés (24/10/2026) : le tableau de bord du bureau, la tablette, le client mystère, la page du franchisé, qui fait quoi.
@@ -767,6 +771,13 @@ class App {
       if (!this.scouting) this.scouting = new Scouting(this);
       this.scouting.mount(document.getElementById('scouting-root'));
     }
+    // MétaDonnée : une instance pour les quatre écrans du sous-menu ; ses étapes changent d'écran,
+    // ses compteurs (retards, mappings à faire) remontent en pastilles du rail.
+    if (this.state.ready && ['mdFormulaires', 'mdMapping', 'mdLeads', 'mdSms'].includes(this.state.screen) && window.CockpitMetaDonnee){
+      window.CockpitMetaDonnee.mount(document.getElementById('metadonnee-root'), { vue: this.state.screen, apiBase: API_BASE, notify: msg => this.notify(msg),
+        go: id => this.setState({ screen: id, railOuvert: false }),
+        onResume: b => { const a = this.state.mdBadges || {}; if (a.retard !== b.retard || a.mapping !== b.mapping) this.setState({ mdBadges: b }); } });
+    }
     // L'édition des promotions : la hauteur du cadre suit l'assistant.
     if (this.state.ready && this.state.screen === 'promoEdition') { peMonter(this); }
     // L'écran est posé : on relève ce qu'il AFFICHE de cliquable (voir
@@ -1101,6 +1112,10 @@ class App {
       suiviSources: ['Sources et API', 'Les consultants et les visites, source par source : ce qui vient du panel atelierby.tfbuddy.com, ce qui vit dans les tables locales con_, ce qui se lit dans la base TFBuddy sans API — et les API à ouvrir au panel pour tout passer en lecture et en écriture, avec la structure de chaque table.'],
       suiviAdmin: ['Qui fait quoi', 'Par magasin, qui prépare, qui adapte le rapport, qui l’envoie, qui valide les corrections, qui est en copie, à quelle adresse et dans quelle langue ; les personnes et leurs droits ; les délais ; les visites annoncées ou inopinées ; les courriels aux franchisés dans les quatre langues.'],
       invendus: ['Invendus et poubelle', 'Ce que les magasins jettent, déclaré en caisse : les pièces, leur coût de production (retranché du résultat), la valeur de vente perdue, les motifs, et les produits les plus jetés du réseau. Les reports au lendemain n\u2019ont pas de route de lecture dans le panel.'],
+      mdFormulaires: ['MétaDonnée — 1. Formulaires', 'Les formulaires de prospects Facebook et Instagram de la Page, par la connexion Meta du CRM. On choisit ceux qu\u2019on suit et leur magasin : un formulaire non suivi ne laisse rien entrer.'],
+      mdMapping: ['MétaDonnée — 2. Mapping ERP', 'Chaque question du formulaire trouve sa place dans un champ de l\u2019ERP (atelierby.tfbuddy.com), avec sa règle. Ce qui partira se lit à gauche, sur le dernier lead reçu.'],
+      mdLeads: ['MétaDonnée — 3. Suivi des leads', 'Ce que l\u2019ERP dit de chaque lead, relu toutes les 10 minutes : vu, contacté, bureau créé, bureau connecté. Pas vu à temps ou pas rappelé : en retard.'],
+      mdSms: ['MétaDonnée — 4. Alertes SMS', 'Le SMS au gérant du magasin à chaque nouveau lead, la relance s\u2019il ne l\u2019a pas ouvert, l\u2019e-mail au consultant s\u2019il n\u2019est pas rappelé.'],
       mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
@@ -1553,6 +1568,10 @@ class App {
         // La liste de démarchage vit dans son application (prospection/, 16/10/2026) :
         // mise en page bureau sur grand écran, mobile sur le téléphone.
         ['ext:prospection/', 'Prospection ↗', 0],
+        // MétaDonnée (demande du 28/10/2026, maquette A) : les formulaires de prospects Meta et
+        // Instagram jusqu'à l'ERP du franchisé, en quatre étapes — module à part (metadonnee.js).
+        { sub: 'MétaDonnée', children: [['mdFormulaires', '1 · Formulaires', 0], ['mdMapping', '2 · Mapping ERP', (S.mdBadges || {}).mapping || 0],
+          ['mdLeads', '3 · Suivi des leads', (S.mdBadges || {}).retard || 0], ['mdSms', '4 · Alertes SMS', 0]] },
         // Le book des vendeuses : une application à part (tablette/) — l'écran
         // donne ses liens, un aperçu et l'état des données que le BO lui sert.
         ['tablette', 'Tablette vendeuses', 0],
@@ -1604,11 +1623,12 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
+      mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (key) { common[key] = true; }

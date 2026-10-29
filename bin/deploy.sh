@@ -576,6 +576,7 @@ chmod +x "$TARGET_DIR/bin/rapports_cron.sh"
 chmod +x "$TARGET_DIR/bin/newsletter_cron.sh"
 chmod +x "$TARGET_DIR/bin/social_cron.sh"
 chmod +x "$TARGET_DIR/bin/visites_cron.sh"
+chmod +x "$TARGET_DIR/bin/metadonnee_cron.sh"
 chmod +x "$TARGET_DIR/bin/stock_cron.sh"
 # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
 # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
@@ -592,6 +593,7 @@ chmod +x "$TARGET_DIR/bin/stock_cron.sh"
   # (rien tant que la publication réelle est éteinte dans le portail Marketing).
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/social_cron.sh >/dev/null 2>&1"
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/visites_cron.sh >/dev/null 2>&1"
+  echo "* * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/metadonnee_cron.sh >/dev/null 2>&1"
   # Le stock matière des magasins : relu toutes les 5 minutes pour garder chaque inventaire et chaque
   # livraison du panel au moment où ils passent (l'API ne rend que le stock courant).
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/stock_cron.sh >/dev/null 2>&1"

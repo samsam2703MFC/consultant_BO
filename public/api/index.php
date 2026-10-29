@@ -15,6 +15,7 @@ require __DIR__ . '/../../src/meta_graph.php';
 require __DIR__ . '/../../src/linkedin_api.php';
 require __DIR__ . '/../../src/social_publication.php';
 require __DIR__ . '/../../src/brand_guard.php';
+require __DIR__ . '/../../src/metadonnee.php';
 require __DIR__ . '/../../src/installer.php';
 require __DIR__ . '/../../src/marketing_tables.php';
 require __DIR__ . '/../../src/con_tables.php';
@@ -158,6 +159,13 @@ try {
             echo json_encode(wr_bg_webhook((string) file_get_contents('php://input'), $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? null), JSON_UNESCAPED_UNICODE);
             exit;
         }
+    }
+
+    // MétaDonnée : le webhook `leadgen`, recopié du CRM — public lui aussi, gardé
+    // par le jeton de vérification (GET) et la signature de l'application (POST).
+    if ($path === '/metadonnee/meta/leads') {
+        if ($method === 'GET') { mdWebhookVerif(); exit; }
+        if ($method === 'POST') { mdWebhookRecu((string) file_get_contents('php://input'), (string) ($_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '')); exit; }
     }
 
     // « Mes primes » dans l'app worker : la personne se présente avec SON jeton d'employé, que le
@@ -540,6 +548,11 @@ function route(string $method, string $path): mixed
             $path === '/marketing/brand-guard/pages'   => ep_bg_pages(),
             $path === '/marketing/brand-guard/stats'   => ep_bg_stats(),
             $path === '/marketing/brand-guard/cron'    => ep_bg_cron(),
+            // MétaDonnée : les formulaires Meta et Instagram vers l'ERP du franchisé (src/metadonnee.php).
+            $path === '/metadonnee'                    => ep_md(),
+            $path === '/metadonnee/leads'              => ep_md_leads(),
+            $path === '/metadonnee/cron'               => ep_md_cron(),
+            (bool) preg_match('#^/metadonnee/leads/(\d+)$#', $path, $mdl) => ep_md_lead((int) $mdl[1]),
             default                                    => notFound(),
         };
     }
@@ -805,6 +818,23 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/marketing/brand-guard/checks') { return wr_bg_check(); }
     if ($method === 'PUT' && $path === '/marketing/brand-guard/rules') { return wr_bg_rules_put(); }
     if ($method === 'PUT' && $path === '/marketing/brand-guard/pages') { return wr_bg_pages_put(); }
+    // --- MétaDonnée (formulaires Meta → ERP du franchisé, suivi, SMS)
+    if ($method === 'POST' && $path === '/metadonnee/formulaires/relire') { return wr_md_formulaires_relire(); }
+    if ($method === 'PUT' && preg_match('#^/metadonnee/formulaires/(\d{1,30})$#', $path, $m)) { return wr_md_formulaire_put($m[1]); }
+    if ($method === 'POST' && preg_match('#^/metadonnee/formulaires/(\d{1,30})/rattrapage$#', $path, $m)) { return wr_md_formulaire_rattrapage($m[1]); }
+    if ($method === 'POST' && $path === '/metadonnee/apercu') { return wr_md_apercu(); }
+    if ($method === 'PUT' && preg_match('#^/metadonnee/leads/(\d+)$#', $path, $m)) { return wr_md_lead_put((int) $m[1]); }
+    if ($method === 'POST' && preg_match('#^/metadonnee/leads/(\d+)/envoyer$#', $path, $m)) { return wr_md_lead_envoyer((int) $m[1]); }
+    if ($method === 'POST' && preg_match('#^/metadonnee/leads/(\d+)/sms$#', $path, $m)) { return wr_md_lead_sms((int) $m[1]); }
+    if ($method === 'POST' && $path === '/metadonnee/tick') { return wr_md_tick(); }
+    if ($method === 'PUT' && $path === '/metadonnee/reglages') { return wr_md_reglages_put(); }
+    if ($method === 'PUT' && preg_match('#^/metadonnee/magasins/([\w-]{1,16})$#', $path, $m)) { return wr_md_magasin_put($m[1]); }
+    if ($method === 'POST' && $path === '/metadonnee/sms/test') { return wr_md_sms_test(); }
+    if ($method === 'POST' && $path === '/metadonnee/erp/test') { return wr_md_erp_test(); }
+    if ($method === 'POST' && $path === '/metadonnee/erp/essai') { return wr_md_erp_essai(); }
+    if ($method === 'POST' && $path === '/metadonnee/sonde') { return wr_md_sonde(); }
+    if ($method === 'PUT' && $path === '/metadonnee/meta') { return wr_md_meta_put(); }
+    if ($method === 'POST' && $path === '/metadonnee/meta/connecter') { return wr_md_meta_connecter(); }
     if ($method === 'POST' && preg_match('#^/marketing/social/posts/([\w-]+)/controle$#', $path, $m)) { return wr_fb_controle($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/marketing/social/posts/([\w-]+)$#', $path, $m)) { return wr_fb_decision($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/marketing/social/posts/([\w-]+)/ecarts/(\d+)$#', $path, $m)) { return wr_fb_ecart_patch($m[1], (int) $m[2]); }
