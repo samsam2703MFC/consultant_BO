@@ -2543,15 +2543,35 @@ leurs clients vivent au panel, relus à la demande ; le numéro de la campagne n
 - La réponse porte `bon` relu (forme de `GET …/bon` ci-dessous) ; `demandes[].bon` vaut `{campagne}` quand la
   promotion est en `VOUCHER_ONLY`, null sinon. La liste montre une puce « bon » et une colonne « Bon » (lien « codes »).
 
-`GET /exploitation/promos-magasin/clients?shop=4&q=dup` — les clients du magasin, lus au panel
-(`GET /shops/{shop}/clients`, 500 par page, 2 000 au plus), pour choisir ceux du bon : `{ shop, total, clients: [ { id,
-nom, soc, ville, b2b, contact } ] }` — deux lettres au moins, 30 résultats au plus, triés par nom ; `contact` est un
-e-mail ou un téléphone montré à moitié (« j…@exemple.be »), pour distinguer deux homonymes. Panel illisible : 502.
+`GET /exploitation/promos-magasin/clients?shop=4&type=b2b|particulier&q=dup` — les clients du magasin, lus au panel,
+pour choisir ceux du bon (29/10/2026 : « un client B2B ou un client normal, rattaché au magasin ») :
+
+    { shop, type, total, trouves, nB2b, nParticuliers,
+      clients: [ { id, nom, soc, personne, tva, ville, b2b, ailleurs, contact } ] }   // 30 au plus, triés par nom
+
+- `type=b2b` : les comptes B2B du magasin (`GET /shops/{shop}/clients?type=b2b`) ; `nom` est la société, `personne`
+  le nom de la personne, `tva` le n° de TVA. Sans texte, la liste se parcourt (les 30 premiers par nom).
+- `type=particulier` : ses particuliers (`?type=b2c` — le panel lit toute autre valeur que `b2b` comme B2C) ; deux
+  lettres au moins. `ailleurs` : le client est rattaché au magasin mais son magasin principal (`id_main_shop`) est un autre.
+- Sans `type` : les deux (la forme d'avant). `total` : les clients du ou des types lus ; `trouves` : ceux qui
+  répondent au texte, avant la coupe à 30 ; `nB2b` / `nParticuliers` : null pour le type non lu.
+- Le texte cherche le nom, la société, l'e-mail, le téléphone, la ville, le code postal, la TVA et le code client. Un
+  numéro (« BE 0123.456 », « 0470 12 34 ») se compare en chiffres seuls, et sans son zéro de tête (le panel garde les
+  téléphones au format international). Un client fusionné (`merged_into_id`), bloqué ou inactif n'est pas proposé.
+- `contact` est un e-mail ou un téléphone montré à moitié (« j…@exemple.be »), pour distinguer deux homonymes.
+- La lecture au panel, mesurée par la sonde du 29/10/2026 (`tools/sonde_clients_bon.php`) : `limit` n'est tenu
+  qu'avec `offset` (sans lui, tout vient d'un coup — 8 641 clients et 10 Mo au magasin 2) et les B2B viennent devant.
+  Le cockpit lit donc par pages de 500 (`limit` + `offset`, la première seule puis quatre de front), sans plafond
+  (avant : 2 000, si bien qu'au magasin 2 seuls 1 294 des 7 935 particuliers se trouvaient), et garde la liste réduite
+  dix minutes dans `ceo_app_setting` (`pbClients:{shop}:{type}`). Panel illisible : 502.
+
+Dans `GET …/bon` ci-dessous, chaque code porte aussi `b2bClient` (true, false, ou null quand le client n'est plus au
+magasin).
 
 `GET /exploitation/promos-magasin/bon?shop=4&id=p21` — le bon de la promotion, relu au panel :
 
     { ok, bon: { campagne, promotion, nom, statut, actif, cible, code, limite,
-                 codes: [ { id, code, statut, client, nomClient, usages, limite } ],   // 600 au plus
+                 codes: [ { id, code, statut, client, nomClient, b2bClient, usages, limite } ],   // 600 au plus
                  nCodes, nActifs, utilisations, complete, manque: [missing_requirements] } }
 
 Les codes sont en clair : le magasin les remet à ses clients (bouton « Copier les codes »). Une promotion d'un autre

@@ -53,10 +53,14 @@ final class ErpApi
     public static ?string $refusCampagne = null;
     public static ?string $refusPromo = null;
     public static array $clients = [4 => [
-        ['id' => 11, 'name' => 'Anne', 'surname' => 'Dupont', 'company_name' => null, 'city' => 'Halle', 'email' => 'anne.dupont@exemple.be', 'phone' => '+32470000011', 'is_b2b' => 0],
-        ['id' => 12, 'name' => 'Marc', 'surname' => 'Durand', 'company_name' => 'IBA', 'city' => 'Bruxelles', 'email' => null, 'phone' => '+32470000123', 'is_b2b' => 1],
-        ['id' => 13, 'name' => null, 'surname' => null, 'company_name' => 'Odoo', 'city' => 'Halle', 'email' => 'contact@odoo.example', 'phone' => null, 'is_b2b' => 1],
-    ], 5 => [['id' => 51, 'name' => 'Zoé', 'surname' => 'Autre', 'city' => 'Mons', 'is_b2b' => 0]]];
+        ['id' => 11, 'name' => 'Anne', 'surname' => 'Dupont', 'company_name' => null, 'city' => 'Halle', 'email' => 'anne.dupont@exemple.be', 'phone' => '+32470000011', 'is_b2b' => 0, 'id_main_shop' => 4],
+        ['id' => 12, 'name' => 'Marc', 'surname' => 'Durand', 'company_name' => 'IBA', 'city' => 'Bruxelles', 'email' => null, 'phone' => '+32470000123', 'is_b2b' => 1, 'id_main_shop' => 4, 'tax_number' => 'BE0123.456.789'],
+        ['id' => 13, 'name' => null, 'surname' => null, 'company_name' => 'Odoo', 'city' => 'Halle', 'email' => 'contact@odoo.example', 'phone' => null, 'is_b2b' => 1, 'id_main_shop' => 4, 'tax_number' => 'BE0477472701'],
+        ['id' => 14, 'name' => 'Paul', 'surname' => 'Dumont', 'city' => 'Mons', 'email' => 'paul@exemple.be', 'is_b2b' => 0, 'id_main_shop' => 5],
+        ['id' => 15, 'name' => 'Ancien', 'surname' => 'Dubois', 'city' => 'Halle', 'is_b2b' => 0, 'id_main_shop' => 4, 'merged_into_id' => 11],
+    ], 5 => [['id' => 51, 'name' => 'Zoé', 'surname' => 'Autre', 'city' => 'Mons', 'is_b2b' => 0, 'id_main_shop' => 5]]];
+    /** Les lectures de la liste des clients d'un magasin (la garde de dix minutes les épargne). */
+    public static int $lecturesClients = 0;
     public static function disponible(): bool { return self::$actif; }
     private static function ok($c = [], int $code = 200): array { return ['code' => $code, 'corps' => $c, 'erreur' => null]; }
     private static function ko(int $code, string $desc, array $errs = []): array
@@ -164,6 +168,10 @@ final class ErpApi
             }
             return $f;
         }
+        if (preg_match('#^/shops/\d+/clients#', $path)) {
+            $r = self::sondeGet($path);
+            return $r['code'] >= 200 && $r['code'] < 300 ? $r['corps'] : null;
+        }
         return null;
     }
     public static function getParallele(array $paths, int $front = 4): array
@@ -193,8 +201,13 @@ final class ErpApi
             return self::ok(['items' => array_slice($l, ($page - 1) * $lim, $lim), 'pagination' => ['page' => $page, 'limit' => $lim, 'total' => count($l), 'pages' => max(1, (int) ceil(count($l) / $lim))]]);
         }
         if (preg_match('#^/shops/(\d+)/clients$#', $p, $x)) {
+            // Comme le panel (sonde du 29/10/2026) : `type=b2b` les B2B, toute autre valeur les particuliers, sans `type`
+            // les deux, B2B devant ; `limit` n'est tenu qu'avec `offset` — sans lui, tout vient d'un coup.
+            self::$lecturesClients++;
             $l = self::$clients[(int) $x[1]] ?? [];
-            return self::ok(array_slice($l, (int) ($q['offset'] ?? 0), (int) ($q['limit'] ?? 50)));
+            if (isset($q['type'])) { $l = array_values(array_filter($l, static fn ($c) => !empty($c['is_b2b']) === ($q['type'] === 'b2b'))); }
+            else { usort($l, static fn ($a, $b) => (int) !empty($b['is_b2b']) <=> (int) !empty($a['is_b2b'])); }
+            return self::ok(isset($q['offset'], $q['limit']) ? array_slice($l, (int) $q['offset'], (int) $q['limit']) : $l);
         }
         return self::ko(404, 'NOT_FOUND');
     }
@@ -272,21 +285,55 @@ verifie('activée par PATCH /{id} (PATCH /status la refuse), complète', $c['sta
 
 echo "Des clients du magasin\n";
 $_GET = ['shop' => '4', 'q' => 'du']; $cl = ep_promos_magasin_clients();
-verifie('la recherche : nom, société, ville ; un contact masqué', count($cl['clients']) === 2 && $cl['clients'][0]['nom'] === 'Anne Dupont' && $cl['clients'][0]['contact'] === 'a…@exemple.be'
-    && $cl['clients'][1]['soc'] === 'IBA' && $cl['clients'][1]['contact'] === '…123' && $cl['total'] === 3, $cl);
+verifie('la recherche : nom, société, ville ; un contact masqué ; un B2B par sa société', array_column($cl['clients'], 'nom') === ['Anne Dupont', 'IBA', 'Paul Dumont']
+    && $cl['clients'][0]['contact'] === 'a…@exemple.be' && $cl['clients'][1]['personne'] === 'Marc Durand' && $cl['clients'][1]['contact'] === '…123' && $cl['total'] === 4, $cl);
 $_GET = ['shop' => '4', 'q' => 'odoo']; $cl = ep_promos_magasin_clients();
 verifie('une société sans prénom : son nom, B2B', ($cl['clients'][0]['nom'] ?? '') === 'Odoo' && $cl['clients'][0]['b2b'] === true, $cl);
 $_GET = ['shop' => '4', 'q' => 'd']; $cl = ep_promos_magasin_clients();
 verifie('une lettre : rien (deux au moins)', $cl['clients'] === []);
 $_GET = ['shop' => '5', 'q' => 'du']; $cl = ep_promos_magasin_clients(); $_GET = [];
 verifie('un autre magasin : ses clients seulement', $cl['clients'] === [], $cl);
+verifie('sans type : les B2B et les particuliers, chacun lu au panel avec son filtre', in_array('GET /shops/5/clients?type=b2b&limit=500&offset=0', ErpApi::$appels, true)
+    && in_array('GET /shops/5/clients?type=b2c&limit=500&offset=0', ErpApi::$appels, true), array_values(array_filter(ErpApi::$appels, static fn ($a) => str_contains($a, '/clients'))));
+
+echo "Client B2B ou client du magasin (29/10/2026)\n";
+$_GET = ['shop' => '4', 'type' => 'b2b', 'q' => '']; $cl = ep_promos_magasin_clients();
+verifie('B2B sans texte : les comptes du magasin, par société, avec leur TVA', array_column($cl['clients'], 'nom') === ['IBA', 'Odoo'] && $cl['clients'][0]['tva'] === 'BE0123.456.789'
+    && $cl['nB2b'] === 2 && $cl['nParticuliers'] === null, $cl);
+$_GET = ['shop' => '4', 'type' => 'b2b', 'q' => 'du']; $cl = ep_promos_magasin_clients();
+verifie('B2B : la personne derrière le compte se cherche aussi, pas les particuliers', array_column($cl['clients'], 'nom') === ['IBA'], $cl);
+$_GET = ['shop' => '4', 'type' => 'b2b', 'q' => '0123.456']; $cl = ep_promos_magasin_clients();
+$_GET = ['shop' => '4', 'type' => 'b2b', 'q' => 'be 0477 472']; $cl2 = ep_promos_magasin_clients();
+verifie('B2B : le numéro de TVA, avec ou sans points ni espaces', array_column($cl['clients'], 'nom') === ['IBA'] && array_column($cl2['clients'], 'nom') === ['Odoo'], [$cl, $cl2]);
+$_GET = ['shop' => '4', 'type' => 'particulier', 'q' => 'du']; $cl = ep_promos_magasin_clients();
+verifie('particuliers : ceux du magasin, sans les B2B ni les fusionnés ; un autre magasin principal se signale', array_column($cl['clients'], 'nom') === ['Anne Dupont', 'Paul Dumont']
+    && $cl['clients'][0]['b2b'] === false && $cl['clients'][0]['ailleurs'] === false && $cl['clients'][1]['ailleurs'] === true
+    && $cl['nParticuliers'] === 2, $cl);
+$_GET = ['shop' => '4', 'type' => 'particulier', 'q' => '']; $cl = ep_promos_magasin_clients();
+verifie('particuliers sans texte : rien (deux lettres au moins)', $cl['clients'] === [] && $cl['nParticuliers'] === 2, $cl);
+// Le magasin 2 du 29/10/2026 en petit : 300 B2B devant, 2 300 particuliers — le bon d'avant n'en lisait que 2 000.
+ErpApi::$clients[2] = [];
+for ($i = 1; $i <= 300; $i++) { ErpApi::$clients[2][] = ['id' => 20000 + $i, 'company_name' => 'Société ' . $i, 'is_b2b' => 1, 'id_main_shop' => 2, 'tax_number' => 'BE0' . (400000000 + $i)]; }
+for ($i = 1; $i <= 2300; $i++) { ErpApi::$clients[2][] = ['id' => 30000 + $i, 'name' => 'Client', 'surname' => 'N' . $i, 'is_b2b' => 0, 'id_main_shop' => 2, 'phone' => '+3247' . str_pad((string) $i, 7, '0', STR_PAD_LEFT)]; }
+ErpApi::$clients[2][] = ['id' => 39999, 'name' => 'Zénobie', 'surname' => 'Lointaine', 'city' => 'Gosselies', 'is_b2b' => 0, 'id_main_shop' => 2];
+ErpApi::$lecturesClients = 0;
+$_GET = ['shop' => '2', 'type' => 'particulier', 'q' => 'lointaine']; $cl = ep_promos_magasin_clients();
+verifie('un grand magasin : le particulier du fond de la liste se trouve (une page, puis quatre de front)', array_column($cl['clients'], 'nom') === ['Zénobie Lointaine']
+    && $cl['nParticuliers'] === 2301 && ErpApi::$lecturesClients === 5, [$cl['nParticuliers'], ErpApi::$lecturesClients]);
+$_GET = ['shop' => '2', 'type' => 'particulier', 'q' => 'client n12']; $cl = ep_promos_magasin_clients();
+verifie('chercher lettre après lettre : la liste gardée, le panel pas relu', ErpApi::$lecturesClients === 5 && $cl['trouves'] === 111 && count($cl['clients']) === 30, [ErpApi::$lecturesClients, $cl['trouves']]);
+$_GET = ['shop' => '2', 'type' => 'particulier', 'q' => '0470 00 07 77']; $cl = ep_promos_magasin_clients();
+verifie('un téléphone tapé à la belge (0470 …) face au format du panel (+32470…)', array_column($cl['clients'], 'nom') === ['Client N777'], $cl);
+$_GET = ['shop' => '2', 'type' => 'b2b', 'q' => 'société 299']; $cl = ep_promos_magasin_clients(); $_GET = [];
+verifie('les B2B du grand magasin : les 300, lus à part, en une page', array_column($cl['clients'], 'nom') === ['Société 299'] && $cl['nB2b'] === 300 && ErpApi::$lecturesClients === 6, [$cl, ErpApi::$lecturesClients]);
 $GLOBALS['corps'] = $promo('Fidèles · Halle', ['on' => true, 'cible' => 'clients', 'clients' => [['id' => 11, 'nom' => 'Anne Dupont'], ['id' => 12, 'nom' => 'Marc Durand']]]);
 $r = wr_promos_magasin();
 $c = $campDe(33); $k = $codesDe($c['id'] ?? 0);
 verifie('un code personnel par client, une utilisation, client requis', $c !== null && !empty($c['requires_customer']) && $c['usage_limit_per_customer'] === 1 && count($k) === 2
     && array_column($k, 'id_customer') === [11, 12] && $k[0]['usage_limit'] === 1 && $c['status'] === 'ACTIVE', [$c, $k]);
 $_GET = ['shop' => '4', 'id' => 'p33']; $v = ep_promos_magasin_bon(); $_GET = [];
-verifie('« Voir les codes » : chaque code avec le nom de son client', array_column($v['bon']['codes'], 'nomClient') === ['Anne Dupont', 'Marc Durand'], $v['bon']['codes'] ?? null);
+verifie('« Voir les codes » : chaque code avec le nom de son client, B2B ou non', array_column($v['bon']['codes'], 'nomClient') === ['Anne Dupont', 'IBA']
+    && array_column($v['bon']['codes'], 'b2bClient') === [false, true], $v['bon']['codes'] ?? null);
 ErpApi::$appels = [];
 $GLOBALS['corps'] = $promo('Fidèles · Halle', ['on' => true, 'cible' => 'clients', 'clients' => [['id' => 12], ['id' => 13]]], 'envoyer', 'p33');
 $r = wr_promos_magasin();
