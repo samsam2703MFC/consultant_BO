@@ -138,3 +138,52 @@ body.lp-dragging { cursor: grabbing; user-select: none; }
 .lp-check input { width: 22px; height: 22px; }
 .lp-presets { display: flex; flex-wrap: wrap; gap: 6px; }
 .lp-presets .btn { min-height: 40px; font-size: 13px; }
+
+/* Kalendarz tras [207] (makieta 1) : ciężarówki × oś czasu, fazy trasy. */
+.kc-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.kc-seg { display: inline-flex; background: var(--at-bg-2); border-radius: 10px; padding: 3px; gap: 3px; align-items: center; }
+.kc-seg button { border: 0; background: transparent; border-radius: 8px; padding: 0 14px; min-height: 44px; min-width: 44px; font-size: 13px; font-weight: 600; color: var(--at-muted); }
+.kc-seg button.on { background: #fff; color: var(--at-text); box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+.kc-nav span { padding: 0 10px; font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kc-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--at-muted); }
+.kc-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.kc-hatch { background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, .45) 0 4px, transparent 4px 8px) !important; }
+.kc-card { background: var(--at-surface); border: 1px solid var(--at-line); border-radius: var(--at-radius-lg); }
+.kc-gantt { position: relative; overflow: visible; }
+.kc-axis { display: grid; grid-template-columns: 232px 1fr; }
+.kc-axis-l { padding: 10px 12px; font-size: 12px; color: var(--at-muted); }
+.kc-ticks { position: relative; height: 40px; }
+.kc-d { position: absolute; top: 4px; font-size: 13px; font-weight: 700; padding-left: 6px; white-space: nowrap; }
+.kc-t { position: absolute; top: 22px; font-size: 11px; color: var(--at-muted); transform: translateX(-50%); font-variant-numeric: tabular-nums; }
+.kc-vl { position: absolute; top: 40px; bottom: 0; width: 1px; background: rgba(34, 34, 34, .12); pointer-events: none; }
+.kc-vl.minor { background: rgba(34, 34, 34, .05); }
+.kc-now { position: absolute; top: 34px; bottom: 0; width: 2px; background: var(--at-danger); pointer-events: none; z-index: 2; }
+.kc-row { display: grid; grid-template-columns: 232px 1fr; border-top: 1px solid var(--at-line); }
+.kc-who { padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; justify-content: center; }
+.kc-who b { font-size: 14px; } .kc-who small { color: var(--at-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.kc-man { font-size: 11.5px; color: #8a5512; }
+.kc-link { border: 0; background: none; padding: 0; color: var(--at-primary); text-decoration: underline; font-size: 11.5px; min-height: 24px; }
+.kc-track { position: relative; min-height: 96px; }
+.kc-row.is-month .kc-track { min-height: 56px; }
+.kc-s { position: absolute; top: 14px; height: 42px; border-radius: 6px; font-size: 11px; font-weight: 600; overflow: hidden; white-space: nowrap; padding: 3px 5px; line-height: 1.25;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); cursor: grab; touch-action: none; user-select: none; }
+.kc-row.is-month .kc-s { height: 26px; cursor: pointer; }
+.kc-s:focus-visible { outline: 3px solid #1c6ed6; outline-offset: 1px; }
+.kc-s.sel { outline: 3px solid #1c6ed6; outline-offset: 1px; z-index: 3; overflow: visible; }
+.kc-h { position: absolute; right: -4px; top: 6px; bottom: 6px; width: 8px; border-radius: 4px; background: #fff; box-shadow: 0 0 0 1.5px #1c6ed6; cursor: ew-resize; }
+.kc-chk { position: absolute; left: 0; right: 0; bottom: 6px; display: flex; gap: 6px; flex-wrap: wrap; padding-left: 2px; }
+.kc-chip { font-size: 11px; border-radius: 6px; padding: 2px 7px; background: rgba(46, 125, 79, .1); color: #1f5a37; font-weight: 600; white-space: nowrap; }
+.kc-chip.warn { background: rgba(193, 122, 42, .14); color: #8a5512; } .kc-chip.bad { background: rgba(196, 30, 58, .1); color: #9a1730; }
+.kc-empty { padding: 18px 16px; }
+.kc-pop { position: absolute; z-index: 6; width: 340px; background: var(--at-surface); border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, .18); border: 1px solid var(--at-line-2); padding: 14px; display: grid; gap: 10px; }
+.kc-pop-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.kc-pop-g { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kc-pop label { font-size: 12px; color: var(--at-muted); display: grid; gap: 4px; }
+.kc-pop .form-control, .kc-pop .form-select { min-height: 44px; font-variant-numeric: tabular-nums; }
+.kc-step { display: grid; grid-template-columns: 44px 1fr 44px; border: 1px solid var(--at-line-2); border-radius: 10px; overflow: hidden; }
+.kc-step button { border: 0; background: var(--at-bg-2); font-size: 20px; font-weight: 700; min-height: 44px; }
+.kc-step .form-control { border: 0; text-align: center; font-weight: 700; }
+.kc-pop-a { display: flex; flex-wrap: wrap; gap: 6px; } .kc-pop-a .btn { min-height: 36px; }
+.kc-pop-f { display: flex; justify-content: space-between; gap: 8px; } .kc-pop-f .btn { min-height: 44px; }
+.lp-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.lp-field small { font-size: 11.5px; color: var(--at-muted); }

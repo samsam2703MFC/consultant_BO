@@ -69,7 +69,7 @@ try {
     foreach (['customer', 'customer_order', 'customer_order_product', 'final_product', 'final_product_ppwr_sales_packaging', 'category_product', 'carrier', 'carrier_vehicle',
                  'n_vehicle', 'n_tour', 'n_tour_customer', 'n_tour_vehicle', 'document_cmr', 'n_shipping_assignment', 'n_prod_param', 'n_prod_employee', 'production_employee',
                  'n_position', 'n_logistics_plan_week', 'n_logistics_plan_load', 'n_logistics_plan_vehicle', 'n_logistics_event', 'n_logistics_customer_coef',
-                 'n_logistics_absence', 'n_logistics_holiday'] as $table) {
+                 'n_logistics_absence', 'n_logistics_holiday', 'n_logistics_trip'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -243,6 +243,40 @@ try {
     expectPlan($as === ['1:12'], 'reset : pojazdy dnia z planu zdjęte, wybór ręczny w Dniu wysyłki zostaje (' . implode(', ', $as) . ')');
     $p = $svc->resetLoads(7, null);
     expectPlan($p['result']['cleared'] === 0 && $p['result']['unapproved'] === 0, 'reset drugi raz : nic do zdjęcia');
+    // Kalendarz tras [207] : trasa z szablonu (klienci na ciężarówce, przerwy i odpoczynki UE), zmiana ręczna, reset, szablon.
+    $trips = $c->get(\App\Services\Logistics\LogisticsTripService::class);
+    $svc->autoDispatch(7, null);
+    $p = $svc->plan(null, $today);
+    $t = array_values(array_filter($p['trips'], fn($t) => $t['week_start'] === '2026-11-30' && $t['vehicle_id'] === 11))[0] ?? null;
+    expectPlan($t !== null && !$t['manual'] && $t['start_at'] === '2026-12-01 05:00' && $p['trip_template']['drive_out_min'] === 765, 'trasa tydz. 49 WX 2 : z szablonu, wyjazd wt 1.12 05:00');
+    $kinds = array_column($t['phases'], 'k');
+    expectPlan($kinds[0] === 'load' && in_array('brk', $kinds, true) && in_array('rest', $kinds, true) && end($kinds) === 'weekly' && in_array('unload', $kinds, true), 'fazy : załadunek, przerwa, odpoczynek, rozładunek, odpoczynek tygodniowy');
+    expectPlan(array_column($t['checks'], 'level') === ['ok', 'ok', 'ok'] && $t['arrive_at'] !== null && $t['home_at'] > $t['arrive_at'], 'kontrola czasu pracy : OK ; u klienta i powrót');
+    $unload = array_values(array_filter($t['phases'], fn($x) => $x['k'] === 'unload'));
+    expectPlan(count($unload) === $t['clients'] && $unload[0]['client'] !== '' && $unload[0]['m'] === 30 + 2 * $unload[0]['pallets'], 'rozładunek : 30 min + 2 min / paletę, nazwa klienta');
+    // Zmiana ręczna : rozładunek 2 h, jazda bez przerwy 6 h → kontrola ; brak klienta → ostrzeżenie.
+    $planned = array_column($t['stops'], 'client');
+    $trips->save('2026-11-30', 11, ['start_at' => '2026-12-01T06:00', 'phases' => [['k' => 'load', 'm' => 60], ['k' => 'drive', 'm' => 360], ['k' => 'unload', 'm' => 120, 'client_id' => 3], ['k' => 'back', 'm' => 300]]], 7);
+    $t = array_values(array_filter($svc->plan(null, $today)['trips'], fn($t) => $t['week_start'] === '2026-11-30' && $t['vehicle_id'] === 11))[0];
+    expectPlan($t['manual'] && $t['start_at'] === '2026-12-01 06:00' && $t['phases'][2]['s'] === '2026-12-01 13:00' && $t['phases'][2]['e'] === '2026-12-01 15:00', 'trasa ręczna : wyjazd 6:00, rozładunek 13:00–15:00');
+    expectPlan($t['checks'][0]['code'] === 'CONT_DRIVE' && $t['checks'][0]['level'] === 'bad' && $t['checks'][0]['value'] === 660 && $t['checks'][1]['level'] === 'bad', 'kontrola : 11 h jazdy bez przerwy (rozładunek to nie przerwa), 11 h dziennie');
+    $w = array_column($t['warnings'], null, 'code');
+    expectPlan($w['MISSING']['names'] === $planned && $w['EXTRA']['names'] === ['#3'] && !isset($w['SHIP_DATE']), 'ostrzeżenia : klienci planu bez rozładunku, rozładunek klienta spoza ciężarówki');
+    $n = $trips->insertRest('2026-11-30', 7);
+    $t = array_values(array_filter($svc->plan(null, $today)['trips'], fn($t) => $t['week_start'] === '2026-11-30' && $t['vehicle_id'] === 11))[0];
+    expectPlan($n === 1 && array_column($t['checks'], 'level') === ['ok', 'ok', 'ok'] && end($t['phases'])['k'] === 'weekly', '« Wstaw przerwy i odpoczynki » : trasa zgodna z UE');
+    expectPlanFail(fn() => $trips->save('2026-11-30', 11, ['start_at' => '2026-12-01 06:00', 'phases' => [['k' => 'fly', 'm' => 10]]], 7), 422, 'nieznany rodzaj fazy');
+    expectPlanFail(fn() => $trips->save('2026-11-30', 11, ['start_at' => '2026-12-01 06:00', 'phases' => [['k' => 'unload', 'm' => 10]]], 7), 422, 'rozładunek bez klienta');
+    expectPlanFail(fn() => $trips->save('2026-11-30', 999, ['start_at' => '2026-12-01 06:00', 'phases' => [['k' => 'load', 'm' => 10]]], 7), 404, 'nieznana ciężarówka');
+    expectPlanFail(fn() => $trips->save('2026-12-01', 11, ['start_at' => '2026-12-01 06:00', 'phases' => [['k' => 'load', 'm' => 10]]], 7), 422, 'tydzień : poniedziałek');
+    expectPlanFail(fn() => $trips->save('2026-11-30', 11, ['start_at' => '2027-03-01 06:00', 'phases' => [['k' => 'load', 'm' => 10]]], 7), 422, 'początek poza tygodniem');
+    $trips->reset('2026-11-30', 11);
+    expectPlan(!array_values(array_filter($svc->plan(null, $today)['trips'], fn($t) => $t['week_start'] === '2026-11-30' && $t['vehicle_id'] === 11))[0]['manual'], 'przywróć szablon');
+    $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES ('logistics.trip_departure_time', '05:00', '05:00', 'string'), ('logistics.trip_load_min', '60', '60', 'int'), ('logistics.trip_drive_out_min', '765', '765', 'int')");
+    $trips->saveTemplate(['departure_time' => '4:30', 'load_min' => '45', 'drive_out_min' => '600'], 7);
+    $t = array_values(array_filter($svc->plan(null, $today)['trips'], fn($t) => $t['week_start'] === '2026-11-30' && $t['vehicle_id'] === 11))[0];
+    expectPlan($t['start_at'] === '2026-12-01 04:30' && $t['phases'][0]['m'] === 45, 'szablon : załadunek 4:30, 45 min');
+    expectPlanFail(fn() => $trips->saveTemplate(['departure_time' => '25:00', 'load_min' => -1], 7), 422, 'szablon : walidacja');
     // Inny zakres (?from).
     $p = $svc->plan('2026-12-02', $today);
     expectPlan($p['weeks'][0]['week_start'] === '2026-11-30' && $p['range']['prev'] === '2026-11-02', 'zakres od tygodnia daty from');

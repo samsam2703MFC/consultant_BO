@@ -17,11 +17,12 @@
 
 {% block content %}
 {# Plan logistyki [200] : Tablica (ciężarówki × tygodnie, przeciągnij klientów), Prognoza (klienci × tygodnie, współczynnik,
-   dodatkowe palety), Święta i kierowcy (wyjazd tygodnia, dni wolne PL / BE / DE — przejazd [202], urlopy). Dane : /ajax/logistics/plan. #}
+   dodatkowe palety), Kalendarz tras [207] (fazy tras ciężarówek, czas pracy kierowcy), Święta i kierowcy (wyjazd tygodnia, dni wolne PL / BE / DE — przejazd [202], urlopy). Dane : /ajax/logistics/plan. #}
 <section class="section lp" id="logisticsPlan">
     <div class="lp-tabs" role="tablist" aria-label="Widok planu">
         <button type="button" role="tab" data-tab="board"><i class="bi bi-truck"></i> Tablica</button>
         <button type="button" role="tab" data-tab="forecast"><i class="bi bi-graph-up"></i> Prognoza</button>
+        <button type="button" role="tab" data-tab="trips"><i class="bi bi-calendar-week"></i> Kalendarz tras</button>
         <button type="button" role="tab" data-tab="calendar"><i class="bi bi-calendar-event"></i> Święta i kierowcy</button>
     </div>
     <div class="lp-kpis" data-kpis></div>

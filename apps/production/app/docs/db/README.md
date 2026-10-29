@@ -66,6 +66,25 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Planning logistique : calendrier des trajets (migration 130, 29/10/2026)
+
+- Onglet **« Kalendarz tras »** de `/logistics/plan` (à côté de Prognoza, `#trasy`) : une ligne par camion, frise
+  Dzień / 4 dni / Tydzień / Miesiąc, phases du trajet : chargement, conduite, pause 45 min, repos journalier 11 h,
+  déchargement chez chaque client (dans l'ordre des arrêts des tournées, `n_tour_customer.stop_order`), retour, repos
+  hebdomadaire. Clients = clients sur le camion dans la Tablica ; départ = jour de départ de la semaine + heure du
+  camion (`n_vehicle.departure_time`) sinon `logistics.trip_departure_time`.
+- Trajet par défaut : modèle (`logistics.trip_load_min`, `trip_drive_out_min`, `trip_between_min`, `trip_unload_min`
+  + `trip_unload_pallet_min` par palette, `trip_drive_back_min`, `trip_weekly_rest_min`) ; pauses et repos insérés
+  selon le règlement UE 561/2006 (`App\Domain\Logistics\TripPlan` : conduite ≤ 4 h 30 sans pause de 45 min — ou
+  15 + 30 —, conduite journalière ≤ 9 h, 10 h deux fois par semaine, repos journalier 11 h, réduit 9 h). Contrôle
+  affiché sous chaque camion.
+- Tout est modifiable : glisser un bloc (la phase précédente s'allonge / raccourcit ; premier bloc = heure de départ),
+  glisser le bord droit (durée), toucher un bloc (type, client, durée, ordre, ajouter, supprimer).
+  `n_logistics_trip` (clé semaine + camion) garde le trajet modifié (`start_at`, `phases` en JSON) ; « Przywróć
+  szablon » le supprime ; « Wstaw przerwy i odpoczynki » recalcule pauses et repos des trajets modifiés de la semaine.
+  Avertissements si le trajet modifié ne correspond plus au plan (client sans déchargement, client qui n'est plus sur
+  le camion, jour de départ changé).
+
 ### Kartony i palety : catalogue des cartons et étape « Paleta » de la fiche produit (migration 129, 29/10/2026)
 
 - **Rail Produkt › Kartony i palety** (`/products/cartons`) : un carton = un article d'emballage de la liste des matières

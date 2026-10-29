@@ -43,6 +43,7 @@ final class LogisticsPlanService
         private LogisticsRepository $logi,
         private ParamRepository $params,
         private TransactionManager $tx,
+        private LogisticsTripService $trips,
     ) {
     }
 
@@ -573,6 +574,9 @@ final class LogisticsPlanService
             'drivers' => array_values(array_filter($drivers, fn($d) => $d['active'])),
             'absences' => array_map(fn($a) => $a + ['employee' => $drivers[$a['id_employee']]['name'] ?? ('#' . $a['id_employee'])], $this->repo->absences($today, date('Y-m-d', strtotime($end . ' +1 year')))),
             'holidays' => $this->holidayList($weeks[0], $end, [$depCountry, $delCountry, ...$transit], $holidays, $manualHolidays),
+            // Kalendarz tras [207] : trasa każdej ciężarówki z klientami w tygodniu (szablon albo zmieniona ręcznie).
+            'trips' => $this->trips->build($weekRows, $vehicles, $customers),
+            'trip_template' => $this->trips->template(),
             'events' => array_values(array_filter($events, fn($e) => $e['yearly'] || ($e['week_start'] >= $weeks[0] && $e['week_start'] <= end($weeks)))),
             'kpis' => [
                 'avg' => $rows ? round(array_sum($totals) / count($totals), 1) : 0.0, 'peak' => $rows ? $rows[$peak]['pallets'] : 0, 'peak_week' => $rows ? $rows[$peak]['iso_week'] : null,

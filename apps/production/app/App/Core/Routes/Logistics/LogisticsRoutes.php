@@ -22,6 +22,11 @@ return function(RouteCollector $r) {
     $r->addRoute('PUT', '/ajax/logistics/plan/holidays', ['controller' => $pl, 'method' => 'saveHoliday']);
     $r->addRoute('POST', '/ajax/logistics/plan/auto', ['controller' => $pl, 'method' => 'autoDispatch']);
     $r->addRoute('POST', '/ajax/logistics/plan/reset', ['controller' => $pl, 'method' => 'resetLoads']);
+    // Kalendarz tras [207] : trasa ciężarówki (fazy, przerwy, odpoczynki), szablon trasy.
+    $r->addRoute('PUT', '/ajax/logistics/plan/trips/{week:\d{4}-\d{2}-\d{2}}/{id:\d+}', ['controller' => $pl, 'method' => 'saveTrip']);
+    $r->addRoute('DELETE', '/ajax/logistics/plan/trips/{week:\d{4}-\d{2}-\d{2}}/{id:\d+}', ['controller' => $pl, 'method' => 'resetTrip']);
+    $r->addRoute('POST', '/ajax/logistics/plan/trips/{week:\d{4}-\d{2}-\d{2}}/rest', ['controller' => $pl, 'method' => 'tripRest']);
+    $r->addRoute('PUT', '/ajax/logistics/plan/trip-template', ['controller' => $pl, 'method' => 'saveTripTemplate']);
     $r->addRoute('POST', '/ajax/logistics/plan/approve', ['controller' => $pl, 'method' => 'approve']);
     $r->addRoute('GET', '/logistics/vehicles', ['controller' => $c, 'method' => 'vehicles']);
     $r->addRoute('GET', '/logistics/tours', ['controller' => $c, 'method' => 'tours']);

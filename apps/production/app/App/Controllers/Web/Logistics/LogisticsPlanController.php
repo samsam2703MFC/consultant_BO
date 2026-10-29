@@ -6,6 +6,7 @@ namespace App\Controllers\Web\Logistics;
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Services\Logistics\LogisticsPlanService;
+use App\Services\Logistics\LogisticsTripService;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -16,7 +17,7 @@ final class LogisticsPlanController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private LogisticsPlanService $plans) {}
+    public function __construct(private LogisticsPlanService $plans, private LogisticsTripService $trips) {}
 
     public function index()
     {
@@ -97,6 +98,39 @@ final class LogisticsPlanController extends BaseController
             $r = $d['result'];
             return ['message' => $r['cleared'] ? "Do rozplanowania : {$r['cleared']} × klient zdjęty z ciężarówki ({$r['weeks']} tyg.)"
                 . ($r['unapproved'] ? ", {$r['unapproved']} tyg. do ponownego zatwierdzenia." : '.') : 'Nikt nie był na ciężarówce — wszystko już do rozplanowania.', 'data' => $d];
+        });
+    }
+
+    /** Kalendarz tras [207] : trasa ciężarówki zmieniona w kalendarzu (początek, fazy). */
+    public function saveTrip($week, $id)
+    {
+        return $this->respond(function () use ($week, $id) {
+            $this->trips->save((string) $week, (int) $id, $this->input(), $this->userId());
+            return ['message' => 'Zapisano trasę.', 'data' => $this->plans->plan($this->from())];
+        });
+    }
+
+    public function resetTrip($week, $id)
+    {
+        return $this->respond(function () use ($week, $id) {
+            $this->trips->reset((string) $week, (int) $id);
+            return ['message' => 'Trasa z szablonu.', 'data' => $this->plans->plan($this->from())];
+        });
+    }
+
+    public function tripRest($week)
+    {
+        return $this->respond(function () use ($week) {
+            $n = $this->trips->insertRest((string) $week, $this->userId());
+            return ['message' => $n ? "Przerwy i odpoczynki wstawione : {$n} × trasa." : 'Trasy z szablonu mają już przerwy i odpoczynki.', 'data' => $this->plans->plan($this->from())];
+        });
+    }
+
+    public function saveTripTemplate()
+    {
+        return $this->respond(function () {
+            $this->trips->saveTemplate($this->input(), $this->userId());
+            return ['message' => 'Zapisano szablon trasy.', 'data' => $this->plans->plan($this->from())];
         });
     }
 

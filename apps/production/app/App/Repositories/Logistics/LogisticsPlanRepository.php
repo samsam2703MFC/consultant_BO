@@ -236,6 +236,39 @@ final class LogisticsPlanRepository extends WorkshopRepository
         $this->db->prepare('DELETE FROM n_logistics_holiday WHERE day = ? AND country = ?')->execute([$day, $country]);
     }
 
+    // --- Kalendarz tras [207] -----------------------------------------------------------------------------
+
+    /** @return array<string, array<int, array{start_at:string, phases:array}>> tydzień => pojazd => trasa zmieniona ręcznie */
+    public function trips(string $from, string $to): array
+    {
+        $out = [];
+        foreach ($this->all('SELECT week_start, id_carrier_vehicle, DATE_FORMAT(start_at, "%Y-%m-%d %H:%i") AS start_at, phases FROM n_logistics_trip WHERE week_start BETWEEN ? AND ?', [$from, $to]) as $r) {
+            $phases = json_decode((string) $r['phases'], true);
+            if (is_array($phases)) $out[$r['week_start']][(int) $r['id_carrier_vehicle']] = ['start_at' => $r['start_at'], 'phases' => $phases];
+        }
+        return $out;
+    }
+
+    public function saveTrip(string $week, int $vehicleId, string $startAt, array $phases, ?int $userId): void
+    {
+        $this->db->prepare('INSERT INTO n_logistics_trip (week_start, id_carrier_vehicle, start_at, phases, updated_by) VALUES (?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE start_at = VALUES(start_at), phases = VALUES(phases), updated_by = VALUES(updated_by)')
+            ->execute([$week, $vehicleId, $startAt, json_encode(array_values($phases), JSON_UNESCAPED_UNICODE), $userId]);
+    }
+
+    public function deleteTrip(string $week, int $vehicleId): bool
+    {
+        $st = $this->db->prepare('DELETE FROM n_logistics_trip WHERE week_start = ? AND id_carrier_vehicle = ?');
+        $st->execute([$week, $vehicleId]);
+        return $st->rowCount() > 0;
+    }
+
+    /** Kolejność rozładunku : najmniejszy numer przystanku klienta w trasach (n_tour_customer). @return array<int,int> */
+    public function stopOrders(): array
+    {
+        return array_map('intval', array_column($this->all('SELECT id_customer, MIN(stop_order) AS o FROM n_tour_customer WHERE stop_order IS NOT NULL GROUP BY id_customer'), 'o', 'id_customer'));
+    }
+
     // --- Zatwierdzenie -----------------------------------------------------------------------------------
 
     /**

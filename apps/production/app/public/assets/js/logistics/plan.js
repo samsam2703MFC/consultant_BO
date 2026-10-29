@@ -5,6 +5,8 @@
  *   układ na następne, zatwierdź (pojazdy klientów na dzień wyjazdu).
  * Prognoza : klienci × tygodnie (N-1 × współczynnik, bez N-1 średnia 3 mies., zamówione, wpisane), współczynnik klienta
  *   albo dla wszystkich, dodatkowe palety tygodnia (% , co roku).
+ * Kalendarz tras [207] : ciężarówki × oś czasu, fazy trasy (załadunek, jazda, przerwy, odpoczynki, rozładunki, powrót)
+ *   do przesuwania i zmiany, kontrola czasu pracy kierowcy (UE 561/2006), szablon trasy.
  * Święta i kierowcy : dzień wyjazdu tygodnia, dni wolne PL / BE / DE — przejazd, zakaz ruchu ciężarówek [202] (pomiń, dodaj), urlopy kierowców.
  */
 (function () {
@@ -16,7 +18,7 @@
     const DAYS = ['', 'pn', 'wt', 'śr', 'czw', 'pt', 'sob', 'nd'];
     const SRC = { n1: 'N-1 × współczynnik', avg: 'średnia 3 mies.', orders: 'zamówione', manual: 'wpisane ręcznie', none: 'brak' };
     const PRESETS = [['Boże Narodzenie', 40], ['Przed świętami', 30], ['Mikołaj / St-Nicolas', 15], ['Nowy Rok', 20], ['Wielkanoc', 20], ['Po świętach', -10]];
-    let tab = ({ '#prognoza': 'forecast', '#swieta': 'calendar' })[location.hash] || 'board';
+    let tab = ({ '#prognoza': 'forecast', '#trasy': 'trips', '#swieta': 'calendar' })[location.hash] || 'board';
     let picked = null;
 
     const dm = (d) => { const p = String(d).split('-'); return `${Number(p[2])}.${p[1]}`; };
@@ -79,7 +81,7 @@
 
     root.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
         tab = b.dataset.tab;
-        history.replaceState(null, '', location.pathname + location.search + ({ forecast: '#prognoza', calendar: '#swieta' }[tab] || ''));
+        history.replaceState(null, '', location.pathname + location.search + ({ forecast: '#prognoza', trips: '#trasy', calendar: '#swieta' }[tab] || ''));
         render();
     }));
 
@@ -89,6 +91,7 @@
         renderKpis();
         if (tab === 'forecast') renderForecast();
         else if (tab === 'calendar') renderCalendar();
+        else if (tab === 'trips') renderTrips();
         else renderBoard();
     }
 
@@ -446,6 +449,339 @@
         af.addEventListener('submit', async (e) => {
             e.preventDefault();
             await api('/ajax/logistics/plan/absences', 'POST', { employee_id: af.employee_id.value, date_from: af.date_from.value, date_to: af.date_to.value || af.date_from.value, reason: af.reason.value });
+        });
+    }
+
+    // --- Kalendarz tras [207] (makieta 1) -------------------------------------------------------------------
+    // Ciężarówki w wierszach, oś czasu (dzień, 4 dni, tydzień, miesiąc) ; fazy trasy : załadunek, jazda, przerwa,
+    // odpoczynek, rozładunek, powrót, odpoczynek tygodniowy. Przeciągnij blok = przesuń (poprzednia faza dłuższa / krótsza,
+    // pierwszy blok = godzina wyjazdu), przeciągnij prawy brzeg = czas fazy, dotknij = okienko (rodzaj, klient, czas,
+    // kolejność, dodaj, usuń). Kontrola czasu pracy kierowcy (UE 561/2006) z serwera po zapisie.
+    const KIND = {
+        load: { label: 'Załadunek', short: 'Załad.', color: '#8D1D2C', text: '#fff' },
+        drive: { label: 'Jazda', short: 'Jazda', color: '#3d3a37', text: '#fff' },
+        brk: { label: 'Przerwa', short: 'P', color: '#E2A33B', text: '#2b1d05' },
+        rest: { label: 'Odpoczynek dobowy', short: 'Odp.', color: '#B9B2A8', text: '#2b2b2b', hatch: true },
+        unload: { label: 'Rozładunek', short: 'Rozł.', color: '#2E7D4F', text: '#fff' },
+        back: { label: 'Powrót', short: 'Powr.', color: '#4A6FA5', text: '#fff' },
+        weekly: { label: 'Odpoczynek tygodniowy', short: 'Odp. tyg.', color: '#D9D3CB', text: '#2b2b2b', hatch: true },
+    };
+    const ZOOM = { day: ['Dzień', 1, 5], '4d': ['4 dni', 4, 15], week: ['Tydzień', 7, 30], month: ['Miesiąc', 28, 60] };
+    const tv = { zoom: '4d', week: null, day: null, sel: null, draft: null };
+    const T = (s) => new Date(String(s).replace(' ', 'T')).getTime();
+    const pad = (n) => String(n).padStart(2, '0');
+    const iso = (t) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    const hm = (t) => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    const dlab = (t) => { const d = new Date(t); return `${DAYS[d.getDay() || 7]} ${d.getDate()}.${pad(d.getMonth() + 1)}`; };
+    const dur = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + pad(m % 60) : ''}` : `${m} min`);
+    const parseDur = (v) => {
+        const s = String(v).trim().toLowerCase().replace(',', '.');
+        let m = s.match(/^(\d+)\s*(?:h|:)\s*(\d{1,2})?\s*(?:min)?$/);
+        if (m) return Number(m[1]) * 60 + Number(m[2] || 0);
+        m = s.match(/^(\d+(?:\.\d+)?)\s*h$/);
+        if (m) return Math.round(Number(m[1]) * 60);
+        m = s.match(/^(\d+)\s*(?:min|m)?$/);
+        return m ? Number(m[1]) : null;
+    };
+    const tripKey = (t) => `${t.week_start}|${t.vehicle_id}`;
+    const tripsOf = (ws) => (P.trips || []).filter(t => t.week_start === ws);
+    const curWeek = () => {
+        if (tv.week && W()[tv.week]) return tv.week;
+        const withTrip = P.weeks.find(w => tripsOf(w.week_start).length);
+        return (withTrip || P.weeks[0]).week_start;
+    };
+    // Fazy trasy (wersja robocza w trakcie edycji) z godzinami liczonymi w przeglądarce.
+    const phasesOf = (t) => {
+        const d = tv.draft && tv.draft.key === tripKey(t) ? tv.draft : null;
+        let cur = T(d ? d.start_at : t.start_at);
+        return (d ? d.phases : t.phases).map(p => { const s = cur; cur += p.m * 60000; return { ...p, s, e: cur }; });
+    };
+    const checkText = (c) => ({
+        CONT_DRIVE: `jazda bez przerwy maks. ${dur(c.value)} (≤ 4 h 30)`,
+        DAY_DRIVE: `jazda dzienna maks. ${dur(c.value)} (≤ 9 h, 2× w tyg. 10 h)`,
+        DAILY_REST: `odpoczynek dobowy min. ${dur(c.value)} (≥ 11 h, skrócony 9 h)`,
+    }[c.code] || c.code);
+    const warnText = (w) => ({
+        MISSING: `brak rozładunku : ${(w.names || []).join(', ')}`,
+        EXTRA: `nie na tej ciężarówce : ${(w.names || []).join(', ')}`,
+        SHIP_DATE: `wyjazd w planie : ${w.date ? wd(w.date) + ' ' + dm(w.date) : ''}`,
+    }[w.code] || w.code);
+
+    function tripRange() {
+        const ws = curWeek();
+        const w = W()[ws];
+        const z = ZOOM[tv.zoom];
+        let from;
+        if (tv.zoom === 'day') from = T((tv.day || w.ship_date) + ' 00:00');
+        else if (tv.zoom === '4d') from = T(w.ship_date + ' 00:00');
+        else from = T(ws + ' 00:00');
+        return { ws, w, from, to: from + z[1] * 86400000 };
+    }
+
+    function renderTrips() {
+        const { ws, w, from, to } = tripRange();
+        const month = tv.zoom === 'month';
+        const weeks = month ? P.weeks.filter(x => T(x.week_start + ' 00:00') >= from && T(x.week_start + ' 00:00') < to).map(x => x.week_start) : [ws];
+        const trips = (P.trips || []).filter(t => weeks.includes(t.week_start));
+        const rowsBy = {};
+        trips.forEach(t => { (rowsBy[t.vehicle_id] ??= []).push(t); });
+        const vids = Object.keys(rowsBy).map(Number).sort((a, b) => String(rowsBy[a][0].label).localeCompare(String(rowsBy[b][0].label)));
+        const width = Math.max(320, view.clientWidth - 232);
+        const px = (t) => (t - from) / (to - from) * width;
+        // Oś : etykiety dni i godzin.
+        const step = { day: 2, '4d': 6, week: 12, month: 24 }[tv.zoom] * 3600000;
+        let axis = '', lines = '';
+        for (let t = from; t <= to; t += step) {
+            const d = new Date(t);
+            const midnight = d.getHours() === 0;
+            if (t < to && midnight && (!month || d.getDay() === 1 || t === from)) axis += `<span class="kc-d" style="left:${px(t)}px">${month ? dm(iso(t).slice(0, 10)) : dlab(t)}</span>`;
+            if (!month && t > from && t < to) axis += `<span class="kc-t" style="left:${px(t)}px">${hm(t)}</span>`;
+            lines += `<i class="kc-vl ${midnight ? '' : 'minor'}" style="left:${232 + px(t)}px"></i>`;
+        }
+        const now = Date.now();
+        if (now > from && now < to) lines += `<i class="kc-now" style="left:${232 + px(now)}px" title="teraz"></i>`;
+        const seg = (t, p, i, sel) => {
+            const k = KIND[p.k] || KIND.drive;
+            const l = Math.max(0, px(p.s)), r = Math.min(width, px(p.e));
+            if (r <= 0 || l >= width) return '';
+            const wpx = r - l;
+            const lab = month ? '' : p.k === 'unload' ? `${esc(p.client || '')}<br>${p.pallets ?? ''}${p.pallets !== undefined ? ' pal.' : ''}`
+                : wpx > 64 ? `${esc(k.label.replace('Odpoczynek ', 'Odp. '))}<br>${dur(p.m)}` : (wpx > 28 ? dur(p.m).replace(' h', 'h').replace(' min', '′') : '');
+            return `<div class="kc-s ${k.hatch ? 'kc-hatch' : ''} ${sel ? 'sel' : ''}" data-seg="${tripKey(t)}|${i}" tabindex="0" role="button"
+                aria-label="${esc(`${k.label}${p.client ? ' ' + p.client : ''} ${dlab(p.s)} ${hm(p.s)}–${hm(p.e)}`)}" title="${esc(`${k.label}${p.client ? ' · ' + p.client : ''} · ${dlab(p.s)} ${hm(p.s)}–${hm(p.e)} · ${dur(p.m)}`)}"
+                style="left:${l}px;width:${Math.max(2, wpx - 1)}px;background:${k.color};color:${k.text}">${lab}${sel && !month ? '<i class="kc-h" data-resize></i>' : ''}</div>`;
+        };
+        let rows = '';
+        vids.forEach(vid => {
+            const list = rowsBy[vid];
+            const t = list[0];
+            const ph = month ? null : phasesOf(t);
+            const segs = list.map(x => phasesOf(x).map((p, i) => seg(x, p, i, tv.sel && tv.sel.key === tripKey(x) && tv.sel.i === i)).join('')).join('');
+            let info = `<b>${esc(t.label)}</b><small>${esc(t.driver || '—')}</small>`;
+            if (!month) {
+                const arrive = ph.find(p => p.k === 'unload');
+                const home = ph.filter(p => p.k !== 'weekly').at(-1);
+                info += `<small>${t.pallets} / ${t.places} pal. · ${t.clients} klientów</small>
+                    <small>wyjazd ${dlab(ph[0].s)} ${hm(ph[0].s)}${arrive ? ' · u klienta ' + hm(arrive.s) : ''}${home ? ` · baza ${dlab(home.e)} ${hm(home.e)}` : ''}</small>
+                    ${t.manual ? `<span class="kc-man">zmieniona ręcznie · <button type="button" class="kc-link" data-trip-reset="${tripKey(t)}">przywróć szablon</button></span>` : ''}`;
+            } else info += `<small>${list.length} × trasa</small>`;
+            const chips = month ? '' : `<div class="kc-chk">${t.checks.map(c => `<span class="kc-chip ${c.level === 'ok' ? '' : c.level}">${c.level === 'ok' ? '✓' : '⚠'} ${esc(checkText(c))}</span>`).join('')}
+                ${t.warnings.map(x => `<span class="kc-chip bad">⚠ ${esc(warnText(x))}</span>`).join('')}${tv.draft && tv.draft.key === tripKey(t) ? '<span class="kc-chip warn">niezapisane zmiany</span>' : ''}</div>`;
+            rows += `<div class="kc-row ${month ? 'is-month' : ''}" data-trip-row="${vid}"><div class="kc-who">${info}</div><div class="kc-track" data-track="${vid}">${segs}${chips}</div></div>`;
+        });
+        const label = tv.zoom === 'day' ? dlab(from) : `${month ? '' : 'tydz. ' + w.iso_week + ' · '}${dlab(from)} → ${dlab(to - 1)}`;
+        view.innerHTML = `<div class="kc-bar">
+                <div class="kc-seg" role="group" aria-label="Zakres">${Object.entries(ZOOM).map(([k, z]) => `<button type="button" data-zoom="${k}" class="${tv.zoom === k ? 'on' : ''}" aria-pressed="${tv.zoom === k}">${z[0]}</button>`).join('')}</div>
+                <div class="kc-seg kc-nav"><button type="button" data-tnav="-1" aria-label="Wcześniej">‹</button><span>${esc(label)}</span><button type="button" data-tnav="1" aria-label="Później">›</button></div>
+                <div class="kc-legend">${Object.values(KIND).map(k => `<span><i class="${k.hatch ? 'kc-hatch' : ''}" style="background:${k.color}"></i>${k.label}</span>`).join('')}</div>
+                <div class="lp-actions"><button type="button" class="btn btn-outline-secondary lp-big" data-trip-tpl><i class="bi bi-sliders"></i> Szablon trasy</button>
+                    <button type="button" class="btn btn-primary lp-big" data-trip-rest ${month ? 'disabled' : ''}><i class="bi bi-magic"></i> Wstaw przerwy i odpoczynki</button></div></div>
+            <div class="kc-card kc-gantt">
+                <div class="kc-axis"><div class="kc-axis-l">${month ? 'miesiąc' : 'tydz. ' + w.iso_week} · ciężarówka</div><div class="kc-ticks">${axis}</div></div>
+                ${lines}${rows || `<p class="at-empty kc-empty">Brak tras : nikt nie jest na ciężarówce w tym tygodniu (Tablica → Rozdziel automatycznie albo przeciągnij klientów).</p>`}
+                <div data-trip-pop></div>
+            </div>
+            <p class="lp-hint">Trasa = szablon (załadunek, jazda tam, rozładunek u klientów w kolejności trasy, powrót, odpoczynek tygodniowy ; przerwy co 4 h 30 i odpoczynek dobowy 11 h wstawiane same)
+                od dnia wyjazdu tygodnia. Przeciągnij blok, aby go przesunąć (pierwszy blok = godzina wyjazdu), przeciągnij prawy brzeg, aby zmienić czas, dotknij bloku, aby zmienić rodzaj, klienta, kolejność, dodać albo usunąć fazę.
+                Kontrola czasu pracy kierowcy (UE 561/2006) po każdym zapisie.</p>`;
+        view.dataset.from = from; view.dataset.to = to; view.dataset.width = width;
+        if (tv.sel && !month) renderPopover();
+    }
+
+    function tripByKey(key) { return (P.trips || []).find(t => tripKey(t) === key); }
+    function startDraft(t) {
+        if (!tv.draft || tv.draft.key !== tripKey(t)) tv.draft = { key: tripKey(t), start_at: t.start_at, phases: t.phases.map(p => ({ k: p.k, m: p.m, ...(p.client_id ? { client_id: p.client_id, client: p.client, pallets: p.pallets } : {}) })) };
+        return tv.draft;
+    }
+
+    function renderPopover() {
+        const box = view.querySelector('[data-trip-pop]');
+        const t = tripByKey(tv.sel.key);
+        if (!box || !t) return;
+        const ph = phasesOf(t);
+        const i = tv.sel.i;
+        const p = ph[i];
+        if (!p) { tv.sel = null; return; }
+        const k = KIND[p.k];
+        const row = view.querySelector(`[data-trip-row="${t.vehicle_id}"]`);
+        const width = Number(view.dataset.width);
+        const left = Math.min(Math.max(232, 232 + (p.s - Number(view.dataset.from)) / (Number(view.dataset.to) - Number(view.dataset.from)) * width), 232 + width - 340);
+        const clients = [...t.stops.map(s => [s.client_id, s.client]), ...(p.client_id && !t.stops.some(s => s.client_id === p.client_id) ? [[p.client_id, p.client || '#' + p.client_id]] : [])];
+        box.innerHTML = `<div class="kc-pop" style="left:${left}px;top:${(row ? row.offsetTop + row.offsetHeight - 6 : 60)}px" role="dialog" aria-label="Faza trasy">
+            <div class="kc-pop-h"><b>${esc(k.label)}${p.client ? ' · ' + esc(p.client) : ''}</b><span class="kc-chip">${esc(t.label)}</span></div>
+            <div class="kc-pop-g">
+                <label>Faza<select class="form-select" data-pop="k">${Object.entries(KIND).map(([key, x]) => `<option value="${key}" ${p.k === key ? 'selected' : ''}>${x.label}</option>`).join('')}</select></label>
+                ${p.k === 'unload' ? `<label>Klient<select class="form-select" data-pop="client">${clients.map(([id, n]) => `<option value="${id}" ${p.client_id === id ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>` : '<span></span>'}
+                <label>Początek${i === 0 ? `<input class="form-control" type="datetime-local" data-pop="start" value="${iso(p.s).replace(' ', 'T')}">` : `<input class="form-control" value="${dlab(p.s)} ${hm(p.s)}" disabled>`}</label>
+                <label>Koniec<input class="form-control" value="${dlab(p.e)} ${hm(p.e)}" disabled></label>
+            </div>
+            <label class="kc-pop-dur">Czas trwania<div class="kc-step"><button type="button" data-pop-step="-15" aria-label="−15 min">−</button><input class="form-control" data-pop="m" value="${dur(p.m)}" aria-label="Czas trwania"><button type="button" data-pop-step="15" aria-label="+15 min">+</button></div></label>
+            <div class="kc-pop-a"><button type="button" class="btn btn-outline-secondary btn-sm" data-pop-move="-1" ${i === 0 ? 'disabled' : ''}>↑ Wcześniej</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-pop-move="1" ${i === ph.length - 1 ? 'disabled' : ''}>↓ Później</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-pop-add>+ Faza po</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-pop-del ${ph.length < 2 ? 'disabled' : ''}>Usuń fazę</button></div>
+            <div class="kc-pop-f"><button type="button" class="btn btn-outline-secondary" data-pop-cancel>Anuluj</button><button type="button" class="btn btn-primary" data-pop-save>Zapisz trasę</button></div>
+        </div>`;
+    }
+
+    async function saveDraft() {
+        const d = tv.draft;
+        if (!d) return;
+        const [ws, vid] = d.key.split('|');
+        const res = await api(`/ajax/logistics/plan/trips/${ws}/${vid}`, 'PUT', { start_at: d.start_at, phases: d.phases.map(p => ({ k: p.k, m: p.m, ...(p.k === 'unload' ? { client_id: p.client_id } : {}) })) });
+        if (res) tv.draft = null;
+    }
+
+    view.addEventListener('click', async (e) => {
+        if (tab !== 'trips') return;
+        const b = e.target.closest('button, [data-seg]');
+        if (!b) { if (!e.target.closest('.kc-pop') && tv.sel) { tv.sel = null; if (!tv.draft) renderTrips(); else renderTrips(); } return; }
+        if (b.dataset.zoom) { tv.zoom = b.dataset.zoom; tv.sel = null; if (b.dataset.zoom === 'day') tv.day = W()[curWeek()].ship_date; renderTrips(); return; }
+        if (b.dataset.tnav) {
+            const dir = Number(b.dataset.tnav);
+            tv.sel = null;
+            if (tv.zoom === 'day') { const d = new Date(T((tv.day || W()[curWeek()].ship_date) + ' 12:00') + dir * 86400000); tv.day = iso(d.getTime()).slice(0, 10); const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const m = iso(mon.getTime()).slice(0, 10); if (W()[m]) tv.week = m; }
+            else { const idx = P.weeks.findIndex(x => x.week_start === curWeek()); const n = P.weeks[Math.min(P.weeks.length - 1, Math.max(0, idx + dir * (tv.zoom === 'month' ? 4 : 1)))]; tv.week = n.week_start; }
+            renderTrips();
+            return;
+        }
+        if (b.matches('[data-trip-tpl]')) { openTripTemplate(); return; }
+        if (b.matches('[data-trip-rest]')) { b.disabled = true; tv.draft = null; tv.sel = null; await api(`/ajax/logistics/plan/trips/${curWeek()}/rest`, 'POST', {}); return; }
+        if (b.dataset.tripReset) {
+            const [ws, vid] = b.dataset.tripReset.split('|');
+            if (await ask('Przywrócić trasę z szablonu ? Zmiany ręczne tej trasy zostaną usunięte.', 'Przywróć')) { tv.draft = null; tv.sel = null; await api(`/ajax/logistics/plan/trips/${ws}/${vid}`, 'DELETE'); }
+            return;
+        }
+        if (b.dataset.seg) {
+            if (segDrag && segDrag.moved) return;
+            const parts = b.dataset.seg.split('|');
+            const key = parts[0] + '|' + parts[1];
+            if (tv.zoom === 'month') { tv.zoom = '4d'; tv.week = parts[0]; }
+            if (tv.draft && tv.draft.key !== key && !(await ask('Zapisać zmiany poprzedniej trasy ?', 'Zapisz'))) tv.draft = null;
+            else if (tv.draft && tv.draft.key !== key) await saveDraft();
+            tv.sel = { key, i: Number(parts[2]) };
+            renderTrips();
+            return;
+        }
+        const pop = e.target.closest('.kc-pop');
+        if (!pop || !tv.sel) return;
+        const t = tripByKey(tv.sel.key);
+        const d = startDraft(t);
+        const i = tv.sel.i;
+        if (b.dataset.popStep) d.phases[i].m = Math.max(5, d.phases[i].m + Number(b.dataset.popStep));
+        else if (b.dataset.popMove) {
+            const j = i + Number(b.dataset.popMove);
+            if (j < 0 || j >= d.phases.length) return;
+            [d.phases[i], d.phases[j]] = [d.phases[j], d.phases[i]];
+            tv.sel.i = j;
+        } else if (b.matches('[data-pop-add]')) { d.phases.splice(i + 1, 0, { k: 'drive', m: 60 }); tv.sel.i = i + 1; }
+        else if (b.matches('[data-pop-del]')) { d.phases.splice(i, 1); tv.sel.i = Math.max(0, i - 1); }
+        else if (b.matches('[data-pop-cancel]')) { tv.draft = null; tv.sel = null; }
+        else if (b.matches('[data-pop-save]')) { await saveDraft(); return; }
+        renderTrips();
+    });
+
+    view.addEventListener('change', (e) => {
+        if (tab !== 'trips' || !tv.sel) return;
+        const el = e.target.closest('[data-pop]');
+        if (!el) return;
+        const t = tripByKey(tv.sel.key);
+        const d = startDraft(t);
+        const p = d.phases[tv.sel.i];
+        if (el.dataset.pop === 'k') {
+            p.k = el.value;
+            if (p.k === 'unload' && !p.client_id) { const s = t.stops[0]; if (s) { p.client_id = s.client_id; p.client = s.client; p.pallets = s.pallets; } }
+            if (p.k !== 'unload') { delete p.client_id; delete p.client; delete p.pallets; }
+        } else if (el.dataset.pop === 'client') {
+            const s = t.stops.find(x => x.client_id === Number(el.value));
+            p.client_id = Number(el.value); p.client = s ? s.client : '#' + el.value; p.pallets = s ? s.pallets : undefined;
+        } else if (el.dataset.pop === 'start') {
+            if (el.value) d.start_at = el.value.replace('T', ' ').slice(0, 16);
+        } else if (el.dataset.pop === 'm') {
+            const m = parseDur(el.value);
+            if (m === null || m < 1 || m > 6000) { at.notify(false, 'Czas : np. 45, 1:30 albo 4 h 30.'); el.value = dur(p.m); return; }
+            p.m = m;
+        }
+        renderTrips();
+    });
+
+    view.addEventListener('keydown', (e) => {
+        if (tab !== 'trips') return;
+        const s = e.target.closest('[data-seg]');
+        if (s && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); s.click(); }
+        if (e.key === 'Escape' && tv.sel) { tv.sel = null; tv.draft = null; renderTrips(); }
+    });
+
+    // Przeciąganie bloku (przesuń) i prawego brzegu (czas fazy) ; zapis po puszczeniu.
+    let segDrag = null;
+    view.addEventListener('pointerdown', (e) => {
+        if (tab !== 'trips' || tv.zoom === 'month' || e.button > 0) return;
+        const s = e.target.closest('[data-seg]');
+        if (!s) return;
+        const parts = s.dataset.seg.split('|');
+        const key = parts[0] + '|' + parts[1];
+        if (tv.draft && tv.draft.key !== key) return;
+        const t = tripByKey(key);
+        const d = startDraft(t);
+        segDrag = { key, i: Number(parts[2]), mode: e.target.closest('[data-resize]') ? 'resize' : 'move', x0: e.clientX, moved: false,
+            start0: d.start_at, m0: d.phases.map(p => p.m), track: s.closest('[data-track]') };
+        s.setPointerCapture(e.pointerId);
+    });
+    view.addEventListener('pointermove', (e) => {
+        if (!segDrag) return;
+        const span = Number(view.dataset.to) - Number(view.dataset.from);
+        const snap = ZOOM[tv.zoom][2];
+        const delta = Math.round((e.clientX - segDrag.x0) / Number(view.dataset.width) * span / 60000 / snap) * snap;
+        if (!delta && !segDrag.moved) return;
+        segDrag.moved = true;
+        const d = tv.draft;
+        const i = segDrag.i;
+        if (segDrag.mode === 'resize') d.phases[i].m = Math.max(5, segDrag.m0[i] + delta);
+        else if (i === 0) d.start_at = iso(T(segDrag.start0) + delta * 60000);
+        else d.phases[i - 1].m = Math.max(5, segDrag.m0[i - 1] + delta);
+        // Tylko pozycje bloków tej trasy (bez przebudowy — przeciąganie trwa).
+        const t = tripByKey(segDrag.key);
+        const from = Number(view.dataset.from), width = Number(view.dataset.width);
+        const px = (x) => (x - from) / span * width;
+        phasesOf(t).forEach((p, j) => {
+            const el = segDrag.track.querySelector(`[data-seg="${segDrag.key}|${j}"]`);
+            if (!el) return;
+            const l = Math.max(0, px(p.s)), r = Math.min(width, px(p.e));
+            el.style.left = l + 'px';
+            el.style.width = Math.max(2, r - l - 1) + 'px';
+        });
+    });
+    const endDrag = async () => {
+        if (!segDrag) return;
+        const moved = segDrag.moved;
+        const key = segDrag.key, i = segDrag.i;
+        setTimeout(() => { segDrag = null; }, 0);
+        if (!moved) { if (!tv.sel || tv.sel.key !== key) tv.draft = tv.draft && tv.draft.key === key && JSON.stringify(tv.draft.phases.map(p => p.m)) === JSON.stringify(tripByKey(key).phases.map(p => p.m)) ? null : tv.draft; return; }
+        tv.sel = { key, i };
+        await saveDraft();
+    };
+    view.addEventListener('pointerup', endDrag);
+    view.addEventListener('pointercancel', endDrag);
+    window.addEventListener('resize', () => { if (tab === 'trips') renderTrips(); });
+
+    function openTripTemplate() {
+        const s = P.trip_template;
+        const f = (name, label, value, hint = '') => `<label class="lp-field">${label}<input class="form-control" name="${name}" inputmode="numeric" value="${value}">${hint ? `<small>${hint}</small>` : ''}</label>`;
+        modal('Szablon trasy', `<p class="lp-hint">Czasy bez przerw — przerwy 45 min (co 4 h 30 jazdy) i odpoczynek dobowy 11 h (po 9 h jazdy) wstawiane same. Trasy zmienione ręcznie zostają bez zmian.</p>
+            <div class="lp-form-grid">
+                <label class="lp-field">Godzina załadunku<input class="form-control" type="time" name="departure_time" value="${esc(s.departure_time)}"><small>gdy ciężarówka nie ma własnej</small></label>
+                ${f('load_min', 'Załadunek (min)', s.load_min)}
+                ${f('drive_out_min', 'Jazda do 1. klienta (min)', s.drive_out_min, dur(s.drive_out_min))}
+                ${f('between_min', 'Jazda między klientami (min)', s.between_min)}
+                ${f('unload_min', 'Rozładunek (min)', s.unload_min)}
+                ${f('unload_pallet_min', '+ na paletę (min)', s.unload_pallet_min)}
+                ${f('drive_back_min', 'Powrót do bazy (min)', s.drive_back_min, dur(s.drive_back_min))}
+                ${f('weekly_rest_h', 'Odpoczynek tygodniowy (h)', Math.round(s.weekly_rest_min / 60), '45 h ; skrócony 24 h')}
+            </div>`, async (form) => {
+            const v = (n) => form[n].value.trim();
+            const res = await api('/ajax/logistics/plan/trip-template', 'PUT', { departure_time: v('departure_time'), load_min: v('load_min'), drive_out_min: v('drive_out_min'), between_min: v('between_min'),
+                unload_min: v('unload_min'), unload_pallet_min: v('unload_pallet_min'), drive_back_min: v('drive_back_min'), weekly_rest_min: String(Math.round(Number(v('weekly_rest_h').replace(',', '.')) * 60)) });
+            return !!res;
         });
     }
 
