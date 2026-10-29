@@ -66,6 +66,20 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Nouveau produit : nos recettes dans « Nasz surowiec » (migration 125, 29/10/2026)
+
+- Étape « Koszt i cena » : un ingrédient de la fiche peut être rapproché d'une matière **ou d'une de nos recettes**
+  (`product_recipe` de type 1 Kompozycja, en g, et 2 Półprodukt, en pièces ; les produits finis — carton avec
+  emballage — sont exclus, ainsi que les recettes sans rendement). Coût de ligne = quantité ×
+  `precalculated_material_cost` ÷ `yield_quantity` (coût matières de la recette, recalculé par l'ERP à chaque
+  changement de prix).
+- Proposition automatique d'une recette seulement si tout le nom correspond et mieux qu'une matière (statut `check`, à
+  confirmer) ; sinon elle figure dans les « Podpowiedzi ». Bouton « 🔍 Szukaj » : recherche dans toutes les matières et
+  recettes (filtre Wszystko / Surowce / Nasze receptury).
+- `n_dev_card.cost_json` : chaque ligne porte `id_raw_material` **ou** `id_recipe`.
+- `n_dev_ingredient_map` : `id_raw_material` devient facultatif, nouvelle colonne `id_recipe` (le choix mémorisé est une
+  matière ou une recette).
+
 ### Un seul assistant « Nowy produkt testowy » (migration 123, 29/10/2026)
 
 - `/test-products/new` réunit l'ancien formulaire de produit test et l'assistant « Z filmu » : source = lien Facebook /

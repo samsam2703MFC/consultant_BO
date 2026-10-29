@@ -236,7 +236,8 @@ try {
     foreach (['n_dev_card', 'n_dev_card_frame', 'n_ai_prompt', 'n_prod_group', 'n_prod_param', 'n_app_secret', 'test_product', 'test_product_status', 'test_product_type',
                  'production_sections', 'product_recipe', 'n_dev_product', 'n_dev_product_photo', 'n_dev_trial', 'n_dev_trial_photo', 'n_prod_employee', 'production_employee',
                  'final_product', 'user', 'test_product_changelog', 'test_product_stage', 'n_mgr_launch', 'category_product',
-                 'raw_material', 'unit', 'product_recipe_connection', 'erp_company_other_settings', 'n_store_price_config', 'n_dev_ingredient_map'] as $table) {
+                 'raw_material', 'unit', 'product_recipe_connection', 'erp_company_other_settings', 'n_store_price_config', 'n_dev_ingredient_map',
+                 'product_recipe_type'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -251,6 +252,11 @@ try {
         (3, 'jajka', 3, 0.0137, 0), (4, 'Sól', 3, 0.0013, 0), (5, 'Drożdże', 3, 0.0064, 0), (6, 'Masło', 3, 0.022, 0), (7, 'Ser żółty', 3, 0.02, 0),
         (8, 'Mak', 3, 0.03, 0), (9, 'Folia na ser', 3, 0.01, 1), (10, 'Mąka żytnia', 3, 0.005, 0)");
     $pdo->exec("INSERT INTO product_recipe_connection (id, parent_recipe_id, child_ingredient_id, quantity) VALUES (1, 100, 1, 1), (2, 101, 1, 1)");
+    // Nasze receptury [199] : kompozycja (g), półprodukt (szt.), produkt gotowy (karton z opakowaniem — pominięty).
+    $pdo->exec("INSERT INTO product_recipe_type (id, name) VALUES (1, 'Kompozycja'), (2, 'Półprodukt'), (3, 'Produkt gotowy')");
+    $pdo->exec("INSERT INTO product_recipe (id, name, id_type, is_subrecipe, id_unit, yield_quantity, precalculated_material_cost) VALUES
+        (200, 'Ciasto francuskie', 1, 1, 3, 1000, 12.00), (201, 'Krem cremyko', 1, 1, 3, 2000, 10.00), (202, 'Bagietka 350 g', 2, 1, 5, 1, 1.04),
+        (203, 'Pogacza karton', 3, 0, 5, 1, 40.00), (204, 'Pusta', 1, 1, 3, 0, 5.00)");
     $pdo->exec("INSERT INTO erp_company_other_settings (id, exchange_rate_euro) VALUES (1, 4.00)");
     $pdo->exec("INSERT INTO n_store_price_config (id, multiplier, limit_coef, reserve_coef) VALUES (1, 2.50, 2.20, 3.20)");
     $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES ('new_product.factory_coefs', '2,5 ; 3 ; 4', '2.5,3,4', 'string')");
@@ -425,6 +431,9 @@ try {
             ['qty' => '10 g', 'name' => 'soli'], ['qty' => '7 g', 'name' => 'drożdży instant'], ['qty' => '50 g', 'name' => 'masła · 5 g soli']]],
             ['group' => 'NADZIENIE', 'items' => [['qty' => '100 g', 'name' => 'startego kaşaru (lub ementalera)'], ['qty' => '100 g', 'name' => 'sucuku'],
             ['qty' => '250 ml', 'name' => 'wody'], ['qty' => '1', 'name' => 'plaster sera na sztukę']]]], 'photos' => [], 'notes' => []]);
+    // [199] : ta sama karta + ciasto francuskie (nasza kompozycja) i krem (sam « krem » nie wystarcza).
+    $recipeCard = $costCard;
+    $recipeCard['ingredients'][] = ['group' => 'SPÓD', 'items' => [['qty' => '200 g', 'name' => 'ciasta francuskiego'], ['qty' => '50 g', 'name' => 'kremu waniliowego']]];
     $tmp = tempnam(sys_get_temp_dir(), 'imp');
     file_put_contents($tmp, CardDocx::build($costCard, []));
     $cc = $svc->importDocx(['name' => 'Pogacza (koszt)', 'id_group' => 1, 'weekly_sales' => 100], $tmp, 7);
@@ -441,6 +450,9 @@ try {
     expectCard($by['sucuku']['status'] === 'missing' && $by['sucuku']['id_raw_material'] === null && $by['wody']['status'] === 'free', 'sucuk : brak ; woda : bez kosztu');
     expectCard($by['plaster sera na sztukę']['id_raw_material'] === 7 && $by['plaster sera na sztukę']['qty'] === 320.0 && str_contains((string) $by['plaster sera na sztukę']['note'], '× 16 szt.'), 'plaster sera na sztukę : 20 g × 16 szt.');
     expectCard(!in_array(9, array_column($k['materials'], 'id'), true) && $k['yield_pcs'] === 16 && $k['rate'] === 4.0, 'lista bez opakowań, partia 16 z karty, kurs 4,00');
+    expectCard(array_column($k['recipes'], 'ref') === ['r202', 'r200', 'r201'] && $k['recipes'][1]['type'] === 'Kompozycja' && $k['recipes'][0]['price_label'] === '1,04 zł/szt'
+        && $k['recipes'][1]['price_label'] === '12,00 zł/kg', 'receptury : kompozycje i półprodukty z ceną na jednostkę (bez produktu gotowego i wydajności 0)');
+    expectCard($by['mąki']['ref'] === 'm1' && $by['mąki']['kind'] === 'm' && $by['mąki']['id_recipe'] === null && $by['mąki']['suggestions'][0] === 'm1', 'linia : ref surowca « m1 », podpowiedzi jako ref');
     expectCard($k['total_pln'] === 13.19 && abs($k['cost_pc_pln'] - 0.8242) < 0.0001, 'koszt : partia 13,19 zł, sztuka 0,8242 zł (ilość × najwyższa cena)');
     expectCard($k['factory']['coefs'] === [2.5, 3.0, 4.0] && $k['factory']['coef'] === 3.0 && $k['store']['mult'] === 4.0 && abs($k['factory']['price_eur'] - 0.6182) < 0.0001,
         'fabryka : × 3,0 domyślnie (lista « 2,5 ; 3 ; 4 » z parametru) → 0,6182 €');
@@ -483,6 +495,60 @@ try {
     $kas = array_values(array_filter($costs->cost($cc2['id'])['lines'], fn($l) => str_contains($l['name'], 'kaşaru')))[0];
     expectCard($kas['id_raw_material'] === 7 && $kas['status'] === 'auto' && str_contains((string) $kas['note'], 'zapamiętane'), 'druga karta : kaşar → Ser żółty z pamięci');
     expectFail(fn() => $costs->cost($state['id'] + 9999), 404, 'koszt : nieznana karta');
+
+    // [199] Nasze receptury w kolumnie « Nasz surowiec » : podpowiedź, koszt = koszt receptury ÷ wydajność × ilość, zapis, pamięć.
+    $tmp = tempnam(sys_get_temp_dir(), 'imp');
+    file_put_contents($tmp, CardDocx::build($recipeCard, []));
+    $rc = $svc->importDocx(['name' => 'Pogacza francuska', 'id_group' => 1, 'weekly_sales' => 100], $tmp, 7);
+    @unlink($tmp);
+    $k = $costs->cost($rc['id']);
+    $by = [];
+    foreach ($k['lines'] as $l) $by[$l['name']] = $l;
+    $fr = $by['ciasta francuskiego'];
+    expectCard($fr['id_recipe'] === 200 && $fr['id_raw_material'] === null && $fr['ref'] === 'r200' && $fr['kind'] === 'r' && $fr['status'] === 'check'
+        && $fr['qty'] === 200.0 && $fr['cost'] === 2.4 && $fr['type'] === 'Kompozycja' && $fr['material'] === 'Ciasto francuskie',
+        'ciasta francuskiego → nasza kompozycja « Ciasto francuskie » : do sprawdzenia, 200 g × 12 zł/kg = 2,40 zł');
+    $kr = $by['kremu waniliowego'];
+    expectCard($kr['id_recipe'] === null && in_array('r201', $kr['suggestions'], true), 'kremu waniliowego : « Krem cremyko » tylko w podpowiedziach (połowa nazwy), nie wybrany');
+    $lines = array_map(fn($l) => ['key' => $l['key'], 'id_raw_material' => $l['id_raw_material'], 'id_recipe' => $l['id_recipe'], 'qty' => $l['qty'], 'price_kg' => null,
+        'status' => $l['status']], $k['lines']);
+    $set = function (array $lines, string $name, array $v) use ($k): array {
+        foreach ($k['lines'] as $i => $l) if ($l['name'] === $name) $lines[$i] = $v + $lines[$i];
+        return $lines;
+    };
+    $in = ['yield_pcs' => 16, 'factory_coef' => 3, 'store_mult' => 4, 'cobot' => null];
+    $e = expectFail(fn() => $costs->save($rc['id'], ['lines' => $set($lines, 'ciasta francuskiego', ['id_recipe' => 203])] + $in, 7), 422, 'receptura : produkt gotowy niedostępny');
+    expectCard(str_contains(implode(' ', $e->getErrors()['fields']), 'Nieznana receptura'), 'receptura : « Nieznana receptura »');
+    $e = expectFail(fn() => $costs->save($rc['id'], ['lines' => $set($lines, 'ciasta francuskiego', ['id_raw_material' => 1])] + $in, 7), 422, 'receptura i surowiec naraz');
+    expectCard(str_contains(implode(' ', $e->getErrors()['fields']), 'nie oba'), 'receptura i surowiec : « nie oba »');
+    $lines = $set($lines, 'ciasta francuskiego', ['status' => 'ok']);
+    $lines = $set($lines, 'kremu waniliowego', ['id_raw_material' => null, 'id_recipe' => 201, 'qty' => 50]);
+    $k = $costs->save($rc['id'], ['lines' => $lines] + $in, 7);
+    $by = [];
+    foreach ($k['lines'] as $l) $by[$l['name']] = $l;
+    expectCard($by['ciasta francuskiego']['status'] === 'ok' && $by['kremu waniliowego']['id_recipe'] === 201 && $by['kremu waniliowego']['status'] === 'ok'
+        && $by['kremu waniliowego']['cost'] === 0.25 && $by['kremu waniliowego']['price_label'] === '5,00 zł/kg', 'zapis : ciasto potwierdzone, krem → « Krem cremyko » 50 g × 5 zł/kg = 0,25 zł');
+    $saved = array_column(json_decode((string) $pdo->query('SELECT cost_json FROM n_dev_card WHERE id = ' . (int) $rc['id'])->fetchColumn(), true), null, 'src');
+    expectCard($saved['200 g ciasta francuskiego']['id_recipe'] === 200 && $saved['200 g ciasta francuskiego']['id_raw_material'] === null, 'cost_json : id_recipe zapisane');
+    $mem = $pdo->query("SELECT name_key, id_raw_material, id_recipe FROM n_dev_ingredient_map WHERE id_recipe IS NOT NULL ORDER BY name_key")->fetchAll();
+    expectCard(array_column($mem, 'id_recipe', 'name_key') === ['ciasta francuskiego' => 200, 'kremu waniliowego' => 201] && $mem[0]['id_raw_material'] === null,
+        'pamięć : wybór receptury zapamiętany (bez surowca)');
+    // Następna karta : receptury z pamięci, od razu « auto ».
+    $tmp = tempnam(sys_get_temp_dir(), 'imp');
+    file_put_contents($tmp, CardDocx::build($recipeCard, []));
+    $rc2 = $svc->importDocx(['name' => 'Pogacza francuska 2', 'id_group' => 1, 'weekly_sales' => 100], $tmp, 7);
+    @unlink($tmp);
+    $by = [];
+    foreach ($costs->cost($rc2['id'])['lines'] as $l) $by[$l['name']] = $l;
+    expectCard($by['kremu waniliowego']['id_recipe'] === 201 && $by['kremu waniliowego']['status'] === 'auto' && str_contains((string) $by['kremu waniliowego']['note'], 'zapamiętane'),
+        'druga karta : krem → « Krem cremyko » z pamięci (auto)');
+    // Zmiana wyboru : receptura → surowiec, pamięć nadpisana (licznik od nowa).
+    $l2 = $costs->cost($rc2['id'])['lines'];
+    $lines = array_map(fn($l) => ['key' => $l['key'], 'id_raw_material' => $l['name'] === 'ciasta francuskiego' ? 6 : $l['id_raw_material'],
+        'id_recipe' => $l['name'] === 'ciasta francuskiego' ? null : $l['id_recipe'], 'qty' => $l['qty'], 'price_kg' => null, 'status' => $l['status']], $l2);
+    $costs->save($rc2['id'], ['lines' => $lines] + $in, 7);
+    $m = $pdo->query("SELECT id_raw_material, id_recipe, uses FROM n_dev_ingredient_map WHERE name_key = 'ciasta francuskiego'")->fetch();
+    expectCard((int) $m['id_raw_material'] === 6 && $m['id_recipe'] === null && (int) $m['uses'] === 1, 'pamięć : receptura → surowiec (licznik od nowa)');
 
     // Prompt w wersjach (zapis — administrator — sprawdzany na stronie ; tutaj wersje w repozytorium).
     $c->get(App\Repositories\Workshop\DevCardRepository::class)->addPrompt('dev_card', 'Nowy prompt testowy ' . str_repeat('x', 60), 7);

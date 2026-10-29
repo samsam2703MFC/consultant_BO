@@ -160,22 +160,52 @@ final class DevCardRepository extends WorkshopRepository
             ORDER BY r.name, r.id');
     }
 
-    /** Pamięć przypisań : klucz nazwy składnika → surowiec. */
+    /**
+     * Nasze receptury do kosztu [199] : kompozycje (g) i półprodukty (szt.) z kosztem surowców na jednostkę wydajności ;
+     * produkty gotowe (koszt kartonu z opakowaniem) pominięte.
+     */
+    public function costRecipes(): array
+    {
+        return $this->all('SELECT pr.id, COALESCE(NULLIF(TRIM(pr.name), \'\'), fp.name, CONCAT(\'Receptura #\', pr.id)) AS name, pr.id_type,
+                COALESCE(t.name, \'\') AS type_name, COALESCE(u.name, \'g\') AS unit, pr.yield_quantity, pr.precalculated_material_cost, COALESCE(x.n, 0) AS uses
+            FROM product_recipe pr
+            LEFT JOIN product_recipe_type t ON t.id = pr.id_type
+            LEFT JOIN unit u ON u.id = pr.id_unit
+            LEFT JOIN (SELECT id_recipe, MIN(name) AS name FROM final_product WHERE id_recipe IS NOT NULL GROUP BY id_recipe) fp ON fp.id_recipe = pr.id
+            LEFT JOIN (SELECT child_recipe_id AS id, COUNT(DISTINCT parent_recipe_id) AS n FROM product_recipe_connection
+                WHERE child_recipe_id IS NOT NULL GROUP BY child_recipe_id) x ON x.id = pr.id
+            WHERE pr.id_type IN (1, 2) AND pr.yield_quantity > 0
+            ORDER BY name, pr.id');
+    }
+
+    /** Pamięć przypisań : klucz nazwy składnika → « m{id} » (surowiec) albo « r{id} » (receptura). */
     public function ingredientMemory(): array
     {
         try {
-            return array_column($this->all('SELECT name_key, id_raw_material FROM n_dev_ingredient_map'), 'id_raw_material', 'name_key');
+            $rows = $this->all('SELECT name_key, id_raw_material, id_recipe FROM n_dev_ingredient_map');
         } catch (\PDOException) {
-            return []; // przed migracją 124
+            try {
+                $rows = $this->all('SELECT name_key, id_raw_material, NULL AS id_recipe FROM n_dev_ingredient_map'); // przed migracją 125
+            } catch (\PDOException) {
+                return []; // przed migracją 124
+            }
         }
+        $out = [];
+        foreach ($rows as $r) {
+            if ($r['id_recipe'] !== null) $out[$r['name_key']] = 'r' . (int) $r['id_recipe'];
+            elseif ($r['id_raw_material'] !== null) $out[$r['name_key']] = 'm' . (int) $r['id_raw_material'];
+        }
+        return $out;
     }
 
-    public function rememberIngredient(string $key, string $name, int $materialId, ?int $userId): void
+    /** Zapamiętaj wybór : surowiec albo receptura (drugie pole puste). */
+    public function rememberIngredient(string $key, string $name, ?int $materialId, ?int $recipeId, ?int $userId): void
     {
-        $this->db->prepare('INSERT INTO n_dev_ingredient_map (name_key, name, id_raw_material, updated_by) VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE name = VALUES(name), uses = IF(id_raw_material = VALUES(id_raw_material), uses + 1, 1),
-                id_raw_material = VALUES(id_raw_material), updated_by = VALUES(updated_by)')
-            ->execute([$key, mb_substr($name, 0, 255), $materialId, $userId]);
+        $this->db->prepare('INSERT INTO n_dev_ingredient_map (name_key, name, id_raw_material, id_recipe, updated_by) VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE name = VALUES(name),
+                uses = IF(id_raw_material <=> VALUES(id_raw_material) AND id_recipe <=> VALUES(id_recipe), uses + 1, 1),
+                id_raw_material = VALUES(id_raw_material), id_recipe = VALUES(id_recipe), updated_by = VALUES(updated_by)')
+            ->execute([$key, mb_substr($name, 0, 255), $materialId, $recipeId, $userId]);
     }
 
     /** Kurs EUR (Ustawienia › Pozostałe) ; null gdy nieustawiony. */

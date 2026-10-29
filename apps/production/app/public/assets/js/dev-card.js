@@ -6,7 +6,7 @@
  * 2. Generowanie : odczyt linku (serwer, bez logowania), klatki wycięte tutaj w przeglądarce (wideo pobrane przez serwer
  *    z Facebooka / Pinteresta albo plik operatora — nie wysyłamy całego filmu), asystent AI (klucz Anthropic na serwerze).
  * 3. Karta : podgląd A4 / tabletu, poprawki tekstu i zdjęć, .docx / PDF.
- * 4. Koszt i cena [198] : receptura z karty → nasze surowce → koszt na sztukę, cena fabryczna (× współczynnik),
+ * 4. Koszt i cena [198] : receptura z karty → nasze surowce albo nasze receptury [199] → koszt na sztukę, cena fabryczna (× współczynnik),
  *    cena w sklepie (fabryka × mnożnik), cobot ; zapis → produkt na tablecie grupy albo karta do druku.
  */
 (function () {
@@ -691,7 +691,8 @@
     }
 
     // --- Krok 4 : koszt i cena [198] --------------------------------------------------------------------
-    // Receptura z karty → nasze surowce (podpowiedzi serwera, wybór operatora zapamiętany), ilość w jednostce surowca,
+    // Receptura z karty → nasze surowce albo receptury (kompozycje, półprodukty) [199] — podpowiedzi serwera, wyszukiwarka,
+    // wybór operatora zapamiętany ; linia wskazuje « m12 » (surowiec) albo « r45 » (receptura) ; ilość w jednostce surowca,
     // koszt partii i sztuki ; cena fabryczna = koszt × współczynnik ; cena w sklepie netto = fabryka × mnożnik ; cobot.
 
     const ST = { auto: ['ok', '✓ auto'], ok: ['ok', '✓'], check: ['w', '? sprawdź'], missing: ['bad', '✗ brak'], estimate: ['w', '≈ szacunek'], free: ['', 'bez kosztu'] };
@@ -699,6 +700,7 @@
     const money = (n, unit) => n === null || n === undefined || !Number.isFinite(Number(n)) ? '—' : num(n) + ' ' + unit;
     const parseNum = (v) => { const x = parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return Number.isFinite(x) ? x : null; };
     const qtyText = (q) => String(Math.round(Number(q || 0) * 100) / 100).replace('.', ',');
+    const fold = (v) => String(v || '').toLowerCase().replace(/ł/g, 'l').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const roundTo = (v, step) => v === null ? null : (step > 0 ? Math.round(Math.round(v / step) * step * 100) / 100 : Math.round(v * 100) / 100);
     let C = null;
     let dirty = false;
@@ -716,14 +718,16 @@
 
     function setCost(data) {
         C = data;
-        C.byId = Object.fromEntries(C.materials.map(m => [m.id, m]));
+        C.items = [...C.materials.map(m => ({ ...m, kind: 'm', type: 'Surowiec' })), ...(C.recipes || []).map(r => ({ ...r, kind: 'r' }))];
+        C.items.forEach(x => { x.w = fold(x.name).split(/[^a-z0-9]+/).filter(Boolean); });
+        C.byRef = Object.fromEntries(C.items.map(x => [x.ref, x]));
         C.factory.coefs = [...new Set([...C.factory.coefs, C.factory.coef].map(Number))].sort((a, b) => a - b);
         C.store.mults = [...new Set([...C.store.mults, C.store.mult].map(Number))].sort((a, b) => a - b);
         dirty = false;
     }
 
     function lineCost(l) {
-        if (l.id_raw_material) { const m = C.byId[l.id_raw_material]; return m ? l.qty * m.price : 0; }
+        if (l.ref) { const m = C.byRef[l.ref]; return m ? l.qty * m.price : 0; }
         return l.status === 'estimate' && l.price_kg !== null ? l.qty * l.price_kg / 1000 : 0;
     }
 
@@ -740,25 +744,79 @@
             shareF: 100 / C.factory.coef, shareS: pc !== null && rate && final ? pc / rate / final * 100 : null };
     }
 
+    const itemLabel = (m) => m.kind === 'r' ? `${m.name} · ${m.type.toLowerCase()}` : m.name;
+
     function lineRow(i) {
         const l = C.lines[i];
-        const sugg = (l.suggestions || []).filter(id => C.byId[id]);
-        const inSugg = sugg.includes(Number(l.id_raw_material));
-        const opt = (m, sel) => `<option value="${m.id}" ${sel && Number(l.id_raw_material) === m.id ? 'selected' : ''}>${esc(m.name)}</option>`;
-        const m = l.id_raw_material ? C.byId[l.id_raw_material] : null;
+        const sugg = (l.suggestions || []).filter(r => C.byRef[r]);
+        const m = l.ref ? C.byRef[l.ref] : null;
+        const opt = (x) => `<option value="${x.ref}" ${l.ref === x.ref ? 'selected' : ''}>${esc(itemLabel(x))}</option>`;
         const [cls, label] = ST[l.status] || ST.check;
         const price = m ? `<span class="dc-price">${esc(m.price_label)}</span>` : (l.status === 'free' ? ''
             : `<span class="dc-qty dc-pkg"><input class="form-control" data-pkg inputmode="decimal" value="${l.price_kg !== null ? qtyText(l.price_kg) : ''}" placeholder="cena" aria-label="Cena szacunkowa zł/kg"><small>zł/kg</small></span>`);
         return `<tr data-line="${i}" class="st-${l.status}">
             <td class="src"><b>${esc(l.qty_text)}</b> ${esc(l.name)}${l.note ? `<span class="dc-why">${esc(l.note)}</span>` : ''}</td>
-            <td><div class="dc-sel"><select class="form-select" data-mat aria-label="Surowiec : ${esc(l.src)}">
-                    <option value="" ${!l.id_raw_material && l.status !== 'free' ? 'selected' : ''}>— brak w ERP (cena szacunkowa) —</option>
+            <td><div class="dc-sel"><select class="form-select" data-mat aria-label="Surowiec albo receptura : ${esc(l.src)}">
+                    <option value="" ${!l.ref && l.status !== 'free' ? 'selected' : ''}>— brak w ERP (cena szacunkowa) —</option>
                     <option value="free" ${l.status === 'free' ? 'selected' : ''}>— bez kosztu (woda) —</option>
-                    ${sugg.length ? `<optgroup label="Podpowiedzi">${sugg.map(id => opt(C.byId[id], true)).join('')}</optgroup>` : ''}
-                    <optgroup label="Wszystkie surowce">${C.materials.map(x => opt(x, !inSugg)).join('')}</optgroup></select>
-                <div class="dc-sel-meta"><button type="button" class="dc-st ${cls}" data-st title="${['check', 'auto'].includes(l.status) ? 'Dotknij, aby potwierdzić' : ''}">${label}</button>${price}</div></div></td>
+                    ${sugg.length ? `<optgroup label="Podpowiedzi">${sugg.map(r => opt(C.byRef[r])).join('')}</optgroup>` : ''}
+                    ${m && !sugg.includes(l.ref) ? `<optgroup label="Wybrane">${opt(m)}</optgroup>` : ''}
+                    <option value="search">🔍 Szukaj : wszystkie surowce i receptury…</option></select>
+                <div class="dc-sel-meta"><button type="button" class="dc-st ${cls}" data-st title="${['check', 'auto'].includes(l.status) ? 'Dotknij, aby potwierdzić' : ''}">${label}</button>${
+                    m && m.kind === 'r' ? `<span class="dc-kind">${esc(m.type)}</span>` : ''}${price}</div></div></td>
             <td class="n"><span class="dc-qty"><input class="form-control" data-qty inputmode="decimal" value="${qtyText(l.qty)}" aria-label="Ilość"><small>${esc(m ? m.unit : 'g')}</small></span></td>
             <td class="n" data-cost></td></tr>`;
+    }
+
+    // Wyszukiwarka : surowce i receptury (kompozycje, półprodukty) ; każde słowo = początek słowa nazwy, bez końcówki
+    // (« ciasta » → « cias… » : Ciasto) ; najpierw nazwy z pełnymi słowami.
+    function searchPick(i, done) {
+        const l = C.lines[i];
+        const box = document.createElement('div');
+        box.className = 'dc-modal';
+        const KINDS = [['', 'Wszystko'], ['m', 'Surowce'], ['r', 'Nasze receptury']];
+        let kind = '';
+        box.innerHTML = `<div class="dc-modal-box dc-find" role="dialog" aria-modal="true" aria-label="Szukaj surowca albo receptury">
+            <div class="dc-row dc-between"><h4 class="dc-h dc-m0">Nasz surowiec dla « ${esc(l.src)} »</h4>
+                <button type="button" class="btn btn-outline-secondary" data-close>Zamknij</button></div>
+            <input class="form-control dc-find-q" type="search" data-q placeholder="Szukaj : nazwa surowca albo receptury" aria-label="Szukaj" autocomplete="off">
+            <div class="dc-seg dc-seg-sm" role="radiogroup" aria-label="Rodzaj">${KINDS.map(([v, t]) =>
+                `<label><input type="radio" name="find_kind" value="${v}" ${v === '' ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div>
+            <div class="dc-find-list" data-list role="listbox"></div></div>`;
+        document.body.appendChild(box);
+        const q = box.querySelector('[data-q]');
+        const list = box.querySelector('[data-list]');
+        const LIMIT = 60;
+        const draw = () => {
+            const full = fold(q.value).split(/[^a-z0-9]+/).filter(Boolean);
+            const words = full.map(w => w.length > 4 ? w.slice(0, w.length - 2) : w);
+            const score = (x) => words.every(w => x.w.some(v => v.startsWith(w))) ? full.filter(w => x.w.some(v => v.startsWith(w))).length : -1;
+            const pool = C.items.filter(x => !kind || x.kind === kind).map(x => [x, score(x)]).filter(([, n]) => n >= 0)
+                .sort((a, b) => b[1] - a[1]).map(([x]) => x);
+            const sugg = words.length ? [] : (l.suggestions || []).map(r => C.byRef[r]).filter(x => x && (!kind || x.kind === kind));
+            const rest = pool.filter(x => !sugg.includes(x));
+            const row = (x) => `<button type="button" class="dc-find-item ${x.ref === l.ref ? 'on' : ''}" data-ref="${x.ref}" role="option">
+                <span>${esc(x.name)}</span><span class="dc-kind ${x.kind === 'm' ? 'm' : ''}">${esc(x.type)}</span><span class="dc-price">${esc(x.price_label)}</span></button>`;
+            list.innerHTML = (sugg.length ? `<p class="dc-label">Podpowiedzi</p>${sugg.map(row).join('')}<p class="dc-label">Wszystkie</p>` : '')
+                + (rest.length ? rest.slice(0, LIMIT).map(row).join('') : '<p class="at-empty">Nic nie znaleziono — zmień słowo albo rodzaj.</p>')
+                + (rest.length > LIMIT ? `<p class="dc-hint">… i ${rest.length - LIMIT} więcej — zawęź wyszukiwanie.</p>` : '');
+        };
+        const close = () => { box.remove(); document.removeEventListener('keydown', onKey); };
+        const pick = (ref) => { close(); done(ref); };
+        const onKey = (e) => {
+            if (e.key === 'Escape') close();
+            else if (e.key === 'Enter' && document.activeElement === q) { const b = list.querySelector('[data-ref]'); if (b) pick(b.dataset.ref); }
+        };
+        document.addEventListener('keydown', onKey);
+        box.addEventListener('click', (e) => {
+            if (e.target === box || e.target.closest('[data-close]')) return close();
+            const b = e.target.closest('[data-ref]');
+            if (b) pick(b.dataset.ref);
+        });
+        q.addEventListener('input', draw);
+        box.querySelectorAll('[name=find_kind]').forEach(r => r.addEventListener('change', () => { kind = r.value; draw(); q.focus(); }));
+        draw();
+        q.focus();
     }
 
     function renderCost() {
@@ -771,15 +829,16 @@
             groups[groups.length - 1].rows.push(i);
         });
         view.innerHTML = `<div class="dc-grid dc-grid-cost"><div>
-            <div class="dc-card"><h4 class="dc-h"><span class="dc-num">1</span>Surowce : karta → nasze surowce <span class="dc-pill ok dc-ml" data-progress-label></span></h4>
+            <div class="dc-card"><h4 class="dc-h"><span class="dc-num">1</span>Surowce : karta → nasze surowce i receptury <span class="dc-pill ok dc-ml" data-progress-label></span></h4>
                 <div class="dc-prog"><i data-progress></i></div>
-                <div class="dc-map-wrap"><table class="dc-map"><thead><tr><th>Z karty</th><th>Nasz surowiec</th><th class="n">Ilość</th><th class="n">Koszt</th></tr></thead>
+                <div class="dc-map-wrap"><table class="dc-map"><thead><tr><th>Z karty</th><th>Nasz surowiec / receptura</th><th class="n">Ilość</th><th class="n">Koszt</th></tr></thead>
                 <tbody>${groups.map(g => `${g.name ? `<tr class="grp"><td colspan="4">${esc(g.name)}</td></tr>` : ''}${g.rows.map(lineRow).join('')}`).join('')}</tbody>
                 <tfoot><tr><td colspan="3"><label class="dc-yield">Partia : <input class="form-control" name="yield_pcs" inputmode="numeric" value="${C.yield_pcs ?? ''}" aria-label="Sztuk z partii"> szt.</label>
                     ${C.yield_text ? `<small>z karty : « ${esc(C.yield_text)} »</small>` : ''}</td><td class="n" data-total></td></tr>
                     <tr class="pc"><td colspan="3">Koszt surowców na sztukę</td><td class="n" data-pc></td></tr></tfoot></table></div>
-                <p class="dc-hint">Podpowiedzi według nazw, wybór zapamiętany dla następnych kart. Cena surowca = najwyższa zatwierdzona (jak w kalkulacji receptur).
-                    Brak surowca : wybierz z listy, wpisz cenę szacunkową albo <a href="${at.root}/materials/new" target="_blank" rel="noopener">dodaj surowiec</a>
+                <p class="dc-hint">Podpowiedzi według nazw, wybór zapamiętany dla następnych kart. Cena surowca = najwyższa zatwierdzona (jak w kalkulacji receptur) ;
+                    nasza receptura (kompozycja, półprodukt) = koszt jej surowców ÷ wydajność.
+                    Brak surowca : « 🔍 Szukaj » (surowce i receptury), wpisz cenę szacunkową albo <a href="${at.root}/materials/new" target="_blank" rel="noopener">dodaj surowiec</a>
                     i <button type="button" class="dc-link dc-inline" data-reload>odśwież listę</button>.</p></div>
             <div class="dc-card"><h4 class="dc-h"><span class="dc-num">2</span>Cobot</h4>
                 <span class="dc-label">Czy produkt jest cobotyzowalny ?</span>
@@ -855,17 +914,32 @@
             if (el.matches('[data-mat]')) {
                 const i = lineOf(el);
                 const l = C.lines[i];
-                if (el.value === 'free') Object.assign(l, { id_raw_material: null, status: 'free', note: null });
-                else if (el.value === '') Object.assign(l, { id_raw_material: null, status: l.price_kg !== null ? 'estimate' : 'missing', note: null });
-                else Object.assign(l, { id_raw_material: Number(el.value), status: 'ok', note: null });
-                redraw(i);
+                const choose = (v) => {
+                    if (v === 'free') Object.assign(l, { ref: null, status: 'free', note: null });
+                    else if (v === '') Object.assign(l, { ref: null, status: l.price_kg !== null ? 'estimate' : 'missing', note: null });
+                    else if (C.byRef[v]) {
+                        // Inna jednostka : g ↔ kg, ml ↔ l przeliczone ; na sztuki (albo ze sztuk) — ilość do sprawdzenia.
+                        const BASE = { g: 1, ml: 1, kg: 1000, l: 1000 };
+                        const from = l.ref && C.byRef[l.ref] ? C.byRef[l.ref].unit : 'g';
+                        const to = C.byRef[v].unit;
+                        let note = null;
+                        if (from !== to && BASE[from] && BASE[to]) l.qty = Math.round(l.qty * BASE[from] / BASE[to] * 1000) / 1000;
+                        else if (from !== to) note = `Sprawdź ilość : jednostka ${to}`;
+                        Object.assign(l, { ref: v, status: 'ok', note });
+                    }
+                    redraw(i);
+                };
+                if (el.value === 'search') {
+                    el.value = l.ref || (l.status === 'free' ? 'free' : ''); // bez wyboru w wyszukiwarce nic się nie zmienia
+                    searchPick(i, choose);
+                } else choose(el.value);
             } else if (el.matches('[data-qty]')) {
                 // Ilość wpisana : linia sprawdzona, uwaga « Podaj ilość » znika.
                 const i = lineOf(el);
                 const l = C.lines[i];
                 const was = [l.status, l.note];
                 if (l.qty > 0 && /^Podaj/.test(l.note || '')) l.note = null;
-                if (l.id_raw_material && l.status === 'check') l.status = 'ok';
+                if (l.ref && l.status === 'check') l.status = 'ok';
                 if (was[0] !== l.status || was[1] !== l.note) redraw(i);
             }
         });
@@ -892,7 +966,7 @@
             if (!b) return;
             const i = lineOf(b);
             const l = C.lines[i];
-            if (['check', 'auto'].includes(l.status) && l.id_raw_material) { l.status = 'ok'; redraw(i); }
+            if (['check', 'auto'].includes(l.status) && l.ref) { l.status = 'ok'; redraw(i); }
         });
         view.querySelector('[name=yield_pcs]').addEventListener('input', (e) => { const n = parseInt(String(e.target.value).replace(/\D/g, ''), 10); C.yield_pcs = n > 0 ? n : null; touch(); });
         view.querySelectorAll('[name=cobot]').forEach(r => r.addEventListener('change', () => {
@@ -931,7 +1005,8 @@
 
     function costPayload() {
         const t = totals();
-        return { lines: C.lines.map(l => ({ key: l.key, id_raw_material: l.id_raw_material, qty: l.qty, price_kg: l.price_kg, status: l.status })),
+        const id = (l, k) => l.ref && l.ref[0] === k ? Number(l.ref.slice(1)) : null;
+        return { lines: C.lines.map(l => ({ key: l.key, id_raw_material: id(l, 'm'), id_recipe: id(l, 'r'), qty: l.qty, price_kg: l.price_kg, status: l.status })),
             yield_pcs: C.yield_pcs, factory_coef: C.factory.coef, store_mult: C.store.mult, store_price_eur: t.final,
             cobot: C.cobot || null, cobot_steps: C.cobot === 'yes' ? C.cobot_steps : [] };
     }
