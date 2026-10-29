@@ -149,6 +149,7 @@ $r = $reader->read('https://fb.watch/abc');
 expectCard($r['kind'] === 'facebook' && $r['url'] === 'https://www.facebook.com/reel/123', 'Facebook : przekierowanie fb.watch → reel');
 expectCard($r['text'] === "Kıvrık Poğaça\n500 gr un, 300 ml süt, 10 gr tuz & maya", 'Facebook : pełny opis zamiast skróconego og:description');
 expectCard($r['author'] === 'Chefburcinarda', 'Facebook : autor ' . $r['author']);
+expectCard(SourceReader::detect('https://www.facebook.com/x/videos/1/')['kind'] === 'facebook', 'Facebook : film /videos/');
 expectCard($r['video'] === 'https://video.xx.fbcdn.net/v/t42.mp4?_nc=1&oh=2' && $r['video_sd'] === 'https://video.xx.fbcdn.net/v/t42sd.mp4?oh=3', 'Facebook : wideo HD + zapasowe SD (długi film)');
 expectCard($r['image'] === 'https://scontent.xx.fbcdn.net/v/cover.jpg' && !$r['login_wall'], 'Facebook : okładka, bez ściany logowania');
 $wall = $reader->read('https://fb.watch/wall');

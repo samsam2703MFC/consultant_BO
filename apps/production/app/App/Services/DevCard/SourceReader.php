@@ -54,6 +54,10 @@ final class SourceReader
 
     private function facebook(string $html, array $meta, array $out): array
     {
+        // Tytuł bez licznika na początku (« 9,2 tys. wyświetleń · 398 reakcji | … », « 12K views · 1.1K reactions | … »).
+        if ($out['title'] !== null) {
+            $out['title'] = preg_replace('~^[^|]*\b(?:wyświetle\w*|reakcj\w*|views?|reactions?|vues|réactions)\b[^|]*\|\s*~iu', '', $out['title']);
+        }
         // Opis : najdłuższy z og:description i tekstów posta w danych strony (og:description bywa skrócony).
         $texts = array_filter([$meta['og:description'] ?? null, $meta['description'] ?? null]);
         foreach (['~"message":\{"text":"((?:[^"\\\\]|\\\\.)*)"~', '~"description":\{"text":"((?:[^"\\\\]|\\\\.)*)"~'] as $re) {
