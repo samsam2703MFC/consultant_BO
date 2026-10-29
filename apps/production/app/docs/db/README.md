@@ -3,7 +3,7 @@
 Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y a été déplacée le 24/10/2026 par `deploy/server.sh`, données gardées).
 
 - **121 tables d'origine** de l'ERP SL Food : noms inchangés (131 avant le nettoyage du 24/10/2026, qui a supprimé les 10 copies de sauvegarde).
-- **152 tables ajoutées** pendant le développement (28/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
+- **155 tables ajoutées** pendant le développement (29/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
 
 ## Installer / intégrer
 
@@ -42,6 +42,26 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 ### Tablette chauffeur (migration 082, 26/10/2026)
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
+
+### Nouveau produit depuis un film : karta technologiczna (migration 122, 29/10/2026)
+
+- `n_dev_card` : une carte par produit test (`id_test_product` UNIQUE, CASCADE ; vide tant que le brouillon n'est pas
+  enregistré). `status` (`draft` → `ready` → `saved`), source (`source_kind` : facebook, pinterest, file, text, docx ;
+  `source_url`, auteur, titre, description du film `source_text`, `source_info` JSON : vidéo, couverture, remarques),
+  `video_url` (lien du film, recopié sur le produit), nom, groupe (`id_group` → `n_prod_group`), ventes `weekly_sales`
+  (pièces / semaine), `season_quarters` (« 1,4 » = Q1 et Q4 ; vide = toute l'année), carte `card_json` (titre, origine,
+  portions, cuisson, temps, ingrédients par groupe, étapes, photos {frame_id, légende}, remarques), `model`, `id_prompt`,
+  `usage_json` (jetons), `generated_at`, `generation_ms`. Brouillons non enregistrés supprimés après 30 jours.
+- `n_dev_card_frame` : images de la carte (CASCADE) — `kind` `frame` (image extraite du film dans le navigateur, avec
+  `at_ms`), `cover` (couverture du lien), `docx` (photo d'une carte .docx importée) ; JPEG / PNG en `MEDIUMBLOB`. À
+  l'enregistrement, les images non choisies (`frame`) sont supprimées.
+- `n_dev_product` reçoit `weekly_sales` et `season_quarters` (prévision par trimestre : 13 semaines × ventes / semaine).
+- `n_ai_prompt` : versions du prompt (`code` = `dev_card`, texte, auteur) ; la dernière est utilisée, sinon le prompt par défaut.
+- Paramètre `ai.model` (`claude-opus-5-5` par défaut, ou `claude-sonnet-5-5`). La clé Anthropic n'est jamais dans le dépôt :
+  `n_app_secret` `anthropic_api_key`, chiffrée (comme les mots de passe des boîtes mail), saisie par un administrateur dans
+  Ustawienia › Asystent AI (`/settings/ai`), ou variable d'environnement `ANTHROPIC_API_KEY` du serveur.
+- Pages : `/test-products/from-video` (assistant), `/test-products/cards/{id}/card.docx` et `card.pdf` ; la carte apparaît
+  sur la fiche du produit en développement (bureau) et sur la tablette du groupe.
 
 ### Tablette d'emballage (migration 121, 28/10/2026)
 

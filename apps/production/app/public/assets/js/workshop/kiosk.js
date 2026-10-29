@@ -2388,6 +2388,20 @@
         const photosOf = {};
         done.forEach(tr => tr.photos.forEach(ph => { photosOf[ph.id] = ph.src; }));
         p.photos.forEach(ph => { photosOf['ref' + ph.id] = ph.src; });
+        // Karta technologiczna z filmu [196] : wydajność / pieczenie / czas, składniki (ilości w kolumnie), kroki, zdjęcia etapów.
+        const c = p.card;
+        if (c) c.photos.forEach((ph, i) => { photosOf['card' + i] = ph.src; });
+        const cardHtml = !c ? '' : `<section class="kiosk-card kiosk-tk">
+            <div class="kiosk-tk-head">${c.cover ? `<img src="${c.cover}" alt="">` : ''}<div><h2>${icon('clipboard-check')} ${esc(t('dev_card'))}</h2>
+                <p class="kiosk-muted">${esc([c.title !== p.name ? c.title : '', c.original_name, c.author && t('dev_card_by', {name: c.author})].filter(Boolean).join(' · '))}</p></div></div>
+            <div class="kiosk-tk-facts">${[['layout-grid', 'dev_card_yield', c.yield], ['flame', 'dev_card_baking', c.baking], ['clock', 'dev_card_time', c.time]].map(([ic, k, v]) =>
+                `<div class="kiosk-tk-fact"><small>${icon(ic, 'is-sm')} ${esc(t(k))}</small><b>${esc(v || '—')}</b></div>`).join('')}</div>
+            <div class="kiosk-tk-cols"><div><h3>${esc(t('dev_card_ingredients'))}</h3>${c.ingredients.map(g => `${g.group ? `<div class="kiosk-tk-sub">${esc(g.group)}</div>` : ''}
+                <table class="kiosk-tk-ing">${g.items.map(it => `<tr><td>${esc(it.qty)}</td><td>${esc(it.name)}</td></tr>`).join('')}</table>`).join('')}</div>
+                <div><h3>${esc(t('dev_card_steps'))}</h3><ol class="kiosk-tk-steps">${c.steps.map(st => `<li>${esc(st)}</li>`).join('')}</ol></div></div>
+            ${c.photos.length ? `<h3>${esc(t('dev_card_photos'))}</h3><div class="kiosk-tk-photos">${c.photos.map((ph, i) =>
+                `<button type="button" class="kiosk-tk-photo" data-zoom="card${i}"><img src="${ph.src}" alt="${esc(ph.caption)}"><span><b>${i + 1}.</b> ${esc(ph.caption)}</span></button>`).join('')}</div>` : ''}
+            <p class="kiosk-muted kiosk-tk-foot">${esc(c.footer)}</p></section>`;
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-back>‹ ${esc(t('back'))}</button>`, true) + `
             <section class="kiosk-card kiosk-dev-hero"><span class="kiosk-dev-stage">${esc(dev.stage_label)}</span><h2>${esc(p.name)}</h2>
                 <p class="kiosk-muted">${esc([...new Set([dev.group && dev.group.name, p.section, dev.target_date && t('dev_target', {date: dateFmt(dev.target_date)})].filter(Boolean))].join(' · '))}</p>
@@ -2396,6 +2410,7 @@
                     ${planned.instructions ? `<p class="kiosk-dev-text">${esc(planned.instructions)}</p>` : ''}</div>` : ''}
                 ${p.recipe_confirmed ? `<p class="kiosk-status kiosk-dev-ok">${icon('circle-check')} ${esc(t('dev_recipe_confirmed', {date: dayTime(p.recipe_confirmed.at), name: p.recipe_confirmed.by || '—'}))}</p>` : ''}
                 ${action ? `<div class="kiosk-row kiosk-dev-actions">${action}</div>` : ''}</section>
+            ${cardHtml}
             ${done.length ? `<section class="kiosk-card"><h2>${icon('flask-conical')} ${esc(t('dev_trials', {n: done.length}))}</h2><div class="kiosk-dev-trials">${done.slice().reverse().map(tr => `<article class="kiosk-dev-trial">
                 <div class="kiosk-dev-trial-head"><strong>${esc(t('dev_trial_no', {n: tr.no}))}</strong><span class="kiosk-pill ${RESULT_CLS[tr.result] || ''}">${esc(tr.result_label || '')}</span>
                 <span class="kiosk-muted">${esc([dayTime(tr.done_at), tr.employee, tr.quantity !== null ? t('dev_qty', {q: fmt(tr.quantity)}) : ''].filter(Boolean).join(' · '))}</span></div>
