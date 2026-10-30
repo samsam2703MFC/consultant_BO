@@ -38,7 +38,7 @@
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
     pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null, pmC: null, pmCanJ: 30, pmCanM: 'n',
-    prVue: 'mois', prFiltre: 'toutes', prM: null, prY: null, prTri: null, prTriAn: null,
+    prVue: 'mois', prFiltre: 'toutes', prM: null, prY: null, prTri: null, prTriAn: null, prOuv: {},
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -1264,13 +1264,14 @@
     exp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M11 20V5M17 20v-8M2 20h20"/></svg>',
     ctrl: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.6"/></svg>',
     sem: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+    prim: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M8.6 13.8 7 22l5-3 5 3-1.6-8.2"/></svg>',
   };
   /** Le menu du téléphone : Opérationnel (la journée en cours, 06/10/2026), Exploitation, Contrôle,
-   * Semaine, chacun avec sa couleur. La réclamation fournisseur s'ouvre depuis Contrôle et y ramène. */
+   * Semaine, chacun avec sa couleur, et Primes (30/10/2026). La réclamation fournisseur s'ouvre depuis Contrôle et y ramène. */
   function mbOnglets() {
     const P = maEtats();
-    const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'jour' ? S.mo : '')));
-    return `<div class="mb-tabs mb-tabs4 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['sem', 'Semaine']]
+    const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'primes' ? 'prim' : (S.vue === 'jour' ? S.mo : ''))));
+    return `<div class="mb-tabs mb-tabs5 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['sem', 'Semaine'], ['prim', 'Primes']]
       .map(([k, l]) => `<button type="button" data-mo="${k}" class="${on === k ? 'on' : ''}"><i>${MA_ICO[k]}${P[k] && P[k] !== 'n' ? `<b class="pt p${P[k]}"></b>` : ''}</i>${l}</button>`).join('')}</div>`;
   }
 
@@ -4534,13 +4535,68 @@
     if (k.etat === 'vide' || k.etat === 'sans_vente' || k.val == null) { return 0; }
     return 1e6 + (k.niveau || 0) * 1e3 + (k.rang ? 100 - k.rang : 0) + Math.min(99, +k.val || 0) / 100;
   }
+  /** La barre fine : le chemin fait vers l'objectif, verte passé 80 %, grise une fois le mois perdu. */
+  const prBarre = k => (k.niveau != null && k.ton !== 'gagne' && k.ton !== 'tete' ? `<div class="pr-barre"><i style="width:${Math.max(3, Math.min(100, k.niveau))}%"${k.ton === 'perdu' ? ' class="gris"' : k.niveau >= 80 ? ' class="vert"' : ''}></i></div>` : '');
   /** Un en-tête qui trie : le 2e clic inverse ; le sens suivant voyage dans le bouton. */
   function prTriBt(tri, col, tab, contenu) {
     const on = tri.col === col, sens = on ? -tri.sens : (col === 'nom' ? 1 : -1);
     return `<button class="pr-tri" data-prtri="${esc(col)}" data-prtab="${tab}" data-prsens="${sens}">${contenu}${on ? `<span class="pr-fl">${tri.sens < 0 ? '↓' : '↑'}</span>` : ''}</button>`;
   }
   const prAria = (tri, col) => (tri.col === col ? (tri.sens < 0 ? 'descending' : 'ascending') : 'none');
-  function prTableMois(D, garde) {
+  /* Les primes d'équipe (30/10/2026) : la même valeur pour toutes — l'objectif du magasin, la note Google. Elles sortent
+   * du tableau des vendeuses, qui ne garde que l'individuel ; seule l'éligibilité (le minimum d'heures) change de l'une
+   * à l'autre. MAQUETTES : ?maq=a (tuiles) ou ?maq=b (une carte « ensemble ») — à trancher. */
+  const PR_EQUIPE = ['objectif', 'google'];
+  const PR_MAQ = q.get('maq') === 'b' ? 'b' : 'a';
+  const prEstEquipe = p => PR_EQUIPE.includes(p.base) && p.type === 'target';
+  /** Une prime d'équipe lue sur l'équipe : sa valeur (la même pour toutes), l'objectif, qui en profite. */
+  function prEquipeInfos(D, garde) {
+    const clos = !D.enCours;
+    return (D.primes || []).filter(p => garde(p) && prEstEquipe(p)).map(p => {
+      const ks = (D.vendeuses || []).map(v => ({ v, k: (v.cases || {})[p.cle] })).filter(x => x.k);
+      const ref = (ks.find(x => x.k.val != null) || {}).k || {};
+      const hors = ks.filter(x => x.k.motif === 'heures').map(x => x.v.nom), elig = ks.filter(x => x.k.motif !== 'heures').map(x => x.v.nom);
+      const atteint = ks.some(x => x.k.etat === 'gagne');
+      const diff = ref.cible != null && ref.val != null ? Math.max(0, +ref.cible - +ref.val) : null;
+      const reste = diff == null ? '' : p.unite === 'pct' ? 'encore ' + prFx(diff, 1) + ' point' + (diff > 1 ? 's' : '') : p.unite === 'note' ? 'encore ' + nf(diff, 1) + ' ★' : 'encore ' + prVal(p.unite, diff);
+      return { p, val: prVal(p.unite, ref.val), proj: p.base === 'objectif' && !clos, cible: ref.cible != null ? (p.base === 'objectif' ? 'objectif ' : 'cible ') + prVal(p.unite, ref.cible) : '',
+        niveau: atteint ? 100 : ref.niveau != null ? ref.niveau : null, atteint, perdu: clos && !atteint, reste, hors, elig,
+        chacune: p.montant, pot: p.montant * elig.length };
+    });
+  }
+  /** Maquette A : une tuile par prime d'équipe, au-dessus du tableau. */
+  function prEquipeA(E, mobile) {
+    if (!E.length) { return ''; }
+    return `<div class="pr-eqa-t">Primes d’équipe<small>la même pour toutes : le magasin les gagne ensemble</small></div>
+      <div class="pr-eqa-g${mobile ? ' mob' : ''}">${E.map(e => `<div class="pr-eqa${e.atteint ? ' ok' : ''}">
+        <div class="k">${esc(e.p.lib)}<span>${esc(e.chacune + ' € chacune · ' + prPayeur(e.p))}</span></div>
+        <div class="v">${e.atteint ? '✓ ' : ''}${e.proj ? '<small>proj. </small>' : ''}${esc(e.val)}<small> · ${esc(e.cible)}</small></div>
+        ${e.niveau != null ? `<div class="pr-barre l"><i style="width:${Math.max(3, Math.min(100, e.niveau))}%"${e.atteint || e.niveau >= 80 ? ' class="vert"' : ''}></i></div>` : ''}
+        <div class="s">${e.atteint ? 'atteint : ' + esc(prEur(e.pot)) + ' pour ' + prPl(e.elig.length, 'vendeuse') : e.perdu ? 'pas atteint ce mois-là' : esc(e.reste) + ' · si atteint : <b>' + esc(prEur(e.pot)) + '</b> pour ' + prPl(e.elig.length, 'vendeuse')}</div>
+        ${e.hors.length ? `<div class="s mu">sous le min. d’heures : ${esc(e.hors.join(', '))}</div>` : ''}
+      </div>`).join('')}</div>`;
+  }
+  /** Maquette B : une seule carte — des anneaux, ce que chacune touche si tout est atteint, et qui en profite. */
+  function prEquipeB(E, mobile) {
+    if (!E.length) { return ''; }
+    const C = 2 * Math.PI * 30;
+    const anneau = e => { const n = Math.max(0, Math.min(100, e.niveau || 0));
+      return `<div class="pr-eqb-r"><svg viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="30" class="f"/><circle cx="38" cy="38" r="30" class="a${e.atteint || n >= 80 ? ' ok' : ''}" stroke-dasharray="${(C * n / 100).toFixed(1)} ${C.toFixed(1)}"/></svg>
+        <div class="c"><b>${esc(e.val)}</b>${e.proj ? '<small>proj.</small>' : ''}</div>
+        <div class="l"><b>${esc(e.p.lib)}</b><small>${esc(e.cible)} · ${esc(e.chacune + ' € chacune')}</small><small class="${e.atteint ? 'ok' : ''}">${e.atteint ? '✓ atteint' : e.perdu ? 'pas atteint' : esc(e.reste)}</small></div></div>`; };
+    const chacune = E.reduce((t, e) => t + e.chacune, 0), elig = E[0].elig, hors = E[0].hors;
+    const pot = E.reduce((t, e) => t + e.pot, 0);
+    return `<div class="pr-eqb${mobile ? ' mob' : ''}">
+      <div class="pr-eqb-h"><div><div class="pr-eqb-t">Le magasin, ensemble</div><div class="s">${E.length > 1 ? E.length + ' primes' : 'Une prime'} que toute l’équipe gagne d’un coup, quand le magasin y arrive</div></div>
+        <div class="pr-eqb-pot"><b>+ ${esc(prEur(chacune))}</b><small>chacune si tout est atteint · ${esc(prEur(pot))} pour l’équipe</small></div></div>
+      <div class="pr-eqb-rs">${E.map(anneau).join('')}</div>
+      <div class="pr-eqb-ch"><span class="lab">Éligibles · ${elig.length}</span>${elig.map(n => `<span class="ch">${esc(n)}</span>`).join('')}
+        ${hors.length ? `<span class="lab">Sous le min. d’heures · ${hors.length}</span>${hors.map(n => `<span class="ch gris">${esc(n)}</span>`).join('')}` : ''}</div>
+    </div>`;
+  }
+  const prEquipe = (D, garde, mobile) => { const E = prEquipeInfos(D, garde); return PR_MAQ === 'b' ? prEquipeB(E, mobile) : prEquipeA(E, mobile); };
+  /** Le mois, pour l'ordinateur comme pour le téléphone : les colonnes gardées par le filtre, les vendeuses triées. */
+  function prMoisVue(D, garde) {
     const cols = (D.primes || []).filter(garde), clos = !D.enCours;
     const t0 = S.prTri || { col: 'acquis', sens: -1 };
     const tri = t0.col === 'nom' || t0.col === 'acquis' || cols.some(p => p.cle === t0.col) ? t0 : { col: 'acquis', sens: -1 };
@@ -4550,8 +4606,13 @@
       const xa = val(a), xb = val(b), c = typeof xa === 'string' ? xa.localeCompare(xb, 'fr') : xa - xb;
       return c * tri.sens || b.acquis - a.acquis || a.nom.localeCompare(b.nom, 'fr');
     });
+    return { cols, clos, tri, rangs };
+  }
+  const prSousV = v => [v.heures != null ? prFx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).join(' · ');
+  function prTableMois(D, garde) {
+    const { cols, clos, tri, rangs } = prMoisVue(D, garde);
     const cel = k => (k.ton === 'hors' ? '<td class="pr-hors">·</td>' : `<td class="pr-c pr-${k.ton}"><div class="pr-h">${esc(k.haut)}</div>
-      ${k.niveau != null && k.ton !== 'gagne' && k.ton !== 'tete' ? `<div class="pr-barre"><i style="width:${Math.max(3, Math.min(100, k.niveau))}%"${k.ton === 'perdu' ? ' class="gris"' : k.niveau >= 80 ? ' class="vert"' : ''}></i></div>` : ''}
+      ${prBarre(k)}
       ${k.bas ? `<div class="pr-b">${esc(k.bas)}</div>` : ''}</td>`);
     const quand = D.quand ? new Date(D.quand * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '';
     return `<div class="db-card pr-carte"><div class="pr-defil"><table class="pr-tab">
@@ -4563,7 +4624,7 @@
         <th class="pr-petit pr-d" aria-sort="${prAria(tri, 'acquis')}">${prTriBt(tri, 'acquis', 'mois', D.enCours ? 'Acquis' : 'Gagné')}</th>
       </tr></thead>
       <tbody>${rangs.map(v => `<tr>
-        <td class="pr-g pr-nom"><b>${esc(v.nom)}</b>${[v.heures != null ? prFx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).length ? `<small>${esc([v.heures != null ? prFx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).join(' · '))}</small>` : ''}</td>
+        <td class="pr-g pr-nom"><b>${esc(v.nom)}</b>${prSousV(v) ? `<small>${esc(prSousV(v))}</small>` : ''}</td>
         ${cols.map(p => cel(prCase(p, (v.cases || {})[p.cle], clos))).join('')}
         <td class="pr-tot">${v.acquis > 0 ? esc(prEur(v.acquis)) : '—'}</td></tr>`).join('')}</tbody>
     </table></div></div>
@@ -4626,7 +4687,58 @@
     }
     if (!(D.vendeuses || []).length) { return h + '<div class="db-card"><div class="pm-vide">Personne au planning ni en caisse dans ce magasin ce mois-là.</div></div>'; }
     if (!(D.primes || []).filter(garde).length) { return h + '<div class="db-card"><div class="pm-vide">Aucune prime du magasin ce mois-là.</div></div>'; }
-    return h + prTableMois(D, garde);
+    return h + prEquipe(D, garde, false) + prTableMois(D, p => garde(p) && !prEstEquipe(p));
+  }
+  /* Au téléphone (30/10/2026) : le tableau ne tient pas en largeur — une carte par vendeuse, dans l'ordre du tableau :
+   * son nom, ses heures et tickets, l'acquis, une pastille par prime (verte : gagnée, bordeaux : en tête). Un toucher
+   * déplie le détail prime par prime, avec la même barre. Le mois ou l'année se change en haut, comme la date. */
+  function rendPrimesMobile() {
+    const an = S.prVue === 'annee', filtre = S.prFiltre === 'magasin' ? 'magasin' : 'toutes';
+    const garde = p => filtre === 'toutes' || p.payeur === 'magasin';
+    const k = an ? clePrAn() : clePrEq(), D = S.aux[k];
+    const m = prMois(), y = prAn(), mMax = AUJ.slice(0, 7), yMax = +AUJ.slice(0, 4);
+    const pas = (attr, n, ok, lib) => `<button type="button" class="ma-pas" ${attr}="${n}" aria-label="${lib}"${ok ? '' : ' disabled'}>${n < 0 ? '‹' : '›'}</button>`;
+    const per = an ? pas('data-pry', -1, y > PR_Y_DEBUT, 'année précédente') + `<b>${y}${y === yMax ? ' · en cours' : ''}</b>` + pas('data-pry', 1, y < yMax, 'année suivante')
+      : pas('data-prm', -1, m > PR_M_DEBUT, 'mois précédent') + `<b>${esc(prLibMois(m))}${m === mMax ? ' · en cours' : ''}</b>` + pas('data-prm', 1, m < mMax, 'mois suivant');
+    let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
+      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d">${per}</div></div>
+      <span class="sp"></span><button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <div class="mb-sc"><div class="ma pr-mob">
+      <div class="pr-mob-f"><div class="db-ong db-ong-p">${[['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-prvue="${o[0]}" class="${(an ? 'annee' : 'mois') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+        <div class="db-ong db-ong-p">${[['toutes', 'Toutes'], ['magasin', 'Du magasin']].map(o => `<button data-prf="${o[0]}" class="${filtre === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div></div>`;
+    const fin = '</div></div>' + mbOnglets();
+    const vide = t => h + `<div class="ma-t w"><div class="s" style="font-size:12px">${t}</div></div>` + fin;
+    if (S.err[k]) { return h + `<div class="db-err">Primes : ${esc(S.err[k])}</div>` + fin; }
+    if (!D) { return h + `<div class="ma-v"><span class="n mu">…</span><span class="t">${an ? 'calcul de l’année' : 'lecture des fiches de l’équipe'}<em>${an ? 'mois par mois, prime par prime' : 'ce que chacune voit dans Mes primes'}</em></span></div>${squeletteMa(4)}` + fin; }
+    const ouv = S.prOuv || {};
+    // Une carte : l'en-tête se touche, le détail se déplie dessous.
+    const carte = (id, nom, sous, droite, dots, lignes) => `<div class="pr-mc${ouv[id] ? ' ouv' : ''}">
+      <button type="button" class="pr-mc-h" data-prouv="${esc(id)}" aria-expanded="${!!ouv[id]}">
+        <span class="pr-mc-n"><b>${esc(nom)}</b>${sous ? `<small>${esc(sous)}</small>` : ''}</span>
+        <span class="pr-mc-a"><b>${droite}</b>${dots ? `<span class="pr-dots">${dots}</span>` : ''}</span><span class="pr-mc-ch">${ouv[id] ? '▴' : '▾'}</span></button>
+      ${ouv[id] ? `<div class="pr-mc-d">${lignes()}</div>` : ''}</div>`;
+    if (an) {
+      const V = prAnneeVue(D, garde);
+      if (!V.rangs.length) { return vide('Aucune prime gagnée dans ce magasin cette année-là' + (filtre === 'magasin' ? ' parmi celles du magasin.' : '.')); }
+      h += `<div class="ma-v"><span class="n long">${esc(V.total)}</span><span class="t">gagnés en ${y}<em>${esc(V.periode)}</em></span></div>`;
+      h += V.rangs.map(r => carte('an:' + r.id, r.nom, prPl(r.mois, 'mois') + ' primé' + (r.mois > 1 ? 's' : ''), esc(prEur(V.totalDe(r))), '',
+        () => V.cols.map(p => { const c = (r.cases || {})[p.cle]; return `<div class="pr-ml${c ? ' pr-gagne' : ''}"><span class="pr-ml-l">${esc(p.lib)}<small>${p.payeur === 'magasin' ? `<span class="pr-mag">${esc(prPayeur(p))}</span>` : esc(prPayeur(p))}</small></span>
+          <span class="pr-ml-v">${c ? `<span class="pr-h">${esc(c.montant > 0 ? prEur(c.montant) : '✓ cadeau')}</span><span class="pr-b">${esc(prPl(c.fois, 'mois'))}</span>` : '<span class="pr-hors">·</span>'}</span></div>`; }).join(''))).join('');
+      return h + '<div class="ma-note">Le montant gagné sur l’année et le nombre de mois · toucher une vendeuse pour le détail</div>' + fin;
+    }
+    if (!(D.vendeuses || []).length) { return vide('Personne au planning ni en caisse dans ce magasin ce mois-là.'); }
+    if (!(D.primes || []).filter(garde).length) { return vide('Aucune prime du magasin ce mois-là.'); }
+    const V = prMoisVue(D, p => garde(p) && !prEstEquipe(p));
+    const total = D.vendeuses.reduce((t, v) => t + (+v.acquis || 0), 0), nG = V.cols.reduce((t, p) => t + (+p.gagnees || 0), 0);
+    h += `<div class="ma-v"><span class="n long">${esc(prEur(total))}</span><span class="t">${D.enCours ? 'acquis ce mois' : 'gagnés ce mois-là'}<em>${prPl(V.rangs.length, 'vendeuse')} · ${nG} prime${nG > 1 ? 's' : ''} individuelle${nG > 1 ? 's' : ''} gagnée${nG > 1 ? 's' : ''}</em></span></div>`;
+    h += prEquipe(D, garde, true);
+    h += V.rangs.map(v => {
+      const cs = V.cols.map(p => ({ p, k: prCase(p, (v.cases || {})[p.cle], V.clos) }));
+      return carte(v.id, v.nom, prSousV(v), v.acquis > 0 ? esc(prEur(v.acquis)) : '—', cs.map(x => `<i class="${x.k.ton}"></i>`).join(''),
+        () => cs.map(({ p, k: c }) => `<div class="pr-ml pr-${c.ton}"><span class="pr-ml-l">${esc(p.lib)}<small>${esc(prRecompense(p))} · ${p.payeur === 'magasin' ? `<span class="pr-mag">${esc(prPayeur(p))}</span>` : esc(prPayeur(p))}</small></span>
+          <span class="pr-ml-v">${c.ton === 'hors' ? '<span class="pr-hors">·</span>' : `<span class="pr-h">${esc(c.haut)}</span>${prBarre(c)}${c.bas ? `<span class="pr-b">${esc(c.bas)}</span>` : ''}`}</span></div>`).join(''));
+    }).join('');
+    return h + '<div class="ma-note"><i class="pr-lg gagne"></i>gagnée · <i class="pr-lg tete"></i>en tête · toucher une vendeuse pour le détail, prime par prime</div>' + fin;
   }
 
   function rendre() {
@@ -4638,7 +4750,9 @@
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
       // La production se pilote sur ordinateur (demande du 03/10/2026) : pas d'écran au téléphone.
-      if (!['ops', 'jour', 'semaine', 'reclamation'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      // Les primes : déplier une carte ne doit pas ramener en haut de la liste.
+      if (S.vue === 'primes') { const a = $.querySelector('.pr-mob'), sc = a ? a.closest('.mb-sc') : null, top = sc ? sc.scrollTop : 0; $.innerHTML = rendPrimesMobile(); $.classList.add('mob'); brancher(); const sc2 = $.querySelector('.mb-sc'); if (sc2) { sc2.scrollTop = top; } return; }
       if (S.vue === 'actions' || S.vue === 'campagne') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
       if (S.vue === 'reclamation') {
         const champ = rcGarder();
@@ -7768,6 +7882,7 @@
     $.querySelectorAll('[data-prvue]').forEach(b => b.addEventListener('click', () => { S.prVue = b.dataset.prvue; charger(false); }));
     $.querySelectorAll('[data-prm]').forEach(b => b.addEventListener('click', () => { S.prM = prDecale(prMois(), +b.dataset.prm); charger(false); }));
     $.querySelectorAll('[data-pry]').forEach(b => b.addEventListener('click', () => { S.prY = prAn() + (+b.dataset.pry); charger(false); }));
+    $.querySelectorAll('[data-prouv]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.prouv; S.prOuv[id] = !S.prOuv[id]; rendre(); }));
     $.querySelectorAll('[data-prtri]').forEach(b => b.addEventListener('click', () => { S[b.dataset.prtab === 'an' ? 'prTriAn' : 'prTri'] = { col: b.dataset.prtri, sens: +b.dataset.prsens }; rendre(); }));
     $.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; rendre(); }));
     $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
@@ -7841,7 +7956,7 @@
     $.querySelectorAll('[data-rgdrop]').forEach(b => b.addEventListener('click', () => { S.rgOuvert = !S.rgOuvert; rendre(); }));
     $.querySelectorAll('[data-mo]').forEach(b => b.addEventListener('click', () => {
       const k = b.dataset.mo, avant = S.vue;
-      if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else { S.vue = 'jour'; S.mo = k; }
+      if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else if (k === 'prim') { S.vue = 'primes'; } else { S.vue = 'jour'; S.mo = k; }
       S.heure = null; S.jourH = null; urlMaj();
       if (S.vue === avant) { rendre(); const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } } else { charger(false); } }));
     $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));
