@@ -1169,3 +1169,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T10:40:21Z 217 kreator faktur KSeF (pozycje jedna po drugiej)
 2026-10-30T10:50:27Z 217 kreator faktur : podgląd ceny
 2026-10-30T12:43:33Z 217 kreator faktur : Usługa → Finanse
+2026-10-30T12:55:45Z [cockpit] MetaDonnee : les cles et l'acces Meta du CRM, lus dans sa base

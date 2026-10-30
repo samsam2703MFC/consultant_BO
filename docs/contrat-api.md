@@ -3559,13 +3559,23 @@ Sous-menu « MétaDonnée » du rail (ERP franchisé), maquette A : quatre écra
 `mdLeads`, `mdSms`, un module (`public/assets/js/metadonnee.js`), un serveur (`src/metadonnee.php`). Tables
 créées à la première utilisation : `ceo_md_form` (formulaires, suivi, magasin, mapping), `ceo_md_lead` (un lead
 Meta, son état côté cockpit, son statut relu dans l'ERP, ses SMS), `ceo_md_shop` (SMS du magasin),
-`ceo_md_journal` (le cycle). Réglages : `mdReglages` (erp, sms, meta, cp), `mdMeta` (ID de l'application et de
-la Page, adresse de rappel, jeton de vérification, bilan de la dernière connexion), `mdMetaSecret`, `mdMetaJeton`,
-`mdSmsJeton` (jamais renvoyés), `mdCycle`, `mdJeton` (horloge).
+`ceo_md_journal` (le cycle). Réglages : `mdReglages` (erp, sms, meta, cp), `mdMeta` (`source` des clés, ID de
+l'application et de la Page, adresse de rappel, jeton de vérification, bilan de la dernière connexion), `mdMetaSecret`,
+`mdMetaJeton`, `mdMetaJetonCrm`, `mdSmsJeton` (jamais renvoyés), `mdCycle`, `mdJeton` (horloge).
+
+**Clés Meta : celles du CRM** (30/10/2026). Par défaut (`source` « crm »), l'ID et la clé secrète de l'application,
+l'ID et le jeton de la Page sont ceux du CRM candidat, relus à chaque appel dans la base partagée — `crm_settings`
+(`meta_app_id`, `meta_app_secret`, `meta_page_id`, `meta_page_token`), complété par `meta_connexion` (`app_id`,
+`app_secret`, `page_id`, `page_token`, puis `system_token`), la table que le CRM publie pour Social & Ads. Rien n'y
+est jamais écrit : si le jeton du CRM est celui de l'utilisateur système, le jeton de la Page qu'en tire « Connecter
+et tester » est gardé dans `mdMetaJetonCrm` (`{de: sha256 du jeton du CRM, jeton}`), oublié dès que le CRM change le
+sien. Avec les clés du CRM, l'application est la sienne : son adresse de rappel n'est jamais prise, le Cockpit relève
+(mode `releve`). `source` « cockpit » : les clés saisies à l'écran (`mdMeta`, `mdMetaSecret`, `mdMetaJeton`).
 
 **Lectures**
 
-- `GET /metadonnee` — tout ce que les quatre écrans lisent : `statut` (meta — configuré, Page, mode `webhook`|`releve`,
+- `GET /metadonnee` — tout ce que les quatre écrans lisent : `statut` (meta — `source` `crm`|`cockpit`, `crm`
+  (`{le}` : dernière publication du CRM, `null` sans CRM dans la base), configuré, Page, mode `webhook`|`releve`,
   dernière connexion —, erp, sms, smtp, cron), `reglages`, `champs` (les champs de l'ERP et leur règle), `besoins`, `statuts`, `formulaires[]`
   (questions avec dernière réponse et suggestion, mapping enregistré ou `null`, `mappingSuggere`, `valeurs`,
   `champsNeufs`, leads 30 j, `fb`/`ig`, `ignores`), `magasins[]` (SMS et chiffres 30 j), `resume`, `journal`.
@@ -3576,9 +3586,11 @@ la Page, adresse de rappel, jeton de vérification, bilan de la dernière connex
 
 **Écritures**
 
-- `PUT /metadonnee/meta` `{appId?, pageId?, secret?, jeton?, rappel?}` — les réglages Meta du CRM, recopiés (un secret
-  vide n'efface rien). `POST /metadonnee/meta/connecter` — « Connecter et tester » : `{ok, etapes[{titre, ok, detail}], meta}` ;
-  l'adresse de rappel de l'application n'est prise que libre (ou déjà la nôtre), en https sur un nom de domaine.
+- `PUT /metadonnee/meta` `{source?: crm|cockpit, appId?, pageId?, secret?, jeton?, rappel?}` — d'où viennent les clés
+  (changer de source efface le bilan de la dernière connexion) ; les clés propres (un secret vide n'efface rien).
+  `POST /metadonnee/meta/connecter` — « Connecter et tester » : `{ok, etapes[{titre, ok, detail}], meta}` ; l'adresse
+  de rappel de l'application n'est prise que libre (ou déjà la nôtre), en https sur un nom de domaine, et jamais avec
+  les clés du CRM.
 - `POST /metadonnee/formulaires/relire` — les formulaires de la Page (`/{page}/leadgen_forms`, questions comprises).
   Un nouveau formulaire arrive NON suivi, magasin suggéré.
 - `PUT /metadonnee/formulaires/{id}` — `{suivi?, affectation?: magasin|cp, shopId?, mapping?: {question: champ|ignorer}, valeurs?: {question: {réponse: code}}, par?}`.
