@@ -29,13 +29,16 @@ use App\Services\Workshop\Product\StandardTime;
  *  - trend sieci = kartony ostatnich tygodni ÷ te same tygodnie rok temu (tygodnie N-1 z danymi), w granicach parametrów.
  * Z kartonów : palety (kartony na paletę), godziny produkcji (partia z arkusza albo marszruta) wobec zdolności (pracownicy ×
  * etat, dni pracy bez świąt PL), pieniądze na produkcję [221] (wydatki gotówkowe : kartony × (surowce i opakowania + płace
- * i media działu produkcji + wspólne działy produkcji), z ostatnich miesięcy kosztowych ; bez amortyzacji, kosztów stałych,
- * Administracji i logistyki) i zakupy surowców (receptura na karton, stan, w drodze, czas dostawy → « zamówić do »).
+ * i media działu produkcji + wspólne działy produkcji), z ostatnich miesięcy kosztowych ; bez inwestycji (amortyzacja, kredyt
+ * i leasing), kosztów stałych, Administracji i logistyki) i zakupy surowców (receptura na karton, stan, w drodze, czas dostawy → « zamówić do »).
  * Zatwierdzenie (Kierownik produkcji, co poniedziałek) zapisuje zdjęcie liczb w n_forecast_run i zalicza zadanie tygodnia.
  */
 final class ForecastService
 {
     private const EPS = 1e-9;
+    /** Koszt stały będący inwestycją albo jej spłatą [223] : po nazwie (bez polskich znaków) albo kategorii. */
+    private const INVESTMENT = '/\b(inwestyc\w*|invest\w*|kredyt\w*|leasing\w*|pozyczk\w*|rat[ay] |srod\w* trwal\w*|capex)/u';
+    private const INVESTMENT_CATEGORIES = ['INVESTMENT', 'INVEST', 'LEASING', 'CREDIT', 'LOAN', 'CAPEX'];
     private const COVERAGE = 0.3;
     private const SHAPE_MIN = 0.5;
     private const SHAPE_MAX = 2.0;
@@ -305,8 +308,11 @@ final class ForecastService
         $perCompany = fn(float $v) => $costBasis['cartons'] > 0 ? $v / $costBasis['cartons'] : 0.0;
         $cost += ['basis' => $costBasis['label'], 'months' => $costBasis['count'], 'logistics_per_carton' => round($costBasis['logistics_per_carton'], 2),
             'shared_sections' => $costBasis['shared_sections'], 'admin_sections' => $costBasis['excluded']['admin_sections'],
-            // Poza wydatkami (dla informacji, na te same kartony) : amortyzacja, koszty stałe (Finanse), Administracja.
-            'excluded' => ['depreciation' => round($allCartons * $perCompany($costBasis['excluded']['depreciation']), 2),
+            // Poza wydatkami (dla informacji, na te same kartony) : inwestycje (amortyzacja, kredyt i leasing), pozostałe koszty
+            // stałe (Finanse), Administracja.
+            'excluded' => ['investment' => round($allCartons * $perCompany($costBasis['excluded']['depreciation'] + $costBasis['excluded']['financing']), 2),
+                'depreciation' => round($allCartons * $perCompany($costBasis['excluded']['depreciation']), 2),
+                'financing' => round($allCartons * $perCompany($costBasis['excluded']['financing']), 2),
                 'fixed' => round($allCartons * $perCompany($costBasis['excluded']['fixed']), 2), 'admin' => round($allCartons * $perCompany($costBasis['excluded']['admin']), 2)],
             'logistics' => round(array_sum(array_column($weekRows, 'cartons')) * $costBasis['logistics_per_carton'], 2),
             'no_raw' => count(array_filter($rows, fn($r) => $r['total'] > 0 && $r['cost_per_carton']['raw'] <= 0)),
@@ -608,7 +614,8 @@ final class ForecastService
     /**
      * Podstawa wydatków na karton [221] : ostatnie miesiące kosztowe (zamknięte najpierw, forecast.cost_months) — tylko wydatki
      * gotówkowe : wynagrodzenia i media działu produkcji na karton działu, wspólne działy produkcji (np. Pakowanie / wysyłka)
-     * i media bez rozdziału na karton firmy. Bez amortyzacji, kosztów stałych (Finanse) i działu Administracja ; logistyka osobno.
+     * i media bez rozdziału na karton firmy. Bez inwestycji [223] (amortyzacja działów + koszty stałe « kredyt / leasing »),
+     * pozostałych kosztów stałych (Finanse) i działu Administracja ; logistyka osobno.
      */
     private function costBasis(): array
     {
@@ -617,7 +624,11 @@ final class ForecastService
         $label = $this->costMonths->getDataBasisLabel($ids);
         $pool = (float) $basis['unallocated_media'];
         $shared = [];
-        $excluded = ['depreciation' => (float) $basis['depreciation_total'], 'fixed' => (float) $basis['fixed'], 'admin' => 0.0, 'admin_sections' => []];
+        $financing = 0.0;
+        foreach ($this->repo->fixedCosts($basis['month_ids']) as $f) if (self::isInvestment($f['name'], $f['category'])) $financing += $f['amount'];
+        $financing = min(max(0.0, $financing), (float) $basis['fixed']);
+        $excluded = ['depreciation' => (float) $basis['depreciation_total'], 'financing' => $financing, 'fixed' => (float) $basis['fixed'] - $financing,
+            'admin' => 0.0, 'admin_sections' => []];
         foreach ($basis['sections'] as $sec) {
             if (!$sec['shared']) continue;
             $cash = (float) $sec['labor_actual'] + (float) $sec['media_actual'];
@@ -629,6 +640,14 @@ final class ForecastService
             'shared_sections' => $shared, 'excluded' => $excluded];
     }
 
+    /** Koszt stały będący inwestycją albo jej spłatą (kredyt, leasing, środek trwały) — po nazwie albo kategorii. */
+    public static function isInvestment(string $name, string $category = ''): bool
+    {
+        if (in_array(strtoupper(trim($category)), self::INVESTMENT_CATEGORIES, true)) return true;
+        $n = strtr(mb_strtolower($name), ['ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n', 'ó' => 'o', 'ś' => 's', 'ź' => 'z', 'ż' => 'z']);
+        return (bool) preg_match(self::INVESTMENT, preg_replace('/[^a-z0-9]+/', ' ', $n) . ' ');
+    }
+
     /** Dział administracji (koszty firmy, nie produkcji) — po nazwie. */
     private static function isAdministration(string $name): bool
     {
@@ -637,7 +656,8 @@ final class ForecastService
 
     /**
      * Wydatki na karton (zł) : surowce i opakowania (koszt receptury kartonu), wynagrodzenia i media działu produkcji,
-     * wspólne działy produkcji i media bez rozdziału ; bez amortyzacji, kosztów stałych, Administracji i logistyki.
+     * wspólne działy produkcji i media bez rozdziału ; bez inwestycji (amortyzacja, kredyt i leasing), kosztów stałych,
+     * Administracji i logistyki.
      * @return array{raw:float, labor:float, media:float, shared:float, total:float, section:bool}
      */
     private function cartonCost(array $basis, array $p): array

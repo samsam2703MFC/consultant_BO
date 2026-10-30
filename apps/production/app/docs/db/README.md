@@ -130,8 +130,10 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   cartons × (matières et emballages de la recette `pre_calculated_raw_price_per_carton` + salaires et médias du département de
   production `final_product.id_section` par carton du département + départements partagés de production, p. ex.
   Pakowanie / wysyłka, et médias non répartis, par carton de l'entreprise), moyennés sur les `forecast.cost_months` (3) derniers
-  mois de coûts (clôturés d'abord, `SectionUnitCostService`). Sans amortissement, sans frais fixes (Finanse) et sans le
-  département Administracja (nom « Administ… ») : montrés pour information au survol ; logistique à part. Ligne
+  mois de coûts (clôturés d'abord, `SectionUnitCostService`). Sans investissements (amortissement des départements + frais
+  fixes « kredyt / leasing / rata / inwestycja / pożyczka / środki trwałe » ou de catégorie INVESTMENT, LEASING, CREDIT,
+  LOAN, CAPEX — `ForecastService::isInvestment`, 30/10/2026), sans les autres frais fixes (Finanse) et sans le département
+  Administracja (nom « Administ… ») : montrés pour information au survol ; logistique à part. Ligne
   « Pieniądze na produkcję » et sa part matières, tuile du total 13 semaines (matières, salaires, médias, départements
   partagés) ; `n_forecast_run.production_cost` : total enregistré à la validation.
 - API du panel TF Buddy, lecture seule (GET) : `/product-availability-periods` (gammes, `from_md` → `to_md`, aussi à cheval

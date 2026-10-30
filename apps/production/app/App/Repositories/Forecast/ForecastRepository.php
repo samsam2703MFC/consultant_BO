@@ -81,6 +81,18 @@ final class ForecastRepository extends WorkshopRepository
         return $out;
     }
 
+    /**
+     * Koszty stałe miesięcy kosztowych (Finanse) wiersz po wierszu — prognoza wydziela inwestycje (kredyt, leasing).
+     * @return list<array{name:string, category:string, amount:float}>
+     */
+    public function fixedCosts(array $monthIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $monthIds))));
+        if (!$ids) return [];
+        return array_map(fn($r) => ['name' => (string) $r['name'], 'category' => (string) $r['category'], 'amount' => (float) $r['amount']],
+            $this->all('SELECT name, category, amount FROM cost_month_fixed_cost WHERE month_id IN (' . implode(',', $ids) . ')'));
+    }
+
     // --- Zatwierdzenia -------------------------------------------------------------------------------------------
 
     public function runForWeek(string $weekStart): ?array

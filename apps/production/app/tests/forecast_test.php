@@ -53,6 +53,10 @@ expectFc(SeasonMatcher::best('Galette Frangipane', $cands)[0]['id'] === 4, 'podp
 expectFc(SeasonMatcher::best("Sapin de Noel en pain d'épice", $cands)[0]['score'] === 1.0, 'podpowiedź : bez akcentów, « épice » = « épices »');
 expectFc(SeasonMatcher::best('Crêpe 1 pièce', $cands) === [], 'podpowiedź : brak podobnego produktu');
 expectFc(SeasonMatcher::tokens('Bûche Chocolat - 4/6 personnes') === ['buche', 'chocolat'], 'słowa : bez liczb i słów pomocniczych');
+// Inwestycje w kosztach stałych [223] : kredyt, leasing, raty, środki trwałe (nazwa) albo kategoria ; nie czynsz ani środki czystości.
+expectFc(ForecastService::isInvestment('Kredyt - Leasing', 'RENT') && ForecastService::isInvestment('Rata kredytu') && ForecastService::isInvestment('Środki trwałe')
+    && ForecastService::isInvestment('Piec', 'investment') && !ForecastService::isInvestment('Rent', 'RENT') && !ForecastService::isInvestment('Srodki Czystosci', 'MAINTENANCE')
+    && !ForecastService::isInvestment('Ratownik') && !ForecastService::isInvestment('Auto - 1', 'LOGISTICS'), 'inwestycje w kosztach stałych : po nazwie albo kategorii');
 $occ = SeasonMatcher::occurrences(['is_recurring' => 1, 'from_md' => 1018, 'to_md' => 115], '2026-11-02', '2027-01-31');
 expectFc(count($occ) === 1 && $occ[0] === ['from' => '2026-10-18', 'to' => '2027-01-15', 'n1_from' => '2025-10-18', 'n1_to' => '2026-01-15'], 'gama przez Nowy Rok : w tym roku i rok temu');
 expectFc(SeasonMatcher::occurrences(['is_recurring' => 1, 'from_md' => 301, 'to_md' => 501], '2026-11-02', '2027-01-31') === [], 'gama poza oknem : brak');
@@ -130,8 +134,9 @@ try {
         (1, 'Bagietka', 1, 10, 5, 2, 10, 1, 100), (2, 'Cougnou sucre – 200 g (cru)', 1, 42, 5, 2, 20, 1, NULL), (3, 'Spéculoos Saint-Nicolas', 1, 24, 1, 1, 1, 1, NULL),
         (4, 'Buche Chocolat & Praline - 16 cm', 1, 12, 5, 2, 40, 0, NULL), (5, 'Bûche cacao 4/6', 1, 6, 5, 2, 40, 1, NULL)");
     // Wydatki na karton [221–222] : miesiąc zamknięty — płace Piekarni 10 000 zł ÷ 1 000 kartonów = 10 zł, Pakowanie / wysyłka
-    // (dział wspólny) 3 000 zł = 3 zł na karton firmy ; poza wydatkami : amortyzacja 1 000 zł, koszty stałe 5 000 zł,
-    // Administracja 4 000 zł ; logistyka 2 000 zł = 2 zł (osobno). Bagietka : surowce 8 zł → 21 zł ; bez działu : 3 zł.
+    // (dział wspólny) 3 000 zł = 3 zł na karton firmy ; poza wydatkami : inwestycje [223] = amortyzacja 1 000 zł + « Kredyt -
+    // Leasing » 1 500 zł, pozostałe koszty stałe 3 500 zł, Administracja 4 000 zł ; logistyka 2 000 zł = 2 zł (osobno).
+    // Bagietka : surowce 8 zł → 21 zł ; bez działu : 3 zł.
     $pdo->exec("INSERT INTO production_sections (id, name, depreciation) VALUES (1, 'Piekarnia', 1000), (2, 'Pakowanie/wysyłka', 0), (3, 'Administracja', 0)");
     $pdo->exec("INSERT INTO n_section_target (id_section, is_shared) VALUES (2, 1), (3, 1)");
     $pdo->exec("INSERT INTO cost_month_employee (month_id, section_id, name, surname, monthly_cost, is_included) VALUES (1, 2, 'Ewa', 'Test', 3000, 1), (1, 3, 'Olga', 'Test', 4000, 1)");
@@ -139,7 +144,7 @@ try {
     $pdo->exec("INSERT INTO cost_month (id, year, month, status) VALUES (1, 2026, 9, 'LOCKED'), (2, 2026, 10, 'OPEN')");
     $pdo->exec("INSERT INTO cost_month_employee (month_id, section_id, name, surname, monthly_cost, is_included) VALUES (1, 1, 'Jan', 'Test', 10000, 1), (2, 1, 'Jan', 'Test', 99999, 1)");
     $pdo->exec("INSERT INTO cost_month_section (month_id, section_id, cartons_qty) VALUES (1, 1, 1000)");
-    $pdo->exec("INSERT INTO cost_month_fixed_cost (month_id, amount) VALUES (1, 5000)");
+    $pdo->exec("INSERT INTO cost_month_fixed_cost (month_id, name, category, amount) VALUES (1, 'Rent', 'RENT', 3500), (1, 'Kredyt - Leasing', 'RENT', 1500)");
     $pdo->exec("INSERT INTO cost_month_logistics (month_id, amount) VALUES (1, 2000)");
     $pdo->exec("INSERT INTO erp_company_other_settings (id, exchange_rate_euro) VALUES (1, 4.3)");
     $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES ('forecast.cost_months', '1', '1', 'int')");
@@ -269,8 +274,10 @@ try {
         'wydatki na karton Bagietki : surowce 8 + płace 10 + Pakowanie 3 = 21 zł, bez amortyzacji, kosztów stałych i Administracji (miesiąc zamknięty) ; ' . json_encode($b['cost_per_carton']));
     expectFc($rows[2]['cost_per_carton']['total'] === 3.0 && !$rows[2]['cost_per_carton']['section'], 'produkt bez działu i bez kosztu surowców : tylko wspólne działy produkcji');
     expectFc($f['cost']['shared_sections'] === ['Pakowanie/wysyłka'] && $f['cost']['admin_sections'] === ['Administracja']
-        && abs($f['cost']['excluded']['fixed'] - $f['totals']['cartons'] * 5) < 0.01 && abs($f['cost']['excluded']['admin'] - $f['totals']['cartons'] * 4) < 0.01
-        && abs($f['cost']['excluded']['depreciation'] - $f['totals']['cartons'] * 1) < 0.01, 'poza wydatkami (informacja) : amortyzacja, koszty stałe, Administracja');
+        && abs($f['cost']['excluded']['fixed'] - $f['totals']['cartons'] * 3.5) < 0.01 && abs($f['cost']['excluded']['admin'] - $f['totals']['cartons'] * 4) < 0.01
+        && abs($f['cost']['excluded']['depreciation'] - $f['totals']['cartons'] * 1) < 0.01 && abs($f['cost']['excluded']['financing'] - $f['totals']['cartons'] * 1.5) < 0.01
+        && abs($f['cost']['excluded']['investment'] - $f['totals']['cartons'] * 2.5) < 0.01,
+        'poza wydatkami (informacja) : inwestycje (amortyzacja + kredyt i leasing), pozostałe koszty stałe, Administracja ; ' . json_encode($f['cost']['excluded']));
     $w = $W[$i50];
     $expect = 0.0;
     foreach ($f['products'] as $r) $expect += $r['values'][$i50] * $r['cost_per_carton']['total'];
