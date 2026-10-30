@@ -1165,3 +1165,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T08:26:10Z [213] palety : limit kartonu zastepuje parametr
 2026-10-30T09:03:45Z [cockpit] Mon profil : l'employe encode ses donnees, fiches de l'equipe cote franchise (#78)
 2026-10-30T09:21:08Z [215] paleta mieszana (pelne warstwy, propozycje, etykieta) + kalendarz wyjazdu w planie
+2026-10-30T10:05:18Z 216 prognoza zapasu i okresy stanów wyjątkowych
