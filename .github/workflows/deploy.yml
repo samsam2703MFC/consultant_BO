@@ -323,4 +323,15 @@ jobs:
             for f in $(grep -rlE "promotions" /var/www/html/tfb/api --include="*Routes*.php" 2>/dev/null | grep -v vendor | head -6); do
               echo "--- $f"; grep -nE "promotion|middleware|Middleware|role|Role|admin|consultant|group\(" "$f" | head -60
             done
+            # Le PIN de caisse que la personne change elle-même dans « Mon profil » (30/10/2026, demande de Sam) :
+            # quelle route l’écrit, et qui a le droit de l’appeler. Du code seulement, jamais une valeur.
+            echo; echo "=== employés : routes d’écriture (30/10/2026) ==="
+            grep -rnoE "(post|put|patch|delete)\([\"'\''][^\"'\'']*employee[^\"'\'']*" /var/www/html/tfb/api --include="*.php" --exclude-dir=vendor 2>/dev/null | sort -u | head -60
+            echo; echo "=== employés : ce qui garde ces routes ==="
+            for f in $(grep -rlE "(put|patch|post)\([\"'\''][^\"'\'']*employee" /var/www/html/tfb/api --include="*.php" --exclude-dir=vendor 2>/dev/null | head -6); do
+              echo "--- $f"; grep -nE "employee|middleware|Middleware|role|Role|auth|Auth|group\(" "$f" | cut -c1-200 | head -60
+            done
+            echo; echo "=== le PIN dans le code ==="
+            grep -rnE "[\"'\'']pin[\"'\'']|pin_?code|pinCode|->pin([^a-zA-Z_]|$)|function [a-zA-Z]*[Pp]in[A-Z(]" /var/www/html/tfb/api --include="*.php" --exclude-dir=vendor 2>/dev/null \
+              | grep -viE "/config|\.env" | cut -c1-220 | head -80
           '
