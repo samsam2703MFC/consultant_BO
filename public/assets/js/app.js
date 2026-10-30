@@ -7155,6 +7155,56 @@ class App {
         vendeuses: eq ? rangsEq.map(v => ({ nom: v.nom, sous: [v.heures != null ? fx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).join(' · '),
           total: v.acquis > 0 ? eurEq(v.acquis) : '—', cases: colsEq.map(p => caseEq(p, (v.cases || {})[p.cle], !eq.enCours)) })) : [],
       };
+      // Les fiches de l'équipe (30/10/2026) : ce que chaque personne a rempli dans « Mon profil » de l'app, la fiche au
+      // clic ; numéro national et IBAN masqués, en clair sur demande (au journal), la carte d'identité en photo.
+      const fichesL = connu ? lire('fiches:' + sid, '/ventes/equipe/profils?shop=' + encodeURIComponent(sid)) : null;
+      const empF = S.prFiche || null;
+      const voirF = !!S.prFicheVoir;
+      const ficheL = empF ? lire('fiche:' + empF + (voirF ? ':voir' : ''), '/ventes/equipe/profil?emp=' + empF + (voirF ? '&voir=1' : '')) : null;
+      const jjF = d => (d ? String(d).slice(8, 10) + '/' + String(d).slice(5, 7) + '/' + String(d).slice(0, 4) : '');
+      const statutF = { employe: 'Employé·e', etudiant: 'Étudiant·e', flexi: 'Flexi-job' };
+      const ficheVue = f => {
+        if (!f || f.error) { return null; }
+        const P = f.profil || {}, I = P.identite || {}, C = P.coordonnees || {}, U = P.urgence || {}, Pa = P.paie || {}, Te = P.tenue || {}, Di = P.dispo || {};
+        const Pn = P.panel || {};
+        const corr = f.corrections || {};
+        const l = (lib, v, panel) => ({ lib, v: v || '', vide: !v, panel: panel ? 'panel : ' + panel : '' });
+        const carte = face => (f.carte || {})[face] ? { lib: face === 'recto' ? 'Recto' : 'Verso', quand: jjF(f.carte[face]), url: API_BASE + '/ventes/equipe/profil/carte?emp=' + f.emp + '&face=' + face } : null;
+        const jours = ['lu', 'ma', 'me', 'je', 've', 'sa', 'di'];
+        return {
+          nom: f.nom, complet: f.complet, masque: !!f.masque,
+          groupes: [
+            ['Identité', [l('Prénom', I.prenom || Pn.prenom, corr['identite.prenom']), l('Nom', I.nom || Pn.nom, corr['identite.nom']), l('Naissance', jjF(I.naissance)), l('Nationalité', I.nationalite)]],
+            ['Coordonnées', [l('Téléphone', C.telephone || Pn.telephone, corr['coordonnees.telephone']), l('E-mail', C.email || Pn.email, corr['coordonnees.email']),
+              l('Adresse', C.rue ? [C.rue + ' ' + (C.numero || '') + (C.boite ? ' / ' + C.boite : ''), (C.cp || '') + ' ' + (C.ville || ''), C.pays || ''].filter(x => x.trim()).join(', ') : '')]],
+            ['En cas d’urgence', [l('Personne à prévenir', U.nom ? U.nom + (U.lien ? ' (' + U.lien + ')' : '') : ''), l('Téléphone', U.telephone)]],
+            ['Paie', [l('Statut', statutF[Pa.statut] || ''), l('N° national', Pa.niss), l('IBAN', Pa.iban), l('Titulaire', Pa.titulaire)]],
+            ['Tenue', [l('T-shirt', Te.tshirt), l('Veste', Te.veste), l('Chaussures', Te.chaussures)]],
+          ].map(([titre, lignes]) => ({ titre, lignes })),
+          dispo: jours.map(j => ({ j: j.charAt(0).toUpperCase() + j.slice(1), m: !!(((Di.grille || {})[j] || {}).m), a: !!(((Di.grille || {})[j] || {}).a) })),
+          remarque: Di.remarque || '',
+          cartes: ['recto', 'verso'].map(carte),
+          voir: f.masque && (Pa.niss || Pa.iban) ? () => this.setState({ prFicheVoir: true }) : null,
+          masquer: !f.masque ? () => this.setState({ prFicheVoir: false }) : null,
+        };
+      };
+      const fiches = {
+        chargement: connu && fichesL === undefined, motif: fichesL === null && connu ? 'Les fiches de l’équipe n’ont pas pu être lues.' : '',
+        relire: () => { Object.keys(this._prL).filter(k => /^~?fiches?:/.test(k)).forEach(k => delete this._prL[k]); this.setState({}); },
+        lignes: (fichesL && fichesL.fiches ? fichesL.fiches : []).map(f => ({
+          emp: f.emp, nom: f.nom, complet: f.complet,
+          manque: f.manque.length ? f.manque.slice(0, 3).join(', ') + (f.manque.length > 3 ? ' +' + (f.manque.length - 3) : '') : 'complet',
+          corrections: (f.corrections || []).join(', '), maj: f.maj ? jjF(f.maj) : 'jamais ouvert',
+          ouvert: empF === f.emp,
+          basculer: () => {
+            Object.keys(this._prL).filter(k => /^~?fiche:/.test(k)).forEach(k => delete this._prL[k]);
+            this.setState({ prFiche: empF === f.emp ? null : f.emp, prFicheVoir: false });
+          },
+        })),
+        // La fiche ouverte n'est montrée que si la personne est de ce magasin (un autre magasin choisi entre-temps la referme).
+        detail: empF && fichesL && (fichesL.fiches || []).some(f => f.emp === empF)
+          ? { chargement: ficheL === undefined, motif: ficheL === null ? 'La fiche n’a pas pu être lue.' : '', f: ficheVue(ficheL) } : null,
+      };
       const ent = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
       const cible = cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut;
       const stat = (lib, v, vr, sous) => ({ lib, v: v || '—', reseau: vr ? 'réseau ' + vr : '', sous: sous || '' });
@@ -7164,7 +7214,7 @@ class App {
       common.prFr = {
         id: sid, nom: nomMag[sid] || '', connu,
         magasins: (d.magasins || []).map(m => ({ id: String(m.id), nom: court(m.nom), aller: () => this.setState({ prShop: String(m.id) }) })),
-        marque, siennes, nSiennesMax: 6, equipe,
+        marque, siennes, nSiennesMax: 6, equipe, fiches,
         // Les primes de la marque, repliées par défaut : le tableau de l'équipe les montre déjà en colonnes.
         marqueOuvert: !!S.prFrMarque, basculerMarque: () => this.setState({ prFrMarque: !this.state.prFrMarque }),
         // « + Nouvelle prime du magasin » : la sorte d'abord (23/10/2026) — promotion, catégorie, ventes croisées, objectif CA, note Google, clients pro.

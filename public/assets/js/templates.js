@@ -7382,6 +7382,46 @@ function tplPrimesApp(c, x){
       : EQ.chargement ? vide('Lecture des fiches de l’équipe…') : EQ.motif ? vide(esc(EQ.motif)) : !EQ.vendeuses.length ? vide('Personne au planning ni en caisse dans ce magasin ce mois-là.')
         : !EQ.primes.length ? vide(`<span style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="flex:1">Aucune prime du magasin ce mois-là.</span>${FR.nouvelle ? `<button ${x.A(FR.nouvelle)} style="${btP}" data-eq-nouvelle>+ Nouvelle prime du magasin</button>` : ''}</span>`) : tableEq()}
     </section>`;
+    // Les fiches de l'équipe (30/10/2026) : ce que chaque personne a rempli dans « Mon profil » ; la fiche au clic.
+    const FI = FR.fiches;
+    const barreFi = c => `<span style="display:inline-block;width:90px;height:5px;border-radius:3px;background:var(--color-border-tertiary);overflow:hidden;vertical-align:middle"><span style="display:block;height:100%;width:${Math.max(0, Math.min(100, c))}%;background:${c >= 100 ? '#2d7a3e' : 'var(--color-primary)'}"></span></span>`;
+    const detailFi = D => {
+      if (!D) { return ''; }
+      if (D.chargement) { return `<div style="padding:14px 18px;border-top:${filet};font:400 13px ${sf};color:${muet}">Lecture de la fiche…</div>`; }
+      if (D.motif || !D.f) { return `<div style="padding:14px 18px;border-top:${filet};font:400 13px ${sf};color:${muet}">${esc(D.motif || 'Fiche illisible.')}</div>`; }
+      const F = D.f;
+      const ligne = l => `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:${filet}">
+          <span style="font:400 13px ${sf};color:${muet};flex:none">${esc(l.lib)}</span>
+          <span style="font:${l.vide ? 400 : 500} 13px ${sf};color:${l.vide ? 'var(--color-primary)' : 'var(--color-text)'};text-align:right;min-width:0;overflow-wrap:anywhere">${l.vide ? 'à compléter' : esc(l.v)}${l.panel ? `<span style="display:block;font:400 11.5px ${sf};color:#A35F00">corrigé · ${esc(l.panel)}</span>` : ''}</span></div>`;
+      const groupe = g => `<div style="min-width:0"><div style="font:600 11px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};padding:0 0 8px">${esc(g.titre)}</div>${g.lignes.map(ligne).join('')}</div>`;
+      const dispo = `<div style="min-width:0"><div style="font:600 11px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};padding:0 0 8px">Disponibilités</div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font:600 10.5px ${sf};color:${muet}">${F.dispo.map(d => `<span>${esc(d.j)}</span>`).join('')}
+          ${F.dispo.map(d => `<span title="matin" style="height:16px;border-radius:5px;background:${d.m ? 'rgba(45,122,62,.18)' : 'var(--color-border-tertiary)'}"></span>`).join('')}
+          ${F.dispo.map(d => `<span title="après-midi" style="height:16px;border-radius:5px;background:${d.a ? 'rgba(45,122,62,.18)' : 'var(--color-border-tertiary)'}"></span>`).join('')}</div>
+          ${F.remarque ? `<div style="font:400 12px/1.4 ${sf};color:${muet};margin-top:8px">${esc(F.remarque)}</div>` : ''}
+          <div style="font:600 11px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};padding:16px 0 8px">Carte d’identité</div>
+          ${F.cartes.map((c, i) => c ? `<a href="${esc(c.url)}" target="_blank" rel="noopener" data-fi-carte style="display:block;font:500 13px ${sf};color:var(--color-primary);padding:3px 0">${esc(c.lib)} · ajoutée le ${esc(c.quand)} ↗</a>`
+            : `<div style="font:400 13px ${sf};color:var(--color-primary);padding:3px 0">${i ? 'Verso' : 'Recto'} · à compléter</div>`).join('')}</div>`;
+      return `<div data-fi-detail style="padding:16px 18px 18px;border-top:${filet};background:var(--color-background-secondary)">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px 26px">${F.groupes.map(groupe).join('')}${dispo}</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;font:400 12px/1.4 ${sf};color:${muet}">
+          ${F.voir ? `<button ${x.A(F.voir)} data-fi-voir style="${btS}">Afficher le n° national et l’IBAN en clair</button>` : ''}
+          ${F.masquer ? `<button ${x.A(F.masquer)} data-fi-masquer style="${btS}">Masquer</button>` : ''}
+          <span>Gardé chiffré. Afficher en clair ou ouvrir la carte s’écrit au journal.</span></div>
+      </div>`;
+    };
+    const fiches = `<section data-pr="fr-fiches">
+      ${tete('Les fiches de l’équipe', 'Ce que chacune a rempli dans « Mon profil » de l’app : identité, coordonnées, urgence, paie, tenue, disponibilités, carte d’identité.', `<button ${x.A(FI.relire)} style="${btS}">Relire</button>`)}
+      ${FI.chargement ? vide('Lecture des fiches…') : FI.motif ? vide(esc(FI.motif)) : !FI.lignes.length ? vide('Personne dans ce magasin pour l’instant.') : `<div style="${groupeSt};margin-top:14px">${FI.lignes.map((l, i) => `
+        <div data-fi-ligne="${esc(String(l.emp))}" ${x.A(l.basculer)} role="button" aria-expanded="${l.ouvert}" style="display:flex;align-items:center;gap:16px;padding:12px 18px;cursor:pointer;${i ? `border-top:${filet};` : ''}">
+          <span style="font-size:9px;color:${muet};width:8px">${l.ouvert ? '▾' : '▸'}</span>
+          <span style="flex:0 0 180px;min-width:0;font:600 14px/1.3 ${sf};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.nom)}</span>
+          <span style="flex:none;display:flex;align-items:center;gap:8px;font:600 13px ${sf};font-variant-numeric:tabular-nums;color:${l.complet >= 100 ? '#2d7a3e' : 'var(--color-text)'}">${barreFi(l.complet)}${l.complet} %</span>
+          <span style="flex:1;min-width:0;font:400 13px/1.35 ${sf};color:${l.complet >= 100 ? '#2d7a3e' : muet};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.manque)}</span>
+          ${l.corrections ? `<span title="Changé dans l’app : à reporter dans le panel" style="flex:none;font:500 12px ${sf};color:#A35F00;background:#FBEFE0;border-radius:999px;padding:3px 9px">à reporter : ${esc(l.corrections)}</span>` : ''}
+          <span style="flex:none;font:400 12px ${sf};color:${muet};white-space:nowrap">${esc(l.maj)}</span>
+        </div>${l.ouvert ? detailFi(FI.detail) : ''}`).join('')}</div>`}
+    </section>`;
     const marque = `<section data-pr="fr-marque" class="prl-mag">
       ${tete('Primes de la marque et des sponsors', FR.marque.length + ' qui tournent ici, réglées par la marque' + (FR.marqueOuvert ? '.' : ' — déjà en colonnes dans le tableau.'),
         FR.marque.length ? `<button ${x.A(FR.basculerMarque)} data-pr-marque-bascule aria-expanded="${FR.marqueOuvert}" style="${btS}">${FR.marqueOuvert ? 'Masquer' : 'Voir le détail'}</button>` : '')}
@@ -7419,7 +7459,7 @@ function tplPrimesApp(c, x){
       ${tete('Promotions du panel dans ce magasin', 'Une prime du magasin en un geste.', `<button ${x.A(PF.relire)} style="${btS}">Relire</button>`)}
       ${PF.chargement ? vide('Lecture des promotions…') : PF.motif ? vide(esc(PF.motif)) : !PF.liste.length ? vide('Aucune promotion du panel ne tourne dans ce magasin.') : `<div style="${groupeSt};margin-top:14px">${PF.liste.map(ligneProm).join('')}</div>`}
     </section>`;
-    return equipe + marque + siennes + donnees + promosIci;
+    return equipe + fiches + marque + siennes + donnees + promosIci;
   };
   return `
 <div data-screen="primesApp" style="display:flex;flex-direction:column;gap:34px;max-width:1560px;font-family:${sf}">

@@ -22,6 +22,7 @@ tables, toutes sous le préfixe `mot_` (décision du 23/10/2026, Sam).
 | `mot_reglage` | Ce que la marque et les franchisés règlent, et ce qui est gravé : une clé, une valeur JSON. | Jamais |
 | `mot_cache` | Ce qui se recalcule (fiches du mois, moyennes, catalogue, ventes du jour relues) : une clé, une valeur JSON. | Oui, sans rien perdre |
 | `mot_grand_prix` | Les grands prix de l'année, du réseau ou d'un magasin, une ligne chacun. | Jamais |
+| `mot_profil` | « Mon profil » de chaque employé (identité, coordonnées, urgence, paie, tenue, disponibilités), chiffré. Créée par `src/profil_employe.php`. | Jamais |
 
 ### `mot_reglage`
 
@@ -58,6 +59,21 @@ Les clés commencent par :
 | `du`, `au` | La saison, en mois entiers. |
 | `actif` | Allumé ou éteint. |
 | `resultat` | Le classement gravé, trois jours après la fin de la saison. |
+
+### `mot_profil` (30/10/2026)
+
+| Colonne | Contenu |
+|---|---|
+| `id_employee` | L'identifiant du panel (clé). |
+| `shop` | Son magasin à l'enregistrement (la liste du franchisé le lit). |
+| `donnees` | Tout le profil, chiffré en AES-256-GCM (`v1:` + base64 de iv, tag, données). |
+| `complet`, `manque`, `corrections` | Ce que la liste du franchisé lit sans déchiffrer : le pourcentage rempli (16 éléments), les clés de ce qui manque, les champs du panel que la personne a changés. Rien de personnel. |
+| `cree`, `maj` | Dates. |
+
+La clé (`profil.key`, 0600) et les photos de la carte d'identité (`cartes/<emp>-recto.bin`, chiffrées elles aussi)
+vivent dans le dossier privé `/var/lib/consulant_bo/prive`, hors du site et hors de la livraison (`bin/deploy.sh` le
+crée, `rsync --delete` ne le touche pas). **Perdre `profil.key`, c'est rendre les profils illisibles : la sauvegarder
+avec la base.**
 
 ## Reprise depuis `ceo_app_setting`
 

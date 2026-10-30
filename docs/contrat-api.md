@@ -4343,3 +4343,23 @@ endormi (> 45 j). « D'un mois à l'autre » compare l'état à J−30.
 **À brancher** : le flux des visites carte (PWA ou panel) vers `ceo_fid_visite` ; la PWA qui lit ces règles (ses cartes et sa jauge vivent dans
 `pwa_loyalty_card` / `pwa_loyalty_config`, réglées aujourd'hui par `/franchisor/loyalty-*` du webshop) ; les ventes par gamme ; le suivi des parrainages.
 Le budget repose sur trois hypothèses dites à l'écran (bons utilisés à 65 %, produits pris à 85 %, 2,50 € le produit offert).
+
+### Le profil de l'employé — « Mon profil » de l'app (30/10/2026, demande de Sam)
+
+L'employé encode lui-même, dans l'app (`/me`), six fiches et la photo de sa carte d'identité (maquette validée :
+`docs/maquettes/profil-employe`). Le cockpit les garde chiffrées dans `mot_profil` (`src/profil_employe.php`) ; le
+franchisé les lit sur la page franchisé des primes (« Les fiches de l'équipe »). Le panel n'est jamais écrit : un
+prénom, un nom, un téléphone ou un e-mail changé dans l'app est gardé ici et signalé « à reporter ».
+
+| Méthode | Route | Qui | Rôle |
+|---|---|---|---|
+| GET | `/ventes/moi/profil?panel=` | l'app (identité signée de « Mes primes », ou jeton d'employé confirmé par le panel), avant la session | `{emp, profil:{identite, coordonnees, urgence, paie, tenue, dispo, panel}, carte:{recto, verso}, complet, manque:{clé: libellé}, corrections:{clé: valeur du panel}, masque:false}`. `panel` : base64 du JSON `{prenom, nom, telephone, email}` connu du panel, lu pour compter ce qui manque, jamais gardé. 401 sans identité. |
+| POST | `/ventes/moi/profil` | l'app | `{section: identite \| coordonnees \| urgence \| paie \| tenue \| dispo, valeurs:{…}, panel?}` → la même réponse. 422 `{error, erreurs:{champ: motif}}` si un champ ne passe pas (numéro national : 11 chiffres et modulo 97 ; IBAN : longueur du pays et modulo 97 ; téléphone : 8 à 15 chiffres, le 0 belge devient +32 ; naissance entre 14 et 100 ans ; tailles XS…3XL ; pointure 30 à 50) — rien n'est alors enregistré. 400 section inconnue. |
+| POST | `/ventes/moi/profil/carte` | l'app | `{face: recto \| verso, data: base64 ou data:…}` — JPEG, PNG ou WebP, 6 Mo au plus (l'app réduit à 1600 px). 422 sinon. |
+| GET | `/ventes/equipe/profils?shop=` | le cockpit (session) | `{shop, fiches:[{emp, nom, complet, manque:[libellés], corrections:[libellés], maj}]}` — tout le magasin, même qui n'a encore rien rempli (0 %), le moins rempli d'abord. |
+| GET | `/ventes/equipe/profil?emp=[&voir=1]` | le cockpit | La fiche d'une personne (même forme que `GET /ventes/moi/profil`, plus `nom`). Numéro national et IBAN masqués (`85.07.30-•••.••`, `BE68 •••• •••• 7034`) ; `voir=1` les rend en clair et l'écrit au journal (`Profil`). |
+| GET | `/ventes/equipe/profil/carte?emp=&face=` | le cockpit | La photo, déchiffrée (`Cache-Control: private, no-store`) ; l'ouvrir s'écrit au journal. 404 sans photo. |
+
+Ce qui manque compte 16 éléments : prénom, nom, naissance, nationalité ; téléphone, e-mail, adresse ; contact
+d'urgence ; statut, numéro national, IBAN ; t-shirt, veste, pointure ; disponibilités ; carte (recto et verso). Le
+prénom, le nom, le téléphone et l'e-mail du panel comptent comme remplis. Tests : `php bin/tests_profil.php`.
