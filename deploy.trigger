@@ -1177,3 +1177,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T14:17:17Z [production] feuille de route de la semaine : Mój tydzień + plan tygodnia stanowiska [219]
 2026-10-30T14:24:18Z [production] Dzisiaj : komunikat bez stanowiska [219]
 2026-10-30T14:36:48Z [cockpit] Promotions Edition : Tous les magasins, une promotion reseau
+2026-10-30T14:41:19Z [production] plan tygodnia : zadania zakupów → kierownik produkcji [219]
