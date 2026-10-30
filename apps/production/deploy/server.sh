@@ -388,9 +388,15 @@ if [[ -f "$IMPORT_OK" ]]; then
 # ERP /production — e-mails automatiques (écrit par apps/production/deploy/server.sh)
 */5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/mail_dispatch.php >> /var/log/production-erp-mail.log 2>&1
 */5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/user_mail_sync.php >> /var/log/production-erp-mail.log 2>&1
+# Prognoza 13 tygodni : gamy i sprzedaż sklepów z panelu TF Buddy (GET), raz w tygodniu (po poniedziałku 6:00)
+10 6 * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/forecast_panel_read.php >> /var/log/production-erp-mail.log 2>&1
 CRON
   chmod 644 /etc/cron.d/production-erp-mail
   touch /var/log/production-erp-mail.log && chown www-data:www-data /var/log/production-erp-mail.log
+  # Prognoza 13 tygodni : pierwszy odczyt panelu (tylko GET ; potem cron w poniedziałek) — błąd nie zatrzymuje wdrożenia.
+  ( cd "$ERP_TARGET/app" && timeout 300 "$PHPBIN" Bin/forecast_panel_read.php ) \
+    || warn "Prognoza 13 tygodni : odczyt panelu TF Buddy nie udał się — przycisk « Odśwież z panelu » na stronie."
+
   if [[ "${ERP_TFB_DEMO:-}" == "1" ]]; then
     ( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/tfb_seed_demo.php ${ERP_ENTREE_LIBRE:+--grant-admin="$ERP_ENTREE_LIBRE"} ) \
       || fail "Données de démonstration du module atelier en échec."

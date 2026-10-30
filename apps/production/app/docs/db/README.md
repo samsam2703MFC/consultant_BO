@@ -103,6 +103,51 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   désactivé s'il n'a personne. Les alertes d'achat de « Do obsłużenia » et de Dzisiaj (commande fournisseur non envoyée,
   zakupy tygodnia, offres à décider, articles < 3 fournisseurs) visent ZAKUPY et KIEROWNIK_PRODUKCJI.
 
+### Prévision 13 semaines glissantes (migration 141, 30/10/2026)
+
+- Page : Produkcja › « Prognoza 13 tygodni » (`/production/forecast`, onglet de la page Produkcja, maquettes 220-1 à 3 ;
+  catalogue d'accès `production`). `ForecastService`, `PanelSeasonService`, `SeasonMatcher`, `ForecastRepository`,
+  `forecast.js`. Chaque semaine les mêmes 13 semaines à partir du lundi en cours (`forecast.weeks`), en cartons par produit :
+  - semaine en cours : les commandes (`customer_order` statuts 1, 2, 3, 5, sans gratuits) ; ensuite la plus grande valeur
+    entre les commandes déjà passées et la prévision ;
+  - produits de toute l'année : moyenne des `forecast.trend_weeks` (8) dernières semaines × forme N-1 (cartons du réseau
+    hors saisonniers la même semaine ISO un an plus tôt, ±1 semaine, ÷ niveau N-1 de ces 8 semaines ; une semaine N-1 à
+    moins de 30 % du niveau = trou de données, pas une baisse → moyenne seule) ;
+  - produits saisonniers (seulement nos produits : catalogue SL Food du panel) : ventes en magasin de la même gamme un an
+    plus tôt (semaine k de la gamme N-1 → semaine k de la gamme cette année ; pièces ÷ pièces par carton ; semaine non lue →
+    nos expéditions ERP) × tendance du réseau ; hors gamme : seulement les commandes. Un produit d'une gamme saisonnière
+    vendu hors de sa gamme dans les dernières semaines (≥ ½ carton / semaine) compte comme produit de toute l'année ;
+  - tendance du réseau = ventes de nos produits dans tous les magasins (panel) des 8 dernières semaines ÷ mêmes semaines un
+    an plus tôt (semaines N-1 avec données), bornée par `forecast.trend_min` / `forecast.trend_max` ; sans panel : expéditions ERP.
+  Palettes (cartons par palette, fiche « 1 / 1 / 1 » = inconnu), heures de production (lot de la feuille : pièces, personnes ×
+  minutes, sinon gamme opératoire ; produits sans temps : moyenne pondérée des autres, affichée « szacunek »), capacité
+  (`forecast.capacity_hours`, 0 = salariés de production actifs × `week.fte_hours`, réduite les jours fériés PL ; pic sans la
+  semaine en cours). Achats 13 semaines : recette par carton × cartons, stock (inventaire + réceptions − consommation, comme
+  Zaopatrzenie), en route, semaine de manque, « commander avant » = lundi de la semaine de manque − délai (dernière offre du
+  fournisseur actuel `n_mp_offer.lead_time_days`, sinon `forecast.lead_days`), à acheter en emballages entiers (mode
+  « na stanie » : jusqu'au max), valeur ; matière utilisée seulement par des saisonniers = « sezon ».
+- API du panel TF Buddy, lecture seule (GET) : `/product-availability-periods` (gammes, `from_md` → `to_md`, aussi à cheval
+  sur le Nouvel An ; gamme saisonnière = active et ≤ 200 jours, gamme de plus de 200 jours = toute l'année, 1 jour = ignorée),
+  `/product-availability-periods/{id}/products` (produits des magasins), `/material-suppliers` → SL Food →
+  `/material-suppliers/{id}/catalog/products` (nos SKU = `final_product.id`),
+  `/material-suppliers/{id}/analytics/raw-material-sales-all-shops?from=…&to=…` (pièces vendues dans tous les magasins,
+  semaine par semaine : semaines de la tendance et semaines des gammes un an plus tôt). Une semaine terminée déjà lue n'est
+  plus demandée (cache dans le dernier relevé) ; 40 semaines et 120 s au plus par lecture, le reste à la suivante.
+  `Bin/forecast_panel_read.php` (cron 06:10 tous les jours, lit seulement si le dernier relevé date d'avant lundi 6:00 ;
+  aussi au déploiement), bouton « Odśwież z panelu » ; la page relit aussi le lundi si un relevé existe déjà.
+- `n_forecast_panel_read` : relevés (`read_at`, `read_by`, `ok`, `error`, `payload` JSON : gammes, produits, catalogue,
+  ventes par semaine, semaines en échec) ; 20 derniers gardés.
+- `n_forecast_panel_link` : produit de magasin d'une gamme (`panel_product_id`) → notre produit (`id_final_product`) ou
+  « nie od nas » (`ignored`). Sans ligne : suggestion d'après le nom (mots sans accents, nombres ni mots outils, mots presque
+  égaux « frangipane » / « frangipanne » ; égalité → produit actif), utilisée si ≥ 60 % (« auto », à confirmer).
+- `n_forecast_run` : validation de la semaine (une par lundi `week_start`, revalidation = remplacement) : tendance, cartons,
+  dont saisonniers, heures, valeur des achats, `payload` JSON (semaines, produits × semaines et source, gammes, achats),
+  note, `approved_at`, `approved_by`. Tâche du lundi « Zatwierdź prognozę 13 tygodni » (KIEROWNIK_PRODUKCJI, 30 min, lien
+  `/production/forecast`, `auto_code` `forecast_approved` = validation dans la semaine) ; « Cofnij zatwierdzenie » supprime la ligne.
+- Paramètres (`n_prod_param`) : `forecast.weeks` 13, `forecast.trend_weeks` 8, `forecast.trend_min` 0,5,
+  `forecast.trend_max` 2, `forecast.capacity_hours` 0, `forecast.lead_days` 7 ; `logistics.plan_weeks` 12 → 13 (plan
+  logistique sur les mêmes 13 semaines, seulement s'il valait encore 12).
+
 ### Assistant prix « Kreator cen » (migration 138, 30/10/2026)
 
 - Page : Analiza › Marże i koszty › « Kreator cen » (`/finances/price-wizard`, maquette 218 validée ; aussi depuis Marża

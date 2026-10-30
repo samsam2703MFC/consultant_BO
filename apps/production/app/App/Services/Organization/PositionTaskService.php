@@ -30,6 +30,7 @@ final class PositionTaskService
 
     /** Strony ERP do wyboru w planie tygodnia : ścieżka => [etykieta listy, przycisk na karcie zadania]. Inny adres zostaje. */
     public const LINKS = [
+        '/production/forecast' => ['Prognoza 13 tygodni (sezony z panelu, zakupy)', 'Prognoza'],
         '/workshop/supply#tab=invoices&inv=wizard' => ['Kreator faktur (zatwierdzanie pozycji)', 'Kreator faktur'],
         '/workshop/supply#tab=invoices' => ['Faktury zakupowe (wgraj PDF / zdjęcia, KSeF)', 'Faktury'],
         '/finances/price-wizard' => ['Kreator cen — krok 1 : koszty i marże', 'Kreator cen'],
@@ -62,6 +63,7 @@ final class PositionTaskService
         'costs_recalc' => 'gdy koszty i marże są przeliczone (kreator cen, krok 1)',
         'prices_planned' => 'gdy nowe ceny są zaplanowane (kreator cen, krok 3)',
         'buy_sent' => 'gdy zapytania ofertowe są wysłane (zakupy tygodnia)',
+        'forecast_approved' => 'gdy prognoza 13 tygodni jest zatwierdzona (Produkcja › Prognoza)',
     ];
 
     /** Link zadania → zaliczenie automatyczne do wyboru w planie (kreator, który zamyka zadanie). */
@@ -70,6 +72,7 @@ final class PositionTaskService
         '/finances/price-wizard' => 'costs_recalc',
         '/finances/price-wizard#step=2' => 'prices_planned',
         '/workshop/buy' => 'buy_sent',
+        '/production/forecast' => 'forecast_approved',
     ];
 
     /** Kolor kategorii na kartach tygodnia (pasek z lewej). */

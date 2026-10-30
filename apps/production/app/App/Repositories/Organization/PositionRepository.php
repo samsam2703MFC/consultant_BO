@@ -214,6 +214,7 @@ final class PositionRepository extends WorkshopRepository
             'costs_recalc' => 'SELECT EXISTS (SELECT 1 FROM n_margin_recalc_run WHERE run_at >= ? AND run_at < ?) AS ok',
             'prices_planned' => "SELECT EXISTS (SELECT 1 FROM n_price_publication WHERE created_at >= ? AND created_at < ? AND status <> 'cancelled') AS ok",
             'buy_sent' => 'SELECT EXISTS (SELECT 1 FROM n_buy_round WHERE sent_at >= ? AND sent_at < ?) AS ok',
+            'forecast_approved' => 'SELECT EXISTS (SELECT 1 FROM n_forecast_run WHERE approved_at >= ? AND approved_at < ?) AS ok',
             default => null,
         };
         return $sql !== null && (bool) ($this->all($sql, [$from, $to])[0]['ok'] ?? false);

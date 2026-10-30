@@ -13,7 +13,7 @@ final class PageTabs
     /** grupa => [rail : etykieta, sekcja, ikona ; tabs : [ścieżka, etykieta, ikona, tylko ta ścieżka (bez podstron) ?]] */
     public const GROUPS = [
         // Produkcja na jednej stronie : arkusz tygodnia (jedna linia na produkt), plan tygodnia (dni), plan zespołów
-        // (druk, tablet) z listami dnia (PDF), dostawy surowców (kto dostarcza co i kiedy), partie, śledzenie produkcji (plan / zrobione / straty), jakość, stanowiska i coboty,
+        // (druk, tablet) z listami dnia (PDF), prognoza 13 tygodni, dostawy surowców (kto dostarcza co i kiedy), partie, śledzenie produkcji (plan / zrobione / straty), jakość, stanowiska i coboty,
         // tabela do wypełnienia (Excel : dane rzeczywiste pracowni → import).
         // Tablety (biurowy, grup, kierowcy) i ich zarządzanie : osobna sekcja « Tablety » w railu.
         // Wynik grup : miesiąc (wynik i produkcja grup) i tydzień (rentowność grup) na jednej pozycji (audyt 2, N7).
@@ -25,6 +25,8 @@ final class PageTabs
             ['/workshop/sheet', 'Arkusz tygodnia', 'bi-table'],
             ['/workshop/gantt', 'Plan tygodnia', 'bi-calendar-week'],
             ['/workshop/team-sheet', 'Plan zespołów i listy dnia (PDF)', 'bi-printer'],
+            // Prognoza 13 tygodni [220] : kroczące tygodnie, gamy sezonowe panelu TF Buddy, zakupy, zatwierdzenie w poniedziałek.
+            ['/production/forecast', 'Prognoza 13 tygodni', 'bi-graph-up'],
             ['/workshop/deliveries', 'Dostawy surowców', 'bi-truck'],
             ['/workshop/traceability', 'Partie i identyfikowalność', 'bi-upc-scan'],
             ['/production/follow-up', 'Śledzenie produkcji', 'bi-graph-up-arrow'],

@@ -19,7 +19,7 @@ final class PageAccess
         'dashboard' => ['Rentowność (pulpit, wynik i produkcja grup, raport miesięczny)', 'Analiza', ['/dashboard'], false],
         'sales' => ['Analiza sprzedaży', 'Analiza', ['/finances/sales-analytics'], false],
         'margins' => ['Marże i koszty (marże, koszty produktu i działów, kalkulator, zamknięcie miesiąca ; Finanse : faktury i koszty, koszty usług miesiąca)', 'Analiza', ['/finances', '/cost-calculator', '/month-close'], false],
-        'production' => ['Produkcja (arkusz, plan tygodnia, plan zespołów, stany, ruchy magazynowe, partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
+        'production' => ['Produkcja (arkusz, plan tygodnia, plan zespołów, prognoza 13 tygodni, stany, ruchy magazynowe, partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
             ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock-movements', '/workshop/traceability', '/production', '/purchasing/nc', '/workshop/workstations', '/workshop/data-sheet'], false],
         'tablet' => ['Tablety : zarządzanie (tablety, PIN, czas pracy, zatwierdzenia produkcji)', 'Tablety', ['/workshop/execution', '/workshop/timesheet', '/workshop/production-days'], false],
         'supply' => ['Zaopatrzenie (zapotrzebowanie, zakupy tygodnia, zamówienia, faktury, stan)', 'Zakupy', ['/workshop/supply', '/workshop/buy'], false],
