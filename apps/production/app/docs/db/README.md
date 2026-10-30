@@ -66,6 +66,16 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Factures d'achat : fenêtre « nouveau prix de base » (30/10/2026, sans migration)
+
+- Prix d'une matière sur la facture au-dessus du prix de base (calcul des recettes) : au lieu du seul message
+  `INVOICE_PRICE_UP_PENDING`, une fenêtre (`public/assets/js/workshop/invoice-price-up.js`) montre par matière prix de
+  base → nouveau prix, hausse en %, surcoût sur la facture, nombre de recettes, avec « Nowa cena bazowa » (coché) ou
+  « Bez zmian » ; enregistrement `POST /supply/invoices/{id}/price-decisions`, puis l'action reprend (valider la
+  facture, importer les prix).
+- Ouverte depuis : liste des factures (bouton « podwyżka ceny »), fiche facture (bouton + ligne « Nowa cena
+  bazowa »), « Do obsłużenia › Zatwierdź ceny » (`#tab=invoices&inv=ID&pu=1`), Finanse › faktury i koszty.
+
 ### Produits test : nettoyage des anciennes propositions (migration 132, 30/10/2026)
 
 - 22 produits test « Propozycja » de 2023–2024 retirés à la demande (Boulangerie, Cake au yaourt, Cookie's, Fond à

@@ -32,6 +32,9 @@
     const addDays = (s, k) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + k); return iso(d); };
     const day = (s) => s ? `${s.slice(8, 10)}.${s.slice(5, 7)}` : '—';
     const errText = (err) => ((err.body && err.body.errors) || []).map(x => x.message).join(' ') || err.message;
+    // [210] Podwyżka ceny bez decyzji : okno « nowa cena bazowa ? » (invoice-price-up.js) zamiast samego komunikatu.
+    const priceUp = (invoiceId, o = {}) => window.TfbInvoicePriceUp.open({api, invoiceId, ...o});
+    const isPriceUp = (err) => window.TfbInvoicePriceUp.isPending(err);
     // Ilość w jednostce wyświetlanej (kg dla g) : baza ÷ factor ; pole edycji tak samo.
     const q = (r, v, d) => v === null || v === undefined ? '—' : `${n(v / r.factor, d ?? (r.factor > 1 ? 2 : 0))} ${r.unit}`;
     const toInput = (r, v) => v === null || v === undefined ? '' : String(Math.round(v / r.factor * 1000) / 1000).replace('.', ',');
@@ -61,6 +64,8 @@
             pmonths: PMONTHS.includes(Number(p.get('pm'))) ? Number(p.get('pm')) : 12,
             // #tab=stock&inventory=1 : arkusz inwentaryzacji od razu (kreator « Zamknięcie miesiąca », krok 5).
             search: '', stockMode: 'all', used: true, inventory: p.get('tab') === 'stock' && p.get('inventory') === '1',
+            // #…&inv=ID&pu=1 : okno nowej ceny od razu (Do obsłużenia › « Zatwierdź ceny »).
+            pu: p.get('pu') === '1',
         };
     }
     function writeHash() {
@@ -107,6 +112,7 @@
             return;
         }
         draw();
+        if (state.tab === 'invoices' && typeof state.inv === 'number') autoPriceUp(data.invoice);
     }
 
     function draw() {
@@ -814,7 +820,8 @@
         if (r.ok) return w ? `<button type="button" class="btn btn-sm btn-success text-nowrap" data-quick-process="${i.id}"><i class="bi bi-check2-all"></i> ${esc(t('inv.act.process_short'))}</button>` : '';
         if (r.blockers.includes('no_supplier')) return `<span class="badge bg-warning text-dark">${esc(t('inv.next.supplier'))}</span>`;
         if (r.blockers.includes('unmapped')) return `<span class="badge bg-warning text-dark">${esc(t('inv.next.map', {n: r.unmapped}))}</span>`;
-        if (r.blockers.includes('price_up')) return `<span class="badge bg-danger"><i class="bi bi-graph-up-arrow"></i> ${esc(t('inv.next.price_up', {n: r.price_ups}))}</span>`;
+        if (r.blockers.includes('price_up')) return w ? `<button type="button" class="btn btn-sm btn-danger text-nowrap" data-quick-pu="${i.id}"><i class="bi bi-graph-up-arrow"></i> ${esc(t('inv.next.price_up', {n: r.price_ups}))}</button>`
+            : `<span class="badge bg-danger"><i class="bi bi-graph-up-arrow"></i> ${esc(t('inv.next.price_up', {n: r.price_ups}))}</span>`;
         if (r.blockers.length) return `<span class="badge bg-light text-dark">${esc(t('inv.next.lines'))}</span>`;
         return `<span class="badge bg-warning text-dark" title="${esc(r.warnings.map(x => t('inv.warn.' + x)).join(' · '))}">${esc(t('inv.next.check'))}</span>`;
     }
@@ -839,6 +846,15 @@
         data.invoice = invoice;
         if (invoice.editable && invoice.lines.some(l => !l.material || l.id === iv.editLine)) await ensureMaterials();
         draw();
+        await autoPriceUp(invoice);
+    }
+    // #…&pu=1 (Do obsłużenia › « Zatwierdź ceny ») : okno nowej ceny raz, po otwarciu faktury.
+    async function autoPriceUp(invoice) {
+        if (!state.pu || !invoice) return;
+        state.pu = false;
+        if (!invoice.editable || !invoice.ready || !invoice.ready.blockers.includes('price_up')) return;
+        const res = await priceUp(invoice.id, {next: t('pu.next_after')});
+        if (res) await showInvoice(res);
     }
 
     function drawInvoices() {
@@ -994,7 +1010,7 @@
             window.TfbInvoiceClassify.toGoods({api, invoice: inv, rule: !!inv.by_rule, onDone: () => load()});
         }));
         el.querySelectorAll('tr[data-open-inv]').forEach(tr => tr.addEventListener('click', (e) => {
-            if (e.target.closest('[data-quick-process], [data-classify], [data-to-goods]')) return;
+            if (e.target.closest('[data-quick-process], [data-quick-pu], [data-classify], [data-to-goods]')) return;
             e.preventDefault();
             openInvoice(Number(tr.dataset.openInv));
         }));
@@ -1022,15 +1038,28 @@
             } catch (err) { ui.notify(false, errText(err)); }
             load();
         });
+        // Podwyżka ceny z listy : okno « nowa cena bazowa » bez otwierania faktury [210].
+        el.querySelectorAll('[data-quick-pu]').forEach(b => b.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            b.disabled = true;
+            if (await priceUp(Number(b.dataset.quickPu), {next: t('pu.next_after')})) load();
+            else b.disabled = false;
+        }));
         el.querySelectorAll('[data-quick-process]').forEach(b => b.addEventListener('click', async (e) => {
             e.stopPropagation();
             const inv = d.invoices.find(x => x.id === Number(b.dataset.quickProcess));
             if (!window.confirm(t('inv.confirm_process', {number: inv.number || t('inv.no_number')}))) return;
             b.disabled = true;
+            const process = () => api.post(`/supply/invoices/${inv.id}/process`, {});
             try {
-                const res = await api.post(`/supply/invoices/${inv.id}/process`, {});
+                const res = await process();
                 ui.notify(true, processedText(res.processed));
-            } catch (err) { ui.notify(false, errText(err)); }
+            } catch (err) {
+                if (!isPriceUp(err)) ui.notify(false, errText(err));
+                else if (await priceUp(inv.id, {next: t('pu.next_process')})) {
+                    try { ui.notify(true, processedText((await process()).processed)); } catch (err2) { ui.notify(false, errText(err2)); }
+                }
+            }
             load();
         }));
         el.querySelector('[data-ksef-toggle]')?.addEventListener('click', () => { iv.ksefOpen = !iv.ksefOpen; draw(); });
@@ -1381,7 +1410,8 @@
                 <span class="small text-muted">${esc(t('inv.map_all_help'))}</span></div>`;
         }
         if (r.blockers.includes('no_supplier')) return `<div class="tfb-inv-quick"><span class="small text-warning"><i class="bi bi-arrow-up"></i> ${esc(t('inv.next.supplier_help'))}</span></div>`;
-        if (r.blockers.includes('price_up')) return `<div class="tfb-inv-quick is-warn"><span class="small text-danger"><i class="bi bi-graph-up-arrow"></i> ${esc(t('inv.price_up.first', {n: r.price_ups}))}</span></div>`;
+        if (r.blockers.includes('price_up')) return `<div class="tfb-inv-quick is-warn">${i.editable ? `<button type="button" class="btn btn-danger" data-pu-modal><i class="bi bi-graph-up-arrow"></i> ${esc(t('pu.open', {n: r.price_ups}))}</button>` : ''}
+            <span class="small text-danger"><i class="bi bi-graph-up-arrow"></i> ${esc(t('inv.price_up.first', {n: r.price_ups}))}</span></div>`;
         const opt = (k, on, enabled, label) => `<label class="form-check form-check-inline small mb-0"><input class="form-check-input" type="checkbox" data-step="${k}" ${on ? 'checked' : ''} ${enabled ? '' : 'disabled'}> ${esc(label)}</label>`;
         const pricesDone = !!i.prices_imported_at;
         return `<div class="tfb-inv-quick ${r.warnings.length ? 'is-warn' : ''}">
@@ -1670,14 +1700,23 @@
             run(e.currentTarget, () => api.put(`/supply/invoices/${i.id}/map`, {lines, remember: true}), t('inv.map_all_ok', {n: lines.length}) + (missing ? ' ' + t('inv.map_all_missing', {n: missing}) : ''));
         });
         // Podwyżki cen : decyzja dla jednego surowca albo wszystkich bez decyzji (nowa cena bazowa / bez zmian).
+        // Nowa (wyższa) cena bazowa : zawsze przez okno potwierdzenia [210] ; « Bez zmian » od razu.
+        const confirmUps = async (b, o = {}) => {
+            b.disabled = true;
+            const res = await priceUp(i.id, o);
+            b.disabled = false;
+            if (res) await showInvoice(res);
+        };
+        el.querySelector('[data-pu-modal]')?.addEventListener('click', (e) => confirmUps(e.currentTarget, {next: t('pu.next_after')}));
         el.querySelectorAll('[data-pu]').forEach(b => b.addEventListener('click', () => {
             const decision = b.dataset.pu;
+            if (decision === 'accept') return confirmUps(b, {materialIds: [Number(b.dataset.puMat)]});
             run(b, () => api.post(`/supply/invoices/${i.id}/price-decisions`, {decision, raw_material_ids: [Number(b.dataset.puMat)]}), t('inv.price_up.' + decision + '_ok', {n: 1}));
         }));
         el.querySelectorAll('[data-pu-all]').forEach(b => b.addEventListener('click', () => {
             const decision = b.dataset.puAll;
             const n = (i.price_ups || []).filter(u => !u.decision).length;
-            if (decision === 'accept' && !window.confirm(t('inv.price_up.confirm_all', {n}))) return;
+            if (decision === 'accept') return confirmUps(b);
             run(b, () => api.post(`/supply/invoices/${i.id}/price-decisions`, {decision}), t('inv.price_up.' + decision + '_ok', {n}));
         }));
         // « Zatwierdź fakturę » : wybrane kroki ; ostrzeżenia (rozbieżności, skok ceny, suma) — potwierdzenie i force.
@@ -1691,11 +1730,19 @@
                 body.force = true;
             }
             b.disabled = true;
-            try {
+            const process = async () => {
                 const res = await api.post(`/supply/invoices/${i.id}/process`, body);
                 ui.notify(true, processedText(res.processed) || t('saved'));
                 await showInvoice(res);
-            } catch (err) { ui.notify(false, errText(err)); b.disabled = false; }
+            };
+            try {
+                await process();
+            } catch (err) {
+                if (!isPriceUp(err)) { ui.notify(false, errText(err)); b.disabled = false; return; }
+                const res = await priceUp(i.id, {next: t('pu.next_process')});
+                if (!res) { b.disabled = false; return; }
+                try { await process(); } catch (err2) { ui.notify(false, errText(err2)); await showInvoice(res); }
+            }
         });
         el.querySelectorAll('[data-e-remove]').forEach(b => b.addEventListener('click', () => b.closest('tr').remove()));
         el.querySelectorAll('[data-iact]').forEach(b => b.addEventListener('click', async () => {
@@ -1737,11 +1784,19 @@
                 const n = new Set(i.lines.filter(l => l.material).map(l => l.material.id)).size;
                 if (!window.confirm(t('inv.confirm_prices', {n}))) return;
                 b.disabled = true;
-                try {
+                const importPrices = async () => {
                     const res = await api.post(`/supply/invoices/${i.id}/prices`, {});
                     ui.notify(true, t('inv.prices_ok', {n: res.imported_prices.length}) + (res.skipped.length ? ' ' + t('inv.prices_skipped', {list: res.skipped.join(', ')}) : ''));
                     await showInvoice(res);
-                } catch (err) { ui.notify(false, errText(err)); b.disabled = false; }
+                };
+                try {
+                    await importPrices();
+                } catch (err) {
+                    if (!isPriceUp(err)) { ui.notify(false, errText(err)); b.disabled = false; return; }
+                    const res = await priceUp(i.id, {next: t('pu.next_prices')});
+                    if (!res) { b.disabled = false; return; }
+                    try { await importPrices(); } catch (err2) { ui.notify(false, errText(err2)); await showInvoice(res); }
+                }
                 return;
             }
             if (act === 'accept') {

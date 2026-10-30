@@ -821,5 +821,19 @@
   "buy.sup.done": "Tous les articles ont 3 fournisseurs.",
   "buy.sup.new": "Nouveau fournisseur : d'abord sa fiche (NIP, e-mail, langue) — ensuite directement dans la demande d'offre.",
   "buy.sup.saved": "Fournisseurs enregistrés : {name}.",
-  "buy.sup.more": "Afficher plus ({n})"
+  "buy.sup.more": "Afficher plus ({n})",
+  "pu.title": "Nouveau prix de matière à valider ({n})",
+  "pu.invoice": "facture {number}",
+  "pu.lead": "Le prix de la facture est plus élevé que le prix de base (calcul des recettes). Validez le nouveau prix de base, plus élevé, ou gardez le prix inchangé.",
+  "pu.qty": "sur la facture : {q}",
+  "pu.help": "« Nouveau prix de base » : le prix de la facture va dans la fiche matière, coût des recettes et marges recalculés à la validation de la facture. « Inchangé » : la facture peut être acceptée, le prix de base reste.",
+  "pu.submit_accept": "Valider le nouveau prix ({n})",
+  "pu.submit_keep": "Garder les prix inchangés ({n})",
+  "pu.submit_mixed": "Enregistrer : nouveau prix {a}, inchangé {k}",
+  "pu.cancel": "Annuler",
+  "pu.none": "Aucune hausse de prix à valider.",
+  "pu.open": "Valider le nouveau prix ({n})",
+  "pu.next_process": "Ensuite la facture sera validée.",
+  "pu.next_prices": "Ensuite les prix iront dans les fiches matières.",
+  "pu.next_after": "Ensuite : « Valider la facture »."
 }

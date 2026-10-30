@@ -298,7 +298,7 @@ final class OrderQueueService
                 'detail' => number_format((float) $inv['total_net'], 2, ',', ' ') . ' ' . ($inv['currency'] ?: 'PLN') . ' netto',
                 'note' => 'cena wyższa niż cena bazowa (kalkulacja receptur) : ' . $inv['materials'] . ' poz.',
             ], [
-                ['label' => 'Zatwierdź ceny', 'url' => '/workshop/supply#tab=invoices&inv=' . $inv['id'], 'primary' => true],
+                ['label' => 'Zatwierdź ceny', 'url' => '/workshop/supply#tab=invoices&inv=' . $inv['id'] . '&pu=1', 'primary' => true],
             ]);
         }
         $stale = $this->repo->staleInventory($now->modify('-' . self::INVENTORY_DAYS . ' days')->format('Y-m-d'));

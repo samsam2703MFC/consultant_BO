@@ -152,6 +152,13 @@
         });
         el.querySelectorAll('[data-decide]').forEach(b => b.addEventListener('click', async () => {
             const [inv, mid] = b.dataset.decide.split(':').map(Number);
+            // Nowa (wyższa) cena bazowa : okno potwierdzenia [210] ; « Bez zmian » od razu.
+            if (b.dataset.decision === 'accept') {
+                b.disabled = true;
+                if (await window.TfbInvoicePriceUp.open({api, invoiceId: inv, materialIds: [mid]})) load();
+                else b.disabled = false;
+                return;
+            }
             busy(b);
             try {
                 await api.post(`/supply/invoices/${inv}/price-decisions`, {decision: b.dataset.decision, raw_material_ids: [mid]});

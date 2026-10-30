@@ -821,5 +821,19 @@
   "buy.sup.done": "Wszystkie pozycje mają 3 dostawców.",
   "buy.sup.new": "Nowy dostawca : najpierw karta dostawcy (NIP, e-mail, język) — potem od razu w zapytaniu ofertowym.",
   "buy.sup.saved": "Dostawcy zapisani : {name}.",
-  "buy.sup.more": "Pokaż więcej ({n})"
+  "buy.sup.more": "Pokaż więcej ({n})",
+  "pu.title": "Nowa cena surowca do zatwierdzenia ({n})",
+  "pu.invoice": "faktura {number}",
+  "pu.lead": "Cena na fakturze jest wyższa niż cena bazowa (kalkulacja receptur). Zatwierdź nową, wyższą cenę bazową albo zostaw cenę bez zmian.",
+  "pu.qty": "na fakturze : {q}",
+  "pu.help": "« Nowa cena bazowa » : cena z faktury trafi do kartoteki surowca, koszty receptur i marże zostaną przeliczone przy zatwierdzeniu faktury. « Bez zmian » : faktura może być zaakceptowana, cena bazowa zostaje.",
+  "pu.submit_accept": "Zatwierdź nową cenę ({n})",
+  "pu.submit_keep": "Zostaw ceny bez zmian ({n})",
+  "pu.submit_mixed": "Zapisz : nowa cena {a}, bez zmian {k}",
+  "pu.cancel": "Anuluj",
+  "pu.none": "Brak podwyżek cen do zatwierdzenia.",
+  "pu.open": "Zatwierdź nową cenę ({n})",
+  "pu.next_process": "Po zapisie faktura zostanie zatwierdzona.",
+  "pu.next_prices": "Po zapisie ceny trafią do kartoteki surowców.",
+  "pu.next_after": "Potem : « Zatwierdź fakturę »."
 }
