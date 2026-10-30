@@ -124,6 +124,33 @@ final class PanelProbeService
         return $out;
     }
 
+    /** Krok 3 : filtr dat sprzedaży materiałów SL Food (from / to) — suma i wiersze na miesiąc, sztuki wybranych SKU. */
+    public function salesWindows(?int $actorId): array
+    {
+        if (!$this->access->isAdmin($actorId)) throw new CustomException('Sondę panelu uruchamia administrator.', 'errors', 403);
+        $out = [];
+        $skus = ['1003088', '1003092', '1008271', '1010916', '1008240', '2580006', '2580065', '1003064', '1003021', '1002343'];
+        $windows = [['2025-01-01', '2025-12-31'], ['2025-09-01', '2025-09-30'], ['2025-10-01', '2025-10-31'], ['2025-11-01', '2025-11-30'], ['2025-12-01', '2025-12-31'],
+            ['2026-01-01', '2026-01-31'], ['2026-03-01', '2026-03-31'], ['2026-09-01', '2026-09-30'], ['2026-10-01', '2026-10-29'], ['2026-10-20', '2026-10-26']];
+        foreach ($windows as [$f, $t]) {
+            foreach (["?from={$f}&to={$t}", "?from={$f}T00:00:00&to={$t}T23:59:59"] as $q) {
+                try { $rows = PanelApiClient::rows($this->api->get('/material-suppliers/1/analytics/raw-material-sales-all-shops' . $q)); }
+                catch (\Throwable $e) { $out[$q] = mb_substr($e->getMessage(), 0, 120); continue; }
+                $by = [];
+                foreach ($rows as $r) if (in_array((string) ($r['catalog_product_sku'] ?? ''), $skus, true)) $by[(string) $r['catalog_product_sku']] = ($by[(string) $r['catalog_product_sku']] ?? 0) + (float) ($r['total_sold_quantity'] ?? 0);
+                $out[$q] = ['rows' => count($rows), 'sum' => round(array_sum(array_map(fn($r) => (float) ($r['total_sold_quantity'] ?? 0), $rows)), 1), 'skus' => $by];
+            }
+        }
+        foreach (['?date_from=2025-12-01&date_to=2025-12-31&limit=500', '?from=2025-12-01&to=2025-12-31&limit=500', '?date_from=2026-10-01&date_to=2026-10-29&limit=500'] as $q) {
+            try { $rows = PanelApiClient::rows($this->api->get('/material-suppliers/1/analytics/top-products' . $q)); }
+            catch (\Throwable $e) { $out['top' . $q] = mb_substr($e->getMessage(), 0, 120); continue; }
+            $by = [];
+            foreach ($rows as $r) if (in_array((string) ($r['supplier_sku'] ?? ''), $skus, true)) $by[(string) $r['supplier_sku']] = $r['total_qty'] ?? null;
+            $out['top' . $q] = ['rows' => count($rows), 'sum' => round(array_sum(array_map(fn($r) => (float) ($r['total_qty'] ?? 0), $rows)), 1), 'skus' => $by];
+        }
+        return $out;
+    }
+
     /** GET : kod (ok / błąd), liczba wierszy, klucze, do $samples przykładów ze skróconymi wartościami. */
     private function read(string $path, array &$out, int $samples = 2): mixed
     {
