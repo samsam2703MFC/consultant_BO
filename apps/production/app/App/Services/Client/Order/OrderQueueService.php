@@ -30,16 +30,16 @@ final class OrderQueueService
         'shipping_issue' => ['label' => 'Różnica / problem dostawy', 'icon' => 'bi-exclamation-diamond', 'positions' => ['ADMINISTRACJA', 'LOGISTYKA']],
         'send_error' => ['label' => 'E-mail do klienta nie wyszedł', 'icon' => 'bi-send-exclamation', 'positions' => ['ADMINISTRACJA']],
         'ksef' => ['label' => 'WDT do KSeF', 'icon' => 'bi-cloud-upload', 'positions' => ['ADMINISTRACJA', 'LOGISTYKA']],
-        // Zakupy (P20) : nic nie czeka bez wiedzy działu zakupów.
-        'po_draft' => ['label' => 'Zamówienie u dostawcy niewysłane', 'icon' => 'bi-cart3', 'positions' => ['ZAKUPY']],
+        // Zakupy (P20) : nic nie czeka bez wiedzy działu zakupów ; zakupy prowadzi kierownik produkcji (plan tygodnia [219], 30/10/2026).
+        'po_draft' => ['label' => 'Zamówienie u dostawcy niewysłane', 'icon' => 'bi-cart3', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
         'po_late' => ['label' => 'Dostawa surowców po terminie', 'icon' => 'bi-truck', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
         'invoice_unlinked' => ['label' => 'Faktura zakupowa do przypisania', 'icon' => 'bi-receipt', 'positions' => ['ZAKUPY', 'ADMINISTRACJA']],
         'invoice_price_up' => ['label' => 'Podwyżka ceny surowca do zatwierdzenia', 'icon' => 'bi-graph-up-arrow', 'positions' => ['ZAKUPY', 'ADMINISTRACJA', 'KIEROWNIK_PRODUKCJI']],
         'inventory_old' => ['label' => 'Inwentaryzacja surowców > 30 dni', 'icon' => 'bi-clipboard-check', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
         // Zakupy tygodnia : szkic niewysłany, oferty do decyzji (termin : odpowiedź dostawców), pozycje z mniej niż 3 dostawcami.
-        'buy_round' => ['label' => 'Zakupy tygodnia niewysłane', 'icon' => 'bi-basket2', 'positions' => ['ZAKUPY']],
-        'buy_offers' => ['label' => 'Oferty dostawców do decyzji', 'icon' => 'bi-star', 'positions' => ['ZAKUPY']],
-        'buy_suppliers' => ['label' => 'Pozycje z mniej niż 3 dostawcami', 'icon' => 'bi-people', 'positions' => ['ZAKUPY']],
+        'buy_round' => ['label' => 'Zakupy tygodnia niewysłane', 'icon' => 'bi-basket2', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
+        'buy_offers' => ['label' => 'Oferty dostawców do decyzji', 'icon' => 'bi-star', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
+        'buy_suppliers' => ['label' => 'Pozycje z mniej niż 3 dostawcami', 'icon' => 'bi-people', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
         // Finanse (27/10/2026) : faktury usług do sprawdzenia, miesiąc kosztów usług do zamknięcia (finance.service_due_day).
         'service_open' => ['label' => 'Faktura usługi do sprawdzenia', 'icon' => 'bi-receipt-cutoff', 'positions' => ['ADMINISTRACJA']],
         'service_month' => ['label' => 'Koszty usług miesiąca do zamknięcia', 'icon' => 'bi-calendar2-range', 'positions' => ['ADMINISTRACJA']],

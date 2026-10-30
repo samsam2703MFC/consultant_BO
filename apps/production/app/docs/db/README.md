@@ -98,6 +98,10 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   « Zaimportować ceny z faktur » → lien kreator faktur + `inv_checked` ; « Zakupy tygodnia » → `buy_sent` ; nouvelles tâches
   kreator cen : coûts et marges mercredi 20 min `costs_recalc`, nouveaux prix jeudi 30 min `prices_planned`, contrôle de
   la publication vendredi 10 min). Total : 4 h 15 par semaine.
+- Migration 140 (décision du 30/10/2026 : pas d'acheteur, les achats sont faits par la production) : toutes les tâches du poste
+  ZAKUPY passent au poste KIEROWNIK_PRODUKCJI (Anna Szeremeta ; occurrences conservées, ordre après ses tâches), poste ZAKUPY
+  désactivé s'il n'a personne. Les alertes d'achat de « Do obsłużenia » et de Dzisiaj (commande fournisseur non envoyée,
+  zakupy tygodnia, offres à décider, articles < 3 fournisseurs) visent ZAKUPY et KIEROWNIK_PRODUKCJI.
 
 ### Assistant prix « Kreator cen » (migration 138, 30/10/2026)
 

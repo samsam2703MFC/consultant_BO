@@ -42,6 +42,8 @@ expectPurch((bool) $material, 'a material in grams is available');
 $materialId = (int) $material['id'];
 $maxMessage = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM communication_message')->fetchColumn();
 $maxOccurrence = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM n_task_occurrence')->fetchColumn();
+// Wystąpienia, które już są (stanowisko kierownika produkcji ma historię) : stan przywracany w finally.
+$savedOccurrences = $pdo->query('SELECT id, status, done_by, done_at, note FROM n_task_occurrence')->fetchAll(PDO::FETCH_ASSOC);
 $userId = (int) $pdo->query('SELECT MIN(id) FROM user')->fetchColumn();
 $userPosition = $pdo->query("SELECT * FROM n_user_position WHERE id_user = {$userId}")->fetch(PDO::FETCH_ASSOC) ?: null;
 $supplierIds = [];
@@ -140,20 +142,24 @@ try {
     expectPurch($tasks->period('quarterly', $wed) === ['key' => '2026-Q4', 'due' => '2026-12-31'], 'quarterly: end of quarter');
     expectPurch($tasks->period('quarterly', new DateTimeImmutable('2026-02-10')) === ['key' => '2026-Q1', 'due' => '2026-03-31'], 'Q1 ends 31.03');
 
-    // Moje zadania : stanowisko Zakupy, wtorek → środa (zaległe), zrobione, pominięte z powodem
-    $positionId = (int) $pdo->query("SELECT id FROM n_position WHERE code = 'ZAKUPY'")->fetchColumn();
+    // Moje zadania : stanowisko z zadaniami zakupów (od migracji 140 kierownik produkcji), wtorek → środa (zaległe), zrobione,
+    // pominięte z powodem.
+    $buyer = $pdo->query("SELECT p.id, p.name_pl FROM n_position p JOIN n_position_task t ON t.id_position = p.id AND t.active = 1
+        WHERE t.link_path = '/purchasing/offers' ORDER BY p.active DESC, p.id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    $positionId = (int) $buyer['id'];
     $tasks->assign($userId, ['position_id' => $positionId]);
     $tue = $tasks->myTasks($userId, new DateTimeImmutable('2026-10-20'));
     expectPurch($tasks->period('weekly', $wed, 1) === ['key' => '2026-W43', 'due' => '2026-10-19'], 'weekly with a due weekday (Monday)');
-    expectPurch(array_keys($tue['groups']) === ['CENY', 'MARZE', 'UPLOAD', 'JAKOSC'], 'tasks grouped by category (category order)');
+    expectPurch(array_values(array_intersect(array_keys($tue['groups']), ['CENY', 'MARZE', 'UPLOAD', 'JAKOSC'])) === ['CENY', 'MARZE', 'UPLOAD', 'JAKOSC'], 'tasks grouped by category (category order)');
     $items = array_merge(...array_map(fn($g) => $g['items'], array_values($tue['groups'])));
     $first = fn(array $items, string $frequency) => array_values(array_filter($items, fn($it) => $it['task']['frequency'] === $frequency))[0];
     expectPurch($first($items, 'daily')['frequency'] === 'Codziennie' && $tue['groups']['CENY']['icon'] === 'bi-tag', 'item shows its frequency, group its icon');
     $daily = $first($items, 'daily')['occurrence'];
     expectPurch($daily['period_key'] === '2026-10-20' && $daily['status'] === 'open', 'daily occurrence created on first view');
+    $dailyTue = array_values(array_filter($items, fn($it) => $it['task']['frequency'] === 'daily'));
     $wedBoard = $tasks->myTasks($userId, $wed);
-    expectPurch(count($wedBoard['overdue']) === 1 && $wedBoard['overdue'][0]['period_key'] === '2026-10-20', "yesterday's open task is overdue");
-    $tasks->setStatus((int) $daily['id'], ['status' => 'done'], $userId);
+    expectPurch(count($wedBoard['overdue']) === count($dailyTue) && array_unique(array_column($wedBoard['overdue'], 'period_key')) === ['2026-10-20'], "yesterday's open tasks are overdue");
+    foreach ($dailyTue as $it) $tasks->setStatus((int) $it['occurrence']['id'], ['status' => 'done'], $userId);
     expectPurch($tasks->myTasks($userId, $wed)['overdue'] === [], 'done → no longer overdue');
     $weekly = $first(array_merge(...array_map(fn($g) => $g['items'], array_values($wedBoard['groups']))), 'weekly')['occurrence'];
     $needsNote = false;
@@ -161,7 +167,7 @@ try {
     expectPurch($needsNote, 'skipping needs a reason');
     $tasks->setStatus((int) $weekly['id'], ['status' => 'skipped', 'note' => 'Brak ofert w tym tygodniu'], $userId);
     $sheet = $tasks->userSheet($userId, $wed);
-    expectPurch(count($sheet['history']) >= 2 && $sheet['user']['position_name'] === 'Specjalista ds. zakupów', 'user sheet shows position and history');
+    expectPurch(count($sheet['history']) >= 2 && $sheet['user']['position_name'] === $buyer['name_pl'], 'user sheet shows position and history');
 
     echo "purchasing_test: OK\n";
 } finally {
@@ -182,6 +188,8 @@ try {
     }
     $pdo->exec("DELETE FROM communication_message WHERE id > {$maxMessage}");
     $pdo->exec("DELETE FROM n_task_occurrence WHERE id > {$maxOccurrence}");
+    $restore = $pdo->prepare('UPDATE n_task_occurrence SET status = ?, done_by = ?, done_at = ?, note = ? WHERE id = ?');
+    foreach ($savedOccurrences as $o) $restore->execute([$o['status'], $o['done_by'], $o['done_at'], $o['note'], $o['id']]);
     $pdo->exec("DELETE FROM n_user_position WHERE id_user = {$userId}");
     if ($userPosition) {
         $pdo->prepare('INSERT INTO n_user_position (id_user, id_position, since) VALUES (?, ?, ?)')->execute([$userId, $userPosition['id_position'], $userPosition['since']]);
