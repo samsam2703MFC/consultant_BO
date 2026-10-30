@@ -60,6 +60,70 @@ final class PanelProbeService
         return $out;
     }
 
+    /**
+     * Krok 2 : powiązanie gam z produktami SL Food — tryby dostępności katalogu SL Food (z polem availability), produkty
+     * wszystkich gam, nazwy parametrów dat w sprzedaży materiałów (suma na wariant), jeden pełny wiersz sprzedaży (sklepy
+     * bez nazw), szczegół produktu sklepu, sprzedaż sklepu wg produktów w grudniu N-1, szczegół inwentaryzacji (klucze).
+     */
+    public function deep(?int $actorId): array
+    {
+        if (!$this->access->isAdmin($actorId)) throw new CustomException('Sondę panelu uruchamia administrator.', 'errors', 403);
+        if (!$this->api->configured()) throw new CustomException('Konto API panelu nie jest skonfigurowane.', 'errors', 422);
+        $out = [];
+        $try = function (string $path) use (&$out) {
+            try { return $this->api->get($path); } catch (\Throwable $e) { $out['errors'][$path] = mb_substr($e->getMessage(), 0, 160); return null; }
+        };
+        $periods = PanelApiClient::rows($try('/product-availability-periods'));
+        $out['periods'] = array_map(fn($p) => array_intersect_key($p, array_flip(['id', 'name', 'start_date', 'end_date', 'is_recurring', 'is_active', 'from_md', 'to_md'])), $periods);
+        foreach ($periods as $p) {
+            $rows = PanelApiClient::rows($try('/product-availability-periods/' . (int) $p['id'] . '/products'));
+            $out['period_products'][(int) $p['id']] = ['count' => count($rows), 'names' => array_slice(array_map(fn($r) => mb_substr((string) ($r['name'] ?? ''), 0, 50) . ' #' . ($r['id'] ?? '?') . (isset($r['available']) && !$r['available'] ? ' (off)' : ''), $rows), 0, 25)];
+        }
+        $cat = PanelApiClient::rows($try('/material-suppliers/1/catalog/products'));
+        $modes = [];
+        foreach ($cat as $c) $modes[(string) ($c['availability_mode'] ?? 'null') . '|' . (string) ($c['stock_mode'] ?? 'null') . '|active=' . (int) ($c['is_active'] ?? 0)] = ($modes[(string) ($c['availability_mode'] ?? 'null') . '|' . (string) ($c['stock_mode'] ?? 'null') . '|active=' . (int) ($c['is_active'] ?? 0)] ?? 0) + 1;
+        $out['catalog_modes'] = $modes;
+        $out['catalog_not_always'] = array_slice(array_values(array_map(fn($c) => ['sku' => $c['sku'] ?? null, 'name' => mb_substr((string) ($c['name'] ?? ''), 0, 50), 'mode' => $c['availability_mode'] ?? null,
+            'active' => $c['is_active'] ?? null, 'pack' => ($c['package_size'] ?? '') . ' ' . ($c['package_unit'] ?? ''), 'per_carton' => $c['packagings_per_carton'] ?? null,
+            'category' => $c['category_name'] ?? null, 'availability' => mb_substr(json_encode($c['availability'] ?? null, JSON_UNESCAPED_UNICODE), 0, 400)],
+            array_filter($cat, fn($c) => ($c['availability_mode'] ?? 'ALWAYS') !== 'ALWAYS'))), 0, 80);
+        $out['catalog_availability_samples'] = array_slice(array_values(array_filter(array_map(fn($c) => $c['availability'] ?? null, $cat), fn($a) => $a !== null && $a !== [])), 0, 3);
+        $out['catalog_categories'] = array_count_values(array_map(fn($c) => (string) ($c['category_name'] ?? '—'), $cat));
+        $y = (int) date('Y') - 1;
+        foreach (['', "?date_from={$y}-12-01&date_to={$y}-12-31", "?from={$y}-12-01&to={$y}-12-31", "?start_date={$y}-12-01&end_date={$y}-12-31",
+                     "?dateFrom={$y}-12-01&dateTo={$y}-12-31", "?date_start={$y}-12-01&date_end={$y}-12-31", "?period_from={$y}-12-01&period_to={$y}-12-31",
+                     "?start={$y}-12-01&end={$y}-12-31", "?days=30", "?period=month"] as $q) {
+            $rows = PanelApiClient::rows($try('/material-suppliers/1/analytics/raw-material-sales-all-shops' . $q));
+            $out['sales_param'][$q ?: '(none)'] = ['rows' => count($rows), 'sum' => round(array_sum(array_map(fn($r) => (float) ($r['total_sold_quantity'] ?? 0), $rows)), 1)];
+            if ($q === '' && $rows) {
+                $r = $rows[0];
+                $r['shops'] = array_map(fn($s) => is_array($s) ? array_diff_key($s, ['shop_name' => 1]) : $s, array_slice((array) ($r['shops'] ?? []), 0, 3));
+                $out['sales_full_row'] = $r;
+            }
+        }
+        $shops = PanelApiClient::rows($try('/shops'));
+        $shop = (int) ($shops[0]['id'] ?? 0);
+        $out['shop_ids'] = array_map(fn($s) => (int) ($s['id'] ?? 0), $shops);
+        if ($shop) {
+            $st = PanelApiClient::rows($try("/shops/{$shop}/statistics/sales/product-category-groups?date_from={$y}-12-01&date_to={$y}-12-31"));
+            $out['shop_sales_dec'] = ['rows' => count($st), 'keys' => $st ? array_keys($st[0]) : null, 'samples' => array_slice(array_map(fn($r) => self::short($r), array_values(array_filter($st, fn($r) => preg_match('/b[uû]che|galette|no[eë]l/iu', (string) ($r['product_name'] ?? $r['name'] ?? ''))))), 0, 6)];
+            $takes = PanelApiClient::rows($try("/shops/{$shop}/materials/stocktakings"));
+            if ($takes) {
+                $d = $try("/shops/{$shop}/materials/stocktakings/" . (int) $takes[0]['id']);
+                $items = is_array($d) ? (PanelApiClient::rows($d['items'] ?? $d['data']['items'] ?? $d) ?: []) : [];
+                $out['stocktaking_detail'] = ['top_keys' => is_array($d) ? array_slice(array_keys($d), 0, 20) : null, 'items' => count($items), 'item_keys' => $items ? array_keys($items[0]) : null,
+                    'item_sample' => $items ? self::short($items[0]) : null];
+            }
+        }
+        $first = null;
+        foreach ($periods as $p) if (preg_match('/no[eë]l/iu', (string) $p['name'])) { $first = PanelApiClient::rows($try('/product-availability-periods/' . (int) $p['id'] . '/products'))[0]['id'] ?? null; break; }
+        if ($first) {
+            $prod = $try('/products/' . (int) $first);
+            $out['store_product'] = is_array($prod) ? ['keys' => array_slice(array_keys($prod), 0, 60), 'sample' => self::short($prod)] : null;
+        }
+        return $out;
+    }
+
     /** GET : kod (ok / błąd), liczba wierszy, klucze, do $samples przykładów ze skróconymi wartościami. */
     private function read(string $path, array &$out, int $samples = 2): mixed
     {

@@ -17,7 +17,7 @@ class ForecastController extends BaseController
     public function panelProbe()
     {
         try {
-            return $this->json(['data' => $this->probe->probe($this->userId())]);
+            return $this->json(['data' => ($_GET['step'] ?? '') === '2' ? $this->probe->deep($this->userId()) : $this->probe->probe($this->userId())]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
