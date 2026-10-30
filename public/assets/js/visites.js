@@ -180,6 +180,7 @@
 .vi .cq-l .fi{flex:0 0 auto;max-height:52dvh;overflow-y:auto;margin:10px 12px calc(12px + env(safe-area-inset-bottom,0px));background:var(--color-surface);color:var(--color-text);border-radius:14px;padding:12px 14px}
 .vi .cq-l .fi .t{display:block;font-family:var(--font-display);font-size:18px;font-weight:400;margin:6px 0 2px}
 .vi .cq-l .fi .q{font-size:11.5px;color:var(--color-text-muted);line-height:1.4}
+.vi .cq-piste .db-cqc.duo{flex:0 0 326px}.vi .db-cqduo{gap:10px}
 .vi .rt-piste{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:8px -14px 0;padding:0 14px}
 .vi .rt-piste::-webkit-scrollbar{display:none}
 .vi .rt-piste .ph{flex:0 0 112px;height:auto;aspect-ratio:3/4;align-items:flex-end}
@@ -693,11 +694,12 @@
     }
     cqCarte(shop, t, cq) {
       const rt = this.typeSrc(this.rayonTache(t));
-      const ty = rt ? `<em class="ty" style="background-image:url('${esc(rt)}')" title="photo type du rayon"></em>` : '';
-      const ph = !t.photoUrl ? `<span class="db-cqph vide ${t.e.c}"><b>${t.e.c === 'ko' ? '✗' : '—'}</b>${t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'sans photo' : 'photo indisponible')}${ty}</span>`
-        : `<span class="db-cqph"><img src="${esc(t.photoUrl)}" alt="" loading="lazy">${(t.reperes || []).map(r => this.cqRepere(r, t)).join('')}${hm(t.faitLe) ? `<em class="h">${hm(t.faitLe)}</em>` : ''}<em class="cqbd ${t.e.c}">${esc(t.e.bd)}</em>${ty}</span>`;
+      const ph0 = !t.photoUrl ? `<span class="db-cqph vide ${t.e.c}"><b>${t.e.c === 'ko' ? '✗' : '—'}</b>${t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'sans photo' : 'photo indisponible')}</span>`
+        : `<span class="db-cqph"><img src="${esc(t.photoUrl)}" alt="" loading="lazy">${(t.reperes || []).map(r => this.cqRepere(r, t)).join('')}${hm(t.faitLe) ? `<em class="h">${hm(t.faitLe)}</em>` : ''}<em class="cqbd ${t.e.c}">${esc(t.e.bd)}</em></span>`;
+      // La photo type à côté de la photo rendue, jamais posée dessus.
+      const ph = rt ? `<span class="db-cqduo">${ph0}<span class="db-cqph type"><img src="${esc(rt)}" alt="Photo type" loading="lazy"><em class="lb">Photo type</em></span></span>` : ph0;
       const meta = t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hm(t.faitLe) : hm(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : ''));
-      return `<div class="db-cqc"><button type="button" class="cq-ouvrir" data-a="cq-voir" data-v="${esc(shop)}|${esc(t.taskId)}">${ph}<span class="n">${esc(cqNom(t))}</span><span class="m">${esc(meta)}</span><span class="c ${t.e.c}">${esc(this.cqConstat(t))}</span></button>${this.cqRapides(shop, t, cq, false)}</div>`;
+      return `<div class="db-cqc${rt ? ' duo' : ''}"><button type="button" class="cq-ouvrir" data-a="cq-voir" data-v="${esc(shop)}|${esc(t.taskId)}">${ph}<span class="n">${esc(cqNom(t))}</span><span class="m">${esc(meta)}</span><span class="c ${t.e.c}">${esc(this.cqConstat(t))}</span></button>${this.cqRapides(shop, t, cq, false)}</div>`;
     }
     /** La photo en grand : sa fiche, la note rapide, ‹ › dans l'ordre de la bande. */
     cqLoupe() {

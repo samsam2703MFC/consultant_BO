@@ -2190,8 +2190,9 @@ Où elle s'affiche :
 - **Cockpit, Tâches › Contrôle** : la carte repliable « Photos types des
   rayons » (le back office : une tuile par rayon — photo à choisir, réduite à
   1600 px avant l'envoi, consigne, retrait — l'ajout d'un rayon, et les rayons
-  vus aujourd'hui dans le panel sans photo type, à ajouter d'un clic) ; une
-  vignette « type » dans le coin de chaque carte de comptoir ; dans le volet de
+  vus aujourd'hui dans le panel sans photo type, à ajouter d'un clic) ; sur le
+  rail, chaque carte de comptoir met la photo type À CÔTÉ de la photo rendue,
+  jamais dessus (la carte prend deux places) ; dans le volet de
   notation, la colonne « Photo type · <rayon> » en face de la photo en boutique,
   la consigne dessous, et le dépôt direct si elle manque.
   `GET /pwa/tasks/detail` porte `rayon` (`cle`, `nom`, `photo`, `consigne`)
@@ -2199,8 +2200,8 @@ Où elle s'affiche :
   rapport PDF et l'assistance IA téléchargent.
 - **Application visites, contrôle guidé** : `GET /visites/app` porte
   `rayons[]`. L'étape « Les contrôles en photo » ouvre « Les comptoirs
-  attendus » (la bande des photos types), chaque carte de comptoir porte la
-  vignette « type », et la loupe met la photo rendue et la photo type côte à
+  attendus » (la bande des photos types), chaque carte de comptoir montre la
+  photo type à côté de la photo rendue, et la loupe les met côte à
   côte (« 📐 Photo type » les sépare), la consigne sous le titre. Dans le
   module Planogramme, chaque point « Comptoir … » montre « Attendu : <consigne> »
   et le bouton « 📐 Photo type ».

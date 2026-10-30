@@ -3304,14 +3304,14 @@ function tplCtrlMasquees(s, c, x){
    le volet de notation. */
 function tplCtrlPhotos(s, c, x, card){
   const { esc } = x; const q = s.cq || { puces: [], cartes: [], resume: '', pied: '', vide: '' };
-  // La photo type du rayon, en vignette dans le coin : le comptoir attendu à côté du comptoir rendu.
-  const ty = t => t.type ? `<em class="ty" style="background-image:url('${esc(t.type)}')" title="photo type du rayon"></em>` : '';
+  // La photo type du rayon, à côté de la photo rendue : le comptoir attendu en face du comptoir rendu.
+  const ty = t => t.type ? `<span class="db-cqph type"><img src="${esc(t.type)}" alt="Photo type" loading="lazy"><em class="lb">Photo type</em></span>` : '';
   const photo = t => {
     if (!t.photo) {
       if (t.attente) { return '<span class="db-cqph att"></span>'; }
-      return `<span class="db-cqph vide ${t.e}"><b>${t.e === 'ko' ? '✗' : '—'}</b>${esc(t.videTxt)}${ty(t)}</span>`;
+      return `<span class="db-cqph vide ${t.e}"><b>${t.e === 'ko' ? '✗' : '—'}</b>${esc(t.videTxt)}</span>`;
     }
-    return `<span class="db-cqph"><img src="${esc(t.photo)}" alt="" loading="lazy">${t.reperes.map(r => `<i style="${esc(r.st)}"></i>`).join('')}${t.heure ? `<em class="h">${esc(t.heure)}</em>` : ''}<em class="cqbd ${t.e}">${esc(t.badge)}</em>${ty(t)}</span>`;
+    return `<span class="db-cqph"><img src="${esc(t.photo)}" alt="" loading="lazy">${t.reperes.map(r => `<i style="${esc(r.st)}"></i>`).join('')}${t.heure ? `<em class="h">${esc(t.heure)}</em>` : ''}<em class="cqbd ${t.e}">${esc(t.badge)}</em></span>`;
   };
   // La carte : la photo et son texte ouvrent le volet ; dessous, la note
   // rapide (4, 5 — sans commentaire) et « Noter… » pour le volet.
@@ -3321,7 +3321,7 @@ function tplCtrlPhotos(s, c, x, card){
     if (!rapides && !t.bouton) { return ''; }
     return `<div class="cq-acts">${rapides}${t.bouton ? `<button type="button" ${x.A(t.open)} class="cq-noter${t.e === 'ctl' ? '' : ' re'}" title="Voir la photo en grand, poser des repères, commenter">${esc(t.bouton)}</button>` : ''}</div>`;
   };
-  const carte = t => `<div class="db-cqc"><button type="button" ${x.A(t.open)} class="cq-ouvrir" title="Voir la photo et noter">${photo(t)}<span class="n">${esc(t.nom)}</span><span class="m">${esc(t.meta)}</span>${t.constat ? `<span class="c ${t.e}">${esc(t.constat)}</span>` : ''}</button>${actes(t)}</div>`;
+  const carte = t => `<div class="db-cqc${t.type ? ' duo' : ''}"><button type="button" ${x.A(t.open)} class="cq-ouvrir" title="Voir la photo et noter">${t.type ? `<span class="db-cqduo">${photo(t)}${ty(t)}</span>` : photo(t)}<span class="n">${esc(t.nom)}</span><span class="m">${esc(t.meta)}</span>${t.constat ? `<span class="c ${t.e}">${esc(t.constat)}</span>` : ''}</button>${actes(t)}</div>`;
   return `
           <div style="${card};overflow:hidden">
             <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
