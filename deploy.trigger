@@ -1173,3 +1173,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T13:15:14Z dashboard magasin : onglet Primes (Où en sont tes vendeuses, lecture seule)
 2026-10-30T13:37:30Z [production] kreator cen — koszty po fakturach, nowe ceny (marża bazowa + współczynnik surowców), publikacja od daty [218]
 2026-10-30T13:44:51Z [production] kreator cen — liczba mnoga [218]
+2026-10-30T13:53:10Z dashboard magasin : Primes au téléphone, primes d'équipe dans « Le magasin, ensemble »
