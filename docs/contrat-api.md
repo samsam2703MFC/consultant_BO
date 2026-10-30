@@ -1955,13 +1955,21 @@ revérifie tout).
 - `sansCout`, `nSansCout`, `caSansCout` : les produits vendus sans coût de recette, à chiffrer dans le panel.
 Sous « Ventes par catégorie », la carte « À compléter pour des chiffres justes » montre deux vignettes avec leur liste déroulante : « Ventes sans produit » (à rattacher à un produit dans la caisse ; le reste de l'écart = arrondis ou tickets pas encore lus) et « Produits sans coût » (un clic ouvre la fiche du produit).
 
+**Tickets pas encore lus (11/10/2026).** Mesuré à Halle le 11/10 : la carte annonçait « Ventes sans produit 45 € » avec « 0 ligne sans produit ». Les 45,40 € étaient un ticket de 11:17, six lignes toutes rattachées à un produit, passé après la dernière lecture des tickets (le relevé du jour se garde dix minutes, l'heure par heure aussi, chacun de son côté).
+- `svProduitsJour(..., $attendu)` : `/ventes/stats` passe pour aujourd'hui le nombre de tickets de l'heure par heure. Un relevé du jour qui en a lu moins se complète tout de suite, les nouveaux tickets seulement, une fois par minute au plus.
+- `aCompleter.ticketsLus` (tickets des relevés de la période) et `aCompleter.luA` (aujourd'hui, l'heure de la dernière lecture, `HH:MM`).
+- La carte : « Ventes sans produit » vaut les lignes sans produit et les remises sur ticket des relevés, pas l'écart entier. Le reste de l'écart se lit « X € de N tickets pas encore lus, dernière lecture à HH:MM ». Des tickets pas encore lus seuls ne montrent pas la carte.
+- « Non ventilé » nomme ce qu'il contient : produits sans coût, lignes sans produit et remises, tickets pas encore lus (lecture de HH:MM).
+
 **Bundles et marges partielles dans « Ventes par catégorie » (10/10/2026).** A : un bundle se range dans la catégorie du produit que nomme sa recette (« 2 Cookies » → « Cookies »), au prix du bundle et avec sa marge ; un bundle mixte se partage au prorata du coût de ses lignes (`svBundleCats`, recette lue à l'API du panel, partage gardé 24 h dans `bdlCat:{pid}:{shop}`). Sa ligne produit porte `bundle` : `{de, n, prix, part}`. Sans produit reconnu dans sa recette, il reste dans « Bundle ». La carte « Bundles vendus » ne change pas. B : chaque catégorie garde la marge de ses produits chiffrés : `c`, `m` et `taux` portent sur `vChiffre` ; `nSans` et `vSans` comptent ses produits sans coût, nommés sur sa ligne. Une catégorie n'affiche « ? » que si aucun de ses produits n'est chiffré. « Non ventilé » ne garde que la marge des produits sans coût, estimée par le P&L.
 
 **En-tête et duel (10/10/2026).** Le sous-titre « Dashboard magasin · période · en direct » et la ligne « face à samedi dernier · clients · panier · au rythme de la journée » sont retirés.
 
 **Recettes relues passées 10 secondes (10/10/2026).** La recette d'un produit au panel (`recetteDuProduit:{pid}`) et son coût pour le magasin (`recetteCout:{rid}:{shop}`) se gardent 10 s (`RP_SEC_RECETTE`), le partage des bundles aussi. `/ventes/stats` rechiffre les ventes sans coût des tickets au coût de la recette du moment (`svRechiffrer` : recettes et coûts lus en parallèle, 30 produits au plus, pièces entières) : une recette créée ou complétée au panel sort le produit de « Produits sans coût » à la relecture suivante, sans relire les tickets. La fiche produit relit sa recette quand elle a plus de 10 s.
 
-**La vitrine, ce qui va manquer (10/10/2026).** Au bureau et sur tablette, la carte « La vitrine » (Opérationnel) montre d'abord ce qui va manquer, avec trois badges de filtre : rouge « Vide maintenant », orange « Va manquer », vert « En ordre » (éteint au départ). Une liste déroulante par durée de vie, fermée au départ, résume dans son en-tête : combien vont manquer, combien cuire, les ventes à sauver. Short et medium life : un produit manque quand il n'y en a plus au bout d'une heure alors que la prévision de l'heure suivante en demande (et au moins une demi-pièce d'ici la fermeture) ; la ligne montre sa journée heure par heure (vert, orange, rouge ; pâle à venir), les pièces et les euros qui manqueront, et combien en mettre dans la prochaine cuisson. Long life : le stock face à trois jours de vente, et ce qu'il faut refaire. Un clic ouvre la fiche du produit. Données : `/production/flux/suivi`. Le téléphone garde l'ancienne vitrine.
+**La vitrine, ce qui va manquer (10/10/2026).** Au bureau et sur tablette, la carte « La vitrine » (Opérationnel) montre d'abord ce qui va manquer. Une liste déroulante par durée de vie, fermée au départ, résume dans son en-tête : combien vont manquer, combien cuire, les ventes à sauver ; au bout de l'en-tête, trois petits carrés de filtre discrets, propres à chaque durée de vie, avec leur nombre : rouge « Vide maintenant », orange « Va manquer », vert « En ordre » (éteint au départ). Un clic sur un carré filtre cette durée de vie seule et l'ouvre. Short et medium life : un produit manque quand il n'y en a plus au bout d'une heure alors que la prévision de l'heure suivante en demande (et au moins une demi-pièce d'ici la fermeture) ; la ligne, sur une seule ligne, porte à gauche une micro-vignette discrète avec l'heure de la rupture (rouge pâle : vide ; cadre orange : va manquer ; vide : en ordre ; long life : le stock), le reste du texte en infobulle, puis sa journée heure par heure (vert, orange, rouge ; pâle à venir), les pièces et les euros qui manqueront, et combien en mettre dans la prochaine cuisson. Long life : le stock face à trois jours de vente, et ce qu'il faut refaire. Un clic ouvre la fiche de stock du produit. Données : `/production/flux/suivi`. Le téléphone garde l'ancienne vitrine.
+
+**La fiche de stock de La vitrine (10/10/2026).** Un clic sur une ligne de La vitrine ouvre la fiche de stock du produit, la réponse d'abord : « Recuire N pièces dans la cuisson de 14:00 » (ou maintenant) avec son calcul, à vendre d'ici la fermeture − en vitrine − déjà prévu = à recuire, ou « Pas de recuisson » avec ce qui restera ce soir ; long life : de quoi tenir trois jours de vente. À vendre d'ici la fermeture : la prévision des derniers mêmes jours (`prevH`), l'heure entamée au prorata. En vitrine : `stock`, jamais sous zéro (un stock négatif au panel veut dire des ventes au-delà des sorties déclarées, la fiche le signale). Déjà prévu : les lignes du produit dans les cuissons à venir non validées (`cuissons[].lignes[].sortie`). À recuire : l'arrondi supérieur de ce qui manque, à un quart de pièce près, pour finir la journée au plus juste. Le graphique de la journée heure par heure : la moyenne vendue des derniers mêmes jours (`moy`), le vendu d'aujourd'hui (`vc`), la vitrine au bout de chaque heure (`cases[].q`), les cuissons du jour, et la vitrine à venir avec la recuisson proposée. À droite, les cuissons du jour, la proposition, et la journée sans et avec recuisson. Un lien ouvre la fiche du produit. La carte suit le même calcul : « vide maintenant » veut dire la vitrine à zéro et encore à vendre (une rupture du matin réapprovisionnée ne compte plus), « va manquer » la première heure à venir où elle sera vide, et le « + N » à recuire est celui de la fiche.
 
 **Contrôle des tâches : toutes les photos du jour (10/10/2026).** Le rail des photos du cockpit (`#/controle-taches`) garde les tâches maîtrisées (contrôle par exception) : leur photo s'affiche, badge « maîtrisée », moyenne et date de re-contrôle, avec un filtre « Maîtrisées ». La liste « à noter » les écarte toujours. Une tâche maîtrisée non rendue reste hors du rail.
 
@@ -3038,3 +3046,195 @@ coefMedian, coefMin, coefMax, zones}], groupes: [{nom, n, nChiffres, coefMedian,
 triés par groupe, catégorie, nom ; les produits inactifs sont écartés sauf `inactifs=1`. `prixCible` et `prixObjectif` : le prix
 TTC de la pièce qui atteindrait la cible de sa catégorie, ou l'objectif du réseau, aux 5 centimes supérieurs. Relu à chaque
 appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. `sonde=1` rend les premières lignes brutes.
+
+**La modale d'une catégorie en deux onglets (10/10/2026, maquette A).** Le (i) d'un groupe ou d'une catégorie ouvre deux onglets. « 12 dernières semaines » : la courbe du magasin face à la moyenne par magasin du réseau, la tendance du magasin en pointillé (droite des moindres carrés sur les semaines closes) et, sous l'axe, l'écart de chaque semaine à la précédente (▲▼ %) ; à côté, la tendance des 4 dernières semaines closes face aux 4 d'avant, la même pour le réseau, la pente par semaine, la meilleure et la plus faible semaine, la semaine en cours, l'écart au réseau . Le tableau des sous-catégories a été retiré (10/10/2026). « La journée · 6 h – 18 h » : les ventes de chaque heure du jour choisi (bleu) face à la moyenne des 6 derniers mêmes jours (gris), l'heure en cours au trait rouge ; à côté, le vendu, la moyenne à la même heure, l'écart, l'heure forte, la part d'avant midi et celle d'habitude, une journée moyenne. CA ou pièces. Plus de tableau de chiffres : un clic sur une semaine ou une heure montre ses valeurs dans une mini-vignette (un second clic la retire ; la fiche produit aussi). Nouveau `GET /analyse/categories/journee?shop=&niveau=groupe|categorie&nom=&date=` : `{date, jourNom, maintenant (le jour même), jours (les mêmes jours lus), manquants, heures: [{h 6…17, ca, q, moyCa, moyQ}]}`, lu dans les relevés de tickets (`svProduitsJour`), un jour sans aucune vente au magasin ne compte pas dans la moyenne.
+
+**Tablette (10/10/2026).** Sous 760 px, les vignettes des jours de la frise gardent le montant entier (sans « € » ni « obj. »). La jauge de l'objectif du jour : quand le jour, J−7 ou la projection dépasse l'objectif, l'échelle s'allonge jusqu'au plus haut et l'objectif devient un repère sur les deux pistes, son montant sous l'axe à sa place ; le trait « journée écoulée » se place sur l'objectif au prorata de la journée.
+
+**Fiche produit sans tableau, « Ta place dans le réseau » dans l'Opérationnel (10/10/2026).** La fiche produit perd son tableau des semaines : un clic sur un point de la courbe montre ses valeurs dans la mini-vignette (pièces du magasin, du réseau). La zone cliquable de chaque semaine passe au-dessus des points, pour qu'un doigt posé sur un point ouvre la vignette (modale des catégories aussi). Le bandeau « Ta place dans le réseau » (chiffre d'affaires, clients, panier moyen, marge brute, B2B) s'affiche dans l'Opérationnel juste au-dessus de l'objectif du jour, sur la journée comme en vue Jour.
+
+**Fiche produit, onglet Prix et Recette & marge (10/10/2026).** L'onglet « Prix face au réseau » montre le prix de vente en caisse du magasin (`portion_price_gross` de products/available, le prix pratiqué) à côté du prix encaissé, et les autres magasins : en gris et nommés dans le nuage (un clic sur un point : prix de vente, prix encaissé, pièces pour 10 000 €, pièces vendues), et en liste sous le côté (magasin, vente, encaissé, pièces pour 10 000 €). `GET /analyse/produits/magasin` porte `prix.magasins` : `[{nom, moi, p, v10k, q, brut}]` et `prix.magasin.brut`. Les lignes d'explication sont retirées (onglet 1 : « en pièces ; un grand magasin vend plus… » ; Prix : « prix encaissé = chiffre ÷ pièces… » ; Recette & marge : « une pièce vendue aujourd'hui · coût de recette… »). Une recette d'une seule ligne (le produit acheté tel quel, 100 % du coût) n'a plus de liste déroulante. L'axe des pièces de la courbe des 12 semaines prend un pas rond au-delà de 60 (une catégorie compte des milliers de pièces).
+
+**`GET /ventes/tickets?shop=&date=&cat=` (ou `&q=`) (10/10/2026).** Les tickets d'un jour qui portent une catégorie (ou un mot du nom d'un produit), ligne par ligne, pour lire une promotion ou une remise : `{ticketsDuJour, ticketsLus, tickets: [{id, heure, total, remiseTicket, bon, pro, lignes: [{pid, nom, cat, vise, q, pu, remise, total, portion}]}]}`. Lecture seule, rien n'est gardé ; ni client, ni vendeur, ni remarque.
+
+**Mode de service (11/10/2026).** `&service=0` garde les tickets d'un mode de service, toutes leurs lignes (`vise: true`). Seuls ces tickets se lisent. Chaque ticket porte `service` (l'`id_serving_method` de la liste du panel), la réponse aussi. Mesuré à Halle du 1er au 11/10 : 0 = sur place (le compte colle heure par heure à `eat_in_qty` de l'heure par heure), 2 = à emporter ; 21 tickets sur place sur 1 659. Avec `cat` ou `q`, le filtre s'ajoute : les tickets du mode, la ligne visée seulement.
+
+**Pro = TVA valide (11/10/2026).** Un ticket ne compte pro que si le panel le marque client pro (`is_client_b2b`) ET que la fiche du client porte un numéro de TVA valide (`client.tax_number` ; BE : clé modulo 97 ; autre pays de l'UE : forme). Mesuré à Halle le 11/10 : 6 tickets marqués pro pour 469,20 €, une seule fiche avec TVA (114,50 €), cinq sans TVA ni nom de société.
+- `vpTvaValides(shop, clés)` : le verdict par client, lu à la fiche (`/shops/{id}/clients/{id}`) et gardé dans `vpTva:{shop}` (six heures s'il est bon, une heure sinon : une fiche complétée au panel compte dans l'heure). Une fiche illisible garde l'avis du panel ; un ticket sans identifiant de client n'est pas pro.
+- Le relevé `b` gardé dans `svP{shop}:{date}` reste l'avis brut du panel ; `vpFiltreTva` le filtre à la lecture (`vpLu`, `vpJour`, `vpGraveListe`, donc le Résultat, le split pro / comptoir, la règle des 40 %, les clients manquants au comptoir). Jours passés compris : une fiche complétée fait revenir ses tickets au pro.
+- `GET /exploitation/pro` : `jour.sansTva` (le jour) et `sansTva` (les 30 jours) `{tickets, ca}` = ce qui est marqué pro au panel sans TVA valide, compté au comptoir. La carte « Clients pro » le dit : « N tickets marqués pro sans TVA valide… à compléter dans le panel ».
+- Les pièces pro (production, planogramme) : le relevé garde `pbc` = les pièces pro client par client ; `svPbValide` n'en garde que les clients à TVA valide. Un relevé d'avant sans `pbc` se range client par client au cron (`svB2bMoisson`) ou à la demande, faute de budget il garde son `pb`. Un relevé du jour sans `pbc` se relit une fois en entier.
+- `GET /ventes/tickets` : `pro` suit la même règle. Les commandes du plan de production aussi (`pro` = client pro à TVA valide, ou département de société).
+
+**Lignes retirées du dashboard (11/10/2026, demande de Sam).** « Pas déclenchées : … » sous les promotions de Bundles vendus ; le sous-titre des sources du P&L (« matière : coût des recettes vendues · personnel : … · frais généraux : … », jour, semaine et mois) ; le sous-titre « ce qui manque dans la caisse et le panel · la ligne « Non ventilé » ci-dessus » de la carte À compléter. Dans la fiche produit, onglet Recette & marge : la source de la recette (« API du panel : /shops/{magasin}/recipes/{recette}/cost… », toujours dans `source` de la réponse) et la note du coefficient « ce que le prix fait de la matière : prix de vente ÷ coût de recette ». Les paliers « Le prix pour y arriver » (marge 40 %, sa catégorie, le prix réseau, marge 60 %, le magasin aujourd'hui, objectif) sont retirés aussi : trop d'information ; le prix se tape toujours dans la carte du coefficient. Les pastilles d'en-tête des fiches (`.fi-chip`) passent en rectangles aux coins arrondis de 4 px. Dans Opérationnel : la mention « ventes encaissées, pro compris » (« tickets encaissés, pro compris » en Clients) à droite de la carte Heure par heure, et au téléphone la ligne de renvoi « Le P&L, les ventes par catégorie, les promotions et les portions : Exploitation › · Les photos, les commandes, le stock et la poubelle : Contrôle › » ; les onglets du bas y mènent. Puis toutes les petites phrases des sections d'Opérationnel : les sous-titres du duel chiffre par chiffre (« à la même heure, puis la journée entière de la semaine passée »), d'Heure par heure (« le cumul d'aujourd'hui face à… »), de La journée (« de 04:00 à 20:00 · le trait rouge… »), de La vitrine (« à HH:MM · prévision des 6 derniers… », « ce qui est sorti du four face à… »), des Ventes par catégorie (« groupe › catégorie › produit · barre… · couleur… · coef… », et ceux des onglets Treemap, Promotions et Portions) et des Bundles vendus (« la journée · catégorie Bundle ») ; la règle de chaque durée de vie à côté de « N réf. » ; la puce de source de l'objectif (« budget du mois · profil des … ») et celle sans objectif ; « en direct · relu toutes les 2 min » sous l'heure ; « à encoder à la fermeture » et « pas de promotion posée pour aujourd'hui » ; « · face aux 6 derniers … » du titre des ventes au comptoir et « en euros, au prix de vente, hors commandes » de sa légende ; « une case par heure · cadre noir… » de la légende de la vitrine et l'aide « ▸ un clic ouvre la sous-catégorie… » ; « les écarts d'abord · un clic ouvre la photo en grand » sous les contrôles en photo. La raison de la cloche barrée du stock passe en infobulle. Aussi : « la journée · anonyme » sous « Ta place dans le réseau » (reste le nombre de magasins et les 🏆) ; l'aide « à chiffrer dans le panel… » et « à rattacher à un produit dans la caisse » d'À compléter ; dans le P&L, la source sous chaque ligne (« recettes vendues · estimé… », « mesure », « coût de production des pièces jetées ») : restent les seuils, les pièces jetées et « rien déclaré au panel ». `coutMatiereSource`, `labourSource` et `overheadSource` restent dans la réponse. Dans le cockpit, écran Résultat : le sous-titre de la page (« La journée, la semaine et le mois du réseau, face à l'objectif… Ouvrez une ligne pour le détail du magasin. ») et la phrase de chaque onglet (Jour, Semaine « l'objectif, ce qui est fait, ce qui reste… », Mois, Analyse réseau). Un écran au sous-titre vide n'affiche plus de ligne vide sous son titre. Les invitations « Ouvrez une ligne… » sous les tableaux Jour, Semaine et Mois et la note de source sous le tableau Semaine et Mois sont retirées aussi.
+
+**Pondération des jours et caches du Résultat (11/10/2026).** Adopter une pondération (`POST /exploitation/ponderation-jours`) périme tout calcul gardé avant l'heure d'adoption (`adopteLe`) : `/exploitation/jour` et `/exploitation/periode` (rcServi) le servent alors comme périmé (`cache.frais` faux, `cache.relu` vrai) et le recalculent aussitôt, et le calcul des objectifs de la tablette n'est plus frais. Les objectifs du jour, de la semaine et du mois du dashboard, du cockpit et de la tablette suivent donc la nouvelle pondération dès l'affichage suivant, au lieu d'attendre la fin du cache (jusqu'à une heure pour un jour passé). Restent les chiffres, les états (« 🏆 objectif atteint », la prochaine cuisson) et les clés de couleur des légendes.
+
+**Main-d'œuvre, frais généraux et marge nette des mois passés (11/10/2026).** Le tableau « mois par mois » de la vue Année (`GET /stores/perf`) lisait la main-d'œuvre, les frais généraux et la marge nette dans `mac_shop_monthly_pnl`, une copie du P&L mensuel du panel qui ne porte que juillet et août 2026 (août : frais généraux à 111,9 % du CA). Mesuré : le résumé quotidien du panel (`/shops/{id}/statistics/daily-summary?date=`) rend `employee_cost` et `shop_cost` pour tout jour passé.
+- `resCoutsPeriode(shop, du, au, budget)` additionne les jours, gravés dans `dsJ:{shop}:{date}` une fois clos (resJoursPanel) ; `manque` = les jours encore sans chiffre.
+- `/stores/perf` : pour chaque mois de l'année, `labourCostPct` et `overheadPct` = Σ jour ÷ CA du mois ; `margeNette` = CA − food cost − main-d'œuvre − frais généraux, `margePct` en fraction ; `coutsSource` = « panel, jour par jour ». 120 lectures au plus par requête ; un mois incomplet reste vide avec `coutsManque`.
+- Le cron (`svCron` → `resCoutsMoisson`, 400 lectures par battement) remplit l'année d'avance.
+- `/exploitation/periode` lit aussi les jours des mois passés : le P&L d'un mois passé a son résultat net.
+- Le sous-titre « marge, labour et overhead connus depuis juillet 2026, food cost depuis janvier » est retiré.
+- **API seule** (même jour, demande de Sam : « pas de table locale, API only ») : `/stores/perf` ne lit plus aucune copie locale du panel. Magasins : `/consultant/shops`. CA, tickets, panier : `/shops/{id}/statistics/sales/kpis` du mois (`pvKpisMois`, lus en parallèle par `pvKpisMoisLot`, gardés une fois le mois clos). Food cost : la heatmap de marge. Main-d'œuvre et frais généraux : le résumé quotidien, les deux années demandées (la plus récente d'abord), une somme gardée par mois clos et complet (`dsM:{shop}:{AAAA-MM}`). Seul le budget vient encore d'une table, celle du cockpit (`ceo_shop_month_perf`, saisi dans le cockpit). Sans réponse du panel : `[]`, plus de repli local. Le cron remplit l'année en cours et la précédente. Un jour clos se grave dès que le panel répond, même sans planning : sans vente ni planning (fermé, avant l'ouverture) il compte 0 € ; vendu sans planning, il rend la main-d'œuvre du mois inconnue (`sansPlanning`, le tableau affiche « — » avec le nombre de jours en bulle, les frais généraux restent). Un mois encore en lecture affiche « … ».
+
+**Le P&L mensuel du panel (11/10/2026).** `/stores/perf` lit la main-d'œuvre et les frais généraux de chaque mois dans `/consultant/shops/{id}/pnl/monthly?from=AAAA-MM&to=AAAA-MM` (24 mois au plus ; sans `from`/`to` la route répond 422) : un appel par magasin (`resPnlMensuel`, une année par appel — mesuré : 22 mois d'un coup ne répondent pas pour trois magasins sur quatre —, gardé dans `pnlM:{shop}`, le mois en cours relu passée l'heure). Le mois en cours prend le cumul jour par jour à date (resCoutsPeriode) : le P&L mensuel y compte les frais du mois entier face au CA à date (Halle, 11/10 : 68,9 %). Le poste `material` y vaut 0 : le food cost vient de la heatmap. Recoupé à Halle avec le résumé quotidien additionné : septembre 9 477,50 € contre 9 458 € de personnel, 13 042,65 € de frais des deux côtés. Les jours vendus sans planning (relevé jour par jour gravé par le cron, lu sans appel) posent `sansPlanning` : le tableau affiche la main-d'œuvre du panel suivie d'un « ! » rouge, la bulle dit combien de jours manquent.
+
+Les autres routes de coûts, mesurées par la sonde : `/costs` (les 9 types de frais), `/shops/{id}/costs?period=AAAA-MM` et `/shops/{id}/owner/costs?period=AAAA-MM` (les lignes de frais du mois : loyer, énergie, assurances… et leur total, 13 042,65 € à Halle en septembre). `/costs/{id}` répond 500 au panel (« CostRepository::getById() » absent de leur code).
+
+**Sonde des coûts du panel (11/10/2026).** `GET /exploitation/couts/sonde?shop=4[&mois=AAAA-MM]` : le contrat Swagger des routes de coûts du panel (`/costs`, `/costs/{id}`, `/shops/{id}/costs`, `/shops/costs/{id}`, `/shops/{id}/owner/costs`, `/consultant/shops/{id}/pnl/monthly`, `/consultant/shops/pnl/monthly`, `/consultant/shops/pnl-summary`) et ce qu'elles rendent pour le magasin, en lecture seule. Ni mot de passe, ni jeton, ni coordonnées ; listes coupées à 15 éléments.
+
+**Tickets et commandes (11/10/2026).** Chaque ticket de `GET /ventes/tickets` porte `refCommande` (une référence de commande sur le ticket) et `source` (la source de la liste du panel). `&commandes=1` lit en plus les commandes clients des quatorze jours d'avant (`/shops/{id}/client-orders?date_from=`, une lecture) et pose `commande` sur chaque ticket qui en encaisse une : `{canal: compt | cc | liv, retrait, passee}`, null sinon ; la réponse porte `commandesLues`.
+
+**Tickets avec client (11/10/2026).** `&client=1` garde les tickets rattachés à un client du panel (`id_client` dans la liste), pro ou particulier, toutes leurs lignes. Chaque ticket porte `client`, `facture` (`will_be_invoiced`), `differe` (`deferral_payment`) et `pro` (`is_client_b2b`). Jamais le nom ni l'identifiant du client. Chaque ticket porte aussi `fiche` : la fiche du client relue au panel (`/shops/{id}/clients/{id}`, une lecture par client), réduite à `{lue, tva, valide, pays, pro, societe, compte}` (`vtFicheClient`) : un numéro de TVA est-il présent (au panel : `client.tax_number`), valide (BE : clé modulo 97 ; autre pays de l'UE : forme seulement, `valide` null), le préfixe pays, le drapeau pro de la fiche, un nom de société oui ou non, et le rang anonyme du client dans la réponse pour compter les clients. La réponse porte `champsFiche`, les noms des champs de la fiche, jamais leurs valeurs. Le drapeau pro suit la fiche du client au panel : mesuré le 10/10 sur 400 tickets, 6 tickets pro tous facturés, et 3 tickets facturés à un client particulier, comptés au comptoir.
+
+**Promotions du panel reconnues dans les tickets (10/10/2026, maquette B3 · 3).** `GET /ventes/stats` renvoie `promos` :
+
+- `regles[]` : chaque promotion déclenchée sur les jours lus. Champs : `{id, nom, type (buyxgety | bundle | remise), texte, statut, fois, tickets, q, v, r}`. Elles sont triées par ventes. L'id `x` regroupe les remises de ligne qu'aucune promotion n'explique.
+- `autres[]` : les promotions qui valent pour le magasin mais n'ont rien donné.
+- `produits` : `{clé produit : {id promotion : [pièces, ventes, remise, fois]}}`. La clé est celle de `categories[].produits[].id` (« pid » ou « pid:portion »).
+- `tickets`, `v`, `q`, `r` : les totaux.
+- `joursLus`, `joursSans` : les jours lus avant le relevé des remises sont sans promotions.
+- `erreur` : le compte admin du panel est absent ou muet.
+
+Les règles se lisent avec le compte ADMIN du panel (`ErpApi`). La source est `/admin/promotions/buy-x-get-y?limit=100`, puis le détail de chaque règle. Ce détail donne les produits et catégories qui déclenchent et qui reçoivent, plus le type et la valeur de la récompense. Pour un bundle, il donne les articles et leur prix remisé. Les règles sont gardées 10 minutes dans `pvRegles`. Le code est dans `src/promos_ventes.php`.
+
+La lecture des tickets (`svP{shop}:{jour}`) garde `r`, la liste des tickets à remise de ligne, en entier : `[{t, mn, l: [[clé, pid, q, prix unitaire, remise, total]]}]`. Un relevé sans `r` se relit une fois pour aujourd'hui, ou pour un jour passé ouvert seul.
+
+Une ligne remisée se rattache à la règle dont la récompense explique la remise au centime :
+
+| Type de récompense | Remise par pièce |
+|---|---|
+| FIXED_PRICE | prix − valeur |
+| FIXED_AMOUNT_DISCOUNT | valeur |
+| FREE | prix |
+| PERCENTAGE_DISCOUNT | prix × valeur ÷ 100 |
+
+Quand deux règles expliquent la même remise, une règle ACTIVE passe avant une inactive, puis la priorité du panel départage. Les pièces qui déclenchent se prennent dans le même ticket : d'abord le reste de la ligne remisée, puis les lignes sans remise des produits ou catégories qui déclenchent.
+
+À Halle le 10/10, sur 10 tickets :
+
+| Promotion | Fois | Pièces | Ventes | Remise |
+|---|---|---|---|---|
+| 2 Cookies ! | 6 | 12 | 35,40 € | 1,80 € |
+| 3 Cookie's ! | 3 | 9 | 23,70 € | 4,20 € |
+| Brood | 1 | 2 | 23,40 € | 1,40 € |
+| **Total** | **10** | | **82,50 €** | |
+
+C'est 2,8 % du CA. Lecture seule.
+
+Le dashboard affiche ces promotions à deux endroits :
+
+- **Ventes par catégorie.** Un onglet « Promotions » à côté de Liste et Treemap, gardé dans `localStorage` (`db.cVue`). Il montre :
+  - un bandeau : part du CA en promotion, remises, tickets avec une promotion, une pastille par promotion avec ses fois ;
+  - l'arbre groupe › catégorie › produit, avec une ligne par promotion sous chaque produit. Seuls les groupes touchés y sont, du plus promu au moins promu. Le premier groupe et sa première catégorie sont ouverts. Les autres groupes tiennent sur une ligne « Sans promotion ».
+- **Bundles vendus.** Le bloc « Les promotions » donne pour chaque promotion :
+  - son poids dans le CA complet : ventes ÷ CA de la journée ;
+  - son poids dans chaque catégorie touchée : ventes dans la catégorie ÷ CA de la catégorie.
+
+  Les promotions actives pas déclenchées sont listées en bas. Sous 600 px, les lignes s'empilent.
+
+La sonde `GET /exploitation/bundles/sonde?admin=1&detail=11-18` lit ce détail.
+
+**Portions (10/10/2026, maquette A + la colonne « reste » de B).** `GET /ventes/stats` ajoute deux choses :
+
+- sur chaque produit des catégories vendu en part (id « pid:portion ») : `portion: {lib, f}`. C'est le libellé lu dans le nom (« 1/4 ») et la fraction de la pièce entière (0,25), via `svPortionDuNom`. `f` vaut null quand le libellé ne dit pas la fraction ;
+- `portions.prix` : `{pid : prix de la pièce entière}` au catalogue du magasin, pour les produits vendus en parts (`cataloguePrixMagasin`).
+
+Le dashboard ajoute un onglet « Portions » à côté de Promotions dans Ventes par catégorie. On y voit seulement les catégories qui vendent en parts.
+
+Le bandeau donne quatre chiffres :
+- la part du CA vendue en portions ;
+- le nombre de pièces entières vendues ;
+- le CA par pièce entière ;
+- les pièces encore en parts.
+
+Le tableau va de la catégorie au produit, avec ces colonnes :
+- une barre en pièces entières, une couleur par taille ;
+- une colonne par taille présente : Entière, ½, ¼… ;
+- « En entières » : Σ fraction × pièces ;
+- « Reste » : la dernière pièce coupée moins les parts vendues. C'est une estimation : rien ne restait de la veille et rien n'a été recoupé ;
+- le CA et le CA par pièce entière.
+
+Le prix entier d'un produit vient des entières vendues, sinon du catalogue. Les produits vendus seulement entiers tiennent sur une ligne.
+
+À Halle le 10/10 :
+
+| Mesure | Valeur |
+|---|---|
+| CA tartes et quiches vendu en portions | 59 % |
+| Pièces entières vendues | 30 ¼ |
+| CA par pièce entière | 24,46 € |
+| Pièces encore en parts | 7 ¾ |
+
+**Téléphone : les vues réparties entre les onglets (10/10/2026).** Chaque onglet a son rôle, sans doublon :
+
+| Onglet | Ce qu'il porte |
+|---|---|
+| Opérationnel | Le direct : l'objectif face à J−7, les quatre tuiles, le duel, l'heure par heure, la vitrine, la journée (équipe et cuissons), et deux renvois en bas. |
+| Exploitation | Les chiffres de la journée : les tuiles, le P&L court, les ventes par catégorie (Liste, Treemap, Promotions, Portions), les bundles et les promotions. |
+| Contrôle | Inchangé : les photos, les contrôles, les commandes, le stock, la poubelle, la réclamation et la note. |
+| Semaine | Inchangé. |
+
+Le P&L, les catégories et les bundles ont quitté Opérationnel. Les photos, les mini-cartes commandes et poubelle et le stock aussi : Contrôle les portait déjà.
+
+Sous 560 px, rien ne défile de côté, sauf le carrousel des photos. Les tableaux gardent ces colonnes :
+
+| Tableau | Colonnes |
+|---|---|
+| Liste | catégorie, CA, taux de marge |
+| Promotions | produit, ventes en promo, part |
+| Portions | produit, pièces entières, reste, CA |
+
+Les autres réglages du téléphone :
+- la grille horaire de la vitrine tient dans la ligne ;
+- la date de l'en-tête est courte : « aujourd’hui · sam. 10 oct. ».
+
+Vérifié à 390 et 360 px : aucune page ne défile de côté.
+
+**Téléphone : une donnée, un seul onglet (11/10/2026).** Le passage du 10/10 laissait des KPI en double d'un onglet à l'autre. Chaque chiffre du jour ne se lit plus qu'à un endroit :
+
+| Donnée | Où | Retiré de |
+|---|---|---|
+| CA face à l'objectif et à J−7 | Opérationnel, la jauge | duel d'Opérationnel, tuile CA d'Exploitation |
+| Clients, panier face à J−7 | Opérationnel, le duel | tuile Clients d'Exploitation |
+| Les heures | Opérationnel, la courbe | ventes au comptoir heure par heure d'Opérationnel, tuile Heure par heure d'Exploitation |
+| Vitrine, équipe, cuissons | Opérationnel, leurs cartes | les quatre tuiles d'Opérationnel |
+| Résultat, matière, main-d'œuvre, coût de la poubelle | Exploitation, le P&L court | tuiles Résultat, Matière, Main-d'œuvre, Invendus |
+| Rang dans le réseau, canaux | Exploitation, deux tuiles | — |
+| Déclaration de la poubelle, photos, contrôles, commandes, stock | Contrôle | — |
+| CA jour par jour de la semaine | Semaine, les barres | la ligne « Chiffre / obj. » du damier |
+
+Le verdict d'Exploitation se juge toujours sur toutes les mesures. Le bureau ne change pas : `opDuelTable(D, {sansCa})` n'est appelé sans le CA qu'au téléphone.
+
+**Téléphone : La vitrine compacte (11/10/2026).** Dans l'onglet Opérationnel, la carte passe de 672 à 386 px à Halle :
+- les onglets S, M et L tiennent en deux lignes, le niveau puis les alertes. La phrase et la valeur en euros passent dans l'infobulle, la jauge reste au bureau ;
+- chaque section tient sur une ligne : nom, pièces en vitrine, à recuire, état ;
+- la grille des heures ne s'affiche qu'à l'ouverture de la section.
+
+Bureau et tablette inchangés : seuls la branche téléphone d'`opVitrine` et `opArbre` changent, avec du CSS sous 560 px.
+
+**Téléphone : La journée compacte (11/10/2026).** Dans l'onglet Opérationnel, `opJourneeMob` remplace les lignes une à une par une frise de la journée. La carte passe de 302 à 195–210 px à Halle.
+
+- **L'équipe :** une barre fine par personne au planning, le nom dedans :
+  - vert : en poste ;
+  - gris : a fini ;
+  - cadre : arrive plus tard ;
+  - bleu gris : un jour passé.
+- **Le trait rouge :** l'heure actuelle.
+- **Les cuissons :** un repère à l'heure du four sous la frise, puis une ligne de pastilles « 05:15 Matin 897 ». La couleur dit l'état :
+  - vert : validée ;
+  - orange : à valider ;
+  - cadre : à venir.
+
+  Seule la prochaine cuisson dit dans combien de temps elle part.
+- **L'en-tête :** les heures au planning et le nombre de personnes en poste.
+- **Le détail :** les heures exactes, les pièces et la plage de cuisson sont dans l'infobulle.
+
+Le bureau et la tablette gardent leurs cartes.
+
+**Contrôle des franchisés sur tablette (12/10/2026).** Page `controle/` : l'application Visites montée en mode tablette (`CockpitVisites.mount(…, { role: 'consultant', tablette: true })`), installable (manifest, service worker de portée `/controle/`). Aucune route nouvelle : la lecture reste `GET /visites/app`, les écritures restent celles de l'app Visites (`POST /visites`, `PUT /visites/{id}`, `PUT /visites/{id}/points`, `POST /visites/photos`, `POST /plans`), par la même file hors ligne. L'accueil n'a pas de barre de menu : les boutiques avec leur date de contrôle (en cours, prochaine visite planifiée, ou à planifier) et, par une bascule, l'agenda en calendrier du mois. Une boutique ouvre le contrôle : une étape à l'écran, les étapes du contrôle guidé dans la barre du bas (photo du jour, contrôles photo, chiffres, un module de checklist par étape, constat, plan d'action et fin de visite), chacune avec son état et ses écarts. Les points se notent en OK / Écart / N/A. Consultant : `?id=u8` une fois, gardé sur l'appareil. Correction au passage : l'étape « chiffres » est marquée lue quand on la quitte (elle l'était à la sortie de l'étape d'avant depuis l'ajout des contrôles photo).
+
+**Météo du franchisé (12/10/2026).** La visite porte `meteo` (1 orage, 2 pluie, 3 nuageux, 4 éclaircies, 5 grand soleil ; `null` sans avis), colonne `ceo_visite.meteo` ajoutée à chaud. `GET /visites/app` la rend sur chaque visite, `PUT /visites/{id}` l'accepte (hors 1..5 : `null`). Elle se choisit à la dernière étape du contrôle, « Plan d'action et fin de visite », et part avec « Terminer ». Le résumé « Vu sur place » et la carte boutique de la tablette rappellent la dernière.
+
+**Contrôles qualité du mois (12/10/2026).** `GET /controles/qualite?m=YYYY-MM[&shop=ID]` : chaque contrôle photo du mois, magasin par magasin et jour par jour, lu à l'API du panel (`/consultant/shops/{id}/tasks?date=`, une lecture par magasin et par jour, quatre de front ; tâches à photo exigée ou avec pièce jointe). Ligne : `shopId`, `shop`, `date`, `taskId`, `tache`, `checklist`, `checklistId`, `completionId`, `heure` (prévue), `fait` (heure faite), `photo` (booléen), `note` (1..5 du panel, `review_rating`), `commentaire` (`review_comment`), `noteLe`, `etat` = la note, sinon `a_noter` (photo sans note), `en_attente` (aujourd'hui sans photo) ou `non_rendue` (journée passée sans photo). Rendus aussi : `niveaux` et `seuil` du barème `signalement` (Exemplaire, Conforme, non conforme mineur, majeur, critique), `magasins`, `manque` (journées pas encore lues : l'écran relit) et `lus`. Rien de nominatif : ni qui a fait, ni qui a noté. Chaque journée est gardée (`cqmJ:{id}:{date}`) cinq minutes pour aujourd'hui, une demi-heure pour hier, six heures avant ; une note posée par `POST /pwa/tasks/review` efface la journée concernée. Écran cockpit « Contrôles qualité du mois » (Franchisés › Suivi journalier et opérations) : KPI, puces par niveau, tableau par magasin, liste des contrôles ; une ligne ouvre la photo en modale (`GET /pwa/tasks/detail`, URL fraîche) où l'on peut noter, motif obligatoire sous « Conforme ».

@@ -628,6 +628,31 @@ function pvKpisMois(int $sid, string $m): ?array
     return $d;
 }
 
+/**
+ * Les KPIs de plusieurs [magasin, 'AAAA-MM'] lus en parallèle (11/10/2026, le tableau des mois de /stores/perf) :
+ * seuls les mois absents du cache (ou le mois en cours de plus d'une heure) partent au panel, et se gardent
+ * comme pvKpisMois les garde.
+ */
+function pvKpisMoisLot(array $paires): void
+{
+    $chemins = [];
+    foreach ($paires as [$sid, $m]) {
+        $c = setting('pvCa' . $sid . ':' . $m);
+        $clos = date('Y-m-t', strtotime($m . '-01')) < date('Y-m-d');
+        if (is_array($c) && isset($c['ca'], $c['tickets']) && ($clos || (int) ($c['quand'] ?? 0) > time() - 3600)) { continue; }
+        $fin = min(date('Y-m-t', strtotime($m . '-01')), date('Y-m-d'));
+        $chemins[$sid . '|' . $m] = '/shops/' . $sid . '/statistics/sales/kpis?' . http_build_query(['date_from' => $m . '-01', 'date_to' => $fin]);
+    }
+    if ($chemins === []) { return; }
+    foreach (PanelApi::getParallele($chemins, 6) as $k => $r) {
+        if (!is_array($r) || !isset($r['ca'])) { continue; }
+        [$sid, $m] = explode('|', (string) $k, 2);
+        $d = ['ca' => (float) $r['ca'], 'tickets' => (int) ($r['tickets'] ?? 0), 'panier' => isset($r['avg_basket']) ? (float) $r['avg_basket'] : null];
+        try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['pvCa' . $sid . ':' . $m, json_encode(['quand' => time()] + $d)]); }
+        catch (Throwable $e) { /* sans cache : pvKpisMois relira */ }
+    }
+}
+
 /** Le CA seul — l'habillage historique de pvKpisMois. */
 function pvCaMois(int $sid, string $m): ?float
 {

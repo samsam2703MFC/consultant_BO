@@ -4,7 +4,7 @@
  * x = { A: onClick, C: onChange, I: onInput, DS: dragstart, DP: drop, EN: mouseenter, esc }.
  */
 
-import { tplGC, tplFF, tplRO } from './franchises-tpl.js';
+import { tplGC, tplFF, tplRO, tplCQM } from './franchises-tpl.js';
 
 /* Entrée du rail : feuille (bouton simple) ou sous-menu (parent repliable +
    enfants indentés). Le badge s'affiche à droite. */
@@ -101,7 +101,7 @@ export function render(c, x){
       ${c.isScouting ? '' : `<header class="shell-head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex:0 0 auto">
         <div>
           <h1 style="font-family:var(--font-display);font-size:30px;font-weight:400;margin:0;line-height:1.15">${esc(c.screenTitle)}</h1>
-          <p class="shell-sub" style="font-size:13px;color:var(--color-text-muted);margin:5px 0 0;max-width:640px">${esc(c.screenSub)}</p>
+          ${c.screenSub ? `<p class="shell-sub" style="font-size:13px;color:var(--color-text-muted);margin:5px 0 0;max-width:640px">${esc(c.screenSub)}</p>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.metaDate)}</span>
@@ -170,7 +170,7 @@ export function render(c, x){
       ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isOffres ? tplOffres(c, x) : ''}
       ${c.isInvendus ? tplInvendus(c, x) : ''}
-      ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, x) : ''}${c.isRO ? tplRO(c, x) : ''}
+      ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, x) : ''}${c.isRO ? tplRO(c, x) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isGP ? tplGP(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
@@ -4608,7 +4608,7 @@ function tplResultat(c, x){
     ${tous ? confettisReseau() : ''}
     ${tous ? `<div class="rj-tous">${eclat(17, 'rj-feu')}Tous les magasins ont passé leur objectif ${esc(c.rjOnglet === 'jour' ? 'du jour' : (c.rjOnglet === 'mois' ? 'du mois' : 'de la semaine'))}.</div>` : ''}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
-      <div style="font-size:12px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rjOngletTxt)}</div>
+      <div></div>
       <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px">${c.rjOnglets.map(ong).join('')}</div>
     </div>
     ${c.rjChargeEnCours ? `
@@ -4950,7 +4950,7 @@ function tplResultatPeriode(c, x){
         ${c.rpReseau ? rang(c.rpReseau) : ''}
       </table>
       </div>
-      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(c.rpNote)}${c.rpInvite ? ' ' + esc(c.rpInvite) : ''}</div>
+      ${c.rpNote || c.rpInvite ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(c.rpNote)}${c.rpInvite ? ' ' + esc(c.rpInvite) : ''}</div>` : ''}
     </div>
 
     ${c.rpRentab && c.exRentDet ? tplExploitRentModal(c.exRentDet, x) : ''}

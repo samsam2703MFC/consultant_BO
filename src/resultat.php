@@ -52,20 +52,202 @@ function resJoursPanel(array $ids, array $jours, string $auj): array
         foreach ($jours as $j) {
             if ($j > $auj) { continue; }
             $g = $j <= $clos ? setting('dsJ:' . $id . ':' . $j) : null;
-            if (is_array($g) && array_key_exists('lab', $g)) { $out[$id][$j] = ['lab' => $g['lab'], 'oh' => $g['oh'] ?? null]; continue; }
+            if (is_array($g) && array_key_exists('lab', $g)) { $out[$id][$j] = ['lab' => $g['lab'], 'oh' => $g['oh'] ?? null, 'ca' => $g['ca'] ?? null]; continue; }
             $paths[$id . '|' . $j] = '/shops/' . $id . '/statistics/daily-summary?date=' . $j;
         }
     }
     foreach ($paths === [] ? [] : PanelApi::getParallele($paths, 6) as $k => $r) {
         if (!is_array($r)) { continue; }
         [$id, $j] = explode('|', (string) $k); $id = (int) $id;
-        $lab = nombreOuNull($r, ['employee_cost']); $oh = nombreOuNull($r, ['shop_cost']);
-        $out[$id][$j] = ['lab' => $lab, 'oh' => $oh];
-        if ($j <= $clos && $lab !== null) {
-            try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['dsJ:' . $id . ':' . $j, json_encode(['lab' => $lab, 'oh' => $oh, 'le' => $auj])]); }
+        $lab = nombreOuNull($r, ['employee_cost']); $oh = nombreOuNull($r, ['shop_cost']); $caJ = nombreOuNull($r, ['income']);
+        $out[$id][$j] = ['lab' => $lab, 'oh' => $oh, 'ca' => $caJ];
+        // Un jour clos se grave dès que le panel a répondu, même sans planning (11/10/2026) : un jour sans
+        // planning (avant l'ouverture, ou jamais encodé) ne se relit pas à chaque appel.
+        if ($j <= $clos && ($lab !== null || $caJ !== null)) {
+            try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['dsJ:' . $id . ':' . $j, json_encode(['lab' => $lab, 'oh' => $oh, 'ca' => $caJ, 'le' => $auj])]); }
             catch (Throwable $e) { /* sans gravure : relu la prochaine fois */ }
         }
     }
+    return $out;
+}
+
+/**
+ * Le personnel et les frais généraux d'une période, jour par jour, tels que le panel les alloue
+ * (daily-summary : employee_cost, shop_cost ; gravés par resJoursPanel) — les mois passés compris.
+ * Mesuré le 11/10/2026 : le résumé quotidien les rend pour tout jour passé (14/03, 15/06, 15/09 à
+ * Halle). $budget borne les lectures au panel (un jour non gravé = une lecture) ; ce qui manque
+ * se lit au battement suivant du cron (resCoutsMoisson). `manque` = les jours encore sans chiffre.
+ * @return array{lab: float, oh: float, jours: int, manque: int, sansPlanning: int}
+ */
+function resCoutsPeriode(int $id, string $du, string $au, int &$budget, string $auj): array
+{
+    $clos = date('Y-m-d', strtotime($auj . ' -2 day'));
+    $fin = min($au, $auj);
+    // Un mois entier et clos, complet : sa somme se garde (dsM), le tableau des mois ne relit plus ses trente jours.
+    $moisEntier = substr($du, 8) === '01' && $au === date('Y-m-t', strtotime($du)) && $au <= $clos;
+    $cleM = 'dsM:' . $id . ':' . substr($du, 0, 7);
+    if ($moisEntier) { $gM = setting($cleM); if (is_array($gM) && isset($gM['lab'], $gM['jours'])) { return ['lab' => (float) $gM['lab'], 'oh' => (float) ($gM['oh'] ?? 0), 'jours' => (int) $gM['jours'], 'manque' => 0, 'sansPlanning' => (int) ($gM['sansPlanning'] ?? 0)]; } }
+    $jours = []; $manque = 0;
+    for ($d = $du; $d <= $fin; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
+        $g = $d <= $clos ? setting('dsJ:' . $id . ':' . $d) : null;
+        if (is_array($g) && array_key_exists('lab', $g)) { $jours[] = $d; continue; }
+        if ($budget > 0) { $jours[] = $d; $budget--; } else { $manque++; }
+    }
+    $r = $jours === [] ? [] : (resJoursPanel([$id], $jours, $auj)[$id] ?? []);
+    $lab = 0.0; $oh = 0.0; $n = 0; $sansPl = 0;
+    foreach ($jours as $d) {
+        $x = $r[$d] ?? null;
+        if ($x === null || ($x['lab'] === null && ($x['ca'] ?? null) === null)) { $manque++; continue; }
+        // Sans planning au panel : un jour sans vente (fermé, avant l'ouverture) compte 0 € ; un jour qui a
+        // vendu laisse la main-d'œuvre du mois inconnue (`sansPlanning`).
+        if ($x['lab'] === null && (float) ($x['ca'] ?? 0) > 0) { $sansPl++; }
+        $lab += (float) ($x['lab'] ?? 0); $oh += (float) ($x['oh'] ?? 0); $n++;
+    }
+    if ($moisEntier && $manque === 0 && $n > 0) {
+        try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cleM, json_encode(['lab' => round($lab, 2), 'oh' => round($oh, 2), 'jours' => $n, 'sansPlanning' => $sansPl, 'le' => $auj])]); }
+        catch (Throwable $e) { /* sans gravure : la somme se refait */ }
+    }
+    return ['lab' => $lab, 'oh' => $oh, 'jours' => $n, 'manque' => $manque, 'sansPlanning' => $sansPl];
+}
+
+/**
+ * Au cron : graver le personnel et les frais de chaque jour de l'année en cours, magasin par magasin,
+ * du plus récent au plus ancien, $budget lectures au plus — le tableau « mois par mois » et le P&L
+ * d'un mois passé les lisent ensuite sans appel.
+ */
+function resCoutsMoisson(int $budget = 400): array
+{
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['ok' => false, 'motif' => 'compte panel non configuré']; }
+    $ids = [];
+    foreach (analyseListe(PanelApi::consultantShops() ?? []) as $sh) { if ((int) ($sh['id'] ?? 0) > 0) { $ids[] = (int) $sh['id']; } }
+    if ($ids === []) { return ['ok' => false, 'motif' => 'magasins illisibles']; }
+    $auj = date('Y-m-d'); $restants = 0; $lus = $budget;
+    // L'année en cours puis la précédente : /stores/perf les montre toutes les deux.
+    for ($t = strtotime(date('Y-m-01')); $t >= strtotime((date('Y') - 1) . '-01-01'); $t = strtotime('-1 month', $t)) {
+        $du = date('Y-m-01', $t);
+        foreach ($ids as $id) { $r = resCoutsPeriode($id, $du, date('Y-m-t', $t), $budget, $auj); $restants += $r['manque']; }
+    }
+    return ['ok' => true, 'lectures' => $lus - $budget, 'joursRestants' => $restants];
+}
+
+/**
+ * Le P&L mensuel du panel (11/10/2026) : /consultant/shops/{id}/pnl/monthly?from=AAAA-MM&to=AAAA-MM (24 mois au plus,
+ * mesuré : sans `from`/`to` la route répond 422). Personnel (`labour`) et frais généraux (`overhead`, la somme des
+ * frais du magasin au panel, /shops/{id}/owner/costs) de chaque mois, en un appel par magasin. Le poste matière y
+ * vaut 0 (le panel ne le chiffre pas au mois) : le food cost vient de la heatmap. Recoupé à Halle avec le résumé
+ * quotidien additionné jour par jour : septembre 9 477,50 € contre 9 458 € de personnel, 13 042,65 € de frais des deux
+ * côtés. Gardé dans `pnlM:{shop}` ; le mois en cours se relit passée l'heure.
+ * @return array<string, array{ca: ?float, lab: ?float, oh: ?float}> ['AAAA-MM' => …]
+ */
+function resPnlMensuel(int $sid, string $de, string $a): array
+{
+    $cle = 'pnlM:' . $sid;
+    $g = setting($cle);
+    $g = is_array($g) && is_array($g['m'] ?? null) ? $g : ['m' => [], 'quand' => 0];
+    $moisC = date('Y-m');
+    $relire = false;
+    for ($m = $de; $m <= $a; $m = date('Y-m', strtotime($m . '-01 +1 month'))) {
+        if (!isset($g['m'][$m]) || ($m >= $moisC && (int) ($g['quand'] ?? 0) < time() - 3600)) { $relire = true; break; }
+    }
+    if ($relire && class_exists('PanelApi') && PanelApi::configured()) {
+        // Une année par appel : mesuré le 11/10/2026, janvier 2025 → octobre 2026 d'un coup ne répond pas pour trois
+        // magasins sur quatre, une année à la fois répond pour tous.
+        $chemins = [];
+        for ($y = (int) substr($de, 0, 4); $y <= (int) substr($a, 0, 4); $y++) {
+            $chemins[$y] = '/consultant/shops/' . $sid . '/pnl/monthly?' . http_build_query(['from' => max($de, $y . '-01'), 'to' => min($a, $y . '-12')]);
+        }
+        $lu = false;
+        foreach (PanelApi::getParallele($chemins, 4) as $yR => $r) {
+            if (!is_array($r) || !is_array($r['months'] ?? null)) { continue; }
+            $lu = true;
+            // Les mois de l'année que le panel ne rend pas (avant l'ouverture) se notent vides : ils ne se redemandent pas.
+            for ($m = max($de, $yR . '-01'); $m <= min($a, $yR . '-12'); $m = date('Y-m', strtotime($m . '-01 +1 month'))) { $g['m'][$m] ??= ['ca' => null, 'lab' => null, 'oh' => null]; }
+            foreach ($r['months'] as $x) {
+                $m = is_array($x) ? substr((string) ($x['month'] ?? ''), 0, 7) : '';
+                if (!preg_match('/^\d{4}-\d{2}$/', $m)) { continue; }
+                $g['m'][$m] = ['ca' => nombreOuNull($x, ['turnover']), 'lab' => nombreOuNull($x, ['labour']), 'oh' => nombreOuNull($x, ['overhead'])];
+            }
+        }
+        if ($lu) {
+            $g['quand'] = time();
+            try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($g)]); }
+            catch (Throwable $e) { /* sans gravure : relu la prochaine fois */ }
+        }
+    }
+    return $g['m'];
+}
+
+/**
+ * GET /exploitation/couts/sonde?shop=4[&mois=2026-09] (11/10/2026) — les routes de coûts du panel, en lecture seule :
+ * leur contrat Swagger (résumé, paramètres, champs de la réponse) et ce qu'elles rendent pour un magasin
+ * (/costs, /costs/{id}, /shops/{id}/costs, /shops/costs/{id}, /shops/{id}/owner/costs, /consultant/shops/{id}/pnl/monthly,
+ * /consultant/shops/pnl/monthly, /consultant/shops/pnl-summary). Ni mot de passe, ni jeton, ni coordonnées.
+ */
+function ep_couts_sonde(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 4);
+    $mois = preg_match('/^\d{4}-\d{2}$/', (string) ($_GET['mois'] ?? '')) ? (string) $_GET['mois'] : date('Y-m', strtotime('first day of last month'));
+    if (!PanelApi::configured()) { return ['error' => 'compte panel non configuré']; }
+    @set_time_limit(90);
+    $propre = static function ($v, int $n = 0) use (&$propre) {
+        if (!is_array($v)) { return $v; }
+        $o = []; $i = 0;
+        foreach ($v as $k => $x) {
+            if (is_string($k) && preg_match('/pass|secret|token|mail|phone|iban|bic|bank|street|address|zip|first_?name|last_?name|surname|login|contact|birth|national/i', $k)) { continue; }
+            if (array_is_list($v) && ++$i > 15) { $o[] = '… ' . (count($v) - 15) . ' de plus'; break; }
+            $o[$k] = is_array($x) ? ($n > 5 ? '[…]' : $propre($x, $n + 1)) : $x;
+        }
+        return $o;
+    };
+    // 1. Le contrat Swagger des routes de coûts.
+    $doc = PanelApi::sondeGet('/../swagger/openapi.json', 25);
+    $spec = is_array($doc['corps'] ?? null) ? $doc['corps'] : [];
+    $schemas = is_array($spec['components']['schemas'] ?? null) ? $spec['components']['schemas'] : [];
+    $champs = static function ($sch, int $n = 0) use (&$champs, $schemas) {
+        if (!is_array($sch) || $n > 3) { return null; }
+        if (isset($sch['$ref']) && preg_match('#/([^/]+)$#', (string) $sch['$ref'], $m)) { return [$m[1] => $champs($schemas[$m[1]] ?? null, $n + 1)]; }
+        if (($sch['type'] ?? '') === 'array') { return ['[]' => $champs($sch['items'] ?? null, $n + 1)]; }
+        if (isset($sch['properties']) && is_array($sch['properties'])) { $o = []; foreach ($sch['properties'] as $k => $p) { $o[$k] = is_array($p) && (isset($p['properties']) || isset($p['$ref']) || ($p['type'] ?? '') === 'array') ? $champs($p, $n + 1) : ($p['type'] ?? '?'); } return $o; }
+        foreach (['allOf', 'oneOf', 'anyOf'] as $c) { if (isset($sch[$c]) && is_array($sch[$c])) { return array_map(static fn ($x) => $champs($x, $n + 1), $sch[$c]); } }
+        return $sch['type'] ?? null;
+    };
+    $out = ['shop' => $sid, 'mois' => $mois, 'swagger' => []];
+    foreach ((array) ($spec['paths'] ?? []) as $ch => $ops) {
+        if (!preg_match('#/costs|pnl/monthly|pnl-summary|owner/costs#', (string) $ch) || !is_array($ops)) { continue; }
+        foreach ($ops as $m => $op) {
+            if (!is_array($op)) { continue; }
+            $rep = $op['responses']['200']['content']['application/json']['schema'] ?? null;
+            $out['swagger'][strtoupper((string) $m) . ' ' . $ch] = ['resume' => $op['summary'] ?? ($op['description'] ?? null),
+                'parametres' => array_map(static fn ($p) => is_array($p) ? ($p['name'] ?? '?') . ' (' . ($p['in'] ?? '?') . (!empty($p['required']) ? ', requis' : '') . ')' : $p, (array) ($op['parameters'] ?? [])),
+                'corps' => isset($op['requestBody']) ? $champs($op['requestBody']['content']['application/json']['schema'] ?? null) : null,
+                'reponse' => $champs($rep)];
+        }
+    }
+    // 2. Ce que les routes de lecture rendent pour ce magasin (GET seulement).
+    $routes = ['costs' => '/costs', 'shop-costs' => '/shops/' . $sid . '/costs', 'shop-costs-mois' => '/shops/' . $sid . '/costs?month=' . $mois,
+        'costs-shop' => '/shops/costs/' . $sid, 'owner-costs' => '/shops/' . $sid . '/owner/costs',
+        'pnl-mensuel' => '/consultant/shops/' . $sid . '/pnl/monthly?month=' . $mois, 'pnl-mensuel-date' => '/consultant/shops/' . $sid . '/pnl/monthly?date=' . $mois . '-15',
+        'pnl-mensuel-reseau' => '/consultant/shops/pnl/monthly?month=' . $mois, 'pnl-resume' => '/consultant/shops/pnl-summary',
+        // Les variantes de période (11/10/2026) : le mois demandé, et le P&L mensuel sur une plage.
+        'owner-period' => '/shops/' . $sid . '/owner/costs?period=' . $mois, 'owner-month' => '/shops/' . $sid . '/owner/costs?month=' . $mois,
+        'owner-date' => '/shops/' . $sid . '/owner/costs?date=' . $mois . '-15', 'owner-from' => '/shops/' . $sid . '/owner/costs?from=' . $mois . '-01&to=' . date('Y-m-t', strtotime($mois . '-01')),
+        'shop-costs-period' => '/shops/' . $sid . '/costs?period=' . $mois, 'shop-costs-from' => '/shops/' . $sid . '/costs?date_from=' . $mois . '-01&date_to=' . date('Y-m-t', strtotime($mois . '-01')),
+        'pnl-mensuel-ym' => '/consultant/shops/' . $sid . '/pnl/monthly?from=' . substr($mois, 0, 4) . '-01&to=' . $mois,
+        'pnl-mensuel-dates' => '/consultant/shops/' . $sid . '/pnl/monthly?from=' . substr($mois, 0, 4) . '-01-01&to=' . date('Y-m-t', strtotime($mois . '-01')),
+        'pnl-mensuel-dfdt' => '/consultant/shops/' . $sid . '/pnl/monthly?date_from=' . substr($mois, 0, 4) . '-01-01&date_to=' . date('Y-m-t', strtotime($mois . '-01')),
+        'pnl-mensuel-start' => '/consultant/shops/' . $sid . '/pnl/monthly?start=' . substr($mois, 0, 4) . '-01&end=' . $mois];
+    $out['routes'] = [];
+    foreach ($routes as $nom => $ch) {
+        $r = PanelApi::sondeGet($ch, 20);
+        $lst = analyseListe($r['corps'] ?? null); if ($lst === [] && is_array($r['corps']['items'] ?? null)) { $lst = $r['corps']['items']; }
+        $dates = array_values(array_filter(array_map(static fn ($x) => is_array($x) ? substr((string) ($x['date'] ?? ''), 0, 7) : '', $lst)));
+        $out['routes'][$nom] = ['chemin' => $ch, 'code' => $r['code'] ?? null, 'erreur' => isset($r['erreur']) ? mb_substr((string) $r['erreur'], 0, 200) : null,
+            'n' => $lst !== [] ? count($lst) : null, 'moisVus' => $dates !== [] ? array_count_values($dates) : null, 'corps' => $propre($r['corps'] ?? null)];
+    }
+    // 3. Une ligne de coût par identifiant, la première de la liste.
+    $l = analyseListe($out['routes']['costs']['corps'] ?? null);
+    $id = is_array($l[0] ?? null) ? ($l[0]['id'] ?? null) : null;
+    if ($id !== null) { $r = PanelApi::sondeGet('/costs/' . rawurlencode((string) $id), 20); $out['routes']['cost-' . $id] = ['chemin' => '/costs/' . $id, 'code' => $r['code'] ?? null, 'corps' => $propre($r['corps'] ?? null)]; }
     return $out;
 }
 
@@ -160,12 +342,11 @@ function exPeriodeCalcul(): array
         }
     }
     $res = PanelApi::getParallele($paths, 6);
-    // Le personnel et les frais de CHAQUE jour, tels que le panel les alloue (10/10/2026) : le mois
-    // courant et toute semaine. Un mois passé garde la règle d'avant (pas de P&L hors mois courant).
+    // Le personnel et les frais de CHAQUE jour, tels que le panel les alloue (10/10/2026) : toute semaine,
+    // tout mois. 11/10/2026 : les mois passés aussi — le résumé quotidien les rend pour tout jour passé,
+    // un jour clos se grave (resJoursPanel) et le cron les remplit d'avance (resCoutsMoisson).
     $joursDs = [];
-    if ($vue === 'semaine' || substr($du, 0, 7) === $moisCourant) {
-        for ($d = $du; $d <= $jusqua; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $joursDs[] = $d; }
-    }
+    for ($d = $du; $d <= $jusqua; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $joursDs[] = $d; }
     $dsJ = resJoursPanel(array_map(static fn ($s) => (int) $s['id'], $shops), $joursDs, $auj);
     // Les clients pro de l'étendue : le relevé de chaque jour (gravé par la
     // moisson ou le dashboard), complété par une trentaine de listes lues en

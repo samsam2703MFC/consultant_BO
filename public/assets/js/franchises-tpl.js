@@ -196,3 +196,37 @@ export function tplRO(c, x){
   const par = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Par opérateur</span></div><div class="mko-corps" style="padding-top:4px">${r.parOperateur.length ? r.parOperateur.map(o => `<div class="gc-barre"><span class="n" style="width:140px">${esc(o.nom)}</span><div class="b"><i style="width:${o.pct}%;background:#8D1D2C"></i></div><span class="v">${esc(o.txt)}</span></div>`).join('') : '<div class="mko-mu">—</div>'}</div></div>`;
   return `<div data-screen="remarques-operateurs">${entete}<div class="gc-kpis">${r.kpis.map(k => kpi(esc, k)).join('')}</div><div class="cx-deux">${liste}${par}</div></div>`;
 }
+
+/* --- Contrôles qualité du mois (12/10/2026) ------------------------------------------------ */
+const cqmB = (esc, b, gros) => `<span class="cqm-b${gros ? ' g' : ''}" style="background:${b.bg};color:${b.fg}" title="${esc(b.long)}">${esc(b.txt)}</span>`;
+export function tplCQM(c, x){
+  const { esc } = x, r = c.cqm;
+  const entete = `<div class="mko-hd" style="margin-bottom:14px;flex-wrap:wrap">
+      <span class="mko-mu">Mois</span><button ${x.A(r.moisPrec)} class="mko-pied-btn">‹</button><b style="font-size:12.5px;min-width:120px;text-align:center">${esc(r.moisLib)}</b>${r.moisSuiv ? `<button ${x.A(r.moisSuiv)} class="mko-pied-btn">›</button>` : '<span style="width:28px"></span>'}
+      ${r.magasins.length ? `<span class="mko-mu" style="margin-left:10px">Magasin</span>${sel(x, esc, r.setShop, r.magasins)}<span class="mko-mu">Checklist</span>${sel(x, esc, r.setCl, r.checklists, 'max-width:260px')}` : ''}
+      <span style="flex:1"></span>${r.lecture ? `<span class="mko-mu">${esc(r.lecture)}</span>` : ''}<button ${x.A(r.rafraichir)} class="mko-pied-btn">Relire</button></div>`;
+  const modal = r.modal ? tplCQMModal(r.modal, x) : '';
+  if (r.indispo) { return `<div data-screen="controles-qualite">${entete}<div class="mko-carte" style="padding:20px 22px;color:#8D1D2C;font-size:13px">${esc(r.indispo)}</div>${modal}</div>`; }
+  if (r.chargement) { return `<div data-screen="controles-qualite">${entete}<div class="mko-carte" style="padding:20px 22px;color:var(--color-text-muted);font-size:13px">Lecture des contrôles du mois au panel, magasin par magasin et jour par jour…</div>${modal}</div>`; }
+  const puces = `<div class="cx-puces" style="margin:0 0 12px">${r.puces.map(p => `<button ${x.A(p.choisir)} class="cx-pu${p.on ? ' on' : ''}">${p.badge ? `<i class="cqm-pt" style="background:${p.badge.bg};border-color:${p.badge.fg}"></i>` : ''}${esc(p.nom)} · ${p.n}</button>`).join('')}</div>`;
+  const shops = `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">Par magasin</span></div><div style="overflow-x:auto"><table class="mko-tab cqm-tab" style="min-width:760px"><thead><tr><th>Magasin</th><th class="n">Contrôles</th><th class="n">Rendus</th>${(r.parShop[0] ? r.parShop[0].niveaux : []).map(n => `<th class="n">${cqmB(esc, n.b)}</th>`).join('')}<th class="n">À noter</th><th class="n">Non rendues</th></tr></thead><tbody>
+    ${r.parShop.map(s => `<tr><td class="nom">${esc(s.nom)}</td><td class="n">${esc(s.total)}</td><td class="n">${esc(s.rendus)}</td>${s.niveaux.map(n => `<td class="n"${n.n && n.b.n <= 3 ? ' style="color:#C0182B;font-weight:700"' : ''}>${n.n || '·'}</td>`).join('')}<td class="n">${s.aNoter || '·'}</td><td class="n">${s.nonRendues || '·'}</td></tr>`).join('')}</tbody></table></div></div>`;
+  const lignes = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">${esc(r.titre || '')}</span></div>
+    ${r.lignes.length ? `<div style="overflow-x:auto"><table class="mko-tab cqm-tab"><thead><tr><th>Date</th><th>Magasin</th><th>Checklist</th><th>Contrôle</th><th class="n">Prévu</th><th class="n">Fait</th><th>Note</th><th>Motif</th><th></th></tr></thead><tbody>
+    ${r.lignes.map(l => `<tr ${x.A(l.ouvrir)} class="cqm-l"><td style="white-space:nowrap">${esc(l.date)}</td><td class="nom">${esc(l.shop)}</td><td class="mu">${esc(l.checklist)}</td><td>${esc(l.tache)}</td><td class="n">${esc(l.heure)}</td><td class="n">${esc(l.fait)}</td><td>${cqmB(esc, l.badge)}</td><td class="mu" style="max-width:260px">${esc(l.commentaire)}</td><td class="n">${l.photo ? '<span class="cqm-voir">📷 Voir</span>' : ''}</td></tr>`).join('')}
+    </tbody></table></div>${r.plus ? `<div style="padding:10px 14px"><button ${x.A(r.plus)} class="mko-pied-btn">Voir les ${r.reste} suivants</button></div>` : ''}` : '<div class="mko-corps mko-mu">Aucun contrôle pour ce choix.</div>'}</div>`;
+  return `<div data-screen="controles-qualite">${entete}${r.erreur ? `<div class="gc-msg ko">${esc(r.erreur)}</div>` : ''}<div class="gc-kpis">${r.kpis.map(k => kpi(esc, k)).join('')}</div>${puces}${shops}${lignes}${modal}</div>`;
+}
+function tplCQMModal(m, x){
+  const { esc } = x;
+  const photo = m.chargement ? '<div class="cqm-ph vide">lecture de la photo…</div>' : m.indispo ? `<div class="cqm-ph vide" style="color:#8D1D2C">${esc(m.indispo)}</div>`
+    : m.photo ? `<a href="${esc(m.photo)}" target="_blank" rel="noopener" class="cqm-ph"><img src="${esc(m.photo)}" alt=""></a>` : '<div class="cqm-ph vide">Pas de photo rendue pour ce contrôle.</div>';
+  return `<div ${x.A(m.fermer)} class="cqm-voile"></div><div class="cqm-mod" role="dialog" aria-modal="true">
+    <div class="cqm-mh"><div style="min-width:0"><b>${esc(m.titre)}</b><small>${esc(m.sous)}${m.faitLe ? ' · ' + esc(m.faitLe) : ''}</small></div><span style="flex:1"></span>${cqmB(esc, m.badge, true)}<button ${x.A(m.fermer)} class="cqm-x" aria-label="Fermer">✕</button></div>
+    <div class="cqm-mc">${photo}
+      <div class="cqm-side">${m.commentaire ? `<div class="cqm-com"><span>Motif noté</span>${esc(m.commentaire)}</div>` : ''}
+        ${m.peutNoter ? `<div class="mko-mu" style="margin:2px 0 8px">Noter ce contrôle</div><div class="cqm-choix">${m.choix.map(o => `<button ${x.A(o.choisir)} class="${o.on ? 'on' : ''}" style="--c:${o.b.bg}"><i style="background:${o.b.bg}"></i>${esc(o.b.long)}</button>`).join('')}</div>
+        <textarea ${x.I(m.setComment)} class="mko-inp" rows="3" placeholder="${m.motifRequis ? 'Motif obligatoire sous « Conforme »' : 'Motif (facultatif)'}" style="width:100%;margin-top:10px;resize:vertical">${esc(m.comment)}</textarea>
+        <button ${x.A(m.enregistrer)} class="cx-btn prim" style="width:100%;margin-top:10px" ${m.envoi ? 'disabled' : ''}>${m.envoi ? 'Envoi au panel…' : 'Enregistrer la note'}</button>` : ''}
+        ${m.msg ? `<div class="gc-msg ${m.msg.ko ? 'ko' : ''}" style="margin-top:10px">${esc(m.msg.txt)}</div>` : ''}</div></div></div>`;
+}
