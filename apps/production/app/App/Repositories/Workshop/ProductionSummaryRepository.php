@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Repositories\Workshop;
 
+use App\Domain\Stock\StockLevels;
+
 /** Karta produkcyjna produktu ERP w skrócie : ustawienia, marszruta, plan i Gantt tygodnia. */
 final class ProductionSummaryRepository extends WorkshopRepository
 {
@@ -22,13 +24,14 @@ final class ProductionSummaryRepository extends WorkshopRepository
     {
         return $this->all(
             "SELECT i.id, i.item_type, i.base_unit, fp.ppc, fp.cpp, fp.weight,
-                    s.mode, s.status, s.bake_state, s.batch_min, s.batch_multiple, s.stock_min, s.stock_max, s.id_primary_group,
+                    s.mode, s.status, s.bake_state, s.batch_min, s.batch_multiple, COALESCE(xp.stock_min, s.stock_min) AS stock_min, COALESCE(xp.stock_max, s.stock_max) AS stock_max, s.id_primary_group,
                     g.name_pl AS group_name, g.color AS group_color,
                     (SELECT COALESCE(SUM(t.planned_headcount), 0) FROM n_prod_team t JOIN n_prod_shift_template sh ON sh.id = t.id_shift_template
                      WHERE t.id_group = s.id_primary_group AND t.active = 1 AND sh.is_night = 0) AS group_people
              FROM n_prod_item i
              LEFT JOIN final_product fp ON fp.id = i.id_final_product
              LEFT JOIN n_prod_product_settings s ON s.id_item = i.id
+             " . StockLevels::join('i') . "
              LEFT JOIN n_prod_group g ON g.id = s.id_primary_group
              WHERE {$where} LIMIT 1",
             [$id]

@@ -541,5 +541,8 @@
   "pal.save_line": "Zapis : kartonów na warstwę {cpl}, warstw {lpp}, na paletę {cpp} → ERP (wysyłka, plan 12 tygodni, CMR)",
   "pal.save": "Zapisz układ i dalej",
   "pal.no_dims": "Wybierz karton z listy albo podaj wymiary, aby policzyć paletę.",
-  "pal.semi": "Półprodukt nie ma palety — przejdź dalej."
+  "pal.semi": "Półprodukt nie ma palety — przejdź dalej.",
+  "lv.period": "Okres wyjątkowy : {name} — stany wyjątkowe do {to}",
+  "lv.period_help": "Stan okresu « {name} » (do {to}) ; potem wraca stan normalny",
+  "lv.normal": "norm. {v}"
 }

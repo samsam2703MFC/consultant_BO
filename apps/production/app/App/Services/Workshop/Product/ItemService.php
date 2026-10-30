@@ -134,6 +134,10 @@ final class ItemService
                 'mode' => $r['mode'] ?? 'MTO', 'never_frozen' => (bool) ($r['never_frozen'] ?? false), 'ppc' => $ppc, 'cpp' => $cpp,
                 'stock_min' => $this->num($r['stock_min']), 'stock_max' => $this->num($r['stock_max']), 'batch' => $this->num($r['batch_multiple']),
                 'stock_min_cartons' => $cartons($r['stock_min']), 'stock_max_cartons' => $cartons($r['stock_max']), 'stock_calc_at' => $r['stock_calc_at'],
+                // Okres stanów wyjątkowych dziś [216] : stany powyżej z okresu, normalne (karta) wracają dzień po końcu.
+                'stock_period' => $r['stock_period'] ?? null, 'stock_period_to' => $r['stock_period_to'] ?? null,
+                'normal_stock_min' => $this->num($r['normal_stock_min'] ?? $r['stock_min']), 'normal_stock_max' => $this->num($r['normal_stock_max'] ?? $r['stock_max']),
+                'normal_min_cartons' => $cartons($r['normal_stock_min'] ?? $r['stock_min']), 'normal_max_cartons' => $cartons($r['normal_stock_max'] ?? $r['stock_max']),
                 'shipped_cartons' => round((float) $r['shipped_cartons'], 1), 'weekly_cartons' => round($weekly, 2), 'shops' => $shops,
                 'per_shop_weekly_cartons' => $shops ? round($weekly / $shops, 2) : null,
                 'per_shop_weekly_quantity' => $shops && $ppc ? round($weekly / $shops * $ppc, 1) : null,
@@ -386,10 +390,11 @@ final class ItemService
                 if (!$i['ppc'] || $i['suggested_max_cartons'] <= 0) { $noSales++; continue; }
                 $eligible[] = ['id' => $i['id'], 'name' => $i['name'], 'category' => $cat['name'], 'group_id' => $i['group_id'], 'ppc' => $i['ppc'],
                     'weekly_cartons' => $i['weekly_cartons'], 'stock_calc_at' => $i['stock_calc_at'],
-                    'old_min_cartons' => $i['stock_min_cartons'], 'old_max_cartons' => $i['stock_max_cartons'],
+                    // Stany normalne karty (nie wyjątkowe okresu [216]) : to one są przeliczane.
+                    'old_min_cartons' => $i['normal_min_cartons'], 'old_max_cartons' => $i['normal_max_cartons'],
                     'new_min_cartons' => $i['suggested_min_cartons'], 'new_max_cartons' => $i['suggested_max_cartons'],
-                    'changed' => $i['stock_min'] === null || $i['stock_max'] === null
-                        || abs($i['stock_min'] - $i['suggested_min_cartons'] * $i['ppc']) > 1e-6 || abs($i['stock_max'] - $i['suggested_max_cartons'] * $i['ppc']) > 1e-6];
+                    'changed' => $i['normal_stock_min'] === null || $i['normal_stock_max'] === null
+                        || abs($i['normal_stock_min'] - $i['suggested_min_cartons'] * $i['ppc']) > 1e-6 || abs($i['normal_stock_max'] - $i['suggested_max_cartons'] * $i['ppc']) > 1e-6];
             }
         }
         $changes = array_values(array_filter($eligible, fn($e) => $e['changed']));

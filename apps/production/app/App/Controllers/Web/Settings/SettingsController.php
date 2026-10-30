@@ -13,7 +13,9 @@ use Symfony\Component\HttpFoundation\Request;
 class SettingsController extends BaseController
 {
     /** Parametry zapasów (n_prod_param) : kod => domyślnie ; zakresy w App\Domain\Params\ParamRules (jedna reguła). */
-    private const STOCK_PARAMS = ['stock.suggest_weeks' => '6', 'stock.suggest_min_weeks' => '1', 'stock.suggest_max_weeks' => '3'];
+    private const STOCK_PARAMS = ['stock.suggest_weeks' => '6', 'stock.suggest_min_weeks' => '1', 'stock.suggest_max_weeks' => '3',
+        // Prognoza zapasu [216] : bezpieczeństwo ponad wyjazd (%), miejsca paletowe zamrażarki (0 = nie podano).
+        'stock.plan_safety_pct' => '25', 'stock.freezer_pallet_places' => '0'];
 
     /** Alerty i terminy w dzwonku (n_prod_param) : kod => domyślnie ; zakresy w ParamRules. */
     private const ALERT_PARAMS = [

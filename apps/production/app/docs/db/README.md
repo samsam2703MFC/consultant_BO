@@ -66,6 +66,35 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Stock nécessaire selon le plan logistique et périodes de niveaux d'exception (migration 136, 30/10/2026)
+
+- Page : Magazyn › « Prognoza zapasu i okresy » (`/workshop/stock/forecast`, maquettes 216 1–3). Prévision sur les 12
+  semaines du plan logistique (`LogisticsPlanService::plan`), produits MTS seulement :
+  - par semaine : départ (calendrier = `n_logistics_plan_week.ship_date`, même écriture que Plan 12 tygodni › Święta i
+    kierowcy), retour du camion (fin du trajet du Kalendarz tras, sinon livraison + jours de route ; + 1 jour par jour
+    de blocage sur la route : férié d'un pays de transit ou du pays de départ, dimanche dans un pays de transit), jours
+    de travail (lun.–ven. moins les fériés et fermetures du pays de départ), palettes au départ (plan) ;
+  - cartons du produit au départ : semaine avec commandes → cartons commandés, sinon palettes du client au plan × ses
+    cartons par palette × part du produit (fenêtre de moyenne du plan, `logistics.plan_avg_weeks`) ;
+  - stock nécessaire avant le départ = cartons × (1 + `stock.plan_safety_pct`) + départs des semaines sans production ;
+  - projection depuis le stock d'aujourd'hui (`carton_stock`, libres + sur palettes) : production de la semaine =
+    stock nécessaire − stock après le départ précédent (0 si négatif ou semaine sans production), stock avant départ
+    = stock + production ; en palettes (cartons ÷ cartons par palette) avec les palettes des autres produits, comparé
+    aux places du congélateur (`stock.freezer_pallet_places`, 0 = non renseigné). Bascules « Zapas potrzebny / Do
+    produkcji / Zapas przed wyjazdem » et « Kartony / Palety » (mémorisées dans le navigateur).
+- Périodes : `n_stock_period` (nom, du / au, `status` draft | approved, créé / validé par / le) et `n_stock_period_item`
+  (période, `n_prod_item`, `stock_min` / `stock_max` en unité de base comme `n_prod_product_settings`, niveaux normaux
+  et prévision moyenne / pic au moment du calcul). Niveaux proposés par la prévision : min. = cartons moyens par départ
+  dans la période × `stock.suggest_min_weeks`, max. = pic du stock nécessaire dans la période (≥ min.) ; modifiables
+  tant que la période est en projet. Validation refusée si elle chevauche une autre période validée ou si elle est
+  passée.
+- Effet (`App\Domain\Stock\StockLevels`) : entre `date_from` et `date_to` d'une période validée, les niveaux de la
+  période remplacent ceux de la fiche produit dans Stan magazynu (badge « Okres wyjątkowy », valeur normale en
+  dessous), le plan de production, le récapitulatif de production et les tablettes ; le lendemain de la fin, retour
+  automatique aux niveaux normaux. La fiche produit garde toujours les niveaux normaux.
+- Paramètres (`n_prod_param`, Ustawienia › Pozostałe › Stany magazynowe) : `stock.plan_safety_pct` (25 %),
+  `stock.freezer_pallet_places` (0).
+
 ### Palette mixte — couches complètes de plusieurs produits empilées (migration 135, 30/10/2026)
 
 - Page : Kartony i palety › « Paleta mieszana » (`/products/cartons/mixed?date=…&customer=…`, maquette 214). Pour un

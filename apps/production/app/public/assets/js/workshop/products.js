@@ -542,12 +542,19 @@
         const below = mts.filter(i => i.below_min);
         const sum = (list, f) => list.reduce((a, i) => a + (i[f] || 0), 0);
         const link = (m) => '#/levels?' + new URLSearchParams({...(group ? {group_id: group} : {}), mode: m});
+        // Okres stanów wyjątkowych [216] : min./maks. okresu zamiast normalnych (karta produktu) do dnia końca.
+        const period = all.find(i => i.stock_period);
+        const dm = (d) => d ? d.slice(8, 10) + '.' + d.slice(5, 7) : '';
+        const lvl = (i, f) => i.stock_period
+            ? `<span class="tfb-level-xm" title="${esc(t('lv.period_help', {name: i.stock_period, to: dm(i.stock_period_to)}))}">${n(i[f + '_cartons'], 1)}</span><div class="small text-muted">${esc(t('lv.normal', {v: n(i['normal_' + f.replace('stock_', '') + '_cartons'], 1)}))}</div>`
+            : n(i[f + '_cartons'], 1);
         el.innerHTML = header() + viewTabs('levels') + `
             <div class="tfb-stock-bar card"><div class="card-body d-flex flex-wrap gap-3 align-items-center justify-content-between">
                 <div class="btn-group btn-group-sm" role="group" aria-label="${esc(t('col.mode'))}">
                     ${['MTS', 'MTO', 'all'].map(m => `<a class="btn ${mode === m ? 'btn-primary' : 'btn-outline-primary'}" href="${link(m)}">${esc(t('lv.mode_' + m))}</a>`).join('')}</div>
                 <select class="form-select form-select-sm" data-group style="width:auto"><option value="">${esc(t('col.group'))}: ${esc(t('all'))}</option>
                     ${state.groups.map(g => `<option value="${g.id}" ${group === String(g.id) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
+                ${period ? `<a class="tfb-level-period" href="${esc(api.root || '')}/workshop/stock/forecast">${esc(t('lv.period', {name: period.stock_period, to: dm(period.stock_period_to)}))}</a>` : ''}
                 <div class="small">${mode !== 'MTO' ? esc(t('lv.summary', {below: below.length, products: mts.length, to_min: n(sum(mts, 'to_min_cartons')), to_max: n(sum(mts, 'to_max_cartons'))}))
                     : esc(t('lv.summary_mto', {products: rows.length, over: n(sum(rows, 'orders_over_stock_cartons'))}))}</div>
             </div></div>
@@ -567,7 +574,7 @@
                         ${i.ordered_year_ago_cartons ? `<div class="small text-muted" title="${esc(t('lv.year_ago_help'))}">${esc(t('lv.year_ago', {c: n(i.ordered_year_ago_cartons)}))}</div>` : ''}</td>
                     <td class="text-end">${i.in_production_cartons ? n(i.in_production_cartons, 1) : '—'}</td>
                     <td class="text-end"><strong class="${i.available_cartons < 0 ? 'text-danger' : ''}">${n(i.available_cartons, 1)}</strong></td>
-                    <td class="text-end">${n(i.stock_min_cartons, 1)}</td><td class="text-end">${n(i.stock_max_cartons, 1)}</td>
+                    <td class="text-end">${lvl(i, 'stock_min')}</td><td class="text-end">${lvl(i, 'stock_max')}</td>
                     <td class="text-end">${i.coverage_weeks === null ? '<span class="text-muted">—</span>' : `<span class="${i.coverage_weeks < 1 ? 'text-danger' : ''}">${esc(t('lv.coverage_w', {w: n(i.coverage_weeks, 1)}))}</span>`}</td>
                     <td class="text-end">${i.mode === 'MTS'
                         ? (i.to_min_cartons === null ? `<span class="text-muted small">${esc(t('lv.no_min'))}</span>`

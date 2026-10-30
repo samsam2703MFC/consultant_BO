@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Repositories\Workshop;
 
+use App\Domain\Stock\StockLevels;
+
 use App\Domain\Client\Order\OpenOrders;
 use App\Domain\Stock\ToProduce;
 
@@ -226,7 +228,7 @@ final class ItemRepository extends WorkshopRepository
         if ($groupId !== null) { $where .= ' AND COALESCE(s.id_primary_group, dg.id) = ?'; $params[] = $groupId; }
         if ($itemId !== null) { $where .= ' AND i.id = ?'; $params[] = $itemId; }
         return $this->all("SELECT i.id, fp.id AS id_final_product, fp.name, fp.id_category, cp.name AS category, fp.ppc, fp.cpp, fp.active AS erp_active, fp.workload_points, fp.id_recipe,
-                                  s.mode, s.never_frozen, s.stock_min, s.stock_max, s.stock_calc_at, s.batch_multiple, COALESCE(s.id_primary_group, dg.id) AS id_primary_group, s.status,
+                                  s.mode, s.never_frozen, " . StockLevels::columns('s') . ", s.stock_calc_at, s.batch_multiple, COALESCE(s.id_primary_group, dg.id) AS id_primary_group, s.status,
                                   COALESCE(w.cartons, 0) AS shipped_cartons, COALESCE(w.shops, 0) AS shops, COALESCE(w.value_eur, 0) AS shipped_value_eur,
                                   fp.pre_calculated_raw_price_per_carton / ? AS material_cost_eur,
                                   COALESCE(cs.cartons, 0) AS free_cartons, COALESCE(cs.palletised, 0) AS palletised_cartons, COALESCE(oo.cartons, 0) AS ordered_cartons, COALESCE(mo.pieces, 0) AS in_production
@@ -234,6 +236,7 @@ final class ItemRepository extends WorkshopRepository
                            LEFT JOIN n_prod_item i ON i.id_final_product = fp.id AND i.item_type = 'product'
                            LEFT JOIN category_product cp ON cp.id = fp.id_category
                            LEFT JOIN n_prod_product_settings s ON s.id_item = i.id
+                           " . StockLevels::join('i') . "
                            LEFT JOIN (SELECT id_section, MIN(id) AS id FROM n_prod_group WHERE active = 1 AND id_section IS NOT NULL GROUP BY id_section) dg ON dg.id_section = fp.id_section
                            LEFT JOIN (SELECT sl.id_product, SUM(sl.cartons) AS cartons, COUNT(DISTINCT sl.id_customer) AS shops, SUM(sl.value_eur) AS value_eur
                                       FROM (" . WdtSalesRepository::linesSql() . ") sl

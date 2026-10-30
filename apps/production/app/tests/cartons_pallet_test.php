@@ -75,7 +75,7 @@ $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
     foreach (['raw_material', 'category_material', 'carton_dimension', 'raw_material_ppwr_profile', 'raw_material_ppwr_dimension', 'n_carton', 'final_product',
-                 'final_product_ppwr_sales_packaging', 'flattened_recipe_ingredient', 'n_prod_item', 'n_prod_item_logistics', 'n_prod_product_settings', 'n_prod_param',
+                 'final_product_ppwr_sales_packaging', 'flattened_recipe_ingredient', 'n_prod_item', 'n_prod_item_logistics', 'n_prod_product_settings', 'n_stock_period', 'n_stock_period_item', 'n_prod_param',
                  'document_wdt', 'document_wdt_product', 'n_wdt_superseded', 'erp_company_other_settings', 'production_sections', 'category_product', 'product_recipe',
                  'n_prod_group', 'n_prod_routing_step', 'n_prod_routing_alternative', 'n_prod_workstation', 'n_prod_audit_log', 'n_recipe_producer', 'carton_stock', 'customer_order', 'customer_order_product', 'n_prod_order'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");

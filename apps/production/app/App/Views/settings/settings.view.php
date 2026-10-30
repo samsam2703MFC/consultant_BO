@@ -83,6 +83,14 @@
                         <label class="form-label" for="spWeeks">Średnia sprzedaży z ostatnich (tygodni)</label>
                         <input class="form-control" id="spWeeks" name="stock.suggest_weeks" inputmode="numeric" value="<?= htmlspecialchars((string) ($sp['stock.suggest_weeks'] ?? '6')) ?>">
                     </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="spSafety">Prognoza zapasu : bezpieczeństwo ponad wyjazd (%)</label>
+                        <input class="form-control" id="spSafety" name="stock.plan_safety_pct" inputmode="decimal" value="<?= htmlspecialchars(str_replace('.', ',', (string) ($sp['stock.plan_safety_pct'] ?? '25'))) ?>">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="spFreezer">Zamrażarka : miejsca paletowe (0 = nie podano)</label>
+                        <input class="form-control" id="spFreezer" name="stock.freezer_pallet_places" inputmode="numeric" value="<?= htmlspecialchars((string) ($sp['stock.freezer_pallet_places'] ?? '0')) ?>">
+                    </div>
                     <div class="col-12 col-md-3 d-grid">
                         <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Zapisz parametry zapasów</button>
                     </div>

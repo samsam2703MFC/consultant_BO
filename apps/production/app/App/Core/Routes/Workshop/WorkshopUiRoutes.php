@@ -7,6 +7,15 @@ return function (RouteCollector $r) {
     // Magazyn (zakładki) : ta sama aplikacja co Karty produktów, otwarta na stanie magazynu albo zapasie MTS.
     $r->addRoute('GET', '/workshop/stock', ['controller' => $c, 'method' => 'stock']);
     $r->addRoute('GET', '/workshop/stock/mts', ['controller' => $c, 'method' => 'stockMts']);
+    // Prognoza zapasu [216] : zapas potrzebny wg planu logistyki, okresy stanów wyjątkowych (Boże Narodzenie…).
+    $sp = App\Controllers\Web\Workshop\StockPlanController::class;
+    $r->addRoute('GET', '/workshop/stock/forecast', ['controller' => $sp, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/stock/forecast', ['controller' => $sp, 'method' => 'data']);
+    $r->addRoute('POST', '/ajax/stock/periods', ['controller' => $sp, 'method' => 'create']);
+    $r->addRoute('PUT', '/ajax/stock/periods/{id:\d+}', ['controller' => $sp, 'method' => 'update']);
+    $r->addRoute('POST', '/ajax/stock/periods/{id:\d+}/approve', ['controller' => $sp, 'method' => 'approve']);
+    $r->addRoute('POST', '/ajax/stock/periods/{id:\d+}/reopen', ['controller' => $sp, 'method' => 'reopen']);
+    $r->addRoute('DELETE', '/ajax/stock/periods/{id:\d+}', ['controller' => $sp, 'method' => 'delete']);
     // « Plan tygodnia i surowce » usunięty : planuje się na tablicy « Tydzień produkcji ».
     $r->addRoute('GET', '/workshop/planning', ['redirect' => '/workshop/gantt']);
     $r->addRoute('GET', '/workshop/gantt', ['controller' => $c, 'method' => 'gantt']);

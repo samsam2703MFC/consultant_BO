@@ -541,5 +541,8 @@
   "pal.save_line": "Enregistrement : cartons par couche {cpl}, couches {lpp}, par palette {cpp} → ERP (expédition, planning 12 semaines, CMR)",
   "pal.save": "Enregistrer et continuer",
   "pal.no_dims": "Choisissez un carton de la liste ou saisissez ses dimensions pour calculer la palette.",
-  "pal.semi": "Un semi-fini n'a pas de palette — continuer."
+  "pal.semi": "Un semi-fini n'a pas de palette — continuer.",
+  "lv.period": "Période d'exception : {name} — niveaux d'exception jusqu'au {to}",
+  "lv.period_help": "Niveau de la période « {name} » (jusqu'au {to}) ; ensuite retour au niveau normal",
+  "lv.normal": "norm. {v}"
 }

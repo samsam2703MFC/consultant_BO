@@ -1,0 +1,27 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Prognoza zapasu{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Magazyn — prognoza zapasu</h3>
+            <p class="text-subtitle text-muted mb-0">Zapas potrzebny i do produkcji (kartony, palety) wg zatwierdzonego planu logistyki : wyjazdy, powroty, dni pracy. Okresy stanów wyjątkowych (np. Boże Narodzenie) — po okresie stany normalne wracają same.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# Magazyn › Prognoza zapasu [216] (makiety 1–3) : zapas potrzebny wg planu logistyki (wyjazd, powrót, dni pracy, produkty MTS
+   na tydzień), okresy stanów wyjątkowych (projekt → zatwierdzony → powrót do normalnych). App\Services\Stock\StockPeriodService. #}
+<section class="section sx" id="stockForecastApp" data-root="{{ root }}">
+    <div data-sx-forecast><p class="at-empty">Ładowanie…</p></div>
+    <div data-sx-period></div>
+    <div data-sx-periods></div>
+</section>
+<script type="application/json" id="stockForecastBoot">{{ boot|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/workshop/stock-forecast.js?v={{ asset_v() }}"></script>
+{% endblock %}

@@ -36,6 +36,8 @@ final class ParamRules
         'prices.client_round_eur' => [0.01, 1, false],
         'prices.client_interval_days' => [0, 365, true],
         'stock.suggest_min_weeks' => [0, 26, false],
+        'stock.plan_safety_pct' => [0, 200, false],
+        'stock.freezer_pallet_places' => [0, 100000, true],
         'stock.suggest_max_weeks' => [0.5, 52, false],
         'alerts.complaint_days' => [1, 60, true],
         'alerts.complaint_escalate_days' => [1, 90, true],

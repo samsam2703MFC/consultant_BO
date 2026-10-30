@@ -37,6 +37,7 @@ final class PageTabs
         'warehouse' => ['label' => 'Magazyn', 'section' => 'Produkcja', 'icon' => 'bi-building', 'tabs' => [
             ['/workshop/stock', 'Stan magazynu', 'bi-bar-chart-line'],
             ['/workshop/stock/mts', 'Zapas MTS', 'bi-boxes'],
+            ['/workshop/stock/forecast', 'Prognoza zapasu i okresy', 'bi-calendar2-range'],
             ['/workshop/stock-movements', 'Ruchy magazynowe', 'bi-arrow-left-right'],
         ]],
         // Produkty na jednej stronie : karty produktów (lista ERP, kategorie, MTO / MTS, stany), receptury, półprodukty,
