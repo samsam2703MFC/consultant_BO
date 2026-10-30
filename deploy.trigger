@@ -1178,3 +1178,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T14:24:18Z [production] Dzisiaj : komunikat bez stanowiska [219]
 2026-10-30T14:36:48Z [cockpit] Promotions Edition : Tous les magasins, une promotion reseau
 2026-10-30T14:41:19Z [production] plan tygodnia : zadania zakupów → kierownik produkcji [219]
+2026-10-30T15:51:46Z [cockpit] liste des routes : ecriture des employes et PIN de caisse (#79)
