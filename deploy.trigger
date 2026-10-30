@@ -1163,3 +1163,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T07:58:40Z [212] marza kategorii : ceny klientow wg marzy, klient po kliencie (migration 134)
 2026-10-30T08:14:24Z [213] logistyka : waga i wysokosc palet, wysokosc kartonu
 2026-10-30T08:26:10Z [213] palety : limit kartonu zastepuje parametr
+2026-10-30T09:03:45Z [cockpit] Mon profil : l'employe encode ses donnees, fiches de l'equipe cote franchise (#78)
