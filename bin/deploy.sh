@@ -180,6 +180,8 @@ mkdir -p "$TARGET_DIR/public/uploads/social"     # visuels des posts (portail Ma
 # Vignettes 640 px de la tablette des vendeuses (src/tablette.php) : sous
 # uploads/, donc protégées du rsync --delete par la même exclusion.
 mkdir -p "$TARGET_DIR/public/uploads/tablette"
+# Photos types des rayons (src/rayons_photos.php) : le comptoir attendu.
+mkdir -p "$TARGET_DIR/public/uploads/rayons"
 chown -R www-data:www-data "$TARGET_DIR/public/uploads"
 chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
 

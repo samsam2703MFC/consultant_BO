@@ -226,6 +226,25 @@ verifie('routes branchées dans l’API', str_contains($index, "require __DIR__ 
     && str_contains($index, "'/ventes/equipe/profils'        => ep_profils_equipe()") && str_contains($index, "=> ep_profil_carte()")
     && strpos($index, "str_starts_with(\$path, '/ventes/moi/profil') && primesVoieApp()") < strpos($index, 'function routeGardee'));
 
+echo "\nLe PIN de caisse (app employé)\n";
+// Le contrôle de l'app (ProfileController::pinErreur) et l'appel au panel : PATCH /employees/{son id} avec le seul PIN.
+require_once __DIR__ . '/../apps/employee/vendor/autoload.php';
+$pinErr = static fn (string $p, string $c) => \App\Employee\app\Http\Controllers\Me\ProfileController::pinErreur($p, $c);
+verifie('PIN : 4 chiffres, la confirmation identique', $pinErr('2580', '2580') === null && $pinErr('7890', '7890') === null);
+verifie('PIN : 3 ou 5 chiffres, des lettres, des espaces refusés', $pinErr('258', '258') === ['pin', 'format'] && $pinErr('25801', '25801') === ['pin', 'format']
+    && $pinErr('25a0', '25a0') === ['pin', 'format'] && $pinErr(' 2580', ' 2580') === ['pin', 'format']);
+verifie('PIN : 1111, 0000, 1234, 0123, 9876 refusés', array_unique(array_map(static fn ($p) => $pinErr($p, $p)[1] ?? null, ['1111', '0000', '1234', '0123', '9876'])) === ['faible']);
+verifie('PIN : confirmation différente', $pinErr('2580', '2581') === ['confirmation', 'different']);
+$GLOBALS['APPELS'] = [];
+$client = new class extends \App\Employee\core\Http\ApiClient {
+    public function __construct() {}
+    public function patch($endpoint, $data) { $GLOBALS['APPELS'][] = [$endpoint, $data]; return ['success' => true, 'code' => 200]; }
+};
+\App\Employee\core\Support\GlobalRegistry::set('user', new class { public function getId() { return 12; } });
+$svc = new \App\Employee\app\Services\Employee\EmployeeService(new \App\Employee\app\Repositories\Employee\EmployeeRepository($client));
+$r = $svc->changerPin('2580');
+verifie('PIN écrit au panel : PATCH /employees/12 avec le seul PIN, l’id venant du jeton', $r['success'] === true && $GLOBALS['APPELS'] === [['/employees/12', ['pin' => '2580']]], json_encode($GLOBALS['APPELS']));
+
 // --- ménage --------------------------------------------------------------------------------
 foreach (array_merge(glob($prive . '/cartes/*') ?: [], glob($prive . '/*') ?: []) as $x) { is_dir($x) ? @rmdir($x) : @unlink($x); }
 @rmdir($prive);
