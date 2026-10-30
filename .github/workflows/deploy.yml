@@ -351,4 +351,9 @@ jobs:
             echo; echo "=== AuthMiddleware::checkAuth ==="
             f=$(grep -rlE "class AuthMiddleware" $A/app --include="*.php" 2>/dev/null | head -1); echo "--- $f"
             awk "/function checkAuth/,/^    }/" "$f" | grep -viE "secret|password|key *=" | cut -c1-200 | head -60
+            echo; echo "=== EmployeeService::update (ce qui arrive aux champs non envoyés) ==="
+            sed -n 150,215p $A/app/Services/Employee/EmployeeService.php | cut -c1-200
+            echo; echo "=== EmployeeController::patch ==="
+            f=$A/app/Controllers/Employee/EmployeeController.php
+            awk "/function patch\(/,/^    }/" "$f" | cut -c1-200 | head -40
           '
