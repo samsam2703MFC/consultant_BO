@@ -123,6 +123,9 @@ body.lp-dragging { cursor: grabbing; user-select: none; }
 .lp-dim td { color: var(--at-muted); text-decoration: line-through; }
 .lp-dim td:last-child { text-decoration: none; }
 .lp-sel { min-height: 40px; min-width: 150px; }
+.lp-ship { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lp-date { min-height: 44px; width: 170px; font-variant-numeric: tabular-nums; }
+.lp-auto { min-height: 44px; border-radius: 10px; }
 .lp-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .lp-form .form-control, .lp-form .form-select { min-height: 44px; width: auto; flex: 1 1 140px; }
 

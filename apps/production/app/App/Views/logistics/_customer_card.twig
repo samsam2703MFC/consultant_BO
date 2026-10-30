@@ -38,21 +38,24 @@
         </div>
     </header>
     {% if c.missing_cpp %}<p class="at-sub text-danger mb-2">{{ c.missing_cpp }} prod. bez kartonów na paletę — nie są na paletach poniżej.</p>{% endif %}
+    {# Paleta mieszana [215] : resztki kilku produktów pełnymi warstwami na jednej palecie (propozycja, zatwierdzenie, etykieta). #}
+    {% if c.stack_pallets ?? 0 %}<p class="at-sub mb-2"><a href="{{ root }}/products/cartons/mixed?date={{ date }}&amp;customer={{ c.id }}"><i class="bi bi-layers" aria-hidden="true"></i> {{ c.stack_pallets|plural_pl('paleta mieszana zatwierdzona', 'palety mieszane zatwierdzone', 'palet mieszanych zatwierdzonych') }} — kolejność warstw, etykieta</a></p>
+    {% elseif (c.mixed_pallets ?? 0) >= 2 %}<p class="at-sub mb-2"><a href="{{ root }}/products/cartons/mixed?date={{ date }}&amp;customer={{ c.id }}"><i class="bi bi-layers" aria-hidden="true"></i> {{ c.mixed_pallets }} niepełne palety — sprawdź paletę mieszaną (pełne warstwy jedna na drugiej)</a></p>{% endif %}
     {% for ct in c.carton_types %}
     <section class="at-logi-ctype">
         <h5 class="at-logi-ctype-title">
-            <i class="bi {{ ct.id == 'formats' ? 'bi-stack' : 'bi-box-seam' }}" aria-hidden="true"></i> {{ ct.name ?: 'Karton nieokreślony (brak w karcie opakowań)' }}
+            <i class="bi {{ ct.id == 'formats' ? 'bi-stack' : (ct.id == 'stack' ? 'bi-layers' : 'bi-box-seam') }}" aria-hidden="true"></i> {{ ct.name ?: 'Karton nieokreślony (brak w karcie opakowań)' }}
             <span class="at-sub">{{ ct.pallets|length|plural_pl('paleta', 'palety', 'palet') }} · {{ ct.cartons|number_format(0, ',', ' ') }} kart.</span>
         </h5>
         <ol class="at-pallets" aria-label="Palety: {{ ct.name }}">
             {% for p in ct.pallets %}
-                {% set label = p.items|length > 1 ? 'Mix ' ~ p.items|length : p.items[0].product %}
+                {% set label = p.kind == 'stack' ? 'Warstwy ' ~ p.items|length ~ ' prod.' : (p.items|length > 1 ? 'Mix ' ~ p.items|length : p.items[0].product) %}
                 {% set ld = p.load ?? null %}
                 {% set over = ld and (ld.over_kg or ld.over_height or ld.over_truck) %}
-                <li class="at-pallet is-{{ p.kind }}{{ over ? ' is-over' : '' }}" title="{{ p.items|map(i => i.product ~ (i.format is defined ? ' [' ~ i.format ~ ']' : '') ~ ': ' ~ i.cartons|number_format(0, ',', ' ') ~ ' kart.')|join('\n') }}{{ p.kind != 'full' ? '\nzapełnienie ' ~ (p.fill * 100)|round ~ ' %' : '' }}{{ ld ? '\n' ~ ld.kg|number_format(0, ',', ' ') ~ ' kg · ' ~ (ld.height_mm ? (ld.height_mm / 1000)|number_format(2, ',', ' ') ~ ' m' : 'wysokość ?') ~ ' (limit ' ~ ld.max_kg|number_format(0, ',', ' ') ~ ' kg, ' ~ (ld.max_height_mm / 1000)|number_format(2, ',', ' ') ~ ' m)' : '' }}">
+                <li class="at-pallet is-{{ p.kind }}{{ over ? ' is-over' : '' }}" title="{{ p.items|map(i => i.product ~ (i.format is defined ? ' [' ~ i.format ~ ']' : '') ~ ': ' ~ i.cartons|number_format(0, ',', ' ') ~ ' kart.')|join('\n') }}{{ p.kind not in ['full', 'stack'] ? '\nzapełnienie ' ~ (p.fill * 100)|round ~ ' %' : '' }}{{ ld ? '\n' ~ ld.kg|number_format(0, ',', ' ') ~ ' kg · ' ~ (ld.height_mm ? (ld.height_mm / 1000)|number_format(2, ',', ' ') ~ ' m' : 'wysokość ?') ~ ' (limit ' ~ ld.max_kg|number_format(0, ',', ' ') ~ ' kg, ' ~ (ld.max_height_mm / 1000)|number_format(2, ',', ' ') ~ ' m)' : '' }}">
                     <span class="at-pallet-fill" style="height: {{ (p.fill * 100)|round(1) }}%"></span>
                     <span class="at-pallet-label">{{ label|length > 22 ? label|slice(0, 21) ~ '…' : label }}</span>
-                    <span class="at-pallet-qty">{{ p.items|reduce((s, i) => s + i.cartons, 0)|number_format(0, ',', ' ') }} kart.{{ p.kind != 'full' ? ' · ' ~ (p.fill * 100)|round ~ ' %' : '' }}</span>
+                    <span class="at-pallet-qty">{{ p.items|reduce((s, i) => s + i.cartons, 0)|number_format(0, ',', ' ') }} kart.{{ p.kind not in ['full', 'stack'] ? ' · ' ~ (p.fill * 100)|round ~ ' %' : '' }}</span>
                     {% if ld %}<span class="at-pallet-load">{{ ld.kg|number_format(0, ',', ' ') }} kg · {{ ld.height_mm ? (ld.height_mm / 1000)|number_format(2, ',', ' ') ~ ' m' : '? m' }}{{ over ? ' ⚠' : '' }}</span>{% endif %}
                 </li>
             {% endfor %}

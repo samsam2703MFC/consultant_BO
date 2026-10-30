@@ -41,7 +41,7 @@ final class CartonService
      * Dane palety produktów [213] (waga i wysokość palet w logistyce i pakowaniu) : sztuki w kartonie, gramatura,
      * kartony na warstwę, karton (nazwa, wysokość, waga), własne limity produktu albo rodzaju kartonu (null = parametry).
      * @param list<int>|null $productIds null = wszystkie aktywne
-     * @return array<int, array{ppc: int, weight_g: float, cpl: int, cpp: int, carton_id: ?int, carton: ?string, height_mm: ?int, tare_g: float, max_height_mm: ?int, max_kg: ?int}>
+     * @return array<int, array{ppc: int, weight_g: float, cpl: int, cpp: int, carton_id: ?int, carton: ?string, height_mm: ?int, length_mm: ?int, width_mm: ?int, tare_g: float, max_height_mm: ?int, max_kg: ?int}>
      */
     public function palletData(?array $productIds = null): array
     {
@@ -62,6 +62,7 @@ final class CartonService
             $out[(int) $p['id']] = [
                 'ppc' => (int) $p['ppc'], 'weight_g' => (float) $p['weight'], 'cpl' => $erpOk ? $cpl : ($perLayer ?: ($cpl ?: 0)), 'cpl_source' => $erpOk ? 'erp' : ($perLayer ? 'carton' : 'erp'), 'cpp' => $cpp,
                 'carton_id' => $c ? (int) $c['id'] : null, 'carton' => $c['name'] ?? null, 'height_mm' => $c && (int) $c['height_mm'] > 0 ? (int) $c['height_mm'] : null,
+                'length_mm' => $c && (int) $c['length_mm'] > 0 ? (int) $c['length_mm'] : null, 'width_mm' => $c && (int) $c['width_mm'] > 0 ? (int) $c['width_mm'] : null,
                 'tare_g' => $c ? (float) $c['tare_g'] : 0.0,
                 'max_height_mm' => (int) $p['pallet_max_height_mm'] ?: ((int) ($c['pallet_max_height_mm'] ?? 0) ?: null),
                 'max_kg' => (int) $p['pallet_max_kg'] ?: ((int) ($c['pallet_max_kg'] ?? 0) ?: null),

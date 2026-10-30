@@ -91,5 +91,8 @@
   "load_over": "au-delà de la limite",
   "load_limits": "limite palette {kg} kg · {m}",
   "load_none": "pas de données palette (carton, cartons par couche)",
-  "load_sum": "{n} palettes · la plus lourde {kg} kg · la plus haute {m}"
+  "load_sum": "{n} palettes · la plus lourde {kg} kg · la plus haute {m}",
+  "mixed_title": "Palette mixte {n} — empiler depuis le bas",
+  "mixed_layer": "{pos}. {name} : {layers} c. × {per} = {n} cartons",
+  "mixed_total": "{m} · {kg} kg"
 }

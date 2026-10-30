@@ -35,7 +35,7 @@
                 <td>{{ loop.index }}</td>
                 <td><strong>{{ c.name }}</strong><br>{{ c.town }}{{ c.country ? ', ' ~ c.country : '' }}{% if c.stop %}<br>rozładunek nr {{ c.stop }}{% endif %}</td>
                 <td>{% for p in c.products %}{{ p.name }} — {{ p.cartons|number_format(0, ',', ' ') }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
-                <td class="num">{{ c.pallets }}<br><small>{{ c.full_pallets }} + {{ c.mixed_pallets }}</small></td>
+                <td class="num">{{ c.pallets }}<br><small>{{ c.full_pallets }} + {{ c.mixed_pallets }}{{ (c.stack_pallets ?? 0) ? ' + ' ~ c.stack_pallets ~ ' warstw.' : '' }}</small></td>
                 <td class="num">{{ c.weight_kg|number_format(0, ',', ' ') }} kg</td>
                 <td>☐</td>
             </tr>

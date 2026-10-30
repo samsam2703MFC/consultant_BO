@@ -49,7 +49,7 @@ try {
                  'customer_order_product', 'final_product', 'palets_delivery', 'document_cmr', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'raw_material',
                  'category_product', 'carton_stock', 'carton_pallet_connection', 'n_pallet_entry', 'n_packing_count', 'n_load_plan', 'n_load_check', 'n_prod_item',
                  'n_prod_routing_step', 'n_prod_group', 'n_prod_employee', 'n_prod_team', 'n_prod_team_member', 'n_prod_clock', 'user', 'production_employee',
-                 'n_carton', 'n_prod_item_logistics', 'flattened_recipe_ingredient', 'category_material'] as $table) {
+                 'n_carton', 'n_prod_item_logistics', 'flattened_recipe_ingredient', 'category_material', 'n_mixed_pallet', 'n_mixed_pallet_item'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");

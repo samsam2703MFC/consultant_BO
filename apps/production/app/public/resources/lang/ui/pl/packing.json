@@ -91,5 +91,8 @@
   "load_over": "ponad limit",
   "load_limits": "limit palety {kg} kg · {m}",
   "load_none": "brak danych palety (karton, kartony na warstwę)",
-  "load_sum": "{n} palet · najcięższa {kg} kg · najwyższa {m}"
+  "load_sum": "{n} palet · najcięższa {kg} kg · najwyższa {m}",
+  "mixed_title": "Paleta mieszana {n} — układaj od dołu",
+  "mixed_layer": "{pos}. {name} : {layers} w. × {per} = {n} kart.",
+  "mixed_total": "{m} · {kg} kg"
 }

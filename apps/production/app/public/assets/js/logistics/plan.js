@@ -405,14 +405,13 @@
 
     function renderCalendar() {
         const weeks = P.weeks.map(w => {
-            const opts = [0, 1, 2, 3, 4].map(i => {
-                const d = new Date(new Date(w.week_start + 'T12:00:00').getTime() + i * 864e5).toISOString().slice(0, 10);
-                return `<option value="${d}" ${w.ship_manual && w.ship_date === d ? 'selected' : ''}>${DAYS[i + 1]} ${dm(d)}</option>`;
-            }).join('');
+            // Wyjazd : kalendarz (dowolny dzień tego tygodnia, pn–nd) ; « auto » = dzień domyślny (przesunięty przy święcie).
+            const end = new Date(new Date(w.week_start + 'T12:00:00').getTime() + 6 * 864e5).toISOString().slice(0, 10);
             const note = [w.shifted, ...w.warnings].filter(Boolean).map(t => `<div class="lp-warn">${esc(t)}</div>`).join('');
             return `<tr><td><b>${w.iso_week}</b> <small>${dm(w.week_start)}</small></td>
-                <td><select class="form-select lp-sel" data-ship="${w.week_start}" aria-label="Wyjazd tydzień ${w.iso_week}">
-                    <option value="" ${w.ship_manual ? '' : 'selected'}>auto : ${wd(w.ship_default)} ${dm(w.ship_default)}</option>${opts}</select></td>
+                <td><div class="lp-ship"><input type="date" class="form-control lp-date" data-ship="${w.week_start}" value="${w.ship_date}" min="${w.week_start}" max="${end}" aria-label="Wyjazd tydzień ${w.iso_week}">
+                    <span class="lp-sub">${wd(w.ship_date)}${w.ship_manual ? '' : ' · auto'}</span>
+                    ${w.ship_manual ? `<button type="button" class="btn btn-outline-secondary lp-auto" data-ship-auto="${w.week_start}" title="Dzień automatyczny : ${wd(w.ship_default)} ${dm(w.ship_default)}">auto</button>` : ''}</div></td>
                 <td>${wd(w.delivery_date)} ${dm(w.delivery_date)}</td><td>${note || '<span class="lp-sub">—</span>'}</td></tr>`;
         }).join('');
         const hol = P.holidays.map(h => {
@@ -438,7 +437,11 @@
                 <form class="lp-form" data-abs-add><select class="form-select" name="employee_id" required aria-label="Kierowca"><option value="">Kierowca…</option>${P.drivers.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join('')}</select>
                     <input class="form-control" type="date" name="date_from" required aria-label="Od"><input class="form-control" type="date" name="date_to" aria-label="Do">
                     <input class="form-control" name="reason" maxlength="120" placeholder="powód (urlop, choroba…)" aria-label="Powód"><button type="submit" class="btn btn-outline-primary lp-big">Dodaj urlop</button></form></div></div></div>`;
-        view.querySelectorAll('[data-ship]').forEach(s => s.addEventListener('change', () => api(`/ajax/logistics/plan/weeks/${s.dataset.ship}`, 'PUT', { ship_date: s.value || null })));
+        view.querySelectorAll('[data-ship]').forEach(s => s.addEventListener('change', () => {
+            if (s.value && (s.value < s.min || s.value > s.max)) { s.value = s.defaultValue; return; }
+            api(`/ajax/logistics/plan/weeks/${s.dataset.ship}`, 'PUT', { ship_date: s.value || null }).then(r => { if (!r) s.value = s.defaultValue; });
+        }));
+        view.querySelectorAll('[data-ship-auto]').forEach(b => b.addEventListener('click', () => api(`/ajax/logistics/plan/weeks/${b.dataset.shipAuto}`, 'PUT', { ship_date: null })));
         view.querySelectorAll('[data-hol]').forEach(b => b.addEventListener('click', async () => {
             const [day, country, act] = b.dataset.hol.split('|');
             b.disabled = true;

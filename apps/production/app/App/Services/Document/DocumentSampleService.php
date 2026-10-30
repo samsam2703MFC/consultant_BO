@@ -32,6 +32,7 @@ class DocumentSampleService
         'cmr' => ['CMR', 'Logistyka', ['pl'], 'Międzynarodowy list przewozowy : urzędowy formularz, układ bez zmian (PL / EN).', '/shipments?type=cmr', null],
         'picking_list' => ['Lista kompletacyjna', 'Logistyka', [], 'Zamówienie albo zwroty klienta do skompletowania, z polem do odhaczenia.', '/client-orders', null],
         'packaging' => ['Lista opakowań BDO / PPWR wysyłki', 'Logistyka', [], 'Opakowania wysłane do klienta (w pliku dokumentów dostawy).', '/shipments', null],
+        'mixed_pallet' => ['Etykieta palety mieszanej', 'Logistyka', [], 'Pełne warstwy kilku produktów klienta jedna na drugiej : kolejność układania od dołu, wysokość, waga, kontrole — dla magazynu, kierowcy i klienta.', '/products/cartons/mixed', null],
         'packaging_reports' => ['Raporty BDO i PPWR', 'Logistyka', [], 'Masa opakowań w okresie, według materiału i klienta.', '/audits/packaging-reports', null],
         'production_list' => ['Lista produkcyjna działu', 'Produkcja i magazyn', [], 'Do produkcji według planu tygodnia, stan i dostawy na 4 dni.', '/workshop/team-sheet', null],
         'requirement_list' => ['Lista zapotrzebowania materiałowego', 'Produkcja i magazyn', [], 'Surowce i opakowania potrzebne do zamówień, stan i do zamówienia.', '/workshop/team-sheet', null],

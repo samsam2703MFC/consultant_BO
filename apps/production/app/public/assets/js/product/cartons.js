@@ -58,6 +58,7 @@
                 <input class="form-control ct-search" type="search" placeholder="Szukaj kartonu…" value="${esc(search)}" data-search aria-label="Szukaj kartonu">
                 ${seg('filter', filter, { active: 'Aktywne', archived: 'Archiwum', all: 'Wszystkie' })}
                 ${seg('pallet', pallet, PALLET)}
+                <a class="btn btn-outline-primary ct-big" href="${root.dataset.root}/products/cartons/mixed"><i class="bi bi-layers"></i> Paleta mieszana</a>
                 <button type="button" class="btn btn-primary ct-big" data-add><i class="bi bi-plus-lg"></i> Dodaj karton</button></div>
             <div class="ct-card"><div class="ct-scroll"><table class="ct-table"><thead><tr><th>Karton</th><th class="n">Wymiary zewn. (mm)</th><th class="n">Waga kartonu</th>
                 <th class="n">Maks. ładunek</th><th class="n">Cena</th><th class="n">Paleta ${esc(PALLET[pallet].split(' ')[0])} : warstwa × warstwy</th><th class="n">Produkty</th><th></th></tr></thead>

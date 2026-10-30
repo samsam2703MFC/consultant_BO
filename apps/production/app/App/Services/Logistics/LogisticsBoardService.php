@@ -111,6 +111,7 @@ final class LogisticsBoardService
         $s = $this->state($date);
         [$data, $limits] = $this->palletBasis($s['customers']);
         $contents = $this->repo->palletContents($date);
+        $stacks = $this->logistics->mixedPallets($date);
         $pallets = [];
         foreach ($this->repo->pallets($date) as $p) {
             $items = [];
@@ -130,7 +131,7 @@ final class LogisticsBoardService
                 'packed' => $this->sum($rows, 'packed'), 'ready' => $this->sum($rows, 'ready'), 'missing' => $this->sum($rows, 'missing'),
                 'pallets' => $pallets[$cid] ?? [], 'planned_pallets' => max($c['planned_pallets'], count($pallets[$cid] ?? [])),
                 'lines' => $rows,
-                'load_now' => $this->load($rows, 'on_pallet', $data, $limits), 'load_final' => $this->load($rows, 'ordered', $data, $limits),
+                'load_now' => $this->load($rows, 'on_pallet', $data, $limits), 'load_final' => $this->load($rows, 'ordered', $data, $limits, $stacks[$cid] ?? []),
             ];
             $item['left'] = max(0, $item['ordered'] - $item['on_pallet']);
             $clients[] = $item;
@@ -286,10 +287,14 @@ final class LogisticsBoardService
             $open = array_values(array_filter($clients, fn($c) => $c['left'] > 0));
             $customerId = $open[0]['id'] ?? ($ids[0] ?? null);
         }
+        $stacks = $this->logistics->mixedPallets($date);
         foreach ($clients as &$cl) {
             if ($cl['id'] !== $customerId) continue;
             $cl['load_now'] = $this->load($cl['lines'], 'on_pallet', $data, $limits);
-            $cl['load_final'] = $this->load($cl['lines'], 'ordered', $data, $limits);
+            $cl['load_final'] = $this->load($cl['lines'], 'ordered', $data, $limits, $stacks[$cl['id']] ?? []);
+            // Paleta mieszana [215] : kolejność układania od dołu (warstwy produktów).
+            $cl['mixed'] = array_map(fn($s) => ['id' => $s['id'], 'height_mm' => $s['height_mm'], 'kg' => $s['kg'],
+                'items' => array_map(fn($it) => ['product' => $it['product'], 'layers' => $it['layers'], 'cartons' => $it['cartons'], 'per_layer' => $it['per_layer']], $s['items'])], $stacks[$cl['id']] ?? []);
         }
         unset($cl);
         $entries = [];
@@ -321,20 +326,36 @@ final class LogisticsBoardService
      * (format kartonu, pełne i mieszane) — waga i wysokość każdej [213].
      * @return array{pallets: list<array>, kg: float, max_height_mm: ?int, over: int}
      */
-    private function load(array $lines, string $key, array $data, array $limits): array
+    private function load(array $lines, string $key, array $data, array $limits, array $stacks = []): array
     {
+        // Palety mieszane zatwierdzone [215] (tylko « po zamówieniu ») : ich kartony zdjęte z pozycji, najwyżej zamówione.
+        $left = [];
+        foreach ($lines as $l) $left[$l['product_id']] = (float) ($l[$key] ?? 0);
+        $built = [];
+        foreach ($stacks as $s) {
+            $items = [];
+            foreach ($s['items'] as $it) {
+                $n = min((float) $it['cartons'], $left[$it['product_id']] ?? 0.0);
+                if ($n <= 0) continue;
+                $left[$it['product_id']] -= $n;
+                $items[] = ['product_id' => $it['product_id'], 'product' => $it['product'], 'cartons' => $n];
+            }
+            $built[] = ['id' => $s['id'], 'items' => $items];
+        }
         $rows = [];
         foreach ($lines as $l) {
-            $n = (float) ($l[$key] ?? 0);
+            $n = $left[$l['product_id']];
             if ($n <= 0) continue;
             $d = $data[$l['product_id']] ?? [];
             $rows[] = ['product_id' => $l['product_id'], 'product' => $l['name'], 'cartons' => $n, 'cpp' => $d['cpp'] ?? 0,
                 'carton_type_id' => $d['carton_id'] ?? null, 'carton_type' => $d['carton'] ?? null];
         }
-        $m = PalletCalculator::measure(PalletCalculator::layout($rows), $data, $limits);
+        $types = PalletCalculator::layout($rows);
+        if ($stack = PalletCalculator::stackType($built)) array_unshift($types, $stack);
+        $m = PalletCalculator::measure($types, $data, $limits);
         $pallets = [];
         foreach ($m['types'] as $t) {
-            foreach ($t['pallets'] as $p) $pallets[] = ['cartons' => array_sum(array_column($p['items'], 'cartons')), 'fill' => $p['fill'], 'format' => $t['name']] + $p['load'];
+            foreach ($t['pallets'] as $p) $pallets[] = ['cartons' => array_sum(array_column($p['items'], 'cartons')), 'fill' => $p['fill'], 'format' => $t['name'], 'stack' => $p['kind'] === 'stack'] + $p['load'];
         }
         return ['pallets' => $pallets, 'kg' => $m['kg'], 'max_height_mm' => $m['max_height_mm'], 'over' => $m['over']];
     }

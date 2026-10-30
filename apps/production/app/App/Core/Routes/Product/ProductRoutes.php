@@ -99,4 +99,13 @@ return function(RouteCollector $r) {
     $r->addRoute('PUT', '/ajax/products/cartons/{id:\d+}', ['controller' => $ct, 'method' => 'save']);
     $r->addRoute('GET', '/ajax/pallet/plan', ['controller' => $ct, 'method' => 'plan']);
     $r->addRoute('GET', '/ajax/products/{id:\d+}/pallet', ['controller' => $ct, 'method' => 'product']);
+
+    // Paleta mieszana [215] : pełne warstwy kilku produktów klienta jedna na drugiej (propozycje dnia, edytor, etykieta).
+    $mx = App\Controllers\Web\Product\MixedPalletController::class;
+    $r->addRoute('GET', '/products/cartons/mixed', ['controller' => $mx, 'method' => 'index']);
+    $r->addRoute('GET', '/products/cartons/mixed/label', ['controller' => $mx, 'method' => 'label']);
+    $r->addRoute('GET', '/ajax/products/cartons/mixed', ['controller' => $mx, 'method' => 'data']);
+    $r->addRoute('GET', '/ajax/products/cartons/mixed/preview', ['controller' => $mx, 'method' => 'preview']);
+    $r->addRoute('POST', '/ajax/products/cartons/mixed', ['controller' => $mx, 'method' => 'confirm']);
+    $r->addRoute('DELETE', '/ajax/products/cartons/mixed/{id:\d+}', ['controller' => $mx, 'method' => 'delete']);
 };

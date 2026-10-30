@@ -264,7 +264,7 @@
 
     // Waga i wysokość palet klienta [213] : już na paletach (skan + tablet) i po całym zamówieniu ; czerwone ponad limit.
     function loads(c) {
-        if (!c.load_now && !c.load_final) return '';
+        if (!c.load_now && !c.load_final && !(c.mixed || []).length) return '';
         const m = (mm) => mm ? (mm / 1000).toLocaleString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' m' : '? m';
         const bad = (p) => p.over_kg || p.over_height || p.over_truck;
         // Najwyżej 6 palet (najpierw ponad limit), reszta w podsumowaniu : liczba, najcięższa, najwyższa, ponad limit.
@@ -277,8 +277,12 @@
             return `<div class="pp-load"><span class="pp-load-l">${esc(label)}</span>${sum}${shown.map(p =>
                 `<span class="pp-lp ${bad(p) ? 'is-over' : ''}" title="${esc(t('load_limits', {kg: fmt(p.max_kg), m: m(p.max_height_mm)}))}"><b>${esc(t('pallet_short', {n: p.n}))}</b> ${fmt(p.kg)} kg · ${m(p.height_mm)}${p.known_height ? '' : '+'}${bad(p) ? ' ⚠' : ''}</span>`).join('')}</div>`;
         };
+        // Palety mieszane zatwierdzone [215] : kolejność układania warstw od dołu.
+        const mixed = (c.mixed || []).map((s, i) => `<div class="pp-mixed"><b>${esc(t('mixed_title', {n: (c.mixed.length > 1 ? i + 1 : '')}).replace('  ', ' '))}</b>
+            <ol>${s.items.map((it, k) => `<li>${esc(t('mixed_layer', {pos: k + 1, name: it.product, layers: it.layers, per: it.per_layer, n: fmt(it.cartons)}))}</li>`).join('')}</ol>
+            ${s.height_mm ? `<small>${esc(t('mixed_total', {m: m(s.height_mm), kg: fmt(s.kg)}))}</small>` : ''}</div>`).join('');
         const html = row(t('load_now'), c.load_now) + row(t('load_final'), c.load_final);
-        return html || `<div class="pp-load"><span class="pp-load-l">${esc(t('load_none'))}</span></div>`;
+        return (html || `<div class="pp-load"><span class="pp-load-l">${esc(t('load_none'))}</span></div>`) + mixed;
     }
 
     function side(c) {

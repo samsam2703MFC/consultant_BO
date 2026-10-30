@@ -106,6 +106,31 @@ final class LogisticsRepository extends WorkshopRepository
         );
     }
 
+    /**
+     * Palety mieszane zatwierdzone na dzień [215] : klient => palety (produkty od dołu : kartony, warstwy, na warstwę).
+     * @return array<int, list<array{id:int, pallet:string, height_mm:?int, kg:?float, confirmed_at:string, who:?string, items:list<array{product_id:int, product:string, cartons:int, layers:int, per_layer:int}>}>>
+     */
+    public function mixedPallets(string $date): array
+    {
+        $out = [];
+        $items = [];
+        foreach ($this->all("SELECT i.id_mixed_pallet, i.position, i.id_final_product, fp.name, i.cartons, i.layers, i.per_layer
+                FROM n_mixed_pallet_item i JOIN n_mixed_pallet mp ON mp.id = i.id_mixed_pallet JOIN final_product fp ON fp.id = i.id_final_product
+                WHERE mp.ship_date = ? ORDER BY i.id_mixed_pallet, i.position", [$date]) as $r) {
+            $items[(int) $r['id_mixed_pallet']][] = ['product_id' => (int) $r['id_final_product'], 'product' => (string) $r['name'],
+                'cartons' => (int) $r['cartons'], 'layers' => (int) $r['layers'], 'per_layer' => (int) $r['per_layer']];
+        }
+        foreach ($this->all("SELECT mp.id, mp.id_customer, mp.pallet, mp.height_mm, mp.kg, mp.confirmed_at,
+                    COALESCE(NULLIF(TRIM(u.displayed_name), ''), u.login) AS who
+                FROM n_mixed_pallet mp LEFT JOIN user u ON u.id = mp.confirmed_by
+                WHERE mp.ship_date = ? ORDER BY mp.id", [$date]) as $r) {
+            $out[(int) $r['id_customer']][] = ['id' => (int) $r['id'], 'pallet' => (string) $r['pallet'],
+                'height_mm' => $r['height_mm'] !== null ? (int) $r['height_mm'] : null, 'kg' => $r['kg'] !== null ? (float) $r['kg'] : null,
+                'confirmed_at' => (string) $r['confirmed_at'], 'who' => $r['who'], 'items' => $items[(int) $r['id']] ?? []];
+        }
+        return $out;
+    }
+
     /** @return array<int,int> klient => palety zeskanowane na ten dzień */
     public function scannedPallets(string $date): array
     {

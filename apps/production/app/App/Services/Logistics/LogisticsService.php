@@ -24,8 +24,9 @@ final class LogisticsService
 {
     public const WEEKDAYS = [1 => 'pon.', 2 => 'wt.', 3 => 'śr.', 4 => 'czw.', 5 => 'pt.', 6 => 'sob.', 7 => 'niedz.'];
 
-    /** Dane palety produktów [213] (raz na żądanie : tydzień liczy kilka dni). */
+    /** Dane palety produktów [213] i limity logistyki (raz na żądanie : tydzień liczy kilka dni). */
     private ?array $palletData = null;
+    private ?array $limits = null;
 
     /** CartonService : waga i wysokość każdej palety [213] (null — bez pomiaru, np. w testach). Bez wartości domyślnej : PHP-DI pomija parametry opcjonalne. */
     public function __construct(private LogisticsRepository $repo, private ParamRepository $params, private ?CartonService $cartons)
@@ -106,6 +107,7 @@ final class LogisticsService
         $assignments = $this->repo->assignments($date);
         $last = $this->repo->lastVehicles(array_keys($byCustomer));
         $scanned = $this->repo->scannedPallets($date);
+        $stacks = $this->repo->mixedPallets($date);
         $vehicles = [];
         foreach ($this->repo->vehicles() as $v) $vehicles[(int) $v['id']] = $v;
         [$tours, $members, $stops] = $this->tourMap($date);
@@ -113,27 +115,8 @@ final class LogisticsService
         $customers = [];
         foreach ($byCustomer as $id => $c) {
             // Ten sam produkt z kilku zamówień klienta : jedna pozycja (pełne palety liczone łącznie).
-            $merged = [];
-            foreach ($c['lines'] as $l) {
-                $pid = (int) $l['product_id'];
-                if (isset($merged[$pid])) {
-                    $merged[$pid]['cartons'] = (float) $merged[$pid]['cartons'] + (float) $l['cartons'];
-                    continue;
-                }
-                $merged[$pid] = $l;
-            }
-            $c['lines'] = array_values($merged);
-            $calc = PalletCalculator::compute(array_map(fn($l) => ['product_id' => (int) $l['product_id'], 'cartons' => $l['cartons'], 'cpp' => $l['cpp'], 'ppc' => $l['ppc'], 'weight_g' => $l['weight_g'],
-                'product' => $l['product'], 'carton_type_id' => $l['carton_type_id'] !== null ? (int) $l['carton_type_id'] : null,
-                'carton_type' => $l['carton_type'], 'category' => $l['category']], $c['lines']), $mixed, $tare, $leftoverMax);
-            if ($this->cartons !== null) {
-                // [213] Waga i wysokość każdej palety (karton z katalogu, kartony na warstwę) ; najcięższa, najwyższa, ponad limit.
-                $this->palletData ??= $this->cartons->palletData();
-                $m = PalletCalculator::measure($calc['carton_types'], $this->palletData, $limits ??= $this->cartons->limits());
-                $loads = array_merge([], ...array_map(fn($t) => array_column($t['pallets'], 'load'), $m['types']));
-                $calc['carton_types'] = $m['types'];
-                $calc += ['pallet_max_kg' => $loads ? max(array_column($loads, 'kg')) : null, 'pallet_max_height_mm' => $m['max_height_mm'], 'pallets_over' => $m['over']];
-            }
+            $c['lines'] = self::merge($c['lines']);
+            $calc = $this->palletize($c['lines'], $stacks[$id] ?? []);
             $a = $assignments[$id] ?? null;
             [$tourId, $tourSource] = match (true) {
                 $a !== null && $a['tour_set'] => [$a['tour'], 'day'],
@@ -245,7 +228,7 @@ final class LogisticsService
         $cartonTypes = [];
         foreach ($customers as $c) {
             foreach ($c['carton_types'] as $type) {
-                if ($type['id'] === 'formats') continue;
+                if ($type['id'] === 'formats' || $type['id'] === 'stack') continue;
                 $key = $type['id'] ?? 'none';
                 $cartonTypes[$key] ??= ['id' => $type['id'], 'name' => $type['name'], 'cartons' => 0.0, 'pallets' => 0, 'full' => 0, 'mixed' => 0, 'customers' => 0];
                 $cartonTypes[$key]['cartons'] += $type['cartons'];
@@ -296,6 +279,88 @@ final class LogisticsService
             'vehicles' => array_values(array_filter($vehicles, fn($v) => (int) $v['active'] === 1)),
             'all_vehicles' => $vehicles,
         ];
+    }
+
+    /**
+     * Pozycje dnia na klienta (jedna na produkt ; karta « 1 / 1 / 1 » = brak kartonów na paletę) — dla palet mieszanych [215].
+     * @return array<int, array{id:int, name:string, town:?string, lines:list<array>}>
+     */
+    public function customerLines(string $date): array
+    {
+        $out = [];
+        foreach ($this->repo->dayLines($date) as $l) {
+            if ((int) $l['cpp'] === 1 && (int) $l['cpl'] <= 1 && (int) $l['lpp'] <= 1) $l['cpp'] = 0;
+            $id = (int) $l['id_customer'];
+            $out[$id] ??= ['id' => $id, 'name' => $l['customer'], 'town' => $l['town'], 'lines' => []];
+            $out[$id]['lines'][] = $l;
+        }
+        foreach ($out as &$c) $c['lines'] = self::merge($c['lines']);
+        unset($c);
+        return $out;
+    }
+
+    /** Palety mieszane zatwierdzone na dzień [215] : klient => palety (produkty od dołu). */
+    public function mixedPallets(string $date): array
+    {
+        return $this->repo->mixedPallets($date);
+    }
+
+    /**
+     * Palety klienta : zatwierdzone palety mieszane [215] (pełne warstwy ; ich kartony zdjęte z pozycji, najwyżej zamówione)
+     * + reszta przez PalletCalculator (pełne, mieszane jednego formatu, resztki razem) ; waga i wysokość każdej palety [213].
+     * @param list<array> $lines pozycje klienta (merge) ; @param list<array{id:int, items:list<array{product_id:int, cartons:int|float}>}> $stacks
+     */
+    public function palletize(array $lines, array $stacks = []): array
+    {
+        $mixed = $this->params->get('logistics.mixed_pallets', '1') === '1';
+        $tare = (float) $this->params->get('logistics.pallet_tare_kg', '25');
+        $leftoverMax = max(0.0, min(1.0, (float) $this->params->get('logistics.leftover_fill_max', '0.5')));
+        $byId = [];
+        $left = [];
+        foreach ($lines as $l) {
+            $byId[(int) $l['product_id']] = $l;
+            $left[(int) $l['product_id']] = (float) $l['cartons'];
+        }
+        $built = [];
+        foreach ($stacks as $s) {
+            $items = [];
+            foreach ($s['items'] as $it) {
+                $pid = (int) $it['product_id'];
+                $n = min((float) $it['cartons'], $left[$pid] ?? 0.0);
+                if ($n <= 0) continue;
+                $left[$pid] -= $n;
+                $items[] = ['product_id' => $pid, 'product' => $byId[$pid]['product'], 'cartons' => $n, 'ppc' => $byId[$pid]['ppc'], 'weight_g' => $byId[$pid]['weight_g']];
+            }
+            $built[] = ['id' => (int) $s['id'], 'items' => $items];
+        }
+        $calc = PalletCalculator::compute(array_map(fn($l) => ['product_id' => (int) $l['product_id'], 'cartons' => $left[(int) $l['product_id']], 'cpp' => $l['cpp'],
+            'ppc' => $l['ppc'], 'weight_g' => $l['weight_g'], 'product' => $l['product'], 'carton_type_id' => $l['carton_type_id'] !== null ? (int) $l['carton_type_id'] : null,
+            'carton_type' => $l['carton_type'], 'category' => $l['category']], $lines), $mixed, $tare, $leftoverMax);
+        $calc = PalletCalculator::addStacks($calc, $built, $tare);
+        if ($this->cartons !== null) {
+            // [213] Waga i wysokość każdej palety (karton z katalogu, kartony na warstwę) ; najcięższa, najwyższa, ponad limit.
+            $this->palletData ??= $this->cartons->palletData();
+            $m = PalletCalculator::measure($calc['carton_types'], $this->palletData, $this->limits ??= $this->cartons->limits());
+            $loads = array_merge([], ...array_map(fn($t) => array_column($t['pallets'], 'load'), $m['types']));
+            $calc['carton_types'] = $m['types'];
+            $calc += ['pallet_max_kg' => $loads ? max(array_column($loads, 'kg')) : null, 'pallet_max_height_mm' => $m['max_height_mm'], 'pallets_over' => $m['over']];
+        }
+        return $calc;
+    }
+
+    /** Ten sam produkt z kilku zamówień klienta : jedna pozycja (kartony razem). */
+    private static function merge(array $lines): array
+    {
+        $merged = [];
+        foreach ($lines as $l) {
+            $pid = (int) $l['product_id'];
+            if (isset($merged[$pid])) {
+                $merged[$pid]['cartons'] = (float) $merged[$pid]['cartons'] + (float) $l['cartons'];
+                continue;
+            }
+            $merged[$pid] = $l;
+        }
+        return array_values($merged);
     }
 
     /**

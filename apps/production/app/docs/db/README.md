@@ -66,6 +66,33 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Palette mixte — couches complètes de plusieurs produits empilées (migration 135, 30/10/2026)
+
+- Page : Kartony i palety › « Paleta mieszana » (`/products/cartons/mixed?date=…&customer=…`, maquette 214). Pour un
+  client et un jour d'expédition : les produits de la palette (format du carton, cartons par couche, kg / carton,
+  cartons / commandés, hauteur, poids, kg par couche, couches − / +, au plus les cartons commandés), « + Dodaj produkt
+  klienta », tuiles (hauteur, poids, cartons, places camion « było n »), contrôles, vue de côté (ligne de hauteur max.) et
+  vue de dessus de chaque couche ; « Etykieta palety (PDF) », « Zatwierdź paletę mieszaną ». En dessous, les
+  propositions du jour : clients dont les restes (cartons hors palettes pleines) tiennent sur une palette et font gagner
+  au moins une place (palettes du client maintenant → après).
+- Calcul (`App\Domain\Logistics\MixedPallet`) : ordre automatique du bas vers le haut — couche incomplète seulement tout
+  en haut, plus grand plancher en bas (petits cartons toujours au-dessus), même plancher (± 15 mm, même nombre par
+  couche) : couche la plus lourde en bas. Contrôles : hauteur ≤ la limite la plus basse des produits (produit → carton →
+  `logistics.pallet_max_height_mm`) et intérieur du camion ; poids ≤ limite ; charge sur le carton du bas de chaque
+  produit comparée à sa palette mono-produit ((couches ERP − 1) × kg) ; plancher différent au-dessus seulement sur des
+  couches pleines ≥ 90 % de la palette. Propositions : restes du client, les plus hauts d'abord, sur la première palette
+  où tous les contrôles passent.
+- Tables : `n_mixed_pallet` (jour, client, palette, hauteur, poids, validé par / le) et `n_mixed_pallet_item`
+  (position 1 = en bas, produit, cartons, couches, cartons par couche).
+- Une palette validée compte pour une place dans Dzień wysyłki (`LogisticsService::palletize` : ses cartons, au plus les
+  commandés, sortent des palettes normales ; type « stack » en tête de la carte client, lien vers la page), dans
+  l'écran de palettisation et la tablette d'emballage (« commande complète » + ordre d'empilement des couches). Le plan
+  12 semaines (historique) n'en tient pas compte.
+- Étiquette PDF : `/products/cartons/mixed/label?pallet=…` (ou brouillon `date`, `customer`, `items=produit:cartons,…`),
+  aussi dans « Wzory dokumentów ».
+- Plan 12 semaines › Święta i kierowcy : le jour de départ de la semaine se choisit avec un calendrier (n'importe quel
+  jour de la semaine), bouton « auto » pour revenir au jour par défaut.
+
 ### Poids et hauteur des palettes — logistique et emballage (30/10/2026, sans migration)
 
 - Calcul (`App\Domain\Logistics\PalletLoad`) : poids = tare palette (EUR 25 kg, industrielle 30 kg) + cartons × (pièces ×
