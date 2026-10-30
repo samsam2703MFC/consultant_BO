@@ -31,6 +31,7 @@ function body(): array { return []; }
 
 require __DIR__ . '/../src/meta_graph.php';
 require __DIR__ . '/../src/brand_guard.php';
+require __DIR__ . '/../src/rayons_photos.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -165,6 +166,17 @@ $pl = bgCronPlan(new DateTime('2026-09-21 13:00', $tz));
 verifie('lundi 13 h : rien', !$pl['audit'] && !$pl['quotidien'] && !$pl['hebdo'], json_encode($pl));
 $pl = bgCronPlan(new DateTime('2026-09-23 15:00', $tz), true);
 verifie('forcé : tout, quelle que soit l’heure', $pl['audit'] && $pl['quotidien'] && $pl['hebdo']);
+
+// --- 8. les photos types des rayons : quel rayon pour quel libellé ----------------------------
+echo "Photos types des rayons\n";
+$rv = static fn (string $l): ?string => ($r = rvRayonDe($l)) !== null ? $r['cle'] : null;
+verifie('clé sans accent ni signe', rvCle('Pains & Boulangerie') === 'pains-boulangerie' && rvCle('Épicerie') === 'epicerie');
+verifie('les neuf rayons du panel, sans photo, sans base', count(rvListe()) === 9 && rvListe()[0]['photo'] === null);
+verifie('la tâche du panel trouve son rayon', $rv('Photo du comptoir - Pâtisseries') === 'patisseries' && $rv('Photo du comptoir - Pains & Boulangerie') === 'pains-boulangerie');
+verifie('au pluriel près', $rv('Comptoir viennoiserie') === 'viennoiseries');
+verifie('par le début du nom, à la frontière d’un mot', $rv('Comptoir pains') === 'pains-boulangerie' && $rv('Comptoir tartes et sablés') === 'tartes');
+verifie('« Tartelettes » ne prend pas « Tartes »', $rv('Photo du comptoir - Tartelettes') === null);
+verifie('une tâche qui n’est pas un comptoir n’a pas de rayon', rvRayonDeTache('Contrôle Qualité – Tartes') === null && rvRayonDeTache('Comptoir pains') === null);
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

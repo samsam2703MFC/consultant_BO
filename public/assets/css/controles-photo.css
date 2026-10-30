@@ -25,6 +25,9 @@
 .db-cqph>i u{position:absolute;left:-2px;top:-18px;color:#fff;font:700 10px var(--font-ui);text-decoration:none;padding:1px 6px;border-radius:3px 3px 0 0;white-space:nowrap}
 .db-cqph .h{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.58);color:#fff;font:600 9.5px var(--font-ui);font-style:normal;padding:2px 6px;border-radius:5px;font-variant-numeric:tabular-nums}
 .db-cqph .cqbd{position:absolute;right:6px;top:6px}
+/* La photo type du rayon (src/rayons_photos.php), en vignette dans le coin : le comptoir attendu à côté du comptoir rendu. */
+.db-cqph .ty{position:absolute;right:6px;bottom:6px;width:38%;aspect-ratio:3/4;border-radius:6px;background:#2a2622 center/cover no-repeat;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.35);overflow:hidden}
+.db-cqph .ty:after{content:"type";position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.62);color:#fff;font:700 8.5px var(--font-ui);font-style:normal;text-align:center;padding:1px 0;text-transform:uppercase;letter-spacing:.06em}
 .cqbd{display:inline-block;font:700 10px var(--font-ui);font-style:normal;padding:2px 7px;border-radius:5px;color:#fff;white-space:nowrap}
 .cqbd.ok{background:#2d7a3e}.cqbd.nc{background:#D97706}.cqbd.ctl{background:#2F5D8A}.cqbd.ko{background:#C0182B}.cqbd.mu{background:#8a8177}.cqbd.mai{background:#5b6b78}
 .db-cqph.vide,.db-cqph.perdue{background:repeating-linear-gradient(135deg,#f5f0e9 0 8px,#eee8df 8px 16px);border:1px dashed #c9c2b8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--color-text-muted);font:600 10.5px var(--font-ui);text-align:center;padding:8px}

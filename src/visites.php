@@ -746,6 +746,8 @@ function ep_visites_app(): array
         'msp' => $e['msp'], 'equipe' => $e['equipe'], 'checklist' => viChecklist(), 'types' => $types, 'cadre' => function_exists('vcCadre') ? vcCadre() : [], 'taches' => $taches,
         'causes' => viCausesPlano(), 'causesDiag' => viCausesDiag(), 'seuils' => viSeuils(),
         'frequence' => setting('visitesFrequence', []) ?: (object) [],
+        // Les photos types des rayons : le comptoir attendu, en face de la photo rendue et des points « Comptoir … ».
+        'rayons' => function_exists('rvListe') ? rvListe() : [],
         'reseau' => viReseau($e['boutiques'])];
 }
 

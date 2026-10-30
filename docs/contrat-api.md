@@ -2153,6 +2153,58 @@ laisse les colonnes `owner_*` à la direction. La photo en grand (loupe) porte
 la fiche, la note rapide et ‹ ›. L'étape est faite quand plus rien n'attend
 une note.
 
+### `/rayons/photos` — la photo type de chaque rayon
+
+Le comptoir tel qu'il doit être, pour juger la photo rendue par comparaison.
+Un rayon est le nom que le panel écrit après « Photo du comptoir - »
+(Viennoiseries, Traiteur, Épicerie…) ; sa clé est ce nom réduit (minuscules,
+sans accent, tirets) : « Pains & Boulangerie » → `pains-boulangerie`. Les neuf
+rayons du panel sont toujours listés, dans l'ordre du comptoir ; les rayons
+ajoutés suivent par ordre alphabétique (`src/rayons_photos.php`).
+
+`GET /rayons/photos` :
+
+```json
+{ "rayons": [{ "cle": "viennoiseries", "nom": "Viennoiseries", "photo": "uploads/rayons/viennoiseries-20261030101500.jpg",
+               "consigne": "Croissants alignés par trois rangs, corbeille pleine", "par": "Sam", "le": "2026-10-30 10:15:00",
+               "defaut": true }],
+  "total": 9, "poses": 1, "source": "…" }
+```
+
+`PUT /rayons/photos` — `{ nom, data?, consigne?, retirer? }`. Seuls les champs
+présents changent : `data` (data-URL JPEG, PNG ou WebP, 6 Mo au plus ; `""`
+retire la photo), `consigne` (600 caractères ; `""` la retire), `retirer: true`
+efface la ligne (un rayon du panel revient sans photo, un rayon ajouté
+disparaît). `{ nom }` seul ajoute un rayon. Rend la liste, comme le `GET`.
+Journalisé. Table `ceo_rayon_photo` ; fichiers sous `uploads/rayons/`, un nom
+neuf à chaque dépôt.
+
+Le rapprochement d'un libellé avec son rayon tolère le pluriel et un nom
+raccourci, à la frontière d'un mot : « Photo du comptoir - Viennoiseries » et
+le point de checklist « Comptoir viennoiserie » → Viennoiseries, « Comptoir
+pains » → Pains & Boulangerie, « Comptoir tartes et sablés » → Tartes ; mais
+« Tartelettes » ne prend pas « Tartes ».
+
+Où elle s'affiche :
+
+- **Cockpit, Tâches › Contrôle** : la carte repliable « Photos types des
+  rayons » (le back office : une tuile par rayon — photo à choisir, réduite à
+  1600 px avant l'envoi, consigne, retrait — l'ajout d'un rayon, et les rayons
+  vus aujourd'hui dans le panel sans photo type, à ajouter d'un clic) ; une
+  vignette « type » dans le coin de chaque carte de comptoir ; dans le volet de
+  notation, la colonne « Photo type · <rayon> » en face de la photo en boutique,
+  la consigne dessous, et le dépôt direct si elle manque.
+  `GET /pwa/tasks/detail` porte `rayon` (`cle`, `nom`, `photo`, `consigne`)
+  pour une photo de comptoir — chemin local, à part de `photoRef`, que le
+  rapport PDF et l'assistance IA téléchargent.
+- **Application visites, contrôle guidé** : `GET /visites/app` porte
+  `rayons[]`. L'étape « Les contrôles en photo » ouvre « Les comptoirs
+  attendus » (la bande des photos types), chaque carte de comptoir porte la
+  vignette « type », et la loupe met la photo rendue et la photo type côte à
+  côte (« 📐 Photo type » les sépare), la consigne sous le titre. Dans le
+  module Planogramme, chaque point « Comptoir … » montre « Attendu : <consigne> »
+  et le bouton « 📐 Photo type ».
+
 ### Qui fait autorité sur quoi
 
 Le cockpit vit dans la base du panel. Certaines données lui appartiennent, la
