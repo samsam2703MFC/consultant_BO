@@ -1183,3 +1183,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T15:59:02Z [cockpit] liste des routes : mise a jour d un employe dans le panel (#81)
 2026-10-30T16:04:34Z [app] Mon profil : PIN de caisse change par la personne (#82)
 2026-10-30T18:23:08Z [cockpit] photos types des rayons : comptoir attendu a cote de la photo rendue (back office, controle sur tablette, visites)
+2026-10-30T19:31:43Z [production] strona « Nie znaleziono », tytuły stron usuwania
