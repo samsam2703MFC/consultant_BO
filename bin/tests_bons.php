@@ -403,6 +403,11 @@ verifie('le bon refusé : la promotion reste inactive (un brouillon), l’erreur
 $GLOBALS['corps'] = $promo('Code invalide', ['on' => true, 'cible' => 'code', 'code' => 'é!']);
 $r = @wr_promos_magasin();
 verifie('un code mal formé : 422, rien au panel', ($r['error'] ?? '') === 'à compléter' && str_contains(implode(' ', $r['erreurs']), 'code du bon'), $r);
+$n = count(ErpApi::$promos); $nc = count(ErpApi::$camps);
+$GLOBALS['corps'] = ['tous' => true] + $promo('Tout le réseau, par code', ['on' => true, 'cible' => 'code', 'code' => 'RESEAU']);
+$r = @wr_promos_magasin();
+verifie('tous les magasins (30/10/2026) : pas de bon, 422, rien au panel', ($r['error'] ?? '') === 'à compléter' && str_contains(implode(' ', $r['erreurs']), 'Un bon reste à un magasin')
+    && count(ErpApi::$promos) === $n && count(ErpApi::$camps) === $nc, $r);
 
 echo "La bascule depuis la liste\n";
 $cid = $campDe(33)['id'];
