@@ -48,6 +48,10 @@ function apiModInventaire(): array
                     ['m' => 'GET', 'r' => '/ventes/primes-reference?ids=&du=&au=&shops=', 'dit' => 'Ce que des produits ont vendu, pour proposer un objectif', 'pages' => $AF, 'garde' => '', 'sonde' => ['pas' => 'calculée à la demande, rien n’en est gardé']],
                     ['m' => 'GET', 'r' => '/ventes/grands-prix[?shop=]', 'dit' => 'Les grands prix et leur classement', 'pages' => $AF, 'garde' => '1 h', 'sonde' => ['cache' => 'grandsPrix']],
                     ['m' => 'GET', 'r' => '/ventes/moi?m=', 'dit' => 'La fiche « Mes primes » de la personne connectée (son jeton, vérifié chez le panel)', 'pages' => ['app'], 'garde' => '15 min · 1 j', 'sonde' => ['cache' => 'primesMoi']],
+                    ['m' => 'GET', 'r' => '/ventes/moi/profil?panel=', 'dit' => '« Mon profil » de la personne connectée, déchiffré pour elle seule', 'pages' => ['app'], 'garde' => '', 'sonde' => ['pas' => 'il faut le jeton de la personne']],
+                    ['m' => 'GET', 'r' => '/ventes/equipe/profils?shop=', 'dit' => 'Les fiches d’un magasin : rempli à combien, ce qui manque, ce qui est à reporter au panel', 'pages' => ['franchise'], 'garde' => '', 'sonde' => ['pas' => 'lue à la demande dans mot_profil']],
+                    ['m' => 'GET', 'r' => '/ventes/equipe/profil?emp=[&voir=1]', 'dit' => 'Une fiche, n° national et IBAN masqués (en clair : au journal)', 'pages' => ['franchise'], 'garde' => '', 'sonde' => ['pas' => 'une fiche ouverte se lit pour une personne']],
+                    ['m' => 'GET', 'r' => '/ventes/equipe/profil/carte?emp=&face=', 'dit' => 'Une photo de la carte d’identité, déchiffrée (au journal)', 'pages' => ['franchise'], 'garde' => '', 'sonde' => ['pas' => 'l’ouvrir s’écrit au journal']],
                 ]],
                 ['nom' => 'Écritures', 'routes' => [
                     ['m' => 'POST', 'r' => '/ventes/primes-app', 'dit' => 'Enregistre les primes, la récompense, les primes externes, le SMS', 'pages' => $AF],
@@ -55,6 +59,8 @@ function apiModInventaire(): array
                     ['m' => 'POST', 'r' => '/ventes/croisees', 'dit' => 'La règle des ventes croisées (cible, tickets minimum)', 'pages' => ['admin']],
                     ['m' => 'POST', 'r' => '/ventes/grands-prix', 'dit' => 'Crée, modifie, allume ou éteint un grand prix', 'pages' => ['admin']],
                     ['m' => 'POST', 'r' => '/ventes/grands-prix/retirer', 'dit' => 'Retire un grand prix', 'pages' => ['admin']],
+                    ['m' => 'POST', 'r' => '/ventes/moi/profil', 'dit' => 'Enregistre une fiche de « Mon profil » (contrôlée, chiffrée)', 'pages' => ['app']],
+                    ['m' => 'POST', 'r' => '/ventes/moi/profil/carte', 'dit' => 'Dépose une photo de la carte d’identité (chiffrée)', 'pages' => ['app']],
                 ]],
             ]],
         ['cle' => 'panel', 'nom' => 'Panel tfbuddy', 'hote' => 'atelierby.tfbuddy.com/api/v1', 'unite' => 'route',
@@ -112,6 +118,7 @@ function apiModInventaire(): array
                     ['m' => 'ÉCRIT', 'r' => 'mot_reglage', 'dit' => 'Les réglages des primes, les SMS déjà envoyés', 'pages' => $AF, 'garde' => '', 'sonde' => ['table' => ['mot_reglage']]],
                     ['m' => 'ÉCRIT', 'r' => 'mot_cache', 'dit' => 'Les calculs gardés (fiches, mois, équipe, année)', 'pages' => $AFE, 'garde' => '', 'sonde' => ['table' => ['mot_cache']]],
                     ['m' => 'ÉCRIT', 'r' => 'mot_grand_prix', 'dit' => 'Les grands prix', 'pages' => ['admin'], 'garde' => '', 'sonde' => ['table' => ['mot_grand_prix']]],
+                    ['m' => 'ÉCRIT', 'r' => 'mot_profil', 'dit' => 'Les profils des employés, chiffrés (la clé et les photos de la carte hors du site)', 'pages' => ['franchise', 'app'], 'garde' => '', 'sonde' => ['table' => ['mot_profil']]],
                     ['m' => 'ÉCRIT', 'r' => 'ceo_app_setting', 'dit' => 'Les mois de ventes gravés (un mois clos ne se relit plus)', 'pages' => $AFE, 'garde' => '', 'sonde' => ['table' => ['ceo_app_setting']]],
                 ]],
             ]],
@@ -304,6 +311,7 @@ function apiModMesurer(array $inv): array
 
     // Le cockpit : l'âge des calculs gardés, la date des réglages (les tables mot_ créées au besoin).
     if (function_exists('motTables')) { try { motTables(); } catch (Throwable $e) { /* la lecture dira l'erreur */ } }
+    if (function_exists('profilTable')) { try { profilTable(); } catch (Throwable $e) { /* la lecture dira l'erreur */ } }
     foreach ($routes as [$src, $r]) {
         $id = apiModId($src, $r);
         try {

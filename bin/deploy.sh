@@ -183,6 +183,13 @@ mkdir -p "$TARGET_DIR/public/uploads/tablette"
 chown -R www-data:www-data "$TARGET_DIR/public/uploads"
 chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
 
+# Le dossier privé (30/10/2026) : hors du site web et hors du dépôt, la livraison n'y touche pas. Il garde la clé
+# qui chiffre le profil des employés et les photos chiffrées de leur carte d'identité (src/profil_employe.php).
+# Perdre profil.key rend ces données illisibles : il se sauvegarde avec la base.
+mkdir -p /var/lib/consulant_bo/prive/cartes
+chown -R www-data:www-data /var/lib/consulant_bo/prive
+chmod 700 /var/lib/consulant_bo/prive /var/lib/consulant_bo/prive/cartes
+
 # Visuels des campagnes de l'assistant : même règle que les photos plano.
 mkdir -p "$TARGET_DIR/public/assistant/uploads"
 chown -R www-data:www-data "$TARGET_DIR/public/assistant/uploads"

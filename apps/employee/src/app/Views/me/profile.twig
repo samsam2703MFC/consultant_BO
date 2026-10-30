@@ -1,642 +1,464 @@
+{# me/profile.twig — « Mon profil » (30/10/2026, Sam : « que l'employé puisse encoder toutes ses données » ; maquette
+   docs/maquettes/profil-employe). En tête, ce qui manque ; puis identité, coordonnées, urgence, paie, tenue,
+   disponibilités, chacune s'ouvrant en feuille ; la carte d'identité dans la feuille Paie ; « Mon travail » en lecture.
+   Le profil vient du cockpit (ProfilService), chiffré là-bas ; le prénom, le nom, le téléphone et l'e-mail du panel tant
+   que la personne ne les a pas changés. #}
 {% extends "layouts/mobile_base.twig" %}
 {% set active_nav = 'profile' %}
+{% set T = translations %}
+{% set P = profil.profil ?? {} %}
+{% set ok = profil is not null %}
+{% set id = P.identite ?? {} %}
+{% set co = P.coordonnees ?? {} %}
+{% set ur = P.urgence ?? {} %}
+{% set pa = P.paie ?? {} %}
+{% set te = P.tenue ?? {} %}
+{% set di = P.dispo ?? {} %}
+{% set prenom = (id.prenom ?? '') ?: (panel.prenom ?? '') %}
+{% set nom = (id.nom ?? '') ?: (panel.nom ?? '') %}
+{% set telephone = (co.telephone ?? '') ?: (panel.telephone ?? '') %}
+{% set email = (co.email ?? '') ?: (panel.email ?? '') %}
+{% set manque = profil.manque ?? {} %}
+{% set shopNom = shop ? (shop.getRepresentativeName() ?: shop.getName()) : '' %}
+{% set depuis = employee and employee.getCreateTimestamp() ? mois(employee.getCreateTimestamp()|slice(0, 7)) : '' %}
+{% set jours = (T.pf_days ?? 'Lu,Ma,Me,Je,Ve,Sa,Di')|split(',') %}
+{% set cles = ['lu', 'ma', 'me', 'je', 've', 'sa', 'di'] %}
+{% set tailles = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'] %}
+{# La feuille qu'ouvre chaque élément manquant. #}
+{% set feuilleDe = {'identite': 'identite', 'coordonnees': 'coordonnees', 'urgence': 'urgence', 'paie': 'paie', 'tenue': 'tenue', 'dispo': 'dispo', 'carte': 'paie'} %}
+{% set libManque = {
+    'identite.prenom': T.pf_first_name ?? 'Prénom', 'identite.nom': T.pf_last_name ?? 'Nom', 'identite.naissance': T.pf_birth_long ?? 'Date de naissance',
+    'identite.nationalite': T.pf_nationality ?? 'Nationalité', 'coordonnees.telephone': T.pf_phone ?? 'Téléphone', 'coordonnees.email': T.pf_email ?? 'E-mail',
+    'coordonnees.adresse': T.pf_address ?? 'Adresse', 'urgence': T.pf_emergency_contact ?? 'Contact d’urgence', 'paie.statut': T.pf_status ?? 'Statut',
+    'paie.niss': T.pf_niss ?? 'N° national', 'paie.iban': T.pf_iban ?? 'IBAN', 'tenue.tshirt': T.pf_tshirt_size ?? 'Taille de t-shirt',
+    'tenue.veste': T.pf_jacket_size ?? 'Taille de veste', 'tenue.chaussures': T.pf_shoe_size ?? 'Pointure', 'dispo': T.pf_availability ?? 'Disponibilités',
+    'carte': T.pf_id_card ?? 'Carte d’identité'} %}
+{% set statuts = {'employe': T.pf_status_employe ?? 'Employé·e', 'etudiant': T.pf_status_etudiant ?? 'Étudiant·e', 'flexi': T.pf_status_flexi ?? 'Flexi-job'} %}
+{% set langues = {'FR': 'Français', 'EN': 'English', 'NL': 'Nederlands', 'IT': 'Italiano', 'PL': 'Polski'} %}
 
-{% block title %}{{ translations.my_profile ?? 'My profile' }}{% endblock %}
-{% block page_title %}{{ translations.my_profile ?? 'My profile' }}{% endblock %}
-{% block page_subtitle %}
-    {{ translations.profile_subtitle ?? 'Your employee details and roles' }}
-{% endblock %}
+{% macro vide(T) %}<span class="pf-v manque">{{ T.pf_to_complete ?? 'À compléter' }}</span>{% endmacro %}
+{% macro tete(T, titre) %}<div class="fx-poignee"></div><div class="fx-tete"><button type="button" data-ferme>{{ T.pf_cancel ?? 'Annuler' }}</button><b>{{ titre }}</b><button type="submit" class="ok">{{ T.pf_save ?? 'Enregistrer' }}</button></div>{% endmacro %}
+{% macro champ(nom, libelle, valeur, type, extra) %}<label class="fx-champ" data-champ="{{ nom }}"><span>{{ libelle }}</span><input name="{{ nom }}" type="{{ type ?: 'text' }}" value="{{ valeur }}" {{ extra|raw }}><em class="err"></em></label>{% endmacro %}
+{# Un téléphone belge lisible : « +32 470 12 34 56 », « +32 2 123 45 67 » ; les autres tels quels. #}
+{% macro tel(t) %}{% if t|slice(0, 3) == '+32' and t|length == 12 %}+32 {{ t|slice(3, 3) }} {{ t|slice(6, 2) }} {{ t|slice(8, 2) }} {{ t|slice(10, 2) }}{% elseif t|slice(0, 3) == '+32' and t|length == 11 %}+32 {{ t|slice(3, 1) }} {{ t|slice(4, 3) }} {{ t|slice(7, 2) }} {{ t|slice(9, 2) }}{% else %}{{ t }}{% endif %}{% endmacro %}
+{% import _self as f %}
+
+{% block title %}{{ T.pf_title ?? 'Mon profil' }}{% endblock %}
+{% block page_title %}{{ T.pf_title ?? 'Mon profil' }}{% endblock %}
+{% block page_subtitle %}{{ shopNom }}{% if depuis %} · {{ (T.pf_since ?? 'depuis {d}')|replace({'{d}': depuis}) }}{% endif %}{% endblock %}
 
 {% block head %}
-    <style>
-        .hero-card{
-            border-radius: 22px;
-            overflow: hidden;
-            border: 1px solid rgba(0,0,0,.06);
-            background: linear-gradient(135deg, rgba(141,29,44,.12), rgba(255,255,255,1) 55%);
-        }
-        .hero-top{
-            padding: 16px 16px 10px;
-            display:flex;
-            align-items:center;
-            gap:12px;
-        }
-        .avatar{
-            width: 54px;
-            height: 54px;
-            border-radius: 18px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            background: rgba(141,29,44,.14);
-            border: 1px solid rgba(141,29,44,.18);
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            color: #5A121C;
-            flex: 0 0 auto;
-        }
-        .hero-name{
-            margin: 0;
-            font-weight: 900;
-            letter-spacing: -0.02em;
-            line-height: 1.1;
-            font-size: 1.25rem;
-        }
-        .hero-sub{
-            margin: 4px 0 0;
-            color: var(--la-muet);
-            font-size: .9rem;
-        }
-        .chips{
-            padding: 0 16px 14px;
-            display:flex;
-            flex-wrap:wrap;
-            gap:8px;
-        }
-        .chip{
-            display:inline-flex;
-            align-items:center;
-            gap:6px;
-            padding: .4rem .65rem;
-            border-radius: 999px;
-            border: 1px solid rgba(0,0,0,.06);
-            background: rgba(255,255,255,.85);
-            font-weight: 700;
-            font-size: .78rem;
-            color: #3d3a36;
-        }
-        .chip i{ font-size: .95rem; opacity: .85; }
-
-        .section-title{
-            font-weight: 900;
-            letter-spacing: -0.02em;
-            font-size: 1.02rem;
-            margin: 16px 0 10px;
-        }
-
-        .info-row{
-            display:flex;
-            justify-content:space-between;
-            align-items:flex-start;
-            gap: 10px;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(0,0,0,.06);
-        }
-        .info-row:last-child{ border-bottom: 0; }
-
-        .info-label{
-            color: var(--la-muet);
-            font-size: .86rem;
-            min-width: 110px;
-        }
-        .info-value{
-            text-align:right;
-            font-weight: 800;
-            color: var(--la-encre);
-            font-size: .92rem;
-            word-break: break-word;
-        }
-
-        .btn-soft{
-            border-radius: 14px;
-            padding: .85rem .95rem;
-            font-weight: 800;
-            border: 1px solid rgba(0,0,0,.06);
-            background: rgba(255,255,255,.9);
-        }
-
-        .card{
-            border-radius: 18px;
-            border: 1px solid rgba(0,0,0,.06);
-        }
-
-        .empty-state{
-            padding: 14px;
-            border-radius: 18px;
-            border: 1px dashed rgba(0,0,0,.12);
-            background: rgba(255,255,255,.75);
-            color: var(--la-muet);
-            font-size: .92rem;
-        }
-
-        /* Position cards */
-        .pos-card{
-            border-radius: 18px;
-            border: 1px solid rgba(0,0,0,.06);
-            background: rgba(255,255,255,.92);
-            overflow: hidden;
-        }
-        .pos-top{
-            display:flex;
-            justify-content:space-between;
-            align-items:flex-start;
-            gap:12px;
-        }
-        .pos-name{
-            font-weight: 900;
-            letter-spacing: -0.02em;
-            margin: 0;
-            font-size: 1.02rem;
-            line-height: 1.2;
-        }
-        .pos-desc{
-            margin: 6px 0 0;
-            color: var(--la-muet);
-            font-size: .9rem;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .badge-soft{
-            border-radius: 999px;
-            padding: .35rem .6rem;
-            font-weight: 900;
-            font-size: .75rem;
-            border: 1px solid rgba(141,29,44,.18);
-            background: rgba(141,29,44,.10);
-            color: #5A121C;
-            white-space: nowrap;
-        }
-        .badge-mini{
-            border-radius: 999px;
-            padding: .28rem .55rem;
-            font-weight: 800;
-            font-size: .72rem;
-            border: 1px solid rgba(0,0,0,.08);
-            background: rgba(255,255,255,.9);
-            color: #3d3a36;
-            white-space: nowrap;
-        }
-
-        /* Competency list */
-        .comp-item{
-            border-radius: 16px;
-            border: 1px solid rgba(0,0,0,.06);
-            background: rgba(255,255,255,.92);
-            padding: 12px 12px;
-        }
-        .comp-title{
-            font-weight: 900;
-            margin: 0;
-            font-size: .98rem;
-            letter-spacing: -0.01em;
-            line-height: 1.2;
-        }
-        .comp-meta{
-            margin-top: 6px;
-            display:flex;
-            flex-wrap:wrap;
-            gap:8px;
-            align-items:center;
-            color:var(--la-muet);
-            font-size:.82rem;
-        }
-        .comp-desc{
-            margin: 8px 0 0;
-            color:var(--la-muet);
-            font-size:.9rem;
-            display: -webkit-box;
-            -webkit-line-clamp: 4;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        /* Collapsible competencies by category */
-        .cat-accordion{
-            border: 1px solid rgba(0,0,0,.06);
-            border-radius: 18px;
-            background: rgba(255,255,255,.92);
-            overflow: hidden;
-        }
-        .cat-accordion details{
-            border-top: 1px solid rgba(0,0,0,.06);
-        }
-        .cat-accordion details:first-child{ border-top: 0; }
-
-        .cat-accordion summary{
-            list-style: none;
-            cursor: pointer;
-            padding: 12px 14px;
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:10px;
-            user-select:none;
-        }
-        .cat-accordion summary::-webkit-details-marker{ display:none; }
-
-        .cat-title{
-            display:flex;
-            align-items:center;
-            gap:10px;
-            min-width:0;
-        }
-        .cat-title .name{
-            font-weight: 950;
-            letter-spacing: -0.02em;
-            color:#5A121C;
-            font-size: .95rem;
-            white-space:nowrap;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            max-width: 240px;
-        }
-        .cat-title .icon{
-            width: 34px; height: 34px;
-            border-radius: 12px;
-            display:flex; align-items:center; justify-content:center;
-            background: rgba(141,29,44,.10);
-            border: 1px solid rgba(141,29,44,.14);
-            color:#5A121C;
-            flex: 0 0 auto;
-        }
-        .cat-right{
-            display:flex;
-            align-items:center;
-            gap:10px;
-            flex: 0 0 auto;
-        }
-        .cat-count{
-            font-weight: 900;
-            font-size: .75rem;
-            color: var(--la-muet);
-            border: 1px solid rgba(0,0,0,.08);
-            border-radius: 999px;
-            padding: .18rem .45rem;
-            background: rgba(255,255,255,.9);
-            white-space: nowrap;
-        }
-        .chev{ color:var(--la-muet); transition: transform .12s ease; }
-        details[open] .chev{ transform: rotate(180deg); }
-
-        .cat-body{
-            padding: 0 14px 14px;
-        }
-        .subhead{
-            margin: 10px 0 8px;
-            font-weight: 900;
-            font-size: .86rem;
-            color:#3d3a36;
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:10px;
-        }
-        .subhead .mini-count{
-            font-weight: 900;
-            font-size: .72rem;
-            color: var(--la-muet);
-            border: 1px solid rgba(0,0,0,.08);
-            border-radius: 999px;
-            padding: .12rem .4rem;
-            background: rgba(255,255,255,.9);
-            white-space: nowrap;
-        }
-
-        .shop-actions{
-            display:grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 12px;
-        }
-    </style>
+<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}">
+<style>
+  .pf-heros{background:var(--s-carte);border-radius:18px;padding:16px;margin-bottom:18px}
+  .pf-qui{display:flex;align-items:center;gap:14px}
+  .pf-av{width:60px;height:60px;border-radius:50%;background:var(--s-accent);color:#fff;display:flex;align-items:center;justify-content:center;font:600 22px var(--s-police);flex:0 0 auto}
+  .pf-nom{font:600 20px/1.2 var(--s-police);color:var(--s-texte)}
+  .pf-ou{font:400 14px var(--s-police);color:var(--s-second);margin-top:2px}
+  .pf-comp{margin-top:14px}
+  .pf-comp .l{display:flex;justify-content:space-between;font:600 13px var(--s-police);color:var(--s-texte)}
+  .pf-comp .l span{color:var(--s-second);font-weight:400}
+  .pf-comp .bar{height:6px;border-radius:3px;background:var(--s-remplir);margin-top:7px;overflow:hidden}
+  .pf-comp .bar i{display:block;height:100%;background:var(--s-accent);border-radius:3px}
+  .pf-comp.fini .bar i{background:var(--s-vert)}
+  .pf-manque{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .pf-manque button{font:500 12.5px var(--s-police);color:var(--s-accent);background:var(--s-accent-doux);border:0;border-radius:999px;padding:4px 10px}
+  .pf-sec{display:flex;align-items:baseline;justify-content:space-between;margin:0 4px 7px;font:600 13px var(--s-police);letter-spacing:.02em;text-transform:uppercase;color:var(--s-second)}
+  .pf-sec small{text-transform:none;letter-spacing:0;font-weight:400;display:flex;align-items:center;gap:4px}
+  .pf-g{background:var(--s-carte);border-radius:16px;overflow:hidden;margin-bottom:8px}
+  .pf-l{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-height:46px;padding:11px 34px 11px 16px;color:inherit;text-decoration:none;background:none;border:0;text-align:left}
+  .pf-l+.pf-l::before{content:'';position:absolute;left:16px;right:0;top:0;border-top:.5px solid var(--s-trait)}
+  .pf-l::after{content:'';position:absolute;right:17px;top:50%;width:7px;height:7px;margin-top:-4px;border-right:2px solid var(--s-tertiaire);border-bottom:2px solid var(--s-tertiaire);transform:rotate(-45deg)}
+  .pf-l.fixe{padding-right:16px}.pf-l.fixe::after{display:none}
+  .pf-l:disabled{opacity:1}
+  .pf-k{flex:0 0 auto;font:400 16px var(--s-police);color:var(--s-texte)}
+  .pf-v{flex:1;min-width:0;text-align:right;font:400 16px var(--s-police);color:var(--s-second);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pf-v.manque{color:var(--s-accent)}
+  .pf-v.manque::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--s-accent);margin-right:7px;vertical-align:1px}
+  .pf-v.multi{white-space:normal;line-height:1.3}
+  .pf-v .corr{display:inline-block;width:7px;height:7px;border-radius:50%;background:#E08A1E;margin-right:6px;vertical-align:1px}
+  .pf-note{margin:0 16px 18px;font:400 12.5px/1.4 var(--s-police);color:var(--s-second)}
+  .pf-note i{margin-right:4px}
+  .pf-esp{height:10px}
+  .pf-alerte{background:var(--s-carte);border-radius:14px;padding:12px 14px;margin-bottom:14px;font:400 14px var(--s-police);color:var(--s-second)}
+  .pf-dispo{padding:12px 16px 14px;display:block;width:100%;background:none;border:0;text-align:left}
+  .pf-dispo .j{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
+  .pf-dispo .j+.j{margin-top:5px}
+  .pf-dispo .j b{font:600 11px var(--s-police);color:var(--s-second);text-transform:uppercase;letter-spacing:.03em}
+  .pf-dispo .j i{display:block;height:22px;border-radius:7px;background:var(--s-remplir);font:500 10.5px/22px var(--s-police);font-style:normal;color:var(--s-second)}
+  .pf-dispo .j i.on{background:var(--s-vert-doux);color:var(--s-vert)}
+  .pf-dispo .lg{display:flex;justify-content:space-between;gap:10px;margin-top:8px;font:400 12px var(--s-police);color:var(--s-second)}
+  .pf-dispo .lg span:last-child{text-align:right}
+  /* Les feuilles de saisie */
+  dialog.fx{position:fixed;inset:auto 0 0 0;width:100%;max-width:520px;margin:0 auto;max-height:92vh;padding:0;border:0;border-radius:16px 16px 0 0;background:var(--s-fond);box-shadow:0 -6px 24px rgba(0,0,0,.18);overflow:auto}
+  dialog.fx::backdrop{background:rgba(0,0,0,.3)}
+  .fx-poignee{width:38px;height:5px;border-radius:3px;background:var(--s-tertiaire);margin:7px auto 0}
+  .fx-tete{position:sticky;top:0;z-index:2;background:var(--s-fond);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px 12px}
+  .fx-tete button{background:none;border:0;padding:4px 0;font:400 16px var(--s-police);color:var(--s-accent)}
+  .fx-tete button.ok{font-weight:600}
+  .fx-tete button:disabled{color:var(--s-tertiaire)}
+  .fx-tete b{font:600 17px var(--s-police);color:var(--s-texte)}
+  .fx-corps{padding:0 16px 28px}
+  .fx-champ{position:relative;display:block;padding:9px 16px 10px;margin:0}
+  .fx-champ+.fx-champ::before{content:'';position:absolute;left:16px;right:0;top:0;border-top:.5px solid var(--s-trait)}
+  .fx-champ>span{display:block;font:400 12.5px var(--s-police);color:var(--s-second)}
+  .fx-champ input,.fx-champ textarea{display:block;width:100%;border:0;padding:3px 0 0;background:none;font:400 17px var(--s-police);color:var(--s-texte);font-variant-numeric:tabular-nums;outline:none}
+  .fx-champ textarea{resize:none;min-height:46px}
+  .fx-champ input::placeholder,.fx-champ textarea::placeholder{color:var(--s-tertiaire)}
+  .fx-champ .err{display:none;font:500 12.5px var(--s-police);color:#B3261E;margin-top:3px}
+  .fx-champ.ko .err{display:block}
+  .fx-champ .aide{display:block;font:400 12.5px var(--s-police);color:var(--s-second);margin-top:3px}
+  .fx-champ .aide.bon{color:var(--s-vert)}
+  .fx-deux{display:grid;grid-template-columns:1fr 1fr}
+  .fx-deux .fx-champ+.fx-champ::before{left:0}
+  .fx-seg{display:flex;background:var(--s-remplir);border-radius:9px;padding:2px;margin-top:6px}
+  .fx-seg label{flex:1;margin:0}
+  .fx-seg input{position:absolute;opacity:0;pointer-events:none}
+  .fx-seg span{display:block;text-align:center;padding:6px 0;border-radius:7px;font:500 13.5px var(--s-police);color:var(--s-texte)}
+  .fx-seg input:checked+span{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+  .fx-grille{padding:12px 16px}
+  .fx-grille .j{display:grid;grid-template-columns:52px repeat(7,1fr);gap:5px;align-items:center;text-align:center}
+  .fx-grille .j+.j{margin-top:6px}
+  .fx-grille b{font:600 11px var(--s-police);color:var(--s-second);text-transform:uppercase}
+  .fx-grille .t{font:400 12.5px var(--s-police);color:var(--s-second);text-align:left}
+  .fx-grille label{margin:0}
+  .fx-grille input{position:absolute;opacity:0;pointer-events:none}
+  .fx-grille span{display:block;height:34px;border-radius:9px;background:var(--s-remplir)}
+  .fx-grille input:checked+span{background:var(--s-vert);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+  .fx-carte{display:flex;align-items:center;gap:12px;padding:12px 16px;margin:0;cursor:pointer}
+  .fx-carte+.fx-carte{border-top:.5px solid var(--s-trait)}
+  .fx-carte input{display:none}
+  .fx-carte i{width:44px;height:32px;border-radius:6px;background:var(--s-remplir);display:flex;align-items:center;justify-content:center;color:var(--s-second);font-size:16px;flex:0 0 auto}
+  .fx-carte.fait i{background:var(--s-vert-doux);color:var(--s-vert)}
+  .fx-carte b{display:block;font:400 15px var(--s-police);color:var(--s-accent)}
+  .fx-carte small{display:block;font:400 12.5px var(--s-police);color:var(--s-second)}
+  .fx-msg{display:none;margin:0 4px 12px;font:500 13px var(--s-police);color:#B3261E}
+  .fx-msg.on{display:block}
+  .fx-liste{padding:4px 16px}
+  .fx-liste div{padding:9px 0;border-bottom:.5px solid var(--s-trait);font:400 15px var(--s-police);color:var(--s-texte)}
+  .fx-liste div:last-child{border-bottom:0}
+  .fx-liste small{display:block;font:400 12.5px var(--s-police);color:var(--s-second)}
+</style>
 {% endblock %}
 
 {% block content %}
+{% if not ok %}
+<div class="pf-alerte"><i class="bi bi-cloud-slash me-1"></i>{{ T.pf_unavailable ?? 'Ton profil ne peut pas être lu pour l’instant. Réessaie dans un moment.' }}</div>
+{% endif %}
 
-    {% set displayName = employee.getDisplayName() ?: (employee.getName() ~ ' ' ~ employee.getSurname()) %}
-    {% set initials = (employee.getName()|default('')|slice(0,1) ~ employee.getSurname()|default('')|slice(0,1))|upper %}
-    {% set lang = employee.getLangCode()|default('')|upper %}
+{# ── En tête : qui, et ce qui manque ── #}
+{% set complet = profil.complet ?? 0 %}
+<div class="pf-heros">
+  <div class="pf-qui"><div class="pf-av">{{ ((prenom|slice(0,1)) ~ (nom|slice(0,1)))|upper ?: (T.me_abbr ?? 'MOI') }}</div>
+    <div><div class="pf-nom">{{ (prenom ~ ' ' ~ nom)|trim ?: (employee ? employee.getDisplayName() : '') }}</div>
+      <div class="pf-ou">{{ employee and employee.getPositions() is not empty ? employee.getPositions()[0].getName() ~ ' · ' : '' }}{{ shopNom }}</div></div></div>
+  {% if ok %}
+  <div class="pf-comp{{ complet >= 100 ? ' fini' }}" data-complet="{{ complet }}">
+    <div class="l">{{ (T.pf_complete ?? 'Profil complet à {p} %')|replace({'{p}': complet}) }}
+      <span>{% if manque|length %}{{ (T.pf_to_fill ?? '{n} à compléter')|replace({'{n}': manque|length}) }}{% else %}{{ T.pf_all_done ?? 'Tout est rempli' }}{% endif %}</span></div>
+    <div class="bar"><i style="width:{{ complet }}%"></i></div>
+    {% if manque|length %}<div class="pf-manque">{% for k, l in manque %}{% if loop.index <= 4 %}<button type="button" data-ouvre="{{ feuilleDe[k|split('.')[0]] ?? 'identite' }}">{{ libManque[k] ?? l }}</button>{% endif %}{% endfor %}</div>{% endif %}
+  </div>
+  {% endif %}
+</div>
 
-    {% set positions = employee.getPositions()|default([]) %}
-    {% set comps = employee.getCompetencies()|default([]) %}
+{# ── Identité ── #}
+<div class="pf-sec">{{ T.pf_identity ?? 'Identité' }}</div>
+<div class="pf-g">
+  <button type="button" class="pf-l" data-ouvre="identite"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_first_name ?? 'Prénom' }}</span>{% if prenom %}<span class="pf-v">{% if profil.corrections['identite.prenom'] is defined %}<i class="corr"></i>{% endif %}{{ prenom }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+  <button type="button" class="pf-l" data-ouvre="identite"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_last_name ?? 'Nom' }}</span>{% if nom %}<span class="pf-v">{% if profil.corrections['identite.nom'] is defined %}<i class="corr"></i>{% endif %}{{ nom }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+  <button type="button" class="pf-l" data-ouvre="identite"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_birth ?? 'Naissance' }}</span>{% if id.naissance ?? '' %}<span class="pf-v">{{ id.naissance|date('j') }} {{ mois(id.naissance) }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+  <button type="button" class="pf-l" data-ouvre="identite"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_nationality ?? 'Nationalité' }}</span>{% if id.nationalite ?? '' %}<span class="pf-v">{{ id.nationalite }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+</div>
+<p class="pf-note">{{ T.pf_from_account ?? 'Ton prénom, ton nom, ton téléphone et ton e-mail viennent de ton compte ; une correction est signalée au magasin.' }}</p>
 
-    {# HERO #}
-    <div class="hero-card mb-3">
-        <div class="hero-top">
-            <div class="avatar">{{ initials ?: (translations.me_abbr ?? 'ME') }}</div>
-            <div class="flex-grow-1">
-                <h2 class="hero-name">{{ displayName }}</h2>
-                <div class="hero-sub">
-                    {{ translations.employee_id ?? 'Employee ID' }}: {{ employee.getId() }}
-                    {% if employee.getLogin() %} • {{ translations.login ?? 'Login' }}: {{ employee.getLogin() }}{% endif %}
-                </div>
-            </div>
-        </div>
+{# ── Coordonnées ── #}
+<div class="pf-sec">{{ T.pf_contact ?? 'Coordonnées' }}</div>
+<div class="pf-g">
+  <button type="button" class="pf-l" data-ouvre="coordonnees"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_phone ?? 'Téléphone' }}</span>{% if telephone %}<span class="pf-v">{% if profil.corrections['coordonnees.telephone'] is defined %}<i class="corr"></i>{% endif %}{{ f.tel(telephone) }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+  <button type="button" class="pf-l" data-ouvre="coordonnees"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_email ?? 'E-mail' }}</span>{% if email %}<span class="pf-v">{% if profil.corrections['coordonnees.email'] is defined %}<i class="corr"></i>{% endif %}{{ email }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+  <button type="button" class="pf-l" data-ouvre="coordonnees"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_address ?? 'Adresse' }}</span>{% if (co.rue ?? '') and (co.ville ?? '') %}<span class="pf-v multi">{{ co.rue }} {{ co.numero ?? '' }}{% if co.boite ?? '' %} / {{ co.boite }}{% endif %}<br>{{ co.cp ?? '' }} {{ co.ville }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+</div>
+<div class="pf-esp"></div>
 
-        <div class="chips">
-        <span class="chip">
-            <i class="bi bi-shop"></i>
-            {{ shop.getRepresentativeName() ?: shop.getName() }}
-        </span>
+{# ── En cas d'urgence ── #}
+<div class="pf-sec">{{ T.pf_emergency ?? 'En cas d’urgence' }}</div>
+<div class="pf-g">
+  <button type="button" class="pf-l" data-ouvre="urgence"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_emergency_person ?? 'Personne à prévenir' }}</span>{% if (ur.nom ?? '') and (ur.telephone ?? '') %}<span class="pf-v multi">{{ ur.nom }}{% if ur.lien ?? '' %} · {{ ur.lien }}{% endif %}<br>{{ f.tel(ur.telephone) }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+</div>
+<p class="pf-note">{{ T.pf_emergency_note ?? 'Son nom, son lien avec toi et son téléphone. Seul ton magasin le voit.' }}</p>
 
-            {% if employee.getProductionAreaName() %}
-                <span class="chip">
-                <i class="bi bi-diagram-3"></i>
-                {{ employee.getProductionAreaName() }}
-            </span>
-            {% endif %}
+{# ── Paie ── #}
+<div class="pf-sec">{{ T.pf_pay ?? 'Paie' }} <small><i class="bi bi-lock-fill"></i> {{ T.pf_private ?? 'privé' }}</small></div>
+<div class="pf-g">
+  <button type="button" class="pf-l" data-ouvre="paie"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_status ?? 'Statut' }}</span>{% if pa.statut ?? '' %}<span class="pf-v">{{ statuts[pa.statut] ?? pa.statut }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+  <button type="button" class="pf-l" data-ouvre="paie"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_niss ?? 'N° national' }}</span>{% if pa.niss ?? '' %}<span class="pf-v">{{ pa.niss|slice(0, 9) }}•••.••</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+  <button type="button" class="pf-l" data-ouvre="paie"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_iban ?? 'IBAN' }}</span>{% if pa.iban ?? '' %}<span class="pf-v">{{ pa.iban|slice(0, 4) }} •••• {{ pa.iban|replace({' ': ''})|slice(-4) }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+  <button type="button" class="pf-l" data-ouvre="paie"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_id_card ?? 'Carte d’identité' }}</span>{% if (profil.carte.recto ?? null) and (profil.carte.verso ?? null) %}<span class="pf-v">{{ T.pf_id_both ?? 'Recto et verso' }} ✓</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+</div>
+<p class="pf-note"><i class="bi bi-shield-lock"></i>{{ T.pf_pay_note ?? 'Visible par toi, ton franchisé et la marque seulement. Gardé chiffré.' }}</p>
 
-            {% if lang %}
-                <span class="chip">
-                <i class="bi bi-translate"></i>
-                {{ translations.language ?? 'Language' }}: {{ lang }}
-            </span>
-            {% endif %}
+{# ── Tenue ── #}
+<div class="pf-sec">{{ T.pf_outfit ?? 'Tenue' }}</div>
+<div class="pf-g">
+  <button type="button" class="pf-l" data-ouvre="tenue"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_tshirt ?? 'T-shirt' }}</span>{% if te.tshirt ?? '' %}<span class="pf-v">{{ te.tshirt }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+  <button type="button" class="pf-l" data-ouvre="tenue"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_jacket ?? 'Veste' }}</span>{% if te.veste ?? '' %}<span class="pf-v">{{ te.veste }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+  <button type="button" class="pf-l" data-ouvre="tenue"{{ ok ? '' : ' disabled' }}><span class="pf-k">{{ T.pf_shoes ?? 'Chaussures' }}</span>{% if te.chaussures ?? '' %}<span class="pf-v">{{ te.chaussures }}</span>{% else %}{{ f.vide(T) }}{% endif %}</button>
+</div>
+<div class="pf-esp"></div>
 
-            <span class="chip">
-            <i class="bi bi-award"></i>
-            {{ translations.positions ?? 'Positions' }}: {{ positions|length }}
-        </span>
+{# ── Disponibilités ── #}
+<div class="pf-sec">{{ T.pf_availability ?? 'Disponibilités' }} <small>{{ T.pf_editable ?? 'modifiable' }}</small></div>
+<div class="pf-g">
+  <button type="button" class="pf-dispo" data-ouvre="dispo"{{ ok ? '' : ' disabled' }}>
+    <div class="j">{% for j in jours %}<b>{{ j }}</b>{% endfor %}</div>
+    <div class="j" style="margin-top:6px">{% for c in cles %}<i class="{{ (di.grille[c].m ?? false) ? 'on' }}">{{ T.pf_morning ?? 'matin' }}</i>{% endfor %}</div>
+    <div class="j">{% for c in cles %}<i class="{{ (di.grille[c].a ?? false) ? 'on' }}">{{ T.pf_afternoon ?? 'a-m' }}</i>{% endfor %}</div>
+    <div class="lg"><span>{{ T.pf_avail_legend ?? 'Vert : je peux travailler' }}</span><span>{{ di.remarque ?? '' }}</span></div>
+  </button>
+</div>
+<div class="pf-esp"></div>
 
-            <span class="chip">
-            <i class="bi bi-journal-check"></i>
-            {{ translations.competencies ?? 'Competencies' }}: {{ comps|length }}
-        </span>
-        </div>
+{# ── Mon travail (le panel, en lecture) ── #}
+{% set positions = employee ? employee.getPositions()|default([]) : [] %}
+{% set comps = employee ? employee.getCompetencies()|default([]) : [] %}
+<div class="pf-sec">{{ T.pf_work ?? 'Mon travail' }}</div>
+<div class="pf-g">
+  <div class="pf-l fixe"><span class="pf-k">{{ T.pf_shop ?? 'Magasin' }}</span><span class="pf-v">{{ shopNom ?: '—' }}</span></div>
+  <div class="pf-l fixe"><span class="pf-k">{{ T.pf_positions ?? 'Postes' }}</span><span class="pf-v">{% for p in positions %}{{ p.getName() }}{{ loop.last ? '' : ', ' }}{% else %}{{ T.pf_none ?? 'Aucun' }}{% endfor %}</span></div>
+  <button type="button" class="pf-l" data-ouvre="competences"{{ comps is empty ? ' disabled' }}><span class="pf-k">{{ T.pf_competencies ?? 'Compétences' }}</span><span class="pf-v">{{ comps|length }}</span></button>
+</div>
+<div class="pf-esp"></div>
+
+<div class="pf-g">
+  <div class="pf-l fixe"><span class="pf-k">{{ T.pf_language ?? 'Langue de l’app' }}</span><span class="pf-v">{{ langues[(employee ? employee.getLangCode() : '')|upper] ?? (employee ? employee.getLangCode()|upper : '') }}</span></div>
+  <a class="pf-l fixe" href="{{ ROOT }}/logout"><span class="pf-k" style="color:var(--s-accent)">{{ T.pf_logout ?? 'Se déconnecter' }}</span></a>
+</div>
+
+{% if ok %}
+{# ══ Les feuilles de saisie ══ #}
+
+<dialog class="fx" id="fx-identite"><form data-section="identite" novalidate>
+  {{ f.tete(T, T.pf_identity ?? 'Identité') }}
+  <div class="fx-corps"><p class="fx-msg"></p>
+    <div class="pf-g">
+      {{ f.champ('prenom', T.pf_first_name ?? 'Prénom', prenom, 'text', 'autocomplete="given-name" maxlength="60"') }}
+      {{ f.champ('nom', T.pf_last_name ?? 'Nom', nom, 'text', 'autocomplete="family-name" maxlength="60"') }}
+      {{ f.champ('naissance', T.pf_birth_long ?? 'Date de naissance', id.naissance ?? '', 'date', 'autocomplete="bday" max="' ~ 'now'|date('Y-m-d') ~ '"') }}
+      {{ f.champ('nationalite', T.pf_nationality ?? 'Nationalité', id.nationalite ?? '', 'text', 'list="pf-nationalites" maxlength="40"') }}
     </div>
+    <p class="pf-note" style="margin:0 4px">{{ T.pf_from_account ?? 'Ton prénom, ton nom, ton téléphone et ton e-mail viennent de ton compte ; une correction est signalée au magasin.' }}</p>
+  </div>
+  <datalist id="pf-nationalites">{% for n in (T.pf_nationalities ?? 'Belge,Française,Néerlandaise,Luxembourgeoise,Italienne,Espagnole,Portugaise,Polonaise,Roumaine,Marocaine,Turque,Algérienne,Tunisienne,Congolaise')|split(',') %}<option value="{{ n }}">{% endfor %}</datalist>
+</form></dialog>
 
-    {# CONTACT (tylko dane pracownika bez CTA do dzwonienia) #}
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="section-title">{{ translations.contact ?? 'Contact' }}</div>
-
-            <div class="info-row">
-                <div class="info-label">{{ translations.phone ?? 'Phone' }}</div>
-                <div class="info-value">{{ employee.getPhone() ?: '-' }}</div>
-            </div>
-
-            <div class="info-row">
-                <div class="info-label">{{ translations.email ?? 'Email' }}</div>
-                <div class="info-value">{{ employee.getEmail() ?: '-' }}</div>
-            </div>
-
-            <div class="info-row">
-                <div class="info-label">{{ translations.language ?? 'Language' }}</div>
-                <div class="info-value">{{ lang ?: '-' }}</div>
-            </div>
-        </div>
+<dialog class="fx" id="fx-coordonnees"><form data-section="coordonnees" novalidate>
+  {{ f.tete(T, T.pf_contact ?? 'Coordonnées') }}
+  <div class="fx-corps"><p class="fx-msg"></p>
+    <div class="pf-g">
+      {{ f.champ('telephone', T.pf_phone ?? 'Téléphone', telephone, 'tel', 'autocomplete="tel" inputmode="tel"') }}
+      {{ f.champ('email', T.pf_email ?? 'E-mail', email, 'email', 'autocomplete="email" inputmode="email"') }}
     </div>
-
-    {# WORKPLACE / SHOP + SHOP CONTACT CTA #}
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="section-title">{{ translations.workplace ?? 'Workplace' }}</div>
-
-            <div class="info-row">
-                <div class="info-label">{{ translations.shop ?? 'Shop' }}</div>
-                <div class="info-value">{{ shop.getRepresentativeName() ?: shop.getName() }}</div>
-            </div>
-
-            <div class="info-row">
-                <div class="info-label">{{ translations.address ?? 'Address' }}</div>
-                <div class="info-value">
-                    {{ shop.getStreet() }} {{ shop.getStreetNum() }},
-                    {{ shop.getZip() }} {{ shop.getCity() }}
-                    {% if shop.getCountryCode() %} ({{ shop.getCountryCode() }}){% endif %}
-                </div>
-            </div>
-
-            {% set open_h = shop.getOpeningHour() %}
-            {% set open_m = shop.getOpeningMinute() %}
-            {% set close_h = shop.getClosingHour() %}
-            {% set close_m = shop.getClosingMinute() %}
-
-            <div class="info-row">
-                <div class="info-label">{{ translations.opening_hours ?? 'Hours' }}</div>
-                <div class="info-value">
-                    {{ "%02d"|format(open_h) }}:{{ "%02d"|format(open_m) }}
-                    –
-                    {{ "%02d"|format(close_h) }}:{{ "%02d"|format(close_m) }}
-                </div>
-            </div>
-
-            {% if shop.getTaxNumber() %}
-                <div class="info-row">
-                    <div class="info-label">{{ translations.tax_number ?? 'Tax no.' }}</div>
-                    <div class="info-value">{{ shop.getTaxNumberPrefixe() }} {{ shop.getTaxNumber() }}</div>
-                </div>
-            {% endif %}
-
-            {# Shop contact subsection #}
-            <div class="section-title" style="margin-top: 14px;">
-                {{ translations.shop_contact ?? 'Shop contact' }}
-            </div>
-
-            <div class="info-row">
-                <div class="info-label">{{ translations.phone ?? 'Phone' }}</div>
-                <div class="info-value">{{ shop.getPhone() ?: '-' }}</div>
-            </div>
-
-            <div class="info-row">
-                <div class="info-label">{{ translations.email ?? 'Email' }}</div>
-                <div class="info-value">{{ shop.getEmail() ?: '-' }}</div>
-            </div>
-
-            <div class="shop-actions">
-                {% if shop.getPhone() %}
-                    <a class="btn btn-soft w-100" href="tel:{{ shop.getPhone() }}">
-                        <i class="bi bi-telephone me-1"></i>{{ translations.call_shop ?? 'Call shop' }}
-                    </a>
-                {% else %}
-                    <button class="btn btn-soft w-100" type="button" disabled>
-                        <i class="bi bi-telephone me-1"></i>{{ translations.call_shop ?? 'Call shop' }}
-                    </button>
-                {% endif %}
-
-                {% if shop.getEmail() %}
-                    <a class="btn btn-soft w-100" href="mailto:{{ shop.getEmail() }}">
-                        <i class="bi bi-envelope me-1"></i>{{ translations.email_shop ?? 'Email shop' }}
-                    </a>
-                {% else %}
-                    <button class="btn btn-soft w-100" type="button" disabled>
-                        <i class="bi bi-envelope me-1"></i>{{ translations.email_shop ?? 'Email shop' }}
-                    </button>
-                {% endif %}
-            </div>
-        </div>
+    <div class="pf-g">
+      {{ f.champ('rue', T.pf_street ?? 'Rue', co.rue ?? '', 'text', 'autocomplete="address-line1" maxlength="80"') }}
+      <div class="fx-deux">{{ f.champ('numero', T.pf_number ?? 'Numéro', co.numero ?? '', 'text', 'maxlength="10"') }}{{ f.champ('boite', T.pf_box ?? 'Boîte', co.boite ?? '', 'text', 'maxlength="10"') }}</div>
+      <div class="fx-deux">{{ f.champ('cp', T.pf_zip ?? 'Code postal', co.cp ?? '', 'text', 'autocomplete="postal-code" inputmode="numeric" maxlength="10"') }}{{ f.champ('ville', T.pf_city ?? 'Ville', co.ville ?? '', 'text', 'autocomplete="address-level2" maxlength="60"') }}</div>
+      {{ f.champ('pays', T.pf_country ?? 'Pays', co.pays ?? (T.pf_country_default ?? 'Belgique'), 'text', 'autocomplete="country-name" maxlength="40"') }}
     </div>
+  </div>
+</form></dialog>
 
-    {# POSITIONS (z levelem, bez level_order i bez id) #}
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="section-title">{{ translations.positions ?? 'Positions' }}</div>
-
-            {% if positions is empty %}
-                <div class="empty-state">
-                    <i class="bi bi-info-circle me-1"></i>
-                    {{ translations.no_positions ?? 'No positions assigned yet.' }}
-                </div>
-            {% else %}
-                <div class="d-grid gap-2">
-                    {% for p in positions %}
-                        <div class="pos-card">
-                            <div class="p-3">
-                                <div class="pos-top">
-                                    <div class="flex-grow-1">
-                                        <h3 class="pos-name">{{ p.getName() }}</h3>
-
-                                        {% if p.getLevelName() %}
-                                            <div class="mt-2 d-flex flex-wrap gap-2">
-                                            <span class="badge-soft">
-                                                <i class="bi bi-layers me-1"></i>
-                                                {{ p.getLevelName() }}
-                                            </span>
-                                            </div>
-                                        {% endif %}
-
-                                        {% if p.getDescription() %}
-                                            <p class="pos-desc">{{ p.getDescription() }}</p>
-                                        {% endif %}
-                                    </div>
-                                </div>
-
-                                {% if p.getLevelDescription() %}
-                                    <div class="mt-2 text-muted small">
-                                        <i class="bi bi-info-circle me-1"></i>
-                                        {{ p.getLevelDescription()|slice(0,140) }}{% if p.getLevelDescription()|length > 140 %}…{% endif %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
+<dialog class="fx" id="fx-urgence"><form data-section="urgence" novalidate>
+  {{ f.tete(T, T.pf_emergency ?? 'En cas d’urgence') }}
+  <div class="fx-corps"><p class="fx-msg"></p>
+    <div class="pf-g">
+      {{ f.champ('nom', T.pf_name ?? 'Nom', ur.nom ?? '', 'text', 'maxlength="80"') }}
+      {{ f.champ('lien', T.pf_relation ?? 'Lien', ur.lien ?? '', 'text', 'list="pf-liens" maxlength="30"') }}
+      {{ f.champ('telephone', T.pf_phone ?? 'Téléphone', ur.telephone ?? '', 'tel', 'inputmode="tel"') }}
     </div>
+    <p class="pf-note" style="margin:0 4px">{{ T.pf_emergency_note ?? 'Son nom, son lien avec toi et son téléphone. Seul ton magasin le voit.' }}</p>
+  </div>
+  <datalist id="pf-liens">{% for n in (T.pf_relations ?? 'Parent,Conjoint·e,Frère / sœur,Ami·e')|split(',') %}<option value="{{ n }}">{% endfor %}</datalist>
+</form></dialog>
 
-    {# COMPETENCIES (zwinięte domyślnie per KATEGORIA) #}
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="section-title">{{ translations.competencies ?? 'Competencies' }}</div>
-
-            {% if comps is empty %}
-                <div class="empty-state">
-                    <i class="bi bi-info-circle me-1"></i>
-                    {{ translations.no_competencies ?? 'No competencies assigned yet.' }}
-                </div>
-            {% else %}
-
-                {# 1) Zbuduj strukturę: category -> subcategory -> [competencies] #}
-                {% set catGroups = {} %}
-                {% for c in comps %}
-                    {% set cat = c.getCategoryName() ?: (translations.other ?? 'Other') %}
-                    {% set sub = c.getSubcategoryName() ?: (translations.other ?? 'Other') %}
-
-                    {% set catNode = catGroups[cat]|default({}) %}
-                    {% set subNode = catNode[sub]|default([]) %}
-
-                    {% set catNode = catNode|merge({ (sub): subNode|merge([c]) }) %}
-                    {% set catGroups = catGroups|merge({ (cat): catNode }) %}
-                {% endfor %}
-
-                <div class="cat-accordion">
-                    {# 2) Kategorie jako <details> (domyślnie ZWINIĘTE) #}
-                    {% for catName, subMap in catGroups %}
-                        {# policz ile kompetencji w kategorii #}
-                        {% set catCount = 0 %}
-                        {% for subName, arr in subMap %}
-                            {% set catCount = catCount + (arr|length) %}
-                        {% endfor %}
-
-                        <details>
-                            <summary>
-                                <div class="cat-title">
-                                    <div class="icon"><i class="bi bi-collection"></i></div>
-                                    <div class="name">{{ catName }}</div>
-                                </div>
-                                <div class="cat-right">
-                                    <span class="cat-count">{{ catCount }}</span>
-                                    <i class="bi bi-chevron-down chev"></i>
-                                </div>
-                            </summary>
-
-                            <div class="cat-body">
-                                {% for subName, items in subMap %}
-                                    <div class="subhead">
-                                        <span>{{ subName }}</span>
-                                        <span class="mini-count">{{ items|length }}</span>
-                                    </div>
-
-                                    <div class="d-grid gap-2">
-                                        {% for c in items %}
-                                            <div class="comp-item">
-                                                <div class="d-flex align-items-start justify-content-between gap-2">
-                                                    <h4 class="comp-title">{{ c.getName() }}</h4>
-
-                                                    {% if c.getVerificationMethod() %}
-                                                        <span class="badge-mini">
-                                                        <i class="bi bi-check2-circle me-1"></i>{{ c.getVerificationMethod()|upper }}
-                                                    </span>
-                                                    {% endif %}
-                                                </div>
-
-                                                <div class="comp-meta">
-                                                    <span><i class="bi bi-tag me-1"></i>#{{ c.getId() }}</span>
-                                                    {% if c.getCreatedAt() %}
-                                                        {# jeśli getCreatedAt() zwraca string, usuń |date(...) #}
-                                                        <span><i class="bi bi-clock me-1"></i>{{ c.getCreatedAt()|date('Y-m-d') }}</span>
-                                                    {% endif %}
-                                                </div>
-
-                                                {% if c.getDescription() %}
-                                                    <div class="comp-desc">{{ c.getDescription() }}</div>
-                                                {% endif %}
-                                            </div>
-                                        {% endfor %}
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </details>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
+<dialog class="fx" id="fx-paie"><form data-section="paie" novalidate>
+  {{ f.tete(T, T.pf_pay ?? 'Paie') }}
+  <div class="fx-corps"><p class="fx-msg"></p>
+    <div class="pf-g">
+      <div class="fx-champ" data-champ="statut"><span>{{ T.pf_status ?? 'Statut' }}</span>
+        <div class="fx-seg">{% for k, l in statuts %}<label><input type="radio" name="statut" value="{{ k }}"{{ (pa.statut ?? '') == k ? ' checked' }}><span>{{ l }}</span></label>{% endfor %}</div><em class="err"></em></div>
+      <label class="fx-champ" data-champ="niss"><span>{{ T.pf_niss_long ?? 'Numéro national (au dos de ta carte d’identité)' }}</span><input name="niss" value="{{ pa.niss ?? '' }}" inputmode="numeric" autocomplete="off" placeholder="00.00.00-000.00" data-controle="niss"><small class="aide"></small><em class="err"></em></label>
+      <label class="fx-champ" data-champ="iban"><span>{{ T.pf_iban ?? 'IBAN' }}</span><input name="iban" value="{{ pa.iban ?? '' }}" autocomplete="off" autocapitalize="characters" placeholder="BE00 0000 0000 0000" data-controle="iban"><small class="aide"></small><em class="err"></em></label>
+      <label class="fx-champ" data-champ="titulaire"><span>{{ T.pf_holder ?? 'Titulaire du compte' }}</span><input name="titulaire" value="{{ pa.titulaire ?? ((prenom ~ ' ' ~ nom)|trim) }}" maxlength="80"><em class="err"></em></label>
     </div>
-
-    {# WORKSTATIONS #}
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="section-title">{{ translations.workstations ?? 'Workstations' }}</div>
-
-            {% set ws = employee.getWorkstations()|default([]) %}
-            {% if ws is empty %}
-                <div class="empty-state">
-                    <i class="bi bi-info-circle me-1"></i>
-                    {{ translations.no_workstations ?? 'No workstations assigned yet.' }}
-                </div>
-            {% else %}
-                <div class="d-flex flex-wrap gap-2">
-                    {% for w in ws %}
-                        <span class="badge-soft">
-                        <i class="bi bi-grid-3x3-gap me-1"></i>
-                        {{ w.getName() ?? w.name ?? (translations.workstation ?? 'Workstation') }}
-                    </span>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
+    <div class="pf-g" data-cartes>
+      {% for face in ['recto', 'verso'] %}{% set fait = profil.carte[face] ?? null %}
+      <label class="fx-carte{{ fait ? ' fait' }}" data-face="{{ face }}"><input type="file" accept="image/*" capture="environment"><i class="bi {{ fait ? 'bi-check-lg' : 'bi-person-vcard' }}"></i>
+        <div><b>{{ face == 'recto' ? (T.pf_id_front ?? 'Carte d’identité · recto') : (T.pf_id_back ?? 'Carte d’identité · verso') }}</b>
+          <small>{% if fait %}{{ (T.pf_id_added ?? 'ajoutée le {d} · toucher pour remplacer')|replace({'{d}': fait|date('d/m')}) }}{% else %}{{ T.pf_id_note ?? 'Une photo nette, pour ton contrat' }}{% endif %}</small></div></label>
+      {% endfor %}
     </div>
+    <p class="pf-note" style="margin:0 4px"><i class="bi bi-shield-lock"></i>{{ T.pf_pay_note_long ?? 'Visible par toi, ton franchisé et la marque seulement. Le numéro national, l’IBAN et la carte sont gardés chiffrés ; ailleurs, ils s’affichent masqués.' }}</p>
+  </div>
+</form></dialog>
 
-    {# SETTINGS #}
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="section-title">{{ translations.settings ?? 'Settings' }}</div>
-
-            <div class="d-grid gap-2">
-                <a class="btn btn-soft w-100" href="{{ ROOT }}/profile/language">
-                    <i class="bi bi-translate me-1"></i>
-                    {{ translations.change_language ?? 'Change language' }}
-                    <span class="text-muted ms-1">({{ lang ?: '-' }})</span>
-                </a>
-
-                <a class="btn btn-soft w-100" href="{{ ROOT }}/logout">
-                    <i class="bi bi-box-arrow-right me-1"></i>
-                    {{ translations.logout ?? 'Log out' }}
-                </a>
-            </div>
-        </div>
+<dialog class="fx" id="fx-tenue"><form data-section="tenue" novalidate>
+  {{ f.tete(T, T.pf_outfit ?? 'Tenue') }}
+  <div class="fx-corps"><p class="fx-msg"></p>
+    <div class="pf-g">
+      {% for k in ['tshirt', 'veste'] %}
+      <div class="fx-champ" data-champ="{{ k }}"><span>{{ k == 'tshirt' ? (T.pf_tshirt ?? 'T-shirt') : (T.pf_jacket ?? 'Veste') }}</span>
+        <div class="fx-seg">{% for t in tailles %}<label><input type="radio" name="{{ k }}" value="{{ t }}"{{ (te[k] ?? '') == t ? ' checked' }}><span>{{ t }}</span></label>{% endfor %}</div><em class="err"></em></div>
+      {% endfor %}
+      {{ f.champ('chaussures', T.pf_shoe_size ?? 'Pointure', te.chaussures ?? '', 'text', 'inputmode="decimal" placeholder="38"') }}
     </div>
+  </div>
+</form></dialog>
 
+<dialog class="fx" id="fx-dispo"><form data-section="dispo" novalidate>
+  {{ f.tete(T, T.pf_availability ?? 'Disponibilités') }}
+  <div class="fx-corps"><p class="fx-msg"></p>
+    <div class="pf-g">
+      <div class="fx-grille">
+        <div class="j"><span></span>{% for j in jours %}<b>{{ j }}</b>{% endfor %}</div>
+        {% for moment, lib in {'m': T.pf_morning_long ?? 'Matin', 'a': T.pf_afternoon_long ?? 'Après-midi'} %}
+        <div class="j"><span class="t">{{ lib }}</span>{% for c in cles %}<label><input type="checkbox" name="grille.{{ c }}.{{ moment }}"{{ (di.grille[c][moment] ?? false) ? ' checked' }}><span></span></label>{% endfor %}</div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="pf-g"><label class="fx-champ" data-champ="remarque"><span>{{ T.pf_remark ?? 'Remarque' }}</span><textarea name="remarque" maxlength="200" placeholder="{{ T.pf_remark_ph ?? 'Ex. : cours en semaine jusqu’à 16 h' }}">{{ di.remarque ?? '' }}</textarea><em class="err"></em></label></div>
+    <p class="pf-note" style="margin:0 4px">{{ T.pf_avail_note ?? 'En vert, quand tu peux travailler. Ton magasin s’en sert pour le planning.' }}</p>
+  </div>
+</form></dialog>
+{% endif %}
+
+<dialog class="fx" id="fx-competences"><form>
+  <div class="fx-poignee"></div><div class="fx-tete"><span></span><b>{{ T.pf_competencies ?? 'Compétences' }}</b><button type="button" class="ok" data-ferme>OK</button></div>
+  <div class="fx-corps"><div class="pf-g fx-liste">{% for c in comps %}<div>{{ c.getName() }}{% if c.getCategoryName() %}<small>{{ c.getCategoryName() }}{% if c.getSubcategoryName() %} · {{ c.getSubcategoryName() }}{% endif %}</small>{% endif %}</div>{% endfor %}</div></div>
+</form></dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var ROOT = {{ ROOT|json_encode|raw }};
+  var T = {{ {
+    saving: T.pf_saving ?? 'Enregistrement…', save: T.pf_save ?? 'Enregistrer', error: T.pf_error ?? 'Impossible d’enregistrer pour l’instant. Réessaie.',
+    valid: T.pf_valid ?? 'valide', nissLen: T.pf_niss_len ?? 'Le numéro national a 11 chiffres : il en manque {n}.', nissBad: T.pf_niss_bad ?? 'Ce numéro national n’est pas valide.',
+    ibanLen: T.pf_iban_len ?? 'Un IBAN {c} a {l} caractères : il en manque {n}.', ibanBad: T.pf_iban_bad ?? 'Cet IBAN n’est pas valide.',
+    photoSending: T.pf_photo_sending ?? 'Envoi…', photoError: T.pf_photo_error ?? 'La photo n’a pas pu être envoyée.', photoDone: T.pf_photo_done ?? 'ajoutée · toucher pour remplacer'
+  }|json_encode|raw }};
+  var IBAN_L = {BE:16, FR:27, NL:18, LU:20, DE:22, PL:28, IT:27, ES:24, PT:25, GB:22, IE:22, AT:20, CH:21, MA:28, TR:26, RO:24};
+
+  function ouvrir(id) { var d = document.getElementById('fx-' + id); if (d && d.showModal) { d.showModal(); } }
+  document.querySelectorAll('[data-ouvre]').forEach(function (b) { b.addEventListener('click', function () { ouvrir(b.getAttribute('data-ouvre')); }); });
+  document.querySelectorAll('dialog.fx').forEach(function (d) {
+    d.querySelectorAll('[data-ferme]').forEach(function (b) { b.addEventListener('click', function () { d.close(); }); });
+    d.addEventListener('click', function (e) { if (e.target === d) { d.close(); } });   // un toucher hors de la feuille la ferme
+  });
+
+  // Numéro national : 11 chiffres, contrôle modulo 97 (« 2 » devant pour les naissances depuis 2000).
+  function nissOk(n) {
+    if (n.length !== 11) { return false; }
+    var base = n.slice(0, 9), c = parseInt(n.slice(9), 10);
+    return 97 - (parseInt(base, 10) % 97) === c || 97 - (parseInt('2' + base, 10) % 97) === c;
+  }
+  function ibanMod(i) {
+    var r = (i.slice(4) + i.slice(0, 4)).replace(/[A-Z]/g, function (ch) { return String(ch.charCodeAt(0) - 55); });
+    var reste = 0;
+    for (var k = 0; k < r.length; k += 7) { reste = parseInt(String(reste) + r.slice(k, k + 7), 10) % 97; }
+    return reste === 1;
+  }
+  function controler(input) {
+    var aide = input.parentNode.querySelector('.aide'); if (!aide) { return; }
+    var t = input.getAttribute('data-controle'), v = input.value, msg = '', bon = false;
+    if (t === 'niss') {
+      var n = v.replace(/\D/g, '');
+      if (n.length === 0) { msg = ''; }
+      else if (n.length < 11) { msg = T.nissLen.replace('{n}', 11 - n.length); }
+      else if (nissOk(n)) { msg = '✓ ' + T.valid; bon = true; }
+      else { msg = T.nissBad; }
+    } else {
+      var i = v.replace(/[^0-9A-Za-z]/g, '').toUpperCase(), l = IBAN_L[i.slice(0, 2)];
+      if (i.length === 0) { msg = ''; }
+      else if (l && i.length < l) { msg = T.ibanLen.replace('{c}', i.slice(0, 2)).replace('{l}', l).replace('{n}', l - i.length); }
+      else if (i.length >= 15 && ibanMod(i) && (!l || i.length === l)) { msg = '✓ ' + T.valid; bon = true; }
+      else { msg = T.ibanBad; }
+    }
+    aide.textContent = msg; aide.classList.toggle('bon', bon);
+  }
+  document.querySelectorAll('[data-controle]').forEach(function (i) { i.addEventListener('input', function () { controler(i); }); controler(i); });
+
+  // Une fiche enregistrée : les valeurs du formulaire, en JSON, au cockpit par l'app ; les erreurs sous leur champ.
+  function valeurs(form) {
+    var v = {};
+    form.querySelectorAll('input, textarea').forEach(function (el) {
+      if (!el.name || el.type === 'file') { return; }
+      if (el.type === 'radio') { if (el.checked) { v[el.name] = el.value; } else if (!(el.name in v)) { v[el.name] = ''; } return; }
+      if (el.type === 'checkbox') {
+        var p = el.name.split('.'); v[p[0]] = v[p[0]] || {}; v[p[0]][p[1]] = v[p[0]][p[1]] || {}; v[p[0]][p[1]][p[2]] = el.checked; return;
+      }
+      v[el.name] = el.value;
+    });
+    return v;
+  }
+  document.querySelectorAll('dialog.fx form[data-section]').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var bt = form.querySelector('button.ok'), msg = form.querySelector('.fx-msg');
+      form.querySelectorAll('.fx-champ.ko').forEach(function (c) { c.classList.remove('ko'); });
+      msg.classList.remove('on');
+      bt.disabled = true; bt.textContent = T.saving;
+      fetch(ROOT + '/me/profil', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ section: form.getAttribute('data-section'), valeurs: valeurs(form) }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { code: r.status, d: d }; }); })
+        .then(function (x) {
+          if (x.code === 200) { location.reload(); return; }
+          bt.disabled = false; bt.textContent = T.save;
+          var errs = (x.d && x.d.erreurs) || null;
+          if (x.code === 422 && errs) {
+            Object.keys(errs).forEach(function (k) {
+              var c = form.querySelector('[data-champ="' + k + '"]');
+              if (c) { c.classList.add('ko'); c.querySelector('.err').textContent = errs[k]; } else { msg.textContent = errs[k]; msg.classList.add('on'); }
+            });
+          } else { msg.textContent = T.error; msg.classList.add('on'); }
+        })
+        .catch(function () { bt.disabled = false; bt.textContent = T.save; msg.textContent = T.error; msg.classList.add('on'); });
+    });
+  });
+
+  // La carte d'identité : la photo réduite à 1600 px dans le navigateur (JPEG), puis envoyée.
+  function reduire(fichier) {
+    return new Promise(function (ok, ko) {
+      var img = new Image(), url = URL.createObjectURL(fichier);
+      img.onload = function () {
+        var k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        ok(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); ko(); };
+      img.src = url;
+    });
+  }
+  document.querySelectorAll('.fx-carte').forEach(function (lab) {
+    var input = lab.querySelector('input'), sous = lab.querySelector('small'), face = lab.getAttribute('data-face');
+    input.addEventListener('change', function () {
+      if (!input.files || !input.files[0]) { return; }
+      var avant = sous.textContent; sous.textContent = T.photoSending;
+      reduire(input.files[0]).then(function (data) {
+        return fetch(ROOT + '/me/carte', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ face: face, data: data }) });
+      }).then(function (r) {
+        if (!r.ok) { throw new Error(); }
+        lab.classList.add('fait'); lab.querySelector('i').className = 'bi bi-check-lg'; sous.textContent = T.photoDone;
+      }).catch(function () { sous.textContent = T.photoError; setTimeout(function () { sous.textContent = avant; }, 4000); });
+      input.value = '';
+    });
+  });
+
+  // Après un enregistrement, la page se relit ; ?ouvre=paie rouvre une feuille.
+  var o = new URLSearchParams(location.search).get('ouvre'); if (o) { ouvrir(o); }
+})();
+</script>
 {% endblock %}

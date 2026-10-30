@@ -256,6 +256,22 @@ l'heure sur aujourd'hui, les jours passés en gris, un autre magasin que d'habit
 `ScheduleService::semaine` (`construire` sans réseau) ; les jours dans la langue de la personne : la fonction Twig
 `jour()` (`core/Twig/AppExtension.php`).
 
+## Mon profil (30/10/2026) : la personne encode elle-même ses données
+
+Demande de Sam (« que l'employé puisse encoder toutes ses données » ; maquette `docs/maquettes/profil-employe`).
+`/me` (`Me/ProfileController`, `Views/me/profile.twig`, textes `pf_*` de `translations/page/{fr,en,it,nl,pl}/me.json`)
+montre en tête ce qui est rempli (une barre, ce qui manque en puces qui ouvrent la bonne fiche), puis six fiches qui
+s'ouvrent du bas : **identité**, **coordonnées**, **en cas d'urgence**, **paie** (statut, numéro national, IBAN,
+titulaire, photo de la carte d'identité recto et verso), **tenue**, **disponibilités** (matin / après-midi, du lundi
+au dimanche, une remarque). Le numéro national et l'IBAN se contrôlent pendant la frappe ; le serveur refait le
+contrôle et rend ses erreurs champ par champ. Les photos sont réduites dans le navigateur (1600 px, JPEG) avant
+l'envoi.
+
+Rien n'est gardé dans l'app : `Services/Profil/ProfilService` relaie au cockpit (`/ventes/moi/profil`, identité signée
+comme « Mes primes »), qui garde le profil chiffré. Le prénom, le nom, le téléphone et l'e-mail viennent du panel tant
+que la personne ne les change pas ; un changement est signalé au franchisé, jamais écrit au panel. Routes de l'app :
+`POST /me/profil {section, valeurs}`, `POST /me/carte {face, data}`. Qui voit : la personne, son franchisé, la marque.
+
 `/statistiques` (`StatsController`, `Views/stats/statistiques.twig`, styles `assets/atelier/stats.css`, textes
 `translations/page/{fr,en,it,nl,pl}/stats.json`) : **ses chiffres à elle, rien que les siens**, depuis la même
 fiche que Primes (`GET /ventes/moi` du cockpit, rien n'est calculé dans l'app).
