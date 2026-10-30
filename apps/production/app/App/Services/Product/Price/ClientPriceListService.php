@@ -30,9 +30,10 @@ class ClientPriceListService implements IDocument
         $S = fn(string $key) => DocumentLabels::sub($key, $lang);
 
         $pdf->brandPage($L('doc_price_list'), ['ref' => (string) $client['company'], 'lang' => $lang]);
-        $pdf->brandHeader($L('doc_price_list') . ($S('doc_price_list') !== '' ? ' / ' . $S('doc_price_list') : ''), [
-            [DocumentLabels::pair('date', $lang), date('Y-m-d')],
-        ], (string) $client['company']);
+        $head = [[DocumentLabels::pair('date', $lang), date('Y-m-d')]];
+        // Cennik od daty (Kreator cen [218]) : data, od której obowiązują ceny.
+        if (!empty($data['valid_from'])) $head[] = [DocumentLabels::pair('valid_from', $lang), date('d.m.Y', strtotime((string) $data['valid_from']))];
+        $pdf->brandHeader($L('doc_price_list') . ($S('doc_price_list') !== '' ? ' / ' . $S('doc_price_list') : ''), $head, (string) $client['company']);
 
         $rows = [];
         $lastCategory = null;
@@ -71,6 +72,26 @@ class ClientPriceListService implements IDocument
             'productPriceData' => $productPriceData]);
 
         return ['file_string' => $pdf, "filename" => 'PRICE_LIST_' . $clientData['company'] . '.pdf'];
+    }
+
+    /**
+     * Cennik klienta od daty (Kreator cen [218]) : obecny cennik z cenami zmienionymi od $validFrom.
+     * @param array<int, float> $prices produkt => nowa cena
+     */
+    public function generateFuturePDF(int $id, array $prices, string $validFrom): array
+    {
+        $rows = $this->priceListRepository->getPriceListData(['id_customer' => $id]);
+        if (empty($rows)) throw new CustomException("PRICE_LIST_DATA_NOT_FOUND", 'errors', 404);
+        foreach ($rows as &$r) {
+            if (isset($prices[(int) $r['id_final_product']])) $r['price'] = $prices[(int) $r['id_final_product']];
+        }
+        unset($r);
+        $clientData = $this->clientRepository->first(['id' => $id]);
+        if (empty($clientData)) throw new CustomException("CLIENT_NOT_FOUND", 'errors', 404);
+        $pdf = new TCPDFService('P', 'mm', 'a4', true, 'UTF-8', false);
+        $this->renderDocument($pdf, ['clientData' => $clientData, 'lang' => $this->clientRepository->communicationLang($id),
+            'productPriceData' => $rows, 'valid_from' => $validFrom]);
+        return ['filename' => 'PRICE_LIST_' . $clientData['company'] . '_' . str_replace('-', '', $validFrom) . '.pdf', 'file_string' => $pdf->Output('', 'S')];
     }
 
     public function generateDocumentPDF(int $id): array

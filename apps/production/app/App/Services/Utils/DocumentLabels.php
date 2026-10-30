@@ -17,6 +17,7 @@ final class DocumentLabels
         'page' => ['pl' => 'Strona', 'fr' => 'Page', 'nl' => 'Pagina', 'en' => 'Page'],
         'number' => ['pl' => 'Numer', 'fr' => 'Numéro', 'nl' => 'Nummer', 'en' => 'Number'],
         'date' => ['pl' => 'Data', 'fr' => 'Date', 'nl' => 'Datum', 'en' => 'Date'],
+        'valid_from' => ['pl' => 'Obowiązuje od', 'fr' => 'Valable à partir du', 'nl' => 'Geldig vanaf', 'en' => 'Valid from'],
         'seller' => ['pl' => 'Sprzedawca', 'fr' => 'Vendeur', 'nl' => 'Verkoper', 'en' => 'Seller'],
         'buyer' => ['pl' => 'Nabywca', 'fr' => 'Acheteur', 'nl' => 'Koper', 'en' => 'Buyer'],
         'consignor' => ['pl' => 'Wydający', 'fr' => 'Expéditeur', 'nl' => 'Afzender', 'en' => 'Consignor'],

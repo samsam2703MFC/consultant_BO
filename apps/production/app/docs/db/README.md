@@ -66,6 +66,44 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Assistant prix « Kreator cen » (migration 138, 30/10/2026)
+
+- Page : Analiza › Marże i koszty › « Kreator cen » (`/finances/price-wizard`, maquette 218 validée ; aussi depuis Marża
+  kategorii et à la fin du kreator faktur, après « Zatwierdź faktury »). `PriceWizardService`, `PricePublicationService`,
+  `price-wizard.js`. Trois étapes :
+  1. « Koszty i marże » : factures ouvertes et lignes à vérifier (lien vers le kreator faktur), « Przelicz koszty i marże »
+     (coût matières de toutes les recettes aux prix actuels, le même calcul que « Przelicz wszystkie marże »), marge par
+     catégorie avant → après, écart à la marge de base, effet € / mois, produits dont le coût a changé avec leurs causes
+     (matières de la recette dont le prix a changé : `raw_material_price_changelog`), matières qui ont changé ;
+  2. « Nowe ceny » : par catégorie la marge de base (`category_product.target_margin_percentage`) et le coefficient matières
+     (`n_category_price_rule.material_coef`, vide = `prices.material_coef_default`). Prix cible du carton = le plus haut de
+     coût complet ÷ (1 − marge) et coût matières × coefficient ; jamais plus bas que le prix actuel, hausse au plus
+     `prices.client_cap_pct` % (8 %) d'un coup, arrondi vers le haut à `prices.client_round_eur` (0,05 €) ; prix modifiable
+     à la main dans ces limites. Produit déjà dans une publication prévue : non sélectionnable ; relevé par l'assistant il y a
+     moins de `prices.client_interval_days` jours : non coché. Alerte Belgique (magasin ÷ usine sous × 2,5 après la hausse) ;
+  3. « Publikacja » : date d'effet (aujourd'hui au plus tôt, au plus un an), prix clients calculés : prix égal au standard →
+     nouveau standard ; prix négocié → même % (remise gardée), même plafond ; client décoché = ses prix ne bougent pas.
+     Canaux : site franchise (client avec `franchisee_uid`, tarif par le webhook existant `PricelistPusher`), e-mail avec le
+     tarif PDF à la date (adresse du document « Cennik » de la Dystrybucja dokumentów, langue du client).
+- Tables : `n_category_price_rule` (id_category, material_coef) ; `n_price_publication` (effective_date, status planned |
+  applied | cancelled, notify_email, notice_days, products, client_prices, avg_pct, month_eur, created_by, applied_at,
+  cancelled_by/at) ; `n_price_publication_item` (id_product, id_customer 0 = prix standard, old_price, new_price, manual,
+  status planned | applied | skipped) ; `n_price_publication_client` (site, email, email_status queued | skipped | failed,
+  id_message, site_status sent | retry | failed | no_site, site_attempts, site_version).
+- Exécution (`Bin/mail_dispatch.php`, toutes les 5 minutes) : e-mail « Nouveaux prix à partir du » (modèle
+  `price_change_notice` fr / nl / pl / en, PDF `ClientPriceListService::generateFuturePDF` avec « Valable à partir du »)
+  `prices.notice_days` (7) jours avant ; le jour J, prix standard et prix clients changés seulement si la base a encore le
+  prix du plan (sinon ligne « skipped »), historique `n_product_price_change` (source `price_wizard`, auteur de la
+  publication) ; un client qui a déjà reçu l'e-mail avec ce tarif ne reçoit pas en plus « Votre tarif mis à jour »
+  (`n_price_list_state` noté) ; puis tarif vers le site franchise, une tentative par passage, au plus 12 (`failed`), sans clé
+  de webhook → `no_site` (copie de test : clés vidées, rien ne part). Publication prévue annulable jusqu'à la veille.
+- Paramètres : `prices.material_coef_default` (2,5), `prices.notice_days` (7) ; `prices.client_cap_pct` et
+  `prices.client_round_eur` valent pour les prix standard et les prix clients (réglables par l'administrateur dans l'assistant).
+- Ajax (session ERP, accès « Marże i koszty ») : `GET /ajax/price-wizard/costs`, `POST …/recalculate`, `GET …/prices`,
+  `PUT …/categories` (rows id, margin, coef), `PUT …/params`, `POST …/preview` (items product_id, price, manual),
+  `POST …/preview-pdf`, `GET|POST …/publications` (date, items, exclude, notify), `GET …/publications/{id}`,
+  `POST …/publications/{id}/cancel` ; PDF `GET /finances/price-wizard/publications/{id}/pdf?customer=`.
+
 ### Factures d'achat — assistant « toutes les lignes » (migration 137, 30/10/2026)
 
 - Page : Zaopatrzenie › Faktury › « Kreator : wszystkie pozycje » (`/workshop/supply#tab=invoices&inv=wizard`, maquettes 217

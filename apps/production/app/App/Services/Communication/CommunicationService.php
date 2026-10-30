@@ -43,6 +43,7 @@ class CommunicationService
         'accounting_document' => 'Kopia dokumentu dla księgowości (automatyczne)',
         'sales_goal' => 'Cel obrotu franczyzobiorcy (zakupy × współczynnik, PDF)',
         'price_list' => 'Nowy cennik klienta (automatyczne, po zmianie cen)',
+        'price_change_notice' => 'Nowe ceny od daty : cennik od dnia zmiany (Kreator cen, X dni przed)',
         'monthly_report' => 'Raport miesięczny : podsumowanie sprzedaży i cel obrotu (automatyczne)',
         'management_report' => 'Raport miesięczny zarządu : rentowność, marża, reklamacje (PDF, wewnętrzny)',
         'buy_request' => 'Zakupy tygodnia : zapytanie ofertowe do dostawcy (pozycje, warunki, link do cen)',
