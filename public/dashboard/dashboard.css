@@ -2272,3 +2272,40 @@ body.pm-emb{background:var(--color-bg)}
 body.pm-emb #dash{padding:0 0 4px;max-width:none}
 body.pm-emb .pm-tete{margin-top:0}
 body.pm-emb .pm-ok{flex-wrap:wrap}
+/* Primes (30/10/2026) : « Où en sont tes vendeuses », le tableau de la page franchisé du cockpit, à lire.
+   Une ligne par vendeuse, une colonne par prime ; le nom reste en place quand le tableau défile. */
+.pr-sous{font-size:12px;margin-top:3px}
+.pr-outils{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pr-pas{display:inline-flex;align-items:center;gap:4px}
+.pr-per{display:inline-block;min-width:150px;text-align:center;font:600 12.5px var(--font-ui);padding:6px 10px;background:var(--color-surface);border:.5px solid var(--color-border-secondary);border-radius:8px}
+.pr-per small{font-weight:400;font-size:12px;color:var(--color-text-muted)}
+.pr-carte{overflow:hidden;margin-bottom:0}
+.pr-defil{overflow-x:auto}
+.pr-tab{border-collapse:separate;border-spacing:0;min-width:100%;font-family:var(--font-ui)}
+.pr-tab th{text-align:left;padding:14px 12px 10px;vertical-align:bottom;min-width:104px;font-weight:400}
+.pr-tab td{padding:11px 12px;border-top:.5px solid var(--color-border-tertiary);vertical-align:top}
+.pr-tab .pr-g{position:sticky;left:0;z-index:1;background:var(--color-surface);padding-left:16px;min-width:150px}
+.pr-tab .pr-petit{font:600 10.5px/1 var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
+.pr-tab .pr-d{text-align:right;padding-right:16px;white-space:nowrap;min-width:0}
+.pr-tri{border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;cursor:pointer;display:block;width:100%}
+.pr-fl{color:var(--color-primary);font-weight:600;margin-left:4px}
+.pr-lib{font:600 13px/1.25 var(--font-ui);color:var(--color-text);max-width:150px}
+.pr-rec{font-size:11.5px;line-height:1.35;color:var(--color-text-muted);margin-top:3px;white-space:nowrap}
+.pr-mag{color:var(--color-on-abricot)}
+.pr-cpt{font:600 11.5px/1.35 var(--font-ui);color:#2d7a3e;margin-top:2px;white-space:nowrap}
+.pr-nom b{display:block;font:600 14px/1.3 var(--font-ui);white-space:nowrap}
+.pr-nom small{display:block;font-size:11.5px;line-height:1.35;color:var(--color-text-muted);white-space:nowrap}
+.pr-c{min-width:104px}
+.pr-h{font:600 13.5px/1.3 var(--font-ui);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--color-text)}
+.pr-b{font-size:11.5px;line-height:1.35;color:var(--color-text-muted);white-space:nowrap}
+.pr-gagne .pr-h{color:#2d7a3e}
+.pr-tete .pr-h,.pr-tete-t{color:var(--color-primary)}
+.pr-perdu .pr-h,.pr-vide .pr-h{color:var(--color-text-muted)}
+.pr-vide .pr-h{font-weight:400}
+.pr-hors{color:var(--color-border-secondary)}
+.pr-barre{height:4px;border-radius:2px;background:var(--color-border-tertiary);margin:6px 0 4px;max-width:110px;overflow:hidden}
+.pr-barre i{display:block;height:100%;border-radius:2px;background:var(--color-primary)}
+.pr-barre i.vert{background:#2d7a3e}
+.pr-barre i.gris{background:var(--color-border-secondary)}
+.pr-tab .pr-tot{text-align:right;padding-right:16px;font:600 14px/1.3 var(--font-ui);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pr-pied{font-size:12px;line-height:1.5;color:var(--color-text-muted);padding:8px 6px 12px}

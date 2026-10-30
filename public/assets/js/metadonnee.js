@@ -2,8 +2,8 @@
  * Ads) de la Page, jusqu'à l'ERP du franchisé (maquette A retenue le
  * 28/10/2026 : un sous-menu en quatre étapes, sous « ERP franchisé ») :
  *
- *   1 · Formulaires     — la connexion Meta du CRM, recopiée (« Connecter et
- *                         tester ») ; les formulaires de la Page, ceux qu'on suit
+ *   1 · Formulaires     — la connexion Meta du CRM, recopiée, avec ses clés et son
+ *                         accès (« Connecter et tester ») ; les formulaires de la Page, ceux qu'on suit
  *                         et leur magasin ;
  *   2 · Mapping ERP     — chaque question dans un champ de l'ERP, ce qui partira,
  *                         la traduction des réponses en codes, le magasin par code postal ;
@@ -344,30 +344,52 @@
       </div>`;
     }
 
-    /** La connexion Meta : les réglages et le « Connecter et tester » du CRM, recopiés. */
+    /**
+     * La connexion Meta : par défaut les clés et l'accès du CRM, lus dans sa base (rien à saisir,
+     * rien n'y est écrit) ; « Clés propres » : les réglages saisis ici. Le « Connecter et tester » du CRM, recopié.
+     */
     carteMeta() {
       const s = this.s, m = this.d().statut.meta || {};
-      const b = s.metaBr || (s.metaBr = { appId: m.appId || '', pageId: m.pageId || '', secret: '', jeton: '', rappel: m.rappelSaisi ? m.rappel : '' });
+      const crm = m.source !== 'cockpit';
+      const b = s.metaBr || (s.metaBr = { appId: crm ? '' : m.appId || '', pageId: crm ? '' : m.pageId || '', secret: '', jeton: '', rappel: m.rappelSaisi ? m.rappel : '' });
       const sale = b.appId !== (m.appId || '') || b.pageId !== (m.pageId || '') || !!b.secret || !!b.jeton || b.rappel !== (m.rappelSaisi ? m.rappel : '');
       const cx = m.connexion;
       const champ = (k, lib, type, ph) => `<div class="regle"><b>${lib}</b><span class="v"><input type="${type}" data-f="meta-${k}" data-i="meta" data-k="${k}" value="${esc(b[k])}" placeholder="${esc(ph)}" autocomplete="off" style="width:100%"></span></div>`;
+      const lu = (lib, v, la) => `<div class="regle"><b>${lib}</b><span class="v">${la ? esc(v) : pill('ko', 'absent du CRM', 104)}</span></div>`;
       const mode = !m.configure ? '' : m.mode === 'webhook'
         ? pill('ok', 'webhook au Cockpit', 150, 'L’application envoie chaque lead ici, à la seconde ; la relève horaire reste en filet')
-        : pill('att', 'relève toutes les ' + (this.d().reglages.meta.releveMin || 2) + ' min', 150, m.rappelApp ? 'Le webhook de l’application va à ' + m.rappelApp + ' (le CRM) : le Cockpit ne le détourne pas, il relit ses formulaires' : 'Pas de webhook vers le Cockpit : il relit ses formulaires');
+        : pill('att', 'relève toutes les ' + (this.d().reglages.meta.releveMin || 2) + ' min', 150, crm ? 'L’application du CRM garde son webhook : le Cockpit relit ses formulaires' : m.rappelApp ? 'Le webhook de l’application va à ' + m.rappelApp + ' (le CRM) : le Cockpit ne le détourne pas, il relit ses formulaires' : 'Pas de webhook vers le Cockpit : il relit ses formulaires');
       const etapes = cx && cx.etapes && cx.etapes.length ? `<div style="margin-top:12px">${cx.etapes.map(e => `<div class="journal">${pill(e.ok ? 'ok' : 'plein', e.ok ? '✓' : '✕', 24)}<span class="t"><b style="font-size:12px">${esc(e.titre)}</b><br><span class="mini">${esc(e.detail)}</span></span></div>`).join('')}
         <div class="mini" style="margin-top:4px">Testée ${esc(this.ilYa(cx.le))}</div></div>` : '';
-      return `<div class="carte"><h3>Connexion Meta<small>${m.pageNom ? '« ' + esc(m.pageNom) + ' »' : 'les réglages du CRM'}</small><span class="d">${mode}</span></h3>
-        <div class="mini" style="margin-bottom:8px">Les mêmes que dans le CRM : Paramètres → Intégrations → Formulaires Facebook / Instagram.</div>
+      const source = `<div style="display:flex;gap:6px;margin-bottom:8px">${[['crm', 'Clés du CRM', 'Les clés et l’accès du CRM (Paramètres → Intégrations → Formulaires Facebook / Instagram), lus dans sa base : un jeton régénéré dans le CRM vaut aussitôt ici'],
+        ['cockpit', 'Clés propres', 'Une autre application Meta, saisie ici (pour un webhook à la seconde)']]
+        .map(([k, l, t]) => (k === 'crm') === crm
+          ? `<button class="btn xs" title="${esc(t)}" disabled style="opacity:1">${l}</button>`
+          : `<button class="btn s xs" data-a="metaSource" data-v="${k}" title="${esc(t)}" ${s.busy ? 'disabled' : ''}>${l}</button>`).join('')}</div>`;
+      const boutons = (enregistrer) => `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          ${enregistrer ? `<button class="btn s xs" data-a="metaEnregistrer" ${sale && !s.busy ? '' : 'disabled'}>Enregistrer</button>` : ''}
+          <button class="btn xs" data-a="metaConnecter" ${s.busy ? 'disabled' : ''} title="Le jeton (lu par Meta, échangé contre celui de la Page), la Page, ses formulaires, l’abonnement aux leads, l’adresse de rappel — sans jamais détourner celle du CRM">🔌 Connecter et tester</button>
+        </div>`;
+      if (crm) {
+        return `<div class="carte"><h3>Connexion Meta<small>${m.pageNom ? '« ' + esc(m.pageNom) + ' »' : 'les clés du CRM'}</small><span class="d">${mode}</span></h3>
+        ${source}
+        ${!m.crm ? `<div class="mini">${pill('ko', 'pas de CRM', 80)} Aucun réglage du CRM dans cette base : passez en « Clés propres ».</div>`
+          : `${lu('ID de l’application', m.appId, !!m.appId)}
+        ${lu('Clé secrète', '•••••• celle du CRM', m.secret)}
+        ${lu('ID de la Page', m.pageId, !!m.pageId)}
+        ${lu('Jeton', '•••••• celui du CRM', m.jeton)}
+        ${m.crm.le ? `<div class="mini" style="margin-top:4px">Publiées par le CRM ${esc(this.ilYa(m.crm.le))}</div>` : ''}`}
+        ${boutons(false)}${etapes}</div>`;
+      }
+      return `<div class="carte"><h3>Connexion Meta<small>${m.pageNom ? '« ' + esc(m.pageNom) + ' »' : 'clés propres'}</small><span class="d">${mode}</span></h3>
+        ${source}
         ${champ('appId', 'ID de l’application', 'text', '1234567890')}
         ${champ('secret', 'Clé secrète', 'password', m.secret ? '•••••• enregistrée' : 'clé secrète de l’application')}
         ${champ('pageId', 'ID de la Page', 'text', '1234567890')}
         ${champ('jeton', 'Jeton', 'password', m.jeton ? '•••••• enregistré (jeton de la Page)' : 'jeton de l’utilisateur système')}
         ${champ('rappel', 'Adresse de rappel', 'text', m.rappelAuto || 'https://…/api/cockpit/metadonnee/meta/leads')}
         <div class="regle"><b>Jeton de vérification</b><span class="v" style="display:flex;gap:6px;min-width:0"><input type="text" value="${esc(m.verify || '')}" readonly style="flex:1;min-width:0;color:var(--color-text-muted)"><button class="btn s xs" data-a="copier" data-v="${esc(m.verify || '')}">Copier</button></span></div>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <button class="btn s xs" data-a="metaEnregistrer" ${sale && !s.busy ? '' : 'disabled'}>Enregistrer</button>
-          <button class="btn xs" data-a="metaConnecter" ${s.busy ? 'disabled' : ''} title="Le jeton (lu par Meta, échangé contre celui de la Page), la Page, ses formulaires, l’abonnement aux leads, l’adresse de rappel — sans jamais détourner celle du CRM">🔌 Connecter et tester</button>
-        </div>${etapes}</div>`;
+        ${boutons(true)}${etapes}</div>`;
     }
 
     /* --- 2 · mapping ------------------------------------------------------------------- */
@@ -670,9 +692,11 @@
         case 'relire': this.act(W('POST', '/metadonnee/formulaires/relire'), r => r.formulaires + ' formulaire(s) relu(s)' + (r.nouveaux ? ', ' + r.nouveaux + ' nouveau(x), non suivi(s)' : '')); break;
         case 'copier': if (navigator.clipboard) navigator.clipboard.writeText(v).then(() => this.notify('Copié'), () => this.notify('⚠ Copie impossible')); break;
         case 'metaEnregistrer': this.act(W('PUT', '/metadonnee/meta', this.metaCorps()), 'Connexion Meta enregistrée', () => { s.metaBr = null; return this.charger(); }); break;
+        case 'metaSource': this.act(W('PUT', '/metadonnee/meta', { source: v }), v === 'crm' ? 'Les clés et l’accès du CRM' : 'Clés propres', () => { s.metaBr = null; return this.charger(); }); break;
         case 'metaConnecter': {
-          const corps = this.metaCorps();
-          this.act(W('PUT', '/metadonnee/meta', corps).then(() => W('POST', '/metadonnee/meta/connecter')),
+          // Avec les clés du CRM, rien à enregistrer d'abord : les champs propres, cachés, ne sont pas envoyés.
+          const avant = (d.statut.meta || {}).source === 'cockpit' ? W('PUT', '/metadonnee/meta', this.metaCorps()) : Promise.resolve();
+          this.act(avant.then(() => W('POST', '/metadonnee/meta/connecter')),
             r => r.ok ? '✓ Connexion Meta vérifiée' : '⚠ Connexion incomplète : voir les étapes', () => { s.metaBr = null; return this.charger(); });
           break;
         }

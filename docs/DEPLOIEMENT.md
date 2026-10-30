@@ -384,15 +384,17 @@ renouvellement automatique à vérifier) avant d'équiper les tablettes.
 Rail → ERP franchisé → MétaDonnée (1 · Formulaires, 2 · Mapping ERP, 3 · Suivi des leads, 4 · Alertes SMS).
 Contrat : `docs/contrat-api.md`, « MétaDonnée ».
 
-- **Meta** : rien à régler chez Meta — c'est la connexion du CRM (atelier-espace-candidat), dont le flux est
-  recopié ici (`src/crm/meta_graph.php` = copie identique de `app/crm/api/lib/meta_graph.php`). À l'étape 1,
-  carte « Connexion Meta », recopier les réglages du CRM (Paramètres → Intégrations → Formulaires Facebook /
-  Instagram) : ID et clé secrète de l'application, ID de la Page, jeton de l'utilisateur système ; puis
-  « 🔌 Connecter et tester » (jeton vérifié et échangé contre celui de la Page, Page, formulaires, abonnement
-  `leadgen`). Une application Meta n'a qu'UNE adresse de rappel : elle reste au CRM, le Cockpit ne la détourne
-  jamais et relève ses formulaires toutes les 2 minutes. Pour un webhook à la seconde, une application Meta
-  dédiée au Cockpit (adresse `…/api/cockpit/metadonnee/meta/leads`, en https sur un nom de domaine) : le même
-  bouton la branche. Côté CRM, les formulaires suivis ici restent « non validés » (pas de candidats) ; l'équipe
+- **Meta** : rien à régler, ni chez Meta ni dans le Cockpit — ce sont les clés et l'accès du CRM
+  (atelier-espace-candidat), dont le flux est recopié ici (`src/crm/meta_graph.php` = copie identique de
+  `app/crm/api/lib/meta_graph.php`). Le Cockpit les LIT dans la base partagée à chaque appel (`crm_settings`,
+  complété par `meta_connexion`) et n'y écrit jamais : un jeton régénéré dans le CRM (Paramètres → Intégrations →
+  Formulaires Facebook / Instagram) vaut aussitôt ici. Le compte MySQL du Cockpit doit pouvoir lire ces deux tables
+  (`sql/grants.sql`). À l'étape 1, carte « Connexion Meta » (« Clés du CRM ») : « 🔌 Connecter et tester » (jeton
+  vérifié — celui de l'utilisateur système échangé contre celui de la Page, gardé côté Cockpit —, Page, formulaires,
+  abonnement `leadgen`). L'application étant celle du CRM, son adresse de rappel reste au CRM : le Cockpit ne la
+  prend jamais et relève ses formulaires toutes les 2 minutes. Pour un webhook à la seconde, une application Meta
+  dédiée au Cockpit (« Clés propres », adresse `…/api/cockpit/metadonnee/meta/leads`, en https sur un nom de
+  domaine) : le même bouton la branche. Côté CRM, les formulaires suivis ici restent « non validés » (pas de candidats) ; l'équipe
   reçoit une fois par formulaire l'alerte « formulaire non validé ».
   Le CRM a vu son application bloquée par Meta en oct. 2026 (« API access blocked ») : tant que c'est le cas,
   la sonde le dit et aucun lead ne passe — par ici comme par le CRM.
