@@ -2213,6 +2213,13 @@ Où elle s'affiche :
   côte (« 📐 Photo type » les sépare), la consigne sous le titre. Dans le
   module Planogramme, chaque point « Comptoir … » montre « Attendu : <consigne> »
   et le bouton « 📐 Photo type ».
+- **Application de contrôle sur tablette** (`controle/?id=u8`, le même module
+  en mode `tablette`) : tout ce qui précède, dans l'étape « Contrôles photo »
+  et les étapes de checklist. La loupe et la photo en grand passent au-dessus
+  de la barre du haut et de la barre des étapes.
+- **Cockpit, Contrôles qualité du mois** : la modale de notation d'une photo
+  de comptoir met la photo type à côté de la photo rendue, et « Attendu » en
+  tête de la colonne de notation.
 
 ### Qui fait autorité sur quoi
 

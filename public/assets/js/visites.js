@@ -261,6 +261,9 @@
 .vi.tab .tb-nav .tb-b{flex:0 0 auto}
 .vi.tab .tb-nav .tb-b.p{flex:1}
 .vi.tab .tb-ctl{padding-bottom:132px}
+/* La loupe et la photo en grand passent au-dessus des barres de la tablette (haut 30, étapes 40) : sous elles, la croix,
+   « Photo type », la note rapide et ‹ › étaient masquées. */
+.vi.tab .voir{z-index:50}.vi.tab .cq-l{z-index:51}
 .vi.tab .tb-pills{display:flex;gap:6px;flex-wrap:wrap}
 .vi.tab .tb-pills span{font:700 10.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted)}
 .vi.tab .tb-pills span.ok{background:#E6F2E9;color:#2d7a3e}.vi.tab .tb-pills span.ko{background:#F7E4E6;color:#C0182B}
@@ -284,6 +287,7 @@
 .vi.tab .pt.t .l1{gap:14px}
 .vi.tab .pt.t .l1 b{font-size:15px !important;line-height:1.3}
 .vi.tab .pt.t.ko{background:linear-gradient(90deg,rgba(192,24,43,.05),var(--color-surface) 60%)}
+.vi.tab .pt.t .att-t{margin:6px 0 0;font-size:13px}
 .vi.tab .pt.t .act{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .vi.tab .pt.t .act .chip{min-height:38px;padding:0 12px;font-size:12.5px}
 .vi.tab .pt.t .act input[type=text]{min-height:40px;font-size:13.5px !important;border-radius:10px}
