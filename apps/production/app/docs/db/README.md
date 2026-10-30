@@ -132,7 +132,9 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   Pakowanie / wysyłka, et médias non répartis, par carton de l'entreprise), moyennés sur les `forecast.cost_months` (3) derniers
   mois de coûts (clôturés d'abord, `SectionUnitCostService`). Sans investissements (amortissement des départements + frais
   fixes « kredyt / leasing / rata / inwestycja / pożyczka / środki trwałe » ou de catégorie INVESTMENT, LEASING, CREDIT,
-  LOAN, CAPEX — `ForecastService::isInvestment`, 30/10/2026), sans les autres frais fixes (Finanse) et sans le département
+  LOAN, CAPEX — `ForecastService::isInvestment`, 30/10/2026 ; migration 144 : les voitures des frais fixes « Auto - 1 »,
+  « Drugi Auto », « Passat », « Toyata » (catégorie LOGISTICS) sont des leasings, « (leasing) » ajouté à leur nom dans tous
+  les mois, montants inchangés), sans les autres frais fixes (Finanse) et sans le département
   Administracja (nom « Administ… ») : montrés pour information au survol ; logistique à part. Ligne
   « Pieniądze na produkcję » et sa part matières, tuile du total 13 semaines (matières, salaires, médias, départements
   partagés) ; `n_forecast_run.production_cost` : total enregistré à la validation.
