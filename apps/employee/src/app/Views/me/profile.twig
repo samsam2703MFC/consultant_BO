@@ -230,6 +230,13 @@
 </div>
 <div class="pf-esp"></div>
 
+{# ── Caisse : le PIN, changé par la personne elle-même et écrit au panel (30/10/2026) ── #}
+<div class="pf-sec">{{ T.pf_till ?? 'Caisse' }}</div>
+<div class="pf-g">
+  <button type="button" class="pf-l" data-ouvre="pin"><span class="pf-k">{{ T.pf_pin ?? 'Code PIN' }}</span><span class="pf-v" data-pin-etat>••••</span></button>
+</div>
+<p class="pf-note">{{ T.pf_pin_row_note ?? 'Le code à 4 chiffres que tu tapes à la caisse.' }}</p>
+
 <div class="pf-g">
   <div class="pf-l fixe"><span class="pf-k">{{ T.pf_language ?? 'Langue de l’app' }}</span><span class="pf-v">{{ langues[(employee ? employee.getLangCode() : '')|upper] ?? (employee ? employee.getLangCode()|upper : '') }}</span></div>
   <a class="pf-l fixe" href="{{ ROOT }}/logout"><span class="pf-k" style="color:var(--s-accent)">{{ T.pf_logout ?? 'Se déconnecter' }}</span></a>
@@ -332,6 +339,17 @@
 </form></dialog>
 {% endif %}
 
+<dialog class="fx" id="fx-pin"><form data-pin novalidate autocomplete="off">
+  {{ f.tete(T, T.pf_pin_title ?? 'Code PIN de caisse') }}
+  <div class="fx-corps"><p class="fx-msg"></p>
+    <div class="pf-g">
+      {{ f.champ('pin', T.pf_pin_new ?? 'Nouveau code', '', 'password', 'inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" placeholder="••••"') }}
+      {{ f.champ('confirmation', T.pf_pin_again ?? 'Encore une fois', '', 'password', 'inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" placeholder="••••"') }}
+    </div>
+    <p class="pf-note" style="margin:0 4px">{{ T.pf_pin_note ?? '4 chiffres. Évite 1111 ou 1234. Il remplace l’ancien dès que tu enregistres.' }}</p>
+  </div>
+</form></dialog>
+
 <dialog class="fx" id="fx-competences"><form>
   <div class="fx-poignee"></div><div class="fx-tete"><span></span><b>{{ T.pf_competencies ?? 'Compétences' }}</b><button type="button" class="ok" data-ferme>OK</button></div>
   <div class="fx-corps"><div class="pf-g fx-liste">{% for c in comps %}<div>{{ c.getName() }}{% if c.getCategoryName() %}<small>{{ c.getCategoryName() }}{% if c.getSubcategoryName() %} · {{ c.getSubcategoryName() }}{% endif %}</small>{% endif %}</div>{% endfor %}</div></div>
@@ -346,7 +364,9 @@
     saving: T.pf_saving ?? 'Enregistrement…', save: T.pf_save ?? 'Enregistrer', error: T.pf_error ?? 'Impossible d’enregistrer pour l’instant. Réessaie.',
     valid: T.pf_valid ?? 'valide', nissLen: T.pf_niss_len ?? 'Le numéro national a 11 chiffres : il en manque {n}.', nissBad: T.pf_niss_bad ?? 'Ce numéro national n’est pas valide.',
     ibanLen: T.pf_iban_len ?? 'Un IBAN {c} a {l} caractères : il en manque {n}.', ibanBad: T.pf_iban_bad ?? 'Cet IBAN n’est pas valide.',
-    photoSending: T.pf_photo_sending ?? 'Envoi…', photoError: T.pf_photo_error ?? 'La photo n’a pas pu être envoyée.', photoDone: T.pf_photo_done ?? 'ajoutée · toucher pour remplacer'
+    photoSending: T.pf_photo_sending ?? 'Envoi…', photoError: T.pf_photo_error ?? 'La photo n’a pas pu être envoyée.', photoDone: T.pf_photo_done ?? 'ajoutée · toucher pour remplacer',
+    pin: { format: T.pf_pin_format ?? '4 chiffres, rien d’autre.', faible: T.pf_pin_weak ?? 'Trop facile à deviner. Choisis-en un autre.', different: T.pf_pin_diff ?? 'Les deux codes ne sont pas les mêmes.' },
+    pinDone: T.pf_pin_done ?? 'Changé ✓', pinError: T.pf_pin_error ?? 'Le code n’a pas été changé. Si c’est déjà ton code actuel, rien à faire ; sinon, réessaie plus tard.'
   }|json_encode|raw }};
   var IBAN_L = {BE:16, FR:27, NL:18, LU:20, DE:22, PL:28, IT:27, ES:24, PT:25, GB:22, IE:22, AT:20, CH:21, MA:28, TR:26, RO:24};
 
@@ -426,6 +446,56 @@
         .catch(function () { bt.disabled = false; bt.textContent = T.save; msg.textContent = T.error; msg.classList.add('on'); });
     });
   });
+
+  // Le PIN de caisse : contrôlé ici comme au serveur (4 chiffres, pas 1111 ni 1234, la confirmation identique), puis écrit
+  // au panel par /me/pin. La feuille se vide en se fermant : le code ne reste pas dans la page.
+  var fp = document.querySelector('form[data-pin]');
+  if (fp) {
+    var dp = fp.closest('dialog');
+    var pinFaute = function (pin, conf) {
+      if (!/^\d{4}$/.test(pin)) { return ['pin', 'format']; }
+      var d = pin.split('').map(Number), p = [d[1] - d[0], d[2] - d[1], d[3] - d[2]];
+      if (p[0] === p[1] && p[1] === p[2] && Math.abs(p[0]) <= 1) { return ['pin', 'faible']; }
+      if (conf !== pin) { return ['confirmation', 'different']; }
+      return null;
+    };
+    var montrer = function (champ, motif) {
+      var c = fp.querySelector('[data-champ="' + champ + '"]');
+      if (c) { c.classList.add('ko'); c.querySelector('.err').textContent = T.pin[motif] || motif; }
+    };
+    fp.querySelectorAll('input').forEach(function (i) {
+      i.addEventListener('input', function () { i.value = i.value.replace(/\D/g, '').slice(0, 4); i.closest('.fx-champ').classList.remove('ko'); });
+    });
+    dp.addEventListener('close', function () {
+      fp.reset(); fp.querySelectorAll('.fx-champ.ko').forEach(function (c) { c.classList.remove('ko'); }); fp.querySelector('.fx-msg').classList.remove('on');
+    });
+    fp.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var bt = fp.querySelector('button.ok'), msg = fp.querySelector('.fx-msg');
+      var pin = fp.elements.pin.value, conf = fp.elements.confirmation.value;
+      fp.querySelectorAll('.fx-champ.ko').forEach(function (c) { c.classList.remove('ko'); });
+      msg.classList.remove('on');
+      var faute = pinFaute(pin, conf);
+      if (faute) { montrer(faute[0], faute[1]); return; }
+      bt.disabled = true; bt.textContent = T.saving;
+      fetch(ROOT + '/me/pin', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ pin: pin, confirmation: conf }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { code: r.status, d: d }; }); })
+        .then(function (x) {
+          bt.disabled = false; bt.textContent = T.save;
+          if (x.code === 200 && x.d && x.d.ok) {
+            dp.close();
+            var etat = document.querySelector('[data-pin-etat]');
+            if (etat) { etat.textContent = T.pinDone; etat.style.color = 'var(--s-vert)'; }
+            return;
+          }
+          var errs = (x.d && x.d.erreurs) || null;
+          if (x.code === 422 && errs) { Object.keys(errs).forEach(function (k) { montrer(k, errs[k]); }); }
+          else { msg.textContent = T.pinError; msg.classList.add('on'); }
+        })
+        .catch(function () { bt.disabled = false; bt.textContent = T.save; msg.textContent = T.pinError; msg.classList.add('on'); });
+    });
+  }
 
   // La carte d'identité : la photo réduite à 1600 px dans le navigateur (JPEG), puis envoyée.
   function reduire(fichier) {

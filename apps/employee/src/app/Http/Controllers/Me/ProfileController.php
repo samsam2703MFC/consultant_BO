@@ -13,7 +13,7 @@ use App\Employee\core\Support\Route;
  * « Mon profil » (30/10/2026, Sam : « que l'employé puisse encoder toutes ses données » ; maquette
  * docs/maquettes/profil-employe) : ce qui manque en tête, puis six fiches que la personne remplit elle-même et la photo
  * de sa carte d'identité. Le profil est gardé chiffré par le cockpit (ProfilService) ; le prénom, le nom, le téléphone
- * et l'e-mail viennent du panel tant qu'elle ne les a pas changés.
+ * et l'e-mail viennent du panel tant qu'elle ne les a pas changés. Le PIN de caisse se change ici aussi, écrit au panel.
  */
 class ProfileController extends Controller
 {
@@ -57,6 +57,38 @@ class ProfileController extends Controller
         $r = $this->profilService->carte($b['face'], $b['data']);
         if ($r['ok']) { return $this->json($r['data']); }
         return $this->json($r['data'] ?? ['error' => $r['erreur'] ?? 'indisponible'], $r['code'] === 422 ? 422 : 502);
+    }
+
+    /**
+     * POST /me/pin {pin, confirmation} — le PIN de caisse (4 chiffres), changé par la personne elle-même (30/10/2026,
+     * Sam). Écrit au panel (PATCH /employees/{id}, son jeton). 422 {erreurs: {champ: format | faible | different}} :
+     * la page traduit le motif.
+     */
+    #[Route('POST', '/me/pin')]
+    public function pin()
+    {
+        $b = json_decode((string) file_get_contents('php://input'), true);
+        if (!is_array($b)) { return $this->json(['error' => 'requête illisible'], 400); }
+        $erreur = self::pinErreur((string) ($b['pin'] ?? ''), (string) ($b['confirmation'] ?? ''));
+        if ($erreur !== null) { return $this->json(['error' => 'à corriger', 'erreurs' => [$erreur[0] => $erreur[1]]], 422); }
+        $r = $this->employeeService->changerPin((string) $b['pin']);
+        if (!empty($r['success'])) { return $this->json(['ok' => true]); }
+        error_log('PIN de caisse : le panel répond ' . ($r['code'] ?? '?') . ' ' . ($r['description'] ?? ''));
+        return $this->json(['error' => 'le panel n’a pas accepté le changement'], 502);
+    }
+
+    /**
+     * Le contrôle d'un PIN : 4 chiffres, pas un code qui se devine (quatre fois le même chiffre, une suite comme 1234
+     * ou 9876), la confirmation identique. Rend null, ou [champ, motif].
+     */
+    public static function pinErreur(string $pin, string $confirmation): ?array
+    {
+        if (!preg_match('/^\d{4}$/', $pin)) { return ['pin', 'format']; }
+        $d = array_map('intval', str_split($pin));
+        $pas = [$d[1] - $d[0], $d[2] - $d[1], $d[3] - $d[2]];
+        if (count(array_unique($pas)) === 1 && in_array($pas[0], [-1, 0, 1], true)) { return ['pin', 'faible']; }
+        if ($confirmation !== $pin) { return ['confirmation', 'different']; }
+        return null;
     }
 
     /** Ce que le panel sait de la personne : prénom, nom, téléphone, e-mail. */

@@ -86,6 +86,7 @@ function apiModInventaire(): array
                     ['m' => 'GET', 'r' => '/employees/{id}/tasks', 'dit' => 'Les tâches du jour', 'pages' => ['app'], 'garde' => '', 'sonde' => $perso('/employees/{emp}/tasks')],
                     ['m' => 'GET', 'r' => '/tasks/completions/{id}', 'dit' => 'Une tâche faite', 'pages' => ['app'], 'garde' => '', 'sonde' => ['pas' => 'il faut une tâche faite à relire']],
                     ['m' => 'POST', 'r' => '/employees/{id}/tasks/{task}/mark-as-done', 'dit' => 'Marque une tâche faite (avec ses photos)', 'pages' => ['app']],
+                    ['m' => 'PATCH', 'r' => '/employees/{id}', 'dit' => 'Le PIN de caisse, changé par la personne dans « Mon profil » (le seul champ envoyé)', 'pages' => ['app']],
                     ['m' => 'GET', 'r' => '/shops/{id}', 'dit' => 'Le magasin de la personne', 'pages' => ['app'], 'garde' => '', 'sonde' => $perso('/shops/{sid}')],
                     ['m' => 'GET', 'r' => '/attachments/{id}/meta', 'dit' => 'Une photo de tâche', 'pages' => ['app'], 'garde' => '', 'sonde' => ['pas' => 'il faut une photo à relire']],
                     ['m' => 'GET', 'r' => '/attachments/{id}/presigned-url', 'dit' => 'Le lien d’une photo', 'pages' => ['app'], 'garde' => '', 'sonde' => ['pas' => 'il faut une photo à relire']],

@@ -272,6 +272,15 @@ comme « Mes primes »), qui garde le profil chiffré. Le prénom, le nom, le t�
 que la personne ne les change pas ; un changement est signalé au franchisé, jamais écrit au panel. Routes de l'app :
 `POST /me/profil {section, valeurs}`, `POST /me/carte {face, data}`. Qui voit : la personne, son franchisé, la marque.
 
+**Le PIN de caisse** (30/10/2026, Sam : « que le personnel puisse changer son PIN de façon indépendante ») : la ligne
+« Caisse › Code PIN » ouvre une feuille (nouveau code, confirmation). 4 chiffres ; 1111, 1234, 9876 et leurs pareils
+sont refusés (`ProfileController::pinErreur`, le même contrôle dans la page). `POST /me/pin {pin, confirmation}` écrit
+au panel `PATCH /employees/{id} {pin}` avec le jeton de la personne et son propre identifiant — le seul champ envoyé :
+la mise à jour du panel laisse le mot de passe et les postes tels quels quand ils ne sont pas envoyés. Rien n'est
+gardé dans l'app ni dans le cockpit ; la feuille se vide en se fermant. À savoir côté panel : il garde le PIN en clair
+(`franchisee_employee.pin`) et `PATCH /employees/{id}` ne vérifie que la validité du jeton, pas qu'il s'agit de la
+personne elle-même.
+
 `/statistiques` (`StatsController`, `Views/stats/statistiques.twig`, styles `assets/atelier/stats.css`, textes
 `translations/page/{fr,en,it,nl,pl}/stats.json`) : **ses chiffres à elle, rien que les siens**, depuis la même
 fiche que Primes (`GET /ventes/moi` du cockpit, rien n'est calculé dans l'app).
