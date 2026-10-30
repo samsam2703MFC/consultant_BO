@@ -23,8 +23,16 @@ php -S 127.0.0.1:8098 tools/metadonnee-essai/router.php &
 META_GRAPH_BASE=http://127.0.0.1:8098/graph/v25.0 php -S 127.0.0.1:8090 -t public public/router.php &
 ```
 
-Puis http://127.0.0.1:8090/#/metadonnee-formulaires, carte « Connexion Meta » : application `4242`, clé `secret-app`,
-Page `501`, jeton `tok-system`, « 🔌 Connecter et tester » (l'adresse de rappel étant au CRM : mode relève). Puis suivre les formulaires, enregistrer
+Les clés Meta sont celles du CRM, lues dans sa table `crm_settings` : dans la base locale,
+
+```sql
+CREATE TABLE IF NOT EXISTS crm_settings (skey VARCHAR(64) PRIMARY KEY, svalue TEXT);
+REPLACE INTO crm_settings VALUES ('meta_app_id','4242'),('meta_app_secret','secret-app'),('meta_page_id','501'),('meta_page_token','tok-system');
+```
+
+Puis http://127.0.0.1:8090/#/metadonnee-formulaires, carte « Connexion Meta » (« Clés du CRM » : application `4242`,
+Page `501`), « 🔌 Connecter et tester » (`tok-system` échangé contre `tok-page-501`, gardé côté Cockpit ; l'application
+étant celle du CRM : mode relève). « Clés propres » : les mêmes valeurs saisies à l'écran. Puis suivre les formulaires, enregistrer
 les mappings, « Récupérer 30 jours », allumer l'envoi (étape 2) et les SMS (étape 4), « Lancer le cycle maintenant ».
 `php tools/metadonnee-essai/franchises.php` fait « travailler » les franchisés dans le faux ERP (vu, contacté,
 bureau créé, bureau connecté, perdu) ; le cycle suivant le relit.
