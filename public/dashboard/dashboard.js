@@ -22,7 +22,7 @@
   // Promotions se lit (la liste, où elles sont utilisées, le coefficient). ?ouvrir= : nouvelle (défaut), bon, p21
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -38,6 +38,7 @@
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
     pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null, pmC: null, pmCanJ: 30, pmCanM: 'n',
+    prVue: 'mois', prFiltre: 'toutes', prM: null, prY: null, prTri: null, prTriAn: null,
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -130,6 +131,8 @@
     // qu'il faut pour en écrire une — produits, livraisons, motifs.
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
     if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
+    // Les primes de l'équipe (30/10/2026) : le mois ou l'année, rien d'autre.
+    if (S.vue === 'primes') { if (S.prVue === 'annee') { lireAux(clePrAn(), cheminPrAn(), force); } else { lireAux(clePrEq(), cheminPrEq(), force); } rendre(); return; }
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
     // Et où elles s'appliquent : comptoir, click & collect, livraison (18/10/2026).
     // Le panel est relu à chaque ouverture de l'onglet (21/10/2026, Sam) : voir pmRelire().
@@ -4476,6 +4479,156 @@
     const bres = document.getElementById('pm-bres'); if (bres) { pmBrancherBonRes(bres); if (S.pmW && d.bon.on && d.bon.cible === 'clients') { pmBonPrechauffer(S.pmW); } }
   }
 
+  /* --- Primes du magasin (30/10/2026) -----------------------------------------------------------------------------
+   * « Où en sont tes vendeuses », le tableau de la page franchisé du cockpit (#/primes?shop=4), à LIRE dans le
+   * dashboard : une ligne par vendeuse, une colonne par prime de Mes primes — gagnée en vert, en tête, sa place, ou sa
+   * valeur face à l'objectif avec une barre fine. Le mois (‹ octobre 2026 ›) ou l'année, toutes les primes ou celles du
+   * magasin, un clic sur un en-tête trie. Rien ne s'y pose ni ne s'y modifie : les primes se règlent au cockpit.
+   *   ../api/cockpit/ventes/primes-equipe?shop=&m=   (le mois)
+   *   ../api/cockpit/ventes/primes-annee?y=&shop=    (l'année)
+   */
+  const PR_M_DEBUT = '2026-01', PR_Y_DEBUT = 2026;
+  function prMois() { const m = S.prM || S.date.slice(0, 7), max = AUJ.slice(0, 7); return m < PR_M_DEBUT ? PR_M_DEBUT : (m > max ? max : m); }
+  function prAn() { return Math.max(PR_Y_DEBUT, Math.min(+AUJ.slice(0, 4), S.prY || annee())); }
+  function clePrEq() { return 'prEq|' + S.shop + '|' + prMois(); }
+  function cheminPrEq() { return '/ventes/primes-equipe?shop=' + encodeURIComponent(S.shop) + '&m=' + prMois(); }
+  function clePrAn() { return 'prAn|' + S.shop + '|' + prAn(); }
+  function cheminPrAn() { return '/ventes/primes-annee?y=' + prAn() + '&shop=' + encodeURIComponent(S.shop); }
+  function prDecale(m, n) { const x = new Date(+m.slice(0, 4), +m.slice(5, 7) - 1 + n, 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); }
+  const prLibMois = m => MOIS[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4);
+  const prFx = (v, k) => nf(+v, Number.isInteger(+v) ? 0 : k);
+  const prEur = v => (+v).toLocaleString('fr-BE', { minimumFractionDigits: (+v) % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €';
+  const prPl = (n, mot) => n + ' ' + mot + (n > 1 && !/s$/.test(mot) ? 's' : '');
+  const prPayeur = p => (p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : p.payeur === 'magasin' ? 'le magasin' : 'la marque');
+  const prVal = (u, v) => (v == null ? '' : u === 'pct' ? prFx(v, 1) + ' %' : u === 'lpt' ? nf(+v, 2) + ' art./ticket' : u === 'note' ? nf(+v, 1) + ' ★'
+    : u === 'pcs' ? prFx(v, 1) + ' pcs' : u === 'eur' ? fE(v) : u === 'score' ? 'score ' + prFx(v, 1) : prFx(v, 1));
+  const PR_MOTIFS = { pas_compte: 'pas encore compté', sans_vente: 'aucune vente', min_tickets: 'pas assez de tickets', heures: 'sous le min. d’heures',
+    pas_record: 'pose son 1er record', pas_objectif: 'pas d’objectif', pas_note: 'pas de note', pas_classee: 'pas encore classée' };
+  function prRecompense(p) {
+    if (p.type === 'b2b') { return p.mode === 'fixe' ? (p.fixe || 0) + ' € · 1re commande' : prFx(p.taux, 1) + ' % · ' + (p.duree === 'premiere' ? '1re commande' : p.duree === 'sans' ? 'sans limite' : p.duree + ' mois'); }
+    return p.cadeau ? 'cadeau · ' + p.cadeau : (p.max ? 'jusqu’à ' : '') + p.montant + ' €';
+  }
+  /** Une case : ce que la vendeuse voit dans Mes primes pour cette prime — `ton` dit la couleur, `niveau` la barre. */
+  function prCase(p, k, clos) {
+    if (!k) { return { ton: 'hors', haut: '', bas: '' }; }
+    const v = prVal(p.unite, k.val);
+    const place = k.rang ? k.rang + (k.rang === 1 ? 're' : 'e') + (k.sur ? ' / ' + k.sur : '') : '';
+    if (p.type === 'b2b') {
+      const cl = k.clients ? prPl(k.clients, 'client') + ' pro' : 'aucun client pro';
+      return k.gain > 0 ? { ton: 'gagne', haut: '✓ ' + prEur(k.gain), bas: cl } : { ton: 'vide', haut: '—', bas: cl };
+    }
+    if (k.etat === 'gagne') { return { ton: 'gagne', haut: '✓ ' + (k.gain > 0 ? prEur(k.gain) : p.cadeau ? 'cadeau' : 'gagnée'), bas: [v, place].filter(Boolean).join(' · ') }; }
+    if (k.etat === 'tete') { return { ton: 'tete', haut: 'en tête', bas: [v, k.avance1 != null ? '+' + k.avance1 + ' sur la 2e' : place].filter(Boolean).join(' · ') }; }
+    if (k.etat === 'vide' || k.etat === 'sans_vente' || k.val == null) { return { ton: 'vide', haut: '—', bas: PR_MOTIFS[k.motif] || (clos ? 'pas gagnée' : '') }; }
+    if (k.etat === 'rang' || (k.rang && k.cible == null)) {
+      return { ton: clos ? 'perdu' : 'route', haut: place || v, bas: [place ? v : '', k.pour1 ? k.pour1 + ' pcs pour la 1re' : ''].filter(Boolean).join(' · '), niveau: k.niveau };
+    }
+    const obj = k.cible != null ? (p.base === 'objectif' ? 'objectif ' : 'cible ') + prVal(p.unite, k.cible) : '';
+    return { ton: clos ? 'perdu' : 'route', haut: (p.base === 'objectif' && !clos ? 'proj. ' : '') + v, bas: k.motif === 'min_tickets' ? PR_MOTIFS.min_tickets : obj, niveau: k.niveau };
+  }
+  /** La force d'une case pour le tri : gagnée d'abord (le gain), puis en tête, puis le chemin fait et la place. */
+  function prForce(p, k) {
+    if (!k) { return -1; }
+    if (k.etat === 'gagne' || (p.type === 'b2b' && k.gain > 0)) { return 4e6 + k.gain * 100 + Math.min(99, +k.val || 0); }
+    if (k.etat === 'tete') { return 3e6 + Math.min(999, +k.val || 0); }
+    if (k.etat === 'vide' || k.etat === 'sans_vente' || k.val == null) { return 0; }
+    return 1e6 + (k.niveau || 0) * 1e3 + (k.rang ? 100 - k.rang : 0) + Math.min(99, +k.val || 0) / 100;
+  }
+  /** Un en-tête qui trie : le 2e clic inverse ; le sens suivant voyage dans le bouton. */
+  function prTriBt(tri, col, tab, contenu) {
+    const on = tri.col === col, sens = on ? -tri.sens : (col === 'nom' ? 1 : -1);
+    return `<button class="pr-tri" data-prtri="${esc(col)}" data-prtab="${tab}" data-prsens="${sens}">${contenu}${on ? `<span class="pr-fl">${tri.sens < 0 ? '↓' : '↑'}</span>` : ''}</button>`;
+  }
+  const prAria = (tri, col) => (tri.col === col ? (tri.sens < 0 ? 'descending' : 'ascending') : 'none');
+  function prTableMois(D, garde) {
+    const cols = (D.primes || []).filter(garde), clos = !D.enCours;
+    const t0 = S.prTri || { col: 'acquis', sens: -1 };
+    const tri = t0.col === 'nom' || t0.col === 'acquis' || cols.some(p => p.cle === t0.col) ? t0 : { col: 'acquis', sens: -1 };
+    const pTri = cols.find(p => p.cle === tri.col);
+    const val = v => (tri.col === 'nom' ? v.nom : pTri ? prForce(pTri, (v.cases || {})[pTri.cle]) : v.acquis);
+    const rangs = (D.vendeuses || []).slice().sort((a, b) => {
+      const xa = val(a), xb = val(b), c = typeof xa === 'string' ? xa.localeCompare(xb, 'fr') : xa - xb;
+      return c * tri.sens || b.acquis - a.acquis || a.nom.localeCompare(b.nom, 'fr');
+    });
+    const cel = k => (k.ton === 'hors' ? '<td class="pr-hors">·</td>' : `<td class="pr-c pr-${k.ton}"><div class="pr-h">${esc(k.haut)}</div>
+      ${k.niveau != null && k.ton !== 'gagne' && k.ton !== 'tete' ? `<div class="pr-barre"><i style="width:${Math.max(3, Math.min(100, k.niveau))}%"${k.ton === 'perdu' ? ' class="gris"' : k.niveau >= 80 ? ' class="vert"' : ''}></i></div>` : ''}
+      ${k.bas ? `<div class="pr-b">${esc(k.bas)}</div>` : ''}</td>`);
+    const quand = D.quand ? new Date(D.quand * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '';
+    return `<div class="db-card pr-carte"><div class="pr-defil"><table class="pr-tab">
+      <thead><tr>
+        <th class="pr-g pr-petit" aria-sort="${prAria(tri, 'nom')}">${prTriBt(tri, 'nom', 'mois', 'Vendeuse')}</th>
+        ${cols.map(p => `<th aria-sort="${prAria(tri, p.cle)}">${prTriBt(tri, p.cle, 'mois', `<div class="pr-lib">${esc(p.lib)}</div>
+          <div class="pr-rec">${esc(prRecompense(p))} · ${p.payeur === 'magasin' ? `<span class="pr-mag">${esc(prPayeur(p))}</span>` : esc(prPayeur(p))}</div>
+          <div class="pr-cpt" title="${esc(p.gagnees + ' vendeuse' + (p.gagnees > 1 ? 's' : '') + ' sur ' + p.vendeuses + ' l’' + (p.gagnees > 1 ? 'ont' : 'a') + ' gagnée')}">✓ ${esc(p.gagnees + ' / ' + p.vendeuses)}</div>`)}</th>`).join('')}
+        <th class="pr-petit pr-d" aria-sort="${prAria(tri, 'acquis')}">${prTriBt(tri, 'acquis', 'mois', D.enCours ? 'Acquis' : 'Gagné')}</th>
+      </tr></thead>
+      <tbody>${rangs.map(v => `<tr>
+        <td class="pr-g pr-nom"><b>${esc(v.nom)}</b>${[v.heures != null ? prFx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).length ? `<small>${esc([v.heures != null ? prFx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).join(' · '))}</small>` : ''}</td>
+        ${cols.map(p => cel(prCase(p, (v.cases || {})[p.cle], clos))).join('')}
+        <td class="pr-tot">${v.acquis > 0 ? esc(prEur(v.acquis)) : '—'}</td></tr>`).join('')}</tbody>
+    </table></div></div>
+    <div class="pr-pied">✓ gagnée · <span class="pr-tete-t">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin vers l’objectif · un clic sur un en-tête trie${quand ? ' · lu à ' + esc(quand) : ''}</div>`;
+  }
+  /** L'année : une colonne par prime gagnée, une ligne par vendeuse — ce qu'elle a touché et combien de mois. */
+  function prAnneeVue(A, garde) {
+    const cols = (A.primes || []).filter(garde);
+    const t0 = S.prTriAn || { col: 'total', sens: -1 };
+    const tri = t0.col === 'nom' || t0.col === 'total' || cols.some(p => p.cle === t0.col) ? t0 : { col: 'total', sens: -1 };
+    const totalDe = r => cols.reduce((t, p) => t + (((r.cases || {})[p.cle] || {}).montant || 0), 0);
+    const val = r => (tri.col === 'nom' ? String(r.nom) : tri.col === 'total' ? totalDe(r) : ((r.cases || {})[tri.col] ? r.cases[tri.col].montant * 1000 + r.cases[tri.col].fois : -1));
+    const rangs = (A.personnes || []).filter(r => cols.some(p => (r.cases || {})[p.cle])).sort((a, b) => {
+      const xa = val(a), xb = val(b), c = typeof xa === 'string' ? xa.localeCompare(xb, 'fr') : xa - xb;
+      return c * tri.sens || totalDe(b) - totalDe(a) || String(a.nom).localeCompare(String(b.nom), 'fr');
+    });
+    const mois = A.mois || [];
+    return { tri, cols, rangs, totalDe, total: prEur(rangs.reduce((t, r) => t + totalDe(r), 0)),
+      periode: mois.length ? MOIS[+mois[0].m.slice(5, 7) - 1] + ' → ' + prLibMois(mois[mois.length - 1].m) + (mois[mois.length - 1].enCours ? ' (en cours)' : '') : '' };
+  }
+  function prTableAn(V) {
+    const { tri, cols, rangs, totalDe } = V;
+    return `<div class="db-card pr-carte"><div class="pr-defil"><table class="pr-tab">
+      <thead><tr>
+        <th class="pr-g pr-petit" aria-sort="${prAria(tri, 'nom')}">${prTriBt(tri, 'nom', 'an', 'Vendeuse')}</th>
+        ${cols.map(p => `<th aria-sort="${prAria(tri, p.cle)}">${prTriBt(tri, p.cle, 'an', `<div class="pr-lib">${esc(p.lib)}</div>
+          <div class="pr-rec${p.payeur === 'magasin' ? ' pr-mag' : ''}">${esc(prPayeur(p))}</div>
+          <div class="pr-cpt">${esc(prEur(p.total) + ' · ' + prPl(p.gagnantes, 'gagnante'))}</div>`)}</th>`).join('')}
+        <th class="pr-petit pr-d" aria-sort="${prAria(tri, 'total')}">${prTriBt(tri, 'total', 'an', 'Total')}</th>
+      </tr></thead>
+      <tbody>${rangs.map(r => `<tr>
+        <td class="pr-g pr-nom"><b>${esc(r.nom)}</b><small>${esc(prPl(r.mois, 'mois') + ' primé' + (r.mois > 1 ? 's' : ''))}</small></td>
+        ${cols.map(p => { const c = (r.cases || {})[p.cle]; return !c ? '<td class="pr-hors">·</td>'
+          : `<td class="pr-c pr-gagne"><div class="pr-h">${esc(c.montant > 0 ? prEur(c.montant) : '✓ cadeau')}</div><div class="pr-b">${esc(prPl(c.fois, 'mois'))}</div></td>`; }).join('')}
+        <td class="pr-tot">${esc(prEur(totalDe(r)))}</td></tr>`).join('')}</tbody>
+    </table></div></div>
+    <div class="pr-pied">Le montant gagné sur l’année et le nombre de mois · ✓ cadeau : une prime sans euros · un clic sur un en-tête trie</div>`;
+  }
+  function rendPrimes() {
+    const an = S.prVue === 'annee', filtre = S.prFiltre === 'magasin' ? 'magasin' : 'toutes';
+    const garde = p => filtre === 'toutes' || p.payeur === 'magasin';
+    const k = an ? clePrAn() : clePrEq(), D = S.aux[k];
+    const V = an && D ? prAnneeVue(D, garde) : null;
+    const m = prMois(), y = prAn(), mMax = AUJ.slice(0, 7), yMax = +AUJ.slice(0, 4);
+    const pas = an
+      ? `<button class="db-btn" data-pry="-1"${y > PR_Y_DEBUT ? '' : ' disabled'} aria-label="Année précédente">‹</button><span class="pr-per">${y}${y === yMax ? '<small> · en cours</small>' : ''}</span><button class="db-btn" data-pry="1"${y < yMax ? '' : ' disabled'} aria-label="Année suivante">›</button>`
+      : `<button class="db-btn" data-prm="-1"${m > PR_M_DEBUT ? '' : ' disabled'} aria-label="Mois précédent">‹</button><span class="pr-per">${esc(prLibMois(m))}${m === mMax ? '<small> · en cours</small>' : ''}</span><button class="db-btn" data-prm="1"${m < mMax ? '' : ' disabled'} aria-label="Mois suivant">›</button>`;
+    const sous = an ? (V && V.periode ? esc(V.periode) + ' · ' + esc(V.total) + ' gagnés' : 'L’année du magasin, prime par prime.') : 'Ce que chacune voit dans Mes primes, prime par prime.';
+    let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Primes</div><div class="pm-titre">Où en sont tes vendeuses</div><div class="db-mini pr-sous">${sous}</div></div><span style="flex:1"></span>
+      <div class="pr-outils">
+        <div class="db-ong db-ong-p">${[['toutes', 'Toutes les primes'], ['magasin', 'Celles du magasin']].map(o => `<button data-prf="${o[0]}" class="${filtre === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+        <div class="db-ong db-ong-p">${[['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-prvue="${o[0]}" class="${(an ? 'annee' : 'mois') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+        <span class="pr-pas">${pas}</span></div></div>
+      <div class="pm-lecture">Lecture seule : les primes se posent et se règlent au cockpit.</div>`;
+    if (S.err[k]) { return h + `<div class="db-err">Primes : ${esc(S.err[k])}</div>`; }
+    if (!D) { return h + `<div class="db-card"><div class="pm-vide">${an ? 'Calcul de l’année, mois par mois…' : 'Lecture des fiches de l’équipe…'}</div></div>`; }
+    if (an) {
+      if (!V.rangs.length) { return h + `<div class="db-card"><div class="pm-vide">Aucune prime gagnée dans ce magasin cette année-là${filtre === 'magasin' ? ' parmi celles du magasin' : ''}.</div></div>`; }
+      return h + prTableAn(V);
+    }
+    if (!(D.vendeuses || []).length) { return h + '<div class="db-card"><div class="pm-vide">Personne au planning ni en caisse dans ce magasin ce mois-là.</div></div>'; }
+    if (!(D.primes || []).filter(garde).length) { return h + '<div class="db-card"><div class="pm-vide">Aucune prime du magasin ce mois-là.</div></div>'; }
+    return h + prTableMois(D, garde);
+  }
+
   function rendre() {
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
@@ -4516,15 +4669,16 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions'], ['primes', 'Primes']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'primes' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
+    if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }
@@ -7609,6 +7763,12 @@
     $.querySelectorAll('[data-fdate]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.fdate; if (!d || d > AUJ) { return; } S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fan]').forEach(b => b.addEventListener('click', () => { const y = annee() + (+b.dataset.fan); const d = y + S.date.slice(4, 7) + '-01'; S.date = d > AUJ ? AUJ : finMois(d.slice(0, 7)); S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => charger(true)));
+    // Primes : le filtre, le mois ou l'année, le pas de période, le tri — de la lecture, rien ne s'écrit.
+    $.querySelectorAll('[data-prf]').forEach(b => b.addEventListener('click', () => { S.prFiltre = b.dataset.prf; rendre(); }));
+    $.querySelectorAll('[data-prvue]').forEach(b => b.addEventListener('click', () => { S.prVue = b.dataset.prvue; charger(false); }));
+    $.querySelectorAll('[data-prm]').forEach(b => b.addEventListener('click', () => { S.prM = prDecale(prMois(), +b.dataset.prm); charger(false); }));
+    $.querySelectorAll('[data-pry]').forEach(b => b.addEventListener('click', () => { S.prY = prAn() + (+b.dataset.pry); charger(false); }));
+    $.querySelectorAll('[data-prtri]').forEach(b => b.addEventListener('click', () => { S[b.dataset.prtab === 'an' ? 'prTriAn' : 'prTri'] = { col: b.dataset.prtri, sens: +b.dataset.prsens }; rendre(); }));
     $.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; rendre(); }));
     $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));

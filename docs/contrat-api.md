@@ -744,7 +744,8 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   `TWILIO_SID`, `TWILIO_TOKEN`, `SMS_EXPEDITEUR` (`src/sms.php`) ; sans lui, rien ne part, l'écran et le journal
   le disent.
 - `GET /ventes/primes-equipe?shop=&m=` (23/10/2026) : l'équipe d'un magasin face à ses primes, pour la page
-  franchisé (`#/primes?shop=4`, « Où en sont tes vendeuses ») : `primes[] {cle, lib, type, base,
+  franchisé (`#/primes?shop=4`, « Où en sont tes vendeuses ») et l'onglet Primes du dashboard magasin
+  (`dashboard/?shop=4&vue=primes`, à lire seulement, 30/10/2026) : `primes[] {cle, lib, type, base,
   montant, max, cadeau, unite, regle, payeur (marque | magasin | sponsor), sponsor, mode, taux, fixe, duree,
   vendeuses, gagnees}` — celles de Mes primes, dans leur ordre — et `vendeuses[] {id, nom, heures, tickets,
   acquis, enJeu, cases: {cle: {etat, gain, val, cible, record, rang, sur, ecart, pour1, avance1, motif, niveau,
@@ -762,7 +763,7 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   total, `magasins[] {id, nom, total, gagnantes, cases: {cle: {montant, fois, gagnantes}}}` (réseau seulement),
   `total`. Un titre sans euros (un cadeau) compte gagné à 0 €. Les clients pro, prime par prime (`b2b.parCle` des
   primes du mois). Cache `primesAn{y}` : une heure (une année close : un jour), vidé avec les fiches ; `&frais=1`
-  recalcule. Écrans : la page franchisé (« Où en sont tes vendeuses » › Année) et la page admin (« L'année des
+  recalcule. Écrans : la page franchisé (« Où en sont tes vendeuses » › Année), l'onglet Primes du dashboard magasin (› Année) et la page admin (« L'année des
   primes », par magasin ou par vendeuse, les mois en barres).
 - `GET /ventes/primes-api[?frais=1]` (24/10/2026) : l'API du module (`src/api_module.php`, écran `#/api`, rail ›
   Application employé › API du module) — l'inventaire de ce que le module des primes et l'application employé
