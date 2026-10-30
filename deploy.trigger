@@ -1159,3 +1159,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-29T20:59:11Z [208] plan logistique : nombre de tournées par semaine par camion / chauffeur (migration 131)
 2026-10-30T07:01:33Z [209] produits test : retrait de 22 anciennes propositions (migration 132)
 2026-10-30T07:22:42Z [210] factures : fenêtre de confirmation du nouveau prix de base
+2026-10-30T07:40:39Z [211] kartony : edycja produktow w oknie kartonu, limity palety kartonu (migration 133)
