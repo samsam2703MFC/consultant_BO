@@ -1187,3 +1187,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T19:48:33Z [production] sonda API panelu (prognoza 13 tygodni) [220]
 2026-10-30T19:56:35Z sonde panel étape 2 [220]
 2026-10-30T20:04:58Z sonde panel étape 3 [220]
+2026-10-30T20:38:55Z prévision 13 semaines [220]
