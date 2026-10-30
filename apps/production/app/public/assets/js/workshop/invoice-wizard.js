@@ -165,7 +165,7 @@
             const rest = (materials || []).filter(m => !sugIds.has(m.id) && (!l.material || m.id !== l.material.id));
             const opts = `<option value="">${esc(t('kw.pick_material'))}</option>`
                 + (l.material ? `<option value="${l.material.id}" selected>${esc(l.material.name)}</option>` : '')
-                + (sug.length ? `<optgroup label="${esc(t('inv.suggested'))}">${sug.map(s => `<option value="${s.raw_material_id}" ${!l.material && s.raw_material_id === sel ? 'selected' : ''}>${esc(s.name)} · ${esc(score(s))}</option>`).join('')}</optgroup>` : '')
+                + (sug.length ? `<optgroup label="${esc(t('inv.suggested'))}">${sug.map(s => `<option value="${s.raw_material_id}" data-price="${s.catalog_price ?? ''}" data-base="${esc(s.base_unit)}" ${!l.material && s.raw_material_id === sel ? 'selected' : ''}>${esc(s.name)} · ${esc(score(s))}</option>`).join('')}</optgroup>` : '')
                 + (rest.length ? `<optgroup label="${esc(t('inv.all_materials'))}">${rest.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</optgroup>` : '')
                 + (materials ? '' : `<option value="" disabled>${esc(t('kw.loading_materials'))}</option>`);
             const base = l.material ? l.material.base_unit : (sug[0] ? sug[0].base_unit : 'szt');
@@ -177,7 +177,7 @@
             const odd = suspicious(l);
             const qtyNote = c.ordered !== null ? (l.state === 'todo' && l.reason === 'qty' ? 'warn' : '') : null;
             const write = W.can_write;
-            return `<tr class="panel" data-kw-panel="${key(inv, l)}"><td></td><td colspan="7"><div class="kw-p">
+            return `<tr class="panel" data-kw-panel="${key(inv, l)}" data-unit-price="${l.unit_price ?? ''}"><td></td><td colspan="7"><div class="kw-p">
                 <div><h6>${esc(t('kw.our_material'))}</h6><select class="form-select kw-field" data-kw-mat aria-label="${esc(t('kw.our_material'))}" ${write ? '' : 'disabled'}>${opts}</select>
                     ${sug.length && !l.material ? `<div class="kw-chips">${sug.slice(0, 4).map(s => `<button type="button" class="kw-chip ${s.raw_material_id === sel ? 'on' : ''}" data-kw-sug="${s.raw_material_id}" data-factor="${s.factor ?? ''}">${esc(s.name)} · ${esc(score(s))}</button>`).join('')}</div>` : ''}
                     <label class="kw-check"><input type="checkbox" data-kw-remember checked ${write ? '' : 'disabled'}> ${esc(t('kw.remember', {s: seller(inv)}))}</label></div>
@@ -188,11 +188,13 @@
                     ${l.material ? `<span>${esc(t('kw.per_unit', {u: displayOf(l).unit}))}</span><b>${perDisplay(l, c.price_base)}</b>` : ''}
                     ${c.catalog_price ? `<span>${esc(t('kw.base_price'))}</span><b>${perDisplay(l, c.catalog_price)}</b><span>${esc(t('kw.change'))}</span><b class="${c.catalog_gap_pct > 0 ? 'kw-up' : 'kw-down'}">${pct(c.catalog_gap_pct)}${l.up ? ' · ' + esc(t('kw.recipes', {n: l.up.recipes})) : ''}</b>` : ''}
                     ${c.order_price ? `<span>${esc(t('kw.order_price'))}${inv.order ? ' ' + esc(inv.order.code) : ''}</span><b>${perDisplay(l, c.order_price)}</b>` : ''}</div>
+                    ${l.material ? '' : '<div data-kw-preview></div>'}
                     ${l.up && l.up.decision ? `<div class="kw-note">${esc(t('kw.up_decided.' + l.up.decision))}</div>` : ''}
                     ${odd ? `<div class="kw-note bad">${esc(t('kw.odd_price', {p: pct(c.catalog_gap_pct)}))}</div>` : ''}</div></div>
                 ${write ? `<div class="kw-acts">${l.state === 'todo' || l.state === 'auto' ? (up
                         ? `<button type="button" class="kw-btn ${odd ? '' : 'pri'}" data-kw-check="accept" ${odd ? 'data-kw-odd' : ''}>${esc(t('kw.act.accept'))}${odd ? '' : ' <span class="kw-key">Enter</span>'}</button><button type="button" class="kw-btn" data-kw-check="keep">${esc(t('kw.act.keep'))} <span class="kw-key">K</span></button>`
-                        : `<button type="button" class="kw-btn ${odd ? '' : 'pri'}" data-kw-check="" ${odd ? 'data-kw-odd' : ''}>${esc(t('kw.act.check'))}${odd ? '' : ' <span class="kw-key">Enter</span>'}</button>`)
+                        : `<span class="kw-do" data-kw-plain><button type="button" class="kw-btn ${odd ? '' : 'pri'}" data-kw-check="" ${odd ? 'data-kw-odd' : ''}>${esc(t('kw.act.check'))}${odd ? '' : ' <span class="kw-key">Enter</span>'}</button></span>`
+                          + (l.material ? '' : `<span class="kw-do d-none" data-kw-pair><button type="button" class="kw-btn pri" data-kw-check="accept">${esc(t('kw.act.accept'))} <span class="kw-key">Enter</span></button><button type="button" class="kw-btn" data-kw-check="keep">${esc(t('kw.act.keep'))} <span class="kw-key">K</span></button></span>`))
                     : `<button type="button" class="kw-btn" data-kw-reset>${esc(t('kw.act.reset'))}</button>`}
                     ${l.state === 'todo' ? `<button type="button" class="kw-btn" data-kw-skip>${esc(t('kw.act.skip'))} <span class="kw-key">→</span></button>` : ''}
                     ${l.state !== 'disputed' ? `<button type="button" class="kw-btn ghost" data-kw-dispute>${esc(t('kw.act.dispute'))}</button>` : ''}
@@ -260,6 +262,7 @@
                 const x = find(cur);
                 if (x && !x.l.material && !materials) ensureMaterials();
                 const p = host.querySelector('[data-kw-panel]');
+                if (p) preview(p);
                 if (p && !isVisible(p)) p.scrollIntoView({block: 'center'});
             }
         }
@@ -325,8 +328,43 @@
             const res = await act(() => api.post(`/supply/invoices/${x.inv.id}/lines/${x.l.id}/check`, {action: 'dispute', note}), t('kw.disputed_saved'), prev);
             if (!res) { cur = prev; render(); }
         }
+        // Linia bez surowca : podgląd ceny z wybranej podpowiedzi (cena bazowa, zmiana) jeszcze przed zatwierdzeniem —
+        // zła jednostka widoczna od razu (zmiana nie do wiary : bez Enter, jak po przypisaniu).
+        function preview(p) {
+            const box = p.querySelector('[data-kw-preview]');
+            if (!box) return;
+            const opt = p.querySelector('[data-kw-mat]').selectedOptions[0];
+            const price = Number(opt?.dataset.price || 0);
+            const unitPrice = Number(p.dataset.unitPrice || 0);
+            const scale = Number(p.querySelector('[data-kw-unit].on')?.dataset.kwUnit || 1);
+            const raw = p.querySelector('[data-kw-factor]').value.trim().replace(/\s/g, '').replace(',', '.');
+            const factor = raw === '' ? null : Number(raw) * scale;
+            if (!price || !unitPrice || !factor || !isFinite(factor)) {
+                box.innerHTML = '';
+                p.querySelector('[data-kw-plain]')?.classList.remove('d-none');
+                p.querySelector('[data-kw-pair]')?.classList.add('d-none');
+                return;
+            }
+            const base = opt.dataset.base;
+            const [unit, f] = base === 'g' ? ['kg', 1000] : (base === 'ml' ? ['l', 1000] : [base || 'szt', 1]);
+            const gap = (unitPrice / factor - price) / price * 100;
+            const odd = gap > 100 || gap < -60;
+            box.innerHTML = `<div class="kw-price mt-1"><span>${esc(t('kw.per_unit', {u: unit}))}</span><b>≈ ${f2(unitPrice / factor * f)} zł/${unit}</b>
+                <span>${esc(t('kw.base_price'))}</span><b>${f2(price * f)} zł/${unit}</b><span>${esc(t('kw.change'))}</span><b class="${gap > 0 ? 'kw-up' : 'kw-down'}">≈ ${pct(gap)}</b></div>`
+                + (odd ? `<div class="kw-note bad">${esc(t('kw.odd_price', {p: pct(gap)}))}</div>` : '');
+            // Podwyżka przewidziana (ponad próg supply.invoice_price_up_pct) : od razu « nowa cena / bez zmian ».
+            const up = gap > (W.auto && W.auto.price_up_pct ? W.auto.price_up_pct : 0) + 0.05;
+            p.querySelector('[data-kw-plain]')?.classList.toggle('d-none', up);
+            p.querySelector('[data-kw-pair]')?.classList.toggle('d-none', !up);
+            const btn = p.querySelector(up ? '[data-kw-pair] [data-kw-check="accept"]' : '[data-kw-plain] [data-kw-check]');
+            if (btn) {
+                btn.toggleAttribute('data-kw-odd', odd);
+                btn.classList.toggle('pri', !odd);
+                btn.querySelector('.kw-key')?.classList.toggle('d-none', odd);
+            }
+        }
         // Po wyborze podpowiedzi, jednostki albo surowca : fokus na « Zatwierdź » — Enter zatwierdza od razu.
-        const focusCheck = (p) => p.querySelector('[data-kw-check]')?.focus({preventScroll: true});
+        const focusCheck = (p) => { preview(p); [...p.querySelectorAll('[data-kw-check]')].find(b => !b.closest('.d-none'))?.focus({preventScroll: true}); };
         function skip() {
             const nx = nextTodo(cur);
             if (nx) { cur = key(nx.inv, nx.l); render(); }
@@ -430,6 +468,7 @@
             }
         });
         host.addEventListener('focusin', (e) => { if (e.target.matches('[data-kw-mat]')) ensureMaterials(); });
+        host.addEventListener('input', (e) => { if (e.target.matches('[data-kw-factor]')) preview(e.target.closest('[data-kw-panel]')); });
         // Klawiatura (krok 2) : Enter — zatwierdź, K — cena bez zmian, → — pomiń ; nie w polach wyboru.
         const onKey = (e) => {
             if (!document.body.contains(host)) { document.removeEventListener('keydown', onKey); return; }
@@ -438,8 +477,9 @@
             if (tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'INPUT' && e.key !== 'Enter') || (tag === 'BUTTON' && e.key === 'Enter')) return;
             const p = host.querySelector('[data-kw-panel]');
             if (!p) return;
-            if (e.key === 'Enter') { const b = p.querySelector('[data-kw-check]:not([data-kw-odd])'); if (b && b.dataset.kwCheck !== 'keep') { e.preventDefault(); b.click(); } }
-            else if (e.key === 'k' || e.key === 'K') { const b = p.querySelector('[data-kw-check="keep"]'); if (b) { e.preventDefault(); b.click(); } }
+            const shown = [...p.querySelectorAll('[data-kw-check]')].filter(b => !b.closest('.d-none'));
+            if (e.key === 'Enter') { const b = shown.find(x => !x.hasAttribute('data-kw-odd') && x.dataset.kwCheck !== 'keep'); if (b) { e.preventDefault(); b.click(); } }
+            else if (e.key === 'k' || e.key === 'K') { const b = shown.find(x => x.dataset.kwCheck === 'keep'); if (b) { e.preventDefault(); b.click(); } }
             else if (e.key === 'ArrowRight') { e.preventDefault(); skip(); }
         };
         document.addEventListener('keydown', onKey);

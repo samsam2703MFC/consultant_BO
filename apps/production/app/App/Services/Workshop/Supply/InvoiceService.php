@@ -580,6 +580,7 @@ final class InvoiceService
         usort($scored, fn($a, $b) => $b[0] <=> $a[0]);
         return array_map(fn($x) => ['raw_material_id' => (int) $x[1]['id'], 'name' => $lang === 'fr' && $x[1]['name_fr'] ? $x[1]['name_fr'] : $x[1]['name'],
             'score' => round(min(1.0, $x[0]), 2), 'known' => isset($named[(int) $x[1]['id']]), 'base_unit' => $x[1]['unit'] ?: 'szt',
+            'catalog_price' => isset($x[1]['price_per_unit']) && (float) $x[1]['price_per_unit'] > 0 ? (float) $x[1]['price_per_unit'] : null,
             'factor' => $named[(int) $x[1]['id']] ?? InvoiceParser::defaultFactor($l['unit'], $x[1]['unit'], $x[1]['package_size'] !== null ? (float) $x[1]['package_size'] : null, (string) $l['name'])],
             array_slice($scored, 0, 5));
     }
