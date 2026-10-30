@@ -1180,3 +1180,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T14:41:19Z [production] plan tygodnia : zadania zakupów → kierownik produkcji [219]
 2026-10-30T15:51:46Z [cockpit] liste des routes : ecriture des employes et PIN de caisse (#79)
 2026-10-30T15:56:26Z [cockpit] liste des routes : modification d un employe dans le panel (#80)
+2026-10-30T15:59:02Z [cockpit] liste des routes : mise a jour d un employe dans le panel (#81)
