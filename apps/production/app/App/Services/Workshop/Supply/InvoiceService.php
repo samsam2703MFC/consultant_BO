@@ -562,19 +562,25 @@ final class InvoiceService
         return $rows;
     }
 
-    /** Podpowiedzi surowca : z zamówienia, od dostawcy, potem wszystkie — wg podobieństwa nazw. */
+    /**
+     * Podpowiedzi surowca : ta sama nazwa przypisana już u innego dostawcy (known, z jej przelicznikiem) najpierw [217], potem
+     * z zamówienia, od dostawcy, wszystkie — wg podobieństwa nazw.
+     */
     private function suggest(array $l, array $inv, array $materials, array $orderMaterials, string $lang): array
     {
+        $named = $this->repo->namedMappings(InvoiceParser::nameKey((string) $l['name']), InvoiceParser::unitKey($l['unit'] ?? null));
         $scored = [];
         foreach ($materials as $m) {
             $score = InvoiceParser::similarity((string) $l['name'], (string) $m['name']);
             if (in_array((int) $m['id'], $orderMaterials, true)) $score += 0.3;
             if ($inv['id_supplier'] && (int) $m['id_current_supplier'] === (int) $inv['id_supplier']) $score += 0.2;
+            if (isset($named[(int) $m['id']])) $score += 2;
             if ($score >= 0.3) $scored[] = [$score, $m];
         }
         usort($scored, fn($a, $b) => $b[0] <=> $a[0]);
-        return array_map(fn($x) => ['raw_material_id' => (int) $x[1]['id'], 'name' => $lang === 'fr' && $x[1]['name_fr'] ? $x[1]['name_fr'] : $x[1]['name'], 'score' => round($x[0], 2),
-            'base_unit' => $x[1]['unit'] ?: 'szt', 'factor' => InvoiceParser::defaultFactor($l['unit'], $x[1]['unit'], $x[1]['package_size'] !== null ? (float) $x[1]['package_size'] : null, (string) $l['name'])],
+        return array_map(fn($x) => ['raw_material_id' => (int) $x[1]['id'], 'name' => $lang === 'fr' && $x[1]['name_fr'] ? $x[1]['name_fr'] : $x[1]['name'],
+            'score' => round(min(1.0, $x[0]), 2), 'known' => isset($named[(int) $x[1]['id']]), 'base_unit' => $x[1]['unit'] ?: 'szt',
+            'factor' => $named[(int) $x[1]['id']] ?? InvoiceParser::defaultFactor($l['unit'], $x[1]['unit'], $x[1]['package_size'] !== null ? (float) $x[1]['package_size'] : null, (string) $l['name'])],
             array_slice($scored, 0, 5));
     }
 
@@ -668,23 +674,53 @@ final class InvoiceService
         $factor = $mid === null ? null : (float) ($v->value('factor')
             ?? InvoiceParser::defaultFactor($line['unit'], $material['unit'], $material['package_size'] !== null ? (float) $material['package_size'] : null, (string) $line['name']));
         $remember = $v->value('remember') !== false;
-        $keys = $this->supplierKeys($inv);
-        $this->tx->execute(function () use ($id, $line, $mid, $factor, $remember, $keys, $inv, $context) {
-            $nameKey = InvoiceParser::nameKey($line['name']);
-            $unitKey = InvoiceParser::unitKey($line['unit']);
-            foreach ($this->repo->lines($id) as $l) {
-                if ((int) $l['id'] === (int) $line['id'] || ($remember && InvoiceParser::nameKey($l['name']) === $nameKey && InvoiceParser::unitKey($l['unit']) === $unitKey)) {
-                    $this->repo->mapLine((int) $l['id'], $mid, $factor);
-                }
-            }
-            if ($remember && $mid !== null && $keys) {
-                $this->repo->saveMapping($keys[0], $inv['id_supplier'] !== null ? (int) $inv['id_supplier'] : null, $nameKey, $unitKey, $line['name'], $line['unit'], (int) $mid, (float) $factor, $context->userId);
-            }
-            $this->autoLink($id);
-            $this->audit->record($context, 'map', 'purchase_invoice_line', (int) $line['id'], ['raw_material_id' => $line['id_raw_material'], 'factor' => $line['factor']],
-                ['raw_material_id' => $mid, 'factor' => $factor, 'remember' => $remember]);
-        });
+        $this->tx->execute(fn() => $this->applyMapping($inv, $line, $mid, $factor, $remember, $context));
         return $this->detail($id, $context);
+    }
+
+    /**
+     * Przypisanie linii (i takich samych linii faktury, gdy remember) ; remember zapisuje nazwę dostawcy i od razu stosuje ją do
+     * linii bez surowca w innych otwartych fakturach tego dostawcy [217]. @return list<int> inne faktury z nowymi przypisaniami
+     */
+    private function applyMapping(array $inv, array $line, ?int $mid, ?float $factor, bool $remember, ApiContext $context): array
+    {
+        $id = (int) $inv['id'];
+        $nameKey = InvoiceParser::nameKey($line['name']);
+        $unitKey = InvoiceParser::unitKey($line['unit']);
+        foreach ($this->repo->lines($id) as $l) {
+            if ((int) $l['id'] === (int) $line['id'] || ($remember && InvoiceParser::nameKey($l['name']) === $nameKey && InvoiceParser::unitKey($l['unit']) === $unitKey)) {
+                $this->repo->mapLine((int) $l['id'], $mid, $factor);
+            }
+        }
+        $keys = $this->supplierKeys($inv);
+        $touched = [];
+        if ($remember && $mid !== null && $keys) {
+            $this->repo->saveMapping($keys[0], $inv['id_supplier'] !== null ? (int) $inv['id_supplier'] : null, $nameKey, $unitKey, $line['name'], $line['unit'], (int) $mid, (float) $factor, $context->userId);
+            $touched = $this->propagate($inv);
+        }
+        $this->autoLink($id);
+        $this->audit->record($context, 'map', 'purchase_invoice_line', (int) $line['id'], ['raw_material_id' => $line['id_raw_material'], 'factor' => $line['factor']],
+            ['raw_material_id' => $mid, 'factor' => $factor, 'remember' => $remember] + ($touched ? ['other_invoices' => $touched] : []));
+        return $touched;
+    }
+
+    /** Zapamiętane przypisania dostawcy dla linii bez surowca w innych otwartych fakturach (ten sam NIP albo dostawca ERP). @return list<int> */
+    private function propagate(array $inv): array
+    {
+        $touched = [];
+        foreach ($this->repo->invoices('open') as $o) {
+            if ((int) $o['id'] === (int) $inv['id'] || (int) $o['unmapped'] === 0) continue;
+            $same = ($inv['seller_nip'] && $o['seller_nip'] === $inv['seller_nip']) || ($inv['id_supplier'] !== null && (string) $o['id_supplier'] === (string) $inv['id_supplier']);
+            if (!$same) continue;
+            $n = 0;
+            foreach ($this->repo->lines((int) $o['id']) as $l) {
+                if ($l['id_raw_material'] !== null) continue;
+                $k = $this->known($o, $l);
+                if ($k) { $this->repo->mapLine((int) $l['id'], $k['id_raw_material'], $k['factor']); $n++; }
+            }
+            if ($n) { $this->autoLink((int) $o['id']); $touched[] = (int) $o['id']; }
+        }
+        return $touched;
     }
 
     /**
@@ -722,7 +758,9 @@ final class InvoiceService
                 }
             }
             $this->autoLink($id);
-            $this->audit->record($context, 'map_all', 'purchase_invoice', $id, null, ['lines' => array_map(fn($x) => [(int) $x[0]['id'], $x[1], $x[2]], $clean), 'remember' => $remember]);
+            $touched = $remember && $keys ? $this->propagate($inv) : [];
+            $this->audit->record($context, 'map_all', 'purchase_invoice', $id, null, ['lines' => array_map(fn($x) => [(int) $x[0]['id'], $x[1], $x[2]], $clean), 'remember' => $remember]
+                + ($touched ? ['other_invoices' => $touched] : []));
         });
         return $this->detail($id, $context);
     }
@@ -1224,6 +1262,216 @@ final class InvoiceService
         $f = $this->repo->file($id);
         if ($f === null) throw ApiException::notFound('invoice_file', $id);
         return ['filename' => $f['filename'], 'mime' => $f['mime'], 'size' => strlen($f['content']), 'content_base64' => base64_encode($f['content'])];
+    }
+
+    // --- Kreator faktur [217] -----------------------------------------------------------------------------------------
+
+    /** Flagi linii : cena (podwyżka, skok, ponad zamówienie) i ilość / zamówienie. */
+    private const WIZ_PRICE = ['price_up', 'price_jump', 'price_over'];
+    private const WIZ_QTY = ['not_in_order', 'qty_over_received', 'qty_over_ordered', 'qty_under_received'];
+    public const CHECK_ACTIONS = ['check', 'dispute', 'reset'];
+
+    /**
+     * Kreator (Zaopatrzenie › Faktury › Kreator, makiety 217 1–3) : wszystkie otwarte faktury surowców i opakowań w jednej tabeli,
+     * ich linie sprawdzane jedna po drugiej. Stan linii : auto (przypisana, bez uwag — sprawdzona sama), checked (sprawdzona : kto,
+     * kiedy), disputed (sporna), todo (nowa nazwa, cena, ilość / zamówienie, inne). Faktura gotowa (krok 3) : wszystkie linie
+     * auto / sprawdzone, bez spornych, dostawca ERP znany — « Zatwierdź » robi ceny, przyjęcie na stan i akceptację.
+     */
+    public function wizard(ApiContext $context): array
+    {
+        $lang = $context->translator->lang();
+        $materials = null;
+        $suppliers = null;
+        $invoices = [];
+        $t = ['invoices' => 0, 'net' => 0.0, 'lines' => 0, 'auto' => 0, 'checked' => 0, 'todo' => 0, 'disputed' => 0, 'safe' => 0, 'ready' => 0, 'ready_net' => 0.0,
+            'reasons' => ['new' => 0, 'price' => 0, 'qty' => 0, 'other' => 0]];
+        foreach ($this->repo->invoices('open') as $inv) {
+            $lines = $this->repo->lines((int) $inv['id']);
+            $needSuggest = (bool) array_filter($lines, fn($l) => $l['id_raw_material'] === null);
+            if ($needSuggest) $materials ??= $this->repo->materials();
+            if ($inv['id_supplier'] === null) $suppliers ??= $this->repo->suppliers();
+            $w = $this->wizardInvoice($inv, $lines, $lang, $materials ?? [], $suppliers ?? []);
+            $invoices[] = $w;
+            $t['invoices']++;
+            $t['net'] += (float) ($w['total_net'] ?? 0);
+            foreach (['lines', 'auto', 'checked', 'todo', 'disputed', 'safe'] as $k) $t[$k] += $w['counts'][$k];
+            foreach ($w['lines'] as $l) if ($l['state'] === 'todo') $t['reasons'][$l['reason']]++;
+            if ($w['wizard_ready']) { $t['ready']++; $t['ready_net'] += (float) ($w['total_net'] ?? 0); }
+        }
+        // Do sprawdzenia najpierw (najwięcej pozycji), gotowe na końcu ; w tym samym stanie — najstarsze najpierw.
+        usort($invoices, fn($a, $b) => [$a['wizard_ready'], -$a['counts']['todo'], $a['issue_date'] ?? '', $a['id']] <=> [$b['wizard_ready'], -$b['counts']['todo'], $b['issue_date'] ?? '', $b['id']]);
+        $t['net'] = round($t['net'], 2);
+        $t['ready_net'] = round($t['ready_net'], 2);
+        return ['invoices' => $invoices, 'totals' => $t, 'last_ksef' => $this->repo->lastKsefImport(), 'auto' => $this->autoMode(),
+            'can_write' => $context->can('prod.supply.write')];
+    }
+
+    /** Faktura kreatora : linie ze stanem i powodem, podwyżki, liczby, gotowość i co zrobi « Zatwierdź » (ceny, przyjęcie). */
+    private function wizardInvoice(array $inv, array $lines, string $lang, array $materials, array $suppliers): array
+    {
+        $control = $this->control($inv, $lines);
+        $ups = [];
+        foreach ($this->presentUps($this->priceUps($lines, !empty($inv['is_correction'])), $lines, $lang) as $u) $ups[$u['raw_material_id']] = $u;
+        $orderMaterials = $inv['id_po'] ? array_map(fn($l) => (int) $l['id_raw_material'], $this->supply->lines((int) $inv['id_po'])) : [];
+        $counts = ['lines' => count($lines), 'auto' => 0, 'checked' => 0, 'todo' => 0, 'disputed' => 0, 'safe' => 0];
+        $out = [];
+        $prices = [];
+        foreach ($lines as $k => $l) {
+            $c = $control['lines'][$k];
+            [$state, $reason, $safe] = self::lineState($l, $c);
+            $counts[$state]++;
+            if ($safe) $counts['safe']++;
+            $mid = $l['id_raw_material'] !== null ? (int) $l['id_raw_material'] : null;
+            $row = $this->presentLine($l, $lang) + ['control' => $c, 'state' => $state, 'reason' => $reason, 'safe' => $safe,
+                'check' => $l['check_status'] !== null ? ['status' => $l['check_status'], 'by' => $l['checked_name'] ?? null, 'at' => $l['checked_at'], 'note' => $l['check_note']] : null,
+                'up' => $mid !== null ? ($ups[$mid] ?? null) : null];
+            if ($mid === null) $row['suggestions'] = $this->suggest($l, $inv, $materials, $orderMaterials, $lang);
+            $out[] = $row;
+            // Ceny do kartoteki przy « Zatwierdź » : zmiana wobec ceny bazowej (podwyżka « bez zmian » — pominięta).
+            if ($mid !== null && $c['catalog_gap_pct'] !== null && abs($c['catalog_gap_pct']) >= 0.5 && !isset($prices[$mid])) {
+                $prices[$mid] = ['name' => $row['material']['name'], 'pct' => $c['catalog_gap_pct'], 'kept' => ($ups[$mid]['decision'] ?? null) === 'keep'];
+            }
+        }
+        $ready = $this->readiness($inv, $control);
+        $wizardReady = $counts['lines'] > 0 && $counts['todo'] === 0 && $counts['disputed'] === 0 && $inv['id_supplier'] !== null;
+        $choices = [];
+        if ($inv['id_supplier'] === null) {
+            $choices = array_map(fn($s) => ['id' => (int) $s['id'], 'name' => trim((string) $s['name']),
+                'score' => $inv['seller_name'] ? round(InvoiceParser::similarity((string) $inv['seller_name'], (string) $s['name']), 2) : 0.0], $suppliers);
+            usort($choices, fn($a, $b) => [$b['score'], $a['name']] <=> [$a['score'], $b['name']]);
+        }
+        return $this->summary($inv) + ['lines' => $out, 'counts' => $counts, 'control' => $control['summary'], 'warnings' => $ready['warnings'],
+            'wizard_ready' => $wizardReady, 'supplier_choices' => $choices,
+            'plan' => ['prices' => $inv['prices_imported_at'] === null ? array_values($prices) : [], 'prices_done' => $inv['prices_imported_at'] !== null,
+                'receive' => $this->canReceive($inv, $control) ? ($inv['id_po'] !== null ? 'order' : 'invoice') : null]];
+    }
+
+    /**
+     * Stan linii : disputed ; todo — bez surowca (new), podwyżka bez decyzji / skok ceny / ponad zamówienie (price), ilość lub
+     * spoza zamówienia (qty), inne (tylko niższa cena : other) ; checked ; auto (przypisana, bez uwag). safe : do sprawdzenia
+     * zbiorczo — przypisana, bez podwyżki i bez różnic ilości, tylko cena niższa (« Zatwierdź wszystkie bez ryzyka »).
+     * @return array{0: string, 1: ?string, 2: bool}
+     */
+    private static function lineState(array $l, array $c): array
+    {
+        if ($l['check_status'] === 'disputed') return ['disputed', null, false];
+        $flags = $c['flags'];
+        if (in_array('unmapped', $flags, true)) return ['todo', 'new', false];
+        if (in_array('price_up', $flags, true)) return ['todo', 'price', false];
+        if ($l['check_status'] === 'checked') return ['checked', null, false];
+        $issues = array_values(array_diff($flags, ['price_up_accept', 'price_up_keep']));
+        if (!$issues) return ['auto', null, false];
+        $cheaper = array_values(array_filter($issues, fn($f) => $f === 'price_under' || ($f === 'price_jump' && ($c['catalog_gap_pct'] ?? 0) < 0)));
+        $reason = array_intersect($issues, self::WIZ_QTY) ? 'qty' : (count($cheaper) < count(array_intersect($issues, self::WIZ_PRICE)) ? 'price' : 'other');
+        return ['todo', $reason, count($cheaper) === count($issues)];
+    }
+
+    /**
+     * Linia sprawdzona w kreatorze : action check — opcjonalnie surowiec / przelicznik (remember : zapamiętaj dla dostawcy i zastosuj
+     * w innych fakturach), przy podwyżce ponad cenę bazową decyzja price (accept | keep) ; dispute — sporna z notatką ; reset — znowu do
+     * sprawdzenia. Odpowiedź : cały kreator (faktury mogły się zmienić przez zapamiętaną nazwę).
+     */
+    public function checkLine(int $id, int $lineId, array $body, ApiContext $context): array
+    {
+        $inv = $this->open($id);
+        $line = $this->repo->line($id, $lineId);
+        if ($line === null) throw ApiException::notFound('purchase_invoice_line', $lineId);
+        $v = (new Validator($body))->only(['action', 'raw_material_id', 'factor', 'remember', 'price', 'note'])
+            ->choice('action', self::CHECK_ACTIONS)->integer('raw_material_id', false, 1, null, true)->decimal('factor', false, 0, 10_000_000, true, true)
+            ->boolean('remember')->string('note', 500, false, true);
+        if (isset($body['price']) && $body['price'] !== null && !in_array($body['price'], self::PRICE_DECISIONS, true)) $v->add('price', 'INVALID_CHOICE', ['allowed' => implode(', ', self::PRICE_DECISIONS)]);
+        $mid = $v->value('raw_material_id');
+        $material = $mid !== null && !$v->hasError('raw_material_id') ? $this->repo->material((int) $mid) : null;
+        if ($mid !== null && !$v->hasError('raw_material_id') && $material === null) $v->add('raw_material_id', 'REFERENCE_NOT_FOUND', ['id' => (string) $mid]);
+        $v->throwIfInvalid();
+        $action = (string) $v->value('action');
+        $note = $v->value('note');
+        $id = (int) $inv['id'];
+        if ($action !== 'check') {
+            $this->tx->execute(function () use ($line, $action, $note, $context) {
+                $this->repo->checkLine((int) $line['id'], $action === 'dispute' ? 'disputed' : null, $note, $context->userId);
+                $this->audit->record($context, 'wizard_' . $action, 'purchase_invoice_line', (int) $line['id'], ['check' => $line['check_status']], ['note' => $note]);
+            });
+            return $this->wizard($context);
+        }
+        // Nowy surowiec / przelicznik zapisany najpierw : podwyżka ujawniona dopiero przez przypisanie zostaje przy linii
+        // (INVOICE_PRICE_UP_PENDING, linia przypisana) — kreator pyta wtedy « nowa cena / bez zmian ».
+        $current = $line['id_raw_material'] !== null ? (int) $line['id_raw_material'] : null;
+        $factor = $v->value('factor');
+        if ($mid !== null && ($mid !== $current || ($factor !== null && abs((float) $factor - (float) $line['factor']) > 1e-9))) {
+            $factor = (float) ($factor ?? InvoiceParser::defaultFactor($line['unit'], $material['unit'], $material['package_size'] !== null ? (float) $material['package_size'] : null, (string) $line['name']));
+            $this->tx->execute(fn() => $this->applyMapping($inv, $line, $mid, $factor, $v->value('remember') !== false, $context));
+            $current = $mid;
+        } elseif ($current !== null && $v->value('remember') !== false && ($keys = $this->supplierKeys($inv))
+            && !$this->repo->mapping($keys[0], InvoiceParser::nameKey($line['name']), InvoiceParser::unitKey($line['unit']))) {
+            // Linia przypisana wcześniej (bez zapamiętania) : « Zapamiętaj » przy sprawdzeniu zapisuje nazwę dla dostawcy.
+            $this->tx->execute(function () use ($inv, $line, $keys, $current, $context) {
+                $this->repo->saveMapping($keys[0], $inv['id_supplier'] !== null ? (int) $inv['id_supplier'] : null, InvoiceParser::nameKey($line['name']), InvoiceParser::unitKey($line['unit']),
+                    $line['name'], $line['unit'], $current, (float) $line['factor'], $context->userId);
+                $this->propagate($inv);
+            });
+        }
+        if ($current === null) throw new ApiException('INVOICE_UNMAPPED', 422, [], ['n' => 1]);
+        $this->tx->execute(function () use ($inv, $line, $current, $body, $note, $context, $id) {
+            // Podwyżka ponad cenę bazową : decyzja przy sprawdzeniu (dla wszystkich linii tego surowca na fakturze).
+            $up = $this->priceUps($this->repo->lines($id), !empty($inv['is_correction']))[$current] ?? null;
+            $price = $body['price'] ?? null;
+            if ($up !== null && $price === null && $up['decision'] === null) throw new ApiException('INVOICE_PRICE_UP_PENDING', 409, [], ['n' => 1]);
+            if ($up !== null && $price !== null && $price !== $up['decision']) {
+                $this->repo->decidePrice($id, $current, $price, $up['price'], $context->userId);
+                $this->audit->record($context, 'price_decision', 'purchase_invoice', $id, null, ['decision' => $price, 'materials' => [[$current, $up['catalog'], $up['new_catalog']]]]);
+            }
+            $this->repo->checkLine((int) $line['id'], 'checked', $note, $context->userId);
+            $this->audit->record($context, 'wizard_check', 'purchase_invoice_line', (int) $line['id'], ['check' => $line['check_status']], ['raw_material_id' => $current, 'price' => $price]);
+        });
+        return $this->wizard($context);
+    }
+
+    /** « Zatwierdź wszystkie bez ryzyka » : linie safe (przypisane, tylko cena niższa) sprawdzone naraz. */
+    public function checkSafe(ApiContext $context): array
+    {
+        $n = 0;
+        $this->tx->execute(function () use ($context, &$n) {
+            foreach ($this->repo->invoices('open') as $inv) {
+                $lines = $this->repo->lines((int) $inv['id']);
+                $control = $this->control($inv, $lines);
+                foreach ($lines as $k => $l) {
+                    if (!self::lineState($l, $control['lines'][$k])[2]) continue;
+                    $this->repo->checkLine((int) $l['id'], 'checked', null, $context->userId);
+                    $n++;
+                }
+            }
+            if ($n) $this->audit->record($context, 'wizard_check_safe', 'purchase_invoice', 0, null, ['lines' => $n]);
+        });
+        return $this->wizard($context) + ['checked' => $n];
+    }
+
+    /**
+     * Krok 3 : wybrane faktury gotowe w kreatorze (wszystkie linie sprawdzone) — każda jak « Zatwierdź fakturę » (ceny, przyjęcie na
+     * stan, akceptacja) ; ostrzeżenia (różnice z zamówieniem, sumy) potwierdzone wyborem. Błąd jednej nie zatrzymuje reszty.
+     */
+    public function processChecked(array $body, ApiContext $context): array
+    {
+        $ids = $body['ids'] ?? null;
+        if (!is_array($ids) || !$ids || count($ids) > 300 || array_filter($ids, fn($x) => !is_int($x))) {
+            throw ApiException::validation([['field' => 'ids', 'code' => 'NOT_ARRAY', 'params' => []]]);
+        }
+        $lang = $context->translator->lang();
+        $done = [];
+        $errors = [];
+        foreach (array_values(array_unique($ids)) as $id) {
+            $inv = $this->repo->invoice($id);
+            $label = ['id' => $id, 'number' => $inv['number'] ?? null];
+            if ($inv === null || $inv['status'] !== 'open' || ($inv['kind'] ?? 'goods') !== 'goods') { $errors[] = $label + ['code' => 'INVOICE_CLOSED']; continue; }
+            $w = $this->wizardInvoice($inv, $this->repo->lines($id), $lang, [], []);
+            if (!$w['wizard_ready']) { $errors[] = $label + ['code' => 'INVOICE_NOT_CHECKED']; continue; }
+            try {
+                $done[] = $label + $this->runProcess($id, self::STEPS, true, $context, 'wizard_process');
+            } catch (ApiException $e) {
+                $errors[] = $label + ['code' => $e->errorCode()];
+            }
+        }
+        return ['processed' => $done, 'errors' => $errors] + $this->wizard($context);
     }
 
     // --- Pomocnicze ---------------------------------------------------------------------------------------------------

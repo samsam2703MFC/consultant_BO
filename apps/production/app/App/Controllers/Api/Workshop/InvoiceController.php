@@ -37,6 +37,11 @@ final class InvoiceController
     public function delete(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->delete($request->id(), $request->context)); }
     public function mappings(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->mappings($request->context)); }
     public function deleteMapping(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->deleteMapping($request->id(), $request->context)); }
+    // Kreator [217] : wszystkie otwarte faktury w jednej tabeli, linie sprawdzane jedna po drugiej, zatwierdzenie gotowych.
+    public function wizard(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->wizard($request->context)); }
+    public function checkLine(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->checkLine($request->id(), $request->id('lineId'), $request->body(), $request->context)); }
+    public function checkSafe(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->checkSafe($request->context)); }
+    public function processChecked(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->processChecked($request->body(), $request->context)); }
     public function mapLines(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->mapLines($request->id(), $request->body(), $request->context)); }
     public function process(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->process($request->id(), $request->body(), $request->context)); }
     public function processReady(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->processReady($request->body(), $request->context)); }

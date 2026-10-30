@@ -63,6 +63,18 @@ final class OpenApiSupply
                 'description' => "Recherche depuis la dernière facture KSeF importée (− 7 jours ; sinon 30 jours, au plus 89 jours) jusqu'à aujourd'hui, import de toutes les nouvelles (50 max), traitement automatique des factures entièrement reconnues. KSEF_UNAVAILABLE (422)."],
             'POST /supply/invoices/process-ready' => ['tag' => $t, 'id' => 'processReadyPurchaseInvoices', 'summary' => 'Zatwierdź gotowe faktury / Valider les factures prêtes', 'body' => 'InvoiceProcessInput', 'response' => 'InvoiceProcessReadyResult',
                 'description' => 'Toutes les factures ouvertes sans blocage ni avertissement (fournisseur connu, toutes les lignes reliées, sans écart, sans hausse de prix, totaux cohérents) : comme POST /supply/invoices/{id}/process.'],
+            'GET /supply/invoices/wizard' => ['tag' => $t, 'id' => 'getPurchaseInvoiceWizard', 'summary' => 'Kreator faktur : wszystkie pozycje / Assistant factures : toutes les lignes', 'response' => 'InvoiceWizard',
+                'description' => "Toutes les factures ouvertes (matières et emballages) avec leurs lignes dans un seul tableau [217]. État de ligne : auto (reliée, sans remarque), checked (vérifiée : qui, quand), "
+                    . "disputed (litigieuse), todo avec reason = new (nom inconnu, suggestions), price (hausse sans décision, saut de prix, au-dessus de la commande), qty (quantité / hors commande), other (prix plus bas). "
+                    . "wizard_ready : toutes les lignes auto ou vérifiées, aucune litigieuse, fournisseur ERP connu ; plan : prix vers les fiches matières, réception (order | invoice)."],
+            'POST /supply/invoices/wizard/check-safe' => ['tag' => $t, 'id' => 'checkSafePurchaseInvoiceLines', 'summary' => 'Zatwierdź wszystkie bez ryzyka / Valider les lignes sans risque', 'response' => 'InvoiceWizard',
+                'description' => 'Vérifie d\'un coup les lignes « safe » : reliées, sans hausse de prix ni écart de quantité (seulement un prix plus bas). Réponse : assistant + checked (nombre).'],
+            'POST /supply/invoices/wizard/process' => ['tag' => $t, 'id' => 'processCheckedPurchaseInvoices', 'summary' => 'Zatwierdź sprawdzone faktury / Valider les factures vérifiées', 'body' => 'InvoiceWizardProcessInput', 'response' => 'InvoiceWizard', 'errors' => [400],
+                'description' => 'Factures choisies dont toutes les lignes sont vérifiées : comme POST /supply/invoices/{id}/process (prix, réception, acceptation), avertissements confirmés. '
+                    . 'processed et errors (INVOICE_NOT_CHECKED, INVOICE_CLOSED, …) par facture, puis l\'assistant à jour.'],
+            'POST /supply/invoices/{id:\d+}/lines/{lineId:\d+}/check' => ['tag' => $t, 'id' => 'checkPurchaseInvoiceLine', 'summary' => 'Sprawdź pozycję / Vérifier une ligne', 'body' => 'InvoiceLineCheckInput', 'response' => 'InvoiceWizard', 'errors' => [400, 404, 409, 422],
+                'description' => "action check : matière (et facteur) éventuellement changée — remember : mémorisée pour le fournisseur et appliquée aux autres factures ouvertes ; hausse au-dessus du prix de base : price accept | keep requis "
+                    . "(INVOICE_PRICE_UP_PENDING 409 sinon) ; INVOICE_UNMAPPED (422) sans matière. dispute : ligne litigieuse (note). reset : à vérifier. Réponse : l'assistant complet."],
             'POST /supply/invoices/upload' => ['tag' => $t, 'id' => 'uploadPurchaseInvoice', 'summary' => 'Faktura z pliku (XML KSeF, PDF, skan, zdjęcie) / Facture depuis un fichier', 'body' => 'InvoiceUploadInput', 'response' => 'PurchaseInvoice', 'ok' => 201, 'errors' => [400, 409, 422],
                 'description' => "XML FA : lecture complète. PDF : texte (pdftotext), lignes reconnues quand quantité × prix = valeur ; le reste se complète à la main. "
                     . "Scan ou photo (JPEG, PNG, WebP, ou PDF sans texte) : texte OCR lu par le client dans ocr_text, mêmes règles, source « ocr » ; "
@@ -318,6 +330,20 @@ final class OpenApiSupply
             'InvoiceProcessInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
                 'prices' => ['type' => 'boolean', 'description' => 'prix vers les fiches matières (défaut true)'], 'stock' => ['type' => 'boolean', 'description' => 'quantités en stock (défaut true)'],
                 'accept' => ['type' => 'boolean', 'description' => 'accepter la facture (défaut true)'], 'force' => ['type' => 'boolean', 'description' => 'valider malgré les avertissements (facture seule)'],
+            ]],
+            'InvoiceWizard' => ['type' => 'object', 'additionalProperties' => true, 'properties' => [
+                'invoices' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true, 'description' => 'facture (résumé) + lines[] (state, reason, safe, check, up, suggestions), counts, warnings, wizard_ready, supplier_choices, plan']],
+                'totals' => ['type' => 'object', 'additionalProperties' => true, 'description' => 'invoices, net, lines, auto, checked, todo, disputed, safe, ready, ready_net, reasons {new, price, qty, other}'],
+                'last_ksef' => ['type' => 'string', 'nullable' => true, 'description' => 'dernière facture importée de KSeF'], 'can_write' => ['type' => 'boolean'],
+            ]],
+            'InvoiceLineCheckInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['action'], 'properties' => [
+                'action' => ['type' => 'string', 'enum' => InvoiceService::CHECK_ACTIONS], 'raw_material_id' => ['type' => 'integer', 'nullable' => true],
+                'factor' => ['type' => 'number', 'nullable' => true, 'description' => 'unités de base par unité de facture ; absent : déduit'], 'remember' => ['type' => 'boolean', 'description' => 'défaut true'],
+                'price' => ['type' => 'string', 'enum' => InvoiceService::PRICE_DECISIONS, 'nullable' => true, 'description' => 'hausse au-dessus du prix de base : accept (nouveau prix) | keep'],
+                'note' => ['type' => 'string', 'maxLength' => 500, 'nullable' => true],
+            ]],
+            'InvoiceWizardProcessInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['ids'], 'properties' => [
+                'ids' => ['type' => 'array', 'maxItems' => 300, 'items' => ['type' => 'integer'], 'description' => 'factures à valider (toutes les lignes vérifiées)'],
             ]],
             'InvoiceProcessReadyResult' => ['type' => 'object', 'properties' => [
                 'processed' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]],

@@ -6,7 +6,8 @@
  * de base (g, ml, szt), affichées en unité lisible (kg, l) avec factor. Onglet Factures : contrôle des factures
  * d'achat (KSeF, XML, PDF, scan ou photo lus par OCR dans le navigateur) contre les commandes et réceptions, noms du
  * fournisseur reliés à nos matières — en boutons rapides : « Pobierz nowe z KSeF », « Przypisz wszystkie » (seulement les
- * lignes inconnues), « Zatwierdź fakturę » (prix + stock + acceptation), « Zatwierdź gotowe ». Onglet Ceny i dostawcy :
+ * lignes inconnues), « Zatwierdź fakturę » (prix + stock + acceptation), « Zatwierdź gotowe ». « Kreator » [217] : toutes les
+ * factures ouvertes dans un tableau, lignes vérifiées l'une après l'autre (invoice-wizard.js). Onglet Ceny i dostawcy :
  * historique des prix au kg par matière et par fournisseur (price-history.js).
  */
 (async function () {
@@ -57,7 +58,8 @@
             receive: p.get('receive') === '1',
             kind: ['all', 'raw', 'pack'].includes(p.get('kind')) ? p.get('kind') : 'all',
             only: p.get('only') !== '0',
-            inv: ['map', 'rules'].includes(p.get('inv')) ? p.get('inv') : Number(p.get('inv')) || null,
+            // inv : map (przypisania), rules (reguły), wizard (kreator [217] : wszystkie pozycje, invoice-wizard.js) albo id faktury.
+            inv: ['map', 'rules', 'wizard'].includes(p.get('inv')) ? p.get('inv') : Number(p.get('inv')) || null,
             istatus: ['open', 'accepted', 'disputed', 'all'].includes(p.get('ist')) ? p.get('ist') : 'open',
             // Rodzaj faktur : surowce i opakowania (goods), usługi → Finanse (service), odrzucone (rejected).
             ikind: ['goods', 'service', 'rejected'].includes(p.get('ik')) ? p.get('ik') : 'goods',
@@ -98,7 +100,8 @@
             if (state.tab === 'stock') data.materials = await api.get('/supply/materials');
             if (state.tab === 'prices') data.prices = await api.get(`/supply/prices?months=${state.pmonths}`);
             if (state.tab === 'invoices') {
-                if (state.inv === 'map') data.mappings = await api.get('/supply/mappings');
+                if (state.inv === 'wizard') { /* kreator wczytuje się sam */ }
+                else if (state.inv === 'map') data.mappings = await api.get('/supply/mappings');
                 else if (state.inv === 'rules') data.rules = await api.get('/supply/supplier-rules');
                 else if (state.inv) {
                     data.invoice = await api.get(`/supply/invoices/${state.inv}`);
@@ -117,7 +120,7 @@
 
     function draw() {
         const y = window.scrollY;
-        const invoices = () => state.inv === 'map' ? drawMappings() : state.inv === 'rules' ? drawRules() : state.inv && data.invoice ? drawInvoice() : drawInvoices();
+        const invoices = () => state.inv === 'wizard' ? '<div data-inv-wizard></div>' : state.inv === 'map' ? drawMappings() : state.inv === 'rules' ? drawRules() : state.inv && data.invoice ? drawInvoice() : drawInvoices();
         const body = state.tab === 'needs' ? drawNeeds() : state.tab === 'stock' ? drawStock() : state.tab === 'prices' ? drawPrices() : state.tab === 'invoices' ? invoices()
             : (state.order && data.order ? drawOrder() : data.batch ? drawBatch() : drawOrders());
         el.innerHTML = shell(body);
@@ -125,6 +128,10 @@
         if (state.tab === 'needs') bindNeeds();
         else if (state.tab === 'stock') bindStock();
         else if (state.tab === 'prices') bindPrices();
+        else if (state.tab === 'invoices' && state.inv === 'wizard') {
+            // Kreator [217] : własny stan i API ; « Lista faktur » wraca do listy (bez kroku kreatora w adresie).
+            window.TfbInvoiceWizard.mount(el.querySelector('[data-inv-wizard]'), {api, back: () => { state.inv = null; history.replaceState(null, '', location.hash.replace(/&ws=\d/, '')); load(); }});
+        }
         else if (state.tab === 'invoices') (state.inv === 'map' ? bindMappings : state.inv === 'rules' ? bindRules : state.inv && data.invoice ? bindInvoice : bindInvoices)();
         else if (state.order && data.order) bindOrder();
         else if (data.batch) bindBatch();
@@ -888,7 +895,8 @@
                     <span class="at-tile-meta">${esc(k.services_suspected ? t('inv.kpi.suspected', {n: k.services_suspected}) : t('inv.kpi.services_help', {n: k.services_open}))}</span></a></div>`;
         if (state.ikind !== 'goods') return toggles + tiles + otherInvoices(d);
         return toggles + tiles + `<div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">
-                ${w ? `<button type="button" class="btn btn-sm btn-primary" data-ksef-sync title="${esc(t('inv.ksef_sync_help'))}"><i class="bi bi-cloud-download"></i> ${esc(t('inv.ksef_sync'))}</button>
+                <a href="#tab=invoices&inv=wizard" class="btn btn-sm btn-primary" data-wizard title="${esc(t('kw.open_help'))}"><i class="bi bi-list-check"></i> ${esc(t('kw.open'))}${k.open ? ` <span class="badge bg-light text-dark">${k.open}</span>` : ''}</a>
+                ${w ? `<button type="button" class="btn btn-sm btn-outline-primary" data-ksef-sync title="${esc(t('inv.ksef_sync_help'))}"><i class="bi bi-cloud-download"></i> ${esc(t('inv.ksef_sync'))}</button>
                 <button type="button" class="btn btn-sm ${iv.ksefOpen ? 'btn-secondary' : 'btn-outline-primary'}" data-ksef-toggle><i class="bi bi-calendar-range"></i> ${esc(t('inv.from_ksef'))}</button>
                 <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-upload"></i> ${esc(t('inv.upload'))}<input type="file" class="d-none" accept=".pdf,.xml,application/pdf,application/xml,text/xml,image/*" data-upload></label>
                 <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-camera"></i> ${esc(t('inv.photo'))}<input type="file" class="d-none" accept="image/*" capture="environment" data-upload></label>
@@ -1003,6 +1011,7 @@
         el.querySelector('[data-ikind-link]')?.addEventListener('click', (e) => { e.preventDefault(); state.ikind = 'service'; load(); });
         el.querySelector('[data-rules]').addEventListener('click', (e) => { e.preventDefault(); state.inv = 'rules'; load(); });
         el.querySelector('[data-mappings]')?.addEventListener('click', (e) => { e.preventDefault(); openInvoice('map'); });
+        el.querySelector('[data-wizard]')?.addEventListener('click', (e) => { e.preventDefault(); openInvoice('wizard'); });
         el.querySelectorAll('[data-classify]').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); classify(Number(b.dataset.classify), b.dataset.action); }));
         el.querySelectorAll('[data-to-goods]').forEach(b => b.addEventListener('click', (e) => {
             e.stopPropagation();

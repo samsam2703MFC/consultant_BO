@@ -370,6 +370,7 @@ check(InvoiceParser::number('1 234,56') === 1234.56 && InvoiceParser::number('1.
     'Polish and dotted number formats; ambiguous groups refused');
 check(InvoiceParser::defaultFactor('kg', 'g', null) == 1000 && InvoiceParser::defaultFactor('worek', 'g', 25000) == 25000 && InvoiceParser::defaultFactor('szt', 'szt', 100) == 1
     && InvoiceParser::defaultFactor('l', 'ml', null) == 1000, 'default factor: kg → g, bag → package size, same unit → 1');
+check(InvoiceParser::defaultFactor('l', 'g', null) == 1000 && InvoiceParser::defaultFactor('kg', 'ml', null) == 1000 && InvoiceParser::defaultFactor('ml', 'g', null) == 1, 'default factor: volume ↔ mass with density 1');
 check(InvoiceParser::nameKey('  MĄKA  pszenna, T-65 ') === 'mąka pszenna t 65' && InvoiceParser::unitKey('Szt.') === 'szt' && InvoiceParser::unitKey('opak.') === 'op', 'name and unit keys for supplier mappings');
 check(InvoiceParser::similarity('MĄKA PSZENNA T-65 WOREK 25KG', 'Mąka T65') > InvoiceParser::similarity('MĄKA PSZENNA T-65 WOREK 25KG', 'Masło'), 'name similarity ranks the right material first');
 check(InvoiceParser::packSize('MAKA PSZENNA T65 WOREK 25KG') === [25000.0, 'g'] && InvoiceParser::packSize('DROZDZE 0,5KG') === [500.0, 'g'] && InvoiceParser::packSize('Cukier 10x1kg') === [10000.0, 'g']

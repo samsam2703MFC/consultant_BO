@@ -66,6 +66,29 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Factures d'achat — assistant « toutes les lignes » (migration 137, 30/10/2026)
+
+- Page : Zaopatrzenie › Faktury › « Kreator : wszystkie pozycje » (`/workshop/supply#tab=invoices&inv=wizard`, maquettes 217
+  1–3, `invoice-wizard.js`). Toutes les factures ouvertes de matières et emballages (KSeF, fichiers) :
+  1. « Pobierz z KSeF » : un tableau des factures (lignes vérifiées n / m, remarques : nouveaux noms, prix, quantité /
+     commande, litigieuses, fournisseur ERP manquant) ; le bouton KSeF ne fait que lire (aucun envoi) ;
+  2. « Sprawdź pozycje » : les lignes de toutes les factures dans un seul tableau, facture par facture ; la ligne en cours
+     est ouverte (matière : suggestions, « nom connu » si le même nom est déjà relié chez un autre fournisseur ; unité ;
+     prix comparé au prix de base et à la commande) ; Entrée valide et passe à la suivante, K = prix de base inchangé, →
+     passer ; « Oznacz jako sporną » (note). Une correspondance mémorisée s'applique tout de suite aux lignes sans matière
+     des autres factures ouvertes du même vendeur (NIP ou fournisseur ERP). Une hausse révélée par une nouvelle
+     correspondance garde la correspondance et demande « nouveau prix / inchangé ». « Zatwierdź wszystkie bez ryzyka » :
+     lignes reliées dont la seule remarque est un prix plus bas ;
+  3. « Zatwierdź faktury » : factures dont toutes les lignes sont vérifiées (auto ou à la main), sans ligne litigieuse,
+     fournisseur ERP connu — comme « Zatwierdź fakturę » (prix vers les fiches, réception depuis la commande ou la facture,
+     acceptation ; avertissements confirmés par la sélection).
+- État d'une ligne : auto (reliée, sans remarque), checked, disputed, todo (`reason` new | price | qty | other). Colonnes
+  `n_inv_line.check_status` (checked | disputed), `check_note`, `checked_by`, `checked_at` ; une nouvelle correspondance (matière
+  ou facteur) les remet à zéro avec la décision de prix.
+- API : `GET /supply/invoices/wizard`, `POST /supply/invoices/{id}/lines/{lineId}/check` (action check | dispute | reset,
+  raw_material_id, factor, remember, price accept | keep, note), `POST /supply/invoices/wizard/check-safe`,
+  `POST /supply/invoices/wizard/process` (ids).
+
 ### Stock nécessaire selon le plan logistique et périodes de niveaux d'exception (migration 136, 30/10/2026)
 
 - Page : Magazyn › « Prognoza zapasu i okresy » (`/workshop/stock/forecast`, maquettes 216 1–3). Prévision sur les 12

@@ -9580,6 +9580,299 @@
                 "x-permission": "prod.supply.read"
             }
         },
+        "/supply/invoices/wizard": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Kreator faktur : wszystkie pozycje / Assistant factures : toutes les lignes",
+                "operationId": "getPurchaseInvoiceWizard",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceWizard"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Toutes les factures ouvertes (matières et emballages) avec leurs lignes dans un seul tableau [217]. État de ligne : auto (reliée, sans remarque), checked (vérifiée : qui, quand), disputed (litigieuse), todo avec reason = new (nom inconnu, suggestions), price (hausse sans décision, saut de prix, au-dessus de la commande), qty (quantité / hors commande), other (prix plus bas). wizard_ready : toutes les lignes auto ou vérifiées, aucune litigieuse, fournisseur ERP connu ; plan : prix vers les fiches matières, réception (order | invoice).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/invoices/wizard/check-safe": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zatwierdź wszystkie bez ryzyka / Valider les lignes sans risque",
+                "operationId": "checkSafePurchaseInvoiceLines",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceWizard"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Vérifie d'un coup les lignes « safe » : reliées, sans hausse de prix ni écart de quantité (seulement un prix plus bas). Réponse : assistant + checked (nombre).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/invoices/wizard/process": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zatwierdź sprawdzone faktury / Valider les factures vérifiées",
+                "operationId": "processCheckedPurchaseInvoices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceWizard"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Factures choisies dont toutes les lignes sont vérifiées : comme POST /supply/invoices/{id}/process (prix, réception, acceptation), avertissements confirmés. processed et errors (INVOICE_NOT_CHECKED, INVOICE_CLOSED, …) par facture, puis l'assistant à jour.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvoiceWizardProcessInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/invoices/{id}/lines/{lineId}/check": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Sprawdź pozycję / Vérifier une ligne",
+                "operationId": "checkPurchaseInvoiceLine",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceWizard"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "action check : matière (et facteur) éventuellement changée — remember : mémorisée pour le fournisseur et appliquée aux autres factures ouvertes ; hausse au-dessus du prix de base : price accept | keep requis (INVOICE_PRICE_UP_PENDING 409 sinon) ; INVOICE_UNMAPPED (422) sans matière. dispute : ligne litigieuse (note). reset : à vérifier. Réponse : l'assistant complet.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "lineId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvoiceLineCheckInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
         "/supply/invoices/ksef/search": {
             "post": {
                 "tags": [
@@ -20141,7 +20434,7 @@
                     "wizard_step": {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 8
+                        "maximum": 9
                     },
                     "validated_at": {
                         "type": "string",
@@ -20243,6 +20536,23 @@
                                 "nullable": true,
                                 "description": "produit seulement",
                                 "properties": {
+                                    "carton_id": {
+                                        "type": "integer",
+                                        "nullable": true,
+                                        "description": "carton du catalogue Kartony i palety (raw_material.id)"
+                                    },
+                                    "pallet_max_height_mm": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "pallet_max_kg": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "pallet_overhang_mm": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
                                     "carton_length_mm": {
                                         "type": "integer",
                                         "nullable": true
@@ -20695,7 +21005,7 @@
                     "wizard_step": {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 8
+                        "maximum": 9
                     }
                 }
             },
@@ -21512,6 +21822,32 @@
                             "ambient"
                         ],
                         "nullable": true
+                    },
+                    "carton_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "carton du catalogue Kartony i palety (raw_material.id) ; 404 NOT_FOUND sinon"
+                    },
+                    "pallet_max_height_mm": {
+                        "type": "integer",
+                        "minimum": 300,
+                        "maximum": 3000,
+                        "nullable": true,
+                        "description": "hauteur max palette comprise ; null = paramètre"
+                    },
+                    "pallet_max_kg": {
+                        "type": "integer",
+                        "minimum": 50,
+                        "maximum": 3000,
+                        "nullable": true,
+                        "description": "poids brut max ; null = paramètre"
+                    },
+                    "pallet_overhang_mm": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100,
+                        "nullable": true,
+                        "description": "débord autorisé de chaque côté ; null = paramètre"
                     }
                 }
             },
@@ -33467,6 +33803,94 @@
                     "force": {
                         "type": "boolean",
                         "description": "valider malgré les avertissements (facture seule)"
+                    }
+                }
+            },
+            "InvoiceWizard": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                    "invoices": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true,
+                            "description": "facture (résumé) + lines[] (state, reason, safe, check, up, suggestions), counts, warnings, wizard_ready, supplier_choices, plan"
+                        }
+                    },
+                    "totals": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "description": "invoices, net, lines, auto, checked, todo, disputed, safe, ready, ready_net, reasons {new, price, qty, other}"
+                    },
+                    "last_ksef": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "dernière facture importée de KSeF"
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "InvoiceLineCheckInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "action"
+                ],
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "check",
+                            "dispute",
+                            "reset"
+                        ]
+                    },
+                    "raw_material_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "factor": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "unités de base par unité de facture ; absent : déduit"
+                    },
+                    "remember": {
+                        "type": "boolean",
+                        "description": "défaut true"
+                    },
+                    "price": {
+                        "type": "string",
+                        "enum": [
+                            "accept",
+                            "keep"
+                        ],
+                        "nullable": true,
+                        "description": "hausse au-dessus du prix de base : accept (nouveau prix) | keep"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true
+                    }
+                }
+            },
+            "InvoiceWizardProcessInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "ids"
+                ],
+                "properties": {
+                    "ids": {
+                        "type": "array",
+                        "maxItems": 300,
+                        "items": {
+                            "type": "integer"
+                        },
+                        "description": "factures à valider (toutes les lignes vérifiées)"
                     }
                 }
             },

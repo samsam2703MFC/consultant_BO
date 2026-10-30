@@ -50,7 +50,8 @@ final class InvoiceRepository extends WorkshopRepository
     /** Linie bez przypisania surowca (faktura sklasyfikowana jako usługa / odrzucona : bez wpływu na ceny i stany). */
     public function unmapLines(int $invoiceId): void
     {
-        $this->db->prepare('UPDATE n_inv_line SET id_raw_material = NULL, factor = NULL, price_decision = NULL, price_ok_price = NULL, price_ok_by = NULL, price_ok_at = NULL WHERE id_inv = ?')
+        $this->db->prepare('UPDATE n_inv_line SET id_raw_material = NULL, factor = NULL, price_decision = NULL, price_ok_price = NULL, price_ok_by = NULL, price_ok_at = NULL,
+                check_status = NULL, check_note = NULL, checked_by = NULL, checked_at = NULL WHERE id_inv = ?')
             ->execute([$invoiceId]);
     }
 
@@ -125,11 +126,12 @@ final class InvoiceRepository extends WorkshopRepository
     {
         return $this->all(
             "SELECT l.*, rm.name AS material_name, rm.name_fr AS material_name_fr, u.name AS material_unit, rm.price_per_unit AS catalog_price, rm.package_size_in_base_unit AS package_size,
-                    COALESCE(NULLIF(ok.displayed_name, ''), ok.login) AS price_ok_name
+                    COALESCE(NULLIF(ok.displayed_name, ''), ok.login) AS price_ok_name, COALESCE(NULLIF(ck.displayed_name, ''), ck.login) AS checked_name
              FROM n_inv_line l
              LEFT JOIN raw_material rm ON rm.id = l.id_raw_material
              LEFT JOIN unit u ON u.id = rm.id_unit
              LEFT JOIN user ok ON ok.id = l.price_ok_by
+             LEFT JOIN user ck ON ck.id = l.checked_by
              WHERE l.id_inv = ? ORDER BY l.line_no, l.id",
             [$invoiceId]
         );
@@ -153,11 +155,25 @@ final class InvoiceRepository extends WorkshopRepository
         $this->db->prepare('DELETE FROM n_inv_line WHERE id_inv = ?')->execute([$invoiceId]);
     }
 
-    /** Nowe przypisanie albo przelicznik : decyzja o podwyżce ceny (inna cena za jednostkę) przestaje obowiązywać. */
+    /** Nowe przypisanie albo przelicznik : decyzja o podwyżce ceny (inna cena za jednostkę) i sprawdzenie linii [217] przestają obowiązywać. */
     public function mapLine(int $lineId, ?int $materialId, ?float $factor): void
     {
-        $this->db->prepare('UPDATE n_inv_line SET id_raw_material = ?, factor = ?, price_decision = NULL, price_ok_price = NULL, price_ok_by = NULL, price_ok_at = NULL WHERE id = ?')
+        $this->db->prepare('UPDATE n_inv_line SET id_raw_material = ?, factor = ?, price_decision = NULL, price_ok_price = NULL, price_ok_by = NULL, price_ok_at = NULL,
+                check_status = NULL, check_note = NULL, checked_by = NULL, checked_at = NULL WHERE id = ?')
             ->execute([$materialId, $factor, $lineId]);
+    }
+
+    /** Kreator [217] : linia sprawdzona (checked), sporna (disputed) albo do sprawdzenia (null) — kto, kiedy, notatka. */
+    public function checkLine(int $lineId, ?string $status, ?string $note, ?int $userId): void
+    {
+        $this->db->prepare('UPDATE n_inv_line SET check_status = ?, check_note = ?, checked_by = ?, checked_at = ? WHERE id = ?')
+            ->execute([$status, $status !== null ? $note : null, $status !== null ? $userId : null, $status !== null ? date('Y-m-d H:i:s') : null, $lineId]);
+    }
+
+    /** Ostatnie pobranie faktur z KSeF (data utworzenia najnowszej faktury ze źródła KSeF). */
+    public function lastKsefImport(): ?string
+    {
+        return $this->all("SELECT MAX(created_at) AS at FROM n_inv WHERE source = 'ksef'")[0]['at'] ?? null;
     }
 
     /** Decyzja o podwyżce ceny surowca na fakturze (wszystkie jego linie) : accept | keep, cena zatwierdzona, kto, kiedy. */
@@ -205,6 +221,15 @@ final class InvoiceRepository extends WorkshopRepository
     public function mapping(string $supplierKey, string $nameKey, string $unitKey): ?array
     {
         return $this->all('SELECT * FROM n_inv_mapping WHERE supplier_key = ? AND name_norm = ? AND unit_norm = ?', [$supplierKey, $nameKey, $unitKey])[0] ?? null;
+    }
+
+    /** Ta sama nazwa (i jednostka) przypisana u innych dostawców [217] : surowiec => przelicznik (najczęstsze najpierw). @return array<int, float> */
+    public function namedMappings(string $nameKey, string $unitKey): array
+    {
+        $out = [];
+        foreach ($this->all('SELECT id_raw_material, MAX(factor) AS factor, COUNT(*) AS n FROM n_inv_mapping WHERE name_norm = ? AND unit_norm = ? GROUP BY id_raw_material ORDER BY n DESC',
+            [$nameKey, $unitKey]) as $r) $out[(int) $r['id_raw_material']] = (float) $r['factor'];
+        return $out;
     }
 
     public function saveMapping(string $supplierKey, ?int $supplierId, string $nameKey, string $unitKey, string $name, ?string $unit, int $materialId, float $factor, ?int $userId): void

@@ -257,6 +257,8 @@ final class InvoiceParser
             $u === 't' && $b === 'kg' => 1000.0,
             $u === 'dag' && $b === 'g' => 10.0,
             $u === 'g' && $b === 'kg', $u === 'ml' && $b === 'l' => 0.001,
+            // Objętość ↔ masa (śmietana, mleko, olej w litrach, surowiec w gramach) : gęstość ≈ 1 — lepiej niż 1 l = 1 g [217].
+            $u === 'l' && $b === 'g', $u === 'kg' && $b === 'ml' => 1000.0,
             in_array($u, self::PACKAGE_UNITS, true) => $pack ?? 1.0,
             $u === 'szt' && $b !== 'szt' && $pack !== null => $pack,
             default => 1.0,
