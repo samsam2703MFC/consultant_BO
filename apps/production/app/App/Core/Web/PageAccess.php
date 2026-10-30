@@ -51,6 +51,7 @@ final class PageAccess
         'devices' => ['Urządzenia (dostęp API)', 'Administracja', ['/devices'], false],
         'manager' => ['Kierownik produkcji : stanowisko, cele, raport, premia, rozmowa, audyt', 'Administracja', ['/workshop/manager'], true],
         'access' => ['Uprawnienia funkcji', 'Administracja', ['/organization/access'], true],
+        'week_plan' => ['Plan tygodnia stanowisk (dni, minuty zadań stałych, czas rzeczywisty)', 'Administracja', ['/organization/week-plan'], true],
         'activity' => ['Aktywność w ERP (sesje, strony, kliknięcia, koszt czasu)', 'Administracja', ['/organization/activity'], true],
         'panel_api' => ['API cen w sklepach (konto panelu franczyzy)', 'Administracja', ['/settings/panel-api'], true],
         'ai' => ['Asystent AI (klucz Anthropic, model, prompt karty technologicznej)', 'Administracja', ['/settings/ai'], true],

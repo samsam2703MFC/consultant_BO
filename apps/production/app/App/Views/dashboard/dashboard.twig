@@ -1,5 +1,28 @@
 {% extends "layouts/base.twig" %}
 
+{# Mój tydzień : czas « 1 h 05 » i karta zadania (slot = dzień tygodnia liczony w kafelku i pasku dnia). #}
+{% macro hm(m) %}{{ m // 60 }} h {{ '%02d'|format(m % 60) }}{% endmacro %}
+{% macro card(it, root, slot) %}
+    <div class="wk-t{{ it.done ? ' done' : '' }}{{ it.late ? ' late' : '' }}{{ it.status == 'planned' or it.status == 'none' ? ' later' : '' }}" style="--c:{{ it.color }}"{% if slot %} data-slot="{{ slot }}" data-min="{{ it.minutes ?? 0 }}"{% endif %}>
+        <div class="row1"><span class="wk-cat">{{ it.category ?: it.frequency }}{% if it.late %} · zaległe od {{ it.due|date('d.m') }}{% endif %}</span>{% if it.minutes is not null %}<span class="min">{{ it.minutes }} min</span>{% endif %}</div>
+        <b>{{ it.title }}</b>
+        {% if it.auto_done %}<small class="wk-auto"><i class="bi bi-magic"></i> zaliczone automatycznie</small>
+        {% elseif it.done and it.done_by %}<small class="wk-auto">{{ it.status == 'skipped' ? 'pominięte' : 'zrobione' }} : {{ it.done_by }}{{ it.done_at ? ', ' ~ it.done_at|date('d.m H:i') : '' }}</small>
+        {% elseif it.auto and not it.done %}<small class="wk-auto" title="Zalicza się samo {{ it.auto }}"><i class="bi bi-magic"></i> zalicza się samo</small>{% endif %}
+        <div class="acts">
+            {% if it.link %}<a class="go" href="{{ root }}{{ it.link }}">{{ it.button }} <i class="bi bi-arrow-right"></i></a>{% else %}<span class="go muted">bez linku</span>{% endif %}
+            {% if it.form and it.id %}
+                <a class="chk form" href="{{ root }}/my-tasks/{{ it.id }}/form" title="Protokół" aria-label="Protokół"><i class="bi bi-journal-text"></i></a>
+            {% elseif it.id %}
+                <button type="button" class="chk" data-wk-toggle="{{ it.id }}" aria-pressed="{{ it.done ? 'true' : 'false' }}" title="{{ it.done ? 'Cofnij' : 'Zrobione' }}" aria-label="{{ it.done ? 'Cofnij' : 'Zrobione' }}"><i class="bi bi-check-lg"></i></button>
+            {% else %}
+                <span class="chk off" title="{{ it.status == 'planned' ? 'Zaplanowane' : 'Nieodnotowane' }}"><i class="bi bi-clock"></i></span>
+            {% endif %}
+        </div>
+    </div>
+{% endmacro %}
+{% import _self as wk %}
+
 {% block title %}Dzisiaj{% endblock %}
 
 {% block page_heading %}
@@ -58,52 +81,71 @@
     </div>
 
     <div class="row">
-        {# --- Moje zadania : zadania stanowiska użytkownika ---------------------- #}
+        {# --- Mój tydzień : zadania stałe stanowiska dzień po dniu (plan ustala administrator) --- #}
         <div class="col-12">
+            {% if not member or not member.id_position %}
             <div class="card at-mytasks">
-                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <h4 class="card-title mb-0">Moje zadania</h4>
-                        <span class="at-sub">{{ member and member.position_name ? member.position_name : 'bez stanowiska' }}</span>
-                    </div>
-                    {% if member and member.id_position %}
-                        <span class="d-flex gap-1 flex-wrap">
-                            <span class="badge bg-info">do zrobienia {{ my_counts.open ?? 0 }}</span>
-                            <span class="badge bg-success">zrobione {{ my_counts.done ?? 0 }}</span>
-                            {% if my_counts.overdue ?? 0 %}<span class="badge bg-danger">zaległe {{ my_counts.overdue }}</span>{% endif %}
-                        </span>
-                    {% endif %}
-                </div>
+                <div class="card-header"><h4 class="card-title mb-0">Mój tydzień</h4><span class="at-sub">bez stanowiska</span></div>
                 <div class="card-body pt-0">
-                    {% if not member or not member.id_position %}
-                        <p class="at-empty mb-2">Nie masz przypisanego stanowiska — przypisz je, aby widzieć tu swoje zadania.</p>
-                        <a class="btn btn-sm btn-outline-primary" href="{{ root }}/organization/positions">Funkcje i zadania</a>
-                    {% elseif my_tasks %}
-                        <ul class="at-tasks at-tasks-compact">
-                        {% for it in my_tasks %}
-                            {% set o = it.occurrence %}
-                            <li class="at-task is-{{ o.status }}{{ it.overdue ? ' is-overdue' : '' }}" data-occurrence="{{ o.id }}">
-                                <div class="at-task-main">
-                                    <strong>{{ it.task.title_pl }}</strong>
-                                    <div class="at-sub">{% if it.task.category_name %}<i class="bi {{ it.task.category_icon }}"></i> {{ it.task.category_name }} · {% endif %}{% if it.overdue %}zaległe · termin {{ o.due_date|date('d.m') }}{% else %}{{ it.frequency }} · termin {{ o.due_date|date('d.m') }}{% endif %}</div>
-                                </div>
-                                <div class="at-task-actions">
-                                    {% if it.task.link_path %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}{{ it.task.link_path }}">Otwórz</a>{% endif %}
-                                    {% if it.task.form_code %}
-                                        <a class="btn btn-sm btn-primary" href="{{ root }}/my-tasks/{{ o.id }}/form"><i class="bi bi-journal-text"></i> {{ o.form_status == 'draft' ? 'Dokończ protokół' : 'Protokół' }}</a>
-                                    {% else %}
-                                        <button class="btn btn-sm btn-primary" data-status="done" title="Zrobione"><i class="bi bi-check"></i></button>
-                                    {% endif %}
-                                </div>
-                            </li>
-                        {% endfor %}
-                        </ul>
-                        <a class="at-link" href="{{ root }}/my-tasks">Wszystkie moje zadania</a>
-                    {% else %}
-                        <p class="at-empty"><i class="bi bi-check2-circle"></i> Wszystkie zadania stanowiska zrobione.</p>
-                    {% endif %}
+                    <p class="at-empty mb-2">Nie masz przypisanego stanowiska — przypisz je, aby widzieć tu swoją feuille de route tygodnia.</p>
+                    <a class="btn btn-sm btn-outline-primary" href="{{ root }}/organization/positions">Funkcje i zadania</a>
                 </div>
             </div>
+            {% else %}
+            {% set t = week.totals %}
+            <div class="kw-card wk-card" id="myWeek">
+                <h5>Mój tydzień — {{ member.position_name }} <span class="kw-badge">tydzień {{ week.week.number }} · {{ week.week.from|date('d.m') }}–{{ week.week.to|date('d.m') }}</span>
+                    <span class="kw-badge ok">{{ member.displayed_name ?: member.login }}</span>
+                    <a class="wk-all" href="{{ root }}/my-tasks">Wszystkie moje zadania</a>
+                    {% if can_see('/organization/week-plan/' ~ member.id_position) %}<a class="wk-all" href="{{ root }}/organization/week-plan/{{ member.id_position }}"><i class="bi bi-sliders"></i> Plan tygodnia</a>{% endif %}</h5>
+                <p class="kw-lead">Te same zadania co tydzień : każde z linkiem prosto do strony w ERP. « Zrobione » zapisuje dzień i godzinę ; zadanie z kreatorem (faktury, ceny) zalicza się samo, gdy kreator jest zakończony.</p>
+                <div class="kw-tiles">
+                    <div class="ok"><span>Zrobione w tym tygodniu</span><b data-wk="done">{{ t.done }} / {{ t.total }}</b><small data-wk="done-min">{{ wk.hm(t.done_minutes) }} z {{ wk.hm(t.minutes) }} zaplanowanych</small></div>
+                    <div class="todo"><span>Dziś — {{ t.today_name }}</span>
+                        {% if t.today.count %}<b>{{ t.today.count|plural_pl('zadanie', 'zadania', 'zadań') }}</b><small>{{ t.today.minutes }} min{{ t.today.buttons ? ' · ' ~ t.today.buttons|join(', ') : '' }}</small>
+                        {% else %}<b>wolne</b><small>dziś bez zadań stałych</small>{% endif %}</div>
+                    <div class="{{ t.overdue + t.late ? 'late' : '' }}"><span>Zaległe</span><b>{{ t.overdue + t.late }}</b>
+                        <small>{% if week.overdue %}{{ week.overdue[0].title|length > 42 ? week.overdue[0].title|slice(0, 41) ~ '…' : week.overdue[0].title }} ({{ week.overdue[0].due|date('d.m') }}){% elseif t.late %}z wcześniejszych dni tygodnia{% else %}nic nie czeka{% endif %}</small></div>
+                    <div><span>Czas na zadania stałe</span><b>{{ t.share }} %</b><small>{{ wk.hm(t.minutes) }} z 40 h tygodnia</small></div>
+                    <div><span>Miesiąc i kwartał</span><b>{{ t.later_open }}</b><small>{% if t.later_next %}{{ t.later_next.title|length > 34 ? t.later_next.title|slice(0, 33) ~ '…' : t.later_next.title }} · do {{ t.later_next.due|date('d.m') }}{% else %}wszystko zrobione{% endif %}</small></div>
+                </div>
+                {% for row in week.strip %}
+                    {% set it = row.item ?? row.task %}
+                    <div class="wk-daily">
+                        <div class="wk-t{{ row.item and row.item.done ? ' done' : '' }}" style="--c:{{ it.color }}">
+                            <div><span class="wk-cat">Codziennie{{ it.minutes is not null ? ' · ' ~ it.minutes ~ ' min' : '' }}</span><b>{{ it.title }}</b></div>
+                            <div class="acts">
+                                <span class="wk-dots">{% for n, s in row.slots %}<i class="{{ s.done ? 'ok' : '' }}{{ week.days[n].today ? ' now' : '' }}" data-slot="{{ n }}" data-min="{{ s.minutes ?? 0 }}" title="{{ week.days[n].label }}{{ s.done ? ' : zrobione' : '' }}">{{ week.days[n].short }}</i>{% endfor %}</span>
+                                {% if it.link %}<a class="go" href="{{ root }}{{ it.link }}">{{ it.button }} <i class="bi bi-arrow-right"></i></a>{% endif %}
+                                {% if row.item and row.item.id %}<button type="button" class="chk" data-wk-toggle="{{ row.item.id }}" aria-pressed="{{ row.item.done ? 'true' : 'false' }}" title="Zrobione dziś" aria-label="Zrobione dziś"><i class="bi bi-check-lg"></i></button>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+                <div class="wk" style="--wk-days: {{ week.days|length }}">
+                    {% for n, d in week.days %}
+                        <div class="wk-day{{ d.today ? ' today' : '' }}{{ d.past ? ' past' : '' }}" data-wk-day="{{ n }}">
+                            <h6>{{ d.label }}{{ d.today ? ' · dziś' : '' }}<small>{{ d.minutes }} min</small></h6>
+                            <div class="wk-bar"><i style="width: {{ d.minutes ? (d.done_minutes * 100 / d.minutes)|round : 0 }}%"></i></div>
+                            {% for it in d.items %}{{ wk.card(it, root, n) }}{% else %}<p class="wk-free">{{ week.strip ? 'tylko zadania codzienne' : 'bez zadań stałych' }}</p>{% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="wk-side">
+                <div class="kw-card"><h5>Zaległe</h5>
+                    {% if week.overdue %}<div class="wk-list">{% for it in week.overdue %}{{ wk.card(it, root, null) }}{% endfor %}</div>
+                    {% else %}<p class="at-empty mb-0"><i class="bi bi-check2-circle"></i> Nic zaległego z poprzednich tygodni.</p>{% endif %}
+                </div>
+                <div class="kw-card wk-month"><h5>Miesiąc i kwartał</h5>
+                    {% if week.later %}<ul>{% for it in week.later %}
+                        <li class="{{ it.done ? 'done' : '' }}"><span>{% if it.link %}<a href="{{ root }}{{ it.link }}">{{ it.title }}</a>{% else %}{{ it.title }}{% endif %}<small>{{ it.frequency }}{{ it.minutes is not null ? ' · ' ~ it.minutes ~ ' min' : '' }}</small></span>
+                            <span class="wk-month-r"><b data-due="do {{ it.due|date('d.m') }}">{{ it.done ? 'zrobione' : 'do ' ~ it.due|date('d.m') }}</b>{% if it.id and not it.form %}<button type="button" class="chk" data-wk-toggle="{{ it.id }}" aria-pressed="{{ it.done ? 'true' : 'false' }}" title="{{ it.done ? 'Cofnij' : 'Zrobione' }}" aria-label="{{ it.done ? 'Cofnij' : 'Zrobione' }}"><i class="bi bi-check-lg"></i></button>{% endif %}</span></li>
+                    {% endfor %}</ul>
+                    {% else %}<p class="at-empty mb-0">Brak zadań miesięcznych i kwartalnych.</p>{% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         {# --- Moje wskaźniki : osoba na stanowisku kierownika produkcji (cele i wyniki z modułu) --- #}
@@ -339,14 +381,43 @@
 {% include 'page_components/ajax_helpers.twig' %}
 <script>
 (() => {
-    // Moje zadania : « Zrobione » prosto ze strony Dzisiaj.
-    document.querySelectorAll('.at-mytasks [data-occurrence] [data-status]').forEach(button => button.addEventListener('click', () => {
-        const li = button.closest('[data-occurrence]');
+    // Mój tydzień : « Zrobione » / « Cofnij » prosto ze strony Dzisiaj — karta, pasek dnia i kafelek bez przeładowania.
+    const week = document.getElementById('myWeek');
+    const hm = (m) => `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
+    // Sloty tygodnia : karty dni i kropki zadań codziennych (data-slot = dzień, data-min = minuty).
+    function recount() {
+        if (!week) return;
+        const per = {};
+        let done = 0, total = 0, min = 0, doneMin = 0;
+        week.querySelectorAll('[data-slot]').forEach(el => {
+            const m = Number(el.dataset.min) || 0, d = el.dataset.slot, ok = el.classList.contains('done') || el.classList.contains('ok');
+            per[d] ??= [0, 0];
+            per[d][0] += m; total++; min += m;
+            if (ok) { per[d][1] += m; done++; doneMin += m; }
+        });
+        week.querySelectorAll('.wk-day').forEach(day => {
+            const [all, ok] = per[day.dataset.wkDay] || [0, 0];
+            day.querySelector('.wk-bar i').style.width = (all ? Math.round(ok * 100 / all) : 0) + '%';
+        });
+        week.querySelector('[data-wk=done]').textContent = `${done} / ${total}`;
+        week.querySelector('[data-wk=done-min]').textContent = `${hm(doneMin)} z ${hm(min)} zaplanowanych`;
+    }
+    document.querySelectorAll('[data-wk-toggle]').forEach(button => button.addEventListener('click', () => {
+        const card = button.closest('.wk-t, li');
+        const done = button.getAttribute('aria-pressed') === 'true';
         button.disabled = true;
-        at.send(`/ajax/my-tasks/${li.dataset.occurrence}`, 'PATCH', {status: button.dataset.status, note: null}).then(res => {
+        at.send(`/ajax/my-tasks/${button.dataset.wkToggle}`, 'PATCH', {status: done ? 'open' : 'done', note: null}).then(res => {
+            button.disabled = false;
             at.notify(res.ok, res.message);
-            if (res.ok) window.setTimeout(() => window.location.reload(), 400);
-            else button.disabled = false;
+            if (!res.ok) return;
+            button.setAttribute('aria-pressed', done ? 'false' : 'true');
+            button.title = done ? 'Zrobione' : 'Cofnij';
+            card.classList.toggle('done', !done);
+            const due = card.querySelector('[data-due]');
+            if (due) due.textContent = done ? due.dataset.due : 'zrobione';
+            // zadanie codzienne : kropka dzisiejszego dnia
+            card.closest('.wk-daily')?.querySelector('.wk-dots i.now')?.classList.toggle('ok', !done);
+            recount();
         });
     }));
 })();

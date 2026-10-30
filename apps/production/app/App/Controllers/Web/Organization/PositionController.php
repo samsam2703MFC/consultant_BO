@@ -55,6 +55,42 @@ class PositionController extends BaseController
         }
     }
 
+    /** Plan tygodnia stanowiska (tylko administrator ; strona chroniona też przez katalog uprawnień). */
+    public function weekPlan($id)
+    {
+        $this->view('organization/week_plan', ['plan' => $this->service->weekPlan((int) $id, $this->userId())]);
+    }
+
+    public function weekPlanData($id)
+    {
+        try {
+            return $this->json(['data' => $this->service->weekPlan((int) $id, $this->userId())]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    public function saveWeekPlan($id)
+    {
+        try {
+            $n = $this->service->saveWeekPlan((int) $id, $this->getJson(Request::createFromGlobals()), $this->userId());
+            return $this->json(['message' => "Zapisano plan tygodnia ({$n} zadań).", 'data' => $this->service->weekPlan((int) $id, $this->userId())]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    public function copyWeekPlan($id)
+    {
+        try {
+            $input = $this->getJson(Request::createFromGlobals());
+            $n = $this->service->copyPlan((int) $id, (int) ($input['from'] ?? 0), $this->userId());
+            return $this->json(['message' => $n ? "Skopiowano zadania : {$n}." : 'Nic do skopiowania — te zadania już są.', 'data' => $this->service->weekPlan((int) $id, $this->userId())]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     public function savePosition($id = null)
     {
         try {
