@@ -856,8 +856,8 @@ echo "\nL'API du module\n";
 $inv = apiModInventaire();
 $parSource = [];
 foreach ($inv as $src) { $parSource[$src['cle']] = array_merge(...array_column($src['groupes'], 'routes')); }
-verifie('cinq sources : 20 routes du cockpit, 19 du panel, 4 de l’ERP admin, 11 tables, 1 route Twilio',
-    array_map('count', $parSource) === ['cockpit' => 20, 'panel' => 19, 'erp' => 4, 'base' => 11, 'sms' => 1], json_encode(array_map('count', $parSource)));
+verifie('cinq sources : 20 routes du cockpit, 20 du panel, 4 de l’ERP admin, 11 tables, 1 route Twilio',
+    array_map('count', $parSource) === ['cockpit' => 20, 'panel' => 20, 'erp' => 4, 'base' => 11, 'sms' => 1], json_encode(array_map('count', $parSource)));
 $malFaites = [];
 foreach ($parSource as $cle => $rs) {
     foreach ($rs as $r) {
@@ -911,7 +911,7 @@ $vue = apiModuleVue($inv, [apiModId('panel', $rKpi) => ['type' => 'http', 'code'
     apiModId('panel', $rEmp) => ['type' => 'http', 'code' => 403, 'ms' => 80]], ['notes' => ['erp' => 'non réglé']]);
 $vs = array_column($vue['sources'], null, 'cle');
 verifie('une source prend le pire de ses routes et compte ses erreurs ; les autres restent à « pas mesurée »',
-    $vs['panel']['etat'] === 'erreur' && $vs['panel']['compte']['erreur'] === 1 && $vs['panel']['compte']['ecriture'] === 3
+    $vs['panel']['etat'] === 'erreur' && $vs['panel']['compte']['erreur'] === 1 && $vs['panel']['compte']['ecriture'] === 4
     && $vs['cockpit']['etat'] === 'ok' && $vs['cockpit']['compte']['ecriture'] === 7 && $vs['erp']['note'] === 'non réglé' && $vs['base']['n'] === 11);
 verifie('le chemin d’une sonde : les repères remplacés, null s’il en manque un ; le premier ticket d’une liste',
     apiModChemin('/shops/{sid}/transactions?date={date}', ['sid' => '4', 'date' => '2026-10-24']) === '/shops/4/transactions?date=2026-10-24'

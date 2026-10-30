@@ -19,5 +19,10 @@ return function(RouteCollector $r) {
         'controller' => \App\Employee\app\Http\Controllers\Me\ProfileController::class,
         'method'     => 'carte'
     ]);
+    // Le PIN de caisse, changé par la personne elle-même — écrit au panel.
+    $r->addRoute('POST', '/me/pin', [
+        'controller' => \App\Employee\app\Http\Controllers\Me\ProfileController::class,
+        'method'     => 'pin'
+    ]);
 
 };
