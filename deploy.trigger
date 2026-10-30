@@ -1190,3 +1190,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T20:38:55Z prévision 13 semaines [220]
 2026-10-30T20:53:52Z prévision : argent pour produire [221]
 2026-10-30T21:05:36Z prévision : sorties de caisse [222]
+2026-10-30T21:16:51Z rail : Marketing en magasin ↗ (régie d'affichage)
