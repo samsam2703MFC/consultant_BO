@@ -28,9 +28,9 @@ use App\Services\Workshop\Product\StandardTime;
  *    rok temu (tydzień gamy N-1 → ten sam tydzień gamy w tym roku) × trend sieci ; poza gamą tylko zamówienia ;
  *  - trend sieci = kartony ostatnich tygodni ÷ te same tygodnie rok temu (tygodnie N-1 z danymi), w granicach parametrów.
  * Z kartonów : palety (kartony na paletę), godziny produkcji (partia z arkusza albo marszruta) wobec zdolności (pracownicy ×
- * etat, dni pracy bez świąt PL), pieniądze na produkcję [221] (kartony × koszt pełny kartonu — ta sama reguła co Marże i
- * Rentowność : surowce i opakowania + wynagrodzenia działu + media i amortyzacja + koszty ogólne, z ostatnich miesięcy
- * kosztowych, bez logistyki) i zakupy surowców (receptura na karton, stan, w drodze, czas dostawy → « zamówić do »).
+ * etat, dni pracy bez świąt PL), pieniądze na produkcję [221] (wydatki gotówkowe : kartony × (surowce i opakowania + płace
+ * i media działu produkcji + wspólne działy produkcji), z ostatnich miesięcy kosztowych ; bez amortyzacji, kosztów stałych,
+ * Administracji i logistyki) i zakupy surowców (receptura na karton, stan, w drodze, czas dostawy → « zamówić do »).
  * Zatwierdzenie (Kierownik produkcji, co poniedziałek) zapisuje zdjęcie liczb w n_forecast_run i zalicza zadanie tygodnia.
  */
 final class ForecastService
@@ -273,7 +273,7 @@ final class ForecastService
             $off = [];
             for ($d = 0; $d < 5; $d++) { $day = date('Y-m-d', strtotime($w . " +{$d} days")); if (isset($holidays[$day][$dep])) $off[] = ['date' => $day, 'name' => $holidays[$day][$dep]]; }
             $c = 0; $sc = 0; $pal = 0.0; $h = 0.0; $est = 0.0; $noCpp = 0; $noHours = 0;
-            $money = ['raw' => 0.0, 'labor' => 0.0, 'media' => 0.0, 'overhead' => 0.0];
+            $money = ['raw' => 0.0, 'labor' => 0.0, 'media' => 0.0, 'shared' => 0.0];
             foreach ($rows as $r) {
                 $v = $r['values'][$i];
                 if ($v <= 0) continue;
@@ -290,7 +290,7 @@ final class ForecastService
                 'cartons' => $c, 'season_cartons' => $sc, 'pallets' => round($pal, 1), 'hours' => round($h, 1), 'capacity' => round($cap, 1),
                 'estimated_hours' => round($est, 1), 'load_pct' => $cap > 0 ? (int) round($h / $cap * 100) : null, 'off' => $off,
                 'cost' => round(array_sum($money), 2), 'cost_raw' => round($money['raw'], 2), 'cost_labor' => round($money['labor'], 2),
-                'cost_media' => round($money['media'], 2), 'cost_overhead' => round($money['overhead'], 2),
+                'cost_media' => round($money['media'], 2), 'cost_shared' => round($money['shared'], 2),
                 'shape' => $shape[$i] !== null ? round($shape[$i], 2) : null, 'no_cpp' => $noCpp, 'no_hours' => $noHours];
         }
         $seasonsOut = $this->presentSeasons($seasons['list'], $rows, $by, $weeks, $t, $sales);
@@ -300,8 +300,14 @@ final class ForecastService
         $peak = $ahead ? array_reduce($ahead, fn($m, $i) => $m === null || ($weekRows[$i]['load_pct'] ?? -1) > ($weekRows[$m]['load_pct'] ?? -1) ? $i : $m) : null;
         $totalHours = round(array_sum(array_column($weekRows, 'hours')), 1);
         $cost = ['total' => round(array_sum(array_column($weekRows, 'cost')), 2)];
-        foreach (['raw', 'labor', 'media', 'overhead'] as $k) $cost[$k] = round(array_sum(array_column($weekRows, 'cost_' . $k)), 2);
+        foreach (['raw', 'labor', 'media', 'shared'] as $k) $cost[$k] = round(array_sum(array_column($weekRows, 'cost_' . $k)), 2);
+        $allCartons = array_sum(array_column($weekRows, 'cartons'));
+        $perCompany = fn(float $v) => $costBasis['cartons'] > 0 ? $v / $costBasis['cartons'] : 0.0;
         $cost += ['basis' => $costBasis['label'], 'months' => $costBasis['count'], 'logistics_per_carton' => round($costBasis['logistics_per_carton'], 2),
+            'shared_sections' => $costBasis['shared_sections'], 'admin_sections' => $costBasis['excluded']['admin_sections'],
+            // Poza wydatkami (dla informacji, na te same kartony) : amortyzacja, koszty stałe (Finanse), Administracja.
+            'excluded' => ['depreciation' => round($allCartons * $perCompany($costBasis['excluded']['depreciation']), 2),
+                'fixed' => round($allCartons * $perCompany($costBasis['excluded']['fixed']), 2), 'admin' => round($allCartons * $perCompany($costBasis['excluded']['admin']), 2)],
             'logistics' => round(array_sum(array_column($weekRows, 'cartons')) * $costBasis['logistics_per_carton'], 2),
             'no_raw' => count(array_filter($rows, fn($r) => $r['total'] > 0 && $r['cost_per_carton']['raw'] <= 0)),
             'no_section' => count(array_filter($rows, fn($r) => $r['total'] > 0 && !$r['cost_per_carton']['section'])),
@@ -600,27 +606,48 @@ final class ForecastService
     }
 
     /**
-     * Podstawa kosztu kartonu [221] : ostatnie miesiące kosztowe (zamknięte najpierw, forecast.cost_months) — wynagrodzenia,
-     * media i amortyzacja działu na karton, koszty ogólne i logistyka na karton firmy (SectionUnitCostService).
+     * Podstawa wydatków na karton [221] : ostatnie miesiące kosztowe (zamknięte najpierw, forecast.cost_months) — tylko wydatki
+     * gotówkowe : wynagrodzenia i media działu produkcji na karton działu, wspólne działy produkcji (np. Pakowanie / wysyłka)
+     * i media bez rozdziału na karton firmy. Bez amortyzacji, kosztów stałych (Finanse) i działu Administracja ; logistyka osobno.
      */
     private function costBasis(): array
     {
         $ids = $this->costMonths->getLastMonthIds((int) $this->param('forecast.cost_months', '3', 1, 24));
         $basis = $this->unitCosts->months($ids);
         $label = $this->costMonths->getDataBasisLabel($ids);
-        return $basis + ['label' => $label['label'] ?? null, 'count' => count($basis['month_ids'])];
+        $pool = (float) $basis['unallocated_media'];
+        $shared = [];
+        $excluded = ['depreciation' => (float) $basis['depreciation_total'], 'fixed' => (float) $basis['fixed'], 'admin' => 0.0, 'admin_sections' => []];
+        foreach ($basis['sections'] as $sec) {
+            if (!$sec['shared']) continue;
+            $cash = (float) $sec['labor_actual'] + (float) $sec['media_actual'];
+            if (self::isAdministration((string) $sec['name'])) { $excluded['admin'] += $cash; $excluded['admin_sections'][] = (string) $sec['name']; continue; }
+            if ($cash > 0) { $pool += $cash; $shared[] = (string) $sec['name']; }
+        }
+        $cartons = (int) $basis['cartons'];
+        return $basis + ['label' => $label['label'] ?? null, 'count' => count($basis['month_ids']), 'shared_cash_per_carton' => $cartons > 0 ? $pool / $cartons : 0.0,
+            'shared_sections' => $shared, 'excluded' => $excluded];
+    }
+
+    /** Dział administracji (koszty firmy, nie produkcji) — po nazwie. */
+    private static function isAdministration(string $name): bool
+    {
+        return (bool) preg_match('/administ/iu', $name);
     }
 
     /**
-     * Koszt pełny kartonu bez logistyki (zł) : surowce i opakowania (koszt receptury kartonu), wynagrodzenia działu, media i
-     * amortyzacja działu, koszty ogólne. @return array{raw:float, labor:float, media:float, overhead:float, total:float, section:bool}
+     * Wydatki na karton (zł) : surowce i opakowania (koszt receptury kartonu), wynagrodzenia i media działu produkcji,
+     * wspólne działy produkcji i media bez rozdziału ; bez amortyzacji, kosztów stałych, Administracji i logistyki.
+     * @return array{raw:float, labor:float, media:float, shared:float, total:float, section:bool}
      */
     private function cartonCost(array $basis, array $p): array
     {
         $sid = $p['id_section'] !== null ? (int) $p['id_section'] : null;
-        $u = SectionUnitCostService::unitCost($basis, $sid, max(0.0, (float) ($p['raw_cost'] ?? 0)));
-        $out = ['raw' => round($u['raw'], 4), 'labor' => round($u['labor'], 4), 'media' => round($u['media'] + $u['depreciation'], 4), 'overhead' => round($u['overhead'], 4)];
-        return $out + ['total' => round(array_sum($out), 4), 'section' => $sid !== null && isset($basis['sections'][$sid]) && $basis['sections'][$sid]['cartons'] > 0];
+        $sec = $sid !== null ? ($basis['sections'][$sid] ?? null) : null;
+        $own = $sec !== null && !$sec['shared'];
+        $out = ['raw' => round(max(0.0, (float) ($p['raw_cost'] ?? 0)), 4), 'labor' => round($own ? (float) $sec['labor_per_carton'] : 0.0, 4),
+            'media' => round($own ? (float) $sec['media_per_carton'] : 0.0, 4), 'shared' => round((float) $basis['shared_cash_per_carton'], 4)];
+        return $out + ['total' => round(array_sum($out), 4), 'section' => $own && $sec['cartons'] > 0];
     }
 
     /** Zdolność tygodnia (h) : parametr albo aktywni pracownicy produkcji × godziny etatu. */

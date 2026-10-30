@@ -6,7 +6,8 @@ declare(strict_types=1);
  * zamkniętych i ponowieniem nieudanych ; prognoza (tydzień bieżący = zamówienia, większe z zamówień i prognozy, N-1 × trend,
  * produkty sezonowe : sprzedaż w sklepach N-1 z panelu, brak tygodnia → wysyłki ERP, produkt gamy sprzedawany cały rok =
  * całoroczny), trend z panelu, palety, godziny i zdolność (święta PL), zakupy (receptura, stan, czas dostawy z oferty, opakowania),
- * pieniądze na produkcję (kartony × koszt pełny kartonu z miesiąca kosztowego, logistyka osobno), połączenia produktów gamy
+ * pieniądze na produkcję (wydatki : kartony × surowce, płace i media działu, wspólne działy produkcji ; bez amortyzacji, kosztów
+ * stałych i Administracji ; logistyka osobno), połączenia produktów gamy
  * (ręczne, pominięte, podpowiedź), zatwierdzenie (zadanie tygodnia zalicza się samo) i cofnięcie.
  *
  *   php tests/forecast_test.php
@@ -128,9 +129,12 @@ try {
     $pdo->exec("INSERT INTO final_product (id, name, id_category, ppc, cpl, lpp, cpp, active, id_recipe) VALUES
         (1, 'Bagietka', 1, 10, 5, 2, 10, 1, 100), (2, 'Cougnou sucre – 200 g (cru)', 1, 42, 5, 2, 20, 1, NULL), (3, 'Spéculoos Saint-Nicolas', 1, 24, 1, 1, 1, 1, NULL),
         (4, 'Buche Chocolat & Praline - 16 cm', 1, 12, 5, 2, 40, 0, NULL), (5, 'Bûche cacao 4/6', 1, 6, 5, 2, 40, 1, NULL)");
-    // Koszt pełny kartonu [221] : miesiąc zamknięty — płace działu 10 000 zł ÷ 1 000 kartonów = 10 zł, koszty stałe 5 000 zł = 5 zł,
-    // logistyka 2 000 zł = 2 zł (osobno) ; Bagietka : surowce 8 zł → 23 zł / karton ; produkty bez działu : tylko koszty ogólne.
-    $pdo->exec("INSERT INTO production_sections (id, name) VALUES (1, 'Piekarnia')");
+    // Wydatki na karton [221–222] : miesiąc zamknięty — płace Piekarni 10 000 zł ÷ 1 000 kartonów = 10 zł, Pakowanie / wysyłka
+    // (dział wspólny) 3 000 zł = 3 zł na karton firmy ; poza wydatkami : amortyzacja 1 000 zł, koszty stałe 5 000 zł,
+    // Administracja 4 000 zł ; logistyka 2 000 zł = 2 zł (osobno). Bagietka : surowce 8 zł → 21 zł ; bez działu : 3 zł.
+    $pdo->exec("INSERT INTO production_sections (id, name, depreciation) VALUES (1, 'Piekarnia', 1000), (2, 'Pakowanie/wysyłka', 0), (3, 'Administracja', 0)");
+    $pdo->exec("INSERT INTO n_section_target (id_section, is_shared) VALUES (2, 1), (3, 1)");
+    $pdo->exec("INSERT INTO cost_month_employee (month_id, section_id, name, surname, monthly_cost, is_included) VALUES (1, 2, 'Ewa', 'Test', 3000, 1), (1, 3, 'Olga', 'Test', 4000, 1)");
     $pdo->exec("UPDATE final_product SET id_section = 1, pre_calculated_raw_price_per_carton = 8 WHERE id = 1");
     $pdo->exec("INSERT INTO cost_month (id, year, month, status) VALUES (1, 2026, 9, 'LOCKED'), (2, 2026, 10, 'OPEN')");
     $pdo->exec("INSERT INTO cost_month_employee (month_id, section_id, name, surname, monthly_cost, is_included) VALUES (1, 1, 'Jan', 'Test', 10000, 1), (2, 1, 'Jan', 'Test', 99999, 1)");
@@ -261,13 +265,16 @@ try {
     expectFc($s['cpp'] === null && abs($W[1]['pallets'] - (20 / 10)) < 0.01 && $W[1]['no_cpp'] === 1, 'palety : karta 1/1/1 bez palet');
 
     // --- Pieniądze na produkcję [221] ----------------------------------------------------------------------------------
-    expectFc($b['cost_per_carton'] === ['raw' => 8.0, 'labor' => 10.0, 'media' => 0.0, 'overhead' => 5.0, 'total' => 23.0, 'section' => true],
-        'koszt kartonu Bagietki : surowce 8 + płace 10 + koszty ogólne 5 = 23 zł (miesiąc zamknięty, nie otwarty) ; ' . json_encode($b['cost_per_carton']));
-    expectFc($rows[2]['cost_per_carton']['total'] === 5.0 && !$rows[2]['cost_per_carton']['section'], 'produkt bez działu i bez kosztu surowców : tylko koszty ogólne');
+    expectFc($b['cost_per_carton'] === ['raw' => 8.0, 'labor' => 10.0, 'media' => 0.0, 'shared' => 3.0, 'total' => 21.0, 'section' => true],
+        'wydatki na karton Bagietki : surowce 8 + płace 10 + Pakowanie 3 = 21 zł, bez amortyzacji, kosztów stałych i Administracji (miesiąc zamknięty) ; ' . json_encode($b['cost_per_carton']));
+    expectFc($rows[2]['cost_per_carton']['total'] === 3.0 && !$rows[2]['cost_per_carton']['section'], 'produkt bez działu i bez kosztu surowców : tylko wspólne działy produkcji');
+    expectFc($f['cost']['shared_sections'] === ['Pakowanie/wysyłka'] && $f['cost']['admin_sections'] === ['Administracja']
+        && abs($f['cost']['excluded']['fixed'] - $f['totals']['cartons'] * 5) < 0.01 && abs($f['cost']['excluded']['admin'] - $f['totals']['cartons'] * 4) < 0.01
+        && abs($f['cost']['excluded']['depreciation'] - $f['totals']['cartons'] * 1) < 0.01, 'poza wydatkami (informacja) : amortyzacja, koszty stałe, Administracja');
     $w = $W[$i50];
     $expect = 0.0;
     foreach ($f['products'] as $r) $expect += $r['values'][$i50] * $r['cost_per_carton']['total'];
-    expectFc(abs($w['cost'] - $expect) < 0.01 && abs($w['cost'] - ($w['cost_raw'] + $w['cost_labor'] + $w['cost_media'] + $w['cost_overhead'])) < 0.01,
+    expectFc(abs($w['cost'] - $expect) < 0.01 && abs($w['cost'] - ($w['cost_raw'] + $w['cost_labor'] + $w['cost_media'] + $w['cost_shared'])) < 0.01,
         'tydzień : pieniądze = kartony × koszt kartonu (suma składników)');
     expectFc(abs($f['cost']['total'] - array_sum(array_column($W, 'cost'))) < 0.05 && abs($f['cost']['logistics'] - $f['totals']['cartons'] * 2) < 0.01
         && $f['cost']['months'] === 1 && $f['cost']['no_raw'] >= 1 && $f['cost']['no_section'] >= 1, 'suma 13 tygodni, logistyka osobno (2 zł / karton), produkty bez kosztu policzone');

@@ -126,12 +126,14 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   Zaopatrzenie), en route, semaine de manque, « commander avant » = lundi de la semaine de manque − délai (dernière offre du
   fournisseur actuel `n_mp_offer.lead_time_days`, sinon `forecast.lead_days`), à acheter en emballages entiers (mode
   « na stanie » : jusqu'au max), valeur ; matière utilisée seulement par des saisonniers = « sezon ».
-- Argent nécessaire pour produire (migration 142, 30/10/2026) : par semaine, cartons × coût complet du carton sans logistique,
-  la même règle que Marże et Rentowność (`SectionUnitCostService`) : matières et emballages (`pre_calculated_raw_price_per_carton`)
-  + salaires, médias et amortissement du département (`final_product.id_section`) + frais généraux, moyennés sur les
-  `forecast.cost_months` (3) derniers mois de coûts (clôturés d'abord) ; ligne « Pieniądze na produkcję » et sa part matières,
-  tuile du total 13 semaines (matières, salaires, médias, frais généraux), logistique affichée à part ; produits sans coût
-  matières ou sans département comptés. `n_forecast_run.production_cost` : total enregistré à la validation.
+- Argent nécessaire pour produire (migrations 142 et 143, 30/10/2026) : seulement les sorties de caisse, par semaine :
+  cartons × (matières et emballages de la recette `pre_calculated_raw_price_per_carton` + salaires et médias du département de
+  production `final_product.id_section` par carton du département + départements partagés de production, p. ex.
+  Pakowanie / wysyłka, et médias non répartis, par carton de l'entreprise), moyennés sur les `forecast.cost_months` (3) derniers
+  mois de coûts (clôturés d'abord, `SectionUnitCostService`). Sans amortissement, sans frais fixes (Finanse) et sans le
+  département Administracja (nom « Administ… ») : montrés pour information au survol ; logistique à part. Ligne
+  « Pieniądze na produkcję » et sa part matières, tuile du total 13 semaines (matières, salaires, médias, départements
+  partagés) ; `n_forecast_run.production_cost` : total enregistré à la validation.
 - API du panel TF Buddy, lecture seule (GET) : `/product-availability-periods` (gammes, `from_md` → `to_md`, aussi à cheval
   sur le Nouvel An ; gamme saisonnière = active et ≤ 200 jours, gamme de plus de 200 jours = toute l'année, 1 jour = ignorée),
   `/product-availability-periods/{id}/products` (produits des magasins), `/material-suppliers` → SL Food →
