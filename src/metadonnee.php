@@ -991,9 +991,45 @@ function mdMetaRappelAuto(): string
 }
 
 /**
- * Les réglages Meta. Les secrets (clé de l'application, jeton de la Page)
- * vivent à part et ne repartent jamais vers l'écran ; le jeton de
- * vérification du webhook naît au premier appel.
+ * Les clés et l'accès Meta du CRM, lus dans la base partagée (atelierby_db) —
+ * jamais écrits : ses réglages (`crm_settings`, Paramètres → Intégrations →
+ * Formulaires Facebook / Instagram), complétés par la connexion qu'il publie
+ * pour Social & Ads (`meta_connexion`). Après son « Connecter et tester », le
+ * jeton gardé est celui de la Page ; avant, celui de l'utilisateur système.
+ * null : pas de CRM dans cette base.
+ */
+function mdMetaCrm(): ?array
+{
+    $v = [];
+    try {
+        foreach (Db::rows("SELECT skey, svalue FROM crm_settings WHERE skey IN ('meta_app_id', 'meta_app_secret', 'meta_page_id', 'meta_page_token')") as $r) {
+            $v[(string) $r['skey']] = trim((string) $r['svalue']);
+        }
+    } catch (Throwable $e) { return null; }
+    $p = [];
+    $le = '';
+    try {
+        foreach (Db::rows("SELECT cle, valeur, maj_le FROM meta_connexion WHERE cle IN ('app_id', 'app_secret', 'page_id', 'page_token', 'system_token')") as $r) {
+            $p[(string) $r['cle']] = trim((string) $r['valeur']);
+            $le = max($le, (string) $r['maj_le']);
+        }
+    } catch (Throwable $e) { /* connexion pas encore publiée : ses réglages suffisent */ }
+    $premier = static fn (string ...$x): string => (string) current(array_filter($x, static fn ($y) => $y !== '') ?: ['']);
+    return [
+        'appId' => (string) preg_replace('/\D/', '', $premier($v['meta_app_id'] ?? '', $p['app_id'] ?? '')),
+        'pageId' => (string) preg_replace('/\D/', '', $premier($v['meta_page_id'] ?? '', $p['page_id'] ?? '')),
+        'secret' => $premier($v['meta_app_secret'] ?? '', $p['app_secret'] ?? ''),
+        'jeton' => $premier($v['meta_page_token'] ?? '', $p['page_token'] ?? '', $p['system_token'] ?? ''),
+        'le' => $le,
+    ];
+}
+
+/**
+ * Les réglages Meta. Par défaut, les clés et l'accès du CRM (`source` « crm »,
+ * relus à chaque appel : un jeton régénéré dans le CRM vaut aussitôt ici) ;
+ * « cockpit » : ceux saisis à l'écran. Les secrets vivent à part et ne
+ * repartent jamais vers l'écran ; le jeton de vérification du webhook naît au
+ * premier appel.
  */
 function mdMetaCfg(): array
 {
@@ -1001,7 +1037,8 @@ function mdMetaCfg(): array
     $m = is_array($m) ? $m : [];
     if ((string) ($m['verify'] ?? '') === '') { $m['verify'] = 'atelierby-' . bin2hex(random_bytes(12)); mdSettingSet('mdMeta', $m); }
     $saisi = trim((string) ($m['rappel'] ?? ''));
-    return [
+    $c = [
+        'source' => (string) ($m['source'] ?? '') === 'cockpit' ? 'cockpit' : 'crm',
         'appId' => (string) preg_replace('/\D/', '', (string) ($m['appId'] ?? '')),
         'pageId' => (string) preg_replace('/\D/', '', (string) ($m['pageId'] ?? '')),
         'secret' => (string) setting('mdMetaSecret', ''),
@@ -1010,7 +1047,21 @@ function mdMetaCfg(): array
         'rappel' => $saisi !== '' ? $saisi : mdMetaRappelAuto(),
         'rappelSaisi' => $saisi !== '',
         'connexion' => is_array($m['connexion'] ?? null) ? $m['connexion'] : null,
+        'crm' => null,
     ];
+    if ($c['source'] === 'crm') {
+        $x = mdMetaCrm();
+        $jeton = (string) ($x['jeton'] ?? '');
+        // Le jeton de la Page que « Connecter et tester » a tiré d'un jeton
+        // d'utilisateur du CRM : gardé ici, jamais chez lui, et oublié dès que
+        // le CRM change le sien.
+        $tire = setting('mdMetaJetonCrm', []);
+        if ($jeton !== '' && is_array($tire) && (string) ($tire['jeton'] ?? '') !== '' && hash_equals((string) ($tire['de'] ?? ''), hash('sha256', $jeton))) { $tire = (string) $tire['jeton']; }
+        else { $tire = ''; }
+        $c = ['appId' => (string) ($x['appId'] ?? ''), 'pageId' => (string) ($x['pageId'] ?? ''), 'secret' => (string) ($x['secret'] ?? ''),
+            'jeton' => $tire !== '' ? $tire : $jeton, 'jetonCrm' => $jeton, 'crm' => $x === null ? null : ['le' => $x['le']]] + $c;
+    }
+    return $c;
 }
 
 function mdMetaConfigure(?array $c = null): bool
@@ -1019,11 +1070,14 @@ function mdMetaConfigure(?array $c = null): bool
     return $c['pageId'] !== '' && $c['jeton'] !== '';
 }
 
-/** « webhook » : l'application envoie ses leads au Cockpit ; « releve » : ailleurs (le CRM), ou nulle part. */
+/**
+ * « webhook » : l'application envoie ses leads au Cockpit ; « releve » : ailleurs (le CRM), ou nulle part.
+ * Avec les clés du CRM, c'est son application : son webhook reste le sien, le Cockpit relève.
+ */
 function mdMetaMode(?array $c = null): string
 {
     $c ??= mdMetaCfg();
-    return (string) ($c['connexion']['mode'] ?? '') === 'webhook' ? 'webhook' : 'releve';
+    return $c['source'] !== 'crm' && (string) ($c['connexion']['mode'] ?? '') === 'webhook' ? 'webhook' : 'releve';
 }
 
 /** Ce que l'écran en lit : jamais un secret, seulement s'il est là. */
@@ -1031,7 +1085,7 @@ function mdMetaStatut(): array
 {
     $c = mdMetaCfg();
     $cx = $c['connexion'];
-    return ['configure' => mdMetaConfigure($c), 'appId' => $c['appId'], 'pageId' => $c['pageId'], 'secret' => $c['secret'] !== '', 'jeton' => $c['jeton'] !== '',
+    return ['source' => $c['source'], 'crm' => $c['crm'], 'configure' => mdMetaConfigure($c), 'appId' => $c['appId'], 'pageId' => $c['pageId'], 'secret' => $c['secret'] !== '', 'jeton' => $c['jeton'] !== '',
         'verify' => $c['verify'], 'rappel' => $c['rappel'], 'rappelSaisi' => $c['rappelSaisi'], 'rappelAuto' => mdMetaRappelAuto(),
         'mode' => mdMetaMode($c), 'pageNom' => (string) ($cx['pageNom'] ?? ''), 'rappelApp' => (string) ($cx['rappelApp'] ?? ''),
         'connexion' => $cx !== null ? ['le' => $cx['le'] ?? null, 'ok' => !empty($cx['ok']), 'etapes' => $cx['etapes'] ?? []] : null];
@@ -1056,7 +1110,8 @@ function mdMetaRefusRappel(string $cb): ?string
  * contre celui de la Page), la Page, ses formulaires (relus dans la liste),
  * l'abonnement de la Page au champ `leadgen` (vérifié après coup), puis
  * l'adresse de rappel de l'application — prise seulement si elle est libre ou
- * déjà la nôtre. Le bilan est gardé : l'écran le remontre.
+ * déjà la nôtre, jamais avec les clés du CRM (ni elle, ni ses réglages ne sont
+ * touchés). Le bilan est gardé : l'écran le remontre.
  */
 function mdMetaConnecter(): array
 {
@@ -1077,8 +1132,14 @@ function mdMetaConnecter(): array
             . ' · ' . ($mode === 'webhook' ? 'webhook au Cockpit' : 'relève toutes les 2 min'));
         return ['ok' => $ok, 'etapes' => $etapes, 'meta' => mdMetaStatut()];
     };
+    $crm = $c['source'] === 'crm';
+    if ($crm && $c['crm'] === null) { $etapes[] = ['titre' => 'Clés du CRM', 'ok' => false, 'detail' => "Pas de CRM dans cette base (crm_settings) : passez en « Clés propres »."]; return $fin(); }
     $manque = array_keys(array_filter(['ID de la Page' => $page === '', 'jeton' => $jeton === '', "ID de l'application" => $appId === '', "clé secrète de l'application" => $secret === '']));
-    if ($manque) { $etapes[] = ['titre' => 'Réglages', 'ok' => false, 'detail' => 'À renseigner : ' . implode(', ', $manque) . ' — les mêmes que dans le CRM (Paramètres → Intégrations → Formulaires Facebook / Instagram).']; return $fin(); }
+    if ($manque) {
+        $etapes[] = ['titre' => $crm ? 'Clés du CRM' : 'Réglages', 'ok' => false, 'detail' => ($crm ? 'Absent du CRM : ' : 'À renseigner : ') . implode(', ', $manque)
+            . ($crm ? ' — à régler dans le CRM (Paramètres → Intégrations → Formulaires Facebook / Instagram).' : ' — les mêmes que dans le CRM (Paramètres → Intégrations → Formulaires Facebook / Instagram).')];
+        return $fin();
+    }
     $appTok = $appId . '|' . $secret;
 
     // 1. Le jeton, lu par Meta avec le jeton de NOTRE application.
@@ -1131,11 +1192,14 @@ function mdMetaConnecter(): array
                     . ". L'utilisateur système doit avoir la Page parmi ses ressources (Business Suite → Utilisateurs système → Attribuer des ressources → Pages, contrôle total), puis régénérez son jeton."];
                 return $fin();
             }
-            if ($pt !== $c['jeton']) { mdSettingSet('mdMetaJeton', $pt); }
+            // Les clés du CRM restent les siennes : le jeton de la Page est gardé ici, à côté.
+            if ($crm) { mdSettingSet('mdMetaJetonCrm', ['de' => hash('sha256', $c['jetonCrm']), 'jeton' => $pt]); }
+            elseif ($pt !== $c['jeton']) { mdSettingSet('mdMetaJeton', $pt); }
             $jeton = $pt;
             $dp = MdMeta::graph('GET', 'debug_token', ['input_token' => $pt], $appTok);
             $pexp = $dp['ok'] ? (int) ($dp['data']['data']['expires_at'] ?? 0) : -1;
-            $etapes[] = ['titre' => 'Jeton de la Page', 'ok' => true, 'detail' => "Jeton d'utilisateur converti en jeton de la Page « " . (string) ($x['data']['name'] ?? $page) . ' » et enregistré à sa place.'
+            $etapes[] = ['titre' => 'Jeton de la Page', 'ok' => true, 'detail' => "Jeton d'utilisateur converti en jeton de la Page « " . (string) ($x['data']['name'] ?? $page) . ' »'
+                . ($crm ? ', gardé par le Cockpit (rien n’est écrit dans le CRM).' : ' et enregistré à sa place.')
                 . ($pexp === 0 ? " Il n'expire pas." : ($pexp > 0 ? ' ⚠ Il expire le ' . date('d/m/Y à H:i', $pexp) . " : collez le jeton d'un utilisateur système." : ''))];
         } elseif (isset($info['profile_id']) && (string) $info['profile_id'] !== $page) {
             $etapes[] = ['titre' => 'Jeton de la Page', 'ok' => false, 'detail' => "Ce jeton est celui d'une autre Page (" . (string) $info['profile_id'] . ", pas $page) — régénérez-le pour la bonne Page, ou corrigez l'ID de la Page."];
@@ -1184,7 +1248,10 @@ function mdMetaConnecter(): array
         if (is_array($sub) && ($sub['object'] ?? '') === 'page') { $rappelApp = trim((string) ($sub['callback_url'] ?? '')); }
     }
     $refus = mdMetaRefusRappel($cb);
-    if (!$s['ok']) {
+    if ($crm) {
+        $etapes[] = ['titre' => 'Adresse de rappel', 'ok' => true, 'detail' => "L'application du CRM garde son adresse de rappel" . ($rappelApp !== '' ? " ($rappelApp)" : '')
+            . ' : le Cockpit ne la prend jamais — il relève ses formulaires toutes les 2 minutes.'];
+    } elseif (!$s['ok']) {
         $etapes[] = ['titre' => 'Adresse de rappel', 'ok' => false, 'detail' => "Impossible de lire l'adresse de rappel de l'application — " . $s['error'] . ' Le Cockpit relève ses formulaires toutes les 2 minutes.'];
     } elseif ($rappelApp !== '' && rtrim($rappelApp, '/') !== rtrim($cb, '/')) {
         $etapes[] = ['titre' => 'Adresse de rappel', 'ok' => true, 'detail' => "L'application envoie déjà les leads de ses pages à $rappelApp (le CRM) : le Cockpit ne la détourne pas — il relève ses formulaires toutes les 2 minutes. Pour un webhook à la seconde, une application Meta à lui."];
@@ -2145,9 +2212,10 @@ function wr_md_sms_test(): array
 }
 
 /**
- * PUT /metadonnee/meta — {appId?, pageId?, secret?, jeton?, rappel?}. Les
- * réglages du CRM, recopiés : un secret n'est remplacé que si une valeur est
- * envoyée (jamais effacé par le champ vide d'un écran rechargé) ; `rappel`
+ * PUT /metadonnee/meta — {source?, appId?, pageId?, secret?, jeton?, rappel?}.
+ * `source` : « crm » (les clés et l'accès du CRM, lus dans sa base) ou
+ * « cockpit » (ceux saisis ici). Un secret n'est remplacé que si une valeur
+ * est envoyée (jamais effacé par le champ vide d'un écran rechargé) ; `rappel`
  * vide = l'adresse proposée.
  */
 function wr_md_meta_put(): array
@@ -2157,6 +2225,12 @@ function wr_md_meta_put(): array
     $m = setting('mdMeta', []);
     $m = is_array($m) ? $m : [];
     $faits = [];
+    if (array_key_exists('source', $b)) {
+        $v = (string) $b['source'];
+        if (!in_array($v, ['crm', 'cockpit'], true)) { http_response_code(422); return ['error' => 'source : « crm » ou « cockpit »']; }
+        // Le bilan de la dernière connexion parlait des autres clés : il s'efface.
+        if ($v !== ((string) ($m['source'] ?? '') === 'cockpit' ? 'cockpit' : 'crm')) { $m['source'] = $v; unset($m['connexion']); $faits[] = $v === 'crm' ? 'clés du CRM' : 'clés propres'; }
+    }
     foreach (['appId' => "ID de l'application", 'pageId' => 'ID de la Page'] as $k => $lib) {
         if (!array_key_exists($k, $b)) { continue; }
         $v = trim((string) $b[$k]);
@@ -2211,8 +2285,14 @@ function mdSonde(): array
     $blocs = [];
     $m = [];
     $c = mdMetaCfg();
+    if ($c['source'] === 'crm') {
+        $m[] = $c['crm'] === null ? ['ko', 'Clés du CRM', 'pas de CRM dans cette base (crm_settings) : passez en « Clés propres » (étape 1)']
+            : ['ok', 'Clés du CRM', 'lues dans sa base' . ($c['crm']['le'] !== '' ? ', publiées le ' . date('d/m/Y à H:i', (int) strtotime($c['crm']['le'])) : '') . ' — rien n’y est écrit'];
+    }
     if (!mdMetaConfigure($c) || $c['appId'] === '' || $c['secret'] === '') {
-        $m[] = ['ko', 'Connexion Meta', "à régler (étape 1) : ID et clé secrète de l'application, ID et jeton de la Page — les mêmes que dans le CRM"];
+        $m[] = ['ko', 'Connexion Meta', $c['source'] === 'crm'
+            ? "incomplète dans le CRM : ID et clé secrète de l'application, ID et jeton de la Page (CRM → Paramètres → Intégrations → Formulaires Facebook / Instagram)"
+            : "à régler (étape 1) : ID et clé secrète de l'application, ID et jeton de la Page — les mêmes que dans le CRM"];
     } else {
         // Les maillons de la sonde du CRM (meta_sonde), en lecture seule.
         $appTok = $c['appId'] . '|' . $c['secret'];
