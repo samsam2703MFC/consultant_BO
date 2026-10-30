@@ -40,6 +40,11 @@ expectPl(PalletLoad::measure([], $L)['kg'] === 0.0 && PalletLoad::measure([], $L
 // Limity : najniższy z produktów (karton 300 kg) ; za wysoka paleta i wnętrze ciężarówki.
 $m = PalletLoad::measure([['cartons' => 60, 'max_kg' => 300] + $croissant], $L);
 expectPl($m['max_kg'] === 300 && $m['over_kg'], 'limit kartonu 300 kg : 335,8 kg za ciężka');
+// Limit kartonu wyższy niż parametr (1850 > 1800 mm) : zastępuje parametr — 8 warstw = 1824 mm mieści się.
+$m = PalletLoad::measure([['cartons' => 80, 'max_height_mm' => 1850] + $croissant], $L);
+expectPl($m['max_height_mm'] === 1850 && $m['height_mm'] === 1824 && !$m['over_height'], 'limit kartonu 1850 mm zastępuje parametr 1800 mm');
+$m = PalletLoad::measure([['cartons' => 30, 'max_height_mm' => 1850] + $croissant, ['cartons' => 8] + $bagietka], $L);
+expectPl($m['max_height_mm'] === 1800, 'drugi produkt bez własnego limitu : parametr 1800 mm (najniższy)');
 $m = PalletLoad::measure([['cartons' => 100] + $croissant], $L);
 expectPl($m['height_mm'] === 144 + 10 * 210 && $m['over_height'] && !$m['over_truck'], '10 warstw = 2244 mm > 1800 mm, mieści się w ciężarówce 2550');
 $m = PalletLoad::measure([['cartons' => 120] + $croissant], ['max_height_mm' => 3000] + $L);

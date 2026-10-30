@@ -10,7 +10,8 @@ namespace App\Domain\Logistics;
  *  - wysokość = podstawa palety + Σ warstwy × wysokość kartonu ; kartony tego samego formatu (wysokość i kartony na
  *    warstwę) układane razem — warstwy = kartony ÷ kartony na warstwę w górę (pełne warstwy jednego produktu jedna na
  *    drugiej, jak na makiecie palety mieszanej) ;
- *  - limity : najniższe z produktów na palecie (produkt → rodzaj kartonu → parametry) i wnętrze ciężarówki.
+ *  - limity : najniższe z produktów na palecie ; limit produktu albo rodzaju kartonu zastępuje parametr (także wyższy),
+ *    produkt bez własnego limitu ma parametr ; wnętrze ciężarówki zawsze.
  * Brak danych produktu : wynik bez niego, oznaczony (known_kg / known_height = false).
  */
 final class PalletLoad
@@ -29,8 +30,8 @@ final class PalletLoad
         $knownKg = true;
         $knownHeight = true;
         $groups = [];
-        $maxH = (int) $limits['max_height_mm'];
-        $maxKg = (int) $limits['max_kg'];
+        $maxH = null;
+        $maxKg = null;
         $any = false;
         foreach ($items as $it) {
             $qty = (float) ($it['cartons'] ?? 0);
@@ -49,9 +50,11 @@ final class PalletLoad
             } else {
                 $knownHeight = false;
             }
-            if ((int) ($it['max_height_mm'] ?? 0) > 0) $maxH = min($maxH, (int) $it['max_height_mm']);
-            if ((int) ($it['max_kg'] ?? 0) > 0) $maxKg = min($maxKg, (int) $it['max_kg']);
+            $maxH = min($maxH ?? PHP_INT_MAX, (int) ($it['max_height_mm'] ?? 0) ?: (int) $limits['max_height_mm']);
+            $maxKg = min($maxKg ?? PHP_INT_MAX, (int) ($it['max_kg'] ?? 0) ?: (int) $limits['max_kg']);
         }
+        $maxH ??= (int) $limits['max_height_mm'];
+        $maxKg ??= (int) $limits['max_kg'];
         $layers = 0;
         $height = $groups ? (int) $p['base_mm'] : null;
         foreach ($groups as $gr) {

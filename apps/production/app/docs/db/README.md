@@ -71,7 +71,8 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Calcul (`App\Domain\Logistics\PalletLoad`) : poids = tare palette (EUR 25 kg, industrielle 30 kg) + cartons × (pièces ×
   g + poids du carton) ; hauteur = base 144 mm + couches × hauteur du carton ; cartons du même format posés ensemble
   (couches = cartons ÷ cartons par couche, arrondi au-dessus), formats différents empilés (maquette 214). Limites : la plus
-  basse des produits de la palette (produit → sorte de carton → `logistics.pallet_max_*`) et `logistics.truck_inner_height_mm`.
+  basse des produits de la palette (produit → sorte de carton → `logistics.pallet_max_*` ; la limite d'un produit ou d'un
+  carton remplace le paramètre, même plus haute) et `logistics.truck_inner_height_mm`.
 - Données (`CartonService::palletData`) : carton du produit (fiche, PPWR ou recette — catalogue `n_carton` : hauteur,
   poids `raw_material.packaging_unit_weight_g`). Cartons par couche : ERP si cohérent (`cpl × lpp = cpp` et tient sur la
   palette), sinon calculé avec les dimensions du carton sur une palette EUR (`PalletLayout`) — l'ERP a souvent 1/1/1 ou 10/10/10.
