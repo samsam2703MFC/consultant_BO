@@ -334,4 +334,21 @@ jobs:
             echo; echo "=== le PIN dans le code ==="
             grep -rnE "[\"'\'']pin[\"'\'']|pin_?code|pinCode|->pin([^a-zA-Z_]|$)|function [a-zA-Z]*[Pp]in[A-Z(]" /var/www/html/tfb/api --include="*.php" --exclude-dir=vendor 2>/dev/null \
               | grep -viE "/config|\.env" | cut -c1-220 | head -80
+            # La modification d’un employé (PATCH /employees/{id}) : accepte-t-elle le PIN, et avec quel jeton ?
+            A=/var/www/html/tfb/api
+            echo; echo "=== PATCH /employees/{id} : la route ==="
+            sed -n 20,36p $A/v1/Routes/Employee/employeeRoutes.php | cut -c1-200
+            echo; echo "=== EmployeeRepository : les champs, les fonctions ==="
+            sed -n 10,60p $A/app/Repositories/Employee/EmployeeRepository.php | cut -c1-200
+            grep -nE "function |pin|UPDATE|update\(" $A/app/Repositories/Employee/EmployeeRepository.php | cut -c1-200 | head -60
+            echo; echo "=== EmployeeService : autour du PIN ==="
+            grep -nE "function " $A/app/Services/Employee/EmployeeService.php | cut -c1-200 | head -40
+            sed -n 40,110p $A/app/Services/Employee/EmployeeService.php | cut -c1-200
+            echo; echo "=== le contrôleur de PATCH /employees/{id} ==="
+            for f in $(grep -rlE "function (update|edit|patch)[A-Za-z]*\(" $A/app/Controllers/Employee --include="*.php" 2>/dev/null | head -4); do
+              echo "--- $f"; grep -nE "function |pin|validate|Validator|getUser|idEmployee|id_employee|role|Role" "$f" | cut -c1-200 | head -40
+            done
+            echo; echo "=== AuthMiddleware::checkAuth ==="
+            f=$(grep -rlE "class AuthMiddleware" $A/app --include="*.php" 2>/dev/null | head -1); echo "--- $f"
+            awk "/function checkAuth/,/^    }/" "$f" | grep -viE "secret|password|key *=" | cut -c1-200 | head -60
           '
