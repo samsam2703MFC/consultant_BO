@@ -32,6 +32,7 @@
     const ceny = (n) => plural(n, 'cena', 'ceny', 'cen');
     const sklepy = (n) => n + ' ' + plural(n, 'sklep', 'sklepy', 'sklepów');
     const klientow = (n) => n + ' ' + plural(n, 'klient', 'klientów', 'klientów');
+    const surowce = (n) => n + ' ' + plural(n, 'surowiec zmienił cenę', 'surowce zmieniły cenę', 'surowców zmieniło cenę');
     const num = (s) => { const v = parseFloat(String(s ?? '').replace(/\s/g, '').replace(',', '.')); return isNaN(v) ? null : v; };
     const roundUp = (v, step) => Math.round(Math.ceil(Math.round(v / step * 1e6) / 1e6) * step * 100) / 100;
 
@@ -134,8 +135,8 @@
         }
         return `<div class="kw-card"><h5>Koszty i marże po fakturach ${gate}${run ? `<span class="kw-badge">ostatnie przeliczenie ${dmy(run.run_at)} ${hm(run.run_at)}${run.by_name ? ' · ' + esc(run.by_name) : ''}</span>` : '<span class="kw-badge warn">jeszcze nie przeliczono</span>'}</h5>
             <p class="kw-lead">Najpierw zatwierdź faktury (kreator faktur) — nowe ceny surowców trafiają do kartoteki. Potem jedno kliknięcie : koszt surowców wszystkich receptur po bieżących cenach (najwyższa zatwierdzona cena), koszt pełny (działy + logistyka) i marża przy obecnych cenach sprzedaży. Ceny sprzedaży jeszcze się nie zmieniają.</p>
-            ${c.window.pending ? `<div class="kw-note warn">Ceny ${c.materials.up + c.materials.down} surowców zmieniły się po ostatnim przeliczeniu (${c.materials.up} w górę, ${c.materials.down} w dół) — przelicz koszty, zanim ustalisz nowe ceny.</div>` : ''}
-            <div class="kw-tiles"><div><span>Faktury z cenami ${esc(winTxt)}</span><b>${c.invoices_with_prices}</b><small>${c.materials.up} cen surowców w górę · ${c.materials.down} w dół</small></div>
+            ${c.window.pending ? `<div class="kw-note warn">${surowce(c.materials.up + c.materials.down)} po ostatnim przeliczeniu (${c.materials.up} w górę, ${c.materials.down} w dół) — przelicz koszty, zanim ustalisz nowe ceny.</div>` : ''}
+            <div class="kw-tiles"><div><span>Faktury z cenami ${esc(winTxt)}</span><b>${c.invoices_with_prices}</b><small>ceny surowców : ${c.materials.up} w górę · ${c.materials.down} w dół</small></div>
                 <div><span>Receptury przeliczone</span><b>${run ? f(run.recipes) : '—'}</b><small>${run ? dmy(run.run_at) + ' ' + hm(run.run_at) : 'brak przeliczenia'}</small></div>
                 <div class="${t.changed ? 'todo' : ''}"><span>Produkty ze zmianą kosztu</span><b>${t.changed}</b><small>z ${t.products} z ceną</small></div>
                 <div class="${pp < -0.05 ? 'todo' : ''}"><span>Marża średnia</span><b>${f(t.margin_after, 1)} %</b><small>${Math.abs(pp) >= 0.05 ? sg(pp) + ' pp · było ' + f(t.margin_before, 1) + ' %' : 'bez zmiany'}</small></div>
