@@ -4545,9 +4545,9 @@
   const prAria = (tri, col) => (tri.col === col ? (tri.sens < 0 ? 'descending' : 'ascending') : 'none');
   /* Les primes d'équipe (30/10/2026) : la même valeur pour toutes — l'objectif du magasin, la note Google. Elles sortent
    * du tableau des vendeuses, qui ne garde que l'individuel ; seule l'éligibilité (le minimum d'heures) change de l'une
-   * à l'autre. MAQUETTES : ?maq=a (tuiles) ou ?maq=b (une carte « ensemble ») — à trancher. */
+   * à l'autre. Elles se lisent dans une carte « Le magasin, ensemble » (maquette B, retenue le 30/10/2026) : un anneau
+   * par prime, ce que chacune touche si tout est atteint, les éligibles et celles sous le minimum d'heures. */
   const PR_EQUIPE = ['objectif', 'google'];
-  const PR_MAQ = q.get('maq') === 'b' ? 'b' : 'a';
   const prEstEquipe = p => PR_EQUIPE.includes(p.base) && p.type === 'target';
   /** Une prime d'équipe lue sur l'équipe : sa valeur (la même pour toutes), l'objectif, qui en profite. */
   function prEquipeInfos(D, garde) {
@@ -4564,26 +4564,31 @@
         chacune: p.montant, pot: p.montant * elig.length };
     });
   }
-  /** Maquette A : une tuile par prime d'équipe, au-dessus du tableau. */
-  function prEquipeA(E, mobile) {
-    if (!E.length) { return ''; }
-    return `<div class="pr-eqa-t">Primes d’équipe<small>la même pour toutes : le magasin les gagne ensemble</small></div>
-      <div class="pr-eqa-g${mobile ? ' mob' : ''}">${E.map(e => `<div class="pr-eqa${e.atteint ? ' ok' : ''}">
-        <div class="k">${esc(e.p.lib)}<span>${esc(e.chacune + ' € chacune · ' + prPayeur(e.p))}</span></div>
-        <div class="v">${e.atteint ? '✓ ' : ''}${e.proj ? '<small>proj. </small>' : ''}${esc(e.val)}<small> · ${esc(e.cible)}</small></div>
-        ${e.niveau != null ? `<div class="pr-barre l"><i style="width:${Math.max(3, Math.min(100, e.niveau))}%"${e.atteint || e.niveau >= 80 ? ' class="vert"' : ''}></i></div>` : ''}
-        <div class="s">${e.atteint ? 'atteint : ' + esc(prEur(e.pot)) + ' pour ' + prPl(e.elig.length, 'vendeuse') : e.perdu ? 'pas atteint ce mois-là' : esc(e.reste) + ' · si atteint : <b>' + esc(prEur(e.pot)) + '</b> pour ' + prPl(e.elig.length, 'vendeuse')}</div>
-        ${e.hors.length ? `<div class="s mu">sous le min. d’heures : ${esc(e.hors.join(', '))}</div>` : ''}
-      </div>`).join('')}</div>`;
+  /** Un anneau : le chemin fait (0 à 100), vert passé 80 % ou atteint ; le chiffre au centre, le libellé à droite. */
+  function prAnneau(niveau, ok, centre, libelle) {
+    const C = 2 * Math.PI * 30, n = Math.max(0, Math.min(100, niveau || 0));
+    return `<div class="pr-eqb-r"><svg viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="30" class="f"/><circle cx="38" cy="38" r="30" class="a${ok || n >= 80 ? ' ok' : ''}" stroke-dasharray="${(C * n / 100).toFixed(1)} ${C.toFixed(1)}"/></svg>
+        <div class="c">${centre}</div><div class="l">${libelle}</div></div>`;
   }
-  /** Maquette B : une seule carte — des anneaux, ce que chacune touche si tout est atteint, et qui en profite. */
-  function prEquipeB(E, mobile) {
+  /** L'année : les primes d'équipe gagnées, et combien de mois le magasin y est arrivé sur les mois clos. */
+  function prEquipeAn(A, V, mobile) {
+    if (!V.equipe.length) { return ''; }
+    const clos = (A.mois || []).filter(x => !x.enCours).length;
+    const verse = V.equipe.reduce((t, p) => t + (+p.total || 0), 0);
+    return `<div class="pr-eqb${mobile ? ' mob' : ''}">
+      <div class="pr-eqb-h"><div><div class="pr-eqb-t">Le magasin, ensemble</div><div class="s">Les primes que toute l’équipe gagne d’un coup : les mois où le magasin y est arrivé</div></div>
+        <div class="pr-eqb-pot"><b>${esc(prEur(verse))}</b><small>versés à l’équipe en ${esc(String(A.y || prAn()))}</small></div></div>
+      <div class="pr-eqb-rs">${V.equipe.map(p => { const n = Math.max(0, ...(A.personnes || []).map(r => +(((r.cases || {})[p.cle] || {}).fois) || 0));
+        return prAnneau(clos ? 100 * n / clos : 0, false, `<b>${n} / ${clos}</b><small>mois</small>`,
+          `<b>${esc(p.lib)}</b><small>atteint ${prPl(n, 'mois')} sur ${clos} clos · ${esc(prPayeur(p))}</small><small>${esc(prEur(+p.total || 0))} · ${prPl(+p.gagnantes || 0, 'gagnante')}</small>`); }).join('')}</div>
+    </div>`;
+  }
+  /** Le mois : une seule carte — un anneau par prime, ce que chacune touche si tout est atteint, et qui en profite. */
+  function prEquipe(D, garde, mobile) {
+    const E = prEquipeInfos(D, garde);
     if (!E.length) { return ''; }
-    const C = 2 * Math.PI * 30;
-    const anneau = e => { const n = Math.max(0, Math.min(100, e.niveau || 0));
-      return `<div class="pr-eqb-r"><svg viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="30" class="f"/><circle cx="38" cy="38" r="30" class="a${e.atteint || n >= 80 ? ' ok' : ''}" stroke-dasharray="${(C * n / 100).toFixed(1)} ${C.toFixed(1)}"/></svg>
-        <div class="c"><b>${esc(e.val)}</b>${e.proj ? '<small>proj.</small>' : ''}</div>
-        <div class="l"><b>${esc(e.p.lib)}</b><small>${esc(e.cible)} · ${esc(e.chacune + ' € chacune')}</small><small class="${e.atteint ? 'ok' : ''}">${e.atteint ? '✓ atteint' : e.perdu ? 'pas atteint' : esc(e.reste)}</small></div></div>`; };
+    const anneau = e => prAnneau(e.niveau, e.atteint, `<b>${esc(e.val)}</b>${e.proj ? '<small>proj.</small>' : ''}`,
+      `<b>${esc(e.p.lib)}</b><small>${esc(e.cible)} · ${esc(e.chacune + ' € chacune')}</small><small class="${e.atteint ? 'ok' : ''}">${e.atteint ? '✓ atteint' : e.perdu ? 'pas atteint' : esc(e.reste)}</small>`);
     const chacune = E.reduce((t, e) => t + e.chacune, 0), elig = E[0].elig, hors = E[0].hors;
     const pot = E.reduce((t, e) => t + e.pot, 0);
     return `<div class="pr-eqb${mobile ? ' mob' : ''}">
@@ -4594,7 +4599,6 @@
         ${hors.length ? `<span class="lab">Sous le min. d’heures · ${hors.length}</span>${hors.map(n => `<span class="ch gris">${esc(n)}</span>`).join('')}` : ''}</div>
     </div>`;
   }
-  const prEquipe = (D, garde, mobile) => { const E = prEquipeInfos(D, garde); return PR_MAQ === 'b' ? prEquipeB(E, mobile) : prEquipeA(E, mobile); };
   /** Le mois, pour l'ordinateur comme pour le téléphone : les colonnes gardées par le filtre, les vendeuses triées. */
   function prMoisVue(D, garde) {
     const cols = (D.primes || []).filter(garde), clos = !D.enCours;
@@ -4632,17 +4636,18 @@
   }
   /** L'année : une colonne par prime gagnée, une ligne par vendeuse — ce qu'elle a touché et combien de mois. */
   function prAnneeVue(A, garde) {
-    const cols = (A.primes || []).filter(garde);
+    // Les primes d'équipe sortent du tableau mais comptent dans le total de chacune.
+    const tous = (A.primes || []).filter(garde), cols = tous.filter(p => !PR_EQUIPE.includes(p.cle)), equipe = tous.filter(p => PR_EQUIPE.includes(p.cle));
     const t0 = S.prTriAn || { col: 'total', sens: -1 };
     const tri = t0.col === 'nom' || t0.col === 'total' || cols.some(p => p.cle === t0.col) ? t0 : { col: 'total', sens: -1 };
-    const totalDe = r => cols.reduce((t, p) => t + (((r.cases || {})[p.cle] || {}).montant || 0), 0);
+    const totalDe = r => tous.reduce((t, p) => t + (((r.cases || {})[p.cle] || {}).montant || 0), 0);
     const val = r => (tri.col === 'nom' ? String(r.nom) : tri.col === 'total' ? totalDe(r) : ((r.cases || {})[tri.col] ? r.cases[tri.col].montant * 1000 + r.cases[tri.col].fois : -1));
-    const rangs = (A.personnes || []).filter(r => cols.some(p => (r.cases || {})[p.cle])).sort((a, b) => {
+    const rangs = (A.personnes || []).filter(r => tous.some(p => (r.cases || {})[p.cle])).sort((a, b) => {
       const xa = val(a), xb = val(b), c = typeof xa === 'string' ? xa.localeCompare(xb, 'fr') : xa - xb;
       return c * tri.sens || totalDe(b) - totalDe(a) || String(a.nom).localeCompare(String(b.nom), 'fr');
     });
     const mois = A.mois || [];
-    return { tri, cols, rangs, totalDe, total: prEur(rangs.reduce((t, r) => t + totalDe(r), 0)),
+    return { tri, cols, equipe, rangs, totalDe, total: prEur(rangs.reduce((t, r) => t + totalDe(r), 0)),
       periode: mois.length ? MOIS[+mois[0].m.slice(5, 7) - 1] + ' → ' + prLibMois(mois[mois.length - 1].m) + (mois[mois.length - 1].enCours ? ' (en cours)' : '') : '' };
   }
   function prTableAn(V) {
@@ -4683,7 +4688,7 @@
     if (!D) { return h + `<div class="db-card"><div class="pm-vide">${an ? 'Calcul de l’année, mois par mois…' : 'Lecture des fiches de l’équipe…'}</div></div>`; }
     if (an) {
       if (!V.rangs.length) { return h + `<div class="db-card"><div class="pm-vide">Aucune prime gagnée dans ce magasin cette année-là${filtre === 'magasin' ? ' parmi celles du magasin' : ''}.</div></div>`; }
-      return h + prTableAn(V);
+      return h + prEquipeAn(D, V, false) + prTableAn(V);
     }
     if (!(D.vendeuses || []).length) { return h + '<div class="db-card"><div class="pm-vide">Personne au planning ni en caisse dans ce magasin ce mois-là.</div></div>'; }
     if (!(D.primes || []).filter(garde).length) { return h + '<div class="db-card"><div class="pm-vide">Aucune prime du magasin ce mois-là.</div></div>'; }
@@ -4720,7 +4725,7 @@
     if (an) {
       const V = prAnneeVue(D, garde);
       if (!V.rangs.length) { return vide('Aucune prime gagnée dans ce magasin cette année-là' + (filtre === 'magasin' ? ' parmi celles du magasin.' : '.')); }
-      h += `<div class="ma-v"><span class="n long">${esc(V.total)}</span><span class="t">gagnés en ${y}<em>${esc(V.periode)}</em></span></div>`;
+      h += `<div class="ma-v"><span class="n long">${esc(V.total)}</span><span class="t">gagnés en ${y}<em>${esc(V.periode)}</em></span></div>` + prEquipeAn(D, V, true);
       h += V.rangs.map(r => carte('an:' + r.id, r.nom, prPl(r.mois, 'mois') + ' primé' + (r.mois > 1 ? 's' : ''), esc(prEur(V.totalDe(r))), '',
         () => V.cols.map(p => { const c = (r.cases || {})[p.cle]; return `<div class="pr-ml${c ? ' pr-gagne' : ''}"><span class="pr-ml-l">${esc(p.lib)}<small>${p.payeur === 'magasin' ? `<span class="pr-mag">${esc(prPayeur(p))}</span>` : esc(prPayeur(p))}</small></span>
           <span class="pr-ml-v">${c ? `<span class="pr-h">${esc(c.montant > 0 ? prEur(c.montant) : '✓ cadeau')}</span><span class="pr-b">${esc(prPl(c.fois, 'mois'))}</span>` : '<span class="pr-hors">·</span>'}</span></div>`; }).join(''))).join('');
