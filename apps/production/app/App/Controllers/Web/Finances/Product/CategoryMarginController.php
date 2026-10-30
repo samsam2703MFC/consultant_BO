@@ -5,6 +5,7 @@ use App\Core\Web\BaseController;
 use App\Exceptions\CustomException;
 use App\Repositories\Analysis\MarginRecalcRepository;
 use App\Repositories\Product\FinalProductRepository;
+use App\Services\Finances\ClientPriceService;
 use App\Services\Finances\ProductMarginService;
 use App\Services\Finances\StandardPriceService;
 use App\Services\Finances\StorePrice\StoreSellabilityService;
@@ -21,6 +22,7 @@ class CategoryMarginController extends BaseController
         private RecipeCostRecalculationService       $recipeCosts,
         private MarginRecalcRepository               $recalc,
         private StoreSellabilityService              $sellability,
+        private ClientPriceService                   $clientPrices,
     ) {
     }
 
@@ -32,13 +34,17 @@ class CategoryMarginController extends BaseController
 
         $available = $this->productMarginService->getAvailableMonthsCount();
         $result    = $this->productMarginService->calculateCategoryOverview($months);
-        // Widok « Sprzedawalność w Belgii » : cena fabryczna za sztukę × mnożnik franczyzy vs cena w sklepie (API panelu)
-        $view      = $request->query->get('view') === 'be' ? 'be' : 'margin';
+        // Widok « Sprzedawalność w Belgii » : cena fabryczna za sztukę × mnożnik franczyzy vs cena w sklepie (API panelu) ;
+        // « Ceny klientów » [212] : cennik klienta po kliencie — obecna, nowa wg marży, różnica (nigdy niżej)
+        $view      = in_array($request->query->get('view'), ['be', 'clients'], true) ? $request->query->get('view') : 'margin';
         $userId    = user('id') ? (int) user('id') : null;
+        $client    = (int) $request->query->get('client', 0);
 
         $this->view('finances/product-margin/categories', [
             'view'                   => $view,
             'be'                     => $view === 'be' ? $this->sellability->forCategories($result ?: [], $userId) : null,
+            'cp'                     => $view === 'clients' ? $this->clientPrices->overview($result ?: [], $client > 0 ? $client : null) : null,
+            'cp_admin'               => $view === 'clients' && $this->clientPrices->isAdmin($userId),
             'selected_months'        => $months,
             'available_months_count' => $available,
             'result'                 => $result,
@@ -142,6 +148,36 @@ class CategoryMarginController extends BaseController
             }
         }
         return ['products' => $products, 'categories' => $categories, 'month_eur' => array_sum($categories)];
+    }
+
+    /**
+     * POST /ajax/category-margin/client-prices {customer_id, product_ids[], months} : nowe ceny klienta wg marży [212]
+     * (serwer liczy od nowa ; tylko podwyżki, historia cen n_product_price_change).
+     */
+    public function applyClientPrices(): JsonResponse
+    {
+        $body = $this->getJson(Request::createFromGlobals());
+        $months = max(1, min(24, (int) ($body['months'] ?? 12)));
+        $userId = user('id') ? (int) user('id') : null;
+        try {
+            $result = $this->clientPrices->apply($this->productMarginService->calculateCategoryOverview($months) ?: [],
+                (int) ($body['customer_id'] ?? 0), (array) ($body['product_ids'] ?? []), $userId);
+        } catch (CustomException $e) {
+            return $this->json(['ok' => false, 'error' => $e->getMessage()], (int) $e->getCode() ?: 400);
+        }
+        return $this->json(['ok' => true] + $result);
+    }
+
+    /** PUT /ajax/category-margin/client-prices/params {cap_pct, round_eur, keep_discount} — administrator. */
+    public function saveClientPriceParams(): JsonResponse
+    {
+        $userId = user('id') ? (int) user('id') : null;
+        try {
+            $params = $this->clientPrices->saveParams($this->getJson(Request::createFromGlobals()), $userId);
+        } catch (CustomException $e) {
+            return $this->json(['ok' => false, 'error' => $e->getMessage()], (int) $e->getCode() ?: 400);
+        }
+        return $this->json(['ok' => true, 'params' => $params]);
     }
 
     /**

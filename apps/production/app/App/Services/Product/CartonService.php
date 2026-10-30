@@ -37,6 +37,39 @@ final class CartonService
         ];
     }
 
+    /**
+     * Dane palety produktów [213] (waga i wysokość palet w logistyce i pakowaniu) : sztuki w kartonie, gramatura,
+     * kartony na warstwę, karton (nazwa, wysokość, waga), własne limity produktu albo rodzaju kartonu (null = parametry).
+     * @param list<int>|null $productIds null = wszystkie aktywne
+     * @return array<int, array{ppc: int, weight_g: float, cpl: int, cpp: int, carton_id: ?int, carton: ?string, height_mm: ?int, tare_g: float, max_height_mm: ?int, max_kg: ?int}>
+     */
+    public function palletData(?array $productIds = null): array
+    {
+        $ids = $productIds !== null ? array_flip(array_map('intval', $productIds)) : null;
+        if ($ids === []) return [];
+        $cartons = array_column($this->repo->cartons(), null, 'id');
+        $overhang = $this->limits()['overhang_mm'];
+        $geo = [];
+        $out = [];
+        foreach ($this->repo->products() as $p) {
+            if ($ids !== null && !isset($ids[(int) $p['id']])) continue;
+            $c = $p['carton_id'] !== null ? ($cartons[(int) $p['carton_id']] ?? null) : null;
+            // Kartony na warstwę : z ERP, gdy spójne (warstwa × warstwy = paleta i mieści się na palecie) ; inaczej z wymiarów
+            // kartonu na palecie EUR (PalletLayout) — w ERP często 1/1/1 albo 10/10/10.
+            $perLayer = $c ? ($geo[(int) $c['id']] ??= count(PalletLayout::layer((int) $c['length_mm'], (int) $c['width_mm'], 1200, 800, $overhang))) : 0;
+            [$cpl, $lpp, $cpp] = [(int) $p['cpl'], (int) $p['lpp'], (int) $p['cpp']];
+            $erpOk = $cpl > 0 && $lpp > 0 && $cpl * $lpp === $cpp && ($perLayer === 0 || $cpl <= $perLayer);
+            $out[(int) $p['id']] = [
+                'ppc' => (int) $p['ppc'], 'weight_g' => (float) $p['weight'], 'cpl' => $erpOk ? $cpl : ($perLayer ?: ($cpl ?: 0)), 'cpl_source' => $erpOk ? 'erp' : ($perLayer ? 'carton' : 'erp'), 'cpp' => $cpp,
+                'carton_id' => $c ? (int) $c['id'] : null, 'carton' => $c['name'] ?? null, 'height_mm' => $c && (int) $c['height_mm'] > 0 ? (int) $c['height_mm'] : null,
+                'tare_g' => $c ? (float) $c['tare_g'] : 0.0,
+                'max_height_mm' => (int) $p['pallet_max_height_mm'] ?: ((int) ($c['pallet_max_height_mm'] ?? 0) ?: null),
+                'max_kg' => (int) $p['pallet_max_kg'] ?: ((int) ($c['pallet_max_kg'] ?? 0) ?: null),
+            ];
+        }
+        return $out;
+    }
+
     public function catalog(): array
     {
         $limits = $this->limits();

@@ -83,5 +83,13 @@
   "nothing_ordered": "Brak zamówień do paletyzacji na ten dzień.",
   "since": "od {time}",
   "transport": "Transport",
-  "all_short": "Wszyscy klienci"
+  "all_short": "Wszyscy klienci",
+  "carton_cm": "karton {h} cm",
+  "load_now": "Na paletach teraz",
+  "load_final": "Po zamówieniu",
+  "pallet_short": "P{n}",
+  "load_over": "ponad limit",
+  "load_limits": "limit palety {kg} kg · {m}",
+  "load_none": "brak danych palety (karton, kartony na warstwę)",
+  "load_sum": "{n} palet · najcięższa {kg} kg · najwyższa {m}"
 }

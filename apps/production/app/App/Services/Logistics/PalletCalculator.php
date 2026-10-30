@@ -1,6 +1,8 @@
 <?php
 namespace App\Services\Logistics;
 
+use App\Domain\Logistics\PalletLoad;
+
 /**
  * Palety klienta na dzień wysyłki, z kartonów zamówionych i karty produktu.
  *
@@ -123,10 +125,12 @@ final class PalletCalculator
                 $categories[$category]['pallets_exact'] += $cpp > 0 ? $qty / $cpp : 0;
                 $categories[$category]['products'][] = ['name' => $product, 'cartons' => $qty, 'cpp' => $cpp ?: null, 'pallets_exact' => $cpp > 0 ? round($qty / $cpp, 2) : null];
                 if ($cpp <= 0) continue;
+                $pid = isset($l['product_id']) ? (int) $l['product_id'] : null;
                 $whole = (int) floor($qty / $cpp + 1e-9);
-                for ($i = 0; $i < $whole; $i++) $pallets[] = ['kind' => 'full', 'fill' => 1.0, 'items' => [['product' => $product, 'cartons' => (float) $cpp]]];
+                $tag = $pid !== null ? ['product_id' => $pid] : [];
+                for ($i = 0; $i < $whole; $i++) $pallets[] = ['kind' => 'full', 'fill' => 1.0, 'items' => [['product' => $product, 'cartons' => (float) $cpp] + $tag]];
                 $rest = $qty - $whole * $cpp;
-                if ($rest > 1e-9) $rests[] = ['product' => $product, 'cartons' => $rest, 'cpp' => $cpp];
+                if ($rest > 1e-9) $rests[] = ['product' => $product, 'cartons' => $rest, 'cpp' => $cpp, 'tag' => $tag];
             }
             if ($mixed) {
                 usort($rests, fn($a, $b) => $b['cartons'] / $b['cpp'] <=> $a['cartons'] / $a['cpp']);
@@ -137,14 +141,14 @@ final class PalletCalculator
                         if ($current === null) $current = ['kind' => 'mixed', 'fill' => 0.0, 'items' => []];
                         $fit = min($left, floor((1 - $current['fill']) * $r['cpp'] + 1e-9));
                         if ($fit <= 0) { $pallets[] = $current; $current = null; continue; }
-                        $current['items'][] = ['product' => $r['product'], 'cartons' => $fit];
+                        $current['items'][] = ['product' => $r['product'], 'cartons' => $fit] + $r['tag'];
                         $current['fill'] = min(1.0, $current['fill'] + $fit / $r['cpp']);
                         $left -= $fit;
                     }
                 }
                 if ($current !== null) $pallets[] = $current;
             } else {
-                foreach ($rests as $r) $pallets[] = ['kind' => 'partial', 'fill' => $r['cartons'] / $r['cpp'], 'items' => [['product' => $r['product'], 'cartons' => $r['cartons']]]];
+                foreach ($rests as $r) $pallets[] = ['kind' => 'partial', 'fill' => $r['cartons'] / $r['cpp'], 'items' => [['product' => $r['product'], 'cartons' => $r['cartons']] + $r['tag']]];
             }
             foreach ($pallets as &$p) $p['fill'] = round($p['fill'], 3);
             unset($p);
@@ -156,5 +160,29 @@ final class PalletCalculator
         }
         usort($out, fn($a, $b) => [$a['id'] === null, -count($a['pallets'])] <=> [$b['id'] === null, -count($b['pallets'])]);
         return $out;
+    }
+
+    /**
+     * Waga i wysokość każdej palety układu [213] (PalletLoad) : $data = produkt → ppc, weight_g, tare_g, height_mm, cpl,
+     * max_height_mm, max_kg (CartonService::palletData) ; $limits = domyślne limity logistyki.
+     * @return array{types: list<array>, kg: float, max_height_mm: ?int, over: int}
+     */
+    public static function measure(array $types, array $data, array $limits): array
+    {
+        $kg = 0.0;
+        $maxH = null;
+        $over = 0;
+        foreach ($types as &$type) {
+            foreach ($type['pallets'] as &$p) {
+                $items = array_map(fn($it) => ['cartons' => $it['cartons']] + ($data[(int) ($it['product_id'] ?? 0)] ?? []), $p['items']);
+                $p['load'] = PalletLoad::measure($items, $limits);
+                $kg += $p['load']['kg'];
+                if ($p['load']['height_mm'] !== null) $maxH = max($maxH ?? 0, $p['load']['height_mm']);
+                if ($p['load']['over_kg'] || $p['load']['over_height'] || $p['load']['over_truck']) $over++;
+            }
+            unset($p);
+        }
+        unset($type);
+        return ['types' => $types, 'kg' => round($kg, 1), 'max_height_mm' => $maxH, 'over' => $over];
     }
 }

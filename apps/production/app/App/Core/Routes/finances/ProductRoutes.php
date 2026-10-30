@@ -41,6 +41,15 @@ return function (RouteCollector $r) {
         'controller' => App\Controllers\Web\Finances\Product\CategoryMarginController::class,
         'method' => 'productAction'
     ]);
+    // Ceny klientów wg marży [212] (Marża kategorii › Ceny klientów)
+    $r->addRoute('POST', '/ajax/category-margin/client-prices', [
+        'controller' => App\Controllers\Web\Finances\Product\CategoryMarginController::class,
+        'method' => 'applyClientPrices'
+    ]);
+    $r->addRoute('PUT', '/ajax/category-margin/client-prices/params', [
+        'controller' => App\Controllers\Web\Finances\Product\CategoryMarginController::class,
+        'method' => 'saveClientPriceParams'
+    ]);
 
     $r->addRoute('GET', '/finances/sales-analytics', [
         'controller' => App\Controllers\Web\Finances\Product\SalesAnalyticsController::class,

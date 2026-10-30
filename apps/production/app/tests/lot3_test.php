@@ -66,7 +66,7 @@ try {
     };
 
     // --- Załadunek dnia : ta sama walidacja palety
-    $logistics = new LogisticsService(new LogisticsRepository($pdo), new ParamRepository($pdo));
+    $logistics = new LogisticsService(new LogisticsRepository($pdo), new ParamRepository($pdo), null);
     expectLot3($refused(fn() => $logistics->savePalletData(20, ['cpp' => '90']), 'najwyżej 80'), 'Załadunek : 90 kartonów > 10 × 8 odrzucone');
     expectLot3($refused(fn() => $logistics->savePalletData(20, ['lpp' => '150']), 'od 1 do 100'), 'Załadunek : warstwy w zakresie Karty');
     $saved = $logistics->savePalletData(20, ['cpl' => '12', 'lpp' => '8', 'cpp' => '90']);

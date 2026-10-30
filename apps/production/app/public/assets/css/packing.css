@@ -85,6 +85,12 @@
 .pp-plus { justify-self: end; width: 56px; height: 48px; border-radius: 12px; border: 0; background: var(--k-primary); color: #fff; font-size: 28px; line-height: 1; }
 .pp-plus.is-ok { background: var(--k-ok-50); color: var(--k-ok); font-size: 20px; }
 .pp-sum { padding: 10px 6px 4px; border-top: 1px solid var(--k-line); color: var(--k-primary); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+/* Waga i wysokość palet klienta [213] */
+.pp-load { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 6px 0; font-variant-numeric: tabular-nums; }
+.pp-load-l { font-size: 13px; color: var(--k-muted, #6b6b6b); font-weight: 600; margin-right: 4px; }
+.pp-lp { display: inline-flex; gap: 4px; align-items: baseline; padding: 5px 10px; border-radius: 8px; background: rgba(34, 34, 34, .05); font-size: 14px; }
+.pp-lp.is-over { background: rgba(192, 57, 43, .12); color: #9a1730; font-weight: 600; }
+.pp-lp.is-sum { background: transparent; border: 1px solid rgba(34, 34, 34, .18); }
 /* Panel z boku przypięty do ekranu (klawiatura zawsze cała widoczna, lista przewija się obok). */
 .pp-side { display: flex; flex-direction: column; gap: 12px; position: fixed; z-index: 20; top: 76px; bottom: 12px; right: max(16px, calc((100vw - 1180px) / 2 + 16px)); width: 370px; overflow-y: auto; box-shadow: 0 8px 30px rgba(34, 34, 34, .14); }
 .pp-side-head { display: flex; align-items: flex-start; gap: 8px; }

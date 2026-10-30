@@ -1160,3 +1160,6 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T07:01:33Z [209] produits test : retrait de 22 anciennes propositions (migration 132)
 2026-10-30T07:22:42Z [210] factures : fenêtre de confirmation du nouveau prix de base
 2026-10-30T07:40:39Z [211] kartony : edycja produktow w oknie kartonu, limity palety kartonu (migration 133)
+2026-10-30T07:58:40Z [212] marza kategorii : ceny klientow wg marzy, klient po kliencie (migration 134)
+2026-10-30T08:14:24Z [213] logistyka : waga i wysokosc palet, wysokosc kartonu
+2026-10-30T08:26:10Z [213] palety : limit kartonu zastepuje parametr

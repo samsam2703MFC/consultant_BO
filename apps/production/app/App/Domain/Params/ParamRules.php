@@ -31,6 +31,10 @@ final class ParamRules
         'logistics.trip_unload_pallet_min' => [0, 60, true],
         'logistics.trip_drive_back_min' => [0, 3000, true],
         'logistics.trip_weekly_rest_min' => [0, 6000, true],
+        // Ceny klientów wg marży [212]
+        'prices.client_cap_pct' => [0.5, 50, false],
+        'prices.client_round_eur' => [0.01, 1, false],
+        'prices.client_interval_days' => [0, 365, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.suggest_max_weeks' => [0.5, 52, false],
         'alerts.complaint_days' => [1, 60, true],

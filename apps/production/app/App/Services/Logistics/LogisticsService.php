@@ -5,6 +5,7 @@ use App\Domain\Product\ProductLogistics;
 use App\Exceptions\CustomException;
 use App\Repositories\Logistics\LogisticsRepository;
 use App\Repositories\Workshop\ParamRepository;
+use App\Services\Product\CartonService;
 
 /**
  * Dzień wysyłki : klienci z paletami i wagą, przydział do pojazdów, zapełnienie pojazdów.
@@ -23,7 +24,11 @@ final class LogisticsService
 {
     public const WEEKDAYS = [1 => 'pon.', 2 => 'wt.', 3 => 'śr.', 4 => 'czw.', 5 => 'pt.', 6 => 'sob.', 7 => 'niedz.'];
 
-    public function __construct(private LogisticsRepository $repo, private ParamRepository $params)
+    /** Dane palety produktów [213] (raz na żądanie : tydzień liczy kilka dni). */
+    private ?array $palletData = null;
+
+    /** CartonService : waga i wysokość każdej palety [213] (null — bez pomiaru, np. w testach). Bez wartości domyślnej : PHP-DI pomija parametry opcjonalne. */
+    public function __construct(private LogisticsRepository $repo, private ParamRepository $params, private ?CartonService $cartons)
     {
     }
 
@@ -118,9 +123,17 @@ final class LogisticsService
                 $merged[$pid] = $l;
             }
             $c['lines'] = array_values($merged);
-            $calc = PalletCalculator::compute(array_map(fn($l) => ['cartons' => $l['cartons'], 'cpp' => $l['cpp'], 'ppc' => $l['ppc'], 'weight_g' => $l['weight_g'],
+            $calc = PalletCalculator::compute(array_map(fn($l) => ['product_id' => (int) $l['product_id'], 'cartons' => $l['cartons'], 'cpp' => $l['cpp'], 'ppc' => $l['ppc'], 'weight_g' => $l['weight_g'],
                 'product' => $l['product'], 'carton_type_id' => $l['carton_type_id'] !== null ? (int) $l['carton_type_id'] : null,
                 'carton_type' => $l['carton_type'], 'category' => $l['category']], $c['lines']), $mixed, $tare, $leftoverMax);
+            if ($this->cartons !== null) {
+                // [213] Waga i wysokość każdej palety (karton z katalogu, kartony na warstwę) ; najcięższa, najwyższa, ponad limit.
+                $this->palletData ??= $this->cartons->palletData();
+                $m = PalletCalculator::measure($calc['carton_types'], $this->palletData, $limits ??= $this->cartons->limits());
+                $loads = array_merge([], ...array_map(fn($t) => array_column($t['pallets'], 'load'), $m['types']));
+                $calc['carton_types'] = $m['types'];
+                $calc += ['pallet_max_kg' => $loads ? max(array_column($loads, 'kg')) : null, 'pallet_max_height_mm' => $m['max_height_mm'], 'pallets_over' => $m['over']];
+            }
             $a = $assignments[$id] ?? null;
             [$tourId, $tourSource] = match (true) {
                 $a !== null && $a['tour_set'] => [$a['tour'], 'day'],

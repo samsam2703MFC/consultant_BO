@@ -66,6 +66,19 @@ final class LogisticsBoardRepository extends WorkshopRepository
         );
     }
 
+    /** @return array<int, array<int, int>> paleta → produkt → kartony zeskanowane (palety dnia) [213] */
+    public function palletContents(string $date): array
+    {
+        $out = [];
+        foreach ($this->all(
+            'SELECT pd.id_palet, cs.id_product, COUNT(*) AS n FROM palets_delivery pd
+             JOIN carton_pallet_connection c ON c.id_palet = pd.id_palet JOIN carton_stock cs ON cs.id_carton = c.id_carton
+             WHERE pd.delivery_date = ? GROUP BY pd.id_palet, cs.id_product', [$date]) as $r) {
+            $out[(int) $r['id_palet']][(int) $r['id_product']] = (int) $r['n'];
+        }
+        return $out;
+    }
+
     /** Ostatni ruch dnia : skan palety albo wpis z tabletu. */
     public function lastActivity(string $date): ?string
     {

@@ -176,6 +176,12 @@ try {
     expectCt($d['pallet_max_height_mm'] === null && $d['limits']['max_kg'] === 1000, 'puste = parametry logistyki');
     $s = $items->updateSettings(101, ['wizard_step' => 9], $ctx);
     expectCt($s['settings']['wizard_step'] === 9 && ItemService::WIZARD_STEPS === 9, 'kreator : 9 kroków (krok 3 = Paleta)');
+    // [213] Dane palety do wagi i wysokości : kartony na warstwę z ERP, gdy spójne ; inaczej z wymiarów kartonu.
+    $pd = $svc->palletData([10, 11, 13]);
+    expectCt($pd[10]['cpl'] === 8 && $pd[10]['cpl_source'] === 'carton' && $pd[10]['height_mm'] === 210 && $pd[10]['tare_g'] === 410.0,
+        'Croissant : ERP 10 / warstwę nie mieści się (395 × 295 → 8), karton 210 mm, 410 g');
+    expectCt($pd[11]['cpl'] === 4 && $pd[11]['cpl_source'] === 'erp' && $pd[11]['max_height_mm'] === 1600 && $pd[11]['max_kg'] === null
+        && $pd[13]['height_mm'] === null && $pd[13]['cpl'] === 0, 'Bagietka : ERP 4 × 3 = 12 spójne, własna wysokość 1600 mm ; Babka bez kartonu : brak wysokości');
 } finally {
     $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 }
