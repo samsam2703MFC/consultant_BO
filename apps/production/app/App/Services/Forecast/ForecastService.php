@@ -6,11 +6,13 @@ namespace App\Services\Forecast;
 use App\Core\TransactionManager;
 use App\Domain\Logistics\Holidays;
 use App\Exceptions\CustomException;
+use App\Repositories\Analysis\ProductMarginRepository;
 use App\Repositories\Forecast\ForecastRepository;
 use App\Repositories\Workshop\ParamRepository;
 use App\Repositories\Workshop\PlanningRepository;
 use App\Repositories\Workshop\SupplyRepository;
 use App\Services\Logistics\LogisticsPlanService;
+use App\Services\Production\Cost\SectionUnitCostService;
 use App\Services\Purchasing\CostOptimizationService;
 use App\Services\Workshop\Planning\PlanningService;
 use App\Services\Workshop\Product\StandardTime;
@@ -26,7 +28,9 @@ use App\Services\Workshop\Product\StandardTime;
  *    rok temu (tydzień gamy N-1 → ten sam tydzień gamy w tym roku) × trend sieci ; poza gamą tylko zamówienia ;
  *  - trend sieci = kartony ostatnich tygodni ÷ te same tygodnie rok temu (tygodnie N-1 z danymi), w granicach parametrów.
  * Z kartonów : palety (kartony na paletę), godziny produkcji (partia z arkusza albo marszruta) wobec zdolności (pracownicy ×
- * etat, dni pracy bez świąt PL) i zakupy surowców (receptura na karton, stan, w drodze, czas dostawy → « zamówić do »).
+ * etat, dni pracy bez świąt PL), pieniądze na produkcję [221] (kartony × koszt pełny kartonu — ta sama reguła co Marże i
+ * Rentowność : surowce i opakowania + wynagrodzenia działu + media i amortyzacja + koszty ogólne, z ostatnich miesięcy
+ * kosztowych, bez logistyki) i zakupy surowców (receptura na karton, stan, w drodze, czas dostawy → « zamówić do »).
  * Zatwierdzenie (Kierownik produkcji, co poniedziałek) zapisuje zdjęcie liczb w n_forecast_run i zalicza zadanie tygodnia.
  */
 final class ForecastService
@@ -44,6 +48,8 @@ final class ForecastService
         private SupplyRepository $supply,
         private ParamRepository $params,
         private TransactionManager $tx,
+        private SectionUnitCostService $unitCosts,
+        private ProductMarginRepository $costMonths,
     ) {
     }
 
@@ -66,6 +72,7 @@ final class ForecastService
                 'changed' => (int) $run['cartons'] !== $f['totals']['cartons']] : null,
             'runs' => array_map(fn($r) => ['week_start' => $r['week_start'], 'iso_week' => (int) date('W', strtotime($r['week_start'])), 'cartons' => (int) $r['cartons'],
                 'season_cartons' => (int) $r['season_cartons'], 'hours' => $r['hours'] !== null ? (float) $r['hours'] : null,
+                'production_cost' => $r['production_cost'] !== null ? (float) $r['production_cost'] : null,
                 'purchase_value' => $r['purchase_value'] !== null ? (float) $r['purchase_value'] : null, 'approved_at' => $r['approved_at'], 'by' => $r['approved_by_name']], $this->repo->runs()),
             'panel_status' => ['configured' => $this->panel->configured(), 'read_at' => $panel['read_at'] ?? null, 'read_by' => $panel['read_by'] ?? null,
                 'weeks' => count($panel['sales'] ?? []), 'failed' => count($panel['sales_failed'] ?? []),
@@ -84,13 +91,15 @@ final class ForecastService
         if (!$f['products']) throw new CustomException('Prognoza jest pusta — brak zamówień i sprzedaży w ostatnich tygodniach.', 'errors', 422);
         $payload = [
             'weeks' => array_map(fn($w) => ['week_start' => $w['week_start'], 'iso_week' => $w['iso_week']], $f['weeks']),
-            'products' => array_map(fn($p) => ['id' => $p['product_id'], 'name' => $p['name'], 'kind' => $p['kind'], 'values' => $p['values'], 'sources' => $p['sources']], $f['products']),
-            'totals' => $f['totals'], 'trend' => $f['trend'], 'seasons' => array_map(fn($s) => ['id' => $s['id'], 'name' => $s['name'], 'from' => $s['from'], 'to' => $s['to'], 'cartons' => $s['cartons']], $f['seasons']),
+            'products' => array_map(fn($p) => ['id' => $p['product_id'], 'name' => $p['name'], 'kind' => $p['kind'], 'values' => $p['values'], 'sources' => $p['sources'],
+                'cost_per_carton' => $p['cost_per_carton']['total'] ?? null], $f['products']),
+            'totals' => $f['totals'], 'cost' => $f['cost'], 'trend' => $f['trend'], 'seasons' => array_map(fn($s) => ['id' => $s['id'], 'name' => $s['name'], 'from' => $s['from'], 'to' => $s['to'], 'cartons' => $s['cartons']], $f['seasons']),
             'purchases' => array_map(fn($m) => ['id' => $m['id'], 'name' => $m['name'], 'need' => $m['need'], 'to_buy' => $m['to_buy'], 'order_by' => $m['order_by'], 'value' => $m['value']], $f['purchases']['rows']),
         ];
         $this->tx->execute(fn() => $this->repo->saveRun([
             'week_start' => $f['weeks'][0]['week_start'], 'weeks' => count($f['weeks']), 'trend' => $f['trend']['value'],
             'cartons' => $f['totals']['cartons'], 'season_cartons' => $f['totals']['season_cartons'], 'hours' => $f['totals']['hours'],
+            'production_cost' => $f['cost']['total'],
             'purchase_value' => $f['purchases']['totals']['value'], 'payload' => json_encode($payload, JSON_UNESCAPED_UNICODE),
             'note' => $note ?: null, 'approved_at' => date('Y-m-d H:i:s', $now), 'approved_by' => $userId,
         ]));
@@ -216,6 +225,7 @@ final class ForecastService
         }
         $info = $this->repo->products($ids);
         $hpc = $this->hoursPerCarton();
+        $costBasis = $this->costBasis();
         $rows = [];
         foreach (array_unique($ids) as $pid) {
             $p = $info[$pid] ?? null;
@@ -245,6 +255,7 @@ final class ForecastService
                 'all_year_in' => $allYear[$pid] ?? null,
                 'avg' => round($avg, 1), 'values' => $values, 'sources' => $sources, 'total' => array_sum($values),
                 'hours_per_carton' => isset($hpc[$pid]) ? round($hpc[$pid], 4) : null,
+                'cost_per_carton' => $this->cartonCost($costBasis, $p),
             ];
         }
         usort($rows, fn($a, $b) => [$a['kind'] === 'season' ? 1 : 0, -$a['total'], $a['name']] <=> [$b['kind'] === 'season' ? 1 : 0, -$b['total'], $b['name']]);
@@ -262,10 +273,12 @@ final class ForecastService
             $off = [];
             for ($d = 0; $d < 5; $d++) { $day = date('Y-m-d', strtotime($w . " +{$d} days")); if (isset($holidays[$day][$dep])) $off[] = ['date' => $day, 'name' => $holidays[$day][$dep]]; }
             $c = 0; $sc = 0; $pal = 0.0; $h = 0.0; $est = 0.0; $noCpp = 0; $noHours = 0;
+            $money = ['raw' => 0.0, 'labor' => 0.0, 'media' => 0.0, 'overhead' => 0.0];
             foreach ($rows as $r) {
                 $v = $r['values'][$i];
                 if ($v <= 0) continue;
                 $c += $v;
+                foreach ($money as $k => $_) $money[$k] += $v * $r['cost_per_carton'][$k];
                 if ($r['kind'] === 'season') $sc += $v;
                 if ($r['cpp']) $pal += $v / $r['cpp']; else $noCpp++;
                 if ($r['hours_per_carton'] !== null) $h += $v * $r['hours_per_carton'];
@@ -276,6 +289,8 @@ final class ForecastService
             $weekRows[] = ['week_start' => $w, 'iso_week' => (int) date('W', strtotime($w)), 'iso_year' => (int) date('o', strtotime($w)), 'n1_week' => LogisticsPlanService::lastYear($w),
                 'cartons' => $c, 'season_cartons' => $sc, 'pallets' => round($pal, 1), 'hours' => round($h, 1), 'capacity' => round($cap, 1),
                 'estimated_hours' => round($est, 1), 'load_pct' => $cap > 0 ? (int) round($h / $cap * 100) : null, 'off' => $off,
+                'cost' => round(array_sum($money), 2), 'cost_raw' => round($money['raw'], 2), 'cost_labor' => round($money['labor'], 2),
+                'cost_media' => round($money['media'], 2), 'cost_overhead' => round($money['overhead'], 2),
                 'shape' => $shape[$i] !== null ? round($shape[$i], 2) : null, 'no_cpp' => $noCpp, 'no_hours' => $noHours];
         }
         $seasonsOut = $this->presentSeasons($seasons['list'], $rows, $by, $weeks, $t, $sales);
@@ -284,8 +299,15 @@ final class ForecastService
         $ahead = array_slice(array_keys($weekRows), 1, null);
         $peak = $ahead ? array_reduce($ahead, fn($m, $i) => $m === null || ($weekRows[$i]['load_pct'] ?? -1) > ($weekRows[$m]['load_pct'] ?? -1) ? $i : $m) : null;
         $totalHours = round(array_sum(array_column($weekRows, 'hours')), 1);
+        $cost = ['total' => round(array_sum(array_column($weekRows, 'cost')), 2)];
+        foreach (['raw', 'labor', 'media', 'overhead'] as $k) $cost[$k] = round(array_sum(array_column($weekRows, 'cost_' . $k)), 2);
+        $cost += ['basis' => $costBasis['label'], 'months' => $costBasis['count'], 'logistics_per_carton' => round($costBasis['logistics_per_carton'], 2),
+            'logistics' => round(array_sum(array_column($weekRows, 'cartons')) * $costBasis['logistics_per_carton'], 2),
+            'no_raw' => count(array_filter($rows, fn($r) => $r['total'] > 0 && $r['cost_per_carton']['raw'] <= 0)),
+            'no_section' => count(array_filter($rows, fn($r) => $r['total'] > 0 && !$r['cost_per_carton']['section'])),
+            'warnings' => $costBasis['warnings']];
         return [
-            'today' => $today, 'weeks' => $weekRows, 'products' => $rows, 'trend' => $trend + ['weeks' => $trendWeeks], 'capacity' => $capacity,
+            'today' => $today, 'weeks' => $weekRows, 'products' => $rows, 'trend' => $trend + ['weeks' => $trendWeeks], 'capacity' => $capacity, 'cost' => $cost,
             'seasons' => $seasonsOut, 'panel_products' => $seasons['unlinked'], 'purchases' => $purchases,
             'totals' => ['cartons' => (int) array_sum(array_column($weekRows, 'cartons')), 'season_cartons' => (int) array_sum(array_column($weekRows, 'season_cartons')),
                 'pallets' => round(array_sum(array_column($weekRows, 'pallets')), 1), 'hours' => $totalHours,
@@ -575,6 +597,30 @@ final class ForecastService
             if ($h > 0) $out[(int) $it['id_final_product']] = $h;
         }
         return $out;
+    }
+
+    /**
+     * Podstawa kosztu kartonu [221] : ostatnie miesiące kosztowe (zamknięte najpierw, forecast.cost_months) — wynagrodzenia,
+     * media i amortyzacja działu na karton, koszty ogólne i logistyka na karton firmy (SectionUnitCostService).
+     */
+    private function costBasis(): array
+    {
+        $ids = $this->costMonths->getLastMonthIds((int) $this->param('forecast.cost_months', '3', 1, 24));
+        $basis = $this->unitCosts->months($ids);
+        $label = $this->costMonths->getDataBasisLabel($ids);
+        return $basis + ['label' => $label['label'] ?? null, 'count' => count($basis['month_ids'])];
+    }
+
+    /**
+     * Koszt pełny kartonu bez logistyki (zł) : surowce i opakowania (koszt receptury kartonu), wynagrodzenia działu, media i
+     * amortyzacja działu, koszty ogólne. @return array{raw:float, labor:float, media:float, overhead:float, total:float, section:bool}
+     */
+    private function cartonCost(array $basis, array $p): array
+    {
+        $sid = $p['id_section'] !== null ? (int) $p['id_section'] : null;
+        $u = SectionUnitCostService::unitCost($basis, $sid, max(0.0, (float) ($p['raw_cost'] ?? 0)));
+        $out = ['raw' => round($u['raw'], 4), 'labor' => round($u['labor'], 4), 'media' => round($u['media'] + $u['depreciation'], 4), 'overhead' => round($u['overhead'], 4)];
+        return $out + ['total' => round(array_sum($out), 4), 'section' => $sid !== null && isset($basis['sections'][$sid]) && $basis['sections'][$sid]['cartons'] > 0];
     }
 
     /** Zdolność tygodnia (h) : parametr albo aktywni pracownicy produkcji × godziny etatu. */

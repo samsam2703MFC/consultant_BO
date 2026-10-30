@@ -126,6 +126,12 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   Zaopatrzenie), en route, semaine de manque, « commander avant » = lundi de la semaine de manque − délai (dernière offre du
   fournisseur actuel `n_mp_offer.lead_time_days`, sinon `forecast.lead_days`), à acheter en emballages entiers (mode
   « na stanie » : jusqu'au max), valeur ; matière utilisée seulement par des saisonniers = « sezon ».
+- Argent nécessaire pour produire (migration 142, 30/10/2026) : par semaine, cartons × coût complet du carton sans logistique,
+  la même règle que Marże et Rentowność (`SectionUnitCostService`) : matières et emballages (`pre_calculated_raw_price_per_carton`)
+  + salaires, médias et amortissement du département (`final_product.id_section`) + frais généraux, moyennés sur les
+  `forecast.cost_months` (3) derniers mois de coûts (clôturés d'abord) ; ligne « Pieniądze na produkcję » et sa part matières,
+  tuile du total 13 semaines (matières, salaires, médias, frais généraux), logistique affichée à part ; produits sans coût
+  matières ou sans département comptés. `n_forecast_run.production_cost` : total enregistré à la validation.
 - API du panel TF Buddy, lecture seule (GET) : `/product-availability-periods` (gammes, `from_md` → `to_md`, aussi à cheval
   sur le Nouvel An ; gamme saisonnière = active et ≤ 200 jours, gamme de plus de 200 jours = toute l'année, 1 jour = ignorée),
   `/product-availability-periods/{id}/products` (produits des magasins), `/material-suppliers` → SL Food →
@@ -145,7 +151,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   note, `approved_at`, `approved_by`. Tâche du lundi « Zatwierdź prognozę 13 tygodni » (KIEROWNIK_PRODUKCJI, 30 min, lien
   `/production/forecast`, `auto_code` `forecast_approved` = validation dans la semaine) ; « Cofnij zatwierdzenie » supprime la ligne.
 - Paramètres (`n_prod_param`) : `forecast.weeks` 13, `forecast.trend_weeks` 8, `forecast.trend_min` 0,5,
-  `forecast.trend_max` 2, `forecast.capacity_hours` 0, `forecast.lead_days` 7 ; `logistics.plan_weeks` 12 → 13 (plan
+  `forecast.trend_max` 2, `forecast.capacity_hours` 0, `forecast.lead_days` 7, `forecast.cost_months` 3 ; `logistics.plan_weeks` 12 → 13 (plan
   logistique sur les mêmes 13 semaines, seulement s'il valait encore 12).
 
 ### Assistant prix « Kreator cen » (migration 138, 30/10/2026)

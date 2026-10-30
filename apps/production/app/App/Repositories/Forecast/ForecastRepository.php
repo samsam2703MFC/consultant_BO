@@ -31,7 +31,8 @@ final class ForecastRepository extends WorkshopRepository
     }
 
     /**
-     * Produkty ERP : nazwa, sztuki w kartonie, kartony na paletę, aktywność, karta produkcji (n_prod_item) i tryb.
+     * Produkty ERP : nazwa, sztuki w kartonie, kartony na paletę, aktywność, dział, koszt surowców kartonu (zł), karta
+     * produkcji (n_prod_item) i tryb.
      * @return array<int, array> po final_product.id
      */
     public function products(array $ids): array
@@ -39,7 +40,8 @@ final class ForecastRepository extends WorkshopRepository
         $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
         if (!$ids) return [];
         $out = [];
-        foreach ($this->all('SELECT fp.id, fp.name, fp.ppc, fp.cpp, fp.cpl, fp.lpp, fp.active, cat.name AS category, i.id AS item_id, s.mode
+        foreach ($this->all('SELECT fp.id, fp.name, fp.ppc, fp.cpp, fp.cpl, fp.lpp, fp.active, fp.id_section, fp.pre_calculated_raw_price_per_carton AS raw_cost,
+                    cat.name AS category, i.id AS item_id, s.mode
                 FROM final_product fp
                 LEFT JOIN category_product cat ON cat.id = fp.id_category
                 LEFT JOIN n_prod_item i ON i.id_final_product = fp.id AND i.item_type = \'product\'
@@ -90,7 +92,7 @@ final class ForecastRepository extends WorkshopRepository
     /** @return list<array> ostatnie zatwierdzenia (bez zdjęcia liczb) */
     public function runs(int $limit = 8): array
     {
-        return $this->all("SELECT r.id, r.week_start, r.weeks, r.trend, r.cartons, r.season_cartons, r.hours, r.purchase_value, r.note, r.approved_at,
+        return $this->all("SELECT r.id, r.week_start, r.weeks, r.trend, r.cartons, r.season_cartons, r.hours, r.production_cost, r.purchase_value, r.note, r.approved_at,
                     COALESCE(NULLIF(TRIM(u.displayed_name), ''), u.login) AS approved_by_name
                 FROM n_forecast_run r LEFT JOIN user u ON u.id = r.approved_by ORDER BY r.week_start DESC LIMIT " . max(1, min(52, $limit)));
     }
@@ -98,7 +100,7 @@ final class ForecastRepository extends WorkshopRepository
     /** Zatwierdzenie tygodnia : nowe albo ponowne (te same 13 tygodni po zmianach). */
     public function saveRun(array $row): int
     {
-        $cols = ['week_start', 'weeks', 'trend', 'cartons', 'season_cartons', 'hours', 'purchase_value', 'payload', 'note', 'approved_at', 'approved_by'];
+        $cols = ['week_start', 'weeks', 'trend', 'cartons', 'season_cartons', 'hours', 'production_cost', 'purchase_value', 'payload', 'note', 'approved_at', 'approved_by'];
         $row = array_intersect_key($row, array_flip($cols));
         $names = array_keys($row);
         $sql = 'INSERT INTO n_forecast_run (' . implode(', ', $names) . ') VALUES (' . implode(', ', array_fill(0, count($names), '?')) . ')

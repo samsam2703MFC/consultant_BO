@@ -6,7 +6,8 @@ declare(strict_types=1);
  * zamkniętych i ponowieniem nieudanych ; prognoza (tydzień bieżący = zamówienia, większe z zamówień i prognozy, N-1 × trend,
  * produkty sezonowe : sprzedaż w sklepach N-1 z panelu, brak tygodnia → wysyłki ERP, produkt gamy sprzedawany cały rok =
  * całoroczny), trend z panelu, palety, godziny i zdolność (święta PL), zakupy (receptura, stan, czas dostawy z oferty, opakowania),
- * połączenia produktów gamy (ręczne, pominięte, podpowiedź), zatwierdzenie (zadanie tygodnia zalicza się samo) i cofnięcie.
+ * pieniądze na produkcję (kartony × koszt pełny kartonu z miesiąca kosztowego, logistyka osobno), połączenia produktów gamy
+ * (ręczne, pominięte, podpowiedź), zatwierdzenie (zadanie tygodnia zalicza się samo) i cofnięcie.
  *
  *   php tests/forecast_test.php
  *
@@ -108,7 +109,9 @@ try {
     foreach (['customer', 'customer_order', 'customer_order_product', 'final_product', 'category_product', 'product_recipe', 'n_prod_item', 'n_prod_product_settings',
                  'n_prod_group', 'n_prod_routing_step', 'n_prod_routing_alternative', 'n_prod_workstation', 'n_stock_period', 'n_stock_period_item', 'n_prod_param',
                  'n_prod_employee', 'user', 'raw_material', 'unit', 'category_material', 'supplier', 'n_mp_supply', 'n_mp_count', 'n_po', 'n_po_line', 'n_po_receipt',
-                 'carton_stock', 'flattened_recipe_ingredient', 'n_mp_offer', 'n_forecast_run', 'n_forecast_panel_read', 'n_forecast_panel_link'] as $table) {
+                 'carton_stock', 'flattened_recipe_ingredient', 'n_mp_offer', 'n_forecast_run', 'n_forecast_panel_read', 'n_forecast_panel_link',
+                 'cost_month', 'cost_month_employee', 'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'cost_month_logistics',
+                 'cost_month_section', 'production_sections', 'n_section_target', 'document_wdt', 'document_wdt_product', 'n_wdt_superseded', 'erp_company_other_settings'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -125,6 +128,17 @@ try {
     $pdo->exec("INSERT INTO final_product (id, name, id_category, ppc, cpl, lpp, cpp, active, id_recipe) VALUES
         (1, 'Bagietka', 1, 10, 5, 2, 10, 1, 100), (2, 'Cougnou sucre – 200 g (cru)', 1, 42, 5, 2, 20, 1, NULL), (3, 'Spéculoos Saint-Nicolas', 1, 24, 1, 1, 1, 1, NULL),
         (4, 'Buche Chocolat & Praline - 16 cm', 1, 12, 5, 2, 40, 0, NULL), (5, 'Bûche cacao 4/6', 1, 6, 5, 2, 40, 1, NULL)");
+    // Koszt pełny kartonu [221] : miesiąc zamknięty — płace działu 10 000 zł ÷ 1 000 kartonów = 10 zł, koszty stałe 5 000 zł = 5 zł,
+    // logistyka 2 000 zł = 2 zł (osobno) ; Bagietka : surowce 8 zł → 23 zł / karton ; produkty bez działu : tylko koszty ogólne.
+    $pdo->exec("INSERT INTO production_sections (id, name) VALUES (1, 'Piekarnia')");
+    $pdo->exec("UPDATE final_product SET id_section = 1, pre_calculated_raw_price_per_carton = 8 WHERE id = 1");
+    $pdo->exec("INSERT INTO cost_month (id, year, month, status) VALUES (1, 2026, 9, 'LOCKED'), (2, 2026, 10, 'OPEN')");
+    $pdo->exec("INSERT INTO cost_month_employee (month_id, section_id, name, surname, monthly_cost, is_included) VALUES (1, 1, 'Jan', 'Test', 10000, 1), (2, 1, 'Jan', 'Test', 99999, 1)");
+    $pdo->exec("INSERT INTO cost_month_section (month_id, section_id, cartons_qty) VALUES (1, 1, 1000)");
+    $pdo->exec("INSERT INTO cost_month_fixed_cost (month_id, amount) VALUES (1, 5000)");
+    $pdo->exec("INSERT INTO cost_month_logistics (month_id, amount) VALUES (1, 2000)");
+    $pdo->exec("INSERT INTO erp_company_other_settings (id, exchange_rate_euro) VALUES (1, 4.3)");
+    $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES ('forecast.cost_months', '1', '1', 'int')");
     $pdo->exec("INSERT INTO n_prod_item (id, item_type, id_final_product) VALUES (11, 'product', 1), (12, 'product', 2), (13, 'product', 3), (14, 'product', 4), (15, 'product', 5)");
     // Bagietka : partia 100 szt., 2 osoby × 30 min = 1 h → 0,1 h na karton ; pozostałe bez czasu (szacunek średnią).
     $pdo->exec("INSERT INTO n_prod_product_settings (id_item, mode, batch_multiple, batch_people, batch_minutes) VALUES (11, 'MTS', 100, 2, 30), (12, 'MTO', NULL, NULL, NULL),
@@ -246,6 +260,18 @@ try {
     // Palety : Bagietka 10 kart. / pal., Spéculoos « 1 / 1 / 1 » = brak danych.
     expectFc($s['cpp'] === null && abs($W[1]['pallets'] - (20 / 10)) < 0.01 && $W[1]['no_cpp'] === 1, 'palety : karta 1/1/1 bez palet');
 
+    // --- Pieniądze na produkcję [221] ----------------------------------------------------------------------------------
+    expectFc($b['cost_per_carton'] === ['raw' => 8.0, 'labor' => 10.0, 'media' => 0.0, 'overhead' => 5.0, 'total' => 23.0, 'section' => true],
+        'koszt kartonu Bagietki : surowce 8 + płace 10 + koszty ogólne 5 = 23 zł (miesiąc zamknięty, nie otwarty) ; ' . json_encode($b['cost_per_carton']));
+    expectFc($rows[2]['cost_per_carton']['total'] === 5.0 && !$rows[2]['cost_per_carton']['section'], 'produkt bez działu i bez kosztu surowców : tylko koszty ogólne');
+    $w = $W[$i50];
+    $expect = 0.0;
+    foreach ($f['products'] as $r) $expect += $r['values'][$i50] * $r['cost_per_carton']['total'];
+    expectFc(abs($w['cost'] - $expect) < 0.01 && abs($w['cost'] - ($w['cost_raw'] + $w['cost_labor'] + $w['cost_media'] + $w['cost_overhead'])) < 0.01,
+        'tydzień : pieniądze = kartony × koszt kartonu (suma składników)');
+    expectFc(abs($f['cost']['total'] - array_sum(array_column($W, 'cost'))) < 0.05 && abs($f['cost']['logistics'] - $f['totals']['cartons'] * 2) < 0.01
+        && $f['cost']['months'] === 1 && $f['cost']['no_raw'] >= 1 && $f['cost']['no_section'] >= 1, 'suma 13 tygodni, logistyka osobno (2 zł / karton), produkty bez kosztu policzone');
+
     // --- Gamy (zakładka 2) i połączenia -----------------------------------------------------------------------------
     $noel = array_values(array_filter($f['seasons'], fn($x) => $x['id'] === 8))[0];
     $by = array_column($noel['products'], null, 'panel_id');
@@ -285,6 +311,7 @@ try {
     expectFc($pos->autoCondition('forecast_approved', '2026-11-02', '2026-11-09'), 'zadanie : zalicza się samo po zatwierdzeniu');
     $run = $pdo->query("SELECT * FROM n_forecast_run WHERE week_start = '2026-11-02'")->fetch();
     $payload = json_decode($run['payload'], true);
+    expectFc(abs((float) $run['production_cost'] - $a['cost']['total']) < 0.01 && $a['runs'][0]['production_cost'] === (float) $run['production_cost'], 'zatwierdzenie : pieniądze na produkcję zapisane');
     expectFc((int) $run['cartons'] === $a['totals']['cartons'] && (float) $run['trend'] === 1.25 && count($payload['weeks']) === 13 && count($payload['products']) === count($a['products']),
         'zatwierdzenie : zdjęcie liczb (13 tygodni, produkty, trend)');
     $fc->approve(5, null, $today, $now + 30);

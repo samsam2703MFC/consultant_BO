@@ -76,7 +76,9 @@
     }
     function productRow(p, S) {
         const dot = p.kind === 'season' && p.seasons.length ? `<span class="fc-dot" style="background:${S[p.seasons[0]]?.color || '#999'}"></span>` : '';
-        const title = p.sources.map((s, i) => `${D.weeks[i].iso_week} : ${({orders: 'zamówienia', n1: 'N-1 × trend', avg: 'średnia', season: 'gama N-1 × trend', none: '—'})[s]}`).join('\n');
+        const cc = p.cost_per_carton;
+        const title = `Koszt kartonu ${num(cc.total, 2)} zł (surowce ${num(cc.raw, 2)}, płace ${num(cc.labor, 2)}, media ${num(cc.media, 2)}, ogólne ${num(cc.overhead, 2)}) · ${D.weeks.length} tyg. : ${num(p.total * cc.total)} zł\n`
+            + p.sources.map((s, i) => `${D.weeks[i].iso_week} : ${({orders: 'zamówienia', n1: 'N-1 × trend', avg: 'średnia', season: 'gama N-1 × trend', none: '—'})[s]}`).join('\n');
         const note = p.all_year_in ? ` <span class="at-sub" title="Sprzedawany w ostatnich tygodniach poza gamą — liczony jak całoroczny">(w gamie ${esc(p.all_year_in.join(', '))}, sprzedaż cały rok)</span>` : '';
         return `<tr title="${esc(title)}"><td>${dot}${esc(p.name)}${srcBadge(p)}${note}</td>
             ${p.values.map((v, i) => `<td class="${v ? '' : 'z'}${p.kind === 'season' && v ? ' s' : ''}${p.sources[i] === 'orders' && v ? ' o' : ''}">${v ? num(v) : '—'}</td>`).join('')}<td class="s">${num(p.total)}</td></tr>`;
@@ -96,15 +98,20 @@
         const hot = W.filter(w => w.load_pct !== null && w.load_pct >= 95);
         const appr = D.approval;
         const sum = (f) => W.map((w) => f(w));
+        const C = D.cost;
+        const mln = (v) => v >= 1e6 ? num(v / 1e6, 2) + ' mln' : num(v / 1000, 0) + ' tys.';
+        const costTitle = `Kartony × koszt pełny kartonu (bez logistyki), koszty z ${C.basis || 'brak miesięcy kosztowych'} : surowce i opakowania ${num(C.raw)} zł, wynagrodzenia działów ${num(C.labor)} zł, media i amortyzacja ${num(C.media)} zł, koszty ogólne ${num(C.overhead)} zł. Logistyka osobno : ${num(C.logistics)} zł (${num(C.logistics_per_carton, 2)} zł / karton).`;
+        const wTitle = (w) => `${num(w.cost)} zł : surowce ${num(w.cost_raw)}, płace ${num(w.cost_labor)}, media ${num(w.cost_media)}, ogólne ${num(w.cost_overhead)}`;
         return `<div class="kw"><div class="kw-card">
             <h5>Prognoza 13 tygodni <span class="kw-badge">kroczące : tydz. ${W[0].iso_week} / ${W[0].iso_year} → tydz. ${W[W.length - 1].iso_week} / ${W[W.length - 1].iso_year}</span>
                 ${appr ? `<span class="kw-badge ok">zatwierdzona : ${when(appr.approved_at)}${appr.by ? ' — ' + esc(appr.by) : ''}</span>${appr.changed ? ' <span class="kw-badge warn">liczby zmieniły się od zatwierdzenia</span>' : ''}` : '<span class="kw-badge warn">do zatwierdzenia w tym tygodniu</span>'}</h5>
-            <p class="kw-lead">Co tydzień te same ${W.length} tygodni do przodu. Kartony na tydzień : zamówienia już złożone (tydzień bieżący : tylko zamówienia), inaczej sprzedaż ostatnich ${D.trend.weeks} tygodni × kształt tego samego tygodnia rok temu (N-1 × trend), a produkty sezonowe z gam panelu TF Buddy (daty gamy w tym roku + nasze kartony w tej samej gamie rok temu × trend sieci). Z prognozy : palety (plan logistyki), godziny produkcji i zakupy surowców.</p>
+            <p class="kw-lead">Co tydzień te same ${W.length} tygodni do przodu. Kartony na tydzień : zamówienia już złożone (tydzień bieżący : tylko zamówienia), inaczej sprzedaż ostatnich ${D.trend.weeks} tygodni × kształt tego samego tygodnia rok temu (N-1 × trend), a produkty sezonowe z gam panelu TF Buddy (daty gamy w tym roku + nasze kartony w tej samej gamie rok temu × trend sieci). Z prognozy : palety (plan logistyki), godziny produkcji, pieniądze na produkcję (zł) i zakupy surowców.</p>
             <div class="kw-tiles">
                 <div><span>Kartony ${W.length} tygodni</span><b>${num(T.cartons)}</b><small>w tym sezonowe ${num(T.season_cartons)}${T.cartons ? ` (${Math.round(T.season_cartons / T.cartons * 100)} %)` : ''}</small></div>
                 <div><span>Palety</span><b>${num(T.pallets)}</b><small>średnio ${num(T.pallets / W.length, 1)} na tydzień${T.no_cpp ? ` · ${T.no_cpp} ${pl(T.no_cpp, 'produkt', 'produkty', 'produktów')} bez kart./pal.` : ''}</small></div>
                 <div class="${T.over.length ? 'todo' : 'ok'}"><span>Szczyt produkcji</span><b>${T.peak_week !== null ? `tydz. ${T.peak_week} — ${T.peak_pct ?? '—'} %` : '—'}</b><small>${num(T.peak_hours)} h z ${num(T.peak_capacity)} h zdolności · ${T.over.length} tyg. ponad 100 %</small></div>
                 <div><span>Sezony w oknie (panel)</span><b>${seasonsIn.length}</b><small>${seasonsIn.length ? esc(seasonsIn.map(s => s.name).join(', ')) : (D.panel_status.read_at ? 'brak gam sezonowych w tych tygodniach' : 'panel jeszcze nie odczytany')}</small></div>
+                <div class="fc-money"><span>Pieniądze na produkcję ${W.length} tyg.</span><b>${num(C.total)} zł</b><small title="${esc(costTitle)}">surowce ${mln(C.raw)} · płace ${mln(C.labor)} · media ${mln(C.media)} · ogólne ${mln(C.overhead)}</small></div>
                 <div><span>Zakupy surowców ${W.length} tyg.</span><b>${num(P.value)} zł</b><small>${P.season_value ? `w tym na sezon ${num(P.season_value)} zł · ` : ''}<a href="#tab=buy" data-fc-go="buy">Zakupy ${W.length} tyg.</a></small></div>
             </div>
             <div class="fc-ok"><b>Zadanie co poniedziałek</b> « Zatwierdź prognozę 13 tygodni » — Kierownik produkcji, 30 min, zalicza się samo po zatwierdzeniu. <span class="kw-badge">trend sieci ${trendTxt()} : ${num(D.trend.now)} ${D.trend.unit} ÷ ${num(D.trend.last)} rok temu (${D.trend.used} z ${D.trend.weeks} tyg.${D.trend.skipped.length ? ' ; tyg. ' + D.trend.skipped.join(', ') + ' rok temu bez danych' : ''}) — ${D.trend.source === 'panel' ? 'sprzedaż naszych produktów w sklepach (panel)' : 'wysyłki ERP'}</span></div>
@@ -119,13 +126,15 @@
                 ${seasonal.map(p => productRow(p, S)).join('') || `<tr><td colspan="${W.length + 2}" class="at-sub">${D.panel_status.read_at ? 'Brak naszych produktów w gamach sezonowych tych tygodni.' : 'Panel TF Buddy jeszcze nie odczytany — zakładka « Sezony z panelu ».'}</td></tr>`}
                 <tr class="tot"><td>Razem kartony</td>${sum(w => `<td>${num(w.cartons)}</td>`).join('')}<td>${num(T.cartons)}</td></tr>
                 <tr><td>Palety</td>${sum(w => `<td>${num(w.pallets, 1)}</td>`).join('')}<td>${num(T.pallets, 0)}</td></tr>
+                <tr class="fc-cost"><td>Pieniądze na produkcję <span class="at-sub">(zł)</span></td>${sum(w => `<td title="${esc(wTitle(w))}">${num(w.cost / 1000, 0)} tys.</td>`).join('')}<td>${mln(C.total)}</td></tr>
+                <tr><td class="fc-sub">w tym surowce i opakowania</td>${sum(w => `<td>${num(w.cost_raw / 1000, 0)} tys.</td>`).join('')}<td>${mln(C.raw)}</td></tr>
                 <tr><td>Godziny produkcji <span class="at-sub">/ zdolność</span></td>${sum(w => `<td class="${w.load_pct > 100 ? 'over' : (w.load_pct >= 90 ? 'hi' : '')}" title="${num(w.hours)} h z ${num(w.capacity)} h${w.estimated_hours ? ' (szacunek ' + num(w.estimated_hours) + ' h)' : ''}">${w.load_pct !== null ? w.load_pct + ' %' : '—'}</td>`).join('')}<td>${num(T.hours)} h</td></tr>
             </tbody></table></div>
-            <div class="kw-foot"><span class="at-sub">${hot.length ? `Tydz. ${hot.map(w => `${w.iso_week} (${w.load_pct} %)`).join(', ')} : blisko albo ponad zdolność — produkcja wcześniej na zapas (Prognoza zapasu) albo dodatkowa zmiana.` : 'Wszystkie tygodnie w zdolności produkcji.'} Zdolność : ${capTxt} na tydzień, mniej w tygodniach ze świętami ; ${hoursNote}.</span>
+            <div class="kw-foot"><span class="at-sub">${hot.length ? `Tydz. ${hot.map(w => `${w.iso_week} (${w.load_pct} %)`).join(', ')} : blisko albo ponad zdolność — produkcja wcześniej na zapas (Prognoza zapasu) albo dodatkowa zmiana.` : 'Wszystkie tygodnie w zdolności produkcji.'} Zdolność : ${capTxt} na tydzień, mniej w tygodniach ze świętami ; ${hoursNote}. Pieniądze na produkcję : kartony × koszt pełny kartonu (surowce + płace i media działu + koszty ogólne, z ${esc(C.basis || '—')} ; logistyka osobno : ${num(C.logistics)} zł)${C.no_raw ? ` ; ${C.no_raw} ${pl(C.no_raw, 'produkt', 'produkty', 'produktów')} bez kosztu surowców` : ''}${C.no_section ? ` ; ${C.no_section} bez działu (tylko surowce i koszty ogólne)` : ''}.</span>
                 <span class="d-flex gap-2 flex-wrap"><button type="button" class="kw-btn" data-fc-go="seasons">Sezony z panelu</button><button type="button" class="kw-btn" data-fc-go="buy">Zakupy 13 tygodni</button>
                 ${appr ? '<button type="button" class="kw-btn" data-fc-reopen>Cofnij zatwierdzenie</button><button type="button" class="kw-btn pri" data-fc-approve>Zatwierdź ponownie</button>' : '<button type="button" class="kw-btn pri" data-fc-approve>Zatwierdź prognozę</button>'}</span></div>
-            ${D.runs.length ? `<div class="fc-runs"><h6>Ostatnie zatwierdzenia</h6><table class="kw-t"><thead><tr><th>Tydzień</th><th>Zatwierdzona</th><th class="r">Kartony</th><th class="r">w tym sezon</th><th class="r">Godziny</th><th class="r">Zakupy</th></tr></thead><tbody>
-                ${D.runs.map(r => `<tr><td>tydz. ${r.iso_week} · ${full(r.week_start)}</td><td>${when(r.approved_at)}${r.by ? ' — ' + esc(r.by) : ''}</td><td class="r">${num(r.cartons)}</td><td class="r">${num(r.season_cartons)}</td><td class="r">${r.hours !== null ? num(r.hours) + ' h' : '—'}</td><td class="r">${r.purchase_value !== null ? num(r.purchase_value) + ' zł' : '—'}</td></tr>`).join('')}
+            ${D.runs.length ? `<div class="fc-runs"><h6>Ostatnie zatwierdzenia</h6><table class="kw-t"><thead><tr><th>Tydzień</th><th>Zatwierdzona</th><th class="r">Kartony</th><th class="r">w tym sezon</th><th class="r">Godziny</th><th class="r">Pieniądze na produkcję</th><th class="r">Zakupy</th></tr></thead><tbody>
+                ${D.runs.map(r => `<tr><td>tydz. ${r.iso_week} · ${full(r.week_start)}</td><td>${when(r.approved_at)}${r.by ? ' — ' + esc(r.by) : ''}</td><td class="r">${num(r.cartons)}</td><td class="r">${num(r.season_cartons)}</td><td class="r">${r.hours !== null ? num(r.hours) + ' h' : '—'}</td><td class="r">${r.production_cost !== null ? num(r.production_cost) + ' zł' : '—'}</td><td class="r">${r.purchase_value !== null ? num(r.purchase_value) + ' zł' : '—'}</td></tr>`).join('')}
             </tbody></table></div>` : ''}
         </div></div>`;
     }
@@ -283,7 +292,7 @@
         }
         if (t.hasAttribute('data-fc-approve')) {
             const T = D.totals;
-            const res = window.Swal ? await Swal.fire({icon: 'question', title: 'Zatwierdzić prognozę?', html: `${num(T.cartons)} kartonów, ${num(T.pallets)} palet, ${num(T.hours)} h produkcji, zakupy ${num(D.purchases.totals.value)} zł — tydz. ${D.weeks[0].iso_week}–${D.weeks[D.weeks.length - 1].iso_week}.`,
+            const res = window.Swal ? await Swal.fire({icon: 'question', title: 'Zatwierdzić prognozę?', html: `${num(T.cartons)} kartonów, ${num(T.pallets)} palet, ${num(T.hours)} h produkcji, pieniądze na produkcję ${num(D.cost.total)} zł, zakupy ${num(D.purchases.totals.value)} zł — tydz. ${D.weeks[0].iso_week}–${D.weeks[D.weeks.length - 1].iso_week}.`,
                 input: 'text', inputPlaceholder: 'Uwaga (opcjonalnie)', showCancelButton: true, confirmButtonText: 'Zatwierdź', cancelButtonText: 'Anuluj'}) : {isConfirmed: confirm('Zatwierdzić prognozę?'), value: ''};
             if (!res.isConfirmed) return;
             return act(t, 'POST', '/ajax/forecast/approve', {note: res.value || null});
