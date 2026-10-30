@@ -28,6 +28,9 @@
   const LANG_KEYS = ['fr', 'nl', 'en'];
   const TRIGGERS = ['dormant45', 'third', 'birthday', 'firstOffice', 'season'];
   const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  // Le webshop lit ?shop=&mode=&voucher= à l'ouverture (parseDeepLink, dépôt WebShop) : le code arrive saisi au panier.
+  const WEBSHOP = 'https://webshop.atelierby.be';
+  const lienOk = l => !l || (/^https?:\/\/[^\s/]+\.[^\s]+$/i.test(l) && l.length <= 500);
 
   const I18N = {
     fr: {
@@ -44,6 +47,9 @@
       subject: 'Objet', subjectGood: 'Bonne longueur, ça tient sur mobile.', subjectLong: 'Trop long pour un écran de téléphone : visez moins de 45 caractères.',
       insert: 'Insérer…', insFirstname: 'Prénom', insVoucher: 'Code voucher', insWebshop: 'Lien webshop', insShop: 'Lien boutique',
       words: 'mots', oneCta: 'Un seul lien primaire par mail.',
+      ctaLink: 'Lien du bouton', ctaLinkWebshop: 'Webshop', ctaLinkBad: 'Une adresse complète, qui commence par https://',
+      ctaLinkHint: 'Où mène le bouton. Le webshop n’accepte que ses propres bons : écrivez le code du bon webshop à la fin (…&voucher=TUBIZE2). {{code}} y met le code newsletter du destinataire, que le webshop ne connaît pas encore. Vide : le lien commun.',
+      ctaLinkTo: 'Le bouton mène à', ctaLinkDefault: 'le lien commun',
       s4Title: 'Quand part-il ?', s4Sub: 'Le mail part par lots de 100 par minute. Un mail par client par jour maximum.',
       date: 'Date', time: 'Heure', bestTime: 'Ce segment ouvre le plus entre 7h30 et 9h en semaine.',
       maxVouchers: 'Vouchers max', optional: 'facultatif', voucherHintOn: 'vouchers Stripe uniques générés au départ. Le premier arrivé, premier servi.', voucherHintOff: 'Pas de voucher dans ce mail.',
@@ -104,6 +110,9 @@
       subject: 'Onderwerp', subjectGood: 'Goede lengte, past op mobiel.', subjectLong: 'Te lang voor een telefoonscherm: hou het onder 45 tekens.',
       insert: 'Invoegen…', insFirstname: 'Voornaam', insVoucher: 'Vouchercode', insWebshop: 'Link webshop', insShop: 'Link winkel',
       words: 'woorden', oneCta: 'Eén primaire link per mail.',
+      ctaLink: 'Link van de knop', ctaLinkWebshop: 'Webshop', ctaLinkBad: 'Een volledig adres dat begint met https://',
+      ctaLinkHint: 'Waar de knop naartoe leidt. De webshop aanvaardt alleen zijn eigen bonnen: zet de code van de webshopbon achteraan (…&voucher=TUBIZE2). {{code}} zet er de nieuwsbriefcode van de ontvanger in, die de webshop nog niet kent. Leeg: de gemeenschappelijke link.',
+      ctaLinkTo: 'De knop leidt naar', ctaLinkDefault: 'de gemeenschappelijke link',
       s4Title: 'Wanneer vertrekt hij?', s4Sub: 'De mail vertrekt in groepen van 100 per minuut. Maximaal één mail per klant per dag.',
       date: 'Datum', time: 'Uur', bestTime: 'Dit segment opent het meest tussen 7u30 en 9u op weekdagen.',
       maxVouchers: 'Max. vouchers', optional: 'optioneel', voucherHintOn: 'unieke Stripe-vouchers aangemaakt bij verzending. Wie eerst komt, eerst maalt.', voucherHintOff: 'Geen voucher in deze mail.',
@@ -164,6 +173,9 @@
       subject: 'Subject', subjectGood: 'Good length, fits on mobile.', subjectLong: 'Too long for a phone screen: aim under 45 characters.',
       insert: 'Insert…', insFirstname: 'First name', insVoucher: 'Voucher code', insWebshop: 'Webshop link', insShop: 'Shop link',
       words: 'words', oneCta: 'One primary link per email.',
+      ctaLink: 'Button link', ctaLinkWebshop: 'Webshop', ctaLinkBad: 'A full address starting with https://',
+      ctaLinkHint: 'Where the button leads. The webshop only accepts its own vouchers: put the webshop voucher code at the end (…&voucher=TUBIZE2). {{code}} puts in the recipient’s newsletter code, which the webshop doesn’t know yet. Empty: the shared link.',
+      ctaLinkTo: 'The button leads to', ctaLinkDefault: 'the shared link',
       s4Title: 'When does it go?', s4Sub: 'Sent in batches of 100 per minute. One email per customer per day, max.',
       date: 'Date', time: 'Time', bestTime: 'This segment opens most between 7:30 and 9:00 on weekdays.',
       maxVouchers: 'Max vouchers', optional: 'optional', voucherHintOn: 'unique Stripe vouchers generated at send. First come, first served.', voucherHintOff: 'No voucher in this email.',
@@ -284,7 +296,7 @@
 
   const ETAT0 = () => ({
     step: 1, sourceId: 'indiv', segmentId: '', templateId: 'gagne', subjects: {}, bodies: {}, smsTexts: {}, sendLangs: ['fr', 'nl'], editLang: 'fr',
-    date: '', time: '08:30', maxVouchers: '30', testSent: false, senderId: '',
+    date: '', time: '08:30', maxVouchers: '30', testSent: false, senderId: '', lien: '',
     segForm: false, segName: '', segShop: 'all', segProduct: 'all', segPeriod: '365', segMinBasket: '',
     channel: 'email', sendMode: 'manual', trigger: 'dormant45',
   });
@@ -576,7 +588,18 @@
         <textarea data-f="body" rows="8" style="border:none;padding:14px;font-size:14px;line-height:1.6;font-family:var(--font-ui);resize:vertical;background:${SURF};width:100%">${esc(body)}</textarea>
       </div>
       <div style="display:flex;gap:16px;font-size:12px;color:${MUTED}"><span>${body.trim() ? body.trim().split(/\s+/).length : 0} ${esc(t.words)}</span><span>·</span><span>${esc(t.oneCta)}</span></div>
+      ${s.channel !== 'sms' ? this.champLien() : ''}
       ${hasSms ? `<label style="display:flex;flex-direction:column;gap:6px;border-top:0.5px solid var(--color-border-tertiary);padding-top:18px"><span style="display:flex;justify-content:space-between;gap:12px">${this.cap(esc(t.smsText))}<span style="font-size:12px;color:${sms.length > 160 ? P : MUTED}">${sms.length} / 160</span></span><textarea data-f="sms" rows="3" style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:12px;font-size:14px;line-height:1.5;font-family:var(--font-ui);resize:vertical;background:${SURF};width:100%">${esc(sms)}</textarea><span style="font-size:12px;color:${MUTED}">${esc(t.smsHint)}</span></label>` : ''}`;
+    }
+    /** Le lien du bouton : une adresse par campagne, et en un clic le webshop du magasin, prêt pour le code du bon. */
+    lienWebshop() { const shop = this.segById(this.s.segmentId).shop || (this.isBrand() ? '' : this.role()); return { shop, url: WEBSHOP + '/?' + (shop ? 'shop=' + encodeURIComponent(shop) + '&' : '') + 'mode=collect&voucher=' }; }
+    champLien() {
+      const s = this.s, t = this.t(), w = this.lienWebshop(), ok = lienOk(s.lien.trim());
+      // Un div et non un label : le bouton « Webshop » serait le contrôle du label, et un clic sur le titre le déclencherait.
+      return `<div style="display:flex;flex-direction:column;gap:6px">
+        <span style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">${this.cap(esc(t.ctaLink) + ` <span style="text-transform:none;letter-spacing:0">(${esc(t.optional)})</span>`)}${this.link('lienwebshop', esc(t.ctaLinkWebshop + (w.shop ? ' · ' + this.nomShop(w.shop) : '')), null, 'font-size:12px')}</span>
+        ${this.input('lien', s.lien, ok ? '' : `border-color:${P}`, `placeholder="${esc(WEBSHOP)}/?shop=2&amp;mode=collect&amp;voucher=CODE" spellcheck="false" autocomplete="off" aria-label="${esc(t.ctaLink)}"`)}
+        <span style="font-size:12px;color:${ok ? MUTED : P}">${esc(ok ? t.ctaLinkHint : t.ctaLinkBad)}</span></div>`;
     }
     step5() {
       const s = this.s, t = this.t(), isAuto = s.sendMode === 'auto', seg = this.segById(s.segmentId), src = (this.data().sources || []).find(x => x.id === s.sourceId), tp = this.tpl(), sd = this.sender();
@@ -600,7 +623,7 @@
       <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;font-size:13px">
         ${rec(t.database, esc(src ? this.L(src.name) : ''))}${rec(t.segment, esc(this.L(seg.name)) + ' · ' + fmt(seg.count))}${rec(t.sendLangs, esc(langSummary))}${rec(t.channel, esc({ email: t.chEmail, sms: t.chSms, both: t.chBoth }[s.channel]))}
         ${rec(t.sendMode, esc(modeSummary))}${rec(t.template, esc(this.L(tp.name)))}${rec(t.sender, esc(sd.name) + ' · ' + esc(sd.email))}
-        ${rec(t.subject, esc(this.subject()))}${rec(t.sendTest, this.link('test', esc(s.testSent ? t.testDone : t.testSend)))}
+        ${rec(t.subject, esc(this.subject()))}${s.channel !== 'sms' ? rec(t.ctaLink, `<span style="word-break:break-all">${esc(s.lien.trim() || t.ctaLinkDefault)}</span>`) : ''}${rec(t.sendTest, this.link('test', esc(s.testSent ? t.testDone : t.testSend)))}
       </div>`;
     }
     preview() {
@@ -622,6 +645,7 @@
           </div>
           <div style="padding:14px 24px 18px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:${MUTED};line-height:1.7"><div>${esc(t.footWebshop)} · ${esc(t.footShop)} · ${esc(t.footSupport)}</div><div>${esc(t.footHours)}</div><div style="margin-top:4px;text-decoration:underline">${esc(t.unsubscribe)}</div></div>
         </div>
+        ${s.channel !== 'sms' ? `<div style="max-width:360px;margin:10px auto 0;font-size:11px;color:${MUTED};word-break:break-all">${esc(t.ctaLinkTo)} : ${s.lien.trim() ? esc(s.lien.trim().replace(/\{\{code(_promo)?\}\}/g, 'K7M2DIAM')) : esc(t.ctaLinkDefault)}</div>` : ''}
         ${hasSms ? `<div style="max-width:360px;margin:18px auto 0">${this.cap('SMS · ' + el, 'margin-bottom:10px')}<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start"><div style="font-size:11px;color:${MUTED};padding-left:4px">${esc(sd.name)} · +32 460 12 34 56</div><div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:16px 16px 16px 4px;padding:10px 14px;font-size:14px;line-height:1.5;max-width:290px;white-space:pre-wrap">${esc(smsPreview)}</div></div></div>` : ''}
       </div>`;
     }
@@ -783,10 +807,11 @@
       else if (a === 'wrap') { const el = this.editLang(); const body = this.body(); s.bodies[el] = body + (v === '**' ? ' **gras**' : ' _italique_'); this.render(); }
       else if (a === 'mode') { s.sendMode = v; this.render(); }
       else if (a === 'sender') { s.senderId = v; this.render(); }
-      else if (a === 'test') { const tp = this.tpl(); ecrire(this.base, 'POST', '/marketing/newsletter/test', { role: this.role(), subject: this.subject(), body: this.body(), headline: this.LL(tp.headline), cta: this.LL(tp.cta), templateId: tp.id, lang: this.editLang(), sender: this.sender().id, voucher: !!s.maxVouchers }).then(r => { s.testSent = true; this.notify(r && r.simule ? 'Test non envoyé (' + (r.motif || 'simulé') + ').' : (r.ok ? 'Test envoyé à ' + r.adresses + ' adresse(s).' : 'Test refusé par le SMTP : ' + (r.erreur || ''))); this.render(); }).catch(err => this.notify(err.message)); }
+      else if (a === 'lienwebshop') { s.lien = this.lienWebshop().url; this.render(); const i = this.el.querySelector('[data-f="lien"]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+      else if (a === 'test') { const tp = this.tpl(); ecrire(this.base, 'POST', '/marketing/newsletter/test', { role: this.role(), subject: this.subject(), body: this.body(), headline: this.LL(tp.headline), cta: this.LL(tp.cta), templateId: tp.id, lang: this.editLang(), sender: this.sender().id, voucher: !!s.maxVouchers, lien: s.channel === 'sms' ? '' : s.lien.trim() }).then(r => { s.testSent = true; this.notify(r && r.simule ? 'Test non envoyé (' + (r.motif || 'simulé') + ').' : (r.ok ? 'Test envoyé à ' + r.adresses + ' adresse(s).' : 'Test refusé par le SMTP : ' + (r.erreur || ''))); this.render(); }).catch(err => this.notify(err.message)); }
       else if (a === 'prev') { s.step = Math.max(1, s.step - 1); this.render(); }
       else if (a === 'next') this.nextStep();
-      else if (a === 'dupAB') { const c = (this.data().campagnes || []).find(x => String(x.id) === String(v)); if (!c) return; const subj = (c.subjects && (c.subjects.fr || '')) || ''; this.go('wizard', { step: 3, templateId: TEMPLATES.some(z => z.id === c.templateId) ? c.templateId : 'gagne', segmentId: c.segment, sourceId: c.src, subjects: { fr: subj + ' (B)' }, bodies: {}, channel: c.channel === 'sms' ? 'email' : c.channel }); }
+      else if (a === 'dupAB') { const c = (this.data().campagnes || []).find(x => String(x.id) === String(v)); if (!c) return; const subj = (c.subjects && (c.subjects.fr || '')) || ''; this.go('wizard', { step: 3, templateId: TEMPLATES.some(z => z.id === c.templateId) ? c.templateId : 'gagne', segmentId: c.segment, sourceId: c.src, subjects: { fr: subj + ' (B)' }, bodies: {}, channel: c.channel === 'sms' ? 'email' : c.channel, lien: c.lien || '' }); }
       else if (a === 'cansend') { const m = this.magasins().find(x => x.id === v); if (!m) return; this.putShop(v, { canSend: !m.canSend }); }
     }
     onInput(e) {
@@ -800,6 +825,7 @@
       else if (f === 'impLot') { s.imp.lot = v; return; }
       else if (f === 'segMinBasket') s.segMinBasket = v;
       else if (f === 'maxVouchers') s.maxVouchers = v;
+      else if (f === 'lien') s.lien = v;
       else if (f === 'date') s.date = v;
       else if (f === 'time') s.time = v;
       else return;
@@ -821,7 +847,7 @@
       else if (f.indexOf('shopname-') === 0) { this.putShop(f.slice(9), { senderName: v }); return; }
       else if (f.indexOf('shopmail-') === 0) { this.putShop(f.slice(9), { email: v }); return; }
       else if (f.indexOf('shopstatus-') === 0) { this.putShop(f.slice(11), { status: v }); return; }
-      else if (['date', 'time', 'maxVouchers', 'subject', 'body', 'sms', 'segName', 'segMinBasket'].includes(f)) return;
+      else if (['date', 'time', 'maxVouchers', 'subject', 'body', 'sms', 'segName', 'segMinBasket', 'lien'].includes(f)) return;
       this.render();
     }
     putReglages(patch) {
@@ -849,6 +875,7 @@
     nextStep() {
       const s = this.s, t = this.t();
       if (s.step === 1 && !s.sendLangs.length) { this.notify(t.langNone); return; }
+      if (s.step === 3 && s.channel !== 'sms' && !lienOk(s.lien.trim())) { this.notify(t.ctaLink + ' : ' + t.ctaLinkBad); return; }
       if (s.step < 4) { s.step++; this.render(); window.scrollTo({ top: 0 }); return; }
       if (s.busy) return;
       const seg = this.segById(s.segmentId), tp = this.tpl();
@@ -857,7 +884,7 @@
       s.busy = true; this.render();
       ecrire(this.base, 'POST', '/marketing/newsletter/campagnes', { role: this.role(), campagne: this.opts.campagne || null, name: nom, segment: seg.id, langs: s.sendLangs, templateId: tp.id, channel: s.channel,
         subjects: par(s.subjects, tp.subject), bodies: par(s.bodies, tp.body), sms: s.channel === 'email' ? {} : par(s.smsTexts, tp.sms), headlines: par({}, tp.headline), ctas: par({}, tp.cta),
-        sendMode: s.sendMode, trigger: s.trigger, date: s.date, time: s.time, maxVouchers: s.maxVouchers, sender: this.sender().id, testSent: s.testSent })
+        sendMode: s.sendMode, trigger: s.trigger, date: s.date, time: s.time, maxVouchers: s.maxVouchers, sender: this.sender().id, testSent: s.testSent, lien: s.channel === 'sms' ? '' : s.lien.trim() })
         .then(r => {
           s.busy = false;
           const test = !(r && r.test === false);
