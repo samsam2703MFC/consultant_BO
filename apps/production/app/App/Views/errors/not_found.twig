@@ -1,0 +1,19 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Nie znaleziono{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3><i class="bi bi-question-circle"></i> Nie znaleziono</h3>
+            <p class="text-subtitle text-muted">{{ message ?: 'Tej strony albo pozycji już nie ma.' }}</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    {% if back %}<a class="btn btn-primary" href="{{ root }}{{ back.url }}"><i class="bi bi-arrow-left"></i> {{ back.label }}</a>{% endif %}
+    <a class="btn btn-outline-primary" href="{{ root }}/today"><i class="bi bi-house"></i> Dzisiaj</a>
+</section>
+{% endblock %}

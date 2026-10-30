@@ -3,6 +3,7 @@ namespace App\Controllers\Web\Organization;
 
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
+use App\Exceptions\CustomException;
 use App\Services\Organization\PositionSheetService;
 use App\Services\Organization\PositionTaskService;
 use App\Services\Organization\TaskFormService;
@@ -32,11 +33,11 @@ class PositionController extends BaseController
 
     public function userSheet($id)
     {
-        $this->view('organization/user', $this->asMember($this->service->userSheet((int) $id)) + [
+        $this->page(fn() => $this->view('organization/user', $this->asMember($this->service->userSheet((int) $id)) + [
             'positions' => $this->service->positions(),
             'module' => $this->service->moduleRoles((int) $id) + ['can_set' => $this->service->canSetModuleRoles($this->userId())],
             'frequencies' => PositionTaskService::FREQUENCY_LABELS,
-        ]);
+        ]));
     }
 
     public function myTasks()
@@ -58,7 +59,7 @@ class PositionController extends BaseController
     /** Plan tygodnia stanowiska (tylko administrator ; strona chroniona też przez katalog uprawnień). */
     public function weekPlan($id)
     {
-        $this->view('organization/week_plan', ['plan' => $this->service->weekPlan((int) $id, $this->userId())]);
+        $this->page(fn() => $this->view('organization/week_plan', ['plan' => $this->service->weekPlan((int) $id, $this->userId())]));
     }
 
     public function weekPlanData($id)
@@ -156,7 +157,7 @@ class PositionController extends BaseController
     /** Karta stanowiska : treść PL / FR, przełożony, osoby, zadania, strony ERP ; edycja dla tych, którzy widzą stronę. */
     public function sheet($id)
     {
-        $this->view('organization/position_sheet', ['sheet' => $this->sheets->sheet((int) $id)] + $this->sheets->choices());
+        $this->page(fn() => $this->view('organization/position_sheet', ['sheet' => $this->sheets->sheet((int) $id)] + $this->sheets->choices()));
     }
 
     public function sheetPdf($id)
@@ -197,6 +198,18 @@ class PositionController extends BaseController
             return $this->json(['message' => "Zapisano pracowników na stanowisku ({$n})."]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
+        }
+    }
+
+    /** Strona : nieznana pozycja (usunięty użytkownik, stanowisko) → strona « Nie znaleziono » (404), nie błąd PHP. */
+    private function page(callable $render): void
+    {
+        try {
+            $render();
+        } catch (CustomException $e) {
+            if ((int) $e->getCode() !== 404) throw $e;
+            http_response_code(404);
+            $this->view('errors/not_found', ['message' => $e->getMessage(), 'back' => ['url' => '/organization/positions', 'label' => 'Funkcje i zadania']]);
         }
     }
 
