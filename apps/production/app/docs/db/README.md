@@ -66,6 +66,17 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Kartony i palety : limites de palette par carton, édition des produits dans la fenêtre (migration 133, 30/10/2026)
+
+- `n_carton.pallet_max_height_mm` / `pallet_max_kg` (NULL = `logistics.pallet_max_height_mm` / `logistics.pallet_max_kg`).
+  Ordre : limites propres du produit (étape Paleta, `n_prod_item_logistics`) → sorte de carton → paramètres. Le nombre
+  de couches de chaque produit est calculé avec son poids (pièces × g + carton) : produit plus lourd = moins de couches
+  (`best.by_weight`).
+- Fenêtre du carton (`/products/cartons?id=…`) : pour chaque produit, pièces / carton, g / pièce, cartons par couche ×
+  couches (cartons par palette = produit) modifiables dans le tableau ; enregistrement par l'API de la fiche produit
+  (`PUT /produits/items/{id}/logistics`, mêmes contrôles et journal) ; « zastosuj » = plan qui tient (hauteur et poids
+  de palette) ; « Dopasuj układ palety » applique ce plan à tous les produits en alerte.
+
 ### Factures d'achat : fenêtre « nouveau prix de base » (30/10/2026, sans migration)
 
 - Prix d'une matière sur la facture au-dessus du prix de base (calcul des recettes) : au lieu du seul message

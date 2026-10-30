@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers\Web\Product;
 
+use App\Core\Api\Workshop\WorkshopConfig;
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Services\Product\CartonService;
@@ -16,11 +17,13 @@ final class CartonController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private CartonService $cartons) {}
+    public function __construct(private CartonService $cartons, private WorkshopConfig $config) {}
 
     public function index()
     {
-        $this->view('product/cartons', ['boot' => json_encode($this->cartons->catalog(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP)]);
+        // API warsztatu (jak karta produktu) : zapis opakowania produktu prosto z okna kartonu [211].
+        $this->view('product/cartons', ['boot' => json_encode($this->cartons->catalog(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP),
+            'api_base' => $this->config->webApiBase(ROOT), 'session_user' => (int) user('id')]);
     }
 
     public function data()

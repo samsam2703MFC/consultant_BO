@@ -111,7 +111,7 @@ try {
     expectCt(count($cat['cartons']) === 3 && $cat['products_total'] === 4 && $cat['without_carton'] === 1, 'katalog : 3 kartony, 4 aktywne produkty, 1 bez kartonu (Babka)');
     $cr = $by[4500]['products'][0];
     expectCt($by[4500]['product_count'] === 1 && $cr['name'] === 'Croissant 75 g' && $cr['source'] === 'card' && $cr['net_kg'] === 4.8 && $cr['over_load'], 'Croissant : karton z karty, zawartość 4,8 kg > maks. 4 kg');
-    expectCt($cr['issues'][0]['code'] === 'LAYER_TOO_MANY' && $cr['best'] === ['per_layer' => 8, 'layers' => 7, 'cartons' => 56] && $by[4500]['issue_count'] === 1, 'Croissant : ERP 10 na warstwę, mieści się 8 × 7 = 56');
+    expectCt($cr['issues'][0]['code'] === 'LAYER_TOO_MANY' && [$cr['best']['per_layer'], $cr['best']['layers'], $cr['best']['cartons']] === [8, 7, 56] && !$cr['best']['by_weight'] && $by[4500]['issue_count'] === 1, 'Croissant : ERP 10 na warstwę, mieści się 8 × 7 = 56');
     expectCt($by[4006]['product_count'] === 1 && $by[4006]['products'][0]['source'] === 'ppwr' && $by[4006]['products'][0]['issues'] === [] && $by[4006]['plans']['eur']['per_layer'] === 4
         && $by[4006]['plans']['eur']['layers'] === 7, 'Bagietka : karton PPWR (nieaktywny produkt pominięty), ERP 4 × 7 zgodne ; 590 × 390 na EUR : 4 × 7');
     expectCt($by[4093]['products'][0]['source'] === 'recipe' && $by[4093]['products'][0]['issues'] === [] && $by[4093]['volume_l'] === 24.0, 'Tarta : karton z receptury, bez układu w ERP — bez błędów ; 24 l');
@@ -157,6 +157,23 @@ try {
     } catch (ApiException $e) {
         expectCt($e->httpStatus() === 422 && $e->fieldErrors()[0]['field'] === 'carton_id', 'nieznany karton w karcie : 422 carton_id');
     }
+    // [211] Maks. wysokość / waga palety rodzaju kartonu : produkt → karton → parametry ; warstwy z wagi produktu.
+    $d = $svc->save(4006, ['pallet_max_height_mm' => '1200', 'pallet_max_kg' => '100'], 7);
+    $bg = $d['products'][0];
+    expectCt($d['pallet_max_height_mm'] === 1200 && $d['pallet_max_kg'] === 100 && $d['limits']['max_height_mm'] === 1200 && $d['defaults']['max_height_mm'] === 1800,
+        'karton : maks. 1200 mm i 100 kg (parametry 1800 mm zostają domyślne)');
+    expectCt($bg['limits']['max_height_mm'] === 1600 && $bg['limits']['max_kg'] === 100 && $bg['limits']['own'], 'Bagietka : własna wysokość 1600 mm (karta) ma pierwszeństwo, waga 100 kg z kartonu');
+    // 20 × 250 g + 770 g = 5,77 kg / karton, 4 na warstwę = 23,08 kg ; (100 − tara palety) ÷ 23,08 → 3 warstwy (wysokość pozwala na więcej).
+    expectCt($bg['best']['per_layer'] === 4 && $bg['best']['layers'] === 3 && $bg['best']['cartons'] === 12 && $bg['best']['by_weight'] && $bg['best']['gross_kg'] <= 100
+        && in_array('TOO_HEAVY', array_column($bg['issues'], 'code'), true), 'Bagietka : warstwy wg wagi 4 × 3 = 12 ; ERP 4 × 6 za ciężkie');
+    $info = $svc->productInfo(11);
+    expectCt($info['defaults']['max_kg'] === 100 && $info['defaults']['max_height_mm'] === 1200 && $info['limits']['max_height_mm'] === 1600, 'krok Paleta : domyślne z kartonu, własne z karty');
+    $it = $items->updateLogistics(101, ['cpl' => 4, 'lpp' => 3, 'cpp' => 12], $ctx);
+    $bg = array_column($svc->catalog()['cartons'], null, 'id')[4006]['products'][0];
+    expectCt($bg['issues'] === [] && (int) $it['erp']['cpp'] === 12, 'zastosowany układ 4 × 3 = 12 : bez błędów');
+    expectCtFail(fn() => $svc->save(4006, ['pallet_max_height_mm' => '100', 'pallet_max_kg' => '5000'], 7), 422, 'walidacja : 300–3000 mm, 50–3000 kg');
+    $d = $svc->save(4006, ['pallet_max_height_mm' => '', 'pallet_max_kg' => null], 7);
+    expectCt($d['pallet_max_height_mm'] === null && $d['limits']['max_kg'] === 1000, 'puste = parametry logistyki');
     $s = $items->updateSettings(101, ['wizard_step' => 9], $ctx);
     expectCt($s['settings']['wizard_step'] === 9 && ItemService::WIZARD_STEPS === 9, 'kreator : 9 kroków (krok 3 = Paleta)');
 } finally {

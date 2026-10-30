@@ -15,7 +15,7 @@
 {% block content %}
 {# Kartony i palety [205] : katalog n_carton (karton = surowiec-opakowanie), układ palety (App\Domain\Logistics\PalletLayout),
    produkty w kartonie (karta → PPWR → receptura). Dane : /ajax/products/cartons. #}
-<section class="section ct" id="cartonsApp">
+<section class="section ct" id="cartonsApp" data-root="{{ root }}" data-api-base="{{ api_base }}" data-user="{{ session_user }}" data-labels="workshop">
     <div class="ct-kpis" data-kpis></div>
     <div data-view><p class="at-empty">Ładowanie…</p></div>
 </section>
@@ -24,6 +24,7 @@
 
 {% block scripts %}
 {% include "page_components/ajax_helpers.twig" %}
+<script src="{{ root }}/assets/js/workshop/api.js?v={{ asset_v() }}"></script>
 <script src="{{ root }}/assets/js/pallet-views.js?v={{ asset_v() }}"></script>
 <script src="{{ root }}/assets/js/product/cartons.js?v={{ asset_v() }}"></script>
 {% endblock %}

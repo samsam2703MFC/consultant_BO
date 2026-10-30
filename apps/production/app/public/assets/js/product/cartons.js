@@ -115,19 +115,35 @@
         });
     }
 
-    async function openCarton(id) {
+    // API warsztatu (jak karta produktu) : opakowanie i układ palety produktu zapisane prosto z okna kartonu [211].
+    let wapi = null;
+    const api = async () => {
+        if (!wapi) { wapi = new window.TfbWorkshop.WorkshopApi(root); await wapi.init(); }
+        return wapi;
+    };
+    const apiErr = (err) => ((err.body && err.body.errors) || []).map(x => x.message).join(' ') || err.message || 'Błąd';
+    const LAYOUT_CODES = ['LAYER_TOO_MANY', 'TOO_HIGH', 'TOO_HEAVY'];
+    const fits = (p) => p.best && p.best.cartons > 0 && (p.erp.cpl !== p.best.per_layer || p.erp.lpp !== p.best.layers || p.erp.cpp !== p.best.cartons);
+
+    async function openCarton(id, keepScroll) {
         const res = await at.send(`/ajax/products/cartons/${id}`, 'GET');
         if (!res.ok) { at.notify(false, res.message || 'Błąd'); return; }
         const c = res.data;
+        const dflt = c.defaults || D.limits || {};
         let pal = pallet;
         const field = (name, label, value, unit, extra = '') => `<label>${label}<div class="ct-unit"><input class="form-control" name="${name}" inputmode="decimal" value="${value ?? ''}" ${extra}><span>${unit}</span></div></label>`;
-        const products = c.products.map(p => `<tr class="${p.over_load || p.issues.length ? 'ct-warnrow' : ''}">
-            <td>${p.item_id ? `<a href="${at.root}/workshop/products#/item/${p.item_id}/3">${esc(p.name)}</a>` : esc(p.name)}<small>${esc(SRC[p.source] || '')}</small></td>
-            <td class="n">${p.ppc ? num(p.ppc) + ' szt.' : '—'}${p.weight_g ? `<small>${num(p.weight_g)} g / szt.</small>` : ''}</td>
-            <td class="n ${p.over_load ? 'ct-bad' : ''}">${p.net_kg !== null ? num(p.net_kg, 2) + ' kg' : '—'}${p.over_load ? '<small>> maks. ładunek</small>' : ''}</td>
-            <td class="n">${p.gross_kg !== null ? num(p.gross_kg, 2) + ' kg' : '—'}</td>
-            <td class="n">${p.erp.cpl && p.erp.lpp ? `${p.erp.cpl} × ${p.erp.lpp} = ${p.erp.cpp}` : '<span class="ct-miss">brak</span>'}${p.best ? `<small>mieści się ${p.best.per_layer} × ${p.best.layers} = ${p.best.cartons}</small>` : ''}</td>
-            <td>${p.issues.map(i => `<span class="ct-badge is-bad">${esc(issueText(i))}</span>`).join(' ') || (p.over_load ? '' : '<span class="ct-badge is-ok">OK</span>')}</td></tr>`).join('');
+        const cell = (p, name, value, label, w = 64) => `<input class="form-control form-control-sm ct-in" style="width:${w}px" name="${name}" inputmode="numeric" value="${value ?? ''}" aria-label="${esc(label + ' ' + p.name)}" ${p.item_id ? '' : 'disabled'}>`;
+        const badFix = c.products.filter(p => p.item_id && fits(p) && p.issues.some(i => LAYOUT_CODES.includes(i.code)));
+        const products = c.products.map(p => `<tr class="${p.over_load || p.issues.length ? 'ct-warnrow' : ''}" data-prow="${p.id}">
+            <td>${p.item_id ? `<a href="${at.root}/workshop/products#/item/${p.item_id}/3">${esc(p.name)}</a>` : esc(p.name)}<small>${esc(SRC[p.source] || '')}${p.limits && p.limits.own ? ' · własne limity palety' : ''}</small></td>
+            <td class="n"><span class="ct-edit">${cell(p, 'ppc', p.ppc, 'Sztuk w kartonie')} szt.</span><small class="ct-edit">${cell(p, 'weight', p.weight_g, 'Waga sztuki', 70)} g / szt.</small></td>
+            <td class="n ${p.over_load ? 'ct-bad' : ''}" data-net>${p.net_kg !== null ? num(p.net_kg, 2) + ' kg' : '—'}${p.over_load ? '<small>> maks. ładunek</small>' : ''}</td>
+            <td class="n" data-gross>${p.gross_kg !== null ? num(p.gross_kg, 2) + ' kg' : '—'}</td>
+            <td class="n"><span class="ct-edit">${cell(p, 'cpl', p.erp.cpl || '', 'Kartony na warstwę', 52)} × ${cell(p, 'lpp', p.erp.lpp || '', 'Warstwy', 52)} = <b data-cpp title="kartony na paletę w ERP">${p.erp.cpp || '—'}</b></span>
+                ${p.best ? `<small>mieści się ${p.best.per_layer} × ${p.best.layers} = ${p.best.cartons} · ${num(p.best.height_mm)} mm${p.best.gross_kg !== null ? ' · ' + num(p.best.gross_kg) + ' kg' : ''}${p.best.by_weight ? ' · <b>warstwy wg wagi</b>' : ''}
+                    ${p.item_id && fits(p) ? `<button type="button" class="ct-link" data-fit="${p.id}">↧ zastosuj</button>` : ''}</small>` : ''}</td>
+            <td>${p.issues.map(i => `<span class="ct-badge is-bad">${esc(issueText(i))}</span>`).join(' ') || (p.over_load ? '' : '<span class="ct-badge is-ok">OK</span>')}</td>
+            <td>${p.item_id ? `<button type="button" class="btn btn-sm btn-outline-primary ct-save" data-psave="${p.id}" disabled>Zapisz</button>` : '<small class="ct-miss">brak karty</small>'}</td></tr>`).join('');
         const m = overlay(`<div class="ct-modal-head"><h4>${esc(c.name)}</h4><button type="button" class="btn btn-outline-secondary" data-close>Zamknij</button></div>
             <div class="ct-detail">
                 <form class="ct-form" data-carton-form>
@@ -135,6 +151,9 @@
                     <div class="ct-grid3">${field('length_mm', 'Długość', c.length_mm, 'mm')}${field('width_mm', 'Szerokość', c.width_mm, 'mm')}${field('height_mm', 'Wysokość', c.height_mm, 'mm')}</div>
                     <h6>Waga</h6>
                     <div class="ct-grid2">${field('tare_g', 'Waga pustego kartonu', c.tare_g !== null ? num(c.tare_g, 0).replace(/\s/g, '') : '', 'g')}${field('max_load_kg', 'Maks. ładunek (zawartość)', c.max_load_kg !== null ? String(c.max_load_kg).replace('.', ',') : '', 'kg')}</div>
+                    <h6>Paleta z tym kartonem</h6>
+                    <div class="ct-grid2">${field('pallet_max_height_mm', 'Maks. wysokość palety', c.pallet_max_height_mm ?? '', 'mm', `placeholder="${dflt.max_height_mm ?? ''}"`)}${field('pallet_max_kg', 'Maks. waga palety', c.pallet_max_kg ?? '', 'kg', `placeholder="${dflt.max_kg ?? ''}"`)}</div>
+                    <p class="ct-hint">Puste = parametry logistyki (${num(dflt.max_height_mm)} mm, ${num(dflt.max_kg)} kg). Warstwy każdego produktu liczone z jego wagi : cięższy produkt = mniej warstw.</p>
                     <div class="ct-grid2"><label>Rodzaj<select class="form-select" name="kind"><option value="">—</option>${Object.keys(KIND).map(k => `<option value="${k}" ${c.kind === k ? 'selected' : ''}>${k}</option>`).join('')}</select></label>
                         <label class="ct-switch"><input type="checkbox" name="active" ${c.active ? 'checked' : ''}> Aktywny (do wyboru w karcie produktu)</label></div>
                     <label>Notatka<input class="form-control" name="note" maxlength="255" value="${esc(c.note || '')}" placeholder="np. 5-warstwowy, do mrożonek"></label>
@@ -146,22 +165,28 @@
                     <div data-plan></div>
                 </div>
             </div>
-            <h6 class="ct-sub">Produkty w tym kartonie (${c.products.length})</h6>
-            ${c.products.length ? `<div class="ct-scroll"><table class="ct-table ct-prod"><thead><tr><th>Produkt</th><th class="n">W kartonie</th><th class="n">Zawartość</th><th class="n">Z kartonem</th><th class="n">Układ w ERP</th><th>Kontrola</th></tr></thead><tbody>${products}</tbody></table></div>`
+            <div class="ct-sub-row"><h6 class="ct-sub">Produkty w tym kartonie (${c.products.length})</h6>
+                ${badFix.length ? `<button type="button" class="btn btn-sm btn-primary" data-fit-all>↧ Dopasuj układ palety dla ${badFix.length} produktów z problemem</button>` : ''}</div>
+            ${c.products.length ? `<p class="ct-hint">Popraw prosto w tabeli : sztuki w kartonie, waga sztuki, kartony na warstwę × warstwy (kartony na paletę = iloczyn) — zapis do karty produktu.</p>
+                <div class="ct-scroll"><table class="ct-table ct-prod"><thead><tr><th>Produkt</th><th class="n">W kartonie</th><th class="n">Zawartość</th><th class="n">Z kartonem</th><th class="n">Układ w ERP</th><th>Kontrola</th><th></th></tr></thead><tbody>${products}</tbody></table></div>`
                 : '<p class="at-empty">Żaden aktywny produkt nie używa tego kartonu.</p>'}`, c.name);
         const f = m.box.querySelector('[data-carton-form]');
         const planBox = m.box.querySelector('[data-plan]');
+        const scroller = m.box.querySelector('.ct-modal-box');
+        if (keepScroll && scroller) scroller.scrollTop = keepScroll;
+        const reopen = async () => { const top = scroller ? scroller.scrollTop : 0; m.close(); await reload(); openCarton(id, top); };
         let timer = null;
         const showPlan = async () => {
             const v = (n) => (f[n].value || '').replace(',', '.').replace(/\s/g, '');
             if (!(v('length_mm') > 0 && v('width_mm') > 0 && v('height_mm') > 0)) { planBox.innerHTML = '<p class="at-empty">Podaj wymiary kartonu, aby zobaczyć paletę.</p>'; return; }
-            const qs = new URLSearchParams({ length_mm: v('length_mm'), width_mm: v('width_mm'), height_mm: v('height_mm'), tare_g: v('tare_g'), pallet: pal });
+            const qs = new URLSearchParams({ length_mm: v('length_mm'), width_mm: v('width_mm'), height_mm: v('height_mm'), tare_g: v('tare_g'), pallet: pal,
+                max_height_mm: v('pallet_max_height_mm') || dflt.max_height_mm || '', max_kg: v('pallet_max_kg') || dflt.max_kg || '' });
             const r = await at.send('/ajax/pallet/plan?' + qs, 'GET');
             if (!r.ok) { planBox.innerHTML = `<p class="at-empty">${esc(r.message || 'Błąd')}</p>`; return; }
             const p = r.data;
             planBox.innerHTML = `<div class="ct-tiles"><div><span>Na warstwę</span><b>${p.per_layer}</b></div><div><span>Warstw</span><b>${p.max.layers}</b></div>
                 <div><span>Na paletę</span><b>${p.max.cartons}</b></div><div><span>Wysokość</span><b>${num(p.max.height_mm)} mm</b></div><div><span>Podłoga</span><b>${num(p.floor_pct)} %</b></div></div>
-                <div class="ct-pics"><div>${PV.top(p, 330)}<small>warstwa z góry</small></div><div>${PV.side(p, p.max.layers, { width: 300, stack: false })}<small>z boku</small></div></div>`;
+                <div class="ct-pics"><div>${PV.top(p, 330)}<small>warstwa z góry</small></div><div>${PV.side(p, p.max.layers, { width: 300, stack: false })}<small>z boku · maks. ${num(Number(v('pallet_max_height_mm')) || dflt.max_height_mm)} mm</small></div></div>`;
         };
         f.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(showPlan, 300); });
         m.box.querySelectorAll('[data-mpal]').forEach(b => b.addEventListener('click', () => {
@@ -175,14 +200,71 @@
             btn.disabled = true;
             const val = (n) => f[n].value.trim() === '' ? null : f[n].value.trim();
             const r = await at.send(`/ajax/products/cartons/${id}`, 'PUT', { length_mm: val('length_mm'), width_mm: val('width_mm'), height_mm: val('height_mm'),
-                tare_g: val('tare_g'), max_load_kg: val('max_load_kg'), kind: f.kind.value || null, note: f.note.value, active: f.active.checked });
+                tare_g: val('tare_g'), max_load_kg: val('max_load_kg'), pallet_max_height_mm: val('pallet_max_height_mm'), pallet_max_kg: val('pallet_max_kg'),
+                kind: f.kind.value || null, note: f.note.value, active: f.active.checked });
             btn.disabled = false;
             f.querySelectorAll('.is-invalid').forEach(x => x.classList.remove('is-invalid'));
             if (!r.ok) { at.notify(false, r.message || 'Błąd'); return; }
             at.notify(true, r.message);
-            m.close();
-            await reload();
-            openCarton(id);
+            await reopen();
+        });
+        // Produkty : edycja w wierszu (zmiana → przycisk Zapisz), « zastosuj » = układ, który się mieści (wysokość i waga palety).
+        const prow = (pid) => m.box.querySelector(`[data-prow="${pid}"]`);
+        const intOf = (input) => { const v = input.value.replace(/\s/g, '').replace(',', '.'); return v === '' ? null : Number(v); };
+        const refreshRow = (tr) => {
+            const p = c.products.find(x => x.id === Number(tr.dataset.prow));
+            const ppc = intOf(tr.querySelector('[name=ppc]')), w = intOf(tr.querySelector('[name=weight]'));
+            const cpl = intOf(tr.querySelector('[name=cpl]')), lpp = intOf(tr.querySelector('[name=lpp]'));
+            const layoutChanged = cpl !== (p.erp.cpl || null) || lpp !== (p.erp.lpp || null);
+            tr.querySelector('[data-cpp]').textContent = layoutChanged ? (cpl && lpp ? String(cpl * lpp) : '—') : String(p.erp.cpp || '—');
+            if (ppc && w) {
+                const net = ppc * w / 1000;
+                tr.querySelector('[data-net]').innerHTML = num(net, 2) + ' kg' + (c.max_load_kg !== null && net > c.max_load_kg ? '<small>> maks. ładunek</small>' : '');
+                tr.querySelector('[data-gross]').textContent = num(net + (c.tare_g || 0) / 1000, 2) + ' kg';
+            }
+            const changed = ppc !== p.ppc || w !== p.weight_g || cpl !== (p.erp.cpl || null) || lpp !== (p.erp.lpp || null);
+            tr.querySelector('[data-psave]').disabled = !changed;
+            tr.classList.toggle('ct-dirty', changed);
+        };
+        const bodyOf = (tr) => {
+            const p = c.products.find(x => x.id === Number(tr.dataset.prow));
+            const ppc = intOf(tr.querySelector('[name=ppc]')), w = intOf(tr.querySelector('[name=weight]'));
+            const cpl = intOf(tr.querySelector('[name=cpl]')), lpp = intOf(tr.querySelector('[name=lpp]'));
+            const body = {};
+            if (ppc !== p.ppc) body.ppc = ppc;
+            if (w !== p.weight_g) body.weight = w;
+            if (cpl !== (p.erp.cpl || null) || lpp !== (p.erp.lpp || null)) { body.cpl = cpl ?? 0; body.lpp = lpp ?? 0; body.cpp = (cpl || 0) * (lpp || 0); }
+            return body;
+        };
+        const save = async (p, body) => (await api()).put(`/produits/items/${p.item_id}/logistics`, body);
+        m.box.querySelectorAll('[data-prow]').forEach(tr => tr.querySelectorAll('.ct-in').forEach(i => i.addEventListener('input', () => refreshRow(tr))));
+        m.box.querySelectorAll('[data-fit]').forEach(b => b.addEventListener('click', () => {
+            const p = c.products.find(x => x.id === Number(b.dataset.fit));
+            const tr = prow(p.id);
+            tr.querySelector('[name=cpl]').value = p.best.per_layer;
+            tr.querySelector('[name=lpp]').value = p.best.layers;
+            refreshRow(tr);
+        }));
+        m.box.querySelectorAll('[data-psave]').forEach(b => b.addEventListener('click', async () => {
+            const tr = prow(Number(b.dataset.psave));
+            const p = c.products.find(x => x.id === Number(b.dataset.psave));
+            b.disabled = true;
+            try {
+                await save(p, bodyOf(tr));
+                at.notify(true, `Zapisano : ${p.name}`);
+                await reopen();
+            } catch (err) { at.notify(false, `${p.name} : ${apiErr(err)}`); b.disabled = false; }
+        }));
+        m.box.querySelector('[data-fit-all]')?.addEventListener('click', async (e) => {
+            if (!window.confirm(`Ustawić układ palety, który się mieści (wysokość i waga palety), dla ${badFix.length} produktów ? Kartony na warstwę × warstwy = kartony na paletę w karcie produktu.`)) return;
+            e.currentTarget.disabled = true;
+            let ok = 0;
+            const errs = [];
+            for (const p of badFix) {
+                try { await save(p, { cpl: p.best.per_layer, lpp: p.best.layers, cpp: p.best.cartons }); ok++; } catch (err) { errs.push(`${p.name} : ${apiErr(err)}`); }
+            }
+            at.notify(!errs.length, `Układ palety zapisany : ${ok} produktów.` + (errs.length ? ' Błędy : ' + errs.join(' · ') : ''));
+            await reopen();
         });
         showPlan();
     }

@@ -14,7 +14,7 @@ final class CartonRepository extends WorkshopRepository
     protected string $table = 'n_carton';
 
     private const SELECT = "SELECT c.id_raw_material AS id, rm.name, rm.id_category, cm.name AS category, rm.price_per_unit, rm.packaging_unit_weight_g AS tare_g,
-            c.length_mm, c.width_mm, c.height_mm, c.max_load_kg, c.kind, c.note, c.active, c.updated_at
+            c.length_mm, c.width_mm, c.height_mm, c.max_load_kg, c.pallet_max_height_mm, c.pallet_max_kg, c.kind, c.note, c.active, c.updated_at
         FROM n_carton c
         JOIN raw_material rm ON rm.id = c.id_raw_material
         LEFT JOIN category_material cm ON cm.id = rm.id_category";

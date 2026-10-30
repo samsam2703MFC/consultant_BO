@@ -25,12 +25,13 @@ final class CartonService
     ) {}
 
     /** Ograniczenia palety : parametry, nadpisane przez kartę produktu (puste = parametr). */
-    public function limits(array $product = []): array
+    /** Ograniczenia palety : produkt (krok Paleta) → rodzaj kartonu [211] → parametry logistyki. */
+    public function limits(array $product = [], array $carton = []): array
     {
         $p = fn(string $code, int $default, int $min, int $max) => max($min, min($max, (int) $this->params->get($code, (string) $default)));
         return [
-            'max_height_mm' => (int) ($product['pallet_max_height_mm'] ?? 0) ?: $p('logistics.pallet_max_height_mm', 1800, 300, 3000),
-            'max_kg' => (int) ($product['pallet_max_kg'] ?? 0) ?: $p('logistics.pallet_max_kg', 1000, 50, 3000),
+            'max_height_mm' => (int) ($product['pallet_max_height_mm'] ?? 0) ?: ((int) ($carton['pallet_max_height_mm'] ?? 0) ?: $p('logistics.pallet_max_height_mm', 1800, 300, 3000)),
+            'max_kg' => (int) ($product['pallet_max_kg'] ?? 0) ?: ((int) ($carton['pallet_max_kg'] ?? 0) ?: $p('logistics.pallet_max_kg', 1000, 50, 3000)),
             'overhang_mm' => isset($product['pallet_overhang_mm']) && $product['pallet_overhang_mm'] !== null ? (int) $product['pallet_overhang_mm'] : $p('logistics.pallet_overhang_mm', 0, 0, 100),
             'truck_height_mm' => $p('logistics.truck_inner_height_mm', 2550, 1000, 3500),
         ];
@@ -45,7 +46,7 @@ final class CartonService
             if ($p['carton_id'] === null) { $without++; continue; }
             $byCarton[(int) $p['carton_id']][] = $p;
         }
-        $cartons = array_map(fn($c) => $this->present($c, $byCarton[(int) $c['id']] ?? [], $limits, false), $this->repo->cartons());
+        $cartons = array_map(fn($c) => $this->present($c, $byCarton[(int) $c['id']] ?? [], $this->limits([], $c), false), $this->repo->cartons());
         return [
             'cartons' => $cartons,
             'limits' => $limits,
@@ -60,7 +61,7 @@ final class CartonService
     {
         $c = $this->repo->carton($id) ?? throw new CustomException('Nie znaleziono kartonu.', 'errors', 404);
         $products = array_values(array_filter($this->repo->products(), fn($p) => $p['carton_id'] === $id));
-        return $this->present($c, $products, $this->limits(), true);
+        return $this->present($c, $products, $this->limits([], $c), true) + ['defaults' => $this->limits()];
     }
 
     public function candidates(): array
@@ -97,6 +98,14 @@ final class CartonService
             if ($v !== null && ($v < 0.1 || $v > 100)) $errors['max_load_kg'] = 'Od 0,1 do 100 kg.';
             else $data['max_load_kg'] = $v === null ? null : round($v, 2);
         }
+        // Maks. wysokość i waga palety z tym kartonem [211] ; puste = parametry logistyki.
+        foreach (['pallet_max_height_mm' => [300, 3000, 'Od 300 do 3000 mm (z paletą).'], 'pallet_max_kg' => [50, 3000, 'Od 50 do 3000 kg (z paletą).']] as $f => [$min, $max, $msg]) {
+            if (!array_key_exists($f, $input)) continue;
+            $v = self::number($input[$f]);
+            if ($v === null) { $data[$f] = null; continue; }
+            if ($v != (int) $v || $v < $min || $v > $max) { $errors[$f] = $msg; continue; }
+            $data[$f] = (int) $v;
+        }
         if (array_key_exists('kind', $input)) {
             $k = $input['kind'] === null || $input['kind'] === '' ? null : (string) $input['kind'];
             if ($k !== null && !in_array($k, self::KINDS, true)) $errors['kind'] = 'Wybierz rodzaj z listy.';
@@ -115,7 +124,8 @@ final class CartonService
             if ($tare !== null && ($tare < 1 || $tare > 10000)) $errors['tare_g'] = 'Od 1 do 10 000 g.';
         }
         if ($errors) {
-            $labels = ['length_mm' => 'Długość', 'width_mm' => 'Szerokość', 'height_mm' => 'Wysokość', 'max_load_kg' => 'Maks. ładunek', 'kind' => 'Rodzaj', 'note' => 'Notatka', 'tare_g' => 'Waga kartonu'];
+            $labels = ['length_mm' => 'Długość', 'width_mm' => 'Szerokość', 'height_mm' => 'Wysokość', 'max_load_kg' => 'Maks. ładunek', 'kind' => 'Rodzaj', 'note' => 'Notatka', 'tare_g' => 'Waga kartonu',
+                'pallet_max_height_mm' => 'Maks. wysokość palety', 'pallet_max_kg' => 'Maks. waga palety'];
             throw new CustomException(implode(' ', array_map(fn($f, $m) => ($labels[$f] ?? $f) . ' : ' . $m, array_keys($errors), $errors)), 'errors', 422, ['fields' => $errors]);
         }
         $this->repo->save($id, $data, $tare, $tareGiven, $userId);
@@ -161,8 +171,9 @@ final class CartonService
             'cartons' => $cartons,
             'carton_id' => $product['carton_id'],
             'carton_source' => $product['carton_source'],
-            'limits' => $this->limits($product),
-            'defaults' => $this->limits(),
+            // Domyślne = karton produktu (maks. wysokość / waga palety rodzaju kartonu [211]) albo parametry.
+            'limits' => $this->limits($product, $cartonRow = ($product['carton_id'] !== null ? ($this->repo->carton((int) $product['carton_id']) ?? []) : [])),
+            'defaults' => $this->limits([], $cartonRow),
             'weeks' => $weeks,
             'weekly_cartons' => round($this->items->shippedCartons($finalProductId, $weeks * 7) / $weeks, 1),
             'places' => max(1, (int) $this->params->get('logistics.default_pallet_places', '33')),
@@ -190,7 +201,7 @@ final class CartonService
             $gross = $net !== null ? round($net + ($carton['tare_g'] ?? 0) / 1000, 3) : null;
             $over = $maxLoad !== null && $net !== null && $net > $maxLoad;
             $pallet = isset(PalletLayout::PALLETS[$p['pallet_type'] ?? '']) ? $p['pallet_type'] : 'eur';
-            $plan = PalletLayout::plan($carton, $pallet, $this->limits($p), $net);
+            $plan = PalletLayout::plan($carton, $pallet, $this->limits($p, $c), $net);
             $check = $plan ? PalletLayout::check($plan, (int) $p['cpl'], (int) $p['lpp'], (int) $p['cpp']) : [];
             $check = array_values(array_filter($check, fn($x) => $x['code'] !== 'ERP_EMPTY'));
             if ($over || $check) $issues++;
@@ -198,7 +209,12 @@ final class CartonService
             $rows[] = ['id' => (int) $p['id'], 'item_id' => $p['item_id'] !== null ? (int) $p['item_id'] : null, 'name' => $p['name'], 'ppc' => $ppc ?: null,
                 'weight_g' => (float) $p['weight'] ?: null, 'net_kg' => $net, 'gross_kg' => $gross, 'over_load' => $over, 'source' => $p['carton_source'],
                 'erp' => ['cpl' => (int) $p['cpl'], 'lpp' => (int) $p['lpp'], 'cpp' => (int) $p['cpp']], 'pallet' => $pallet,
-                'best' => $plan ? ['per_layer' => $plan['per_layer'], 'layers' => $plan['max']['layers'], 'cartons' => $plan['max']['cartons']] : null,
+                // Najlepszy układ dla wagi produktu : warstwy ograniczone wysokością i wagą palety [211].
+                'best' => $plan ? ['per_layer' => $plan['per_layer'], 'layers' => $plan['max']['layers'], 'cartons' => $plan['max']['cartons'],
+                    'height_mm' => $plan['max']['height_mm'], 'gross_kg' => $plan['max']['gross_kg'],
+                    'by_weight' => $plan['layers_by_weight'] !== null && $plan['layers_by_weight'] < $plan['layers_by_height']] : null,
+                'limits' => ['max_height_mm' => $this->limits($p, $c)['max_height_mm'], 'max_kg' => $this->limits($p, $c)['max_kg'],
+                    'own' => (int) ($p['pallet_max_height_mm'] ?? 0) > 0 || (int) ($p['pallet_max_kg'] ?? 0) > 0],
                 'issues' => $check];
         }
         return [
@@ -207,6 +223,7 @@ final class CartonService
             'tare_g' => $carton['tare_g'], 'length_mm' => $carton['length_mm'], 'width_mm' => $carton['width_mm'], 'height_mm' => $carton['height_mm'],
             'volume_l' => $carton['length_mm'] && $carton['width_mm'] && $carton['height_mm'] ? round($carton['length_mm'] * $carton['width_mm'] * $carton['height_mm'] / 1e6, 1) : null,
             'max_load_kg' => $maxLoad, 'note' => $c['note'], 'active' => (bool) $c['active'],
+            'pallet_max_height_mm' => self::int($c['pallet_max_height_mm'] ?? null), 'pallet_max_kg' => self::int($c['pallet_max_kg'] ?? null), 'limits' => $limits,
             'plans' => $plans, 'products' => $rows, 'product_count' => count($rows), 'issue_count' => $issues, 'heaviest_kg' => $heaviest,
         ];
     }
