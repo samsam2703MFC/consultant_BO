@@ -319,6 +319,19 @@ final class MailEventSource
         return $out;
     }
 
+    /** Empreinte du tarif d'un client (même calcul que priceHashes) : l'assistant prix [218] la note après un changement annoncé par e-mail. */
+    public function priceHash(int $customerId): ?string
+    {
+        $stmt = $this->db->prepare('SELECT p.id_final_product, p.price FROM final_product_customer_price p
+                                    JOIN final_product fp ON fp.id = p.id_final_product AND fp.active = 1
+                                    JOIN customer c ON c.id = p.id_customer AND c.active = 1
+                                    WHERE p.id_customer = ? AND p.available = 1 AND p.price >= 10
+                                    ORDER BY p.id_final_product');
+        $stmt->execute([$customerId]);
+        $parts = array_map(fn($r) => $r[0] . ':' . $r[1], $stmt->fetchAll(PDO::FETCH_NUM));
+        return $parts ? md5(implode(';', $parts)) : null;
+    }
+
     /** @return array<int, string> empreinte du tarif (produits actifs et prix imprimés sur le cennik) par client actif */
     private function priceHashes(): array
     {

@@ -2713,3 +2713,90 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
 .kw-badge.svc { background: rgba(110,72,150,.12); color: #5b3a85; } .kw-btn.kw-svc { border-color: rgba(110,72,150,.45); color: #5b3a85; }
 .kw-end { justify-content: flex-end; align-items: center; } .kw-inv-act { float: right; } .kw-inv-act .kw-btn { min-height: 34px; padding: 0 10px; font-size: 12.5px; }
 .kw-t td.r { white-space: nowrap; }
+
+/* Kreator cen [218] (Finanse › Marże i koszty) : kroki .kw-* z kreatora faktur + kategorie z regułą, ceny, publikacja od daty. */
+.pw-planned { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: -4px; }
+.pw-arrow { color: var(--at-muted); padding: 0 4px; } .pw-grow { flex: 1; }
+.pw-rule3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 12px; }
+.pw-rule3 > div { border: 1px solid var(--at-line); border-radius: 10px; padding: 10px 12px; font-size: 12.5px; color: var(--at-muted); }
+.pw-rule3 b { display: block; color: var(--at-text); font-size: 13.5px; margin-bottom: 2px; }
+.pw-q { width: 220px; min-height: 44px; border-radius: 10px; }
+.pw-t td.r, .pw-t th.r { text-align: right; white-space: nowrap; }
+.pw-t tr.pw-cat td { background: #faf8f4; } .pw-t tr.pw-cat.open td { background: rgba(142,31,47,.05); } .pw-t tr.pw-cat.open td:first-child { box-shadow: inset 4px 0 0 #8e1f2f; }
+.pw-t tr.pw-sub td { font-size: 12.5px; } .pw-t tr.pw-sub td:first-child { box-shadow: inset 4px 0 0 #8e1f2f; padding-left: 22px; }
+.kw-t tr.pw-off td { color: #8a8a8a; } .kw-t tr.pw-off td .kw-up { color: #8a8a8a; }
+.pw-tog { border: 0; background: none; padding: 0; min-height: 36px; text-align: left; color: var(--at-text); }
+.pw-t .kw-in { width: 86px; min-height: 40px; } .pw-t .pw-rule { width: 72px; }
+.kw-in.pw-edit { border-color: #8e1f2f; color: #8e1f2f; } .kw-in.pw-bad { border-color: #9a1730; background: rgba(154,23,48,.06); color: #9a1730; }
+.pw-pub { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 14px; align-items: start; }
+.pw-date { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 4px; }
+.pw-dateinput { width: 190px; min-height: 48px; font-size: 18px; font-weight: 700; border-radius: 10px; }
+.pw-time { list-style: none; margin: 10px 0 0; padding: 0; }
+.pw-time li { display: grid; grid-template-columns: 112px 18px minmax(0, 1fr); gap: 8px; align-items: start; padding: 8px 0; font-size: 13px; }
+.pw-time li b { font-variant-numeric: tabular-nums; } .pw-time li i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #8e1f2f; margin-top: 3px; background: #fff; }
+.pw-time li.done i { background: #1f5a37; border-color: #1f5a37; } .pw-time li span small { display: block; color: var(--at-muted); font-size: 12px; }
+.pw-sum { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 13px; margin-top: 12px; } .pw-sum b { text-align: right; font-variant-numeric: tabular-nums; }
+.pw-detail { text-align: left; font-size: 13px; max-height: 60vh; overflow: auto; }
+.pw-params { display: grid; gap: 10px; text-align: left; } .pw-params label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+@media (max-width: 1199.98px) { .pw-pub, .pw-rule3 { grid-template-columns: minmax(0, 1fr); } .pw-q { width: 100%; } }
+
+/* [219] Dzisiaj « Mój tydzień » : zadania stałe stanowiska dzień po dniu (kolor kategorii, minuty, link, zrobione). */
+.wk-card { margin-bottom: 14px; }
+.wk-card h5 .wk-all { margin-left: auto; font-size: 13px; font-weight: 600; } .wk-card h5 .wk-all + .wk-all { margin-left: 12px; }
+.wk { display: grid; grid-template-columns: repeat(var(--wk-days, 5), minmax(0, 1fr)); gap: 10px; }
+.wk-day { background: var(--at-bg-2); border-radius: 12px; padding: 10px; min-width: 0; }
+.wk-day.today { background: rgba(142,31,47,.06); box-shadow: inset 0 0 0 2px #8e1f2f; }
+.wk-day h6 { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin: 0 0 8px; font-size: 13px; font-weight: 700; }
+.wk-day h6 small { color: var(--at-muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+.wk-bar { height: 6px; border-radius: 4px; background: #fff; overflow: hidden; margin: -2px 0 10px; } .wk-bar i { display: block; height: 100%; background: #2e7d4f; transition: width .2s; }
+.wk-free { font-size: 12px; color: var(--at-muted); margin: 4px 2px; }
+.wk-t { background: #fff; border-radius: 10px; padding: 10px; margin-bottom: 8px; border-left: 4px solid var(--c, #8e1f2f); display: grid; gap: 6px; min-width: 0; }
+.wk-t b { font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; } .wk-t .row1 { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+.wk-t .min { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--at-muted); white-space: nowrap; }
+.wk-cat { font-size: 11px; color: var(--at-muted); display: block; }
+.wk-auto { font-size: 11.5px; color: var(--at-muted); } .wk-auto .bi { color: #5b3a85; }
+.wk-t .acts { display: flex; gap: 6px; align-items: center; }
+.wk-t .go { flex: 1; min-width: 0; display: inline-flex; justify-content: center; align-items: center; gap: 4px; min-height: 44px; padding: 0 8px; border-radius: 8px; background: #8e1f2f; color: #fff; font-weight: 600; font-size: 12.5px; text-align: center; }
+.wk-t .go:hover { background: #761a27; color: #fff; } .wk-t .go.muted { background: var(--at-bg-2); color: var(--at-muted); font-weight: 400; }
+.chk { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--at-line-2); display: inline-grid; place-items: center; background: #fff; color: transparent; font-size: 18px; padding: 0; }
+.chk:hover { color: #b9b2a8; } .chk[aria-pressed=true] { background: rgba(46,125,79,.15); border-color: transparent; color: #1f5a37; }
+.chk.off { color: #b9b2a8; font-size: 15px; background: var(--at-bg-2); border-color: transparent; } .chk.form { color: #8e1f2f; font-size: 16px; }
+.wk-t.done { opacity: .6; } .wk-t.done b { text-decoration: line-through; } .wk-t.done .go { background: var(--at-bg-2); color: var(--at-muted); }
+.wk-t.late { box-shadow: inset 0 0 0 1px rgba(154,23,48,.35); } .wk-t.late .wk-cat { color: #9a1730; font-weight: 600; }
+.wk-t.later:not(.done) { background: rgba(255,255,255,.7); }
+.wk-daily { background: var(--at-bg-2); border-radius: 12px; padding: 8px; margin-bottom: 10px; }
+.wk-daily .wk-t { margin: 0; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.wk-daily .wk-t .go { flex: 0 0 auto; padding: 0 14px; }
+.wk-dots { display: flex; gap: 4px; } .wk-dots i { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-size: 11px; font-style: normal; font-weight: 700; background: var(--at-bg-2); color: var(--at-muted); }
+.wk-dots i.ok { background: rgba(46,125,79,.18); color: #1f5a37; } .wk-dots i.now { box-shadow: inset 0 0 0 2px #8e1f2f; color: #8e1f2f; } .wk-dots i.now.ok { color: #1f5a37; }
+.wk-side { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 14px; align-items: start; margin-bottom: 14px; }
+.wk-side .kw-card h5 { margin-bottom: 10px; } .wk-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; } .wk-list .wk-t { margin: 0; }
+.wk-month ul { list-style: none; margin: 0; padding: 0; } .wk-month li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--at-line); font-size: 13px; }
+.wk-month li small { display: block; color: var(--at-muted); font-size: 11.5px; } .wk-month li.done > span:first-child { color: var(--at-muted); text-decoration: line-through; }
+.wk-month-r { display: flex; align-items: center; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kw-tiles .late b { color: #9a1730; }
+@media (max-width: 1199.98px) { .wk { grid-template-columns: repeat(3, minmax(0, 1fr)); } .wk-side { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 767.98px) {
+    .wk { grid-template-columns: minmax(0, 1fr); } .wk-card .kw-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .wk-daily .wk-t { grid-template-columns: minmax(0, 1fr); } .wk-daily .acts { flex-wrap: wrap; } .wk-card h5 .wk-all { margin-left: 0; }
+}
+
+/* [219] Plan tygodnia stanowiska (administrator) : dni, minuty, link, czas rzeczywisty, obciążenie dni. */
+.ad-days { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
+.ad-days button { min-width: 38px; min-height: 40px; border-radius: 8px; border: 1px solid var(--at-line-2); background: #fff; color: var(--at-muted); font-size: 12px; font-weight: 700; padding: 0 6px; }
+.ad-days button.on { background: #8e1f2f; color: #fff; border-color: transparent; } .ad-days .sep { width: 8px; flex: 0 0 8px; }
+.ad-days button.per { font-weight: 600; } .ad-days button.per.on { background: #2b5f9e; }
+.ad-title { display: block; border: 1px solid transparent; border-radius: 8px; padding: 5px 8px; font-weight: 700; line-height: 1.3; width: 100%; min-width: 280px; background: transparent; resize: none; field-sizing: content; min-height: 40px; }
+.ad-title:hover { border-color: var(--at-line-2); } .ad-title:focus { border-color: #8e1f2f; background: #fff; outline: none; }
+.ad-sel { min-height: 40px; border: 1px solid var(--at-line-2); border-radius: 8px; padding: 0 8px; font-size: 12.5px; font-weight: 600; background: #fff; min-width: 210px; max-width: 280px; width: 100%; }
+.ad-sel.cat { min-width: 130px; } .ad-link-custom { margin-top: 4px; }
+.ad-min { width: 76px; }
+.ad-auto { font-size: 11.5px; color: #5b3a85; display: block; margin-top: 3px; }
+.ad-real { font-size: 12.5px; white-space: nowrap; } .ad-real.over { color: #8e1f2f; font-weight: 700; } .ad-real.ok { color: #1f5a37; font-weight: 700; }
+.ad-real small { display: block; color: var(--at-muted); font-weight: 400; font-size: 11px; }
+.kw-t tr.ad-off td { opacity: .45; } .kw-t tr.ad-new td { background: rgba(43,95,158,.05); }
+.ad-load { display: grid; grid-template-columns: repeat(var(--ad-days, 5), minmax(0, 1fr)) minmax(0, 1.4fr); gap: 8px; margin-top: 12px; }
+.ad-load > div { background: var(--at-bg-2); border-radius: 10px; padding: 8px 10px; font-size: 12px; } .ad-load b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
+.ad-load .bar { height: 6px; border-radius: 4px; background: #fff; margin-top: 6px; overflow: hidden; } .ad-load .bar i { display: block; height: 100%; background: #8e1f2f; }
+.ad-load .over b { color: #8e1f2f; }
+@media (max-width: 991.98px) { .ad-load { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

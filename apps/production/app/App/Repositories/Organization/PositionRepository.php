@@ -10,7 +10,7 @@ final class PositionRepository extends WorkshopRepository
     protected array $writable = ['code', 'name_pl', 'name_fr', 'description', 'kind', 'id_group', 'id_reports_to', 'sort_order', 'active'];
     /** Pola karty stanowiska (n_position_sheet), każde w wersji _pl i _fr. */
     public const SHEET_FIELDS = ['mission', 'responsibilities', 'skills', 'requirements', 'conditions', 'indicators', 'safety', 'relations'];
-    private const TASK_COLUMNS = ['id_position', 'id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'link_path', 'form_code', 'sort_order', 'active'];
+    private const TASK_COLUMNS = ['id_position', 'id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'minutes', 'weekdays', 'link_path', 'form_code', 'auto_code', 'sort_order', 'active'];
 
     public function positions(): array
     {
@@ -174,6 +174,83 @@ final class PositionRepository extends WorkshopRepository
              ORDER BY o.due_date, o.id",
             [...$taskIds, ...$keys, $today]
         );
+    }
+
+    /**
+     * Occurrences du tableau de la semaine : échéance dans la semaine [from, to], périodes en cours (mois, trimestre)
+     * et toutes celles restées ouvertes avant la semaine.
+     */
+    public function weekOccurrences(array $taskIds, array $currentKeys, string $from, string $to): array
+    {
+        if (!$taskIds) return [];
+        $in = implode(', ', array_fill(0, count($taskIds), '?'));
+        $keys = $currentKeys ?: [''];
+        $inKeys = implode(', ', array_fill(0, count($keys), '?'));
+        return $this->all(
+            "SELECT o.*, u.displayed_name AS done_by_name, f.id AS form_id, f.status AS form_status
+             FROM n_task_occurrence o LEFT JOIN user u ON u.id = o.done_by LEFT JOIN n_task_form f ON f.id_occurrence = o.id
+             WHERE o.id_task IN ({$in}) AND (o.due_date BETWEEN ? AND ? OR o.period_key IN ({$inKeys}) OR (o.status = 'open' AND o.due_date < ?))
+             ORDER BY o.due_date, o.id",
+            [...$taskIds, $from, $to, ...$keys, $from]
+        );
+    }
+
+    /** Zadanie zaliczone samo (kreator zakończony) : bez osoby, z notatką. */
+    public function autoDone(int $occurrenceId, string $note): void
+    {
+        $this->db->prepare("UPDATE n_task_occurrence SET status = 'done', done_by = NULL, done_at = ?, note = ? WHERE id = ? AND status = 'open'")
+            ->execute([date('Y-m-d H:i:s'), $note, $occurrenceId]);
+    }
+
+    /**
+     * Warunek zaliczenia automatycznego w okresie [from, to) : pozycje faktur sprawdzone (coś sprawdzono w okresie
+     * i nic nie czeka), koszty przeliczone, nowe ceny zaplanowane, zapytania ofertowe wysłane.
+     */
+    public function autoCondition(string $code, string $from, string $to): bool
+    {
+        $sql = match ($code) {
+            'inv_checked' => "SELECT EXISTS (SELECT 1 FROM n_inv_line WHERE checked_at >= ? AND checked_at < ?)
+                AND NOT EXISTS (SELECT 1 FROM n_inv_line l JOIN n_inv i ON i.id = l.id_inv WHERE i.kind = 'goods' AND i.status = 'open' AND l.check_status IS NULL) AS ok",
+            'costs_recalc' => 'SELECT EXISTS (SELECT 1 FROM n_margin_recalc_run WHERE run_at >= ? AND run_at < ?) AS ok',
+            'prices_planned' => "SELECT EXISTS (SELECT 1 FROM n_price_publication WHERE created_at >= ? AND created_at < ? AND status <> 'cancelled') AS ok",
+            'buy_sent' => 'SELECT EXISTS (SELECT 1 FROM n_buy_round WHERE sent_at >= ? AND sent_at < ?) AS ok',
+            default => null,
+        };
+        return $sql !== null && (bool) ($this->all($sql, [$from, $to])[0]['ok'] ?? false);
+    }
+
+    /** Czas aktywny (s) według ścieżki strony dla użytkowników od dnia (rejestrator aktywności). @return array<string, int> */
+    public function activeSecondsByPath(array $userIds, string $since): array
+    {
+        if (!$userIds) return [];
+        $in = implode(', ', array_fill(0, count($userIds), '?'));
+        $out = [];
+        foreach ($this->all("SELECT path, SUM(active_s) AS s FROM n_activity_view WHERE id_user IN ({$in}) AND started_at >= ? GROUP BY path", [...$userIds, $since]) as $r) {
+            $out[$r['path']] = (int) $r['s'];
+        }
+        return $out;
+    }
+
+    /** Otwarte wystąpienia zadania od dnia (bez rozpoczętego protokołu) — po zmianie dni w planie powstaną od nowa. */
+    public function dropOpenOccurrences(int $taskId, string $fromDay): void
+    {
+        $this->db->prepare("DELETE o FROM n_task_occurrence o LEFT JOIN n_task_form f ON f.id_occurrence = o.id
+                            WHERE o.id_task = ? AND o.status = 'open' AND o.due_date >= ? AND f.id IS NULL")->execute([$taskId, $fromDay]);
+    }
+
+    public function beginTransaction(): void
+    {
+        $this->db->beginTransaction();
+    }
+
+    public function commit(): void
+    {
+        $this->db->commit();
+    }
+
+    public function rollBack(): void
+    {
+        if ($this->db->inTransaction()) $this->db->rollBack();
     }
 
     /** Formularz okresu zakończony (zadanie z protokołem). */

@@ -11,13 +11,15 @@ declare(strict_types=1);
  * les réglages vivent en mémoire. On vérifie le coefficient du lot (le cas le plus serré, la pièce
  * offerte la moins chère), les règles du magasin (une fin, un an, deux à la fois) et le parcours
  * d'une promotion, toute au panel (18/10/2026, plus de copie au cockpit) : brouillon inactif,
- * enregistrement (créée inactive, relue, activée), modification, suppression, la liste relue.
+ * enregistrement (créée inactive, relue, activée), modification, suppression, la liste relue ; une promotion pour
+ * tous les magasins (30/10/2026) : une seule au panel, ALL_SHOPS.
  */
 
 // --- doublures : pas de base, pas de réseau ------------------------------------------------
 final class Db
 {
-    public static function rows(string $sql, array $a = []): array { return []; }
+    /** Les magasins ouverts (une promotion pour tous les magasins, 30/10/2026) : vides tant qu'un test ne les pose pas. */
+    public static function rows(string $sql, array $a = []): array { return str_contains($sql, 'FROM shops') ? ($GLOBALS['ouverts'] ?? []) : []; }
     public static function row(string $sql, array $a = []): ?array { return null; }
     public static function exec(string $sql, array $a = []): void
     {
@@ -330,6 +332,31 @@ $GLOBALS['corps'] = ['shop' => 4, 'shops' => [4, 5], 'action' => 'envoyer', 'nom
     'x' => ['q' => 3, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 30, 'prods' => [['id' => 2]]]];
 $r = wr_promos_magasin();
 verifie('un autre magasin demandé : ignoré, la promotion ne vaut que pour Halle (×2,31, ses prix)', (ErpApi::$promos[$r['demande']['panelId'] ?? 0]['shop_ids'] ?? null) === [4] && $r['coef']['lot'] === 2.31 && $r['coef']['magasin'] === 4, json_encode($r, JSON_UNESCAPED_UNICODE));
+
+echo "Tous les magasins : une promotion réseau (30/10/2026)\n";
+$GLOBALS['ouverts'] = [['id' => 4], ['id' => 5]];
+$reseau = static fn (array $plus = []) => $plus + ['shop' => 4, 'tous' => true, 'action' => 'envoyer', 'nom' => 'Pains au chocolat, tout le réseau', 'du' => $j(80), 'au' => $j(82),
+    'x' => ['q' => 3, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 30, 'prods' => [['id' => 2]]]];
+$GLOBALS['corps'] = $reseau();
+$r = wr_promos_magasin();
+$PR = ErpApi::$promos[$r['demande']['panelId'] ?? 0] ?? [];
+verifie('une seule promotion au panel, pour tout le réseau (ALL_SHOPS), en caisse', ($PR['shop_scope_type'] ?? '') === 'ALL_SHOPS' && $PR['shop_ids'] === [] && ($PR['status'] ?? '') === 'ACTIVE'
+    && ($r['demande']['statut'] ?? '') === 'en_caisse' && $r['demande']['tous'] === true && $r['panelErreur'] === null, json_encode([$r, $PR], JSON_UNESCAPED_UNICODE));
+verifie('le coefficient vérifié dans chaque magasin ouvert : le plus serré, à Fleurus (pain au chocolat moins cher)', $r['coef']['magasin'] === 5 && $r['coef']['lot'] < 2.31, json_encode($r['coef']));
+$_GET = ['shop' => '4']; $l = ep_promos_magasin_demandes(); $_GET = [];
+$vu = array_values(array_filter($l['panel'], static fn ($x) => (int) $x['id'] === (int) $PR['id']));
+verifie('au magasin : avec celles de la marque (« réseau »), pas parmi les siennes', !in_array('p' . $PR['id'], array_column($l['demandes'], 'id'), true) && ($vu[0]['reseau'] ?? false) === true, json_encode($vu));
+$n = count(ErpApi::$promos);
+$GLOBALS['corps'] = $reseau(['action' => 'brouillon']);
+$r = @wr_promos_magasin();
+verifie('pas de brouillon réseau (le cockpit ne saurait pas le reprendre) : 422, rien au panel', ($r['error'] ?? '') === 'à compléter' && str_contains($r['erreurs'][0], 'en caisse directement') && count(ErpApi::$promos) === $n, json_encode($r, JSON_UNESCAPED_UNICODE));
+$GLOBALS['corps'] = $reseau(['id' => 'p30']);
+$r = @wr_promos_magasin();
+verifie('une promotion du magasin ne passe pas au réseau : 422, elle reste à son magasin', ($r['error'] ?? '') === 'à compléter' && str_contains($r['erreurs'][0], 'reste à son magasin') && ErpApi::$promos[30]['shop_ids'] === [4], json_encode($r, JSON_UNESCAPED_UNICODE));
+// Un panel qui garderait la promotion à un seul magasin : l'écart se dit, elle reste inactive.
+$ecarts = pmPanelEcarts(pmPanelCorps(pmPropre($reseau(), 4), 'INACTIVE'), ['shop_scope_type' => 'SELECTED_SHOPS', 'shop_ids' => [4]] + pmPanelCorps(pmPropre($reseau(), 4), 'INACTIVE'));
+verifie('relue à un seul magasin : l’écart « tous les magasins » dit', in_array('tous les magasins', $ecarts, true), json_encode($ecarts, JSON_UNESCAPED_UNICODE));
+$GLOBALS['ouverts'] = [];
 
 echo "La liste du panel, page après page (18/10/2026)\n";
 verifie('le numéro du navigateur relu (p21, 21), un autre écarté', pmNumero('p21') === 21 && pmNumero('21') === 21 && pmNumero(21) === 21 && pmNumero('pm1a2b3c') === null && pmNumero('') === null && pmNumero('p0') === null);

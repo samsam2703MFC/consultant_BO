@@ -10,7 +10,8 @@ declare(strict_types=1);
  * qui n'en ont pas encore (versions « en vigueur depuis »), alimente la file des écarts d'expédition, rafraîchit les
  * statuts KSeF en attente (si un token KSeF est configuré : l'e-mail « après acceptation KSeF » part sans ouvrir
  * Wysyłki), renvoie les domówienia remises en file (Stan wysyłek, « Ponów »), passe la file des avis « wysłane » aux
- * boutiques des franchisés (Wyślij dzień, webhook_outbox_shipments), puis passe la file d'envoi.
+ * boutiques des franchisés (Wyślij dzień, webhook_outbox_shipments), applique les publications de prix datées (assistant prix :
+ * e-mail « nouveaux prix à partir du », prix du jour J, tarif vers le site franchise), puis passe la file d'envoi.
  *   php Bin/mail_dispatch.php        à lancer par cron toutes les 5 minutes
  * L'envoi réel dépend de MAIL_DELIVERY_MODE (.env) : live, redirect ou log_only.
  */
@@ -84,8 +85,15 @@ try {
         fwrite(STDERR, 'mail_dispatch shop notices: ' . $e->getMessage() . PHP_EOL);
         $shopNotices = ['error' => $e->getMessage()];
     }
+    // Kreator cen [218] : e-maile « nowe ceny od » (X dni przed), nowe ceny w dniu zmiany, cennik na stronę franczyzy (à part aussi).
+    try {
+        $prices = $container->get(App\Services\Finances\PricePublicationService::class)->run();
+    } catch (Throwable $e) {
+        fwrite(STDERR, 'mail_dispatch price publications: ' . $e->getMessage() . PHP_EOL);
+        $prices = ['error' => $e->getMessage()];
+    }
     $delivery = $container->get(App\Services\Communication\CommunicationEmailDeliveryWorker::class)->processDue(50);
-    echo json_encode(['dispatch' => $dispatch, 'reminders' => $reminders, 'monthly_report' => $report, 'alerts' => $alerts, 'recipe_versions' => $recipeVersions, 'shipping_issues' => $shippingIssues, 'ksef' => $ksef, 'supplements' => $supplements, 'shop_notices' => $shopNotices, 'delivery' => $delivery], JSON_UNESCAPED_UNICODE) . PHP_EOL;
+    echo json_encode(['dispatch' => $dispatch, 'reminders' => $reminders, 'monthly_report' => $report, 'alerts' => $alerts, 'recipe_versions' => $recipeVersions, 'shipping_issues' => $shippingIssues, 'ksef' => $ksef, 'supplements' => $supplements, 'shop_notices' => $shopNotices, 'price_publications' => $prices, 'delivery' => $delivery], JSON_UNESCAPED_UNICODE) . PHP_EOL;
 } catch (Throwable $e) {
     fwrite(STDERR, 'mail_dispatch: ' . $e->getMessage() . PHP_EOL);
     exit(1);

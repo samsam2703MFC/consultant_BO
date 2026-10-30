@@ -7,8 +7,9 @@
  *    Deux vues : « Qui utilise quoi » (la matrice promotions × magasins, puis la carte de chaque magasin — maquette A
  *    avec le détail de C, docs/maquettes/promotions-utilisation) et « Toutes les promotions » (la liste).
  *  - Édition (#/promotions/edition?shop=4) : l'assistant « X achetés + Y » du dashboard, tel quel, dans un cadre
- *    (dashboard/?embed=promos) où le magasin se choisit. Le cadre écrit au panel lui-même ; il prévient le cockpit par
- *    messages (enregistrée, magasin, tableau, haut, etat) et sa hauteur suit son contenu (même origine).
+ *    (dashboard/?embed=promos) où le magasin se choisit — ou « Tous les magasins » (30/10/2026) : une seule promotion
+ *    réseau au panel, qui rejoint celles de la marque dans le Tableau. Le cadre écrit au panel lui-même ; il prévient le
+ *    cockpit par messages (enregistrée, magasin, tableau, haut, etat) et sa hauteur suit son contenu (même origine).
  *
  * Remplit `common.prT` (tableau) et `common.prE` (édition) ; les gabarits sont dans promotions-tpl.js, le style dans
  * promotions.css (préfixe ptb-).

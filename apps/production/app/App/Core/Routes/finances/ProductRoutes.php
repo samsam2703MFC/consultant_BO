@@ -51,6 +51,22 @@ return function (RouteCollector $r) {
         'method' => 'saveClientPriceParams'
     ]);
 
+    // Kreator cen [218] : koszty po fakturach → nowe ceny (marża bazowa + współczynnik surowców kategorii) → publikacja od daty
+    $pw = App\Controllers\Web\Finances\Product\PriceWizardController::class;
+    $r->addRoute('GET', '/finances/price-wizard', ['controller' => $pw, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/price-wizard/costs', ['controller' => $pw, 'method' => 'costs']);
+    $r->addRoute('POST', '/ajax/price-wizard/recalculate', ['controller' => $pw, 'method' => 'recalculate']);
+    $r->addRoute('GET', '/ajax/price-wizard/prices', ['controller' => $pw, 'method' => 'prices']);
+    $r->addRoute('PUT', '/ajax/price-wizard/categories', ['controller' => $pw, 'method' => 'saveCategories']);
+    $r->addRoute('PUT', '/ajax/price-wizard/params', ['controller' => $pw, 'method' => 'saveParams']);
+    $r->addRoute('POST', '/ajax/price-wizard/preview', ['controller' => $pw, 'method' => 'preview']);
+    $r->addRoute('POST', '/ajax/price-wizard/preview-pdf', ['controller' => $pw, 'method' => 'previewPdf']);
+    $r->addRoute('GET', '/ajax/price-wizard/publications', ['controller' => $pw, 'method' => 'list']);
+    $r->addRoute('POST', '/ajax/price-wizard/publications', ['controller' => $pw, 'method' => 'plan']);
+    $r->addRoute('GET', '/ajax/price-wizard/publications/{id:\d+}', ['controller' => $pw, 'method' => 'detail']);
+    $r->addRoute('POST', '/ajax/price-wizard/publications/{id:\d+}/cancel', ['controller' => $pw, 'method' => 'cancel']);
+    $r->addRoute('GET', '/finances/price-wizard/publications/{id:\d+}/pdf', ['controller' => $pw, 'method' => 'pdf']);
+
     $r->addRoute('GET', '/finances/sales-analytics', [
         'controller' => App\Controllers\Web\Finances\Product\SalesAnalyticsController::class,
         'method' => 'overview'

@@ -22,6 +22,11 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/activity/view', ['controller' => App\Controllers\Web\Organization\ActivityController::class, 'method' => 'start']);
     $r->addRoute('POST', '/ajax/activity/beat', ['controller' => App\Controllers\Web\Organization\ActivityController::class, 'method' => 'beat']);
     $r->addRoute('PUT', '/ajax/organization/activity/users/{id:\d+}/cost', ['controller' => App\Controllers\Web\Organization\ActivityController::class, 'method' => 'cost']);
+    // Plan tygodnia stanowiska (administrator) : dni, minuty, link, czas rzeczywisty ; Dzisiaj « Mój tydzień » go pokazuje.
+    $r->addRoute('GET', '/organization/week-plan/{id:\d+}', ['controller' => $c, 'method' => 'weekPlan']);
+    $r->addRoute('GET', '/ajax/organization/week-plan/{id:\d+}', ['controller' => $c, 'method' => 'weekPlanData']);
+    $r->addRoute('PUT', '/ajax/organization/week-plan/{id:\d+}', ['controller' => $c, 'method' => 'saveWeekPlan']);
+    $r->addRoute('POST', '/ajax/organization/week-plan/{id:\d+}/copy', ['controller' => $c, 'method' => 'copyWeekPlan']);
     $r->addRoute('GET', '/my-tasks', ['controller' => $c, 'method' => 'myTasks']);
     $r->addRoute('PATCH', '/ajax/my-tasks/{id:\d+}', ['controller' => $c, 'method' => 'setStatus']);
     $r->addRoute('POST', '/ajax/organization/positions', ['controller' => $c, 'method' => 'savePosition']);

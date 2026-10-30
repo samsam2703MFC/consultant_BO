@@ -1170,3 +1170,9 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T10:50:27Z 217 kreator faktur : podgląd ceny
 2026-10-30T12:43:33Z 217 kreator faktur : Usługa → Finanse
 2026-10-30T12:55:45Z [cockpit] MetaDonnee : les cles et l'acces Meta du CRM, lus dans sa base
+2026-10-30T13:15:14Z dashboard magasin : onglet Primes (Où en sont tes vendeuses, lecture seule)
+2026-10-30T13:37:30Z [production] kreator cen — koszty po fakturach, nowe ceny (marża bazowa + współczynnik surowców), publikacja od daty [218]
+2026-10-30T13:44:51Z [production] kreator cen — liczba mnoga [218]
+2026-10-30T13:53:10Z dashboard magasin : Primes au téléphone, primes d'équipe dans « Le magasin, ensemble »
+2026-10-30T14:17:17Z [production] feuille de route de la semaine : Mój tydzień + plan tygodnia stanowiska [219]
+2026-10-30T14:24:18Z [production] Dzisiaj : komunikat bez stanowiska [219]

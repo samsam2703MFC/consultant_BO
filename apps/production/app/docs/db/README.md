@@ -66,6 +66,77 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Feuille de route de la semaine (migration 139, 30/10/2026)
+
+- Dzisiaj « Mój tydzień » (maquette 219-1) : les tâches fixes du poste de l'utilisateur, jour par jour pour la semaine ISO en
+  cours (jours ouvrés `tasks.workdays`), chaque carte avec la catégorie (couleur), les minutes, le lien direct vers la page
+  ERP (« Kreator faktur → », « Kreator cen → »…) et la case « Zrobione » (PATCH `/ajax/my-tasks/{id}`, sans rechargement,
+  « Cofnij » remet à faire). Tâches quotidiennes de tous les jours dans un bandeau au-dessus (pastilles Pn…Pt) ; tuiles
+  zrobione / total et minutes, aujourd'hui (tâches, minutes, liens), en retard, part des 40 h, mois et trimestre ; en dessous
+  « Zaległe » (ouvertes des semaines passées) et « Miesiąc i kwartał ». Les jours passés sans occurrence restent grisés
+  (personne n'a ouvert la liste ce jour-là), les jours à venir sont « zaplanowane » (occurrence créée le jour même, comme
+  « Moje zadania »). `PositionTaskService::week()`.
+- Validation automatique (`n_position_task.auto_code`) : la tâche passe « faite » toute seule (sans auteur, note
+  « Automatycznie : … ») quand l'assistant lié est terminé dans sa période : `inv_checked` (au moins une ligne de facture
+  vérifiée dans la période et plus aucune ligne de facture marchandises ouverte à vérifier), `costs_recalc`
+  (`n_margin_recalc_run` dans la période), `prices_planned` (publication de prix créée, non annulée), `buy_sent`
+  (`n_buy_round.sent_at`). Évaluée à l'ouverture de Dzisiaj / Moje zadania.
+- Plan de la semaine du poste (maquette 219-2, administrateur seul : catalogue d'accès `week_plan`,
+  `/organization/week-plan/{id}`, bouton « Plan tygodnia » sur chaque poste de Funkcje i zadania) : tâche, catégorie, jours
+  (1 jour = hebdomadaire ce jour-là, tous les jours ouvrés = quotidienne, 2 à 4 jours = quotidienne ces jours-là
+  `weekdays`, ou « Mies. » / « Kw. »), minutes (0–480), lien (liste des pages : kreator faktur, faktury, kreator cen étapes
+  1 / 2 / 3, zakupy tygodnia, dostawcy, oferty, NC… ou autre adresse), « zalicza się samo » ; colonne « Rzeczywiście » :
+  temps actif moyen par exécution des personnes du poste sur la page du lien (`n_activity_view`, 4 dernières semaines,
+  préfixe le plus long, partagé au prorata du plan entre tâches d'une même page ; rouge au-delà de 125 % du plan) ; charge
+  par jour et de la semaine (% de 40 h). Enregistrement du plan entier en une transaction (`PUT
+  /ajax/organization/week-plan/{id}` : tasks [id, title_pl, category_id, period week | monthly | quarterly, days, minutes,
+  link_path, auto_code], removed [ids] → tâches inactives) ; un changement de jours supprime les occurrences ouvertes depuis
+  lundi (recréées selon le nouveau plan). « Kopiuj z innego stanowiska » (`POST …/copy` {from}) ajoute les tâches actives
+  d'un autre poste, sauf celles du même nom. `GET /ajax/organization/week-plan/{id}` relit le plan.
+- Colonnes ajoutées à `n_position_task` : `minutes` (SMALLINT, durée d'une exécution), `weekdays` (ex. « 1,4 »),
+  `auto_code`. Migration : plan du poste ZAKUPY (minutes et jours des tâches existantes laissées vides ; tâche du mercredi
+  « Zaimportować ceny z faktur » → lien kreator faktur + `inv_checked` ; « Zakupy tygodnia » → `buy_sent` ; nouvelles tâches
+  kreator cen : coûts et marges mercredi 20 min `costs_recalc`, nouveaux prix jeudi 30 min `prices_planned`, contrôle de
+  la publication vendredi 10 min). Total : 4 h 15 par semaine.
+
+### Assistant prix « Kreator cen » (migration 138, 30/10/2026)
+
+- Page : Analiza › Marże i koszty › « Kreator cen » (`/finances/price-wizard`, maquette 218 validée ; aussi depuis Marża
+  kategorii et à la fin du kreator faktur, après « Zatwierdź faktury »). `PriceWizardService`, `PricePublicationService`,
+  `price-wizard.js`. Trois étapes :
+  1. « Koszty i marże » : factures ouvertes et lignes à vérifier (lien vers le kreator faktur), « Przelicz koszty i marże »
+     (coût matières de toutes les recettes aux prix actuels, le même calcul que « Przelicz wszystkie marże »), marge par
+     catégorie avant → après, écart à la marge de base, effet € / mois, produits dont le coût a changé avec leurs causes
+     (matières de la recette dont le prix a changé : `raw_material_price_changelog`), matières qui ont changé ;
+  2. « Nowe ceny » : par catégorie la marge de base (`category_product.target_margin_percentage`) et le coefficient matières
+     (`n_category_price_rule.material_coef`, vide = `prices.material_coef_default`). Prix cible du carton = le plus haut de
+     coût complet ÷ (1 − marge) et coût matières × coefficient ; jamais plus bas que le prix actuel, hausse au plus
+     `prices.client_cap_pct` % (8 %) d'un coup, arrondi vers le haut à `prices.client_round_eur` (0,05 €) ; prix modifiable
+     à la main dans ces limites. Produit déjà dans une publication prévue : non sélectionnable ; relevé par l'assistant il y a
+     moins de `prices.client_interval_days` jours : non coché. Alerte Belgique (magasin ÷ usine sous × 2,5 après la hausse) ;
+  3. « Publikacja » : date d'effet (aujourd'hui au plus tôt, au plus un an), prix clients calculés : prix égal au standard →
+     nouveau standard ; prix négocié → même % (remise gardée), même plafond ; client décoché = ses prix ne bougent pas.
+     Canaux : site franchise (client avec `franchisee_uid`, tarif par le webhook existant `PricelistPusher`), e-mail avec le
+     tarif PDF à la date (adresse du document « Cennik » de la Dystrybucja dokumentów, langue du client).
+- Tables : `n_category_price_rule` (id_category, material_coef) ; `n_price_publication` (effective_date, status planned |
+  applied | cancelled, notify_email, notice_days, products, client_prices, avg_pct, month_eur, created_by, applied_at,
+  cancelled_by/at) ; `n_price_publication_item` (id_product, id_customer 0 = prix standard, old_price, new_price, manual,
+  status planned | applied | skipped) ; `n_price_publication_client` (site, email, email_status queued | skipped | failed,
+  id_message, site_status sent | retry | failed | no_site, site_attempts, site_version).
+- Exécution (`Bin/mail_dispatch.php`, toutes les 5 minutes) : e-mail « Nouveaux prix à partir du » (modèle
+  `price_change_notice` fr / nl / pl / en, PDF `ClientPriceListService::generateFuturePDF` avec « Valable à partir du »)
+  `prices.notice_days` (7) jours avant ; le jour J, prix standard et prix clients changés seulement si la base a encore le
+  prix du plan (sinon ligne « skipped »), historique `n_product_price_change` (source `price_wizard`, auteur de la
+  publication) ; un client qui a déjà reçu l'e-mail avec ce tarif ne reçoit pas en plus « Votre tarif mis à jour »
+  (`n_price_list_state` noté) ; puis tarif vers le site franchise, une tentative par passage, au plus 12 (`failed`), sans clé
+  de webhook → `no_site` (copie de test : clés vidées, rien ne part). Publication prévue annulable jusqu'à la veille.
+- Paramètres : `prices.material_coef_default` (2,5), `prices.notice_days` (7) ; `prices.client_cap_pct` et
+  `prices.client_round_eur` valent pour les prix standard et les prix clients (réglables par l'administrateur dans l'assistant).
+- Ajax (session ERP, accès « Marże i koszty ») : `GET /ajax/price-wizard/costs`, `POST …/recalculate`, `GET …/prices`,
+  `PUT …/categories` (rows id, margin, coef), `PUT …/params`, `POST …/preview` (items product_id, price, manual),
+  `POST …/preview-pdf`, `GET|POST …/publications` (date, items, exclude, notify), `GET …/publications/{id}`,
+  `POST …/publications/{id}/cancel` ; PDF `GET /finances/price-wizard/publications/{id}/pdf?customer=`.
+
 ### Factures d'achat — assistant « toutes les lignes » (migration 137, 30/10/2026)
 
 - Page : Zaopatrzenie › Faktury › « Kreator : wszystkie pozycje » (`/workshop/supply#tab=invoices&inv=wizard`, maquettes 217
@@ -730,7 +801,7 @@ Lignes : base de développement le 24/10/2026 (indicatif).
 | `n_mp_offer` | 17 | 0 | — |
 | `n_nc` | 23 | 0 | — |
 | `n_position` | 7 | 5 | — |
-| `n_position_task` | 11 | 21 | — |
+| `n_position_task` | 14 | 24 | — |
 | `n_task_occurrence` | 8 | 7 | — |
 | `n_tender` | 11 | 0 | — |
 | `n_tender_item` | 6 | 0 | — |

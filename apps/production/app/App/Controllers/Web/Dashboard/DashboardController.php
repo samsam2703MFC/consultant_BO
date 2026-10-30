@@ -72,12 +72,12 @@ class DashboardController extends BaseController
     {
         $data = $this->today->overview();
         $userId = $this->userId();
-        $mine = $userId ? $this->tasks->myTasks($userId) : ['user' => null, 'groups' => [], 'overdue' => [], 'counts' => []];
+        // Mój tydzień : zadania stałe stanowiska dzień po dniu (minuty, link, zrobione) — plan ustala administrator.
+        $week = $userId ? $this->tasks->week($userId) : null;
         $names = array_column($this->tasks->positions(), 'name_pl', 'code');
-        $data['todo'] = $this->today->markTodo($data['todo'], $mine['user']['position_code'] ?? null, $names);
-        $data['member'] = $mine['user'];
-        $data['my_counts'] = $mine['counts'];
-        $data['my_tasks'] = $this->openTasks($mine);
+        $data['todo'] = $this->today->markTodo($data['todo'], $week['user']['position_code'] ?? null, $names);
+        $data['member'] = $week['user'] ?? null;
+        $data['week'] = $week;
         try {
             $data['profit'] = $this->profitability->snapshot();
         } catch (\Throwable $e) {
@@ -91,20 +91,6 @@ class DashboardController extends BaseController
             $data['manager_kpis'] = null;
         }
         $this->view('dashboard/dashboard', $data);
-    }
-
-    /** Zadania stanowiska do zrobienia : zaległe, potem okres bieżący według terminu. */
-    private function openTasks(array $mine): array
-    {
-        $items = array_map(fn($o) => ['task' => $o['task'], 'occurrence' => $o, 'overdue' => true], $mine['overdue']);
-        $current = [];
-        foreach ($mine['groups'] as $group) {
-            foreach ($group['items'] as $it) {
-                if ($it['occurrence'] && $it['occurrence']['status'] === 'open') $current[] = $it + ['overdue' => false];
-            }
-        }
-        usort($current, fn($a, $b) => $a['occurrence']['due_date'] <=> $b['occurrence']['due_date']);
-        return array_merge($items, $current);
     }
 
     /** Liczniki przy pozycjach menu i wskaźnik rentowności w górnym pasku (assets/js/notifications.js). */

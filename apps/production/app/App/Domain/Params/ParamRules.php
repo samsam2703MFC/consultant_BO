@@ -35,6 +35,9 @@ final class ParamRules
         'prices.client_cap_pct' => [0.5, 50, false],
         'prices.client_round_eur' => [0.01, 1, false],
         'prices.client_interval_days' => [0, 365, true],
+        // Kreator cen [218]
+        'prices.material_coef_default' => [1, 10, false],
+        'prices.notice_days' => [0, 60, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.plan_safety_pct' => [0, 200, false],
         'stock.freezer_pallet_places' => [0, 100000, true],

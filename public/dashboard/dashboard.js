@@ -22,7 +22,7 @@
   // Promotions se lit (la liste, où elles sont utilisées, le coefficient). ?ouvrir= : nouvelle (défaut), bon, p21
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -38,6 +38,7 @@
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
     pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null, pmC: null, pmCanJ: 30, pmCanM: 'n',
+    prVue: 'mois', prFiltre: 'toutes', prM: null, prY: null, prTri: null, prTriAn: null, prOuv: {},
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -130,6 +131,8 @@
     // qu'il faut pour en écrire une — produits, livraisons, motifs.
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
     if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
+    // Les primes de l'équipe (30/10/2026) : le mois ou l'année, rien d'autre.
+    if (S.vue === 'primes') { if (S.prVue === 'annee') { lireAux(clePrAn(), cheminPrAn(), force); } else { lireAux(clePrEq(), cheminPrEq(), force); } rendre(); return; }
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
     // Et où elles s'appliquent : comptoir, click & collect, livraison (18/10/2026).
     // Le panel est relu à chaque ouverture de l'onglet (21/10/2026, Sam) : voir pmRelire().
@@ -1261,13 +1264,14 @@
     exp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M11 20V5M17 20v-8M2 20h20"/></svg>',
     ctrl: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.6"/></svg>',
     sem: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+    prim: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M8.6 13.8 7 22l5-3 5 3-1.6-8.2"/></svg>',
   };
   /** Le menu du téléphone : Opérationnel (la journée en cours, 06/10/2026), Exploitation, Contrôle,
-   * Semaine, chacun avec sa couleur. La réclamation fournisseur s'ouvre depuis Contrôle et y ramène. */
+   * Semaine, chacun avec sa couleur, et Primes (30/10/2026). La réclamation fournisseur s'ouvre depuis Contrôle et y ramène. */
   function mbOnglets() {
     const P = maEtats();
-    const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'jour' ? S.mo : '')));
-    return `<div class="mb-tabs mb-tabs4 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['sem', 'Semaine']]
+    const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'primes' ? 'prim' : (S.vue === 'jour' ? S.mo : ''))));
+    return `<div class="mb-tabs mb-tabs5 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['sem', 'Semaine'], ['prim', 'Primes']]
       .map(([k, l]) => `<button type="button" data-mo="${k}" class="${on === k ? 'on' : ''}"><i>${MA_ICO[k]}${P[k] && P[k] !== 'n' ? `<b class="pt p${P[k]}"></b>` : ''}</i>${l}</button>`).join('')}</div>`;
   }
 
@@ -3811,7 +3815,7 @@
     const d = W.d, C = pmCoefCourant(d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
     const x = pmEffectif(d.x), y = pmEffectif(d.y), n = pmJours(d);
     const ck = (ok, t) => `<div class="pm-ck${ok ? '' : ' no'}">${ok ? '✓' : '○'} ${t}</div>`;
-    const mags = d.shops.map(s => { const o = S.stores.find(z => +z.id === +s); return o ? o.nom.replace(/^.* - /, '') : 'magasin ' + s; });
+    const mags = pmReseau(W) ? ['Tous les magasins'] : d.shops.map(s => { const o = S.stores.find(z => +z.id === +s); return o ? o.nom.replace(/^.* - /, '') : 'magasin ' + s; });
     let h = `<div class="db-card pm-c"><div class="db-lab">Récapitulatif</div>
       <div class="pm-phrase">${pmPhrase(x, Object.assign(y, { type: d.y.type, valeur: d.y.valeur }))}</div>
       <div class="pm-badges">${pmBadges(d.canal, d.seuil)}</div>
@@ -3880,7 +3884,7 @@
     const d = W.d, e = W.etape, R = (S.aux[clePM()] || {}).regles || {};
     const tete = (lab, t) => `<div class="pm-sh"><span class="n">${pmPos(W, e)}</span><div><div class="db-lab">Étape ${pmPos(W, e)}${lab ? ' · ' + lab : ''}</div><div class="pm-h2">${t}</div></div></div>`;
     if (e === 1) {
-      return tete('la promotion', 'Nom') + `<div class="pm-f" style="margin-bottom:10px"><label>Magasin</label><div class="pm-in ro"><b>${esc(nomShop())}</b></div><span class="db-mini">la promotion vaut pour ce magasin seulement</span></div>
+      return tete('la promotion', 'Nom') + `<div class="pm-f" style="margin-bottom:10px"><label>Magasin</label><div class="pm-in ro"><b>${pmReseau(W) ? 'Tous les magasins' : esc(nomShop())}</b></div><span class="db-mini">${pmReseau(W) ? 'une seule promotion au panel, pour tout le réseau' : 'la promotion vaut pour ce magasin seulement'}</span></div>
         <div class="pm-f"><label>Nom</label><input class="pm-in" maxlength="80" placeholder="ex. Cookies 2+1 · Halle" value="${esc(d.nom)}" data-pmf="nom"></div>
         <div class="pm-f" style="margin-top:10px"><label>Description <small class="db-mini">facultatif</small></label><textarea class="pm-in" rows="3" maxlength="500" placeholder="Quand l’utiliser, ce qu’on en attend…" data-pmf="description">${esc(d.description)}</textarea></div>
         <div class="pm-info"><b>Fixé par la marque</b> · priorité normale · non exclusive · enregistrée dès l’envoi, sans validation · déclenchement : automatique en caisse, ou par un bon (étape « Bon de réduction »)</div>`;
@@ -3948,7 +3952,7 @@
     const desc = c => c.cats.length ? 'catégorie ' + c.cats.map(o => '<b>' + esc(o.nom) + '</b>').join(', ') + ', ' + (c.portion ? '<b>' + PM_PORTIONS[c.portion].lib + ' seulement</b>' : 'toutes les variantes') + ' · ' + (c.exclus.length ? 'sauf ' + esc(c.exclus.map(o => o.nom).join(', ')) : 'aucune exclusion') : (c.prods.length ? c.prods.map(o => '<b>' + esc(o.nom) + '</b>').join(', ') + (c.portion ? ', <b>' + PM_PORTIONS[c.portion].lib + ' seulement</b>' : '') : '<span class="ko">à choisir</span>');
     const manque = [1, 2, 3, 4, 5, 6].map(i => pmManque(d, i) ? PM_ETAPES[i - 1] + ' : ' + pmManque(d, i) : '').filter(Boolean);
     return tete('', 'Vérifier et enregistrer') + `<div class="pm-phrase g">${pmPhrase(x, Object.assign(y, { type: d.y.type, valeur: d.y.valeur }))}</div><div class="db-mini">« ${esc(d.nom || 'sans nom')} »</div>
-      <table class="pm-recap">${lgn('Magasin', '<b>' + esc(nomShop()) + '</b>', 0)}${lgn('Ce qu’on achète (X)', '<b>' + x.q + '</b> pièce' + (x.q > 1 ? 's' : '') + ' · ' + desc(x), 2)}
+      <table class="pm-recap">${lgn('Magasin', pmReseau(W) ? '<b>tous les magasins</b> · une promotion réseau au panel (produits et prix lus chez ' + esc(nomShop()) + ')' : '<b>' + esc(nomShop()) + '</b>', 0)}${lgn('Ce qu’on achète (X)', '<b>' + x.q + '</b> pièce' + (x.q > 1 ? 's' : '') + ' · ' + desc(x), 2)}
         ${lgn('Ce qu’on reçoit (Y)', '<b>' + y.q + '</b> pièce' + (y.q > 1 ? 's' : '') + ' <b>' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + '</b> · ' + desc(y) + ' · la moins chère', 3)}
         ${lgn('Où', '<b>' + esc(pmCanalLib(d.canal)) + '</b> · ' + esc((PM_CANAUX.find(o => o[0] === d.canal) || PM_CANAUX[0])[2]), 4)}
         ${lgn('Seuil du ticket', +d.seuil > 0 ? 'le ticket atteint <b>' + fU(+d.seuil) + '</b> TTC' : 'sans seuil', 4)}
@@ -3959,7 +3963,7 @@
       <div id="pm-fixe">${pmFixe(W)}</div>
       ${manque.length ? `<div class="pm-warn">À compléter avant l’enregistrement : ${esc(manque.join(' · '))}</div>` : ''}
       ${W.erreurs ? `<div class="db-err" style="margin-top:10px">${W.erreurs.map(esc).join('<br>')}</div>` : ''}
-      <div class="db-mini" style="margin-top:10px">« Enregistrer la promotion » l’enregistre et la crée au panel, <b>sans validation</b> : créée inactive, relue, puis activée — en caisse pour ses dates.${d.bon.on ? ' Son bon s’écrit avec elle au panel (une campagne liée à la promotion), puis s’active.' : ''}${pmSortis(pmCoefCourant(W.d)).length ? ' <b>Sortent d’office</b> (sans coût de recette ou sans prix, leur coefficient ne se vérifie pas) : ' + esc(pmSortisTxt(pmCoefCourant(W.d))) + '.' : ''}</div>`;
+      <div class="db-mini" style="margin-top:10px">${pmReseau(W) ? '<b>Une seule promotion au panel, pour tout le réseau</b> : elle rejoint celles de la marque (« Tout le réseau » dans le Tableau d’analyse) et ne se reprend plus d’ici — elle se modifie au panel, ou se duplique. ' : ''}« ${pmReseau(W) ? 'Mettre en caisse dans tous les magasins' : 'Enregistrer la promotion'} » l’enregistre et la crée au panel, <b>sans validation</b> : créée inactive, relue, puis activée — en caisse pour ses dates.${d.bon.on ? ' Son bon s’écrit avec elle au panel (une campagne liée à la promotion), puis s’active.' : ''}${pmSortis(pmCoefCourant(W.d)).length ? ' <b>Sortent d’office</b> (sans coût de recette ou sans prix, leur coefficient ne se vérifie pas) : ' + esc(pmSortisTxt(pmCoefCourant(W.d))) + '.' : ''}</div>`;
   }
   /**
    * L'étape Bon (24/10/2026) : automatique, ou par un bon — un code pour tous, des codes uniques, ou un code par client du
@@ -3967,8 +3971,9 @@
    */
   function pmEtapeBon(W, tete) {
     const b = W.d.bon, A = W.bonActuel;
-    let h = tete('comment la caisse la déclenche', 'Bon de réduction') + `<div class="pm-f"><label>Déclenchement</label><span class="pm-seg"><button type="button" class="${b.on ? '' : 'on'}" data-pmbon="auto">Automatique en caisse</button><button type="button" class="${b.on ? 'on' : ''}" data-pmbon="bon">Avec un bon</button></span>
-      <span class="db-mini">${b.on ? 'La caisse n’applique la promotion qu’au client qui donne un code du bon.' : 'La caisse applique la promotion à tous les tickets qui y ont droit.'}</span></div>`;
+    const reseau = pmReseau(W);
+    let h = tete('comment la caisse la déclenche', 'Bon de réduction') + `<div class="pm-f"><label>Déclenchement</label><span class="pm-seg"><button type="button" class="${b.on ? '' : 'on'}" data-pmbon="auto">Automatique en caisse</button><button type="button" class="${b.on ? 'on' : ''}" data-pmbon="bon"${reseau && !b.on ? ' disabled title="un bon reste à un magasin : ses codes, ses clients"' : ''}>Avec un bon</button></span>
+      <span class="db-mini">${b.on ? 'La caisse n’applique la promotion qu’au client qui donne un code du bon.' : 'La caisse applique la promotion à tous les tickets qui y ont droit.' + (reseau ? ' Pour tous les magasins, pas de bon : ses codes et ses clients sont ceux d’un magasin.' : '')}</span></div>`;
     if (!b.on) { return h + (A ? `<div class="pm-warn">Le bon actuel (n° ${esc(A.campagne)} au panel) sera mis hors service et détaché à l’enregistrement : la promotion vaudra pour tous.</div>` : ''); }
     if (b.charge) { return h + '<div class="db-mini" style="margin-top:12px">Lecture du bon au panel…</div>'; }
     if (b.err) { return h + `<div class="db-err" style="margin-top:12px">Bon illisible au panel : ${esc(b.err)}</div>`; }
@@ -4205,11 +4210,11 @@
     const pv = pmVoisine(W, -1), sv = pmVoisine(W, 1);
     const prec = pv ? `<button class="db-btn pm-gros" data-pmet="${pv}">‹ Retour : ${esc(PM_ETAPES[pv - 1].toLowerCase())}</button>` : '<span></span>';
     const suiv = sv ? `<button class="db-btn prim pm-gros" data-pmet="${sv}">Suivant : ${esc(PM_ETAPES[sv - 1].toLowerCase())} ›</button>`
-      : `<span class="pm-boutons">${W.enCaisse ? '' : `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''} title="écrite au panel, inactive : elle ne passe pas en caisse">Garder en brouillon</button>`}<button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Enregistrement…' : (W.enCaisse ? 'Enregistrer les changements ›' : 'Enregistrer la promotion ›')}</button></span>`;
+      : `<span class="pm-boutons">${W.enCaisse || pmReseau(W) ? '' : `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''} title="écrite au panel, inactive : elle ne passe pas en caisse">Garder en brouillon</button>`}<button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Enregistrement…' : (W.enCaisse ? 'Enregistrer les changements ›' : pmReseau(W) ? 'Mettre en caisse dans tous les magasins ›' : 'Enregistrer la promotion ›')}</button></span>`;
     return `<div class="pm-tete"><div><div class="db-mini"><button class="pm-lien" data-pmfermer="1">‹ ${EMBED_PM ? 'Tableau d’analyse' : 'Promotions du magasin'}</button></div><div class="pm-titre">${W.ordre && !W.d.id ? 'Nouveau bon et sa promotion « X achetés + Y »' : (W.d.id ? 'Modifier' : 'Nouvelle') + ' promotion « X achetés + Y »' + (W.d.bon.on ? ' · par bon' : '')}</div></div><span style="flex:1"></span>
         ${W.d.id ? '' : `<div class="pm-f"><span class="db-lab">Remplir un exemple</span><span class="pm-seg">${PM_DUREES.map(([k, lib]) => `<button type="button" data-pmexemple="${k}"${pmProduits() ? '' : ' disabled title="lecture des produits du magasin…"'}>${lib}</button>`).join('')}</span></div>`}
         ${pmMagasinChamp(W)}
-        ${e < PM_FIN && !W.enCaisse ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''} title="écrite au panel, inactive : elle ne passe pas en caisse">Garder en brouillon</button>` : ''}</div>
+        ${e < PM_FIN && !W.enCaisse && !pmReseau(W) ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''} title="écrite au panel, inactive : elle ne passe pas en caisse">Garder en brouillon</button>` : ''}</div>
       ${W.enCaisse ? `<div class="pm-warn" style="margin-bottom:10px">En caisse${W.enCaisse !== true ? ' (promotion n° ' + esc(W.enCaisse) + ' au panel)' : ''} : les changements partent au panel sur la même promotion — mise inactive le temps de la relecture, puis réactivée. Pour garder l’actuelle telle quelle, dupliquez-la plutôt.</div>` : ''}
       ${W.exempleErr ? `<div class="pm-warn" style="margin-bottom:10px">${esc(W.exempleErr)}</div>` : ''}
       <div class="pm-wz" id="pm-wz">${pmStepper(W)}</div>
@@ -4243,7 +4248,7 @@
   }
   function pmCorps(action) {
     const d = S.pmW.d, x = pmEffectif(d.x), y = pmEffectif(d.y);
-    return { shop: +S.shop, id: d.id, action, nom: d.nom, description: d.description, x, y: Object.assign(y, { type: d.y.type, valeur: d.y.type === 'FREE' ? null : d.y.valeur }),
+    return { shop: +S.shop, tous: !!(EMBED_PM && S.pmTous && !d.id), id: d.id, action, nom: d.nom, description: d.description, x, y: Object.assign(y, { type: d.y.type, valeur: d.y.type === 'FREE' ? null : d.y.valeur }),
       du: d.du, au: d.au, creneaux: d.creneaux, repetable: d.repetable, maxParTicket: d.repetable ? d.maxParTicket : null,
       canal: d.canal, seuil: d.seuilOn && +d.seuil > 0 ? +d.seuil : null,
       bon: d.bon.on ? { on: true, cible: d.bon.cible, code: d.bon.code.trim().toUpperCase(), limite: d.bon.limite, nombre: d.bon.nombre, prefixe: d.bon.prefixe.trim().toUpperCase(), clients: d.bon.clients } : null };
@@ -4258,9 +4263,10 @@
         const dm = j.demande || {}, sortis = j.exclusAuto || [], B = j.bon;
         // Le bon (24/10/2026) : ce qu'il est devenu au panel, en une phrase après celle de la promotion.
         const bonTxt = !B ? '' : ' Bon n° ' + esc(B.campagne) + ' ' + (B.actif ? 'actif' : 'en brouillon') + ' : ' + (B.cible === 'code' ? 'code <b>' + esc(B.code) + '</b>' : esc(B.nCodes + ' code' + (B.nCodes > 1 ? 's' : '')) + ' — ⋯ › Voir les codes du bon') + '.';
+        const reseau = !!dm.tous;
         S.pmMsg = action !== 'envoyer' ? `Brouillon gardé au panel, inactif : « ${esc(dm.nom || 'sans nom')} » (promotion n° ${esc(dm.panelId)}).${bonTxt}`
-          : (!j.panelErreur && dm.statut === 'en_caisse' ? `En caisse : « ${esc(dm.nom)} » — ${W.enCaisse ? 'mise à jour' : 'créée'} au panel (promotion n° ${esc(dm.panelId)}), active ${esc(pmPeriodeTxt(dm))}.${sortis.length ? ' Sortis d’office : ' + esc(sortis.slice(0, 5).join(', ')) + (sortis.length > 5 ? '…' : '') + '.' : ''}${bonTxt}`
-            : `Pas en caisse : « ${esc(dm.nom)} » est au panel (promotion n° ${esc(dm.panelId)}), inactive — ${esc(j.panelErreur || 'le panel ne l’a pas activée')}. Reprenez-la dans les brouillons.`);
+          : (!j.panelErreur && dm.statut === 'en_caisse' ? `En caisse${reseau ? ' dans tous les magasins' : ''} : « ${esc(dm.nom)} » — ${W.enCaisse ? 'mise à jour' : 'créée'} au panel (promotion ${reseau ? 'réseau ' : ''}n° ${esc(dm.panelId)}), active ${esc(pmPeriodeTxt(dm))}.${sortis.length ? ' Sortis d’office : ' + esc(sortis.slice(0, 5).join(', ')) + (sortis.length > 5 ? '…' : '') + '.' : ''}${bonTxt}`
+            : `Pas en caisse : « ${esc(dm.nom)} » est au panel (promotion ${reseau ? 'réseau ' : ''}n° ${esc(dm.panelId)}), inactive — ${esc(j.panelErreur || 'le panel ne l’a pas activée')}. ${reseau ? 'Reprenez-la au panel.' : 'Reprenez-la dans les brouillons.'}`);
         S.pmF = action === 'envoyer' && !j.panelErreur && dm.statut === 'en_caisse' ? 'actives' : 'brouillons';
         S.pmW = null; lireAux(clePM(), cheminPM(), true);
         pmSignaler('enregistree', { statut: dm.statut || null, id: dm.id || null, shop: S.shop });
@@ -4293,11 +4299,27 @@
     if (!EMBED_PM || window.parent === window) { return; }
     try { window.parent.postMessage(Object.assign({ source: 'atelier-promos', type }, data || {}), location.origin); } catch (e) { /* hors du cockpit */ }
   }
-  /** Le champ Magasin de l'entête : au cockpit, une liste — une promotion enregistrée reste à son magasin ; au dashboard, le sien. */
+  /**
+   * Le champ Magasin de l'entête : au cockpit, une liste — une promotion enregistrée reste à son magasin ; au dashboard, le sien.
+   * « Tous les magasins » (30/10/2026, Sam) : UNE promotion réseau au panel (S.pmTous) ; l'assistant garde les produits et
+   * les prix du magasin choisi avant (S.shop), le serveur vérifie le coefficient dans chaque magasin ouvert.
+   */
   function pmMagasinChamp(W) {
     if (!EMBED_PM) { return `<div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>`; }
-    const fixe = !!(W && W.d.id), L = S.stores.length ? S.stores : [{ id: S.shop, nom: nomShop() }];
-    return `<div class="pm-f"><span class="db-lab">Magasin</span><select class="pm-in pm-mag" data-pmshop="1"${fixe ? ' disabled title="une promotion enregistrée reste à son magasin : dupliquez-la pour un autre"' : ''}>${L.map(o => `<option value="${esc(o.id)}"${String(o.id) === String(S.shop) ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></div>`;
+    const fixe = !!(W && W.d.id), L = S.stores.length ? S.stores : [{ id: S.shop, nom: nomShop() }], bon = !!(W && W.d.bon.on);
+    return `<div class="pm-f"><span class="db-lab">Magasin</span><select class="pm-in pm-mag" data-pmshop="1"${fixe ? ' disabled title="une promotion enregistrée reste à son magasin : dupliquez-la pour un autre"' : ''}>`
+      + `<option value="tous"${S.pmTous && !fixe ? ' selected' : ''}${bon ? ' disabled' : ''}>Tous les magasins — une promotion réseau${bon ? ' (pas avec un bon)' : ''}</option>`
+      + `${L.map(o => `<option value="${esc(o.id)}"${String(o.id) === String(S.shop) && !(S.pmTous && !fixe) ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>`
+      + `${S.pmTous && !fixe ? `<span class="db-mini" title="le coefficient du lot se vérifie dans chaque magasin ouvert à l’enregistrement">produits et prix de ${esc(nomShop().replace(/^.* - /, ''))} · coefficient vérifié partout</span>` : ''}</div>`;
+  }
+  /** La promotion ouverte part-elle pour tout le réseau ? (une enregistrée reste à son magasin) */
+  function pmReseau(W) { return !!(EMBED_PM && S.pmTous && !(W && W.d.id)); }
+  /** Tous les magasins, ou un seul : au premier, la promotion en cours devient réseau (sans bon, sans brouillon). */
+  function pmChoisirMagasin(v) {
+    if (v === 'tous') { S.pmTous = true; if (S.pmW) { S.pmW.erreurs = null; } rendre(); return; }
+    const etait = S.pmTous; S.pmTous = false;
+    if (String(v) === String(S.shop)) { if (etait) { rendre(); } return; }
+    pmChangerMagasin(v);
   }
   /** Un autre magasin : ses promotions, ses prix et coûts (le coefficient se recalcule) ; la promotion en cours le suit. */
   function pmChangerMagasin(id) {
@@ -4357,13 +4379,13 @@
     on('[data-pmmsg]', 'click', () => { S.pmMsg = null; rendre(); });
     on('[data-pmnew]', 'click', () => pmOuvrir(pmNouvelle(), 1));
     // « + Nouveau bon » (24/10/2026) : l'assistant commence par le bon, puis enchaîne sur la promotion qu'il déclenche.
-    on('[data-pmnewbon]', 'click', () => { const n = pmNouvelle(); n.bon = pmBonDe({ cible: 'code' }); pmOuvrir(n, 5); S.pmW.ordre = [5, 1, 2, 3, 4, 6, 7]; rendre(); });
+    on('[data-pmnewbon]', 'click', () => { S.pmTous = false; const n = pmNouvelle(); n.bon = pmBonDe({ cible: 'code' }); pmOuvrir(n, 5); S.pmW.ordre = [5, 1, 2, 3, 4, 6, 7]; rendre(); });
     on('[data-pmbonvoir]', 'click', el => { S.pmMenu = null; pmBonVoir(el.dataset.pmbonvoir); });
     on('[data-pmbonfermer]', 'click', () => { S.pmBonV = null; rendre(); });
     on('[data-pmbonact]', 'click', el => pmBonBasculer(el.dataset.pmbonact === '1'));
     on('[data-pmboncopier]', 'click', () => pmBonCopier());
     on('[data-pmrelire]', 'click', () => pmRelire());
-    on('[data-pmshop]', 'change', el => pmChangerMagasin(el.value));
+    on('[data-pmshop]', 'change', el => pmChoisirMagasin(el.value));
     on('[data-pmtableau]', 'click', () => pmSignaler('tableau'));
     on('[data-pmedit]', 'click', el => {
       const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit);
@@ -4459,7 +4481,7 @@
     on('[data-pmcanal]', 'click', el => { d.canal = el.dataset.pmcanal; rendre(); });
     on('[data-pmseuil]', 'click', el => { d.seuilOn = el.dataset.pmseuil === 'avec'; if (!d.seuilOn) { d.seuil = ''; } rendre(); if (d.seuilOn) { const i = $.querySelector('[data-pmf="seuil"]'); if (i) { i.focus(); } } });
     // Le bon (24/10/2026).
-    on('[data-pmbon]', 'click', el => { d.bon.on = el.dataset.pmbon === 'bon'; rendre(); });
+    on('[data-pmbon]', 'click', el => { if (el.dataset.pmbon === 'bon' && pmReseau(W)) { return; } d.bon.on = el.dataset.pmbon === 'bon'; rendre(); });
     on('[data-pmbcible]', 'click', el => { d.bon.cible = el.dataset.pmbcible; rendre(); });
     on('[data-pmb]', 'input', el => {
       const k = el.dataset.pmb;
@@ -4476,6 +4498,272 @@
     const bres = document.getElementById('pm-bres'); if (bres) { pmBrancherBonRes(bres); if (S.pmW && d.bon.on && d.bon.cible === 'clients') { pmBonPrechauffer(S.pmW); } }
   }
 
+  /* --- Primes du magasin (30/10/2026) -----------------------------------------------------------------------------
+   * « Où en sont tes vendeuses », le tableau de la page franchisé du cockpit (#/primes?shop=4), à LIRE dans le
+   * dashboard : une ligne par vendeuse, une colonne par prime de Mes primes — gagnée en vert, en tête, sa place, ou sa
+   * valeur face à l'objectif avec une barre fine. Le mois (‹ octobre 2026 ›) ou l'année, toutes les primes ou celles du
+   * magasin, un clic sur un en-tête trie. Rien ne s'y pose ni ne s'y modifie : les primes se règlent au cockpit.
+   *   ../api/cockpit/ventes/primes-equipe?shop=&m=   (le mois)
+   *   ../api/cockpit/ventes/primes-annee?y=&shop=    (l'année)
+   */
+  const PR_M_DEBUT = '2026-01', PR_Y_DEBUT = 2026;
+  function prMois() { const m = S.prM || S.date.slice(0, 7), max = AUJ.slice(0, 7); return m < PR_M_DEBUT ? PR_M_DEBUT : (m > max ? max : m); }
+  function prAn() { return Math.max(PR_Y_DEBUT, Math.min(+AUJ.slice(0, 4), S.prY || annee())); }
+  function clePrEq() { return 'prEq|' + S.shop + '|' + prMois(); }
+  function cheminPrEq() { return '/ventes/primes-equipe?shop=' + encodeURIComponent(S.shop) + '&m=' + prMois(); }
+  function clePrAn() { return 'prAn|' + S.shop + '|' + prAn(); }
+  function cheminPrAn() { return '/ventes/primes-annee?y=' + prAn() + '&shop=' + encodeURIComponent(S.shop); }
+  function prDecale(m, n) { const x = new Date(+m.slice(0, 4), +m.slice(5, 7) - 1 + n, 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); }
+  const prLibMois = m => MOIS[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4);
+  const prFx = (v, k) => nf(+v, Number.isInteger(+v) ? 0 : k);
+  const prEur = v => (+v).toLocaleString('fr-BE', { minimumFractionDigits: (+v) % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €';
+  const prPl = (n, mot) => n + ' ' + mot + (n > 1 && !/s$/.test(mot) ? 's' : '');
+  const prPayeur = p => (p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : p.payeur === 'magasin' ? 'le magasin' : 'la marque');
+  const prVal = (u, v) => (v == null ? '' : u === 'pct' ? prFx(v, 1) + ' %' : u === 'lpt' ? nf(+v, 2) + ' art./ticket' : u === 'note' ? nf(+v, 1) + ' ★'
+    : u === 'pcs' ? prFx(v, 1) + ' pcs' : u === 'eur' ? fE(v) : u === 'score' ? 'score ' + prFx(v, 1) : prFx(v, 1));
+  const PR_MOTIFS = { pas_compte: 'pas encore compté', sans_vente: 'aucune vente', min_tickets: 'pas assez de tickets', heures: 'sous le min. d’heures',
+    pas_record: 'pose son 1er record', pas_objectif: 'pas d’objectif', pas_note: 'pas de note', pas_classee: 'pas encore classée' };
+  function prRecompense(p) {
+    if (p.type === 'b2b') { return p.mode === 'fixe' ? (p.fixe || 0) + ' € · 1re commande' : prFx(p.taux, 1) + ' % · ' + (p.duree === 'premiere' ? '1re commande' : p.duree === 'sans' ? 'sans limite' : p.duree + ' mois'); }
+    return p.cadeau ? 'cadeau · ' + p.cadeau : (p.max ? 'jusqu’à ' : '') + p.montant + ' €';
+  }
+  /** Une case : ce que la vendeuse voit dans Mes primes pour cette prime — `ton` dit la couleur, `niveau` la barre. */
+  function prCase(p, k, clos) {
+    if (!k) { return { ton: 'hors', haut: '', bas: '' }; }
+    const v = prVal(p.unite, k.val);
+    const place = k.rang ? k.rang + (k.rang === 1 ? 're' : 'e') + (k.sur ? ' / ' + k.sur : '') : '';
+    if (p.type === 'b2b') {
+      const cl = k.clients ? prPl(k.clients, 'client') + ' pro' : 'aucun client pro';
+      return k.gain > 0 ? { ton: 'gagne', haut: '✓ ' + prEur(k.gain), bas: cl } : { ton: 'vide', haut: '—', bas: cl };
+    }
+    if (k.etat === 'gagne') { return { ton: 'gagne', haut: '✓ ' + (k.gain > 0 ? prEur(k.gain) : p.cadeau ? 'cadeau' : 'gagnée'), bas: [v, place].filter(Boolean).join(' · ') }; }
+    if (k.etat === 'tete') { return { ton: 'tete', haut: 'en tête', bas: [v, k.avance1 != null ? '+' + k.avance1 + ' sur la 2e' : place].filter(Boolean).join(' · ') }; }
+    if (k.etat === 'vide' || k.etat === 'sans_vente' || k.val == null) { return { ton: 'vide', haut: '—', bas: PR_MOTIFS[k.motif] || (clos ? 'pas gagnée' : '') }; }
+    if (k.etat === 'rang' || (k.rang && k.cible == null)) {
+      return { ton: clos ? 'perdu' : 'route', haut: place || v, bas: [place ? v : '', k.pour1 ? k.pour1 + ' pcs pour la 1re' : ''].filter(Boolean).join(' · '), niveau: k.niveau };
+    }
+    const obj = k.cible != null ? (p.base === 'objectif' ? 'objectif ' : 'cible ') + prVal(p.unite, k.cible) : '';
+    return { ton: clos ? 'perdu' : 'route', haut: (p.base === 'objectif' && !clos ? 'proj. ' : '') + v, bas: k.motif === 'min_tickets' ? PR_MOTIFS.min_tickets : obj, niveau: k.niveau };
+  }
+  /** La force d'une case pour le tri : gagnée d'abord (le gain), puis en tête, puis le chemin fait et la place. */
+  function prForce(p, k) {
+    if (!k) { return -1; }
+    if (k.etat === 'gagne' || (p.type === 'b2b' && k.gain > 0)) { return 4e6 + k.gain * 100 + Math.min(99, +k.val || 0); }
+    if (k.etat === 'tete') { return 3e6 + Math.min(999, +k.val || 0); }
+    if (k.etat === 'vide' || k.etat === 'sans_vente' || k.val == null) { return 0; }
+    return 1e6 + (k.niveau || 0) * 1e3 + (k.rang ? 100 - k.rang : 0) + Math.min(99, +k.val || 0) / 100;
+  }
+  /** La barre fine : le chemin fait vers l'objectif, verte passé 80 %, grise une fois le mois perdu. */
+  const prBarre = k => (k.niveau != null && k.ton !== 'gagne' && k.ton !== 'tete' ? `<div class="pr-barre"><i style="width:${Math.max(3, Math.min(100, k.niveau))}%"${k.ton === 'perdu' ? ' class="gris"' : k.niveau >= 80 ? ' class="vert"' : ''}></i></div>` : '');
+  /** Un en-tête qui trie : le 2e clic inverse ; le sens suivant voyage dans le bouton. */
+  function prTriBt(tri, col, tab, contenu) {
+    const on = tri.col === col, sens = on ? -tri.sens : (col === 'nom' ? 1 : -1);
+    return `<button class="pr-tri" data-prtri="${esc(col)}" data-prtab="${tab}" data-prsens="${sens}">${contenu}${on ? `<span class="pr-fl">${tri.sens < 0 ? '↓' : '↑'}</span>` : ''}</button>`;
+  }
+  const prAria = (tri, col) => (tri.col === col ? (tri.sens < 0 ? 'descending' : 'ascending') : 'none');
+  /* Les primes d'équipe (30/10/2026) : la même valeur pour toutes — l'objectif du magasin, la note Google. Elles sortent
+   * du tableau des vendeuses, qui ne garde que l'individuel ; seule l'éligibilité (le minimum d'heures) change de l'une
+   * à l'autre. Elles se lisent dans une carte « Le magasin, ensemble » (maquette B, retenue le 30/10/2026) : un anneau
+   * par prime, ce que chacune touche si tout est atteint, les éligibles et celles sous le minimum d'heures. */
+  const PR_EQUIPE = ['objectif', 'google'];
+  const prEstEquipe = p => PR_EQUIPE.includes(p.base) && p.type === 'target';
+  /** Une prime d'équipe lue sur l'équipe : sa valeur (la même pour toutes), l'objectif, qui en profite. */
+  function prEquipeInfos(D, garde) {
+    const clos = !D.enCours;
+    return (D.primes || []).filter(p => garde(p) && prEstEquipe(p)).map(p => {
+      const ks = (D.vendeuses || []).map(v => ({ v, k: (v.cases || {})[p.cle] })).filter(x => x.k);
+      const ref = (ks.find(x => x.k.val != null) || {}).k || {};
+      const hors = ks.filter(x => x.k.motif === 'heures').map(x => x.v.nom), elig = ks.filter(x => x.k.motif !== 'heures').map(x => x.v.nom);
+      const atteint = ks.some(x => x.k.etat === 'gagne');
+      const diff = ref.cible != null && ref.val != null ? Math.max(0, +ref.cible - +ref.val) : null;
+      const reste = diff == null ? '' : p.unite === 'pct' ? 'encore ' + prFx(diff, 1) + ' point' + (diff > 1 ? 's' : '') : p.unite === 'note' ? 'encore ' + nf(diff, 1) + ' ★' : 'encore ' + prVal(p.unite, diff);
+      return { p, val: prVal(p.unite, ref.val), proj: p.base === 'objectif' && !clos, cible: ref.cible != null ? (p.base === 'objectif' ? 'objectif ' : 'cible ') + prVal(p.unite, ref.cible) : '',
+        niveau: atteint ? 100 : ref.niveau != null ? ref.niveau : null, atteint, perdu: clos && !atteint, reste, hors, elig,
+        chacune: p.montant, pot: p.montant * elig.length };
+    });
+  }
+  /** Un anneau : le chemin fait (0 à 100), vert passé 80 % ou atteint ; le chiffre au centre, le libellé à droite. */
+  function prAnneau(niveau, ok, centre, libelle) {
+    const C = 2 * Math.PI * 30, n = Math.max(0, Math.min(100, niveau || 0));
+    return `<div class="pr-eqb-r"><svg viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="30" class="f"/><circle cx="38" cy="38" r="30" class="a${ok || n >= 80 ? ' ok' : ''}" stroke-dasharray="${(C * n / 100).toFixed(1)} ${C.toFixed(1)}"/></svg>
+        <div class="c">${centre}</div><div class="l">${libelle}</div></div>`;
+  }
+  /** L'année : les primes d'équipe gagnées, et combien de mois le magasin y est arrivé sur les mois clos. */
+  function prEquipeAn(A, V, mobile) {
+    if (!V.equipe.length) { return ''; }
+    const clos = (A.mois || []).filter(x => !x.enCours).length;
+    const verse = V.equipe.reduce((t, p) => t + (+p.total || 0), 0);
+    return `<div class="pr-eqb${mobile ? ' mob' : ''}">
+      <div class="pr-eqb-h"><div><div class="pr-eqb-t">Le magasin, ensemble</div><div class="s">Les primes que toute l’équipe gagne d’un coup : les mois où le magasin y est arrivé</div></div>
+        <div class="pr-eqb-pot"><b>${esc(prEur(verse))}</b><small>versés à l’équipe en ${esc(String(A.y || prAn()))}</small></div></div>
+      <div class="pr-eqb-rs">${V.equipe.map(p => { const n = Math.max(0, ...(A.personnes || []).map(r => +(((r.cases || {})[p.cle] || {}).fois) || 0));
+        return prAnneau(clos ? 100 * n / clos : 0, false, `<b>${n} / ${clos}</b><small>mois</small>`,
+          `<b>${esc(p.lib)}</b><small>atteint ${prPl(n, 'mois')} sur ${clos} clos · ${esc(prPayeur(p))}</small><small>${esc(prEur(+p.total || 0))} · ${prPl(+p.gagnantes || 0, 'gagnante')}</small>`); }).join('')}</div>
+    </div>`;
+  }
+  /** Le mois : une seule carte — un anneau par prime, ce que chacune touche si tout est atteint, et qui en profite. */
+  function prEquipe(D, garde, mobile) {
+    const E = prEquipeInfos(D, garde);
+    if (!E.length) { return ''; }
+    const anneau = e => prAnneau(e.niveau, e.atteint, `<b>${esc(e.val)}</b>${e.proj ? '<small>proj.</small>' : ''}`,
+      `<b>${esc(e.p.lib)}</b><small>${esc(e.cible)} · ${esc(e.chacune + ' € chacune')}</small><small class="${e.atteint ? 'ok' : ''}">${e.atteint ? '✓ atteint' : e.perdu ? 'pas atteint' : esc(e.reste)}</small>`);
+    const chacune = E.reduce((t, e) => t + e.chacune, 0), elig = E[0].elig, hors = E[0].hors;
+    const pot = E.reduce((t, e) => t + e.pot, 0);
+    return `<div class="pr-eqb${mobile ? ' mob' : ''}">
+      <div class="pr-eqb-h"><div><div class="pr-eqb-t">Le magasin, ensemble</div><div class="s">${E.length > 1 ? E.length + ' primes' : 'Une prime'} que toute l’équipe gagne d’un coup, quand le magasin y arrive</div></div>
+        <div class="pr-eqb-pot"><b>+ ${esc(prEur(chacune))}</b><small>chacune si tout est atteint · ${esc(prEur(pot))} pour l’équipe</small></div></div>
+      <div class="pr-eqb-rs">${E.map(anneau).join('')}</div>
+      <div class="pr-eqb-ch"><span class="lab">Éligibles · ${elig.length}</span>${elig.map(n => `<span class="ch">${esc(n)}</span>`).join('')}
+        ${hors.length ? `<span class="lab">Sous le min. d’heures · ${hors.length}</span>${hors.map(n => `<span class="ch gris">${esc(n)}</span>`).join('')}` : ''}</div>
+    </div>`;
+  }
+  /** Le mois, pour l'ordinateur comme pour le téléphone : les colonnes gardées par le filtre, les vendeuses triées. */
+  function prMoisVue(D, garde) {
+    const cols = (D.primes || []).filter(garde), clos = !D.enCours;
+    const t0 = S.prTri || { col: 'acquis', sens: -1 };
+    const tri = t0.col === 'nom' || t0.col === 'acquis' || cols.some(p => p.cle === t0.col) ? t0 : { col: 'acquis', sens: -1 };
+    const pTri = cols.find(p => p.cle === tri.col);
+    const val = v => (tri.col === 'nom' ? v.nom : pTri ? prForce(pTri, (v.cases || {})[pTri.cle]) : v.acquis);
+    const rangs = (D.vendeuses || []).slice().sort((a, b) => {
+      const xa = val(a), xb = val(b), c = typeof xa === 'string' ? xa.localeCompare(xb, 'fr') : xa - xb;
+      return c * tri.sens || b.acquis - a.acquis || a.nom.localeCompare(b.nom, 'fr');
+    });
+    return { cols, clos, tri, rangs };
+  }
+  const prSousV = v => [v.heures != null ? prFx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).join(' · ');
+  function prTableMois(D, garde) {
+    const { cols, clos, tri, rangs } = prMoisVue(D, garde);
+    const cel = k => (k.ton === 'hors' ? '<td class="pr-hors">·</td>' : `<td class="pr-c pr-${k.ton}"><div class="pr-h">${esc(k.haut)}</div>
+      ${prBarre(k)}
+      ${k.bas ? `<div class="pr-b">${esc(k.bas)}</div>` : ''}</td>`);
+    const quand = D.quand ? new Date(D.quand * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '';
+    return `<div class="db-card pr-carte"><div class="pr-defil"><table class="pr-tab">
+      <thead><tr>
+        <th class="pr-g pr-petit" aria-sort="${prAria(tri, 'nom')}">${prTriBt(tri, 'nom', 'mois', 'Vendeuse')}</th>
+        ${cols.map(p => `<th aria-sort="${prAria(tri, p.cle)}">${prTriBt(tri, p.cle, 'mois', `<div class="pr-lib">${esc(p.lib)}</div>
+          <div class="pr-rec">${esc(prRecompense(p))} · ${p.payeur === 'magasin' ? `<span class="pr-mag">${esc(prPayeur(p))}</span>` : esc(prPayeur(p))}</div>
+          <div class="pr-cpt" title="${esc(p.gagnees + ' vendeuse' + (p.gagnees > 1 ? 's' : '') + ' sur ' + p.vendeuses + ' l’' + (p.gagnees > 1 ? 'ont' : 'a') + ' gagnée')}">✓ ${esc(p.gagnees + ' / ' + p.vendeuses)}</div>`)}</th>`).join('')}
+        <th class="pr-petit pr-d" aria-sort="${prAria(tri, 'acquis')}">${prTriBt(tri, 'acquis', 'mois', D.enCours ? 'Acquis' : 'Gagné')}</th>
+      </tr></thead>
+      <tbody>${rangs.map(v => `<tr>
+        <td class="pr-g pr-nom"><b>${esc(v.nom)}</b>${prSousV(v) ? `<small>${esc(prSousV(v))}</small>` : ''}</td>
+        ${cols.map(p => cel(prCase(p, (v.cases || {})[p.cle], clos))).join('')}
+        <td class="pr-tot">${v.acquis > 0 ? esc(prEur(v.acquis)) : '—'}</td></tr>`).join('')}</tbody>
+    </table></div></div>
+    <div class="pr-pied">✓ gagnée · <span class="pr-tete-t">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin vers l’objectif · un clic sur un en-tête trie${quand ? ' · lu à ' + esc(quand) : ''}</div>`;
+  }
+  /** L'année : une colonne par prime gagnée, une ligne par vendeuse — ce qu'elle a touché et combien de mois. */
+  function prAnneeVue(A, garde) {
+    // Les primes d'équipe sortent du tableau mais comptent dans le total de chacune.
+    const tous = (A.primes || []).filter(garde), cols = tous.filter(p => !PR_EQUIPE.includes(p.cle)), equipe = tous.filter(p => PR_EQUIPE.includes(p.cle));
+    const t0 = S.prTriAn || { col: 'total', sens: -1 };
+    const tri = t0.col === 'nom' || t0.col === 'total' || cols.some(p => p.cle === t0.col) ? t0 : { col: 'total', sens: -1 };
+    const totalDe = r => tous.reduce((t, p) => t + (((r.cases || {})[p.cle] || {}).montant || 0), 0);
+    const val = r => (tri.col === 'nom' ? String(r.nom) : tri.col === 'total' ? totalDe(r) : ((r.cases || {})[tri.col] ? r.cases[tri.col].montant * 1000 + r.cases[tri.col].fois : -1));
+    const rangs = (A.personnes || []).filter(r => tous.some(p => (r.cases || {})[p.cle])).sort((a, b) => {
+      const xa = val(a), xb = val(b), c = typeof xa === 'string' ? xa.localeCompare(xb, 'fr') : xa - xb;
+      return c * tri.sens || totalDe(b) - totalDe(a) || String(a.nom).localeCompare(String(b.nom), 'fr');
+    });
+    const mois = A.mois || [];
+    return { tri, cols, equipe, rangs, totalDe, total: prEur(rangs.reduce((t, r) => t + totalDe(r), 0)),
+      periode: mois.length ? MOIS[+mois[0].m.slice(5, 7) - 1] + ' → ' + prLibMois(mois[mois.length - 1].m) + (mois[mois.length - 1].enCours ? ' (en cours)' : '') : '' };
+  }
+  function prTableAn(V) {
+    const { tri, cols, rangs, totalDe } = V;
+    return `<div class="db-card pr-carte"><div class="pr-defil"><table class="pr-tab">
+      <thead><tr>
+        <th class="pr-g pr-petit" aria-sort="${prAria(tri, 'nom')}">${prTriBt(tri, 'nom', 'an', 'Vendeuse')}</th>
+        ${cols.map(p => `<th aria-sort="${prAria(tri, p.cle)}">${prTriBt(tri, p.cle, 'an', `<div class="pr-lib">${esc(p.lib)}</div>
+          <div class="pr-rec${p.payeur === 'magasin' ? ' pr-mag' : ''}">${esc(prPayeur(p))}</div>
+          <div class="pr-cpt">${esc(prEur(p.total) + ' · ' + prPl(p.gagnantes, 'gagnante'))}</div>`)}</th>`).join('')}
+        <th class="pr-petit pr-d" aria-sort="${prAria(tri, 'total')}">${prTriBt(tri, 'total', 'an', 'Total')}</th>
+      </tr></thead>
+      <tbody>${rangs.map(r => `<tr>
+        <td class="pr-g pr-nom"><b>${esc(r.nom)}</b><small>${esc(prPl(r.mois, 'mois') + ' primé' + (r.mois > 1 ? 's' : ''))}</small></td>
+        ${cols.map(p => { const c = (r.cases || {})[p.cle]; return !c ? '<td class="pr-hors">·</td>'
+          : `<td class="pr-c pr-gagne"><div class="pr-h">${esc(c.montant > 0 ? prEur(c.montant) : '✓ cadeau')}</div><div class="pr-b">${esc(prPl(c.fois, 'mois'))}</div></td>`; }).join('')}
+        <td class="pr-tot">${esc(prEur(totalDe(r)))}</td></tr>`).join('')}</tbody>
+    </table></div></div>
+    <div class="pr-pied">Le montant gagné sur l’année et le nombre de mois · ✓ cadeau : une prime sans euros · un clic sur un en-tête trie</div>`;
+  }
+  function rendPrimes() {
+    const an = S.prVue === 'annee', filtre = S.prFiltre === 'magasin' ? 'magasin' : 'toutes';
+    const garde = p => filtre === 'toutes' || p.payeur === 'magasin';
+    const k = an ? clePrAn() : clePrEq(), D = S.aux[k];
+    const V = an && D ? prAnneeVue(D, garde) : null;
+    const m = prMois(), y = prAn(), mMax = AUJ.slice(0, 7), yMax = +AUJ.slice(0, 4);
+    const pas = an
+      ? `<button class="db-btn" data-pry="-1"${y > PR_Y_DEBUT ? '' : ' disabled'} aria-label="Année précédente">‹</button><span class="pr-per">${y}${y === yMax ? '<small> · en cours</small>' : ''}</span><button class="db-btn" data-pry="1"${y < yMax ? '' : ' disabled'} aria-label="Année suivante">›</button>`
+      : `<button class="db-btn" data-prm="-1"${m > PR_M_DEBUT ? '' : ' disabled'} aria-label="Mois précédent">‹</button><span class="pr-per">${esc(prLibMois(m))}${m === mMax ? '<small> · en cours</small>' : ''}</span><button class="db-btn" data-prm="1"${m < mMax ? '' : ' disabled'} aria-label="Mois suivant">›</button>`;
+    const sous = an ? (V && V.periode ? esc(V.periode) + ' · ' + esc(V.total) + ' gagnés' : 'L’année du magasin, prime par prime.') : 'Ce que chacune voit dans Mes primes, prime par prime.';
+    let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Primes</div><div class="pm-titre">Où en sont tes vendeuses</div><div class="db-mini pr-sous">${sous}</div></div><span style="flex:1"></span>
+      <div class="pr-outils">
+        <div class="db-ong db-ong-p">${[['toutes', 'Toutes les primes'], ['magasin', 'Celles du magasin']].map(o => `<button data-prf="${o[0]}" class="${filtre === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+        <div class="db-ong db-ong-p">${[['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-prvue="${o[0]}" class="${(an ? 'annee' : 'mois') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+        <span class="pr-pas">${pas}</span></div></div>
+      <div class="pm-lecture">Lecture seule : les primes se posent et se règlent au cockpit.</div>`;
+    if (S.err[k]) { return h + `<div class="db-err">Primes : ${esc(S.err[k])}</div>`; }
+    if (!D) { return h + `<div class="db-card"><div class="pm-vide">${an ? 'Calcul de l’année, mois par mois…' : 'Lecture des fiches de l’équipe…'}</div></div>`; }
+    if (an) {
+      if (!V.rangs.length) { return h + `<div class="db-card"><div class="pm-vide">Aucune prime gagnée dans ce magasin cette année-là${filtre === 'magasin' ? ' parmi celles du magasin' : ''}.</div></div>`; }
+      return h + prEquipeAn(D, V, false) + prTableAn(V);
+    }
+    if (!(D.vendeuses || []).length) { return h + '<div class="db-card"><div class="pm-vide">Personne au planning ni en caisse dans ce magasin ce mois-là.</div></div>'; }
+    if (!(D.primes || []).filter(garde).length) { return h + '<div class="db-card"><div class="pm-vide">Aucune prime du magasin ce mois-là.</div></div>'; }
+    return h + prEquipe(D, garde, false) + prTableMois(D, p => garde(p) && !prEstEquipe(p));
+  }
+  /* Au téléphone (30/10/2026) : le tableau ne tient pas en largeur — une carte par vendeuse, dans l'ordre du tableau :
+   * son nom, ses heures et tickets, l'acquis, une pastille par prime (verte : gagnée, bordeaux : en tête). Un toucher
+   * déplie le détail prime par prime, avec la même barre. Le mois ou l'année se change en haut, comme la date. */
+  function rendPrimesMobile() {
+    const an = S.prVue === 'annee', filtre = S.prFiltre === 'magasin' ? 'magasin' : 'toutes';
+    const garde = p => filtre === 'toutes' || p.payeur === 'magasin';
+    const k = an ? clePrAn() : clePrEq(), D = S.aux[k];
+    const m = prMois(), y = prAn(), mMax = AUJ.slice(0, 7), yMax = +AUJ.slice(0, 4);
+    const pas = (attr, n, ok, lib) => `<button type="button" class="ma-pas" ${attr}="${n}" aria-label="${lib}"${ok ? '' : ' disabled'}>${n < 0 ? '‹' : '›'}</button>`;
+    const per = an ? pas('data-pry', -1, y > PR_Y_DEBUT, 'année précédente') + `<b>${y}${y === yMax ? ' · en cours' : ''}</b>` + pas('data-pry', 1, y < yMax, 'année suivante')
+      : pas('data-prm', -1, m > PR_M_DEBUT, 'mois précédent') + `<b>${esc(prLibMois(m))}${m === mMax ? ' · en cours' : ''}</b>` + pas('data-prm', 1, m < mMax, 'mois suivant');
+    let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
+      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d">${per}</div></div>
+      <span class="sp"></span><button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <div class="mb-sc"><div class="ma pr-mob">
+      <div class="pr-mob-f"><div class="db-ong db-ong-p">${[['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-prvue="${o[0]}" class="${(an ? 'annee' : 'mois') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+        <div class="db-ong db-ong-p">${[['toutes', 'Toutes'], ['magasin', 'Du magasin']].map(o => `<button data-prf="${o[0]}" class="${filtre === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div></div>`;
+    const fin = '</div></div>' + mbOnglets();
+    const vide = t => h + `<div class="ma-t w"><div class="s" style="font-size:12px">${t}</div></div>` + fin;
+    if (S.err[k]) { return h + `<div class="db-err">Primes : ${esc(S.err[k])}</div>` + fin; }
+    if (!D) { return h + `<div class="ma-v"><span class="n mu">…</span><span class="t">${an ? 'calcul de l’année' : 'lecture des fiches de l’équipe'}<em>${an ? 'mois par mois, prime par prime' : 'ce que chacune voit dans Mes primes'}</em></span></div>${squeletteMa(4)}` + fin; }
+    const ouv = S.prOuv || {};
+    // Une carte : l'en-tête se touche, le détail se déplie dessous.
+    const carte = (id, nom, sous, droite, dots, lignes) => `<div class="pr-mc${ouv[id] ? ' ouv' : ''}">
+      <button type="button" class="pr-mc-h" data-prouv="${esc(id)}" aria-expanded="${!!ouv[id]}">
+        <span class="pr-mc-n"><b>${esc(nom)}</b>${sous ? `<small>${esc(sous)}</small>` : ''}</span>
+        <span class="pr-mc-a"><b>${droite}</b>${dots ? `<span class="pr-dots">${dots}</span>` : ''}</span><span class="pr-mc-ch">${ouv[id] ? '▴' : '▾'}</span></button>
+      ${ouv[id] ? `<div class="pr-mc-d">${lignes()}</div>` : ''}</div>`;
+    if (an) {
+      const V = prAnneeVue(D, garde);
+      if (!V.rangs.length) { return vide('Aucune prime gagnée dans ce magasin cette année-là' + (filtre === 'magasin' ? ' parmi celles du magasin.' : '.')); }
+      h += `<div class="ma-v"><span class="n long">${esc(V.total)}</span><span class="t">gagnés en ${y}<em>${esc(V.periode)}</em></span></div>` + prEquipeAn(D, V, true);
+      h += V.rangs.map(r => carte('an:' + r.id, r.nom, prPl(r.mois, 'mois') + ' primé' + (r.mois > 1 ? 's' : ''), esc(prEur(V.totalDe(r))), '',
+        () => V.cols.map(p => { const c = (r.cases || {})[p.cle]; return `<div class="pr-ml${c ? ' pr-gagne' : ''}"><span class="pr-ml-l">${esc(p.lib)}<small>${p.payeur === 'magasin' ? `<span class="pr-mag">${esc(prPayeur(p))}</span>` : esc(prPayeur(p))}</small></span>
+          <span class="pr-ml-v">${c ? `<span class="pr-h">${esc(c.montant > 0 ? prEur(c.montant) : '✓ cadeau')}</span><span class="pr-b">${esc(prPl(c.fois, 'mois'))}</span>` : '<span class="pr-hors">·</span>'}</span></div>`; }).join(''))).join('');
+      return h + '<div class="ma-note">Le montant gagné sur l’année et le nombre de mois · toucher une vendeuse pour le détail</div>' + fin;
+    }
+    if (!(D.vendeuses || []).length) { return vide('Personne au planning ni en caisse dans ce magasin ce mois-là.'); }
+    if (!(D.primes || []).filter(garde).length) { return vide('Aucune prime du magasin ce mois-là.'); }
+    const V = prMoisVue(D, p => garde(p) && !prEstEquipe(p));
+    const total = D.vendeuses.reduce((t, v) => t + (+v.acquis || 0), 0), nG = V.cols.reduce((t, p) => t + (+p.gagnees || 0), 0);
+    h += `<div class="ma-v"><span class="n long">${esc(prEur(total))}</span><span class="t">${D.enCours ? 'acquis ce mois' : 'gagnés ce mois-là'}<em>${prPl(V.rangs.length, 'vendeuse')} · ${nG} prime${nG > 1 ? 's' : ''} individuelle${nG > 1 ? 's' : ''} gagnée${nG > 1 ? 's' : ''}</em></span></div>`;
+    h += prEquipe(D, garde, true);
+    h += V.rangs.map(v => {
+      const cs = V.cols.map(p => ({ p, k: prCase(p, (v.cases || {})[p.cle], V.clos) }));
+      return carte(v.id, v.nom, prSousV(v), v.acquis > 0 ? esc(prEur(v.acquis)) : '—', cs.map(x => `<i class="${x.k.ton}"></i>`).join(''),
+        () => cs.map(({ p, k: c }) => `<div class="pr-ml pr-${c.ton}"><span class="pr-ml-l">${esc(p.lib)}<small>${esc(prRecompense(p))} · ${p.payeur === 'magasin' ? `<span class="pr-mag">${esc(prPayeur(p))}</span>` : esc(prPayeur(p))}</small></span>
+          <span class="pr-ml-v">${c.ton === 'hors' ? '<span class="pr-hors">·</span>' : `<span class="pr-h">${esc(c.haut)}</span>${prBarre(c)}${c.bas ? `<span class="pr-b">${esc(c.bas)}</span>` : ''}`}</span></div>`).join(''));
+    }).join('');
+    return h + '<div class="ma-note"><i class="pr-lg gagne"></i>gagnée · <i class="pr-lg tete"></i>en tête · toucher une vendeuse pour le détail, prime par prime</div>' + fin;
+  }
+
   function rendre() {
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
@@ -4485,7 +4773,9 @@
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
       // La production se pilote sur ordinateur (demande du 03/10/2026) : pas d'écran au téléphone.
-      if (!['ops', 'jour', 'semaine', 'reclamation'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      // Les primes : déplier une carte ne doit pas ramener en haut de la liste.
+      if (S.vue === 'primes') { const a = $.querySelector('.pr-mob'), sc = a ? a.closest('.mb-sc') : null, top = sc ? sc.scrollTop : 0; $.innerHTML = rendPrimesMobile(); $.classList.add('mob'); brancher(); const sc2 = $.querySelector('.mb-sc'); if (sc2) { sc2.scrollTop = top; } return; }
       if (S.vue === 'actions' || S.vue === 'campagne') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
       if (S.vue === 'reclamation') {
         const champ = rcGarder();
@@ -4516,15 +4806,16 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions'], ['primes', 'Primes']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'primes' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
+    if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }
@@ -7609,6 +7900,13 @@
     $.querySelectorAll('[data-fdate]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.fdate; if (!d || d > AUJ) { return; } S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fan]').forEach(b => b.addEventListener('click', () => { const y = annee() + (+b.dataset.fan); const d = y + S.date.slice(4, 7) + '-01'; S.date = d > AUJ ? AUJ : finMois(d.slice(0, 7)); S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => charger(true)));
+    // Primes : le filtre, le mois ou l'année, le pas de période, le tri — de la lecture, rien ne s'écrit.
+    $.querySelectorAll('[data-prf]').forEach(b => b.addEventListener('click', () => { S.prFiltre = b.dataset.prf; rendre(); }));
+    $.querySelectorAll('[data-prvue]').forEach(b => b.addEventListener('click', () => { S.prVue = b.dataset.prvue; charger(false); }));
+    $.querySelectorAll('[data-prm]').forEach(b => b.addEventListener('click', () => { S.prM = prDecale(prMois(), +b.dataset.prm); charger(false); }));
+    $.querySelectorAll('[data-pry]').forEach(b => b.addEventListener('click', () => { S.prY = prAn() + (+b.dataset.pry); charger(false); }));
+    $.querySelectorAll('[data-prouv]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.prouv; S.prOuv[id] = !S.prOuv[id]; rendre(); }));
+    $.querySelectorAll('[data-prtri]').forEach(b => b.addEventListener('click', () => { S[b.dataset.prtab === 'an' ? 'prTriAn' : 'prTri'] = { col: b.dataset.prtri, sens: +b.dataset.prsens }; rendre(); }));
     $.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; rendre(); }));
     $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
@@ -7681,7 +7979,7 @@
     $.querySelectorAll('[data-rgdrop]').forEach(b => b.addEventListener('click', () => { S.rgOuvert = !S.rgOuvert; rendre(); }));
     $.querySelectorAll('[data-mo]').forEach(b => b.addEventListener('click', () => {
       const k = b.dataset.mo, avant = S.vue;
-      if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else { S.vue = 'jour'; S.mo = k; }
+      if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else if (k === 'prim') { S.vue = 'primes'; } else { S.vue = 'jour'; S.mo = k; }
       S.heure = null; S.jourH = null; urlMaj();
       if (S.vue === avant) { rendre(); const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } } else { charger(false); } }));
     $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));

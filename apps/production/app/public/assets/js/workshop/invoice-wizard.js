@@ -455,6 +455,12 @@
                 const res = await act(() => api.post('/supply/invoices/wizard/process', {ids}));
                 if (res) {
                     ui.notify(!res.errors.length, t('kw.processed', {n: res.processed.length}) + (res.errors.length ? ' ' + t('kw.process_errors', {list: res.errors.map(x => (x.number || '#' + x.id) + ' (' + x.code + ')').join(', ')}) : ''));
+                    // Nowe ceny surowców w kartotece → Kreator cen [218] : koszty i marże, nowe ceny, publikacja od daty.
+                    if (res.processed.length && window.Swal) {
+                        const next = await Swal.fire({icon: 'success', title: t('kw.processed', {n: res.processed.length}), text: t('kw.next_prices'), showCancelButton: true,
+                            confirmButtonText: t('kw.go_prices'), cancelButtonText: t('kw.stay'), confirmButtonColor: '#8e1f2f'});
+                        if (next.isConfirmed) window.location.href = api.root + '/finances/price-wizard';
+                    }
                 }
             }
         });

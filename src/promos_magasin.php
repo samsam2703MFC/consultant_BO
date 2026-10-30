@@ -20,6 +20,13 @@ declare(strict_types=1);
  * `shops` vaut toujours [shop] (la forme du périmètre « magasins sélectionnés » du panel). Les règles se lisent encore
  * magasin par magasin sur `shops`, pour d'anciennes demandes à plusieurs magasins.
  *
+ * TOUS LES MAGASINS (30/10/2026, Sam : « dans l'éditeur, choisir aussi pour tous les shops » — une seule promotion
+ * réseau, choisie plutôt qu'une copie par magasin) : `tous` dans la demande. UNE promotion du panel pour tout le réseau
+ * (`ALL_SHOPS`, comme celles de la marque) ; `shop` n'est plus que le magasin dont l'assistant a lu les produits et les
+ * prix. Le coefficient se vérifie dans chaque magasin ouvert. Elle part en caisse directement, sans bon : une fois
+ * écrite, c'est une promotion « Tout le réseau » du Tableau d'analyse, que le cockpit ne reprend pas (pmEstDuMagasin) —
+ * pas de brouillon qu'il ne saurait rouvrir, ni de bon, dont les codes et les clients sont ceux d'un magasin.
+ *
  * La règle du magasin, vérifiée ici (le navigateur la montre, le serveur l'impose) : une date de fin. Plus de durée
  * maximale (23/10/2026, Sam : « Tout le temps », d'aujourd'hui au 31/12/2037 — le panel refuse 1927 → 2125 ; un an au plus avant, 14 jours jusqu'au
  * 18/10/2026), plus de limite au nombre de promotions du magasin en même temps (23/10/2026 ; deux au plus avant).
@@ -43,11 +50,22 @@ const PM_TYPES = ['FREE', 'FIXED_PRICE', 'FIXED_AMOUNT_DISCOUNT', 'PERCENTAGE_DI
  */
 const PM_PORTIONS = ['ONE_HALF' => 0.5, 'ONE_QUARTER' => 0.25];
 
-/** Les magasins qu'une demande couvre (les anciennes n'ont que `shop`). */
+/** Les magasins qu'une demande couvre (les anciennes n'ont que `shop`) ; pour tout le réseau, les magasins ouverts. */
 function pmShops(array $d): array
 {
+    if (!empty($d['tous'])) {
+        $l = pmShopsOuverts();
+        return $l !== [] ? $l : [(int) ($d['shop'] ?? 0)];
+    }
     $l = array_values(array_unique(array_filter(array_map('intval', (array) ($d['shops'] ?? [])), static fn ($s) => $s > 0)));
     return $l !== [] ? $l : [(int) ($d['shop'] ?? 0)];
+}
+
+/** Les magasins ouverts (ceux du Tableau d'analyse) : ceux où une promotion réseau passe en caisse. */
+function pmShopsOuverts(): array
+{
+    try { $r = Db::rows('SELECT id FROM shops WHERE active = 1 ORDER BY sort_order, id'); } catch (Throwable $e) { $r = []; }
+    return array_values(array_filter(array_map(static fn ($x) => (int) $x['id'], $r), static fn ($s) => $s > 0));
 }
 
 /* --- ce que le navigateur envoie, rendu propre ------------------------------------------------ */
@@ -112,10 +130,12 @@ function pmQuand($v): ?string
 function pmPropre(array $b, int $shop): array
 {
     $max = $b['maxParTicket'] ?? null;
+    $tous = !empty($b['tous']);
     return [
         'shop' => $shop,
-        // Le magasin qui l'écrit, lui seul : un `shops` envoyé par le navigateur est ignoré.
-        'shops' => [$shop],
+        // Le magasin qui l'écrit, lui seul : un `shops` envoyé par le navigateur est ignoré. Tout le réseau : aucun.
+        'shops' => $tous ? null : [$shop],
+        'tous' => $tous,
         'nom' => mb_substr(trim((string) ($b['nom'] ?? '')), 0, 80),
         'description' => mb_substr(trim((string) ($b['description'] ?? '')), 0, 500),
         'x' => pmCote($b['x'] ?? [], false),
@@ -650,7 +670,9 @@ function pmPanelCorps(array $d, string $statut, bool $secondes = true): array
         'valid_from' => $d['du'] !== null ? $d['du'] . ':00' : null, 'valid_to' => $d['au'] !== null ? $d['au'] . ':00' : null,
         'is_repeatable' => (bool) $d['repetable'], 'max_applications_per_transaction' => $d['repetable'] ? $d['maxParTicket'] : null,
         // Avec un bon (24/10/2026) : VOUCHER_ONLY, la caisse ne l'applique qu'avec un code de sa campagne.
-        'shop_scope_type' => 'SELECTED_SHOPS', 'activation_mode' => !empty($d['bon']) ? 'VOUCHER_ONLY' : 'AUTOMATIC', 'shop_ids' => [(int) $d['shop']],
+        // Tous les magasins (30/10/2026) : le périmètre de la marque, « Tout le réseau ».
+        'shop_scope_type' => !empty($d['tous']) ? 'ALL_SHOPS' : 'SELECTED_SHOPS', 'activation_mode' => !empty($d['bon']) ? 'VOUCHER_ONLY' : 'AUTOMATIC',
+        'shop_ids' => !empty($d['tous']) ? [] : [(int) $d['shop']],
         'schedule' => pmPanelHoraire($d['creneaux'] ?? [], $secondes),
         'trigger' => $cote($d['x']),
         'reward' => $cote($y) + ['type' => $y['type'], 'value' => $y['type'] === 'FREE' ? null : $y['valeur'], 'selection_strategy' => 'CHEAPEST'],
@@ -750,7 +772,9 @@ function pmPanelEcarts(array $envoye, array $relu): array
     $e = [];
     $ens = static function ($l): array { $v = array_map('intval', (array) $l); sort($v); return $v; };
     if (trim((string) ($relu['name'] ?? '')) !== trim((string) $envoye['name'])) { $e[] = 'nom'; }
-    if ($ens($relu['shop_ids'] ?? []) !== $ens($envoye['shop_ids'])) { $e[] = 'magasin'; }
+    if ($envoye['shop_scope_type'] === 'ALL_SHOPS') {
+        if (strtoupper((string) ($relu['shop_scope_type'] ?? '')) !== 'ALL_SHOPS') { $e[] = 'tous les magasins'; }
+    } elseif ($ens($relu['shop_ids'] ?? []) !== $ens($envoye['shop_ids'])) { $e[] = 'magasin'; }
     foreach (['valid_from' => 'début', 'valid_to' => 'fin'] as $k => $mot) {
         if (substr((string) ($relu[$k] ?? ''), 0, 16) !== substr((string) ($envoye[$k] ?? ''), 0, 16)) { $e[] = $mot; }
     }
@@ -860,7 +884,7 @@ function pmDemande(array $r): array
     $rc = (array) ($r['recompense'] ?? []);
     $shop = (int) (((array) ($r['shops'] ?? []))[0] ?? 0);
     $type = in_array($rc['type'] ?? '', PM_TYPES, true) ? (string) $rc['type'] : 'FREE';
-    return ['id' => 'p' . (int) $r['id'], 'panelId' => (int) $r['id'], 'shop' => $shop, 'shops' => [$shop],
+    return ['id' => 'p' . (int) $r['id'], 'panelId' => (int) $r['id'], 'shop' => $shop, 'shops' => [$shop], 'tous' => array_key_exists('shops', $r) && $r['shops'] === null,
         'nom' => (string) ($r['nom'] ?? ''), 'description' => (string) ($r['description'] ?? ''),
         'x' => $cote($r['declenche'] ?? []), 'y' => $cote($r['recoit'] ?? []) + ['type' => $type, 'valeur' => $type === 'FREE' ? null : ($rc['valeur'] ?? null)],
         'du' => $r['duH'] ?? (($r['du'] ?? null) !== null ? $r['du'] . ' 00:00' : null),
@@ -1212,7 +1236,9 @@ function ep_promos_magasin_demandes(): array
 
 /**
  * POST /exploitation/promos-magasin {shop, id? (« p21 » : la promotion n° 21 du panel), action: brouillon|envoyer, nom,
- * description, x, y, du, au, creneaux, repetable, maxParTicket, bon?} — écrit au panel, et rien ailleurs (18/10/2026).
+ * description, x, y, du, au, creneaux, repetable, maxParTicket, bon?, tous?} — écrit au panel, et rien ailleurs (18/10/2026).
+ * `tous` (30/10/2026) : une promotion réseau (ALL_SHOPS), nouvelle, envoyée en caisse, sans bon — sinon 422 ; `shop` est
+ * alors le magasin dont l'assistant a lu les produits.
  * `bon` (24/10/2026) : {on, cible: code|uniques|clients, code, limite, nombre, prefixe, clients: [{id, nom}]} — la
  * promotion passe « par code » et sa campagne s'écrit avec elle (promos_bons.php, pbEnvoyer).
  * « envoyer » : les règles du magasin (422 sinon), ce qui ne se chiffre pas sort d'office, puis créée (POST) ou modifiée
@@ -1231,6 +1257,14 @@ function wr_promos_magasin(): array
     $d = pmPropre($b, $shop);
     $panelId = pmNumero($b['id'] ?? null);
     if (($b['id'] ?? null) !== null && ($b['id'] ?? '') !== '' && $panelId === null) { http_response_code(404); return ['error' => 'promotion introuvable']; }
+    if ($d['tous']) {
+        $non = array_values(array_filter([
+            $panelId !== null ? 'Une promotion enregistrée reste à son magasin : dupliquez-la, puis choisissez « Tous les magasins ».' : null,
+            !$envoi ? 'Une promotion pour tous les magasins part en caisse directement : le cockpit ne reprend pas un brouillon réseau.' : null,
+            ($d['bon'] ?? null) !== null ? 'Un bon reste à un magasin (ses codes, ses clients) : choisissez un magasin, ou le déclenchement automatique.' : null,
+        ]));
+        if ($non !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $non]; }
+    }
     if ($panelId !== null) {
         $actuelle = pmMienne($shop, $panelId);
         if ($actuelle === null) { http_response_code(404); return ['error' => 'promotion introuvable']; }
@@ -1260,7 +1294,7 @@ function wr_promos_magasin(): array
     [$d, $errP] = pmCiblesPortions($d, $shop);
     if ($errP !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $errP, 'coef' => $coef]; }
     // Un envoi à la fois par magasin : un double clic ne crée pas deux promotions au panel (17/10/2026 : « Test » n° 20 et 21).
-    $verrou = @fopen(sys_get_temp_dir() . '/cockpit-promo-magasin-' . $shop . '.lock', 'c');
+    $verrou = @fopen(sys_get_temp_dir() . '/cockpit-promo-magasin-' . ($d['tous'] ? 'reseau' : $shop) . '.lock', 'c');
     if ($verrou !== false && !flock($verrou, LOCK_EX | LOCK_NB)) {
         fclose($verrou);
         http_response_code(409);
