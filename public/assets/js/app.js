@@ -1559,6 +1559,10 @@ class App {
         // Le Marketing lui-même (dépôt marketing, servi à /marketing/ à côté du cockpit) : campagnes et leur
         // assistant, réseaux sociaux, publicités Meta. Il s'ouvre dans un onglet à part.
         ['ext:../marketing/', 'Marketing ↗', 0],
+        // Le marketing en magasin (30/10/2026, Sam) : la régie d'affichage des écrans des magasins (dépôt signage,
+        // servie à /signage/ sur le même serveur) — films, promotions TFBuddy à l'écran, planning, réseau d'écrans.
+        // Une campagne s'y prolonge en boutique ; comme le Marketing, elle s'ouvre dans un onglet à part.
+        ['ext:../signage/', 'Marketing en magasin ↗', 0],
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
