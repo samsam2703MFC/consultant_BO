@@ -1,0 +1,143 @@
+{# Ceny klientów wg marży [212] — makieta 2 « klient po kliencie » : obecna cena, nowa wg marży kategorii, różnica ; nigdy niżej. #}
+{% macro ceny(n) %}{{ n == 1 ? 'cena' : ((n % 10) in [2, 3, 4] and (n % 100) not in [12, 13, 14] ? 'ceny' : 'cen') }}{% endmacro %}
+{% import _self as cpm %}
+{% set p = cp.params %}
+<div class="cp-wrap mt-3" id="clientPrices" data-root="{{ root }}" data-months="{{ selected_months }}" data-client="{{ cp.client ? cp.client.id : '' }}">
+    <div class="cp-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <div>
+                <h5 class="cp-h">Ceny klientów wg marży — klient po kliencie</h5>
+                <p class="cp-lead">Wszystkie kategorie z marżą docelową naraz ; dla każdego klienta jego cennik : obecna cena, nowa cena, różnica. Nigdy niżej niż obecna cena.</p>
+            </div>
+            {% if cp_admin %}<button type="button" class="cp-btn" data-cp-params><i class="bi bi-sliders"></i> Parametry</button>{% endif %}
+        </div>
+        <div class="cp-params">
+            <div class="cp-param"><small>Marża docelowa kategorii</small><b>wg kategorii</b><span>Produkty › Kategorie</span></div>
+            <div class="cp-param"><small>Podstawa kosztu</small><b>Koszt pełny</b><span>surowce + praca działu</span></div>
+            <div class="cp-param"><small>Limit podwyżki na raz</small><b>+{{ p.cap_pct|number_format(p.cap_pct == p.cap_pct|round ? 0 : 1, ',', ' ') }} %</b><span>reszta przy następnej zmianie</span></div>
+            <div class="cp-param"><small>Zaokrąglenie</small><b>w górę do {{ p.round_eur|number_format(2, ',', ' ') }} €</b><span>karton</span></div>
+            <div class="cp-param"><small>Następna podwyżka tej ceny</small><b>{{ p.interval_days ? 'po ' ~ p.interval_days ~ ' dniach' : 'bez przerwy' }}</b><span>od ostatniej podwyżki wg marży</span></div>
+            <div class="cp-param"><small>Rabat klienta</small><b>{{ p.keep_discount ? 'zachowany' : 'bez rabatu' }}</b><span>{{ p.keep_discount ? 'cena poniżej standardowej : ten sam rabat od ceny celu' : 'wszyscy klienci do tej samej ceny celu' }}</span></div>
+            <div class="cp-param is-lock"><small>Zabezpieczenie</small><b><i class="bi bi-lock-fill"></i> nigdy niżej niż obecna cena</b><span>zawsze włączone</span></div>
+        </div>
+    </div>
+
+    {% if cp.clients is empty %}
+        <div class="cp-card text-muted">Brak aktywnych klientów z cennikiem produktów z kategorii z marżą docelową.</div>
+    {% else %}
+    <div class="cp-split">
+        <div class="cp-card cp-side">
+            <div class="cp-side-h">Klienci · efekt / miesiąc</div>
+            <div class="cp-clients">
+                {% for c in cp.clients %}
+                    <a href="{{ root }}/finances/category-margin?months={{ selected_months }}&amp;view=clients&amp;client={{ c.id }}" class="cp-client{{ cp.client and cp.client.id == c.id ? ' is-on' : '' }}" data-cp-client="{{ c.id }}"{{ cp.client and cp.client.id == c.id ? ' aria-current="true"' : '' }}>
+                        <b>{{ c.name }}</b>
+                        <span class="cp-n {{ c.month_eur > 0 ? 'cp-up' : 'cp-eq' }}">{{ c.month_eur > 0 ? '+' : '' }}{{ c.month_eur|number_format(0, ',', ' ') }} €</span>
+                        <small class="cp-client-sub">{{ c.changes }} z {{ c.prices }} do zmiany{% if c.changes %} · śr. +{{ c.avg_pct|number_format(1, ',', ' ') }} %{% endif %}</small>
+                    </a>
+                {% endfor %}
+            </div>
+            <p class="cp-note">Razem : {{ cp.totals.changes }} {{ cpm.ceny(cp.totals.changes) }} do zmiany u {{ cp.totals.clients }} klientów · <b class="cp-up">+{{ cp.totals.month_eur|number_format(0, ',', ' ') }} € / mies.</b> (różnica × średnia sprzedaż kartonów klienta na miesiąc, WDT 12 mies.)</p>
+        </div>
+
+        {% set c = cp.client %}
+        {% set changes = cp.rows|filter(r => r.delta > 0) %}
+        {% set maxMonth = max(changes|map(r => r.month_eur)|merge([0.01])) %}
+        <div class="cp-card cp-main" data-mode="all">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                <div>
+                    <h5 class="cp-h mb-1">{{ c.name }}</h5>
+                    <p class="cp-lead mb-0">{{ c.prices }} {{ cpm.ceny(c.prices) }} w cenniku · {{ c.changes }} do podwyżki · efekt <b class="cp-up">+{{ c.month_eur|number_format(0, ',', ' ') }} € / mies.</b></p>
+                </div>
+                <div class="cp-seg" role="tablist" aria-label="Widok cennika">
+                    <button type="button" class="is-on" data-cp-mode="all" role="tab" aria-selected="true">Obecna · nowa · różnica</button>
+                    <button type="button" data-cp-mode="changes" role="tab" aria-selected="false">Tylko zmiany</button>
+                    <button type="button" data-cp-mode="chart" role="tab" aria-selected="false">Wykres</button>
+                </div>
+            </div>
+
+            <div class="table-responsive cp-table-wrap">
+                <table class="cp-t">
+                    <thead><tr>
+                        <th class="cp-chk-col">{% if changes is not empty %}<input type="checkbox" class="form-check-input" data-cp-all checked aria-label="Zaznacz wszystkie podwyżki">{% endif %}</th>
+                        <th>Produkt · kategoria</th>
+                        <th class="n">Obecna cena</th><th class="n">Nowa cena</th><th class="n">Różnica €</th><th class="n">Różnica %</th><th class="n">Efekt / mies.</th><th>Status</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for r in cp.rows %}
+                        <tr class="{{ r.delta > 0 ? 'is-up' : 'is-same' }}" data-cp-row="{{ r.id }}" data-month="{{ r.month_eur }}">
+                            <td class="cp-chk-col">{% if r.delta > 0 %}<input type="checkbox" class="form-check-input" data-cp-pick value="{{ r.id }}" checked aria-label="Podwyżka : {{ r.name }}">{% endif %}</td>
+                            <td><a href="{{ root }}/finances/product-margin?product_id={{ r.id }}&amp;months={{ selected_months }}" class="cp-name">{{ r.name }}</a><small class="cp-cat">{{ r.category }}</small></td>
+                            <td class="n">{{ r.cur|number_format(2, ',', ' ') }} €</td>
+                            <td class="n" title="{% if r.target is not null %}Cena celu klienta {{ r.target|number_format(2, ',', ' ') }} € (marża kategorii {{ r.target_margin|number_format(0) }} %{{ r.cost is not null ? ', koszt pełny ' ~ r.cost|number_format(2, ',', ' ') ~ ' €' : '' }}){% if r.margin_now is not null %} · marża {{ r.margin_now|number_format(1, ',', ' ') }} % → {{ r.margin_new|number_format(1, ',', ' ') }} %{% endif %}{% else %}Kategoria bez marży docelowej{% endif %}"><b>{{ r.new|number_format(2, ',', ' ') }} €</b></td>
+                            <td class="n {{ r.delta > 0 ? 'cp-up' : 'cp-eq' }}">{{ r.delta > 0 ? '+' : '' }}{{ r.delta|number_format(2, ',', ' ') }} €</td>
+                            <td class="n {{ r.delta > 0 ? 'cp-up' : 'cp-eq' }}">{{ r.delta > 0 ? '+' : '' }}{{ r.delta_pct|number_format(1, ',', ' ') }} %</td>
+                            <td class="n {{ r.month_eur > 0 ? 'cp-up' : 'cp-eq' }}" title="{{ r.qty|number_format(1, ',', ' ') }} kart. / mies.">{{ r.month_eur > 0 ? '+' : '' }}{{ r.month_eur|number_format(0, ',', ' ') }} €</td>
+                            <td>
+                                {% if r.status == 'limited' %}<span class="cp-badge is-lim" title="Limit podwyżki +{{ p.cap_pct|number_format(0) }} % ; do ceny celu brakuje jeszcze {{ r.gap_pct|number_format(1, ',', ' ') }} %">limit +{{ p.cap_pct|number_format(p.cap_pct == p.cap_pct|round ? 0 : 1, ',', ' ') }} %</span><small class="cp-gap">do celu +{{ r.gap_pct|number_format(0) }} %</small>
+                                {% elseif r.status == 'up' %}<span class="cp-badge is-up">cena celu</span>
+                                {% elseif r.status == 'recent' %}<span class="cp-badge is-recent" title="Podwyżka wg marży {{ r.raised_at|date('d.m.Y') }} ; do ceny celu brakuje {{ r.gap_pct|number_format(1, ',', ' ') }} %">podniesiona {{ r.raised_at|date('d.m') }}</span><small class="cp-gap">następna od {{ r.next_at|date('d.m.Y') }}</small>
+                                {% elseif r.status == 'locked' %}<span class="cp-badge is-lock" title="Cena z marży {{ r.target|number_format(2, ',', ' ') }} € niższa niż obecna — cena zostaje"><i class="bi bi-lock-fill"></i> nie niżej</span>
+                                {% else %}<span class="cp-badge is-none">brak celu</span>{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="cp-chart" aria-label="Efekt podwyżki na miesiąc wg produktu">
+                {% for r in changes|sort((a, b) => b.month_eur <=> a.month_eur) %}
+                    <div class="cp-bar-row" data-cp-bar="{{ r.id }}">
+                        <span class="cp-bar-name">{{ r.name }}</span>
+                        <span class="cp-bar"><i style="width: {{ (r.month_eur > 0 ? r.month_eur / maxMonth * 100 : 0)|round(1) }}%"></i></span>
+                        <span class="cp-n cp-up">+{{ r.month_eur|number_format(0, ',', ' ') }} €</span>
+                        <span class="cp-n cp-bar-pct">+{{ r.delta_pct|number_format(1, ',', ' ') }} %</span>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">Brak podwyżek u tego klienta.</p>
+                {% endfor %}
+            </div>
+
+            {% set locked = cp.rows|filter(r => r.status == 'locked') %}
+            {% if locked is not empty %}
+                <p class="cp-note"><i class="bi bi-lock-fill"></i> {{ locked|length }} {{ cpm.ceny(locked|length) }} z marży poniżej obecnych — ceny zostają{% if locked|length <= 3 %} ({% for r in locked %}{{ r.name }} : {{ r.target|number_format(2, ',', ' ') }} € &lt; {{ r.cur|number_format(2, ',', ' ') }} €{{ not loop.last ? ' ; ' : '' }}{% endfor %}){% endif %}.</p>
+            {% endif %}
+
+            <div class="cp-foot">
+                <a class="cp-btn" href="{{ root }}/ajax/clients/{{ c.id }}/price-list" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> Cennik PDF klienta</a>
+                {% if changes is not empty %}
+                    <button type="button" class="cp-btn is-pri" data-cp-apply>Zastosuj u klienta <span data-cp-count>({{ changes|length }})</span></button>
+                    <span class="cp-sum">Zaznaczone : <b class="cp-up" data-cp-sum>+{{ c.month_eur|number_format(0, ',', ' ') }} €</b> / mies.</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if cp_admin %}
+<div class="modal fade" id="cpParamsModal" tabindex="-1" aria-labelledby="cpParamsTitle" aria-hidden="true">
+    <div class="modal-dialog"><form class="modal-content" data-cp-params-form>
+        <div class="modal-header"><h5 class="modal-title" id="cpParamsTitle">Parametry cen klientów wg marży</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button></div>
+        <div class="modal-body">
+            <label class="form-label fw-semibold" for="cpCap">Limit podwyżki jednej ceny na raz (%)</label>
+            <input class="form-control mb-1" id="cpCap" name="cap_pct" inputmode="decimal" value="{{ p.cap_pct|number_format(p.cap_pct == p.cap_pct|round ? 0 : 1, ',', '') }}" required>
+            <div class="form-text mb-3">Od 0,5 do 50 %. Reszta do ceny celu przy następnej zmianie.</div>
+            <label class="form-label fw-semibold" for="cpRound">Zaokrąglenie w górę do (€)</label>
+            <select class="form-select mb-3" id="cpRound" name="round_eur">
+                {% for v in [0.01, 0.05, 0.10, 0.50] %}<option value="{{ v }}"{{ (p.round_eur - v)|abs < 0.001 ? ' selected' : '' }}>{{ v|number_format(2, ',', '') }} €</option>{% endfor %}
+            </select>
+            <label class="form-label fw-semibold" for="cpInterval">Następna podwyżka tej samej ceny po (dni)</label>
+            <input class="form-control mb-1" id="cpInterval" name="interval_days" inputmode="numeric" value="{{ p.interval_days }}" required>
+            <div class="form-text mb-3">Od 0 do 365 dni ; 0 = bez przerwy (każde zastosowanie znowu +limit).</div>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="cpKeep" name="keep_discount"{{ p.keep_discount ? ' checked' : '' }}>
+                <label class="form-check-label" for="cpKeep">Rabat klienta zachowany (klient z ceną poniżej standardowej : ten sam rabat od ceny celu)</label>
+            </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Anuluj</button><button type="submit" class="btn btn-primary">Zapisz</button></div>
+    </form></div>
+</div>
+{% endif %}

@@ -135,10 +135,14 @@
         {# ── WIDOK : marża fabryki / sprzedawalność w Belgii (franczyza) ───── #}
         <div class="mt-3">
             <div class="at-seg">
-                <a href="{{ root }}/finances/category-margin?months={{ selected_months }}" class="{{ view != 'be' ? 'is-on' : '' }}">Marża fabryki</a>
+                <a href="{{ root }}/finances/category-margin?months={{ selected_months }}" class="{{ view == 'margin' ? 'is-on' : '' }}">Marża fabryki</a>
                 <a href="{{ root }}/finances/category-margin?months={{ selected_months }}&amp;view=be" class="{{ view == 'be' ? 'is-on' : '' }}">Sprzedawalność w Belgii (franczyza)</a>
+                <a href="{{ root }}/finances/category-margin?months={{ selected_months }}&amp;view=clients" class="{{ view == 'clients' ? 'is-on' : '' }}">Ceny klientów wg marży</a>
             </div>
         </div>
+        {% if view == 'clients' %}
+            {% include 'finances/product-margin/_clients.twig' %}
+        {% else %}
         {% if view == 'be' %}
             {% include 'finances/product-margin/_be_toolbar.twig' %}
             <div class="d-flex flex-wrap gap-3 mt-2 mb-2 small align-items-center">
@@ -471,6 +475,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
     {% endif %}
 
@@ -618,6 +623,7 @@
 
 {% block scripts %}
 {% if view == 'be' %}{% include 'page_components/ajax_helpers.twig' %}{% include 'finances/product-margin/_be_link_modal.twig' %}{% endif %}
+{% if view == 'clients' %}<script src="{{ root }}/assets/js/finances/client-prices.js?v={{ asset_v() }}"></script>{% endif %}
 <script>
     function toggleCategory(categoryId) {
         const panel = document.getElementById('products_' + categoryId);

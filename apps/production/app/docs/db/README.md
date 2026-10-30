@@ -66,6 +66,25 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Prix clients par la marge — client par client (migration 134, 30/10/2026)
+
+- Page : Marża kategorii › onglet « Ceny klientów wg marży » (`/finances/category-margin?view=clients&client=…`,
+  maquette 2). À gauche les clients actifs avec cennik (effet € / mois, prix à monter) ; à droite le cennik du client :
+  prix actuel, nouveau prix, différence € et %, effet / mois, statut ; bascule « Obecna · nowa · różnica / Tylko
+  zmiany / Wykres ».
+- Règle (`ClientPriceService::rule`) : prix cible du produit = coût complet ÷ (1 − marge cible de la catégorie) (le
+  même que « cena wg celu » de la page) ; cible du client = cible × min(1, prix client ÷ prix standard) si la remise
+  est conservée ; nouveau prix = max(actuel, min(cible client, actuel × (1 + plafond))) arrondi vers le haut.
+  Jamais plus bas que le prix actuel. Statuts : `up` (cible atteinte), `limited` (plafond, reste à la prochaine hausse),
+  `locked` (cible ≤ actuel : prix gardé), `none` (catégorie sans cible), `recent` (monté il y a moins de
+  `prices.client_interval_days` jours : pas de nouvelle hausse).
+- Effet / mois = différence × cartons moyens du client par mois (WDT, 12 derniers mois).
+- « Zastosuj u klienta » (`POST /ajax/category-margin/client-prices`) : le serveur recalcule, ne monte que les produits
+  cochés, seulement si le prix en base est toujours l'actuel ; chaque hausse dans `n_product_price_change`
+  (`source = 'margin_clients'`, auteur, date). Accès : page marges (`margins`).
+- Paramètres `n_prod_param` (administrateur, bouton « Parametry » ou Ustawienia) : `prices.client_cap_pct` (8 %),
+  `prices.client_round_eur` (0,05 €), `prices.client_keep_discount` (1), `prices.client_interval_days` (90 j).
+
 ### Kartony i palety : limites de palette par carton, édition des produits dans la fenêtre (migration 133, 30/10/2026)
 
 - `n_carton.pallet_max_height_mm` / `pallet_max_kg` (NULL = `logistics.pallet_max_height_mm` / `logistics.pallet_max_kg`).
