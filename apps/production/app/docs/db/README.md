@@ -66,6 +66,16 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Produits test : nettoyage des anciennes propositions (migration 132, 30/10/2026)
+
+- 22 produits test « Propozycja » de 2023–2024 retirés à la demande (Boulangerie, Cake au yaourt, Cookie's, Fond à
+  garnir, Plats Preparés, Quiches, Viennoiseries — liste dans `migrations/tfb/132_test_products_cleanup.sql`),
+  avec leur historique (`test_product_changelog`). Correspondance catégorie + nom ; seulement le statut 1 et sans
+  carte / essai / photo du CRM (`n_dev_*`).
+- Copie avant suppression : `n_test_product_removed` et `n_test_product_changelog_removed` (même structure que les
+  tables d'origine) ; pour remettre un produit : `INSERT INTO test_product SELECT * FROM n_test_product_removed
+  WHERE id = …` puis la même chose pour l'historique.
+
 ### Planning logistique : nombre de tournées par semaine (migration 131, 29/10/2026)
 
 - `n_vehicle.trips_per_week` (1 à 4, défaut 1) : nombre de tournées (shifts) que le chauffeur fait avec le camion
