@@ -4950,6 +4950,10 @@ function ep_pwa_task_detail(): array
         // Référence : la photo de la fiche technique du produit contrôlé, pour
         // juger par COMPARAISON. Rapprochée par identifiant seul (jamais le nom).
         'produitId' => null, 'produit' => null, 'photoRef' => null,
+        // Une photo de comptoir n'a pas de produit : sa référence est la photo
+        // TYPE du rayon, posée dans le cockpit (src/rayons_photos.php). Chemin
+        // local, à part de photoRef que le rapport PDF et l'IA téléchargent.
+        'rayon' => null,
         // Repères posés sur la photo. Lus AVANT l'API : ils sont locaux, ils
         // doivent revenir même si le panel ne répond pas.
         'reperes' => annotationLire($shopId, $taskId, $date),
@@ -5006,6 +5010,9 @@ function ep_pwa_task_detail(): array
     if ($out['produitId'] !== null) {
         $ref = PanelApi::productPhoto($out['produitId'], $shopId);
         if ($ref !== null) { $out['produit'] = $ref['nom']; $out['photoRef'] = $ref['url']; }
+    }
+    if ($out['tache'] !== null && function_exists('rvRayonDeTache') && ($rv = rvRayonDeTache($out['tache'])) !== null) {
+        $out['rayon'] = ['cle' => $rv['cle'], 'nom' => $rv['nom'], 'photo' => $rv['photo'], 'consigne' => $rv['consigne']];
     }
     $out['api']['erreur'] = PanelApi::$lastError;
     return $out;

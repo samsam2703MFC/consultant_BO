@@ -3146,6 +3146,7 @@ function tplControle(c, x){
       <select ${x.C(c.setCtrlOnly)} style="${selCss};font-family:var(--font-ui)">${opts(c.ctrlOnlyOptions, c.ctrlOnly, o => o.val, o => o.nom)}</select>
       <span class="cq-vue"><button type="button" ${x.A(c.ctrlVuePhotos)} class="${c.ctrlVue === 'photos' ? 'on' : ''}">▦ Photos</button><button type="button" ${x.A(c.ctrlVueListe)} class="${c.ctrlVue === 'liste' ? 'on' : ''}">☰ Liste</button></span>
     </div>
+    ${c.rv ? tplRayonsPhotos(c.rv, x, card) : ''}
     ${c.ctrlApiOff ? `
       <div style="background:rgba(193,122,42,0.10);border:0.5px solid rgba(193,122,42,0.35);border-radius:10px;padding:12px 16px;font-size:12.5px;line-height:1.55">
         <span style="font-weight:600">Compte consultant non configuré.</span> Les noms de tâches et les photos viennent de l’API du panel : renseignez le téléphone et le mot de passe du compte dans <span style="font-weight:500">Paramètres → Compte consultant (API panel)</span>. En attendant, les tâches s’affichent par leur identifiant et la notation est indisponible.${c.ctrlApiErr ? `<div style="margin-top:6px;color:#8a5a13">${esc(c.ctrlApiErr)}</div>` : ''}
@@ -3229,6 +3230,53 @@ function tplControle(c, x){
   </div>`;
 }
 
+/* Les photos types des rayons : le back office du comptoir attendu. Repliée,
+   une ligne dit combien sont posées ; dépliée, une tuile par rayon — la photo,
+   le fichier à choisir, la consigne — puis l'ajout d'un rayon. */
+function tplRayonsPhotos(r, x, card){
+  const { esc } = x;
+  const lab = 'font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)';
+  const btn = 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:999px;padding:5px 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer';
+  const etat = r.chargement ? 'lecture…' : r.indispo ? 'indisponibles — l’API ne répond pas' : r.poses + ' / ' + r.total + ' posée' + (r.poses > 1 ? 's' : '');
+  return `
+    <div data-rv="1" style="${card};overflow:hidden">
+      <button ${x.A(r.basculer)} style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:var(--font-ui);padding:13px 18px;display:flex;align-items:center;gap:12px;color:var(--color-text)">
+        <span style="font-size:13.5px;font-weight:600">Photos types des rayons</span>
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(etat)} — le comptoir tel qu’il doit être, en face de chaque « Photo du comptoir »</span>
+        <span style="margin-left:auto;font-size:11.5px;font-weight:500;color:var(--color-primary)">${r.ouvert ? 'Replier ▴' : 'Gérer ▾'}</span>
+      </button>
+      ${r.ouvert && !r.chargement && !r.indispo ? `
+      <div style="border-top:0.5px solid var(--color-border-tertiary);padding:14px 18px 16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px">
+          ${r.lignes.map(l => `
+            <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+              ${l.photo
+                ? `<a href="${esc(l.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand" style="display:block"><img src="${esc(l.photo)}" alt="Photo type ${esc(l.nom)}" loading="lazy" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block"></a>`
+                : `<label style="aspect-ratio:3/4;border-radius:10px;border:1px dashed var(--color-border-secondary);background:repeating-linear-gradient(135deg,#f5f0e9 0 8px,#eee8df 8px 16px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;padding:10px;font-size:11.5px;color:var(--color-text-muted);cursor:pointer"><b style="font-size:20px;opacity:.55">📐</b>Pas encore de photo type<span style="font-weight:600;color:var(--color-primary)">${l.busy ? 'Envoi…' : 'Choisir une photo'}</span><input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(l.fichier)} hidden></label>`}
+              <div style="display:flex;align-items:baseline;gap:6px">
+                <span style="font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.nom)}">${esc(l.nom)}</span>
+                ${l.photo ? `<label style="font-size:11px;color:var(--color-primary);cursor:pointer;white-space:nowrap">${l.busy ? 'envoi…' : 'remplacer'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(l.fichier)} hidden></label>` : ''}
+                ${l.retirerPhoto ? `<button ${x.A(l.retirerPhoto)} title="Retirer la photo type" style="border:none;background:none;padding:0;font-family:var(--font-ui);font-size:11px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline">retirer</button>` : ''}
+              </div>
+              <textarea ${x.C(l.setConsigne)} rows="2" maxlength="600" placeholder="Ce que la photo doit montrer (facultatif)" style="width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:6px 8px;font-family:var(--font-ui);font-size:11.5px;line-height:1.45;background:var(--color-surface);color:var(--color-text);resize:vertical">${esc(l.consigne)}</textarea>
+              ${l.meta || l.vus ? `<div style="font-size:10.5px;color:var(--color-text-muted);line-height:1.4">${esc([l.meta, l.vus].filter(Boolean).join(' · '))}</div>` : ''}
+              ${l.supprimer ? `<button ${x.A(l.supprimer)} style="align-self:flex-start;border:none;background:none;padding:0;font-family:var(--font-ui);font-size:10.5px;color:#8D1D2C;cursor:pointer;text-decoration:underline">retirer ce rayon</button>` : ''}
+            </div>`).join('')}
+        </div>
+        ${r.inconnus.length ? `<div style="margin-top:14px;padding:10px 12px;border-radius:9px;background:rgba(193,122,42,0.08);font-size:12px;line-height:1.55">
+          <span style="font-weight:600">Vus aujourd’hui dans le panel, sans rayon ici :</span>
+          ${r.inconnus.map(i => `<span style="display:inline-flex;align-items:center;gap:6px;margin:3px 8px 0 0">« ${esc(i.nom)} »<button ${x.A(i.ajouter)} style="${btn};padding:2px 9px;font-size:11px">Ajouter</button></span>`).join('')}
+        </div>` : ''}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px">
+          <span style="${lab}">Ajouter un rayon</span>
+          <input value="${esc(r.nouveau)}" ${x.I(r.setNouveau)} placeholder="Nom écrit après « Photo du comptoir - »" style="flex:1;min-width:220px;max-width:360px;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 10px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)">
+          <button ${x.A(r.ajouter)} style="${btn}">Ajouter</button>
+        </div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">Un rayon est le nom que le panel écrit après « Photo du comptoir - ». Sa photo type s’affiche en face de la photo rendue : sur les cartes et dans le volet de notation ci-dessous, et dans le contrôle guidé des visites (application consultant). Photo réduite à 1600 px avant l’envoi.</div>
+      </div>` : ''}
+    </div>`;
+}
+
 /* Les contrôles maîtrisés d'une boutique : sous la liste comme sous les photos.
    CONTRÔLE PAR EXCEPTION : ce qui est maîtrisé quitte la liste du jour sans
    disparaître — le motif reste lisible et un bouton ramène la tâche. */
@@ -3256,6 +3304,8 @@ function tplCtrlMasquees(s, c, x){
    le volet de notation. */
 function tplCtrlPhotos(s, c, x, card){
   const { esc } = x; const q = s.cq || { puces: [], cartes: [], resume: '', pied: '', vide: '' };
+  // La photo type du rayon, à côté de la photo rendue : le comptoir attendu en face du comptoir rendu.
+  const ty = t => t.type ? `<span class="db-cqph type"><img src="${esc(t.type)}" alt="Photo type" loading="lazy"><em class="lb">Photo type</em></span>` : '';
   const photo = t => {
     if (!t.photo) {
       if (t.attente) { return '<span class="db-cqph att"></span>'; }
@@ -3271,7 +3321,7 @@ function tplCtrlPhotos(s, c, x, card){
     if (!rapides && !t.bouton) { return ''; }
     return `<div class="cq-acts">${rapides}${t.bouton ? `<button type="button" ${x.A(t.open)} class="cq-noter${t.e === 'ctl' ? '' : ' re'}" title="Voir la photo en grand, poser des repères, commenter">${esc(t.bouton)}</button>` : ''}</div>`;
   };
-  const carte = t => `<div class="db-cqc"><button type="button" ${x.A(t.open)} class="cq-ouvrir" title="Voir la photo et noter">${photo(t)}<span class="n">${esc(t.nom)}</span><span class="m">${esc(t.meta)}</span>${t.constat ? `<span class="c ${t.e}">${esc(t.constat)}</span>` : ''}</button>${actes(t)}</div>`;
+  const carte = t => `<div class="db-cqc${t.type ? ' duo' : ''}"><button type="button" ${x.A(t.open)} class="cq-ouvrir" title="Voir la photo et noter">${t.type ? `<span class="db-cqduo">${photo(t)}${ty(t)}</span>` : photo(t)}<span class="n">${esc(t.nom)}</span><span class="m">${esc(t.meta)}</span>${t.constat ? `<span class="c ${t.e}">${esc(t.constat)}</span>` : ''}</button>${actes(t)}</div>`;
   return `
           <div style="${card};overflow:hidden">
             <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -8001,13 +8051,21 @@ function tplCtrlDetail(c, x){
             : `<div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoTxt)}</div>`}
         </div>
         <div>
-          <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">Référence attendue</div>
+          <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">${d.rayon ? 'Photo type · ' + esc(d.rayon.nom) : 'Référence attendue'}</div>
           ${d.photoRef
             ? `<a href="${d.photoRef}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${d.photoRef}" alt="Photo de référence du produit" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block"></a>`
+            : d.rayon && d.rayon.photo
+            ? `<a href="${esc(d.rayon.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(d.rayon.photo)}" alt="Photo type du rayon ${esc(d.rayon.nom)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:0.5px solid var(--color-border-tertiary);display:block"></a>
+               <label style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline">${d.rayon.busy ? 'envoi…' : 'remplacer la photo type'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
+            : d.rayon
+            ? `<label style="background:var(--color-background-secondary);border:1px dashed var(--color-border-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5;cursor:pointer"><span>Pas encore de photo type pour ce rayon.</span><span style="font-weight:600;color:var(--color-primary)">${d.rayon.busy ? 'Envoi…' : 'Poser la photo type'}</span><input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
             : `<div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoRefTxt)}</div>`}
         </div>
       </div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Un contrôle qualité se juge par comparaison : la photo produit (products/available \u2192 recipes/{id_recipe}, le même API que le webshop) s\u2019affiche en face de la photo prise en boutique. Sans chemin : « Pas de photo. »</div>
+      ${d.rayon && d.rayon.consigne ? `<div style="font-size:12px;margin-top:8px;line-height:1.5"><span style="font-weight:600">Attendu :</span> ${esc(d.rayon.consigne)}</div>` : ''}
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">${d.rayon
+        ? 'Une photo de comptoir se juge contre la photo type de son rayon, posée dans « Photos types des rayons » en haut de l\u2019écran — la même s\u2019affiche dans le contrôle guidé des visites.'
+        : 'Un contrôle qualité se juge par comparaison : la photo produit (products/available \u2192 recipes/{id_recipe}, le même API que le webshop) s\u2019affiche en face de la photo prise en boutique. Sans chemin : « Pas de photo. »'}</div>
 
       <div style="${'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin:22px 0 6px">Avis du consultant</div>
       <div style="font-size:13px;font-weight:500">${esc(d.avisTxt)}</div>

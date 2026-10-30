@@ -44,6 +44,7 @@ require __DIR__ . '/../../src/jours_creux.php';
 require __DIR__ . '/../../src/scoring.php';
 require __DIR__ . '/../../src/ventes_pro.php';
 require __DIR__ . '/../../src/plano_std.php';
+require __DIR__ . '/../../src/rayons_photos.php';
 require __DIR__ . '/../../src/assortiment.php';
 require __DIR__ . '/../../src/plano_proposition.php';
 require __DIR__ . '/../../src/rapports.php';
@@ -342,6 +343,7 @@ function route(string $method, string $path): mixed
             $path === '/planogramme/rotations'         => ep_plano_std_rotations(),
             $path === '/planogramme/montage'           => ep_plano_std_montage(),
             $path === '/planogramme/standard/montage'  => ep_plano_std_montage(),
+            $path === '/rayons/photos'                 => ep_rayons_photos(),
             $path === '/fonds'                         => ep_fonds(),
             $path === '/produits/analyse'              => ep_produits_analyse(),
             $path === '/produits/analyse/options'      => ep_produits_analyse_options(),
@@ -622,6 +624,8 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/planogramme/standard/zone') { return wr_plano_std_zone(); }
     if ($method === 'POST' && $path === '/planogramme/standard/vider') { return wr_plano_std_vider(); }
     if ($method === 'POST' && ($path === '/planogramme/standard/montage' || $path === '/planogramme/montage')) { return wr_plano_std_montage(); }
+    // La photo type d'un rayon : le comptoir tel qu'il doit être, en face de la photo rendue.
+    if ($method === 'PUT' && $path === '/rayons/photos') { return wr_rayons_photos_put(); }
     // --- fonds & redevances : le cockpit ÉCRIT dans le module marketing, qui
     //     reste le seul tenant du grand livre. Aucune écriture locale.
     if ($method === 'POST' && $path === '/fonds/mouvement') { return wr_fonds_mouvement(null); }

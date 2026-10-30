@@ -180,6 +180,19 @@
 .vi .cq-l .fi{flex:0 0 auto;max-height:52dvh;overflow-y:auto;margin:10px 12px calc(12px + env(safe-area-inset-bottom,0px));background:var(--color-surface);color:var(--color-text);border-radius:14px;padding:12px 14px}
 .vi .cq-l .fi .t{display:block;font-family:var(--font-display);font-size:18px;font-weight:400;margin:6px 0 2px}
 .vi .cq-l .fi .q{font-size:11.5px;color:var(--color-text-muted);line-height:1.4}
+.vi .cq-piste .db-cqc.duo{flex:0 0 326px}.vi .db-cqduo{gap:10px}
+.vi .rt-piste{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:8px -14px 0;padding:0 14px}
+.vi .rt-piste::-webkit-scrollbar{display:none}
+.vi .rt-piste .ph{flex:0 0 112px;height:auto;aspect-ratio:3/4;align-items:flex-end}
+.vi .rt-piste .ph b{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);color:#fff;font-size:10.5px;padding:4px 6px;line-height:1.25}
+.vi .pt .att-t{font-size:11px;color:var(--color-text-muted);margin:2px 0 0 34px;line-height:1.35}
+.vi .cq-l .ph.duo{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr);gap:8px;align-items:stretch;padding:8px}
+.vi .cq-l .ph.duo figure{margin:0;min-height:0;display:flex;flex-direction:column;gap:5px}
+.vi .cq-l .ph.duo img{flex:1;min-height:0;width:100%;max-height:none}
+.vi .cq-l .ph.duo .vide{flex:1;display:flex;align-items:center;justify-content:center;border:1px dashed #a59d93;border-radius:10px;color:#6b5f52;font-size:12px;text-align:center;padding:8px}
+.vi .cq-l .ph.duo figcaption{font:600 11px var(--font-ui);color:#3a2f26;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vi .cq-l .hd .chip{background:rgba(255,255,255,.14);color:#fff;border-color:transparent}.vi .cq-l .hd .chip.on{background:#fff;color:#0d0b09}
+.vi .cq-l .fi .ty{margin-top:6px;color:var(--color-text)}
 .vi .cq-l .fi .cq-acts{margin-top:10px;padding-top:0}.vi .cq-l .fi .act{margin-top:10px}.vi .cq-l .fi .act .btn{flex:1}
 .vi .meteo{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .vi .meteo button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;border-radius:12px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);cursor:pointer;font:600 12px var(--font-ui);color:var(--color-text);text-align:center;line-height:1.2}
@@ -248,6 +261,9 @@
 .vi.tab .tb-nav .tb-b{flex:0 0 auto}
 .vi.tab .tb-nav .tb-b.p{flex:1}
 .vi.tab .tb-ctl{padding-bottom:132px}
+/* La loupe et la photo en grand passent au-dessus des barres de la tablette (haut 30, étapes 40) : sous elles, la croix,
+   « Photo type », la note rapide et ‹ › étaient masquées. */
+.vi.tab .voir{z-index:50}.vi.tab .cq-l{z-index:51}
 .vi.tab .tb-pills{display:flex;gap:6px;flex-wrap:wrap}
 .vi.tab .tb-pills span{font:700 10.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted)}
 .vi.tab .tb-pills span.ok{background:#E6F2E9;color:#2d7a3e}.vi.tab .tb-pills span.ko{background:#F7E4E6;color:#C0182B}
@@ -271,6 +287,7 @@
 .vi.tab .pt.t .l1{gap:14px}
 .vi.tab .pt.t .l1 b{font-size:15px !important;line-height:1.3}
 .vi.tab .pt.t.ko{background:linear-gradient(90deg,rgba(192,24,43,.05),var(--color-surface) 60%)}
+.vi.tab .pt.t .att-t{margin:6px 0 0;font-size:13px}
 .vi.tab .pt.t .act{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .vi.tab .pt.t .act .chip{min-height:38px;padding:0 12px;font-size:12.5px}
 .vi.tab .pt.t .act input[type=text]{min-height:40px;font-size:13.5px !important;border-radius:10px}
@@ -359,6 +376,8 @@
   };
   // Les contrôles en photo : le nom court d'une tâche, sa checklist sans son code.
   const cqNom = t => String(t.tache || ('Tâche #' + t.taskId)).replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
+  // Les photos types des rayons : un libellé réduit pour retrouver son rayon (même règle que src/rayons_photos.php).
+  const rvNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/œ/g, 'oe').replace(/æ/g, 'ae').replace(/[^a-z0-9]+/g, ' ').trim();
   const cqCl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '');
   const hm = v => v ? String(v).slice(11, 16) : '';
   const pcLeg = avecObj => '<div class="pc-leg"><span><i class="r"></i>cette année</span><span><i class="n"></i>N-1, mêmes jours</span>' + (avecObj ? '<span><i class="o"></i>objectif</span>' : '') + '</div>';
@@ -417,7 +436,7 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.T = {}; this.cqF = {}; this.cqV = null; this.S = null; this.R = null;
+      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.T = {}; this.cqF = {}; this.cqV = null; this.cqSeul = false; this.S = null; this.R = null;
       this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
@@ -718,6 +737,34 @@
       this.file.filter(op => op.apres === 'controle' && String((op.body || {}).shopId) === String(shop)).forEach(op => this.cqApplique(op.body, true));
       this.rendre();
     }
+    /* --- Les photos types des rayons : le comptoir tel qu'il doit être ----------
+     * Posées dans le cockpit (Contrôle des tâches › Photos types des rayons),
+     * lues avec /visites/app. Une tâche « Photo du comptoir - Viennoiseries » ou
+     * un point « Comptoir viennoiserie » retrouve son rayon par le nom : au
+     * pluriel près, sinon par le début du nom, à la frontière d'un mot. */
+    rayonDe(libelle) {
+      const reste = rvNorm(libelle).replace(/^(photo du )?comptoirs?\s*/, ''); if (!reste) { return null; }
+      const sing = x => x.replace(/s\b/g, '');
+      let pre = null, long = 0;
+      for (const r of (this.D && this.D.rayons) || []) {
+        const nz = rvNorm(r.nom); if (!nz) { continue; }
+        if (reste === nz || sing(reste) === sing(nz)) { return r; }
+        const a = sing(reste), b = sing(nz);
+        if (a.length >= 4 && b.length >= 4 && (a.startsWith(b + ' ') || b.startsWith(a + ' ')) && b.length > long) { pre = r; long = b.length; }
+      }
+      return pre;
+    }
+    rayonTache(t) { return /^photo du comptoir/.test(rvNorm(t && t.tache)) ? this.rayonDe(t.tache) : null; }
+    typeSrc(r) { return r && r.photo ? (this.o.racine || '') + r.photo : null; }
+    /** Les comptoirs attendus : la bande des photos types, repliée sous un bouton. */
+    typesHtml(shop) {
+      const ry = (this.D && this.D.rayons) || []; if (!ry.length) { return ''; }
+      const avec = ry.filter(r => r.photo); const cle = 'rt:' + shop; const ouvert = !!this.ouvert[cle];
+      const sans = ry.filter(r => !r.photo).map(r => r.nom);
+      return `<div class="act" style="margin-top:8px"><button class="chip ${ouvert ? 'on' : ''}" data-a="drop" data-v="${esc(cle)}">📐 Les comptoirs attendus · ${avec.length} / ${ry.length} photo${ry.length > 1 ? 's' : ''} type${ry.length > 1 ? 's' : ''} ${ouvert ? '▴' : '▾'}</button></div>`
+        + (!ouvert ? '' : (avec.length ? `<div class="rt-piste">${avec.map(r => `<div class="ph" style="background-image:url('${esc(this.typeSrc(r))}')" data-a="voir-type" data-v="${esc(r.cle)}"><b>${esc(r.nom)}</b></div>`).join('')}</div>` : '')
+          + `<div class="xs mu" style="margin:6px 2px 0">${avec.length ? 'Toucher une photo type l’ouvre en grand, avec sa consigne.' : 'Aucune photo type posée pour l’instant.'}${sans.length ? ' Sans photo type : ' + esc(sans.join(' · ')) + '.' : ''} Elles se posent dans le cockpit, Contrôle des tâches.</div>`);
+    }
     /** L'état d'une tâche, cinq mots : écart, à contrôler, conforme, non rendue, sans photo. */
     cqEtat(t, seuil) {
       if (t.note != null) {
@@ -748,7 +795,7 @@
     controlesHtml(shop) {
       this.chargerControles(shop);
       const T = this.T[shop]; const cq = this.cqListe(shop);
-      if (!cq) { return `<div class="card sm mu">${T && T.erreur ? 'Contrôles du jour indisponibles — hors ligne ?' : 'Lecture des contrôles du jour…'}</div>`; }
+      if (!cq) { return this.typesHtml(shop) + `<div class="card sm mu" style="margin-top:8px">${T && T.erreur ? 'Contrôles du jour indisponibles — hors ligne ?' : 'Lecture des contrôles du jour…'}</div>`; }
       const { sel, F } = this.cqVisibles(shop, cq);
       const avec = cq.L.filter(t => t.photoUrl);
       const heures = avec.map(t => hm(t.faitLe)).filter(Boolean).sort();
@@ -757,7 +804,7 @@
       const res = avec.length ? `<em>${avec.length} photo${avec.length > 1 ? 's' : ''}</em> rendue${avec.length > 1 ? 's' : ''}${heures.length ? ' ' + (heures[0] === heures[heures.length - 1] ? 'à ' + heures[0] : 'de ' + heures[0] + ' à ' + heures[heures.length - 1]) : ''}${qui ? ' par ' + esc(qui) : ''} · ${notees ? notees + ' notée' + (notees > 1 ? 's' : '') : 'pas encore notées'}` : 'aucune photo rendue pour l’instant';
       const puces = [['tout', 'Tout', null, cq.total], ['nc', 'Écarts', '#D97706', cq.nb('nc')], ['ctl', 'À contrôler', '#2F5D8A', cq.nb('ctl')], ['ok', 'Conformes', '#2d7a3e', cq.nb('ok')], ['ko', 'Non rendues', '#C0182B', cq.nb('ko')], ['mu', 'Sans photo', '#a59d93', cq.nb('mu')]]
         .filter(f => f[3]).map(f => `<button type="button" class="${sel === f[0] ? 'on' : ''}" data-a="cq-f" data-v="${esc(shop)}|${f[0]}">${f[2] ? `<i style="background:${f[2]}"></i>` : ''}${f[1]}<b>${f[3]}</b></button>`).join('');
-      return `<div class="cq-res">${res}${cq.nb('ko') ? ' · ' + cq.nb('ko') + ' non rendue' + (cq.nb('ko') > 1 ? 's' : '') : ''}</div><div class="db-cqf cq-fs">${puces}</div>`
+      return this.typesHtml(shop) + `<div class="cq-res">${res}${cq.nb('ko') ? ' · ' + cq.nb('ko') + ' non rendue' + (cq.nb('ko') > 1 ? 's' : '') : ''}</div><div class="db-cqf cq-fs">${puces}</div>`
         + (F.length ? `<div class="db-cqpiste cq-piste">${F.map(t => this.cqCarte(shop, t, cq)).join('')}</div><div class="cq-pied">${F.length} contrôle${F.length > 1 ? 's' : ''}${sel === 'tout' ? ' · les écarts d’abord' : ''} · 4 et 5 notent sans commentaire · toucher une photo l’ouvre en grand</div>`
           : '<div class="sm mu" style="margin-top:8px">Aucune tâche dans ce filtre.</div>');
     }
@@ -776,10 +823,13 @@
       return `<div class="cq-acts">${cq.rapides.map(n => `<button type="button" class="cq-rapide${lg ? ' lg' : ''}" style="--c:${esc(n.couleur || '#2d7a3e')}" data-a="cq-note" data-v="${esc(shop)}|${esc(t.taskId)}|${n.n}" title="${esc(n.nom || '')} — note rapide, sans commentaire">${n.n}${lg ? ' · ' + esc(n.nom || '') : ''}</button>`).join('')}</div>`;
     }
     cqCarte(shop, t, cq) {
-      const ph = !t.photoUrl ? `<span class="db-cqph vide ${t.e.c}"><b>${t.e.c === 'ko' ? '✗' : '—'}</b>${t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'sans photo' : 'photo indisponible')}</span>`
+      const rt = this.typeSrc(this.rayonTache(t));
+      const ph0 = !t.photoUrl ? `<span class="db-cqph vide ${t.e.c}"><b>${t.e.c === 'ko' ? '✗' : '—'}</b>${t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'sans photo' : 'photo indisponible')}</span>`
         : `<span class="db-cqph"><img src="${esc(t.photoUrl)}" alt="" loading="lazy">${(t.reperes || []).map(r => this.cqRepere(r, t)).join('')}${hm(t.faitLe) ? `<em class="h">${hm(t.faitLe)}</em>` : ''}<em class="cqbd ${t.e.c}">${esc(t.e.bd)}</em></span>`;
+      // La photo type à côté de la photo rendue, jamais posée dessus.
+      const ph = rt ? `<span class="db-cqduo">${ph0}<span class="db-cqph type"><img src="${esc(rt)}" alt="Photo type" loading="lazy"><em class="lb">Photo type</em></span></span>` : ph0;
       const meta = t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hm(t.faitLe) : hm(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : ''));
-      return `<div class="db-cqc"><button type="button" class="cq-ouvrir" data-a="cq-voir" data-v="${esc(shop)}|${esc(t.taskId)}">${ph}<span class="n">${esc(cqNom(t))}</span><span class="m">${esc(meta)}</span><span class="c ${t.e.c}">${esc(this.cqConstat(t))}</span></button>${this.cqRapides(shop, t, cq, false)}</div>`;
+      return `<div class="db-cqc${rt ? ' duo' : ''}"><button type="button" class="cq-ouvrir" data-a="cq-voir" data-v="${esc(shop)}|${esc(t.taskId)}">${ph}<span class="n">${esc(cqNom(t))}</span><span class="m">${esc(meta)}</span><span class="c ${t.e.c}">${esc(this.cqConstat(t))}</span></button>${this.cqRapides(shop, t, cq, false)}</div>`;
     }
     /** La photo en grand : sa fiche, la note rapide, ‹ › dans l'ordre de la bande. */
     cqLoupe() {
@@ -791,9 +841,13 @@
       const t = F[i];
       const rendue = t.e.c === 'ko' ? 'pas encore rendue' : (hm(t.faitLe) ? 'à ' + hm(t.faitLe) + (t.faitePar ? ' par ' + t.faitePar : '') : 'rendue');
       const notee = t.note != null ? t.note + '/5' + (t.valideeLe ? ' · ' + (/\d{2}:\d{2}/.test(String(t.valideeLe)) ? hm(t.valideeLe) : t.valideeLe) : '') + (t.valideePar ? ' par ' + t.valideePar : '') : 'pas encore notée';
-      return `<div class="cq-l" role="dialog" aria-label="${esc(cqNom(t))}"><div class="hd"><span>${i + 1} / ${F.length}</span><span class="sp"></span><button type="button" class="x" data-a="cq-fermer" aria-label="fermer">✕</button></div>
-        <div class="ph">${t.photoUrl ? `<img src="${esc(t.photoUrl)}" alt="">` : `<span class="xs" style="color:#bbb">${t.e.c === 'ko' ? 'pas encore rendue' : 'pas de photo'}</span>`}</div>
+      // Une photo de comptoir se juge contre sa photo type : les deux côte à côte, sauf si on la replie.
+      const ry = this.rayonTache(t); const rt = this.typeSrc(ry); const duo = !!rt && !this.cqSeul;
+      const rendueImg = t.photoUrl ? `<img src="${esc(t.photoUrl)}" alt="">` : `<span class="xs" style="color:#bbb">${t.e.c === 'ko' ? 'pas encore rendue' : 'pas de photo'}</span>`;
+      return `<div class="cq-l" role="dialog" aria-label="${esc(cqNom(t))}"><div class="hd"><span>${i + 1} / ${F.length}</span><span class="sp"></span>${rt ? `<button type="button" class="chip${duo ? ' on' : ''}" data-a="cq-duo" title="Afficher ou masquer la photo type du rayon">📐 Photo type</button>` : ''}<button type="button" class="x" data-a="cq-fermer" aria-label="fermer">✕</button></div>
+        <div class="ph${duo ? ' duo' : ''}">${duo ? `<figure>${t.photoUrl ? rendueImg : `<span class="vide">${t.e.c === 'ko' ? 'pas encore rendue' : 'pas de photo'}</span>`}<figcaption>Rendue${hm(t.faitLe) ? ' à ' + hm(t.faitLe) : ''}</figcaption></figure><figure><img src="${esc(rt)}" alt="Photo type"><figcaption>Photo type · ${esc(ry.nom)}</figcaption></figure>` : rendueImg}</div>
         <div class="fi"><em class="cqbd ${t.e.c}">${esc(t.e.bd)}</em><b class="t">${esc(cqNom(t))}</b>${cqCl(t) ? `<div class="q">${esc(cqCl(t))}</div>` : ''}
+          ${ry ? `<div class="q ty">📐 ${ry.consigne ? 'Attendu : ' + esc(ry.consigne) : rt ? 'Attendu : comme la photo type.' : 'Pas encore de photo type pour ce rayon — elle se pose dans le cockpit, Contrôle des tâches.'}</div>` : ''}
           <div class="q" style="margin-top:6px">Rendue ${esc(rendue)}<br>Notée ${esc(notee)}${t.e.c === 'nc' ? '<br>' + esc(this.cqConstat(t)) : ''}</div>
           ${this.cqRapides(V.shop, t, cq, true)}
           <div class="act"><button type="button" class="btn" data-a="cq-nav" data-v="-1"${i ? '' : ' disabled'}>‹ Précédente</button><button type="button" class="btn p" data-a="cq-nav" data-v="1"${i < F.length - 1 ? '' : ' disabled'}>Suivante ›</button></div></div></div>`;
@@ -1037,15 +1091,18 @@
             cnt.total++; const p = pts[pt.ref] || {}; if (p.etat || p.note != null || p.valeur != null) { cnt.faits++; }
             const phs = photos.filter(x => x.ref === pt.ref);
             const k = `${esc(v.id)}|${esc(pt.ref)}|${m.id}`;
+            const ry = /^comptoir/.test(rvNorm(pt.libelle)) ? this.rayonDe(pt.libelle) : null;
+            const att = ry && (ry.photo || ry.consigne) ? `<div class="att-t">📐 Attendu${ry.consigne ? ' : ' + esc(ry.consigne) : ' : voir la photo type'}</div>` : '';
+            const typeBtn = ry && ry.photo ? `<button class="chip" data-a="voir-type" data-v="${esc(ry.cle)}">📐 Photo type</button>` : '';
             if (this.o.tablette) {
               const tri = [['ok', 'OK'], ['ko', 'Écart'], ['na', 'N/A']].map(([e, l]) => `<button data-a="etat-set" data-v="${k}|${e}" class="${p.etat === e ? e : ''}">${l}</button>`).join('');
-              return `<div class="pt t ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1"><b style="flex:1">${esc(pt.libelle)}</b>${pt.pct ? `<input type="number" data-f="pct|${k}" value="${p.valeur != null ? p.valeur : ''}" placeholder="%">` : ''}<span class="tri">${tri}</span></div>
-              <div class="act">${pt.photo || phs.length ? `<button class="chip" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' photo' + (phs.length > 1 ? 's' : '') : 'Photo'}</button>` : ''}${phs.map(x => `<button class="chip" data-a="voir" data-v="${esc(x.client_id || x.id)}">${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</button>`).join('')}
+              return `<div class="pt t ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1"><b style="flex:1">${esc(pt.libelle)}</b>${pt.pct ? `<input type="number" data-f="pct|${k}" value="${p.valeur != null ? p.valeur : ''}" placeholder="%">` : ''}<span class="tri">${tri}</span></div>${att}
+              <div class="act">${typeBtn}${pt.photo || phs.length ? `<button class="chip" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' photo' + (phs.length > 1 ? 's' : '') : 'Photo'}</button>` : ''}${phs.map(x => `<button class="chip" data-a="voir" data-v="${esc(x.client_id || x.id)}">${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</button>`).join('')}
               ${pt.pct ? Object.keys(causes).map(c => `<button class="chip ${(p.causes || []).includes(c) ? 'on' : ''}" data-a="cause" data-v="${k}|${c}">${esc(causes[c])}</button>`).join('') : ''}
               <input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="Remarque…" style="flex:1;min-width:180px;padding:6px 10px"></div></div>`;
             }
-            return `<div class="pt ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1"><button class="cb ${p.etat || ''}" data-a="etat" data-v="${k}">${p.etat === 'ok' ? '✓' : p.etat === 'ko' ? '!' : p.etat === 'na' ? '–' : ''}</button><b class="sm" style="flex:1">${esc(pt.libelle)}</b>${pt.pct ? `<input type="number" data-f="pct|${k}" value="${p.valeur != null ? p.valeur : ''}" placeholder="%" style="width:64px;padding:5px 7px">` : `<span class="notes">${[1, 2, 3, 4, 5].map(n => `<button data-a="note" data-v="${k}|${n}" class="${p.note === n ? (n <= 2 ? 'bad' : 'on') : ''}">${n}</button>`).join('')}</span>`}</div>
-              <div class="act">${pt.photo || phs.length ? `<button class="chip" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' photo' + (phs.length > 1 ? 's' : '') : 'Photo'}</button>` : ''}${phs.map(x => `<button class="chip" data-a="voir" data-v="${esc(x.client_id || x.id)}">${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</button>`).join('')}
+            return `<div class="pt ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1"><button class="cb ${p.etat || ''}" data-a="etat" data-v="${k}">${p.etat === 'ok' ? '✓' : p.etat === 'ko' ? '!' : p.etat === 'na' ? '–' : ''}</button><b class="sm" style="flex:1">${esc(pt.libelle)}</b>${pt.pct ? `<input type="number" data-f="pct|${k}" value="${p.valeur != null ? p.valeur : ''}" placeholder="%" style="width:64px;padding:5px 7px">` : `<span class="notes">${[1, 2, 3, 4, 5].map(n => `<button data-a="note" data-v="${k}|${n}" class="${p.note === n ? (n <= 2 ? 'bad' : 'on') : ''}">${n}</button>`).join('')}</span>`}</div>${att}
+              <div class="act">${typeBtn}${pt.photo || phs.length ? `<button class="chip" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' photo' + (phs.length > 1 ? 's' : '') : 'Photo'}</button>` : ''}${phs.map(x => `<button class="chip" data-a="voir" data-v="${esc(x.client_id || x.id)}">${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</button>`).join('')}
               ${pt.pct ? Object.keys(causes).map(c => `<button class="chip ${(p.causes || []).includes(c) ? 'on' : ''}" data-a="cause" data-v="${k}|${c}">${esc(causes[c])}</button>`).join('') : ''}
               <input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="Remarque…" style="flex:1;min-width:120px;padding:5px 8px;font-size:12px"></div></div>`;
           }).join('')}</div>`;
@@ -1409,6 +1466,8 @@
       if (a === 'cq-f') { this.cqF[parts[0]] = parts[1]; this.rendre(); return; }
       if (a === 'cq-voir') { this.cqV = { shop: parts[0], taskId: parts[1] }; this.rendre(); return; }
       if (a === 'cq-fermer') { this.cqV = null; this.rendre(); return; }
+      if (a === 'cq-duo') { this.cqSeul = !this.cqSeul; this.rendre(); return; }
+      if (a === 'voir-type') { const r = ((this.D && this.D.rayons) || []).find(x => x.cle === v); if (r && r.photo) { this.voir = { src: this.typeSrc(r), txt: 'Photo type · ' + r.nom + (r.consigne ? ' — ' + r.consigne : '') }; this.rendre(); } return; }
       if (a === 'cq-nav') { this.cqAvance(Number(v)); return; }
       if (a === 'cq-note') { this.cqNoter(parts[0], parts[1], Number(parts[2])); return; }
       if (a === 'voir-serie') { const ps = this.photosJour(parts[0]).filter(x => x.genre === parts[1]); if (ps.length) { this.voir = { src: this.photoSrc(ps[0]), txt: ps.length + ' photo(s) · la plus récente ' + fmtDJ(ps[0].prise_a) }; this.rendre(); } return; }

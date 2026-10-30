@@ -1076,6 +1076,11 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{
 .cqm-ph{display:flex;align-items:center;justify-content:center;background:#1b1714;border-radius:10px;min-height:360px;max-height:calc(100vh - 170px);overflow:hidden}
 .cqm-ph img{max-width:100%;max-height:calc(100vh - 170px);object-fit:contain;display:block}
 .cqm-ph.vide{background:var(--color-background-secondary);color:var(--color-text-muted);font-size:13px}
+/* La photo rendue et la photo type du rayon, côte à côte (src/rayons_photos.php). */
+.cqm-duo{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:0}
+.cqm-duo figure{margin:0;min-width:0;display:flex;flex-direction:column;gap:5px}
+.cqm-duo figcaption{font:600 11px var(--font-ui);color:var(--color-text-muted);text-align:center}
+.cqm-ph.type{background:#f5f0e9}
 .cqm-com{font-size:13px;line-height:1.45;padding:10px 12px;border-radius:10px;background:var(--color-background-secondary);margin-bottom:12px}
 .cqm-com span{display:block;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px}
 .cqm-choix{display:flex;flex-direction:column;gap:6px}

@@ -13449,6 +13449,75 @@ class App {
     }
     return c ? c.val : null;
   }
+  /* --- Les photos types des rayons (src/rayons_photos.php) --------------------
+   *
+   * Pour chaque rayon que le panel fait photographier (« Photo du comptoir -
+   * Viennoiseries »…), une photo type et une consigne : le comptoir tel qu'il
+   * doit être. Elle se met en face de la photo rendue — dans le volet de
+   * notation, sur les cartes du rail, et dans le contrôle guidé des visites.
+   * Lue une fois ; chaque écriture rend la liste entière. */
+  rvLire(){
+    if (this._rv !== undefined || this._rvEnCours) { return this._rv || null; }
+    this._rvEnCours = true;
+    readOne('/rayons/photos').then(r => {
+      this._rvEnCours = false;
+      this._rv = r && Array.isArray(r.rayons) ? r.rayons : null;
+      this._rvIndispo = !this._rv;
+      this.setState({});
+    });
+    return null;
+  }
+  /** Le rayon d'un libellé : au pluriel près, sinon par le début du nom, à la frontière d'un mot. */
+  rvDe(libelle){
+    const norm = x => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/œ/g, 'oe').replace(/æ/g, 'ae').replace(/[^a-z0-9]+/g, ' ').trim();
+    const reste = norm(libelle).replace(/^(photo du )?comptoirs?\s*/, ''); if (!reste) { return null; }
+    const sing = x => x.replace(/s\b/g, '');
+    let pre = null, long = 0;
+    for (const r of this._rv || []) {
+      const nz = norm(r.nom); if (!nz) { continue; }
+      if (reste === nz || sing(reste) === sing(nz)) { return r; }
+      const a = sing(reste), b = sing(nz);
+      if (a.length >= 4 && b.length >= 4 && (a.startsWith(b + ' ') || b.startsWith(a + ' ')) && b.length > long) { pre = r; long = b.length; }
+    }
+    return pre;
+  }
+  /** Le rayon d'une tâche du panel — seulement une photo de comptoir. */
+  rvDeTache(tache){ return /^photo du comptoir/i.test(String(tache || '').trim()) ? this.rvDe(tache) : null; }
+  /** Réduite avant l'envoi (bord long 1600 px, JPEG) : la photo type s'ouvre aussi sur le téléphone du consultant. */
+  rvReduire(f){
+    return new Promise((ok, ko) => {
+      const url = URL.createObjectURL(f); const im = new Image();
+      im.onload = () => {
+        URL.revokeObjectURL(url);
+        const r = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight));
+        const c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * r); c.height = Math.round(im.naturalHeight * r);
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        ok(c.toDataURL('image/jpeg', 0.82));
+      };
+      im.onerror = () => { URL.revokeObjectURL(url); ko(new Error('image illisible')); };
+      im.src = url;
+    });
+  }
+  /** Une écriture sur un rayon : {data}, {consigne}, {retirer} — la réponse remplace la liste. */
+  rvEcrire(nom, champs, msg){
+    this.setState(s => ({ rvBusy: Object.assign({}, s.rvBusy, { [nom]: true }) }));
+    return this.api('PUT', '/rayons/photos', Object.assign({ nom }, champs)).then(r => {
+      this.setState(s => { const b = Object.assign({}, s.rvBusy); delete b[nom]; return { rvBusy: b }; });
+      if (!r || r.ok === false) { return; }
+      if (Array.isArray(r.rayons)) { this._rv = r.rayons; this._rvIndispo = false; }
+      if (msg) { this.notify(msg); }
+      this.setState({});
+    });
+  }
+  rvFichier(nom){
+    return e => {
+      const f = e.target.files && e.target.files[0]; e.target.value = '';
+      if (!f) { return; }
+      if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { this.notify('Photo en JPEG, PNG ou WebP'); return; }
+      this.rvReduire(f).then(data => this.rvEcrire(nom, { data }, 'Photo type posée — ' + nom))
+        .catch(() => this.notify('Image illisible — essayez un autre fichier'));
+    };
+  }
   /**
    * La note rapide, sous la photo : 4 ou 5 en un clic, sans commentaire ni
    * repère — au-dessus du seuil, le barème n'en exige pas. Le même chemin
@@ -13531,7 +13600,8 @@ class App {
         : t.e.c === 'ctl' ? 'photo déposée, pas encore notée'
         : t.e.c === 'mai' ? 'maîtrisée' + (t.maitrise && t.maitrise.moyenne != null ? ' · ' + String(t.maitrise.moyenne).replace('.', ',') + ' / 5' : '') + (t.maitrise && t.maitrise.recontrole ? ' · re-contrôle le ' + this.fD(t.maitrise.recontrole) : '')
         : t.e.c === 'mu' ? 'rendue sans photo' : (cl(t) || 'non rendue');
-      return { e: t.e.c, badge: t.e.bd, nom: nom(t), heure: hh(t.faitLe),
+      const ry = this.rvDeTache(t.tache);
+      return { e: t.e.c, badge: t.e.bd, nom: nom(t), heure: hh(t.faitLe), type: ry && ry.photo ? ry.photo : null,
         meta: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hh(t.faitLe) : hh(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : '')),
         constat, photo: t.p ? t.p.photo : null, reperes: rp,
         attente: !t.p && !P && t.e.c !== 'ko' && t.e.c !== 'mu',
@@ -13557,6 +13627,7 @@ class App {
   }
   valsControle(common){
     const S = this.state, D = this.D, M = this.M;
+    this.rvLire();   // les photos types des rayons : les cartes du rail et le volet de notation les lisent
     const pt = D.pwaTasks || { shops: [], dates: [], consultants: [], totals: {}, indispo: true };
     const T = pt.totals || {};
     common.ctrlIndispo = !!pt.indispo && (pt.shops || []).length === 0;
@@ -13671,6 +13742,44 @@ class App {
     common.ctrlMasqPlier = () => this.setState({ ctrlMasqTout: !S.ctrlMasqTout });
     common.ctrlMasqTotal = shops.reduce((a, s2) => a + s2.nMasquees, 0);
 
+    // --- Photos types des rayons : le back office du comptoir attendu. Les
+    // rayons que le panel photographie aujourd'hui sans photo type connue
+    // sont proposés à l'ajout : un nom mal orthographié ne reste pas invisible.
+    const rvL = this._rv || [];
+    const rvBusy = S.rvBusy || {};
+    const vusPanel = {};
+    (pt.shops || []).forEach(s2 => (s2.taches || []).forEach(t => {
+      const m = /^photo du comptoir\s*[-–—:]?\s*(.+)$/i.exec(String(t.tache || '').trim());
+      if (m) { const k = m[1].trim(); vusPanel[k] = (vusPanel[k] || 0) + 1; }
+    }));
+    const nouv = String(S.rvNouveau || '');
+    common.rv = {
+      ouvert: !!S.rvOuvert,
+      basculer: () => this.setState({ rvOuvert: !S.rvOuvert }),
+      chargement: this._rv === undefined,
+      indispo: !!this._rvIndispo,
+      total: rvL.length, poses: rvL.filter(r => r.photo).length,
+      lignes: rvL.map(r => {
+        const vus = Object.keys(vusPanel).filter(k => { const r2 = this.rvDe(k); return r2 && r2.cle === r.cle; }).reduce((a, k) => a + vusPanel[k], 0);
+        return { cle: r.cle, nom: r.nom, photo: r.photo || null, consigne: r.consigne || '', defaut: !!r.defaut, busy: !!rvBusy[r.nom],
+          meta: (r.photo ? 'Posée' : (r.consigne ? 'Consigne seule' : '')) + (r.le && (r.photo || r.consigne) ? ' le ' + this.fD(String(r.le).slice(0, 10)) + (r.par ? ' par ' + r.par : '') : ''),
+          vus: vus ? vus + ' photo' + (vus > 1 ? 's' : '') + ' à rendre ou rendue' + (vus > 1 ? 's' : '') + ' aujourd’hui' : '',
+          fichier: this.rvFichier(r.nom),
+          retirerPhoto: r.photo ? () => { if (window.confirm('Retirer la photo type « ' + r.nom + ' » ?')) { this.rvEcrire(r.nom, { data: '' }, 'Photo type retirée — ' + r.nom); } } : null,
+          setConsigne: e => { const v = String(e.target.value).trim(); if (v !== (r.consigne || '')) { this.rvEcrire(r.nom, { consigne: v }, v ? 'Consigne enregistrée — ' + r.nom : 'Consigne retirée — ' + r.nom); } },
+          supprimer: r.defaut ? null : () => { if (window.confirm('Retirer le rayon « ' + r.nom + ' », sa photo type et sa consigne ?')) { this.rvEcrire(r.nom, { retirer: true }, 'Rayon retiré — ' + r.nom); } } };
+      }),
+      inconnus: Object.keys(vusPanel).filter(k => !this.rvDe(k)).sort().map(k => ({ nom: k, nb: vusPanel[k], ajouter: () => this.rvEcrire(k, {}, 'Rayon ajouté — ' + k) })),
+      nouveau: nouv,
+      setNouveau: e => this.setState({ rvNouveau: e.target.value }),
+      ajouter: () => {
+        const n = String(this.state.rvNouveau || '').trim();
+        if (!n) { this.notify('Le nom du rayon, tel que le panel l’écrit après « Photo du comptoir - »'); return; }
+        if (this.rvDe(n)) { this.notify('Ce rayon existe déjà : ' + this.rvDe(n).nom); return; }
+        this.rvEcrire(n, {}, 'Rayon ajouté — ' + n).then(() => this.setState({ rvNouveau: '' }));
+      },
+    };
+
     common.ctrlConsultants = (pt.consultants || []).map(c => ({
       nom: c.nom, avis: String(c.avis), refuses: String(c.refuses), valides: String(c.valides),
       noteMoy: c.noteMoy != null ? String(c.noteMoy).replace('.', ',') + ' / 5' : '',
@@ -13749,6 +13858,15 @@ class App {
         produit: d.produit || '', photoRef: d.photoRef || null,
         photoRefTxt: d.produitId ? (d.photoRef ? '' : 'Pas de photo.')
           : 'Cette tâche ne porte pas sur un produit précis — pas de visuel de référence.',
+        // Une photo de comptoir : sa référence est la photo TYPE du rayon. La
+        // liste du cockpit d'abord (fraîche après un dépôt ici même), le
+        // rapprochement du serveur sinon.
+        rayon: (() => {
+          if (d.photoRef) { return null; }
+          const r = this.rvDeTache(d.tache || dt.nom) || d.rayon || null;
+          if (!r) { return null; }
+          return { nom: r.nom, photo: r.photo || null, consigne: r.consigne || '', busy: !!(S.rvBusy || {})[r.nom], fichier: this.rvFichier(r.nom) };
+        })(),
         setComment: e => { const v = e.target.value; this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { comment: v }) })); },
         send: () => this.ctrlSendNote(),
         // --- note au consultant : depuis le contrôle, sans changer d'écran.

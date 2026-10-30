@@ -682,6 +682,8 @@ export function valsCQM(app, common){
     r.modal = { titre: M.l.tache, sous: M.l.shop + ' · ' + fmtDJ(M.l.date) + (M.l.checklist ? ' · ' + M.l.checklist : ''), chargement: M.chargement, indispo: M.d && !dt ? 'Photo illisible — API injoignable.' : '',
       photo: dt && dt.photo ? dt.photo : null, faitLe: dt && dt.faitLe ? 'faite à ' + String(dt.faitLe).slice(11, 16) : (M.l.fait ? 'faite à ' + M.l.fait : ''),
       badge: cqmBadge(d || {}, M.l.etat), commentaire: M.l.commentaire || '',
+      // Une photo de comptoir : la photo type de son rayon à côté, et la consigne (src/rayons_photos.php).
+      rayon: dt && dt.rayon && (dt.rayon.photo || dt.rayon.consigne) ? { nom: dt.rayon.nom, photo: dt.rayon.photo || null, consigne: dt.rayon.consigne || '' } : null,
       choix: (d ? d.niveaux || [] : []).slice().sort((a, c) => c.n - a.n).map(n => ({ b: cqmBadge(d, n.n), on: M.note === n.n, choisir: () => app.setState({ cqmModal: Object.assign({}, app.state.cqmModal, { note: n.n, msg: null }) }) })),
       motifRequis: !!M.note && M.note < ((d || {}).seuil || 4), comment: M.comment || '', setComment: e => { const X = app.state.cqmModal; if (X) { X.comment = e.target.value; } },
       peutNoter: !!dt && !!M.l.photo, envoi: M.envoi, msg: M.msg, enregistrer: () => cqmNoter(app), fermer: () => app.setState({ cqmModal: null }) };
