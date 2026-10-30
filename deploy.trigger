@@ -1192,3 +1192,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T21:05:36Z prévision : sorties de caisse [222]
 2026-10-30T21:16:51Z rail : Marketing en magasin ↗ (régie d'affichage)
 2026-10-30T21:28:13Z prévision 13 semaines : investissements hors de l'argent pour produire [223]
+2026-10-30T22:13:49Z frais fixes : voitures en leasing (migration 144) [224]
