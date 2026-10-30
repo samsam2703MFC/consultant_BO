@@ -1284,7 +1284,8 @@ final class InvoiceService
         $materials = null;
         $suppliers = null;
         $invoices = [];
-        $t = ['invoices' => 0, 'net' => 0.0, 'lines' => 0, 'auto' => 0, 'checked' => 0, 'todo' => 0, 'disputed' => 0, 'safe' => 0, 'ready' => 0, 'ready_net' => 0.0,
+        $this->wizardCats = $this->categories->all();
+        $t = ['invoices' => 0, 'net' => 0.0, 'lines' => 0, 'auto' => 0, 'checked' => 0, 'todo' => 0, 'disputed' => 0, 'safe' => 0, 'ready' => 0, 'ready_net' => 0.0, 'services' => 0,
             'reasons' => ['new' => 0, 'price' => 0, 'qty' => 0, 'other' => 0]];
         foreach ($this->repo->invoices('open') as $inv) {
             $lines = $this->repo->lines((int) $inv['id']);
@@ -1298,14 +1299,18 @@ final class InvoiceService
             foreach (['lines', 'auto', 'checked', 'todo', 'disputed', 'safe'] as $k) $t[$k] += $w['counts'][$k];
             foreach ($w['lines'] as $l) if ($l['state'] === 'todo') $t['reasons'][$l['reason']]++;
             if ($w['wizard_ready']) { $t['ready']++; $t['ready_net'] += (float) ($w['total_net'] ?? 0); }
+            if ($w['service_guess'] !== null) $t['services']++;
         }
         // Do sprawdzenia najpierw (najwięcej pozycji), gotowe na końcu ; w tym samym stanie — najstarsze najpierw.
         usort($invoices, fn($a, $b) => [$a['wizard_ready'], -$a['counts']['todo'], $a['issue_date'] ?? '', $a['id']] <=> [$b['wizard_ready'], -$b['counts']['todo'], $b['issue_date'] ?? '', $b['id']]);
         $t['net'] = round($t['net'], 2);
         $t['ready_net'] = round($t['ready_net'], 2);
         return ['invoices' => $invoices, 'totals' => $t, 'last_ksef' => $this->repo->lastKsefImport(), 'auto' => $this->autoMode(),
-            'can_write' => $context->can('prod.supply.write')];
+            'can_write' => $context->can('prod.supply.write'), 'can_finance' => $context->can('prod.finance.read')];
     }
+
+    /** Kategorie kalkulatora kosztów (podpowiedź « wygląda na usługę » w kreatorze), raz na zapytanie. */
+    private ?array $wizardCats = null;
 
     /** Faktura kreatora : linie ze stanem i powodem, podwyżki, liczby, gotowość i co zrobi « Zatwierdź » (ceny, przyjęcie). */
     private function wizardInvoice(array $inv, array $lines, string $lang, array $materials, array $suppliers): array
@@ -1341,8 +1346,11 @@ final class InvoiceService
                 'score' => $inv['seller_name'] ? round(InvoiceParser::similarity((string) $inv['seller_name'], (string) $s['name']), 2) : 0.0], $suppliers);
             usort($choices, fn($a, $b) => [$b['score'], $a['name']] <=> [$a['score'], $b['name']]);
         }
+        // « Usługa → Finanse » : faktura jeszcze nieprzetworzona (bez cen w kartotece, bez zamówienia) ; podpowiedź kategorii (sprzedawca, linie).
+        $movable = $inv['prices_imported_at'] === null && $inv['id_po'] === null;
+        $guess = $movable && empty($inv['is_correction']) && $this->wizardCats ? CostCategories::guess($inv, $lines, $this->wizardCats) : null;
         return $this->summary($inv) + ['lines' => $out, 'counts' => $counts, 'control' => $control['summary'], 'warnings' => $ready['warnings'],
-            'wizard_ready' => $wizardReady, 'supplier_choices' => $choices,
+            'wizard_ready' => $wizardReady, 'supplier_choices' => $choices, 'movable' => $movable, 'service_guess' => $guess,
             'plan' => ['prices' => $inv['prices_imported_at'] === null ? array_values($prices) : [], 'prices_done' => $inv['prices_imported_at'] !== null,
                 'receive' => $this->canReceive($inv, $control) ? ($inv['id_po'] !== null ? 'order' : 'invoice') : null]];
     }

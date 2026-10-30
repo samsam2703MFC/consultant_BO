@@ -95,12 +95,16 @@
             if (r.other) out.push(['', t('kw.r.other', {n: r.other})]);
             if (inv.counts.disputed) out.push(['bad', t('kw.r.disputed', {n: inv.counts.disputed})]);
             if (!inv.supplier) out.push(['bad', t('kw.no_supplier')]);
+            if (inv.service_guess) out.unshift(['svc', t('kw.looks_service', {c: inv.service_guess.label})]);
             if (!out.length) out.push(['ok', t('kw.all_known')]);
             return out.map(([c, s]) => `<span class="kw-badge ${c}">${esc(s)}</span>`).join('');
         };
         const statusOf = (inv) => inv.wizard_ready ? `<span class="kw-badge ok">✓ ${esc(t('kw.ready'))}</span>`
             : (inv.counts.todo ? `<span class="kw-badge">${esc(t('kw.todo_n', {n: inv.counts.todo}))}</span>`
                 : (inv.counts.disputed ? `<span class="kw-badge bad">${esc(t('kw.disputed'))}</span>` : `<span class="kw-badge bad">${esc(t('kw.no_supplier'))}</span>`));
+        // « Usługa → Finanse » (okno klasyfikacji : kategoria kalkulatora kosztów, miesiąc, reguła dostawcy — invoice-classify.js).
+        const toFinance = (inv, small) => inv.movable && W.can_write && window.TfbInvoiceClassify
+            ? `<button type="button" class="kw-btn ${small ? 'kw-sm' : ''} ${inv.service_guess ? 'kw-svc' : 'ghost'}" data-kw-service="${inv.id}" title="${esc(t('kw.to_finance_help'))}"><i class="bi bi-arrow-right-square"></i> ${esc(t('kw.to_finance'))}</button>` : '';
         const supplierPick = (inv) => inv.supplier || !W.can_write ? '' : `<span class="kw-sup"><select class="form-select form-select-sm" data-kw-supplier="${inv.id}" aria-label="${esc(t('kw.pick_supplier'))}">
             <option value="">${esc(t('kw.pick_supplier'))}</option>${inv.supplier_choices.slice(0, 40).map(s => `<option value="${s.id}">${esc(s.name)}${s.score >= 0.5 ? ' · ' + Math.round(s.score * 100) + ' %' : ''}</option>`).join('')}</select></span>`;
 
@@ -111,7 +115,8 @@
             const rs = [R.new && t('kw.r.new', {n: R.new}), R.price && t('kw.r.price', {n: R.price}), R.qty && t('kw.r.qty', {n: R.qty}), R.other && t('kw.r.other', {n: R.other})].filter(Boolean).join(' · ');
             const rows = W.invoices.map(i => `<tr class="tfb-supply-click" data-kw-open="${i.id}"><td><b>${esc(i.number || t('inv.no_number'))}</b><small>${esc(t('inv.source.' + i.source))}${i.is_correction ? ' · ' + esc(t('kw.correction')) : ''}</small></td>
                 <td>${esc(seller(i))}${!i.supplier && i.seller_nip ? `<small>NIP ${esc(i.seller_nip)}</small>` : ''}</td><td>${day(i.issue_date)}</td><td class="r tfb-num">${money(i.total_net)}</td>
-                <td>${i.order ? esc(i.order.code) : '—'}</td><td class="text-nowrap">${bar(i)}</td><td><span class="kw-do">${remarks(i)}</span></td><td class="r">${statusOf(i)}</td></tr>`).join('');
+                <td>${i.order ? esc(i.order.code) : '—'}</td><td class="text-nowrap">${bar(i)}</td><td><span class="kw-do">${remarks(i)}</span></td>
+                <td class="r"><span class="kw-do kw-end">${i.service_guess ? toFinance(i, true) : ''}${statusOf(i)}</span></td></tr>`).join('');
             return `<div class="kw-card"><h5>${esc(t('kw.s1.title'))} ${W.last_ksef ? `<span class="kw-badge ok">${esc(t('kw.last_ksef', {d: day(W.last_ksef.slice(0, 10)), h: W.last_ksef.slice(11, 16)}))}</span>` : ''}</h5>
                 <p class="kw-lead">${esc(t('kw.s1.lead'))}</p>
                 <div class="kw-tiles"><div><span>${esc(t('kw.t.invoices'))}</span><b>${T.invoices}</b><small>${money(T.net)} ${esc(t('kw.net'))}</small></div>
@@ -119,6 +124,7 @@
                     <div class="ok"><span>${esc(t('kw.t.auto'))}</span><b>${T.auto + T.checked}</b><small>${esc(t('kw.t.auto_help', {a: T.auto, c: T.checked}))}</small></div>
                     <div class="${T.todo ? 'todo' : 'ok'}"><span>${esc(t('kw.t.todo'))}</span><b>${T.todo}</b><small>${esc(rs || t('kw.nothing'))}${T.disputed ? ' · ' + esc(t('kw.r.disputed', {n: T.disputed})) : ''}</small></div>
                     <div class="${T.ready ? 'ok' : ''}"><span>${esc(t('kw.t.ready'))}</span><b>${T.ready}</b><small>${money(T.ready_net)}</small></div></div>
+                ${T.services ? `<div class="kw-note warn mb-2">${esc(t('kw.services_note', {n: T.services}))}</div>` : ''}
                 ${W.invoices.length ? `<div class="table-responsive"><table class="kw-t"><thead><tr><th>${esc(t('inv.col.number'))}</th><th>${esc(t('col.supplier'))}</th><th>${esc(t('inv.col.date'))}</th>
                     <th class="r">${esc(t('inv.col.net'))}</th><th>${esc(t('inv.col.order'))}</th><th>${esc(t('kw.col.checked'))}</th><th>${esc(t('kw.col.remarks'))}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
                     : `<p class="at-empty mb-0">${esc(t('kw.empty'))}</p>`}
@@ -211,7 +217,7 @@
             const groups = W.invoices.map(inv => {
                 const vis = inv.lines.filter(l => lineVisible(l) || key(inv, l) === cur);
                 if (!vis.length) return '';
-                return `<tr class="inv"><td colspan="8"><span>${esc(inv.number || t('inv.no_number'))} · ${esc(seller(inv))}</span><small>${day(inv.issue_date)} · ${money(inv.total_net)} ${esc(t('kw.net'))}${inv.order ? ' · ' + esc(t('kw.order_short', {c: inv.order.code})) : ''} · ${esc(t('kw.checked_of', {d: inv.counts.auto + inv.counts.checked, n: inv.counts.lines}))}</small>${supplierPick(inv)}</td></tr>`
+                return `<tr class="inv"><td colspan="8"><span>${esc(inv.number || t('inv.no_number'))} · ${esc(seller(inv))}</span><small>${day(inv.issue_date)} · ${money(inv.total_net)} ${esc(t('kw.net'))}${inv.order ? ' · ' + esc(t('kw.order_short', {c: inv.order.code})) : ''} · ${esc(t('kw.checked_of', {d: inv.counts.auto + inv.counts.checked, n: inv.counts.lines}))}</small>${inv.service_guess ? ` <span class="kw-badge svc">${esc(t('kw.looks_service', {c: inv.service_guess.label}))}</span>` : ''}${supplierPick(inv)}<span class="kw-inv-act">${toFinance(inv, true)}</span></td></tr>`
                     + vis.map(l => { if (!done(l)) num++; return lineRow(inv, l, num) + (key(inv, l) === cur ? panel(inv, l) : ''); }).join('');
             }).join('');
             return `<div class="kw-card"><h5>${esc(t('kw.s2.title'))} <span class="kw-badge">${esc(t('kw.s2.badge', {i: T.invoices, n: T.lines}))}</span></h5>
@@ -425,6 +431,10 @@
             if (b.matches('[data-kw-reset]')) {
                 const x = find(cur);
                 return act(() => api.post(`/supply/invoices/${x.inv.id}/lines/${x.l.id}/check`, {action: 'reset'}));
+            }
+            if (b.dataset.kwService) {
+                // Faktura przeniesiona do Finansów znika z kreatora (i z jego liczb) ; reguła dostawcy przenosi też inne jego faktury.
+                return window.TfbInvoiceClassify.open({api, invoiceId: Number(b.dataset.kwService), action: 'service', onDone: () => { cur = null; load(); }});
             }
             if (b.matches('[data-kw-safe]')) return act(() => api.post('/supply/invoices/wizard/check-safe', {}), (r) => t('kw.safe_done', {n: r.checked}));
             if (b.matches('[data-kw-sync]')) {

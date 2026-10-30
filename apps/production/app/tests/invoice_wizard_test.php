@@ -76,6 +76,8 @@ try {
         'KSEF-MLYN-0002' => ['5260250274', 'Młyn test Sp. z o.o.', 'M/2', date('Y-m-d', strtotime('-2 days')), [['MĄKA PSZENNA T-65 WOREK 25KG', 'szt', 1, 100.0]]],
         // H/1 : inny dostawca (inny NIP), ta sama nazwa mąki — podpowiedź « znana nazwa » z przelicznikiem.
         'KSEF-INNY-0001' => ['1112223334', 'Hurtownia inna', 'H/1', date('Y-m-d'), [['MĄKA PSZENNA T-65 WOREK 25KG', 'szt', 1, 99.0]]],
+        // O/1 : paliwo — wygląda na usługę (Finanse).
+        'KSEF-ORLEN-0001' => ['7740001454', 'ORLEN S.A.', 'O/1', date('Y-m-d'), [['ON EKODIESEL', 'l', 100, 6.0]]],
     ];
     $xml = function (array $d): string {
         [$nip, $name, $number, $date, $lines] = $d;
@@ -181,6 +183,16 @@ try {
     $h1 = $inv($svc->wizard($ctx), 'H/1');
     $sug = $h1['lines'][0]['suggestions'][0];
     expectWiz($h1['lines'][0]['state'] === 'todo' && $sug['raw_material_id'] === 900 && $sug['known'] && abs($sug['factor'] - 25000) < 1e-6 && $sug['score'] <= 1.0, 'other supplier: known name suggested first');
+
+    // « Usługa → Finanse » : faktura ORLEN rozpoznana jako paliwo, po klasyfikacji znika z kreatora.
+    $pdo->exec("INSERT INTO cost_logistics_type (id, code, name, sort_order) VALUES (1, 'FUEL', 'Paliwo', 1)");
+    $svc->ksefImport(['ksef_numbers' => ['KSEF-ORLEN-0001']], $ctx);
+    $w = $svc->wizard($ctx);
+    $o1 = $inv($w, 'O/1');
+    expectWiz($o1['movable'] && $o1['service_guess']['code'] === 'log:FUEL' && $w['totals']['services'] === 1 && $inv($w, 'H/1')['service_guess'] === null, 'fuel invoice looks like a service (Finance)');
+    $svc->classify($o1['id'], ['action' => 'service', 'cost_category' => 'log:FUEL'], $ctx);
+    $w = $svc->wizard($ctx);
+    expectWiz(!array_filter($w['invoices'], fn($i) => $i['number'] === 'O/1') && $w['totals']['services'] === 0, 'moved to Finance: gone from the wizard');
 
     echo "invoice_wizard_test: OK\n";
 } finally {

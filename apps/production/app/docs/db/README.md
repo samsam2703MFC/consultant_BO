@@ -79,6 +79,9 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
      des autres factures ouvertes du même vendeur (NIP ou fournisseur ERP). Une hausse révélée par une nouvelle
      correspondance garde la correspondance et demande « nouveau prix / inchangé ». « Zatwierdź wszystkie bez ryzyka » :
      lignes reliées dont la seule remarque est un prix plus bas ;
+  « Usługa → Finanse » (étapes 1 et 2) : une facture pas encore traitée (sans prix importés ni commande) part dans Finances
+  avec la fenêtre de classement habituelle (catégorie du calculateur de coûts, mois, règle fournisseur) ; celles qui
+  ressemblent à un service (vendeur Orlen → carburant, lignes d'énergie…) sont signalées « wygląda na usługę ».
   3. « Zatwierdź faktury » : factures dont toutes les lignes sont vérifiées (auto ou à la main), sans ligne litigieuse,
      fournisseur ERP connu — comme « Zatwierdź fakturę » (prix vers les fiches, réception depuis la commande ou la facture,
      acceptation ; avertissements confirmés par la sélection).
