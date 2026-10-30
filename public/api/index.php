@@ -102,6 +102,7 @@ require __DIR__ . '/../../src/primes.php';
 require __DIR__ . '/../../src/primes_app.php';
 require __DIR__ . '/../../src/primes_b2b.php';
 require __DIR__ . '/../../src/api_module.php';
+require __DIR__ . '/../../src/profil_employe.php';
 require __DIR__ . '/../../src/grands_prix.php';
 require __DIR__ . '/../../src/promos_magasin.php';
 require __DIR__ . '/../../src/promos_bons.php';
@@ -170,6 +171,20 @@ try {
 
     // « Mes primes » dans l'app worker : la personne se présente avec SON jeton d'employé, que le
     // panel confirme — la fiche rendue est la sienne, personne d'autre (src/primes.php).
+    // Le profil de l'employé (30/10/2026) : même voie que « Mes primes », l'identité signée par l'app ou le jeton
+    // d'employé que le panel confirme ; la personne ne lit et n'écrit que le sien (src/profil_employe.php).
+    if (str_starts_with($path, '/ventes/moi/profil') && primesVoieApp()) {
+        $out = match (true) {
+            $method === 'GET' && $path === '/ventes/moi/profil'         => ep_profil_moi(),
+            $method === 'POST' && $path === '/ventes/moi/profil'        => wr_profil_moi(),
+            $method === 'POST' && $path === '/ventes/moi/profil/carte'  => wr_profil_carte(),
+            default => (static function (): array { http_response_code(404); return ['error' => 'route inconnue']; })(),
+        };
+        tempsServeur($tCharge, $tInstall);
+        echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     if ($method === 'GET' && $path === '/ventes/moi' && primesVoieApp()) {
         $out = ep_ventes_moi_jeton();
         tempsServeur($tCharge, $tInstall);
@@ -446,6 +461,9 @@ function route(string $method, string $path): mixed
             $path === '/ventes/primes-equipe'         => ep_primes_equipe(),
             $path === '/ventes/primes-annee'          => ep_primes_annee(),
             $path === '/ventes/primes-api'            => ep_primes_api(),
+            $path === '/ventes/equipe/profils'        => ep_profils_equipe(),
+            $path === '/ventes/equipe/profil'         => ep_profil_equipe(),
+            $path === '/ventes/equipe/profil/carte'   => ep_profil_carte(),
             $path === '/ventes/primes-promos'         => ep_primes_promos(),
             $path === '/ventes/primes-catalogue'      => ep_primes_catalogue(),
             $path === '/ventes/primes-promos/sonde'   => ep_primes_promos_sonde(),
