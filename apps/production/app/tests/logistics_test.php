@@ -101,7 +101,7 @@ try {
     $pdo->exec("INSERT INTO n_shipping_assignment (ship_date, id_customer, id_carrier_vehicle, stop_order) VALUES ('{$d}', 1, 1, 2)");
     $pdo->exec("INSERT INTO document_cmr (id, id_customer, id_carrier, id_carrier_vehicle) VALUES (1, 3, 1, 3), (2, 3, 1, 2)");
 
-    $new = fn() => new LogisticsService(new LogisticsRepository($pdo), new ParamRepository($pdo));
+    $new = fn() => new LogisticsService(new LogisticsRepository($pdo), new ParamRepository($pdo), null);
     $service = $new();
     $refused = function (callable $fn): bool {
         try { $fn(); return false; } catch (CustomException) { return true; }

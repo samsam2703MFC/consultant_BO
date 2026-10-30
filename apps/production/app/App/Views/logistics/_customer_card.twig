@@ -9,7 +9,7 @@
         </div>
         <div class="at-logi-customer-total">
             <strong>{{ c.pallets }}</strong><span>{{ c.pallets|plural_pl('paleta', 'palety', 'palet')|split(' ')|last }}</span>
-            <span class="at-sub">{{ c.cartons|number_format(0, ',', ' ') }} kart. · {{ c.weight_kg|number_format(0, ',', ' ') }} kg{% if c.scanned %} · <span class="{{ c.scanned != c.pallets ? 'text-warning' : 'text-success' }}">zeskanowane {{ c.scanned }}</span>{% endif %}</span>
+            <span class="at-sub">{{ c.cartons|number_format(0, ',', ' ') }} kart. · {{ c.weight_kg|number_format(0, ',', ' ') }} kg{% if c.pallet_max_kg is defined and c.pallet_max_kg %} · najcięższa {{ c.pallet_max_kg|number_format(0, ',', ' ') }} kg{% if c.pallet_max_height_mm %}, najwyższa {{ (c.pallet_max_height_mm / 1000)|number_format(2, ',', ' ') }} m{% endif %}{% if c.pallets_over %} · <span class="text-danger">⚠ {{ c.pallets_over }} ponad limit</span>{% endif %}{% endif %}{% if c.scanned %} · <span class="{{ c.scanned != c.pallets ? 'text-warning' : 'text-success' }}">zeskanowane {{ c.scanned }}</span>{% endif %}</span>
         </div>
         <div class="at-logi-customer-truck">
             <select class="form-select form-select-sm" data-field="tour_id" aria-label="Trasa {{ c.name }}">
@@ -47,10 +47,13 @@
         <ol class="at-pallets" aria-label="Palety: {{ ct.name }}">
             {% for p in ct.pallets %}
                 {% set label = p.items|length > 1 ? 'Mix ' ~ p.items|length : p.items[0].product %}
-                <li class="at-pallet is-{{ p.kind }}" title="{{ p.items|map(i => i.product ~ (i.format is defined ? ' [' ~ i.format ~ ']' : '') ~ ': ' ~ i.cartons|number_format(0, ',', ' ') ~ ' kart.')|join('\n') }}{{ p.kind != 'full' ? '\nzapełnienie ' ~ (p.fill * 100)|round ~ ' %' : '' }}">
+                {% set ld = p.load ?? null %}
+                {% set over = ld and (ld.over_kg or ld.over_height or ld.over_truck) %}
+                <li class="at-pallet is-{{ p.kind }}{{ over ? ' is-over' : '' }}" title="{{ p.items|map(i => i.product ~ (i.format is defined ? ' [' ~ i.format ~ ']' : '') ~ ': ' ~ i.cartons|number_format(0, ',', ' ') ~ ' kart.')|join('\n') }}{{ p.kind != 'full' ? '\nzapełnienie ' ~ (p.fill * 100)|round ~ ' %' : '' }}{{ ld ? '\n' ~ ld.kg|number_format(0, ',', ' ') ~ ' kg · ' ~ (ld.height_mm ? (ld.height_mm / 1000)|number_format(2, ',', ' ') ~ ' m' : 'wysokość ?') ~ ' (limit ' ~ ld.max_kg|number_format(0, ',', ' ') ~ ' kg, ' ~ (ld.max_height_mm / 1000)|number_format(2, ',', ' ') ~ ' m)' : '' }}">
                     <span class="at-pallet-fill" style="height: {{ (p.fill * 100)|round(1) }}%"></span>
                     <span class="at-pallet-label">{{ label|length > 22 ? label|slice(0, 21) ~ '…' : label }}</span>
                     <span class="at-pallet-qty">{{ p.items|reduce((s, i) => s + i.cartons, 0)|number_format(0, ',', ' ') }} kart.{{ p.kind != 'full' ? ' · ' ~ (p.fill * 100)|round ~ ' %' : '' }}</span>
+                    {% if ld %}<span class="at-pallet-load">{{ ld.kg|number_format(0, ',', ' ') }} kg · {{ ld.height_mm ? (ld.height_mm / 1000)|number_format(2, ',', ' ') ~ ' m' : '? m' }}{{ over ? ' ⚠' : '' }}</span>{% endif %}
                 </li>
             {% endfor %}
         </ol>

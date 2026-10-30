@@ -3,9 +3,11 @@ declare(strict_types=1);
 
 namespace App\Services\Logistics;
 
+use App\Domain\Logistics\PalletLoad;
 use App\Exceptions\CustomException;
 use App\Repositories\Logistics\LogisticsBoardRepository;
 use App\Repositories\Workshop\ParamRepository;
+use App\Services\Product\CartonService;
 
 /**
  * Logistyka i pakowanie (28/10/2026) — trzy ekrany na tych samych liczbach dnia wysyłki :
@@ -16,6 +18,8 @@ use App\Repositories\Workshop\ParamRepository;
  *  - załadunek : naczepa (miejsca palet), klienci pojazdu w kolejności rozładunku (pierwszy przy drzwiach), palety
  *    zeskanowane z numerem i planowane ; układ zapisany albo automatyczny, wysłany na tablet kierowcy (wersja).
  * Stan magazynu dzielony między klientów w kolejności trasy (najpierw pierwszy przystanek).
+ * Waga i wysokość palet [213] : palety zeskanowane (kartony na palecie), « teraz » (kartony już na paletach klienta,
+ * skan + tablet) i « po zamówieniu » (wszystkie zamówione) ułożone jak plan ; limity produktu / kartonu / parametrów.
  */
 final class LogisticsBoardService
 {
@@ -27,6 +31,7 @@ final class LogisticsBoardService
         private LogisticsService $logistics,
         private LogisticsBoardRepository $repo,
         private ParamRepository $params,
+        private CartonService $cartons,
     ) {
     }
 
@@ -104,9 +109,14 @@ final class LogisticsBoardService
     {
         $this->checkDate($date);
         $s = $this->state($date);
+        [$data, $limits] = $this->palletBasis($s['customers']);
+        $contents = $this->repo->palletContents($date);
         $pallets = [];
         foreach ($this->repo->pallets($date) as $p) {
-            $pallets[(int) $p['id_customer']][] = ['id' => (int) $p['id_palet'], 'cartons' => (int) $p['cartons'], 'open' => (int) $p['status'] === 1];
+            $items = [];
+            foreach ($contents[(int) $p['id_palet']] ?? [] as $pid => $n) $items[] = ['cartons' => $n] + ($data[$pid] ?? []);
+            $pallets[(int) $p['id_customer']][] = ['id' => (int) $p['id_palet'], 'cartons' => (int) $p['cartons'], 'open' => (int) $p['status'] === 1,
+                'load' => $items ? PalletLoad::measure($items, $limits) : null];
         }
         $clients = [];
         $alerts = [];
@@ -120,10 +130,19 @@ final class LogisticsBoardService
                 'packed' => $this->sum($rows, 'packed'), 'ready' => $this->sum($rows, 'ready'), 'missing' => $this->sum($rows, 'missing'),
                 'pallets' => $pallets[$cid] ?? [], 'planned_pallets' => max($c['planned_pallets'], count($pallets[$cid] ?? [])),
                 'lines' => $rows,
+                'load_now' => $this->load($rows, 'on_pallet', $data, $limits), 'load_final' => $this->load($rows, 'ordered', $data, $limits),
             ];
             $item['left'] = max(0, $item['ordered'] - $item['on_pallet']);
             $clients[] = $item;
             if ($item['ordered'] > 0 && $item['on_pallet'] === 0) $alerts[] = ['type' => 'no_pallet', 'customer' => $item['name']];
+            // Palety zeskanowane ponad limit (waga, wysokość, ciężarówka) : jeden alarm na klienta.
+            $over = array_values(array_filter($item['pallets'], fn($p) => $p['load'] && ($p['load']['over_kg'] || $p['load']['over_height'] || $p['load']['over_truck'])));
+            if ($over) {
+                $alerts[] = ['type' => 'pallet_over', 'customer' => $item['name'], 'pallets' => array_column($over, 'id'),
+                    'kg' => max(array_map(fn($p) => $p['load']['kg'], $over)), 'height_mm' => max(array_map(fn($p) => (int) $p['load']['height_mm'], $over)),
+                    'max_kg' => min(array_map(fn($p) => $p['load']['max_kg'], $over)),
+                    'max_height_mm' => min($limits['truck_height_mm'], ...array_map(fn($p) => $p['load']['max_height_mm'], $over))];
+            }
         }
         $worst = $clients ? array_reduce($clients, fn($w, $c) => $w === null || $c['missing'] > $w['missing'] ? $c : $w) : null;
         if ($worst && $worst['missing'] > 0) {
@@ -241,6 +260,7 @@ final class LogisticsBoardService
         $this->checkDate($date);
         $s = $this->state($date);
         $day = $s['day'];
+        [$data, $limits] = $this->palletBasis($s['customers']);
         $vehicles = [];
         foreach ($day['fleet'] as $t) {
             if (!$t['customers']) continue;
@@ -252,7 +272,8 @@ final class LogisticsBoardService
             if (!$c['lines'] || ($vehicleId !== null && ($c['vehicle']['id'] ?? null) !== $vehicleId)) continue;
             $lines = array_map(fn($l) => ['product_id' => $l['product_id'], 'name' => $l['name'], 'category' => $l['category'], 'ppc' => $l['ppc'],
                 'ordered' => $l['ordered'], 'on_pallet' => $l['on_pallet'], 'scanned' => $l['scanned'], 'entered' => $l['entered'],
-                'left' => max(0, $l['ordered'] - $l['on_pallet']), 'over' => max(0, $l['on_pallet'] - $l['ordered'])], $c['lines']);
+                'left' => max(0, $l['ordered'] - $l['on_pallet']), 'over' => max(0, $l['on_pallet'] - $l['ordered']),
+                'carton_mm' => $data[$l['product_id']]['height_mm'] ?? null], $c['lines']);
             // Kolejność stała (kategoria, nazwa) — wiersz nie skacze po dodaniu ; gotowe na końcu.
             usort($lines, fn($a, $b) => [$a['left'] === 0, (string) $a['category'], $a['name']] <=> [$b['left'] === 0, (string) $b['category'], $b['name']]);
             $ordered = $this->sum($lines, 'ordered');
@@ -265,6 +286,12 @@ final class LogisticsBoardService
             $open = array_values(array_filter($clients, fn($c) => $c['left'] > 0));
             $customerId = $open[0]['id'] ?? ($ids[0] ?? null);
         }
+        foreach ($clients as &$cl) {
+            if ($cl['id'] !== $customerId) continue;
+            $cl['load_now'] = $this->load($cl['lines'], 'on_pallet', $data, $limits);
+            $cl['load_final'] = $this->load($cl['lines'], 'ordered', $data, $limits);
+        }
+        unset($cl);
         $entries = [];
         if ($customerId !== null) {
             foreach ($this->repo->palletEntries($date, $customerId) as $e) {
@@ -277,8 +304,39 @@ final class LogisticsBoardService
             'date' => $date, 'dates' => $day['dates'], 'now' => date('Y-m-d H:i:s'),
             'departure' => $truck['departure'] ?? $this->departure($day),
             'vehicles' => $vehicles, 'vehicle_id' => $vehicleId, 'clients' => $clients, 'customer_id' => $customerId,
-            'entries' => (object) $entries, 'people' => $this->repo->presentPeople(),
+            'entries' => (object) $entries, 'people' => $this->repo->presentPeople(), 'limits' => $limits,
         ];
+    }
+
+    /** Dane palety produktów dnia i limity logistyki [213]. @return array{0: array<int, array>, 1: array} */
+    private function palletBasis(array $customers): array
+    {
+        $ids = [];
+        foreach ($customers as $c) foreach ($c['lines'] as $l) $ids[$l['product_id']] = true;
+        return [$this->cartons->palletData(array_keys($ids)), $this->cartons->limits()];
+    }
+
+    /**
+     * Palety klienta z kartonów ($key : on_pallet = już na paletach, ordered = całe zamówienie) ułożone jak plan
+     * (format kartonu, pełne i mieszane) — waga i wysokość każdej [213].
+     * @return array{pallets: list<array>, kg: float, max_height_mm: ?int, over: int}
+     */
+    private function load(array $lines, string $key, array $data, array $limits): array
+    {
+        $rows = [];
+        foreach ($lines as $l) {
+            $n = (float) ($l[$key] ?? 0);
+            if ($n <= 0) continue;
+            $d = $data[$l['product_id']] ?? [];
+            $rows[] = ['product_id' => $l['product_id'], 'product' => $l['name'], 'cartons' => $n, 'cpp' => $d['cpp'] ?? 0,
+                'carton_type_id' => $d['carton_id'] ?? null, 'carton_type' => $d['carton'] ?? null];
+        }
+        $m = PalletCalculator::measure(PalletCalculator::layout($rows), $data, $limits);
+        $pallets = [];
+        foreach ($m['types'] as $t) {
+            foreach ($t['pallets'] as $p) $pallets[] = ['cartons' => array_sum(array_column($p['items'], 'cartons')), 'fill' => $p['fill'], 'format' => $t['name']] + $p['load'];
+        }
+        return ['pallets' => $pallets, 'kg' => $m['kg'], 'max_height_mm' => $m['max_height_mm'], 'over' => $m['over']];
     }
 
     /** Kartony położone na paletę (tablet) : klient i produkt z zamówień dnia, 1–999, operator (osoba aktywna). */

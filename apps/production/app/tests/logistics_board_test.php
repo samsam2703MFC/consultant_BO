@@ -21,6 +21,9 @@ use App\Repositories\Logistics\LogisticsRepository;
 use App\Repositories\Workshop\ParamRepository;
 use App\Services\Logistics\LogisticsBoardService;
 use App\Services\Logistics\LogisticsService;
+use App\Services\Product\CartonService;
+use App\Repositories\Product\CartonRepository;
+use App\Repositories\Workshop\ItemRepository;
 
 function expectBoard(bool $condition, string $message): void
 {
@@ -45,7 +48,8 @@ try {
     foreach (['n_prod_param', 'carrier', 'carrier_vehicle', 'n_vehicle', 'n_tour', 'n_tour_vehicle', 'n_tour_customer', 'n_shipping_assignment', 'customer', 'customer_order',
                  'customer_order_product', 'final_product', 'palets_delivery', 'document_cmr', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'raw_material',
                  'category_product', 'carton_stock', 'carton_pallet_connection', 'n_pallet_entry', 'n_packing_count', 'n_load_plan', 'n_load_check', 'n_prod_item',
-                 'n_prod_routing_step', 'n_prod_group', 'n_prod_employee', 'n_prod_team', 'n_prod_team_member', 'n_prod_clock', 'user', 'production_employee'] as $table) {
+                 'n_prod_routing_step', 'n_prod_group', 'n_prod_employee', 'n_prod_team', 'n_prod_team_member', 'n_prod_clock', 'user', 'production_employee',
+                 'n_carton', 'n_prod_item_logistics', 'flattened_recipe_ingredient', 'category_material'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -83,7 +87,12 @@ try {
     $pdo->exec("INSERT INTO n_prod_clock (id_employee, clock_in, clock_out) VALUES (1, NOW(), NULL), (2, NOW(), NULL), (3, NOW() - INTERVAL 5 HOUR, NOW())");
     $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (1, 'Marek', 'Nowak', 0, 1), (2, 'Ola', 'Kowal', 0, 1), (3, 'Piotr', 'Lis', 0, 1)");
 
-    $new = fn() => new LogisticsBoardService(new LogisticsService(new LogisticsRepository($pdo), new ParamRepository($pdo)), new LogisticsBoardRepository($pdo), new ParamRepository($pdo));
+    // [213] Karton Croissant z karty produktu (krok Paleta) : 395 × 295 × 210 mm, 380 g, maks. 300 kg palety ; Bagietka bez kartonu.
+    $pdo->exec("INSERT INTO raw_material (id, name, id_category, price_per_unit, packaging_unit_weight_g, is_part_of_package) VALUES (4500, 'Karton 395 x 295 x 210', 200, 2.5, 380, 1)");
+    $pdo->exec("INSERT INTO n_carton (id_raw_material, length_mm, width_mm, height_mm, kind, pallet_max_kg) VALUES (4500, 395, 295, 210, 'klapowy', 300)");
+    $pdo->exec("INSERT INTO n_prod_item_logistics (id_item, id_carton) VALUES (1, 4500)");
+    $cartons = new CartonService(new CartonRepository($pdo), new ParamRepository($pdo), new ItemRepository($pdo));
+    $new = fn() => new LogisticsBoardService(new LogisticsService(new LogisticsRepository($pdo), new ParamRepository($pdo), $cartons), new LogisticsBoardRepository($pdo), new ParamRepository($pdo), $cartons);
     $board = $new();
     $refused = function (callable $fn): bool {
         try { $fn(); return false; } catch (CustomException) { return true; }
@@ -91,7 +100,7 @@ try {
     $line = fn(array $live, int $cid, string $name) => array_values(array_filter(array_column($live['clients'], null, 'id')[$cid]['lines'], fn($l) => $l['name'] === $name))[0];
 
     // --- Karta 1 / 1 / 1 : brak danych (do poprawienia), nie 5 palet po 1 kartonie
-    $day = (new LogisticsService(new LogisticsRepository($pdo), new ParamRepository($pdo)))->day($d);
+    $day = (new LogisticsService(new LogisticsRepository($pdo), new ParamRepository($pdo), $cartons))->day($d);
     $tarta = array_values(array_filter($day['products'], fn($p) => $p['name'] === 'Tarta'))[0];
     expectBoard($tarta['placeholder'] && $tarta['issue'] === 'missing' && $day['by_id'][3]['missing_cpp'] === 1 && $day['by_id'][3]['pallets'] === 1,
         'Tarta 1/1/1 : brak danych paletowych, klient C 1 paleta (nie 1 + 5)');
@@ -107,7 +116,24 @@ try {
     $b = $line($live, 2, 'Croissant');
     expectBoard($b['scanned'] === 3 && $b['stock'] === 0 && $b['missing'] === 117, 'B Croissant : 3 zeskanowane, stan już rozdany, brak 117');
     $clients = array_column($live['clients'], null, 'id');
-    expectBoard($clients[2]['pallets'] === [['id' => 501, 'cartons' => 3, 'open' => true]] && $t['pallets'] === 1 && $t['pallets_open'] === 1, 'paleta 501 w budowie');
+    $p501 = $clients[2]['pallets'][0];
+    expectBoard(count($clients[2]['pallets']) === 1 && $p501['id'] === 501 && $p501['cartons'] === 3 && $p501['open'] && $t['pallets'] === 1 && $t['pallets_open'] === 1, 'paleta 501 w budowie');
+    // [213] Waga i wysokość : 3 kartony Croissant = 25 kg palety + 3 × (64 × 75 g + 380 g) = 40,5 kg ; 144 mm + 1 warstwa × 210 mm.
+    expectBoard($p501['load']['kg'] === 40.5 && $p501['load']['height_mm'] === 354 && $p501['load']['max_kg'] === 300 && !$p501['load']['over_kg'],
+        'paleta 501 : 40,5 kg, 354 mm, limit 300 kg z kartonu');
+    $pdo->exec('UPDATE n_carton SET pallet_max_kg = 30 WHERE id_raw_material = 4500');
+    $over = array_values(array_filter($board->live($d)['alerts'], fn($x) => $x['type'] === 'pallet_over'));
+    expectBoard(count($over) === 1 && $over[0]['customer'] === 'Sklep B' && $over[0]['pallets'] === [501] && $over[0]['kg'] === 40.5 && $over[0]['max_kg'] === 30,
+        'limit kartonu 30 kg : jeden alarm klienta B (P501 40,5 kg)');
+    $pdo->exec('UPDATE n_carton SET pallet_max_kg = 300 WHERE id_raw_material = 4500');
+    // Warstwa : ERP 10 kart. nie mieści się (karton 395 × 295 : 8 na palecie EUR) → 8 na warstwę z wymiarów kartonu.
+    $now = $clients[1]['load_now'];
+    expectBoard(count($now['pallets']) === 2 && $now['pallets'][0]['kg'] === 76.8 && $now['pallets'][0]['height_mm'] === 144 + 2 * 210
+        && $now['pallets'][1]['height_mm'] === null && !$now['pallets'][1]['known_height'] && $now['pallets'][1]['kg'] === 50.0 && $now['kg'] === 126.8,
+        'A teraz : Croissant 10 kart. (76,8 kg, 2 warstwy po 8 = 564 mm) + Bagietka 5 kart. bez kartonu (50 kg, wysokość nieznana)');
+    $fin = $clients[1]['load_final'];
+    expectBoard($fin['pallets'][0]['kg'] === 335.8 && $fin['pallets'][0]['height_mm'] === 144 + 8 * 210 && $fin['pallets'][0]['over_kg'] && $fin['pallets'][0]['over_height']
+        && $fin['over'] === 1, 'A po zamówieniu : pełna paleta Croissant 60 kart. = 335,8 kg > 300 kg, 8 warstw = 1824 mm > 1800 mm (alarm)');
     expectBoard($clients[1]['vehicle']['id'] === 1 && $clients[3]['vehicle'] === null && $clients[1]['departure'] === '18:00' && $clients[3]['departure'] === '20:00', 'pojazd i wyjazd klienta');
     expectBoard($clients[3]['left'] === 15 && $live['alerts'][0] == ['type' => 'no_pallet', 'customer' => 'Sklep C'], 'C bez żadnej palety : alarm');
     $worst = array_values(array_filter($live['alerts'], fn($x) => $x['type'] === 'missing'))[0];
@@ -207,6 +233,8 @@ try {
         'pojazd 1 : klienci A, B w kolejności rozładunku ; pierwszy z resztą wybrany');
     expectBoard(array_column($a['lines'], 'name') === ['Bagietka', 'Croissant'] && $a['lines'][1]['on_pallet'] === 10 && $a['lines'][1]['left'] === 60
         && $a['ordered'] === 100 && $a['left'] === 85, 'A : Croissant 10 na palecie (4 + 6), zostało 60 ; razem zostało 85');
+    expectBoard($a['lines'][1]['carton_mm'] === 210 && $a['lines'][0]['carton_mm'] === null && $a['load_now']['kg'] === 126.8 && !isset($p['clients'][1]['load_now'])
+        && $p['limits']['max_kg'] === 1000, 'tablet : wysokość kartonu w wierszu, palety klienta teraz (tylko wybrany klient)');
     expectBoard(array_column(((array) $p['entries'])[10], 'cartons') === [4, 6] && array_column($p['people'], 'name') === ['Marek Nowak', 'Ola Kowal'],
         'wpisy A (4 + 6) ; operatorzy = osoby obecne');
     $all = $board->pallets($d, null, 3);

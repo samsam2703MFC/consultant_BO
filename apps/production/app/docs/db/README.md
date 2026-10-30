@@ -66,6 +66,20 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Résumé sur la fiche du produit en développement (`/test-products/{id}/tablet`) : coût par pièce, prix usine, prix
   magasin, cobot, lien « Popraw koszt i cenę » (`/test-products/new/{id}#koszt`).
 
+### Poids et hauteur des palettes — logistique et emballage (30/10/2026, sans migration)
+
+- Calcul (`App\Domain\Logistics\PalletLoad`) : poids = tare palette (EUR 25 kg, industrielle 30 kg) + cartons × (pièces ×
+  g + poids du carton) ; hauteur = base 144 mm + couches × hauteur du carton ; cartons du même format posés ensemble
+  (couches = cartons ÷ cartons par couche, arrondi au-dessus), formats différents empilés (maquette 214). Limites : la plus
+  basse des produits de la palette (produit → sorte de carton → `logistics.pallet_max_*`) et `logistics.truck_inner_height_mm`.
+- Données (`CartonService::palletData`) : carton du produit (fiche, PPWR ou recette — catalogue `n_carton` : hauteur,
+  poids `raw_material.packaging_unit_weight_g`). Cartons par couche : ERP si cohérent (`cpl × lpp = cpp` et tient sur la
+  palette), sinon calculé avec les dimensions du carton sur une palette EUR (`PalletLayout`) — l'ERP a souvent 1/1/1 ou 10/10/10.
+- Où : Dzień wysyłki (carte client : chaque palette planifiée en kg · m, la plus lourde / la plus haute, « ⚠ n ponad
+  limit ») ; Ekran paletyzacji (palettes scannées P… avec kg · m, « teraz » et « po zamówieniu » par client, une alerte
+  par client si une palette scannée dépasse une limite) ; tablette d'emballage, mode Paletyzacja (hauteur du carton par
+  produit, palettes du client maintenant et à la commande complète, 6 au plus + résumé).
+
 ### Prix clients par la marge — client par client (migration 134, 30/10/2026)
 
 - Page : Marża kategorii › onglet « Ceny klientów wg marży » (`/finances/category-margin?view=clients&client=…`,

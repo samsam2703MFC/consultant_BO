@@ -2289,6 +2289,16 @@ button.tfb-buy-box.is-on { box-shadow: none; background: var(--at-primary); back
 .lg-pal { display: inline-flex; flex-direction: column; padding: 5px 9px; border-radius: 9px; background: color-mix(in srgb, var(--c) 12%, white); border: 1px solid color-mix(in srgb, var(--c) 35%, white); font-size: 13px; line-height: 1.2; }
 .lg-pal b { color: var(--c); } .lg-pal small { color: var(--at-muted); font-size: 11.5px; } .lg-pal.is-closed { background: var(--lg-fill); }
 .lg-pal.is-ghost { border: 1.5px dashed rgba(34, 34, 34, .25); background: transparent; color: var(--at-muted); justify-content: center; font-size: 12.5px; }
+/* Waga i wysokość palet [213] */
+.lg-pal.is-over { border-color: #c0392b; background: rgba(192, 57, 43, .08); } .lg-pal.is-over small { color: #9a1730; font-weight: 600; }
+.lg-load { display: block; font-size: 12.5px; color: var(--at-muted); font-variant-numeric: tabular-nums; }
+.lg-load.is-over { color: #9a1730; font-weight: 600; }
+.lg-loads { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px; font-size: 13px; }
+.lg-loads > b { margin-right: 4px; }
+.at-pallet-load { display: block; font-size: 11px; color: var(--at-muted); font-variant-numeric: tabular-nums; position: relative; z-index: 1; }
+.at-pallet.is-full .at-pallet-load { color: rgba(255, 255, 255, .85); }
+.at-pallet:has(.at-pallet-load) { height: auto; min-height: 78px; }
+.at-pallet.is-over { outline: 2px solid #c0392b; outline-offset: -2px; } .at-pallet.is-over .at-pallet-load { color: #9a1730; font-weight: 700; }
 .lg-miss { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .lg-miss li { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 13.5px; min-height: 28px; } .lg-miss li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lg-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--at-muted); } .lg-go { color: var(--at-primary); font-weight: 600; font-size: 14px; }

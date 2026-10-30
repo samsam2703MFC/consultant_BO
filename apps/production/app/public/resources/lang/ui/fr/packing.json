@@ -83,5 +83,13 @@
   "nothing_ordered": "Pas de commande à palettiser ce jour.",
   "since": "depuis {time}",
   "transport": "Transport",
-  "all_short": "Tous les clients"
+  "all_short": "Tous les clients",
+  "carton_cm": "carton {h} cm",
+  "load_now": "Sur palettes maintenant",
+  "load_final": "Commande complète",
+  "pallet_short": "P{n}",
+  "load_over": "au-delà de la limite",
+  "load_limits": "limite palette {kg} kg · {m}",
+  "load_none": "pas de données palette (carton, cartons par couche)",
+  "load_sum": "{n} palettes · la plus lourde {kg} kg · la plus haute {m}"
 }

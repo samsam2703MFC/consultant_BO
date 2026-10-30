@@ -22,6 +22,16 @@
         const a = Math.abs(n) % 100, b = a % 10;
         return n === 1 ? one : (b >= 2 && b <= 4 && (a < 12 || a > 14) ? few : many);
     };
+    // Waga i wysokość palety [213] : « 412 kg · 1,62 m », alarm gdy ponad limit (palety, kartonu albo ciężarówki).
+    const meters = (mm) => mm ? (mm / 1000).toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' m' : '? m';
+    const over = (l) => !!l && (l.over_kg || l.over_height || l.over_truck);
+    const loadTxt = (l) => l ? `${fmt(l.kg)} kg · ${meters(l.height_mm)}${l.known_height ? '' : '+'}` : '';
+    const overTxt = (l) => [l.over_kg ? `ponad ${fmt(l.max_kg)} kg` : '', l.over_height ? `ponad ${meters(l.max_height_mm)}` : '', l.over_truck ? 'wyższa niż ciężarówka' : ''].filter(Boolean).join(', ');
+    const loadSum = (c) => {
+        const f = c.load_final || {pallets: []};
+        const heavy = f.pallets.reduce((m, p) => Math.max(m, p.kg), 0);
+        return `<span class="lg-load ${f.over ? 'is-over' : ''}">Teraz ≈ ${fmt((c.load_now || {}).kg)} kg na paletach · po zamówieniu ${f.pallets.length} pal. : najcięższa ${fmt(heavy)} kg, najwyższa ${meters(f.max_height_mm)}${f.over ? ` · ⚠ ${f.over} ponad limit` : ''}</span>`;
+    };
     // Czas serwera (strefa ERP) : różnica z zegarem tabletu.
     const skew = state && state.now ? Date.parse(state.now.replace(' ', 'T')) - Date.now() : 0;
     const serverNow = () => new Date(Date.now() + skew);
@@ -75,6 +85,8 @@
                 <small>${T.missing ? 'do spakowania przed ' + esc(s.departure) + ' (tablet pakowania)' : 'wszystko jest na stanie albo na paletach'}</small></div></div>`;
         const alerts = s.alerts.length ? `<div class="lg-alerts">${s.alerts.map(a => a.type === 'no_pallet'
             ? `<span class="lg-pill is-bad">⚠ ${esc(a.customer)} : jeszcze żadnej palety</span>`
+            : a.type === 'pallet_over'
+            ? `<span class="lg-pill is-bad" title="${esc(a.pallets.map(id => 'P' + id).join(', '))}">⚠ ${esc(a.customer)} : ${a.pallets.length === 1 ? 'P' + a.pallets[0] : a.pallets.length + ' ' + plural(a.pallets.length, 'paleta', 'palety', 'palet')} ponad limit — do ${fmt(a.kg)} kg · ${meters(a.height_mm)} (limit ${fmt(a.max_kg)} kg, ${meters(a.max_height_mm)})</span>`
             : `<span class="lg-pill is-bad">⚠ ${esc(a.customer)} : ${fmt(a.cartons)} kart. nie ma na stanie (${a.products.map(esc).join(', ')}…)</span>`).join('')}</div>` : '';
         const cards = s.clients.map(c => {
             const p = (v) => c.ordered ? Math.min(100, v / c.ordered * 100) : 0;
@@ -85,8 +97,9 @@
                 <span class="lg-client-head"><span class="lg-no">${c.n}</span><span><b>${esc(c.name)}</b><small>${esc([c.town, c.vehicle ? c.vehicle.label : 'bez pojazdu', 'plan ' + c.planned_pallets + ' pal.'].filter(Boolean).join(' · '))}</small></span></span>
                 <span class="lg-big"><strong>${fmt(c.on_pallet)}</strong> / ${fmt(c.ordered)} kart. na paletach</span>
                 <span class="lg-bar"><i class="is-ok" style="width:${p(c.on_pallet)}%"></i><i class="is-ready" style="width:${p(c.ready)}%"></i></span>
-                <span class="lg-pals">${c.pallets.map(x => `<span class="lg-pal ${x.open ? '' : 'is-closed'}"><b>P${x.id}</b> ${x.cartons} kart.<small>${x.open ? 'w budowie' : 'zamknięta'}</small></span>`).join('')}
+                <span class="lg-pals">${c.pallets.map(x => `<span class="lg-pal ${x.open ? '' : 'is-closed'} ${over(x.load) ? 'is-over' : ''}" ${over(x.load) ? `title="${esc(overTxt(x.load))}"` : ''}><b>P${x.id}</b> ${x.cartons} kart.<small>${x.load ? esc(loadTxt(x.load)) + ' · ' : ''}${x.open ? 'w budowie' : 'zamknięta'}</small></span>`).join('')}
                     ${planned ? `<span class="lg-pal is-ghost">+${planned} ${plural(planned, 'planowana', 'planowane', 'planowanych')}</span>` : ''}</span>
+                ${c.ordered ? loadSum(c) : ''}
                 ${lines ? `<ul class="lg-miss">${lines}</ul>` : (c.left === 0 ? '<span class="lg-pill is-ok">✓ wszystko na paletach</span>' : '')}
                 <span class="lg-foot"><span>Zostało ${fmt(c.left)} : <b class="is-ready">${fmt(c.ready)} gotowe</b> · <b class="is-missing">${fmt(c.missing)} nie ma</b></span><span class="lg-go">Szczegóły ›</span></span>
             </button>`;
@@ -105,7 +118,8 @@
             <span class="lg-no">${c.n}</span><div><h3>${esc(c.name)}${c.town ? ' — ' + esc(c.town) : ''}</h3>
             <p class="at-sub mb-0">${c.lines.length} ${plural(c.lines.length, 'produkt', 'produkty', 'produktów')} · ${fmt(c.ordered)} kart. · ${c.vehicle ? esc(c.vehicle.label) : 'bez pojazdu'} · plan ${c.planned_pallets} pal.</p></div></div>
             <div class="lg-switch">${Object.entries(filters).map(([k, [label, f]]) => `<button type="button" class="${k === detailFilter ? 'is-on' : ''}" data-filter="${k}">${label} (${c.lines.filter(f).length})</button>`).join('')}
-                <span class="at-sub">${c.pallets.length ? 'Palety : ' + c.pallets.map(p => `<b>P${p.id}</b> ${p.cartons} kart.`).join(' · ') : 'Jeszcze żadnej palety'}</span></div>
+                <span class="at-sub">${c.pallets.length ? 'Palety : ' + c.pallets.map(p => `<b>P${p.id}</b> ${p.cartons} kart.${p.load ? ' · ' + esc(loadTxt(p.load)) : ''}`).join(' · ') : 'Jeszcze żadnej palety'}</span></div>
+            <div class="lg-loads"><b>Palety po zamówieniu (waga i wysokość)</b>${(c.load_final || {pallets: []}).pallets.map((p, i) => `<span class="lg-pal ${over(p) ? 'is-over' : ''}" ${over(p) ? `title="${esc(overTxt(p))}"` : ''}><b>${i + 1}</b> ${fmt(p.cartons)} kart.<small>${esc(loadTxt(p))}${p.layers ? ' · ' + p.layers + ' ' + plural(p.layers, 'warstwa', 'warstwy', 'warstw') : ''}${over(p) ? ' · ⚠ ' + esc(overTxt(p)) : ''}</small></span>`).join('') || '<span class="at-sub">brak danych paletowych</span>'}</div>
             <div class="card"><div class="table-responsive"><table class="table lg-table mb-0"><thead><tr><th>Produkt</th><th class="text-end">Zamówione</th><th class="text-end">Na palecie</th>
                 <th class="text-end">Na stanie</th><th class="text-end">Brak</th><th>Co zrobić</th></tr></thead><tbody>
                 ${rows.map(l => `<tr class="${l.missing ? 'is-missing' : ''}"><td><b>${esc(l.name)}</b><div class="at-sub">${esc(l.category || '')}${l.entered ? ' · tablet ' + fmt(l.entered) : ''}</div></td>

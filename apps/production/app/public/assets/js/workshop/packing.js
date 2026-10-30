@@ -252,14 +252,33 @@
             const open = c.lines.filter(l => l.left > 0);
             list = `<section class="kiosk-card pp-list"><div class="pp-head"><span>${esc(t('col_product'))}</span><span>${esc(t('col_ordered'))}</span><span>${esc(t('col_on'))}</span><span>${esc(t('col_left'))}</span><span></span></div>
                 ${c.lines.map(l => `<div class="pp-row ${l.left === 0 ? 'is-done' : ''} ${l.product_id === product ? 'is-sel' : ''}" data-line="${l.product_id}">
-                    <div class="pp-pn"><b>${esc(l.name)}</b><small>${esc(l.category || '')}${l.ppc ? ' · ' + esc(t('pcs_per', {n: l.ppc})) : ''}</small></div>
+                    <div class="pp-pn"><b>${esc(l.name)}</b><small>${esc(l.category || '')}${l.ppc ? ' · ' + esc(t('pcs_per', {n: l.ppc})) : ''}${l.carton_mm ? ' · ' + esc(t('carton_cm', {h: fmt(l.carton_mm / 10)})) : ''}</small></div>
                     <div class="pp-n">${fmt(l.ordered)}</div><div class="pp-n">${l.on_pallet ? fmt(l.on_pallet) : '—'}</div>
                     <div class="pp-n pp-rem ${l.left === 0 ? 'is-zero' : ''}">${l.left === 0 ? (l.over ? '+' + fmt(l.over) : '✓') : fmt(l.left)}</div>
                     <button type="button" class="pp-plus ${l.left === 0 ? 'is-ok' : ''}" data-plus="${l.product_id}" aria-label="${esc(t('add'))}">${l.left === 0 ? '✓' : '+'}</button></div>`).join('')}
-                <div class="pp-sum">${open.length ? esc(t('left_sum', {n: fmt(c.left), p: open.length})) : esc(t('all_on'))}</div></section>`;
+                <div class="pp-sum">${open.length ? esc(t('left_sum', {n: fmt(c.left), p: open.length})) : esc(t('all_on'))}</div>${loads(c)}</section>`;
         }
         el.innerHTML = header() + clients + `<div class="pp-main ${panel ? 'has-side' : ''}">${list}${panel && c ? side(c) : ''}</div>` + dropdown();
         bindPallets();
+    }
+
+    // Waga i wysokość palet klienta [213] : już na paletach (skan + tablet) i po całym zamówieniu ; czerwone ponad limit.
+    function loads(c) {
+        if (!c.load_now && !c.load_final) return '';
+        const m = (mm) => mm ? (mm / 1000).toLocaleString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' m' : '? m';
+        const bad = (p) => p.over_kg || p.over_height || p.over_truck;
+        // Najwyżej 6 palet (najpierw ponad limit), reszta w podsumowaniu : liczba, najcięższa, najwyższa, ponad limit.
+        const row = (label, L) => {
+            if (!L || !L.pallets.length) return '';
+            const all = L.pallets.map((p, i) => ({...p, n: i + 1}));
+            const shown = all.length <= 6 ? all : [...all.filter(bad), ...all.filter(p => !bad(p))].slice(0, 6).sort((a, b) => a.n - b.n);
+            const over = all.filter(bad).length;
+            const sum = all.length > 6 ? `<span class="pp-lp is-sum">${esc(t('load_sum', {n: all.length, kg: fmt(Math.max(...all.map(p => p.kg))), m: m(L.max_height_mm)}))}${over ? ' · ⚠ ' + over + ' ' + esc(t('load_over')) : ''}</span>` : '';
+            return `<div class="pp-load"><span class="pp-load-l">${esc(label)}</span>${sum}${shown.map(p =>
+                `<span class="pp-lp ${bad(p) ? 'is-over' : ''}" title="${esc(t('load_limits', {kg: fmt(p.max_kg), m: m(p.max_height_mm)}))}"><b>${esc(t('pallet_short', {n: p.n}))}</b> ${fmt(p.kg)} kg · ${m(p.height_mm)}${p.known_height ? '' : '+'}${bad(p) ? ' ⚠' : ''}</span>`).join('')}</div>`;
+        };
+        const html = row(t('load_now'), c.load_now) + row(t('load_final'), c.load_final);
+        return html || `<div class="pp-load"><span class="pp-load-l">${esc(t('load_none'))}</span></div>`;
     }
 
     function side(c) {
