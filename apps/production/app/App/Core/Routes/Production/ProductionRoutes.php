@@ -33,4 +33,7 @@ return function(RouteCollector $r) {
         'controller' => App\Controllers\Web\Production\ProductionListController::class,
         'method'     => 'ajaxGetRequirementListPDF'
     ]);
+
+    // Prognoza 13 tygodni [220] : sonda API panelu TF Buddy (administrator, tylko GET).
+    $r->addRoute('GET', '/ajax/forecast/panel-probe', ['controller' => App\Controllers\Web\Production\ForecastController::class, 'method' => 'panelProbe']);
 };
