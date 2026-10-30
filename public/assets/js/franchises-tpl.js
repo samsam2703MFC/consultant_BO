@@ -142,10 +142,13 @@ function tplCQMModal(m, x){
   const { esc } = x;
   const photo = m.chargement ? '<div class="cqm-ph vide">lecture de la photo…</div>' : m.indispo ? `<div class="cqm-ph vide" style="color:#8D1D2C">${esc(m.indispo)}</div>`
     : m.photo ? `<a href="${esc(m.photo)}" target="_blank" rel="noopener" class="cqm-ph"><img src="${esc(m.photo)}" alt=""></a>` : '<div class="cqm-ph vide">Pas de photo rendue pour ce contrôle.</div>';
+  // La photo type du rayon À CÔTÉ de la photo rendue : le comptoir attendu en face du comptoir montré.
+  const ry = m.rayon;
+  const photos = ry && ry.photo ? `<div class="cqm-duo"><figure>${photo}<figcaption>Photo rendue</figcaption></figure><figure><a href="${esc(ry.photo)}" target="_blank" rel="noopener" class="cqm-ph type"><img src="${esc(ry.photo)}" alt="Photo type ${esc(ry.nom)}"></a><figcaption>Photo type · ${esc(ry.nom)}</figcaption></figure></div>` : photo;
   return `<div ${x.A(m.fermer)} class="cqm-voile"></div><div class="cqm-mod" role="dialog" aria-modal="true">
     <div class="cqm-mh"><div style="min-width:0"><b>${esc(m.titre)}</b><small>${esc(m.sous)}${m.faitLe ? ' · ' + esc(m.faitLe) : ''}</small></div><span style="flex:1"></span>${cqmB(esc, m.badge, true)}<button ${x.A(m.fermer)} class="cqm-x" aria-label="Fermer">✕</button></div>
-    <div class="cqm-mc">${photo}
-      <div class="cqm-side">${m.commentaire ? `<div class="cqm-com"><span>Motif noté</span>${esc(m.commentaire)}</div>` : ''}
+    <div class="cqm-mc">${photos}
+      <div class="cqm-side">${ry && ry.consigne ? `<div class="cqm-com"><span>Attendu · ${esc(ry.nom)}</span>${esc(ry.consigne)}</div>` : ''}${m.commentaire ? `<div class="cqm-com"><span>Motif noté</span>${esc(m.commentaire)}</div>` : ''}
         ${m.peutNoter ? `<div class="mko-mu" style="margin:2px 0 8px">Noter ce contrôle</div><div class="cqm-choix">${m.choix.map(o => `<button ${x.A(o.choisir)} class="${o.on ? 'on' : ''}" style="--c:${o.b.bg}"><i style="background:${o.b.bg}"></i>${esc(o.b.long)}</button>`).join('')}</div>
         <textarea ${x.I(m.setComment)} class="mko-inp" rows="3" placeholder="${m.motifRequis ? 'Motif obligatoire sous « Conforme »' : 'Motif (facultatif)'}" style="width:100%;margin-top:10px;resize:vertical">${esc(m.comment)}</textarea>
         <button ${x.A(m.enregistrer)} class="cx-btn prim" style="width:100%;margin-top:10px" ${m.envoi ? 'disabled' : ''}>${m.envoi ? 'Envoi au panel…' : 'Enregistrer la note'}</button>` : ''}

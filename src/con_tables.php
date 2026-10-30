@@ -59,6 +59,8 @@ const CON_TABLES = [
         'api' => ['chemin' => '/consultant/tasks/daily', 'cle' => 'jour,id_shop,id_task', 'filtres' => ['id_shop', 'date_from', 'date_to']]],
     'con_tache_jour_etat' => ['ancien' => 'ceo_tache_jour_etat', 'famille' => 'Tâches du jour', 'quoi' => 'Le journal des jours relevés : « zéro tâche » n’est pas « jamais relevé »',
         'api' => ['chemin' => '/consultant/tasks/daily/days', 'cle' => 'jour', 'filtres' => ['date_from', 'date_to']]],
+    'con_rayon_photo'     => ['ancien' => 'ceo_rayon_photo', 'famille' => 'Tâches du jour', 'quoi' => 'La photo type et la consigne de chaque rayon : le comptoir attendu, en face de chaque « Photo du comptoir »',
+        'api' => ['chemin' => '/consultant/shelf-photos', 'cle' => 'cle', 'filtres' => []]],
 ];
 
 /**

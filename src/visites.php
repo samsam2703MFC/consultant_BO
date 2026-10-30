@@ -826,6 +826,8 @@ function ep_visites_app(): array
         'langues' => function_exists('suLangue') ? (object) array_map(static fn ($id) => suLangue((string) $id), array_combine(array_keys($mags), array_keys($mags)) ?: []) : (object) [],
         'typesReponse' => VI_TYPES_REPONSE,
         'frequence' => setting('visitesFrequence', []) ?: (object) [],
+        // Les photos types des rayons : le comptoir attendu, en face de la photo rendue et des points « Comptoir … ».
+        'rayons' => function_exists('rvListe') ? rvListe() : [],
         'reseau' => viReseau($e['boutiques']),
         // Le délai d'envoi du rapport par le bureau, que la fin de visite annonce (suivi.php).
         'delaiRapport' => function_exists('suRegles') ? (int) suRegles()['delais']['rapportHeures'] : null];

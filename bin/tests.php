@@ -41,6 +41,7 @@ require __DIR__ . '/../src/con_tables.php';
 require __DIR__ . '/../src/linkedin_api.php';
 require __DIR__ . '/../src/social_publication.php';
 require __DIR__ . '/../src/fbcontrole.php';
+require __DIR__ . '/../src/rayons_photos.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -344,6 +345,17 @@ LinkedInApi::$transport = static fn () => [401, [], json_encode(['message' => 'E
 try { LinkedInApi::publier('x', [], null); $exp = false; } catch (LinkedInTokenExpire $e) { $exp = true; }
 verifie('LinkedIn : 401 ⇒ jeton expiré, dit comme tel', $exp);
 LinkedInApi::$transport = null; putenv('LINKEDIN_ACCESS_TOKEN'); $GLOBALS['reglages'] = [];
+
+// --- 13. les photos types des rayons : quel rayon pour quel libellé ----------------------------
+echo "Photos types des rayons\n";
+$rv = static fn (string $l): ?string => ($r = rvRayonDe($l)) !== null ? $r['cle'] : null;
+verifie('clé sans accent ni signe', rvCle('Pains & Boulangerie') === 'pains-boulangerie' && rvCle('Épicerie') === 'epicerie');
+verifie('les neuf rayons du panel, sans photo, sans base', count(rvListe()) === 9 && rvListe()[0]['photo'] === null);
+verifie('la tâche du panel trouve son rayon', $rv('Photo du comptoir - Pâtisseries') === 'patisseries' && $rv('Photo du comptoir - Pains & Boulangerie') === 'pains-boulangerie');
+verifie('au pluriel près', $rv('Comptoir viennoiserie') === 'viennoiseries');
+verifie('par le début du nom, à la frontière d’un mot', $rv('Comptoir pains') === 'pains-boulangerie' && $rv('Comptoir tartes et sablés') === 'tartes');
+verifie('« Tartelettes » ne prend pas « Tartes »', $rv('Photo du comptoir - Tartelettes') === null);
+verifie('une tâche qui n’est pas un comptoir n’a pas de rayon', rvRayonDeTache('Contrôle Qualité – Tartes') === null && rvRayonDeTache('Comptoir pains') === null);
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);
