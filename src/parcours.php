@@ -186,8 +186,11 @@ function pcDestinations(array $ref): array
 }
 
 /** Le groupe d'une destination dans l'assistant. */
-function pcGroupe(string $code, ?string $metier): string
+function pcGroupe(string $code, ?string $metier, bool $sansPoste = false): string
 {
+    // Un employé sans poste dans le panel (fréquent, mesuré le 31/10/2026) choisit sa voie :
+    // tous les niveaux d'opérateur et de chef de section lui sont proposés.
+    if ($sansPoste && in_array($code, ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'], true)) { return 'metier'; }
     if (in_array($code, ['P10', 'P11', 'P9', 'P12'], true)) { return 'entrepreneur'; }
     if (in_array($code, ['P7', 'P8'], true)) { return 'encadrer'; }
     // Le même métier : l'opérateur et son chef de section (le niveau « Responsable d'équipe »).
@@ -319,7 +322,7 @@ function ep_parcours_destinations(): array
     foreach (pcDestinations($ctx['ref']) as $d) {
         // Pas de destination « en dessous » : un niveau inférieur du même poste, ou le niveau tenu.
         if ($pers['niveau'] !== null && $d['posteId'] !== null && $d['posteId'] === ($pers['niveau']['id'] ?? null) && $d['ordre'] <= (int) ($pers['niveau']['ordre'] ?? 0)) { continue; }
-        $groupe = pcGroupe($d['v25'], $metier);
+        $groupe = pcGroupe($d['v25'], $metier, $eid !== null && $metier === null);
         if ($eid === null && $groupe !== 'entrepreneur') { continue; }   // un candidat vise la franchise
         if ($groupe === 'autre') { continue; }
         [$requis, $facultatif, , $acquises] = pcFormations($d, $ctx, $tenues, $faites, $niveauActuel);
