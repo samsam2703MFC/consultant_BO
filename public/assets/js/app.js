@@ -1553,11 +1553,10 @@ class App {
         ['ventes', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['croisements']],
         // Le suivi du franchisé ne garde que la part des invendus dans le CA (09/10/2026) :
         // le détail — pièces, motifs, produits — reste ici, sous Magasins.
-        ['invendus', 'Invendus et poubelle', 0],
-        // Entre deux inventaires (12/10/2026) : les sorties du stock face aux ventes et à la poubelle.
         // « Scouting — où ouvrir » a quitté le rail (31/10/2026) : il vit dans
-        // le CRM, Développement → Étude de faisabilité.
-        ['inventaires', 'Inventaires', 0]]],
+        // le CRM, Développement → Étude de faisabilité. « Inventaires » est passé
+        // sous Vérification (Sam, 31/10/2026).
+        ['invendus', 'Invendus et poubelle', 0]]],
       // Deux entrées (18/10/2026) : le Catalogue — quatre questions, une liste,
       // une fiche ; ses lectures détaillées (une référence magasin par magasin,
       // prix × volume, dans le temps, manque à gagner) s'ouvrent de la fiche — et
@@ -1570,6 +1569,9 @@ class App {
       ['Vérification', [
         ['verifFlux', 'Audit des flux', 0],
         ['verifFuites', 'Fuites par magasin', 0],
+        // Entre deux inventaires (12/10/2026) : les sorties du stock face aux ventes et à la
+        // poubelle — venu de Magasins (Sam, 31/10/2026 : « déplace Inventaires dans Vérification »).
+        ['inventaires', 'Inventaires', 0],
         ['verifMatieres', 'Matières ↔ recettes', 0],
         ['verifCa', 'Chiffre d’affaires', 0],
         ['verifMouv', 'Mouvements d’un produit', 0],
