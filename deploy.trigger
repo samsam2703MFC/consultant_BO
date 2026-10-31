@@ -1195,3 +1195,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-30T22:13:49Z frais fixes : voitures en leasing (migration 144) [224]
 2026-10-31T07:27:36Z prévision 13 semaines : fenêtre clients × semaines [225]
 2026-10-31T07:43:47Z prévision 13 semaines : palettes par client, client exclu (migration 145) [226]
+2026-10-31T08:50:06Z [227] zadanie = kreator, cron, przypomnienia, Kto co zrobił
