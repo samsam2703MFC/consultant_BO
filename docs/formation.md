@@ -45,6 +45,36 @@ Comme le reste du cockpit : HTML/CSS/JS sans dépendance ni compilation (`index.
 | Manuel opératoire | Manuel en ligne | `#/manuel/…` | Postes en cartes → niveaux en étapes → compétences en cartes → procédure à lire. Recherche plein texte. Mode tablette (plein écran, cibles tactiles agrandies). |
 | Documentation | Routes API | `#/api[/{famille}]` | Les 237 routes du référentiel dans le swagger : verbe, état, paramètres, corps, champs de réponse, codes — et un bouton **Tester** qui appelle la route en lecture avec le compte du cockpit. |
 
+## Parcours compétences (31/10/2026) — `/formation/parcours/`
+
+Pour chaque personne (employé du panel ou candidat franchisé), le chemin vers le poste qu'elle vise.
+Page mobile d'abord (elle rejoindra l'application employé) ; pour l'instant une entrée dans le rail du
+cockpit, *Formation › Parcours compétences ↗*. Maquettes validées : `docs/maquettes/parcours-competences/`.
+
+- **Assistant en 3 étapes** : *Où veux-tu aller ?* (les niveaux au-dessus du sien dans son métier,
+  encadrer le magasin, devenir entrepreneur) → *Ce que tu sais déjà* (compétences du niveau à cocher,
+  confirmées ensuite par la manager ; formations déjà suivies) → *Ton parcours est prêt* (nombre de
+  formations, rythme : tranquille 1/mois, normal 1/3 sem., rapide 1/2 sem.).
+- **Frise de suivi** : le déjà fait à gauche, l'étape en cours, l'objectif au bout. Chaque formation se
+  valide par ses évaluations ; la dernière cochée valide la formation **et coche dans le panel** les
+  compétences qui y sont rattachées (relues). Fin du parcours : *Valider le niveau* l'affecte dans le panel.
+- **Cockpit, Parcours des équipes** : une ligne par personne, frise compacte, avancement, retard.
+- **Formations** : une fiche par FO (référentiel v25) avec ses évaluations et ses compétences du panel.
+
+Règle : **les données des API ont priorité**. Ce qu'un niveau exige = ses compétences dans le panel ; les
+formations du chemin = celles que le panel y rattache (évaluations « [FO-xx] … »), **complétées** par les
+obligatoires de la matrice v25 ; l'ordre = le plan de formation (Étudiant, Vendeur, Gérant, Multi).
+Le référentiel v25 vit dans `src/data/referentiel_v25.json` (relu de l'Excel par
+`tools/formation/referentiel_excel.py`). *Locataire-gérant* et *Franchisé multi-boutique* n'existant pas
+dans le panel, ce sont des destinations du référentiel (rien n'est créé dans le panel).
+
+Tables (créées au premier appel) : `ceo_parcours` (personne, objectif, rythme, statut, compétences déclarées)
+et `ceo_parcours_etape` (une ligne par formation : évaluations, date prévue, statut, origine panel / déclarée /
+parcours). Routes : `GET /parcours/destinations?employe=&shop=`, `POST /parcours`, `GET /parcours?id=`,
+`GET /parcours/liste`, `PATCH /parcours/{id}/etape/{FO}`, `POST /parcours/{id}/acquis/{cid}`,
+`PATCH /parcours/{id}` (rythme, arrêt, objectif atteint), `GET /formation/v25`. Chaque geste est journalisé
+(type « Parcours »).
+
 ## Le modèle de données du panel
 
 ```

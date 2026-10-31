@@ -1601,7 +1601,9 @@ class App {
       // formations, procédures) et le manuel opératoire en ligne, ouvert en mode tablette.
       ['Formation', [
         ['ext:formation/', 'Module Formation ↗', 0],
-        ['ext:formation/?tablette=1#/manuel', 'Manuel opératoire ↗', 0]]],
+        ['ext:formation/?tablette=1#/manuel', 'Manuel opératoire ↗', 0],
+        // Le parcours de chacun vers le poste visé (31/10/2026) : ici pour l'instant, il passera dans l'application employé.
+        ['ext:formation/parcours/', 'Parcours compétences ↗', 0]]],
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];

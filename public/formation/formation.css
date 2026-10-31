@@ -1711,3 +1711,63 @@ a.filter {
     padding: 0;
   }
 }
+
+/* ── Parcours des équipes : la frise compacte d'une ligne ─────────────── */
+.fm-pts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  max-width: 260px;
+}
+
+.fm-pt {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 1.5px solid var(--faint);
+  background: #fff;
+}
+
+.fm-pt.validee {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.fm-pt.encours {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.fm-pt-flag {
+  margin-left: 3px;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.fm-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fm-initiales {
+  flex: 0 0 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--chip);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fiche-ol,
+.fiche-ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 13px;
+  line-height: 1.8;
+}

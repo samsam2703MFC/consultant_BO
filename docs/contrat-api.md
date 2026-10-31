@@ -1303,6 +1303,14 @@ les 237 routes : `docs/formation-routes.md`.
 `PUT /formation/employe/{eid}/poste?shop= {poste, niveau}`. Réponse `{ok, deja?, …l'état relu, appels[]}` ; un refus du panel
 ou un écart à la relecture : `502 {ok: false, error, appels}`.
 
+Parcours compétences (`/formation/parcours/`, 31/10/2026) : `GET /parcours/destinations?employe=&shop=` (sans employé : un
+candidat) rend la personne et chaque destination `{cle, titre, sous, groupe, competences[{id, nom, acquise}], formations[{fo, nom,
+evaluations, competences, acquise}], aFaire, facultatives}` ; `POST /parcours {employe?, shop?, nom?, cible, rythme, acquis[], suivies[]}`
+crée le parcours et rend `{parcours, etapes[]}` ; `GET /parcours?id=`, `GET /parcours/liste` ; `PATCH /parcours/{id}/etape/{FO}
+{evaluation, fait}` (la dernière valide la formation et coche ses compétences dans le panel : `panel {ok, cochees, attendues}`) ;
+`POST /parcours/{id}/acquis/{cid}` (confirmer une compétence déclarée) ; `PATCH /parcours/{id} {rythme | statut: arrete | atteint}`.
+Détail : `docs/formation.md`.
+
 ### `/tablette/book` et `/tablette/photos` — les données de la tablette des vendeuses
 
 La tablette « Book vendeuses » (`public/tablette/`, application compilée du dépôt `pwa_sales_tablet`) lit ses produits,
