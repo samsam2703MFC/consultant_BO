@@ -4277,18 +4277,32 @@ tournent (une prime du magasin en un geste).
 
 **La page en volets** (31/10/2026, demande de Sam : « réorganiser la page en toggle, au-dessus créer une nouvelle
 prime ; à l'ouverture, l'avancement des vendeuses, la marque et le magasin bien séparés, et pour chacune le cumul et ce
-qui est déjà atteint »). En haut, la barre « + Créer une nouvelle prime » (le choix de la sorte) et un raccourci par
-sorte (Promotion, Catégorie, Ventes croisées, Objectif CA, Note Google, Clients pro), grisé à six primes de la sorte.
-Puis six volets (`S.prFrOuv`) : « Où en sont tes vendeuses », seul déplié à l'ouverture ; les primes du magasin, de la
-marque et des sponsors, les promotions du panel, les chiffres, les fiches — repliés, chacun avec sa ligne de résumé.
-Le tableau de l'équipe range ses colonnes en deux familles sous leurs bandeaux — **la marque** (et ses sponsors) en
-rubis, **le magasin** en abricot (`payeur: magasin`) — ; une prime d'équipe (objectif CA, note Google) porte la marque
-« équipe ». Après le nom, la colonne **Cumul** de chaque vendeuse : ce qui est atteint face à ce qui est en jeu (la
-somme des `gain` de ses cases, et de `max(montant, gain)` de chaque prime où elle compte ; un mois clos : gagné face au
-possible), la barre, et la part de la marque et du magasin ; elle trie le tableau. Au-dessus, trois totaux de l'équipe
-(marque, magasin, toute l'équipe). Sur un écran large (≥ 1 000 px), le nom et le cumul restent en place quand les
-primes défilent. La vue Année range ses colonnes de la même façon, le total après le nom avec sa part marque / magasin.
+qui est déjà atteint » ; refaite le jour même, plus sobre : « c'est moche »). « + Créer une nouvelle prime » est sur la
+ligne des onglets (le choix de la sorte). Dessous, une carte blanche « Où en sont tes vendeuses », dépliée à l'ouverture
+(son titre la replie) : une ligne de l'équipe — ce qui est atteint face à ce qui est en jeu, une barre en deux couleurs,
+la marque, le magasin et les vendeuses primées — puis le tableau. Ses colonnes se rangent en deux familles, chacune sous
+son intitulé souligné de sa couleur — **la marque** (et ses sponsors) en rubis, **le magasin** en ambre (`payeur:
+magasin`) — un filet entre les deux ; la couleur ne vit que sur ces traits, les pastilles et les barres, jamais en aplat.
+Une prime d'équipe (objectif CA, note Google) le dit sous son nom. Après le nom, la colonne **Cumul** de chaque vendeuse :
+atteint / en jeu (la somme des `gain` de ses cases, et de `max(montant, gain)` de chaque prime où elle compte ; un mois
+clos : gagné / possible), la barre marque + magasin, la part de chacune ; elle trie le tableau. Sur un écran large
+(≥ 1 000 px), le nom et le cumul restent en place quand les primes défilent. Les autres volets (`S.prFrOuv`) forment une
+liste groupée, repliée, une ligne par volet avec son résumé : les primes du magasin, de la marque et des sponsors, les
+promotions du panel, les chiffres, les fiches. La vue Année range ses colonnes de la même façon, le total après le nom.
 Rien ne change côté API (`/ventes/primes-equipe`, `/ventes/primes-annee`).
+
+**Fiches à imprimer et à envoyer** (31/10/2026, demande de Sam : « les PDF peuvent être imprimés de la page édition prime,
+avec envoi par mail à l'équipe » ; `src/primes_fiches.php`, voir `docs/primes/LISEZMOI.md`). Un volet de la page d'un
+magasin : le mode d'emploi du franchisé et l'affiche de l'équipe (FR, NL), trois PDF servis par le cockpit
+(`assets/primes/`), ouverts dans un onglet pour l'impression ; puis l'envoi de l'affiche.
+
+| Méthode | Route | Rend |
+|---|---|---|
+| GET | `/ventes/primes-fiches/equipe?shop=` | `{shop, smtp, fiches: [{cle, lib, present}], equipe: [{emp, nom, email}]}` — les personnes de « Les fiches de l'équipe », l'adresse **masquée** (`j•••@gmail.com`) ou `null`. Lu seulement quand le volet s'ouvre (il déchiffre les profils). |
+| POST | `/ventes/primes-fiches/envoyer` | `{shop, langues: [fr\|nl], emps: [id]}` → `{envoyes: [noms], sansAdresse: [noms], echecs: [{nom, motif}]}` ; 409 sans SMTP réglé (rien ne part), 400 sans magasin, langue ou destinataire. Un courrier par personne cochée, jamais de copie : l'affiche en pièce jointe (une par langue), le lien direct vers l'app, le prénom ; deux langues : le texte dans les deux. Au journal (`Primes`). |
+
+L'adresse d'une personne : celle de « Mon profil » (`coordonnees.email`), sinon celle du panel recopiée au profil
+(`panel.email`). Le cockpit ne montre jamais l'adresse en clair.
 
 **Les primes d'un magasin** (`famille: magasin`, `payeur: magasin`, six de chaque sorte au plus) — `POST
 /ventes/primes-app` les reçoit dans la liste, comme les autres :
