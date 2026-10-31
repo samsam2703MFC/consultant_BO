@@ -1249,3 +1249,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T20:21:46Z vérification : mouvements d'un produit ou d'une matière sur une période (#/verification/mouvements)
 2026-10-31T20:33:52Z vérification : mouvements d'un produit, un tableau par semaine (colonnes datées, + et −)
 2026-10-31T20:39:03Z inventaires-dans-verification
+2026-10-31T20:41:26Z vérification : mouvements d'un produit, colonnes inversées, semaine par semaine avec l'écart
