@@ -1091,6 +1091,20 @@ les donne pas.
 l'assortiment, aujourd'hui pour les obligatoires sans place au comptoir. `assortiment` ajoute `saisonnieres` (exigées
 de saison) et `horsSaison` (obligatoires de saison non exigées à cette date).
 
+### `/formation/*` — le module Formation (`/formation`) et le manuel opératoire (31/10/2026)
+
+Le référentiel RH du panel — postes (`/positions`), niveaux ou sous-postes (`/position-levels`),
+compétences, formations, procédures opératoires, base de connaissances — lu avec le compte
+consultant, **en lecture seule**. `GET /formation/referentiel` (tout, `_cache=600`),
+`GET /formation/liens` (procédures, formations et ressources de chaque compétence, `_cache=900`),
+`GET /formation/competence|niveau|procedure|formation|ressource?id=`, `GET /formation/equipe?shop=`
+(compétences validées par personne), `GET /formation/sonde?chemin=` (test d'une route du référentiel,
+liste blanche), `GET /formation/pdf?type=poste|niveau|procedure&id=` (PDF du panel relayé). Sans
+compte panel : `503 {indispo, raison}`. Chaque réponse porte `appels[]` (code HTTP, lignes, durée
+de chaque lecture du panel). Les routes `/career-*` du panel sont déclarées en 500 dans son
+swagger : les postes passent par `/positions`. Détail, constats et sécurité : `docs/formation.md` ;
+les 237 routes : `docs/formation-routes.md`.
+
 ### `/tablette/book` et `/tablette/photos` — les données de la tablette des vendeuses
 
 La tablette « Book vendeuses » (`public/tablette/`, application compilée du dépôt `pwa_sales_tablet`) lit ses produits,

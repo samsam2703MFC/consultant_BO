@@ -80,6 +80,7 @@ require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
 require __DIR__ . '/../../src/primes.php';
+require __DIR__ . '/../../src/formation.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -322,6 +323,18 @@ function route(string $method, string $path): mixed
             $path === '/production/suivi'              => ep_prod_suivi(),
             $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
             // La tablette des vendeuses (public/tablette/) : son book de données, tiré du catalogue.
+            // Le module Formation (public/formation/) : le référentiel RH du panel — postes, niveaux,
+            // compétences, formations, procédures — et le manuel opératoire qui s'en déduit. Lecture seule.
+            $path === '/formation/referentiel'         => ep_formation_referentiel(),
+            $path === '/formation/liens'               => ep_formation_liens(),
+            $path === '/formation/competence'          => ep_formation_competence(),
+            $path === '/formation/niveau'              => ep_formation_niveau(),
+            $path === '/formation/procedure'           => ep_formation_procedure(),
+            $path === '/formation/formation'           => ep_formation_formation(),
+            $path === '/formation/ressource'           => ep_formation_ressource(),
+            $path === '/formation/equipe'              => ep_formation_equipe(),
+            $path === '/formation/sonde'               => ep_formation_sonde(),
+            $path === '/formation/pdf'                 => ep_formation_pdf(),
             $path === '/tablette/book'                 => ep_tablette_book(),
             // L'accueil de la tablette : CA et vente additionnelle de la semaine et du mois face à l'objectif.
             $path === '/tablette/objectifs'            => ep_tablette_objectifs(),

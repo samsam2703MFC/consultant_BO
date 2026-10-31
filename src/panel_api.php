@@ -193,6 +193,104 @@ final class PanelApi
         return $rang;
     }
 
+    /**
+     * Même file que `getParallele()`, mais chaque réponse garde son CODE HTTP
+     * et sa durée : `[cle => ['code' => int, 'data' => mixed, 'ms' => int,
+     * 'erreur' => ?string]]`. Le module Formation s'en sert pour dire, route
+     * par route, ce que le panel a rendu — un vide et un 403 ne se confondent
+     * pas. Si TOUTE la volée revient en 401 (jeton périmé côté panel avant
+     * notre cache), une reconnexion et un second passage, une seule fois.
+     */
+    public static function getParalleleDetail(array $paths, int $front = 4, int $timeout = 25, bool $reessai = true): array
+    {
+        if (!$paths) { return []; }
+        $tok = self::token();
+        if ($tok === null) {
+            $e = self::$lastError ?? 'jeton indisponible';
+            return array_map(static fn () => ['code' => 0, 'data' => null, 'ms' => 0, 'erreur' => $e], $paths);
+        }
+        $base = self::config()['base'];
+        $multi = curl_multi_init();
+        $file = array_keys($paths);
+        $cle = []; $debut = []; $actifs = 0;
+        $lancer = static function () use (&$file, &$cle, &$debut, &$actifs, $multi, $paths, $base, $tok, $timeout): void {
+            $k = array_shift($file);
+            $ch = curl_init($base . $paths[$k]);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER     => ['Accept: application/json', 'Authorization: Bearer ' . $tok],
+                CURLOPT_TIMEOUT        => max(1, $timeout),
+                CURLOPT_CONNECTTIMEOUT => min(6, max(1, $timeout)),
+            ]);
+            curl_multi_add_handle($multi, $ch);
+            $cle[spl_object_id($ch)] = $k;
+            $debut[$k] = microtime(true);
+            $actifs++;
+        };
+        while ($actifs < max(1, $front) && $file) { $lancer(); }
+        $out = [];
+        do {
+            $st = curl_multi_exec($multi, $en);
+            while (($info = curl_multi_info_read($multi)) !== false) {
+                $ch = $info['handle'];
+                $k = $cle[spl_object_id($ch)];
+                $raw  = curl_multi_getcontent($ch);
+                $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $err  = curl_error($ch);
+                curl_multi_remove_handle($multi, $ch);
+                curl_close($ch);
+                $actifs--;
+                $res = is_string($raw) ? json_decode($raw, true) : null;
+                $ok = $code >= 200 && $code < 300;
+                $det = null;
+                if (!$ok) {
+                    $det = $code === 0 ? ('API injoignable' . ($err !== '' ? ' : ' . $err : '')) : 'HTTP ' . $code;
+                    if (is_array($res)) {
+                        foreach (['description', 'message', 'detail', 'error'] as $kk) {
+                            if (!empty($res[$kk]) && is_string($res[$kk])) { $det .= ' : ' . mb_substr($res[$kk], 0, 240); break; }
+                        }
+                    }
+                    self::$lastError = 'GET ' . $paths[$k] . ' → ' . $det;
+                }
+                $out[$k] = ['code' => $code, 'data' => $ok ? (is_array($res) && array_key_exists('data', $res) && !array_is_list($res) ? $res['data'] : $res) : null,
+                    'ms' => (int) round((microtime(true) - $debut[$k]) * 1000), 'erreur' => $det];
+                if ($file) { $lancer(); }
+            }
+            if ($actifs > 0 && curl_multi_select($multi, 1.0) === -1) { usleep(2000); }
+        } while ($actifs > 0 && $st === CURLM_OK);
+        curl_multi_close($multi);
+        $rang = [];
+        foreach (array_keys($paths) as $k) { $rang[$k] = $out[$k] ?? ['code' => 0, 'data' => null, 'ms' => 0, 'erreur' => 'sans réponse']; }
+        if ($reessai && $rang && count(array_filter($rang, static fn ($r) => $r['code'] === 401)) === count($rang)) {
+            if (self::token(true) !== null) { return self::getParalleleDetail($paths, $front, $timeout, false); }
+        }
+        return $rang;
+    }
+
+    /**
+     * Lecture BINAIRE authentifiée (un PDF du panel) : `[code, octets, type]`.
+     * Le corps n'est jamais décodé ; un 401 déclenche une reconnexion.
+     */
+    public static function binaire(string $path, int $timeout = 30): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return [0, null, null]; }
+        $lire = static function (string $tok) use ($path, $timeout): array {
+            $ch = curl_init(self::config()['base'] . $path);
+            curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 2,
+                CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => 6,
+                CURLOPT_HTTPHEADER => ['Accept: application/pdf,application/octet-stream,*/*', 'Authorization: Bearer ' . $tok]]);
+            $raw = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+            curl_close($ch);
+            return [$code, $raw === false ? null : (string) $raw, is_string($type) ? $type : null];
+        };
+        $r = $lire($tok);
+        if ($r[0] === 401 && ($tok = self::token(true)) !== null) { $r = $lire($tok); }
+        return $r;
+    }
+
     /** Jeton en cache, sinon connexion. `$force` ignore le cache (retry sur 401). */
     private static function token(bool $force = false): ?string
     {
