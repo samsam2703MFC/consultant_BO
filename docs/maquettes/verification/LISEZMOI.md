@@ -15,16 +15,18 @@ Demandes du 31/10/2026 :
 - **un tableau par magasin, tous de la même structure** : stock début + entrées −
   stock fin = sorti ; sorti − ventes − poubelle = **delta**, par catégorie et par
   produit, pour **voir où il y a des fuites, et s'il y en a** ;
-- tout **enregistrer chaque jour en base**, pour voir les progrès de gestion.
+- tout **enregistrer chaque jour en base**, pour voir les progrès de gestion ;
+- **l'entrée, c'est la validation des commandes entrantes** (réponse du 31/10).
 
 ## Les écrans
 
 | Fichier | Écran | Ce qu'il montre |
 |---|---|---|
 | `a.png` | Audit des flux, le réseau, la semaine | Par magasin : l'entré (au coût), la part devenue pièces, puis vendu, poubelle, invendu et non expliqué en % du disponible ; le non expliqué et la poubelle jour par jour |
-| `a-jour.png` | Audit des flux, un magasin, un jour | Produit par produit : gardé d'hier, entré (reçu tout fait), produit (sorti du four), disponible ; vendu, poubelle, invendu, non expliqué, en pièces et en % |
+| `a-jour.png` | Audit des flux, un magasin, un jour | Produit par produit : gardé d’hier, entré (commande validée), produit (sorti du four), disponible ; vendu, poubelle, invendu, non expliqué, en pièces et en % |
 | `b.png` | Audit des flux, un magasin, le mois | Jour par jour, le total de chaque semaine et du mois ; « où ça fuit » par catégorie |
-| `g.png` | **Fuites par magasin** | La matrice catégories × magasins, puis **un tableau par magasin, de structure identique** : stock début, + entrées, − stock fin, = sorti, ventes, poubelle, **delta** (pièces, % du sorti, €). Une catégorie se déplie en produits. Bascule produits finis / matières premières |
+| `g.png` | **Fuites par magasin, produits finis** | La matrice catégories × magasins, puis **un tableau par magasin, de structure identique** : stock début, + entrées (commandes validées), + produit (cuissons), − stock fin, = sorti, ventes, poubelle, **delta** (pièces, % du sorti, €). Une catégorie se déplie en produits |
+| `g-matieres.png` | **Fuites par magasin, matières premières** | Le même tableau en matières, au coût : stock début + **entrées = commandes validées à la réception** − stock fin = sorti, face aux ventes et à la poubelle passées par les recettes. Les commandes de la semaine une par une, dont une livrée mais pas validée |
 | `c.png` | Matières ↔ recettes | Entre deux inventaires : stock + entré − stock = consommé réel, face au théorique des recettes, matière par matière ; d'où vient l'écart |
 | `d.png` | Chiffre d'affaires | Caisse, P&L, base des redevances, CA attendu par la matière ; lignes sans produit, annulations ; les jours à regarder |
 | `e.png` | La bascule allumée | Les 37 recettes douteuses ou manquantes, classées par CA concerné ; la couverture vers 100 % |

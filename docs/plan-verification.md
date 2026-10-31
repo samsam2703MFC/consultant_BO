@@ -17,6 +17,10 @@ Demandes du 31/10/2026. Maquette : [`docs/maquettes/verification/`](maquettes/ve
 5. **Tout enregistrer chaque jour en base**, pour suivre les progrès de gestion dans le
    temps.
 
+**Réponse du 31/10 : l'entrée, c'est la validation des commandes entrantes.** Une
+commande compte comme entrée le jour où le magasin valide sa réception au panel, avec
+les quantités validées. Une commande livrée mais pas validée n'est pas une entrée.
+
 ## 2. Les écrans
 
 Une section **Vérification** dans le rail, entre Magasins et Produits. Cinq onglets et
@@ -25,7 +29,7 @@ une bascule, toujours visible :
 | Onglet | Question | Maquette |
 |---|---|---|
 | Audit des flux | Ce qui est entré, produit, vendu, jeté, gardé — et le reste ? (jour · semaine · mois) | `a`, `a-jour`, `b` |
-| Fuites par magasin | Dans quel magasin, quelle catégorie, quel produit ça fuit ? | `g` |
+| Fuites par magasin | Dans quel magasin, quelle catégorie, quel produit ou quelle matière ça fuit ? | `g` (produits finis), `g-matieres` (matières premières, avec les commandes validées de la semaine) |
 | Matières ↔ recettes | La matière consommée est-elle expliquée par les recettes ? | `c` |
 | Chiffre d'affaires | La caisse, le P&L, les redevances et la matière disent-ils la même chose ? | `d` |
 | Évolution | La gestion s'améliore-t-elle ? | `f` |
@@ -38,8 +42,10 @@ une bascule, toujours visible :
 Pour un magasin et un jour :
 
 - **Gardé d'hier** = la clôture de la veille (ce qui se garde pour le lendemain) ;
-- **Entré** = les produits finis reçus (centrale : baguettes…) ; côté matière, l'entré
-  est la livraison au coût ;
+- **Entré** = les **commandes entrantes validées à la réception**, au jour de leur
+  validation. Pour les pièces, ce sont les produits finis de ces commandes (centrale :
+  baguettes…). Pour la matière, ce sont toutes leurs lignes validées, valorisées au prix
+  du magasin ;
 - **Produit** = les cuissons validées en production (sinon le plan, marqué « estimé ») ;
 - **Disponible** = gardé d'hier + entré + produit = 100 % ;
 - **Vendu** (tickets, commandes comprises), **Poubelle** (déclarée en caisse),
@@ -48,23 +54,34 @@ Pour un magasin et un jour :
 
 À la semaine et au mois : somme des journées ÷ somme des disponibles (le taux d'une
 journée moyenne). **Produit ÷ entré** (matière au coût) ne se lit pas sur un seul jour
-(trois livraisons par semaine), mais sur sept jours glissants, ou mieux entre deux
-inventaires.
+(environ trois commandes validées par semaine), mais sur sept jours glissants, ou mieux
+entre deux inventaires.
 
 ### 3.2 Fuites par magasin (même structure pour chaque magasin)
 
 Par catégorie (dépliable en produits), sur la période :
 
 ```
-Stock début + Entrées (produit + reçu) − Stock fin = Sorti
-Sorti − Ventes − Poubelle déclarée                 = Delta (la fuite)
-Delta % = Delta ÷ Sorti        Delta € = Delta × prix de vente HT
+Produits finis (pièces) :
+Stock début + Entrées (commandes validées) + Produit (cuissons validées) − Stock fin = Sorti
+Sorti − Ventes − Poubelle déclarée                                              = Delta (la fuite)
+
+Matières premières (au coût) :
+Stock début + Entrées (commandes validées) − Stock fin                          = Sorti (consommé)
+Sorti − Ventes × recettes − Poubelle × recettes                                 = Delta
+
+Delta % = Delta ÷ Sorti        Delta € = Delta × prix (de vente HT pour les pièces, au coût pour les matières)
 ```
 
 Les lignes sont **les mêmes et dans le même ordre** pour tous les magasins (le catalogue
 du réseau), pour qu'une ligne rouge se compare d'un coup d'œil. Une matrice catégories ×
 magasins résume le tout en tête. La bascule *Produits finis / Matières premières* passe
-au même tableau en matières, avec stock = inventaire et entrées = livraisons.
+au même tableau en matières (`g-matieres`). Le stock y est la photo du soir du stock
+matière, ou l'inventaire du jour quand il y en a un. Les entrées sont les commandes
+validées, et l'écran liste, sous la matrice, les commandes de la semaine une par une :
+fournisseur, date de commande, date et heure de validation, lignes, valeur, et ce qui a
+été corrigé à la réception. Une commande livrée mais pas validée apparaît en rouge. Ses
+matières sortent alors en delta négatif, et la ligne le signale.
 
 Sur une semaine, delta de la semaine = somme des « non expliqué » des jours : les deux
 onglets se recoupent.
@@ -72,7 +89,7 @@ onglets se recoupent.
 ### 3.3 Matières ↔ recettes (entre deux inventaires)
 
 ```
-Consommé réel = stock inventaire début + entrées (livraisons) − stock inventaire fin
+Consommé réel = stock inventaire début + entrées (commandes validées) − stock inventaire fin
 Théorique     = Σ (pièces produites + produits finis reçus) × recette dépliée jusqu'à la matière
 Écart         = réel − théorique   (quantité, %, €)
 Matière expliquée = théorique ÷ réel
@@ -147,13 +164,14 @@ forme se mesure par sonde avant d'être codée.
 | Factures de redevances | `/admin/royalties/invoices` (réalm admin) | `endpoints.php` (Facturation) |
 | Catégories et groupes | `/product-categories`, `/product-category-groups` | `produits_coef.php` |
 | Besoins et réquisitions | `/shops/{id}/material-requisitions`, `/list` | Centrale d'achat |
+| **Commandes entrantes (l'entrée)** | `GET /deliveries/{id}` rend la commande entière : `order_key`, `id_shop`, `id_supplier`, `order_date`, `expected_date`, `supplier_planned_delivery_date`, `supplier_accepted_at`, `in_transit_sent_at`, **`delivered_on`** (la validation de réception), `supplier_fulfillment_status`. **Aucun montant.** Aucune route ne liste les commandes (`/shops/{id}/orders`, `/orders/materials`, `/orders`, `/material-orders` répondent 404 ORDER_NOT_FOUND en consultant comme en admin) : le cockpit balaie les identifiants récents | `caSuiviCommandes` (`endpoints.php`), `wr_ca_relance` |
 
 ### À sonder (dans le swagger, sans contrat)
 
 | Donnée | Routes candidates |
 |---|---|
 | **Inventaires** (dates, lignes comptées) | `/shops/{id}/materials/stocktakings`, `/stocktakings/{id}`, `/materials/stocktakings/{id}/document` |
-| **Livraisons et achats** | `/shops/{id}/orders`, `/shops/{id}/orders/materials`, `/shops/{id}/orders/{o}/supplier-fulfillment`, `/material-suppliers/{f}/orders/{o}/final-items`, `/shops/{id}/supplement-orders` (mesuré le 16/09 : `/material-orders` et `/deliveries` répondent 404) |
+| **Lignes validées des commandes** (quantités par matière, commandé ou validé) | les lignes dans `/deliveries/{id}` ? sinon `/material-suppliers/{f}/orders/{o}/final-items` (lignes finales après réception), `/comparison` (commandé face à livré), `/read-model`, `/shops/{id}/orders/{o}/supplier-fulfillment`. La validation elle-même est `POST /orders/{id}/delivery` (le geste du magasin) ; `POST /shops/{id}/manual-open-deliveries` couvre les fournisseurs libres (OPEN) ; `/shops/{id}/supplement-orders` les compléments |
 | **Recettes en masse** | `/recipes`, `/recipes/flatten`, `/recipes/{id}`, `/recipes/{id}/cost`, `/shops/{id}/recipes`, `/subrecipes`, `/products/{id}/portions` |
 | **Corrections et annulations** | `/shops/{id}/sales-corrections`, `/shops/{id}/reports/sales/original-period-later-corrections`, `/transactions/{id}/corrections` |
 | **Anomalies du panel** | `/panel/sales-anomalies`, `/panel/sales-anomalies/{id}` |
@@ -188,6 +206,15 @@ CREATE TABLE IF NOT EXISTS ceo_verif_produit (
   poubelle DECIMAL(9,2), invendu DECIMAL(9,2), prix_ht DECIMAL(8,3), cout DECIMAL(8,4),
   PRIMARY KEY (shop_id, jour, product_id), KEY (jour)
 );
+-- Une commande entrante validée : l'entrée, ligne par ligne (la source ne garde pas de montant).
+CREATE TABLE IF NOT EXISTS ceo_verif_commande (
+  delivery_id INT NOT NULL PRIMARY KEY, order_key VARCHAR(40), shop_id INT NOT NULL, supplier_id INT,
+  commandee_le DATE, livree_le DATE NULL, validee_le DATETIME NULL,   -- delivered_on
+  lignes JSON,                                -- [{material_id, unite, qte_commandee, qte_validee, prix_magasin}]
+  valeur DECIMAL(10,2),                       -- Σ qte_validee × prix du magasin au jour de la validation
+  corrigee TINYINT(1) DEFAULT 0, vu_le DATETIME NOT NULL,
+  KEY (shop_id, validee_le)
+);
 -- Une matière entre deux inventaires (onglet Matières).
 CREATE TABLE IF NOT EXISTS ceo_verif_matiere (
   shop_id INT NOT NULL, inv_debut DATE NOT NULL, inv_fin DATE NOT NULL, material_id INT NOT NULL,
@@ -211,14 +238,17 @@ Volume : environ 70 produits × 4 magasins × 365 jours, soit 100 000 lignes par
 **Calcul de nuit** : `GET /api/cockpit/verification/cron?jeton=…`, ajouté au fichier
 `/etc/cron.d/cockpit-rapports` posé par `deploy.sh`, à **4 h 30** :
 
-1. il calcule la veille de chaque magasin et l'écrit (upsert) ;
-2. il **recalcule les sept jours d'avant**, pour absorber les corrections tardives et les
-   cuissons validées après coup ;
-3. il prend la photo du soir de `/material-inventory` (le stock matière jour par jour,
+1. il balaie les commandes (`/deliveries/{id}`, comme le suivi des achats) et enregistre
+   celles validées depuis le dernier passage dans `ceo_verif_commande`, avec leurs lignes
+   valorisées au prix du magasin. Ces lignes font l'entrée ;
+2. il calcule la veille de chaque magasin et l'écrit (upsert) ;
+3. il **recalcule les sept jours d'avant**, pour absorber les corrections tardives, les
+   cuissons validées après coup et les commandes validées en retard ;
+4. il prend la photo du soir de `/material-inventory` (le stock matière jour par jour,
    même sans inventaire formel) ;
-4. il passe les règles de recettes et met à jour `ceo_verif_recette` (premier vu,
+5. il passe les règles de recettes et met à jour `ceo_verif_recette` (premier vu,
    dernier vu, résolu) ;
-5. il écrit une ligne au journal (`journalAdd`).
+6. il écrit une ligne au journal (`journalAdd`).
 
 Il garde le budget de lecture des tickets (`SV_BUDGET_CRON`) : la moisson horaire a déjà
 lu la plupart des tickets dans la journée. **Rien ne s'efface** : une correction de
@@ -272,10 +302,15 @@ fausse, l'écart matière et le CA attendu le sont aussi.
   l'écran le dit, et le compté de la clôture aide.
 - **Report (carryover)** : aucune route de lecture. On le prend dans la clôture du
   cockpit (`pfCloture`).
-- **Livraisons** : `/material-orders` et `/deliveries` répondent 404 (16/09). Si
-  `/shops/{id}/orders*` ne donne pas les quantités livrées, l'entré sera l'inventaire
-  matière du soir (photo quotidienne) plus les réquisitions réalisées, ce qui est moins
-  précis. Le lot 0 tranche.
+- **Commandes entrantes** : elles se lisent une par une (`/deliveries/{id}`, aucune route
+  de liste) et sans montant. La valeur vient donc du prix du magasin. Le lot 0 doit
+  trouver où se lisent **les quantités validées ligne par ligne** : dans
+  `/deliveries/{id}`, ou dans `final-items` / `comparison`. Sans elles, l'entrée d'une
+  commande validée serait sa quantité commandée, ce qui est moins juste quand la
+  réception a été corrigée.
+- **Commande livrée mais pas validée** : elle n'entre pas, et ses matières sortent en delta
+  négatif. L'écran le dit, et une alerte peut partir quand une commande est livrée depuis
+  plus de 24 h sans validation. Sinon le magasin aurait intérêt à ne pas valider.
 - **Inventaires** : la fréquence par magasin n'est pas connue. Sans inventaire, l'onglet
   Matières se lit sur les photos du soir de `/material-inventory`.
 - **Recettes** : elles faussent tout le reste, d'où le lot 1 en premier et la
@@ -287,8 +322,8 @@ fausse, l'écart matière et le CA attendu le sont aussi.
 
 ## 10. Questions ouvertes
 
-1. **Entré** = livraisons de matière (au coût) + produits finis reçus : est-ce bien ce
-   que tu entends par « entrée » ?
+1. ~~Qu'est-ce que l'entrée ?~~ **Réglé le 31/10 : la validation des commandes
+   entrantes.**
 2. Les seuils de fuite (3 % / 6 %) te conviennent-ils ?
 3. À quelle fréquence les magasins font-ils un inventaire au panel ?
 4. Qui reçoit la liste des recettes à corriger (bouton « Envoyer au responsable
