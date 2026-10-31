@@ -403,11 +403,13 @@ preg_match_all("/SELECT id_position, '([a-z_]+)'/", $laterSql, $later);
 preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/146_task_wizards_cron.sql'), $m146);
 // 149 [230] : przyjęcia, płatności dnia, ocena dostawców — z uprawnień stron macierzystych.
 preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/149_lot4_wizards.sql'), $m149);
-$seeded = array_values(array_unique(array_merge($m[1], $later[1], $m146[1], $m149[1])));
+// 152 [234] : Moce produkcyjne — pełna wersja (dyrektor zakładu).
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/152_capacity_full_access.sql'), $m152);
+$seeded = array_values(array_unique(array_merge($m[1], $later[1], $m146[1], $m149[1], $m152[1])));
 sort($seeded);
 $grantable = PageAccess::grantable();
 sort($grantable);
-check($seeded === $grantable, 'access: migrations 050 + 059 + 063 + 146 + 149 seed exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
+check($seeded === $grantable, 'access: migrations 050 + 059 + 063 + 146 + 149 + 152 seed exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
 
 // --- Aktywność w ERP : trasa (identyfikatory → {id}), ścieżka bez zapytania, okres uporządkowany i ograniczony
 check(ActivityService::route('/products/12/edit') === '/products/{id}/edit' && ActivityService::route('/workshop/gantt') === '/workshop/gantt'

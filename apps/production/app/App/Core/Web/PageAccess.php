@@ -21,6 +21,9 @@ final class PageAccess
         'margins' => ['Marże i koszty (marże, koszty produktu i działów, kalkulator, zamknięcie miesiąca ; Finanse : faktury i koszty, koszty usług miesiąca)', 'Analiza', ['/finances', '/cost-calculator', '/month-close'], false],
         'production' => ['Produkcja (arkusz, plan tygodnia, plan zespołów, prognoza 13 tygodni, stany, ruchy magazynowe, partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
             ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock-movements', '/workshop/traceability', '/production', '/purchasing/nc', '/workshop/workstations', '/workshop/data-sheet'], false],
+        // Moce produkcyjne [234] : bez tego prawa — tylko stan obecny (tydzień bieżący, do odczytu) ; z nim — pełna wersja.
+        'capacity_full' => ['Moce produkcyjne — pełna wersja (co jeszcze zmieszczę, ilość na zmianę, ustawienia maszyn, co jeśli, wartość w €) : administrator, dyrektor zakładu ; bez tego prawa — tylko stan obecny', 'Produkcja',
+            ['/production/capacity/full'], false],
         'tablet' => ['Tablety : zarządzanie (tablety, PIN, czas pracy, zatwierdzenia produkcji)', 'Tablety', ['/workshop/execution', '/workshop/timesheet', '/workshop/production-days'], false],
         'supply' => ['Zaopatrzenie (zapotrzebowanie, zakupy tygodnia, zamówienia, faktury, stan)', 'Zakupy', ['/workshop/supply', '/workshop/buy'], false],
         'purchasing' => ['Koszty surowców, oferty i zapytania', 'Zakupy', ['/purchasing'], false],

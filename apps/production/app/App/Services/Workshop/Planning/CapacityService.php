@@ -75,7 +75,7 @@ final class CapacityService
         $avg = $loaded ? round(array_sum(array_column($loaded, 'pct')) / count($loaded), 1) : null;
 
         return [
-            'week' => $c['week'], 'what_if' => $c['what_if'], 'group' => $groupId, 'target' => $target,
+            'week' => $c['week'], 'what_if' => $c['what_if'], 'group' => $groupId, 'target' => $target, 'readonly' => false, 'today' => date('Y-m-d'),
             'groups' => $c['groups'], 'shifts' => array_values(array_map(fn($s) => ['id' => (int) $s['id'], 'code' => $s['code'], 'name' => $s['name_pl'],
                 'hours' => round($this->shiftSeconds($s) / 3600, 1)], $c['shifts'])),
             'sections' => $sections, 'hidden' => $hidden, 'freezer' => $c['freezer'],
@@ -89,6 +89,20 @@ final class CapacityService
                 'best' => $best ? ['name' => $best['name'], 'more' => $best['more'], 'unit' => $best['unit'], 'value' => $best['value'], 'limit' => $best['more_limit']] : null,
             ],
         ];
+    }
+
+    /**
+     * Stan obecny (produkcja, bez prawa « pełna wersja ») : tydzień bieżący, zmiany wg zespołów, tylko do odczytu — maszyny,
+     * zespoły, mroźnia ; bez produktów, wartości w €, maszyn ukrytych i symulacji.
+     */
+    public function state(?int $groupId = null): array
+    {
+        $d = $this->data(null, [], $groupId);
+        $d['tiles']['best'] = null;
+        $d['products'] = [];
+        $d['hidden'] = [];
+        $d['readonly'] = true;
+        return $d;
     }
 
     /**

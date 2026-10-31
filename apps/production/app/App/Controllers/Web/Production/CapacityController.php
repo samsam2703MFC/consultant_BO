@@ -13,39 +13,59 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * Moce produkcyjne [234] (makiety 10 i 11) : wykorzystanie maszyn wobec planu tygodnia, ludzie (zespoły), mroźnia zapasu,
  * ilość na zmianę produktu (wąskie gardło), « co jeszcze zmieszczę », ustawienia maszyn.
+ * Pełna wersja : administrator i stanowiska z prawem « capacity_full » (dyrektor zakładu) ; produkcja (prawo « production »)
+ * widzi tylko stan obecny — tydzień bieżący, do odczytu.
  */
 final class CapacityController extends BaseController
 {
     use JsonErrors;
 
     private const PATH = '/production/capacity';
+    private const FULL = '/production/capacity/full';
 
     public function __construct(private CapacityService $capacity, private PageAccessService $access)
     {
     }
 
-    /** Dane i ustawienia : ta sama zgoda co strona (Produkcja). */
+    /** Dane : ta sama zgoda co strona (Produkcja). */
     private function guard(): void
     {
         if (!$this->access->canSee($this->userId(), self::PATH)) throw new CustomException('Brak dostępu do mocy produkcyjnych.', 'errors', 403);
     }
 
+    /** Symulacja i ustawienia : tylko pełna wersja. */
+    private function guardFull(): void
+    {
+        $this->guard();
+        if (!$this->full()) throw new CustomException('Symulacje i ustawienia mocy : administrator albo dyrektor zakładu (prawo « Moce produkcyjne — pełna wersja »).', 'errors', 403);
+    }
+
+    private function full(): bool
+    {
+        return $this->access->canSee($this->userId(), self::FULL);
+    }
+
+    private function payload(): array
+    {
+        return $this->full() ? $this->capacity->data($this->date(), $this->whatIf(), $this->group()) : $this->capacity->state($this->group());
+    }
+
     public function index()
     {
         try {
-            $boot = $this->capacity->data($this->date(), $this->whatIf(), $this->group());
+            $boot = $this->payload();
         } catch (\Throwable $e) {
             error_log((string) $e);
             $boot = ['error' => 'Nie udało się policzyć mocy produkcyjnych : ' . $e->getMessage()];
         }
-        $this->view('production/capacity', ['data' => $boot]);
+        $this->view('production/capacity', ['data' => $boot, 'full' => $this->full()]);
     }
 
     public function data()
     {
         try {
             $this->guard();
-            return $this->json(['data' => $this->capacity->data($this->date(), $this->whatIf(), $this->group())]);
+            return $this->json(['data' => $this->payload()]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
@@ -54,7 +74,7 @@ final class CapacityController extends BaseController
     public function simulate()
     {
         try {
-            $this->guard();
+            $this->guardFull();
             $qty = (float) str_replace(',', '.', (string) ($_GET['qty'] ?? '0'));
             return $this->json(['data' => $this->capacity->simulate($this->date(), (int) ($_GET['item'] ?? 0), $qty, $this->whatIf())]);
         } catch (\Throwable $e) {
@@ -65,7 +85,7 @@ final class CapacityController extends BaseController
     public function saveMachine($id)
     {
         try {
-            $this->guard();
+            $this->guardFull();
             $this->capacity->saveMachine((int) $id, $this->getJson(Request::createFromGlobals()), $this->userId());
             return $this->json(['message' => 'Zapisano ustawienia maszyny.']);
         } catch (\Throwable $e) {
@@ -76,7 +96,7 @@ final class CapacityController extends BaseController
     public function saveFreezer()
     {
         try {
-            $this->guard();
+            $this->guardFull();
             $this->capacity->saveFreezer($this->getJson(Request::createFromGlobals()), $this->userId());
             return $this->json(['message' => 'Zapisano mroźnię zapasu.']);
         } catch (\Throwable $e) {

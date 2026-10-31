@@ -38,7 +38,8 @@ function expectCapFail(callable $fn, int $code, string $message): void
 }
 
 // --- Bez bazy : dostęp i zakładka -------------------------------------------------------------------------------
-expectCap(PageAccess::keyFor('/production/capacity') === 'production', 'dostęp : strona w katalogu « production »');
+expectCap(PageAccess::keyFor('/production/capacity') === 'production' && PageAccess::keyFor('/production/capacity/full') === 'capacity_full'
+    && in_array('capacity_full', PageAccess::grantable(), true), 'dostęp : stan obecny = « production », pełna wersja = prawo « capacity_full » (do nadania stanowisku)');
 expectCap(in_array('/production/capacity', array_column(PageTabs::GROUPS['production']['tabs'], 0), true), 'zakładka « Moce produkcyjne » na stronie Produkcja');
 
 $dsn = getenv('TFB_TEST_DSN') ?: 'mysql:unix_socket=/run/mysqld/mysqld.sock';
@@ -203,6 +204,13 @@ try {
     expectCap(in_array(14, array_column($h['hidden'], 'id'), true) && $h['tiles']['blast'] === null, 'maszyna ukryta : poza sekcjami i kafelkami');
     $svc->saveMachine(14, ['cycle_min' => '', 'view' => true], 5);
     expectCap($pdo->query('SELECT cycle_s FROM n_prod_workstation WHERE id = 14')->fetchColumn() === null, 'cykl pusty → z kart produkcyjnych');
+
+    // --- Stan obecny (produkcja bez pełnej wersji) : tydzień bieżący, bez produktów i € --------------------------------
+    $st = $svc->state();
+    expectCap($st['readonly'] && $st['products'] === [] && $st['hidden'] === [] && $st['tiles']['best'] === null && !$st['what_if']['night']
+        && $st['week']['start'] <= date('Y-m-d') && $st['week']['end'] >= date('Y-m-d') && $st['today'] === date('Y-m-d') && isset($st['sections'], $st['teams'], $st['freezer']),
+        'stan obecny : tydzień bieżący, maszyny, zespoły i mroźnia, bez produktów, wartości i symulacji');
+    expectCap($d['readonly'] === false, 'pełna wersja : nie do odczytu');
 
     // --- Filtr grupy ---------------------------------------------------------------------------------------------
     $g = $svc->data($date, [], 99);

@@ -263,6 +263,11 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Migration 151 : `n_prod_workstation.efficiency_pct` (100 par défaut), `cycle_s`, `capacity_view` (tables manuelles masquées
   par défaut : leur limite, ce sont les personnes) + paramètre `stock.freezer_alert_pct` (90 %). Mroźnia : palettes en stock
   (`StockPeriodRepository::stockPallets`) + production MTS de la semaine en palettes, comparées aux places. Rejouable.
+- **Qui voit quoi** : version complète (4 onglets, semaines, « co jeśli », valeurs en €, simulation, réglages) = administrateur
+  et postes ayant le droit `capacity_full` (« Moce produkcyjne — pełna wersja », à donner au directeur de site dans
+  Uprawnienia funkcji ; migration 152 : postes « Dyrektor… » s'il en existe, sinon personne). Production (droit `production`) : seulement le tableau de l'état actuel —
+  semaine en cours, shifts des équipes, machines, équipes et congélateur, jour du jour encadré, lecture seule
+  (`CapacityService::state` : sans produits ni € ; simulation et enregistrements refusés côté serveur, 403).
 - API web : `GET /ajax/production/capacity`, `GET /ajax/production/capacity/simulate?item=&qty=`,
   `PUT /ajax/production/capacity/workstations/{id}`, `PUT /ajax/production/capacity/freezer`.
 

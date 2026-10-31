@@ -3094,6 +3094,8 @@ button.mc-name:hover b { color: #8e1f2f; }
 .mc-u b { text-align: right; font-size: 12.5px; } .mc-u b.bad { color: #9a1730; } .mc-u b.warn { color: #a0640f; }
 .mc-days { display: flex; gap: 3px; }
 .mc-days span { width: 26px; height: 22px; border-radius: 5px; font-size: 9.5px; font-weight: 700; display: grid; place-items: center; color: #fff; }
+.mc-now { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; }
+.mc-days span.today { box-shadow: 0 0 0 2px var(--at-text, #2a2420); }
 .mc-days .g1 { background: #9cc9ad; color: #1f5a37; } .mc-days .g2 { background: #2E7D4F; } .mc-days .g3 { background: #C17A2A; } .mc-days .g4 { background: #9a1730; } .mc-days .g0 { background: var(--at-bg-2); color: var(--at-muted); }
 .mc-free b { color: #1f5a37; } .mc-free.none b { color: #9a1730; }
 .mc-note { font-size: 12px; color: var(--at-muted); margin: 8px 6px 4px; }

@@ -6,10 +6,14 @@
     <div class="page-heading at-profit-head">
         <div class="page-title">
             <h3>Moce produkcyjne</h3>
+            {% if full %}
             <p class="text-subtitle text-muted mb-0">Produkcja › Moce produkcyjne · maszyny (wsad × wsady na zmianę × zmiany × TRS) i zespoły wobec planu tygodnia, mroźnia zapasu, wolne moce i ile jeszcze można dodać.</p>
+            {% else %}
+            <p class="text-subtitle text-muted mb-0">Produkcja › Moce produkcyjne · stan obecny : wykorzystanie maszyn, zespołów i mroźni w bieżącym tygodniu (plan tygodnia).</p>
+            {% endif %}
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a class="btn btn-outline-primary" href="{{ root }}/production"><i class="bi bi-calendar-week"></i> Plan tygodnia</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/workshop/sheet"><i class="bi bi-calendar-week"></i> Arkusz tygodnia</a>
         </div>
     </div>
 {% endblock %}

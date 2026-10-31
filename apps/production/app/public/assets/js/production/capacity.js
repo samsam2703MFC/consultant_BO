@@ -9,8 +9,10 @@
     const TABS = [['use', 'bi-speedometer2', 'Wykorzystanie'], ['more', 'bi-plus-square', 'Co jeszcze zmieszczę'], ['shift', 'bi-clock-history', 'Ilość na zmianę'], ['settings', 'bi-sliders', 'Ustawienia maszyn']];
     const ICON = {froid: 'bi-thermometer-snow', surgelation: 'bi-snow', four: 'bi-fire', machine: 'bi-gear', fermentation: 'bi-hourglass-split', robot: 'bi-robot', manuel: 'bi-person-workspace'};
     const UNITS = {piece: 'szt.', plaque: 'blach', kg: 'kg', chariot: 'wózków', bac: 'pojemników', litre: 'l'};
+    // Produkcja (bez prawa « pełna wersja ») : tylko stan obecny — tydzień bieżący, do odczytu, bez zakładek i symulacji.
+    const RO = () => !!D.readonly;
     let tab = (location.hash.match(/tab=(\w+)/) || [])[1] || 'use';
-    if (!TABS.some(([k]) => k === tab)) tab = 'use';
+    if (!TABS.some(([k]) => k === tab) || RO()) tab = 'use';
     let filters = {date: D.week ? D.week.start : null, group: D.group ?? '', shifts: []};
     if (D.what_if) { if (D.what_if.afternoon) filters.shifts.push('afternoon'); if (D.what_if.night) filters.shifts.push('night'); }
     let sim = {item: null, qty: '', res: null, busy: false};
@@ -27,15 +29,22 @@
     function days(list) {
         return `<div class="mc-days">${list.map(x => {
             const p = x.pct;
-            if (p === null) return '<span class="g0" title="brak zmiany">—</span>';
+            if (p === null) return `<span class="g0${x.date === D.today ? ' today' : ''}" title="brak zmiany">—</span>`;
             const g = p >= 100 ? 'g4' : (p >= D.target ? 'g3' : (p >= 50 ? 'g2' : (p > 0 ? 'g1' : 'g0')));
-            return `<span class="${g}" title="${p} %">${p >= 999 ? '!' : p}</span>`;
+            const today = x.date === D.today;
+            return `<span class="${g}${today ? ' today' : ''}" title="${today ? 'dziś · ' : ''}${p} %">${p >= 999 ? '!' : p}</span>`;
         }).join('')}</div>`;
     }
 
     // --- Filtry, kafelki ----------------------------------------------------------------------------------------------
     function bar0() {
         const w = D.week;
+        if (RO()) {
+            return `<div class="mc-bar"><b class="mc-now"><i class="bi bi-broadcast"></i> Stan obecny</b><span class="at-sub">${esc(w.label)}</span>
+                <label class="tt-sel ${filters.group !== '' && filters.group !== null ? 'on' : ''}"><i class="bi bi-people"></i><span>Grupa</span>
+                    <select name="group" aria-label="Grupa"><option value="">wszystkie</option>${D.groups.map(g => `<option value="${g.id}" ${String(g.id) === String(filters.group) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select></label>
+                <span class="at-sub mc-src"><i class="bi bi-calendar-week"></i> plan tygodnia · ${w.planned_items} produktów · zmiany wg zespołów</span></div>`;
+        }
         const on = (k) => filters.shifts.includes(k);
         return `<div class="mc-bar">
             <span class="tt-nav"><button type="button" class="kw-btn" data-week="${esc(w.prev)}" aria-label="Poprzedni tydzień"><i class="bi bi-chevron-left"></i></button>
@@ -58,14 +67,14 @@
         const b = t.bottleneck;
         return `<div class="mc-tiles">
             <div class="mc-tile ${b && b.pct >= 100 ? 'bad' : (b && b.pct >= D.target ? 'warn' : '')}"><span>Wąskie gardło</span><b>${b ? `${nf(b.pct)} % · ${esc(b.name)}` : '—'}</b>
-                <small>${b ? `${b.peak_day ? `szczyt ${esc(b.peak_day.label)} ${b.peak_day.pct >= 999 ? '∞' : b.peak_day.pct} %` : ''}${b.top ? ' · ' + esc(b.top) : ''}` : 'brak obciążenia w planie'}</small></div>
+                <small>${b ? [b.peak_day ? `szczyt ${esc(b.peak_day.label)} ${b.peak_day.pct >= 999 ? '∞' : b.peak_day.pct} %` : '', b.top ? esc(b.top) : ''].filter(Boolean).join(' · ') : 'brak obciążenia w planie'}</small></div>
             <div class="mc-tile ${f.pct !== null && f.pct >= f.alert_pct ? 'bad' : (f.pct !== null && f.pct >= 75 ? 'warn' : '')}"><span>Mroźnia zapasu</span>
                 <b>${f.places ? `${nf(f.now, 1)} / ${f.places} palet` : `${nf(f.now, 1)} palet`}</b>
-                <small>${f.places ? `${nf(f.pct)} % · wolne ${nf(f.free, 1)} · + ${nf(f.mts_week, 1)} z produkcji na zapas` : `<button type="button" class="tt-link mc-inline" data-freezer>ustaw liczbę miejsc paletowych</button>`}</small></div>
+                <small>${f.places ? `${nf(f.pct)} % · wolne ${nf(f.free, 1)} · + ${nf(f.mts_week, 1)} z produkcji na zapas` : (RO() ? 'miejsca paletowe nieustawione' : `<button type="button" class="tt-link mc-inline" data-freezer>ustaw liczbę miejsc paletowych</button>`)}</small></div>
             <div class="mc-tile"><span>Komora szokowa</span><b>${t.blast ? nf(t.blast.pct) + ' %' : '—'}</b><small>${t.blast ? `wolne ${esc(t.blast.free || '—')}` : 'brak komory w maszynach'}</small></div>
             <div class="mc-tile"><span>Średnio maszyny</span><b>${t.average.pct !== null ? nf(t.average.pct) + ' %' : '—'}</b><small>cel ${D.target} % · ${t.average.below} z ${t.average.count} poniżej</small></div>
-            <div class="mc-tile ok"><span>Najwięcej miejsca</span><b>${t.best ? '≈ ' + nf(t.best.value) + ' €' : '—'}</b>
-                <small>${t.best ? `+ ${nf(t.best.more)} ${esc(t.best.unit)} ${esc(t.best.name)} · limit : ${esc(t.best.limit)}` : 'brak cen standardowych'}</small></div>
+            ${RO() ? '' : `<div class="mc-tile ok"><span>Najwięcej miejsca</span><b>${t.best ? '≈ ' + nf(t.best.value) + ' €' : '—'}</b>
+                <small>${t.best ? `+ ${nf(t.best.more)} ${esc(t.best.unit)} ${esc(t.best.name)} · limit : ${esc(t.best.limit)}` : 'brak cen standardowych'}</small></div>`}
         </div>`;
     }
 
@@ -81,8 +90,8 @@
         const cap = m.mode === 'delay' ? `${nf(m.capacity_per_pass)} ${esc(m.unit)}<small>miejsca (oczekiwanie)</small>`
             : `${nf(m.capacity_per_pass, 1)} ${esc(m.unit)}<small>${m.cycle_s ? 'cykl ' + mins(m.cycle_s) : (m.no_steps ? 'brak etapów w kartach' : '')}</small>`;
         const per = m.passes_shift ? `${m.passes_shift} wsadów<small>× ${m.shifts_week} zm. w tyg.</small>` : `${m.shifts_week} zm.<small>${esc(m.shift_names.join(', ') || 'brak zmiany')}</small>`;
-        return `<tr class="${m.pct >= D.target ? 'hot' : ''}" data-machine="${m.id}"><td><button type="button" class="mc-name" data-edit="${m.id}" title="Ustawienia maszyny">
-                <i class="bi ${ICON[m.type] || 'bi-gear'}"></i><span><b>${esc(m.name)}</b><small>${esc(m.group || '')}${m.efficiency_pct < 100 ? ` · TRS ${nf(m.efficiency_pct)} %` : ''}</small></span></button></td>
+        const nm = `<i class="bi ${ICON[m.type] || 'bi-gear'}"></i><span><b>${esc(m.name)}</b><small>${esc(m.group || '')}${m.efficiency_pct < 100 ? ` · TRS ${nf(m.efficiency_pct)} %` : ''}</small></span>`;
+        return `<tr class="${m.pct >= D.target ? 'hot' : ''}" data-machine="${m.id}"><td>${RO() ? `<span class="mc-name">${nm}</span>` : `<button type="button" class="mc-name" data-edit="${m.id}" title="Ustawienia maszyny">${nm}</button>`}</td>
             <td>${cap}</td><td>${per}</td>
             <td class="r">${nf(m.avail_h, 1)} h</td><td class="r"${m.top ? ` title="Najwięcej : ${esc(m.top.name)}"` : ''}>${nf(m.load_h, 1)} h${m.passes ? `<small>${nf(m.passes)} wsadów</small>` : ''}</td>
             <td>${bar(m.pct)}</td><td>${days(m.days)}</td>
@@ -92,10 +101,11 @@
     function freezerRow() {
         const f = D.freezer;
         const p = f.places ? f.pct : null;
-        return `<tr class="${p !== null && p >= f.alert_pct ? 'hot' : ''}"><td><button type="button" class="mc-name" data-freezer title="Ustawienia mroźni"><i class="bi bi-snow2"></i><span><b>Mroźnia zapasu</b><small>zapas produktów gotowych (palety)</small></span></button></td>
+        const nm = '<i class="bi bi-snow2"></i><span><b>Mroźnia zapasu</b><small>zapas produktów gotowych (palety)</small></span>';
+        return `<tr class="${p !== null && p >= f.alert_pct ? 'hot' : ''}"><td>${RO() ? `<span class="mc-name">${nm}</span>` : `<button type="button" class="mc-name" data-freezer title="Ustawienia mroźni">${nm}</button>`}</td>
             <td>${f.places ? `${f.places} miejsc<small>paletowych</small>` : '<span class="at-sub">nie ustawiono</span>'}</td><td>—</td>
             <td class="r">${f.places ? f.places + ' palet' : '—'}</td><td class="r">${nf(f.now, 1)} palet<small>+ ${nf(f.mts_week, 1)} produkcja na zapas</small></td>
-            <td>${p !== null ? bar(p) : '<span class="at-sub">ustaw miejsca</span>'}</td><td><small class="at-sub">${f.pct_max !== null ? `po produkcji ≤ ${nf(f.pct_max)} %` : ''}</small></td>
+            <td>${p !== null ? bar(p) : `<span class="at-sub">${RO() ? 'miejsca nieustawione' : 'ustaw miejsca'}</span>`}</td><td><small class="at-sub">${f.pct_max !== null ? `po produkcji ≤ ${nf(f.pct_max)} %` : ''}</small></td>
             <td class="r mc-free ${p !== null && p >= 100 ? 'none' : ''}"><b>${f.free !== null ? nf(f.free, 1) + ' palet' : '—'}</b></td></tr>`;
     }
 
@@ -115,7 +125,8 @@
         return `<div class="mc-card"><div class="table-responsive"><table class="mc-tbl"><thead><tr><th>Maszyna</th><th>Wsad</th><th>Na zmianę</th><th class="r">Dostępne</th><th class="r">Zaplanowane</th>
             <th>Wykorzystanie <small class="mc-th">(| cel ${D.target} %)</small></th><th>${D.week.days.map(d => esc(d.short.replace('.', ''))).join(' ')}</th><th class="r">Wolne</th></tr></thead>
             <tbody>${!hasCold && !groupSel ? `<tr class="grp"><td colspan="8">Chłodzenie i mrożenie</td></tr>${freezerRow()}` : ''}${sections}${teamRows()}</tbody></table></div>
-            <p class="mc-note">Dostępne = zmiany, na których pracuje maszyna (zespół grupy, zmiany « co jeśli », zmiany włączone na maszynie) × dni produkcji × TRS. Zaplanowane = etapy kart produkcyjnych × ilości planu tygodnia (dni z Planu zespołów). Kliknij maszynę, aby zmienić jej ustawienia.</p></div>`;
+            <p class="mc-note">Dostępne = zmiany, na których pracuje maszyna (zespół grupy, zmiany « co jeśli », zmiany włączone na maszynie) × dni produkcji × TRS. Zaplanowane = etapy kart produkcyjnych × ilości planu tygodnia (dni z Planu zespołów ; obramowany = dziś).
+            ${RO() ? 'Ustawienia maszyn i symulacje : administrator albo dyrektor zakładu.' : 'Kliknij maszynę, aby zmienić jej ustawienia.'}</p></div>`;
     }
 
     // --- Symulacja ------------------------------------------------------------------------------------------------------
@@ -247,20 +258,22 @@
         if (D.error) { app.innerHTML = `<div class="kw"><div class="kw-card"><p class="text-danger mb-0">${esc(D.error)}</p></div></div>`; return; }
         const y = window.scrollY;
         let body = '';
-        if (tab === 'use') body = `<div class="mc-wrap">${useTable()}<div class="mc-side">${simPanel(false)}${ranking(5)}</div></div>`;
+        if (RO()) body = useTable();
+        else if (tab === 'use') body = `<div class="mc-wrap">${useTable()}<div class="mc-side">${simPanel(false)}${ranking(5)}</div></div>`;
         else if (tab === 'more') body = moreTab();
         else if (tab === 'shift') body = shiftTab();
         else body = settingsTab();
-        app.innerHTML = `<div class="kw mc"><div class="mc-tabs" role="tablist">${TABS.map(([k, ic, l]) => `<button type="button" role="tab" aria-selected="${k === tab}" class="${k === tab ? 'on' : ''}" data-tab="${k}"><i class="bi ${ic}"></i> ${l}</button>`).join('')}</div>
+        const tabs = RO() ? '' : `<div class="mc-tabs" role="tablist">${TABS.map(([k, ic, l]) => `<button type="button" role="tab" aria-selected="${k === tab}" class="${k === tab ? 'on' : ''}" data-tab="${k}"><i class="bi ${ic}"></i> ${l}</button>`).join('')}</div>`;
+        app.innerHTML = `<div class="kw mc${RO() ? ' ro' : ''}">${tabs}
             ${bar0()}${tiles()}${warn()}${body}</div>${modal ? modalHtml() : ''}`;
         window.scrollTo(0, y);
     }
 
     async function load() {
         const q = new URLSearchParams();
-        if (filters.date) q.set('date', filters.date);
+        if (filters.date && !RO()) q.set('date', filters.date);
         if (filters.group !== '' && filters.group !== null) q.set('group', filters.group);
-        if (filters.shifts.length) q.set('shifts', filters.shifts.join(','));
+        if (filters.shifts.length && !RO()) q.set('shifts', filters.shifts.join(','));
         app.querySelectorAll('.mc-bar button, .mc-bar select').forEach(b => { b.disabled = true; });
         const res = await at.send('/ajax/production/capacity?' + q.toString(), 'GET');
         if (!res.ok || !res.data) { at.notify(false, res.message || 'Błąd ładowania.'); render(); return; }
