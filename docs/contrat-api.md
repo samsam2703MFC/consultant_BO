@@ -3398,9 +3398,12 @@ TVA, `n` tickets — le relevé du CA net, `cnMois`, lu dans 20 s à la demande,
   R = (consommé − poubelle) ÷ ventes, au coût ; attendu = caisse × R ; écart = caisse ÷ attendu − 1.
 
 À part : `sansProduit` (lignes de ticket sans produit, `svP…['sp']` type `ligne`), `remises` (remises sur le ticket
-entier), `corrections` et `anomalies` ([nombre, montant|null] de `/shops/{id}/sales-corrections` et
-`/panel/sales-anomalies`, `null` tant que la route ne répond pas). **Jours à regarder** : P&L ≠ caisse de 20 € ou plus,
-lignes sans produit ≥ 30 € (ou trois lignes), remises sur le ticket entier ≥ 30 €.
+entier), `corrections` ([nombre, € TTC] des corrections de ventes après encaissement du mois — mesuré le 31/10 :
+`/shops/{id}/sales-corrections` rend `items[]` {`correction_number`, `status`, `original_insert_timestamp`, `gross_delta`,
+`tax_delta`, `net_delta`, `created_at`, `cancelled_at`, `employee_name`} et ignore le filtre de dates, le mois se choisit
+sur `created_at`, les annulées écartées ; chacune devient un jour à regarder), `anomalies` (toujours `null` :
+`/panel/sales-anomalies` répond 403 « Shop context required » au compte consultant). **Jours à regarder** : P&L ≠ caisse de 20 € ou plus,
+lignes sans produit ≥ 30 € (ou trois lignes), remises sur le ticket entier ≥ 30 €, correction après encaissement.
 
 `GET /verification/ca[?mois=AAAA-MM][&shop=]` (le mois d'hier par défaut) : `mois`, `du`, `au`, `enCours`, `aLire`,
 `magasins[]` {`id`, `nom`, `caisse` {`ttc`, `ht`, `tva`, `tickets`, `joursLus`, `jours`, `complet`}, `pnl`, `redevances`

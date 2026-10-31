@@ -496,6 +496,13 @@ verifie('une caisse incomplète : le P&L se compare sur les jours lus, la base d
 verifie('le rapport matière exclut les semaines sans entrée validée', vcRapportMatiere([['jours' => 7, 'entrees_eur' => 0, 'sorties_eur' => 10, 'poubelle_eur' => 0, 'ventes_eur' => 5]]) === ['r' => null, 'semaines' => 0, 'exclues' => 1]
     && vcRapportMatiere([['jours' => 7, 'entrees_eur' => 900, 'sorties_eur' => 1100, 'poubelle_eur' => 100, 'ventes_eur' => 800]])['r'] === 1.25);
 verifie('une liste du panel sans contrat : le nombre et le montant si un champ le porte', vcListeMontants(['data' => [['amount' => -12.5], ['amount' => 7.5]]]) === [2, 20.0] && vcListeMontants([['id' => 1]]) === [1, null] && vcListeMontants(null) === null);
+$corrP = ['items' => [['correction_number' => 'RC/4/2026/2', 'status' => 'SETTLED', 'original_insert_timestamp' => '2026-10-14 14:52:37', 'gross_delta' => '-21.90', 'created_at' => '2026-10-19 17:42:47', 'cancelled_at' => null, 'employee_name' => 'Nathan C.'],
+    ['correction_number' => 'RC/4/2026/1', 'gross_delta' => '-5.00', 'created_at' => '2026-09-02 10:00:00', 'cancelled_at' => null, 'original_insert_timestamp' => '2026-09-02 09:00:00'],
+    ['correction_number' => 'RC/4/2026/3', 'gross_delta' => '-9.00', 'created_at' => '2026-10-20 10:00:00', 'cancelled_at' => '2026-10-20 10:05:00', 'original_insert_timestamp' => '2026-10-20 09:00:00']]];
+$cm = vcCorrectionsMois($corrP, '2026-10');
+verifie('les corrections après encaissement : le mois choisi sur created_at, les annulées écartées', $cm[0] === 1 && $cm[1] === 21.9 && $cm[2][0]['qui'] === 'Nathan C.' && vcCorrectionsMois(null, '2026-10') === null);
+$L5d = vcLecture(['2026-10-19' => [500.0, 30.0, 20]], ['2026-10-19' => 500.0], null, null, [], ['corrections' => [1, 21.9], 'details' => $cm[2], 'anomalies' => null], 1);
+verifie('une correction après encaissement devient un jour à regarder, avec qui et quand', $L5d['joursARegarder'][0]['type'] === 'correction' && str_contains($L5d['joursARegarder'][0]['texte'], 'Nathan C.') && str_contains($L5d['joursARegarder'][0]['texte'], '14/10 à 14:52'));
 verifie('les jours d’un mois s’arrêtent à hier', vcJours(date('Y-m'))[0] === date('Y-m-01') || date('j') === '1');
 Db::$reglages['caNet4:2026-09-01'] = json_encode(['b' => 1000, 't' => 90, 'n' => 50, 'q' => time()]);
 verifie('la caisse se lit dans le relevé du CA net', vcCaisse(4, ['2026-09-01', '2026-09-02']) === ['2026-09-01' => [1000.0, 90.0, 50]]);

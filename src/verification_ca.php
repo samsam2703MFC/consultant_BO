@@ -168,30 +168,47 @@ function vcListeMontants(mixed $r): ?array
     foreach ($l as $x) {
         if (!is_array($x)) { continue; }
         $n++;
-        foreach (['amount', 'total_amount', 'difference', 'amount_difference', 'value', 'total_gross_amount', 'gross_amount', 'total'] as $k) {
+        foreach (['gross_delta', 'amount', 'total_amount', 'difference', 'amount_difference', 'value', 'total_gross_amount', 'gross_amount', 'total'] as $k) {
             if (isset($x[$k]) && is_numeric($x[$k])) { $m += abs((float) $x[$k]); $vu = true; break; }
         }
     }
     return [$n, $vu ? round($m, 2) : null];
 }
 
-/** Corrections après encaissement et anomalies du panel, par magasin, sur le mois ; gardées 1 h. */
+/**
+ * Les corrections de ventes après encaissement d'un mois — fonction pure. Mesuré le 31/10 : `/shops/{id}/sales-corrections`
+ * rend `items[]` {correction_number, status, original_insert_timestamp, gross_delta, created_at, cancelled_at,
+ * employee_name} et ignore le filtre de dates : le mois se choisit ici, sur `created_at`. Rend [n, € (|gross_delta|), détails].
+ */
+function vcCorrectionsMois(mixed $r, string $ym): ?array
+{
+    if (!is_array($r)) { return null; }
+    $l = array_is_list($r) ? $r : (array) ($r['items'] ?? $r['data'] ?? []);
+    $n = 0; $e = 0.0; $det = [];
+    foreach ($l as $x) {
+        if (!is_array($x) || !empty($x['cancelled_at']) || substr((string) ($x['created_at'] ?? ''), 0, 7) !== $ym) { continue; }
+        $v = (float) ($x['gross_delta'] ?? 0);
+        $n++; $e += abs($v);
+        $det[] = ['date' => substr((string) $x['created_at'], 0, 10), 'heure' => substr((string) $x['created_at'], 11, 5), 'eur' => round($v, 2),
+            'numero' => (string) ($x['correction_number'] ?? ''), 'qui' => (string) ($x['employee_name'] ?? ''), 'ticket' => substr((string) ($x['original_insert_timestamp'] ?? ''), 0, 16)];
+    }
+    return [$n, round($e, 2), $det];
+}
+
+/** Corrections après encaissement, par magasin, sur le mois ; gardées 1 h. Les anomalies du panel (`/panel/sales-anomalies`)
+ *  refusent le compte consultant (403 « Shop context required », mesuré le 31/10) : elles restent nulles. */
 function vcCorrections(array $sids, string $ym): array
 {
     try { $c = setting('vcCorr:' . $ym); } catch (Throwable $e) { $c = null; }
     if (is_array($c) && isset($c['le'], $c['v']) && time() - (int) $c['le'] < 3600) { return (array) $c['v']; }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return []; }
-    $du = $ym . '-01'; $au = min(date('Y-m-t', strtotime($du)), date('Y-m-d'));
-    $q = http_build_query(['date_from' => $du, 'date_to' => $au, 'from' => $du, 'to' => $au]);
     $ch = [];
-    foreach ($sids as $sid) {
-        $ch['c' . $sid] = '/shops/' . $sid . '/sales-corrections?' . $q;
-        $ch['a' . $sid] = '/panel/sales-anomalies?' . $q . '&shop_id=' . $sid . '&id_shop=' . $sid;
-    }
+    foreach ($sids as $sid) { $ch[$sid] = '/shops/' . $sid . '/sales-corrections?per_page=100&page=1'; }
     $rep = PanelApi::getParallele($ch, 4);
     $out = [];
     foreach ($sids as $sid) {
-        $out[$sid] = ['corrections' => vcListeMontants($rep['c' . $sid] ?? null), 'anomalies' => vcListeMontants($rep['a' . $sid] ?? null)];
+        $x = vcCorrectionsMois($rep[$sid] ?? null, $ym);
+        $out[$sid] = ['corrections' => $x === null ? null : [$x[0], $x[1]], 'details' => $x[2] ?? [], 'anomalies' => null];
     }
     try { svGrave('vcCorr:' . $ym, ['le' => time(), 'v' => $out]); } catch (Throwable $e) { /* sans cache */ }
     return $out;
@@ -248,6 +265,10 @@ function vcLecture(array $caisse, array $pnl, ?array $red, ?array $mat, array $s
         if ($x['remEur'] >= VC_SP_MIN_EUR) {
             $jr[] = ['date' => $j, 'ton' => 'att', 'eur' => $x['remEur'], 'type' => 'remise', 'texte' => $x['remN'] . ' remise' . ($x['remN'] > 1 ? 's' : '') . ' sur le ticket entier (' . vcNb($x['remEur'], 2) . ' €).'];
         }
+    }
+    foreach ((array) ($corr['details'] ?? []) as $k) {
+        $jr[] = ['date' => $k['date'], 'ton' => 'att', 'eur' => abs($k['eur']), 'type' => 'correction',
+            'texte' => 'Correction ' . $k['numero'] . ($k['qui'] !== '' ? ' par ' . $k['qui'] : '') . ' à ' . $k['heure'] . ' : ' . vcNb($k['eur'], 2) . ' € sur un ticket encaissé le ' . date('d/m à H:i', strtotime($k['ticket'])) . '.'];
     }
     usort($jr, static fn ($a, $b) => $b['eur'] <=> $a['eur']);
     // Le verdict : la caisse face au P&L et aux redevances d'abord (de l'argent qui sort de la base), puis la matière.
@@ -415,6 +436,7 @@ function ep_verification_ca_sonde(): array
     };
     $out = ['shop' => $sid, 'mois' => $ym];
     foreach ($routes as $k => $r) {
+        PanelApi::$lastError = null;
         $x = PanelApi::get($r);
         $out[$k] = ['route' => $r, 'erreur' => $x === null ? (PanelApi::$lastError ?: 'sans réponse') : null, 'reponse' => $court($x), 'lu' => vcListeMontants($x)];
     }

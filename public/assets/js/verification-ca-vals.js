@@ -72,13 +72,13 @@ export function valsVerifCa(app, common){
       att: ecart(m.attendu), attPourquoi: m.attendu ? m.attendu.semaines + ' semaine' + (m.attendu.semaines > 1 ? 's' : '') + ' d’inventaire' : (mat && mat.exclues ? 'entrées non validées' : 'pas de semaine d’inventaire'),
       recettes: m.recettesFiables == null ? null : nf(m.recettesFiables, 1) + ' % de recettes fiables',
       sp: fE(m.sansProduit.eur), spN: m.sansProduit.n + ' ligne' + (m.sansProduit.n > 1 ? 's' : ''), rem: m.remises.eur > 0 ? fE(m.remises.eur) + ' de remises' : '',
-      corr: m.corrections ? (m.corrections[0] + ' correction' + (m.corrections[0] > 1 ? 's' : '') + (m.corrections[1] != null ? ' · ' + fE(m.corrections[1]) : '')) : 'non lues',
+      corr: m.corrections ? (m.corrections[0] ? m.corrections[0] + ' correction' + (m.corrections[0] > 1 ? 's' : '') + (m.corrections[1] != null ? ' · ' + fE(m.corrections[1], 2) : '') : 'aucune') : 'non lues',
       ano: m.anomalies ? m.anomalies[0] + ' anomalie' + (m.anomalies[0] > 1 ? 's' : '') : '',
       verdict: m.verdict, n: m.nJoursARegarder };
   });
   v.avecCorr = (d.magasins || []).some(m => m.corrections || m.anomalies);
   v.reseau = { caisse: fE(R.caisse), pnl: ecart(R.pnl), red: ecart(R.redevances), att: ecart(R.attendu), sp: fE(R.sansProduit.eur), spN: R.sansProduit.n + ' lignes',
-    corr: R.corrections && R.corrections[0] ? R.corrections[0] + ' corrections' : '' };
+    corr: R.corrections && R.corrections[0] ? R.corrections[0] + ' correction' + (R.corrections[0] > 1 ? 's' : '') + (R.corrections[1] != null ? ' · ' + fE(R.corrections[1], 2) : '') : 'aucune' };
   // La phrase : où la base des redevances perd sur la caisse, et ce que la matière appelle.
   const sous = (d.magasins || []).filter(m => m.redevances && m.redevances.ecart <= -20).map(m => court(m.nom) + ' (' + fEs(m.redevances.ecart) + ')');
   const egaux = (d.magasins || []).filter(m => m.pnl && Math.abs(m.pnl.ecart) < 20).map(m => court(m.nom));
