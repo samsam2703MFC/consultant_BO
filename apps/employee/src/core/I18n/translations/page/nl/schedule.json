@@ -16,6 +16,7 @@
   "schedule_unavailable": "Het rooster kan nu niet gelezen worden.",
   "schedule_unavailable_hint": "Probeer het zo meteen opnieuw. Je winkel heeft het actuele rooster.",
   "shift": "dienst",
+  "shift_at_shop": "in {n}",
   "shift_other_shop": "winkel {n}",
   "shift_profit": "Rendement van de dienst",
   "shifts": "diensten",

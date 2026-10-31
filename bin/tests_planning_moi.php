@@ -46,6 +46,7 @@ final class Db
     public static function rows(string $sql, array $a = []): array
     {
         if (str_contains($sql, 'FROM shops WHERE active = 1')) { return [['id' => 4], ['id' => 5]]; }
+        if (str_contains($sql, 'SELECT id, name FROM shops')) { return [['id' => 4, 'name' => 'Atelier by - Halle'], ['id' => 5, 'name' => 'Atelier by Max & Sandra - Namur']]; }
         if (str_contains($sql, 'FROM franchisee_employee_schedule')) {
             return array_values(array_filter($GLOBALS['TABLE'], static fn ($r) => (int) $r['id_employee'] === (int) $a[0] && $r['work_date'] >= $a[1] && $r['work_date'] <= $a[2]));
         }
@@ -87,7 +88,8 @@ $r = planningPersonne(12, '2026-10-26', '2026-11-01', $T0);
 $dates = array_column($r['services'], 'work_date');
 verifie('ses services, renfort comprise, dans l’ordre', $dates === ['2026-10-26', '2026-10-27', '2026-10-28'], json_encode($dates));
 verifie('pas ceux des autres, ni noms ni téléphones', !in_array(11, array_column($r['services'], 'id_employee'), true)
-    && array_keys($r['services'][0]) === ['id_schedule', 'id_employee', 'work_date', 'start_hour', 'end_hour', 'id_shop']);
+    && array_keys($r['services'][0]) === ['id_schedule', 'id_employee', 'work_date', 'start_hour', 'end_hour', 'id_shop', 'shop_name']);
+verifie('le nom court du magasin sur chaque service (« Halle », « Namur »)', array_column($r['services'], 'shop_name') === ['Halle', 'Halle', 'Namur'], json_encode(array_column($r['services'], 'shop_name')));
 verifie('un service effacé au panel ne revient pas de la table', !in_array('2026-10-29', $dates, true));
 verifie('le magasin de la renfort est gardé', $r['services'][2]['id_shop'] === 5 && $r['source'] === 'panel /shops/{id}/schedule' && $r['muets'] === []);
 verifie('seule la fenêtre est gardée (l’historique de 2025 non)', !in_array('2025-01-06', array_column($GLOBALS['CACHE']['planShop:4']['lignes'], 'work_date'), true)
@@ -149,6 +151,13 @@ verifie('lit le cockpit (du, au) et rend des ScheduleModel', $GLOBALS['DEMANDES'
     && count($l) === 1 && $l[0]->getStartHour() === '07:00:00' && !$svc->indisponible());
 $s = $svc->semaine('2026-10-28', $T0);
 verifie('la semaine : lundi 7 h – 15 h, pas « indisponible »', $s['jours'][0]['services'][0]['debut'] === '07:00' && $s['indisponible'] === false);
+$GLOBALS['REP'] = ['ok' => true, 'code' => 200, 'data' => ['services' => [
+    ['id_schedule' => 1, 'id_employee' => 12, 'work_date' => '2026-10-26', 'start_hour' => '07:00:00', 'end_hour' => '15:00:00', 'id_shop' => 4, 'shop_name' => 'Halle'],
+    ['id_schedule' => 2, 'id_employee' => 12, 'work_date' => '2026-10-27', 'start_hour' => '07:00:00', 'end_hour' => '15:00:00', 'id_shop' => 4, 'shop_name' => 'Halle'],
+    ['id_schedule' => 9, 'id_employee' => 12, 'work_date' => '2026-10-28', 'start_hour' => '09:00:00', 'end_hour' => '17:00:00', 'id_shop' => 5, 'shop_name' => 'Namur']]]];
+$s = (new \App\Employee\app\Services\Schedule\ScheduleService($cockpit))->semaine('2026-10-28', $T0);
+$mer = $s['jours'][2]['services'][0];
+verifie('la renfort porte le nom de son magasin', $mer['autreShop'] === true && $mer['shopNom'] === 'Namur' && $s['jours'][0]['services'][0]['autreShop'] === false);
 $GLOBALS['REP'] = ['ok' => false, 'code' => 502, 'erreur' => 'injoignable'];
 $svc2 = new \App\Employee\app\Services\Schedule\ScheduleService($cockpit);
 $s = $svc2->semaine('2026-10-28', $T0);

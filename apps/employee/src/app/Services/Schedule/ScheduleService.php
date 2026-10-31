@@ -106,7 +106,7 @@ class ScheduleService {
             'prochain' => self::prochain($services, $maintenant)];
     }
 
-    /** Les services lus, triés : {date, debut « 07:00 », fin, de (minutes depuis minuit), duree (minutes), shop}. */
+    /** Les services lus, triés : {date, debut « 07:00 », fin, de (minutes depuis minuit), duree (minutes), shop, shopNom}. */
     private static function services(array $entrees): array
     {
         $out = [];
@@ -118,7 +118,7 @@ class ScheduleService {
             // Un service qui passe minuit finit le lendemain.
             $duree = ($a - $de + 1440) % 1440;
             $out[] = ['date' => $date, 'debut' => substr((string) $e->getStartHour(), 0, 5), 'fin' => substr((string) $e->getEndHour(), 0, 5),
-                'de' => $de, 'duree' => $duree, 'shop' => $e->getIdShop()];
+                'de' => $de, 'duree' => $duree, 'shop' => $e->getIdShop(), 'shopNom' => (string) ($e->getShopName() ?? '')];
         }
         usort($out, static fn ($x, $y) => [$x['date'], $x['de']] <=> [$y['date'], $y['de']]);
         return $out;
