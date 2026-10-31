@@ -98,7 +98,9 @@ class App
                         $access = $container->get(\App\Services\Organization\PageAccessService::class);
                         $userId = (int) (user('id') ?? 0);
                         \App\Core\Web\PageAccess::$rail = $access->railPrefixes($userId);
-                        \App\Core\Web\PageAccess::$checker = fn(string $path) => $access->canSee($userId, $path);
+                        // Menu (rail, linki) : w sesji administratora [239] — jak u wybranego stanowiska ; dostęp bez zmian.
+                        \App\Core\Web\PageAccess::$checker = fn(string $path) => $access->menuSees($userId, $path);
+                        \App\Core\Web\ViewSession::$menu = fn() => $access->sessionMenu($userId);
                         $denied = !str_starts_with($uri, '/ajax/') && !$access->canSee($userId, $uri);
                     } catch (\Throwable $e) {
                         error_log('[page-access] ' . $e->getMessage());

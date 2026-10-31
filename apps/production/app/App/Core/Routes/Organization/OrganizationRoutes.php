@@ -17,6 +17,8 @@ return function (RouteCollector $r) {
     $r->addRoute('PUT', '/ajax/organization/access/{id:\d+}', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'save']);
     $r->addRoute('PUT', '/ajax/organization/access/{id:\d+}/home', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'saveHome']);
     $r->addRoute('GET', '/home', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'home']);
+    // [239] Sesja administratora (menu pod awatarem) : ERP widziane jak dane stanowisko.
+    $r->addRoute('POST', '/ajax/view-session', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'session']);
     // Aktywność w ERP : zapis z każdej strony (wyświetlenie, puls) i raport administratora z kosztem godziny.
     $r->addRoute('GET', '/organization/activity', ['controller' => App\Controllers\Web\Organization\ActivityController::class, 'method' => 'index']);
     $r->addRoute('POST', '/ajax/activity/view', ['controller' => App\Controllers\Web\Organization\ActivityController::class, 'method' => 'start']);

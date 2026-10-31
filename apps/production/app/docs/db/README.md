@@ -240,6 +240,18 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   non lu de moins de 7 jours ; tâche faite entre-temps (jour validé, assistant terminé) → fermé, disparaît. Au tableau :
   « przeczytane 10:51 (J. K., PIN) ».
 
+### Sesja sous l'avatar : l'administrateur voit l'ERP comme un poste (31/10/2026, sans migration)
+
+- Menu de l'avatar (en haut à droite), administrateur seulement : « Sesja » — Pełny widok, puis un choix par poste ERP actif
+  (Produkcja = Kierownik produkcji, Administracja i finanse = Administracja i fakturowanie, Logistyka, Jakość…), avec le
+  nombre de pages et la page d'accueil du poste. Choisir une session : rail et recherche limités aux pages du poste
+  (`PageAccessService::railPrefixes` / `menuSees`), page d'accueil du poste (`homePath`), « Mój tydzień », « Moje zadania »
+  et « Do zrobienia » du poste (`PositionTaskService::viewer`). Les droits ne changent pas (l'administrateur ouvre toujours
+  toutes les pages ; la porte d'entrée garde `canSee`). Sous le nom : « Sesja : … » ; les autres comptes y voient le nom de
+  leur poste (avant : « Administrator » pour tout le monde).
+- Stockage : `$_SESSION['view_position']` (`App\Core\Web\ViewSession`), `POST /ajax/view-session {position_id|null}` ;
+  refus 403 hors administrateur, 422 pour un poste inconnu, inactif ou d'atelier. Test : `tests/view_session_test.php`.
+
 ### Poste Tarty et remplacement des tâches (migration 155, 31/10/2026)
 
 - **Tarty** est un groupe à part entière : poste d'atelier `TARTY` « Pracownik tart » (groupe Tarty, chef d'équipe =

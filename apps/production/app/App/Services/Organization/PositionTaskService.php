@@ -146,11 +146,25 @@ final class PositionTaskService
         return $this->period($task['frequency'], $day, isset($task['due_weekday']) ? (int) $task['due_weekday'] : null, $task['weekdays'] ?? null, $task['month_day'] ?? null);
     }
 
+    /**
+     * Osoba z jej stanowiskiem ; administrator w sesji stanowiska [239] — ze stanowiskiem sesji (zadania, « Do zrobienia »).
+     */
+    private function viewer(int $userId): ?array
+    {
+        $user = $this->positions->user($userId);
+        $view = $user ? $this->access->viewPosition($userId) : null;
+        if ($view !== null && ($p = $this->positions->find($view))) {
+            $user = ['id_position' => $view, 'position_code' => $p['code'], 'position_name' => $p['name_pl'], 'position_name_fr' => $p['name_fr'] ?? null,
+                'position_description' => $p['description'] ?? null, 'view_session' => true] + $user;
+        }
+        return $user;
+    }
+
     /** Liste « Moje zadania » d'un utilisateur : tâches de son poste pour la période en cours, plus les retards. */
     public function myTasks(int $userId, ?DateTimeImmutable $today = null): array
     {
         $today ??= new DateTimeImmutable('today');
-        $user = $this->positions->user($userId);
+        $user = $this->viewer($userId);
         if (!$user || !$user['id_position']) {
             return ['user' => $user, 'groups' => [], 'overdue' => [], 'counts' => ['open' => 0, 'done' => 0, 'overdue' => 0]];
         }
@@ -370,7 +384,7 @@ final class PositionTaskService
     public function week(int $userId, ?DateTimeImmutable $today = null): array
     {
         $today = ($today ?? new DateTimeImmutable('today'))->setTime(0, 0);
-        $user = $this->positions->user($userId);
+        $user = $this->viewer($userId);
         $monday = $today->setISODate((int) $today->format('o'), (int) $today->format('W'), 1);
         $sunday = $monday->modify('+6 days');
         $workdays = $this->workdays();

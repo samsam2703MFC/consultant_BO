@@ -3170,3 +3170,16 @@ button.mc-name:hover b { color: #8e1f2f; }
 .pp-toast.ok { background: #2E7D4F; } .pp-toast.bad { background: #9a1730; }
 .ml-read { margin-left: 4px; }
 @media (max-width: 900px) { .pp-grid { grid-template-columns: minmax(0, 1fr); } .pp-row { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+
+/* [239] Sesja pod awatarem : administrator ogląda ERP jak stanowisko */
+.at-vs-menu { min-width: 360px; max-width: calc(100vw - 24px); }
+.at-vs-head { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: #8a7f76; padding-bottom: 2px; }
+.at-vs-item { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 14px; border-radius: 10px; margin: 0 6px; width: calc(100% - 12px); white-space: normal; text-align: left; }
+.at-vs-item > .bi:first-child { font-size: 1.1rem; color: #8e1f2f; flex: 0 0 auto; width: 22px; text-align: center; }
+.at-vs-item span { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.at-vs-item b { font-weight: 600; line-height: 1.2; }
+.at-vs-item small { color: #8a7f76; font-size: .76rem; line-height: 1.25; }
+.at-vs-item.on { background: #f7ece9; }
+.at-vs-item.on b { color: #8e1f2f; }
+.at-vs-check { color: #8e1f2f; font-size: 1.1rem; flex: 0 0 auto; }
+.at-vs-on { color: #8e1f2f !important; font-weight: 600; }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Organization;
 
 use App\Core\Web\PageAccess;
+use App\Core\Web\ViewSession;
 use App\Exceptions\CustomException;
 use App\Repositories\Organization\PageAccessRepository;
 
@@ -17,6 +18,17 @@ final class PageAccessService
 {
     /** @var array<int, array{admin:bool, keys:array<string,bool>}> */
     private array $cache = [];
+    /** @var array<int, array{id:int, code:string, name_pl:string}>|null stanowiska ERP do wyboru jako sesja */
+    private ?array $sessionPositions = null;
+
+    /** [239] Sesje pod awatarem : nazwa obszaru i ikona wg kodu stanowiska (inne stanowiska — nazwa stanowiska). */
+    private const SESSION_AREAS = [
+        'KIEROWNIK_PRODUKCJI' => ['Produkcja', 'bi-gear'],
+        'ADMINISTRACJA' => ['Administracja i finanse', 'bi-receipt'],
+        'LOGISTYKA' => ['Logistyka', 'bi-truck'],
+        'JAKOSC' => ['Jakość', 'bi-patch-check'],
+        'ZAKUPY' => ['Zakupy', 'bi-cart3'],
+    ];
 
     public function __construct(private PageAccessRepository $repo)
     {
@@ -44,13 +56,96 @@ final class PageAccessService
      */
     public function railPrefixes(?int $userId): array
     {
-        if ($userId && $this->profile($userId)['admin']) return [];
+        $keys = $userId ? $this->profile($userId)['keys'] : [];
+        if ($userId && $this->profile($userId)['admin']) {
+            // [239] Sesja administratora : rail jak u stanowiska.
+            $view = $this->viewPosition($userId);
+            if ($view === null) return [];
+            $keys = array_fill_keys($this->repo->positionGrants($view), true);
+        }
         $out = [];
         foreach (PageAccess::PAGES as $key => [, , $prefixes]) {
-            $seen = $userId && !PageAccess::adminOnly($key) && isset($this->profile($userId)['keys'][$key]);
+            $seen = $userId && !PageAccess::adminOnly($key) && isset($keys[$key]);
             foreach ($prefixes as $p) $out[$p] = $seen;
         }
         return $out;
+    }
+
+    /**
+     * Widoczność w menu (rail, linki na stronach) : jak canSee, a w sesji administratora — jak u wybranego stanowiska.
+     * Dostęp do stron się nie zmienia (bramka w App używa canSee).
+     */
+    public function menuSees(?int $userId, string $path): bool
+    {
+        $view = $this->viewPosition($userId);
+        if ($view === null) return $this->canSee($userId, $path);
+        $key = PageAccess::keyFor($path);
+        if ($key === null) return true;
+        return !PageAccess::adminOnly($key) && in_array($key, $this->repo->positionGrants($view), true);
+    }
+
+    /** [239] Stanowisko sesji administratora (null = pełny widok albo nie administrator). */
+    public function viewPosition(?int $userId): ?int
+    {
+        $id = ViewSession::position();
+        if ($id === null || !$userId || !$this->profile($userId)['admin']) return null;
+        return isset($this->sessionPositions()[$id]) ? $id : null;
+    }
+
+    /**
+     * Menu pod awatarem : administrator — « Pełny widok » i sesje stanowisk ERP (obszar, stanowisko, strona startowa,
+     * liczba stron) ; inni — tylko nazwa stanowiska pod imieniem.
+     * @return array{can_switch:bool, label:string, current:?int, sessions:list<array>}
+     */
+    public function sessionMenu(?int $userId): array
+    {
+        if (!$userId) return ['can_switch' => false, 'label' => '', 'current' => null, 'sessions' => []];
+        if (!$this->profile($userId)['admin']) {
+            $pos = $this->repo->userPosition($userId);
+            $name = $pos ? (array_column($this->repo->positions(), 'name_pl', 'id')[$pos] ?? '') : '';
+            return ['can_switch' => false, 'label' => $name !== '' ? $name : 'bez stanowiska', 'current' => null, 'sessions' => []];
+        }
+        $view = $this->viewPosition($userId);
+        $homes = $this->repo->homes();
+        $sessions = [['id' => null, 'name' => 'Pełny widok', 'sub' => 'administrator — wszystkie strony', 'icon' => 'bi-grid-3x3-gap', 'current' => $view === null]];
+        $label = 'Administrator';
+        foreach ($this->sessionPositions() as $p) {
+            [$area, $icon] = self::SESSION_AREAS[$p['code']] ?? [$p['name_pl'], 'bi-briefcase'];
+            $pages = count(array_filter($this->repo->positionGrants((int) $p['id']), fn($k) => isset(PageAccess::PAGES[$k]) && !PageAccess::adminOnly($k)));
+            $home = PageAccess::HOME_PAGES[$homes[(int) $p['id']] ?? '/today'] ?? 'Dzisiaj';
+            $sessions[] = ['id' => (int) $p['id'], 'name' => $area, 'sub' => $p['name_pl'] . ' · ' . $pages . ' ' . self::pagesWord($pages) . ' · start : ' . $home,
+                'icon' => $icon, 'current' => $view === (int) $p['id']];
+            if ($view === (int) $p['id']) $label = 'Sesja : ' . $area;
+        }
+        return ['can_switch' => true, 'label' => $label, 'current' => $view, 'sessions' => $sessions];
+    }
+
+    /** Zmiana sesji (tylko administrator) ; zwraca stronę startową nowej sesji. */
+    public function switchSession(?int $userId, mixed $positionId): string
+    {
+        if (!$userId || !$this->profile($userId)['admin']) throw new CustomException('Sesje stanowisk : tylko administrator.', 'errors', 403);
+        $id = $positionId === null || $positionId === '' ? null : (is_numeric($positionId) ? (int) $positionId : -1);
+        if ($id !== null && !isset($this->sessionPositions()[$id])) throw new CustomException('Nieznana sesja.', 'errors', 422);
+        ViewSession::set($id);
+        return $this->homePath($userId);
+    }
+
+    /** @return array<int, array{id:int, code:string, name_pl:string}> */
+    private function sessionPositions(): array
+    {
+        if ($this->sessionPositions === null) {
+            $this->sessionPositions = [];
+            foreach ($this->repo->positions() as $p) {
+                if ((int) $p['active'] === 1 && ($p['kind'] ?? 'erp') === 'erp') $this->sessionPositions[(int) $p['id']] = $p;
+            }
+        }
+        return $this->sessionPositions;
+    }
+
+    private static function pagesWord(int $n): string
+    {
+        if ($n === 1) return 'strona';
+        return ($n % 10 >= 2 && $n % 10 <= 4 && ($n % 100 < 12 || $n % 100 > 14)) ? 'strony' : 'stron';
     }
 
     /**
@@ -60,7 +155,13 @@ final class PageAccessService
     public function homePath(?int $userId): string
     {
         if (!$userId) return '/today';
-        if ($this->profile($userId)['admin']) return '/dashboard';
+        if ($this->profile($userId)['admin']) {
+            // [239] Sesja administratora : strona startowa stanowiska.
+            $view = $this->viewPosition($userId);
+            if ($view === null) return '/dashboard';
+            $home = $this->repo->homes()[$view] ?? '/today';
+            return isset(PageAccess::HOME_PAGES[$home]) ? $home : '/today';
+        }
         $home = $this->repo->homes()[$this->repo->userPosition($userId)] ?? '/today';
         return isset(PageAccess::HOME_PAGES[$home]) && $this->canSee($userId, $home) ? $home : '/today';
     }
