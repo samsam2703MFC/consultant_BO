@@ -1243,3 +1243,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T19:32:07Z vérification lot 3 : évolution — non expliqué jugé à sa distance à zéro, poubelle non déclarée exclue de la comparaison, axe sous zéro
 2026-10-31T19:52:56Z vérification lot 4 : matières ↔ recettes (#/verification/matieres), causes des écarts, catégories, historique ceo_verif_inventaire
 2026-10-31T20:01:55Z vérification lot 5 : chiffre d'affaires (#/verification/ca), caisse face au P&L, aux redevances et à l'attendu, jours à regarder, base ceo_verif_ca
+2026-10-31T20:05:40Z vérification lot 5 : corrections après encaissement lues (sales-corrections), jours à regarder
