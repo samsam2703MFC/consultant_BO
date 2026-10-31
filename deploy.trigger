@@ -1221,3 +1221,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T12:51:45Z parcours : critères d'admission (Adjoint Manager, Manager, Franchisé multi-boutique)
 2026-10-31T13:08:26Z [234] Moce produkcyjne : wykorzystanie maszyn, co jeszcze zmieszczę, ilość na zmianę, ustawienia maszyn
 2026-10-31T13:12:21Z contrôle sur tablette : charte de communication, commentaire obligatoire sur un Non
+2026-10-31T13:12:47Z primes du magasin : volet des vendeuses replié par défaut
