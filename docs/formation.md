@@ -102,11 +102,39 @@ le bouton *Créer ce poste dans le panel* appelle `POST /formation/postes {code:
 {name, description, app_type: EMPLOYEE}`), puis un niveau du même nom (`POST /position-levels {position_id, id_position,
 name, level_order: 1}`), chaque pas relu ; un second appel reprend où le premier s'est arrêté, sans doublon. Journalisé.
 
+### Carte des métiers et écrans refaits (31/10/2026)
+
+Maquettes validées : `docs/maquettes/formation-donnees/` (01a, 01c, 02 à 05). Deux constats sur le panel :
+**les niveaux ne sont pas cumulatifs** (chaque niveau ne liste que ses nouvelles compétences : partout, ce
+qu'il faut maîtriser à un niveau = le cumul des niveaux du poste jusqu'à lui) ; **aucune compétence n'a de
+procédure ni de ressource** reliée.
+
+- **Carte des métiers** (l'accueil, `#/tableau`), sur une bascule mémorisée : *Plan des métiers* (plan de
+  métro : trois lignes de métier — vente, boulangerie-pâtisserie, traiteur — qui entrent **toutes** dans
+  « Pour encadrer : maîtriser les trois métiers », puis le tronc adjoint → manager, puis candidat → franchisé
+  → multi-boutique, locataire-gérant en embranchement) et *Effectifs* (personnes actives, placées, sans
+  poste ; le vivier de gérants : qui maîtrise 3, 2, 1, 0 métier ; chaque poste et ses niveaux avec le nombre
+  de personnes). Commun : *Ce qui manque*, parcours en cours. Données : `GET /formation/carte`
+  (`pcCarte`) — des **comptes**, aucun nom ; équipes lues par magasin, en cache 5 min.
+- **Règle des trois métiers** (31/10/2026) : le gérant de magasin maîtrise la vente, la
+  boulangerie-pâtisserie et le traiteur. Maîtriser un métier = toutes ses compétences jusqu'au dernier
+  niveau avant « Responsable d'équipe » (`pcMaitrises`). Critère d'admission `metiers` : il **remplace**
+  « Responsable d'équipe » pour l'Adjoint et **s'ajoute** à « Adjoint en poste » pour le Manager ; ce qui
+  manque passe par les formations qui l'enseignent, ajoutées au parcours ; validable par la manager.
+- **Fiche du niveau** : l'escalier du poste (+N · total), *Ce qu'il faut savoir faire* (nouveau / acquis
+  avant / tout, la FO de chaque compétence), *Pour les apprendre* (FO dans l'ordre), *Pour y accéder*
+  (niveau précédent + critères d'admission), *Ensuite*.
+- **Compétences** et **Formations** : bascule *Liste* / *Matrice* — compétences × niveaux d'un poste (carré
+  plein où elle entre, clair ensuite) ; « Qui doit suivre quoi » (formations × postes par famille, O / R).
+- **Équipes** : par personne, compétences tenues sur le **cumul** de son niveau, ce qui manque, prochaine
+  étape, parcours en cours ; le détail et ses gestes (valider, changer de niveau) restent.
+
 ### Lisibilité et familles de postes (31/10/2026)
 
-- **Trois familles** partout (tableau de bord, arbre des postes, assistant du parcours) : *Opérationnel* (P1–P6),
-  *Cadre et direction* (Adjoint, Manager, et les rôles du réseau : direction, consultants, contrôle…),
-  *Devenir entrepreneur* (candidat, franchisé, locataire-gérant, multi-boutique). Rangement côté serveur
+- **Deux portées, trois familles** (arbre des postes, fiches, carte) : **dans la franchise** (le magasin) —
+  *Opérationnel* (P1–P6), *Cadre et direction* (Adjoint, Manager), *Devenir entrepreneur* (candidat, franchisé,
+  locataire-gérant, multi-boutique) ; **dans la marque** (le franchiseur, 31/10/2026) — direction opérationnelle,
+  stratégie, consultants, contrôle qualité, client mystère… (famille `marque` : les postes hors matrice v25). Rangement côté serveur
   (`pcFamillePoste`, sur les noms du panel), rendu par `GET /formation/v25` (`familles`).
 - **Police** : `fonts/Gotham_Regular.otf` est en réalité Gotham *Black* (nom interne « Gotham-Black ») ; tout le texte
   sortait en noir épais. Famille « Gotham Lisible » : Light pour le texte, Medium pour les libellés, Black pour les titres.

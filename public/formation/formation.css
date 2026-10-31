@@ -1965,3 +1965,149 @@ details.fm-tech > summary { cursor: pointer; font-size: 13px; color: var(--muted
 }
 .fm-tree__famille:first-child { padding-top: 4px; }
 .fm-tree__poste.is-v25 span:first-child { color: var(--muted-2); }
+
+/* ===========================================================================
+   PARTIE 4 — CARTE DES MÉTIERS (31/10/2026), maquettes docs/maquettes/formation-donnees
+   01a (plan de métro) et 01c (effectifs), sur une bascule. Règle : le gérant de
+   magasin maîtrise les trois métiers (vente, boulangerie-pâtisserie, traiteur).
+   =========================================================================== */
+.fm-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; }
+.fm-seg { align-self: center; flex: 0 0 auto; }
+.fm-seg button { border: 0; border-radius: 0; margin: 0; background: none; padding: 8px 16px; font-size: 13.5px; line-height: 1.2; font-weight: 500; color: var(--muted-2); cursor: pointer; }
+.fm-seg button + button { border-left: 1px solid var(--line); }
+.fm-seg button.is-on { background: var(--ink); color: #fff; }
+.fm-carte-tete { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin: 1.4rem 0 0.8rem; flex-wrap: wrap; }
+.fm-carte-tete h2 { font-size: 1.1rem; margin: 0 0 2px; }
+.fm-carte-tete p { margin: 0; font-size: 13.5px; color: var(--muted); max-width: 52rem; }
+
+.fm-metro-wrap { overflow-x: auto; padding-bottom: 4px; }
+.fm-metro { position: relative; width: 1150px; height: 560px; background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.fm-metro svg { position: absolute; inset: 0; }
+.fm-zone { position: absolute; top: 0; bottom: 0; border-right: 1px dashed var(--line); }
+.fm-zone b { position: absolute; top: 14px; left: 16px; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.fm-zone--c { background: #fdfbf8; }
+.fm-zone--e { border-right: 0; background: #fcfaf6; }
+.fm-ligne-nom { position: absolute; font-size: 12.5px; font-weight: 600; }
+.fm-st { position: absolute; text-align: center; color: inherit; text-decoration: none; }
+.fm-st:hover .fm-st__nm { color: var(--accent); }
+.fm-st__dot { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 4px solid; margin: 0 auto 6px; box-sizing: border-box; }
+.fm-st__dot.is-mx { width: 22px; height: 22px; margin-top: -2px; box-shadow: 0 0 0 3px #fff, 0 0 0 5px currentColor; }
+.fm-st__nm { font-size: 12.5px; font-weight: 600; line-height: 1.25; color: var(--ink); }
+.fm-st__dt { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.fm-st__dt.is-vide { color: var(--danger); }
+.fm-st__dt b { color: var(--ink); font-weight: 600; }
+.fm-st__mt { display: inline-block; margin-top: 4px; font-size: 10.5px; font-weight: 600; padding: 1px 6px; border-radius: 5px; color: #fff; }
+.fm-st__pp { display: inline-block; margin-top: 4px; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 5px; background: var(--chip); color: var(--ink); }
+.fm-st__pp.is-zero { background: transparent; color: var(--faint); font-weight: 500; }
+.fm-hub { position: absolute; background: #fff; border: 2px solid var(--ink); border-radius: 16px; padding: 14px 14px 12px; box-sizing: border-box; }
+.fm-hub__k { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.fm-hub__t { font-size: 15px; font-weight: 600; line-height: 1.25; margin: 4px 0 10px; }
+.fm-hub__m { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 6px 0; border-top: 1px solid var(--row-line); }
+.fm-hub__m i { width: 12px; height: 12px; border-radius: 3px; flex: 0 0 12px; }
+.fm-hub__m b { margin-left: auto; font-weight: 600; }
+.fm-hub__s { font-size: 12.5px; margin-top: 8px; padding-top: 8px; border-top: 1.5px solid var(--ink); display: flex; justify-content: space-between; font-weight: 600; }
+.fm-hub__n { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+.fm-legende { display: flex; gap: 18px; font-size: 12.5px; color: var(--muted); margin: 10px 2px 0; flex-wrap: wrap; }
+.fm-legende i { display: inline-block; width: 22px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+.fm-alertes { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 12px; }
+.fm-alerte { display: block; background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--danger); border-radius: 10px; padding: 12px 14px; color: inherit; text-decoration: none; text-align: left; font: inherit; cursor: pointer; width: 100%; margin: 0; }
+.fm-alerte.is-w { border-left-color: #c9a227; }
+.fm-alerte.is-ok { border-left-color: var(--green); }
+.fm-alerte b { display: block; font-size: 22px; font-weight: 600; }
+.fm-alerte span { font-size: 13.5px; }
+.fm-alerte small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.fm-alerte:hover { border-color: var(--accent); }
+
+.fm-hero { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+.fm-hero h2 { font-size: 18px; margin: 0 0 4px; }
+.fm-pile { display: flex; height: 26px; border-radius: 7px; overflow: hidden; margin-top: 12px; font-size: 12px; font-weight: 600; color: #fff; background: var(--chip); }
+.fm-pile > div { display: flex; align-items: center; padding: 0 8px; white-space: nowrap; overflow: hidden; }
+.fm-vivier { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 14px; }
+.fm-palier { display: grid; grid-template-columns: 11rem 1fr 4.5rem; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--row-line); font-size: 13.5px; }
+.fm-palier:first-of-type { border-top: 0; }
+.fm-palier__bar { height: 14px; border-radius: 4px; background: var(--chip); overflow: hidden; }
+.fm-palier__bar i { display: block; height: 100%; border-radius: 4px; }
+.fm-palier b { text-align: right; font-weight: 600; }
+.fm-cols3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); gap: 14px; align-items: start; }
+.fm-col__t { font-size: 13px; font-weight: 600; color: var(--muted-2); margin: 0 0 8px; }
+.fm-pc3 { display: block; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px 12px; margin-bottom: 12px; color: inherit; text-decoration: none; }
+a.fm-pc3:hover { border-color: var(--accent); }
+.fm-pc3__t { font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.fm-pc3__t span { font-weight: 500; font-size: 13px; color: var(--muted-2); white-space: nowrap; }
+.fm-segs { display: flex; gap: 3px; margin: 10px 0 4px; }
+.fm-segs > div { flex: 1; min-width: 0; }
+.fm-segs__b { height: 28px; border-radius: 6px; background: var(--chip); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+.fm-segs__b.is-p { background: rgba(141,29,44,.14); color: var(--accent); }
+.fm-segs__b.is-mx { outline: 2px solid var(--ink); outline-offset: -2px; }
+.fm-segs__l { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.25; text-align: center; }
+.fm-segs__l b { color: var(--ink); font-weight: 600; }
+.fm-pc3__d { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.fm-cond { font-size: 12px; background: #fbf6ee; border-radius: 8px; padding: 7px 9px; margin-top: 8px; }
+.fm-trois { display: flex; gap: 4px; margin-top: 6px; }
+.fm-trois span { flex: 1; font-size: 11px; font-weight: 600; text-align: center; padding: 4px 0; border-radius: 5px; color: #fff; }
+
+/* ===========================================================================
+   PARTIE 5 — ÉCRANS VALIDÉS LE 31/10/2026 (maquettes 02 à 05) : fiche du niveau
+   (cumulée), matrices compétences × niveaux et formations × postes, équipe.
+   =========================================================================== */
+.fm-escalier { display: flex; gap: 8px; margin: 0 0 16px; overflow-x: auto; padding-bottom: 2px; }
+.fm-escalier a { flex: 1; min-width: 9.5rem; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; color: inherit; text-decoration: none; }
+.fm-escalier a:hover { border-color: var(--accent); }
+.fm-escalier a.is-on { border: 2px solid var(--accent); }
+.fm-escalier a.is-fait { background: #f4f8f5; }
+.fm-escalier__t { display: block; font-size: 13px; font-weight: 600; line-height: 1.3; }
+.fm-escalier__d { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+.fm-escalier__x { display: flex; align-items: center; color: var(--faint); }
+.fm-deux { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .fm-deux { grid-template-columns: 1fr; } }
+.fm-deux .card + .card { margin-top: 14px; }
+.fm-seg--petit { margin-bottom: 10px; }
+.fm-seg--petit button { padding: 6px 12px; font-size: 13px; }
+.fm-cat { font-size: 12.5px; font-weight: 600; color: var(--muted-2); margin: 14px 0 4px; }
+.fm-comp { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--row-line); font-size: 14px; }
+.fm-comp__ck { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--faint); }
+.fm-comp > a { color: inherit; text-decoration: none; }
+.fm-comp > a:hover { color: var(--accent); }
+.fm-comp__tags { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.fm-fo { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-top: 1px solid var(--row-line); color: inherit; text-decoration: none; }
+.fm-fo:first-of-type { border-top: 0; }
+.fm-fo:hover .fm-fo__t { color: var(--accent); }
+.fm-fo__code { font-size: 12px; font-weight: 600; background: var(--chip); border-radius: 6px; text-align: center; padding: 4px 0; align-self: start; }
+.fm-fo__t { display: block; font-size: 14px; font-weight: 500; }
+.fm-fo__d { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.fm-encart { background: var(--paper); border-radius: 10px; padding: 12px 14px; margin-top: 12px; font-size: 13.5px; }
+.fm-choix { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+
+.fm-mat { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; min-width: 760px; }
+.fm-mat th, .fm-mat td { border-bottom: 1px solid var(--row-line); padding: 7px 10px; vertical-align: middle; }
+.fm-mat thead th { background: var(--table-head); font-size: 12px; font-weight: 500; color: var(--muted-2); text-align: center; vertical-align: bottom; }
+.fm-mat thead th:first-child { text-align: left; }
+.fm-mat thead tr.fm-mat__fam th { font-size: 11.5px; font-weight: 600; color: var(--ink); border-bottom: 0; padding-bottom: 2px; }
+.fm-mat thead th small { display: block; font-weight: 400; color: var(--muted); margin-top: 2px; }
+.fm-mat td.fm-mat__c { text-align: center; width: 6rem; }
+.fm-mat tbody tr.row-link:hover td { background: #fcfaf6; }
+.fm-pt2 { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: middle; }
+.fm-pt2.is-new { background: var(--accent); }
+.fm-pt2.is-acq { background: rgba(141, 29, 44, 0.16); }
+.fm-or { display: inline-block; width: 24px; height: 18px; border-radius: 4px; font-size: 10.5px; font-weight: 600; line-height: 18px; text-align: center; vertical-align: middle; }
+.fm-or.is-O { background: var(--accent); color: #fff; }
+.fm-or.is-R { border: 1.5px solid var(--accent); color: var(--accent); line-height: 15px; }
+
+.fm-pers { display: flex; gap: 12px; align-items: center; }
+.fm-ini { width: 34px; height: 34px; border-radius: 9px; background: var(--chip); display: inline-flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 600; color: var(--accent); flex: 0 0 34px; }
+.fm-pers__n { display: block; font-weight: 600; }
+.fm-pers__s { display: block; font-size: 12.5px; color: var(--muted); }
+.fm-prog { font-size: 12.5px; color: var(--muted); margin-bottom: 5px; }
+.fm-prog b { color: var(--ink); font-weight: 600; }
+td .fm-barre { display: block; }
+.fm-legende i.fm-or { width: 24px; height: 18px; border-radius: 4px; margin-right: 6px; vertical-align: middle; }
+
+/* Deux portées de postes (31/10/2026) : dans la franchise (le magasin) / dans la marque (le franchiseur). */
+.fm-tree__portee { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--accent); padding: 16px 10px 4px; margin-top: 10px; border-top: 1px solid var(--line); }
+.fm-tree__portee:first-child { margin-top: 0; border-top: 0; padding-top: 4px; }
+.fm-tree__portee small { font-size: 11px; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--muted); }
+.fm-tree__portee--marque { color: #3d5a80; }
+.fm-tree__portee--marque ~ .fm-tree__poste.is-active { background: rgba(61, 90, 128, .1); color: #3d5a80; }
+.fm-tag--franchise { background: rgba(141, 29, 44, .08); color: var(--accent); }
+.fm-tag--marque { background: rgba(61, 90, 128, .12); color: #3d5a80; }
