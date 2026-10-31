@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-Construit public/assets/data/population_grid_2021.json — la grille de population
-du scouting commercial : les cellules de 1 km² du recensement 2021 (StatBel,
-diffusé par Eurostat/GISCO), chacune rattachée à sa commune, avec la surface
-officielle des communes.
+Construit population_grid_2021.json — la grille de population du scouting
+commercial : les cellules de 1 km² du recensement 2021 (StatBel, diffusé par
+Eurostat/GISCO), chacune rattachée à sa commune, avec la surface officielle
+des communes. L'écran a quitté le cockpit le 31/10/2026 : la grille est
+servie par le CRM (app/crm/web/public/geo/population_grid_2021.json).
 
 Pourquoi : le site de StatBel bloque les téléchargements automatiques (captcha),
 mais Eurostat/GISCO diffuse la même grille (Census 2021 grid V2.0) et les
 contours communaux LAU sans restriction. Le fichier produit est statique, livré
-avec public/, et lu par l'écran (scouting.js, loadGrid) : les ménages d'un rayon
+avec l'écran du CRM, et lu par lui (scouting.js, loadGrid) : les ménages d'un rayon
 sont ceux des cellules qu'il couvre, là où les gens habitent.
 
 Étapes (à rejouer pour une nouvelle édition) :
