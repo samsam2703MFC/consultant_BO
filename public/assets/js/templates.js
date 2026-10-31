@@ -7501,7 +7501,7 @@ function tplPrimesApp(c, x){
     const corpsEq = EQ.vue === 'annee'
       ? (EQ.annee.chargement ? videIn('Calcul de l’année, mois par mois…') : EQ.annee.motif ? videIn(esc(EQ.annee.motif)) : !EQ.annee.lignes.length ? videIn('Aucune prime gagnée dans ce magasin cette année-là' + (EQ.filtres[1].on ? ' parmi celles du magasin.' : '.'))
         : frise(EQ.annee.frise, true) + (EQ.annee.cols.length ? tableAn(EQ.annee, 'Vendeuse', true) : '') + `<div style="font:400 12px/1.5 ${sf};color:${muet};padding:11px 20px 14px;border-top:${filet}">${pointF('marque')}la marque et ses sponsors · ${pointF('magasin')}le magasin · le montant gagné sur l’année et le nombre de mois · ✓ cadeau : une prime sans euros · un clic sur un en-tête trie</div>`)
-      : EQ.chargement ? videIn('Lecture des fiches de l’équipe…') : EQ.motif ? videIn(esc(EQ.motif)) : !EQ.vendeuses.length ? videIn('Personne au planning ni en caisse dans ce magasin ce mois-là.')
+      : EQ.chargement ? videIn('Lecture de l’équipe…') : EQ.motif ? videIn(esc(EQ.motif)) : !EQ.vendeuses.length ? videIn('Personne au planning ni en caisse dans ce magasin ce mois-là.')
         : !EQ.primes.length && !EQ.frise ? videIn('Aucune prime du magasin ce mois-là.') : synthese() + frise(EQ.frise, false) + (EQ.primes.length ? tableEq() : '');
     const resumeEq = !VE.ouvert && EQ.resume ? EQ.resume : EQ.vue === 'annee' ? (EQ.annee.periode ? EQ.annee.periode + ' · ' + EQ.annee.total + ' gagnés' : 'L’année du magasin, prime par prime.') : 'Ce que chacune voit dans Mes primes, la marque et le magasin à part.';
     const equipe = `<section data-pr="fr-equipe" data-pr-volet="equipe" data-ouvert="${VE.ouvert ? 1 : 0}" style="${groupeSt};overflow:visible">
@@ -7514,92 +7514,59 @@ function tplPrimesApp(c, x){
       </div>
       ${VE.ouvert ? corpsEq : ''}
     </section>`;
-    // Les fiches de l'équipe (30/10/2026) : ce que chaque personne a rempli dans « Mon profil » ; la fiche au clic.
-    const FI = FR.fiches;
-    const barreFi = c => `<span style="display:inline-block;width:90px;height:5px;border-radius:3px;background:var(--color-border-tertiary);overflow:hidden;vertical-align:middle"><span style="display:block;height:100%;width:${Math.max(0, Math.min(100, c))}%;background:${c >= 100 ? '#2d7a3e' : 'var(--color-primary)'}"></span></span>`;
-    const detailFi = D => {
-      if (!D) { return ''; }
-      if (D.chargement) { return `<div style="padding:14px 18px;border-top:${filet};font:400 13px ${sf};color:${muet}">Lecture de la fiche…</div>`; }
-      if (D.motif || !D.f) { return `<div style="padding:14px 18px;border-top:${filet};font:400 13px ${sf};color:${muet}">${esc(D.motif || 'Fiche illisible.')}</div>`; }
-      const F = D.f;
-      const ligne = l => `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:${filet}">
-          <span style="font:400 13px ${sf};color:${muet};flex:none">${esc(l.lib)}</span>
-          <span style="font:${l.vide ? 400 : 500} 13px ${sf};color:${l.vide ? 'var(--color-primary)' : 'var(--color-text)'};text-align:right;min-width:0;overflow-wrap:anywhere">${l.vide ? 'à compléter' : esc(l.v)}${l.panel ? `<span style="display:block;font:400 11.5px ${sf};color:#A35F00">corrigé · ${esc(l.panel)}</span>` : ''}</span></div>`;
-      const groupe = g => `<div style="min-width:0"><div style="font:600 11px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};padding:0 0 8px">${esc(g.titre)}</div>${g.lignes.map(ligne).join('')}</div>`;
-      const dispo = `<div style="min-width:0"><div style="font:600 11px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};padding:0 0 8px">Disponibilités</div>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font:600 10.5px ${sf};color:${muet}">${F.dispo.map(d => `<span>${esc(d.j)}</span>`).join('')}
-          ${F.dispo.map(d => `<span title="matin" style="height:16px;border-radius:5px;background:${d.m ? 'rgba(45,122,62,.18)' : 'var(--color-border-tertiary)'}"></span>`).join('')}
-          ${F.dispo.map(d => `<span title="après-midi" style="height:16px;border-radius:5px;background:${d.a ? 'rgba(45,122,62,.18)' : 'var(--color-border-tertiary)'}"></span>`).join('')}</div>
-          ${F.remarque ? `<div style="font:400 12px/1.4 ${sf};color:${muet};margin-top:8px">${esc(F.remarque)}</div>` : ''}
-          <div style="font:600 11px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};padding:16px 0 8px">Carte d’identité</div>
-          ${F.cartes.map((c, i) => c ? `<a href="${esc(c.url)}" target="_blank" rel="noopener" data-fi-carte style="display:block;font:500 13px ${sf};color:var(--color-primary);padding:3px 0">${esc(c.lib)} · ajoutée le ${esc(c.quand)} ↗</a>`
-            : `<div style="font:400 13px ${sf};color:var(--color-primary);padding:3px 0">${i ? 'Verso' : 'Recto'} · à compléter</div>`).join('')}</div>`;
-      return `<div data-fi-detail style="padding:16px 18px 18px;border-top:${filet};background:var(--color-background-secondary)">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px 26px">${F.groupes.map(groupe).join('')}${dispo}</div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;font:400 12px/1.4 ${sf};color:${muet}">
-          ${F.voir ? `<button ${x.A(F.voir)} data-fi-voir style="${btS}">Afficher le n° national et l’IBAN en clair</button>` : ''}
-          ${F.masquer ? `<button ${x.A(F.masquer)} data-fi-masquer style="${btS}">Masquer</button>` : ''}
-          <span>Gardé chiffré. Afficher en clair ou ouvrir la carte s’écrit au journal.</span></div>
-      </div>`;
-    };
-    // Les autres volets : une liste groupée, façon Réglages — une ligne par volet (le titre, ce qu'il contient, la flèche),
-    // séparées d'un filet. Un volet ouvert s'étale sous sa ligne ; la liste reprend après lui.
-    const item = (cle, titre, resume, droite, corps) => ({ cle, V: FR.volets[cle], titre, resume, droite, corps });
-    const ligneV = (it, haut, bas) => `<div data-pr-volet="${it.cle}" data-ouvert="${it.V.ouvert ? 1 : 0}" style="display:flex;align-items:center;gap:12px;background:var(--color-surface);${haut ? 'border-top-left-radius:14px;border-top-right-radius:14px;' : `border-top:${filet};`}${bas ? 'border-bottom-left-radius:14px;border-bottom-right-radius:14px;' : ''}padding:0 18px 0 0">
-        <button ${x.A(it.V.basculer)} data-pr-volet-bascule="${it.cle}" aria-expanded="${it.V.ouvert}" style="flex:1;min-width:0;display:flex;align-items:center;gap:14px;border:0;background:none;padding:14px 0 14px 20px;text-align:left;cursor:pointer;font-family:${sf};color:var(--color-text)">
-          <span style="flex:1;min-width:0"><span style="display:block;font:600 15.5px/1.3 ${sf}">${it.titre}</span><span data-pr-volet-resume style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:2px">${esc(it.resume)}</span></span>
-        </button>
-        ${it.V.ouvert && it.droite ? it.droite : ''}
-        <button ${x.A(it.V.basculer)} aria-label="${it.V.ouvert ? 'Replier' : 'Déplier'}" tabindex="-1" style="flex:none;border:0;background:none;padding:6px 2px;cursor:pointer">${chevron(it.V.ouvert)}</button>
-      </div>`;
-    const liste = items => {
-      let h = ''; let debut = true;
-      items.forEach((it, i) => {
-        const fin = it.V.ouvert || i === items.length - 1;
-        h += ligneV(it, debut, fin);
-        if (it.V.ouvert) { h += `<div data-pr="fr-${it.cle}" class="prl-mag" style="margin:4px 0 22px">${it.corps}</div>`; }
-        debut = it.V.ouvert;
-      });
-      return `<div data-pr-volets>${h}</div>`;
-    };
+    // Le reste de la page (31/10/2026, Sam : « tout ceci en toggle (paramètres), dans des tableaux compréhensibles et
+    // visuels ») : un seul volet « Paramètres », replié ; ouvert, ses quatre parties se suivent, chacune en tableau, sans
+    // volet dans le volet. Une partie : son titre, ce qu'elle contient, ses boutons, son tableau.
+    const item = (cle, titre, resume, droite, corps) => ({ cle, titre, resume, droite, corps });
+    const partie = it => `<section data-pr="fr-${it.cle}" class="prl-mag" style="margin-top:24px">
+        <div style="display:flex;align-items:flex-end;gap:10px 16px;flex-wrap:wrap;padding:0 4px">
+          <span style="flex:1 1 300px;min-width:0"><span style="display:block;font:700 17px/1.25 ${sf};letter-spacing:-.01em">${it.titre}</span><span style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:2px">${esc(it.resume)}</span></span>
+          ${it.droite || ''}
+        </div>
+        ${it.corps}
+      </section>`;
     const btRelire = fn => `<button ${x.A(fn)} style="border:0;border-radius:999px;padding:6px 13px;font:500 12.5px ${sf};background:var(--color-background-secondary);color:var(--color-text);cursor:pointer">Relire</button>`;
-    const fiches = item('fiches', 'Les fiches de l’équipe', FR.resumes.fiches, btRelire(FI.relire),
-      `${FI.chargement ? vide('Lecture des fiches…') : FI.motif ? vide(esc(FI.motif)) : !FI.lignes.length ? vide('Personne dans ce magasin pour l’instant.') : `<div style="${groupeSt};margin-top:12px">${FI.lignes.map((l, i) => `
-        <div data-fi-ligne="${esc(String(l.emp))}" ${x.A(l.basculer)} role="button" aria-expanded="${l.ouvert}" style="display:flex;align-items:center;gap:16px;padding:12px 18px;cursor:pointer;${i ? `border-top:${filet};` : ''}">
-          <span style="font-size:9px;color:${muet};width:8px">${l.ouvert ? '▾' : '▸'}</span>
-          <span style="flex:0 0 180px;min-width:0;font:600 14px/1.3 ${sf};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.nom)}</span>
-          <span style="flex:none;display:flex;align-items:center;gap:8px;font:600 13px ${sf};font-variant-numeric:tabular-nums;color:${l.complet >= 100 ? '#2d7a3e' : 'var(--color-text)'}">${barreFi(l.complet)}${l.complet} %</span>
-          <span style="flex:1;min-width:0;font:400 13px/1.35 ${sf};color:${l.complet >= 100 ? '#2d7a3e' : muet};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.manque)}</span>
-          ${l.corrections ? `<span title="Changé dans l’app : à reporter dans le panel" style="flex:none;font:500 12px ${sf};color:#A35F00;background:#FBEFE0;border-radius:999px;padding:3px 9px">à reporter : ${esc(l.corrections)}</span>` : ''}
-          <span style="flex:none;font:400 12px ${sf};color:${muet};white-space:nowrap">${esc(l.maj)}</span>
-        </div>${l.ouvert ? detailFi(FI.detail) : ''}`).join('')}</div>`}`);
     const marque = item('marque', pointF('marque') + 'Primes de la marque et des sponsors', FR.resumes.marque, '',
       !FR.marque.length ? vide('Aucune prime de la marque ni des sponsors ne tourne dans ce magasin pour l’instant.') : groupes(FR.marque, ligneLire, 'Ce magasin'));
     const siennes = item('magasin', pointF('magasin') + 'Les primes du magasin', FR.resumes.magasin, '',
       FR.siennes.length ? groupes(FR.siennes, null, 'Ce magasin') : vide('Aucune prime du magasin pour l’instant : « + Créer une nouvelle prime », en haut de la page.'));
-    // Les chiffres : des tuiles sur une liste blanche, le magasin en grand, le réseau en gris.
-    const grille = ls => `<div style="${groupeSt};display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));padding:4px 0">${ls.map(s => `<div style="padding:12px 18px;min-width:0">
-        <div style="font:400 12.5px/1.3 ${sf};color:${muet}">${esc(s.lib)}</div>
-        <div style="font:600 21px/1.25 ${sf};font-variant-numeric:tabular-nums;margin-top:4px;color:var(--color-text)">${esc(s.v)}</div>
-        ${s.sous || s.reseau ? `<div style="font:400 11.5px/1.4 ${sf};color:${muet};margin-top:3px">${esc([s.sous, s.reseau].filter(Boolean).join(' · '))}</div>` : ''}</div>`).join('')}</div>`;
-    const sousTitre = t => `<div style="${titreG}">${esc(t)}</div>`;
-    const donnees = item('donnees', 'Les chiffres du magasin', (FR.periode ? FR.periode + ' · ' : '') + FR.resumes.donnees,
-      `<div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${FR.ns.map(k => `<button ${x.A(k.choisir)} style="border:0;border-radius:8px;padding:5px 11px;font:500 12.5px ${sf};cursor:pointer;background:${k.on ? 'var(--color-surface)' : 'transparent'};color:${k.on ? 'var(--color-text)' : muet}">${esc(k.nom)}</button>`).join('')}</div>`,
-      `${FR.moyChargement ? vide('Calcul des moyennes…') : FR.moyMotif ? vide(esc(FR.moyMotif)) : `
-      <div style="margin-top:12px">${grille(FR.donnees)}</div>
-      ${FR.pieces.length ? sousTitre('Pièces par vendeuse et par mois') + grille(FR.pieces.map(p => ({ lib: p.lib, v: p.v, reseau: p.reseau ? 'réseau ' + p.reseau : '' }))) : ''}
-      ${FR.promosVend.length ? sousTitre('Promotions en cours · pièces par vendeuse') + grille(FR.promosVend.map(p => ({ lib: p.lib, v: p.v, sous: p.du ? 'dès le ' + p.du : '', reseau: p.reseau ? 'réseau ' + p.reseau : '' }))) : ''}`}`);
+    // Les chiffres du magasin (31/10/2026, « en tuiles, sans volet, juste visibles ») : une tuile par mesure — la valeur
+    // du magasin, l'écart au réseau (▲ au-dessus, ▼ en dessous), la valeur du réseau.
+    const tuileC = t => `<div data-pr-tuile style="background:var(--color-background-secondary);border-radius:12px;padding:12px 14px 11px;min-width:0">
+        <div style="font:400 12.5px/1.3 ${sf};color:${muet};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(t.lib)}">${esc(t.lib)}</div>
+        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:5px"><span style="font:600 22px/1.15 ${sf};font-variant-numeric:tabular-nums">${esc(t.v)}</span>
+          ${t.ecart ? `<span style="font:600 11.5px ${sf};padding:2px 7px;border-radius:999px;white-space:nowrap;${t.ecart.sens > 0 ? 'background:#eaf3ec;color:#245f31' : t.ecart.sens < 0 ? 'background:#f6e6e8;color:var(--color-primary)' : `background:var(--color-surface);color:${muet}`}">${t.ecart.sens > 0 ? '▲ ' : t.ecart.sens < 0 ? '▼ ' : '= '}${esc(t.ecart.txt)}</span>` : ''}</div>
+        ${t.reseau || t.sous ? `<div style="font:400 11.5px/1.4 ${sf};color:${muet};margin-top:4px">${esc([t.reseau, t.sous].filter(Boolean).join(' · '))}</div>` : ''}
+      </div>`;
+    const tuilesC = ls => `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px">${ls.map(tuileC).join('')}</div>`;
+    const sousT = t => `<div style="font:600 11px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};margin:18px 0 9px">${esc(t)}</div>`;
+    const chiffres = `<section data-pr="fr-donnees" style="${groupeSt}">
+      <div style="display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;padding:18px 20px 14px">
+        <span style="flex:1 1 300px;min-width:0"><span style="display:block;font:700 20px/1.2 ${sf};letter-spacing:-.015em">Les chiffres du magasin</span><span style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:3px">${esc((FR.periode ? FR.periode + ' · ' : '') + 'par mois, face au réseau')}</span></span>
+        <div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${FR.ns.map(k => `<button ${x.A(k.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:500 12.5px ${sf};cursor:pointer;background:${k.on ? 'var(--color-surface)' : 'transparent'};color:${k.on ? 'var(--color-text)' : muet};box-shadow:${k.on ? '0 1px 2px rgba(0,0,0,.08)' : 'none'}">${esc(k.nom)}</button>`).join('')}</div>
+      </div>
+      <div style="padding:0 20px 20px">${FR.moyChargement ? `<div style="font:400 14px ${sf};color:${muet}">Calcul des moyennes…</div>` : FR.moyMotif ? `<div style="font:400 14px ${sf};color:${muet}">${esc(FR.moyMotif)}</div>`
+        : tuilesC(FR.donnees)
+          + (FR.pieces.length ? sousT('Pièces par vendeuse et par mois') + tuilesC(FR.pieces.map(t => ({ lib: t.lib, v: t.v, reseau: t.reseau ? 'réseau ' + t.reseau : '', ecart: t.ecart }))) : '')
+          + (FR.promosVend.length ? sousT('Promotions en cours · pièces par vendeuse') + tuilesC(FR.promosVend.map(t => ({ lib: t.lib, v: t.v, sous: t.du ? 'dès le ' + t.du : '', reseau: t.reseau ? 'réseau ' + t.reseau : '', ecart: t.ecart }))) : '')}</div>
+    </section>`;
     // Les promotions du panel qui tournent ici : une prime du magasin en un geste.
     const PF = FR.promos;
-    const ligneProm = (p, i) => `<div style="display:flex;align-items:center;gap:14px;padding:13px 18px;${i ? `border-top:${filet};` : ''}">
-        <span style="flex:1;min-width:0">
-          <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="font:600 15px/1.3 ${sf}">${esc(p.nom)}</b><span style="font:400 13px ${sf};color:${muet}">${esc(p.sorte)}${p.prix ? ' · ' + esc(p.prix) : ''}</span></span>
-          <span style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:2px">${esc(p.dates)} · ${esc(p.portee)} · <span style="color:${p.comptable ? muet : 'var(--color-primary)'}">${esc(p.produits)}</span>${p.marque ? ' · ' + esc(p.marque) : ''}</span>
-        </span>
-        <span style="flex:none">${p.statutMag ? `<span style="font:600 13px ${sf};color:${p.statutMag === 'prime du magasin' ? 'var(--color-primary)' : muet}">${p.statutMag === 'prime du magasin' ? '✓ ' : ''}${esc(p.statutMag)}</span>` : p.ajouter ? `<button ${x.A(p.ajouter)} style="${btS};background:var(--color-background-secondary)" data-pr-promo-mag>+ Prime du magasin</button>` : ''}</span>
-      </div>`;
+    const thP = (t, droite) => `<th style="text-align:${droite ? 'right' : 'left'};padding:12px 14px 9px;font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};border-bottom:${filet};white-space:nowrap">${t}</th>`;
+    const tdP = (i, st) => `<td style="padding:11px 14px;vertical-align:top;${i ? `border-top:${filet};` : ''}${st || ''}">`;
+    const statutP = p => (p.statutMag ? `<span style="font:600 12px ${sf};padding:3px 9px;border-radius:999px;white-space:nowrap;${p.statutMag === 'prime du magasin' ? 'background:#eaf3ec;color:#245f31' : `background:var(--color-background-secondary);color:${muet}`}">${p.statutMag === 'prime du magasin' ? '✓ ' : ''}${esc(p.statutMag)}</span>`
+      : p.ajouter ? `<button ${x.A(p.ajouter)} data-pr-promo-mag style="border:0;border-radius:999px;padding:6px 12px;font:600 12.5px ${sf};background:var(--color-background-secondary);color:var(--color-text);cursor:pointer;white-space:nowrap">+ Prime du magasin</button>` : '');
+    const tabPromos = `<div style="${groupeSt};margin-top:12px;overflow-x:auto"><table data-pr-promos style="border-collapse:separate;border-spacing:0;width:100%;font-family:${sf}">
+        <thead><tr>${thP('Promotion')}${thP('Sorte')}${thP('Dates')}${thP('Portée')}${thP('Produits')}${thP('Prime', true)}</tr></thead>
+        <tbody>${PF.liste.map((p, i) => `<tr>
+          ${tdP(i)}<b style="font:600 14px/1.3 ${sf}">${esc(p.nom)}</b>${p.marque ? `<span style="display:block;font:400 11.5px/1.35 ${sf};color:${muet}">${esc(p.marque)}</span>` : ''}</td>
+          ${tdP(i, `font:400 13px ${sf};color:${muet};white-space:nowrap`)}${esc(p.sorte)}${p.prix ? ' · ' + esc(p.prix) : ''}</td>
+          ${tdP(i, `font:400 13px ${sf};white-space:nowrap;font-variant-numeric:tabular-nums`)}${esc(p.dates)}</td>
+          ${tdP(i, `font:400 13px ${sf};color:${muet}`)}${esc(p.portee)}</td>
+          ${tdP(i, `font:400 13px ${sf};color:${p.comptable ? muet : 'var(--color-primary)'}`)}${esc(p.produits)}</td>
+          ${tdP(i, 'text-align:right')}${statutP(p)}</td></tr>`).join('')}</tbody></table></div>`;
     const promosIci = item('promos', 'Promotions du panel dans ce magasin', FR.resumes.promos, btRelire(PF.relire),
-      PF.chargement ? vide('Lecture des promotions…') : PF.motif ? vide(esc(PF.motif)) : !PF.liste.length ? vide('Aucune promotion du panel ne tourne dans ce magasin.') : `<div style="${groupeSt};margin-top:12px">${PF.liste.map(ligneProm).join('')}</div>`);
+      PF.chargement ? vide('Lecture des promotions…') : PF.motif ? vide(esc(PF.motif)) : !PF.liste.length ? vide('Aucune promotion du panel ne tourne dans ce magasin.') : tabPromos);
     // Les fiches à imprimer et l'affiche à envoyer (31/10/2026) : trois PDF du cockpit, ouverts dans un onglet (le
     // lecteur du navigateur imprime) ; l'affiche part par mail à chaque personne cochée, séparément.
     const IM = FR.imprimer;
@@ -7627,9 +7594,21 @@ function tplPrimesApp(c, x){
     </div>`;
     const imprimer = item('imprimer', 'Fiches à imprimer et à envoyer', FR.resumes.imprimer, '',
       `<div style="${groupeSt};margin-top:12px">${IM.fiches.map(ligneFiche).join('')}</div>${envoiAff}`);
-    // L'ordre : l'avancement des vendeuses (déplié à l'ouverture), puis les volets repliés — les primes du magasin, de la
-    // marque, les promotions du panel, les chiffres, les fiches.
-    return `<div style="display:flex;flex-direction:column;gap:26px">${equipe}${liste([siennes, imprimer, marque, promosIci, donnees, fiches])}</div>`;
+    // L'ordre (31/10/2026) : l'avancement des vendeuses (déplié à l'ouverture), les chiffres du magasin (toujours visibles),
+    // puis « Paramètres » (replié) — les primes du magasin, les fiches à imprimer et à envoyer, la marque, les promotions du
+    // panel. Les fiches de l'équipe (« Mon profil ») ont quitté la page le même jour, à la demande de Sam.
+    const VP = FR.volets.parametres;
+    const parametres = `<section data-pr-volet="parametres" data-ouvert="${VP.ouvert ? 1 : 0}">
+      <div style="${groupeSt};display:flex;align-items:center;gap:12px;padding:0 20px 0 0">
+        <button ${x.A(VP.basculer)} data-pr-volet-bascule="parametres" aria-expanded="${VP.ouvert}" style="flex:1;min-width:0;border:0;background:none;padding:17px 0 17px 20px;text-align:left;cursor:pointer;font-family:${sf};color:var(--color-text)">
+          <span style="display:block;font:700 18px/1.2 ${sf};letter-spacing:-.012em">Paramètres</span>
+          <span data-pr-volet-resume style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:3px">${esc(FR.resumes.parametres)}</span>
+        </button>
+        <button ${x.A(VP.basculer)} aria-label="${VP.ouvert ? 'Replier' : 'Déplier'}" tabindex="-1" style="flex:none;border:0;background:none;padding:6px 2px;cursor:pointer">${chevron(VP.ouvert)}</button>
+      </div>
+      ${VP.ouvert ? [siennes, imprimer, marque, promosIci].map(partie).join('') : ''}
+    </section>`;
+    return `<div style="display:flex;flex-direction:column;gap:22px">${equipe}${chiffres}${parametres}</div>`;
   };
 
   return `

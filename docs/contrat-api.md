@@ -4286,9 +4286,12 @@ magasin`) — un filet entre les deux ; la couleur ne vit que sur ces traits, le
 Une prime d'équipe (objectif CA, note Google) le dit sous son nom. Après le nom, la colonne **Cumul** de chaque vendeuse :
 atteint / en jeu (la somme des `gain` de ses cases, et de `max(montant, gain)` de chaque prime où elle compte ; un mois
 clos : gagné / possible), la barre marque + magasin, la part de chacune ; elle trie le tableau. Sur un écran large
-(≥ 1 000 px), le nom et le cumul restent en place quand les primes défilent. Les autres volets (`S.prFrOuv`) forment une
-liste groupée, repliée, une ligne par volet avec son résumé : les primes du magasin, de la marque et des sponsors, les
-promotions du panel, les chiffres, les fiches. La vue Année range ses colonnes de la même façon, le total après le nom.
+(≥ 1 000 px), le nom et le cumul restent en place quand les primes défilent. Sous l'équipe, **les chiffres du magasin**, toujours
+visibles, en tuiles : la valeur du magasin, l'écart au réseau (▲ / ▼, en % ou en points pour un pourcentage), la valeur du
+réseau (1, 3 ou 6 mois). Puis un seul volet replié, **« Paramètres »** (`S.prFrOuv.parametres`) : ouvert, ses quatre
+parties se suivent en tableaux, sans volet dans le volet — les primes du magasin, les fiches à imprimer et à envoyer, les
+primes de la marque et des sponsors, les promotions du panel (un tableau : promotion, sorte, dates, portée, produits,
+prime). Les fiches de l'équipe (« Mon profil ») ont quitté la page le 31/10/2026 ; leurs routes restent. La vue Année range ses colonnes de la même façon, le total après le nom.
 **Les primes d'équipe en frise** (31/10/2026, demande de Sam : « les primes pour le magasin qui sont communes doivent être
 en frise horizontale au-dessus du tableau, comme dans l'application mobile ») : l'objectif CA et la note Google — de la
 marque, ou du magasin (`cible` de base `objectif` ou `google`) — sortent des colonnes. Au-dessus du tableau, « Le magasin,
