@@ -1202,3 +1202,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T09:26:20Z [228] porządek zadań stanowisk (migracja 147)
 2026-10-31T09:35:25Z [229] zadania dnia tabletów (migracja 148)
 2026-10-31T09:42:02Z [229] Kto co zrobił : dzień wolny
+2026-10-31T10:12:21Z primes du magasin : page refaite sobre (carte de l'équipe, familles soulignées, liste groupée)
