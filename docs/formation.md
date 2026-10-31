@@ -6,12 +6,14 @@ Le référentiel RH du panel TFBuddy, rangé pour être lu : **postes et sous-po
 opératoire en ligne** pour la tablette. Toutes les routes API qui portent ces données sont
 documentées dans le module (écran *Routes API*) et dans `docs/formation-routes.md`.
 
-- Adresse : `…/consulant_bo/formation/` — rail du cockpit › **Formation** › *Module Formation ↗*.
+- Adresse : `https://185.180.206.46/formation/` (à la racine, comme `/marketing/` — alias Apache posé par
+  `bin/deploy.sh`), et `…/consulant_bo/formation/` — rail du cockpit › **Formation** › *Module Formation ↗*.
 - Manuel sur tablette : `…/consulant_bo/formation/?tablette=1#/manuel` — rail › *Manuel opératoire ↗*.
   La page s'ajoute à l'écran d'accueil (manifeste `formation/manifest.webmanifest`) et s'ouvre
   directement sur le manuel, sans barre latérale.
-- **Lecture seule** : le module ne fait aucun POST, PUT, PATCH ni DELETE vers le panel. Les routes
-  d'écriture sont documentées, jamais appelées.
+- **Écritures** (voir plus bas) : compétences exigées par un niveau, formations / procédures / ressources
+  d'une compétence, catalogue des compétences, compétences validées et niveau d'une personne. Toute
+  écriture est relue au panel avant d'être annoncée, et journalisée dans le cockpit.
 
 ## Design
 
@@ -98,7 +100,7 @@ sans schéma, 159 sans contrat (« runtime route »), **23 cassées**.
 
 ## L'API du cockpit — `GET /api/cockpit/formation/*`
 
-Toutes en lecture, toutes avec le compte consultant du panel (`PanelApi`, Paramètres › Panel
+Les lectures ci-dessous (les écritures ont leur tableau plus haut), toutes avec le compte consultant du panel (`PanelApi`, Paramètres › Panel
 consultant). Sans compte : `503 {error, indispo: true, raison}` — l'écran le dit, et la
 documentation des routes reste consultable.
 
@@ -122,6 +124,34 @@ un vide et un 403 ne se confondent pas.
 Les volées passent par `PanelApi::getParalleleDetail()` (même file de quatre connexions que
 `getParallele()`, mais chaque réponse garde son code HTTP et sa durée ; si toute la volée revient
 en 401, une reconnexion et un second passage). Le PDF passe par `PanelApi::binaire()`.
+
+## Les écritures (31/10/2026)
+
+| Geste (écran) | Route du cockpit | Route du panel |
+|---|---|---|
+| Exiger une compétence à un niveau (Postes & sous-postes) | `POST /formation/niveau/{nid}/competences {competence}` | `POST /position-levels/{nid}/competencies {competency_id, id_competency}` |
+| Ne plus l'exiger | `DELETE /formation/niveau/{nid}/competences/{cid}` | `DELETE /position-levels/{nid}/competencies/{cid}`, puis l'id de liaison |
+| Rattacher une formation / procédure / ressource (fiche compétence) | `POST /formation/competence/{cid}/liens {type, id}` | `POST /competencies/{cid}/trainings {training_id}` (resp. `operational-procedures {id_operational_procedure}`, `knowledge-resources {knowledge_resource_id}`) |
+| La détacher | `DELETE /formation/competence/{cid}/liens/{type}/{id}` | `DELETE /competencies/{cid}/{route}/{id}`, puis l'id de liaison |
+| Créer une compétence (Compétences) | `POST /formation/competences {sousCategorie, nom, description, verification}` | `POST /competencies {id_subcategory, name, description, verification_method}` |
+| La modifier | `PATCH /formation/competences/{cid}` (champs changés seulement) | `PATCH /competencies/{cid}` |
+| La supprimer (confirmation, impact affiché) | `DELETE /formation/competences/{cid}` | `DELETE /competencies/{cid}` |
+| Valider / retirer une compétence pour une personne (Équipes) | `PUT` / `DELETE /formation/employe/{eid}/competences/{cid}?shop=` | `PUT /employees/{eid}/competencies {competency_id}` / `DELETE …/{cid}` |
+| Affecter un poste et un niveau, passer au niveau suivant | `PUT /formation/employe/{eid}/poste?shop= {poste, niveau}` | `PUT /employees/{eid}/positions {position_id, level_id}` |
+
+Règles : (1) **tout est relu** — le panel répond « success » à un DELETE qui n'a rien supprimé et à un
+POST dont il ignore le corps ; un écart entre la demande et la relecture est rendu en erreur (502) ;
+(2) un retrait essaie l'identifiant de la **cible**, puis celui de la **liaison** si la cible est encore
+là (les routes sans contrat ne disent pas lequel elles attendent) ; (3) chaque écriture réussie écrit
+une ligne au journal du cockpit (type « Formation ») et **corrige sur place** les lectures en cache
+(référentiel, liens, équipe du magasin) — l'écran suivant montre l'état écrit sans tout relire.
+`PanelApi::requete()` porte ces appels (code HTTP et corps de la réponse, reconnexion sur 401).
+Les erreurs du panel (403, 500…) s'affichent dans la fenêtre, avec sa description.
+
+**Accès** : sur le serveur, le cockpit tourne sans authentification (`auth => false`). Quiconque
+atteint l'adresse peut donc écrire dans le référentiel RH du panel, avec le compte consultant du
+cockpit — comme pour les autres écritures du cockpit. Activer l'authentification intégrée
+(`COCKPIT_AUTH=1`) la protège.
 
 ## Sécurité
 
@@ -160,8 +190,8 @@ et de procédures affichent « … » et un bandeau le dit.
 
 ## Suites possibles (non faites)
 
-- **Écrire** depuis le module : rattacher une compétence à un niveau, une formation ou une
-  procédure à une compétence, valider une compétence pour une personne. Les routes existent
-  (documentées) ; il faut décider qui a le droit de le faire depuis le cockpit.
+- Écrire aussi les formations, procédures et ressources elles-mêmes (création, contenu des sections),
+  les compétences produit et leurs traductions, et `POST /packages` : routes sans contrat, corps à
+  mesurer d'abord à la sonde.
 - Manuel **hors ligne** sur la tablette (service worker et copie des procédures).
 - Traductions : `lang_code` n'est pas appliqué par le panel aujourd'hui ; le module lit le français.

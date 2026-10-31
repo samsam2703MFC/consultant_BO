@@ -504,6 +504,16 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/projects') { return wr_project_create(); }
     if ($method === 'POST' && preg_match('#^/connecteurs/([\w-]+)/test$#', $path, $m)) { return wr_connecteur_test($m[1]); }
     if ($method === 'POST' && $path === '/push/abonnements') { return wr_push_abonnement(); }
+    // Module Formation : les écritures dans le référentiel RH du panel, toutes relues après coup.
+    if ($method === 'POST' && preg_match('#^/formation/niveau/(\d+)/competences$#', $path, $m)) { return wr_formation_niveau_ajouter((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/formation/niveau/(\d+)/competences/(\d+)$#', $path, $m)) { return wr_formation_niveau_retirer((int) $m[1], (int) $m[2]); }
+    if ($method === 'POST' && preg_match('#^/formation/competence/(\d+)/liens$#', $path, $m)) { return wr_formation_lien_ajouter((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/formation/competence/(\d+)/liens/(formation|procedure|ressource)/(\d+)$#', $path, $m)) { return wr_formation_lien_retirer((int) $m[1], $m[2], (int) $m[3]); }
+    if ($method === 'POST' && $path === '/formation/competences') { return wr_formation_competence_creer(); }
+    if ($method === 'PATCH' && preg_match('#^/formation/competences/(\d+)$#', $path, $m)) { return wr_formation_competence_modifier((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/formation/competences/(\d+)$#', $path, $m)) { return wr_formation_competence_supprimer((int) $m[1]); }
+    if (($method === 'PUT' || $method === 'DELETE') && preg_match('#^/formation/employe/(\d+)/competences/(\d+)$#', $path, $m)) { return wr_formation_employe_competence($method, (int) $m[1], (int) $m[2]); }
+    if ($method === 'PUT' && preg_match('#^/formation/employe/(\d+)/poste$#', $path, $m)) { return wr_formation_employe_poste((int) $m[1]); }
     if ($method === 'DELETE' && $path === '/push/abonnements') { return wr_push_desabonnement(); }
     if ($method === 'POST' && $path === '/push/essai') { return wr_push_essai(); }
     if ($method === 'DELETE' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_delete($m[1]); }

@@ -268,6 +268,37 @@ final class PanelApi
     }
 
     /**
+     * Une requête authentifiée, n'importe quel verbe, réponse détaillée :
+     * `['code' => int, 'data' => mixed, 'erreur' => ?string]`. Le module
+     * Formation écrit par là : il doit savoir CE QUE le panel a répondu (un
+     * 204 sans corps, un 500 avec sa description), pas seulement si ça a
+     * marché. Pas de corps quand `$body` est null (un DELETE n'en envoie pas).
+     * Un 401 déclenche une reconnexion, une seule.
+     */
+    public static function requete(string $methode, string $path, ?array $body = null, int $timeout = 20): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return ['code' => 0, 'data' => null, 'erreur' => self::$lastError ?? 'jeton indisponible']; }
+        $url = self::config()['base'] . $path;
+        [$code, $res] = self::http($methode, $url, $body, $tok, $timeout);
+        if ($code === 401 && ($tok = self::token(true)) !== null) {
+            [$code, $res] = self::http($methode, $url, $body, $tok, $timeout);
+        }
+        $ok = $code >= 200 && $code < 300;
+        $det = null;
+        if (!$ok) {
+            $det = $code === 0 ? (self::$lastError ?? 'API injoignable') : 'HTTP ' . $code;
+            if (is_array($res)) {
+                foreach (['description', 'message', 'detail', 'error'] as $k) {
+                    if (!empty($res[$k]) && is_string($res[$k])) { $det .= ' : ' . mb_substr($res[$k], 0, 300); break; }
+                }
+            }
+            self::$lastError = $methode . ' ' . $path . ' → ' . $det;
+        }
+        return ['code' => $code, 'data' => $res, 'erreur' => $det];
+    }
+
+    /**
      * Lecture BINAIRE authentifiée (un PDF du panel) : `[code, octets, type]`.
      * Le corps n'est jamais décodé ; un 401 déclenche une reconnexion.
      */

@@ -267,8 +267,16 @@ function ep_formation_referentiel(): array
     $niveauxGlobaux = array_map(static fn ($r) => fmNiveau($r, null), fmListe($v1['niveaux']['data']));
     $parPoste = [];
     foreach (array_keys($postes) as $pid) { $parPoste['p' . $pid] = '/positions/' . $pid . '/levels'; }
+    // Les sous-catégories de chaque catégorie, dans la même volée : la création d'une
+    // compétence les demande (id_subcategory), et une sous-catégorie encore vide
+    // n'apparaît sur aucune compétence.
+    $cats = array_values(array_filter(array_map(static fn ($r) => fmInt($r, ['id']), fmListe($v1['categories']['data'])), static fn ($x) => $x !== null));
+    foreach ($cats as $cid) { $parPoste['s' . $cid] = '/operational-framework/structure/categories/' . $cid . '/subcategories'; }
     $v2 = PanelApi::getParalleleDetail($parPoste, 4, 20);
-    if ($v2) { $appels[] = fmAppelVolee('niveauxParPoste', '/positions/{id}/levels', $v2); }
+    $v2p = array_filter($v2, static fn ($k) => $k[0] === 'p', ARRAY_FILTER_USE_KEY);
+    $v2s = array_filter($v2, static fn ($k) => $k[0] === 's', ARRAY_FILTER_USE_KEY);
+    if ($v2p) { $appels[] = fmAppelVolee('niveauxParPoste', '/positions/{id}/levels', $v2p); }
+    if ($v2s) { $appels[] = fmAppelVolee('sousCategories', '/operational-framework/structure/categories/{id}/subcategories', $v2s); }
     $niveaux = [];
     foreach ($postes as $pid => $p) {
         $r = $v2['p' . $pid] ?? null;
@@ -330,6 +338,22 @@ function ep_formation_referentiel(): array
             'ordre' => null, 'brut' => [], 'niveaux' => $sansPoste];
     }
 
+    // Les sous-catégories : celles du panel, complétées par celles que portent les compétences.
+    $sousCats = [];
+    foreach ($cats as $cid) {
+        $r = $v2['s' . $cid] ?? null;
+        if ($r === null || $r['code'] < 200 || $r['code'] >= 300) { continue; }
+        foreach (fmListe($r['data']) as $x) {
+            $id = fmInt($x, ['id', 'subcategory_id']);
+            if ($id !== null) { $sousCats[$id] = ['id' => $id, 'nom' => fmTexte($x, ['name', 'base_name', 'title']) ?? ('#' . $id), 'categorieId' => $cid]; }
+        }
+    }
+    foreach ($competences as $c) {
+        if ($c['sousCategorieId'] !== null && !isset($sousCats[$c['sousCategorieId']])) {
+            $sousCats[$c['sousCategorieId']] = ['id' => $c['sousCategorieId'], 'nom' => $c['sousCategorie'] ?? ('#' . $c['sousCategorieId']), 'categorieId' => $c['categorieId']];
+        }
+    }
+
     $comp = array_values($competences);
     usort($comp, static fn ($a, $b) => [$a['categorie'] ?? '', $a['sousCategorie'] ?? '', $a['nom']] <=> [$b['categorie'] ?? '', $b['sousCategorie'] ?? '', $b['nom']]);
 
@@ -346,6 +370,7 @@ function ep_formation_referentiel(): array
         'structure'   => [
             'sections'   => $map('sections', static fn ($r) => fmSimple($r)),
             'categories' => $map('categories', static fn ($r) => fmSimple($r) + ['sectionId' => fmInt($r, ['section_id', 'id_section'])]),
+            'sousCategories' => array_values($sousCats),
         ],
         'appels'      => $appels,
     ];
@@ -631,4 +656,492 @@ function ep_formation_pdf(): array
     header('Content-Length: ' . strlen($octets));
     echo $octets;
     exit;
+}
+
+/* ── Écritures (31/10/2026) ────────────────────────────────────────────────
+ *
+ * Ce que le module écrit dans le panel, et rien d'autre :
+ *   - les compétences exigées par un niveau (sous-poste) ;
+ *   - les formations, procédures et ressources rattachées à une compétence ;
+ *   - le catalogue des compétences (créer, modifier, supprimer) ;
+ *   - pour une personne : valider ou retirer une compétence, changer de niveau.
+ *
+ * Trois règles :
+ *   1. TOUTE écriture est relue. Le panel répond « success » à un DELETE qui
+ *      n'a rien supprimé et à un POST dont il a ignoré le corps : seule la
+ *      relecture dit ce qui est vraiment enregistré. Un écart est une erreur.
+ *   2. Un retrait essaie d'abord l'identifiant de la CIBLE (compétence,
+ *      formation…), puis, si la relecture la montre encore, celui de la
+ *      LIAISON — les routes sans contrat ne disent pas lequel elles attendent.
+ *   3. Chaque écriture réussie laisse une ligne au journal du cockpit, et
+ *      corrige les lectures gardées en cache (référentiel, liens, équipe) :
+ *      l'écran suivant montre l'état écrit, sans tout relire au panel.
+ */
+
+/** La clé de cache d'une lecture gardée (même calcul que routeGardee()). */
+function fmCleCache(string $route, array $q = []): string
+{
+    ksort($q);
+    return 'rcG:' . md5($route . '?' . http_build_query($q));
+}
+
+/** Corrige une lecture gardée en place ; sans copie en cache, rien à faire. */
+function fmCachePatch(string $route, array $q, callable $f): void
+{
+    try {
+        $k = fmCleCache($route, $q);
+        $c = setting($k);
+        if (!is_array($c) || !is_array($c['r'] ?? null)) { return; }
+        $c['r'] = $f($c['r']);
+        $j = json_encode($c, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+        if (is_string($j)) { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$k, $j]); }
+    } catch (Throwable $e) { /* le cache se refera à sa prochaine lecture */ }
+}
+
+/** Le journal du cockpit, s'il est là (les tests n'en ont pas). */
+function fmJournal(?string $objet, string $message): void
+{
+    if (!function_exists('journalAdd')) { return; }
+    try { journalAdd('CEO', 'Formation', $objet, $message); } catch (Throwable $e) { /* l'écriture est faite, le journal suivra */ }
+}
+
+/** Le corps JSON de la requête (writes.php le fournit ; repli pour les tests). */
+function fmCorps(): array
+{
+    if (function_exists('body')) { return body(); }
+    $d = json_decode((string) file_get_contents('php://input'), true);
+    return is_array($d) ? $d : [];
+}
+
+/** Un entier strictement positif lu dans le corps, ou null. */
+function fmIdCorps(array $b, string $k): ?int
+{
+    $v = $b[$k] ?? null;
+    if (is_int($v) && $v > 0) { return $v; }
+    if (is_string($v) && preg_match('/^\d{1,9}$/', $v) && (int) $v > 0) { return (int) $v; }
+    return null;
+}
+
+/** Un refus propre : code HTTP et message, avec ce que le panel a répondu. */
+function fmRefus(int $http, string $message, array $extra = []): array
+{
+    http_response_code($http);
+    return ['ok' => false, 'error' => $message] + $extra;
+}
+
+/** Une ligne d'appel d'écriture pour l'écran (jamais le corps complet). */
+function fmAppelEcrit(string $methode, string $chemin, array $r): array
+{
+    return ['methode' => $methode, 'chemin' => $chemin, 'code' => $r['code'], 'erreur' => $r['erreur'],
+        'reponse' => is_array($r['data']) ? fmScrub(array_slice($r['data'], 0, 6, true)) : (is_scalar($r['data']) ? $r['data'] : null)];
+}
+
+/** Les compétences d'un niveau, relues : `[ids, liaisons{cid: idLiaison}, appel]`. */
+function fmRelireNiveau(int $nid): array
+{
+    $c = '/position-levels/' . $nid . '/competencies';
+    $r = PanelApi::requete('GET', $c);
+    $ids = []; $liaisons = [];
+    if ($r['code'] >= 200 && $r['code'] < 300 && is_array($r['data'])) {
+        foreach (fmListe(isset($r['data']['data']) && !array_is_list($r['data']) ? $r['data']['data'] : $r['data']) as $x) {
+            $cid = fmInt($x, ['competency_id', 'id_competency', 'competence_id', 'id']);
+            if ($cid === null) { continue; }
+            $ids[] = $cid;
+            $lid = fmInt($x, ['id']);
+            if ($lid !== null && $lid !== $cid) { $liaisons[$cid] = $lid; }
+        }
+    }
+    return [array_values(array_unique($ids)), $liaisons, $r];
+}
+
+/** Une compétence et ses liens, relus : `[competence|null, liens, brut, appel]`. */
+function fmRelireCompetence(int $cid): array
+{
+    $r = PanelApi::requete('GET', '/competencies/' . $cid . '?include=operational_procedures,trainings,knowledge_resources&lang_code=fr');
+    $d = $r['code'] >= 200 && $r['code'] < 300 && is_array($r['data']) ? (isset($r['data']['data']) && is_array($r['data']['data']) && !array_is_list($r['data']) ? $r['data']['data'] : $r['data']) : null;
+    if (!is_array($d) || fmInt($d, ['id']) === null) { return [null, fmLiens(is_array($d) ? $d : []), $d, $r]; }
+    return [fmCompetence($d), fmLiens($d), $d, $r];
+}
+
+/** Les postes et compétences d'une personne, relus. */
+function fmRelireEmploye(int $eid): array
+{
+    $r = PanelApi::requete('GET', '/employees/' . $eid . '?include=competencies,positions');
+    $d = $r['code'] >= 200 && $r['code'] < 300 && is_array($r['data']) ? (isset($r['data']['data']) && is_array($r['data']['data']) && !array_is_list($r['data']) ? $r['data']['data'] : $r['data']) : null;
+    if (!is_array($d)) { return [null, $r]; }
+    $postes = [];
+    foreach (is_array($d['positions'] ?? null) ? $d['positions'] : [] as $p) {
+        if (!is_array($p)) { continue; }
+        $postes[] = ['id' => fmInt($p, ['id', 'position_id']), 'nom' => fmTexte($p, ['name']), 'niveauId' => fmInt($p, ['level_id']),
+            'niveau' => fmTexte($p, ['level_name']), 'ordre' => fmInt($p, ['level_order'])];
+    }
+    $comps = [];
+    foreach (is_array($d['competencies'] ?? null) ? $d['competencies'] : [] as $c) {
+        if (is_array($c) && ($cid = fmInt($c, ['competency_id', 'id'])) !== null) { $comps[] = $cid; }
+    }
+    return [['id' => $eid, 'postes' => $postes, 'competences' => array_values(array_unique($comps))], $r];
+}
+
+/** Le niveau (et son poste) dans un référentiel en cache — pour le journal et les corrections. */
+function fmNiveauDans(array $ref, int $nid): ?array
+{
+    foreach ($ref['postes'] ?? [] as $p) {
+        foreach ($p['niveaux'] ?? [] as $n) {
+            if (($n['id'] ?? null) === $nid) { return ['poste' => $p['nom'] ?? '', 'niveau' => $n['nom'] ?? '']; }
+        }
+    }
+    return null;
+}
+
+/** Le libellé d'un niveau pour le journal, lu dans le cache du référentiel. */
+function fmNomNiveau(int $nid): string
+{
+    $c = setting(fmCleCache('/formation/referentiel'));
+    $n = is_array($c) && is_array($c['r'] ?? null) ? fmNiveauDans($c['r'], $nid) : null;
+    return $n ? $n['poste'] . ' › ' . $n['niveau'] : 'niveau #' . $nid;
+}
+
+/** Le nom d'une compétence pour le journal (cache, sinon l'identifiant). */
+function fmNomCompetence(int $cid): string
+{
+    $c = setting(fmCleCache('/formation/referentiel'));
+    foreach (is_array($c) && is_array($c['r'] ?? null) ? ($c['r']['competences'] ?? []) : [] as $x) {
+        if (($x['id'] ?? null) === $cid) { return (string) $x['nom']; }
+    }
+    return 'compétence #' . $cid;
+}
+
+/** Corrige les compétences d'un niveau dans le référentiel en cache. */
+function fmPatchNiveau(int $nid, array $ids): void
+{
+    fmCachePatch('/formation/referentiel', [], static function (array $r) use ($nid, $ids): array {
+        foreach ($r['postes'] as &$p) {
+            foreach ($p['niveaux'] as &$n) {
+                if (($n['id'] ?? null) === $nid) { $n['competences'] = $ids; $n['competencesLues'] = true; }
+            }
+            unset($n);
+        }
+        unset($p);
+        return $r;
+    });
+}
+
+/**
+ * POST /formation/niveau/{nid}/competences {competence} — exiger une
+ * compétence à ce niveau. La route du panel n'a pas de contrat : le corps
+ * porte les deux noms usuels (competency_id, id_competency), le panel garde
+ * celui qu'il connaît. La relecture dit si c'est passé.
+ */
+function wr_formation_niveau_ajouter(int $nid): array
+{
+    if ($e = fmPret()) { return $e; }
+    $cid = fmIdCorps(fmCorps(), 'competence');
+    if ($cid === null) { return fmRefus(422, 'competence (identifiant) attendu'); }
+    [$avant] = fmRelireNiveau($nid);
+    if (in_array($cid, $avant, true)) { return ['ok' => true, 'deja' => true, 'niveau' => ['id' => $nid, 'competences' => $avant]]; }
+    $chemin = '/position-levels/' . $nid . '/competencies';
+    $w = PanelApi::requete('POST', $chemin, ['competency_id' => $cid, 'id_competency' => $cid]);
+    $appels = [fmAppelEcrit('POST', $chemin, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [$apres] = fmRelireNiveau($nid);
+    if (!in_array($cid, $apres, true)) {
+        return fmRefus(502, 'le panel a répondu HTTP ' . $w['code'] . ' mais la compétence n’apparaît pas au niveau — rien n’a changé', ['appels' => $appels]);
+    }
+    fmPatchNiveau($nid, $apres);
+    fmJournal(fmNomNiveau($nid), 'Compétence exigée ajoutée : « ' . fmNomCompetence($cid) . ' »');
+    return ['ok' => true, 'niveau' => ['id' => $nid, 'competences' => $apres], 'appels' => $appels];
+}
+
+/** DELETE /formation/niveau/{nid}/competences/{cid} — ne plus l'exiger à ce niveau. */
+function wr_formation_niveau_retirer(int $nid, int $cid): array
+{
+    if ($e = fmPret()) { return $e; }
+    [$avant, $liaisons] = fmRelireNiveau($nid);
+    if (!in_array($cid, $avant, true)) { return ['ok' => true, 'deja' => true, 'niveau' => ['id' => $nid, 'competences' => $avant]]; }
+    $appels = [];
+    $essais = [$cid];
+    if (isset($liaisons[$cid])) { $essais[] = $liaisons[$cid]; }
+    $apres = $avant;
+    foreach ($essais as $x) {
+        $chemin = '/position-levels/' . $nid . '/competencies/' . $x;
+        $w = PanelApi::requete('DELETE', $chemin);
+        $appels[] = fmAppelEcrit('DELETE', $chemin, $w);
+        [$apres] = fmRelireNiveau($nid);
+        if (!in_array($cid, $apres, true)) { break; }
+    }
+    if (in_array($cid, $apres, true)) {
+        return fmRefus(502, 'la compétence est toujours exigée à ce niveau après le retrait — le panel ne l’a pas supprimée', ['appels' => $appels]);
+    }
+    fmPatchNiveau($nid, $apres);
+    fmJournal(fmNomNiveau($nid), 'Compétence exigée retirée : « ' . fmNomCompetence($cid) . ' »');
+    return ['ok' => true, 'niveau' => ['id' => $nid, 'competences' => $apres], 'appels' => $appels];
+}
+
+/** Les trois sortes de liens d'une compétence : route du panel, champ du corps, clé de fmLiens(). */
+const FM_LIENS = [
+    'formation'  => ['trainings', 'training_id', 'formations', 'Formation'],
+    'procedure'  => ['operational-procedures', 'id_operational_procedure', 'procedures', 'Procédure'],
+    'ressource'  => ['knowledge-resources', 'knowledge_resource_id', 'ressources', 'Ressource'],
+];
+
+/** L'identifiant de liaison d'un lien, lu dans la compétence brute. */
+function fmIdLiaison(array $brut, string $type, int $cible): ?int
+{
+    $k = ['formation' => 'trainings', 'procedure' => 'operational_procedures', 'ressource' => 'knowledge_resources'][$type];
+    $cle = FM_LIENS[$type][1];
+    foreach (is_array($brut[$k] ?? null) ? $brut[$k] : [] as $x) {
+        if (is_array($x) && fmInt($x, [$cle]) === $cible) {
+            $lid = fmInt($x, ['id']);
+            return $lid !== null && $lid !== $cible ? $lid : null;
+        }
+    }
+    return null;
+}
+
+/** Corrige les liens d'une compétence dans le cache du lot des liens. */
+function fmPatchLiens(int $cid, array $liens): void
+{
+    fmCachePatch('/formation/liens', [], static function (array $r) use ($cid, $liens): array {
+        if (!isset($r['liens']) || !is_array($r['liens'])) { $r['liens'] = []; }
+        $r['liens'][(string) $cid] = $liens;
+        return $r;
+    });
+}
+
+/** POST /formation/competence/{cid}/liens {type: formation|procedure|ressource, id} — rattacher. */
+function wr_formation_lien_ajouter(int $cid): array
+{
+    if ($e = fmPret()) { return $e; }
+    $b = fmCorps();
+    $type = (string) ($b['type'] ?? '');
+    $id = fmIdCorps($b, 'id');
+    if (!isset(FM_LIENS[$type]) || $id === null) { return fmRefus(422, 'type (formation, procedure, ressource) et id attendus'); }
+    [$comp, $avant] = fmRelireCompetence($cid);
+    if ($comp === null) { return fmRefus(404, 'compétence inconnue du panel'); }
+    [$route, $champ, $cle, $lib] = FM_LIENS[$type];
+    $deja = static fn (array $l) => in_array($id, array_column($l[$cle], 'id'), true);
+    if ($deja($avant)) { return ['ok' => true, 'deja' => true, 'competence' => $cid, 'liens' => $avant]; }
+    $chemin = '/competencies/' . $cid . '/' . $route;
+    $w = PanelApi::requete('POST', $chemin, [$champ => $id]);
+    $appels = [fmAppelEcrit('POST', $chemin, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [, $apres] = fmRelireCompetence($cid);
+    if (!$deja($apres)) { return fmRefus(502, 'le panel a répondu HTTP ' . $w['code'] . ' mais le lien n’apparaît pas — rien n’a changé', ['appels' => $appels]); }
+    fmPatchLiens($cid, $apres);
+    $nom = array_values(array_filter($apres[$cle], static fn ($x) => $x['id'] === $id))[0]['nom'] ?? ('#' . $id);
+    fmJournal($comp['nom'], $lib . ' rattachée : « ' . $nom . ' »');
+    return ['ok' => true, 'competence' => $cid, 'liens' => $apres, 'appels' => $appels];
+}
+
+/** DELETE /formation/competence/{cid}/liens/{type}/{id} — détacher. */
+function wr_formation_lien_retirer(int $cid, string $type, int $id): array
+{
+    if ($e = fmPret()) { return $e; }
+    if (!isset(FM_LIENS[$type])) { return fmRefus(422, 'type inconnu'); }
+    [$comp, $avant, $brut] = fmRelireCompetence($cid);
+    if ($comp === null) { return fmRefus(404, 'compétence inconnue du panel'); }
+    [$route, , $cle, $lib] = FM_LIENS[$type];
+    $present = static fn (array $l) => in_array($id, array_column($l[$cle], 'id'), true);
+    if (!$present($avant)) { return ['ok' => true, 'deja' => true, 'competence' => $cid, 'liens' => $avant]; }
+    $nom = array_values(array_filter($avant[$cle], static fn ($x) => $x['id'] === $id))[0]['nom'] ?? ('#' . $id);
+    $essais = [$id];
+    if (($lid = fmIdLiaison(is_array($brut) ? $brut : [], $type, $id)) !== null) { $essais[] = $lid; }
+    $appels = [];
+    $apres = $avant;
+    foreach ($essais as $x) {
+        $chemin = '/competencies/' . $cid . '/' . $route . '/' . $x;
+        $w = PanelApi::requete('DELETE', $chemin);
+        $appels[] = fmAppelEcrit('DELETE', $chemin, $w);
+        [, $apres] = fmRelireCompetence($cid);
+        if (!$present($apres)) { break; }
+    }
+    if ($present($apres)) { return fmRefus(502, 'le lien est toujours là après le retrait — le panel ne l’a pas supprimé', ['appels' => $appels]); }
+    fmPatchLiens($cid, $apres);
+    fmJournal($comp['nom'], $lib . ' détachée : « ' . $nom . ' »');
+    return ['ok' => true, 'competence' => $cid, 'liens' => $apres, 'appels' => $appels];
+}
+
+/** Les champs d'une compétence lus dans le corps : nom, description, vérification, sous-catégorie. */
+function fmChampsCompetence(array $b, bool $creation): array
+{
+    $o = [];
+    $txt = static function ($v, int $max): ?string {
+        if (!is_string($v)) { return null; }
+        $v = trim(str_replace("\0", '', $v));
+        return mb_substr($v, 0, $max);
+    };
+    if (array_key_exists('nom', $b)) { $o['name'] = $txt($b['nom'], 255); }
+    if (array_key_exists('description', $b)) { $o['description'] = $txt($b['description'], 5000); }
+    if (array_key_exists('verification', $b)) { $o['verification_method'] = $txt($b['verification'], 2000); }
+    if (array_key_exists('sousCategorie', $b)) { $o['id_subcategory'] = fmIdCorps($b, 'sousCategorie'); }
+    $o = array_filter($o, static fn ($v) => $v !== null);
+    if ($creation && (($o['name'] ?? '') === '' || !isset($o['id_subcategory']))) { return []; }
+    if (isset($o['name']) && $o['name'] === '') { unset($o['name']); }
+    return $o;
+}
+
+/** Ajoute ou remplace une compétence dans le référentiel en cache. */
+function fmPatchCompetence(array $c): void
+{
+    fmCachePatch('/formation/referentiel', [], static function (array $r) use ($c): array {
+        $trouve = false;
+        foreach ($r['competences'] as &$x) {
+            if (($x['id'] ?? null) === $c['id']) { $x = $c + ['horsCatalogue' => false]; $trouve = true; }
+        }
+        unset($x);
+        if (!$trouve) { $r['competences'][] = $c; }
+        return $r;
+    });
+}
+
+/** POST /formation/competences {sousCategorie, nom, description?, verification?} — créer. */
+function wr_formation_competence_creer(): array
+{
+    if ($e = fmPret()) { return $e; }
+    $champs = fmChampsCompetence(fmCorps(), true);
+    if (!$champs) { return fmRefus(422, 'nom et sous-catégorie obligatoires'); }
+    $w = PanelApi::requete('POST', '/competencies', $champs);
+    $appels = [fmAppelEcrit('POST', '/competencies', $w)];
+    $nouv = is_array($w['data']) ? fmInt($w['data'], ['inserted_id', 'id']) : null;
+    if ($w['code'] < 200 || $w['code'] >= 300 || $nouv === null) {
+        return fmRefus(502, 'le panel n’a pas créé la compétence : ' . ($w['erreur'] ?? 'pas d’identifiant rendu'), ['appels' => $appels]);
+    }
+    [$comp] = fmRelireCompetence($nouv);
+    if ($comp === null) { return fmRefus(502, 'compétence #' . $nouv . ' annoncée créée, mais introuvable à la relecture', ['appels' => $appels]); }
+    fmPatchCompetence($comp);
+    fmPatchLiens($nouv, ['procedures' => [], 'formations' => [], 'ressources' => []]);
+    fmJournal($comp['nom'], 'Compétence créée (#' . $nouv . ', ' . ($comp['sousCategorie'] ?? 'sous-catégorie ' . $champs['id_subcategory']) . ')');
+    return ['ok' => true, 'competence' => $comp, 'appels' => $appels];
+}
+
+/** PATCH /formation/competences/{cid} {nom?, description?, verification?, sousCategorie?} — modifier. */
+function wr_formation_competence_modifier(int $cid): array
+{
+    if ($e = fmPret()) { return $e; }
+    $champs = fmChampsCompetence(fmCorps(), false);
+    // Un PATCH vide fait échouer la requête SQL du panel : on ne l'envoie pas.
+    if (!$champs) { return fmRefus(422, 'aucun champ à modifier'); }
+    [$avant] = fmRelireCompetence($cid);
+    if ($avant === null) { return fmRefus(404, 'compétence inconnue du panel'); }
+    $w = PanelApi::requete('PATCH', '/competencies/' . $cid, $champs);
+    $appels = [fmAppelEcrit('PATCH', '/competencies/' . $cid, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [$apres, , $brut] = fmRelireCompetence($cid);
+    if ($apres === null) { return fmRefus(502, 'compétence introuvable à la relecture', ['appels' => $appels]); }
+    // Comparé aux champs BRUTS : `nom` et `description` de l'écran retombent sur base_name /
+    // base_description quand le champ est vide, un effacement passerait pour un refus.
+    $ecarts = [];
+    $lus = ['name' => $brut['name'] ?? '', 'description' => $brut['description'] ?? '', 'verification_method' => $brut['verification_method'] ?? '',
+        'id_subcategory' => $brut['id_subcategory'] ?? ($brut['subcategory_id'] ?? '')];
+    foreach ($champs as $k => $v) {
+        if (trim((string) $lus[$k]) !== trim((string) $v)) { $ecarts[] = $k; }
+    }
+    if ($ecarts) { return fmRefus(502, 'le panel n’a pas enregistré : ' . implode(', ', $ecarts), ['appels' => $appels, 'competence' => $apres]); }
+    fmPatchCompetence($apres);
+    $noms = ['name' => 'nom', 'description' => 'description', 'verification_method' => 'méthode de vérification', 'id_subcategory' => 'sous-catégorie'];
+    fmJournal($apres['nom'], 'Compétence modifiée : ' . implode(', ', array_map(static fn ($k) => $noms[$k], array_keys($champs)))
+        . (isset($champs['name']) && $champs['name'] !== $avant['nom'] ? ' (ancien nom « ' . $avant['nom'] . ' »)' : ''));
+    return ['ok' => true, 'competence' => $apres, 'appels' => $appels];
+}
+
+/** DELETE /formation/competences/{cid} — supprimer du catalogue. */
+function wr_formation_competence_supprimer(int $cid): array
+{
+    if ($e = fmPret()) { return $e; }
+    [$avant] = fmRelireCompetence($cid);
+    if ($avant === null) { return ['ok' => true, 'deja' => true, 'competence' => $cid]; }
+    $w = PanelApi::requete('DELETE', '/competencies/' . $cid);
+    $appels = [fmAppelEcrit('DELETE', '/competencies/' . $cid, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [$apres] = fmRelireCompetence($cid);
+    if ($apres !== null) { return fmRefus(502, 'la compétence existe toujours après la suppression — le panel ne l’a pas supprimée (liée ailleurs ?)', ['appels' => $appels]); }
+    fmCachePatch('/formation/referentiel', [], static function (array $r) use ($cid): array {
+        $r['competences'] = array_values(array_filter($r['competences'], static fn ($x) => ($x['id'] ?? null) !== $cid));
+        foreach ($r['postes'] as &$p) {
+            foreach ($p['niveaux'] as &$n) { $n['competences'] = array_values(array_filter($n['competences'], static fn ($x) => $x !== $cid)); }
+            unset($n);
+        }
+        unset($p);
+        return $r;
+    });
+    fmJournal($avant['nom'], 'Compétence supprimée du catalogue (#' . $cid . ')');
+    return ['ok' => true, 'competence' => $cid, 'appels' => $appels];
+}
+
+/** Corrige la fiche d'une personne dans le cache de l'équipe de son magasin. */
+function fmPatchEmploye(?int $shop, array $fiche): void
+{
+    if ($shop === null) { return; }
+    fmCachePatch('/formation/equipe', ['shop' => (string) $shop], static function (array $r) use ($fiche): array {
+        foreach ($r['employes'] ?? [] as $i => $e) {
+            if (($e['id'] ?? null) === $fiche['id']) {
+                $r['employes'][$i]['postes'] = $fiche['postes'];
+                $r['employes'][$i]['competences'] = $fiche['competences'];
+                $r['employes'][$i]['lu'] = true;
+            }
+        }
+        return $r;
+    });
+}
+
+/** Le nom d'une personne pour le journal, lu dans le cache de l'équipe. */
+function fmNomEmploye(?int $shop, int $eid): string
+{
+    $c = $shop !== null ? setting(fmCleCache('/formation/equipe', ['shop' => (string) $shop])) : null;
+    foreach (is_array($c) && is_array($c['r'] ?? null) ? ($c['r']['employes'] ?? []) : [] as $e) {
+        if (($e['id'] ?? null) === $eid) { return (string) $e['nom']; }
+    }
+    return 'employé #' . $eid;
+}
+
+/**
+ * PUT /formation/employe/{eid}/competences/{cid} — la personne a validé la
+ * compétence. DELETE — on la lui retire. `?shop=` : le magasin, pour corriger
+ * l'écran Équipes en cache.
+ */
+function wr_formation_employe_competence(string $methode, int $eid, int $cid): array
+{
+    if ($e = fmPret()) { return $e; }
+    $shop = fmId('shop');
+    [$avant] = fmRelireEmploye($eid);
+    if ($avant === null) { return fmRefus(404, 'personne inconnue du panel'); }
+    $voulu = $methode === 'PUT';
+    if (in_array($cid, $avant['competences'], true) === $voulu) { return ['ok' => true, 'deja' => true, 'employe' => $avant]; }
+    $chemin = '/employees/' . $eid . '/competencies' . ($voulu ? '' : '/' . $cid);
+    $w = PanelApi::requete($methode, $chemin, $voulu ? ['competency_id' => $cid] : null);
+    $appels = [fmAppelEcrit($methode, $chemin, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [$apres] = fmRelireEmploye($eid);
+    if ($apres === null || in_array($cid, $apres['competences'], true) !== $voulu) {
+        return fmRefus(502, 'le panel a répondu HTTP ' . $w['code'] . ' mais la fiche n’a pas changé', ['appels' => $appels]);
+    }
+    fmPatchEmploye($shop, $apres);
+    fmJournal(fmNomEmploye($shop, $eid), ($voulu ? 'Compétence validée' : 'Validation retirée') . ' : « ' . fmNomCompetence($cid) . ' »');
+    return ['ok' => true, 'employe' => $apres, 'appels' => $appels];
+}
+
+/** PUT /formation/employe/{eid}/poste {poste, niveau} — affecter un poste et un niveau. */
+function wr_formation_employe_poste(int $eid): array
+{
+    if ($e = fmPret()) { return $e; }
+    $b = fmCorps();
+    $poste = fmIdCorps($b, 'poste');
+    $niveau = fmIdCorps($b, 'niveau');
+    $shop = fmId('shop');
+    if ($poste === null || $niveau === null) { return fmRefus(422, 'poste et niveau attendus'); }
+    [$avant] = fmRelireEmploye($eid);
+    if ($avant === null) { return fmRefus(404, 'personne inconnue du panel'); }
+    $tient = static fn (array $f) => (bool) array_filter($f['postes'], static fn ($p) => $p['id'] === $poste && $p['niveauId'] === $niveau);
+    if ($tient($avant)) { return ['ok' => true, 'deja' => true, 'employe' => $avant]; }
+    $chemin = '/employees/' . $eid . '/positions';
+    $w = PanelApi::requete('PUT', $chemin, ['position_id' => $poste, 'level_id' => $niveau]);
+    $appels = [fmAppelEcrit('PUT', $chemin, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [$apres] = fmRelireEmploye($eid);
+    if ($apres === null || !$tient($apres)) { return fmRefus(502, 'le panel a répondu HTTP ' . $w['code'] . ' mais le poste n’a pas changé', ['appels' => $appels]); }
+    fmPatchEmploye($shop, $apres);
+    $ancien = implode(', ', array_map(static fn ($p) => ($p['nom'] ?? 'poste') . ' · ' . ($p['niveau'] ?? 'niveau'), $avant['postes'])) ?: 'aucun';
+    $nouveau = fmNomNiveau($niveau);
+    fmJournal(fmNomEmploye($shop, $eid), 'Niveau affecté : ' . $nouveau . ' (avant : ' . $ancien . ')');
+    return ['ok' => true, 'employe' => $apres, 'appels' => $appels];
 }

@@ -5,21 +5,22 @@
    global.css (le front du module marketing) — jetons, coquille 246 px,
    barre supérieure, cartes, tableaux, filtres, cartes de campagne, étapes de
    l'assistant, cartes de choix, voile de confirmation. Seuls changent les
-   chemins des polices : la page vit sous /formation/, les fontes sous
-   ../assets/ds/fonts/ (les mêmes fichiers Gotham que le cockpit).
+   chemins des polices : fonts/ à côté de la page (les mêmes fichiers Gotham
+   que /marketing/fonts/ et le cockpit), pour que le module se serve aussi
+   bien à la racine du serveur (/formation/) que sous le cockpit.
    Partie 2 (fin du fichier) : les pièces propres au module, mêmes jetons.
    ========================================================================== */
 
 @font-face {
   font-family: 'Gotham';
-  src: url('../assets/ds/fonts/Gotham_Regular.otf') format('opentype');
+  src: url('fonts/Gotham_Regular.otf') format('opentype');
   font-weight: 400;
   font-display: swap;
 }
 
 @font-face {
   font-family: 'Gotham';
-  src: url('../assets/ds/fonts/Gotham_Medium.otf') format('opentype');
+  src: url('fonts/Gotham_Medium.otf') format('opentype');
   font-weight: 500;
   font-display: swap;
 }
@@ -1402,6 +1403,163 @@ a.filter {
   padding: 6px 10px;
 }
 
+/* ── Écritures : en-têtes de carte avec leur bouton, fenêtres, listes ── */
+
+.fm-banner--ok {
+  background: rgba(63, 122, 82, 0.08);
+  border-color: rgba(63, 122, 82, 0.3);
+  color: var(--green);
+  justify-content: space-between;
+}
+
+.fm-banner .filter {
+  margin-left: auto;
+}
+
+.fm-banner__fermer {
+  margin: 0 0 0 auto;
+  padding: 0 4px;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.fm-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fm-card-head .filter {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.filter:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.filter.confirm__danger:not(:disabled):hover {
+  filter: brightness(0.92);
+}
+
+/* La croix d'un élément retirable : petite, discrète, rouge au survol. */
+.filter.fm-x {
+  padding: 0 7px;
+  min-width: 26px;
+  height: 24px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.filter.fm-x:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.fm-liste {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.fm-liste li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--row-line);
+  font-size: 13px;
+}
+
+.fm-liste li:first-child {
+  border-top: none;
+}
+
+.fm-liste--cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  column-gap: 24px;
+}
+
+.fm-liste--cols li:nth-child(-n + 3) {
+  border-top: none;
+}
+
+/* La fenêtre : le voile de confirmation du marketing, assez large pour une liste. */
+.confirm__box.fm-modale {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.fm-modale .muted {
+  font-size: 13px;
+}
+
+.fm-modale__q {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.fm-modale .field--block {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.fm-modale .field--block input,
+.fm-modale .field--block select {
+  width: 100%;
+}
+
+.fm-modale .field--block textarea {
+  font-size: 13px;
+}
+
+.fm-pick {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  max-height: 46vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.fm-pick li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--row-line);
+}
+
+.fm-pick li:first-child {
+  border-top: none;
+}
+
+.fm-pick li > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.fm-pick strong {
+  font-weight: 400;
+}
+
+.fm-pick .muted {
+  font-size: 11.5px;
+}
+
 /* Bouton d'ouverture du menu, sur les écrans étroits seulement. */
 .fm-burger {
   display: none;
@@ -1505,6 +1663,11 @@ a.filter {
 .fm-tablette .filter {
   padding: 10px 16px;
   font-size: 14px;
+}
+
+.fm-tablette .filter.fm-x {
+  min-width: 40px;
+  height: 40px;
 }
 
 .fm-tablette .fm-rich,

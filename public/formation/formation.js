@@ -8,15 +8,21 @@
  * la documentation de toutes les routes API qui portent ces données.
  *
  * Design : celui du module Marketing, à l'identique (formation.css, partie 1).
- * Données : uniquement l'API du cockpit (../api/cockpit/formation/*), qui lit
- * le panel avec le compte consultant — rien n'est écrit dans le panel.
+ * Données : uniquement l'API du cockpit (api/cockpit/formation/*), qui lit le
+ * panel avec le compte consultant, et y écrit sur demande : compétences d'un
+ * niveau, liens d'une compétence, catalogue, compétences et niveau d'une
+ * personne. Chaque écriture est relue par le serveur avant d'être annoncée.
  * Navigation : par l'ancre (#/postes/12/34) — le bouton « retour » de la
  * tablette et les favoris marchent.
  */
 (function () {
   'use strict';
 
-  var API = '../api/cockpit';
+  // L'API est À CÔTÉ du module (formation/api/cockpit) : la même page se sert sous le cockpit
+  // (/consulant_bo/formation/) et à la racine du serveur (/formation/, comme /marketing/).
+  var API = 'api/cockpit';
+  // Le retour au cockpit : le dossier parent sous le cockpit ; depuis la racine, son adresse.
+  var COCKPIT = /^\/formation(\/|$)/.test(location.pathname) ? '/consulant_bo/' : '../';
   var root = document.getElementById('root');
 
   /* ── Outils ─────────────────────────────────────────────────────────── */
@@ -45,11 +51,13 @@
     return d.toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' à ' + d.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' });
   }
 
-  /** Lecture JSON de l'API du cockpit, avec un délai. */
-  function lire(chemin, delai) {
+  /** Appel JSON de l'API du cockpit, avec un délai. */
+  function appel(methode, chemin, corps, delai) {
     var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var minuteur = setTimeout(function () { if (ctrl) ctrl.abort(); }, delai || 120000);
-    return fetch(API + chemin, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: ctrl ? ctrl.signal : undefined })
+    var h = { Accept: 'application/json' };
+    if (corps) h['Content-Type'] = 'application/json';
+    return fetch(API + chemin, { method: methode, headers: h, credentials: 'same-origin', body: corps ? JSON.stringify(corps) : undefined, signal: ctrl ? ctrl.signal : undefined })
       .then(function (r) {
         return r.text().then(function (t) {
           var d = null;
@@ -69,6 +77,7 @@
       })
       .finally(function () { clearTimeout(minuteur); });
   }
+  function lire(chemin, delai) { return appel('GET', chemin, null, delai); }
 
   /* ── État ───────────────────────────────────────────────────────────── */
 
@@ -83,6 +92,9 @@
     f: { q: '', categorie: '', vue: 'tous', fq: '', pq: '', rq: '', mq: '', aFam: '', aStatut: '', aQ: '', aDemande: false },
     menu: false,
     tablette: false,
+    modale: null,   // fenêtre de saisie ouverte : {type, …}
+    occupe: null,   // l'écriture en cours (une à la fois)
+    flash: null,    // le message après une écriture : {genre: ok|error, texte}
   };
   var I = null; // index dérivés du référentiel
 
@@ -128,8 +140,8 @@
 
   /** Les liens d'une compétence : le lot complet s'il est là, sinon la lecture unitaire. */
   function liensDe(cid) {
-    if (I && I.liens) return I.liens[cid] || { procedures: [], formations: [], ressources: [] };
     var u = S.competences[cid];
+    if (I && I.liens) return I.liens[cid] || (u && u.data ? u.data.liens : { procedures: [], formations: [], ressources: [] });
     return u && u.data ? u.data.liens : null;
   }
 
@@ -186,9 +198,8 @@
         }).join('') + '</div>';
     }).join('');
     return '<nav class="sidebar" aria-label="Navigation principale">' +
-      '<div class="sidebar__head"><img src="../assets/img/logo.png" alt="L\'Atelier By" class="sidebar__logo" /><div class="sidebar__kicker">Module Formation</div></div>' +
-      '<div class="sidebar__back"><a href="../">' + icone('M19 12H5M12 19l-7-7 7-7') + 'Retour au cockpit</a></div>' +
-      '<div class="sidebar__brand">Réseau L’Atelier by</div>' +
+      '<div class="sidebar__head"><img src="img/logo.png" alt="L\'Atelier By" class="sidebar__logo" /><div class="sidebar__kicker">Module Formation</div></div>' +
+      '<div class="sidebar__back"><a href="' + COCKPIT + '">' + icone('M19 12H5M12 19l-7-7 7-7') + 'Retour au cockpit</a></div>' +
       '<div class="sidebar__groups">' + groupes + '</div></nav>';
   }
 
@@ -206,7 +217,7 @@
       '<button type="button" class="fm-burger" data-act="menu" aria-label="Ouvrir le menu">' + icone('M3 6h18M3 12h18M3 18h18') + '</button>' +
       '<div><p class="topbar__kicker">' + esc(v.kicker || 'Vue Réseau') + '</p><h1>' + esc(v.titre) + '</h1></div></div>' +
       '<div class="topbar__actions">' + actions + '</div></header>' +
-      '<main class="app__body' + (v.large ? ' app__body--wide' : '') + '" id="corps">' + v.corps + '</main></div></div>';
+      '<main class="app__body' + (v.large ? ' app__body--wide' : '') + '" id="corps">' + messageFlash() + v.corps + '</main></div>' + fenetre() + '</div>';
   }
 
   /* ── Pièces communes ────────────────────────────────────────────────── */
@@ -286,7 +297,7 @@
       return '<section class="card pending"><span class="chip pending__chip">' + (e.status === 503 ? 'Compte du panel à brancher' : auth ? 'Session requise' : 'Panel injoignable') + '</span>' +
         '<h2>' + (e.status === 503 ? 'Le module n’a pas d’accès au panel' : auth ? 'Connectez-vous au cockpit' : 'Le référentiel n’a pas pu être lu') + '</h2>' +
         '<p class="muted">' + esc(e.message) + '</p>' +
-        (auth ? '<p class="muted" style="margin-top:8px"><a href="../">Ouvrir le cockpit</a>, puis revenez ici.</p>' : '') +
+        (auth ? '<p class="muted" style="margin-top:8px"><a href="' + COCKPIT + '">Ouvrir le cockpit</a>, puis revenez ici.</p>' : '') +
         (e.status === 503 ? '<p class="muted" style="margin-top:8px">La documentation des routes, elle, reste consultable : <a href="#/api">Routes API</a>.</p>' : '') +
         '<p style="margin-top:12px"><button type="button" class="filter" data-act="rafraichir">Réessayer</button></p></section>';
     }
@@ -423,7 +434,11 @@
     if (niveau.competencesLues === false) {
       h += bandeau('Compétences du niveau illisibles : ' + esc(niveau.competencesErreur || 'erreur du panel') + '.', 'error');
     }
-    h += '<section class="card table-card"><h2>Compétences exigées</h2>' + tableCompetences(comps, { niveaux: false }) + '</section>';
+    h += '<section class="card table-card"><div class="fm-card-head"><h2>Compétences exigées</h2>' +
+      bouton('niv-ouvrir', 'niv-ouvrir', '+ Exiger une compétence', ' data-nid="' + niveau.id + '"', 'is-on') + '</div>' +
+      tableCompetences(comps, { niveaux: false, action: function (c) {
+        return bouton('niv-' + niveau.id + '-' + c.id, 'niv-retirer', 'Retirer', ' data-nid="' + niveau.id + '" data-cid="' + c.id + '" title="Ne plus exiger cette compétence à ce niveau"');
+      } }) + '</section>';
 
     // Exigences et tâches : lues à la demande.
     var d = S.niveaux[niveau.id];
@@ -453,9 +468,9 @@
     var tri = comps.slice().sort(function (a, b) {
       return (a.categorie || '~').localeCompare(b.categorie || '~', 'fr') || (a.sousCategorie || '').localeCompare(b.sousCategorie || '', 'fr') || a.nom.localeCompare(b.nom, 'fr');
     });
-    var col = o.niveaux ? 7 : 6;
+    var col = (o.niveaux ? 7 : 6) + (o.action ? 1 : 0);
     var h = '<div class="table-scroll"><table><thead><tr><th>Compétence</th><th>Sous-catégorie</th>' + (o.niveaux ? '<th>Exigée par</th>' : '<th>Vérification</th>') +
-      '<th>Formations</th><th>Procédures</th><th class="num">Ressources</th>' + (o.niveaux ? '<th class="num">Niveaux</th>' : '') + '</tr></thead><tbody>';
+      '<th>Formations</th><th>Procédures</th><th class="num">Ressources</th>' + (o.niveaux ? '<th class="num">Niveaux</th>' : '') + (o.action ? '<th class="num"></th>' : '') + '</tr></thead><tbody>';
     var cat = null;
     tri.forEach(function (c) {
       var k = c.categorie || 'Sans catégorie';
@@ -469,7 +484,8 @@
         '<td>' + (l ? chipsListe(l.formations, 2) : '<span class="muted">…</span>') + '</td>' +
         '<td>' + (l ? chipsListe(l.procedures, 2) : '<span class="muted">…</span>') + '</td>' +
         '<td class="num">' + compte(l ? l.ressources : null) + '</td>' +
-        (o.niveaux ? '<td class="num">' + (nivs.length ? n(nivs.length) : '<span class="muted">0</span>') + '</td>' : '') + '</tr>';
+        (o.niveaux ? '<td class="num">' + (nivs.length ? n(nivs.length) : '<span class="muted">0</span>') + '</td>' : '') +
+        (o.action ? '<td class="num fm-nowrap">' + o.action(c) + '</td>' : '') + '</tr>';
     });
     return h + '</tbody></table></div>';
   }
@@ -495,7 +511,8 @@
     var h = bandeauLiens() + '<div class="filters"><div class="filters__row">' +
       '<input class="fm-search" type="search" placeholder="Rechercher une compétence…" data-input="q" value="' + esc(f.q) + '" />' +
       '<select class="fm-select" data-input="categorie"><option value="">Toutes les catégories</option>' +
-      I.categories.map(function (c) { return '<option' + (f.categorie === c ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></div>' +
+      I.categories.map(function (c) { return '<option' + (f.categorie === c ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select>' +
+      bouton('comp+', 'comp-nouvelle', '+ Nouvelle compétence', '', 'is-on') + '</div>' +
       '<div class="filters__row">' + vues.map(function (v) {
         var off = (v[0] === 'sansFormation' || v[0] === 'sansProcedure') && !I.liens;
         return '<button type="button" class="filter' + (f.vue === v[0] ? ' is-on' : '') + '" data-act="filtre" data-k="vue" data-v="' + v[0] + '"' + (off ? ' disabled title="Les liens des compétences sont en cours de lecture"' : '') + '>' + esc(v[1]) + '</button>';
@@ -517,7 +534,9 @@
     var nivs = I.niveauxParComp.get(cid) || [];
     h += '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(c.nom) + '</h2><p class="muted">' + esc([c.categorie, c.sousCategorie].filter(Boolean).join(' › ') || 'Sans catégorie') +
       (c.nomBase && c.nomBase !== c.nom ? ' · nom de base : ' + esc(c.nomBase) : '') + ' · #' + c.id + '</p></div>' +
-      '<div class="fm-links"><a class="filter" href="#/manuel/competence/' + cid + '">Ouvrir dans le manuel</a></div></div>';
+      '<div class="fm-links"><a class="filter" href="#/manuel/competence/' + cid + '">Ouvrir dans le manuel</a>' +
+      (I.comp.has(cid) ? bouton('comp~' + cid, 'comp-modifier', 'Modifier', ' data-cid="' + cid + '"') + bouton('comp-' + cid, 'comp-supprimer', 'Supprimer', ' data-cid="' + cid + '"', 'confirm__danger') : '') +
+      '</div></div>';
     h += '<div class="fm-cols" style="margin-top:14px">';
     h += '<section class="card"><h2>Description</h2>' + (c.description ? '<div class="fm-rich">' + riche(c.description) + '</div>' : '<p class="muted">Pas de description dans le panel.</p>') + '</section>';
     h += '<section class="card"><h2>Méthode de vérification</h2>' + (c.verification ? '<div class="fm-rich">' + riche(c.verification) + '</div>' : '<p class="muted">Non renseignée.</p>') + '</section>';
@@ -529,13 +548,21 @@
     if (!l) {
       h += '<section class="card table-card">' + attente('Lecture des liens de la compétence…') + '</section>';
     } else {
+      var carte = function (type, items, lien, vide) {
+        var T = TYPES[type];
+        return '<section class="card"><div class="fm-card-head"><h2>' + esc(T[2] === 'Ressource' ? 'Ressources' : T[2] + 's') + ' · ' + n(items.length) + '</h2>' +
+          bouton('lien-ouvrir', 'lien-ouvrir', '+ Rattacher', ' data-cid="' + cid + '" data-type="' + type + '"') + '</div>' +
+          (items.length ? '<ul class="fm-liste">' + items.map(function (x) {
+            return '<li><span>' + lien(x) + '</span>' + bouton('lien-' + cid + type + x.id, 'lien-retirer', '×', ' data-cid="' + cid + '" data-type="' + type + '" data-id="' + x.id + '" title="Détacher" aria-label="Détacher ' + esc(x.nom) + '"', 'fm-x') + '</li>';
+          }).join('') + '</ul>' : '<p class="muted">' + vide + '</p>') + '</section>';
+      };
       h += '<div class="fm-cols" style="margin-top:1rem">';
-      h += '<section class="card"><h2>Formations · ' + n(l.formations.length) + '</h2>' + (l.formations.length ? '<ul>' + l.formations.map(function (x) { return '<li><a href="#/formations/' + x.id + '">' + esc(x.nom) + '</a></li>'; }).join('') + '</ul>' : '<p class="muted">Aucune formation attachée.</p>') + '</section>';
-      h += '<section class="card"><h2>Procédures · ' + n(l.procedures.length) + '</h2>' + (l.procedures.length ? '<ul>' + l.procedures.map(function (x) { return '<li><a href="#/procedures/' + x.id + '">' + esc(x.nom) + '</a></li>'; }).join('') + '</ul>' : '<p class="muted">Aucune procédure attachée.</p>') + '</section>';
-      h += '<section class="card"><h2>Ressources · ' + n(l.ressources.length) + '</h2>' + (l.ressources.length ? '<ul>' + l.ressources.map(function (x) {
+      h += carte('formation', l.formations, function (x) { return '<a href="#/formations/' + x.id + '">' + esc(x.nom) + '</a>'; }, 'Aucune formation attachée.');
+      h += carte('procedure', l.procedures, function (x) { return '<a href="#/procedures/' + x.id + '">' + esc(x.nom) + '</a>'; }, 'Aucune procédure attachée.');
+      h += carte('ressource', l.ressources, function (x) {
         var r = I.ressource.get(x.id);
-        return '<li>' + (r && r.url ? '<a target="_blank" rel="noopener" href="' + esc(r.url) + '">' + esc(x.nom) + ' ↗</a>' : esc(x.nom)) + '</li>';
-      }).join('') + '</ul>' : '<p class="muted">Aucune ressource attachée.</p>') + '</section>';
+        return r && r.url && /^https?:/i.test(r.url) ? '<a target="_blank" rel="noopener" href="' + esc(r.url) + '">' + esc(x.nom) + ' ↗</a>' : esc(x.nom);
+      }, 'Aucune ressource attachée.');
       h += '</div>';
     }
     return { titre: c.nom, kicker: 'Compétence', corps: h };
@@ -758,13 +785,45 @@
           '<div class="progress progress--inline"><div class="progress__fill" style="width:' + prog + '%"></div></div><p class="muted">' + n(l.valides) + ' / ' + n(l.exig.size) + ' · ' + prog + ' %</p>') + '</td>' +
         '<td>' + chipsListe(l.manque.map(function (c) { return I.comp.get(c) || { id: c, nom: '#' + c }; }), 2, 'chip--warn') + '</td>' +
         '<td>' + (I.liens ? (l.formations.length ? chipsListe(l.formations, 2) : '<span class="muted">—</span>') : '<span class="muted">…</span>') + '</td></tr>';
-      if (ouvert) {
-        h += '<tr class="fm-detail"><td colspan="5">' + (l.manque.length ? '<div class="section-label" style="margin-top:0">Ce qui manque à ' + esc(e.nom) + '</div>' + tableCompetences(l.manque.map(function (c) { return I.comp.get(c); }).filter(Boolean), { niveaux: false }) :
-          '<p class="muted">' + (l.exig.size ? 'Toutes les compétences du niveau sont validées.' : 'Aucun niveau tenu : rien n’est exigé.') + '</p>') + '</td></tr>';
-      }
+      if (ouvert) h += '<tr class="fm-detail"><td colspan="5">' + detailEmploye(sid, l) + '</td></tr>';
     });
     h += '</tbody></table></div></section>';
     return { titre: TITRES.equipes, corps: h };
+  }
+
+  /** Le détail d'une personne : son niveau, ce qui lui manque, ce qu'elle a validé — et les gestes. */
+  function detailEmploye(sid, l) {
+    var e = l.e, eid = e.id;
+    var att = function (cid) { return ' data-sid="' + sid + '" data-eid="' + eid + '" data-cid="' + cid + '"'; };
+    var h = '<div class="fm-head"><div><div class="section-label" style="margin-top:0">Poste et niveau</div><div style="margin-top:8px">' +
+      (e.postes.length ? chipsListe(e.postes.map(function (p) { return { id: p.id, nom: (p.nom || 'Poste') + (p.niveau ? ' · ' + p.niveau : '') }; }), 4, 'chip--accent') : '<span class="muted">Aucun poste dans le panel.</span>') + '</div></div>' +
+      '<div class="fm-links">' + bouton('emp' + eid + 'niv', 'emp-poste', 'Changer de poste ou de niveau', ' data-sid="' + sid + '" data-eid="' + eid + '"') + '</div></div>';
+    // Tout est validé : le niveau suivant du même poste, s'il existe.
+    if (l.exig.size && !l.manque.length) {
+      e.postes.forEach(function (p) {
+        var poste = I.posteById.get(p.id);
+        if (!poste) return;
+        var i = -1;
+        poste.niveaux.forEach(function (nv, k) { if (nv.id === p.niveauId) i = k; });
+        var suivant = i >= 0 ? poste.niveaux[i + 1] : null;
+        h += '<div class="fm-banner fm-banner--ok" style="margin-top:12px"><span>Toutes les compétences du niveau ' + esc(poste.nom + ' · ' + (p.niveau || '')) + ' sont validées.' +
+          (suivant ? '' : ' C’est le dernier niveau du poste.') + '</span>' +
+          (suivant ? bouton('emp' + eid + 'niv', 'emp-suivant', 'Passer au niveau « ' + esc(suivant.nom) + ' »', ' data-sid="' + sid + '" data-eid="' + eid + '" data-pid="' + poste.id + '" data-nid="' + suivant.id + '"', 'is-on') : '') + '</div>';
+      });
+    }
+    var manque = l.manque.map(function (c) { return I.comp.get(c); }).filter(Boolean);
+    h += '<div class="section-label">À acquérir · ' + n(manque.length) + '</div>';
+    h += manque.length ? tableCompetences(manque, { niveaux: false, action: function (c) {
+      return bouton('emp' + eid + '+' + c.id, 'emp-valider', 'Valider', att(c.id) + ' title="La personne maîtrise cette compétence : l’enregistrer dans le panel"', 'is-on');
+    } }) : '<p class="muted" style="margin-top:8px">' + (l.exig.size ? 'Rien : tout ce que le niveau exige est validé.' : 'Aucun niveau tenu : rien n’est exigé.') + '</p>';
+    var valides = e.competences.map(function (cid) { return I.comp.get(cid) || { id: cid, nom: 'Compétence #' + cid }; })
+      .sort(function (a, b) { return a.nom.localeCompare(b.nom, 'fr'); });
+    h += '<div class="section-label">Validées · ' + n(valides.length) + '</div>';
+    h += valides.length ? '<ul class="fm-liste fm-liste--cols">' + valides.map(function (c) {
+      return '<li><span>' + esc(c.nom) + (l.exig.has(c.id) ? '' : ' <span class="muted fm-small">(hors niveau)</span>') + '</span>' +
+        bouton('emp' + eid + '-' + c.id, 'emp-retirer', '×', att(c.id) + ' title="Retirer la validation" aria-label="Retirer la validation de ' + esc(c.nom) + '"', 'fm-x') + '</li>';
+    }).join('') + '</ul>' : '<p class="muted" style="margin-top:8px">Aucune compétence validée dans le panel.</p>';
+    return h;
   }
 
   /* ── Manuel opératoire (tablette) ───────────────────────────────────── */
@@ -1048,6 +1107,230 @@
     return h;
   }
 
+  /* ── Écritures ──────────────────────────────────────────────────────── */
+
+  /** Le message laissé par la dernière écriture, en tête de l'écran. */
+  function messageFlash() {
+    if (!S.flash) return '';
+    return '<div class="fm-banner fm-banner--' + (S.flash.genre === 'ok' ? 'ok' : 'error') + '" role="status"><span>' + esc(S.flash.texte) + '</span>' +
+      '<button type="button" class="fm-banner__fermer" data-act="flash-fermer" aria-label="Fermer">×</button></div>';
+  }
+  var minuteurFlash = null;
+  function flash(genre, texte) {
+    S.flash = { genre: genre, texte: texte };
+    clearTimeout(minuteurFlash);
+    minuteurFlash = setTimeout(function () { S.flash = null; rendre(true); }, genre === 'ok' ? 6000 : 15000);
+  }
+
+  /**
+   * Une écriture : une à la fois, le bouton dit qu'elle part, la réponse du
+   * serveur (déjà relue au panel) corrige l'état de l'écran par `appliquer`,
+   * qui rend le message à afficher. Une erreur reste dans la fenêtre ouverte.
+   */
+  function ecrire(cle, methode, chemin, corps, appliquer) {
+    if (S.occupe) return;
+    S.occupe = cle;
+    if (S.modale) S.modale.erreur = null;
+    rendre(true);
+    appel(methode, chemin, corps, 120000).then(function (r) {
+      S.occupe = null;
+      var msg = appliquer(r);
+      flash('ok', r.deja ? 'Déjà ainsi dans le panel — rien à changer.' : msg);
+      rendre(true);
+    }, function (e) {
+      S.occupe = null;
+      var msg = 'Le panel n’a pas enregistré : ' + e.message;
+      if (S.modale) S.modale.erreur = msg; else flash('error', msg);
+      rendre(true);
+    });
+  }
+  function bouton(cle, act, libelle, attrs, cls) {
+    var occ = S.occupe === cle;
+    return '<button type="button" class="filter' + (cls ? ' ' + cls : '') + '" data-act="' + act + '"' + (attrs || '') + (S.occupe ? ' disabled' : '') + '>' + (occ ? 'Enregistrement…' : libelle) + '</button>';
+  }
+
+  // Ce que le serveur rend, appliqué à l'état de l'écran.
+  function majNiveau(n) {
+    S.ref.postes.forEach(function (p) { p.niveaux.forEach(function (nv) { if (nv.id === n.id) { nv.competences = n.competences; nv.competencesLues = true; } }); });
+    indexer();
+  }
+  function majLiens(cid, liens) {
+    if (S.liens) S.liens.liens[cid] = liens;
+    S.competences[cid] = { data: { competence: I.comp.get(cid) || (S.competences[cid] && S.competences[cid].data && S.competences[cid].data.competence), liens: liens } };
+    indexer();
+  }
+  function majCompetence(c) {
+    var i = -1;
+    S.ref.competences.forEach(function (x, k) { if (x.id === c.id) i = k; });
+    if (i >= 0) S.ref.competences[i] = c; else S.ref.competences.push(c);
+    if (S.liens && !S.liens.liens[c.id]) S.liens.liens[c.id] = { procedures: [], formations: [], ressources: [] };
+    indexer();
+  }
+  function oterCompetence(cid) {
+    S.ref.competences = S.ref.competences.filter(function (x) { return x.id !== cid; });
+    S.ref.postes.forEach(function (p) { p.niveaux.forEach(function (nv) { nv.competences = nv.competences.filter(function (x) { return x !== cid; }); }); });
+    if (S.liens) delete S.liens.liens[cid];
+    delete S.competences[cid];
+    indexer();
+  }
+  function majEmploye(sid, f) {
+    var d = S.equipe.parShop[sid];
+    if (d && d.data) d.data.employes.forEach(function (e) { if (e.id === f.id) { e.postes = f.postes; e.competences = f.competences; e.lu = true; } });
+  }
+  function nomComp(cid) { var c = I.comp.get(cid); return c ? c.nom : 'compétence #' + cid; }
+
+  // Les gestes.
+  function ajouterAuNiveau(nid, cid) {
+    ecrire('niv+' + nid + '-' + cid, 'POST', '/formation/niveau/' + nid + '/competences', { competence: cid }, function (r) {
+      majNiveau(r.niveau);
+      return '« ' + nomComp(cid) + ' » est exigée au niveau ' + niveauLibelle(nid) + '.';
+    });
+  }
+  function retirerDuNiveau(nid, cid) {
+    ecrire('niv-' + nid + '-' + cid, 'DELETE', '/formation/niveau/' + nid + '/competences/' + cid, null, function (r) {
+      majNiveau(r.niveau); S.modale = null;
+      return '« ' + nomComp(cid) + ' » n’est plus exigée au niveau ' + niveauLibelle(nid) + '.';
+    });
+  }
+  var TYPES = { formation: ['formations', 'formation', 'Formation'], procedure: ['procedures', 'procédure', 'Procédure'], ressource: ['ressources', 'ressource', 'Ressource'] };
+  function rattacher(cid, type, id) {
+    ecrire('lien+' + cid + type + id, 'POST', '/formation/competence/' + cid + '/liens', { type: type, id: id }, function (r) {
+      majLiens(cid, r.liens);
+      return TYPES[type][2] + ' rattachée à « ' + nomComp(cid) + ' ».';
+    });
+  }
+  function detacher(cid, type, id) {
+    ecrire('lien-' + cid + type + id, 'DELETE', '/formation/competence/' + cid + '/liens/' + type + '/' + id, null, function (r) {
+      majLiens(cid, r.liens); S.modale = null;
+      return TYPES[type][2] + ' détachée de « ' + nomComp(cid) + ' ».';
+    });
+  }
+  function enregistrerCompetence() {
+    var m = S.modale, f = m.form;
+    var corps = { nom: (f.nom || '').trim(), description: (f.description || '').trim(), verification: (f.verification || '').trim(), sousCategorie: +f.sousCategorie || null };
+    if (!corps.nom || !corps.sousCategorie) { m.erreur = 'Le nom et la sous-catégorie sont obligatoires.'; rendre(true); return; }
+    if (m.cid) {
+      var c = I.comp.get(m.cid) || {};
+      var diff = {};
+      if (corps.nom !== c.nom) diff.nom = corps.nom;
+      if (corps.description !== (c.description || '')) diff.description = corps.description;
+      if (corps.verification !== (c.verification || '')) diff.verification = corps.verification;
+      if (corps.sousCategorie !== c.sousCategorieId) diff.sousCategorie = corps.sousCategorie;
+      if (!Object.keys(diff).length) { S.modale = null; rendre(true); return; }
+      ecrire('comp~' + m.cid, 'PATCH', '/formation/competences/' + m.cid, diff, function (r) {
+        majCompetence(r.competence); S.modale = null;
+        return 'Compétence « ' + r.competence.nom + ' » enregistrée dans le panel.';
+      });
+    } else {
+      ecrire('comp+', 'POST', '/formation/competences', corps, function (r) {
+        majCompetence(r.competence); S.modale = null;
+        setTimeout(function () { location.hash = '#/competences/' + r.competence.id; }, 0);
+        return 'Compétence « ' + r.competence.nom + ' » créée dans le panel (#' + r.competence.id + ').';
+      });
+    }
+  }
+  function supprimerCompetence(cid) {
+    var nom = nomComp(cid);
+    ecrire('comp-' + cid, 'DELETE', '/formation/competences/' + cid, null, function () {
+      oterCompetence(cid); S.modale = null;
+      setTimeout(function () { location.hash = '#/competences'; }, 0);
+      return 'Compétence « ' + nom + ' » supprimée du catalogue.';
+    });
+  }
+  function validerPour(sid, eid, cid, oui) {
+    ecrire('emp' + eid + (oui ? '+' : '-') + cid, oui ? 'PUT' : 'DELETE', '/formation/employe/' + eid + '/competences/' + cid + '?shop=' + sid, null, function (r) {
+      majEmploye(sid, r.employe); S.modale = null;
+      return (oui ? 'Validée : ' : 'Validation retirée : ') + '« ' + nomComp(cid) + ' ».';
+    });
+  }
+  function affecterNiveau(sid, eid, pid, nid) {
+    ecrire('emp' + eid + 'niv', 'PUT', '/formation/employe/' + eid + '/poste?shop=' + sid, { poste: pid, niveau: nid }, function (r) {
+      majEmploye(sid, r.employe); S.modale = null;
+      return 'Niveau affecté : ' + niveauLibelle(nid) + '.';
+    });
+  }
+
+  /** Une demande de confirmation, au gabarit du voile de confirmation du marketing. */
+  function confirmer(titre, texte, libelle, cle, action) {
+    S.modale = { type: 'confirmer', titre: titre, texte: texte, libelle: libelle, cle: cle, action: action };
+    rendre(true);
+  }
+
+  /** La liste à choisir d'une fenêtre (compétences à exiger, formations à rattacher…). */
+  function listeChoix(items, cleOcc, act, attrs) {
+    if (!items.length) return '<p class="muted" style="margin-top:12px">Rien à proposer.</p>';
+    return '<ul class="fm-pick">' + items.slice(0, 200).map(function (x) {
+      return '<li><div><strong>' + esc(x.nom) + '</strong>' + (x.note ? '<span class="muted">' + esc(x.note) + '</span>' : '') + '</div>' +
+        (x.fait ? '<span class="chip chip--ok">' + esc(x.fait) + '</span>' : bouton(cleOcc(x), act, x.libelle || 'Ajouter', ' data-id="' + x.id + '"' + (attrs || ''))) + '</li>';
+    }).join('') + (items.length > 200 ? '<li class="muted">… ' + (items.length - 200) + ' de plus : précisez la recherche.</li>' : '') + '</ul>';
+  }
+
+  function fenetre() {
+    var m = S.modale;
+    if (!m) return '';
+    var titre = '', corps = '', actions = '<button type="button" class="filter" data-act="modale-fermer">' + (m.type === 'confirmer' || m.type === 'competence' || m.type === 'poste' ? 'Annuler' : 'Fermer') + '</button>';
+    var q = norm(m.q);
+    var recherche = function (ph) { return '<input class="fm-search fm-modale__q" type="search" placeholder="' + esc(ph) + '" data-minput="q" value="' + esc(m.q || '') + '" />'; };
+    if (m.type === 'confirmer') {
+      titre = m.titre;
+      corps = '<p class="muted" style="line-height:1.55">' + m.texte + '</p>';
+      actions += bouton(m.cle, 'modale-confirmer', m.libelle, '', 'confirm__danger');
+    } else if (m.type === 'ajoutNiveau') {
+      var nv = I.niveauById.get(m.nid);
+      titre = 'Exiger une compétence — ' + niveauLibelle(m.nid);
+      var deja = new Set(nv ? nv.competences : []);
+      var items = S.ref.competences.filter(function (c) { return !q || norm(c.nom + ' ' + (c.categorie || '') + ' ' + (c.sousCategorie || '')).indexOf(q) >= 0; })
+        .sort(function (a, b) { return (a.categorie || '~').localeCompare(b.categorie || '~', 'fr') || a.nom.localeCompare(b.nom, 'fr'); })
+        .map(function (c) { return { id: c.id, nom: c.nom, note: [c.categorie, c.sousCategorie].filter(Boolean).join(' › '), fait: deja.has(c.id) ? 'Exigée' : null }; });
+      corps = '<p class="muted">Le panel exigera la compétence à ce niveau : elle entre dans la fiche du niveau, le manuel et l’écart des équipes.</p>' + recherche('Rechercher dans le catalogue…') +
+        listeChoix(items, function (x) { return 'niv+' + m.nid + '-' + x.id; }, 'niv-ajouter', ' data-nid="' + m.nid + '"');
+    } else if (m.type === 'lien') {
+      var T = TYPES[m.ltype], l = liensDe(m.cid) || { procedures: [], formations: [], ressources: [] };
+      titre = 'Rattacher une ' + T[1] + ' — ' + nomComp(m.cid);
+      var lies = new Set(l[T[0]].map(function (x) { return x.id; }));
+      var source = m.ltype === 'formation' ? S.ref.formations.map(function (f) { return { id: f.id, nom: f.nom, note: [f.categorie, f.sousCategorie].filter(Boolean).join(' › ') }; })
+        : m.ltype === 'procedure' ? S.ref.procedures.map(function (p) { return { id: p.id, nom: p.titre, note: [p.categorie, p.sousCategorie].filter(Boolean).join(' › ') }; })
+          : S.ref.ressources.map(function (r) { return { id: r.id, nom: r.titre, note: [r.type, r.categorie].filter(Boolean).join(' · ') }; });
+      var it2 = source.filter(function (x) { return !q || norm(x.nom + ' ' + x.note).indexOf(q) >= 0; })
+        .sort(function (a, b) { return a.nom.localeCompare(b.nom, 'fr'); })
+        .map(function (x) { return Object.assign(x, { fait: lies.has(x.id) ? 'Rattachée' : null, libelle: 'Rattacher' }); });
+      corps = recherche('Rechercher…') + listeChoix(it2, function (x) { return 'lien+' + m.cid + m.ltype + x.id; }, 'lien-ajouter', ' data-cid="' + m.cid + '" data-type="' + m.ltype + '"');
+    } else if (m.type === 'competence') {
+      titre = m.cid ? 'Modifier la compétence' : 'Nouvelle compétence';
+      var f = m.form;
+      var sc = (S.ref.structure.sousCategories || []).slice();
+      var catNom = {};
+      (S.ref.structure.categories || []).forEach(function (c) { catNom[c.id] = c.nom; });
+      S.ref.competences.forEach(function (c) { if (c.categorieId != null && c.categorie) catNom[c.categorieId] = catNom[c.categorieId] || c.categorie; });
+      var groupes = {};
+      sc.forEach(function (x) { var k = catNom[x.categorieId] || 'Sans catégorie'; (groupes[k] = groupes[k] || []).push(x); });
+      var options = '<option value="">— Choisir —</option>' + Object.keys(groupes).sort(function (a, b) { return a.localeCompare(b, 'fr'); }).map(function (g) {
+        return '<optgroup label="' + esc(g) + '">' + groupes[g].sort(function (a, b) { return a.nom.localeCompare(b.nom, 'fr'); }).map(function (x) {
+          return '<option value="' + x.id + '"' + (String(f.sousCategorie) === String(x.id) ? ' selected' : '') + '>' + esc(x.nom) + '</option>';
+        }).join('') + '</optgroup>';
+      }).join('');
+      corps = '<label class="field field--block">Sous-catégorie<select class="fm-select" data-mform="sousCategorie">' + options + '</select></label>' +
+        '<label class="field field--block">Nom<input type="text" maxlength="255" data-mform="nom" value="' + esc(f.nom || '') + '" /></label>' +
+        '<label class="field field--block">Description<textarea rows="4" maxlength="5000" data-mform="description">' + esc(f.description || '') + '</textarea></label>' +
+        '<label class="field field--block">Méthode de vérification<textarea rows="2" maxlength="2000" data-mform="verification">' + esc(f.verification || '') + '</textarea></label>';
+      actions += bouton(m.cid ? 'comp~' + m.cid : 'comp+', 'competence-enregistrer', m.cid ? 'Enregistrer' : 'Créer', '', 'is-on');
+    } else if (m.type === 'poste') {
+      titre = 'Poste et niveau — ' + esc(m.nom);
+      var postes = S.ref.postes.filter(function (p) { return p.id != null && p.niveaux.length; });
+      var pid = +m.poste || (postes[0] && postes[0].id);
+      var poste = postes.filter(function (p) { return p.id === pid; })[0];
+      corps = '<p class="muted">Le panel enregistre le niveau tenu pour ce poste (un niveau par poste).</p>' +
+        '<label class="field field--block">Poste<select class="fm-select" data-minput="poste">' + postes.map(function (p) { return '<option value="' + p.id + '"' + (p.id === pid ? ' selected' : '') + '>' + esc(p.nom) + '</option>'; }).join('') + '</select></label>' +
+        '<label class="field field--block">Niveau<select class="fm-select" data-minput="niveau">' + (poste ? poste.niveaux.map(function (nv, i) {
+          return '<option value="' + nv.id + '"' + (String(m.niveau) === String(nv.id) ? ' selected' : '') + '>' + (i + 1) + ' · ' + esc(nv.nom) + '</option>';
+        }).join('') : '') + '</select></label>';
+      actions += bouton('emp' + m.eid + 'niv', 'poste-enregistrer', 'Affecter', '', 'is-on');
+    }
+    return '<div class="confirm" data-act="modale-fond"><div class="confirm__box card fm-modale" role="dialog" aria-modal="true" aria-label="' + esc(titre) + '">' +
+      '<h3>' + esc(titre) + '</h3>' + corps + (m.erreur ? '<p class="error">' + esc(m.erreur) + '</p>' : '') +
+      '<div class="confirm__actions">' + actions + '</div></div></div>';
+  }
+
   /* ── Rendu ──────────────────────────────────────────────────────────── */
 
   var ECRANS = {
@@ -1060,8 +1343,9 @@
     document.body.classList.toggle('fm-tablette', S.tablette);
     var actif = document.activeElement, focus = null;
     if (actif && actif.getAttribute) {
-      var cle = actif.getAttribute('data-input') || actif.getAttribute('data-probe');
-      if (cle) focus = { attr: actif.hasAttribute('data-input') ? 'data-input' : 'data-probe', cle: cle, debut: actif.selectionStart, fin: actif.selectionEnd };
+      ['data-input', 'data-probe', 'data-minput', 'data-mform'].forEach(function (a) {
+        if (!focus && actif.hasAttribute(a)) focus = { attr: a, cle: actif.getAttribute(a), debut: actif.selectionStart, fin: actif.selectionEnd };
+      });
     }
     var ancien = document.getElementById('corps');
     var defil = garder && ancien ? ancien.scrollTop : 0;
@@ -1141,9 +1425,11 @@
 
   function chargerLiens(forcer) {
     S.liensCharge = true; S.liensErreur = null;
-    var hors = S.ref.competences.filter(function (c) { return c.horsCatalogue; }).map(function (c) { return c.id; });
-    lire('/formation/liens?_cache=900' + (hors.length ? '&en_plus=' + hors.join(',') : '') + (forcer ? '&rafraichir=1' : ''), 280000).then(function (d) {
+    // Une seule adresse (sans paramètre) : le serveur corrige ce cache après chaque écriture.
+    lire('/formation/liens?_cache=900' + (forcer ? '&rafraichir=1' : ''), 280000).then(function (d) {
       S.liens = d; S.liensCharge = false; indexer(); rendre(true);
+      // Les compétences exigées par un niveau mais absentes du catalogue : lues une par une.
+      S.ref.competences.forEach(function (c) { if (c.horsCatalogue && !d.liens[c.id]) chargerUn(S.competences, c.id, '/formation/competence?id=' + c.id); });
     }, function (e) {
       S.liensCharge = false; S.liensErreur = e.message; rendre(true);
     });
@@ -1151,12 +1437,95 @@
 
   /* ── Événements ─────────────────────────────────────────────────────── */
 
+  /** Les gestes d'écriture et les fenêtres. Rend vrai si l'action est traitée. */
+  function gestes(act, t, ev) {
+    var num = function (k) { return +t.getAttribute(k); };
+    switch (act) {
+      case 'flash-fermer': S.flash = null; rendre(true); return true;
+      case 'modale-fond': if (ev.target === t && !S.occupe) { S.modale = null; rendre(true); } return true;
+      case 'modale-fermer': if (!S.occupe) { S.modale = null; rendre(true); } return true;
+      case 'modale-confirmer': if (S.modale && S.modale.action) S.modale.action(); return true;
+      case 'niv-ouvrir': S.modale = { type: 'ajoutNiveau', nid: num('data-nid'), q: '' }; rendre(true); focusModale(); return true;
+      case 'niv-ajouter': ajouterAuNiveau(num('data-nid'), num('data-id')); return true;
+      case 'niv-retirer': {
+        var nid = num('data-nid'), cid = num('data-cid');
+        confirmer('Ne plus exiger cette compétence ?', '« ' + esc(nomComp(cid)) + ' » ne sera plus exigée au niveau <strong>' + esc(niveauLibelle(nid)) + '</strong>. La compétence reste au catalogue, et les personnes qui l’ont validée la gardent.',
+          'Retirer du niveau', 'niv-' + nid + '-' + cid, function () { retirerDuNiveau(nid, cid); });
+        return true;
+      }
+      case 'lien-ouvrir': S.modale = { type: 'lien', cid: num('data-cid'), ltype: t.getAttribute('data-type'), q: '' }; rendre(true); focusModale(); return true;
+      case 'lien-ajouter': rattacher(num('data-cid'), t.getAttribute('data-type'), num('data-id')); return true;
+      case 'lien-retirer': {
+        var c2 = num('data-cid'), ty = t.getAttribute('data-type'), id2 = num('data-id');
+        var l2 = liensDe(c2) || { procedures: [], formations: [], ressources: [] };
+        var x2 = l2[TYPES[ty][0]].filter(function (x) { return x.id === id2; })[0];
+        confirmer('Détacher cette ' + TYPES[ty][1] + ' ?', '« ' + esc(x2 ? x2.nom : '#' + id2) + ' » ne sera plus rattachée à <strong>' + esc(nomComp(c2)) + '</strong>. Elle reste dans le panel.',
+          'Détacher', 'lien-' + c2 + ty + id2, function () { detacher(c2, ty, id2); });
+        return true;
+      }
+      case 'comp-nouvelle': {
+        var cat = S.f.categorie;
+        var sc = (S.ref.structure.sousCategories || []).filter(function (x) { return S.ref.competences.some(function (c) { return c.sousCategorieId === x.id && (c.categorie || 'Sans catégorie') === cat; }); })[0];
+        S.modale = { type: 'competence', cid: null, form: { sousCategorie: sc ? sc.id : '', nom: '', description: '', verification: '' } };
+        rendre(true); focusModale('[data-mform="nom"]'); return true;
+      }
+      case 'comp-modifier': {
+        var c3 = I.comp.get(num('data-cid'));
+        if (!c3) return true;
+        S.modale = { type: 'competence', cid: c3.id, form: { sousCategorie: c3.sousCategorieId || '', nom: c3.nom, description: c3.description || '', verification: c3.verification || '' } };
+        rendre(true); focusModale('[data-mform="nom"]'); return true;
+      }
+      case 'competence-enregistrer': enregistrerCompetence(); return true;
+      case 'comp-supprimer': {
+        var c4 = num('data-cid'), nivs = I.niveauxParComp.get(c4) || [], l4 = liensDe(c4);
+        var impact = nivs.length ? ' Elle est exigée par ' + pl(nivs.length, 'niveau') + ' (' + esc(nivs.map(niveauLibelle).join(', ')) + ') : elle en disparaîtra.' : ' Aucun niveau ne l’exige.';
+        if (l4 && (l4.formations.length || l4.procedures.length || l4.ressources.length)) impact += ' Ses liens (' + n(l4.formations.length) + ' formation(s), ' + n(l4.procedures.length) + ' procédure(s), ' + n(l4.ressources.length) + ' ressource(s)) seront perdus.';
+        confirmer('Supprimer du catalogue ?', '« <strong>' + esc(nomComp(c4)) + '</strong> » sera supprimée du panel.' + impact + ' Ce geste ne se défait pas depuis le module.',
+          'Supprimer définitivement', 'comp-' + c4, function () { supprimerCompetence(c4); });
+        return true;
+      }
+      case 'emp-valider': validerPour(num('data-sid'), num('data-eid'), num('data-cid'), true); return true;
+      case 'emp-retirer': {
+        var sid = num('data-sid'), eid = num('data-eid'), c5 = num('data-cid');
+        confirmer('Retirer la validation ?', '« ' + esc(nomComp(c5)) + ' » ne sera plus comptée comme acquise pour cette personne.', 'Retirer', 'emp' + eid + '-' + c5, function () { validerPour(sid, eid, c5, false); });
+        return true;
+      }
+      case 'emp-poste': {
+        var s6 = num('data-sid'), e6 = num('data-eid');
+        var d6 = S.equipe.parShop[s6], emp = d6 && d6.data ? d6.data.employes.filter(function (x) { return x.id === e6; })[0] : null;
+        var tenu = emp && emp.postes[0];
+        S.modale = { type: 'poste', sid: s6, eid: e6, nom: emp ? emp.nom : '#' + e6, poste: tenu ? tenu.id : '', niveau: tenu ? tenu.niveauId : '' };
+        rendre(true); return true;
+      }
+      case 'poste-enregistrer': {
+        var m = S.modale;
+        var selP = root.querySelector('[data-minput="poste"]'), selN = root.querySelector('[data-minput="niveau"]');
+        if (!selP || !selN || !selN.value) { m.erreur = 'Choisissez un poste et un niveau.'; rendre(true); return true; }
+        affecterNiveau(m.sid, m.eid, +selP.value, +selN.value);
+        return true;
+      }
+      case 'emp-suivant': {
+        var s7 = num('data-sid'), e7 = num('data-eid'), p7 = num('data-pid'), n7 = num('data-nid');
+        confirmer('Passer au niveau suivant ?', 'Le panel enregistrera le niveau <strong>' + esc(niveauLibelle(n7)) + '</strong> pour cette personne. Les compétences de ce niveau deviendront celles à acquérir.',
+          'Passer au niveau', 'emp' + e7 + 'niv', function () { affecterNiveau(s7, e7, p7, n7); });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Le premier champ de la fenêtre ouverte prend la main (clavier, tablette). */
+  function focusModale(sel) {
+    setTimeout(function () { var el = root.querySelector(sel || '.fm-modale input, .fm-modale select'); if (el) el.focus(); }, 0);
+  }
+
   root.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act], [data-href]');
     if (!t || !root.contains(t)) return;
     if (ev.target.closest('a[href]') && ev.target.closest('a[href]') !== t && t.contains(ev.target.closest('a[href]'))) return; // un lien dans la ligne garde son rôle
     var act = t.getAttribute('data-act');
     if (!act) { location.hash = t.getAttribute('data-href'); return; }
+    if (gestes(act, t, ev)) return;
     if (act === 'menu') { S.menu = !S.menu; rendre(true); return; }
     if (act === 'tablette') {
       S.tablette = !S.tablette;
@@ -1186,22 +1555,30 @@
     var t = ev.target;
     var k = t.getAttribute && t.getAttribute('data-input');
     if (k) { S.f[k] = t.value; rendre(true); return; }
+    var mk = t.getAttribute && t.getAttribute('data-minput');
+    if (mk && S.modale) { S.modale[mk] = t.value; if (mk === 'poste') S.modale.niveau = ''; rendre(true); return; }
+    var mf = t.getAttribute && t.getAttribute('data-mform');
+    if (mf && S.modale && S.modale.form) { S.modale.form[mf] = t.value; return; }
     var p = t.getAttribute && t.getAttribute('data-probe');
     if (p) S.api.chemins[p] = t.value;
   });
 
-  root.addEventListener('keydown', function (ev) {
+  // Sur le document : après un rendu, le focus peut être retombé sur <body>, hors de #root.
+  document.addEventListener('keydown', function (ev) {
     var p = ev.target.getAttribute && ev.target.getAttribute('data-probe');
     if (p && ev.key === 'Enter') {
       var b = root.querySelector('[data-act="api-sonder"][data-k="' + (window.CSS && CSS.escape ? CSS.escape(p) : p) + '"]');
       if (b) b.click();
     }
+    if (ev.key === 'Escape' && S.modale && !S.occupe) { S.modale = null; rendre(true); return; }
     if (ev.key === 'Escape' && S.menu) { S.menu = false; rendre(true); }
   });
 
   window.addEventListener('hashchange', function () {
     lireRoute();
     S.menu = false;
+    // Une fenêtre ne survit pas à un changement d'écran (sauf écriture en cours : sa réponse la fermera).
+    if (!S.occupe) S.modale = null;
     rendre(false);
   });
 
