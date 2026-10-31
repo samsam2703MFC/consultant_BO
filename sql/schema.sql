@@ -748,14 +748,16 @@ CREATE TABLE IF NOT EXISTS ceo_connecteur (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------------------------------------------------------
--- Scouting commercial (écran « Scouting commercial ») : cache OpenStreetMap
+-- Scouting commercial — écran parti dans le CRM le 31/10/2026 (Étude de
+-- faisabilité), tables communes ; le cockpit n'y lit plus que ceo_scouting_etude
+-- (démarchage). Cache OpenStreetMap
 -- partagé et saisies — notes/commentaires sur les concurrents, zones
 -- candidates retenues, populations StatBel importées. Les hypothèses du
 -- modèle CA et la clé Google Places vivent dans ceo_app_setting
 -- (clés scoutingParams et scoutingGoogleKey).
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ceo_scouting_tile (
-  sector      TINYINT UNSIGNED PRIMARY KEY,   -- secteur Overpass (0–8, voir scouting.js)
+  sector      TINYINT UNSIGNED PRIMARY KEY,   -- secteur Overpass (0–8 ; zoning 100–108) — relu par le CRM
   fetched_at  DATETIME NOT NULL,
   payload     MEDIUMTEXT NOT NULL             -- JSON { t, c: communes, b: commerces, p: nœuds place }
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -772,7 +774,7 @@ CREATE TABLE IF NOT EXISTS ceo_scouting_competitor (
   updated_at     DATETIME NOT NULL,
   place_id       VARCHAR(80) NULL,            -- fiche Google raccordée par la recherche
   address        VARCHAR(200) NULL,           -- adresse rendue par Google
-  google_json    MEDIUMTEXT NULL,             -- avis et photo pour le dossier (voir wr_scouting_concurrents_google)
+  google_json    MEDIUMTEXT NULL,             -- avis et photo pour le dossier (Étude de faisabilité du CRM)
   google_at      DATETIME NULL,               -- relevé de google_json ; 30 jours au plus (conditions Google)
   business_status VARCHAR(24) NULL,           -- OPERATIONAL / CLOSED_TEMPORARILY / CLOSED_PERMANENTLY (Google)
   last_review_at DATE NULL                    -- le plus récent des avis que Google rend : un commerce sans avis depuis un an est écarté

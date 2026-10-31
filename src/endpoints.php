@@ -9106,131 +9106,11 @@ function ep_actions_usage(): array
         'vus' => array_sum(array_column($out, 'vus'))];
 }
 
-/* --- Scouting commercial ----------------------------------------------------- */
-
-/** GET /scouting — saisies enregistrées, hypothèses, état du connecteur Google, inventaire du cache OSM. */
-function ep_scouting(): array
-{
-    // Les fiches Google prêtées à des commerces sans nom (la recherche rendait
-    // le voisin) ne valent rien : on les oublie, la saisie terrain reste.
-    try { Db::exec("DELETE FROM ceo_scouting_competitor WHERE rating_source = 'google' AND name LIKE '%sans nom%'"); } catch (Throwable $e) { /* table absente */ }
-    $competitors = array_map(fn ($r) => [
-        'id' => $r['osm_id'], 'name' => $r['name'], 'commune' => $r['commune'], 'arr' => $r['arrondissement'],
-        'rating' => $r['rating'] !== null ? (float) $r['rating'] : null,
-        'reviews' => $r['reviews'] !== null ? (int) $r['reviews'] : null,
-        'source' => $r['rating_source'], 'comment' => $r['comment'],
-        'adresse' => $r['address'] ?? null,
-        // le signe de vie : statut Google et date du dernier avis connu
-        'statut' => $r['business_status'] ?? null, 'dernierAvis' => $r['last_review_at'] ?? null,
-        // la qualification terrain (type réel, force vue sur place, concurrent de référence, visite) et,
-        // pour un commerce ajouté à la main (id « m… »), sa position
-        'type' => ($r['type'] ?? null) !== null && $r['type'] !== '' ? $r['type'] : null,
-        'force' => isset($r['force_manuelle']) && $r['force_manuelle'] !== null ? (int) $r['force_manuelle'] : null,
-        'reference' => !empty($r['reference']), 'visiteLe' => $r['visite_le'] ?? null, 'terrain' => $r['terrain'] ?? null,
-        'lat' => isset($r['lat']) && $r['lat'] !== null ? (float) $r['lat'] : null, 'lng' => isset($r['lng']) && $r['lng'] !== null ? (float) $r['lng'] : null,
-    ], Db::rows('SELECT * FROM ceo_scouting_competitor'));
-    $candidates = array_map(fn ($r) => [
-        'id' => (int) $r['id'], 'name' => $r['name'], 'commune' => $r['commune'], 'arr' => $r['arrondissement'], 'prov' => $r['province'],
-        'lat' => (float) $r['lat'], 'lng' => (float) $r['lng'], 'hh' => (int) $r['households'], 'market' => (int) $r['market'],
-        'emprise' => (float) $r['emprise'], 'ca' => (int) $r['revenue'], 'score' => (int) $r['score'], 'n' => (int) $r['shops'],
-        'strong' => (int) $r['strong'], 'm2' => (int) $r['revenue_m2'],
-        'zone' => isset($r['zone_json']) && $r['zone_json'] !== null ? json_decode((string) $r['zone_json'], true) : null,
-        'hyp' => isset($r['hyp_json']) && $r['hyp_json'] !== null ? json_decode((string) $r['hyp_json'], true) : null,
-        'terrain' => isset($r['terrain_json']) && $r['terrain_json'] !== null ? json_decode((string) $r['terrain_json'], true) : null,
-        'date' => $r['created_at'],
-    ], Db::rows('SELECT * FROM ceo_scouting_candidate ORDER BY created_at, id'));
-    $pops = [];
-    foreach (Db::rows('SELECT ins, population FROM ceo_scouting_population') as $r) {
-        $pops[$r['ins']] = (int) $r['population'];
-    }
-    $tiles = array_map(fn ($r) => ['sector' => (int) $r['sector'], 'fetchedAt' => $r['fetched_at'], 'bytes' => (int) $r['bytes']],
-        Db::rows('SELECT sector, fetched_at, LENGTH(payload) AS bytes FROM ceo_scouting_tile ORDER BY sector'));
-    return [
-        'params'      => setting('scoutingParams'),
-        'google'      => GoogleApi::statut(),   // l'état du connecteur de Paramètres, jamais la clé
-        'competitors' => $competitors,
-        'candidates'  => $candidates,
-        'populations' => (object) $pops,
-        'tiles'       => $tiles,
-        'references'  => scoutingReferences(),
-    ];
-}
-
-/**
- * Les points de comparaison ajoutés à la main dans « Magasins du réseau » :
- * un magasin à ouvrir, une zone mesurée, un concurrent connu — à côté des
- * trois références de l'étude, qui restent dans le code de l'écran.
- */
-function scoutingReferences(): array
-{
-    $l = setting('scoutingReferences');
-    return is_array($l) ? array_values(array_filter($l, 'is_array')) : [];
-}
-
-/**
- * GET /scouting/reseau — les magasins du réseau, leur position et leur CA réel.
- *
- * C'est la matière du calage : le CA que le modèle prédit à l'emplacement de
- * chaque magasin ouvert se compare à son CA réel — P&L mensuel du panel
- * (mac_shop_monthly_pnl), douze derniers mois clos, annualisé s'il y en a
- * moins. La position vient de la fiche Google raccordée par la réputation, lue
- * une fois puis gardée dans ceo_app_setting.scoutingReseau ; une position
- * pointée à la main sur la carte (PUT /scouting/reseau/{id}) prime.
- */
-/**
- * GET /scouting/etude?lat=&lng=&r= — l'étude de marché locale d'un point :
- * ce qu'OpenStreetMap sait du rayon (entreprises, zonings, écoles, flux,
- * concurrence indirecte). Servi du cache s'il a moins de 45 jours, sinon
- * relevé chez Overpass depuis le serveur (jusqu'à deux minutes) et déposé.
- * `force=1` relit quoi qu'il en soit ; un relevé qui échoue rend le cache
- * périmé s'il existe, avec `perime: true`.
- */
-function ep_scouting_etude(): array
-{
-    $lat = (float) ($_GET['lat'] ?? 0); $lng = (float) ($_GET['lng'] ?? 0);
-    $r = (int) ($_GET['r'] ?? 4000);
-    if ($lat < 49.4 || $lat > 51.6 || $lng < 2.3 || $lng > 6.5) { http_response_code(400); return ['error' => 'point hors de Belgique']; }
-    $r = max(500, min(15000, $r));
-    $lat = round($lat, 3); $lng = round($lng, 3);
-    $cle = md5(number_format($lat, 3, '.', '') . ',' . number_format($lng, 3, '.', '') . ',' . $r);
-    $row = Db::row('SELECT fetched_at, payload FROM ceo_scouting_etude WHERE cle = ?', [$cle]);
-    $force = !empty($_GET['force']);
-    if ($row !== null && !$force && strtotime((string) $row['fetched_at']) > time() - 45 * 86400) {
-        $d = json_decode((string) $row['payload'], true);
-        if (is_array($d)) { $d['cache'] = true; $d['releve'] = $row['fetched_at']; return $d; }
-    }
-    @set_time_limit(200);
-    @ini_set('memory_limit', '512M');
-    // Un seul relevé à la fois pour un même point : le second appel attend le
-    // premier (verrou MySQL), puis se sert du cache qu'il vient d'écrire.
-    $verrou = 'scetude' . $cle;
-    $pris = Db::row('SELECT GET_LOCK(?, 190) AS l', [$verrou]);
-    if ($pris !== null && (int) $pris['l'] === 1 && !$force) {
-        $row2 = Db::row('SELECT fetched_at, payload FROM ceo_scouting_etude WHERE cle = ?', [$cle]);
-        if ($row2 !== null && strtotime((string) $row2['fetched_at']) > time() - 45 * 86400) {
-            $d = json_decode((string) $row2['payload'], true);
-            if (is_array($d)) { Db::exec('DO RELEASE_LOCK(?)', [$verrou]); $d['cache'] = true; $d['releve'] = $row2['fetched_at']; return $d; }
-        }
-    }
-    try {
-        $d = ScoutingOsm::etude($lat, $lng, $r);
-    } finally {
-        try { Db::exec('DO RELEASE_LOCK(?)', [$verrou]); } catch (Throwable $e) { /* verrou déjà rendu */ }
-    }
-    if ($d === null) {
-        if ($row !== null) {
-            $old = json_decode((string) $row['payload'], true);
-            if (is_array($old)) { $old['cache'] = true; $old['perime'] = true; $old['releve'] = $row['fetched_at']; return $old; }
-        }
-        http_response_code(502);
-        return ['error' => 'OpenStreetMap injoignable depuis le serveur — ' . (ScoutingOsm::$lastError ?? 'sans détail')];
-    }
-    Db::exec('INSERT INTO ceo_scouting_etude (cle, lat, lng, r, fetched_at, payload) VALUES (?,?,?,?,?,?)'
-        . ' ON DUPLICATE KEY UPDATE fetched_at = VALUES(fetched_at), payload = VALUES(payload)',
-        [$cle, $lat, $lng, $r, date('Y-m-d H:i:s'), json_encode($d, JSON_UNESCAPED_UNICODE)]);
-    $d['cache'] = false; $d['releve'] = date('Y-m-d H:i:s');
-    return $d;
-}
+/* --- Lieux autour des magasins (reste du scouting) ----------------------------
+   Le Scouting commercial — « où ouvrir » — est parti dans le CRM (Développement
+   → Étude de faisabilité, 31/10/2026), avec sa copie du code et la même base.
+   Restent ici les deux lectures dont vivent Développement commercial et
+   Prospection : les lieux autour d'un magasin, et les magasins pointés. */
 
 /**
  * GET /scouting/demarchage?lat&lng&r — les lieux à démarcher autour d'un
@@ -9284,11 +9164,20 @@ function ep_scouting_demarchage(): array
     return $d;
 }
 
+/**
+ * GET /scouting/reseau — les magasins du réseau, leur position et leur CA réel.
+ *
+ * La position vient de la fiche Google raccordée par la réputation, lue une
+ * fois puis gardée dans ceo_app_setting.scoutingReseau ; une position pointée
+ * à la main sur la carte de l'Étude de faisabilité du CRM (même réglage, même
+ * base) prime. Le CA réel : P&L mensuel du panel, douze derniers mois clos,
+ * annualisé s'il y en a moins.
+ */
 function ep_scouting_reseau(): array
 {
     try {
         // since_year : l'année d'ouverture connue du panel — le mois, lui, se
-        // saisit dans « Magasins du réseau » quand on le sait
+        // saisit dans « Magasins du réseau » (Étude de faisabilité du CRM)
         $shops = array_map(fn ($r) => $r + ['ouvertLe' => !empty($r['since_year']) ? sprintf('%04d', (int) $r['since_year']) : null],
             Db::rows('SELECT id, name, city, zone, region, active, since_year FROM shops ORDER BY sort_order, id'));
     } catch (PDOException $e) {
@@ -9346,7 +9235,7 @@ function ep_scouting_reseau(): array
             'position' => is_array($p) ? (string) ($p['source'] ?? 'google') : null,
             'caAnnuel' => $ca !== null ? (int) round($ca) : null, 'mois' => $mois, 'du' => $du, 'au' => $au,
             'annualise' => $mois > 0 && $mois < 12,
-            // les données d'étude saisies à la main (PUT /scouting/magasins/{id})
+            // les données d'étude saisies à la main (dans le CRM, PUT /scouting/magasins/{id})
             'saisie' => is_array($saisie) ? $saisie : null,
             // l'ouverture : « AAAA-MM » ou « AAAA » (le panel ne connaît que l'année)
             'ouvertLe' => $sh['ouvertLe'] ?? null,
@@ -9398,14 +9287,4 @@ function scoutingPanierReseau(): ?array
     } catch (Throwable $e) {
         return null;   // caisse indisponible : panier inconnu, le dossier le dit
     }
-}
-
-/** GET /scouting/tiles/{i} — un secteur du cache OpenStreetMap partagé. */
-function ep_scouting_tile(int $sector): array
-{
-    $r = Db::row('SELECT payload FROM ceo_scouting_tile WHERE sector = ?', [$sector]);
-    if ($r === null) { http_response_code(404); return ['error' => 'secteur absent du cache']; }
-    $d = json_decode($r['payload'], true);
-    if (!is_array($d)) { http_response_code(500); return ['error' => 'cache illisible']; }
-    return $d;
 }
