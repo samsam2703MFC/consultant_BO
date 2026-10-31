@@ -13,6 +13,8 @@
   "prev_week": "Vorige week",
   "scale": "De balk: de dag, van {a}u tot {b}u.",
   "schedule": "Rooster",
+  "schedule_unavailable": "Het rooster kan nu niet gelezen worden.",
+  "schedule_unavailable_hint": "Probeer het zo meteen opnieuw. Je winkel heeft het actuele rooster.",
   "shift": "dienst",
   "shift_other_shop": "winkel {n}",
   "shift_profit": "Rendement van de dienst",

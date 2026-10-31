@@ -104,6 +104,7 @@ require __DIR__ . '/../../src/primes_app.php';
 require __DIR__ . '/../../src/primes_b2b.php';
 require __DIR__ . '/../../src/api_module.php';
 require __DIR__ . '/../../src/profil_employe.php';
+require __DIR__ . '/../../src/planning_moi.php';
 require __DIR__ . '/../../src/grands_prix.php';
 require __DIR__ . '/../../src/promos_magasin.php';
 require __DIR__ . '/../../src/promos_bons.php';
@@ -181,6 +182,13 @@ try {
             $method === 'POST' && $path === '/ventes/moi/profil/carte'  => wr_profil_carte(),
             default => (static function (): array { http_response_code(404); return ['error' => 'route inconnue']; })(),
         };
+        tempsServeur($tCharge, $tInstall);
+        echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    // Le planning de l'app (31/10/2026) : ses services, lus à la route du planning du panel (src/planning_moi.php).
+    if ($method === 'GET' && $path === '/ventes/moi/planning' && primesVoieApp()) {
+        $out = ep_planning_moi();
         tempsServeur($tCharge, $tInstall);
         echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;

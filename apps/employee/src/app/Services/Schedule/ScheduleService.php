@@ -3,21 +3,40 @@ namespace App\Employee\app\Services\Schedule;
 
 
 
-use App\Employee\app\Repositories\Schedule\ScheduleRepository;
-use App\Employee\core\Support\GlobalRegistry;
+use App\Employee\app\Models\Schedule\ScheduleModel;
+use App\Employee\app\Services\Cockpit\CockpitClient;
 
+/**
+ * Le planning de la personne (31/10/2026, Sam : « /employee/schedule est faux, il ne relaie pas via les API planning ») :
+ * lu au cockpit (GET /ventes/moi/planning), qui le lit à la route du planning du panel, GET /shops/{id}/schedule — la
+ * même source que le planning du cockpit. L'app ne lit plus GET /employees/{id}/schedule. Sans réponse du cockpit, la
+ * page le dit (« indisponible ») plutôt que de montrer une semaine vide.
+ */
 class ScheduleService {
 
     /** La journée que montre la barre de chaque service : de 6 h à 22 h, élargie si un service en sort. */
     private const AXE_DEBUT = 6 * 60;
     private const AXE_FIN = 22 * 60;
 
-    public function __construct(private ScheduleRepository $scheduleRepository) {
+    /** Vrai si le cockpit n'a pas répondu à la dernière lecture. */
+    private bool $panne = false;
+
+    public function __construct(private CockpitClient $cockpit) {
     }
 
-    public function getForMe($dateFrom = null, $dateTo = null)
+    /** Les services de la personne connectée, du … au … (aujourd'hui et deux semaines par défaut). @return ScheduleModel[] */
+    public function getForMe($dateFrom = null, $dateTo = null): array
     {
-        return $this->scheduleRepository->getByEmployee(GlobalRegistry::get('user')->getId(), $dateFrom, $dateTo);
+        $du = is_string($dateFrom) && $dateFrom !== '' ? $dateFrom : date('Y-m-d');
+        $au = is_string($dateTo) && $dateTo !== '' ? $dateTo : date('Y-m-d', strtotime($du . ' +14 days'));
+        $r = $this->cockpit->appel('GET', '/ventes/moi/planning?' . http_build_query(['du' => $du, 'au' => $au]));
+        if (!$r['ok'] || !is_array($r['data']['services'] ?? null)) { $this->panne = true; return []; }
+        return array_map(static fn ($s) => new ScheduleModel((array) $s), $r['data']['services']);
+    }
+
+    public function indisponible(): bool
+    {
+        return $this->panne;
     }
 
     /**
@@ -40,6 +59,7 @@ class ScheduleService {
             $suite = $this->getForMe(max($aujourdhui, date('Y-m-d', strtotime($dimanche . ' +1 day'))), date('Y-m-d', strtotime($aujourdhui . ' +15 days')));
             $semaine['prochain'] = self::prochain(self::services($suite), $maintenant);
         }
+        $semaine['indisponible'] = $this->panne;
         return $semaine;
     }
 

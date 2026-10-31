@@ -256,6 +256,13 @@ l'heure sur aujourd'hui, les jours passés en gris, un autre magasin que d'habit
 `ScheduleService::semaine` (`construire` sans réseau) ; les jours dans la langue de la personne : la fonction Twig
 `jour()` (`core/Twig/AppExtension.php`).
 
+**La source (31/10/2026, Sam : « faux, il ne relaie pas via les API planning »)** : les services se lisent au
+cockpit, `GET /ventes/moi/planning?du=&au=` (`Services/Cockpit/CockpitClient`, identité signée), qui les lit à la
+route du planning du panel, `GET /shops/{id}/schedule` — celle du planning du cockpit. L'app ne lit plus
+`GET /employees/{id}/schedule` (le dépôt `ScheduleRepository` est retiré). L'Accueil (« ton service aujourd'hui »)
+passe par le même `ScheduleService::getForMe`. Sans réponse du cockpit, la page dit « Le planning ne se lit pas pour
+l'instant » au lieu d'une semaine de « Repos ».
+
 ## Mon profil (30/10/2026) : la personne encode elle-même ses données
 
 Demande de Sam (« que l'employé puisse encoder toutes ses données » ; maquette `docs/maquettes/profil-employe`).
