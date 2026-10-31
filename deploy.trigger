@@ -1223,3 +1223,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T13:12:21Z contrôle sur tablette : charte de communication, commentaire obligatoire sur un Non
 2026-10-31T13:12:47Z primes du magasin : volet des vendeuses replié par défaut
 2026-10-31T13:27:15Z [234] Moce produkcyjne : pełna wersja (administrator, dyrektor zakładu), produkcja — stan obecny
+2026-10-31T13:31:37Z formation : lisibilité, familles de postes, tableau de bord, création du poste multi-boutique dans le panel

@@ -97,6 +97,24 @@ tous les critères**. Module, *Postes & sous-postes* : la carte *Critères d'adm
 Le multi-boutique n'est pas créé dans le panel : dès qu'un poste dont le nom contient « multi » y existe, il
 prend le relais (ses niveaux, ses compétences, ses exigences).
 
+**Créer le poste dans le panel** : sur la fiche d'un poste « à créer » (Franchisé multi-boutique, Locataire-gérant),
+le bouton *Créer ce poste dans le panel* appelle `POST /formation/postes {code: P12|P9}` : le poste (`POST /positions
+{name, description, app_type: EMPLOYEE}`), puis un niveau du même nom (`POST /position-levels {position_id, id_position,
+name, level_order: 1}`), chaque pas relu ; un second appel reprend où le premier s'est arrêté, sans doublon. Journalisé.
+
+### Lisibilité et familles de postes (31/10/2026)
+
+- **Trois familles** partout (tableau de bord, arbre des postes, assistant du parcours) : *Opérationnel* (P1–P6),
+  *Cadre et direction* (Adjoint, Manager, et les rôles du réseau : direction, consultants, contrôle…),
+  *Devenir entrepreneur* (candidat, franchisé, locataire-gérant, multi-boutique). Rangement côté serveur
+  (`pcFamillePoste`, sur les noms du panel), rendu par `GET /formation/v25` (`familles`).
+- **Police** : `fonts/Gotham_Regular.otf` est en réalité Gotham *Black* (nom interne « Gotham-Black ») ; tout le texte
+  sortait en noir épais. Famille « Gotham Lisible » : Light pour le texte, Medium pour les libellés, Black pour les titres.
+- **Pas de badges** : étiquettes en rectangles aux coins arrondis ; titres de carte en clair (plus de capitales grises).
+- **Tableau de bord** : six chiffres cliquables, *À compléter* (compétences sans formation, sans procédure, niveaux vides,
+  postes à créer), *Parcours en cours*, *Les postes* par famille avec la part des compétences couvertes par une formation ;
+  le détail technique des appels au panel est replié.
+
 Tables (créées au premier appel) : `ceo_parcours` (personne, objectif, rythme, statut, compétences déclarées, critères d'admission)
 et `ceo_parcours_etape` (une ligne par formation : évaluations, date prévue, statut, origine panel / déclarée /
 parcours). Routes : `GET /parcours/destinations?employe=&shop=`, `POST /parcours`, `GET /parcours?id=`,

@@ -161,7 +161,8 @@
     h += titre('Mon parcours', 'Où veux-tu aller&nbsp;?', 'Choisis le poste que tu vises. On te prépare le chemin.') + msg();
     if (d.personne.niveau) h += '<div class="ph-now"><span class="chip chip--soft">Aujourd’hui</span> ' + esc(d.personne.niveau) + '</div>';
     if (d.parcoursActif) h += '<p class="pc-msg pc-msg--ko">Un parcours est déjà en cours pour cette personne : en créer un autre l’arrêtera. <a href="#/p/' + d.parcoursActif + '">Voir le parcours en cours</a></p>';
-    var groupes = [['metier', 'Dans ton métier'], ['encadrer', 'Encadrer le magasin'], ['entrepreneur', 'Devenir entrepreneur']];
+    // Les trois familles de postes, comme dans le module (Opérationnel · Cadre et direction · Devenir entrepreneur).
+    var groupes = [['metier', 'Opérationnel'], ['encadrer', 'Cadre et direction'], ['entrepreneur', 'Devenir entrepreneur']];
     groupes.forEach(function (g) {
       var l = d.destinations.filter(function (x) { return x.groupe === g[0]; });
       if (!l.length) return;
