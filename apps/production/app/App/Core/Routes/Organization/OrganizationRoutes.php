@@ -31,6 +31,11 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/organization/execution', ['controller' => $c, 'method' => 'execution']);
     $r->addRoute('GET', '/ajax/organization/execution', ['controller' => $c, 'method' => 'executionData']);
     $r->addRoute('POST', '/ajax/organization/execution/remind/{id:\d+}', ['controller' => $c, 'method' => 'remindTask']);
+    // Zadania zespołu [232] (makiety 7 i 8) : tablica wszystkich grup i osób, filtry, przypomnienia (dzwonek + e-mail, tablet).
+    $t = App\Controllers\Web\Organization\TeamTasksController::class;
+    $r->addRoute('GET', '/organization/team-tasks', ['controller' => $t, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/organization/team-tasks', ['controller' => $t, 'method' => 'data']);
+    $r->addRoute('POST', '/ajax/organization/team-tasks/remind', ['controller' => $t, 'method' => 'remind']);
     $r->addRoute('GET', '/my-tasks', ['controller' => $c, 'method' => 'myTasks']);
     $r->addRoute('PATCH', '/ajax/my-tasks/{id:\d+}', ['controller' => $c, 'method' => 'setStatus']);
     $r->addRoute('POST', '/ajax/organization/positions', ['controller' => $c, 'method' => 'savePosition']);

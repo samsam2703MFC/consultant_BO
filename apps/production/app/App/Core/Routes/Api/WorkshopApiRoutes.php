@@ -20,6 +20,7 @@ use App\Controllers\Api\Workshop\PlanningController;
 use App\Controllers\Api\Workshop\ReceivingController;
 use App\Controllers\Api\Workshop\SchedulingController;
 use App\Controllers\Api\Workshop\ShiftTemplateController;
+use App\Controllers\Api\Workshop\TaskMessageController;
 use App\Controllers\Api\Workshop\TeamController;
 use App\Controllers\Api\Workshop\FinanceController;
 use App\Controllers\Api\Workshop\InvoiceController;
@@ -324,6 +325,9 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/receiving', ReceivingController::class, 'day', 'kiosk'],
             ['GET', '/kiosk/receiving/orders/{id:\d+}', ReceivingController::class, 'order', 'kiosk'],
             ['POST', '/kiosk/receiving/orders/{id:\d+}', ReceivingController::class, 'check', 'kiosk'],
+            // Komunikaty kierownika produkcji [232] (tablica « Zadania zespołu ») : tablet grupy, pakowania, kierowcy ; « Przeczytane » PIN-em.
+            ['GET', '/kiosk/messages', TaskMessageController::class, 'list', 'kiosk'],
+            ['POST', '/kiosk/messages/{id:\d+}/read', TaskMessageController::class, 'read', 'kiosk'],
             ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk_employee'],
             ['POST', '/driver/photos', DriverController::class, 'photo', 'kiosk_employee'],
             ['GET', '/driver/report', DriverController::class, 'report', 'kiosk_employee'],

@@ -295,6 +295,15 @@ final class KioskAuthService
     }
 
     /**
+     * Sprawdzenie PIN-u bez otwierania sesji [232] (« Przeczytane » komunikatu kierownika na tablecie) : te same zasady
+     * co przy logowaniu (blokada po kiosk.pin_max_attempts błędach). @return array pracownik (id, …)
+     */
+    public function verifyPin(array $body, ApiContext $context): array
+    {
+        return $this->authenticateEmployee(['employee_id' => $body['employee_id'] ?? null, 'pin' => $body['pin'] ?? null], (int) $context->deviceId, $context);
+    }
+
+    /**
      * Nowy jeton osoby już zidentyfikowanej (jeton jeszcze ważny) : tablet przedłuża sesję, póki osoba
      * pracuje (wpisywanie partii, zdjęcia) ; bezczynność nadal wylogowuje (kiosk.idle_logout_s).
      */

@@ -845,6 +845,65 @@ final class PositionTaskService
             'tiles' => $tiles + ['runs' => count($runs), 'runs_ok' => $runsOk, 'runs_failed' => count(array_filter($runs, fn($r) => $r['ok'] !== null && !(int) $r['ok']))]];
     }
 
+    /**
+     * Zadania zespołu [232] : płaska lista terminów [from, to] wszystkich stanowisk z osobą albo pracowni (tablety) — stan
+     * jak w « Kto co zrobił » (zrobione, zaliczone samo, w toku, spóźnione, do zrobienia, zaplanowane), stanowisko, kategoria,
+     * częstotliwość, wynik. @return list<array>
+     */
+    public function itemsBetween(string $from, string $to, ?DateTimeImmutable $today = null): array
+    {
+        $today = ($today ?? new DateTimeImmutable('today'))->setTime(0, 0);
+        $todayStr = $today->format('Y-m-d');
+        $held = [];
+        foreach ($this->positions->users() as $u) if ($u['id_position']) $held[(int) $u['id_position']] = true;
+        $positions = [];
+        foreach ($this->positions->positions() as $p) {
+            if ((int) $p['active'] !== 1) continue;
+            if (($p['kind'] ?? '') === 'atelier' || isset($held[(int) $p['id']])) $positions[(int) $p['id']] = $p;
+        }
+        $tasks = [];
+        foreach ($this->positions->tasks(null, true) as $t) if (isset($positions[(int) $t['id_position']])) $tasks[(int) $t['id']] = $t;
+        $occ = [];
+        foreach ($this->positions->occurrencesRange(array_keys($tasks), $from, $to) as $o) {
+            $o = $this->autoClose($o, $tasks[(int) $o['id_task']], $today);
+            $occ[(int) $o['id_task']][$o['due_date']] = $o;
+        }
+        $out = [];
+        foreach ($tasks as $tid => $t) {
+            $p = $positions[(int) $t['id_position']];
+            foreach ($this->dueDates($t, $from, $to) as $due) {
+                $o = $occ[$tid][$due] ?? null;
+                if ($o === null && ($t['auto_code'] ?? null) !== null && $due <= $todayStr) $o = $this->virtualState($t, $due);
+                $status = $o['status'] ?? 'planned';
+                $done = in_array($status, ['done', 'skipped'], true);
+                $late = !$done && $due < $todayStr;
+                $running = !$done && isset($o['wizard_state']) && ($o['wizard_state']['step'] ?? null) !== null;
+                $info = TaskWizards::info($t['auto_code'] ?? null);
+                $out[] = [
+                    'task' => $tid, 'occurrence' => !empty($o['id']) ? (int) $o['id'] : null, 'title' => $t['title_pl'],
+                    'position_id' => (int) $p['id'], 'position_code' => $p['code'], 'position_name' => $p['name_pl'], 'position_kind' => $p['kind'] ?? 'erp',
+                    'frequency' => $t['frequency'], 'category_id' => isset($t['id_category']) ? (int) $t['id_category'] : null, 'category' => $t['category_name'] ?? null,
+                    'auto_code' => $t['auto_code'] ?? null, 'wizard' => $info ? $info['label'] : null, 'wizard_steps' => $info ? (int) $info['steps'] : null,
+                    'due' => $due, 'due_time' => isset($t['due_time']) && $t['due_time'] !== null ? substr((string) $t['due_time'], 0, 5) : null,
+                    'state' => $done ? ($o['done_by'] === null ? 'auto' : 'ok') : ($late ? 'late' : ($running ? 'run' : ($due > $todayStr ? 'plan' : 'todo'))),
+                    'late_days' => $late ? (int) floor((strtotime($todayStr) - strtotime($due)) / 86400) : 0,
+                    'done_by' => $o['done_by_name'] ?? null, 'done_by_id' => isset($o['done_by']) && $o['done_by'] !== null ? (int) $o['done_by'] : null, 'done_at' => $o['done_at'] ?? null,
+                    'summary' => $o['summary'] ?? ($o['wizard_state']['summary'] ?? null),
+                    'step' => $running ? (int) $o['wizard_state']['step'] : null, 'steps' => $running ? (int) ($o['wizard_state']['steps'] ?? 1) : null,
+                    'step_label' => $running ? ($o['wizard_state']['step_label'] ?? null) : null, 'escalated' => !empty($o['escalated_at']),
+                    'link' => $info['link'] ?? ($t['link_path'] ?? null), 'minutes' => isset($t['minutes']) ? (int) $t['minutes'] : null,
+                ];
+            }
+        }
+        return $out;
+    }
+
+    /** Dni robocze zadań (param tasks.workdays, 1 = poniedziałek). @return list<int> */
+    public function workdayNumbers(): array
+    {
+        return $this->workdays();
+    }
+
     /** Stan kreatora zadania w dniu bez wystąpienia (odczyt) : zrobione samo albo w toku ; null = nic. */
     private function virtualState(array $t, string $due): ?array
     {

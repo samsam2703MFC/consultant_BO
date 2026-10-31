@@ -214,6 +214,33 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   `supplier_review` (depuis `purchasing`). Tâches reliées par poste, page et fréquence (pas par id), seulement sans
   assistant ; rejouable.
 
+### Zadania zespołu : tableau du responsable de production et rappels (migration 150, 31/10/2026)
+
+- **Tableau** `/organization/team-tasks` (rail « Zadania zespołu », même droit que « Kto co zrobił » : clé `execution`) —
+  toutes les échéances de la période (aujourd'hui, semaine des jours ouvrés, mois ; ‹ › pour décaler) des postes ERP occupés
+  et des postes d'atelier (`PositionTaskService::itemsBetween`, même état que « Kto co zrobił » : en retard, à faire, en cours
+  avec étape, prévu, fait par une personne, validé seul), regroupées par **section** : groupe de production (tablette du
+  groupe, aussi les groupes sans poste comme Tarty : jour validé sur la tablette, jour passé sans production ignoré),
+  pakowanie / kierowca / brygadzista (tablettes), postes ERP (personnes). Filtres : groupe / poste, personne (compte ERP →
+  son poste, salarié → son groupe / poste ; tâches faites par la personne), état (Wszystkie / Niezrobione / Spóźnione /
+  Zrobione, compteurs), fréquence, catégorie, recherche. Tuiles : fait X sur Y (objectif 90 %), à faire (jusqu'à aujourd'hui /
+  plus tard), en retard (dont > 2 jours), en cours, rappels envoyés aujourd'hui et lus.
+- **Przypomnij** (une ligne, un groupe, la sélection) — fenêtre : destinataires, message prérempli depuis la tâche (modifiable ;
+  sans modification chaque destinataire reçoit le texte de sa tâche), urgence (normale / rouge), canaux. Personne avec compte
+  ERP → **cloche à elle seule** (`app_notification.id_user`, nouveau : `NULL` = tout le monde comme avant ; la cloche n'affiche
+  et n'acquitte que les notifications communes et les siennes) + **e-mail** à l'adresse du compte (un e-mail par personne avec
+  ses tâches, file `communication_message`, envoi par le worker selon `MAIL_DELIVERY_MODE`). Groupe sans comptes →
+  **message sur sa tablette** (`audience` : `group:<id>`, `packing`, `driver`, `shift` = tablettes des groupes pour le chef
+  d'équipe). Tâche déjà faite : ignorée. Historique `n_task_reminder` (lot d'envoi, tâche + échéance, message, urgence,
+  destinataire, canaux, notification, e-mail, envoyé par / à, lu à / par / comment : PIN, toucher, cloche, fermé).
+- **Tablettes** (`task-messages.js`, commun aux tablettes de groupe, d'emballage et chauffeur ; API `GET /kiosk/messages?for=`,
+  `POST /kiosk/messages/{id}/read`) : bandeau « Od kierownika produkcji · HH:MM » au-dessus de l'écran (urgents en rouge,
+  2 visibles + « Pokaż wszystkie »), « Przeczytane (PIN) » → personne (présents d'abord) → PIN vérifié comme à la connexion
+  (`KioskAuthService::verifyPin`, blocage après erreurs) ; sans PIN : seulement une personne présente qui n'en a pas. Message
+  non lu de moins de 7 jours ; tâche faite entre-temps (jour validé, assistant terminé) → fermé, disparaît. Au tableau :
+  « przeczytane 10:51 (J. K., PIN) ».
+
+
 ### Prévision 13 semaines glissantes (migration 141, 30/10/2026)
 
 - Page : Produkcja › « Prognoza 13 tygodni » (`/production/forecast`, onglet de la page Produkcja, maquettes 220-1 à 3 ;

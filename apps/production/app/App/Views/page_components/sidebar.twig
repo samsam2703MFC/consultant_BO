@@ -37,6 +37,12 @@
                         <span>Kto co zrobił</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a href="{{ root }}/organization/team-tasks" class="sidebar-link">
+                        <i class="bi bi-list-check"></i>
+                        <span>Zadania zespołu</span>
+                    </a>
+                </li>
                 {% endif %}
 
                 <li class="sidebar-item">
@@ -624,6 +630,8 @@
                 <li><a href="{{ root }}/tablet/packing?mode=receiving" data-where="Logistyka i pakowanie › Tablet pakowania › Przyjęcia"><i class="bi bi-tablet-landscape"></i> Tablet pakowania, tryb « Przyjęcia » : dostawy dnia, ilość, partia i termin ważności ze zdjęcia etykiety (OCR, 📷 Etykieta), temperatura (chłodnia), OK / niezgodność ze zdjęciem z aparatu tabletu, dostawa nie dotarła</a></li>
                 <li><a href="{{ root }}/finances/payments-day" data-where="Sprzedaż › Płatności dnia"><i class="bi bi-cash-coin"></i> Płatności dnia : proformy niezapłacone (dni od wystawienia, przypomnienia), opłacone z datą i kwotą z wyciągu, przypomnienia na dziś (poziomy 1–5), różnice dostaw (dopłaty, zwroty) ; zadanie Administracji zaliczane samo</a></li>
                 <li><a href="{{ root }}/purchasing/supplier-review" data-where="Zakupy › Oferty i zapytania › Ocena dostawców"><i class="bi bi-award"></i> Ocena dostawców co kwartał : zakupy, dostawy, na czas, niezgodności, zmiana cen → ocena A / B / C (40 / 30 / 30 %), decyzja (zostaje, obserwuj, zmień), surowce do zapytania, szkic zapytania ofertowego</a></li>
+                <li><a href="{{ root }}/organization/team-tasks" data-where="Zadania zespołu"><i class="bi bi-list-check"></i> Zadania zespołu (Kierownik produkcji) : zadania wszystkich grup i osób — zrobione / niezrobione / spóźnione, filtry (okres, grupa, osoba, stan, częstotliwość, kategoria, szukaj), « Przypomnij » : osoba — dzwonek + e-mail, grupa — komunikat na tablecie potwierdzany PIN-em</a></li>
+                <li><a href="{{ root }}/tablet/production" data-where="Tablety › Tablet grupy"><i class="bi bi-bell"></i> Komunikat kierownika na tablecie (grupy, pakowania, kierowcy) : « Przeczytane (PIN) », znika sam, gdy zadanie się zaliczy</a></li>
                 <li><a href="{{ root }}/organization/execution" data-where="Kto co zrobił"><i class="bi bi-people"></i> Kto co zrobił (przełożony) : stanowiska × dni (dziś, tydzień, miesiąc), zrobione, w toku, spóźnione, grupy produkcji (tablety), System — zadania automatyczne, lista spóźnionych z « Przypomnij », szczegóły zadania</a></li>
                 <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Ustawienia › Organizacja › Funkcje i zadania"><i class="bi bi-file-earmark-person"></i> Karty stanowisk (fiches de poste) : cel, obowiązki, kompetencje, wskaźniki, higiena — biuro i pracownia, PDF PL / FR</a></li>
                 <li><a href="{{ root }}/tablet/driver" data-where="Tablety › Otwórz tablet › Tablet kierowcy"><i class="bi bi-tablet-landscape"></i> Tablet kierowcy : trasa dnia, numery palet, zdjęcia przed i po rozładunku z godziną, podpis, raport PDF trasy, problemy w dostawie</a></li>

@@ -716,5 +716,13 @@
     // Koniec sesji (trasa skończona, kolejny dzień) : znów lista + PIN.
     window.setInterval(() => { if (session && session.exp < Date.now()) { setSession(null); renderLogin(t('session_ended')); } }, 60000);
 
-    loadLabels().then(() => { paired ? load().then(flush) : renderPairing(); });
+    // Komunikaty kierownika produkcji [232] (tablet kierowcy) : nad ekranem, co minutę ; « Przeczytane » PIN-em.
+    function taskMessages() {
+        if (!paired || !window.tfbTaskMessages) return;
+        window.tfbTaskMessages.refresh({host: document.getElementById('tfbTaskMsgs'), api: (m, path, body) => api(m, path, body), audience: 'driver', lang,
+            people: () => api('GET', '/kiosk/people'), toast});
+    }
+    window.setInterval(() => { if (!document.hidden) taskMessages(); }, 60000);
+
+    loadLabels().then(() => { paired ? load().then(flush).then(taskMessages) : renderPairing(); });
 })();

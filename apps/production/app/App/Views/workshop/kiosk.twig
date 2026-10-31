@@ -15,10 +15,12 @@
 <meta name="apple-mobile-web-app-title" content="Tablet grupy">
 </head>
 <body>
+<div id="tfbTaskMsgs" class="tm-dock" hidden aria-live="polite"></div>
 <main id="tfbKiosk" class="kiosk" data-root="{{ root }}" data-api-base="{{ api_base }}" aria-live="polite">
     <p class="kiosk-muted">Wczytywanie… / Chargement…</p>
 </main>
 <script src="{{ root }}/assets/js/workshop/label-ocr.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/workshop/task-messages.js?v={{ asset_v() }}"></script>
 <script src="{{ root }}/assets/js/workshop/kiosk.js?v={{ asset_v() }}"></script>
 <script>
     // PWA : tablet grupy instalowany jako aplikacja (ikona na ekranie, pełny ekran) ; powłoka w pamięci podręcznej.

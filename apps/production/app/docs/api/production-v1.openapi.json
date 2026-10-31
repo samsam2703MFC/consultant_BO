@@ -19399,6 +19399,180 @@
                 ]
             }
         },
+        "/kiosk/messages": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Komunikaty kierownika produkcji / Messages du responsable de production",
+                "operationId": "kioskTaskMessages",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/TaskMessage"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Rappels envoyés depuis le tableau « Zadania zespołu » de l'ERP : non lus, de moins de 7 jours, urgents d'abord. Un rappel dont la tâche est faite entre-temps (jour validé, assistant terminé) est fermé et n'apparaît plus.",
+                "parameters": [
+                    {
+                        "name": "for",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "group",
+                                "packing",
+                                "driver"
+                            ],
+                            "description": "tablette : group (groupe de la tablette ou X-Kiosk-Group, + rappels du chef d'équipe), packing, driver"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/messages/{id}/read": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Przeczytane (PIN) / Lu (PIN)",
+                "operationId": "kioskTaskMessageRead",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/TaskMessageRead"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "423": {
+                        "$ref": "#/components/responses/Error423"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "La personne choisie confirme avec son PIN (mêmes règles et blocage que la connexion à la tablette). Sans PIN : seulement une personne sans PIN, présente aujourd'hui (pointage). Le tableau de l'ERP affiche « przeczytane », l'heure et la personne.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TaskMessageReadInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/driver/stops": {
             "post": {
                 "tags": [
@@ -25337,6 +25511,86 @@
                                 }
                             }
                         }
+                    }
+                }
+            },
+            "TaskMessage": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "urgent": {
+                        "type": "boolean"
+                    },
+                    "due": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "due_label": {
+                        "type": "string"
+                    },
+                    "sent_at": {
+                        "type": "string"
+                    },
+                    "from": {
+                        "type": "string"
+                    },
+                    "from_name": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "TaskMessageReadInput": {
+                "type": "object",
+                "required": [
+                    "employee_id"
+                ],
+                "properties": {
+                    "employee_id": {
+                        "type": "integer"
+                    },
+                    "pin": {
+                        "type": "string",
+                        "pattern": "^\\d{4,6}$",
+                        "nullable": true
+                    },
+                    "for": {
+                        "type": "string",
+                        "enum": [
+                            "group",
+                            "packing",
+                            "driver"
+                        ]
+                    }
+                }
+            },
+            "TaskMessageRead": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "read": {
+                        "type": "boolean"
+                    },
+                    "by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "via": {
+                        "type": "string",
+                        "enum": [
+                            "pin",
+                            "tap"
+                        ]
                     }
                 }
             },

@@ -329,6 +329,7 @@
         };
         drawPeople(false);
         homePresent = present;
+        taskMessages();
         box.addEventListener('click', (e) => {
             if (e.target.closest('[data-other-person]')) { drawPeople(true); el.querySelector('[data-team-hint]').textContent = t('home_team_hint'); return; }
             const b = e.target.closest('[data-person]');
@@ -3063,6 +3064,18 @@
             paired = res.ok;
         } catch (e) { /* hors ligne : écran d'appairage */ }
     }
+
+    // Komunikaty kierownika produkcji [232] : nad ekranem tabletu grupy (grupa tabletu albo dotknięta), co minutę.
+    function taskMessages() {
+        if (!paired || !window.tfbTaskMessages || (deviceInfo && (deviceInfo.mode !== 'atelier' || !deviceInfo.group_id && !group))) {
+            const dock = document.getElementById('tfbTaskMsgs');
+            if (dock) { dock.hidden = true; dock.innerHTML = ''; }
+            return;
+        }
+        window.tfbTaskMessages.refresh({host: document.getElementById('tfbTaskMsgs'), api: (m, path, body) => api(m, path, body), audience: 'group', lang,
+            people: () => api('GET', '/kiosk/people'), toast: (msg, e) => toast(msg, e)});
+    }
+    window.setInterval(() => { if (!document.hidden) taskMessages(); }, 60000);
 
     window.addEventListener('hashchange', () => { if (location.hash === '#week' && paired && !session) renderWeek(null, true); });
     Promise.all([loadLabels(), detectPairing()]).then(() => {

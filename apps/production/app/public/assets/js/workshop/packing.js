@@ -741,5 +741,13 @@
         if (mode === 'receiving' && tick % 4 === 0 && !drop && !Object.keys(draft).length) load();
     }, 15000);
 
-    loadLabels().then(load);
+    // Komunikaty kierownika produkcji [232] (tablet pakowania) : nad nagłówkiem, co minutę ; « Przeczytane » PIN-em.
+    function taskMessages() {
+        if (!device && !current()) return;
+        if (window.tfbTaskMessages) window.tfbTaskMessages.refresh({host: document.getElementById('tfbTaskMsgs'), api, audience: 'packing', lang,
+            people: () => api('GET', '/kiosk/people'), toast});
+    }
+    window.setInterval(() => { if (document.visibilityState === 'visible') taskMessages(); }, 60000);
+
+    loadLabels().then(load).then(taskMessages);
 })();

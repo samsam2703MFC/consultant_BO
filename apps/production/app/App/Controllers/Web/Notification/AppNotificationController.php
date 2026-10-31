@@ -15,8 +15,8 @@ class AppNotificationController extends BaseController
     {
         $limit = (int) ($_GET['limit'] ?? 3);
         return $this->json([
-            'data' => $this->service->active($limit),
-            'total' => $this->service->countActive(),
+            'data' => $this->service->active($limit, $this->userId()),
+            'total' => $this->service->countActive($this->userId()),
         ]);
     }
 
@@ -24,7 +24,7 @@ class AppNotificationController extends BaseController
     {
         try {
             $payload = $this->getJson(Request::createFromGlobals());
-            $this->service->acknowledge((int) $id, $payload['via'] ?? 'read');
+            $this->service->acknowledge((int) $id, $payload['via'] ?? 'read', $this->userId());
             return $this->json(['message' => 'Powiadomienie oznaczono jako odczytane.']);
         } catch (CustomException $exception) {
             return $this->json(['message' => $exception->getMessage()], $exception->getCode() ?: 422);
@@ -37,7 +37,7 @@ class AppNotificationController extends BaseController
     public function acknowledgeAll()
     {
         try {
-            $this->service->acknowledgeAll();
+            $this->service->acknowledgeAll($this->userId());
             return $this->json(['message' => 'Wszystkie powiadomienia oznaczono jako odczytane.']);
         } catch (CustomException $exception) {
             return $this->json(['message' => $exception->getMessage()], $exception->getCode() ?: 422);
@@ -45,5 +45,12 @@ class AppNotificationController extends BaseController
             error_log((string) $exception);
             return $this->json(['message' => 'Nie udało się zaktualizować powiadomień.'], 500);
         }
+    }
+
+    /** Zalogowany użytkownik : dzwonek pokazuje wspólne powiadomienia i jego własne (przypomnienia zadań [232]). */
+    private function userId(): ?int
+    {
+        $id = user('id');
+        return $id ? (int) $id : null;
     }
 }

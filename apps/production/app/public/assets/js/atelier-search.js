@@ -91,6 +91,8 @@
         'discord': 'monitoring', 'surveillance': 'monitoring', 'relancer': 'ponow przypomnij przypomnienie', 'renvoyer': 'ponow', 'retry': 'ponow',
         'traiter': 'obsluzenia sprawy', 'urgent': 'obsluzenia terminie', 'urgence': 'obsluzenia terminie', 'urgences': 'obsluzenia terminie',
         'impaye': 'nieoplacona przypomnienie platnosci', 'impayes': 'nieoplacone przypomnienie platnosci', 'impayee': 'nieoplacona przypomnienie platnosci', 'impayees': 'nieoplacone przypomnienie platnosci',
+        'avertir': 'przypomnij przypomnienie dzwonek', 'prevenir': 'przypomnij przypomnienie dzwonek', 'lu': 'przeczytane', 'lus': 'przeczytane',
+        'filtre': 'filtry', 'filtres': 'filtry', 'membres': 'zespolu osoby', 'collaborateurs': 'zespolu osoby', 'effectue': 'zrobione', 'effectuees': 'zrobione',
         'paiement': 'platnosci oplacona platnosc', 'relance': 'przypomnienie', 'relances': 'przypomnienia przypomnienie', 'afaire': 'obsluzenia zadania',
         'envoye': 'wyslane wyslana niewyslana', 'envoyee': 'wyslana niewyslana', 'envoyees': 'wyslane niewyslane',
         'journee': 'dnia dzien', 'fin': 'koniec', 'boutique': 'sklep sklepy sklepow', 'boutiques': 'sklepy sklepow sklep', 'perte': 'straty strata', 'pertes': 'straty', 'controle': 'kontrola kontroli', 'qualite': 'jakosci jakosc', 'conservation': 'przydatnosc', 'delai': 'termin zamawianie wyprzedzenie przed', 'complement': 'domowienie domowienia', 'complements': 'domowienia',

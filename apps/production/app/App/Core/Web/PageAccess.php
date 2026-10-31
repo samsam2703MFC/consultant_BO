@@ -55,7 +55,7 @@ final class PageAccess
         'manager' => ['Kierownik produkcji : stanowisko, cele, raport, premia, rozmowa, audyt', 'Administracja', ['/workshop/manager'], true],
         'access' => ['Uprawnienia funkcji', 'Administracja', ['/organization/access'], true],
         'week_plan' => ['Zadania stanowisk (kreator, kiedy, minuty, automatycznie — cron, przypomnienia)', 'Administracja', ['/organization/week-plan'], true],
-        'execution' => ['Kto co zrobił (wykonanie zadań stanowisk, automatyczne, spóźnione, przypomnij)', 'Administracja', ['/organization/execution'], false],
+        'execution' => ['Kto co zrobił i Zadania zespołu (wykonanie zadań stanowisk i grup, filtry, spóźnione, przypomnij osobie albo grupie)', 'Administracja', ['/organization/execution', '/organization/team-tasks'], false],
         'activity' => ['Aktywność w ERP (sesje, strony, kliknięcia, koszt czasu)', 'Administracja', ['/organization/activity'], true],
         'panel_api' => ['API cen w sklepach (konto panelu franczyzy)', 'Administracja', ['/settings/panel-api'], true],
         'ai' => ['Asystent AI (klucz Anthropic, model, prompt karty technologicznej)', 'Administracja', ['/settings/ai'], true],
