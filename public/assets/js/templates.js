@@ -7594,8 +7594,8 @@ function tplPrimesApp(c, x){
     </div>`;
     const imprimer = item('imprimer', 'Fiches à imprimer et à envoyer', FR.resumes.imprimer, '',
       `<div style="${groupeSt};margin-top:12px">${IM.fiches.map(ligneFiche).join('')}</div>${envoiAff}`);
-    // L'ordre (31/10/2026) : l'avancement des vendeuses (déplié à l'ouverture), les chiffres du magasin (toujours visibles),
-    // puis « Paramètres » (replié) — les primes du magasin, les fiches à imprimer et à envoyer, la marque, les promotions du
+    // L'ordre (31/10/2026) : les chiffres du magasin tout en haut (toujours visibles, Sam : « mets les chiffres du magasin
+    // tout en haut »), l'avancement des vendeuses (déplié à l'ouverture), puis « Paramètres » (replié) — les primes du magasin, les fiches à imprimer et à envoyer, la marque, les promotions du
     // panel. Les fiches de l'équipe (« Mon profil ») ont quitté la page le même jour, à la demande de Sam.
     const VP = FR.volets.parametres;
     const parametres = `<section data-pr-volet="parametres" data-ouvert="${VP.ouvert ? 1 : 0}">
@@ -7608,7 +7608,7 @@ function tplPrimesApp(c, x){
       </div>
       ${VP.ouvert ? [siennes, imprimer, marque, promosIci].map(partie).join('') : ''}
     </section>`;
-    return `<div style="display:flex;flex-direction:column;gap:22px">${equipe}${chiffres}${parametres}</div>`;
+    return `<div style="display:flex;flex-direction:column;gap:22px">${chiffres}${equipe}${parametres}</div>`;
   };
 
   return `
