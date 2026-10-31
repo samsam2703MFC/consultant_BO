@@ -743,8 +743,12 @@ function ep_production_flux_commandes(): array
             $tk = (int) ($o['id_transaction'] ?? 0);
             $t = $tk > 0 ? ($T[(string) $tk] ?? null) : null;
             $cl = $o['client'] ?? null;
+            // Client pro : marqué pro au panel ET TVA valide sur sa fiche (11/10/2026), ou un département de société.
+            $proCl = is_array($cl) && !empty($cl['is_b2b']);
+            $idc = (string) ($o['id_client'] ?? (is_array($cl) ? ($cl['id'] ?? '') : ''));
+            if ($proCl && $idc !== '' && function_exists('vpTvaValides') && (vpTvaValides($sid, ['c' . $idc])['c' . $idc] ?? null) === false) { $proCl = false; }
             $out[] = ['jour' => $jour, 'heure' => substr($quand, 11, 5), 'id' => (int) ($o['id'] ?? 0), 'canal' => $canal, 'statut' => $statut,
-                'client' => pfClientNom($o, $complet), 'pro' => (is_array($cl) && !empty($cl['is_b2b'])) || ($o['id_client_department'] ?? null) !== null,
+                'client' => pfClientNom($o, $complet), 'pro' => $proCl || ($o['id_client_department'] ?? null) !== null,
                 'montant' => round((float) ($o['total_value'] ?? 0), 2), 'lignes' => is_array($t) ? ($t['l'] ?? []) : [], 'sansDetail' => !is_array($t)];
         }
         $lu = true;

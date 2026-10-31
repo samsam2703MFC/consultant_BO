@@ -1,0 +1,58 @@
+name: Sonde — clients du magasin pour le bon (lecture seule)
+
+# Comment l'API admin TFBuddy rend les clients d'un magasin, B2B et particuliers
+# (GET /shops/{id}/clients : filtre `type`, pagination limit/offset, id_main_shop),
+# avant de laisser choisir « client B2B » ou « client du magasin » dans le bon d'une
+# promotion (#/promotions/edition). Le script tools/sonde_clients_bon.php part sur
+# le serveur par l'entrée standard de `php` : rien n'est déposé, rien n'est écrit,
+# rien de nominatif n'est affiché (des comptes, des clés, des durées).
+#
+# Déclenchement : pousser un changement sur le script ou ce fichier dans la branche
+# ci-dessous. Ne déploie rien : le déploiement du cockpit reste dans deploy.yml.
+
+on:
+  push:
+    branches: [claude/magical-meitner-lx22uk]
+    paths: ['tools/sonde_clients_bon.php', '.github/workflows/sonde-clients-bon.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: sonde-clients-bon
+  cancel-in-progress: true
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  TARGET_DIR: "/var/www/consulant_bo"
+
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Contrôler la syntaxe du script
+        run: php -l tools/sonde_clients_bon.php
+
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      - name: Sonder les clients des magasins depuis le serveur du cockpit
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "php -- '${TARGET_DIR}'" < tools/sonde_clients_bon.php

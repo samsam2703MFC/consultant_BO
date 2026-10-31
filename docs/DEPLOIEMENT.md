@@ -180,6 +180,19 @@ l'installation échoue, le déploiement continue et les PDF sortent sans pied de
 page. `src/rapports.php` appelle `/usr/local/bin/wkhtmltopdf` en chemin
 complet — le PATH d'Apache ne contient pas toujours `/usr/local/bin`.
 
+### Une livraison ne coupe pas les requêtes en cours
+
+Après la copie, `bin/deploy.sh` **recharge** Apache et PHP-FPM en douceur
+(`systemctl reload`) : les requêtes en cours finissent sur l'ancienne
+version. Il ne les **redémarre** que s'il a dû tuer des rendus PDF suspendus
+(`wkhtmltopdf`, `xvfb-run`, `Xvfb`), qui retiendraient sinon des workers.
+Avant le 26/10/2026, chaque livraison redémarrait Apache : qui enregistrait à
+cet instant (le carnet d'adresses d'un rapport, ce soir-là, avec une livraison
+toutes les vingt minutes) voyait « Failed to fetch ». Côté cockpit
+(`assets/js/api.js`), une modification (PUT, DELETE) coupée en route ou
+refusée en 502/503/504 se rejoue une fois, deux secondes plus tard ; une
+création (POST) ne se rejoue jamais.
+
 ## Horloge des rapports (posée par `bin/deploy.sh`)
 
 Un rapport porte sa planification en base — « tous les lundis à 10 h » est un
@@ -262,6 +275,49 @@ Puis dans le navigateur : `$BASE/` →
 | `/api/cockpit/*` → 404 | `mod_rewrite` inactif ou `AllowOverride` ≠ `All` sur le répertoire |
 | Partages panel vides | `mac_report_share` inexistante (aucun partage encore créé côté panel) — normal, volet vide |
 | Boutique « #n » au lieu du nom dans les partages | `ceo_shop.pwa_shop_id` pas encore mappé aux vrais ids du panel |
+| `/api/cockpit/*` → 503 « Too many connections », livraison bloquée sur `/api/cockpit/meta` | **disque plein** : MySQL n'écrit plus, ses connexions s'empilent → voir « Disque plein » ci-dessous |
+
+### Disque plein (24/10/2026)
+
+Le 24/10/2026, le disque de 25 Go était plein à 100 % : MySQL n'écrivait plus, l'API répondait 503
+« Too many connections » et chaque livraison restait bloquée sur `/api/cockpit/meta`. Depuis :
+
+- chaque livraison commence par `bin/menage_disque.sh` (relevé, ménage sûr dès 90 %, relance de MySQL
+  s'il refuse les connexions) et **s'arrête avant de copier** s'il reste moins de 300 Mo libres ;
+- `/etc/cron.d/cockpit-disque` relance ce ménage toutes les 6 heures dès 85 % et notifie les abonnés
+  « admin » du cockpit si le disque reste à 90 % ou plus (journal : `/var/log/cockpit-disque.log`) ;
+- `/etc/logrotate.d/cockpit` fait tourner les journaux `/var/log/cockpit-*.log` chaque semaine.
+
+Le 24/10/2026, les binlogs de MySQL pesaient 4 Go (30 jours gardés par défaut) : le ménage règle leur
+rétention à 3 jours. MySQL s'administre avec le compte de maintenance d'Ubuntu (`/etc/mysql/debian.cnf`),
+root y ayant un mot de passe. Le ménage ne retire que ce qui se recrée : cache apt, journaux systemd au-delà de 200 Mo, journaux tournés
+de plus de 3 jours, journaux du cockpit au-delà de 50 Mo (les 5 000 dernières lignes restent), caches pip,
+composer, npm, yarn et node-gyp de root, images et cache de construction Docker inutilisés depuis 7 jours,
+anciennes révisions des snaps, binlogs MySQL de plus de 3 jours (sans réplica), fichiers de `/tmp` de plus
+de 2 jours. Jamais une base, un téléversement, un conteneur ni un volume.
+
+**À la main, en root (PuTTY), quand le serveur est déjà plein :**
+
+```bash
+df -h /                                                     # 1. combien il reste
+du -xh --max-depth=1 /var/lib /var/www /srv /root 2>/dev/null | sort -rh | head -20
+ls -lh /var/lib/mysql | grep -i bin | tail                  #    binlogs MySQL, s'il y en a
+apt-get clean                                               # 2. le ménage sûr
+journalctl --vacuum-size=100M
+find /var/log -xdev -type f \( -name '*.gz' -o -name '*.[0-9]' \) -mtime +7 -delete
+rm -rf /root/.cache/pip /root/.cache/composer /root/.npm/_cacache
+docker image prune -af --filter until=168h 2>/dev/null     #    seulement si Docker est installé
+df -h /                                                     # 3. il faut au moins 1 Go libre
+systemctl restart mysql                                     # 4. libère les connexions bloquées
+mysql --defaults-file=/etc/mysql/debian.cnf -e "PURGE BINARY LOGS BEFORE NOW() - INTERVAL 3 DAY"   # 5. binlogs
+mysql --defaults-file=/etc/mysql/debian.cnf -e "SET PERSIST binlog_expire_logs_seconds = 259200"   #    3 jours
+df -h / && curl -s http://127.0.0.1/consulant_bo/api/cockpit/meta | head -c 120; echo
+```
+
+Une fois le cockpit livré, la même chose s'écrit `bash /var/www/consulant_bo/bin/menage_disque.sh --force --mysql`.
+Si le disque reste plein après le ménage, ce sont des données : le relevé dit où (base MySQL dans
+`/var/lib/mysql`, sites dans `/var/www` et `/srv`, sauvegardes dans `/root/backups`) — à trier à la main.
+Puis relancer la livraison (GitHub › Actions › « Deploy — Cockpit CEO » › Run workflow).
 
 ## Application terrain (visites)
 
@@ -322,3 +378,33 @@ renouvellement automatique à vérifier) avant d'équiper les tablettes.
 `tablette/img/__absent__.png` répond 404, `api/cockpit/tablette/book` porte
 `"products":[`. Le contrôle de syntaxe `node --check` ignore `public/tablette/`
 (bundle Vite, comme `public/assistant/`).
+
+## MétaDonnée — formulaires Meta et Instagram vers l'ERP du franchisé
+
+Rail → ERP franchisé → MétaDonnée (1 · Formulaires, 2 · Mapping ERP, 3 · Suivi des leads, 4 · Alertes SMS).
+Contrat : `docs/contrat-api.md`, « MétaDonnée ».
+
+- **Meta** : rien à régler, ni chez Meta ni dans le Cockpit — ce sont les clés et l'accès du CRM
+  (atelier-espace-candidat), dont le flux est recopié ici (`src/crm/meta_graph.php` = copie identique de
+  `app/crm/api/lib/meta_graph.php`). Le Cockpit les LIT dans la base partagée à chaque appel (`crm_settings`,
+  complété par `meta_connexion`) et n'y écrit jamais : un jeton régénéré dans le CRM (Paramètres → Intégrations →
+  Formulaires Facebook / Instagram) vaut aussitôt ici. Le compte MySQL du Cockpit doit pouvoir lire ces deux tables
+  (`sql/grants.sql`). À l'étape 1, carte « Connexion Meta » (« Clés du CRM ») : « 🔌 Connecter et tester » (jeton
+  vérifié — celui de l'utilisateur système échangé contre celui de la Page, gardé côté Cockpit —, Page, formulaires,
+  abonnement `leadgen`). L'application étant celle du CRM, son adresse de rappel reste au CRM : le Cockpit ne la
+  prend jamais et relève ses formulaires toutes les 2 minutes. Pour un webhook à la seconde, une application Meta
+  dédiée au Cockpit (« Clés propres », adresse `…/api/cockpit/metadonnee/meta/leads`, en https sur un nom de
+  domaine) : le même bouton la branche. Côté CRM, les formulaires suivis ici restent « non validés » (pas de candidats) ; l'équipe
+  reçoit une fois par formulaire l'alerte « formulaire non validé ».
+  Le CRM a vu son application bloquée par Meta en oct. 2026 (« API access blocked ») : tant que c'est le cas,
+  la sonde le dit et aucun lead ne passe — par ici comme par le CRM.
+- **ERP** : le compte API du panel (Paramètres → compte consultant). Les routes `POST/GET /consultant/leads`
+  sont à créer côté panel ; elles se règlent à l'étape 2. L'envoi automatique est **éteint** à l'installation.
+- **SMS** : SMSAPI, jeton OAuth avec la permission « sms » — `config/config.php` (`smsapi.token`), variable
+  `SMSAPI_TOKEN`, ou saisi à l'étape 4. Les SMS sont **éteints** à l'installation ; la Belgique doit être autorisée
+  sur le compte SMSAPI (code 112 sinon).
+- **Horloge** : `bin/metadonnee_cron.sh`, chaque minute (un passage en cours bloque le suivant), ligne posée par `bin/deploy.sh` dans
+  `/etc/cron.d/cockpit-rapports` (jeton `mdJeton` lu en base, né à la première ouverture du module).
+- **Vérifier** : « 🔍 Tester les connexions » (lecture seule, sur chaque écran du module) et, à l'étape 2,
+  « Envoyer un lead d'essai » (un lead TEST réellement envoyé puis relu : à supprimer dans l'ERP).
+  Kit d'essai hors ligne : `tools/metadonnee-essai/LISEZMOI.md`.

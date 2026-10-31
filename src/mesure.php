@@ -25,7 +25,7 @@ declare(strict_types=1);
 /** Les trois tables de la mesure. Créées à la volée, comme le reste du cockpit. */
 function ensureMesureTables(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_campagne_mesure ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_campagne_mesure ('
         . 'campagne_id INT NOT NULL,'
         . 'ref_debut DATE NULL,'
         . 'ref_fin DATE NULL,'
@@ -46,7 +46,7 @@ function ensureMesureTables(): void
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // Le relevé Facebook : deux nombres, saisis à la main. La page n'est pas
     // connectée — un chiffre relevé vaut mieux qu'un indicateur absent.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_campagne_releve ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_campagne_releve ('
         . 'campagne_id INT NOT NULL,'
         . 'shop_id VARCHAR(32) NOT NULL,'
         . 'phase VARCHAR(8) NOT NULL,'
@@ -58,7 +58,7 @@ function ensureMesureTables(): void
     // Le gel de la référence. Les remontées de caisse arrivent avec du retard :
     // sans cette photo prise au lancement, l'« avant » change tout seul et le
     // résultat n'est plus reproductible d'une semaine à l'autre.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_campagne_snapshot ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_campagne_snapshot ('
         . 'campagne_id INT NOT NULL,'
         . 'kpi VARCHAR(32) NOT NULL,'
         . 'shop_id VARCHAR(32) NOT NULL,'
@@ -613,7 +613,7 @@ function ep_mesure(): array
 
     // Paramétrage mémorisé.
     $p = [];
-    foreach (Db::rows('SELECT * FROM ceo_campagne_mesure WHERE campagne_id = ?', [$camp['id']]) as $r) { $p = $r; }
+    foreach (Db::rows('SELECT * FROM mar_campagne_mesure WHERE campagne_id = ?', [$camp['id']]) as $r) { $p = $r; }
 
     $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
     $nomDe = [];
@@ -899,7 +899,7 @@ function ep_mesure(): array
 
     // ── Le relevé Facebook.
     $rel = [];
-    foreach (Db::rows('SELECT shop_id, phase, abonnes, releve_le FROM ceo_campagne_releve WHERE campagne_id = ?',
+    foreach (Db::rows('SELECT shop_id, phase, abonnes, releve_le FROM mar_campagne_releve WHERE campagne_id = ?',
         [$camp['id']]) as $r) {
         $rel[(string) $r['shop_id']][(string) $r['phase']] = [
             'abonnes' => $r['abonnes'] !== null ? (int) $r['abonnes'] : null,
@@ -924,7 +924,7 @@ function ep_mesure(): array
 
     // ── Le gel : ce que valait la référence au lancement.
     $snap = [];
-    foreach (Db::rows('SELECT kpi, shop_id, valeur, mesure_le FROM ceo_campagne_snapshot WHERE campagne_id = ?',
+    foreach (Db::rows('SELECT kpi, shop_id, valeur, mesure_le FROM mar_campagne_snapshot WHERE campagne_id = ?',
         [$camp['id']]) as $r) {
         $snap[(string) $r['kpi']][(string) $r['shop_id']] = $r['valeur'] !== null ? (float) $r['valeur'] : null;
     }
@@ -972,7 +972,7 @@ function wr_mesure_param(int $id): array
 
     // L'écran écrit champ par champ : un corps qui ne porte pas une clé ne
     // veut pas dire « efface-la ». Seul ce qui est envoyé est modifié.
-    $cur = Db::row('SELECT * FROM ceo_campagne_mesure WHERE campagne_id = ?', [$id]) ?? [];
+    $cur = Db::row('SELECT * FROM mar_campagne_mesure WHERE campagne_id = ?', [$id]) ?? [];
     $val = static function (string $cle, $neuf, $ancien) use ($b) {
         return array_key_exists($cle, $b) ? $neuf : $ancien;
     };
@@ -993,7 +993,7 @@ function wr_mesure_param(int $id): array
         'marge_pct' => $val('margePct', $num($b['margePct'] ?? null), $cur['marge_pct'] ?? null),
     ];
 
-    Db::exec('INSERT INTO ceo_campagne_mesure
+    Db::exec('INSERT INTO mar_campagne_mesure
         (campagne_id, ref_debut, ref_fin, remanence_jours, temoins, n1,
          cible_trafic, cible_panier, cible_ca, cible_promo, cible_fb, produits, cout, marge_pct, maj)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -1023,12 +1023,12 @@ function wr_mesure_releve(int $id): array
 
     $v = $b['abonnes'] ?? null;
     if ($v === '' || $v === null) {
-        Db::exec('DELETE FROM ceo_campagne_releve WHERE campagne_id = ? AND shop_id = ? AND phase = ?', [$id, $sid, $phase]);
+        Db::exec('DELETE FROM mar_campagne_releve WHERE campagne_id = ? AND shop_id = ? AND phase = ?', [$id, $sid, $phase]);
         return ['ok' => true, 'efface' => true];
     }
     $date = trim((string) ($b['date'] ?? ''));
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { $date = date('Y-m-d'); }
-    Db::exec('INSERT INTO ceo_campagne_releve (campagne_id, shop_id, phase, abonnes, releve_le, maj)
+    Db::exec('INSERT INTO mar_campagne_releve (campagne_id, shop_id, phase, abonnes, releve_le, maj)
               VALUES (?,?,?,?,?,?)
               ON DUPLICATE KEY UPDATE abonnes = VALUES(abonnes), releve_le = VALUES(releve_le), maj = VALUES(maj)',
         [$id, $sid, $phase, max(0, (int) $v), $date, date('Y-m-d H:i:s')]);
@@ -1046,8 +1046,8 @@ function wr_mesure_gel(int $id): array
     ensureMesureTables();
     $b = body();
     if (!empty($b['annuler'])) {
-        Db::exec('DELETE FROM ceo_campagne_snapshot WHERE campagne_id = ?', [$id]);
-        Db::exec('UPDATE ceo_campagne_mesure SET gele_le = NULL WHERE campagne_id = ?', [$id]);
+        Db::exec('DELETE FROM mar_campagne_snapshot WHERE campagne_id = ?', [$id]);
+        Db::exec('UPDATE mar_campagne_mesure SET gele_le = NULL WHERE campagne_id = ?', [$id]);
         return ['ok' => true, 'gele' => false];
     }
     $_GET['campagne'] = (string) $id;
@@ -1057,10 +1057,10 @@ function wr_mesure_gel(int $id): array
         return ['error' => 'rien à geler : la fenêtre de référence ne rend aucune donnée'];
     }
     $now = date('Y-m-d H:i:s');
-    Db::exec('DELETE FROM ceo_campagne_snapshot WHERE campagne_id = ?', [$id]);
+    Db::exec('DELETE FROM mar_campagne_snapshot WHERE campagne_id = ?', [$id]);
     $pose = static function (string $kpi, string $sid, ?float $v) use ($id, $now) {
         if ($v === null) { return; }
-        Db::exec('INSERT INTO ceo_campagne_snapshot (campagne_id, kpi, shop_id, valeur, mesure_le) VALUES (?,?,?,?,?)
+        Db::exec('INSERT INTO mar_campagne_snapshot (campagne_id, kpi, shop_id, valeur, mesure_le) VALUES (?,?,?,?,?)
                   ON DUPLICATE KEY UPDATE valeur = VALUES(valeur), mesure_le = VALUES(mesure_le)',
             [$id, $kpi, $sid, $v, $now]);
     };
@@ -1075,7 +1075,7 @@ function wr_mesure_gel(int $id): array
     $pose('panier', '0', $r['panier'] ?? null);
     foreach ($d['produits'] ?? [] as $p) { $pose('volume:' . $p['sku'], '0', $p['refJour']); }
 
-    Db::exec('INSERT INTO ceo_campagne_mesure (campagne_id, gele_le, maj) VALUES (?,?,?)
+    Db::exec('INSERT INTO mar_campagne_mesure (campagne_id, gele_le, maj) VALUES (?,?,?)
               ON DUPLICATE KEY UPDATE gele_le = VALUES(gele_le), maj = VALUES(maj)', [$id, $now, $now]);
     journalAdd('CEO', 'Campagne', (string) ($d['campagne']['nom'] ?? $id),
         'Référence de mesure gelée (' . ($d['fenetres']['ref']['du'] ?? '') . ' → ' . ($d['fenetres']['ref']['au'] ?? '') . ')');

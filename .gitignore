@@ -4,3 +4,6 @@ node_modules/
 tools/assistant-src/tsconfig.tsbuildinfo
 tools/assistant-src/dist-assistant/
 public/uploads/
+
+# Worktrees temporaires des agents Claude Code
+.claude/worktrees/

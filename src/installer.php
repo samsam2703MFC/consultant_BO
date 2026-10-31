@@ -28,6 +28,29 @@ function ensureInstalled(): void
         runSqlFile(__DIR__ . '/../sql/schema.sql');
     }
 
+    // Les tables du marketing passent sous mar_ (13/10/2026) : renommées AVANT que
+    // les ensure*() ci-dessous ne créent leurs nouvelles tables vides. Une panne ici
+    // ne doit pas fermer tout le cockpit : elle se note, et l'appel suivant réessaie
+    // (une table recréée vide entre-temps sera remplacée par l'ancienne, pleine).
+    $marOk = true;
+    if (function_exists('marMigrer')) {
+        try { marMigrer(); }
+        catch (Throwable $e) {
+            $marOk = false;   // l'empreinte ne sera pas posée : l'appel suivant réessaie
+            try { journalAdd('Installation', 'Erreur', 'Marketing', 'Migration des tables mar_ impossible : ' . $e->getMessage()); } catch (Throwable $x) { /* journal absent */ }
+        }
+    }
+
+    // Les tables des consultants et des visites passent sous con_ (26/10/2026), même règle que mar_ :
+    // renommées avant que ensureVisites() et les autres ne créent leurs nouvelles tables vides.
+    if (function_exists('conMigrer')) {
+        try { conMigrer(); }
+        catch (Throwable $e) {
+            $marOk = false;   // l'empreinte ne sera pas posée : l'appel suivant réessaie
+            try { journalAdd('Installation', 'Erreur', 'Suivi des franchisés', 'Migration des tables con_ impossible : ' . $e->getMessage()); } catch (Throwable $x) { /* journal absent */ }
+        }
+    }
+
     // Jeu de démonstration : chargé UNIQUEMENT s'il est explicitement activé
     // (config 'seed' = true, ou variable d'env COCKPIT_SEED=1). Désactivé par
     // défaut → une base neuve reste vide, prête pour les vraies données.
@@ -44,7 +67,6 @@ function ensureInstalled(): void
     }
 
     ensureValidation();
-    ensureMaitrise();
     ensureReference();
     ensureProduction();
     ensureCentrale();
@@ -53,15 +75,24 @@ function ensureInstalled(): void
     ensureReputation();
     ensureReglageLarge();
     ensureRevue();
+    // « Nécessaire » fondu dans « Obligatoire » (18/10/2026) : une fois, après la revue et le catalogue de production.
+    if (function_exists('aoFusionNecessaire')) {
+        try { aoFusionNecessaire(); }
+        catch (Throwable $e) { try { journalAdd('Installation', 'Erreur', 'Assortiment', 'Fusion « nécessaire » → « obligatoire » impossible : ' . $e->getMessage()); } catch (Throwable $x) { /* journal absent */ } }
+    }
     connecteurTable();
     ensureScouting();
     ensureNewsletter();
+    ensureFidelite();
     ensureProspection();
     ensureVisites();
     ensureFacebook();
+    if (function_exists('ensureSocialPublication')) { ensureSocialPublication(); }   // après les posts : elle les complète
     ensureTabletteRemarques();
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['schemaVu', json_encode($emp)]);
+    if ($marOk) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['schemaVu', json_encode($emp)]);
+    }
 }
 
 /** L'empreinte du code qui porte le schéma : nom, date et taille des sources et de schema.sql. */
@@ -200,63 +231,6 @@ function ensureReglageLarge(): void
         . " WHERE table_schema = DATABASE() AND table_name = 'ceo_app_setting' AND column_name = 'value'");
     if ($r !== null && strtolower((string) ($r['t'] ?? '')) === 'text') {
         Db::exec('ALTER TABLE ceo_app_setting MODIFY COLUMN value MEDIUMTEXT NOT NULL');
-    }
-}
-
-/**
- * Maîtrise d'un contrôle par une boutique — le contrôle par exception.
- *
- * Une tâche contrôlée cinq fois avec de bonnes notes n'apprend plus rien : on
- * la masque, et on contrôle ce qui dérive. Trois précautions, sans quoi le
- * dispositif se retourne contre lui-même :
- *
- *  - Deux seuils, pas un. On masque haut (moyenne ≥ `masquer`), on rouvre plus
- *    bas (< `rouvrir`) ; entre les deux l'état COURANT est conservé. Avec un
- *    seuil unique, une moyenne qui oscille autour ferait clignoter la tâche
- *    d'une semaine à l'autre.
- *  - Un re-contrôle obligatoire (`recontrole_le`). Une tâche masquée ne reçoit
- *    plus de notes : sa moyenne est gelée, donc elle ne peut PLUS jamais
- *    échouer. Sans réouverture périodique, masquer serait une porte à sens
- *    unique et le dispositif s'éteindrait tout seul.
- *  - `jamais_masquer` : l'hygiène et la sécurité ne se gagnent pas au mérite.
- *
- * L'état est PERSISTÉ (et non recalculé à la volée) précisément à cause de
- * l'hystérésis : il faut se souvenir de l'état précédent pour savoir quoi faire
- * dans la bande entre les deux seuils.
- */
-function ensureMaitrise(): void
-{
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_task_maitrise ('
-        . 'id_shop INT NOT NULL,'
-        . 'id_task INT NOT NULL,'
-        . "etat ENUM('visible','masquee') NOT NULL DEFAULT 'visible',"
-        . 'depuis DATETIME NOT NULL,'
-        . 'moyenne DECIMAL(3,2) NULL,'          // moyenne au moment de la bascule
-        . 'nb_avis SMALLINT NOT NULL DEFAULT 0,'
-        . 'recontrole_le DATE NULL,'            // réouverture programmée
-        . 'jamais_masquer TINYINT NOT NULL DEFAULT 0,'
-        . 'motif VARCHAR(200) NULL,'
-        . 'force_par VARCHAR(80) NULL,'         // réouverture manuelle : qui, quand
-        . 'force_le DATETIME NULL,'
-        . 'PRIMARY KEY (id_shop, id_task),'
-        . 'KEY idx_maitrise_etat (etat, recontrole_le)'
-        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-
-    // Les seuils sont un RÉGLAGE, jamais des constantes cachées : ce sont des
-    // jugements métier, ils doivent pouvoir se discuter sans redéploiement.
-    if (setting('maitrise') === null) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
-            ['maitrise', json_encode([
-                // Masquer au-dessus de la barre de CONFORMITÉ (seuil signalement = 4),
-                // jamais en dessous : cacher un contrôle dont la moyenne est déjà
-                // non conforme serait contradictoire.
-                'masquer' => 4.2,
-                'rouvrir' => 3.75,
-                'minAvis' => 5,      // en dessous, la moyenne est du bruit
-                'fenetre' => 5,      // moyenne sur les N derniers avis, pas sur tout l'historique
-                'recontroleJours' => 42,
-                'noteGrave' => 2,    // une note à ce niveau rouvre le jour même
-            ])]);
     }
 }
 
@@ -939,7 +913,7 @@ function seedEnabled(): bool
  */
 function ensureReputation(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_reputation ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_avis_fiche ('
         . 'shop_id VARCHAR(8) PRIMARY KEY,'
         . 'place_id VARCHAR(120) NULL,'
         . 'profile_url VARCHAR(400) NULL,'
@@ -948,7 +922,7 @@ function ensureReputation(): void
         . 'synced_at DATETIME NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_review ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_avis ('
         . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'
         . 'shop_id VARCHAR(8) NOT NULL,'
         . "source VARCHAR(20) NOT NULL DEFAULT 'google',"
@@ -978,7 +952,7 @@ function ensureReputation(): void
  */
 function ensureFacebook(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fb_post ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_social_post ('
         . 'id VARCHAR(16) PRIMARY KEY,'
         . 'shop_id VARCHAR(8) NULL,'
         . 'author VARCHAR(120) NOT NULL,'
@@ -1005,7 +979,7 @@ function ensureFacebook(): void
         . 'KEY idx_shop (shop_id, planned_at)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fb_finding ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_social_ecart ('
         . 'id BIGINT AUTO_INCREMENT PRIMARY KEY,'
         . 'post_id VARCHAR(16) NOT NULL,'
         . 'rule_code VARCHAR(40) NOT NULL,'

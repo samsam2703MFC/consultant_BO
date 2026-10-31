@@ -1,0 +1,137 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Partie i identyfikowalność{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Partie i identyfikowalność</h3>
+            <p class="text-subtitle text-muted">Partie wyrobu wpisane na tabletach grup, z partiami surowców i zdjęciami etykiet</p>
+        </div>
+        <a class="btn btn-outline-primary" href="{{ root }}/tablet/production" target="_blank" rel="noopener"><i class="bi bi-tablet me-1"></i> Ekran tabletu</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-trace">
+    <form class="card" method="get" action="{{ root }}/workshop/traceability">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-6 col-md-2"><label class="form-label small">Od</label><input type="date" class="form-control" name="from" value="{{ from }}"></div>
+            <div class="col-6 col-md-2"><label class="form-label small">Do</label><input type="date" class="form-control" name="to" value="{{ to }}"></div>
+            <div class="col-12 col-md-3"><label class="form-label small">Grupa</label>
+                <select class="form-select" name="group"><option value="">Wszystkie grupy</option>
+                    {% for g in groups %}<option value="{{ g.id }}" {{ group == g.id ? 'selected' : '' }}>{{ g.name_pl }}</option>{% endfor %}
+                </select></div>
+            <div class="col-12 col-md-3"><label class="form-label small">Szukaj: numer partii wyrobu lub surowca, produkt, surowiec</label>
+                <input type="search" class="form-control" name="q" value="{{ q }}" placeholder="np. L2310-A7 albo 261020-PIEK"></div>
+            <div class="col-12 col-md-2 d-grid"><button class="btn btn-primary"><i class="bi bi-search me-1"></i> Pokaż</button></div>
+        </div>
+    </form>
+
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+    {% if q and totals.material_hits %}
+        <div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1"></i>
+            Partia surowca <strong>„{{ q }}”</strong> użyta w <strong>{{ totals.material_hits|plural_pl('partii wyrobu', 'partiach wyrobu', 'partiach wyrobu') }}</strong> w tym okresie — lista poniżej (do wycofania / blokady).</div>
+    {% endif %}
+
+    {% if q and recall %}
+        <div class="card at-trace-recall">
+            <div class="card-body">
+                <h6 class="mb-1"><i class="bi bi-truck me-1"></i> Klienci do powiadomienia : {{ recall|length }}</h6>
+                <p class="small text-muted mb-2">Kartony tych partii (ten sam produkt, etykieta kartonu w dniu produkcji{{ label_days == 1 ? ' lub następnego dnia' : (label_days ? ' lub do ' ~ label_days ~ ' dni później' : '') }}) wysłane lub na paletach dla :</p>
+                <ul class="at-trace-clients mb-0">
+                    {% for c in recall %}
+                        <li><a href="{{ root }}/clients/{{ c.id }}/space"><strong>{{ c.name }}</strong></a>
+                            <span class="text-muted small">· {{ c.cartons }} kart. · dostawa {% for d in c.dates %}{{ d|date('d.m') }}{{ not loop.last ? ', ' : '' }}{% endfor %} · {{ c.products|join(', ') }}</span></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="at-tiles">
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-box-seam"></i> Partie wyrobu</span>
+            <strong class="at-tile-value">{{ totals.batches }}</strong><span class="at-tile-meta">{{ from|date('d.m') }} – {{ to|date('d.m.Y') }}</span></div>
+        <div class="at-tile {{ totals.batches and totals.complete == totals.batches ? 'at-tile-ok' : '' }}"><span class="at-tile-label"><i class="bi bi-check2-circle"></i> Komplet partii surowców</span>
+            <strong class="at-tile-value">{{ totals.complete }}</strong><span class="at-tile-meta">wszystkie surowce i opakowania z numerem</span></div>
+        <div class="at-tile {{ totals.missing ? 'at-tile-warn' : 'at-tile-ok' }}"><span class="at-tile-label"><i class="bi bi-question-circle"></i> Brakujące numery</span>
+            <strong class="at-tile-value">{{ totals.missing }}</strong><span class="at-tile-meta">{{ totals.missing ? 'partie do uzupełnienia na tablecie' : 'nic nie brakuje' }}</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-truck"></i> Dokąd poszło</span>
+            <strong class="at-tile-value">{{ recall|length }}</strong><span class="at-tile-meta">{{ recall|length ? (recall|length == 1 ? 'klient' : 'klientów') ~ ' z kartonami tych partii' : 'brak wysłanych kartonów' }}</span></div>
+    </div>
+
+    <div class="card">
+        <div class="card-body pt-3">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="traceTable">
+                    <thead><tr>
+                        <th>Partia wyrobu</th><th>Produkt</th><th class="text-end">Ilość</th><th>Grupa</th><th>Kto</th><th class="text-center">Partie surowców</th><th class="text-center">Klienci</th><th></th>
+                    </tr></thead>
+                    <tbody>
+                    {% for r in rows %}
+                        {% set cancelled = r.cancelled_at is not null %}
+                        <tr class="{{ cancelled ? 'text-muted text-decoration-line-through' : '' }} {{ r.matches ? 'table-warning' : '' }}">
+                            <td><strong class="font-monospace">{{ r.lot_code }}</strong><div class="small text-muted">{{ r.work_date|date('d.m.Y') }} · {{ r.created_at|date('H:i') }}</div></td>
+                            <td>{{ r.item_name }}{% if r.note %}<div class="small text-muted">{{ r.note }}</div>{% endif %}</td>
+                            <td class="text-end text-nowrap">{{ r.quantity|number_format(r.base_unit == 'kg' ? 2 : 0, ',', ' ') }} {{ r.base_unit }}
+                                {% if r.ppc %}<div class="small text-muted">{{ (r.quantity / r.ppc)|number_format(1, ',', ' ') }} kart.</div>{% endif %}</td>
+                            <td>{{ r.group_name }}</td>
+                            <td class="small">{{ r.employee_name ?: '—' }}{% if r.device_name %}<div class="text-muted">{{ r.device_name }}</div>{% endif %}</td>
+                            <td class="text-center">{% if cancelled %}<span class="badge bg-secondary">anulowana</span>
+                                {% else %}<span class="badge {{ r.lots_total and r.lots_done >= r.lots_total ? 'bg-success' : (r.lots_done ? 'bg-warning text-dark' : 'bg-danger') }}">{{ r.lots_done }}/{{ r.lots_total }}</span>{% endif %}</td>
+                            <td class="text-center">{% if r.ship is null %}<span class="text-muted">—</span>
+                                {% elseif r.ship.cartons %}<span class="badge {{ r.ship.customers|length ? 'bg-primary' : 'bg-light text-muted' }}" title="{{ r.ship.cartons }} kart. oklejonych · {{ r.ship.shipped }} wysłanych">{{ r.ship.customers|length }}</span>
+                                {% else %}<span class="small text-muted">brak kartonów</span>{% endif %}</td>
+                            <td class="text-end text-nowrap">{% if r.lots %}<button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#lots{{ r.id }}" aria-expanded="{{ r.matches ? 'true' : 'false' }}">Surowce</button>{% endif %}
+                                {% if r.ship and r.ship.cartons %}<button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#ship{{ r.id }}" aria-expanded="false">Dokąd</button>{% endif %}</td>
+                        </tr>
+                        {% if r.ship and r.ship.cartons %}
+                        <tr class="collapse" id="ship{{ r.id }}"><td colspan="8" class="bg-light">
+                            <p class="small mb-2">Kartony <strong>{{ r.item_name }}</strong> oklejone {{ r.work_date|date('d.m') }}{{ label_days ? ' – ' ~ (r.work_date|date_modify('+' ~ label_days ~ ' day')|date('d.m')) : '' }} :
+                                <strong>{{ r.ship.cartons }}</strong> · w magazynie {{ r.ship.stock }} · na palecie {{ r.ship.pallet }} · wysłane {{ r.ship.shipped }}</p>
+                            {% if r.ship.customers %}
+                            <table class="table table-sm mb-0">
+                                <thead><tr class="small text-muted"><th>Klient</th><th>Dostawa</th><th class="text-end">Kartony</th><th class="text-end">Palety</th><th>WZ</th><th>Stan</th></tr></thead>
+                                <tbody>
+                                {% for c in r.ship.customers %}
+                                    <tr><td><a href="{{ root }}/clients/{{ c.id }}/space">{{ c.name }}</a></td><td>{{ c.delivery_date ? c.delivery_date|date('d.m.Y') : '—' }}</td>
+                                        <td class="text-end">{{ c.cartons }}</td><td class="text-end">{{ c.pallets }}</td>
+                                        <td class="small font-monospace">{{ c.wz ? c.wz|join(', ') : '—' }}</td>
+                                        <td>{{ c.shipped ? '<span class="badge bg-success">wysłane</span>' : '<span class="badge bg-warning text-dark">na palecie</span>' }}</td></tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}<p class="small text-muted mb-0">Kartony jeszcze w magazynie — żaden klient.</p>{% endif %}
+                        </td></tr>
+                        {% endif %}
+                        {% if r.lots %}
+                        <tr class="collapse {{ r.matches ? 'show' : '' }}" id="lots{{ r.id }}"><td colspan="8" class="bg-light">
+                            <table class="table table-sm mb-0">
+                                <thead><tr class="small text-muted"><th>Surowiec / opakowanie</th><th class="text-end">Ilość</th><th>Numer partii</th><th>Data przydatności</th><th>Zdjęcie etykiety</th><th>Odczyt OCR</th></tr></thead>
+                                <tbody>
+                                {% for l in r.lots %}
+                                    <tr class="{{ q and l.lot_number and (q|lower) in (l.lot_number|lower) ? 'table-warning' : '' }}">
+                                        <td>{{ l.material_name }}</td>
+                                        <td class="text-end text-nowrap">{{ l.quantity is not null ? l.quantity|number_format(l.quantity >= 100 ? 0 : 2, ',', ' ') ~ ' ' ~ l.unit : '—' }}</td>
+                                        <td class="font-monospace">{{ l.lot_number ?: '—' }}</td>
+                                        <td>{{ l.best_before ? l.best_before|date('d.m.Y') : '—' }}</td>
+                                        <td>{% if l.id_photo %}<a href="{{ root }}/workshop/traceability/photo/{{ l.id_photo }}" target="_blank" rel="noopener"><img src="{{ root }}/workshop/traceability/photo/{{ l.id_photo }}" alt="Etykieta {{ l.material_name }}" class="at-trace-photo" loading="lazy"></a>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                        <td class="small text-muted at-trace-ocr">{{ l.ocr_text ? l.ocr_text|slice(0, 160) : '' }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </td></tr>
+                        {% endif %}
+                    {% else %}
+                        <tr><td colspan="8" class="at-empty">Brak partii w tym okresie{{ q ? ' dla „' ~ q ~ '”' : '' }}. Partie wpisuje się na tablecie grupy : Tablet → osoba + PIN → « Produkcja dnia i partie ».</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="at-profit-note mb-0">Numer partii wyrobu : RRMMDD-GRUPA-NN (dzień, grupa, kolejna partia dnia). Surowce i opakowania z receptury ERP, ilość przeliczona na partię. « Dokąd » : kartony tego produktu z etykietą z dnia produkcji{{ label_days == 1 ? ' lub następnego dnia' : (label_days ? ' lub do ' ~ label_days ~ ' dni później' : '') }} (parametr trace.label_days) → palety → klienci i WZ ; etykieta kartonu nie ma jeszcze numeru partii z tabletu, więc to powiązanie prawdopodobne (ten sam produkt i dzień). Pokazano do 500 partii — zawęź okres lub grupę.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

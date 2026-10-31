@@ -1,0 +1,810 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Services\Forecast;
+
+use App\Core\TransactionManager;
+use App\Domain\Logistics\Holidays;
+use App\Exceptions\CustomException;
+use App\Repositories\Analysis\ProductMarginRepository;
+use App\Repositories\Forecast\ForecastRepository;
+use App\Repositories\Workshop\ParamRepository;
+use App\Repositories\Workshop\PlanningRepository;
+use App\Repositories\Workshop\SupplyRepository;
+use App\Services\Logistics\LogisticsPlanService;
+use App\Services\Production\Cost\SectionUnitCostService;
+use App\Services\Purchasing\CostOptimizationService;
+use App\Services\Workshop\Planning\PlanningService;
+use App\Services\Workshop\Product\StandardTime;
+
+/**
+ * Prognoza 13 tygodni [220] (Produkcja › Prognoza 13 tygodni, makiety 1–3) — co tydzień te same 13 tygodni do przodu od
+ * bieżącego poniedziałku, kartony na produkt i tydzień :
+ *  - tydzień bieżący : zamówienia (gdy są) ; dalej większe z : zamówienia już złożone, prognoza ;
+ *  - produkty całoroczne : średnio na tydzień w ostatnich tygodniach (forecast.trend_weeks) × kształt N-1 (kartony sieci bez
+ *    produktów sezonowych w tym samym tygodniu rok temu, ±1 tydzień, ÷ poziom N-1 tych ostatnich tygodni) = N-1 × trend ;
+ *    tydzień N-1 bez danych (mniej niż 30 % poziomu) : sama średnia ;
+ *  - produkty sezonowe (gamy panelu TF Buddy, tylko nasze produkty — katalog SL Food) : kartony wysłane w tej samej gamie
+ *    rok temu (tydzień gamy N-1 → ten sam tydzień gamy w tym roku) × trend sieci ; poza gamą tylko zamówienia ;
+ *  - trend sieci = kartony ostatnich tygodni ÷ te same tygodnie rok temu (tygodnie N-1 z danymi), w granicach parametrów.
+ * Z kartonów : palety (kartony na paletę), godziny produkcji (partia z arkusza albo marszruta) wobec zdolności (pracownicy ×
+ * etat, dni pracy bez świąt PL), pieniądze na produkcję [221] (wydatki gotówkowe : kartony × (surowce i opakowania + płace
+ * i media działu produkcji + wspólne działy produkcji), z ostatnich miesięcy kosztowych ; bez inwestycji (amortyzacja, kredyt
+ * i leasing), kosztów stałych, Administracji i logistyki) i zakupy surowców (receptura na karton, stan, w drodze, czas dostawy → « zamówić do »).
+ * Zatwierdzenie (Kierownik produkcji, co poniedziałek) zapisuje zdjęcie liczb w n_forecast_run i zalicza zadanie tygodnia.
+ */
+final class ForecastService
+{
+    private const EPS = 1e-9;
+    /** Koszt stały będący inwestycją albo jej spłatą [223] : po nazwie (bez polskich znaków) albo kategorii. */
+    private const INVESTMENT = '/\b(inwestyc\w*|invest\w*|kredyt\w*|leasing\w*|pozyczk\w*|rat[ay] |srod\w* trwal\w*|capex)/u';
+    private const INVESTMENT_CATEGORIES = ['INVESTMENT', 'INVEST', 'LEASING', 'CREDIT', 'LOAN', 'CAPEX'];
+    private const COVERAGE = 0.3;
+    private const SHAPE_MIN = 0.5;
+    private const SHAPE_MAX = 2.0;
+    private const COLORS = ['#8e1f2f', '#5b3a85', '#2b5f9e', '#c17a2a', '#1f5a37', '#3f6b7c', '#9a5b13', '#6b6b6b'];
+
+    public function __construct(
+        private ForecastRepository $repo,
+        private PanelSeasonService $panel,
+        private PlanningRepository $planning,
+        private SupplyRepository $supply,
+        private ParamRepository $params,
+        private TransactionManager $tx,
+        private SectionUnitCostService $unitCosts,
+        private ProductMarginRepository $costMonths,
+    ) {
+    }
+
+    /** Strona : prognoza, gamy, zakupy, zatwierdzenie tygodnia ; odczyt panelu, gdy ostatni jest sprzed poniedziałku. */
+    public function page(?string $today = null, ?int $now = null): array
+    {
+        $now ??= time();
+        $today ??= date('Y-m-d', $now);
+        $panel = $this->panel->last($now);
+        // Odczyt tygodniowy przy pierwszym otwarciu po poniedziałku 6:00 (przyrostowy : tylko nowe tygodnie sprzedaży) ;
+        // pierwszy odczyt w ogóle (dłuższy) — przyciskiem « Odśwież z panelu ».
+        if ($panel !== null && $panel['stale'] && $this->panel->configured()) {
+            try { $panel = $this->panel->refresh(null, $now, ...$this->windowParams()); } catch (\Throwable) { /* zostaje poprzedni odczyt, błąd w lastAttempt */ }
+        }
+        $f = $this->compute($today, $panel);
+        $run = $this->repo->runForWeek($f['weeks'][0]['week_start']);
+        $attempt = $this->panel->lastAttempt();
+        return $f + [
+            'approval' => $run ? ['approved_at' => $run['approved_at'], 'by' => $run['approved_by_name'], 'cartons' => (int) $run['cartons'], 'note' => $run['note'],
+                'changed' => (int) $run['cartons'] !== $f['totals']['cartons']] : null,
+            'runs' => array_map(fn($r) => ['week_start' => $r['week_start'], 'iso_week' => (int) date('W', strtotime($r['week_start'])), 'cartons' => (int) $r['cartons'],
+                'season_cartons' => (int) $r['season_cartons'], 'hours' => $r['hours'] !== null ? (float) $r['hours'] : null,
+                'production_cost' => $r['production_cost'] !== null ? (float) $r['production_cost'] : null,
+                'purchase_value' => $r['purchase_value'] !== null ? (float) $r['purchase_value'] : null, 'approved_at' => $r['approved_at'], 'by' => $r['approved_by_name']], $this->repo->runs()),
+            'panel_status' => ['configured' => $this->panel->configured(), 'read_at' => $panel['read_at'] ?? null, 'read_by' => $panel['read_by'] ?? null,
+                'weeks' => count($panel['sales'] ?? []), 'failed' => count($panel['sales_failed'] ?? []),
+                'error' => $attempt && !(int) $attempt['ok'] && (!$panel || $attempt['read_at'] > $panel['read_at']) ? $attempt['error'] : null],
+        ];
+    }
+
+    /** Zatwierdzenie prognozy tygodnia (ponowne : nadpisuje zdjęcie liczb). */
+    public function approve(?int $userId, ?string $note = null, ?string $today = null, ?int $now = null): array
+    {
+        $now ??= time();
+        $today ??= date('Y-m-d', $now);
+        $note = $note !== null ? trim($note) : null;
+        if ($note !== null && mb_strlen($note) > 255) throw new CustomException('Uwaga : najwyżej 255 znaków.', 'errors', 422);
+        $f = $this->compute($today, $this->panel->last($now));
+        if (!$f['products']) throw new CustomException('Prognoza jest pusta — brak zamówień i sprzedaży w ostatnich tygodniach.', 'errors', 422);
+        $payload = [
+            'weeks' => array_map(fn($w) => ['week_start' => $w['week_start'], 'iso_week' => $w['iso_week']], $f['weeks']),
+            'products' => array_map(fn($p) => ['id' => $p['product_id'], 'name' => $p['name'], 'kind' => $p['kind'], 'values' => $p['values'], 'sources' => $p['sources'],
+                'cost_per_carton' => $p['cost_per_carton']['total'] ?? null], $f['products']),
+            'totals' => $f['totals'], 'cost' => $f['cost'], 'trend' => $f['trend'], 'clients_excluded' => $f['clients_excluded'], 'seasons' => array_map(fn($s) => ['id' => $s['id'], 'name' => $s['name'], 'from' => $s['from'], 'to' => $s['to'], 'cartons' => $s['cartons']], $f['seasons']),
+            'purchases' => array_map(fn($m) => ['id' => $m['id'], 'name' => $m['name'], 'need' => $m['need'], 'to_buy' => $m['to_buy'], 'order_by' => $m['order_by'], 'value' => $m['value']], $f['purchases']['rows']),
+        ];
+        $this->tx->execute(fn() => $this->repo->saveRun([
+            'week_start' => $f['weeks'][0]['week_start'], 'weeks' => count($f['weeks']), 'trend' => $f['trend']['value'],
+            'cartons' => $f['totals']['cartons'], 'season_cartons' => $f['totals']['season_cartons'], 'hours' => $f['totals']['hours'],
+            'production_cost' => $f['cost']['total'],
+            'purchase_value' => $f['purchases']['totals']['value'], 'payload' => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            'note' => $note ?: null, 'approved_at' => date('Y-m-d H:i:s', $now), 'approved_by' => $userId,
+        ]));
+        return $this->page($today, $now);
+    }
+
+    /** Cofnięcie zatwierdzenia bieżącego tygodnia. */
+    public function reopen(?string $today = null, ?int $now = null): array
+    {
+        $now ??= time();
+        $today ??= date('Y-m-d', $now);
+        $this->tx->execute(fn() => $this->repo->deleteRun(LogisticsPlanService::monday($today)));
+        return $this->page($today, $now);
+    }
+
+    /** Odczyt panelu na żądanie (GET). */
+    public function refreshPanel(?int $userId, ?string $today = null, ?int $now = null): array
+    {
+        $this->panel->refresh($userId, $now, ...$this->windowParams());
+        return $this->page($today, $now);
+    }
+
+    /** Produkt gamy panelu → nasz produkt (albo « nie od nas » = pominięty, albo null = z powrotem podpowiedź). */
+    public function link(int $panelProductId, array $input, ?int $userId, ?string $today = null, ?int $now = null): array
+    {
+        $panel = $this->panel->last($now);
+        $name = $panel['products'][$panelProductId]['name'] ?? $panel['products'][(string) $panelProductId]['name'] ?? null;
+        if ($panel === null || $name === null) throw new CustomException('Nie ma takiego produktu w gamach panelu (odśwież odczyt).', 'errors', 404);
+        $mode = (string) ($input['mode'] ?? 'product');
+        $this->tx->execute(function () use ($mode, $input, $panelProductId, $name, $userId) {
+            if ($mode === 'auto') { $this->repo->deletePanelLink($panelProductId); return; }
+            if ($mode === 'ignore') { $this->repo->savePanelLink($panelProductId, $name, null, true, $userId); return; }
+            $pid = (int) ($input['product_id'] ?? 0);
+            if ($pid <= 0 || !$this->repo->productExists($pid)) throw new CustomException('Wybierz nasz produkt z listy.', 'errors', 422);
+            $this->repo->savePanelLink($panelProductId, $name, $pid, false, $userId);
+        });
+        return $this->page($today, $now);
+    }
+
+    /** Klient w prognozie albo wyłączony [226] (0 = « Bez klienta »). */
+    public function setClient(int $clientId, bool $included, ?int $userId, ?string $today = null, ?int $now = null): array
+    {
+        if ($clientId < 0 || ($clientId > 0 && !$this->repo->clientExists($clientId))) throw new CustomException('Nie ma takiego klienta.', 'errors', 404);
+        $this->repo->setClientExcluded($clientId, !$included, $userId);
+        return $this->page($today, $now);
+    }
+
+    /** @return list<array{id:int, name:string}> nasze aktywne produkty (połączenie produktu gamy) */
+    public function productOptions(): array
+    {
+        return $this->repo->activeProducts();
+    }
+
+    /** @return array{0:int, 1:int} tygodnie prognozy i tygodnie trendu */
+    private function windowParams(): array
+    {
+        return [(int) $this->param('forecast.weeks', '13', 4, 26), (int) $this->param('forecast.trend_weeks', '8', 4, 26)];
+    }
+
+    // --- Obliczenie ----------------------------------------------------------------------------------------------
+
+    public function compute(string $today, ?array $panel): array
+    {
+        $n = (int) $this->param('forecast.weeks', '13', 4, 26);
+        $trendWeeks = (int) $this->param('forecast.trend_weeks', '8', 4, 26);
+        $start = LogisticsPlanService::monday($today);
+        $weeks = [];
+        for ($i = 0; $i < $n; $i++) $weeks[] = date('Y-m-d', strtotime($start . " +{$i} weeks"));
+        $end = date('Y-m-d', strtotime(end($weeks) . ' +6 days'));
+        $index = array_flip($weeks);
+        $recent = [];
+        for ($i = $trendWeeks; $i >= 1; $i--) $recent[] = date('Y-m-d', strtotime($start . " -{$i} weeks"));
+
+        // Gamy panelu w oknie (tylko produkty z katalogu SL Food), zanim policzymy sieć bez produktów sezonowych.
+        $seasons = $this->seasons($panel, $start, $end);
+        $seasonal = [];
+        foreach ($seasons['list'] as $s) foreach ($s['products'] as $p) if ($p['product_id'] !== null && $p['status'] !== 'ignored') $seasonal[$p['product_id']][] = $s;
+        $allYear = [];
+
+        // Historia : kartony na produkt i poniedziałek (od N-1 najstarszego potrzebnego tygodnia).
+        $histFrom = min(date('Y-m-d', strtotime(LogisticsPlanService::lastYear($recent[0]) . ' -7 days')), $seasons['n1_from'] ?? $start);
+        $by = [];
+        $network = [];
+        $regular = [];
+        foreach ($this->repo->cartonsByDay($histFrom, $end) as $l) {
+            $m = LogisticsPlanService::monday($l['ship_date']);
+            $by[$l['product_id']][$m] = ($by[$l['product_id']][$m] ?? 0.0) + $l['cartons'];
+            $network[$m] = ($network[$m] ?? 0.0) + $l['cartons'];
+        }
+        // Produkt gamy sezonowej sprzedawany w ostatnich tygodniach poza swoją gamą (w tym i zeszłym roku) jest całoroczny.
+        foreach ($seasonal as $pid => $list) {
+            $outside = 0.0;
+            foreach ($recent as $m) {
+                $in = false;
+                foreach ($list as $s) {
+                    foreach ([[$s['from'], $s['to']], [$s['n1_from'], $s['n1_to']]] as [$a, $b]) if ($a !== null && $m >= LogisticsPlanService::monday($a) && $m <= $b) $in = true;
+                }
+                if (!$in) $outside += $by[$pid][$m] ?? 0.0;
+            }
+            if ($outside >= $trendWeeks / 2) { $allYear[$pid] = array_values(array_unique(array_map(fn($s) => $s['name'], $list))); unset($seasonal[$pid]); }
+        }
+        foreach ($by as $pid => $byWeek) {
+            if (isset($seasonal[$pid])) continue;
+            foreach ($byWeek as $m => $c) $regular[$m] = ($regular[$m] ?? 0.0) + $c;
+        }
+
+        $sales = $panel['sales'] ?? [];
+        $trend = $this->trend($recent, $network, $sales);
+        $t = $trend['value'] ?? 1.0;
+        // Poziom N-1 sieci (bez sezonowych) w tygodniach trendu z danymi → kształt tygodnia N-1 (średnia tygodni N-1 ±1
+        // z danymi ; tydzień N-1 z mniej niż 30 % poziomu = brak danych, nie spadek).
+        $base = [];
+        foreach ($recent as $m) { $v = $regular[LogisticsPlanService::lastYear($m)] ?? 0.0; if ($v > 0) $base[] = $v; }
+        $level = $base ? array_sum($base) / count($base) : 0.0;
+        $base = array_filter($base, fn($v) => $v >= self::COVERAGE * $level);
+        $baseLevel = $base ? array_sum($base) / count($base) : 0.0;
+        $shape = [];
+        foreach ($weeks as $i => $w) {
+            $n1 = LogisticsPlanService::lastYear($w);
+            $near = array_filter([$regular[date('Y-m-d', strtotime($n1 . ' -7 days'))] ?? 0.0, $regular[$n1] ?? 0.0, $regular[date('Y-m-d', strtotime($n1 . ' +7 days'))] ?? 0.0],
+                fn($v) => $baseLevel > 0 && $v >= self::COVERAGE * $baseLevel);
+            $shape[$i] = $near ? max(self::SHAPE_MIN, min(self::SHAPE_MAX, array_sum($near) / count($near) / $baseLevel)) : null;
+        }
+        $orderedThisWeek = 0.0;
+        foreach ($by as $byWeek) $orderedThisWeek += $byWeek[$weeks[0]] ?? 0.0;
+
+        // Produkty : ostatnie tygodnie, zamówienia w oknie, sezonowe.
+        $ids = array_keys($seasonal);
+        foreach ($by as $pid => $byWeek) {
+            foreach ([...$recent, ...$weeks] as $m) if (($byWeek[$m] ?? 0) > 0) { $ids[] = $pid; break; }
+        }
+        $info = $this->repo->products($ids);
+        $hpc = $this->hoursPerCarton();
+        $costBasis = $this->costBasis();
+        $rows = [];
+        foreach (array_unique($ids) as $pid) {
+            $p = $info[$pid] ?? null;
+            if ($p === null) continue;
+            $byWeek = $by[$pid] ?? [];
+            $avg = array_sum(array_map(fn($m) => $byWeek[$m] ?? 0.0, $recent)) / $trendWeeks;
+            $isSeason = isset($seasonal[$pid]);
+            $values = [];
+            $sources = [];
+            $seasonValues = $isSeason ? $this->seasonValues($seasonal[$pid], $byWeek, $weeks, $index, $t, $this->panelCartons($sales, $pid, (int) $p['ppc'])) : null;
+            foreach ($weeks as $i => $w) {
+                $ordered = (float) ($byWeek[$w] ?? 0.0);
+                if ($i === 0 && $orderedThisWeek > 0) { $values[$i] = (int) round($ordered); $sources[$i] = 'orders'; continue; }
+                if ($isSeason) { $fc = $seasonValues[$i]; $src = $fc !== null ? 'season' : 'none'; $fc ??= 0.0; }
+                elseif ($shape[$i] !== null) { $fc = $avg * $shape[$i]; $src = 'n1'; }
+                else { $fc = $avg; $src = 'avg'; }
+                if ($ordered > 0 && $ordered >= $fc - self::EPS) { $values[$i] = (int) round($ordered); $sources[$i] = 'orders'; }
+                else { $values[$i] = (int) round($fc); $sources[$i] = $values[$i] > 0 ? $src : 'none'; }
+            }
+            if (!array_sum($values) && !$isSeason) continue;
+            $cpp = (int) $p['cpp'];
+            if ($cpp === 1 && (int) $p['cpl'] <= 1 && (int) $p['lpp'] <= 1) $cpp = 0; // karta « 1 / 1 / 1 » = brak danych
+            $rows[] = [
+                'product_id' => $pid, 'item_id' => $p['item_id'] !== null ? (int) $p['item_id'] : null, 'name' => (string) $p['name'], 'category' => $p['category'],
+                'active' => (bool) (int) $p['active'], 'mode' => $p['mode'], 'ppc' => (int) $p['ppc'] ?: null, 'cpp' => $cpp ?: null,
+                'kind' => $isSeason ? 'season' : 'regular', 'seasons' => $isSeason ? array_values(array_unique(array_map(fn($s) => $s['id'], $seasonal[$pid]))) : [],
+                'all_year_in' => $allYear[$pid] ?? null,
+                'avg' => round($avg, 1), 'values' => $values, 'sources' => $sources, 'total' => array_sum($values),
+                'hours_per_carton' => isset($hpc[$pid]) ? round($hpc[$pid], 4) : null,
+                'cost_per_carton' => $this->cartonCost($costBasis, $p),
+            ];
+        }
+        usort($rows, fn($a, $b) => [$a['kind'] === 'season' ? 1 : 0, -$a['total'], $a['name']] <=> [$b['kind'] === 'season' ? 1 : 0, -$b['total'], $b['name']]);
+
+        // Kto bierze ile [225] ; klienci wyłączeni [226] : ich kartony (zamówienia i prognoza wg udziału) poza wszystkimi sumami.
+        $clients = $this->clientSplit($rows, $weeks, $recent, $seasonal, $end);
+        $excluded = $this->repo->excludedClients();
+        $minus = [];
+        foreach ($clients as &$c) {
+            $c['excluded'] = isset($excluded[$c['id']]) ? $excluded[$c['id']] : null;
+            if ($c['excluded'] === null) continue;
+            foreach ($c['products'] as $cp) foreach ($cp['values'] as $i => $q) if ($q > 0) $minus[$cp['product_id']][$i] = ($minus[$cp['product_id']][$i] ?? 0) + $q;
+        }
+        unset($c);
+        if ($minus) {
+            foreach ($rows as $k => &$r) {
+                if (!isset($minus[$r['product_id']])) continue;
+                foreach ($minus[$r['product_id']] as $i => $q) {
+                    $r['values'][$i] = max(0, $r['values'][$i] - $q);
+                    if ($r['values'][$i] === 0) $r['sources'][$i] = 'none';
+                }
+                $r['excluded_cartons'] = array_sum($minus[$r['product_id']]);
+                $r['total'] = array_sum($r['values']);
+                if ($r['total'] === 0 && $r['kind'] !== 'season') unset($rows[$k]);
+            }
+            unset($r);
+            $rows = array_values($rows);
+            usort($rows, fn($a, $b) => [$a['kind'] === 'season' ? 1 : 0, -$a['total'], $a['name']] <=> [$b['kind'] === 'season' ? 1 : 0, -$b['total'], $b['name']]);
+        }
+        $offClients = array_values(array_filter($clients, fn($c) => $c['excluded'] !== null));
+
+        // Sumy tygodni : kartony, palety, godziny wobec zdolności (dni pracy bez świąt kraju wyjazdu).
+        $dep = strtoupper($this->params->get('logistics.plan_departure_country', 'PL'));
+        $holidays = Holidays::between($start, $end, [$dep]);
+        $capacity = $this->capacity();
+        // Średnio godzin na karton (produkty z czasem partii / marszrutą, ważone kartonami 13 tygodni) — szacunek dla pozostałych.
+        $known = array_filter($rows, fn($r) => $r['hours_per_carton'] !== null && $r['total'] > 0);
+        $knownCartons = array_sum(array_column($known, 'total'));
+        $avgHours = $knownCartons > 0 ? array_sum(array_map(fn($r) => $r['total'] * $r['hours_per_carton'], $known)) / $knownCartons : 0.0;
+        $weekRows = [];
+        foreach ($weeks as $i => $w) {
+            $off = [];
+            for ($d = 0; $d < 5; $d++) { $day = date('Y-m-d', strtotime($w . " +{$d} days")); if (isset($holidays[$day][$dep])) $off[] = ['date' => $day, 'name' => $holidays[$day][$dep]]; }
+            $c = 0; $sc = 0; $pal = 0.0; $h = 0.0; $est = 0.0; $noCpp = 0; $noHours = 0;
+            $money = ['raw' => 0.0, 'labor' => 0.0, 'media' => 0.0, 'shared' => 0.0];
+            foreach ($rows as $r) {
+                $v = $r['values'][$i];
+                if ($v <= 0) continue;
+                $c += $v;
+                foreach ($money as $k => $_) $money[$k] += $v * $r['cost_per_carton'][$k];
+                if ($r['kind'] === 'season') $sc += $v;
+                if ($r['cpp']) $pal += $v / $r['cpp']; else $noCpp++;
+                if ($r['hours_per_carton'] !== null) $h += $v * $r['hours_per_carton'];
+                else { $noHours++; $est += $v * $avgHours; }
+            }
+            $h += $est;
+            $cap = $capacity['hours'] * (5 - count($off)) / 5;
+            $weekRows[] = ['week_start' => $w, 'iso_week' => (int) date('W', strtotime($w)), 'iso_year' => (int) date('o', strtotime($w)), 'n1_week' => LogisticsPlanService::lastYear($w),
+                'cartons' => $c, 'season_cartons' => $sc, 'pallets' => round($pal, 1), 'hours' => round($h, 1), 'capacity' => round($cap, 1),
+                'estimated_hours' => round($est, 1), 'load_pct' => $cap > 0 ? (int) round($h / $cap * 100) : null, 'off' => $off,
+                'cost' => round(array_sum($money), 2), 'cost_raw' => round($money['raw'], 2), 'cost_labor' => round($money['labor'], 2),
+                'cost_media' => round($money['media'], 2), 'cost_shared' => round($money['shared'], 2),
+                'shape' => $shape[$i] !== null ? round($shape[$i], 2) : null, 'no_cpp' => $noCpp, 'no_hours' => $noHours];
+        }
+        $seasonsOut = $this->presentSeasons($seasons['list'], $rows, $by, $weeks, $t, $sales);
+        $purchases = $this->purchases($rows, $weeks, $today, $seasonal);
+        // Szczyt i tygodnie ponad zdolność : bez tygodnia bieżącego (produkcja w toku, zamówienia już wysłane).
+        $ahead = array_slice(array_keys($weekRows), 1, null);
+        $peak = $ahead ? array_reduce($ahead, fn($m, $i) => $m === null || ($weekRows[$i]['load_pct'] ?? -1) > ($weekRows[$m]['load_pct'] ?? -1) ? $i : $m) : null;
+        $totalHours = round(array_sum(array_column($weekRows, 'hours')), 1);
+        $cost = ['total' => round(array_sum(array_column($weekRows, 'cost')), 2)];
+        foreach (['raw', 'labor', 'media', 'shared'] as $k) $cost[$k] = round(array_sum(array_column($weekRows, 'cost_' . $k)), 2);
+        $allCartons = array_sum(array_column($weekRows, 'cartons'));
+        $perCompany = fn(float $v) => $costBasis['cartons'] > 0 ? $v / $costBasis['cartons'] : 0.0;
+        $cost += ['basis' => $costBasis['label'], 'months' => $costBasis['count'], 'logistics_per_carton' => round($costBasis['logistics_per_carton'], 2),
+            'shared_sections' => $costBasis['shared_sections'], 'admin_sections' => $costBasis['excluded']['admin_sections'],
+            // Poza wydatkami (dla informacji, na te same kartony) : inwestycje (amortyzacja, kredyt i leasing), pozostałe koszty
+            // stałe (Finanse), Administracja.
+            'excluded' => ['investment' => round($allCartons * $perCompany($costBasis['excluded']['depreciation'] + $costBasis['excluded']['financing']), 2),
+                'depreciation' => round($allCartons * $perCompany($costBasis['excluded']['depreciation']), 2),
+                'financing' => round($allCartons * $perCompany($costBasis['excluded']['financing']), 2),
+                'fixed' => round($allCartons * $perCompany($costBasis['excluded']['fixed']), 2), 'admin' => round($allCartons * $perCompany($costBasis['excluded']['admin']), 2)],
+            'logistics' => round(array_sum(array_column($weekRows, 'cartons')) * $costBasis['logistics_per_carton'], 2),
+            'no_raw' => count(array_filter($rows, fn($r) => $r['total'] > 0 && $r['cost_per_carton']['raw'] <= 0)),
+            'no_section' => count(array_filter($rows, fn($r) => $r['total'] > 0 && !$r['cost_per_carton']['section'])),
+            'warnings' => $costBasis['warnings']];
+        return [
+            'today' => $today, 'weeks' => $weekRows, 'products' => $rows, 'trend' => $trend + ['weeks' => $trendWeeks], 'capacity' => $capacity, 'cost' => $cost,
+            'seasons' => $seasonsOut, 'panel_products' => $seasons['unlinked'], 'purchases' => $purchases, 'clients' => $clients,
+            'clients_excluded' => ['count' => count($offClients), 'cartons' => array_sum(array_column($offClients, 'total')), 'names' => array_column($offClients, 'name')],
+            'totals' => ['cartons' => (int) array_sum(array_column($weekRows, 'cartons')), 'season_cartons' => (int) array_sum(array_column($weekRows, 'season_cartons')),
+                'pallets' => round(array_sum(array_column($weekRows, 'pallets')), 1), 'hours' => $totalHours,
+                'peak_week' => $peak !== null ? $weekRows[$peak]['iso_week'] : null, 'peak_pct' => $peak !== null ? $weekRows[$peak]['load_pct'] : null,
+                'peak_hours' => $peak !== null ? $weekRows[$peak]['hours'] : null, 'peak_capacity' => $peak !== null ? $weekRows[$peak]['capacity'] : null,
+                'over' => array_values(array_map(fn($i) => $weekRows[$i]['iso_week'], array_filter($ahead, fn($i) => $weekRows[$i]['load_pct'] !== null && $weekRows[$i]['load_pct'] > 100))),
+                'products' => count($rows), 'season_products' => count(array_filter($rows, fn($r) => $r['kind'] === 'season')),
+                'no_hours' => count(array_filter($rows, fn($r) => $r['hours_per_carton'] === null)), 'no_cpp' => count(array_filter($rows, fn($r) => !$r['cpp'])),
+                'hours_known_cartons' => (int) $knownCartons, 'hours_avg_per_carton' => round($avgHours, 4),
+                'estimated_hours' => round(array_sum(array_column($weekRows, 'estimated_hours')), 1)],
+            'params' => ['weeks' => $n, 'trend_weeks' => $trendWeeks, 'from' => $start, 'to' => $end, 'departure_country' => $dep,
+                'orders_this_week' => (int) round($orderedThisWeek), 'season_max_days' => PanelSeasonService::SEASON_MAX_DAYS],
+        ];
+    }
+
+    /**
+     * Trend sieci : ostatnie tygodnie ÷ te same tygodnie rok temu, tylko tygodnie N-1 z danymi (≥ 30 % średniej N-1) —
+     * ze sprzedaży naszych produktów we wszystkich sklepach (panel), gdy panel ma większość tygodni, inaczej z wysyłek ERP.
+     */
+    private function trend(array $recent, array $network, array $sales = []): array
+    {
+        $panelPairs = 0;
+        foreach ($recent as $m) if (isset($sales[$m], $sales[LogisticsPlanService::lastYear($m)])) $panelPairs++;
+        $source = $panelPairs * 2 >= count($recent) ? 'panel' : 'erp';
+        $pairs = [];
+        foreach ($recent as $m) {
+            $n1 = LogisticsPlanService::lastYear($m);
+            $pairs[] = $source === 'panel'
+                ? [$m, isset($sales[$m], $sales[$n1]) ? (float) $sales[$m]['total'] : 0.0, isset($sales[$m], $sales[$n1]) ? (float) $sales[$n1]['total'] : 0.0]
+                : [$m, $network[$m] ?? 0.0, $network[$n1] ?? 0.0];
+        }
+        $nonZero = array_filter(array_column($pairs, 2), fn($v) => $v > 0);
+        $level = $nonZero ? array_sum($nonZero) / count($nonZero) : 0.0;
+        $used = array_values(array_filter($pairs, fn($p) => $level > 0 && $p[2] >= self::COVERAGE * $level));
+        $now = array_sum(array_column($used, 1));
+        $last = array_sum(array_column($used, 2));
+        $min = $this->param('forecast.trend_min', '0.5', 0.1, 1);
+        $max = $this->param('forecast.trend_max', '2', 1, 5);
+        $raw = $last > 0 ? $now / $last : null;
+        return ['value' => $raw !== null ? round(max($min, min($max, $raw)), 3) : null, 'raw' => $raw !== null ? round($raw, 3) : null, 'source' => $source,
+            'unit' => $source === 'panel' ? 'szt.' : 'kart.',
+            'now' => (int) round($now), 'last' => (int) round($last), 'used' => count($used), 'skipped' => array_values(array_map(fn($p) => (int) date('W', strtotime($p[0])),
+                array_filter($pairs, fn($p) => !in_array($p, $used, true)))), 'min' => $min, 'max' => $max];
+    }
+
+    /**
+     * Gamy sezonowe w oknie : wystąpienia, produkty sklepu → nasze produkty (połączenie ręczne, podpowiedź pewna z nazwy,
+     * pominięte, bez pary). Produkty dostępne cały rok (gamy całoroczne) nie są sezonowe.
+     * @return array{list:list<array>, unlinked:list<array>, n1_from:?string}
+     */
+    private function seasons(?array $panel, string $from, string $to): array
+    {
+        if ($panel === null) return ['list' => [], 'unlinked' => [], 'n1_from' => null];
+        $catalog = array_map('intval', $panel['catalog'] ?? []);
+        $always = array_flip(array_map('intval', $panel['always'] ?? []));
+        $links = $this->repo->panelLinks();
+        $candidates = [];
+        $ours = $this->repo->products($catalog);
+        foreach ($ours as $id => $p) $candidates[] = ['id' => (int) $id, 'name' => (string) $p['name'], 'active' => (bool) (int) $p['active'], 'tokens' => SeasonMatcher::tokens((string) $p['name'])];
+        $names = [];
+        foreach ($links as $l) if ($l['id_final_product'] !== null) $names[$l['id_final_product']] = true;
+        $linked = $this->repo->products(array_keys($names));
+        $list = [];
+        $unlinked = [];
+        $n1From = null;
+        $color = 0;
+        foreach ($panel['periods'] ?? [] as $period) {
+            if (($period['kind'] ?? '') !== 'season') continue;
+            $occ = SeasonMatcher::occurrences($period, $from, $to);
+            if (!$occ) continue;
+            $o = $occ[0];
+            if ($o['n1_from'] !== null) $n1From = $n1From === null ? $o['n1_from'] : min($n1From, $o['n1_from']);
+            $products = [];
+            foreach ($period['products'] ?? [] as $panelId) {
+                $panelId = (int) $panelId;
+                if (isset($always[$panelId])) continue;
+                $name = (string) ($panel['products'][$panelId]['name'] ?? $panel['products'][(string) $panelId]['name'] ?? ('#' . $panelId));
+                $link = $links[$panelId] ?? null;
+                $hints = SeasonMatcher::best($name, $candidates);
+                if ($link !== null && $link['ignored']) { $status = 'ignored'; $pid = null; }
+                elseif ($link !== null && $link['id_final_product'] !== null) { $status = 'linked'; $pid = $link['id_final_product']; }
+                elseif ($hints && $hints[0]['score'] >= SeasonMatcher::SURE) { $status = 'auto'; $pid = $hints[0]['id']; }
+                else { $status = 'none'; $pid = null; }
+                $erp = $pid !== null ? ($ours[$pid] ?? $linked[$pid] ?? null) : null;
+                $row = ['panel_id' => $panelId, 'panel_name' => $name, 'status' => $status, 'product_id' => $pid, 'product_name' => $erp['name'] ?? null,
+                    'product_active' => $erp !== null ? (bool) (int) $erp['active'] : null, 'score' => $status === 'auto' ? $hints[0]['score'] : null, 'hints' => $hints];
+                $products[] = $row;
+                if ($status === 'none') $unlinked[$panelId] = $row + ['season' => trim((string) preg_replace('/^[^\p{L}\p{N}]+/u', '', (string) $period['name']))];
+            }
+            $list[] = ['id' => (int) $period['id'], 'name' => trim((string) preg_replace('/^[^\p{L}\p{N}]+/u', '', (string) $period['name'])) ?: (string) $period['name'], 'color' => self::COLORS[$color++ % count(self::COLORS)],
+                'from' => $o['from'], 'to' => $o['to'], 'n1_from' => $o['n1_from'], 'n1_to' => $o['n1_to'], 'recurring' => (bool) $period['is_recurring'], 'products' => $products];
+        }
+        return ['list' => $list, 'unlinked' => array_values($unlinked), 'n1_from' => $n1From];
+    }
+
+    /** Sprzedaż produktu w sklepach (panel) w kartonach na poniedziałek ; tylko tygodnie odczytane. @return array<string, float> */
+    private function panelCartons(array $sales, int $pid, int $ppc): array
+    {
+        $out = [];
+        if ($ppc <= 0) return $out;
+        foreach ($sales as $m => $w) $out[(string) $m] = (float) ($w['skus'][(string) $pid] ?? 0.0) / $ppc;
+        return $out;
+    }
+
+    /**
+     * Kartony produktu sezonowego na tygodnie okna : tydzień k gamy N-1 → tydzień k gamy w tym roku, × trend (kilka gam :
+     * większa wartość) ; N-1 = sprzedaż w sklepach z panelu (sztuki ÷ sztuk w kartonie), a gdy panel nie ma tego tygodnia —
+     * wysyłki z ERP ; tydzień poza gamą : null.
+     * @return list<?float>
+     */
+    private function seasonValues(array $seasons, array $byWeek, array $weeks, array $index, float $trend, array $panel = []): array
+    {
+        $out = array_fill(0, count($weeks), null);
+        foreach ($seasons as $s) {
+            $first = LogisticsPlanService::monday($s['from']);
+            $last = LogisticsPlanService::monday($s['to']);
+            $n1 = $s['n1_from'] !== null ? LogisticsPlanService::monday($s['n1_from']) : null;
+            for ($k = 0; ($m = date('Y-m-d', strtotime($first . " +{$k} weeks"))) <= $last; $k++) {
+                if (!isset($index[$m])) continue;
+                $i = $index[$m];
+                $n1m = $n1 !== null ? date('Y-m-d', strtotime($n1 . " +{$k} weeks")) : null;
+                $v = $n1m !== null ? (float) ($panel[$n1m] ?? $byWeek[$n1m] ?? 0.0) * $trend : 0.0;
+                $out[$i] = max($out[$i] ?? 0.0, $v);
+            }
+        }
+        return $out;
+    }
+
+    /** Karty gam (makieta 2) : produkty, sprzedane w sklepach N-1 (panel), kartony N-1, wysłane N-1 (ERP), prognoza, tygodnie. */
+    private function presentSeasons(array $list, array $rows, array $by, array $weeks, float $trend, array $sales = []): array
+    {
+        $rowById = [];
+        foreach ($rows as $r) $rowById[$r['product_id']] = $r;
+        $out = [];
+        foreach ($list as $s) {
+            $weekIdx = [];
+            foreach ($weeks as $i => $w) if ($w >= LogisticsPlanService::monday($s['from']) && $w <= LogisticsPlanService::monday($s['to'])) $weekIdx[] = $i;
+            $products = [];
+            $sum = 0;
+            $n1Total = 0.0;
+            foreach ($s['products'] as $p) {
+                $r = $p['product_id'] !== null ? ($rowById[$p['product_id']] ?? null) : null;
+                $n1 = null;
+                $shipped = null;
+                $pieces = null;
+                $read = 0;
+                $total = 0;
+                if ($p['product_id'] !== null && $s['n1_from'] !== null) {
+                    $shipped = 0.0;
+                    $ppc = (int) ($r['ppc'] ?? 0);
+                    $n1 = 0.0;
+                    for ($m = LogisticsPlanService::monday($s['n1_from']); $m <= $s['n1_to']; $m = date('Y-m-d', strtotime($m . ' +7 days'))) {
+                        $total++;
+                        $erp = (float) ($by[$p['product_id']][$m] ?? 0.0);
+                        $shipped += $erp;
+                        if (isset($sales[$m])) {
+                            $read++;
+                            $q = (float) ($sales[$m]['skus'][(string) $p['product_id']] ?? 0.0);
+                            $pieces = ($pieces ?? 0.0) + $q;
+                            $n1 += $ppc > 0 ? $q / $ppc : 0.0;
+                        } else $n1 += $erp;
+                    }
+                }
+                $fc = $r ? array_sum(array_map(fn($i) => $r['values'][$i], $weekIdx)) : null;
+                if ($p['status'] === 'linked' || $p['status'] === 'auto') { $sum += (int) $fc; $n1Total += (float) $n1; }
+                $products[] = $p + ['n1_cartons' => $n1 !== null ? (int) round($n1) : null, 'n1_pieces' => $pieces !== null ? (int) round($pieces) : null,
+                    'n1_shipped' => $shipped !== null ? (int) round($shipped) : null, 'n1_weeks_read' => $read, 'n1_weeks' => $total, 'forecast' => $fc, 'ppc' => $r['ppc'] ?? null,
+                    'weeks' => $r ? array_map(fn($i) => $r['values'][$i], $weekIdx) : []];
+            }
+            usort($products, fn($a, $b) => [self::rank($a['status']), -($a['forecast'] ?? 0), $a['panel_name']] <=> [self::rank($b['status']), -($b['forecast'] ?? 0), $b['panel_name']]);
+            $out[] = ['id' => $s['id'], 'name' => $s['name'], 'color' => $s['color'], 'from' => $s['from'], 'to' => $s['to'], 'n1_from' => $s['n1_from'], 'n1_to' => $s['n1_to'],
+                'week_index' => $weekIdx, 'cartons' => $sum, 'n1_cartons' => (int) round($n1Total), 'trend' => $trend, 'products' => $products,
+                'ours' => count(array_filter($products, fn($p) => in_array($p['status'], ['linked', 'auto'], true))),
+                'unlinked' => count(array_filter($products, fn($p) => $p['status'] === 'none')), 'ignored' => count(array_filter($products, fn($p) => $p['status'] === 'ignored'))];
+        }
+        usort($out, fn($a, $b) => [$a['from'], $a['name']] <=> [$b['from'], $b['name']]);
+        return $out;
+    }
+
+    private static function rank(string $status): int
+    {
+        return ['linked' => 0, 'auto' => 0, 'none' => 1, 'ignored' => 2][$status] ?? 3;
+    }
+
+    /**
+     * Zakupy 13 tygodni (makieta 3) : surowce z receptur (na karton) × kartony tygodni, stan (inwentaryzacja + przyjęcia −
+     * zużycie), w drodze, brak od tygodnia, « zamówić do » = poniedziałek tygodnia braku − czas dostawy, do kupienia w
+     * pełnych opakowaniach (na stanie z min. / maks. — do maks.), wartość. Surowiec tylko produktów sezonowych : « sezon ».
+     */
+    private function purchases(array $rows, array $weeks, string $today, array $seasonal): array
+    {
+        $recipes = $this->supply->recipes();
+        $n = count($weeks);
+        $need = [];
+        $usedBy = [];
+        $noRecipe = [];
+        foreach ($rows as $r) {
+            if (!array_sum($r['values'])) continue;
+            if ($r['item_id'] === null || !isset($recipes[$r['item_id']])) { $noRecipe[] = $r['name']; continue; }
+            foreach ($recipes[$r['item_id']] as $ing) {
+                $mid = $ing['material_id'];
+                foreach ($r['values'] as $i => $v) if ($v > 0) $need[$mid][$i] = ($need[$mid][$i] ?? 0.0) + $v * $ing['quantity'];
+                $usedBy[$mid][$r['product_id']] = $r['kind'] === 'season';
+            }
+        }
+        $levels = $this->levels();
+        $onOrder = $this->supply->onOrder();
+        $lead = $this->repo->leadTimes();
+        $defaultLead = (int) $this->param('forecast.lead_days', '7', 0, 90);
+        $out = [];
+        foreach ($this->supply->materials(array_keys($need)) as $m) {
+            $id = (int) $m['id'];
+            $weekly = array_map(fn($i) => round($need[$id][$i] ?? 0.0, 3), range(0, $n - 1));
+            $total = array_sum($weekly);
+            if ($total <= self::EPS) continue;
+            $stock = $levels[$id]['stock'] ?? null;
+            $ordered = (float) ($onOrder[$id] ?? 0.0);
+            $have = max(0.0, $stock ?? 0.0) + $ordered;
+            $short = null;
+            $cum = 0.0;
+            foreach ($weekly as $i => $v) { $cum += $v; if ($cum > $have + self::EPS) { $short = $i; break; } }
+            $after = $have - $total;
+            $max = $m['stock_max'] !== null ? (float) $m['stock_max'] : null;
+            $qty = $m['supply_mode'] === 'stock' && $max !== null ? ($after < (float) ($m['stock_min'] ?? 0) - self::EPS ? $max - $after : 0.0) : max(0.0, -$after);
+            $pack = (float) ($m['package_size'] ?? 0);
+            $packages = null;
+            if ($qty > self::EPS && $pack > 0) { $packages = (int) ceil(round($qty / $pack, 6)); $qty = $packages * $pack; }
+            $days = $lead[$id] ?? null;
+            $leadDays = $days ?? $defaultLead;
+            $orderBy = $short !== null ? date('Y-m-d', strtotime($weeks[$short] . " -{$leadDays} days")) : null;
+            $price = $m['price_per_unit'] !== null && (float) $m['price_per_unit'] > 0 ? (float) $m['price_per_unit'] : null;
+            $unit = CostOptimizationService::displayUnit($m['unit']);
+            $out[] = [
+                'id' => $id, 'name' => (string) $m['name'], 'category' => $m['category'], 'packaging' => (bool) $m['packaging'],
+                'unit' => $unit['label'], 'factor' => $unit['factor'], 'supplier' => $m['supplier_name'] !== null ? trim((string) $m['supplier_name']) : null,
+                'need_weeks' => $weekly, 'need' => round($total, 3), 'stock' => $stock, 'stock_basis' => $levels[$id]['basis'] ?? null, 'on_order' => round($ordered, 3),
+                'short_week' => $short, 'order_by' => $orderBy,
+                'urgency' => $stock === null && $ordered <= 0 ? 'unknown' : ($orderBy === null ? 'ok' : ($orderBy <= $today ? 'now' : ($orderBy <= date('Y-m-d', strtotime($today . ' +7 days')) ? 'soon' : 'later'))),
+                'lead_days' => $leadDays, 'lead_known' => $days !== null, 'to_buy' => round($qty, 3), 'packages' => $packages, 'price' => $price,
+                'value' => $price !== null ? round($qty * $price, 2) : null, 'season' => !in_array(false, $usedBy[$id] ?? [false], true), 'products' => count($usedBy[$id] ?? []),
+            ];
+        }
+        usort($out, fn($a, $b) => [['now' => 0, 'soon' => 1, 'later' => 2, 'unknown' => 3, 'ok' => 4][$a['urgency']], $a['order_by'] ?? '9', -($a['value'] ?? 0), $a['name']]
+            <=> [['now' => 0, 'soon' => 1, 'later' => 2, 'unknown' => 3, 'ok' => 4][$b['urgency']], $b['order_by'] ?? '9', -($b['value'] ?? 0), $b['name']]);
+        $buy = array_filter($out, fn($r) => $r['to_buy'] > 0);
+        $peakWeek = null;
+        $peakValue = 0.0;
+        foreach ($weeks as $i => $w) {
+            $v = 0.0;
+            foreach ($out as $r) if ($r['price'] !== null) $v += $r['need_weeks'][$i] * $r['price'];
+            if ($v > $peakValue) { $peakValue = $v; $peakWeek = $i; }
+        }
+        return ['rows' => $out, 'no_recipe' => array_values(array_unique($noRecipe)),
+            'totals' => ['materials' => count($out), 'to_buy' => count($buy), 'value' => round(array_sum(array_map(fn($r) => (float) $r['value'], $buy)), 2),
+                'season_value' => round(array_sum(array_map(fn($r) => (float) $r['value'], array_filter($buy, fn($r) => $r['season']))), 2),
+                'season' => count(array_filter($out, fn($r) => $r['season'])), 'now' => count(array_filter($out, fn($r) => in_array($r['urgency'], ['now', 'soon'], true) && $r['to_buy'] > 0)),
+                'no_price' => count(array_filter($buy, fn($r) => $r['price'] === null)), 'no_supplier' => count(array_filter($buy, fn($r) => $r['supplier'] === null)),
+                'unknown_stock' => count(array_filter($out, fn($r) => $r['urgency'] === 'unknown')),
+                'peak_week' => $peakWeek, 'peak_value' => round($peakValue, 2)]];
+    }
+
+    /** Stan teoretyczny surowców — ta sama reguła co Zaopatrzenie (inwentaryzacja + przyjęcia − zużycie z produkcji). */
+    private function levels(): array
+    {
+        $counts = $this->supply->lastCounts();
+        $in = $this->supply->receivedSinceCount();
+        $out = $this->supply->consumedSinceCount();
+        $levels = [];
+        foreach ($counts as $id => $c) $levels[$id] = ['stock' => round($c['quantity'] + ($in[$id] ?? 0.0) - ($out[$id] ?? 0.0), 3), 'basis' => 'count'];
+        foreach ($in as $id => $qty) if (!isset($levels[$id])) $levels[$id] = ['stock' => round($qty - ($out[$id] ?? 0.0), 3), 'basis' => 'receipts'];
+        return $levels;
+    }
+
+    /** Godziny pracy na karton : partia z arkusza (sztuki partii, osoby × minuty), inaczej marszruta karty. @return array<int, float> */
+    private function hoursPerCarton(): array
+    {
+        $routings = $this->planning->routings();
+        $out = [];
+        foreach ($this->planning->items() as $it) {
+            if ($it['item_type'] !== 'product' || $it['id_final_product'] === null) continue;
+            $ppc = (float) ($it['ppc'] ?? 0);
+            if ($ppc <= 0) continue;
+            $bh = PlanningService::batchHours($it);
+            if ($bh !== null) $h = $ppc / $bh[0] * $bh[1];
+            elseif (!empty($routings[(int) $it['id']])) $h = StandardTime::routing($routings[(int) $it['id']], $ppc)['totals']['labour_s'] / 3600;
+            else continue;
+            if ($h > 0) $out[(int) $it['id_final_product']] = $h;
+        }
+        return $out;
+    }
+
+    /**
+     * Kto bierze ile [225] : kartony prognozy na klienta i tydzień, suma = prognoza produktu. Zamówienia już złożone — u
+     * klienta, który zamówił ; prognoza ponad zamówienia — wg udziału klienta w produkcie : sezonowe w tej samej gamie rok
+     * temu, całoroczne w ostatnich tygodniach trendu ; bez tej historii wg zamówień w oknie, inaczej « bez klienta » (id 0).
+     * @return list<array{id:int, name:string, values:list<int>, ordered:list<int>, total:int,
+     *   products:list<array{product_id:int, name:string, cpp:?int, values:list<int>, ordered:list<int>, total:int}>}>
+     */
+    private function clientSplit(array $rows, array $weeks, array $recent, array $seasonal, string $end): array
+    {
+        $from = $recent[0] ?? $weeks[0];
+        foreach ($seasonal as $list) foreach ($list as $s) if ($s['n1_from'] !== null) $from = min($from, LogisticsPlanService::monday($s['n1_from']));
+        $by = [];
+        foreach ($this->repo->cartonsByClient($from, $end) as $l) {
+            $by[$l['product_id']][$l['monday']][$l['client_id']] = ($by[$l['product_id']][$l['monday']][$l['client_id']] ?? 0.0) + $l['cartons'];
+        }
+        $n = count($weeks);
+        $zero = array_fill(0, $n, 0);
+        $out = [];
+        foreach ($rows as $r) {
+            $pid = $r['product_id'];
+            $hist = $by[$pid] ?? [];
+            $share = [];
+            $add = function (array $mondays) use ($hist, &$share) { foreach ($mondays as $m) foreach ($hist[$m] ?? [] as $c => $v) $share[$c] = ($share[$c] ?? 0.0) + $v; };
+            if ($r['kind'] === 'season') {
+                foreach ($seasonal[$pid] ?? [] as $s) {
+                    if ($s['n1_from'] === null) continue;
+                    $add(array_filter(array_keys($hist), fn($m) => $m >= LogisticsPlanService::monday($s['n1_from']) && $m <= $s['n1_to']));
+                }
+            }
+            if (!$share) $add($recent);
+            if (!$share) $add($weeks);
+            $sum = array_sum($share);
+            foreach ($r['values'] as $i => $v) {
+                if ($v <= 0) continue;
+                $ord = $hist[$weeks[$i]] ?? [];
+                $o = array_sum($ord);
+                $part = [];
+                if ($o > 0 && $o >= $v - self::EPS) {
+                    foreach ($ord as $c => $x) $part[$c] = $x * $v / $o;
+                } else {
+                    $part = $ord;
+                    if ($sum > 0) foreach ($share as $c => $x) $part[$c] = ($part[$c] ?? 0.0) + ($v - $o) * $x / $sum;
+                    else $part[0] = ($part[0] ?? 0.0) + $v - $o;
+                }
+                foreach (self::roundTo($part, $v) as $c => $q) {
+                    if ($q <= 0) continue;
+                    $out[$c] ??= ['values' => $zero, 'ordered' => $zero, 'products' => []];
+                    $out[$c]['products'][$pid] ??= ['values' => $zero, 'ordered' => $zero];
+                    $done = min($q, (int) round($ord[$c] ?? 0.0));
+                    $out[$c]['values'][$i] += $q;
+                    $out[$c]['ordered'][$i] += $done;
+                    $out[$c]['products'][$pid]['values'][$i] += $q;
+                    $out[$c]['products'][$pid]['ordered'][$i] += $done;
+                }
+            }
+        }
+        $names = $this->repo->clientNames(array_keys($out));
+        $info = array_column($rows, null, 'product_id');
+        $list = [];
+        foreach ($out as $c => $x) {
+            $products = [];
+            foreach ($x['products'] as $pid => $p) $products[] = ['product_id' => $pid, 'name' => $info[$pid]['name'] ?? ('#' . $pid), 'cpp' => $info[$pid]['cpp'] ?? null,
+                'values' => $p['values'], 'ordered' => $p['ordered'], 'total' => array_sum($p['values'])];
+            usort($products, fn($a, $b) => $b['total'] <=> $a['total'] ?: $a['product_id'] <=> $b['product_id']);
+            $list[] = ['id' => (int) $c, 'name' => $c ? ($names[$c] ?? ('Klient #' . $c)) : 'Bez klienta', 'values' => $x['values'], 'ordered' => $x['ordered'],
+                'total' => array_sum($x['values']), 'products' => $products];
+        }
+        usort($list, fn($a, $b) => [$a['id'] === 0 ? 1 : 0, -$a['total'], $a['name']] <=> [$b['id'] === 0 ? 1 : 0, -$b['total'], $b['name']]);
+        return $list;
+    }
+
+    /** Całe kartony z części (największe reszty), suma = $total. @param array<int, float> $parts @return array<int, int> */
+    private static function roundTo(array $parts, int $total): array
+    {
+        if (!$parts) return [];
+        $out = array_map(fn($v) => (int) floor(max(0.0, $v) + self::EPS), $parts);
+        $rest = $total - array_sum($out);
+        $frac = [];
+        foreach ($parts as $k => $v) $frac[$k] = max(0.0, $v) - $out[$k];
+        arsort($frac);
+        $keys = array_keys($frac);
+        for ($j = 0; $rest > 0; $j++, $rest--) $out[$keys[$j % count($keys)]]++;
+        for ($j = 0; $rest < 0 && $j < 10 * count($keys); $j++) { $k = $keys[count($keys) - 1 - ($j % count($keys))]; if ($out[$k] > 0) { $out[$k]--; $rest++; } }
+        return $out;
+    }
+
+    /**
+     * Podstawa wydatków na karton [221] : ostatnie miesiące kosztowe (zamknięte najpierw, forecast.cost_months) — tylko wydatki
+     * gotówkowe : wynagrodzenia i media działu produkcji na karton działu, wspólne działy produkcji (np. Pakowanie / wysyłka)
+     * i media bez rozdziału na karton firmy. Bez inwestycji [223] (amortyzacja działów + koszty stałe « kredyt / leasing »),
+     * pozostałych kosztów stałych (Finanse) i działu Administracja ; logistyka osobno.
+     */
+    private function costBasis(): array
+    {
+        $ids = $this->costMonths->getLastMonthIds((int) $this->param('forecast.cost_months', '3', 1, 24));
+        $basis = $this->unitCosts->months($ids);
+        $label = $this->costMonths->getDataBasisLabel($ids);
+        $pool = (float) $basis['unallocated_media'];
+        $shared = [];
+        $financing = 0.0;
+        foreach ($this->repo->fixedCosts($basis['month_ids']) as $f) if (self::isInvestment($f['name'], $f['category'])) $financing += $f['amount'];
+        $financing = min(max(0.0, $financing), (float) $basis['fixed']);
+        $excluded = ['depreciation' => (float) $basis['depreciation_total'], 'financing' => $financing, 'fixed' => (float) $basis['fixed'] - $financing,
+            'admin' => 0.0, 'admin_sections' => []];
+        foreach ($basis['sections'] as $sec) {
+            if (!$sec['shared']) continue;
+            $cash = (float) $sec['labor_actual'] + (float) $sec['media_actual'];
+            if (self::isAdministration((string) $sec['name'])) { $excluded['admin'] += $cash; $excluded['admin_sections'][] = (string) $sec['name']; continue; }
+            if ($cash > 0) { $pool += $cash; $shared[] = (string) $sec['name']; }
+        }
+        $cartons = (int) $basis['cartons'];
+        return $basis + ['label' => $label['label'] ?? null, 'count' => count($basis['month_ids']), 'shared_cash_per_carton' => $cartons > 0 ? $pool / $cartons : 0.0,
+            'shared_sections' => $shared, 'excluded' => $excluded];
+    }
+
+    /** Koszt stały będący inwestycją albo jej spłatą (kredyt, leasing, środek trwały) — po nazwie albo kategorii. */
+    public static function isInvestment(string $name, string $category = ''): bool
+    {
+        if (in_array(strtoupper(trim($category)), self::INVESTMENT_CATEGORIES, true)) return true;
+        $n = strtr(mb_strtolower($name), ['ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n', 'ó' => 'o', 'ś' => 's', 'ź' => 'z', 'ż' => 'z']);
+        return (bool) preg_match(self::INVESTMENT, preg_replace('/[^a-z0-9]+/', ' ', $n) . ' ');
+    }
+
+    /** Dział administracji (koszty firmy, nie produkcji) — po nazwie. */
+    private static function isAdministration(string $name): bool
+    {
+        return (bool) preg_match('/administ/iu', $name);
+    }
+
+    /**
+     * Wydatki na karton (zł) : surowce i opakowania (koszt receptury kartonu), wynagrodzenia i media działu produkcji,
+     * wspólne działy produkcji i media bez rozdziału ; bez inwestycji (amortyzacja, kredyt i leasing), kosztów stałych,
+     * Administracji i logistyki.
+     * @return array{raw:float, labor:float, media:float, shared:float, total:float, section:bool}
+     */
+    private function cartonCost(array $basis, array $p): array
+    {
+        $sid = $p['id_section'] !== null ? (int) $p['id_section'] : null;
+        $sec = $sid !== null ? ($basis['sections'][$sid] ?? null) : null;
+        $own = $sec !== null && !$sec['shared'];
+        $out = ['raw' => round(max(0.0, (float) ($p['raw_cost'] ?? 0)), 4), 'labor' => round($own ? (float) $sec['labor_per_carton'] : 0.0, 4),
+            'media' => round($own ? (float) $sec['media_per_carton'] : 0.0, 4), 'shared' => round((float) $basis['shared_cash_per_carton'], 4)];
+        return $out + ['total' => round(array_sum($out), 4), 'section' => $own && $sec['cartons'] > 0];
+    }
+
+    /** Zdolność tygodnia (h) : parametr albo aktywni pracownicy produkcji × godziny etatu. */
+    private function capacity(): array
+    {
+        $fixed = $this->param('forecast.capacity_hours', '0', 0, 100000);
+        $fte = $this->param('week.fte_hours', '40', 1, 80);
+        $people = $this->repo->activeEmployees();
+        return $fixed > 0 ? ['hours' => $fixed, 'source' => 'param', 'people' => $people, 'fte_hours' => $fte]
+            : ['hours' => $people * $fte, 'source' => 'people', 'people' => $people, 'fte_hours' => $fte];
+    }
+
+    private function param(string $code, string $default, float $min, float $max): float
+    {
+        $v = (float) str_replace(',', '.', $this->params->get($code, $default));
+        return max($min, min($max, $v));
+    }
+}

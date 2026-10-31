@@ -1,0 +1,99 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ product.name }} — ruchy magazynowe{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3><i class="bi bi-arrow-left-right"></i> {{ product.name }}</h3>
+            <p class="text-subtitle text-muted"><a href="{{ root }}/workshop/stock-movements?from={{ from }}&to={{ to }}"><i class="bi bi-arrow-left"></i> Ruchy magazynowe</a>
+                · {{ product.category ?? 'bez kategorii' }}{% if product.ppc %} · {{ product.ppc }} szt. w kartonie{% endif %}
+                {% if product.card_cost > 0 %} · koszt surowców {{ product.card_cost|pln(2) }} / karton{% endif %}</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.sl-bar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin:0 0 14px}
+.sl-bar label{display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted)}
+.sl-table{width:100%;border-collapse:collapse;font-size:13px}
+.sl-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted);border-bottom:1px solid var(--at-line);padding:8px 10px;white-space:nowrap;text-align:left}
+.sl-table th.n,.sl-table td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sl-table td{border-bottom:1px solid var(--at-line);padding:8px 10px;vertical-align:top}
+.sl-sub{font-size:12px;color:var(--at-muted)}
+.sl-in{color:var(--at-success)}.sl-out{color:var(--at-danger)}
+.sl-cust{display:block;font-size:12.5px}
+.sl-cols{display:grid;grid-template-columns:minmax(0,3fr) minmax(280px,2fr);gap:14px}
+@media (max-width:991px){.sl-cols{grid-template-columns:1fr}}
+.sl-cols .card{margin:0}
+</style>
+<section class="section">
+    <form class="sl-bar" method="get" action="{{ root }}/workshop/stock-movements/{{ product.id }}">
+        <label>Od<input type="date" class="form-control" name="from" value="{{ from }}"></label>
+        <label>Do<input type="date" class="form-control" name="to" value="{{ to }}"></label>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Pokaż</button>
+        <div class="at-chips">
+            {% for p in presets %}<a class="at-chip {{ p.from == from and p.to == to ? 'is-used' }}" href="{{ root }}/workshop/stock-movements/{{ product.id }}?from={{ p.from }}&to={{ p.to }}">{{ p.label }}</a>{% endfor %}
+        </div>
+    </form>
+
+    <div class="at-tiles">
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-box-seam"></i> Stan {{ from|date('d.m') }}</span><span class="at-tile-value">{{ opening }}</span><span class="at-tile-meta">kartonów na początek</span></div>
+        <div class="at-tile at-tile-ok"><span class="at-tile-label"><i class="bi bi-box-arrow-in-down"></i> Przyjęcia</span><span class="at-tile-value">+{{ produced }}</span><span class="at-tile-meta">kartonów z produkcji</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-truck"></i> Wydania</span><span class="at-tile-value">−{{ shipped }}</span><span class="at-tile-meta">kartonów wysłanych</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-box-seam-fill"></i> Stan {{ to|date('d.m') }}</span><span class="at-tile-value">{{ closing }}</span>
+            <span class="at-tile-meta">{% if product.card_cost > 0 %}{{ (closing * product.card_cost)|pln }}{% else %}kartonów na koniec{% endif %}</span></div>
+    </div>
+    {% if closing != opening + produced - shipped %}
+        <div class="at-note at-note-warn"><i class="bi bi-exclamation-triangle"></i>Stan końcowy różni się od ruchów o {{ closing - (opening + produced - shipped) }} : część kartonów ma datę palety wcześniejszą niż datę etykiety.</div>
+    {% endif %}
+
+    <div class="sl-cols">
+        <div class="card"><div class="card-body table-responsive">
+            <h6>Dzień po dniu</h6>
+            {% if lines %}
+            <table class="sl-table">
+                <thead><tr><th>Dzień</th><th class="n">Przyjęcia</th><th>Partie</th><th class="n">Wydania</th><th>Klienci</th><th class="n">Saldo</th></tr></thead>
+                <tbody>
+                {% for l in lines %}
+                    <tr>
+                        <td>{{ l.day|day_pl }}</td>
+                        <td class="n sl-in">{{ l.in ? '+' ~ l.in : '·' }}</td>
+                        <td class="sl-sub">{{ l.batches ?? '' }}</td>
+                        <td class="n sl-out">{{ l.out ? '−' ~ l.out : '·' }}</td>
+                        <td>{% for c in l.customers %}<span class="sl-cust">{% if c.id %}<a href="{{ root }}/clients/{{ c.id }}/edit">{{ c.name }}</a>{% else %}{{ c.name }}{% endif %} <span class="sl-sub">{{ c.n }}</span></span>{% endfor %}</td>
+                        <td class="n"><strong>{{ l.balance }}</strong></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="at-empty">Brak ruchów w tym okresie.</p>
+            {% endif %}
+        </div></div>
+
+        <div class="card"><div class="card-body table-responsive">
+            <h6>Partie na magazynie teraz <span class="sl-sub">({{ in_stock_now }} kart.)</span></h6>
+            {% if batches %}
+            <table class="sl-table">
+                <thead><tr><th>Partia</th><th>Ważne do</th><th class="n">Magazyn</th><th class="n">Na palecie</th></tr></thead>
+                <tbody>
+                {% for b in batches %}
+                    <tr>
+                        <td>{{ b.batch ?: '—' }}<div class="sl-sub">etykieta {{ b.made_on|date('d.m.Y') }}</div></td>
+                        <td>{% if b.expires %}{% if b.expired %}<span class="at-pill at-pill-danger">{{ b.expires|date('d.m.Y') }}</span>{% else %}{{ b.expires|date('d.m.Y') }}{% endif %}{% else %}<span class="sl-sub">—</span>{% endif %}</td>
+                        <td class="n">{{ b.in_store ?: '·' }}</td>
+                        <td class="n">{{ b.on_pallet ?: '·' }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <p class="sl-sub mt-2 mb-0">Najstarsza data ważności pierwsza (FEFO).</p>
+            {% else %}
+            <p class="at-empty">Brak kartonów na magazynie.</p>
+            {% endif %}
+        </div></div>
+    </div>
+</section>
+{% endblock %}

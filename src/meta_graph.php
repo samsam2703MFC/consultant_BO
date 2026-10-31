@@ -2,10 +2,12 @@
 declare(strict_types=1);
 
 /**
- * Meta Graph API — lecture des pages Facebook du réseau.
+ * Meta Graph API — les pages Facebook du réseau et leurs comptes Instagram.
  *
- * Le module est en LECTURE SEULE côté Meta : il résout une page, lit ses
- * posts, reçoit ses webhooks. Il ne publie ni ne supprime jamais rien.
+ * Brand Guard LIT : il résout une page, lit ses posts, reçoit ses webhooks.
+ * Depuis le 13/10/2026, le portail Marketing PUBLIE aussi (src/social_publication.php) :
+ * un post validé part sur la page Facebook et le compte Instagram du magasin, et
+ * seulement sur son ordre — rien ne part d'ici de soi-même, rien n'est supprimé.
  *
  * Trois règles tiennent l'accès :
  *
@@ -257,6 +259,104 @@ final class MetaGraph
             'images' => array_values(array_unique($imgs)),
             'date' => $ts !== false ? date('Y-m-d H:i:s', $ts) : date('Y-m-d H:i:s'),
             'lien' => isset($p['permalink_url']) ? (string) $p['permalink_url'] : null];
+    }
+
+    /* --- publication (portail Marketing) ------------------------------------------ */
+
+    /**
+     * Publie sur une page Facebook, avec le token DE LA PAGE (tokensPages()).
+     *
+     *  - sans visuel : POST /{page}/feed {message, link?} ;
+     *  - un visuel : POST /{page}/photos {url, caption} — Meta va chercher l'image à
+     *    son adresse, elle doit donc être publique ;
+     *  - plusieurs : chaque photo est déposée NON publiée, puis un seul post les
+     *    réunit (POST /{page}/feed {message, attached_media[i]={"media_fbid":…}}).
+     * Rend l'identifiant du post (page_postid) — celui que Brand Guard retrouvera en
+     * relisant la page — et son lien permanent quand Meta le donne.
+     *
+     * @param list<string> $images adresses publiques des visuels
+     * @return array{id:string, lien:?string}
+     */
+    public static function publierPage(string $pageId, string $token, string $message, ?string $lien, array $images): array
+    {
+        $images = array_values(array_filter($images, static fn ($u) => is_string($u) && preg_match('#^https?://#', $u)));
+        if (count($images) === 1) {
+            $r = self::http('POST', $pageId . '/photos', ['url' => $images[0], 'caption' => $message, 'access_token' => $token]);
+            $id = (string) ($r['post_id'] ?? ($r['id'] ?? ''));
+        } else {
+            $p = ['message' => $message, 'access_token' => $token];
+            if ($images) {
+                foreach ($images as $i => $u) {
+                    $ph = self::http('POST', $pageId . '/photos', ['url' => $u, 'published' => 'false', 'access_token' => $token]);
+                    if (empty($ph['id'])) { throw new MetaIndisponible('photo ' . ($i + 1) . ' refusée par Meta'); }
+                    $p['attached_media[' . $i . ']'] = json_encode(['media_fbid' => (string) $ph['id']]);
+                }
+            } elseif ($lien !== null && $lien !== '') {
+                $p['link'] = $lien;
+            }
+            $r = self::http('POST', $pageId . '/feed', $p);
+            $id = (string) ($r['id'] ?? '');
+        }
+        if ($id === '') { throw new MetaIndisponible('Meta n’a pas rendu d’identifiant de post'); }
+        return ['id' => $id, 'lien' => self::permalien($id, $token, 'permalink_url')];
+    }
+
+    /** Le compte Instagram professionnel relié à une page, ou null s'il n'y en a pas. */
+    public static function instagramDePage(string $pageId, string $token): ?string
+    {
+        $r = self::http('GET', $pageId, ['fields' => 'instagram_business_account', 'access_token' => $token]);
+        $id = $r['instagram_business_account']['id'] ?? null;
+        return is_string($id) && $id !== '' ? $id : null;
+    }
+
+    /**
+     * Publie sur un compte Instagram professionnel — en deux temps, comme l'impose Meta :
+     * un conteneur (POST /{ig}/media), puis sa publication (POST /{ig}/media_publish).
+     * Un carrousel (2 à 10 visuels) : un conteneur par visuel (is_carousel_item), puis
+     * un conteneur CAROUSEL qui les réunit. Instagram n'accepte pas de post sans visuel,
+     * et ses visuels doivent être des JPEG à une adresse publique.
+     *
+     * @param list<string> $images
+     * @return array{id:string, lien:?string}
+     */
+    public static function publierInstagram(string $igId, string $token, string $legende, array $images): array
+    {
+        $images = array_values(array_filter($images, static fn ($u) => is_string($u) && preg_match('#^https?://#', $u)));
+        if (!$images) { throw new MetaIndisponible('Instagram exige au moins un visuel à une adresse publique'); }
+        if (count($images) === 1) {
+            $c = self::http('POST', $igId . '/media', ['image_url' => $images[0], 'caption' => $legende, 'access_token' => $token]);
+        } else {
+            $enfants = [];
+            foreach (array_slice($images, 0, 10) as $u) {
+                $e = self::http('POST', $igId . '/media', ['image_url' => $u, 'is_carousel_item' => 'true', 'access_token' => $token]);
+                if (empty($e['id'])) { throw new MetaIndisponible('visuel refusé par Instagram'); }
+                $enfants[] = (string) $e['id'];
+            }
+            $c = self::http('POST', $igId . '/media', ['media_type' => 'CAROUSEL', 'children' => implode(',', $enfants), 'caption' => $legende, 'access_token' => $token]);
+        }
+        $conteneur = (string) ($c['id'] ?? '');
+        if ($conteneur === '') { throw new MetaIndisponible('Instagram n’a pas créé le conteneur'); }
+        // Un conteneur se prépare côté Meta (téléchargement du visuel) : on attend qu'il soit prêt.
+        for ($i = 0; $i < 6; $i++) {
+            $st = self::http('GET', $conteneur, ['fields' => 'status_code', 'access_token' => $token]);
+            $code = (string) ($st['status_code'] ?? 'FINISHED');
+            if ($code === 'FINISHED') { break; }
+            if ($code === 'ERROR' || $code === 'EXPIRED') { throw new MetaIndisponible('Instagram a refusé le visuel (' . $code . ')'); }
+            self::attendre(2);
+        }
+        $r = self::http('POST', $igId . '/media_publish', ['creation_id' => $conteneur, 'access_token' => $token]);
+        $id = (string) ($r['id'] ?? '');
+        if ($id === '') { throw new MetaIndisponible('Instagram n’a pas publié le conteneur'); }
+        return ['id' => $id, 'lien' => self::permalien($id, $token, 'permalink')];
+    }
+
+    /** Le lien permanent d'un post publié — un plus, jamais une raison d'échouer. */
+    private static function permalien(string $id, string $token, string $champ): ?string
+    {
+        try {
+            $r = self::http('GET', $id, ['fields' => $champ, 'access_token' => $token]);
+            return isset($r[$champ]) && is_string($r[$champ]) ? $r[$champ] : null;
+        } catch (Throwable $e) { return null; }
     }
 
     /* --- webhook ----------------------------------------------------------------- */

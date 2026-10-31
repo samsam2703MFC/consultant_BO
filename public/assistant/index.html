@@ -4,11 +4,22 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="../assets/img/logo.png" />
-    <title>Assistant de campagne — Cockpit CEO</title>
-    <script type="module" crossorigin src="./assets/assistant-Bitb3T1c.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/assistant-9DKCHjav.css">
+    <title>Assistant de campagne — Marketing</title>
+    <script>
+      // L'assistant de campagne vit désormais dans le Marketing (/marketing/), avec
+      // les campagnes, les canaux et le module Social & Ads : tout y est regroupé.
+      // Cette page n'est plus qu'un renvoi, pour les liens et favoris existants et
+      // pour les boutons du cockpit : ?id=19 → la campagne 19 (l'assistant si c'est
+      // encore un brouillon, son suivi sinon) ; sans identifiant → une campagne neuve.
+      // Les fichiers déposés (uploads/) restent servis ici.
+      (function () {
+        var MARKETING = '/marketing/';
+        var id = new URLSearchParams(window.location.search).get('id') || '';
+        window.location.replace(/^\d+$/.test(id) ? MARKETING + '?campagne=' + id + '&assistant=1' : MARKETING + '?nouvelle=1');
+      })();
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <p>L'assistant de campagne est dans le <a href="/marketing/">Marketing</a>.</p>
   </body>
 </html>

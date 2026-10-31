@@ -3,6 +3,7 @@
 namespace App\Employee\app\Http\Controllers\Dashboard;
 
 use App\Employee\app\Http\Controllers\Controller;
+use App\Employee\app\Services\Primes\PrimesPlan;
 use App\Employee\app\Services\Primes\PrimesService;
 use App\Employee\app\Services\Schedule\ScheduleService;
 use App\Employee\app\Services\Task\TaskService;
@@ -38,7 +39,9 @@ class DashboardController extends Controller
         catch (\Throwable $e) { $erreur = $e->getMessage(); }
         $data['primes'] = $fiche;
         $data['primesErreur'] = $erreur;
-        $data['etapes'] = $fiche ? $this->etapes($fiche) : [];
+        // Comment y arriver (23/10/2026) : les trois premières primes du plan des Primes, celles qui sont à portée.
+        $plan = $fiche ? PrimesPlan::pour($fiche) : [];
+        $data['etapes'] = array_slice(array_values(array_filter($plan, static fn ($e) => !$e['horsPortee'])), 0, 3);
         $data['semaine'] = $fiche ? $this->semaine($fiche) : null;
         $coll = $fiche['collection'] ?? null;
         $nb = 0; foreach ((array) ($coll['titres'] ?? []) as $t) { $nb += (int) $t['n']; }
@@ -78,41 +81,6 @@ class DashboardController extends Controller
         $taux = 100 * $c / $t;
         return ['fini' => time() >= $fin, 'taux' => (int) round($taux), 'cible' => $cible, 'ok' => $taux + 1e-9 >= $cible,
             'manque' => max(0, (int) ceil($cible * $t / 100) - $c), 'tickets' => $t, 'croisees' => $c];
-    }
-
-    /** Les prochaines étapes qui rapportent, la plus proche d'abord : [{cle, gain, n, …}] ; la vue met les mots. */
-    private function etapes(array $f): array
-    {
-        $b = $f['briques'] ?? [];
-        $out = [];
-        $c = $b['croisees'] ?? null;
-        if ($c && !empty($c['prochain'])) {
-            $out[] = ['cle' => 'croisees', 'gain' => (int) $c['prochain']['montant'], 'n' => (int) $c['prochain']['manque'],
-                'taux' => number_format((float) $c['prochain']['taux'], 0, ',', ' '), 'ordre' => (int) $c['prochain']['manque']];
-        }
-        $r = $b['record'] ?? null;
-        if ($r && isset($r['ecart']) && $r['ecart'] !== null && $r['ecart'] < 0 && !empty($r['eurDixieme'])) {
-            $out[] = ['cle' => 'record', 'gain' => (int) $r['eurDixieme'], 'ecart' => number_format(abs((float) $r['ecart']), 2, ',', ' '),
-                'record' => number_format((float) $r['record'], 1, ',', ' '), 'ordre' => (int) round(abs((float) $r['ecart']) * 100)];
-        }
-        $k = $b['concours'] ?? null;
-        foreach (($k && !empty($k['actif'])) ? (array) ($k['liste'] ?? []) : [] as $q) {
-            if ($q['pieces'] === null || ($q['titre'] ?? null) === 'reseau') { continue; }
-            if (($q['rangMag'] ?? null) === 1) {
-                $manque = max(1, (int) ceil((float) ($q['premierRes'] ?? 0) - (float) $q['pieces']) + 1);
-                $out[] = ['cle' => 'concours', 'niveau' => 'reseau', 'gain' => (int) $q['montantRes'], 'n' => $manque, 'lib' => (string) $q['lib'], 'ordre' => $manque];
-            } else {
-                $manque = max(1, (int) ceil(max((float) ($q['premierMag'] ?? 0), (float) $q['minPieces']) - (float) $q['pieces']) + 1);
-                $out[] = ['cle' => 'concours', 'niveau' => 'magasin', 'gain' => (int) $q['montantMag'], 'n' => $manque, 'lib' => (string) $q['lib'], 'ordre' => $manque];
-            }
-        }
-        $v = $b['meilleure'] ?? null;
-        if ($v && ($v['rangMag'] ?? null) !== null && $v['rangMag'] !== 1 && !empty($v['scorePremier']) && isset($v['score'])) {
-            $out[] = ['cle' => 'meilleure', 'gain' => (int) $v['montantMag'], 'score' => number_format((float) $v['score'], 0, ',', ' '),
-                'premier' => number_format((float) $v['scorePremier'], 0, ',', ' '), 'ordre' => 50];
-        }
-        usort($out, static fn ($a, $z) => $a['ordre'] <=> $z['ordre']);
-        return array_slice($out, 0, 3);
     }
 
     /** La semaine en cours, depuis les douze dernières semaines de la fiche. */

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C — MétaDonnée · contrôle par franchisé</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="md.css">
+<script src="coque.js"></script>
+</head><body><script>
+/* C — L'écran répond d'abord à « le franchisé a-t-il traité ses leads ? » : une carte par magasin
+   (délai, taux, retards, SMS), puis une colonne par état relu dans l'ERP, du lead pas encore arrivé
+   au bureau connecté. Les réglages tiennent en quatre cartes en bas, chacune ouvre son écran. */
+const fr = (cls, nom, n, vus, contact, bur, retard, sms, extra) => `<div class="fr ${cls}">
+  <div class="t"><b>${nom}</b>${cls === 'g' ? pill('gr', 'en ouverture', 92) : retard ? pill('plein', retard + ' en retard', 92) : pill('ok', '✓ à jour', 92)}</div>
+  <div class="ch">
+    <div><small>Leads · 30 j</small><b>${n}</b></div>
+    <div><small>Vus en 2 h</small><b class="${vus[1]}">${vus[0]}</b></div>
+    <div><small>1er contact</small><b class="${contact[1]}">${contact[0]}</b></div>
+    <div><small>Bureaux connectés</small><b class="ok">${bur}</b></div>
+  </div>
+  <div class="sms"><span class="tog ${sms ? 'on' : ''}"></span><span>${sms || 'SMS coupé'}</span></div>
+  ${extra ? `<div class="mini" style="margin-top:6px">${extra}</div>` : ''}
+</div>`;
+const franchises = `<div class="franch">
+  ${fr('', 'Gosselies', 45, ['96 %', 'ok'], ['22 min', ''], 7, 0, 'Aurélie M. · 0476 •• •• 12')}
+  ${fr('', 'Halle', 31, ['90 %', 'ok'], ['48 min', ''], 4, 0, 'Joris D. · 0485 •• •• 07', '1 lead rejeté par l’ERP')}
+  ${fr('o', 'Corbais', 21, ['82 %', ''], ['1 h 10', 'att'], 2, 1, 'Inès F. · 0472 •• •• 58')}
+  ${fr('r', 'Sombreffe', 9, ['44 %', 'ko'], ['5 h 20', 'ko'], 1, 2, 'Thomas L. · 0471 •• •• 40', 'Youssef B. prévenu hier à 14:02')}
+  ${fr('g', 'Knokke', 0, ['—', ''], ['—', ''], 0, 0, '', 'ouverture le 15/11 · formulaire à valider')}
+</div>`;
+
+const carte = (cls, nom, p, sous, mag, age, ageCls) => `<div class="lead ${cls}">
+  <div class="t">${pf([p])}<b>${nom}</b></div><div class="m">${sous}</div>
+  <div class="b">${pill('ru', mag, 74)}${pill(ageCls || 'gr', age, 74)}</div></div>`;
+const col = (cls, titre, n, cartes, plus) => `<div class="col ${cls}"><div class="ch"><b>${titre}</b><span>${n}</span></div>${cartes}${plus ? `<div class="plus">${plus}</div>` : ''}</div>`;
+const kanban = `<div class="carte"><h3>Où en sont les leads<small>relu dans l’ERP à 10:20 · prochaine relecture 10:30</small><span class="d"><span class="filtres" style="margin:0"><span class="on">Ouverts <em>23</em></span><span>Perdus <em>9</em></span></span></span></h3>
+<div class="kanban">
+  ${col('ko', 'Pas encore dans l’ERP', 3,
+    carte('warn', 'Résidence Les Tilleuls', 'ig', 'Paul Henrard · 25 pers. · 1360 Perwez', 'à attribuer', 'hier', 'att')
+    + carte('warn', 'K. Janssens', 'fb', 'e-mail seul · téléphone manquant', 'Halle', 'rejeté 422', 'ko')
+    + carte('warn', 'Boulangerie Mertens', 'ig', 'Luc Mertens · 4 pers. · 5000 Namur', 'à attribuer', 'lun.', 'att'))}
+  ${col('', 'Pas vu', 4,
+    carte('', 'Fiduciaire Delvaux &amp; associés', 'ig', 'Claire Mertens · 35 pers. · lunch', 'Gosselies', '4 min', 'bl')
+    + carte('late', 'Cabinet dentaire de Ligny', 'fb', 'Nathalie Gérard · 8 pers. · petit-déj', 'Sombreffe', '20 h', 'plein')
+    + carte('late', 'Pharmacie du Centre', 'fb', 'Eric Dumont · 6 pers. · plateaux', 'Sombreffe', '1 j 2 h', 'plein'), '+ 1')}
+  ${col('', 'Vu · à rappeler', 5,
+    carte('', 'Clinique vétérinaire du Centre', 'fb', 'Marc Dubois · 12 pers. · plateaux', 'Halle', '23 min', 'gr')
+    + carte('late', 'Garage Ribeiro', 'ig', 'Ana Ribeiro · 9 pers. · plateaux', 'Corbais', '25 h', 'plein')
+    + carte('', 'Crèche Les Lutins', 'fb', 'Julie Hanse · 14 pers. · lunch', 'Gosselies', '3 h', 'gr'), '+ 2')}
+  ${col('', 'Contacté', 9,
+    carte('', 'Atelier 9 architectes', 'ig', 'Sophie Lenoir · 18 pers. · petit-déj', 'Corbais', 'en 36 min', 'ok')
+    + carte('', 'Étude notariale Coppens', 'fb', 'Lise Coppens · essai jeudi', 'Halle', 'en 1 h 02', 'ok')
+    + carte('', 'Ateliers Fontaine', 'ig', 'Yves Fontaine · devis envoyé', 'Gosselies', 'en 15 min', 'ok'), '+ 6')}
+  ${col('', 'Bureau créé', 2,
+    carte('', 'Imprimerie Vandevelde', 'fb', 'tournée Halle-Est · en attente de connexion', 'Halle', '2 j', 'gr')
+    + carte('', 'Centre médical Sud', 'ig', 'tournée Gosselies-Nord', 'Gosselies', '4 j', 'gr'))}
+  ${col('', 'Bureau connecté', 14,
+    carte('', 'Assurances Hainaut Conseil', 'fb', 'Tom Wauters · 1re commande : 14 lunchs', 'Gosselies', 'ce matin', 'ok')
+    + carte('', 'Kiné Plus Corbais', 'ig', '1re commande : 6 plateaux', 'Corbais', 'jeu.', 'ok')
+    + carte('', 'SPRL Delhaye Conseil', 'fb', '1re commande : 9 lunchs', 'Gosselies', 'mer.', 'ok'), '+ 11 sur 30 jours')}
+</div></div>`;
+
+const reglage = (titre, etat, corps, lien) => `<div class="carte"><h3>${titre}<span class="d">${etat}</span></h3>${corps}<div style="margin-top:10px"><span class="lien">${lien} →</span></div></div>`;
+const reglages = `<div class="grille" style="grid-template-columns:repeat(4,minmax(0,1fr));margin-top:16px">
+  ${reglage('Formulaires', pill('att', '1 à valider', 88),
+    MD.forms.slice(0, 5).map(f => `<div class="journal">${pf(f.pf)}<span class="t" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.nom}</span>${pill(f.etat[0], f.etat[1], 88)}</div>`).join(''), 'Choisir les formulaires')}
+  ${reglage('Mapping ERP', pill('att', '1 champ neuf', 88),
+    `<div class="regle"><b>Gosselies, Halle</b><span class="v">${pill('ok', '✓ 10 / 10', 76)}</span></div>
+     <div class="regle"><b>Plateaux réseau</b><span class="v">${pill('ok', '✓ 9 / 9', 76)} par code postal</span></div>
+     <div class="regle"><b>Sombreffe</b><span class="v">${pill('att', '8 / 9', 76)} « Allergies ? » ajoutée chez Meta le 26/10</span></div>
+     <div class="regle"><b>Doublons</b><span class="v">n° de lead Meta = clé dans l’ERP</span></div>`, 'Ouvrir le mapping')}
+  ${reglage('Cycle', pill('ok', '✓ tourne', 88),
+    `<div class="regle"><b>Meta → cockpit</b><span class="v">webhook, à la seconde · filet 1×/h sur 3 j</span></div>
+     <div class="regle"><b>Cockpit → ERP</b><span class="v">tout de suite · 3 essais puis « rejeté »</span></div>
+     <div class="regle"><b>ERP → cockpit</b><span class="v">statuts relus toutes les 10 min, 30 jours</span></div>
+     <div class="regle"><b>Cron</b><span class="v">dernier passage 10:20 · Meta et ERP répondent</span></div>`, 'Voir le journal')}
+  ${reglage('SMS au franchisé', pill('ok', '✓ SMSAPI', 88),
+    `<div class="tel"><div class="bulle">L'Atelier by - Nouveau lead bureau : {entreprise}, {personnes} pers., {cp}. {contact} {telephone}. A traiter : {lien_erp}</div>
+     <div class="cpt"><span>4 magasins sur 5</span><span>144 car. · 1 SMS</span></div></div>
+     <div class="regle"><b>Heures</b><span class="v">8:00 – 20:00, sinon à 8:00</span></div>
+     <div class="regle"><b>Pas vu à 2 h</b><span class="v">relance · à 24 h : le consultant</span></div>`, 'Régler les SMS')}
+</div>`;
+
+coque(`<div class="titre"><h1>Leads Meta · les franchisés</h1><span class="ss">30 jours · règle : vu en 2 h, rappelé en 24 h</span></div>
+${franchises}${kanban}${reglages}`,
+{ lettre: 'C — contrôle par franchisé', enfants: [['Suivi franchisés', true, 3], ['Réglages', false, 1]],
+  boutons: ['⬇ Exporter', '↻ Relire Meta et l’ERP'] });
+</script></body></html>

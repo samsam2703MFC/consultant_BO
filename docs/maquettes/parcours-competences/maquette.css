@@ -1,0 +1,592 @@
+/* Maquettes « Parcours compétences » — en plus de public/formation/formation.css
+   (le design du module Marketing). Mêmes jetons, aucune ombre. */
+
+body.phone-body,
+body.rail-body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px;
+  background: #ece7df;
+}
+
+body.planche-body {
+  padding: 32px;
+  background: #ece7df;
+}
+
+.planche {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+/* ── Le téléphone ─────────────────────────────────────────────────────── */
+.phone {
+  position: relative;
+  flex: 0 0 auto;
+  width: 390px;
+  height: 844px;
+  border: 11px solid #1c1a17;
+  border-radius: 50px;
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.ph-status {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 28px 0;
+  height: 40px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ph-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 20px 12px;
+}
+
+.ph-head img {
+  height: 17px;
+}
+
+.ph-close {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ph-steps {
+  display: flex;
+  gap: 6px;
+  padding: 0 20px;
+}
+
+.ph-steps span {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.ph-steps span.on {
+  background: var(--accent);
+}
+
+.ph-body {
+  padding: 18px 20px 120px;
+}
+
+.ph-title {
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin: 2px 0 6px;
+}
+
+.ph-sous {
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.ph-cta {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 26px;
+}
+
+.ph-cta button {
+  width: 100%;
+  height: 52px;
+  margin: 0;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+.ph-now {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted-2);
+}
+
+.ph-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ph-grid .choice-card {
+  padding: 14px 16px;
+}
+
+.ph-grid .choice-card.is-on {
+  padding: 13px 15px;
+}
+
+.ph-grid .choice-card .muted {
+  font-size: 12px;
+}
+
+.phone .section-label {
+  margin-top: 18px;
+}
+
+.ph-note {
+  font-size: 12.5px;
+  margin-top: 6px;
+  line-height: 1.45;
+}
+
+.ph-ok {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: rgba(63, 122, 82, 0.1);
+  color: var(--green);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ph-list,
+.ph-evals {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.ph-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+
+.ph-list li > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ph-list strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ph-list .muted {
+  font-size: 11.5px;
+}
+
+.ph-check {
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 1.5px solid var(--faint);
+  display: inline-grid;
+  place-items: center;
+  font-size: 13px;
+  color: #fff;
+}
+
+.ph-check.is-on {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.ph-resume {
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.ph-big {
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.ph-big span {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.ph-resume .muted {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.ph-rythme .filter {
+  flex: 1;
+  text-align: center;
+  padding: 10px 6px;
+}
+
+.ph-coach {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.ph-coach > span:last-child {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.ph-coach .muted {
+  font-size: 12px;
+}
+
+/* La mini-frise de l'aperçu */
+.mini {
+  display: flex;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.mini__pt {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid var(--faint);
+  background: #fff;
+  flex: 0 0 auto;
+}
+
+.mini__pt + .mini__pt,
+.mini__pt + .mini__flag {
+  margin-left: 22px;
+  position: relative;
+}
+
+.mini__pt + .mini__pt::before,
+.mini__pt + .mini__flag::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  width: 22px;
+  height: 2px;
+  background: var(--line);
+}
+
+.mini__pt.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.mini__flag {
+  color: var(--accent);
+  font-size: 16px;
+}
+
+/* ── La frise de suivi ───────────────────────────────────────────────── */
+.ph-goal {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: 14px 0 10px;
+}
+
+.ph-goal > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 15px;
+}
+
+.ph-goal .muted {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ph-pct {
+  font-size: 34px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.ph-pct small {
+  font-size: 15px;
+}
+
+.frise {
+  margin: 18px -20px 0 0;
+  overflow: hidden;
+}
+
+.frise__track {
+  display: flex;
+  padding: 6px 0 4px;
+}
+
+.jalon {
+  position: relative;
+  flex: 0 0 98px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 34px;
+  padding-right: 10px;
+}
+
+/* le trait vers le jalon suivant */
+.jalon::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 22px;
+  right: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.jalon:last-child::before {
+  display: none;
+}
+
+.jalon.fait::before {
+  background: var(--green);
+}
+
+.jalon__dot {
+  position: absolute;
+  top: 5px;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 2px solid var(--faint);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: #fff;
+}
+
+.jalon.fait .jalon__dot {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.jalon.encours .jalon__dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 5px rgba(141, 29, 44, 0.15);
+}
+
+.jalon.cible .jalon__dot {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.jalon__date {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.jalon.encours .jalon__date {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.jalon__nom {
+  font-size: 12.5px;
+  line-height: 1.3;
+}
+
+.jalon.avenir .jalon__nom {
+  color: var(--muted-2);
+}
+
+.ph-now-card {
+  margin-top: 18px;
+  padding: 16px;
+}
+
+.ph-now-title {
+  display: block;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.ph-now-card .muted {
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
+.ph-evals li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  font-size: 13.5px;
+  border-top: 1px solid var(--row-line);
+}
+
+.ph-evals li:first-child {
+  border-top: none;
+}
+
+.ph-evals li.is-done {
+  color: var(--muted);
+}
+
+.ph-evals .ph-check {
+  flex: 0 0 20px;
+  height: 20px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+/* ── Bureau : la frise compacte d'une ligne ──────────────────────────── */
+.pts {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pt {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 1.5px solid var(--faint);
+  background: #fff;
+}
+
+.pt.fait {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.pt.encours {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.pt.retard {
+  background: #d8aa1e;
+  border-color: #d8aa1e;
+}
+
+.pt-flag {
+  margin-left: 4px;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.fiche-ol,
+.fiche-ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.fusion {
+  margin-top: 16px;
+  font-size: 12px;
+}
+
+/* ── Le rail du cockpit (extrait) ────────────────────────────────────── */
+.rail {
+  width: 260px;
+  padding: 20px 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-family: 'Gotham', system-ui, sans-serif;
+}
+
+.rail__g {
+  margin-bottom: 16px;
+}
+
+.rail__t {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0 10px 6px;
+}
+
+.rail__i {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--muted-2);
+}
+
+.rail__i.is-new {
+  background: rgba(141, 29, 44, 0.08);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.rail__new {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.rail-note {
+  max-width: 260px;
+  margin: 12px 0 0 20px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted-2);
+}
+
+body.rail-body {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+/* Pastille d'initiales (reprise du module marketing, écran CRM). */
+.lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lead__initials {
+  flex: 0 0 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--chip);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lead__name {
+  font-size: 13.5px;
+}

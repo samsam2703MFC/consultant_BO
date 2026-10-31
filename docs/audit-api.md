@@ -50,7 +50,7 @@ Le problème est entièrement côté serveur PHP.
 `ceo_shop`, `ceo_shop_month_perf`, `ceo_shop_budget`, `ceo_shop_budget_month`,
 `ceo_shop_budget_line`, `ceo_network_target`, `ceo_project`, `ceo_project_levid`,
 `ceo_project_milestone`, `ceo_project_cost`, `ceo_project_task`, `ceo_task_issue`,
-`ceo_project_crm`, `ceo_project_template`, `ceo_consultant`, `ceo_consultant_visit`,
+`ceo_project_crm`, `ceo_project_template`, `con_consultant`, `con_consultant_visit`,
 `ceo_supplier`, `ceo_person`, `ceo_report_schedule`, `ceo_alert_rule`,
 `ceo_email_template`, `ceo_journal_entry`, `ceo_app_setting`, `ceo_product`,
 `ceo_product_month_sales`.
@@ -75,7 +75,7 @@ Deux couplages annexes :
 
 - **C7** — `position` (Manuel Opératoire) : citée dans `sql/schema.sql:35`,
   `sql/grants.sql:43`, `docs/contrat-api.md` §2, et référencée par
-  `ceo_consultant.position_id` / `ceo_shop_budget.validated_by` — **jamais requêtée**.
+  `con_consultant.position_id` / `ceo_shop_budget.validated_by` — **jamais requêtée**.
   Couplage déclaré, dormant.
 - **C8** — `information_schema.columns` (`src/installer.php:53`) : lecture des
   métadonnées MySQL pour les migrations idempotentes. Interne à la base du cockpit,
@@ -208,7 +208,7 @@ GET {mo}/api/positions?appType=CONSULTANT
 ```
 
 Alternative si le rôle des consultants reste géré dans le cockpit : **supprimer** la
-colonne `ceo_consultant.position_id`, `ceo_shop_budget.validated_by`, la ligne
+colonne `con_consultant.position_id`, `ceo_shop_budget.validated_by`, la ligne
 `position` de `sql/schema.sql` et de `sql/grants.sql`. Un couplage documenté mais mort
 finit toujours par être branché « puisqu'il est déjà là ». Trancher dans un sens ou
 dans l'autre.
@@ -240,7 +240,7 @@ faut alimenter. Sans ces API, les données sont saisies à la main ou issues du 
 | Référentiel magasins | `ceo_shop` | ERP / panel | `GET {erp}/api/shops` → code, nom, franchisé, zone, statut, ouverture |
 | Réel mensuel (CA, tickets, marge, food/labour/overhead) | `ceo_shop_month_perf` | ERP / caisse | `GET {erp}/api/shops/{id}/perf?annees=2025,2026` |
 | Ventes par référence | `ceo_product`, `ceo_product_month_sales` | ERP / caisse | `GET {erp}/api/products/sales?periode=2026-07` |
-| Consultants, fournisseurs, personnes | `ceo_consultant`, `ceo_supplier`, `ceo_person` | ERP / RH | `GET {erp}/api/people?type=consultant\|fournisseur\|interne` |
+| Consultants, fournisseurs, personnes | `con_consultant`, `ceo_supplier`, `ceo_person` | ERP / RH | `GET {erp}/api/people?type=consultant\|fournisseur\|interne` |
 | Identité de l'utilisateur connecté | `ceo_app_setting.utilisateur` (valeur statique) | ERP (qui porte l'auth) | `GET {erp}/api/me` — voir **F7** |
 | Envoi réel des rapports | simulé (`writes.php:283`) | SMTP / Resend | à brancher |
 
@@ -339,7 +339,7 @@ MySQL voit encore `of_tag`, rien ne garantit que personne ne le relira.
 | `GET /stores/perf` | `ceo_shop_month_perf` |
 | `GET /stores/budgets` | `ceo_shop_budget`, `ceo_shop_budget_line`, `ceo_shop_month_perf` |
 | `GET /targets` | `ceo_network_target`, `ceo_app_setting` |
-| `GET /consultants` | `ceo_consultant`, `ceo_consultant_visit` |
+| `GET /consultants` | `con_consultant`, `con_consultant_visit` |
 | `GET /fournisseurs` | `ceo_supplier` |
 | `GET /projects` | `ceo_project`, `ceo_project_levid`, `ceo_project_milestone`, `ceo_project_cost`, `ceo_project_task`, `ceo_task_issue` |
 | `GET /projects/crm` | `ceo_project_crm` |

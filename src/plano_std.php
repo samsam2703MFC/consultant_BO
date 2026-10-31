@@ -656,9 +656,10 @@ function psVentesJour(string $sid, string $j, int &$cout, int $budget): array
 {
     $c = setting('svP' . $sid . ':' . $j);
     if (!is_array($c) || !isset($c['p']) || !is_array($c['p'])) { return ['etat' => 'nonLu', 'u' => [], 'h' => [], 'total' => 0.0]; }
-    $pb = $c['pb'] ?? null;
-    if (!is_array($pb) && function_exists('svProduitsB2b') && $cout < $budget) {
-        $pb = svProduitsB2b((int) $sid, $j, $cout, $budget);
+    // Les pièces pro des seuls clients à TVA valide (11/10/2026) ; un relevé sans `pbc` les range client par client si le budget le permet.
+    $pb = function_exists('svPbValide') ? svPbValide((int) $sid, $c) : ($c['pb'] ?? null);
+    if ((!is_array($pb) || !isset($c['pbc'])) && function_exists('svProduitsB2b') && $cout < $budget) {
+        $pb = svProduitsB2b((int) $sid, $j, $cout, $budget) ?? $pb;
     }
     $u = []; $h = [];
     foreach ($c['p'] as $heure => $lst) {

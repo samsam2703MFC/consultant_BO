@@ -116,6 +116,8 @@ function ensureRapports(): void
         rapVentesSemer();
     rapAfficheSemer();
     if (function_exists('sqRapportSemer')) { sqRapportSemer(); }
+    if (function_exists('cqMailSemer')) { cqMailSemer(); }
+    if (function_exists('psSemer')) { psSemer(); }
         return;
     }
     // Les cinq rapports proposés et validés — modifiables ensuite à l'écran.
@@ -139,6 +141,8 @@ function ensureRapports(): void
     rapVentesSemer();
     rapAfficheSemer();
     if (function_exists('sqRapportSemer')) { sqRapportSemer(); }
+    if (function_exists('cqMailSemer')) { cqMailSemer(); }
+    if (function_exists('psSemer')) { psSemer(); }
 }
 
 /**
@@ -1064,10 +1068,10 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             // la Table est mensuel ; la heatmap, elle, veut la semaine.
             try {
                 $joursT = array_reverse(array_map(fn ($r2) => (string) $r2['jour'],
-                    Db::rows('SELECT jour FROM ceo_tache_jour_etat ORDER BY jour DESC LIMIT 7')));
+                    Db::rows('SELECT jour FROM con_tache_jour_etat ORDER BY jour DESC LIMIT 7')));
                 if ($joursT !== []) {
                     $gT = [];
-                    foreach (Db::rows('SELECT jour, id_shop, SUM(fait) f, COUNT(*) t FROM ceo_tache_jour
+                    foreach (Db::rows('SELECT jour, id_shop, SUM(fait) f, COUNT(*) t FROM con_tache_jour
                                        WHERE jour >= ? GROUP BY jour, id_shop', [$joursT[0]]) as $r2) {
                         $gT[(string) $r2['id_shop']][(string) $r2['jour']] = ['f' => (int) $r2['f'], 't' => (int) $r2['t']];
                     }
@@ -2213,6 +2217,9 @@ function wr_rapport_generer(int $id): array
     $rep = Db::row('SELECT * FROM ceo_rapport WHERE id = ?', [$id]);
     if ($rep === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
     if ((string) $rep['code'] === 'target-vente-cloture') { return ['ok' => true] + venteClotureRun($rep, ''); }
+    // Le contrôle qualité : l'aperçu de l'e-mail d'un magasin sans photo à cette heure, rien ne part.
+    if ((string) $rep['code'] === 'cq-non-realise' && function_exists('cqMailDistribuer')) { return ['ok' => true] + cqMailDistribuer($rep, true); }
+    if ((string) $rep['code'] === 'pointages-suspects' && function_exists('psDistribuer')) { return ['ok' => true] + psDistribuer($rep, true); }
     if ((string) $rep['code'] === 'affiche-vente-mois') {
         // L'affiche n'a pas de « génération » à blanc : générer, c'est servir
         // les magasins dont le mail est actif — comme au 1er du mois.
@@ -2231,6 +2238,12 @@ function wr_rapport_envoyer(int $id): array
     }
     if ((string) $rep['code'] === 'affiche-vente-mois') {
         return ['ok' => true, 'mode' => 'par-magasin'] + ventesAfficheDistribuer($rep);
+    }
+    if ((string) $rep['code'] === 'cq-non-realise' && function_exists('cqMailDistribuer')) {
+        return ['ok' => true, 'mode' => 'par-magasin'] + cqMailDistribuer($rep);
+    }
+    if ((string) $rep['code'] === 'pointages-suspects' && function_exists('psDistribuer')) {
+        return ['ok' => true, 'mode' => 'par-magasin'] + psDistribuer($rep);
     }
     if (($rep['envoi_mode'] ?? 'groupe') === 'par-magasin') {
         return ['ok' => true, 'mode' => 'par-magasin'] + rapportDistribuer($rep);
@@ -2292,6 +2305,19 @@ function ep_rapports_cron(): array
                 || ((string) $rep['frequence'] === 'mensuel' && (int) $rep['jour'] === $dom && (int) $rep['heure'] === $h);
         }
         if (!$du) { continue; }
+        // Le contrôle qualité de 19:00 tient son propre registre (un magasin servi une fois par jour) :
+        // un envoi à la main dans l'après-midi ne doit pas éteindre celui du soir.
+        if ((string) $rep['code'] === 'cq-non-realise' && function_exists('cqMailDistribuer')) {
+            $bilan = cqMailDistribuer($rep);
+            $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'] ?? null, 'statut' => 'distribue', 'envoi' => $bilan['resume'] ?? ''];
+            continue;
+        }
+        // Les pointages suspects de fin de journée : même registre propre (pointages_mail.php).
+        if ((string) $rep['code'] === 'pointages-suspects' && function_exists('psDistribuer')) {
+            $bilan = psDistribuer($rep);
+            $faits[] = ['rapport' => $rep['nom'], 'runId' => $bilan['runId'] ?? null, 'statut' => 'distribue', 'envoi' => $bilan['resume'] ?? ''];
+            continue;
+        }
         $deja = Db::row('SELECT id FROM ceo_rapport_run WHERE rapport_id = ? AND genere_le >= ? AND statut <> ?',
             [(int) $rep['id'], date('Y-m-d 00:00:00'), 'erreur']);
         if ($deja !== null) { continue; }
@@ -2354,11 +2380,15 @@ function ep_rapports_cron(): array
     $moissonH = 'module absent';
     try { if (function_exists('svCron')) { $moissonH = svCron(); } }
     catch (Throwable $eH) { $moissonH = 'échec — ' . $eH->getMessage(); }
+    // Les clients PWA des tickets (Récurrence des six leviers, 23/10/2026) : jours relevés jusqu'au 1er janvier, fiches lues.
+    $recurrence = 'module absent';
+    try { if (function_exists('rpCron')) { $recurrence = rpCron(); } }
+    catch (Throwable $eRp) { $recurrence = 'échec — ' . $eRp->getMessage(); }
     // Le Résultat d'aujourd'hui se recalcule au même battement : le premier écran du matin le trouve prêt.
     $resultat = 'module absent';
     try { if (function_exists('exPrechauffer')) { $resultat = exPrechauffer(); } }
     catch (Throwable $eR) { $resultat = 'échec — ' . $eR->getMessage(); }
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'resultat' => $resultat];
+    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'recurrence' => $recurrence, 'resultat' => $resultat];
 }
 
 /**
@@ -2554,7 +2584,8 @@ function rapPdfPiedHtml(array $meta): string
     $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
     $F = "font-family:Helvetica,Arial,sans-serif";
     $logo = rapLogoDataUri();
-    $dates = 'Généré le ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
+    // `genereLib` : le libellé dans la langue du document (le plan d'expansion sort aussi en néerlandais).
+    $dates = $e($meta['genereLib'] ?? 'Généré le') . ' ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
         . (($meta['envoye'] ?? '') !== '' ? ' · envoyé le ' . $e($meta['envoye']) : '');
     // Un rapport composé porte souvent le magasin DANS son nom (« … —
     // Gosselies ») : le pied l'écrivait alors deux fois. Le magasin reste à

@@ -18,6 +18,16 @@
   --la-rubis:#8D1D2C;--la-rubis-fonce:#6E1622;--la-abricot:#F2C9A0;--la-beige:#EAE4DC;--la-beige-doux:#F4EFE8;
   --la-blanc:#FFFFFF;--la-encre:#222222;--la-muet:#666666;--la-trait:rgba(34,34,34,.10);--la-trait2:rgba(34,34,34,.18);
   --la-ok:#2d7a3e;--la-att:#D97706;--la-ko:#C0182B;
+  /* Les primes (14/10/2026), d'après le design system (assets/ds/global.css) : l'ambre des collections pour « en tête »,
+     l'abricot et le brun pop-up pour les types, la palette packaging pour les avatars, les rayons et les ombres. */
+  --la-ok-doux:#E4F3E8;--la-or:#C17A2A;--la-or-doux:#FAC775;--la-or-encre:#6B3D0A;--la-abricot-encre:#6B4420;--la-brun:#78554B;
+  --la-gris:#8C857C;--la-gris-doux:#ECE7E0;--la-gris-trait:#DDD6CC;--la-voile:rgba(255,255,255,.2);
+  --la-teinte-1:#E8964B;--la-teinte-2:#3B3468;--la-teinte-3:#6E3B5C;--la-teinte-4:#A8C47A;--la-teinte-5:#D9A441;--la-teinte-6:#C96A6E;--la-teinte-7:#5C3A6E;--la-teinte-8:#9C6B2F;
+  /* Les séries des graphiques (16/10/2026) : moi, mon magasin, le réseau. Trois teintes distinctes pour les
+     daltoniens et en niveaux de gris (vérifiées), le rubis du design system pour « moi ». */
+  --la-serie-moi:#9A2433;--la-serie-mag:#C17A2A;--la-serie-res:#3B6DB3;
+  --radius-sm:6px;--radius-md:8px;--radius-lg:12px;--radius-xl:18px;--radius-pill:999px;
+  --la-ombre:0 6px 18px rgba(50,30,20,.05);--la-ombre-rubis:0 14px 30px rgba(141,29,44,.25);
   --font-ui:'Gotham',system-ui,-apple-system,'Segoe UI',sans-serif;--font-display:'Vank','Gotham',system-ui,sans-serif;
   --bs-body-font-family:var(--font-ui);--bs-body-color:var(--la-encre);--bs-body-bg:var(--la-beige);
   --bs-primary:var(--la-rubis);--bs-primary-rgb:141,29,44;--bs-link-color:var(--la-rubis);--bs-link-hover-color:var(--la-rubis-fonce);

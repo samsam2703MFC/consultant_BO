@@ -1,0 +1,38 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Moje zadania{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Moje zadania</h3>
+            <p class="text-subtitle text-muted">
+                {% if member and member.position_name %}{{ member.position_name }} · {{ 'now'|day_pl }}{% else %}{{ 'now'|day_pl }}{% endif %}
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+        <a class="btn btn-sm btn-outline-primary" href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły</a>
+        {% if counts %}
+        <div class="at-task-counts">
+            <span class="badge bg-info">do zrobienia {{ counts.open }}</span>
+            <span class="badge bg-success">zrobione {{ counts.done }}</span>
+            {% if counts.overdue %}<span class="badge bg-danger">zaległe {{ counts.overdue }}</span>{% endif %}
+        </div>
+        {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-org">
+    {% if not member or not member.id_position %}
+        <div class="card"><div class="card-body">
+            <p class="at-empty mb-2">Nie masz jeszcze przypisanego stanowiska, więc nie ma zadań do pokazania.</p>
+            <a class="btn btn-primary" href="{{ root }}/organization/positions">Funkcje i zadania</a>
+        </div></div>
+    {% else %}
+        {% include 'page_components/ajax_helpers.twig' %}
+        {% include 'organization/_board.twig' %}
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Stan wysyłek{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3><i class="bi bi-send-exclamation"></i> Stan wysyłek</h3>
+            <p class="text-subtitle text-muted">E-maile do klientów, wysyłki do sklepów franczyzy, e-maile automatyczne i monitoring : co nie wyszło po wszystkich próbach
+                i co czeka w kolejce dłużej niż {{ stuck_minutes }} min. « Ponów » daje jednej pozycji jeszcze jedną próbę (wysyła zadanie planowane, nie ta strona) ;
+                « Rozwiązane » zdejmuje błąd z listy z podanym powodem.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.ss-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+.ss-tile{display:block;padding:12px 14px;border:1px solid var(--at-line);border-radius:var(--at-radius);background:var(--at-surface);color:var(--at-text)}
+.ss-tile:hover{border-color:var(--at-primary)}
+.ss-tile.is-on{border-color:var(--at-primary);box-shadow:0 0 0 1px var(--at-primary)}
+.ss-tile-head{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:600}
+.ss-tile-nums{display:flex;gap:14px;margin:8px 0 4px;font-size:13px}
+.ss-tile-nums strong{font-size:20px;font-weight:600;margin-right:3px}
+.ss-err{color:var(--at-danger)}.ss-wait{color:var(--at-warning)}
+.ss-sub{font-size:12px;color:var(--at-muted)}
+.ss-table{width:100%;border-collapse:collapse;font-size:13px}
+.ss-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted);border-bottom:1px solid var(--at-line);padding:8px 10px;text-align:left;white-space:nowrap}
+.ss-table td{border-bottom:1px solid var(--at-line);padding:9px 10px;vertical-align:top}
+.ss-table tr.is-resolved td{color:var(--at-muted)}
+.ss-error{font-family:var(--bs-font-monospace);font-size:11.5px;color:var(--at-danger);word-break:break-word;max-width:420px}
+.ss-actions{display:flex;flex-direction:column;gap:6px;min-width:170px}
+.ss-resolve{display:flex;gap:6px}
+.ss-resolve[hidden]{display:none}
+.ss-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 12px}
+</style>
+<section class="section">
+    <div class="ss-tiles">
+        {% for key, t in tiles %}
+            <a class="ss-tile {{ source == key ? 'is-on' }}" href="{{ root }}/communication/outbox?filter={{ filter }}&days={{ days }}{{ source == key ? '' : '&source=' ~ key }}">
+                <span class="ss-tile-head"><i class="bi {{ t.icon }}"></i> {{ t.label }}</span>
+                <span class="ss-tile-nums">
+                    <span class="{{ t.errors ? 'ss-err' }}"><strong>{{ t.errors }}</strong>błąd</span>
+                    <span class="{{ t.stuck ? 'ss-wait' }}"><strong>{{ t.stuck }}</strong>czeka</span>
+                    {% if t.resolved %}<span class="ss-sub"><strong>{{ t.resolved }}</strong>rozwiązane</span>{% endif %}
+                </span>
+                <span class="ss-sub">ostatnia udana : {{ t.last_success ? t.last_success|date('d.m.Y H:i') : 'brak' }}</span>
+            </a>
+        {% endfor %}
+    </div>
+
+    <div class="ss-bar">
+        <div class="at-pipe-filters" role="navigation" aria-label="Stan">
+            {% for code, label in filters|merge({'all': 'Wszystkie'}) %}
+                <a class="at-pipe-filter {{ filter == code ? 'active' }}" href="{{ root }}/communication/outbox?filter={{ code }}&days={{ days }}{{ source ? '&source=' ~ source }}">{{ label }} <span class="at-pipe-count">{{ counts[code] }}</span></a>
+            {% endfor %}
+        </div>
+        <div class="at-chips">
+            {% for d, label in {(lookback): 'ostatnie ' ~ lookback ~ ' dni', 0: 'od początku'} %}
+                <a class="at-chip {{ days == d ? 'is-used' }}" href="{{ root }}/communication/outbox?filter={{ filter }}&days={{ d }}{{ source ? '&source=' ~ source }}">{{ label }}</a>
+            {% endfor %}
+            {% if source %}<a class="at-chip" href="{{ root }}/communication/outbox?filter={{ filter }}&days={{ days }}"><i class="bi bi-x"></i> {{ sources[source].label }}</a>{% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body table-responsive">
+            {% if items %}
+            <table class="ss-table" data-at-table data-at-table-size="50">
+                <thead><tr><th>Ostatnio</th><th>Kolejka</th><th>Co</th><th>Klient</th><th>Błąd</th><th>Stan</th><th></th></tr></thead>
+                <tbody>
+                {% for i in items %}
+                    <tr data-source="{{ i.source }}" data-id="{{ i.id }}" class="{{ i.state == 'resolved' ? 'is-resolved' }}">
+                        <td class="text-nowrap">{{ i.last_at|date('d.m.Y H:i') }}<div class="ss-sub">#{{ i.id }}</div></td>
+                        <td><i class="bi {{ i.icon }}"></i> {{ i.source_label }}</td>
+                        <td>{{ i.kind_label }}<div class="ss-sub">{{ i.what }}</div></td>
+                        <td>{% if i.customer_id %}<a href="{{ root }}/clients/{{ i.customer_id }}/edit">{{ i.customer }}</a>{% else %}{{ i.customer ?? '—' }}{% endif %}
+                            {% if i.recipient %}<div class="ss-sub">{{ i.recipient }}</div>{% endif %}</td>
+                        <td><div class="ss-error">{{ i.error ?: '—' }}</div>{% if i.attempts is not null %}<div class="ss-sub">{{ i.attempts|plural_pl('próba', 'próby', 'prób') }}</div>{% endif %}</td>
+                        <td>
+                            {% if i.state == 'error' %}<span class="at-pill at-pill-danger">Błąd</span>
+                            {% elseif i.state == 'stuck' %}<span class="at-pill at-pill-warn">Czeka {{ i.waiting_minutes >= 2880 ? (i.waiting_minutes // 1440) ~ ' dni' : (i.waiting_minutes >= 120 ? (i.waiting_minutes // 60) ~ ' h' : i.waiting_minutes ~ ' min') }}</span>
+                            {% else %}<span class="at-pill at-pill-muted">Rozwiązane</span>{% endif %}
+                            {% if i.last_action %}<div class="ss-sub">{{ i.last_action.action == 'retry' ? 'ponowiono' : 'rozwiązane' }} {{ i.last_action.at|date('d.m H:i') }}{{ i.last_action.user ? ' · ' ~ i.last_action.user }}</div>
+                                {% if i.last_action.reason %}<div class="ss-sub">« {{ i.last_action.reason }} »</div>{% endif %}{% endif %}
+                        </td>
+                        <td>
+                            <div class="ss-actions">
+                                {% if i.can_retry %}<button type="button" class="btn btn-sm btn-primary" data-retry><i class="bi bi-arrow-repeat"></i> Ponów</button>{% endif %}
+                                {% if i.can_resolve %}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-resolve-open><i class="bi bi-check2"></i> Rozwiązane…</button>
+                                    <form class="ss-resolve" data-resolve hidden>
+                                        <input class="form-control form-control-sm" name="reason" placeholder="powód (np. wysłane ręcznie)" maxlength="500" required>
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">OK</button>
+                                    </form>
+                                {% endif %}
+                                {% if i.url %}<a class="at-link" href="{{ root }}{{ i.url }}">Otwórz źródło</a>{% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="at-empty"><i class="bi bi-check-circle text-success"></i> Nic do obsłużenia{{ source ? ' w tej kolejce' }}{{ days ? ' z ostatnich ' ~ days ~ ' dni' }}.</p>
+            {% endif %}
+            <p class="ss-sub mt-2 mb-0">Wysyła zawsze zadanie planowane danej kolejki ({% for s in sources %}{{ s.worker }}{{ not loop.last ? ', ' }}{% endfor %}).
+                Na serwerze testowym e-maile są tylko zapisywane, a dane dostępowe sklepów są wyczyszczone.</p>
+        </div>
+    </div>
+</section>
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(function () {
+    const reload = (res) => { at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd')); if (res.ok) setTimeout(() => location.reload(), 500); return res; };
+    const url = (el, what) => { const tr = el.closest('tr[data-source]'); return '/ajax/communication/outbox/' + tr.dataset.source + '/' + tr.dataset.id + '/' + what; };
+    document.querySelectorAll('[data-retry]').forEach(b => b.addEventListener('click', () => {
+        if (!confirm('Ponowić tę jedną pozycję ? Zadanie planowane spróbuje jeszcze raz przy najbliższym przebiegu.')) return;
+        b.disabled = true;
+        at.send(url(b, 'retry'), 'POST', {}).then(reload).then(res => { if (!res.ok) b.disabled = false; });
+    }));
+    document.querySelectorAll('[data-resolve-open]').forEach(b => b.addEventListener('click', () => {
+        const form = b.parentElement.querySelector('[data-resolve]');
+        form.hidden = !form.hidden;
+        if (!form.hidden) form.reason.focus();
+    }));
+    document.querySelectorAll('[data-resolve]').forEach(form => form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button');
+        btn.disabled = true;
+        at.send(url(form, 'resolve'), 'POST', {reason: form.reason.value}).then(reload).then(res => { if (!res.ok) btn.disabled = false; });
+    }));
+})();
+</script>
+{% endblock %}

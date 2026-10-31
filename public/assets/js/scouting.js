@@ -17,6 +17,7 @@
  */
 import { API_BASE } from './api.js';
 import * as T from './scouting-tpl.js';
+import { planTextes, LANGUES } from './scouting-plan-i18n.js';
 
 const PROV = [
   { code: 'BRU', name: 'Bruxelles-Capitale', reg: 'Bruxelles' },
@@ -168,7 +169,8 @@ const ISO_URL = 'https://valhalla1.openstreetmap.de/isochrone';
 const MATRICE_URL = 'https://valhalla1.openstreetmap.de/sources_to_targets';
 // « Atelier by Max & Sandra - Gosselies » → « magasin de Gosselies » : dans
 // les tableaux du plan, c'est la ville qui compte, et la place est comptée.
-const nomMagasin = n => { const m = /\s[-–—]\s([^-–—]+)$/.exec(n || ''); return 'magasin de ' + (m ? m[1].trim() : (n || '').replace(/^Atelier by\s*/i, '') || 'réseau'); };
+const villeMagasin = n => { const m = /\s[-–—]\s([^-–—]+)$/.exec(n || ''); return m ? m[1].trim() : (n || '').replace(/^Atelier by\s*/i, ''); };
+const nomMagasin = n => 'magasin de ' + (villeMagasin(n) || 'réseau');
 const ISO_CHOIX = [['auto10', '10 min en voiture'], ['auto15', '15 min en voiture'], ['auto20', '20 min en voiture'], ['pedestrian15', '15 min à pied']];
 const LEAFLET_DIR = 'assets/vendor/leaflet/';
 const GRID_URL = 'assets/data/population_grid_2021.json';   // grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)
@@ -241,8 +243,12 @@ const TIP_CONC = {
   'Force': 'Force du concurrent, 0 à 100 % : (note − 3) ÷ 2 avec une note ; sinon signaux OSM : 0,40 + 0,25 enseigne ou chaîne + 0,10 site web + 0,10 horaires + 0,05 pâtisserie.'
 };
 
-const fmtInt = n => Math.round(n).toLocaleString('fr-BE');
-const fmtEur = n => Math.round(n).toLocaleString('fr-BE') + ' €';
+// La locale des nombres et des dates : le français de l'écran, le néerlandais
+// le temps de composer un dossier en NL — la forme du plan d'expansion
+// (scouting-plan-i18n.js) : « € 1.379.045 » et « 15,6% » au lieu de « 1 379 045 € » et « 15,6 % ».
+let LOC = 'fr-BE';
+const fmtInt = n => Math.round(n).toLocaleString(LOC);
+const fmtEur = n => LOC === 'nl-BE' ? '€ ' + fmtInt(n) : fmtInt(n) + ' €';
 const dist = (a, b, c, d) => {
   const R = 6371, p = Math.PI / 180;
   const x = (c - a) * p, y = (d - b) * p * Math.cos((a + c) / 2 * p);
@@ -298,7 +304,33 @@ const merc = (lat, lng, z) => {
 };
 const slugDe = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'zone';
 const nomCourt = nom => String(nom || '').replace(/^L['’]?\s*Atelier by\s*-?\s*/i, '').replace(/^Atelier by\s*-?\s*/i, '') || String(nom || '');
-const pct1 = v => (v * 100).toFixed(1).replace('.', ',') + ' %';
+const pct1 = v => (v * 100).toFixed(1).replace('.', ',') + (LOC === 'nl-BE' ? '%' : ' %');
+// Le dossier d'implantation en néerlandais : ce que l'écran nomme en français
+// et que le dossier reprend — les genres de l'étude locale (OpenStreetMap) et la
+// taille des concurrents. Provinces et arrondissements : scouting-plan-i18n.js.
+const NL_GENRE = {
+  'supermarché': 'supermarkt', 'supérette': 'buurtsuper', 'centre commercial': 'winkelcentrum', 'grand magasin': 'warenhuis', 'torréfacteur / café': 'koffiebranderij',
+  confiserie: 'snoepwinkel', 'épicerie fine': 'delicatessenzaak', 'salon de thé': 'theesalon', 'surgelés': 'diepvrieswinkel', 'coffee shop': 'koffiebar',
+  'café / salon de thé': 'café / theesalon', sandwicherie: 'broodjeszaak', snack: 'snackbar',
+  'école maternelle': 'kleuterschool', 'crèche': 'kinderdagverblijf', 'enseignement supérieur': 'hoger onderwijs', 'école': 'school',
+  'école primaire': 'lagere school', 'école secondaire': 'secundaire school', 'école supérieur': 'hoger onderwijs',
+  'hôpital': 'ziekenhuis', 'clinique / polyclinique': 'kliniek / polikliniek', 'maison de repos': 'woonzorgcentrum', 'service social': 'sociale dienst',
+  'maison communale': 'gemeentehuis', 'marché': 'markt', 'station-service': 'tankstation', gare: 'station', 'arrêt de train': 'treinhalte',
+  'centre sportif': 'sportcentrum', stade: 'stadion', piscine: 'zwembad', sport: 'sport', administration: 'administratie',
+  industriel: 'industrieel', commercial: 'commercieel', commerces: 'winkels', 'activité': 'bedrijvigheid', mixte: 'gemengd', parcelles: 'percelen'
+};
+const NL_NIVEAU = { maternelle: 'kleuter', primaire: 'lager', secondaire: 'secundair', 'supérieur': 'hoger' };
+const NL_TAILLE = { 'très grande': 'zeer groot', grande: 'groot', moyenne: 'middelgroot', petite: 'klein' };
+// « école primaire et secondaire » → « school (lager + secundair) »
+const genreNl = g => NL_GENRE[g] || (/^école .+ et /.test(g) ? 'school (' + g.slice(6).split(' et ').map(n => NL_NIVEAU[n] || n).join(' + ') + ')' : g);
+// Un lieu sans nom porte son genre (« Supermarché », « École sans nom ») : il se traduit avec lui.
+const nomLieuNl = (nom, genre) => {
+  const maj = v => v.charAt(0).toUpperCase() + v.slice(1), G = maj(genre || '');
+  if (genre && nom === G) return maj(genreNl(genre));
+  if (genre && nom === G + ' sans nom') return maj(genreNl(genre)) + ' zonder naam';
+  const m = /^(\d+) petites zones sans nom \(moins de 2 ha\)$/.exec(nom);
+  return m ? m[1] + ' kleine naamloze zones (minder dan 2 ha)' : nom;
+};
 const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const medOf = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
 const pickParams = v => { const o = {}; PARAM_KEYS.forEach(k => { if (v && typeof v[k] === 'number' && isFinite(v[k])) o[k] = v[k]; });
@@ -558,6 +590,9 @@ export class Scouting {
       // Le dossier d'implantation : ouvert sur la fiche courante, avec la zone
       // retenue dont il vient (pour dire ce qui a changé depuis), et sa carte.
       dossier: false, dossierCand: null, dossierImg: '', dossierBusy: false,
+      // La langue du dossier, choisie avant de le télécharger : la page, la
+      // carte, le PDF, l'impression et le CSV la suivent.
+      dossierLang: 'fr',
       // Les points de comparaison ajoutés à la main, et le formulaire ouvert.
       references: [], refForm: null,
       // L'échelle de lecture (maille, commune, arrondissement) et les trois
@@ -577,6 +612,11 @@ export class Scouting {
       planRoute: true, planSel: null, planCalc: null,
       // Le CA annuel estimé minimum d'une ouverture du plan (0 = aucun).
       planCaMin: 0,
+      // La langue du document (fr / nl), la page affichée (« synthese » ou le
+      // code d'une province), la liste des provinces dépliée, les réglages en
+      // cours d'édition dans la modale (null = fermée) et les cartes des pages
+      // de province déjà assemblées.
+      planLang: 'fr', planOnglet: 'synthese', planProvOuvert: false, planReglages: null, planCartes: {}, planCartesBusy: '',
       // L'étude de marché locale du point du dossier (GET /scouting/etude,
       // ou Overpass depuis le navigateur en repli) : entreprises, zonings,
       // écoles, générateurs de flux, concurrence indirecte.
@@ -645,11 +685,13 @@ export class Scouting {
     if (['maille', 'commune', 'arrondissement'].includes(vue.echelle)) s.echelle = vue.echelle;
     if (THEMES.some(t => t[0] === vue.trio2 && t[0] !== 'aucun')) s.trio2 = vue.trio2;
     if (THEMES.some(t => t[0] === vue.trio3 && t[0] !== 'aucun')) s.trio3 = vue.trio3;
+    if (LANGUES.some(l => l[0] === vue.planLang)) s.planLang = vue.planLang;
     s.ratings = ls.get('ratings') || {};
     s.notes = ls.get('notes') || {};
     s.candidates = ls.get('cand') || [];
     s.pops = ls.get('pops') || {};
     s.references = ls.get('refs') || [];
+    if (ls.get('dossierLang') === 'nl') s.dossierLang = 'nl';
   }
 
   /* --- cycle de rendu ------------------------------------------------------- */
@@ -664,7 +706,7 @@ export class Scouting {
   setVue(patch){
     this.setState(patch);
     const s = this.state;
-    ls.set('vue', { theme: s.theme, themeOff: s.themeOff, plis: s.plis, iso: s.iso, echelle: s.echelle, trio2: s.trio2, trio3: s.trio3 });
+    ls.set('vue', { theme: s.theme, themeOff: s.themeOff, plis: s.plis, iso: s.iso, echelle: s.echelle, trio2: s.trio2, trio3: s.trio3, planLang: s.planLang });
   }
 
   render(){
@@ -836,7 +878,8 @@ export class Scouting {
     this._pulled = true;
     // Les magasins du réseau (position, CA réel) arrivent à part : la fiche
     // Google peut prendre quelques secondes la première fois.
-    apiGet('/scouting/reseau', 30000).then(r => { this.setState({ magasins: (r && r.magasins) || [], panier: (r && r.panier) || null }); }).catch(e => console.warn('[scouting] /scouting/reseau :', e.message));
+    // 60 s : le premier calcul du CA réel après six heures relit deux ans de P&L au panel
+    apiGet('/scouting/reseau', 60000).then(r => { this.setState({ magasins: (r && r.magasins) || [], panier: (r && r.panier) || null }); }).catch(e => console.warn('[scouting] /scouting/reseau :', e.message));
     if (!d) return;
     this._serverTiles = {};
     (d.tiles || []).forEach(t => { this._serverTiles[t.sector] = t; });
@@ -1450,7 +1493,7 @@ export class Scouting {
         const ca = hh * s.spend * emprise / (1 - s.passage / 100);
         const score = Math.max(0, Math.min(100, Math.round((hh / 14000) * 60 + emprise / eMax * 40)));
         const k = com.name + '|' + com.arr;
-        if (!best[k] || score > best[k].score) best[k] = { lat: lat, lng: lng, hh: hh, ca: ca, score: score, emprise: emprise, n: near.length, commune: com.name, arr: com.arr };
+        if (!best[k] || score > best[k].score) best[k] = { lat: lat, lng: lng, hh: hh, ca: ca, score: score, emprise: emprise, n: near.length, commune: com.name, nl: com.nl || com.name, arr: com.arr };
       }
     }
     return Object.keys(best).map(k => best[k]);
@@ -1727,11 +1770,11 @@ export class Scouting {
   dormantRaison(b){
     const rv = this.state.ratings[b.id];
     if (!rv || rv.manual) return '';
-    if (rv.statut === 'CLOSED_PERMANENTLY') return 'fermé selon Google';
-    if (rv.statut === 'CLOSED_TEMPORARILY') return 'fermé temporairement selon Google';
+    if (rv.statut === 'CLOSED_PERMANENTLY') return this.tr('fermé selon Google', 'gesloten volgens Google');
+    if (rv.statut === 'CLOSED_TEMPORARILY') return this.tr('fermé temporairement selon Google', 'tijdelijk gesloten volgens Google');
     if (rv.dernierAvis){
       const t = Date.parse(rv.dernierAvis);
-      if (t && Date.now() - t > 365 * 86400000) return 'dernier avis Google le ' + new Date(t).toLocaleDateString('fr-BE');
+      if (t && Date.now() - t > 365 * 86400000) return this.tr('dernier avis Google le ', 'laatste Google-review op ') + new Date(t).toLocaleDateString(LOC);
     }
     return '';
   }
@@ -1848,7 +1891,7 @@ export class Scouting {
         lat: lat, lng: lng, hh: hh, prim: prim, market: market, emprise: emprise, ca: ca,
         near: near, blocked: blocked, load: load, score: score,
         ecartes: this.ecartesAutour(lat, lng, R, null),
-        commune: cm ? cm.name : '—', arr: cm ? cm.arr : '—',
+        commune: cm ? cm.name : '—', communeNl: cm ? cm.nl || cm.name : '—', arr: cm ? cm.arr : '—',
         prov: cm ? (PROV.find(p => p.code === cm.prov) || {}).name : '—',
         cmHh: cm ? cm.hh : 0, cmEst: cm ? !!cm.est : false, cmPop: cm ? cm.pop : 0
       }
@@ -1997,28 +2040,101 @@ export class Scouting {
   // Le Top 5 par province, mis en plan : N zones par province, ce que chacune
   // peut dégager, le total pour le réseau, la carte des points. Deux clics :
   // le bouton, le PDF.
+  // Depuis le 21/10/2026 (demande de Sam) : les provinces se cochent dans une
+  // liste du plan lui-même, les réglages vivent dans une modale, chaque
+  // province a sa page (marché, concurrence, arrondissements, réseau), et le
+  // document sort en français ou en néerlandais.
   ouvrirPlan(){
-    this.setState({ plan: true, planImg: '', dossier: false, compare: false, reseau: false, view: 'map' });
+    this.setState({ plan: true, planImg: '', planOnglet: 'synthese', planProvOuvert: false, planReglages: null, dossier: false, compare: false, reseau: false, view: 'map' });
     this.carteStatiquePlan().then(uri => { if (this.state.plan) this.setState({ planImg: uri }); });
   }
 
-  fermerPlan(){ this._planCle = null; this.setState({ plan: false, planCalc: null }); }
+  fermerPlan(){ this._planCle = null; this.setState({ plan: false, planCalc: null, planProvOuvert: false, planReglages: null }); }
 
+  // Tout ce qui change la sélection : la carte du plan et celles des pages de
+  // province sont à refaire.
   setPlan(patch){
-    this.setState(patch);
+    this.setState(Object.assign({ planCartes: {} }, patch));
     this._planImgKey = null;
     this.carteStatiquePlan().then(uri => { if (this.state.plan) this.setState({ planImg: uri }); });
+    this.carteOnglet();
+  }
+
+  // Les provinces du plan sont celles de la carte (`prov`) : cocher ici coche
+  // là-bas, une seule sélection fait foi. Un arrondissement choisi hors des
+  // provinces restantes n'a plus de sens : on revient à « tous ».
+  planProvinces(patch){
+    const s = this.state, prov = Object.assign({}, s.prov, patch);
+    const arrOk = s.arr === 'all' || s.communes.some(c => c.arr === s.arr && prov[c.prov]);
+    const onglet = s.planOnglet !== 'synthese' && !prov[s.planOnglet] ? 'synthese' : s.planOnglet;
+    this.setPlan({ prov: prov, arr: arrOk ? s.arr : 'all', sel: null, planOnglet: onglet });
+  }
+
+  ongletPlan(k){
+    this._scroll['sc-plan'] = 0;
+    this.setState({ planOnglet: k, planProvOuvert: false });
+    this.carteOnglet();
+  }
+
+  // La carte de la page ouverte, si c'est une province et qu'elle manque.
+  carteOnglet(){
+    const k = this.state.planOnglet;
+    if (!this.state.plan || !k || k === 'synthese' || this.state.planCartes[k]) return;
+    this.carteProvince(k).then(uri => { if (this.state.plan && uri) this.setState({ planCartes: Object.assign({}, this.state.planCartes, { [k]: uri }) }); });
+  }
+
+  setLangPlan(l){ if (LANGUES.some(x => x[0] === l)) this.setVue({ planLang: l }); }
+
+  /* La modale des réglages : on édite une copie, rien ne bouge avant
+   * « Appliquer » — un plan par la route relance des centaines de trajets, il
+   * ne doit repartir qu'une fois. Les hypothèses du modèle (rayon, seuils,
+   * dépense, passage, surface, emprise) sont celles de toute la carte. */
+  ouvrirReglagesPlan(){
+    const s = this.state;
+    this.setState({ planProvOuvert: false, planReglages: {
+      N: Math.max(1, Math.min(10, s.planN || 5)), seuil: !!s.planSeuil, minScore: s.minScore, caMin: s.planCaMin > 0 ? s.planCaMin : '',
+      ecart: Math.max(0, +s.planEcart || 0), reseau: !!s.planReseau, route: s.planRoute !== false, lang: s.planLang,
+      radius: s.radius, weak: s.weak, thresh: s.thresh, spend: s.spend, passage: s.passage, surface: s.surface, empriseMax: s.empriseMax
+    } });
+  }
+
+  // Une case, une liste, un bouton radio : on redessine. Une saisie au clavier
+  // se garde sans redessiner — le champ ne doit pas être remplacé sous les
+  // doigts, ni le bouton « Appliquer » sous la souris.
+  reglagePlan(k, v, redessiner){
+    const r = this.state.planReglages;
+    if (!r) return;
+    if (redessiner) this.setState({ planReglages: Object.assign({}, r, { [k]: v }) });
+    else r[k] = v;
+  }
+
+  appliquerReglagesPlan(){
+    const s = this.state, r = s.planReglages;
+    if (!r) return;
+    const num = (v, d, lo, hi) => { const n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? d : Math.max(lo, Math.min(hi, n)); };
+    const modele = {
+      radius: num(r.radius, s.radius, 0.5, 5), thresh: num(r.thresh, s.thresh, 3.5, 5), weak: num(r.weak, s.weak, 0, 4.9),
+      spend: num(r.spend, s.spend, 1, 100000), passage: num(r.passage, s.passage, 0, 95), surface: num(r.surface, s.surface, 1, 100000),
+      empriseMax: num(r.empriseMax, s.empriseMax, 1, 100), minScore: Math.round(num(r.minScore, s.minScore, 0, 100))
+    };
+    // « pas un concurrent sous » reste sous « concurrent fort dès »
+    if (modele.weak >= modele.thresh) modele.weak = Math.max(0, +(modele.thresh - 0.1).toFixed(1));
+    const caMin = Math.max(0, parseInt(String(r.caMin).replace(/[^\d]/g, ''), 10) || 0);
+    this.setParam(modele);
+    if (r.lang !== s.planLang) this.setLangPlan(r.lang);
+    this.setPlan({ planReglages: null, planN: Math.max(1, Math.min(10, parseInt(r.N, 10) || 5)), planSeuil: !!r.seuil, planCaMin: caMin,
+      planEcart: Math.max(0, parseInt(r.ecart, 10) || 0), planReseau: !!r.reseau, planRoute: !!r.route });
   }
 
   // Ce qui entre dans la sélection du plan : les candidates au score, dans
   // tout le pays, et la clé qui dit si la sélection par la route est à jour.
   planSelection(){
     const s = this.state;
-    const N = Math.max(1, Math.min(5, s.planN || 5)), seuil = !!s.planSeuil;
+    const N = Math.max(1, Math.min(10, s.planN || 5)), seuil = !!s.planSeuil;
     const minutes = Math.max(0, +s.planEcart || 0), ecartKm = minutes * 45 / 60;
     const ouverts = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null)
-      .map(m => ({ lat: +m.lat, lng: +m.lng, nom: nomMagasin(m.nom || m.name || ''), fixe: true }));
-    const groupes = this.scanTop5(ecartKm > 0 || s.planCaMin > 0 ? 40 : 5);
+      .map(m => ({ lat: +m.lat, lng: +m.lng, nom: m.nom || m.name || '', fixe: true }));
+    const groupes = this.scanTop5(ecartKm > 0 || s.planCaMin > 0 ? Math.max(40, N * 8) : Math.max(5, N));
     const caMin = Math.max(0, +s.planCaMin || 0);
     const cands = [];
     groupes.forEach(g => g.zones.forEach(z => { if ((!seuil || z.score >= s.minScore) && (!caMin || z.ca >= caMin)) cands.push(Object.assign({ prov: g.prov, code: g.code }, z)); }));
@@ -2033,9 +2149,10 @@ export class Scouting {
 
   planDonnees(){
     const s = this.state, self = this;
+    const t = planTextes(s.planLang), f = t.f;
     const P = this.planSelection();
     const N = P.N, seuil = P.seuil, caMin = P.caMin, minutes = P.minutes, ecartKm = P.ecartKm, cut = P.cut, groupes = P.groupes;
-    const caMinTxt = caMin ? ' · CA ≥ ' + fmtEur(caMin) : '';
+    const caMinTxt = caMin ? ' · ' + t.caMin(f.eur(caMin)) : '';
     const fixes = s.planReseau ? P.ouverts : [];
     let retenues = [], ecartes = 0, ecartesProv = {}, temps = {}, sel = null, enCours = false;
     if (P.route){
@@ -2058,58 +2175,245 @@ export class Scouting {
         retenues.push(z);
       });
     }
-    const de = n => /^magasin /.test(n) ? 'du ' + n : (/^[aeiouyàâéèêëîïôûùh]/i.test(n) ? 'd’' : 'de ') + n;
+    // le voisin d'une zone : un magasin du réseau se nomme par sa ville
+    const deNom = v => v.fixe ? t.duMagasin(villeMagasin(v.nom)) : t.de(self.nomCommune(v.nom, t));
+    // La densité de toute la sélection, pour situer chaque province.
+    const stats = {};
+    let selHh = 0, selN = 0;
+    groupes.forEach(g => { const st = self.provinceStats(g.code); stats[g.code] = st; selHh += st.hh; selN += st.n; });
+    const selDens = selN ? selHh / selN : null;
     const provinces = [], tous = [];
     let total = 0, hhTot = 0, k = 0;
     groupes.forEach(g => {
+      const P0 = PROV.find(p => p.code === g.code) || { code: g.code, name: g.prov, reg: '' };
+      const nomP = t.province(P0);
       const zones = retenues.filter(z => z.code === g.code);
       const lignes = zones.map((z, i) => {
         const cc = self.concurrenceAu(z.lat, z.lng, s.radius);
         k++;
         const v = ecartKm > 0 ? self.voisinDe(z, retenues.concat(fixes), temps, cut, P.route) : null;
-        const voisinTxt = !(ecartKm > 0) ? '' : v ? (P.route ? 'à ' + Math.round(v.sec / 60) + ' min ' + de(v.nom) + (v.approx ? ' (estimé)' : '') : 'à ' + Math.round(v.km) + ' km ' + de(v.nom) + ' à vol d’oiseau') : (P.route ? 'rien à moins de ' + Math.round(cut) + ' km' : '');
-        return { rang: i + 1, num: k, commune: z.commune, arr: z.arr, prov: g.prov, score: z.score, hh: z.hh, n: z.n, forts: cc.forts, chaines: cc.chainesTxt,
+        const voisinTxt = !(ecartKm > 0) ? '' : v ? (P.route ? t.voisinRoute(Math.round(v.sec / 60), deNom(v), v.approx) : t.voisinVol(Math.round(v.km), deNom(v))) : (P.route ? t.rienAMoins(Math.round(cut)) : '');
+        return { rang: i + 1, num: k, commune: t.lang === 'nl' ? (z.nl || self.nomCommune(z.commune, t)) : z.commune, arr: t.arr(z.arr), arrFr: z.arr, prov: nomP, code: g.code, score: z.score, hh: z.hh, n: z.n, forts: cc.forts, chaines: cc.chainesTxt,
           emprise: z.emprise, ca: z.ca, m2: z.ca / s.surface, lat: z.lat, lng: z.lng, voisin: v, voisinTxt: voisinTxt, dossier: () => self.ouvrirDossierPoint(z.lat, z.lng) };
       });
       const sous = lignes.reduce((a, l) => a + l.ca, 0);
       total += sous; hhTot += lignes.reduce((a, l) => a + l.hh, 0);
-      const manque = ecartKm > 0 && lignes.length < N && ecartesProv[g.code] ? ' · ' + ecartesProv[g.code] + ' zone' + (ecartesProv[g.code] > 1 ? 's' : '') + ' écartée' + (ecartesProv[g.code] > 1 ? 's' : '') + ' pour proximité' : '';
-      provinces.push({ nom: g.prov, code: g.code, detail: fmtInt(g.communes) + ' communes · ' + fmtInt(g.shops) + ' commerces dans la sélection' + manque, lignes: lignes, sousTotal: sous });
+      const manque = ecartKm > 0 && lignes.length < N && ecartesProv[g.code] ? t.ecarteesProv(ecartesProv[g.code]) : '';
+      provinces.push({ nom: nomP, code: g.code, type: t.typeProv(P0), detail: t.detailProv(f.nf(g.communes), f.nf(g.shops)) + manque, lignes: lignes, sousTotal: sous,
+        page: self.provincePage(P0, lignes, stats[g.code], t, selDens) });
       lignes.forEach(l => tous.push(l));
     });
     const reseau = (s.magasins || []).filter(m => m.ouvert && m.caAnnuel);
     const caReseau = reseau.reduce((a, m) => a + m.caAnnuel, 0);
     const nProv = provinces.filter(p => p.lignes.length).length;
-    const R = s.radius.toFixed(1).replace('.', ',') + ' km';
-    let ecartTxt = 'sans écart minimum entre elles';
-    if (ecartKm > 0 && P.route) ecartTxt = 'à ' + minutes + ' min de voiture au moins les unes des autres' + (s.planReseau ? ' et des magasins ouverts' : '') + ' — minutes de route du service Valhalla sur OpenStreetMap, ' + fmtInt(sel ? sel.trajets : 0) + ' trajets calculés' + (sel && sel.approx ? ', ' + sel.approx + ' estimé' + (sel.approx > 1 ? 's' : '') + ' à vol d’oiseau faute de réponse' : '') + ' ; au-delà de ' + Math.round(cut) + ' km à vol d’oiseau, l’écart est acquis sans calcul';
-    else if (ecartKm > 0) ecartTxt = 'à ' + minutes + ' min de voiture au moins les unes des autres' + (s.planReseau ? ' et des magasins ouverts' : '') + ' (' + Math.round(ecartKm) + ' km à vol d’oiseau, à 45 km/h de moyenne)';
+    const R = f.km(s.radius);
+    let ecartTxt = t.sansEcart;
+    if (ecartKm > 0 && P.route) ecartTxt = t.ecartBase(minutes) + (s.planReseau ? t.etOuverts : '') + t.ecartRoute(f.nf(sel ? sel.trajets : 0), sel && sel.approx ? sel.approx : 0, Math.round(cut));
+    else if (ecartKm > 0) ecartTxt = t.ecartBase(minutes) + (s.planReseau ? t.etOuverts : '') + t.ecartVol(Math.round(ecartKm));
+    const H = t.hyp;
     return {
-      enCours: enCours, calc: s.planCalc, route: P.route, cut: cut,
-      titre: 'Plan d’expansion — ' + tous.length + ' ouverture' + (tous.length > 1 ? 's' : '') + ' dans ' + nProv + ' province' + (nProv > 1 ? 's' : ''),
-      date: new Date().toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' }),
+      t: t, lang: t.lang, enCours: enCours, calc: s.planCalc, route: P.route, cut: cut,
+      titre: t.titre(tous.length, nProv),
+      date: f.date(),
       N: N, seuil: seuil, minScore: s.minScore, caMin: caMin, caMinTxt: caMinTxt, minutes: minutes, ecartes: ecartes, ecartTxt: ecartTxt,
       total: total, hhTot: hhTot, nPts: tous.length, nProv: nProv, caReseau: caReseau, nReseau: reseau.length,
+      sousTitre: [t.parProvMax(N), seuil ? t.scoreMin(s.minScore) : t.sansScore].join(' · ') + caMinTxt + (minutes ? ' · ' + t.ecartCourt(minutes) : ''),
       resume: [
-        ['CA annuel estimé TTC, toutes ouvertures', fmtEur(total), fmtEur(total / 52) + ' par semaine'],
-        ['Ouvertures retenues', String(tous.length), N + ' par province au plus' + (seuil ? ', score ≥ ' + s.minScore : '') + caMinTxt + (ecartKm > 0 ? ' · ' + minutes + ' min entre elles' + (P.route ? ' par la route' : '') + (ecartes ? ' · ' + ecartes + ' écartée' + (ecartes > 1 ? 's' : '') + ' pour proximité' : '') : '')],
-        ['Ménages accessibles cumulés', fmtInt(hhTot), tous.length ? fmtInt(hhTot / tous.length) + ' par point en moyenne' : ''],
-        caReseau ? ['Le réseau aujourd’hui', fmtEur(caReseau), reseau.length + ' magasin' + (reseau.length > 1 ? 's' : '') + ' ouverts · le plan ajouterait + ' + Math.round(total / caReseau * 100) + ' %'] : ['CA moyen par ouverture', tous.length ? fmtEur(total / tous.length) : '—', 'sur ' + s.surface + ' m²']
+        [t.rCa, f.eur(total), t.parSemaine(f.eur(total / 52))],
+        [t.rOuv, String(tous.length), t.parProvMax(N) + (seuil ? ', ' + t.scoreMin(s.minScore) : '') + caMinTxt + (ecartKm > 0 ? ' · ' + t.entreElles(minutes) + (P.route ? t.parRoute : '') + (ecartes ? ' · ' + t.ecartees(ecartes) : '') : '')],
+        [t.rMen, f.nf(hhTot), tous.length ? t.parPoint(f.nf(hhTot / tous.length)) : ''],
+        caReseau ? [t.rRes, f.eur(caReseau), t.resAjout(reseau.length, Math.round(total / caReseau * 100))] : [t.rMoy, tous.length ? f.eur(total / tous.length) : '—', t.surM2(s.surface)]
       ],
       provinces: provinces,
+      // la synthèse : une ligne par province, de quoi les comparer d'un coup d'œil
+      parProvince: provinces.map(p => ({ nom: p.nom, code: p.code, nOuv: p.lignes.length, hh: p.page.hh, n: p.page.n, forts: p.page.forts,
+        perShop: p.page.perShop, nMags: p.page.reseau.length, ca: p.sousTotal, aller: () => self.ongletPlan(p.code) })),
+      selHh: selHh, selN: selN, selDens: selDens,
       classement: tous.slice().sort((a, b) => b.ca - a.ca).slice(0, 10),
-      carteNote: 'Les ronds verts numérotés : les zones retenues, dans l’ordre du plan. Les carrés noirs : les magasins du réseau déjà ouverts. Fond de carte © OpenStreetMap.',
-      methode: 'Chaque province cochée est balayée sur toute son emprise, à la maille d’un rayon ; en chaque point, les ménages du recensement dans ' + R + ', les concurrents et leur pression, l’emprise et le CA du modèle de la fiche. Une zone par commune, hors des rayons d’exclusion des concurrents forts, les ' + N + ' meilleures au score par province' + (seuil ? ', au-dessus du score ' + s.minScore : ' — sans score minimum, le score dit ce qu’elles valent') + (caMin ? ', au CA annuel estimé d’au moins ' + fmtEur(caMin) : '') + ', ' + ecartTxt + (ecartes ? ' ; ' + ecartes + ' zone' + (ecartes > 1 ? 's' : '') + ' mieux classée' + (ecartes > 1 ? 's' : '') + ' ' + (ecartes > 1 ? 'ont' : 'a') + ' cédé la place pour cause de proximité' : '') + '. Les CA s’additionnent comme si chaque ouverture était seule : deux zones voisines se partageraient une partie du marché.',
+      carteNote: t.carteNote,
+      methode: t.methode({ R: R, N: N, seuil: seuil, minScore: s.minScore, caMin: caMin ? f.eur(caMin) : '', ecartTxt: ecartTxt, ecartes: ecartes }),
       hypotheses: [
-        ['Dépense par ménage', fmtEur(s.spend) + ' / an'], ['Part du passage', s.passage + ' %'], ['Surface nette cible', s.surface + ' m²'],
-        ['Emprise', s.emprise > 0 ? 'imposée ' + s.emprise + ' %' : 'calculée, max ' + s.empriseMax + ' %'], ['Sensibilité à la concurrence', String(s.compK).replace('.', ',')],
-        ['Rayon', R], ['Concurrent fort dès', (+s.thresh).toFixed(1).replace('.', ',') + ' ★'], ['Score minimum', String(s.minScore)],
-        ['Écart entre ouvertures', ecartKm > 0 ? minutes + ' min de voiture' + (P.route ? ', temps de route' : ', ≈ ' + Math.round(ecartKm) + ' km') + (s.planReseau ? ', magasins ouverts compris' : '') : 'aucun'],
-        ['CA annuel minimum', caMin ? fmtEur(caMin) : 'aucun']
+        [H.depense, H.parAn(f.eur(s.spend))], [H.passage, f.pct(s.passage, 0)], [H.surface, s.surface + ' m²'],
+        [H.emprise, s.emprise > 0 ? H.imposee(f.pct(s.emprise, 0)) : H.calculee(f.pct(s.empriseMax, 0))], [H.compK, String(s.compK).replace('.', ',')],
+        [H.rayon, R], [H.weak, f.dec(s.weak, 1) + ' ★'], [H.thresh, f.dec(s.thresh, 1) + ' ★'], [H.minScore, String(s.minScore)],
+        [H.ecart, ecartKm > 0 ? H.ecartV(minutes, P.route, Math.round(ecartKm), s.planReseau) : H.aucun],
+        [H.caMin, caMin ? f.eur(caMin) : H.aucun]
       ],
-      sources: 'Commerces et communes : OpenStreetMap' + (self.osmDate() ? ', cache du serveur relu le ' + self.osmDate() : '') + ' · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)'
-        + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '') + (ecartKm > 0 && P.route ? ' · temps de route : Valhalla (FOSSGIS) sur OpenStreetMap' : '') + ' · CA réel du réseau : ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises, TTC) pour les mois sans P&L, douze derniers mois clos.'
+      sources: t.sources({ osm: self.osmDate(), google: self.googleOk(), route: ecartKm > 0 && P.route })
     };
+  }
+
+  /* ---------- la page d'une province du plan ---------- */
+  // Le nom d'une commune dans la langue du plan. Les secteurs OpenStreetMap
+  // portent les deux : `name` (le français s'il existe) et `nl` (le nom local —
+  // néerlandais en Flandre, français en Wallonie, bilingue à Bruxelles).
+  nomCommune(nom, t){
+    if (!nom || t.lang !== 'nl') return nom;
+    const cs = this.state.communes;
+    if (!this._nlNoms || this._nlNoms.n !== cs.length){
+      const m = {};
+      cs.forEach(c => { if (c.name && c.nl && !m[c.name]) m[c.name] = c.nl; });
+      this._nlNoms = { n: cs.length, m: m };
+    }
+    return this._nlNoms.m[nom] || nom;
+  }
+
+  // La province la plus proche d'un point : celle de la commune la plus proche.
+  provinceAu(lat, lng){
+    let cm = null, cd = 1e9;
+    this.state.communes.forEach(c => { const d = dist(lat, lng, c.lat, c.lng); if (d < cd){ cd = d; cm = c; } });
+    return cm ? cm.prov : null;
+  }
+
+  // Ce qu'une province contient, lu dans la sélection : son marché (ménages,
+  // population), sa concurrence (forts, chaînes, notes), ses arrondissements,
+  // les magasins du réseau qui y sont déjà. Les mêmes commerces que le plan —
+  // sans les dormants, aux filtres de la carte — pour que les chiffres d'une
+  // page se recoupent avec ceux du plan. Gardé tant que rien ne bouge : la
+  // page se redessine à chaque geste, le calcul ne doit pas la suivre.
+  provinceStats(code){
+    const s = this.state;
+    const base = [this._top5Key, this._rev, s.weak, s.thresh, s.spend, s.communes.length, (s.magasins || []).length, Object.keys(s.ratings).length, Object.keys(s.quals || {}).length].join('|');
+    if (!this._pst || this._pst.base !== base) this._pst = { base: base, shops: this.shops(), par: {} };
+    if (this._pst.par[code]) return this._pst.par[code];
+    const cs = s.communes.filter(c => c.prov === code);
+    const bs = this._pst.shops.filter(b => b.prov === code);
+    const w = s.weak, th = s.thresh;
+    const pop = cs.reduce((a, c) => a + (c.pop || 0), 0), hh = cs.reduce((a, c) => a + (c.hh || 0), 0);
+    const avis = b => { const rv = s.ratings[b.id]; return rv && rv.n ? +rv.n : 0; };
+    const notes = bs.map(b => this.rating(b)).filter(Boolean);
+    const forts = bs.filter(b => this.isStrong(b));
+    const chaines = bs.filter(b => this.estChaine(b));
+    // par arrondissement : communes et ménages d'un côté, commerces de l'autre
+    const parArr = {};
+    const arrDe = nom => parArr[nom] || (parArr[nom] = { arr: nom, communes: 0, hh: 0, pop: 0, n: 0, forts: 0, notes: [] });
+    cs.forEach(c => { const a = arrDe(c.arr || '—'); a.communes++; a.hh += c.hh || 0; a.pop += c.pop || 0; });
+    bs.forEach(b => { const a = arrDe(b.arr || '—'); a.n++; if (this.isStrong(b)) a.forts++; const r = this.rating(b); if (r) a.notes.push(r); });
+    const arrs = Object.keys(parArr).map(k => parArr[k]).filter(a => a.communes > 0)
+      .map(a => Object.assign(a, { avg: a.notes.length ? a.notes.reduce((x, y) => x + y, 0) / a.notes.length : null, perShop: a.n ? a.hh / a.n : null }))
+      .sort((a, b) => b.hh - a.hh);
+    const top = bs.map(b => ({ b: b, f: this.strength(b), n: avis(b), r: this.rating(b) }))
+      .sort((a, b) => (b.f - a.f) || (b.n - a.n) || ((b.r || 0) - (a.r || 0))).slice(0, 10);
+    const mags = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null && this.provinceAu(+m.lat, +m.lng) === code);
+    const out = {
+      code: code, communes: cs.length, pop: pop, hh: hh, n: bs.length, forts: forts.length, chaines: chaines.length,
+      marques: this.marquesDe(chaines),
+      avg: notes.length ? notes.reduce((a, b) => a + b, 0) / notes.length : null,
+      notes: { total: notes.length, non: bs.length - notes.length, sous: notes.filter(r => r < w).length, comptes: notes.filter(r => r >= w && r < th).length, forts: notes.filter(r => r >= th).length },
+      arrs: arrs, top: top, mags: mags,
+      // l'emprise de la province, pour sa carte
+      bb: cs.length ? boitePoly(cs.map(c => [c.lat, c.lng])) : null,
+      shops: bs
+    };
+    this._pst.par[code] = out;
+    return out;
+  }
+
+  // La page d'une province, mise en forme dans la langue du plan.
+  provincePage(P0, lignes, st, t, selDens){
+    const s = this.state, f = t.f;
+    const caOuv = lignes.reduce((a, l) => a + l.ca, 0);
+    const ouvArr = {};
+    lignes.forEach(l => { const a = ouvArr[l.arrFr] || (ouvArr[l.arrFr] = { n: 0, ca: 0 }); a.n++; a.ca += l.ca; });
+    const caMags = st.mags.reduce((a, m) => a + (m.caAnnuel || 0), 0);
+    const avecCa = st.mags.filter(m => m.caAnnuel);
+    // la période du CA réel : celle des magasins, si elle est commune
+    const du = avecCa.length ? avecCa.map(m => m.du).filter(Boolean).sort()[0] : '', au = avecCa.length ? avecCa.map(m => m.au).filter(Boolean).sort().pop() : '';
+    const periode = du && au ? t.periode(f.mois(du), f.mois(au)) : '';
+    const pctDe = (n, tot) => tot ? f.pct(100 * n / tot, 0) : '—';
+    const nb = st.n, wTxt = f.dec(s.weak, 1), thTxt = f.dec(s.thresh, 1);
+    return {
+      code: P0.code, nom: t.province(P0), type: t.typeProv(P0), nOuv: lignes.length, caOuv: caOuv,
+      hh: st.hh, n: st.n, forts: st.forts, perShop: st.n ? st.hh / st.n : null,
+      tuiles: [
+        [t.tMenages, f.nf(st.hh), t.tMenagesS(f.nf(st.pop), f.eur(st.hh * s.spend))],
+        [t.tConc, f.nf(st.n), t.tConcS(st.forts, st.chaines, st.avg ? f.dec(st.avg, 1) : '')],
+        [t.tDens, st.n ? f.nf(st.hh / st.n) : '—', t.tDensS(st.pop ? f.dec(st.n / (st.pop / 10000), 1) : '—', selDens ? f.nf(selDens) : '')],
+        st.mags.length ? [t.tRes, caMags ? f.eur(caMags) : '—', t.tResS(st.mags.length, periode)] : [t.tRes, t.tResVide, t.tResVideS]
+      ],
+      notes: [[t.notesNon, st.notes.non], [t.notesSous(wTxt), st.notes.sous], [t.notesComptes(wTxt, thTxt), st.notes.comptes], [t.notesForts(thTxt), st.notes.forts]]
+        .map(r => [r[0], f.nf(r[1]), pctDe(r[1], nb), nb ? r[1] / nb : 0]),
+      noteMoy: st.avg ? t.noteMoyenne(f.dec(st.avg, 1), st.notes.total) : '',
+      marques: st.marques.slice(0, 10).map(m => [m.nom, f.nf(m.n)]),
+      top: st.top.map((o, i) => [String(i + 1), o.b.name || '—', this.nomCommune(o.b.commune || '', t), o.r ? f.dec(o.r, 1) : '—', o.n ? f.nf(o.n) : '—', f.pct(o.f * 100, 0), this.estChaine(o.b) ? t.chaine : '', this.isStrong(o.b)]),
+      arrs: st.arrs.map(a => [t.arr(a.arr), f.nf(a.communes), f.nf(a.hh), f.nf(a.n), f.nf(a.forts), a.perShop ? f.nf(a.perShop) : '—', a.avg ? f.dec(a.avg, 1) : '—',
+        ouvArr[a.arr] ? String(ouvArr[a.arr].n) : '—', ouvArr[a.arr] ? f.eur(ouvArr[a.arr].ca) : '—']),
+      arrTot: [t.total, f.nf(st.communes), f.nf(st.hh), f.nf(st.n), f.nf(st.forts), st.n ? f.nf(st.hh / st.n) : '—', st.avg ? f.dec(st.avg, 1) : '—', String(lignes.length), lignes.length ? f.eur(caOuv) : '—'],
+      reseau: st.mags.map(m => [m.nom || '—', m.ville || '', m.caAnnuel ? f.eur(m.caAnnuel) : '—', m.du && m.au ? t.periode(f.mois(m.du), f.mois(m.au)) : '']),
+      carteNote: t.carteNoteProv
+    };
+  }
+
+  // Ce que l'écran du plan montre autour du document : la liste des
+  // provinces, le résumé des réglages, les onglets, la modale. L'outil reste
+  // en français ; seul le document suit la langue choisie.
+  planVue(){
+    const s = this.state, self = this, d = this.planDonnees();
+    const nl = planTextes('nl');
+    const REG = ['Bruxelles', 'Flandre', 'Wallonie'];
+    const cochees = PROV.filter(p => s.prov[p.code]);
+    const coche = (choix) => self.planProvinces(PROV.reduce((a, p) => { a[p.code] = !!choix(p); return a; }, {}));
+    const provSel = {
+      ouvert: !!s.planProvOuvert, n: cochees.length, total: PROV.length,
+      label: cochees.length === PROV.length ? 'toutes' : !cochees.length ? 'aucune' : cochees.length <= 2 ? cochees.map(p => p.name).join(', ') : cochees.length + ' sur ' + PROV.length,
+      communes: fmtInt(s.communes.filter(c => s.prov[c.prov]).length),
+      toggle: () => self.setState({ planProvOuvert: !s.planProvOuvert }),
+      fermer: () => self.setState({ planProvOuvert: false }),
+      raccourcis: [['Toutes', () => true], ['Aucune', () => false]].concat(REG.map(r => [r, p => p.reg === r]))
+        .map(([nom, choix]) => ({ nom: nom, on: PROV.every(p => !!choix(p) === !!s.prov[p.code]), go: () => coche(choix) })),
+      groupes: REG.map(r => ({ reg: r, items: PROV.filter(p => p.reg === r).map(p => ({
+        code: p.code, nom: p.name, nl: nl.province(p), on: !!s.prov[p.code],
+        detail: fmtInt(s.communes.filter(c => c.prov === p.code).length) + ' communes · ' + fmtInt(s.bakeries.filter(b => b.prov === p.code).length) + ' commerces',
+        toggle: () => self.planProvinces({ [p.code]: !s.prov[p.code] })
+      })) }))
+    };
+    const onglet = s.planOnglet !== 'synthese' && d.provinces.some(p => p.code === s.planOnglet) ? s.planOnglet : 'synthese';
+    const onglets = [{ k: 'synthese', nom: 'Synthèse', n: d.nPts, on: onglet === 'synthese', go: () => self.ongletPlan('synthese') }]
+      .concat(d.provinces.map(p => ({ k: p.code, nom: (PROV.find(x => x.code === p.code) || {}).name || p.nom, n: p.lignes.length, on: onglet === p.code, go: () => self.ongletPlan(p.code) })));
+    const pCour = onglet !== 'synthese' ? d.provinces.find(p => p.code === onglet) : null;
+    const etoiles = v => (+v).toFixed(1).replace('.', ',') + ' ★';
+    const resume = [
+      d.N + ' par province au plus',
+      d.seuil ? 'score ≥ ' + s.minScore : 'sans score minimum',
+      d.caMin ? 'CA ≥ ' + fmtEur(d.caMin) : 'sans CA minimum',
+      d.minutes ? d.minutes + ' min entre elles' + (s.planReseau ? ', magasins ouverts compris' : '') + (d.route ? ' · temps de route réels' : ' · à vol d’oiseau') : 'sans écart minimum',
+      'rayon ' + s.radius.toFixed(1).replace('.', ',') + ' km · concurrent dès ' + etoiles(s.weak) + ' · fort dès ' + etoiles(s.thresh)
+    ];
+    const R = s.planReglages;
+    const champ = (k, label, unite, step, tip, placeholder) => ({ id: 'sc-pr-' + k, k: k, label: label, unite: unite, step: step, tip: tip || '', placeholder: placeholder || '',
+      v: R && R[k] != null ? R[k] : '', set: e => self.reglagePlan(k, e.target.value, false) });
+    return Object.assign(d, {
+      img: s.planImg, busy: s.planBusy, cartesBusy: s.planCartesBusy, onglet: onglet, onglets: onglets,
+      cartes: s.planCartes, provSel: provSel, resumeReglages: resume,
+      arrFiltre: s.arr !== 'all' ? { nom: s.arr, retirer: () => self.setPlan({ arr: 'all' }) } : null,
+      aucuneProv: !cochees.length,
+      langues: LANGUES.map(([code, nom]) => ({ code: code, nom: nom, on: s.planLang === code, go: () => self.setLangPlan(code) })),
+      ouvrirReglages: () => self.ouvrirReglagesPlan(),
+      provCourante: pCour ? { nom: (PROV.find(x => x.code === pCour.code) || {}).name || pCour.nom, pdf: () => self.telechargerPlanPdf(pCour.code) } : null,
+      reglages: R ? {
+        nChoix: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => ({ value: String(n), label: n + ' par province' })), nVal: String(R.N),
+        setN: e => self.reglagePlan('N', parseInt(e.target.value, 10) || 5, true),
+        seuil: !!R.seuil, toggleSeuil: () => self.reglagePlan('seuil', !R.seuil, true),
+        ecartChoix: [[0, 'sans écart minimum'], [10, '10 min de voiture'], [15, '15 min de voiture'], [20, '20 min de voiture'], [30, '30 min de voiture'], [45, '45 min de voiture']].map(c => ({ value: String(c[0]), label: c[1] })),
+        ecartVal: String(R.ecart), setEcart: e => self.reglagePlan('ecart', parseInt(e.target.value, 10) || 0, true),
+        reseau: !!R.reseau, toggleReseau: () => self.reglagePlan('reseau', !R.reseau, true),
+        route: !!R.route, toggleRoute: () => self.reglagePlan('route', !R.route, true),
+        langues: LANGUES.map(([code, nom]) => ({ code: code, nom: nom, on: R.lang === code, go: () => self.reglagePlan('lang', code, true) })),
+        minScore: champ('minScore', 'au-dessus du score', '', 1, TIP_REGL.minScore),
+        caMin: champ('caMin', 'CA annuel estimé minimum', '€', 50000, 'Seules les zones dont le CA annuel estimé atteint ce montant entrent dans le plan. Vide : aucun minimum.', 'aucun minimum'),
+        modele: [
+          champ('radius', 'Rayon d’exclusion et d’évaluation', 'km', 0.1, TIP_REGL.radius),
+          champ('weak', 'Pas un concurrent sous', '★', 0.1, TIP_REGL.weak),
+          champ('thresh', 'Concurrent fort dès', '★', 0.1, TIP_REGL.thresh),
+          champ('spend', 'Dépense boulangerie par ménage', '€ / an', 1, TIP_HYP['Dépense boulangerie / ménage (€/an)']),
+          champ('passage', 'Part du passage', '%', 1, TIP_HYP['Part du passage (%)']),
+          champ('surface', 'Surface nette cible', 'm²', 10, TIP_HYP['Surface nette cible (m²)']),
+          champ('empriseMax', 'Emprise maximale du modèle', '%', 1, TIP_HYP['Emprise maximale du modèle (%)'])
+        ],
+        appliquer: () => self.appliquerReglagesPlan(), annuler: () => self.setState({ planReglages: null })
+      } : null,
+      fermer: () => self.fermerPlan(), pdf: () => self.telechargerPlanPdf(), csv: () => self.exporterPlanCsv(), imprimer: () => self.imprimerPlan()
+    });
   }
 
   /* ---------- l'écart entre ouvertures, en vraies minutes de route ---------- */
@@ -2182,8 +2486,9 @@ export class Scouting {
     if (run.trajets === 0 && run.echecs) this.notify('Le service de routage n’a pas répondu : les écarts sont estimés à vol d’oiseau (45 km/h)');
     else if (run.coupe) this.notify('Service de routage lent : au-delà de ' + run.appels + ' appels, les derniers écarts sont estimés à vol d’oiseau');
     this._planImgKey = null;
-    this.setState({ planCalc: null, planSel: { cle: P.cle, retenues: retenues, ecartes: ecartes, ecartesProv: ecartesProv, temps: temps, trajets: run.trajets, appels: run.appels, approx: run.approx, echecs: run.echecs, duree: Date.now() - run.t0 } });
+    this.setState({ planCalc: null, planCartes: {}, planSel: { cle: P.cle, retenues: retenues, ecartes: ecartes, ecartesProv: ecartesProv, temps: temps, trajets: run.trajets, appels: run.appels, approx: run.approx, echecs: run.echecs, duree: Date.now() - run.t0 } });
     this.carteStatiquePlan().then(uri => { if (this.state.plan) this.setState({ planImg: uri }); });
+    this.carteOnglet();
   }
 
   // Les secondes de route entre deux points, si on les a demandées ; sinon
@@ -2208,8 +2513,8 @@ export class Scouting {
         const x = z.lat.toFixed(4) + ',' + z.lng.toFixed(4), y = r.lat.toFixed(4) + ',' + r.lng.toFixed(4);
         const v = temps[x < y ? x + '|' + y : y + '|' + x];
         const sec = v !== undefined ? v : d / 45 * 3600;
-        if (!best || sec < best.sec) best = { nom: r.commune || r.nom, sec: sec, km: d, approx: v === undefined };
-      } else if (!best || d < best.km) best = { nom: r.commune || r.nom, km: d, sec: d / 45 * 3600, approx: true };
+        if (!best || sec < best.sec) best = { nom: r.commune || r.nom, fixe: !!r.fixe, sec: sec, km: d, approx: v === undefined };
+      } else if (!best || d < best.km) best = { nom: r.commune || r.nom, fixe: !!r.fixe, km: d, sec: d / 45 * 3600, approx: true };
     });
     return best;
   }
@@ -2260,21 +2565,12 @@ export class Scouting {
     return grille;
   }
 
-  // La carte du plan : le pays (ou l'emprise des points), les zones retenues
-  // numérotées, les magasins ouverts. Même assemblage de tuiles que le dossier.
-  carteStatiquePlan(){
-    const s = this.state, d = this.planDonnees();
-    if (d.enCours) return Promise.resolve('');
-    const pts = [];
-    d.provinces.forEach(p => p.lignes.forEach(l => pts.push(l)));
-    const mags = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null);
-    if (!pts.length && !mags.length) return Promise.resolve('');
-    const key = pts.map(l => l.lat.toFixed(4) + ',' + l.lng.toFixed(4)).join(';') + '|' + mags.length;
-    if (this._planImgKey === key && this._planImgP) return this._planImgP;
-    // Le pays entier tient au zoom 8 dans 740 × 540 : un cran de moins et la
-    // Belgique n'occupait que le tiers de l'image.
-    const W = 740, H = 540;
-    const bb = boitePoly(pts.map(l => [l.lat, l.lng]).concat(mags.map(m => [+m.lat, +m.lng])));
+  // Une carte statique : les tuiles OpenStreetMap au zoom qui fait tenir
+  // l'emprise, un voile clair, puis les repères — les concurrents en petits
+  // points (en bordeaux les forts), les magasins du réseau en carrés noirs, les
+  // zones retenues en ronds verts numérotés. Sert au plan (le pays) et à chaque
+  // page de province ; même assemblage de tuiles que le dossier.
+  carteAssemblee(bb, W, H, pts, mags, concs){
     let z = 12;
     for (; z > 6; z--){ const a = merc(bb.n, bb.w, z), b = merc(bb.s, bb.e, z); if (b[0] - a[0] <= W * 0.97 && b[1] - a[1] <= H * 0.97) break; }
     const c = merc((bb.n + bb.s) / 2, (bb.w + bb.e) / 2, z), x0 = c[0] - W / 2, y0 = c[1] - H / 2;
@@ -2293,10 +2589,15 @@ export class Scouting {
       }));
     }
     const P = ll => { const m = merc(ll[0], ll[1], z); return [m[0] - x0, m[1] - y0]; };
-    this._planImgKey = key;
-    this._planImgP = Promise.all(charges).then(() => {
+    return Promise.all(charges).then(() => {
       // un voile clair : les repères doivent se lire sur le fond
       cx.fillStyle = 'rgba(255,255,255,.28)'; cx.fillRect(0, 0, W, H);
+      // les faibles d'abord, les forts par-dessus
+      (concs || []).slice().sort((a, b) => (a.fort ? 1 : 0) - (b.fort ? 1 : 0)).forEach(o => {
+        const p = P([o.lat, o.lng]);
+        cx.beginPath(); cx.arc(p[0], p[1], o.fort ? 3.2 : 2.3, 0, 6.2832);
+        cx.fillStyle = o.fort ? 'rgba(141,29,44,.9)' : 'rgba(120,85,75,.5)'; cx.fill();
+      });
       mags.forEach(m => {
         const p = P([+m.lat, +m.lng]);
         cx.fillStyle = '#221E1A'; cx.fillRect(p[0] - 6, p[1] - 6, 12, 12);
@@ -2314,18 +2615,91 @@ export class Scouting {
       const txt = '© OpenStreetMap', wt = cx.measureText(txt).width + 10;
       cx.fillStyle = 'rgba(255,255,255,.85)'; cx.fillRect(W - wt - 4, H - 18, wt, 16);
       cx.fillStyle = '#333'; cx.fillText(txt, W - wt + 1, H - 6);
-      try { return canvas.toDataURL('image/jpeg', 0.88); } catch (e) { console.warn('[scouting] carte du plan :', e.message); return ''; }
+      try { return canvas.toDataURL('image/jpeg', 0.86); } catch (e) { console.warn('[scouting] carte statique :', e.message); return ''; }
     });
+  }
+
+  // La carte du plan : le pays (ou l'emprise des points), les zones retenues
+  // numérotées, les magasins ouverts.
+  carteStatiquePlan(){
+    const s = this.state, d = this.planDonnees();
+    if (d.enCours) return Promise.resolve('');
+    const pts = [];
+    d.provinces.forEach(p => p.lignes.forEach(l => pts.push(l)));
+    const mags = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null);
+    if (!pts.length && !mags.length) return Promise.resolve('');
+    const key = pts.map(l => l.lat.toFixed(4) + ',' + l.lng.toFixed(4)).join(';') + '|' + mags.length;
+    if (this._planImgKey === key && this._planImgP) return this._planImgP;
+    // Le pays entier tient au zoom 8 dans 740 × 540 : un cran de moins et la
+    // Belgique n'occupait que le tiers de l'image.
+    const bb = boitePoly(pts.map(l => [l.lat, l.lng]).concat(mags.map(m => [+m.lat, +m.lng])));
+    this._planImgKey = key;
+    this._planImgP = this.carteAssemblee(bb, 740, 540, pts, mags, null);
     return this._planImgP;
   }
 
-  planPayload(d){
+  // La carte d'une page de province : l'emprise de ses communes, ses zones
+  // retenues (au numéro du plan), les magasins du réseau à portée et les
+  // concurrents de la sélection — la concurrence se lit sur la carte avant de
+  // se lire dans les tableaux.
+  carteProvince(code){
+    const s = this.state, d = this.planDonnees();
+    if (d.enCours) return Promise.resolve('');
+    const p = d.provinces.find(x => x.code === code), st = this.provinceStats(code);
+    if (!p || !st.bb) return Promise.resolve('');
+    const bb = st.bb;
+    const dans = (lat, lng) => lat >= bb.s - 0.05 && lat <= bb.n + 0.05 && lng >= bb.w - 0.08 && lng <= bb.e + 0.08;
+    const mags = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null && dans(+m.lat, +m.lng));
+    const concs = st.shops.map(b => ({ lat: b.lat, lng: b.lng, fort: this.isStrong(b) }));
+    const key = p.lignes.map(l => l.num + '@' + l.lat.toFixed(4) + ',' + l.lng.toFixed(4)).join(';') + '|' + mags.length + '|' + concs.length + '|' + concs.filter(o => o.fort).length;
+    this._provCartes = this._provCartes || {};
+    const c = this._provCartes[code];
+    if (c && c.key === key) return c.p;
+    const pr = this.carteAssemblee(bb, 740, 470, p.lignes, mags, concs).catch(() => '');
+    this._provCartes[code] = { key: key, p: pr };
+    return pr;
+  }
+
+  // Les cartes de province qui manquent, une à une — les tuiles viennent d'un
+  // service communautaire ; l'avancement s'affiche dans le bouton.
+  async cartesProvinces(codes){
+    const out = Object.assign({}, this.state.planCartes);
+    for (let i = 0; i < codes.length; i++){
+      const k = codes[i];
+      if (out[k]) continue;
+      this.setState({ planCartesBusy: (i + 1) + '/' + codes.length });
+      out[k] = await this.carteProvince(k);
+    }
+    this.setState({ planCartes: out, planCartesBusy: '' });
+    return out;
+  }
+
+  // Ce que le serveur met en page : les textes déjà formés dans la langue du
+  // plan ; le serveur n'y ajoute que ses intitulés, dans la même langue.
+  // `code` : le PDF d'une seule province (sa page, puis la méthode).
+  planPayload(d, code){
+    const t = d.t, f = t.f;
+    const provs = code ? d.provinces.filter(p => p.code === code) : d.provinces;
+    const seule = code && provs[0] ? provs[0] : null;
+    const ligne = l => [String(l.num), l.commune, l.arr + (l.voisinTxt ? ' · ' + l.voisinTxt : ''), String(l.score), f.nf(l.hh), l.n + (l.forts ? ' ' + t.fort(l.forts) : ''), l.chaines || '—', f.pct(l.emprise * 100), f.eur(l.ca), f.eur(l.m2)];
+    const somme = k => d.parProvince.reduce((a, r) => a + (r[k] || 0), 0);
     return {
-      titre: d.titre, date: d.date, total: fmtEur(d.total), sousTitre: d.nPts + ' ouverture' + (d.nPts > 1 ? 's' : '') + ' · ' + d.N + ' par province au plus' + (d.seuil ? ' · score ≥ ' + d.minScore : '') + (d.caMinTxt || '') + (d.minutes ? ' · ' + d.minutes + ' min de voiture au moins entre elles' : ''),
-      resume: d.resume, carte: d.carte || '', carteNote: d.carteNote,
-      provinces: d.provinces.map(p => ({ nom: p.nom, detail: p.detail, sousTotal: fmtEur(p.sousTotal),
-        lignes: p.lignes.map(l => [String(l.num), l.commune, l.arr + (l.voisinTxt ? ' · ' + l.voisinTxt : ''), String(l.score), fmtInt(l.hh), l.n + (l.forts ? ' (' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')' : ''), l.chaines || '—', pct1(l.emprise), fmtEur(l.ca), fmtEur(l.m2)]) })),
-      classement: d.classement.map(l => [String(l.num), l.commune, l.prov, String(l.score), fmtEur(l.ca)]),
+      lang: d.lang, synthese: !seule,
+      titre: seule ? t.titreProv(seule.nom) : d.titre, date: d.date,
+      total: f.eur(seule ? seule.sousTotal : d.total),
+      sousTitre: (seule ? t.nOuv(seule.lignes.length) : t.nOuv(d.nPts)) + ' · ' + d.sousTitre,
+      resume: d.resume, carte: seule ? '' : (d.carte || ''), carteNote: d.carteNote,
+      parProvince: d.parProvince.map(r => [r.nom, String(r.nOuv), f.nf(r.hh), f.nf(r.n), f.nf(r.forts), r.perShop ? f.nf(r.perShop) : '—', String(r.nMags), r.nOuv ? f.eur(r.ca) : '—']),
+      parProvinceTot: [t.total, String(d.nPts), f.nf(d.selHh), f.nf(d.selN), f.nf(somme('forts')), d.selDens ? f.nf(d.selDens) : '—', String(somme('nMags')), f.eur(d.total)],
+      provinces: provs.map(p => {
+        const g = p.page;
+        // la date est déjà dans l'en-tête de chaque page du PDF
+        return { nom: p.nom, type: g.type, sousTitre: t.pOuvRetenues(g.nOuv, ''), detail: p.detail, sousTotal: f.eur(p.sousTotal),
+          tuiles: g.tuiles, carte: (d.cartes && d.cartes[p.code]) || '', carteNote: g.carteNote,
+          lignes: p.lignes.map(ligne), notes: g.notes.map(r => [r[0], r[1], r[2]]), noteMoy: g.noteMoy, marques: g.marques,
+          forts: g.top.map(r => r.slice(0, 7)), arrs: g.arrs, arrTot: g.arrTot, reseau: g.reseau };
+      }),
+      classement: d.classement.map(l => [String(l.num), l.commune, l.prov, String(l.score), f.eur(l.ca)]),
       hypotheses: d.hypotheses, methode: d.methode, sources: d.sources
     };
   }
@@ -2336,56 +2710,70 @@ export class Scouting {
     return false;
   }
 
-  async telechargerPlanPdf(){
+  // Le nom du fichier : dans la langue du document, la province s'il n'y en a qu'une.
+  planFichier(d, code, ext){
+    const p = code ? d.provinces.find(x => x.code === code) : null;
+    const slug = v => sansAccent(v).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return (d.lang === 'nl' ? 'uitbreidingsplan' : 'plan-expansion') + (p ? '-' + slug(p.nom) : '') + '-' + new Date().toISOString().slice(0, 10) + '.' + ext;
+  }
+
+  async telechargerPlanPdf(code){
     const d = this.planDonnees();
     if (!this.planPret(d)) return;
-    if (!this.useApi()){ this.imprimerPlan(); return; }
+    if (!this.useApi()){ this.imprimerPlan(code); return; }
     this.setState({ planBusy: true });
     try {
-      d.carte = await this.carteStatiquePlan();
+      d.carte = code ? '' : await this.carteStatiquePlan();
+      d.cartes = await this.cartesProvinces(code ? [code] : d.provinces.map(p => p.code));
       const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), 60000);
+      const t = setTimeout(() => ctl.abort(), 90000);
       const r = await fetch(API_BASE + '/scouting/plan.pdf', {
         method: 'POST', credentials: 'same-origin', signal: ctl.signal,
-        headers: { 'Content-Type': 'application/json', Accept: 'application/pdf' }, body: JSON.stringify(this.planPayload(d))
+        headers: { 'Content-Type': 'application/json', Accept: 'application/pdf' }, body: JSON.stringify(this.planPayload(d, code))
       });
       clearTimeout(t);
-      if (r.status === 501){ this.notify('Aucun moteur PDF sur ce serveur : la fenêtre d’impression produit le même document.'); this.imprimerPlan(); return; }
+      if (r.status === 501){ this.notify('Aucun moteur PDF sur ce serveur : la fenêtre d’impression produit le même document.'); this.imprimerPlan(code); return; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const url = URL.createObjectURL(await r.blob());
       const a = document.createElement('a');
-      a.href = url; a.download = 'plan-expansion-' + new Date().toISOString().slice(0, 10) + '.pdf'; a.click();
+      a.href = url; a.download = this.planFichier(d, code, 'pdf'); a.click();
       setTimeout(() => URL.revokeObjectURL(url), 4000);
-      this.notify('Plan d’expansion téléchargé — ' + d.nPts + ' ouvertures, ' + fmtEur(d.total));
+      const p = code ? d.provinces.find(x => x.code === code) : null;
+      this.notify(p ? 'Plan de la province téléchargé — ' + p.nom + ', ' + p.lignes.length + ' ouvertures, ' + fmtEur(p.sousTotal)
+        : 'Plan d’expansion téléchargé — ' + d.nPts + ' ouvertures, ' + fmtEur(d.total) + (d.lang === 'nl' ? ' (en néerlandais)' : ''));
     } catch (e) {
       this.notify('PDF impossible (' + (e.name === 'AbortError' ? 'délai dépassé' : e.message) + ') — la fenêtre d’impression prend le relais');
-      this.imprimerPlan();
+      this.imprimerPlan(code);
     } finally {
-      this.setState({ planBusy: false });
+      this.setState({ planBusy: false, planCartesBusy: '' });
     }
   }
 
-  imprimerPlan(){
+  // La fenêtre s'ouvre tout de suite — dans le geste de l'utilisateur, sinon le
+  // navigateur la bloque — et se remplit quand les cartes des provinces sont prêtes.
+  async imprimerPlan(code){
     const d = this.planDonnees();
     if (!this.planPret(d)) return;
-    d.carte = this.state.planImg || '';
-    const logo = new URL('assets/img/logo.png', document.baseURI).href;
-    const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' + esc(d.titre) + '</title><style>' + T.DOSS_CSS + T.DOSS_PRINT + '</style></head><body>'
-      + T.planPage(d, esc, logo) + '</body></html>';
     const w = window.open('', '_blank');
     if (!w){ this.notify('Fenêtre bloquée par le navigateur — autorise les fenêtres surgissantes pour imprimer le plan.'); return; }
-    w.document.open(); w.document.write(html); w.document.close();
-    setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* fenêtre fermée */ } }, 600);
+    try { w.document.write('<p style="font-family:Helvetica,Arial,sans-serif;color:#7a736a;padding:24px">' + (d.lang === 'nl' ? 'Plan wordt voorbereid…' : 'Préparation du plan…') + '</p>'); } catch (e) { /* fenêtre fermée */ }
+    d.carte = this.state.planImg || '';
+    d.cartes = await this.cartesProvinces(code ? [code] : d.provinces.map(p => p.code));
+    const logo = new URL('assets/img/logo.png', document.baseURI).href;
+    const html = '<!doctype html><html lang="' + d.lang + '"><head><meta charset="utf-8"><title>' + esc(code ? d.t.titreProv((d.provinces.find(p => p.code === code) || {}).nom || '') : d.titre) + '</title><style>' + T.DOSS_CSS + T.DOSS_PRINT + '</style></head><body>'
+      + T.planPage(d, esc, logo, null, code || 'tout', true) + '</body></html>';
+    try { w.document.open(); w.document.write(html); w.document.close(); } catch (e) { return; }
+    setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* fenêtre fermée */ } }, 700);
   }
 
   exporterPlanCsv(){
-    const d = this.planDonnees(), s = this.state;
+    const d = this.planDonnees(), t = d.t;
     if (!this.planPret(d)) return;
     const rows = [];
     d.provinces.forEach(p => p.lignes.forEach(l => rows.push([l.num, p.nom, l.rang, l.commune, l.arr, l.score, Math.round(l.hh), l.n, l.forts, l.chaines, (l.emprise * 100).toFixed(1), Math.round(l.ca), Math.round(l.m2), l.lat.toFixed(5), l.lng.toFixed(5),
-      l.voisin ? l.voisin.nom : '', l.voisin ? l.voisin.km.toFixed(1) : '', l.voisin && d.route && !l.voisin.approx ? Math.round(l.voisin.sec / 60) : ''])));
-    rows.push(['', 'TOTAL', '', d.nPts + ' ouvertures', '', '', Math.round(d.hhTot), '', '', '', '', Math.round(d.total), '', '', '', '', '', '']);
-    this.csv('plan_expansion', ['numero', 'province', 'rang_province', 'commune', 'arrondissement', 'score', 'menages', 'concurrents', 'concurrents_forts', 'chaines', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng', 'plus_proche', 'plus_proche_km_vol_oiseau', 'plus_proche_min_route'], rows);
+      l.voisin ? (l.voisin.fixe ? villeMagasin(l.voisin.nom) : this.nomCommune(l.voisin.nom, t)) : '', l.voisin ? l.voisin.km.toFixed(1) : '', l.voisin && d.route && !l.voisin.approx ? Math.round(l.voisin.sec / 60) : ''])));
+    rows.push(['', t.csvTotal, '', t.nOuv(d.nPts), '', '', Math.round(d.hhTot), '', '', '', '', Math.round(d.total), '', '', '', '', '', '']);
+    this.csv(t.csvNom, t.csvEntete, rows);
   }
 
   /* ---------- la concurrence d'un point, lue pour les listes ---------- */
@@ -2408,10 +2796,11 @@ export class Scouting {
 
   /* ---------- le dossier d'implantation ---------- */
   zoneLibelle(z){
-    const t = z.type === 'isochrone' ? 'Isochrone ' + z.minutes + ' min ' + (z.mode === 'pedestrian' ? 'à pied' : 'en voiture')
-      : z.type === 'cercle' ? 'Cercle de ' + (+z.rayon || 0).toFixed(1).replace('.', ',') + ' km' : z.type === 'rectangle' ? 'Rectangle' : 'Polygone à ' + z.poly.length + ' sommets';
+    const tr = (fr, nl) => this.tr(fr, nl);
+    const t = z.type === 'isochrone' ? tr('Isochrone ', 'Isochroon ') + z.minutes + ' min ' + (z.mode === 'pedestrian' ? tr('à pied', 'te voet') : tr('en voiture', 'met de auto'))
+      : z.type === 'cercle' ? tr('Cercle de ', 'Cirkel van ') + (+z.rayon || 0).toFixed(1).replace('.', ',') + ' km' : z.type === 'rectangle' ? tr('Rectangle', 'Rechthoek') : tr('Polygone à ', 'Veelhoek met ') + z.poly.length + tr(' sommets', ' hoekpunten');
     if (z.aire == null) return t;
-    return t + ' · ' + (z.aire >= 10 ? Math.round(z.aire) : z.aire.toFixed(1).replace('.', ',')) + ' km² · rayon équivalent ' + z.req.toFixed(1).replace('.', ',') + ' km';
+    return t + ' · ' + (z.aire >= 10 ? Math.round(z.aire) : z.aire.toFixed(1).replace('.', ',')) + ' km² · ' + tr('rayon équivalent ', 'equivalente straal ') + z.req.toFixed(1).replace('.', ',') + ' km';
   }
 
   ouvrirDossier(cand){
@@ -2629,19 +3018,43 @@ export class Scouting {
     else this.notify('Les communes ne sont pas encore chargées — un instant, puis réessaie.');
   }
 
+  // La langue du dossier : le français de l'écran, ou le néerlandais d'un
+  // candidat flamand. Elle est posée le temps de composer le dossier — les
+  // aides qu'il appelle (zone, distance, écartés, estimations…) parlent alors
+  // sa langue, nombres et dates compris — puis l'écran retrouve son français.
+  tr(fr, nl){ return this._dl === 'nl' ? nl : fr; }
+
+  dossierDonnees(){
+    const dl = this._dl, loc = LOC;
+    this._dl = this.state.dossierLang === 'nl' ? 'nl' : 'fr';
+    LOC = this._dl === 'nl' ? 'nl-BE' : 'fr-BE';
+    try { return this.dossierCompose(); } finally { this._dl = dl; LOC = loc; }
+  }
+
+  // La langue choisie avant le téléchargement : la page se recompose, la carte
+  // se redessine avec sa légende, et le choix se garde pour le dossier suivant.
+  dossierLangue(l){
+    if (!LANGUES.some(x => x[0] === l)) return;
+    ls.set('dossierLang', l);
+    this.setState({ dossierLang: l });
+    if (this.state.dossier) this.carteStatique().then(uri => { if (this.state.dossier) this.setState({ dossierImg: uri }); });
+  }
+
   // Tout ce que le dossier dit, sous forme de données : la page à l'écran, le
   // PDF du serveur, l'impression et le CSV en sont quatre lectures.
-  dossierDonnees(){
+  dossierCompose(){
     const s = this.state, x = s.sel, self = this;
     if (!x) return null;
+    const nl = this._dl === 'nl', tr = (fr, n) => nl ? n : fr, loc = LOC, sep = tr(' ; ', '; '), P = tr(' %', '%');
     const z = x.zone, R = s.radius, hhSize = s.hhSize || HH_SIZE;
-    const dans = z ? 'dans la zone' : 'dans le rayon';
+    const dans = z ? tr('dans la zone', 'in de zone') : tr('dans le rayon', 'binnen de straal');
     const rayonTxt = R.toFixed(1).replace('.', ',') + ' km';
     const verdictOk = !x.blocked.length && x.score >= 55;
-    const nomCom = x.commune || 'Zone';
+    const nomCom = (nl && x.communeNl) || x.commune || 'Zone';
+    const ceDossier = tr(' — ce dossier', ' — dit dossier');
     // Le réseau, simplement : pour chaque magasin, le CA prévu (le prévu
     // réaliste saisi, sinon l'étude de marché), le CA réel et l'écart.
-    const ecart = (a, b) => a && b ? (a >= b ? '+ ' : '− ') + Math.round(Math.abs(a / b - 1) * 100) + ' %' : '—';
+    const ecart = (a, b) => a && b ? (a >= b ? '+ ' : '− ') + Math.round(Math.abs(a / b - 1) * 100) + P : '—';
     // Trois lectures du même écart : la semaine, le mois, l'année. Le réel
     // est une moyenne par mois clos (et par semaine), projetée sur douze mois.
     // Chaque ligne : nom, prévu et réel de la semaine, du mois, de l'année,
@@ -2650,39 +3063,41 @@ export class Scouting {
     // viennent les chiffres (l'export CSV). La phase et les sources se
     // lisent une fois pour tous, dans la note sous le tableau.
     const eur = v => v ? fmtEur(v) : '—';
-    const reseau = [[nomCom + ' — ce dossier', fmtEur(x.ca / 52), '—', fmtEur(x.ca / 12), '—', fmtEur(x.ca), '—', fmtEur(x.ca * PALIERS[0]), '—', '—', '', 'le CA TTC que le modèle prévoit · année 1, 70 % du plan']];
+    const reseau = [[nomCom + ceDossier, fmtEur(x.ca / 52), '—', fmtEur(x.ca / 12), '—', fmtEur(x.ca), '—', fmtEur(x.ca * PALIERS[0]), '—', '—', '', tr('le CA TTC que le modèle prévoit · année 1, 70 % du plan', 'de omzet incl. btw die het model voorspelt · jaar 1, 70% van het plan')]];
     // d'où viennent les chiffres, regroupés : les magasins qui partagent la
     // même source (ou la même phase) sont cités ensemble
     const mm = v => /^\d{4}-\d{2}$/.test(v || '') ? v.slice(5, 7) + '/' + v.slice(0, 4) : (v || '');
+    const ecranMag = tr('« Magasins du réseau »', '“Magasins du réseau”');
     const gPrevu = {}, gReel = {}, gPhase = {}, noms = [];
     this.calage().rows.forEach(r => {
       const f = this.magasinFiche(r.m);
       const prevu = f.prevu, reel = f.caReel || null;
       const nom = nomMagasin(f.nom).replace(/^magasin de /, '');
       noms.push(nom);
-      const kP = f.caPrevu ? 'saisi dans « Magasins du réseau »' + (r.m.saisie && r.m.saisie.le ? ' le ' + new Date(r.m.saisie.le).toLocaleDateString('fr-BE') : '') : f.ca ? 'celui de l’étude de marché' + (f.etude ? ' ' + f.etude : '') : 'à saisir dans « Magasins du réseau »';
-      const kR = r.m.mois ? 'moyenne de ' + r.m.mois + ' mois clos' + (r.m.du && r.m.au ? ' (' + mm(r.m.du) + ' → ' + mm(r.m.au) + ')' : '') + (r.m.annualise ? ', projetée sur douze' : '') : 'inconnu, pas de mois clos';
-      const kF = f.phase ? 'année ' + f.phase.annee + (f.phase.annee >= 4 ? ' et +' : '') + ' (' + Math.round(f.phase.pct * 100) + ' % du plan)' : 'ouverture à saisir dans « Magasins du réseau »';
-      const ouv = f.phase ? ' (ouvert ' + (f.phase.precis ? f.ouverture.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : 'en ' + f.ouverture) + ')' : '';
+      const kP = f.caPrevu ? tr('saisi dans ', 'ingevoerd in ') + ecranMag + (r.m.saisie && r.m.saisie.le ? tr(' le ', ' op ') + new Date(r.m.saisie.le).toLocaleDateString(loc) : '') : f.ca ? tr('celui de l’étude de marché', 'die van de marktstudie') + (f.etude ? ' ' + f.etude : '') : tr('à saisir dans ', 'in te voeren in ') + ecranMag;
+      const kR = r.m.mois ? tr('moyenne de ', 'gemiddelde van ') + r.m.mois + tr(' mois clos', ' afgesloten maanden') + (r.m.du && r.m.au ? ' (' + mm(r.m.du) + ' → ' + mm(r.m.au) + ')' : '') + (r.m.annualise ? tr(', projetée sur douze', ', geëxtrapoleerd naar twaalf') : '') : tr('inconnu, pas de mois clos', 'onbekend, geen afgesloten maanden');
+      const kF = f.phase ? tr('année ', 'jaar ') + f.phase.annee + (f.phase.annee >= 4 ? tr(' et +', ' en later') : '') + ' (' + Math.round(f.phase.pct * 100) + tr(' % du plan)', '% van het plan)') : tr('ouverture à saisir dans ', 'opening in te voeren in ') + ecranMag;
+      const ouv = f.phase ? tr(' (ouvert ', ' (geopend ') + (f.phase.precis ? f.ouverture.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : tr('en ', 'in ') + f.ouverture) + ')' : '';
       (gPrevu[kP] = gPrevu[kP] || []).push(nom); (gReel[kR] = gReel[kR] || []).push(nom); (gPhase[kF] = gPhase[kF] || []).push(nom + ouv);
       const rc = reel && f.objectif ? reel / f.objectif - 1 : null;
       reseau.push([f.nom, eur(prevu ? prevu / 52 : 0), eur(reel ? reel / 52 : 0), eur(prevu ? prevu / 12 : 0), eur(reel ? reel / 12 : 0), eur(prevu), eur(reel),
-        eur(f.objectif), ecart(reel, f.objectif), ecart(reel, prevu), rc == null ? '' : rc >= 0 ? 'pos' : 'neg', 'prévu ' + kP + ' · réel : ' + kR + ' · ' + kF + ouv]);
+        eur(f.objectif), ecart(reel, f.objectif), ecart(reel, prevu), rc == null ? '' : rc >= 0 ? 'pos' : 'neg', tr('prévu ', 'gepland ') + kP + tr(' · réel : ', ' · werkelijk: ') + kR + ' · ' + kF + ouv]);
     });
-    const groupes = g => Object.keys(g).map(k => k + (g[k].length === noms.length && noms.length > 1 ? ' pour tous les magasins' : ' (' + g[k].join(', ') + ')')).join(' ; ');
+    const groupes = g => Object.keys(g).map(k => k + (g[k].length === noms.length && noms.length > 1 ? tr(' pour tous les magasins', ' voor alle winkels') : ' (' + g[k].join(', ') + ')')).join(sep);
     const reseauNote = noms.length
-      ? 'Cible de l’année, le palier de la phase — ' + Object.keys(gPhase).map(k => k + ' : ' + gPhase[k].join(', ')).join(' ; ') + ' ; ' + nomCom + ' — ce dossier : année 1 (70 % du plan). '
-        + 'Prévu — ' + groupes(gPrevu) + ' ; ' + nomCom + ' — ce dossier : le CA TTC que le modèle prévoit, à comparer aux magasins ouverts. '
-        + 'Réel — ' + groupes(gReel) + '.'
+      ? tr('Cible de l’année, le palier de la phase — ', 'Jaardoel, de trede van de fase — ') + Object.keys(gPhase).map(k => k + tr(' : ', ': ') + gPhase[k].join(', ')).join(sep) + sep + nomCom + tr(' — ce dossier : année 1 (70 % du plan). ', ' — dit dossier: jaar 1 (70% van het plan). ')
+        + tr('Prévu — ', 'Gepland — ') + groupes(gPrevu) + sep + nomCom + tr(' — ce dossier : le CA TTC que le modèle prévoit, à comparer aux magasins ouverts. ', ' — dit dossier: de omzet incl. btw die het model voorspelt, te vergelijken met de geopende winkels. ')
+        + tr('Réel — ', 'Werkelijk — ') + groupes(gReel) + '.'
       : '';
-    const montee = 'Trois ans pour arriver au plan : un magasin fait 70 % de son CA prévu la première année, 80 % la deuxième, 90 % la troisième, et le plan à partir de la quatrième. Le réel de chaque magasin se juge d’abord contre l’objectif de sa phase, pas contre le plan.';
+    const montee = tr('Trois ans pour arriver au plan : un magasin fait 70 % de son CA prévu la première année, 80 % la deuxième, 90 % la troisième, et le plan à partir de la quatrième. Le réel de chaque magasin se juge d’abord contre l’objectif de sa phase, pas contre le plan.',
+      'Drie jaar om het plan te halen: een winkel haalt het eerste jaar 70% van de geplande omzet, het tweede 80%, het derde 90% en vanaf het vierde jaar het plan. Het werkelijke resultaat van elke winkel wordt eerst afgewogen tegen het doel van zijn fase, niet tegen het plan.');
     // le mini-tableau de la montée en charge : les paliers en euros, ce dossier
     // puis chaque magasin, la phase en cours marquée
-    const monteeRows = [[nomCom + ' — ce dossier (modèle)'].concat(PALIERS.map(k => fmtEur(x.ca * k))).concat(['0'])];
+    const monteeRows = [[nomCom + tr(' — ce dossier (modèle)', ' — dit dossier (model)')].concat(PALIERS.map(k => fmtEur(x.ca * k))).concat(['0'])];
     this.calage().rows.forEach(r => {
       const f = this.magasinFiche(r.m);
-      if (!f.prevu) { monteeRows.push([f.nom + ' — prévu à saisir', '—', '—', '—', '—', '0']); return; }
-      monteeRows.push([f.nom + (f.phase ? '' : ' — ouverture à saisir')].concat(PALIERS.map(k => fmtEur(f.prevu * k))).concat([String(f.phase ? f.phase.annee : 0)]));
+      if (!f.prevu) { monteeRows.push([f.nom + tr(' — prévu à saisir', ' — prognose in te voeren'), '—', '—', '—', '—', '0']); return; }
+      monteeRows.push([f.nom + (f.phase ? '' : tr(' — ouverture à saisir', ' — opening in te voeren'))].concat(PALIERS.map(k => fmtEur(f.prevu * k))).concat([String(f.phase ? f.phase.annee : 0)]));
     });
     const chaines = x.near.filter(o => self.estChaine(o.b));
     const marques = chaines.length ? self.marquesDe(chaines.map(o => o.b)) : [];
@@ -2690,154 +3105,202 @@ export class Scouting {
     const forts = x.near.filter(o => self.isStrong(o.b)), notees = x.near.filter(o => self.rating(o.b));
     const patiss = x.near.filter(o => o.b.pastry).length;
     const moy = notees.length ? notees.reduce((a, o) => a + self.rating(o.b), 0) / notees.length : 0;
-    const cl = [['≥ 4,5 ★', o => self.rating(o.b) >= 4.5], ['4,0 à 4,4 ★', o => self.rating(o.b) >= 4 && self.rating(o.b) < 4.5], ['sous 4,0 ★', o => self.rating(o.b) < 4]].map(c => [c[0], notees.filter(c[1]).length]).filter(c => c[1]);
+    const cl = [['≥ 4,5 ★', o => self.rating(o.b) >= 4.5], [tr('4,0 à 4,4 ★', '4,0 tot 4,4 ★'), o => self.rating(o.b) >= 4 && self.rating(o.b) < 4.5], [tr('sous 4,0 ★', 'onder 4,0 ★'), o => self.rating(o.b) < 4]].map(c => [c[0], notees.filter(c[1]).length]).filter(c => c[1]);
     const km = v => v.toFixed(1).replace('.', ',') + ' km';
-    const concurrenceNote = !x.near.length ? '' : x.near.length + ' boulangerie' + (x.near.length > 1 ? 's' : '') + ' et pâtisserie' + (x.near.length > 1 ? 's' : '') + ' relevée' + (x.near.length > 1 ? 's' : '') + ' ' + dans
-      + (patiss ? ' (dont ' + patiss + ' pâtisserie' + (patiss > 1 ? 's' : '') + ')' : '') + ' : ' + forts.length + ' concurrent' + (forts.length > 1 ? 's' : '') + ' fort' + (forts.length > 1 ? 's' : '') + ' (note ≥ ' + (+s.thresh).toFixed(1).replace('.', ',') + ' ★)'
-      + ', ' + chaines.length + ' de chaîne' + (marques.length ? ' (' + marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', ') + ')' : '')
-      + ', ' + notees.length + ' notée' + (notees.length > 1 ? 's' : '') + ' sur Google' + (notees.length ? ' — note moyenne ' + moy.toFixed(1).replace('.', ',') + ' (' + cl.map(c => c[1] + ' ' + c[0]).join(', ') + ')' : '')
-      + (x.near.length - notees.length ? ', ' + (x.near.length - notees.length) + ' sans note' : '') + '. La plus proche : ' + x.near[0].b.name + ' à ' + km(x.near[0].d)
-      + (forts.length ? ' ; le concurrent fort le plus proche : ' + forts[0].b.name + ' à ' + km(forts[0].d) : '') + '. Pression concurrentielle ' + x.load.toFixed(2) + ' — Σ force × (1 − 0,6 × distance ÷ rayon), les forts comptant 1,5 ; la force tient compte de la taille, lue dans le nombre d’avis Google : petite (moins de 30) × 0,8, moyenne (30 à 99) × 1, grande (100 à 199) × 1,15, très grande (200 et plus) × 1,3.'
-      + (() => { const t = { 'très grande': 0, grande: 0, moyenne: 0, petite: 0 }; x.near.forEach(o => { const k = self.tailleAvis(o.b).taille; if (k) t[k]++; }); const l = Object.keys(t).filter(k => t[k]).map(k => t[k] + ' ' + k + (t[k] > 1 && k !== 'très grande' && k !== 'grande' ? 's' : t[k] > 1 && k === 'grande' ? 's' : t[k] > 1 ? 's' : '')); return l.length ? ' Tailles : ' + l.join(', ') + '.' : ''; })();
+    const pl = (n, un, plus) => n > 1 ? plus : un;
+    const marquesTxt = marques.length ? ' (' + marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', ') + ')' : '';
+    const seuilFort = (+s.thresh).toFixed(1).replace('.', ',');
+    // les tailles, lues dans le nombre d'avis Google
+    const tt = { 'très grande': 0, grande: 0, moyenne: 0, petite: 0 };
+    x.near.forEach(o => { const k = self.tailleAvis(o.b).taille; if (k) tt[k]++; });
+    const tl = Object.keys(tt).filter(k => tt[k]);
+    const taillesAdj = { 'très grande': 'zeer grote', grande: 'grote', moyenne: 'middelgrote', petite: 'kleine' };
+    const tailles = !tl.length ? '' : nl ? ' Groottes: ' + tl.map(k => tt[k] + ' ' + taillesAdj[k]).join(', ') + '.' : ' Tailles : ' + tl.map(k => tt[k] + ' ' + k + (tt[k] > 1 ? 's' : '')).join(', ') + '.';
+    const concurrenceNote = !x.near.length ? '' : (nl
+      ? x.near.length + ' ' + pl(x.near.length, 'bakkerij of banketbakkerij', 'bakkerijen en banketbakkerijen') + ' gevonden ' + dans
+        + (patiss ? ' (waarvan ' + patiss + ' ' + pl(patiss, 'banketbakkerij', 'banketbakkerijen') + ')' : '') + ': ' + forts.length + ' ' + pl(forts.length, 'sterke concurrent', 'sterke concurrenten') + ' (score ≥ ' + seuilFort + ' ★)'
+        + ', ' + chaines.length + ' van een keten' + marquesTxt
+        + ', ' + notees.length + ' met een Google-score' + (notees.length ? ' — gemiddelde score ' + moy.toFixed(1).replace('.', ',') + ' (' + cl.map(c => c[1] + ' ' + c[0]).join(', ') + ')' : '')
+        + (x.near.length - notees.length ? ', ' + (x.near.length - notees.length) + ' zonder score' : '') + '. De dichtstbijzijnde: ' + x.near[0].b.name + ' op ' + km(x.near[0].d)
+        + (forts.length ? '; de dichtstbijzijnde sterke concurrent: ' + forts[0].b.name + ' op ' + km(forts[0].d) : '') + '. Concurrentiedruk ' + x.load.toFixed(2) + ' — Σ sterkte × (1 − 0,6 × afstand ÷ straal), sterke concurrenten tellen voor 1,5; de sterkte houdt rekening met de grootte, afgeleid uit het aantal Google-reviews: klein (minder dan 30) × 0,8, middelgroot (30 tot 99) × 1, groot (100 tot 199) × 1,15, zeer groot (200 en meer) × 1,3.'
+      : x.near.length + ' boulangerie' + (x.near.length > 1 ? 's' : '') + ' et pâtisserie' + (x.near.length > 1 ? 's' : '') + ' relevée' + (x.near.length > 1 ? 's' : '') + ' ' + dans
+        + (patiss ? ' (dont ' + patiss + ' pâtisserie' + (patiss > 1 ? 's' : '') + ')' : '') + ' : ' + forts.length + ' concurrent' + (forts.length > 1 ? 's' : '') + ' fort' + (forts.length > 1 ? 's' : '') + ' (note ≥ ' + seuilFort + ' ★)'
+        + ', ' + chaines.length + ' de chaîne' + marquesTxt
+        + ', ' + notees.length + ' notée' + (notees.length > 1 ? 's' : '') + ' sur Google' + (notees.length ? ' — note moyenne ' + moy.toFixed(1).replace('.', ',') + ' (' + cl.map(c => c[1] + ' ' + c[0]).join(', ') + ')' : '')
+        + (x.near.length - notees.length ? ', ' + (x.near.length - notees.length) + ' sans note' : '') + '. La plus proche : ' + x.near[0].b.name + ' à ' + km(x.near[0].d)
+        + (forts.length ? ' ; le concurrent fort le plus proche : ' + forts[0].b.name + ' à ' + km(forts[0].d) : '') + '. Pression concurrentielle ' + x.load.toFixed(2) + ' — Σ force × (1 − 0,6 × distance ÷ rayon), les forts comptant 1,5 ; la force tient compte de la taille, lue dans le nombre d’avis Google : petite (moins de 30) × 0,8, moyenne (30 à 99) × 1, grande (100 à 199) × 1,15, très grande (200 et plus) × 1,3.')
+      + tailles;
     const concurrenceNote2 = concurrenceNote + self.indirectTxt(x);
     // l'étude locale : la bonne, pour ce point et ce rayon, si elle est là
     const et = s.etude && s.etude.cle === this.etudeCle(x.lat, x.lng) ? s.etude : null;
-    const etudeAttente = et ? '' : s.etudeBusy ? 'Étude locale en cours — OpenStreetMap relève les entreprises, les zonings, les écoles et les générateurs de flux du rayon…' : s.etudeErr ? 'Étude locale indisponible : ' + s.etudeErr + '. Les sections qui suivent manquent dans ce dossier.' : '';
+    const etudeAttente = et ? '' : s.etudeBusy ? tr('Étude locale en cours — OpenStreetMap relève les entreprises, les zonings, les écoles et les générateurs de flux du rayon…', 'Lokale studie bezig — OpenStreetMap inventariseert de bedrijven, bedrijventerreinen, scholen en publiekstrekkers binnen de straal…')
+      : s.etudeErr ? tr('Étude locale indisponible : ', 'Lokale studie niet beschikbaar: ') + s.etudeErr + tr('. Les sections qui suivent manquent dans ce dossier.', '. De volgende secties ontbreken in dit dossier.') : '';
     const R1 = self.etudeRayon() / 1000, rTxt = R1.toFixed(1).replace('.', ',') + ' km';
+    // les genres et les lieux sans nom de l'étude locale, dans la langue du dossier
+    const G = g => nl ? genreNl(g) : g, N = e => nl ? nomLieuNl(e.nom, e.genre) : e.nom;
     // Les lieux se résument par genre : combien à moins de 1, 2, 3 km et dans
     // le rayon, et le plus proche — dix piscines ne font pas dix lignes.
     const resume = liste => {
       const par = {};
       liste.forEach(e => { const g = par[e.genre] || (par[e.genre] = { genre: e.genre, n1: 0, n2: 0, n3: 0, n: 0, proche: null }); g.n++; if (e.dKm < 1) g.n1++; if (e.dKm < 2) g.n2++; if (e.dKm < 3) g.n3++; if (!g.proche || e.dKm < g.proche.dKm) g.proche = e; });
       return Object.keys(par).map(k => par[k]).sort((a, b) => b.n - a.n || a.proche.dKm - b.proche.dKm)
-        .map(g => [g.genre.charAt(0).toUpperCase() + g.genre.slice(1), String(g.n1), String(g.n2), String(g.n3), String(g.n), g.proche.nom + ' · ' + km(g.proche.dKm)]);
+        .map(g => { const gg = G(g.genre); return [gg.charAt(0).toUpperCase() + gg.slice(1), String(g.n1), String(g.n2), String(g.n3), String(g.n), N(g.proche) + ' · ' + km(g.proche.dKm)]; });
     };
-    const proches = (liste, n) => liste.slice(0, n).map(e => e.nom + ' (' + km(e.dKm) + ')').join(', ');
-    const zoningsRows = et ? et.zonings.map(z => [z.nom || 'Zone ' + (z.genre === 'commerces' ? 'de commerces' : z.genre === 'mixte' ? 'd’activité' : z.genre === 'industriel' ? 'industrielle' : 'commerciale') + ' sans nom',
-      z.reste ? 'la plus proche à ' + km(z.dKm) : z.genre + (z.morceaux > 1 ? ' · ' + z.morceaux + ' parcelles' : '') + (z.approx ? ' · emprise approchée' : ''), z.reste ? '' : km(z.dKm), (z.ha >= 10 ? Math.round(z.ha) : z.ha.toFixed(1).replace('.', ',')) + ' ha', String(z.n)]) : [];
-    const tissuRows = et ? [
+    const proches = (liste, n) => liste.slice(0, n).map(e => N(e) + ' (' + km(e.dKm) + ')').join(', ');
+    const zoneSansNom = g => nl ? { commerces: 'Naamloze winkelzone', mixte: 'Naamloze bedrijvenzone', industriel: 'Naamloze industriezone' }[g] || 'Naamloze handelszone'
+      : 'Zone ' + (g === 'commerces' ? 'de commerces' : g === 'mixte' ? 'd’activité' : g === 'industriel' ? 'industrielle' : 'commerciale') + ' sans nom';
+    const zoningsRows = et ? et.zonings.map(z => [z.nom ? N(z) : zoneSansNom(z.genre),
+      z.reste ? tr('la plus proche à ', 'de dichtstbijzijnde op ') + km(z.dKm) : G(z.genre) + (z.morceaux > 1 ? ' · ' + z.morceaux + tr(' parcelles', ' percelen') : '') + (z.approx ? tr(' · emprise approchée', ' · benaderde oppervlakte') : ''), z.reste ? '' : km(z.dKm), (z.ha >= 10 ? Math.round(z.ha) : z.ha.toFixed(1).replace('.', ',')) + ' ha', String(z.n)]) : [];
+    const tissuRows = et ? (nl ? [
+      ['Handel', fmtInt(et.ent.commerces), 'winkels, voeding, supermarkten, garages… (tag shop)'],
+      ['Horeca', fmtInt(et.ent.horeca), 'restaurants, cafés, snackbars, bars'],
+      ['Kantoren en diensten', fmtInt(et.ent.bureaux), 'kantoren, agentschappen, vrije beroepen (tag office)'],
+      ['Ambachten', fmtInt(et.ent.artisans), 'werkplaatsen en ambachten (tag craft)'],
+      ['Industrie', fmtInt(et.ent.industries), 'industriële sites en fabrieken'],
+      ['Totaal in kaart gebracht binnen ' + rTxt, fmtInt(et.ent.total), 'waarvan ' + fmtInt(et.ent.zonings) + ' op bedrijventerreinen · OpenStreetMap kent alleen de in kaart gebrachte bedrijven: een ondergrens, niet het btw-register']
+    ] : [
       ['Commerces', fmtInt(et.ent.commerces), 'boutiques, alimentation, supermarchés, garages… (étiquette shop)'],
       ['Horeca', fmtInt(et.ent.horeca), 'restaurants, cafés, snacks, bars'],
       ['Bureaux et services', fmtInt(et.ent.bureaux), 'bureaux, agences, professions libérales (étiquette office)'],
       ['Artisans', fmtInt(et.ent.artisans), 'ateliers et métiers (étiquette craft)'],
       ['Industries', fmtInt(et.ent.industries), 'sites industriels et usines'],
       ['Total cartographié dans ' + rTxt, fmtInt(et.ent.total), 'dont ' + fmtInt(et.ent.zonings) + ' dans les zonings · OpenStreetMap ne connaît que les entreprises cartographiées : un plancher, pas le registre TVA']
-    ] : [];
-    const osmDate = et && et.osm ? new Date(et.osm).toLocaleDateString('fr-BE') : '';
-    const etudeNote = et ? 'Étude locale : OpenStreetMap' + (osmDate ? ' (données du ' + osmDate + ')' : '') + (et.releve ? ', relevé ' + (et.cache ? 'gardé depuis le ' : 'du ') + new Date(et.releve.replace(' ', 'T')).toLocaleDateString('fr-BE') : '') + (et.perime ? ' — relevé périmé, OpenStreetMap n’a pas répondu' : '')
-      + ', dans un rayon de ' + rTxt + ' autour du point' + (z ? ' (le rayon, pas la zone dessinée)' : '') + '. Entreprises comptées par famille d’étiquettes (shop, horeca, office, craft, industrial) ; zonings : surfaces industrielles, commerciales et de commerces de plus d’un demi-hectare, avec les entreprises dont le point tombe dedans ; écoles et générateurs de flux triés par distance à vol d’oiseau.' : '';
+    ]) : [];
+    const osmDate = et && et.osm ? new Date(et.osm).toLocaleDateString(loc) : '';
+    const releve = et && et.releve ? new Date(et.releve.replace(' ', 'T')).toLocaleDateString(loc) : '';
+    const etudeNote = !et ? '' : nl
+      ? 'Lokale studie: OpenStreetMap' + (osmDate ? ' (gegevens van ' + osmDate + ')' : '') + (releve ? ', inventaris ' + (et.cache ? 'bewaard sinds ' : 'van ') + releve : '') + (et.perime ? ' — verouderde inventaris, OpenStreetMap antwoordde niet' : '')
+        + ', binnen een straal van ' + rTxt + ' rond het punt' + (z ? ' (de straal, niet de getekende zone)' : '') + '. Bedrijven geteld per tagfamilie (shop, horeca, office, craft, industrial); bedrijventerreinen: industriële, commerciële en winkelzones groter dan een halve hectare, met de bedrijven waarvan het punt erbinnen valt; scholen en publiekstrekkers gesorteerd op afstand in vogelvlucht.'
+      : 'Étude locale : OpenStreetMap' + (osmDate ? ' (données du ' + osmDate + ')' : '') + (releve ? ', relevé ' + (et.cache ? 'gardé depuis le ' : 'du ') + releve : '') + (et.perime ? ' — relevé périmé, OpenStreetMap n’a pas répondu' : '')
+        + ', dans un rayon de ' + rTxt + ' autour du point' + (z ? ' (le rayon, pas la zone dessinée)' : '') + '. Entreprises comptées par famille d’étiquettes (shop, horeca, office, craft, industrial) ; zonings : surfaces industrielles, commerciales et de commerces de plus d’un demi-hectare, avec les entreprises dont le point tombe dedans ; écoles et générateurs de flux triés par distance à vol d’oiseau.';
     const notes = [];
-    if (z && x.disque) notes.push('Au même centre, le rayon de ' + rayonTxt + ' compte ' + fmtInt(x.disque.hh) + ' ménages et ' + x.disque.n + ' concurrent' + (x.disque.n > 1 ? 's' : '')
-      + ' — la zone dessinée en compte ' + fmtInt(x.hh) + ' et ' + x.near.length + ' : ' + (x.hh >= x.disque.hh ? '+ ' : '− ') + fmtInt(Math.abs(x.hh - x.disque.hh)) + ' ménages, soit '
-      + (x.hh >= x.disque.hh ? '+ ' : '− ') + fmtEur(Math.abs(x.hh - x.disque.hh) * s.spend) + ' de marché.');
+    if (z && x.disque){
+      const plus = x.hh >= x.disque.hh ? '+ ' : '− ', dHh = fmtInt(Math.abs(x.hh - x.disque.hh)), dEur = fmtEur(Math.abs(x.hh - x.disque.hh) * s.spend);
+      notes.push(nl
+        ? 'Vanuit hetzelfde middelpunt telt de straal van ' + rayonTxt + ' ' + fmtInt(x.disque.hh) + ' huishoudens en ' + x.disque.n + ' ' + pl(x.disque.n, 'concurrent', 'concurrenten')
+          + ' — de getekende zone telt er ' + fmtInt(x.hh) + ' en ' + x.near.length + ': ' + plus + dHh + ' huishoudens, of ' + plus + dEur + ' markt.'
+        : 'Au même centre, le rayon de ' + rayonTxt + ' compte ' + fmtInt(x.disque.hh) + ' ménages et ' + x.disque.n + ' concurrent' + (x.disque.n > 1 ? 's' : '')
+          + ' — la zone dessinée en compte ' + fmtInt(x.hh) + ' et ' + x.near.length + ' : ' + plus + dHh + ' ménages, soit ' + plus + dEur + ' de marché.');
+    }
     // La page de garde : à 5 et 10 minutes en voiture (isochrones Valhalla),
     // le magasin en trois lignes, le CA prévu avec la montée en charge — et,
     // si la caisse du réseau a rendu un panier moyen, les clients par jour.
     const g = s.garde && s.garde.cle === this.etudeCle(x.lat, x.lng) ? s.garde : null;
-    const gardeAttente = g ? '' : s.gardeBusy ? 'Isochrones de 5 et 10 minutes en voiture en cours de calcul (Valhalla, routage OpenStreetMap)…' : s.gardeErr ? 'Isochrones de 5 et 10 minutes indisponibles : ' + s.gardeErr + '. La carte montre la zone étudiée.' : '';
+    const gardeAttente = g ? '' : s.gardeBusy ? tr('Isochrones de 5 et 10 minutes en voiture en cours de calcul (Valhalla, routage OpenStreetMap)…', 'Isochronen van 5 en 10 minuten met de auto worden berekend (Valhalla, routering OpenStreetMap)…')
+      : s.gardeErr ? tr('Isochrones de 5 et 10 minutes indisponibles : ', 'Isochronen van 5 en 10 minuten niet beschikbaar: ') + s.gardeErr + tr('. La carte montre la zone étudiée.', '. De kaart toont de bestudeerde zone.') : '';
     const garde = g ? [
-      ['Ménages', fmtInt(g.hh5), fmtInt(g.hh10), fmtInt(x.hh)],
-      ['Marché (ménages × dépense)', fmtEur(g.hh5 * s.spend), fmtEur(g.hh10 * s.spend), fmtEur(x.market)],
-      ['Boulangeries concurrentes', String(g.n5), String(g.n10), String(x.near.length)]
+      [tr('Ménages', 'Huishoudens'), fmtInt(g.hh5), fmtInt(g.hh10), fmtInt(x.hh)],
+      [tr('Marché (ménages × dépense)', 'Markt (huishoudens × besteding)'), fmtEur(g.hh5 * s.spend), fmtEur(g.hh10 * s.spend), fmtEur(x.market)],
+      [tr('Boulangeries concurrentes', 'Concurrerende bakkerijen'), String(g.n5), String(g.n10), String(x.near.length)]
     ] : [];
     const pan = s.panier && +s.panier.reseau > 0 ? s.panier : null;
-    const eur2 = v => (+v).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-    const moisTxt = m => { const dt = /^\d{4}-\d{2}$/.test(m || '') ? new Date(m + '-01T00:00:00') : null; return dt ? dt.toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' }) : ''; };
+    const eur2 = v => { const n = (+v).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return nl ? '€ ' + n : n + ' €'; };
+    const moisTxt = m => { const dt = /^\d{4}-\d{2}$/.test(m || '') ? new Date(m + '-01T00:00:00') : null; return dt ? dt.toLocaleDateString(loc, { month: 'long', year: 'numeric' }) : ''; };
     const jj = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v.slice(8, 10) + '/' + v.slice(5, 7) : '';
-    const panQuand = pan ? (pan.periode === 'semaine' ? 'semaine en cours' : moisTxt(pan.mois)) + (pan.jusquau ? ' au ' + jj(pan.jusquau) : '') : '';
-    const panTxt = pan ? eur2(pan.reseau) + ' (caisse du réseau, ' + panQuand + ')' : '';
+    const panQuand = pan ? (pan.periode === 'semaine' ? tr('semaine en cours', 'lopende week') : moisTxt(pan.mois)) + (pan.jusquau ? tr(' au ', ' tot ') + jj(pan.jusquau) : '') : '';
+    const panTxt = pan ? eur2(pan.reseau) + tr(' (caisse du réseau, ', ' (kassa van het netwerk, ') + panQuand + ')' : '';
+    const panInconnu = tr('la caisse du réseau ne l’a pas encore rendu', 'de kassa van het netwerk heeft het nog niet doorgegeven');
     const clientsJour = ca => pan ? fmtInt(ca / 52 / 6 / pan.reseau) : '—';
     const captes = x.hh * x.emprise;
     const gardeLignes = [
-      ['Entreprises dans le rayon', et ? fmtInt(et.ent.total) : s.etudeBusy ? 'relevé en cours' : '—', et ? 'OpenStreetMap, ' + rTxt + ', dont ' + fmtInt(et.ent.zonings) + ' en zoning' : 'étude locale OpenStreetMap'],
-      ['Manne de clients', fmtInt(captes) + ' ménages', 'emprise ' + pct1(x.emprise) + ' de ' + fmtInt(x.hh) + ' ménages, soit environ ' + fmtInt(captes * hhSize) + ' personnes'],
-      ['Panier moyen', pan ? eur2(pan.reseau) : 'inconnu', pan ? 'caisse du réseau, ' + panQuand + ' · au plan, ' + clientsJour(x.ca) + ' clients par jour sur 6 jours' : 'la caisse du réseau ne l’a pas encore rendu']
+      [tr('Entreprises dans le rayon', 'Bedrijven binnen de straal'), et ? fmtInt(et.ent.total) : s.etudeBusy ? tr('relevé en cours', 'inventaris bezig') : '—', et ? 'OpenStreetMap, ' + rTxt + tr(', dont ', ', waarvan ') + fmtInt(et.ent.zonings) + tr(' en zoning', ' op een bedrijventerrein') : tr('étude locale OpenStreetMap', 'lokale studie OpenStreetMap')],
+      [tr('Manne de clients', 'Klantenpotentieel'), fmtInt(captes) + tr(' ménages', ' huishoudens'), tr('emprise ', 'marktaandeel ') + pct1(x.emprise) + tr(' de ', ' van ') + fmtInt(x.hh) + tr(' ménages, soit environ ', ' huishoudens, of ongeveer ') + fmtInt(captes * hhSize) + tr(' personnes', ' personen')],
+      [tr('Panier moyen', 'Gemiddeld ticket'), pan ? eur2(pan.reseau) : tr('inconnu', 'onbekend'), pan ? tr('caisse du réseau, ', 'kassa van het netwerk, ') + panQuand + tr(' · au plan, ', ' · volgens plan ') + clientsJour(x.ca) + tr(' clients par jour sur 6 jours', ' klanten per dag over 6 dagen') : panInconnu]
     ];
-    const rampe = ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Plan · année 4 et + · 100 %'].map((lib, i) => {
+    const rampe = (nl ? ['Jaar 1 · 70%', 'Jaar 2 · 80%', 'Jaar 3 · 90%', 'Plan · jaar 4 en later · 100%'] : ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Plan · année 4 et + · 100 %']).map((lib, i) => {
       const ca = x.ca * PALIERS[i];
       return [lib, fmtEur(ca / 52), fmtEur(ca / 12), fmtEur(ca), clientsJour(ca)];
     });
-    const rampeNote = 'Clients par jour : CA de la semaine ÷ 6 jours d’ouverture ÷ panier moyen' + (pan ? ' de ' + panTxt : ' (inconnu : la caisse du réseau ne l’a pas encore rendu)') + '.';
+    const rampeNote = tr('Clients par jour : CA de la semaine ÷ 6 jours d’ouverture ÷ panier moyen', 'Klanten per dag: weekomzet ÷ 6 openingsdagen ÷ gemiddeld ticket') + (pan ? tr(' de ', ' van ') + panTxt : ' (' + tr('inconnu : ', 'onbekend: ') + panInconnu + ')') + '.';
     const cand = s.dossierCand;
     if (cand && cand.hyp){
-      const noms = { spend: ['dépense par ménage', v => fmtEur(v)], passage: ['passage', v => v + ' %'], surface: ['surface', v => v + ' m²'], emprise: ['emprise imposée', v => v ? v + ' %' : 'calculée'],
-        empriseMax: ['emprise maximale', v => v + ' %'], compK: ['sensibilité', v => String(v).replace('.', ',')], hhSize: ['taille des ménages', v => String(v).replace('.', ',')],
-        radius: ['rayon', v => (+v).toFixed(1).replace('.', ',') + ' km'], thresh: ['concurrent fort dès', v => (+v).toFixed(1).replace('.', ',') + ' ★'], weak: ['concurrent dès', v => (+v).toFixed(1).replace('.', ',') + ' ★'] };
+      const noms = { spend: [tr('dépense par ménage', 'besteding per huishouden'), v => fmtEur(v)], passage: ['passage', v => v + P], surface: [tr('surface', 'oppervlakte'), v => v + ' m²'], emprise: [tr('emprise imposée', 'opgelegd marktaandeel'), v => v ? v + P : tr('calculée', 'berekend')],
+        empriseMax: [tr('emprise maximale', 'maximaal marktaandeel'), v => v + P], compK: [tr('sensibilité', 'gevoeligheid'), v => String(v).replace('.', ',')], hhSize: [tr('taille des ménages', 'gezinsgrootte'), v => String(v).replace('.', ',')],
+        radius: [tr('rayon', 'straal'), v => (+v).toFixed(1).replace('.', ',') + ' km'], thresh: [tr('concurrent fort dès', 'sterke concurrent vanaf'), v => (+v).toFixed(1).replace('.', ',') + ' ★'], weak: [tr('concurrent dès', 'concurrent vanaf'), v => (+v).toFixed(1).replace('.', ',') + ' ★'] };
       const diff = [];
       Object.keys(noms).forEach(k => { if (cand.hyp[k] != null && typeof s[k] === 'number' && Math.abs(cand.hyp[k] - s[k]) > 1e-9) diff.push(noms[k][0] + ' ' + noms[k][1](cand.hyp[k]) + ' → ' + noms[k][1](s[k])); });
-      const quand = cand.date ? new Date(cand.date).toLocaleDateString('fr-BE') : '';
+      const quand = cand.date ? new Date(cand.date).toLocaleDateString(loc) : '';
       notes.push(diff.length
-        ? 'Depuis que la zone a été retenue' + (quand ? ' le ' + quand : '') + ', les hypothèses ont changé : ' + diff.join(' ; ') + '. Le dossier est calculé avec celles d’aujourd’hui.'
-        : 'Hypothèses inchangées depuis que la zone a été retenue' + (quand ? ' le ' + quand : '') + '.');
+        ? tr('Depuis que la zone a été retenue', 'Sinds de selectie van de zone') + (quand ? tr(' le ', ' op ') + quand : '') + tr(', les hypothèses ont changé : ', ' zijn de aannames gewijzigd: ') + diff.join(sep) + tr('. Le dossier est calculé avec celles d’aujourd’hui.', '. Het dossier is berekend met de huidige aannames.')
+        : tr('Hypothèses inchangées depuis que la zone a été retenue', 'Aannames ongewijzigd sinds de selectie van de zone') + (quand ? tr(' le ', ' op ') + quand : '') + '.');
     }
     const est = self.estimationsDossier(x), ter = self.terrainDossier();
+    const taille = ta => ta.n ? (nl ? NL_TAILLE[ta.taille] : ta.taille) + ' · ' + fmtInt(ta.n) + tr(' avis', ' reviews') : '—';
+    const anonyme = tr('Anonyme', 'Anoniem');
     return {
-      titre: nomCom + ' — étude d’implantation', commune: nomCom,
+      lang: nl ? 'nl' : 'fr',
+      titre: nomCom + tr(' — étude d’implantation', ' — vestigingsstudie'), commune: nomCom,
       estimations: est.rows, estimationsCols: est.cols, estimationsNote: est.note,
       terrain: ter.rows, fluxMesures: ter.flux, terrainNote: ter.note,
-      motOutil: 'Cet outil filtre les sites depuis la population du recensement, la concurrence relevée et le modèle du réseau ; il repère les sites à creuser. L’étude de potentiel confirme par le terrain : la zone de chalandise construite, la concurrence visitée, les flux comptés, la visibilité du site. Les deux se lisent ensemble ; la décision d’investissement et le dossier de financement s’appuient sur la seconde.',
-      geo: 'arr. ' + x.arr + ' · ' + x.prov + ' · ' + x.lat.toFixed(4) + ', ' + x.lng.toFixed(4),
-      date: new Date().toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' }),
+      motOutil: tr('Cet outil filtre les sites depuis la population du recensement, la concurrence relevée et le modèle du réseau ; il repère les sites à creuser. L’étude de potentiel confirme par le terrain : la zone de chalandise construite, la concurrence visitée, les flux comptés, la visibilité du site. Les deux se lisent ensemble ; la décision d’investissement et le dossier de financement s’appuient sur la seconde.',
+        'Deze tool filtert locaties op basis van de bevolking uit de volkstelling, de geïnventariseerde concurrentie en het netwerkmodel; hij spoort de locaties op die nader onderzoek verdienen. De potentieelstudie bevestigt dat op het terrein: het opgebouwde verzorgingsgebied, de bezochte concurrentie, de getelde verkeersstromen, de zichtbaarheid van de locatie. Beide worden samen gelezen; de investeringsbeslissing en het financieringsdossier steunen op de tweede.'),
+      geo: 'arr. ' + (nl ? planTextes('nl').arr(x.arr) : x.arr) + ' · ' + (nl ? planTextes('nl').province(PROV.find(p => p.name === x.prov) || { name: x.prov }) : x.prov) + ' · ' + x.lat.toFixed(4) + ', ' + x.lng.toFixed(4),
+      date: new Date().toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' }),
       score: x.score, verdictOk: verdictOk,
-      verdict: x.blocked.length ? 'Zone exclue — concurrence forte' : x.score >= 55 ? 'Zone candidate prioritaire' : 'Zone candidate secondaire',
+      verdict: x.blocked.length ? tr('Zone exclue — concurrence forte', 'Uitgesloten zone — sterke concurrentie') : x.score >= 55 ? tr('Zone candidate prioritaire', 'Prioritaire kandidaat-zone') : tr('Zone candidate secondaire', 'Secundaire kandidaat-zone'),
       verdictNote: x.blocked.length
-        ? x.blocked.length + ' concurrent(s) fort(s) à moins de ' + rayonTxt + (z ? ' du centre' : '') + ' : ' + x.blocked.slice(0, 3).map(o => o.b.name).join(', ')
-        : 'Score d’opportunité ' + x.score + '/100 — ménages accessibles pondérés par la pression concurrentielle.',
-      zone: z ? this.zoneLibelle(z) : 'Rayon de ' + rayonTxt + ' autour du point',
-      carteNote: g ? 'Isochrones : Valhalla (routage OpenStreetMap). En pointillé, ' + (z ? 'la zone étudiée' : 'le rayon de ' + rayonTxt) + '. Points : les commerces relevés (couleur = note Google). Fond de carte © OpenStreetMap.'
-        : 'En vert, la zone évaluée' + (z ? ' ; en pointillé, le rayon de ' + rayonTxt + ' au même centre' : '') + '. Les points : les commerces relevés, colorés par leur note Google. Fond de carte © OpenStreetMap.',
+        ? x.blocked.length + tr(' concurrent(s) fort(s) à moins de ', ' sterke concurrent(en) op minder dan ') + rayonTxt + (z ? tr(' du centre', ' van het middelpunt') : '') + tr(' : ', ': ') + x.blocked.slice(0, 3).map(o => o.b.name).join(', ')
+        : tr('Score d’opportunité ', 'Opportuniteitsscore ') + x.score + tr('/100 — ménages accessibles pondérés par la pression concurrentielle.', '/100 — bereikbare huishoudens gewogen naar de concurrentiedruk.'),
+      zone: z ? this.zoneLibelle(z) : tr('Rayon de ', 'Straal van ') + rayonTxt + tr(' autour du point', ' rond het punt'),
+      carteNote: g ? (nl ? 'Isochronen: Valhalla (routering OpenStreetMap). Gestippeld: ' + (z ? 'de bestudeerde zone' : 'de straal van ' + rayonTxt) + '. Punten: de geïnventariseerde zaken (kleur = Google-score). Achtergrondkaart © OpenStreetMap.'
+          : 'Isochrones : Valhalla (routage OpenStreetMap). En pointillé, ' + (z ? 'la zone étudiée' : 'le rayon de ' + rayonTxt) + '. Points : les commerces relevés (couleur = note Google). Fond de carte © OpenStreetMap.')
+        : nl ? 'In het groen: de geëvalueerde zone' + (z ? '; gestippeld: de straal van ' + rayonTxt + ' rond hetzelfde middelpunt' : '') + '. De punten: de geïnventariseerde zaken, gekleurd volgens hun Google-score. Achtergrondkaart © OpenStreetMap.'
+          : 'En vert, la zone évaluée' + (z ? ' ; en pointillé, le rayon de ' + rayonTxt + ' au même centre' : '') + '. Les points : les commerces relevés, colorés par leur note Google. Fond de carte © OpenStreetMap.',
       gardeAttente: gardeAttente,
-      gardeCols: ['5 min en voiture', '10 min en voiture', z ? 'Zone étudiée' : 'Rayon de ' + rayonTxt],
+      gardeCols: [tr('5 min en voiture', '5 min met de auto'), tr('10 min en voiture', '10 min met de auto'), z ? tr('Zone étudiée', 'Bestudeerde zone') : tr('Rayon de ', 'Straal van ') + rayonTxt],
       garde: garde, gardeLignes: gardeLignes, rampe: rampe, rampeNote: rampeNote,
       essentiel: [
-        ['Ménages ' + dans, fmtInt(x.hh), 'recensement 2021'],
-        ['Concurrents ' + dans, String(x.near.length), x.blocked.length ? 'dont ' + x.blocked.length + ' fort' + (x.blocked.length > 1 ? 's' : '') : chaines.length ? chaines.length + ' de chaîne' : 'aucun fort'],
-        ['Emprise ' + (s.emprise > 0 ? 'imposée' : 'estimée'), pct1(x.emprise), 'pression ' + x.load.toFixed(2)],
-        ['CA annuel estimé TTC', fmtEur(x.ca), fmtEur(x.ca / s.surface) + ' / m² sur ' + s.surface + ' m²']
+        [tr('Ménages ', 'Huishoudens ') + dans, fmtInt(x.hh), tr('recensement 2021', 'volkstelling 2021')],
+        [tr('Concurrents ', 'Concurrenten ') + dans, String(x.near.length), x.blocked.length ? (nl ? 'waarvan ' + x.blocked.length + ' sterke' : 'dont ' + x.blocked.length + ' fort' + (x.blocked.length > 1 ? 's' : '')) : chaines.length ? chaines.length + tr(' de chaîne', ' van een keten') : tr('aucun fort', 'geen sterke')],
+        [s.emprise > 0 ? tr('Emprise imposée', 'Opgelegd marktaandeel') : tr('Emprise estimée', 'Geschat marktaandeel'), pct1(x.emprise), tr('pression ', 'druk ') + x.load.toFixed(2)],
+        [tr('CA annuel estimé TTC', 'Geschatte jaaromzet incl. btw'), fmtEur(x.ca), fmtEur(x.ca / s.surface) + tr(' / m² sur ', ' / m² op ') + s.surface + ' m²']
       ],
       marche: [
-        ['Population ' + dans, fmtInt(x.hh * hhSize) + ' hab.', self._grid ? 'recensement 2021, maille de 1 km²' : 'part du territoire des communes dans le rayon'],
-        ['Ménages (' + String(hhSize).replace('.', ',') + ' personnes)', fmtInt(x.hh), 'population ÷ taille des ménages'],
-        ['dont zone primaire', fmtInt(x.prim), 'rayon réduit à 55 %'],
-        ['Dépense boulangerie par ménage', fmtEur(s.spend) + ' / an', 'hypothèse du modèle — études GeoConsulting : 650 € à Sombreffe, 586 € à Halle, 550 € à Berlo, 416 € chez Max & Sandra'],
-        ['Marché boulangerie ' + dans, fmtEur(x.market), 'ménages × dépense'],
-        ['Pression concurrentielle', x.load.toFixed(2), 'Σ force × (1 − 0,6 × distance ÷ rayon), les forts comptant 1,5'],
-        ['Emprise ' + (s.emprise > 0 ? 'imposée' : 'estimée'), pct1(x.emprise), s.emprise > 0 ? 'imposée à toutes les zones' : s.empriseMax + ' % ÷ (1 + ' + String(s.compK).replace('.', ',') + ' × pression), plancher 4 %'],
-        ['CA annuel estimé TTC', fmtEur(x.ca), 'marché × emprise ÷ (1 − ' + s.passage + ' % de passage)'],
-        ['Rendement sur ' + s.surface + ' m²', fmtEur(x.ca / s.surface) + ' / m²', 'Halle mesurée : 5 188 € / m² sur 250 m²'],
-        ['CA hebdomadaire', fmtEur(x.ca / 52), 'CA annuel ÷ 52']
+        [tr('Population ', 'Bevolking ') + dans, fmtInt(x.hh * hhSize) + tr(' hab.', ' inw.'), self._grid ? tr('recensement 2021, maille de 1 km²', 'volkstelling 2021, raster van 1 km²') : tr('part du territoire des communes dans le rayon', 'aandeel van het grondgebied van de gemeenten binnen de straal')],
+        [tr('Ménages (', 'Huishoudens (') + String(hhSize).replace('.', ',') + tr(' personnes)', ' personen)'), fmtInt(x.hh), tr('population ÷ taille des ménages', 'bevolking ÷ gezinsgrootte')],
+        [tr('dont zone primaire', 'waarvan primaire zone'), fmtInt(x.prim), tr('rayon réduit à 55 %', 'straal teruggebracht tot 55%')],
+        [tr('Dépense boulangerie par ménage', 'Bakkerijbesteding per huishouden'), fmtEur(s.spend) + tr(' / an', ' / jaar'), tr('hypothèse du modèle — études GeoConsulting : 650 € à Sombreffe, 586 € à Halle, 550 € à Berlo, 416 € chez Max & Sandra', 'modelaanname — studies GeoConsulting: € 650 in Sombreffe, € 586 in Halle, € 550 in Berlo, € 416 bij Max & Sandra')],
+        [tr('Marché boulangerie ', 'Bakkerijmarkt ') + dans, fmtEur(x.market), tr('ménages × dépense', 'huishoudens × besteding')],
+        [tr('Pression concurrentielle', 'Concurrentiedruk'), x.load.toFixed(2), tr('Σ force × (1 − 0,6 × distance ÷ rayon), les forts comptant 1,5', 'Σ sterkte × (1 − 0,6 × afstand ÷ straal), sterke concurrenten tellen voor 1,5')],
+        [s.emprise > 0 ? tr('Emprise imposée', 'Opgelegd marktaandeel') : tr('Emprise estimée', 'Geschat marktaandeel'), pct1(x.emprise), s.emprise > 0 ? tr('imposée à toutes les zones', 'opgelegd aan alle zones') : s.empriseMax + P + ' ÷ (1 + ' + String(s.compK).replace('.', ',') + tr(' × pression), plancher 4 %', ' × druk), minimum 4%')],
+        [tr('CA annuel estimé TTC', 'Geschatte jaaromzet incl. btw'), fmtEur(x.ca), tr('marché × emprise ÷ (1 − ', 'markt × marktaandeel ÷ (1 − ') + s.passage + tr(' % de passage)', '% passage)')],
+        [tr('Rendement sur ', 'Rendement op ') + s.surface + ' m²', fmtEur(x.ca / s.surface) + ' / m²', tr('Halle mesurée : 5 188 € / m² sur 250 m²', 'Halle gemeten: € 5.188 / m² op 250 m²')],
+        [tr('CA hebdomadaire', 'Weekomzet'), fmtEur(x.ca / 52), tr('CA annuel ÷ 52', 'jaaromzet ÷ 52')]
       ],
       concurrence: x.near.slice(0, 150).map(o => {
         const rv = s.ratings[o.b.id], r = self.rating(o.b), ch = self.estChaine(o.b);
         const adresse = (rv && rv.adresse) || o.b.addr || '';
         const ta = self.tailleAvis(o.b);
-        return [o.b.name + (o.b.pastry ? ' (pâtisserie)' : ''), (o.b.commune || '—') + (adresse ? ' · ' + adresse.replace(/, Belgi(que|ë)$/i, '') : ''), self.distTxt(o),
-          r ? r.toFixed(1).replace('.', ',') + (rv && rv.manual ? ' (saisie)' : '') : '—',
-          ta.n ? ta.taille + ' · ' + fmtInt(ta.n) + ' avis' : '—',
-          Math.round(self.strength(o.b) * 100) + ' %', self.isStrong(o.b), ch ? self.marqueDe(o.b) : ''];
+        return [o.b.name + (o.b.pastry ? tr(' (pâtisserie)', ' (banketbakkerij)') : ''), (o.b.commune || '—') + (adresse ? ' · ' + adresse.replace(/, Belgi(que|ë)$/i, '') : ''), self.distTxt(o),
+          r ? r.toFixed(1).replace('.', ',') + (rv && rv.manual ? tr(' (saisie)', ' (ingevoerd)') : '') : '—',
+          taille(ta),
+          Math.round(self.strength(o.b) * 100) + P, self.isStrong(o.b), ch ? self.marqueDe(o.b) : ''];
       }),
       avisGoogle: [].filter(f => f.fiche).map(f => {
         const o = x.near.find(q => q.b.id === f.id);
         return { nom: f.nom || (o ? o.b.name : ''), adresse: (f.adresse || '').replace(/, Belgi(que|ë)$/i, ''), note: f.note != null ? (+f.note).toFixed(1).replace('.', ',') : '—', n: f.n || 0,
           dist: o ? o.d.toFixed(1).replace('.', ',') + ' km' : '', url: f.url || '', photo: f.photo || '', photoAuteur: f.photoAuteur || '',
-          avis: (f.avis || []).map(a => [a.auteur || 'Anonyme', String(a.note || 0), a.le || '', a.texte || '']) };
+          avis: (f.avis || []).map(a => [a.auteur || anonyme, String(a.note || 0), a.le || '', a.texte || '']) };
       }),
-      googleAttente: s.dossierGoogleBusy ? (s.dossierGoogleFrais === 'etude' ? 'Création de l’étude : notes Google de tous les concurrents recalculées, fiches, avis et photos relus' : s.dossierGoogleFrais ? 'Relecture des avis Google pour le PDF' : 'Google en cours — notes, adresses, avis et photos des concurrents') + (s.dossierGoogle && s.dossierGoogle.partiel ? ' (' + (s.dossierGoogle.faits != null ? s.dossierGoogle.faits : s.dossierGoogle.rows.length) + ' fiches sur ' + s.dossierGoogle.attendus + ')' : '') + '…' : (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.erreur ? 'Google : ' + s.dossierGoogle.erreur : ''),
+      googleAttente: s.dossierGoogleBusy ? (s.dossierGoogleFrais === 'etude' ? tr('Création de l’étude : notes Google de tous les concurrents recalculées, fiches, avis et photos relus', 'Studie wordt aangemaakt: Google-scores van alle concurrenten herberekend, profielen, reviews en foto’s herlezen') : s.dossierGoogleFrais ? tr('Relecture des avis Google pour le PDF', 'Google-reviews worden herlezen voor de pdf') : tr('Google en cours — notes, adresses, avis et photos des concurrents', 'Google bezig — scores, adressen, reviews en foto’s van de concurrenten')) + (s.dossierGoogle && s.dossierGoogle.partiel ? ' (' + (s.dossierGoogle.faits != null ? s.dossierGoogle.faits : s.dossierGoogle.rows.length) + tr(' fiches sur ', ' profielen van ') + s.dossierGoogle.attendus + ')' : '') + '…' : (s.dossierGoogle && s.dossierGoogle.cle === this.etudeCle(x.lat, x.lng) && s.dossierGoogle.erreur ? 'Google' + tr(' : ', ': ') + s.dossierGoogle.erreur : ''),
       // la date dite est celle des fiches elles-mêmes : si Google a refusé la
       // relecture du PDF, le dossier part avec les fiches gardées, à leur date
       googleNote: (() => {
         const dg = s.dossierGoogle;
         const jours = dg && dg.cle === this.etudeCle(x.lat, x.lng) ? dg.rows.filter(f => f.fiche).map(f => f.le || dg.le).filter(Boolean).sort() : [];
         if (!jours.length) return '';
-        const fr = j => new Date(j).toLocaleDateString('fr-BE');
-        const quand = jours[0] === jours[jours.length - 1] ? 'relevées le ' + fr(jours[0]) : 'relevées entre le ' + fr(jours[0]) + ' et le ' + fr(jours[jours.length - 1]);
-        return 'Fiches Google Maps des concurrents (trente au plus, du plus proche au plus loin), ' + quand + ' — note et nombre d’avis de la fiche, les trois avis les plus récents que Google rend (cinq au plus), une photo de la fiche ; Google ne fournit pas les photos jointes aux avis. Contenu Google, à ne pas garder plus de trente jours en dehors du dossier.';
+        const fr = j => new Date(j).toLocaleDateString(loc);
+        const un = jours[0] === jours[jours.length - 1];
+        return nl
+          ? 'Google Maps-profielen van de concurrenten (maximaal dertig, van dichtstbij tot verst), ' + (un ? 'opgehaald op ' + fr(jours[0]) : 'opgehaald tussen ' + fr(jours[0]) + ' en ' + fr(jours[jours.length - 1])) + ' — score en aantal reviews van het profiel, de drie recentste reviews die Google teruggeeft (maximaal vijf), een foto van het profiel; Google levert geen foto’s die bij reviews horen. Google-inhoud, niet langer dan dertig dagen te bewaren buiten het dossier.'
+          : 'Fiches Google Maps des concurrents (trente au plus, du plus proche au plus loin), ' + (un ? 'relevées le ' + fr(jours[0]) : 'relevées entre le ' + fr(jours[0]) + ' et le ' + fr(jours[jours.length - 1])) + ' — note et nombre d’avis de la fiche, les trois avis les plus récents que Google rend (cinq au plus), une photo de la fiche ; Google ne fournit pas les photos jointes aux avis. Contenu Google, à ne pas garder plus de trente jours en dehors du dossier.';
       })(),
       concurrenceNote: concurrenceNote2,
       ecartesNote: (x.ecartes || []).length
-        ? 'Écarté' + (x.ecartes.length > 1 ? 's' : '') + ' de l’étude, ' + x.ecartes.length + ' commerce' + (x.ecartes.length > 1 ? 's' : '') + ' relevé' + (x.ecartes.length > 1 ? 's' : '') + ' ' + dans + ' : '
-          + x.ecartes.slice(0, 20).map(o => o.b.name + (o.b.commune ? ' (' + o.b.commune + ')' : '') + ' — ' + o.raison).join(' ; ') + (x.ecartes.length > 20 ? ' ; …' : '')
-          + '. Règle : un concurrent que Google dit fermé, ou dont le dernier avis Google connu date de plus d’un an, ne compte ni dans la liste, ni dans la pression, ni dans le CA.'
+        ? (nl ? 'Uit de studie geweerd, ' + x.ecartes.length + ' ' + pl(x.ecartes.length, 'geïnventariseerde zaak', 'geïnventariseerde zaken') + ' ' + dans + ': '
+          : 'Écarté' + (x.ecartes.length > 1 ? 's' : '') + ' de l’étude, ' + x.ecartes.length + ' commerce' + (x.ecartes.length > 1 ? 's' : '') + ' relevé' + (x.ecartes.length > 1 ? 's' : '') + ' ' + dans + ' : ')
+          + x.ecartes.slice(0, 20).map(o => o.b.name + (o.b.commune ? ' (' + o.b.commune + ')' : '') + ' — ' + (self.dormantRaison(o.b) || o.raison)).join(sep) + (x.ecartes.length > 20 ? sep + '…' : '')
+          + tr('. Règle : un concurrent que Google dit fermé, ou dont le dernier avis Google connu date de plus d’un an, ne compte ni dans la liste, ni dans la pression, ni dans le CA.', '. Regel: een concurrent die volgens Google gesloten is, of waarvan de laatste bekende Google-review meer dan een jaar oud is, telt niet mee in de lijst, noch in de druk, noch in de omzet.')
         : '',
       chaines: marques.map(m => m.nom + (m.n > 1 ? ' ×' + m.n : '')).join(', '),
       // la liste : chaque concurrent, sa ligne, puis sa fiche Google (photo, trois derniers avis) quand elle est là
@@ -2848,36 +3311,41 @@ export class Scouting {
         return x.near.slice(0, 150).map(o => {
           const rv = s.ratings[o.b.id], r = self.rating(o.b), ch = self.estChaine(o.b), ta = self.tailleAvis(o.b), f = fiches[o.b.id];
           const adresse = (f && f.adresse) || (rv && rv.adresse) || o.b.addr || '';
-          return { ligne: [o.b.name + (o.b.pastry ? ' (pâtisserie)' : ''), (o.b.commune || '—') + (adresse ? ' · ' + adresse.replace(/, Belgi(que|ë)$/i, '') : ''), self.distTxt(o),
-              r ? r.toFixed(1).replace('.', ',') + (rv && rv.manual ? ' (saisie)' : '') : '—', ta.n ? ta.taille + ' · ' + fmtInt(ta.n) + ' avis' : '—', Math.round(self.strength(o.b) * 100) + ' %', self.isStrong(o.b), ch ? self.marqueDe(o.b) : ''],
-            fiche: f ? { url: f.url || '', photo: f.photo || '', photoAuteur: f.photoAuteur || '', avis: (f.avis || []).map(a => [a.auteur || 'Anonyme', String(a.note || 0), a.le || '', a.texte || '']) } : null };
+          return { ligne: [o.b.name + (o.b.pastry ? tr(' (pâtisserie)', ' (banketbakkerij)') : ''), (o.b.commune || '—') + (adresse ? ' · ' + adresse.replace(/, Belgi(que|ë)$/i, '') : ''), self.distTxt(o),
+              r ? r.toFixed(1).replace('.', ',') + (rv && rv.manual ? tr(' (saisie)', ' (ingevoerd)') : '') : '—', taille(ta), Math.round(self.strength(o.b) * 100) + P, self.isStrong(o.b), ch ? self.marqueDe(o.b) : ''],
+            fiche: f ? { url: f.url || '', photo: f.photo || '', photoAuteur: f.photoAuteur || '', avis: (f.avis || []).map(a => [a.auteur || anonyme, String(a.note || 0), a.le || '', a.texte || '']) } : null };
         });
       })(),
       etude: !!et, etudeAttente: etudeAttente, etudeNote: etudeNote,
       montee: montee,
-      monteeCols: ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Année 4 et + · 100 %'],
+      monteeCols: nl ? ['Jaar 1 · 70%', 'Jaar 2 · 80%', 'Jaar 3 · 90%', 'Jaar 4 en later · 100%'] : ['Année 1 · 70 %', 'Année 2 · 80 %', 'Année 3 · 90 %', 'Année 4 et + · 100 %'],
       monteeRows: monteeRows,
-      motFin: 'Quelle que soit l’étude de marché, elle mesure un potentiel — pas un chiffre acquis. Ce potentiel, le candidat doit aller le chercher et l’exploiter : personne ne lui enverra de clients. Les trois premières années, on constitue sa clientèle, jour après jour ; c’est la clé de voûte d’une entreprise pérenne.',
+      motFin: tr('Quelle que soit l’étude de marché, elle mesure un potentiel — pas un chiffre acquis. Ce potentiel, le candidat doit aller le chercher et l’exploiter : personne ne lui enverra de clients. Les trois premières années, on constitue sa clientèle, jour après jour ; c’est la clé de voûte d’une entreprise pérenne.',
+        'Welke marktstudie ook: ze meet een potentieel — geen verworven cijfer. Dat potentieel moet de kandidaat zelf gaan halen en benutten: niemand brengt de klanten vanzelf aan. De eerste drie jaar bouw je je klantenkring op, dag na dag; dat is de hoeksteen van een duurzame onderneming.'),
       indirecte: et ? resume(et.indirecte) : [],
-      indirecteNote: et && et.indirecte.length ? 'Les plus proches : ' + proches(et.indirecte, 6) + '.' : '',
+      indirecteNote: et && et.indirecte.length ? tr('Les plus proches : ', 'De dichtstbijzijnde: ') + proches(et.indirecte, 6) + '.' : '',
       tissu: tissuRows, zonings: zoningsRows,
       ecoles: et ? resume(et.ecoles) : [],
-      ecolesNote: et && et.ecoles.length ? 'Les plus proches : ' + proches(et.ecoles, 5) + (et.ecoles.some(e => e.eleves) ? ' — ' + et.ecoles.filter(e => e.eleves).map(e => e.nom + ' : ' + fmtInt(e.eleves) + ' élèves').join(', ') : '') + '.' : '',
+      ecolesNote: et && et.ecoles.length ? tr('Les plus proches : ', 'De dichtstbijzijnde: ') + proches(et.ecoles, 5) + (et.ecoles.some(e => e.eleves) ? ' — ' + et.ecoles.filter(e => e.eleves).map(e => N(e) + tr(' : ', ': ') + fmtInt(e.eleves) + tr(' élèves', ' leerlingen')).join(', ') : '') + '.' : '',
       flux: et ? resume(et.flux) : [],
-      fluxNote: et && et.flux.length ? 'Les plus proches : ' + proches(et.flux, 6) + '.' : '',
+      fluxNote: et && et.flux.length ? tr('Les plus proches : ', 'De dichtstbijzijnde: ') + proches(et.flux, 6) + '.' : '',
       reseau: reseau, reseauNote: reseauNote,
       hypotheses: [
-        ['Dépense par ménage', fmtEur(s.spend) + ' / an'], ['Part du passage', s.passage + ' %'], ['Surface nette cible', s.surface + ' m²'],
-        ['Emprise imposée', s.emprise > 0 ? s.emprise + ' %' : 'calculée'], ['Emprise maximale', s.empriseMax + ' %'], ['Sensibilité à la concurrence', String(s.compK).replace('.', ',')],
-        ['Taille des ménages', String(hhSize).replace('.', ',')], ['Rayon', rayonTxt], ['Concurrent dès', (+s.weak).toFixed(1).replace('.', ',') + ' ★'],
-        ['Concurrent fort dès', (+s.thresh).toFixed(1).replace('.', ',') + ' ★'], ['Score minimum', String(s.minScore)],
-        ['Emprise zone primaire', String(s.empriseP).replace('.', ',') + ' %'], ['Emprise zone secondaire', String(s.empriseS).replace('.', ',') + ' %'],
-        ['Concurrence indirecte', s.indirecte + ' % d’une boulangerie, les six plus proches'], ['Coupure aux pôles concurrents', s.poles ? 'oui' : 'non'], ['Distances par la route', s.routeDist ? 'oui' : 'non']
+        [tr('Dépense par ménage', 'Besteding per huishouden'), fmtEur(s.spend) + tr(' / an', ' / jaar')], [tr('Part du passage', 'Aandeel passage'), s.passage + P], [tr('Surface nette cible', 'Beoogde netto-oppervlakte'), s.surface + ' m²'],
+        [tr('Emprise imposée', 'Opgelegd marktaandeel'), s.emprise > 0 ? s.emprise + P : tr('calculée', 'berekend')], [tr('Emprise maximale', 'Maximaal marktaandeel'), s.empriseMax + P], [tr('Sensibilité à la concurrence', 'Gevoeligheid voor concurrentie'), String(s.compK).replace('.', ',')],
+        [tr('Taille des ménages', 'Gezinsgrootte'), String(hhSize).replace('.', ',')], [tr('Rayon', 'Straal'), rayonTxt], [tr('Concurrent dès', 'Concurrent vanaf'), (+s.weak).toFixed(1).replace('.', ',') + ' ★'],
+        [tr('Concurrent fort dès', 'Sterke concurrent vanaf'), (+s.thresh).toFixed(1).replace('.', ',') + ' ★'], [tr('Score minimum', 'Minimumscore'), String(s.minScore)],
+        [tr('Emprise zone primaire', 'Marktaandeel primaire zone'), String(s.empriseP).replace('.', ',') + P], [tr('Emprise zone secondaire', 'Marktaandeel secundaire zone'), String(s.empriseS).replace('.', ',') + P],
+        [tr('Concurrence indirecte', 'Indirecte concurrentie'), s.indirecte + tr(' % d’une boulangerie, les six plus proches', '% van een bakkerij, de zes dichtstbijzijnde')], [tr('Coupure aux pôles concurrents', 'Afsnijding bij concurrerende polen'), s.poles ? tr('oui', 'ja') : tr('non', 'nee')], [tr('Distances par la route', 'Afstanden over de weg'), s.routeDist ? tr('oui', 'ja') : tr('non', 'nee')]
       ],
       notes: notes,
-      sources: 'Commerces et communes : OpenStreetMap' + (self.osmDate() ? ', cache du serveur relu le ' + self.osmDate() : '') + ' · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)'
-        + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '')
-        + (g || (z && z.type === 'isochrone') || x.routes ? ' · isochrones et distances par la route : Valhalla (routage OpenStreetMap)' : '') + (et ? ' · entreprises, zonings, écoles, flux et concurrence indirecte : OpenStreetMap (Overpass)' : '') + (pan ? ' · panier moyen : caisse du réseau' : '') + '.'
+      sources: nl
+        ? 'Zaken en gemeenten: OpenStreetMap' + (self.osmDate() ? ', servercache herlezen op ' + self.osmDate() : '') + ' · bevolking: raster van 1 km² uit de volkstelling 2021 (Statbel, verspreiding Eurostat)'
+          + ' · besteding per huishouden, marktaandeel en oppervlakte: studie GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · scores: Google Places' : '')
+          + (g || (z && z.type === 'isochrone') || x.routes ? ' · isochronen en afstanden over de weg: Valhalla (routering OpenStreetMap)' : '') + (et ? ' · bedrijven, bedrijventerreinen, scholen, publiekstrekkers en indirecte concurrentie: OpenStreetMap (Overpass)' : '') + (pan ? ' · gemiddeld ticket: kassa van het netwerk' : '') + '.'
+        : 'Commerces et communes : OpenStreetMap' + (self.osmDate() ? ', cache du serveur relu le ' + self.osmDate() : '') + ' · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)'
+          + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '')
+          + (g || (z && z.type === 'isochrone') || x.routes ? ' · isochrones et distances par la route : Valhalla (routage OpenStreetMap)' : '') + (et ? ' · entreprises, zonings, écoles, flux et concurrence indirecte : OpenStreetMap (Overpass)' : '') + (pan ? ' · panier moyen : caisse du réseau' : '') + '.'
     };
   }
 
@@ -2890,7 +3358,9 @@ export class Scouting {
     const pts = x.zone ? x.zone.poly : cerclePoly(x.lat, x.lng, s.radius);
     // les isochrones de la page de garde, quand Valhalla les a rendues
     const g = s.garde && s.garde.cle === this.etudeCle(x.lat, x.lng) ? s.garde : null;
-    const key = [x.lat.toFixed(5), x.lng.toFixed(5), pts.length, s.radius, this._rev, s.minRating, s.arr, g ? 'iso' : ''].join('|');
+    // la légende est dessinée dans l'image : une carte par langue du dossier
+    const nl = s.dossierLang === 'nl';
+    const key = [x.lat.toFixed(5), x.lng.toFixed(5), pts.length, s.radius, this._rev, s.minRating, s.arr, g ? 'iso' : '', nl ? 'nl' : 'fr'].join('|');
     if (this._imgKey === key && this._imgP) return this._imgP;
     // la page de garde cadre sur les 10 minutes en voiture, au plus près :
     // la zone étudiée reste en pointillé, coupée au bord s'il le faut
@@ -2948,7 +3418,8 @@ export class Scouting {
       cx.font = '11px Helvetica, Arial, sans-serif';
       if (g){
         // la légende sur l'image : le PDF et l'impression la gardent
-        const items = [['rgba(27,94,32,.75)', '5 min en voiture'], ['rgba(139,195,74,.9)', '10 min en voiture'], ['', x.zone ? 'zone étudiée' : 'rayon de ' + s.radius.toFixed(1).replace('.', ',') + ' km']];
+        const items = [['rgba(27,94,32,.75)', nl ? '5 min met de auto' : '5 min en voiture'], ['rgba(139,195,74,.9)', nl ? '10 min met de auto' : '10 min en voiture'],
+          ['', x.zone ? (nl ? 'bestudeerde zone' : 'zone étudiée') : (nl ? 'straal van ' : 'rayon de ') + s.radius.toFixed(1).replace('.', ',') + ' km']];
         let wl = 10;
         items.forEach(it => { wl += 18 + cx.measureText(it[1]).width + 10; });
         cx.fillStyle = 'rgba(255,255,255,.9)'; cx.fillRect(8, 8, wl, 24);
@@ -3004,9 +3475,9 @@ export class Scouting {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const url = URL.createObjectURL(await r.blob());
       const a = document.createElement('a');
-      a.href = url; a.download = 'dossier-implantation-' + slugDe(d.commune) + '-' + new Date().toISOString().slice(0, 10) + '.pdf'; a.click();
+      a.href = url; a.download = (d.lang === 'nl' ? 'vestigingsdossier-' : 'dossier-implantation-') + slugDe(d.commune) + '-' + new Date().toISOString().slice(0, 10) + '.pdf'; a.click();
       setTimeout(() => URL.revokeObjectURL(url), 4000);
-      this.notify('Dossier PDF téléchargé — ' + d.commune + (avisNote ? ' · ' + avisNote : ''));
+      this.notify('Dossier PDF téléchargé' + (d.lang === 'nl' ? ' en néerlandais' : '') + ' — ' + d.commune + (avisNote ? ' · ' + avisNote : ''));
     } catch (e) {
       this.notify('PDF impossible (' + (e.name === 'AbortError' ? 'délai dépassé' : e.message) + ') — la fenêtre d’impression prend le relais');
       this.imprimerDossier();
@@ -3020,7 +3491,7 @@ export class Scouting {
     if (!d) return;
     d.carte = this.state.dossierImg || '';
     const logo = new URL('assets/img/logo.png', document.baseURI).href;
-    const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' + esc(d.titre) + '</title><style>' + T.DOSS_CSS + T.DOSS_PRINT + '</style></head><body>'
+    const html = '<!doctype html><html lang="' + d.lang + '"><head><meta charset="utf-8"><title>' + esc(d.titre) + '</title><style>' + T.DOSS_CSS + T.DOSS_PRINT + '</style></head><body>'
       + T.dossierPage(d, esc, logo) + '</body></html>';
     const w = window.open('', '_blank');
     if (!w){ this.notify('Fenêtre bloquée par le navigateur — autorise les fenêtres surgissantes pour imprimer le dossier.'); return; }
@@ -3028,30 +3499,38 @@ export class Scouting {
     setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* fenêtre fermée */ } }, 600);
   }
 
+  // Le CSV suit la langue du dossier ; les clés de section restent les mêmes
+  // (un tableur qui les filtre ne casse pas d'une langue à l'autre).
   exporterDossierCsv(){
     const d = this.dossierDonnees();
     if (!d) return;
-    const rows = [['dossier', 'titre', d.titre, d.date], ['dossier', 'zone', d.zone, d.geo], ['dossier', 'score', d.score, d.verdict]];
+    const tr = (fr, nl) => d.lang === 'nl' ? nl : fr;
+    const bandes = r => r[4] + tr(' dans le rayon · ', ' binnen de straal · ') + r[1] + tr(' à moins de 1 km · ', ' op minder dan 1 km · ') + r[2] + tr(' à moins de 2 km · ', ' op minder dan 2 km · ') + r[3] + tr(' à moins de 3 km', ' op minder dan 3 km');
+    const proche = tr('plus proche : ', 'dichtstbijzijnde: ');
+    const rows = [['dossier', tr('titre', 'titel'), d.titre, d.date], ['dossier', 'zone', d.zone, d.geo], ['dossier', 'score', d.score, d.verdict]];
     d.essentiel.forEach(r => rows.push(['essentiel', r[0], r[1], r[2]]));
     d.marche.forEach(r => rows.push(['marche', r[0], r[1], r[2]]));
-    if (d.concurrenceNote) rows.push(['concurrence', 'lecture', d.concurrenceNote, '']);
-    d.concurrence.forEach(r => rows.push(['concurrence', r[0], r[2] + ' · note ' + r[3] + ' · taille ' + r[4] + ' · force ' + r[5], r[1] + (r[6] ? ' · concurrent fort' : '') + (r[7] ? ' · chaîne ' + r[7] : '')]));
-    d.indirecte.forEach(r => rows.push(['concurrence_indirecte', r[0], r[4] + ' dans le rayon · ' + r[1] + ' à moins de 1 km · ' + r[2] + ' à moins de 2 km · ' + r[3] + ' à moins de 3 km', 'plus proche : ' + r[5]]));
+    if (d.concurrenceNote) rows.push(['concurrence', tr('lecture', 'duiding'), d.concurrenceNote, '']);
+    d.concurrence.forEach(r => rows.push(['concurrence', r[0], r[2] + tr(' · note ', ' · score ') + r[3] + tr(' · taille ', ' · grootte ') + r[4] + tr(' · force ', ' · sterkte ') + r[5], r[1] + (r[6] ? tr(' · concurrent fort', ' · sterke concurrent') : '') + (r[7] ? tr(' · chaîne ', ' · keten ') + r[7] : '')]));
+    d.indirecte.forEach(r => rows.push(['concurrence_indirecte', r[0], bandes(r), proche + r[5]]));
     d.tissu.forEach(r => rows.push(['tissu_economique', r[0], r[1], r[2]]));
-    d.zonings.forEach(r => rows.push(['zonings', r[0], r[4] + ' entreprises · ' + r[3], r[1] + ' · ' + r[2]]));
-    d.ecoles.forEach(r => rows.push(['ecoles', r[0], r[4] + ' dans le rayon · ' + r[1] + ' à moins de 1 km · ' + r[2] + ' à moins de 2 km · ' + r[3] + ' à moins de 3 km', 'plus proche : ' + r[5]]));
-    d.flux.forEach(r => rows.push(['flux', r[0], r[4] + ' dans le rayon · ' + r[1] + ' à moins de 1 km · ' + r[2] + ' à moins de 2 km · ' + r[3] + ' à moins de 3 km', 'plus proche : ' + r[5]]));
-    [['concurrence_indirecte', d.indirecteNote], ['ecoles', d.ecolesNote], ['flux', d.fluxNote]].forEach(x => { if (x[1]) rows.push([x[0], 'les plus proches', x[1], '']); });
-    if (d.etudeNote) rows.push(['etude_locale', 'methode', d.etudeNote, '']);
+    d.zonings.forEach(r => rows.push(['zonings', r[0], r[4] + tr(' entreprises · ', ' bedrijven · ') + r[3], r[1] + ' · ' + r[2]]));
+    d.ecoles.forEach(r => rows.push(['ecoles', r[0], bandes(r), proche + r[5]]));
+    d.flux.forEach(r => rows.push(['flux', r[0], bandes(r), proche + r[5]]));
+    [['concurrence_indirecte', d.indirecteNote], ['ecoles', d.ecolesNote], ['flux', d.fluxNote]].forEach(x => { if (x[1]) rows.push([x[0], tr('les plus proches', 'de dichtstbijzijnde'), x[1], '']); });
+    if (d.etudeNote) rows.push(['etude_locale', tr('methode', 'methode'), d.etudeNote, '']);
     if (d.motFin) rows.push(['a_lire', '', d.motFin, '']);
-    d.reseau.forEach(r => rows.push(['reseau', r[0], 'semaine : ' + r[1] + ' prévu / ' + r[2] + ' réel · mois : ' + r[3] + ' prévu / ' + r[4] + ' réel · année : ' + r[5] + ' prévu / ' + r[6] + ' réel · cible de l’année ' + r[7] + ' · réel/cible ' + r[8] + ' · réel/plan ' + r[9], r[11]]));
-    if (d.montee) rows.push(['reseau', 'montée en charge', d.montee, '']);
-    d.monteeRows.forEach(r => rows.push(['montee_en_charge', r[0], 'année 1 ' + r[1] + ' · année 2 ' + r[2] + ' · année 3 ' + r[3] + ' · année 4+ ' + r[4], +r[5] ? 'en cours : année ' + r[5] : '']));
+    const pr = tr(' prévu / ', ' gepland / '), re = tr(' réel', ' werkelijk');
+    d.reseau.forEach(r => rows.push(['reseau', r[0], tr('semaine : ', 'week: ') + r[1] + pr + r[2] + re + tr(' · mois : ', ' · maand: ') + r[3] + pr + r[4] + re + tr(' · année : ', ' · jaar: ') + r[5] + pr + r[6] + re
+      + tr(' · cible de l’année ', ' · jaardoel ') + r[7] + tr(' · réel/cible ', ' · werkelijk/doel ') + r[8] + tr(' · réel/plan ', ' · werkelijk/plan ') + r[9], r[11]]));
+    if (d.montee) rows.push(['reseau', tr('montée en charge', 'aanloop'), d.montee, '']);
+    const an = tr('année ', 'jaar ');
+    d.monteeRows.forEach(r => rows.push(['montee_en_charge', r[0], an + '1 ' + r[1] + ' · ' + an + '2 ' + r[2] + ' · ' + an + '3 ' + r[3] + ' · ' + an + '4+ ' + r[4], +r[5] ? tr('en cours : année ', 'lopend: jaar ') + r[5] : '']));
     d.cartes.forEach(c => { if (c.fiche) c.fiche.avis.forEach(a => rows.push(['google_avis', c.ligne[0], a[1] + ' ★ · ' + a[0] + ' · ' + a[2], a[3]])); });
     d.hypotheses.forEach(r => rows.push(['hypotheses', r[0], r[1], '']));
     d.notes.forEach(n => rows.push(['notes', '', n, '']));
     rows.push(['sources', '', d.sources, '']);
-    this.csv('dossier_' + slugDe(d.commune), ['section', 'mesure', 'valeur', 'detail'], rows);
+    this.csv(tr('dossier_', 'vestigingsdossier_') + slugDe(d.commune), tr(['section', 'mesure', 'valeur', 'detail'], ['sectie', 'maatstaf', 'waarde', 'detail']), rows);
   }
 
   /* ---------- la zone dessinée ---------- */
@@ -3088,7 +3567,7 @@ export class Scouting {
         lat: cen[0], lng: cen[1], hh: hh, prim: prim, market: market, emprise: emprise, ca: ca,
         near: near, blocked: blocked, load: load, score: score,
         ecartes: this.ecartesAutour(cen[0], cen[1], Req, poly),
-        commune: cm ? cm.name : '—', arr: cm ? cm.arr : '—',
+        commune: cm ? cm.name : '—', communeNl: cm ? cm.nl || cm.name : '—', arr: cm ? cm.arr : '—',
         prov: cm ? (PROV.find(p => p.code === cm.prov) || {}).name : '—',
         cmHh: cm ? cm.hh : 0, cmEst: cm ? !!cm.est : false, cmPop: cm ? cm.pop : 0,
         zone: Object.assign({}, zone, { centre: cen, aire: aire, req: Req }),
@@ -3856,13 +4335,15 @@ export class Scouting {
     return pop / (this.state.hhSize || HH_SIZE);
   }
 
-  distTxt(o){ return o.d.toFixed(1).replace('.', ',') + ' km' + (o.dR != null ? ' · ' + o.dR.toFixed(1).replace('.', ',') + ' km par la route' : ''); }
+  distTxt(o){ return o.d.toFixed(1).replace('.', ',') + ' km' + (o.dR != null ? ' · ' + o.dR.toFixed(1).replace('.', ',') + this.tr(' km par la route', ' km over de weg') : ''); }
 
   indirectTxt(x){
-    const s = this.state, l = x.indirect || [];
+    const s = this.state, l = x.indirect || [], nl = this._dl === 'nl';
     if (!l.length) return '';
-    return ' Concurrence indirecte comptée dans la pression (+' + l.reduce((a, e) => a + e.poids, 0).toFixed(2) + ', les ' + l.length + ' plus proches, un supermarché valant ' + s.indirecte + ' % d’une boulangerie) : '
-      + l.slice(0, 8).map(e => e.nom + ' (' + e.genre + ', ' + e.d.toFixed(1).replace('.', ',') + ' km)').join(', ') + (l.length > 8 ? '…' : '') + '.';
+    const p = l.reduce((a, e) => a + e.poids, 0).toFixed(2);
+    return (nl ? ' Indirecte concurrentie meegeteld in de druk (+' + p + ', de ' + l.length + ' dichtstbijzijnde, een supermarkt telt voor ' + s.indirecte + '% van een bakkerij): '
+      : ' Concurrence indirecte comptée dans la pression (+' + p + ', les ' + l.length + ' plus proches, un supermarché valant ' + s.indirecte + ' % d’une boulangerie) : ')
+      + l.slice(0, 8).map(e => (nl ? nomLieuNl(e.nom, e.genre) : e.nom) + ' (' + (nl ? genreNl(e.genre) : e.genre) + ', ' + e.d.toFixed(1).replace('.', ',') + ' km)').join(', ') + (l.length > 8 ? '…' : '') + '.';
   }
 
   lignesConstruit(x){
@@ -3878,22 +4359,26 @@ export class Scouting {
   }
 
   estimationsDossier(x){
-    const s = this.state, c = x.construit, hhSize = s.hhSize || HH_SIZE, R = s.radius;
-    const z = x.zone, cercleTxt = z ? 'Zone étudiée' : 'Rayon de ' + R.toFixed(1).replace('.', ',') + ' km';
-    const cols = [cercleTxt, 'Zone construite 5 / 10 min', 'Lecture'];
-    if (!c) return { rows: [], cols: cols, note: s.gardeBusy ? 'Zone construite en cours de calcul (isochrones Valhalla).' : '' };
+    const s = this.state, c = x.construit, hhSize = s.hhSize || HH_SIZE, R = s.radius, tr = (fr, nl) => this.tr(fr, nl);
+    const z = x.zone, cercleTxt = z ? tr('Zone étudiée', 'Bestudeerde zone') : tr('Rayon de ', 'Straal van ') + R.toFixed(1).replace('.', ',') + ' km';
+    const cols = [cercleTxt, tr('Zone construite 5 / 10 min', 'Opgebouwde zone 5 / 10 min'), tr('Lecture', 'Duiding')];
+    if (!c) return { rows: [], cols: cols, note: s.gardeBusy ? tr('Zone construite en cours de calcul (isochrones Valhalla).', 'Opgebouwde zone wordt berekend (isochronen Valhalla).') : '' };
     const eMoy = (c.hhP + c.hhS) > 0 ? (c.hhP * c.eP + c.hhS * c.eS) / (c.hhP + c.hhS) : 0;
+    const hab = tr(' hab.', ' inw.'), men = tr(' ménages', ' huishoudens'), emp = tr(' · emprise ', ' · marktaandeel ');
     const rows = [
-      ['Population', fmtInt(x.hh * hhSize) + ' hab.', fmtInt((c.hhP + c.hhS) * hhSize) + ' hab.', 'grille du recensement 2021 ; zone construite = 5 min (primaire) + 5 à 10 min (secondaire) en voiture'],
-      ['Ménages', fmtInt(x.hh), fmtInt(c.hhP + c.hhS), 'population ÷ ' + String(hhSize).replace('.', ',')],
-      ['Zone primaire', fmtInt(x.prim) + ' (rayon × 55 %)', fmtInt(c.hhP) + ' ménages · emprise ' + pct1(c.eP), 'à 5 minutes en voiture'],
-      ['Zone secondaire', '—', fmtInt(c.hhS) + ' ménages · emprise ' + pct1(c.eS) + (c.coupe > 0 ? ' · ' + fmtInt(c.coupe) + ' cédés aux pôles' : ''), 'de 5 à 10 minutes' + (c.coupe > 0 ? ' ; coupée là où un concurrent fort est plus près' : '')],
-      ['Concurrents', String(x.near.length), c.n5 + ' à 5 min · ' + c.n10 + ' à 10 min', 'boulangeries et pâtisseries relevées'],
-      ['Emprise', pct1(x.emprise), pct1(eMoy) + ' en moyenne', 'les deux emprises baissent avec la pression concurrentielle (' + x.load.toFixed(2) + ')'],
-      ['CA annuel estimé TTC', fmtEur(x.ca), fmtEur(c.ca), 'ménages × dépense × emprise ÷ (1 − passage)']
+      [tr('Population', 'Bevolking'), fmtInt(x.hh * hhSize) + hab, fmtInt((c.hhP + c.hhS) * hhSize) + hab, tr('grille du recensement 2021 ; zone construite = 5 min (primaire) + 5 à 10 min (secondaire) en voiture', 'raster van de volkstelling 2021; opgebouwde zone = 5 min (primair) + 5 tot 10 min (secundair) met de auto')],
+      [tr('Ménages', 'Huishoudens'), fmtInt(x.hh), fmtInt(c.hhP + c.hhS), tr('population ÷ ', 'bevolking ÷ ') + String(hhSize).replace('.', ',')],
+      [tr('Zone primaire', 'Primaire zone'), fmtInt(x.prim) + tr(' (rayon × 55 %)', ' (straal × 55%)'), fmtInt(c.hhP) + men + emp + pct1(c.eP), tr('à 5 minutes en voiture', 'op 5 minuten met de auto')],
+      [tr('Zone secondaire', 'Secundaire zone'), '—', fmtInt(c.hhS) + men + emp + pct1(c.eS) + (c.coupe > 0 ? ' · ' + fmtInt(c.coupe) + tr(' cédés aux pôles', ' afgestaan aan de polen') : ''), tr('de 5 à 10 minutes', 'van 5 tot 10 minuten') + (c.coupe > 0 ? tr(' ; coupée là où un concurrent fort est plus près', '; afgesneden waar een sterke concurrent dichterbij ligt') : '')],
+      [tr('Concurrents', 'Concurrenten'), String(x.near.length), c.n5 + tr(' à 5 min · ', ' op 5 min · ') + c.n10 + tr(' à 10 min', ' op 10 min'), tr('boulangeries et pâtisseries relevées', 'geïnventariseerde bakkerijen en banketbakkerijen')],
+      [tr('Emprise', 'Marktaandeel'), pct1(x.emprise), pct1(eMoy) + tr(' en moyenne', ' gemiddeld'), tr('les deux emprises baissent avec la pression concurrentielle (', 'beide marktaandelen dalen met de concurrentiedruk (') + x.load.toFixed(2) + ')'],
+      [tr('CA annuel estimé TTC', 'Geschatte jaaromzet incl. btw'), fmtEur(x.ca), fmtEur(c.ca), tr('ménages × dépense × emprise ÷ (1 − passage)', 'huishoudens × besteding × marktaandeel ÷ (1 − passage)')]
     ];
-    const note = 'Deux chemins pour un même point : le rayon (ou la zone dessinée) avec une emprise unique, et la zone construite par temps de parcours — ' + fmtInt(c.hhP) + ' ménages à 5 minutes avec ' + pct1(c.eP) + ' d’emprise, ' + fmtInt(c.hhS) + ' de 5 à 10 minutes avec ' + pct1(c.eS)
-      + (c.coupe > 0 ? ', ' + fmtInt(c.coupe) + ' ménages cédés aux pôles concurrents plus proches' : '') + '. L’écart entre les deux dit ce que la forme de la zone change ; le terrain tranche.';
+    const note = this._dl === 'nl'
+      ? 'Twee wegen voor eenzelfde punt: de straal (of de getekende zone) met één marktaandeel, en de zone opgebouwd volgens reistijd — ' + fmtInt(c.hhP) + ' huishoudens op 5 minuten met ' + pct1(c.eP) + ' marktaandeel, ' + fmtInt(c.hhS) + ' van 5 tot 10 minuten met ' + pct1(c.eS)
+        + (c.coupe > 0 ? ', ' + fmtInt(c.coupe) + ' huishoudens afgestaan aan dichterbij gelegen concurrerende polen' : '') + '. Het verschil tussen beide toont wat de vorm van de zone verandert; het terrein beslist.'
+      : 'Deux chemins pour un même point : le rayon (ou la zone dessinée) avec une emprise unique, et la zone construite par temps de parcours — ' + fmtInt(c.hhP) + ' ménages à 5 minutes avec ' + pct1(c.eP) + ' d’emprise, ' + fmtInt(c.hhS) + ' de 5 à 10 minutes avec ' + pct1(c.eS)
+        + (c.coupe > 0 ? ', ' + fmtInt(c.coupe) + ' ménages cédés aux pôles concurrents plus proches' : '') + '. L’écart entre les deux dit ce que la forme de la zone change ; le terrain tranche.';
     return { rows: rows, cols: cols, note: note };
   }
 
@@ -3902,9 +4387,10 @@ export class Scouting {
     const t = f && f.v ? f.v : (cand && cand.terrain) || null;
     if (!t) return { rows: [], flux: [], note: '' };
     const dj = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) : '';
-    const rows = [['Visite', dj(t.visiteLe)], ['Visibilité', t.visibilite], ['Accès', t.acces], ['Façade', t.facade], ['Parking', t.parking], ['Remarques', t.remarques]].filter(r => r[1]);
+    const tr = (fr, nl) => this.tr(fr, nl);
+    const rows = [[tr('Visite', 'Bezoek'), dj(t.visiteLe)], [tr('Visibilité', 'Zichtbaarheid'), t.visibilite], [tr('Accès', 'Toegang'), t.acces], [tr('Façade', 'Gevel'), t.facade], ['Parking', t.parking], [tr('Remarques', 'Opmerkingen'), t.remarques]].filter(r => r[1]);
     const flux = (t.flux || []).filter(r => r.axe).map(r => [r.axe, r.vehJour ? fmtInt(r.vehJour) : '—', r.sens || '', (r.source || '') + (r.le ? (r.source ? ' · ' : '') + dj(r.le) : '')]);
-    return { rows: rows, flux: flux, note: rows.length || flux.length ? 'Relevé terrain saisi par le consultant : ce que l’outil ne voit pas — un terrain en contrebas, une façade masquée, un flux compté sur l’axe.' : '' };
+    return { rows: rows, flux: flux, note: rows.length || flux.length ? tr('Relevé terrain saisi par le consultant : ce que l’outil ne voit pas — un terrain en contrebas, une façade masquée, un flux compté sur l’axe.', 'Terreinverkenning ingevoerd door de consultant: wat de tool niet ziet — een terrein dat lager ligt, een verborgen gevel, een getelde verkeersstroom op de as.') : '' };
   }
 
   terrainVm(){
@@ -4834,21 +5320,10 @@ export class Scouting {
       })),
       ouvrirDossier: () => self.ouvrirDossier(null),
       ouvrirPlan: () => self.ouvrirPlan(),
-      plan: s.plan ? Object.assign(self.planDonnees(), {
-        img: s.planImg, busy: s.planBusy,
-        nChoix: [1, 2, 3, 5].map(n => ({ value: String(n), label: n + ' par province' })), nVal: String(Math.max(1, Math.min(5, s.planN || 5))),
-        setN: e => self.setPlan({ planN: parseInt(e.target.value, 10) || 5 }),
-        seuilOn: !!s.planSeuil, toggleSeuil: () => self.setPlan({ planSeuil: !s.planSeuil }),
-        ecartChoix: [[0, 'sans écart minimum'], [10, '10 min entre elles'], [15, '15 min entre elles'], [20, '20 min entre elles'], [30, '30 min entre elles']].map(c => ({ value: String(c[0]), label: c[1] })),
-        ecartVal: String(Math.max(0, +s.planEcart || 0)), setEcart: e => self.setPlan({ planEcart: parseInt(e.target.value, 10) || 0 }),
-        reseauOn: !!s.planReseau, toggleReseau: () => self.setPlan({ planReseau: !s.planReseau }),
-        routeOn: s.planRoute !== false, toggleRoute: () => self.setPlan({ planRoute: s.planRoute === false }),
-        caMinVal: s.planCaMin > 0 ? String(s.planCaMin) : '',
-        setCaMin: e => { const v = parseInt(String(e.target.value).replace(/[^\d]/g, ''), 10); self.setPlan({ planCaMin: isNaN(v) ? 0 : Math.max(0, v) }); },
-        fermer: () => self.fermerPlan(), pdf: () => self.telechargerPlanPdf(), csv: () => self.exporterPlanCsv(), imprimer: () => self.imprimerPlan()
-      }) : null,
+      plan: s.plan ? self.planVue() : null,
       dossier: s.dossier && x ? Object.assign(self.dossierDonnees(), {
         img: s.dossierImg, busy: s.dossierBusy, busyTxt: s.dossierBusyTxt || '', terrainForm: self.terrainVm(),
+        langues: LANGUES.map(([code, nom]) => ({ code: code, nom: nom, on: s.dossierLang === code, go: () => self.dossierLangue(code) })),
         fermer: () => self.fermerDossier(),
         pdf: () => self.telechargerPdf(),
         csv: () => self.exporterDossierCsv(),

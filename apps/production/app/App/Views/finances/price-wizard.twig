@@ -1,0 +1,25 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Kreator cen{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Kreator cen</h3>
+            <p class="text-subtitle text-muted mb-0">Po zatwierdzeniu faktur : przelicz koszty i marże, nowe ceny wg marży bazowej i współczynnika surowców każdej kategorii, publikacja od daty — w ERP, na stronie franczyzy i e-mailem do klientów.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# Kreator cen [218] (makieta zatwierdzona) : 1. koszty i marże, 2. nowe ceny, 3. publikacja od daty.
+   App\Services\Finances\PriceWizardService (kroki), PricePublicationService (e-mail, zmiana w dniu, strona franczyzy). #}
+<section class="section" id="priceWizardApp" data-root="{{ root }}">
+    <div class="kw" data-pw-body><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="priceWizardBoot">{{ boot|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/finances/price-wizard.js?v={{ asset_v() }}"></script>
+{% endblock %}

@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>My bonuses</title>
+    <link rel="stylesheet" href="/public/employee/assets/atelier/app.css?v=1791869247">
+    <link rel="stylesheet" href="/public/employee/assets/bootstrap-icons/bootstrap-icons.css?v=1791869247">
+    <link rel="stylesheet" href="/public/employee/assets/atelier/marque.css?v=1792152004">
+
+    <link rel="manifest" href="/public/employee/manifest.webmanifest">
+    <meta name="theme-color" content="#8D1D2C">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/public/employee/assets/pwa/icon-192.png">
+
+    <style>
+        :root{
+            --emp-tabbar-h: 72px;
+        }
+
+        body{
+            background: var(--la-beige); /* Mazer-ish */
+        }
+
+        /* CONTENT: zawsze nad tabbarem */
+        .emp-content{
+            padding-bottom: calc(var(--emp-tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px);
+        }
+        /* Sur un grand écran, l'app garde sa largeur de téléphone au centre. */
+        .emp-content .container, .emp-topbar .container{ max-width: 600px; }
+
+        /* TOP BAR */
+        .emp-topbar{
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            padding-top: env(safe-area-inset-top, 0px);
+            background: rgba(234,228,220,.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,.05);
+        }
+
+        .emp-topbar-inner{
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .emp-title{
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .emp-subtitle{
+            margin: 0;
+            font-size: .85rem;
+            color: var(--la-muet);
+        }
+
+        /* BOTTOM NAV */
+        .emp-bottom-nav{
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1030;
+
+            height: calc(var(--emp-tabbar-h) + env(safe-area-inset-bottom, 0px));
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+
+            background: rgba(255,255,255,.92);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(0,0,0,.06);
+            max-width: 600px;
+            margin: 0 auto;
+
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: 1fr;
+        }
+
+        .emp-bottom-item{
+            text-decoration: none;
+            color: var(--la-muet);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+        .emp-bottom-item i{
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        .emp-bottom-item.is-active{
+            color: var(--la-rubis); /* Mazer primary-ish */
+        }
+
+        .emp-bottom-item.is-active i{
+            transform: translateY(-1px);
+        }
+    </style>
+
+    <link rel="stylesheet" href="/public/employee/assets/atelier/primes.css?v=1792174333"></head>
+<body>
+
+    <div class="emp-topbar">
+        <div class="container">
+            <div class="emp-topbar-inner">
+                <div>
+                    <p class="emp-title">My bonuses</p>
+                    <p class="emp-subtitle"></p>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                                    </div>
+            </div>
+        </div>
+    </div>
+
+<main class="emp-content">
+    <div class="container py-3">
+        
+<nav class="mois-sel" aria-label="Month" data-mois>
+  <a class="ms-f" href="/public/employee/primes?m=2026-09" aria-label="Previous month"><i class="bi bi-chevron-left"></i></a>
+    <div class="ms-l"><b>October 2026</b><small>in progress · as of 16</small></div>
+  <span class="ms-f off" aria-hidden="true"><i class="bi bi-chevron-right"></i></span></nav>
+
+<div class="hx">
+  <div class="l">
+    <div><b>175&nbsp;€</b><small>earned</small></div>
+    <div class="r"><b>650&nbsp;€</b><small>in play</small></div>  </div>
+  <div class="bar"><i style="width:26.9%"></i></div></div>
+
+
+<div class="titre-section" data-section="targets"><h2>Targets</h2><small>up to 500&nbsp;€</small></div>
+<div class="pl-liste">
+<div class="pl ok" data-carte="croisees">
+  <div class="pl-b" role="button" tabindex="0" aria-expanded="false" aria-controls="pd-croisees" data-pl>
+    <div class="pl-h">
+      <span class="emo">🛍️</span>
+      <b class="pl-t">Cross-sales</b>
+      <span class="pl-v">56<small>%</small></span>
+      <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
+    </div>
+        <div class="pl-j" aria-hidden="true"><i style="width:76.5%"></i><span class="ob"></span>
+      <span class="fl">✓ 50&nbsp;€</span></div>
+        <div class="pl-s">
+      <span class="ok">✓ Bonus unlocked</span>
+      <span>goal 55 %</span>    </div>
+  </div>
+  <div class="pl-d" id="pd-croisees" hidden>
+    <dl class="pl-l">
+          <div><dt>Your rate this month</dt><dd>56,1&nbsp;%<small>147 / 262 tickets</small></dd></div>
+      <div><dt>Target</dt><dd>55&nbsp;%</dd></div>
+      <div><dt>Today</dt><dd>57,9&nbsp;%<small>11 / 19 tickets</small></dd></div>                        <div><dt>Reward</dt><dd>50&nbsp;€</dd></div>      <div><dt>Condition</dt><dd>30 tickets min. in the month</dd></div>    </dl><p class="pl-n">A ticket with 2 items or more. Beat the shop target: every level pays.</p>
+        <button type="button" class="pl-cl" data-voir-cl="croisees">See the leaderboard <i class="bi bi-arrow-down"></i></button>  </div>
+</div>
+<div class="pl" data-carte="record">
+  <div class="pl-b" role="button" tabindex="0" aria-expanded="false" aria-controls="pd-record" data-pl>
+    <div class="pl-h">
+      <span class="emo">🚀</span>
+      <b class="pl-t">Beat your record</b>
+      <span class="pl-v">2,74</span>
+      <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
+    </div>
+        <div class="pl-j" aria-hidden="true"><i style="width:68.5%"></i><span class="ob"></span>
+      <span class="fl">300&nbsp;€ max</span></div>
+        <div class="pl-s">
+      <span class="">still 0,26</span>
+      <span>goal 3,00</span>    </div>
+  </div>
+  <div class="pl-d" id="pd-record" hidden>
+    <dl class="pl-l">
+          <div><dt>Your lines per ticket this month</dt><dd>2,74</dd></div>
+      <div><dt>Your record</dt><dd>2,80<small>septembre 2026</small></dd></div>
+      <div><dt>Goal</dt><dd>3,00</dd></div>      <div><dt>Reward</dt><dd>100&nbsp;€ per tenth<small>up to 300&nbsp;€</small></dd></div>
+      <div><dt>Condition</dt><dd>30 tickets min. in the month</dd></div>    </dl>
+          </div>
+</div>
+<div class="pl" data-carte="objectif">
+  <div class="pl-b" role="button" tabindex="0" aria-expanded="false" aria-controls="pd-objectif" data-pl>
+    <div class="pl-h">
+      <span class="emo">🏪</span>
+      <b class="pl-t">Shop target</b>
+      <span class="pl-v">55<small>%</small></span>
+      <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
+    </div>
+        <div class="pl-j" aria-hidden="true"><i style="width:41%"></i><span class="jr" style="left:38.7%"></span><span class="ob"></span>
+      <span class="fl">50&nbsp;€</span></div>
+        <div class="pl-s">
+      <span class=""><b class="okp">proj. 108&nbsp;%</b> · <span class="jr-l"></span>D16 : 52&nbsp;%</span>
+      <span>goal 100 %</span>    </div>
+  </div>
+  <div class="pl-d" id="pd-objectif" hidden>
+    <dl class="pl-l">
+          <div><dt>Shop revenue</dt><dd>33 320&nbsp;€<small>out of 61 000&nbsp;€</small></dd></div>      <div><dt>D16</dt><dd class="ok">54,6&nbsp;%<small>should be 51,6&nbsp;%</small></dd></div>      <div><dt>Month end, at current pace</dt><dd>65 570&nbsp;€<small>107,5&nbsp;%</small></dd></div>      <div><dt>100&nbsp;% · 50&nbsp;€ for you</dt><dd class="ok">✓ reached</dd></div>      <div><dt>Your hours</dt><dd class="">128,0&nbsp;h<small>20&nbsp;h min. to earn the bonus</small></dd></div>    </dl>
+          </div>
+</div>
+<div class="pl ok" data-carte="google">
+  <div class="pl-b" role="button" tabindex="0" aria-expanded="false" aria-controls="pd-google" data-pl>
+    <div class="pl-h">
+      <span class="emo">⭐</span>
+      <b class="pl-t">Google rating</b>
+      <span class="pl-v">4,6<small>★</small></span>
+      <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
+    </div>
+        <div class="pl-j" aria-hidden="true"><i style="width:82.5%"></i><span class="ob"></span>
+      <span class="fl">✓ 25&nbsp;€</span></div>
+        <div class="pl-s">
+      <span class="ok">✓ Bonus unlocked</span>
+      <span>goal 4,5 ★</span>    </div>
+  </div>
+  <div class="pl-d" id="pd-google" hidden>
+    <dl class="pl-l">
+          <div><dt>Shop rating</dt><dd>4,6 ★<small>312 reviews</small></dd></div>
+      <div><dt>Threshold</dt><dd>4,5 ★</dd></div>
+      <div><dt>Reward</dt><dd>25&nbsp;€<small>per person</small></dd></div>
+      <div><dt>Your hours</dt><dd class="">38,5&nbsp;h<small>20&nbsp;h min. to earn the bonus</small></dd></div>    </dl>
+          </div>
+</div>
+<div class="pl" data-carte="meilleure">
+  <div class="pl-b" role="button" tabindex="0" aria-expanded="false" aria-controls="pd-meilleure" data-pl>
+    <div class="pl-h">
+      <span class="emo">🏆</span>
+      <b class="pl-t">Best seller</b>
+      <span class="pl-v">59<small>pts</small></span>
+      <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
+    </div>
+        <div class="pl-j" aria-hidden="true"><i style="width:71.4%"></i><span class="ob"></span>
+      <span class="fl">75&nbsp;€</span></div>
+        <div class="pl-s">
+      <span class="">still 3 pts</span>
+      <span>goal 62 pts</span>    </div>
+  </div>
+  <div class="pl-d" id="pd-meilleure" hidden>
+    <dl class="pl-l">
+          <div><dt>Your score</dt><dd>59<small>#2 / 4 · My shop</small></dd></div>
+      <div><dt>1st in the shop</dt><dd>Léa<small>61</small></dd></div>      <div><dt>Network</dt><dd>#2 / 4</dd></div>      <div><dt>Revenue per hour</dt><dd>85&nbsp;€/h<small>38,5&nbsp;h</small></dd></div>      <div><dt>Average ticket</dt><dd>12,56&nbsp;€</dd></div>    </dl><p class="pl-n">Your sales per hour, slot-adjusted, against the other sellers.</p>
+          </div>
+</div>
+</div>
+<div class="titre-section" data-section="promos"><h2>Promos</h2><small>up to 50&nbsp;€</small></div>
+<div class="pq-grille">
+<div class="pq non" data-carte="pb900">
+  <div class="pq-h">
+    <span class="emo"><img src="demo/uploads/primes/e58b40d2c7a91f36b0c4.svg" alt=""></span>
+    <span class="pq-m">50&nbsp;€</span>
+  </div>
+  <b class="pq-n">Promo café + croissant</b>
+  <div class="pq-g">
+        <svg class="dj" viewBox="0 12 120 62" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+      <path class="fond" d="M12 68 A48 48 0 0 1 108 68" pathLength="100"/>
+                  <g transform="rotate(66.6 60 68)"><line class="rep" x1="60" y1="9" x2="60" y2="30"/><circle class="rep-p" cx="60" cy="6" r="4"/></g>      <circle class="moi" cx="60" cy="20" r="6.5" transform="rotate(-90 60 68)"/>    </svg>
+    <span class="pq-v">0<small>pcs</small>      <i>You</i></span>
+  </div>
+    <div class="pq-o"><span class="lg"></span>Goal <b>1 pcs</b> min.</div>
+  <div class="pq-f">
+    <span class="etat att">−1 pcs</span>
+        <span class="pq-c"></span>
+  </div>
+</div>
+</div>
+
+<div class="titre-section" id="classement"><h2>Leaderboard</h2><small>October 2026</small></div>
+                                <button type="button" class="dd" data-cl-ouvrir aria-haspopup="listbox" aria-expanded="false" aria-controls="cl-feuille">
+  <span class="emo" data-cl-emo><img src="demo/uploads/primes/7a1e0c3b9f2d4e5a6b70.svg" alt=""></span>
+  <span class="t"><b data-cl-lib>Queen of Tartes</b><span class="typ categorie" data-cl-typ>Category</span></span>
+  <span class="dd-r" data-cl-rang>#2<small>/ 6</small></span>
+  <i class="bi bi-chevron-down"></i>
+</button>
+<div class="feuille" id="cl-feuille" data-feuille hidden>
+  <div class="feuille-fond" data-fermer></div>
+  <div class="feuille-c" role="dialog" aria-modal="true" aria-label="Choose a leaderboard">
+    <div class="feuille-poignee"></div>
+    <div class="feuille-t"><b>Choose a leaderboard</b><button type="button" class="feuille-x" data-fermer aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
+    <ul role="listbox" aria-label="Leaderboard">
+            <li role="option" tabindex="0" aria-selected="true" data-choix="tartes" data-type="categorie">
+        <span class="emo"><img src="demo/uploads/primes/7a1e0c3b9f2d4e5a6b70.svg" alt=""></span>
+        <span class="t"><b>Queen of Tartes</b><span class="typ categorie">Category</span>
+          <small>👑 Léa 51 pcs</small></span>
+        <span class="dd-r">#2<small>/ 6</small></span>
+        <i class="bi bi-check-lg coche"></i>
+      </li>      <li role="option" tabindex="0" aria-selected="false" data-choix="quiches" data-type="categorie">
+        <span class="emo"><img src="demo/uploads/primes/3c9d2b81e04f6a7c5d12.svg" alt=""></span>
+        <span class="t"><b>Queen of Quiches</b><span class="typ categorie">Category</span>
+          <small>👑 You 27 pcs</small></span>
+        <span class="dd-r">👑 1st<small>/ 6</small></span>
+        <i class="bi bi-check-lg coche"></i>
+      </li>      <li role="option" tabindex="0" aria-selected="false" data-choix="pb900" data-type="promo">
+        <span class="emo"><img src="demo/uploads/primes/e58b40d2c7a91f36b0c4.svg" alt=""></span>
+        <span class="t"><b>Promo café + croissant</b><span class="typ promo">Promo</span>
+          <small>nobody yet</small></span>
+        <span class="dd-r">—</span>
+        <i class="bi bi-check-lg coche"></i>
+      </li>      <li role="option" tabindex="0" aria-selected="false" data-choix="croisees" data-type="target">
+        <span class="emo">🛍️</span>
+        <span class="t"><b>Cross-sales</b><span class="typ target">Target</span>
+          <small>👑 Sarah 60,9 %</small></span>
+        <span class="dd-r">#2<small>/ 6</small></span>
+        <i class="bi bi-check-lg coche"></i>
+      </li>    </ul>
+  </div>
+</div>
+<div class="cl-carte" data-classements>
+  <div class="seg" role="tablist"><button type="button" role="tab" class="on" aria-selected="true" data-cl-niv="magasin">My shop</button><button type="button" role="tab" aria-selected="false" data-cl-niv="reseau">Network</button></div>
+        <div class="cl-liste on" data-cl="tartes:magasin">
+                <div class="podium">
+                  <div class="pod p2 moi">
+                <span class="av moi"><i class="bi bi-person-fill"></i></span>
+        <b>You</b>        <div class="q">42<small> pcs</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av t3">L</span>
+        <b>Léa</b>        <div class="q">51<small> pcs</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av t5">M</span>
+        <b>Manon</b>        <div class="q">37<small> pcs</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av t5">S</span>
+      <span class="nom">Sarah</span>
+      <span class="val">29<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av t5">J</span>
+      <span class="nom">Julie</span>
+      <span class="val">18<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av t7">C</span>
+      <span class="nom">Camille</span>
+      <span class="val">12<small>pcs</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="tartes:reseau">
+                <div class="podium">
+                  <div class="pod p2">
+                <span class="av t4">N</span>
+        <b>Nora</b><small>Louvain-la-Neuve</small>        <div class="q">63<small> pcs</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av t4">I</span>
+        <b>Inès</b><small>Namur</small>        <div class="q">68<small> pcs</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av t4">E</span>
+        <b>Emma</b><small>Waterloo</small>        <div class="q">57<small> pcs</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av t3">L</span>
+      <span class="nom">Léa<span class="mag">· Halle</span></span>
+      <span class="val">51<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av t5">C</span>
+      <span class="nom">Chloé<span class="mag">· Uccle</span></span>
+      <span class="val">49<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av t3">Z</span>
+      <span class="nom">Zoé<span class="mag">· Sombreffe</span></span>
+      <span class="val">46<small>pcs</small></span></div>
+            <div class="cl-row moi"><span class="r">7</span>
+      <span class="av moi"><i class="bi bi-person-fill"></i></span>
+      <span class="nom">You<span class="mag">· Halle</span></span>
+      <span class="val">42<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">8</span>
+      <span class="av t5">L</span>
+      <span class="nom">Lucie<span class="mag">· Wavre</span></span>
+      <span class="val">40<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">9</span>
+      <span class="av t5">M</span>
+      <span class="nom">Manon<span class="mag">· Halle</span></span>
+      <span class="val">37<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">10</span>
+      <span class="av t7">Y</span>
+      <span class="nom">Yasmine<span class="mag">· Ixelles</span></span>
+      <span class="val">35<small>pcs</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="quiches:magasin">
+                <div class="podium">
+                  <div class="pod p2">
+                <span class="av t5">S</span>
+        <b>Sarah</b>        <div class="q">24<small> pcs</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1 moi">
+        <span class="cr">👑</span>        <span class="av moi"><i class="bi bi-person-fill"></i></span>
+        <b>You</b>        <div class="q">27<small> pcs</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av t3">L</span>
+        <b>Léa</b>        <div class="q">19<small> pcs</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av t5">M</span>
+      <span class="nom">Manon</span>
+      <span class="val">15<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av t5">J</span>
+      <span class="nom">Julie</span>
+      <span class="val">9<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av t7">C</span>
+      <span class="nom">Camille</span>
+      <span class="val">6<small>pcs</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="quiches:reseau">
+                <div class="podium">
+                  <div class="pod p2">
+                <span class="av t4">I</span>
+        <b>Inès</b><small>Namur</small>        <div class="q">36<small> pcs</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av t6">A</span>
+        <b>Amélie</b><small>Wavre</small>        <div class="q">41<small> pcs</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av t5">L</span>
+        <b>Laura</b><small>Namur</small>        <div class="q">33<small> pcs</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av t5">L</span>
+      <span class="nom">Lucie<span class="mag">· Wavre</span></span>
+      <span class="val">30<small>pcs</small></span></div>
+            <div class="cl-row moi"><span class="r">5</span>
+      <span class="av moi"><i class="bi bi-person-fill"></i></span>
+      <span class="nom">You<span class="mag">· Halle</span></span>
+      <span class="val">27<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av t4">N</span>
+      <span class="nom">Nora<span class="mag">· Louvain-la-Neuve</span></span>
+      <span class="val">26<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">7</span>
+      <span class="av t5">S</span>
+      <span class="nom">Sarah<span class="mag">· Halle</span></span>
+      <span class="val">24<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">8</span>
+      <span class="av t4">E</span>
+      <span class="nom">Emma<span class="mag">· Waterloo</span></span>
+      <span class="val">22<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">9</span>
+      <span class="av t5">C</span>
+      <span class="nom">Chloé<span class="mag">· Uccle</span></span>
+      <span class="val">21<small>pcs</small></span></div>
+            <div class="cl-row "><span class="r">10</span>
+      <span class="av t3">L</span>
+      <span class="nom">Léa<span class="mag">· Halle</span></span>
+      <span class="val">19<small>pcs</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="pb900:magasin">
+    <div class="note">Nobody is ranked yet this month.</div>  </div>
+        <div class="cl-liste " data-cl="pb900:reseau">
+    <div class="note">Nobody is ranked yet this month.</div>  </div>
+        <div class="cl-liste " data-cl="croisees:magasin">
+                <div class="podium">
+                  <div class="pod p2 moi">
+                <span class="av moi"><i class="bi bi-person-fill"></i></span>
+        <b>You</b>        <div class="q">56<small> %</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av t5">S</span>
+        <b>Sarah</b>        <div class="q">61<small> %</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av t3">L</span>
+        <b>Léa</b>        <div class="q">54<small> %</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av t5">M</span>
+      <span class="nom">Manon</span>
+      <span class="val">52,1&nbsp;%<small>125/240</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av t5">J</span>
+      <span class="nom">Julie</span>
+      <span class="val">49,3&nbsp;%<small>74/150</small></span></div>
+            <div class="cl-row "><span class="r">6</span>
+      <span class="av t7">C</span>
+      <span class="nom">Camille</span>
+      <span class="val">44,2&nbsp;%<small>53/120</small></span></div>
+          </div>
+        <div class="cl-liste " data-cl="croisees:reseau">
+                <div class="podium">
+                  <div class="pod p2">
+                <span class="av t4">N</span>
+        <b>Nora</b><small>Louvain-la-Neuve</small>        <div class="q">64<small> %</small></div>
+        <div class="socle">2</div>
+      </div>
+                        <div class="pod p1">
+        <span class="cr">👑</span>        <span class="av t5">C</span>
+        <b>Chloé</b><small>Uccle</small>        <div class="q">66<small> %</small></div>
+        <div class="socle">1</div>
+      </div>
+                        <div class="pod p3">
+                <span class="av t5">S</span>
+        <b>Sarah</b><small>Halle</small>        <div class="q">61<small> %</small></div>
+        <div class="socle">3</div>
+      </div>
+                </div>
+                    <div class="cl-row "><span class="r">4</span>
+      <span class="av t4">I</span>
+      <span class="nom">Inès<span class="mag">· Namur</span></span>
+      <span class="val">60,0&nbsp;%<small>198/330</small></span></div>
+            <div class="cl-row "><span class="r">5</span>
+      <span class="av t6">A</span>
+      <span class="nom">Amélie<span class="mag">· Wavre</span></span>
+      <span class="val">58,1&nbsp;%<small>157/270</small></span></div>
+            <div class="cl-row moi"><span class="r">6</span>
+      <span class="av moi"><i class="bi bi-person-fill"></i></span>
+      <span class="nom">You<span class="mag">· Halle</span></span>
+      <span class="val">56,1&nbsp;%<small>147/262</small></span></div>
+            <div class="cl-row "><span class="r">7</span>
+      <span class="av t4">E</span>
+      <span class="nom">Emma<span class="mag">· Waterloo</span></span>
+      <span class="val">55,2&nbsp;%<small>160/290</small></span></div>
+            <div class="cl-row "><span class="r">8</span>
+      <span class="av t3">L</span>
+      <span class="nom">Léa<span class="mag">· Halle</span></span>
+      <span class="val">54,0&nbsp;%<small>162/300</small></span></div>
+            <div class="cl-row "><span class="r">9</span>
+      <span class="av t5">L</span>
+      <span class="nom">Laura<span class="mag">· Namur</span></span>
+      <span class="val">53,9&nbsp;%<small>124/230</small></span></div>
+            <div class="cl-row "><span class="r">10</span>
+      <span class="av t5">L</span>
+      <span class="nom">Lucie<span class="mag">· Wavre</span></span>
+      <span class="val">53,8&nbsp;%<small>140/260</small></span></div>
+          </div>
+  </div>
+    </div>
+</main>
+
+
+<nav class="emp-bottom-nav" role="navigation" aria-label="Primary navigation">
+                    <a class="emp-bottom-item is-active"
+           href="/public/employee/primes"
+           aria-current="page">
+            <i class="bi bi-trophy"></i>
+            <span>Bonuses</span>
+        </a>
+                    <a class="emp-bottom-item "
+           href="/public/employee/me"
+           aria-current="false">
+            <i class="bi bi-person"></i>
+            <span>Profile</span>
+        </a>
+    </nav>
+<script>
+(function () {
+  var m = document.querySelector('[data-mois]');
+  if (m) { m.querySelectorAll('a.ms-f').forEach(function (a) { a.addEventListener('click', function () { m.classList.add('charge'); }); }); }
+})();
+(function () {
+  // Les targets : toucher une ligne déroule son détail, une seule ouverte à la fois.
+  var lignes = Array.prototype.slice.call(document.querySelectorAll('[data-pl]'));
+  function bascule(l) {
+    var ouvrir = l.getAttribute('aria-expanded') !== 'true';
+    lignes.forEach(function (x) { var on = ouvrir && x === l; x.setAttribute('aria-expanded', on ? 'true' : 'false'); document.getElementById(x.getAttribute('aria-controls')).hidden = !on; });
+  }
+  lignes.forEach(function (l) {
+    l.addEventListener('click', function () { bascule(l); });
+    l.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bascule(l); } });
+  });
+})();
+(function () {
+  var bloc = document.querySelector('[data-classements]'); if (!bloc) { return; }
+  var bouton = document.querySelector('[data-cl-ouvrir]');
+  var feuille = document.querySelector('[data-feuille]');
+  var options = Array.prototype.slice.call(feuille.querySelectorAll('[data-choix]'));
+  var cat = options.length ? options[0].dataset.choix : '', niv = 'magasin';
+  function montre() {
+    bloc.querySelectorAll('[data-cl]').forEach(function (l) { l.classList.toggle('on', l.dataset.cl === cat + ':' + niv); });
+    bloc.querySelectorAll('[data-cl-niv]').forEach(function (c) { var on = c.dataset.clNiv === niv; c.classList.toggle('on', on); c.setAttribute('aria-selected', on ? 'true' : 'false'); });
+    options.forEach(function (o) {
+      var on = o.dataset.choix === cat;
+      o.setAttribute('aria-selected', on ? 'true' : 'false');
+      if (!on) { return; }
+      // Le bouton reprend l'icône, le nom, le type et mon rang de la ligne choisie.
+      bouton.querySelector('[data-cl-emo]').innerHTML = o.querySelector('.emo').innerHTML;
+      bouton.querySelector('[data-cl-lib]').textContent = o.querySelector('.t b').textContent;
+      var t = bouton.querySelector('[data-cl-typ]'); t.textContent = o.querySelector('.typ').textContent; t.className = 'typ ' + o.dataset.type;
+      bouton.querySelector('[data-cl-rang]').innerHTML = o.querySelector('.dd-r').innerHTML;
+    });
+  }
+  function ouvre() {
+    feuille.hidden = false;
+    requestAnimationFrame(function () { feuille.classList.add('ouverte'); });
+    bouton.setAttribute('aria-expanded', 'true');
+    var sel = feuille.querySelector('[aria-selected="true"]') || options[0]; if (sel) { sel.focus(); }
+  }
+  function ferme() {
+    feuille.classList.remove('ouverte');
+    bouton.setAttribute('aria-expanded', 'false');
+    setTimeout(function () { feuille.hidden = true; }, 200);
+    bouton.focus();
+  }
+  function choisit(cle) { cat = cle; montre(); ferme(); }
+  bouton.addEventListener('click', ouvre);
+  feuille.querySelectorAll('[data-fermer]').forEach(function (f) { f.addEventListener('click', ferme); });
+  options.forEach(function (o, i) {
+    o.addEventListener('click', function () { choisit(o.dataset.choix); });
+    o.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choisit(o.dataset.choix); }
+      else if (e.key === 'ArrowDown' && options[i + 1]) { e.preventDefault(); options[i + 1].focus(); }
+      else if (e.key === 'ArrowUp' && options[i - 1]) { e.preventDefault(); options[i - 1].focus(); }
+    });
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !feuille.hidden) { ferme(); } });
+  bloc.querySelectorAll('[data-cl-niv]').forEach(function (c) { c.addEventListener('click', function () { niv = c.dataset.clNiv; montre(); }); });
+  // Un carré avec un classement ouvre le sien ; dans le détail d'une ligne, « Voir le classement » aussi.
+  document.querySelectorAll('[data-voir-cl]').forEach(function (v) {
+    v.addEventListener('click', function () { cat = v.dataset.voirCl; montre(); document.getElementById('classement').scrollIntoView({ behavior: 'smooth' }); });
+  });
+  document.querySelectorAll('.pq:not(.ligne)[data-carte]').forEach(function (k) {
+    var cle = k.dataset.carte;
+    if (!feuille.querySelector('[data-choix="' + cle + '"]')) { return; }
+    k.classList.add('cliquable');
+    k.addEventListener('click', function () { cat = cle; montre(); document.getElementById('classement').scrollIntoView({ behavior: 'smooth' }); });
+  });
+})();
+</script>
+
+<script>
+    (function () {
+        if (!("serviceWorker" in navigator)) return;
+
+        window.addEventListener("load", async () => {
+            try {
+                const reg = await navigator.serviceWorker.register("/public/employee/sw.js", { scope: "/public/employee/" });
+                // Opcjonalnie log:
+                console.log("SW registered", reg);
+            } catch (e) {
+                console.warn("SW register failed", e);
+            }
+        });
+    })();
+</script>
+</body>
+</html>

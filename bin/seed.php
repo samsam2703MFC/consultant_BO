@@ -515,10 +515,10 @@ function buildStatements(): array
 
     // --- intervenants
     foreach (consultants() as $i => $c) {
-        $sql[] = 'INSERT INTO ceo_consultant (id, position_id, name, role, email, daily_rate, workload) VALUES (' .
+        $sql[] = 'INSERT INTO con_consultant (id, position_id, name, role, email, daily_rate, workload) VALUES (' .
             q($c['id']) . ', ' . ($i + 1) . ', ' . q($c['nom']) . ', ' . q($c['role']) . ', ' . q($c['email']) . ', ' . n($c['tjm']) . ', ' . n($c['charge']) . ');';
         foreach ($c['visites'] as [$date, $store, $objet]) {
-            $sql[] = 'INSERT INTO ceo_consultant_visit (consultant_id, visited_on, store_label, subject) VALUES (' . q($c['id']) . ', ' . q($date) . ', ' . q($store) . ', ' . q($objet) . ');';
+            $sql[] = 'INSERT INTO con_consultant_visit (consultant_id, visited_on, store_label, subject) VALUES (' . q($c['id']) . ', ' . q($date) . ', ' . q($store) . ', ' . q($objet) . ');';
         }
     }
     foreach (suppliers() as $s) {
@@ -584,14 +584,14 @@ function buildStatements(): array
 
     // --- posts Facebook soumis au contrôle + écarts relevés par l'agent
     foreach (fbPosts() as $p) {
-        $sql[] = 'INSERT INTO ceo_fb_post (id, shop_id, author, format, message, link, medias_json, planned_at, submitted_at, status, agent_note, agent_summary, agent_ran_at, agent_runs, note, decision_famille, decision_type, decision_comment, decided_at, decided_by, published_at, fb_post_id) VALUES (' .
+        $sql[] = 'INSERT INTO mar_social_post (id, shop_id, author, format, message, link, medias_json, planned_at, submitted_at, status, agent_note, agent_summary, agent_ran_at, agent_runs, note, decision_famille, decision_type, decision_comment, decided_at, decided_by, published_at, fb_post_id) VALUES (' .
             q($p['id']) . ', ' . q($p['magasin']) . ', ' . q($p['auteur']) . ', ' . q($p['format']) . ', ' . q($p['message']) . ', ' . q($p['lien']) . ', ' .
             ($p['medias'] ? j($p['medias']) : 'NULL') . ', ' . q($p['publierLe']) . ', ' . q($p['soumisLe']) . ', ' . q($p['statut']) . ', ' .
             n($p['agentNote']) . ', ' . q($p['agentResume']) . ', ' . q($p['agentLe']) . ', ' . $p['agentPassages'] . ', ' .
             n($p['note']) . ', ' . q($p['famille']) . ', ' . q($p['type']) . ', ' . q($p['commentaire']) . ', ' . q($p['decideLe']) . ', ' . q($p['decidePar']) . ', ' .
             q($p['publieLe']) . ', ' . q($p['fbId']) . ');';
         foreach ($p['ecarts'] as $e) {
-            $sql[] = 'INSERT INTO ceo_fb_finding (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (' .
+            $sql[] = 'INSERT INTO mar_social_ecart (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (' .
                 q($p['id']) . ', ' . q($e['code']) . ', ' . q($e['regle']) . ', ' . q($e['famille']) . ', ' . q($e['type']) . ', ' . $e['gravite'] . ', ' .
                 q($e['message']) . ', ' . q($e['extrait']) . ", 'ouvert', " . q($p['agentLe']) . ');';
         }

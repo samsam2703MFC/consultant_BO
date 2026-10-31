@@ -1,0 +1,193 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ tender.code }} · zapytanie ofertowe{% endblock %}
+
+{% set statusLabels = {draft: 'szkic', sent: 'wysłane', awarded: 'rozstrzygnięte', cancelled: 'anulowane'} %}
+{% set messageLabels = {queued: 'w kolejce', sending: 'wysyłanie', sent: 'wysłany', failed: 'błąd wysyłki'} %}
+{% set open = tender.status in ['draft', 'sent'] %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>{{ tender.code }} · {{ tender.title }}</h3>
+            <p class="text-subtitle text-muted">
+                <a href="{{ root }}/purchasing/tenders">Zapytania ofertowe</a> ·
+                {{ statusLabels[tender.status] ?? tender.status }} ·
+                odpowiedź do {{ tender.reply_deadline ? tender.reply_deadline|date('d.m.Y') : '—' }} ·
+                e-mail {{ tender.language == 'fr' ? 'po francusku' : 'po polsku' }}
+            </p>
+        </div>
+        {% if open %}
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-primary" id="previewMail"><i class="bi bi-eye"></i> Podgląd e-maila</button>
+            <button class="btn btn-primary" id="sendMail"><i class="bi bi-envelope"></i> {{ tender.status == 'draft' ? 'Wyślij do dostawców' : 'Wyślij do nowych dostawców' }}</button>
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-purch">
+    <div class="card" id="mailPreview" hidden>
+        <div class="card-header d-flex justify-content-between"><h4 class="card-title mb-0">Podgląd e-maila</h4><button class="btn-close" type="button" aria-label="Zamknij" data-close></button></div>
+        <div class="card-body pt-0">
+            <p class="mb-1"><span class="at-sub">Do:</span> <span data-to></span></p>
+            <p class="mb-2"><span class="at-sub">Temat:</span> <strong data-subject></strong></p>
+            <pre class="at-mail-body" data-body></pre>
+            <p class="at-sub mb-0">Załącznik: {{ tender.code }}.csv — tabela do uzupełnienia (surowiec, jednostka, zapotrzebowanie, cena, opakowanie, minimum, termin).</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Porównanie ofert</h4></div>
+        <div class="card-body pt-0">
+            <form id="awardForm">
+            <div class="table-responsive">
+                <table class="table mb-0 at-tender-matrix">
+                    <thead>
+                        <tr>
+                            <th>Surowiec</th>
+                            <th class="text-end">Zapotrzebowanie / rok</th>
+                            <th class="text-end">Obecna cena</th>
+                            {% for s in suppliers %}<th class="text-end">{{ s.supplier_name }}</th>{% endfor %}
+                            <th class="text-end">Oszczędność / rok</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in items %}
+                        <tr>
+                            <td><a href="{{ root }}/purchasing/materials/{{ item.id_raw_material }}">{{ item.material_name }}</a></td>
+                            <td class="text-end">{{ item.display_qty|number_format(0, ',', ' ') }} {{ item.display_unit }}</td>
+                            <td class="text-end">{{ item.display_current|number_format(2, ',', ' ') }} zł/{{ item.display_unit }}</td>
+                            {% for s in suppliers %}
+                                {% set o = item.cells[s.id_supplier] ?? null %}
+                                <td class="text-end {{ o and o.id == item.best_offer_id ? 'at-best' : '' }}">
+                                    {% if o %}
+                                        <label class="at-tender-cell">
+                                            {% if open %}<input type="radio" class="form-check-input" name="award_{{ item.id }}" value="{{ o.id }}" {{ item.id_awarded_offer == o.id or (item.id_awarded_offer is null and o.id == item.best_offer_id and o.display_price < item.display_current) ? 'checked' : '' }}>{% endif %}
+                                            <strong>{{ o.display_price|number_format(2, ',', ' ') }}</strong>
+                                            <span class="at-sub {{ o.diff_pct < 0 ? 'text-success' : 'text-danger' }}">{{ o.diff_pct > 0 ? '+' : '' }}{{ o.diff_pct|pct }}</span>
+                                        </label>
+                                        {% if item.id_awarded_offer == o.id %}<div class="at-sub text-success"><i class="bi bi-trophy"></i> wybrana</div>{% endif %}
+                                    {% else %}<span class="at-sub">—</span>{% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-end">{{ item.saving > 0 ? item.saving|currency(0) : '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    {% if open %}
+                    <tfoot>
+                        <tr><td colspan="{{ 4 + suppliers|length }}">
+                            <div class="d-flex gap-3 align-items-center justify-content-end flex-wrap">
+                                <label class="form-check mb-0"><input type="checkbox" class="form-check-input" name="notify" checked> Wyślij wynik e-mailem do wszystkich dostawców</label>
+                                <button type="submit" class="btn btn-primary">Rozstrzygnij: zaznaczone ceny stają się aktualne</button>
+                            </div>
+                            <div class="at-sub text-end mt-1">Pozycja bez zaznaczenia zostaje bez zmian. Zastosowana oferta przelicza koszty receptur.</div>
+                        </td></tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Dostawcy i odpowiedzi</h4></div>
+        <div class="card-body pt-0">
+            {% for s in suppliers %}
+                <details class="at-tender-supplier" {{ loop.first and open and tender.status == 'sent' ? 'open' : '' }}>
+                    <summary>
+                        <strong>{{ s.supplier_name }}</strong> <span class="at-sub">{{ s.email }}</span>
+                        {% if s.id_message %}<span class="badge bg-info">{{ messageLabels[s.message_status] ?? s.message_status ?? 'w kolejce' }}{{ s.invited_at ? ' ' ~ s.invited_at|date('d.m H:i') : '' }}</span>{% else %}<span class="badge bg-secondary">nie zaproszony</span>{% endif %}
+                        {% if s.responded_at %}<span class="badge bg-success">odpowiedź {{ s.responded_at|date('d.m') }}</span>{% endif %}
+                    </summary>
+                    {% if open %}
+                    <form class="at-reply" data-supplier="{{ s.id_supplier }}">
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-2">
+                                <thead><tr><th>Surowiec</th><th>Cena za opak. (zł)</th><th>Opakowanie</th><th>Min. zamówienie</th><th>Dostawa (dni)</th><th>Ważna do</th></tr></thead>
+                                <tbody>
+                                {% for item in items %}
+                                    <tr data-material="{{ item.id_raw_material }}">
+                                        <td>{{ item.material_name }}</td>
+                                        <td><input class="form-control form-control-sm" data-col="pack_price" inputmode="decimal"></td>
+                                        <td><span class="input-group input-group-sm"><input class="form-control" data-col="pack_size" inputmode="decimal"><span class="input-group-text">{{ item.display_unit }}</span></span></td>
+                                        <td><input class="form-control form-control-sm" data-col="min_order_qty" inputmode="decimal"></td>
+                                        <td><input class="form-control form-control-sm" data-col="lead_time_days" inputmode="numeric"></td>
+                                        <td><input class="form-control form-control-sm" type="date" data-col="valid_to"></td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-sm btn-primary" type="submit">Zapisz odpowiedź</button>
+                        <span class="at-sub">Puste wiersze są pomijane. Kolejna odpowiedź tego dostawcy dodaje nowe oferty.</span>
+                    </form>
+                    {% endif %}
+                </details>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const id = {{ tender.id }};
+    const preview = document.getElementById('previewMail');
+    if (preview) preview.addEventListener('click', () => at.send(`/ajax/purchasing/tenders/${id}/preview`, 'GET').then(res => {
+        if (!res.ok) return at.notify(false, res.message);
+        const box = document.getElementById('mailPreview');
+        box.hidden = false;
+        box.querySelector('[data-to]').textContent = res.data.recipients.join(', ') || '—';
+        box.querySelector('[data-subject]').textContent = res.data.subject;
+        box.querySelector('[data-body]').textContent = res.data.body;
+        box.scrollIntoView({behavior: 'smooth'});
+    }));
+    document.querySelector('#mailPreview [data-close]').addEventListener('click', () => document.getElementById('mailPreview').hidden = true);
+    const send = document.getElementById('sendMail');
+    if (send) send.addEventListener('click', () => {
+        if (!window.confirm('Wysłać zapytanie e-mailem do zaproszonych dostawców?')) return;
+        send.disabled = true;
+        at.send(`/ajax/purchasing/tenders/${id}/send`, 'POST', {}).then(res => {
+            send.disabled = false;
+            at.notify(res.ok, res.message);
+            if (res.ok) window.setTimeout(() => window.location.reload(), 800);
+        });
+    });
+    document.querySelectorAll('.at-reply').forEach(form => form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const rows = [...form.querySelectorAll('tr[data-material]')].map(tr => {
+            const row = {material_id: tr.dataset.material};
+            tr.querySelectorAll('[data-col]').forEach(input => {
+                let v = input.value.trim();
+                if (input.inputMode === 'decimal') v = v.replace(/\s/g, '').replace(',', '.');
+                row[input.dataset.col] = v;
+            });
+            return row;
+        }).filter(r => r.pack_price !== '');
+        if (!rows.length) return at.notify(false, 'Wpisz co najmniej jedną cenę.');
+        at.send(`/ajax/purchasing/tenders/${id}/replies`, 'POST', {supplier_id: form.dataset.supplier, rows}).then(res => {
+            at.notify(res.ok, res.message);
+            if (res.ok) window.setTimeout(() => window.location.reload(), 600);
+        });
+    }));
+    const award = document.getElementById('awardForm');
+    award.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const awards = {};
+        award.querySelectorAll('input[type=radio]:checked').forEach(r => awards[r.name.replace('award_', '')] = r.value);
+        if (!Object.keys(awards).length) return at.notify(false, 'Zaznacz co najmniej jedną ofertę.');
+        if (!window.confirm('Zastosować zaznaczone ceny jako aktualne i zamknąć zapytanie?')) return;
+        at.send(`/ajax/purchasing/tenders/${id}/award`, 'POST', {awards, notify: award.notify?.checked ?? false}).then(res => {
+            at.notify(res.ok, res.message);
+            if (res.ok) window.setTimeout(() => window.location.reload(), 800);
+        });
+    });
+})();
+</script>
+{% endblock %}
