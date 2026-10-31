@@ -10,6 +10,7 @@
     let filter = 'all';
     let showAll = false;
     const picked = new Map();   // id → {paid_on, amount}
+    let mailProofs = null;       // Wpłata z e-maila [233] : potwierdzenia z Poczty do sprawdzenia
     const money = (v) => v === null || v === undefined ? '—' : Number(v).toLocaleString('pl-PL', {minimumFractionDigits: 0, maximumFractionDigits: 2}) + ' €';
     const dm = (d) => d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '';
     const plural = (n, one, few, many) => n === 1 ? one : ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? few : many);
@@ -37,6 +38,25 @@
             ${D.done ? `<div class="kw-card"><h5 class="rcv-h"><i class="bi bi-check-circle"></i> Zadanie zaliczone ${esc(D.done.at)}</h5><div class="at-sub">${esc(D.done.summary)}</div></div>` : ''}</div>`;
     }
 
+    // Wpłata z e-maila [233] (makieta 9) : « Z poczty : potwierdzenia do sprawdzenia » — wiadomości od klientów z proformą
+    // niezapłaconą i załącznikiem ; « Sprawdź » = okno odczytu i zatwierdzenia (payment-proof.js).
+    function mailCard() {
+        if (!mailProofs || !window.tfbPaymentProof) return '';
+        const rows = mailProofs.rows;
+        const chip = (r) => ({ok: '<span class="kw-badge ok">kwota zgodna</span>', diff: `<span class="kw-badge warn">różnica ${r.diff > 0 ? '+' : ''}${money(r.diff)}</span>`,
+            no_amount: '<span class="kw-badge">brak kwoty — do sprawdzenia</span>', no_match: '<span class="kw-badge">do sprawdzenia</span>', unread: '<span class="kw-badge">nieodczytane</span>'}[r.state]);
+        const body = rows.map(r => `<tr><td><i class="bi ${r.proof ? (/\.pdf$/i.test(r.proof.filename || '') ? 'bi-file-earmark-pdf' : 'bi-file-earmark-image') : 'bi-envelope-paper'}"></i></td>
+            <td><b>${esc(r.subject || '(bez tematu)')}</b><small>${esc(r.customer.name || '')} · ${esc(r.date ? r.date.slice(8, 10) + '.' + r.date.slice(5, 7) + ' ' + r.date.slice(11, 16) : '')}${r.proof ? ' · ' + esc(r.proof.filename || '') : ''}</small></td>
+            <td>${r.match.length ? esc(r.match.join(', ')) : `<span class="at-sub">${r.unpaid.count} ${plural(r.unpaid.count, 'proforma', 'proformy', 'proform')} do zapłaty</span>`}
+                <small>${r.proof ? (r.proof.amount !== null ? `odczytano : ${money(r.proof.amount)}${r.proof.date ? ' · ' + dm(r.proof.date) : ''}` : 'brak kwoty przelewu') : 'załącznik jeszcze nieodczytany'}</small></td>
+            <td class="r"><b>${r.expected !== null ? money(r.expected) : (r.proof ? '—' : money(r.unpaid.sum))}</b><small>${chip(r)}</small></td>
+            <td class="r"><button type="button" class="kw-btn ${r.state === 'ok' ? 'pri' : ''}" data-proof-mail="${r.mail_id}" data-proof="${r.proof ? r.proof.id : ''}">Sprawdź</button></td></tr>`).join('');
+        return `<div class="kw-card pp-card"><h5 class="rcv-h"><i class="bi bi-envelope-check"></i> Z poczty : ${rows.length} ${plural(rows.length, 'potwierdzenie', 'potwierdzenia', 'potwierdzeń')} do sprawdzenia
+                ${rows.length ? '<span class="kw-badge">nowe</span>' : ''}<span class="rcv-sp"></span><a class="at-sub" href="${esc(at.root)}/mail">Poczta</a></h5>
+            ${rows.length ? `<div class="table-responsive"><table class="rcv-tbl"><tbody>${body}</tbody></table></div>`
+                : `<p class="at-empty">Brak wiadomości od klientów z potwierdzeniem przelewu (ostatnie ${mailProofs.days} dni, Twoja skrzynka).</p>`}</div>`;
+    }
+
     function stepPaid() {
         const T = D.totals;
         let rows = D.proformas;
@@ -56,7 +76,7 @@
         }).join('');
         const more = rows.length > shown.length ? `<tr><td colspan="7"><button type="button" class="kw-btn ghost" data-more>+ ${rows.length - shown.length} ${plural(rows.length - shown.length, 'proforma', 'proformy', 'proform')} (pokaż)</button></td></tr>` : '';
         const paidToday = D.paid_today.length ? `<div class="at-sub" style="margin-top:8px">Dziś zapisane : ${D.paid_today.map(p => `${esc(p.number)} ${p.amount ? money(p.amount) : ''}`).join(' · ')}</div>` : '';
-        return `<div class="kw-card"><h5 class="rcv-h">Które proformy są opłacone? <span class="kw-badge">${T.count} ${plural(T.count, 'niezapłacona', 'niezapłacone', 'niezapłaconych')} · ${money(T.unpaid)}</span><span class="rcv-sp"></span><span class="at-seg">${seg}</span></h5>
+        return `${mailCard()}<div class="kw-card"><h5 class="rcv-h">Które proformy są opłacone? <span class="kw-badge">${T.count} ${plural(T.count, 'niezapłacona', 'niezapłacone', 'niezapłaconych')} · ${money(T.unpaid)}</span><span class="rcv-sp"></span><span class="at-seg">${seg}</span></h5>
             ${rows.length ? `<div class="table-responsive"><table class="rcv-tbl"><thead><tr><th></th><th>Proforma</th><th>Klient</th><th class="r">Kwota</th><th class="r">Od wystawienia</th><th>Przypomnienia</th><th>Wpłata</th></tr></thead><tbody>${body}${more}</tbody></table></div>`
                 : '<p class="at-empty">Brak proform w tym widoku.</p>'}${paidToday}
             <div class="rcv-row" style="margin-top:10px"><span class="at-sub">Zaznacz opłacone (data i kwota z wyciągu).</span><span class="rcv-sp"></span>
@@ -99,6 +119,14 @@
     async function reload() {
         const r = await at.send('/ajax/finances/payments-day', 'GET');
         if (r.ok) { D = r.data; render(); } else at.notify(false, r.message);
+        loadProofs();
+    }
+
+    async function loadProofs() {
+        if (!window.tfbPaymentProof) return;
+        const r = await at.send('/ajax/finances/payment-proofs', 'GET');
+        mailProofs = r.ok && r.data ? r.data : {rows: [], days: 45, error: r.message};
+        if (step === 1) render();
     }
 
     function bind() {
@@ -129,6 +157,10 @@
             if (r.data) { D = r.data; picked.clear(); }
             render();
         });
+        app.querySelectorAll('[data-proof-mail]').forEach(b => b.addEventListener('click', () => {
+            const o = {onDone: () => reload()};
+            if (b.dataset.proof) window.tfbPaymentProof.openProof(Number(b.dataset.proof), o); else window.tfbPaymentProof.openMail(Number(b.dataset.proofMail), o);
+        }));
         const rl = app.querySelector('[data-reload]');
         if (rl) rl.addEventListener('click', reload);
         const fin = app.querySelector('[data-finish]');
@@ -142,4 +174,5 @@
     }
 
     render();
+    loadProofs();
 })();

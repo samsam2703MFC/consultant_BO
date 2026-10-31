@@ -123,7 +123,10 @@ class ClientSpaceRepository extends BaseRepository
         $sql = match ($type) {
             'proforma' => "SELECT p.id, p.established_date AS date, p.doc_num AS number,
                                   (SELECT SUM(pp.total_price_net) FROM document_proforma_product pp WHERE pp.id_proforma = p.id) AS amount,
-                                  'EUR' AS currency, p.status, NULL AS note
+                                  'EUR' AS currency, p.status,
+                                  (SELECT CONCAT('opłacona ', DATE_FORMAT(pay.paid_on, '%d.%m.%Y'),
+                                          IF(EXISTS (SELECT 1 FROM n_payment_proof_proforma ppl WHERE ppl.id_proforma = p.id), ' · potwierdzenie przelewu z e-maila', ''))
+                                   FROM n_proforma_payment pay WHERE pay.id_proforma = p.id) AS note
                            FROM document_proforma p
                            WHERE p.id_customer = :c AND p.established_date >= :from AND p.doc_num LIKE :q",
             'wdt' => "SELECT w.id, COALESCE(w.invoiced_date, w.established_date) AS date, w.doc_num AS number,

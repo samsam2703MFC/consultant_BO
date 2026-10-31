@@ -14,7 +14,8 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class MailController extends BaseController
 {
-    public function __construct(private UserMailService $mail, private DeepLTranslator $translator) {}
+    public function __construct(private UserMailService $mail, private DeepLTranslator $translator,
+        private \App\Services\Finances\PaymentProof\PaymentProofService $proofs, private \App\Services\Organization\PageAccessService $access) {}
 
     public function index()
     {
@@ -61,7 +62,15 @@ class MailController extends BaseController
 
     public function message($id)
     {
-        return $this->run(fn() => $this->mail->open($this->userId(), (int) $id));
+        return $this->run(function () use ($id) {
+            $m = $this->mail->open($this->userId(), (int) $id);
+            // Wpłata z e-maila [233] : « Zweryfikuj wpłatę », gdy wiadomość od klienta z proformą niezapłaconą (prawo « Płatności dnia »).
+            $m['payment'] = null;
+            if ($this->access->canSee($this->userId(), '/finances/payments-day')) {
+                try { $m['payment'] = $this->proofs->mailHint($this->userId(), (int) $id); } catch (\Throwable $e) { error_log('[mail] payment hint : ' . $e->getMessage()); }
+            }
+            return $m;
+        });
     }
 
     public function send()

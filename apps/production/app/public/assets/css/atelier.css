@@ -3124,3 +3124,49 @@ button.mc-name:hover b { color: #8e1f2f; }
 .mc-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 1400px) { .mc-wrap, .mc-split { grid-template-columns: minmax(0, 1fr); } .mc-side { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); } }
 @media (max-width: 1100px) { .mc-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mc-f { grid-template-columns: 1fr; } }
+
+/* Wpłata z e-maila [233] (makieta 9) : okno « Wpłata — sprawdź i zatwierdź » (payment-proof.js), Poczta, Płatności dnia. */
+.pp-box { width: min(1180px, 100%); }
+.pp-box.pp-narrow { width: min(620px, 100%); }
+.pp-busy { display: flex; align-items: center; gap: 10px; padding: 18px 4px; font-size: 15px; }
+.pp-sub { color: var(--at-muted); font-size: 13px; }
+.pp-grid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.pp-doc { border: 1px solid var(--at-border, #e6e0d8); border-radius: 12px; padding: 10px; background: var(--at-bg-2, #f7f3ee); display: flex; flex-direction: column; gap: 8px; }
+.pp-doc img { width: 100%; max-height: 260px; object-fit: contain; border-radius: 8px; background: #fff; }
+.pp-text { margin: 0; white-space: pre-wrap; font-size: 11.5px; line-height: 1.45; max-height: 340px; overflow: auto; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.pp-text.small { max-height: 160px; }
+.pp-text mark { background: #f6df8c; padding: 0 2px; border-radius: 3px; }
+.pp-doc-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; }
+.pp-form { display: flex; flex-direction: column; gap: 8px; }
+.pp-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 190px; gap: 10px; align-items: center; }
+.pp-row label { font-size: 13px; color: var(--at-muted); margin: 0; }
+.pp-row .form-control { min-height: 44px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pp-in { display: flex; align-items: center; gap: 6px; } .pp-in span { color: var(--at-muted); font-weight: 600; }
+.pp-val { min-height: 44px; display: flex; flex-direction: column; justify-content: center; padding: 6px 12px; border: 1px solid var(--at-border, #e6e0d8); border-radius: 10px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pp-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.pp-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 8px; font-size: 11.5px; font-weight: 700; background: var(--at-bg-2, #f1ece5); color: var(--at-muted); }
+.pp-chip.ok { background: rgba(46,125,79,.12); color: #1f5a37; } .pp-chip.warn { background: rgba(193,122,42,.14); color: #8a5512; } .pp-chip.bad { background: rgba(154,23,48,.1); color: #9a1730; }
+.pp-h { margin-top: 6px; font-weight: 700; font-size: 13px; } .pp-h small { font-weight: 500; color: var(--at-muted); }
+.pp-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow: auto; }
+.pp-pf { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--at-border, #e6e0d8); border-radius: 12px; cursor: pointer; margin: 0; min-height: 48px; }
+.pp-pf.on { border: 2px solid #2E7D4F; background: rgba(46,125,79,.05); }
+.pp-pf.off { opacity: .6; cursor: default; }
+.pp-pf small { display: block; color: var(--at-muted); font-size: 12px; }
+.pp-pf input { width: 18px; height: 18px; }
+.pp-amt { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pp-sum { font-size: 13px; color: var(--at-muted); text-align: right; font-variant-numeric: tabular-nums; }
+.pp-note { font-size: 12.5px; color: var(--at-muted); margin: 0; }
+.pp-actions { display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
+.pp-actions .kw-btn { min-height: 46px; padding: 0 20px; }
+.pp-done { padding: 10px 14px; border-radius: 10px; font-weight: 600; }
+.pp-done.confirmed { background: rgba(46,125,79,.1); color: #1f5a37; } .pp-done.rejected { background: rgba(154,23,48,.08); color: #9a1730; }
+.pp-files { display: flex; flex-direction: column; gap: 8px; }
+.pp-file { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--at-border, #e6e0d8); border-radius: 12px; }
+.pp-file i { font-size: 22px; color: #9a1730; } .pp-file small { display: block; color: var(--at-muted); }
+.pp-card td { white-space: normal; vertical-align: middle; } .pp-card td small, .pp-card td b { display: block; white-space: normal; overflow-wrap: anywhere; color: inherit; } .pp-card td small { color: var(--at-muted); margin-top: 2px; }
+.pp-card td.r b { white-space: nowrap; } .pp-card td.r small { white-space: nowrap; }
+.pp-card td:first-child { width: 28px; } .pp-card td:last-child { width: 1%; white-space: nowrap; }
+.pp-toast { position: fixed; right: 18px; bottom: 18px; z-index: 1100; padding: 12px 16px; border-radius: 10px; color: #fff; font-weight: 600; }
+.pp-toast.ok { background: #2E7D4F; } .pp-toast.bad { background: #9a1730; }
+.ml-read { margin-left: 4px; }
+@media (max-width: 900px) { .pp-grid { grid-template-columns: minmax(0, 1fr); } .pp-row { grid-template-columns: minmax(0, 1fr); gap: 4px; } }

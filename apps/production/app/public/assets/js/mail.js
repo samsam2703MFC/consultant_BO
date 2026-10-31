@@ -180,6 +180,19 @@
         }).catch(function (e) { reader.innerHTML = '<div class="ml-empty text-danger">' + esc(e.message) + '</div>'; });
     }
 
+    // « Zweryfikuj wpłatę » : wiadomość od klienta z proformą niezapłaconą (prawo « Płatności dnia »).
+    function payButton(m) {
+        if (!m.payment || !window.tfbPaymentProof) return '';
+        var done = (m.payment.proofs || []).some(function (p) { return p.status === 'confirmed'; });
+        return '<button type="button" class="btn btn-sm ' + (done ? 'btn-outline-success' : 'btn-danger') + '" data-pay-verify><i class="bi bi-cash-coin"></i> '
+            + (done ? 'Wpłata zatwierdzona' : 'Zweryfikuj wpłatę') + '</button>'
+            + (done ? '' : '<span class="ml-tag">' + m.payment.unpaid + ' ' + plProformy(m.payment.unpaid) + '</span>');
+    }
+    function plProformy(n) {
+        if (n === 1) return 'proforma niezapłacona';
+        return [2, 3, 4].indexOf(n % 10) >= 0 && [12, 13, 14].indexOf(n % 100) < 0 ? 'proformy niezapłacone' : 'proform niezapłaconych';
+    }
+
     function contactLinks(m) {
         return (m.customer ? ' <a class="ml-tag" href="' + esc(root) + '/clients/' + m.customer.id + '/edit">klient : ' + esc(m.customer.name || '#' + m.customer.id) + '</a>' : '')
             + (m.supplier ? ' <a class="ml-tag is-supplier" href="' + esc(root) + '/material-suppliers/' + m.supplier.id + '/edit">dostawca : ' + esc(m.supplier.name || '#' + m.supplier.id) + '</a>' : '');
@@ -199,6 +212,7 @@
             + '<div class="ml-actions"><button type="button" class="btn btn-sm btn-primary" data-reply><i class="bi bi-reply"></i> Odpowiedz</button>'
             + '<button type="button" class="btn btn-sm btn-outline-secondary" data-reply-all><i class="bi bi-reply-all"></i> Odpowiedz wszystkim</button>'
             + '<button type="button" class="btn btn-sm btn-outline-secondary" data-forward><i class="bi bi-forward"></i> Przekaż</button>'
+            + payButton(m)
             + (m.html ? '<button type="button" class="btn btn-sm btn-link" data-plain>Pokaż jako tekst</button>' : '')
             + (remote ? '<button type="button" class="btn btn-sm btn-link" data-remote>Pokaż obrazy z internetu</button>' : '')
             + (canTranslate() ? '<button type="button" class="btn btn-sm ' + (foreign ? 'btn-outline-primary' : 'btn-link') + '" data-translate><i class="bi bi-translate"></i> '
@@ -207,7 +221,9 @@
             + '<div class="ml-body" data-body></div>'
             + (m.attachments.length ? '<div class="ml-files">' + m.attachments.map(function (a) {
                 return '<a class="ml-file" href="' + esc(root) + '/mail/messages/' + m.id + '/attachments/' + a.index + '"><i class="bi bi-paperclip"></i> ' + esc(a.filename)
-                    + ' <span class="text-muted">' + size(a.size) + '</span></a>';
+                    + ' <span class="text-muted">' + size(a.size) + '</span></a>'
+                    + (m.payment && window.tfbPaymentProof && /pdf|jpe?g|png|webp/i.test((a.mime || '') + ' ' + (a.filename || ''))
+                        ? '<button type="button" class="btn btn-sm btn-outline-secondary ml-read" data-pay-read="' + a.index + '" data-name="' + esc(a.filename) + '"><i class="bi bi-eye"></i> Odczytaj</button>' : '');
             }).join('') + '</div>' : '');
         var body = reader.querySelector('[data-body]');
         function showHtml(allowRemote) {
@@ -234,6 +250,13 @@
             trBox.querySelector('[data-orig]').addEventListener('click', showOriginal);
         }
         if (m.translation && m.translation.lang === target) showTranslation(m.translation); else showOriginal();
+        // Wpłata z e-maila [233] : potwierdzenie przelewu → okno « Wpłata — sprawdź i zatwierdź ».
+        var payOpts = { root: root, onDone: function () { open(m.id); } };
+        var payBtn = reader.querySelector('[data-pay-verify]');
+        if (payBtn) payBtn.addEventListener('click', function () { window.tfbPaymentProof.openMail(m.id, payOpts); });
+        reader.querySelectorAll('[data-pay-read]').forEach(function (b) {
+            b.addEventListener('click', function () { window.tfbPaymentProof.read(m.id, Number(b.dataset.payRead), { filename: b.dataset.name }, payOpts); });
+        });
         var trBtn = reader.querySelector('[data-translate]');
         if (trBtn) trBtn.addEventListener('click', function () {
             trBtn.disabled = true;

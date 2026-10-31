@@ -44,7 +44,7 @@ final class PageAccess
         'franchise' => ['Franczyza', 'Sprzedaż', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints'], false],
         'invoices' => ['Proformy i faktury', 'Sprzedaż', ['/proforma-documents', '/invoice-documents'], false],
         'reminders' => ['Przypomnienia płatności (proformy 1–5, dopłaty różnic)', 'Sprzedaż', ['/communication/payment-reminders', '/communication/compose/reminder'], false],
-        'payments_day' => ['Płatności dnia (wpłaty proform, przypomnienia, różnice dostaw)', 'Sprzedaż', ['/finances/payments-day'], false],
+        'payments_day' => ['Płatności dnia (wpłaty proform, potwierdzenia przelewów z e-maila, przypomnienia, różnice dostaw)', 'Sprzedaż', ['/finances/payments-day', '/finances/payment-proofs'], false],
         'client_volume' => ['Klienci : wolumen i marża (N / N-1, marża, należności)', 'Sprzedaż', ['/finances/clients'], false],
         'returns' => ['Zwroty', 'Sprzedaż', ['/client-complaints'], false],
         'communication' => ['Komunikacja (dystrybucja dokumentów i e-maile automatyczne, wzory dokumentów i e-maili, wiadomości)', 'Sprzedaż', ['/communication'], false],

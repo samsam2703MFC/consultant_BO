@@ -240,7 +240,33 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   non lu de moins de 7 jours ; tâche faite entre-temps (jour validé, assistant terminé) → fermé, disparaît. Au tableau :
   « przeczytane 10:51 (J. K., PIN) ».
 
-### Moce produkcyjne : utilisation des machines et production encore possible (migration 151, 31/10/2026)
+### Wpłata z e-maila : preuve de paiement du client → OCR → validation (migration 153, 31/10/2026)
+
+- Maquette 9. Une preuve de virement (PDF, photo) envoyée par un client dans Poczta. **Poczta** : bouton « Zweryfikuj wpłatę »
+  sur un message d'un client qui a des proformas impayées (droit `payments_day`), « Odczytaj » sur chaque pièce PDF / image.
+  **Płatności dnia › krok 1** : bloc « Z poczty : N potwierdzeń do sprawdzenia » — messages de la boîte de l'utilisateur
+  (45 jours, INBOX, pièce jointe, client avec proforma impayée, mot-clé FP-…, proforma, przelew, wpłata, paiement, virement,
+  preuve, payment, betaling, overschrijving…), montant lu, proforma trouvée, « kwota zgodna / różnica / do sprawdzenia ».
+- Lecture : PDF texte → `pdftotext` côté serveur ; scan / photo → OCR dans le navigateur (Tesseract.js `pol`, pdf.js pour les
+  scans) puis texte envoyé. `PaymentProofParser` (sans base) : numéros FP-00001/28/07/2026 (bruit OCR O→0, l→1), montant
+  (ligne « Kwota / Montant / Amount / Bedrag / Betrag », devise, 1 234,56 · 1.234,56 · 1,234.56), date d'opération (libellés
+  forts « Data operacji, Date d'exécution, Uitvoeringsdatum… » avant « Data », pas dans le futur, ≤ 400 jours), comptes
+  (IBAN, NRB), donneur d'ordre, « zrealizowany ». Notre compte = `erp_company_data.*bank*` (chiffres égaux ou suffixe).
+- Rapprochement : numéros lus parmi les proformas impayées du client, sinon une proforma au même montant, sinon toutes si la
+  somme est égale ; les autres proformas du client à cocher (virement pour plusieurs). Contrôles : montant = proforma(s),
+  date, numéro (trouvé / déjà payée / autre client / absent), compte (le nôtre / autre), donneur d'ordre ≈ client du mail.
+- « Zatwierdź wpłatę » → `PaymentsDayService::markPaid` (statut `paid`, `n_proforma_payment` date + montant : une proforma =
+  montant du virement, plusieurs = montant de chacune) ; lien `n_payment_proof_proforma` ; les rappels s'arrêtent (proforma
+  payée exclue des listes) ; fiche client (`/clients/{id}/space`) : « opłacona 30.10.2026 · potwierdzenie przelewu z e-maila ».
+  « To nie jest wpłata » → `rejected`, le message sort de la liste.
+- `n_payment_proof` : fichier (`content`), texte lu (`text_enc`) et donneur d'ordre (`payer_enc`) **chiffrés** AES-256-GCM
+  (`PaymentProofCipher`, préfixe `p1:`, clé dérivée de `PRODUCTION_JWT_SECRET`) ; montant, date, numéros, compte « nôtre »
+  en clair ; un seul enregistrement par pièce jointe (`id_mail`, `attachment_index`). Seul le propriétaire de la boîte voit
+  ses preuves. Fichier : `GET /finances/payment-proofs/{id}/file` (inline, protégé comme Płatności dnia).
+- API web : `GET /ajax/finances/payment-proofs`, `GET …/mail/{id}`, `POST …/mail/{id}/reject`, `POST …/read`
+  `{mail_id, index, ocr_text?}` (→ `need_ocr` si scan / photo), `GET …/{id}`, `POST …/{id}/confirm` `{proformas, paid_on,
+  amount}`, `POST …/{id}/reject`.
+ et production encore possible (migration 151, 31/10/2026)
 
 - Page : Produkcja › « Moce produkcyjne » (`/production/capacity`, onglet de la page Produkcja, maquettes 10 et 11 ;
   catalogue d'accès `production`). `CapacityService`, `CapacityRepository`, `CapacityController`, `capacity.js`. Semaine du
