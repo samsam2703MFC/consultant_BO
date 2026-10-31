@@ -342,7 +342,7 @@ const verdictFlux = (s, a) => {
   const MAT = [
     // nom, unité, prix/unité, stock début, entré, stock fin, théorique (produit × recette), ton, cause
     ['Thon à l’huile', 'kg', 26.43, 2.0, 10.0, 1.5, 7.1, 'ko', 'FlipFlap - Thon : 70 g en recette, la poubelle du soir n’est pas déclarée le dimanche — et le coût de la recette est faux à Halle (voir la liste).'],
-    ['Baguette Tradition 500 g.', 'pcs', 1.4656, 40, 540, 36, 488, 'ko', '56 baguettes reçues de la centrale, ni vendues ni jetées : ventes hors caisse ou poubelle non déclarée — voir Chiffre d’affaires.'],
+    ['Baguette Tradition 500 g.', 'pcs', 1.4656, 40, 540, 36, 488, 'ko', '28 baguettes reçues de la centrale, ni vendues ni jetées : ventes hors caisse ou poubelle non déclarée — voir Chiffre d’affaires.'],
     ['Beurre doux 82 %', 'kg', 7.95, 18.0, 75.0, 14.5, 64.2, 'ko', 'Pain au Chocolat Nappé : le beurre de tourage manque dans la recette (0 g) — recette incomplète.'],
     ['Jambon cuit supérieur', 'kg', 11.40, 4.2, 18.0, 3.1, 12.6, 'ko', 'FlipFlap - Club : 35 g en recette, 55 g constatés en visite le 14/10 — garnir à la recette, ou la corriger.'],
     ['Crème 35 %', 'l', 4.10, 12, 48, 10, 41, 'ko', 'Merveilleux, Misérable Ind. : la chantilly n’est pas une sous-recette, la crème n’entre dans aucun coût.'],
@@ -353,20 +353,25 @@ const verdictFlux = (s, a) => {
     ['Lait entier', 'l', 0.95, 20, 60, 18, 58.5, 'ok', ''],
     ['Saumon fumé', 'kg', 32.00, 1.2, 6.0, 0.8, 6.3, 'ok', ''],
     ['Sucre perlé', 'kg', 3.20, 0, 5.0, 3.5, 0, 'att', 'Acheté, employé par aucune recette : à ajouter là où il sert (Gosette Pomme ? Couque au sucre ?).'],
-  ].map(([nom, u, prix, s0, e, s1, th, t, cause]) => { const reel = s0 + e - s1; const ec = reel - th; return { nom, u, prix, s0, e, s1, reel, th, ec, ecP: th > 0 ? 100 * ec / th : null, ecE: ec * prix, t, cause }; })
+  ].map(([nom, u, prix, s0, e14, s1, th14, t, cause]) => {
+      // Une semaine d'inventaire à inventaire (31/10 : un inventaire par semaine) : la moitié des entrées et de l'écart
+      // de la quinzaine de départ ; le sucre perlé, une seule commande, reste entier.
+      const e = nom === 'Sucre perlé' ? e14 : e14 / 2; const ec = nom === 'Sucre perlé' ? (s0 + e14 - s1) : ((s0 + e14 - s1) - th14) / 2;
+      const reel = s0 + e - s1; const th = reel - ec;
+      return { nom, u, prix, s0, e, s1, reel, th, ec, ecP: th > 0 ? 100 * ec / th : null, ecE: ec * prix, t, cause }; })
     .sort((a, b) => Math.abs(b.ecE) - Math.abs(a.ecE));
   const fq = (q, u) => nf(q, u === 'pcs' ? 0 : 1) + ' ' + u;
-  const K = { s0: 2140, e: 5930, s1: 2010 }; K.reel = K.s0 + K.e - K.s1; K.th = 5380; K.ec = K.reel - K.th;
-  const CAUSES = [['Recettes incomplètes ou fausses', 312, 'ko', 'beurre de tourage, crème, chocolat, sucre perlé'], ['Poubelle non déclarée (estimée)', 205, 'att', 'thon, jambon, baguettes le dimanche'], ['Ventes hors caisse probables', 82, 'ko', 'baguettes de la centrale'], ['Tolérance de fabrication', 81, 'ok', 'farine, œufs, lait sous leurs seuils']];
+  const K = { s0: 2140, e: 2965, s1: 2010 }; K.reel = K.s0 + K.e - K.s1; K.th = 2755; K.ec = K.reel - K.th;
+  const CAUSES = [['Recettes incomplètes ou fausses', 156, 'ko', 'beurre de tourage, crème, chocolat, sucre perlé'], ['Poubelle non déclarée (estimée)', 102, 'att', 'thon, jambon, baguettes le dimanche'], ['Ventes hors caisse probables', 41, 'ko', 'baguettes de la centrale'], ['Tolérance de fabrication', 41, 'ok', 'farine, œufs, lait sous leurs seuils']];
   const corps = `<div class="vf-fil">
     <div class="vf-seg"><button class="on">Entre deux inventaires</button><button>Semaine</button><button>Mois</button></div>
-    <select class="vf-sel"><option>Inventaire du lun. 05/10 → inventaire du lun. 19/10 (14 jours)</option></select>
+    <select class="vf-sel"><option>Inventaire du lun. 12/10 → inventaire du lun. 19/10 (7 jours)</option></select>
     <select class="vf-sel"><option>Atelier by Max & Sandra - Gosselies</option></select>
     <div class="r"><span class="vf-lu">143 matières comptées aux deux inventaires · 9 comptées une seule fois, écartées</span></div></div>
   <div class="vf-kpis">
-    ${kpi('Stock au 05/10', eur(K.s0), 'inventaire du panel, au coût')}
-    ${kpi('+ Entré', eur(K.e), '6 commandes validées à la réception · 3 fournisseurs')}
-    ${kpi('− Stock au 19/10', eur(K.s1), 'inventaire du panel, au coût')}
+    ${kpi('Stock au 12/10', eur(K.s0), 'inventaire hebdomadaire, au coût')}
+    ${kpi('+ Entré', eur(K.e), '3 commandes validées à la réception · 3 fournisseurs')}
+    ${kpi('− Stock au 19/10', eur(K.s1), 'inventaire hebdomadaire, au coût')}
     ${kpi('= Consommé réel', eur(K.reel), `face à ${eur(K.th)} que les recettes expliquent`)}
     ${kpi('Écart matière', pc(100 * K.ec / K.reel), `${eur(K.ec)} · ${pc(100 * K.th / K.reel)} de la matière expliquée par les recettes`, 'ko')}
   </div>
@@ -374,17 +379,17 @@ const verdictFlux = (s, a) => {
     <div style="padding:14px 18px">${CAUSES.map(([c, v, t, d]) => `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:12.5px"><b style="font-weight:600">${c}</b><span><b>${eur(v)}</b> <span class="mu" style="color:var(--color-text-muted)">${nf(100 * v / K.ec, 0)} %</span></span></div>
       <div style="height:9px;border-radius:5px;background:#f1ece5;margin:5px 0 3px;overflow:hidden"><i style="display:block;height:100%;width:${100 * v / CAUSES[0][1]}%;background:${t === 'ko' ? '#C0182B' : t === 'att' ? '#D97706' : '#2d7a3e'}"></i></div><div style="font-size:11px;color:var(--color-text-muted)">${d}</div></div>`).join('')}</div>
     <div class="vf-pied">Une matière dont la recette est signalée dans la liste « recettes douteuses » range son écart en « recette » ; une matière d’un produit short life sans poubelle déclarée, en « poubelle » ; un produit fini reçu, ni vendu ni jeté, en « hors caisse ».</div></div>
-    <div class="vf-card"><div class="vf-ct"><h3>Les quatre magasins</h3><span class="s">dernière période entre deux inventaires</span></div>
+    <div class="vf-card"><div class="vf-ct"><h3>Les quatre magasins</h3><span class="s">dernière semaine d’inventaire à inventaire</span></div>
     <table class="vf-t"><thead><tr><th class="g">Magasin</th><th>Période</th><th>Expliquée</th><th>Écart</th></tr></thead><tbody>
-      <tr><td class="g nom"><b>Halle</b></td><td class="mu">12 → 26/10</td><td>${pill('ok', '96,4 %')}</td><td>238 €</td></tr>
-      <tr class="sel"><td class="g nom"><b>Gosselies</b></td><td class="mu">05 → 19/10</td><td>${pill('ko', pc(100 * K.th / K.reel))}</td><td>${eur(K.ec)}</td></tr>
-      <tr><td class="g nom"><b>Corbais</b></td><td class="mu">01 → 22/10</td><td>${pill('att', '93,1 %')}</td><td>402 €</td></tr>
-      <tr><td class="g nom"><b>Sombreffe</b></td><td class="mu">28/09 → 26/10</td><td>${pill('att', '90,2 %')}</td><td>596 €<small>dont 9 recettes manquantes</small></td></tr></tbody></table></div></div>
+      <tr><td class="g nom"><b>Halle</b></td><td class="mu">19 → 26/10</td><td>${pill('ok', '96,4 %')}</td><td>119 €</td></tr>
+      <tr class="sel"><td class="g nom"><b>Gosselies</b></td><td class="mu">12 → 19/10</td><td>${pill('ko', pc(100 * K.th / K.reel))}</td><td>${eur(K.ec)}</td></tr>
+      <tr><td class="g nom"><b>Corbais</b></td><td class="mu">15 → 22/10</td><td>${pill('att', '93,1 %')}</td><td>201 €</td></tr>
+      <tr><td class="g nom"><b>Sombreffe</b></td><td class="mu">19 → 26/10</td><td>${pill('att', '90,2 %')}</td><td>298 €<small>dont 9 recettes manquantes</small></td></tr></tbody></table></div></div>
   <div class="vf-card"><div class="vf-ct"><h3>Matière par matière</h3><span class="s">les plus gros écarts en euros d’abord · 12 sur 143</span><span class="r"><button class="vf-btn">Toutes les matières</button></span></div>
-    <div class="vf-lect"><b>Du 05 au 19/10 à Gosselies,</b> le magasin a consommé ${eur(K.reel)} de matière ; les pièces produites n’en expliquent que ${eur(K.th)}. Les cinq premières lignes font ${eur(MAT.slice(0, 5).reduce((a, m) => a + m.ecE, 0))} de l’écart ; trois d’entre elles viennent d’une recette qui ne compte pas ce qu’elle emploie.</div>
+    <div class="vf-lect"><b>Du 12 au 19/10 à Gosselies,</b> le magasin a consommé ${eur(K.reel)} de matière ; les pièces produites n’en expliquent que ${eur(K.th)}. Les cinq premières lignes font ${eur(MAT.slice(0, 5).reduce((a, m) => a + m.ecE, 0))} de l’écart ; trois d’entre elles viennent d’une recette qui ne compte pas ce qu’elle emploie.</div>
     <table class="vf-t"><thead>
-      <tr class="grp"><th></th><th colspan="4"><span>Le réel — inventaires et livraisons</span></th><th><span>Les recettes</span></th><th colspan="3"><span>L’écart</span></th><th></th></tr>
-      <tr><th class="g">Matière</th><th>Stock 05/10</th><th>+ Entré<small>commandes validées</small></th><th>− Stock 19/10</th><th>= Consommé</th><th>Théorique<small>produit × recette</small></th><th>Quantité</th><th>%</th><th>€</th><th class="g">Cause probable</th></tr></thead><tbody>
+      <tr class="grp"><th></th><th colspan="4"><span>Le réel — inventaires et commandes validées</span></th><th><span>Les recettes</span></th><th colspan="3"><span>L’écart</span></th><th></th></tr>
+      <tr><th class="g">Matière</th><th>Stock 12/10</th><th>+ Entré<small>commandes validées</small></th><th>− Stock 19/10</th><th>= Consommé</th><th>Théorique<small>produit × recette</small></th><th>Quantité</th><th>%</th><th>€</th><th class="g">Cause probable</th></tr></thead><tbody>
       ${MAT.map(m => `<tr${m.t === 'ko' ? ' class="sel"' : ''}><td class="g nom"><b>${esc(m.nom)}</b><small>${nf(m.prix, Number.isInteger(Math.round(m.prix * 1e4) / 100) ? 2 : 4)} € / ${m.u}</small></td><td>${fq(m.s0, m.u)}</td><td>${fq(m.e, m.u)}</td><td>${fq(m.s1, m.u)}</td><td><b>${fq(m.reel, m.u)}</b></td><td>${fq(m.th, m.u)}</td>
         <td>${m.ec > 0 ? '+' : ''}${fq(m.ec, m.u)}</td><td>${m.ecP == null ? pill('ko', 'hors recette') : pill(m.t, (m.ecP > 0 ? '+' : '') + pc(m.ecP))}</td><td><b>${m.ecE > 0 ? '+' : ''}${nf(m.ecE, 0)} €</b></td><td class="g wrap" style="max-width:330px;font-size:11.5px">${esc(m.cause)}</td></tr>`).join('')}
       </tbody></table>
@@ -468,7 +473,7 @@ const verdictFlux = (s, a) => {
     <div><div class="jg"><i style="width:93.6%"></i><u style="left:99.6%"></u></div>
     <div class="tx">Objectif <b>100 %</b> : chaque produit vendu a une recette complète, chiffrée et plausible. Il manque <b>6,4 % du CA, soit 8 120 € de ventes sur 30 jours</b>, dont 72 % dans les dix premières lignes. Tant qu’elles restent, l’audit des flux, l’écart matière et le CA attendu en portent une part.</div></div></div>
     <div class="vf-chips"><button class="on">Toutes <b>37</b></button>${Object.values(TYPES).map(([c, n, k]) => `<button><span class="vf-pb ${c}" style="padding:0 6px;margin-right:4px">&nbsp;</span>${n} <b>${k}</b></button>`).join('')}</div>
-    <div class="vf-fil" style="padding:10px 18px 0;margin:0"><select class="vf-sel"><option>Tous les magasins</option></select><select class="vf-sel"><option>Classées par CA concerné (30 jours)</option></select><div class="r"><button class="vf-btn">Exporter la liste</button><button class="vf-btn prim">Envoyer au responsable recettes</button></div></div>
+    <div class="vf-fil" style="padding:10px 18px 0;margin:0"><select class="vf-sel"><option>Tous les magasins</option></select><select class="vf-sel"><option>Classées par CA concerné (30 jours)</option></select><div class="r"><button class="vf-btn">Exporter la liste</button></div></div>
     <table class="vf-t" style="margin-top:8px"><thead><tr><th class="g" style="width:30px">#</th><th class="g">Produit</th><th class="g">Problème</th><th class="g">Ce qui cloche</th><th>CA concerné<small>30 jours</small></th><th class="g">Magasins</th><th>Repérée<small>depuis</small></th><th></th></tr></thead><tbody>
     ${L.map(([nom, cat, k, txt, ca, mag, dep], x) => `<tr><td class="g"><span class="vf-rang${x < 5 ? ' h' : ''}">${x + 1}</span></td><td class="g nom"><b>${esc(nom)}</b><small>${esc(cat)}</small></td><td class="g"><span class="vf-pb ${TYPES[k][0]}">${TYPES[k][1]}</span></td>
       <td class="g wrap" style="max-width:420px;font-size:11.5px">${esc(txt)}</td><td>${ca ? '<b>' + eur(ca) + '</b>' : '<span class="mu">—</span>'}</td><td class="g mu">${esc(mag)}</td><td>${dep}</td><td><a class="vf-lien">Ouvrir au panel ↗</a></td></tr>`).join('')}
@@ -607,7 +612,7 @@ const verdictFlux = (s, a) => {
       <div class="vf-lect">${T.pct > SF[0] ? `<b>${pire[0].c}</b> porte ${nf(100 * pire[0].T.delV / T.delV, 0)} % de la fuite (${eur(pire[0].T.delV)}), puis ${pire[1].c} (${eur(pire[1].T.delV)}) et ${pire[2].c} (${eur(pire[2].T.delV)}).` : `Toutes les catégories restent sous ${SF[0]} % : ${eur(T.delV)} de delta sur ${eur(T.sortiV)} sortis.`}</div>
       <table class="vf-t"><thead>
         <tr class="grp"><th></th><th colspan="5"><span>Les stocks — pièces</span></th><th colspan="2"><span>Ce qui est déclaré</span></th><th colspan="3"><span>Delta = sorti − ventes − poubelle</span></th></tr>
-        <tr><th class="g">Catégorie / produit</th><th>Stock début<small>lun. 19/10 matin</small></th><th>+ Entrées<small>commandes validées</small></th><th>+ Produit<small>cuissons validées</small></th><th>− Stock fin<small>dim. 25/10 soir</small></th><th>= Sorti</th><th>Ventes<small>caisse</small></th><th>Poubelle<small>déclarée</small></th><th>Delta</th><th>% du sorti</th><th>€<small>prix de vente</small></th></tr></thead>
+        <tr><th class="g">Catégorie / produit</th><th>Stock début<small>lun. 19/10 matin</small></th><th>+ Entrées<small>commandes validées</small></th><th>+ Produit<small>cuissons validées</small></th><th>− Stock fin<small>lun. 26/10</small></th><th>= Sorti</th><th>Ventes<small>caisse</small></th><th>Poubelle<small>déclarée</small></th><th>Delta</th><th>% du sorti</th><th>€<small>prix de vente</small></th></tr></thead>
       <tbody>${cats.map(ligneC).join('')}
         <tr class="tot"><td class="g">${s.court} — total</td><td>${T.deb}</td><td>${T.recu}</td><td>${T.prod}</td><td>${T.fin}</td><td>${T.sorti}</td><td>${T.ven}</td><td>${T.pou}</td><td>${T.del} pcs</td><td>${fuite(T)}</td><td>${eur(T.delV)}</td></tr></tbody></table></div>`;
   };
@@ -621,8 +626,8 @@ const verdictFlux = (s, a) => {
   page({ fichier: 'g.html', titre: 'Fuites par magasin', onglet: 'fuites', corps });
 
   /* ---------- G-MATIÈRES : le même tableau, en matières premières ----------
-   * Stock début (photo du soir du dimanche 18/10) + entrées (commandes entrantes VALIDÉES à la réception)
-   * − stock fin (photo du dimanche 25/10) = sorti ; sorti − ventes × recettes − poubelle × recettes = delta. */
+   * Stock début (inventaire hebdomadaire du lun. 19/10) + entrées (commandes entrantes VALIDÉES à la réception)
+   * − stock fin (inventaire du lun. 26/10) = sorti ; sorti − ventes × recettes − poubelle × recettes = delta. */
   const MCAT = [
     ['Farines et céréales', [['Farine T65', 'kg', 0.70, 7], ['Farine de seigle', 'kg', 0.95, 1.5], ['Mélange 10 céréales', 'kg', 2.40, 1.2]]],
     ['Beurres et laitages', [['Beurre doux 82 %', 'kg', 7.95, 7], ['Beurre de tourage', 'kg', 8.60, 6], ['Crème 35 %', 'l', 4.10, 3], ['Lait entier', 'l', 0.95, 1.2], ['Mozzarella', 'kg', 9.80, 2]]],
@@ -709,8 +714,8 @@ const verdictFlux = (s, a) => {
     return `<div class="vf-card"><div class="vf-ct"><h3>${s.court}</h3><span class="s">${esc(s.nom)} · matières premières, au coût</span><span class="r"><span class="vf-v ${v[0]}"><i></i>${v[1]} · ${pc(T.pct)} · ${eur(T.delV)}</span></span></div>
       <div class="vf-lect">${T.pct > SF[0] ? `<b>${pire[0].c}</b> porte ${nf(100 * pire[0].T.delV / T.delV, 0)} % de la fuite (${eur(pire[0].T.delV)}), puis ${pire[1].c} (${eur(pire[1].T.delV)}).` : `Toutes les catégories restent sous ${SF[0]} % : ${eur(T.delV)} de delta sur ${eur(T.sortiSuiviV)} de matière sortie.`}</div>
       <table class="vf-t"><thead>
-        <tr class="grp"><th></th><th colspan="4"><span>Les stocks — matières</span></th><th colspan="2"><span>Ce qui est déclaré, passé par les recettes</span></th><th colspan="3"><span>Delta = sorti − ventes − poubelle</span></th></tr>
-        <tr><th class="g">Catégorie / matière</th><th>Stock début<small>dim. 18/10 soir</small></th><th>+ Entrées<small>commandes validées</small></th><th>− Stock fin<small>dim. 25/10 soir</small></th><th>= Sorti<small>consommé</small></th><th>Ventes<small>× recettes</small></th><th>Poubelle<small>× recettes</small></th><th>Delta</th><th>% du sorti</th><th>€<small>au coût</small></th></tr></thead>
+        <tr class="grp"><th></th><th colspan="4"><span>Inventaires et commandes validées</span></th><th colspan="2"><span>Ce qui est déclaré, passé par les recettes</span></th><th colspan="3"><span>Delta = sorti − ventes − poubelle</span></th></tr>
+        <tr><th class="g">Catégorie / matière</th><th>Stock début<small>lun. 19/10</small></th><th>+ Entrées<small>commandes validées</small></th><th>− Stock fin<small>lun. 26/10</small></th><th>= Sorti<small>consommé</small></th><th>Ventes<small>× recettes</small></th><th>Poubelle<small>× recettes</small></th><th>Delta</th><th>% du sorti</th><th>€<small>au coût</small></th></tr></thead>
       <tbody>${cats.map(ligneC).join('')}
         <tr class="tot"><td class="g">${s.court} — total</td><td>${eur(T.debV)}</td><td>${eur(T.entV)}</td><td>${eur(T.finV)}</td><td>${eur(T.sortiV)}</td><td>${eur(T.venV)}</td><td>${eur(T.pouV)}</td><td>${eur(T.delV)}</td><td>${mfuite(T)}</td><td>${eur(T.delV)}</td></tr></tbody></table></div>`;
   };
@@ -721,7 +726,7 @@ const verdictFlux = (s, a) => {
   ${mmatrice}
   ${cmdCard}
   ${mordre.map(mtab).join('')}
-  <div class="vf-card"><div class="vf-pied" style="border-top:none">Stock début et stock fin : la photo du soir du stock matière (/shops/{id}/material-inventory, prise chaque nuit par le cockpit), ou l’inventaire du panel quand il y en a un ce jour-là. Entrées : les commandes entrantes validées à la réception dans la semaine, ligne par ligne, au prix du magasin. Sorti = début + entrées − fin : la matière consommée. Ventes × recettes et poubelle × recettes : les pièces vendues et jetées, dépliées par leurs recettes jusqu’à la matière (les pièces gardées d’une semaine à l’autre comptent avec les ventes). Delta = sorti − ventes − poubelle. Une recette fausse fait un faux delta : voir la bascule des recettes. Les emballages ne passent par aucune recette : suivis à part.</div></div>`;
+  <div class="vf-card"><div class="vf-pied" style="border-top:none">Stock début et stock fin : l’inventaire hebdomadaire du panel (le lundi avant l’ouverture) ; quand il manque, la photo du soir du stock matière (/shops/{id}/material-inventory, prise chaque nuit par le cockpit), et l’écran le dit. Entrées : les commandes entrantes validées à la réception dans la semaine, ligne par ligne, au prix du magasin. Sorti = début + entrées − fin : la matière consommée. Ventes × recettes et poubelle × recettes : les pièces vendues et jetées, dépliées par leurs recettes jusqu’à la matière (les pièces gardées d’une semaine à l’autre comptent avec les ventes). Delta = sorti − ventes − poubelle. Une recette fausse fait un faux delta : voir la bascule des recettes. Les emballages ne passent par aucune recette : suivis à part.</div></div>`;
   page({ fichier: 'g-matieres.html', titre: 'Fuites par magasin — matières premières', onglet: 'fuites', corps: corpsM });
 }
 

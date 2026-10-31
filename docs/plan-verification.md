@@ -17,9 +17,16 @@ Demandes du 31/10/2026. Maquette : [`docs/maquettes/verification/`](maquettes/ve
 5. **Tout enregistrer chaque jour en base**, pour suivre les progrès de gestion dans le
    temps.
 
-**Réponse du 31/10 : l'entrée, c'est la validation des commandes entrantes.** Une
-commande compte comme entrée le jour où le magasin valide sa réception au panel, avec
-les quantités validées. Une commande livrée mais pas validée n'est pas une entrée.
+**Décisions du 31/10 :**
+
+- **l'entrée, c'est la validation des commandes entrantes**. Une commande compte comme
+  entrée le jour où le magasin valide sa réception au panel, avec les quantités
+  validées. Une commande livrée mais pas validée n'est pas une entrée ;
+- **seuils de fuite : 3 % / 6 %** (vert, orange, rouge au-delà) ;
+- **un inventaire matière chaque semaine** dans chaque magasin : l'écart matière se lit
+  d'un inventaire à l'autre, sur sept jours ;
+- **la liste des recettes à corriger est pour le CEO seul** : pas d'envoi ;
+- **pas d'alerte pour l'instant**.
 
 ## 2. Les écrans
 
@@ -76,8 +83,9 @@ Delta % = Delta ÷ Sorti        Delta € = Delta × prix (de vente HT pour les 
 Les lignes sont **les mêmes et dans le même ordre** pour tous les magasins (le catalogue
 du réseau), pour qu'une ligne rouge se compare d'un coup d'œil. Une matrice catégories ×
 magasins résume le tout en tête. La bascule *Produits finis / Matières premières* passe
-au même tableau en matières (`g-matieres`). Le stock y est la photo du soir du stock
-matière, ou l'inventaire du jour quand il y en a un. Les entrées sont les commandes
+au même tableau en matières (`g-matieres`). Le stock y est l'inventaire hebdomadaire
+(le lundi avant l'ouverture). Quand un inventaire manque, la photo du soir du stock
+matière prend le relais, et l'écran le dit. Les entrées sont les commandes
 validées, et l'écran liste, sous la matrice, les commandes de la semaine une par une :
 fournisseur, date de commande, date et heure de validation, lignes, valeur, et ce qui a
 été corrigé à la réception. Une commande livrée mais pas validée apparaît en rouge. Ses
@@ -86,7 +94,7 @@ matières sortent alors en delta négatif, et la ligne le signale.
 Sur une semaine, delta de la semaine = somme des « non expliqué » des jours : les deux
 onglets se recoupent.
 
-### 3.3 Matières ↔ recettes (entre deux inventaires)
+### 3.3 Matières ↔ recettes (d'un inventaire hebdomadaire à l'autre)
 
 ```
 Consommé réel = stock inventaire début + entrées (commandes validées) − stock inventaire fin
@@ -140,7 +148,7 @@ On classe par **CA concerné sur 30 jours**. On montre la **couverture**, c'est-
 part du CA qui passe par une recette fiable, avec l'objectif de 100 %. « Repérée depuis »
 vient de la base quotidienne ; une ligne disparaît d'elle-même quand la recette est
 corrigée au panel. Le bouton « Ouvrir au panel » mène à la recette. **On n'écrit rien au
-panel.**
+panel.** La liste est **pour le CEO seul** (31/10) : pas d'envoi, un export suffit.
 
 ## 4. Les sources : routes du swagger du panel
 
@@ -267,7 +275,7 @@ recette se voit comme une amélioration, à partir du jour où elle a eu lieu.
 | Contrat | `docs/contrat-api.md` | une section par route, avec les mesures de la sonde |
 | Tests | `bin/tests.php` | formules (flux, delta, consommé réel), règles de recettes sur des cas connus |
 
-## 7. Seuils (Paramètres, réglables)
+## 7. Seuils (Paramètres, réglables ; 3 % / 6 % confirmés le 31/10)
 
 | Indicateur | Vert | Orange | Rouge |
 |---|---|---|---|
@@ -289,7 +297,7 @@ recette se voit comme une amélioration, à partir du jour où elle a eu lieu.
 | **3. Base quotidienne + Évolution** | Tables, cron 4 h 30, recalcul sur 7 jours, onglet Évolution | lot 2 | M |
 | **4. Matières ↔ recettes** | Inventaires, livraisons, recettes dépliées, tolérances, attribution ; Fuites en matières | lots 0 et 1 | L |
 | **5. Chiffre d'affaires** | Caisse, P&L, redevances, CA attendu, lignes sans produit, annulations, anomalies | lots 0 et 4 | M |
-| 6. Alertes (option) | Un magasin rouge deux jours de suite donne une notification et une tâche au consultant | lot 3 | S |
+| ~~6. Alertes~~ | **Pas pour l'instant (31/10).** Plus tard : un magasin rouge deux jours de suite, une commande livrée non validée depuis 24 h | lot 3 | S |
 
 L'ordre est choisi pour que **les recettes passent d'abord** : tant qu'une recette est
 fausse, l'écart matière et le CA attendu le sont aussi.
@@ -309,10 +317,12 @@ fausse, l'écart matière et le CA attendu le sont aussi.
   commande validée serait sa quantité commandée, ce qui est moins juste quand la
   réception a été corrigée.
 - **Commande livrée mais pas validée** : elle n'entre pas, et ses matières sortent en delta
-  négatif. L'écran le dit, et une alerte peut partir quand une commande est livrée depuis
-  plus de 24 h sans validation. Sinon le magasin aurait intérêt à ne pas valider.
-- **Inventaires** : la fréquence par magasin n'est pas connue. Sans inventaire, l'onglet
-  Matières se lit sur les photos du soir de `/material-inventory`.
+  négatif. L'écran le signale en rouge, sinon le magasin aurait intérêt à ne pas valider. Pas
+  d'alerte pour l'instant (31/10) : on le lit à l'écran.
+- **Inventaires** : un par semaine dans chaque magasin (31/10). Quand un inventaire
+  manque, ou qu'une matière n'est comptée qu'une fois, la photo du soir de
+  `/material-inventory` prend le relais, et l'écran le dit. Le lot 0 vérifie que les
+  inventaires se lisent bien par `/shops/{id}/materials/stocktakings`.
 - **Recettes** : elles faussent tout le reste, d'où le lot 1 en premier et la
   couverture affichée partout.
 - **Charge du panel** : lecture de nuit, sous le budget existant ; le jour, on ne relit
@@ -320,12 +330,13 @@ fausse, l'écart matière et le CA attendu le sont aussi.
 - **Personnes** : aucun nom d'employé dans ces écrans. On dit « poste de caisse », pas
   qui.
 
-## 10. Questions ouvertes
+## 10. Questions — toutes réglées le 31/10
 
-1. ~~Qu'est-ce que l'entrée ?~~ **Réglé le 31/10 : la validation des commandes
-   entrantes.**
-2. Les seuils de fuite (3 % / 6 %) te conviennent-ils ?
-3. À quelle fréquence les magasins font-ils un inventaire au panel ?
-4. Qui reçoit la liste des recettes à corriger (bouton « Envoyer au responsable
-   recettes ») ?
-5. Veut-on des alertes (lot 6) ?
+1. L'entrée : **la validation des commandes entrantes**.
+2. Les seuils de fuite : **3 % / 6 %**.
+3. Les inventaires : **chaque semaine**.
+4. La liste des recettes à corriger : **pour le CEO seul**.
+5. Les alertes : **pas pour l'instant**.
+
+Reste à mesurer, au lot 0 : les quantités validées ligne par ligne des commandes, et la
+lecture des inventaires hebdomadaires.

@@ -18,6 +18,10 @@ Demandes du 31/10/2026 :
 - tout **enregistrer chaque jour en base**, pour voir les progrès de gestion ;
 - **l'entrée, c'est la validation des commandes entrantes** (réponse du 31/10).
 
+Décisions du 31/10 : seuils de fuite 3 % / 6 % ; un inventaire matière par semaine (l'onglet
+Matières se lit d'un inventaire à l'autre, sur sept jours) ; la liste des recettes à corriger est
+pour le CEO seul (pas d'envoi) ; pas d'alerte pour l'instant.
+
 ## Les écrans
 
 | Fichier | Écran | Ce qu'il montre |
@@ -27,7 +31,7 @@ Demandes du 31/10/2026 :
 | `b.png` | Audit des flux, un magasin, le mois | Jour par jour, le total de chaque semaine et du mois ; « où ça fuit » par catégorie |
 | `g.png` | **Fuites par magasin, produits finis** | La matrice catégories × magasins, puis **un tableau par magasin, de structure identique** : stock début, + entrées (commandes validées), + produit (cuissons), − stock fin, = sorti, ventes, poubelle, **delta** (pièces, % du sorti, €). Une catégorie se déplie en produits |
 | `g-matieres.png` | **Fuites par magasin, matières premières** | Le même tableau en matières, au coût : stock début + **entrées = commandes validées à la réception** − stock fin = sorti, face aux ventes et à la poubelle passées par les recettes. Les commandes de la semaine une par une, dont une livrée mais pas validée |
-| `c.png` | Matières ↔ recettes | Entre deux inventaires : stock + entré − stock = consommé réel, face au théorique des recettes, matière par matière ; d'où vient l'écart |
+| `c.png` | Matières ↔ recettes | D'un inventaire hebdomadaire à l'autre : stock + entré − stock = consommé réel, face au théorique des recettes, matière par matière ; d'où vient l'écart |
 | `d.png` | Chiffre d'affaires | Caisse, P&L, base des redevances, CA attendu par la matière ; lignes sans produit, annulations ; les jours à regarder |
 | `e.png` | La bascule allumée | Les 37 recettes douteuses ou manquantes, classées par CA concerné ; la couverture vers 100 % |
 | `f.png` | Évolution | Ce que montre la base quotidienne : douze semaines, avant / après, mieux ou moins bien |
