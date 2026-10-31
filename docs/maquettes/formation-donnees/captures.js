@@ -5,7 +5,7 @@ const ici = __dirname;
 (async () => {
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
-  for (const f of ['01a-carte-metro', '01b-carte-grille', '01c-carte-effectifs', '02-fiche-niveau', '03-matrice-competences', '04-matrice-formations', '05-equipe']) {
+  for (const f of ['01a-carte-metro', '01c-carte-effectifs', '02-fiche-niveau', '03-matrice-competences', '04-matrice-formations', '05-equipe']) {
     await p.goto('file://' + path.join(ici, f + '.html'));
     await p.waitForTimeout(600);
     await p.screenshot({ path: path.join(ici, f + '.png'), fullPage: true });

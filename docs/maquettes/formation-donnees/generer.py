@@ -103,48 +103,76 @@ def pp(n):
     return '<span class="pp' + (' z' if not n else '') + '">' + (str(n) + ' pers.' if n else 'personne') + '</span>'
 
 
+COUL = {'vente': '#8D1D2C', 'boul': '#b07a2a', 'trait': '#3f7a52'}
+LIB = {'vente': 'Vente', 'boul': 'Boulangerie – Pâtisserie', 'trait': 'Traiteur'}
+
+
+def maitrise(p):
+    """Le niveau de maîtrise d'un métier : le dernier avant « Responsable d'équipe » ; ses compétences cumulées."""
+    et = niveaux_cumules(p)
+    k = max((i for i, (n, _, _) in enumerate(et) if 'responsable' not in n['nom'].lower()), default=len(et) - 1)
+    return k, set(et[k][2])
+
+
 def m1a_metro(ref, v25, comp, eff):
-    """Variante A : un plan de métro — trois lignes de métier qui rejoignent le tronc commun."""
+    """Variante A : plan de métro. Les trois lignes de métier ne se remplacent pas : elles entrent
+    TOUTES dans la polyvalence — le gérant de magasin maîtrise les trois métiers — puis le tronc."""
     R = chemin_reseau(ref, v25)
-    W, top = 1150, 0
-    lignes = [('vente', 'Vente', '#8D1D2C', 110), ('boul', 'Boulangerie – Pâtisserie', '#b07a2a', 260), ('trait', 'Traiteur', '#3f7a52', 410)]
-    svg, st = '', ''
+    W, H = 1150, 560
+    lignes = [('vente', 110), ('boul', 280), ('trait', 450)]
+    svg, st, union = '', '', set()
 
-    def station(x, y, coul, n, total, nb, vide=False):
-        return ('<div class="st" style="left:' + str(x - 56) + 'px;top:' + str(y - 9) + 'px"><div class="dot" style="border-color:' + coul + '"></div>'
-                '<div class="nm">' + e(n['nom']) + '</div><div class="dt' + (' vd' if vide else '') + '">' + ('compétences à définir' if vide else str(total) + ' compétences') + '</div>' + pp(nb) + '</div>')
+    def station(x, y, coul, titre, dt, nb, extra='', mx=False, vide=False, w=104):
+        return ('<div class="st" style="left:' + str(x - w // 2) + 'px;width:' + str(w) + 'px;top:' + str(y - (11 if mx else 9)) + 'px;color:' + coul + '"><div class="dot' + (' mx' if mx else '') + '" style="border-color:' + coul + '"></div>'
+                '<div class="nm" style="color:var(--ink)">' + e(titre) + '</div><div class="dt' + (' vd' if vide else '') + '">' + dt + '</div>' + extra + pp(nb) + '</div>')
 
-    for k, lib, coul, y in lignes:
+    for k, y in lignes:
         p = R[k]
         if not p:
             continue
+        coul = COUL[k]
         et = niveaux_cumules(p)
-        xs = [70 + i * (370 / max(len(et) - 1, 1)) for i in range(len(et))]
-        svg += '<path d="M40,' + str(y) + ' L' + str(xs[-1]) + ',' + str(y) + ' C' + str(xs[-1] + 90) + ',' + str(y) + ' 530,260 600,260" stroke="' + coul + '" stroke-width="7" fill="none" stroke-linecap="round"/>'
-        st += '<div class="ligne-nom" style="left:18px;top:' + str(y - 34) + 'px;color:' + coul + '">' + e(lib) + '</div>'
-        for x, (n, nv, cu) in zip(xs, et):
-            st += station(x, y, coul, n, len(cu), personnes(eff, n['id']))
-    tronc = [('adjoint', 650), ('manager', 765), ('candidat', 885), ('franchise', 995), ('multi', 1092)]
-    svg += '<path d="M600,260 L1092,260" stroke="#47423c" stroke-width="7" fill="none" stroke-linecap="round"/>'
-    if R['locataire']:
-        # La location-gérance part du candidat, vers le haut : les étiquettes du tronc sont dessous.
-        svg += '<path d="M885,260 C885,170 895,120 945,120 L995,120" stroke="#47423c" stroke-width="5" stroke-dasharray="2 9" fill="none" stroke-linecap="round"/>'
-    for k, x in tronc:
+        km, s = maitrise(p)
+        union |= s
+        xs = [60 + i * (300 / max(len(et) - 1, 1)) for i in range(len(et))]
+        svg += '<path d="M30,' + str(y) + ' L440,' + str(y) + '" stroke="' + coul + '" stroke-width="7" fill="none" stroke-linecap="round"/>'
+        st += '<div class="ligne-nom" style="left:18px;top:' + str(y - 34) + 'px;color:' + coul + '">' + e(LIB[k]) + '</div>'
+        for i, (x, (n, nv, cu)) in enumerate(zip(xs, et)):
+            ext = '<span class="mt" style="background:' + coul + '">maîtrise</span><br>' if i == km else ''
+            st += station(x, y, coul, n['nom'], str(len(cu)) + ' compétences', personnes(eff, n['id']), ext, i == km)
+    hub_x, hub_w = 440, 185
+    adj, man = R['adjoint'], R['manager']
+    n_adj = len(adj['niveaux'][-1]['competences']) if adj and adj['niveaux'] else 0
+    n_man = len(man['niveaux'][-1]['competences']) if man and man['niveaux'] else 0
+    hub = ('<div class="hub" style="left:' + str(hub_x) + 'px;top:62px;width:' + str(hub_w) + 'px;height:446px"><div class="k">Pour encadrer</div><div class="t">Maîtriser les trois métiers</div>'
+           + ''.join('<div class="m"><i style="background:' + COUL[k] + '"></i>' + e(LIB[k]) + '<b>' + str(len(maitrise(R[k])[1])) + '</b></div>' for k, _ in lignes if R[k])
+           + '<div class="s"><span>Polyvalence</span><span>' + str(len(union)) + '</span></div><div class="n">compétences au total (sans doublon), au niveau « maîtrise » de chaque métier.<br><br>'
+           'Le chef de section reste dans son métier ; le gérant, lui, tient les trois.</div></div>')
+    svg += '<path d="M' + str(hub_x + hub_w) + ',280 L1095,280" stroke="#47423c" stroke-width="7" fill="none" stroke-linecap="round"/>'
+    t_adj, t_man = len(union) + n_adj, len(union) + n_adj + n_man
+    tronc = [('adjoint', 690, '+' + str(n_adj) + ' · <span class="tot">' + str(t_adj) + ' au total</span>'), ('manager', 790, '+' + str(n_man) + ' · <span class="tot">' + str(t_man) + ' au total</span>')]
+    for k, x, dt in tronc:
+        p = R[k]
+        if p and p['niveaux']:
+            st += station(x, 280, '#47423c', p['nom'].strip(), dt, personnes(eff, p['niveaux'][-1]['id']), w=92)
+    for k, x in (('candidat', 900), ('franchise', 995), ('multi', 1092)):
         p = R[k]
         if p and p['niveaux']:
             n = p['niveaux'][-1]
-            st += station(x, 260, '#47423c', n | {'nom': p['nom'].strip()}, len(n['competences']), personnes(eff, n['id']), not n['competences'])
+            vide = not n['competences']
+            st += station(x, 280, '#47423c', p['nom'].strip(), 'compétences à définir' if vide else '+' + str(len(n['competences'])) + ' compétences', personnes(eff, n['id']), vide=vide, w=92)
     if R['locataire'] and R['locataire']['niveaux']:
+        svg += '<path d="M900,280 C900,180 910,120 960,120 L995,120" stroke="#47423c" stroke-width="5" stroke-dasharray="2 9" fill="none" stroke-linecap="round"/>'
         n = R['locataire']['niveaux'][-1]
-        st += station(995, 120, '#47423c', n | {'nom': R['locataire']['nom']}, len(n['competences']), personnes(eff, n['id']), not n['competences'])
-    zones = ('<div class="zone" style="left:0;width:590px"><b>Opérationnel</b></div><div class="zone c" style="left:590px;width:240px"><b>Cadre et direction</b></div>'
-             '<div class="zone e" style="left:830px;width:320px"><b>Devenir entrepreneur</b></div>')
-    carte = '<div class="metro">' + zones + '<svg width="' + str(W) + '" height="540">' + svg + '</svg>' + st + '</div>'
+        st += station(995, 120, '#47423c', R['locataire']['nom'], 'compétences à définir' if not n['competences'] else '+' + str(len(n['competences'])), personnes(eff, n['id']), vide=not n['competences'], w=92)
+    zones = ('<div class="zone" style="left:0;width:650px"><b>Opérationnel</b></div><div class="zone c" style="left:650px;width:200px"><b>Cadre et direction</b></div>'
+             '<div class="zone e" style="left:850px;width:300px"><b>Devenir entrepreneur</b></div>')
+    carte = '<div class="metro" style="height:' + str(H) + 'px">' + zones + '<svg width="' + str(W) + '" height="' + str(H) + '">' + svg + '</svg>' + hub + st + '</div>'
     reseau = ', '.join(p['nom'].strip() for p in R['reseau'])
-    corps = (kpis_carte(ref, v25, comp, eff) + '<h2 class="mq-h">Le chemin des métiers</h2><p class="mq-sub">Trois lignes de métier qui rejoignent le même tronc : encadrer, puis entreprendre. '
-             'Chaque station : le niveau, les compétences à maîtriser (cumulées), les personnes qui y sont aujourd’hui.</p>' + carte +
+    corps = (kpis_carte(ref, v25, comp, eff) + '<h2 class="mq-h">Le chemin des métiers</h2><p class="mq-sub">On apprend un métier sur sa ligne. Pour encadrer un magasin, les <b>trois</b> lignes sont nécessaires : '
+             'le gérant maîtrise la vente, la boulangerie-pâtisserie et le traiteur. Ensuite, le tronc : adjoint, manager, puis la franchise.</p>' + carte +
              '<div class="legende2"><span><i style="background:#8D1D2C"></i>Vente</span><span><i style="background:#b07a2a"></i>Boulangerie – Pâtisserie</span><span><i style="background:#3f7a52"></i>Traiteur</span>'
-             '<span><i style="background:#47423c"></i>Tronc commun</span><span>· · · Locataire-gérant : une autre voie que la franchise</span></div>'
+             '<span><i style="background:#47423c"></i>Tronc commun</span><span>◎ niveau de maîtrise du métier</span><span>· · · Locataire-gérant : l’autre voie que la franchise</span></div>'
              '<p class="mq-note" style="margin-top:14px"><b>Hors chemin — rôles du réseau</b> (' + str(len(R['reseau'])) + ') : ' + e(reseau) + '</p>' + manques(ref, comp, eff))
     page('01a-carte-metro', 'carte', 'Vue réseau', 'Carte des métiers', corps, '<a class="btn">Rafraîchir</a>')
 
@@ -168,56 +196,8 @@ def manques(ref, comp, eff):
             '<div class="alerte"><b>' + str(sans_proc) + ' / ' + str(len(comp)) + '</b><span>compétences sans procédure du manuel</span><small>Le manuel n’est relié à aucune compétence.</small></div></div>')
 
 
-def m1b_grille(ref, v25, comp, eff):
-    """Variante B : une grille en escalier — une ligne par voie, une colonne par étape."""
-    R = chemin_reseau(ref, v25)
-
-    def cel(titre, total, nb, avec=None, vide=False):
-        return ('<div class="cel' + (' vide' if vide else '') + '"><div class="t">' + e(titre) + '</div><div class="d"><span>' + ('à définir' if vide else '<b>' + str(total) + '</b> compétences') + '</span>' + pp(nb) + '</div>'
-                + (jauge(avec, total) if avec is not None and total else '') + '</div>')
-
-    def rangee(nom, sous, cellules):
-        return '<div class="rg"><div class="pn">' + e(nom) + ('<small>' + e(sous) + '</small>' if sous else '') + '</div>' + ''.join(cellules) + ''.join('<div></div>' for _ in range(4 - len(cellules))) + '</div>'
-
-    h = '<div class="esc2"><div class="fh">Opérationnel<span>en magasin, de l’arrivée à responsable d’équipe</span></div>'
-    for k, lib in (('vente', 'Vente'), ('boul', 'Boulangerie – Pâtisserie'), ('trait', 'Traiteur')):
-        p = R[k]
-        if not p:
-            continue
-        cs = []
-        for n, nv, cu in niveaux_cumules(p):
-            cs.append(cel(n['nom'], len(cu), personnes(eff, n['id']), sum(1 for c in cu if comp.get(c, {}).get('fo'))))
-        rest = sum(personnes(eff, n['id']) for n in p['niveaux'])
-        h += rangee(lib, str(rest) + ' personnes', cs)
-    h += '<div class="fh">Cadre et direction<span>encadrer le magasin — on y arrive depuis « Responsable d’équipe »</span></div>'
-    cs = []
-    for k in ('adjoint', 'manager'):
-        p = R[k]
-        if p and p['niveaux']:
-            n = p['niveaux'][-1]
-            cs.append(cel(p['nom'].strip(), len(n['competences']), personnes(eff, n['id']), sum(1 for c in n['competences'] if comp.get(c, {}).get('fo')), not n['competences']))
-    h += rangee('Encadrer', None, cs)
-    h += '<div class="fh">Devenir entrepreneur<span>candidat, puis franchisé ; ou locataire-gérant</span></div>'
-    cs = []
-    for k in ('candidat', 'franchise', 'multi'):
-        p = R[k]
-        if p and p['niveaux']:
-            n = p['niveaux'][-1]
-            cs.append(cel(p['nom'].strip(), len(n['competences']), personnes(eff, n['id']), sum(1 for c in n['competences'] if comp.get(c, {}).get('fo')), not n['competences']))
-    h += rangee('Franchise', None, cs)
-    if R['locataire'] and R['locataire']['niveaux']:
-        n = R['locataire']['niveaux'][-1]
-        h += rangee('Location-gérance', 'l’autre voie', [cel(R['locataire']['nom'], len(n['competences']), personnes(eff, n['id']), None, not n['competences'])])
-    h += '</div>'
-    reseau = ', '.join(p['nom'].strip() for p in R['reseau'])
-    corps = (kpis_carte(ref, v25, comp, eff) + '<h2 class="mq-h">Le chemin des métiers</h2><p class="mq-sub">Une ligne par voie, une colonne par étape : on lit de gauche à droite. '
-             'Chaque case : les compétences à maîtriser (cumulées), les personnes qui y sont, la part qui a une formation.</p>' + h +
-             '<p class="mq-note" style="margin-top:14px"><b>Hors chemin — rôles du réseau</b> (' + str(len(R['reseau'])) + ') : ' + e(reseau) + '</p>' + manques(ref, comp, eff))
-    page('01b-carte-grille', 'carte', 'Vue réseau', 'Carte des métiers', corps, '<a class="btn">Rafraîchir</a>')
-
-
 def m1c_effectifs(ref, v25, comp, eff):
-    """Variante C : les personnes d'abord — où est l'équipe sur le chemin."""
+    """Variante C : les personnes d'abord, et le vivier de gérants (polyvalence sur les trois métiers)."""
     R = chemin_reseau(ref, v25)
     fam = {'o': ['vente', 'boul', 'trait'], 'c': ['adjoint', 'manager'], 'e': ['candidat', 'franchise', 'multi', 'locataire']}
     nb = {f: sum(personnes(eff, n['id']) for k in ks if R[k] for n in R[k]['niveaux']) for f, ks in fam.items()}
@@ -229,22 +209,43 @@ def m1c_effectifs(ref, v25, comp, eff):
             '<p class="muted" style="margin:0">' + str(tot - sans) + ' sont placées sur la carte ; ' + str(sans) + ' n’ont pas encore de poste dans le panel.</p><div class="pile">' + pile + '</div></div>'
             '<a class="btn on">Placer les ' + str(sans) + ' personnes →</a></div>')
 
-    def carte_poste(p, titre=None):
+    # Le vivier : combien maîtrisent 3, 2, 1, 0 métier(s). Chiffres d'EXEMPLE (le panel n'a aujourd'hui
+    # des compétences validées que pour 1 personne sur 72 : tout serait à zéro).
+    ex = {3: 2, 2: 5, 1: 17, 0: 48}
+    exm = {'vente': 13, 'boul': 9, 'trait': 6}
+    tot_ex = sum(ex.values())
+    paliers = ''.join('<div class="palier"><span>' + lib + '</span><div class="bar"><i style="width:' + str(max(round(v * 100 / tot_ex), 1)) + '%;background:' + col + '"></i></div><b>' + str(v) + ' pers.</b></div>'
+                      for lib, v, col in (('Les 3 métiers', ex[3], 'var(--ink)'), ('2 métiers', ex[2], '#7a736a'), ('1 métier', ex[1], '#b8b2a8'), ('Aucun encore', ex[0], '#e1dbd2')))
+    metiers = ''.join('<div class="palier"><span>' + e(LIB[k]) + '</span><div class="bar"><i style="width:' + str(round(exm[k] * 100 / tot_ex)) + '%;background:' + COUL[k] + '"></i></div><b>' + str(exm[k]) + ' pers.</b></div>' for k in ('vente', 'boul', 'trait'))
+    vivier = ('<h2 class="mq-h">Le vivier de gérants<span class="ex">chiffres d’exemple</span></h2><p class="mq-sub">Pour encadrer un magasin, il faut maîtriser les trois métiers. Qui est prêt, qui y est presque.</p>'
+              '<div class="vivier"><section class="box"><h2 style="margin-bottom:6px">Polyvalence</h2>' + paliers +
+              '<p class="mq-note" style="margin:10px 0 0"><b>2 personnes</b> maîtrisent les trois métiers : prêtes pour Adjoint de Manager. <a>Voir qui →</a></p></section>'
+              '<section class="box"><h2 style="margin-bottom:6px">Métier par métier</h2>' + metiers +
+              '<p class="mq-note" style="margin:10px 0 0">Maîtriser un métier : toutes les compétences jusqu’à son niveau de maîtrise (Équipier confirmé). Le traiteur est le métier le moins partagé : la polyvalence se gagne là.</p></section></div>'
+              '<p class="mq-note">Aujourd’hui dans le panel, <b>1 personne sur 72</b> a des compétences validées : tous ces chiffres seraient à zéro. Les parcours et la validation en magasin les rempliront.</p>')
+
+    def carte_poste(p, titre=None, cle=None):
         if not p:
             return ''
         et = niveaux_cumules(p)
-        segs = ''.join('<div><div class="b' + (' p' if personnes(eff, n['id']) else '') + '">' + str(personnes(eff, n['id'])) + '</div><div class="l">' + e(n['nom']) + '</div></div>' for n, _, _ in et)
+        km = maitrise(p)[0] if cle in COUL else None
+        segs = ''.join('<div><div class="b' + (' p' if personnes(eff, n['id']) else '') + (' mx' if i == km else '') + '">' + str(personnes(eff, n['id'])) + '</div><div class="l">' + e(n['nom']) + ('<br><b>maîtrise</b>' if i == km else '') + '</div></div>'
+                       for i, (n, _, _) in enumerate(et))
         total = len(et[-1][2]) if et else 0
         avec = sum(1 for c in (et[-1][2] if et else []) if comp.get(c, {}).get('fo'))
         nbp = sum(personnes(eff, n['id']) for n in p['niveaux'])
+        cond = ''
+        if cle in ('adjoint', 'manager'):
+            cond = ('<div class="cond">Condition : maîtriser les 3 métiers<div class="trois"><span class="ok" style="background:' + COUL['vente'] + '">Vente</span><span class="ok" style="background:' + COUL['boul'] + '">Boul.-Pât.</span>'
+                    '<span class="ok" style="background:' + COUL['trait'] + '">Traiteur</span></div></div>')
         return ('<div class="pc3"><div class="t">' + e(titre or p['nom'].strip()) + '<span>' + str(nbp) + ' pers.</span></div><div class="segs">' + segs + '</div>'
-                '<div class="d">' + (str(total) + ' compétences au dernier niveau · ' + str(round(avec * 100 / total)) + ' % avec formation' if total else '<span style="color:var(--danger)">compétences à définir</span>') + '</div></div>')
+                '<div class="d">' + (str(total) + ' compétences au dernier niveau · ' + str(round(avec * 100 / total)) + ' % avec formation' if total else '<span style="color:var(--danger)">compétences à définir</span>') + '</div>' + cond + '</div>')
 
-    cols = ('<div class="cols3"><div><div class="cat" style="margin:0 0 8px">Opérationnel</div>' + carte_poste(R['vente'], 'Vente') + carte_poste(R['boul'], 'Boulangerie – Pâtisserie') + carte_poste(R['trait'], 'Traiteur') + '</div>'
-            '<div><div class="cat" style="margin:0 0 8px">Cadre et direction</div>' + carte_poste(R['adjoint']) + carte_poste(R['manager']) +
+    cols = ('<div class="cols3"><div><div class="cat" style="margin:0 0 8px">Opérationnel</div>' + carte_poste(R['vente'], 'Vente', 'vente') + carte_poste(R['boul'], 'Boulangerie – Pâtisserie', 'boul') + carte_poste(R['trait'], 'Traiteur', 'trait') + '</div>'
+            '<div><div class="cat" style="margin:0 0 8px">Cadre et direction</div>' + carte_poste(R['adjoint'], None, 'adjoint') + carte_poste(R['manager'], None, 'manager') +
             '<p class="mq-note">Rôles du réseau (' + str(len(R['reseau'])) + ') : hors chemin.</p></div>'
             '<div><div class="cat" style="margin:0 0 8px">Devenir entrepreneur</div>' + carte_poste(R['candidat']) + carte_poste(R['franchise']) + carte_poste(R['multi']) + carte_poste(R['locataire']) + '</div></div>')
-    corps = (hero + '<h2 class="mq-h">Où est l’équipe</h2><p class="mq-sub">Chaque poste, ses niveaux de gauche à droite ; dans chaque case, le nombre de personnes à ce niveau aujourd’hui.</p>' + cols + manques(ref, comp, eff))
+    corps = (hero + vivier + '<h2 class="mq-h">Où est l’équipe</h2><p class="mq-sub">Chaque poste, ses niveaux de gauche à droite ; dans chaque case, le nombre de personnes à ce niveau aujourd’hui. Encadré : le niveau de maîtrise du métier.</p>' + cols + manques(ref, comp, eff))
     page('01c-carte-effectifs', 'carte', 'Vue réseau', 'Carte des métiers', corps, '<a class="btn">Rafraîchir</a>')
 
 
@@ -382,14 +383,14 @@ def main(d):
     f = os.path.join(d, 'effectifs.json')
     eff = json.load(open(f, encoding='utf-8')) if os.path.exists(f) else {}
     # La carte des métiers : trois propositions (la première version, 01-carte-des-metiers, est écartée).
+    # Gardées le 31/10/2026 : A (métro) et C (effectifs), avec la polyvalence du gérant sur les trois métiers.
     m1a_metro(ref, v25, comp, eff)
-    m1b_grille(ref, v25, comp, eff)
     m1c_effectifs(ref, v25, comp, eff)
     m2_fiche(ref, v25, comp)
     m3_matrice_comp(ref, comp)
     m4_matrice_fo(v25)
     m5_equipe(ref)
-    print('7 maquettes écrites dans', ICI)
+    print('6 maquettes écrites dans', ICI)
 
 
 if __name__ == '__main__':

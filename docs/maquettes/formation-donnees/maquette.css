@@ -163,3 +163,29 @@ body { margin: 0; background: var(--paper); }
 .segs .b.p { background: rgba(141,29,44,.14); color: var(--accent); }
 .segs .l { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.25; text-align: center; }
 .pc3 .d { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+
+/* ── Polyvalence : le gérant maîtrise les trois métiers (31/10/2026) ───── */
+.hub { position: absolute; background: #fff; border: 2px solid var(--ink); border-radius: 16px; padding: 14px 14px 12px; box-sizing: border-box; }
+.hub .k { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.hub .t { font-size: 15px; font-weight: 600; line-height: 1.25; margin: 4px 0 10px; }
+.hub .m { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 6px 0; border-top: 1px solid var(--row-line); }
+.hub .m i { width: 12px; height: 12px; border-radius: 3px; flex: 0 0 12px; }
+.hub .m b { margin-left: auto; font-weight: 600; }
+.hub .s { font-size: 12.5px; margin-top: 8px; padding-top: 8px; border-top: 1.5px solid var(--ink); display: flex; justify-content: space-between; font-weight: 600; }
+.hub .n { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.35; }
+.st .dot.mx { width: 22px; height: 22px; margin-top: -2px; box-shadow: 0 0 0 3px #fff, 0 0 0 5px currentColor; }
+.st .mt { display: inline-block; margin-top: 4px; font-size: 10.5px; font-weight: 600; padding: 1px 6px; border-radius: 5px; color: #fff; }
+.st .tot { font-size: 11.5px; font-weight: 600; color: var(--ink); }
+.ex { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 5px; background: #fff3cd; color: #7a5b00; margin-left: 8px; vertical-align: 2px; }
+.vivier { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; }
+.palier { display: grid; grid-template-columns: 150px 1fr 70px; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--row-line); font-size: 13.5px; }
+.palier:first-of-type { border-top: 0; }
+.palier .bar { height: 14px; border-radius: 4px; background: var(--chip); overflow: hidden; }
+.palier .bar i { display: block; height: 100%; border-radius: 4px; }
+.palier b { text-align: right; font-weight: 600; }
+.trois { display: flex; gap: 4px; margin-top: 8px; }
+.trois span { flex: 1; font-size: 11px; font-weight: 600; text-align: center; padding: 4px 0; border-radius: 5px; background: var(--chip); color: var(--muted-2); }
+.trois span.ok { color: #fff; }
+.cond { font-size: 12px; color: var(--ink); background: #fbf6ee; border-radius: 8px; padding: 7px 9px; margin-top: 8px; }
+.segs .b.mx { outline: 2px solid var(--ink); outline-offset: -2px; }
+.segs .l b { color: var(--ink); font-weight: 600; }
