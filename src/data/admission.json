@@ -1,0 +1,41 @@
+{
+ "source": "Critères d'admission du cockpit (31/10/2026) — complètent les exigences du panel (/position-levels/{id}/requirements), qui passent en premier.",
+ "types": {
+  "poste": "vérifié dans le panel : la personne tient un de ces postes (codes v25)",
+  "fo": "vérifié : formations acquises (compétences du panel ou validées dans un parcours) — elles s'ajoutent au chemin si elles manquent",
+  "metiers": "vérifié dans le panel : toutes les compétences des 3 métiers jusqu'à leur niveau de maîtrise (Équipier confirmé) — règle du 31/10/2026 : le gérant de magasin maîtrise les trois ; les formations qui manquent s'ajoutent au chemin",
+  "manuel": "validé par la manager ou le consultant, dans le suivi du parcours"
+ },
+ "postes": {
+  "P7": {
+   "nom": "Adjoint Manager",
+   "criteres": [
+    {"cle": "metiers", "type": "metiers", "libelle": "Maîtriser les 3 métiers : vente, boulangerie-pâtisserie, traiteur"},
+    {"cle": "bases", "type": "fo", "fo": ["FO-01", "FO-02", "FO-16"], "libelle": "Les bases validées : vente, HACCP & hygiène, allergènes"},
+    {"cle": "anciennete", "type": "manuel", "libelle": "Au moins 6 mois dans le réseau"},
+    {"cle": "avis", "type": "manuel", "libelle": "Proposé par le manager ou le franchisé du magasin"}
+   ]
+  },
+  "P8": {
+   "nom": "Manager",
+   "criteres": [
+    {"cle": "metiers", "type": "metiers", "libelle": "Maîtriser les 3 métiers : vente, boulangerie-pâtisserie, traiteur"},
+    {"cle": "poste", "type": "poste", "codes": ["P7"], "libelle": "Adjoint Manager en poste"},
+    {"cle": "adjoint", "type": "fo", "fo": ["FO-28", "FO-24"], "libelle": "Formation Adjoint Manager et planification validées"},
+    {"cle": "encadrement", "type": "manuel", "libelle": "12 mois d'encadrement (adjoint ou équivalent)"},
+    {"cle": "entretien", "type": "manuel", "libelle": "Entretien de validation avec le franchisé et le consultant"}
+   ]
+  },
+  "P12": {
+   "nom": "Franchisé multi-boutique",
+   "criteres": [
+    {"cle": "poste", "type": "poste", "codes": ["P11"], "libelle": "Franchisé en activité"},
+    {"cle": "gerant", "type": "fo", "fo": ["FO-05", "FO-06", "FO-24"], "libelle": "Plan Gérant maîtrisé : pilotage commercial, équipe & RH, plannings"},
+    {"cle": "anciennete", "type": "manuel", "libelle": "12 mois d'activité minimum sur la première boutique"},
+    {"cle": "resultats", "type": "manuel", "libelle": "Première boutique rentable : P&L et audit qualité conformes"},
+    {"cle": "relais", "type": "manuel", "libelle": "Un Manager formé (P8) pour tenir la première boutique"},
+    {"cle": "accord", "type": "manuel", "libelle": "Accord du franchiseur (comité de développement)"}
+   ]
+  }
+ }
+}

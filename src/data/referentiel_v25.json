@@ -1,0 +1,3029 @@
+{
+ "source": "L'ATELIER BY — RÉFÉRENTIEL v25 (Excel)",
+ "priorites": [
+  "TRAFIC",
+  "RECURRENCE",
+  "XP",
+  "FOOD-COST",
+  "LABOUR-COST",
+  "OVERHEAD-COST"
+ ],
+ "postes": [
+  {
+   "code": "P1",
+   "nom": "Opérateur Boulangerie-Pâtisserie"
+  },
+  {
+   "code": "P2",
+   "nom": "Opérateur Traiteur"
+  },
+  {
+   "code": "P3",
+   "nom": "Opérateur Vente"
+  },
+  {
+   "code": "P4",
+   "nom": "Chef section Vente"
+  },
+  {
+   "code": "P5",
+   "nom": "Chef section Boul-Pât"
+  },
+  {
+   "code": "P6",
+   "nom": "Chef section Traiteur"
+  },
+  {
+   "code": "P7",
+   "nom": "Adjoint Manager"
+  },
+  {
+   "code": "P8",
+   "nom": "Manager"
+  },
+  {
+   "code": "P9",
+   "nom": "Locataire Gerant"
+  },
+  {
+   "code": "P10",
+   "nom": "Candidat Franchisé"
+  },
+  {
+   "code": "P11",
+   "nom": "Franchisé"
+  },
+  {
+   "code": "P12",
+   "nom": "Franchisé multi-boutique"
+  }
+ ],
+ "formations": [
+  {
+   "code": "FO-01",
+   "nom": "Formation Vendeur (initiale + recyclage)",
+   "priorites": [
+    "RECURRENCE",
+    "XP"
+   ],
+   "frequence": "Semestriel",
+   "sousCategorie": "Process",
+   "sections": "Vente",
+   "controleur": "Business coach",
+   "executant": "Franchisé",
+   "procedure": "MO §7.5 — Formation Vendeur",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "O",
+    "P4": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-02",
+   "nom": "Formation HACCP & Hygiène (obligatoire annuelle)",
+   "priorites": [
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Conformité",
+   "sections": "Boulangerie · Pâtisserie · Traiteur · Vente",
+   "controleur": "Qualité & Conformité",
+   "executant": "—",
+   "procedure": "MO §2.4 — Formation HACCP & Hygiène",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P1": "O",
+    "P2": "O",
+    "P3": "O",
+    "P4": "O",
+    "P5": "O",
+    "P6": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-03",
+   "nom": "Formation Production & Recettes signature",
+   "priorites": [
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Semestriel",
+   "sousCategorie": "Recette",
+   "sections": "Boulangerie · Pâtisserie · Traiteur",
+   "controleur": "Postes du consultant",
+   "executant": "Franchisé",
+   "procedure": "MO §4.5 — Formation Production & Recettes signature",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P1": "O",
+    "P2": "O",
+    "P5": "O",
+    "P6": "O",
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-04",
+   "nom": "Formation Merchandising & Expérience client",
+   "priorites": [
+    "TRAFIC",
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Process",
+   "sections": "Vente",
+   "controleur": "Business coach",
+   "executant": "—",
+   "procedure": "MO §3.10 — Formation Merchandising & Expérience client",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "O",
+    "P4": "O",
+    "P5": "R",
+    "P6": "R",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-05",
+   "nom": "Formation Pilotage Commercial (Franchisé / Responsable)",
+   "priorites": [
+    "FOOD-COST",
+    "LABOUR-COST",
+    "OVERHEAD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Process",
+   "sections": "Administratif",
+   "controleur": "Développeur de performance (business coach)",
+   "executant": "Consultant (Business coach)",
+   "procedure": "MO §6.4 — Formation Pilotage Commercial",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P4": "R",
+    "P5": "R",
+    "P6": "R",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-06",
+   "nom": "Formation Animation Équipe & RH (Franchisé / Responsable)",
+   "priorites": [
+    "XP",
+    "LABOUR-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Échange franchisé",
+   "sections": "Administratif",
+   "controleur": "Développeur de performance (business coach)",
+   "executant": "Consultant (Business coach)",
+   "procedure": "MO §7.6 — Formation Animation Équipe & RH",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P4": "R",
+    "P5": "R",
+    "P6": "R",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-07",
+   "nom": "Formation Boulangerie technique",
+   "priorites": [
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Recette",
+   "sections": "Boulangerie · Pâtisserie",
+   "controleur": "Postes du consultant",
+   "executant": "Consultant (Postes du consultant)",
+   "procedure": "MO §4.6 — Formation Boulangerie technique",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P1": "O",
+    "P5": "O",
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-08",
+   "nom": "Formation Pâtisserie technique",
+   "priorites": [
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Recette",
+   "sections": "Pâtisserie",
+   "controleur": "Postes du consultant",
+   "executant": "Consultant (Postes du consultant)",
+   "procedure": "MO §4.7 — Formation Pâtisserie technique",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P1": "O",
+    "P5": "O",
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-09",
+   "nom": "Formation Viennoiserie & Feuilletage",
+   "priorites": [
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Recette",
+   "sections": "Boulangerie · Pâtisserie",
+   "controleur": "Postes du consultant",
+   "executant": "Consultant (Postes du consultant)",
+   "procedure": "MO §4.8 — Formation Viennoiserie & Feuilletage",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P1": "O",
+    "P5": "O",
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-10",
+   "nom": "Traiteur — Préparations froides & chaudes",
+   "priorites": [
+    "RECURRENCE",
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Operations & Pdv",
+   "sections": "Operationnel",
+   "controleur": "Business coach",
+   "executant": "Opérateur Traiteur",
+   "procedure": "MO §5.x — Traiteur cœur métier (froid & chaud)",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P2": "O",
+    "P3": "R",
+    "P4": "R",
+    "P5": "R",
+    "P6": "O",
+    "P11": "R"
+   }
+  },
+  {
+   "code": "FO-11",
+   "nom": "Formation Barista & Boissons chaudes",
+   "priorites": [
+    "XP"
+   ],
+   "frequence": "Semestriel",
+   "sousCategorie": "Recette",
+   "sections": "Vente",
+   "controleur": "Postes du consultant",
+   "executant": "Consultant (Postes du consultant)",
+   "procedure": "MO §4.10 — Formation Barista & Boissons chaudes",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "O",
+    "P4": "O",
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-12",
+   "nom": "Formation Cuisson & gestion four",
+   "priorites": [
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Process",
+   "sections": "Boulangerie · Pâtisserie",
+   "controleur": "Postes du consultant",
+   "executant": "Consultant (Postes du consultant)",
+   "procedure": "MO §4.11 — Formation Cuisson & gestion four",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P1": "O",
+    "P5": "O",
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-13",
+   "nom": "Formation Vente conseil approfondie",
+   "priorites": [
+    "RECURRENCE",
+    "XP"
+   ],
+   "frequence": "Semestriel",
+   "sousCategorie": "Process",
+   "sections": "Vente",
+   "controleur": "Business coach",
+   "executant": "Franchisé",
+   "procedure": "MO §7.7 — Formation Vente conseil approfondie",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "O",
+    "P4": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-14",
+   "nom": "Formation Encaissement & gestion caisse",
+   "priorites": [
+    "XP"
+   ],
+   "frequence": "Semestriel",
+   "sousCategorie": "Process",
+   "sections": "Vente",
+   "controleur": "Business coach",
+   "executant": "Franchisé",
+   "procedure": "MO §7.8 — Formation Encaissement & gestion caisse",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "O",
+    "P4": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-15",
+   "nom": "Formation Service client premium / VIP",
+   "priorites": [
+    "RECURRENCE",
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Process",
+   "sections": "Vente",
+   "controleur": "Business coach",
+   "executant": "Franchisé",
+   "procedure": "MO §7.9 — Formation Service client premium",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "R",
+    "P4": "O",
+    "P6": "R",
+    "P7": "O",
+    "P8": "O",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-16",
+   "nom": "Formation Allergènes & FIC réglementation",
+   "priorites": [
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Conformité",
+   "sections": "Vente · Production",
+   "controleur": "Qualité & Conformité",
+   "executant": "—",
+   "procedure": "MO §2.5 — Formation Allergènes & FIC",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P1": "O",
+    "P2": "O",
+    "P3": "O",
+    "P4": "O",
+    "P5": "O",
+    "P6": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-17",
+   "nom": "Formation Multilinguisme client (FR/NL/EN)",
+   "priorites": [
+    "TRAFIC",
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Process",
+   "sections": "Vente",
+   "controleur": "Business coach",
+   "executant": "—",
+   "procedure": "MO §7.10 — Formation Multilinguisme client",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "O",
+    "P4": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-18",
+   "nom": "Formation Gestion conflit client",
+   "priorites": [
+    "RECURRENCE",
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Process",
+   "sections": "Vente",
+   "controleur": "Business coach",
+   "executant": "Franchisé",
+   "procedure": "MO §7.11 — Formation Gestion conflit client",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "R",
+    "P4": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-19",
+   "nom": "Formation Upselling / cross-selling",
+   "priorites": [
+    "RECURRENCE",
+    "XP"
+   ],
+   "frequence": "Semestriel",
+   "sousCategorie": "Process",
+   "sections": "Vente",
+   "controleur": "Business coach",
+   "executant": "Franchisé",
+   "procedure": "MO §7.12 — Formation Upselling / cross-selling",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "O",
+    "P4": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-20",
+   "nom": "Formation Vitrine & merchandising visuel",
+   "priorites": [
+    "TRAFIC",
+    "XP"
+   ],
+   "frequence": "Trimestriel",
+   "sousCategorie": "Process",
+   "sections": "Vente",
+   "controleur": "Business coach",
+   "executant": "—",
+   "procedure": "MO §3.11 — Formation Vitrine & merchandising visuel",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "O",
+    "P4": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-21",
+   "nom": "Formation Chef de section Vente",
+   "priorites": [
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Management",
+   "sections": "Vente",
+   "controleur": "Business coach",
+   "executant": "Manager",
+   "procedure": "MO §8.1 — Formation Chef de section Vente",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P4": "O",
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-22",
+   "nom": "Formation Chef de section Boul-Pât",
+   "priorites": [
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Management",
+   "sections": "Boulangerie · Pâtisserie",
+   "controleur": "Postes du consultant",
+   "executant": "Manager",
+   "procedure": "MO §8.2 — Formation Chef de section Boul-Pât",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P5": "O",
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-23",
+   "nom": "Formation Chef de section Traiteur",
+   "priorites": [
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Management",
+   "sections": "Traiteur",
+   "controleur": "Postes du consultant",
+   "executant": "Manager",
+   "procedure": "MO §8.3 — Formation Chef de section Traiteur",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P6": "O",
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-24",
+   "nom": "Formation Planification & gestion plannings",
+   "priorites": [
+    "XP",
+    "LABOUR-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Process",
+   "sections": "Administratif",
+   "controleur": "Business coach",
+   "executant": "Manager",
+   "procedure": "MO §6.5 — Formation Planification & gestion plannings",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P4": "R",
+    "P5": "R",
+    "P6": "R",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-25",
+   "nom": "Formation Inventaire & gestion stocks",
+   "priorites": [
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Process",
+   "sections": "Administratif",
+   "controleur": "Business coach",
+   "executant": "Manager",
+   "procedure": "MO §6.6 — Formation Inventaire & gestion stocks",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P4": "R",
+    "P5": "R",
+    "P6": "R",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-26",
+   "nom": "Formation Réception marchandises & ProdAtelier",
+   "priorites": [
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Process",
+   "sections": "Administratif",
+   "controleur": "Qualité & Conformité",
+   "executant": "Manager",
+   "procedure": "MO §2.6 — Formation Réception & ProdAtelier",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P1": "R",
+    "P2": "R",
+    "P3": "R",
+    "P4": "O",
+    "P5": "O",
+    "P6": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-27",
+   "nom": "Formation Gestion casse & invendus",
+   "priorites": [
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Process",
+   "sections": "Administratif",
+   "controleur": "Business coach",
+   "executant": "Manager",
+   "procedure": "MO §6.7 — Formation Gestion casse & invendus",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P4": "R",
+    "P5": "R",
+    "P6": "R",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-28",
+   "nom": "Formation Adjoint Manager",
+   "priorites": [
+    "XP",
+    "LABOUR-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Management",
+   "sections": "Vente · Production",
+   "controleur": "Business coach",
+   "executant": "Manager",
+   "procedure": "MO §8.4 — Formation Adjoint Manager",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P4": "R",
+    "P5": "R",
+    "P6": "R",
+    "P7": "O",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-29",
+   "nom": "Formation Recrutement & sourcing",
+   "priorites": [
+    "XP",
+    "LABOUR-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "RH",
+   "sections": "Administratif",
+   "controleur": "Consultant RH (Pierre Boseret)",
+   "executant": "Franchisé",
+   "procedure": "MO §7.13 — Formation Recrutement & sourcing",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P7": "R",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-30",
+   "nom": "Formation Onboarding nouveau collaborateur",
+   "priorites": [
+    "XP",
+    "LABOUR-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "RH",
+   "sections": "Administratif",
+   "controleur": "Consultant RH (Pierre Boseret)",
+   "executant": "Manager",
+   "procedure": "MO §7.14 — Formation Onboarding nouveau collaborateur",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P4": "R",
+    "P5": "R",
+    "P6": "R",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-31",
+   "nom": "Identité & ADN L'Atelier By",
+   "priorites": [],
+   "frequence": "Ad hoc",
+   "sousCategorie": "Onboarding franchisé",
+   "sections": "Administratif",
+   "controleur": "Franchiseur",
+   "executant": "—",
+   "procedure": "MO §1.1 — Identité & ADN L'Atelier By",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-32",
+   "nom": "Modèle franchise & cadre contractuel",
+   "priorites": [],
+   "frequence": "Ad hoc",
+   "sousCategorie": "Onboarding franchisé",
+   "sections": "Administratif",
+   "controleur": "Franchiseur",
+   "executant": "—",
+   "procedure": "MO §1.2 — Modèle franchise & cadre contractuel",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-33",
+   "nom": "Étude de marché & emplacement",
+   "priorites": [],
+   "frequence": "Ad hoc",
+   "sousCategorie": "Onboarding franchisé",
+   "sections": "Administratif",
+   "controleur": "Consultant Dev & Recrutement",
+   "executant": "Candidat franchisé",
+   "procedure": "MO §1.3 — Étude de marché & emplacement",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P9": "O",
+    "P10": "O",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-34",
+   "nom": "Bouclage financier & business plan",
+   "priorites": [
+    "OVERHEAD-COST"
+   ],
+   "frequence": "Ad hoc",
+   "sousCategorie": "Onboarding franchisé",
+   "sections": "Administratif",
+   "controleur": "Consultant Finance",
+   "executant": "Candidat franchisé",
+   "procedure": "MO §1.4 — Bouclage financier & business plan",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P9": "O",
+    "P10": "O",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-35",
+   "nom": "Manuel Opératoire — lecture intégrale",
+   "priorites": [],
+   "frequence": "Ad hoc",
+   "sousCategorie": "Onboarding franchisé",
+   "sections": "Administratif",
+   "controleur": "Franchiseur",
+   "executant": "Candidat franchisé",
+   "procedure": "MO §1.5 — Lecture MO + cas pratiques",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P7": "R",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-36",
+   "nom": "Outils Franchise Buddy & écosystème IT",
+   "priorites": [],
+   "frequence": "Ad hoc",
+   "sousCategorie": "Onboarding franchisé",
+   "sections": "Administratif",
+   "controleur": "Consultant Dev & IA",
+   "executant": "Candidat franchisé",
+   "procedure": "MO §1.6 — FB & écosystème IT",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P4": "R",
+    "P5": "R",
+    "P6": "R",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-37",
+   "nom": "Stage immersif boutique pilote (4-6 sem)",
+   "priorites": [
+    "XP"
+   ],
+   "frequence": "Ad hoc",
+   "sousCategorie": "Onboarding franchisé",
+   "sections": "Vente · Production",
+   "controleur": "Franchisé pilote",
+   "executant": "Candidat franchisé",
+   "procedure": "MO §1.7 — Stage immersif boutique pilote",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P9": "O",
+    "P10": "O",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-38",
+   "nom": "Stratégie d'ouverture J-90 → J",
+   "priorites": [
+    "TRAFIC",
+    "OVERHEAD-COST"
+   ],
+   "frequence": "Ad hoc",
+   "sousCategorie": "Onboarding franchisé",
+   "sections": "Administratif",
+   "controleur": "Consultant Dev & Recrutement",
+   "executant": "Candidat franchisé",
+   "procedure": "MO §1.8 — Stratégie d'ouverture",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P9": "O",
+    "P10": "O",
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-39",
+   "nom": "Master class métier annuelle",
+   "priorites": [
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Formation continue",
+   "sections": "Boulangerie · Pâtisserie · Traiteur",
+   "controleur": "Postes du consultant",
+   "executant": "Franchisé",
+   "procedure": "MO §9.1 — Master class métier annuelle",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P4": "R",
+    "P5": "R",
+    "P6": "R",
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-40",
+   "nom": "Veille concurrentielle & benchmark réseau",
+   "priorites": [
+    "TRAFIC",
+    "RECURRENCE",
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Formation continue",
+   "sections": "Administratif",
+   "controleur": "Business coach",
+   "executant": "Franchisé",
+   "procedure": "MO §9.2 — Veille concurrentielle & benchmark",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-41",
+   "nom": "Gestion financière avancée",
+   "priorites": [
+    "FOOD-COST",
+    "LABOUR-COST",
+    "OVERHEAD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Formation continue",
+   "sections": "Administratif",
+   "controleur": "Consultant Finance",
+   "executant": "Franchisé",
+   "procedure": "MO §9.3 — Gestion financière avancée",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P7": "R",
+    "P8": "O",
+    "P9": "R",
+    "P10": "R",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-42",
+   "nom": "Multi-boutique (franchisé en croissance)",
+   "priorites": [
+    "OVERHEAD-COST"
+   ],
+   "frequence": "Ad hoc",
+   "sousCategorie": "Formation continue",
+   "sections": "Administratif",
+   "controleur": "Franchiseur",
+   "executant": "Franchisé",
+   "procedure": "MO §9.4 — Multi-boutique",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P11": "R",
+    "P12": "R"
+   }
+  },
+  {
+   "code": "FO-43",
+   "nom": "Communication locale & réseaux sociaux franchisé",
+   "priorites": [
+    "TRAFIC",
+    "RECURRENCE"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Formation continue",
+   "sections": "Administratif",
+   "controleur": "Consultant Marketing (Mato)",
+   "executant": "Franchisé",
+   "procedure": "MO §9.5 — Com locale & réseaux sociaux",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P7": "R",
+    "P8": "R",
+    "P9": "R",
+    "P10": "R",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-44",
+   "nom": "Réglementation alimentaire avancée",
+   "priorites": [
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Conformité",
+   "sections": "Vente · Production",
+   "controleur": "Qualité & Conformité",
+   "executant": "Franchisé",
+   "procedure": "MO §2.7 — Réglementation alimentaire avancée",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P1": "O",
+    "P2": "O",
+    "P3": "O",
+    "P4": "O",
+    "P5": "O",
+    "P6": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "O",
+    "P10": "O",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-45",
+   "nom": "Animation commerciale & saisons",
+   "priorites": [
+    "TRAFIC",
+    "RECURRENCE",
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Formation continue",
+   "sections": "Vente",
+   "controleur": "Business coach",
+   "executant": "Franchisé",
+   "procedure": "MO §9.6 — Animation commerciale & saisons",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "R",
+    "P4": "O",
+    "P7": "O",
+    "P8": "O",
+    "P9": "R",
+    "P10": "R",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-46",
+   "nom": "Click & Collect / Livraison — Préparation & Remise",
+   "priorites": [
+    "RECURRENCE",
+    "XP",
+    "LABOUR-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Operations & Pdv",
+   "sections": "Operationnel",
+   "controleur": "Business coach",
+   "executant": "Vendeur préparateur",
+   "procedure": "MO §5.x — Formation Click & Collect / Livraison",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P3": "O",
+    "P4": "O",
+    "P5": "R",
+    "P6": "R",
+    "P7": "R"
+   }
+  },
+  {
+   "code": "FO-47",
+   "nom": "Webshop — Gestion catalogue & stock digital",
+   "priorites": [
+    "TRAFIC",
+    "RECURRENCE"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Operations & Pdv",
+   "sections": "Administratif",
+   "controleur": "Business coach",
+   "executant": "Franchisé ou Manager",
+   "procedure": "MO §5.x — Gestion catalogue PWA & plateformes",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P7": "R",
+    "P8": "R",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-48",
+   "nom": "E-commerce omnicanal — Stratégie & pilotage",
+   "priorites": [
+    "TRAFIC",
+    "RECURRENCE",
+    "XP"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Echange franchisé",
+   "sections": "Strategique",
+   "controleur": "Business coach",
+   "executant": "Franchisé",
+   "procedure": "MO §5.x — Pilotage canaux digitaux",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P8": "R",
+    "P11": "O",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-49",
+   "nom": "Gérant multi-boutique — Gouvernance & pilotage transversal",
+   "priorites": [
+    "LABOUR-COST",
+    "OVERHEAD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Pilotage",
+   "sections": "Strategique",
+   "controleur": "Direction Franchise Generation",
+   "executant": "Franchisé multi-boutique",
+   "procedure": "MO §7.x — Gouvernance multi-boutique",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P11": "R",
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-50",
+   "nom": "Reporting consolidé & arbitrage portefeuille multi-boutiques",
+   "priorites": [
+    "FOOD-COST",
+    "LABOUR-COST",
+    "OVERHEAD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Pilotage",
+   "sections": "Strategique",
+   "controleur": "Direction Franchise Generation",
+   "executant": "Franchisé multi-boutique",
+   "procedure": "MO §7.x — Consolidation P&L multi-sites",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P12": "O"
+   }
+  },
+  {
+   "code": "FO-51",
+   "nom": "Sandwicherie — Panification, garnissage & formules",
+   "priorites": [
+    "RECURRENCE",
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Operations & Pdv",
+   "sections": "Operationnel",
+   "controleur": "Business coach",
+   "executant": "Opérateur Traiteur / Vente",
+   "procedure": "MO §5.x — Sandwicherie (panification, garnissage, formules)",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P2": "O",
+    "P3": "R",
+    "P4": "R",
+    "P6": "O",
+    "P11": "R"
+   }
+  },
+  {
+   "code": "FO-52",
+   "nom": "Salades & Bowls — Compositions signature",
+   "priorites": [
+    "RECURRENCE",
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Operations & Pdv",
+   "sections": "Operationnel",
+   "controleur": "Business coach",
+   "executant": "Opérateur Traiteur",
+   "procedure": "MO §5.x — Salades & Bowls (compositions, sauces, packaging)",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P2": "O",
+    "P3": "R",
+    "P4": "R",
+    "P6": "O",
+    "P11": "R"
+   }
+  },
+  {
+   "code": "FO-53",
+   "nom": "Comptoir fromages — Sélection, conservation & conseil",
+   "priorites": [
+    "TRAFIC",
+    "RECURRENCE",
+    "XP",
+    "FOOD-COST"
+   ],
+   "frequence": "Annuel",
+   "sousCategorie": "Operations & Pdv",
+   "sections": "Operationnel",
+   "controleur": "Business coach",
+   "executant": "Opérateur Traiteur / Vente",
+   "procedure": "MO §5.x — Comptoir fromages (sélection, conservation, conseil)",
+   "nbEvaluations": 5,
+   "attendu": {
+    "P2": "O",
+    "P3": "R",
+    "P4": "R",
+    "P5": "R",
+    "P6": "O",
+    "P11": "R"
+   }
+  }
+ ],
+ "competences": [
+  {
+   "code": "C-VENTE.Accueil",
+   "famille": "C-VENTE",
+   "nom": "Accueil client <3s",
+   "description": "Regard + sourire + bonjour en moins de 3 secondes à chaque entrée client",
+   "formation": "FO-01",
+   "niveau": "Débutant→Confirmé",
+   "postes": "P3 Vente"
+  },
+  {
+   "code": "C-VENTE.Conseil",
+   "famille": "C-VENTE",
+   "nom": "Conseil produit",
+   "description": "Orienter le client, expliquer la gamme, story-telling, recommandation adaptée",
+   "formation": "FO-01",
+   "niveau": "Confirmé",
+   "postes": "P3 Vente"
+  },
+  {
+   "code": "C-VENTE.Upselling",
+   "famille": "C-VENTE",
+   "nom": "Upselling / Cross-selling",
+   "description": "Proposition complémentaire systématique : 1 client = 1 propal mini (boisson+pâtisserie / formule)",
+   "formation": "FO-01",
+   "niveau": "Confirmé",
+   "postes": "P3 Vente"
+  },
+  {
+   "code": "C-VENTE.Caisse",
+   "famille": "C-VENTE",
+   "nom": "Encaissement & caisse",
+   "description": "Tickets délivrés, écarts de caisse <0.5%, moyens paiement, clôture journalière",
+   "formation": "FO-01",
+   "niveau": "Débutant→Confirmé",
+   "postes": "P3 Vente"
+  },
+  {
+   "code": "C-VENTE.Fidélité",
+   "famille": "C-VENTE",
+   "nom": "Fidélisation & PWA loyalty",
+   "description": "Inscription PWA, activation programme, NFC/QR identification, panier ambassadeur",
+   "formation": "FO-01",
+   "niveau": "Confirmé",
+   "postes": "P3 Vente"
+  },
+  {
+   "code": "C-VENTE.Standards",
+   "famille": "C-VENTE",
+   "nom": "Standards expérience client",
+   "description": "Accueil <3s, sourire, formule au revoir, ticket systématique — chronométrable",
+   "formation": "FO-04",
+   "niveau": "Confirmé",
+   "postes": "P3 Vente"
+  },
+  {
+   "code": "C-VENTE.B2B",
+   "famille": "C-VENTE",
+   "nom": "Vente B2B traiteur",
+   "description": "Prise de commande téléphone/email, devis, suivi livraison, facturation pro",
+   "formation": "FO-15",
+   "niveau": "Expert",
+   "postes": "P3-P4 Vente"
+  },
+  {
+   "code": "C-VENTE.Conflit",
+   "famille": "C-VENTE",
+   "nom": "Gestion conflit client",
+   "description": "Écoute active, dé-escalade, geste commercial, escalade franchisé",
+   "formation": "FO-18",
+   "niveau": "Confirmé",
+   "postes": "P3 niv3 / P4-P5"
+  },
+  {
+   "code": "C-VENTE.Vitrine",
+   "famille": "C-VENTE",
+   "nom": "Vitrine & merchandising visuel",
+   "description": "Montage matinal, réassort, étiquetage charte, photos produit, propreté",
+   "formation": "FO-20",
+   "niveau": "Confirmé",
+   "postes": "P3 niv3 / P4-P5"
+  },
+  {
+   "code": "C-TRANS.HACCP",
+   "famille": "C-TRANS",
+   "nom": "HACCP & hygiène",
+   "description": "5M, températures, allergènes 14, lavage mains, fiches HACCP — obligatoire annuel",
+   "formation": "FO-02",
+   "niveau": "Base→Validé",
+   "postes": "Toutes"
+  },
+  {
+   "code": "C-TRANS.FIFO-DLC",
+   "famille": "C-TRANS",
+   "nom": "FIFO & DLC",
+   "description": "Rotation produits anciens devant, vérification DLC continue, retrait immédiat dépassé",
+   "formation": "FO-02",
+   "niveau": "Confirmé",
+   "postes": "Toutes"
+  },
+  {
+   "code": "C-TRANS.Merchandising",
+   "famille": "C-TRANS",
+   "nom": "Merchandising vitrine",
+   "description": "Planogramme, facing client, signalétique stars, charte Ruby/Abricot, refresh PLV",
+   "formation": "FO-04",
+   "niveau": "Confirmé",
+   "postes": "P3-P4 Vente"
+  },
+  {
+   "code": "C-TRANS.Sécurité",
+   "famille": "C-TRANS",
+   "nom": "Sécurité au travail",
+   "description": "EPI, gestes & postures, équipements à risque (four, trancheuse), procédures incident",
+   "formation": "FO-02",
+   "niveau": "Base",
+   "postes": "Toutes"
+  },
+  {
+   "code": "C-TRANS.Conformité",
+   "famille": "C-TRANS",
+   "nom": "Conformité réglementaire",
+   "description": "Affichages obligatoires, allergènes FIC, étiquetage, droits/devoirs employeur",
+   "formation": "FO-16",
+   "niveau": "Validé",
+   "postes": "P4-P8"
+  },
+  {
+   "code": "C-TRANS.Multilingue",
+   "famille": "C-TRANS",
+   "nom": "Multilinguisme client",
+   "description": "Accueil FR/NL/EN, vocabulaire produit, charte Bruxelles bilingue",
+   "formation": "FO-17",
+   "niveau": "Confirmé",
+   "postes": "P3 Vente"
+  },
+  {
+   "code": "C-PROD.Pain",
+   "famille": "C-PROD",
+   "nom": "Pain & boulangerie technique",
+   "description": "Pétrissage, hydratation, pousse contrôlée, façonnage, cuisson — gamme signature",
+   "formation": "FO-07",
+   "niveau": "Notions→Confirmé",
+   "postes": "P1 Boul-Pât"
+  },
+  {
+   "code": "C-PROD.Viennoiserie",
+   "famille": "C-PROD",
+   "nom": "Viennoiserie & feuilletage",
+   "description": "Tourage, détrempe, beurrage, croissants & couques signature",
+   "formation": "FO-09",
+   "niveau": "Notions→Confirmé",
+   "postes": "P1 Boul-Pât"
+  },
+  {
+   "code": "C-PROD.Pâtisserie",
+   "famille": "C-PROD",
+   "nom": "Pâtisserie technique",
+   "description": "Crèmes, ganaches, montage, glaçages, finitions, gamme signature L'Atelier By",
+   "formation": "FO-08",
+   "niveau": "Base→Confirmé",
+   "postes": "P1 Boul-Pât"
+  },
+  {
+   "code": "C-PROD.Salade",
+   "famille": "C-PROD",
+   "nom": "Salades & traiteur froid",
+   "description": "Composition, conservation, DLC, dressage assiette",
+   "formation": "FO-10",
+   "niveau": "Base",
+   "postes": "P2 Traiteur"
+  },
+  {
+   "code": "C-PROD.Sandwich",
+   "famille": "C-PROD",
+   "nom": "Sandwichs & wraps",
+   "description": "Garniture, montage, conservation, packaging client",
+   "formation": "FO-10",
+   "niveau": "Base",
+   "postes": "P2 Traiteur"
+  },
+  {
+   "code": "C-PROD.Cuisson",
+   "famille": "C-PROD",
+   "nom": "Cuisson & gestion four",
+   "description": "Vagues, programmes four, T°/durée, défournement, lecture produit cuit",
+   "formation": "FO-12",
+   "niveau": "Confirmé",
+   "postes": "P1 Boul-Pât"
+  },
+  {
+   "code": "C-TRAITEUR.Froid",
+   "famille": "C-TRAITEUR",
+   "nom": "Traiteur froid",
+   "description": "Sandwichs, salades, plats froids selon recettes et standards marque",
+   "formation": "FO-10",
+   "niveau": "Confirmé",
+   "postes": "P2 Traiteur"
+  },
+  {
+   "code": "C-TRAITEUR.Chaud",
+   "famille": "C-TRAITEUR",
+   "nom": "Traiteur chaud",
+   "description": "Cuisson plats chauds, dressage, températures de service, organisation poste chaud",
+   "formation": "FO-10",
+   "niveau": "Confirmé",
+   "postes": "P2 Traiteur"
+  },
+  {
+   "code": "C-TRAITEUR.B2B",
+   "famille": "C-TRAITEUR",
+   "nom": "Traiteur B2B & événementiel",
+   "description": "Commandes corporate, devis, livraison groupée, facturation pro",
+   "formation": "FO-15",
+   "niveau": "Expert",
+   "postes": "P2 Traiteur niv4"
+  },
+  {
+   "code": "C-BARISTA.Espresso",
+   "famille": "C-BARISTA",
+   "nom": "Extraction espresso",
+   "description": "Mouture, tamping, temps d'extraction, T° eau — espresso conforme",
+   "formation": "FO-11",
+   "niveau": "Base→Confirmé",
+   "postes": "P3 Vente"
+  },
+  {
+   "code": "C-BARISTA.Lait",
+   "famille": "C-BARISTA",
+   "nom": "Latte art & boissons lait",
+   "description": "Texture lait, micro-mousse, motifs latte art (cœur, rosetta), boissons gamme",
+   "formation": "FO-11",
+   "niveau": "Confirmé",
+   "postes": "P3 Vente"
+  },
+  {
+   "code": "C-RH.Briefing",
+   "famille": "C-RH",
+   "nom": "Animation briefing matin",
+   "description": "5 min : produits du jour, focus commercial, énergie équipe, infos franchiseur",
+   "formation": "FO-06",
+   "niveau": "Confirmé",
+   "postes": "P4-P5"
+  },
+  {
+   "code": "C-RH.Réunion",
+   "famille": "C-RH",
+   "nom": "Conduite réunion hebdo",
+   "description": "Ordre du jour, animation, suivi actions, retex semaine, planning S+1",
+   "formation": "FO-06",
+   "niveau": "Confirmé",
+   "postes": "P4-P5"
+  },
+  {
+   "code": "C-RH.Évaluation",
+   "famille": "C-RH",
+   "nom": "Évaluation collaborateurs",
+   "description": "Évaluation compétences FB, entretien semestriel, plan dev individuel",
+   "formation": "FO-06",
+   "niveau": "Expert",
+   "postes": "P4-P5"
+  },
+  {
+   "code": "C-RH.Onboarding",
+   "famille": "C-RH",
+   "nom": "Onboarding nouveau collab.",
+   "description": "Maîtrise CL-07 : contrat, J1-J5, parcours 30/60/90 j, évaluation période d'essai",
+   "formation": "FO-30",
+   "niveau": "Confirmé",
+   "postes": "P4-P5"
+  },
+  {
+   "code": "C-RH.Recrutement",
+   "famille": "C-RH",
+   "nom": "Recrutement & sourcing",
+   "description": "Sourcing, entretiens, sélection compétences, intégration, marque employeur",
+   "formation": "FO-29",
+   "niveau": "Confirmé",
+   "postes": "P5-P7"
+  },
+  {
+   "code": "C-RH.Conflit",
+   "famille": "C-RH",
+   "nom": "Gestion conflit & droit travail",
+   "description": "Méthodologie résolution conflits, droit du travail belge (durée, congés, contrats)",
+   "formation": "FO-06",
+   "niveau": "Expert",
+   "postes": "P4-P5"
+  },
+  {
+   "code": "C-PILOTAGE.Vente",
+   "famille": "C-PILOTAGE",
+   "nom": "Pilotage commercial vente",
+   "description": "KPI ticket moyen, articles/ticket, % CA formules, taux ventes stars vs benchmark",
+   "formation": "FO-05",
+   "niveau": "Confirmé",
+   "postes": "P3 niv4 / P4-P5"
+  },
+  {
+   "code": "C-PILOTAGE.Production",
+   "famille": "C-PILOTAGE",
+   "nom": "Pilotage production",
+   "description": "Plan production, casse, marge produit, KPI laboratoire",
+   "formation": "FO-05",
+   "niveau": "Confirmé",
+   "postes": "P1 niv3 / P5"
+  },
+  {
+   "code": "C-PILOTAGE.Traiteur",
+   "famille": "C-PILOTAGE",
+   "nom": "Pilotage traiteur",
+   "description": "Activité B2B, marge traiteur, prévisionnel, DSO B2B",
+   "formation": "FO-05",
+   "niveau": "Confirmé",
+   "postes": "P2 niv4 / P5"
+  },
+  {
+   "code": "C-PILOTAGE.Franchise",
+   "famille": "C-PILOTAGE",
+   "nom": "Pilotage franchise réseau",
+   "description": "Reporting franchiseur, redevances, dashboard FB, P&L mensuel, benchmark réseau",
+   "formation": "FO-05",
+   "niveau": "Expert",
+   "postes": "P7 Franchisé"
+  },
+  {
+   "code": "C-PILOTAGE.KPI",
+   "famille": "C-PILOTAGE",
+   "nom": "Lecture tableau de bord FB",
+   "description": "Vue CA, ticket, marge, % CA formules, KPI hebdo + mensuel — décision data-driven",
+   "formation": "FO-05",
+   "niveau": "Confirmé",
+   "postes": "P4-P7"
+  },
+  {
+   "code": "C-PILOTAGE.Finance",
+   "famille": "C-PILOTAGE",
+   "nom": "Gestion financière avancée",
+   "description": "Analyse écarts, optimisation marge, stratégies pricing, trésorerie",
+   "formation": "FO-41",
+   "niveau": "Expert",
+   "postes": "P7 Franchisé"
+  },
+  {
+   "code": "C-PILOTAGE.Multi",
+   "famille": "C-PILOTAGE",
+   "nom": "Multi-boutique",
+   "description": "Passage 1→2→3 boutiques, délégation, structure managériale réseau",
+   "formation": "FO-42",
+   "niveau": "Expert",
+   "postes": "P7 Franchisé"
+  },
+  {
+   "code": "C-STOCK.Inventaire",
+   "famille": "C-STOCK",
+   "nom": "Inventaire & gestion stocks",
+   "description": "Process hebdo, valorisation, écarts, rotations, alertes FB",
+   "formation": "FO-25",
+   "niveau": "Confirmé",
+   "postes": "P4-P5"
+  },
+  {
+   "code": "C-STOCK.Réception",
+   "famille": "C-STOCK",
+   "nom": "Réception & ProdAtelier",
+   "description": "Flux ProdAtelier Pologne→Belgique, conformité, chaîne froid, anomalies",
+   "formation": "FO-26",
+   "niveau": "Confirmé",
+   "postes": "P4-P5"
+  },
+  {
+   "code": "C-STOCK.Casse",
+   "famille": "C-STOCK",
+   "nom": "Gestion casse & invendus",
+   "description": "Pesée, traçabilité FB, analyse causes, plan réduction, valorisation invendus",
+   "formation": "FO-27",
+   "niveau": "Confirmé",
+   "postes": "P4-P5"
+  },
+  {
+   "code": "C-PLAN.Planning",
+   "famille": "C-PLAN",
+   "nom": "Planification équipes",
+   "description": "Prévision flux, dimensionnement équipe, conformité droit travail, FB planning",
+   "formation": "FO-24",
+   "niveau": "Confirmé",
+   "postes": "P4-P5"
+  },
+  {
+   "code": "C-PLAN.Ouverture",
+   "famille": "C-PLAN",
+   "nom": "Procédure ouverture boutique",
+   "description": "AC-01 maîtrisée : équipements, HACCP matinale, vitrine, propreté, briefing 5 min",
+   "formation": "FO-01",
+   "niveau": "Base",
+   "postes": "P3-P5"
+  },
+  {
+   "code": "C-PLAN.Fermeture",
+   "famille": "C-PLAN",
+   "nom": "Procédure fermeture boutique",
+   "description": "AC-02 maîtrisée : inventaire, comptage caisse, nettoyage deep, sécurisation",
+   "formation": "FO-01",
+   "niveau": "Base",
+   "postes": "P3-P5"
+  },
+  {
+   "code": "C-CC.Préparation",
+   "famille": "C-CC",
+   "nom": "Préparation commande C&C / Livraison",
+   "description": "Lecture commande PWA / plateforme, sélection produits FIFO, emballage adapté (sec, frais, chaud), étiquetage client, mise en zone tampon, notification statut.",
+   "formation": "FO-46",
+   "niveau": "Débutant→Confirmé",
+   "postes": "P3 Vente"
+  },
+  {
+   "code": "C-CC.Remise",
+   "famille": "C-CC",
+   "nom": "Remise commande C&C / Handover livreur",
+   "description": "Vérification identité client (nom + QR PWA) ou livreur plateforme, contrôle final commande, geste commercial, clôture digitale (scan QR), sollicitation avis Google.",
+   "formation": "FO-46",
+   "niveau": "Confirmé",
+   "postes": "P3 Vente"
+  },
+  {
+   "code": "C-CC.Litige",
+   "famille": "C-CC",
+   "nom": "Gestion litige commande digitale",
+   "description": "Traitement réclamation client web/livraison : produit manquant, abîmé, livraison hors créneau. Geste commercial proportionné, escalade plateforme, traçabilité Franchise Buddy.",
+   "formation": "FO-46",
+   "niveau": "Confirmé→Expert",
+   "postes": "P4 Chef sec. Vente"
+  },
+  {
+   "code": "C-WEB.Catalogue",
+   "famille": "C-WEB",
+   "nom": "Gestion catalogue & stock PWA / plateformes",
+   "description": "Mise à jour produits (photos, descriptions, prix, allergènes), gestion disponibilité (activation/désactivation), créneaux retrait, promotions ponctuelles, intégration plateformes livraison.",
+   "formation": "FO-47",
+   "niveau": "Confirmé→Expert",
+   "postes": "P10 Franchisé"
+  },
+  {
+   "code": "C-WEB.Pilotage",
+   "famille": "C-WEB",
+   "nom": "Pilotage performance canaux digitaux",
+   "description": "Lecture analytics PWA + plateformes : visiteurs, conversion, panier moyen digital vs boutique, ruptures fréquentes, sources trafic, ROI campagnes. Plan d'action mensuel.",
+   "formation": "FO-48",
+   "niveau": "Expert",
+   "postes": "P10 Franchisé"
+  },
+  {
+   "code": "C-MULTI.Délégation",
+   "famille": "C-MULTI",
+   "nom": "Délégation managériale multi-sites",
+   "description": "Identifier et faire monter en compétences un Manager (P8) par boutique. Définir scope de délégation, rituel reporting, contrôle sans micromanagement. Construction confiance.",
+   "formation": "FO-49",
+   "niveau": "Expert",
+   "postes": "P11 Franchisé multi-boutique"
+  },
+  {
+   "code": "C-MULTI.Consolidation",
+   "famille": "C-MULTI",
+   "nom": "Consolidation reporting & P&L multi-boutiques",
+   "description": "Agrégation hebdo/mensuelle des KPIs et P&L des N boutiques. Mise en forme dashboard consolidé. Détection écarts inter-sites. Arbitrage allocation ressources.",
+   "formation": "FO-50",
+   "niveau": "Expert",
+   "postes": "P11 Franchisé multi-boutique"
+  },
+  {
+   "code": "C-MULTI.Mobilité",
+   "famille": "C-MULTI",
+   "nom": "Mobilité équipes inter-boutiques",
+   "description": "Organisation rotations volontaires de collaborateurs polyvalents entre boutiques du portefeuille. Gestion contractuelle (avenant ou clause mobilité), planification, incitations.",
+   "formation": "FO-49",
+   "niveau": "Confirmé→Expert",
+   "postes": "P11 Franchisé multi-boutique"
+  },
+  {
+   "code": "C-SANDWICH.Préparation",
+   "famille": "C-SANDWICH",
+   "nom": "Préparation sandwicherie & formules",
+   "description": "Sélection pain adapté, préparation garnitures, assemblage propre, formules upselling midi (sandwich + boisson + dessert), conservation vitrine et rotation FIFO.",
+   "formation": "FO-51",
+   "niveau": "Débutant→Confirmé",
+   "postes": "P2 Opérateur Traiteur"
+  },
+  {
+   "code": "C-SALADE.Composition",
+   "famille": "C-SALADE",
+   "nom": "Composition salades & bowls signature",
+   "description": "Maîtrise des recettes signature, sauces et assaisonnements, présentation vitrine et à la commande, packaging à emporter compatible plateformes livraison.",
+   "formation": "FO-52",
+   "niveau": "Débutant→Confirmé",
+   "postes": "P2 Opérateur Traiteur"
+  },
+  {
+   "code": "C-FROMAGE.Comptoir",
+   "famille": "C-FROMAGE",
+   "nom": "Tenue comptoir fromages & conseil client",
+   "description": "Connaissance gamme fromages (familles, origines, profils gustatifs), conservation chaîne du froid, découpe respectueuse du produit, conseil client et accords (pain, vin, confitures).",
+   "formation": "FO-53",
+   "niveau": "Confirmé",
+   "postes": "P2 Opérateur Traiteur"
+  }
+ ],
+ "plans": [
+  {
+   "code": "PF-ETU",
+   "nom": "Plan Étudiant / Flexi-job",
+   "logique": "Pack autonome — turnover élevé → asset central produit une fois et déployé sur tout le réseau. Onboarding standardisé, scalable, autonome.",
+   "format": "5 capsules vidéos + mini-book PDF + check-list prise de poste + sous-titres FR (NL option) + quizz fin",
+   "budget": "Volume jours à cadrer avec Stefano (tournage + montage + rédaction + design parcours onboarding)",
+   "blocs": [
+    {
+     "code": "B1",
+     "nom": "Les indispensables",
+     "contenu": [
+      "Accueil client (sourire, contact)",
+      "Les bases de la vente"
+     ],
+     "checklist": [],
+     "kpis": [],
+     "formations": [
+      "FO-01"
+     ]
+    },
+    {
+     "code": "B2",
+     "nom": "Les réflexes commerciaux",
+     "contenu": [
+      "Toujours proposer un complément",
+      "Poser 1 question au client"
+     ],
+     "checklist": [],
+     "kpis": [],
+     "formations": [
+      "FO-19"
+     ]
+    },
+    {
+     "code": "B3",
+     "nom": "Les produits clés",
+     "contenu": [
+      "Top ventes à connaître",
+      "Produits à pousser"
+     ],
+     "checklist": [],
+     "kpis": [],
+     "formations": [
+      "FO-13"
+     ]
+    },
+    {
+     "code": "B4",
+     "nom": "Gestion du rush",
+     "contenu": [
+      "Être rapide ET efficace",
+      "Prioriser sans perdre la qualité"
+     ],
+     "checklist": [],
+     "kpis": [],
+     "formations": [
+      "FO-14"
+     ]
+    },
+    {
+     "code": "B5",
+     "nom": "Mise en situation",
+     "contenu": [
+      "Jeux de rôle simples",
+      "Cas concrets du quotidien"
+     ],
+     "checklist": [],
+     "kpis": [],
+     "formations": [
+      "FO-01"
+     ]
+    }
+   ]
+  },
+  {
+   "code": "PF-VEND",
+   "nom": "Plan Vendeur / Vendeuse",
+   "logique": "Sessions groupe par boutique. Chaque boutique vient avec son équipe vendeurs. Pas de Train the Trainer dans un premier temps — le formateur intervient directement. Le gérant participe avec son équipe et assure le relais en boutique.",
+   "format": "Sessions présentielles 1-2 jours par groupe",
+   "budget": "Tarification à définir : par session, par boutique ou forfait réseau",
+   "blocs": [
+    {
+     "code": "B1",
+     "nom": "Les bases de la vente",
+     "contenu": [
+      "Les 5 étapes de la vente",
+      "Posture, attitude, énergie"
+     ],
+     "checklist": [],
+     "kpis": [],
+     "formations": [
+      "FO-01"
+     ]
+    },
+    {
+     "code": "B2",
+     "nom": "Vente additionnelle",
+     "contenu": [
+      "Proposer systématiquement",
+      "Techniques simples et naturelles",
+      "Augmenter le panier moyen"
+     ],
+     "checklist": [],
+     "kpis": [],
+     "formations": [
+      "FO-19"
+     ]
+    },
+    {
+     "code": "B3",
+     "nom": "Connaissance produits",
+     "contenu": [
+      "Savoir présenter les produits",
+      "Mettre en valeur (fraîcheur, fabrication…)"
+     ],
+     "checklist": [],
+     "kpis": [],
+     "formations": [
+      "FO-13"
+     ]
+    },
+    {
+     "code": "B4",
+     "nom": "Expérience client",
+     "contenu": [
+      "Accueil client",
+      "Gestion des files / rush",
+      "Créer une expérience agréable"
+     ],
+     "checklist": [],
+     "kpis": [],
+     "formations": [
+      "FO-04",
+      "FO-15"
+     ]
+    },
+    {
+     "code": "B5",
+     "nom": "Gestion des situations difficiles",
+     "contenu": [
+      "Clients mécontents",
+      "Stress et pression"
+     ],
+     "checklist": [],
+     "kpis": [],
+     "formations": [
+      "FO-18"
+     ]
+    },
+    {
+     "code": "B6",
+     "nom": "Mise en pratique",
+     "contenu": [
+      "Jeux de rôle",
+      "Scénarios réels (client pressé, hésitant…)"
+     ],
+     "checklist": [],
+     "kpis": [],
+     "formations": [
+      "FO-13",
+      "FO-19"
+     ]
+    }
+   ]
+  },
+  {
+   "code": "PF-GER",
+   "nom": "Plan Gérant (Franchisé)",
+   "logique": "Intégration aux journées rencontre trimestrielles. 1-2 blocs traités à chaque journée. Sur 4 trimestres → couverture des 6 blocs en ~1 an. Avantage : pas de coût ni temps additionnel, ancrage dans rituel existant, partage entre pairs.",
+   "format": "Journées trimestrielles + diagnostic préalable individuel (auto-éval + Sam/Pierre/Loïc)",
+   "budget": "500 € par bloc × 6 = 3 000 € package complet (modulable selon diagnostic)",
+   "blocs": [
+    {
+     "code": "B1",
+     "nom": "Pilotage du business",
+     "contenu": [
+      "Lecture P&L",
+      "Suivi quotidien",
+      "Indicateurs clés"
+     ],
+     "checklist": [
+      "Lecture du P&L mensuel sans assistance externe",
+      "Identification spontanée des 5 produits les plus rentables",
+      "Tableau de bord quotidien tenu (CA, panier moyen, nb tickets)",
+      "Calcul de la marge brute par catégorie produit",
+      "Point chiffres hebdomadaire avec l'équipe",
+      "Analyse des écarts vs budget chaque mois"
+     ],
+     "kpis": [
+      "Marge brute (% du CA)",
+      "Coût matière (% du CA)",
+      "CA / m² (€)",
+      "Évolution hebdo CA vs N-1 (%)",
+      "Mix produits par catégorie (%)",
+      "Écart réel vs budget mensuel (%)"
+     ],
+     "formations": [
+      "FO-05"
+     ]
+    },
+    {
+     "code": "B2",
+     "nom": "Gestion du point de vente",
+     "contenu": [
+      "Organisation équipe",
+      "Horaires / productivité",
+      "Standards opérationnels"
+     ],
+     "checklist": [
+      "Planning hebdomadaire affiché et respecté",
+      "Briefing quotidien d'équipe en place (ouverture)",
+      "Standards opérationnels documentés et accessibles (ouverture, fermeture, hygiène)",
+      "Procédures écrites disponibles pour chaque poste",
+      "Audit hygiène / propreté hebdomadaire réalisé",
+      "Onboarding documenté pour les nouveaux entrants"
+     ],
+     "kpis": [
+      "Ratio CA / heure travaillée (€)",
+      "Ratio CA / ETP",
+      "Coût main d'œuvre (% du CA)",
+      "Taux d'absentéisme (%)",
+      "Turnover équipe (% annuel)",
+      "Score conformité standards (audit interne, /100)",
+      "Productivité par tranche horaire (CA/h)"
+     ],
+     "formations": [
+      "FO-24",
+      "FO-25"
+     ]
+    },
+    {
+     "code": "B3",
+     "nom": "Stratégie commerciale",
+     "contenu": [
+      "Structuration de l'offre (gamme, formules, marges)",
+      "Merchandising",
+      "Mise en avant"
+     ],
+     "checklist": [
+      "Produits à forte marge en vitrine et à hauteur des yeux",
+      "Formule du jour / déjeuner proposée et visible",
+      "Étiquetage prix lisible et homogène sur l'ensemble de la gamme",
+      "Merchandising revu à chaque saison (planogramme à jour)",
+      "Ruptures sur produits stars tracées et limitées",
+      "Produit signature mis en avant chaque semaine (Samedi Signature)"
+     ],
+     "kpis": [
+      "Mix produits forte marge / CA total (%)",
+      "Taux de rupture sur top ventes (%)",
+      "CA formules / CA total (%)",
+      "Panier moyen sur les heures pleines (€)",
+      "Rotation produits saisonniers (jours)",
+      "CA Samedi Signature vs samedi standard (% delta)"
+     ],
+     "formations": [
+      "FO-04",
+      "FO-20"
+     ]
+    },
+    {
+     "code": "B4",
+     "nom": "Développement du chiffre d'affaires",
+     "contenu": [
+      "Panier moyen",
+      "Ventes additionnelles",
+      "B2B (entreprises, écoles)"
+     ],
+     "checklist": [
+      "Programme B2B en place (prospects identifiés, démarchage actif)",
+      "Ventes additionnelles systématisées en caisse (script en place)",
+      "Suivi panier moyen hebdomadaire affiché à l'équipe",
+      "Carte de fidélité active et trackée",
+      "Cadence visite B2B respectée (Thursday visit)",
+      "Programme 12 semaines B2B suivi avec jalons hebdo"
+     ],
+     "kpis": [
+      "Panier moyen (€)",
+      "Nombre d'articles par ticket",
+      "% CA B2B / CA total",
+      "Nombre de comptes B2B actifs",
+      "Taux de transformation prospects → clients B2B (%)",
+      "Évolution adhérents fidélité (nouveaux / mois)"
+     ],
+     "formations": [
+      "FO-15",
+      "FO-19"
+     ]
+    },
+    {
+     "code": "B5",
+     "nom": "Management & leadership",
+     "contenu": [
+      "Motivation équipe",
+      "Formation vendeurs",
+      "Culture commerciale"
+     ],
+     "checklist": [
+      "Entretiens individuels (1-to-1) mensuels avec chaque membre d'équipe",
+      "Objectifs commerciaux partagés et affichés en boutique",
+      "Mécanisme de reconnaissance de performance formalisé",
+      "Onboarding nouveau vendeur documenté et appliqué",
+      "Participation active du gérant aux sessions vendeurs"
+     ],
+     "kpis": [
+      "Turnover équipe (% annuel)",
+      "Score satisfaction équipe (enquête annuelle, /10)",
+      "Taux d'atteinte objectifs individuels (%)",
+      "Nombre de promotions internes (vendeur → chef d'équipe / an)",
+      "Délai moyen de montée en compétences nouveau vendeur (jours)"
+     ],
+     "formations": [
+      "FO-06",
+      "FO-29",
+      "FO-30"
+     ]
+    },
+    {
+     "code": "B6",
+     "nom": "Marketing local",
+     "contenu": [
+      "Attraction",
+      "Fidélisation",
+      "Visibilité locale"
+     ],
+     "checklist": [
+      "Campagnes exécutées",
+      "Partenariats locaux identifiés et activés (écoles, entreprises voisines)",
+      "Application de fidélité communiquée en caisse à chaque transaction éligible",
+      "Avis Google répondus systématiquement sous 48h",
+      "Calendrier marketing local trimestriel formalisé et respecté"
+     ],
+     "kpis": [
+      "Trafic boutique (nombre de tickets / jour)",
+      "Note Google (étoiles + nombre d'avis)",
+      "Engagement réseaux sociaux (Agorapulse insights : reach, engagement rate)",
+      "Taux de fidélisation (% clients récurrents)",
+      "Nouveaux clients / mois",
+      "Coût d'acquisition client local (€)"
+     ],
+     "formations": [
+      "FO-43",
+      "FO-45"
+     ]
+    }
+   ]
+  },
+  {
+   "code": "PF-MULTI",
+   "nom": "Plan Gérant Multi-Boutique",
+   "logique": "Spécifique aux franchisés gérant 2+ boutiques (cas Loïc/ASIMA SRL et futurs). Approfondissement après maîtrise du Plan Gérant standard (PF-GER). Centré sur gouvernance portefeuille, délégation, consolidation et arbitrage.",
+   "format": "4 blocs sur 2 jours intensifs + coaching individuel trimestriel",
+   "budget": "2 000 € (4 × 500 €) + coaching trimestriel à part",
+   "blocs": [
+    {
+     "code": "B1",
+     "nom": "Gouvernance & délégation managériale",
+     "contenu": [
+      "Identifier un Manager (P8) par boutique et le faire monter en compétences",
+      "Définir scope de délégation et niveau d'autonomie par boutique",
+      "Construire le rituel de reporting Manager → Franchisé multi",
+      "Contrôler sans micromanagement (KPIs + visites ciblées)",
+      "Construire la confiance et l'engagement managers"
+     ],
+     "checklist": [
+      "Chaque boutique a un Manager (P8) identifié et formé",
+      "Rituel reporting hebdo Manager → Franchisé multi en place",
+      "Manager autonome sur 80% des décisions opérationnelles",
+      "Visites Franchisé multi planifiées (pas surprises) selon performance boutique",
+      "Plan de succession formalisé (que se passe-t-il si Manager quitte ?)"
+     ],
+     "kpis": [
+      "Taux d'autonomie Managers (% décisions non remontées) — cible ≥ 80%",
+      "Fréquence interventions urgentes Franchisé multi sur boutique — cible décroissante",
+      "Turnover Managers — cible < 15%/an",
+      "Satisfaction Managers (enquête annuelle) — cible ≥ 8/10",
+      "Délai moyen promotion Vendeur → Chef équipe → Manager (jours)"
+     ],
+     "formations": [
+      "FO-49"
+     ]
+    },
+    {
+     "code": "B2",
+     "nom": "RH multi-boutiques — mobilité & polyvalence",
+     "contenu": [
+      "Identifier collaborateurs polyvalents pouvant intervenir sur plusieurs boutiques",
+      "Cadrer contractuellement la mobilité (avenant ou clause mobilité d'office)",
+      "Planifier rotations volontaires (apprentissage croisé)",
+      "Incitations à la polyvalence (prime, évolution)",
+      "Gérer absences/congés en mutualisation portefeuille"
+     ],
+     "checklist": [
+      "Cartographie polyvalence du portefeuille (matrice collab. × boutique × poste)",
+      "Clause mobilité dans tous les contrats nouveaux entrants",
+      "Plan rotations trimestriel formalisé",
+      "Pool de remplaçants identifiés et briefés sur chaque boutique",
+      "Procédure standard d'intégration rapide d'un collaborateur sur nouvelle boutique"
+     ],
+     "kpis": [
+      "Taux polyvalence portefeuille = collab. polyvalents / effectif total — cible ≥ 25%",
+      "Nb rotations effectives par trimestre",
+      "Délai résolution absentéisme imprévu (heures) — cible < 4 h",
+      "Coût intérim / Coût main d'œuvre total — cible décroissant",
+      "Productivité boutique post-rotation (vs avant) — cible neutre ou positif"
+     ],
+     "formations": [
+      "FO-49"
+     ]
+    },
+    {
+     "code": "B3",
+     "nom": "Finance consolidée & arbitrage portefeuille",
+     "contenu": [
+      "Construire un P&L consolidé (toutes boutiques) à fréquence mensuelle",
+      "ROI par boutique (bénéfice net / investissement initial)",
+      "Détection boutique sous-performante chronique (3+ mois consécutifs)",
+      "Arbitrage allocation budget marketing entre boutiques",
+      "Décisions investissement (rénovation, équipement) priorisées au niveau portefeuille"
+     ],
+     "checklist": [
+      "Tableau consolidé P&L N boutiques mensuel",
+      "Scoring portefeuille (ranking interne) trimestriel",
+      "Comité d'arbitrage budgétaire mensuel (avec consultant si applicable)",
+      "Plan d'action sur boutique sous-perf chronique (renfort ou fermeture)",
+      "Vue ROI par boutique mise à jour annuellement"
+     ],
+     "kpis": [
+      "P&L consolidé disponible J+5 max après clôture mensuelle",
+      "Écart ROI entre boutiques (max − min) — cible décroissant",
+      "% budget marketing alloué hors égalitaire pur (priorisation) — cible ≥ 30%",
+      "Nb décisions investissement priorisées au niveau portefeuille / total",
+      "Marge consolidée portefeuille (% CA total) — cible ≥ 13%"
+     ],
+     "formations": [
+      "FO-50"
+     ]
+    },
+    {
+     "code": "B4",
+     "nom": "Cas pratique portefeuille réel — application immédiate",
+     "contenu": [
+      "Application des 3 blocs précédents sur le portefeuille réel du franchisé",
+      "Construction du dashboard consolidé spécifique",
+      "Identification 3 actions immédiates (court terme < 3 mois)",
+      "Identification 2 chantiers structurels (long terme 6-12 mois)",
+      "Engagement écrit franchisé + consultant sur les actions retenues"
+     ],
+     "checklist": [
+      "Dashboard consolidé du portefeuille construit en séance",
+      "3 actions court terme documentées et planifiées",
+      "2 chantiers long terme cadrés (objectif, livrable, jalons)",
+      "Suivi consultant trimestriel formalisé sur ces actions",
+      "Bilan annuel des actions et nouveaux objectifs"
+     ],
+     "kpis": [
+      "% actions court terme tenues à 3 mois — cible ≥ 80%",
+      "% chantiers long terme bouclés à 12 mois — cible ≥ 70%",
+      "Évolution KPI cible de chaque chantier vs baseline",
+      "Satisfaction franchisé multi sur la valeur ajoutée du plan (note /10)",
+      "Effet sur consolidation : marge portefeuille N vs N-1 (% delta)"
+     ],
+     "formations": [
+      "FO-49",
+      "FO-50"
+     ]
+    }
+   ]
+  }
+ ],
+ "manuel": [
+  {
+   "code": "D1",
+   "nom": "Identité & Culture",
+   "sousCategories": [
+    {
+     "nom": "Notre Histoire",
+     "description": "Histoire de la marque L'Atelier By, fondateurs, étapes clés du développement réseau.",
+     "priorites": [],
+     "competences": [
+      "C-ID.ADN"
+     ],
+     "checklists": [],
+     "formations": [
+      "FO-31"
+     ]
+    },
+    {
+     "nom": "Notre Mission & Vision",
+     "description": "Vision long terme, mission boulangerie-pâtisserie artisanale belge, ambition réseau.",
+     "priorites": [],
+     "competences": [
+      "C-ID.ADN"
+     ],
+     "checklists": [],
+     "formations": [
+      "FO-31"
+     ]
+    },
+    {
+     "nom": "Nos Valeurs",
+     "description": "Valeurs fondamentales : qualité artisanale, authenticité, exigence, exécution.",
+     "priorites": [],
+     "competences": [
+      "C-ID.ADN"
+     ],
+     "checklists": [],
+     "formations": [
+      "FO-31"
+     ]
+    },
+    {
+     "nom": "Culture d'entreprise",
+     "description": "Codes de comportement, posture professionnelle, esprit d'équipe et de réseau.",
+     "priorites": [
+      "XP"
+     ],
+     "competences": [
+      "C-ID.ADN",
+      "C-RH.Briefing"
+     ],
+     "checklists": [],
+     "formations": [
+      "FO-31",
+      "FO-06"
+     ]
+    }
+   ]
+  },
+  {
+   "code": "D2",
+   "nom": "Image & Design",
+   "sousCategories": [
+    {
+     "nom": "Identité Visuelle",
+     "description": "Codes visuels Ruby/Abricot/Noir, typographie Gotham, slogan Magritte, logo, signature.",
+     "priorites": [
+      "TRAFIC",
+      "XP"
+     ],
+     "competences": [
+      "C-TRANS.Merchandising"
+     ],
+     "checklists": [
+      "CP-06",
+      "CP-07",
+      "AC-06",
+      "AC-26",
+      "CP-24",
+      "CP-26"
+     ],
+     "formations": [
+      "FO-04"
+     ]
+    },
+    {
+     "nom": "Aménagement & Design",
+     "description": "Aménagement boutique : murs Ruby, microcement, oak cladding, éclairage, ambiance signature.",
+     "priorites": [
+      "TRAFIC",
+      "XP"
+     ],
+     "competences": [
+      "C-VENTE.Vitrine",
+      "C-TRANS.Merchandising"
+     ],
+     "checklists": [
+      "CP-07",
+      "AC-06",
+      "AC-26",
+      "CP-24",
+      "CP-26"
+     ],
+     "formations": [
+      "FO-20",
+      "FO-04"
+     ]
+    },
+    {
+     "nom": "Packaging & Print",
+     "description": "Emballages produits, sacs, étuis, PLV imprimée, signalétique boutique.",
+     "priorites": [
+      "XP"
+     ],
+     "competences": [
+      "C-TRANS.Merchandising",
+      "C-MKT.Digital"
+     ],
+     "checklists": [
+      "AC-23"
+     ],
+     "formations": [
+      "FO-04",
+      "FO-43"
+     ]
+    }
+   ]
+  },
+  {
+   "code": "D3",
+   "nom": "Communication",
+   "sousCategories": [
+    {
+     "nom": "Stratégie de marque",
+     "description": "Positionnement, brand voice, axes éditoriaux, calendrier réseau, cohérence multi-boutiques.",
+     "priorites": [
+      "TRAFIC",
+      "RECURRENCE"
+     ],
+     "competences": [
+      "C-MKT.Saisons",
+      "C-ID.ADN"
+     ],
+     "checklists": [
+      "CL-06"
+     ],
+     "formations": [
+      "FO-45",
+      "FO-31"
+     ]
+    },
+    {
+     "nom": "Communication Digitale",
+     "description": "Site, emailing, Agorapulse, réseaux sociaux, story, engagement communauté.",
+     "priorites": [
+      "TRAFIC"
+     ],
+     "competences": [
+      "C-MKT.Digital"
+     ],
+     "checklists": [
+      "CL-06",
+      "CP-10",
+      "AC-16"
+     ],
+     "formations": [
+      "FO-43"
+     ]
+    },
+    {
+     "nom": "Communication Locale",
+     "description": "Communication de proximité : partenariats quartier, événements, presse locale, flyering.",
+     "priorites": [
+      "TRAFIC",
+      "RECURRENCE"
+     ],
+     "competences": [
+      "C-MKT.Local"
+     ],
+     "checklists": [
+      "AC-16"
+     ],
+     "formations": [
+      "FO-43"
+     ]
+    },
+    {
+     "nom": "Communication Interne",
+     "description": "Échange franchisé ↔ franchiseur, lettre du franchiseur, Franchise Buddy, infos réseau.",
+     "priorites": [],
+     "competences": [
+      "C-ID.MO",
+      "C-ID.FB"
+     ],
+     "checklists": [
+      "CL-08"
+     ],
+     "formations": [
+      "FO-35",
+      "FO-36"
+     ]
+    },
+    {
+     "nom": "Click & Collect / Webshop / Livraison",
+     "description": "Canaux digitaux : PWA, web shop, plateformes livraison (Uber Eats/Deliveroo/Takeaway), marketing digital local, SEO Google Business.",
+     "priorites": [
+      "TRAFIC",
+      "RECURRENCE",
+      "XP"
+     ],
+     "competences": [
+      "C-CC.Préparation",
+      "C-CC.Remise",
+      "C-WEB.Catalogue",
+      "C-WEB.Pilotage"
+     ],
+     "checklists": [
+      "AC-24",
+      "AC-25",
+      "CP-23"
+     ],
+     "formations": [
+      "FO-46",
+      "FO-47",
+      "FO-48"
+     ]
+    }
+   ]
+  },
+  {
+   "code": "D4",
+   "nom": "Expérience Client",
+   "sousCategories": [
+    {
+     "nom": "Promesse client",
+     "description": "Charte L'Atelier By, accueil <3s, standards expérience, signature relationnelle.",
+     "priorites": [
+      "RECURRENCE",
+      "XP"
+     ],
+     "competences": [
+      "C-VENTE.Standards",
+      "C-VENTE.Accueil"
+     ],
+     "checklists": [
+      "CP-15",
+      "CM-01",
+      "AC-22"
+     ],
+     "formations": [
+      "FO-04",
+      "FO-01"
+     ]
+    },
+    {
+     "nom": "Accueil & Service",
+     "description": "Regard + sourire + bonjour, conseil produit, formule au revoir, gestion file.",
+     "priorites": [
+      "RECURRENCE",
+      "XP"
+     ],
+     "competences": [
+      "C-VENTE.Accueil",
+      "C-VENTE.Standards",
+      "C-VENTE.Conseil"
+     ],
+     "checklists": [
+      "AC-22",
+      "CP-15",
+      "CM-01",
+      "AC-27",
+      "CP-26"
+     ],
+     "formations": [
+      "FO-01",
+      "FO-04"
+     ]
+    },
+    {
+     "nom": "Fidélisation",
+     "description": "Programme PWA loyalty, inscription, gestion réclamations, suivi client récurrent.",
+     "priorites": [
+      "RECURRENCE",
+      "XP"
+     ],
+     "competences": [
+      "C-VENTE.Fidélité",
+      "C-VENTE.Conflit"
+     ],
+     "checklists": [],
+     "formations": [
+      "FO-01",
+      "FO-18"
+     ]
+    }
+   ]
+  },
+  {
+   "code": "D5",
+   "nom": "Opérations & Production",
+   "sousCategories": [
+    {
+     "nom": "Organisation du PDV",
+     "description": "Pilotage quotidien, organisation flux, plannings, briefing, dimensionnement équipe.",
+     "priorites": [
+      "XP",
+      "LABOUR-COST"
+     ],
+     "competences": [
+      "C-PLAN.Planning",
+      "C-PLAN.Ouverture"
+     ],
+     "checklists": [
+      "AC-22"
+     ],
+     "formations": [
+      "FO-24",
+      "FO-01"
+     ]
+    },
+    {
+     "nom": "Ouverture & Fermeture",
+     "description": "Procédures AC-01/02/03 — équipements, HACCP, vitrine, propreté, sécurisation finale.",
+     "priorites": [
+      "XP",
+      "LABOUR-COST"
+     ],
+     "competences": [
+      "C-PLAN.Ouverture",
+      "C-PLAN.Fermeture"
+     ],
+     "checklists": [
+      "AC-01",
+      "AC-02",
+      "AC-03"
+     ],
+     "formations": [
+      "FO-01"
+     ]
+    },
+    {
+     "nom": "Production",
+     "description": "Pain, pâtisserie, viennoiserie, cuisson — recettes signatures, fiches techniques.",
+     "priorites": [
+      "XP",
+      "FOOD-COST"
+     ],
+     "competences": [
+      "C-PROD.Pain",
+      "C-PROD.Pâtisserie",
+      "C-PROD.Viennoiserie",
+      "C-PROD.Cuisson"
+     ],
+     "checklists": [
+      "AC-08",
+      "AC-09",
+      "AC-18",
+      "AC-21",
+      "CP-25",
+      "CP-26",
+      "AC-30"
+     ],
+     "formations": [
+      "FO-07",
+      "FO-08",
+      "FO-09",
+      "FO-12"
+     ]
+    },
+    {
+     "nom": "Stocks & Approvisionnement",
+     "description": "Inventaire hebdo, réception ProdAtelier, casse, valorisation, alertes Franchise Buddy.",
+     "priorites": [
+      "XP",
+      "FOOD-COST"
+     ],
+     "competences": [
+      "C-STOCK.Inventaire",
+      "C-STOCK.Réception",
+      "C-STOCK.Casse"
+     ],
+     "checklists": [
+      "AC-10",
+      "AC-15"
+     ],
+     "formations": [
+      "FO-25",
+      "FO-26",
+      "FO-27"
+     ]
+    },
+    {
+     "nom": "Équipements",
+     "description": "Maintenance préventive : fours, froid, machines, petits équipements, plan maintenance.",
+     "priorites": [
+      "OVERHEAD-COST"
+     ],
+     "competences": [
+      "C-TRANS.Sécurité"
+     ],
+     "checklists": [
+      "AC-11"
+     ],
+     "formations": [
+      "FO-02"
+     ]
+    }
+   ]
+  },
+  {
+   "code": "D6",
+   "nom": "Ressources Humaines",
+   "sousCategories": [
+    {
+     "nom": "Recrutement",
+     "description": "Sourcing, entretiens, sélection compétences, marque employeur, attractivité réseau.",
+     "priorites": [
+      "XP",
+      "LABOUR-COST"
+     ],
+     "competences": [
+      "C-RH.Recrutement"
+     ],
+     "checklists": [],
+     "formations": [
+      "FO-29"
+     ]
+    },
+    {
+     "nom": "Intégration & Onboarding",
+     "description": "Parcours J1-J5, 30/60/90 jours, kit d'accueil, période d'essai, certification interne.",
+     "priorites": [
+      "XP",
+      "LABOUR-COST"
+     ],
+     "competences": [
+      "C-RH.Onboarding"
+     ],
+     "checklists": [
+      "CL-07",
+      "CL-08"
+     ],
+     "formations": [
+      "FO-30"
+     ]
+    },
+    {
+     "nom": "Formation",
+     "description": "Plan de formation par poste, évaluation compétences via Franchise Buddy, plan développement.",
+     "priorites": [
+      "XP"
+     ],
+     "competences": [
+      "C-RH.Évaluation"
+     ],
+     "checklists": [
+      "CP-14",
+      "CP-18"
+     ],
+     "formations": [
+      "FO-06"
+     ]
+    },
+    {
+     "nom": "Management & Évaluation",
+     "description": "Briefing matin, réunion hebdo, entretien individuel, gestion conflit, évaluation perf.",
+     "priorites": [
+      "XP",
+      "LABOUR-COST"
+     ],
+     "competences": [
+      "C-RH.Briefing",
+      "C-RH.Réunion",
+      "C-RH.Évaluation",
+      "C-RH.Conflit"
+     ],
+     "checklists": [
+      "AC-13",
+      "CP-14",
+      "CP-18"
+     ],
+     "formations": [
+      "FO-06"
+     ]
+    }
+   ]
+  },
+  {
+   "code": "D7",
+   "nom": "Gestion & Finance",
+   "sousCategories": [
+    {
+     "nom": "Pilotage de l'activité",
+     "description": "Tableau de bord FB, CA, ticket moyen, articles/ticket, % CA formules, KPI hebdo/mensuel.",
+     "priorites": [
+      "FOOD-COST",
+      "LABOUR-COST",
+      "OVERHEAD-COST"
+     ],
+     "competences": [
+      "C-PILOTAGE.Vente",
+      "C-PILOTAGE.KPI",
+      "C-PILOTAGE.Franchise"
+     ],
+     "checklists": [
+      "AC-12",
+      "AC-17",
+      "CP-09",
+      "CP-16",
+      "CP-18",
+      "CP-19"
+     ],
+     "formations": [
+      "FO-05"
+     ]
+    },
+    {
+     "nom": "Caisse & Paiements",
+     "description": "Tickets, fond de caisse, clôture journalière, écarts <0,5%, moyens paiement, sécurité.",
+     "priorites": [
+      "XP"
+     ],
+     "competences": [
+      "C-VENTE.Caisse"
+     ],
+     "checklists": [
+      "AC-07",
+      "CP-08"
+     ],
+     "formations": [
+      "FO-01"
+     ]
+    },
+    {
+     "nom": "Obligations financières franchise",
+     "description": "Reporting franchiseur, redevances, RFA, encodage coûts, P&L mensuel.",
+     "priorites": [
+      "OVERHEAD-COST"
+     ],
+     "competences": [
+      "C-PILOTAGE.Franchise",
+      "C-PILOTAGE.Finance"
+     ],
+     "checklists": [
+      "AC-12",
+      "CP-17",
+      "CP-18",
+      "CP-19"
+     ],
+     "formations": [
+      "FO-05",
+      "FO-41"
+     ]
+    },
+    {
+     "nom": "Politique de prix",
+     "description": "Stratégie pricing, benchmark concurrence, marges cibles par catégorie, ajustements saison.",
+     "priorites": [
+      "RECURRENCE",
+      "FOOD-COST"
+     ],
+     "competences": [
+      "C-PILOTAGE.Finance",
+      "C-PILOTAGE.Vente"
+     ],
+     "checklists": [
+      "CP-19"
+     ],
+     "formations": [
+      "FO-41",
+      "FO-05"
+     ]
+    },
+    {
+     "nom": "Valorisation",
+     "description": "Valorisation du fonds, suivi performance long terme, optimisation marge, EBITDA.",
+     "priorites": [
+      "OVERHEAD-COST"
+     ],
+     "competences": [
+      "C-PILOTAGE.Franchise",
+      "C-PILOTAGE.Finance"
+     ],
+     "checklists": [
+      "CP-18",
+      "CP-19"
+     ],
+     "formations": [
+      "FO-05",
+      "FO-41"
+     ]
+    },
+    {
+     "nom": "Multi-boutique & Gouvernance réseau",
+     "description": "Pilotage portefeuille N boutiques : consolidation P&L, ROI par boutique, mobilité équipes, mutualisation overheads, comité de pilotage réseau trimestriel.",
+     "priorites": [
+      "LABOUR-COST",
+      "OVERHEAD-COST"
+     ],
+     "competences": [
+      "C-MULTI.Délégation",
+      "C-MULTI.Consolidation",
+      "C-MULTI.Mobilité"
+     ],
+     "checklists": [
+      "CL-11",
+      "CL-13"
+     ],
+     "formations": [
+      "FO-49",
+      "FO-50"
+     ]
+    }
+   ]
+  },
+  {
+   "code": "D8",
+   "nom": "Conformité & Qualité",
+   "sousCategories": [
+    {
+     "nom": "HACCP & Sécurité alimentaire",
+     "description": "5M, températures, lavage mains, fiches HACCP — obligatoire AFSCA, recyclage annuel.",
+     "priorites": [
+      "XP"
+     ],
+     "competences": [
+      "C-TRANS.HACCP"
+     ],
+     "checklists": [
+      "AC-04",
+      "AC-05",
+      "AC-14",
+      "CP-05",
+      "CP-18",
+      "CS-01",
+      "CP-26"
+     ],
+     "formations": [
+      "FO-02"
+     ]
+    },
+    {
+     "nom": "Contrôle qualité",
+     "description": "Aspect, poids, cuisson, dégustation organoleptique, FIFO continu, retrait non-conformités.",
+     "priorites": [
+      "RECURRENCE",
+      "XP",
+      "FOOD-COST"
+     ],
+     "competences": [
+      "C-TRANS.FIFO-DLC",
+      "C-TRANS.HACCP"
+     ],
+     "checklists": [
+      "AC-14",
+      "CP-04",
+      "CS-03",
+      "CP-26"
+     ],
+     "formations": [
+      "FO-02"
+     ]
+    },
+    {
+     "nom": "Obligations légales",
+     "description": "Affichages obligatoires, allergènes FIC, étiquetage, audits conformité gestion franchisé.",
+     "priorites": [],
+     "competences": [
+      "C-TRANS.Conformité"
+     ],
+     "checklists": [
+      "CP-17",
+      "CP-18"
+     ],
+     "formations": [
+      "FO-16"
+     ]
+    },
+    {
+     "nom": "Assurances & Sécurité",
+     "description": "EPI, gestes & postures, équipements à risque (four, trancheuse), procédures incident.",
+     "priorites": [
+      "OVERHEAD-COST"
+     ],
+     "competences": [
+      "C-TRANS.Sécurité"
+     ],
+     "checklists": [],
+     "formations": [
+      "FO-02"
+     ]
+    },
+    {
+     "nom": "Gestion de crise & continuité",
+     "description": "Protocole H+0/+24/+48 sur incidents graves (intoxication, fermeture AFSCA, accident, buzz négatif, fraude). Cellule de crise, communication, mesures conservatoires, REX.",
+     "priorites": [
+      "XP"
+     ],
+     "competences": [
+      "C-TRANS.HACCP",
+      "C-PILOTAGE.Franchise"
+     ],
+     "checklists": [
+      "CS-04"
+     ],
+     "formations": [
+      "FO-02",
+      "FO-05"
+     ]
+    },
+    {
+     "nom": "Conformité RGPD / Données client",
+     "description": "Registre traitements, mentions information, durées conservation, droits clients, sécurité données (PWA, B2B, RH). Qualité de la base client/B2B contrôlée hebdo (AC-29).",
+     "priorites": [],
+     "competences": [
+      "C-TRANS.Conformité"
+     ],
+     "checklists": [
+      "CL-12",
+      "AC-29"
+     ],
+     "formations": [
+      "FO-16"
+     ]
+    }
+   ]
+  }
+ ]
+}

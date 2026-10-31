@@ -1091,6 +1091,42 @@ les donne pas.
 l'assortiment, aujourd'hui pour les obligatoires sans place au comptoir. `assortiment` ajoute `saisonnieres` (exigées
 de saison) et `horsSaison` (obligatoires de saison non exigées à cette date).
 
+### `/formation/*` — le module Formation (`/formation`) et le manuel opératoire (31/10/2026)
+
+Le référentiel RH du panel — postes (`/positions`), niveaux ou sous-postes (`/position-levels`),
+compétences, formations, procédures opératoires, base de connaissances — lu avec le compte
+consultant. `GET /formation/referentiel` (tout, `_cache=600`),
+`GET /formation/liens` (procédures, formations et ressources de chaque compétence, `_cache=900`),
+`GET /formation/competence|niveau|procedure|formation|ressource?id=`, `GET /formation/equipe?shop=`
+(compétences validées par personne), `GET /formation/sonde?chemin=` (test d'une route du référentiel,
+liste blanche), `GET /formation/pdf?type=poste|niveau|procedure&id=` (PDF du panel relayé). Sans
+compte panel : `503 {indispo, raison}`. Chaque réponse porte `appels[]` (code HTTP, lignes, durée
+de chaque lecture du panel). Les routes `/career-*` du panel sont déclarées en 500 dans son
+swagger : les postes passent par `/positions`. Détail, constats et sécurité : `docs/formation.md` ;
+les 237 routes : `docs/formation-routes.md`.
+
+Écritures (toutes relues au panel, journalisées, caches corrigés) : `POST|DELETE /formation/niveau/{nid}/competences[/{cid}]`,
+`POST /formation/competence/{cid}/liens {type, id}`, `DELETE /formation/competence/{cid}/liens/{type}/{id}`,
+`POST /formation/competences`, `PATCH|DELETE /formation/competences/{cid}`, `PUT|DELETE /formation/employe/{eid}/competences/{cid}?shop=`,
+`PUT /formation/employe/{eid}/poste?shop= {poste, niveau}`, `POST /formation/postes {code: P12|P9}` (créer dans le panel un poste
+du référentiel v25 et son niveau ; rend `{ok, deja, poste{id, nom}, niveau{id, nom}, appels}`). Réponse `{ok, deja?, …l'état relu, appels[]}` ; un refus du panel
+ou un écart à la relecture : `502 {ok: false, error, appels}`.
+
+Parcours compétences (`/formation/parcours/`, 31/10/2026) : `GET /parcours/destinations?employe=&shop=` (sans employé : un
+candidat) rend la personne et chaque destination `{cle, titre, sous, groupe, competences[{id, nom, acquise}], formations[{fo, nom,
+evaluations, competences, acquise}], aFaire, facultatives, admission[{cle, type: poste|fo|manuel, libelle, source: panel|referentiel, ok, preuve,
+manque[]}], admis}` ; `POST /parcours {employe?, shop?, nom?, cible, rythme, acquis[], suivies[]}`
+crée le parcours et rend `{parcours, etapes[]}` ; `GET /parcours?id=`, `GET /parcours/liste` ; `PATCH /parcours/{id}/etape/{FO}
+{evaluation, fait}` (la dernière valide la formation et coche ses compétences dans le panel : `panel {ok, cochees, attendues}`) ;
+`POST /parcours/{id}/acquis/{cid}` (confirmer une compétence déclarée) ; `PATCH /parcours/{id}/admission/{cle} {fait}` (valider un
+critère d'admission `manuel` — ou un `poste` que le panel n'a pas ; `409` pour un critère vérifié ou de formations) ; `PATCH /parcours/{id}
+{rythme | statut: arrete | atteint}` (`atteint` : `409` tant qu'une formation ou un critère d'admission manque).
+`GET /formation/carte` (carte des métiers, à garder en cache côté écran : `_cache=300`) rend `{chemin{metiers[{id, nom, cle, libelle,
+maitrise, maitriseCompetences, niveaux[{id, nom, nouvelles, total, avecFormation, personnes}]}], tronc[], entrepreneur[], reseau[{id, nom}]},
+polyvalence{competences, metiers[{cle, libelle, niveau, competences, personnes}], paliers{3,2,1,0}, avecCompetences}, effectifs{actifs,
+sansPoste, places, magasins}, manques{sansFormation, sansProcedure, competences, niveauxVides[]}}` — des comptes, aucun nom de personne.
+Détail : `docs/formation.md`.
+
 ### `/tablette/book` et `/tablette/photos` — les données de la tablette des vendeuses
 
 La tablette « Book vendeuses » (`public/tablette/`, application compilée du dépôt `pwa_sales_tablet`) lit ses produits,
