@@ -4275,6 +4275,21 @@ la page admin, la colonne des moyennes titrée « Ce magasin ».
 magasin) ; les siennes (posées et payées par le magasin) ; ses chiffres face au réseau ; les promotions du panel qui y
 tournent (une prime du magasin en un geste).
 
+**La page en volets** (31/10/2026, demande de Sam : « réorganiser la page en toggle, au-dessus créer une nouvelle
+prime ; à l'ouverture, l'avancement des vendeuses, la marque et le magasin bien séparés, et pour chacune le cumul et ce
+qui est déjà atteint »). En haut, la barre « + Créer une nouvelle prime » (le choix de la sorte) et un raccourci par
+sorte (Promotion, Catégorie, Ventes croisées, Objectif CA, Note Google, Clients pro), grisé à six primes de la sorte.
+Puis six volets (`S.prFrOuv`) : « Où en sont tes vendeuses », seul déplié à l'ouverture ; les primes du magasin, de la
+marque et des sponsors, les promotions du panel, les chiffres, les fiches — repliés, chacun avec sa ligne de résumé.
+Le tableau de l'équipe range ses colonnes en deux familles sous leurs bandeaux — **la marque** (et ses sponsors) en
+rubis, **le magasin** en abricot (`payeur: magasin`) — ; une prime d'équipe (objectif CA, note Google) porte la marque
+« équipe ». Après le nom, la colonne **Cumul** de chaque vendeuse : ce qui est atteint face à ce qui est en jeu (la
+somme des `gain` de ses cases, et de `max(montant, gain)` de chaque prime où elle compte ; un mois clos : gagné face au
+possible), la barre, et la part de la marque et du magasin ; elle trie le tableau. Au-dessus, trois totaux de l'équipe
+(marque, magasin, toute l'équipe). Sur un écran large (≥ 1 000 px), le nom et le cumul restent en place quand les
+primes défilent. La vue Année range ses colonnes de la même façon, le total après le nom avec sa part marque / magasin.
+Rien ne change côté API (`/ventes/primes-equipe`, `/ventes/primes-annee`).
+
 **Les primes d'un magasin** (`famille: magasin`, `payeur: magasin`, six de chaque sorte au plus) — `POST
 /ventes/primes-app` les reçoit dans la liste, comme les autres :
 
