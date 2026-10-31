@@ -11,6 +11,7 @@
         <div class="wt-main">
             <h6>{% if it.done %}<i class="bi bi-check-circle-fill"></i> {% endif %}{{ it.title }}</h6>
             <div class="meta">
+                {% if it.backup_for %}<span class="kw-badge" title="Na tym stanowisku nikogo nie ma — zadanie robi Twoje stanowisko"><i class="bi bi-person-check"></i> zastępstwo : {{ it.backup_for }}</span>{% endif %}
                 {% if it.wizard %}<span class="kw-badge new"><i class="bi bi-magic"></i> kreator{{ it.wizard.steps > 1 ? ' · ' ~ it.wizard.steps|plural_pl('krok', 'kroki', 'kroków') : '' }}</span>
                 {% elseif it.cron %}<span class="kw-badge"><i class="bi bi-robot"></i> automatycznie</span>
                 {% elseif it.form %}<span class="kw-badge"><i class="bi bi-journal-text"></i> protokół</span>{% endif %}

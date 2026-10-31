@@ -39,7 +39,7 @@ final class TaskWizards
     ];
 
     /** Stanowisko pracowni → grupa produkcji (dzień grupy na tablecie). */
-    public const POSITION_GROUP = ['PIEKARZ' => 'PIEKARNIA', 'ROGAL' => 'ROGAL', 'CUKIERNIK' => 'CUKIERNIA', 'GARMAZER' => 'GARMAZERIA'];
+    public const POSITION_GROUP = ['PIEKARZ' => 'PIEKARNIA', 'ROGAL' => 'ROGAL', 'CUKIERNIK' => 'CUKIERNIA', 'GARMAZER' => 'GARMAZERIA', 'TARTY' => 'TARTY'];
 
     /** Zalicza się samo, gdy… (lista do planu stanowiska). */
     public const AUTO = [

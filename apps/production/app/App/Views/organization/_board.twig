@@ -2,7 +2,7 @@
 {% macro item(task, o, root, overdue = false, frequency = null) %}
     <li class="at-task {{ o ? 'is-' ~ o.status : '' }} {{ overdue ? 'is-overdue' : '' }}" {% if o %}data-occurrence="{{ o.id }}"{% endif %}>
         <div class="at-task-main">
-            <strong>{{ task.title_pl }}</strong>{% if task.form_code %} <span class="badge bg-light text-dark border"><i class="bi bi-journal-text"></i> protokół</span>{% endif %}
+            <strong>{{ task.title_pl }}</strong>{% if task.backup_for %} <span class="badge bg-light text-dark border" title="Na tym stanowisku nikogo nie ma — zadanie robi Twoje stanowisko"><i class="bi bi-person-check"></i> zastępstwo : {{ task.backup_for }}</span>{% endif %}{% if task.form_code %} <span class="badge bg-light text-dark border"><i class="bi bi-journal-text"></i> protokół</span>{% endif %}
             <div class="at-sub">
                 {% if frequency %}{{ frequency }}{% if task.frequency == 'weekly' and task.due_weekday %} ({{ ['', 'pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.', 'niedz.'][task.due_weekday] }}){% endif %} · {% endif %}
                 {% if overdue %}zaległe · termin {{ o.due_date|date('d.m.Y') }} ({{ o.period_key }}){% elseif o %}termin {{ o.due_date|date('d.m') }}{% else %}dziś dzień wolny{% endif %}

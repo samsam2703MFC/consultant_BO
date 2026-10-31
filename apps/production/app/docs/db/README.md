@@ -240,6 +240,20 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   non lu de moins de 7 jours ; tâche faite entre-temps (jour validé, assistant terminé) → fermé, disparaît. Au tableau :
   « przeczytane 10:51 (J. K., PIN) ».
 
+### Poste Tarty et remplacement des tâches (migration 155, 31/10/2026)
+
+- **Tarty** est un groupe à part entière : poste d'atelier `TARTY` « Pracownik tart » (groupe Tarty, chef d'équipe =
+  Brygadzista), fiche de poste pré-remplie (à relire et valider), tâche du jour « Dzień zatwierdzony na tablecie — Tarty »
+  (`group_day_closed`, `TaskWizards::POSITION_GROUP['TARTY']`). « Kto co zrobił » / « Zadania zespołu » : Tarty sur sa propre
+  ligne de groupe ; « Grupa bez stanowiska » ne liste plus que les groupes sans poste actif (ex. Pakowanie/wysyłka).
+- **Remplacement** : colonne `n_position_task.id_backup_position`. Si personne n'occupe le poste de la tâche (aucun compte ERP
+  dans `n_user_position`), la tâche passe au poste remplaçant : Moje zadania, Mój tydzień (badge « zastępstwo : … »), Kto co
+  zrobił, Zadania zespołu, occurrences du cron, rappels et escalade (`PositionRepository::EFFECTIVE_POSITION`,
+  `tasks(…, withBackup: true)`). Dès qu'une personne prend le poste, la tâche lui revient. Plan du poste : champ « Zastępstwo,
+  gdy na stanowisku nikogo nie ma » (postes ERP, jamais le poste lui-même).
+- **Kontrola przyjęć dnia** : une seule tâche, chez Jakość, remplaçant = Kierownik produkcji ; la copie du Kierownik est
+  désactivée (historique conservé).
+
 ### Pas de shift de nuit (migration 154, 31/10/2026)
 
 - L'atelier ne travaille pas la nuit : le shift `NUIT` (22:00–06:00) et tout shift marqué « nocna » (`is_night = 1`) sont

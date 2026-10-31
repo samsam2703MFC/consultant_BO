@@ -220,8 +220,10 @@ final class TaskWizardRepository extends WorkshopRepository
     /** Otwarte wystąpienia z terminem do dnia (z zadaniem i stanowiskiem) — przypomnienia i przełożony. */
     public function openUntil(string $day): array
     {
-        return $this->all("SELECT o.*, t.title_pl, t.remind_time, t.escalate_days, t.due_time, t.id_position, p.name_pl AS position_name, p.id_reports_to
-                FROM n_task_occurrence o JOIN n_position_task t ON t.id = o.id_task AND t.active = 1 JOIN n_position p ON p.id = t.id_position
+        // [238] Stanowisko bez nikogo + zastępstwo : przypomina się stanowisku zastępczemu.
+        $eff = PositionRepository::EFFECTIVE_POSITION;
+        return $this->all("SELECT o.*, t.title_pl, t.remind_time, t.escalate_days, t.due_time, {$eff} AS id_position, p.name_pl AS position_name, p.id_reports_to
+                FROM n_task_occurrence o JOIN n_position_task t ON t.id = o.id_task AND t.active = 1 JOIN n_position p ON p.id = {$eff}
                 WHERE o.status = 'open' AND o.due_date <= ? ORDER BY o.due_date, o.id", [$day]);
     }
 

@@ -224,6 +224,10 @@
                 <div class="wp-inline"><label class="wp-chk"><input type="checkbox" data-f="escalate_on" ${r.escalate_days ? 'checked' : ''}> spóźnione o</label>
                     <input class="kw-in wp-min" type="number" min="1" max="30" data-f="escalate_days" value="${r.escalate_days || 2}" ${r.escalate_days ? '' : 'disabled'} aria-label="Dni spóźnienia"><span>dni → przełożony (${esc(P.superior)})</span></div>
             </div>
+            <div class="wp-f"><label for="wpBackup"><i class="bi bi-person-check"></i> Zastępstwo, gdy na stanowisku nikogo nie ma</label>
+                <select id="wpBackup" class="kw-in" data-f="backup_position_id"><option value="">— brak —</option>
+                ${(P.backup_positions || []).map(p => `<option value="${p.id}" ${p.id === r.backup_position_id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+                <div class="wp-sub">${r.backup_position_id && P.vacant ? 'Teraz nikogo nie ma na stanowisku — zadanie robi stanowisko zastępcze.' : 'Zadanie wraca samo, gdy ktoś obejmie stanowisko.'}</div></div>
             <div class="wp-acts"><button type="button" class="kw-btn ghost" data-del>${off ? '<i class="bi bi-arrow-counterclockwise"></i> Przywróć' : '<i class="bi bi-trash"></i> Usuń z planu'}</button><span class="wk-sp"></span>
                 <button type="button" class="kw-btn" data-cancel>Anuluj</button><button type="button" class="kw-btn pri" data-save>Zapisz</button></div>
         </div>`;
@@ -416,6 +420,7 @@
         const f = e.target.dataset.f;
         if (!r) return;
         if (f === 'category_id') r.category_id = e.target.value === '' ? null : Number(e.target.value);
+        else if (f === 'backup_position_id') { r.backup_position_id = e.target.value === '' ? null : Number(e.target.value); return touch(r, true); }
         else if (f === 'wizard') {
             const w = wiz(e.target.value);
             r.auto_code = w ? w.code : null;
@@ -482,7 +487,7 @@
             tasks: rows.filter(r => !removed.has(r.key)).map(r => ({id: r.id, title_pl: r.title_pl.trim(), category_id: r.category_id, period: r.period, days: r.days,
                 minutes: r.minutes, link_path: r.link_path, extra_links: r.extra_links || [], auto_code: r.auto_code, due_time: r.due_time, month_day: r.period === 'week' ? null : r.month_day,
                 cron_on: !!r.cron_on, cron_freq: r.cron_freq, cron_days: r.cron_days, cron_time: r.cron_time, cron_action: r.cron_action, cron_then: r.cron_then || 'wait',
-                remind_time: r.remind_time, escalate_days: r.escalate_days})),
+                remind_time: r.remind_time, escalate_days: r.escalate_days, backup_position_id: r.backup_position_id ?? null})),
             removed: rows.filter(r => removed.has(r.key) && r.id).map(r => r.id),
         });
         button.disabled = false;

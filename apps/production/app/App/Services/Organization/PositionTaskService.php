@@ -154,7 +154,7 @@ final class PositionTaskService
         if (!$user || !$user['id_position']) {
             return ['user' => $user, 'groups' => [], 'overdue' => [], 'counts' => ['open' => 0, 'done' => 0, 'overdue' => 0]];
         }
-        return ['user' => $user] + $this->board($this->positions->tasks((int) $user['id_position'], true), $today);
+        return ['user' => $user] + $this->board($this->positions->tasks((int) $user['id_position'], true, true), $today);
     }
 
     /** Tâches d'un poste rangées par catégorie (puis fréquence), avec l'état de la période en cours et les retards. */
@@ -265,7 +265,7 @@ final class PositionTaskService
     {
         $today ??= new DateTimeImmutable('today');
         $user = $this->positions->user($userId) ?? throw new CustomException('Nie znaleziono użytkownika.', 'errors', 404);
-        $board = $user['id_position'] ? $this->board($this->positions->tasks((int) $user['id_position'], true), $today) : ['groups' => [], 'overdue' => [], 'counts' => ['open' => 0, 'done' => 0, 'overdue' => 0]];
+        $board = $user['id_position'] ? $this->board($this->positions->tasks((int) $user['id_position'], true, true), $today) : ['groups' => [], 'overdue' => [], 'counts' => ['open' => 0, 'done' => 0, 'overdue' => 0]];
         return ['user' => $user, 'history' => $user['id_position'] ? $this->positions->history((int) $user['id_position']) : []] + $board;
     }
 
@@ -382,7 +382,7 @@ final class PositionTaskService
         }
         $view = ['user' => $user, 'week' => ['number' => (int) $today->format('W'), 'from' => $monday->format('Y-m-d'), 'to' => $monday->modify('+' . (max($workdays) - 1) . ' days')->format('Y-m-d')],
             'days' => $days, 'strip' => [], 'overdue' => [], 'later' => [], 'totals' => null];
-        $tasks = $user && $user['id_position'] ? $this->positions->tasks((int) $user['id_position'], true) : [];
+        $tasks = $user && $user['id_position'] ? $this->positions->tasks((int) $user['id_position'], true, true) : [];
         $byId = [];
         $current = [];
         try {
@@ -542,6 +542,7 @@ final class PositionTaskService
             'id' => $o ? (int) $o['id'] : null,
             'task_id' => (int) $task['id'],
             'title' => $task['title_pl'],
+            'backup_for' => $task['backup_for'] ?? null,
             'category' => $task['category_name'] ?? null,
             'color' => $this->color($task),
             'minutes' => isset($task['minutes']) ? (int) $task['minutes'] : null,
@@ -621,7 +622,7 @@ final class PositionTaskService
         [$from, $to] = $this->periodRange($task['frequency'], (string) $o['period_key'], (string) $o['due_date']);
         if ($from > $today->format('Y-m-d') . ' 23:59:59') return $o;
         try {
-            $state = $this->wizards->state($code, $from, $to, (string) $o['due_date'], $task['position_code'] ?? null);
+            $state = $this->wizards->state($code, $from, $to, (string) $o['due_date'], $task['own_position_code'] ?? $task['position_code'] ?? null);
         } catch (\PDOException) {
             return $o;
         }
@@ -670,7 +671,7 @@ final class PositionTaskService
         foreach ($this->positions->positions() as $p) if (($p['kind'] ?? '') === 'atelier' && (int) $p['active'] === 1) $held[(int) $p['id']] = true;
         $byId = [];
         $keys = [];
-        foreach ($this->positions->tasks(null, true) as $t) {
+        foreach ($this->positions->tasks(null, true, true) as $t) {
             if (!isset($held[(int) $t['id_position']])) continue;
             $byId[(int) $t['id']] = $t;
             if ($p = $this->taskPeriod($t, $today)) {
@@ -731,7 +732,7 @@ final class PositionTaskService
         $atelier = [];
         foreach ($this->positions->positions() as $p) if (($p['kind'] ?? '') === 'atelier' && (int) $p['active'] === 1) $atelier[(int) $p['id']] = $p;
         $tasks = [];
-        foreach ($this->positions->tasks(null, true) as $t) if (isset($people[(int) $t['id_position']]) || isset($atelier[(int) $t['id_position']])) $tasks[(int) $t['id']] = $t;
+        foreach ($this->positions->tasks(null, true, true) as $t) if (isset($people[(int) $t['id_position']]) || isset($atelier[(int) $t['id_position']])) $tasks[(int) $t['id']] = $t;
         $occ = [];
         foreach ($this->positions->occurrencesRange(array_keys($tasks), $from, $to) as $o) {
             $t = $tasks[(int) $o['id_task']];
@@ -805,7 +806,10 @@ final class PositionTaskService
         $tabletsMerged = false;
         if ($groupRows) {
             $row = $merge($groupRows, 'Produkcja — grupy (tablety)', count($groupRows) . ' ' . self::plural(count($groupRows), 'grupa', 'grupy', 'grup') . ' · dzień zatwierdzony na tablecie');
-            $extra = $this->tabletsRow($cols, $today->format('Y-m-d'), $work, array_values(TaskWizards::POSITION_GROUP));
+            // Grupy ze stanowiskiem (aktywnym) są już w wierszu ; reszta — « Grupa bez stanowiska ».
+            $covered = [];
+            foreach ($atelier as $ap) if (isset(TaskWizards::POSITION_GROUP[$ap['code']])) $covered[] = TaskWizards::POSITION_GROUP[$ap['code']];
+            $extra = $this->tabletsRow($cols, $today->format('Y-m-d'), $work, $covered);
             if ($extra) {
                 foreach ($extra['cells'] as $i => $items) foreach ($items as $it) $row['cells'][$i][] = ['occurrence' => null, 'task' => null, 'due' => $cols[$i]['from'], 'minutes' => null, 'done_by' => null,
                     'done_at' => null, 'summary' => $it['at'] ? 'dzień zatwierdzony ' . $it['at'] : null, 'step' => null, 'step_label' => null, 'note' => null, 'escalated' => false, 'late_days' => 0,
@@ -862,7 +866,7 @@ final class PositionTaskService
             if (($p['kind'] ?? '') === 'atelier' || isset($held[(int) $p['id']])) $positions[(int) $p['id']] = $p;
         }
         $tasks = [];
-        foreach ($this->positions->tasks(null, true) as $t) if (isset($positions[(int) $t['id_position']])) $tasks[(int) $t['id']] = $t;
+        foreach ($this->positions->tasks(null, true, true) as $t) if (isset($positions[(int) $t['id_position']])) $tasks[(int) $t['id']] = $t;
         $occ = [];
         foreach ($this->positions->occurrencesRange(array_keys($tasks), $from, $to) as $o) {
             $o = $this->autoClose($o, $tasks[(int) $o['id_task']], $today);
@@ -911,7 +915,7 @@ final class PositionTaskService
         if (!$p || TaskWizards::info($t['auto_code']) === null) return null;
         [$from, $to] = $this->periodRange($t['frequency'], $p['key'], $p['due']);
         try {
-            $st = $this->wizards->state($t['auto_code'], $from, $to, $p['due'], $t['position_code'] ?? null);
+            $st = $this->wizards->state($t['auto_code'], $from, $to, $p['due'], $t['own_position_code'] ?? $t['position_code'] ?? null);
         } catch (\PDOException) {
             return null;
         }
@@ -1025,6 +1029,10 @@ final class PositionTaskService
             'superior' => (isset($position['id_reports_to']) ? $this->runs->positionName((int) $position['id_reports_to']) : null) ?? 'Administrator',
             'runs' => $this->safeRuns(array_column($rows, 'id')),
             'others' => array_map(fn($p) => ['id' => (int) $p['id'], 'name' => $p['name_pl'], 'tasks' => (int) $p['task_count']], $others),
+            // [238] Zastępstwo : stanowisko, które robi zadanie, gdy na tym stanowisku nikogo nie ma.
+            'backup_positions' => array_values(array_map(fn($p) => ['id' => (int) $p['id'], 'name' => $p['name_pl']],
+                array_filter($this->positions->positions(), fn($p) => (int) $p['id'] !== $positionId && (int) $p['active'] === 1 && ($p['kind'] ?? 'erp') !== 'atelier'))),
+            'vacant' => !$users,
             'max_minutes' => self::MAX_MINUTES,
         ];
     }
@@ -1086,6 +1094,7 @@ final class PositionTaskService
             'cron_then' => $task['cron_then'] ?? 'wait',
             'remind_time' => !empty($task['remind_time']) ? substr((string) $task['remind_time'], 0, 5) : null,
             'escalate_days' => isset($task['escalate_days']) ? (int) $task['escalate_days'] : null,
+            'backup_position_id' => isset($task['id_backup_position']) ? (int) $task['id_backup_position'] : null,
             'sort_order' => (int) ($task['sort_order'] ?? 0),
             // wykonania w 4 tygodniach (podział czasu rzeczywistego)
             'per_4w' => $period === 'week' ? 4 * count($days) : ($period === 'monthly' ? 1 : 1 / 3),
@@ -1174,6 +1183,11 @@ final class PositionTaskService
             elseif ($days === $workdays) $schedule = ['frequency' => 'daily', 'due_weekday' => null, 'weekdays' => null];
             else $schedule = ['frequency' => 'daily', 'due_weekday' => null, 'weekdays' => implode(',', $days)];
             $extra = $this->validateExtra($row, $n, $period);
+            if (array_key_exists('backup_position_id', $row)) {
+                $backup = $row['backup_position_id'] === null || $row['backup_position_id'] === '' ? null : (int) $row['backup_position_id'];
+                if ($backup !== null && ($backup === $positionId || !$this->positions->exists($backup))) throw new CustomException("Wiersz {$n} : zastępstwo — wybierz inne stanowisko.", 'errors', 422);
+                $extra['id_backup_position'] = $backup;
+            }
             $plan[] = ['id' => $id, 'data' => ['title_pl' => $title, 'id_category' => $category, 'minutes' => $minutes, 'link_path' => $link, 'auto_code' => $auto] + $schedule + $extra];
         }
         $removed = array_values(array_unique(array_map('intval', is_array($input['removed'] ?? null) ? $input['removed'] : [])));

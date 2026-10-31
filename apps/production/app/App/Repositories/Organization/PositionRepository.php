@@ -11,7 +11,12 @@ final class PositionRepository extends WorkshopRepository
     /** Pola karty stanowiska (n_position_sheet), każde w wersji _pl i _fr. */
     public const SHEET_FIELDS = ['mission', 'responsibilities', 'skills', 'requirements', 'conditions', 'indicators', 'safety', 'relations'];
     private const TASK_COLUMNS = ['id_position', 'id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'minutes', 'weekdays', 'due_time', 'month_day', 'link_path', 'extra_links', 'form_code', 'auto_code',
-        'cron_on', 'cron_freq', 'cron_days', 'cron_time', 'cron_action', 'cron_then', 'remind_time', 'escalate_days', 'sort_order', 'active'];
+        'cron_on', 'cron_freq', 'cron_days', 'cron_time', 'cron_action', 'cron_then', 'remind_time', 'escalate_days', 'sort_order', 'active', 'id_backup_position'];
+    /**
+     * [238] Stanowisko, które faktycznie robi zadanie (alias t = n_position_task) : stanowisko zastępcze, gdy na stanowisku
+     * zadania nikogo nie ma (brak konta ERP), inaczej stanowisko zadania.
+     */
+    public const EFFECTIVE_POSITION = 'IF(t.id_backup_position IS NOT NULL AND NOT EXISTS (SELECT 1 FROM n_user_position vu WHERE vu.id_position = t.id_position), t.id_backup_position, t.id_position)';
 
     public function positions(): array
     {
@@ -24,19 +29,33 @@ final class PositionRepository extends WorkshopRepository
         );
     }
 
-    public function tasks(?int $positionId = null, bool $activeOnly = false): array
+    /**
+     * Zadania stanowisk. $withBackup [238] : zadanie stanowiska bez nikogo, z zastępstwem, liczy się u stanowiska zastępczego
+     * (id_position = stanowisko, które je robi ; own_position_id = stanowisko zadania ; backup_for = jego nazwa). Bez
+     * $withBackup — zadania jak zapisane (plan i karta stanowiska, edycja).
+     */
+    public function tasks(?int $positionId = null, bool $activeOnly = false, bool $withBackup = false): array
     {
+        $pos = $withBackup ? self::EFFECTIVE_POSITION : 't.id_position';
         $where = [];
         $params = [];
-        if ($positionId !== null) { $where[] = 't.id_position = ?'; $params[] = $positionId; }
+        if ($positionId !== null) { $where[] = "{$pos} = ?"; $params[] = $positionId; }
         if ($activeOnly) $where[] = 't.active = 1';
-        return $this->all(
-            "SELECT t.*, c.code AS category_code, c.name_pl AS category_name, c.name_fr AS category_name_fr, c.icon AS category_icon, c.sort_order AS category_sort,
-                    pp.code AS position_code, pp.kind AS position_kind
-             FROM n_position_task t LEFT JOIN n_task_category c ON c.id = t.id_category LEFT JOIN n_position pp ON pp.id = t.id_position" . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
-            . " ORDER BY t.id_position, FIELD(t.frequency, 'daily', 'weekly', 'monthly', 'quarterly'), t.sort_order, t.id",
+        $rows = $this->all(
+            "SELECT t.*, {$pos} AS eff_position, c.code AS category_code, c.name_pl AS category_name, c.name_fr AS category_name_fr, c.icon AS category_icon, c.sort_order AS category_sort,
+                    pp.code AS position_code, pp.kind AS position_kind, op.name_pl AS own_position_name, op.code AS own_position_code
+             FROM n_position_task t LEFT JOIN n_task_category c ON c.id = t.id_category LEFT JOIN n_position pp ON pp.id = {$pos}
+                  LEFT JOIN n_position op ON op.id = t.id_position" . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
+            . " ORDER BY {$pos}, FIELD(t.frequency, 'daily', 'weekly', 'monthly', 'quarterly'), t.sort_order, t.id",
             $params
         );
+        foreach ($rows as &$r) {
+            $r['own_position_id'] = $r['id_position'];
+            $r['backup_for'] = (int) $r['eff_position'] !== (int) $r['id_position'] ? $r['own_position_name'] : null;
+            $r['id_position'] = $r['eff_position'];
+            unset($r['eff_position'], $r['own_position_name']);
+        }
+        return $rows;
     }
 
     public function task(int $id): ?array
