@@ -104,16 +104,15 @@ Alias /consulant_bo /var/www/consulant_bo/public
 Prérequis : Apache `mod_rewrite`, PHP ≥ 8.1 avec `pdo_mysql`.
 
 L'écran Scouting commercial a quitté le cockpit le 31/10/2026 (CRM,
-Développement → Étude de faisabilité, même base). Le cockpit garde Leaflet
-(`assets/vendor/leaflet/`, pour la carte de Prospection), la création des
-tables `ceo_scouting_*` (cf. § 3) et la relecture OpenStreetMap par le
-**serveur** : le déploiement pose `/etc/cron.d/cockpit-scouting` (dimanche
-4 h 15, `bin/scouting_refresh.php`, journal `/var/log/cockpit-scouting.log`) et
-lance une première relecture des secteurs manquants en arrière-plan — c'est ce
-cache que l'Étude de faisabilité du CRM lit. Le serveur doit donc atteindre les
-miroirs Overpass (`overpass.kumi.systems`, `overpass-api.de`,
-`overpass.private.coffee`), aussi pour les lieux à démarcher autour des
-magasins (`GET /scouting/demarchage`).
+Développement → Étude de faisabilité, même base), avec la relecture
+hebdomadaire de son cache OpenStreetMap : le déploiement **efface**
+l'ancien `/etc/cron.d/cockpit-scouting` s'il est encore là (le CRM relit le
+cache par son workflow « Scouting — relecture OpenStreetMap »). Le cockpit
+garde Leaflet (`assets/vendor/leaflet/`, pour la carte de Prospection), la
+création des tables `ceo_scouting_*` (cf. § 3) et le relevé des lieux à
+démarcher autour des magasins (`GET /scouting/demarchage`) : le serveur doit
+donc toujours atteindre les miroirs Overpass (`overpass.kumi.systems`,
+`overpass-api.de`, `overpass.private.coffee`).
 
 ---
 

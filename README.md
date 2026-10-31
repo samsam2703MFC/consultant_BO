@@ -316,14 +316,17 @@ Restent dans le cockpit, parce que d'autres écrans en vivent :
   *Développement commercial*, *Prospection* et *Prospection mobile* ;
 - `GET /scouting/reseau` — les magasins du réseau et leur position (fiche
   Google raccordée, ou pointée sur la carte de l'Étude de faisabilité du CRM) ;
-- `src/scouting_osm.php` (les relevés Overpass) et le cron hebdomadaire
-  `bin/scouting_refresh.php`, posé par `bin/deploy.sh` (dimanche 4 h 15, zoning
-  6 h 15) : il tient à jour `ceo_scouting_tile`, que l'Étude de faisabilité du
-  CRM lit et qu'elle ne relit que sur demande ;
-- `bin/scouting_grille.py`, qui reconstruit la grille de population du
-  recensement — servie désormais par le CRM (`app/crm/web/public/geo/`) ;
+- `src/scouting_osm.php`, réduit au relevé Overpass du démarchage ;
 - la création des tables `ceo_scouting_*` (`ensureScouting`, `schema.sql`) :
   la base est commune, rien n'est supprimé.
+
+Partis avec l'écran dans le CRM : la relecture hebdomadaire du cache
+OpenStreetMap (`ceo_scouting_tile`) — l'ancien cron
+`/etc/cron.d/cockpit-scouting` et `bin/scouting_refresh.php`, devenus le
+workflow « Scouting — relecture OpenStreetMap » et `tools/scouting-relecture.php`
+du CRM ; `bin/deploy.sh` efface l'ancien fichier cron du serveur — et la
+reconstruction de la grille de population du recensement
+(`bin/scouting_grille.py` → `tools/scouting-grille.py` du CRM).
 
 ## Mix par 1 000 € vendus
 

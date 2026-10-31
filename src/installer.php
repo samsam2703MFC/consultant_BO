@@ -89,10 +89,11 @@ function schemaOublier(PDOException $e): void
  * ensureValidation() : une installation déjà en service ne rejoue pas
  * schema.sql. Idempotent (CREATE TABLE IF NOT EXISTS).
  *
- * L'écran a quitté le cockpit (31/10/2026) pour le CRM, qui lit et écrit ces
- * mêmes tables (base commune). Elles restent créées ici : le démarchage
- * (ceo_scouting_etude) et la relecture hebdomadaire d'OpenStreetMap
- * (ceo_scouting_tile, bin/scouting_refresh.php) s'en servent encore.
+ * L'écran et sa relecture d'OpenStreetMap ont quitté le cockpit (31/10/2026)
+ * pour le CRM, qui lit et écrit ces mêmes tables (base commune) et les crée
+ * lui-même s'il est seul. Le cockpit ne se sert plus que de
+ * ceo_scouting_etude (le démarchage) ; les autres restent créées ici pour
+ * qu'une base neuve ait le schéma commun entier.
  */
 function ensureScouting(): void
 {
