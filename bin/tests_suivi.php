@@ -245,6 +245,11 @@ verifie('tous les supports retirés : le module reste vide (il disparaît des vi
 $sc = viScore(array_merge([viPhotosNormalise(null)], $cl, [viCharteNormalise(null)]), [['module' => 'charte', 'ref' => 'ch_affiches', 'etat' => 'ok'], ['module' => 'charte', 'ref' => 'ch_billboard', 'etat' => 'ko'],
     ['module' => 'charte', 'ref' => 'ch_leaflets', 'etat' => 'ok'], ['module' => 'charte', 'ref' => 'ch_menu', 'etat' => 'ok']]);
 verifie('le score compte la charte, sous son nom (3 Oui sur 4 → 75)', $sc['modules'][0]['id'] === 'charte' && $sc['modules'][0]['score'] === 75 && $sc['modules'][0]['nom'] === 'Charte de communication', json_encode($sc['modules'][0], JSON_UNESCAPED_UNICODE));
+verifie('« Pas ce support ici » proposé partout, sauf « Aucun support hors charte »', array_column(viCharteNormalise(null)['points'], 'pasIci', 'ref') === array_merge(array_fill_keys(array_column(array_slice(VI_CHARTE_DEFAUT, 0, -1), 0), true), ['ch_hors_charte' => false]));
+$ch = viCharteNormalise(['points' => [['ref' => 'ch_a', 'libelle' => 'Affiches', 'pasIci' => false], ['ref' => 'ch_b', 'libelle' => 'Bâches']]]);
+verifie('réglée : « Pas ce support ici » retiré reste retiré ; sans réglage, proposé', array_column($ch['points'], 'pasIci') === [false, true]);
+$sc = viScore([viCharteNormalise(null)], [['module' => 'charte', 'ref' => 'ch_affiches', 'etat' => 'ok'], ['module' => 'charte', 'ref' => 'ch_billboard', 'etat' => 'na'], ['module' => 'charte', 'ref' => 'ch_baches', 'etat' => 'ko']]);
+verifie('« Pas ce support ici » (N/A) ne compte pas dans le score (1 Oui, 1 Non, 1 absent → 50 sur 2)', $sc['score'] === 50 && $sc['n'] === 2, json_encode($sc));
 
 // --- Les finances du franchisé, dans la météo (28/10/2026) -----------------------------------------------------
 echo "\nMétéo du franchisé : finances\n";

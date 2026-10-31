@@ -295,36 +295,40 @@ function viPhotosNormalise(mixed $m): array
  * un suivi ou une revisite : un support de communication par question. Chaque question se répond Oui (conforme) ou Non
  * (absent, abîmé, périmé ou hors charte) ET porte sa photo : sans photo, le support n'est pas vu — l'étape ne se remplit
  * pas. Les supports s'ajoutent, se retirent et se renomment (Réglages › Checklist, réglage visitesCharte) ; le type de
- * réponse et la photo, eux, ne se règlent pas. Chaque support dit où il se regarde (`lieu`) : dehors (billboard,
+ * réponse et la photo, eux, ne se règlent pas. « Pas ce support ici » (31/10/2026, Sam) : le magasin n'a pas ce
+ * support — la réponse s'écrit N/A (`etat` na) : ni photo exigée, ni score, ni écart. Elle se propose support par
+ * support (`pasIci`, vrai par défaut ; « Aucun support hors charte » ne la propose pas : la question vaut partout).
+ * Chaque support dit où il se regarde (`lieu`) : dehors (billboard,
  * bâches, vitrine…), il passe au tour de l'extérieur ; dedans (leaflets, PLV, menu board…), à l'intérieur. Tous les
  * supports retirés : le module disparaît des visites.
  * La réponse s'enregistre comme un point de checklist (module `charte`) : elle compte dans le score, et un Non part
  * dans le rapport et dans les points proposés, comme une autre question.
  */
 const VI_CHARTE_DEFAUT = [
-    // [référence, libellé FR, libellé NL, précision FR, précision NL, lieu : ext (le tour dehors) ou int (dedans)]
+    // [référence, libellé FR, libellé NL, précision FR, précision NL, lieu : ext (le tour dehors) ou int (dedans),
+    //  « Pas ce support ici » proposé]
     ['ch_billboard', 'Billboard et panneaux publicitaires conformes', 'Billboard en reclameborden conform',
-        'Campagne du réseau en cours, affiche intacte, éclairée s’il y a un éclairage.', 'Lopende netwerkcampagne, affiche intact, verlicht als er verlichting is.', 'ext'],
+        'Campagne du réseau en cours, affiche intacte, éclairée s’il y a un éclairage.', 'Lopende netwerkcampagne, affiche intact, verlicht als er verlichting is.', 'ext', true],
     ['ch_baches', 'Bâches et kakémonos conformes', 'Spandoeken en roll-ups conform',
-        'Visuel officiel, propres, bien tendus, sans déchirure ni décoloration.', 'Officiële visual, proper, goed gespannen, niet gescheurd of verkleurd.', 'ext'],
+        'Visuel officiel, propres, bien tendus, sans déchirure ni décoloration.', 'Officiële visual, proper, goed gespannen, niet gescheurd of verkleurd.', 'ext', true],
     ['ch_vitrine', 'Vitrophanie et vitrine conformes', 'Raamstickers en etalage conform',
-        'Adhésifs de la marque intacts, campagne du moment, horaires au modèle du réseau.', 'Merkstickers intact, campagne van het moment, openingsuren volgens het netwerkmodel.', 'ext'],
+        'Adhésifs de la marque intacts, campagne du moment, horaires au modèle du réseau.', 'Merkstickers intact, campagne van het moment, openingsuren volgens het netwerkmodel.', 'ext', true],
     ['ch_affiches', 'Affiches conformes à la charte', 'Affiches conform de huisstijl',
-        'Format et visuel de la campagne en cours, logo, couleurs et typographies de la marque ; rien de périmé.', 'Formaat en visual van de lopende campagne, logo, kleuren en lettertypes van het merk; niets verouderd.', 'ext'],
+        'Format et visuel de la campagne en cours, logo, couleurs et typographies de la marque ; rien de périmé.', 'Formaat en visual van de lopende campagne, logo, kleuren en lettertypes van het merk; niets verouderd.', 'ext', true],
     ['ch_chevalet', 'Chevalet et stop-trottoir conformes', 'Stoepbord conform',
-        'Modèle de la marque, message à jour, lisible, aux couleurs de la charte.', 'Merkmodel, actuele boodschap, leesbaar, in de huisstijlkleuren.', 'ext'],
+        'Modèle de la marque, message à jour, lisible, aux couleurs de la charte.', 'Merkmodel, actuele boodschap, leesbaar, in de huisstijlkleuren.', 'ext', true],
     ['ch_leaflets', 'Leaflets et flyers conformes', 'Folders en flyers conform',
-        'Modèle du réseau, à jour, rangés au comptoir dans leur présentoir.', 'Netwerkmodel, actueel, netjes in hun houder aan de toonbank.', 'int'],
+        'Modèle du réseau, à jour, rangés au comptoir dans leur présentoir.', 'Netwerkmodel, actueel, netjes in hun houder aan de toonbank.', 'int', true],
     ['ch_plv', 'PLV et présentoirs conformes', 'POS-materiaal en displays conform',
-        'Présentoirs, stop-rayons et étiquettes du réseau ; les promotions en cours seulement.', 'Displays, schapstoppers en etiketten van het netwerk; enkel de lopende promoties.', 'int'],
+        'Présentoirs, stop-rayons et étiquettes du réseau ; les promotions en cours seulement.', 'Displays, schapstoppers en etiketten van het netwerk; enkel de lopende promoties.', 'int', true],
     ['ch_menu', 'Menu board et écrans conformes', 'Menubord en schermen conform',
-        'Gabarit du réseau, prix à jour, typographies et couleurs de la marque.', 'Netwerksjabloon, actuele prijzen, lettertypes en kleuren van het merk.', 'int'],
+        'Gabarit du réseau, prix à jour, typographies et couleurs de la marque.', 'Netwerksjabloon, actuele prijzen, lettertypes en kleuren van het merk.', 'int', true],
     ['ch_emballages', 'Sacs et emballages de la marque', 'Zakken en verpakkingen van het merk',
-        'Modèles référencés seulement, logo net ; aucun emballage neutre ou d’une autre enseigne.', 'Enkel gerefereerde modellen, duidelijk logo; geen neutrale verpakking of van een andere keten.', 'int'],
+        'Modèles référencés seulement, logo net ; aucun emballage neutre ou d’une autre enseigne.', 'Enkel gerefereerde modellen, duidelijk logo; geen neutrale verpakking of van een andere keten.', 'int', true],
     ['ch_tenues', 'Tenues de l’équipe aux couleurs de la marque', 'Kledij van het team in de merkkleuren',
-        'Tablier, casquette ou toque, badge prénom au modèle du réseau.', 'Schort, pet of koksmuts, naambadge volgens het netwerkmodel.', 'int'],
+        'Tablier, casquette ou toque, badge prénom au modèle du réseau.', 'Schort, pet of koksmuts, naambadge volgens het netwerkmodel.', 'int', true],
     ['ch_hors_charte', 'Aucun support hors charte', 'Geen dragers buiten de huisstijl',
-        'Rien de fait maison, manuscrit ou imprimé au magasin ; logo, couleurs et polices jamais modifiés.', 'Niets zelfgemaakt, handgeschreven of in de winkel afgedrukt; logo, kleuren en lettertypes nooit aangepast.', 'int'],
+        'Rien de fait maison, manuscrit ou imprimé au magasin ; logo, couleurs et polices jamais modifiés.', 'Niets zelfgemaakt, handgeschreven of in de winkel afgedrukt; logo, kleuren en lettertypes nooit aangepast.', 'int', false],
 ];
 const VI_CHARTE_MAX = 30;
 
@@ -339,10 +343,10 @@ function viCharteNormalise(mixed $m): array
     $points = [];
     if ($regle && is_array($m['points'] ?? null)) { $points = $m['points']; }
     elseif (!$regle) {
-        foreach (VI_CHARTE_DEFAUT as [$ref, $fr, $nl, $aide, $aideNl, $lieu]) { $points[] = ['ref' => $ref, 'libelle' => $fr, 'libelle_nl' => $nl, 'aide' => $aide, 'aide_nl' => $aideNl, 'lieu' => $lieu]; }
+        foreach (VI_CHARTE_DEFAUT as [$ref, $fr, $nl, $aide, $aideNl, $lieu, $pasIci]) { $points[] = ['ref' => $ref, 'libelle' => $fr, 'libelle_nl' => $nl, 'aide' => $aide, 'aide_nl' => $aideNl, 'lieu' => $lieu, 'pasIci' => $pasIci]; }
     }
     // Une référence de support : celle reçue, une nouvelle si elle manque ou sert déjà. Le lieu : où il se regarde.
-    $vus = []; $propres = []; $lieux = [];
+    $vus = []; $propres = []; $lieux = []; $pasIci = [];
     foreach ($points as $p) {
         if (!is_array($p)) { continue; }
         $ref = (string) preg_replace('/[^\w-]/', '', (string) ($p['ref'] ?? ''));
@@ -350,11 +354,12 @@ function viCharteNormalise(mixed $m): array
         $vus[$ref] = true;
         $propres[] = array_merge($p, ['ref' => $ref, 'type' => 'ouinon', 'photo' => true]);
         $lieux[$ref] = ($p['lieu'] ?? '') === 'ext' ? 'ext' : 'int';
+        $pasIci[$ref] = !array_key_exists('pasIci', $p) || (bool) $p['pasIci'];
         if (count($propres) >= VI_CHARTE_MAX) { break; }
     }
     $out = viModuleNormalise(['nom' => trim((string) ($m['nom'] ?? '')) !== '' ? $m['nom'] : 'Charte de communication',
         'nom_nl' => trim((string) ($m['nom_nl'] ?? '')) !== '' ? $m['nom_nl'] : 'Huisstijl en communicatie', 'points' => $propres], 'charte');
-    foreach ($out['points'] as &$p) { $p['type'] = 'ouinon'; $p['photo'] = true; $p['photoExigee'] = true; $p['lieu'] = $lieux[$p['ref']] ?? 'int'; }
+    foreach ($out['points'] as &$p) { $p['type'] = 'ouinon'; $p['photo'] = true; $p['photoExigee'] = true; $p['lieu'] = $lieux[$p['ref']] ?? 'int'; $p['pasIci'] = $pasIci[$p['ref']] ?? true; }
     unset($p);
     $out['charte'] = true;
     return $out;
