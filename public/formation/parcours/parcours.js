@@ -81,6 +81,8 @@
   function points(frise) {
     return '<span class="pts">' + frise.map(function (s) { return '<span class="pt ' + s + '"></span>'; }).join('') + '<span class="pt-flag">⚑</span></span>';
   }
+  /** Qui valide : le consultant pour un candidat ou une cible de franchise (P9–P12), la manager sinon. */
+  function quiValide(code, candidat) { return candidat || /^P(9|1[0-2])$/.test(code || '') ? 'ton consultant' : 'ta manager'; }
   function initiales(nom) {
     return String(nom || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(function (x) { return x.charAt(0).toUpperCase(); }).join('');
   }
@@ -165,7 +167,8 @@
       if (!l.length) return;
       h += '<div class="section-label">' + g[1] + '</div><ul class="type-grid ph-grid">' + l.map(function (x) {
         var detail = (x.sous ? esc(x.sous) + ' · ' : '') + (x.competences.length ? pl(x.competences.length, 'compétence') + ' · ' : '') +
-          pl(x.aFaire, 'formation') + ' · environ ' + moisPour(x.aFaire, 'normal') + ' mois';
+          pl(x.aFaire, 'formation') + ' · environ ' + moisPour(x.aFaire, 'normal') + ' mois' +
+          (x.admission.length ? ' · admission ' + x.admis + '/' + x.admission.length : '');
         return '<li><button type="button" class="choice-card' + (nv.cible === x.cle ? ' is-on' : '') + '" data-act="cible" data-cle="' + esc(x.cle) + '"><strong>' + esc(x.titre) + '</strong><span class="muted">' + detail + '</span></button></li>';
       }).join('') + '</ul>';
     });
@@ -216,9 +219,37 @@
     h += '<div class="section-label">Ton rythme</div><div class="filters__row ph-rythme">' + RYTHMES.map(function (r) {
       return '<button type="button" class="filter' + (nv.rythme === r[0] ? ' is-on' : '') + '" data-act="rythme" data-r="' + r[0] + '">' + r[1] + '</button>';
     }).join('') + '</div><p class="muted ph-note">' + esc(RYTHMES.filter(function (r) { return r[0] === nv.rythme; })[0][2]) + '.</p>';
-    h += '<div class="section-label">Qui t’accompagne</div><div class="ph-coach"><span class="lead__initials">' + (nv.employe ? 'MG' : 'CO') + '</span><span><strong>' +
-      (nv.employe ? 'Ta manager' : 'Ton consultant') + '</strong><span class="muted">valide chaque étape avec toi</span></span></div>';
+    if (d.admission.length) {
+      h += '<div class="section-label">Pour être admis</div><ul class="ph-list">' + d.admission.map(function (c) { return ligneCritere(c, quiValide(d.v25, !nv.employe), false); }).join('') + '</ul>';
+    }
+    var coach = quiValide(d.v25, !nv.employe) === 'ton consultant';
+    h += '<div class="section-label">Qui t’accompagne</div><div class="ph-coach"><span class="lead__initials">' + (coach ? 'CO' : 'MG') + '</span><span><strong>' +
+      (coach ? 'Ton consultant' : 'Ta manager') + '</strong><span class="muted">valide chaque étape avec toi</span></span></div>';
     return h + cta('C’est parti', 'creer');
+  }
+
+  /* ── Les critères d'admission ───────────────────────────────────────── */
+
+  /**
+   * Une ligne de critère. Vérifié (panel, parcours) : coché, sans action.
+   * Formations qui manquent : elles sont dans le chemin. Le reste : la manager
+   * ou le consultant le valide dans le suivi (`action` : le bouton).
+   */
+  function ligneCritere(c, qui, action) {
+    var etat;
+    if (c.ok) {
+      etat = c.preuve === 'panel' ? 'vérifié dans le panel' : c.preuve === 'parcours' ? 'validé dans ce parcours' : 'validé' + (c.le ? ' le ' + dateCourte(c.le) : '') + ' par ' + (qui === 'ta manager' ? 'la manager' : 'le consultant');
+    } else if (c.type === 'fo' && c.manque.length) {
+      etat = 'dans ton parcours : ' + c.manque.map(function (m) { return court(m.nom); }).join(', ');
+    } else {
+      etat = 'à valider par ' + qui;
+    }
+    var bouton = '';
+    if (action && c.type !== 'fo' && (!c.ok || c.preuve === 'consultant')) {
+      bouton = '<button type="button" class="filter' + (c.ok ? '' : ' is-on') + '" data-act="adm" data-cle="' + esc(c.cle) + '" data-fait="' + (c.ok ? '0' : '1') + '"' + (S.occupe ? ' disabled' : '') + '>' + (c.ok ? 'Retirer' : 'Valider') + '</button>';
+    }
+    return '<li class="pc-row is-lock"><span class="ph-check' + (c.ok ? ' is-on' : '') + '">' + (c.ok ? '✓' : '') + '</span><span class="pc-row__txt"><strong>' + esc(c.libelle) + '</strong>' +
+      '<span class="muted">' + esc(etat) + (c.source === 'panel' ? ' · exigence du panel' : '') + '</span></span>' + bouton + '</li>';
   }
 
   /* ── La frise de suivi ──────────────────────────────────────────────── */
@@ -267,18 +298,26 @@
           '<button type="button" class="filter" data-act="confirmer" data-id="' + a.id + '"' + (S.occupe ? ' disabled' : '') + '>Confirmer</button></li>';
       }).join('') + '</ul>';
     }
+    // Les critères d'admission : la manager (ou le consultant) valide ce qui ne se vérifie pas.
+    var adm = x.data.admission || [];
+    if (adm.length) {
+      h += '<div class="section-label">Critères d’admission · ' + p.admis + '/' + p.criteres + '</div><ul class="ph-list">' +
+        adm.map(function (c) { return ligneCritere(c, quiValide(p.cibleV25, p.profil === 'candidat'), p.statut === 'actif'); }).join('') + '</ul>';
+    }
     // Ensuite : les deux prochaines.
     var suite = et.filter(function (e) { return e.statut === 'avenir'; }).slice(0, 3);
     if (suite.length) h += '<div class="section-label">Ensuite</div><ul class="pc-next">' + suite.map(function (e) { return '<li><span>' + esc(e.nom) + '</span><span class="muted">' + esc(dateCourte(e.prevue)) + '</span></li>'; }).join('') + '</ul>';
+    var admisOk = p.admis === p.criteres;
     if (p.statut === 'actif' && p.validees === p.total && p.total) {
-      h += '<div class="pc-done"><strong>Toutes les formations sont validées.</strong>Il reste à valider le niveau : le panel l’enregistre pour la personne.</div>';
+      h += '<div class="pc-done"><strong>Toutes les formations sont validées.</strong>' + (admisOk ? 'Il reste à valider le niveau : le panel l’enregistre pour la personne.' :
+        'Il reste ' + pl(p.criteres - p.admis, 'critère') + ' d’admission à remplir avant de valider le niveau.') + '</div>';
     }
     if (p.statut === 'actif') {
       h += '<div class="section-label">Rythme</div><div class="filters__row ph-rythme">' + RYTHMES.map(function (r) {
         return '<button type="button" class="filter' + (p.rythme === r[0] ? ' is-on' : '') + '" data-act="p-rythme" data-r="' + r[0] + '"' + (S.occupe ? ' disabled' : '') + '>' + r[1] + '</button>';
       }).join('') + '</div><div class="pc-actions" style="margin-top:22px"><button type="button" class="filter" data-act="arreter">Arrêter ce parcours</button></div>';
     }
-    if (p.statut === 'actif' && p.validees === p.total && p.total) h += cta('Objectif atteint — valider le niveau', 'atteint');
+    if (p.statut === 'actif' && p.validees === p.total && p.total && admisOk) h += cta('Objectif atteint — valider le niveau', 'atteint');
     return h;
   }
   function court(nom) { return String(nom || '').replace(/^Formation\s+/i, '').replace(/\s*\(.*?\)\s*$/, ''); }
@@ -409,6 +448,11 @@
       return;
     }
     if (act === 'confirmer') { ecrireParcours(id, 'POST', '/parcours/' + id + '/acquis/' + t.getAttribute('data-id'), null, 'Compétence confirmée et enregistrée dans le panel.'); return; }
+    if (act === 'adm') {
+      var fait2 = t.getAttribute('data-fait') === '1';
+      ecrireParcours(id, 'PATCH', '/parcours/' + id + '/admission/' + encodeURIComponent(t.getAttribute('data-cle')), { fait: fait2 }, fait2 ? 'Critère d’admission validé.' : 'Critère d’admission retiré.');
+      return;
+    }
     if (act === 'p-rythme') { ecrireParcours(id, 'PATCH', '/parcours/' + id, { rythme: t.getAttribute('data-r') }, 'Rythme changé : les dates sont recalculées.'); return; }
     if (act === 'arreter') {
       S.sheet = { titre: 'Arrêter ce parcours ?', texte: 'Les formations déjà validées restent acquises. Le parcours sort de la liste.', libelle: 'Arrêter', danger: true,

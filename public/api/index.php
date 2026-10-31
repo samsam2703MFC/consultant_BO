@@ -524,6 +524,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/parcours') { return wr_parcours_creer(); }
     if ($method === 'PATCH' && preg_match('#^/parcours/(\d+)/etape/(FO-\d{1,3})$#', $path, $m)) { return wr_parcours_evaluation((int) $m[1], $m[2]); }
     if ($method === 'POST' && preg_match('#^/parcours/(\d+)/acquis/(\d+)$#', $path, $m)) { return wr_parcours_confirmer((int) $m[1], (int) $m[2]); }
+    if ($method === 'PATCH' && preg_match('#^/parcours/(\d+)/admission/([a-z0-9_-]{1,40})$#', $path, $m)) { return wr_parcours_admission((int) $m[1], $m[2]); }
     if ($method === 'PATCH' && preg_match('#^/parcours/(\d+)$#', $path, $m)) { return wr_parcours_modifier((int) $m[1]); }
     if ($method === 'DELETE' && $path === '/push/abonnements') { return wr_push_desabonnement(); }
     if ($method === 'POST' && $path === '/push/essai') { return wr_push_essai(); }

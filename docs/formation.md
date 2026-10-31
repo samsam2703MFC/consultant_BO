@@ -68,11 +68,40 @@ Le référentiel v25 vit dans `src/data/referentiel_v25.json` (relu de l'Excel p
 `tools/formation/referentiel_excel.py`). *Locataire-gérant* et *Franchisé multi-boutique* n'existant pas
 dans le panel, ce sont des destinations du référentiel (rien n'est créé dans le panel).
 
-Tables (créées au premier appel) : `ceo_parcours` (personne, objectif, rythme, statut, compétences déclarées)
+### Critères d'admission — Adjoint Manager, Manager, Franchisé multi-boutique
+
+Ce qu'il faut pour être **nommé** au poste visé (et pas seulement formé). Les exigences du niveau dans le
+panel (`/position-levels/{id}/requirements`, lignes sans nom écartées) passent en premier ; le cockpit
+complète avec `src/data/admission.json`, sans doublon (une formation déjà exigée par le panel n'est pas
+répétée). Trois sortes :
+
+| Sorte | Vérifié par | Exemple |
+|---|---|---|
+| `poste` | le panel : le poste tenu | Manager ← *Adjoint Manager en poste* ; multi-boutique ← *Franchisé en activité* |
+| `fo` | le panel ou le parcours : formations acquises — celles qui manquent **s'ajoutent au chemin**, en tête | Manager ← FO-28 Adjoint Manager + FO-24 Plannings |
+| `manuel` | la manager (le consultant pour la franchise) dans le suivi : bouton *Valider* | ancienneté, entretien, P&L conforme, accord du franchiseur |
+
+| Poste | Critères |
+|---|---|
+| Adjoint Manager (P7) | Responsable d'équipe (chef de section) · bases validées (FO-01 vente, FO-02 HACCP, FO-16 allergènes) · 6 mois dans le réseau · proposé par le manager ou le franchisé |
+| Manager (P8) | Adjoint Manager en poste · FO-28 + FO-24 · 12 mois d'encadrement · entretien avec le franchisé et le consultant |
+| Franchisé multi-boutique (P12) | Franchisé en activité · Plan Gérant (FO-05, FO-06, FO-24) · 12 mois sur la 1re boutique · 1re boutique rentable (P&L, audit qualité) · un Manager formé pour la tenir · accord du franchiseur |
+
+L'assistant ne propose que ce qui est à portée : pas de poste plus bas que celui tenu (un franchisé ne vise
+plus Manager) ; un critère `poste` non rempli cache la destination (il faut d'abord ce poste-là) — sauf pour
+un employé **sans poste dans le panel** (fréquent) : tout reste ouvert, la manager valide. Un candidat ne voit
+pas le multi-boutique. Étape 1 : *admission 1/6* sur la carte ; étape 3 : *Pour être admis* ; frise : la liste
+des critères, et *Valider le niveau* n'apparaît (et n'est accepté, `409`) qu'avec **toutes les formations et
+tous les critères**. Module, *Postes & sous-postes* : la carte *Critères d'admission* de chaque niveau, et
+*Pas encore dans le panel* (Franchisé multi-boutique, Locataire-gérant) : critères, formations, plan.
+Le multi-boutique n'est pas créé dans le panel : dès qu'un poste dont le nom contient « multi » y existe, il
+prend le relais (ses niveaux, ses compétences, ses exigences).
+
+Tables (créées au premier appel) : `ceo_parcours` (personne, objectif, rythme, statut, compétences déclarées, critères d'admission)
 et `ceo_parcours_etape` (une ligne par formation : évaluations, date prévue, statut, origine panel / déclarée /
 parcours). Routes : `GET /parcours/destinations?employe=&shop=`, `POST /parcours`, `GET /parcours?id=`,
 `GET /parcours/liste`, `PATCH /parcours/{id}/etape/{FO}`, `POST /parcours/{id}/acquis/{cid}`,
-`PATCH /parcours/{id}` (rythme, arrêt, objectif atteint), `GET /formation/v25`. Chaque geste est journalisé
+`PATCH /parcours/{id}/admission/{cle} {fait}`, `PATCH /parcours/{id}` (rythme, arrêt, objectif atteint), `GET /formation/v25`. Chaque geste est journalisé
 (type « Parcours »).
 
 ## Le modèle de données du panel
