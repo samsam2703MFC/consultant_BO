@@ -298,6 +298,8 @@ function viPhotosNormalise(mixed $m): array
  * réponse et la photo, eux, ne se règlent pas. « Pas ce support ici » (31/10/2026, Sam) : le magasin n'a pas ce
  * support — la réponse s'écrit N/A (`etat` na) : ni photo exigée, ni score, ni écart. Elle se propose support par
  * support (`pasIci`, vrai par défaut ; « Aucun support hors charte » ne la propose pas : la question vaut partout).
+ * Un Non demande sa raison (31/10/2026, Sam : « rends le commentaire obligatoire quand la réponse est Non ») :
+ * `commentaireNon`, toujours vrai — à la tablette, un Non sans commentaire laisse le support à remplir.
  * Chaque support dit où il se regarde (`lieu`) : dehors (billboard,
  * bâches, vitrine…), il passe au tour de l'extérieur ; dedans (leaflets, PLV, menu board…), à l'intérieur. Tous les
  * supports retirés : le module disparaît des visites.
@@ -359,7 +361,7 @@ function viCharteNormalise(mixed $m): array
     }
     $out = viModuleNormalise(['nom' => trim((string) ($m['nom'] ?? '')) !== '' ? $m['nom'] : 'Charte de communication',
         'nom_nl' => trim((string) ($m['nom_nl'] ?? '')) !== '' ? $m['nom_nl'] : 'Huisstijl en communicatie', 'points' => $propres], 'charte');
-    foreach ($out['points'] as &$p) { $p['type'] = 'ouinon'; $p['photo'] = true; $p['photoExigee'] = true; $p['lieu'] = $lieux[$p['ref']] ?? 'int'; $p['pasIci'] = $pasIci[$p['ref']] ?? true; }
+    foreach ($out['points'] as &$p) { $p['type'] = 'ouinon'; $p['photo'] = true; $p['photoExigee'] = true; $p['lieu'] = $lieux[$p['ref']] ?? 'int'; $p['pasIci'] = $pasIci[$p['ref']] ?? true; $p['commentaireNon'] = true; }
     unset($p);
     $out['charte'] = true;
     return $out;
