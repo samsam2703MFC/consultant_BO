@@ -305,6 +305,8 @@
     'Les # points, le thermomètre en photo': 'De # punten, de thermometer op foto', 'pas dans l’ordre du jour': 'niet op de agenda', 'semaine du § au §': 'week van § tot §', 'à écrire': 'te schrijven',
     'N.v.t.': 'N.v.t.', 'N.v.t': 'N.v.t', 'Ja': 'Ja', 'Nee': 'Nee', 'Afwijking': 'Afwijking', 'Opmerking': 'Opmerking', 'Foto': 'Foto', 'Het antwoord': 'Het antwoord', 'Traffic': 'Traffic', 'Planogram': 'Planogram',
     '# réponse à donner': '# antwoord te geven', '# réponses à donner': '# antwoorden te geven', 'une question par photo, pour toutes les visites': 'één vraag per foto, voor alle bezoeken',
+    // La charte de communication (31/10/2026) : un support, sa photo, Oui / Non.
+    'Charte de communication': 'Huisstijl en communicatie', 'dehors': 'buiten', 'dedans': 'binnen', 'Photo à prendre': 'Foto te nemen', 'Pas ce support ici': 'Hier niet aanwezig',
     'point': 'punt', 'signature': 'handtekening', 'optionnel': 'optioneel', 'facultatif': 'optioneel', 'Annuler la visite': 'Bezoek annuleren', 'Escalader à Sam': 'Escaleren naar Sam', 'Pourquoi escalader': 'Waarom escaleren', 'Précédente': 'Vorige', 'Suivante': 'Volgende', 'pas de photo pour cette tâche': 'geen foto voor deze taak',
     'Lundi #/#': 'Maandag #/#', 'Mardi #/#': 'Dinsdag #/#', 'Mercredi #/#': 'Woensdag #/#', 'Jeudi #/#': 'Donderdag #/#', 'Vendredi #/#': 'Vrijdag #/#', 'Samedi #/#': 'Zaterdag #/#', 'Dimanche #/#': 'Zondag #/#',
   };

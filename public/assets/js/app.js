@@ -1106,7 +1106,7 @@ class App {
       controlesQualite: ['Contrôles qualité du mois', ''],
       inventaires: ['Entre deux inventaires', 'Par magasin, entre deux inventaires : ce qui est sorti du stock (compté au début + livré − compté à la fin) face à ce que la caisse et la poubelle expliquent, ramené aux matières par les recettes. La justesse des ventes en %, matière par matière, jour par jour et inventaire par inventaire.'],
       suiviTableau: ['Suivi des franchisés · visites', ''],
-      suiviTablette: ['Visite sur tablette', 'L’application du consultant en visite (controle/), la même hors ligne : photo du jour, dossier du bureau, checklist du type, contrôles photo, points à travailler, météo du franchisé, signature. À la fin, le brouillon part au bureau.'],
+      suiviTablette: ['Visite sur tablette', 'L’application du consultant en visite (controle/), la même hors ligne : photo du jour, dossier du bureau, checklist du type, charte de communication (chaque support en photo, Oui ou Non), contrôles photo, points à travailler, météo du franchisé, signature. À la fin, le brouillon part au bureau.'],
       suiviMsp: ['Client mystère', 'Les passages du client mystère, magasin par magasin : la note, les rubriques sur 20, le passage précédent et ce qui a suivi. Un seul encodage par passage, rangé dans son trimestre : il nourrit le feu, le scoring, la visite suivante et la page du franchisé.'],
       suiviFranchise: ['Page du franchisé', 'La page que le franchisé ouvre avec son lien, sans mot de passe : ses points à travailler et l’envoi de sa photo de correction, ses chiffres de chaque jour, ses rapports de visite, sa prochaine visite annoncée, le journal. L’aperçu ne marque rien comme lu.'],
       suiviSources: ['Sources et API', 'Les consultants et les visites, source par source : ce qui vient du panel atelierby.tfbuddy.com, ce qui vit dans les tables locales con_, ce qui se lit dans la base TFBuddy sans API — et les API à ouvrir au panel pour tout passer en lecture et en écriture, avec la structure de chaque table.'],
@@ -1596,6 +1596,14 @@ class App {
           [['cockpit', 'Cockpit'], ['panel', 'Panel tfbuddy'], ['erp', 'ERP admin'], ['base', 'Base partagée'], ['sms', 'SMS · Twilio']]
             .map(([cle, nom]) => ['apiModule', nom, ((this._apiL || {}).erreurs || {})[cle] || 0, [], { apiSrc: cle }])) }]],
         // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
+      // Le module Formation (demande du 31/10/2026) : une application à part (formation/), au
+      // design du module marketing — le référentiel RH du panel (postes, niveaux, compétences,
+      // formations, procédures) et le manuel opératoire en ligne, ouvert en mode tablette.
+      ['Formation', [
+        ['ext:formation/', 'Module Formation ↗', 0],
+        ['ext:formation/?tablette=1#/manuel', 'Manuel opératoire ↗', 0],
+        // Le parcours de chacun vers le poste visé (31/10/2026) : ici pour l'instant, il passera dans l'application employé.
+        ['ext:formation/parcours/', 'Parcours compétences ↗', 0]]],
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];
@@ -6919,13 +6927,15 @@ class App {
       const cols0 = (A.primes || []).filter(o.filtre || (() => true));
       // La page d'un magasin (31/10/2026) : la marque puis le magasin, sous leurs bandeaux, comme le tableau du mois.
       const bandeA = p => (p.payeur === 'magasin' ? 'magasin' : 'marque');
-      const cols = !o.bandes ? cols0 : cols0.map((p, i) => ({ p, i })).sort((a, b) => (bandeA(a.p) === bandeA(b.p) ? a.i - b.i : bandeA(a.p) === 'marque' ? -1 : 1)).map(x => x.p);
+      const tousA = !o.bandes ? cols0 : cols0.map((p, i) => ({ p, i })).sort((a, b) => (bandeA(a.p) === bandeA(b.p) ? a.i - b.i : bandeA(a.p) === 'marque' ? -1 : 1)).map(x => x.p);
+      // Les primes d'équipe (la page d'un magasin) sortent du tableau pour leur frise, mais comptent dans le total de chacune.
+      const cols = o.equipe ? tousA.filter(p => !o.equipe(p)) : tousA;
       const tri0 = S[cleTri] || { col: 'total', sens: -1 };
       const tri = tri0.col === 'nom' || tri0.col === 'total' || cols.some(p => p.cle === tri0.col) ? tri0 : { col: 'total', sens: -1 };
-      const totalDe = r => cols.reduce((t, p) => t + (((r.cases || {})[p.cle] || {}).montant || 0), 0);
+      const totalDe = r => tousA.reduce((t, p) => t + (((r.cases || {})[p.cle] || {}).montant || 0), 0);
       const val = r => (tri.col === 'nom' ? String(r.nom) : tri.col === 'total' ? totalDe(r) : ((r.cases || {})[tri.col] ? r.cases[tri.col].montant * 1000 + r.cases[tri.col].fois : -1));
       const src = (o.magasins ? A.magasins : A.personnes) || [];
-      const rangs = src.filter(r => cols.some(p => (r.cases || {})[p.cle])).sort((a, b) => {
+      const rangs = src.filter(r => tousA.some(p => (r.cases || {})[p.cle])).sort((a, b) => {
         const xa = val(a); const xb = val(b); const c = typeof xa === 'string' ? xa.localeCompare(xb, 'fr') : xa - xb;
         return c * tri.sens || totalDe(b) - totalDe(a) || String(a.nom).localeCompare(String(b.nom), 'fr');
       });
@@ -6946,9 +6956,22 @@ class App {
           somme: eurA(p.total) + ' · ' + pl(p.gagnantes, 'gagnante') })),
         lignes: rangs.map(r => ({ nom: r.nom, total: eurA(totalDe(r)), cases: cols.map(p => caseAn((r.cases || {})[p.cle])),
           // Ce que la marque et le magasin lui ont versé sur l'année (la page d'un magasin).
-          parts: !o.bandes ? '' : ['marque', 'magasin'].filter(b => cols.some(p => bandeA(p) === b))
-            .map(b => eurA(cols.filter(p => bandeA(p) === b).reduce((t, p) => t + (((r.cases || {})[p.cle] || {}).montant || 0), 0)) + ' ' + b).join(' · '),
+          parts: !o.bandes ? '' : ['marque', 'magasin'].filter(b => tousA.some(p => bandeA(p) === b))
+            .map(b => eurA(tousA.filter(p => bandeA(p) === b).reduce((t, p) => t + (((r.cases || {})[p.cle] || {}).montant || 0), 0)) + ' ' + b).join(' · '),
           sous: o.magasins ? pl(r.gagnantes, 'vendeuse') + ' primée' + (r.gagnantes > 1 ? 's' : '') : [o.reseau ? r.magasinNom : '', pl(r.mois, 'mois') + ' primé' + (r.mois > 1 ? 's' : '')].filter(Boolean).join(' · ') })),
+        // « Le magasin, ensemble » sur l'année : un anneau par prime d'équipe, les mois où le magasin y est arrivé.
+        frise: !o.equipe ? null : (() => {
+          const eqs = tousA.filter(o.equipe);
+          if (!eqs.length) { return null; }
+          const clos = mois.filter(x => !x.enCours).length;
+          return { sous: 'Les primes que toute l’équipe gagne d’un coup : les mois où le magasin y est arrivé',
+            total: eurA(eqs.reduce((t, p) => t + (+p.total || 0), 0)), totalSous: 'versés à l’équipe en ' + (A.y || ''),
+            items: eqs.map(p => { const k = Math.max(0, ...src.map(r => +(((r.cases || {})[p.cle] || {}).fois) || 0));
+              // Le mois en cours peut déjà compter (la projection) : on compte alors sur tous les mois montrés.
+              const den = k > clos ? mois.length : clos;
+              return { cle: p.cle, lib: p.lib, bande: bandeA(p), niveau: den ? Math.round(100 * k / den) : 0, centre: k + ' / ' + den, centreSous: 'mois',
+                l1: 'atteint ' + pl(k, 'mois') + ' sur ' + den + (den === clos ? ' clos' : '') + ' · ' + payeurLib(p), l2: eurA(+p.total || 0) + ' · ' + pl(+p.gagnantes || 0, 'gagnante') }; }) };
+        })(),
         // Le réseau : ce qui a été gagné mois par mois, en barres fines.
         barres: mois.filter(x => x.total != null).map(x => ({ lib: MOIS_C[+x.m.slice(5, 7) - 1].replace('.', ''), titre: libMois(x.m) + ' · ' + eurA(x.total || 0), h: Math.round(100 * (+x.total || 0) / maxM), enCours: !!x.enCours })),
       };
@@ -7135,15 +7158,23 @@ class App {
       // valeur pour toutes, quand le magasin y arrive) le dit dans son en-tête.
       const bandeDe = p => (p.payeur === 'magasin' ? 'magasin' : 'marque');
       const parBande = ls => ls.map((p, i) => ({ p, i })).sort((a, b) => (bandeDe(a.p) === bandeDe(b.p) ? a.i - b.i : bandeDe(a.p) === 'marque' ? -1 : 1)).map(o => o.p);
-      const estEquipe = p => p.type === 'target' && (p.base === 'objectif' || p.base === 'google');
-      const colsEq = eq ? parBande((eq.primes || []).filter(p => filtreEq === 'toutes' || p.payeur === 'magasin')) : [];
+      // Les primes d'équipe (31/10/2026, Sam : « les primes pour le magasin qui sont communes doivent être en frise
+      // horizontale au-dessus du tableau, comme dans l'application mobile ») : l'objectif CA et la note Google, de la
+      // marque ou du magasin — la même valeur pour toutes, gagnées d'un coup quand le magasin y arrive. Elles sortent des
+      // colonnes pour une frise au-dessus du tableau, mais comptent toujours dans le cumul de chacune. Le réglage les
+      // reconnaît aussi dans l'année, dont les primes ne disent pas leur mesure.
+      const cleEquipe = new Set(['objectif', 'google'].concat((app.liste || []).filter(e => e.type === 'cible' && (e.base === 'objectif' || e.base === 'google')).map(e => e.cle)));
+      const estEquipe = p => cleEquipe.has(p.cle) || (p.type === 'target' && (p.base === 'objectif' || p.base === 'google'));
+      const colsTous = eq ? parBande((eq.primes || []).filter(p => filtreEq === 'toutes' || p.payeur === 'magasin')) : [];
+      const colsEq = colsTous.filter(p => !estEquipe(p));
+      const colsEquipe = colsTous.filter(estEquipe);
       // Le cumul de chacune (31/10/2026, Sam : « à chaque opérateur combien est le cumul de prime et combien est déjà
       // atteint ») : sur les primes du tableau où elle compte, ce qui est déjà atteint (les gains de ses cases, l'acquis de
       // Mes primes) et ce qui est en jeu (la récompense de chaque prime, ou son gain s'il la dépasse) ; marque et magasin
       // à part. Un mois clos : ce qui était possible.
       const cumulDe = v => {
         const t = { marque: { atteint: 0, jeu: 0, n: 0, gagnees: 0 }, magasin: { atteint: 0, jeu: 0, n: 0, gagnees: 0 } };
-        colsEq.forEach(p => {
+        colsTous.forEach(p => {
           const k = (v.cases || {})[p.cle];
           if (!k) { return; }
           const b = t[bandeDe(p)]; const gain = +k.gain || 0;
@@ -7177,6 +7208,7 @@ class App {
       const totEq = { marque: { atteint: 0, jeu: 0 }, magasin: { atteint: 0, jeu: 0 }, primees: 0 };
       cumuls.forEach(t => { ['marque', 'magasin'].forEach(b => { totEq[b].atteint += t[b].atteint; totEq[b].jeu += t[b].jeu; }); if (t.atteint > 0) { totEq.primees++; } });
       const nBande = b => colsEq.filter(p => bandeDe(p) === b).length;
+      const nBandeT = b => colsTous.filter(p => bandeDe(p) === b).length;
       const closEq = !!eq && !eq.enCours;
       // Une barre en deux couleurs : la part de la marque, puis celle du magasin, sur tout ce qui est en jeu.
       const partsBarre = (aM, aG, j) => ({ m: j > 0 ? Math.min(100, 100 * aM / j) : 0, g: j > 0 ? Math.min(100, 100 * aG / j) : 0 });
@@ -7190,23 +7222,45 @@ class App {
         vue: vueEq, vues: [['mois', 'Mois'], ['annee', 'Année']].map(([k, nom]) => ({ nom, on: k === vueEq, choisir: () => this.setState({ prEqVue: k, prEqPick: false }) })),
         picker: pickerMois(mEq, 'prEq'),
         annee: vueEq !== 'annee' ? null : Object.assign({ chargement: anEq === undefined, motif: anEq === null && connu ? 'L’année du magasin n’a pas pu être calculée.' : '', picker: pickerAn(yEq, 'prEqAn') },
-          anneeVue(anEq, 'prEqTriAn', { filtre: p => filtreEq === 'toutes' || p.payeur === 'magasin', bandes: true })),
-        chargement: vueEq === 'mois' && eq === undefined, motif: vueEq === 'mois' && eq === null && connu ? 'Les fiches de l’équipe n’ont pas pu être lues.' : '',
+          anneeVue(anEq, 'prEqTriAn', { filtre: p => filtreEq === 'toutes' || p.payeur === 'magasin', bandes: true, equipe: estEquipe })),
+        chargement: vueEq === 'mois' && eq === undefined, motif: vueEq === 'mois' && eq === null && connu ? 'L’avancement de l’équipe n’a pas pu être lu.' : '',
         enCours: !!(eq && eq.enCours), lib: eq ? eq.lib : '', quand: eq && eq.quand ? new Date(eq.quand * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '',
         filtres: [['toutes', 'Toutes les primes'], ['magasin', 'Celles du magasin']].map(([k, nom]) => ({ nom, on: k === filtreEq, choisir: () => this.setState({ prEqFiltre: k }) })),
         // Les familles au-dessus des colonnes : la marque (et ses sponsors), puis le magasin.
         bandes: [['marque', 'Primes de la marque'], ['magasin', 'Primes du magasin']].map(([cle, lib]) => ({ cle, lib, n: nBande(cle) })).filter(b => b.n),
         // Le volet replié le dit en une ligne : le mois, ce que l'équipe a atteint face à ce qui est en jeu.
-        resume: !eq || vueEq !== 'mois' || !colsEq.length ? '' : (eq.lib || '') + ' · ' + eurEq(totEq.marque.atteint + totEq.magasin.atteint) + (closEq ? ' gagnés sur ' : ' atteints sur ')
+        resume: !eq || vueEq !== 'mois' || !colsTous.length ? '' : (eq.lib || '') + ' · ' + eurEq(totEq.marque.atteint + totEq.magasin.atteint) + (closEq ? ' gagnés sur ' : ' atteints sur ')
           + eurEq(totEq.marque.jeu + totEq.magasin.jeu) + (closEq ? ' possibles' : ' en jeu') + ' · ' + totEq.primees + ' vendeuse' + (totEq.primees > 1 ? 's' : '') + ' primée' + (totEq.primees > 1 ? 's' : '') + ' sur ' + (eq.vendeuses || []).length,
         // En tête du tableau, une ligne : ce que l'équipe a atteint face à ce qui est en jeu, la barre marque + magasin, et
         // chaque famille à part (31/10/2026, refaite plus sobre).
-        synthese: !eq || !colsEq.length ? null : (() => {
+        synthese: !eq || !colsTous.length ? null : (() => {
           const a = totEq.marque.atteint + totEq.magasin.atteint, j = totEq.marque.jeu + totEq.magasin.jeu, nV = (eq.vendeuses || []).length;
           return { atteint: eurEq(a), jeu: eurEq(j), mot: closEq ? 'gagnés sur' : 'atteints sur', motJeu: closEq ? 'possibles' : 'en jeu', barre: partsBarre(totEq.marque.atteint, totEq.magasin.atteint, j),
-            familles: ['marque', 'magasin'].filter(b => nBande(b)).map(b => ({ cle: b, lib: b === 'marque' ? 'Marque' : 'Magasin', atteint: eurEq(totEq[b].atteint), jeu: eurEq(totEq[b].jeu),
-              sous: nBande(b) + ' prime' + (nBande(b) > 1 ? 's' : '') + (b === 'magasin' ? ' · à sa charge' : '') })),
+            familles: ['marque', 'magasin'].filter(b => nBandeT(b)).map(b => ({ cle: b, lib: b === 'marque' ? 'Marque' : 'Magasin', atteint: eurEq(totEq[b].atteint), jeu: eurEq(totEq[b].jeu),
+              sous: nBandeT(b) + ' prime' + (nBandeT(b) > 1 ? 's' : '') + (b === 'magasin' ? ' · à sa charge' : '') })),
             primees: totEq.primees + ' / ' + nV, primeesLib: 'vendeuse' + (totEq.primees > 1 ? 's' : '') + ' primée' + (totEq.primees > 1 ? 's' : '') };
+        })(),
+        // « Le magasin, ensemble » : un anneau par prime d'équipe — sa valeur (la même pour toutes), l'objectif, ce que chacune
+        // touche, ce qu'il reste ; puis qui en profite et qui est sous le minimum d'heures (comme le dashboard magasin).
+        frise: !eq || !colsEquipe.length ? null : (() => {
+          const clos = !eq.enCours;
+          const items = colsEquipe.map(p => {
+            const ks = (eq.vendeuses || []).map(v => ({ v, k: (v.cases || {})[p.cle] })).filter(x => x.k);
+            const ref = (ks.find(x => x.k.val != null) || {}).k || {};
+            const atteint = ks.some(x => x.k.etat === 'gagne');
+            const elig = ks.filter(x => x.k.motif !== 'heures').map(x => x.v.nom);
+            const hors = ks.filter(x => x.k.motif === 'heures').map(x => x.v.nom);
+            const diff = ref.cible != null && ref.val != null ? Math.max(0, +ref.cible - +ref.val) : null;
+            const reste = diff == null ? '' : p.unite === 'pct' ? 'encore ' + fx(diff, 1) + ' point' + (diff > 1 ? 's' : '') : p.unite === 'note' ? 'encore ' + fr(diff, 1) + ' ★' : 'encore ' + valTxt(p.unite, diff);
+            const niveau = atteint ? 100 : ref.niveau != null ? ref.niveau : (ref.val != null && +ref.cible > 0 ? Math.min(100, 100 * ref.val / ref.cible) : 0);
+            return { cle: p.cle, lib: p.lib, bande: bandeDe(p), val: ref.val != null ? valTxt(p.unite, ref.val) : '—', proj: p.base === 'objectif' && !clos,
+              cible: ref.cible != null ? (p.base === 'objectif' || p.cle === 'objectif' ? 'objectif ' : 'seuil ') + valTxt(p.unite, ref.cible) : '',
+              chacune: recompense(p) + ' chacune', payeur: p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : p.payeur === 'magasin' ? 'le magasin' : 'la marque',
+              niveau: Math.round(niveau), atteint, perdu: clos && !atteint, etat: atteint ? '✓ atteint' : clos ? 'pas atteint' : reste, elig, hors, pot: (+p.montant || 0) * elig.length, chac: +p.montant || 0 };
+          });
+          const elig = items[0].elig, hors = items[0].hors;
+          return { items, sous: (items.length > 1 ? items.length + ' primes' : 'Une prime') + ' que toute l’équipe gagne d’un coup, quand le magasin y arrive',
+            chacune: '+ ' + eurEq(items.reduce((t, x) => t + x.chac, 0)), pot: eurEq(items.reduce((t, x) => t + x.pot, 0)), elig, hors };
         })(),
         primes: colsEq.map((p, i) => ({ cle: p.cle, lib: p.lib, tri: colTri(p.cle), recompense: recompense(p), payeur: p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : p.payeur === 'magasin' ? 'le magasin' : 'la marque',
           sponsor: p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : '',
@@ -7223,61 +7277,11 @@ class App {
             cases: colsEq.map((p, i) => Object.assign(caseEq(p, (v.cases || {})[p.cle], !eq.enCours), { bande: bandeDe(p), debut: !i || bandeDe(colsEq[i - 1]) !== bandeDe(p) })) };
         }) : [],
       };
-      // Les fiches de l'équipe (30/10/2026) : ce que chaque personne a rempli dans « Mon profil » de l'app, la fiche au
-      // clic ; numéro national et IBAN masqués, en clair sur demande (au journal), la carte d'identité en photo.
-      const fichesL = connu ? lire('fiches:' + sid, '/ventes/equipe/profils?shop=' + encodeURIComponent(sid)) : null;
-      const empF = S.prFiche || null;
-      const voirF = !!S.prFicheVoir;
-      const ficheL = empF ? lire('fiche:' + empF + (voirF ? ':voir' : ''), '/ventes/equipe/profil?emp=' + empF + (voirF ? '&voir=1' : '')) : null;
-      const jjF = d => (d ? String(d).slice(8, 10) + '/' + String(d).slice(5, 7) + '/' + String(d).slice(0, 4) : '');
-      const statutF = { employe: 'Employé·e', etudiant: 'Étudiant·e', flexi: 'Flexi-job' };
-      const ficheVue = f => {
-        if (!f || f.error) { return null; }
-        const P = f.profil || {}, I = P.identite || {}, C = P.coordonnees || {}, U = P.urgence || {}, Pa = P.paie || {}, Te = P.tenue || {}, Di = P.dispo || {};
-        const Pn = P.panel || {};
-        const corr = f.corrections || {};
-        const l = (lib, v, panel) => ({ lib, v: v || '', vide: !v, panel: panel ? 'panel : ' + panel : '' });
-        const carte = face => (f.carte || {})[face] ? { lib: face === 'recto' ? 'Recto' : 'Verso', quand: jjF(f.carte[face]), url: API_BASE + '/ventes/equipe/profil/carte?emp=' + f.emp + '&face=' + face } : null;
-        const jours = ['lu', 'ma', 'me', 'je', 've', 'sa', 'di'];
-        return {
-          nom: f.nom, complet: f.complet, masque: !!f.masque,
-          groupes: [
-            ['Identité', [l('Prénom', I.prenom || Pn.prenom, corr['identite.prenom']), l('Nom', I.nom || Pn.nom, corr['identite.nom']), l('Naissance', jjF(I.naissance)), l('Nationalité', I.nationalite)]],
-            ['Coordonnées', [l('Téléphone', C.telephone || Pn.telephone, corr['coordonnees.telephone']), l('E-mail', C.email || Pn.email, corr['coordonnees.email']),
-              l('Adresse', C.rue ? [C.rue + ' ' + (C.numero || '') + (C.boite ? ' / ' + C.boite : ''), (C.cp || '') + ' ' + (C.ville || ''), C.pays || ''].filter(x => x.trim()).join(', ') : '')]],
-            ['En cas d’urgence', [l('Personne à prévenir', U.nom ? U.nom + (U.lien ? ' (' + U.lien + ')' : '') : ''), l('Téléphone', U.telephone)]],
-            ['Paie', [l('Statut', statutF[Pa.statut] || ''), l('N° national', Pa.niss), l('IBAN', Pa.iban), l('Titulaire', Pa.titulaire)]],
-            ['Tenue', [l('T-shirt', Te.tshirt), l('Veste', Te.veste), l('Chaussures', Te.chaussures)]],
-          ].map(([titre, lignes]) => ({ titre, lignes })),
-          dispo: jours.map(j => ({ j: j.charAt(0).toUpperCase() + j.slice(1), m: !!(((Di.grille || {})[j] || {}).m), a: !!(((Di.grille || {})[j] || {}).a) })),
-          remarque: Di.remarque || '',
-          cartes: ['recto', 'verso'].map(carte),
-          voir: f.masque && (Pa.niss || Pa.iban) ? () => this.setState({ prFicheVoir: true }) : null,
-          masquer: !f.masque ? () => this.setState({ prFicheVoir: false }) : null,
-        };
-      };
-      const fiches = {
-        chargement: connu && fichesL === undefined, motif: fichesL === null && connu ? 'Les fiches de l’équipe n’ont pas pu être lues.' : '',
-        relire: () => { Object.keys(this._prL).filter(k => /^~?fiches?:/.test(k)).forEach(k => delete this._prL[k]); this.setState({}); },
-        lignes: (fichesL && fichesL.fiches ? fichesL.fiches : []).map(f => ({
-          emp: f.emp, nom: f.nom, complet: f.complet,
-          manque: f.manque.length ? f.manque.slice(0, 3).join(', ') + (f.manque.length > 3 ? ' +' + (f.manque.length - 3) : '') : 'complet',
-          corrections: (f.corrections || []).join(', '), maj: f.maj ? jjF(f.maj) : 'jamais ouvert',
-          ouvert: empF === f.emp,
-          basculer: () => {
-            Object.keys(this._prL).filter(k => /^~?fiche:/.test(k)).forEach(k => delete this._prL[k]);
-            this.setState({ prFiche: empF === f.emp ? null : f.emp, prFicheVoir: false });
-          },
-        })),
-        // La fiche ouverte n'est montrée que si la personne est de ce magasin (un autre magasin choisi entre-temps la referme).
-        detail: empF && fichesL && (fichesL.fiches || []).some(f => f.emp === empF)
-          ? { chargement: ficheL === undefined, motif: ficheL === null ? 'La fiche n’a pas pu être lue.' : '', f: ficheVue(ficheL) } : null,
-      };
       // Les fiches à imprimer et l'affiche à envoyer (31/10/2026, Sam : « les PDF peuvent être imprimés de la page édition
       // prime, avec envoi par mail à l'équipe » ; src/primes_fiches.php). Les PDF sont servis par le cockpit
       // (assets/primes). L'équipe et ses adresses (masquées) ne se lisent qu'une fois le volet ouvert : elles déchiffrent
       // les profils. L'affiche part à chacune séparément ; décocher une personne la laisse de côté.
-      const ouvImp = !!(S.prFrOuv && S.prFrOuv.imprimer);
+      const ouvImp = !!(S.prFrOuv && S.prFrOuv.parametres);
       const affEq = connu && ouvImp ? lire('affEq:' + sid, '/ventes/primes-fiches/equipe?shop=' + encodeURIComponent(sid)) : null;
       const AFF = this._prAff && this._prAff.sid === sid ? this._prAff : (this._prAff = { sid, langues: ['fr'], hors: {}, busy: false, res: null });
       const reAff = () => this.setState({});
@@ -7314,25 +7318,33 @@ class App {
       };
       const ent = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
       const cible = cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut;
-      const stat = (lib, v, vr, sous) => ({ lib, v: v || '—', reseau: vr ? 'réseau ' + vr : '', sous: sous || '' });
+      // Une tuile : la valeur du magasin, celle du réseau, et l'écart en clair (31/10/2026, « des tuiles, juste visibles ») —
+      // en % de la valeur du réseau, ou en points pour un pourcentage ; ▲ au-dessus, ▼ en dessous.
+      const ecart = (m, r, pts) => {
+        if (m == null || r == null || !isFinite(+m) || !isFinite(+r) || (!pts && +r === 0)) { return null; }
+        const d = pts ? +m - +r : 100 * (+m - +r) / +r;
+        return { sens: Math.abs(d) < (pts ? 0.05 : 0.5) ? 0 : d > 0 ? 1 : -1, txt: (d > 0 ? '+' : d < 0 ? '−' : '') + fr(Math.abs(d), Math.abs(d) < 10 ? 1 : 0) + (pts ? ' pt' + (Math.abs(d) >= 2 ? 's' : '') : ' %') };
+      };
+      const stat = (lib, v, vr, sous, m, r, pts) => ({ lib, v: v || '—', reseau: vr ? 'réseau ' + vr : '', sous: sous || '', ecart: ecart(m, r, pts) });
       // Vendeuses et tickets : le réseau en fait la somme ; face à un magasin, la moyenne par magasin.
       const nMagMoy = moy ? (moy.magasins || []).length : 0;
       const parMag = v => (v != null && nMagMoy ? v / nMagMoy : null);
       common.prFr = {
         id: sid, nom: nomMag[sid] || '', connu,
         magasins: (d.magasins || []).map(m => ({ id: String(m.id), nom: court(m.nom), aller: () => this.setState({ prShop: String(m.id) }) })),
-        marque, siennes, nSiennesMax: 6, equipe, fiches, imprimer,
+        marque, siennes, nSiennesMax: 6, equipe, imprimer,
         // La page en volets (31/10/2026, Sam : « réorganiser la page en toggle ») : à l'ouverture, seul l'avancement des
         // vendeuses est déplié ; le reste se replie en une ligne qui dit l'essentiel, et s'ouvre au toucher.
         volets: (() => {
           const ouv = Object.assign({ equipe: true }, S.prFrOuv || {});
           const v = cle => ({ ouvert: !!ouv[cle], basculer: () => this.setState({ prFrOuv: Object.assign({}, ouv, { [cle]: !ouv[cle] }) }) });
-          return { equipe: v('equipe'), magasin: v('magasin'), marque: v('marque'), promos: v('promos'), donnees: v('donnees'), fiches: v('fiches'), imprimer: v('imprimer') };
+          // Le reste de la page (31/10/2026, Sam : « tout ceci en toggle (paramètres), dans des tableaux compréhensibles et
+          // visuels ») : un seul volet, « Paramètres » ; les chiffres du magasin, eux, restent visibles en tuiles.
+          return { equipe: v('equipe'), parametres: v('parametres') };
         })(),
         resumes: (() => {
           const pl2 = (k, mot) => k + ' ' + mot + (k > 1 ? 's' : '');
           const actives = siennes.filter(l => l.actif).length;
-          const fL = fichesL && fichesL.fiches ? fichesL.fiches : null;
           const avecPrime = promosIci.filter(p => p.statutMag).length;
           return {
             magasin: siennes.length ? pl2(siennes.length, 'prime') + ' · ' + (actives ? pl2(actives, 'active') : 'aucune active') + ' · payées par le magasin' : 'Aucune pour l’instant',
@@ -7340,7 +7352,7 @@ class App {
             promos: promos === undefined ? 'Lecture…' : promosIci.length ? pl2(promosIci.length, 'promotion') + ' · ' + (avecPrime ? avecPrime + ' avec une prime du magasin' : 'aucune avec une prime du magasin') : 'Aucune ici',
             donnees: 'Moyennes par mois sur ' + n + ' mois, face au réseau',
             imprimer: 'Le mode d’emploi, l’affiche de l’équipe en français et en néerlandais — à imprimer, ou l’affiche à envoyer par mail',
-            fiches: fL === null ? (fichesL === undefined ? 'Lecture…' : 'Fiches illisibles') : fL.length ? pl2(fL.length, 'personne') + ' · ' + pl2(fL.filter(f => f.complet >= 100).length, 'fiche') + ' complète' + (fL.filter(f => f.complet >= 100).length > 1 ? 's' : '') : 'Personne pour l’instant',
+            parametres: [pl2(siennes.length, 'prime') + ' du magasin', pl2(marque.length, 'prime') + ' de la marque', promos === undefined ? '' : pl2(promosIci.length, 'promotion') + ' du panel', 'les fiches à imprimer'].filter(Boolean).join(' · '),
           };
         })(),
         // « + Nouvelle prime du magasin » : la sorte d'abord (23/10/2026) — promotion, catégorie, ventes croisées, objectif CA, note Google, clients pro.
@@ -7349,16 +7361,16 @@ class App {
         moyChargement: moy === undefined, moyMotif: moy === null ? 'Les moyennes n’ont pas pu être calculées.' : (moy && !M ? 'Pas de moyennes pour ce magasin sur ' + n + ' mois.' : ''),
         ns: [1, 3, 6].map(k => ({ nom: k + ' mois', on: k === n, choisir: () => this.setState({ prMoyN: k }) })), periode: moy ? moy.mois.map(x => x.lib).join(', ') : '',
         donnees: !M ? [] : [
-          stat('Vendeuses', fr(M.vendeuses, 1), R && parMag(R.vendeuses) != null ? fr(parMag(R.vendeuses), 1) + ' par magasin' : '', 'par mois'),
-          stat('Tickets', ent(M.tickets), R && parMag(R.tickets) != null ? ent(parMag(R.tickets)) + ' par magasin' : '', 'par mois'),
-          stat('Tickets par vendeuse', ent(M.ticketsVendeuse), R ? ent(R.ticketsVendeuse) : '', 'par mois'),
-          stat('Ticket moyen', M.ticketMoyen != null ? fr(M.ticketMoyen, 2) + ' €' : '', R && R.ticketMoyen != null ? fr(R.ticketMoyen, 2) + ' €' : ''),
-          stat('Lignes par ticket', fr(M.lignesTicket, 2), R ? fr(R.lignesTicket, 2) : ''),
-          stat('Ventes croisées', pc(M.croisees), R ? pc(R.croisees) : '', 'cible du magasin ' + fr(+cible, 1) + ' %'),
-          stat('Objectif atteint', pc(M.atteinte), R ? pc(R.atteinte) : '', 'CA du mois'),
+          stat('Vendeuses', fr(M.vendeuses, 1), R && parMag(R.vendeuses) != null ? fr(parMag(R.vendeuses), 1) + ' par magasin' : '', 'par mois', M.vendeuses, R ? parMag(R.vendeuses) : null),
+          stat('Tickets', ent(M.tickets), R && parMag(R.tickets) != null ? ent(parMag(R.tickets)) + ' par magasin' : '', 'par mois', M.tickets, R ? parMag(R.tickets) : null),
+          stat('Tickets par vendeuse', ent(M.ticketsVendeuse), R ? ent(R.ticketsVendeuse) : '', 'par mois', M.ticketsVendeuse, R ? R.ticketsVendeuse : null),
+          stat('Ticket moyen', M.ticketMoyen != null ? fr(M.ticketMoyen, 2) + ' €' : '', R && R.ticketMoyen != null ? fr(R.ticketMoyen, 2) + ' €' : '', '', M.ticketMoyen, R ? R.ticketMoyen : null),
+          stat('Lignes par ticket', fr(M.lignesTicket, 2), R ? fr(R.lignesTicket, 2) : '', '', M.lignesTicket, R ? R.lignesTicket : null),
+          stat('Ventes croisées', pc(M.croisees), R ? pc(R.croisees) : '', 'cible du magasin ' + fr(+cible, 1) + ' %', M.croisees, R ? R.croisees : null, true),
+          stat('Objectif atteint', pc(M.atteinte), R ? pc(R.atteinte) : '', 'CA du mois', M.atteinte, R ? R.atteinte : null, true),
         ],
-        pieces: !M ? [] : cats.map(c => ({ lib: c.lib, v: fr((M.pieces || {})[c.cle], 0) || '—', reseau: R ? fr((R.pieces || {})[c.cle], 0) : '' })),
-        promosVend: !M ? [] : prs.map(p => ({ lib: p.lib, du: p.du ? jj(p.du) : '', v: fr((p.magasins || {})[sid], 0) || '—', reseau: fr(p.reseau, 0) })),
+        pieces: !M ? [] : cats.map(c => ({ lib: c.lib, v: fr((M.pieces || {})[c.cle], 0) || '—', reseau: R ? fr((R.pieces || {})[c.cle], 0) : '', ecart: ecart((M.pieces || {})[c.cle], R ? (R.pieces || {})[c.cle] : null) })),
+        promosVend: !M ? [] : prs.map(p => ({ lib: p.lib, du: p.du ? jj(p.du) : '', v: fr((p.magasins || {})[sid], 0) || '—', reseau: fr(p.reseau, 0), ecart: ecart((p.magasins || {})[sid], p.reseau) })),
         promos: { chargement: promos === undefined, motif: promos === null ? 'Les promotions n’ont pas pu être lues.' : (promos && !promos.api ? PR_MOTIF() : ''), liste: promosIci, relire: () => { delete this._prL.promos; this.setState({ prPromosFrais: true }); } },
       };
       // Les sortes d'une prime du magasin : le choix de « Créer une nouvelle prime », et ses raccourcis en haut de la page

@@ -1283,6 +1283,34 @@ les donne pas.
 l'assortiment, aujourd'hui pour les obligatoires sans place au comptoir. `assortiment` ajoute `saisonnieres` (exigées
 de saison) et `horsSaison` (obligatoires de saison non exigées à cette date).
 
+### `/formation/*` — le module Formation (`/formation`) et le manuel opératoire (31/10/2026)
+
+Le référentiel RH du panel — postes (`/positions`), niveaux ou sous-postes (`/position-levels`),
+compétences, formations, procédures opératoires, base de connaissances — lu avec le compte
+consultant. `GET /formation/referentiel` (tout, `_cache=600`),
+`GET /formation/liens` (procédures, formations et ressources de chaque compétence, `_cache=900`),
+`GET /formation/competence|niveau|procedure|formation|ressource?id=`, `GET /formation/equipe?shop=`
+(compétences validées par personne), `GET /formation/sonde?chemin=` (test d'une route du référentiel,
+liste blanche), `GET /formation/pdf?type=poste|niveau|procedure&id=` (PDF du panel relayé). Sans
+compte panel : `503 {indispo, raison}`. Chaque réponse porte `appels[]` (code HTTP, lignes, durée
+de chaque lecture du panel). Les routes `/career-*` du panel sont déclarées en 500 dans son
+swagger : les postes passent par `/positions`. Détail, constats et sécurité : `docs/formation.md` ;
+les 237 routes : `docs/formation-routes.md`.
+
+Écritures (toutes relues au panel, journalisées, caches corrigés) : `POST|DELETE /formation/niveau/{nid}/competences[/{cid}]`,
+`POST /formation/competence/{cid}/liens {type, id}`, `DELETE /formation/competence/{cid}/liens/{type}/{id}`,
+`POST /formation/competences`, `PATCH|DELETE /formation/competences/{cid}`, `PUT|DELETE /formation/employe/{eid}/competences/{cid}?shop=`,
+`PUT /formation/employe/{eid}/poste?shop= {poste, niveau}`. Réponse `{ok, deja?, …l'état relu, appels[]}` ; un refus du panel
+ou un écart à la relecture : `502 {ok: false, error, appels}`.
+
+Parcours compétences (`/formation/parcours/`, 31/10/2026) : `GET /parcours/destinations?employe=&shop=` (sans employé : un
+candidat) rend la personne et chaque destination `{cle, titre, sous, groupe, competences[{id, nom, acquise}], formations[{fo, nom,
+evaluations, competences, acquise}], aFaire, facultatives}` ; `POST /parcours {employe?, shop?, nom?, cible, rythme, acquis[], suivies[]}`
+crée le parcours et rend `{parcours, etapes[]}` ; `GET /parcours?id=`, `GET /parcours/liste` ; `PATCH /parcours/{id}/etape/{FO}
+{evaluation, fait}` (la dernière valide la formation et coche ses compétences dans le panel : `panel {ok, cochees, attendues}`) ;
+`POST /parcours/{id}/acquis/{cid}` (confirmer une compétence déclarée) ; `PATCH /parcours/{id} {rythme | statut: arrete | atteint}`.
+Détail : `docs/formation.md`.
+
 ### `/tablette/book` et `/tablette/photos` — les données de la tablette des vendeuses
 
 La tablette « Book vendeuses » (`public/tablette/`, application compilée du dépôt `pwa_sales_tablet`) lit ses produits,
@@ -3170,6 +3198,7 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `POST /msp` | consultant, admin | `shop`, `mois` AAAA-MM, `rubriques{}` (/20), `total`, `commentaires`, `fichier` (data-URL PDF ≤ 8 Mo). Un rapport par boutique et par mois. |
 | `PUT /equipe/{shop}` | consultant, franchisé | `effectif`, `prevu`, `departs`, `releve_le`. |
 | `PUT /visites/reglages` | admin | `checklist[]` (modules produit, hygiene, visuel, planogramme, assortiment, msp, avec `nom_nl` ; questions `ref`, `libelle`, `libelle_nl`, `aide`, `aide_nl`, `photo`, `type` — etat (OK / Écart / N/A), ouinon, note, pct, nombre (`min`, `max`, `unite`), choix et multi (`choix[]` {code, fr, nl, ko}), texte ; sans type, `pct` vaut pourcentage — ; `score` (compte dans le score, vrai par défaut, jamais pour le texte) et `poids` 1 à 3 — normalisées par `src/visites_questions.php`), `seuils{}`, `frequence{shop: jours}`, `photos{}` (27/10/2026 : les questions des photos du jour, module fixe `photos` — `jour_facade`, `jour_arriere`, `jour_interieur`, ni ajoutées ni retirées ; même forme de question, photo toujours attendue ; réglage `visitesPhotos`, commun à tous les types de visite). La réponse à une photo s'écrit comme un point (`PUT /visites/{id}/points`, `module: photos`, `ref` = le genre) ; elle compte dans le score (en tête) et ses écarts vont au rapport comme ceux de la checklist. `GET /visites/app` rend `photosQuestions{}`, `GET /visites/reglages` `photos{}`. `GET /visites/app` rend la checklist typée, complétée du néerlandais livré là où le français est d'origine, `typesReponse` et `langues{shop: fr\|nl\|en\|de}` (la langue du magasin, Qui fait quoi sinon sa région) : la tablette ouvre la checklist dans cette langue, FR \| NL en tête de l'étape. Le cadre de visite (`PUT /visites/cadre`, types) prend les mêmes questions. |
+| `PUT /visites/reglages` · `charte{}` | admin | (31/10/2026) la **charte de communication** : module fixe `charte` (`nom`, `nom_nl`, `points[]`), un support de communication par question — affiches, leaflets, bâches, billboard, vitrophanie, chevalet, PLV, menu board, emballages, tenues, supports hors charte. Les supports s'ajoutent, se retirent et se renomment (`ref`, `libelle`, `libelle_nl`, `aide`, `aide_nl`, `score`, `poids`, `lieu` : `ext` au tour de l'extérieur, `int` à l'intérieur) ; le type est toujours `ouinon` et la photo toujours exigée (`photoExigee`) ; `pasIci` (vrai par défaut, faux pour « Aucun support hors charte ») propose la troisième réponse « Pas ce support ici », écrite `etat` na : sans photo, hors score, ni écart ni point proposé — `viCharteNormalise`, réglage `visitesCharte`, les supports livrés tant qu'il n'existe pas ; vide, le module sort des visites. Rendu par `GET /visites/app` (`charte`) et `GET`/`PUT /visites/reglages`. Ajouté à toute visite qui n'est ni un suivi ni une revisite ; à la tablette, deux étapes (dehors, dedans) qui ne se remplissent qu'avec, pour chaque support, la photo ET Oui / Non. Les réponses s'écrivent comme des points (`PUT /visites/{id}/points`, module `charte`) : elles comptent dans le score, un Non part dans le rapport et dans les points proposés. |
 | `POST /visites/tick` | admin | l'horloge tout de suite (`force` : sans attendre l'heure). |
 
 Feu tricolore (`seuils`, la première règle qui s'applique) : 🔴 P0 ouvert
@@ -4286,9 +4315,19 @@ magasin`) — un filet entre les deux ; la couleur ne vit que sur ces traits, le
 Une prime d'équipe (objectif CA, note Google) le dit sous son nom. Après le nom, la colonne **Cumul** de chaque vendeuse :
 atteint / en jeu (la somme des `gain` de ses cases, et de `max(montant, gain)` de chaque prime où elle compte ; un mois
 clos : gagné / possible), la barre marque + magasin, la part de chacune ; elle trie le tableau. Sur un écran large
-(≥ 1 000 px), le nom et le cumul restent en place quand les primes défilent. Les autres volets (`S.prFrOuv`) forment une
-liste groupée, repliée, une ligne par volet avec son résumé : les primes du magasin, de la marque et des sponsors, les
-promotions du panel, les chiffres, les fiches. La vue Année range ses colonnes de la même façon, le total après le nom.
+(≥ 1 000 px), le nom et le cumul restent en place quand les primes défilent. Tout en haut de la page (au-dessus de l'équipe), **les chiffres du magasin**, toujours
+visibles, en tuiles : la valeur du magasin, l'écart au réseau (▲ / ▼, en % ou en points pour un pourcentage), la valeur du
+réseau (1, 3 ou 6 mois). Puis un seul volet replié, **« Paramètres »** (`S.prFrOuv.parametres`) : ouvert, ses quatre
+parties se suivent en tableaux, sans volet dans le volet — les primes du magasin, les fiches à imprimer et à envoyer, les
+primes de la marque et des sponsors, les promotions du panel (un tableau : promotion, sorte, dates, portée, produits,
+prime). Les fiches de l'équipe (« Mon profil ») ont quitté la page le 31/10/2026 ; leurs routes restent. La vue Année range ses colonnes de la même façon, le total après le nom.
+**Les primes d'équipe en frise** (31/10/2026, demande de Sam : « les primes pour le magasin qui sont communes doivent être
+en frise horizontale au-dessus du tableau, comme dans l'application mobile ») : l'objectif CA et la note Google — de la
+marque, ou du magasin (`cible` de base `objectif` ou `google`) — sortent des colonnes. Au-dessus du tableau, « Le magasin,
+ensemble » : un anneau par prime (la couleur de sa famille, vert une fois atteinte), sa valeur commune (projetée tant que
+le mois court), l'objectif, ce que chacune touche, ce qu'il reste ; puis les éligibles et celles sous le minimum
+d'heures — la forme du dashboard magasin. Elles comptent toujours dans le cumul de chacune. Dans l'année : un anneau par
+prime d'équipe, les mois où le magasin y est arrivé, et ce qui a été versé à l'équipe.
 Rien ne change côté API (`/ventes/primes-equipe`, `/ventes/primes-annee`).
 
 **Fiches à imprimer et à envoyer** (31/10/2026, demande de Sam : « les PDF peuvent être imprimés de la page édition prime,

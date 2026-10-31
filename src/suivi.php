@@ -764,6 +764,8 @@ function suChecklistBilan(array $v): array
     }
     // Les photos du jour ont leur question, quel que soit le type (src/visites_questions.php, viPhotosNormalise).
     if (function_exists('viPhotos')) { foreach (viPhotos()['points'] as $pt) { $defs[$pt['ref']] = $pt; } }
+    // La charte de communication aussi : un support par question, Oui / Non avec sa photo.
+    if (function_exists('viCharte')) { foreach (viCharte()['points'] as $pt) { $defs[$pt['ref']] = $pt; } }
     $ok = 0; $ko = 0; $na = 0; $ecarts = [];
     foreach ($pts as $p) {
         $fait = $p['etat'] !== '' || $p['note'] !== null || $p['valeur'] !== null;

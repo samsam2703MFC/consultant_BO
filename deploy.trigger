@@ -1207,3 +1207,13 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T10:32:09Z production : lot 4 — kontrola przyjęć (tablet pakowania › Przyjęcia), płatności dnia, ocena dostawców [230]
 2026-10-31T10:36:40Z [app] Planning : nom du magasin au lieu du numero (#85)
 2026-10-31T10:42:49Z production : tablet pakowania › Przyjęcia — partia i termin ze zdjęcia etykiety (OCR) [231]
+2026-10-31T10:43:19Z primes du magasin : primes d'équipe en frise au-dessus du tableau
+2026-10-31T11:05:42Z contrôle sur tablette : charte de communication, chaque support en photo avec Oui / Non
+2026-10-31T11:08:18Z primes du magasin : chiffres en tuiles, Paramètres, fiches de l'équipe retirées
+2026-10-31T11:17:30Z module formation à la racine (/formation/) : référentiel RH, manuel opératoire, écritures
+2026-10-31T11:21:09Z formation : sections des procédures, lien du panel sur la compétence
+2026-10-31T11:39:57Z primes du magasin : chiffres du magasin tout en haut
+2026-10-31T11:42:01Z contrôle sur tablette : charte de communication, réponse « Pas ce support ici »
+2026-10-31T11:52:01Z formation : parcours compétences (assistant, frise de suivi), formations fusionnées par FO
+2026-10-31T11:54:25Z parcours : rôles du réseau hors destinations
+2026-10-31T11:57:35Z parcours : employé sans poste, tous les métiers proposés

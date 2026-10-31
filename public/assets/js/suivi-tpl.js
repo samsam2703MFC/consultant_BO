@@ -195,7 +195,7 @@ function tplCorrections(corrections, points, x){
 export function tplSvTablette(c, x){
   const { esc } = x, s = c.sv;
   const circuit = [['Préparer', 'au bureau, sur l’ordinateur : dossier, points du bureau, type de visite'], ['Ordre du jour', 'part tout seul au franchisé si la visite est annoncée'],
-    ['Visiter', 'sur la tablette, même hors ligne : photo du jour, checklist, contrôles, points, météo, signature'], ['Brouillon', 'à la fin de la visite, il part au bureau avec les points proposés'],
+    ['Visiter', 'sur la tablette, même hors ligne : photo du jour, checklist, charte de communication (une photo et Oui / Non par support), contrôles, points, météo, signature'], ['Brouillon', 'à la fin de la visite, il part au bureau avec les points proposés'],
     ['Adapter et envoyer', 'au bureau, sous le délai réglé : le franchisé reçoit son rapport et ses points'], ['Corriger', 'le franchisé envoie sa photo, le bureau valide, le consultant ferme sur place']];
   return `<div data-screen="suivi-tablette"><div class="mko-hd sv-hd"><span class="mko-mu">Tablette de</span>${sel(x, esc, s.setCons, s.consultants)}
       <span class="sv-hd-d"><button ${x.A(s.copier)} class="cx-btn">Copier le lien d’installation</button><a class="cx-btn prim" href="${esc(s.src)}" target="_blank" rel="noopener">Ouvrir en plein écran</a></span></div>
