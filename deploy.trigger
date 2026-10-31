@@ -1232,3 +1232,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T14:52:51Z [235] Bez zmiany nocnej : zmiana nocna i zespoły nocne nieaktywne, bez « + nocna », reguła NIGHT_SHIFT_DISABLED
 2026-10-31T15:32:12Z formation : collisions (marge sous le titre, étiquettes du plan de métro)
 2026-10-31T15:37:50Z formation : carte des métiers sans collision (étiquettes, hauteur)
+2026-10-31T16:16:02Z [237][238] Tarty : własne stanowisko ; zastępstwo zadań (Kontrola przyjęć : Jakość → Kierownik)
