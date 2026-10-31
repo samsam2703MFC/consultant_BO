@@ -104,9 +104,9 @@ function pcAdmissionDefs(): array
  * il est frais, sinon refaite et remise en cache : le parcours et le module
  * lisent le même référentiel, une seule fois.
  */
-function pcLecture(string $route, callable $calcul, int $ttl): ?array
+function pcLecture(string $route, callable $calcul, int $ttl, array $q = []): ?array
 {
-    $k = fmCleCache($route);
+    $k = fmCleCache($route, $q);
     $c = setting($k);
     if (is_array($c) && is_array($c['r'] ?? null) && time() - (int) ($c['le'] ?? 0) < max($ttl, (int) ($c['ttl'] ?? 0))) { return $c['r']; }
     $r = $calcul();
@@ -206,6 +206,143 @@ function pcFamillePoste(array $p): string
     $code = pcCodeV25((string) ($p['nom'] ?? ''), '');
     foreach ($p['niveaux'] ?? [] as $n) { $code ??= pcCodeV25((string) ($p['nom'] ?? ''), (string) ($n['nom'] ?? '')); }
     return pcFamille($code);
+}
+
+/**
+ * Les trois métiers et leur niveau de MAÎTRISE (31/10/2026, règle du réseau : le
+ * gérant de magasin maîtrise la vente, la boulangerie-pâtisserie et le traiteur).
+ * Maîtriser un métier = toutes ses compétences cumulées jusqu'au dernier niveau
+ * avant « Responsable d'équipe » (Équipier confirmé). Lu sur les noms du panel.
+ */
+const PC_METIERS = ['P3' => ['vente', 'Vente'], 'P1' => ['boul', 'Boulangerie – Pâtisserie'], 'P2' => ['trait', 'Traiteur']];
+
+function pcMaitrises(array $ref): array
+{
+    $o = [];
+    foreach ($ref['postes'] ?? [] as $p) {
+        $code = pcCodeV25((string) ($p['nom'] ?? ''), '');
+        if (!isset(PC_METIERS[$code]) || isset($o[PC_METIERS[$code][0]]) || empty($p['niveaux'])) { continue; }
+        $k = 0;
+        foreach ($p['niveaux'] as $i => $n) { if (!str_contains(mb_strtolower((string) $n['nom']), 'responsable')) { $k = $i; } }
+        $cumul = [];
+        foreach (array_slice($p['niveaux'], 0, $k + 1) as $n) { foreach ($n['competences'] ?? [] as $c) { $cumul[(int) $c] = true; } }
+        $o[PC_METIERS[$code][0]] = ['cle' => PC_METIERS[$code][0], 'libelle' => PC_METIERS[$code][1], 'posteId' => $p['id'], 'poste' => (string) $p['nom'],
+            'niveauId' => $p['niveaux'][$k]['id'], 'niveau' => (string) $p['niveaux'][$k]['nom'], 'competences' => array_keys($cumul)];
+    }
+    $ordre = ['vente' => 0, 'boul' => 1, 'trait' => 2];
+    uksort($o, static fn ($a, $b) => $ordre[$a] <=> $ordre[$b]);
+    return $o;
+}
+
+/**
+ * La carte des métiers (GET /formation/carte) : le chemin — trois lignes de métier,
+ * la polyvalence, le tronc (adjoint, manager), la franchise — avec, à chaque niveau,
+ * les compétences cumulées, la part qui a une formation et le nombre de personnes ;
+ * les effectifs ; le vivier (qui maîtrise 3, 2, 1, 0 métier) ; ce qui manque.
+ * Aucun nom de personne ne sort : des comptes.
+ * $equipes : les employés lus par magasin (ep_formation_equipe), une liste par magasin.
+ */
+function pcCarte(array $ref, array $liens, array $equipes, int $magasins): array
+{
+    $avecFo = static fn (int $cid): bool => !empty($liens[(string) $cid]['formations']);
+    $actifs = [];
+    foreach ($equipes as $l) { foreach ($l as $e) { if (!empty($e['actif'])) { $actifs[(int) $e['id']] = $e; } } }
+    $parNiveau = [];
+    $sansPoste = 0;
+    foreach ($actifs as $e) {
+        if (empty($e['postes'])) { $sansPoste++; }
+        foreach ($e['postes'] as $p) { if (($p['niveauId'] ?? null) !== null) { $parNiveau[(int) $p['niveauId']] = ($parNiveau[(int) $p['niveauId']] ?? 0) + 1; } }
+    }
+    $maitrises = pcMaitrises($ref);
+    $niveauxDe = static function (array $p) use ($avecFo, $parNiveau): array {
+        $cumul = []; $o = [];
+        foreach ($p['niveaux'] ?? [] as $n) {
+            $nouv = array_map('intval', $n['competences'] ?? []);
+            foreach ($nouv as $c) { $cumul[$c] = true; }
+            $o[] = ['id' => (int) $n['id'], 'nom' => (string) $n['nom'], 'nouvelles' => count($nouv), 'total' => count($cumul),
+                'avecFormation' => count(array_filter(array_keys($cumul), $avecFo)), 'personnes' => $parNiveau[(int) $n['id']] ?? 0];
+        }
+        return $o;
+    };
+    $chemin = ['metiers' => [], 'tronc' => [], 'entrepreneur' => [], 'reseau' => []];
+    $roles = ['P7' => 'tronc', 'P8' => 'tronc', 'P10' => 'entrepreneur', 'P11' => 'entrepreneur', 'P12' => 'entrepreneur', 'P9' => 'entrepreneur'];
+    foreach ($ref['postes'] ?? [] as $p) {
+        if (($p['id'] ?? null) === null) { continue; }
+        $code = pcCodeV25((string) $p['nom'], '');
+        foreach ($p['niveaux'] ?? [] as $n) { $code ??= pcCodeV25((string) $p['nom'], (string) $n['nom']); }
+        $x = ['id' => (int) $p['id'], 'nom' => trim((string) $p['nom']), 'code' => $code, 'niveaux' => $niveauxDe($p)];
+        if (isset(PC_METIERS[$code])) {
+            $m = $maitrises[PC_METIERS[$code][0]] ?? null;
+            $x['cle'] = PC_METIERS[$code][0];
+            $x['libelle'] = PC_METIERS[$code][1];
+            $x['maitrise'] = $m ? array_search($m['niveauId'], array_column($x['niveaux'], 'id'), true) : null;
+            $x['maitriseCompetences'] = $m ? count($m['competences']) : 0;
+            $chemin['metiers'][PC_METIERS[$code][0]] = $x;
+        } elseif (isset($roles[$code])) {
+            $chemin[$roles[$code]][$code] = $x;
+        } elseif (pcFamillePoste($p) === 'cadre') {
+            $chemin['reseau'][] = ['id' => (int) $p['id'], 'nom' => trim((string) $p['nom'])];
+        }
+    }
+    $ordreM = ['vente' => 0, 'boul' => 1, 'trait' => 2];
+    uksort($chemin['metiers'], static fn ($a, $b) => $ordreM[$a] <=> $ordreM[$b]);
+    $chemin['metiers'] = array_values($chemin['metiers']);
+    foreach (['tronc' => ['P7', 'P8'], 'entrepreneur' => ['P10', 'P11', 'P12', 'P9']] as $k => $ordre) {
+        $chemin[$k] = array_values(array_filter(array_map(static fn ($c) => $chemin[$k][$c] ?? null, $ordre)));
+    }
+    // La polyvalence : l'union des trois maîtrises, et qui la tient.
+    $union = [];
+    foreach ($maitrises as $m) { foreach ($m['competences'] as $c) { $union[$c] = true; } }
+    $paliers = [0, 0, 0, 0];
+    $parMetier = array_fill_keys(array_keys($maitrises), 0);
+    $avecCompetences = 0;
+    foreach ($actifs as $e) {
+        $tenues = array_flip(array_map('intval', $e['competences'] ?? []));
+        if ($tenues) { $avecCompetences++; }
+        $n = 0;
+        foreach ($maitrises as $k => $m) {
+            if ($m['competences'] && !array_diff_key(array_flip($m['competences']), $tenues)) { $n++; $parMetier[$k]++; }
+        }
+        $paliers[$n]++;
+    }
+    $sansFo = 0; $sansProc = 0;
+    foreach ($ref['competences'] ?? [] as $c) {
+        $l = $liens[(string) $c['id']] ?? null;
+        if (empty($l['formations'])) { $sansFo++; }
+        if (empty($l['procedures'])) { $sansProc++; }
+    }
+    $vides = [];
+    foreach (array_merge($chemin['tronc'], $chemin['entrepreneur']) as $x) {
+        foreach ($x['niveaux'] as $n) { if ($n['nouvelles'] === 0) { $vides[] = $x['nom']; } }
+    }
+    return ['chemin' => $chemin,
+        'polyvalence' => ['competences' => count($union), 'metiers' => array_values(array_map(static fn ($m) => ['cle' => $m['cle'], 'libelle' => $m['libelle'], 'niveau' => $m['niveau'],
+            'competences' => count($m['competences']), 'personnes' => $parMetier[$m['cle']]], $maitrises)), 'paliers' => ['3' => $paliers[3], '2' => $paliers[2], '1' => $paliers[1], '0' => $paliers[0]],
+            'avecCompetences' => $avecCompetences],
+        'effectifs' => ['actifs' => count($actifs), 'sansPoste' => $sansPoste, 'places' => count($actifs) - $sansPoste, 'magasins' => $magasins, 'equipesLues' => count($equipes)],
+        'manques' => ['sansFormation' => $sansFo, 'sansProcedure' => $sansProc, 'competences' => count($ref['competences'] ?? []), 'niveauxVides' => array_values(array_unique($vides))]];
+}
+
+/** GET /formation/carte — la carte des métiers, lue sur le référentiel et les équipes en cache. */
+function ep_formation_carte(): array
+{
+    if ($e = fmPret()) { return $e; }
+    @set_time_limit(240);
+    $p = pcPanel();
+    if (isset($p['erreur'])) { return $p['erreur']; }
+    $equipe = ep_formation_equipe();
+    $equipes = [];
+    foreach ($equipe['magasins'] ?? [] as $m) {
+        $sid = (int) $m['id'];
+        $r = pcLecture('/formation/equipe', static function () use ($sid) {
+            $avant = $_GET['shop'] ?? null;
+            $_GET['shop'] = (string) $sid;
+            try { return ep_formation_equipe(); } finally { if ($avant === null) { unset($_GET['shop']); } else { $_GET['shop'] = $avant; } }
+        }, 300, ['shop' => (string) $sid]);
+        if ($r !== null && is_array($r['employes'] ?? null)) { $equipes[] = $r['employes']; }
+    }
+    http_response_code(200);
+    return pcCarte($p['ref'], $p['liens'], $equipes, count($equipe['magasins'] ?? []));
 }
 
 /** Toutes les destinations possibles : les niveaux du panel (priorité), plus les postes v25 que le panel n'a pas. */
@@ -356,7 +493,7 @@ function pcCriteres(array $d, array $exigences): array
     foreach (pcAdmissionDefs()[$d['v25']]['criteres'] ?? [] as $c) {
         $fo = array_values(array_diff(array_map('strval', $c['fo'] ?? []), $parPanel));
         if (($c['type'] ?? '') === 'fo' && !$fo) { continue; }
-        $o[] = ['cle' => (string) $c['cle'], 'type' => in_array($c['type'] ?? '', ['poste', 'fo'], true) ? $c['type'] : 'manuel', 'libelle' => (string) $c['libelle'],
+        $o[] = ['cle' => (string) $c['cle'], 'type' => in_array($c['type'] ?? '', ['poste', 'fo', 'metiers'], true) ? $c['type'] : 'manuel', 'libelle' => (string) $c['libelle'],
             'detail' => $c['detail'] ?? null, 'codes' => array_map('strval', $c['codes'] ?? []), 'fo' => $fo, 'source' => 'referentiel'];
     }
     return $o;
@@ -388,6 +525,25 @@ function pcEvaluer(array $criteres, array $ctx, array $pers, array $faites): arr
             $manque = array_values(array_filter($c['fo'], static fn ($fo) => !pcAcquise($fo, $ctx, $pers['competences'] ?? [], $faites)));
             $c['ok'] = $manque === [];
             $c['manque'] = array_map(static fn ($fo) => ['fo' => $fo, 'nom' => pcNomFo($fo, $ctx)], $manque);
+        } elseif ($c['type'] === 'metiers') {
+            // Les trois métiers maîtrisés : toutes leurs compétences jusqu'au niveau de maîtrise, tenues dans le panel.
+            // Ce qui manque passe par les formations qui l'enseignent : elles s'ajoutent au chemin.
+            $tenues = $pers['competences'] ?? [];
+            $foDe = [];
+            foreach ($ctx['compParFo'] ?? [] as $fo => $cids) { foreach ($cids as $cid) { $foDe[(int) $cid][] = $fo; } }
+            $manqueC = [];
+            $c['metiers'] = [];
+            foreach (pcMaitrises($ctx['ref'] ?? []) as $m) {
+                $mq = array_values(array_diff($m['competences'], $tenues));
+                $c['metiers'][] = ['nom' => $m['libelle'], 'total' => count($m['competences']), 'manque' => count($mq)];
+                $manqueC = array_merge($manqueC, $mq);
+            }
+            $c['ok'] = $c['metiers'] !== [] && $manqueC === [];
+            $fos = [];
+            foreach (array_unique($manqueC) as $cid) { foreach ($foDe[(int) $cid] ?? [] as $fo) { if (!in_array($fo, $faites, true)) { $fos[$fo] = true; } } }
+            $fos = array_keys($fos);
+            usort($fos, static fn ($a, $b) => (int) substr($a, 3) <=> (int) substr($b, 3));
+            $c['manque'] = array_map(static fn ($fo) => ['fo' => $fo, 'nom' => pcNomFo($fo, $ctx)], $fos);
         }
         if ($c['ok']) { $c['preuve'] = 'panel'; $c['le'] = date('Y-m-d'); }
     }
@@ -418,7 +574,10 @@ function pcHorsAtteinte(string $code, array $crit, ?int $eid, ?string $tenu): ?s
 function pcFoAdmission(array $criteres): array
 {
     $o = [];
-    foreach ($criteres as $c) { if ($c['type'] === 'fo') { foreach ($c['fo'] as $fo) { $o[$fo] = true; } } }
+    foreach ($criteres as $c) {
+        if ($c['type'] === 'fo') { foreach ($c['fo'] as $fo) { $o[$fo] = true; } }
+        if ($c['type'] === 'metiers' && empty($c['ok'])) { foreach ($c['manque'] ?? [] as $m) { $o[$m['fo']] = true; } }
+    }
     return array_keys($o);
 }
 
@@ -513,7 +672,8 @@ function ep_parcours_destinations(): array
 function pcAdmissionSortie(array $crit): array
 {
     return array_map(static fn ($c) => ['cle' => $c['cle'], 'type' => $c['type'], 'libelle' => $c['libelle'], 'detail' => $c['detail'] ?? null,
-        'source' => $c['source'], 'ok' => (bool) $c['ok'], 'preuve' => $c['preuve'] ?? null, 'le' => $c['le'] ?? null, 'manque' => $c['manque'] ?? []], $crit);
+        'source' => $c['source'], 'ok' => (bool) $c['ok'], 'preuve' => $c['preuve'] ?? null, 'le' => $c['le'] ?? null, 'manque' => $c['manque'] ?? []]
+        + (isset($c['metiers']) ? ['metiers' => $c['metiers']] : []), $crit);
 }
 
 /** Les dates prévues des étapes non validées, au rythme choisi, à partir d'aujourd'hui (ou du début). */
@@ -633,7 +793,7 @@ function pcAdmissionSuivie(array $p, array $etapes): array
     if (!is_array($adm)) { return []; }
     $validees = array_column(array_filter($etapes, static fn ($e) => $e['statut'] === 'validee'), 'fo');
     foreach ($adm as &$c) {
-        if ($c['type'] !== 'fo' || !empty($c['ok'])) { continue; }
+        if (!in_array($c['type'], ['fo', 'metiers'], true) || !empty($c['ok'])) { continue; }
         $c['manque'] = array_values(array_filter($c['manque'] ?? [], static fn ($m) => !in_array($m['fo'], $validees, true)));
         if ($c['manque'] === []) { $c['ok'] = true; $c['preuve'] = 'parcours'; $c['le'] = date('Y-m-d'); }
     }

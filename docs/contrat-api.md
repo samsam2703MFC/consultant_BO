@@ -1313,6 +1313,10 @@ crée le parcours et rend `{parcours, etapes[]}` ; `GET /parcours?id=`, `GET /pa
 `POST /parcours/{id}/acquis/{cid}` (confirmer une compétence déclarée) ; `PATCH /parcours/{id}/admission/{cle} {fait}` (valider un
 critère d'admission `manuel` — ou un `poste` que le panel n'a pas ; `409` pour un critère vérifié ou de formations) ; `PATCH /parcours/{id}
 {rythme | statut: arrete | atteint}` (`atteint` : `409` tant qu'une formation ou un critère d'admission manque).
+`GET /formation/carte` (carte des métiers, à garder en cache côté écran : `_cache=300`) rend `{chemin{metiers[{id, nom, cle, libelle,
+maitrise, maitriseCompetences, niveaux[{id, nom, nouvelles, total, avecFormation, personnes}]}], tronc[], entrepreneur[], reseau[{id, nom}]},
+polyvalence{competences, metiers[{cle, libelle, niveau, competences, personnes}], paliers{3,2,1,0}, avecCompetences}, effectifs{actifs,
+sansPoste, places, magasins}, manques{sansFormation, sansProcedure, competences, niveauxVides[]}}` — des comptes, aucun nom de personne.
 Détail : `docs/formation.md`.
 
 ### `/tablette/book` et `/tablette/photos` — les données de la tablette des vendeuses

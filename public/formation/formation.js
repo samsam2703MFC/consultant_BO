@@ -100,6 +100,7 @@
   var I = null; // index dérivés du référentiel
 
   try {
+    S.carteVue = localStorage.getItem('fm.carte') || 'plan';
     S.tablette = /[?&]tablette=1\b/.test(location.search) || localStorage.getItem('fm.tablette') === '1';
   } catch (e) { /* stockage indisponible : mode normal */ }
 
@@ -173,7 +174,7 @@
     parcours: 'M2 12h20M6 8v8M12 8v8M18 8v8',
   };
   var NAV = [
-    ['Pilotage', [['tableau', 'Tableau de bord']]],
+    ['Pilotage', [['tableau', 'Carte des métiers']]],
     ['Référentiel', [['postes', 'Postes & sous-postes'], ['competences', 'Compétences'], ['formations', 'Formations'],
       ['procedures', 'Procédures opératoires'], ['ressources', 'Base de connaissances'], ['produit', 'Compétences produit']]],
     ['Équipes', [['parcours', 'Parcours des équipes'], ['equipes', 'Compétences des équipes']]],
@@ -343,75 +344,144 @@
     return '<a class="fm-kpi" href="' + href + '"><span class="fm-kpi__n">' + nombre + '</span><span class="fm-kpi__l">' + esc(libelle) + '</span>' + (sous ? '<span class="fm-kpi__s">' + sous + '</span>' : '') + '</a>';
   }
 
-  function ecranTableau() {
-    var R = S.ref;
-    var niveaux = 0, exigees = new Set(), vides = 0;
-    R.postes.forEach(function (p) { niveaux += p.niveaux.length; p.niveaux.forEach(function (nv) { if (!nv.competences.length) vides++; nv.competences.forEach(function (c) { exigees.add(c); }); }); });
-    var sansFormation = null, sansProcedure = null;
-    if (I.liens) {
-      sansFormation = 0; sansProcedure = 0;
-      exigees.forEach(function (cid) { var l = liensDe(cid); if (!l.formations.length) sansFormation++; if (!l.procedures.length) sansProcedure++; });
-    }
-    var actifs = S.pcListe ? S.pcListe.filter(function (p) { return p.statut === 'actif'; }) : null;
+  /* ── Carte des métiers (tableau de bord) ─────────────────────────────
+     Deux vues sur une bascule (maquettes 01a et 01c) : le plan des métiers — trois
+     lignes qui entrent TOUTES dans la polyvalence (le gérant maîtrise les trois
+     métiers), puis le tronc et la franchise — et les effectifs, avec le vivier.
+     Données : GET /formation/carte (src/parcours.php, pcCarte) — des comptes, aucun nom. */
+  var COUL = { vente: '#8D1D2C', boul: '#b07a2a', trait: '#3f7a52' };
+  var TRONC = '#47423c';
+  function pers(nb) { return '<span class="fm-st__pp' + (nb ? '' : ' is-zero') + '">' + (nb ? nb + ' pers.' : 'personne') + '</span>'; }
 
-    var h = bandeauLiens();
-    // 1. Les chiffres — chacun ouvre son écran.
-    h += '<div class="fm-kpis">' +
-      kpi('#/postes', n(R.postes.filter(function (p) { return p.id != null; }).length), 'Postes', pl(niveaux, 'niveau')) +
-      kpi('#/competences', n(R.competences.length), 'Compétences', n(exigees.size) + ' exigées par un niveau') +
-      kpi('#/formations', S.v25 ? n(S.v25.formations.length) : '…', 'Formations', pl(R.formations.length, 'évaluation') + ' dans le panel') +
-      kpi('#/procedures', n(R.procedures.length), 'Procédures', 'manuel opératoire') +
-      kpi('#/ressources', n(R.ressources.length), 'Ressources', 'base de connaissances') +
-      kpi('#/parcours', actifs ? n(actifs.length) : '…', 'Parcours en cours', actifs ? n(actifs.filter(function (p) { return p.retard; }).length) + ' en retard' : '') +
-      '</div>';
-
-    // 2. Ce qu'il reste à faire, et les parcours.
-    var todo = function (nb, texte, attrs, ok) {
-      return '<li><' + (attrs.indexOf('href=') === 0 ? 'a ' : 'button type="button" ') + attrs + '><span class="fm-todo__n' + (nb === 0 || ok ? ' is-ok' : '') + '">' + (nb === null ? '…' : n(nb)) + '</span>' +
-        '<span>' + texte + '</span><span class="fm-todo__go">Voir →</span></' + (attrs.indexOf('href=') === 0 ? 'a' : 'button') + '></li>';
+  function carteMetro(C) {
+    var ys = [110, 280, 450], svg = '', st = '';
+    var station = function (x, y, coul, href, nom, dt, nb, extra, mx, vide, w) {
+      w = w || 104;
+      return '<a class="fm-st" href="' + href + '" style="left:' + (x - w / 2) + 'px;width:' + w + 'px;top:' + (y - (mx ? 11 : 9)) + 'px;color:' + coul + '">' +
+        '<div class="fm-st__dot' + (mx ? ' is-mx' : '') + '" style="border-color:' + coul + '"></div><div class="fm-st__nm">' + esc(nom) + '</div>' +
+        '<div class="fm-st__dt' + (vide ? ' is-vide' : '') + '">' + dt + '</div>' + (extra || '') + pers(nb) + '</a>';
     };
-    var hp = (S.v25 && S.v25.horsPanel) || [];
-    h += '<div class="fm-cols" style="margin-top:1rem"><section class="card"><h2>À compléter</h2><ul class="fm-todo">' +
-      todo(sansFormation, 'compétences exigées <strong>sans formation</strong>', 'data-act="voir-comp" data-v="sansFormation"') +
-      todo(sansProcedure, 'compétences exigées <strong>sans procédure</strong> du manuel', 'data-act="voir-comp" data-v="sansProcedure"') +
-      todo(vides, 'niveaux <strong>sans aucune compétence</strong> exigée', 'href="#/postes"') +
-      (hp.length ? todo(hp.length, (hp.length > 1 ? 'postes du référentiel' : 'poste du référentiel') + ' <strong>pas encore dans le panel</strong> : ' + hp.map(function (x) { return esc(x.nom); }).join(', '), 'href="#/postes/v25/' + esc(hp[hp.length - 1].code) + '"') : '') +
-      '</ul></section>';
-    h += '<section class="card"><h2>Parcours en cours</h2>';
-    if (!actifs) h += attente('Lecture des parcours…');
-    else if (!actifs.length) h += '<p class="muted">Aucun parcours en cours. <a href="parcours/#/nouveau">Créer le premier</a>.</p>';
-    else {
-      h += '<ul class="fm-todo">' + actifs.slice(0, 6).map(function (p) {
+    C.chemin.metiers.forEach(function (m, k) {
+      var y = ys[k] || ys[2], coul = COUL[m.cle] || TRONC, nb = m.niveaux.length;
+      svg += '<path d="M30,' + y + ' L440,' + y + '" stroke="' + coul + '" stroke-width="7" fill="none" stroke-linecap="round"/>';
+      st += '<div class="fm-ligne-nom" style="left:18px;top:' + (y - 34) + 'px;color:' + coul + '">' + esc(m.libelle) + '</div>';
+      m.niveaux.forEach(function (n, i) {
+        var x = 60 + i * (300 / Math.max(nb - 1, 1));
+        st += station(x, y, coul, '#/postes/' + m.id + '/' + n.id, n.nom, pl(n.total, 'compétence'), n.personnes,
+          i === m.maitrise ? '<span class="fm-st__mt" style="background:' + coul + '">maîtrise</span><br>' : '', i === m.maitrise);
+      });
+    });
+    var P = C.polyvalence;
+    var hub = '<div class="fm-hub" style="left:440px;top:62px;width:185px;height:446px"><div class="fm-hub__k">Pour encadrer</div><div class="fm-hub__t">Maîtriser les trois métiers</div>' +
+      P.metiers.map(function (m) { return '<div class="fm-hub__m"><i style="background:' + (COUL[m.cle] || TRONC) + '"></i>' + esc(m.libelle) + '<b>' + n(m.competences) + '</b></div>'; }).join('') +
+      '<div class="fm-hub__s"><span>Polyvalence</span><span>' + n(P.competences) + '</span></div><div class="fm-hub__n">compétences au total (sans doublon), jusqu’au niveau « maîtrise » de chaque métier.<br><br>' +
+      'Le chef de section reste dans son métier ; le gérant, lui, tient les trois.<br><br><strong>' + n(P.paliers['3']) + '</strong> personne' + (P.paliers['3'] > 1 ? 's' : '') + ' les maîtrise' + (P.paliers['3'] > 1 ? 'nt' : '') + ' aujourd’hui.</div></div>';
+    svg += '<path d="M625,280 L1092,280" stroke="' + TRONC + '" stroke-width="7" fill="none" stroke-linecap="round"/>';
+    var total = P.competences;
+    C.chemin.tronc.forEach(function (x, k) {
+      var nv = x.niveaux[x.niveaux.length - 1];
+      if (!nv) return;
+      total += nv.nouvelles;
+      st += station([690, 790][k] || 790, 280, TRONC, '#/postes/' + x.id + '/' + nv.id, x.nom, '+' + nv.nouvelles + ' · <b>' + total + ' au total</b>', nv.personnes, '', false, false, 92);
+    });
+    var entre = C.chemin.entrepreneur.filter(function (x) { return x.code !== 'P9'; }), loc = C.chemin.entrepreneur.filter(function (x) { return x.code === 'P9'; })[0];
+    var xs = [900, 995, 1092];
+    entre.forEach(function (x, k) {
+      var nv = x.niveaux[x.niveaux.length - 1];
+      if (!nv) return;
+      st += station(xs[k] || 1092, 280, TRONC, '#/postes/' + x.id + '/' + nv.id, x.nom, nv.nouvelles ? '+' + pl(nv.nouvelles, 'compétence') : 'compétences à définir', nv.personnes, '', false, !nv.nouvelles, 92);
+    });
+    if (loc && loc.niveaux.length) {
+      var nl = loc.niveaux[loc.niveaux.length - 1];
+      svg += '<path d="M900,280 C900,180 910,120 960,120 L995,120" stroke="' + TRONC + '" stroke-width="5" stroke-dasharray="2 9" fill="none" stroke-linecap="round"/>';
+      st += station(995, 120, TRONC, '#/postes/' + loc.id + '/' + nl.id, loc.nom, nl.nouvelles ? '+' + pl(nl.nouvelles, 'compétence') : 'compétences à définir', nl.personnes, '', false, !nl.nouvelles, 92);
+    }
+    var zones = '<div class="fm-zone" style="left:0;width:650px"><b>Opérationnel</b></div><div class="fm-zone fm-zone--c" style="left:650px;width:200px"><b>Cadre et direction</b></div>' +
+      '<div class="fm-zone fm-zone--e" style="left:850px;width:300px"><b>Devenir entrepreneur</b></div>';
+    return '<div class="fm-metro-wrap"><div class="fm-metro">' + zones + '<svg width="1150" height="560" aria-hidden="true">' + svg + '</svg>' + hub + st + '</div></div>' +
+      '<div class="fm-legende">' + C.chemin.metiers.map(function (m) { return '<span><i style="background:' + (COUL[m.cle] || TRONC) + '"></i>' + esc(m.libelle) + '</span>'; }).join('') +
+      '<span><i style="background:' + TRONC + '"></i>Tronc commun</span><span>◎ niveau de maîtrise du métier</span>' + (loc ? '<span>· · · Locataire-gérant : l’autre voie que la franchise</span>' : '') + '</div>' +
+      (C.chemin.reseau.length ? '<p class="muted fm-small" style="margin-top:12px"><strong>Hors chemin — rôles du réseau</strong> (' + C.chemin.reseau.length + ') : ' +
+        C.chemin.reseau.map(function (x) { return '<a href="#/postes/' + x.id + '">' + esc(x.nom) + '</a>'; }).join(', ') + '</p>' : '');
+  }
+
+  function carteEffectifs(C) {
+    var E = C.effectifs, P = C.polyvalence, tot = Math.max(E.actifs, 1);
+    var nbDe = function (liste) { return liste.reduce(function (a, x) { return a + x.niveaux.reduce(function (b, nv) { return b + nv.personnes; }, 0); }, 0); };
+    var parts = [[nbDe(C.chemin.metiers), 'opérationnel', 'var(--accent)'], [nbDe(C.chemin.tronc), 'cadre et direction', '#a8665f'],
+      [nbDe(C.chemin.entrepreneur), 'entrepreneurs', '#c9a227'], [E.sansPoste, 'sans poste dans le panel', '#d9d3ca']];
+    var h = '<div class="fm-hero"><div><h2>' + pl(E.actifs, 'personne active', 'personnes actives') + ' dans ' + pl(E.magasins, 'magasin') + '</h2>' +
+      '<p class="muted">' + n(E.places) + ' placée' + (E.places > 1 ? 's' : '') + ' sur la carte ; ' + n(E.sansPoste) + ' sans poste dans le panel.</p>' +
+      '<div class="fm-pile">' + parts.map(function (x) { var w = x[0] * 100 / tot; return x[0] ? '<div style="width:' + w + '%;background:' + x[2] + (x[2] === '#d9d3ca' ? ';color:var(--muted-2)' : '') + '">' + (w >= 4 ? n(x[0]) : '') + '</div>' : ''; }).join('') + '</div>' +
+      '<div class="fm-legende" style="margin-top:8px">' + parts.map(function (x) { return '<span><i style="background:' + x[2] + ';height:10px;width:10px;border-radius:3px"></i>' + n(x[0]) + ' ' + x[1] + '</span>'; }).join('') + '</div></div>' +
+      (E.sansPoste ? '<a class="filter is-on" href="#/equipes">' + (E.sansPoste > 1 ? 'Placer les ' + n(E.sansPoste) + ' personnes' : 'Placer la personne') + ' →</a>' : '') + '</div>';
+    // Le vivier de gérants : qui maîtrise les trois métiers.
+    var totP = Math.max(P.paliers['3'] + P.paliers['2'] + P.paliers['1'] + P.paliers['0'], 1);
+    var palier = function (lib, v, col) { return '<div class="fm-palier"><span>' + lib + '</span><div class="fm-palier__bar"><i style="width:' + Math.max(v * 100 / totP, v ? 2 : 0) + '%;background:' + col + '"></i></div><b>' + n(v) + ' pers.</b></div>'; };
+    h += '<div class="fm-carte-tete"><div><h2>Le vivier de gérants</h2><p>Pour encadrer un magasin, il faut maîtriser les trois métiers. Qui est prêt, qui y est presque.</p></div></div>' +
+      '<div class="fm-vivier"><section class="card"><h2>Polyvalence</h2>' + palier('Les 3 métiers', P.paliers['3'], 'var(--ink)') + palier('2 métiers', P.paliers['2'], '#7a736a') +
+      palier('1 métier', P.paliers['1'], '#b8b2a8') + palier('Aucun encore', P.paliers['0'], '#e1dbd2') +
+      '<p class="muted fm-small" style="margin-top:10px">' + (P.paliers['3'] ? '<strong>' + pl(P.paliers['3'], 'personne') + '</strong> prête' + (P.paliers['3'] > 1 ? 's' : '') + ' pour Adjoint de Manager.' : 'Personne ne maîtrise encore les trois métiers.') + '</p></section>' +
+      '<section class="card"><h2>Métier par métier</h2>' + P.metiers.map(function (m) { return palier(esc(m.libelle), m.personnes, COUL[m.cle] || TRONC); }).join('') +
+      '<p class="muted fm-small" style="margin-top:10px">Maîtriser un métier : toutes ses compétences jusqu’au niveau de maîtrise (' + P.metiers.map(function (m) { return esc(m.niveau); }).filter(function (x, i, a) { return a.indexOf(x) === i; }).join(', ') + ').</p></section></div>' +
+      (P.avecCompetences < E.actifs / 2 ? bandeau('Dans le panel, <strong>' + n(P.avecCompetences) + ' personne' + (P.avecCompetences > 1 ? 's' : '') + ' sur ' + n(E.actifs) + '</strong> ont des compétences validées : le vivier se remplira avec les parcours et la validation en magasin.', '') : '');
+    // Où est l'équipe.
+    var cartePoste = function (x, titre) {
+      var segs = x.niveaux.map(function (nv, i) {
+        return '<div><div class="fm-segs__b' + (nv.personnes ? ' is-p' : '') + (i === x.maitrise ? ' is-mx' : '') + '">' + n(nv.personnes) + '</div><div class="fm-segs__l">' + esc(nv.nom) + (i === x.maitrise ? '<br><b>maîtrise</b>' : '') + '</div></div>';
+      }).join('');
+      var der = x.niveaux[x.niveaux.length - 1];
+      var cond = (x.code === 'P7' || x.code === 'P8') ? '<div class="fm-cond">Condition : maîtriser les 3 métiers<div class="fm-trois">' + C.chemin.metiers.map(function (m) { return '<span style="background:' + (COUL[m.cle] || TRONC) + '">' + esc(m.libelle.split(' –')[0]) + '</span>'; }).join('') + '</div></div>' : '';
+      return '<a class="fm-pc3" href="#/postes/' + x.id + '"><div class="fm-pc3__t">' + esc(titre || x.nom) + '<span>' + n(x.niveaux.reduce(function (a, nv) { return a + nv.personnes; }, 0)) + ' pers.</span></div>' +
+        '<div class="fm-segs">' + segs + '</div><div class="fm-pc3__d">' + (der && der.total ? pl(der.total, 'compétence') + ' au dernier niveau · ' + pct(der.avecFormation, der.total) + ' % avec formation' : '<span style="color:var(--danger)">compétences à définir</span>') + '</div>' + cond + '</a>';
+    };
+    h += '<div class="fm-carte-tete"><div><h2>Où est l’équipe</h2><p>Chaque poste, ses niveaux de gauche à droite ; dans chaque case, le nombre de personnes à ce niveau aujourd’hui. Encadré : le niveau de maîtrise du métier.</p></div></div>' +
+      '<div class="fm-cols3"><div><p class="fm-col__t">Opérationnel</p>' + C.chemin.metiers.map(function (m) { return cartePoste(m, m.libelle); }).join('') + '</div>' +
+      '<div><p class="fm-col__t">Cadre et direction</p>' + C.chemin.tronc.map(function (x) { return cartePoste(x); }).join('') + (C.chemin.reseau.length ? '<p class="muted fm-small">Rôles du réseau (' + C.chemin.reseau.length + ') : hors chemin.</p>' : '') + '</div>' +
+      '<div><p class="fm-col__t">Devenir entrepreneur</p>' + C.chemin.entrepreneur.map(function (x) { return cartePoste(x); }).join('') + '</div></div>';
+    return h;
+  }
+
+  function ecranTableau() {
+    var R = S.ref, C = S.carte, vue = S.carteVue === 'effectifs' ? 'effectifs' : 'plan';
+    var h = bandeauLiens();
+    if (vue === 'plan') {
+      var E = C && C.effectifs;
+      h += '<div class="fm-kpis">' +
+        kpi('#/equipes', E ? n(E.actifs) : '…', 'Personnes actives', E ? n(E.places) + ' placées sur la carte · ' + pl(E.magasins, 'magasin') : 'lecture des équipes…') +
+        kpi('#/postes', n(R.postes.filter(function (p) { return p.id != null; }).length), 'Postes', pl(R.postes.reduce(function (a, p) { return a + p.niveaux.length; }, 0), 'niveau')) +
+        kpi('#/competences', n(R.competences.length), 'Compétences', C ? n(C.manques.competences - C.manques.sansFormation) + ' ont une formation' : '') +
+        kpi('#/formations', S.v25 ? n(S.v25.formations.length) : '…', 'Formations', pl(R.formations.length, 'évaluation') + ' dans le panel') + '</div>';
+    }
+    h += '<div class="fm-carte-tete"><div><h2>' + (vue === 'plan' ? 'Le chemin des métiers' : 'Les équipes sur la carte') + '</h2><p>' + (vue === 'plan' ?
+      'On apprend un métier sur sa ligne. Pour encadrer un magasin, les <strong>trois</strong> lignes sont nécessaires : le gérant maîtrise la vente, la boulangerie-pâtisserie et le traiteur. Ensuite, le tronc : adjoint, manager, puis la franchise.' :
+      'Combien de personnes à chaque niveau, et qui peut encadrer demain.') + '</p></div>' +
+      '<div class="fm-seg" role="group" aria-label="Vue de la carte"><button type="button" data-act="carte-vue" data-v="plan"' + (vue === 'plan' ? ' class="is-on" aria-pressed="true"' : '') + '>Plan des métiers</button>' +
+      '<button type="button" data-act="carte-vue" data-v="effectifs"' + (vue === 'effectifs' ? ' class="is-on" aria-pressed="true"' : '') + '>Effectifs</button></div></div>';
+    if (S.carteErreur) h += '<p class="error">La carte n’a pas pu être lue : ' + esc(S.carteErreur) + '</p>';
+    else if (!C) h += bandeau('Lecture de la carte : le référentiel, puis les équipes de chaque magasin (la première fois, une minute)…', '', true);
+    else h += vue === 'plan' ? carteMetro(C) : carteEffectifs(C);
+
+    // Ce qui manque — commun aux deux vues.
+    if (C) {
+      var M = C.manques;
+      h += '<h2 class="fm-section-titre">Ce qui manque</h2><div class="fm-alertes">' +
+        '<a class="fm-alerte' + (C.effectifs.sansPoste ? '' : ' is-ok') + '" href="#/equipes"><b>' + n(C.effectifs.sansPoste) + '</b><span>' + (C.effectifs.sansPoste > 1 ? 'personnes' : 'personne') + ' sans poste dans le panel</span><small>Elles n’apparaissent pas sur la carte : à placer.</small></a>' +
+        '<a class="fm-alerte is-w" href="#/competences" data-act="voir-comp" data-v="sansFormation"><b>' + n(M.sansFormation) + '</b><span>compétences sans formation</span><small>À rattacher à une FO.</small></a>' +
+        '<a class="fm-alerte" href="#/competences" data-act="voir-comp" data-v="sansProcedure"><b>' + n(M.sansProcedure) + ' / ' + n(M.competences) + '</b><span>compétences sans procédure du manuel</span><small>' + (M.sansProcedure === M.competences ? 'Le manuel n’est relié à aucune compétence.' : 'À relier au manuel opératoire.') + '</small></a>' +
+        (M.niveauxVides.length ? '<a class="fm-alerte" href="#/postes"><b>' + n(M.niveauxVides.length) + '</b><span>niveaux sans compétence</span><small>' + esc(M.niveauxVides.join(', ')) + '</small></a>' : '') + '</div>';
+    }
+    // Les parcours en cours, en bref.
+    var actifs = S.pcListe ? S.pcListe.filter(function (p) { return p.statut === 'actif'; }) : null;
+    if (actifs && actifs.length) {
+      h += '<h2 class="fm-section-titre">Parcours en cours</h2><section class="card"><ul class="fm-todo">' + actifs.slice(0, 6).map(function (p) {
         var x = p.total ? Math.round(p.validees * 100 / p.total) : 0;
         return '<li><a href="parcours/#/p/' + p.id + '"><span class="fm-todo__n is-ok">' + x + '%</span><span><strong>' + esc(p.nom) + '</strong> → ' + esc(p.cibleNom) +
           (p.criteres ? ' <span class="muted fm-small">· admission ' + p.admis + '/' + p.criteres + '</span>' : '') + '</span><span class="fm-todo__go">' + (p.retard ? 'en retard' : 'Voir →') + '</span></a></li>';
-      }).join('') + '</ul>' + (actifs.length > 6 ? '<p class="muted fm-small" style="margin-top:8px"><a href="#/parcours">Les ' + actifs.length + ' parcours →</a></p>' : '');
+      }).join('') + '</ul>' + (actifs.length > 6 ? '<p class="muted fm-small" style="margin-top:8px"><a href="#/parcours">Les ' + actifs.length + ' parcours →</a></p>' : '') + '</section>';
     }
-    h += '</section></div>';
-
-    // 3. Les postes, par famille.
-    h += '<h2 class="fm-section-titre">Les postes</h2><p class="muted" style="margin:-0.4rem 0 0.8rem">La barre : part des compétences exigées qui ont une formation.</p>';
-    if (!S.v25) h += attente('Lecture des familles de postes…');
-    else {
-      var pf = postesParFamille();
-      h += '<div class="fm-familles">' + FAMILLES.concat(pf.autres.length ? [['autres', 'Autres', 'Niveaux rattachés à aucun poste.']] : []).map(function (f) {
-        var l = pf[f[0]];
-        return '<section class="card fm-famille"><h2>' + esc(f[1]) + '</h2><p class="muted">' + esc(f[2]) + '</p>' + (l.length ? l.map(function (x) {
-          if (x.v25) {
-            return '<a class="fm-famille__ligne" href="#/postes/v25/' + esc(x.v25.code) + '"><span class="fm-famille__nom">' + esc(x.v25.nom) + '<span class="fm-tag fm-tag--accent">à créer dans le panel</span></span><span></span>' +
-              '<span class="fm-famille__info">référentiel v25 : critères d’admission, formations, plan</span></a>';
-          }
-          var p = x.poste, c = couverture(p);
-          return '<a class="fm-famille__ligne" href="#/postes/' + (p.id != null ? p.id : 'sans') + '"><span class="fm-famille__nom">' + esc(p.nom) + '</span>' +
-            '<span class="fm-famille__pct">' + (c.comps && c.f !== null ? pct(c.f, c.comps) + ' %' : '') + '</span>' +
-            '<span class="fm-famille__info">' + pl(c.niveaux, 'niveau') + ' · ' + (c.comps ? pl(c.comps, 'compétence') + ' exigée' + (c.comps > 1 ? 's' : '') : 'aucune compétence exigée') + '</span>' +
-            (c.comps && c.f !== null ? barre(c.f, c.comps) : '') + '</a>';
-        }).join('') : '<p class="muted" style="padding:8px 0 12px">Aucun poste.</p>') + '</section>';
-      }).join('') + '</div>';
-    }
-
     h += '<details class="fm-tech"><summary>Détail technique : ce que le panel a rendu</summary>' + carteAppels() + '</details>';
-    return { titre: 'Tableau de bord', corps: h };
+    return { titre: 'Carte des métiers', corps: h };
   }
 
   /** Ce que le panel a rendu, route par route : un vide et un 403 ne se confondent pas. */
@@ -480,58 +550,104 @@
     return { titre: TITRES.postes, corps: bandeauLiens() + '<div class="fm-split">' + arbre + '<div>' + droite + '</div></div>' };
   }
 
+  /* Le panel ne liste, à chaque niveau, que ses NOUVELLES compétences (mesuré le 31/10/2026) :
+     ce qu'il faut maîtriser à un niveau = le cumul des niveaux du poste jusqu'à lui. */
+  function cumul(poste, niveauId) {
+    var s = new Set(), fini = false;
+    poste.niveaux.forEach(function (nv) { if (fini) return; nv.competences.forEach(function (c) { s.add(c); }); if (nv.id === niveauId) fini = true; });
+    return s;
+  }
+  function catDe(c) { var k = (c && c.categorie) || ''; return !k || /^\d+$/.test(k) ? 'À classer' : k; }
+  /** Les codes FO qui enseignent une compétence (via ses formations du panel « [FO-xx] … »). */
+  function foDe(cid) {
+    var l = liensDe(cid), o = [];
+    (l ? l.formations : []).forEach(function (f) { var k = codeFo(f.nom); if (k && o.indexOf(k) < 0) o.push(k); });
+    return o.sort(function (a, b) { return +a.slice(3) - +b.slice(3); });
+  }
+  function tagsFo(cid) {
+    if (!I.liens) return '<span class="muted fm-small">…</span>';
+    var f = foDe(cid), l = liensDe(cid);
+    if (f.length) return f.slice(0, 2).map(function (k) { return '<a class="chip chip--soft" href="#/formations/' + k + '">' + k + '</a>'; }).join('');
+    if (l && l.formations.length) return '<a class="chip chip--soft" href="#/formations/' + l.formations[0].id + '">' + esc(court(l.formations[0].nom, 26)) + '</a>';
+    return '<span class="chip chip--ko">sans formation</span>';
+  }
+
   function ficheNiveau(poste, niveau) {
-    var comps = niveau.competences.map(function (cid) { return I.comp.get(cid); }).filter(Boolean);
-    var formations = new Set(), procedures = new Set(), ressources = new Set();
-    if (I.liens) comps.forEach(function (c) { var l = liensDe(c.id); l.formations.forEach(function (f) { formations.add(f.id); }); l.procedures.forEach(function (p) { procedures.add(p.id); }); l.ressources.forEach(function (r) { ressources.add(r.id); }); });
-    var rang = poste.niveaux.indexOf(niveau) + 1;
+    var pid = poste.id != null ? poste.id : 'sans';
+    var rang = poste.niveaux.indexOf(niveau);
+    var tout = cumul(poste, niveau.id);
+    var nouv = niveau.competences.slice();
+    var avant = Array.from(tout).filter(function (c) { return nouv.indexOf(c) < 0; });
+    var vue = S.ficheVue === 'avant' || S.ficheVue === 'tout' ? S.ficheVue : 'nouveau';
+    var ids = vue === 'nouveau' ? nouv : vue === 'avant' ? avant : Array.from(tout);
     var h = '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(poste.nom) + ' › ' + esc(niveau.nom) + '</h2>' +
-      '<p class="muted">Niveau ' + rang + ' sur ' + poste.niveaux.length + (niveau.description ? ' · ' + esc(niveau.description) : '') + '</p></div>' +
+      '<p class="muted">Niveau ' + (rang + 1) + ' sur ' + poste.niveaux.length + ' · ' + pl(tout.size, 'compétence') + ' à maîtriser, dont ' + n(nouv.length) + ' nouvelle' + (nouv.length > 1 ? 's' : '') + (niveau.description ? ' · ' + esc(niveau.description) : '') + '</p></div>' +
       '<div class="fm-links">' +
-      '<a class="filter" href="#/manuel/poste/' + (poste.id != null ? poste.id : 'sans') + '/' + niveau.id + '">Ouvrir dans le manuel</a>' +
-      '<a class="filter" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=niveau&id=' + niveau.id + '">Fiche PDF du niveau ↗</a>' +
-      (poste.id != null ? '<a class="filter" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=poste&id=' + poste.id + '">Fiche PDF du poste ↗</a>' : '') +
-      '</div></div>';
-    h += '<div class="grid grid--tight">' +
-      '<section class="card"><h2>Compétences</h2><p class="metric">' + n(comps.length) + '</p><p class="muted">exigées à ce niveau</p></section>' +
-      '<section class="card"><h2>Formations</h2><p class="metric">' + (I.liens ? n(formations.size) : '…') + '</p><p class="muted">qui les enseignent</p></section>' +
-      '<section class="card"><h2>Procédures</h2><p class="metric">' + (I.liens ? n(procedures.size) : '…') + '</p><p class="muted">du manuel opératoire</p></section>' +
-      '<section class="card"><h2>Ressources</h2><p class="metric">' + (I.liens ? n(ressources.size) : '…') + '</p><p class="muted">base de connaissances</p></section></div>';
+      '<a class="filter" href="#/manuel/poste/' + pid + '/' + niveau.id + '">Manuel</a>' +
+      '<a class="filter" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=niveau&id=' + niveau.id + '">Fiche PDF ↗</a>' +
+      bouton('niv-ouvrir', 'niv-ouvrir', '+ Exiger une compétence', ' data-nid="' + niveau.id + '"', 'is-on') + '</div></div>';
+    // L'escalier du poste : chaque marche, ce qu'elle ajoute et le total.
+    h += '<div class="fm-escalier">' + poste.niveaux.map(function (nv, i) {
+      return (i ? '<span class="fm-escalier__x">›</span>' : '') + '<a class="' + (nv === niveau ? 'is-on' : i < rang ? 'is-fait' : '') + '" href="#/postes/' + pid + '/' + nv.id + '">' +
+        '<span class="fm-escalier__t">' + esc(nv.nom) + '</span><span class="fm-escalier__d">+' + n(nv.competences.length) + ' · ' + n(cumul(poste, nv.id).size) + ' au total</span></a>';
+    }).join('') + '</div>';
+    if (niveau.competencesLues === false) h += bandeau('Compétences du niveau illisibles : ' + esc(niveau.competencesErreur || 'erreur du panel') + '.', 'error');
 
-    if (niveau.competencesLues === false) {
-      h += bandeau('Compétences du niveau illisibles : ' + esc(niveau.competencesErreur || 'erreur du panel') + '.', 'error');
+    // À gauche : ce qu'il faut savoir faire.
+    var g = '<section class="card"><h2>Ce qu’il faut savoir faire</h2><div class="fm-seg fm-seg--petit" role="group">' +
+      [['nouveau', 'Nouveau à ce niveau', nouv.length], ['avant', 'Acquis avant', avant.length], ['tout', 'Tout', tout.size]].map(function (v) {
+        return '<button type="button" data-act="fiche-vue" data-v="' + v[0] + '"' + (vue === v[0] ? ' class="is-on"' : '') + '>' + v[1] + ' · ' + n(v[2]) + '</button>';
+      }).join('') + '</div>';
+    var parCat = {};
+    ids.forEach(function (cid) { var c = I.comp.get(cid) || { id: cid, nom: 'Compétence #' + cid }; (parCat[catDe(c)] = parCat[catDe(c)] || []).push(c); });
+    var cats = Object.keys(parCat).sort(function (a, b) { return parCat[b].length - parCat[a].length || a.localeCompare(b, 'fr'); });
+    if (!ids.length) g += '<p class="muted" style="margin-top:6px">' + (vue === 'avant' ? 'Premier niveau du poste : rien avant.' : 'Aucune compétence exigée à ce niveau.') + '</p>';
+    cats.forEach(function (k) {
+      g += '<div class="fm-cat">' + esc(k) + ' · ' + parCat[k].length + '</div>' + parCat[k].sort(function (a, b) { return a.nom.localeCompare(b.nom, 'fr'); }).map(function (c) {
+        var propre = nouv.indexOf(c.id) >= 0;
+        return '<div class="fm-comp"><span class="fm-comp__ck"></span><a href="#/competences/' + c.id + '">' + esc(c.nom) + '</a><span class="fm-comp__tags">' + tagsFo(c.id) + '</span>' +
+          (propre ? bouton('niv-' + niveau.id + '-' + c.id, 'niv-retirer', '×', ' data-nid="' + niveau.id + '" data-cid="' + c.id + '" title="Ne plus exiger cette compétence à ce niveau"', 'fm-x') : '<span></span>') + '</div>';
+      }).join('');
+    });
+    g += '</section>';
+
+    // À droite : comment l'apprendre, comment y accéder, et après.
+    var couvre = {}, sansFo = 0, autres = new Map();
+    nouv.forEach(function (cid) {
+      var f = I.liens ? foDe(cid) : [];
+      f.forEach(function (k) { couvre[k] = (couvre[k] || 0) + 1; });
+      if (I.liens && !liensDe(cid).formations.length) sansFo++;
+      if (I.liens && !f.length) liensDe(cid).formations.forEach(function (x) { autres.set(x.id, x); });
+    });
+    var evals = {};
+    (formationsFo() || []).forEach(function (x) { evals[x.code] = x.evaluations.length; });
+    var codes = Object.keys(couvre).sort(function (a, b) { return +a.slice(3) - +b.slice(3); });
+    var d2 = '<section class="card"><h2>Pour les apprendre</h2>';
+    if (!I.liens) d2 += attente('Liens des compétences en cours de lecture…');
+    else if (!codes.length && !autres.size) d2 += '<p class="muted">Aucune formation ne couvre les compétences nouvelles de ce niveau.</p>';
+    else {
+      d2 += '<p class="muted fm-small" style="margin:-4px 0 4px">Dans l’ordre du parcours.</p>' + codes.map(function (k) {
+        return '<a class="fm-fo" href="#/formations/' + k + '"><span class="fm-fo__code">' + k + '</span><span><span class="fm-fo__t">' + esc(nomFo(k).replace(/^Formation\s+/, '')) + '</span>' +
+          '<span class="fm-fo__d">' + (evals[k] ? pl(evals[k], 'évaluation') + ' · ' : '') + 'couvre ' + pl(couvre[k], 'compétence') + ' de ce niveau</span></span></a>';
+      }).join('') + Array.from(autres.values()).map(function (x) {
+        return '<a class="fm-fo" href="#/formations/' + x.id + '"><span class="fm-fo__code">—</span><span><span class="fm-fo__t">' + esc(x.nom) + '</span><span class="fm-fo__d">formation du panel, sans code FO</span></span></a>';
+      }).join('');
     }
-    h += '<section class="card table-card"><div class="fm-card-head"><h2>Compétences exigées</h2>' +
-      bouton('niv-ouvrir', 'niv-ouvrir', '+ Exiger une compétence', ' data-nid="' + niveau.id + '"', 'is-on') + '</div>' +
-      tableCompetences(comps, { niveaux: false, action: function (c) {
-        return bouton('niv-' + niveau.id + '-' + c.id, 'niv-retirer', 'Retirer', ' data-nid="' + niveau.id + '" data-cid="' + c.id + '" title="Ne plus exiger cette compétence à ce niveau"');
-      } }) + '</section>';
-
-    // Exigences et tâches : lues à la demande.
-    var d = S.niveaux[niveau.id];
-    h += '<div class="fm-cols" style="margin-top:1rem">';
-    var bloc = function (titre, cle, vide) {
-      var x = '<section class="card"><h2>' + titre + '</h2>';
-      if (!d || d.charge) x += attente('Lecture…');
-      else if (d.erreur) x += '<p class="error">' + esc(d.erreur) + '</p>';
-      else {
-        var appel = (d.data.appels || []).filter(function (a) { return a.cle === cle; })[0];
-        var lignes = d.data[cle] || [];
-        if (appel && !(appel.code >= 200 && appel.code < 300)) x += '<p class="muted">Route indisponible : ' + chemin(appel.chemin) + ' → HTTP ' + esc(appel.code) + '</p>';
-        else if (!lignes.length) x += '<p class="muted">' + vide + '</p>';
-        else x += '<ul>' + lignes.map(function (r) { return '<li>' + esc(r.nom) + (r.description && r.description !== r.nom ? ' <span class="muted">— ' + esc(court(r.description, 140)) + '</span>' : '') + '</li>'; }).join('') + '</ul>';
-      }
-      return x + '</section>';
-    };
-    // Les critères d'admission : les exigences du panel d'abord, le référentiel du cockpit complète.
-    var ap = d && d.data ? (d.data.appels || []).filter(function (a) { return a.cle === 'exigences'; })[0] : null;
-    var note = !d || d.charge ? attente('Lecture des exigences du panel…') : d.erreur ? '<p class="error">' + esc(d.erreur) + '</p>' :
-      ap && !(ap.code >= 200 && ap.code < 300) ? '<p class="muted">Exigences du panel indisponibles : ' + chemin(ap.chemin) + ' → HTTP ' + esc(ap.code) + '</p>' : '';
+    if (sansFo) d2 += '<div class="fm-encart"><strong>' + pl(sansFo, 'compétence') + '</strong> de ce niveau sans formation : à rattacher.</div>';
+    d2 += '</section>';
+    var dn = S.niveaux[niveau.id];
+    var ap = dn && dn.data ? (dn.data.appels || []).filter(function (a) { return a.cle === 'exigences'; })[0] : null;
+    var note = (rang > 0 ? '<p style="margin:0 0 10px;font-size:14px">Avoir validé <strong>' + esc(poste.niveaux[rang - 1].nom) + '</strong> (' + pl(avant.length, 'compétence') + ').</p>' : '') +
+      (!dn || dn.charge ? attente('Lecture des exigences du panel…') : dn.erreur ? '<p class="error">' + esc(dn.erreur) + '</p>' :
+        ap && !(ap.code >= 200 && ap.code < 300) ? '<p class="muted">Exigences du panel indisponibles : ' + chemin(ap.chemin) + ' → HTTP ' + esc(ap.code) + '</p>' : '');
     var code = S.v25 && S.v25.niveauxV25 ? S.v25.niveauxV25[niveau.id] : null;
-    h += carteCriteres(criteresAdmission(code, d && d.data ? d.data.exigences : []), note);
-    h += bloc('Tâches du niveau', 'taches', 'Aucune tâche attachée à ce niveau.');
-    h += '</div>';
-    return h;
+    d2 += carteCriteres(criteresAdmission(code, dn && dn.data ? dn.data.exigences : []), note).replace('<h2>Critères d’admission</h2>', '<h2>Pour y accéder</h2>');
+    var suivant = poste.niveaux[rang + 1];
+    d2 += '<section class="card"><h2>Ensuite</h2>' + (suivant ? '<p style="margin:0;font-size:14px"><a href="#/postes/' + pid + '/' + suivant.id + '"><strong>' + esc(suivant.nom) + '</strong></a> : +' +
+      pl(suivant.competences.length, 'compétence') + ', ' + n(cumul(poste, suivant.id).size) + ' au total.</p>' : '<p class="muted">Dernier niveau du poste.</p>') + '</section>';
+    var taches = dn && dn.data ? dn.data.taches || [] : [];
+    if (taches.length) d2 += '<section class="card"><h2>Tâches du niveau</h2><ul>' + taches.map(function (r) { return '<li>' + esc(r.nom) + '</li>'; }).join('') + '</ul></section>';
+    return h + '<div class="fm-deux"><div>' + g + '</div><div>' + d2 + '</div></div>';
   }
 
   /**
@@ -564,6 +680,7 @@
     if (!crit.length) return h + (note ? '' : '<p class="muted">Aucun critère : on y entre par les compétences et les formations du niveau.</p>') + '</section>';
     h += '<ul class="fiche-ul">' + crit.map(function (c) {
       var comment = c.type === 'poste' ? 'vérifié dans le panel : le poste tenu' :
+        c.type === 'metiers' ? 'vérifié dans le panel : toutes les compétences de la vente, de la boulangerie-pâtisserie et du traiteur jusqu’à leur niveau de maîtrise — les formations qui manquent s’ajoutent au parcours' :
         c.type === 'fo' ? 'vérifié : ' + c.fo.map(function (k) { return '<a href="#/formations/' + esc(k) + '">' + esc(k) + '</a> ' + esc(nomFo(k)); }).join(', ') + ' — ajoutée au parcours si elle manque' :
         'validé par la manager ou le consultant, dans le suivi du parcours';
       return '<li><strong>' + esc(c.libelle) + '</strong> <span class="chip ' + (c.source === 'panel' ? 'chip--accent' : 'chip--soft') + '">' + (c.source === 'panel' ? 'panel' : 'référentiel') + '</span>' +
@@ -652,17 +769,52 @@
       return true;
     });
     var vues = [['tous', 'Toutes'], ['exigees', 'Exigées par un niveau'], ['hors', 'Hors niveau'], ['sansFormation', 'Sans formation'], ['sansProcedure', 'Sans procédure']];
+    var bascule = '<div class="fm-seg" role="group" style="margin-left:auto"><button type="button" data-act="filtre" data-k="compVue" data-v="liste"' + (f.compVue !== 'matrice' ? ' class="is-on"' : '') + '>Liste</button>' +
+      '<button type="button" data-act="filtre" data-k="compVue" data-v="matrice"' + (f.compVue === 'matrice' ? ' class="is-on"' : '') + '>Matrice</button></div>';
+    if (f.compVue === 'matrice') return { titre: TITRES.competences, corps: bandeauLiens() + '<div class="filters"><div class="filters__row">' + bascule + '</div></div>' + matriceCompetences() };
     var h = bandeauLiens() + '<div class="filters"><div class="filters__row">' +
       '<input class="fm-search" type="search" placeholder="Rechercher une compétence…" data-input="q" value="' + esc(f.q) + '" />' +
       '<select class="fm-select" data-input="categorie"><option value="">Toutes les catégories</option>' +
       I.categories.map(function (c) { return '<option' + (f.categorie === c ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select>' +
-      bouton('comp+', 'comp-nouvelle', '+ Nouvelle compétence', '', 'is-on') + '</div>' +
+      bouton('comp+', 'comp-nouvelle', '+ Nouvelle compétence', '', 'is-on') + bascule + '</div>' +
       '<div class="filters__row">' + vues.map(function (v) {
         var off = (v[0] === 'sansFormation' || v[0] === 'sansProcedure') && !I.liens;
         return '<button type="button" class="filter' + (f.vue === v[0] ? ' is-on' : '') + '" data-act="filtre" data-k="vue" data-v="' + v[0] + '"' + (off ? ' disabled title="Les liens des compétences sont en cours de lecture"' : '') + '>' + esc(v[1]) + '</button>';
       }).join('') + '<span class="muted fm-small">' + pl(liste.length, 'compétence') + ' sur ' + n(R.competences.length) + '</span></div></div>';
     h += '<section class="card table-card" style="margin-top:0">' + tableCompetences(liste, { niveaux: true }) + '</section>';
     return { titre: TITRES.competences, corps: h };
+  }
+
+  /** Matrice compétences × niveaux d'un poste : un carré plein où elle entre, clair ensuite. */
+  function matriceCompetences() {
+    var postes = S.ref.postes.filter(function (p) { return p.id != null && p.niveaux.some(function (nv) { return nv.competences.length; }); });
+    if (!postes.length) return '<p class="muted">Aucun poste n’a de compétence exigée.</p>';
+    var p = postes.filter(function (x) { return String(x.id) === String(S.f.matPoste); })[0] || postes[0];
+    var h = '<div class="fm-choix">' + postes.map(function (x) {
+      return '<button type="button" class="filter' + (x === p ? ' is-on' : '') + '" data-act="filtre" data-k="matPoste" data-v="' + x.id + '">' + esc(x.nom) + '</button>';
+    }).join('') + '</div>';
+    var intro = new Map();
+    p.niveaux.forEach(function (nv, k) { nv.competences.forEach(function (c) { if (!intro.has(c)) intro.set(c, k); }); });
+    var parCat = {};
+    intro.forEach(function (k, cid) { var c = I.comp.get(cid) || { id: cid, nom: 'Compétence #' + cid }; (parCat[catDe(c)] = parCat[catDe(c)] || []).push([k, c]); });
+    var cats = Object.keys(parCat).sort(function (a, b) {
+      var ma = Math.min.apply(null, parCat[a].map(function (x) { return x[0]; })), mb = Math.min.apply(null, parCat[b].map(function (x) { return x[0]; }));
+      return ma - mb || a.localeCompare(b, 'fr');
+    });
+    h += '<div class="fm-legende" style="margin:0 0 12px"><span><i class="fm-pt2 is-new" style="width:14px;height:14px"></i>exigée à partir de ce niveau</span><span><i class="fm-pt2 is-acq" style="width:14px;height:14px"></i>déjà acquise</span>' +
+      '<span><span class="chip chip--soft">FO-01</span> la formation qui l’enseigne</span><span><span class="chip chip--ko">sans formation</span></span></div>';
+    h += '<section class="card table-card" style="margin-top:0"><div class="table-scroll"><table class="fm-mat"><thead><tr><th>Compétence</th>' + p.niveaux.map(function (nv) {
+      return '<th>' + esc(nv.nom) + '<small>+' + n(nv.competences.length) + ' · ' + n(cumul(p, nv.id).size) + ' au total</small></th>';
+    }).join('') + '<th>Formation</th></tr></thead><tbody>';
+    cats.forEach(function (k) {
+      h += '<tr class="fm-group"><td colspan="' + (p.niveaux.length + 2) + '">' + esc(k) + ' · ' + parCat[k].length + '</td></tr>';
+      parCat[k].sort(function (a, b) { return a[0] - b[0] || a[1].nom.localeCompare(b[1].nom, 'fr'); }).forEach(function (x) {
+        h += '<tr class="row-link" data-href="#/competences/' + x[1].id + '"><td>' + esc(x[1].nom) + '</td>' + p.niveaux.map(function (nv, j) {
+          return '<td class="fm-mat__c">' + (j === x[0] ? '<i class="fm-pt2 is-new"></i>' : j > x[0] ? '<i class="fm-pt2 is-acq"></i>' : '') + '</td>';
+        }).join('') + '<td><span class="fm-comp__tags" style="justify-content:flex-start">' + tagsFo(x[1].id) + '</span></td></tr>';
+      });
+    });
+    return h + '</tbody></table></div></section>';
   }
 
   function ficheCompetence(cid) {
@@ -767,7 +919,10 @@
     var liste = toutes.filter(function (x) { return !q || norm(x.code + ' ' + x.nom).indexOf(q) >= 0; });
     var autres = Array.from(I.formation.values()).filter(function (t) { return !codeFo(t.nom) && (!q || norm(t.nom).indexOf(q) >= 0); });
     var h = bandeauLiens() + '<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher une formation…" data-input="fq" value="' + esc(S.f.fq) + '" />' +
-      '<span class="muted fm-small">' + pl(liste.length, 'formation') + '</span></div></div>';
+      '<span class="muted fm-small">' + pl(liste.length, 'formation') + '</span>' +
+      '<div class="fm-seg" role="group" style="margin-left:auto"><button type="button" data-act="filtre" data-k="foVue" data-v="liste"' + (S.f.foVue !== 'matrice' ? ' class="is-on"' : '') + '>Liste</button>' +
+      '<button type="button" data-act="filtre" data-k="foVue" data-v="matrice"' + (S.f.foVue === 'matrice' ? ' class="is-on"' : '') + '>Qui doit suivre quoi</button></div></div></div>';
+    if (S.f.foVue === 'matrice') return { titre: TITRES.formations, corps: h + matriceFormations(liste) };
     h += '<section class="card table-card" style="margin-top:0"><div class="table-scroll"><table><thead><tr><th>Formation</th><th>Évaluations</th><th>Ce qu’on apprend</th><th>Obligatoire pour</th></tr></thead><tbody>';
     liste.forEach(function (x) {
       var ob = obligatoirePour(x), tous = ob.api.concat(ob.v25);
@@ -784,6 +939,34 @@
         '</tbody></table></div></section>';
     }
     return { titre: TITRES.formations, corps: h };
+  }
+
+  /** « Qui doit suivre quoi » : formations × postes par famille, O plein / R contour (la matrice de l'Excel). */
+  function matriceFormations(liste) {
+    var cols = [['Opérationnel', ['P3', 'P4', 'P1', 'P5', 'P2', 'P6']], ['Cadre et direction', ['P7', 'P8']], ['Devenir entrepreneur', ['P10', 'P9', 'P11', 'P12']]];
+    var courts = { P1: 'Boul.-Pât.', P5: 'Chef Boul.-Pât.', P2: 'Traiteur', P6: 'Chef traiteur', P3: 'Vente', P4: 'Chef vente', P7: 'Adjoint', P8: 'Manager',
+      P10: 'Candidat', P9: 'Loc.-gérant', P11: 'Franchisé', P12: 'Multi-boutique' };
+    var noms = (S.v25 && S.v25.nomsPanel) || {};
+    var h = '<div class="fm-legende" style="margin:0 0 12px"><span><i class="fm-or is-O">O</i> obligatoire</span><span><i class="fm-or is-R">R</i> recommandée</span>' +
+      '<span>Colonnes : les postes, par famille · lignes : les formations, par thème</span></div>';
+    h += '<section class="card table-card" style="margin-top:0"><div class="table-scroll"><table class="fm-mat"><thead><tr class="fm-mat__fam"><th></th>' +
+      cols.map(function (c) { return '<th colspan="' + c[1].length + '">' + esc(c[0]) + '</th>'; }).join('') + '</tr><tr><th>Formation</th>' +
+      cols.map(function (c) { return c[1].map(function (k) { return '<th title="' + esc(noms[k] || k) + '">' + esc(courts[k] || k) + '</th>'; }).join(''); }).join('') + '</tr></thead><tbody>';
+    var groupes = [], parTheme = {};
+    liste.forEach(function (x) {
+      var t = (x.v25 && x.v25.sousCategorie) || 'Autres', k = norm(t);
+      if (!parTheme[k]) { parTheme[k] = { nom: t, l: [] }; groupes.push(k); }
+      parTheme[k].l.push(x);
+    });
+    groupes.forEach(function (k) {
+      h += '<tr class="fm-group"><td colspan="13">' + esc(parTheme[k].nom) + '</td></tr>';
+      parTheme[k].l.forEach(function (x) {
+        var att = (x.v25 && x.v25.attendu) || {};
+        h += '<tr class="row-link" data-href="#/formations/' + x.code + '"><td><span class="fm-code">' + x.code + '</span> ' + esc(String(x.nom).replace(/^Formation\s+/, '')) + '</td>' +
+          cols.map(function (c) { return c[1].map(function (p) { return '<td class="fm-mat__c">' + (att[p] === 'O' || att[p] === 'R' ? '<i class="fm-or is-' + att[p] + '">' + att[p] + '</i>' : '') + '</td>'; }).join(''); }).join('') + '</tr>';
+      });
+    });
+    return h + '</tbody></table></div></section>';
   }
 
   function ficheFo(code) {
@@ -973,30 +1156,57 @@
     var emps = d.data.employes || [];
     var actifs = emps.filter(function (e) { return e.actif; });
     var lignes = actifs.map(function (e) {
-      var exig = new Set();
-      e.postes.forEach(function (p) { var nv = p.niveauId != null ? I.niveauById.get(p.niveauId) : null; if (nv) nv.competences.forEach(function (c) { exig.add(c); }); });
+      // Ce que le niveau tenu exige = le cumul des niveaux du poste jusqu'à lui (le panel ne liste que les nouvelles).
+      var exig = new Set(), suivant = null;
+      e.postes.forEach(function (p) {
+        var poste = I.posteById.get(p.id);
+        if (!poste || p.niveauId == null) return;
+        cumul(poste, p.niveauId).forEach(function (c) { exig.add(c); });
+        var i = -1;
+        poste.niveaux.forEach(function (nv, k) { if (nv.id === p.niveauId) i = k; });
+        if (i >= 0 && poste.niveaux[i + 1]) suivant = { poste: poste, nv: poste.niveaux[i + 1] };
+      });
       var acq = new Set(e.competences);
       var manque = Array.from(exig).filter(function (c) { return !acq.has(c); });
       var formations = new Map();
       if (I.liens) manque.forEach(function (cid) { (liensDe(cid).formations || []).forEach(function (f) { formations.set(f.id, f); }); });
-      return { e: e, exig: exig, valides: Array.from(exig).filter(function (c) { return acq.has(c); }).length, manque: manque, formations: Array.from(formations.values()) };
+      var parcours = (S.pcListe || []).filter(function (x) { return x.employe === e.id && x.statut === 'actif'; })[0] || null;
+      return { e: e, exig: exig, valides: Array.from(exig).filter(function (c) { return acq.has(c); }).length, manque: manque, formations: Array.from(formations.values()), suivant: suivant, parcours: parcours };
     });
     var tot = lignes.reduce(function (a, l) { return a + l.exig.size; }, 0), ok = lignes.reduce(function (a, l) { return a + l.valides; }, 0);
-    h += '<div class="grid">' +
-      '<section class="card"><h2>Équipe active</h2><p class="metric">' + n(actifs.length) + '</p><p class="muted">' + n(emps.length - actifs.length) + ' inactif' + (emps.length - actifs.length > 1 ? 's' : '') + ' non montré' + (emps.length - actifs.length > 1 ? 's' : '') + '</p></section>' +
-      '<section class="card"><h2>Compétences validées</h2><p class="metric">' + pct(ok, tot) + ' <span class="unit">%</span></p><p class="muted">' + n(ok) + ' sur ' + n(tot) + ' exigées par les niveaux tenus</p></section>' +
-      '<section class="card"><h2>Sans poste</h2><p class="metric">' + n(lignes.filter(function (l) { return !l.e.postes.length; }).length) + '</p><p class="muted">personnes sans poste ni niveau dans le panel</p></section></div>';
-    h += '<section class="card table-card"><h2>Compétences de l’équipe</h2><div class="table-scroll"><table><thead><tr><th>Personne</th><th>Poste · niveau</th><th>Compétences</th><th>À acquérir</th><th>Formations à suivre</th></tr></thead><tbody>';
+    var sansPoste = lignes.filter(function (l) { return !l.e.postes.length; }).length;
+    var complets = lignes.filter(function (l) { return l.exig.size && !l.manque.length; }).length;
+    var enCours = lignes.filter(function (l) { return l.exig.size && l.manque.length; });
+    h += '<div class="fm-kpis" style="margin-bottom:1rem">' +
+      '<div class="fm-kpi"><span class="fm-kpi__n">' + n(actifs.length) + '</span><span class="fm-kpi__l">Personnes</span><span class="fm-kpi__s">' + (sansPoste ? n(sansPoste) + ' sans poste dans le panel' : 'toutes placées') + '</span></div>' +
+      '<div class="fm-kpi"><span class="fm-kpi__n">' + n(complets) + '</span><span class="fm-kpi__l">Niveau complet</span><span class="fm-kpi__s">prêtes pour l’étape suivante</span></div>' +
+      '<div class="fm-kpi"><span class="fm-kpi__n">' + n(enCours.length) + '</span><span class="fm-kpi__l">En progression</span><span class="fm-kpi__s">' + n(enCours.filter(function (l) { return l.parcours; }).length) + ' avec un parcours</span></div>' +
+      '<div class="fm-kpi"><span class="fm-kpi__n">' + (tot ? pct(ok, tot) + ' %' : '—') + '</span><span class="fm-kpi__l">Compétences tenues</span><span class="fm-kpi__s">du niveau de chacun</span></div></div>';
+    h += '<section class="card table-card"><div class="table-scroll"><table><thead><tr><th>Personne</th><th>Compétences du niveau</th><th>Où elle en est</th><th></th></tr></thead><tbody>';
     lignes.forEach(function (l) {
       var e = l.e, ouvert = E.ouvert === e.id;
-      var prog = l.exig.size ? pct(l.valides, l.exig.size) : null;
-      h += '<tr class="row-link" data-act="equipe-ouvrir" data-id="' + e.id + '"><td>' + esc(e.nom) + (e.role ? '<p class="muted">' + esc(e.role) + '</p>' : '') + (!e.lu ? '<p class="muted">fiche illisible</p>' : '') + '</td>' +
-        '<td>' + (e.postes.length ? chipsListe(e.postes.map(function (p) { return { id: p.id, nom: (p.nom || 'Poste') + (p.niveau ? ' · ' + p.niveau : '') }; }), 2, 'chip--accent') : '<span class="muted">—</span>') + '</td>' +
-        '<td style="min-width:150px">' + (prog === null ? '<span class="muted">' + n(e.competences.length) + ' validée' + (e.competences.length > 1 ? 's' : '') + '</span>' :
-          '<div class="progress progress--inline"><div class="progress__fill" style="width:' + prog + '%"></div></div><p class="muted">' + n(l.valides) + ' / ' + n(l.exig.size) + ' · ' + prog + ' %</p>') + '</td>' +
-        '<td>' + chipsListe(l.manque.map(function (c) { return I.comp.get(c) || { id: c, nom: '#' + c }; }), 2, 'chip--warn') + '</td>' +
-        '<td>' + (I.liens ? (l.formations.length ? chipsListe(l.formations, 2) : '<span class="muted">—</span>') : '<span class="muted">…</span>') + '</td></tr>';
-      if (ouvert) h += '<tr class="fm-detail"><td colspan="5">' + detailEmploye(sid, l) + '</td></tr>';
+      var ini = String(e.nom || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w.charAt(0).toUpperCase(); }).join('');
+      var po = e.postes.map(function (p) { return (p.nom || 'Poste') + (p.niveau ? ' · ' + p.niveau : ''); }).join(' ; ');
+      var etat, action;
+      if (!e.postes.length) {
+        etat = '<span class="chip chip--ko">à affecter</span>';
+        action = bouton('emp' + e.id + 'niv', 'emp-poste', 'Choisir un poste', ' data-sid="' + sid + '" data-eid="' + e.id + '"');
+      } else if (!l.exig.size) {
+        etat = '<span class="muted">aucune compétence exigée à ce niveau</span>';
+        action = '';
+      } else if (!l.manque.length) {
+        etat = 'Niveau complet' + (l.suivant ? ' → prête pour <strong>' + esc(l.suivant.nv.nom) + '</strong> (+' + n(l.suivant.nv.competences.length) + ')' : '');
+        action = l.parcours ? '<a class="chip chip--ok" href="parcours/#/p/' + l.parcours.id + '">parcours en cours</a>' : '<a class="filter" href="parcours/#/nouveau">Ouvrir un parcours</a>';
+      } else {
+        etat = 'Il manque <strong>' + pl(l.manque.length, 'compétence') + '</strong>';
+        action = l.parcours ? '<a class="chip chip--ok" href="parcours/#/p/' + l.parcours.id + '">parcours en cours</a>' :
+          '<button type="button" class="filter" data-act="equipe-ouvrir" data-id="' + e.id + '">' + (ouvert ? 'Fermer' : 'Voir ce qui manque') + '</button>';
+      }
+      h += '<tr class="row-link" data-act="equipe-ouvrir" data-id="' + e.id + '"><td><div class="fm-pers"><span class="fm-ini">' + esc(ini) + '</span><span><span class="fm-pers__n">' + esc(e.nom) + '</span>' +
+        '<span class="fm-pers__s">' + (po ? esc(po) : 'sans poste dans le panel') + (!e.lu ? ' · fiche illisible' : '') + '</span></span></div></td>' +
+        '<td style="min-width:13rem">' + (l.exig.size ? '<div class="fm-prog"><b>' + n(l.valides) + ' / ' + n(l.exig.size) + '</b> compétences du niveau</div>' + barre(l.valides, l.exig.size) : '<span class="muted">—</span>') + '</td>' +
+        '<td>' + etat + '</td><td class="num fm-nowrap">' + action + '</td></tr>';
+      if (ouvert) h += '<tr class="fm-detail"><td colspan="4">' + detailEmploye(sid, l) + '</td></tr>';
     });
     h += '</tbody></table></div></section>';
     return { titre: TITRES.equipes, corps: h };
@@ -1634,7 +1844,12 @@
       S.v25Charge = true;
       lire('/formation/v25', 30000).then(function (d) { S.v25 = d; rendre(true); }, function (er) { S.v25Erreur = er.message; rendre(true); });
     }
-    if (e === 'parcours' || e === 'tableau') {
+    if (e === 'tableau' && !S.carte && !S.carteCharge && !S.carteErreur) {
+      S.carteCharge = true;
+      lire('/formation/carte?_cache=300' + (S.carteForcer ? '&rafraichir=1' : ''), 280000).then(function (d) { S.carte = d; S.carteCharge = false; S.carteForcer = false; rendre(true); },
+        function (er) { S.carteErreur = er.message; S.carteCharge = false; rendre(true); });
+    }
+    if (e === 'parcours' || e === 'tableau' || e === 'equipes') {
       if (e === 'parcours' && !S.equipe.magasins && !S.equipe.charge && !S.equipe.erreur) chargerMagasins();
       if (!S.pcListe && !S.pcCharge && !S.pcErreur) {
         S.pcCharge = true;
@@ -1676,7 +1891,7 @@
     lire('/formation/referentiel?_cache=600' + (forcer ? '&rafraichir=1' : ''), 170000).then(function (d) {
       S.ref = d; S.refCharge = false;
       // Le référentiel v25 se relit APRÈS le panel : ses correspondances (niveaux, postes absents) en dépendent.
-      if (forcer) { S.liens = null; S.v25 = null; S.v25Charge = false; }
+      if (forcer) { S.liens = null; S.v25 = null; S.v25Charge = false; S.carte = null; S.carteErreur = null; S.carteForcer = true; }
       indexer();
       rendre(true);
       chargerLiens(forcer);
@@ -1816,6 +2031,8 @@
     if (act === 'imprimer') { window.print(); return; }
     if (act === 'filtre') { S.f[t.getAttribute('data-k')] = t.getAttribute('data-v'); rendre(true); return; }
     if (act === 'voir-comp') { S.f.vue = t.getAttribute('data-v'); location.hash = '#/competences'; return; }
+    if (act === 'fiche-vue') { S.ficheVue = t.getAttribute('data-v'); rendre(true); return; }
+    if (act === 'carte-vue') { S.carteVue = t.getAttribute('data-v'); try { localStorage.setItem('fm.carte', S.carteVue); } catch (x) { /* rien */ } rendre(true); return; }
     if (act === 'bascule') { var k = t.getAttribute('data-k'); S.f[k] = !S.f[k]; rendre(true); return; }
     if (act === 'equipe-ouvrir') { var id = +t.getAttribute('data-id'); S.equipe.ouvert = S.equipe.ouvert === id ? null : id; rendre(true); return; }
     if (act === 'api-ouvrir') { var k2 = t.getAttribute('data-k'); S.api.ouvert[k2] = !S.api.ouvert[k2]; rendre(true); return; }
