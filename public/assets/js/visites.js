@@ -40,7 +40,8 @@
   // system branding de la marque : affiche, leaflet, bâches, billboard… ; chaque point, une photo avec oui ou non ») :
   // un support par question, Oui (conforme) / Non, la photo exigée. Les supports viennent des réglages
   // (src/visites_questions.php, viCharteNormalise ; /visites/app → charte). Ceci n'est que le secours hors ligne.
-  const CH_PT = (ref, libelle, libelle_nl, aide, aide_nl, lieu) => ({ ref, libelle, libelle_nl, aide, aide_nl, lieu, type: 'ouinon', photo: true, photoExigee: true, score: true, poids: 1 });
+  // « Pas ce support ici » (pasIci) : le magasin n'a pas ce support — N/A, sans photo ni score.
+  const CH_PT = (ref, libelle, libelle_nl, aide, aide_nl, lieu, pasIci) => ({ ref, libelle, libelle_nl, aide, aide_nl, lieu, pasIci: pasIci !== false, type: 'ouinon', photo: true, photoExigee: true, score: true, poids: 1 });
   const CHARTE_Q = { id: 'charte', nom: 'Charte de communication', nom_nl: 'Huisstijl en communicatie', charte: true, points: [
     CH_PT('ch_billboard', 'Billboard et panneaux publicitaires conformes', 'Billboard en reclameborden conform', 'Campagne du réseau en cours, affiche intacte, éclairée s’il y a un éclairage.', 'Lopende netwerkcampagne, affiche intact, verlicht als er verlichting is.', 'ext'),
     CH_PT('ch_baches', 'Bâches et kakémonos conformes', 'Spandoeken en roll-ups conform', 'Visuel officiel, propres, bien tendus, sans déchirure ni décoloration.', 'Officiële visual, proper, goed gespannen, niet gescheurd of verkleurd.', 'ext'),
@@ -52,7 +53,7 @@
     CH_PT('ch_menu', 'Menu board et écrans conformes', 'Menubord en schermen conform', 'Gabarit du réseau, prix à jour, typographies et couleurs de la marque.', 'Netwerksjabloon, actuele prijzen, lettertypes en kleuren van het merk.', 'int'),
     CH_PT('ch_emballages', 'Sacs et emballages de la marque', 'Zakken en verpakkingen van het merk', 'Modèles référencés seulement, logo net ; aucun emballage neutre ou d’une autre enseigne.', 'Enkel gerefereerde modellen, duidelijk logo; geen neutrale verpakking of van een andere keten.', 'int'),
     CH_PT('ch_tenues', 'Tenues de l’équipe aux couleurs de la marque', 'Kledij van het team in de merkkleuren', 'Tablier, casquette ou toque, badge prénom au modèle du réseau.', 'Schort, pet of koksmuts, naambadge volgens het netwerkmodel.', 'int'),
-    CH_PT('ch_hors_charte', 'Aucun support hors charte', 'Geen dragers buiten de huisstijl', 'Rien de fait maison, manuscrit ou imprimé au magasin ; logo, couleurs et polices jamais modifiés.', 'Niets zelfgemaakt, handgeschreven of in de winkel afgedrukt; logo, kleuren en lettertypes nooit aangepast.', 'int')] };
+    CH_PT('ch_hors_charte', 'Aucun support hors charte', 'Geen dragers buiten de huisstijl', 'Rien de fait maison, manuscrit ou imprimé au magasin ; logo, couleurs et polices jamais modifiés.', 'Niets zelfgemaakt, handgeschreven of in de winkel afgedrukt; logo, kleuren en lettertypes nooit aangepast.', 'int', false)] };
   const repondu = p => !!p && (!!p.etat || p.note != null || p.valeur != null);
   const RUBRIQUES_MSP = ['Accueil', 'Produits', 'Hygiène', 'Ambiance'];
   const METEO_ECH = [['moral', 'Moral'], ['envie', 'Envie, motivation'], ['equipe', 'Climat de l’équipe'], ['relation', 'Relation avec le réseau']];
@@ -588,9 +589,9 @@
    */
   const LNG = {
     fr: { ok: 'OK', ko: 'Écart', na: 'N/A', oui: 'Oui', non: 'Non', rem: 'Remarque…', rep: 'La réponse…', photo: 'Photo', photos: 'photos', multi: 'plusieurs choix possibles', points: 'points', tous: '✓ Toutes les autres sont là', bornes: 'attendu', nc: 'non conforme',
-      phExige: 'Photo à prendre', chIntro: 'Le cahier des charges de communication et le design system de la marque, support par support : la photo, puis Oui (conforme) ou Non (absent, abîmé, périmé ou hors charte). Sans photo, le support n’est pas vu.', chExt: 'dehors', chInt: 'dedans' },
+      phExige: 'Photo à prendre', chIntro: 'Le cahier des charges de communication et le design system de la marque, support par support : la photo, puis Oui (conforme) ou Non (manquant, abîmé, périmé ou hors charte). Sans photo, le support n’est pas vu. Le magasin n’a pas ce support : « Pas ce support ici », sans photo, hors score.', chExt: 'dehors', chInt: 'dedans', chAbsent: 'Pas ce support ici' },
     nl: { ok: 'OK', ko: 'Afwijking', na: 'N.v.t.', oui: 'Ja', non: 'Nee', rem: 'Opmerking…', rep: 'Het antwoord…', photo: 'Foto', photos: 'foto’s', multi: 'meerdere keuzes mogelijk', points: 'punten', tous: '✓ Alle andere zijn aanwezig', bornes: 'verwacht', nc: 'niet conform',
-      phExige: 'Foto te nemen', chIntro: 'Het communicatielastenboek en het designsysteem van het merk, drager per drager: de foto, dan Ja (conform) of Nee (afwezig, beschadigd, verouderd of buiten de huisstijl). Zonder foto is de drager niet gezien.', chExt: 'buiten', chInt: 'binnen' }
+      phExige: 'Foto te nemen', chIntro: 'Het communicatielastenboek en het designsysteem van het merk, drager per drager: de foto, dan Ja (conform) of Nee (ontbreekt, beschadigd, verouderd of buiten de huisstijl). Zonder foto is de drager niet gezien. Heeft de winkel deze drager niet: « Hier niet aanwezig », zonder foto, buiten de score.', chExt: 'buiten', chInt: 'binnen', chAbsent: 'Hier niet aanwezig' }
   };
   const libDe = (x, l) => (l === 'nl' && x.libelle_nl) ? x.libelle_nl : x.libelle;
   const nomDe = (m, l) => (l === 'nl' && m.nom_nl) ? m.nom_nl : m.nom;
@@ -1821,7 +1822,8 @@
       const T = LNG[l]; const t = typeQ(pt);
       const tri = (opts, cls) => `<span class="${cls || 'tri'}">${opts.map(([e, lab]) => `<button data-a="etat-set" data-v="${k}|${e}" class="${p.etat === e ? e : ''}">${lab}</button>`).join('')}</span>`;
       const notes = `<span class="notes">${[1, 2, 3, 4, 5].map(n => `<button data-a="note-q" data-v="${k}|${n}" class="${p.note === n ? (n <= 2 ? 'bad' : 'on') : ''}">${n}</button>`).join('')}</span>`;
-      if (t === 'ouinon') { return [tri([['ok', T.oui], ['ko', T.non]]), '']; }
+      // La charte de communication : « Pas ce support ici » en troisième réponse, là où elle est proposée (N/A).
+      if (t === 'ouinon') { return [tri([['ok', T.oui], ['ko', T.non]].concat(pt.pasIci ? [['na', T.chAbsent]] : [])), '']; }
       if (t === 'note') { return [notes, '']; }
       if (t === 'nombre') {
         const bornes = pt.min != null || pt.max != null ? `<span class="xs mu">${T.bornes} ${pt.min != null && pt.max != null ? nbTxt(pt.min) + ' – ' + nbTxt(pt.max) : (pt.min != null ? '≥ ' + nbTxt(pt.min) : '≤ ' + nbTxt(pt.max))}${pt.unite ? ' ' + esc(pt.unite) : ''}</span>` : '';
@@ -1850,7 +1852,8 @@
             cnt.total++; const p = pts[pt.ref] || {};
             const phs = photos.filter(x => x.ref === pt.ref);
             // Un point à photo exigée (la charte de communication) n'est vu qu'avec sa réponse ET sa photo.
-            const rep = !!(p.etat || p.note != null || p.valeur != null); const sansPh = !!pt.photoExigee && !phs.length;
+            // « Pas ce support ici » (N/A) : rien à photographier.
+            const rep = !!(p.etat || p.note != null || p.valeur != null); const sansPh = !!pt.photoExigee && !phs.length && p.etat !== 'na';
             if (rep && !sansPh) { cnt.faits++; }
             if (sansPh) { cnt.sansPhoto = (cnt.sansPhoto || 0) + 1; }
             if (!rep) { cnt.sansRep = (cnt.sansRep || 0) + 1; }
@@ -2390,7 +2393,7 @@
             <button class="chip" data-a="clc-add" data-v="${k}">+ réponse</button><span class="xs mu"> « écart » : cette réponse rend le point non conforme.</span></div>` : '';
           const nombre = t === 'nombre' ? `<div class="row rg-nb"><label>min</label><input type="number" step="any" data-f="cl|${k}|min" value="${p.min != null ? esc(p.min) : ''}"><label>max</label><input type="number" step="any" data-f="cl|${k}|max" value="${p.max != null ? esc(p.max) : ''}"><label>unité</label><input type="text" data-f="cl|${k}|unite" value="${esc(p.unite || '')}" placeholder="kg, °C, pièces…"><span class="xs mu">hors des bornes : écart</span></div>` : '';
           return `<div class="rg-q"><div class="row"><input type="text" data-f="cl|${k}|libelle" value="${esc(p.libelle)}" placeholder="${m.charte ? 'le support en français (affiches, bâche…)' : 'la question en français'}"><input type="text" data-f="cl|${k}|libelle_nl" value="${esc(p.libelle_nl || '')}" placeholder="${m.charte ? 'de drager in het Nederlands' : 'de vraag in het Nederlands'}"></div>
-            <div class="row">${m.charte ? `<span class="xs mu" style="align-self:center">Oui / Non · 📷 photo exigée</span>${[['ext', 'dehors'], ['int', 'dedans']].map(([x, lab]) => `<button class="chip ${(p.lieu === 'ext' ? 'ext' : 'int') === x ? 'on' : ''}" data-a="cl-lieu" data-v="${k}|${x}" title="où le support se regarde : au tour de l’extérieur ou à l’intérieur">${lab}</button>`).join('')}`
+            <div class="row">${m.charte ? `<span class="xs mu" style="align-self:center">Oui / Non · 📷 photo exigée</span>${[['ext', 'dehors'], ['int', 'dedans']].map(([x, lab]) => `<button class="chip ${(p.lieu === 'ext' ? 'ext' : 'int') === x ? 'on' : ''}" data-a="cl-lieu" data-v="${k}|${x}" title="où le support se regarde : au tour de l’extérieur ou à l’intérieur">${lab}</button>`).join('')}<button class="chip ${p.pasIci !== false ? 'on' : ''}" data-a="cl-pasici" data-v="${k}" title="le consultant peut répondre que le magasin n’a pas ce support : sans photo, hors score">« Pas ce support ici »</button>`
               : `<select data-c="cl-type|${k}">${Object.keys(TYPES_Q).map(x => opt(t, x, TYPES_Q[x])).join('')}</select>${m.fixe ? '' : `<button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${k}|photo" title="photo attendue">📷 photo</button>`}`}
               <input type="text" class="rg-aide" data-f="cl|${k}|aide" value="${esc(p.aide || '')}" placeholder="précision (facultatif)"><input type="text" class="rg-aide" data-f="cl|${k}|aide_nl" value="${esc(p.aide_nl || '')}" placeholder="toelichting (optioneel)">${m.fixe ? '' : `<button class="chip ko" data-a="cl-del" data-v="${k}">×</button>`}</div>${choix}${nombre}
             <div class="rg-sc"><span class="cap">Score</span>${t === 'texte' ? '<span class="xs mu">le texte libre ne compte jamais dans le score</span>'
@@ -2515,7 +2518,8 @@
       if (a === 'equipe') { const f = this.form; this.ecrire({ method: 'PUT', path: '/equipe/' + encodeURIComponent(v), body: { effectif: f.effectif, prevu: f.prevu, departs: f.departs, qui: this.qui() } }); const b = this.boutique(v); if (b) { b.equipe = { effectif: f.effectif != null && f.effectif !== '' ? Number(f.effectif) : null, prevu: f.prevu ? Number(f.prevu) : null, departs: f.departs ? Number(f.departs) : null, releve_le: auj() }; } this.form = {}; this.dire('Effectif relevé.'); return; }
       if (a === 'push') { this.pushBasculer(); return; }
       if (a === 'cl-add') { const m = this.form.checklist[Number(v)]; const plano = m.id === 'planogramme';
-        m.points.push(m.charte ? { ref: 'ch_' + Date.now().toString(36), libelle: '', libelle_nl: '', photo: true, photoExigee: true, type: 'ouinon', lieu: 'int' } : { ref: 'p' + Date.now().toString(36), libelle: '', libelle_nl: '', photo: false, type: plano ? 'pct' : 'etat', pct: plano }); this.rendre(); return; }
+        m.points.push(m.charte ? { ref: 'ch_' + Date.now().toString(36), libelle: '', libelle_nl: '', photo: true, photoExigee: true, type: 'ouinon', lieu: 'int', pasIci: true } : { ref: 'p' + Date.now().toString(36), libelle: '', libelle_nl: '', photo: false, type: plano ? 'pct' : 'etat', pct: plano }); this.rendre(); return; }
+      if (a === 'cl-pasici') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; p.pasIci = p.pasIci === false; this.rendre(); return; }
       if (a === 'cl-lieu') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; p.lieu = parts[2] === 'ext' ? 'ext' : 'int'; this.rendre(); return; }
       if (a === 'cl-score') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; p.score = parts[2] === '1'; this.rendre(); return; }
       if (a === 'cl-poids') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; p.poids = Number(parts[2]); this.rendre(); return; }
@@ -2835,7 +2839,7 @@
     finHtml(v) {
       const pts = this.pointsDe(v.id); const phs = this.photosDe(v.id); let total = 0, faits = 0, ko = 0;
       // Un support de la charte n'est vu qu'avec sa photo ; son Non compte comme un écart dès qu'il est donné.
-      this.checklistDe(v).forEach(m => m.points.forEach(pt => { total++; const p = pts[pt.ref]; if (p && (p.etat || p.note != null || p.valeur != null)) { if (!pt.photoExigee || phs.some(x => x.ref === pt.ref)) { faits++; } if (p.etat === 'ko' || (p.note != null && p.note <= 2)) { ko++; } } }));
+      this.checklistDe(v).forEach(m => m.points.forEach(pt => { total++; const p = pts[pt.ref]; if (p && (p.etat || p.note != null || p.valeur != null)) { if (!pt.photoExigee || p.etat === 'na' || phs.some(x => x.ref === pt.ref)) { faits++; } if (p.etat === 'ko' || (p.note != null && p.note <= 2)) { ko++; } } }));
       const pa = (this.form.pa || []).filter(a => a.titre && a.titre.trim());
       const h = this.D.delaiRapport;
       return `<div class="stat"><div><div class="xs mu">Checklist</div><div class="k" style="margin-top:4px">${faits} / ${total}</div><div class="xs mu">${ko} non conforme${ko > 1 ? 's' : ''}</div></div><div><div class="xs mu">Points proposés</div><div class="k" style="margin-top:4px">${pa.length}</div><div class="xs mu">${pa.filter(a => a.priorite === 'P0').length} P0</div></div><div><div class="xs mu">Photos</div><div class="k" style="margin-top:4px">${this.photosDe(v.id).length}</div><div class="xs mu">${this.file.filter(o => o.apres === 'photo').length} en attente d’envoi</div></div></div>
