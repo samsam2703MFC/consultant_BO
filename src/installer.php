@@ -88,6 +88,11 @@ function schemaOublier(PDOException $e): void
  * Tables du scouting commercial, à chaque démarrage — même raison que
  * ensureValidation() : une installation déjà en service ne rejoue pas
  * schema.sql. Idempotent (CREATE TABLE IF NOT EXISTS).
+ *
+ * L'écran a quitté le cockpit (31/10/2026) pour le CRM, qui lit et écrit ces
+ * mêmes tables (base commune). Elles restent créées ici : le démarchage
+ * (ceo_scouting_etude) et la relecture hebdomadaire d'OpenStreetMap
+ * (ceo_scouting_tile, bin/scouting_refresh.php) s'en servent encore.
  */
 function ensureScouting(): void
 {

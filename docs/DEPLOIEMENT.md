@@ -103,21 +103,17 @@ Alias /consulant_bo /var/www/consulant_bo/public
 
 Prérequis : Apache `mod_rewrite`, PHP ≥ 8.1 avec `pdo_mysql`.
 
-L'écran Scouting commercial embarque Leaflet (`assets/vendor/leaflet/`, déployé
-avec `public/`) et ses tables `ceo_scouting_*` sont créées automatiquement
-(cf. § 3). Les données OpenStreetMap sont relues par le **serveur** : le
-déploiement pose `/etc/cron.d/cockpit-scouting` (dimanche 4 h 15,
-`bin/scouting_refresh.php`, journal `/var/log/cockpit-scouting.log`) et lance
-une première relecture des secteurs manquants en arrière-plan. Le serveur doit
-donc atteindre les miroirs Overpass (`overpass.kumi.systems`, `overpass-api.de`,
-`overpass.private.coffee`) et, pour les notes Google, `places.googleapis.com`
-(clé du connecteur Google de Paramètres, même sortie que la réputation des
-magasins). La grille de population du recensement 2021 est un fichier statique livré avec
-`public/` (`assets/data/population_grid_2021.json`, 673 Ko). Les **navigateurs** n'ont besoin que de `tile.openstreetmap.org`
-(fond de carte) ; ils ne retombent sur Overpass que si le serveur n'y arrive
-pas. Un `PUT /scouting/tiles/{n}` pèse jusqu'à ~1 Mo :
-`post_max_size` PHP et la limite de corps du proxy/Apache doivent le laisser
-passer (défaut PHP 8 Mo — suffisant).
+L'écran Scouting commercial a quitté le cockpit le 31/10/2026 (CRM,
+Développement → Étude de faisabilité, même base). Le cockpit garde Leaflet
+(`assets/vendor/leaflet/`, pour la carte de Prospection), la création des
+tables `ceo_scouting_*` (cf. § 3) et la relecture OpenStreetMap par le
+**serveur** : le déploiement pose `/etc/cron.d/cockpit-scouting` (dimanche
+4 h 15, `bin/scouting_refresh.php`, journal `/var/log/cockpit-scouting.log`) et
+lance une première relecture des secteurs manquants en arrière-plan — c'est ce
+cache que l'Étude de faisabilité du CRM lit. Le serveur doit donc atteindre les
+miroirs Overpass (`overpass.kumi.systems`, `overpass-api.de`,
+`overpass.private.coffee`), aussi pour les lieux à démarcher autour des
+magasins (`GET /scouting/demarchage`).
 
 ---
 

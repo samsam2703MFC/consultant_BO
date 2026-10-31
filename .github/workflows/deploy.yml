@@ -143,7 +143,7 @@ jobs:
           # donc elle doit couvrir ce qui vient d'être livré — sinon elle
           # certifie une mise en ligne qu'elle n'a pas vérifiée.
           fail=0
-          for ep in meta stores consultants people scouting 'taches/suivi?periode=semaine' 'taches/suivi?periode=mois'; do
+          for ep in meta stores consultants people 'taches/suivi?periode=semaine' 'taches/suivi?periode=mois'; do
             echo "== GET ${APP_BASE}/api/cockpit/${ep} =="
             if ! curl -fsS "${APP_BASE}/api/cockpit/${ep}" | head -c 500; then
               echo; echo "::error::Échec recette sur /api/cockpit/${ep}"; fail=1
@@ -165,26 +165,11 @@ jobs:
             fi
           done
           [ "$fail" = "0" ] && echo "OK  /taches/suivi porte les six champs de l'écran de suivi"
-          # Le scouting emprunte la clé Google de Paramètres : /scouting doit dire
-          # l'état du connecteur, et ne plus jamais renvoyer une clé au navigateur.
-          sc=$(curl -fsS "${APP_BASE}/api/cockpit/scouting" || echo '{}')
-          if ! echo "$sc" | grep -q '"google":{"configure":'; then
-            echo "::error::/scouting ne porte pas l'état du connecteur Google (clé de Paramètres)"; fail=1
-          elif echo "$sc" | grep -q '"googleKey"'; then
-            echo "::error::/scouting renvoie encore une clé Google au navigateur"; fail=1
-          else echo "OK  /scouting porte l'état du connecteur Google, jamais la clé"; fi
-          # La relecture OpenStreetMap se fait côté serveur : la route doit répondre
-          # (404 sur un secteur inconnu — sans déclencher une vraie relecture).
-          rc=$(curl -s -o /dev/null -w '%{http_code}' -X POST "${APP_BASE}/api/cockpit/scouting/refresh/99")
-          if [ "$rc" != "404" ]; then echo "::error::POST /scouting/refresh/{n} répond HTTP $rc (404 attendu sur un secteur inconnu)"; fail=1
-          else echo "OK  POST /scouting/refresh/{n} est câblé"; fi
-          # Le calage du modèle lit les magasins du réseau : position (fiche Google) et CA réel.
+          # Le Scouting est parti dans le CRM (Étude de faisabilité) ; Développement
+          # commercial et Prospection lisent encore ici les magasins pointés.
           rs=$(curl -fsS "${APP_BASE}/api/cockpit/scouting/reseau" || echo '{}')
           if ! echo "$rs" | grep -q '"magasins":\['; then echo "::error::/scouting/reseau ne rend pas les magasins du réseau"; fail=1
-          # La grille de population du recensement (statique) doit être servie avec l'écran.
-          if ! curl -fsS "${APP_BASE}/assets/data/population_grid_2021.json" | head -c 300 | grep -q '"cellules"'; then echo "::error::assets/data/population_grid_2021.json absent ou illisible"; fail=1
-          else echo "OK  la grille de population du recensement 2021 est servie"; fi
-          else echo "OK  /scouting/reseau rend les magasins du réseau ($(echo "$rs" | grep -o '"caAnnuel":[0-9]' | wc -l) avec un CA réel, $(echo "$rs" | grep -o '"position":"' | wc -l) positionnés)"; fi
+          else echo "OK  /scouting/reseau rend les magasins du réseau ($(echo "$rs" | grep -o '"position":"' | wc -l) positionnés)"; fi
 
           # La tablette des vendeuses (public/tablette/, application compilée) :
           # la page, son service worker et son manifeste répondent ; un fichier

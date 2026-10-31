@@ -148,10 +148,7 @@ qu'un mois à 6 507 € sur 7 jours est un mois d'ouverture et non un mois raté
 | `reporting` | `GET /reporting` | Reporting automatisé |
 | `journal` | `GET /journal` | Journal |
 | `products` | `GET /products/scoring?periode=AAAA-MM` | Scoring produits |
-| — | `GET /scouting` | Scouting commercial : saisies, hypothèses, état du connecteur Google, inventaire du cache OSM ; chaque concurrent porte `statut` (businessStatus Google) et `dernierAvis` (date du plus récent avis rendu par sa fiche) — fermé ou sans avis depuis un an, il est écarté par l’écran |
-| — | `GET /scouting/tiles/{secteur}` | Scouting commercial : un secteur du cache OpenStreetMap |
-| — | `GET /scouting/reseau` | Scouting commercial : magasins du réseau, position (fiche Google ou pointée) et CA réel des douze derniers mois clos — le calage du modèle ; `panier` : panier moyen TTC du réseau et par magasin (même source que l'écran Exploitation, mois en cours, gardé un jour) |
-| — | `GET /scouting/etude?lat=&lng=&r=` | Scouting commercial : l'étude de marché locale d'un point — ce qu'OpenStreetMap sait du rayon `r` (mètres, 500 à 15 000) : entreprises par famille (`ent`), zonings avec emprise et entreprises dedans (`zonings`), écoles (`ecoles`), générateurs de flux (`flux`), concurrence indirecte (`indirecte`). Servi du cache `ceo_scouting_etude` s'il a moins de 45 jours (`cache: true`, `releve`), sinon relevé chez Overpass depuis le serveur (jusqu'à deux minutes) ; `force=1` relit ; un relevé qui échoue rend le cache périmé avec `perime: true`, ou 502 |
+| — | `GET /scouting/reseau` | Magasins du réseau (Développement commercial, Prospection) : position (fiche Google, ou pointée dans l'Étude de faisabilité du CRM) et CA réel des douze derniers mois clos ; `panier` : panier moyen TTC du réseau et par magasin (même source que l'écran Exploitation, mois en cours, gardé un jour) |
 | — | `GET /ventes/stats?shop=&vue=&date=` | Les heures de la période, le top de chaque heure, et `categories[]` : CA, coût matière, marge brute, taux, part, `groupe`, et `produits[]` de chaque catégorie (id, nom, q, v, c, m, taux, part dans la catégorie) — la liste groupe › catégorie › produit du dashboard magasin. `bundles` (10/10/2026) : les produits de la catégorie « Bundle », groupe « Bundle & Promotion », vendus sur la période. Il donne `{n, pieces, ca, taux, part, lignes[{id, nom, cat, q, v, prix, c, m, taux, heures{h: q}, premiere, derniere}]}`, trié par quantité. Le dashboard opérationnel l'affiche à côté des ventes par catégorie, sans colonne d'heures, avec la composition lue dans la recette du bundle (`/analyse/produits/recette`). `GET /exploitation/bundles/sonde` lit en lecture seule les promotions bundle et buy X get Y du panel (`/admin/promotions/...`) : au 10/10/2026, le compte API reçoit 403. |
 | — | (relevé des tickets `svP{shop}:{date}`) | Lu une fois par jour et par magasin, la journée en cours relue toutes les dix minutes. Depuis le 05/10/2026, la relecture est **incrémentale** : le relevé garde ses tickets (`ids`), la liste du jour se relit (un appel) et seuls les tickets nouveaux se lisent (un appel chacun) ; mesuré avant, 298 tickets relus à Corbais, 8 s. Un ticket déjà lu qui a disparu de la liste (annulé) fait tout relire. `produits.ticketsLus` compte les tickets lus pendant l'appel. |
 | `fbRegles` | `GET /referentiels/facebook-regles` | Contrôle posts Facebook — pack de règles |
@@ -2450,60 +2447,14 @@ calcul de la note.
 
 ---
 
-### `/scouting` — saisies du scouting commercial
+### `/scouting` — parti dans le CRM (31/10/2026)
 
-Chargé à l'ouverture de l'écran (pas au démarrage du cockpit). Les données
-OpenStreetMap elles-mêmes ne transitent pas par ce endpoint : elles vivent dans
-`ceo_scouting_tile`, relues par le serveur — chaque semaine par cron
-(`bin/scouting_refresh.php`), ou à la demande par `POST /scouting/refresh/{secteur}`
-(« Recharger les données »). Le navigateur n'interroge Overpass lui-même qu'en
-repli, sans API ou si le serveur n'atteint pas Overpass.
-
-```json
-{
-  "params": { "spend": 586, "emprise": 0, "passage": 15, "surface": 250, "empriseMax": 30,
-              "compK": 0.22, "hhSize": 2.31, "minScore": 55, "radius": 2, "thresh": 4.5 },
-  "google": { "configure": true, "langue": "fr", "empreinte": "AIzaSy…Qx4c" },
-  "competitors": [{ "id": "n123456", "name": "Boulangerie Dupont", "commune": "Halle", "arr": "Hal-Vilvorde",
-                    "rating": 4.6, "reviews": 132, "source": "google", "comment": "File le samedi" }],
-  "candidates": [{ "id": 1756900000000, "name": "Halle — zone 50.733/4.237", "commune": "Halle", "arr": "Hal-Vilvorde",
-                   "prov": "Brabant flamand", "lat": 50.7336, "lng": 4.2372, "hh": 9800, "market": 5742800,
-                   "emprise": 0.155, "ca": 1047000, "score": 72, "n": 6, "strong": 2, "m2": 4188 }],
-  "populations": { "23027": 42608 },
-  "tiles": [{ "sector": 0, "fetchedAt": "2026-09-03 17:12:40", "bytes": 91234 }]
-}
-```
-
-- `params` : `null` tant qu'aucune hypothèse n'a été enregistrée (défauts de l'étude Halle côté client).
-- `google` : l'état du connecteur Google de Paramètres (`PUT /parametres/google-cle`) — jamais la clé. Les notes des
-  concurrents se demandent au serveur par `POST /scouting/notes` ; sans clé, il répond 422.
-| Scouting — signe de vie Google de toute la carte (statut, date du dernier avis), par lots | `POST /scouting/concurrents/vie` (`{ n }`, 25 par défaut, 40 au plus ; rend `faits`, `fermes`, `dormants`, `reste`, `ecartes` ; colonnes `business_status`, `last_review_at`) |
-- `competitors[].source` ∈ `google` | `manuel` ; une note `manuel` prime sur Google. `rating: null` avec
-  `source: "google"` = commerce déjà interrogé sans note (pas réinterrogé).
-- `id` d'un concurrent = type + id OSM (`n`, `w`, `r`), ou `m` + horodatage pour un commerce ajouté à la main
-  (`POST /scouting/concurrents`), qui porte alors `lat` et `lng`. `id` d'une zone candidate = horodatage client (ms).
-- `competitors[]` porte aussi la **qualification terrain** (retour de l'étude de potentiel du 09/10/2026) :
-  `type` (boulangerie, patisserie, sandwicherie, friterie, snack, supermarche, superette, autre ; null = relevé OSM),
-  `force` (0–100, vue sur place, prime sur la note ; null = calculée), `reference` (le concurrent de référence de la
-  zone : fort quoi qu'en dise la note), `visiteLe`, `terrain` (≤ 500 car.). L'écran pondère la force par le type
-  (sandwicherie 0,3, friterie 0,15, snack 0,3, supermarché 0,35, supérette 0,15, autre 0) ; un type pondéré sous 1
-  n'est jamais « fort » sauf référence.
-- `candidates[].terrain` : le relevé terrain de la zone retenue (`PUT /scouting/candidates/{id}/terrain`) :
-  `{ visiteLe, visibilite, acces, facade, parking, remarques, flux: [{ axe, vehJour, sens, source, le }] }`, chaînes bornées,
-  six axes au plus ; null tant que rien n'est saisi. Imprimé dans le dossier (« Le relevé terrain »).
-- `params` porte aussi les hypothèses du **modèle à deux zones** : `empriseP` (emprise de la zone primaire, 5 minutes en
-  voiture, 30 par défaut), `empriseS` (zone secondaire, 5 à 10 minutes, 6,5), `indirecte` (poids d'un supermarché dans
-  la pression, en % d'une boulangerie, 35 ; les six commerces indirects les plus proches comptent, pas davantage), `poles` (1 : la zone secondaire s'arrête là où un concurrent fort est plus
-  près que le point), `routeDist` (1 : pression sur la distance par la route, Valhalla, face à 1,3 × rayon). Le calcul
-  reste à l'écran : les isochrones de 5 et 10 minutes (Valhalla) sur la grille du recensement, la zone construite
-  `(ménages primaires × empriseP + secondaires × empriseS) × dépense ÷ (1 − passage)`, les deux emprises abaissées par
-  la pression comme celle du rayon ; le dossier montre les deux estimations côte à côte.
-- `POST /scouting/dossier.pdf` accepte en plus `estimations` (≤ 10 lignes × 4 : mesure, rayon, zone construite, lecture),
-  `estimationsCols`, `estimationsNote`, `terrain` (≤ 12 × 2), `fluxMesures` (≤ 6 × 4 : axe, véhicules/jour, sens, source · date),
-  `terrainNote` et `motOutil` (« l'outil repère, l'étude confirme ») ; les distances des concurrents portent la distance par
-  la route quand l'écran l'a (`0,4 km · 1,3 km par la route`).
-- `tiles` : inventaire seulement ; `GET /scouting/tiles/{secteur}` renvoie le JSON `{ t, c, b, p }` déposé
-  par le navigateur (communes, commerces, nœuds `place`). 404 si le secteur n'est pas en cache.
+L'écran « Scouting — où ouvrir » a quitté le cockpit : il vit dans le CRM
+(dépôt `atelier-espace-candidat`, Développement → Étude de faisabilité), avec
+ses routes `/scouting/*` sous l'API du CRM, sur la même base (`ceo_scouting_*`,
+`ceo_app_setting`). Le contrat de ces routes y est tenu (`CLAUDE.md`,
+« Portail Recrutement & Développement »). Restent ici `GET /scouting/reseau`
+et `GET /scouting/demarchage`, lus par Développement commercial et Prospection.
 
 ### `/prospection/{shop}` — la liste de démarchage du magasin, au serveur
 
@@ -2845,7 +2796,7 @@ dérogation accordée ne se rejoue pas à chaque passage de l'agent. L'id d'un
 
 `tendVol` est calculé côté API : `volume(annee, mois) / volume(annee-1, mois)`.
 
--- Scouting commercial
+-- Scouting commercial (tables communes avec l'Étude de faisabilité du CRM)
 CREATE TABLE ceo_scouting_tile (
   sector      TINYINT UNSIGNED PRIMARY KEY,    -- secteur Overpass 0–8
   fetched_at  DATETIME NOT NULL,
@@ -2890,10 +2841,10 @@ CREATE TABLE ceo_scouting_population (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-Les hypothèses du modèle sont une ligne de `ceo_app_setting` (`scoutingParams`).
-La clé Google est celle du connecteur Google de Paramètres (ligne `google`,
-`PUT /parametres/google-cle`) : le serveur interroge Places, la clé n'est jamais
-renvoyée à l'écran.
+Les hypothèses du modèle sont une ligne de `ceo_app_setting` (`scoutingParams`),
+écrite par l'Étude de faisabilité du CRM. La clé Google du connecteur de
+Paramètres (ligne `google`, `PUT /parametres/google-cle`) lui sert de repli
+quand le CRM n'a pas sa propre clé ; elle n'est jamais renvoyée à l'écran.
 
 ```sql
 ### Écran → tables
@@ -2926,18 +2877,6 @@ Les écrans qui écrivent aujourd'hui en mémoire attendent ces routes :
 | Changement de statut projet | `PATCH /projects/{id}` |
 | Relance d'une tâche | `POST /tasks/{id}/reminder` |
 | Modification d'un seuil ou d'un modèle d'email | `PUT /parametres/{key}` |
-| Scouting — hypothèses du modèle | `PUT /parametres/scoutingParams` (`{ "valeur": … }`) |
-| Scouting — dépôt d'un secteur OSM dans le cache partagé (repli navigateur) | `PUT /scouting/tiles/{secteur}` (corps : `{ t, c, b, p }`, ≤ 12 Mo) |
-| Scouting — relecture d'un secteur OpenStreetMap par le serveur | `POST /scouting/refresh/{secteur}` (0 à 8 ; une à trois minutes ; rend le secteur `{ t, c, b, p }` et le dépose dans le cache ; 502 si Overpass ne répond pas, le cache est alors conservé) |
-| Scouting — notes, avis, source, commentaire terrain (lot ≤ 500) | `PUT /scouting/competitors` (`{ "rows": [{ id, name?, commune?, arr?, rating?, reviews?, source?, comment? }] }` — seules les clés présentes sont modifiées) |
-| Scouting — qualification terrain d'un concurrent (type, force 0–100, référence, visite, relevé) | même `PUT /scouting/competitors`, champs `type`, `force`, `reference`, `visiteLe`, `terrain` par ligne ; identifiants `n`, `w`, `r` ou `m` ; une ligne vidée de tout est effacée, sauf un commerce ajouté à la main |
-| Scouting — un commerce vu sur place, absent d'OpenStreetMap | `POST /scouting/concurrents` (`{ name, lat, lng, commune?, arr?, type?, rating?, comment?, force?, reference?, visiteLe?, terrain? }` → `{ ok, id: "m…", concurrent }`) ; 400 sans nom ou hors de Belgique |
-| Scouting — retirer un commerce ajouté à la main | `DELETE /scouting/concurrents/{m…}` (404 inconnu ; jamais un relevé OSM) |
-| Scouting — relevé terrain d'une zone retenue | `PUT /scouting/candidates/{id}/terrain` (corps = le relevé ; vide = effacé ; 404 zone inconnue) → `{ ok, id, terrain }` |
-| Scouting — notes Google d'un lot de commerces (≤ 40 ; clé de Paramètres, côté serveur) | `POST /scouting/notes` (`{ "rows": [{ id, name, addr?, commune?, arr?, lat, lng }] }` → `{ rows: [{ id, rating, reviews }], erreur? }` ; 422 sans clé) |
-| Scouting — zone candidate retenue / retirée | `POST /scouting/candidates` (objet zone) · `DELETE /scouting/candidates/{id}` |
-| Scouting — position d'un magasin du réseau pointée sur la carte | `PUT /scouting/reseau/{id}` (`{ lat, lng }`, Belgique seulement ; prime sur la fiche Google ; ligne `ceo_app_setting.scoutingReseau`) |
-| Scouting — import CSV StatBel | `PUT /scouting/populations` (`{ "populations": { "NIS": population }, "fichier"? }`) |
 | Soumission d'un post Facebook au contrôle | `POST /facebook/posts` |
 | (Re)passer l'agent de contrôle sur un post | `POST /facebook/posts/{id}/controle` |
 | Décision du CEO (valider / refuser) ou publication déclarée | `PATCH /facebook/posts/{id}` |

@@ -78,8 +78,6 @@ public/
     js/templates.js     gabarits HTML des 13 écrans + modales + assistants
     js/api.js           couche d'accès (19 endpoints, repli démo)
     js/data.js          jeu de démonstration (génération déterministe)
-    js/scouting.js      écran Scouting commercial (Overpass, carte, modèle CA)
-    js/scouting-tpl.js  gabarits HTML de l'écran Scouting
     vendor/leaflet/     Leaflet 1.9.4 (carte), embarqué
   dashboard/            dashboard magasin — page à part, hors SPA
     index.html          coquille
@@ -299,123 +297,33 @@ installée sur les tablettes : il ne change plus de nom.
   `.htaccess` (qui fait de même en production : sans cela le shell du cockpit
   partait en 200 à la place d'un morceau de script ou d'une image).
 
-## Scouting commercial
+## Scouting commercial → CRM
 
-Écran « Scouting commercial » (rail, groupe *Développement*) — implémentation
-du design Claude Design « Scouting Belgique » : carte Leaflet / OpenStreetMap
-centrée sur la Belgique, 11 provinces et régions, 43 arrondissements.
+L'écran « Scouting — où ouvrir » a **quitté le cockpit le 31/10/2026**. Il vit
+dans le CRM (dépôt `atelier-espace-candidat`), menu *Développement* →
+**Étude de faisabilité** : le même code (écran, gabarits, styles, routes
+`/scouting/*`, dossier d'implantation et plan d'expansion en PDF), recopié tel
+quel sous l'API du CRM, sur la **même base** — tables `ceo_scouting_*` et
+réglages `scoutingParams`, `scoutingReferences`, `scoutingReseau`,
+`scoutingMagasins` de `ceo_app_setting`. La documentation de l'écran est dans
+le `CLAUDE.md` du CRM (« Portail Recrutement & Développement »). Une ancienne
+adresse `#/scouting` ouvre l'accueil et dit où l'écran est parti.
 
-- **Données** : boulangeries et pâtisseries (`shop=bakery|pastry`) et
-  communes (`admin_level=8`, population OSM) interrogées **depuis le
-  navigateur** sur Overpass, en 9 secteurs avec reprise et bascule
-  d'endpoint. Chaque secteur est mis en cache dans `ceo_scouting_tile`
-  (partagé entre tous les utilisateurs — le premier chargement seul est long)
-  et en `localStorage`. « Recharger les données » force une nouvelle
-  interrogation.
-- **Population** : valeur OSM de la commune quand elle existe, sinon nœud
-  `place` homonyme, sinon densité médiane des communes sourcées voisines
-  (signalée « estimée »). L'import d'un CSV StatBel (code NIS ; population)
-  écrase ces estimations, table `ceo_scouting_population`.
-- **Concurrence** : force d'un concurrent d'après sa note Google, à défaut
-  d'après les signaux OSM (enseigne, site, horaires). Les notes Google sont
-  chargées à la demande par le serveur (`POST /scouting/notes`), avec la clé
-  du connecteur Google de Paramètres — la même que pour la réputation des
-  magasins, jamais dans le code ni dans le navigateur ; **une note ou un
-  commentaire terrain saisis à la main priment**
-  et sont persistés dans `ceo_scouting_competitor`.
-- **Population** : grille de 1 km² du recensement 2021 (StatBel, diffusée par
-  Eurostat/GISCO — `public/assets/data/population_grid_2021.json`, 24 267
-  cellules habitées, 11,54 M d'habitants, chaque cellule rattachée à sa commune
-  par les contours LAU 2024 de GISCO). Les ménages d'un rayon sont ceux des
-  cellules qu'il couvre, là où les gens habitent ; les totaux par commune en
-  découlent, un CSV StatBel importé (code NIS ; population) prime. Sans le
-  fichier, repli sur la part du territoire de chaque commune dans le rayon.
-- **Modèle CA** (étude GeoConsulting, Halle 08-2024) : ménages du rayon ×
-  dépense/ménage × emprise, majoré du passage ; l'emprise décroît avec la
-  pression concurrentielle sauf si elle est imposée. Les 7 hypothèses sont
-  éditables, enregistrées dans `ceo_app_setting.scoutingParams` et reprises
-  dans les exports.
-- **Assistant « où puis-je ouvrir, et pour combien »** : quatre questions dans
-  l'ordre — les provinces, l'arrondissement (classé par ménages par point de
-  vente), les deux bornes de la concurrence, le chiffre d'affaires visé — puis
-  la carte cadrée sur la zone choisie, avec les seuls emplacements qui tiennent
-  les conditions et un bandeau qui rappelle les réponses. Il n'a pas de calcul
-  à lui : il écrit dans les réglages de l'écran. Deux d'entre eux sont nés avec
-  lui, `weak` (en dessous de cette note, ce n'est pas un concurrent — la force
-  valait `(note − 3) ÷ 2`, le 3 était en dur) et `caVise` (plancher de CA, à
-  côté du score minimum), plus deux conditions de terrain : `nMax` (concurrents
-  au plus dans le rayon, 0 = aucune boulangerie) et `hhMin` (ménages minimum
-  dans le rayon, la densité là où elle compte) et `zoneMax` (à tant de km d'un
-  **zoning d'activité**, distance mesurée au bord de la zone). Quand rien ne
-  sort, l'écran dit lequel des filtres vide la liste et combien d'emplacements
-  il retient.
-- **Zoning d'activité** : les surfaces `landuse=industrial|commercial|retail`
-  d'OpenStreetMap, d'au moins 260 m de rayon. Elles ont leur **propre requête
-  Overpass et leurs propres secteurs** (100 à 108 de `ceo_scouting_tile`) :
-  un échec du zoning ne peut pas empêcher le relevé des commerces, qui est la
-  donnée vitale de l'écran. Cron du dimanche 6 h 15,
-  `bin/scouting_refresh.php --zoning`. Tant que le cache est vide, le filtre le
-  dit et reste éteint. Les zones sont aussi une **couche de la carte**, cochée
-  d'origine : au-delà de 1 200 dans la vue, seules les plus grandes sont
-  peintes, sans quoi la Belgique entière devient illisible.
-  Son balayage est par **arrondissement**, jamais par la vue : à l'échelle du
-  pays, la maille de la carte s'élargit et ne rendait que deux points.
-- **Chercher une ville** : en haut du panneau de gauche, et à l'étape 2 de
-  l'assistant — là elle répond à la question posée : choisir une ville, c'est
-  choisir son arrondissement (on connaît sa ville, rarement son
-  arrondissement), et la ligne choisie est ramenée sous les yeux dans le
-  tableau. La saisie se compare
-  sans casse ni accents, et **sur les deux noms** que le relevé garde de chaque
-  commune (`name:fr` et `name`) : « Ieper » trouve Ypres, « Brugge » trouve
-  Bruges. Elle porte sur toutes les communes relevées, pas seulement celles des
-  provinces cochées — on ne peut pas chercher ce qu'on a masqué ; aller à une
-  ville hors sélection recoche sa province (sinon la fiche s'ouvrirait sans un
-  seul concurrent, la carte ne les chargeant pas) et resserre l'arrondissement
-  s'il en était fixé un autre. Le clic, ou Entrée sur la première trouvée, cadre
-  la carte et ouvre **la fiche de scoring complète** de l'endroit : score,
-  ménages du rayon, zone primaire, marché, concurrents, pression, emprise,
-  rendement au m², CA hebdomadaire et CA annuel estimé.
-- **Chaînes** : une enseigne est reconnue à la **marque relevée par
-  OpenStreetMap** (`brand`, 392 commerces sur le relevé) — de la donnée, pas une
-  liste écrite à la main — et à défaut au nom, pour les quelques enseignes
-  connues que la marque ne porte pas (`CHAINS`). `estChaine()` et `marqueDe()`
-  en sont l'unique définition ; `strength()` s'en sert aussi. Le compte paraît
-  en colonne « dont chaînes » du tableau de l'assistant (avec les marques en
-  toutes lettres), dans le résumé de l'étape, en ligne « Chaînes dans le rayon »
-  de la fiche de scoring, et en marque sur chaque concurrent de la liste. Une
-  chaîne déjà installée ne s'est pas installée au hasard : sa présence valide la
-  zone de chalandise autant qu'elle la dispute.
-- **Points chauds** : les zones prioritaires de la carte sont aussi **listées
-  dans le panneau de droite**, dans le même ordre — rang, commune, ménages,
-  concurrents, CA estimé, score. Cliquer une ligne cadre la carte et ouvre la
-  fiche ; cliquer un repère surligne la ligne et titre la fiche « Point chaud
-  nº N ». Une seule sélection des deux côtés, un seul balayage (`scanPrio()`)
-  pour la carte, le compteur et la liste.
-- **Zones** : zones d'exclusion (rayon paramétrable autour des concurrents
-  forts), zones prioritaires (balayage de la vue, 30 meilleurs scores hors
-  zones rouges), fiche d'implantation au clic, zones candidates retenues
-  (`ceo_scouting_candidate`), comparaison de deux arrondissements, modale des
-  magasins du réseau. Onglets tabulaires `ceo_zones`, `ceo_concurrents`,
-  `ceo_arrondissements` et « Top 5 par province » (les cinq meilleures communes
-  de chaque province cochée, balayées sur toute leur emprise), avec export CSV.
-- **Calage sur le réseau** : pour chaque magasin ouvert, le CA réel (P&L du
-  panel, douze derniers mois clos) face au CA que le modèle prédit à son
-  emplacement — position lue sur la fiche Google raccordée, ou pointée sur la
-  carte. Un bouton cale la dépense par ménage sur le rapport médian réel ÷
-  modèle, pour que le classement colle au réseau.
-- Chaque saisie (note, commentaire, zone retenue, import) produit une ligne
-  `Scouting` dans le Journal. Sans API (mode démo), tout reste en
-  `localStorage` du navigateur.
+Restent dans le cockpit, parce que d'autres écrans en vivent :
 
-Les données OpenStreetMap (neuf secteurs : communes, boulangeries, lieux
-peuplés) vivent dans `ceo_scouting_tile` et sont relues par le **serveur** :
-cron hebdomadaire `bin/scouting_refresh.php` (posé par `bin/deploy.sh`) et
-`POST /scouting/refresh/{secteur}` pour « Recharger les données ». L'écran
-n'attend donc jamais Overpass : il lit le cache, et affiche la date de
-relecture. Dépendances réseau côté serveur : les miroirs Overpass et, pour les
-notes Google, `places.googleapis.com` (connecteur Google de Paramètres). Côté
-navigateur : `tile.openstreetmap.org` (fond de carte) seulement — Overpass n'est
-interrogé depuis le navigateur qu'en repli, hors API.
+- `GET /scouting/demarchage` — les lieux à démarcher autour d'un magasin
+  (OpenStreetMap, gardés 45 jours dans `ceo_scouting_etude`), pour
+  *Développement commercial*, *Prospection* et *Prospection mobile* ;
+- `GET /scouting/reseau` — les magasins du réseau et leur position (fiche
+  Google raccordée, ou pointée sur la carte de l'Étude de faisabilité du CRM) ;
+- `src/scouting_osm.php` (les relevés Overpass) et le cron hebdomadaire
+  `bin/scouting_refresh.php`, posé par `bin/deploy.sh` (dimanche 4 h 15, zoning
+  6 h 15) : il tient à jour `ceo_scouting_tile`, que l'Étude de faisabilité du
+  CRM lit et qu'elle ne relit que sur demande ;
+- `bin/scouting_grille.py`, qui reconstruit la grille de population du
+  recensement — servie désormais par le CRM (`app/crm/web/public/geo/`) ;
+- la création des tables `ceo_scouting_*` (`ensureScouting`, `schema.sql`) :
+  la base est commune, rien n'est supprimé.
 
 ## Mix par 1 000 € vendus
 

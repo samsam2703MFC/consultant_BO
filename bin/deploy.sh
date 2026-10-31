@@ -574,7 +574,10 @@ fi
 #
 # Les neuf secteurs Overpass (communes, boulangeries, lieux peuplés) vivent dans
 # ceo_scouting_tile. Interroger Overpass prend une à trois minutes par secteur :
-# personne ne doit l'attendre à l'ouverture de l'écran. Le cron relit les
+# personne ne doit l'attendre à l'ouverture de l'écran. L'écran a quitté le
+# cockpit (31/10/2026) : c'est l'Étude de faisabilité du CRM, qui lit ces
+# mêmes tables (base commune) et n'a pas de cron à elle — celui-ci la tient à
+# jour tant qu'elle n'en a pas. Le cron relit les
 # secteurs le dimanche à 4 h 15 ; bin/scouting_refresh.php ne touche pas à un
 # secteur relu depuis moins de six jours, et refuse de tourner deux fois en
 # même temps (verrou).

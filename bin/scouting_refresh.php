@@ -3,6 +3,11 @@ declare(strict_types=1);
 /**
  * Rafraîchit le cache OpenStreetMap du scouting commercial (ceo_scouting_tile).
  *
+ * L'écran du scouting a quitté le cockpit (31/10/2026) : il vit dans le CRM,
+ * Développement → Étude de faisabilité, qui lit ces mêmes tables (base
+ * commune) sans relecture planifiée à lui. Ce script reste ici tant que le
+ * CRM n'a pas la sienne.
+ *
  *   php bin/scouting_refresh.php            secteurs absents ou relus il y a plus de six jours
  *   php bin/scouting_refresh.php --force    les neuf secteurs, quel que soit leur âge
  *   php bin/scouting_refresh.php 2 5        seulement ces secteurs (0 à 8), quel que soit leur âge
