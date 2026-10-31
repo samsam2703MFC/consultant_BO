@@ -79,7 +79,8 @@ echo "Parcours : correspondances (les noms du panel font foi)\n";
 foreach ([['Opérateur Vente', 'Équipier confirmé', 'P3'], ['Opérateur Vente', 'Responsable d’équipe ( Crew Chief )', 'P4'], ['Opérateur Boulangerie – Pâtisserie', 'Débutant', 'P1'],
     ['Opérateur Boulangerie – Pâtisserie', "Responsable d'équipe", 'P5'], ['Opérateur Traiteur', 'Équipier confirmé - Traiteur Froid', 'P2'], ['Adjoint de Manager', 'Adjoint Manager', 'P7'],
     ['Manager', 'Manager', 'P8'], ['Candidat Franchisé', 'Candidat Franchisé', 'P10'], ['Franchisé', 'Franchise', 'P11'], ['Client mystère', '', null],
-    ['Consultant Réseaux Sociaux', 'Indépandant', null]] as [$po, $ni, $attendu]) {
+    ['Consultant Réseaux Sociaux', 'Indépandant', null], ['Interface Franchiseur–Franchisés', 'Indépandant', null],
+    ['Contrôleur Qualité & Conformité', 'Animateur Formateur', null], ['Développeur de performance (business coach)', 'Indépandant', null]] as [$po, $ni, $attendu]) {
     verifie("$po · $ni → " . ($attendu ?? 'hors matrice'), pcCodeV25($po, $ni) === $attendu, (string) pcCodeV25($po, $ni));
 }
 verifie('même métier : vendeuse → chef de section vente', pcGroupe('P4', 'P3') === 'metier');

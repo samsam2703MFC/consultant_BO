@@ -116,6 +116,9 @@ function pcCodeFo(string $nom): ?string
 function pcCodeV25(string $poste, string $niveau): ?string
 {
     $p = mb_strtolower($poste); $n = mb_strtolower($niveau);
+    // Les rôles du réseau (franchiseur, consultants, contrôle) ne sont pas des postes de la matrice —
+    // mesuré sur le panel : « Interface Franchiseur–Franchisés » passait pour un franchisé.
+    if (preg_match('/interface|consultant|contr[ôo]leur|direction|client myst|strat[ée]gie|d[ée]veloppeur|tech/u', $p)) { return null; }
     $chef = str_contains($n, 'responsable');
     if (str_contains($p, 'boulang') || str_contains($p, 'pâtiss')) { return $chef ? 'P5' : 'P1'; }
     if (str_contains($p, 'traiteur')) { return $chef ? 'P6' : 'P2'; }
@@ -124,7 +127,7 @@ function pcCodeV25(string $poste, string $niveau): ?string
     if (str_contains($p, 'candidat')) { return 'P10'; }
     if (str_contains($p, 'multi')) { return 'P12'; }
     if (str_contains($p, 'locataire')) { return 'P9'; }
-    if (str_contains($p, 'franchis')) { return 'P11'; }
+    if (preg_match('/^franchis/u', $p)) { return 'P11'; }
     if (str_contains($p, 'manager')) { return 'P8'; }
     return null;
 }
