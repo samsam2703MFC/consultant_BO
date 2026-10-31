@@ -199,7 +199,7 @@ function vcCorrectionsMois(mixed $r, string $ym): ?array
  *  refusent le compte consultant (403 « Shop context required », mesuré le 31/10) : elles restent nulles. */
 function vcCorrections(array $sids, string $ym): array
 {
-    try { $c = setting('vcCorr:' . $ym); } catch (Throwable $e) { $c = null; }
+    try { $c = setting('vcCorr2:' . $ym); } catch (Throwable $e) { $c = null; }
     if (is_array($c) && isset($c['le'], $c['v']) && time() - (int) $c['le'] < 3600) { return (array) $c['v']; }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return []; }
     $ch = [];
@@ -210,7 +210,7 @@ function vcCorrections(array $sids, string $ym): array
         $x = vcCorrectionsMois($rep[$sid] ?? null, $ym);
         $out[$sid] = ['corrections' => $x === null ? null : [$x[0], $x[1]], 'details' => $x[2] ?? [], 'anomalies' => null];
     }
-    try { svGrave('vcCorr:' . $ym, ['le' => time(), 'v' => $out]); } catch (Throwable $e) { /* sans cache */ }
+    try { svGrave('vcCorr2:' . $ym, ['le' => time(), 'v' => $out]); } catch (Throwable $e) { /* sans cache */ }
     return $out;
 }
 
