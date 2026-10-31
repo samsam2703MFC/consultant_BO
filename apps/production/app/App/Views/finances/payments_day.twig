@@ -1,0 +1,31 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Płatności dnia{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Płatności dnia</h3>
+            <p class="text-subtitle text-muted mb-0">Finanse › Należności · {{ data.day|date('d.m.Y') }} — proformy niezapłacone, przypomnienia, różnice dostaw.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if can_see('/communication/payment-reminders') %}<a class="btn btn-outline-primary" href="{{ root }}/communication/payment-reminders"><i class="bi bi-bell"></i> Przypomnienia płatności</a>{% endif %}
+            {% if can_see('/shipments/differences') %}<a class="btn btn-outline-primary" href="{{ root }}/shipments/differences"><i class="bi bi-arrow-left-right"></i> Różnice dostaw</a>{% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# Płatności dnia [230] (makieta 5) : App\Services\Finances\PaymentsDayService — widok w assets/js/finances/payments-day.js.
+   Zadanie « Płatności dnia » (Administracja, codziennie do 11:00) zalicza się samo po kroku 3 (« Zakończ »). #}
+<section class="section">
+    <div class="rcv-task"><i class="bi bi-magic"></i> Zadanie « Płatności dnia » (Administracja, codziennie do 11:00) zalicza się samo po kroku 3 — wynik : opłacone, przypomnienia, należności.</div>
+    <div id="payApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="payBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/finances/payments-day.js?v={{ asset_v() }}"></script>
+{% endblock %}

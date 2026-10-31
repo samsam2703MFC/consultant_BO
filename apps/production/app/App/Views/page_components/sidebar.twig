@@ -150,6 +150,14 @@
                     </a>
                 </li>
 
+                {# Kontrola przyjęć dnia [230] : wpisywana na tablecie pakowania (tryb « Przyjęcia »), tu podsumowanie dnia, zdjęcia, e-mail do dostawcy. #}
+                <li class="sidebar-item">
+                    <a href="{{ root }}/workshop/receiving" class="sidebar-link">
+                        <i class="bi bi-box-arrow-in-down"></i>
+                        <span>Kontrola przyjęć</span>
+                    </a>
+                </li>
+
                 {# Zakupy tygodnia : kreator w 3 krokach (co kupić → komu i jak → wyślij), oferty z minimum zamówienia, wyniki operatora i zespołu. #}
                 <li class="sidebar-item">
                     <a href="{{ root }}/workshop/buy" class="sidebar-link">
@@ -196,6 +204,7 @@
                     <ul class="submenu">
                         <li class="submenu-item"><a href="{{ root }}/purchasing/offers"><i class="bi bi-tags"></i> Oferty cenowe</a></li>
                         <li class="submenu-item"><a href="{{ root }}/purchasing/tenders"><i class="bi bi-envelope"></i> Zapytania ofertowe</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/purchasing/supplier-review"><i class="bi bi-award"></i> Ocena dostawców (kwartał)</a></li>
                     </ul>
                 </li>
 
@@ -349,6 +358,14 @@
                             </a>
                         </li>
                     </ul>
+                </li>
+
+                {# Płatności dnia [230] : wpłaty proform, przypomnienia, różnice dostaw — kreator zadania Administracji. #}
+                <li class="sidebar-item">
+                    <a href="{{ root }}/finances/payments-day" class="sidebar-link">
+                        <i class="bi bi-cash-coin"></i>
+                        <span>Płatności dnia</span>
+                    </a>
                 </li>
 
                 <li class="sidebar-item">
@@ -603,6 +620,10 @@
                 <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Ustawienia › Organizacja › Funkcje i zadania › Zadania stanowiska"><i class="bi bi-bell"></i> Przypomnienia zadań : w dniu terminu o 09:00 → osoba, spóźnione po 2 dniach → przełożony (dzwonek), dla każdego zadania</a></li>
                 <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Ustawienia › Organizacja › Funkcje i zadania › Zadania stanowiska"><i class="bi bi-link-45deg"></i> Też w tym zadaniu : inne strony zadania (kroki bez własnego zadania, np. oferty i dostawcy w Zakupach tygodnia) — linki pod zadaniem na stronie Dzisiaj ; jedno zadanie = jeden kreator</a></li>
                 <li><a href="{{ root }}/organization/execution" data-where="Kto co zrobił"><i class="bi bi-tablet"></i> Zadania dnia tabletów : grupy produkcji (dzień zatwierdzony), brygadzista (wszystkie grupy), pakowanie (wszystko spakowane), kierowca (trasa zakończona) — zaliczane przez tablet, widoczne w Kto co zrobił</a></li>
+                <li><a href="{{ root }}/workshop/receiving" data-where="Zakupy › Kontrola przyjęć"><i class="bi bi-box-arrow-in-down"></i> Kontrola przyjęć dnia : dostawy z zamówień sprawdzone na tablecie pakowania (tryb « Przyjęcia »), pozycje OK / niezgodność, zdjęcia, decyzja, szkic e-maila do dostawcy w jego języku ; zadanie Jakości / Kierownika zaliczane samo</a></li>
+                <li><a href="{{ root }}/tablet/packing?mode=receiving" data-where="Logistyka i pakowanie › Tablet pakowania › Przyjęcia"><i class="bi bi-tablet-landscape"></i> Tablet pakowania, tryb « Przyjęcia » : dostawy dnia, ilość, partia, termin ważności, temperatura (chłodnia), OK / niezgodność ze zdjęciem z aparatu tabletu, dostawa nie dotarła</a></li>
+                <li><a href="{{ root }}/finances/payments-day" data-where="Sprzedaż › Płatności dnia"><i class="bi bi-cash-coin"></i> Płatności dnia : proformy niezapłacone (dni od wystawienia, przypomnienia), opłacone z datą i kwotą z wyciągu, przypomnienia na dziś (poziomy 1–5), różnice dostaw (dopłaty, zwroty) ; zadanie Administracji zaliczane samo</a></li>
+                <li><a href="{{ root }}/purchasing/supplier-review" data-where="Zakupy › Oferty i zapytania › Ocena dostawców"><i class="bi bi-award"></i> Ocena dostawców co kwartał : zakupy, dostawy, na czas, niezgodności, zmiana cen → ocena A / B / C (40 / 30 / 30 %), decyzja (zostaje, obserwuj, zmień), surowce do zapytania, szkic zapytania ofertowego</a></li>
                 <li><a href="{{ root }}/organization/execution" data-where="Kto co zrobił"><i class="bi bi-people"></i> Kto co zrobił (przełożony) : stanowiska × dni (dziś, tydzień, miesiąc), zrobione, w toku, spóźnione, grupy produkcji (tablety), System — zadania automatyczne, lista spóźnionych z « Przypomnij », szczegóły zadania</a></li>
                 <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Ustawienia › Organizacja › Funkcje i zadania"><i class="bi bi-file-earmark-person"></i> Karty stanowisk (fiches de poste) : cel, obowiązki, kompetencje, wskaźniki, higiena — biuro i pracownia, PDF PL / FR</a></li>
                 <li><a href="{{ root }}/tablet/driver" data-where="Tablety › Otwórz tablet › Tablet kierowcy"><i class="bi bi-tablet-landscape"></i> Tablet kierowcy : trasa dnia, numery palet, zdjęcia przed i po rozładunku z godziną, podpis, raport PDF trasy, problemy w dostawie</a></li>

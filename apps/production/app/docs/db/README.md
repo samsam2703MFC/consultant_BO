@@ -177,6 +177,42 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   p. ex. Tarty, depuis les validations de journée) et « Brygadzista · Pakowanie · Kierowca (tablety) » ; un jour passé sans
   occurrence (tâche créée après, liste jamais ouverte) affiche l'état de l'assistant ce jour-là (lecture seule).
 
+### Trois assistants de tâches : réceptions, paiements, évaluation des fournisseurs (migration 149, 31/10/2026)
+
+- **Kontrola przyjęć dnia** — saisie sur la tablette d'emballage (`/tablet/packing`, troisième choix de l'interrupteur
+  Pakowanie / Paletyzacja / **Przyjęcia**, API `GET /kiosk/receiving`, `GET|POST /kiosk/receiving/orders/{id}`, toute tablette
+  appairée, opérateur = personne pointée). Livraisons du jour = commandes fournisseurs (`n_po`) envoyées / reçues avec la date
+  de livraison du jour, ou reçues ce jour-là (`ReceivingWizardRepository::DUE`) ; commandes ouvertes en retard (14 jours)
+  affichées à part. Par ligne : quantité (unité affichée kg / l / szt), lot, DLUO, température (matières froides : catégorie ou
+  nom — nabiał, mięso, masło, drożdże…), OK / Niezgodność. Chaque ligne contrôlée enregistre la réception dans la commande
+  (`SupplyService::receive`, `n_po_receipt.temperature_c` nouveau) ; une non-conformité (types : quantité, qualité,
+  température, emballage, DLUO, document ; description ; décision : acceptée, sous réserve, retour, décision du responsable ;
+  4 photos JPEG / PNG / WebP ≤ 3 Mo, `n_nc_photo`) crée une NC fournisseur (`n_nc`, quantité concernée, décision dans
+  `immediate_action`) ; « retour » et « décision du responsable » → cloche (`receiving_nc`). « Livraison non arrivée » =
+  contrôle sans réception. `n_receiving_check` (commande × jour : lignes OK / NC, arrivée, NC, utilisateur ou opérateur).
+  ERP : `/workshop/receiving` (Zakupy › Kontrola przyjęć) = résumé du jour, photos (`/purchasing/nc/photo/{id}`), brouillon
+  d'e-mail au fournisseur dans sa langue (PL / FR, « Kopiuj », « Otwórz w poczcie » — rien n'est envoyé par l'ERP).
+  Tâche Jakość (quotidienne, 14:00) et Kierownik (quotidienne) → `receiving_checked` : faite quand toutes les livraisons du
+  jour sont contrôlées (« 4 dostawy · 10 OK · 1 NC »), jour sans livraison = fait.
+- **Płatności dnia** (`/finances/payments-day`, Sprzedaż) — 1. proformas impayées (jours depuis l'émission, rappels envoyés),
+  « opłacone » avec date et montant du relevé (`ProformaService::markPaid` + `n_proforma_payment`) ; 2. rappels dus (niveaux
+  1–5 après 3 / 7 / 14 / 21 / 30 jours ; niveaux couverts par l'envoi automatique = automatiques, autres : aperçu et
+  « Wyślij » dans le composeur) ; 3. écarts de livraison ouverts (dopłaty, zwroty, problèmes ; décisions sur la page des
+  écarts). « Zakończ » → `n_wizard_done` (`payments_reviewed`, « 2 opłacone · 4 przypomnienia · należności 62 410 € »).
+  Tâche Administracja « Kontrola wysłanych faktur i płatności » (quotidienne, 11:00).
+- **Ocena dostawców** (`/purchasing/supplier-review`, Zakupy › Oferty i zapytania, trimestre précédent) — par fournisseur :
+  achats (réceptions ou factures KSeF, le plus grand), livraisons, à temps (première réception ≤ date de livraison de la
+  commande), NC de livraison, variation de prix (dernier prix de `raw_material_price_changelog` en début et fin de
+  trimestre, pondérée par les achats). Note = à temps 40 % · NC 30 % (1 − 2 × NC / livraisons) · prix 30 % (0 % à +10 %) ;
+  parts sans données ignorées ; A ≥ 85, B ≥ 65, C ; décision par défaut A zostaje, B obserwuj, C zmień dostawcę (corrigeable,
+  note) → `n_supplier_review`. Matières proposées : +5 % sur le trimestre, fournisseur actuel « zmień », ou matière clé
+  (≥ 5 % des achats) à moins de 3 fournisseurs. Brouillon d'appel d'offres (`TenderService::create`, fournisseurs actuels
+  + mêmes catégories avec e-mail, réponse +14 jours) — envoi seulement depuis Zapytania ofertowe. « Zatwierdź ocenę » →
+  `n_wizard_done` (`suppliers_reviewed`, « III kwartał 2026 : 8 A · 4 B · 2 C · zapytanie ZO-… »).
+- Accès : nouvelles pages `receiving` (depuis `supply` / `production`), `payments_day` (depuis `reminders` / `invoices`),
+  `supplier_review` (depuis `purchasing`). Tâches reliées par poste, page et fréquence (pas par id), seulement sans
+  assistant ; rejouable.
+
 ### Prévision 13 semaines glissantes (migration 141, 30/10/2026)
 
 - Page : Produkcja › « Prognoza 13 tygodni » (`/production/forecast`, onglet de la page Produkcja, maquettes 220-1 à 3 ;

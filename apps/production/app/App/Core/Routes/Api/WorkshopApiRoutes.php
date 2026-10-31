@@ -17,6 +17,7 @@ use App\Controllers\Api\Workshop\OpenApiController;
 use App\Controllers\Api\Workshop\PackingController;
 use App\Controllers\Api\Workshop\ParamController;
 use App\Controllers\Api\Workshop\PlanningController;
+use App\Controllers\Api\Workshop\ReceivingController;
 use App\Controllers\Api\Workshop\SchedulingController;
 use App\Controllers\Api\Workshop\ShiftTemplateController;
 use App\Controllers\Api\Workshop\TeamController;
@@ -319,6 +320,10 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/pallets', PackingController::class, 'pallets', 'kiosk'],
             ['POST', '/kiosk/pallets/entries', PackingController::class, 'addPallet', 'kiosk'],
             ['DELETE', '/kiosk/pallets/entries/{id:\d+}', PackingController::class, 'deletePallet', 'kiosk'],
+            // Tryb « Przyjęcia » tabletu pakowania [230] : kontrola przyjęć dnia (dostawy z zamówień, OK / niezgodność, zdjęcia).
+            ['GET', '/kiosk/receiving', ReceivingController::class, 'day', 'kiosk'],
+            ['GET', '/kiosk/receiving/orders/{id:\d+}', ReceivingController::class, 'order', 'kiosk'],
+            ['POST', '/kiosk/receiving/orders/{id:\d+}', ReceivingController::class, 'check', 'kiosk'],
             ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk_employee'],
             ['POST', '/driver/photos', DriverController::class, 'photo', 'kiosk_employee'],
             ['GET', '/driver/report', DriverController::class, 'report', 'kiosk_employee'],

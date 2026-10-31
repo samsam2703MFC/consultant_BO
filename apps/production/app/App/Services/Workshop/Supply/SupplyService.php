@@ -364,7 +364,8 @@ final class SupplyService
             'supplier_email' => $o['supplier_email'], 'supplier_phone' => $o['supplier_phone'], 'note' => $o['note'],
             'lines' => $lines, 'receipts' => array_map(fn($r) => ['line_id' => (int) $r['id_po_line'], 'raw_material_id' => (int) $r['id_raw_material'], 'received_on' => $r['received_on'],
                 'quantity' => (float) $r['quantity'], 'unit_price' => $r['unit_price'] !== null ? (float) $r['unit_price'] : null,
-                'lot_number' => $r['lot_number'] ?? null, 'best_before' => $r['best_before'] ?? null, 'nc_id' => isset($r['id_nc']) ? (int) $r['id_nc'] : null,
+                'lot_number' => $r['lot_number'] ?? null, 'best_before' => $r['best_before'] ?? null,
+                'temperature_c' => isset($r['temperature_c']) ? (float) $r['temperature_c'] : null, 'nc_id' => isset($r['id_nc']) ? (int) $r['id_nc'] : null,
                 'employee' => ($r['employee_name'] ?? '') !== '' ? $r['employee_name'] : null], $this->repo->receipts($id)),
             'can_edit' => $o['status'] === 'draft' && $context->can('prod.supply.write'),
             'can_receive' => in_array($o['status'], ['sent', 'partial'], true) && $context->can('prod.supply.write'),
@@ -467,8 +468,11 @@ final class SupplyService
             if ($lot !== null && mb_strlen($lot) > 64) { $v->add("lines.$i.lot_number", 'TOO_LONG', ['max' => 64]); continue; }
             $bb = isset($r['best_before']) && is_string($r['best_before']) && $r['best_before'] !== '' ? $r['best_before'] : null;
             if ($bb !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $bb)) { $v->add("lines.$i.best_before", 'INVALID_DATE'); continue; }
+            // Temperatura przy przyjęciu (chłodnia / mroźnia, kreator przyjęć) : opcjonalna, −40…+60 °C.
+            $temp = $r['temperature_c'] ?? null;
+            if ($temp !== null && ((!is_int($temp) && !is_float($temp)) || $temp < -40 || $temp > 60)) { $v->add("lines.$i.temperature_c", 'OUT_OF_RANGE', ['min' => -40, 'max' => 60]); continue; }
             if ($qty > 0) $clean[] = ['id' => $lineId, 'quantity' => (float) $qty, 'unit_price' => $price !== null ? (float) $price : ($own[$lineId]['unit_price'] !== null ? (float) $own[$lineId]['unit_price'] : null),
-                'lot_number' => $lot, 'best_before' => $bb];
+                'lot_number' => $lot, 'best_before' => $bb, 'temperature_c' => $temp !== null ? round((float) $temp, 1) : null];
         }
         // Problem przy przyjęciu (asystent, krok 4) : niezgodność dostawcy wypełniona z linii (dostawca, surowiec, ilość).
         $problems = [];
@@ -487,7 +491,7 @@ final class SupplyService
         $by = $context->employeeId !== null ? $this->repo->employeeName($context->employeeId) : null;
         $this->tx->execute(function () use ($id, $o, $day, $clean, $problems, $own, $context, $by) {
             $receiptOf = [];
-            foreach ($clean as $c) $receiptOf[$c['id']] = $this->repo->addReceipt($c['id'], $day, $c['quantity'], $c['unit_price'], $context->userId, $c['lot_number'], $c['best_before'], $context->employeeId);
+            foreach ($clean as $c) $receiptOf[$c['id']] = $this->repo->addReceipt($c['id'], $day, $c['quantity'], $c['unit_price'], $context->userId, $c['lot_number'], $c['best_before'], $context->employeeId, $c['temperature_c']);
             foreach ($problems as $lineId => $pb) {
                 $line = $own[$lineId];
                 $ncId = $this->nc->save(['reported_at' => $day, 'source' => 'supplier_delivery', 'supplier_id' => (int) $o['id_supplier'], 'material_id' => (int) $line['id_raw_material'],

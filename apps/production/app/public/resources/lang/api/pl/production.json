@@ -76,6 +76,7 @@
     "PO_NOT_EDITABLE": "Tego zamówienia nie można już zmienić (status : {status}).",
     "PO_NO_LINES": "Zamówienie nie ma żadnej linii.",
     "PO_NO_EMAIL": "Brak adresu e-mail dostawcy — wpisz adres albo oznacz zamówienie jako wysłane ręcznie.",
+    "RECEIVING_INVALID": "{message}",
     "PO_NOT_RECEIVABLE": "Dostawę można przyjąć tylko dla zamówienia wysłanego (status : {status}).",
     "PO_NO_TEMPLATE": "Brak szablonu e-mail zamówienia do dostawcy (supplier_order).",
     "KSEF_UNAVAILABLE": "KSeF niedostępny lub nieskonfigurowany : {reason}",

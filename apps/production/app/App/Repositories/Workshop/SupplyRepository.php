@@ -345,10 +345,10 @@ final class SupplyRepository extends WorkshopRepository
     }
 
     /** Przyjęcie linii ; partia i data ważności (asystent « Przyjęcie dostawy ») — podpowiedź dla tabletu (FEFO). */
-    public function addReceipt(int $lineId, string $day, float $quantity, ?float $unitPrice, ?int $userId, ?string $lot = null, ?string $bestBefore = null, ?int $employeeId = null): int
+    public function addReceipt(int $lineId, string $day, float $quantity, ?float $unitPrice, ?int $userId, ?string $lot = null, ?string $bestBefore = null, ?int $employeeId = null, ?float $temperature = null): int
     {
-        $this->db->prepare('INSERT INTO n_po_receipt (id_po_line, received_on, quantity, unit_price, lot_number, best_before, created_by, id_employee) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-            ->execute([$lineId, $day, $quantity, $unitPrice, $lot, $bestBefore, $userId, $employeeId]);
+        $this->db->prepare('INSERT INTO n_po_receipt (id_po_line, received_on, quantity, unit_price, lot_number, best_before, temperature_c, created_by, id_employee) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$lineId, $day, $quantity, $unitPrice, $lot, $bestBefore, $temperature, $userId, $employeeId]);
         return (int) $this->db->lastInsertId();
     }
 

@@ -1,0 +1,31 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Ocena dostawców{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Ocena dostawców — {{ data.quarter.label }}</h3>
+            <p class="text-subtitle text-muted mb-0">Zakupy › Dostawcy · dane {{ data.quarter.from|date('d.m') }} – {{ data.quarter.to|date_modify('-1 day')|date('d.m.Y') }} : dostawy, terminowość, niezgodności, ceny, udział w zakupach.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if can_see('/purchasing/tenders') %}<a class="btn btn-outline-primary" href="{{ root }}/purchasing/tenders"><i class="bi bi-envelope-paper"></i> Zapytania ofertowe</a>{% endif %}
+            {% if can_see('/purchasing/nc') %}<a class="btn btn-outline-primary" href="{{ root }}/purchasing/nc"><i class="bi bi-exclamation-triangle"></i> Niezgodności</a>{% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# Ocena dostawców [230] (makieta 6) : App\Services\Purchasing\SupplierReviewService — widok w assets/js/purchasing/supplier-review.js.
+   Zadanie « Ocena dostawców i zapytanie ofertowe » (Kierownik produkcji, co kwartał) zalicza się samo po « Zatwierdź ocenę ». #}
+<section class="section">
+    <div class="rcv-task"><i class="bi bi-magic"></i> Zadanie « Ocena dostawców i zapytanie ofertowe na kluczowe surowce » (co kwartał) zalicza się samo, gdy ocena jest zatwierdzona — wynik : oceny A / B / C i zapytanie ofertowe.</div>
+    <div id="srApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="srBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/purchasing/supplier-review.js?v={{ asset_v() }}"></script>
+{% endblock %}

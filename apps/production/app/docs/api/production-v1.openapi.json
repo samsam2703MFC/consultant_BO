@@ -19174,6 +19174,231 @@
                 ]
             }
         },
+        "/kiosk/receiving": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Tablet pakowania : kontrola przyjęć dnia / Tablette d'emballage : contrôle des réceptions du jour",
+                "operationId": "kioskReceiving",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ReceivingDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Toute tablette appairée : commandes fournisseurs livrées ce jour (date de livraison ou réception ce jour, due = true) et commandes ouvertes en retard (14 jours), contrôle du jour par commande, compteurs, types de non-conformité et décisions, personnes pointées (opérateur).",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "jour (défaut : aujourd'hui ; au plus 30 jours en arrière)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/receiving/orders/{id}": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Pozycje dostawy / Lignes de la livraison",
+                "operationId": "kioskReceivingOrder",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ReceivingOrder"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Lignes en unité affichée (kg, l, szt) : commandé, déjà reçu, reste, reçu ce jour (lot, DLUO, température), cold = chambre froide / congélateur (température à saisir).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Kontrola dostawy : OK / niezgodność / Contrôle de la livraison : OK / non-conformité",
+                "operationId": "kioskReceivingCheck",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ReceivingOrder"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Chaque ligne contrôlée enregistre la réception (quantité, lot, DLUO, température) dans la commande ; une non-conformité (types, description, décision, photos JPEG/PNG/WebP ≤ 3 Mo, 4 max.) crée une NC fournisseur ; « zwrot » et « do decyzji kierownika » → cloche de l'ERP. arrived = false : livraison non arrivée. Réponse : la livraison + result {ok, nc, nc_numbers}.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReceivingCheckInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/driver/stops": {
             "post": {
                 "tags": [
@@ -24922,6 +25147,297 @@
                             },
                             "per_piece": {
                                 "type": "number"
+                            }
+                        }
+                    }
+                }
+            },
+            "ReceivingDay": {
+                "type": "object",
+                "properties": {
+                    "day": {
+                        "type": "string"
+                    },
+                    "now": {
+                        "type": "string",
+                        "example": "2026-10-20 06:02:00"
+                    },
+                    "orders": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "code": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string"
+                                },
+                                "supplier": {
+                                    "type": "string"
+                                },
+                                "delivery_date": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "due": {
+                                    "type": "boolean"
+                                },
+                                "lines": {
+                                    "type": "integer"
+                                },
+                                "receivable": {
+                                    "type": "boolean"
+                                },
+                                "check": {
+                                    "type": "object",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "stats": {
+                        "type": "object",
+                        "properties": {
+                            "due": {
+                                "type": "integer"
+                            },
+                            "checked": {
+                                "type": "integer"
+                            },
+                            "lines": {
+                                "type": "integer"
+                            },
+                            "ok": {
+                                "type": "integer"
+                            },
+                            "nc": {
+                                "type": "integer"
+                            },
+                            "overdue": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "kinds": {
+                        "type": "object"
+                    },
+                    "decisions": {
+                        "type": "object"
+                    },
+                    "people": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "group": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "since": {
+                                    "type": "string",
+                                    "example": "2026-10-20 06:02:00"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "ReceivingOrder": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "supplier": {
+                        "type": "string"
+                    },
+                    "delivery_date": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "receivable": {
+                        "type": "boolean"
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "material_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "factor": {
+                                    "type": "number"
+                                },
+                                "ordered": {
+                                    "type": "number"
+                                },
+                                "received": {
+                                    "type": "number"
+                                },
+                                "remaining": {
+                                    "type": "number"
+                                },
+                                "package": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "cold": {
+                                    "type": "boolean"
+                                },
+                                "today": {
+                                    "type": "object",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "check": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "result": {
+                        "type": "object",
+                        "properties": {
+                            "ok": {
+                                "type": "integer"
+                            },
+                            "nc": {
+                                "type": "integer"
+                            },
+                            "nc_numbers": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "ReceivingCheckInput": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "employee_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "arrived": {
+                        "type": "boolean"
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "id",
+                                "status"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "ok",
+                                        "nc"
+                                    ]
+                                },
+                                "qty": {
+                                    "type": "number"
+                                },
+                                "lot": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "best_before": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "temperature": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "problems": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "line_id",
+                                "kinds",
+                                "decision"
+                            ],
+                            "properties": {
+                                "line_id": {
+                                    "type": "integer"
+                                },
+                                "kinds": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "enum": [
+                                            "qty",
+                                            "quality",
+                                            "temp",
+                                            "package",
+                                            "date",
+                                            "doc"
+                                        ]
+                                    }
+                                },
+                                "description": {
+                                    "type": "string"
+                                },
+                                "decision": {
+                                    "type": "string",
+                                    "enum": [
+                                        "accepted",
+                                        "conditional",
+                                        "return",
+                                        "manager"
+                                    ]
+                                },
+                                "photos": {
+                                    "type": "array",
+                                    "maxItems": 4,
+                                    "items": {
+                                        "type": "string",
+                                        "description": "data URL image/jpeg|png|webp ;base64"
+                                    }
+                                }
                             }
                         }
                     }

@@ -76,6 +76,7 @@
     "PO_NOT_EDITABLE": "Cette commande ne peut plus être modifiée (statut : {status}).",
     "PO_NO_LINES": "La commande n’a aucune ligne.",
     "PO_NO_EMAIL": "Pas d’adresse e-mail du fournisseur — saisissez une adresse ou marquez la commande comme passée autrement.",
+    "RECEIVING_INVALID": "{message}",
     "PO_NOT_RECEIVABLE": "Une réception n’est possible que pour une commande envoyée (statut : {status}).",
     "PO_NO_TEMPLATE": "Modèle d’e-mail de commande fournisseur absent (supplier_order).",
     "KSEF_UNAVAILABLE": "KSeF indisponible ou non configuré : {reason}",

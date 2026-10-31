@@ -157,7 +157,8 @@ try {
     expectPurch($first($items, 'daily')['frequency'] === 'Codziennie' && $tue['groups']['CENY']['icon'] === 'bi-tag', 'item shows its frequency, group its icon');
     $daily = $first($items, 'daily')['occurrence'];
     expectPurch($daily['period_key'] === '2026-10-20' && $daily['status'] === 'open', 'daily occurrence created on first view');
-    $dailyTue = array_values(array_filter($items, fn($it) => $it['task']['frequency'] === 'daily'));
+    // 149 [230] : « Kontrola przyjęć dnia » zalicza się sama w dzień bez dostaw (kreator) — nie jest zaległa.
+    $dailyTue = array_values(array_filter($items, fn($it) => $it['task']['frequency'] === 'daily' && ($it['task']['auto_code'] ?? null) !== 'receiving_checked'));
     $wedBoard = $tasks->myTasks($userId, $wed);
     expectPurch(count($wedBoard['overdue']) === count($dailyTue) && array_unique(array_column($wedBoard['overdue'], 'period_key')) === ['2026-10-20'], "yesterday's open tasks are overdue");
     foreach ($dailyTue as $it) $tasks->setStatus((int) $it['occurrence']['id'], ['status' => 'done'], $userId);

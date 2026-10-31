@@ -22,6 +22,10 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/purchasing/tenders/{id:\d+}/award', ['controller' => $c, 'method' => 'awardTender']);
 
     $r->addRoute('GET', '/purchasing/nc', ['controller' => $c, 'method' => 'nc']);
+    // Lot 4 [230] : kontrola przyjęć dnia (podsumowanie wpisów z tabletu pakowania › Przyjęcia), zdjęcia niezgodności.
+    $rw = App\Controllers\Web\Purchasing\ReceivingWizardController::class;
+    $r->addRoute('GET', '/workshop/receiving', ['controller' => $rw, 'method' => 'index']);
+    $r->addRoute('GET', '/purchasing/nc/photo/{id:\d+}', ['controller' => $rw, 'method' => 'photo']);
     $r->addRoute('POST', '/ajax/purchasing/nc', ['controller' => $c, 'method' => 'saveNc']);
     $r->addRoute('PATCH', '/ajax/purchasing/nc/{id:\d+}', ['controller' => $c, 'method' => 'saveNc']);
 };

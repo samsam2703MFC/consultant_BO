@@ -130,6 +130,34 @@ final class TaskWizardRepository extends WorkshopRepository
     }
 
     /** Grupy produkcji aktywne (tablety). */
+    /** Kontrola przyjęć dnia [230] : dostawy dnia, sprawdzone, pozycje OK / NC, niedotarłe. */
+    public function receivingDay(string $day): array
+    {
+        $r = $this->all(
+            "SELECT COUNT(*) AS due, SUM(c.id IS NOT NULL) AS checked, COALESCE(SUM(c.lines_ok), 0) AS ok, COALESCE(SUM(c.lines_nc), 0) AS nc, COALESCE(SUM(c.arrived = 0), 0) AS missing
+             FROM n_po p LEFT JOIN n_receiving_check c ON c.id_po = p.id AND c.day = ?
+             WHERE " . \App\Repositories\Purchasing\ReceivingWizardRepository::DUE,
+            [$day, $day, $day]
+        )[0] ?? [];
+        return ['due' => (int) ($r['due'] ?? 0), 'checked' => (int) ($r['checked'] ?? 0), 'ok' => (int) ($r['ok'] ?? 0), 'nc' => (int) ($r['nc'] ?? 0), 'missing' => (int) ($r['missing'] ?? 0)];
+    }
+
+    /** Kreator zakończony w dniach [from, to) (płatności dnia, ocena dostawców). */
+    public function wizardDone(string $code, string $from, string $to): ?array
+    {
+        return $this->all('SELECT summary, done_at FROM n_wizard_done WHERE code = ? AND day >= ? AND day < ? ORDER BY day DESC LIMIT 1', [$code, $from, $to])[0] ?? null;
+    }
+
+    public function paymentsRecorded(string $day): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_proforma_payment WHERE recorded_at >= ? AND recorded_at < DATE_ADD(?, INTERVAL 1 DAY)', [$day, $day])[0]['n'] ?? 0);
+    }
+
+    public function reviewsSaved(string $from, string $to): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_supplier_review WHERE reviewed_at >= ? AND reviewed_at < ?', [$from, $to])[0]['n'] ?? 0);
+    }
+
     public function activeGroups(): array
     {
         return $this->all('SELECT id, code, name_pl FROM n_prod_group WHERE active = 1 ORDER BY sort_order, name_pl');

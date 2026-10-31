@@ -2955,3 +2955,47 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
 .fc-api { font-size: 12px; color: var(--at-muted); margin-top: 10px; line-height: 1.5; } .fc-api code { font-size: 11.5px; background: var(--at-bg-2); padding: 1px 5px; border-radius: 5px; color: var(--at-text); }
 @media (max-width: 767.98px) { .fc-cards { grid-template-columns: 1fr; } }
 @media (max-width: 767.98px) { .fc .kw-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Lot 4 [230] — kreatory zadań (makiety 4–6) : kroki z lewej, karta główna, panel z prawej ; przyjęcia (podsumowanie
+   z tabletu pakowania), płatności dnia, ocena dostawców. Wspólne : .rcv-task, .rcv-wz, .rcv-steps, .rcv-tbl, .rcv-kv. */
+.rcv-task { display: flex; gap: 10px; align-items: center; font-size: 12.5px; color: var(--at-muted); background: rgba(43,95,158,.07); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; }
+.rcv-wz { display: grid; grid-template-columns: 220px minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+.rcv-mainc, .rcv-side { display: grid; gap: 12px; min-width: 0; }
+.rcv-steps { display: grid; gap: 6px; }
+.rcv-steps .s { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: #fff; font-size: 13px; font-weight: 600; color: var(--at-muted); border: 0; text-align: left; width: 100%; min-height: 52px; }
+.rcv-steps .s .n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--at-bg-2); font-size: 12px; flex: 0 0 auto; }
+.rcv-steps .s.on { color: var(--at-text); box-shadow: inset 0 0 0 2px #8e1f2f; } .rcv-steps .s.on .n { background: #8e1f2f; color: #fff; }
+.rcv-steps .s.ok .n { background: #2e7d4f; color: #fff; } .rcv-steps .s small { display: block; font-weight: 400; font-size: 11.5px; }
+.rcv-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 15px; margin: 0 0 10px; }
+.rcv-h .rcv-sp { flex: 1; }
+.rcv-tbl { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.rcv-tbl th { font-size: 10.5px; color: var(--at-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 6px 8px; border-bottom: 1px solid var(--at-line); text-align: left; white-space: nowrap; }
+.rcv-tbl td { padding: 9px 8px; border-bottom: 1px solid var(--at-line); vertical-align: middle; } .rcv-tbl .r { text-align: right; }
+.rcv-tbl td small { display: block; color: var(--at-muted); font-size: 11.5px; white-space: nowrap; } .rcv-tbl td b { white-space: nowrap; }
+.rcv-tbl tr.is-late td { background: rgba(193,122,42,.05); } .rcv-tbl tr.is-off td { opacity: .5; }
+.rcv-tbl input[type=checkbox] { width: 22px; height: 22px; accent-color: #8e1f2f; }
+.rcv-tbl input.form-control, .rcv-tbl select.form-select { min-height: 40px; font-size: 13px; }
+.rcv-nc { border-top: 1px solid var(--at-line); padding: 10px 0; display: grid; gap: 4px; font-size: 13px; }
+.rcv-nc:first-of-type { border-top: 0; }
+.rcv-nc-h { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .rcv-nc-h .at-sub { margin-right: auto; color: var(--at-muted); font-size: 12px; }
+.rcv-nc-d { color: var(--at-text); }
+.rcv-ph { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; } .rcv-ph img { width: 120px; height: 90px; object-fit: cover; border-radius: 10px; border: 1px solid var(--at-line); }
+.rcv-mail { display: grid; gap: 8px; padding: 10px 0; border-top: 1px solid var(--at-line); } .rcv-mail:first-of-type { border-top: 0; }
+.rcv-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; } .rcv-row .rcv-sp { flex: 1; }
+.rcv-sum { display: grid; gap: 8px; } .rcv-sum h5 { margin: 0; }
+.rcv-kv { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--at-line); }
+.rcv-kv b { font-variant-numeric: tabular-nums; } .rcv-kv b.is-bad { color: #9a1730; } .rcv-kv b.is-ok { color: #1f5a37; }
+.rcv-list { font-size: 12.5px; display: grid; gap: 6px; }
+.rcv-up { color: #9a1730; font-weight: 700; } .rcv-down { color: #1f5a37; font-weight: 700; }
+.rcv-grade { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; font-weight: 800; color: #fff; background: var(--at-bg-2); }
+.rcv-grade.a { background: #2e7d4f; } .rcv-grade.b { background: #c17a2a; } .rcv-grade.c { background: #9a1730; }
+.rcv-tbl [data-note] { min-width: 170px; }
+.rcv-dec { min-height: 40px; border-radius: 10px; font-weight: 700; font-size: 12.5px; max-width: 170px; }
+.rcv-dec.a { color: #1f5a37; } .rcv-dec.b { color: #8a5512; } .rcv-dec.c { color: #9a1730; border-color: rgba(154,23,48,.4); }
+.rcv-pane[hidden] { display: none; }
+.rcv-tbl td.r, .rcv-tbl th.r { white-space: nowrap; } .rcv-tbl td:nth-child(2) { white-space: nowrap; }
+.rcv-tbl td small { max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+.rcv-h .at-sub { font-size: 12px; font-weight: 400; color: var(--at-muted); }
+/* Z railem ERP : kroki w poziomie nad kartą, panel z prawej (karta główna szeroka jak na makiecie). */
+@media (max-width: 1600px) { .rcv-wz { grid-template-columns: minmax(0, 1fr) 280px; } .rcv-steps { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1100px) { .rcv-wz { grid-template-columns: minmax(0, 1fr); } .rcv-side { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } }

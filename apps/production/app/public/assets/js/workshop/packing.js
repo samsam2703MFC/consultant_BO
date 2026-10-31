@@ -7,6 +7,9 @@
  *  - Paletyzacja : operator (osoby obecne), transport (pojazd albo wszyscy klienci dnia), klienci u góry, produkty
  *    zamówione przez klienta : zamówione / na palecie / zostało ; dotknięcie wiersza → szczegóły (skan + 1 + 2 + 32 = …),
  *    « + » → klawiatura (1, 5, 10, reszta) → kartony na paletę ; cofnięcie ostatniego wpisu ; odświeżanie co 15 s.
+ *  - Przyjęcia [230] : kontrola przyjęć dnia — dostawy z zamówień dostawców (lista z lewej), pozycja po pozycji : ilość,
+ *    partia, termin, temperatura (chłodnia), OK / Niezgodność (co jest nie tak, zdjęcie z aparatu tabletu, opis, decyzja) ;
+ *    zapis = przyjęcie w zamówieniu + NC ; operator jak w paletyzacji. Zadanie « Kontrola przyjęć » zalicza się samo.
  */
 (function () {
     'use strict';
@@ -30,7 +33,8 @@
     let lang = store.get(LANG_KEY) === 'fr' ? 'fr' : 'pl';
     let labels = {};
     let device = store.get(DEVICE_KEY);
-    let mode = ['pack', 'pallets'].includes(query.get('mode')) ? query.get('mode') : (store.get(MODE_KEY) === 'pallets' ? 'pallets' : 'pack');
+    const MODES = ['pack', 'pallets', 'receiving'];
+    let mode = MODES.includes(query.get('mode')) ? query.get('mode') : (MODES.includes(store.get(MODE_KEY)) ? store.get(MODE_KEY) : 'pack');
     let data = null;   // pakowanie
     let pal = null;    // paletyzacja
     let date = (query.get('date') || '').match(/^\d{4}-\d{2}-\d{2}$/) ? query.get('date') : null;
@@ -45,6 +49,12 @@
     let panel = null;       // 'detail' | 'pad'
     let pad = '';
     let drop = null;        // 'vehicle' | 'operator'
+    // Przyjęcia : dzień kontroli (dziś / wczoraj), dostawa otwarta, szkic pozycji (status, ilość, partia, NC…).
+    let rec = null;
+    let recDay = null;
+    let recSel = null;
+    let recOrder = null;
+    let draft = {};
 
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const t = (k, p) => { let s = labels[k] ?? k; for (const [a, b] of Object.entries(p || {})) s = s.split('{' + a + '}').join(String(b)); return s; };
@@ -56,7 +66,7 @@
     const serverNow = () => new Date(Date.now() + skew);
     const color = (n) => COLORS[((n || 1) - 1) % COLORS.length];
     const initials = (name) => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase();
-    const current = () => (mode === 'pack' ? data : pal);
+    const current = () => (mode === 'pack' ? data : (mode === 'pallets' ? pal : rec));
 
     async function loadLabels() {
         const res = await fetch(`${root}/resources/lang/ui/${lang}/packing.json${VERSION ? '?v=' + encodeURIComponent(VERSION) : ''}`, {credentials: 'same-origin'});
@@ -92,19 +102,19 @@
     // Nagłówek w jednej linii (makieta 2) : logo | dni (segmenty) | operator (pastylka, paletyzacja) · tryb · ↻ · język.
     function header() {
         const s = current();
-        const title = t(mode === 'pack' ? 'title' : 'title_pallets');
+        const title = t(mode === 'pack' ? 'title' : (mode === 'pallets' ? 'title_pallets' : 'title_receiving'));
         if (!s) {
             return `<header class="kiosk-head"><div class="kiosk-brand"><div class="kiosk-logo">LA</div><div><h1>${esc(title)}</h1>
                 <p class="kiosk-muted">${esc(t('subtitle'))}</p></div></div>
                 <div class="kiosk-head-tools">${device ? `<button type="button" class="kiosk-chip" data-refresh aria-label="${esc(t('refresh'))}">↻</button>` : ''}
                 <button type="button" class="kiosk-chip" data-lang>${esc(t('lang_switch'))}</button></div></header>`;
         }
-        const op = mode === 'pallets' ? operatorNow() : null;
-        const who = mode === 'pallets' ? `<button type="button" class="pk-avatar ${op ? '' : 'is-empty'}" data-drop="operator" aria-haspopup="listbox"
+        const op = mode !== 'pack' ? operatorNow() : null;
+        const who = mode !== 'pack' ? `<button type="button" class="pk-avatar ${op ? '' : 'is-empty'}" data-drop="operator" aria-haspopup="listbox"
                 title="${esc(op ? op.name : t('operator_none'))}" aria-label="${esc(t('operator'))} : ${esc(op ? op.name : t('operator_none'))}">${op ? esc(initials(op.name)) : '?'}</button><span class="pk-gap"></span>` : '';
         const sw = `<div class="pk-switch" role="radiogroup" aria-label="${esc(t('mode'))}">
-                ${['pack', 'pallets'].map(m => `<button type="button" role="radio" aria-checked="${m === mode}" class="${m === mode ? 'is-on' : ''}" data-mode="${m}">${esc(t(m === 'pack' ? 'mode_pack' : 'mode_pallets'))}</button>`).join('')}</div>`;
-        return `<header class="kiosk-head pk-head"><div class="kiosk-logo" title="${esc(title)}">LA</div><h1 class="pk-sr">${esc(title)}</h1>${daySeg(s)}
+                ${MODES.map(m => `<button type="button" role="radio" aria-checked="${m === mode}" class="${m === mode ? 'is-on' : ''}" data-mode="${m}">${esc(t('mode_' + m))}</button>`).join('')}</div>`;
+        return `<header class="kiosk-head pk-head"><div class="kiosk-logo" title="${esc(title)}">LA</div><h1 class="pk-sr">${esc(title)}</h1>${mode === 'receiving' ? recDaySeg(s) : daySeg(s)}
             <div class="kiosk-head-tools">${who}${sw}<button type="button" class="kiosk-chip" data-refresh aria-label="${esc(t('refresh'))}">↻</button>
                 <button type="button" class="kiosk-chip" data-lang>${esc(t('lang_switch'))}</button></div></header>`;
     }
@@ -145,7 +155,16 @@
     // Bez tokenu w pamięci przeglądarki : serwer zna tablet z ciasteczka parowania (tablet zostaje sparowany).
     async function load() {
         try {
-            if (mode === 'pack') {
+            if (mode === 'receiving') {
+                rec = await api('GET', '/kiosk/receiving' + (recDay ? '?date=' + encodeURIComponent(recDay) : ''));
+                recDay = rec.day;
+                if (recSel && !rec.orders.some(o => o.id === recSel)) { recSel = null; recOrder = null; draft = {}; }
+                if (!recSel) {
+                    const next = rec.orders.find(o => o.due && !o.check) || null;
+                    if (next) { recSel = next.id; draft = {}; }
+                }
+                if (recSel) recOrder = await api('GET', `/kiosk/receiving/orders/${recSel}?date=${encodeURIComponent(recDay)}`);
+            } else if (mode === 'pack') {
                 data = await api('GET', '/kiosk/packing' + (date ? '?date=' + encodeURIComponent(date) : ''));
                 date = data.date;
                 if (people === null) people = Math.max(1, data.people.present || 1);
@@ -166,7 +185,7 @@
     }
 
     function render() {
-        if (mode === 'pack') renderPack(); else renderPallets();
+        if (mode === 'pack') renderPack(); else if (mode === 'pallets') renderPallets(); else renderReceiving();
     }
 
     // ============================================================== Pakowanie
@@ -234,7 +253,8 @@
         if (product && !clientNow()?.lines.some(l => l.product_id === product)) { product = null; panel = null; }
     }
     const clientNow = () => (pal ? pal.clients.find(c => c.id === customer) : null);
-    const operatorNow = () => (pal ? pal.people.find(p => p.id === operator) : null);
+    const peopleNow = () => ((mode === 'receiving' ? rec : pal) || {}).people || [];
+    const operatorNow = () => peopleNow().find(p => p.id === operator) || null;
 
     function renderPallets() {
         const s = pal;
@@ -324,7 +344,7 @@
                 + `${pal.vehicles.length ? '<div class="pp-sep"></div>' : ''}<button type="button" class="pp-opt ${pal.vehicle_id === null ? 'is-on' : ''}" data-vehicle=""><span class="pp-ico">☰</span>
                     <span><b>${esc(t('all_clients'))}</b><small>${esc(t('all_clients_help'))}</small></span>${pal.vehicle_id === null ? '<span class="pp-check">✓</span>' : ''}</button>`;
         } else {
-            items = pal.people.length ? pal.people.map(p => `<button type="button" class="pp-opt ${p.id === operator ? 'is-on' : ''}" data-operator="${p.id}"><span class="pp-av">${esc(initials(p.name))}</span>
+            items = peopleNow().length ? peopleNow().map(p => `<button type="button" class="pp-opt ${p.id === operator ? 'is-on' : ''}" data-operator="${p.id}"><span class="pp-av">${esc(initials(p.name))}</span>
                     <span><b>${esc(p.name)}</b><small>${esc([p.group, t('since', {time: time(p.since)})].filter(Boolean).join(' · '))}</small></span>${p.id === operator ? '<span class="pp-check">✓</span>' : ''}</button>`).join('')
                 : `<p class="kiosk-muted pp-none">${esc(t('no_people'))}</p>`;
         }
@@ -412,6 +432,232 @@
         } finally { busy = false; }
     }
 
+    // ============================================================== Przyjęcia [230]
+    const num = (v) => { const x = Number(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return String(v ?? '').trim() === '' || !Number.isFinite(x) ? null : x; };
+    const qtyFmt = (n) => Number(n || 0).toLocaleString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {maximumFractionDigits: 3});
+    const dm = (iso) => iso ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}` : '';
+    const kindLabel = (k) => labels['rc_kind_' + k] || (rec && rec.kinds[k]) || k;
+    const decLabel = (k) => labels['rc_dec_' + k] || (rec && rec.decisions[k]) || k;
+    // Pozycje do sprawdzenia : reszta do przyjęcia albo przyjęte dziś (np. wcześniej na tablecie grupy).
+    const toCheck = (l) => l.remaining > 0 || !!l.today;
+    const lineDraft = (l) => {
+        if (!draft[l.id]) {
+            draft[l.id] = {status: null, qty: recOrder.receivable && l.remaining > 0 ? String(l.remaining).replace('.', lang === 'fr' ? ',' : ',') : '',
+                lot: l.today?.lot || '', bb: l.today?.best_before || '', temp: l.today?.temperature != null ? String(l.today.temperature).replace('.', ',') : '',
+                kinds: [], desc: '', decision: null, photos: []};
+        }
+        return draft[l.id];
+    };
+
+    function recDaySeg(s) {
+        const today = s.now.slice(0, 10);
+        const days = [1, 0].map(n => new Date(new Date(today + 'T12:00:00').getTime() - n * 86400000).toISOString().slice(0, 10));
+        return `<nav class="pk-dayseg" aria-label="${esc(t('day'))}">${days.map(d => `<button type="button" class="${d === s.day ? 'is-on' : ''}" aria-pressed="${d === s.day}"
+            data-rday="${d}">${esc(d === today ? t('rc_today') : dayLabel(d))}</button>`).join('')}</nav>`;
+    }
+
+    function renderReceiving() {
+        const s = rec;
+        const st = s.stats;
+        const orders = s.orders.length ? s.orders.map(o => {
+            const state = o.check ? (o.check.arrived ? t('rc_checked', {ok: o.check.ok, nc: o.check.nc}) : t('rc_missing')) : (o.due ? t('rc_todo') : t('rc_overdue', {date: dm(o.delivery_date)}));
+            const cls = o.check ? (o.check.arrived ? (o.check.nc ? 'is-nc' : 'is-ok') : 'is-miss') : (o.due ? '' : 'is-late');
+            return `<button type="button" class="rc-order ${cls} ${o.id === recSel ? 'is-on' : ''}" data-rorder="${o.id}">
+                <b>${esc(o.supplier)}</b><small>${esc(o.code)} · ${esc(t('rc_lines', {n: o.lines}))}</small><span class="rc-state">${esc(state)}</span></button>`;
+        }).join('') : `<p class="kiosk-muted rc-none">${esc(t('rc_none'))}</p>`;
+        let cold = 0, coldDone = 0;
+        if (recOrder) recOrder.lines.filter(toCheck).filter(l => l.cold).forEach(l => { cold++; if (num(lineDraft(l).temp) !== null) coldDone++; });
+        const stats = `<section class="kiosk-card rc-stats"><h3>${esc(t('rc_today'))}</h3>
+            <div class="rc-kv"><span>${esc(t('rc_stats_due'))}</span><b>${st.checked} / ${st.due}</b></div>
+            <div class="rc-kv"><span>${esc(t('rc_stats_ok'))}</span><b>${st.ok} / ${st.lines}</b></div>
+            <div class="rc-kv"><span>${esc(t('rc_stats_nc'))}</span><b class="${st.nc ? 'is-bad' : ''}">${st.nc}</b></div>
+            ${cold ? `<div class="rc-kv"><span>${esc(t('rc_stats_temp'))}</span><b>${esc(t('rc_stats_temp_v', {n: coldDone, m: cold}))}</b></div>` : ''}
+            <p class="kiosk-muted">${esc(t('rc_note'))}</p></section>`;
+        el.innerHTML = header() + `<div class="rc-main"><aside class="rc-left"><nav class="rc-orders" aria-label="${esc(t('rc_orders'))}">${orders}</nav>${stats}</aside>
+            <section class="kiosk-card rc-card">${recOrder ? orderPanel() : `<p class="pk-empty">${esc(s.orders.length ? (st.due && st.checked >= st.due ? t('rc_done_all') : t('rc_choose')) : t('rc_none'))}</p>`}</section></div>`
+            + dropdown() + `<input type="file" accept="image/*" capture="environment" class="pk-sr" data-photo-input tabindex="-1">`;
+        bindReceiving();
+    }
+
+    function orderPanel() {
+        const o = recOrder;
+        const lines = o.lines.filter(toCheck);
+        const earlier = o.lines.filter(l => !toCheck(l));
+        const head = `<div class="rc-head"><h2>${esc(o.supplier)} · ${esc(o.code)}</h2>
+            ${o.delivery_date ? `<span class="rc-badge">${esc(t('rc_due', {date: dm(o.delivery_date)}))}</span>` : ''}
+            ${o.check ? `<span class="rc-badge ${o.check.arrived ? 'is-ok' : 'is-bad'}">${esc(o.check.arrived ? t('rc_checked', {ok: o.check.ok, nc: o.check.nc}) : t('rc_missing'))} · ${esc(o.check.at)}</span>` : ''}</div>`;
+        if (o.check && !recheck) {
+            const rows = o.lines.filter(l => l.today).map(l => `<div class="rc-done-row"><b>${esc(l.name)}</b><span>${esc(t('rc_already', {qty: qtyFmt(l.today.qty) + ' ' + l.unit}))}${l.today.lot ? ' · ' + esc(l.today.lot) : ''}${l.today.best_before ? ' · ' + esc(dm(l.today.best_before)) : ''}${l.today.temperature != null ? ' · ' + esc(String(l.today.temperature).replace('.', ',')) + ' °C' : ''}${l.today.nc ? ' · ⚠ NC' : ''}</span></div>`).join('');
+            const more = o.receivable && o.lines.some(l => l.remaining > 0);
+            return head + (rows || `<p class="kiosk-muted">${esc(t('rc_nothing_today'))}</p>`)
+                + `<div class="rc-foot"><span class="kiosk-muted">${esc(o.check.arrived ? '' : t('rc_missing_help'))}</span>${more ? `<button type="button" class="kiosk-btn" data-recheck>${esc(t('rc_recheck'))}</button>` : ''}
+                    ${nextOrder() ? `<button type="button" class="kiosk-btn is-primary" data-rnext>${esc(t('rc_next'))} →</button>` : ''}</div>`;
+        }
+        const body = lines.map(l => lineRow(l, o)).join('');
+        const done = lines.filter(l => lineDraft(l).status).length;
+        const ok = lines.filter(l => lineDraft(l).status === 'ok').length;
+        const nc = lines.filter(l => lineDraft(l).status === 'nc').length;
+        const left = lines.length - done;
+        const noneYet = o.receivable && !o.lines.some(l => l.today) && !o.check;
+        return head + body + (earlier.length ? `<p class="kiosk-muted rc-earlier">${esc(t('rc_earlier', {n: earlier.length}))}</p>` : '')
+            + `<div class="rc-foot">${noneYet ? `<button type="button" class="kiosk-btn" data-rmissing>${esc(t('rc_not_arrived'))}</button>` : ''}
+                <span class="kiosk-muted">${esc(left ? t('rc_left', {n: left}) : t('rc_hint'))}</span>
+                <button type="button" class="kiosk-btn is-primary rc-save" data-rsave ${left || !lines.length ? 'disabled' : ''}>${esc(t('rc_save', {ok, nc}))}</button></div>`;
+    }
+
+    function lineRow(l, o) {
+        const d = lineDraft(l);
+        const edit = o.receivable && l.remaining > 0;
+        const sub = [t('rc_ordered', {qty: qtyFmt(l.ordered) + ' ' + l.unit})];
+        if (l.received > 0) sub.push(t('rc_received_before', {qty: qtyFmt(l.received - (l.today ? l.today.qty : 0)) + ' ' + l.unit}));
+        if (l.package) sub.push(t('rc_package', {qty: qtyFmt(l.package) + ' ' + l.unit}));
+        if (l.cold) sub.push('❄ ' + t('rc_cold'));
+        const inputs = edit
+            ? `<label class="rc-in is-num"><input inputmode="decimal" data-f="qty" value="${esc(d.qty)}" aria-label="${esc(t('rc_qty'))}"><span>${esc(l.unit)}</span></label>
+               <input class="rc-in" data-f="lot" value="${esc(d.lot)}" placeholder="${esc(t('rc_lot'))}" autocapitalize="characters" maxlength="64">
+               <input class="rc-in" type="date" data-f="bb" value="${esc(d.bb)}" aria-label="${esc(t('rc_bb'))}" title="${esc(t('rc_bb'))}">`
+            : `<span class="rc-ro">${esc(t('rc_already', {qty: qtyFmt(l.today ? l.today.qty : 0) + ' ' + l.unit}))}</span><span class="rc-ro">${esc(l.today?.lot || '—')}</span><span class="rc-ro">${esc(l.today?.best_before ? dm(l.today.best_before) : '—')}</span>`;
+        const temp = l.cold && edit ? `<label class="rc-in is-num"><input inputmode="decimal" data-f="temp" value="${esc(d.temp)}" placeholder="${esc(t('rc_temp'))}"><span>°C</span></label>` : '<span></span>';
+        const row = `<div class="rc-line ${d.status === 'ok' ? 'is-ok' : (d.status === 'nc' ? 'is-nc' : '')}" data-rline="${l.id}">
+            <div class="rc-name"><b>${esc(l.name)}</b><small>${esc(sub.join(' · '))}</small></div>${inputs}${temp}
+            <div class="rc-two"><button type="button" class="kiosk-btn ${d.status === 'ok' ? 'is-ok' : ''}" data-st="ok">✓ ${esc(t('rc_ok'))}</button>
+                <button type="button" class="kiosk-btn ${d.status === 'nc' ? 'is-nc' : ''}" data-st="nc">⚠ ${esc(t('rc_nc'))}</button></div></div>`;
+        if (d.status !== 'nc') return row;
+        const accepted = num(d.qty);
+        const decisions = Object.keys(rec.decisions).map(k => `<button type="button" class="${d.decision === k ? 'is-on' : ''}" data-dec="${k}">${esc(decLabel(k))}${(k === 'accepted' || k === 'conditional') && edit && accepted !== null ? ' (' + esc(qtyFmt(accepted) + ' ' + l.unit) + ')' : ''}</button>`).join('');
+        return row + `<div class="rc-nc" data-rline="${l.id}"><b class="rc-nc-t">${esc(t('rc_nc_title', {name: l.name}))}</b>
+            <div><small>${esc(t('rc_what'))}</small><div class="rc-chips">${Object.keys(rec.kinds).map(k => `<button type="button" class="${d.kinds.includes(k) ? 'is-on' : ''}" data-kind="${k}">${esc(kindLabel(k))}</button>`).join('')}</div></div>
+            <div class="rc-photos">${d.photos.map((p, i) => `<span class="rc-ph"><img src="${p}" alt=""><button type="button" data-unphoto="${i}" aria-label="${esc(t('close'))}">✕</button></span>`).join('')}
+                ${d.photos.length < 4 ? `<button type="button" class="rc-cam" data-photo>📷<small>${esc(t('rc_photo'))}</small></button>` : ''}
+                <label class="rc-desc"><small>${esc(t('rc_desc'))}</small><input data-f="desc" value="${esc(d.desc)}" maxlength="1000" placeholder="${esc(t('rc_desc_ph'))}"></label></div>
+            <div><small>${esc(t('rc_decision'))}</small><div class="rc-chips is-dec">${decisions}</div></div></div>`;
+    }
+
+    let recheck = false;
+    const nextOrder = () => (rec ? rec.orders.find(o => o.id !== recSel && o.due && !o.check) : null);
+
+    async function openOrder(id) {
+        recSel = id; draft = {}; recheck = false;
+        try {
+            recOrder = await api('GET', `/kiosk/receiving/orders/${id}?date=${encodeURIComponent(recDay)}`);
+            renderReceiving();
+        } catch (err) { if (err.code !== 'DEVICE_UNAUTHENTICATED') toast(err.message, true); }
+    }
+
+    function bindReceiving() {
+        el.querySelectorAll('[data-drop]').forEach(b => b.addEventListener('click', () => { drop = drop === b.dataset.drop ? null : b.dataset.drop; renderReceiving(); }));
+        const dim = el.querySelector('[data-dim]');
+        if (dim) dim.addEventListener('click', () => { drop = null; renderReceiving(); });
+        el.querySelectorAll('[data-operator]').forEach(b => b.addEventListener('click', () => {
+            operator = Number(b.dataset.operator); store.set(OPERATOR_KEY, String(operator)); drop = null; renderReceiving();
+        }));
+        el.querySelectorAll('[data-rorder]').forEach(b => b.addEventListener('click', () => openOrder(Number(b.dataset.rorder))));
+        el.querySelectorAll('[data-rday]').forEach(b => b.addEventListener('click', () => { recDay = b.dataset.rday; recSel = null; recOrder = null; draft = {}; load(); }));
+        const next = el.querySelector('[data-rnext]');
+        if (next) next.addEventListener('click', () => { const n = nextOrder(); if (n) openOrder(n.id); });
+        const re = el.querySelector('[data-recheck]');
+        if (re) re.addEventListener('click', () => { recheck = true; draft = {}; renderReceiving(); });
+        const line = (node) => recOrder.lines.find(l => l.id === Number(node.closest('[data-rline]').dataset.rline));
+        el.querySelectorAll('[data-f]').forEach(inp => inp.addEventListener('input', () => {
+            const d = lineDraft(line(inp));
+            d[inp.dataset.f] = inp.value;
+            if (inp.dataset.f === 'temp') updateTempStat();
+        }));
+        el.querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => {
+            const d = lineDraft(line(b));
+            d.status = d.status === b.dataset.st ? null : b.dataset.st;
+            if (d.status === 'nc' && !d.decision) d.decision = 'accepted';
+            renderReceiving();
+        }));
+        el.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => {
+            const d = lineDraft(line(b)); const k = b.dataset.kind;
+            d.kinds = d.kinds.includes(k) ? d.kinds.filter(x => x !== k) : [...d.kinds, k];
+            renderReceiving();
+        }));
+        el.querySelectorAll('[data-dec]').forEach(b => b.addEventListener('click', () => { lineDraft(line(b)).decision = b.dataset.dec; renderReceiving(); }));
+        el.querySelectorAll('[data-unphoto]').forEach(b => b.addEventListener('click', () => { lineDraft(line(b)).photos.splice(Number(b.dataset.unphoto), 1); renderReceiving(); }));
+        const file = el.querySelector('[data-photo-input]');
+        el.querySelectorAll('[data-photo]').forEach(b => b.addEventListener('click', () => { file.dataset.line = b.closest('[data-rline]').dataset.rline; file.value = ''; file.click(); }));
+        file.addEventListener('change', async () => {
+            const f = file.files && file.files[0];
+            const l = recOrder && recOrder.lines.find(x => x.id === Number(file.dataset.line));
+            if (!f || !l) return;
+            try { lineDraft(l).photos.push(await shrink(f)); renderReceiving(); } catch (e) { toast(t('rc_photo_error'), true); }
+        });
+        const missing = el.querySelector('[data-rmissing]');
+        if (missing) missing.addEventListener('click', () => saveCheck(true));
+        const save = el.querySelector('[data-rsave]');
+        if (save) save.addEventListener('click', () => saveCheck(false));
+    }
+
+    function updateTempStat() {
+        // Licznik « Chłodnia : temperatura » bez przerysowania (klawiatura zostaje otwarta).
+        const kv = [...el.querySelectorAll('.rc-kv')].find(n => n.textContent.includes(t('rc_stats_temp')));
+        if (!kv || !recOrder) return;
+        const cold = recOrder.lines.filter(toCheck).filter(l => l.cold);
+        kv.querySelector('b').textContent = t('rc_stats_temp_v', {n: cold.filter(l => num(lineDraft(l).temp) !== null).length, m: cold.length});
+    }
+
+    // Zdjęcie z aparatu → JPEG najwyżej 1280 px (≈ 150–300 kB).
+    function shrink(file) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+                const c = document.createElement('canvas');
+                c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                URL.revokeObjectURL(url);
+                resolve(c.toDataURL('image/jpeg', 0.78));
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image')); };
+            img.src = url;
+        });
+    }
+
+    async function saveCheck(notArrived) {
+        if (busy || !recOrder) return;
+        if (peopleNow().length && !operatorNow()) { toast(t('choose_operator_first'), true); drop = 'operator'; renderReceiving(); return; }
+        const o = recOrder;
+        const body = {date: recDay, employee_id: operatorNow() ? operator : null};
+        if (notArrived) {
+            if (!window.confirm(t('rc_confirm_missing', {code: o.code}))) return;
+            body.arrived = false;
+        } else {
+            const lines = o.lines.filter(toCheck);
+            body.lines = []; body.problems = [];
+            for (const l of lines) {
+                const d = lineDraft(l);
+                const edit = o.receivable && l.remaining > 0;
+                const qty = edit ? num(d.qty) : null;
+                if (edit && d.qty !== '' && qty === null) { toast(t('rc_number', {name: l.name}), true); return; }
+                const temp = num(d.temp);
+                body.lines.push({id: l.id, status: d.status, qty: edit ? (qty ?? 0) : null, lot: edit && d.lot.trim() ? d.lot.trim() : null,
+                    best_before: edit && d.bb ? d.bb : null, temperature: edit && l.cold ? temp : null});
+                if (d.status === 'nc') {
+                    if (!d.kinds.length || !d.decision) { toast(t('rc_need_kind', {name: l.name}), true); return; }
+                    body.problems.push({line_id: l.id, kinds: d.kinds, description: d.desc.trim(), decision: d.decision, photos: d.photos});
+                }
+            }
+        }
+        busy = true;
+        el.querySelectorAll('[data-rsave],[data-rmissing]').forEach(b => { b.disabled = true; });
+        try {
+            const r = await api('POST', `/kiosk/receiving/orders/${o.id}`, body);
+            const res = r.result || {ok: 0, nc: 0, nc_numbers: []};
+            toast(notArrived ? t('rc_saved_missing', {code: o.code}) : t('rc_saved', {ok: res.ok, nc: res.nc}) + (res.nc_numbers.length ? ' · ' + res.nc_numbers.join(', ') : ''));
+            draft = {}; recheck = false;
+            rec = await api('GET', `/kiosk/receiving?date=${encodeURIComponent(recDay)}`);
+            const n = nextOrder();
+            if (n) { recSel = n.id; recOrder = await api('GET', `/kiosk/receiving/orders/${n.id}?date=${encodeURIComponent(recDay)}`); }
+            else recOrder = r;
+            renderReceiving();
+        } catch (err) {
+            if (err.code !== 'DEVICE_UNAUTHENTICATED') { toast(err.message, true); renderReceiving(); }
+        } finally { busy = false; }
+    }
+
     el.addEventListener('click', async (e) => {
         if (e.target.closest('[data-lang]')) {
             lang = lang === 'pl' ? 'fr' : 'pl';
@@ -438,6 +684,8 @@
         if (!current() || busy || document.visibilityState !== 'visible' || !navigator.onLine) return;
         if (mode === 'pack' && tick % 2 === 0) load();
         if (mode === 'pallets' && panel !== 'pad' && !drop) load();
+        // Przyjęcia : odświeżenie listy co minutę, gdy nic nie jest wpisywane.
+        if (mode === 'receiving' && tick % 4 === 0 && !drop && !Object.keys(draft).length) load();
     }, 15000);
 
     loadLabels().then(load);
