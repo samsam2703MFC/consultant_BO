@@ -1208,3 +1208,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T10:36:40Z [app] Planning : nom du magasin au lieu du numero (#85)
 2026-10-31T10:42:49Z production : tablet pakowania › Przyjęcia — partia i termin ze zdjęcia etykiety (OCR) [231]
 2026-10-31T10:43:19Z primes du magasin : primes d'équipe en frise au-dessus du tableau
+2026-10-31T11:05:42Z contrôle sur tablette : charte de communication, chaque support en photo avec Oui / Non
