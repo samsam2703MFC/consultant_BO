@@ -10,7 +10,7 @@ final class PositionRepository extends WorkshopRepository
     protected array $writable = ['code', 'name_pl', 'name_fr', 'description', 'kind', 'id_group', 'id_reports_to', 'sort_order', 'active'];
     /** Pola karty stanowiska (n_position_sheet), każde w wersji _pl i _fr. */
     public const SHEET_FIELDS = ['mission', 'responsibilities', 'skills', 'requirements', 'conditions', 'indicators', 'safety', 'relations'];
-    private const TASK_COLUMNS = ['id_position', 'id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'minutes', 'weekdays', 'due_time', 'month_day', 'link_path', 'form_code', 'auto_code',
+    private const TASK_COLUMNS = ['id_position', 'id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'minutes', 'weekdays', 'due_time', 'month_day', 'link_path', 'extra_links', 'form_code', 'auto_code',
         'cron_on', 'cron_freq', 'cron_days', 'cron_time', 'cron_action', 'cron_then', 'remind_time', 'escalate_days', 'sort_order', 'active'];
 
     public function positions(): array

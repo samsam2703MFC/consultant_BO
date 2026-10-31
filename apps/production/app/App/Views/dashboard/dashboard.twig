@@ -17,6 +17,7 @@
                 <span>{{ it.when }}{% if it.late and it.freq == 'daily' %} · {{ it.due|date('d.m') }}{% endif %}</span>
                 {% if it.minutes %}<span>{{ wk.dur(it.minutes) }}</span>{% endif %}
             </div>
+            {% if it.extra %}<div class="wt-more">też : {% for x in it.extra %}<a href="{{ root }}{{ x.link }}">{{ x.label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
         </div>
         <div class="wt-state">
             {% if it.done %}

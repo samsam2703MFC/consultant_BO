@@ -142,15 +142,16 @@ try {
     expectPurch($tasks->period('quarterly', $wed) === ['key' => '2026-Q4', 'due' => '2026-12-31'], 'quarterly: end of quarter');
     expectPurch($tasks->period('quarterly', new DateTimeImmutable('2026-02-10')) === ['key' => '2026-Q1', 'due' => '2026-03-31'], 'Q1 ends 31.03');
 
-    // Moje zadania : stanowisko z zadaniami zakupów (od migracji 140 kierownik produkcji), wtorek → środa (zaległe), zrobione,
-    // pominięte z powodem.
+    // Moje zadania : stanowisko z zadaniami zakupów (od migracji 140 kierownik produkcji ; od 147 « Zakupy tygodnia » obejmuje
+    // oferty i dostawców pozycji), wtorek → środa (zaległe), zrobione, pominięte z powodem.
     $buyer = $pdo->query("SELECT p.id, p.name_pl FROM n_position p JOIN n_position_task t ON t.id_position = p.id AND t.active = 1
-        WHERE t.link_path = '/purchasing/offers' ORDER BY p.active DESC, p.id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        WHERE t.link_path = '/workshop/buy' ORDER BY p.active DESC, p.id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
     $positionId = (int) $buyer['id'];
     $tasks->assign($userId, ['position_id' => $positionId]);
     $tue = $tasks->myTasks($userId, new DateTimeImmutable('2026-10-20'));
     expectPurch($tasks->period('weekly', $wed, 1) === ['key' => '2026-W43', 'due' => '2026-10-19'], 'weekly with a due weekday (Monday)');
-    expectPurch(array_values(array_intersect(array_keys($tue['groups']), ['CENY', 'MARZE', 'UPLOAD', 'JAKOSC'])) === ['CENY', 'MARZE', 'UPLOAD', 'JAKOSC'], 'tasks grouped by category (category order)');
+    // 147 : « Wgrać faktury » (UPLOAD) w zadaniu kreatora faktur (CENY).
+    expectPurch(array_values(array_intersect(array_keys($tue['groups']), ['CENY', 'MARZE', 'UPLOAD', 'JAKOSC'])) === ['CENY', 'MARZE', 'JAKOSC'], 'tasks grouped by category (category order)');
     $items = array_merge(...array_map(fn($g) => $g['items'], array_values($tue['groups'])));
     $first = fn(array $items, string $frequency) => array_values(array_filter($items, fn($it) => $it['task']['frequency'] === $frequency))[0];
     expectPurch($first($items, 'daily')['frequency'] === 'Codziennie' && $tue['groups']['CENY']['icon'] === 'bi-tag', 'item shows its frequency, group its icon');

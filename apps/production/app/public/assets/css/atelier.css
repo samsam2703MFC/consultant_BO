@@ -2797,6 +2797,7 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
 .wt.done { background: #fbfdfb; } .wt.done h6 { color: #1f5a37; }
 .wt.late { box-shadow: inset 0 0 0 2px rgba(154,23,48,.35); }
 .wt-steps { display: flex; gap: 4px; } .wt-steps i { flex: 1; height: 6px; border-radius: 4px; background: var(--at-bg-2); } .wt-steps i.on { background: #2e7d4f; } .wt-steps i.cur { background: #c17a2a; }
+.wt-more { font-size: 12.5px; color: var(--at-muted); margin-top: 4px; } .wt-more a { display: inline-block; padding: 4px 0; font-weight: 600; }
 .wt-sum { color: #1f5a37; font-weight: 600; } .wt-sum.muted { color: var(--at-muted); }
 .wk-day h6 small { font-variant-numeric: tabular-nums; }
 .wk-chip { display: flex; gap: 6px; align-items: center; background: #fff; border-radius: 9px; padding: 7px 9px; font-size: 12.5px; margin-bottom: 6px; border-left: 4px solid var(--c, #8e1f2f); color: var(--at-text); min-width: 0; }
@@ -2865,6 +2866,8 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
 .wp-kv { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 8px 10px; align-items: center; } .wp-kv > span:nth-child(odd) { font-size: 12px; color: var(--at-muted); }
 .wp-radio { display: grid; gap: 4px; } .wp-radio label, .wp-chk { display: inline-flex; gap: 6px; align-items: center; min-height: 32px; }
 .wp-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.wp-chips { display: flex; gap: 6px; flex-wrap: wrap; } .wp-chips span { display: inline-flex; align-items: center; gap: 4px; border-radius: 8px; background: var(--at-bg-2); padding: 0 4px 0 10px; font-size: 12.5px; font-weight: 600; min-height: 36px; }
+.wp-chips button { border: 0; background: none; width: 32px; height: 32px; border-radius: 8px; color: var(--at-muted); } .wp-chips button:hover { background: #fff; color: #9a1730; }
 .wp-cat { display: grid; gap: 8px; } .wp-cat .it { border: 1px solid var(--at-line); border-radius: 10px; padding: 9px 11px; background: #fff; display: grid; gap: 4px; font-size: 12.5px; }
 .wp-cat .it b { font-size: 13.5px; } .wp-cat .it .ev { color: var(--at-muted); } .wp-cat .it.used { background: #fbfaf8; }
 @media (max-width: 1199.98px) { .wp-grid { grid-template-columns: minmax(0, 1fr); } .wp-side { position: static; } }

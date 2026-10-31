@@ -147,6 +147,21 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   la tablette), ligne « System » (exécutions cron), tuiles, retards avec « Przypomnij » (POST
   `/ajax/organization/execution/remind/{occurrence}` → cloche, une fois par jour), détail au clic.
 
+### Ménage des tâches par poste (migration 147, 31/10/2026)
+
+- Une tâche = un assistant : les tâches du Kierownik produkcji qui étaient des étapes d'un assistant existant sont fusionnées
+  dans la tâche de l'assistant (21 → 13 tâches actives ; tâches fusionnées `active = 0`, historique des occurrences conservé) :
+  Zakupy tygodnia (lundi, 85 min) ← offres reçues + articles à moins de 3 fournisseurs ; Faktury tygodnia (mercredi, kreator
+  faktur, 60 min) ← import des factures + nouveaux prix matières (factures et listes de prix) ; Koszty i marże (mercredi,
+  kreator cen étape 1) ← coût des recettes + marges des catégories (mensuels) ; Nowe ceny i publikacja (jeudi, étapes 2–3,
+  40 min) ← vérification de la publication ; trimestre : évaluation des fournisseurs + appel d'offres matières clés = une tâche.
+  Correspondance par poste, page et fréquence (pas par id), seulement si la tâche cible est active ; rejouable. Les achats
+  restent au Kierownik produkcji (décision du 30/10 : pas d'acheteur). Doublon connu : contrôle des réceptions / NC chez
+  Kierownik (quotidien) et Jakość (quotidien) — Jakość n'a personne ; à retirer du Kierownik quand quelqu'un l'occupera.
+- `n_position_task.extra_links` (JSON, liste de chemins ERP, 6 au plus) : « Też w tym zadaniu » — pages des étapes fusionnées,
+  en liens sous la tâche dans Dzisiaj (« też : Oferty · Dostawcy ») et dans le panneau d'édition des tâches du poste (ajout
+  depuis la liste des pages, suppression) ; validées à l'enregistrement (chemin ERP, sans doublon), copiées avec le plan.
+
 ### Prévision 13 semaines glissantes (migration 141, 30/10/2026)
 
 - Page : Produkcja › « Prognoza 13 tygodni » (`/production/forecast`, onglet de la page Produkcja, maquettes 220-1 à 3 ;

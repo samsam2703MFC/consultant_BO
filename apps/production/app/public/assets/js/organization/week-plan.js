@@ -1,6 +1,7 @@
 // Zadania stanowiska [227] (makieta 2, tylko administrator) : zadanie = kreator (zalicza się samo na ostatnim kroku),
 // częstotliwość (dzień / tydzień / miesiąc / kwartał + termin), minuty, automatycznie (cron : kiedy, o której, co robi,
-// potem), przypomnienia (osoba w dniu terminu, przełożony po N dniach), kreatory do przypięcia, obciążenie dni.
+// potem), przypomnienia (osoba w dniu terminu, przełożony po N dniach), inne strony zadania (« Też w tym zadaniu », [228]),
+// kreatory do przypięcia, obciążenie dni.
 // Tabela pogrupowana według częstotliwości ; klik w wiersz = panel edycji po prawej. Zapis całego planu naraz :
 // PUT /ajax/organization/week-plan/{id} (PositionTaskService::saveWeekPlan).
 (() => {
@@ -81,12 +82,18 @@
         return `<div class="wp-sel none"><span>— bez kreatora —<small>${r.link_path ? esc(P.links[r.link_path] || r.link_path) : 'osoba zaznacza « Zrobione »'}</small></span></div>`;
     }
 
+    const linkLabel = (l) => (P.links[l] || l).split(' (')[0];
+    function extraHtml(r) {
+        const x = r.extra_links || [];
+        return x.length ? `<small class="wp-sub">+ ${x.map(l => esc(linkLabel(l))).join(' · ')}</small>` : '';
+    }
+
     function rowHtml(r) {
         const off = removed.has(r.key);
         const cat = r.category_id ? (P.categories.find(c => Number(c.id) === r.category_id)?.name_pl || '') : '';
         return `<tr data-row="${r.key}" class="wp-row${sel === r.key ? ' cur' : ''}${off ? ' ad-off' : ''}${r.id ? '' : ' ad-new'}" tabindex="0" aria-label="Edytuj : ${esc(r.title_pl || 'nowe zadanie')}">
             <td class="nm"><b>${esc(r.title_pl || 'Nowe zadanie')}</b><small>${off ? 'do usunięcia przy zapisie' : esc(cat || '—')}</small></td>
-            <td>${wizHtml(r)}</td>
+            <td>${wizHtml(r)}${extraHtml(r)}</td>
             <td>${whenHtml(r)}</td>
             <td class="r"><span class="wp-num">${r.minutes ?? '—'}</span>${r.real ? `<small class="ad-real ${r.real_state}" title="Średni czas aktywny na stronie (4 tygodnie)">rzecz. ${r.real} min</small>` : ''}</td>
             <td>${cronHtml(r)}</td>
@@ -185,6 +192,10 @@
                     : `<select class="kw-in mt-1" data-f="link" aria-label="Strona ERP (link)">${linkOptions(r)}</select>
                        ${custom ? `<input class="kw-in mt-1" data-f="link_custom" value="${esc(r.link_path || '')}" placeholder="/strona-w-erp" maxlength="255" aria-label="Adres strony">` : ''}
                        ${r.form_code ? '<div class="wp-sub"><i class="bi bi-journal-text"></i> kończy się protokołem</div>' : '<div class="wp-sub">Bez kreatora : osoba zaznacza « Zrobione ».</div>'}`}</div>
+            <div class="wp-f"><label for="wpExtra">Też w tym zadaniu (inne strony)</label>
+                ${(r.extra_links || []).length ? `<div class="wp-chips">${r.extra_links.map((l, i) => `<span>${esc(linkLabel(l))}<button type="button" data-extra-del="${i}" aria-label="Usuń : ${esc(linkLabel(l))}"><i class="bi bi-x-lg"></i></button></span>`).join('')}</div>` : ''}
+                ${(r.extra_links || []).length < 6 ? `<select id="wpExtra" class="kw-in" data-f="extra_add"><option value="">+ dodaj stronę…</option>${Object.entries(P.links).filter(([p]) => p !== r.link_path && !(r.extra_links || []).includes(p)).map(([p, l]) => `<option value="${esc(p)}">${esc(l)}</option>`).join('')}</select>` : ''}
+                <div class="wp-sub">Linki pod zadaniem na stronie Dzisiaj — kroki, które nie mają własnego zadania.</div></div>
             <div class="wp-f"><label>Częstotliwość i termin</label>${seg('mode', MODES, r.mode)}
                 ${r.mode === 'day' ? dayButtons('task', P.workdays, r.days, false) : ''}
                 ${r.mode === 'week' ? dayButtons('task', P.workdays, r.days, true) : ''}
@@ -283,7 +294,7 @@
     function newRow(extra = {}) {
         const r = {key: 'n' + (++seq), id: null, title_pl: '', category_id: null, period: 'week', days: [1], mode: 'week', minutes: null, link_path: null, auto_code: null,
             form_code: null, due_time: null, month_day: null, cron_on: false, cron_freq: null, cron_days: null, cron_time: null, cron_action: null, cron_then: 'wait',
-            remind_time: '09:00', escalate_days: 2, real: null, real_state: '', shared: false, custom: false, ...extra};
+            remind_time: '09:00', escalate_days: 2, extra_links: [], real: null, real_state: '', shared: false, custom: false, ...extra};
         rows.push(r);
         return r;
     }
@@ -330,6 +341,11 @@
                     r.cron_days = (cur.includes(d) ? cur.filter(x => x !== d) : [...cur, d]).sort((a, b) => a - b).join(',');
                 }
             }
+            return touch(r, true);
+        }
+        const xd = e.target.closest('[data-extra-del]');
+        if (xd && r) {
+            r.extra_links = (r.extra_links || []).filter((_, i) => i !== Number(xd.dataset.extraDel));
             return touch(r, true);
         }
         if (e.target.closest('[data-f=cron_on]') && r) {
@@ -411,6 +427,9 @@
             if (e.target.value === '__custom') { r.custom = true; r.link_path = null; }
             else { r.custom = false; r.link_path = e.target.value || null; }
             return touch(r, true);
+        } else if (f === 'extra_add') {
+            if (e.target.value) r.extra_links = [...(r.extra_links || []), e.target.value];
+            return touch(r, true);
         } else if (f === 'due_time') r.due_time = e.target.value || null;
         else if (f === 'cron_time') r.cron_time = e.target.value || null;
         else if (f === 'cron_action') r.cron_action = e.target.value || null;
@@ -461,7 +480,7 @@
         button.disabled = true;
         const res = await at.send(`/ajax/organization/week-plan/${positionId}`, 'PUT', {
             tasks: rows.filter(r => !removed.has(r.key)).map(r => ({id: r.id, title_pl: r.title_pl.trim(), category_id: r.category_id, period: r.period, days: r.days,
-                minutes: r.minutes, link_path: r.link_path, auto_code: r.auto_code, due_time: r.due_time, month_day: r.period === 'week' ? null : r.month_day,
+                minutes: r.minutes, link_path: r.link_path, extra_links: r.extra_links || [], auto_code: r.auto_code, due_time: r.due_time, month_day: r.period === 'week' ? null : r.month_day,
                 cron_on: !!r.cron_on, cron_freq: r.cron_freq, cron_days: r.cron_days, cron_time: r.cron_time, cron_action: r.cron_action, cron_then: r.cron_then || 'wait',
                 remind_time: r.remind_time, escalate_days: r.escalate_days})),
             removed: rows.filter(r => removed.has(r.key) && r.id).map(r => r.id),

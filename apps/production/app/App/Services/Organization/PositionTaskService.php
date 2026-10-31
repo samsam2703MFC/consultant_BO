@@ -554,6 +554,7 @@ final class PositionTaskService
             'escalate_days' => isset($task['escalate_days']) ? (int) $task['escalate_days'] : null,
             'prepared' => $prepared,
             'link' => $wizard['link'] ?? $link,
+            'extra' => array_map(fn($l) => ['link' => $l, 'label' => self::LINKS[$l][1] ?? $l], self::extraLinks($task['extra_links'] ?? null)),
             'button' => $link !== null ? (self::LINKS[$link][1] ?? 'Otwórz') : null,
             'auto' => ($task['auto_code'] ?? null) ? (self::AUTO[$task['auto_code']] ?? null) : null,
             'auto_done' => $o !== null && $status === 'done' && $o['done_by'] === null && (($task['auto_code'] ?? null) !== null || $cronOn),
@@ -566,6 +567,14 @@ final class PositionTaskService
             'done_at' => $o['done_at'] ?? null,
             'form' => ($task['form_code'] ?? null) ? ['status' => $o['form_status'] ?? null] : null,
         ];
+    }
+
+    /** Inne strony zadania (« Też w tym zadaniu ») : JSON → lista ścieżek ERP. @return list<string> */
+    public static function extraLinks(?string $json): array
+    {
+        if ($json === null || $json === '') return [];
+        $list = json_decode($json, true);
+        return is_array($list) ? array_values(array_filter($list, fn($l) => is_string($l) && $l !== '')) : [];
     }
 
     /** « co tydzień · pt. 30.10 do 12:00 », « co miesiąc · 3. dzień roboczy (04.11) ». */
@@ -944,6 +953,7 @@ final class PositionTaskService
             'days' => $days,
             'minutes' => isset($task['minutes']) ? (int) $task['minutes'] : null,
             'link_path' => $task['link_path'] ?? null,
+            'extra_links' => self::extraLinks($task['extra_links'] ?? null),
             'auto_code' => $task['auto_code'] ?? null,
             'form_code' => $task['form_code'] ?? null,
             'due_time' => !empty($task['due_time']) ? substr((string) $task['due_time'], 0, 5) : null,
@@ -1097,6 +1107,18 @@ final class PositionTaskService
             $out['month_day'] = $md !== '' && $period !== 'week' ? $md : null;
         }
         if (array_key_exists('remind_time', $row)) $out['remind_time'] = $time($row['remind_time'], 'przypomnienie');
+        if (array_key_exists('extra_links', $row)) {
+            $links = is_array($row['extra_links']) ? $row['extra_links'] : [];
+            $clean = [];
+            foreach ($links as $l) {
+                $l = trim((string) $l);
+                if ($l === '') continue;
+                if (mb_strlen($l) > 255 || !preg_match('/^\/[A-Za-z0-9\/_\-?=&.%#]*$/', $l)) throw new CustomException("Wiersz {$n} : inne strony — ścieżka ERP, np. /purchasing/offers.", 'errors', 422);
+                if (!in_array($l, $clean, true)) $clean[] = $l;
+            }
+            if (count($clean) > 6) throw new CustomException("Wiersz {$n} : najwyżej 6 innych stron.", 'errors', 422);
+            $out['extra_links'] = $clean ? json_encode($clean, JSON_UNESCAPED_SLASHES) : null;
+        }
         if (array_key_exists('escalate_days', $row)) {
             $e = $row['escalate_days'];
             if ($e === null || $e === '') $out['escalate_days'] = null;
@@ -1143,7 +1165,7 @@ final class PositionTaskService
         foreach ($this->positions->tasks($sourceId, true) as $t) {
             if (in_array(mb_strtolower(trim($t['title_pl'])), $have, true)) continue;
             $this->positions->insertTask(['id_position' => $positionId] + array_intersect_key($t, array_flip(['id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'minutes', 'weekdays', 'due_time', 'month_day', 'remind_time', 'escalate_days',
-                'link_path', 'form_code', 'auto_code', 'sort_order'])) + ['active' => 1]);
+                'link_path', 'extra_links', 'form_code', 'auto_code', 'sort_order'])) + ['active' => 1]);
             $n++;
         }
         return $n;
