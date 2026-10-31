@@ -1212,3 +1212,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T11:08:18Z primes du magasin : chiffres en tuiles, Paramètres, fiches de l'équipe retirées
 2026-10-31T11:17:30Z module formation à la racine (/formation/) : référentiel RH, manuel opératoire, écritures
 2026-10-31T11:21:09Z formation : sections des procédures, lien du panel sur la compétence
+2026-10-31T11:39:57Z primes du magasin : chiffres du magasin tout en haut
