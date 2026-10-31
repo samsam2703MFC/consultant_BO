@@ -539,7 +539,8 @@
       '</div></div>';
     h += '<div class="fm-cols" style="margin-top:14px">';
     h += '<section class="card"><h2>Description</h2>' + (c.description ? '<div class="fm-rich">' + riche(c.description) + '</div>' : '<p class="muted">Pas de description dans le panel.</p>') + '</section>';
-    h += '<section class="card"><h2>Méthode de vérification</h2>' + (c.verification ? '<div class="fm-rich">' + riche(c.verification) + '</div>' : '<p class="muted">Non renseignée.</p>') + '</section>';
+    h += '<section class="card"><h2>Méthode de vérification</h2>' + (c.verification ? '<div class="fm-rich">' + riche(c.verification) + '</div>' : '<p class="muted">Non renseignée.</p>') +
+      (c.lien && /^https?:/i.test(c.lien) ? '<p style="margin-top:10px"><a target="_blank" rel="noopener" href="' + esc(c.lien) + '">Lien du panel ↗</a></p>' : '') + '</section>';
     h += '<section class="card"><h2>Exigée par</h2>' + (nivs.length ? '<ul>' + nivs.map(function (id) {
       var p = I.niveauPoste.get(id);
       return '<li><a href="#/postes/' + (p && p.id != null ? p.id : 'sans') + '/' + id + '">' + esc(niveauLibelle(id)) + '</a></li>';
@@ -932,6 +933,7 @@
     var h = filAriane(fil) + '<h2 class="screen-subtitle">' + esc(c.nom) + '</h2><p class="muted">' + esc([c.categorie, c.sousCategorie].filter(Boolean).join(' › ')) + '</p>';
     if (c.description) h += '<div class="fm-doc__lead fm-rich" style="margin-top:12px">' + riche(c.description) + '</div>';
     if (c.verification) h += '<section class="card" style="margin-top:14px"><h2>Comment c’est vérifié</h2><div class="fm-rich">' + riche(c.verification) + '</div></section>';
+    if (c.lien && /^https?:/i.test(c.lien)) h += '<p style="margin-top:12px"><a class="filter" target="_blank" rel="noopener" href="' + esc(c.lien) + '">Ouvrir le support ↗</a></p>';
     if (!l) return { titre: c.nom, kicker: 'Compétence', corps: h + attente('Lecture des procédures et formations…') };
     h += '<div class="section-label">Procédures à suivre · ' + n(l.procedures.length) + '</div>';
     h += l.procedures.length ? '<ul class="type-grid">' + l.procedures.map(function (x) {
