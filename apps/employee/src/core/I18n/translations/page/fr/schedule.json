@@ -13,6 +13,8 @@
   "prev_week": "Semaine précédente",
   "scale": "La barre : la journée, de {a} h à {b} h.",
   "schedule": "Planning",
+  "schedule_unavailable": "Le planning ne se lit pas pour l’instant.",
+  "schedule_unavailable_hint": "Réessaie dans un moment. Ton magasin a le planning à jour.",
   "shift": "service",
   "shift_other_shop": "magasin {n}",
   "shift_profit": "Rentabilité du service",

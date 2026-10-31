@@ -67,6 +67,14 @@
   <a class="ms-f" href="{{ ROOT }}/schedule?semaine={{ S.suiv }}" aria-label="{{ T.next_week ?? 'Semaine suivante' }}"><i class="bi bi-chevron-right"></i></a>
 </nav>
 
+{# Le cockpit n'a pas répondu (31/10/2026) : le dire, plutôt qu'une semaine de « Repos » qui serait fausse. #}
+{% if S.indisponible ?? false %}
+<div class="pl-heros" data-indisponible>
+  <span class="pl-quand">{{ T.schedule_unavailable ?? 'Le planning ne se lit pas pour l’instant.' }}</span>
+  <span class="sb-sous">{{ T.schedule_unavailable_hint ?? 'Réessaie dans un moment. Ton magasin a le planning à jour.' }}</span>
+</div>
+{% else %}
+
 {# ── Le service en cours, ou le prochain, en grand ── #}
 {% set P = S.prochain %}
 {% if P %}
@@ -112,5 +120,6 @@
   {% endfor %}
 </div>
 <p class="sb-pied" style="margin:0 4px">{% if S.nbServices == 0 %}{{ T.no_shift_week ?? 'Aucun service cette semaine.' }} {% endif %}{{ (T.scale ?? 'La barre : la journée, de {a} h à {b} h.')|replace({'{a}': S.axe.de, '{b}': S.axe.a}) }}</p>
+{% endif %}
 
 {% endblock %}

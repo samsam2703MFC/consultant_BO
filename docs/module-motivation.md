@@ -45,7 +45,9 @@ Les clés commencent par :
 - `primesMoi`, `primesTous`, `primesClos`, `primesColl`, `primesS12`, `primesJeton`, `primesPromos3`,
   `primesCatalogue` ;
 - `prMoy`, `b2bM`, `pvJ`, `vmMois` ;
-- `grandsPrix…`.
+- `grandsPrix…` ;
+- `planShop:<id>` — le planning d'un magasin lu à `GET /shops/{id}/schedule` pour l'app (cinq minutes,
+  `src/planning_moi.php`).
 
 ### `mot_grand_prix`
 
