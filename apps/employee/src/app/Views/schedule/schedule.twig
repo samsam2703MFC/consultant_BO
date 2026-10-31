@@ -108,7 +108,7 @@
     <div class="pl-corps"{% if not j.services %} style="padding-top:12px"{% endif %}>
       {% for s in j.services %}
       <div class="pl-svc">
-        <div class="sb-l1"><b>{{ s.debut }} – {{ s.fin }}{% if s.autreShop %}<span class="pl-shop">{{ (T.shift_other_shop ?? 'magasin {n}')|replace({'{n}': s.shop}) }}</span>{% endif %}</b><span class="pl-duree">{{ f.duree(s.duree) }}</span></div>
+        <div class="sb-l1"><b>{{ s.debut }} – {{ s.fin }}{% if s.autreShop %}<span class="pl-shop">{% if s.shopNom %}{{ (T.shift_at_shop ?? 'à {n}')|replace({'{n}': s.shopNom}) }}{% else %}{{ (T.shift_other_shop ?? 'magasin {n}')|replace({'{n}': s.shop}) }}{% endif %}</span>{% endif %}</b><span class="pl-duree">{{ f.duree(s.duree) }}</span></div>
         <div class="pl-axe"><i style="left:{{ s.gauche }}%;width:{{ s.largeur }}%"></i>{% if loop.first and j.maintenant is not null %}<em style="left:{{ j.maintenant }}%"></em>{% endif %}</div>
         <div class="pl-rent" data-rentabilite><i class="bi bi-graph-up-arrow"></i>{{ T.shift_profit ?? 'Rentabilité du service' }} · {{ T.coming_soon ?? 'à venir' }}</div>
       </div>

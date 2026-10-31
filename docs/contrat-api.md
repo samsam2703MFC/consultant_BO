@@ -4477,7 +4477,7 @@ planning que le panel sert en production (`src/planning_sync.php`). L'app demand
 
 | Méthode | Route | Rôle |
 |---|---|---|
-| GET | `/ventes/moi/planning?du=AAAA-MM-JJ&au=AAAA-MM-JJ` | `{emp, du, au, services:[{id_schedule, id_employee, work_date, start_hour, end_hour, id_shop}], source, muets:[sid], garde:[sid]}` — les services de la personne seule, sans nom ni téléphone. 401 sans identité ; 400 si une date manque ou est illisible, si `au < du`, ou au-delà de deux mois. |
+| GET | `/ventes/moi/planning?du=AAAA-MM-JJ&au=AAAA-MM-JJ` | `{emp, du, au, services:[{id_schedule, id_employee, work_date, start_hour, end_hour, id_shop, shop_name}], source, muets:[sid], garde:[sid]}` — les services de la personne seule, sans nom ni téléphone ; `shop_name`, le nom court du magasin (« Corbais » pour « Atelier by Berlo - Corbais », comme le cockpit). 401 sans identité ; 400 si une date manque ou est illisible, si `au < du`, ou au-delà de deux mois. |
 
 Comment : les magasins actifs, lus de front à `GET /shops/{id}/schedule` (la route rend tout l'historique ; seule la
 fenêtre de six semaines avant à dix semaines après aujourd'hui est gardée, cinq minutes, dans `mot_cache`

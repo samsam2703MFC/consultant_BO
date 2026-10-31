@@ -16,6 +16,7 @@
   "schedule_unavailable": "Grafiku nie da się teraz odczytać.",
   "schedule_unavailable_hint": "Spróbuj za chwilę. Twój sklep ma aktualny grafik.",
   "shift": "zmiana",
+  "shift_at_shop": "sklep {n}",
   "shift_other_shop": "sklep {n}",
   "shift_profit": "Rentowność zmiany",
   "shifts": "zmiany",
