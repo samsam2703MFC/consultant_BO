@@ -142,9 +142,10 @@ verifie('sans poste dans le panel → tout reste ouvert (le consultant valide)',
 verifie('franchisé → Manager ou candidat : on ne redescend pas', pcHorsAtteinte('P8', [], 47, 'P11') !== null && pcHorsAtteinte('P10', [], 47, 'P11') !== null);
 verifie('adjointe → Manager : à sa portée', pcHorsAtteinte('P8', $e, 46, 'P7') === null);
 
-echo "Familles de postes (opérationnel, cadre et direction, devenir entrepreneur)\n";
+echo "Familles de postes : dans la franchise (opérationnel, cadre et direction, devenir entrepreneur), dans la marque\n";
 foreach ([['Opérateur Vente', [], 'operationnel'], ['Opérateur Boulangerie – Pâtisserie', [['nom' => "Responsable d'équipe"]], 'operationnel'], ['Adjoint de Manager', [], 'cadre'],
-    ['Manager', [], 'cadre'], ['Direction Opérationnelle', [], 'cadre'], ['Consultant Réseaux Sociaux', [['nom' => 'Indépandant']], 'cadre'], ['Client mystère', [], 'cadre'],
+    ['Manager', [], 'cadre'], ['Direction Opérationnelle', [], 'marque'], ['Consultant Réseaux Sociaux', [['nom' => 'Indépandant']], 'marque'], ['Client mystère', [], 'marque'],
+    ['Contrôleur Qualité & Conformité', [['nom' => 'Animateur Formateur']], 'marque'], ['Interface Franchiseur–Franchisés', [['nom' => 'Indépandant']], 'marque'],
     ['Candidat Franchisé', [], 'entrepreneur'], ['Franchisé ', [['nom' => 'Franchise']], 'entrepreneur'], ['Franchisé multi-boutique', [], 'entrepreneur']] as [$po, $nv, $f]) {
     verifie("$po → $f", pcFamillePoste(['nom' => $po, 'niveaux' => $nv]) === $f, pcFamillePoste(['nom' => $po, 'niveaux' => $nv]));
 }

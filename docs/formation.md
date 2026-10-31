@@ -131,9 +131,10 @@ procédure ni de ressource** reliée.
 
 ### Lisibilité et familles de postes (31/10/2026)
 
-- **Trois familles** partout (tableau de bord, arbre des postes, assistant du parcours) : *Opérationnel* (P1–P6),
-  *Cadre et direction* (Adjoint, Manager, et les rôles du réseau : direction, consultants, contrôle…),
-  *Devenir entrepreneur* (candidat, franchisé, locataire-gérant, multi-boutique). Rangement côté serveur
+- **Deux portées, trois familles** (arbre des postes, fiches, carte) : **dans la franchise** (le magasin) —
+  *Opérationnel* (P1–P6), *Cadre et direction* (Adjoint, Manager), *Devenir entrepreneur* (candidat, franchisé,
+  locataire-gérant, multi-boutique) ; **dans la marque** (le franchiseur, 31/10/2026) — direction opérationnelle,
+  stratégie, consultants, contrôle qualité, client mystère… (famille `marque` : les postes hors matrice v25). Rangement côté serveur
   (`pcFamillePoste`, sur les noms du panel), rendu par `GET /formation/v25` (`familles`).
 - **Police** : `fonts/Gotham_Regular.otf` est en réalité Gotham *Black* (nom interne « Gotham-Black ») ; tout le texte
   sortait en noir épais. Famille « Gotham Lisible » : Light pour le texte, Medium pour les libellés, Black pour les titres.

@@ -2102,3 +2102,12 @@ a.fm-pc3:hover { border-color: var(--accent); }
 .fm-prog b { color: var(--ink); font-weight: 600; }
 td .fm-barre { display: block; }
 .fm-legende i.fm-or { width: 24px; height: 18px; border-radius: 4px; margin-right: 6px; vertical-align: middle; }
+
+/* Deux portées de postes (31/10/2026) : dans la franchise (le magasin) / dans la marque (le franchiseur). */
+.fm-tree__portee { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--accent); padding: 16px 10px 4px; margin-top: 10px; border-top: 1px solid var(--line); }
+.fm-tree__portee:first-child { margin-top: 0; border-top: 0; padding-top: 4px; }
+.fm-tree__portee small { font-size: 11px; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--muted); }
+.fm-tree__portee--marque { color: #3d5a80; }
+.fm-tree__portee--marque ~ .fm-tree__poste.is-active { background: rgba(61, 90, 128, .1); color: #3d5a80; }
+.fm-tag--franchise { background: rgba(141, 29, 44, .08); color: var(--accent); }
+.fm-tag--marque { background: rgba(61, 90, 128, .12); color: #3d5a80; }

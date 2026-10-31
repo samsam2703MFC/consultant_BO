@@ -310,19 +310,23 @@
   /* ── Tableau de bord ────────────────────────────────────────────────── */
 
   /* Les trois familles de postes (demande du 31/10/2026). Le serveur range chaque poste
-     (src/parcours.php, pcFamillePoste) ; les rôles du réseau vont avec les cadres. */
+     (src/parcours.php, pcFamillePoste). Deux portées (31/10/2026) : les postes DANS LA
+     FRANCHISE (le magasin : les trois premières familles) et ceux DANS LA MARQUE (le
+     franchiseur : direction, consultants, contrôle qualité, client mystère…). */
   var FAMILLES = [
     ['operationnel', 'Opérationnel', 'En magasin : vente, boulangerie-pâtisserie, traiteur — de débutant à responsable d’équipe.'],
-    ['cadre', 'Cadre et direction', 'Encadrer le magasin (adjoint, manager), et les rôles du réseau.'],
+    ['cadre', 'Cadre et direction', 'Encadrer le magasin : adjoint, manager.'],
     ['entrepreneur', 'Devenir entrepreneur', 'Candidat, franchisé, multi-boutique.'],
   ];
+  var MARQUE = ['marque', 'La marque', 'Le franchiseur : direction, consultants, contrôle qualité, client mystère.'];
+  function nomFamille(f) { return f === 'marque' ? 'Dans la marque' : 'Dans la franchise · ' + ((FAMILLES.filter(function (x) { return x[0] === f; })[0] || [0, ''])[1]); }
   function familleDe(p) {
     if (p.id == null) return 'autres';
     return (S.v25 && S.v25.familles && S.v25.familles[p.id]) || 'cadre';
   }
   /** Les postes par famille ; ceux du référentiel que le panel n'a pas encore, à la fin de la leur. */
   function postesParFamille() {
-    var o = { autres: [] };
+    var o = { autres: [], marque: [] };
     FAMILLES.forEach(function (f) { o[f[0]] = []; });
     S.ref.postes.forEach(function (p) { o[familleDe(p)].push({ poste: p }); });
     ((S.v25 && S.v25.horsPanel) || []).forEach(function (x) { (o[x.famille] || o.entrepreneur).push({ v25: x }); });
@@ -401,7 +405,7 @@
     return '<div class="fm-metro-wrap"><div class="fm-metro">' + zones + '<svg width="1150" height="560" aria-hidden="true">' + svg + '</svg>' + hub + st + '</div></div>' +
       '<div class="fm-legende">' + C.chemin.metiers.map(function (m) { return '<span><i style="background:' + (COUL[m.cle] || TRONC) + '"></i>' + esc(m.libelle) + '</span>'; }).join('') +
       '<span><i style="background:' + TRONC + '"></i>Tronc commun</span><span>◎ niveau de maîtrise du métier</span>' + (loc ? '<span>· · · Locataire-gérant : l’autre voie que la franchise</span>' : '') + '</div>' +
-      (C.chemin.reseau.length ? '<p class="muted fm-small" style="margin-top:12px"><strong>Hors chemin — rôles du réseau</strong> (' + C.chemin.reseau.length + ') : ' +
+      (C.chemin.reseau.length ? '<p class="muted fm-small" style="margin-top:12px"><strong>Dans la marque — postes du franchiseur</strong>, hors du chemin des magasins (' + C.chemin.reseau.length + ') : ' +
         C.chemin.reseau.map(function (x) { return '<a href="#/postes/' + x.id + '">' + esc(x.nom) + '</a>'; }).join(', ') + '</p>' : '');
   }
 
@@ -437,7 +441,7 @@
     };
     h += '<div class="fm-carte-tete"><div><h2>Où est l’équipe</h2><p>Chaque poste, ses niveaux de gauche à droite ; dans chaque case, le nombre de personnes à ce niveau aujourd’hui. Encadré : le niveau de maîtrise du métier.</p></div></div>' +
       '<div class="fm-cols3"><div><p class="fm-col__t">Opérationnel</p>' + C.chemin.metiers.map(function (m) { return cartePoste(m, m.libelle); }).join('') + '</div>' +
-      '<div><p class="fm-col__t">Cadre et direction</p>' + C.chemin.tronc.map(function (x) { return cartePoste(x); }).join('') + (C.chemin.reseau.length ? '<p class="muted fm-small">Rôles du réseau (' + C.chemin.reseau.length + ') : hors chemin.</p>' : '') + '</div>' +
+      '<div><p class="fm-col__t">Cadre et direction</p>' + C.chemin.tronc.map(function (x) { return cartePoste(x); }).join('') + (C.chemin.reseau.length ? '<p class="muted fm-small">Dans la marque (' + C.chemin.reseau.length + ' postes du franchiseur) : hors du chemin des magasins.</p>' : '') + '</div>' +
       '<div><p class="fm-col__t">Devenir entrepreneur</p>' + C.chemin.entrepreneur.map(function (x) { return cartePoste(x); }).join('') + '</div></div>';
     return h;
   }
@@ -532,10 +536,12 @@
     var arbre = '<section class="card fm-tree">';
     if (!S.v25) arbre += R.postes.map(lignePoste).join('');
     else {
+      // Deux portées : dans la franchise (le magasin, par famille), dans la marque (le franchiseur).
       var pf = postesParFamille();
-      arbre += FAMILLES.concat(pf.autres.length ? [['autres', 'Autres']] : []).map(function (f) {
-        return pf[f[0]].length ? '<div class="fm-tree__famille">' + esc(f[1]) + '</div>' + pf[f[0]].map(function (x) { return x.v25 ? ligneV25(x.v25) : lignePoste(x.poste); }).join('') : '';
-      }).join('');
+      var groupe = function (f) { return pf[f[0]].length ? '<div class="fm-tree__famille">' + esc(f[1]) + '</div>' + pf[f[0]].map(function (x) { return x.v25 ? ligneV25(x.v25) : lignePoste(x.poste); }).join('') : ''; };
+      arbre += '<div class="fm-tree__portee">Dans la franchise<small>le magasin</small></div>' + FAMILLES.map(groupe).join('');
+      if (pf.marque.length) arbre += '<div class="fm-tree__portee fm-tree__portee--marque">Dans la marque<small>le franchiseur</small></div>' + pf.marque.map(function (x) { return lignePoste(x.poste); }).join('');
+      if (pf.autres.length) arbre += groupe(['autres', 'Autres']);
     }
     arbre += '</section>';
 
@@ -543,7 +549,8 @@
     if (horsPanel !== null) {
       droite = ficheHorsPanel(horsPanel);
     } else if (!niveau) {
-      droite = '<section class="card pending"><span class="chip pending__chip">Sans niveau</span><h2>' + esc(poste.nom) + '</h2><p class="muted">Ce poste n’a aucun niveau dans le panel (<code>/positions/' + esc(poste.id) + '/levels</code>).</p></section>';
+      var famP = S.v25 ? familleDe(poste) : null;
+      droite = '<section class="card pending"><span class="chip pending__chip">Sans niveau</span>' + (famP && famP !== 'autres' ? ' <span class="fm-tag' + (famP === 'marque' ? ' fm-tag--marque' : ' fm-tag--franchise') + '">' + esc(nomFamille(famP)) + '</span>' : '') + '<h2>' + esc(poste.nom) + '</h2><p class="muted">Ce poste n’a aucun niveau dans le panel (<code>/positions/' + esc(poste.id) + '/levels</code>).</p></section>';
     } else {
       droite = ficheNiveau(poste, niveau);
     }
@@ -580,8 +587,9 @@
     var avant = Array.from(tout).filter(function (c) { return nouv.indexOf(c) < 0; });
     var vue = S.ficheVue === 'avant' || S.ficheVue === 'tout' ? S.ficheVue : 'nouveau';
     var ids = vue === 'nouveau' ? nouv : vue === 'avant' ? avant : Array.from(tout);
+    var fam = S.v25 ? familleDe(poste) : null;
     var h = '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(poste.nom) + ' › ' + esc(niveau.nom) + '</h2>' +
-      '<p class="muted">Niveau ' + (rang + 1) + ' sur ' + poste.niveaux.length + ' · ' + pl(tout.size, 'compétence') + ' à maîtriser, dont ' + n(nouv.length) + ' nouvelle' + (nouv.length > 1 ? 's' : '') + (niveau.description ? ' · ' + esc(niveau.description) : '') + '</p></div>' +
+      '<p class="muted">' + (fam && fam !== 'autres' ? '<span class="fm-tag' + (fam === 'marque' ? ' fm-tag--marque' : ' fm-tag--franchise') + '" style="margin:0 8px 0 0">' + esc(nomFamille(fam)) + '</span>' : '') + 'Niveau ' + (rang + 1) + ' sur ' + poste.niveaux.length + ' · ' + pl(tout.size, 'compétence') + ' à maîtriser, dont ' + n(nouv.length) + ' nouvelle' + (nouv.length > 1 ? 's' : '') + (niveau.description ? ' · ' + esc(niveau.description) : '') + '</p></div>' +
       '<div class="fm-links">' +
       '<a class="filter" href="#/manuel/poste/' + pid + '/' + niveau.id + '">Manuel</a>' +
       '<a class="filter" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=niveau&id=' + niveau.id + '">Fiche PDF ↗</a>' +
