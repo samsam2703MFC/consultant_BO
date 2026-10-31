@@ -143,9 +143,20 @@ procédure ni de ressource** reliée.
   postes à créer), *Parcours en cours*, *Les postes* par famille avec la part des compétences couvertes par une formation ;
   le détail technique des appels au panel est replié.
 
-Tables (créées au premier appel) : `ceo_parcours` (personne, objectif, rythme, statut, compétences déclarées, critères d'admission)
+**Candidats franchisés (31/10/2026)** : l'étape « Pour qui ? » liste les dossiers en cours du CRM candidat
+(atelier-espace-candidat), qui vit dans la même base que le cockpit. Sa table est `crm_candidates` (le pipeline : `name`,
+`zone`, `stage_idx` → nom de l'étape dans `crm_stages` triées par `position`, `person_status` contact / candidat, `closed`,
+`last_activity_at`) — pas `crm_cd_candidates`, les comptes de l'espace candidat. Elle est trouvée par information_schema
+(ailleurs : un nom finissant par candidat(s) / candidate(s), puis lead(s), puis prospect(s), hors `ceo_`, `mar_`, journal
+Meta et tables de comptes), gardée une heure (`ceo_app_setting` `pcCrmSource`), puis lue sans jamais y écrire : nom, étape,
+zone, dates — ni e-mail ni téléphone ; les dossiers arrêtés sont écartés. Les candidats d'abord, les contacts (pas encore
+passés par l'appel de qualification) sur demande ; recherche sans accents sur le nom, la zone ou l'étape ; 30 lignes, les plus
+récemment actives d'abord ; un candidat qui a déjà un parcours y mène directement. Le parcours garde la référence de la fiche
+(`ceo_parcours.candidat_ref`). Hors CRM, ou sans CRM dans la base, le nom se saisit à la main.
+
+Tables (créées au premier appel) : `ceo_parcours` (personne, candidat du CRM, objectif, rythme, statut, compétences déclarées, critères d'admission)
 et `ceo_parcours_etape` (une ligne par formation : évaluations, date prévue, statut, origine panel / déclarée /
-parcours). Routes : `GET /parcours/destinations?employe=&shop=`, `POST /parcours`, `GET /parcours?id=`,
+parcours). Routes : `GET /parcours/destinations?employe=&shop=`, `GET /parcours/candidats`, `POST /parcours`, `GET /parcours?id=`,
 `GET /parcours/liste`, `PATCH /parcours/{id}/etape/{FO}`, `POST /parcours/{id}/acquis/{cid}`,
 `PATCH /parcours/{id}/admission/{cle} {fait}`, `PATCH /parcours/{id}` (rythme, arrêt, objectif atteint), `GET /formation/v25`. Chaque geste est journalisé
 (type « Parcours »).

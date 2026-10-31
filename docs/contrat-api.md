@@ -1304,7 +1304,12 @@ ou un écart à la relecture : `502 {ok: false, error, appels}`.
 Parcours compétences (`/formation/parcours/`, 31/10/2026) : `GET /parcours/destinations?employe=&shop=` (sans employé : un
 candidat) rend la personne et chaque destination `{cle, titre, sous, groupe, competences[{id, nom, acquise}], formations[{fo, nom,
 evaluations, competences, acquise}], aFaire, facultatives, admission[{cle, type: poste|fo|manuel, libelle, source: panel|referentiel, ok, preuve,
-manque[]}], admis}` ; `POST /parcours {employe?, shop?, nom?, cible, rythme, acquis[], suivies[]}`
+manque[]}], admis}` ; `GET /parcours/candidats` (les dossiers en cours du CRM atelier-espace-candidat, `crm_candidates`, lus en lecture seule
+dans la base partagée : `{crm: {table, colonnes[], etapes} | null, candidats[{ref, nom, statut (étape du pipeline), personne:
+candidat|contact|null, zone, le, maj, parcours: {id, statut} | null}], total, parType: {candidat, contact}}` — ni e-mail ni
+téléphone, dossiers arrêtés écartés ; `crm: null` : pas de CRM dans cette base ; `?frais=1` recherche la table à nouveau) ;
+`POST /parcours {employe?, shop?, nom?, candidat?, cible, rythme, acquis[], suivies[]}` (`candidat` : la `ref` du CRM — le nom est relu
+dans sa fiche, `404` si elle n'existe pas ou si le dossier est arrêté ; un parcours actif du même candidat est arrêté)
 crée le parcours et rend `{parcours, etapes[]}` ; `GET /parcours?id=`, `GET /parcours/liste` ; `PATCH /parcours/{id}/etape/{FO}
 {evaluation, fait}` (la dernière valide la formation et coche ses compétences dans le panel : `panel {ok, cochees, attendues}`) ;
 `POST /parcours/{id}/acquis/{cid}` (confirmer une compétence déclarée) ; `PATCH /parcours/{id}/admission/{cle} {fait}` (valider un
