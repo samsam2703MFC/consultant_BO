@@ -1206,3 +1206,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T10:31:16Z primes du magasin : fiches à imprimer, affiche envoyée par mail à l'équipe, affiche NL
 2026-10-31T10:32:09Z production : lot 4 — kontrola przyjęć (tablet pakowania › Przyjęcia), płatności dnia, ocena dostawców [230]
 2026-10-31T10:36:40Z [app] Planning : nom du magasin au lieu du numero (#85)
+2026-10-31T10:42:49Z production : tablet pakowania › Przyjęcia — partia i termin ze zdjęcia etykiety (OCR) [231]
