@@ -111,3 +111,55 @@ body { margin: 0; background: var(--paper); }
 .pers .sous { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
 .prog { font-size: 12.5px; color: var(--muted); }
 .prog b { color: var(--ink); font-weight: 600; }
+
+/* ── Carte des métiers, trois variantes (31/10/2026) ───────────────────── */
+.metro { position: relative; width: 1150px; height: 540px; background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.metro svg { position: absolute; inset: 0; }
+.zone { position: absolute; top: 0; bottom: 0; border-right: 1px dashed var(--line); }
+.zone b { position: absolute; top: 14px; left: 16px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.zone.e { border-right: 0; background: #fcfaf6; }
+.zone.c { background: #fdfbf8; }
+.st { position: absolute; width: 112px; text-align: center; }
+.st .dot { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 4px solid; margin: 0 auto 6px; box-sizing: border-box; }
+.st .nm { font-size: 12.5px; font-weight: 600; line-height: 1.25; }
+.st .dt { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.st .pp { display: inline-block; margin-top: 4px; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 5px; background: var(--chip); color: var(--ink); }
+.st .pp.z { background: transparent; color: var(--faint); font-weight: 500; }
+.st .vd { color: var(--danger); }
+.ligne-nom { position: absolute; font-size: 12.5px; font-weight: 600; }
+.legende2 { display: flex; gap: 20px; font-size: 12.5px; color: var(--muted); margin: 10px 2px 0; flex-wrap: wrap; }
+.legende2 i { display: inline-block; width: 22px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+.esc2 { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.esc2 .fh { background: var(--total-line); padding: 9px 16px; font-size: 13px; font-weight: 600; border-top: 1px solid var(--line); }
+.esc2 .fh:first-child { border-top: 0; }
+.esc2 .fh span { font-weight: 400; color: var(--muted); margin-left: 8px; }
+.esc2 .rg { display: grid; grid-template-columns: 210px repeat(4, 1fr); gap: 10px; align-items: stretch; padding: 12px 16px; border-top: 1px solid var(--row-line); }
+.esc2 .rg > .pn { font-size: 14px; font-weight: 600; align-self: center; }
+.esc2 .rg > .pn small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+.cel { position: relative; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px 10px; background: #fff; }
+.cel + .cel::before { content: '→'; position: absolute; left: -10px; top: 50%; transform: translate(-50%, -50%); color: var(--faint); font-size: 13px; }
+.cel .t { font-size: 13px; font-weight: 600; line-height: 1.3; }
+.cel .d { font-size: 12px; color: var(--muted); margin-top: 3px; display: flex; justify-content: space-between; gap: 6px; }
+.cel .d b { color: var(--ink); font-weight: 600; }
+.cel.vide { border-style: dashed; background: #fffdfa; }
+.cel.vide .t { color: var(--muted-2); }
+
+.hero { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+.hero h2 { font-size: 18px; margin: 0 0 4px; }
+.pile { display: flex; height: 26px; border-radius: 7px; overflow: hidden; margin-top: 12px; font-size: 12px; font-weight: 600; color: #fff; }
+.pile > div { display: flex; align-items: center; padding: 0 8px; white-space: nowrap; }
+.pile .o { background: var(--accent); }
+.pile .c { background: #a8665f; }
+.pile .e { background: #c9a227; }
+.pile .s { background: #d9d3ca; color: var(--muted-2); }
+.cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
+.pc3 { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px 12px; margin-bottom: 12px; }
+.pc3 .t { font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; }
+.pc3 .t span { font-weight: 500; font-size: 13px; color: var(--muted-2); }
+.segs { display: flex; gap: 3px; margin: 10px 0 4px; }
+.segs > div { flex: 1; min-width: 0; }
+.segs .b { height: 28px; border-radius: 6px; background: var(--chip); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+.segs .b.p { background: rgba(141,29,44,.14); color: var(--accent); }
+.segs .l { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.25; text-align: center; }
+.pc3 .d { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
