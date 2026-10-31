@@ -4291,6 +4291,19 @@ liste groupée, repliée, une ligne par volet avec son résumé : les primes du 
 promotions du panel, les chiffres, les fiches. La vue Année range ses colonnes de la même façon, le total après le nom.
 Rien ne change côté API (`/ventes/primes-equipe`, `/ventes/primes-annee`).
 
+**Fiches à imprimer et à envoyer** (31/10/2026, demande de Sam : « les PDF peuvent être imprimés de la page édition prime,
+avec envoi par mail à l'équipe » ; `src/primes_fiches.php`, voir `docs/primes/LISEZMOI.md`). Un volet de la page d'un
+magasin : le mode d'emploi du franchisé et l'affiche de l'équipe (FR, NL), trois PDF servis par le cockpit
+(`assets/primes/`), ouverts dans un onglet pour l'impression ; puis l'envoi de l'affiche.
+
+| Méthode | Route | Rend |
+|---|---|---|
+| GET | `/ventes/primes-fiches/equipe?shop=` | `{shop, smtp, fiches: [{cle, lib, present}], equipe: [{emp, nom, email}]}` — les personnes de « Les fiches de l'équipe », l'adresse **masquée** (`j•••@gmail.com`) ou `null`. Lu seulement quand le volet s'ouvre (il déchiffre les profils). |
+| POST | `/ventes/primes-fiches/envoyer` | `{shop, langues: [fr\|nl], emps: [id]}` → `{envoyes: [noms], sansAdresse: [noms], echecs: [{nom, motif}]}` ; 409 sans SMTP réglé (rien ne part), 400 sans magasin, langue ou destinataire. Un courrier par personne cochée, jamais de copie : l'affiche en pièce jointe (une par langue), le lien direct vers l'app, le prénom ; deux langues : le texte dans les deux. Au journal (`Primes`). |
+
+L'adresse d'une personne : celle de « Mon profil » (`coordonnees.email`), sinon celle du panel recopiée au profil
+(`panel.email`). Le cockpit ne montre jamais l'adresse en clair.
+
 **Les primes d'un magasin** (`famille: magasin`, `payeur: magasin`, six de chaque sorte au plus) — `POST
 /ventes/primes-app` les reçoit dans la liste, comme les autres :
 

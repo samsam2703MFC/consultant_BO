@@ -7579,9 +7579,36 @@ function tplPrimesApp(c, x){
       </div>`;
     const promosIci = item('promos', 'Promotions du panel dans ce magasin', FR.resumes.promos, btRelire(PF.relire),
       PF.chargement ? vide('Lecture des promotions…') : PF.motif ? vide(esc(PF.motif)) : !PF.liste.length ? vide('Aucune promotion du panel ne tourne dans ce magasin.') : `<div style="${groupeSt};margin-top:12px">${PF.liste.map(ligneProm).join('')}</div>`);
+    // Les fiches à imprimer et l'affiche à envoyer (31/10/2026) : trois PDF du cockpit, ouverts dans un onglet (le
+    // lecteur du navigateur imprime) ; l'affiche part par mail à chaque personne cochée, séparément.
+    const IM = FR.imprimer;
+    const ligneFiche = (f, i) => `<div data-pr-fiche="${esc(f.cle)}" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:13px 18px;${i ? `border-top:${filet};` : ''}">
+        <span aria-hidden="true" style="flex:none;width:30px;height:38px;border-radius:5px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px;font:700 8px ${sf};color:var(--color-primary);letter-spacing:.04em">PDF</span>
+        <span style="flex:1 1 240px;min-width:0"><b style="display:block;font:600 14.5px/1.3 ${sf}">${esc(f.lib)}</b><span style="display:block;font:400 12.5px/1.4 ${sf};color:${muet};margin-top:2px">${esc(f.sous)}</span></span>
+        <a href="${esc(f.url)}" target="_blank" rel="noopener" data-pr-fiche-ouvrir style="border-radius:999px;padding:8px 15px;font:600 13px ${sf};background:var(--color-background-secondary);color:var(--color-text);text-decoration:none;white-space:nowrap">Ouvrir et imprimer ↗</a>
+      </div>`;
+    const ligneIn = t => `<div style="padding:12px 18px 16px;border-top:${filet};font:400 13.5px/1.45 ${sf};color:${muet}">${t}</div>`;
+    const envoiAff = `<div data-pr-envoi style="${groupeSt};margin-top:12px">
+      <div style="display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;padding:15px 18px 13px">
+        <span style="flex:1 1 260px;min-width:0"><b style="display:block;font:600 15px/1.3 ${sf}">Envoyer l’affiche à l’équipe</b><span style="display:block;font:400 12.5px/1.4 ${sf};color:${muet};margin-top:2px">Par mail, à chacune séparément : l’affiche en pièce jointe et le lien direct vers l’app.</span></span>
+        ${segm(IM.langues)}
+      </div>
+      ${IM.chargement ? ligneIn('Lecture de l’équipe…') : IM.motif ? ligneIn(esc(IM.motif)) : !IM.personnes.length ? ligneIn('Personne dans ce magasin pour l’instant.') : `
+      <div style="border-top:${filet}">${IM.personnes.map((pe, i) => `<label data-pr-envoi-personne="${esc(String(pe.emp))}" style="display:flex;align-items:center;gap:12px;padding:10px 18px;${i ? `border-top:${filet};` : ''}cursor:${pe.basculer ? 'pointer' : 'default'}">
+          <input type="checkbox" ${pe.on ? 'checked' : ''} ${pe.basculer ? x.C(pe.basculer) : 'disabled'} style="width:17px;height:17px;flex:none;accent-color:var(--color-primary)">
+          <span style="flex:1;min-width:0;font:${pe.sans ? 400 : 500} 14px/1.3 ${sf};color:${pe.sans ? muet : 'var(--color-text)'}">${esc(pe.nom)}</span>
+          <span style="flex:none;font:400 12.5px ${sf};color:${muet}">${pe.sans ? 'sans adresse — à compléter dans « Mon profil »' : esc(pe.email)}</span></label>`).join('')}</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 18px;border-top:${filet}">
+        <span style="flex:1 1 240px;font:400 12.5px/1.4 ${sf};color:${IM.smtp ? muet : 'var(--color-primary)'}">${!IM.smtp ? 'Le courrier n’est pas réglé (Paramètres › SMTP) : l’envoi est impossible pour l’instant.' : IM.sansN ? IM.sansN + ' personne' + (IM.sansN > 1 ? 's' : '') + ' sans adresse : imprimez-leur l’affiche.' : 'Toute l’équipe a une adresse.'}</span>
+        <button ${IM.envoyer ? x.A(IM.envoyer) : 'disabled'} data-pr-envoi-envoyer style="${btP};${IM.envoyer ? '' : 'opacity:.45;cursor:default;'}">${IM.busy ? 'Envoi…' : 'Envoyer à ' + IM.n + ' personne' + (IM.n > 1 ? 's' : '')}</button>
+      </div>
+      ${IM.res ? `<div data-pr-envoi-res style="padding:0 18px 15px;font:500 13px/1.45 ${sf};color:${IM.res.ko ? 'var(--color-primary)' : '#2d7a3e'}">${esc(IM.res.txt)}</div>` : ''}`}
+    </div>`;
+    const imprimer = item('imprimer', 'Fiches à imprimer et à envoyer', FR.resumes.imprimer, '',
+      `<div style="${groupeSt};margin-top:12px">${IM.fiches.map(ligneFiche).join('')}</div>${envoiAff}`);
     // L'ordre : l'avancement des vendeuses (déplié à l'ouverture), puis les volets repliés — les primes du magasin, de la
     // marque, les promotions du panel, les chiffres, les fiches.
-    return `<div style="display:flex;flex-direction:column;gap:26px">${equipe}${liste([siennes, marque, promosIci, donnees, fiches])}</div>`;
+    return `<div style="display:flex;flex-direction:column;gap:26px">${equipe}${liste([siennes, imprimer, marque, promosIci, donnees, fiches])}</div>`;
   };
 
   return `

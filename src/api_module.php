@@ -40,6 +40,7 @@ function apiModInventaire(): array
             'groupes' => [
                 ['nom' => 'Lectures', 'routes' => [
                     ['m' => 'GET', 'r' => '/ventes/primes-reglages', 'dit' => 'Les primes posées (marque, sponsors, franchisés), la récompense, le SMS', 'pages' => $AF, 'garde' => '', 'sonde' => ['reglage' => 'ventePrimesApp']],
+                    ['m' => 'GET', 'r' => '/ventes/primes-fiches/equipe?shop=', 'dit' => 'Les fiches à imprimer, et qui recevra l’affiche par mail (adresse masquée)', 'pages' => ['franchise'], 'garde' => ''],
                     ['m' => 'GET', 'r' => '/ventes/primes-equipe?shop=&m=', 'dit' => 'Qui a quelle prime, à quel niveau, dans un magasin et un mois', 'pages' => ['franchise'], 'garde' => '10 min · 1 j', 'sonde' => ['cache' => 'primesEq']],
                     ['m' => 'GET', 'r' => '/ventes/primes-annee?y=[&shop=]', 'dit' => 'L’année des primes, par magasin ou par vendeuse', 'pages' => $AF, 'garde' => '1 h · 1 j', 'sonde' => ['cache' => 'primesAn']],
                     ['m' => 'GET', 'r' => '/ventes/primes-moyennes?n=', 'dit' => 'Les moyennes du réseau, pour caler un objectif', 'pages' => ['admin'], 'garde' => '1 j', 'sonde' => ['cache' => 'prMoy']],
@@ -56,6 +57,7 @@ function apiModInventaire(): array
                 ]],
                 ['nom' => 'Écritures', 'routes' => [
                     ['m' => 'POST', 'r' => '/ventes/primes-app', 'dit' => 'Enregistre les primes, la récompense, les primes externes, le SMS', 'pages' => $AF],
+                    ['m' => 'POST', 'r' => '/ventes/primes-fiches/envoyer', 'dit' => 'Envoie l’affiche de l’app (FR, NL) à chaque personne cochée de l’équipe', 'pages' => ['franchise']],
                     ['m' => 'POST', 'r' => '/ventes/primes-icone', 'dit' => 'Dépose l’icône d’une prime ou le logo d’un sponsor', 'pages' => $AF],
                     ['m' => 'POST', 'r' => '/ventes/croisees', 'dit' => 'La règle des ventes croisées (cible, tickets minimum)', 'pages' => ['admin']],
                     ['m' => 'POST', 'r' => '/ventes/grands-prix', 'dit' => 'Crée, modifie, allume ou éteint un grand prix', 'pages' => ['admin']],

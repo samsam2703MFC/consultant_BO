@@ -7273,6 +7273,45 @@ class App {
         detail: empF && fichesL && (fichesL.fiches || []).some(f => f.emp === empF)
           ? { chargement: ficheL === undefined, motif: ficheL === null ? 'La fiche n’a pas pu être lue.' : '', f: ficheVue(ficheL) } : null,
       };
+      // Les fiches à imprimer et l'affiche à envoyer (31/10/2026, Sam : « les PDF peuvent être imprimés de la page édition
+      // prime, avec envoi par mail à l'équipe » ; src/primes_fiches.php). Les PDF sont servis par le cockpit
+      // (assets/primes). L'équipe et ses adresses (masquées) ne se lisent qu'une fois le volet ouvert : elles déchiffrent
+      // les profils. L'affiche part à chacune séparément ; décocher une personne la laisse de côté.
+      const ouvImp = !!(S.prFrOuv && S.prFrOuv.imprimer);
+      const affEq = connu && ouvImp ? lire('affEq:' + sid, '/ventes/primes-fiches/equipe?shop=' + encodeURIComponent(sid)) : null;
+      const AFF = this._prAff && this._prAff.sid === sid ? this._prAff : (this._prAff = { sid, langues: ['fr'], hors: {}, busy: false, res: null });
+      const reAff = () => this.setState({});
+      const persAff = affEq && affEq.equipe ? affEq.equipe : [];
+      const choisisAff = persAff.filter(p => p.email && !AFF.hors[p.emp]);
+      const plP = (k, mot) => k + ' ' + mot + (k > 1 ? 's' : '');
+      const imprimer = {
+        fiches: [
+          ['franchise', 'Mode d’emploi du franchisé', 'Une page A4, pour vous : les deux familles de primes, votre page en trois gestes, les règles.', 'assets/primes/primes-franchise-mode-emploi.pdf'],
+          ['fr', 'Affiche de l’équipe — français', 'Le QR code de l’app employé, à afficher en magasin.', 'assets/primes/primes-personnel-qr.pdf'],
+          ['nl', 'Affiche de l’équipe — néerlandais', 'Dezelfde affiche, in het Nederlands.', 'assets/primes/primes-personnel-qr-nl.pdf'],
+        ].map(([cle, lib, sous, url]) => ({ cle, lib, sous, url })),
+        chargement: ouvImp && affEq === undefined, motif: ouvImp && affEq === null ? 'L’équipe n’a pas pu être lue.' : '',
+        smtp: !!(affEq && affEq.smtp),
+        langues: [['fr', 'Français'], ['nl', 'Nederlands'], ['fr+nl', 'Les deux']].map(([k, nom]) => ({ nom, on: AFF.langues.join('+') === k,
+          choisir: () => { AFF.langues = k.split('+'); AFF.res = null; reAff(); } })),
+        personnes: persAff.map(p => ({ emp: p.emp, nom: p.nom, email: p.email || '', sans: !p.email, on: !!p.email && !AFF.hors[p.emp],
+          basculer: p.email ? () => { AFF.hors[p.emp] = !AFF.hors[p.emp]; AFF.res = null; reAff(); } : null })),
+        n: choisisAff.length, sansN: persAff.filter(p => !p.email).length, busy: AFF.busy, res: AFF.res,
+        envoyer: !choisisAff.length || AFF.busy || !(affEq && affEq.smtp) ? null : () => {
+          if (!window.confirm('Envoyer l’affiche (' + AFF.langues.join(' + ').toUpperCase() + ') à ' + plP(choisisAff.length, 'personne') + ' de l’équipe ? Chacune la reçoit seule, à son adresse.')) { return; }
+          AFF.busy = true; AFF.res = null; reAff();
+          this.api('POST', '/ventes/primes-fiches/envoyer', { shop: sid, langues: AFF.langues, emps: choisisAff.map(p => p.emp) }).then(r => {
+            AFF.busy = false;
+            if (!r || (r.ok === false && !r.envoyes)) { AFF.res = { ko: true, txt: (r && r.error) || 'L’envoi a échoué.' }; reAff(); return; }
+            if (!r.envoyes) { AFF.res = { ko: true, txt: 'Rien n’est parti : le cockpit n’est pas relié au serveur.' }; reAff(); return; }
+            const e = r.envoyes || [], sa = r.sansAdresse || [], ec = r.echecs || [];
+            AFF.res = { ko: !e.length, txt: (e.length ? 'Envoyée à ' + plP(e.length, 'personne') + ' : ' + e.join(', ') + '.' : 'Rien n’est parti.')
+              + (sa.length ? ' Sans adresse : ' + sa.join(', ') + '.' : '') + (ec.length ? ' En échec : ' + ec.map(x => x.nom + ' (' + x.motif + ')').join(', ') + '.' : '') };
+            if (e.length) { this.notify('Affiche envoyée à ' + plP(e.length, 'personne')); }
+            reAff();
+          });
+        },
+      };
       const ent = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
       const cible = cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut;
       const stat = (lib, v, vr, sous) => ({ lib, v: v || '—', reseau: vr ? 'réseau ' + vr : '', sous: sous || '' });
@@ -7282,13 +7321,13 @@ class App {
       common.prFr = {
         id: sid, nom: nomMag[sid] || '', connu,
         magasins: (d.magasins || []).map(m => ({ id: String(m.id), nom: court(m.nom), aller: () => this.setState({ prShop: String(m.id) }) })),
-        marque, siennes, nSiennesMax: 6, equipe, fiches,
+        marque, siennes, nSiennesMax: 6, equipe, fiches, imprimer,
         // La page en volets (31/10/2026, Sam : « réorganiser la page en toggle ») : à l'ouverture, seul l'avancement des
         // vendeuses est déplié ; le reste se replie en une ligne qui dit l'essentiel, et s'ouvre au toucher.
         volets: (() => {
           const ouv = Object.assign({ equipe: true }, S.prFrOuv || {});
           const v = cle => ({ ouvert: !!ouv[cle], basculer: () => this.setState({ prFrOuv: Object.assign({}, ouv, { [cle]: !ouv[cle] }) }) });
-          return { equipe: v('equipe'), magasin: v('magasin'), marque: v('marque'), promos: v('promos'), donnees: v('donnees'), fiches: v('fiches') };
+          return { equipe: v('equipe'), magasin: v('magasin'), marque: v('marque'), promos: v('promos'), donnees: v('donnees'), fiches: v('fiches'), imprimer: v('imprimer') };
         })(),
         resumes: (() => {
           const pl2 = (k, mot) => k + ' ' + mot + (k > 1 ? 's' : '');
@@ -7300,6 +7339,7 @@ class App {
             marque: marque.length ? pl2(marque.length, 'prime') + ' qui tourne' + (marque.length > 1 ? 'nt' : '') + ' ici · à lire' : 'Aucune ici pour l’instant',
             promos: promos === undefined ? 'Lecture…' : promosIci.length ? pl2(promosIci.length, 'promotion') + ' · ' + (avecPrime ? avecPrime + ' avec une prime du magasin' : 'aucune avec une prime du magasin') : 'Aucune ici',
             donnees: 'Moyennes par mois sur ' + n + ' mois, face au réseau',
+            imprimer: 'Le mode d’emploi, l’affiche de l’équipe en français et en néerlandais — à imprimer, ou l’affiche à envoyer par mail',
             fiches: fL === null ? (fichesL === undefined ? 'Lecture…' : 'Fiches illisibles') : fL.length ? pl2(fL.length, 'personne') + ' · ' + pl2(fL.filter(f => f.complet >= 100).length, 'fiche') + ' complète' + (fL.filter(f => f.complet >= 100).length > 1 ? 's' : '') : 'Personne pour l’instant',
           };
         })(),
