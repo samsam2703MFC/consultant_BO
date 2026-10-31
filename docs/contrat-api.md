@@ -4289,6 +4289,13 @@ clos : gagné / possible), la barre marque + magasin, la part de chacune ; elle 
 (≥ 1 000 px), le nom et le cumul restent en place quand les primes défilent. Les autres volets (`S.prFrOuv`) forment une
 liste groupée, repliée, une ligne par volet avec son résumé : les primes du magasin, de la marque et des sponsors, les
 promotions du panel, les chiffres, les fiches. La vue Année range ses colonnes de la même façon, le total après le nom.
+**Les primes d'équipe en frise** (31/10/2026, demande de Sam : « les primes pour le magasin qui sont communes doivent être
+en frise horizontale au-dessus du tableau, comme dans l'application mobile ») : l'objectif CA et la note Google — de la
+marque, ou du magasin (`cible` de base `objectif` ou `google`) — sortent des colonnes. Au-dessus du tableau, « Le magasin,
+ensemble » : un anneau par prime (la couleur de sa famille, vert une fois atteinte), sa valeur commune (projetée tant que
+le mois court), l'objectif, ce que chacune touche, ce qu'il reste ; puis les éligibles et celles sous le minimum
+d'heures — la forme du dashboard magasin. Elles comptent toujours dans le cumul de chacune. Dans l'année : un anneau par
+prime d'équipe, les mois où le magasin y est arrivé, et ce qui a été versé à l'équipe.
 Rien ne change côté API (`/ventes/primes-equipe`, `/ventes/primes-annee`).
 
 **Fiches à imprimer et à envoyer** (31/10/2026, demande de Sam : « les PDF peuvent être imprimés de la page édition prime,
