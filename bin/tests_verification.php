@@ -18,15 +18,18 @@ final class Db
     public static array $registre = [];
     public static array $shops = [];
     public static array $verif = [];       // ceo_verif_jour : 'sid:jour' => colonnes
+    public static array $inv = [];         // ceo_verif_inventaire : 'sid:de:a' => colonnes
     public static function rows(string $sql, array $p = []): array
     {
         if (str_contains($sql, 'FROM shops')) { return self::$shops; }
         if (str_contains($sql, 'FROM ceo_verif_jour')) { $r = array_values(array_filter(self::$verif, static fn ($x) => $x['jour'] >= ($p[0] ?? ''))); usort($r, static fn ($a, $b) => $a['jour'] <=> $b['jour']); return $r; }
         if (str_contains($sql, 'FROM ceo_verif_recette')) { return array_values(self::$registre); }
+        if (str_contains($sql, 'FROM ceo_verif_inventaire')) { return array_values(array_filter(self::$inv, static fn ($x) => $x['a_at'] >= ($p[0] ?? ''))); }
         return [];
     }
     public static function row(string $sql, array $p = []): ?array
     {
+        if (str_contains($sql, 'FROM ceo_verif_inventaire')) { return isset(self::$inv[$p[0] . ':' . $p[1] . ':' . $p[2]]) ? ['x' => 1] : null; }
         if (str_contains($sql, 'FROM ceo_verif_jour') && str_contains($sql, 'COUNT(*)')) {
             $j = array_column(self::$verif, 'jour');
             return ['n' => count(self::$verif), 'premier' => $j ? min($j) : null, 'dernier' => $j ? max($j) : null, 'flux' => null, 'rec' => null, 'mags' => count(array_unique(array_column(self::$verif, 'shop_id')))];
@@ -45,6 +48,12 @@ final class Db
             return 1;
         }
         if (str_starts_with($sql, 'UPDATE ceo_verif_recette SET resolu_le')) { self::$registre[$p[1]]['resolu_le'] = $p[0]; return 1; }
+        if (str_starts_with($sql, 'INSERT INTO ceo_verif_inventaire')) {
+            preg_match('/\(([^)]*)\) VALUES/', $sql, $m);
+            $row = array_combine(array_map('trim', explode(',', $m[1])), $p);
+            self::$inv[$row['shop_id'] . ':' . $row['de'] . ':' . $row['a']] = $row;
+            return 1;
+        }
         if (str_starts_with($sql, 'INSERT INTO ceo_verif_jour')) {
             preg_match('/\(([^)]*)\) VALUES/', $sql, $m);
             $cols = array_map('trim', explode(',', $m[1]));
@@ -101,6 +110,12 @@ function ep_production_flux_cloture(): array
 require __DIR__ . '/../src/verification.php';
 require __DIR__ . '/../src/verification_flux.php';
 require __DIR__ . '/../src/verification_base.php';
+// Lot 4 : les doubles du module Inventaires (invListe, invEcart) et de la gravure.
+$INVENTAIRES = []; $ECARTS = []; $APPELS_ECART = 0;
+function svGrave(string $cle, array $v): void { Db::$reglages[$cle] = json_encode($v, JSON_UNESCAPED_UNICODE); }
+function invListe(int $sid): array { global $INVENTAIRES; return $INVENTAIRES[$sid] ?? []; }
+function invEcart(int $sid, string $de, string $a): ?array { global $ECARTS, $APPELS_ECART; $APPELS_ECART++; return $ECARTS[$sid . ':' . $de . ':' . $a] ?? null; }
+require __DIR__ . '/../src/verification_matieres.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -393,6 +408,70 @@ $ev4 = ep_verification_evolution();
 $m3 = array_values(array_filter($ev4['magasins'], static fn ($m) => $m['id'] === '3'))[0];
 verifie('la poubelle qui apparaît (0 → 4 %) n’est pas une dégradation : les semaines à zéro ne se comparent pas', $m3['series']['poubelle'] === [0.0, 0.0, 4.0, 4.0] && $m3['comparaison']['poubelle']['sens'] === 'stable', json_encode($m3['comparaison']['poubelle']));
 Db::$verif = $sauve; $_GET = [];
+
+
+echo "Lot 4 — matières ↔ recettes\n";
+$L4 = static fn (float $s, float $v, float $w, array $pr = [[11, 'Croissant']], string $u = 'pce') => ['id' => 1, 'nom' => 'X', 'cat' => 'C', 'u' => $u, 'p' => 1.0, 'd' => 0.0, 'e' => 0.0, 'f' => 0.0, 's' => $s, 'v' => $v, 'w' => $w, 'pr' => $pr];
+verifie('dans la tolérance : 2 % d’écart sur 3 %', vmCause($L4(100, 97, 1), 3.0, [])[0] === 'tolerance');
+verifie('le stock monte sans entrée : une commande non validée à la réception', vmCause($L4(-20, 50, 0), 3.0, [])[0] === 'entree');
+verifie('vendu plus que sorti (du même ordre) : entrée manquante ou recette surdosée', vmCause($L4(100, 150, 0), 3.0, [])[0] === 'entree');
+verifie('sorti sans qu’aucune vente l’emploie : la recette', vmCause($L4(30, 0, 0, []), 3.0, [])[0] === 'recette');
+verifie('un ordre de grandeur (six fois) : unité ou recette', vmCause($L4(10, 80, 0), 3.0, [])[0] === 'recette' && vmCause($L4(100, 10, 2), 3.0, [])[0] === 'recette');
+verifie('un produit qui l’emploie est dans « Recettes à corriger » : la recette', str_contains(vmCause($L4(100, 80, 2), 3.0, [11 => 'Recette vide'])[1], 'Recette vide'));
+verifie('manque, rien de jeté déclaré : poubelle non déclarée', vmCause($L4(100, 80, 0), 3.0, [])[0] === 'poubelle');
+verifie('manque alors que la poubelle est déclarée : hors caisse', vmCause($L4(100, 80, 5), 3.0, [])[0] === 'horsCaisse');
+verifie('rien ne bouge : pas de cause', vmCause($L4(0, 0, 0), 3.0, [])[0] === null);
+verifie('une pièce d’écart sur quinze, ou moins de 5 € : du bruit, pas une cause', vmCause($L4(15, 16, 0), 3.0, [])[0] === 'tolerance' && vmCause(['p' => 0.01, 'u' => 'g'] + $L4(1000, 800, 0, [[11, 'Pain']], 'g'), 8.0, [])[0] === 'tolerance');
+$T4 = vmTolerances();
+verifie('tolérances par défaut : pièces 3 %, grammes 8 %', vmTolerance($T4, 'pce', 'Pain') === 3.0 && vmTolerance($T4, 'g', 'Fond à garnir') === 8.0);
+Db::$reglages['verifTolerances'] = json_encode(['categorie' => ['Pain' => 5]]);
+verifie('une tolérance réglée par catégorie prime', vmTolerance(vmTolerances(), 'pce', 'Pain') === 5.0);
+unset(Db::$reglages['verifTolerances']);
+// Une semaine : trois matières (Baguette : poubelle non déclarée ; Croissant : tolérance ; Pistolet : entrée non validée).
+$ligne4 = static fn (int $id, string $nom, string $cat, float $prix, float $deb, float $ent, float $fin, float $v, float $w, string $pnom) => ['id' => $id, 'nom' => $nom, 'categorie' => $cat, 'unite' => 'pce', 'prix' => $prix,
+    'debut' => $deb, 'entrees' => $ent, 'fin' => $fin, 'sorties' => $deb + $ent - $fin, 'ventes' => $v, 'poubelle' => $w, 'produits' => [['id' => $id * 10, 'nom' => $pnom, 'q' => $v]]];
+$sem4 = static fn (string $de, string $a, string $deAt, string $aAt, array $m) => ['de' => ['id' => $de, 'at' => $deAt], 'a' => ['id' => $a, 'at' => $aAt], 'jours' => 7.0, 'matieres' => $m,
+    'sansRecette' => [['id' => 99, 'nom' => 'Poke', 'q' => 3, 'ca' => 30.0]], 'totaux' => ['ca' => 1000.0, 'caSansRecette' => 30.0, 'horsInventaire' => 12.0], 'ventesCompletes' => true, 'notes' => []];
+$ECARTS['4:r1:r2'] = $sem4('r1', 'r2', '2026-10-11 12:00:00', '2026-10-18 12:00:00', [
+    $ligne4(1, 'Baguette', 'Pain', 1.5, 20, 200, 20, 160, 0, 'Baguette'),
+    $ligne4(2, 'Croissant', 'Viennoiserie', 0.5, 100, 300, 100, 295, 3, 'Croissant'),
+    $ligne4(3, 'Pistolet', 'Pain', 0.3, 50, 0, 150, 80, 0, 'Pistolet')]);
+$ECARTS['4:r2:r3'] = $sem4('r2', 'r3', '2026-10-18 12:00:00', '2026-10-25 12:00:00', [
+    $ligne4(1, 'Baguette', 'Pain', 1.5, 20, 200, 30, 180, 2, 'Baguette'),
+    $ligne4(2, 'Croissant', 'Viennoiserie', 0.5, 100, 300, 100, 290, 4, 'Croissant')]);
+$INVENTAIRES[4] = [['id' => 'r3', 'at' => '2026-10-25 12:00:00', 'n' => 60, 'source' => 'releve'], ['id' => 'r9', 'at' => '2026-10-21 08:00:00', 'n' => 4, 'source' => 'releve'],
+    ['id' => 'r2', 'at' => '2026-10-18 12:00:00', 'n' => 62, 'source' => 'releve'], ['id' => 'r1', 'at' => '2026-10-11 12:00:00', 'n' => 58, 'source' => 'releve'], ['id' => 'c9', 'at' => '2026-07-12 12:00:00', 'n' => 80, 'source' => 'copie']];
+$S4m = vmSemaines(4);
+verifie('les semaines : inventaires consécutifs relevés, le partiel et la copie écartés', count($S4m['semaines']) === 2 && $S4m['semaines'][0]['de'] === 'r2' && $S4m['semaines'][0]['a'] === 'r3' && $S4m['semaines'][1]['de'] === 'r1', json_encode($S4m['semaines']));
+$w1 = vmSemaine(4, 'r1', 'r2', true);
+verifie('une semaine se calcule une fois, puis se lit gardée', $w1 !== null && $APPELS_ECART === 1 && vmSemaine(4, 'r1', 'r2', true) !== null && $APPELS_ECART === 1);
+verifie('une semaine calculée entre dans l’historique ceo_verif_inventaire', isset(Db::$inv['4:r1:r2']) && (float) Db::$inv['4:r1:r2']['entrees_eur'] === 450.0);
+$lec = vmLecture($w1, vmTolerances(), []);
+$parNom = []; foreach ($lec['matieres'] as $m) { $parNom[$m['nom']] = $m; }
+verifie('Baguette : 40 manquantes, rien de jeté déclaré → poubelle', $parNom['Baguette']['cause'] === 'poubelle' && $parNom['Baguette']['ecartEur'] === 60.0);
+verifie('Croissant : 2 sur 300, sous 3 % → tolérance', $parNom['Croissant']['cause'] === 'tolerance');
+verifie('Pistolet : le stock monte de 100 sans entrée → entrée non validée', $parNom['Pistolet']['cause'] === 'entree');
+$t4 = $lec['totaux'];
+verifie('la matière expliquée : (160×1,5 + 298×0,5) ÷ (200×1,5 + 300×0,5)', $t4['explication'] === round(100 * (240 + 149) / (300 + 150), 1), json_encode($t4));
+$attrM = array_sum(array_column($lec['attribution']['manque'], 'eur')); $attrD = array_sum(array_column($lec['attribution']['depasse'], 'eur'));
+verifie('l’attribution rend tout l’écart, d’un côté et de l’autre', abs($attrM - $t4['manquant']) < 0.01 && abs($attrD - $t4['excedent']) < 0.01, $attrM . ' / ' . $t4['manquant']);
+verifie('les catégories, dans le même ordre pour tous : Pain puis Viennoiserie', array_column($lec['categories'], 'nom') === ['Pain', 'Viennoiserie']);
+$w2 = vmSemaine(4, 'r2', 'r3', true);
+$cu = vmCumul([$w1, $w2]);
+$b = array_values(array_filter($cu['m'], static fn ($l) => $l['id'] === 1))[0];
+verifie('le cumul de deux semaines : début du premier, fin du dernier, le reste additionné', $b['d'] === 20.0 && $b['f'] === 30.0 && $b['e'] === 400.0 && $b['v'] === 340.0 && $cu['jours'] === 14.0 && $cu['de']['id'] === 'r1' && $cu['a']['id'] === 'r3');
+verifie('un produit signalé par le lot 1 range l’écart en « recette »', vmLecture($w1, vmTolerances(), [10 => 'Prix d’achat absent'])['matieres'][0]['cause'] === 'recette');
+$_GET = ['shop' => '4', 'semaines' => '4'];
+$ep4 = ep_verification_matieres();
+verifie('la route d’un magasin : ses semaines et le cumul demandé', count($ep4['semaines']) === 2 && $ep4['periode']['semaines'] === 2 && $ep4['lecture']['totaux']['n'] === 3, json_encode($ep4['periode']));
+$_GET = [];
+$ep4r = ep_verification_matieres();
+$m4 = array_values(array_filter($ep4r['magasins'], static fn ($m) => $m['id'] === '4'))[0];
+verifie('le réseau : la dernière semaine de chaque magasin et la matrice des catégories', $m4['a']['id'] === 'r3' && count($ep4r['matrice']) === 2 && $ep4r['reseau']['n'] === 2);
+$m3 = array_values(array_filter($ep4r['magasins'], static fn ($m) => $m['id'] === '3'))[0];
+verifie('un magasin sans inventaire relevé : signalé en retard, sans lecture', $m3['inventaireEnRetard'] === true && $m3['lecture'] === null);
+$SM = vjSeriesMatiere(array_values(Db::$inv), array_slice(vjSemaines(4, '2026-10-26'), 0, 4), [4, 3]);
+verifie('l’évolution lit la matière expliquée, semaine de l’inventaire de fin', $SM['4'][1] === $t4['explication'] && $SM['4'][2] !== null && $SM['3'][1] === null, json_encode($SM['4']));
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko > 0 ? 1 : 0);

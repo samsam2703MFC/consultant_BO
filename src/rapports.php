@@ -2391,6 +2391,9 @@ function ep_rapports_cron(): array
     // Vérification, lot 2 : les journées closes de l'audit des flux qui manquent, par lots.
     try { if (function_exists('vxCron')) { $verification .= ' · flux : ' . vxCron(); } }
     catch (Throwable $eX) { $verification .= ' · flux : échec — ' . $eX->getMessage(); }
+    // Lot 4 : les semaines d'inventaire (matières ↔ recettes) pas encore calculées, et leur historique.
+    try { if (function_exists('vmCron')) { $verification .= ' · matières : ' . vmCron(); } }
+    catch (Throwable $eM4) { $verification .= ' · matières : échec — ' . $eM4->getMessage(); }
     // Le Résultat d'aujourd'hui se recalcule au même battement : le premier écran du matin le trouve prêt.
     $resultat = 'module absent';
     try { if (function_exists('exPrechauffer')) { $resultat = exPrechauffer(); } }

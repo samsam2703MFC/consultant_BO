@@ -28,6 +28,7 @@ const VJ_INDICATEURS = [
     'invendu'  => ['Invendu gardé', false],
     'mesure'   => ['Journées mesurées', true],
     'recettes' => ['Recettes fiables', true],
+    'matiere'  => ['Matière expliquée', true],   // lot 4 : ceo_verif_inventaire, semaine de l'inventaire de fin
 ];
 
 function vjTable(): void
@@ -169,6 +170,24 @@ function vjSeries(array $rows, array $semaines, array $sids): array
     return $out;
 }
 
+/** La matière expliquée par semaine — fonction pure : Σ couvert ÷ Σ consommé (positif), en %, par magasin et réseau. */
+function vjSeriesMatiere(array $rows, array $semaines, array $sids): array
+{
+    $idx = []; foreach ($semaines as $k => $s) { $idx[$s['cle']] = $k; }
+    $acc = [];
+    foreach (array_merge(array_map('strval', $sids), ['reseau']) as $k) { foreach ($semaines as $i => $s) { $acc[$k][$i] = [0.0, 0.0]; } }
+    foreach ($rows as $r) {
+        $sid = (string) (int) $r['shop_id'];
+        if (!isset($acc[$sid]) || $r['a_at'] === null) { continue; }
+        $cle = date('o-W', strtotime(substr((string) $r['a_at'], 0, 10) . ' 12:00:00'));
+        if (!isset($idx[$cle])) { continue; }
+        foreach ([$sid, 'reseau'] as $k) { $acc[$k][$idx[$cle]][0] += (float) $r['couvert_eur']; $acc[$k][$idx[$cle]][1] += (float) $r['sorti_pos_eur']; }
+    }
+    $out = [];
+    foreach ($acc as $k => $ws) { foreach ($ws as $i => [$c, $s]) { $out[$k][$i] = $s > 0 ? round(100 * $c / $s, 1) : null; } }
+    return $out;
+}
+
 /**
  * Avant / après : la moyenne des premières semaines renseignées face à celle des dernières, et le sens du changement.
  * $versZero : le non expliqué se juge à sa distance à zéro — −12 % (vendu plus que produit : cuissons non saisies) n'est
@@ -202,6 +221,11 @@ function ep_verification_evolution(): array
         if ($b !== null) { $base = ['lignes' => (int) $b['n'], 'premier' => $b['premier'], 'dernier' => $b['dernier'], 'fluxLe' => $b['flux'], 'recettesLe' => $b['rec'], 'magasins' => (int) $b['mags']]; }
     } catch (Throwable $e) { $base['erreur'] = 'la base quotidienne n’a pas pu être lue'; }
     $S = vjSeries($rows, $sem, array_keys($mags));
+    // Lot 4 : la matière expliquée, semaine par semaine (la semaine de l'inventaire qui clôt chaque paire).
+    $inv = [];
+    try { if (function_exists('vmTable')) { vmTable(); $inv = Db::rows('SELECT shop_id, a_at, sorti_pos_eur, couvert_eur FROM ceo_verif_inventaire WHERE a_at >= ?', [$sem[0]['du']]); } }
+    catch (Throwable $e) { $inv = []; }
+    foreach (vjSeriesMatiere($inv, $sem, array_keys($mags)) as $k => $v) { $S[$k]['matiere'] = $v; }
     $lecture = static function (array $s): array {
         $o = ['series' => $s, 'comparaison' => []];
         foreach (VJ_INDICATEURS as $code => [$nom, $haut]) {

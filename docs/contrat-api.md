@@ -3347,6 +3347,41 @@ sources :
 - `indicateurs[]` {`code`, `nom`, `hautMieux`}, `base` {`lignes`, `premier`, `dernier`, `fluxLe`, `recettesLe`,
   `magasins`, [`erreur`]}, `seuils` {`nonExpl` [3, 6], `poubelle` [6, 9], `mesureMin` 50}, `lu`, `source`.
 
+### `/verification/matieres` — matières ↔ recettes (Vérification, lot 4, 31/10/2026)
+
+Code : `src/verification_matieres.php` (moteur : `invEcart` de `src/inventaires.php`) ; écran `#/verification/matieres`
+(`verification-matieres-vals.js`, `-tpl.js`) ; maquettes `c.png` et `g-matieres.png` ; tests `bin/tests_verification.php`
+(section lot 4). Lecture seule.
+
+Une **semaine** est une paire d'inventaires **consécutifs relevés en direct** (`r…` : le cockpit relève le stock du panel
+toutes les cinq minutes ; la copie locale s'arrête à la mi-juillet) ; un inventaire partiel (moins de la moitié des
+matières d'un comptage habituel) ne borne pas de semaine. Calculée une fois (≈ 5 s, `invEcart`), gardée sous
+`vmP:{shop}:{de}:{a}` quand ses tickets sont complets, et écrite dans **`ceo_verif_inventaire`** (clé `shop_id`, `de`, `a` ;
+`de_at`, `a_at`, `jours`, `debut_eur`, `entrees_eur`, `fin_eur`, `sorties_eur`, `ventes_eur`, `poubelle_eur`,
+`sorti_pos_eur`, `couvert_eur`, `manquant_eur`, `excedent_eur`, `matieres`, `calcule_le`). Le cron horaire (`vmCron`)
+calcule les semaines manquantes (45 s au plus) ; la route calcule à la demande dans 25 s.
+
+Par matière : consommé réel `s` = début + entré (commandes validées à la réception) − fin ; expliqué `e` = ventes ×
+recette aplatie + poubelle déclarée × recette ; écart = `s − e` (quantité, % de `s`, € au prix d'achat moyen HTVA).
+**Cause** (`vmCause`, dans l'ordre) : `recette` si un ordre de grandeur sépare `s` et `e` (≥ 6) ; `tolerance` sous le
+seuil (`verifTolerances` : `{unite: {pce: 3, g: 8, ml: 8}, categorie: {…}}`) ou pour une pièce / moins de 5 € ; `entree`
+si `s ≤ 0` ou `e > s` (stock monté sans commande validée, ou recette surdosée) ; `recette` si `e = 0` ou si un produit
+qui l'emploie est dans « Recettes à corriger » ; `poubelle` si rien de jeté déclaré ; sinon `horsCaisse`.
+**Matière expliquée** = Σ min(e, s) ÷ Σ s sur les matières sorties (€) ; seuils 3 % / 6 % d'écart.
+
+`GET /verification/matieres` (réseau) : `magasins[]` {`id`, `nom`, `dernierInventaire`, `ageInventaire`,
+`inventaireEnRetard` (> 8 jours), `semaines`, `aCalculer`, `de`, `a`, `jours`, `lecture` {`totaux`, `verdict`,
+`attribution`, `categories`, `sansEntree`}}, `reseau` (les magasins lisibles), `reseauSans`, `matrice[]` (catégories ×
+magasins, même ordre), `tolerances`, `seuils`, `causes`.
+`GET /verification/matieres?shop=&semaines=1|4[&de=&a=]` : `semaines[]` {`de`, `a`, `deAt`, `aAt`, `jours`}, `periode`,
+`lecture` {`totaux` (`debut`, `entrees`, `fin`, `sorties`, `ventes`, `poubelle`, `explique`, `ecart`, `manquant`,
+`excedent`, `explication`, `ecartPct`, `ton`), `verdict`, `attribution` {`manque`[], `depasse`[]} ({`code`, `nom`, `eur`,
+`n`, `exemples`}), `categories[]` (avec `matieres[]`), `matieres[]` ({…, `ecartPct`, `ecartEur`, `tolerance`, `cause`,
+`pourquoi`, `produits`}), `sansEntree`, `nEntreeManquante`}, `sansRecette[]`, `caSansRecette`, `horsInventaire`, `notes`.
+
+L'Évolution (`/verification/evolution`) gagne l'indicateur `matiere` : Σ `couvert_eur` ÷ Σ `sorti_pos_eur` de
+`ceo_verif_inventaire`, rangé à la semaine de l'inventaire de fin.
+
 ## 2. Mapping base de données → écran → champ
 
 ### Tables existantes réutilisées (`franchise_buddy_db`)

@@ -156,15 +156,36 @@
 .ve-th{cursor:pointer;text-align:center!important}
 .ve-th:hover{color:var(--color-text)}
 .ve-t td{padding:8px 6px}
-.ve-spc{width:68px;padding-right:2px!important}
+.ve-spc{width:52px;padding-right:2px!important}
 .ve-sp{display:block;overflow:visible}
 .ve-sp path{fill:none;stroke:#8a8177;stroke-width:1.4;stroke-linejoin:round;stroke-linecap:round}
 .ve-sp circle{fill:#8a8177}
 .ve-spc.ok .ve-sp path{stroke:var(--vr-ok)}.ve-spc.ok .ve-sp circle{fill:var(--vr-ok)}
 .ve-spc.ko .ve-sp path{stroke:var(--vr-ko)}.ve-spc.ko .ve-sp circle{fill:var(--vr-ko)}
-.ve-sp0{display:inline-block;width:64px}
+.ve-sp0{display:inline-block;width:48px}
 .ve-av{font-size:12.5px}.ve-av b{font-weight:700}
 .ve-s{font-weight:600}
 .ve-s.ok{color:var(--vr-ok)!important}.ve-s.ko{color:var(--vr-ko)!important}
 .ve-fort td{background:#fbf3f4}
 .ve-gr.z{stroke:rgba(34,34,34,.35)}
+
+/* --- Lot 4 : matières ↔ recettes (préfixe vm-), maquettes c et g-matieres ------------------------------------------ */
+.vm-deux{display:grid;grid-template-columns:1.25fr 1fr;gap:12px;margin-top:12px;align-items:start}
+.vm-deux>.vr-card{margin-top:0!important}
+.vm-attr{display:grid;grid-template-columns:1fr;gap:4px;padding:6px 18px 12px}
+.vm-cote{padding-top:8px}
+.vm-ch{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);padding-bottom:4px;border-bottom:.5px solid var(--vr-trait);margin-bottom:6px}
+.vm-ch b{font-weight:600}.vm-ch span{font-weight:700;color:var(--color-text);letter-spacing:0}
+.vm-at{padding:6px 0}
+.vm-al{display:flex;justify-content:space-between;gap:10px;font-size:12.5px}
+.vm-al b{font-weight:600}.vm-al span{font-weight:700;white-space:nowrap}
+.vm-bar{height:8px;border-radius:999px;background:#f1ece5;overflow:hidden;margin:5px 0 3px}
+.vm-bar i{display:block;height:100%;border-radius:999px}
+.vm-ex{font-size:11px;color:var(--color-text-muted);line-height:1.35}
+.vm-rt{color:var(--vr-ko);font-weight:600}
+.vm-t td{vertical-align:top}
+.vm-prod{white-space:normal!important;max-width:170px;font-size:11px;color:var(--color-text-muted)}
+.vm-cause{white-space:normal!important;min-width:220px;max-width:320px;font-size:11.5px;line-height:1.4}
+.vm-cause b{font-weight:600}
+.vm-ko td{background:#fdf6f6}
+@media (max-width:1200px){.vm-deux{grid-template-columns:1fr}}

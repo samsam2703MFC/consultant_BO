@@ -28,8 +28,9 @@ const LIB = {
   invendu: ['Invendu gardé', 'gardé pour le lendemain · % du disponible'],
   mesure: ['Journées mesurées', 'part du disponible venue de cuissons validées'],
   recettes: ['Recettes fiables', 'part du CA dont la recette est complète et plausible'],
+  matiere: ['Matière expliquée', 'part de la matière consommée (inventaire à inventaire) que ventes et poubelle expliquent'],
 };
-const ORDRE = ['nonExpl', 'poubelle', 'invendu', 'mesure', 'recettes'];
+const ORDRE = ['nonExpl', 'poubelle', 'invendu', 'mesure', 'recettes', 'matiere'];
 
 function charge(app, chemin, force){
   const b = app.state.veData;
@@ -46,7 +47,7 @@ function charge(app, chemin, force){
 
 /** Une échelle « ronde » pour l'axe des valeurs. */
 function echelle(max, min, ind){
-  if (ind === 'mesure' || ind === 'recettes') { return { haut: 100, bas: 0, pas: 25 }; }
+  if (ind === 'mesure' || ind === 'recettes' || ind === 'matiere') { return { haut: 100, bas: 0, pas: 25 }; }
   const m = Math.max(max, ind === 'poubelle' ? 10 : (ind === 'nonExpl' ? 7 : 4));
   // Sous zéro (vendu plus que produit : cuissons non saisies), l'axe descend aussi.
   const etendue = m - Math.min(0, min);
@@ -98,7 +99,7 @@ function graphique(d, ind, shop, mags){
 
 /** Une petite courbe (une ligne du tableau) : un chemin par morceau continu. */
 function etincelle(vals){
-  const W = 64, H = 22;
+  const W = 48, H = 22;
   const ok = (vals || []).filter(v => v != null);
   if (ok.length < 2) { return null; }
   let lo = Math.min(...ok), hi = Math.max(...ok);
