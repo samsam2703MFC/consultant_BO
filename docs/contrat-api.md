@@ -3429,21 +3429,23 @@ la même semaine d'inventaire.
 — ceux du relevé des tickets et des journées de l'audit des flux —, `matieres[]` {`id`, `nom`, `cat`, `unite`, `n`} —
 celles du relevé du stock (`ceo_stock_releve`) ; gardé une heure (`vmoListe:{shop}`).
 
-`GET /verification/mouvements?shop=&p=ID&du=&au=` (un **produit**, 62 jours au plus, quatorze par défaut) : `jours[]`
+`GET /verification/mouvements?shop=&p=ID&du=&au=` (un **produit**, neuf semaines au plus ; par défaut la semaine d'hier et la précédente, du lundi) : `jours[]`
 {`date`, `calcule`, `auPlan`, `garde0`, `prod`, `mesure` (cuissons validées), `dispo`, `vendu`, `ca`, `poubelle`, `garde`,
 `compte`, `nonExpl`, `heures` {h: pièces}} — les journées gravées de l'audit des flux (`vxJ:`, calculées dans 15 s si
 elles manquent) et les tickets heure par heure (`svP`, portions ramenées à la pièce) ; `totaux` ; `matieres[]` (la recette
-aplatie : `parPiece`, `theorique` = (vendu + poubelle) × recette, `mouvements[]`) ; `journal[]` {`date`, `h` (matin, 07h…,
+aplatie : `parPiece`, `theorique` = (vendu + poubelle) × recette, `mouvements[]`, et la fiche de stock jour par jour `jours[]` / `totaux` comme pour une matière — consommation de tous les produits qui l'emploient) ; `journal[]` {`date`, `h` (matin, 07h…,
 05:01, soir), `type` (garde0, prod, vente, poubelle, garde, nonExpl, stock:livraison|entree|inventaire|effacement|correction),
 `q`, `texte`}, trié dans l'ordre du jour.
 
-`GET /verification/mouvements?shop=&m=ID&du=&au=` (une **matière**) : `jours[]` {`date`, `livre`, `corrige`,
+`GET /verification/mouvements?shop=&m=ID&du=&au=` (une **matière**) : `jours[]` {`date`, `stockMatin`, `livre` (livraisons validées), `entree` (à la main), `corrige`, `ventes`, `poubelle` (× recette),
 `inventaire` {`compte`, `avant`, `ecart`}, `theorique`, `stockSoir`, `mouvements[]`}, `totaux` {`stockDebut`, `livre`,
 `corrige`, `inventaires`, `ecartInventaires`, `theorique`, `stockFin`}, `produits[]` (ceux qui l'emploient, vendus ou
 jetés : `parPiece`, `vendu`, `poubelle`, `consomme`), `journal[]`. Un mouvement relevé {`at`, `type`, `avant`, `apres`,
 `delta`} : une rafale montante est une livraison validée, une rafale où des quantités baissent un inventaire ; un
 inventaire qui suit une remise à zéro se lit face au solde effacé (ce que le panel attendait) ; un mouvement isolé est une
 entrée ou une correction à la main.
+
+L'écran montre **un tableau par semaine** (demande du 31/10) : une colonne par jour, du lundi au dimanche, et la semaine ; une ligne par mouvement, + ce qui entre, − ce qui sort. Produit : gardé d'hier (le matin), + produit (« plan » si la cuisson n'est pas validée), − vendu (l'heure par heure au survol), − poubelle déclarée, − gardé pour demain, = non expliqué ; puis le stock du panel de chaque matière de sa recette. Matière : stock du matin, + livraison validée, + entrée à la main, +/− correction, +/− inventaire (écart au stock attendu, compté), − ventes × recette, − poubelle × recette, = stock du soir. La colonne Semaine somme les flux et reprend le stock du premier matin et du dernier soir.
 
 ## 2. Mapping base de données → écran → champ
 

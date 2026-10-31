@@ -29,31 +29,29 @@ function tplJournal(v, x){
   return `<div class="vmo-jn" data-scroll="vmo-journal">${v.journal.map(e => e.jour ? `<div class="vmo-jj">${esc(e.jour)}</div>` : `<div class="vmo-e"><span class="h">${esc(e.h)}</span>${pill(e.ton, esc(e.type))}<span class="t">${esc(e.texte)}</span></div>`).join('')}</div>`;
 }
 
+/** Un tableau par semaine : une colonne par jour (lundi → dimanche) et la semaine ; une ligne par mouvement, + et −. */
+function tplSemaines(v, x){
+  const { esc } = x;
+  return v.semaines.map(sm => `<div class="vr-card"><div class="vx-ct"><h3>${esc(sm.titre)}</h3><span class="vr-lu">du ${esc(sm.du)} au ${esc(sm.au)} · + ce qui entre, − ce qui sort · survolez un jour de ventes pour l’heure par heure</span></div>
+    <div class="vr-tw"><table class="vr-t vmo-sem"><thead><tr><th class="g">Mouvement</th>${sm.entetes.map(e => `<th class="${e.hors ? 'vmo-hors' : ''}">${esc(e.j)}<small>${esc(e.d)}</small></th>`).join('')}<th class="vmo-tot">Semaine</th></tr></thead><tbody>
+    ${sm.sections.map(sc => `<tr class="vmo-sec"><td class="g" colspan="9">${esc(sc.titre)}</td></tr>${sc.lignes.map(l => `<tr class="${l.sens === '=' || l.sens === 'soir' ? 'vmo-fin' : ''}"><td class="g nom">${esc(l.lib)}</td>${l.cells.map(c => `<td class="${c.cls}"${c.title ? ` title="${esc(c.title)}"` : ''}>${c.txt}${c.small ? `<small>${esc(c.small)}</small>` : ''}</td>`).join('')}<td class="vmo-tot ${l.tot.cls}">${l.tot.txt}</td></tr>`).join('')}`).join('')}
+    </tbody></table></div></div>`).join('');
+}
+
 function tplProduit(v, x){
   const { esc } = x;
-  const table = `<div class="vr-card"><div class="vx-ct"><h3>Jour par jour</h3><span class="vr-lu">en pièces · gardé d’hier + produit = disponible ; − vendu − poubelle − gardé pour demain = non expliqué</span></div>
-    <div class="vr-tw"><table class="vr-t"><thead><tr><th class="g">Jour</th><th>Gardé d’hier</th><th>+ Produit<small>cuissons (ou plan)</small></th><th>= Disponible</th><th>Vendu<small>caisse</small></th><th>Poubelle<small>déclarée</small></th><th>Gardé<small>pour demain</small></th><th>Non expliqué</th><th class="g">Ventes heure par heure</th></tr></thead><tbody>
-    ${v.jours.map(j => `<tr class="${j.dim ? 'vx-dim' : ''}"><td class="g nom"><b>${esc(j.date)}</b>${!j.calcule ? '<small>journée pas encore calculée</small>' : (!j.auPlan ? '<small>pas au plan ce jour</small>' : '')}</td>
-      <td>${j.garde0}</td><td>${j.prod}${j.auPlan && !j.mesure ? ' <span class="vx-est">plan</span>' : ''}</td><td><b>${j.dispo}</b></td><td>${j.vendu}<small>${esc(j.ca)}</small></td><td>${j.poubelle}</td><td>${j.garde}${j.compte ? `<small>compté ${j.compte}</small>` : ''}</td>
-      <td>${pill(j.tonNE, j.nonExpl)}</td><td class="g vmo-h">${esc(j.heures)}</td></tr>`).join('')}
-    </tbody></table></div></div>`;
-  const mats = v.matieres.length ? `<div class="vr-card"><div class="vx-ct"><h3>Ses matières — le stock du panel</h3><span class="vr-lu">la recette aplatie ; chaque mouvement relevé sur la période · un clic ouvre la matière</span></div>
-    ${v.matieres.map(m => `<div class="vmo-m"><div class="vmo-mt vx-clic" ${x.A(m.ouvrir)}><b>${esc(m.nom)}</b><small>${esc(m.parPiece)} · consommé par ce produit sur la période : ${esc(m.theorique)} · ${m.n} mouvement${m.n > 1 ? 's' : ''} de stock</small></div>
-      ${m.mouvements.length ? `<table class="vr-t"><tbody>${m.mouvements.map(z => `<tr><td class="g">${esc(z.quand)}</td><td class="g">${pill(z.ton, esc(z.type))}</td><td>${z.avant} → <b>${z.apres}</b></td><td><b>${z.delta}</b></td></tr>`).join('')}</tbody></table>` : ''}</div>`).join('')}</div>` : '';
-  return `${table}<div class="vca-deux"><div class="vr-card"><div class="vx-ct"><h3>Le journal</h3><span class="vr-lu">tous les mouvements, dans l’ordre</span></div>${tplJournal(v, x)}</div>${mats || '<div></div>'}</div>`;
+  const mats = v.matieres.length ? `<div class="vr-card"><div class="vx-ct"><h3>Sa recette</h3><span class="vr-lu">les matières du stock du panel · un clic ouvre la matière</span></div>
+    ${v.matieres.map(m => `<div class="vmo-m"><div class="vmo-mt vx-clic" ${x.A(m.ouvrir)}><b>${esc(m.nom)}</b><small>${esc(m.parPiece)} · consommé par ce produit sur la période : ${esc(m.theorique)} · ${m.n} mouvement${m.n > 1 ? 's' : ''} de stock</small></div></div>`).join('')}</div>` : '<div></div>';
+  return `${tplSemaines(v, x)}<div class="vca-deux"><div class="vr-card"><div class="vx-ct"><h3>Le journal</h3><span class="vr-lu">tous les mouvements, dans l’ordre de la journée</span></div>${tplJournal(v, x)}</div>${mats}</div>`;
 }
 
 function tplMatiere(v, x){
   const { esc } = x;
-  const table = `<div class="vr-card"><div class="vx-ct"><h3>Jour par jour</h3><span class="vr-lu">le stock du panel, relevé toutes les cinq minutes · le théorique : ventes et poubelle des produits qui l’emploient × recette</span></div>
-    <div class="vr-tw"><table class="vr-t"><thead><tr><th class="g">Jour</th><th>Livré<small>commandes validées</small></th><th>Corrigé<small>à la main</small></th><th>Inventaire<small>compté (écart)</small></th><th>Consommé<small>théorique</small></th><th>Stock<small>le soir</small></th><th>Mouvements</th></tr></thead><tbody>
-    ${v.jours.map(j => `<tr class="${j.dim ? 'vx-dim' : ''}"><td class="g nom"><b>${esc(j.date)}</b></td><td>${j.livre}</td><td>${j.corrige}</td><td>${j.inventaire ? pill(j.tonInv, esc(j.inventaire)) : ''}</td><td>${j.theorique}</td><td><b>${j.stock}</b></td><td>${j.n || ''}</td></tr>`).join('')}
-    </tbody></table></div></div>`;
   const prods = `<div class="vr-card"><div class="vx-ct"><h3>Les produits qui l’emploient</h3><span class="vr-lu">${v.nProduitsRecette} produit${v.nProduitsRecette > 1 ? 's' : ''} en recette · vendus ou jetés sur la période · un clic ouvre le produit</span></div>
     ${v.produits.length ? `<div class="vr-tw"><table class="vr-t"><thead><tr><th class="g">Produit</th><th>Par pièce</th><th>Vendu</th><th>Poubelle</th><th>Consommé</th></tr></thead><tbody>
       ${v.produits.map(p => `<tr class="vx-clic" ${x.A(p.ouvrir)}><td class="g nom"><b>${esc(p.nom)}</b></td><td>${p.parPiece}</td><td>${p.vendu}</td><td>${p.poubelle}</td><td><b>${p.consomme}</b></td></tr>`).join('')}</tbody></table></div>`
       : `<div class="vr-vide">${v.nProduitsRecette ? 'Aucun produit qui l’emploie n’a été vendu ni jeté sur la période.' : 'Aucune recette n’emploie cette matière : tout ce qui sort du stock est sans explication.'}</div>`}</div>`;
-  return `${table}<div class="vca-deux"><div class="vr-card"><div class="vx-ct"><h3>Le journal</h3><span class="vr-lu">chaque mouvement de stock relevé, avant → après</span></div>${tplJournal(v, x)}</div>${prods}</div>`;
+  return `${tplSemaines(v, x)}<div class="vca-deux"><div class="vr-card"><div class="vx-ct"><h3>Le journal</h3><span class="vr-lu">chaque mouvement de stock relevé, avant → après</span></div>${tplJournal(v, x)}</div>${prods}</div>`;
 }
 
 export function tplVerifMouvements(c, x){

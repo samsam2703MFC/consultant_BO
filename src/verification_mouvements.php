@@ -18,7 +18,7 @@ declare(strict_types=1);
  * Lecture seule.
  */
 
-const VMO_JOURS_MAX = 62;
+const VMO_JOURS_MAX = 63;        // neuf semaines
 const VMO_SEC_CALCUL = 15.0;      // secondes pour calculer les journées de l'audit des flux qui manquent
 
 /** La période demandée : [du, au, jours] (par défaut les quatorze derniers jours, hier compris). */
@@ -26,7 +26,9 @@ function vmoPeriode(): array
 {
     $au = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($_GET['au'] ?? '')) ? (string) $_GET['au'] : date('Y-m-d', strtotime('-1 day'));
     if ($au > date('Y-m-d')) { $au = date('Y-m-d'); }
-    $du = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($_GET['du'] ?? '')) ? (string) $_GET['du'] : date('Y-m-d', strtotime($au . ' -13 day'));
+    // Par défaut : la semaine d'hier et la précédente, du lundi (l'écran montre un tableau par semaine).
+    $lundi = date('Y-m-d', strtotime($au . ' -' . ((int) date('N', strtotime($au)) - 1) . ' day'));
+    $du = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($_GET['du'] ?? '')) ? (string) $_GET['du'] : date('Y-m-d', strtotime($lundi . ' -7 day'));
     if ($du > $au) { $du = $au; }
     if ((strtotime($au) - strtotime($du)) / 86400 >= VMO_JOURS_MAX) { $du = date('Y-m-d', strtotime($au . ' -' . (VMO_JOURS_MAX - 1) . ' day')); }
     $jours = [];
@@ -160,32 +162,77 @@ function vmoProduitJours(int $pid, array $jours, array $G, array $V): array
 function vmoQ(float $q): string { $r = round($q, 1); return (abs($r - round($r)) < 0.05 ? number_format($r, 0, ',', ' ') : number_format($r, 1, ',', ' ')) . ' pce' . (abs($r) >= 2 ? 's' : ''); }
 
 /**
- * Une matière jour par jour — fonction pure : les mouvements relevés et la consommation théorique ($C : [jour => q]).
- * Rend les jours (livré, corrigé, inventaire, théorique, stock du soir) et les totaux.
+ * Une matière jour par jour — fonction pure : les mouvements relevés ($M) et la consommation théorique, ventes ($C) et
+ * poubelle ($W) × recette ([jour => q]). Rend, par jour, le stock du matin, livré (livraisons validées), entré à la main,
+ * corrigé, l'inventaire (compté, écart au solde attendu), consommé, stock du soir — et les totaux.
  */
-function vmoMatiereJours(array $jours, array $M, array $C): array
+function vmoMatiereJours(array $jours, array $M, array $C, array $W = []): array
 {
     $parJour = [];
     foreach ($M as $m) { $parJour[substr($m['at'], 0, 10)][] = $m; }
-    $J = []; $T = ['livre' => 0.0, 'corrige' => 0.0, 'theorique' => 0.0, 'inventaires' => 0, 'ecartInventaires' => 0.0, 'stockDebut' => null, 'stockFin' => null];
+    $J = []; $T = ['livre' => 0.0, 'entree' => 0.0, 'corrige' => 0.0, 'theorique' => 0.0, 'ventes' => 0.0, 'poubelle' => 0.0, 'inventaires' => 0, 'ecartInventaires' => 0.0, 'stockDebut' => null, 'stockFin' => null];
     foreach ($M as $m) { if ($m['avant'] !== null) { $T['stockDebut'] = $m['avant']; break; } }
     $dernier = $T['stockDebut'];
     foreach ($jours as $j) {
-        $L = ['date' => $j, 'livre' => 0.0, 'corrige' => 0.0, 'inventaire' => null, 'theorique' => round((float) ($C[$j] ?? 0), 3), 'mouvements' => $parJour[$j] ?? []];
+        $v = round((float) ($C[$j] ?? 0), 3); $w = round((float) ($W[$j] ?? 0), 3);
+        $L = ['date' => $j, 'stockMatin' => $dernier, 'livre' => 0.0, 'entree' => 0.0, 'corrige' => 0.0, 'inventaire' => null, 'ventes' => $v, 'poubelle' => $w, 'theorique' => round($v + $w, 3), 'mouvements' => $parJour[$j] ?? []];
         foreach ($L['mouvements'] as $m) {
             $d = (float) ($m['delta'] ?? 0);
-            if (in_array($m['type'], ['livraison', 'entree'], true) && $d > 0) { $L['livre'] += $d; }
+            if ($m['type'] === 'livraison' && $d > 0) { $L['livre'] += $d; }
+            elseif ($m['type'] === 'entree' && $d > 0) { $L['entree'] += $d; }
             elseif ($m['type'] === 'inventaire') { $L['inventaire'] = ['compte' => $m['apres'], 'avant' => $m['avant'], 'ecart' => $m['delta']]; $T['inventaires']++; $T['ecartInventaires'] += (float) ($m['delta'] ?? 0); }
             elseif ($m['type'] !== 'effacement') { $L['corrige'] += $d; }
             $dernier = $m['apres'];
         }
         $L['stockSoir'] = $dernier;
-        $T['livre'] += $L['livre']; $T['corrige'] += $L['corrige']; $T['theorique'] += $L['theorique'];
+        foreach (['livre', 'entree', 'corrige', 'theorique', 'ventes', 'poubelle'] as $k) { $T[$k] += $L[$k]; }
         $J[] = $L;
     }
     $T['stockFin'] = $dernier;
-    foreach (['livre', 'corrige', 'theorique', 'ecartInventaires'] as $k) { $T[$k] = round($T[$k], 3); }
+    foreach (['livre', 'entree', 'corrige', 'theorique', 'ventes', 'poubelle', 'ecartInventaires'] as $k) { $T[$k] = round($T[$k], 3); }
     return ['jours' => $J, 'totaux' => $T];
+}
+
+/**
+ * Ce que les ventes (tickets) et la poubelle déclarée (journées de l'audit des flux) des produits qui les emploient
+ * consomment de chaque matière, jour par jour : [mid => ['v' => [jour => q], 'w' => [jour => q], 'p' => [pid => [vendu, jeté]]]].
+ * Chaque journée n'est lue qu'une fois, pour toutes les matières.
+ */
+function vmoConso(int $sid, array $jours, array $mids): array
+{
+    $R = []; $out = [];
+    foreach ($mids as $mid) { $R[$mid] = vmoProduitsDeMatiere((int) $mid); $out[$mid] = ['v' => [], 'w' => [], 'p' => []]; }
+    if ($R === []) { return []; }
+    foreach ($jours as $j) {
+        try { $c = setting('svP' . $sid . ':' . $j); } catch (Throwable $e) { $c = null; }
+        foreach ((array) (is_array($c) ? ($c['p'] ?? []) : []) as $lst) {
+            foreach ((array) $lst as $k => $x) {
+                $p = (int) explode(':', (string) $k)[0];
+                if (!is_array($x)) { continue; }
+                $f = null;
+                foreach ($R as $mid => $prods) {
+                    if (!isset($prods[$p])) { continue; }
+                    if ($f === null) { $f = 1.0; if (str_contains((string) $k, ':') && function_exists('svPortionDuNom')) { $pp = svPortionDuNom((string) $x[0]); $f = isset($pp['f']) && (float) $pp['f'] > 0 ? (float) $pp['f'] : 1.0; } }
+                    $q = (float) $x[1] * $f;
+                    $out[$mid]['v'][$j] = ($out[$mid]['v'][$j] ?? 0.0) + $q * $prods[$p];
+                    $out[$mid]['p'][$p][0] = ($out[$mid]['p'][$p][0] ?? 0.0) + $q;
+                }
+            }
+        }
+        $g = function_exists('vxJour') ? vxJour($sid, $j, false) : null;
+        foreach ((array) ($g['l'] ?? []) as $x) {
+            $p = (int) $x['p'];
+            if ((float) $x['jd'] <= 0) { continue; }
+            foreach ($R as $mid => $prods) {
+                if (!isset($prods[$p])) { continue; }
+                $out[$mid]['w'][$j] = ($out[$mid]['w'][$j] ?? 0.0) + (float) $x['jd'] * $prods[$p];
+                $out[$mid]['p'][$p][1] = ($out[$mid]['p'][$p][1] ?? 0.0) + (float) $x['jd'];
+            }
+        }
+    }
+    foreach ($out as $mid => &$o) { $o['r'] = $R[$mid]; }
+    unset($o);
+    return $out;
 }
 
 /** GET /verification/mouvements/liste?shop= — les produits (vendus ou au plan sur trente jours) et les matières relevées. */
@@ -253,11 +300,16 @@ function ep_verification_mouvements(): array
         $rec = function_exists('invRecettes') ? (invRecettes([$pid])[$pid] ?? []) : [];
         $infos = function_exists('invMatieres') ? invMatieres(array_keys($rec)) : [];
         $mats = [];
+        $live = function_exists('invUnitesLive') ? invUnitesLive($sid) : [];
+        $conso = vmoConso($sid, $jours, array_keys($rec));
         foreach ($rec as $m => $qp) {
             $mv = vmoMouvementsMatiere($sid, (int) $m, $du, $au);
             $i = $infos[$m] ?? ['nom' => 'Matière ' . $m, 'categorie' => '', 'unite' => 'pce'];
+            if (isset($live[$m])) { $u = $live[$m]; $i['unite'] = in_array($u, ['g', 'kg'], true) ? 'g' : (in_array($u, ['ml', 'cl', 'l'], true) ? 'ml' : 'pce'); }
+            $RJ = vmoMatiereJours($jours, $mv, $conso[$m]['v'] ?? [], $conso[$m]['w'] ?? []);
             $mats[] = ['id' => (int) $m, 'nom' => $i['nom'], 'cat' => $i['categorie'], 'unite' => $i['unite'], 'parPiece' => round($qp, 4),
-                'theorique' => round(($P['totaux']['vendu'] + $P['totaux']['poubelle']) * $qp, 3), 'mouvements' => $mv];
+                'theorique' => round(($P['totaux']['vendu'] + $P['totaux']['poubelle']) * $qp, 3), 'mouvements' => $mv,
+                'jours' => array_map(static fn ($x) => array_diff_key($x, ['mouvements' => 1]), $RJ['jours']), 'totaux' => $RJ['totaux'], 'nProduits' => count($conso[$m]['r'] ?? [])];
             foreach ($mv as $x) {
                 $P['journal'][] = ['date' => substr($x['at'], 0, 10), 'h' => substr($x['at'], 11, 5), 'type' => 'stock:' . $x['type'], 'q' => $x['delta'],
                     'texte' => $i['nom'] . ' — ' . vmoTexteStock($x, $i['unite'])];
@@ -275,28 +327,10 @@ function ep_verification_mouvements(): array
     if (function_exists('invUnitesLive')) { $u = invUnitesLive($sid)[$mid] ?? null; if ($u !== null) { $info['unite'] = in_array($u, ['g', 'kg'], true) ? 'g' : (in_array($u, ['ml', 'cl', 'l'], true) ? 'ml' : 'pce'); } }
     $M = vmoMouvementsMatiere($sid, $mid, $du, $au);
     // La consommation théorique : ventes (tickets) et poubelle (journées gravées) des produits qui l'emploient × recette.
-    $prods = vmoProduitsDeMatiere($mid);
-    $C = []; $parProduit = [];
-    foreach ($jours as $j) {
-        try { $c = setting('svP' . $sid . ':' . $j); } catch (Throwable $e) { $c = null; }
-        foreach ((array) (is_array($c) ? ($c['p'] ?? []) : []) as $lst) {
-            foreach ((array) $lst as $k => $x) {
-                $p = (int) explode(':', (string) $k)[0];
-                if (!isset($prods[$p]) || !is_array($x)) { continue; }
-                $f = 1.0;
-                if (str_contains((string) $k, ':') && function_exists('svPortionDuNom')) { $pp = svPortionDuNom((string) $x[0]); $f = isset($pp['f']) && (float) $pp['f'] > 0 ? (float) $pp['f'] : 1.0; }
-                $q = (float) $x[1] * $f;
-                $C[$j] = ($C[$j] ?? 0.0) + $q * $prods[$p];
-                $parProduit[$p]['v'] = ($parProduit[$p]['v'] ?? 0.0) + $q;
-            }
-        }
-        $g = function_exists('vxJour') ? vxJour($sid, $j, false) : null;
-        foreach ((array) ($g['l'] ?? []) as $x) {
-            $p = (int) $x['p'];
-            if (isset($prods[$p]) && (float) $x['jd'] > 0) { $C[$j] = ($C[$j] ?? 0.0) + (float) $x['jd'] * $prods[$p]; $parProduit[$p]['w'] = ($parProduit[$p]['w'] ?? 0.0) + (float) $x['jd']; }
-        }
-    }
-    $R = vmoMatiereJours($jours, $M, $C);
+    $co = vmoConso($sid, $jours, [$mid])[$mid] ?? ['v' => [], 'w' => [], 'p' => [], 'r' => []];
+    $prods = $co['r'];
+    $parProduit = array_map(static fn ($x) => ['v' => $x[0] ?? 0.0, 'w' => $x[1] ?? 0.0], $co['p']);
+    $R = vmoMatiereJours($jours, $M, $co['v'], $co['w']);
     $journal = array_map(static fn ($x) => ['date' => substr($x['at'], 0, 10), 'h' => substr($x['at'], 11, 5), 'type' => 'stock:' . $x['type'], 'q' => $x['delta'], 'texte' => vmoTexteStock($x, $info['unite'])], $M);
     $pl = [];
     foreach ($parProduit as $p => $x) {

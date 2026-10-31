@@ -532,10 +532,16 @@ verifie('les totaux d’une matière : stock au début et à la fin, livré, th�
 $MV = vmoMouvements([['avant' => 340, 'qty' => 0, 'modif' => null, 'vu' => '2026-10-25 11:40:00', 'type' => 'effacement', 'at' => '2026-10-25 11:40:02'], ['avant' => 0, 'qty' => 96, 'modif' => null, 'vu' => '2026-10-25 11:49:50', 'type' => 'inventaire', 'at' => '2026-10-25 11:49:48'],
     ['avant' => 96, 'qty' => 90, 'modif' => '2026-10-26 09:00:00', 'vu' => '2026-10-26 09:01:00', 'type' => 'mouvement', 'at' => null]]);
 verifie('un inventaire après remise à zéro se lit face au solde effacé (340 attendus, 96 comptés : −244)', $MV[1]['avant'] === 340.0 && $MV[1]['delta'] === -244.0 && $MV[2]['type'] === 'correction' && $MV[2]['delta'] === -6.0);
+$RW = vmoMatiereJours($jM, $MM, ['2026-10-19' => 30.0], ['2026-10-19' => 8.0]);
+verifie('la fiche de stock d’une matière : stock du matin, ventes et poubelle séparées', $RW['jours'][0]['stockMatin'] === 10.0 && $RW['jours'][1]['stockMatin'] === 45.0 && $RW['jours'][0]['ventes'] === 30.0 && $RW['jours'][0]['poubelle'] === 8.0 && $RW['jours'][0]['theorique'] === 38.0 && $RW['totaux']['poubelle'] === 8.0);
+$_GET = ['au' => '2026-10-30'];
+[$duW] = vmoPeriode();
+verifie('la période par défaut : deux semaines entières, du lundi', $duW === '2026-10-19' || $duW === date('Y-m-d', strtotime('monday this week', strtotime(date('Y-m-d', strtotime('-1 day')))) - 7 * 86400));
+$_GET = [];
 verifie('un mouvement de stock en clair', str_contains(vmoTexteStock($MM[0], 'pce'), 'Livraison validée : +40 pce') && str_contains(vmoTexteStock($MM[2], 'pce'), 'le panel attendait 45 pce, écart −33 pce'));
 $_GET = ['du' => '2026-10-01', 'au' => '2026-12-31'];
 [$duM, $auM, $jsM] = vmoPeriode();
-verifie('la période s’arrête à aujourd’hui et à 62 jours', $auM <= date('Y-m-d') && count($jsM) <= 62);
+verifie('la période s’arrête à aujourd’hui et à neuf semaines', $auM <= date('Y-m-d') && count($jsM) <= 63);
 $_GET = [];
 
 echo "\n$ok réussi(s), $ko en échec\n";
