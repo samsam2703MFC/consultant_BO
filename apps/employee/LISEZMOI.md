@@ -261,7 +261,8 @@ cockpit, `GET /ventes/moi/planning?du=&au=` (`Services/Cockpit/CockpitClient`, i
 route du planning du panel, `GET /shops/{id}/schedule` — celle du planning du cockpit. L'app ne lit plus
 `GET /employees/{id}/schedule` (le dépôt `ScheduleRepository` est retiré). L'Accueil (« ton service aujourd'hui »)
 passe par le même `ScheduleService::getForMe`. Sans réponse du cockpit, la page dit « Le planning ne se lit pas pour
-l'instant » au lieu d'une semaine de « Repos ».
+l'instant » au lieu d'une semaine de « Repos ». Un service dans un autre magasin que d'habitude porte le nom court de
+ce magasin (« à Corbais », clé `shift_at_shop`), donné par le cockpit ; le numéro seulement s'il manque.
 
 ## Mon profil (30/10/2026) : la personne encode elle-même ses données
 

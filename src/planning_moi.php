@@ -12,7 +12,7 @@ declare(strict_types=1);
  * (franchisee_employee_schedule).
  *
  *   GET /ventes/moi/planning?du=AAAA-MM-JJ&au=AAAA-MM-JJ — l'app (identité signée de « Mes primes ») ; ses services
- *   à elle seule, sans le nom ni le téléphone de personne.
+ *   à elle seule, sans le nom ni le téléphone de personne, chacun avec le nom court de son magasin (« Corbais »).
  */
 
 const PLAN_TTL = 300;              // un magasin relu au plus toutes les cinq minutes
@@ -102,12 +102,26 @@ function planningPersonne(int $emp, string $du, string $au, ?int $maintenant = n
         $services[$l['id_schedule'] ?: $l['work_date'] . $l['start_hour'] . $l['id_shop']] ??= $l;
         $complete = true;
     }
-    $services = array_values($services);
+    $noms = planNomsMagasins();
+    $services = array_map(static fn ($l) => $l + ['shop_name' => (string) ($noms[$l['id_shop']] ?? '')], array_values($services));
     usort($services, static fn ($a, $b) => [$a['work_date'], $a['start_hour']] <=> [$b['work_date'], $b['start_hour']]);
     $garde = array_keys(array_filter($mag, static fn ($m) => is_array($m) && !empty($m['garde'])));
     return ['emp' => $emp, 'du' => $du, 'au' => $au, 'services' => $services,
         'source' => $complete || $muets !== [] ? 'panel /shops/{id}/schedule + table locale' : 'panel /shops/{id}/schedule',
         'muets' => $muets, 'garde' => array_map('intval', $garde)];
+}
+
+/** Le nom court de chaque magasin, actif ou non : « Atelier by Berlo - Corbais » → « Corbais » (comme le cockpit). */
+function planNomsMagasins(): array
+{
+    $out = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops') as $s) {
+            $nom = trim((string) ($s['name'] ?? ''));
+            $out[(int) $s['id']] = str_contains($nom, ' - ') ? trim(substr($nom, strrpos($nom, ' - ') + 3)) : $nom;
+        }
+    } catch (Throwable $e) { /* sans noms : l'app montre le numéro */ }
+    return $out;
 }
 
 /** GET /ventes/moi/planning?du=&au= — les services de l'employé connecté (identité signée de l'app). */

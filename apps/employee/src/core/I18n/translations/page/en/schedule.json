@@ -16,6 +16,7 @@
   "schedule_unavailable": "The schedule can’t be read right now.",
   "schedule_unavailable_hint": "Try again in a moment. Your shop has the up-to-date schedule.",
   "shift": "shift",
+  "shift_at_shop": "at {n}",
   "shift_other_shop": "shop {n}",
   "shift_profit": "Shift profitability",
   "shifts": "shifts",
