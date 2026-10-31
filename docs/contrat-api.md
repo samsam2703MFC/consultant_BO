@@ -1108,7 +1108,8 @@ les 237 routes : `docs/formation-routes.md`.
 Écritures (toutes relues au panel, journalisées, caches corrigés) : `POST|DELETE /formation/niveau/{nid}/competences[/{cid}]`,
 `POST /formation/competence/{cid}/liens {type, id}`, `DELETE /formation/competence/{cid}/liens/{type}/{id}`,
 `POST /formation/competences`, `PATCH|DELETE /formation/competences/{cid}`, `PUT|DELETE /formation/employe/{eid}/competences/{cid}?shop=`,
-`PUT /formation/employe/{eid}/poste?shop= {poste, niveau}`. Réponse `{ok, deja?, …l'état relu, appels[]}` ; un refus du panel
+`PUT /formation/employe/{eid}/poste?shop= {poste, niveau}`, `POST /formation/postes {code: P12|P9}` (créer dans le panel un poste
+du référentiel v25 et son niveau ; rend `{ok, deja, poste{id, nom}, niveau{id, nom}, appels}`). Réponse `{ok, deja?, …l'état relu, appels[]}` ; un refus du panel
 ou un écart à la relecture : `502 {ok: false, error, appels}`.
 
 Parcours compétences (`/formation/parcours/`, 31/10/2026) : `GET /parcours/destinations?employe=&shop=` (sans employé : un

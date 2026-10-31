@@ -516,6 +516,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/formation/competence/(\d+)/liens$#', $path, $m)) { return wr_formation_lien_ajouter((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/formation/competence/(\d+)/liens/(formation|procedure|ressource)/(\d+)$#', $path, $m)) { return wr_formation_lien_retirer((int) $m[1], $m[2], (int) $m[3]); }
     if ($method === 'POST' && $path === '/formation/competences') { return wr_formation_competence_creer(); }
+    if ($method === 'POST' && $path === '/formation/postes') { return wr_formation_poste_creer(); }
     if ($method === 'PATCH' && preg_match('#^/formation/competences/(\d+)$#', $path, $m)) { return wr_formation_competence_modifier((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/formation/competences/(\d+)$#', $path, $m)) { return wr_formation_competence_supprimer((int) $m[1]); }
     if (($method === 'PUT' || $method === 'DELETE') && preg_match('#^/formation/employe/(\d+)/competences/(\d+)$#', $path, $m)) { return wr_formation_employe_competence($method, (int) $m[1], (int) $m[2]); }

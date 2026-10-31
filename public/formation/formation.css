@@ -1771,3 +1771,197 @@ a.filter {
   font-size: 13px;
   line-height: 1.8;
 }
+
+/* ===========================================================================
+   PARTIE 3 — LISIBILITÉ (31/10/2026). Demandes : « pas de badges mais des
+   rectangles aux coins arrondis », « refaire les dashboards et tableaux »,
+   « que ce soit lisible et intelligible ».
+   La police : le fichier fonts/Gotham_Regular.otf est en réalité Gotham BLACK
+   (nom interne « Gotham-Black ») ; déclaré en 400, il faisait sortir tout le
+   texte courant en noir épais. Famille propre : Light pour le texte, Medium
+   pour les libellés et l'emphase, Black pour les seuls titres.
+   =========================================================================== */
+@font-face { font-family: 'Gotham Lisible'; src: url('fonts/Gotham_Light.otf') format('opentype'); font-weight: 100 400; font-display: swap; }
+@font-face { font-family: 'Gotham Lisible'; src: url('fonts/Gotham_Medium.otf') format('opentype'); font-weight: 500 600; font-display: swap; }
+@font-face { font-family: 'Gotham Lisible'; src: url('fonts/Gotham_Regular.otf') format('opentype'); font-weight: 700 900; font-display: swap; }
+
+:root {
+  font-family: 'Gotham Lisible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --muted: #5b544c;
+  --muted-2: #47423c;
+  line-height: 1.5;
+}
+button, input, select, textarea { font-family: inherit; }
+strong, b, th { font-weight: 600; }
+h3 { font-weight: 600; }
+
+/* Les titres gardent le noir de la marque ; le reste se lit. */
+.topbar h1, .screen-subtitle { font-weight: 800; }
+.topbar__kicker { font-weight: 500; letter-spacing: 0.12em; }
+.sidebar__item { font-weight: 500; }
+.fm-pick strong { font-weight: 600; }
+
+/* Titres de carte : en clair, à la casse de la phrase, plus en capitales grises. */
+h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+  margin-bottom: 0.65rem;
+}
+.muted { line-height: 1.5; }
+.metric { font-size: 2.1rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 0.25rem; }
+
+/* Pas de badges : des rectangles aux coins arrondis, partout. */
+.chip, .lever-tag, .pending__chip {
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 8px;
+  line-height: 1.4;
+}
+.chips { gap: 6px; }
+a.chip { text-decoration: none; }
+a.chip:hover { filter: brightness(0.96); }
+.role-switch { border-radius: 10px; }
+.wizard__step button, .wizard__step a, .wizard__num { border-radius: 8px; }
+.filter { border-radius: 8px; font-weight: 500; font-size: 13px; padding: 7px 14px; }
+
+/* Tableaux : en-têtes lisibles, cellules aérées, la première colonne a de la place. */
+table { font-size: 14px; }
+thead th {
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted-2);
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: bottom;
+}
+tbody td { padding: 14px; line-height: 1.45; vertical-align: top; }
+tbody td:first-child { min-width: 15rem; }
+tbody td:first-child > strong, tbody td:first-child > a { font-weight: 600; }
+td .muted { font-size: 12.5px; }
+td .chip { font-size: 11.5px; border-radius: 5px; padding: 2px 7px; }
+tbody tr.fm-group td {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.table-card > h2 + .table-scroll, .table-card > h2 + p + .table-scroll { margin-top: 0.25rem; }
+
+/* ── Tableau de bord ───────────────────────────────────────────────────── */
+.fm-kpis {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+}
+.fm-kpi {
+  display: block;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: inherit;
+  text-decoration: none;
+}
+a.fm-kpi:hover { border-color: var(--accent); }
+.fm-kpi__n { display: block; font-size: 1.9rem; font-weight: 600; line-height: 1.1; }
+.fm-kpi__l { display: block; font-size: 13.5px; font-weight: 500; margin-top: 4px; }
+.fm-kpi__s { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+.fm-section-titre { font-size: 1.05rem; font-weight: 600; margin: 1.6rem 0 0.75rem; }
+.fm-familles {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  align-items: start;
+}
+.fm-famille { padding: 1rem 1.1rem 0.6rem; }
+.fm-famille > h2 { margin-bottom: 0.15rem; }
+.fm-famille > .muted { font-size: 13px; margin-bottom: 0.6rem; }
+.fm-famille__ligne {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--row-line);
+  color: inherit;
+  text-decoration: none;
+}
+.fm-famille__ligne:hover .fm-famille__nom { color: var(--accent); }
+.fm-famille__nom { font-weight: 600; font-size: 14px; }
+.fm-famille__info { font-size: 12.5px; color: var(--muted); grid-column: 1 / -1; }
+.fm-famille__pct { font-size: 13px; font-weight: 600; text-align: right; }
+.fm-barre { grid-column: 1 / -1; height: 6px; border-radius: 4px; background: var(--chip); overflow: hidden; }
+.fm-barre > span { display: block; height: 100%; background: var(--green); border-radius: 4px; }
+.fm-barre.is-faible > span { background: #c9a227; }
+.fm-barre.is-vide > span { background: var(--danger); }
+.fm-tag {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--chip);
+  color: var(--muted-2);
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+.fm-tag--accent { background: rgba(141, 29, 44, 0.08); color: var(--accent); }
+
+.fm-todo { list-style: none; margin: 0; padding: 0; }
+.fm-todo li { border-top: 1px solid var(--row-line); }
+.fm-todo li:first-child { border-top: 0; }
+.fm-todo a, .fm-todo button {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 11px 2px;
+  background: none;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+.fm-todo button { margin: 0; font-weight: 300; }
+.fm-todo a:hover, .fm-todo button:hover { color: var(--accent); }
+/* Dans un tableau, une étiquette longue passe à la ligne plutôt que d'élargir la colonne. */
+td .chip { white-space: normal; max-width: 22rem; }
+table { min-width: 0; }
+.table-scroll > table { min-width: 760px; }
+.fm-todo__n {
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 8px;
+  padding: 4px 0;
+  background: rgba(179, 38, 30, 0.08);
+  color: var(--danger);
+}
+.fm-todo__n.is-ok { background: rgba(63, 122, 82, 0.1); color: var(--green); }
+.fm-todo__go { color: var(--muted); font-size: 13px; }
+
+details.fm-tech { margin-top: 1rem; }
+details.fm-tech > summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 6px 0; }
+
+/* Arbre des postes : les familles. */
+.fm-tree__famille {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 14px 10px 6px;
+}
+.fm-tree__famille:first-child { padding-top: 4px; }
+.fm-tree__poste.is-v25 span:first-child { color: var(--muted-2); }

@@ -187,6 +187,27 @@ function pcCompetencesParFo(array $ref, array $liens): array
     return array_map('array_keys', $o);
 }
 
+/**
+ * La famille d'un poste, pour ranger les écrans : opérationnel (P1–P6), cadre
+ * et direction (P7, P8, et les rôles du réseau — direction, consultants,
+ * contrôle), devenir entrepreneur (candidat, franchisé, locataire-gérant,
+ * multi-boutique). Lue sur les noms du panel, comme pcCodeV25.
+ */
+function pcFamille(?string $code): string
+{
+    if ($code === null) { return 'cadre'; }
+    $n = (int) substr($code, 1);
+    return $n <= 6 ? 'operationnel' : ($n <= 8 ? 'cadre' : 'entrepreneur');
+}
+
+/** La famille d'un poste du panel (son nom, puis ceux de ses niveaux). */
+function pcFamillePoste(array $p): string
+{
+    $code = pcCodeV25((string) ($p['nom'] ?? ''), '');
+    foreach ($p['niveaux'] ?? [] as $n) { $code ??= pcCodeV25((string) ($p['nom'] ?? ''), (string) ($n['nom'] ?? '')); }
+    return pcFamille($code);
+}
+
 /** Toutes les destinations possibles : les niveaux du panel (priorité), plus les postes v25 que le panel n'a pas. */
 function pcDestinations(array $ref): array
 {
@@ -806,16 +827,93 @@ function pcAffecter(int $eid, int $poste, int $niveau): array
     return ['ok' => true];
 }
 
+/** Les postes du référentiel que le module sait créer dans le panel (un poste, un niveau du même nom). */
+const PC_POSTES_A_CREER = [
+    'P12' => ['nom' => 'Franchisé multi-boutique',
+        'description' => 'Franchisé qui exploite deux boutiques ou plus : gouvernance du portefeuille, délégation à un Manager par boutique, finance consolidée et arbitrages.'],
+    'P9'  => ['nom' => 'Locataire-gérant',
+        'description' => 'Exploite une boutique en location-gérance, selon le concept et les standards de la marque.'],
+];
+
+/** Le poste du panel qui porte ce code v25 (relu sans cache) : la ligne, [] s'il n'y en a pas, null si illisible. */
+function pcPostePanel(string $code): ?array
+{
+    $r = PanelApi::getParalleleDetail(['p' => '/positions'], 1, 20)['p'];
+    if ($r['code'] < 200 || $r['code'] >= 300) { return null; }
+    foreach (fmListe($r['data']) as $p) {
+        if (pcCodeV25((string) ($p['name'] ?? ''), '') === $code) { return $p; }
+    }
+    return [];
+}
+
+/** Les niveaux d'un poste du panel, relus sans cache (null si illisible). */
+function pcNiveauxPanel(int $pid): ?array
+{
+    $r = PanelApi::getParalleleDetail(['n' => '/positions/' . $pid . '/levels'], 1, 20)['n'];
+    return $r['code'] >= 200 && $r['code'] < 300 ? fmListe($r['data']) : null;
+}
+
+/**
+ * POST /formation/postes {code} — créer dans le panel un poste du référentiel
+ * v25 qui n'y est pas encore (Franchisé multi-boutique, Locataire-gérant) : le
+ * poste, puis un niveau du même nom. Chaque pas est relu ; refaire l'appel
+ * reprend où il s'est arrêté (rien en double). Ensuite le panel fait foi : le
+ * module et les parcours lisent ce poste-là, avec ses exigences et compétences.
+ * Les routes du panel n'ont pas de contrat : le corps porte les noms lus dans
+ * ses réponses (name, description, app_type ; position_id et id_position).
+ */
+function wr_formation_poste_creer(): array
+{
+    if ($e = fmPret()) { return $e; }
+    $code = strtoupper(trim((string) (fmCorps()['code'] ?? '')));
+    $def = PC_POSTES_A_CREER[$code] ?? null;
+    if ($def === null) { return fmRefus(422, 'poste du référentiel inconnu ou non créable : ' . $code); }
+    $appels = []; $cree = false; $niveauCree = false;
+    $p = pcPostePanel($code);
+    if ($p === null) { return fmRefus(502, 'liste des postes du panel illisible'); }
+    $pid = $p ? fmInt($p, ['id']) : null;
+    if ($pid === null) {
+        $w = PanelApi::requete('POST', '/positions', ['name' => $def['nom'], 'description' => $def['description'], 'app_type' => 'EMPLOYEE']);
+        $appels[] = fmAppelEcrit('POST', '/positions', $w);
+        if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel n’a pas créé le poste : ' . ($w['erreur'] ?? 'HTTP ' . $w['code']), ['appels' => $appels]); }
+        $p = pcPostePanel($code);
+        $pid = $p ? fmInt($p, ['id']) : null;
+        if ($pid === null) { return fmRefus(502, 'poste annoncé créé (HTTP ' . $w['code'] . ') mais introuvable à la relecture', ['appels' => $appels]); }
+        $cree = true;
+    }
+    $niv = pcNiveauxPanel($pid);
+    if ($niv === null) { return fmRefus(502, 'poste #' . $pid . ' prêt, mais ses niveaux sont illisibles', ['appels' => $appels]); }
+    if (!$niv) {
+        $w = PanelApi::requete('POST', '/position-levels', ['position_id' => $pid, 'id_position' => $pid, 'name' => $def['nom'], 'description' => '', 'level_order' => 1]);
+        $appels[] = fmAppelEcrit('POST', '/position-levels', $w);
+        if ($w['code'] < 200 || $w['code'] >= 300) {
+            return fmRefus(502, 'poste #' . $pid . ' créé, mais le panel a refusé son niveau : ' . ($w['erreur'] ?? 'HTTP ' . $w['code']), ['appels' => $appels]);
+        }
+        $niv = pcNiveauxPanel($pid) ?? [];
+        if (!$niv) { return fmRefus(502, 'poste #' . $pid . ' créé ; niveau annoncé créé (HTTP ' . $w['code'] . ') mais absent du poste à la relecture', ['appels' => $appels]); }
+        $niveauCree = true;
+    }
+    // Le référentiel en cache ne connaît pas ce poste : il sera relu.
+    try { Db::exec('DELETE FROM ceo_app_setting WHERE `key` = ?', [fmCleCache('/formation/referentiel')]); } catch (Throwable $e) { /* relu à l'expiration */ }
+    $n = fmNiveau($niv[0], $pid);
+    if ($cree || $niveauCree) {
+        fmJournal($def['nom'], 'Poste créé dans le panel depuis le référentiel v25 (' . $code . ') : poste #' . $pid . ', niveau #' . $n['id']);
+    }
+    return ['ok' => true, 'deja' => !$cree && !$niveauCree, 'poste' => ['id' => $pid, 'nom' => (string) ($p['name'] ?? $def['nom'])],
+        'niveau' => ['id' => $n['id'], 'nom' => $n['nom']], 'appels' => $appels];
+}
+
 /** GET /formation/v25 — le référentiel v25 pour l'écran (formations, postes, plans). */
 function ep_formation_v25(): array
 {
     $v = pcV25();
     // P1…P12 → le nom du panel (prioritaire), lu dans le référentiel en cache ; à défaut, celui de l'Excel.
-    $noms = []; $niveaux = []; $horsPanel = [];
+    $noms = []; $niveaux = []; $horsPanel = []; $familles = [];
     $c = setting(fmCleCache('/formation/referentiel'));
     if (is_array($c) && is_array($c['r'] ?? null)) {
+        foreach ($c['r']['postes'] ?? [] as $p) { if (($p['id'] ?? null) !== null) { $familles[(string) $p['id']] = pcFamillePoste($p); } }
         foreach (pcDestinations($c['r']) as $d) {
-            if ($d['niveauId'] !== null) { $niveaux[(string) $d['niveauId']] = $d['v25']; } else { $horsPanel[] = ['code' => $d['v25'], 'nom' => $d['titre']]; }
+            if ($d['niveauId'] !== null) { $niveaux[(string) $d['niveauId']] = $d['v25']; } else { $horsPanel[] = ['code' => $d['v25'], 'nom' => $d['titre'], 'famille' => pcFamille($d['v25'])]; }
             // P1–P3 couvrent tous les niveaux d'opérateur : le nom du poste ; P4–P6, le niveau « Responsable d'équipe ».
             $chef = in_array($d['v25'], ['P4', 'P5', 'P6'], true);
             $noms[$d['v25']] ??= $d['sous'] ? ($chef ? $d['sous'] . ' · ' . $d['titre'] : $d['sous']) : $d['titre'];
@@ -823,5 +921,6 @@ function ep_formation_v25(): array
     }
     foreach ($v['postes'] as $p) { $noms[$p['code']] ??= $p['nom']; }
     return ['source' => $v['source'] ?? null, 'postes' => $v['postes'], 'nomsPanel' => $noms, 'formations' => $v['formations'], 'plans' => $v['plans'],
-        'competences' => $v['competences'], 'admission' => (object) pcAdmissionDefs(), 'niveauxV25' => (object) $niveaux, 'horsPanel' => $horsPanel];
+        'competences' => $v['competences'], 'admission' => (object) pcAdmissionDefs(), 'niveauxV25' => (object) $niveaux, 'horsPanel' => $horsPanel,
+        'familles' => (object) $familles];
 }

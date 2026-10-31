@@ -741,3 +741,13 @@ button.filter.confirm__danger {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* Lisibilité (31/10/2026) : la famille « Gotham Lisible » de formation.css
+   (Light pour le texte, Medium pour les libellés, Black pour les titres). */
+.ph-title { font-weight: 800; }
+.ph-big { font-weight: 600; }
+.ph-big span { font-weight: 500; }
+.pc .section-label { font-weight: 600; }
+.pc-row strong, .ph-list strong, .ph-now-title, .pc-sheet__box h3 { font-weight: 600; }
+.ph-now .chip { border-radius: 6px; }
+.ph-cta button, .choice-card strong { font-weight: 600; }
