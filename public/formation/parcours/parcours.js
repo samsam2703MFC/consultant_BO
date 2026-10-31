@@ -135,8 +135,7 @@
         }).join('') + '</div>';
       }
     }
-    var dc = S.candidats && S.candidats.data;
-    h += '<div class="section-label">Un candidat franchisé' + (dc && dc.total ? ' · ' + pl(dc.total, 'dans le CRM', 'dans le CRM') : '') + '</div>' + listeCandidats(nv);
+    h += '<div class="section-label">Un candidat franchisé</div>' + listeCandidats(nv);
     var libre = nv.libre || (S.candidats && S.candidats.data && !S.candidats.data.crm);
     if (!libre) return h + '<p class="pc-libre"><button type="button" class="pc-lien" data-act="nv-libre">Il n’est pas dans le CRM&nbsp;? Saisir son nom</button></p>';
     return h + '<input class="pc-input" type="text" maxlength="120" placeholder="Prénom et nom du candidat" data-input="nvNom" value="' + esc(nv.nomCandidat || '') + '" />' +
@@ -154,21 +153,34 @@
     var d = c.data;
     if (!d.crm) return '<p class="muted" style="margin-top:6px">Le CRM des candidats n’est pas dans la base du cockpit : saisissez le nom.</p>';
     if (d.erreur) return '<p class="error">' + esc(d.erreur) + '</p>';
-    if (!d.candidats.length) return '<p class="muted" style="margin-top:6px">Aucun candidat dans le CRM pour l’instant.</p>';
+    if (!d.candidats.length) return '<p class="muted" style="margin-top:6px">Aucun dossier en cours dans le CRM.</p>';
+    // Le CRM distingue le contact (avant l'appel de bascule) du candidat : les candidats d'abord, les contacts sur demande.
+    var pt = d.parType || { candidat: 0, contact: 0 };
+    var type = nv.typeCrm || (pt.candidat ? 'candidat' : pt.contact ? 'contact' : '');
     var mots = plat(nv.cherche).split(/\s+/).filter(Boolean);
     var l = d.candidats.filter(function (x) {
+      if (type && x.personne && x.personne !== type) return false;
       var t = plat(x.nom + ' ' + (x.zone || '') + ' ' + (x.statut || ''));
       return mots.every(function (m) { return t.indexOf(m) >= 0; });
     });
-    var h = '<input class="pc-input" type="search" maxlength="60" placeholder="Chercher : nom, zone ou statut" data-input="nvCherche" value="' + esc(nv.cherche || '') + '" />';
-    if (!l.length) return h + '<p class="muted" style="margin-top:10px">Aucun candidat ne répond à « ' + esc(nv.cherche) + ' ».</p>';
+    var h = '';
+    if (pt.candidat && pt.contact) {
+      h += '<div class="pc-types">' + [['candidat', 'Candidats', pt.candidat], ['contact', 'Contacts', pt.contact]].map(function (o) {
+        return '<button type="button" class="filter' + (type === o[0] ? ' is-on' : '') + '" data-act="type-crm" data-v="' + o[0] + '">' + o[1] + ' · ' + o[2] + '</button>';
+      }).join('') + '</div>';
+      if (type === 'contact') h += '<p class="muted pc-aide">Pas encore candidats : ils n’ont pas passé l’appel de qualification du CRM.</p>';
+    } else {
+      h += '<p class="muted pc-aide">' + pl(d.total, 'dossier en cours', 'dossiers en cours') + ' dans le CRM.</p>';
+    }
+    h += '<input class="pc-input" type="search" maxlength="60" placeholder="Chercher : nom, zone ou étape" data-input="nvCherche" value="' + esc(nv.cherche || '') + '" />';
+    if (!l.length) return h + '<p class="muted" style="margin-top:10px">' + (nv.cherche ? 'Personne ne répond à « ' + esc(nv.cherche) + ' ».' : 'Personne ici.') + '</p>';
     h += '<div style="margin-top:10px">' + l.slice(0, 30).map(function (x) {
       var sous = [x.statut, x.zone, x.maj || x.le ? 'suivi le ' + dateCourte(x.maj || x.le) : null].filter(Boolean).join(' · ') || 'fiche du CRM';
       var dedans = '<span class="lead__initials">' + esc(initiales(x.nom)) + '</span><span class="pc-row__txt"><strong>' + esc(x.nom) + '</strong><span class="muted">' + esc(sous) + '</span></span>';
       if (x.parcours) return '<a class="pc-row" href="#/p/' + x.parcours.id + '">' + dedans + '<span class="pc-tag">' + (x.parcours.statut === 'atteint' ? 'Parcours atteint' : 'Parcours en cours') + ' ›</span></a>';
       return '<button type="button" class="pc-row" data-act="choisir-crm" data-ref="' + esc(x.ref) + '" data-nom="' + esc(x.nom) + '">' + dedans + '</button>';
     }).join('') + '</div>';
-    if (l.length > 30) h += '<p class="muted" style="margin-top:6px">' + pl(l.length - 30, 'autre candidat') + ' — affinez la recherche.</p>';
+    if (l.length > 30) h += '<p class="muted" style="margin-top:6px">' + pl(l.length - 30, 'autre') + ' — affinez la recherche.</p>';
     return h;
   }
 
@@ -453,7 +465,8 @@
     if (act === 'nouveau') { S.nv = { shop: S.filtre && S.filtre !== 'candidats' ? S.filtre : '' }; location.hash = '#/nouveau'; return; }
     if (act === 'choisir-employe') { demarrer({ employe: +t.getAttribute('data-id'), shop: +nv.shop, nom: t.getAttribute('data-nom') }); return; }
     if (act === 'choisir-candidat') { demarrer({ employe: null, shop: null, nom: (nv.nomCandidat || '').trim(), nomCandidat: nv.nomCandidat, libre: true }); return; }
-    if (act === 'choisir-crm') { demarrer({ employe: null, shop: null, candidat: t.getAttribute('data-ref'), nom: t.getAttribute('data-nom'), cherche: nv.cherche }); return; }
+    if (act === 'choisir-crm') { demarrer({ employe: null, shop: null, candidat: t.getAttribute('data-ref'), nom: t.getAttribute('data-nom'), cherche: nv.cherche, typeCrm: nv.typeCrm }); return; }
+    if (act === 'type-crm') { nv.typeCrm = t.getAttribute('data-v'); rendre(); return; }
     if (act === 'nv-libre') { nv.libre = true; rendre(); var el = root.querySelector('[data-input="nvNom"]'); if (el) el.focus(); return; }
     if (act === 'cible') { nv.cible = t.getAttribute('data-cle'); nv.acquis = {}; nv.suivies = {}; rendre(); return; }
     if (act === 'vers-2') { location.hash = '#/nouveau/2'; return; }

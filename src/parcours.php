@@ -79,10 +79,15 @@ function ensureParcours(): void
 
 /* ── Les candidats franchisés du CRM ─────────────────────────────────────────
  * Le CRM candidat (atelier-espace-candidat) vit dans la MÊME base que le
- * cockpit (comme crm_settings, lu par smtp.php et metadonnee.php). Sa table des
- * candidats est trouvée par son nom et ses colonnes — information_schema, rien
- * d'autre — puis lue telle quelle : jamais une écriture chez le CRM. Seuls le
- * nom, le statut, la zone et les dates en sortent : ni e-mail, ni téléphone.
+ * cockpit (comme crm_settings, lu par smtp.php et metadonnee.php). Son
+ * pipeline est `crm_candidates` : une fiche par personne (`name`, `zone`),
+ * son étape (`stage_idx`, index 0 des étapes de `crm_stages` triées par
+ * `position`), `person_status` « contact » puis « candidat » une fois passée
+ * l'étape de bascule (l'appel), `closed` = dossier arrêté. `crm_cd_candidates`
+ * n'est PAS le pipeline : ce sont les comptes de l'espace candidat (mot de
+ * passe). Lu tel quel, jamais une écriture chez le CRM ; seuls le nom, l'étape,
+ * la zone et les dates en sortent : ni e-mail ni téléphone. Une autre base (un
+ * autre CRM) : la table est cherchée par son nom et ses colonnes.
  * ------------------------------------------------------------------------- */
 
 /** Les colonnes utiles, par ordre de préférence (comparées en minuscules). */
@@ -90,21 +95,25 @@ const PC_CRM_COLONNES = [
     'id' => ['id', 'candidate_id', 'candidat_id', 'uuid'],
     'prenom' => ['first_name', 'firstname', 'prenom', 'given_name', 'first'],
     'nom' => ['last_name', 'lastname', 'nom', 'family_name', 'surname', 'last'],
-    'complet' => ['full_name', 'fullname', 'name', 'nom_complet', 'display_name', 'contact_name'],
+    'complet' => ['name', 'full_name', 'fullname', 'nom_complet', 'display_name', 'contact_name'],
+    'etape' => ['stage_idx'],
     'statut' => ['status', 'statut', 'stage', 'etape', 'pipeline_stage', 'phase', 'step', 'state'],
-    'zone' => ['zone', 'zone_souhaitee', 'target_zone', 'project_city', 'target_city', 'city', 'ville', 'commune', 'localite', 'locality', 'region', 'area', 'location'],
+    'personne' => ['person_status'],
+    'zone' => ['zone', 'localite', 'zone_souhaitee', 'target_zone', 'project_city', 'target_city', 'city', 'ville', 'commune', 'locality', 'region', 'area', 'location'],
     'le' => ['created_at', 'date_creation', 'cree_le', 'created', 'date_created', 'insert_timestamp'],
-    'maj' => ['updated_at', 'maj_le', 'last_activity_at', 'last_contact_at', 'modified_at', 'updated'],
+    'maj' => ['last_activity_at', 'stage_changed_at', 'updated_at', 'maj_le', 'last_contact_at', 'modified_at', 'updated'],
+    'ferme' => ['closed'],
     'supprime' => ['deleted_at', 'archived_at', 'is_deleted', 'deleted', 'is_archived', 'archived'],
 ];
 
 /**
  * La table des candidats parmi celles de la base : [table => [colonnes]] → la
- * source retenue (table et colonnes, par rôle), ou null. Le nom doit FINIR par
- * candidat(s), candidate(s), lead(s) ou prospect(s) — une table de notes ou
- * d'événements des candidats n'en est pas une — et ne pas être au cockpit
- * (ceo_), au marketing (mar_) ni au journal Meta ; il faut un identifiant et
- * un nom. « candid » l'emporte sur « lead », qui l'emporte sur « prospect ».
+ * source retenue (table et colonnes, par rôle), ou null. `crm_candidates` (le
+ * pipeline du CRM) d'abord ; sinon un nom qui FINIT par candidat(s),
+ * candidate(s), lead(s) ou prospect(s) — une table de notes ou d'événements
+ * des candidats n'en est pas une — hors cockpit (ceo_), marketing (mar_) et
+ * journal Meta, et pas une table de comptes (mot de passe) ; il faut un
+ * identifiant et un nom. « candid » l'emporte sur « lead », puis « prospect ».
  */
 function pcCrmChoisir(array $tables): ?array
 {
@@ -114,14 +123,16 @@ function pcCrmChoisir(array $tables): ?array
         if (!preg_match('/^[A-Za-z0-9_]{1,64}$/', $t) || preg_match('/^(ceo|mar|pla|brand_guard)_/i', $t) || stripos($t, 'meta') !== false) { continue; }
         if (!preg_match('/(^|_)(candidats?|candidates?|leads?|prospects?)$/i', $t, $m)) { continue; }
         $bas = array_map('strtolower', array_map('strval', (array) $cols));
+        if (array_intersect(['password_hash', 'password', 'mot_de_passe'], $bas)) { continue; }   // des comptes, pas un pipeline
         $role = [];
         foreach (PC_CRM_COLONNES as $r => $noms) {
             foreach ($noms as $n) { if (in_array($n, $bas, true)) { $role[$r] = (string) $cols[array_search($n, $bas, true)]; break; } }
         }
         if (!isset($role['id']) || !(isset($role['complet']) || isset($role['nom']))) { continue; }
-        $s = (stripos($m[2], 'candid') === 0 ? 30 : (stripos($m[2], 'lead') === 0 ? 20 : 10))
+        $s = (strtolower($t) === 'crm_candidates' ? 100 : 0)
+            + (stripos($m[2], 'candid') === 0 ? 30 : (stripos($m[2], 'lead') === 0 ? 20 : 10))
             + (preg_match('/^(crm|fl|tfb_crm)_/i', $t) ? 5 : 0)
-            + (in_array('email', $bas, true) ? 2 : 0) + (isset($role['statut']) ? 2 : 0) + (isset($role['zone']) ? 1 : 0) + (isset($role['prenom']) ? 1 : 0);
+            + (in_array('email', $bas, true) ? 2 : 0) + (isset($role['statut']) || isset($role['etape']) ? 2 : 0) + (isset($role['zone']) ? 1 : 0) + (isset($role['prenom']) ? 1 : 0);
         if ($s > $score) { $score = $s; $meilleure = ['table' => $t, 'colonnes' => $role]; }
     }
     return $meilleure;
@@ -134,7 +145,7 @@ function pcCrmSource(bool $frais = false): ?array
     if ($memo !== null && !$frais) { return $memo ?: null; }
     $k = 'pcCrmSource';
     $c = setting($k);
-    if (!$frais && is_array($c) && time() - (int) ($c['le'] ?? 0) < 3600) { $memo = $c['source'] ?? false; return $memo ?: null; }
+    if (!$frais && is_array($c) && (int) ($c['v'] ?? 0) === 2 && time() - (int) ($c['le'] ?? 0) < 3600) { $memo = $c['source'] ?? false; return $memo ?: null; }
     $source = null;
     try {
         $tables = [];
@@ -143,9 +154,14 @@ function pcCrmSource(bool $frais = false): ?array
             $tables[(string) $r['t']][] = (string) $r['c'];
         }
         $source = pcCrmChoisir($tables);
+        // Les noms des étapes du pipeline du CRM, s'il les range à côté.
+        if ($source !== null && isset($source['colonnes']['etape'])) {
+            $st = Db::row("SELECT COUNT(*) AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'crm_stages' AND COLUMN_NAME IN ('name', 'position')");
+            if ((int) ($st['n'] ?? 0) === 2) { $source['etapes'] = 'crm_stages'; }
+        }
     } catch (Throwable $e) { return null; }   // information_schema fermé : on ne garde pas l'échec
     $memo = $source ?? false;
-    $j = json_encode(['le' => time(), 'source' => $source], JSON_UNESCAPED_UNICODE);
+    $j = json_encode(['v' => 2, 'le' => time(), 'source' => $source], JSON_UNESCAPED_UNICODE);
     try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$k, $j]); } catch (Throwable $e) { /* sans cache */ }
     return $source;
 }
@@ -157,42 +173,60 @@ function pcCrmStatut(?string $s): ?string
     return $s === '' ? null : mb_strtoupper(mb_substr($s, 0, 1)) . mb_substr($s, 1);
 }
 
+/** Le nom d'une fiche : le nom complet s'il est rempli, sinon prénom et nom. */
+function pcCrmNom(array $r): string
+{
+    $n = trim((string) ($r['complet'] ?? ''));
+    if ($n === '') { $n = trim(trim((string) ($r['prenom'] ?? '')) . ' ' . trim((string) ($r['nom'] ?? ''))); }
+    return mb_substr((string) preg_replace('/\s+/u', ' ', $n), 0, 120);
+}
+
 /**
- * Les candidats, du plus récemment suivi au plus ancien (2 000 au plus), ou un
- * seul (`$ref`). Chaque ligne : ref, nom, statut, zone, le (création), maj.
+ * Les candidats en cours (dossiers arrêtés et fiches archivées écartés), du
+ * plus récemment actif au plus ancien (2 000 au plus), ou un seul (`$ref`).
+ * Chaque ligne : ref, nom, statut (l'étape du pipeline), personne (candidat |
+ * contact | null), zone, le (création), maj (dernière activité).
  *
- * @return list<array{ref:string,nom:string,statut:?string,zone:?string,le:?string,maj:?string}>
+ * @return list<array{ref:string,nom:string,statut:?string,personne:?string,zone:?string,le:?string,maj:?string}>
  */
 function pcCandidatsCrm(array $src, ?string $ref = null): array
 {
     $q = static fn (string $c): string => '`' . str_replace('`', '', $c) . '`';
     $col = $src['colonnes'];
     $sel = [$q($col['id']) . ' AS ref'];
-    foreach (['prenom', 'nom', 'complet', 'statut', 'zone', 'le', 'maj'] as $r) { $sel[] = (isset($col[$r]) ? $q($col[$r]) : 'NULL') . ' AS ' . $r; }
+    foreach (['prenom', 'nom', 'complet', 'etape', 'statut', 'personne', 'zone', 'le', 'maj'] as $r) { $sel[] = (isset($col[$r]) ? $q($col[$r]) : 'NULL') . ' AS ' . $r; }
     $where = [];
+    if (isset($col['ferme'])) { $where[] = '(' . $q($col['ferme']) . ' IS NULL OR ' . $q($col['ferme']) . ' = 0)'; }
     if (isset($col['supprime'])) {
         $s = strtolower($col['supprime']);
         $where[] = str_ends_with($s, '_at') ? $q($col['supprime']) . ' IS NULL' : '(' . $q($col['supprime']) . ' IS NULL OR ' . $q($col['supprime']) . ' = 0)';
     }
     $args = [];
     if ($ref !== null) { $where[] = $q($col['id']) . ' = ?'; $args[] = $ref; }
-    $tri = isset($col['maj']) || isset($col['le']) ? 'COALESCE(' . implode(', ', array_map($q, array_values(array_filter([$col['maj'] ?? null, $col['le'] ?? null])))) . ') DESC, ' : '';
+    $dates = array_values(array_filter([$col['maj'] ?? null, $col['le'] ?? null]));
+    $tri = $dates ? 'COALESCE(' . implode(', ', array_map($q, $dates)) . ') DESC, ' : '';
     $sql = 'SELECT ' . implode(', ', $sel) . ' FROM ' . $q($src['table']) . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY ' . $tri . $q($col['id']) . ' DESC LIMIT 2000';
+    $etapes = [];
+    if (($src['etapes'] ?? null) === 'crm_stages') {
+        try { $etapes = array_map(static fn ($e) => (string) $e['name'], Db::rows('SELECT name FROM crm_stages ORDER BY position, id')); } catch (Throwable $e) { $etapes = []; }
+    }
+    $date = static fn ($v) => $v === null || $v === '' ? null : (is_numeric($v) ? date('Y-m-d', (int) $v > 1e11 ? (int) ($v / 1000) : (int) $v) : substr((string) $v, 0, 10));
     $out = [];
     foreach (Db::rows($sql, $args) as $r) {
-        $nom = trim(trim((string) $r['prenom']) . ' ' . trim((string) $r['nom']));
-        if ($nom === '' || (isset($col['complet']) && !isset($col['prenom']))) { $nom = trim((string) ($r['complet'] ?? '')) ?: $nom; }
+        $nom = pcCrmNom($r);
         if ($nom === '') { continue; }
-        $date = static fn ($v) => $v === null || $v === '' ? null : (is_numeric($v) ? date('Y-m-d', (int) $v > 1e11 ? (int) ($v / 1000) : (int) $v) : substr((string) $v, 0, 10));
-        $out[] = ['ref' => (string) $r['ref'], 'nom' => mb_substr(preg_replace('/\s+/', ' ', $nom), 0, 120), 'statut' => pcCrmStatut($r['statut'] === null ? null : (string) $r['statut']),
+        $statut = $r['etape'] !== null && isset($etapes[(int) $r['etape']]) ? $etapes[(int) $r['etape']] : pcCrmStatut($r['statut'] === null ? null : (string) $r['statut']);
+        $pers = $r['personne'] === null ? null : (strtolower((string) $r['personne']) === 'candidat' ? 'candidat' : 'contact');
+        $out[] = ['ref' => (string) $r['ref'], 'nom' => $nom, 'statut' => $statut === null || $statut === '' ? null : mb_substr($statut, 0, 80), 'personne' => $pers,
             'zone' => ($z = trim((string) ($r['zone'] ?? ''))) === '' ? null : mb_substr($z, 0, 80), 'le' => $date($r['le']), 'maj' => $date($r['maj'])];
     }
     return $out;
 }
 
 /**
- * GET /parcours/candidats — les candidats franchisés du CRM, pour l'étape
- * « Pour qui ? » ; chacun dit s'il a déjà un parcours en cours. `crm` : la table
+ * GET /parcours/candidats — les candidats franchisés du CRM (dossiers en
+ * cours), pour l'étape « Pour qui ? » : leur étape dans le pipeline, et s'ils
+ * ont déjà un parcours. `crm` : la table
  * lue (null : pas de CRM dans cette base — la saisie libre reste possible).
  */
 function ep_parcours_candidats(): array
@@ -211,7 +245,10 @@ function ep_parcours_candidats(): array
     }
     foreach ($l as &$c) { $c['parcours'] = $en[$c['ref']] ?? null; }
     unset($c);
-    return ['crm' => ['table' => $src['table'], 'colonnes' => array_keys($src['colonnes'])], 'candidats' => $l, 'total' => count($l)];
+    // « candidat » : passé l'étape de bascule du CRM ; « contact » : pas encore (null : ce CRM ne les distingue pas).
+    $parType = ['candidat' => 0, 'contact' => 0];
+    foreach ($l as $c) { if ($c['personne'] !== null) { $parType[$c['personne']]++; } }
+    return ['crm' => ['table' => $src['table'], 'colonnes' => array_keys($src['colonnes']), 'etapes' => isset($src['etapes'])], 'candidats' => $l, 'total' => count($l), 'parType' => $parType];
 }
 
 /** Le référentiel v25 (l'Excel), tel que tools/formation/referentiel_excel.py l'a écrit. */
@@ -862,7 +899,7 @@ function wr_parcours_creer(): array
         $src = pcCrmSource();
         if ($src === null) { return fmRefus(422, 'CRM des candidats introuvable dans la base'); }
         try { $fiche = pcCandidatsCrm($src, $cref)[0] ?? null; } catch (Throwable $e) { return fmRefus(502, 'CRM des candidats illisible'); }
-        if ($fiche === null) { return fmRefus(404, 'candidat inconnu du CRM'); }
+        if ($fiche === null) { return fmRefus(404, 'candidat introuvable dans le CRM (ou dossier arrêté)'); }
         $nom = $fiche['nom'];
     }
     if ($nom === '') { return fmRefus(422, 'le nom du candidat est obligatoire'); }
