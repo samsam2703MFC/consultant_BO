@@ -117,6 +117,7 @@ function invListe(int $sid): array { global $INVENTAIRES; return $INVENTAIRES[$s
 function invEcart(int $sid, string $de, string $a): ?array { global $ECARTS, $APPELS_ECART; $APPELS_ECART++; return $ECARTS[$sid . ':' . $de . ':' . $a] ?? null; }
 require __DIR__ . '/../src/verification_matieres.php';
 require __DIR__ . '/../src/verification_ca.php';
+require __DIR__ . '/../src/verification_mouvements.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -510,6 +511,32 @@ verifie('la caisse se lit dans le relevé du CA net', vcCaisse(4, ['2026-09-01',
 Db::$reglages['svP4:2026-09-01'] = json_encode(['p' => [], 'sp' => [['type' => 'ligne', 'v' => 12.5, 'nom' => 'Divers'], ['type' => 'ticket', 'v' => -4.0, 'nom' => 'remise sur le ticket entier'], ['type' => 'ligne', 'v' => 3.0, 'nom' => 'Divers']]]);
 $sp4 = vcSansProduit(4, ['2026-09-01']);
 verifie('les lignes sans produit et les remises sur le ticket entier, jour par jour', $sp4['2026-09-01']['spEur'] === 15.5 && $sp4['2026-09-01']['spN'] === 2 && $sp4['2026-09-01']['remEur'] === 4.0 && $sp4['2026-09-01']['noms'] === ['Divers']);
+
+
+echo "Mouvements d’un produit ou d’une matière\n";
+$jM = ['2026-10-19', '2026-10-20'];
+$GM = ['2026-10-19' => ['l' => [['p' => 77, 'n' => 'Croissant', 'c' => 'Viennoiserie', 'x' => 1.2, 's0' => 4.0, 'so' => 40.0, 'ok' => 1, 'vd' => 35.0, 'jd' => 3.0, 'r' => 5.0, 'co' => null]], 'enr' => true],
+    '2026-10-20' => ['l' => [['p' => 77, 'n' => 'Croissant', 'c' => 'Viennoiserie', 'x' => 1.2, 's0' => 5.0, 'so' => 30.0, 'ok' => 0, 'vd' => 30.0, 'jd' => 0.0, 'r' => 2.0, 'co' => null]], 'enr' => false]];
+$VM = ['2026-10-19' => [7 => [10.0, 12.0], 8 => [25.0, 30.0]], '2026-10-20' => [7 => [30.0, 36.0]]];
+$PM = vmoProduitJours(77, $jM, $GM, $VM);
+verifie('un produit jour par jour : gardé, produit, vendu, poubelle, gardé pour demain, non expliqué', $PM['jours'][0]['dispo'] === 44.0 && $PM['jours'][0]['nonExpl'] === 1.0 && $PM['jours'][0]['heures'] === [7 => 10.0, 8 => 25.0] && $PM['jours'][1]['mesure'] === false);
+verifie('les totaux de la période : gardé au début et à la fin, le reste additionné', $PM['totaux']['garde0'] === 4.0 && $PM['totaux']['garde'] === 2.0 && $PM['totaux']['prod'] === 70.0 && $PM['totaux']['vendu'] === 65.0 && $PM['totaux']['ca'] === 78.0 && $PM['totaux']['nonExpl'] === 4.0 && $PM['totaux']['mesure'] === 1);
+$typesM = array_column($PM['journal'], 'type');
+verifie('le journal : gardé d’hier, production, ventes heure par heure, poubelle, gardé, non expliqué', array_slice($typesM, 0, 6) === ['garde0', 'prod', 'vente', 'vente', 'poubelle', 'garde'] && in_array('nonExpl', $typesM, true));
+verifie('le journal dit quand la production n’est que le plan', str_contains($PM['journal'][array_search('prod', array_slice($typesM, 7), true) + 7]['texte'] ?? '', 'au plan'));
+$MM = [['at' => '2026-10-19 05:01', 'type' => 'livraison', 'avant' => 10.0, 'apres' => 50.0, 'delta' => 40.0], ['at' => '2026-10-19 15:20', 'type' => 'correction', 'avant' => 50.0, 'apres' => 45.0, 'delta' => -5.0],
+    ['at' => '2026-10-20 11:49', 'type' => 'inventaire', 'avant' => 45.0, 'apres' => 12.0, 'delta' => -33.0]];
+$RM = vmoMatiereJours($jM, $MM, ['2026-10-19' => 38.0, '2026-10-20' => 30.0]);
+verifie('une matière jour par jour : livré, corrigé, inventaire, théorique, stock du soir', $RM['jours'][0]['livre'] === 40.0 && $RM['jours'][0]['corrige'] === -5.0 && $RM['jours'][0]['stockSoir'] === 45.0 && $RM['jours'][1]['inventaire']['compte'] === 12.0);
+verifie('les totaux d’une matière : stock au début et à la fin, livré, théorique, écart des inventaires', $RM['totaux']['stockDebut'] === 10.0 && $RM['totaux']['stockFin'] === 12.0 && $RM['totaux']['livre'] === 40.0 && $RM['totaux']['theorique'] === 68.0 && $RM['totaux']['ecartInventaires'] === -33.0);
+$MV = vmoMouvements([['avant' => 340, 'qty' => 0, 'modif' => null, 'vu' => '2026-10-25 11:40:00', 'type' => 'effacement', 'at' => '2026-10-25 11:40:02'], ['avant' => 0, 'qty' => 96, 'modif' => null, 'vu' => '2026-10-25 11:49:50', 'type' => 'inventaire', 'at' => '2026-10-25 11:49:48'],
+    ['avant' => 96, 'qty' => 90, 'modif' => '2026-10-26 09:00:00', 'vu' => '2026-10-26 09:01:00', 'type' => 'mouvement', 'at' => null]]);
+verifie('un inventaire après remise à zéro se lit face au solde effacé (340 attendus, 96 comptés : −244)', $MV[1]['avant'] === 340.0 && $MV[1]['delta'] === -244.0 && $MV[2]['type'] === 'correction' && $MV[2]['delta'] === -6.0);
+verifie('un mouvement de stock en clair', str_contains(vmoTexteStock($MM[0], 'pce'), 'Livraison validée : +40 pce') && str_contains(vmoTexteStock($MM[2], 'pce'), 'le panel attendait 45 pce, écart −33 pce'));
+$_GET = ['du' => '2026-10-01', 'au' => '2026-12-31'];
+[$duM, $auM, $jsM] = vmoPeriode();
+verifie('la période s’arrête à aujourd’hui et à 62 jours', $auM <= date('Y-m-d') && count($jsM) <= 62);
+$_GET = [];
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko > 0 ? 1 : 0);

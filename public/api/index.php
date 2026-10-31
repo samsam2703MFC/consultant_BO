@@ -53,6 +53,7 @@ require __DIR__ . '/../../src/verification_flux.php';
 require __DIR__ . '/../../src/verification_base.php';
 require __DIR__ . '/../../src/verification_matieres.php';
 require __DIR__ . '/../../src/verification_ca.php';
+require __DIR__ . '/../../src/verification_mouvements.php';
 require __DIR__ . '/../../src/notes_jour.php';
 require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
@@ -495,6 +496,8 @@ function route(string $method, string $path): mixed
             $path === '/verification/matieres'        => ep_verification_matieres(),
             $path === '/verification/ca'              => ep_verification_ca(),
             $path === '/verification/ca/sonde'        => ep_verification_ca_sonde(),
+            $path === '/verification/mouvements'      => ep_verification_mouvements(),
+            $path === '/verification/mouvements/liste' => ep_verification_mouvements_liste(),
             $path === '/stock/inventaires/ecart'      => ep_stock_inventaires_ecart(),
             $path === '/stock/inventaires/releve'     => ep_stock_inventaires_releve(),
             $path === '/ventes/reseau'                => ep_ventes_reseau(),

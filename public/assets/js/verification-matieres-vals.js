@@ -143,7 +143,9 @@ export function valsVerifMatieres(app, common){
   v.nMatieres = (L.matieres || []).length;
   v.tout = !!S.vmTout;
   v.basculerTout = () => app.setState({ vmTout: !S.vmTout });
-  v.matieres = (v.tout ? toutes : toutes.slice(0, 15)).map(matiere);
+  // Un clic sur une matière ouvre ses mouvements, sur la même période (Mouvements d'un produit).
+  const versMouv = m => () => app.setState({ screen: 'verifMouv', railOuvert: false, vmoShop: shop, vmoSel: 'm:' + m.id, vmoQ: '', vmoDu: P ? String(P.de.at).slice(0, 10) : '', vmoAu: P ? String(P.a.at).slice(0, 10) : '' });
+  v.matieres = (v.tout ? toutes : toutes.slice(0, 15)).map(m => Object.assign(matiere(m), { ouvrir: versMouv(m) }));
   v.nAvecEcart = toutes.length;
   v.sansRecette = (d.sansRecette || []).map(p => ({ nom: p.nom, q: nf(p.q, p.q % 1 ? 1 : 0), ca: fE(p.ca) }));
   v.caSansRecette = fE(d.caSansRecette);

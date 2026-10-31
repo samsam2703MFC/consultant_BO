@@ -385,6 +385,8 @@ recette se voit comme une amélioration, à partir du jour où elle a eu lieu.
 
 **Constat du lot 5 (relevé du 31/10)** : le P&L du panel et la base des redevances sont un même chiffre, TTC (`sales-kpis` = somme de `pnl/daily`). En septembre, ils reprennent la caisse au centime à Halle, mais comptent 450 € de moins que les tickets à Corbais, 796 € à Sombreffe et 278 € à Gosselies : des ventes encaissées qui n'entrent pas dans la base des redevances. Les jours à regarder disent lesquels.
 
+**Mouvements d'un produit (demande du 31/10, livré le 31/10)** : `#/verification/mouvements` — un produit ou une matière, un magasin, une période (62 jours au plus) : jour par jour et dans l'ordre de l'heure, gardé d'hier, production (cuisson validée ou plan), ventes heure par heure, poubelle, gardé pour demain, non expliqué ; livraisons validées, inventaires (face au solde attendu), corrections et remises à zéro du stock ; la recette et ses matières, ou les produits qui emploient la matière.
+
 L'ordre est choisi pour que **les recettes passent d'abord** : tant qu'une recette est
 fausse, l'écart matière et le CA attendu le sont aussi.
 

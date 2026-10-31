@@ -3418,6 +3418,33 @@ lignes sans produit ≥ 30 € (ou trois lignes), remises sur le ticket entier �
 `sans_produit_eur`, `sans_produit_n`, `remises_ticket_eur`, `calcule_le`), écrite par le cron (`vcCron`) pour chaque jour
 clos du mois en cours (et du précédent les cinq premiers jours).
 
+### `/verification/mouvements` — les mouvements d'un produit ou d'une matière sur une période (31/10/2026)
+
+Demande du 31/10 : « pouvoir prendre un produit et avoir tous les mouvements pendant une période ». Code :
+`src/verification_mouvements.php` ; écran `#/verification/mouvements` (`verification-mouvements-vals.js`, `-tpl.js`) ;
+tests `bin/tests_verification.php`. Lecture seule. Un clic sur une matière de « Matières ↔ recettes » l'ouvre ici, sur
+la même semaine d'inventaire.
+
+`GET /verification/mouvements/liste?shop=` : `magasins[]`, `produits[]` {`id`, `nom`, `cat`, `q` (vendus en 30 jours)}
+— ceux du relevé des tickets et des journées de l'audit des flux —, `matieres[]` {`id`, `nom`, `cat`, `unite`, `n`} —
+celles du relevé du stock (`ceo_stock_releve`) ; gardé une heure (`vmoListe:{shop}`).
+
+`GET /verification/mouvements?shop=&p=ID&du=&au=` (un **produit**, 62 jours au plus, quatorze par défaut) : `jours[]`
+{`date`, `calcule`, `auPlan`, `garde0`, `prod`, `mesure` (cuissons validées), `dispo`, `vendu`, `ca`, `poubelle`, `garde`,
+`compte`, `nonExpl`, `heures` {h: pièces}} — les journées gravées de l'audit des flux (`vxJ:`, calculées dans 15 s si
+elles manquent) et les tickets heure par heure (`svP`, portions ramenées à la pièce) ; `totaux` ; `matieres[]` (la recette
+aplatie : `parPiece`, `theorique` = (vendu + poubelle) × recette, `mouvements[]`) ; `journal[]` {`date`, `h` (matin, 07h…,
+05:01, soir), `type` (garde0, prod, vente, poubelle, garde, nonExpl, stock:livraison|entree|inventaire|effacement|correction),
+`q`, `texte`}, trié dans l'ordre du jour.
+
+`GET /verification/mouvements?shop=&m=ID&du=&au=` (une **matière**) : `jours[]` {`date`, `livre`, `corrige`,
+`inventaire` {`compte`, `avant`, `ecart`}, `theorique`, `stockSoir`, `mouvements[]`}, `totaux` {`stockDebut`, `livre`,
+`corrige`, `inventaires`, `ecartInventaires`, `theorique`, `stockFin`}, `produits[]` (ceux qui l'emploient, vendus ou
+jetés : `parPiece`, `vendu`, `poubelle`, `consomme`), `journal[]`. Un mouvement relevé {`at`, `type`, `avant`, `apres`,
+`delta`} : une rafale montante est une livraison validée, une rafale où des quantités baissent un inventaire ; un
+inventaire qui suit une remise à zéro se lit face au solde effacé (ce que le panel attendait) ; un mouvement isolé est une
+entrée ou une correction à la main.
+
 ## 2. Mapping base de données → écran → champ
 
 ### Tables existantes réutilisées (`franchise_buddy_db`)
