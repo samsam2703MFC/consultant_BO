@@ -7372,21 +7372,33 @@ function tplPrimesApp(c, x){
     const bt = 'border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;cursor:pointer;display:block;width:100%';
     const fl = t => (t.fleche ? `<span data-an-fleche style="color:var(--color-primary);font-weight:600;margin-left:4px">${t.fleche}</span>` : '');
     const petit = `font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet}`;
-    return `<div style="${groupeSt};margin-top:12px"><div style="overflow-x:auto">
-      <table data-an style="border-collapse:separate;border-spacing:0;min-width:100%;font-family:${sf}">
-        <thead><tr>
-          <th aria-sort="${A.triNom.aria}" style="${g};text-align:left;padding:14px 16px 10px;${petit};min-width:160px;vertical-align:bottom"><button ${x.A(A.triNom.trier)} data-an-tri="nom" style="${bt}">${esc(nomCol)}${fl(A.triNom)}</button></th>
-          ${A.cols.map(p => `<th data-an-prime="${esc(p.cle)}" aria-sort="${p.tri.aria}" style="text-align:left;padding:14px 12px 10px;vertical-align:bottom;min-width:112px"><button ${x.A(p.tri.trier)} data-an-tri="${esc(p.cle)}" style="${bt}">
+    // La page d'un magasin (31/10/2026) : les colonnes sous les bandeaux de la marque et du magasin, et le total juste
+    // après le nom, avec la part de chaque famille. Sans bandeaux (la page du réseau) : le total en bout de ligne.
+    const BD = A.bandes && A.bandes.length ? A.bandes : null;
+    const BC = { marque: ['var(--color-primary)', 'color-mix(in srgb, var(--color-primary) 4%, var(--color-surface))', 'color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))', 'var(--color-primary)'],
+      magasin: ['var(--color-collection-border)', 'color-mix(in srgb, var(--color-secondary) 22%, var(--color-surface))', 'var(--color-secondary)', 'var(--color-on-abricot)'] };
+    const fond = p => (BD && BC[p.bande] ? `background:${BC[p.bande][1]};` + (p.debut ? `border-left:2px solid ${BC[p.bande][0]};` : '') : '');
+    const pt = b => `<span aria-hidden="true" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${BC[b][0]};margin-right:5px;vertical-align:1px"></span>`;
+    const thTotal = (rs) => `<th${rs ? ' rowspan="2"' : ''} aria-sort="${A.triTotal.aria}" style="text-align:${BD ? 'left' : 'right'};padding:14px 16px 10px;vertical-align:bottom;${petit};white-space:nowrap${BD ? `;border-right:${filet}` : ''}"><button ${x.A(A.triTotal.trier)} data-an-tri="total" style="${bt}">Total${fl(A.triTotal)}</button></th>`;
+    const tdTotal = r => (BD ? `<td data-an-total style="padding:11px 16px;border-top:${filet};border-right:${filet};vertical-align:top;white-space:nowrap"><div style="font:600 14px/1.3 ${sf};font-variant-numeric:tabular-nums;color:#2d7a3e">${esc(r.total)}</div>${(r.parts || []).map(pa => `<div style="font:400 11.5px/1.45 ${sf};color:${muet}">${pt(pa.cle)}${esc(pa.txt)}</div>`).join('')}</td>`
+      : `<td style="padding:11px 16px;border-top:${filet};text-align:right;vertical-align:top;font:600 14px/1.3 ${sf};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(r.total)}</td>`);
+    const thCol = p => `<th data-an-prime="${esc(p.cle)}" aria-sort="${p.tri.aria}" style="text-align:left;padding:14px 12px 10px;vertical-align:bottom;min-width:112px;${fond(p)}"><button ${x.A(p.tri.trier)} data-an-tri="${esc(p.cle)}" style="${bt}">
             <div style="font:600 13px/1.25 ${sf};color:var(--color-text);max-width:150px">${esc(p.lib)}${fl(p.tri)}</div>
             <div style="font:400 11.5px/1.35 ${sf};color:${p.duMagasin ? 'var(--color-on-abricot)' : muet};margin-top:3px;white-space:nowrap">${esc(p.payeur)}</div>
-            <div style="font:600 11.5px/1.35 ${sf};color:#2d7a3e;margin-top:2px;white-space:nowrap">${esc(p.somme)}</div></button></th>`).join('')}
-          <th aria-sort="${A.triTotal.aria}" style="text-align:right;padding:14px 16px 10px;vertical-align:bottom;${petit};white-space:nowrap"><button ${x.A(A.triTotal.trier)} data-an-tri="total" style="${bt}">Total${fl(A.triTotal)}</button></th>
-        </tr></thead>
+            <div style="font:600 11.5px/1.35 ${sf};color:#2d7a3e;margin-top:2px;white-space:nowrap">${esc(p.somme)}</div></button></th>`;
+    const thNom = rs => `<th${rs ? ' rowspan="2"' : ''} aria-sort="${A.triNom.aria}" style="${g};text-align:left;padding:14px 16px 10px;${petit};min-width:160px;vertical-align:bottom"><button ${x.A(A.triNom.trier)} data-an-tri="nom" style="${bt}">${esc(nomCol)}${fl(A.triNom)}</button></th>`;
+    const tete2 = BD
+      ? `<tr data-an-bandes>${thNom(true)}${thTotal(true)}${BD.map(b => `<th colspan="${b.n}" data-an-bande-tete="${esc(b.cle)}" style="text-align:left;padding:9px 12px 8px;background:${BC[b.cle][2]};border-left:2px solid ${BC[b.cle][0]};box-shadow:inset 0 3px 0 ${BC[b.cle][0]};white-space:nowrap"><span style="font:700 11px/1.2 ${sf};letter-spacing:.06em;text-transform:uppercase;color:${BC[b.cle][3]}">${esc(b.lib)}</span><span style="font:400 11.5px ${sf};color:${BC[b.cle][3]};opacity:.8;margin-left:8px">${b.n} · ${esc(b.sous)}</span></th>`).join('')}</tr><tr>${A.cols.map(thCol).join('')}</tr>`
+      : `<tr>${thNom(false)}${A.cols.map(thCol).join('')}${thTotal(false)}</tr>`;
+    return `<div style="${groupeSt};margin-top:12px"><div style="overflow-x:auto">
+      <table data-an style="border-collapse:separate;border-spacing:0;min-width:100%;font-family:${sf}">
+        <thead>${tete2}</thead>
         <tbody>${A.lignes.map(r => `<tr data-an-ligne>
           <td style="${g};padding:11px 16px;border-top:${filet};vertical-align:top"><div style="font:600 14px/1.3 ${sf};white-space:nowrap">${esc(r.nom)}</div><div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(r.sous)}</div></td>
-          ${r.cases.map(k => !k ? `<td style="padding:11px 12px;border-top:${filet};color:var(--color-border-secondary)">·</td>` : `<td style="padding:11px 12px;border-top:${filet};vertical-align:top">
-            <div style="font:600 13.5px/1.3 ${sf};color:#2d7a3e;font-variant-numeric:tabular-nums;white-space:nowrap">${esc(k.haut)}</div><div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(k.bas)}</div></td>`).join('')}
-          <td style="padding:11px 16px;border-top:${filet};text-align:right;vertical-align:top;font:600 14px/1.3 ${sf};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(r.total)}</td></tr>`).join('')}</tbody>
+          ${BD ? tdTotal(r) : ''}
+          ${r.cases.map((k, i) => { const p = A.cols[i] || {}; return !k ? `<td style="padding:11px 12px;border-top:${filet};color:var(--color-border-secondary);${fond(p)}">·</td>` : `<td style="padding:11px 12px;border-top:${filet};vertical-align:top;${fond(p)}">
+            <div style="font:600 13.5px/1.3 ${sf};color:#2d7a3e;font-variant-numeric:tabular-nums;white-space:nowrap">${esc(k.haut)}</div><div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(k.bas)}</div></td>`; }).join('')}
+          ${BD ? '' : tdTotal(r)}</tr>`).join('')}</tbody>
       </table></div></div>`;
   };
   // Les mois du réseau en barres fines : ce qui a été gagné chaque mois.
@@ -7397,8 +7409,33 @@ function tplPrimesApp(c, x){
   const frPage = () => {
     const shopId = `<span data-pr-shop="${esc(FR.id)}" style="font:600 12.5px ${sf};padding:6px 13px;border-radius:999px;background:var(--color-surface);color:var(--color-text);font-variant-numeric:tabular-nums">shop ${esc(FR.id)}</span>`;
     // Le magasin, sa note et son shop id sont dans le titre de la page (23/10/2026, « compresser ») ; un magasin inconnu
-    // garde son en-tête, avec les magasins du panel.
-    const entete = `<section data-pr="fr-tete">${tete(esc(FR.nom || 'Magasin ' + FR.id), '', shopId)}</section>`;
+    // garde son en-tête, avec les magasins du panel. Au-dessus de tout, « Créer une nouvelle prime » (31/10/2026).
+    // Le nom du magasin est déjà le titre de l'écran : ici, la barre de création — le bouton, et chaque sorte en raccourci.
+    const sorteBt = o => `<button ${o.choisir ? x.A(o.choisir) : 'disabled'} data-pr-creer-sorte="${esc(o.court)}" title="${esc(o.plein ? 'Déjà six primes de cette sorte : éteignez-en une, ou modifiez-la.' : o.txt)}" style="border:0;border-radius:999px;padding:7px 12px;font:500 12.5px ${sf};background:var(--color-background-secondary);color:${o.choisir ? 'var(--color-text)' : 'var(--color-border-secondary)'};cursor:${o.choisir ? 'pointer' : 'default'};white-space:nowrap">${o.e} ${esc(o.court)}</button>`;
+    const entete = !FR.connu ? `<section data-pr="fr-tete">${tete(esc(FR.nom || 'Magasin ' + FR.id), '', shopId)}</section>`
+      : `<section data-pr="fr-tete" style="${groupeSt};overflow:visible;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 18px">
+      ${FR.nouvelle ? `<button ${x.A(FR.nouvelle)} data-pr-creer style="${btP};padding:11px 20px;font-size:14.5px;flex:none">+ Créer une nouvelle prime</button>` : ''}
+      <div style="flex:1;min-width:260px"><div style="font:400 12px/1.3 ${sf};color:${muet};margin-bottom:6px">Payée par le magasin, pour ses vendeuses — directement :</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${(FR.sortes || []).map(sorteBt).join('')}</div></div>
+      ${shopId.replace('background:var(--color-surface)', 'background:var(--color-background-secondary)')}
+    </section>`;
+    // Les deux familles (31/10/2026) : la marque en rubis, le magasin en abricot — dans le tableau, ses bandeaux et ses totaux.
+    const BANDE = { marque: { trait: 'var(--color-primary)', fond: 'color-mix(in srgb, var(--color-primary) 4%, var(--color-surface))', pastille: 'color-mix(in srgb, var(--color-primary) 10%, var(--color-surface))', texte: 'var(--color-primary)' },
+      magasin: { trait: 'var(--color-collection-border)', fond: 'color-mix(in srgb, var(--color-secondary) 22%, var(--color-surface))', pastille: 'var(--color-secondary)', texte: 'var(--color-on-abricot)' },
+      total: { trait: '#2d7a3e', fond: 'var(--color-surface)', pastille: 'rgba(45,122,62,.12)', texte: '#2d7a3e' } };
+    const point = b => `<span aria-hidden="true" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${BANDE[b].trait};margin-right:5px;vertical-align:1px"></span>`;
+    // Un volet : une ligne blanche qui se touche — la flèche, le titre, ce qu'il contient en une phrase ; ses boutons à
+    // droite quand il est ouvert ; son contenu dessous.
+    const volet = (cle, V, titre, resume, droite, corps) => `<section data-pr="fr-${cle}" data-pr-volet="${cle}" data-ouvert="${V.ouvert ? 1 : 0}"${cle === 'magasin' || cle === 'marque' ? ' class="prl-mag"' : ''}${V.ouvert ? ' style="margin-bottom:14px"' : ''}>
+      <div style="${groupeSt};overflow:visible;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 18px">
+        <button ${x.A(V.basculer)} data-pr-volet-bascule="${cle}" aria-expanded="${V.ouvert}" style="flex:1 1 320px;min-width:0;display:flex;align-items:center;gap:13px;border:0;background:none;padding:2px 0;text-align:left;cursor:pointer;font-family:${sf};color:var(--color-text)">
+          <span aria-hidden="true" style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--color-background-secondary);display:inline-flex;align-items:center;justify-content:center;font:600 16px/1 ${sf};color:${muet};transform:rotate(${V.ouvert ? 90 : 0}deg);transition:transform .15s">›</span>
+          <span style="min-width:0"><span style="display:block;font:700 18px/1.25 ${sf};letter-spacing:-.012em">${titre}</span>${resume ? `<span data-pr-volet-resume style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:2px">${resume}</span>` : ''}</span>
+        </button>
+        ${V.ouvert && droite ? droite : ''}
+      </div>
+      ${V.ouvert ? corps : ''}
+    </section>`;
     if (!FR.connu) {
       return entete + `<section data-pr="fr-inconnu"><div style="${groupeSt};padding:18px">
         <div style="font:600 14px ${sf};color:var(--color-primary)">Aucun magasin « ${esc(FR.id)} » dans le panel.</div>
@@ -7408,7 +7445,10 @@ function tplPrimesApp(c, x){
     // sa place, ou sa valeur face à l'objectif avec une barre fine. Le nom reste en place quand le tableau défile.
     const EQ = FR.equipe;
     const tonCouleur = { gagne: '#2d7a3e', tete: 'var(--color-primary)', route: 'var(--color-text)', perdu: muet, vide: muet, hors: muet };
-    const caseEq = k => k.ton === 'hors' ? `<td data-eq-case="hors" style="padding:11px 12px;border-top:${filet};color:var(--color-border-secondary);text-align:left">·</td>` : `<td data-eq-case="${esc(k.ton)}" style="padding:11px 12px;border-top:${filet};vertical-align:top;min-width:104px">
+    // Une case : teintée de sa famille (la marque en rubis pâle, le magasin en abricot), un trait à l'entrée de chaque famille.
+    const fondB = b => (b && BANDE[b] ? `background:${BANDE[b].fond};` : '');
+    const entreeB = (b, debut) => (debut && b && BANDE[b] ? `border-left:2px solid ${BANDE[b].trait};` : '');
+    const caseEq = k => k.ton === 'hors' ? `<td data-eq-case="hors" data-eq-bande="${esc(k.bande || '')}" style="padding:11px 12px;border-top:${filet};${fondB(k.bande)}${entreeB(k.bande, k.debut)}color:var(--color-border-secondary);text-align:left">·</td>` : `<td data-eq-case="${esc(k.ton)}" data-eq-bande="${esc(k.bande || '')}" style="padding:11px 12px;border-top:${filet};${fondB(k.bande)}${entreeB(k.bande, k.debut)}vertical-align:top;min-width:104px">
         <div style="font:${k.ton === 'vide' ? 400 : 600} 13.5px/1.3 ${sf};color:${tonCouleur[k.ton] || 'var(--color-text)'};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(k.haut)}</div>
         ${k.niveau != null && k.ton !== 'gagne' && k.ton !== 'tete' ? `<div style="height:4px;border-radius:2px;background:var(--color-border-tertiary);margin:6px 0 4px;max-width:110px;overflow:hidden"><div style="height:100%;width:${Math.max(3, Math.min(100, k.niveau))}%;border-radius:2px;background:${k.ton === 'perdu' ? 'var(--color-border-secondary)' : k.niveau >= 80 ? '#2d7a3e' : 'var(--color-primary)'}"></div></div>` : ''}
         ${k.bas ? `<div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(k.bas)}</div>` : ''}</td>`;
@@ -7416,30 +7456,51 @@ function tplPrimesApp(c, x){
     // Un en-tête qui trie : tout l'en-tête se touche, la flèche dit le sens.
     const btTri = 'border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;cursor:pointer;display:block;width:100%';
     const fleche = t => (t.fleche ? `<span data-eq-fleche style="color:var(--color-primary);font-weight:600;margin-left:4px">${t.fleche}</span>` : '');
-    const tableEq = () => `<div style="${groupeSt};margin-top:14px"><div style="overflow-x:auto">
+    const petitEnt = `font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet}`;
+    // Les bandeaux au-dessus des colonnes : « Primes de la marque », « Primes du magasin », chacun dans sa couleur.
+    const bandeTh = b => `<th colspan="${b.n}" data-eq-bande-tete="${esc(b.cle)}" style="text-align:left;padding:9px 12px 8px;background:${BANDE[b.cle].pastille};border-left:2px solid ${BANDE[b.cle].trait};box-shadow:inset 0 3px 0 ${BANDE[b.cle].trait};white-space:nowrap">
+          <span style="font:700 11px/1.2 ${sf};letter-spacing:.06em;text-transform:uppercase;color:${BANDE[b.cle].texte}">${esc(b.lib)}</span><span style="font:400 11.5px ${sf};color:${BANDE[b.cle].texte};opacity:.8;margin-left:8px">${b.n} · ${esc(b.sous)}</span></th>`;
+    // La barre du cumul : ce qui est atteint face à ce qui est en jeu.
+    const barreCumul = (pct, w) => `<div style="height:5px;border-radius:3px;background:var(--color-border-tertiary);margin:6px 0 5px;max-width:${w}px;overflow:hidden"><div style="height:100%;width:${pct > 0 ? Math.max(3, pct) : 0}%;border-radius:3px;background:#2d7a3e"></div></div>`;
+    const cumulTd = v => `<td data-eq-cumul class="eq-cumul" style="padding:11px 16px 11px 14px;border-top:${filet};vertical-align:top;min-width:176px;border-right:${filet};box-shadow:4px 0 6px -4px rgba(0,0,0,.12)">
+          ${v.cumul.rien ? `<div style="font:400 13px/1.3 ${sf};color:${muet}">—</div>` : `<div style="font:600 14.5px/1.3 ${sf};font-variant-numeric:tabular-nums;white-space:nowrap"><span style="color:${v.cumul.pct > 0 ? '#2d7a3e' : 'var(--color-text)'}">${esc(v.cumul.atteint)}</span><span style="font-weight:400;color:${muet}"> / ${esc(v.cumul.jeu)}</span></div>
+          ${barreCumul(v.cumul.pct, 160)}
+          ${v.cumul.parts.map(pa => `<div data-eq-part="${esc(pa.cle)}" style="font:400 11.5px/1.45 ${sf};color:${muet};white-space:nowrap">${point(pa.cle)}${esc(pa.txt)}</div>`).join('')}`}</td>`;
+    const tableEq = () => `<div style="${groupeSt};margin-top:12px"><div style="overflow-x:auto">
       <table data-eq style="border-collapse:separate;border-spacing:0;min-width:100%;font-family:${sf}">
-        <thead><tr>
-          <th aria-sort="${EQ.triNom.aria}" style="${colGauche};text-align:left;padding:14px 16px 10px;font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};min-width:150px;vertical-align:bottom"><button ${x.A(EQ.triNom.trier)} data-eq-tri="nom" title="Trier par nom" style="${btTri}">Vendeuse${fleche(EQ.triNom)}</button></th>
-          ${EQ.primes.map(p => `<th data-eq-prime="${esc(p.cle)}" aria-sort="${p.tri.aria}" style="text-align:left;padding:14px 12px 10px;vertical-align:bottom;min-width:104px"><button ${x.A(p.tri.trier)} data-eq-tri="${esc(p.cle)}" title="Trier sur cette prime" style="${btTri}">
+        <thead><tr data-eq-bandes>
+          <th rowspan="2" class="eq-nom" aria-sort="${EQ.triNom.aria}" style="${colGauche};z-index:2;text-align:left;padding:14px 16px 10px;${petitEnt};min-width:150px;vertical-align:bottom"><button ${x.A(EQ.triNom.trier)} data-eq-tri="nom" title="Trier par nom" style="${btTri}">Vendeuse${fleche(EQ.triNom)}</button></th>
+          <th rowspan="2" class="eq-cumul" aria-sort="${EQ.triAcquis.aria}" style="text-align:left;padding:14px 16px 10px 14px;vertical-align:bottom;border-right:${filet};box-shadow:4px 0 6px -4px rgba(0,0,0,.12)"><button ${x.A(EQ.triAcquis.trier)} data-eq-tri="acquis" title="Trier sur ce qui est atteint" style="${btTri}">
+            <div style="${petitEnt}">Cumul${fleche(EQ.triAcquis)}</div>
+            <div style="font:400 11.5px/1.35 ${sf};color:${muet};margin-top:5px;white-space:nowrap">${EQ.enCours ? 'atteint / en jeu' : 'gagné / possible'}</div></button></th>
+          ${EQ.bandes.map(bandeTh).join('')}
+        </tr><tr>
+          ${EQ.primes.map(p => `<th data-eq-prime="${esc(p.cle)}" data-eq-bande="${esc(p.bande)}" aria-sort="${p.tri.aria}" style="text-align:left;padding:12px 12px 10px;vertical-align:bottom;min-width:104px;${fondB(p.bande)}${entreeB(p.bande, p.debut)}"><button ${x.A(p.tri.trier)} data-eq-tri="${esc(p.cle)}" title="Trier sur cette prime" style="${btTri}">
             <div style="font:600 13px/1.25 ${sf};color:var(--color-text);max-width:150px">${esc(p.lib)}${fleche(p.tri)}</div>
-            <div style="font:400 11.5px/1.35 ${sf};color:${muet};margin-top:3px;white-space:nowrap">${esc(p.recompense)} · ${p.duMagasin ? `<span style="color:var(--color-on-abricot)">${esc(p.payeur)}</span>` : esc(p.payeur)}</div>
+            ${p.equipe ? `<div data-eq-equipe title="La même pour toutes : quand le magasin y arrive, chacune au planning la gagne" style="display:inline-block;margin-top:4px;font:600 9.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;padding:3px 6px;border-radius:999px;background:var(--color-surface);color:${muet};border:0.5px solid var(--color-border-secondary)">équipe</div>` : ''}
+            <div style="font:400 11.5px/1.35 ${sf};color:${muet};margin-top:3px;white-space:nowrap">${esc(p.recompense)} · <span style="color:${BANDE[p.bande].texte}">${esc(p.payeur)}</span></div>
             <div title="${esc(p.compteLong)}" style="font:600 11.5px/1.35 ${sf};color:#2d7a3e;margin-top:2px;white-space:nowrap">✓ ${esc(p.compte)}</div></button></th>`).join('')}
-          <th aria-sort="${EQ.triAcquis.aria}" style="text-align:right;padding:14px 16px 10px;vertical-align:bottom;font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};white-space:nowrap"><button ${x.A(EQ.triAcquis.trier)} data-eq-tri="acquis" title="Trier par montant" style="${btTri}">${EQ.enCours ? 'Acquis' : 'Gagné'}${fleche(EQ.triAcquis)}</button></th>
         </tr></thead>
         <tbody>${EQ.vendeuses.map(v => `<tr data-eq-vendeuse>
-          <td style="${colGauche};padding:11px 16px;border-top:${filet};vertical-align:top"><div style="font:600 14px/1.3 ${sf};white-space:nowrap">${esc(v.nom)}</div>${v.sous ? `<div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(v.sous)}</div>` : ''}</td>
-          ${v.cases.map(caseEq).join('')}
-          <td style="padding:11px 16px;border-top:${filet};text-align:right;vertical-align:top;font:600 14px/1.3 ${sf};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(v.total)}</td></tr>`).join('')}</tbody>
+          <td class="eq-nom" title="${esc(v.nom)}" style="${colGauche};padding:11px 16px;border-top:${filet};vertical-align:top"><div style="font:600 14px/1.3 ${sf};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(v.nom)}</div>${v.sous ? `<div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(v.sous)}</div>` : ''}</td>
+          ${cumulTd(v)}
+          ${v.cases.map(caseEq).join('')}</tr>`).join('')}</tbody>
       </table></div></div>
-      <div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">✓ gagnée · <span style="color:var(--color-primary)">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin vers l’objectif · un clic sur un en-tête trie${EQ.quand ? ' · lu à ' + esc(EQ.quand) : ''}</div>`;
-    const equipe = `<section data-pr="fr-equipe">
-      ${tete('Où en sont tes vendeuses', EQ.vue === 'annee' ? (EQ.annee.periode ? esc(EQ.annee.periode) + ' · ' + esc(EQ.annee.total) + ' gagnés' : 'L’année du magasin, prime par prime.') : 'Ce que chacune voit dans Mes primes, prime par prime.',
-        `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${segm(EQ.filtres)}${segm(EQ.vues)}${EQ.vue === 'annee' ? stepperT(EQ.annee.picker) : pickerMoisT(EQ.picker)}</div>`)}
-      ${EQ.vue === 'annee' ? (EQ.annee.chargement ? vide('Calcul de l’année, mois par mois…') : EQ.annee.motif ? vide(esc(EQ.annee.motif)) : !EQ.annee.lignes.length ? vide('Aucune prime gagnée dans ce magasin cette année-là' + (EQ.filtres[1].on ? ' parmi celles du magasin.' : '.'))
-        : tableAn(EQ.annee, 'Vendeuse') + `<div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">Le montant gagné sur l’année et le nombre de mois · ✓ cadeau : une prime sans euros · un clic sur un en-tête trie</div>`)
+      <div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">${point('marque')}la marque · ${point('magasin')}le magasin · ✓ gagnée · <span style="color:var(--color-primary)">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin vers l’objectif · <b style="font-weight:600">équipe</b> : la même pour toutes, quand le magasin y arrive · un clic sur un en-tête trie${EQ.quand ? ' · lu à ' + esc(EQ.quand) : ''}</div>`;
+    // L'équipe entière, en tête du tableau : la marque, le magasin, le total — atteint, en jeu, la barre.
+    const totauxEq = () => (!EQ.totaux.length ? '' : `<div data-eq-totaux style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">${EQ.totaux.map(t => `<div data-eq-total="${esc(t.cle)}" style="${groupeSt};padding:14px 18px 13px;box-shadow:inset 0 3px 0 ${BANDE[t.cle].trait}">
+        <div style="font:600 11px/1.2 ${sf};letter-spacing:.06em;text-transform:uppercase;color:${BANDE[t.cle].texte}">${esc(t.lib)}</div>
+        <div style="margin-top:7px;white-space:nowrap"><span style="font:700 24px/1.15 ${sf};letter-spacing:-.015em;font-variant-numeric:tabular-nums;color:${t.pct > 0 ? '#2d7a3e' : 'var(--color-text)'}">${esc(t.atteint)}</span><span style="font:400 13px ${sf};color:${muet}"> ${EQ.enCours ? 'atteints' : 'gagnés'} ${esc(t.jeuLib)}</span></div>
+        ${barreCumul(t.pct, 9999)}
+        <div style="font:400 12px/1.4 ${sf};color:${muet}">${esc(t.sous)} · ${t.pct} %</div></div>`).join('')}</div>`);
+    const controlesEq = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${segm(EQ.filtres)}${segm(EQ.vues)}${EQ.vue === 'annee' ? stepperT(EQ.annee.picker) : pickerMoisT(EQ.picker)}</div>`;
+    const corpsEq = `<div style="margin-top:12px">${EQ.vue === 'annee' ? (EQ.annee.chargement ? vide('Calcul de l’année, mois par mois…') : EQ.annee.motif ? vide(esc(EQ.annee.motif)) : !EQ.annee.lignes.length ? vide('Aucune prime gagnée dans ce magasin cette année-là' + (EQ.filtres[1].on ? ' parmi celles du magasin.' : '.'))
+        : tableAn(EQ.annee, 'Vendeuse') + `<div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">${point('marque')}la marque · ${point('magasin')}le magasin · le montant gagné sur l’année et le nombre de mois · ✓ cadeau : une prime sans euros · un clic sur un en-tête trie</div>`)
       : EQ.chargement ? vide('Lecture des fiches de l’équipe…') : EQ.motif ? vide(esc(EQ.motif)) : !EQ.vendeuses.length ? vide('Personne au planning ni en caisse dans ce magasin ce mois-là.')
-        : !EQ.primes.length ? vide(`<span style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="flex:1">Aucune prime du magasin ce mois-là.</span>${FR.nouvelle ? `<button ${x.A(FR.nouvelle)} style="${btP}" data-eq-nouvelle>+ Nouvelle prime du magasin</button>` : ''}</span>`) : tableEq()}
-    </section>`;
+        : !EQ.primes.length ? vide(`<span style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="flex:1">Aucune prime du magasin ce mois-là.</span>${FR.nouvelle ? `<button ${x.A(FR.nouvelle)} style="${btP}" data-eq-nouvelle>+ Nouvelle prime du magasin</button>` : ''}</span>`) : totauxEq() + tableEq()}</div>`;
+    const equipe = volet('equipe', FR.volets.equipe, 'Où en sont tes vendeuses', !FR.volets.equipe.ouvert && EQ.resume ? esc(EQ.resume) :
+      EQ.vue === 'annee' ? (EQ.annee.periode ? esc(EQ.annee.periode) + ' · ' + esc(EQ.annee.total) + ' gagnés' : 'L’année du magasin, prime par prime.') : 'Ce que chacune voit dans Mes primes : la marque et le magasin à part, et son cumul — atteint face à ce qui est en jeu.',
+      controlesEq, corpsEq);
     // Les fiches de l'équipe (30/10/2026) : ce que chaque personne a rempli dans « Mon profil » ; la fiche au clic.
     const FI = FR.fiches;
     const barreFi = c => `<span style="display:inline-block;width:90px;height:5px;border-radius:3px;background:var(--color-border-tertiary);overflow:hidden;vertical-align:middle"><span style="display:block;height:100%;width:${Math.max(0, Math.min(100, c))}%;background:${c >= 100 ? '#2d7a3e' : 'var(--color-primary)'}"></span></span>`;
@@ -7468,9 +7529,8 @@ function tplPrimesApp(c, x){
           <span>Gardé chiffré. Afficher en clair ou ouvrir la carte s’écrit au journal.</span></div>
       </div>`;
     };
-    const fiches = `<section data-pr="fr-fiches">
-      ${tete('Les fiches de l’équipe', 'Ce que chacune a rempli dans « Mon profil » de l’app : identité, coordonnées, urgence, paie, tenue, disponibilités, carte d’identité.', `<button ${x.A(FI.relire)} style="${btS}">Relire</button>`)}
-      ${FI.chargement ? vide('Lecture des fiches…') : FI.motif ? vide(esc(FI.motif)) : !FI.lignes.length ? vide('Personne dans ce magasin pour l’instant.') : `<div style="${groupeSt};margin-top:14px">${FI.lignes.map((l, i) => `
+    const fiches = volet('fiches', FR.volets.fiches, 'Les fiches de l’équipe', esc(FR.resumes.fiches) + ' — ce que chacune a rempli dans « Mon profil » de l’app.', `<button ${x.A(FI.relire)} style="${btS};background:var(--color-background-secondary)">Relire</button>`,
+      `${FI.chargement ? vide('Lecture des fiches…') : FI.motif ? vide(esc(FI.motif)) : !FI.lignes.length ? vide('Personne dans ce magasin pour l’instant.') : `<div style="${groupeSt};margin-top:12px">${FI.lignes.map((l, i) => `
         <div data-fi-ligne="${esc(String(l.emp))}" ${x.A(l.basculer)} role="button" aria-expanded="${l.ouvert}" style="display:flex;align-items:center;gap:16px;padding:12px 18px;cursor:pointer;${i ? `border-top:${filet};` : ''}">
           <span style="font-size:9px;color:${muet};width:8px">${l.ouvert ? '▾' : '▸'}</span>
           <span style="flex:0 0 180px;min-width:0;font:600 14px/1.3 ${sf};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.nom)}</span>
@@ -7478,32 +7538,25 @@ function tplPrimesApp(c, x){
           <span style="flex:1;min-width:0;font:400 13px/1.35 ${sf};color:${l.complet >= 100 ? '#2d7a3e' : muet};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.manque)}</span>
           ${l.corrections ? `<span title="Changé dans l’app : à reporter dans le panel" style="flex:none;font:500 12px ${sf};color:#A35F00;background:#FBEFE0;border-radius:999px;padding:3px 9px">à reporter : ${esc(l.corrections)}</span>` : ''}
           <span style="flex:none;font:400 12px ${sf};color:${muet};white-space:nowrap">${esc(l.maj)}</span>
-        </div>${l.ouvert ? detailFi(FI.detail) : ''}`).join('')}</div>`}
-    </section>`;
-    const marque = `<section data-pr="fr-marque" class="prl-mag">
-      ${tete('Primes de la marque et des sponsors', FR.marque.length + ' qui tournent ici, réglées par la marque' + (FR.marqueOuvert ? '.' : ' — déjà en colonnes dans le tableau.'),
-        FR.marque.length ? `<button ${x.A(FR.basculerMarque)} data-pr-marque-bascule aria-expanded="${FR.marqueOuvert}" style="${btS}">${FR.marqueOuvert ? 'Masquer' : 'Voir le détail'}</button>` : '')}
-      ${!FR.marque.length ? vide('Aucune prime de la marque ni des sponsors ne tourne dans ce magasin pour l’instant.') : FR.marqueOuvert ? groupes(FR.marque, ligneLire, 'Ce magasin') : ''}
-    </section>`;
-    const siennes = `<section data-pr="fr-magasin" class="prl-mag">
-      ${tete('Les primes du magasin', 'Payées par le magasin, pour ses vendeuses seules : promotion, catégorie, ventes croisées, objectif CA, note Google, clients pro. Six de chaque sorte au plus.',
-        FR.nouvelle ? `<button ${x.A(FR.nouvelle)} style="${btP}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin</button>` : '')}
-      ${FR.siennes.length ? groupes(FR.siennes, null, 'Ce magasin') : vide('Aucune prime du magasin pour l’instant : posez la première, ses chiffres sont juste en dessous.')}
-    </section>`;
+        </div>${l.ouvert ? detailFi(FI.detail) : ''}`).join('')}</div>`}`);
+    // Les titres des deux familles portent leur pastille : la même couleur que leurs colonnes dans le tableau.
+    const titreB = (b, t) => `<span style="display:inline-flex;align-items:center;gap:9px"><span aria-hidden="true" style="width:10px;height:10px;border-radius:3px;background:${BANDE[b].trait};flex:none"></span>${t}</span>`;
+    const marque = volet('marque', FR.volets.marque, titreB('marque', 'Primes de la marque et des sponsors'), esc(FR.resumes.marque) + (FR.marque.length ? ' — à lire seulement.' : '.'), '',
+      !FR.marque.length ? vide('Aucune prime de la marque ni des sponsors ne tourne dans ce magasin pour l’instant.') : groupes(FR.marque, ligneLire, 'Ce magasin'));
+    const siennes = volet('magasin', FR.volets.magasin, titreB('magasin', 'Les primes du magasin'), esc(FR.resumes.magasin) + ' — six de chaque sorte au plus ; toucher une prime la modifie.', '',
+      FR.siennes.length ? groupes(FR.siennes, null, 'Ce magasin') : vide(`<span style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="flex:1">Aucune prime du magasin pour l’instant : posez la première, les chiffres du magasin aident à régler ses seuils.</span>${FR.nouvelle ? `<button ${x.A(FR.nouvelle)} style="${btP}" data-pr-nouvelle-mag>+ Créer une nouvelle prime</button>` : ''}</span>`));
     // Les chiffres : des tuiles sur une liste blanche, le magasin en grand, le réseau en gris.
     const grille = ls => `<div style="${groupeSt};display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));padding:4px 0">${ls.map(s => `<div style="padding:12px 18px;min-width:0">
         <div style="font:400 12.5px/1.3 ${sf};color:${muet}">${esc(s.lib)}</div>
         <div style="font:600 21px/1.25 ${sf};font-variant-numeric:tabular-nums;margin-top:4px;color:var(--color-text)">${esc(s.v)}</div>
         ${s.sous || s.reseau ? `<div style="font:400 11.5px/1.4 ${sf};color:${muet};margin-top:3px">${esc([s.sous, s.reseau].filter(Boolean).join(' · '))}</div>` : ''}</div>`).join('')}</div>`;
     const sousTitre = t => `<div style="${titreG}">${esc(t)}</div>`;
-    const donnees = `<section data-pr="fr-donnees">
-      ${tete('Les chiffres du magasin', FR.periode ? esc(FR.periode) + ' · par mois, face au réseau' : 'Par mois, face au réseau',
-        `<div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${FR.ns.map(k => `<button ${x.A(k.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:500 12.5px ${sf};cursor:pointer;background:${k.on ? 'var(--color-surface)' : 'transparent'};color:${k.on ? 'var(--color-text)' : muet}">${esc(k.nom)}</button>`).join('')}</div>`)}
-      ${FR.moyChargement ? vide('Calcul des moyennes…') : FR.moyMotif ? vide(esc(FR.moyMotif)) : `
-      <div style="margin-top:14px">${grille(FR.donnees)}</div>
+    const donnees = volet('donnees', FR.volets.donnees, 'Les chiffres du magasin', (FR.periode ? esc(FR.periode) + ' · ' : '') + esc(FR.resumes.donnees) + ' — pour régler les seuils des primes.',
+        `<div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${FR.ns.map(k => `<button ${x.A(k.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:500 12.5px ${sf};cursor:pointer;background:${k.on ? 'var(--color-surface)' : 'transparent'};color:${k.on ? 'var(--color-text)' : muet}">${esc(k.nom)}</button>`).join('')}</div>`,
+      `${FR.moyChargement ? vide('Calcul des moyennes…') : FR.moyMotif ? vide(esc(FR.moyMotif)) : `
+      <div style="margin-top:12px">${grille(FR.donnees)}</div>
       ${FR.pieces.length ? sousTitre('Pièces par vendeuse et par mois') + grille(FR.pieces.map(p => ({ lib: p.lib, v: p.v, reseau: p.reseau ? 'réseau ' + p.reseau : '' }))) : ''}
-      ${FR.promosVend.length ? sousTitre('Promotions en cours · pièces par vendeuse') + grille(FR.promosVend.map(p => ({ lib: p.lib, v: p.v, sous: p.du ? 'dès le ' + p.du : '', reseau: p.reseau ? 'réseau ' + p.reseau : '' }))) : ''}`}
-    </section>`;
+      ${FR.promosVend.length ? sousTitre('Promotions en cours · pièces par vendeuse') + grille(FR.promosVend.map(p => ({ lib: p.lib, v: p.v, sous: p.du ? 'dès le ' + p.du : '', reseau: p.reseau ? 'réseau ' + p.reseau : '' }))) : ''}`}`);
     // Les promotions du panel qui tournent ici : une prime du magasin en un geste.
     const PF = FR.promos;
     const ligneProm = (p, i) => `<div style="display:flex;align-items:center;gap:14px;padding:13px 18px;${i ? `border-top:${filet};` : ''}">
@@ -7513,11 +7566,11 @@ function tplPrimesApp(c, x){
         </span>
         <span style="flex:none">${p.statutMag ? `<span style="font:600 13px ${sf};color:${p.statutMag === 'prime du magasin' ? 'var(--color-primary)' : muet}">${p.statutMag === 'prime du magasin' ? '✓ ' : ''}${esc(p.statutMag)}</span>` : p.ajouter ? `<button ${x.A(p.ajouter)} style="${btS};background:var(--color-background-secondary)" data-pr-promo-mag>+ Prime du magasin</button>` : ''}</span>
       </div>`;
-    const promosIci = `<section data-pr="fr-promos">
-      ${tete('Promotions du panel dans ce magasin', 'Une prime du magasin en un geste.', `<button ${x.A(PF.relire)} style="${btS}">Relire</button>`)}
-      ${PF.chargement ? vide('Lecture des promotions…') : PF.motif ? vide(esc(PF.motif)) : !PF.liste.length ? vide('Aucune promotion du panel ne tourne dans ce magasin.') : `<div style="${groupeSt};margin-top:14px">${PF.liste.map(ligneProm).join('')}</div>`}
-    </section>`;
-    return equipe + fiches + marque + siennes + donnees + promosIci;
+    const promosIci = volet('promos', FR.volets.promos, 'Promotions du panel dans ce magasin', esc(FR.resumes.promos) + ' — une prime du magasin en un geste.', `<button ${x.A(PF.relire)} style="${btS};background:var(--color-background-secondary)">Relire</button>`,
+      PF.chargement ? vide('Lecture des promotions…') : PF.motif ? vide(esc(PF.motif)) : !PF.liste.length ? vide('Aucune promotion du panel ne tourne dans ce magasin.') : `<div style="${groupeSt};margin-top:12px">${PF.liste.map(ligneProm).join('')}</div>`);
+    // L'ordre (31/10/2026) : « Créer une nouvelle prime » au-dessus, l'avancement des vendeuses déplié, puis les volets
+    // repliés — les primes du magasin, celles de la marque, les promotions du panel, les chiffres, les fiches.
+    return entete + `<div data-pr-volets style="display:flex;flex-direction:column;gap:10px">${equipe + siennes + marque + promosIci + donnees + fiches}</div>`;
   };
   return `
 <div data-screen="primesApp" style="display:flex;flex-direction:column;gap:34px;max-width:1560px;font-family:${sf}">
