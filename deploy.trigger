@@ -1197,3 +1197,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T07:43:47Z prévision 13 semaines : palettes par client, client exclu (migration 145) [226]
 2026-10-31T08:50:06Z [227] zadanie = kreator, cron, przypomnienia, Kto co zrobił
 2026-10-31T08:50:36Z [app] Planning : lu a la route du planning du panel par le cockpit (#84)
+2026-10-31T09:09:03Z [227] Mój tydzień : ikona znaczka miesiąca
