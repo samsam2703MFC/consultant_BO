@@ -8,7 +8,7 @@ let pw; try { pw = require('playwright'); } catch (e) { pw = require('/opt/node2
   const p = await b.newPage({ viewport: { width: 1440, height: 950 } });
   const err = []; p.on('pageerror', e => err.push(e.message));
   const mes = {};
-  for (const m of ['a', 'a-jour', 'b', 'g', 'g-matieres', 'c', 'd', 'e', 'f']) {
+  for (const m of ['a', 'a-jour', 'b', 'g', 'g-matieres', 'c', 'd', 'e', 'f', 'h']) {
     await p.goto('http://127.0.0.1:8099/docs/maquettes/verification/' + m + '.html', { waitUntil: 'networkidle' });
     await p.evaluate(() => document.fonts.ready);
     mes[m] = { hauteur: await p.evaluate(() => document.documentElement.scrollHeight), debordement: await p.evaluate(() => document.documentElement.scrollWidth > innerWidth) };

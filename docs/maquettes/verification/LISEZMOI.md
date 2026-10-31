@@ -34,6 +34,7 @@ pour le CEO seul (pas d'envoi) ; pas d'alerte pour l'instant.
 | `c.png` | Matières ↔ recettes | D'un inventaire hebdomadaire à l'autre : stock + entré − stock = consommé réel, face au théorique des recettes, matière par matière ; d'où vient l'écart |
 | `d.png` | Chiffre d'affaires | Caisse, P&L, base des redevances, CA attendu par la matière ; lignes sans produit, annulations ; les jours à regarder |
 | `e.png` | La bascule allumée | Les 37 recettes douteuses ou manquantes, classées par CA concerné ; la couverture vers 100 % |
+| `h.png` | **Entre deux inventaires — le détail d’un produit** (demande du 31/10, chiffres réels de Corbais) | L’écran Inventaires tel qu’il est ; une ligne de « Matière par matière » cliquée s’ouvre sur le tableau de **tous ses mouvements** d’un inventaire à l’autre : une ligne par jour (ou par mouvement), les + et les − en colonnes (livraison validée, entrée et correction à la main, vendu et jeté par les recettes), le stock théorique du matin et du soir, l’inventaire qui ferme la période, ce qui s’est passé à l’heure près ; puis vendu par produit et **semaine par semaine** d’un inventaire à l’autre. Générée par `h-inventaire.js` |
 | `f.png` | Évolution | Ce que montre la base quotidienne : douze semaines, avant / après, mieux ou moins bien |
 
 `planche.jpg` : tous les écrans sur une seule image.
