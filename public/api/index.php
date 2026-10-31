@@ -104,6 +104,7 @@ require __DIR__ . '/../../src/primes_app.php';
 require __DIR__ . '/../../src/primes_b2b.php';
 require __DIR__ . '/../../src/api_module.php';
 require __DIR__ . '/../../src/profil_employe.php';
+require __DIR__ . '/../../src/primes_fiches.php';
 require __DIR__ . '/../../src/planning_moi.php';
 require __DIR__ . '/../../src/grands_prix.php';
 require __DIR__ . '/../../src/promos_magasin.php';
@@ -472,6 +473,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/primes-annee'          => ep_primes_annee(),
             $path === '/ventes/primes-api'            => ep_primes_api(),
             $path === '/ventes/equipe/profils'        => ep_profils_equipe(),
+            $path === '/ventes/primes-fiches/equipe'  => ep_primes_fiches_equipe(),
             $path === '/ventes/equipe/profil'         => ep_profil_equipe(),
             $path === '/ventes/equipe/profil/carte'   => ep_profil_carte(),
             $path === '/ventes/primes-promos'         => ep_primes_promos(),
@@ -682,6 +684,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ventes/croisees') { return wr_croisees(); }
     if ($method === 'POST' && $path === '/ventes/primes-app') { return wr_primes_app(); }
     if ($method === 'POST' && $path === '/ventes/primes-icone') { return wr_primes_icone(); }
+    if ($method === 'POST' && $path === '/ventes/primes-fiches/envoyer') { return wr_primes_fiches_envoyer(); }
     if ($method === 'POST' && $path === '/ventes/grands-prix') { return wr_grands_prix(); }
     if ($method === 'POST' && $path === '/ventes/grands-prix/retirer') { return wr_grands_prix_retirer(); }
     if ($method === 'POST' && $path === '/croisements/combo') { return wr_croisement_combo(); }
