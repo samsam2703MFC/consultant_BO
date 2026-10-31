@@ -224,6 +224,28 @@ verifie('les trois questions seulement, dans l’ordre : rien ne s’ajoute ni n
 $sc = viScore(array_merge([viPhotosNormalise(null)], $cl), array_merge($pts, [['module' => 'photos', 'ref' => 'jour_facade', 'etat' => 'ok'], ['module' => 'photos', 'ref' => 'jour_arriere', 'etat' => 'ko']]));
 verifie('le score compte les photos, en tête (façade OK, arrière écart → 50)', $sc['modules'][0]['id'] === 'photos' && $sc['modules'][0]['score'] === 50 && $sc['n'] === 8, json_encode($sc['modules'][0]));
 
+// --- La charte de communication : un support par question, Oui / Non et photo (31/10/2026) ----------------------
+echo "\nCharte de communication : un support, une photo, Oui / Non\n";
+$ch = viCharteNormalise(null);
+verifie('défaut : les supports livrés, tous Oui / Non, photo exigée, FR et NL', $ch['id'] === 'charte' && !empty($ch['charte']) && count($ch['points']) === count(VI_CHARTE_DEFAUT)
+    && array_unique(array_column($ch['points'], 'type')) === ['ouinon'] && !in_array(false, array_column($ch['points'], 'photoExigee'), true)
+    && !in_array(false, array_column($ch['points'], 'photo'), true) && $ch['nom_nl'] === 'Huisstijl en communicatie'
+    && in_array('ch_billboard', array_column($ch['points'], 'ref'), true) && in_array('ch_leaflets', array_column($ch['points'], 'ref'), true), json_encode($ch['points'][0] ?? null, JSON_UNESCAPED_UNICODE));
+verifie('défaut : chaque support dit où il se regarde (billboard dehors, leaflets dedans)', array_column($ch['points'], 'lieu', 'ref')['ch_billboard'] === 'ext' && array_column($ch['points'], 'lieu', 'ref')['ch_leaflets'] === 'int');
+$ch = viCharteNormalise(['nom' => 'Charte', 'points' => [
+    ['ref' => 'ch_affiches', 'libelle' => 'Affiches A2', 'type' => 'note', 'photo' => false, 'poids' => 2, 'lieu' => 'ext'],
+    ['ref' => 'ch_affiches', 'libelle' => 'Totem'],
+    ['libelle' => 'Drapeaux', 'lieu' => 'nulle part'],
+    ['ref' => 'ch_vide', 'libelle' => '']]]);
+verifie('réglée : le type et la photo ne se règlent pas, le poids oui ; une référence en double ou absente en reçoit une', count($ch['points']) === 3
+    && array_column($ch['points'], 'type') === ['ouinon', 'ouinon', 'ouinon'] && array_column($ch['points'], 'photoExigee') === [true, true, true] && $ch['points'][0]['poids'] === 2
+    && $ch['points'][0]['ref'] === 'ch_affiches' && $ch['points'][1]['ref'] !== 'ch_affiches' && $ch['points'][2]['ref'] !== '' && $ch['nom'] === 'Charte', json_encode($ch['points'], JSON_UNESCAPED_UNICODE));
+verifie('réglée : un lieu inconnu → dedans', array_column($ch['points'], 'lieu') === ['ext', 'int', 'int']);
+verifie('tous les supports retirés : le module reste vide (il disparaît des visites)', viCharteNormalise(['points' => []])['points'] === []);
+$sc = viScore(array_merge([viPhotosNormalise(null)], $cl, [viCharteNormalise(null)]), [['module' => 'charte', 'ref' => 'ch_affiches', 'etat' => 'ok'], ['module' => 'charte', 'ref' => 'ch_billboard', 'etat' => 'ko'],
+    ['module' => 'charte', 'ref' => 'ch_leaflets', 'etat' => 'ok'], ['module' => 'charte', 'ref' => 'ch_menu', 'etat' => 'ok']]);
+verifie('le score compte la charte, sous son nom (3 Oui sur 4 → 75)', $sc['modules'][0]['id'] === 'charte' && $sc['modules'][0]['score'] === 75 && $sc['modules'][0]['nom'] === 'Charte de communication', json_encode($sc['modules'][0], JSON_UNESCAPED_UNICODE));
+
 // --- Les finances du franchisé, dans la météo (28/10/2026) -----------------------------------------------------
 echo "\nMétéo du franchisé : finances\n";
 require __DIR__ . '/../src/franchises.php';

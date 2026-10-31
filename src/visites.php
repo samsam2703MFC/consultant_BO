@@ -294,6 +294,12 @@ function viPhotos(): array
     return viPhotosNormalise(setting('visitesPhotos', null));
 }
 
+/** La charte de communication (src/visites_questions.php, viCharteNormalise) : un support par question, Oui / Non et photo. */
+function viCharte(): array
+{
+    return viCharteNormalise(setting('visitesCharte', null));
+}
+
 function viSeuilsDefaut(): array
 {
     return [
@@ -820,7 +826,7 @@ function ep_visites_app(): array
     return ['role' => $role, 'id' => $id, 'shop' => $shop, 'maintenant' => date('Y-m-d H:i'),
         'boutiques' => $e['boutiques'], 'consultants' => array_map(fn ($c) => $c + ['profil' => function_exists('vcProfilDe') ? vcProfilDe($c['id']) : '', 'profilNom' => function_exists('vcProfilDe') ? vcProfilNom(vcProfilDe($c['id'])) : ''], viConsultants()),
         'visites' => $visites, 'points' => $points, 'photos' => $photos, 'plans' => $e['plans'],
-        'msp' => $e['msp'], 'equipe' => $e['equipe'], 'checklist' => viChecklist(), 'photosQuestions' => viPhotos(), 'types' => $types, 'cadre' => function_exists('vcCadre') ? vcCadre() : [], 'taches' => $taches,
+        'msp' => $e['msp'], 'equipe' => $e['equipe'], 'checklist' => viChecklist(), 'photosQuestions' => viPhotos(), 'charte' => viCharte(), 'types' => $types, 'cadre' => function_exists('vcCadre') ? vcCadre() : [], 'taches' => $taches,
         'causes' => viCausesPlano(), 'causesDiag' => viCausesDiag(), 'seuils' => viSeuils(),
         // Bilingue (26/10/2026) : la langue de chaque magasin (Qui fait quoi, sinon sa région) ouvre la checklist en FR ou en NL.
         'langues' => function_exists('suLangue') ? (object) array_map(static fn ($id) => suLangue((string) $id), array_combine(array_keys($mags), array_keys($mags)) ?: []) : (object) [],
@@ -1026,8 +1032,9 @@ function viScoreVisite(array $v, bool $fige = true): ?array
     if (viTypeDynamique($v)) { return null; }
     if ($fige && !empty($v['score']) && is_array($x = json_decode((string) $v['score'], true))) { return $x; }
     $pts = array_map('viPointLigne', Db::rows('SELECT * FROM con_visite_point WHERE visite_id = ?', [(int) $v['id']]));
-    // Les photos du jour comptent avec la checklist, en tête (la tablette fait de même, visites.js scoreDe).
-    $s = viScore(array_merge([viPhotos()], viChecklistVisite($v)), $pts);
+    // Les photos du jour comptent avec la checklist, en tête, la charte de communication à la suite (la tablette fait
+    // de même, visites.js scoreDe).
+    $s = viScore(array_merge([viPhotos()], viChecklistVisite($v), [viCharte()]), $pts);
     return $s['score'] === null ? null : $s;
 }
 
@@ -1335,6 +1342,8 @@ function wr_visites_reglages_put(): array
     }
     // Les questions des photos du jour : trois, fixes ; leur type, leurs libellés, leur score se règlent.
     if (isset($b['photos']) && is_array($b['photos'])) { viSettingSet('visitesPhotos', viPhotosNormalise($b['photos'])); }
+    // La charte de communication : les supports s'ajoutent et se retirent ; chacun reste Oui / Non avec photo exigée.
+    if (isset($b['charte']) && is_array($b['charte'])) { viSettingSet('visitesCharte', viCharteNormalise($b['charte'])); }
     if (isset($b['seuils']) && is_array($b['seuils'])) {
         $s = viSeuils(); $d = viSeuilsDefaut();
         foreach ($d as $k => $v) {
@@ -1358,7 +1367,7 @@ function wr_visites_reglages_put(): array
         foreach ($b['frequence'] as $shop => $j) { if (isset(viMagasins()[(string) $shop]) && (int) $j > 0) { $f[(string) $shop] = min(90, (int) $j); } }
         viSettingSet('visitesFrequence', $f);
     }
-    return ['ok' => true, 'checklist' => viChecklist(), 'photos' => viPhotos(), 'seuils' => viSeuils(), 'frequence' => setting('visitesFrequence', []) ?: (object) []];
+    return ['ok' => true, 'checklist' => viChecklist(), 'photos' => viPhotos(), 'charte' => viCharte(), 'seuils' => viSeuils(), 'frequence' => setting('visitesFrequence', []) ?: (object) []];
 }
 
 /* --- synthèse et horloge ------------------------------------------------------- */
@@ -1527,7 +1536,7 @@ function wr_visites_tick(): array
 function ep_visites_reglages(): array
 {
     ensureVisites();
-    return ['checklist' => viChecklist(), 'photos' => viPhotos(), 'seuils' => viSeuils(), 'frequence' => setting('visitesFrequence', []) ?: (object) [],
+    return ['checklist' => viChecklist(), 'photos' => viPhotos(), 'charte' => viCharte(), 'seuils' => viSeuils(), 'frequence' => setting('visitesFrequence', []) ?: (object) [],
         'types' => function_exists('vcTypesCourts') ? vcTypesCourts() : [], 'cadre' => function_exists('vcCadre') ? vcCadre() : [],
         'cron' => setting('visitesCron', []) ?: (object) [], 'cronUrl' => rtrim(rapBaseUrl(), '/') . '/api/cockpit/visites/cron?jeton=' . rawurlencode((string) setting('visitesJeton', '')),
         'smtp' => class_exists('Smtp') && Smtp::configured(), 'magasins' => array_values(viMagasins()), 'consultants' => viConsultants()];

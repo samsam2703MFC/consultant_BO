@@ -36,6 +36,23 @@
     { ref: 'jour_facade', libelle: 'Façade (photo du jour)', libelle_nl: 'Gevel (foto van de dag)', type: 'etat', photo: true, score: true, poids: 1 },
     { ref: 'jour_arriere', libelle: 'Arrière (photo du jour)', libelle_nl: 'Achterkant (foto van de dag)', type: 'etat', photo: true, score: true, poids: 1 },
     { ref: 'jour_interieur', libelle: 'Intérieur (photo du jour)', libelle_nl: 'Binnenkant (foto van de dag)', type: 'etat', photo: true, score: true, poids: 1 }] };
+  // La charte de communication (31/10/2026, Sam : « le respect du cahier des charges de communication et du design
+  // system branding de la marque : affiche, leaflet, bâches, billboard… ; chaque point, une photo avec oui ou non ») :
+  // un support par question, Oui (conforme) / Non, la photo exigée. Les supports viennent des réglages
+  // (src/visites_questions.php, viCharteNormalise ; /visites/app → charte). Ceci n'est que le secours hors ligne.
+  const CH_PT = (ref, libelle, libelle_nl, aide, aide_nl, lieu) => ({ ref, libelle, libelle_nl, aide, aide_nl, lieu, type: 'ouinon', photo: true, photoExigee: true, score: true, poids: 1 });
+  const CHARTE_Q = { id: 'charte', nom: 'Charte de communication', nom_nl: 'Huisstijl en communicatie', charte: true, points: [
+    CH_PT('ch_billboard', 'Billboard et panneaux publicitaires conformes', 'Billboard en reclameborden conform', 'Campagne du réseau en cours, affiche intacte, éclairée s’il y a un éclairage.', 'Lopende netwerkcampagne, affiche intact, verlicht als er verlichting is.', 'ext'),
+    CH_PT('ch_baches', 'Bâches et kakémonos conformes', 'Spandoeken en roll-ups conform', 'Visuel officiel, propres, bien tendus, sans déchirure ni décoloration.', 'Officiële visual, proper, goed gespannen, niet gescheurd of verkleurd.', 'ext'),
+    CH_PT('ch_vitrine', 'Vitrophanie et vitrine conformes', 'Raamstickers en etalage conform', 'Adhésifs de la marque intacts, campagne du moment, horaires au modèle du réseau.', 'Merkstickers intact, campagne van het moment, openingsuren volgens het netwerkmodel.', 'ext'),
+    CH_PT('ch_affiches', 'Affiches conformes à la charte', 'Affiches conform de huisstijl', 'Format et visuel de la campagne en cours, logo, couleurs et typographies de la marque ; rien de périmé.', 'Formaat en visual van de lopende campagne, logo, kleuren en lettertypes van het merk; niets verouderd.', 'ext'),
+    CH_PT('ch_chevalet', 'Chevalet et stop-trottoir conformes', 'Stoepbord conform', 'Modèle de la marque, message à jour, lisible, aux couleurs de la charte.', 'Merkmodel, actuele boodschap, leesbaar, in de huisstijlkleuren.', 'ext'),
+    CH_PT('ch_leaflets', 'Leaflets et flyers conformes', 'Folders en flyers conform', 'Modèle du réseau, à jour, rangés au comptoir dans leur présentoir.', 'Netwerkmodel, actueel, netjes in hun houder aan de toonbank.', 'int'),
+    CH_PT('ch_plv', 'PLV et présentoirs conformes', 'POS-materiaal en displays conform', 'Présentoirs, stop-rayons et étiquettes du réseau ; les promotions en cours seulement.', 'Displays, schapstoppers en etiketten van het netwerk; enkel de lopende promoties.', 'int'),
+    CH_PT('ch_menu', 'Menu board et écrans conformes', 'Menubord en schermen conform', 'Gabarit du réseau, prix à jour, typographies et couleurs de la marque.', 'Netwerksjabloon, actuele prijzen, lettertypes en kleuren van het merk.', 'int'),
+    CH_PT('ch_emballages', 'Sacs et emballages de la marque', 'Zakken en verpakkingen van het merk', 'Modèles référencés seulement, logo net ; aucun emballage neutre ou d’une autre enseigne.', 'Enkel gerefereerde modellen, duidelijk logo; geen neutrale verpakking of van een andere keten.', 'int'),
+    CH_PT('ch_tenues', 'Tenues de l’équipe aux couleurs de la marque', 'Kledij van het team in de merkkleuren', 'Tablier, casquette ou toque, badge prénom au modèle du réseau.', 'Schort, pet of koksmuts, naambadge volgens het netwerkmodel.', 'int'),
+    CH_PT('ch_hors_charte', 'Aucun support hors charte', 'Geen dragers buiten de huisstijl', 'Rien de fait maison, manuscrit ou imprimé au magasin ; logo, couleurs et polices jamais modifiés.', 'Niets zelfgemaakt, handgeschreven of in de winkel afgedrukt; logo, kleuren en lettertypes nooit aangepast.', 'int')] };
   const repondu = p => !!p && (!!p.etat || p.note != null || p.valeur != null);
   const RUBRIQUES_MSP = ['Accueil', 'Produits', 'Hygiène', 'Ambiance'];
   const METEO_ECH = [['moral', 'Moral'], ['envie', 'Envie, motivation'], ['equipe', 'Climat de l’équipe'], ['relation', 'Relation avec le réseau']];
@@ -420,6 +437,9 @@
 .vi.tab .pt.t .att-t{margin:6px 0 0;font-size:13px}
 .vi.tab .pt.t .act{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .vi.tab .pt.t .act .chip{min-height:38px;padding:0 12px;font-size:12.5px}
+/* La charte de communication (31/10/2026) : la photo exigée d'un support, tant qu'elle n'est pas prise. */
+.vi .chip.exige{border-color:#B26A00;color:#8a5200;background:#FFF4E5}
+.vi .ch-intro{font-size:12px;color:var(--color-text-muted);margin:0 2px 8px;line-height:1.45}.vi.tab .ch-intro{font-size:13.5px;margin-bottom:12px}
 .vi.tab .pt.t .act input[type=text]{min-height:40px;font-size:13.5px !important;border-radius:10px}
 .vi.tab .pt.t input[type=number]{height:44px;width:84px !important;font-size:15px}
 .vi.tab .tri{display:inline-flex;border-radius:12px;overflow:hidden;border:.5px solid var(--color-border-secondary);flex:0 0 auto}
@@ -567,8 +587,10 @@
    * c'est la référence du rapport et des plans.
    */
   const LNG = {
-    fr: { ok: 'OK', ko: 'Écart', na: 'N/A', oui: 'Oui', non: 'Non', rem: 'Remarque…', rep: 'La réponse…', photo: 'Photo', photos: 'photos', multi: 'plusieurs choix possibles', points: 'points', tous: '✓ Toutes les autres sont là', bornes: 'attendu', nc: 'non conforme' },
-    nl: { ok: 'OK', ko: 'Afwijking', na: 'N.v.t.', oui: 'Ja', non: 'Nee', rem: 'Opmerking…', rep: 'Het antwoord…', photo: 'Foto', photos: 'foto’s', multi: 'meerdere keuzes mogelijk', points: 'punten', tous: '✓ Alle andere zijn aanwezig', bornes: 'verwacht', nc: 'niet conform' }
+    fr: { ok: 'OK', ko: 'Écart', na: 'N/A', oui: 'Oui', non: 'Non', rem: 'Remarque…', rep: 'La réponse…', photo: 'Photo', photos: 'photos', multi: 'plusieurs choix possibles', points: 'points', tous: '✓ Toutes les autres sont là', bornes: 'attendu', nc: 'non conforme',
+      phExige: 'Photo à prendre', chIntro: 'Le cahier des charges de communication et le design system de la marque, support par support : la photo, puis Oui (conforme) ou Non (absent, abîmé, périmé ou hors charte). Sans photo, le support n’est pas vu.', chExt: 'dehors', chInt: 'dedans' },
+    nl: { ok: 'OK', ko: 'Afwijking', na: 'N.v.t.', oui: 'Ja', non: 'Nee', rem: 'Opmerking…', rep: 'Het antwoord…', photo: 'Foto', photos: 'foto’s', multi: 'meerdere keuzes mogelijk', points: 'punten', tous: '✓ Alle andere zijn aanwezig', bornes: 'verwacht', nc: 'niet conform',
+      phExige: 'Foto te nemen', chIntro: 'Het communicatielastenboek en het designsysteem van het merk, drager per drager: de foto, dan Ja (conform) of Nee (afwezig, beschadigd, verouderd of buiten de huisstijl). Zonder foto is de drager niet gezien.', chExt: 'buiten', chInt: 'binnen' }
   };
   const libDe = (x, l) => (l === 'nl' && x.libelle_nl) ? x.libelle_nl : x.libelle;
   const nomDe = (m, l) => (l === 'nl' && m.nom_nl) ? m.nom_nl : m.nom;
@@ -793,7 +815,10 @@
     /** La checklist d'une visite : les points demandés par le bureau en tête, puis celle de son type. */
     checklistDe(v) {
       const t = this.typeDe(v.type);
-      const cl = this.avecExterieur((t && t.dynamique ? [] : [MOD_XP]).concat(this.avecObligatoires(this.checklistType(v), v.shop), t && t.dynamique ? [] : [MOD_LEVIERS]));
+      // La charte de communication vient après « L'extérieur » : ses supports dehors ne s'y mêlent pas.
+      const ch = t && t.dynamique ? null : this.charteQ();
+      const cl = this.avecExterieur((t && t.dynamique ? [] : [MOD_XP]).concat(this.avecObligatoires(this.checklistType(v), v.shop), t && t.dynamique ? [] : [MOD_LEVIERS]))
+        .concat(ch && ch.points.length ? [ch] : []);
       const pts = (v.prep && v.prep.points) || [];
       if (!pts.length) { return cl; }
       return [{ id: 'bureau', nom: 'Demandé par le bureau', nom_nl: 'Gevraagd door het kantoor', bureau: true, points: pts.map(p => ({ ref: p.ref, libelle: p.libelle, photo: true, pct: false })) }].concat(cl);
@@ -814,6 +839,8 @@
     tempsModule(m) {
       if (m.bureau || m.revisite || m.id === 'suivi') { return 'suivi'; }
       if (m.leviers || m.id === 'msp') { return 'analyse'; }
+      // La charte : ses supports dehors au tour de l'extérieur, ceux de dedans à l'intérieur (v_controle la partage).
+      if (m.charte) { return m.lieu === 'int' ? 'int' : 'ext'; }
       return m.id === 'exterieur' ? 'ext' : 'int';
     }
     /**
@@ -1766,6 +1793,8 @@
     /** La définition d'une question, pour lire ses choix et ses bornes au moment d'y répondre. */
     /** Les questions des photos du jour, telles que réglées. */
     photosQ() { const m = this.D && this.D.photosQuestions; return m && Array.isArray(m.points) && m.points.length ? m : PHOTOS_Q; }
+    /** La charte de communication, telle que réglée (vide si tous ses supports ont été retirés). */
+    charteQ() { const m = this.D && this.D.charte; return m && Array.isArray(m.points) ? m : CHARTE_Q; }
     ptDef(vid, module, ref) {
       const vis = this.visite(vid);
       const m = module === 'photos' ? this.photosQ() : ((vis ? this.checklistDe(vis) : null) || this.D.checklist || []).find(x => x.id === module);
@@ -1814,12 +1843,17 @@
       const l = this.lngDe(v); const T = LNG[l];
 
         const msp = m.id === 'msp' ? b.msp : null;
-        const avant = m.leviers ? this.leviersHtml(v.shop) : m.obligatoires && !m.points.some(pt => pt.oblig) ? this.obligatoiresHtml(v.shop) : '';
+        const avant = m.leviers ? this.leviersHtml(v.shop) : m.obligatoires && !m.points.some(pt => pt.oblig) ? this.obligatoiresHtml(v.shop) : m.charte ? `<div class="ch-intro">${esc(T.chIntro)}</div>` : '';
         return `<div class="mod">${sansTitre ? (m.bureau ? '<div class="xs mu" style="margin:0 2px 6px">Les points que le bureau a ajoutés en préparant la visite.</div>' : '') : `<div class="th"><b>${esc(nomDe(m, l))}</b>${m.bureau ? '<span class="pill bur">bureau</span>' : this.src(m.id === 'planogramme' || m.id === 'assortiment' ? 'mix' : 'local')}<span class="sp"></span>${this.lngTog(v)}<span class="xs mu">${m.points.length} ${T.points}</span></div>`}
           ${avant}${msp ? `<div class="card" style="margin-bottom:6px"><div class="row"><b>${note1(msp.total)} / 20</b><span class="sp"></span><span class="xs mu">MSP ${esc(msp.mois)} · ${esc(msp.par)}</span></div><div class="sm" style="margin-top:4px">${Object.keys(msp.rubriques || {}).map(k => (msp.rubriques[k] < (this.D.seuils.mspAlerte || 12) ? '🔴 ' : msp.rubriques[k] < 16 ? '🟡 ' : '🟢 ') + esc(k) + ' ' + msp.rubriques[k]).join(' · ')}</div>${msp.commentaires ? `<div class="xs mu" style="margin-top:4px">« ${esc(msp.commentaires)} »</div>` : ''}${msp.fichier ? `<div class="act"><a class="chip" target="_blank" rel="noopener" href="${esc((this.o.racine || '') + msp.fichier)}">📄 Rapport PDF</a></div>` : ''}</div>` : m.id === 'msp' ? '<div class="sm mu" style="margin:0 2px 6px">Pas de rapport mystery shopper pour cette boutique (à saisir dans MSP et équipe).</div>' : ''}
           ${this.obligToggleHtml(v, m, pts, cnt)}${m.points.filter(pt => !pt.oblig).map(pt => {
-            cnt.total++; const p = pts[pt.ref] || {}; if (p.etat || p.note != null || p.valeur != null) { cnt.faits++; }
+            cnt.total++; const p = pts[pt.ref] || {};
             const phs = photos.filter(x => x.ref === pt.ref);
+            // Un point à photo exigée (la charte de communication) n'est vu qu'avec sa réponse ET sa photo.
+            const rep = !!(p.etat || p.note != null || p.valeur != null); const sansPh = !!pt.photoExigee && !phs.length;
+            if (rep && !sansPh) { cnt.faits++; }
+            if (sansPh) { cnt.sansPhoto = (cnt.sansPhoto || 0) + 1; }
+            if (!rep) { cnt.sansRep = (cnt.sansRep || 0) + 1; }
             const k = `${esc(v.id)}|${esc(pt.ref)}|${m.id}`;
             const tab = !!this.o.tablette; const t = typeQ(pt);
             // La photo type du rayon d'un point « Comptoir … » (src/rayons_photos.php) : la consigne sous le libellé, le bouton dans la ligne d'actions.
@@ -1829,7 +1863,7 @@
             const [ligne, dessous] = this.reponseHtml(pt, p, k, l, tab);
             const aide = libDe({ libelle: pt.aide, libelle_nl: pt.aide_nl }, l);
             const lib = `<b${tab ? '' : ' class="sm"'} style="flex:1">${esc(libDe(pt, l))}${aide ? `<small class="aide">${esc(aide)}</small>` : ''}</b>`;
-            const photoBtn = pt.photo || phs.length ? `<button class="chip" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' ' + (phs.length > 1 ? T.photos : T.photo.toLowerCase()) : T.photo}</button>` : '';
+            const photoBtn = pt.photo || phs.length ? `<button class="chip${sansPh ? ' exige' : ''}" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' ' + (phs.length > 1 ? T.photos : T.photo.toLowerCase()) : sansPh ? T.phExige : T.photo}</button>` : '';
             const act = `<div class="act">${typeBtn}${photoBtn}${phs.map(x => `<button class="ph-v" data-a="voir" data-v="${esc(x.client_id || x.id)}" style="background-image:url('${esc(this.photoSrc(x))}')"><small>${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</small></button>`).join('')}
               ${pt.pct ? Object.keys(causes).map(c => `<button class="chip ${(p.causes || []).includes(c) ? 'on' : ''}" data-a="cause" data-v="${k}|${c}">${esc(causes[c])}</button>`).join('') : ''}
               ${t === 'texte' ? '' : `<input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="${T.rem}" style="flex:1;${tab ? 'min-width:180px;padding:6px 10px' : 'min-width:120px;padding:5px 8px;font-size:12px'}">`}</div>`;
@@ -1944,8 +1978,12 @@
       const B = this.B[v.shop];
       const etapes = [];
       const jourPris = g => this.photosJour(v.shop).some(x => x.genre === g && String(x.prise_a).slice(0, 10) === t);
-      const mods = this.checklistDe(v).map(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true);
-        return { cle: 'mod:' + m.id, ic: m.id, court: nomDe(m, this.lngDe(v)), module: true, tps: this.tempsModule(m), ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: nomDe(m, this.lngDe(v)), etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }; });
+      // La charte de communication se partage en deux étapes (31/10/2026) : ses supports dehors au tour de l'extérieur
+      // (billboard, bâches, vitrine…), ceux de dedans à l'intérieur (leaflets, PLV, menu board…) — le même module.
+      const Tl = LNG[this.lngDe(v)];
+      const parLieu = m => m.charte && !m.revisite ? ['ext', 'int'].map(lieu => Object.assign({}, m, { lieu, points: m.points.filter(pt => (pt.lieu === 'ext' ? 'ext' : 'int') === lieu) })).filter(x => x.points.length) : [m];
+      const mods = [].concat(...this.checklistDe(v).map(parLieu)).map(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true);
+        return { cle: 'mod:' + m.id, ic: m.id, court: nomDe(m, this.lngDe(v)), module: true, tps: this.tempsModule(m), ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: nomDe(m, this.lngDe(v)) + (m.charte && m.lieu ? ' · ' + (m.lieu === 'ext' ? Tl.chExt : Tl.chInt) : ''), etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }; });
       const modsDe = tps => mods.filter(e => e.tps === tps);
       // 1. L'extérieur : la façade et l'arrière en photo, les points qui se regardent dehors.
       const nExt = ['jour_facade', 'jour_arriere'].filter(jourPris).length;
@@ -2001,7 +2039,12 @@
       // ne passent jamais seuls ; les étapes à lire ne bloquent jamais.
       etapes.forEach(e => {
         if (e.fait || e.lu) { return; }
-        if (e.module && e.n && e.n.total > 0) { const r = e.n.total - e.n.faits; e.manque = r + ' point' + (r > 1 ? 's' : '') + ' à remplir'; e.auto = true; }
+        if (e.module && e.n && e.n.total > 0) {
+          // La charte dit ce qui manque : les photos à prendre, les Oui / Non à donner.
+          const r = e.n.total - e.n.faits; const sp = e.n.sansPhoto || 0; const sr = e.n.sansRep || 0;
+          e.manque = sp ? [sp + ' photo' + (sp > 1 ? 's' : '') + ' à prendre', sr ? sr + ' réponse' + (sr > 1 ? 's' : '') + ' à donner' : ''].filter(Boolean).join(' · ') : r + ' point' + (r > 1 ? 's' : '') + ' à remplir';
+          e.auto = true;
+        }
         else if (e.ic === 'photo') {
           const aPrendre = e.tps === 'ext' ? 2 - nExt : (jourPris('jour_interieur') ? 0 : 1);
           e.manque = aPrendre ? (e.tps === 'ext' ? aPrendre + ' photo' + (aPrendre > 1 ? 's' : '') + ' à prendre' : 'la photo à prendre')
@@ -2311,7 +2354,7 @@
     reglagesEtapesHtml(B) {
       const D = this.D; const mods = []; const vus = {};
       const ajoute = (id, nom, tps) => { if (!id || vus[id]) { return; } vus[id] = true; mods.push(['mod:' + id, nom, tps]); };
-      ajoute('exterieur', 'L’extérieur (points de checklist)', 'ext'); ajoute('xp', MOD_XP.nom, 'int');
+      ajoute('exterieur', 'L’extérieur (points de checklist)', 'ext'); ajoute('charte', (this.charteQ().nom || CHARTE_Q.nom) + ' (supports dehors, puis dedans)', 'ext'); ajoute('xp', MOD_XP.nom, 'int');
       [].concat(D.checklist || [], ...((D.types || []).map(t => t.checklist || []))).forEach(m => ajoute(m.id, m.nom, m.id === 'msp' ? 'analyse' : 'int'));
       ajoute('bureau', 'Demandé par le bureau', 'suivi'); ajoute('leviers', MOD_LEVIERS.nom, 'analyse');
       const lignes = [['ext', 'photos_ext', 'L’extérieur en photo'], ...mods.filter(m => m[2] === 'ext').map(m => [m[2], m[0], m[1]]),
@@ -2341,13 +2384,14 @@
     reglagesChecklistHtml(cl) {
       const n = cl.reduce((a, m) => a + m.points.length, 0);
       const opt = (val, v, lab) => `<option value="${v}" ${val === v ? 'selected' : ''}>${esc(lab)}</option>`;
-      return `<div class="cap">Checklist (${n} questions) · français et néerlandais</div>` + cl.map((m, mi) => `<div class="card rg-mod"><div class="row"><b>${esc(m.nom)}</b><input type="text" class="rg-nl" data-f="clm|${mi}|nom_nl" value="${esc(m.nom_nl || '')}" placeholder="nom en néerlandais"><span class="sp"></span>${m.fixe ? '<span class="xs mu">une question par photo, pour toutes les visites</span>' : `<button class="chip" data-a="cl-add" data-v="${mi}">+ question</button>`}</div>
+      return `<div class="cap">Checklist (${n} questions) · français et néerlandais</div>` + cl.map((m, mi) => `<div class="card rg-mod"><div class="row"><b>${esc(m.nom)}</b><input type="text" class="rg-nl" data-f="clm|${mi}|nom_nl" value="${esc(m.nom_nl || '')}" placeholder="nom en néerlandais"><span class="sp"></span>${m.fixe ? '<span class="xs mu">une question par photo, pour toutes les visites</span>' : m.charte ? `<span class="xs mu">un support par question : Oui / Non, photo exigée, à chaque visite (hors suivi et revisite)</span><button class="chip" data-a="cl-add" data-v="${mi}">+ support</button>` : `<button class="chip" data-a="cl-add" data-v="${mi}">+ question</button>`}</div>${m.charte && !m.points.length ? '<div class="xs mu" style="margin:6px 2px">Aucun support : la charte de communication n’apparaît plus dans les visites.</div>' : ''}
         ${m.points.map((p, pi) => { const t = typeQ(p); const k = mi + '|' + pi;
           const choix = t === 'choix' || t === 'multi' ? `<div class="rg-ch">${(p.choix || []).map((c, ci) => `<div class="row"><input type="text" data-f="clc|${k}|${ci}|fr" value="${esc(c.fr || '')}" placeholder="réponse en français"><input type="text" data-f="clc|${k}|${ci}|nl" value="${esc(c.nl || '')}" placeholder="antwoord in het Nederlands"><button class="chip ${c.ko ? 'ko on' : ''}" data-a="clc-ko" data-v="${k}|${ci}" title="cette réponse est un écart">écart</button><button class="chip ko" data-a="clc-del" data-v="${k}|${ci}">×</button></div>`).join('')}
             <button class="chip" data-a="clc-add" data-v="${k}">+ réponse</button><span class="xs mu"> « écart » : cette réponse rend le point non conforme.</span></div>` : '';
           const nombre = t === 'nombre' ? `<div class="row rg-nb"><label>min</label><input type="number" step="any" data-f="cl|${k}|min" value="${p.min != null ? esc(p.min) : ''}"><label>max</label><input type="number" step="any" data-f="cl|${k}|max" value="${p.max != null ? esc(p.max) : ''}"><label>unité</label><input type="text" data-f="cl|${k}|unite" value="${esc(p.unite || '')}" placeholder="kg, °C, pièces…"><span class="xs mu">hors des bornes : écart</span></div>` : '';
-          return `<div class="rg-q"><div class="row"><input type="text" data-f="cl|${k}|libelle" value="${esc(p.libelle)}" placeholder="la question en français"><input type="text" data-f="cl|${k}|libelle_nl" value="${esc(p.libelle_nl || '')}" placeholder="de vraag in het Nederlands"></div>
-            <div class="row"><select data-c="cl-type|${k}">${Object.keys(TYPES_Q).map(x => opt(t, x, TYPES_Q[x])).join('')}</select>${m.fixe ? '' : `<button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${k}|photo" title="photo attendue">📷 photo</button>`}
+          return `<div class="rg-q"><div class="row"><input type="text" data-f="cl|${k}|libelle" value="${esc(p.libelle)}" placeholder="${m.charte ? 'le support en français (affiches, bâche…)' : 'la question en français'}"><input type="text" data-f="cl|${k}|libelle_nl" value="${esc(p.libelle_nl || '')}" placeholder="${m.charte ? 'de drager in het Nederlands' : 'de vraag in het Nederlands'}"></div>
+            <div class="row">${m.charte ? `<span class="xs mu" style="align-self:center">Oui / Non · 📷 photo exigée</span>${[['ext', 'dehors'], ['int', 'dedans']].map(([x, lab]) => `<button class="chip ${(p.lieu === 'ext' ? 'ext' : 'int') === x ? 'on' : ''}" data-a="cl-lieu" data-v="${k}|${x}" title="où le support se regarde : au tour de l’extérieur ou à l’intérieur">${lab}</button>`).join('')}`
+              : `<select data-c="cl-type|${k}">${Object.keys(TYPES_Q).map(x => opt(t, x, TYPES_Q[x])).join('')}</select>${m.fixe ? '' : `<button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${k}|photo" title="photo attendue">📷 photo</button>`}`}
               <input type="text" class="rg-aide" data-f="cl|${k}|aide" value="${esc(p.aide || '')}" placeholder="précision (facultatif)"><input type="text" class="rg-aide" data-f="cl|${k}|aide_nl" value="${esc(p.aide_nl || '')}" placeholder="toelichting (optioneel)">${m.fixe ? '' : `<button class="chip ko" data-a="cl-del" data-v="${k}">×</button>`}</div>${choix}${nombre}
             <div class="rg-sc"><span class="cap">Score</span>${t === 'texte' ? '<span class="xs mu">le texte libre ne compte jamais dans le score</span>'
               : `<label>Compte</label><span class="seg">${[[1, 'Oui'], [0, 'Non']].map(([x, lab]) => `<button data-a="cl-score" data-v="${k}|${x}" class="${(p.score !== false) === !!x ? 'on' : ''}">${lab}</button>`).join('')}</span>
@@ -2362,7 +2406,8 @@
       const R = this.R;
       if (!R) { this.chargerReglages(); }
       // Les photos du jour en tête de la checklist, comme un module fixe : trois questions, ni ajoutées ni retirées.
-      const cl = f.checklist || [Object.assign(JSON.parse(JSON.stringify((R && R.photos) || this.photosQ())), { fixe: true })].concat((R ? R.checklist : D.checklist) || []);
+      // Puis la charte de communication : ses supports s'ajoutent et se retirent, chacun Oui / Non avec photo exigée.
+      const cl = f.checklist || [Object.assign(JSON.parse(JSON.stringify((R && R.photos) || this.photosQ())), { fixe: true }), Object.assign(JSON.parse(JSON.stringify((R && R.charte) || this.charteQ())), { charte: true })].concat((R ? R.checklist : D.checklist) || []);
       const se = f.seuils || Object.assign({}, s, { etapesBloquantes: Object.assign({}, Array.isArray(s.etapesBloquantes) ? {} : s.etapesBloquantes) });
       const fq = f.frequence || Object.assign({}, D.frequence || {});
       if (!f.checklist) { f.checklist = JSON.parse(JSON.stringify(cl)); f.seuils = se; f.frequence = fq; }
@@ -2469,7 +2514,9 @@
       if (a === 'msp') { this.msp(v); return; }
       if (a === 'equipe') { const f = this.form; this.ecrire({ method: 'PUT', path: '/equipe/' + encodeURIComponent(v), body: { effectif: f.effectif, prevu: f.prevu, departs: f.departs, qui: this.qui() } }); const b = this.boutique(v); if (b) { b.equipe = { effectif: f.effectif != null && f.effectif !== '' ? Number(f.effectif) : null, prevu: f.prevu ? Number(f.prevu) : null, departs: f.departs ? Number(f.departs) : null, releve_le: auj() }; } this.form = {}; this.dire('Effectif relevé.'); return; }
       if (a === 'push') { this.pushBasculer(); return; }
-      if (a === 'cl-add') { const plano = this.form.checklist[Number(v)].id === 'planogramme'; this.form.checklist[Number(v)].points.push({ ref: 'p' + Date.now().toString(36), libelle: '', libelle_nl: '', photo: false, type: plano ? 'pct' : 'etat', pct: plano }); this.rendre(); return; }
+      if (a === 'cl-add') { const m = this.form.checklist[Number(v)]; const plano = m.id === 'planogramme';
+        m.points.push(m.charte ? { ref: 'ch_' + Date.now().toString(36), libelle: '', libelle_nl: '', photo: true, photoExigee: true, type: 'ouinon', lieu: 'int' } : { ref: 'p' + Date.now().toString(36), libelle: '', libelle_nl: '', photo: false, type: plano ? 'pct' : 'etat', pct: plano }); this.rendre(); return; }
+      if (a === 'cl-lieu') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; p.lieu = parts[2] === 'ext' ? 'ext' : 'int'; this.rendre(); return; }
       if (a === 'cl-score') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; p.score = parts[2] === '1'; this.rendre(); return; }
       if (a === 'cl-poids') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; p.poids = Number(parts[2]); this.rendre(); return; }
       if (a === 'clc-add') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; (p.choix = p.choix || []).push({ code: 'c' + Date.now().toString(36), fr: '', nl: '' }); this.rendre(); return; }
@@ -2478,7 +2525,8 @@
       if (a === 'cl-del') { this.form.checklist[Number(parts[0])].points.splice(Number(parts[1]), 1); this.rendre(); return; }
       if (a === 'cl-tog') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; p[parts[2]] = !p[parts[2]]; this.rendre(); return; }
       if (a === 'se-tog') { this.form.seuils[v] = !this.form.seuils[v]; this.rendre(); return; }
-      if (a === 'save-reglages') { const f = this.form; const ph = (f.checklist || []).find(m => m.fixe); this.ecrire({ method: 'PUT', path: '/visites/reglages', body: Object.assign({ checklist: (f.checklist || []).filter(m => !m.fixe), seuils: f.seuils, frequence: f.frequence }, ph ? { photos: ph } : {}) }).then(() => { this.R = null; this.form = {}; this.recharger(); }); this.dire('Réglages enregistrés.'); return; }
+      if (a === 'save-reglages') { const f = this.form; const ph = (f.checklist || []).find(m => m.fixe); const ch = (f.checklist || []).find(m => m.charte);
+        this.ecrire({ method: 'PUT', path: '/visites/reglages', body: Object.assign({ checklist: (f.checklist || []).filter(m => !m.fixe && !m.charte), seuils: f.seuils, frequence: f.frequence }, ph ? { photos: ph } : {}, ch ? { charte: Object.assign({}, ch, { points: ch.points.filter(p => String(p.libelle || '').trim()) }) } : {}) }).then(() => { this.R = null; this.form = {}; this.recharger(); }); this.dire('Réglages enregistrés.'); return; }
       if (a === 'tick') { fetch(this.api('/visites/tick'), { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{"force":true}' }).then(r => r.json()).then(j => { const f = j.fait || {}; this.dire('Horloge : ' + (f.escalades || 0) + ' escalade(s), ' + (f.rappelsJ1 || 0) + ' rappel(s) J-1, ' + (f.rappelsJour || 0) + ' du jour' + (f.synthese ? ', synthèse' : '') + (f.mails ? ', ' + f.mails + ' mail(s)' : '') + '.'); this.R = null; this.rendre(); }).catch(() => this.dire('Horloge injoignable.')); return; }
     }
     saisie(e) {
@@ -2723,8 +2771,9 @@
     scoreDe(v) {
       if (!v) { return null; }
       const t = this.typeDe(v.type); if (t && t.dynamique) { return null; }
-      const base = [this.photosQ()].concat(t && t.checklist && t.checklist.length ? t.checklist : (this.D.checklist || []));
-      const HORS = { xp: [MOD_XP.nom, MOD_XP.nom_nl], leviers: [MOD_LEVIERS.nom, MOD_LEVIERS.nom_nl], bureau: ['Demandé par le bureau', 'Gevraagd door het kantoor'], exterieur: ['L’extérieur', 'De buitenkant'] };
+      // Les photos du jour en tête, la charte de communication à la suite (comme src/visites.php, viScoreVisite).
+      const base = [this.photosQ()].concat(t && t.checklist && t.checklist.length ? t.checklist : (this.D.checklist || []), [this.charteQ()]);
+      const HORS = { xp: [MOD_XP.nom, MOD_XP.nom_nl], leviers: [MOD_LEVIERS.nom, MOD_LEVIERS.nom_nl], bureau: ['Demandé par le bureau', 'Gevraagd door het kantoor'], exterieur: ['L’extérieur', 'De buitenkant'], charte: [CHARTE_Q.nom, CHARTE_Q.nom_nl] };
       const defs = {}, noms = {}, ordre = [];
       base.forEach(m => { noms[m.id] = [m.nom, m.nom_nl || '']; ordre.push(m.id); (m.points || []).forEach(pt => { defs[pt.ref] = pt; }); });
       const reussite = (def, p) => {
@@ -2784,8 +2833,9 @@
         <div class="xs mu" style="margin-top:6px">${nl ? 'Op ' + a.n + ' gescoorde vragen: elk punt in orde telt volgens zijn gewicht. Tellen niet mee: N.v.t., vrije tekst, vragen buiten de score.' : 'Sur ' + a.n + ' questions notées : chaque point conforme compte selon son poids. Ne comptent pas : N/A, texte libre, questions hors score.'}</div></div>`;
     }
     finHtml(v) {
-      const pts = this.pointsDe(v.id); let total = 0, faits = 0, ko = 0;
-      this.checklistDe(v).forEach(m => m.points.forEach(pt => { total++; const p = pts[pt.ref]; if (p && (p.etat || p.note != null || p.valeur != null)) { faits++; if (p.etat === 'ko' || (p.note != null && p.note <= 2)) { ko++; } } }));
+      const pts = this.pointsDe(v.id); const phs = this.photosDe(v.id); let total = 0, faits = 0, ko = 0;
+      // Un support de la charte n'est vu qu'avec sa photo ; son Non compte comme un écart dès qu'il est donné.
+      this.checklistDe(v).forEach(m => m.points.forEach(pt => { total++; const p = pts[pt.ref]; if (p && (p.etat || p.note != null || p.valeur != null)) { if (!pt.photoExigee || phs.some(x => x.ref === pt.ref)) { faits++; } if (p.etat === 'ko' || (p.note != null && p.note <= 2)) { ko++; } } }));
       const pa = (this.form.pa || []).filter(a => a.titre && a.titre.trim());
       const h = this.D.delaiRapport;
       return `<div class="stat"><div><div class="xs mu">Checklist</div><div class="k" style="margin-top:4px">${faits} / ${total}</div><div class="xs mu">${ko} non conforme${ko > 1 ? 's' : ''}</div></div><div><div class="xs mu">Points proposés</div><div class="k" style="margin-top:4px">${pa.length}</div><div class="xs mu">${pa.filter(a => a.priorite === 'P0').length} P0</div></div><div><div class="xs mu">Photos</div><div class="k" style="margin-top:4px">${this.photosDe(v.id).length}</div><div class="xs mu">${this.file.filter(o => o.apres === 'photo').length} en attente d’envoi</div></div></div>
