@@ -131,6 +131,8 @@ function fmCompetence(array $r): array
         'sousCategorieId' => fmInt($r, ['subcategory_id', 'id_subcategory']),
         'sousCategorie'   => fmTexte($r, ['subcategory_name', 'base_subcategory_name']),
         'creeLe'          => fmTexte($r, ['created_at']),
+        // Le lien que le panel attache à une compétence (vidéo, document) — lu sur les données réelles.
+        'lien'            => fmTexte($r, ['related_link', 'link', 'url']),
     ];
 }
 
@@ -478,7 +480,8 @@ function ep_formation_procedure(): array
     if ($e = fmPret()) { return $e; }
     $id = fmId();
     if ($id === null) { http_response_code(422); return ['error' => 'id attendu']; }
-    $chemins = ['fiche' => '/operational-procedures/' . $id . '?lang_code=fr', 'pieces' => '/operational-procedures/' . $id . '/attachments'];
+    // MESURÉ sur le panel (31/10/2026) : sans `include=sections`, la fiche ne porte pas ses sections.
+    $chemins = ['fiche' => '/operational-procedures/' . $id . '?include=sections&lang_code=fr', 'pieces' => '/operational-procedures/' . $id . '/attachments'];
     $v = PanelApi::getParalleleDetail($chemins, 2, 20);
     $appels = [fmAppel('fiche', $chemins['fiche'], $v['fiche']), fmAppel('pieces', $chemins['pieces'], $v['pieces'])];
     $d = $v['fiche']['data'];
