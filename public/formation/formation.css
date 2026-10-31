@@ -1981,7 +1981,7 @@ details.fm-tech > summary { cursor: pointer; font-size: 13px; color: var(--muted
 .fm-carte-tete p { margin: 0; font-size: 13.5px; color: var(--muted); max-width: 52rem; }
 
 .fm-metro-wrap { overflow-x: auto; padding-bottom: 4px; }
-.fm-metro { position: relative; width: 1150px; height: 560px; background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.fm-metro { position: relative; width: 1150px; height: 600px; background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .fm-metro svg { position: absolute; inset: 0; }
 .fm-zone { position: absolute; top: 0; bottom: 0; border-right: 1px dashed var(--line); }
 .fm-zone b { position: absolute; top: 14px; left: 16px; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
@@ -2117,3 +2117,7 @@ td .fm-barre { display: block; }
 .fm-head { margin-bottom: 14px; }
 .fm-tree__poste > span:first-child, .fm-tree__niveau > span:first-child { min-width: 0; }
 .fm-tree__n { white-space: nowrap; flex: 0 0 auto; }
+/* Stations serrées (quatre niveaux sur une ligne) : le nom un peu plus petit, « 28 compétences » sur une ligne,
+   en 11 px pour tenir dans l'étiquette — l'écart de 10 px entre deux étiquettes reste libre. */
+.fm-st__nm { font-size: 12px; }
+.fm-st--serre .fm-st__dt { white-space: nowrap; font-size: 11px; }
