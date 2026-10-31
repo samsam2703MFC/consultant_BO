@@ -1305,10 +1305,13 @@ ou un écart à la relecture : `502 {ok: false, error, appels}`.
 
 Parcours compétences (`/formation/parcours/`, 31/10/2026) : `GET /parcours/destinations?employe=&shop=` (sans employé : un
 candidat) rend la personne et chaque destination `{cle, titre, sous, groupe, competences[{id, nom, acquise}], formations[{fo, nom,
-evaluations, competences, acquise}], aFaire, facultatives}` ; `POST /parcours {employe?, shop?, nom?, cible, rythme, acquis[], suivies[]}`
+evaluations, competences, acquise}], aFaire, facultatives, admission[{cle, type: poste|fo|manuel, libelle, source: panel|referentiel, ok, preuve,
+manque[]}], admis}` ; `POST /parcours {employe?, shop?, nom?, cible, rythme, acquis[], suivies[]}`
 crée le parcours et rend `{parcours, etapes[]}` ; `GET /parcours?id=`, `GET /parcours/liste` ; `PATCH /parcours/{id}/etape/{FO}
 {evaluation, fait}` (la dernière valide la formation et coche ses compétences dans le panel : `panel {ok, cochees, attendues}`) ;
-`POST /parcours/{id}/acquis/{cid}` (confirmer une compétence déclarée) ; `PATCH /parcours/{id} {rythme | statut: arrete | atteint}`.
+`POST /parcours/{id}/acquis/{cid}` (confirmer une compétence déclarée) ; `PATCH /parcours/{id}/admission/{cle} {fait}` (valider un
+critère d'admission `manuel` — ou un `poste` que le panel n'a pas ; `409` pour un critère vérifié ou de formations) ; `PATCH /parcours/{id}
+{rythme | statut: arrete | atteint}` (`atteint` : `409` tant qu'une formation ou un critère d'admission manque).
 Détail : `docs/formation.md`.
 
 ### `/tablette/book` et `/tablette/photos` — les données de la tablette des vendeuses

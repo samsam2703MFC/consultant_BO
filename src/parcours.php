@@ -22,6 +22,14 @@ declare(strict_types=1);
  *   - une formation = ses évaluations (celles du panel, sinon cinq génériques) ;
  *   - valider la dernière évaluation valide la formation ET coche dans le panel
  *     les compétences qui y sont rattachées : une seule action.
+ *
+ * CRITÈRES D'ADMISSION (Adjoint Manager, Manager, Franchisé multi-boutique…) :
+ * ce qu'il faut pour être nommé au poste visé. Les exigences du niveau dans le
+ * panel (/position-levels/{id}/requirements) d'abord ; src/data/admission.json
+ * complète. Trois sortes : le poste tenu et les formations acquises se
+ * vérifient seuls (les formations qui manquent s'ajoutent au chemin) ; le reste
+ * (ancienneté, entretien, accord…) est validé par la manager ou le consultant
+ * dans le suivi. Tous remplis, et seulement alors, on valide le niveau.
  */
 
 const PC_SEMAINES = ['tranquille' => 4.3, 'normal' => 3.0, 'rapide' => 2.0];
@@ -41,6 +49,7 @@ function ensureParcours(): void
         . 'rythme VARCHAR(12) NOT NULL,'
         . 'debut DATE NOT NULL,'
         . 'acquis_declares TEXT NULL,'           // JSON : compétences cochées à l'étape 2, à confirmer
+        . 'admission TEXT NULL,'                 // JSON : les critères d'admission et leur état (pcEvaluer)
         . "statut VARCHAR(10) NOT NULL DEFAULT 'actif',"   // actif | atteint | arrete
         . 'cree_le DATETIME NOT NULL,'
         . 'maj_le DATETIME NOT NULL,'
@@ -58,6 +67,12 @@ function ensureParcours(): void
         . "origine VARCHAR(10) NOT NULL DEFAULT 'parcours',"  // parcours | panel (déjà acquise) | declaree (cochée à l'étape 2)
         . 'PRIMARY KEY (parcours_id, fo)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    static $colonne = false;
+    if (!$colonne) {
+        $colonne = true;
+        // Tables créées avant les critères d'admission (31/10/2026).
+        try { Db::exec('ALTER TABLE ceo_parcours ADD COLUMN admission TEXT NULL AFTER acquis_declares'); } catch (Throwable $e) { /* déjà là */ }
+    }
 }
 
 /** Le référentiel v25 (l'Excel), tel que tools/formation/referentiel_excel.py l'a écrit. */
@@ -68,6 +83,18 @@ function pcV25(): array
         $f = __DIR__ . '/data/referentiel_v25.json';
         $v = is_file($f) ? (json_decode((string) file_get_contents($f), true) ?: []) : [];
         $v += ['postes' => [], 'formations' => [], 'plans' => [], 'competences' => []];
+    }
+    return $v;
+}
+
+/** Les critères d'admission du cockpit, par code v25 (src/data/admission.json). */
+function pcAdmissionDefs(): array
+{
+    static $v = null;
+    if ($v === null) {
+        $f = __DIR__ . '/data/admission.json';
+        $j = is_file($f) ? (json_decode((string) file_get_contents($f), true) ?: []) : [];
+        $v = is_array($j['postes'] ?? null) ? $j['postes'] : [];
     }
     return $v;
 }
@@ -221,7 +248,15 @@ function pcPlan(string $code, string $niveauActuel): ?array
  * déjà validées dans un parcours — gardées, en tête : c'est le passé de la frise.
  * Les autres dans l'ordre du plan.
  */
-function pcFormations(array $dest, array $ctx, array $tenues, array $faites, string $niveauActuel): array
+/** Une formation est acquise : validée dans un parcours, ou toutes ses compétences du panel tenues. */
+function pcAcquise(string $fo, array $ctx, array $tenues, array $faites): bool
+{
+    if (in_array($fo, $faites, true)) { return true; }
+    $c = $ctx['compParFo'][$fo] ?? [];
+    return $c !== [] && !array_diff($c, $tenues);
+}
+
+function pcFormations(array $dest, array $ctx, array $tenues, array $faites, string $niveauActuel, array $prerequis = []): array
 {
     $v25 = [];
     foreach (pcV25()['formations'] as $f) { $v25[$f['code']] = $f; }
@@ -236,24 +271,134 @@ function pcFormations(array $dest, array $ctx, array $tenues, array $faites, str
         $a = $f['attendu'][$dest['v25']] ?? '';
         if ($a === 'O') { $o[$code] = true; } elseif ($a === 'R') { $r[$code] = true; }
     }
-    $requis = array_keys($api + $o);
+    // Les formations exigées pour l'admission (critères « fo ») sont sur le chemin, même recommandées ailleurs.
+    $requis = array_keys($api + $o + array_fill_keys($prerequis, true));
     $facultatif = array_values(array_diff(array_keys($r), $requis));
-    $acquise = static function (string $fo) use ($ctx, $tenues, $faites): bool {
-        if (in_array($fo, $faites, true)) { return true; }
-        $c = $ctx['compParFo'][$fo] ?? [];
-        return $c !== [] && !array_diff($c, $tenues);
-    };
+    $acquise = static fn (string $fo): bool => pcAcquise($fo, $ctx, $tenues, $faites);
     $acquises = array_values(array_filter($requis, $acquise));
     $facultatif = array_values(array_filter($facultatif, static fn ($fo) => !$acquise($fo)));
     $rang = [];
     $plan = pcPlan($dest['v25'], $niveauActuel);
     foreach ($plan['blocs'] ?? [] as $b) { foreach ($b['formations'] as $fo) { $rang[$fo] ??= count($rang); } }
-    $tri = static fn ($a, $b) => [$rang[$a] ?? 999, (int) substr($a, 3)] <=> [$rang[$b] ?? 999, (int) substr($b, 3)];
-    usort($requis, $tri);
-    usort($facultatif, $tri);
-    // Celles déjà acquises d'abord : elles sont le passé de la frise.
-    usort($requis, static fn ($a, $b) => (int) !in_array($a, $acquises, true) <=> (int) !in_array($b, $acquises, true));
+    $cle = static fn ($fo) => [$rang[$fo] ?? 999, (int) substr($fo, 3)];
+    usort($facultatif, static fn ($a, $b) => $cle($a) <=> $cle($b));
+    // Celles déjà acquises d'abord (le passé de la frise), puis les prérequis de l'admission, puis l'ordre du plan.
+    usort($requis, static fn ($a, $b) => [(int) !in_array($a, $acquises, true), (int) !in_array($a, $prerequis, true), ...$cle($a)]
+        <=> [(int) !in_array($b, $acquises, true), (int) !in_array($b, $prerequis, true), ...$cle($b)]);
     return [$requis, $facultatif, $plan['nom'] ?? null, $acquises];
+}
+
+/**
+ * Les exigences des niveaux dans le panel (/position-levels/{id}/requirements),
+ * par id de niveau — lues ensemble, gardées 10 min avec le référentiel. Les
+ * lignes sans nom (il y en a : mesuré sur le niveau 1) ne sont pas des critères.
+ */
+function pcExigences(array $ref): array
+{
+    $ids = [];
+    foreach (pcDestinations($ref) as $d) { if ($d['niveauId'] !== null) { $ids[] = $d['niveauId']; } }
+    sort($ids);
+    $r = pcLecture('/parcours/exigences?n=' . md5(implode(',', $ids)), static function () use ($ids) {
+        $chemins = [];
+        foreach ($ids as $id) { $chemins['n' . $id] = '/position-levels/' . $id . '/requirements'; }
+        $v = $chemins ? PanelApi::getParalleleDetail($chemins, 6, 25) : [];
+        $o = [];
+        foreach ($ids as $id) {
+            $x = $v['n' . $id] ?? null;
+            if ($x === null || $x['code'] < 200 || $x['code'] >= 300) { continue; }
+            foreach (fmListe($x['data']) as $e) {
+                $s = fmSimple($e, ['name', 'base_name', 'title']);
+                if ($s['id'] === null || $s['nom'] === '—') { continue; }
+                $o[(string) $id][] = ['id' => $s['id'], 'nom' => $s['nom'], 'description' => $s['description']];
+            }
+        }
+        return ['exigences' => (object) $o];
+    }, 600);
+    $e = $r['exigences'] ?? [];
+    return is_object($e) ? get_object_vars($e) : (is_array($e) ? $e : []);
+}
+
+/**
+ * Les critères d'admission d'une destination, sans doublon : les exigences du
+ * niveau dans le panel d'abord, puis ceux du cockpit (admission.json). Une
+ * formation que le panel exige déjà n'est pas répétée dans un critère du cockpit.
+ */
+function pcCriteres(array $d, array $exigences): array
+{
+    $o = []; $parPanel = [];
+    foreach ($d['niveauId'] !== null ? ($exigences[(string) $d['niveauId']] ?? []) : [] as $e) {
+        $fo = pcCodeFo((string) $e['nom']);
+        if ($fo !== null) { $parPanel[] = $fo; }
+        $o[] = ['cle' => 'r' . $e['id'], 'type' => $fo !== null ? 'fo' : 'manuel', 'libelle' => (string) $e['nom'],
+            'detail' => $e['description'] ?: null, 'codes' => [], 'fo' => $fo !== null ? [$fo] : [], 'source' => 'panel'];
+    }
+    foreach (pcAdmissionDefs()[$d['v25']]['criteres'] ?? [] as $c) {
+        $fo = array_values(array_diff(array_map('strval', $c['fo'] ?? []), $parPanel));
+        if (($c['type'] ?? '') === 'fo' && !$fo) { continue; }
+        $o[] = ['cle' => (string) $c['cle'], 'type' => in_array($c['type'] ?? '', ['poste', 'fo'], true) ? $c['type'] : 'manuel', 'libelle' => (string) $c['libelle'],
+            'detail' => $c['detail'] ?? null, 'codes' => array_map('strval', $c['codes'] ?? []), 'fo' => $fo, 'source' => 'referentiel'];
+    }
+    return $o;
+}
+
+/** Les codes v25 de tous les postes que la personne tient dans le panel. */
+function pcCodesTenus(array $pers): array
+{
+    $o = [];
+    foreach ($pers['postes'] ?? [] as $p) {
+        if (($c = pcCodeV25((string) ($p['nom'] ?? ''), (string) ($p['niveau'] ?? ''))) !== null) { $o[] = $c; }
+    }
+    return $o;
+}
+
+/**
+ * L'état des critères pour une personne. Le poste tenu et les formations se
+ * vérifient dans le panel (preuve « panel ») ; ce qui ne se vérifie pas reste
+ * à valider par la manager ou le consultant (preuve « consultant »).
+ */
+function pcEvaluer(array $criteres, array $ctx, array $pers, array $faites): array
+{
+    $codes = pcCodesTenus($pers);
+    foreach ($criteres as &$c) {
+        $c['ok'] = false; $c['preuve'] = null; $c['le'] = null; $c['manque'] = [];
+        if ($c['type'] === 'poste') {
+            $c['ok'] = (bool) array_intersect($c['codes'], $codes);
+        } elseif ($c['type'] === 'fo') {
+            $manque = array_values(array_filter($c['fo'], static fn ($fo) => !pcAcquise($fo, $ctx, $pers['competences'] ?? [], $faites)));
+            $c['ok'] = $manque === [];
+            $c['manque'] = array_map(static fn ($fo) => ['fo' => $fo, 'nom' => pcNomFo($fo, $ctx)], $manque);
+        }
+        if ($c['ok']) { $c['preuve'] = 'panel'; $c['le'] = date('Y-m-d'); }
+    }
+    unset($c);
+    return $criteres;
+}
+
+/** Le rang d'un poste dans le réseau : on ne propose pas de redescendre (un franchisé ne vise pas Manager). */
+const PC_RANG = ['P1' => 1, 'P2' => 1, 'P3' => 1, 'P4' => 2, 'P5' => 2, 'P6' => 2, 'P7' => 3, 'P8' => 4, 'P10' => 5, 'P9' => 6, 'P11' => 7, 'P12' => 8];
+
+/**
+ * Pourquoi une destination n'est pas (encore) pour la personne — null si elle
+ * l'est. Un poste plus bas que celui tenu ; ou un critère « poste tenu » non
+ * rempli : il faut d'abord ce poste-là (un candidat n'en tient aucun). Une
+ * personne sans poste dans le panel voit tout : le consultant validera.
+ */
+function pcHorsAtteinte(string $code, array $crit, ?int $eid, ?string $tenu): ?string
+{
+    if ($tenu !== null && (PC_RANG[$code] ?? 0) < (PC_RANG[$tenu] ?? 0)) { return 'poste en dessous de celui tenu'; }
+    if ($eid !== null && $tenu === null) { return null; }
+    foreach ($crit as $c) {
+        if ($c['type'] === 'poste' && empty($c['ok'])) { return 'il faut d’abord : ' . $c['libelle']; }
+    }
+    return null;
+}
+
+/** Les formations que l'admission exige (critères « fo »). */
+function pcFoAdmission(array $criteres): array
+{
+    $o = [];
+    foreach ($criteres as $c) { if ($c['type'] === 'fo') { foreach ($c['fo'] as $fo) { $o[$fo] = true; } } }
+    return array_keys($o);
 }
 
 /** Le contexte commun : panel, évaluations, compétences par FO. */
@@ -318,6 +463,7 @@ function ep_parcours_destinations(): array
     $tenues = $pers['competences'];
     $metier = $pers['niveau']['v25'] ?? null;
     $niveauActuel = (string) ($pers['niveau']['niveau'] ?? '');
+    $exig = pcExigences($ctx['ref']);
     $out = [];
     foreach (pcDestinations($ctx['ref']) as $d) {
         // Pas de destination « en dessous » : un niveau inférieur du même poste, ou le niveau tenu.
@@ -325,8 +471,11 @@ function ep_parcours_destinations(): array
         $groupe = pcGroupe($d['v25'], $metier, $eid !== null && $metier === null);
         if ($eid === null && $groupe !== 'entrepreneur') { continue; }   // un candidat vise la franchise
         if ($groupe === 'autre') { continue; }
-        [$requis, $facultatif, , $acquises] = pcFormations($d, $ctx, $tenues, $faites, $niveauActuel);
-        $out[] = ['cle' => $d['cle'], 'titre' => $d['titre'], 'sous' => $d['sous'], 'groupe' => $groupe, 'source' => $d['source'],
+        $crit = pcEvaluer(pcCriteres($d, $exig), $ctx, $pers, $faites);
+        if (pcHorsAtteinte($d['v25'], $crit, $eid, $metier) !== null) { continue; }
+        [$requis, $facultatif, , $acquises] = pcFormations($d, $ctx, $tenues, $faites, $niveauActuel, pcFoAdmission($crit));
+        $out[] = ['cle' => $d['cle'], 'titre' => $d['titre'], 'sous' => $d['sous'], 'groupe' => $groupe, 'source' => $d['source'], 'v25' => $d['v25'],
+            'admission' => pcAdmissionSortie($crit), 'admis' => count(array_filter($crit, static fn ($c) => $c['ok'])),
             'competences' => array_map(static fn ($cid) => ['id' => $cid, 'nom' => $ctx['compNom'][$cid] ?? ('#' . $cid), 'acquise' => in_array($cid, $tenues, true)], $d['competences']),
             'formations' => array_map(static fn ($fo) => pcFicheFo($fo, $ctx) + ['acquise' => in_array($fo, $acquises, true)], $requis),
             'aFaire' => count($requis) - count($acquises), 'facultatives' => count($facultatif)];
@@ -334,9 +483,16 @@ function ep_parcours_destinations(): array
     $ordre = ['metier' => 0, 'encadrer' => 1, 'entrepreneur' => 2];
     usort($out, static fn ($a, $b) => [$ordre[$a['groupe']], $a['aFaire']] <=> [$ordre[$b['groupe']], $b['aFaire']]);
     $actif = $eid !== null ? Db::row("SELECT id FROM ceo_parcours WHERE employe_id = ? AND statut = 'actif' ORDER BY id DESC LIMIT 1", [$eid]) : null;
-    return ['personne' => ['id' => $eid, 'nom' => $pers['nom'] ?? ($pers['nomAffiche'] ?? null), 'niveau' => $pers['niveau'] ? ($pers['niveau']['nom'] . ' · ' . $pers['niveau']['niveau']) : null,
+    return ['personne' => ['id' => $eid, 'nom' => $pers['nom'] ?? ($pers['nomAffiche'] ?? null), 'niveau' => $pers['niveau'] ? ($pers['niveau']['nom'] . ' · ' . $pers['niveau']['niveau']) : null, 'v25' => $metier,
         'formationsValidees' => count($faites)], 'destinations' => $out, 'parcoursActif' => $actif ? (int) $actif['id'] : null,
         'rythmes' => array_map(static fn ($s) => (float) $s, PC_SEMAINES)];
+}
+
+/** Les critères tels que l'écran les montre. */
+function pcAdmissionSortie(array $crit): array
+{
+    return array_map(static fn ($c) => ['cle' => $c['cle'], 'type' => $c['type'], 'libelle' => $c['libelle'], 'detail' => $c['detail'] ?? null,
+        'source' => $c['source'], 'ok' => (bool) $c['ok'], 'preuve' => $c['preuve'] ?? null, 'le' => $c['le'] ?? null, 'manque' => $c['manque'] ?? []], $crit);
 }
 
 /** Les dates prévues des étapes non validées, au rythme choisi, à partir d'aujourd'hui (ou du début). */
@@ -380,7 +536,9 @@ function wr_parcours_creer(): array
     $nom = $eid !== null ? (string) ($pers['nom'] ?? ('Employé ' . $eid)) : trim(mb_substr((string) ($b['nom'] ?? ''), 0, 120));
     if ($nom === '') { return fmRefus(422, 'le nom du candidat est obligatoire'); }
     $faites = $eid !== null ? array_column(Db::rows("SELECT e.fo FROM ceo_parcours_etape e JOIN ceo_parcours p ON p.id = e.parcours_id WHERE p.employe_id = ? AND e.statut = 'validee'", [$eid]), 'fo') : [];
-    [$requis, , , $acquises] = pcFormations($d, $ctx, $pers['competences'], $faites, (string) ($pers['niveau']['niveau'] ?? ''));
+    $crit = pcEvaluer(pcCriteres($d, pcExigences($ctx['ref'])), $ctx, $pers, $faites);
+    if (($pourquoi = pcHorsAtteinte($d['v25'], $crit, $eid, $pers['niveau']['v25'] ?? null)) !== null) { return fmRefus(422, 'pas encore pour cette personne — ' . $pourquoi); }
+    [$requis, , , $acquises] = pcFormations($d, $ctx, $pers['competences'], $faites, (string) ($pers['niveau']['niveau'] ?? ''), pcFoAdmission($crit));
     $suivies = array_values(array_intersect(is_array($b['suivies'] ?? null) ? array_map('strval', $b['suivies']) : [], $requis));
     // L'ordre de la frise : le déjà fait d'abord (acquis, puis coché), ensuite le reste dans l'ordre du plan.
     $rangDe = static fn ($fo) => in_array($fo, $acquises, true) ? 0 : (in_array($fo, $suivies, true) ? 1 : 2);
@@ -391,9 +549,10 @@ function wr_parcours_creer(): array
         Db::exec("UPDATE ceo_parcours SET statut = 'arrete', maj_le = NOW() WHERE employe_id = ? AND statut = 'actif'", [$eid]);
     }
     $depart = $pers['niveau'] ? $pers['niveau']['nom'] . ' · ' . $pers['niveau']['niveau'] : ($eid === null ? 'Candidat franchisé' : null);
-    Db::exec('INSERT INTO ceo_parcours (employe_id, shop_id, nom, profil, depart, cible_cle, cible_nom, rythme, debut, acquis_declares, statut, cree_le, maj_le)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, \'actif\', NOW(), NOW())',
-        [$eid, $shop, $nom, $eid === null ? 'candidat' : 'employe', $depart, $cle, $d['titre'] . ($d['sous'] ? ' · ' . $d['sous'] : ''), $rythme, json_encode($acquis)]);
+    Db::exec('INSERT INTO ceo_parcours (employe_id, shop_id, nom, profil, depart, cible_cle, cible_nom, rythme, debut, acquis_declares, admission, statut, cree_le, maj_le)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?, \'actif\', NOW(), NOW())',
+        [$eid, $shop, $nom, $eid === null ? 'candidat' : 'employe', $depart, $cle, $d['titre'] . ($d['sous'] ? ' · ' . $d['sous'] : ''), $rythme, json_encode($acquis),
+         json_encode(pcAdmissionSortie($crit), JSON_UNESCAPED_UNICODE)]);
     $pid = (int) Db::row('SELECT LAST_INSERT_ID() AS id')['id'];
     foreach ($requis as $i => $fo) {
         $ev = array_map(static fn ($x) => ['nom' => $x['nom'], 'fait' => false, 'le' => null], $ctx['evals'][$fo] ?? []);
@@ -431,10 +590,59 @@ function ep_parcours_un(int $pid): array
     $retard = false;
     foreach ($etapes as $x) { if ($x['statut'] === 'encours' && $x['prevue'] !== null && strtotime($x['prevue'] . ' +14 days') < time()) { $retard = true; } }
     $fin = $etapes ? end($etapes)['prevue'] : null;
-    return ['parcours' => ['id' => (int) $p['id'], 'employe' => $p['employe_id'] !== null ? (int) $p['employe_id'] : null, 'shop' => $p['shop_id'] !== null ? (int) $p['shop_id'] : null,
+    $adm = pcAdmissionSuivie($p, $etapes);
+    // Le code v25 de la cible : qui valide les critères (le consultant pour la franchise, la manager sinon).
+    $nomCible = explode(' · ', (string) $p['cible_nom']);
+    $cibleV25 = str_starts_with((string) $p['cible_cle'], 'v25:') ? substr((string) $p['cible_cle'], 4) : pcCodeV25($nomCible[1] ?? $nomCible[0], $nomCible[0]);
+    return ['admission' => $adm, 'parcours' => ['cibleV25' => $cibleV25,'id' => (int) $p['id'], 'employe' => $p['employe_id'] !== null ? (int) $p['employe_id'] : null, 'shop' => $p['shop_id'] !== null ? (int) $p['shop_id'] : null,
         'nom' => $p['nom'], 'profil' => $p['profil'], 'depart' => $p['depart'], 'cible' => $p['cible_cle'], 'cibleNom' => $p['cible_nom'],
         'rythme' => $p['rythme'], 'debut' => $p['debut'], 'statut' => $p['statut'], 'acquisDeclares' => pcNomsCompetences(json_decode((string) $p['acquis_declares'], true) ?: []),
-        'validees' => $v, 'total' => count($etapes), 'retard' => $retard, 'objectif' => $fin], 'etapes' => $etapes];
+        'validees' => $v, 'total' => count($etapes), 'retard' => $retard, 'objectif' => $fin,
+        'admis' => count(array_filter($adm, static fn ($c) => $c['ok'])), 'criteres' => count($adm)], 'etapes' => $etapes];
+}
+
+/**
+ * Les critères d'un parcours, tels qu'écrits à sa création, mis à jour par le
+ * parcours lui-même : un critère « formations » est rempli dès que ses
+ * formations y sont validées.
+ */
+function pcAdmissionSuivie(array $p, array $etapes): array
+{
+    $adm = json_decode((string) ($p['admission'] ?? ''), true);
+    if (!is_array($adm)) { return []; }
+    $validees = array_column(array_filter($etapes, static fn ($e) => $e['statut'] === 'validee'), 'fo');
+    foreach ($adm as &$c) {
+        if ($c['type'] !== 'fo' || !empty($c['ok'])) { continue; }
+        $c['manque'] = array_values(array_filter($c['manque'] ?? [], static fn ($m) => !in_array($m['fo'], $validees, true)));
+        if ($c['manque'] === []) { $c['ok'] = true; $c['preuve'] = 'parcours'; $c['le'] = date('Y-m-d'); }
+    }
+    unset($c);
+    return $adm;
+}
+
+/**
+ * PATCH /parcours/{id}/admission/{cle} {fait} — la manager ou le consultant
+ * valide un critère (ancienneté, entretien, accord… ou un poste que le panel
+ * n'a pas enregistré). Un critère vérifié dans le panel ne se décoche pas.
+ */
+function wr_parcours_admission(int $pid, string $cle): array
+{
+    ensureParcours();
+    $b = fmCorps();
+    $p = Db::row('SELECT * FROM ceo_parcours WHERE id = ?', [$pid]);
+    if ($p === null) { return fmRefus(404, 'parcours inconnu'); }
+    if ($p['statut'] !== 'actif') { return fmRefus(409, 'parcours terminé ou arrêté'); }
+    $adm = json_decode((string) ($p['admission'] ?? ''), true);
+    $i = is_array($adm) ? array_search($cle, array_column($adm, 'cle'), true) : false;
+    if ($i === false) { return fmRefus(404, 'critère inconnu'); }
+    $c = $adm[$i];
+    if (!empty($c['ok']) && in_array($c['preuve'] ?? null, ['panel', 'parcours'], true)) { return fmRefus(409, 'critère déjà vérifié dans le panel'); }
+    if ($c['type'] === 'fo') { return fmRefus(409, 'ce critère se remplit en validant ses formations dans le parcours'); }
+    $fait = !empty($b['fait']);
+    $adm[$i] = ['ok' => $fait, 'preuve' => $fait ? 'consultant' : null, 'le' => $fait ? date('Y-m-d') : null] + $c;
+    Db::exec('UPDATE ceo_parcours SET admission = ?, maj_le = NOW() WHERE id = ?', [json_encode($adm, JSON_UNESCAPED_UNICODE), $pid]);
+    pcJournal((string) $p['nom'], 'Critère d’admission ' . ($fait ? 'validé' : 'retiré') . ' : ' . $c['libelle'] . ' (vers « ' . $p['cible_nom'] . ' »)');
+    return ep_parcours_un($pid);
 }
 
 /** Les noms des compétences (lus dans le référentiel en cache), pour l'écran. */
@@ -565,6 +773,8 @@ function wr_parcours_modifier(int $pid): array
     } elseif ($st === 'atteint') {
         $reste = (int) Db::row("SELECT COUNT(*) AS n FROM ceo_parcours_etape WHERE parcours_id = ? AND statut <> 'validee'", [$pid])['n'];
         if ($reste > 0) { return fmRefus(409, $reste . ' formation(s) encore à valider'); }
+        $manque = array_filter(ep_parcours_un($pid)['admission'], static fn ($c) => empty($c['ok']));
+        if ($manque) { return fmRefus(409, count($manque) . ' critère(s) d’admission encore à remplir'); }
         if ($p['employe_id'] !== null && str_starts_with((string) $p['cible_cle'], 'n:')) {
             if ($e = fmPret()) { return $e; }
             $nid = (int) substr((string) $p['cible_cle'], 2);
@@ -601,10 +811,11 @@ function ep_formation_v25(): array
 {
     $v = pcV25();
     // P1…P12 → le nom du panel (prioritaire), lu dans le référentiel en cache ; à défaut, celui de l'Excel.
-    $noms = [];
+    $noms = []; $niveaux = []; $horsPanel = [];
     $c = setting(fmCleCache('/formation/referentiel'));
     if (is_array($c) && is_array($c['r'] ?? null)) {
         foreach (pcDestinations($c['r']) as $d) {
+            if ($d['niveauId'] !== null) { $niveaux[(string) $d['niveauId']] = $d['v25']; } else { $horsPanel[] = ['code' => $d['v25'], 'nom' => $d['titre']]; }
             // P1–P3 couvrent tous les niveaux d'opérateur : le nom du poste ; P4–P6, le niveau « Responsable d'équipe ».
             $chef = in_array($d['v25'], ['P4', 'P5', 'P6'], true);
             $noms[$d['v25']] ??= $d['sous'] ? ($chef ? $d['sous'] . ' · ' . $d['titre'] : $d['sous']) : $d['titre'];
@@ -612,5 +823,5 @@ function ep_formation_v25(): array
     }
     foreach ($v['postes'] as $p) { $noms[$p['code']] ??= $p['nom']; }
     return ['source' => $v['source'] ?? null, 'postes' => $v['postes'], 'nomsPanel' => $noms, 'formations' => $v['formations'], 'plans' => $v['plans'],
-        'competences' => $v['competences']];
+        'competences' => $v['competences'], 'admission' => (object) pcAdmissionDefs(), 'niveauxV25' => (object) $niveaux, 'horsPanel' => $horsPanel];
 }
