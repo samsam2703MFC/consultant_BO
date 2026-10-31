@@ -339,6 +339,7 @@ function route(string $method, string $path): mixed
             $path === '/formation/pdf'                 => ep_formation_pdf(),
             $path === '/formation/v25'                 => ep_formation_v25(),
             // Parcours compétences (public/formation/parcours/) : l'assistant et la frise de chaque personne.
+            $path === '/formation/carte'               => ep_formation_carte(),
             $path === '/parcours/destinations'         => ep_parcours_destinations(),
             $path === '/parcours', $path === '/parcours/liste' => ep_parcours(),
             $path === '/tablette/book'                 => ep_tablette_book(),

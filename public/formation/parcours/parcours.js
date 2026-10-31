@@ -240,8 +240,10 @@
     var etat;
     if (c.ok) {
       etat = c.preuve === 'panel' ? 'vérifié dans le panel' : c.preuve === 'parcours' ? 'validé dans ce parcours' : 'validé' + (c.le ? ' le ' + dateCourte(c.le) : '') + ' par ' + (qui === 'ta manager' ? 'la manager' : 'le consultant');
-    } else if (c.type === 'fo' && c.manque.length) {
+    } else if ((c.type === 'fo' || c.type === 'metiers') && c.manque.length) {
       etat = 'dans ton parcours : ' + c.manque.map(function (m) { return court(m.nom); }).join(', ');
+      // Les trois métiers : où en est chacun (compétences tenues sur celles de la maîtrise).
+      if (c.metiers && c.metiers.length) etat += ' — ' + c.metiers.map(function (m) { return m.nom.split(' –')[0] + ' ' + (m.total - m.manque) + '/' + m.total; }).join(' · ');
     } else {
       etat = 'à valider par ' + qui;
     }
