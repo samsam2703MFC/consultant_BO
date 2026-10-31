@@ -72,13 +72,40 @@ function fiche(sem, parDate, defs){
       return Object.assign(c, { small: detail ? detail(o) : '', title: bulle ? bulle(o) : '' });
     });
     const dedans = vals.map((v, i) => sem.jours[i] ? v : undefined).filter(v => v !== undefined);
-    let tot;
-    if (sens === 'matin') { const v = dedans.find(x => x != null); tot = { txt: v == null ? '—' : fmt(v), cls: 'vmo-stock' }; }
-    else if (sens === 'soir') { const v = [...dedans].reverse().find(x => x != null); tot = { txt: v == null ? '—' : fmt(v), cls: 'vmo-stock' }; }
-    else if (sens === '−fin') { const v = [...dedans].reverse().find(x => x != null); tot = flux(v, '−', fmt); }
-    else { const v = dedans.reduce((a, x) => a + (x || 0), 0); tot = sens === '=' ? { txt: (v < 0 ? '−' : '') + fmt(Math.abs(v)), cls: Math.abs(v) < 0.5 ? 'vmo-zero' : 'vmo-ne' } : flux(v, sens, fmt); }
-    return { lib, sens, cells, tot };
+    let tot, totV;
+    if (sens === 'matin') { const v = dedans.find(x => x != null); totV = v; tot = { txt: v == null ? '—' : fmt(v), cls: 'vmo-stock' }; }
+    else if (sens === 'soir') { const v = [...dedans].reverse().find(x => x != null); totV = v; tot = { txt: v == null ? '—' : fmt(v), cls: 'vmo-stock' }; }
+    else if (sens === '−fin') { const v = [...dedans].reverse().find(x => x != null); totV = v; tot = flux(v, '−', fmt); }
+    else { const v = dedans.reduce((a, x) => a + (x || 0), 0); totV = v; tot = sens === '=' ? { txt: (v < 0 ? '−' : '') + fmt(Math.abs(v)), cls: Math.abs(v) < 0.5 ? 'vmo-zero' : 'vmo-ne' } : flux(v, sens, fmt); }
+    return { lib, sens, cells, tot, totV, fmt };
   });
+}
+
+/**
+ * La vue inversée (demande du 31/10 : « inverser les colonnes pour voir les écarts entre les semaines ») : une colonne
+ * par mouvement (par groupe : la vitrine, le stock de chaque matière), une ligne par jour, un total par semaine ; et
+ * « semaine par semaine » : une ligne par semaine, avec l'écart à la semaine d'avant.
+ * groupes : [{titre, defs, pd (jour => données)}].
+ */
+function inverse(dates, groupes){
+  const sems = semaines(dates);
+  // Les colonnes valent pour toute la période : une ligne « si non nulle » se garde dès qu'un jour en a.
+  const G = groupes.map(g => ({ titre: g.titre, pd: g.pd, defs: g.defs.filter(d => !d[6] || dates.some(j => !vide(d[2](g.pd[j] || {})))).map(d => { const c = d.slice(); c[6] = false; return c; }) }));
+  const colonnes = G.map(g => ({ titre: g.titre, cols: g.defs.map(d => ({ lib: d[0], sens: d[1] })) }));
+  let prec = null, precNum = null;
+  const blocs = sems.map(sm => {
+    const F = G.map(g => fiche(sm, g.pd, g.defs)).flat();
+    const jours = sm.jours.map((j, i) => j ? { date: jour(j), dim: jourDe(j).getDay() === 0, cells: F.map(l => l.cells[i]) } : null).filter(Boolean);
+    const total = F.map(l => l.tot);
+    const ecarts = F.map((l, k) => {
+      if (!prec || prec[k] == null || l.totV == null) { return ''; }
+      const dlt = l.totV - prec[k];
+      return Math.abs(dlt) < 0.0005 ? '= S' + precNum : (dlt > 0 ? '+' : '−') + l.fmt(Math.abs(dlt)) + ' vs S' + precNum;
+    });
+    prec = F.map(l => l.totV); precNum = sm.num;
+    return { titre: 'Semaine ' + sm.num, du: jour(sm.du), au: jour(sm.au), periode: jjmm(sm.du) + ' → ' + jjmm(sm.au), jours, total, ecarts };
+  });
+  return { colonnes, blocs, nCols: colonnes.reduce((a, g) => a + g.cols.length, 0) };
 }
 
 const TYPES = { garde0: ['matin', 'mu'], prod: ['production', 'ok'], vente: ['vente', 'ok'], poubelle: ['poubelle', 'ko'], garde: ['gardé', 'mu'], nonExpl: ['non expliqué', 'ko'],
@@ -172,6 +199,10 @@ export function valsVerifMouvements(app, common){
         const q = x => qte(x, m.unite);
         return { titre: 'Stock du panel — ' + m.nom + ' (' + (m.unite === 'pce' ? 'pièces' : m.unite) + ')' + (m.nProduits > 1 ? ' · employée par ' + m.nProduits + ' produits' : ''), lignes: fiche(sm, pd, defsMatiere(q)) };
       })) }));
+    v.inverse = inverse((d.jours || []).map(j => j.date), [{ titre: 'Vitrine — ' + d.produit.nom + ' (pièces)', defs: defsVitrine, pd: parDate }].concat(mats.map(m => {
+      const pd = {}; (m.jours || []).forEach(j => { pd[j.date] = j; });
+      return { titre: 'Stock du panel — ' + m.nom + ' (' + (m.unite === 'pce' ? 'pièces' : m.unite) + ')', defs: defsMatiere(x => qte(x, m.unite)), pd };
+    })));
     v.matieres = (d.matieres || []).map(m => ({ nom: m.nom, cat: m.cat, parPiece: qte(m.parPiece, m.unite) + ' par pièce', theorique: qte(m.theorique, m.unite),
       n: m.mouvements.length, ouvrir: () => app.setState({ vmoSel: 'm:' + m.id, vmoQ: '' }),
       mouvements: m.mouvements.map(x => ({ quand: jour(x.at) + ' ' + x.at.slice(11, 16), type: (TYPES['stock:' + x.type] || [x.type])[0], ton: (TYPES['stock:' + x.type] || [0, 'mu'])[1], avant: qte(x.avant, m.unite), apres: qte(x.apres, m.unite), delta: signe(x.delta, m.unite) })) }));
@@ -188,6 +219,7 @@ export function valsVerifMouvements(app, common){
     const pdM = {}; (d.jours || []).forEach(j => { pdM[j.date] = j; });
     v.semaines = semaines((d.jours || []).map(j => j.date)).map(sm => ({ titre: 'Semaine ' + sm.num, du: jour(sm.du), au: jour(sm.au), entetes: sm.jours.map((j, i) => { const y = jourDe(sm.du); y.setDate(y.getDate() + i); return { j: JOURS[y.getDay()], d: jjmm(iso(y)), hors: !j }; }),
       sections: [{ titre: 'Stock du panel — ' + M.nom + ' (' + (u === 'pce' ? 'pièces' : u) + ')', lignes: fiche(sm, pdM, defsMatiere(x => qte(x, u))) }] }));
+    v.inverse = inverse((d.jours || []).map(j => j.date), [{ titre: 'Stock du panel — ' + M.nom + ' (' + (u === 'pce' ? 'pièces' : u) + ')', defs: defsMatiere(x => qte(x, u)), pd: pdM }]);
     v.produits = (d.produits || []).map(p => ({ nom: p.nom, parPiece: qte(p.parPiece, u), vendu: pcs(p.vendu), poubelle: pcs(p.poubelle), consomme: qte(p.consomme, u), ouvrir: () => app.setState({ vmoSel: 'p:' + p.id, vmoQ: '' }) }));
     v.nProduitsRecette = d.nProduitsRecette || 0;
   }

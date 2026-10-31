@@ -238,3 +238,14 @@
 .vmo-sem .vmo-tot{background:#f6f1ea;font-weight:700;border-left:1px solid rgba(34,34,34,.12)}
 .vmo-sem tr.vmo-fin td{border-top:1px solid rgba(34,34,34,.18)}
 .vmo-sem td[title]{cursor:help}
+/* La vue inversée : une colonne par mouvement, une ligne par jour ou par semaine */
+.vmo-inv th.vmo-col{white-space:normal;min-width:76px;max-width:110px;line-height:1.25}
+.vmo-inv th.vmo-colfin{border-left:1px solid rgba(34,34,34,.12)}
+.vmo-inv td{min-width:70px}
+.vmo-inv td.nom{min-width:120px}
+.vmo-inv tr.vmo-sec td{background:#f6f1ea;font:600 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary);padding-top:8px;padding-bottom:6px}
+.vmo-inv td.vmo-plus{color:var(--vr-ok);font-weight:600}.vmo-inv td.vmo-moins{color:var(--vr-ko);font-weight:600}
+.vmo-inv td.vmo-stock{font-weight:700}.vmo-inv td.vmo-ne{color:var(--vr-ko);font-weight:700}.vmo-inv td.vmo-zero{color:var(--vr-ok)}
+.vmo-inv tr.vmo-totl td{background:#f6f1ea;font-weight:700;border-top:1px solid rgba(34,34,34,.18)}
+.vmo-inv small.vmo-dlt{color:#7a7068!important;font-weight:500}
+.vmo-inv td[title]{cursor:help}
