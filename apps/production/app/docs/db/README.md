@@ -138,6 +138,12 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   Administracja (nom « Administ… ») : montrés pour information au survol ; logistique à part. Ligne
   « Pieniądze na produkcję » et sa part matières, tuile du total 13 semaines (matières, salaires, médias, départements
   partagés) ; `n_forecast_run.production_cost` : total enregistré à la validation.
+- Qui prend combien (31/10/2026, sans migration) : clic sur « Razem kartony » (une semaine ou toutes), sur un produit ou
+  « Klienci × tygodnie » → fenêtre clients × 13 semaines (cartons). Commandes déjà passées : chez le client qui a commandé ;
+  prévision au-delà des commandes : répartie selon la part du client dans le produit (8 dernières semaines ; produits
+  saisonniers : même gamme un an plus tôt ; sans historique : commandes de la fenêtre, sinon « Bez klienta »). Cartons entiers
+  (plus grands restes), somme = prévision du produit et de la semaine (`ForecastService::clientSplit`,
+  `ForecastRepository::cartonsByClient`). Clic sur un client : ses produits. Pas enregistré à la validation.
 - API du panel TF Buddy, lecture seule (GET) : `/product-availability-periods` (gammes, `from_md` → `to_md`, aussi à cheval
   sur le Nouvel An ; gamme saisonnière = active et ≤ 200 jours, gamme de plus de 200 jours = toute l'année, 1 jour = ignorée),
   `/product-availability-periods/{id}/products` (produits des magasins), `/material-suppliers` → SL Food →

@@ -125,7 +125,7 @@ try {
         ('forecast.trend_min', '0.5', '0.5', 'decimal'), ('forecast.trend_max', '2', '2', 'decimal'), ('forecast.capacity_hours', '0', '0', 'decimal'),
         ('forecast.lead_days', '7', '7', 'int'), ('week.fte_hours', '40', '40', 'decimal'), ('logistics.plan_departure_country', 'PL', 'PL', 'string')");
     $pdo->exec("INSERT INTO user (id, login, displayed_name) VALUES (5, 'kierownik', 'Anna Kierownik')");
-    $pdo->exec("INSERT INTO customer (id, company) VALUES (1, 'Alfa s.a.')");
+    $pdo->exec("INSERT INTO customer (id, company) VALUES (1, 'Alfa s.a.'), (2, 'Beta sp. z o.o.')");
     $pdo->exec("INSERT INTO category_product (id, name) VALUES (1, 'Pieczywo')");
     $pdo->exec("INSERT INTO n_prod_employee (id, id_production_employee, active) VALUES (1, 101, 1), (2, 102, 1), (3, 103, 0)");
     // 1 Bagietka (całoroczna, 10 szt., 10 kart./pal., receptura 100) ; 2 Cougnou (sezon Noël, 42 szt.) ; 3 Spéculoos (w gamie
@@ -173,6 +173,8 @@ try {
         $add(date('Y-m-d', strtotime("{$m} +1 day")), [1 => 20, 3 => 5]);
         $add(date('Y-m-d', strtotime(App\Services\Logistics\LogisticsPlanService::lastYear($m) . ' +1 day')), [1 => 16]);
     }
+    // Kto bierze ile [225] : połowa ostatnich tygodni (zamówienia 1, 3, 5, 7) to klient Beta — udział 50 / 50.
+    $pdo->exec("UPDATE customer_order SET id_customer = 2 WHERE id IN (1, 3, 5, 7)");
     // Rok temu w oknie : Bagietka 16 / tydz., w tygodniach 51 i 52 — 32 ; Cougnou wysłany w tyg. 15.12.2025 : 10 kartonów.
     for ($m = '2025-11-03'; $m <= '2026-02-02'; $m = date('Y-m-d', strtotime("{$m} +7 days"))) $add(date('Y-m-d', strtotime("{$m} +1 day")), [1 => in_array($m, ['2025-12-15', '2025-12-22'], true) ? 32 : 16]);
     $add('2025-12-16', [2 => 10]);
@@ -250,6 +252,17 @@ try {
     $i51 = array_search('2026-12-14', array_column($W, 'week_start'), true);
     // N-1 tyg. 50, 51, 52 = 16, 32, 32 → kształt (16 + 32 + 32) ÷ 3 ÷ 16 = 1,667 ; 20 × 1,667 = 33.
     expectFc($W[$i51]['shape'] === 1.67 && $b['values'][$i51] === 33, 'kształt N-1 (±1 tydzień) : tydz. 51 = 33 (' . $b['values'][$i51] . ')');
+    // Kto bierze ile [225] : zamówienia u klienta, który zamówił ; reszta wg udziału (Bagietka 50 / 50) ; suma = prognoza.
+    $cl = array_column($f['clients'], null, 'id');
+    $cp = fn(int $c, int $pid) => array_column($cl[$c]['products'] ?? [], null, 'product_id')[$pid] ?? ['values' => array_fill(0, 13, 0), 'ordered' => array_fill(0, 13, 0)];
+    $sumOk = true;
+    foreach ($W as $i => $w) if (array_sum(array_map(fn($c) => $c['values'][$i], $f['clients'])) !== $w['cartons']) $sumOk = false;
+    expectFc($sumOk && count($f['clients']) === 2 && $cl[1]['name'] === 'Alfa s.a.' && $cl[2]['name'] === 'Beta sp. z o.o.', 'klienci : suma tygodni = prognoza, nazwy firm');
+    expectFc($cp(1, 1)['values'][0] === 25 && $cp(1, 1)['ordered'][0] === 25 && $cp(2, 1)['values'][0] === 0, 'tydzień bieżący : zamówienie Alfy (25) u Alfy');
+    expectFc($cp(1, 1)['values'][2] === 50 && $cp(2, 1)['values'][2] === 0, 'zamówienie większe od prognozy : całe u klienta, który zamówił');
+    expectFc($cp(1, 1)['values'][3] + $cp(2, 1)['values'][3] === 20 && in_array($cp(2, 1)['values'][3], [7, 8], true) && $cp(1, 1)['ordered'][3] === 5,
+        'zamówienie 5 < prognoza 20 : Alfa 5 + połowa reszty, Beta połowa reszty (7,5) ; ' . $cp(1, 1)['values'][3] . ' / ' . $cp(2, 1)['values'][3]);
+    expectFc($cp(1, 1)['values'][1] === 10 && $cp(2, 1)['values'][1] === 10 && $cp(2, 1)['ordered'][1] === 0, 'bez zamówień : prognoza 20 wg udziału 10 / 10');
     $s = $rows[3];
     expectFc($s['kind'] === 'regular' && $s['all_year_in'] === ['Saint-Nicolas'], 'Spéculoos : w gamie Saint-Nicolas, ale sprzedawany cały rok → całoroczny');
     expectFc(!isset($rows[41009]) && $rows[2]['kind'] === 'season', 'produkt gamy całorocznej nie jest sezonowy ; Cougnou sezonowy');
@@ -260,6 +273,7 @@ try {
     $last2 = array_search('2027-01-25', array_column($W, 'week_start'), true);
     expectFc($cg[$last2] === 0 && $rows[2]['sources'][$last2] === 'none', 'poza gamą (po 15.01) : 0');
     expectFc($W[$i50]['season_cartons'] === 25 && $W[$i50]['cartons'] === $b['values'][$i50] + 25 + $s['values'][$i50], 'suma tygodnia : kartony i sezonowe');
+    expectFc($cp(1, 2)['values'][$i50] === 25 && $cp(2, 2)['values'][$i50] === 0, 'sezonowe : wg klientów tej samej gamy rok temu (Cougnou — tylko Alfa)');
     // Godziny : Bagietka 0,1 h / karton, inne produkty średnią ważoną (0,1) ; zdolność 2 pracowników × 40 h, tydz. 11.11 (święto) 32 h.
     $i46 = 1 + 0;
     expectFc($f['capacity']['hours'] === 80.0 && $f['capacity']['people'] === 2 && $W[1]['capacity'] === 64.0 && $W[1]['off'][0]['date'] === '2026-11-11',

@@ -297,6 +297,7 @@ final class ForecastService
                 'shape' => $shape[$i] !== null ? round($shape[$i], 2) : null, 'no_cpp' => $noCpp, 'no_hours' => $noHours];
         }
         $seasonsOut = $this->presentSeasons($seasons['list'], $rows, $by, $weeks, $t, $sales);
+        $clients = $this->clientSplit($rows, $weeks, $recent, $seasonal, $end);
         $purchases = $this->purchases($rows, $weeks, $today, $seasonal);
         // Szczyt i tygodnie ponad zdolność : bez tygodnia bieżącego (produkcja w toku, zamówienia już wysłane).
         $ahead = array_slice(array_keys($weekRows), 1, null);
@@ -320,7 +321,7 @@ final class ForecastService
             'warnings' => $costBasis['warnings']];
         return [
             'today' => $today, 'weeks' => $weekRows, 'products' => $rows, 'trend' => $trend + ['weeks' => $trendWeeks], 'capacity' => $capacity, 'cost' => $cost,
-            'seasons' => $seasonsOut, 'panel_products' => $seasons['unlinked'], 'purchases' => $purchases,
+            'seasons' => $seasonsOut, 'panel_products' => $seasons['unlinked'], 'purchases' => $purchases, 'clients' => $clients,
             'totals' => ['cartons' => (int) array_sum(array_column($weekRows, 'cartons')), 'season_cartons' => (int) array_sum(array_column($weekRows, 'season_cartons')),
                 'pallets' => round(array_sum(array_column($weekRows, 'pallets')), 1), 'hours' => $totalHours,
                 'peak_week' => $peak !== null ? $weekRows[$peak]['iso_week'] : null, 'peak_pct' => $peak !== null ? $weekRows[$peak]['load_pct'] : null,
@@ -608,6 +609,90 @@ final class ForecastService
             else continue;
             if ($h > 0) $out[(int) $it['id_final_product']] = $h;
         }
+        return $out;
+    }
+
+    /**
+     * Kto bierze ile [225] : kartony prognozy na klienta i tydzień, suma = prognoza produktu. Zamówienia już złożone — u
+     * klienta, który zamówił ; prognoza ponad zamówienia — wg udziału klienta w produkcie : sezonowe w tej samej gamie rok
+     * temu, całoroczne w ostatnich tygodniach trendu ; bez tej historii wg zamówień w oknie, inaczej « bez klienta » (id 0).
+     * @return list<array{id:int, name:string, values:list<int>, ordered:list<int>, total:int,
+     *   products:list<array{product_id:int, values:list<int>, ordered:list<int>, total:int}>}>
+     */
+    private function clientSplit(array $rows, array $weeks, array $recent, array $seasonal, string $end): array
+    {
+        $from = $recent[0] ?? $weeks[0];
+        foreach ($seasonal as $list) foreach ($list as $s) if ($s['n1_from'] !== null) $from = min($from, LogisticsPlanService::monday($s['n1_from']));
+        $by = [];
+        foreach ($this->repo->cartonsByClient($from, $end) as $l) {
+            $by[$l['product_id']][$l['monday']][$l['client_id']] = ($by[$l['product_id']][$l['monday']][$l['client_id']] ?? 0.0) + $l['cartons'];
+        }
+        $n = count($weeks);
+        $zero = array_fill(0, $n, 0);
+        $out = [];
+        foreach ($rows as $r) {
+            $pid = $r['product_id'];
+            $hist = $by[$pid] ?? [];
+            $share = [];
+            $add = function (array $mondays) use ($hist, &$share) { foreach ($mondays as $m) foreach ($hist[$m] ?? [] as $c => $v) $share[$c] = ($share[$c] ?? 0.0) + $v; };
+            if ($r['kind'] === 'season') {
+                foreach ($seasonal[$pid] ?? [] as $s) {
+                    if ($s['n1_from'] === null) continue;
+                    $add(array_filter(array_keys($hist), fn($m) => $m >= LogisticsPlanService::monday($s['n1_from']) && $m <= $s['n1_to']));
+                }
+            }
+            if (!$share) $add($recent);
+            if (!$share) $add($weeks);
+            $sum = array_sum($share);
+            foreach ($r['values'] as $i => $v) {
+                if ($v <= 0) continue;
+                $ord = $hist[$weeks[$i]] ?? [];
+                $o = array_sum($ord);
+                $part = [];
+                if ($o > 0 && $o >= $v - self::EPS) {
+                    foreach ($ord as $c => $x) $part[$c] = $x * $v / $o;
+                } else {
+                    $part = $ord;
+                    if ($sum > 0) foreach ($share as $c => $x) $part[$c] = ($part[$c] ?? 0.0) + ($v - $o) * $x / $sum;
+                    else $part[0] = ($part[0] ?? 0.0) + $v - $o;
+                }
+                foreach (self::roundTo($part, $v) as $c => $q) {
+                    if ($q <= 0) continue;
+                    $out[$c] ??= ['values' => $zero, 'ordered' => $zero, 'products' => []];
+                    $out[$c]['products'][$pid] ??= ['values' => $zero, 'ordered' => $zero];
+                    $done = min($q, (int) round($ord[$c] ?? 0.0));
+                    $out[$c]['values'][$i] += $q;
+                    $out[$c]['ordered'][$i] += $done;
+                    $out[$c]['products'][$pid]['values'][$i] += $q;
+                    $out[$c]['products'][$pid]['ordered'][$i] += $done;
+                }
+            }
+        }
+        $names = $this->repo->clientNames(array_keys($out));
+        $list = [];
+        foreach ($out as $c => $x) {
+            $products = [];
+            foreach ($x['products'] as $pid => $p) $products[] = ['product_id' => $pid, 'values' => $p['values'], 'ordered' => $p['ordered'], 'total' => array_sum($p['values'])];
+            usort($products, fn($a, $b) => $b['total'] <=> $a['total'] ?: $a['product_id'] <=> $b['product_id']);
+            $list[] = ['id' => (int) $c, 'name' => $c ? ($names[$c] ?? ('Klient #' . $c)) : 'Bez klienta', 'values' => $x['values'], 'ordered' => $x['ordered'],
+                'total' => array_sum($x['values']), 'products' => $products];
+        }
+        usort($list, fn($a, $b) => [$a['id'] === 0 ? 1 : 0, -$a['total'], $a['name']] <=> [$b['id'] === 0 ? 1 : 0, -$b['total'], $b['name']]);
+        return $list;
+    }
+
+    /** Całe kartony z części (największe reszty), suma = $total. @param array<int, float> $parts @return array<int, int> */
+    private static function roundTo(array $parts, int $total): array
+    {
+        if (!$parts) return [];
+        $out = array_map(fn($v) => (int) floor(max(0.0, $v) + self::EPS), $parts);
+        $rest = $total - array_sum($out);
+        $frac = [];
+        foreach ($parts as $k => $v) $frac[$k] = max(0.0, $v) - $out[$k];
+        arsort($frac);
+        $keys = array_keys($frac);
+        for ($j = 0; $rest > 0; $j++, $rest--) $out[$keys[$j % count($keys)]]++;
+        for ($j = 0; $rest < 0 && $j < 10 * count($keys); $j++) { $k = $keys[count($keys) - 1 - ($j % count($keys))]; if ($out[$k] > 0) { $out[$k]--; $rest++; } }
         return $out;
     }
 

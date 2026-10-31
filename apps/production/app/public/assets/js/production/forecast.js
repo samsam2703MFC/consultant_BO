@@ -80,7 +80,7 @@
         const title = `Wydatki na karton ${num(cc.total, 2)} zł (surowce ${num(cc.raw, 2)}, płace ${num(cc.labor, 2)}, media ${num(cc.media, 2)}, wspólne działy ${num(cc.shared, 2)}) · ${D.weeks.length} tyg. : ${num(p.total * cc.total)} zł\n`
             + p.sources.map((s, i) => `${D.weeks[i].iso_week} : ${({orders: 'zamówienia', n1: 'N-1 × trend', avg: 'średnia', season: 'gama N-1 × trend', none: '—'})[s]}`).join('\n');
         const note = p.all_year_in ? ` <span class="at-sub" title="Sprzedawany w ostatnich tygodniach poza gamą — liczony jak całoroczny">(w gamie ${esc(p.all_year_in.join(', '))}, sprzedaż cały rok)</span>` : '';
-        return `<tr title="${esc(title)}"><td>${dot}${esc(p.name)}${srcBadge(p)}${note}</td>
+        return `<tr title="${esc(title)}"><td>${dot}<button type="button" class="fc-cl" data-fc-pclients="${p.product_id}" title="Którzy klienci biorą ten produkt — tydzień po tygodniu">${esc(p.name)}</button>${srcBadge(p)}${note}</td>
             ${p.values.map((v, i) => `<td class="${v ? '' : 'z'}${p.kind === 'season' && v ? ' s' : ''}${p.sources[i] === 'orders' && v ? ' o' : ''}">${v ? num(v) : '—'}</td>`).join('')}<td class="s">${num(p.total)}</td></tr>`;
     }
     function renderForecast() {
@@ -97,7 +97,7 @@
         const hoursNote = T.no_hours ? `godziny : ${T.products - T.no_hours} z ${T.products} produktów z czasem partii / marszruty, pozostałe szacowane średnią ${num(T.hours_avg_per_carton, 2)} h / karton (${num(T.estimated_hours)} h)` : 'godziny z czasu partii / marszruty wszystkich produktów';
         const hot = W.filter(w => w.load_pct !== null && w.load_pct >= 95);
         const appr = D.approval;
-        const sum = (f) => W.map((w) => f(w));
+        const sum = (f) => W.map((w, i) => f(w, i));
         const C = D.cost;
         const mln = (v) => v >= 1e6 ? num(v / 1e6, 2) + ' mln' : num(v / 1000, 0) + ' tys.';
         const costTitle = `Wydatki : kartony × (surowce i opakowania + płace i media działu produkcji + wspólne działy produkcji${C.shared_sections.length ? ' : ' + C.shared_sections.join(', ') : ''}), z ${C.basis || 'brak miesięcy kosztowych'} : surowce ${num(C.raw)} zł, płace ${num(C.labor)} zł, media ${num(C.media)} zł, wspólne działy ${num(C.shared)} zł. Poza wydatkami : inwestycje ${num(C.excluded.investment)} zł (amortyzacja ${num(C.excluded.depreciation)} zł, kredyt i leasing ${num(C.excluded.financing)} zł), pozostałe koszty stałe (Finanse) ${num(C.excluded.fixed)} zł, ${C.admin_sections.length ? C.admin_sections.join(', ') : 'Administracja'} ${num(C.excluded.admin)} zł ; logistyka osobno ${num(C.logistics)} zł.`;
@@ -124,19 +124,75 @@
                 ${!showAll && !q && regular.length > LIMIT ? `<tr><td colspan="${W.length + 2}"><button type="button" class="kw-btn kw-sm" data-fc-all>Pokaż wszystkie (${regular.length})</button> <span class="at-sub">pozostałe ${regular.length - LIMIT} są w sumach</span></td></tr>` : ''}
                 <tr class="grp"><td colspan="${W.length + 2}">Sezonowe — gamy panelu TF Buddy · ${seasonal.length}</td></tr>
                 ${seasonal.map(p => productRow(p, S)).join('') || `<tr><td colspan="${W.length + 2}" class="at-sub">${D.panel_status.read_at ? 'Brak naszych produktów w gamach sezonowych tych tygodni.' : 'Panel TF Buddy jeszcze nie odczytany — zakładka « Sezony z panelu ».'}</td></tr>`}
-                <tr class="tot"><td>Razem kartony</td>${sum(w => `<td>${num(w.cartons)}</td>`).join('')}<td>${num(T.cartons)}</td></tr>
+                <tr class="tot"><td><button type="button" class="fc-cl" data-fc-clients="" title="Kto bierze ile : klienci × tygodnie">Razem kartony <i class="bi bi-people"></i></button></td>${sum((w, i) => `<td><button type="button" class="fc-cl" data-fc-clients="${i}" title="Kto bierze ile w tygodniu ${w.iso_week}">${num(w.cartons)}</button></td>`).join('')}<td>${num(T.cartons)}</td></tr>
                 <tr><td>Palety</td>${sum(w => `<td>${num(w.pallets, 1)}</td>`).join('')}<td>${num(T.pallets, 0)}</td></tr>
                 <tr class="fc-cost"><td>Pieniądze na produkcję <span class="at-sub">(zł)</span></td>${sum(w => `<td title="${esc(wTitle(w))}">${num(w.cost / 1000, 0)} tys.</td>`).join('')}<td>${mln(C.total)}</td></tr>
                 <tr><td class="fc-sub">w tym surowce i opakowania</td>${sum(w => `<td>${num(w.cost_raw / 1000, 0)} tys.</td>`).join('')}<td>${mln(C.raw)}</td></tr>
                 <tr><td>Godziny produkcji <span class="at-sub">/ zdolność</span></td>${sum(w => `<td class="${w.load_pct > 100 ? 'over' : (w.load_pct >= 90 ? 'hi' : '')}" title="${num(w.hours)} h z ${num(w.capacity)} h${w.estimated_hours ? ' (szacunek ' + num(w.estimated_hours) + ' h)' : ''}">${w.load_pct !== null ? w.load_pct + ' %' : '—'}</td>`).join('')}<td>${num(T.hours)} h</td></tr>
             </tbody></table></div>
             <div class="kw-foot"><span class="at-sub">${hot.length ? `Tydz. ${hot.map(w => `${w.iso_week} (${w.load_pct} %)`).join(', ')} : blisko albo ponad zdolność — produkcja wcześniej na zapas (Prognoza zapasu) albo dodatkowa zmiana.` : 'Wszystkie tygodnie w zdolności produkcji.'} Zdolność : ${capTxt} na tydzień, mniej w tygodniach ze świętami ; ${hoursNote}. Pieniądze na produkcję = wydatki : kartony × (surowce + płace i media działu produkcji + wspólne działy produkcji), z ${esc(C.basis || '—')} ; bez inwestycji (amortyzacja, kredyt i leasing), pozostałych kosztów stałych (Finanse) i Administracji ; logistyka osobno : ${num(C.logistics)} zł${C.no_raw ? ` ; ${C.no_raw} ${pl(C.no_raw, 'produkt', 'produkty', 'produktów')} bez kosztu surowców` : ''}${C.no_section ? ` ; ${C.no_section} bez działu (surowce i wspólne działy)` : ''}.</span>
-                <span class="d-flex gap-2 flex-wrap"><button type="button" class="kw-btn" data-fc-go="seasons">Sezony z panelu</button><button type="button" class="kw-btn" data-fc-go="buy">Zakupy 13 tygodni</button>
+                <span class="d-flex gap-2 flex-wrap"><button type="button" class="kw-btn" data-fc-clients="">Klienci × tygodnie</button><button type="button" class="kw-btn" data-fc-go="seasons">Sezony z panelu</button><button type="button" class="kw-btn" data-fc-go="buy">Zakupy 13 tygodni</button>
                 ${appr ? '<button type="button" class="kw-btn" data-fc-reopen>Cofnij zatwierdzenie</button><button type="button" class="kw-btn pri" data-fc-approve>Zatwierdź ponownie</button>' : '<button type="button" class="kw-btn pri" data-fc-approve>Zatwierdź prognozę</button>'}</span></div>
             ${D.runs.length ? `<div class="fc-runs"><h6>Ostatnie zatwierdzenia</h6><table class="kw-t"><thead><tr><th>Tydzień</th><th>Zatwierdzona</th><th class="r">Kartony</th><th class="r">w tym sezon</th><th class="r">Godziny</th><th class="r">Pieniądze na produkcję</th><th class="r">Zakupy</th></tr></thead><tbody>
                 ${D.runs.map(r => `<tr><td>tydz. ${r.iso_week} · ${full(r.week_start)}</td><td>${when(r.approved_at)}${r.by ? ' — ' + esc(r.by) : ''}</td><td class="r">${num(r.cartons)}</td><td class="r">${num(r.season_cartons)}</td><td class="r">${r.hours !== null ? num(r.hours) + ' h' : '—'}</td><td class="r">${r.production_cost !== null ? num(r.production_cost) + ' zł' : '—'}</td><td class="r">${r.purchase_value !== null ? num(r.purchase_value) + ' zł' : '—'}</td></tr>`).join('')}
             </tbody></table></div>` : ''}
         </div></div>`;
+    }
+
+    // --- Kto bierze ile [225] : klienci × tygodnie (okno) -----------------------------------------------------------
+    function openClients(opts) {
+        const W = D.weeks;
+        const week = opts.week ?? null;
+        const pid = opts.product ?? null;
+        const prod = pid !== null ? D.products.find(p => p.product_id === pid) : null;
+        const names = Object.fromEntries(D.products.map(p => [p.product_id, p.name]));
+        const list = (D.clients || []).map(c => {
+            if (pid === null) return c;
+            const p = c.products.find(x => x.product_id === pid);
+            return p ? {...c, values: p.values, ordered: p.ordered, total: p.total, products: []} : null;
+        }).filter(c => c && c.total > 0);
+        if (week !== null) list.sort((a, b) => (b.values[week] - a.values[week]) || (b.total - a.total));
+        const open = new Set();
+        let q = '';
+        const box = document.createElement('div');
+        box.className = 'fc-modal';
+        const title = prod ? `${prod.name} — kto bierze ile` : (week !== null ? `Kto bierze ile — tydz. ${W[week].iso_week} (${dm(W[week].week_start)})` : `Kto bierze ile — ${W.length} tygodni`);
+        const cell = (v, o, i) => `<td class="${v ? '' : 'z'}${v && o >= v ? ' o' : ''}${i === week ? ' hl' : ''}" title="${v ? (o >= v ? 'zamówione' : (o ? `zamówione ${num(o)} + prognoza ${num(v - o)}` : 'prognoza')) : ''}">${v ? num(v) : '—'}</td>`;
+        const rowsHtml = () => {
+            const ql = q.trim().toLowerCase();
+            const shown = list.filter(c => !ql || c.name.toLowerCase().includes(ql));
+            const tot = W.map((_, i) => shown.reduce((a, c) => a + c.values[i], 0));
+            return shown.map(c => {
+                const canOpen = pid === null && c.products.length;
+                const isOpen = open.has(c.id);
+                return `<tr class="${canOpen ? 'fc-clrow' : ''}"${canOpen ? ` data-fc-open="${c.id}"` : ''}><td>${canOpen ? `<i class="bi bi-chevron-${isOpen ? 'down' : 'right'}"></i> ` : ''}${esc(c.name)}${canOpen ? ` <span class="at-sub">${c.products.length} ${pl(c.products.length, 'produkt', 'produkty', 'produktów')}</span>` : ''}</td>
+                    ${c.values.map((v, i) => cell(v, c.ordered[i], i)).join('')}<td class="s">${num(c.total)}</td></tr>`
+                    + (isOpen ? c.products.map(p => `<tr class="fc-clsub"><td title="${esc(names[p.product_id] || '#' + p.product_id)}">${esc(names[p.product_id] || '#' + p.product_id)}</td>${p.values.map((v, i) => cell(v, p.ordered[i], i)).join('')}<td>${num(p.total)}</td></tr>`).join('') : '');
+            }).join('') + `<tr class="tot"><td>Razem${ql ? ' (filtr)' : ''}</td>${tot.map((v, i) => `<td class="${i === week ? 'hl' : ''}">${num(v)}</td>`).join('')}<td>${num(tot.reduce((a, v) => a + v, 0))}</td></tr>`;
+        };
+        const head = `<tr><th>Klient <span class="at-sub">(kartony)</span></th>${W.map((w, i) => `<th class="${i === week ? 'hl' : ''}"><b>${w.iso_week}</b>${dm(w.week_start)}</th>`).join('')}<th>Razem</th></tr>`;
+        box.innerHTML = `<div class="fc-modal-box" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+            <div class="fc-modal-head"><h4>${esc(title)}</h4><button type="button" class="kw-btn" data-close>Zamknij</button></div>
+            <p class="at-sub mb-0">Kartony na klienta i tydzień. <span class="fc-o">Zielone</span> = zamówienia już złożone ; reszta prognozy rozdzielona wg udziału klienta w produkcie : ostatnie ${D.trend.weeks} tygodni, produkty sezonowe — ta sama gama rok temu. ${pid === null ? 'Kliknij klienta : jego produkty.' : ''}</p>
+            ${list.length > 8 ? '<input type="search" class="form-control fc-modal-q" placeholder="Szukaj klienta…" aria-label="Szukaj klienta" data-fc-q>' : ''}
+            ${list.length ? `<div class="table-responsive"><table class="fc-t fc-clt"><thead>${head}</thead><tbody>${rowsHtml()}</tbody></table></div>` : '<p class="at-sub">Brak klientów z tym produktem w prognozie.</p>'}
+        </div>`;
+        document.body.appendChild(box);
+        const body = box.querySelector('tbody');
+        const close = () => { box.remove(); document.removeEventListener('keydown', onKey); };
+        const onKey = (e) => { if (e.key === 'Escape') close(); };
+        document.addEventListener('keydown', onKey);
+        box.addEventListener('click', (e) => {
+            if (e.target === box || e.target.closest('[data-close]')) return close();
+            const r = e.target.closest('[data-fc-open]');
+            if (!r || !body) return;
+            const id = parseInt(r.dataset.fcOpen, 10);
+            if (open.has(id)) open.delete(id); else open.add(id);
+            body.innerHTML = rowsHtml();
+        });
+        const qi = box.querySelector('[data-fc-q]');
+        if (qi) qi.addEventListener('input', () => { q = qi.value; body.innerHTML = rowsHtml(); });
+        (qi || box.querySelector('[data-close]')).focus();
     }
 
     // --- Makieta 2 : sezony z panelu ------------------------------------------------------------------------------
@@ -275,6 +331,8 @@
         if (t.dataset.fcTab) return setTab(t.dataset.fcTab);
         if (t.dataset.fcGo) { e.preventDefault(); return setTab(t.dataset.fcGo); }
         if (t.dataset.fcSeason) { season = parseInt(t.dataset.fcSeason, 10); return render(); }
+        if (t.dataset.fcClients !== undefined) return openClients({week: t.dataset.fcClients === '' ? null : parseInt(t.dataset.fcClients, 10)});
+        if (t.dataset.fcPclients) return openClients({product: parseInt(t.dataset.fcPclients, 10)});
         if (t.hasAttribute('data-fc-all')) { showAll = true; return render(); }
         if (t.hasAttribute('data-fc-allbuy')) { showAllBuy = true; return render(); }
         if (t.dataset.fcBuyview) { buyView = t.dataset.fcBuyview; save('buy', buyView); return render(); }

@@ -31,6 +31,35 @@ final class ForecastRepository extends WorkshopRepository
     }
 
     /**
+     * Kartony zamówień (bez gratisów i anulowanych) na produkt, klienta i tydzień wysyłki (poniedziałek) — kto bierze ile [225].
+     * Zamówienie bez klienta : client_id 0.
+     * @return list<array{product_id:int, client_id:int, monday:string, cartons:float}>
+     */
+    public function cartonsByClient(string $from, string $to): array
+    {
+        return array_map(fn($r) => ['product_id' => (int) $r['product_id'], 'client_id' => (int) $r['client_id'], 'monday' => (string) $r['monday'], 'cartons' => (float) $r['cartons']], $this->all(
+            'SELECT cop.id_product AS product_id, COALESCE(co.id_customer, 0) AS client_id,
+                    DATE_SUB(DATE(co.expected_shipping_date), INTERVAL WEEKDAY(co.expected_shipping_date) DAY) AS monday, SUM(cop.quantity_carton) AS cartons
+             FROM customer_order co JOIN customer_order_product cop ON cop.id_order = co.id
+             WHERE co.expected_shipping_date >= ? AND co.expected_shipping_date < DATE_ADD(?, INTERVAL 1 DAY)
+               AND co.status IN (1, 2, 3, 5) AND COALESCE(co.is_freebie, 0) = 0 AND cop.quantity_carton > 0
+             GROUP BY cop.id_product, COALESCE(co.id_customer, 0), monday',
+            [$from, $to]
+        ));
+    }
+
+    /** @return array<int, string> nazwa klienta (firma, inaczej imię i nazwisko) po id */
+    public function clientNames(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (!$ids) return [];
+        $out = [];
+        foreach ($this->all("SELECT id, COALESCE(NULLIF(TRIM(company), ''), TRIM(CONCAT(COALESCE(name, ''), ' ', COALESCE(surname, '')))) AS name
+                FROM customer WHERE id IN (" . implode(',', $ids) . ')') as $r) $out[(int) $r['id']] = (string) $r['name'];
+        return $out;
+    }
+
+    /**
      * Produkty ERP : nazwa, sztuki w kartonie, kartony na paletę, aktywność, dział, koszt surowców kartonu (zł), karta
      * produkcji (n_prod_item) i tryb.
      * @return array<int, array> po final_product.id
