@@ -1,0 +1,192 @@
+{% extends "layouts/base.twig" %}
+
+{% macro money(v, cur) %}{% if v is null %}—{% else %}{{ v > 0 ? '+' : (v < 0 ? '−' : '') }}{{ v|abs|number_format(2, ',', ' ') }} {{ cur == 'EUR' ? '€' : cur }}{% endif %}{% endmacro %}
+{% import _self as f %}
+
+{% block title %}Różnice i problemy dostaw{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3><i class="bi bi-exclamation-diamond"></i> Różnice i problemy dostaw</h3>
+            <p class="text-subtitle text-muted">Każda różnica między opłaconą proformą a WDT (zwrot dla klienta albo dopłata) i każdy problem zgłoszony przez kierowcę
+                trafia tutaj : odpowiedzialny, decyzja w ciągu {{ decision_days }} {{ decision_days == 1 ? 'dnia' : 'dni' }}, potem zamknięcie, gdy decyzja jest wykonana.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.si-table{width:100%;border-collapse:collapse;font-size:13px}
+.si-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted);border-bottom:1px solid var(--at-line);padding:8px 10px;white-space:nowrap;text-align:left}
+.si-table td{border-bottom:1px solid var(--at-line);padding:9px 10px;vertical-align:top}
+.si-table td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.si-table tr.is-done td{color:var(--at-muted)}
+.si-sub{font-size:12px;color:var(--at-muted);margin-top:2px}
+.si-late{color:var(--at-danger);font-weight:600}
+.si-decide{display:flex;flex-direction:column;gap:6px;min-width:230px}
+.si-decide .si-row{display:flex;gap:6px}
+.si-lines td{background:var(--at-bg-2)}
+.si-lines table{width:100%;font-size:12.5px}
+.si-lines th,.si-lines td{padding:4px 8px;border:0}
+.si-pos{color:var(--at-danger)}.si-neg{color:var(--at-success)}
+</style>
+<section class="section">
+    <div class="at-tiles">
+        <div class="at-tile {{ counters.late ? 'at-tile-warn' }}"><span class="at-tile-label"><i class="bi bi-hourglass-split"></i> Do decyzji</span>
+            <span class="at-tile-value">{{ counters.open }}</span><span class="at-tile-meta">{% if counters.late %}<span class="si-late">{{ counters.late }} po terminie</span>{% else %}w terminie{% endif %}</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-arrow-repeat"></i> W realizacji</span>
+            <span class="at-tile-value">{{ counters.decided }}</span><span class="at-tile-meta">decyzja podjęta, do wykonania</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-arrow-return-left"></i> Do zwrotu klientom</span>
+            <span class="at-tile-value">{{ counters.to_refund|number_format(2, ',', ' ') }} €</span><span class="at-tile-meta">opłacone, a nie wysłane (sprawy otwarte)</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-cash-coin"></i> Do dopłaty od klientów</span>
+            <span class="at-tile-value">{{ counters.to_collect|number_format(2, ',', ' ') }} €</span><span class="at-tile-meta">wysłane ponad opłaconą proformę</span></div>
+    </div>
+
+    <div class="at-pipe-filters" role="navigation" aria-label="Status">
+        {% for code, label in {'open': 'Do decyzji', 'decided': 'W realizacji', 'done': 'Zamknięte', 'all': 'Wszystkie'} %}
+            <a class="at-pipe-filter {{ filter == code ? 'active' }}" href="{{ root }}/shipments/differences?status={{ code }}{{ mine ? '&mine=1' }}">{{ label }}{% if code in ['open', 'decided'] %} <span class="at-pipe-count">{{ counters[code] }}</span>{% endif %}</a>
+        {% endfor %}
+        <a class="at-pipe-filter {{ mine ? 'active' }}" href="{{ root }}/shipments/differences?status={{ filter }}{{ mine ? '' : '&mine=1' }}"><i class="bi bi-person"></i> Tylko moje</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body table-responsive">
+            <table class="si-table">
+                <thead><tr><th>Data</th><th>Klient</th><th>Sprawa</th><th class="n">Kwota</th><th>Odpowiedzialny</th><th>Decyzja</th><th></th></tr></thead>
+                <tbody>
+                {% for i in items %}
+                    <tr data-issue="{{ i.id }}" class="{{ i.status == 'done' ? 'is-done' }}">
+                        <td>{{ i.opened_on|date('d.m.Y') }}
+                            <div class="si-sub {{ i.late ? 'si-late' }}">{% if i.status == 'open' %}decyzja do {{ i.due_on|date('d.m') }}{% else %}{{ i.status_label }}{% endif %}</div></td>
+                        <td>{% if i.id_customer %}<a class="text-reset" href="{{ root }}/clients/{{ i.id_customer }}/space">{{ i.customer }}</a>{% else %}{{ i.customer }}{% endif %}</td>
+                        <td><span class="at-pill {{ {refund: 'at-pill-ok', collect: 'at-pill-warn', delivery: 'at-pill-danger'}[i.kind] }}">{{ i.kind_label }}</span>
+                            <div class="si-sub">
+                                {% if i.source == 'difference' %}
+                                    {{ i.wdt_number ? 'WDT ' ~ i.wdt_number ~ ' · ' }}{{ i.lines_changed }} {{ i.lines_changed == 1 ? 'pozycja różni się' : 'pozycji różni się' }}
+                                    · <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-lines="{{ i.id }}">pokaż</button>
+                                {% else %}
+                                    dostawa {{ i.ship_date|date('d.m.Y') }} · {{ i.reason ?: 'problem' }}{{ i.driver_name ? ' · ' ~ i.driver_name }}
+                                    {% if i.pallets %} · palety {{ i.pallets[0] }} / zwrot {{ i.pallets[1] }}{% endif %}
+                                    {% if i.stop_note %}<div>« {{ i.stop_note }} »</div>{% endif %}
+                                {% endif %}
+                                {% if i.last_message_at %}<div><i class="bi bi-envelope-check"></i> wiadomość do klienta {{ i.last_message_at|date('d.m.Y') }}</div>{% endif %}
+                            </div></td>
+                        <td class="n {{ i.amount is not null and i.amount > 0 ? 'si-pos' : (i.amount is not null and i.amount < 0 ? 'si-neg') }}">{{ f.money(i.amount, i.currency) }}</td>
+                        <td><select class="form-select form-select-sm" data-owner aria-label="Odpowiedzialny" {{ i.status == 'done' ? 'disabled' }}>
+                                <option value="">— nikt —</option>
+                                {% for u in users %}<option value="{{ u.id }}" {{ u.id == i.owner_id ? 'selected' }}>{{ u.name }}{{ u.position ? ' (' ~ u.position ~ ')' }}</option>{% endfor %}
+                            </select></td>
+                        <td>
+                            {% if i.status == 'done' %}
+                                {{ i.decision_label }}{% if i.note %}<div class="si-sub">{{ i.note }}</div>{% endif %}
+                            {% else %}
+                                <form class="si-decide" data-decide>
+                                    <select class="form-select form-select-sm" name="decision" aria-label="Decyzja" required>
+                                        <option value="">— wybierz decyzję —</option>
+                                        {% for d in i.decisions %}<option value="{{ d }}" {{ d == i.decision ? 'selected' }}>{{ decisions[d] }}</option>{% endfor %}
+                                    </select>
+                                    <div class="si-row">
+                                        <input class="form-control form-control-sm" name="note" maxlength="2000" placeholder="Notatka (wymagana przy « bez rozliczenia » i korekcie)" value="{{ i.note }}">
+                                        <button class="btn btn-sm btn-outline-primary" type="submit">Zapisz</button>
+                                    </div>
+                                </form>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="at-actions">
+                                {# P7 : la décision s'exécute d'ici — domówienie pré-remplie, non-conformité client, paiement reçu. #}
+                                {% if i.status == 'decided' and i.decision in ['resend', 'redeliver'] %}
+                                    {% if i.id_order %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}/client-orders/{{ i.id_order }}/edit" title="Sprawa zamknie się sama, gdy domówienie dostanie WDT"><i class="bi bi-box-seam"></i> Domówienie #{{ i.id_order }}</a>
+                                    {% elseif i.id_customer %}<a class="btn btn-sm btn-primary" data-supplement href="{{ root }}/clients/{{ i.id_customer }}/orders/create?issue={{ i.id }}"><i class="bi bi-plus-circle"></i> Utwórz domówienie</a>{% endif %}
+                                {% endif %}
+                                {% if i.status == 'decided' and i.decision == 'complaint' %}
+                                    {% if i.id_nc %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}/purchasing/nc"><i class="bi bi-exclamation-octagon"></i> {{ i.nc_number ?: 'Niezgodność' }}</a>
+                                    {% else %}<button type="button" class="btn btn-sm btn-primary" data-nc><i class="bi bi-exclamation-octagon"></i> Utwórz niezgodność</button>{% endif %}
+                                {% endif %}
+                                {% if i.status == 'decided' %}<button type="button" class="btn btn-sm {{ i.decision in ['collect', 'refund'] ? 'btn-primary' : 'btn-outline-primary' }}" data-close data-confirm="{{ {collect: 'Dopłata klienta otrzymana ? Sprawa zostanie zamknięta.', refund: 'Zwrot dla klienta wykonany ? Sprawa zostanie zamknięta.'}[i.decision] ?? 'Zamknąć sprawę ? Decyzja została wykonana.' }}" title="Decyzja wykonana"><i class="bi bi-check2"></i> {{ {collect: 'Dopłata zapłacona', refund: 'Zwrot wykonany'}[i.decision] ?? 'Zamknij' }}</button>{% endif %}
+                                <div class="at-more">
+                                    <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej" title="Więcej"><i class="bi bi-three-dots"></i></button>
+                                    <div class="at-more-menu" role="menu" hidden>
+                                        {% if i.id_difference %}
+                                            <a role="menuitem" href="{{ root }}/ajax/difference-documents/{{ i.id_difference }}/document"><i class="bi bi-file-earmark-pdf"></i>Dokument różnic (PDF)</a>
+                                            <a role="menuitem" href="{{ root }}/difference-documents/{{ i.id_difference }}/products"><i class="bi bi-pencil"></i>Powody różnic</a>
+                                            <a role="menuitem" href="{{ root }}/communication/compose/reminder/difference/{{ i.id_difference }}?type=delivery_difference"><i class="bi bi-envelope"></i>Wyślij dokument klientowi</a>
+                                            {% if i.kind == 'collect' %}<a role="menuitem" href="{{ root }}/communication/compose/reminder/difference/{{ i.id_difference }}?type=payment_reminder"><i class="bi bi-bell"></i>Przypomnienie o dopłacie</a>{% endif %}
+                                        {% endif %}
+                                        {% if i.id_delivery_stop %}
+                                            <a role="menuitem" href="{{ root }}/logistics/deliveries/{{ i.id_delivery_stop }}/proof.pdf" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i>Raport dostawy (PDF)</a>
+                                            <a role="menuitem" href="{{ root }}/franchise-complaints"><i class="bi bi-exclamation-triangle"></i>Reklamacje</a>
+                                        {% endif %}
+                                        {% if i.status == 'done' %}<hr><button type="button" role="menuitem" data-reopen><i class="bi bi-arrow-counterclockwise"></i>Otwórz ponownie</button>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7"><p class="at-empty mb-0">{{ filter == 'open' ? 'Brak spraw do decyzji.' : 'Brak spraw.' }}</p></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <p class="at-sub mt-3 mb-0">Kwota = WDT − opłacona proforma : <span class="si-pos">+ dopłata klienta</span>, <span class="si-neg">− zwrot dla klienta</span>.
+                Różnice bez opłaconej proformy (płatność na fakturę) nie trafiają do kolejki ; próg i liczba dni : Ustawienia › Pozostałe.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include "page_components/ajax_helpers.twig" %}
+<script>
+(function () {
+    const reload = (res) => { at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd')); if (res.ok) setTimeout(() => location.reload(), 400); return res; };
+    const row = (el) => el.closest('tr[data-issue]');
+    document.querySelectorAll('[data-owner]').forEach(s => s.addEventListener('change', () => {
+        at.send('/ajax/shipments/differences/' + row(s).dataset.issue + '/owner', 'PUT', {owner_id: s.value || null}).then(res => at.notify(res.ok, res.message || 'Błąd'));
+    }));
+    document.querySelectorAll('[data-decide]').forEach(form => form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button[type=submit]');
+        btn.disabled = true;
+        at.send('/ajax/shipments/differences/' + row(form).dataset.issue + '/decision', 'PUT', {decision: form.decision.value, note: form.note.value})
+            .then(reload).then(res => { if (!res.ok) btn.disabled = false; });
+    }));
+    document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => {
+        if (!confirm(b.dataset.confirm || 'Zamknąć sprawę ? Decyzja została wykonana (zwrot, dopłata, dostawa…).')) return;
+        b.disabled = true;
+        at.send('/ajax/shipments/differences/' + row(b).dataset.issue + '/close', 'POST', {}).then(reload).then(res => { if (!res.ok) b.disabled = false; });
+    }));
+    document.querySelectorAll('[data-nc]').forEach(b => b.addEventListener('click', () => {
+        if (!confirm('Utworzyć niezgodność klienta (Produkcja › Niezgodności) z opisem problemu przy dostawie ?')) return;
+        b.disabled = true;
+        at.send('/ajax/shipments/differences/' + row(b).dataset.issue + '/nc', 'POST', {}).then(reload).then(res => { if (!res.ok) b.disabled = false; });
+    }));
+    document.querySelectorAll('[data-reopen]').forEach(b => b.addEventListener('click', () => {
+        at.send('/ajax/shipments/differences/' + row(b).dataset.issue + '/reopen', 'POST', {}).then(reload);
+    }));
+    const money = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.querySelectorAll('[data-lines]').forEach(b => b.addEventListener('click', () => {
+        const tr = row(b);
+        const next = tr.nextElementSibling;
+        if (next && next.classList.contains('si-lines')) { next.remove(); b.textContent = 'pokaż'; return; }
+        b.disabled = true;
+        at.send('/ajax/shipments/differences/' + tr.dataset.issue + '/lines', 'GET').then(res => {
+            b.disabled = false;
+            if (!res.ok) { at.notify(false, res.message || 'Błąd'); return; }
+            const lines = res.data || [];
+            const detail = document.createElement('tr');
+            detail.className = 'si-lines';
+            detail.innerHTML = '<td colspan="7"><table><thead><tr><th>Produkt</th><th class="n">Opłacone</th><th class="n">Wysłane</th><th class="n">Cena</th><th class="n">Różnica</th><th>Powód</th></tr></thead><tbody>'
+                + (lines.length ? lines.map(l => `<tr><td>${at.esc(l.product_name)}</td><td class="n">${at.esc(l.quantity_ordered)}</td><td class="n">${at.esc(l.invoiced_quantity)}</td>`
+                    + `<td class="n">${at.esc(Number(l.price_during_invoicing || l.price_during_ordering).toLocaleString('pl-PL', {minimumFractionDigits: 2}))}</td>`
+                    + `<td class="n ${Number(l.amount) > 0 ? 'si-pos' : 'si-neg'}">${money(Number(l.amount))}</td><td>${at.esc(l.difference_reason) || '<span class="text-muted">—</span>'}</td></tr>`).join('')
+                    : '<tr><td colspan="6" class="text-muted">Brak różnic w pozycjach.</td></tr>')
+                + '</tbody></table></td>';
+            tr.after(detail);
+            b.textContent = 'ukryj';
+        });
+    }));
+})();
+</script>
+{% endblock %}

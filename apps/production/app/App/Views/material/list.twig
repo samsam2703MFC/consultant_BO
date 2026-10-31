@@ -1,0 +1,544 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.materials_and_categories }}{% endblock %}
+
+{% block page_heading %}
+<div class="page-heading">
+    <div class="page-title">
+        <div class="row">
+            <div class="col-12 col-md-6 order-md-1 order-last">
+                <h3>{{ translations.materials_and_categories }}</h3>
+                <p class="text-subtitle text-muted">{{ translations.materials_and_categories_subtitle }}</p>
+            </div>
+            <div class="col-12 col-md-6 order-md-2 order-first">
+                <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ root }}">Dashboard</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ translations.materials_and_categories }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+    .material-row {
+        transition: background-color 0.15s ease-in-out;
+    }
+
+    .material-row:hover {
+        background-color: #f8f9fa;
+    }
+
+    .badge-package {
+        font-size: 0.75rem;
+    }
+
+    .icon-package {
+        color: #0d6efd;
+        font-size: 1.2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    {# Jedna strona zamiast trzech (kategorie, surowce kategorii, wszystkie surowce) : zakładki « Surowce » i « Kategorie ». #}
+    {% set new_material_url = selected_category ? root ~ '/material-categories/' ~ selected_category ~ '/materials/new' : root ~ '/materials/new' %}
+    <ul class="nav nav-pills mb-3">
+        <li class="nav-item"><a class="nav-link {{ tab == 'materials' ? 'active' }}" href="{{ root }}/materials/all{{ selected_category ? '?category=' ~ selected_category }}"><i class="bi bi-list-ul"></i> {{ translations.tab_materials }}</a></li>
+        <li class="nav-item"><a class="nav-link {{ tab == 'categories' ? 'active' }}" href="{{ root }}/materials/all?tab=categories"><i class="bi bi-diagram-3"></i> {{ translations.tab_categories }}</a></li>
+    </ul>
+    <section class="section {{ tab != 'materials' ? 'd-none' }}" data-tab="materials">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-12 col-md-6">
+                        <h4 class="card-title mb-0">{{ translations.all_materials_list }}</h4>
+                    </div>
+                    <div class="col-12 col-md-6 text-end mt-2 mt-md-0">
+                        <a href="{{ new_material_url }}" class="btn btn-primary btn-sm" data-new-material>
+                            <i class="bi bi-plus-circle"></i> {{ translations.new_material }}
+                        </a>
+                        <a href="{{ root }}/materials/export" class="btn btn-info btn-sm">
+                            <i class="bi bi-download"></i> {{ translations.export_materials|default('Eksportuj') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Filters -->
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-4">
+                        <input type="text"
+                               class="form-control"
+                               id="searchMaterials"
+                               placeholder="{{ translations.search_materials|default('Szukaj surowców...') }}">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <select class="form-select" id="categoryFilter">
+                            <option value="">{{ translations.all_categories }}</option>
+                            {% for c in categories %}
+                                <option value="{{ c.id }}" {{ c.id == selected_category ? 'selected' }}>{{ c.name }} ({{ c.materials_count }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <select class="form-select" id="typeFilter">
+                            <option value="">{{ translations.all_types }}</option>
+                            <option value="0">{{ translations.regular_materials }}</option>
+                            <option value="1">{{ translations.package_materials }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Counter -->
+                <div class="mb-3">
+                    <small class="text-muted">
+                        {{ translations.showing }}: <span id="visibleCount">{{ rows|length }}</span> / {{ rows|length }}
+                    </small>
+                </div>
+
+                <!-- Materials table -->
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px" class="text-center">{{ translations.filter_by_type }}</th>
+                                <th>{{ translations.material_name }}</th>
+                                <th>{{ translations.category }}</th>
+                                <th>{{ translations.supplier }}</th>
+                                <th>{{ translations.unit }}</th>
+                                <th class="text-end">{{ translations.price_per_1000 }}</th>
+                                <th style="width: 120px" class="text-center">{{ translations.is_package_part }}</th>
+                                <th class="text-center">{{ translations.actions }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="materialsTableBody">
+                            {% if rows is empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        {{ translations.no_materials }}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                {% for material in rows %}
+                                    <tr class="material-row"
+                                        data-material-name="{{ material.name|lower }}"
+                                        data-category="{{ material.id_category|default('') }}"
+                                        data-is-package="{{ material.is_part_of_package }}">
+                                        <td class="text-center">
+                                            {% if material.is_part_of_package == 1 %}
+                                                <i class="bi bi-box-seam icon-package"
+                                                   title="{{ translations.is_package_part }}"
+                                                   data-bs-toggle="tooltip"></i>
+                                            {% else %}
+                                                <i class="bi bi-circle text-muted"
+                                                   title="{{ translations.regular_material }}"
+                                                   data-bs-toggle="tooltip"></i>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <strong>{{ material.name }}</strong>
+                                            {% if material.is_part_of_package == 1 %}
+                                                <span class="badge bg-info badge-package ms-1">
+                                                    {{ translations.is_package_part }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if material.category_name %}
+                                                <span class="badge bg-light text-dark">{{ material.category_name }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if material.supplier_name %}
+                                                {{ material.supplier_name }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ material.unit_name }}</td>
+                                        <td class="text-end">
+                                            {% if material.price_per_1000 %}
+                                                {{ material.price_per_1000|number_format(2, ',', ' ') }} zł
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check form-switch d-flex justify-content-center">
+                                                <input class="form-check-input package-toggle"
+                                                       type="checkbox"
+                                                       role="switch"
+                                                       id="packageToggle{{ material.id }}"
+                                                       data-material-id="{{ material.id }}"
+                                                       data-material-name="{{ material.name }}"
+                                                       {% if material.is_part_of_package == 1 %}checked{% endif %}
+                                                       title="{{ translations.toggle_package_status }}">
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="at-actions">
+                                                <a href="{{ root }}/materials/{{ material.id }}/edit" class="btn btn-sm btn-primary" title="{{ translations.edit }}">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <div class="at-more">
+                                                    <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="{{ translations.more_actions }}" title="{{ translations.more_actions }}"><i class="bi bi-three-dots"></i></button>
+                                                    <div class="at-more-menu" role="menu" hidden>
+                                                        <button type="button" role="menuitem" data-allergens="{{ material.id }}" data-name="{{ material.name }}"><i class="bi bi-exclamation-diamond"></i>{{ translations.allergens }}</button>
+                                                        <hr>
+                                                        <a role="menuitem" class="at-more-danger" href="{{ root }}/materials/{{ material.id }}/delete"><i class="bi bi-trash"></i>{{ translations.delete }}</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section {{ tab != 'categories' ? 'd-none' }}" data-tab="categories">
+        <div class="card">
+            <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                <h4 class="card-title mb-0">{{ translations.material_categories }}</h4>
+                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#categoryModal">
+                    <i class="bi bi-folder-plus"></i> {{ translations.add_category }}
+                </button>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">{{ translations.categories_help }}</p>
+                <table class="table table-striped align-middle" data-at-table>
+                    <thead>
+                    <tr>
+                        <th>{{ translations.category }}</th>
+                        <th class="text-center">{{ translations.materials_count }}</th>
+                        <th class="text-end">{{ translations.actions }}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for c in categories %}
+                        <tr data-category-id="{{ c.id }}">
+                            <td>{{ c.name }}</td>
+                            <td class="text-center">{{ c.materials_count }}</td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#categoryModal"
+                                        data-category-id="{{ c.id }}" data-category-name="{{ c.name }}">{{ translations.edit }}</button>
+                                <a href="{{ root }}/materials/all?category={{ c.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-list-ul"></i> {{ translations.category_materials }}</a>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="3" class="text-center text-muted">{{ translations.no_categories }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    {# Kategoria : nowa / zmiana nazwy (dawna strona /material-categories) #}
+    <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="categoryModalLabel">{{ translations.add_category }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ translations.close }}"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="categoryForm">
+                        <input type="hidden" id="categoryId" value="">
+                        <div class="mb-3">
+                            <label for="categoryName" class="form-label">{{ translations.category_name }}</label>
+                            <input type="text" class="form-control" id="categoryName" required>
+                            <div class="invalid-feedback">{{ translations.field_required }}</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ translations.cancel }}</button>
+                    <button type="button" class="btn btn-primary" id="saveCategoryBtn">{{ translations.save }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Alergeny surowca (dawna lista surowców kategorii) #}
+    <div class="modal fade" id="allergensModal" tabindex="-1" aria-labelledby="allergensModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="allergensModalLabel">Alergeny surowca</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ translations.close }}"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="allergens-material-id" value="">
+                    <div class="alert alert-info py-2" id="allergens-material-name" style="display:none;"></div>
+                    <div id="allergens-loading" class="text-muted" style="display:none;">Ładowanie…</div>
+                    <div class="row" id="allergens-checkboxes">
+                        {% for aid, a in allergens %}
+                            <div class="col-12 col-md-6 col-lg-4 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input allergen-checkbox" type="checkbox" id="allergen_{{ aid }}" value="{{ aid }}">
+                                    <label class="form-check-label" for="allergen_{{ aid }}">{{ a.name|default(a.code|default('-')) }}</label>
+                                    <div class="text-muted small">{{ a.code|default('') }}</div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="col-12"><div class="alert alert-warning mb-0">Brak zdefiniowanych alergenów.</div></div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3 d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-outline-secondary" data-allergens-all="1">Zaznacz wszystkie</button>
+                        <button type="button" class="btn btn-outline-secondary" data-allergens-all="0">Odznacz wszystkie</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ translations.close }}</button>
+                    <button type="button" class="btn btn-primary" id="allergens-save-btn">{{ translations.save }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// DOM Elements
+const searchInput = document.getElementById('searchMaterials');
+const categoryFilter = document.getElementById('categoryFilter');
+const typeFilter = document.getElementById('typeFilter');
+const materialsTableBody = document.getElementById('materialsTableBody');
+const visibleCount = document.getElementById('visibleCount');
+const totalMaterials = {{ rows|length }};
+
+// Apply filters
+function applyFilters() {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const categoryValue = categoryFilter.value;
+    const typeValue = typeFilter.value;
+    let visible = 0;
+
+    document.querySelectorAll('.material-row').forEach(row => {
+        const materialName = row.dataset.materialName || '';
+        const category = row.dataset.category || '';
+        const isPackage = row.dataset.isPackage || '0';
+
+        const matchesSearch = !searchTerm || materialName.includes(searchTerm);
+        const matchesCategory = !categoryValue || category === categoryValue;
+        const matchesType = !typeValue || isPackage === typeValue;
+
+        const isVisible = matchesSearch && matchesCategory && matchesType;
+        row.style.display = isVisible ? '' : 'none';
+
+        if (isVisible) visible++;
+    });
+
+    visibleCount.textContent = visible;
+}
+
+// Event listeners
+searchInput.addEventListener('input', applyFilters);
+categoryFilter.addEventListener('change', function () {
+    applyFilters();
+    // Wybrana kategoria w adresie (powrót z formularzy) i nowy surowiec od razu w tej kategorii.
+    const url = new URL(window.location.href);
+    if (categoryFilter.value) url.searchParams.set('category', categoryFilter.value); else url.searchParams.delete('category');
+    window.history.replaceState(null, '', url);
+    document.querySelector('[data-new-material]').href = categoryFilter.value
+        ? `{{ root }}/material-categories/${categoryFilter.value}/materials/new` : '{{ root }}/materials/new';
+});
+typeFilter.addEventListener('change', applyFilters);
+if (categoryFilter.value) applyFilters();
+
+// Kategoria : nowa / zmiana nazwy
+const categoryModalEl = document.getElementById('categoryModal');
+categoryModalEl.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button ? button.getAttribute('data-category-id') : '';
+    const name = button ? button.getAttribute('data-category-name') : '';
+    document.getElementById('categoryForm').classList.remove('was-validated');
+    document.getElementById('categoryId').value = id || '';
+    document.getElementById('categoryName').value = name || '';
+    document.getElementById('categoryModalLabel').textContent = id ? "{{ translations.edit_category }} - " + (name || '') : "{{ translations.add_category }}";
+});
+document.getElementById('saveCategoryBtn').addEventListener('click', async function () {
+    const id = document.getElementById('categoryId').value;
+    const name = document.getElementById('categoryName').value.trim();
+    if (!name) { document.getElementById('categoryForm').classList.add('was-validated'); return; }
+    try {
+        const response = await api(id ? `/ajax/material-categories/${id}` : '/ajax/material-categories', {method: id ? 'PATCH' : 'POST', data: {id_group: 0, name}});
+        if (!response.ok) throw new Error(response.message || "{{ translations.error_saving }}");
+        window.location.href = '{{ root }}/materials/all?tab=categories';
+    } catch (e) {
+        Swal.fire({icon: 'error', title: 'Błąd!', text: e.message || "{{ translations.error_saving }}", confirmButtonText: 'OK'});
+    }
+});
+
+// Alergeny surowca
+let allergensModal = null;
+const allergenBoxes = () => Array.from(document.querySelectorAll('#allergens-checkboxes .allergen-checkbox'));
+const allergensLoading = (on) => {
+    document.getElementById('allergens-loading').style.display = on ? '' : 'none';
+    document.getElementById('allergens-save-btn').disabled = !!on;
+};
+document.querySelectorAll('[data-allergens-all]').forEach(b => b.addEventListener('click', () => allergenBoxes().forEach(cb => cb.checked = b.dataset.allergensAll === '1')));
+document.addEventListener('click', async function (e) {
+    const b = e.target.closest('[data-allergens]');
+    if (!b) return;
+    const id = b.dataset.allergens;
+    document.getElementById('allergens-material-id').value = id;
+    const nameBox = document.getElementById('allergens-material-name');
+    nameBox.style.display = '';
+    nameBox.textContent = `Surowiec: ${b.dataset.name}`;
+    allergenBoxes().forEach(cb => cb.checked = false);
+    allergensModal = allergensModal || new bootstrap.Modal(document.getElementById('allergensModal'));
+    allergensModal.show();
+    allergensLoading(true);
+    try {
+        const result = await api(`/ajax/materials/${id}/allergens`, {method: 'GET'});
+        if (!result.ok) { showSnack(false, result.message || 'Nie udało się pobrać alergenów'); return; }
+        const ids = (result.rows || result.data?.rows || []).map(r => parseInt(r.id, 10));
+        allergenBoxes().forEach(cb => { cb.checked = ids.includes(parseInt(cb.value, 10)); });
+    } catch (err) { showSnack(false, 'Błąd komunikacji'); }
+    finally { allergensLoading(false); }
+});
+document.getElementById('allergens-save-btn').addEventListener('click', async function () {
+    const id = parseInt(document.getElementById('allergens-material-id').value || '0', 10);
+    if (!id) return;
+    const allergenIds = allergenBoxes().filter(cb => cb.checked).map(cb => parseInt(cb.value, 10));
+    allergensLoading(true);
+    try {
+        const result = await api(`/ajax/materials/${id}/allergens`, {method: 'PATCH', data: {allergenIds}});
+        showSnack(!!result.ok, result.message || (result.ok ? 'Zapisano' : 'Nie udało się zapisać'));
+        if (result.ok) allergensModal.hide();
+    } catch (err) { showSnack(false, 'Błąd komunikacji'); }
+    finally { allergensLoading(false); }
+});
+
+// Keyboard shortcut for search
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+    }
+});
+
+// Package toggle handler
+document.addEventListener('change', async function(e) {
+    if (e.target.classList.contains('package-toggle')) {
+        const toggle = e.target;
+        const materialId = toggle.dataset.materialId;
+        const materialName = toggle.dataset.materialName;
+        const isPartOfPackage = toggle.checked ? 1 : 0;
+
+        // Disable toggle during update
+        toggle.disabled = true;
+
+        try {
+            const response = await api(`/ajax/materials/${materialId}/toggle-package`, {
+                method: 'PATCH',
+                data: {
+                    is_part_of_package: isPartOfPackage
+                }
+            });
+
+            if (response.ok) {
+                // Update UI
+                const row = toggle.closest('.material-row');
+                const iconCell = row.querySelector('td:first-child i');
+                const nameCell = row.querySelector('td:nth-child(2)');
+
+                // Update row data attribute
+                row.dataset.isPackage = isPartOfPackage;
+
+                // Update icon
+                if (isPartOfPackage === 1) {
+                    iconCell.className = 'bi bi-box-seam icon-package';
+                    iconCell.title = "{{ translations.is_package_part }}";
+
+                    // Add badge if not exists
+                    if (!nameCell.querySelector('.badge-package')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'badge bg-info badge-package ms-1';
+                        badge.textContent = "{{ translations.is_package_part }}";
+                        nameCell.querySelector('strong').after(badge);
+                    }
+                } else {
+                    iconCell.className = 'bi bi-circle text-muted';
+                    iconCell.title = "{{ translations.regular_material }}";
+
+                    // Remove badge if exists
+                    const badge = nameCell.querySelector('.badge-package');
+                    if (badge) {
+                        badge.remove();
+                    }
+                }
+
+                // Reinitialize tooltip
+                const tooltip = bootstrap.Tooltip.getInstance(iconCell);
+                if (tooltip) {
+                    tooltip.dispose();
+                }
+                new bootstrap.Tooltip(iconCell);
+
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: "{{ translations.status_updated }}",
+                    text: `${materialName}: ${isPartOfPackage === 1 ? "{{ translations.is_package_part }}" : "{{ translations.regular_material }}"}`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+                // Reapply filters if needed
+                applyFilters();
+            } else {
+                // Revert toggle on error
+                toggle.checked = !toggle.checked;
+
+                Swal.fire({
+                    icon: 'error',
+                    title: "{{ translations.status_update_error }}",
+                    text: response.error || 'Wystąpił błąd',
+                    confirmButtonText: 'OK'
+                });
+            }
+        } catch (error) {
+            console.error('Toggle error:', error);
+
+            // Revert toggle on error
+            toggle.checked = !toggle.checked;
+
+            Swal.fire({
+                icon: 'error',
+                title: "{{ translations.status_update_error }}",
+                text: 'Błąd komunikacji z serwerem',
+                confirmButtonText: 'OK'
+            });
+        } finally {
+            // Re-enable toggle
+            toggle.disabled = false;
+        }
+    }
+});
+</script>
+{% endblock %}
+

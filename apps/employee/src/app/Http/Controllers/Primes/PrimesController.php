@@ -3,10 +3,11 @@
 namespace App\Employee\app\Http\Controllers\Primes;
 
 use App\Employee\app\Http\Controllers\Controller;
+use App\Employee\app\Services\Primes\PrimesPlan;
 use App\Employee\app\Services\Primes\PrimesService;
 use App\Employee\core\Support\Route;
 
-/** « Mes primes » : un seul écran, centré sur elle : ce qu'elle peut gagner, comment, sa collection, les classements (06/10/2026). */
+/** « Mes primes » : ce qui est encore en jeu, comment y arriver, où elle en est, les classements (06/10/2026, motivation le 23/10/2026). */
 class PrimesController extends Controller
 {
     public function __construct(
@@ -21,6 +22,9 @@ class PrimesController extends Controller
         $r = $this->primesService->pourMoi($mois);
         $data['primes'] = $r['fiche'] ?? null;
         $data['primesErreur'] = $r['erreur'] ?? null;
+        // Comment y arriver (23/10/2026) : les primes encore à aller chercher, et le temps qu'il lui reste.
+        $data['plan'] = $data['primes'] ? PrimesPlan::pour($data['primes']) : [];
+        $data['heuresRestantes'] = $data['primes'] ? PrimesPlan::heuresRestantes($data['primes']) : null;
         $data['jour'] = (int) date('j');
         $data['heure'] = date('H:i');
 

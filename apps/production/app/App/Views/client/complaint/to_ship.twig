@@ -1,0 +1,93 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Zwroty do wysłania{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3><i class="bi bi-box-arrow-up"></i> Zwroty do wysłania</h3>
+            <p class="text-subtitle text-muted mb-0">Wszystko, co ma wrócić do klientów, na jednej stronie : zamienniki z reklamacji (do przygotowania i do wysłania),
+                kartony zwrotów (WZ + CMR) i reklamacje bez decyzji. Zamiennik spakowany wychodzi z najbliższym WZ klienta — « Wysłane » ustawia się samo.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-3"><a class="at-tile {{ complaints ? 'at-tile-warn' : 'at-tile-ok' }}" href="#zw-complaints"><span class="at-tile-label"><i class="bi bi-chat-square-text"></i> Reklamacje bez decyzji</span><span class="at-tile-value">{{ complaints|length }}</span></a></div>
+        <div class="col-6 col-lg-3"><a class="at-tile {{ pending ? 'at-tile-warn' : 'at-tile-ok' }}" href="#zw-pending"><span class="at-tile-label"><i class="bi bi-hourglass-split"></i> Do przygotowania</span><span class="at-tile-value">{{ pending|length }}</span></a></div>
+        <div class="col-6 col-lg-3"><a class="at-tile {{ to_ship ? 'at-tile-warn' : 'at-tile-ok' }}" href="#zw-ship"><span class="at-tile-label"><i class="bi bi-truck"></i> Zamienniki do wysłania</span><span class="at-tile-value">{{ to_ship|length }}</span></a></div>
+        <div class="col-6 col-lg-3"><a class="at-tile {{ returns ? 'at-tile-warn' : 'at-tile-ok' }}" href="#zw-returns"><span class="at-tile-label"><i class="bi bi-arrow-counterclockwise"></i> Kartony zwrotów (WZ + CMR)</span><span class="at-tile-value">{{ returns|reduce((s, r) => s + r.cartons, 0) }}</span></a></div>
+    </div>
+
+    <div class="card" id="zw-complaints">
+        <div class="card-header d-flex flex-wrap justify-content-between gap-2"><h4 class="card-title mb-0">1. Reklamacje bez decyzji</h4><a class="at-link" href="{{ root }}/franchise-complaints">Reklamacje franczyzy <i class="bi bi-arrow-right"></i></a></div>
+        <div class="card-body">
+            {% if complaints %}
+                <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Wpłynęła</th><th>Klient</th><th>Produkt</th><th>Status</th><th class="text-end">Dni</th></tr></thead><tbody>
+                {% for c in complaints %}
+                    {% set days = ((today|date('U')) - (c.received_at|date('U'))) // 86400 %}
+                    <tr><td>{{ c.received_at|date('d.m.Y') }}</td><td>{{ c.customer ?? '—' }}</td><td>{{ c.product ?? '—' }}</td>
+                        <td>{{ c.status == 'IN_REVIEW' ? 'w trakcie' : 'nowa' }}</td><td class="text-end {{ days >= 7 ? 'text-danger fw-semibold' }}">{{ days }}</td></tr>
+                {% endfor %}</tbody></table></div>
+            {% else %}<p class="at-empty mb-0"><i class="bi bi-check2-circle"></i> Każda reklamacja ma decyzję.</p>{% endif %}
+        </div>
+    </div>
+
+    <div class="card" id="zw-pending">
+        <div class="card-header d-flex flex-wrap justify-content-between gap-2"><h4 class="card-title mb-0">2. Zamienniki do przygotowania</h4><a class="at-link" href="{{ root }}/client-complaints/picking-list">Lista kompletacyjna zwrotów <i class="bi bi-arrow-right"></i></a></div>
+        <div class="card-body">
+            {% if pending %}
+                <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Klient</th><th>Produkt</th><th class="text-end">Ilość</th><th></th></tr></thead><tbody>
+                {% for p in pending %}
+                    <tr><td>{{ p.customer ?? '—' }}</td><td>{{ p.product ?? '—' }}</td><td class="text-end">{{ p.quantity }}</td>
+                        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ root }}/client-complaints/{{ p.id }}/realisation">Zaplanuj wysyłkę</a></td></tr>
+                {% endfor %}</tbody></table></div>
+            {% else %}<p class="at-empty mb-0"><i class="bi bi-check2-circle"></i> Brak zamienników do przygotowania.</p>{% endif %}
+        </div>
+    </div>
+
+    <div class="card" id="zw-ship">
+        <div class="card-header d-flex flex-wrap justify-content-between gap-2"><h4 class="card-title mb-0">3. Zamienniki do wysłania</h4><a class="at-link" href="{{ root }}/shipping/wizard">Wyślij dzień <i class="bi bi-arrow-right"></i></a></div>
+        <div class="card-body">
+            <p class="at-note"><i class="bi bi-info-circle"></i>Spakowany zamiennik wychodzi z najbliższym WZ klienta (kreator « Wyślij dzień » pokazuje go przy kliencie) i dostaje status « Wysłane » automatycznie. Ręczne « Wysłane » — tylko gdy wyszedł inaczej.</p>
+            {% if to_ship %}
+                <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Wysyłka</th><th>Klient</th><th>Produkt</th><th class="text-end">Kartony</th><th>Status</th><th></th></tr></thead><tbody>
+                {% for t in to_ship %}
+                    <tr data-ship-row="{{ t.id }}"><td class="{{ t.shipping_date and t.shipping_date < today ? 'text-danger fw-semibold' }}">{{ t.shipping_date ? t.shipping_date|date('d.m.Y') : '—' }}</td><td>{{ t.customer ?? '—' }}</td><td>{{ t.product ?? '—' }}</td>
+                        <td class="text-end">{{ t.carton_qty }}</td><td>{{ t.status == 1 ? 'spakowany' : 'czeka na spakowanie' }}</td>
+                        <td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary" data-shipped="{{ t.id }}">Wysłane</button></td></tr>
+                {% endfor %}</tbody></table></div>
+            {% else %}<p class="at-empty mb-0"><i class="bi bi-check2-circle"></i> Brak zamienników do wysłania.</p>{% endif %}
+        </div>
+    </div>
+
+    <div class="card" id="zw-returns">
+        <div class="card-header d-flex flex-wrap justify-content-between gap-2"><h4 class="card-title mb-0">4. Kartony zwrotów : WZ + CMR</h4><a class="at-link" href="{{ root }}/client-complaints/shipping-documents">Dokumenty zwrotów <i class="bi bi-arrow-right"></i></a></div>
+        <div class="card-body">
+            {% if returns %}
+                <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Wysyłka</th><th>Klient</th><th class="text-end">Kartony</th><th></th></tr></thead><tbody>
+                {% for r in returns %}
+                    <tr><td>{{ r.shipping_date ? r.shipping_date|date('d.m.Y') : '—' }}</td><td>{{ r.customer ?? '—' }}</td><td class="text-end">{{ r.cartons }}</td>
+                        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ root }}/shipping/wizard{{ r.shipping_date ? '?date=' ~ r.shipping_date }}#swReturns">WZ + CMR zwrotu</a></td></tr>
+                {% endfor %}</tbody></table></div>
+            {% else %}<p class="at-empty mb-0"><i class="bi bi-check2-circle"></i> Brak kartonów zwrotów czekających na dokumenty.</p>{% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+document.querySelectorAll('[data-shipped]').forEach(b => b.addEventListener('click', () => {
+    if (!confirm('Oznaczyć zamiennik jako wysłany (poza WZ klienta) ?')) return;
+    b.disabled = true;
+    at.send('/ajax/client-complaints/pending-shipment/' + b.dataset.shipped, 'PATCH', {status: 2}).then(res => {
+        at.notify(res.ok, res.ok ? 'Oznaczono jako wysłane.' : (res.message || 'Błąd'));
+        if (res.ok) b.closest('tr').remove(); else b.disabled = false;
+    });
+}));
+</script>
+{% endblock %}

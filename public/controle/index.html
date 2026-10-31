@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Contrôles — L'Atelier by</title>
+<!-- Le contrôle des franchisés sur tablette (12/10/2026) : l'application Visites en mode tablette.
+     Accueil : les boutiques avec leur date de contrôle, ou l'agenda en calendrier ; puis le contrôle
+     étape par étape, les étapes dans la barre du bas. Consultant : ?id=u8 (gardé sur l'appareil).
+     Chemins RELATIFS : la page vit sous /controle/, l'API sous ../api/cockpit. -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="../assets/img/logo.png">
+<link rel="apple-touch-icon" href="../assets/img/logo.png">
+<link rel="stylesheet" href="../assets/ds/global.css">
+<link rel="stylesheet" href="../assets/css/controles-photo.css">
+<link rel="stylesheet" href="../assets/css/cartes-magasin.css">
+<style>
+  html, body { margin: 0; background: var(--color-bg); font-family: var(--font-ui); color: var(--color-text); -webkit-tap-highlight-color: transparent; }
+  #controle-root { min-height: 100vh; }
+</style>
+</head>
+<body>
+<div id="controle-root"></div>
+<script src="../assets/js/cartes-magasin.js"></script>
+<script src="../assets/js/visites-nl.js"></script>
+<script src="../assets/js/visites.js"></script>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var id = q.get('id') || localStorage.getItem('vi.moi') || '';
+  if (q.get('id')) { localStorage.setItem('vi.moi', q.get('id')); }
+  window.CockpitVisites.mount(document.getElementById('controle-root'), {
+    role: 'consultant', id: id, apiBase: '../api/cockpit', tablette: true, racine: '../',
+  });
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function () {}); }
+})();
+</script>
+</body>
+</html>

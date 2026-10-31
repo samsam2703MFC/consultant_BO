@@ -65,3 +65,15 @@ RewriteRule ^ index.html [L]
     Header set X-Content-Type-Options "nosniff"
   </FilesMatch>
 </IfModule>
+
+# Les icônes des primes peuvent être des SVG (déposés dans le cockpit, nettoyés à l'entrée :
+# primesSvgSain). Dans une balise <img> un SVG n'exécute rien ; ouvert seul, ce cadre l'en empêche aussi.
+# (FilesMatch ne voit que le nom du fichier : le chemin se teste ici.)
+<IfModule mod_headers.c>
+  <If "%{REQUEST_URI} =~ m#/uploads/#">
+    Header set X-Content-Type-Options "nosniff"
+  </If>
+  <If "%{REQUEST_URI} =~ m#/uploads/.*\.svg$#">
+    Header set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox"
+  </If>
+</IfModule>

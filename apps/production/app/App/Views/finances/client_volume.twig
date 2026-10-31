@@ -1,0 +1,130 @@
+{% extends "layouts/base.twig" %}
+
+{% set months_pl = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'] %}
+{% set k = company.kpi %}
+{% macro eur(v) %}{{ v|number_format(0, ',', ' ') }} €{% endmacro %}
+{% macro pct(v, signed) %}{% if v is null %}—{% else %}{{ signed and v > 0 ? '+' : '' }}{{ v|number_format(1, ',', ' ') }} %{% endif %}{% endmacro %}
+{% macro delta(n, p) %}{% if p > 0 %}{% set d = (n - p) / p * 100 %}<span class="{{ d >= 0 ? 'text-success' : 'text-danger' }}">{{ d > 0 ? '+' : '' }}{{ d|number_format(0, ',', ' ') }} %</span>{% elseif n > 0 %}<span class="text-success">nowy</span>{% else %}—{% endif %}{% endmacro %}
+{% macro metric(t, metric) %}{% if metric == 'cartons' %}{{ t.cartons|number_format(0, ',', ' ') }}{% elseif metric == 'margin' %}{{ (t.value - t.raw)|number_format(0, ',', ' ') }}{% else %}{{ t.value|number_format(0, ',', ' ') }}{% endif %}{% endmacro %}
+{% macro dt(a, b, metric) %}{% set n = metric == 'cartons' ? a.cartons : (metric == 'margin' ? a.value - a.raw : a.value) %}{% set p = metric == 'cartons' ? b.cartons : (metric == 'margin' ? b.value - b.raw : b.value) %}{{ _self.delta(n, p) }}{% endmacro %}
+
+{% block title %}Klienci : wolumen i marża{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Klienci : wolumen i marża</h3>
+            <p class="text-subtitle text-muted">Sprzedaż WDT klient po kliencie i miesiąc po miesiącu, porównanie z N-1 {{ current ? '(styczeń – ' ~ months_pl[last_month - 1] ~ ', ten sam okres)' : '' }}, marża po surowcach i po koszcie pełnym, należności.</p>
+        </div>
+        <form method="get" action="{{ root }}/finances/clients" class="at-profit-period d-flex gap-2">
+            <select name="year" class="form-select" onchange="this.form.submit()" aria-label="Rok">
+                {% for y in years %}<option value="{{ y }}" {{ y == year ? 'selected' }}>{{ y }} vs {{ y - 1 }}</option>{% endfor %}
+            </select>
+            <select name="metric" class="form-select" onchange="this.form.submit()" aria-label="Miara">
+                {% for key, label in {'value': 'Sprzedaż (€)', 'cartons': 'Kartony', 'margin': 'Marża po surowcach (€)'} %}<option value="{{ key }}" {{ key == metric ? 'selected' }}>{{ label }}</option>{% endfor %}
+            </select>
+        </form>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="at-tiles">
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-currency-euro"></i> Sprzedaż {{ year }}</span><strong class="at-tile-value">{{ _self.eur(company.n.value) }}</strong>
+            <span class="at-tile-meta">N-1 : {{ _self.eur(company.prev.value) }} · {{ _self.delta(company.n.value, company.prev.value) }}</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-box-seam"></i> Kartony</span><strong class="at-tile-value">{{ company.n.cartons|number_format(0, ',', ' ') }}</strong>
+            <span class="at-tile-meta">N-1 : {{ company.prev.cartons|number_format(0, ',', ' ') }} · {{ _self.delta(company.n.cartons, company.prev.cartons) }}</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-percent"></i> Marża po surowcach</span><strong class="at-tile-value">{{ _self.pct(k.margin_pct) }}</strong>
+            <span class="at-tile-meta">{{ _self.eur(k.margin) }} · N-1 {{ _self.pct(k.margin_prev_pct) }}</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-calculator"></i> Marża po koszcie pełnym</span><strong class="at-tile-value {{ k.full_margin_pct is not null and k.full_margin_pct < 0 ? 'text-danger' }}">{{ full_cost ? _self.pct(k.full_margin_pct) : '—' }}</strong>
+            <span class="at-tile-meta">{{ full_cost ? 'surowce + dział + koszty ogólne + logistyka (kalkulator kosztów, ' ~ cost_months|length ~ ' mies.)' : 'brak kosztów roku w kalkulatorze' }}</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-tag"></i> Średnia cena kartonu</span><strong class="at-tile-value">{{ k.price is null ? '—' : k.price|number_format(2, ',', ' ') ~ ' €' }}</strong>
+            <span class="at-tile-meta">N-1 : {{ k.price_prev is null ? '—' : k.price_prev|number_format(2, ',', ' ') ~ ' €' }} · {{ _self.pct(k.price_delta_pct, true) }}</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-people"></i> Klienci kupujący</span><strong class="at-tile-value">{{ company.active }}</strong>
+            <span class="at-tile-meta">N-1 : {{ company.active_prev }}{% if company.top_name %} · największy {{ company.top_name }} {{ _self.pct(company.top_share) }}{% endif %}</span></div>
+        <a class="at-tile" href="{{ root }}/communication/payment-reminders"><span class="at-tile-label"><i class="bi bi-hourglass-split"></i> Proformy bez płatności</span><strong class="at-tile-value">{{ _self.eur(company.unpaid.amount) }}</strong>
+            <span class="at-tile-meta">{{ company.unpaid.count }} proform z {{ thresholds.recent_days }} dni{% if company.unpaid.older %} · starszych bez statusu : {{ company.unpaid.older }}{% endif %} · przypomnienia 1–5</span></a>
+        <a class="at-tile" href="{{ root }}/communication/payment-reminders"><span class="at-tile-label"><i class="bi bi-arrow-left-right"></i> Dopłaty różnic</span><strong class="at-tile-value">{{ _self.eur(company.differences.amount) }}</strong>
+            <span class="at-tile-meta">różnice zamówienie / faktura z {{ thresholds.recent_days }} dni</span></a>
+    </div>
+
+    {% if alerts %}
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0">Do sprawdzenia ({{ alerts|length }})</h4></div>
+        <div class="card-body pt-0">
+            <ul class="list-unstyled mb-0" id="cvAlerts">
+                {% for a in alerts %}
+                    <li class="py-1"><i class="bi {{ a.level == 'danger' ? 'bi-exclamation-octagon text-danger' : (a.level == 'warning' ? 'bi-exclamation-triangle text-warning' : 'bi-info-circle text-secondary') }}"></i>
+                        <a class="at-link" href="{{ root }}/clients/{{ a.id }}/profitability">{{ a.client }}</a> : {{ a.text }}</li>
+                {% endfor %}
+            </ul>
+            <p class="small text-muted mt-2 mb-0">Progi : spadek ≤ {{ thresholds.decline }} % r/r, marża niższa od średniej firmy o {{ thresholds.margin_gap }} pkt, proforma bez płatności &gt; {{ thresholds.unpaid_days }} dni, należności i dopłaty z ostatnich {{ thresholds.recent_days }} dni.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0">Firma : miesiąc po miesiącu</h4></div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0" id="cvCompany">
+                    <thead><tr><th></th>{% for m in 1..12 %}<th class="text-end">{{ months_pl[m - 1] }}</th>{% endfor %}<th class="text-end">Razem</th></tr></thead>
+                    <tbody>
+                        <tr><th>{{ year }}</th>{% for m in 1..12 %}<td class="text-end">{{ _self.metric(company.months[m].n, metric) }}</td>{% endfor %}<td class="text-end fw-semibold">{{ _self.metric(company.n, metric) }}</td></tr>
+                        <tr class="text-muted"><th>{{ year - 1 }}</th>{% for m in 1..12 %}<td class="text-end">{{ _self.metric(company.months[m].prev, metric) }}</td>{% endfor %}<td class="text-end">{{ _self.metric(company.prev_full, metric) }}</td></tr>
+                        <tr><th>Δ</th>{% for m in 1..12 %}<td class="text-end small">{{ m <= last_month ? _self.dt(company.months[m].n, company.months[m].prev, metric) : '' }}</td>{% endfor %}<td class="text-end small">{{ _self.dt(company.n, company.prev, metric) }}</td></tr>
+                        <tr class="small text-muted"><th>marża %</th>{% for m in 1..12 %}{% set t = company.months[m].n %}<td class="text-end">{{ t.value > 0 ? ((t.value - t.raw) / t.value * 100)|number_format(0) ~ ' %' : '' }}</td>{% endfor %}<td class="text-end">{{ _self.pct(k.margin_pct) }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0">Klienci ({{ clients|length }})</h4></div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0" id="cvClients">
+                    <thead>
+                        <tr>
+                            <th>Klient</th>
+                            {% for m in 1..12 %}<th class="text-end small">{{ months_pl[m - 1] }}</th>{% endfor %}
+                            <th class="text-end">{{ year }}</th>
+                            <th class="text-end">{{ year - 1 }}</th>
+                            <th class="text-end">Δ r/r</th>
+                            <th class="text-end" title="Marża po surowcach (koszt receptury)">Marża</th>
+                            <th class="text-end" title="Po koszcie pełnym : surowce, dział, koszty ogólne, logistyka">Pełna</th>
+                            <th class="text-end" title="Średnia cena kartonu i zmiana r/r">€/karton</th>
+                            <th class="text-end">Należności</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for c in clients %}
+                        <tr data-client="{{ c.id }}">
+                            <td><a class="at-link" href="{{ root }}/clients/{{ c.id }}/profitability">{{ c.name }}</a></td>
+                            {% for m in 1..12 %}
+                                {% set n = c.months[m].n %}{% set p = c.months[m].prev %}
+                                {% set nv = metric == 'cartons' ? n.cartons : (metric == 'margin' ? n.value - n.raw : n.value) %}{% set pv = metric == 'cartons' ? p.cartons : (metric == 'margin' ? p.value - p.raw : p.value) %}
+                                <td class="text-end small {{ m <= last_month and pv > 0 ? (nv >= pv ? 'bg-light-success' : 'bg-light-danger') }}" title="{{ months_pl[m - 1] }} {{ year }} : {{ nv|number_format(0, ',', ' ') }} · {{ year - 1 }} : {{ pv|number_format(0, ',', ' ') }}">{{ nv ? nv|number_format(0, ',', ' ') : '·' }}</td>
+                            {% endfor %}
+                            <td class="text-end fw-semibold">{{ _self.metric(c.n, metric) }}</td>
+                            <td class="text-end text-muted">{{ _self.metric(c.prev, metric) }}</td>
+                            <td class="text-end">{{ _self.dt(c.n, c.prev, metric) }}</td>
+                            <td class="text-end">{{ _self.pct(c.kpi.margin_pct) }}</td>
+                            <td class="text-end {{ c.kpi.full_margin_pct is not null and c.kpi.full_margin_pct < 0 ? 'text-danger' }}">{{ _self.pct(c.kpi.full_margin_pct) }}</td>
+                            <td class="text-end">{{ c.kpi.price is null ? '—' : c.kpi.price|number_format(2, ',', ' ') }}<div class="small">{{ _self.pct(c.kpi.price_delta_pct, true) }}</div></td>
+                            <td class="text-end small">
+                                {% if c.unpaid.count %}<div title="Proformy bez płatności">{{ c.unpaid.count }} pf · {{ _self.eur(c.unpaid.amount) }}</div>{% endif %}
+                                {% if c.differences.count %}<div class="text-warning" title="Dopłaty różnic">± {{ _self.eur(c.differences.amount) }}</div>{% endif %}
+                                {% if not c.unpaid.count and not c.differences.count %}—{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="small text-muted mt-2 mb-0">Sprzedaż z faktur WDT (bez dokumentów zastąpionych) — te same liczby co Analiza sprzedaży i Rentowność. Koszty w zł przeliczone kursem {{ rate|number_format(2, ',', ' ') }} zł/€. Kolor miesiąca : lepiej / gorzej niż ten sam miesiąc roku poprzedniego.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

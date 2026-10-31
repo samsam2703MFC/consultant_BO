@@ -1,22 +1,21 @@
 /*
  * La production d'un magasin — l'application /production (demande du 03/10/2026).
  *
- * Quatre pages, dans l'ordre de la journée :
+ * Les pages, dans l'ordre de la journée :
  *   1. Paramètres — par jour de la semaine, le nombre de cuissons et la production minimum de
  *      la 1re cuisson ; les cuissons et les règles ; les catégories (cuissons, plaque, préparée
  *      la veille, se garde au lendemain) ; les produits obligatoires et leurs jours.
  *   2. Plan — catégorie › sous-catégorie › produit : vendu à J−7 (en magasin, webshop,
  *      commandes magasin), à produire pour la 1re période, à préparer pour la 2e cuisson et les
  *      suivantes, à préparer pour la 1re cuisson du lendemain.
- *   3. Validation et suivi — ce qui est réellement sorti, cuisson par cuisson ; le stock heure
- *      par heure et le manque prévu d'après les 6 derniers mêmes jours.
- *   4. Clôture — ce qui reste, ce qui se garde pour demain, ce qui se jette.
+ *   3. Clôture — ce qui reste, ce qui se garde pour demain, ce qui se jette.
+ *   4. Fours.
+ * La page Validation et suivi est retirée (23/10/2026, demande de Sam) ; la lecture du suivi
+ * (…/suivi) reste : la vitrine du dashboard magasin la lit.
  *
- * Lectures : ../api/cockpit/production/flux/{params,plan,suivi,cloture}. Écritures :
- * POST …/params, …/valider, …/cloture — rien ne part au panel.
- * Hors du cockpit, la page Suivi seule (demande du 06/10/2026) : les autres étapes restent dans
- * l'écran Gestion de production du cockpit. Le suivi se lit en trois onglets selon la durée de vie
- * des produits : short, medium et long life (maquette C).
+ * Lectures : ../api/cockpit/production/flux/{params,plan,cloture,fours}. Écritures :
+ * POST …/params, …/cloture — rien ne part au panel.
+ * Hors du cockpit, les pages en onglets (16/10/2026 — la console ne l'intègre plus).
  * ?embed=1 : sans en-tête, pour l'écran Gestion de production du cockpit (le magasin et la page
  * viennent du cockpit ; le jour se choisit dans la barre des jours de la page, et le cockpit retient
  * celui qu'elle lui renvoie par postMessage).
@@ -26,30 +25,19 @@
   const API = '../api/cockpit';
   const q = new URLSearchParams(location.search);
   const EMBED = q.get('embed') === '1';
-  const PAGES = [['params', 'Paramètres'], ['plan', 'Plan de production'], ['suivi', 'Validation et suivi'], ['cloture', 'Clôture'], ['fours', 'Fours']];
+  const PAGES = [['params', 'Paramètres'], ['plan', 'Plan de production'], ['cloture', 'Clôture'], ['fours', 'Fours']];
   const FUTUR = p => p === 'plan' || p === 'fours';   // les pages qui se préparent jusqu'à J+7
-  // La durée de vie d'un produit (demande du 06/10/2026) : short, medium, long life.
-  const VIES = ['S', 'M', 'L'];
-  const VIE_NOM = { S: 'Short life', M: 'Medium life', L: 'Long life' };
-  const VIE_SOUS = { S: 'vendu le jour même', M: 'se garde 2 à 3 jours', L: 'se garde une semaine et plus' };
-  const VIE_REGLE = {
-    S: 'suivi heure par heure · ce qui reste le soir part à la poubelle · recuire dès qu’il manque',
-    M: 'suivi heure par heure · ce qui reste le soir se garde pour demain',
-    L: 'pas de suivi à l’heure · un stock à tenir, lu en jours de vente · recuire quand il passe sous le stock minimum',
-  };
-  const VIE_JOURS = 3;   // le stock d'un long life se lit face à trois jours de vente
   const AUJ = (() => { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); })();
   const dateOk = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
   const decale = (d, n) => { const t = new Date(d + 'T12:00:00'); t.setDate(t.getDate() + n); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
   const S = {
     shop: q.get('shop') || '4',
-    // Hors du cockpit, la page Suivi seule (demande du 06/10/2026).
-    page: !EMBED ? 'suivi' : (PAGES.some(p => p[0] === q.get('page')) ? q.get('page') : 'plan'),
-    vie: VIES.includes(q.get('vie')) ? q.get('vie') : 'S', vieRegl: false, vieEnvoi: false,
+    // ?page= choisit l'onglet ; sans lui (ou l'ancien ?page=suivi), le plan.
+    page: PAGES.some(p => p[0] === q.get('page')) ? q.get('page') : 'plan',
     date: dateOk(q.get('date')) ? q.get('date') : AUJ,   // ramené à aujourd'hui hors du plan, au départ
     stores: [], data: {}, err: {}, enCours: {},
-    edit: null, editShop: null, editF: null, editFCle: null, simF: null, simEnCours: false, filtre: '', seulsOblig: false, alertes: false, moyH: true, vcH: false, ecartsJ7: false,
-    valid: null, clot: null, msg: null, envoi: false,
+    edit: null, editShop: null, editF: null, editFCle: null, simF: null, simEnCours: false, filtre: '', seulsOblig: false, ecartsJ7: false,
+    clot: null, msg: null, envoi: false,
     cmd: {}, cmdOuv: {},   // les commandes du jour (magasin|date) et les produits dépliés (magasin|date|pid)
     par: (() => { try { return localStorage.getItem('pf.par') || ''; } catch (e) { return ''; } })(),
   };
@@ -60,8 +48,6 @@
   const nf = (n, d) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
   const fN = n => n == null ? '—' : nf(Math.round(n));
   const fQ = n => n == null ? '—' : (Math.abs(n - Math.round(n)) < 0.05 ? nf(Math.round(n)) : nf(n, 1));
-  /** Un nombre entier, sans « −0 ». */
-  const fI = n => n == null ? '—' : nf(Math.round(n) + 0);
   const fE = n => n == null ? '—' : nf(Math.round(n)) + ' €';
   const fP = n => n == null ? '—' : nf(n, n % 1 ? 1 : 0) + ' %';
   const fD = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
@@ -103,21 +89,26 @@
   function urlMaj() {
     const u = new URLSearchParams(location.search);
     u.set('shop', S.shop); u.set('page', S.page); u.set('date', S.date);
-    if (S.page === 'suivi') { u.set('vie', S.vie); } else { u.delete('vie'); }
+    u.delete('vie');
     history.replaceState(null, '', location.pathname + '?' + u.toString());
   }
-  function aller(page) { S.page = page; S.valid = null; S.clot = null; S.msg = null; if (!FUTUR(page) && S.date > AUJ) { S.date = AUJ; } urlMaj(); charger(false); }
+  function aller(page) { S.page = page; S.clot = null; S.msg = null; if (!FUTUR(page) && S.date > AUJ) { S.date = AUJ; } urlMaj(); charger(false); }
   function signe(v) { S.par = v; try { localStorage.setItem('pf.par', v); } catch (e) { /* navigation privée */ } }
 
   /* --- le cadre --------------------------------------------------------------- */
   function entete() {
     if (EMBED) { return ''; }
-    return `<div class="pf-hd"><img src="../assets/img/logo.png" alt=""><div><div class="pf-titre">Production <small>Suivi</small></div><div class="pf-sous">${esc(nomShop())} · ${esc(fDL(S.date))}${S.date === AUJ ? ' · aujourd’hui' : (S.date === decale(AUJ, 1) ? ' · demain' : '')}</div></div><span class="sp"></span>
+    return `<div class="pf-hd"><img src="../assets/img/logo.png" alt=""><div><div class="pf-titre">Production <small>${esc((PAGES.find(p => p[0] === S.page) || PAGES[1])[1])}</small></div><div class="pf-sous">${esc(nomShop())} · ${esc(fDL(S.date))}${S.date === AUJ ? ' · aujourd’hui' : (S.date === decale(AUJ, 1) ? ' · demain' : '')}</div></div><span class="sp"></span>
       <label class="pf-lab">Magasin <select id="pf-shop">${(S.stores.length ? S.stores : [{ id: S.shop, nom: 'Magasin ' + S.shop }]).map(s => `<option value="${esc(s.id)}"${String(s.id) === String(S.shop) ? ' selected' : ''}>${esc(s.nom)}</option>`).join('')}</select></label>
       </div>`;
   }
-  /* La barre des jours (demande du 03/10/2026) : le plan se choisit d'hier à J+7, la validation
-   * et la clôture sur les sept derniers jours ; une autre date au calendrier. Elle est dans la page,
+  /** Les cinq pages, dans l'ordre de la journée — hors du cockpit seulement. */
+  function onglets() {
+    if (EMBED) { return ''; }
+    return `<div class="pf-ong">${PAGES.map((p, i) => `<button data-page="${p[0]}" class="${S.page === p[0] ? 'on' : ''}"><b>${i + 1}</b>${esc(p[1])}</button>`).join('')}</div>`;
+  }
+  /* La barre des jours (demande du 03/10/2026) : le plan se choisit d'hier à J+7, la clôture sur
+   * les sept derniers jours ; une autre date au calendrier. Elle est dans la page,
    * donc aussi dans l'écran intégré au cockpit. */
   const JOURS_L = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
   const maxDate = () => FUTUR(S.page) ? decale(AUJ, 7) : AUJ;
@@ -134,7 +125,7 @@
   /** Changer de jour : la page relit, l'adresse suit, et le cockpit qui l'intègre retient le jour. */
   function choisirJour(d) {
     if (!dateOk(d) || d > maxDate()) { return; }
-    S.date = d; S.valid = null; S.clot = null; S.msg = null;
+    S.date = d; S.clot = null; S.msg = null;
     urlMaj();
     if (EMBED) { try { window.parent.postMessage({ pfDate: d }, location.origin); } catch (e) { /* hors cockpit */ } }
     charger(false);
@@ -145,12 +136,11 @@
 
   function rendre() {
     const k = cle(), d = S.data[k];
-    let h = entete() + message() + barreJours();
+    let h = entete() + onglets() + message() + barreJours();
     if (S.err[k]) { h += `<div class="pf-err">${esc(S.err[k])} <button class="pf-btn" data-relire="1">Relire</button></div>`; }
     else if (!d) { h += `<div class="pf-note">Lecture des ventes et des réglages… la première lecture d’un jour relit les tickets des six dernières semaines.</div>` + attente(8); }
     else if (S.page === 'params') { h += pageParams(d); }
     else if (S.page === 'plan') { h += pagePlan(d); }
-    else if (S.page === 'suivi') { h += pageSuivi(d); }
     else if (S.page === 'fours') { h += pageFours(d); }
     else { h += pageCloture(d); }
     const garde = garderFocus();
@@ -183,7 +173,7 @@
     E.hmax = E.hmax || {};
     const C = E.cuissons, nC = C.length, av = +E.regles.avance || 0;
     const totPct = C.reduce((a, c) => a + (+c.pct || 0), 0);
-    let h = `<div class="pf-intro"><b>Les réglages de production du magasin.</b> Ils valent pour chaque jour : le plan, la validation et la clôture les relisent. La prévision lit les ${E.regles.semaines} derniers mêmes jours, heure par heure, ${+E.regles.poidsJ7 > 0 ? `le dernier pesant ${fN(+E.regles.poidsJ7)} %` : 'tous au même poids'}${d.base ? ` (${d.base.lus} sur ${d.base.jours} lus pour demain)` : ''}.${d.flux.maj ? ` Dernier enregistrement le ${esc(fD(d.flux.maj.slice(0, 10)))} à ${esc(d.flux.maj.slice(11, 16))}${d.flux.par ? ' par ' + esc(d.flux.par) : ''}.` : ' Rien n’est encore enregistré : ce sont les valeurs proposées.'}</div>`;
+    let h = `<div class="pf-intro"><b>Les réglages de production du magasin.</b> Ils valent pour chaque jour : le plan et la clôture les relisent. La prévision lit les ${E.regles.semaines} derniers mêmes jours, heure par heure, ${+E.regles.poidsJ7 > 0 ? `le dernier pesant ${fN(+E.regles.poidsJ7)} %` : 'tous au même poids'}${d.base ? ` (${d.base.lus} sur ${d.base.jours} lus pour demain)` : ''}.${d.flux.maj ? ` Dernier enregistrement le ${esc(fD(d.flux.maj.slice(0, 10)))} à ${esc(d.flux.maj.slice(11, 16))}${d.flux.par ? ' par ' + esc(d.flux.par) : ''}.` : ' Rien n’est encore enregistré : ce sont les valeurs proposées.'}</div>`;
     // Les jours de la semaine.
     h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">1 · Les jours de la semaine</span><span class="pf-mini">le nombre de cuissons du jour et la production minimum de la 1re cuisson, en % de la journée</span></div>
       <table class="pf-tab"><thead><tr><th>Jour</th><th class="n">Cuissons</th><th class="n">Production minimum de la 1re cuisson</th><th>Cuissons du jour</th></tr></thead><tbody>
@@ -354,164 +344,7 @@
     return h;
   }
 
-  /* --- 3. Validation et suivi ------------------------------------------------- */
-  function pageSuivi(d) {
-    const C = d.cuissons || [];
-    const passe = d.date <= AUJ;
-    let h = `<div class="pf-intro"><b>${esc(fDL(d.date))}${d.maintenant ? ' — ' + esc(d.maintenant) : ''}.</b> Validez chaque cuisson à la sortie du four : le suivi${EMBED ? ' et la clôture partent' : ' part'} de ce qui est réellement sorti. Le stock de chaque produit se suit heure par heure, vendu d’après les tickets et projeté d’après les ${d.base.lus} derniers ${esc(d.jourNom)}s.</div>`;
-    h += `<div class="pf-cuis">${C.map(c => { const ouvert = S.valid && S.valid.cuisson === c.id; return `<div class="${c.valide ? 'ok' : 'att'}${ouvert ? ' on' : ''}"><div class="k">${esc(c.nom)} · four ${esc(c.four)} · vente ${esc(c.de)}–${esc(c.a)}</div>
-      <div class="v">${c.valide ? fN(c.fait) : fN(c.pieces)} <small>${c.valide ? 'pièces sorties' : 'pièces prévues'}</small></div>
-      <div class="s">${c.valide ? `validée${c.le ? ' le ' + esc(fD(c.le.slice(0, 10))) + ' à ' + esc(c.le.slice(11, 16)) : ''}${c.par ? ' par ' + esc(c.par) : ''} · plan ${fN(c.pieces)}` : 'pas encore validée'}</div>
-      ${passe ? `<button class="pf-btn${c.valide ? '' : ' prim'}" data-valid="${esc(c.id)}">${ouvert ? 'Fermer' : (c.valide ? 'Corriger' : 'Valider la cuisson')}</button>` : ''}</div>`; }).join('')}</div>`;
-    if (S.valid) {
-      const c = C.find(x => x.id === S.valid.cuisson);
-      if (c) {
-        const V = S.valid.lignes;
-        let g = null;
-        h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Valider ${esc(c.nom)} — ce qui est sorti du four</span><span class="pf-mini">prérempli avec le plan, ou la dernière validation · corrigez les écarts</span><button class="pf-btn" data-commeprevu="1">Tout comme prévu</button></div>
-          <table class="pf-tab"><thead><tr><th>Produit</th><th class="n">Prévu</th><th class="n">Plaques</th><th class="n">Sorti</th><th class="n">Écart</th></tr></thead><tbody>
-          ${c.lignes.map(l => { const t = l.groupe !== g ? `<tr class="grp"><td colspan="5">${esc(l.groupe)}</td></tr>` : ''; g = l.groupe; const v = V[l.pid]; const e = (+v || 0) - l.sortie;
-            return t + `<tr><td class="nom">${l.oblig ? '<span class="pf-ob">★</span> ' : ''}${esc(l.nom)}</td><td class="n">${fN(l.sortie)}</td><td class="n mu">${l.plaque ? fN(l.plaques) + ' × ' + fN(l.plaque) : 'unité'}</td>
-              <td class="n"><input class="pf-in court" type="number" min="0" max="5000" data-vq="${l.pid}" data-f="vq${l.pid}" value="${esc(v)}"></td><td class="n ${e > 0 ? 'ok' : (e < 0 ? 'ko' : 'mu')}" data-ve="${l.pid}">${e ? (e > 0 ? '+' : '−') + fN(Math.abs(e)) : '='}</td></tr>`; }).join('')}</tbody></table>
-          <div class="pf-barre in"><label>Signé <input class="pf-in" data-par="1" data-f="par" value="${esc(S.par)}" placeholder="prénom"></label><span class="sp"></span><button class="pf-btn prim" data-validok="1"${S.envoi ? ' disabled' : ''}>${S.envoi ? 'Enregistrement…' : 'Enregistrer la cuisson'}</button></div></div>`;
-      }
-    }
-    return h + suiviVie(d);
-  }
-
-  /* La surveillance selon la durée de vie (maquette C, demande du 06/10/2026) : un onglet par
-   * durée de vie. Short et medium life se suivent heure par heure ; le long life se lit en stock,
-   * en jours de vente. Le S · M · L sous chaque produit change sa durée de vie d'un clic. */
-  const VERD = { rupture: ['ko', 'Rupture'], manque: ['att', 'Manque prévu'], trop: ['bleu', 'Trop produit'], ok: ['ok', 'Tient'] };
-  const vieDe = p => VIES.includes(p.vie) ? p.vie : 'S';
-  /** Le verdict selon la durée de vie : le « trop » d'un short life se jette, celui d'un medium life se garde. */
-  const verdictVie = p => p.verdict === 'trop' ? ['bleu', vieDe(p) === 'S' ? 'Jeté ce soir' : 'Se garde demain'] : (VERD[p.verdict] || ['', '']);
-  /** Un long life est sous le stock quand ce qui reste ne dépasse pas son stock minimum (0 tant qu'il n'est pas réglé). */
-  const sousStock = p => Math.round(p.stock) <= (p.stockMin || 0);
-  const parJour = p => p.moyJ || p.prevJ || 0;
-  function vieStats(L) {
-    return { n: L.length, rupt: L.filter(p => p.verdict === 'rupture').length, manq: L.filter(p => p.verdict === 'manque').length, trop: L.filter(p => p.verdict === 'trop').length, sous: L.filter(sousStock).length,
-      sorti: L.reduce((a, p) => a + (p.sorti || 0), 0), vendu: L.reduce((a, p) => a + (p.vendu || 0), 0), stock: L.reduce((a, p) => a + Math.max(0, p.stock || 0), 0), fin: L.reduce((a, p) => a + Math.max(0, p.finJour || 0), 0) };
-  }
-  /** Le petit S · M · L d'un produit : sa durée de vie, réglable d'un clic. */
-  const miniSeg = p => `<span class="pf-mseg" title="durée de vie${p.vieExc ? ' · exception à sa catégorie (' + VIE_NOM[p.vieCat] + ')' : ''}">${VIES.map(x => `<button data-viep="${p.pid}" data-v="${x}" class="${x === vieDe(p) ? 'on ' + x : ''}"${S.vieEnvoi ? ' disabled' : ''} title="${VIE_NOM[x]}">${x}</button>`).join('')}${p.vieExc ? '<i>exception</i>' : ''}</span>`;
-  function suiviVie(d) {
-    const H = d.heures || [], now = d.maintenant ? hDe(d.maintenant) : 99;
-    const tous = d.produits || [];
-    const k = S.vie;
-    const ST = {}; VIES.forEach(x => { ST[x] = vieStats(tous.filter(p => vieDe(p) === x)); });
-    const s = ST[k];
-    const alerte = p => k === 'L' ? sousStock(p) : p.verdict !== 'ok';
-    const P = tous.filter(p => vieDe(p) === k && (!S.alertes || alerte(p)));
-    // La moyenne vendue au comptoir à chaque heure, les semaines lues, sans les commandes.
-    const nMoy = d.base.lus, libDerniers = `${nMoy} dernier${nMoy > 1 ? 's' : ''} ${esc(d.jourNom)}${nMoy > 1 ? 's' : ''}`, libMoy = `moyenne des ${libDerniers}, hors commandes`;
-    const libJours = `${nMoy} ${esc(d.jourNom)}${nMoy > 1 ? 's' : ''}`;
-    const tab = x => { const t = ST[x];
-      const al = x === 'L' ? `<span class="pf-tag ${t.sous ? 'ko' : 'ok'}">${t.sous} sous le stock</span>` : (t.rupt ? `<span class="pf-tag ko">${t.rupt} rupture${t.rupt > 1 ? 's' : ''}</span>` : '') + (t.manq ? `<span class="pf-tag att">${t.manq} manque${t.manq > 1 ? 's' : ''}</span>` : '');
-      return `<button class="pf-t3 ${x}${x === k ? ' on' : ''}" data-vie="${x}"><span class="pf-vie ${x}">${x}</span>${VIE_NOM[x].replace(' life', '<span class="lf"> life</span>')} <b>${t.n}</b><small>${VIE_SOUS[x]}</small><span class="al">${al}</span></button>`; };
-    let h = `<div class="pf-card"><div class="pf-ct"><span class="pf-k">${k === 'L' ? 'Le stock des long life' : 'Surveillance heure par heure'}</span>
-      ${k === 'L' ? `<span class="pf-chips"><span class="pf-tag ${s.sous ? 'ko' : 'ok'}">${s.sous} sous le stock</span></span>` : `<span class="pf-chips"><span class="pf-tag ko">${s.rupt} en rupture</span><span class="pf-tag att">${s.manq} manque${s.manq > 1 ? 's' : ''} prévu${s.manq > 1 ? 's' : ''}</span><span class="pf-tag bleu">${s.trop} ${k === 'S' ? 'jeté' + (s.trop > 1 ? 's' : '') + ' ce soir' : 'pour demain'}</span></span>`}
-      <span class="pf-mini">sorti ${fN(s.sorti)} · vendu ${fN(s.vendu)} · ${k === 'L' ? 'en stock' : 'en vitrine'} ${fN(s.stock)}${k === 'L' ? '' : ' · fin de journée projetée ' + fN(s.fin)}${d.ventesLues ? '' : ' · <b class="wa">tickets du jour pas encore lus</b>'}</span>
-      ${k === 'L' ? '' : `<label class="pf-mini"><input type="checkbox" data-moyh="1"${S.moyH ? ' checked' : ''}> moyenne par heure</label>
-      <label class="pf-mini"><input type="checkbox" data-vch="1"${S.vcH ? ' checked' : ''}> vendu comptoir par heure</label>`}
-      <label class="pf-mini"><input type="checkbox" data-alertes="1"${S.alertes ? ' checked' : ''}> seulement les alertes</label></div>
-      <div class="pf-tabs3">${VIES.map(tab).join('')}</div>
-      <div class="pf-regle3"><span><b>${VIE_NOM[k]}</b> : ${VIE_REGLE[k]}. Le S · M · L sous chaque produit change sa durée de vie d’un clic.</span><button class="pf-mini-btn${S.vieRegl ? ' on' : ''}" data-vieregl="1">${S.vieRegl ? 'Fermer le réglage' : 'Régler par catégorie'}</button></div>
-      ${S.vieRegl ? vieReglage(d) : ''}`;
-    if (k === 'L') { h += `<div class="pf-defile">${tableLong(d, P, now)}</div>`; }
-    else {
-      // Sous chaque produit, la moyenne vendue à chaque heure en nombres entiers ; le vendu au comptoir sur demande.
-      const sousLignes = p => {
-        if (!p.moy || (!S.moyH && !S.vcH)) { return ''; }
-        const enC = x => x <= now && now < x + 1;
-        const cV = x => { const v = p.vc ? p.vc[x] : null, m = p.moy[x]; if (v == null) { return '<td class="c h"></td>'; }
-          const cls = !enC(x) && m != null && m >= 2 ? (v >= m * 1.25 ? ' plus' : (v <= m * 0.75 ? ' moins' : '')) : '';
-          return `<td class="c h${cls}${enC(x) ? ' encours' : ''}" title="${x} h – ${x + 1} h · vendu au comptoir ${fI(v)}${enC(x) ? ' jusqu’ici' : ''}${m != null ? ' · moyenne ' + fI(m) : ''}">${Math.round(v) ? fI(v) : '<span class="mu">0</span>'}</td>`; };
-        const cM = x => { const m = p.moy[x]; return `<td class="c h${enC(x) ? ' encours' : ''}" title="${x} h – ${x + 1} h · ${libMoy}">${m != null && Math.round(m) ? fI(m) : '<span class="mu">0</span>'}</td>`; };
-        return (S.moyH ? `<tr class="sub moy"><td class="lib" title="${libMoy}">moy. ${libJours}</td><td></td><td></td><td class="n">${fI(p.moyJ)}</td><td></td>${H.map(cM).join('')}<td></td><td></td></tr>` : '')
-          + (S.vcH ? `<tr class="sub vc"><td class="lib">vendu comptoir</td><td></td><td></td><td class="n">${p.vcJ != null ? fI(p.vcJ) : ''}</td><td></td>${H.map(cV).join('')}<td></td><td></td></tr>` : '');
-      };
-      const fin = p => `<span class="mu">${fI(p.finJour)} ${k === 'S' ? 'à jeter ce soir' : 'pour demain'}</span>`;
-      h += `<div class="pf-defile"><table class="pf-tab suivi"><thead><tr><th>Produit</th><th class="n">Report</th><th class="n">Sorti</th><th class="n">Vendu</th><th class="n">En vitrine</th>${H.map(x => `<th class="c h${x <= now && now < x + 1 ? ' now' : ''}">${x} h</th>`).join('')}<th>Verdict</th><th>Conseil</th></tr></thead><tbody>
-      ${P.map(p => { const v = verdictVie(p); return `<tr${(S.moyH || S.vcH) && p.moy ? ' class="pr"' : ''}><td class="nom">${p.oblig ? '<span class="pf-ob">★</span> ' : ''}${esc(p.nom)}<small>${esc(p.cat)}</small>${miniSeg(p)}</td><td class="n mu">${p.report ? fI(p.report) : '—'}</td><td class="n">${fI(p.sorti)}</td><td class="n">${fI(p.vendu)}</td><td class="n q"><b>${fI(p.stock)}</b>${p.stockMin ? `<small title="stock minimum de recuisson : sous ce seuil, la recuisson est conseillée">min. ${fN(p.stockMin)}</small>` : ''}</td>
-        ${H.map(x => { const c = (p.cases || []).find(y => y.h === x); if (!c) { return '<td class="c h"></td>'; } const cls = c.reel ? (c.q < -0.5 ? 'r neg' : 'r') : (c.q < -0.5 ? 'ko' : (c.q < Math.max(1, (c.prev || 0) * 0.25) ? 'att' : 'ok')); return `<td class="c h ${cls}${x <= now && now < x + 1 ? ' now' : ''}" title="${x} h – ${x + 1} h · ${c.reel ? 'stock réel en fin d’heure · vendu ' + fI(c.v) : 'projeté · prévision ' + fI(c.prev)}${p.moy && p.moy[x] != null ? ' · vendu en moyenne ' + fI(p.moy[x]) + ' (' + libMoy + ')' : ''}">${fI(c.q)}</td>`; }).join('')}
-        <td><span class="pf-tag ${v[0]}">${v[1]}</span>${p.manque ? `<small>à ${p.manque.h} h · −${fI(p.manque.q)}</small>` : ''}</td>
-        <td>${p.conseil ? `recuire <b>${p.conseil.plaques != null ? pl(p.conseil.plaques, 'plaque') + ' (' + fN(p.conseil.plaques * p.conseil.plaque) + ')' : fN(p.conseil.pieces)}</b>` : (p.verdict === 'trop' ? fin(p) : '')}</td></tr>${sousLignes(p)}`; }).join('') || `<tr><td colspan="${7 + H.length}" class="mu">${S.alertes ? 'Aucune alerte.' : (tous.length ? 'Aucun produit en ' + VIE_NOM[k].toLowerCase() + ' ce jour.' : 'Rien à suivre : aucune cuisson planifiée ce jour.')}</td></tr>`}</tbody></table></div>
-      <div class="pf-leg"><span><span class="pf-vie ${k}">${k}</span> la durée de vie du produit, réglable sur la ligne</span><span><i class="r"></i>stock réel en fin d’heure (rouge : plus vendu que sorti — une cuisson non validée ou un report non compté)</span><span><i class="ok"></i>projeté, tient</span><span><i class="att"></i>projeté, sous le quart de la vente de l’heure</span><span><i class="ko"></i>projeté, manque (sous le stock minimum de recuisson quand il est réglé)</span><span><i class="now"></i>l’heure en cours</span></div>
-      ${S.moyH || S.vcH ? `<div class="pf-leg">${S.moyH ? `<span><b>moy. ${libJours}</b> : les pièces vendues en moyenne à cette heure-là les ${libDerniers}, hors commandes, arrondies à l’unité</span>` : ''}${S.vcH ? `<span><b>vendu comptoir</b> : les pièces vendues dans l’heure, sans les commandes</span><span><i class="plus"></i>au moins 25 % au-dessus de la moyenne</span><span><i class="moins"></i>au moins 25 % en dessous</span>` : ''}</div>` : ''}`;
-    }
-    return h + `<div class="pf-pied mu">${esc(d.source)}</div></div>`;
-  }
-  /** Le long life : un stock à tenir, face à trois jours de vente ; la prochaine cuisson du jour quand elle est prévue. */
-  function tableLong(d, P, now) {
-    const prochaine = p => { for (const c of d.cuissons || []) { const de = hDe(c.de); if (c.valide || de == null || de <= now) { continue; } const l = (c.lignes || []).find(x => x.pid === p.pid); if (l && l.sortie > 0) { return { de: c.de, q: l.sortie }; } } return null; };
-    const L = P.map(p => { const pj = parJour(p), st = Math.max(0, p.stock || 0); return { p, pj, st, jours: pj > 0 ? st / pj : null, cible: pj * VIE_JOURS, sous: sousStock(p), proch: prochaine(p) }; })
-      .sort((a, b) => (b.sous - a.sous) || ((a.jours == null ? 1e9 : a.jours) - (b.jours == null ? 1e9 : b.jours)) || a.p.nom.localeCompare(b.p.nom));
-    const conseil = x => {
-      if (x.proch) { return `<span class="mu">cuisson de ${esc(x.proch.de)} : ${fN(x.proch.q)}</span>`; }
-      if (!x.sous) { return ''; }
-      const n = Math.max(1, (x.p.conseil && x.p.conseil.pieces) || 0, Math.ceil(x.cible - x.st - 1e-6));
-      return `recuire <b>${fN(n)}</b>`; };
-    return `<table class="pf-tab pf-long"><thead><tr><th>Produit</th><th class="n">Report d’hier</th><th class="n">Sorti</th><th class="n">Vendu</th><th class="n">En stock</th><th class="n">Vendu par jour</th><th>Stock face à ${VIE_JOURS} jours de vente</th><th class="n">Jours de stock</th><th>État</th><th>Conseil</th></tr></thead><tbody>
-      ${L.map(x => { const p = x.p, pc = x.cible > 0 ? Math.min(100, 100 * x.st / x.cible) : (x.st > 0 ? 100 : 0);
-        return `<tr><td class="nom">${p.oblig ? '<span class="pf-ob">★</span> ' : ''}${esc(p.nom)}<small>${esc(p.cat)}</small>${miniSeg(p)}</td><td class="n mu">${p.report ? fI(p.report) : '—'}</td><td class="n">${fI(p.sorti)}</td><td class="n">${fI(p.vendu)}</td>
-          <td class="n q"><b>${fI(p.stock)}</b>${p.stockMin ? `<small title="stock minimum : sous ce seuil, recuire">min. ${fN(p.stockMin)}</small>` : ''}</td><td class="n">${x.pj ? fQ(x.pj) : '<span class="mu">—</span>'}</td>
-          <td><span class="pf-jauge" title="${fI(x.st)} en stock pour ${fQ(x.cible)} vendus en ${VIE_JOURS} jours"><i class="${pc < 34 ? 'ko' : (pc < 67 ? 'att' : 'ok')}" style="width:${pc.toFixed(0)}%"></i></span></td>
-          <td class="n">${x.jours == null ? '<span class="mu">—</span>' : fQ(x.jours)}</td><td><span class="pf-tag ${x.sous ? 'ko' : 'ok'}">${x.sous ? 'Sous le stock' : 'En stock'}</span></td><td>${conseil(x)}</td></tr>`; }).join('')
-      || `<tr><td colspan="10" class="mu">${S.alertes ? 'Aucun long life sous le stock.' : 'Aucun produit en long life ce jour.'}</td></tr>`}</tbody></table>
-      <div class="pf-leg"><span><b>Vendu par jour</b> : la moyenne au comptoir des derniers mêmes jours</span><span><b>Jours de stock</b> : le stock divisé par la vente d’un jour</span><span><b>Conseil</b> : de quoi tenir ${VIE_JOURS} jours, ou la cuisson déjà prévue aujourd’hui</span></div>`;
-  }
-  /** Le réglage par catégorie : la durée de vie de chaque catégorie suivie ce jour, et ses exceptions. */
-  function vieReglage(d) {
-    const C = (d.vie && d.vie.categories) || [];
-    let g = null;
-    return `<div class="pf-viecats"><div class="pf-mini">Chaque produit prend la durée de vie de sa catégorie, sauf ses exceptions (réglées sur la ligne). « proposé » : pas encore réglé, la proposition de départ.</div>
-      <table class="pf-tab"><tbody>${C.map(c => { const t = c.groupe !== g ? `<tr class="grp"><td colspan="3">${esc(c.groupe || 'Sans section')}</td></tr>` : ''; g = c.groupe;
-        return t + `<tr><td class="nom">${esc(c.nom)}<small>${c.produits} produit${c.produits > 1 ? 's' : ''} suivi${c.produits > 1 ? 's' : ''}${c.exceptions ? ' · ' + c.exceptions + ' exception' + (c.exceptions > 1 ? 's' : '') : ''}</small></td>
-          <td>${c.regle ? '' : '<span class="pf-tag">proposé</span>'}</td><td class="n"><span class="pf-seg">${VIES.map(x => `<button data-viecat="${esc(c.cle)}" data-v="${x}" class="${x === c.vie ? 'on ' + x : ''}"${S.vieEnvoi ? ' disabled' : ''}>${VIE_NOM[x].replace(' life', '')}</button>`).join('')}</span></td></tr>`; }).join('') || '<tr><td class="mu">Aucune catégorie suivie ce jour.</td></tr>'}</tbody></table></div>`;
-  }
-  /** Poser une durée de vie : la page suit tout de suite, l'enregistrement part ensuite ; les autres jours se relisent. */
-  function poserVie(type, id, v) {
-    const d = S.data[cle()]; if (!d || !VIES.includes(v) || S.vieEnvoi) { return; }
-    const P = d.produits || [], corps = { shop: +S.shop, par: S.par, cat: {}, prod: {} };
-    const recalc = p => { p.vie = p.vieProd || p.vieAuto || p.vieCat; p.vieExc = p.vie !== p.vieCat; };
-    let lib;
-    if (type === 'prod') {
-      const p = P.find(x => String(x.pid) === String(id)); if (!p || vieDe(p) === v) { return; }
-      p.vieProd = v === (p.vieAuto || p.vieCat) ? null : v; recalc(p);
-      corps.prod[p.pid] = p.vieProd; lib = `${p.nom} en ${VIE_NOM[v].toLowerCase()}`;
-    } else {
-      const c = ((d.vie && d.vie.categories) || []).find(x => x.cle === id); if (!c || c.vie === v) { return; }
-      c.vie = v; c.regle = v !== c.defaut; corps.cat[c.cle] = c.regle ? v : null;
-      P.filter(p => String(p.catCle) === c.cle).forEach(p => { p.vieCat = v; recalc(p); });
-      c.exceptions = P.filter(p => String(p.catCle) === c.cle && p.vieExc).length; lib = `${c.nom} en ${VIE_NOM[v].toLowerCase()}`;
-    }
-    // Les autres catégories : leur compte d'exceptions suit le produit déplacé.
-    ((d.vie && d.vie.categories) || []).forEach(c => { c.exceptions = P.filter(p => String(p.catCle) === c.cle && p.vieExc).length; });
-    S.vieEnvoi = true; S.msg = null; rendre();
-    ecrire('/production/flux/vie', corps)
-      .then(() => { S.msg = { ok: true, t: `Durée de vie enregistrée : ${lib}.` }; Object.keys(S.data).forEach(k => { if (k !== cle() && (k.startsWith('suivi|' + S.shop + '|') || k.startsWith('cloture|' + S.shop + '|'))) { delete S.data[k]; } }); })
-      .catch(e => { S.msg = { ok: false, t: 'Durée de vie pas enregistrée : ' + e.message }; delete S.data[cle()]; charger(true); })
-      .finally(() => { S.vieEnvoi = false; rendre(); });
-  }
-  function ouvrirValid(id) {
-    const d = S.data[cle()]; const c = d && d.cuissons.find(x => x.id === id);
-    if (!c) { return; }
-    if (S.valid && S.valid.cuisson === id) { S.valid = null; rendre(); return; }
-    const V = {}; c.lignes.forEach(l => { V[l.pid] = l.fait != null ? l.fait : l.sortie; });
-    S.valid = { cuisson: id, lignes: V }; S.msg = null; rendre();
-  }
-  function enregistrerValid() {
-    const V = S.valid; if (!V) { return; }
-    const l = {}; Object.entries(V.lignes).forEach(([pid, q]) => { if (q !== '' && q != null && !isNaN(+q)) { l[pid] = +q; } });
-    S.envoi = true; rendre();
-    ecrire('/production/flux/valider', { shop: +S.shop, date: S.date, cuisson: V.cuisson, lignes: l, par: S.par })
-      .then(r => { S.msg = { ok: true, t: `Cuisson validée : ${fN(r.pieces)} pièces sorties sur ${r.lignes} produit${r.lignes > 1 ? 's' : ''}.` }; S.valid = null; delete S.data['cloture|' + S.shop + '|' + S.date]; delete S.data['plan|' + S.shop + '|' + S.date]; charger(true); })
-      .catch(e => { S.msg = { ok: false, t: 'Pas enregistrée : ' + e.message }; })
-      .finally(() => { S.envoi = false; rendre(); });
-  }
-
-  /* --- 4. Clôture -------------------------------------------------------------- */
+  /* --- 3. Clôture -------------------------------------------------------------- */
   /** La base d'une ligne de clôture : le compté quand l'équipe a compté, sinon le reste calculé. */
   const cloCompte = v => v && v.compte !== '' && v.compte != null && isFinite(+v.compte) ? +v.compte : null;
   const cloBase = (l, v) => { const c = cloCompte(v); return c != null ? c : Math.round(l.reste); };
@@ -557,7 +390,7 @@
     if (!S.clot || S.clot.cle !== cle()) { const x = {}; L.forEach(l => { x[l.pid] = { report: l.report, jete: l.jete, compte: l.compte == null ? '' : l.compte }; }); S.clot = { cle: cle(), l: x }; }
     const X = S.clot.l;
     let h = `<div class="pf-intro"><b>Clôture du ${esc(fDL(d.date))}.</b> Pour chaque produit : report d’hier + sorti − vendu − jeté déjà déclaré = ce qui reste, en théorie. Comptez la vitrine et notez le « Compté » : il remplace le calcul. Dites ensuite ce qui se garde pour demain (il entre dans le plan de ${esc(fDL(d.lendemain))} comme stock de départ de la 1re cuisson) et ce qui se jette (à encoder en caisse comme poubelle).${d.enregistree ? ` <b>Clôture enregistrée${d.le ? ' le ' + esc(fD(d.le.slice(0, 10))) + ' à ' + esc(d.le.slice(11, 16)) : ''}${d.par ? ' par ' + esc(d.par) : ''}.</b>` : ''}</div>`;
-    if (d.cuissonsValidees < d.cuissons) { h += `<div class="pf-note"><b class="wa">${d.cuissons - d.cuissonsValidees} cuisson${d.cuissons - d.cuissonsValidees > 1 ? 's' : ''} sur ${d.cuissons} pas validée${d.cuissons - d.cuissonsValidees > 1 ? 's' : ''}</b> : leur « sorti » est celui du plan, et le reste calculé avec lui. Validez-les dans la page 3, ou comptez la vitrine ici.</div>`; }
+    if (d.cuissonsValidees < d.cuissons) { h += `<div class="pf-note"><b class="wa">${d.cuissons - d.cuissonsValidees} cuisson${d.cuissons - d.cuissonsValidees > 1 ? 's' : ''} sur ${d.cuissons} pas validée${d.cuissons - d.cuissonsValidees > 1 ? 's' : ''}</b> : leur « sorti » est celui du plan, et le reste calculé avec lui : comptez la vitrine ici.</div>`; }
     h += cloTuiles(L, X);
     let g = null;
     h += `<div class="pf-card"><div class="pf-ct"><span class="pf-k">Ce qui reste, produit par produit</span><span class="pf-mini">le compté remplace le calcul · les catégories « se garde » sont gardées, le reste est jeté</span><button class="pf-btn" data-tout="garder">Tout garder</button><button class="pf-btn" data-tout="jeter">Tout jeter</button><button class="pf-btn" data-tout="propose">Proposition</button></div>
@@ -773,7 +606,7 @@
   function brancher() {
     const on = (sel, ev, f) => $.querySelectorAll(sel).forEach(el => el.addEventListener(ev, e => f(el, e)));
     on('[data-page]', 'click', b => aller(b.dataset.page));
-    on('#pf-shop', 'change', s => { S.shop = s.value; S.edit = null; S.editF = null; S.simF = null; S.valid = null; S.clot = null; S.msg = null; urlMaj(); charger(false); });
+    on('#pf-shop', 'change', s => { S.shop = s.value; S.edit = null; S.editF = null; S.simF = null; S.clot = null; S.msg = null; urlMaj(); charger(false); });
     on('#pf-date', 'change', i => choisirJour(i.value));
     on('[data-pas]', 'click', b => choisirJour(decale(S.date, +b.dataset.pas)));
     on('[data-jour]', 'click', b => choisirJour(b.dataset.jour));
@@ -815,18 +648,6 @@
     on('[data-seuls]', 'change', c => { S.seulsOblig = c.checked; rendre(); });
     on('[data-annuler]', 'click', () => { const d = S.data[cle()]; if (d) { S.edit = brouillon(d); S.msg = null; rendre(); } });
     on('[data-enreg]', 'click', () => enregistrerParams());
-    // Validation et suivi
-    on('[data-valid]', 'click', b => ouvrirValid(b.dataset.valid));
-    on('[data-vq]', 'input', i => { S.valid.lignes[i.dataset.vq] = i.value; const d = S.data[cle()]; const c = d.cuissons.find(x => x.id === S.valid.cuisson); const l = c && c.lignes.find(x => String(x.pid) === i.dataset.vq); const td = $.querySelector(`[data-ve="${i.dataset.vq}"]`); if (l && td) { const e = (+i.value || 0) - l.sortie; td.className = 'n ' + (e > 0 ? 'ok' : (e < 0 ? 'ko' : 'mu')); td.textContent = e ? (e > 0 ? '+' : '−') + fN(Math.abs(e)) : '='; } });
-    on('[data-commeprevu]', 'click', () => { const d = S.data[cle()]; const c = d.cuissons.find(x => x.id === S.valid.cuisson); c.lignes.forEach(l => { S.valid.lignes[l.pid] = l.sortie; }); rendre(); });
-    on('[data-validok]', 'click', () => enregistrerValid());
-    on('[data-alertes]', 'change', c => { S.alertes = c.checked; rendre(); });
-    on('[data-vie]', 'click', b => { S.vie = b.dataset.vie; urlMaj(); rendre(); });
-    on('[data-vieregl]', 'click', () => { S.vieRegl = !S.vieRegl; rendre(); });
-    on('[data-viep]', 'click', b => poserVie('prod', b.dataset.viep, b.dataset.v));
-    on('[data-viecat]', 'click', b => poserVie('cat', b.dataset.viecat, b.dataset.v));
-    on('[data-moyh]', 'change', c => { S.moyH = c.checked; rendre(); });
-    on('[data-vch]', 'change', c => { S.vcH = c.checked; rendre(); });
     // Clôture
     const ecart = pid => { const d = S.data[cle()]; const l = d.lignes.find(x => String(x.pid) === String(pid)); const v = S.clot.l[pid]; const td = $.querySelector(`[data-ce="${pid}"]`); if (!l || !td) { return; } const E = cloEcart(l, v); td.className = E.cls; td.textContent = E.txt; td.title = E.titre;
       const dv = $.querySelector(`[data-cd="${pid}"]`); if (dv) { dv.innerHTML = cloDer(l, v, d); } };
@@ -881,12 +702,10 @@
 
   /* --- départ ------------------------------------------------------------------------- */
   if (EMBED) { document.body.classList.add('pf-emb'); }
-  // La validation et la clôture ne vont pas au-delà d'aujourd'hui ; le plan, sept jours.
+  // La clôture ne va pas au-delà d'aujourd'hui ; le plan, sept jours.
   if (!FUTUR(S.page) && S.date > AUJ) { S.date = AUJ; }
   if (FUTUR(S.page) && S.date > decale(AUJ, 7)) { S.date = AUJ; }
   lire('/stores?statut=tous').then(l => { S.stores = (Array.isArray(l) ? l : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: s.id, nom: s.nom || s.name })); rendre(); }).catch(() => {});
   urlMaj();
   charger(false);
-  // Le suivi du jour se relit toutes les cinq minutes, sauf pendant une saisie.
-  setInterval(() => { if (S.page === 'suivi' && S.date === AUJ && !S.valid && !S.envoi) { charger(true); } }, 300000);
 })();

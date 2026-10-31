@@ -1,0 +1,110 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><title>B2B · B · Une page et l'aperçu</title><link rel="stylesheet" href="commun.css">
+<style>
+.deux{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:26px;align-items:start}
+.bloc{padding:16px 18px;margin-bottom:12px}
+.bloc h3{display:flex;align-items:center;gap:10px;font:600 15px var(--ui);margin:0 0 12px}
+.bloc h3 .n{width:22px;height:22px;border-radius:50%;background:var(--abf);color:#fff;display:grid;place-items:center;font-size:11.5px}
+.lig{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.seg{display:inline-flex;background:var(--fond);border-radius:11px;padding:3px}
+.seg span{padding:7px 14px;border-radius:9px;font:600 12.5px var(--ui);color:var(--muet)}
+.seg span.on{background:#fff;color:var(--abf-encre);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.reg{display:grid;grid-template-columns:repeat(5,1fr);margin-top:12px;position:relative}
+.reg::before{content:"";position:absolute;left:10%;right:10%;top:9px;height:3px;background:var(--ab-doux);border-radius:2px}
+.reg::after{content:"";position:absolute;left:10%;width:40%;top:9px;height:3px;background:var(--abf);border-radius:2px}
+.reg div{position:relative;text-align:center;font:500 12px var(--ui);color:var(--muet);z-index:1}
+.reg i{display:block;width:21px;height:21px;margin:0 auto 6px;border-radius:50%;background:#fff;border:3px solid var(--ab-doux)}
+.reg .p i{border-color:var(--abf)}
+.reg .on i{background:var(--abf);border-color:var(--abf);box-shadow:0 0 0 5px rgba(168,86,28,.18)}
+.reg .on{color:var(--abf-encre);font-weight:700}
+.rad{display:flex;flex-direction:column;gap:8px}
+.rad label{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--trait2);border-radius:11px}
+.rad label.on{border-color:var(--abf);background:var(--ab-pale)}
+.rad .rd{flex:0 0 18px;height:18px;border-radius:50%;border:2px solid var(--trait2);margin-top:1px}
+.rad .on .rd{border:5px solid var(--abf)}
+.rad b{display:block;font-weight:600}
+.rad small{color:var(--muet)}
+.cote{position:sticky;top:20px}
+.cote .lab{text-align:center}
+.sim{margin-top:16px;padding:14px 16px}
+.sim table td{padding:7px 0;border-bottom:.5px solid var(--trait);font-size:12.5px}
+.sim table td:last-child{text-align:right;font-weight:600}
+.sim tr:last-child td{border-bottom:0;color:var(--abf-encre);font-size:14px}
+.pied{display:flex;gap:10px;align-items:center;margin-top:6px}
+/* L'app */
+.carteb2b{background:linear-gradient(160deg,#B4621F,#8C4514);color:#fff;border-radius:16px;margin:0 12px 12px;padding:14px 16px}
+.carteb2b .t{display:flex;justify-content:space-between;align-items:center;font:600 15px var(--ui)}
+.carteb2b .t span{background:rgba(255,255,255,.18);border-radius:999px;padding:3px 9px;font-size:12px}
+.carteb2b p{margin:6px 0 10px;font-size:12.5px;opacity:.92;line-height:1.4}
+.carteb2b .k{display:flex;gap:6px;flex-wrap:wrap}
+.carteb2b .k i{font-style:normal;font-size:11px;background:rgba(255,255,255,.16);border-radius:999px;padding:3px 8px}
+.cl{flex:1;min-width:0}
+.cl b{display:flex;justify-content:space-between;font:600 13.5px var(--ui)}
+.cl b em{font-style:normal;color:#248A3D}
+.cl small{display:block;color:#6E6E73;font-size:11.5px;margin-top:2px}
+.cl .j{height:5px;background:rgba(118,118,128,.12);border-radius:3px;margin-top:7px;overflow:hidden}
+.cl .j i{display:block;height:100%;background:var(--abf);border-radius:3px}
+</style>
+<body><div class="ecran">
+<nav class="rail">
+  <div class="logo">Cockpit</div>
+  <div class="gr">Pilotage</div>
+  <a><i>◎</i>Tableau de bord</a><a><i>↗</i>Ventes</a><a><i>⟳</i>Récurrence</a>
+  <div class="gr">ERP franchisé</div>
+  <a><i>▤</i>Marketing franchisé</a><a><i>☰</i>Targets &amp; primes</a>
+  <div class="gr">Application employé</div>
+  <a class="sous">Paramètres primes</a><a class="sous on">Paramètres primes franchisé</a><a class="sous">L’application ↗</a>
+  <div class="gr">Réglages</div>
+  <a><i>⚙</i>Paramètres</a>
+</nav>
+
+<main class="page"><div class="fil">Application employé › Paramètres primes franchisé › <b>Nouvelle prime B2B</b></div>
+<h1>Ramène un client pro</h1>
+<p class="chapo">Une prime pour aller chercher les écoles, les crèches, les entreprises : la vendeuse touche une part de ce que le client commande. À droite, ce qu’elle voit dans son app, mis à jour en direct.</p>
+<div class="deux">
+<div>
+  <div class="carte bloc"><h3><span class="n">1</span>La prime</h3>
+    <div class="lig"><div style="flex:1;min-width:240px"><span class="lab">Nom dans l’app</span><span class="chp" style="width:100%">Ramène un client pro</span></div>
+      <div><span class="lab">Icône</span><span class="chp" style="font-size:18px;padding:6px 10px">🏫 <small style="font-size:12px">changer</small></span></div>
+      <div><span class="lab">Ouverte</span><span class="chp">1 nov. → 31 déc. 2026</span></div></div></div>
+  <div class="carte bloc"><h3><span class="n">2</span>Les clients qui comptent</h3>
+    <div class="lig" style="gap:8px"><span class="puce on">🏫 Écoles</span><span class="puce on">🧸 Crèches</span><span class="puce">🏢 Entreprises</span><span class="puce on">🤝 Associations</span><span class="puce">🏛️ Collectivités</span><span class="puce">Tous les clients pros</span></div>
+    <p class="mu" style="margin:10px 0 0;font-size:12px">Un client pro du panel (« client B2B ») sans commande depuis 12 mois. Commande minimum <b style="color:var(--texte)">100 € HT</b>.</p></div>
+  <div class="carte bloc"><h3><span class="n">3</span>Ce que ça rapporte</h3>
+    <div class="lig"><div><span class="lab">Payée</span><div class="seg"><span class="on">% de la commande</span><span>Montant fixe</span></div></div>
+      <div><span class="lab">Taux</span><span class="chp" style="font-size:18px;font-weight:700;color:var(--abf-encre)">5 <small>%</small></span></div>
+      <div><span class="lab">Plafond par client</span><span class="chp">150 <small>€</small></span></div></div>
+    <span class="lab" style="margin-top:16px">Sur ses commandes pendant</span>
+    <div class="reg"><div class="p"><i></i>la 1re</div><div class="p"><i></i>1 mois</div><div class="on"><i></i>3 mois</div><div><i></i>12 mois</div><div><i></i>sans limite</div></div></div>
+  <div class="carte bloc"><h3><span class="n">4</span>Qui gagne, qui paie</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="rad"><label class="on"><span class="rd"></span><span><b>La vendeuse de la 1re commande</b><small>celle qui l’encaisse ; le client reste « à elle » pendant la durée</small></span></label>
+        <label><span class="rd"></span><span><b>Toute l’équipe du magasin</b><small>partagée au prorata des heures</small></span></label></div>
+      <div class="rad"><label class="on"><span class="rd"></span><span><b>Le magasin</b><small>Halle — c’est ta prime</small></span></label>
+        <label><span class="rd"></span><span><b>Un sponsor</b><small>son nom, son logo dans l’app</small></span></label></div>
+    </div></div>
+  <div class="pied"><button class="bt l">Annuler</button><span style="flex:1"></span><span class="mu" style="font-size:12px">Visible dans l’app dès l’enregistrement</span><button class="bt p">Créer la prime</button></div>
+</div>
+<div class="cote">
+  <span class="lab">Dans l’app de la vendeuse</span>
+  <div class="tel" style="margin:0 auto"><div class="ec">
+    <div class="barre"><span>9:41</span><span>●●● ▮</span></div>
+    <h3>Mes primes</h3>
+    <div class="carteb2b"><div class="t">🏫 Ramène un client pro<span>5 %</span></div>
+      <p>Une école, une crèche, une association commande chez nous ? <b>5 % de chacune de ses commandes</b> pendant 3 mois, pour toi.</p>
+      <div class="k"><i>dès 100 € HT</i><i>jusqu’à 150 € par client</i><i>jusqu’au 31 déc.</i></div></div>
+    <div class="ttl"><span>Tes clients pros</span><span>+72 €</span></div>
+    <div class="gp">
+      <div class="lg"><span class="ic">🏫</span><div class="cl"><b>École Jules-Ferry <em>+40 €</em></b><small>2 commandes · encore 2 mois</small><div class="j"><i style="width:33%"></i></div></div></div>
+      <div class="lg"><span class="ic">🧸</span><div class="cl"><b>Crèche Les Lutins <em>+12 €</em></b><small>1 commande · encore 3 mois</small><div class="j"><i style="width:8%"></i></div></div></div>
+      <div class="lg"><span class="ic">🤝</span><div class="cl"><b>Club de foot USH <em>+20 €</em></b><small>1 commande · encore 1 mois</small><div class="j"><i style="width:66%"></i></div></div></div>
+    </div>
+    <div class="ttl"><span>À aller chercher</span></div>
+    <div class="gp"><div class="lg"><span class="ic" style="background:#F2F1EE">💡</span><div class="cl"><b>Une école qui commande 400 €/mois</b><small>20 € par commande, 60 € sur 3 mois</small></div></div></div>
+  </div></div>
+  <div class="carte sim"><span class="lab">Simulation</span><table>
+    <tr><td>Commande moyenne d’une école</td><td>400 € HT</td></tr>
+    <tr><td>5 % par commande, 1 par mois, 3 mois</td><td>3 × 20 €</td></tr>
+    <tr><td>Chiffre apporté au magasin</td><td>1 200 €</td></tr>
+    <tr><td>Pour la vendeuse</td><td>60 €</td></tr></table></div>
+</div>
+</div></main></div></body></html>

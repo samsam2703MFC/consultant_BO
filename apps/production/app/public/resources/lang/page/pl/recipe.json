@@ -1,0 +1,17 @@
+{
+  "preparation": "Przygotowanie",
+  "instruction": "Instrukcja",
+  "preparation_steps": "Kroki przygotowania",
+  "add_step": "Dodaj krok",
+  "edit_step": "Edytuj krok",
+  "delete_step": "Usuń krok",
+  "step_description": "Opis czynności",
+  "step_added": "Krok dodany pomyślnie",
+  "step_updated": "Krok zaktualizowany",
+  "step_deleted": "Krok usunięty",
+  "step_description_empty": "Opis kroku jest wymagany",
+  "step_not_found": "Nie znaleziono kroku",
+  "no_steps": "Brak kroków przygotowania",
+  "back_to_recipes": "Wróć do listy receptur",
+  "insert_after": "Wstaw po kroku"
+}

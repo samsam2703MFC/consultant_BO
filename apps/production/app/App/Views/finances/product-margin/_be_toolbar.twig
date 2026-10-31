@@ -1,0 +1,47 @@
+{# Sprzedawalność w Belgii : progi, źródło cen w sklepach (API panelu), synchronizacja. Zmienna : be (StoreSellabilityService::forCategories / productCard). #}
+<div class="card mt-3 mb-2" id="beToolbar">
+    <div class="card-body py-3">
+        <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
+            <form class="at-be-params" id="beParams" onsubmit="return false">
+                {% if be.is_admin %}
+                    <label>Mnożnik franczyzy × <input class="form-control form-control-sm" name="multiplier" inputmode="decimal" value="{{ be.params.multiplier|number_format(2, ',', '') }}"></label>
+                    <label>Na granicy od × <input class="form-control form-control-sm" name="limit" inputmode="decimal" value="{{ be.params.limit|number_format(2, ',', '') }}"></label>
+                    <label>Rezerwa od × <input class="form-control form-control-sm" name="reserve" inputmode="decimal" value="{{ be.params.reserve|number_format(2, ',', '') }}"></label>
+                    <button class="btn btn-sm btn-outline-secondary d-none" type="button" data-be-save-params><i class="bi bi-save"></i> Zapisz progi</button>
+                {% else %}
+                    <span>Mnożnik franczyzy <span class="at-be-val">× {{ be.params.multiplier|number_format(2, ',', '') }}</span></span>
+                    <span>Na granicy od <span class="at-be-val">× {{ be.params.limit|number_format(2, ',', '') }}</span></span>
+                    <span>Rezerwa od <span class="at-be-val">× {{ be.params.reserve|number_format(2, ',', '') }}</span></span>
+                {% endif %}
+            </form>
+            <div class="d-flex gap-2 align-items-center">
+                {% if be.configured %}
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-be-sync><i class="bi bi-arrow-repeat me-1"></i> Synchronizuj ceny w sklepach</button>
+                {% endif %}
+                {% if be.is_admin %}
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/settings/panel-api"><i class="bi bi-key me-1"></i> API cen w sklepach</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="at-be-src mt-2">
+            <i class="bi bi-shop me-1"></i>
+            Cena w sklepie : API panelu — cena pratiquée w kasie każdego sklepu w Belgii, mediana sklepów (cała sztuka ; produkt na porcje = cena porcji ÷ udział).
+            Współczynnik = cena w sklepie <strong>netto</strong> ÷ cena fabryczna za sztukę (jak w panelu : cena netto ÷ koszt) ; cel = cena fabryczna × {{ be.params.multiplier|number_format(2, ',', '') }}.
+            {% if be.synced %}
+                Ceny z <strong>{{ be.synced.started_at|date('d.m.Y H:i') }}</strong> ({{ be.synced.products }} produktów, {{ be.synced.shops - be.synced.shops_failed }} sklepów{{ be.synced.status == 'partial' ? ', częściowa' : '' }}).
+            {% endif %}
+            {% if be.sync and be.sync.status == 'failed' %}
+                <span class="text-danger">Ostatnia synchronizacja {{ be.sync.started_at|date('d.m.Y H:i') }} nieudana : {{ be.sync.message }}</span>
+            {% endif %}
+        </div>
+        {% if not be.configured %}
+            <div class="alert alert-warning mt-2 mb-0 py-2 small">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                API cen w sklepach nie jest skonfigurowane — brak cen w sklepach.
+                {% if be.is_admin %}<a href="{{ root }}/settings/panel-api">Wpisz konto konsultanta</a>.{% else %}Poproś administratora o wpisanie konta (Ustawienia → API cen w sklepach).{% endif %}
+            </div>
+        {% elseif not be.synced %}
+            <div class="alert alert-info mt-2 mb-0 py-2 small"><i class="bi bi-info-circle me-1"></i> Konto skonfigurowane, ceny jeszcze nie pobrane — kliknij « Synchronizuj ceny w sklepach ».</div>
+        {% endif %}
+    </div>
+</div>

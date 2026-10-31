@@ -1,0 +1,459 @@
+{% extends "layouts/base.twig" %}
+
+{# Mój tydzień [227] : czas « 1 h 05 » / « 45 min », wiersz « Na dziś » (zadanie = kreator) i znaczek tygodnia. #}
+{% macro hm(m) %}{{ m // 60 }} h {{ '%02d'|format(m % 60) }}{% endmacro %}
+{% macro dur(m) %}{% if not m %}0{% elseif m < 60 %}{{ m }} min{% elseif m % 60 == 0 %}{{ m // 60 }} h{% else %}{{ m // 60 }} h {{ '%02d'|format(m % 60) }}{% endif %}{% endmacro %}
+{% macro today(it, root) %}
+    {% import _self as wk %}
+    {% set manual = not it.wizard and not it.cron and not it.form %}
+    <div class="wt{{ it.done ? ' done' : '' }}{{ it.late ? ' late' : '' }}" style="--c:{{ it.color }}" data-wt="{{ it.id }}">
+        <span class="bar"></span>
+        <div class="wt-main">
+            <h6>{% if it.done %}<i class="bi bi-check-circle-fill"></i> {% endif %}{{ it.title }}</h6>
+            <div class="meta">
+                {% if it.wizard %}<span class="kw-badge new"><i class="bi bi-magic"></i> kreator{{ it.wizard.steps > 1 ? ' · ' ~ it.wizard.steps|plural_pl('krok', 'kroki', 'kroków') : '' }}</span>
+                {% elseif it.cron %}<span class="kw-badge"><i class="bi bi-robot"></i> automatycznie</span>
+                {% elseif it.form %}<span class="kw-badge"><i class="bi bi-journal-text"></i> protokół</span>{% endif %}
+                <span>{{ it.when }}{% if it.late and it.freq == 'daily' %} · {{ it.due|date('d.m') }}{% endif %}</span>
+                {% if it.minutes %}<span>{{ wk.dur(it.minutes) }}</span>{% endif %}
+            </div>
+            {% if it.extra %}<div class="wt-more">też : {% for x in it.extra %}<a href="{{ root }}{{ x.link }}">{{ x.label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+        </div>
+        <div class="wt-state">
+            {% if it.done %}
+                {% set at = it.done_at ? it.done_at|date('H:i') : '' %}
+                {% if it.status == 'skipped' %}<span class="wt-sum muted">pominięte{{ it.done_by ? ' · ' ~ it.done_by : '' }}</span>
+                {% elseif it.auto_done and it.cron and not it.wizard %}<span class="wt-sum">wykonane przez system · {{ at }}</span>
+                {% elseif it.auto_done %}<span class="wt-sum">zaliczone samo · {{ at }}</span>
+                {% else %}<span class="wt-sum">zrobione{{ it.done_by ? ' · ' ~ it.done_by : '' }}{{ at ? ', ' ~ at : '' }}</span>{% endif %}
+                {% if it.summary %}<span class="at-sub">{{ it.summary }}</span>{% endif %}
+            {% elseif it.late %}
+                <span><span class="kw-badge bad"><i class="bi bi-bell"></i> spóźnione {{ it.late_days|plural_pl('dzień', 'dni', 'dni') }}</span>{% if it.late_count is defined and it.late_count > 1 %} <span class="at-sub">{{ it.late_count }}× niezrobione</span>{% endif %}</span>
+                {% if it.escalated %}<span class="at-sub">przełożony powiadomiony{{ it.escalate_days ? ' (po ' ~ it.escalate_days|plural_pl('dniu', 'dniach', 'dniach') ~ ')' : '' }}</span>
+                {% elseif it.escalate_days and it.late_days < it.escalate_days %}<span class="at-sub">po {{ it.escalate_days|plural_pl('dniu', 'dniach', 'dniach') }} : przełożony</span>{% endif %}
+            {% elseif it.progress %}
+                <span>krok {{ it.progress.step }} z {{ it.progress.steps }}{% if it.progress.label %} · <b>{{ it.progress.label }}</b>{% endif %}</span>
+                {% if it.progress.steps > 1 %}<span class="wt-steps">{% for s in 1..it.progress.steps %}<i class="{{ s < it.progress.step ? 'on' : (s == it.progress.step ? 'cur' : '') }}"></i>{% endfor %}</span>{% endif %}
+            {% elseif it.prepared %}
+                <span><span class="kw-badge ok"><i class="bi bi-robot"></i> przygotowane {{ it.prepared.at }}</span></span>
+                <span class="at-sub">{{ it.prepared.summary ? it.prepared.summary ~ ' · ' : '' }}czeka na Ciebie</span>
+            {% elseif it.cron %}
+                <span class="at-sub"><i class="bi bi-robot"></i> system uruchomi o {{ it.cron.time }}{{ it.cron.then == 'done' ? ' · zaliczy się samo' : ' · potem Ty' }}</span>
+                {% if it.cron.last and it.cron.last.ok is same as(false) %}<span class="kw-badge bad">ostatnie uruchomienie : błąd</span>{% endif %}
+            {% else %}
+                <span class="at-sub">{{ it.due_time ? 'do ' ~ it.due_time : (it.due and it.due != 'now'|date('Y-m-d') ? 'termin ' ~ it.due|date('d.m') : 'dziś') }}{{ it.wizard ? ' · zalicza się samo na ostatnim kroku' : '' }}</span>
+            {% endif %}
+        </div>
+        <div class="wt-act">
+            {% if it.form and it.id %}
+                <a class="kw-btn{{ it.done ? ' ghost' : ' pri' }}" href="{{ root }}/my-tasks/{{ it.id }}/form">{{ it.done ? 'Zobacz' : 'Wypełnij protokół' }}</a>
+            {% elseif it.done %}
+                {% if it.link %}<a class="kw-btn ghost" href="{{ root }}{{ it.link }}">Zobacz</a>{% endif %}
+            {% elseif it.link and it.progress %}
+                <a class="kw-btn" href="{{ root }}{{ it.link }}">Wznów <i class="bi bi-play-fill"></i></a>
+            {% elseif it.link %}
+                <a class="kw-btn pri" href="{{ root }}{{ it.link }}">Rozpocznij <i class="bi bi-arrow-right"></i></a>
+            {% endif %}
+            {% if manual and it.id %}
+                <button type="button" class="kw-btn wt-chk" data-wk-toggle="{{ it.id }}" aria-pressed="{{ it.done ? 'true' : 'false' }}" title="{{ it.done ? 'Cofnij' : 'Zrobione' }}" aria-label="{{ it.done ? 'Cofnij' : 'Zrobione' }}"><i class="bi bi-check-lg"></i>{{ it.link ? '' : ' Zrobione' }}</button>
+            {% endif %}
+        </div>
+    </div>
+{% endmacro %}
+{% macro chip(it) %}
+    {% if it.late %}{% set ic = 'late' %}{% set tx = '!' %}
+    {% elseif it.done and it.auto_done and it.cron and not it.wizard %}{% set ic = 'ok' %}{% set tx = '<i class="bi bi-robot"></i>' %}
+    {% elseif it.done %}{% set ic = 'ok' %}{% set tx = '✓' %}
+    {% elseif it.progress %}{% set ic = 'run' %}{% set tx = it.progress.step ~ '/' ~ it.progress.steps %}
+    {% elseif it.cron %}{% set ic = '' %}{% set tx = '<i class="bi bi-robot"></i>' %}
+    {% elseif it.wizard %}{% set ic = '' %}{% set tx = '<i class="bi bi-magic"></i>' %}
+    {% else %}{% set ic = 'plain' %}{% set tx = '' %}{% endif %}
+    <div class="wk-chip{{ it.done ? ' done' : '' }}" style="--c:{{ it.color }}"{% if it.id %} data-chip="{{ it.id }}"{% endif %} data-min="{{ it.minutes ?? 0 }}" title="{{ it.title }}{{ it.summary ? ' — ' ~ it.summary : '' }}"><span class="ic {{ ic }}">{{ tx|raw }}</span><span>{{ it.wizard ? it.wizard.label : it.title }}</span></div>
+{% endmacro %}
+{% import _self as wk %}
+
+{% block title %}Dzisiaj{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Dzisiaj</h3>
+            <p class="text-subtitle text-muted">{{ today|day_pl }}</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-today">
+
+    {# --- Cztery liczby dnia -------------------------------------------------- #}
+    <div class="at-tiles">
+        <a class="at-tile" href="{{ root }}/client-orders">
+            <span class="at-tile-label"><i class="bi bi-calendar-event"></i> Najbliższa wysyłka</span>
+            {% if next %}
+                <strong class="at-tile-value">{{ next.day|day_pl|split(',')|first }}, {{ next.day|date('d.m') }}</strong>
+                <span class="at-tile-meta">{{ next.orders|plural_pl('zamówienie', 'zamówienia', 'zamówień') }} · {{ next.cartons|plural_pl('karton', 'kartony', 'kartonów') }}</span>
+            {% else %}
+                <strong class="at-tile-value">—</strong>
+                <span class="at-tile-meta">Brak otwartych zamówień</span>
+            {% endif %}
+        </a>
+
+        <a class="at-tile {{ missing.products ? 'at-tile-warn' : 'at-tile-ok' }}" href="{{ root }}/workshop/team-sheet">
+            <span class="at-tile-label"><i class="bi bi-gear"></i> Do wyprodukowania</span>
+            {% if not next %}
+                <strong class="at-tile-value">—</strong>
+                <span class="at-tile-meta">Nic nie jest zamówione</span>
+            {% elseif missing.products %}
+                <strong class="at-tile-value">{{ missing.products|plural_pl('produkt', 'produkty', 'produktów') }}</strong>
+                <span class="at-tile-meta">{{ missing.cartons|plural_pl('karton', 'kartony', 'kartonów') }} na {{ next.day|date('d.m') }}</span>
+            {% else %}
+                <strong class="at-tile-value">Wszystko na stanie</strong>
+                <span class="at-tile-meta">na {{ next.day|date('d.m') }}</span>
+            {% endif %}
+        </a>
+
+        {% set open_complaints = complaints.new + complaints.review %}
+        <a class="at-tile {{ open_complaints ? (complaints.oldest_days is not null and complaints.oldest_days > 7 ? 'at-tile-danger' : 'at-tile-warn') : 'at-tile-ok' }}" href="{{ root }}/franchise-complaints">
+            <span class="at-tile-label"><i class="bi bi-exclamation-triangle"></i> Reklamacje do decyzji</span>
+            <strong class="at-tile-value">{{ open_complaints }}</strong>
+            <span class="at-tile-meta">
+                {% if complaints.oldest_days is not null %}najstarsza czeka {{ complaints.oldest_days }} {{ complaints.oldest_days == 1 ? 'dzień' : 'dni' }}{% else %}Nic nie czeka{% endif %}
+            </span>
+        </a>
+
+        <a class="at-tile {{ proformas.unpaid ? '' : 'at-tile-ok' }}" href="{{ root }}/proforma-documents">
+            <span class="at-tile-label"><i class="bi bi-receipt"></i> Proformy nieopłacone</span>
+            <strong class="at-tile-value">{{ proformas.unpaid }}</strong>
+            <span class="at-tile-meta">z {{ proformas.orders|plural_pl('otwartego zamówienia', 'otwartych zamówień', 'otwartych zamówień') }}</span>
+        </a>
+    </div>
+
+    <div class="row">
+        {# --- Mój tydzień : zadania stałe stanowiska dzień po dniu (plan ustala administrator) --- #}
+        <div class="col-12">
+            {% if not member or not member.id_position %}
+            <div class="card at-mytasks">
+                <div class="card-header"><h4 class="card-title mb-0">Mój tydzień</h4><span class="at-sub">bez stanowiska</span></div>
+                <div class="card-body pt-0">
+                    <p class="at-empty mb-2">Nie masz przypisanego stanowiska — przypisz je, aby widzieć tu swój plan tygodnia.</p>
+                    <a class="btn btn-sm btn-outline-primary" href="{{ root }}/organization/positions">Funkcje i zadania</a>
+                </div>
+            </div>
+            {% else %}
+            {% set t = week.totals %}
+            {% set todayN = 'now'|date('N') %}
+            <div class="kw-card wk-card" id="myWeek">
+                <h5>Mój tydzień <span class="kw-badge">{{ member.position_name }} · {{ member.displayed_name ?: member.login }}</span>
+                    <span class="kw-badge">tydz. {{ week.week.number }} · {{ week.week.from|date('d.m') }} – {{ week.week.to|date('d.m') }}</span>
+                    <span class="wk-sp"></span>
+                    <span class="kw-badge ok" data-wk="done">{{ t.done }} z {{ t.total }} zrobione</span>
+                    {% if t.running %}<span class="kw-badge warn">{{ t.running }} w toku</span>{% endif %}
+                    {% if t.late + t.overdue %}<span class="kw-badge bad">{{ t.late + t.overdue }} spóźnione</span>{% endif %}</h5>
+                <div class="wk-prog"><div class="wk-bar"><i data-wk="bar" style="width: {{ t.minutes ? (t.done_minutes * 100 / t.minutes)|round : 0 }}%"></i></div>
+                    <span class="at-sub" data-wk="done-min">{{ wk.dur(t.done_minutes) }} z {{ wk.dur(t.minutes) }} zaplanowanych</span>
+                    <a class="wk-all" href="{{ root }}/my-tasks">Wszystkie moje zadania</a>
+                    {% if can_see('/organization/execution') %}<a class="wk-all" href="{{ root }}/organization/execution"><i class="bi bi-people"></i> Kto co zrobił</a>{% endif %}
+                    {% if can_see('/organization/week-plan/' ~ member.id_position) %}<a class="wk-all" href="{{ root }}/organization/week-plan/{{ member.id_position }}"><i class="bi bi-sliders"></i> Zadania stanowiska</a>{% endif %}</div>
+
+                <h6 class="wk-h">Na dziś — {{ t.today_name }} {{ 'now'|date('d.m') }}</h6>
+                {% if week.today %}
+                    <div class="wt-list">{% for it in week.today %}{{ wk.today(it, root) }}{% endfor %}</div>
+                {% else %}
+                    <p class="at-empty mb-0"><i class="bi bi-check2-circle"></i> Na dziś nic więcej — zadania stałe są zrobione albo zaplanowane na inne dni.</p>
+                {% endif %}
+
+                <h6 class="wk-h">Ten tydzień</h6>
+                <div class="wk" style="--wk-days: {{ week.days|length }}">
+                    {% for n, d in week.days %}
+                        <div class="wk-day{{ d.today ? ' today' : '' }}{{ d.past ? ' past' : '' }}" data-wk-day="{{ n }}">
+                            <h6>{{ d.short }} {{ d.date|date('d.m') }}<small>{{ wk.dur(d.done_minutes) }} / {{ wk.dur(d.minutes) }}</small></h6>
+                            {% set cnt = 0 %}
+                            {% for it in d.items %}{{ wk.chip(it) }}{% set cnt = cnt + 1 %}{% endfor %}
+                            {% for row in week.strip %}{% if row.slots[n] is defined %}{{ wk.chip(row.slots[n]) }}{% set cnt = cnt + 1 %}{% endif %}{% endfor %}
+                            {% if not cnt %}<p class="wk-free">bez zadań stałych</p>{% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="wk-legend"><span><span class="ic"><i class="bi bi-magic"></i></span>kreator do zrobienia</span><span><span class="ic run">2/3</span>w toku (krok)</span><span><span class="ic ok">✓</span>zrobione / zaliczone samo</span><span><span class="ic ok"><i class="bi bi-robot"></i></span>wykonane automatycznie</span><span><span class="ic late">!</span>spóźnione</span></div>
+                {% set later = week.later|filter(it => not it.done) %}
+                {% if later %}
+                    <h6 class="wk-h">Miesiąc i kwartał</h6>
+                    <div class="wk-later">{% for it in later %}<a class="wk-chip" style="--c:{{ it.color }}" href="{{ it.link ? root ~ it.link : '#' }}"><span class="ic{{ it.progress ? ' run' : (it.wizard ? '' : ' plain') }}">{% if it.progress %}{{ it.progress.step }}/{{ it.progress.steps }}{% elseif it.wizard %}<i class="bi bi-magic"></i>{% endif %}</span><span>{{ it.title }}</span><small>do {{ it.due|date('d.m') }}</small></a>{% endfor %}</div>
+                {% endif %}
+                <p class="kw-lead wk-foot">Bez pól do zaznaczania : przycisk otwiera kreator, zadanie zalicza się samo na ostatnim kroku, a wiersz pokazuje wynik liczbowy. Zadania bez kreatora : « Zrobione » zapisuje dzień i godzinę.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {# --- Moje wskaźniki : osoba na stanowisku kierownika produkcji (cele i wyniki z modułu) --- #}
+        {% if manager_kpis %}
+        <div class="col-12">
+            <div class="card at-mykpis">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h4 class="card-title mb-0">{{ manager_kpis.mine ? 'Moje wskaźniki' : 'Wskaźniki kierownika produkcji' ~ (manager_kpis.holder ? ' : ' ~ manager_kpis.holder : '') }}</h4>
+                        <span class="at-sub">Kierownik produkcji · {{ manager_kpis.month }} (ostatni pełny miesiąc) · dane z ERP</span>
+                    </div>
+                    <span class="d-flex gap-1 flex-wrap">
+                        {% if manager_kpis.red %}<span class="badge bg-danger">poniżej 90 % : {{ manager_kpis.red }}</span>{% endif %}
+                        {% if manager_kpis.no_objective %}<span class="badge bg-warning text-dark">bez celu : {{ manager_kpis.no_objective }}</span>{% endif %}
+                        {% if manager_kpis.no_data %}<span class="badge bg-secondary">bez danych : {{ manager_kpis.no_data }}</span>{% endif %}
+                    </span>
+                </div>
+                <div class="card-body pt-0">
+                    {% for a in manager_kpis.haccp_alerts %}<div class="alert alert-danger py-2 mb-2">{{ a }}</div>{% endfor %}
+                    <div class="table-responsive"><table class="table table-sm align-middle mb-2 at-kpi-table">
+                        <thead><tr><th>Wskaźnik</th><th class="text-end">Wynik</th><th class="text-end">Cel</th><th class="text-end">Realizacja</th></tr></thead>
+                        <tbody>
+                        {% set last_section = '' %}
+                        {% for k in manager_kpis.indicators %}
+                            {% if k.section != last_section %}<tr class="at-kpi-section"><th colspan="4">{{ k.section }}</th></tr>{% set last_section = k.section %}{% endif %}
+                            <tr>
+                                <td>{{ k.name }}{% if k.unverified %} <span class="badge bg-light text-dark">niezweryfikowane</span>{% endif %}</td>
+                                <td class="text-end">{% if k.value is not null %}<strong>{{ k.value }}</strong>{% else %}<span class="at-sub">{{ k.missing }}</span>{% endif %}</td>
+                                <td class="text-end">{{ k.target ?: '—' }}</td>
+                                <td class="text-end">{% if k.attainment is not null %}<span class="at-kpi-dot is-{{ k.status }}"></span> {{ (k.attainment * 100)|number_format(0, ',', ' ') }} %{% else %}—{% endif %}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table></div>
+                    {% if can_see('/workshop/manager') %}
+                    <a class="at-link" href="{{ root }}/workshop/manager#tab=report&month={{ manager_kpis.month }}">Raport miesięczny</a> ·
+                    <a class="at-link" href="{{ root }}/workshop/manager#tab=job">Karta stanowiska</a> ·
+                    <a class="at-link" href="{{ root }}/workshop/manager#tab=bonus">Premia</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# --- Rentowność grup : personel / sprzedaż wobec celu, brakująca sprzedaż --- #}
+        <div class="col-12">
+            <div class="card at-today-profit">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h4 class="card-title mb-0">Rentowność grup</h4>
+                        <span class="at-sub">bieżący miesiąc · koszt personelu / sprzedaż wobec celu</span>
+                    </div>
+                    <a class="at-link" href="{{ root }}/dashboard#grupy">Szczegóły</a>
+                </div>
+                <div class="card-body pt-0">
+                    {% if profit and profit.groups %}
+                        {% set t = profit.totals %}
+                        <div class="table-responsive">
+                            <table class="table mb-0 at-today-profit-table">
+                                <thead>
+                                    <tr>
+                                        <th>Grupa</th>
+                                        <th class="text-end">Sprzedaż</th>
+                                        <th>Personel / sprzedaż</th>
+                                        <th class="text-end" title="Sprzedaż − surowce i opakowania">Marża brutto</th>
+                                        <th class="text-end" title="Sprzedaż brakująca do celu personel / sprzedaż za cały miesiąc">Brakuje do celu<div class="at-sub">cały miesiąc</div></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% for g in profit.groups %}
+                                    {% set width = g.staff_pct is null ? 100 : min(100, g.staff_pct / max(g.staff_target, 1) * 50) %}
+                                    <tr class="{{ g.ok ? 'at-profit-ok' : 'at-profit-bad' }}">
+                                        <td><strong>{{ g.name }}</strong></td>
+                                        <td class="text-end">{{ g.revenue|eur }}</td>
+                                        <td>
+                                            <div class="at-ratio at-ratio-sm"><span class="at-ratio-bar {{ g.staff_pct is not null and g.staff_pct <= g.staff_target ? 'ok' : '' }}" style="width: {{ width|round(1) }}%"></span><span class="at-ratio-target" style="left: 50%"></span></div>
+                                            <span class="at-ratio-value {{ g.staff_pct is not null and g.staff_pct <= g.staff_target ? 'text-success' : 'text-danger' }}">{{ g.staff_pct|pct }}</span> <span class="at-sub">cel ≤ {{ g.staff_target|pct(0) }}</span>
+                                        </td>
+                                        <td class="text-end">{{ g.gross_pct|pct(0) }}</td>
+                                        <td class="text-end">
+                                            {% if g.missing > 0 %}
+                                                <strong class="{{ profit.period.current and g.missing_after_open <= 0 ? '' : 'text-danger' }}">{{ g.missing|eur }}</strong>{% if g.missing_pct is not null %} <span class="at-profit-badge{{ profit.period.current and g.missing_after_open <= 0 ? ' is-covered' : '' }}">+{{ g.missing_pct|pct(0) }}</span>{% endif %}
+                                                {% if profit.period.current %}<div class="at-sub">{{ g.missing_after_open > 0 ? 'po zamówieniach ' ~ g.missing_after_open|eur : 'pokryte zamówieniami' }}</div>{% endif %}
+                                            {% else %}
+                                                <span class="text-success"><i class="bi bi-check-circle"></i> w normie</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr class="at-profit-total">
+                                        <td><strong>Razem</strong><div class="at-sub">z działami wspólnymi</div></td>
+                                        <td class="text-end"><strong>{{ t.revenue|eur }}</strong></td>
+                                        <td><span class="at-ratio-value {{ t.staff_pct is not null and t.staff_pct <= t.staff_target ? 'text-success' : 'text-danger' }}">{{ t.staff_pct|pct }}</span> <span class="at-sub">cel ≤ {{ t.staff_target|pct(0) }}</span></td>
+                                        <td class="text-end">{{ t.gross_pct|pct(0) }}</td>
+                                        <td class="text-end">{% if t.staff_missing > 0 %}<strong class="text-danger">{{ t.staff_missing|eur }}</strong>{% else %}<span class="text-success"><i class="bi bi-check-circle"></i> w normie</span>{% endif %}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <p class="at-profit-note mb-0">Personel / sprzedaż : koszt personelu do dziś ÷ sprzedaż do dziś. Brakuje do celu : sprzedaż, której brakuje w tym miesiącu, aby koszt personelu całego miesiąca mieścił się w celu ; „pokryte zamówieniami” — otwarte zamówienia do końca miesiąca wystarczą.</p>
+                    {% else %}
+                        <p class="at-empty">Brak danych o sprzedaży lub kosztach w tym miesiącu.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {# --- Plan wysyłek ------------------------------------------------------ #}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Plan wysyłek</h4></div>
+                <div class="card-body pt-0">
+                    {% if days %}
+                    <div class="table-responsive">
+                        <table class="table mb-0 at-days">
+                            <thead>
+                                <tr><th>Dzień</th><th>Ilość</th><th>Etap</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                            {% for d in days %}
+                                <tr class="{{ d.overdue ? 'at-overdue' : '' }}">
+                                    <td>
+                                        <strong>{{ d.day|day_pl }}</strong>
+                                        <div class="at-sub" title="{{ d.client_names }}">{{ d.client_names }}</div>
+                                    </td>
+                                    <td>
+                                        {{ d.orders|plural_pl('zamówienie', 'zamówienia', 'zamówień') }}
+                                        <div class="at-sub">{{ d.cartons|plural_pl('karton', 'kartony', 'kartonów') }}</div>
+                                    </td>
+                                    <td>
+                                        {% if d.overdue %}
+                                            <span class="at-pill at-pill-danger">Po terminie</span>
+                                        {% elseif d.ready %}
+                                            <span class="at-pill at-pill-warn">Gotowe do dokumentów</span>
+                                        {% elseif d.scanning %}
+                                            <span class="at-pill">Kompletowanie · {{ d.scanning }}/{{ d.clients }}</span>
+                                        {% elseif d.shipped >= d.clients %}
+                                            <span class="at-pill at-pill-ok">Wysłane</span>
+                                        {% else %}
+                                            <span class="at-pill at-pill-muted">Produkcja</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if d.ready %}
+                                            <a class="btn btn-sm btn-primary" href="{{ root }}/shipping/wizard?date={{ d.day|url_encode }}">Wyślij</a>
+                                        {% else %}
+                                            <a class="btn btn-sm btn-outline-dark" href="{{ root }}/workshop/team-sheet#date={{ d.day|url_encode }}&lists={{ d.day|url_encode }}">Planuj</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <p class="at-empty">Brak otwartych zamówień.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# --- Do zrobienia ------------------------------------------------------ #}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Do zrobienia</h4></div>
+                <div class="card-body pt-0">
+                    {% if todo %}
+                    <ul class="at-todo">
+                        {% for t in todo %}
+                            <li class="at-todo-{{ t.tone }}{{ t.mine ? ' is-mine' : '' }}">
+                                <a href="{{ root }}{{ t.url }}">
+                                    <i class="bi {{ t.icon }}"></i>
+                                    <span>
+                                        <strong>{{ t.count|plural_pl(t.one, t.few, t.many) }}</strong>
+                                        {% if t.note %}<small>{{ t.note }}</small>{% endif %}
+                                        {% if t.owners %}<small class="at-todo-owner">{% if t.mine %}<span class="at-todo-mine">Twoje</span> {% endif %}{{ t.owners|join(' · ') }}</small>{% endif %}
+                                    </span>
+                                    <i class="bi bi-chevron-right at-todo-go"></i>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                        <p class="at-empty"><i class="bi bi-check2-circle"></i> Wszystko załatwione.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# --- Ostatnie zamówienia --------------------------------------------------- #}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="card-title mb-0">Ostatnie zamówienia</h4>
+            <a class="at-link" href="{{ root }}/client-orders">Wszystkie zamówienia</a>
+        </div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr><th>Nr</th><th>Klient</th><th>Wpłynęło</th><th>Wysyłka</th><th class="text-end">Kartony</th><th>Proforma</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for o in latest %}
+                        <tr>
+                            <td><a href="{{ root }}/client-orders/{{ o.id }}/edit">#{{ o.id }}</a></td>
+                            <td>{{ o.company }}</td>
+                            <td>{{ o.create_order_date }}</td>
+                            <td>{{ o.expected_shipping_date }}</td>
+                            <td class="text-end">{{ o.cartons|number_format(0, ',', ' ') }}</td>
+                            <td>
+                                {% if o.proforma_status == 'paid' %}<span class="at-pill at-pill-ok">Opłacona</span>
+                                {% elseif o.proforma_status == 'issued' %}<span class="at-pill at-pill-warn">Nieopłacona</span>
+                                {% elseif o.proforma_status == 'cancelled' %}<span class="at-pill at-pill-muted">Anulowana</span>
+                                {% elseif o.proforma_status == 'archived' %}<span class="at-pill at-pill-muted">Zarchiwizowana</span>
+                                {% else %}<span class="at-pill at-pill-muted">Brak</span>{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    // Mój tydzień : « Zrobione » / « Cofnij » (zadania bez kreatora) — wiersz « Na dziś », znaczek tygodnia i licznik bez przeładowania.
+    const week = document.getElementById('myWeek');
+    const dur = (m) => !m ? '0' : (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h` + (m % 60 ? ` ${String(m % 60).padStart(2, '0')}` : ''));
+    function recount() {
+        if (!week) return;
+        let done = 0, total = 0, min = 0, doneMin = 0;
+        week.querySelectorAll('.wk-day [data-min]').forEach(el => {
+            const m = Number(el.dataset.min) || 0;
+            total++; min += m;
+            if (el.classList.contains('done')) { done++; doneMin += m; }
+        });
+        week.querySelector('[data-wk=done]').textContent = `${done} z ${total} zrobione`;
+        week.querySelector('[data-wk=done-min]').textContent = `${dur(doneMin)} z ${dur(min)} zaplanowanych`;
+        week.querySelector('[data-wk=bar]').style.width = (min ? Math.round(doneMin * 100 / min) : 0) + '%';
+    }
+    document.querySelectorAll('[data-wk-toggle]').forEach(button => button.addEventListener('click', () => {
+        const id = button.dataset.wkToggle, row = button.closest('.wt');
+        const done = button.getAttribute('aria-pressed') === 'true';
+        button.disabled = true;
+        at.send(`/ajax/my-tasks/${id}`, 'PATCH', {status: done ? 'open' : 'done', note: null}).then(res => {
+            button.disabled = false;
+            at.notify(res.ok, res.message);
+            if (!res.ok) return;
+            button.setAttribute('aria-pressed', done ? 'false' : 'true');
+            button.title = button.ariaLabel = done ? 'Zrobione' : 'Cofnij';
+            row?.classList.toggle('done', !done);
+            week?.querySelectorAll(`[data-chip="${id}"]`).forEach(chip => {
+                chip.classList.toggle('done', !done);
+                const ic = chip.querySelector('.ic');
+                ic.className = 'ic ' + (done ? 'plain' : 'ok');
+                ic.textContent = done ? '' : '✓';
+            });
+            recount();
+        });
+    }));
+})();
+</script>
+{% endblock %}

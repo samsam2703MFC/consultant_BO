@@ -55,14 +55,14 @@ Vocabulaire du brief : 🟢 API = vient d'une source automatique, 🔴 local = s
 | Besoin du brief | Existe | Où | Source |
 |---|---|---|---|
 | CA jour / semaine vs objectif | oui | `GET /exploitation/jour` (7 jours par magasin, `ca` et `objectif`), `/exploitation/magasin` | 🟢 ERP |
-| Note et avis Google, derniers avis | oui | `GET /reputation`, `POST /reputation/sync`, tables `ceo_shop_reputation`, `ceo_shop_review` | 🟢 Google Places |
+| Note et avis Google, derniers avis | oui | `GET /reputation`, `POST /reputation/sync`, tables `mar_avis_fiche`, `mar_avis` | 🟢 Google Places |
 | Tâches consultant, notes 1..5, validation | oui | `GET /pwa/tasks`, `POST /pwa/tasks/review`, `POST /pwa/tasks/validate`, `PUT /pwa/tasks/annotation`, journal `mac_task_review` | 🟢 panel |
 | Non-conformités, récidive, seuil de signalement | oui | `GET /pwa/tasks/nc?shop=&date=` (ou `du/au`), seuil 4 | 🟢 panel |
 | Planogramme de référence, photos produits | oui | `GET /planogramme`, `/planogramme/photos` (liens S3 signés 1 h), tables `pla_*`, `ceo_plano_photo` | 🟢 |
 | Photo d'une cible planogramme | oui | `POST /planogramme/photo` : data-URL, 4 Mo max, type lu dans les octets, fichier sous `public/` | 🔴 |
 | Notifications push | oui | `src/push.php` : VAPID, `POST /push/abonnements`, `pushDiffuser(shop, charge)`, service worker `dashboard/sw.js` | — |
 | Mail | oui | `Smtp::envoyer`, expéditeur rapport@atelierby.be, déjà utilisé par la newsletter et les rapports | — |
-| Consultants | oui | `GET /consultants` (cinq « Consultant réseau »), `ceo_consultant_visit` (consultant, date, magasin, sujet), `POST /consultants/note` | 🔴 |
+| Consultants | oui | `GET /consultants` (cinq « Consultant réseau »), `con_consultant_visit` (consultant, date, magasin, sujet), `POST /consultants/note` | 🔴 |
 | Magasins | oui | `ep_stores()` : Corbais, Gosselies, Sombreffe, Halle (Gembloux fermé) | 🟢 |
 | Cron toutes les 5 min | oui | `/etc/cron.d/cockpit-rapports` écrit par `bin/deploy.sh` | — |
 | Page autonome mobile par magasin | oui | modèle `dashboard/?shop=`, `prospection/?shop=`, `newsletter/?shop=` | — |
@@ -75,7 +75,7 @@ Conclusion : les quatre KPI du TB franchisé se remplissent à trois quarts sans
 
 | Manque | Poids | Remarque |
 |---|---|---|
-| Agenda des visites (planifiées, dues, ASAP) | moyen | `ceo_consultant_visit` ne porte que le passé ; pas de créneau, pas de statut, pas de fréquence par boutique |
+| Agenda des visites (planifiées, dues, ASAP) | moyen | `con_consultant_visit` ne porte que le passé ; pas de créneau, pas de statut, pas de fréquence par boutique |
 | Visite comme objet (début, fin, consultant, checklist, review) | fort | rien |
 | Référentiel de checklist (5 modules, points, cibles) | moyen | à définir avec Sam ; le brief donne les modules, pas les points |
 | Photos de visite (du jour, par point, avant/après) | moyen | l'upload planogramme existe mais une photo par cible et 4 Mo ; il faut n photos par visite, compression, EXIF retiré |
@@ -119,21 +119,21 @@ reste désactivée, le lien porte le rôle comme aujourd'hui pour `dashboard/?sh
 ## 6. Modèle de données
 
 ```
-ceo_visite            id, shop_id, consultant_id, prevu_le, debut_h, duree_min, statut
+con_visite            id, shop_id, consultant_id, prevu_le, debut_h, duree_min, statut
                       (planifiee|confirmee|en_cours|terminee|annulee), motif (reguliere|asap|due),
                       commence_a, termine_a, sentiment_equipe 1..5, observe_positif, notes, synced_at
-ceo_visite_point      id, visite_id, module (produit|hygiene|visuel|planogramme|msp), point_ref,
+con_visite_point      id, visite_id, module (produit|hygiene|visuel|planogramme|msp), point_ref,
                       etat (ok|ko|na), note 1..5, commentaire, cause (chips, JSON)
-ceo_visite_photo      id, visite_id, point_id NULL, genre (jour_facade|jour_interieur|jour_arriere|
+con_visite_photo      id, visite_id, point_id NULL, genre (jour_facade|jour_interieur|jour_arriere|
                       point|avant|apres|correction), chemin, prise_a, lat, lng, largeur, hauteur, octets
 ceo_plan_action       id, shop_id, visite_id NULL, point_id NULL, titre, detail, priorite (P0|P1|P2),
                       assigne (franchise|equipe|consultant|admin), echeance, statut (ouvert|attente|
                       valide|reprendre|ferme|escalade), cree_par, cree_le, valide_par, valide_le,
                       ferme_par, ferme_le, retour_admin, escalade_motif
 ceo_plan_action_evt   id, plan_id, quand, qui, de_statut, vers_statut, commentaire, photo_id NULL
-ceo_msp               id, shop_id, mois, score_total, rubriques JSON (accueil, produits, hygiene,
+con_msp               id, shop_id, mois, score_total, rubriques JSON (accueil, produits, hygiene,
                       ambiance …), commentaires, fichier (PDF), televerse_par, televerse_le
-ceo_equipe_releve     id, shop_id, releve_le, effectif, prevu, departs_mois, source (visite|franchise)
+con_equipe_releve     id, shop_id, releve_le, effectif, prevu, departs_mois, source (visite|franchise)
 ceo_visite_frequence  shop_id, jours (7 par défaut), rappel_j1 (1), rappel_jour (1)
 ceo_app_setting       visitesChecklist (référentiel des points par module), visitesSeuils (feu),
                       visitesPlanoSeuils (25 / 10, rupture 3 j)

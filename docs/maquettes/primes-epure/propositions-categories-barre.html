@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catégories en barre : propositions</title>
+<!-- Généré par propositions-categories-barre.php. Les vrais styles de l'app (la barre .pl des targets) ; le reste ici, avec les variables du design system. -->
+<link rel="stylesheet" href="/public/employee/assets/atelier/app.css">
+<link rel="stylesheet" href="/public/employee/assets/atelier/marque.css">
+<link rel="stylesheet" href="/public/employee/assets/atelier/primes.css">
+<style>
+  body{margin:0}
+  .page{max-width:600px;margin:0 auto;padding:6px 14px 30px}
+  .prop-t{display:flex;align-items:baseline;gap:10px;margin:22px 4px 2px}
+  .prop-t b{font:400 26px/1 var(--font-display);color:var(--la-rubis)}
+  .prop-t h2{font:400 22px/1.1 var(--font-display);margin:0;color:var(--la-encre)}
+  .prop-d{font:500 12.5px/1.45 var(--font-ui);color:var(--la-muet);margin:4px 4px 0}
+  .prop .titre-section{margin-top:12px}
+  .liste{display:flex;flex-direction:column;gap:10px}
+  .carte{background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-xl);box-shadow:var(--la-ombre)}
+  .pl-b{cursor:default}
+  .pl-s .rg{color:var(--la-encre)}
+  .pl.ok .pl-s .rg{color:var(--la-ok)}
+
+  /* B : le peloton */
+  .pel{background:var(--la-beige)}
+  .pel .pk{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--la-gris);border:2px solid var(--la-blanc)}
+  .pel .pk.un{background:var(--la-or)}
+  .pel .pk.moi{width:18px;height:18px;margin:-9px 0 0 -9px;background:var(--la-rubis);border-width:3px;z-index:2;box-shadow:var(--la-ombre)}
+  .pl.ok .pel .pk.moi{background:var(--la-ok)}
+  .pel .pk.moi em{position:absolute;top:calc(100% + 3px);left:50%;transform:translateX(-50%);font:700 10px var(--font-ui);font-style:normal;color:var(--la-rubis);white-space:nowrap}
+  .pl.ok .pel .pk.moi em{color:var(--la-ok)}
+  .pel + .pl-s{margin-top:20px}
+
+  /* C : le rang en grand */
+  .rg-l .pl-b{display:flex;gap:12px;align-items:stretch}
+  .rg-g{flex:0 0 58px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:.5px solid var(--la-trait);padding-right:10px}
+  .rg-g b{font:400 40px/1 var(--font-display);color:var(--la-rubis)}
+  .rg-g b small{font:600 13px var(--font-ui);margin-left:1px;vertical-align:top}
+  .rg-g span{font:600 11px var(--font-ui);color:var(--la-muet);margin-top:2px}
+  .rg-l.ok .rg-g b{color:var(--la-ok)}
+  .rg-d{flex:1;min-width:0}
+  .rg-m{font:400 21px/1 var(--font-display);color:var(--la-abricot-encre);white-space:nowrap}
+  .rg-m small{font:600 11px var(--font-ui);color:var(--la-muet);margin-left:3px}
+  .rg-l.ok .rg-m{color:var(--la-ok)}
+
+  /* D : la liste compacte */
+  .cd-liste{padding:4px 12px}
+  .cd{display:grid;grid-template-columns:30px minmax(0,1fr) 32% auto;align-items:center;gap:10px;height:58px;border-bottom:.5px solid var(--la-trait)}
+  .cd:last-child{border-bottom:0}
+  .cd .emo{width:30px;height:30px;border-radius:var(--radius-md);background:var(--la-beige-doux);display:flex;align-items:center;justify-content:center;font-size:16px;overflow:hidden}
+  .cd .emo img{width:21px;height:21px}
+  .cd-t b{display:block;font:600 13px/1.2 var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cd-t small{display:block;font:500 11px var(--font-ui);color:var(--la-muet);margin-top:2px}
+  .cd .jg{position:relative;height:8px;border-radius:var(--radius-pill);background:var(--la-beige)}
+  .cd .jg i{position:absolute;left:0;top:0;bottom:0;border-radius:var(--radius-pill);background:var(--la-rubis)}
+  .cd.ok .jg i{background:var(--la-ok)}
+  .cd .jg .ob{position:absolute;left:75%;top:-5px;bottom:-5px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--la-encre)}
+  .cd-e{font:700 11.5px var(--font-ui);padding:4px 8px;border-radius:var(--radius-pill);background:var(--la-abricot);color:var(--la-abricot-encre);white-space:nowrap}
+  .cd.ok .cd-e{background:var(--la-ok-doux);color:var(--la-ok)}
+</style>
+</head>
+<body>
+<div class="page">
+<section class="prop" id="prop-a">
+  <div class="prop-t"><b>A</b><h2>Le drapeau</h2></div>
+  <p class="prop-d">Exactement comme les targets : ses pièces à droite, la barre, le trait de la 1re (+1 pièce) et la récompense posée dessus. Dessous, sa place et ce qui lui manque.</p>
+  <div class="titre-section"><h2>Catégories</h2><small>jusqu’à 150 €</small></div>
+  <div class="liste"><div class="pl"><div class="pl-b"><div class="pl-h"><span class="emo"><img src="demo/uploads/primes/7a1e0c3b9f2d4e5a6b70.svg" alt=""></span><b class="pl-t">Queen of Tartes</b><span class="pl-v">42<small>pcs</small></span></div><div class="pl-j"><i style="width:60.6%"></i><span class="ob"></span><span class="fl">50&nbsp;€</span></div><div class="pl-s"><span class=""><b class="rg">2e / 6</b> · encore 10 pcs pour être 1re</span><span>👑 Léa 51</span></div></div></div><div class="pl ok"><div class="pl-b"><div class="pl-h"><span class="emo"><img src="demo/uploads/primes/3c9d2b81e04f6a7c5d12.svg" alt=""></span><b class="pl-t">Queen of Quiches</b><span class="pl-v">27<small>pcs</small></span></div><div class="pl-j"><i style="width:84.4%"></i><span class="ob"></span><span class="fl">✓ 50&nbsp;€</span></div><div class="pl-s"><span class="ok"><b class="rg">👑 1re / 4</b> · +3 pcs d’avance</span><span>2e Sarah 24</span></div></div></div><div class="pl"><div class="pl-b"><div class="pl-h"><span class="emo">🍪</span><b class="pl-t">Queen of Cookies</b><span class="pl-v">22<small>pcs</small></span></div><div class="pl-j"><i style="width:25.4%"></i><span class="ob"></span><span class="fl">50&nbsp;€</span></div><div class="pl-s"><span class=""><b class="rg">5e / 6</b> · encore 43 pcs pour être 1re</span><span>👑 Inès 64</span></div></div></div></div></section>
+<section class="prop" id="prop-b">
+  <div class="prop-t"><b>B</b><h2>Le peloton</h2></div>
+  <p class="prop-d">Toutes les vendeuses du magasin sur la barre : un point chacune, la 1re au trait, elle en rubis. On voit qui est juste devant.</p>
+  <div class="titre-section"><h2>Catégories</h2><small>jusqu’à 150 €</small></div>
+  <div class="liste"><div class="pl"><div class="pl-b"><div class="pl-h"><span class="emo"><img src="demo/uploads/primes/7a1e0c3b9f2d4e5a6b70.svg" alt=""></span><b class="pl-t">Queen of Tartes</b><span class="pl-v">2<small>e / 6</small></span></div><div class="pl-j pel"><span class="ob"></span><span class="fl">50&nbsp;€</span><span class="pk" style="left:17.3%" title="Camille"></span><span class="pk" style="left:26%" title="Julie"></span><span class="pk" style="left:41.8%" title="Sarah"></span><span class="pk" style="left:53.4%" title="Manon"></span><span class="pk un" style="left:73.6%" title="Léa"></span><span class="pk moi" style="left:60.6%"><em>Toi 42</em></span></div><div class="pl-s"><span class="">encore 10 pcs pour être 1re</span><span>👑 Léa 51</span></div></div></div><div class="pl ok"><div class="pl-b"><div class="pl-h"><span class="emo"><img src="demo/uploads/primes/3c9d2b81e04f6a7c5d12.svg" alt=""></span><b class="pl-t">Queen of Quiches</b><span class="pl-v">👑 1re</span></div><div class="pl-j pel"><span class="ob"></span><span class="fl">✓ 50&nbsp;€</span><span class="pk" style="left:34.4%" title="Manon"></span><span class="pk" style="left:59.4%" title="Léa"></span><span class="pk" style="left:75%" title="Sarah"></span><span class="pk moi" style="left:84.4%"><em>Toi 27</em></span></div><div class="pl-s"><span class="ok">+3 pcs d’avance</span><span>2e Sarah 24</span></div></div></div><div class="pl"><div class="pl-b"><div class="pl-h"><span class="emo">🍪</span><b class="pl-t">Queen of Cookies</b><span class="pl-v">5<small>e / 6</small></span></div><div class="pl-j pel"><span class="ob"></span><span class="fl">50&nbsp;€</span><span class="pk" style="left:10.4%" title="Julie"></span><span class="pk" style="left:38.1%" title="Sarah"></span><span class="pk" style="left:47.3%" title="Manon"></span><span class="pk" style="left:66.9%" title="Léa"></span><span class="pk un" style="left:73.8%" title="Inès"></span><span class="pk moi" style="left:25.4%"><em>Toi 22</em></span></div><div class="pl-s"><span class="">encore 43 pcs pour être 1re</span><span>👑 Inès 64</span></div></div></div></div></section>
+<section class="prop" id="prop-c">
+  <div class="prop-t"><b>C</b><h2>Le rang en grand</h2></div>
+  <p class="prop-d">Sa place en très grand à gauche, l’écart en pièces à droite, la barre entre les deux.</p>
+  <div class="titre-section"><h2>Catégories</h2><small>jusqu’à 150 €</small></div>
+  <div class="liste"><div class="pl rg-l"><div class="pl-b"><div class="rg-g"><b>2<small>e</small></b><span>/ 6</span></div><div class="rg-d"><div class="pl-h"><span class="emo"><img src="demo/uploads/primes/7a1e0c3b9f2d4e5a6b70.svg" alt=""></span><b class="pl-t">Queen of Tartes</b><span class="rg-m">−10<small>pcs</small></span></div><div class="pl-j"><i style="width:60.6%"></i><span class="ob"></span><span class="fl">50&nbsp;€</span></div><div class="pl-s"><span>Toi 42 pcs</span><span>👑 Léa 51</span></div></div></div></div><div class="pl rg-l ok"><div class="pl-b"><div class="rg-g"><b>1<small>re</small></b><span>/ 4</span></div><div class="rg-d"><div class="pl-h"><span class="emo"><img src="demo/uploads/primes/3c9d2b81e04f6a7c5d12.svg" alt=""></span><b class="pl-t">Queen of Quiches</b><span class="rg-m">+3<small>pcs</small></span></div><div class="pl-j"><i style="width:84.4%"></i><span class="ob"></span><span class="fl">✓ 50&nbsp;€</span></div><div class="pl-s"><span>Toi 27 pcs</span><span>2e Sarah 24</span></div></div></div></div><div class="pl rg-l"><div class="pl-b"><div class="rg-g"><b>5<small>e</small></b><span>/ 6</span></div><div class="rg-d"><div class="pl-h"><span class="emo">🍪</span><b class="pl-t">Queen of Cookies</b><span class="rg-m">−43<small>pcs</small></span></div><div class="pl-j"><i style="width:25.4%"></i><span class="ob"></span><span class="fl">50&nbsp;€</span></div><div class="pl-s"><span>Toi 22 pcs</span><span>👑 Inès 64</span></div></div></div></div></div></section>
+<section class="prop" id="prop-d">
+  <div class="prop-t"><b>D</b><h2>La liste compacte</h2></div>
+  <p class="prop-d">Une ligne courte par catégorie : sa place, la mini-barre, l’écart en pastille. Le plus court.</p>
+  <div class="titre-section"><h2>Catégories</h2><small>jusqu’à 150 €</small></div>
+  <div class="carte cd-liste"><div class="cd"><span class="emo"><img src="demo/uploads/primes/7a1e0c3b9f2d4e5a6b70.svg" alt=""></span><div class="cd-t"><b>Queen of Tartes</b><small>2e / 6 · 42 pcs</small></div><div class="jg"><i style="width:60.6%"></i><span class="ob"></span></div><span class="cd-e">−10 pcs</span></div><div class="cd ok"><span class="emo"><img src="demo/uploads/primes/3c9d2b81e04f6a7c5d12.svg" alt=""></span><div class="cd-t"><b>Queen of Quiches</b><small>👑 1re / 4 · 27 pcs</small></div><div class="jg"><i style="width:84.4%"></i><span class="ob"></span></div><span class="cd-e">+3 pcs</span></div><div class="cd"><span class="emo">🍪</span><div class="cd-t"><b>Queen of Cookies</b><small>5e / 6 · 22 pcs</small></div><div class="jg"><i style="width:25.4%"></i><span class="ob"></span></div><span class="cd-e">−43 pcs</span></div></div></section>
+</div>
+</body>
+</html>

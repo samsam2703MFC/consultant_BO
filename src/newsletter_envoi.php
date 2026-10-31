@@ -14,7 +14,7 @@ declare(strict_types=1);
  *    campagnes dues par lots de 100 par minute, évalue les automatisations
  *    chaque nuit, et n'écrit jamais deux fois au même client le même jour.
  *
- * Les contacts vivent dans `ceo_nl_contact`, importés par CSV (Paramètres →
+ * Les contacts vivent dans `mar_nl_contact`, importés par CSV (Paramètres →
  * Bases de données) par lots que l'on peut retirer d'un geste. Tant qu'une
  * base n'a aucun contact, ses compteurs restent le jeu d'essai du brief.
  *
@@ -30,7 +30,7 @@ const NL_CADENCE = 100;          // mails par minute
 
 function ensureNewsletterEnvoi(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_nl_contact ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_nl_contact ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'source_id VARCHAR(16) NOT NULL,'
         . 'shop_id VARCHAR(16) NOT NULL DEFAULT "",'
@@ -53,7 +53,7 @@ function ensureNewsletterEnvoi(): void
         . 'UNIQUE KEY u_src_email (source_id, email),'
         . 'KEY k_token (token), KEY k_lot (lot), KEY k_shop (shop_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_nl_envoi ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_nl_envoi ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'campagne_id INT UNSIGNED NOT NULL,'
         . 'contact_id INT UNSIGNED NOT NULL,'
@@ -67,7 +67,7 @@ function ensureNewsletterEnvoi(): void
         . 'UNIQUE KEY u_camp_contact (campagne_id, contact_id),'
         . 'KEY k_token (token), KEY k_contact_jour (contact_id, sent_at)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_nl_voucher ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_nl_voucher ('
         . 'code VARCHAR(12) PRIMARY KEY,'
         . 'campagne_id INT UNSIGNED NOT NULL,'
         . 'contact_id INT UNSIGNED NULL,'
@@ -76,8 +76,8 @@ function ensureNewsletterEnvoi(): void
         . 'shop_id VARCHAR(16) NULL,'
         . 'KEY k_camp (campagne_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    foreach (['headlines_json TEXT NULL', 'ctas_json TEXT NULL', 'image VARCHAR(40) NULL', 'started_at DATETIME NULL', 'finished_at DATETIME NULL', 'auto_dernier DATE NULL'] as $col) {
-        try { Db::exec('ALTER TABLE ceo_nl_campagne ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
+    foreach (['headlines_json TEXT NULL', 'ctas_json TEXT NULL', 'image VARCHAR(40) NULL', 'started_at DATETIME NULL', 'finished_at DATETIME NULL', 'auto_dernier DATE NULL', 'campagne_id INT NULL', 'lien VARCHAR(500) NULL'] as $col) {
+        try { Db::exec('ALTER TABLE mar_nl_campagne ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
     }
     if ((string) setting('nlJeton', '') === '') {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value', ['nlJeton', json_encode(bin2hex(random_bytes(24)))]);
@@ -108,7 +108,7 @@ function nlReglages(): array
 {
     return ['dispatch' => nlDispatch(), 'smtp' => Smtp::configured(), 'smtpExpediteur' => Smtp::configured() ? Smtp::config()['expediteur'] : '',
         'testAdresses' => nlAdressesTest(), 'sms' => false,
-        'cron' => rapBaseUrl() . '/api/cockpit/newsletter/cron?jeton=' . (string) setting('nlJeton', ''), 'cronDernier' => setting('nlCronDernier', null)];
+        'cron' => rapBaseUrl() . '/api/cockpit/marketing/newsletter/cron?jeton=' . (string) setting('nlJeton', ''), 'cronDernier' => setting('nlCronDernier', null)];
 }
 
 /* ---------------------------------------------------------------------------
@@ -118,13 +118,13 @@ function nlReglages(): array
 function nlContactsParSource(): array
 {
     $out = [];
-    foreach (Db::rows('SELECT source_id, COUNT(*) n, SUM(optin = 1 AND desinscrit_le IS NULL) o, SUM(optin_sms = 1 AND desinscrit_le IS NULL) s FROM ceo_nl_contact GROUP BY source_id') as $r) {
+    foreach (Db::rows('SELECT source_id, COUNT(*) n, SUM(optin = 1 AND desinscrit_le IS NULL) o, SUM(optin_sms = 1 AND desinscrit_le IS NULL) s FROM mar_nl_contact GROUP BY source_id') as $r) {
         $out[$r['source_id']] = ['n' => (int) $r['n'], 'optin' => (int) $r['o'], 'sms' => (int) $r['s']];
     }
     return $out;
 }
 
-/** La clause SQL d'un segment sur ceo_nl_contact (opt-in mail, non désinscrit) ; [sql, params]. */
+/** La clause SQL d'un segment sur mar_nl_contact (opt-in mail, non désinscrit) ; [sql, params]. */
 function nlSegmentSql(array $seg): array
 {
     $w = ['c.source_id = ?', 'c.optin = 1', 'c.desinscrit_le IS NULL'];
@@ -148,7 +148,7 @@ function nlSegmentCompte(array $seg, array $parSource): ?array
     if (!isset($parSource[$seg['source_id']])) { return null; }
     [$sql, $p] = nlSegmentSql($seg);
     $out = ['total' => 0, 'split' => [0, 0, 0]];
-    foreach (Db::rows('SELECT c.langue l, COUNT(*) n FROM ceo_nl_contact c WHERE ' . $sql . ' GROUP BY c.langue', $p) as $r) {
+    foreach (Db::rows('SELECT c.langue l, COUNT(*) n FROM mar_nl_contact c WHERE ' . $sql . ' GROUP BY c.langue', $p) as $r) {
         $i = array_search($r['l'], NL_LANGUES, true);
         $out['total'] += (int) $r['n'];
         if ($i !== false) { $out['split'][$i] += (int) $r['n']; }
@@ -182,7 +182,7 @@ function wr_newsletter_contacts_import(): array
     $iEmail = $col('email') !== false ? $col('email') : ($col('e-mail') !== false ? $col('e-mail') : $col('mail'));
     if ($iEmail === false) { http_response_code(422); return ['error' => 'colonne « email » introuvable dans l’en-tête']; }
     $magasins = [];
-    foreach (Db::rows('SELECT shop_id, nom FROM ceo_nl_magasin WHERE shop_id <> "brand"') as $m) { $magasins[strtolower((string) $m['nom'])] = (string) $m['shop_id']; $magasins[(string) $m['shop_id']] = (string) $m['shop_id']; }
+    foreach (Db::rows('SELECT shop_id, nom FROM mar_nl_magasin WHERE shop_id <> "brand"') as $m) { $magasins[strtolower((string) $m['nom'])] = (string) $m['shop_id']; $magasins[(string) $m['shop_id']] = (string) $m['shop_id']; }
     $faits = 0; $ignores = 0; $maj = 0;
     $date = function (?string $v): ?string {
         $v = trim((string) $v); if ($v === '') { return null; }
@@ -199,9 +199,9 @@ function wr_newsletter_contacts_import(): array
         $v = fn (string $n) => ($i = $col($n)) !== false ? trim((string) ($c[$i] ?? '')) : '';
         $langue = strtolower(substr($v('langue') ?: 'fr', 0, 2)); if (!in_array($langue, NL_LANGUES, true)) { $langue = 'fr'; }
         $mag = strtolower($v('magasin')); $shop = $mag !== '' ? ($magasins[$mag] ?? $shopDefaut) : $shopDefaut;
-        $existe = Db::row('SELECT id FROM ceo_nl_contact WHERE source_id = ? AND email = ?', [$src, $email]);
+        $existe = Db::row('SELECT id FROM mar_nl_contact WHERE source_id = ? AND email = ?', [$src, $email]);
         $panier = $v('panier') !== '' ? (float) str_replace(',', '.', $v('panier')) : null;
-        Db::exec('INSERT INTO ceo_nl_contact (source_id, shop_id, email, telephone, prenom, nom, langue, optin, optin_sms, dernier_achat, panier, produits, anniversaire, cree_le, token, lot, importe_le)'
+        Db::exec('INSERT INTO mar_nl_contact (source_id, shop_id, email, telephone, prenom, nom, langue, optin, optin_sms, dernier_achat, panier, produits, anniversaire, cree_le, token, lot, importe_le)'
             . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())'
             . ' ON DUPLICATE KEY UPDATE shop_id = VALUES(shop_id), telephone = VALUES(telephone), prenom = VALUES(prenom), nom = VALUES(nom), langue = VALUES(langue), optin = VALUES(optin), optin_sms = VALUES(optin_sms),'
             . ' dernier_achat = VALUES(dernier_achat), panier = VALUES(panier), produits = VALUES(produits), anniversaire = VALUES(anniversaire), cree_le = COALESCE(VALUES(cree_le), cree_le), lot = VALUES(lot), importe_le = NOW()',
@@ -220,7 +220,7 @@ function ep_newsletter_lots(): array
 {
     ensureNewsletter();
     return ['lots' => array_map(fn ($r) => ['lot' => $r['lot'], 'source' => $r['source_id'], 'n' => (int) $r['n'], 'le' => $r['le']],
-        Db::rows('SELECT lot, source_id, COUNT(*) n, MAX(importe_le) le FROM ceo_nl_contact GROUP BY lot, source_id ORDER BY le DESC LIMIT 60'))];
+        Db::rows('SELECT lot, source_id, COUNT(*) n, MAX(importe_le) le FROM mar_nl_contact GROUP BY lot, source_id ORDER BY le DESC LIMIT 60'))];
 }
 
 /** DELETE /newsletter/contacts/lots/{lot} — retire un lot (et ses envois de suivi restent, anonymes). */
@@ -228,7 +228,7 @@ function wr_newsletter_lot_delete(string $lot): array
 {
     ensureNewsletter();
     if (nlRole() !== 'brand') { http_response_code(403); return ['error' => 'marque seule']; }
-    $n = Db::exec('DELETE FROM ceo_nl_contact WHERE lot = ?', [$lot]);
+    $n = Db::exec('DELETE FROM mar_nl_contact WHERE lot = ?', [$lot]);
     journalAdd('Marque', 'Newsletter', null, "Lot de contacts retiré : $lot ($n)");
     return ['ok' => true, 'retires' => $n, 'contacts' => nlContactsParSource()];
 }
@@ -245,15 +245,40 @@ function nlTexte(array $camp, string $champ, string $lang): string
     return (string) ($j[$lang] ?? $j['fr'] ?? reset($j) ?: '');
 }
 
+/**
+ * Le lien du bouton d'une campagne (29/10/2026) : l'adresse http(s) où mène le
+ * clic suivi (/c/{token}), par exemple le webshop ouvert sur le magasin, le
+ * code du bon déjà saisi :
+ *   https://webshop.atelierby.be/?shop=2&mode=collect&voucher=TUBIZE2
+ * {{code}} (ou {{code_promo}}) y devient le voucher du destinataire. Rend
+ * l'adresse nettoyée, '' sans lien (le lien commun `nlLienWebshop` s'applique),
+ * null si elle n'est pas valable.
+ */
+function nlLienValide(mixed $v): ?string
+{
+    $l = trim((string) $v);
+    if ($l === '') { return ''; }
+    if (mb_strlen($l) > 500 || !preg_match('#^https?://#i', $l)) { return null; }
+    return filter_var(nlLienCible($l, 'CODE1234'), FILTER_VALIDATE_URL) !== false ? $l : null;
+}
+
+/** L'adresse où mène le clic : {{code}} remplacé par le voucher du destinataire (vide sans voucher). */
+function nlLienCible(string $lien, ?string $voucher): string
+{
+    return str_replace(['{{code_promo}}', '{{code}}'], rawurlencode((string) $voucher), $lien);
+}
+
 /** Le HTML d'un mail : en-tête rubis, visuel, titre, corps, bouton, pied — styles en ligne, images en URL absolue. */
 function nlRendre(array $camp, string $lang, array $contact, ?string $voucher, ?string $token): string
 {
     $base = nlBase();
     $img = (string) ($camp['image'] ?? '');
-    $exp = Db::row('SELECT * FROM ceo_nl_magasin WHERE shop_id = ?', [$camp['sender_shop_id']]) ?: ['sender_name' => "L'Atelier By", 'sender_email' => '', 'nom' => ''];
-    $lien = $token ? $base . '/api/cockpit/newsletter/c/' . $token : $base;
-    $unsub = $token ? $base . '/api/cockpit/newsletter/u/' . $token : '#';
-    $pixel = $token ? '<img src="' . htmlspecialchars($base . '/api/cockpit/newsletter/o/' . $token, ENT_QUOTES) . '" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0">' : '';
+    $exp = Db::row('SELECT * FROM mar_nl_magasin WHERE shop_id = ?', [$camp['sender_shop_id']]) ?: ['sender_name' => "L'Atelier By", 'sender_email' => '', 'nom' => ''];
+    // Un vrai envoi passe par le clic suivi, qui mène au lien de la campagne ; un test (sans jeton) y mène tout droit.
+    $propre = nlLienValide($camp['lien'] ?? '');
+    $lien = $token ? $base . '/api/cockpit/marketing/newsletter/c/' . $token : ($propre ? nlLienCible($propre, $voucher) : $base);
+    $unsub = $token ? $base . '/api/cockpit/marketing/newsletter/u/' . $token : '#';
+    $pixel = $token ? '<img src="' . htmlspecialchars($base . '/api/cockpit/marketing/newsletter/o/' . $token, ENT_QUOTES) . '" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0">' : '';
     $sub = function (string $t) use ($contact, $voucher, $lien, $base): string {
         return str_replace(['{{prénom}}', '{{prenom}}', '{{code_promo}}', '{{code}}', '{{lien_webshop}}', '{{lien_boutique}}', '{{lien}}'],
             [(string) ($contact['prenom'] ?: ''), (string) ($contact['prenom'] ?: ''), (string) ($voucher ?: ''), (string) ($voucher ?: ''), $lien, $lien, $lien], $t);
@@ -291,7 +316,7 @@ function nlRendre(array $camp, string $lang, array $contact, ?string $voucher, ?
 /** L'expéditeur affiché : le magasin si son domaine est celui du compte SMTP, sinon le compte SMTP au nom du magasin. */
 function nlExpediteur(array $camp): string
 {
-    $exp = Db::row('SELECT * FROM ceo_nl_magasin WHERE shop_id = ?', [$camp['sender_shop_id']]);
+    $exp = Db::row('SELECT * FROM mar_nl_magasin WHERE shop_id = ?', [$camp['sender_shop_id']]);
     $smtp = Smtp::config()['expediteur'];
     $compte = preg_match('/<([^>]+)>/', $smtp, $m) ? $m[1] : $smtp;
     $domaineCompte = strtolower((string) substr(strrchr($compte, '@') ?: '', 1));
@@ -308,17 +333,17 @@ function nlVoucherCode(): string
 {
     $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // ni 0/O ni 1/I
     do { $c = ''; for ($i = 0; $i < 8; $i++) { $c .= $alphabet[random_int(0, 31)]; } }
-    while (Db::row('SELECT 1 FROM ceo_nl_voucher WHERE code = ?', [$c]) !== null);
+    while (Db::row('SELECT 1 FROM mar_nl_voucher WHERE code = ?', [$c]) !== null);
     return $c;
 }
 function nlVoucherPour(array $camp, int $contactId): ?string
 {
     $max = (int) ($camp['max_vouchers'] ?? 0);
     if ($max <= 0) { return null; }
-    $n = (int) (Db::row('SELECT COUNT(*) n FROM ceo_nl_voucher WHERE campagne_id = ?', [(int) $camp['id']])['n'] ?? 0);
+    $n = (int) (Db::row('SELECT COUNT(*) n FROM mar_nl_voucher WHERE campagne_id = ?', [(int) $camp['id']])['n'] ?? 0);
     if ($n >= $max) { return null; }   // premier arrivé, premier servi
     $code = nlVoucherCode();
-    Db::exec('INSERT INTO ceo_nl_voucher (code, campagne_id, contact_id, cree_le, shop_id) VALUES (?,?,?,NOW(),?)', [$code, (int) $camp['id'], $contactId, $camp['sender_shop_id'] === 'brand' ? null : $camp['sender_shop_id']]);
+    Db::exec('INSERT INTO mar_nl_voucher (code, campagne_id, contact_id, cree_le, shop_id) VALUES (?,?,?,NOW(),?)', [$code, (int) $camp['id'], $contactId, $camp['sender_shop_id'] === 'brand' ? null : $camp['sender_shop_id']]);
     return $code;
 }
 /** POST /newsletter/vouchers/{code}/utiliser — la boutique encaisse le voucher. */
@@ -326,11 +351,11 @@ function wr_newsletter_voucher_utiliser(string $code): array
 {
     ensureNewsletter();
     $code = strtoupper(trim($code));
-    $v = Db::row('SELECT * FROM ceo_nl_voucher WHERE code = ?', [$code]);
+    $v = Db::row('SELECT * FROM mar_nl_voucher WHERE code = ?', [$code]);
     if ($v === null) { http_response_code(404); return ['error' => 'code inconnu']; }
     if ($v['utilise_le'] !== null) { http_response_code(409); return ['error' => 'déjà utilisé le ' . $v['utilise_le']]; }
     $role = nlRole();
-    Db::exec('UPDATE ceo_nl_voucher SET utilise_le = NOW(), shop_id = COALESCE(?, shop_id) WHERE code = ?', [$role !== 'brand' ? $role : null, $code]);
+    Db::exec('UPDATE mar_nl_voucher SET utilise_le = NOW(), shop_id = COALESCE(?, shop_id) WHERE code = ?', [$role !== 'brand' ? $role : null, $code]);
     return ['ok' => true, 'code' => $code, 'campagne' => (int) $v['campagne_id']];
 }
 
@@ -340,7 +365,7 @@ function wr_newsletter_voucher_utiliser(string $code): array
 /** Les contacts d'une campagne pas encore servis, dans ses langues, sans autre mail aujourd'hui. */
 function nlDestinataires(array $camp, int $n): array
 {
-    $seg = Db::row('SELECT * FROM ceo_nl_segment WHERE id = ?', [$camp['segment_id']]);
+    $seg = Db::row('SELECT * FROM mar_nl_segment WHERE id = ?', [$camp['segment_id']]);
     if ($seg === null) { return []; }
     [$sql, $p] = nlSegmentSql($seg);
     $langs = array_values(array_intersect(NL_LANGUES, explode(',', (string) $camp['langues'])));
@@ -348,9 +373,9 @@ function nlDestinataires(array $camp, int $n): array
     $sql .= ' AND c.langue IN (' . implode(',', array_fill(0, count($langs), '?')) . ')';
     $p = array_merge($p, $langs);
     $p[] = (int) $camp['id'];
-    return Db::rows('SELECT c.* FROM ceo_nl_contact c WHERE ' . $sql
-        . ' AND NOT EXISTS (SELECT 1 FROM ceo_nl_envoi e WHERE e.campagne_id = ? AND e.contact_id = c.id)'
-        . ' AND NOT EXISTS (SELECT 1 FROM ceo_nl_envoi e2 WHERE e2.contact_id = c.id AND e2.sent_at >= CURDATE())'
+    return Db::rows('SELECT c.* FROM mar_nl_contact c WHERE ' . $sql
+        . ' AND NOT EXISTS (SELECT 1 FROM mar_nl_envoi e WHERE e.campagne_id = ? AND e.contact_id = c.id)'
+        . ' AND NOT EXISTS (SELECT 1 FROM mar_nl_envoi e2 WHERE e2.contact_id = c.id AND e2.sent_at >= CURDATE())'
         . ' ORDER BY c.id LIMIT ' . max(1, min(NL_LOT_MAX, $n)), $p);
 }
 
@@ -363,7 +388,7 @@ function nlEnvoyerUn(array $camp, array $c): bool
     $html = nlRendre($camp, $lang, $c, $voucher, $token);
     $sujet = str_replace(['{{prénom}}', '{{prenom}}'], (string) $c['prenom'], nlTexte($camp, 'subjects_json', $lang));
     $ok = Smtp::envoyer((string) $c['email'], $sujet, $html, [], nlExpediteur($camp));
-    Db::exec('INSERT INTO ceo_nl_envoi (campagne_id, contact_id, langue, token, sent_at, voucher, erreur) VALUES (?,?,?,?,NOW(),?,?)',
+    Db::exec('INSERT INTO mar_nl_envoi (campagne_id, contact_id, langue, token, sent_at, voucher, erreur) VALUES (?,?,?,?,NOW(),?,?)',
         [(int) $camp['id'], (int) $c['id'], $lang, $token, $voucher, $ok ? null : mb_substr((string) (Smtp::$lastError ?? 'échec'), 0, 200)]);
     return $ok;
 }
@@ -389,9 +414,9 @@ function nlEnvoyerLot(array $camp, int $max = NL_LOT_MAX): array
 /** Les chiffres d'une campagne depuis ses envois ; null si aucun envoi (le jeu d'essai reste). */
 function nlStatsReelles(int $campId): ?array
 {
-    $r = Db::row('SELECT COUNT(*) n, SUM(erreur IS NULL) ok, SUM(opened_at IS NOT NULL) o, SUM(clicked_at IS NOT NULL) c FROM ceo_nl_envoi WHERE campagne_id = ?', [$campId]);
+    $r = Db::row('SELECT COUNT(*) n, SUM(erreur IS NULL) ok, SUM(opened_at IS NOT NULL) o, SUM(clicked_at IS NOT NULL) c FROM mar_nl_envoi WHERE campagne_id = ?', [$campId]);
     if ((int) ($r['n'] ?? 0) === 0) { return null; }
-    $v = Db::row('SELECT COUNT(*) n, SUM(utilise_le IS NOT NULL) u FROM ceo_nl_voucher WHERE campagne_id = ?', [$campId]);
+    $v = Db::row('SELECT COUNT(*) n, SUM(utilise_le IS NOT NULL) u FROM mar_nl_voucher WHERE campagne_id = ?', [$campId]);
     return ['sent' => (int) $r['ok'], 'echecs' => (int) $r['n'] - (int) $r['ok'], 'open' => (int) $r['o'], 'click' => (int) $r['c'], 'vouchers' => (int) ($v['u'] ?? 0), 'vouchersEmis' => (int) ($v['n'] ?? 0), 'revenue' => 0, 'reel' => true];
 }
 
@@ -405,7 +430,7 @@ function nlHorloge(): array
     ensureNewsletter();
     $out = ['dispatch' => nlDispatch(), 'smtp' => Smtp::configured(), 'campagnes' => [], 'automatisations' => []];
     nlReglagePoser('nlCronDernier', date('Y-m-d H:i:s'));
-    $dues = Db::rows('SELECT * FROM ceo_nl_campagne WHERE send_mode = "manual" AND statut IN ("sched", "live") AND send_at <= NOW() AND exemple = 0 ORDER BY send_at, id');
+    $dues = Db::rows('SELECT * FROM mar_nl_campagne WHERE send_mode = "manual" AND statut IN ("sched", "live") AND send_at <= NOW() AND exemple = 0 ORDER BY send_at, id');
     if (!nlDispatch() || !Smtp::configured()) {
         $out['attente'] = array_map(fn ($c) => ['id' => (int) $c['id'], 'nom' => $c['nom'], 'sendAt' => $c['send_at']], $dues);
         $out['motif'] = !Smtp::configured() ? 'SMTP non configuré' : 'mode test : aucun envoi ne part';
@@ -415,26 +440,26 @@ function nlHorloge(): array
     foreach ($dues as $camp) {
         if ($budget <= 0) { break; }
         if ($camp['statut'] === 'sched') {
-            Db::exec('UPDATE ceo_nl_campagne SET statut = "live", started_at = NOW(), updated_at = NOW() WHERE id = ?', [(int) $camp['id']]);
+            Db::exec('UPDATE mar_nl_campagne SET statut = "live", started_at = NOW(), updated_at = NOW() WHERE id = ?', [(int) $camp['id']]);
             journalAdd('Horloge', 'Newsletter', null, 'Campagne en cours d’envoi : ' . $camp['nom']);
         }
         [$env, $ko, $reste] = nlEnvoyerLot($camp, $budget);
         $budget -= ($env + $ko);
         if ($reste === 0) {
-            Db::exec('UPDATE ceo_nl_campagne SET statut = "sent", finished_at = NOW(), updated_at = NOW() WHERE id = ?', [(int) $camp['id']]);
+            Db::exec('UPDATE mar_nl_campagne SET statut = "sent", finished_at = NOW(), updated_at = NOW() WHERE id = ?', [(int) $camp['id']]);
             journalAdd('Horloge', 'Newsletter', null, 'Campagne envoyée : ' . $camp['nom']);
         }
         $out['campagnes'][] = ['id' => (int) $camp['id'], 'nom' => $camp['nom'], 'envoyes' => $env, 'echecs' => $ko, 'reste' => $reste];
     }
     // Automatisations : une fois par jour, la nuit (ou au premier passage du jour)
-    foreach (Db::rows('SELECT * FROM ceo_nl_campagne WHERE send_mode = "auto" AND statut = "live" AND exemple = 0') as $camp) {
+    foreach (Db::rows('SELECT * FROM mar_nl_campagne WHERE send_mode = "auto" AND statut = "live" AND exemple = 0') as $camp) {
         if ((string) ($camp['auto_dernier'] ?? '') === date('Y-m-d')) { continue; }
         if ($budget <= 0) { break; }
         $dest = nlAutoDestinataires($camp, $budget);
         $env = 0; $ko = 0;
         foreach ($dest as $c) { if (nlEnvoyerUn($camp, $c)) { $env++; } else { $ko++; } usleep(600000); }
         $budget -= ($env + $ko);
-        Db::exec('UPDATE ceo_nl_campagne SET auto_dernier = CURDATE(), updated_at = NOW() WHERE id = ?', [(int) $camp['id']]);
+        Db::exec('UPDATE mar_nl_campagne SET auto_dernier = CURDATE(), updated_at = NOW() WHERE id = ?', [(int) $camp['id']]);
         $out['automatisations'][] = ['id' => (int) $camp['id'], 'nom' => $camp['nom'], 'declencheur' => $camp['trigger_rule'], 'envoyes' => $env, 'echecs' => $ko];
     }
     return $out;
@@ -443,7 +468,7 @@ function nlHorloge(): array
 /** Les contacts que la règle d'une automatisation désigne AUJOURD'HUI (chacun une fois, 1 mail par jour). */
 function nlAutoDestinataires(array $camp, int $n): array
 {
-    $seg = Db::row('SELECT * FROM ceo_nl_segment WHERE id = ?', [$camp['segment_id']]);
+    $seg = Db::row('SELECT * FROM mar_nl_segment WHERE id = ?', [$camp['segment_id']]);
     if ($seg === null) { return []; }
     [$sql, $p] = nlSegmentSql($seg);
     $regle = '';
@@ -451,7 +476,7 @@ function nlAutoDestinataires(array $camp, int $n): array
         case 'dormant45': $regle = 'c.dernier_achat = DATE_SUB(CURDATE(), INTERVAL 45 DAY)'; break;
         case 'birthday': $regle = 'c.anniversaire IS NOT NULL AND DATE_FORMAT(c.anniversaire, "%m-%d") = DATE_FORMAT(DATE_ADD(CURDATE(), INTERVAL 3 DAY), "%m-%d")'; break;
         case 'firstOffice': $regle = 'c.source_id = "office" AND c.cree_le = DATE_SUB(CURDATE(), INTERVAL 2 DAY)'; break;
-        case 'third': $regle = '(SELECT COUNT(*) FROM ceo_nl_envoi e3 WHERE e3.contact_id = c.id AND e3.erreur IS NULL) = 2'; break;
+        case 'third': $regle = '(SELECT COUNT(*) FROM mar_nl_envoi e3 WHERE e3.contact_id = c.id AND e3.erreur IS NULL) = 2'; break;
         case 'season': $regle = 'DATE(?) = DATE_ADD(CURDATE(), INTERVAL 7 DAY)'; $p[] = (string) $camp['send_at']; break;
         default: return [];
     }
@@ -460,9 +485,9 @@ function nlAutoDestinataires(array $camp, int $n): array
     $sql .= ' AND ' . $regle . ' AND c.langue IN (' . implode(',', array_fill(0, count($langs), '?')) . ')';
     $p = array_merge($p, $langs);
     $p[] = (int) $camp['id'];
-    return Db::rows('SELECT c.* FROM ceo_nl_contact c WHERE ' . $sql
-        . ' AND NOT EXISTS (SELECT 1 FROM ceo_nl_envoi e WHERE e.campagne_id = ? AND e.contact_id = c.id)'
-        . ' AND NOT EXISTS (SELECT 1 FROM ceo_nl_envoi e2 WHERE e2.contact_id = c.id AND e2.sent_at >= CURDATE())'
+    return Db::rows('SELECT c.* FROM mar_nl_contact c WHERE ' . $sql
+        . ' AND NOT EXISTS (SELECT 1 FROM mar_nl_envoi e WHERE e.campagne_id = ? AND e.contact_id = c.id)'
+        . ' AND NOT EXISTS (SELECT 1 FROM mar_nl_envoi e2 WHERE e2.contact_id = c.id AND e2.sent_at >= CURDATE())'
         . ' ORDER BY c.id LIMIT ' . max(1, min(NL_LOT_MAX, $n)), $p);
 }
 
@@ -488,14 +513,14 @@ function wr_newsletter_campagne_envoyer(int $id): array
 {
     ensureNewsletter();
     $role = nlRole();
-    $c = Db::row('SELECT * FROM ceo_nl_campagne WHERE id = ?', [$id]);
+    $c = Db::row('SELECT * FROM mar_nl_campagne WHERE id = ?', [$id]);
     if ($c === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
     if ($role !== 'brand' && $c['created_by'] !== $role) { http_response_code(403); return ['error' => "Cette campagne n'est pas la vôtre."]; }
     if ($c['statut'] === 'sent') { http_response_code(409); return ['error' => 'déjà envoyée']; }
     if ($c['send_mode'] === 'auto') { http_response_code(409); return ['error' => 'une automatisation part par sa règle, pas à la demande']; }
-    Db::exec('UPDATE ceo_nl_campagne SET statut = "sched", send_at = NOW(), updated_at = NOW() WHERE id = ?', [$id]);
+    Db::exec('UPDATE mar_nl_campagne SET statut = "sched", send_at = NOW(), updated_at = NOW() WHERE id = ?', [$id]);
     $h = nlHorloge();
-    $r = Db::row('SELECT * FROM ceo_nl_campagne WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_nl_campagne WHERE id = ?', [$id]);
     return ['ok' => true, 'campagne' => $r ? nlCampagneRow($r) : null, 'horloge' => $h];
 }
 
@@ -531,9 +556,9 @@ function nlSuivi(string $quoi, string $token): void
 {
     ensureNewsletter();
     $token = preg_match('/^[a-f0-9]{32}$/', $token) ? $token : '';
-    $e = $token !== '' ? Db::row('SELECT * FROM ceo_nl_envoi WHERE token = ?', [$token]) : null;
+    $e = $token !== '' ? Db::row('SELECT * FROM mar_nl_envoi WHERE token = ?', [$token]) : null;
     if ($quoi === 'o') {
-        if ($e && $e['opened_at'] === null) { Db::exec('UPDATE ceo_nl_envoi SET opened_at = NOW() WHERE id = ?', [(int) $e['id']]); }
+        if ($e && $e['opened_at'] === null) { Db::exec('UPDATE mar_nl_envoi SET opened_at = NOW() WHERE id = ?', [(int) $e['id']]); }
         header('Content-Type: image/gif'); header('Cache-Control: no-store, private'); header('Pragma: no-cache');
         echo base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
         exit;
@@ -541,17 +566,20 @@ function nlSuivi(string $quoi, string $token): void
     if ($quoi === 'c') {
         $cible = rapBaseUrl();
         if ($e) {
-            if ($e['clicked_at'] === null) { Db::exec('UPDATE ceo_nl_envoi SET clicked_at = NOW(), opened_at = COALESCE(opened_at, NOW()) WHERE id = ?', [(int) $e['id']]); }
-            $camp = Db::row('SELECT sender_shop_id FROM ceo_nl_campagne WHERE id = ?', [(int) $e['campagne_id']]);
+            if ($e['clicked_at'] === null) { Db::exec('UPDATE mar_nl_envoi SET clicked_at = NOW(), opened_at = COALESCE(opened_at, NOW()) WHERE id = ?', [(int) $e['id']]); }
+            // Le lien de la campagne (le code du destinataire mis à la place de {{code}}), sinon le lien commun.
+            $camp = Db::row('SELECT lien FROM mar_nl_campagne WHERE id = ?', [(int) $e['campagne_id']]);
+            $propre = nlLienValide($camp['lien'] ?? '');
             $lien = (string) setting('nlLienWebshop', '');
-            if ($lien !== '') { $cible = $lien; }
+            if ($propre) { $cible = nlLienCible($propre, $e['voucher']); }
+            elseif ($lien !== '') { $cible = $lien; }
         }
         header('Location: ' . ($cible !== '' ? $cible : '/'), true, 302);
         exit;
     }
     // désinscription : un clic, pas de question
     $ok = false;
-    if ($e) { Db::exec('UPDATE ceo_nl_contact SET desinscrit_le = NOW(), optin = 0, optin_sms = 0 WHERE id = ?', [(int) $e['contact_id']]); $ok = true; }
+    if ($e) { Db::exec('UPDATE mar_nl_contact SET desinscrit_le = NOW(), optin = 0, optin_sms = 0 WHERE id = ?', [(int) $e['contact_id']]); $ok = true; }
     header('Content-Type: text/html; charset=utf-8');
     echo '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>L\'Atelier By</title></head>'
         . '<body style="margin:0;background:#EAE4DC;font-family:Helvetica,Arial,sans-serif;color:#222"><div style="max-width:480px;margin:60px auto;background:#fff;border-radius:14px;padding:32px 28px;text-align:center">'
@@ -569,7 +597,8 @@ function nlEnvoyerTest(array $b, string $role): array
     $lang = in_array($b['lang'] ?? '', NL_LANGUES, true) ? $b['lang'] : 'fr';
     $camp = ['id' => 0, 'sender_shop_id' => mb_substr((string) ($b['sender'] ?? $role), 0, 16), 'template_id' => (string) ($b['templateId'] ?? 'blank'), 'image' => nlImage((string) ($b['templateId'] ?? '')),
         'subjects_json' => json_encode([$lang => (string) ($b['subject'] ?? '')], JSON_UNESCAPED_UNICODE), 'bodies_json' => json_encode([$lang => (string) ($b['body'] ?? '')], JSON_UNESCAPED_UNICODE),
-        'headlines_json' => json_encode([$lang => (string) ($b['headline'] ?? '')], JSON_UNESCAPED_UNICODE), 'ctas_json' => json_encode([$lang => (string) ($b['cta'] ?? '')], JSON_UNESCAPED_UNICODE), 'max_vouchers' => 0];
+        'headlines_json' => json_encode([$lang => (string) ($b['headline'] ?? '')], JSON_UNESCAPED_UNICODE), 'ctas_json' => json_encode([$lang => (string) ($b['cta'] ?? '')], JSON_UNESCAPED_UNICODE), 'max_vouchers' => 0,
+        'lien' => nlLienValide($b['lien'] ?? '') ?? ''];
     $contact = ['prenom' => 'Marie', 'email' => ''];
     $html = nlRendre($camp, $lang, $contact, !empty($b['voucher']) ? 'TEST1234' : null, null);
     $sujet = '[TEST] ' . str_replace(['{{prénom}}', '{{prenom}}'], 'Marie', (string) ($b['subject'] ?? ''));

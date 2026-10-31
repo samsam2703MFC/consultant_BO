@@ -1,0 +1,80 @@
+-- Poczta : każdy użytkownik ERP podłącza własną skrzynkę (IMAP do odbioru, SMTP do wysyłki) w Ustawieniach.
+-- Hasła zaszyfrowane (AES-256-GCM, klucz z sekretu serwera), nigdy nie wracają do przeglądarki.
+-- Wiadomości : nagłówki i tekst (do wyszukiwarki, indeks pełnotekstowy) ; treść HTML i załączniki czytane
+-- ze skrzynki przy otwarciu. Wysłane z ERP : dziennik (tryb wysyłki serwera : live / redirect / log_only).
+CREATE TABLE IF NOT EXISTS n_user_mailbox (
+    id_user INT NOT NULL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    display_name VARCHAR(160) NULL,
+    provider VARCHAR(30) NULL,
+    imap_host VARCHAR(255) NOT NULL,
+    imap_port SMALLINT UNSIGNED NOT NULL DEFAULT 993,
+    imap_security ENUM('ssl', 'starttls') NOT NULL DEFAULT 'ssl',
+    imap_username VARCHAR(255) NOT NULL,
+    imap_secret TEXT NULL,
+    smtp_host VARCHAR(255) NOT NULL,
+    smtp_port SMALLINT UNSIGNED NOT NULL DEFAULT 587,
+    smtp_security ENUM('ssl', 'starttls') NOT NULL DEFAULT 'starttls',
+    smtp_username VARCHAR(255) NOT NULL,
+    smtp_secret TEXT NULL,
+    tls_verify TINYINT(1) NOT NULL DEFAULT 1,
+    signature TEXT NULL,
+    sent_folder VARCHAR(190) NULL,
+    last_sync_at DATETIME NULL,
+    last_error VARCHAR(500) NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_n_user_mailbox_user FOREIGN KEY (id_user) REFERENCES user (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS n_user_mail (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id_user INT NOT NULL,
+    folder VARCHAR(190) NOT NULL,
+    uid_validity BIGINT UNSIGNED NOT NULL,
+    uid INT UNSIGNED NOT NULL,
+    message_id VARCHAR(255) NULL,
+    in_reply_to VARCHAR(255) NULL,
+    from_email VARCHAR(255) NULL,
+    from_name VARCHAR(255) NULL,
+    to_list VARCHAR(1000) NULL,
+    cc_list VARCHAR(1000) NULL,
+    subject VARCHAR(500) NULL,
+    sent_at DATETIME NULL,
+    size INT UNSIGNED NULL,
+    seen TINYINT(1) NOT NULL DEFAULT 0,
+    answered TINYINT(1) NOT NULL DEFAULT 0,
+    flagged TINYINT(1) NOT NULL DEFAULT 0,
+    has_attachments TINYINT(1) NOT NULL DEFAULT 0,
+    snippet VARCHAR(300) NULL,
+    body_text MEDIUMTEXT NULL,
+    id_customer INT NULL,
+    id_supplier INT NULL,
+    synced_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_n_user_mail (id_user, folder, uid_validity, uid),
+    KEY idx_n_user_mail_list (id_user, folder, sent_at),
+    KEY idx_n_user_mail_customer (id_customer),
+    KEY idx_n_user_mail_supplier (id_supplier),
+    FULLTEXT KEY ft_n_user_mail (subject, from_name, from_email, to_list, body_text),
+    CONSTRAINT fk_n_user_mail_user FOREIGN KEY (id_user) REFERENCES user (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS n_user_mail_sent (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id_user INT NOT NULL,
+    to_list VARCHAR(1000) NOT NULL,
+    cc_list VARCHAR(1000) NULL,
+    subject VARCHAR(500) NOT NULL,
+    body_text MEDIUMTEXT NOT NULL,
+    attachments VARCHAR(1000) NULL COMMENT 'nazwy i rozmiary (JSON), bez treści',
+    id_reply_to BIGINT NULL COMMENT 'n_user_mail.id, na którą to odpowiedź',
+    message_id VARCHAR(255) NULL,
+    mode ENUM('live', 'redirect', 'log_only') NOT NULL,
+    status ENUM('sent', 'failed') NOT NULL,
+    error VARCHAR(500) NULL,
+    id_customer INT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_n_user_mail_sent_user (id_user, created_at),
+    KEY idx_n_user_mail_sent_customer (id_customer),
+    FULLTEXT KEY ft_n_user_mail_sent (subject, to_list, body_text),
+    CONSTRAINT fk_n_user_mail_sent_user FOREIGN KEY (id_user) REFERENCES user (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
