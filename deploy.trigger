@@ -1230,3 +1230,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T14:36:45Z formation : carte des métiers (plan / effectifs), trois métiers, fiche niveau cumulée, matrices, équipe
 2026-10-31T14:46:42Z formation : postes dans la franchise / dans la marque
 2026-10-31T14:52:51Z [235] Bez zmiany nocnej : zmiana nocna i zespoły nocne nieaktywne, bez « + nocna », reguła NIGHT_SHIFT_DISABLED
+2026-10-31T15:32:12Z formation : collisions (marge sous le titre, étiquettes du plan de métro)
