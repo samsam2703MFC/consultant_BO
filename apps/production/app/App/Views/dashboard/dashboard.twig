@@ -178,7 +178,7 @@
                 {% set later = week.later|filter(it => not it.done) %}
                 {% if later %}
                     <h6 class="wk-h">Miesiąc i kwartał</h6>
-                    <div class="wk-later">{% for it in later %}<a class="wk-chip" style="--c:{{ it.color }}" href="{{ it.link ? root ~ it.link : '#' }}"><span class="ic{{ it.progress ? ' run' : '' }}">{% if it.progress %}{{ it.progress.step }}/{{ it.progress.steps }}{% elseif it.wizard %}<i class="bi bi-magic"></i>{% endif %}</span><span>{{ it.title }}</span><small>do {{ it.due|date('d.m') }}</small></a>{% endfor %}</div>
+                    <div class="wk-later">{% for it in later %}<a class="wk-chip" style="--c:{{ it.color }}" href="{{ it.link ? root ~ it.link : '#' }}"><span class="ic{{ it.progress ? ' run' : (it.wizard ? '' : ' plain') }}">{% if it.progress %}{{ it.progress.step }}/{{ it.progress.steps }}{% elseif it.wizard %}<i class="bi bi-magic"></i>{% endif %}</span><span>{{ it.title }}</span><small>do {{ it.due|date('d.m') }}</small></a>{% endfor %}</div>
                 {% endif %}
                 <p class="kw-lead wk-foot">Bez pól do zaznaczania : przycisk otwiera kreator, zadanie zalicza się samo na ostatnim kroku, a wiersz pokazuje wynik liczbowy. Zadania bez kreatora : « Zrobione » zapisuje dzień i godzinę.</p>
             </div>
