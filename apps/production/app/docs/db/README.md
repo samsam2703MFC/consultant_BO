@@ -240,6 +240,17 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   non lu de moins de 7 jours ; tâche faite entre-temps (jour validé, assistant terminé) → fermé, disparaît. Au tableau :
   « przeczytane 10:51 (J. K., PIN) ».
 
+### Pas de shift de nuit (migration 154, 31/10/2026)
+
+- L'atelier ne travaille pas la nuit : le shift `NUIT` (22:00–06:00) et tout shift marqué « nocna » (`is_night = 1`) sont
+  **inactifs**, ainsi que les équipes sur ce shift. Planification (fenêtres des machines : seuls les shifts actifs),
+  Moce produkcyjne (plus de « + nocna » ; « co jeśli » = + popołudniowa seulement), plan des équipes et tablettes : seuls les
+  shifts actifs comptent. Rien n'est supprimé (historique d'effectifs, réglages machine conservés).
+- Règle (`ShiftTemplateService`) : un shift de nuit ne peut pas être actif — création ou réactivation refusée
+  (`NIGHT_SHIFT_DISABLED`, aussi à l'import du tableau à remplir). Tableau à remplir : feuille « Zmiany » sans le shift de
+  nuit, équipes de nuit retirées, paramètre `shift.night_staff_ratio` retiré.
+- Ce qui reste : heures de nuit sur la feuille de temps (pointage 22:00–06:00, obligation légale si quelqu'un pointe la nuit).
+
 ### Wpłata z e-maila : preuve de paiement du client → OCR → validation (migration 153, 31/10/2026)
 
 - Maquette 9. Une preuve de virement (PDF, photo) envoyée par un client dans Poczta. **Poczta** : bouton « Zweryfikuj wpłatę »
@@ -270,7 +281,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 - Page : Produkcja › « Moce produkcyjne » (`/production/capacity`, onglet de la page Produkcja, maquettes 10 et 11 ;
   catalogue d'accès `production`). `CapacityService`, `CapacityRepository`, `CapacityController`, `capacity.js`. Semaine du
-  plan (`WeekService::quantities`, ‹ › pour changer), filtre groupe, « co jeśli » : + zmiana popołudniowa / + nocna.
+  plan (`WeekService::quantities`, ‹ › pour changer), filtre groupe, « co jeśli » : + zmiana popołudniowa (pas de nuit, voir migration 154).
 - **Charge** d'une machine = Σ des étapes des cartes produit (`StandardTime::step` : travail + nettoyage) × quantités planifiées
   jour par jour. Machines « attente » (komory rozrostu, chłodnia, szokowe mrożenie) : occupation = passages × délai après
   l'étape, comparés à la capacité d'un passage. **Disponible** = shifts où le groupe a une équipe active (`n_prod_workstation_shift` peut

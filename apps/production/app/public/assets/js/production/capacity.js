@@ -14,7 +14,7 @@
     let tab = (location.hash.match(/tab=(\w+)/) || [])[1] || 'use';
     if (!TABS.some(([k]) => k === tab) || RO()) tab = 'use';
     let filters = {date: D.week ? D.week.start : null, group: D.group ?? '', shifts: []};
-    if (D.what_if) { if (D.what_if.afternoon) filters.shifts.push('afternoon'); if (D.what_if.night) filters.shifts.push('night'); }
+    if (D.what_if && D.what_if.afternoon) filters.shifts.push('afternoon');
     let sim = {item: null, qty: '', res: null, busy: false};
     let modal = null;
     const nf = (v, d = 0) => v === null || v === undefined ? '—' : Number(v).toLocaleString('pl-PL', {maximumFractionDigits: d, minimumFractionDigits: 0});
@@ -55,8 +55,7 @@
                 <select name="group" aria-label="Grupa"><option value="">wszystkie</option>${D.groups.map(g => `<option value="${g.id}" ${String(g.id) === String(filters.group) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select></label>
             <span class="wp-seg" role="group" aria-label="Zmiany">
                 <button type="button" class="${filters.shifts.length ? '' : 'on'}" data-shifts="" aria-pressed="${!filters.shifts.length}">Zmiany wg zespołów</button>
-                <button type="button" class="${on('afternoon') ? 'on' : ''}" data-shift-toggle="afternoon" aria-pressed="${on('afternoon')}">+ popołudniowa</button>
-                <button type="button" class="${on('night') ? 'on' : ''}" data-shift-toggle="night" aria-pressed="${on('night')}">+ nocna</button></span>
+                <button type="button" class="${on('afternoon') ? 'on' : ''}" data-shift-toggle="afternoon" aria-pressed="${on('afternoon')}">+ popołudniowa</button></span>
             <span class="at-sub mc-src"><i class="bi bi-calendar-week"></i> plan tygodnia · ${D.week.planned_items} produktów</span>
         </div>`;
     }

@@ -42,7 +42,6 @@ final class DataSheetService
         'planning.loading_time_min',
         'week.production_days',
         'week.fte_hours',
-        'shift.night_staff_ratio',
         'logistics.default_pallet_places',
         'alerts.complaint_days',
         'alerts.complaint_escalate_days',
@@ -659,15 +658,17 @@ final class DataSheetService
             'active' => '"' . $yn(true) . ',' . $yn(false) . '"',
         ]);
 
+        // Bez zmiany nocnej [235] : tylko zmiany dzienne w tabeli (zmiana nocna nieaktywna, nie do wypełnienia).
+        $nightIds = array_map('intval', array_column(array_filter($shifts, fn($s) => (int) $s['is_night'] === 1), 'id'));
         $this->sheet($book, 'shifts', array_map(fn($s) => [
             $s['code'], $s['name_pl'], $s['name_fr'], substr((string) $s['start_time'], 0, 5), substr((string) $s['end_time'], 0, 5),
             (string) $s['active_days'], (float) $s['premium_pct'], $yn($s['is_night']), (int) $s['sort_order'], $yn($s['active']),
-        ], $shifts), ['is_night' => '"' . $yn(true) . ',' . $yn(false) . '"', 'active' => '"' . $yn(true) . ',' . $yn(false) . '"']);
+        ], array_values(array_filter($shifts, fn($s) => (int) $s['is_night'] !== 1))), ['is_night' => '"' . $yn(true) . ',' . $yn(false) . '"', 'active' => '"' . $yn(true) . ',' . $yn(false) . '"']);
 
         $this->sheet($book, 'teams', array_map(fn($t) => [
             $t['code'], $groupById[$t['id_group']] ?? '', $shiftById[$t['id_shift_template']] ?? '', $t['name'],
             (int) $t['planned_headcount'], $yn($t['active']),
-        ], $this->teamRepo->list(null, null, null)), [
+        ], array_values(array_filter($this->teamRepo->list(null, null, null), fn($t) => !in_array((int) $t['id_shift_template'], $nightIds, true)))), [
             'group' => "'" . self::GROUPS_TITLE . "'!\$A\$2:\$A\$" . self::ROWS,
             'shift' => "'" . self::SHEETS['shifts'][0] . "'!\$A\$2:\$A\$" . self::ROWS,
             'active' => '"' . $yn(true) . ',' . $yn(false) . '"',

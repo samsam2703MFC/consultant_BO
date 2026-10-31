@@ -231,7 +231,12 @@ check($s === 422 && $codes($b) === ['type:INVALID_CHOICE'], 'bad filter is repor
 check($s === 422 && $codes($b) === ['end_time:SAME_START_END'], 'start = end refused');
 [$s, $b] = $call('GET', '/referentiels/shift-templates', null, $access);
 $night = array_values(array_filter($b['data'], fn($t) => $t['code'] === 'NUIT'))[0];
-check($night['crosses_midnight'] === true && $night['duration_minutes'] === 480 && $night['premium_pct'] === 20.0, 'default night shift 22–06, +20 %');
+check($night['crosses_midnight'] === true && $night['duration_minutes'] === 480 && $night['premium_pct'] === 20.0 && $night['active'] === false, 'default night shift 22–06, +20 %, inactive (migration 154)');
+// Bez zmiany nocnej [235] : zmiana nocna nie może być aktywna (utworzenie ani włączenie).
+[$s, $b] = $call('POST', '/referentiels/shift-templates', ['code' => 'N3', 'name_pl' => 'Noc 3', 'name_fr' => 'Nuit 3', 'start_time' => '22:00', 'end_time' => '06:00', 'is_night' => true], $access);
+check($s === 422 && $codes($b) === ['active:NIGHT_SHIFT_DISABLED'], 'active night shift refused');
+[$s, $b] = $call('PATCH', '/referentiels/shift-templates/' . $night['id'], ['active' => true], $access);
+check($s === 422 && $codes($b) === ['active:NIGHT_SHIFT_DISABLED'], 'night shift cannot be switched back on');
 
 // Équipes et membres
 [$s, $b] = $call('POST', '/referentiels/teams', ['code' => 'T1', 'group_id' => 1, 'shift_template_id' => 1, 'name' => 'Équipe 1', 'planned_headcount' => 2], $access);

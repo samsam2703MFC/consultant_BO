@@ -160,6 +160,7 @@
     "ROBOT_MODE_REQUIRED": "Dla robota pole „{field}” jest wymagane (autonome, avec_operateur lub collaboratif).",
     "OPERATOR_SHARE_REQUIRED": "Cobot (tryb współpracujący) : podaj część czasu osoby, np. 0,25 = 1 osoba na 4 coboty.",
     "ROBOT_MODE_FORBIDDEN": "Pole „{field}” dotyczy tylko robotów.",
+    "NIGHT_SHIFT_DISABLED": "Zmiana nocna jest wyłączona w zakładzie — może być tylko nieaktywna.",
     "SAME_START_END": "Początek i koniec zmiany nie mogą być takie same.",
     "DATE_ORDER": "Data końca musi być późniejsza lub równa dacie początku.",
     "DUPLICATE_IN_LIST": "Pole „{field}” zawiera powtórzony element ({id}).",

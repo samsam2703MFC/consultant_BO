@@ -31,7 +31,7 @@ final class CapacityService
     private const TYPE_ORDER = ['Chłodzenie i mrożenie', 'Wypiek', 'Maszyny', 'Roboty i linie', 'Rozrost i oczekiwanie', 'Stanowiska ręczne'];
     public const UNITS = ['piece' => 'szt.', 'plaque' => 'blach', 'kg' => 'kg', 'chariot' => 'wózków', 'bac' => 'pojemników', 'litre' => 'l'];
     private const DAY_ABBR = [1 => 'pn.', 2 => 'wt.', 3 => 'śr.', 4 => 'czw.', 5 => 'pt.', 6 => 'sob.', 7 => 'niedz.'];
-    private const WHAT_IF = ['afternoon' => 'APRES_MIDI', 'night' => 'NUIT'];
+    private const WHAT_IF = ['afternoon' => 'APRES_MIDI'];
 
     public function __construct(
         private WeekService $week,
@@ -44,7 +44,7 @@ final class CapacityService
 
     /**
      * Tydzień produkcji z datą : maszyny (wykorzystanie, dni, wolne), mroźnia, produkty (ilość na zmianę, wąskie gardło,
-     * jeszcze, wartość), kafelki. @param array{afternoon?:bool, night?:bool} $whatIf
+     * jeszcze, wartość), kafelki. @param array{afternoon?:bool} $whatIf
      */
     public function data(?string $date, array $whatIf = [], ?int $groupId = null): array
     {
@@ -432,7 +432,7 @@ final class CapacityService
                 'label' => sprintf('tydzień %d (%s–%s)', $weekNo, date('d.m', strtotime($days[0] ?? $q['start'])), date('d.m.Y', strtotime(end($days) ?: $q['end']))),
                 'prev' => date('Y-m-d', strtotime($q['start'] . ' -7 days')), 'next' => date('Y-m-d', strtotime($q['start'] . ' +7 days')),
                 'planned_items' => count($q['items'])],
-            'what_if' => ['afternoon' => !empty($whatIf['afternoon']), 'night' => !empty($whatIf['night'])],
+            'what_if' => ['afternoon' => !empty($whatIf['afternoon'])],
             'machines' => array_map(fn($m) => $this->publicMachine($m), $machines), 'products' => $products, 'routings' => $routings, 'freezer' => $freezer,
             'unrouted' => $unrouted, 'teams' => array_values($teams), 'shifts' => $shifts, 'groups' => array_map(fn($k, $v) => ['id' => $k, 'name' => $v], array_keys($groups), array_values($groups)),
         ];

@@ -160,6 +160,7 @@
     "ROBOT_MODE_REQUIRED": "Pour un robot, le champ « {field} » est obligatoire (autonome, avec_operateur ou collaboratif).",
     "OPERATOR_SHARE_REQUIRED": "Cobot (mode collaboratif) : indiquez la part du temps d’une personne, par ex. 0,25 = 1 personne pour 4 cobots.",
     "ROBOT_MODE_FORBIDDEN": "Le champ « {field} » ne concerne que les robots.",
+    "NIGHT_SHIFT_DISABLED": "Le shift de nuit est supprimé dans l'atelier — il ne peut être qu'inactif.",
     "SAME_START_END": "Le début et la fin du shift ne peuvent pas être identiques.",
     "DATE_ORDER": "La date de fin doit être postérieure ou égale à la date de début.",
     "DUPLICATE_IN_LIST": "Le champ « {field} » contient un doublon ({id}).",

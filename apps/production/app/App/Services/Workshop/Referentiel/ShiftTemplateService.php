@@ -82,6 +82,10 @@ final class ShiftTemplateService
         if ($start !== null && $end !== null && $start === $end && !$v->hasError('start_time') && !$v->hasError('end_time')) {
             $v->add('end_time', 'SAME_START_END');
         }
+        // Bez zmiany nocnej [235] : zakład nie pracuje w nocy — zmiana nocna nie może być aktywna (także z importu tabeli).
+        $night = (bool) $v->value('is_night', (bool) ($current['is_night'] ?? false));
+        $active = (bool) $v->value('active', $current !== null ? (bool) $current['active'] : true);
+        if ($night && $active && !$v->hasError('active')) $v->add('active', 'NIGHT_SHIFT_DISABLED');
         $v->throwIfInvalid();
         return $v->clean();
     }

@@ -3,7 +3,7 @@ declare(strict_types=1);
 /*
  * Moce produkcyjne [234] (makiety 10 i 11) : migracja 151 (rejouable, stoły ręczne ukryte), obciążenie maszyn z planu
  * tygodnia (etapy kart : praca, wsady, komora rozrostu jako oczekiwanie), dostępność (zmiany zespołów, TRS, dni produkcji,
- * zmiana wyłączona na maszynie, « co jeśli » nocna), dzień szczytu, zespoły (ludzie), ilość na zmianę i wąskie gardło,
+ * zmiana wyłączona na maszynie, « co jeśli » popołudniowa, bez zmiany nocnej), dzień szczytu, zespoły (ludzie), ilość na zmianę i wąskie gardło,
  * « co jeszcze zmieszczę » (maszyna albo ludzie), wartość, produkty bez etapów, mroźnia zapasu (palety, miejsca, MTS
  * tygodnia), symulacja + ilość, ustawienia maszyny i mroźni (walidacja), filtr grupy, dostęp do strony.
  *
@@ -73,7 +73,7 @@ try {
     $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, sort_order) VALUES (1, 'PIEK', 'Piekarnia', 'Boulangerie', 1)");
     $pdo->exec("INSERT INTO n_prod_shift_template (id, code, name_pl, name_fr, start_time, end_time, active_days, active, sort_order) VALUES
         (1, 'JOUR', 'Dzienna', 'Jour', '06:00:00', '14:00:00', '1,2,3,4,5,6', 1, 1), (2, 'APRES_MIDI', 'Popołudniowa', 'Après-midi', '14:00:00', '22:00:00', '1,2,3,4,5,6', 1, 2),
-        (3, 'NUIT', 'Nocna', 'Nuit', '22:00:00', '06:00:00', '1,2,3,4,5,6', 1, 3)");
+        (3, 'NUIT', 'Nocna', 'Nuit', '22:00:00', '06:00:00', '1,2,3,4,5,6', 0, 3)"); // zmiana nocna nieaktywna [235]
     $pdo->exec("INSERT INTO n_prod_team (id, code, id_group, id_shift_template, name, planned_headcount, active) VALUES (1, 'PIEK-J', 1, 1, 'Piekarnia dzień', 2, 1)");
     // 10 formierka (TRS 80 %), 11 piec pokładowy (4 × 12 = 48 szt., 25 min), 12 komora rozrostu (4 wózki), 13 stół (ręczny),
     // 14 szokowe mrożenie (bez etapów).
@@ -170,13 +170,14 @@ try {
     expectCapFail(fn() => $svc->simulate($date, 3, 10), 422, 'symulacja produktu bez etapów');
     expectCapFail(fn() => $svc->simulate($date, 1, 0), 422, 'symulacja : ilość większa od zera');
 
-    // --- Co jeśli : zmiana nocna ; zmiana wyłączona na maszynie ----------------------------------------------------
-    $pdo->exec('INSERT INTO n_prod_workstation_shift (id_workstation, id_shift_template, available) VALUES (10, 3, 0)'); // formierka : noc wyłączona w Stanowiskach
-    $n = $svc->data($date, ['night' => true]);
+    // --- Co jeśli : zmiana popołudniowa ; zmiana wyłączona na maszynie ; bez zmiany nocnej ------------------------------
+    $pdo->exec('INSERT INTO n_prod_workstation_shift (id_workstation, id_shift_template, available) VALUES (10, 2, 0), (11, 3, 1)'); // formierka : popołudnie wyłączone ; piec « w nocy » (zmiana nieaktywna)
+    $n = $svc->data($date, ['afternoon' => true, 'night' => true]);
     $mn = [];
     foreach ($n['sections'] as $s) foreach ($s['rows'] as $r) $mn[$r['id']] = $r;
-    expectCap($n['what_if']['night'] && $mn[11]['avail_s'] == 288000 && $mn[11]['pct'] === 26.0 && $n['teams'][0]['avail_h'] === 160.0 && $mn[10]['avail_s'] == 230400,
-        '+ nocna : piec 26 %, zespół 160 h, formierka też (co jeśli otwiera zmianę dla wszystkich maszyn)');
+    expectCap($n['what_if'] === ['afternoon' => true] && $mn[11]['avail_s'] == 288000 && $mn[11]['pct'] === 26.0 && $n['teams'][0]['avail_h'] === 160.0 && $mn[10]['avail_s'] == 230400
+        && !in_array(3, $mn[11]['shift_ids'], true) && !in_array(3, array_column($n['shifts'], 'id'), true),
+        '+ popołudniowa : piec 26 %, zespół 160 h, formierka też (co jeśli otwiera zmianę dla wszystkich maszyn) ; noc nie istnieje (nawet zaznaczona na piecu)');
     $mx = [];
     foreach ($svc->data($date)['sections'] as $s) foreach ($s['rows'] as $r) $mx[$r['id']] = $r;
     expectCap($mx[10]['avail_s'] == 115200, 'bez « co jeśli » : noc wyłączona na formierce nie liczy się');
@@ -184,11 +185,11 @@ try {
     $mx = [];
     foreach ($svc->data($date)['sections'] as $s) foreach ($s['rows'] as $r) $mx[$r['id']] = $r;
     expectCap($mx[11]['avail_s'] == 0 && $mx[11]['pct'] === 999.0 && $mx[11]['shift_ids'] === [], 'piec wyłączony na zmianie dziennej : brak czasu, przeciążenie');
-    $svc->saveMachine(11, ['shifts' => [1 => true, 3 => true]], 5);
+    $svc->saveMachine(11, ['shifts' => [1 => true, 2 => true, 3 => true]], 5);
     $mx = [];
     foreach ($svc->data($date)['sections'] as $s) foreach ($s['rows'] as $r) $mx[$r['id']] = $r;
-    expectCap($mx[11]['shift_ids'] === [1, 3] && $mx[11]['avail_s'] == 288000 && (int) $pdo->query('SELECT COUNT(*) FROM n_prod_workstation_shift WHERE id_workstation = 11')->fetchColumn() === 2,
-        'piec włączony też w nocy (bez zespołu, np. wypiek nocny) : 2 zmiany, zmiana nieznana pominięta');
+    expectCap($mx[11]['shift_ids'] === [1, 2] && $mx[11]['avail_s'] == 288000 && (int) $pdo->query('SELECT COUNT(*) FROM n_prod_workstation_shift WHERE id_workstation = 11 AND id_shift_template = 2 AND available = 1')->fetchColumn() === 1,
+        'piec włączony też po południu (bez zespołu) : 2 zmiany ; noc pominięta (zmiana nieaktywna) [235]');
 
     // --- Ustawienia maszyny ---------------------------------------------------------------------------------------
     expectCapFail(fn() => $svc->saveMachine(999, ['efficiency_pct' => 90], 5), 404, 'maszyna nieznana');
@@ -207,7 +208,7 @@ try {
 
     // --- Stan obecny (produkcja bez pełnej wersji) : tydzień bieżący, bez produktów i € --------------------------------
     $st = $svc->state();
-    expectCap($st['readonly'] && $st['products'] === [] && $st['hidden'] === [] && $st['tiles']['best'] === null && !$st['what_if']['night']
+    expectCap($st['readonly'] && $st['products'] === [] && $st['hidden'] === [] && $st['tiles']['best'] === null && $st['what_if'] === ['afternoon' => false]
         && $st['week']['start'] <= date('Y-m-d') && $st['week']['end'] >= date('Y-m-d') && $st['today'] === date('Y-m-d') && isset($st['sections'], $st['teams'], $st['freezer']),
         'stan obecny : tydzień bieżący, maszyny, zespoły i mroźnia, bez produktów, wartości i symulacji');
     expectCap($d['readonly'] === false, 'pełna wersja : nie do odczytu');

@@ -110,11 +110,11 @@ final class CapacityController extends BaseController
         return is_string($d) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) ? $d : null;
     }
 
-    /** @return array{afternoon:bool, night:bool} */
+    /** Co jeśli : + zmiana popołudniowa (zmiany nocnej nie ma). @return array{afternoon:bool} */
     private function whatIf(): array
     {
         $w = is_string($_GET['shifts'] ?? null) ? explode(',', $_GET['shifts']) : [];
-        return ['afternoon' => in_array('afternoon', $w, true), 'night' => in_array('night', $w, true)];
+        return ['afternoon' => in_array('afternoon', $w, true)];
     }
 
     private function group(): ?int

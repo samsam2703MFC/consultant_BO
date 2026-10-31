@@ -20,7 +20,7 @@
 
 {% block content %}
 {# Moce produkcyjne [234] (makiety 10 i 11) : App\Services\Workshop\Planning\CapacityService::data / simulate.
-   Widok w assets/js/production/capacity.js ; GET /ajax/production/capacity?date=&group=&shifts=afternoon,night #}
+   Widok w assets/js/production/capacity.js ; GET /ajax/production/capacity?date=&group=&shifts=afternoon #}
 <section class="section" id="mcApp"><div class="kw"><p class="at-empty">Ładowanie…</p></div></section>
 <script type="application/json" id="mcBoot">{{ data|json_encode|raw }}</script>
 {% endblock %}

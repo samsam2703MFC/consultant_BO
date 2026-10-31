@@ -108,10 +108,11 @@ try {
     $titles = array_map(fn($w) => $w->getTitle(), $book->getAllSheets());
     expectSheet($titles === ['Instrukcja (mode d’emploi)', 'Stanowiska (postes)', 'Zmiany (horaires)', 'Zespoły (équipes)', 'Trasy (tournées)', 'Parametry (paramètres)', 'Grupy (groupes)'], 'sheets of the workbook');
     $shiftRows = $book->getSheetByName('Zmiany (horaires)')->toArray(null, false, false, false);
-    expectSheet(count(array_filter(array_slice($shiftRows, 1), fn($r) => $r[0] !== null)) === (int) $pdo->query('SELECT COUNT(*) FROM n_prod_shift_template')->fetchColumn()
-        && in_array('JOUR', array_column($shiftRows, 0), true), 'shift sheet pre-filled with the ERP shifts');
+    expectSheet(count(array_filter(array_slice($shiftRows, 1), fn($r) => $r[0] !== null)) === (int) $pdo->query('SELECT COUNT(*) FROM n_prod_shift_template WHERE is_night = 0')->fetchColumn()
+        && in_array('JOUR', array_column($shiftRows, 0), true) && !in_array('NUIT', array_column($shiftRows, 0), true), 'shift sheet pre-filled with the ERP day shifts (no night shift) [235]');
     $params = array_column($book->getSheetByName('Parametry (paramètres)')->toArray(null, false, false, false), 3, 0);
-    expectSheet(array_key_exists('cold.freezer_capacity_cartons', $params) && (int) $params['cold.freezer_capacity_cartons'] === 0, 'freezer capacity in the parameter sheet');
+    expectSheet(array_key_exists('cold.freezer_capacity_cartons', $params) && (int) $params['cold.freezer_capacity_cartons'] === 0 && !array_key_exists('shift.night_staff_ratio', $params),
+        'freezer capacity in the parameter sheet, no night staffing ratio');
     expectSheet(count($book->getSheetByName('Stanowiska (postes)')->getDataValidationCollection()) >= 4, 'drop-down lists on the workstation sheet');
 
     // --- Fichier rempli : nouveaux poste, cobot, shift, équipe sur ce shift, tournée (heure Excel), surgélateur
