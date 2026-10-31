@@ -4687,6 +4687,14 @@ function marketingAppel(string $methode, string $chemin, ?array $corps = null): 
     $url = preg_match('#^https?://#', $base) ? $base . $chemin : $hote . $base . $chemin;
 
     $entetes = ['Accept: application/json'];
+    // Le jeton de service de l'API Marketing : sans lui, elle répond 401 une fois son identité de
+    // développement coupée. Son déploiement le tire sur le serveur et le pose dans service-token,
+    // à côté de son .env (lisible par www-data) ; il ne passe ni par ce dépôt ni par le navigateur.
+    $fichier = (string) (setting('marketingServiceTokenFile') ?: '/var/www/private/marketing/service-token');
+    $jeton = is_readable($fichier) ? trim((string) @file_get_contents($fichier)) : '';
+    if (strlen($jeton) >= 32) {
+        $entetes[] = 'X-Marketing-Service: ' . $jeton;
+    }
     $ch = curl_init($url);
     $opts = [
         CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15,
