@@ -3267,6 +3267,54 @@ Une même pièce ne porte que l'explication la plus précise : `vide`, `unite` o
 products/available et celle du produit demandé, sa recette telle que `/cost` la rend (trois premières lignes), une
 ligne de `/materials` et de `/material-inventory`, et la dernière erreur du panel.
 
+
+`GET /verification/recettes/fiche?pid=[&shop=]` (31/10/2026) : la recette d'un produit, ouverte au clic sur son nom dans
+la liste — `recette` (`nom`, `rendement`, `total`, `luDans`, `lignes[]` : `mid`, `nom`, `q`, `u`, `cout`, `sous`, `part`,
+`prixMagasins` {magasin : prix | null (sans prix) | "inconnu"}), `magasins[]` (`cout`, `prixHt`, `coef`, `food`,
+`divisible`, `part`), `signalements[]` (les lignes de la liste pour ce produit), `lienPanel`. Lecture seule. Le lien
+mène à la page produit du panel, `/panel/products/{pid}` (mesuré : la route existe, `/panel/recipes/{id}` rend 404) ;
+le réglage `verifLienRecette` (avec `{pid}`) le remplace. La correction depuis le cockpit attend la mesure du format
+de `PATCH /recipes/{id}` : la sonde rend désormais `recetteBrute` (`/recipes/{id}`) et `produitBrut` (`/products/{id}`).
+
+### `/verification/flux` et `/verification/fuites` — l'audit des flux et les fuites par magasin (Vérification, lot 2, 31/10/2026)
+
+Code : `src/verification_flux.php` ; écrans `#/verification/flux` et `#/verification/fuites`
+(`verification-flux-vals.js`, `verification-flux-tpl.js`) ; tests : `php bin/tests_verification.php`.
+
+Une journée d'un magasin, produit par produit, est celle de la **clôture de la Production** : `ep_production_flux_cloture`
+est appelée telle quelle (les mêmes chiffres que l'écran Clôture). Gravée par jour (`ceo_app_setting` `vxJ:{shop}:{jour}` :
+`l[]` = `p` produit, `n` nom, `c` catégorie, `g` groupe, `x` prix, `k` se garde, `v` durée de vie, `s0` gardé d'hier,
+`so` sorti, `ok` cuissons validées, `vd` vendu, `jd` poubelle déclarée, `r` invendu gardé, `co` compté ; `enr` clôture
+enregistrée, `cv`/`cu` cuissons validées / à valider), avec la signature de `ppFait` et des deux `pfCloture` : une
+validation faite après coup la fait recalculer ; les sept derniers jours se recalculent une fois par jour. Le cron horaire
+(`/rapports/cron`, champ `verification` « flux : … ») remplit les cinq dernières semaines par lots de 40 journées ; un
+écran calcule au plus 20 secondes et dit ce qui reste (`manquants`).
+
+```
+disponible = gardé d'hier + sorti (cuissons validées, sinon le plan)
+non expliqué = disponible − vendu − poubelle déclarée − invendu gardé      (au prix de vente ; en % du disponible)
+```
+
+**Mesuré ou estimé.** Une pièce est mesurée quand toutes ses cuissons du jour sont validées. `mesure` = la part du
+disponible mesurée ; sous 50 % (`VX_MESURE_MIN`), le verdict est « Non mesuré » et l'écart est un **écart au plan** (gris),
+pas une fuite. Relevé du 31/10/2026 : aucun magasin ne valide ses cuissons ni n'enregistre sa clôture. Verdicts sur une
+période mesurée : « À regarder » (non expliqué > 6 %), « Poubelle haute » (> 9 %), « Vendu plus que produit » (écart
+négatif au-delà de 3 % : cuissons ou entrées non saisies), « À suivre » (> 3 %), « Tout s'explique ».
+
+`GET /verification/flux?vue=jour|semaine|mois&date=AAAA-MM-JJ[&shop=]` : semaine = lundi → dimanche, mois = 1er → dernier
+jour, l'un et l'autre arrêtés à hier ; le jour peut être aujourd'hui (relu toutes les dix minutes). Une lecture (`reseau`,
+chaque magasin, chaque jour, chaque catégorie, chaque produit) porte : `pcs` et `eur` (`garde0`, `prod`, `dispo`, `vendu`,
+`poubelle`, `invendu`, `nonExpl`), `taux` (en % du disponible), `tons`, `mesure`, `verdict` {`ton`, `nom`, `pourquoi`},
+`jours`, `cuissonsValidees`, `cuissons`, `clotures`, `comptes`. Réponse : `magasins[]` (avec `parJour[]`), `reseau`,
+`manquants`, `calculesCePassage`, `seuils` ; avec `shop` : `categories[]` ; avec `shop` et `vue=jour` : `produits[]` et
+`journee` {`clotureEnregistree`, `cuissonsValidees`, `cuissons`, `poubelleLue`}.
+
+`GET /verification/fuites?vue=&date=` : `magasins[]`, chacun avec `categories[]` dans **le même ordre pour tous**
+(groupe, puis nom ; une catégorie que le magasin ne vend pas reste, vide), chaque catégorie avec `produits[]` ; la même
+lecture que ci-dessus. Gardé d'hier et gardé pour demain sont les sommes des journées : sorti = gardé d'hier + produit −
+gardé pour demain, delta = sorti − ventes − poubelle = la somme des non-expliqués des jours. `matrice[]` : catégories ×
+magasins (et réseau).
+
 ## 2. Mapping base de données → écran → champ
 
 ### Tables existantes réutilisées (`franchise_buddy_db`)

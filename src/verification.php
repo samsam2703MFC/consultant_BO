@@ -40,7 +40,8 @@ declare(strict_types=1);
  * chaque recette est signalée, et quand elle a cessé de l'être (corrigée au panel).
  *
  * GET /verification/recettes[?rafraichir=1]  — la liste, la couverture, les règles ;
- * GET /verification/recettes/sonde?shop=&pid= — ce que les routes rendent (lecture seule, mesure).
+ * GET /verification/recettes/sonde?shop=&pid= — ce que les routes rendent (lecture seule, mesure) ;
+ * GET /verification/recettes/fiche?pid=      — la recette d'un produit, ouverte au clic dans la liste.
  */
 
 const VF_JOURS = 30;
@@ -614,7 +615,7 @@ function vfAnalyse(int $budget): array
         'magasins' => array_map(static fn ($id, $n) => ['id' => (string) $id, 'nom' => $n, 'joursLus' => (int) ($V['jours'][$id] ?? 0)], array_keys($mags), array_values($mags)),
         'periode' => ['du' => $V['du'], 'au' => $V['au'], 'jours' => VF_JOURS],
         'seuils' => ['coutRatioMin' => $ratioMin, 'ecartReseau' => VF_ECART_RESEAU, 'partUnite' => VF_PART_UNITE],
-        'lienRecette' => (string) (setting('verifLienRecette', '') ?: ''),
+        'lienRecette' => vfLienPanelModele(),
         'lu' => date('c'),
         'source' => 'ventes : tickets gravés par la moisson (30 jours, aujourd’hui exclu) · produits, recettes et coûts : API du panel (/shops/{id}/products/available, /shops/{id}/recipes/{recette}/cost, /shops/{id}/materials, /shops/{id}/material-inventory) · lecture seule',
     ];
@@ -703,6 +704,65 @@ function vfRegistre(array $lignes, bool $complet): array
  * Routes
  * ------------------------------------------------------------------------------------------- */
 
+/**
+ * L'adresse d'un produit au panel, avec {pid} : le réglage `verifLienRecette`, sinon la page produit du panel
+ * (mesuré le 31/10/2026 : /panel/products/{id} existe — il renvoie à la connexion —, /panel/recipes/{id} rend 404).
+ */
+function vfLienPanelModele(): string
+{
+    $r = '';
+    try { $r = (string) (setting('verifLienRecette', '') ?: ''); } catch (Throwable $e) { $r = ''; }
+    if ($r !== '') { return $r; }
+    $base = rtrim((string) preg_replace('#/api/v\d+$#', '', (string) (PanelApi::config()['base'] ?? 'https://atelierby.tfbuddy.com/api/v1')), '/');
+    return $base . '/panel/products/{pid}';
+}
+
+/**
+ * GET /verification/recettes/fiche?pid=[&shop=] — la recette d'un produit, ouverte au clic dans la liste : ses lignes
+ * (sous-recettes dépliées, ramenées à une pièce), le prix de chaque matière dans chaque magasin, le produit dans chaque
+ * magasin (coût, prix HT, coefficient), ses signalements, et l'adresse de sa page au panel. Lecture seule : la
+ * correction se fait au panel (l'écriture depuis le cockpit attend la mesure de PATCH /recipes/{id}).
+ */
+function ep_verification_fiche(): array
+{
+    if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'Le compte du panel n’est pas configuré (Paramètres).']; }
+    $pid = (int) ($_GET['pid'] ?? 0);
+    if ($pid <= 0) { http_response_code(400); return ['error' => 'pid requis']; }
+    $mags = vfMagasins(); $sids = array_keys($mags);
+    $D = vfDispo($sids);
+    $rid = null; $nom = ''; $cat = ''; $magasins = []; $ref = (int) ($_GET['shop'] ?? 0);
+    foreach ($sids as $sid) {
+        $p = $D[$sid][$pid] ?? null;
+        if ($p !== null) { $rid = $rid ?: $p['recette']; $nom = $nom ?: $p['nom']; $cat = $cat ?: $p['cat']; if ($ref <= 0) { $ref = $sid; } }
+        $cout = $p['cout'] ?? null; $ht = $p['prixHt'] ?? null;
+        $magasins[] = ['id' => (string) $sid, 'nom' => $mags[$sid], 'present' => $p !== null, 'cout' => $cout !== null ? round((float) $cout, 4) : null,
+            'prixHt' => $ht !== null ? round((float) $ht, 2) : null, 'coef' => $cout !== null && $cout > 0 && $ht !== null ? round($ht / $cout, 2) : null,
+            'food' => $cout !== null && $ht !== null && $ht > 0 ? round(100 * $cout / $ht, 1) : null,
+            'divisible' => (bool) ($p['divisible'] ?? false), 'part' => $p['part'] ?? null];
+    }
+    $R = null;
+    if ($rid) {
+        $R = vfRecettesEnCache([$rid])[$rid] ?? null;
+        if ($R === null && $ref > 0) { vfLireRecettes([$rid => $ref], 1); $R = vfRecettesEnCache([$rid])[$rid] ?? null; }
+    }
+    $M = vfPrixMatieres($sids);
+    $total = 0.0; foreach ((array) ($R['lignes'] ?? []) as $l) { if (($l['cout'] ?? null) !== null) { $total += (float) $l['cout']; } }
+    $lignes = [];
+    foreach ((array) ($R['lignes'] ?? []) as $l) {
+        $px = [];
+        foreach ($sids as $sid) { $px[(string) $sid] = ($M[$sid] ?? []) === [] ? 'inconnu' : (isset($M[$sid][(int) $l['mid']]) && $M[$sid][(int) $l['mid']] > 0 ? round((float) $M[$sid][(int) $l['mid']], 4) : null); }
+        $lignes[] = $l + ['part' => $total > 0 && ($l['cout'] ?? null) !== null ? round(100 * (float) $l['cout'] / $total, 1) : null, 'prixMagasins' => $px];
+    }
+    $sig = [];
+    $A = vfCache('vfAnalyse', 2 * 86400);
+    foreach ((array) ($A['v']['lignes'] ?? []) as $l) { if ((int) ($l['pid'] ?? 0) === $pid) { $sig[] = $l; } }
+    return ['pid' => $pid, 'nom' => $nom, 'cat' => $cat, 'rid' => $rid,
+        'recette' => $R === null ? null : ['nom' => $R['nom'] ?? '', 'rendement' => $R['rend'] ?? null, 'coutNet' => $R['coutNet'] ?? null, 'complet' => $R['complet'] ?? null,
+            'luDans' => $mags[(int) ($R['sid'] ?? 0)] ?? null, 'total' => round($total, 4), 'lignes' => $lignes],
+        'magasins' => $magasins, 'signalements' => $sig, 'lienPanel' => str_replace(['{pid}', '{id}', '{rid}'], [(string) $pid, (string) $pid, (string) ($rid ?? '')], vfLienPanelModele()),
+        'lu' => date('c'), 'source' => 'recette : /shops/{id}/recipes/{recette}/cost (gardée 24 h) · prix : /shops/{id}/materials · produit : /shops/{id}/products/available · lecture seule'];
+}
+
 /** GET /verification/recettes[?rafraichir=1] — servie du cache (une heure) ; « rafraichir » lit un lot de recettes de plus. */
 function ep_verification_recettes(): array
 {
@@ -738,9 +798,21 @@ function ep_verification_sonde(): array
     if (is_array($cout) && isset($cout['elements']) && is_array($cout['elements'])) { $cout['elements'] = array_slice($cout['elements'], 0, 3); }
     $mat = PanelApi::get('/shops/' . $sid . '/materials');
     $inv = PanelApi::get('/shops/' . $sid . '/material-inventory');
+    // Le format de la recette et du produit tels que le panel les rend : c'est la forme qu'attend PATCH /recipes/{id}
+    // (écriture depuis le cockpit, à venir) — les listes sont coupées à trois éléments.
+    $court = static function ($r) use (&$court) {
+        if (!is_array($r)) { return $r; }
+        $o = [];
+        foreach ($r as $k => $v) { $o[$k] = is_array($v) && array_is_list($v) ? array_map($court, array_slice($v, 0, 3)) : (is_array($v) ? $court($v) : $v); }
+        return $o;
+    };
+    $recBrute = $rid > 0 ? $court(PanelApi::get('/recipes/' . $rid)) : null;
+    $pidLu = is_array($ligne) ? (int) (vfNum($ligne, ['id', 'product_id']) ?? 0) : 0;
+    $prodBrut = $pidLu > 0 ? $court(PanelApi::get('/products/' . $pidLu)) : null;
     $premier = static fn ($r) => is_array($r) ? (analyseListe($r)[0] ?? null) : null;
     return ['shop' => $sid, 'nProduits' => count($dispo), 'clesProduit' => is_array($ligne) ? array_keys($ligne) : [], 'produit' => $ligne,
-        'recette' => $rid ?: null, 'cout' => $cout, 'matiere' => $premier($mat), 'stock' => $premier($inv), 'erreur' => PanelApi::$lastError];
+        'recette' => $rid ?: null, 'cout' => $cout, 'matiere' => $premier($mat), 'stock' => $premier($inv),
+        'recetteBrute' => $recBrute, 'produitBrut' => $prodBrut, 'erreur' => PanelApi::$lastError];
 }
 
 /** Le battement du cron horaire (/rapports/cron) : un lot de recettes, l'analyse remise à jour, le registre tenu. */

@@ -54,6 +54,7 @@ final class PanelApi
     public static array $routes = [];      // chemin => réponse
     public static int $lectures = 0;       // recettes lues (…/cost)
     public static function configured(): bool { return true; }
+    public static function config(): array { return ['base' => 'https://atelierby.tfbuddy.com/api/v1']; }
     public static function coutsMatiere(): array { return []; }
     public static function produitsDisponibles(int $sid): array { return self::$dispo[$sid] ?? []; }
     public static function get(string $chemin): mixed { return self::$routes[$chemin] ?? null; }
@@ -71,7 +72,18 @@ function mfMatieresApi(array $sids, bool $frais): array
     return $out;
 }
 
+// La clôture de la Production, simulée : pour un magasin et un jour, les lignes que rend ep_production_flux_cloture.
+$CLOTURE = []; $APPELS_CLOTURE = 0;
+function ep_production_flux_cloture(): array
+{
+    global $CLOTURE, $APPELS_CLOTURE;
+    $APPELS_CLOTURE++;
+    $k = ($_GET['shop'] ?? '') . ':' . ($_GET['date'] ?? '');
+    return $CLOTURE[$k] ?? ['lignes' => [], 'ventesLues' => true, 'enregistree' => false, 'cuissonsValidees' => 0, 'cuissons' => 2, 'poubelleLue' => true];
+}
+
 require __DIR__ . '/../src/verification.php';
+require __DIR__ . '/../src/verification_flux.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -250,6 +262,73 @@ $r3 = vfCache('vfAnalyse', 3600)['v'] ?? [];
 verifie('le cron recalcule et le dit en une phrase', str_contains($bilan, 'signalement') && str_contains($bilan, 'couverture'), $bilan);
 verifie('la tarte corrigée disparaît de la liste', !in_array('inv', array_column($r3['lignes'] ?? [], 'regle'), true));
 verifie('le registre la note résolue aujourd’hui', count(array_filter(Db::$registre, static fn ($x) => $x['resolu_le'] === date('Y-m-d'))) === 1 && ($r3['corrigees']['n'] ?? 0) === 1);
+
+echo "Lot 2 — audit des flux et fuites\n";
+$lx = static fn (int $pid, string $nom, string $cat, float $prix, float $s0, float $so, int $ok, float $vd, float $jd, float $r, ?float $co = null) =>
+    ['pid' => $pid, 'nom' => $nom, 'cat' => $cat, 'groupe' => 'G-' . $cat, 'prix' => $prix, 'garde' => $r > 0, 'vie' => 'S', 'report0' => $s0, 'sorti' => $so, 'sortiValide' => (bool) $ok,
+     'vendu' => $vd, 'jeteDeclare' => $jd, 'report' => $r, 'compte' => $co];
+$a = vxVide();
+vxAjouteLigne($a, ['p' => 1, 'n' => 'Croissant', 'c' => 'Vien', 'g' => 'V', 'x' => 1.2, 'k' => 0, 'v' => 'S', 's0' => 0, 'so' => 100, 'ok' => 1, 'vd' => 80, 'jd' => 6, 'r' => 0, 'co' => null]);
+vxAjouteLigne($a, ['p' => 2, 'n' => 'Pain', 'c' => 'Pain', 'g' => 'P', 'x' => 3.0, 'k' => 1, 'v' => 'M', 's0' => 4, 'so' => 20, 'ok' => 1, 'vd' => 18, 'jd' => 0, 'r' => 5, 'co' => 5]);
+$L = vxLecture($a);
+verifie('disponible = gardé d’hier + sorti, en pièces et au prix de vente', abs($L['pcs']['dispo'] - 124) < 1e-9 && abs($L['eur']['dispo'] - (100 * 1.2 + 24 * 3)) < 1e-9);
+verifie('non expliqué = disponible − vendu − poubelle − invendu', abs($L['pcs']['nonExpl'] - (124 - 98 - 6 - 5)) < 1e-9);
+verifie('les taux se lisent en % du disponible, au prix de vente', abs($L['taux']['nonExpl'] - round(100 * (14 * 1.2 + 1 * 3.0) / 192, 1)) < 1e-9, json_encode($L['taux']));
+verifie('tout mesuré : la part mesurée vaut 100 % et le verdict juge la fuite', $L['mesure'] === 100.0 && $L['verdict']['ton'] === 'ko', json_encode($L['verdict'], JSON_UNESCAPED_UNICODE));
+$b = vxVide();
+vxAjouteLigne($b, ['p' => 1, 'n' => 'Croissant', 'c' => 'Vien', 'g' => 'V', 'x' => 1.2, 'k' => 0, 'v' => 'S', 's0' => 0, 'so' => 100, 'ok' => 0, 'vd' => 80, 'jd' => 6, 'r' => 0, 'co' => null]);
+$Lb = vxLecture($b);
+verifie('cuissons non validées : « Non mesuré », un écart au plan et pas une fuite', $Lb['verdict']['ton'] === 'mu' && $Lb['verdict']['nom'] === 'Non mesuré' && $Lb['tons']['nonExpl'] === 'mu' && str_contains($Lb['verdict']['pourquoi'], 'écart au plan'));
+$c2 = vxVide();
+vxAjouteLigne($c2, ['p' => 1, 'n' => 'Pain', 'c' => 'Pain', 'g' => 'P', 'x' => 2.0, 'k' => 0, 'v' => 'S', 's0' => 0, 'so' => 100, 'ok' => 1, 'vd' => 110, 'jd' => 0, 'r' => 0, 'co' => null]);
+$Lc = vxLecture($c2);
+verifie('vendu plus que produit (écart négatif) : signalé, jugé sur sa valeur absolue', $Lc['verdict']['nom'] === 'Vendu plus que produit' && $Lc['tons']['nonExpl'] === 'ko');
+[$du, $au, $js] = vxBornes('semaine', '2026-10-21');
+verifie('une semaine va du lundi au dimanche', $du === '2026-10-19' && $au === '2026-10-25' && count($js) === 7);
+[$du, $au, $js] = vxBornes('mois', '2026-09-14');
+verifie('un mois va du premier au dernier jour', $du === '2026-09-01' && $au === '2026-09-30' && count($js) === 30);
+[$du, $au, $js] = vxBornes('mois', date('Y-m-d'));
+verifie('le mois en cours s’arrête à hier', $au === max($du, date('Y-m-d', strtotime('-1 day'))));
+verifie('une journée passée gravée après sa fin, même signature : bonne', vxGraveValide(['quand' => time(), 'sig' => 's', 'j' => []], date('Y-m-d', strtotime('-20 day')), 's'));
+verifie('une validation faite après coup (signature changée) la fait recalculer', !vxGraveValide(['quand' => time(), 'sig' => 's', 'j' => []], date('Y-m-d', strtotime('-20 day')), 'autre'));
+verifie('une des sept dernières journées, gravée hier : recalculée aujourd’hui', !vxGraveValide(['quand' => strtotime('-1 day'), 'sig' => 's', 'j' => []], date('Y-m-d', strtotime('-3 day')), 's'));
+
+// Le parcours : deux magasins, une semaine ; Halle valide ses cuissons, Gosselies non.
+$sem = vxBornes('semaine', date('Y-m-d', strtotime('-10 day')))[2];
+Db::$shops = [['id' => 4, 'name' => 'Atelier by - Halle'], ['id' => 3, 'name' => 'Atelier by Max & Sandra - Gosselies']];
+foreach ($sem as $j) {
+    $CLOTURE['4:' . $j] = ['ventesLues' => true, 'enregistree' => true, 'cuissonsValidees' => 2, 'cuissons' => 2, 'poubelleLue' => true,
+        'lignes' => [$lx(1, 'Croissant', 'Viennoiserie', 1.2, 0, 100, 1, 90, 5, 0), $lx(2, 'FlipFlap - Club', 'Sandwiches', 5.0, 0, 20, 1, 12, 0, 0)]];
+    $CLOTURE['3:' . $j] = ['ventesLues' => true, 'enregistree' => false, 'cuissonsValidees' => 0, 'cuissons' => 3, 'poubelleLue' => true,
+        'lignes' => [$lx(1, 'Croissant', 'Viennoiserie', 1.2, 0, 80, 0, 70, 2, 0), $lx(3, 'Pain Demi-Gris', 'Pain', 2.9, 3, 20, 0, 18, 0, 4)]];
+}
+$_GET = ['vue' => 'semaine', 'date' => $sem[2]];
+$APPELS_CLOTURE = 0;
+$f = ep_verification_flux();
+$h = array_values(array_filter($f['magasins'], static fn ($m) => $m['id'] === '4'))[0];
+$g = array_values(array_filter($f['magasins'], static fn ($m) => $m['id'] === '3'))[0];
+verifie('l’audit réseau calcule les 14 journées (2 magasins × 7 jours)', $APPELS_CLOTURE === 14 && $f['manquants'] === 0 && count($h['parJour']) === 7);
+verifie('Halle (cuissons validées) : mesuré, la fuite des sandwichs est jugée', $h['mesure'] === 100.0 && $h['verdict']['ton'] === 'ko', json_encode($h['verdict'], JSON_UNESCAPED_UNICODE));
+verifie('Gosselies (rien de validé) : « Non mesuré »', $g['verdict']['nom'] === 'Non mesuré' && $g['mesure'] === 0.0);
+verifie('le réseau somme les deux magasins', abs($f['reseau']['eur']['dispo'] - ($h['eur']['dispo'] + $g['eur']['dispo'])) < 0.2);
+$APPELS_CLOTURE = 0;
+$f2 = ep_verification_flux();
+verifie('la deuxième ouverture lit les journées gravées, sans rien recalculer', $APPELS_CLOTURE === 0 && abs($f2['reseau']['eur']['dispo'] - $f['reseau']['eur']['dispo']) < 0.01);
+$_GET = ['vue' => 'jour', 'date' => $sem[2], 'shop' => '4'];
+$fj = ep_verification_flux();
+verifie('un magasin, un jour : produit par produit, les plus gros écarts d’abord', count($fj['produits'] ?? []) === 2 && $fj['produits'][0]['nom'] === 'FlipFlap - Club' && ($fj['journee']['clotureEnregistree'] ?? false) === true);
+verifie('un magasin : par catégorie sur la période', count($fj['categories'] ?? []) === 2);
+$_GET = ['vue' => 'semaine', 'date' => $sem[2]];
+$fu = ep_verification_fuites();
+$cats4 = array_column(array_values(array_filter($fu['magasins'], static fn ($m) => $m['id'] === '4'))[0]['categories'], 'cat');
+$cats3 = array_column(array_values(array_filter($fu['magasins'], static fn ($m) => $m['id'] === '3'))[0]['categories'], 'cat');
+verifie('fuites : un tableau par magasin, mêmes catégories dans le même ordre', $cats4 === $cats3 && count($cats4) === 3, json_encode([$cats4, $cats3], JSON_UNESCAPED_UNICODE));
+$fh = array_values(array_filter($fu['magasins'], static fn ($m) => $m['id'] === '4'))[0];
+$sand = array_values(array_filter($fh['categories'], static fn ($c) => $c['cat'] === 'Sandwiches'))[0];
+verifie('le delta d’une catégorie est la somme des non-expliqués de ses journées (8 pièces × 7 jours)', abs($sand['pcs']['nonExpl'] - 56) < 1e-9 && abs($sand['eur']['nonExpl'] - 280) < 1e-9);
+verifie('une catégorie que le magasin ne vend pas reste dans son tableau, vide', count(array_filter($fh['categories'], static fn ($c) => $c['cat'] === 'Pain' && $c['pcs']['dispo'] == 0)) === 1);
+verifie('la matrice croise catégories et magasins', count($fu['matrice']) === 3 && isset($fu['matrice'][0]['magasins']['4'], $fu['matrice'][0]['magasins']['3']));
+$_GET = [];
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko > 0 ? 1 : 0);

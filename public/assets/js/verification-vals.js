@@ -44,6 +44,39 @@ function exporter(lignes, d){
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
+/** La fiche d'un produit (sa recette, ses prix, ses signalements) : ouverte au clic dans la liste. */
+function vrFiche(app, pid){
+  app.setState({ vrFiche: { pid, chargement: true, d: null } });
+  readOne('/verification/recettes/fiche?pid=' + encodeURIComponent(pid)).then(d => {
+    if (((app.state.vrFiche || {}).pid) !== pid) { return; }
+    app.setState({ vrFiche: { pid, chargement: false, d: d || { error: 'injoignable' } } });
+  });
+}
+
+/** Les valeurs de la fiche ouverte. */
+function valsFiche(app){
+  const F = app.state.vrFiche;
+  if (!F) { return null; }
+  const fermer = () => app.setState({ vrFiche: null });
+  if (F.chargement || !F.d) { return { chargement: true, fermer }; }
+  const d = F.d;
+  if (d.error || d.indispo) { return { erreur: d.motif || 'La fiche n’a pas pu être lue.', fermer }; }
+  const mags = d.magasins || [];
+  const r = d.recette;
+  return {
+    fermer, nom: d.nom || ('Produit ' + d.pid), cat: d.cat || '', rid: d.rid, lien: d.lienPanel || null,
+    signalements: (d.signalements || []).map(l => ({ nom: l.nomRegle, classe: CLASSES[l.regle] || 'pb-orph', detail: l.detail, magasins: (l.magasins || []).join(' · ') })),
+    magasins: mags.map(m => ({ nom: m.nom, present: m.present, cout: m.cout == null ? '—' : fE(m.cout, 2), prix: m.prixHt == null ? '—' : fE(m.prixHt, 2), coef: m.coef == null ? '—' : '×' + nf(m.coef, 2),
+      food: m.food == null ? '—' : pc(m.food), ton: m.food == null ? 'mu' : (m.food >= 100 || m.food < 5 ? 'ko' : (m.food > 40 ? 'att' : 'ok')),
+      portion: m.divisible ? (m.part > 0 && m.part < 1 ? 'portion ' + nf(m.part * 100) + ' %' : 'portion sans part') : '' })),
+    entetes: mags.map(m => m.nom),
+    recette: r ? { nom: r.nom, rendement: r.rendement == null ? '1' : nf(r.rendement, 2), total: fE(r.total, 2), luDans: r.luDans || '', complet: r.complet,
+      lignes: (r.lignes || []).map(l => ({ nom: l.nom || ('matière ' + l.mid), sous: l.sous || '', qte: l.q == null ? '—' : nf(l.q, l.q < 1 ? 3 : 2) + ' ' + (l.u || ''),
+        cout: l.cout == null ? '—' : fE(l.cout, 3), part: l.part == null ? '' : pc(l.part, 0), lourde: (l.part || 0) > 50,
+        prix: mags.map(m => { const p = (l.prixMagasins || {})[m.id]; return p === 'inconnu' ? { txt: '?', ton: 'mu' } : (p == null ? { txt: 'sans prix', ton: 'ko' } : { txt: nf(p, p < 1 ? 4 : 2), ton: '' }); }) })) } : null,
+  };
+}
+
 export function valsVerification(app, common){
   const S = app.state;
   vrCharge(app, false);
@@ -57,6 +90,7 @@ export function valsVerification(app, common){
     erreur: brut && brut.error ? 'Le serveur du cockpit n’a pas répondu : réessayez dans un instant.' : null,
     indispo: brut && brut.indispo ? brut.motif : null,
     rafraichir: () => vrCharge(app, true),
+    fiche: valsFiche(app),
   };
   common.vr = v;
   if (!d) { return; }
@@ -71,7 +105,7 @@ export function valsVerification(app, common){
   let L = regle ? dansShop.filter(l => l.regle === regle) : dansShop.slice();
   if (tri === 'depuis') { L.sort((a, b2) => String(a.depuis || '').localeCompare(String(b2.depuis || '')) || (b2.ca || 0) - (a.ca || 0)); }
   else if (tri === 'nom') { L.sort((a, b2) => String(a.nom).localeCompare(String(b2.nom), 'fr')); }
-  const lien = rid => d.lienRecette && rid ? d.lienRecette.replace('{rid}', rid).replace('{id}', rid) : null;
+  const lien = (pid, rid) => d.lienRecette && pid ? d.lienRecette.replace('{pid}', pid).replace('{id}', pid).replace('{rid}', rid || '') : null;
   const mags = d.magasins || [];
   v.lignes = L.map((l, i) => {
     const dj = jour(l.depuis);
@@ -81,7 +115,8 @@ export function valsVerification(app, common){
       ca: l.ca > 0 ? fE(l.ca) : null, caBrut: l.ca > 0 ? l.ca : null, valeur: l.valeur ? fE(l.valeur) + ' en stock' : null, valeurBrute: l.valeur || null,
       magasinsTxt: (l.magasins || []).length === mags.length && mags.length > 2 ? 'les ' + mags.length + ' magasins' : (l.magasins || []).join(' · '),
       depuis: jours == null ? '' : (jours === 0 ? 'aujourd’hui' : jours + ' j'), depuisDate: l.depuis || '', depuisTitre: l.depuis ? 'repérée le ' + jjmm(l.depuis) : '',
-      rid: l.rid || null, lien: lien(l.rid), formule: !!l.formule };
+      rid: l.rid || null, lien: lien(l.pid, l.rid), formule: !!l.formule, pid: l.pid || null,
+      ouvrir: l.pid ? () => vrFiche(app, l.pid) : null };
   });
   v.formules = { on: avecF, n: (shop ? toutes.filter(l => (l.shops || []).indexOf(shop) >= 0) : toutes).filter(l => l.formule).length,
     ca: fE(((d.couverture || {}).formules || {}).ca), basculer: () => app.setState({ vrFormules: !avecF }) };

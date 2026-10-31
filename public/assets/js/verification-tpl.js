@@ -38,7 +38,7 @@ export function tplVerification(c, x){
   } else {
     corps = `<div class="vr-tw"><table class="vr-t"><thead><tr><th class="g" style="width:34px">#</th><th class="g">Produit</th><th class="g">Problème</th><th class="g">Ce qui cloche</th><th>CA concerné<small>30 jours</small></th><th class="g">Magasins</th><th>Repérée<small>depuis</small></th><th></th></tr></thead><tbody>
       ${v.lignes.map(l => `<tr><td class="g"><span class="vr-rang${l.haut ? ' h' : ''}">${l.rang}</span></td>
-        <td class="g nom"><b>${esc(l.nom)}</b>${l.cat || l.formule ? `<small>${esc(l.cat)}${l.formule ? `${l.cat ? ' · ' : ''}<span class="vr-tag">formule</span>` : ''}</small>` : ''}</td>
+        <td class="g nom${l.ouvrir ? ' vr-ouvre' : ''}"${l.ouvrir ? ` ${x.A(l.ouvrir)} title="Ouvrir la recette"` : ''}><b>${esc(l.nom)}</b>${l.cat || l.formule ? `<small>${esc(l.cat)}${l.formule ? `${l.cat ? ' · ' : ''}<span class="vr-tag">formule</span>` : ''}</small>` : ''}</td>
         <td class="g"><span class="vr-pb ${l.classe}">${esc(l.nomRegle)}</span></td>
         <td class="g vr-det">${esc(l.detail)}</td>
         <td>${l.ca ? `<b>${esc(l.ca)}</b>` : (l.valeur ? `<span class="vr-mu">${esc(l.valeur)}</span>` : '<span class="vr-mu">—</span>')}</td>
@@ -48,5 +48,28 @@ export function tplVerification(c, x){
       </tbody></table></div>`;
   }
   const pied = `<div class="vr-pied"><b>Les règles</b>, magasin par magasin, sur les produits vendus ces trente jours : <b>pas de recette</b> (produit vendu sans recette au panel) · <b>formule sans ses produits</b> (une formule ou une promotion vendue comme un seul article : ses produits doivent sortir sur le ticket, chacun à prix réduit — promotion « bundle » du panel) · <b>recette vide</b> (aucune ligne) · <b>matière sans prix</b> (dans un magasin qui vend le produit) · <b>coût invraisemblable</b> (coût de la pièce sous ${esc(v.seuilMin)} ou au-dessus du prix HT) · <b>hors norme du réseau</b> (plus de 40 % d’écart à la médiane des autres magasins) · <b>unité suspecte</b> (une ligne pèse plus de la moitié du coût, et ×1000 ou ÷1000 la ramène dans un coût plausible) · <b>rendement à zéro</b> · <b>portion sans fraction</b> · <b>matière jamais en recette</b> (en stock, employée par aucune recette vendue). Une même pièce ne porte que l’explication la plus précise. « Repérée depuis » : le premier jour où le cockpit l’a vue ; une ligne disparaît d’elle-même quand la recette est corrigée au panel. Lecture seule : rien n’est écrit au panel. <span class="vr-mu">${esc(v.source)}</span></div>`;
-  return `<div data-screen="verification-recettes" class="vr">${haut}<div class="vr-card">${couverture}${chips}${filtres}${corps}${pied}</div></div>`;
+  return `<div data-screen="verification-recettes" class="vr">${haut}<div class="vr-card">${couverture}${chips}${filtres}${corps}${pied}</div>${tplFiche(v.fiche, x)}</div>`;
+}
+
+/** Le volet de la recette d'un produit, ouvert au clic sur son nom. */
+function tplFiche(F, x){
+  if (!F) { return ''; }
+  const { esc } = x;
+  const tete = (titre, sous) => `<div class="vr-fi-t"><div><b>${titre}</b>${sous ? `<small>${sous}</small>` : ''}</div><button class="vr-x" ${x.A(F.fermer)} aria-label="Fermer">×</button></div>`;
+  let corps;
+  if (F.chargement) { corps = tete('Lecture de la recette…', '') + `<div class="vr-etat"><span class="vr-roue"></span>La recette, les prix de chaque magasin, le produit dans chaque magasin.</div>`; }
+  else if (F.erreur) { corps = tete('Fiche indisponible', '') + `<div class="vr-etat ko">${esc(F.erreur)}</div>`; }
+  else {
+    const R = F.recette;
+    corps = tete(esc(F.nom), esc(F.cat) + (F.rid ? ' · recette ' + F.rid : ' · aucune recette au panel'))
+      + `<div class="vr-fi-act">${F.lien ? `<a class="vr-lien" href="${esc(F.lien)}" target="_blank" rel="noopener">Ouvrir au panel pour corriger ↗</a>` : ''}<span class="vr-mu">La correction se fait au panel ; l’écriture depuis le cockpit viendra une fois son format mesuré.</span></div>`
+      + (F.signalements.length ? `<div class="vr-fi-s">${F.signalements.map(s => `<div><span class="vr-pb ${s.classe}">${esc(s.nom)}</span> ${esc(s.detail)} <span class="vr-mu">${esc(s.magasins)}</span></div>`).join('')}</div>` : '')
+      + `<div class="vr-fi-h">Dans chaque magasin</div><table class="vr-t"><thead><tr><th class="g">Magasin</th><th>Coût<small>de la pièce</small></th><th>Prix HT<small>de la pièce</small></th><th>Coefficient</th><th>Matière<small>% du prix</small></th><th class="g"></th></tr></thead><tbody>
+        ${F.magasins.map(m => `<tr><td class="g nom"><b>${esc(m.nom)}</b></td>${m.present ? `<td>${m.cout}</td><td>${m.prix}</td><td>${m.coef}</td><td><span class="vx-p ${m.ton}">${m.food}</span></td><td class="g vr-mu">${esc(m.portion)}</td>` : '<td colspan="5" class="g vr-mu">pas proposé dans ce magasin</td>'}</tr>`).join('')}</tbody></table>`
+      + (R ? `<div class="vr-fi-h">La recette « ${esc(R.nom)} » — ${R.lignes.length} ligne${R.lignes.length > 1 ? 's' : ''}, ${esc(R.total)} la pièce${R.luDans ? ' (prix de ' + esc(R.luDans) + ')' : ''}, rendement ${esc(R.rendement)}</div>
+        ${R.lignes.length ? `<div class="vr-tw"><table class="vr-t"><thead><tr><th class="g">Matière</th><th>Quantité<small>par pièce</small></th><th>Coût</th><th>Part</th>${F.entetes.map(n => `<th>${esc(n)}<small>prix / unité</small></th>`).join('')}</tr></thead><tbody>
+        ${R.lignes.map(l => `<tr${l.lourde ? ' class="vr-lourde"' : ''}><td class="g nom"><b>${esc(l.nom)}</b>${l.sous ? `<small>sous-recette ${esc(l.sous)}</small>` : ''}</td><td>${esc(l.qte)}</td><td>${l.cout}</td><td>${l.part}</td>${l.prix.map(p => `<td>${p.ton ? `<span class="vx-p ${p.ton}">${esc(p.txt)}</span>` : esc(p.txt)}</td>`).join('')}</tr>`).join('')}
+        </tbody></table></div>` : `<div class="vr-vide">La recette n’a aucune ligne.</div>`}` : (F.rid ? `<div class="vr-vide">La recette n’a pas pu être lue.</div>` : `<div class="vr-vide">Ce produit n’a pas de recette au panel : à créer et à rattacher au produit.</div>`));
+  }
+  return `<div class="vr-voile" ${x.A(F.fermer)}></div><div class="vr-fiche">${corps}</div>`;
 }

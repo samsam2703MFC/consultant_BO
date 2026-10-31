@@ -2388,6 +2388,9 @@ function ep_rapports_cron(): array
     $verification = 'module absent';
     try { if (function_exists('vfCron')) { $verification = vfCron(); } }
     catch (Throwable $eV) { $verification = 'échec — ' . $eV->getMessage(); }
+    // Vérification, lot 2 : les journées closes de l'audit des flux qui manquent, par lots.
+    try { if (function_exists('vxCron')) { $verification .= ' · flux : ' . vxCron(); } }
+    catch (Throwable $eX) { $verification .= ' · flux : échec — ' . $eX->getMessage(); }
     // Le Résultat d'aujourd'hui se recalcule au même battement : le premier écran du matin le trouve prêt.
     $resultat = 'module absent';
     try { if (function_exists('exPrechauffer')) { $resultat = exPrechauffer(); } }
