@@ -232,6 +232,18 @@ lecture seule, GET uniquement, et le contrat mesuré est noté dans `docs/contra
 
 ## 5. La base quotidienne
 
+**Livré le 31/10 (lot 3)** : la table `ceo_verif_jour` existe, créée par le code au premier appel
+(`src/verification_base.php`, `CREATE TABLE IF NOT EXISTS`). Une ligne par magasin et par jour, deux familles de
+colonnes : l'audit des flux de la journée (`dispo_eur`, `vendu_eur`, `poubelle_eur`, `invendu_eur`, `nonexpl_eur`,
+`mesure_eur`, les mêmes en pièces, `lignes`, `cuissons_validees`, `cuissons`, `cloture`, `comptes`, `flux_le`) — écrite
+dès qu'une journée est calculée et rattrapée par le cron horaire depuis les journées gravées (84 jours, pas avant le
+12/09, six semaines après le début des ventes gravées) ; et la photo du jour de la couverture des recettes
+(`recettes_ca_total`, `recettes_ca_fiable`, `recettes_signalees`, `recettes_le`) — prise par le cron quand toutes les
+recettes sont lues. Les sept derniers jours sont recalculés chaque jour ; rien ne s'efface. Les colonnes d'entrée
+(commandes validées), de matière et de CA ci-dessous viendront avec les lots 4 et 5.
+
+Le schéma prévu au départ :
+
 On n'enregistre que des **agrégats calculés par le cockpit**, jamais une copie des
 sources, comme le font déjà `pvMois` et `svP`. Tables créées par `installer.php`
 (`CREATE TABLE IF NOT EXISTS`) :
@@ -358,7 +370,7 @@ recette se voit comme une amélioration, à partir du jour où elle a eu lieu.
 | **0. Sonde** | Mesurer les routes « à sonder » (§ 4), écrire le contrat | compte panel | S |
 | **1. Recettes à corriger** — **livré le 31/10** | La liste et ses neuf règles, la couverture, le registre ; écran `#/verification/recettes`, route `GET /verification/recettes` (contrat : `docs/contrat-api.md`), lecture des recettes par le cron horaire, tests `bin/tests_verification.php` | routes déjà connues | M |
 | **2. Audit des flux + Fuites (produits finis)** — **livré le 31/10** | Écrans `#/verification/flux` (réseau, magasin, jour · semaine · mois) et `#/verification/fuites` (matrice + un tableau par magasin) ; journées gravées, cron horaire ; « mesuré » ou « estimé » selon les cuissons validées | données déjà lues | M |
-| **3. Base quotidienne + Évolution** | Tables, cron 4 h 30, recalcul sur 7 jours, onglet Évolution | lot 2 | M |
+| **3. Base quotidienne + Évolution** — **livré le 31/10** | Table `ceo_verif_jour` (§ 5), remplie par le cron horaire, sept derniers jours recalculés ; écran `#/verification/evolution` : un indicateur semaine par semaine (8, 12 ou 26 semaines), un trait par magasin et le réseau, pointillé quand la semaine n'est qu'estimée ; « avant, maintenant » (les premières semaines face aux dernières : mieux, moins bien, stable) ; route `GET /verification/evolution` | lot 2 | M |
 | **4. Matières ↔ recettes** | Inventaires, livraisons, recettes dépliées, tolérances, attribution ; Fuites en matières | lots 0 et 1 | L |
 | **5. Chiffre d'affaires** | Caisse, P&L, redevances, CA attendu, lignes sans produit, annulations, anomalies | lots 0 et 4 | M |
 | ~~6. Alertes~~ | **Pas pour l'instant (31/10).** Plus tard : un magasin rouge deux jours de suite, une commande livrée non validée depuis 24 h | lot 3 | S |

@@ -367,12 +367,13 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
 {
     $info = [];          // pid => produit de référence (le premier magasin qui le connaît)
     foreach ($D as $sid => $ps) { foreach ($ps as $pid => $p) { $info[$pid] ??= $p; } }
-    $caTot = 0.0; $caParPid = []; $fTot = 0.0;
+    $caTot = 0.0; $caParPid = []; $fTot = 0.0; $parShop = [];
     $aLire = []; $caRid = [];                         // rid => magasin de référence (celui qui vend le plus)
     foreach ($V as $sid => $ps) {
         foreach ($ps as $pid => $v) {
             if (($v['ca'] ?? 0) <= 0) { continue; }
             $caTot += $v['ca']; $caParPid[$pid] = ($caParPid[$pid] ?? 0) + $v['ca'];
+            $parShop[$sid]['tot'] = ($parShop[$sid]['tot'] ?? 0.0) + $v['ca'];
             if (isset($F[$pid])) { $fTot += $v['ca']; }
             $rid = ($D[$sid][$pid]['recette'] ?? null) ?: ($info[$pid]['recette'] ?? null);
             if ($rid && (!isset($caRid[$rid]) || $v['ca'] > $caRid[$rid])) { $caRid[$rid] = $v['ca']; $aLire[$rid] = $sid; }
@@ -502,7 +503,7 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
             foreach ($cand as $regle => [$detail, $extra]) { $ajoute($regle, $pid, $sid, $ca, $detail, $base + ['rid' => $rid] + $extra); }
             if ($cand !== []) { $nonFiable[$k] = true; }
             elseif ($r === null) { $caARelire += $ca; if (isset($F[$pid])) { $fARelire += $ca; } }
-            if ($cand === []) { $caFiable += $ca; if (isset($F[$pid])) { $fFiable += $ca; } }
+            if ($cand === []) { $caFiable += $ca; $parShop[$sid]['fiable'] = ($parShop[$sid]['fiable'] ?? 0.0) + $ca; if (isset($F[$pid])) { $fFiable += $ca; } }
         }
     }
 
@@ -572,7 +573,17 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
             'horsFormules' => ['caTotal' => round($hTot, 2), 'caFiable' => round($hFiable, 2), 'caManquant' => round($hManquant, 2), 'caARelire' => round($caARelire - $fARelire, 2),
                 'pct' => $hTot > 0 ? round(100 * $hFiable / $hTot, 1) : null, 'partTop10' => $hManquant > 0 ? round(100 * min($top10h, $hManquant) / $hManquant, 0) : null,
                 'produits' => count($vusH)],
-            'formules' => ['ca' => round($fTot, 2), 'produits' => count(array_intersect_key($F, $caParPid))]],
+            'formules' => ['ca' => round($fTot, 2), 'produits' => count(array_intersect_key($F, $caParPid))],
+            // Par magasin (lot 3 : la photo quotidienne de la couverture, base de l'Évolution).
+            'parShop' => (static function () use ($parShop, $lignes): array {
+                $o = [];
+                foreach ($parShop as $sid => $x) {
+                    $tot = (float) ($x['tot'] ?? 0); $fi = (float) ($x['fiable'] ?? 0);
+                    $o[(string) $sid] = ['caTotal' => round($tot, 2), 'caFiable' => round($fi, 2), 'pct' => $tot > 0 ? round(100 * $fi / $tot, 1) : null,
+                        'signalements' => count(array_filter($lignes, static fn ($l) => in_array((string) $sid, $l['shops'], true)))];
+                }
+                return $o;
+            })()],
         'parRegle' => $parRegle,
         'recettes' => ['vendues' => $nRid, 'lues' => $nLues, 'orphJugees' => $orphJuge],
         'aLire' => array_diff_key($aLire, $R),
@@ -822,6 +833,10 @@ function vfCron(): string
     @set_time_limit(300);
     $a = vfAnalyse(VF_BUDGET_CRON);
     $r = $a['recettes'];
+    // Lot 3 : la couverture du jour, magasin par magasin, dans la base quotidienne — seulement quand toutes les
+    // recettes sont lues (sinon la couverture est provisoire) ; le dernier passage complet du jour fait foi.
+    $photo = '';
+    if (!empty($r['complet']) && function_exists('vjPhotoRecettes')) { $photo = ' · photo du jour : ' . vjPhotoRecettes((array) ($a['couverture']['parShop'] ?? [])) . ' magasin(s)'; }
     return $r['luesCePassage'] . ' recette(s) lue(s), ' . $r['lues'] . '/' . $r['vendues'] . ' en cache, ' . $a['total'] . ' signalement(s), couverture '
-        . ($a['couverture']['pct'] === null ? '—' : number_format((float) $a['couverture']['pct'], 1, ',', '') . ' %');
+        . ($a['couverture']['pct'] === null ? '—' : number_format((float) $a['couverture']['pct'], 1, ',', '') . ' %') . $photo;
 }

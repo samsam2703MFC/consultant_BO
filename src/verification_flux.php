@@ -30,7 +30,9 @@ declare(strict_types=1);
 const VX_SEC_DEMANDE = 20;        // secondes de calcul au plus par ouverture d'écran
 const VX_BUDGET_CRON = 40;        // journées calculées au plus par battement du cron
 const VX_SEC_CRON = 120;          // et secondes au plus
-const VX_JOURS_CRON = 35;         // le cron remplit les cinq dernières semaines
+const VX_JOURS_CRON = 84;         // le cron remplit les douze dernières semaines (l'Évolution, lot 3)…
+const VX_RECUL_BASE = 42;         // …mais pas avant six semaines de ventes moissonnées : le plan d'un jour lit les six
+                                  // semaines d'avant, et la moisson commence le 1er août (SV_DEBUT)
 const VX_MESURE_MIN = 50.0;       // % du disponible mesuré pour qualifier une fuite
 const VX_SEUILS = ['n' => [3.0, 6.0], 'p' => [6.0, 9.0], 'i' => [8.0, 12.0]];   // décision du 31/10/2026 : 3 % / 6 %
 
@@ -87,15 +89,17 @@ function vxJour(int $sid, string $date, bool $calculer): ?array
     $cle = 'vxJ:' . $sid . ':' . $date;
     $sig = vxSig($sid, $date);
     try { $g = setting($cle); } catch (Throwable $e) { $g = null; }
-    if (vxGraveValide($g, $date, $sig)) { return $g['j']; }
-    if (!$calculer) { return is_array($g) && is_array($g['j'] ?? null) ? $g['j'] + ['perime' => true] : null; }
+    if (vxGraveValide($g, $date, $sig)) { return $g['j'] + ['_q' => (int) $g['quand']]; }
+    if (!$calculer) { return is_array($g) && is_array($g['j'] ?? null) ? $g['j'] + ['perime' => true, '_q' => (int) ($g['quand'] ?? 0)] : null; }
     $j = vxJourCalcule($sid, $date);
     if ($j === null) { return null; }
     try {
         $v = json_encode(['quand' => time(), 'sig' => $sig, 'j' => $j], JSON_UNESCAPED_UNICODE);
         if ($v !== false) { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, $v]); }
     } catch (Throwable $e) { /* sans gravure : recalculée la prochaine fois */ }
-    return $j;
+    // Lot 3 : la journée entre aussi dans la base quotidienne (ceo_verif_jour).
+    if (function_exists('vjEnregistre')) { vjEnregistre($sid, $date, $j); }
+    return $j + ['_q' => time()];
 }
 
 /**
@@ -320,11 +324,15 @@ function vxCron(): string
     $mags = function_exists('vfMagasins') ? vfMagasins() : [];
     if ($mags === []) { return 'aucun magasin'; }
     @set_time_limit(300);
+    $plancher = date('Y-m-d', strtotime((defined('SV_DEBUT') ? SV_DEBUT : '2026-08-01') . ' +' . VX_RECUL_BASE . ' day'));
     $jours = [];
-    for ($i = VX_JOURS_CRON; $i >= 1; $i--) { $jours[] = date('Y-m-d', strtotime('-' . $i . ' day')); }
+    for ($i = VX_JOURS_CRON; $i >= 1; $i--) { $j = date('Y-m-d', strtotime('-' . $i . ' day')); if ($j >= $plancher) { $jours[] = $j; } }
+    if ($jours === []) { return 'aucune journée à calculer'; }
     $n = 0;
     $C = vxCollecte(array_keys($mags), $jours, VX_SEC_CRON, $n, VX_BUDGET_CRON);
+    // Lot 3 : ce qui était gravé avant la base quotidienne (ou plus récent qu'elle) y entre.
+    $rattrapees = function_exists('vjRattrape') ? vjRattrape($C) : 0;
     $reste = 0;
     foreach ($C as $js) { foreach ($js as $g) { if ($g === null || !empty($g['perime'])) { $reste++; } } }
-    return $n . ' journée(s) calculée(s), ' . $reste . ' à calculer sur ' . (count($mags) * count($jours));
+    return $n . ' journée(s) calculée(s), ' . $reste . ' à calculer sur ' . (count($mags) * count($jours)) . ', ' . $rattrapees . ' entrée(s) dans la base quotidienne';
 }

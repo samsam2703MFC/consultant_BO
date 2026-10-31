@@ -3315,6 +3315,33 @@ lecture que ci-dessus. Gardé d'hier et gardé pour demain sont les sommes des j
 gardé pour demain, delta = sorti − ventes − poubelle = la somme des non-expliqués des jours. `matrice[]` : catégories ×
 magasins (et réseau).
 
+### `/verification/evolution` — la base quotidienne, semaine par semaine (Vérification, lot 3, 31/10/2026)
+
+Code : `src/verification_base.php` ; écran `#/verification/evolution` (`verification-evol-vals.js`, `-tpl.js`) ;
+maquette `docs/maquettes/verification/f.png` ; tests `bin/tests_verification.php` (section lot 3). Lecture seule.
+
+**La table `ceo_verif_jour`** (clé `shop_id`, `jour`) — des agrégats calculés par le cockpit, jamais une copie des
+sources :
+- l'audit des flux de la journée (lot 2) : `dispo_eur`, `vendu_eur`, `poubelle_eur`, `invendu_eur`, `nonexpl_eur`,
+  `mesure_eur` (la part du disponible venue de cuissons validées), au prix de vente ; `dispo_pcs` … `nonexpl_pcs` ;
+  `lignes`, `cuissons_validees`, `cuissons`, `cloture`, `comptes`, `flux_le`. Écrit par `vxJour` dès qu'une journée est
+  calculée, et par `vjRattrape` (cron horaire, `vxCron`) pour les journées gravées absentes ou plus récentes que la ligne ;
+- la couverture des recettes (lot 1) : `recettes_ca_total`, `recettes_ca_fiable`, `recettes_signalees`, `recettes_le` —
+  la photo du jour, par magasin, prise par `vfCron` quand toutes les recettes sont lues.
+
+`GET /verification/evolution[?semaines=12]` (4 à 26) : semaines ISO, la dernière étant celle d'hier.
+- `semaines[]` : `cle` (`2026-44`), `num` (`S44`), `du`, `au` ;
+- `magasins[]` : `id`, `nom`, `series` et `comparaison` ; `reseau` : `series` et `comparaison` ;
+- `series` : `poubelle`, `nonExpl`, `invendu`, `mesure` (en % du disponible, somme des journées sur somme des
+  disponibles), `recettes` (CA fiable / CA, en %), `estime` (vrai quand moins de 50 % du disponible est mesuré : produit =
+  plan) et `jours` — un tableau par indicateur, une valeur (ou `null`) par semaine ;
+- `comparaison` : par indicateur, `null` (moins de deux semaines renseignées) ou {`avant`, `apres`, `ecart` (points),
+  `sens` : `mieux` | `moins bien` | `stable` (moins de 0,3 point), `semaines` : le nombre de semaines moyennées de chaque
+  côté, au plus 4} — moins de poubelle, de non expliqué et d'invendu, c'est mieux ; plus de mesuré et de recettes fiables,
+  aussi ;
+- `indicateurs[]` {`code`, `nom`, `hautMieux`}, `base` {`lignes`, `premier`, `dernier`, `fluxLe`, `recettesLe`,
+  `magasins`, [`erreur`]}, `seuils` {`nonExpl` [3, 6], `poubelle` [6, 9], `mesureMin` 50}, `lu`, `source`.
+
 ## 2. Mapping base de données → écran → champ
 
 ### Tables existantes réutilisées (`franchise_buddy_db`)

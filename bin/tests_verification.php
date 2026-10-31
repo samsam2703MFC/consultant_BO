@@ -17,14 +17,20 @@ final class Db
     public static array $reglages = [];
     public static array $registre = [];
     public static array $shops = [];
+    public static array $verif = [];       // ceo_verif_jour : 'sid:jour' => colonnes
     public static function rows(string $sql, array $p = []): array
     {
         if (str_contains($sql, 'FROM shops')) { return self::$shops; }
+        if (str_contains($sql, 'FROM ceo_verif_jour')) { $r = array_values(array_filter(self::$verif, static fn ($x) => $x['jour'] >= ($p[0] ?? ''))); usort($r, static fn ($a, $b) => $a['jour'] <=> $b['jour']); return $r; }
         if (str_contains($sql, 'FROM ceo_verif_recette')) { return array_values(self::$registre); }
         return [];
     }
     public static function row(string $sql, array $p = []): ?array
     {
+        if (str_contains($sql, 'FROM ceo_verif_jour') && str_contains($sql, 'COUNT(*)')) {
+            $j = array_column(self::$verif, 'jour');
+            return ['n' => count(self::$verif), 'premier' => $j ? min($j) : null, 'dernier' => $j ? max($j) : null, 'flux' => null, 'rec' => null, 'mags' => count(array_unique(array_column(self::$verif, 'shop_id')))];
+        }
         if (str_contains($sql, 'FROM ceo_verif_recette') && str_contains($sql, 'COUNT(*)')) {
             $r = array_filter(self::$registre, static fn ($x) => $x['resolu_le'] !== null && $x['resolu_le'] >= $p[0]);
             return ['n' => count($r), 'd' => $r === [] ? null : min(array_column($r, 'resolu_le'))];
@@ -39,6 +45,16 @@ final class Db
             return 1;
         }
         if (str_starts_with($sql, 'UPDATE ceo_verif_recette SET resolu_le')) { self::$registre[$p[1]]['resolu_le'] = $p[0]; return 1; }
+        if (str_starts_with($sql, 'INSERT INTO ceo_verif_jour')) {
+            preg_match('/\(([^)]*)\) VALUES/', $sql, $m);
+            $cols = array_map('trim', explode(',', $m[1]));
+            $row = array_combine($cols, $p);
+            $k = $row['shop_id'] . ':' . $row['jour'];
+            $vide = ['dispo_eur' => null, 'vendu_eur' => null, 'poubelle_eur' => null, 'invendu_eur' => null, 'nonexpl_eur' => null, 'mesure_eur' => null, 'flux_le' => null,
+                'recettes_ca_total' => null, 'recettes_ca_fiable' => null, 'recettes_signalees' => null, 'recettes_le' => null];
+            self::$verif[$k] = array_merge($vide, self::$verif[$k] ?? [], $row);
+            return 1;
+        }
         return 0;
     }
 }
@@ -84,6 +100,7 @@ function ep_production_flux_cloture(): array
 
 require __DIR__ . '/../src/verification.php';
 require __DIR__ . '/../src/verification_flux.php';
+require __DIR__ . '/../src/verification_base.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -329,6 +346,38 @@ verifie('le delta d’une catégorie est la somme des non-expliqués de ses jour
 verifie('une catégorie que le magasin ne vend pas reste dans son tableau, vide', count(array_filter($fh['categories'], static fn ($c) => $c['cat'] === 'Pain' && $c['pcs']['dispo'] == 0)) === 1);
 verifie('la matrice croise catégories et magasins', count($fu['matrice']) === 3 && isset($fu['matrice'][0]['magasins']['4'], $fu['matrice'][0]['magasins']['3']));
 $_GET = [];
+
+echo "Lot 3 — base quotidienne et évolution\n";
+// Le parcours du lot 2 a déjà calculé 14 journées : chacune est entrée dans la base quotidienne.
+verifie('chaque journée calculée entre dans la base quotidienne', count(array_filter(Db::$verif, static fn ($x) => $x['dispo_eur'] !== null)) === 14 && isset(Db::$verif['4:' . $sem[2]]));
+verifie('le cron des recettes, analyse complète, a pris la photo du jour (une ligne par magasin)', isset(Db::$verif['4:' . date('Y-m-d')]['recettes_ca_total'], Db::$verif['3:' . date('Y-m-d')]['recettes_ca_total']));
+$r4 = Db::$verif['4:' . $sem[2]];
+verifie('la ligne porte l’audit au prix de vente et la part mesurée', abs($r4['dispo_eur'] - (100 * 1.2 + 20 * 5.0)) < 0.01 && abs($r4['mesure_eur'] - $r4['dispo_eur']) < 0.01 && (int) $r4['cloture'] === 1);
+verifie('Gosselies, sans cuissons validées : part mesurée nulle', abs((float) Db::$verif['3:' . $sem[2]]['mesure_eur']) < 0.01);
+// Le rattrapage : une journée gravée avant la base y entre ; une journée déjà à jour n'est pas réécrite.
+unset(Db::$verif['3:' . $sem[0]]);
+$CC = [3 => [$sem[0] => vxJour(3, $sem[0], false), $sem[1] => vxJour(3, $sem[1], false)]];
+verifie('le rattrapage remet ce qui manque, sans réécrire ce qui est à jour', vjRattrape($CC) === 1 && isset(Db::$verif['3:' . $sem[0]]));
+// La photo du jour de la couverture des recettes, par magasin.
+verifie('la photo du jour de la couverture s’écrit par magasin', vjPhotoRecettes(['4' => ['caTotal' => 1000, 'caFiable' => 900, 'signalements' => 3], '3' => ['caTotal' => 800, 'caFiable' => 560, 'signalements' => 9]]) === 2
+    && (float) Db::$verif['4:' . date('Y-m-d')]['recettes_ca_fiable'] === 900.0);
+$S12 = vjSemaines(12, '2026-10-30');
+verifie('douze semaines ISO, la dernière celle d’hier (S44 : 26/10 → 01/11)', count($S12) === 12 && $S12[11]['num'] === 'S44' && $S12[11]['du'] === '2026-10-26' && $S12[0]['num'] === 'S33');
+$rows = [];
+foreach (['2026-10-05' => 10.0, '2026-10-06' => 10.0, '2026-10-12' => 8.0, '2026-10-19' => 6.0, '2026-10-26' => 4.0] as $j => $pb) {
+    $rows[] = ['shop_id' => 4, 'jour' => $j, 'dispo_eur' => 100.0, 'vendu_eur' => 80.0, 'poubelle_eur' => $pb, 'invendu_eur' => 5.0, 'nonexpl_eur' => 15.0 - $pb, 'mesure_eur' => 100.0,
+        'recettes_ca_total' => null, 'recettes_ca_fiable' => null];
+}
+$rows[] = ['shop_id' => 4, 'jour' => '2026-10-27', 'dispo_eur' => null, 'vendu_eur' => null, 'poubelle_eur' => null, 'invendu_eur' => null, 'nonexpl_eur' => null, 'mesure_eur' => null, 'recettes_ca_total' => 1000.0, 'recettes_ca_fiable' => 930.0];
+$Sx = vjSeries($rows, array_slice($S12, -4), [4, 3]);
+verifie('la poubelle semaine par semaine : 10 → 8 → 6 → 4 %', $Sx['4']['poubelle'] === [10.0, 8.0, 6.0, 4.0], json_encode($Sx['4']['poubelle']));
+verifie('les recettes fiables viennent des photos du jour (une seule ici)', $Sx['4']['recettes'] === [null, null, null, 93.0]);
+verifie('un magasin sans données reste vide, le réseau suit le magasin', $Sx['3']['poubelle'] === [null, null, null, null] && $Sx['reseau']['poubelle'] === [10.0, 8.0, 6.0, 4.0]);
+$cmp = vjAvantApres($Sx['4']['poubelle'], false);
+verifie('avant / après : la poubelle baisse, c’est mieux', $cmp['avant'] === 9.0 && $cmp['apres'] === 5.0 && $cmp['sens'] === 'mieux', json_encode($cmp));
+verifie('la part mesurée qui monte, c’est mieux ; une seule valeur ne se compare pas', vjAvantApres([10.0, 40.0, 60.0], true)['sens'] === 'mieux' && vjAvantApres([null, 93.0], true) === null);
+$ev = ep_verification_evolution();
+verifie('l’évolution rend douze semaines, chaque magasin, le réseau et l’état de la base', count($ev['semaines']) === 12 && count($ev['magasins']) === 2 && isset($ev['reseau']['series']['poubelle']) && $ev['base']['lignes'] === count(Db::$verif));
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko > 0 ? 1 : 0);
