@@ -2111,3 +2111,9 @@ td .fm-barre { display: block; }
 .fm-tree__portee--marque ~ .fm-tree__poste.is-active { background: rgba(61, 90, 128, .1); color: #3d5a80; }
 .fm-tag--franchise { background: rgba(141, 29, 44, .08); color: var(--accent); }
 .fm-tag--marque { background: rgba(61, 90, 128, .12); color: #3d5a80; }
+
+/* Collisions (31/10/2026, signalées à 1117 px) : les boutons du titre passaient à la ligne et
+   touchaient l'escalier ; « 3 niv. » se coupait à côté des noms longs. */
+.fm-head { margin-bottom: 14px; }
+.fm-tree__poste > span:first-child, .fm-tree__niveau > span:first-child { min-width: 0; }
+.fm-tree__n { white-space: nowrap; flex: 0 0 auto; }
