@@ -191,5 +191,35 @@ verifie('carte : polyvalence 10 compétences, 1 personne sur les 3 métiers', $c
 verifie('carte : aucun nom de personne', !str_contains(json_encode($carte), '"A"') && !str_contains(json_encode($carte, JSON_UNESCAPED_UNICODE), '"nom":"B"'));
 verifie('carte : ce qui manque', $carte['manques']['sansFormation'] === 14 && $carte['manques']['sansProcedure'] === 16 && $carte['manques']['niveauxVides'] === ['Franchisé'], json_encode($carte['manques']));
 
+echo "\nCandidats franchisés du CRM\n";
+// Les tables du CRM (atelier-espace-candidat), telles que ses schémas et ses migrations les posent.
+$crmCand = ['id', 'position', 'name', 'email', 'zone', 'stage_idx', 'waiting', 'updated_label', 'closed', 'closure_note', 'closure_reason', 'closed_date',
+    'closed_stage_idx', 'closed_by', 'first_name', 'last_name', 'phone', 'lead_status', 'source', 'campaign_id', 'is_manual', 'notes_text', 'created_by',
+    'created_at', 'stage_changed_at', 'last_activity_at', 'auto_archived', 'person_status', 'converted_at', 'converted_by', 'lang', 'localite'];
+$tablesC = [
+    'ceo_prospect' => ['shop_id', 'place_id', 'nom'],
+    'ceo_scouting_candidate' => ['id', 'name', 'commune'],
+    'mar_crm_lead' => ['id', 'name', 'status'],
+    'cd_candidates' => ['id', 'first_name', 'last_name', 'email', 'password_hash', 'zone'],          // la vue de l'ancien nom
+    'crm_cd_candidates' => ['id', 'first_name', 'last_name', 'email', 'password_hash', 'age', 'zone', 'level', 'current_step', 'created_at'],
+    'crm_candidate_docs' => ['id', 'candidate_id', 'name'],
+    'crm_fl_leads' => ['id', 'first_name', 'last_name', 'email', 'phone', 'zone', 'created_at'],
+    'crm_fl_meta_leads' => ['id', 'first_name', 'last_name', 'email'],
+    'crm_candidates' => $crmCand,
+];
+$srcC = pcCrmChoisir($tablesC);
+verifie('le pipeline du CRM (crm_candidates) — pas les comptes de l’espace candidat, ni la page franchise, ni le cockpit', ($srcC['table'] ?? null) === 'crm_candidates', json_encode($srcC));
+verifie('ses colonnes, par rôle — ni e-mail ni téléphone', ($srcC['colonnes'] ?? []) === ['id' => 'id', 'prenom' => 'first_name', 'nom' => 'last_name', 'complet' => 'name',
+    'etape' => 'stage_idx', 'personne' => 'person_status', 'zone' => 'zone', 'le' => 'created_at', 'maj' => 'last_activity_at', 'ferme' => 'closed'], json_encode($srcC['colonnes'] ?? null));
+verifie('sans le pipeline : la page franchise plutôt que les comptes', pcCrmChoisir(array_diff_key($tablesC, ['crm_candidates' => 1]))['table'] === 'crm_fl_leads');
+verifie('ailleurs, « candidat » l’emporte sur « lead »', pcCrmChoisir(['crm_leads' => ['id', 'name'], 'candidats' => ['id', 'Nom', 'Prenom', 'Statut']])['table'] === 'candidats');
+verifie('colonnes en majuscules gardées telles quelles', pcCrmChoisir(['candidats' => ['ID', 'Nom', 'Prenom']])['colonnes'] === ['id' => 'ID', 'prenom' => 'Prenom', 'nom' => 'Nom']);
+verifie('sans identifiant ou sans nom : pas une table de candidats', pcCrmChoisir(['crm_candidates' => ['email', 'status']]) === null && pcCrmChoisir(['crm_candidates' => ['id', 'email']]) === null);
+verifie('pas de CRM dans la base : rien', pcCrmChoisir(['ceo_prospect' => ['id', 'nom'], 'crm_fl_meta_leads' => ['id', 'name'], 'mar_crm_lead' => ['id', 'name']]) === null);
+verifie('un nom de table douteux est écarté', pcCrmChoisir(['crm`; DROP_candidates' => ['id', 'name']]) === null);
+verifie('le nom : le nom complet du CRM, sinon prénom et nom', pcCrmNom(['complet' => 'Ana  Exemple', 'prenom' => '', 'nom' => '']) === 'Ana Exemple'
+    && pcCrmNom(['complet' => '', 'prenom' => 'Léo', 'nom' => 'Fictif']) === 'Léo Fictif' && pcCrmNom(['complet' => null, 'prenom' => null, 'nom' => null]) === '');
+verifie('statut lisible', pcCrmStatut('entretien_planifie') === 'Entretien planifie' && pcCrmStatut('') === null && pcCrmStatut(null) === null);
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko === 0 ? 0 : 1);
