@@ -701,6 +701,19 @@ const verdictFlux = (s, a) => {
     ${CMD.map(([f, c, le, val, n, part, t, txt]) => `<tr${t === 'ko' ? ' class="sel"' : ''}><td class="g nom"><b>ORD-3-${hex()}</b></td><td class="g">${f}${c ? '<span class="vf-est">centrale</span>' : ''}</td><td class="g mu">${le}</td><td class="g">${val ? `<span class="vf-v ok"><i></i>${val}</span>` : '<span class="vf-v ko"><i></i>pas validée</span>'}</td><td>${n}</td><td>${part ? eur(entG * part) : '<span class="mu">—</span>'}</td><td class="g wrap" style="font-size:11.5px">${txt}</td></tr>`).join('')}
     <tr class="tot"><td class="g">Entrées validées</td><td></td><td></td><td class="g">5 commandes</td><td>119</td><td>${eur(entG)}</td><td class="g" style="font-weight:400;font-size:11.5px">= l’Entré de l’audit des flux</td></tr></tbody></table>
     <div class="vf-pied">La commande se lit par /deliveries/{id} (aucune route ne liste les commandes : le cockpit balaie les identifiants récents, comme le suivi des achats). Sa date de validation est <code>delivered_on</code>, posée quand le magasin valide la réception (POST /orders/{id}/delivery). La commande ne porte aucun montant : chaque ligne validée est valorisée au prix du magasin (/shops/{id}/materials). Une commande livrée mais pas validée n’entre pas : ses matières ressortent en delta négatif, et la ligne le dit.</div></div>`;
+  // Les gestes à surveiller : ce que le panel a modifié à la main, repéré en comparant deux nuits.
+  const GESTES = [
+    ['mar. 20/10 14:12', 'ko', 'Stock corrigé à la main', 'Thon à l’huile : 3,0 → 5,0 kg (+53 €)', 'hors inventaire, sans commande validée', 'PATCH material-inventory'],
+    ['mer. 21/10 16:40', 'att', 'Prix saisi à la main', 'Beurre de tourage : 8,60 → 6,10 €/kg', 'le stock vaut 34 € de moins, le coût des recettes baisse', 'POST manual-price'],
+    ['jeu. 22/10 11:05', 'att', 'Livraison d’un fournisseur libre', '4 lignes, 186 €, déclarées par le magasin', 'aucun fournisseur ne la confirme', 'POST manual-open-deliveries'],
+    ['dim. 25/10 21:40', 'ko', 'Tickets modifiés après encaissement', '3 tickets, −42,60 €', 'lignes retirées après le paiement', 'PATCH transactions/{id}/products'],
+    ['lun. 26/10 09:05', 'ko', 'Inventaire modifié après coup', 'inventaire du 19/10 : 2 lignes changées (thon, jambon)', 'relu cette nuit, il n’est plus celui de la veille', 'PATCH stocktakings/{id}'],
+  ];
+  const gestesCard = `<div class="vf-card"><div class="vf-ct"><h3>Gestes à surveiller — Gosselies</h3><span class="s">ce qui a été modifié à la main au panel cette semaine · repéré en comparant deux nuits</span><span class="r"><span class="vf-v ko"><i></i>5 gestes, dont 3 rouges</span></span></div>
+    <table class="vf-t"><thead><tr><th class="g">Quand</th><th class="g">Geste</th><th class="g">Quoi</th><th class="g">Pourquoi c’est à regarder</th><th class="g">Trace au panel</th></tr></thead><tbody>
+    ${GESTES.map(([q, t, g, quoi, pq, tr]) => `<tr${t === 'ko' ? ' class="sel"' : ''}><td class="g nom"><b>${q}</b></td><td class="g"><span class="vf-v ${t}"><i></i>${g}</span></td><td class="g wrap" style="font-size:12px">${quoi}</td><td class="g wrap mu" style="font-size:11.5px">${pq}</td><td class="g"><code style="font-size:10.5px;background:#efe9e1;padding:1px 6px;border-radius:4px">${tr}</code></td></tr>`).join('')}
+    </tbody></table>
+    <div class="vf-pied">Le cockpit n’appelle jamais ces routes d’écriture : il garde chaque nuit une photo du stock, des prix et des inventaires, et compare avec la veille. Un stock qui remonte sans commande validée, un inventaire qui change ou disparaît, un prix saisi à la main, une livraison sans fournisseur pour la confirmer, un ticket modifié après paiement : autant de façons de faire disparaître un écart au lieu de l’expliquer.</div></div>`;
   const mtab = ({ s, T }) => {
     const ouv = MOUVRE[s.id];
     const ligneM = q => `<tr class="pr"><td class="g nom" style="padding-left:30px">${esc(q.nom)}<small>${nf(q.prix, Number.isInteger(Math.round(q.prix * 1e4) / 100) ? 2 : 4)} € / ${q.u}${q.note ? ` <span class="vf-est" style="background:#fbe3e6;color:#C0182B">livrée, pas validée</span>` : ''}</small></td>
@@ -725,6 +738,7 @@ const verdictFlux = (s, a) => {
   <div class="vf-card"><div class="vf-lect" style="border-bottom:none"><b>Semaine 43, en matières :</b> les quatre magasins ont validé ${eur(MR.entV)} de commandes entrantes. Sur la matière sortie des stocks, ${eur(MR.delV)} (${pc(MR.pct)}) n’est passée ni par une vente ni par une poubelle, recettes à l’appui. ${mordre[0].s.court} en porte ${nf(100 * mordre[0].T.delV / MR.delV, 0)} %. Même tableau pour chaque magasin, mêmes catégories dans le même ordre.</div></div>
   ${mmatrice}
   ${cmdCard}
+  ${gestesCard}
   ${mordre.map(mtab).join('')}
   <div class="vf-card"><div class="vf-pied" style="border-top:none">Stock début et stock fin : l’inventaire hebdomadaire du panel (le lundi avant l’ouverture) ; quand il manque, la photo du soir du stock matière (/shops/{id}/material-inventory, prise chaque nuit par le cockpit), et l’écran le dit. Entrées : les commandes entrantes validées à la réception dans la semaine, ligne par ligne, au prix du magasin. Sorti = début + entrées − fin : la matière consommée. Ventes × recettes et poubelle × recettes : les pièces vendues et jetées, dépliées par leurs recettes jusqu’à la matière (les pièces gardées d’une semaine à l’autre comptent avec les ventes). Delta = sorti − ventes − poubelle. Une recette fausse fait un faux delta : voir la bascule des recettes. Les emballages ne passent par aucune recette : suivis à part.</div></div>`;
   page({ fichier: 'g-matieres.html', titre: 'Fuites par magasin — matières premières', onglet: 'fuites', corps: corpsM });
@@ -738,7 +752,7 @@ fs.writeFileSync(path.join(D, 'planche.html'), `<!DOCTYPE html><html lang="fr"><
   ['a-jour', 'Audit des flux — un jour, produit par produit', 'Gardé d’hier, entré, produit, disponible ; vendu, poubelle, invendu, non expliqué — en pièces et en %.'],
   ['b', 'Audit des flux — un magasin, le mois', 'Jour par jour, le total de chaque semaine et du mois ; où ça fuit, par catégorie.'],
   ['g', 'Fuites par magasin — produits finis', 'Un tableau par magasin, la même structure : stock début + entrées (commandes validées) + produit − stock fin = sorti ; − ventes − poubelle = delta, par catégorie et par produit.'],
-  ['g-matieres', 'Fuites par magasin — matières premières', 'Le même tableau en matières : l’entrée est la commande validée à la réception ; les commandes de la semaine, une par une.'],
+  ['g-matieres', 'Fuites par magasin — matières premières', 'Le même tableau en matières : l’entrée est la commande validée à la réception ; les commandes de la semaine, une par une ; les gestes à surveiller.'],
   ['c', 'Matières ↔ recettes', 'Stock + entré − stock = consommé réel, face au théorique des recettes ; d’où vient l’écart.'],
   ['d', 'Chiffre d’affaires', 'Caisse, P&L, base des redevances, CA attendu par la matière ; les jours à regarder.'],
   ['e', 'La bascule : recettes douteuses ou manquantes', '37 recettes classées par CA concerné ; la couverture vers 100 %.'],

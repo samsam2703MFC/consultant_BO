@@ -150,11 +150,50 @@ vient de la base quotidienne ; une ligne disparaît d'elle-même quand la recett
 corrigée au panel. Le bouton « Ouvrir au panel » mène à la recette. **On n'écrit rien au
 panel.** La liste est **pour le CEO seul** (31/10) : pas d'envoi, un export suffit.
 
+### 3.6 Gestes à surveiller
+
+Une fuite peut se cacher derrière un geste d'écriture au panel, qui fait disparaître
+l'écart au lieu de l'expliquer. Le cockpit **n'appelle jamais ces routes** : il repère
+leur trace en comparant ce qu'il a lu la nuit précédente avec ce qu'il lit cette nuit.
+Chaque geste repéré s'affiche dans le tableau Fuites du magasin (encadré « Gestes à
+surveiller ») et se garde en base.
+
+| Geste au panel | Route d'écriture | Comment le cockpit le voit |
+|---|---|---|
+| Stock d'une matière corrigé à la main | `PATCH /shops/{id}/material-inventory/{matière}` | la quantité de la photo du soir change hors inventaire, et `last_modified` ne tombe pas sur un inventaire |
+| Stock remis à zéro | `PATCH /shops/{id}/material-inventory/erase` | toutes les quantités à 0 avec le même `last_modified` |
+| Inventaire annulé | `POST /shops/{id}/materials/stocktakings/revert-last` | un inventaire déjà lu disparaît de `/shops/{id}/materials/stocktakings` |
+| Inventaire modifié après coup | `PATCH /stocktakings/{id}` | les lignes relues de `/stocktakings/{id}` ne sont plus celles de la veille (empreinte) |
+| Stock d'un produit fini corrigé | `PATCH /shops/{id}/products/{pid}/inventory` | le stock lu sur `/shops/{id}/products/{pid}` change hors clôture (à mesurer) |
+| Prix d'une matière saisi à la main | `POST /materials/{id}/manual-price`, `PATCH /shops/{id}/materials/avg-price`, `POST /shops/{id}/suppliers/{f}/materials/price` | le prix de `/shops/{id}/materials` change sans nouvelle liste de prix du fournisseur ; il fausse la valeur du stock et le coût des recettes |
+| Livraison d'un fournisseur libre déclarée par le magasin | `POST /shops/{id}/manual-open-deliveries`, `POST /shops/{id}/manual-open-suppliers` | entrée sans confirmation d'un fournisseur : comptée, mais marquée « déclarée par le magasin » |
+| Commande corrigée à la réception | `PUT /material-suppliers/{f}/orders/{o}/final-items`, `POST …/documents/difference` | quantité validée ≠ quantité commandée (`comparison`) |
+| Ticket modifié après encaissement | `PATCH /transactions/{id}`, `PATCH /transactions/{id}/products`, `POST /transactions/{id}/corrections`, `POST /sales-corrections/{id}/cancel` | `/transactions/{id}/correction-state`, `/transactions/{id}/corrections`, `/shops/{id}/sales-corrections`, `/reports/sales/original-period-later-corrections` |
+| Recettes recalculées | `POST /shops/{id}/recipes/recalculate` | le coût des recettes du magasin change d'un coup : noté dans le registre des recettes |
+
+Recoupement côté fournisseur : `/material-suppliers/{f}/analytics/raw-material-sales` et
+`/analytics/revenue-by-shop` disent ce que le fournisseur a vendu à chaque magasin. On le
+compare aux commandes validées : « livré selon le fournisseur » face à « validé par le
+magasin ».
+
 ## 4. Les sources : routes du swagger du panel
 
 Le swagger se trouve à `https://atelierby.tfbuddy.com/api/swagger/openapi.json`. Il est
 public et compte 933 routes, dont 763 « runtime routes » **sans contrat documenté** : leur
 forme se mesure par sonde avant d'être codée.
+
+### La carte : inventory · order · material · sales · waste
+
+Les cinq familles de données de la vérification (relevé du 31/10). On ne **lit** que les
+routes GET ; les routes d'écriture servent à savoir quels gestes surveiller (§ 3.6).
+
+| Famille | Ce qu'on lit (GET) | Gestes d'écriture à surveiller |
+|---|---|---|
+| **inventory** (5 GET / 12) | `/shops/{id}/material-inventory` (stock courant, `last_modified`) · `/shops/{id}/materials/stocktakings` (liste des inventaires) · `/stocktakings/{id}` (lignes comptées) · `/materials/stocktakings/{id}/document` (PDF) · `/shops/{id}/material-suppliers/{f}/stock-minimum-items` | `PATCH …/material-inventory/{matière}` · `PATCH …/material-inventory/erase` · `POST …/stocktakings` (l'inventaire lui-même) · `POST …/stocktakings/revert-last` · `PATCH /stocktakings/{id}` · `POST …/stocktakings/verify-codes` · `PATCH /shops/{id}/products/{pid}/inventory` |
+| **order** (29 GET / 52) | `/deliveries/{id}` (seule lecture qui répond, mesuré) · `/orders/{id}` · `/shops/{id}/orders/{o}/supplier-fulfillment` · `/material-suppliers/{f}/orders/{o}/final-items` · `/comparison` · `/read-model` · `/material-suppliers/{f}/upcoming-deliveries` · `/shops/{id}/supplement-orders` · `/shops/{id}/material-requisitions` (+ `/list`) · `/material-requisitions/{id}` | `POST /orders/{id}/delivery` (**la validation = l'entrée**) · `PATCH /orders/{id}` · `POST /shops/{id}/manual-open-deliveries` · `POST /shops/{id}/manual-open-suppliers` · `POST /shops/{id}/suppliers/{f}/order` · `PUT …/final-items` · `POST …/documents/difference` |
+| **material** (118 GET / 251) | `/shops/{id}/materials` (prix du magasin, `source_type`) · `/shops/{id}/materials/pricing` · `/materials/{id}` · `/material-categories` · `/products/{pid}` → `id_recipe` · `/shops/{id}/recipes`, `/shops/{id}/recipes/{r}/cost` · `/recipes/flatten` · `/subrecipes` · `/material-suppliers/{f}/shops/{s}/price-lists/current` et `/latest` · `/material-suppliers/{f}/analytics/raw-material-sales` et `/revenue-by-shop` | `POST /materials/{id}/manual-price` · `PATCH /shops/{id}/materials/avg-price` · `POST /shops/{id}/suppliers/{f}/materials/price` · `POST /shops/{id}/recipes/recalculate` · `PATCH /materials/{id}` |
+| **sales** (54 GET / 66) | `/shops/{id}/transactions?date=` + `/transactions/{id}?include=products` · `/shops/{id}/statistics/sales/hourly-distribution/{date}` · `/consultant/shops/{id}/pnl/daily` · `/shops/{id}/sales-corrections` · `/transactions/{id}/corrections`, `/correction-state` · `/shops/{id}/reports/sales/original-period-later-corrections` · `/panel/sales-anomalies` · `/shops/{id}/reports/sales/monthly`, `/marge` · `/shops/{id}/products/available` | `PATCH /transactions/{id}` · `PATCH /transactions/{id}/products` · `POST /transactions/{id}/corrections` · `POST /sales-corrections/{id}/cancel` |
+| **waste** (4 GET / 4) | `/shops/{id}/products/waste` (par produit et motif) · `/shops/{id}/products/{pid}/waste` · `/products/waste-evidence/full/pdf` et `/general/pdf` (les preuves photo) | la caisse écrit la poubelle, la production et les reports par `POST /product-movements`. **Aucune lecture** des mouvements de production ni des reports : ils viennent du cockpit (cuissons validées, clôture) |
 
 ### Déjà lues et mesurées par le cockpit
 
@@ -178,7 +217,9 @@ forme se mesure par sonde avant d'être codée.
 
 | Donnée | Routes candidates |
 |---|---|
-| **Inventaires** (dates, lignes comptées) | `/shops/{id}/materials/stocktakings`, `/stocktakings/{id}`, `/materials/stocktakings/{id}/document` |
+| **Inventaires** (dates, lignes comptées, auteur) | `/shops/{id}/materials/stocktakings`, `/stocktakings/{id}`, `/materials/stocktakings/{id}/document` ; vérifier que `last_modified` de `/material-inventory` permet de distinguer un inventaire d'une correction à la main |
+| **Stock des produits finis** | ce que lit `/shops/{id}/products/{pid}` (et `/products/available`) après un `PATCH …/products/{pid}/inventory` |
+| **Recoupement fournisseur** | `/material-suppliers/{f}/analytics/raw-material-sales`, `/revenue-by-shop`, `/shops` : par magasin et par période ? en quantités ou en euros ? |
 | **Lignes validées des commandes** (quantités par matière, commandé ou validé) | les lignes dans `/deliveries/{id}` ? sinon `/material-suppliers/{f}/orders/{o}/final-items` (lignes finales après réception), `/comparison` (commandé face à livré), `/read-model`, `/shops/{id}/orders/{o}/supplier-fulfillment`. La validation elle-même est `POST /orders/{id}/delivery` (le geste du magasin) ; `POST /shops/{id}/manual-open-deliveries` couvre les fournisseurs libres (OPEN) ; `/shops/{id}/supplement-orders` les compléments |
 | **Recettes en masse** | `/recipes`, `/recipes/flatten`, `/recipes/{id}`, `/recipes/{id}/cost`, `/shops/{id}/recipes`, `/subrecipes`, `/products/{id}/portions` |
 | **Corrections et annulations** | `/shops/{id}/sales-corrections`, `/shops/{id}/reports/sales/original-period-later-corrections`, `/transactions/{id}/corrections` |
@@ -230,6 +271,27 @@ CREATE TABLE IF NOT EXISTS ceo_verif_matiere (
   unite VARCHAR(16), prix_unite DECIMAL(10,4), cause VARCHAR(24),
   PRIMARY KEY (shop_id, inv_debut, inv_fin, material_id)
 );
+-- La photo du soir du stock matière : base des « gestes à surveiller » (corrections, remise à zéro).
+CREATE TABLE IF NOT EXISTS ceo_verif_stock_jour (
+  shop_id INT NOT NULL, jour DATE NOT NULL, material_id INT NOT NULL,
+  quantite DECIMAL(12,3), last_modified DATETIME NULL, prix_unite DECIMAL(10,4), source_prix VARCHAR(16),
+  PRIMARY KEY (shop_id, jour, material_id)
+);
+-- Le registre des inventaires lus : un inventaire qui disparaît (annulé) ou change (modifié) se voit.
+CREATE TABLE IF NOT EXISTS ceo_verif_inventaire (
+  stocktaking_id INT NOT NULL PRIMARY KEY, shop_id INT NOT NULL, fait_le DATETIME,
+  lignes INT, valeur DECIMAL(10,2), empreinte CHAR(40),
+  premier_vu DATETIME NOT NULL, modifie_le DATETIME NULL, disparu_le DATETIME NULL,
+  KEY (shop_id, fait_le)
+);
+-- Les gestes repérés, un par ligne.
+CREATE TABLE IF NOT EXISTS ceo_verif_geste (
+  id INT AUTO_INCREMENT PRIMARY KEY, shop_id INT NOT NULL, vu_le DATETIME NOT NULL, jour DATE NOT NULL,
+  type VARCHAR(24) NOT NULL,                  -- stock_corrige, stock_efface, inventaire_annule, inventaire_modifie,
+                                              -- prix_manuel, livraison_libre, reception_corrigee, ticket_modifie
+  objet VARCHAR(160), avant VARCHAR(60), apres VARCHAR(60), valeur DECIMAL(10,2),
+  KEY (shop_id, jour)
+);
 -- Le registre des recettes douteuses : quand repérée, quand résolue.
 CREATE TABLE IF NOT EXISTS ceo_verif_recette (
   cle VARCHAR(80) NOT NULL,                   -- règle:produit (ou règle:matière)
@@ -252,8 +314,9 @@ Volume : environ 70 produits × 4 magasins × 365 jours, soit 100 000 lignes par
 2. il calcule la veille de chaque magasin et l'écrit (upsert) ;
 3. il **recalcule les sept jours d'avant**, pour absorber les corrections tardives, les
    cuissons validées après coup et les commandes validées en retard ;
-4. il prend la photo du soir de `/material-inventory` (le stock matière jour par jour,
-   même sans inventaire formel) ;
+4. il prend la photo du soir de `/material-inventory` et des prix de `/shops/{id}/materials`
+   (`ceo_verif_stock_jour`), relit la liste des inventaires (`ceo_verif_inventaire`), et
+   compare avec la veille pour repérer les gestes à surveiller (`ceo_verif_geste`, § 3.6) ;
 5. il passe les règles de recettes et met à jour `ceo_verif_recette` (premier vu,
    dernier vu, résolu) ;
 6. il écrit une ligne au journal (`journalAdd`).
