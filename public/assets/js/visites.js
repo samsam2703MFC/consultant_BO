@@ -40,8 +40,9 @@
   // system branding de la marque : affiche, leaflet, bâches, billboard… ; chaque point, une photo avec oui ou non ») :
   // un support par question, Oui (conforme) / Non, la photo exigée. Les supports viennent des réglages
   // (src/visites_questions.php, viCharteNormalise ; /visites/app → charte). Ceci n'est que le secours hors ligne.
-  // « Pas ce support ici » (pasIci) : le magasin n'a pas ce support — N/A, sans photo ni score.
-  const CH_PT = (ref, libelle, libelle_nl, aide, aide_nl, lieu, pasIci) => ({ ref, libelle, libelle_nl, aide, aide_nl, lieu, pasIci: pasIci !== false, type: 'ouinon', photo: true, photoExigee: true, score: true, poids: 1 });
+  // « Pas ce support ici » (pasIci) : le magasin n'a pas ce support — N/A, sans photo ni score. Un Non demande sa
+  // raison en commentaire (commentaireNon).
+  const CH_PT = (ref, libelle, libelle_nl, aide, aide_nl, lieu, pasIci) => ({ ref, libelle, libelle_nl, aide, aide_nl, lieu, pasIci: pasIci !== false, commentaireNon: true, type: 'ouinon', photo: true, photoExigee: true, score: true, poids: 1 });
   const CHARTE_Q = { id: 'charte', nom: 'Charte de communication', nom_nl: 'Huisstijl en communicatie', charte: true, points: [
     CH_PT('ch_billboard', 'Billboard et panneaux publicitaires conformes', 'Billboard en reclameborden conform', 'Campagne du réseau en cours, affiche intacte, éclairée s’il y a un éclairage.', 'Lopende netwerkcampagne, affiche intact, verlicht als er verlichting is.', 'ext'),
     CH_PT('ch_baches', 'Bâches et kakémonos conformes', 'Spandoeken en roll-ups conform', 'Visuel officiel, propres, bien tendus, sans déchirure ni décoloration.', 'Officiële visual, proper, goed gespannen, niet gescheurd of verkleurd.', 'ext'),
@@ -439,7 +440,7 @@
 .vi.tab .pt.t .act{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .vi.tab .pt.t .act .chip{min-height:38px;padding:0 12px;font-size:12.5px}
 /* La charte de communication (31/10/2026) : la photo exigée d'un support, tant qu'elle n'est pas prise. */
-.vi .chip.exige{border-color:#B26A00;color:#8a5200;background:#FFF4E5}
+.vi .chip.exige{border-color:#B26A00;color:#8a5200;background:#FFF4E5}.vi input.exige{border-color:#B26A00 !important;background:#FFF4E5}
 .vi .ch-intro{font-size:12px;color:var(--color-text-muted);margin:0 2px 8px;line-height:1.45}.vi.tab .ch-intro{font-size:13.5px;margin-bottom:12px}
 .vi.tab .pt.t .act input[type=text]{min-height:40px;font-size:13.5px !important;border-radius:10px}
 .vi.tab .pt.t input[type=number]{height:44px;width:84px !important;font-size:15px}
@@ -589,9 +590,9 @@
    */
   const LNG = {
     fr: { ok: 'OK', ko: 'Écart', na: 'N/A', oui: 'Oui', non: 'Non', rem: 'Remarque…', rep: 'La réponse…', photo: 'Photo', photos: 'photos', multi: 'plusieurs choix possibles', points: 'points', tous: '✓ Toutes les autres sont là', bornes: 'attendu', nc: 'non conforme',
-      phExige: 'Photo à prendre', chIntro: 'Le cahier des charges de communication et le design system de la marque, support par support : la photo, puis Oui (conforme) ou Non (manquant, abîmé, périmé ou hors charte). Sans photo, le support n’est pas vu. Le magasin n’a pas ce support : « Pas ce support ici », sans photo, hors score.', chExt: 'dehors', chInt: 'dedans', chAbsent: 'Pas ce support ici' },
+      phExige: 'Photo à prendre', chIntro: 'Le cahier des charges de communication et le design system de la marque, support par support : la photo, puis Oui (conforme) ou Non (manquant, abîmé, périmé ou hors charte). Sans photo, le support n’est pas vu ; un Non dit pourquoi en commentaire. Le magasin n’a pas ce support : « Pas ce support ici », sans photo, hors score.', chExt: 'dehors', chInt: 'dedans', chAbsent: 'Pas ce support ici', comNon: 'Pourquoi Non ? (obligatoire)' },
     nl: { ok: 'OK', ko: 'Afwijking', na: 'N.v.t.', oui: 'Ja', non: 'Nee', rem: 'Opmerking…', rep: 'Het antwoord…', photo: 'Foto', photos: 'foto’s', multi: 'meerdere keuzes mogelijk', points: 'punten', tous: '✓ Alle andere zijn aanwezig', bornes: 'verwacht', nc: 'niet conform',
-      phExige: 'Foto te nemen', chIntro: 'Het communicatielastenboek en het designsysteem van het merk, drager per drager: de foto, dan Ja (conform) of Nee (ontbreekt, beschadigd, verouderd of buiten de huisstijl). Zonder foto is de drager niet gezien. Heeft de winkel deze drager niet: « Hier niet aanwezig », zonder foto, buiten de score.', chExt: 'buiten', chInt: 'binnen', chAbsent: 'Hier niet aanwezig' }
+      phExige: 'Foto te nemen', chIntro: 'Het communicatielastenboek en het designsysteem van het merk, drager per drager: de foto, dan Ja (conform) of Nee (ontbreekt, beschadigd, verouderd of buiten de huisstijl). Zonder foto is de drager niet gezien; een Nee zegt waarom in een opmerking. Heeft de winkel deze drager niet: « Hier niet aanwezig », zonder foto, buiten de score.', chExt: 'buiten', chInt: 'binnen', chAbsent: 'Hier niet aanwezig', comNon: 'Waarom Nee? (verplicht)' }
   };
   const libDe = (x, l) => (l === 'nl' && x.libelle_nl) ? x.libelle_nl : x.libelle;
   const nomDe = (m, l) => (l === 'nl' && m.nom_nl) ? m.nom_nl : m.nom;
@@ -1854,7 +1855,10 @@
             // Un point à photo exigée (la charte de communication) n'est vu qu'avec sa réponse ET sa photo.
             // « Pas ce support ici » (N/A) : rien à photographier.
             const rep = !!(p.etat || p.note != null || p.valeur != null); const sansPh = !!pt.photoExigee && !phs.length && p.etat !== 'na';
-            if (rep && !sansPh) { cnt.faits++; }
+            // Un Non de la charte sans sa raison : le support reste à remplir.
+            const sansCom = !!pt.commentaireNon && p.etat === 'ko' && !String(p.commentaire || '').trim();
+            if (rep && !sansPh && !sansCom) { cnt.faits++; }
+            if (sansCom) { cnt.sansCom = (cnt.sansCom || 0) + 1; }
             if (sansPh) { cnt.sansPhoto = (cnt.sansPhoto || 0) + 1; }
             if (!rep) { cnt.sansRep = (cnt.sansRep || 0) + 1; }
             const k = `${esc(v.id)}|${esc(pt.ref)}|${m.id}`;
@@ -1869,7 +1873,7 @@
             const photoBtn = pt.photo || phs.length ? `<button class="chip${sansPh ? ' exige' : ''}" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' ' + (phs.length > 1 ? T.photos : T.photo.toLowerCase()) : sansPh ? T.phExige : T.photo}</button>` : '';
             const act = `<div class="act">${typeBtn}${photoBtn}${phs.map(x => `<button class="ph-v" data-a="voir" data-v="${esc(x.client_id || x.id)}" style="background-image:url('${esc(this.photoSrc(x))}')"><small>${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</small></button>`).join('')}
               ${pt.pct ? Object.keys(causes).map(c => `<button class="chip ${(p.causes || []).includes(c) ? 'on' : ''}" data-a="cause" data-v="${k}|${c}">${esc(causes[c])}</button>`).join('') : ''}
-              ${t === 'texte' ? '' : `<input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="${T.rem}" style="flex:1;${tab ? 'min-width:180px;padding:6px 10px' : 'min-width:120px;padding:5px 8px;font-size:12px'}">`}</div>`;
+              ${t === 'texte' ? '' : `<input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="${pt.commentaireNon && p.etat === 'ko' ? T.comNon : T.rem}"${sansCom ? ' class="exige"' : ''} style="flex:1;${tab ? 'min-width:180px;padding:6px 10px' : 'min-width:120px;padding:5px 8px;font-size:12px'}">`}</div>`;
             if (tab) { return `<div class="pt t ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1">${lib}${ligne}</div>${dessous}${att}${act}</div>`; }
             // Sur le téléphone, OK / Écart / N/A garde sa case à toucher en tête de ligne.
             const cb = t === 'etat' || t === 'pct' ? `<button class="cb ${p.etat || ''}" data-a="etat" data-v="${k}">${p.etat === 'ok' ? '✓' : p.etat === 'ko' ? '!' : p.etat === 'na' ? '–' : ''}</button>` : '';
@@ -2044,8 +2048,8 @@
         if (e.fait || e.lu) { return; }
         if (e.module && e.n && e.n.total > 0) {
           // La charte dit ce qui manque : les photos à prendre, les Oui / Non à donner.
-          const r = e.n.total - e.n.faits; const sp = e.n.sansPhoto || 0; const sr = e.n.sansRep || 0;
-          e.manque = sp ? [sp + ' photo' + (sp > 1 ? 's' : '') + ' à prendre', sr ? sr + ' réponse' + (sr > 1 ? 's' : '') + ' à donner' : ''].filter(Boolean).join(' · ') : r + ' point' + (r > 1 ? 's' : '') + ' à remplir';
+          const r = e.n.total - e.n.faits; const sp = e.n.sansPhoto || 0; const sr = e.n.sansRep || 0; const sc = e.n.sansCom || 0;
+          e.manque = sp || sc ? [sp ? sp + ' photo' + (sp > 1 ? 's' : '') + ' à prendre' : '', sr ? sr + ' réponse' + (sr > 1 ? 's' : '') + ' à donner' : '', sc ? sc + ' commentaire' + (sc > 1 ? 's' : '') + ' à écrire' : ''].filter(Boolean).join(' · ') : r + ' point' + (r > 1 ? 's' : '') + ' à remplir';
           e.auto = true;
         }
         else if (e.ic === 'photo') {
@@ -2090,6 +2094,9 @@
     }
     /** Aller à une étape du contrôle : marquer lue celle qu'on quitte, garder la review, défiler en haut. */
     allerEtape(n) {
+      // Une remarque tapée il y a moins de 0,7 s n'a pas encore redessiné l'écran : on relit l'étape avant de juger ce qui manque.
+      // Elle part tout de suite, sans attendre la fin du délai de frappe.
+      if (this._pt) { clearTimeout(this._pt); if (this._ptFlush) { this._ptFlush(); } this._pt = null; this.rendre(); }
       const E = this._etapes; if (!E) { return; }
       const vis = this.visite(E.visite); let vers = Math.max(0, Math.min(E.n - 1, n));
       // Le détail des retards se tape sans redessiner l'écran : « Suivant » relit ce qui manque à la météo.
@@ -2115,7 +2122,9 @@
       this._etapes.manque = e.manque || null;
       if (S.etapeAuto !== false && A && A.visite === v.id && A.cur === cur && !A.fait && e.fait && e.auto && cur < etapes.length - 1) {
         if (this._autoT) { clearTimeout(this._autoT); }
-        this._autoT = setTimeout(() => { this._autoT = null; const E = this._etapes; if (this.v === 'controle' && E && E.visite === v.id && E.cur === cur) { this.dire('Étape remplie : la suite.'); this.allerEtape(cur + 1); } }, 1200);
+        // Jamais pendant une saisie : la remarque qui remplit l'étape (le pourquoi d'un Non) s'écrit jusqu'au bout.
+        const tape = () => { const a = document.activeElement; return !!a && this.host.contains(a) && /^(INPUT|TEXTAREA)$/.test(a.tagName) && a.type !== 'checkbox'; };
+        this._autoT = setTimeout(() => { this._autoT = null; const E = this._etapes; if (this.v === 'controle' && E && E.visite === v.id && E.cur === cur && !tape()) { this.dire('Étape remplie : la suite.'); this.allerEtape(cur + 1); } }, 1200);
       }
       this._auto = { visite: v.id, cur, fait: !!e.fait };
     }
@@ -2499,6 +2508,8 @@
       if (a === 'cause') { const p = this.point(parts[0], parts[1], parts[2]); p.causes = p.causes || []; const i = p.causes.indexOf(parts[3]); if (i >= 0) { p.causes.splice(i, 1); } else { p.causes.push(parts[3]); } this.point_save(parts[0], p); return; }
       if (a === 'cause-diag') { const c = this.form.causes || (this.form.causes = []); const i = c.indexOf(v); if (i >= 0) { c.splice(i, 1); } else { c.push(v); } this.rendre(); return; }
       if (a === 'etape') { this.allerEtape(Number(v)); return; }
+      // Bloqué au dernier dessin, mais une remarque vient d'être tapée (pas encore redessinée) : on relit l'étape.
+      if (a === 'etape-bloque' && this._pt) { this.allerEtape(Number(v)); return; }
       if (a === 'etape-bloque') { const E = this._etapes; this.dire('Avant de continuer : ' + ((E && E.manque) || 'cette étape n’est pas remplie') + '.'); return; }
       if (a === 'sens-mv') { const f = this.form; if (!f.seuils) { return; } const o = this.tempsOrdre(f.seuils.ordreTemps).map(t => t[0]); const i = o.indexOf(parts[0]); const j = i + Number(parts[1]);
         if (i >= 0 && j >= 0 && j < o.length) { [o[i], o[j]] = [o[j], o[i]]; f.seuils.ordreTemps = o.join(','); this.rendre(); } return; }
@@ -2556,7 +2567,8 @@
       if (parts[0] === 'pct' || parts[0] === 'comm') {
         const p = this.point(parts[1], parts[2], parts[3]);
         if (parts[0] === 'pct') { p.valeur = el.value === '' ? null : Math.max(0, Math.min(100, Number(el.value))); } else { p.commentaire = el.value; }
-        clearTimeout(this._pt); this._pt = setTimeout(() => this.point_save(parts[1], p), 700);
+        clearTimeout(this._pt); this._ptFlush = () => { this._pt = null; this._ptFlush = null; this.point_save(parts[1], p); };
+        this._pt = setTimeout(() => { if (this._ptFlush) { this._ptFlush(); } }, 700);
       }
     }
     change(e) {
@@ -2839,7 +2851,7 @@
     finHtml(v) {
       const pts = this.pointsDe(v.id); const phs = this.photosDe(v.id); let total = 0, faits = 0, ko = 0;
       // Un support de la charte n'est vu qu'avec sa photo ; son Non compte comme un écart dès qu'il est donné.
-      this.checklistDe(v).forEach(m => m.points.forEach(pt => { total++; const p = pts[pt.ref]; if (p && (p.etat || p.note != null || p.valeur != null)) { if (!pt.photoExigee || p.etat === 'na' || phs.some(x => x.ref === pt.ref)) { faits++; } if (p.etat === 'ko' || (p.note != null && p.note <= 2)) { ko++; } } }));
+      this.checklistDe(v).forEach(m => m.points.forEach(pt => { total++; const p = pts[pt.ref]; if (p && (p.etat || p.note != null || p.valeur != null)) { if ((!pt.photoExigee || p.etat === 'na' || phs.some(x => x.ref === pt.ref)) && !(pt.commentaireNon && p.etat === 'ko' && !String(p.commentaire || '').trim())) { faits++; } if (p.etat === 'ko' || (p.note != null && p.note <= 2)) { ko++; } } }));
       const pa = (this.form.pa || []).filter(a => a.titre && a.titre.trim());
       const h = this.D.delaiRapport;
       return `<div class="stat"><div><div class="xs mu">Checklist</div><div class="k" style="margin-top:4px">${faits} / ${total}</div><div class="xs mu">${ko} non conforme${ko > 1 ? 's' : ''}</div></div><div><div class="xs mu">Points proposés</div><div class="k" style="margin-top:4px">${pa.length}</div><div class="xs mu">${pa.filter(a => a.priorite === 'P0').length} P0</div></div><div><div class="xs mu">Photos</div><div class="k" style="margin-top:4px">${this.photosDe(v.id).length}</div><div class="xs mu">${this.file.filter(o => o.apres === 'photo').length} en attente d’envoi</div></div></div>
