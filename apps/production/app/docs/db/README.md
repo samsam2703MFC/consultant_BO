@@ -184,7 +184,8 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   appairée, opérateur = personne pointée). Livraisons du jour = commandes fournisseurs (`n_po`) envoyées / reçues avec la date
   de livraison du jour, ou reçues ce jour-là (`ReceivingWizardRepository::DUE`) ; commandes ouvertes en retard (14 jours)
   affichées à part. Par ligne : quantité (unité affichée kg / l / szt), lot, DLUO, température (matières froides : catégorie ou
-  nom — nabiał, mięso, masło, drożdże…), OK / Niezgodność. Chaque ligne contrôlée enregistre la réception dans la commande
+  nom — nabiał, mięso, masło, drożdże…), OK / Niezgodność. Lot et DLUO : « 📷 Etykieta » = photo de l'étiquette → OCR
+  sur la tablette (`label-ocr.js`, module commun avec la tablette de groupe, Tesseract.js) → champs vides remplis + candidats. Chaque ligne contrôlée enregistre la réception dans la commande
   (`SupplyService::receive`, `n_po_receipt.temperature_c` nouveau) ; une non-conformité (types : quantité, qualité,
   température, emballage, DLUO, document ; description ; décision : acceptée, sous réserve, retour, décision du responsable ;
   4 photos JPEG / PNG / WebP ≤ 3 Mo, `n_nc_photo`) crée une NC fournisseur (`n_nc`, quantité concernée, décision dans

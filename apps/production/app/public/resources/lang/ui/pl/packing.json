@@ -128,7 +128,7 @@
   "rc_photo_error": "Nie udało się wczytać zdjęcia.",
   "rc_save": "Zapisz kontrolę : {ok} OK · {nc} NC",
   "rc_left": "Zostało {n} poz. : OK albo Niezgodność",
-  "rc_hint": "Ilość = przyjęta ; partia i termin z etykiety.",
+  "rc_hint": "Ilość = przyjęta ; partia i termin : 📷 Etykieta albo ręcznie.",
   "rc_not_arrived": "Dostawa nie dotarła",
   "rc_confirm_missing": "Zapisać, że dostawa {code} nie dotarła?",
   "rc_saved": "Zapisano : {ok} OK · {nc} NC",
@@ -155,5 +155,14 @@
   "rc_dec_accepted": "Przyjęte",
   "rc_dec_conditional": "Przyjęte warunkowo",
   "rc_dec_return": "Zwrot do dostawcy",
-  "rc_dec_manager": "Do decyzji kierownika"
+  "rc_dec_manager": "Do decyzji kierownika",
+  "rc_label": "Etykieta",
+  "rc_label_title": "Zdjęcie etykiety → partia i termin ważności",
+  "rc_ocr_reading": "Odczytywanie etykiety…",
+  "rc_ocr_progress": "Odczytywanie etykiety… {pct} %",
+  "rc_ocr_found": "Wpisano z etykiety — sprawdź. Dotknij, aby zmienić :",
+  "rc_ocr_nothing": "Nie znaleziono partii ani terminu na zdjęciu — wpisz ręcznie.",
+  "rc_ocr_unavailable": "Odczyt tekstu niedostępny — wpisz ręcznie.",
+  "rc_ocr_lot": "LOT",
+  "rc_ocr_date": "Data"
 }

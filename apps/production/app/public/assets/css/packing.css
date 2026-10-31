@@ -207,3 +207,12 @@ label.rc-in span { color: var(--k-muted); font-weight: 400; font-size: 13px; }
     .rc-stats { display: none; }
     .rc-line { grid-template-columns: 1fr 1fr; } .rc-name { grid-column: 1 / -1; } .rc-line .rc-two { grid-column: 1 / -1; }
 }
+/* Etykieta → OCR [231] : przycisk w wierszu pozycji, panel odczytu (miniatura, postęp, kandydaci LOT / data). */
+.rc-label { margin-left: auto; min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px dashed var(--k-line-2); background: var(--k-bg-2); font: inherit; font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+.rc-ocr { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--k-bg-2); font-size: 14px; }
+.rc-ocr.is-found { background: var(--k-ok-50); }
+.rc-ocr img, .rc-ocr-wait { width: 84px; height: 60px; flex: 0 0 auto; border-radius: 8px; object-fit: cover; display: grid; place-items: center; background: var(--k-fill); font-size: 22px; }
+.rc-ocr-body { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.rc-ocr .rc-chips button { min-height: 40px; font-size: 13.5px; }
+.rc-ocr .rc-chips button.is-on { background: var(--k-ok); color: #fff; border-color: transparent; }
+.rc-ocr-x { flex: 0 0 auto; width: 40px; height: 40px; border: 0; border-radius: 10px; background: var(--k-fill); font-size: 15px; }

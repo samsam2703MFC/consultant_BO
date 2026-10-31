@@ -128,7 +128,7 @@
   "rc_photo_error": "Impossible de lire la photo.",
   "rc_save": "Enregistrer : {ok} OK · {nc} NC",
   "rc_left": "Encore {n} lignes : OK ou non-conformité",
-  "rc_hint": "Quantité = reçue ; lot et date limite de l’étiquette.",
+  "rc_hint": "Quantité = reçue ; lot et date : 📷 Étiquette ou à la main.",
   "rc_not_arrived": "Livraison non arrivée",
   "rc_confirm_missing": "Enregistrer que la livraison {code} n’est pas arrivée ?",
   "rc_saved": "Enregistré : {ok} OK · {nc} NC",
@@ -155,5 +155,14 @@
   "rc_dec_accepted": "Acceptée",
   "rc_dec_conditional": "Acceptée sous réserve",
   "rc_dec_return": "Retour au fournisseur",
-  "rc_dec_manager": "Décision du responsable"
+  "rc_dec_manager": "Décision du responsable",
+  "rc_label": "Étiquette",
+  "rc_label_title": "Photo de l’étiquette → lot et date limite",
+  "rc_ocr_reading": "Lecture de l’étiquette…",
+  "rc_ocr_progress": "Lecture de l’étiquette… {pct} %",
+  "rc_ocr_found": "Rempli depuis l’étiquette — vérifiez. Touchez pour changer :",
+  "rc_ocr_nothing": "Ni lot ni date trouvés sur la photo — saisissez-les à la main.",
+  "rc_ocr_unavailable": "Lecture du texte indisponible — saisissez à la main.",
+  "rc_ocr_lot": "LOT",
+  "rc_ocr_date": "Date"
 }

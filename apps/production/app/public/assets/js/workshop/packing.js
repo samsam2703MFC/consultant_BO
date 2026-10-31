@@ -55,6 +55,7 @@
     let recSel = null;
     let recOrder = null;
     let draft = {};
+    let labelOcr = {};      // pozycja => {state: reading|found|nothing|unavailable|error, pct, lots, dates, img} (zdjęcie etykiety)
 
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const t = (k, p) => { let s = labels[k] ?? k; for (const [a, b] of Object.entries(p || {})) s = s.split('{' + a + '}').join(String(b)); return s; };
@@ -475,7 +476,8 @@
             <p class="kiosk-muted">${esc(t('rc_note'))}</p></section>`;
         el.innerHTML = header() + `<div class="rc-main"><aside class="rc-left"><nav class="rc-orders" aria-label="${esc(t('rc_orders'))}">${orders}</nav>${stats}</aside>
             <section class="kiosk-card rc-card">${recOrder ? orderPanel() : `<p class="pk-empty">${esc(s.orders.length ? (st.due && st.checked >= st.due ? t('rc_done_all') : t('rc_choose')) : t('rc_none'))}</p>`}</section></div>`
-            + dropdown() + `<input type="file" accept="image/*" capture="environment" class="pk-sr" data-photo-input tabindex="-1">`;
+            + dropdown() + `<input type="file" accept="image/*" capture="environment" class="pk-sr" data-photo-input tabindex="-1">`
+            + `<input type="file" accept="image/*" capture="environment" class="pk-sr" data-label-input tabindex="-1">`;
         bindReceiving();
     }
 
@@ -518,10 +520,11 @@
                <input class="rc-in" type="date" data-f="bb" value="${esc(d.bb)}" aria-label="${esc(t('rc_bb'))}" title="${esc(t('rc_bb'))}">`
             : `<span class="rc-ro">${esc(t('rc_already', {qty: qtyFmt(l.today ? l.today.qty : 0) + ' ' + l.unit}))}</span><span class="rc-ro">${esc(l.today?.lot || '—')}</span><span class="rc-ro">${esc(l.today?.best_before ? dm(l.today.best_before) : '—')}</span>`;
         const temp = l.cold && edit ? `<label class="rc-in is-num"><input inputmode="decimal" data-f="temp" value="${esc(d.temp)}" placeholder="${esc(t('rc_temp'))}"><span>°C</span></label>` : '<span></span>';
+        const label = edit && window.tfbLabelOcr ? `<button type="button" class="rc-label" data-label title="${esc(t('rc_label_title'))}">📷 ${esc(t('rc_label'))}</button>` : '';
         const row = `<div class="rc-line ${d.status === 'ok' ? 'is-ok' : (d.status === 'nc' ? 'is-nc' : '')}" data-rline="${l.id}">
-            <div class="rc-name"><b>${esc(l.name)}</b><small>${esc(sub.join(' · '))}</small></div>${inputs}${temp}
+            <div class="rc-name"><b>${esc(l.name)}</b><small>${esc(sub.join(' · '))}</small>${label}</div>${inputs}${temp}
             <div class="rc-two"><button type="button" class="kiosk-btn ${d.status === 'ok' ? 'is-ok' : ''}" data-st="ok">✓ ${esc(t('rc_ok'))}</button>
-                <button type="button" class="kiosk-btn ${d.status === 'nc' ? 'is-nc' : ''}" data-st="nc">⚠ ${esc(t('rc_nc'))}</button></div></div>`;
+                <button type="button" class="kiosk-btn ${d.status === 'nc' ? 'is-nc' : ''}" data-st="nc">⚠ ${esc(t('rc_nc'))}</button></div>${labelPanel(l)}</div>`;
         if (d.status !== 'nc') return row;
         const accepted = num(d.qty);
         const decisions = Object.keys(rec.decisions).map(k => `<button type="button" class="${d.decision === k ? 'is-on' : ''}" data-dec="${k}">${esc(decLabel(k))}${(k === 'accepted' || k === 'conditional') && edit && accepted !== null ? ' (' + esc(qtyFmt(accepted) + ' ' + l.unit) + ')' : ''}</button>`).join('');
@@ -533,11 +536,50 @@
             <div><small>${esc(t('rc_decision'))}</small><div class="rc-chips is-dec">${decisions}</div></div></div>`;
     }
 
+    // Panel odczytu etykiety pod pozycją : miniatura, postęp, kandydaci (LOT, data) do dotknięcia.
+    function labelPanel(l) {
+        const st = labelOcr[l.id];
+        if (!st) return '';
+        const d = lineDraft(l);
+        const msg = st.state === 'reading' ? (st.pct ? t('rc_ocr_progress', {pct: st.pct}) : t('rc_ocr_reading'))
+            : st.state === 'found' ? t('rc_ocr_found') : t(st.state === 'nothing' ? 'rc_ocr_nothing' : 'rc_ocr_unavailable');
+        const chips = st.lots.map(v => `<button type="button" class="${d.lot === v ? 'is-on' : ''}" data-ocr-lot="${esc(v)}">${esc(t('rc_ocr_lot'))} ${esc(v)}</button>`).join('')
+            + st.dates.map(v => `<button type="button" class="${d.bb === v ? 'is-on' : ''}" data-ocr-date="${esc(v)}">${esc(t('rc_ocr_date'))} ${esc(v.split('-').reverse().join('.'))}</button>`).join('');
+        return `<div class="rc-ocr ${st.state === 'found' ? 'is-found' : ''}">${st.img ? `<img src="${st.img}" alt="">` : '<span class="rc-ocr-wait">📷</span>'}
+            <div class="rc-ocr-body"><span data-ocr-msg>${esc(msg)}</span>${chips ? `<div class="rc-chips">${chips}</div>` : ''}</div>
+            ${st.state !== 'reading' ? `<button type="button" class="rc-ocr-x" data-ocr-close aria-label="${esc(t('close'))}">✕</button>` : ''}</div>`;
+    }
+
+    async function readLabel(l, file) {
+        const st = labelOcr[l.id] = {state: 'reading', pct: 0, lots: [], dates: [], img: null};
+        renderReceiving();
+        try {
+            const {canvas, dataUrl} = await window.tfbLabelOcr.readPhoto(file);
+            st.img = dataUrl;
+            renderReceiving();
+            let text = '';
+            try {
+                text = await window.tfbLabelOcr.ocr(canvas, (pct) => {
+                    st.pct = pct;
+                    const n = el.querySelector(`.rc-line[data-rline="${l.id}"] [data-ocr-msg]`);
+                    if (n) n.textContent = t('rc_ocr_progress', {pct});
+                });
+            } catch (e) { st.state = 'unavailable'; renderReceiving(); return; }
+            const found = window.tfbLabelOcr.lotCandidates(text);
+            st.lots = found.lots; st.dates = found.dates;
+            st.state = found.lots.length || found.dates.length ? 'found' : 'nothing';
+            const d = lineDraft(l);
+            if (found.lots.length && !String(d.lot || '').trim()) d.lot = found.lots[0];
+            if (found.dates.length && !d.bb) d.bb = found.dates[0];
+        } catch (e) { st.state = 'error'; }
+        if (labelOcr[l.id] === st) renderReceiving();
+    }
+
     let recheck = false;
     const nextOrder = () => (rec ? rec.orders.find(o => o.id !== recSel && o.due && !o.check) : null);
 
     async function openOrder(id) {
-        recSel = id; draft = {}; recheck = false;
+        recSel = id; draft = {}; recheck = false; labelOcr = {};
         try {
             recOrder = await api('GET', `/kiosk/receiving/orders/${id}?date=${encodeURIComponent(recDay)}`);
             renderReceiving();
@@ -584,6 +626,17 @@
             if (!f || !l) return;
             try { lineDraft(l).photos.push(await shrink(f)); renderReceiving(); } catch (e) { toast(t('rc_photo_error'), true); }
         });
+        // Zdjęcie etykiety → OCR : partia i termin ważności wpisane (puste pola), kandydaci do dotknięcia.
+        const labelInput = el.querySelector('[data-label-input]');
+        el.querySelectorAll('[data-label]').forEach(b => b.addEventListener('click', () => { labelInput.dataset.line = b.closest('[data-rline]').dataset.rline; labelInput.value = ''; labelInput.click(); }));
+        labelInput.addEventListener('change', () => {
+            const f = labelInput.files && labelInput.files[0];
+            const l = recOrder && recOrder.lines.find(x => x.id === Number(labelInput.dataset.line));
+            if (f && l) readLabel(l, f);
+        });
+        el.querySelectorAll('[data-ocr-lot]').forEach(b => b.addEventListener('click', () => { lineDraft(line(b)).lot = b.dataset.ocrLot; renderReceiving(); }));
+        el.querySelectorAll('[data-ocr-date]').forEach(b => b.addEventListener('click', () => { lineDraft(line(b)).bb = b.dataset.ocrDate; renderReceiving(); }));
+        el.querySelectorAll('[data-ocr-close]').forEach(b => b.addEventListener('click', () => { delete labelOcr[line(b).id]; renderReceiving(); }));
         const missing = el.querySelector('[data-rmissing]');
         if (missing) missing.addEventListener('click', () => saveCheck(true));
         const save = el.querySelector('[data-rsave]');
