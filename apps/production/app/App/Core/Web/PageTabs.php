@@ -27,6 +27,8 @@ final class PageTabs
             ['/workshop/team-sheet', 'Plan zespołów i listy dnia (PDF)', 'bi-printer'],
             // Prognoza 13 tygodni [220] : kroczące tygodnie, gamy sezonowe panelu TF Buddy, zakupy, zatwierdzenie w poniedziałek.
             ['/production/forecast', 'Prognoza 13 tygodni', 'bi-graph-up'],
+            // Moce produkcyjne [234] : wykorzystanie maszyn wobec planu, co jeszcze zmieszczę, ilość na zmianę, ustawienia maszyn.
+            ['/production/capacity', 'Moce produkcyjne', 'bi-speedometer2'],
             ['/workshop/deliveries', 'Dostawy surowców', 'bi-truck'],
             ['/workshop/traceability', 'Partie i identyfikowalność', 'bi-upc-scan'],
             ['/production/follow-up', 'Śledzenie produkcji', 'bi-graph-up-arrow'],

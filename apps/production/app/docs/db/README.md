@@ -240,6 +240,32 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   non lu de moins de 7 jours ; tâche faite entre-temps (jour validé, assistant terminé) → fermé, disparaît. Au tableau :
   « przeczytane 10:51 (J. K., PIN) ».
 
+### Moce produkcyjne : utilisation des machines et production encore possible (migration 151, 31/10/2026)
+
+- Page : Produkcja › « Moce produkcyjne » (`/production/capacity`, onglet de la page Produkcja, maquettes 10 et 11 ;
+  catalogue d'accès `production`). `CapacityService`, `CapacityRepository`, `CapacityController`, `capacity.js`. Semaine du
+  plan (`WeekService::quantities`, ‹ › pour changer), filtre groupe, « co jeśli » : + zmiana popołudniowa / + nocna.
+- **Charge** d'une machine = Σ des étapes des cartes produit (`StandardTime::step` : travail + nettoyage) × quantités planifiées
+  jour par jour. Machines « attente » (komory rozrostu, chłodnia, szokowe mrożenie) : occupation = passages × délai après
+  l'étape, comparés à la capacité d'un passage. **Disponible** = shifts où le groupe a une équipe active (`n_prod_workstation_shift` peut
+  retirer ou ajouter un shift à une machine ; la fenêtre n'enregistre que les shifts basculés ; un shift du « co jeśli »
+  s'ouvre pour toutes les machines) × jours de production
+  (`week.production_days` ∩ jours du shift) × **TRS** (`efficiency_pct`). Contrainte **ludzie** par groupe : obsada planowana
+  × heures des shifts × jours, comparée au travail manuel du plan.
+- Onglets : **Wykorzystanie** (tuiles : wąskie gardło, mroźnia zapasu, szokowe mrożenie, moyenne, meilleure marge ; tableau
+  par type de machine avec % semaine, jour de pointe, produit principal, heures libres ; lignes des zespoły ; avertissement
+  pour les produits du plan sans étapes), **Co jeszcze zmieszczę** (par produit : kartony encore possibles = min sur ses étapes
+  du temps libre ÷ temps par unité et du temps libre des personnes ; ce qui limite ; valeur au prix standard ; simulation
+  « + ilość » → chaque étape avant / après), **Ilość na zmianę** (maximum par shift et produit, étape limitante, cycle),
+  **Ustawienia maszyn** (capacité d'un passage + unité, TRS 10–100 %, cycle typique quand la machine n'a pas encore d'étapes,
+  shifts de la machine, visible / masquée ; mroźnia zapasu : places palettes `stock.freezer_pallet_places` et seuil
+  `stock.freezer_alert_pct`). Les fours à sole et autres machines absentes se créent dans « Stanowiska robocze ».
+- Migration 151 : `n_prod_workstation.efficiency_pct` (100 par défaut), `cycle_s`, `capacity_view` (tables manuelles masquées
+  par défaut : leur limite, ce sont les personnes) + paramètre `stock.freezer_alert_pct` (90 %). Mroźnia : palettes en stock
+  (`StockPeriodRepository::stockPallets`) + production MTS de la semaine en palettes, comparées aux places. Rejouable.
+- API web : `GET /ajax/production/capacity`, `GET /ajax/production/capacity/simulate?item=&qty=`,
+  `PUT /ajax/production/capacity/workstations/{id}`, `PUT /ajax/production/capacity/freezer`.
+
 
 ### Prévision 13 semaines glissantes (migration 141, 30/10/2026)
 

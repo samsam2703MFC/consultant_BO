@@ -34,6 +34,14 @@ return function(RouteCollector $r) {
         'method'     => 'ajaxGetRequirementListPDF'
     ]);
 
+    // Moce produkcyjne [234] : wykorzystanie maszyn i ludzi wobec planu tygodnia, mroźnia, ilość na zmianę, co jeszcze zmieszczę, ustawienia.
+    $cc = App\Controllers\Web\Production\CapacityController::class;
+    $r->addRoute('GET', '/production/capacity', ['controller' => $cc, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/production/capacity', ['controller' => $cc, 'method' => 'data']);
+    $r->addRoute('GET', '/ajax/production/capacity/simulate', ['controller' => $cc, 'method' => 'simulate']);
+    $r->addRoute('PUT', '/ajax/production/capacity/workstations/{id:\d+}', ['controller' => $cc, 'method' => 'saveMachine']);
+    $r->addRoute('PUT', '/ajax/production/capacity/freezer', ['controller' => $cc, 'method' => 'saveFreezer']);
+
     // Prognoza 13 tygodni [220] : zamówienia, N-1 × trend, gamy sezonowe panelu TF Buddy (tylko odczyt), zakupy, zatwierdzenie w poniedziałek.
     $fc = App\Controllers\Web\Production\ForecastController::class;
     $r->addRoute('GET', '/production/forecast', ['controller' => $fc, 'method' => 'index']);
