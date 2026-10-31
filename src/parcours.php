@@ -188,14 +188,16 @@ function pcCompetencesParFo(array $ref, array $liens): array
 }
 
 /**
- * La famille d'un poste, pour ranger les écrans : opérationnel (P1–P6), cadre
- * et direction (P7, P8, et les rôles du réseau — direction, consultants,
- * contrôle), devenir entrepreneur (candidat, franchisé, locataire-gérant,
- * multi-boutique). Lue sur les noms du panel, comme pcCodeV25.
+ * La famille d'un poste, pour ranger les écrans. DANS LA FRANCHISE (le magasin) :
+ * opérationnel (P1–P6), cadre et direction (P7 adjoint, P8 manager), devenir
+ * entrepreneur (candidat, franchisé, locataire-gérant, multi-boutique).
+ * DANS LA MARQUE (le franchiseur, 31/10/2026) : direction opérationnelle,
+ * stratégie, consultants, contrôle qualité, client mystère… — les postes que la
+ * matrice v25 ne couvre pas (pcCodeV25 null). Lue sur les noms du panel.
  */
 function pcFamille(?string $code): string
 {
-    if ($code === null) { return 'cadre'; }
+    if ($code === null) { return 'marque'; }
     $n = (int) substr($code, 1);
     return $n <= 6 ? 'operationnel' : ($n <= 8 ? 'cadre' : 'entrepreneur');
 }
@@ -280,7 +282,7 @@ function pcCarte(array $ref, array $liens, array $equipes, int $magasins): array
             $chemin['metiers'][PC_METIERS[$code][0]] = $x;
         } elseif (isset($roles[$code])) {
             $chemin[$roles[$code]][$code] = $x;
-        } elseif (pcFamillePoste($p) === 'cadre') {
+        } elseif (pcFamillePoste($p) === 'marque') {
             $chemin['reseau'][] = ['id' => (int) $p['id'], 'nom' => trim((string) $p['nom'])];
         }
     }
