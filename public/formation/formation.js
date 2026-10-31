@@ -359,9 +359,9 @@
 
   function carteMetro(C) {
     var ys = [110, 280, 450], svg = '', st = '';
-    var station = function (x, y, coul, href, nom, dt, nb, extra, mx, vide, w) {
+    var station = function (x, y, coul, href, nom, dt, nb, extra, mx, vide, w, serre) {
       w = w || 104;
-      return '<a class="fm-st" href="' + href + '" style="left:' + (x - w / 2) + 'px;width:' + w + 'px;top:' + (y - (mx ? 11 : 9)) + 'px;color:' + coul + '">' +
+      return '<a class="fm-st' + (serre ? ' fm-st--serre' : '') + '" href="' + href + '" style="left:' + (x - w / 2) + 'px;width:' + w + 'px;top:' + (y - (mx ? 11 : 9)) + 'px;color:' + coul + '">' +
         '<div class="fm-st__dot' + (mx ? ' is-mx' : '') + '" style="border-color:' + coul + '"></div><div class="fm-st__nm">' + esc(nom) + '</div>' +
         '<div class="fm-st__dt' + (vide ? ' is-vide' : '') + '">' + dt + '</div>' + (extra || '') + pers(nb) + '</a>';
     };
@@ -374,7 +374,7 @@
       m.niveaux.forEach(function (n, i) {
         var x = 60 + i * pas;
         st += station(x, y, coul, '#/postes/' + m.id + '/' + n.id, n.nom, pl(n.total, 'compétence'), n.personnes,
-          i === m.maitrise ? '<span class="fm-st__mt" style="background:' + coul + '">maîtrise</span><br>' : '', i === m.maitrise, false, larg);
+          i === m.maitrise ? '<span class="fm-st__mt" style="background:' + coul + '">maîtrise</span><br>' : '', i === m.maitrise, false, larg, larg < 104);
       });
     });
     var P = C.polyvalence;
@@ -404,7 +404,8 @@
     }
     var zones = '<div class="fm-zone" style="left:0;width:650px"><b>Opérationnel</b></div><div class="fm-zone fm-zone--c" style="left:650px;width:200px"><b>Cadre et direction</b></div>' +
       '<div class="fm-zone fm-zone--e" style="left:850px;width:300px"><b>Devenir entrepreneur</b></div>';
-    return '<div class="fm-metro-wrap"><div class="fm-metro">' + zones + '<svg width="1150" height="560" aria-hidden="true">' + svg + '</svg>' + hub + st + '</div></div>' +
+    // 600 px : sous la dernière ligne, une étiquette de trois lignes (« Équipier confirmé - Traiteur Chaud ») doit tenir.
+    return '<div class="fm-metro-wrap"><div class="fm-metro">' + zones + '<svg width="1150" height="600" aria-hidden="true">' + svg + '</svg>' + hub + st + '</div></div>' +
       '<div class="fm-legende">' + C.chemin.metiers.map(function (m) { return '<span><i style="background:' + (COUL[m.cle] || TRONC) + '"></i>' + esc(m.libelle) + '</span>'; }).join('') +
       '<span><i style="background:' + TRONC + '"></i>Tronc commun</span><span>◎ niveau de maîtrise du métier</span>' + (loc ? '<span>· · · Locataire-gérant : l’autre voie que la franchise</span>' : '') + '</div>' +
       (C.chemin.reseau.length ? '<p class="muted fm-small" style="margin-top:12px"><strong>Dans la marque — postes du franchiseur</strong>, hors du chemin des magasins (' + C.chemin.reseau.length + ') : ' +
