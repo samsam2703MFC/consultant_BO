@@ -1235,3 +1235,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T16:16:02Z [237][238] Tarty : własne stanowisko ; zastępstwo zadań (Kontrola przyjęć : Jakość → Kierownik)
 2026-10-31T18:28:18Z scouting : l'écran « où ouvrir » quitte le cockpit, il vit dans le CRM (Étude de faisabilité) ; cron OSM retiré, relecture par le CRM
 2026-10-31T18:37:51Z [239] Sesja pod awatarem : administrator ogląda ERP jak stanowisko
+2026-10-31T18:43:48Z vérification : recettes à corriger (lot 1) — #/verification/recettes, neuf règles, couverture, registre ceo_verif_recette, lecture des recettes par le cron horaire
