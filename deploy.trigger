@@ -1216,3 +1216,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T11:42:01Z contrôle sur tablette : charte de communication, réponse « Pas ce support ici »
 2026-10-31T11:52:01Z formation : parcours compétences (assistant, frise de suivi), formations fusionnées par FO
 2026-10-31T11:54:25Z parcours : rôles du réseau hors destinations
+2026-10-31T11:57:35Z parcours : employé sans poste, tous les métiers proposés
