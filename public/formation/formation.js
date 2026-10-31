@@ -391,8 +391,10 @@
       return { titre: TITRES.postes, corps: bandeauLiens() + '<section class="card pending"><span class="chip pending__chip">Aucun poste</span><h2>Le panel ne rend aucun poste</h2><p class="muted">La route <code>/positions</code> a répondu sans ligne. Voir le tableau de bord, « Ce que le panel a rendu ».</p></section>' };
     }
     var pid = arg(0), nid = arg(1);
-    var poste = (pid != null && I.posteById.get(pid)) || (S.route.a[0] === undefined ? posteDefaut() : R.postes.filter(function (p) { return p.id == null; })[0]) || posteDefaut();
-    var niveau = nid != null ? I.niveauById.get(nid) : poste.niveaux[0];
+    // #/postes/v25/P12 : un poste du référentiel v25 que le panel n'a pas encore (Franchisé multi-boutique…).
+    var horsPanel = S.route.a[0] === 'v25' ? String(S.route.a[1] || '') : null;
+    var poste = horsPanel !== null ? null : (pid != null && I.posteById.get(pid)) || (S.route.a[0] === undefined ? posteDefaut() : R.postes.filter(function (p) { return p.id == null; })[0]) || posteDefaut();
+    var niveau = !poste ? null : nid != null ? I.niveauById.get(nid) : poste.niveaux[0];
 
     var arbre = '<section class="card fm-tree"><div class="sidebar__group-label" style="padding-top:4px">Postes</div>' + R.postes.map(function (p) {
       var on = p === poste;
@@ -404,10 +406,19 @@
         }).join('') + (p.niveaux.length ? '' : '<li class="muted fm-small" style="padding:6px 10px">Aucun niveau</li>') + '</ul>';
       }
       return x;
-    }).join('') + '</section>';
+    }).join('');
+    var hp = (S.v25 && S.v25.horsPanel) || [];
+    if (hp.length) {
+      arbre += '<div class="sidebar__group-label" style="padding-top:16px">Pas encore dans le panel</div>' + hp.map(function (x) {
+        return '<a class="fm-tree__poste' + (horsPanel === x.code ? ' is-active' : '') + '" href="#/postes/v25/' + esc(x.code) + '"><span>' + esc(x.nom) + '</span><span class="fm-tree__n">v25</span></a>';
+      }).join('');
+    }
+    arbre += '</section>';
 
     var droite;
-    if (!niveau) {
+    if (horsPanel !== null) {
+      droite = ficheHorsPanel(horsPanel);
+    } else if (!niveau) {
       droite = '<section class="card pending"><span class="chip pending__chip">Sans niveau</span><h2>' + esc(poste.nom) + '</h2><p class="muted">Ce poste n’a aucun niveau dans le panel (<code>/positions/' + esc(poste.id) + '/levels</code>).</p></section>';
     } else {
       droite = ficheNiveau(poste, niveau);
@@ -458,9 +469,86 @@
       }
       return x + '</section>';
     };
-    h += bloc('Exigences du niveau', 'exigences', 'Aucune exigence posée en plus des compétences.');
+    // Les critères d'admission : les exigences du panel d'abord, le référentiel du cockpit complète.
+    var ap = d && d.data ? (d.data.appels || []).filter(function (a) { return a.cle === 'exigences'; })[0] : null;
+    var note = !d || d.charge ? attente('Lecture des exigences du panel…') : d.erreur ? '<p class="error">' + esc(d.erreur) + '</p>' :
+      ap && !(ap.code >= 200 && ap.code < 300) ? '<p class="muted">Exigences du panel indisponibles : ' + chemin(ap.chemin) + ' → HTTP ' + esc(ap.code) + '</p>' : '';
+    var code = S.v25 && S.v25.niveauxV25 ? S.v25.niveauxV25[niveau.id] : null;
+    h += carteCriteres(criteresAdmission(code, d && d.data ? d.data.exigences : []), note);
     h += bloc('Tâches du niveau', 'taches', 'Aucune tâche attachée à ce niveau.');
     h += '</div>';
+    return h;
+  }
+
+  /**
+   * Les critères d'admission d'un poste, sans doublon (comme src/parcours.php, pcCriteres) :
+   * les exigences du niveau dans le panel d'abord, puis le référentiel du cockpit
+   * (src/data/admission.json) ; une formation déjà exigée par le panel n'est pas répétée.
+   */
+  function criteresAdmission(code, exigences) {
+    var o = [], parPanel = [];
+    (exigences || []).forEach(function (e) {
+      if (!e.nom || e.nom === '—') return;
+      var fo = codeFo(e.nom);
+      if (fo) parPanel.push(fo);
+      o.push({ libelle: e.nom, detail: e.description, type: fo ? 'fo' : 'manuel', fo: fo ? [fo] : [], source: 'panel' });
+    });
+    var def = code && S.v25 && S.v25.admission ? S.v25.admission[code] : null;
+    (def ? def.criteres : []).forEach(function (c) {
+      var fo = (c.fo || []).filter(function (x) { return parPanel.indexOf(x) < 0; });
+      if (c.type === 'fo' && !fo.length) return;
+      o.push({ libelle: c.libelle, detail: c.detail, type: c.type, fo: fo, source: 'referentiel' });
+    });
+    return o;
+  }
+  function nomFo(code) {
+    var f = S.v25 ? S.v25.formations.filter(function (x) { return x.code === code; })[0] : null;
+    return f ? f.nom : code;
+  }
+  function carteCriteres(crit, note) {
+    var h = '<section class="card"><h2>Critères d’admission</h2>' + (note || '');
+    if (!crit.length) return h + (note ? '' : '<p class="muted">Aucun critère : on y entre par les compétences et les formations du niveau.</p>') + '</section>';
+    h += '<ul class="fiche-ul">' + crit.map(function (c) {
+      var comment = c.type === 'poste' ? 'vérifié dans le panel : le poste tenu' :
+        c.type === 'fo' ? 'vérifié : ' + c.fo.map(function (k) { return '<a href="#/formations/' + esc(k) + '">' + esc(k) + '</a> ' + esc(nomFo(k)); }).join(', ') + ' — ajoutée au parcours si elle manque' :
+        'validé par la manager ou le consultant, dans le suivi du parcours';
+      return '<li><strong>' + esc(c.libelle) + '</strong> <span class="chip ' + (c.source === 'panel' ? 'chip--accent' : 'chip--soft') + '">' + (c.source === 'panel' ? 'panel' : 'référentiel') + '</span>' +
+        '<br><span class="muted fm-small">' + comment + (c.detail ? ' · ' + esc(court(c.detail, 140)) : '') + '</span></li>';
+    }).join('') + '</ul>';
+    return h + '<p class="muted fm-small" style="margin-top:10px">Tous remplis — et seulement alors — le parcours valide le niveau. Les exigences du panel passent en premier.</p></section>';
+  }
+
+  /** Un poste du référentiel v25 que le panel n'a pas encore : ce qu'il demande, d'où il vient. */
+  function ficheHorsPanel(code) {
+    if (!S.v25) return S.v25Erreur ? '<p class="error">' + esc(S.v25Erreur) + '</p>' : attente('Lecture du référentiel v25…');
+    var hp = (S.v25.horsPanel || []).filter(function (x) { return x.code === code; })[0];
+    if (!hp) return '<section class="card pending"><span class="chip pending__chip">Inconnu</span><h2>Poste ' + esc(code) + '</h2><p class="muted">Ce code n’est pas un poste du référentiel v25 absent du panel.</p></section>';
+    var parAttendu = function (a) { return S.v25.formations.filter(function (f) { return f.attendu[code] === a; }); };
+    var crit = criteresAdmission(code, []);
+    var prerequis = [];
+    crit.forEach(function (c) { (c.fo || []).forEach(function (k) { if (prerequis.indexOf(k) < 0) prerequis.push(k); }); });
+    var oblig = parAttendu('O'), reco = parAttendu('R').filter(function (f) { return prerequis.indexOf(f.code) < 0; });
+    prerequis.forEach(function (k) { if (!oblig.some(function (f) { return f.code === k; })) oblig.push({ code: k, nom: nomFo(k) }); });
+    var plan = S.v25.plans.filter(function (p) { return p.code === ({ P12: 'PF-MULTI', P9: 'PF-GER' })[code]; })[0];
+    var puce = function (f) { return '<li><a class="chip chip--soft" href="#/formations/' + esc(f.code) + '">' + esc(f.code) + ' · ' + esc(court(String(f.nom).replace(/^Formation /, ''), 46)) + '</a></li>'; };
+    var h = '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(hp.nom) + '</h2><p class="muted">Référentiel v25 · ' + esc(code) + '</p></div>' +
+      '<div class="fm-links"><a class="filter" href="parcours/#/nouveau">Ouvrir un parcours ↗</a></div></div>';
+    h += bandeau('Ce poste n’existe pas encore dans le panel : il vient du référentiel v25 (l’Excel). Dès qu’un poste « ' + esc(hp.nom) + ' » sera créé dans le panel, ses niveaux et compétences prendront le relais.', '');
+    h += '<div class="grid grid--tight">' +
+      '<section class="card"><h2>Critères</h2><p class="metric">' + n(crit.length) + '</p><p class="muted">pour y être admis</p></section>' +
+      '<section class="card"><h2>Obligatoires</h2><p class="metric">' + n(oblig.length) + '</p><p class="muted">formations du chemin</p></section>' +
+      '<section class="card"><h2>Recommandées</h2><p class="metric">' + n(reco.length) + '</p><p class="muted">pour aller plus loin</p></section>' +
+      '<section class="card"><h2>Plan</h2><p class="metric">' + n(plan ? plan.blocs.length : 0) + '</p><p class="muted">' + esc(plan ? plan.nom : 'aucun plan') + '</p></section></div>';
+    h += '<div class="fm-cols" style="margin-top:1rem">' + carteCriteres(crit, '') +
+      '<section class="card"><h2>Formations obligatoires</h2>' + (oblig.length ? '<ul class="chips">' + oblig.map(puce).join('') + '</ul>' : '<p class="muted">Aucune.</p>') +
+      (reco.length ? '<h3 class="fm-small muted" style="margin:14px 0 6px">Pour aller plus loin</h3><ul class="chips">' + reco.map(puce).join('') + '</ul>' : '') + '</section></div>';
+    if (plan) {
+      h += '<section class="card" style="margin-top:1rem"><h2>' + esc(plan.nom) + '</h2>' + (plan.logique ? '<p class="muted">' + esc(court(plan.logique, 260)) + '</p>' : '') +
+        '<ul class="fiche-ul">' + plan.blocs.map(function (b) {
+          return '<li><strong>' + esc(b.code + ' · ' + b.nom) + '</strong> <span class="muted fm-small">' + esc(b.formations.join(', ')) + '</span>' +
+            (b.checklist.length ? '<br><span class="muted fm-small">' + b.checklist.map(esc).join(' · ') + '</span>' : '') + '</li>';
+        }).join('') + '</ul></section>';
+    }
     return h;
   }
 
@@ -1477,7 +1565,7 @@
     var e = S.route.ecran;
     if (e === 'api' && !S.cat && !S.catCharge) chargerCatalogue();
     if (!I) return;
-    if (e === 'postes') {
+    if (e === 'postes' && S.route.a[0] !== 'v25') {
       var pid = arg(0), nid = arg(1);
       var poste = (pid != null && I.posteById.get(pid)) || (S.route.a[0] === 'sans' ? S.ref.postes.filter(function (p) { return p.id == null; })[0] : posteDefaut());
       var nv = nid != null ? I.niveauById.get(nid) : poste && poste.niveaux[0];
@@ -1486,7 +1574,7 @@
     if (e === 'competences' && arg(0) != null && !I.liens) chargerUn(S.competences, arg(0), '/formation/competence?id=' + arg(0));
     if (e === 'manuel' && S.route.a[0] === 'competence' && arg(1) != null && !I.liens) chargerUn(S.competences, arg(1), '/formation/competence?id=' + arg(1));
     if (e === 'formations' && arg(0) != null) chargerUn(S.formations, arg(0), '/formation/formation?id=' + arg(0));
-    if (e === 'formations' && !S.v25 && !S.v25Charge) {
+    if ((e === 'formations' || e === 'postes') && !S.v25 && !S.v25Charge) {
       S.v25Charge = true;
       lire('/formation/v25', 30000).then(function (d) { S.v25 = d; rendre(true); }, function (er) { S.v25Erreur = er.message; rendre(true); });
     }

@@ -1218,3 +1218,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T11:54:25Z parcours : rôles du réseau hors destinations
 2026-10-31T11:57:35Z parcours : employé sans poste, tous les métiers proposés
 2026-10-31T11:59:21Z [232] Zadania zespołu : tablica Kierownika produkcji + przypomnienia (dzwonek, e-mail, tablety)
+2026-10-31T12:51:45Z parcours : critères d'admission (Adjoint Manager, Manager, Franchisé multi-boutique)
