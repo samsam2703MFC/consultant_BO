@@ -86,6 +86,8 @@ foreach ([['Opérateur Vente', 'Équipier confirmé', 'P3'], ['Opérateur Vente'
 verifie('même métier : vendeuse → chef de section vente', pcGroupe('P4', 'P3') === 'metier');
 verifie('autre métier : vendeuse → chef boulangerie exclu', pcGroupe('P5', 'P3') === 'autre');
 verifie('franchise : groupe entrepreneur', pcGroupe('P11', 'P3') === 'entrepreneur' && pcGroupe('P9', null) === 'entrepreneur');
+verifie('sans poste dans le panel : tous les métiers sont proposés', pcGroupe('P1', null, true) === 'metier' && pcGroupe('P4', null, true) === 'metier');
+verifie('candidat (sans poste, hors employés) : pas de métier', pcGroupe('P1', null, false) === 'autre');
 verifie('code FO d’une évaluation du panel', pcCodeFo('[FO-01] Évaluation théorique vente') === 'FO-01' && pcCodeFo('Formation libre') === null);
 
 echo "Parcours : le chemin d'une destination\n";
