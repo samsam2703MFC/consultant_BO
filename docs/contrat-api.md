@@ -1095,7 +1095,7 @@ de saison) et `horsSaison` (obligatoires de saison non exigées à cette date).
 
 Le référentiel RH du panel — postes (`/positions`), niveaux ou sous-postes (`/position-levels`),
 compétences, formations, procédures opératoires, base de connaissances — lu avec le compte
-consultant, **en lecture seule**. `GET /formation/referentiel` (tout, `_cache=600`),
+consultant. `GET /formation/referentiel` (tout, `_cache=600`),
 `GET /formation/liens` (procédures, formations et ressources de chaque compétence, `_cache=900`),
 `GET /formation/competence|niveau|procedure|formation|ressource?id=`, `GET /formation/equipe?shop=`
 (compétences validées par personne), `GET /formation/sonde?chemin=` (test d'une route du référentiel,
@@ -1104,6 +1104,12 @@ compte panel : `503 {indispo, raison}`. Chaque réponse porte `appels[]` (code H
 de chaque lecture du panel). Les routes `/career-*` du panel sont déclarées en 500 dans son
 swagger : les postes passent par `/positions`. Détail, constats et sécurité : `docs/formation.md` ;
 les 237 routes : `docs/formation-routes.md`.
+
+Écritures (toutes relues au panel, journalisées, caches corrigés) : `POST|DELETE /formation/niveau/{nid}/competences[/{cid}]`,
+`POST /formation/competence/{cid}/liens {type, id}`, `DELETE /formation/competence/{cid}/liens/{type}/{id}`,
+`POST /formation/competences`, `PATCH|DELETE /formation/competences/{cid}`, `PUT|DELETE /formation/employe/{eid}/competences/{cid}?shop=`,
+`PUT /formation/employe/{eid}/poste?shop= {poste, niveau}`. Réponse `{ok, deja?, …l'état relu, appels[]}` ; un refus du panel
+ou un écart à la relecture : `502 {ok: false, error, appels}`.
 
 ### `/tablette/book` et `/tablette/photos` — les données de la tablette des vendeuses
 

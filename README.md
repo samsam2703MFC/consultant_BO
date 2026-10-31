@@ -134,7 +134,8 @@ Base : `/api/cockpit`. Lectures (GET) : `/meta`, `/referentiels/leviers`,
 Chaque écriture produit une ligne dans `ceo_journal_entry` (écran Journal).
 Détail complet, exemples JSON et DDL : `docs/contrat-api.md`.
 
-Module Formation (lecture seule) : `/formation/referentiel`, `/formation/liens`,
+Module Formation (lectures, et écritures relues au panel sous `/formation/niveau`,
+`/formation/competence(s)`, `/formation/employe`) : `/formation/referentiel`, `/formation/liens`,
 `/formation/competence`, `/formation/niveau`, `/formation/procedure`,
 `/formation/formation`, `/formation/ressource`, `/formation/equipe`,
 `/formation/sonde`, `/formation/pdf` — voir `docs/formation.md`.
