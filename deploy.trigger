@@ -1240,3 +1240,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T19:12:17Z vérification lot 2 : audit des flux (#/verification/flux) et fuites par magasin (#/verification/fuites), mesuré ou estimé ; fiche recette au clic
 2026-10-31 19:25 — liste des candidats franchisés du CRM (Nouveau parcours › Pour qui ?)
 2026-10-31T19:26:42Z vérification lot 3 : base quotidienne ceo_verif_jour, écran Évolution (#/verification/evolution), semaine par semaine et avant / maintenant
+2026-10-31T19:32:07Z vérification lot 3 : évolution — non expliqué jugé à sa distance à zéro, poubelle non déclarée exclue de la comparaison, axe sous zéro
