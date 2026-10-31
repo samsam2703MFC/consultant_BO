@@ -782,7 +782,8 @@ function fmRelireEmploye(int $eid): array
     foreach (is_array($d['competencies'] ?? null) ? $d['competencies'] : [] as $c) {
         if (is_array($c) && ($cid = fmInt($c, ['competency_id', 'id'])) !== null) { $comps[] = $cid; }
     }
-    return [['id' => $eid, 'postes' => $postes, 'competences' => array_values(array_unique($comps))], $r];
+    $nom = fmTexte($d, ['display_name']) ?? trim((fmTexte($d, ['name']) ?? '') . ' ' . (fmTexte($d, ['surname']) ?? ''));
+    return [['id' => $eid, 'nom' => $nom !== '' ? $nom : null, 'postes' => $postes, 'competences' => array_values(array_unique($comps))], $r];
 }
 
 /** Le niveau (et son poste) dans un référentiel en cache — pour le journal et les corrections. */

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Maquettes « Parcours compétences » — génère les pages HTML à partir de donnees.json.
+"""Maquettes « Parcours compétences » — génère les pages HTML à partir de src/data/referentiel_v25.json.
 
     python3 -I docs/maquettes/parcours-competences/generer.py
     node docs/maquettes/parcours-competences/captures.js      # les PNG
@@ -17,7 +17,7 @@ import json
 import os
 
 ICI = os.path.dirname(os.path.abspath(__file__))
-D = json.load(open(os.path.join(ICI, 'donnees.json'), encoding='utf-8'))
+D = json.load(open(os.path.join(ICI, '..', '..', '..', 'src', 'data', 'referentiel_v25.json'), encoding='utf-8'))
 F = {f['code']: f for f in D['formations']}
 P = {p['code']: p['nom'] for p in D['postes']}
 CSS = '../../../public/formation/formation.css'

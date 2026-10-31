@@ -2,7 +2,7 @@
 """Référentiel v25 (Excel) → JSON structuré.
 
 Usage :
-    python3 -I tools/formation/referentiel_excel.py atelier_referentiel_v25.xlsx sortie.json
+    python3 -I tools/formation/referentiel_excel.py atelier_referentiel_v25.xlsx src/data/referentiel_v25.json
 
 Lit les onglets Formations, Matrice, Compétences, Plans de Formation et Manuel
 Opératoire du classeur « L'ATELIER BY — RÉFÉRENTIEL v25 » et écrit :

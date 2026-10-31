@@ -21,7 +21,7 @@ compétences, évaluations et formations sont les vraies données (panel + réf�
 
 Régénérer : `python3 -I docs/maquettes/parcours-competences/generer.py` puis
 `node docs/maquettes/parcours-competences/captures.js`. Le référentiel Excel se relit avec
-`python3 -I tools/formation/referentiel_excel.py <fichier.xlsx> docs/maquettes/parcours-competences/donnees.json`.
+`python3 -I tools/formation/referentiel_excel.py <fichier.xlsx> src/data/referentiel_v25.json`.
 
 ## Intégrer le référentiel v25 — simple, sans doublon
 
@@ -50,7 +50,7 @@ Le panel n'a ni parcours ni suivi de formation par personne. Deux tables suffise
 - `ceo_parcours_etape` — une ligne par formation du parcours : code FO, ordre, date prévue, statut
   (à venir, en cours, validée), évaluations faites, validée par, le.
 
-Et le référentiel v25 importé une fois (`donnees.json` → table) pour ce que le panel n'a pas : noms des
+Et le référentiel v25 lu dans `src/data/referentiel_v25.json` pour ce que le panel n'a pas : noms des
 FO, matrice O/R, ordre des plans, priorités.
 
 ## À trancher
