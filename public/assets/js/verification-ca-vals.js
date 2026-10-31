@@ -69,7 +69,7 @@ export function valsVerifCa(app, common){
     return { id: m.id, nom: court(m.nom), on: m.id === d.shopJours, choisir: () => app.setState({ vcaShop: m.id }),
       caisse: fE(C.ttc), ht: fE(C.ht) + ' HT · ' + nf(C.tickets) + ' tickets', incomplet: !C.complet ? C.joursLus + ' / ' + C.jours + ' jours lus' : '',
       pnl: ecart(m.pnl), red: ecart(m.redevances), redDu: m.redevances && m.redevances.active ? 'redevances ' + fE(m.redevances.du) : (m.redevances ? 'redevances désactivées' : ''),
-      att: ecart(m.attendu), attPourquoi: m.attendu ? m.attendu.semaines + ' semaine' + (m.attendu.semaines > 1 ? 's' : '') + ' d’inventaire' : (mat && mat.exclues ? 'entrées non validées' : 'pas de semaine d’inventaire'),
+      att: ecart(m.attendu), attPourquoi: m.attendu ? m.attendu.semaines + ' semaine' + (m.attendu.semaines > 1 ? 's' : '') + ' d’inventaire' : (mat && mat.exclues ? 'entrées non validées ou incomplètes' : 'pas de semaine d’inventaire'),
       recettes: m.recettesFiables == null ? null : nf(m.recettesFiables, 1) + ' % de recettes fiables',
       sp: fE(m.sansProduit.eur), spN: m.sansProduit.n + ' ligne' + (m.sansProduit.n > 1 ? 's' : ''), rem: m.remises.eur > 0 ? fE(m.remises.eur) + ' de remises' : '',
       corr: m.corrections ? (m.corrections[0] ? m.corrections[0] + ' correction' + (m.corrections[0] > 1 ? 's' : '') + (m.corrections[1] != null ? ' · ' + fE(m.corrections[1], 2) : '') : 'aucune') : 'non lues',

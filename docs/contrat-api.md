@@ -3394,7 +3394,8 @@ TVA, `n` tickets — le relevé du CA net, `cnMois`, lu dans 20 s à la demande,
   `vcPnl:{shop}:{mois}`, 24 h pour un mois clos, 1 h sinon) ;
 - **redevances** : la base de calcul du Fonds (`fondsRoyaltiesCalcul` : `sales-kpis` × taux de la fiche), une fois le mois
   lu en entier, avec le dû (`vcRed:{mois}`, 1 h) ;
-- **attendu par la matière** : sur les semaines de `ceo_verif_inventaire` closes dans le mois et à entrées validées,
+- **attendu par la matière** : sur les semaines de `ceo_verif_inventaire` closes dans le mois, à entrées validées et
+  complètes (excédent « vendu sans être sorti » sous le quart des ventes),
   R = (consommé − poubelle) ÷ ventes, au coût ; attendu = caisse × R ; écart = caisse ÷ attendu − 1.
 
 À part : `sansProduit` (lignes de ticket sans produit, `svP…['sp']` type `ligne`), `remises` (remises sur le ticket

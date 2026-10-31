@@ -133,6 +133,9 @@ function vcRapportMatiere(array $rows): ?array
     $s = 0.0; $w = 0.0; $v = 0.0; $n = 0; $jours = 0.0; $exclues = 0;
     foreach ($rows as $r) {
         if ((float) ($r['entrees_eur'] ?? 0) <= 0) { $exclues++; continue; }   // sans entrée validée : faux par défaut
+        // Des entrées incomplètes : plus d'un quart des ventes « vendues sans être sorties » du stock (lot 4) — la
+        // matière ne dit alors rien du CA (mesuré le 31/10 : Halle +186 %, une commande sur deux non validée).
+        if ((float) ($r['excedent_eur'] ?? 0) > 0.25 * (float) ($r['ventes_eur'] ?? 0)) { $exclues++; continue; }
         $s += (float) $r['sorties_eur']; $w += (float) $r['poubelle_eur']; $v += (float) $r['ventes_eur']; $n++; $jours += (float) ($r['jours'] ?? 7);
     }
     if ($n === 0 || $v <= 0) { return $exclues > 0 ? ['r' => null, 'semaines' => 0, 'exclues' => $exclues] : null; }
@@ -143,7 +146,7 @@ function vcAttenduMois(int $sid, string $ym): ?array
 {
     try {
         if (function_exists('vmTable')) { vmTable(); }
-        $rows = Db::rows('SELECT jours, entrees_eur, sorties_eur, poubelle_eur, ventes_eur FROM ceo_verif_inventaire WHERE shop_id = ? AND a_at >= ? AND a_at < ?',
+        $rows = Db::rows('SELECT jours, entrees_eur, sorties_eur, poubelle_eur, ventes_eur, excedent_eur FROM ceo_verif_inventaire WHERE shop_id = ? AND a_at >= ? AND a_at < ?',
             [$sid, $ym . '-01', date('Y-m-d', strtotime($ym . '-01 +1 month'))]);
     } catch (Throwable $e) { return null; }
     return vcRapportMatiere($rows);
