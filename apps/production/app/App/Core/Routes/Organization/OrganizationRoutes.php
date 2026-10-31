@@ -27,6 +27,10 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/ajax/organization/week-plan/{id:\d+}', ['controller' => $c, 'method' => 'weekPlanData']);
     $r->addRoute('PUT', '/ajax/organization/week-plan/{id:\d+}', ['controller' => $c, 'method' => 'saveWeekPlan']);
     $r->addRoute('POST', '/ajax/organization/week-plan/{id:\d+}/copy', ['controller' => $c, 'method' => 'copyWeekPlan']);
+    // Kto co zrobił [227] : wykonanie zadań wszystkich stanowisk (przełożony), przypomnienie.
+    $r->addRoute('GET', '/organization/execution', ['controller' => $c, 'method' => 'execution']);
+    $r->addRoute('GET', '/ajax/organization/execution', ['controller' => $c, 'method' => 'executionData']);
+    $r->addRoute('POST', '/ajax/organization/execution/remind/{id:\d+}', ['controller' => $c, 'method' => 'remindTask']);
     $r->addRoute('GET', '/my-tasks', ['controller' => $c, 'method' => 'myTasks']);
     $r->addRoute('PATCH', '/ajax/my-tasks/{id:\d+}', ['controller' => $c, 'method' => 'setStatus']);
     $r->addRoute('POST', '/ajax/organization/positions', ['controller' => $c, 'method' => 'savePosition']);

@@ -10,7 +10,8 @@ final class PositionRepository extends WorkshopRepository
     protected array $writable = ['code', 'name_pl', 'name_fr', 'description', 'kind', 'id_group', 'id_reports_to', 'sort_order', 'active'];
     /** Pola karty stanowiska (n_position_sheet), każde w wersji _pl i _fr. */
     public const SHEET_FIELDS = ['mission', 'responsibilities', 'skills', 'requirements', 'conditions', 'indicators', 'safety', 'relations'];
-    private const TASK_COLUMNS = ['id_position', 'id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'minutes', 'weekdays', 'link_path', 'form_code', 'auto_code', 'sort_order', 'active'];
+    private const TASK_COLUMNS = ['id_position', 'id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'minutes', 'weekdays', 'due_time', 'month_day', 'link_path', 'form_code', 'auto_code',
+        'cron_on', 'cron_freq', 'cron_days', 'cron_time', 'cron_action', 'cron_then', 'remind_time', 'escalate_days', 'sort_order', 'active'];
 
     public function positions(): array
     {
@@ -195,11 +196,29 @@ final class PositionRepository extends WorkshopRepository
         );
     }
 
-    /** Zadanie zaliczone samo (kreator zakończony) : bez osoby, z notatką. */
-    public function autoDone(int $occurrenceId, string $note): void
+    /** Wystąpienie zadania w okresie (klucz). */
+    public function occurrenceByKey(int $taskId, string $periodKey): ?array
     {
-        $this->db->prepare("UPDATE n_task_occurrence SET status = 'done', done_by = NULL, done_at = ?, note = ? WHERE id = ? AND status = 'open'")
-            ->execute([date('Y-m-d H:i:s'), $note, $occurrenceId]);
+        return $this->all('SELECT * FROM n_task_occurrence WHERE id_task = ? AND period_key = ?', [$taskId, $periodKey])[0] ?? null;
+    }
+
+    /** Wystąpienia zadań z terminem w [from, to] (widok przełożonego). */
+    public function occurrencesRange(array $taskIds, string $from, string $to): array
+    {
+        if (!$taskIds) return [];
+        $in = implode(', ', array_fill(0, count($taskIds), '?'));
+        return $this->all(
+            "SELECT o.*, u.displayed_name AS done_by_name, f.status AS form_status FROM n_task_occurrence o LEFT JOIN user u ON u.id = o.done_by
+             LEFT JOIN n_task_form f ON f.id_occurrence = o.id WHERE o.id_task IN ({$in}) AND o.due_date BETWEEN ? AND ? ORDER BY o.due_date, o.id",
+            [...$taskIds, $from, $to]
+        );
+    }
+
+    /** Zadanie zaliczone samo (kreator zakończony) : bez osoby, z notatką. */
+    public function autoDone(int $occurrenceId, string $note, ?string $summary = null): void
+    {
+        $this->db->prepare("UPDATE n_task_occurrence SET status = 'done', done_by = NULL, done_at = ?, note = ?, summary = ? WHERE id = ? AND status = 'open'")
+            ->execute([date('Y-m-d H:i:s'), $note, $summary !== null ? mb_substr($summary, 0, 255) : null, $occurrenceId]);
     }
 
     /**

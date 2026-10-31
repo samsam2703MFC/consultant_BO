@@ -92,6 +92,32 @@ class PositionController extends BaseController
         }
     }
 
+    /** Kto co zrobił [227] (makieta 3) : przełożony — stanowiska × dni, automatyczne, spóźnione, « Przypomnij ». */
+    public function execution()
+    {
+        $view = (string) ($_GET['view'] ?? 'week');
+        $this->page(fn() => $this->view('organization/execution', ['data' => $this->service->execution($view, $this->userId())]));
+    }
+
+    public function executionData()
+    {
+        try {
+            return $this->json(['data' => $this->service->execution((string) ($_GET['view'] ?? 'week'), $this->userId())]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    public function remindTask($id)
+    {
+        try {
+            $this->service->remind((int) $id, $this->userId());
+            return $this->json(['message' => 'Przypomnienie wysłane (dzwonek).']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     public function savePosition($id = null)
     {
         try {

@@ -390,6 +390,8 @@ if [[ -f "$IMPORT_OK" ]]; then
 */5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/user_mail_sync.php >> /var/log/production-erp-mail.log 2>&1
 # Prognoza 13 tygodni : gamy i sprzedaż sklepów z panelu TF Buddy (GET), raz w tygodniu (po poniedziałku 6:00)
 10 6 * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/forecast_panel_read.php >> /var/log/production-erp-mail.log 2>&1
+# Zadania stanowisk : zadania automatyczne (cron), zaliczenie po kreatorach, przypomnienia i przełożeni
+*/5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/task_cron.php >> /var/log/production-erp-mail.log 2>&1
 CRON
   chmod 644 /etc/cron.d/production-erp-mail
   touch /var/log/production-erp-mail.log && chown www-data:www-data /var/log/production-erp-mail.log

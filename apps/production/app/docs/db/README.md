@@ -103,6 +103,50 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   désactivé s'il n'a personne. Les alertes d'achat de « Do obsłużenia » et de Dzisiaj (commande fournisseur non envoyée,
   zakupy tygodnia, offres à décider, articles < 3 fournisseurs) visent ZAKUPY et KIEROWNIK_PRODUKCJI.
 
+### Tâche = assistant, cron, rappels, « Kto co zrobił » (migration 146, 31/10/2026)
+
+- Chaque tâche de poste peut ouvrir un assistant (`n_position_task.auto_code`, catalogue `TaskWizards::CATALOG`) et se valide
+  seule sur sa dernière étape, avec un résultat chiffré enregistré dans `n_task_occurrence.summary` : `forecast_approved`
+  (`n_forecast_run.approved_at` : « 10 988 kart. · zatwierdzona 09:04 — Anna »), `buy_sent` (`n_buy_round` envoyée ;
+  brouillon = étape 2 sur 3 « Komu »), `inv_checked`, `costs_recalc`, `prices_planned`, `week_plan_validated` (`n_prod_plan`
+  validé ; proposé = en cours), `production_day_closed` (`n_prod_day_close` : groupes qui ont validé le jour),
+  `day_shipped` (`palets_delivery` du jour : statut 1 / 2 = en attente, 3 = expédiée ; jour sans palette = fait),
+  `logistics_plan_approved` (`n_logistics_plan_week.approved_at`), `month_closed` (mois précédent : `cost_month` LOCKED ;
+  ouvert = étape de `MonthCloseService::status`, 8 étapes), `services_closed` (mois précédent `n_service_month`).
+  Lien de la tâche = page de l'assistant. Migration : « Wysyłka dnia » (Logistyka) → `/shipping/wizard` + `day_shipped`,
+  suivi de production (Kierownik produkcji) → `production_day_closed`, clôture du mois (Administracja) → `/month-close`,
+  `month_closed`, 3e jour ouvré ; nouvelles tâches : plan de production de la semaine (Kierownik produkcji, jeudi 45 min),
+  plan logistique 13 semaines (Logistyka, jeudi 30 min), coûts de services du mois (Administracja, 2e jour ouvré 30 min).
+- Colonnes ajoutées à `n_position_task` : `due_time` (échéance dans la journée), `month_day` (mois / trimestre : `wd3` =
+  3e jour ouvré hors fériés PL, `d5` = 5e jour, vide = dernier jour ; trimestre : dans le 1er mois), `cron_on`, `cron_freq`
+  (daily / weekly / monthly / quarterly), `cron_days` (« 1,2,3,4,5 », « 1 », « d1 », « wd1 »), `cron_time`, `cron_action`
+  (`TaskCronService::ACTIONS` : `forecast_panel` lecture du panel TF Buddy + recalcul de la prévision, `stock_recalc`
+  stocks min. / max. des 6 semaines, `month_prepare` ouverture de la clôture du mois précédent), `cron_then` (`wait` =
+  préparé, la personne termine l'assistant ; `done` = validée seule), `remind_time` (défaut 09:00, vide = sans), `escalate_days`
+  (défaut 2, vide = jamais). `n_task_occurrence` : `summary`, `reminded_at`, `escalated_at`. Table `n_task_cron_run`
+  (`id_task`, `period_key` 2026-11-02 / 2026-W45 / 2026-11 / 2026-Q4, `action`, `started_at`, `finished_at`, `ok`, `summary`,
+  `error`) : une exécution réussie par période ; rattrapage plus tard dans la même période si le serveur était arrêté ; échec :
+  nouvel essai toutes les 30 min, 3 au plus, cloche « danger » (`task_cron_failed`).
+- `Bin/task_cron.php` toutes les 5 min (`/etc/cron.d/production-erp-mail`, heure de Varsovie) : occurrences des périodes en
+  cours pour les postes occupés + validation par les assistants, exécutions cron dues, rappel le jour de l'échéance à
+  `remind_time` (cloche `task_reminder` « Dziś termin… »), en retard de `escalate_days` jours → cloche `task_late` avec poste,
+  personnes et supérieur (`n_position.id_reports_to`, sinon Administrateur) ; une fois par occurrence ; retards de plus de
+  `escalate_days` + 7 jours ignorés (anciens retards au premier passage). Cloche seulement (aucun e-mail).
+- Dzisiaj « Mój tydzień » (maquette 227-1) : « Na dziś » = tâches du jour, retards de la semaine et d'avant (une ligne par
+  tâche, « N× niezrobione »), mois / trimestre en cours ou à échéance sous 3 jours, faits aujourd'hui ; un bouton par ligne :
+  Rozpocznij (assistant), Wznów (étape X sur Y), Zobacz (résultat), Wypełnij protokół ; « Zrobione » seulement pour les
+  tâches sans assistant ; états : préparé par le système (cron `wait`), exécuté par le système, en retard avec cloche et
+  « przełożony powiadomiony ». Semaine en pastilles (assistant, en cours, fait, automatique, en retard).
+- Tâches du poste (maquette 227-2, `/organization/week-plan/{id}`, administrateur) : tableau par fréquence, panneau
+  d'édition (assistant, fréquence Dzień / Tydzień / Mies. / Kw. + jours ou règle du mois + heure, minutes, « Automatycznie
+  (cron) » Tak / Nie → quand, jour, heure, quoi, ensuite, dernières exécutions ; rappels), « Kreatory do przypięcia »
+  (libre / épinglé). Enregistrement : mêmes PUT + champs ci-dessus, validés (HH:MM, `wdN` / `dN`, 1–30 jours, cron complet).
+- « Kto co zrobił » (maquette 227-3, `/organization/execution`, catalogue d'accès `execution` : administrateur + postes
+  supérieurs d'un autre poste — Kierownik produkcji, Logistyka, Brygadzista) : postes × jours (Dziś / Tydzień / Miesiąc), une
+  pastille par échéance (fait, validé seul, en cours, en retard, à faire), ligne des groupes de production (jour validé sur
+  la tablette), ligne « System » (exécutions cron), tuiles, retards avec « Przypomnij » (POST
+  `/ajax/organization/execution/remind/{occurrence}` → cloche, une fois par jour), détail au clic.
+
 ### Prévision 13 semaines glissantes (migration 141, 30/10/2026)
 
 - Page : Produkcja › « Prognoza 13 tygodni » (`/production/forecast`, onglet de la page Produkcja, maquettes 220-1 à 3 ;

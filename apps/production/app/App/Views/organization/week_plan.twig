@@ -1,12 +1,12 @@
 {% extends "layouts/base.twig" %}
 
-{% block title %}Plan tygodnia — {{ plan.position.name_pl }}{% endblock %}
+{% block title %}Zadania stanowiska — {{ plan.position.name_pl }}{% endblock %}
 
 {% block page_heading %}
     <div class="page-heading at-profit-head">
         <div class="page-title">
-            <h3>Plan tygodnia stanowiska</h3>
-            <p class="text-subtitle text-muted mb-0">Funkcje i zadania › {{ plan.position.name_pl }} — dni, minuty, link do strony ERP i czas rzeczywisty ; osoby na stanowisku widzą ten plan na stronie Dzisiaj (« Mój tydzień »).</p>
+            <h3>Zadania stanowiska</h3>
+            <p class="text-subtitle text-muted mb-0">Funkcje i zadania › {{ plan.position.name_pl }} — zadanie = kreator (zalicza się samo), kiedy, minuty, automatycznie (cron) i przypomnienia.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a class="btn btn-outline-primary" href="{{ root }}/organization/positions"><i class="bi bi-arrow-left"></i> Funkcje i zadania</a>
@@ -15,8 +15,8 @@
 {% endblock %}
 
 {% block content %}
-{# Plan tygodnia [219] (makieta 2, tylko administrator) : App\Services\Organization\PositionTaskService::weekPlan / saveWeekPlan / copyPlan.
-   Tabela budowana w assets/js/organization/week-plan.js z danych poniżej ; zapis całego planu naraz. #}
+{# Zadania stanowiska [219] → [227] (makieta 2, tylko administrator) : App\Services\Organization\PositionTaskService::weekPlan / saveWeekPlan / copyPlan.
+   Tabela i panel edycji budowane w assets/js/organization/week-plan.js z danych poniżej ; zapis całego planu naraz. #}
 <section class="section" id="weekPlanApp" data-position="{{ plan.position.id }}">
     <div class="kw"><p class="at-empty">Ładowanie…</p></div>
 </section>

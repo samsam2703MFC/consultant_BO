@@ -30,6 +30,15 @@
                     </a>
                 </li>
 
+                {% if can_see('/organization/execution') %}
+                <li class="sidebar-item">
+                    <a href="{{ root }}/organization/execution" class="sidebar-link">
+                        <i class="bi bi-people"></i>
+                        <span>Kto co zrobił</span>
+                    </a>
+                </li>
+                {% endif %}
+
                 <li class="sidebar-item">
                     <a href="{{ root }}/mail" class="sidebar-link">
                         <i class="bi bi-envelope"></i>
@@ -588,8 +597,11 @@
                 <li><a href="{{ root }}/recipes" data-where="Produkt › Produkty › Receptury"><i class="bi bi-clock-history"></i> Historia receptury : wersje « obowiązuje od », co się zmieniło w składzie (surowce, półprodukty, kompozycje), koszt surowców miesiąc po miesiącu (efekt cen i efekt składu) — przycisk « Historia » w kalkulacji receptury</a></li>
                 <li><a href="{{ root }}/other-settings#alert-params" data-where="Ustawienia › Ustawienia › Parametry"><i class="bi bi-bell"></i> Alerty i terminy w dzwonku : reklamacja bez decyzji (po ilu dniach, alert pilny), zaległe testy nowych produktów, brak kosztów miesiąca (do którego dnia)</a></li>
                 <li><a href="{{ root }}/dashboard/groups" data-where="Analiza › Wynik grup › Tydzień : rentowność grup"><i class="bi bi-robot"></i> Godziny, produkcja, marża i sprzedaż grup w tygodniu i miesiącu, coboty, wykres 12 tygodni</a></li>
-                <li><a href="{{ root }}/today#myWeek" data-where="Dzisiaj › Mój tydzień"><i class="bi bi-calendar-week"></i> Mój tydzień : feuille de route tygodnia — zadania stałe stanowiska dzień po dniu, minuty, link do strony (kreator faktur, kreator cen, upload faktur…), zrobione, zaległe, miesiąc i kwartał</a></li>
-                <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Ustawienia › Organizacja › Funkcje i zadania › Plan tygodnia"><i class="bi bi-calendar-week"></i> Plan tygodnia stanowiska (administrator) : dni zadań stałych, minuty, link do strony ERP, zalicza się samo, czas rzeczywisty z 4 tygodni, obciążenie dni, kopiuj z innego stanowiska</a></li>
+                <li><a href="{{ root }}/today#myWeek" data-where="Dzisiaj › Mój tydzień"><i class="bi bi-calendar-week"></i> Mój tydzień : « Na dziś » — zadanie = kreator (Rozpocznij, Wznów krok 2 z 3, Zobacz wynik), zalicza się samo na ostatnim kroku z wynikiem liczbowym, spóźnione z dzwonkiem, przygotowane przez system ; tydzień w znaczkach (kreator, w toku, zrobione, automatycznie, spóźnione)</a></li>
+                <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Ustawienia › Organizacja › Funkcje i zadania › Zadania stanowiska"><i class="bi bi-calendar-week"></i> Zadania stanowiska (administrator) : kreator (zalicza się, gdy…), kiedy (dzień, tydzień, miesiąc — 3. dzień roboczy, kwartał), termin godzina, minuty, czas rzeczywisty, kreatory do przypięcia, kopiuj z innego stanowiska</a></li>
+                <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Ustawienia › Organizacja › Funkcje i zadania › Zadania stanowiska"><i class="bi bi-robot"></i> Automatycznie (cron) : przełącznik w zadaniu — kiedy (codziennie, co tydzień, co miesiąc, kwartał), dzień, o której, co robi (panel TF Buddy + prognoza, stany min. / maks., zamknięcie miesiąca), potem czeka na osobę albo zalicza się samo, ostatnie uruchomienia, błąd w dzwonku</a></li>
+                <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Ustawienia › Organizacja › Funkcje i zadania › Zadania stanowiska"><i class="bi bi-bell"></i> Przypomnienia zadań : w dniu terminu o 09:00 → osoba, spóźnione po 2 dniach → przełożony (dzwonek), dla każdego zadania</a></li>
+                <li><a href="{{ root }}/organization/execution" data-where="Kto co zrobił"><i class="bi bi-people"></i> Kto co zrobił (przełożony) : stanowiska × dni (dziś, tydzień, miesiąc), zrobione, w toku, spóźnione, grupy produkcji (tablety), System — zadania automatyczne, lista spóźnionych z « Przypomnij », szczegóły zadania</a></li>
                 <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Ustawienia › Organizacja › Funkcje i zadania"><i class="bi bi-file-earmark-person"></i> Karty stanowisk (fiches de poste) : cel, obowiązki, kompetencje, wskaźniki, higiena — biuro i pracownia, PDF PL / FR</a></li>
                 <li><a href="{{ root }}/tablet/driver" data-where="Tablety › Otwórz tablet › Tablet kierowcy"><i class="bi bi-tablet-landscape"></i> Tablet kierowcy : trasa dnia, numery palet, zdjęcia przed i po rozładunku z godziną, podpis, raport PDF trasy, problemy w dostawie</a></li>
                 <li><a href="{{ root }}/clients" data-where="Sprzedaż › Klienci › Klienci"><i class="bi bi-shield-lock"></i> Instrukcje dostawy klienta dla kierowcy : procedura rozładunku, alarm, klucz, zamrażarka, kontakt (zaszyfrowane)</a></li>

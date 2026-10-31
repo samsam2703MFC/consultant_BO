@@ -2781,6 +2781,35 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
     .wk-daily .wk-t { grid-template-columns: minmax(0, 1fr); } .wk-daily .acts { flex-wrap: wrap; } .wk-card h5 .wk-all { margin-left: 0; }
 }
 
+/* [227] Mój tydzień = kreatory (makieta 1) : « Na dziś » (jeden przycisk na wiersz), tydzień w znaczkach, legenda. */
+.wk-card h5 { flex-wrap: wrap; } .wk-sp { flex: 1; }
+.wk-prog { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 4px 0 14px; } .wk-prog .wk-bar { flex: 1; min-width: 160px; height: 8px; margin: 0; background: var(--at-bg-2); }
+.wk-prog .at-sub { font-size: 12.5px; font-variant-numeric: tabular-nums; } .wk-prog .wk-all { font-size: 13px; font-weight: 600; }
+.wk-h { font-size: 13px; font-weight: 700; margin: 16px 0 8px; } .wk-card .wk-h:first-of-type { margin-top: 0; }
+.wt-list { display: grid; gap: 8px; }
+.wt { display: grid; grid-template-columns: 6px minmax(0, 1fr) minmax(0, 250px) auto; gap: 14px; align-items: center; background: #fff; border: 1px solid var(--at-line); border-radius: 12px; padding: 12px 14px 12px 0; }
+.wt .bar { align-self: stretch; border-radius: 12px 0 0 12px; background: var(--c, #8e1f2f); }
+.wt h6 { margin: 0 0 3px; font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+.wt .meta { font-size: 12.5px; color: var(--at-muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.wt-state { font-size: 12.5px; display: grid; gap: 5px; min-width: 0; } .wt-state .at-sub { font-size: 12px; }
+.wt-act { display: flex; gap: 6px; justify-content: flex-end; align-items: center; } .wt-act .kw-btn { min-height: 46px; } .wt-act .kw-btn .bi { font-size: 16px; }
+.wt-chk[aria-pressed=true] { background: #1f5a37; color: #fff; border-color: transparent; }
+.wt.done { background: #fbfdfb; } .wt.done h6 { color: #1f5a37; }
+.wt.late { box-shadow: inset 0 0 0 2px rgba(154,23,48,.35); }
+.wt-steps { display: flex; gap: 4px; } .wt-steps i { flex: 1; height: 6px; border-radius: 4px; background: var(--at-bg-2); } .wt-steps i.on { background: #2e7d4f; } .wt-steps i.cur { background: #c17a2a; }
+.wt-sum { color: #1f5a37; font-weight: 600; } .wt-sum.muted { color: var(--at-muted); }
+.wk-day h6 small { font-variant-numeric: tabular-nums; }
+.wk-chip { display: flex; gap: 6px; align-items: center; background: #fff; border-radius: 9px; padding: 7px 9px; font-size: 12.5px; margin-bottom: 6px; border-left: 4px solid var(--c, #8e1f2f); color: var(--at-text); min-width: 0; }
+.wk-chip > span:not(.ic) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .wk-chip.done > span:not(.ic) { color: var(--at-muted); }
+.wk-chip .ic, .wk-legend .ic { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: 0 0 auto; background: var(--at-bg-2); color: var(--at-muted); font-variant-numeric: tabular-nums; }
+.wk-chip .ic.ok, .wk-legend .ic.ok { background: #2e7d4f; color: #fff; } .wk-chip .ic.run, .wk-legend .ic.run { background: #c17a2a; color: #fff; font-size: 9.5px; } .wk-chip .ic.late, .wk-legend .ic.late { background: #9a1730; color: #fff; }
+.wk-chip .ic.plain::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #c9c3ba; }
+.wk-legend { display: flex; gap: 14px; font-size: 12px; color: var(--at-muted); flex-wrap: wrap; margin-top: 10px; } .wk-legend > span { display: inline-flex; align-items: center; gap: 5px; } .wk-legend .ic { width: 16px; height: 16px; font-size: 9px; }
+.wk-later { display: flex; gap: 8px; flex-wrap: wrap; } .wk-later .wk-chip { margin: 0; background: var(--at-bg-2); min-height: 44px; } .wk-later .wk-chip small { color: var(--at-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wk-foot { margin: 12px 0 0; }
+@media (max-width: 991.98px) { .wt { grid-template-columns: 6px minmax(0, 1fr) auto; } .wt-state { grid-column: 2 / 4; grid-row: 2; } }
+@media (max-width: 575.98px) { .wt { grid-template-columns: 6px minmax(0, 1fr); } .wt-act { grid-column: 2; justify-content: flex-start; } .wt-state { grid-column: 2; grid-row: auto; } }
+
 /* [219] Plan tygodnia stanowiska (administrator) : dni, minuty, link, czas rzeczywisty, obciążenie dni. */
 .ad-days { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
 .ad-days button { min-width: 38px; min-height: 40px; border-radius: 8px; border: 1px solid var(--at-line-2); background: #fff; color: var(--at-muted); font-size: 12px; font-weight: 700; padding: 0 6px; }
@@ -2800,6 +2829,69 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
 .ad-load .bar { height: 6px; border-radius: 4px; background: #fff; margin-top: 6px; overflow: hidden; } .ad-load .bar i { display: block; height: 100%; background: #8e1f2f; }
 .ad-load .over b { color: #8e1f2f; }
 @media (max-width: 991.98px) { .ad-load { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* [227] Zadania stanowiska (makieta 2) : tabela według częstotliwości + panel edycji (kreator, kiedy, cron, przypomnienia). */
+.wp-lead { color: var(--at-muted); font-size: 13px; margin: 0 0 10px; }
+.wp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px; align-items: start; }
+.wp-grid > .kw-card h5, .wp-side .kw-card h5 { flex-wrap: wrap; }
+.wp-side { display: grid; gap: 14px; position: sticky; top: 12px; }
+.wp-t tr.grp td { background: #faf8f4; font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--at-muted); padding: 6px 8px; }
+.wp-t tr.wp-row { cursor: pointer; } .wp-t tr.wp-row:hover td { background: rgba(142,31,47,.03); } .wp-t tr.wp-row:focus-visible { outline: 2px solid #8e1f2f; outline-offset: -2px; }
+.wp-t tr.wp-row.cur td { background: rgba(142,31,47,.06); } .wp-t tr.wp-row.cur td:first-child { box-shadow: inset 4px 0 0 #8e1f2f; }
+.wp-t .nm b { display: block; font-size: 13.5px; } .wp-t td small.ad-real { display: block; font-size: 11px; }
+.wp-sel { display: flex; align-items: center; min-height: 40px; border: 1px solid var(--at-line-2); border-radius: 10px; padding: 4px 10px; background: #fff; font-size: 13px; font-weight: 600; }
+.wp-sel small { font-weight: 400; color: var(--at-muted); display: block; font-size: 11.5px; } .wp-sel.none { color: var(--at-muted); font-weight: 400; background: #fbfaf8; }
+.wp-when { font-size: 12.5px; } .wp-when + .wp-when { margin-top: 4px; }
+.wp-when .d { display: inline-grid; place-items: center; width: 26px; height: 24px; border-radius: 7px; background: var(--at-bg-2); font-size: 11px; font-weight: 600; margin-right: 2px; color: var(--at-muted); } .wp-when .d.on { background: #8e1f2f; color: #fff; }
+.wp-num { font-weight: 700; font-variant-numeric: tabular-nums; }
+.wp-sub { display: block; font-size: 11.5px; color: var(--at-muted); margin-top: 4px; }
+.wp-ed { box-shadow: 0 0 0 2px #8e1f2f; display: grid; gap: 12px; } .wp-ed.empty { box-shadow: none; }
+.wp-ed h5 { margin-bottom: 0; } .wp-ed-t { font-weight: 600; color: var(--at-muted); font-size: 13px; }
+.wp-f { display: grid; gap: 5px; font-size: 13px; } .wp-f > label { font-size: 11.5px; color: var(--at-muted); font-weight: 600; }
+.wp-ed .kw-in { min-height: 42px; border: 1px solid var(--at-line-2); border-radius: 10px; padding: 0 10px; font-size: 13px; background: #fff; width: 100%; }
+.wp-ed textarea.kw-in { padding: 8px 10px; font-weight: 700; resize: vertical; }
+.wp-ed textarea.kw-in, .wp-ed select.kw-in, .wp-ed input[type=time].kw-in, .wp-ed input[data-f=link_custom] { text-align: left; } .wp-ed input[type=number].kw-in { text-align: right; }
+.wp-ed .kw-in.is-invalid { border-color: #9a1730; box-shadow: 0 0 0 2px rgba(154,23,48,.15); }
+.wp-seg { display: inline-flex; border: 1px solid var(--at-line-2); border-radius: 10px; overflow: hidden; max-width: 100%; }
+.wp-seg button { min-height: 42px; padding: 0 10px; white-space: nowrap; font-size: 12.5px; font-weight: 600; border: 0; border-right: 1px solid var(--at-line); background: #fff; color: var(--at-text); }
+.wp-seg button:last-child { border-right: 0; } .wp-seg button.on { background: #8e1f2f; color: #fff; }
+.wp-days { display: flex; gap: 4px; flex-wrap: wrap; } .wp-days button { min-width: 40px; min-height: 42px; border-radius: 9px; border: 1px solid var(--at-line-2); background: #fff; color: var(--at-muted); font-size: 12px; font-weight: 700; }
+.wp-days button.on { background: #8e1f2f; color: #fff; border-color: transparent; }
+.wp-rule { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 6px; }
+.wp-inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.wp-ed .wp-inline .kw-in { width: auto; } .wp-ed .wp-min { width: 80px !important; } .wp-ed .wp-time { width: 132px !important; } .wp-ed .wp-inline input[type=time] { width: 132px; }
+.wp-box { border-top: 1px solid var(--at-line); padding-top: 10px; display: grid; gap: 8px; font-size: 13px; }
+.wp-switch { width: 48px; height: 28px; border-radius: 14px; border: 0; background: #c9c3ba; position: relative; padding: 0; flex: 0 0 auto; }
+.wp-switch i { position: absolute; left: 4px; top: 4px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: left .15s; } .wp-switch.on { background: #1f5a37; } .wp-switch.on i { left: 24px; }
+.wp-kv { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 8px 10px; align-items: center; } .wp-kv > span:nth-child(odd) { font-size: 12px; color: var(--at-muted); }
+.wp-radio { display: grid; gap: 4px; } .wp-radio label, .wp-chk { display: inline-flex; gap: 6px; align-items: center; min-height: 32px; }
+.wp-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.wp-cat { display: grid; gap: 8px; } .wp-cat .it { border: 1px solid var(--at-line); border-radius: 10px; padding: 9px 11px; background: #fff; display: grid; gap: 4px; font-size: 12.5px; }
+.wp-cat .it b { font-size: 13.5px; } .wp-cat .it .ev { color: var(--at-muted); } .wp-cat .it.used { background: #fbfaf8; }
+@media (max-width: 1199.98px) { .wp-grid { grid-template-columns: minmax(0, 1fr); } .wp-side { position: static; } }
+/* [227] Kto co zrobił (makieta 3) : stanowiska × dni, kropki, System (cron), spóźnione, szczegóły. */
+.ex-tiles { margin-bottom: 14px; } .ex-tiles .late b { color: #9a1730; }
+.ex-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; align-items: start; }
+.ex-t { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.ex-t th { font-size: 10.5px; color: var(--at-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 6px 8px; border-bottom: 1px solid var(--at-line); text-align: left; white-space: nowrap; }
+.ex-t th.c { text-align: center; } .ex-t th.today { color: #8e1f2f; } .ex-t th.r, .ex-t td.r { text-align: right; }
+.ex-t td { padding: 10px 8px; border-bottom: 1px solid var(--at-line); vertical-align: top; } .ex-t td.today { background: rgba(142,31,47,.04); }
+.ex-t .who b { display: block; font-size: 13.5px; } .ex-t .who small { color: var(--at-muted); font-size: 12px; }
+.ex-t tr.ex-sys td { background: #faf8f4; } .ex-t tr.ex-sys td.today { background: #f5efe9; }
+.ex-dots { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.ex-dot { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 11.5px; font-weight: 700; border: 0; padding: 0; background: var(--at-bg-2); color: var(--at-muted); font-variant-numeric: tabular-nums; cursor: pointer; }
+.ex-dot.ok { background: #2e7d4f; color: #fff; } .ex-dot.run { background: #c17a2a; color: #fff; font-size: 9.5px; } .ex-dot.late { background: #9a1730; color: #fff; }
+.ex-dot.todo::after { content: ''; width: 8px; height: 8px; border-radius: 50%; border: 2px solid #b9b1a6; } .ex-dot.plan { background: transparent; box-shadow: inset 0 0 0 1px var(--at-line-2); }
+.ex-dot.sel { outline: 2px solid #222; outline-offset: 1px; } .ex-dot:focus-visible { outline: 2px solid #8e1f2f; outline-offset: 1px; }
+.ex-none { display: block; text-align: center; color: #c9c3ba; }
+.ex-rate { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; } .ex-rate small { display: block; font-weight: 400; color: var(--at-muted); font-size: 11.5px; } .ex-rate.bad { color: #9a1730; }
+.ex-side { display: grid; gap: 10px; } .ex-lc { padding: 12px; } .ex-lc h5 { font-size: 14px; }
+.ex-late { display: grid; gap: 8px; max-height: 440px; overflow: auto; } .ex-late .it { border-left: 4px solid #9a1730; background: #fff; border-radius: 10px; padding: 9px 11px; font-size: 12.5px; display: grid; gap: 4px; box-shadow: inset 0 0 0 1px var(--at-line); }
+.ex-late .it b { font-size: 13.5px; } .ex-row, .ex-pop-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ex-pop { border: 1px solid var(--at-line-2); box-shadow: 0 10px 30px rgba(34,34,34,.12); border-radius: 12px; background: #fff; padding: 12px 14px; font-size: 12.5px; display: grid; gap: 6px; }
+.ex-pop.empty { box-shadow: none; background: var(--at-bg-2); border-color: transparent; } .ex-pop b { font-size: 13.5px; } .ex-pop .ok { color: #1f5a37; } .ex-pop .bad { color: #9a1730; }
+.ex-pop a { font-weight: 600; }
+.wk-legend .ic:empty::after { content: ''; width: 6px; height: 6px; border-radius: 50%; border: 2px solid #b9b1a6; }
+@media (max-width: 1199.98px) { .ex-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* Produkcja › Prognoza 13 tygodni [220] (makiety 1–3) : zakładki, oś gam sezonowych, tabela tygodni, karty gam, zakupy. */
 .fc-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: 0 0 12px; } .fc-bar .at-tabs button { min-height: 44px; font-size: 13.5px; }

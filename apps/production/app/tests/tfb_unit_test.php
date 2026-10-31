@@ -399,11 +399,13 @@ preg_match_all("/'([a-z_]+)'/", substr($sql, strpos($sql, 'CROSS JOIN ('), strpo
 // 063 : reminders et client_volume pour la section Finanse).
 $laterSql = file_get_contents(__DIR__ . '/../migrations/tfb/059_navigation.sql') . file_get_contents(__DIR__ . '/../migrations/tfb/063_finance.sql');
 preg_match_all("/SELECT id_position, '([a-z_]+)'/", $laterSql, $later);
-$seeded = array_values(array_unique(array_merge($m[1], $later[1])));
+// 146 : « Kto co zrobił » (execution) dla przełożonych.
+preg_match_all("/INSERT IGNORE INTO n_page_access \(id_position, page_key\)\s*SELECT [^']*'([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/146_task_wizards_cron.sql'), $m146);
+$seeded = array_values(array_unique(array_merge($m[1], $later[1], $m146[1])));
 sort($seeded);
 $grantable = PageAccess::grantable();
 sort($grantable);
-check($seeded === $grantable, 'access: migrations 050 + 059 + 063 seed exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
+check($seeded === $grantable, 'access: migrations 050 + 059 + 063 + 146 seed exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
 
 // --- Aktywność w ERP : trasa (identyfikatory → {id}), ścieżka bez zapytania, okres uporządkowany i ograniczony
 check(ActivityService::route('/products/12/edit') === '/products/{id}/edit' && ActivityService::route('/workshop/gantt') === '/workshop/gantt'
