@@ -25,7 +25,6 @@ require __DIR__ . '/../../src/erp_api.php';
 require __DIR__ . '/../../src/anthropic.php';
 require __DIR__ . '/../../src/google_api.php';
 require __DIR__ . '/../../src/scouting_osm.php';
-require __DIR__ . '/../../src/scouting_dossier.php';
 require __DIR__ . '/../../src/newsletter.php';
 require __DIR__ . '/../../src/newsletter_envoi.php';
 require __DIR__ . '/../../src/fidelite.php';
@@ -555,9 +554,10 @@ function route(string $method, string $path): mixed
             $path === '/ia/statut'                     => ep_ia_statut(),
             $path === '/pwa/compte'                    => PanelApi::statut(),
             $path === '/erp/compte'                    => ErpApi::statut(),
-            $path === '/scouting'                      => ep_scouting(),
+            // Le Scouting est parti dans le CRM (Étude de faisabilité) ; restent
+            // ici les deux lectures dont vivent Développement commercial et
+            // Prospection : les magasins pointés et les lieux autour d'eux.
             $path === '/scouting/reseau'               => ep_scouting_reseau(),
-            $path === '/scouting/etude'                => ep_scouting_etude(),
             $path === '/scouting/demarchage'            => ep_scouting_demarchage(),
             $path === '/marketing/newsletter'                    => ep_newsletter(),
             $path === '/fidelite'                      => ep_fidelite(),
@@ -594,7 +594,6 @@ function route(string $method, string $path): mixed
             preg_match('#^/visites/kpi/(\d{1,10})$#', $path, $m) === 1 => ep_visites_kpi($m[1]),
             preg_match('#^/visites/taches/(\d{1,10})$#', $path, $m) === 1 => ep_visites_taches($m[1]),
             preg_match('#^/visites/budget/(\d{1,10})$#', $path, $m) === 1 => ep_visites_budget($m[1]),
-            preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             $path === '/marketing/social/regles'   => ep_fb_regles(),
             $path === '/marketing/social/posts'                => ep_fb_posts(),
             $path === '/marketing/brand-guard/checks'  => ep_bg_checks(),
@@ -819,20 +818,6 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/fonds/royalties/generer') { return wr_fonds_royalties_generer(); }
     if ($method === 'PUT'  && $path === '/ia/compte') { return wr_ia_compte(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
-    // --- scouting commercial
-    if ($method === 'PUT' && preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m)) { return wr_scouting_tile_put((int) $m[1]); }
-    if ($method === 'PUT' && $path === '/scouting/competitors') { return wr_scouting_competitors_put(); }
-    if ($method === 'POST' && $path === '/scouting/concurrents') { return wr_scouting_concurrent_post(); }
-    if ($method === 'DELETE' && preg_match('#^/scouting/concurrents/(m\d{1,15})$#', $path, $m)) { return wr_scouting_concurrent_delete($m[1]); }
-    if ($method === 'PUT' && preg_match('#^/scouting/candidates/(\d{1,15})/terrain$#', $path, $m)) { return wr_scouting_candidate_terrain((int) $m[1]); }
-    if ($method === 'POST' && $path === '/scouting/notes') { return wr_scouting_notes(); }
-    if ($method === 'POST' && $path === '/scouting/concurrents/google') { return wr_scouting_concurrents_google(); }
-    if ($method === 'POST' && $path === '/scouting/concurrents/vie') { return wr_scouting_concurrents_vie(); }
-    if ($method === 'POST' && preg_match('#^/scouting/refresh/(\d{1,3})$#', $path, $m)) { return wr_scouting_refresh((int) $m[1]); }
-    if ($method === 'PUT' && preg_match('#^/scouting/reseau/(\d{1,10})$#', $path, $m)) { return wr_scouting_reseau_put($m[1]); }
-    if ($method === 'PUT' && preg_match('#^/scouting/magasins/(\d{1,10})$#', $path, $m)) { return wr_scouting_magasin_put($m[1]); }
-    if ($method === 'POST' && $path === '/scouting/candidates') { return wr_scouting_candidate_post(); }
-    if ($method === 'POST' && $path === '/scouting/dossier.pdf') { return wr_scouting_dossier_pdf(); }
     // --- newsletter & campagnes (mode test : aucun envoi ne part)
     // --- fidélité : les règles du programme, publiées en un envoi
     if ($method === 'POST' && $path === '/fidelite/regles') { return wr_fidelite_regles_post(); }
@@ -874,10 +859,6 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/msp') { return wr_msp_post(); }
     if ($method === 'DELETE' && preg_match('#^/msp/(\d+)$#', $path, $m)) { return wr_msp_delete((int) $m[1]); }
     if ($method === 'PUT' && preg_match('#^/equipe/(\d{1,10})$#', $path, $m)) { return wr_equipe_put($m[1]); }
-    if ($method === 'POST' && $path === '/scouting/plan.pdf') { return wr_scouting_plan_pdf(); }
-    if ($method === 'DELETE' && preg_match('#^/scouting/candidates/(\d+)$#', $path, $m)) { return wr_scouting_candidate_delete((int) $m[1]); }
-    if ($method === 'PUT' && $path === '/scouting/populations') { return wr_scouting_populations_put(); }
-    if ($method === 'PUT' && $path === '/scouting/references') { return wr_scouting_references_put(); }
     if ($method === 'POST' && $path === '/marketing/social/posts') { return wr_fb_post_create(); }
     // Les réglages du portail, à son adresse : les règles de l'agent et la note Google visée
     // (le même enregistrement que PUT /parametres/{clé}, qui reste valable).

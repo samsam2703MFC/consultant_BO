@@ -12,7 +12,6 @@ import { valsClientsAnnee } from './clients-annee-vals.js';
 import { valsFidelite } from './fidelite-vals.js';
 import { valsVerification } from './verification-vals.js';
 import { valsPromoTableau, valsPromoEdition, promosBadges, peMonter } from './promotions-vals.js';
-import { Scouting } from './scouting.js';
 // MétaDonnée : un module à part, qui tient son DOM (window.CockpitMetaDonnee) — monté après chaque rendu.
 import './metadonnee.js';
 
@@ -286,12 +285,16 @@ class App {
       const juste = this.adresseDe(this.state.screen);
       if (location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
     }
+    // Un écran parti dans une AUTRE application : l'accueil s'ouvre, mais en
+    // disant où le retrouver (le rendu n'a pas encore eu lieu : l'état suffit).
+    const parti = this.departVers();
+    if (parti) { this.state.toast = parti; this._tt = setTimeout(() => this.setState({ toast: null }), 7000); }
     // Reculer dans l'historique doit reculer d'écran. Le changement qu'on
     // provoque nous-même est ignoré : sinon chaque navigation se rejouerait.
     window.addEventListener('hashchange', () => {
       if (this._hashInterne === location.hash) { this._hashInterne = null; return; }
       const id = this.ecranDeAdresse();
-      if (!id) { return; }
+      if (!id) { const parti = this.departVers(); if (parti) { this.notify(parti); } return; }
       if (App.PERF_ONGLETS[id]) {
         this.setState({ screen: 'resultatJour', rjOnglet: App.PERF_ONGLETS[id], rpSel: null, hmHover: null });
         const juste = this.adresseDe('resultatJour');
@@ -363,11 +366,11 @@ class App {
       // #/parametres depuis un signet résolvait vers un écran inconnu et
       // l'affichage tombait — « rendu impossible », page blanche.
       diagnostic: 'diagnostic', parametres: 'parametres', usageConsole: 'journal/usage',
-      // Ces trois-là n'avaient PAS d'adresse, et le défaut « garde son
+      // Ces deux-là n'avaient PAS d'adresse, et le défaut « garde son
       // identifiant » ne suffisait pas : `ecranDeAdresse` n'accepte un
       // identifiant nu que s'il est CLÉ de cette table. L'ancre affichait
       // donc « #/journal » — que rouvrir ramenait aux tâches, sans un mot.
-      journal: 'journal', scoring: 'parametres/scoring', scouting: 'scouting',
+      journal: 'journal', scoring: 'parametres/scoring',
       tablette: 'tablette',
       // La fidélité du client (24/10/2026) : le programme et l'analyse des clients.
       fidelite: 'fidelity',
@@ -445,6 +448,18 @@ class App {
       prospection: 'prospection/', 'prospection-mobile': 'prospection/', 'developpement-commercial': 'prospection/',
       // Les posts : le portail social (/social, à côté du cockpit) ; les newsletters : le Marketing (/marketing/).
       'controle-posts-facebook': '../social/', newsletter: '../marketing/', 'newsletter-magasin': '../marketing/' };
+  }
+  /**
+   * Les écrans partis dans une AUTRE application : leur adresse ne mène plus
+   * à rien ici, alors on dit où ils vivent désormais.
+   */
+  static get ADRESSES_PARTIES(){
+    return { scouting: 'Le Scouting — où ouvrir vit désormais dans le CRM : Développement → Étude de faisabilité.' };
+  }
+  /** Où vit désormais l'écran que l'adresse désigne, s'il est parti ailleurs. */
+  departVers(){
+    const brut = String(location.hash || '').replace(/^#\/?/, '').split('?')[0].trim();
+    return App.ADRESSES_PARTIES[brut] || '';
   }
   /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
   ecranDeAdresse(){
@@ -768,12 +783,6 @@ class App {
         el.focus(); if (selStart != null && el.setSelectionRange) el.setSelectionRange(selStart, selStart);
       }
     }
-    // Le scouting garde sa carte Leaflet entre deux rendus : son élément
-    // racine est créé une fois et simplement ré-attaché ici.
-    if (this.state.ready && this.state.screen === 'scouting'){
-      if (!this.scouting) this.scouting = new Scouting(this);
-      this.scouting.mount(document.getElementById('scouting-root'));
-    }
     // MétaDonnée : une instance pour les quatre écrans du sous-menu ; ses étapes changent d'écran,
     // ses compteurs (retards, mappings à faire) remontent en pastilles du rail.
     if (this.state.ready && ['mdFormulaires', 'mdMapping', 'mdLeads', 'mdSms'].includes(this.state.screen) && window.CockpitMetaDonnee){
@@ -1083,7 +1092,6 @@ class App {
     };
     const titles = {
       brandGuard: ['Paramètres — Brand Guard', 'La charte de marque, règle par règle, et la page Facebook de chaque magasin. Le contrôle des posts relit la charte telle qu’elle est ici : chaque changement fait une nouvelle version.'],
-      scouting: ['Scouting commercial', '11 provinces et régions · boulangeries OpenStreetMap · population OSM/StatBel · zones d’exclusion et zones prioritaires · modèle CA GeoConsulting (Halle, 08-2024).'],
       croisements: ['Croisements', 'Deux familles — catégorie ou produit — et la lecture : sur les tickets qui contiennent A, la part qui contient aussi B. Par mois, réseau et magasin par magasin, vendeuse par vendeuse au clic. Les combos qui servent s’enregistrent et reviennent chaque mois.'],
       ventes: ['Target de vente & classement', 'Qui vend le mieux, personne par personne — au CA par heure prestée du planning, jamais au CA brut. Le panier et les lignes par ticket complètent la lecture ; chaque mois, la marque prime la meilleure de chaque magasin et la meilleure du réseau.'],
       anaprod: ['Produits × magasins', 'Chaque référence, où elle se vend : une jauge par magasin face à la moyenne réseau — vert au-dessus, rouge en dessous, le delta en %, les « jamais vendu » et les éteints qui sautent aux yeux. Cliquez une référence pour sa fiche de vie — courbe fine par magasin, moyenne réseau et an dernier. Lu en direct chez le panel, tranche par tranche.'],
@@ -1528,8 +1536,9 @@ class App {
         // le détail — pièces, motifs, produits — reste ici, sous Magasins.
         ['invendus', 'Invendus et poubelle', 0],
         // Entre deux inventaires (12/10/2026) : les sorties du stock face aux ventes et à la poubelle.
-        ['inventaires', 'Inventaires', 0],
-        ['scouting', 'Scouting — où ouvrir', 0]]],
+        // « Scouting — où ouvrir » a quitté le rail (31/10/2026) : il vit dans
+        // le CRM, Développement → Étude de faisabilité.
+        ['inventaires', 'Inventaires', 0]]],
       // Deux entrées (18/10/2026) : le Catalogue — quatre questions, une liste,
       // une fiche ; ses lectures détaillées (une référence magasin par magasin,
       // prix × volume, dans le temps, manque à gagner) s'ouvrent de la fiche — et
@@ -1643,8 +1652,8 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD'].forEach(k => common[k] = false);
-    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD'].forEach(k => common[k] = false);
+    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',

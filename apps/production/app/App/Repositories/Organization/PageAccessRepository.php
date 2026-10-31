@@ -58,7 +58,7 @@ final class PageAccessRepository extends WorkshopRepository
 
     public function positions(): array
     {
-        return $this->all('SELECT id, code, name_pl, active FROM n_position ORDER BY active DESC, sort_order, name_pl');
+        return $this->all('SELECT id, code, name_pl, kind, active FROM n_position ORDER BY active DESC, sort_order, name_pl');
     }
 
     public function positionExists(int $id): bool

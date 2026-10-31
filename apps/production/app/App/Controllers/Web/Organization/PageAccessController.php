@@ -48,6 +48,17 @@ class PageAccessController extends BaseController
         }
     }
 
+    /** [239] POST {position_id|null} : sesja administratora (menu pod awatarem) → strona startowa sesji. */
+    public function session()
+    {
+        try {
+            $home = $this->access->switchSession($this->userId(), $this->getJson(Request::createFromGlobals())['position_id'] ?? null);
+            return $this->json(['data' => ['home' => $home]]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     /** Strona spoza uprawnień użytkownika (kod 403 ustawia App). */
     public function forbidden(string $uri)
     {

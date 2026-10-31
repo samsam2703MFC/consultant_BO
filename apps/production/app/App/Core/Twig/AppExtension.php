@@ -30,6 +30,7 @@ class AppExtension extends AbstractExtension
             // Uprawnienia stanowisk : czy użytkownik widzi stronę ; prefiksy stron z widocznością dla railu i wyszukiwarki.
             new TwigFunction('can_see', fn(string $path) => \App\Core\Web\PageAccess::visible($path)),
             new TwigFunction('rail_access', fn() => (object) \App\Core\Web\PageAccess::$rail),
+            new TwigFunction('view_session', fn() => \App\Core\Web\ViewSession::menu()),
             new TwigFunction('can', function(string $perm, array $perms = null) {
                 $perms = $perms ?? (GlobalRegistry::get('user')['permissions'] ?? []);
                 return in_array($perm, $perms, true);

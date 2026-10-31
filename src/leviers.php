@@ -24,7 +24,7 @@ declare(strict_types=1);
  * Les pastilles suivent les seuils de la Table KPI (ceo_kpi_def) : rien n'est fixé ici.
  *
  * Comparer à mois égaux, toujours. Le mois d'ouverture d'un magasin est partiel
- * (l'ouverture saisie dans Scouting › Magasins du réseau, sinon l'année du
+ * (l'ouverture saisie dans l'Étude de faisabilité du CRM › Magasins du réseau, sinon l'année du
  * panel) : il ne se compare pas. Des frais généraux à 0 % ne sont pas saisis :
  * ils ne se comparent pas non plus. Le réseau se compare à périmètre constant.
  */
