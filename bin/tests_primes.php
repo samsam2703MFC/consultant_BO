@@ -856,8 +856,8 @@ echo "\nL'API du module\n";
 $inv = apiModInventaire();
 $parSource = [];
 foreach ($inv as $src) { $parSource[$src['cle']] = array_merge(...array_column($src['groupes'], 'routes')); }
-verifie('cinq sources : 20 routes du cockpit, 20 du panel, 4 de l’ERP admin, 11 tables, 1 route Twilio',
-    array_map('count', $parSource) === ['cockpit' => 20, 'panel' => 20, 'erp' => 4, 'base' => 11, 'sms' => 1], json_encode(array_map('count', $parSource)));
+verifie('cinq sources : 21 routes du cockpit, 20 du panel, 4 de l’ERP admin, 11 tables, 1 route Twilio',
+    array_map('count', $parSource) === ['cockpit' => 21, 'panel' => 20, 'erp' => 4, 'base' => 11, 'sms' => 1], json_encode(array_map('count', $parSource)));
 $malFaites = [];
 foreach ($parSource as $cle => $rs) {
     foreach ($rs as $r) {
@@ -893,7 +893,7 @@ $routeIn = static function (string $src, string $chemin) use ($inv): array {
     return [];
 };
 $rKpi = $routeIn('panel', '/shops/{id}/statistics/sales/kpis?date_from=&date_to=');
-$rEmp = $routeIn('panel', '/employees/{id}/schedule?date_from=&date_to=');
+$rEmp = $routeIn('panel', '/employees/{id}/tasks');
 $etat = static fn (array $r, ?array $m): string => apiModEtat($r, $m)['niveau'];
 verifie('l’état d’une route : 200 rapide ok, 200 lent « lente », injoignable, 404 et 500 en erreur',
     $etat($rKpi, ['type' => 'http', 'code' => 200, 'ms' => 230]) === 'ok' && $etat($rKpi, ['type' => 'http', 'code' => 200, 'ms' => 4200]) === 'lent'

@@ -356,4 +356,8 @@ jobs:
             echo; echo "=== EmployeeController::patch ==="
             f=$A/app/Controllers/Employee/EmployeeController.php
             awk "/function patch\(/,/^    }/" "$f" | cut -c1-200 | head -40
+            # Le planning de l’app lisait GET /employees/{id}/schedule (31/10/2026, Sam : « faux ») : les filtres que la route lit.
+            echo; echo "=== GET /employees/{id}/schedule : ce que la route lit ==="
+            awk "/function getByEmployee/,/^    }/" $A/app/Controllers/Employee/ScheduleController.php | cut -c1-200 | head -40
+            grep -rnE "function getByEmployee|start_date|end_date|date_from|date_to|dateFrom|dateTo" $A/app/Services/Employee $A/app/Repositories/Employee --include="*Schedule*.php" 2>/dev/null | cut -c1-220 | head -40
           '

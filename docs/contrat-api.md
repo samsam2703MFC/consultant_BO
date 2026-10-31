@@ -4438,3 +4438,22 @@ prénom, un nom, un téléphone ou un e-mail changé dans l'app est gardé ici e
 Ce qui manque compte 16 éléments : prénom, nom, naissance, nationalité ; téléphone, e-mail, adresse ; contact
 d'urgence ; statut, numéro national, IBAN ; t-shirt, veste, pointure ; disponibilités ; carte (recto et verso). Le
 prénom, le nom, le téléphone et l'e-mail du panel comptent comme remplis. Tests : `php bin/tests_profil.php`.
+
+### `GET /ventes/moi/planning?du=&au=` — le planning de l'app employé, lu à la route du planning (31/10/2026, demande de Sam)
+
+« /employee/schedule est faux, il ne relaie pas via les API planning. » L'app lisait `GET /employees/{id}/schedule`
+du panel avec le jeton de la personne ; le cockpit lit le planning par `GET /shops/{id}/schedule`, la route du
+planning que le panel sert en production (`src/planning_sync.php`). L'app demande maintenant ses services au cockpit
+(`src/planning_moi.php`), même voie que « Mes primes » (identité signée par l'app, avant la session).
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/ventes/moi/planning?du=AAAA-MM-JJ&au=AAAA-MM-JJ` | `{emp, du, au, services:[{id_schedule, id_employee, work_date, start_hour, end_hour, id_shop}], source, muets:[sid], garde:[sid]}` — les services de la personne seule, sans nom ni téléphone. 401 sans identité ; 400 si une date manque ou est illisible, si `au < du`, ou au-delà de deux mois. |
+
+Comment : les magasins actifs, lus de front à `GET /shops/{id}/schedule` (la route rend tout l'historique ; seule la
+fenêtre de six semaines avant à dix semaines après aujourd'hui est gardée, cinq minutes, dans `mot_cache`
+« planShop:<id> »). Un magasin muet sert sa dernière lecture (jusqu'à six heures, `garde`), sinon la table locale
+`franchisee_employee_schedule` que la synchro horaire remplit depuis la même route (`muets`) ; un jour hors de la
+fenêtre vient aussi de la table. Dans la fenêtre, la route fait foi : un service effacé au panel ne revient pas de la
+table. Sans réponse du cockpit, la page Planning de l'app le dit au lieu d'afficher une semaine vide.
+Tests : `php bin/tests_planning_moi.php`.

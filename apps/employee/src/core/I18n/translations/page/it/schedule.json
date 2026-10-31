@@ -13,6 +13,8 @@
   "prev_week": "Settimana precedente",
   "scale": "La barra: la giornata, dalle {a} alle {b}.",
   "schedule": "Pianificazione",
+  "schedule_unavailable": "Il turno non si può leggere in questo momento.",
+  "schedule_unavailable_hint": "Riprova tra poco. Il tuo negozio ha il turno aggiornato.",
   "shift": "turno",
   "shift_other_shop": "negozio {n}",
   "shift_profit": "Redditività del turno",

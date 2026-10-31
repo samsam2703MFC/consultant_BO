@@ -13,6 +13,8 @@
   "prev_week": "Poprzedni tydzień",
   "scale": "Pasek: dzień od {a}:00 do {b}:00.",
   "schedule": "Grafik",
+  "schedule_unavailable": "Grafiku nie da się teraz odczytać.",
+  "schedule_unavailable_hint": "Spróbuj za chwilę. Twój sklep ma aktualny grafik.",
   "shift": "zmiana",
   "shift_other_shop": "sklep {n}",
   "shift_profit": "Rentowność zmiany",
