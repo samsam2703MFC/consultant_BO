@@ -72,7 +72,146 @@ function ensureParcours(): void
         $colonne = true;
         // Tables créées avant les critères d'admission (31/10/2026).
         try { Db::exec('ALTER TABLE ceo_parcours ADD COLUMN admission TEXT NULL AFTER acquis_declares'); } catch (Throwable $e) { /* déjà là */ }
+        // Le candidat du CRM que suit le parcours (sa fiche dans atelier-espace-candidat), null hors CRM.
+        try { Db::exec('ALTER TABLE ceo_parcours ADD COLUMN candidat_ref VARCHAR(64) NULL AFTER employe_id'); } catch (Throwable $e) { /* déjà là */ }
     }
+}
+
+/* ── Les candidats franchisés du CRM ─────────────────────────────────────────
+ * Le CRM candidat (atelier-espace-candidat) vit dans la MÊME base que le
+ * cockpit (comme crm_settings, lu par smtp.php et metadonnee.php). Sa table des
+ * candidats est trouvée par son nom et ses colonnes — information_schema, rien
+ * d'autre — puis lue telle quelle : jamais une écriture chez le CRM. Seuls le
+ * nom, le statut, la zone et les dates en sortent : ni e-mail, ni téléphone.
+ * ------------------------------------------------------------------------- */
+
+/** Les colonnes utiles, par ordre de préférence (comparées en minuscules). */
+const PC_CRM_COLONNES = [
+    'id' => ['id', 'candidate_id', 'candidat_id', 'uuid'],
+    'prenom' => ['first_name', 'firstname', 'prenom', 'given_name', 'first'],
+    'nom' => ['last_name', 'lastname', 'nom', 'family_name', 'surname', 'last'],
+    'complet' => ['full_name', 'fullname', 'name', 'nom_complet', 'display_name', 'contact_name'],
+    'statut' => ['status', 'statut', 'stage', 'etape', 'pipeline_stage', 'phase', 'step', 'state'],
+    'zone' => ['zone', 'zone_souhaitee', 'target_zone', 'project_city', 'target_city', 'city', 'ville', 'commune', 'localite', 'locality', 'region', 'area', 'location'],
+    'le' => ['created_at', 'date_creation', 'cree_le', 'created', 'date_created', 'insert_timestamp'],
+    'maj' => ['updated_at', 'maj_le', 'last_activity_at', 'last_contact_at', 'modified_at', 'updated'],
+    'supprime' => ['deleted_at', 'archived_at', 'is_deleted', 'deleted', 'is_archived', 'archived'],
+];
+
+/**
+ * La table des candidats parmi celles de la base : [table => [colonnes]] → la
+ * source retenue (table et colonnes, par rôle), ou null. Le nom doit FINIR par
+ * candidat(s), candidate(s), lead(s) ou prospect(s) — une table de notes ou
+ * d'événements des candidats n'en est pas une — et ne pas être au cockpit
+ * (ceo_), au marketing (mar_) ni au journal Meta ; il faut un identifiant et
+ * un nom. « candid » l'emporte sur « lead », qui l'emporte sur « prospect ».
+ */
+function pcCrmChoisir(array $tables): ?array
+{
+    $meilleure = null; $score = -1;
+    foreach ($tables as $t => $cols) {
+        $t = (string) $t;
+        if (!preg_match('/^[A-Za-z0-9_]{1,64}$/', $t) || preg_match('/^(ceo|mar|pla|brand_guard)_/i', $t) || stripos($t, 'meta') !== false) { continue; }
+        if (!preg_match('/(^|_)(candidats?|candidates?|leads?|prospects?)$/i', $t, $m)) { continue; }
+        $bas = array_map('strtolower', array_map('strval', (array) $cols));
+        $role = [];
+        foreach (PC_CRM_COLONNES as $r => $noms) {
+            foreach ($noms as $n) { if (in_array($n, $bas, true)) { $role[$r] = (string) $cols[array_search($n, $bas, true)]; break; } }
+        }
+        if (!isset($role['id']) || !(isset($role['complet']) || isset($role['nom']))) { continue; }
+        $s = (stripos($m[2], 'candid') === 0 ? 30 : (stripos($m[2], 'lead') === 0 ? 20 : 10))
+            + (preg_match('/^(crm|fl|tfb_crm)_/i', $t) ? 5 : 0)
+            + (in_array('email', $bas, true) ? 2 : 0) + (isset($role['statut']) ? 2 : 0) + (isset($role['zone']) ? 1 : 0) + (isset($role['prenom']) ? 1 : 0);
+        if ($s > $score) { $score = $s; $meilleure = ['table' => $t, 'colonnes' => $role]; }
+    }
+    return $meilleure;
+}
+
+/** La source des candidats dans la base partagée (gardée une heure), ou null : pas de CRM ici. */
+function pcCrmSource(bool $frais = false): ?array
+{
+    static $memo = null;
+    if ($memo !== null && !$frais) { return $memo ?: null; }
+    $k = 'pcCrmSource';
+    $c = setting($k);
+    if (!$frais && is_array($c) && time() - (int) ($c['le'] ?? 0) < 3600) { $memo = $c['source'] ?? false; return $memo ?: null; }
+    $source = null;
+    try {
+        $tables = [];
+        foreach (Db::rows("SELECT TABLE_NAME t, COLUMN_NAME c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()
+                            AND (TABLE_NAME LIKE '%candidat%' OR TABLE_NAME LIKE '%lead%' OR TABLE_NAME LIKE '%prospect%') ORDER BY TABLE_NAME, ORDINAL_POSITION") as $r) {
+            $tables[(string) $r['t']][] = (string) $r['c'];
+        }
+        $source = pcCrmChoisir($tables);
+    } catch (Throwable $e) { return null; }   // information_schema fermé : on ne garde pas l'échec
+    $memo = $source ?? false;
+    $j = json_encode(['le' => time(), 'source' => $source], JSON_UNESCAPED_UNICODE);
+    try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$k, $j]); } catch (Throwable $e) { /* sans cache */ }
+    return $source;
+}
+
+/** Un statut du CRM, lisible (« entretien_planifie » → « Entretien planifie »). */
+function pcCrmStatut(?string $s): ?string
+{
+    $s = trim(str_replace(['_', '-'], ' ', (string) $s));
+    return $s === '' ? null : mb_strtoupper(mb_substr($s, 0, 1)) . mb_substr($s, 1);
+}
+
+/**
+ * Les candidats, du plus récemment suivi au plus ancien (2 000 au plus), ou un
+ * seul (`$ref`). Chaque ligne : ref, nom, statut, zone, le (création), maj.
+ *
+ * @return list<array{ref:string,nom:string,statut:?string,zone:?string,le:?string,maj:?string}>
+ */
+function pcCandidatsCrm(array $src, ?string $ref = null): array
+{
+    $q = static fn (string $c): string => '`' . str_replace('`', '', $c) . '`';
+    $col = $src['colonnes'];
+    $sel = [$q($col['id']) . ' AS ref'];
+    foreach (['prenom', 'nom', 'complet', 'statut', 'zone', 'le', 'maj'] as $r) { $sel[] = (isset($col[$r]) ? $q($col[$r]) : 'NULL') . ' AS ' . $r; }
+    $where = [];
+    if (isset($col['supprime'])) {
+        $s = strtolower($col['supprime']);
+        $where[] = str_ends_with($s, '_at') ? $q($col['supprime']) . ' IS NULL' : '(' . $q($col['supprime']) . ' IS NULL OR ' . $q($col['supprime']) . ' = 0)';
+    }
+    $args = [];
+    if ($ref !== null) { $where[] = $q($col['id']) . ' = ?'; $args[] = $ref; }
+    $tri = isset($col['maj']) || isset($col['le']) ? 'COALESCE(' . implode(', ', array_map($q, array_values(array_filter([$col['maj'] ?? null, $col['le'] ?? null])))) . ') DESC, ' : '';
+    $sql = 'SELECT ' . implode(', ', $sel) . ' FROM ' . $q($src['table']) . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY ' . $tri . $q($col['id']) . ' DESC LIMIT 2000';
+    $out = [];
+    foreach (Db::rows($sql, $args) as $r) {
+        $nom = trim(trim((string) $r['prenom']) . ' ' . trim((string) $r['nom']));
+        if ($nom === '' || (isset($col['complet']) && !isset($col['prenom']))) { $nom = trim((string) ($r['complet'] ?? '')) ?: $nom; }
+        if ($nom === '') { continue; }
+        $date = static fn ($v) => $v === null || $v === '' ? null : (is_numeric($v) ? date('Y-m-d', (int) $v > 1e11 ? (int) ($v / 1000) : (int) $v) : substr((string) $v, 0, 10));
+        $out[] = ['ref' => (string) $r['ref'], 'nom' => mb_substr(preg_replace('/\s+/', ' ', $nom), 0, 120), 'statut' => pcCrmStatut($r['statut'] === null ? null : (string) $r['statut']),
+            'zone' => ($z = trim((string) ($r['zone'] ?? ''))) === '' ? null : mb_substr($z, 0, 80), 'le' => $date($r['le']), 'maj' => $date($r['maj'])];
+    }
+    return $out;
+}
+
+/**
+ * GET /parcours/candidats — les candidats franchisés du CRM, pour l'étape
+ * « Pour qui ? » ; chacun dit s'il a déjà un parcours en cours. `crm` : la table
+ * lue (null : pas de CRM dans cette base — la saisie libre reste possible).
+ */
+function ep_parcours_candidats(): array
+{
+    ensureParcours();
+    $src = pcCrmSource(!empty($_GET['frais']));
+    if ($src === null) { return ['crm' => null, 'candidats' => [], 'total' => 0]; }
+    try { $l = pcCandidatsCrm($src); }
+    catch (Throwable $e) {
+        pcCrmSource(true);   // la table a peut-être changé : on la recherche à la prochaine lecture
+        return ['crm' => ['table' => $src['table']], 'candidats' => [], 'total' => 0, 'erreur' => 'table des candidats du CRM illisible'];
+    }
+    $en = [];
+    foreach (Db::rows("SELECT id, candidat_ref, statut FROM ceo_parcours WHERE candidat_ref IS NOT NULL AND statut IN ('actif','atteint') ORDER BY statut = 'actif', maj_le") as $r) {
+        $en[(string) $r['candidat_ref']] = ['id' => (int) $r['id'], 'statut' => $r['statut']];
+    }
+    foreach ($l as &$c) { $c['parcours'] = $en[$c['ref']] ?? null; }
+    unset($c);
+    return ['crm' => ['table' => $src['table'], 'colonnes' => array_keys($src['colonnes'])], 'candidats' => $l, 'total' => count($l)];
 }
 
 /** Le référentiel v25 (l'Excel), tel que tools/formation/referentiel_excel.py l'a écrit. */
@@ -717,6 +856,15 @@ function wr_parcours_creer(): array
     $d = $dests[$cle];
     $pers = pcPersonne($eid, $shop, $ctx['ref']);
     $nom = $eid !== null ? (string) ($pers['nom'] ?? ('Employé ' . $eid)) : trim(mb_substr((string) ($b['nom'] ?? ''), 0, 120));
+    // Un candidat du CRM : son nom est celui de sa fiche, relue ici (pas celui qu'envoie le navigateur).
+    $cref = $eid === null && is_scalar($b['candidat'] ?? null) && trim((string) $b['candidat']) !== '' ? mb_substr(trim((string) $b['candidat']), 0, 64) : null;
+    if ($cref !== null) {
+        $src = pcCrmSource();
+        if ($src === null) { return fmRefus(422, 'CRM des candidats introuvable dans la base'); }
+        try { $fiche = pcCandidatsCrm($src, $cref)[0] ?? null; } catch (Throwable $e) { return fmRefus(502, 'CRM des candidats illisible'); }
+        if ($fiche === null) { return fmRefus(404, 'candidat inconnu du CRM'); }
+        $nom = $fiche['nom'];
+    }
     if ($nom === '') { return fmRefus(422, 'le nom du candidat est obligatoire'); }
     $faites = $eid !== null ? array_column(Db::rows("SELECT e.fo FROM ceo_parcours_etape e JOIN ceo_parcours p ON p.id = e.parcours_id WHERE p.employe_id = ? AND e.statut = 'validee'", [$eid]), 'fo') : [];
     $crit = pcEvaluer(pcCriteres($d, pcExigences($ctx['ref'])), $ctx, $pers, $faites);
@@ -730,11 +878,13 @@ function wr_parcours_creer(): array
     $acquis = array_values(array_intersect(array_map('intval', is_array($b['acquis'] ?? null) ? $b['acquis'] : []), $d['competences']));
     if ($eid !== null) {
         Db::exec("UPDATE ceo_parcours SET statut = 'arrete', maj_le = NOW() WHERE employe_id = ? AND statut = 'actif'", [$eid]);
+    } elseif ($cref !== null) {
+        Db::exec("UPDATE ceo_parcours SET statut = 'arrete', maj_le = NOW() WHERE candidat_ref = ? AND statut = 'actif'", [$cref]);
     }
     $depart = $pers['niveau'] ? $pers['niveau']['nom'] . ' · ' . $pers['niveau']['niveau'] : ($eid === null ? 'Candidat franchisé' : null);
-    Db::exec('INSERT INTO ceo_parcours (employe_id, shop_id, nom, profil, depart, cible_cle, cible_nom, rythme, debut, acquis_declares, admission, statut, cree_le, maj_le)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?, \'actif\', NOW(), NOW())',
-        [$eid, $shop, $nom, $eid === null ? 'candidat' : 'employe', $depart, $cle, $d['titre'] . ($d['sous'] ? ' · ' . $d['sous'] : ''), $rythme, json_encode($acquis),
+    Db::exec('INSERT INTO ceo_parcours (employe_id, candidat_ref, shop_id, nom, profil, depart, cible_cle, cible_nom, rythme, debut, acquis_declares, admission, statut, cree_le, maj_le)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?, \'actif\', NOW(), NOW())',
+        [$eid, $cref, $shop, $nom, $eid === null ? 'candidat' : 'employe', $depart, $cle, $d['titre'] . ($d['sous'] ? ' · ' . $d['sous'] : ''), $rythme, json_encode($acquis),
          json_encode(pcAdmissionSortie($crit), JSON_UNESCAPED_UNICODE)]);
     $pid = (int) Db::row('SELECT LAST_INSERT_ID() AS id')['id'];
     foreach ($requis as $i => $fo) {
@@ -777,7 +927,8 @@ function ep_parcours_un(int $pid): array
     // Le code v25 de la cible : qui valide les critères (le consultant pour la franchise, la manager sinon).
     $nomCible = explode(' · ', (string) $p['cible_nom']);
     $cibleV25 = str_starts_with((string) $p['cible_cle'], 'v25:') ? substr((string) $p['cible_cle'], 4) : pcCodeV25($nomCible[1] ?? $nomCible[0], $nomCible[0]);
-    return ['admission' => $adm, 'parcours' => ['cibleV25' => $cibleV25,'id' => (int) $p['id'], 'employe' => $p['employe_id'] !== null ? (int) $p['employe_id'] : null, 'shop' => $p['shop_id'] !== null ? (int) $p['shop_id'] : null,
+    return ['admission' => $adm, 'parcours' => ['cibleV25' => $cibleV25,'id' => (int) $p['id'], 'employe' => $p['employe_id'] !== null ? (int) $p['employe_id'] : null,
+        'candidat' => ($p['candidat_ref'] ?? null) !== null ? (string) $p['candidat_ref'] : null, 'shop' => $p['shop_id'] !== null ? (int) $p['shop_id'] : null,
         'nom' => $p['nom'], 'profil' => $p['profil'], 'depart' => $p['depart'], 'cible' => $p['cible_cle'], 'cibleNom' => $p['cible_nom'],
         'rythme' => $p['rythme'], 'debut' => $p['debut'], 'statut' => $p['statut'], 'acquisDeclares' => pcNomsCompetences(json_decode((string) $p['acquis_declares'], true) ?: []),
         'validees' => $v, 'total' => count($etapes), 'retard' => $retard, 'objectif' => $fin,

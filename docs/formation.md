@@ -143,9 +143,17 @@ procédure ni de ressource** reliée.
   postes à créer), *Parcours en cours*, *Les postes* par famille avec la part des compétences couvertes par une formation ;
   le détail technique des appels au panel est replié.
 
-Tables (créées au premier appel) : `ceo_parcours` (personne, objectif, rythme, statut, compétences déclarées, critères d'admission)
+**Candidats franchisés (31/10/2026)** : l'étape « Pour qui ? » liste les candidats du CRM (atelier-espace-candidat), qui vit
+dans la même base que le cockpit. Sa table est trouvée par information_schema (nom finissant par candidat(s) / candidate(s),
+puis lead(s), puis prospect(s), hors `ceo_`, `mar_` et journal Meta ; un identifiant et un nom requis), gardée une heure
+(`ceo_app_setting` `pcCrmSource`), puis lue sans jamais y écrire : nom, statut, zone, dates — ni e-mail ni téléphone ; les
+fiches archivées (`deleted_at`, `archived`…) sont écartées. Recherche sans accents sur le nom, la zone ou le statut ; 30 lignes
+affichées, les plus récemment suivies d'abord ; un candidat qui a déjà un parcours y mène directement. Le parcours garde la
+référence de la fiche (`ceo_parcours.candidat_ref`). Hors CRM, ou sans CRM dans la base, le nom se saisit à la main.
+
+Tables (créées au premier appel) : `ceo_parcours` (personne, candidat du CRM, objectif, rythme, statut, compétences déclarées, critères d'admission)
 et `ceo_parcours_etape` (une ligne par formation : évaluations, date prévue, statut, origine panel / déclarée /
-parcours). Routes : `GET /parcours/destinations?employe=&shop=`, `POST /parcours`, `GET /parcours?id=`,
+parcours). Routes : `GET /parcours/destinations?employe=&shop=`, `GET /parcours/candidats`, `POST /parcours`, `GET /parcours?id=`,
 `GET /parcours/liste`, `PATCH /parcours/{id}/etape/{FO}`, `POST /parcours/{id}/acquis/{cid}`,
 `PATCH /parcours/{id}/admission/{cle} {fait}`, `PATCH /parcours/{id}` (rythme, arrêt, objectif atteint), `GET /formation/v25`. Chaque geste est journalisé
 (type « Parcours »).

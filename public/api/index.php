@@ -341,6 +341,8 @@ function route(string $method, string $path): mixed
             // Parcours compétences (public/formation/parcours/) : l'assistant et la frise de chaque personne.
             $path === '/formation/carte'               => ep_formation_carte(),
             $path === '/parcours/destinations'         => ep_parcours_destinations(),
+            // Les candidats franchisés du CRM (atelier-espace-candidat), lus dans la base partagée.
+            $path === '/parcours/candidats'            => ep_parcours_candidats(),
             $path === '/parcours', $path === '/parcours/liste' => ep_parcours(),
             $path === '/tablette/book'                 => ep_tablette_book(),
             // L'accueil de la tablette : CA et vente additionnelle de la semaine et du mois face à l'objectif.
