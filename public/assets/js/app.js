@@ -7336,7 +7336,9 @@ class App {
         // La page en volets (31/10/2026, Sam : « réorganiser la page en toggle ») : à l'ouverture, seul l'avancement des
         // vendeuses est déplié ; le reste se replie en une ligne qui dit l'essentiel, et s'ouvre au toucher.
         volets: (() => {
-          const ouv = Object.assign({ equipe: true }, S.prFrOuv || {});
+          // Tout est replié à l'ouverture (31/10/2026, Sam : « replie le tableau des vendeuses par défaut ») : seuls les chiffres
+          // du magasin, au-dessus, restent dépliés ; le volet des vendeuses dit son total en une ligne.
+          const ouv = Object.assign({}, S.prFrOuv || {});
           const v = cle => ({ ouvert: !!ouv[cle], basculer: () => this.setState({ prFrOuv: Object.assign({}, ouv, { [cle]: !ouv[cle] }) }) });
           // Le reste de la page (31/10/2026, Sam : « tout ceci en toggle (paramètres), dans des tableaux compréhensibles et
           // visuels ») : un seul volet, « Paramètres » ; les chiffres du magasin, eux, restent visibles en tuiles.
