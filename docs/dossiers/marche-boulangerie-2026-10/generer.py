@@ -2,8 +2,9 @@
 # français et la même page en néerlandais, deux PDF séparés, rendus par le Chromium de Playwright (rendre.js, à côté de ce
 # fichier), qui refuse un rendu qui déborderait de la page.
 # Demandes du 31 octobre 2026 : sources belges seulement ; un texte simple, écrit naturellement ; mettre en avant ce qui aura de
-# la valeur dans 5 et 10 ans (l'IA et l'automatisation changent beaucoup de métiers, mais il faudra toujours manger) ; conclure
-# sur une entreprise solide qui tient elle-même sa production, sa vente et sa logistique.
+# la valeur dans 5 et 10 ans (l'IA et l'automatisation changent beaucoup de métiers, mais il faudra toujours manger) ; finir
+# sur ce que nous offrons : un réseau solide aux finances saines, vingt ans d'expérience, une deuxième génération qui a traversé
+# les crises, le goût du développement, des investissements faits chez nous (usines, transports), et on mange ce qu'on produit.
 # Les sources sont citées en pied de page, lues le 31 octobre 2026 ; les vues à 5 et 10 ans sont une lecture de ces sources,
 # pas une prévision chiffrée.
 #   python3 generer.py   → Marche-boulangerie-2026-FR.pdf et Markt-bakkerij-2026-NL.pdf dans ce dossier
@@ -59,14 +60,19 @@ T = {
    'Le lieu. Un endroit chaleureux où l’on s’arrête, ce que ni l’IA ni la livraison ne remplacent.',
    'La taille du réseau, pour acheter mieux et faire tourner l’atelier.',
   ],
-  ck='Ce qu’il faut pour tenir',
-  ch='Une entreprise solide, qui fait elle-même sa production, sa vente et sa logistique.',
-  concl=[
-   'Ceux qui dépendent des autres paient le prix fort. En 2022, La Lorraine prévenait ses clients de hausses « sans précédent », qu’elle comptait répercuter « autant que possible » (La Libre). La même année, la facture d’énergie des entreprises belges a pris 35 à 57 % (Belfius), et seuls 7 % des indépendants arrivaient à faire suivre leurs prix (Unizo). Les fournisseurs se regroupent, et moins il en reste, moins on a de poids pour négocier.',
-   'Avec son atelier, ses magasins et ses camions, on décide soi-même de la qualité, du prix et de l’heure de livraison. C’est ce qu’a fait La Lorraine, qui fabrique et vend sous sa propre enseigne, Panos. Il faut de la taille pour y arriver, parce qu’un atelier ne tourne que s’il y a assez de magasins derrière. C’est une bonne raison de grandir en réseau.',
+  ck='Ce que nous offrons',
+  ch='Un réseau qui fabrique lui-même ce qu’il vend.',
+  offre=[
+   'Un réseau solide, avec des finances saines.',
+   'Vingt ans d’expérience dans le métier.',
+   'Une deuxième génération aux commandes, qui a connu les crises et les a traversées.',
+   'La passion du développement : ouvrir, améliorer, grandir.',
+   'Des investissements toujours faits chez nous : nos usines, nos transports, nos outils.',
+   'Résultat, on dépend peu des fournisseurs, qui annonçaient des hausses « sans précédent » en 2022 (La Libre).',
   ],
+  fin='Et n’oublions pas : on mange ce qu’on produit. Et nous, on aime bien manger.',
   srck='Sources',
-  src='APAQ-W et Listen, étude sur le pain (septembre 2024) · Unizo via VRT (septembre 2022 et avril 2026) · Provincies in Cijfers (mai 2024) · NSZ via BRUZZ (juin 2025) · RetailDetail (La Lorraine, 2025) · Brussels Times (Vandemoortele et Délifrance, mars 2025) · L’Écho via Paris Match Belgique (septembre 2025) · La Libre Belgique (mai 2022) · Belfius Research (mars 2024) · ING Economic Focus (avril 2024) · Bureau fédéral du Plan (février 2026).',
+  src='APAQ-W et Listen, étude sur le pain (septembre 2024) · Unizo via VRT (avril 2026) · Provincies in Cijfers (mai 2024) · NSZ via BRUZZ (juin 2025) · RetailDetail (La Lorraine, 2025) · Brussels Times (Vandemoortele et Délifrance, mars 2025) · L’Écho via Paris Match Belgique (septembre 2025) · La Libre Belgique (mai 2022) · ING Economic Focus (avril 2024) · Bureau fédéral du Plan (février 2026).',
   lim='Les chiffres de consommation portent sur les Belges francophones. Les vues à 5 et 10 ans sont notre lecture de ces sources, pas une prévision.',
   pied='L’Atelier by · note de marché · sources lues le 31 octobre 2026',
  ),
@@ -103,14 +109,19 @@ T = {
    'De plek zelf. Een warme zaak waar je even blijft, iets wat AI of levering niet vervangen.',
    'De omvang van het net, om beter in te kopen en het atelier te laten draaien.',
   ],
-  ck='Wat nodig is om stand te houden',
-  ch='Een solide onderneming die zelf haar productie, verkoop en logistiek in handen heeft.',
-  concl=[
-   'Wie van anderen afhangt, betaalt de prijs. In 2022 waarschuwde La Lorraine haar klanten voor ‘ongeziene’ prijsstijgingen, die ze ‘zoveel mogelijk’ wou doorrekenen (La Libre). Datzelfde jaar steeg de energiefactuur van de Belgische bedrijven met 35 tot 57 % (Belfius), terwijl amper 7 % van de ondernemers die kosten kon doorrekenen (Unizo). De leveranciers worden ook minder talrijk, en hoe minder er overblijven, hoe minder je kan onderhandelen.',
-   'Met een eigen atelier, eigen winkels en eigen vrachtwagens beslis je zelf over kwaliteit, prijs en levertijd. Dat is wat La Lorraine deed: ze maakt en verkoopt onder haar eigen keten, Panos. Daarvoor is schaal nodig, want een atelier draait pas als er genoeg winkels achter staan. Een goede reden om als net te groeien.',
+  ck='Wat wij bieden',
+  ch='Een net dat zelf maakt wat het verkoopt.',
+  offre=[
+   'Een solide net, met gezonde financiën.',
+   'Twintig jaar ervaring in het vak.',
+   'Een tweede generatie aan het roer, die de crisissen heeft meegemaakt en doorstaan.',
+   'Een passie voor ontwikkeling: openen, verbeteren, groeien.',
+   'Investeringen die altijd in eigen huis blijven: onze fabrieken, ons transport, onze tools.',
+   'Daardoor hangen we weinig af van leveranciers, die in 2022 ‘ongeziene’ prijsstijgingen aankondigden (La Libre).',
   ],
+  fin='En vergeet niet: we eten wat we maken. En wij eten graag.',
   srck='Bronnen',
-  src='APAQ-W en Listen, studie over brood (september 2024) · Unizo via VRT (september 2022 en april 2026) · Provincies in Cijfers (mei 2024) · NSZ via BRUZZ (juni 2025) · RetailDetail (La Lorraine, 2025) · Brussels Times (Vandemoortele en Délifrance, maart 2025) · L’Echo via Paris Match België (september 2025) · La Libre Belgique (mei 2022) · Belfius Research (maart 2024) · ING Economic Focus (april 2024) · Federaal Planbureau (februari 2026).',
+  src='APAQ-W en Listen, studie over brood (september 2024) · Unizo via VRT (april 2026) · Provincies in Cijfers (mei 2024) · NSZ via BRUZZ (juni 2025) · RetailDetail (La Lorraine, 2025) · Brussels Times (Vandemoortele en Délifrance, maart 2025) · L’Echo via Paris Match België (september 2025) · La Libre Belgique (mei 2022) · ING Economic Focus (april 2024) · Federaal Planbureau (februari 2026).',
   lim='De consumptiecijfers gaan over Franstalige Belgen. De blik op 5 en 10 jaar is onze lezing van deze bronnen, geen voorspelling.',
   pied='L’Atelier by · marktnota · bronnen gelezen op 31 oktober 2026',
  ),
@@ -148,8 +159,9 @@ h1 span{display:block;color:#8D1D2C;font-size:17pt;margin-top:1mm}
 .pts li:before{content:'';position:absolute;left:0;top:1.45mm;width:1.5mm;height:1.5mm;border-radius:50%%;background:#8D1D2C}
 .concl{border:1.4pt solid #8D1D2C;border-radius:8px;background:#fbf9f5;padding:2.8mm 3.8mm 1.4mm}
 .concl .k{font-size:6.8pt;letter-spacing:.12em;text-transform:uppercase;color:#8D1D2C;font-weight:500}
-.concl h2{font-family:Vank,Georgia,serif;font-weight:400;font-size:14pt;margin:.6mm 0 2.2mm;line-height:1.12}
-.concl .prose{margin-bottom:0}
+.concl h2{font-family:Vank,Georgia,serif;font-weight:400;font-size:14pt;margin:.4mm 0 1.8mm;line-height:1.12}
+.concl .offre{margin-bottom:1.4mm}
+.concl .fin{font-family:Vank,Georgia,serif;font-size:12.5pt;color:#8D1D2C;line-height:1.2;border-top:.5pt solid #e6d6d2;padding:1.5mm 0 .8mm}
 .bas{margin-top:auto;padding:2mm 0 6mm}
 .src{font-size:6.1pt;color:#8a8379;line-height:1.45;border-top:.5pt solid #e6e0d8;padding-top:1.6mm}
 .src .k{color:#7a736a;font-weight:500;letter-spacing:.08em;text-transform:uppercase;margin-right:1.2mm}
@@ -181,7 +193,9 @@ def page(t):
 <div class="carte"><div class="tt"><span>{t['h5']}</span><em>{t['a5']}</em></div>{pts(t['val5'])}</div>
 <div class="carte"><div class="tt"><span>{t['h10']}</span><em>{t['a10']}</em></div>{pts(t['val10'])}</div>
 </div>
-<div class="concl"><div class="k">{t['ck']}</div><h2>{t['ch']}</h2>{prose(t['concl'])}</div>
+<div class="concl"><div class="k">{t['ck']}</div><h2>{t['ch']}</h2>
+<div class="cols offre">{pts(t['offre'][:4])}{pts(t['offre'][4:])}</div>
+<div class="fin">{t['fin']}</div></div>
 <div class="bas"><div class="src"><p><span class="k">{t['srck']}</span>{t['src']}</p><p>{t['lim']}</p></div>
 <div class="pied"><span>{t['pied']}</span><span>1 / 1</span></div></div>
 </section>'''
