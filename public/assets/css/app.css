@@ -1238,6 +1238,14 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{
   .prl-ent{display:flex;border-bottom:0.5px solid var(--color-border-tertiary)}
   .prl-ent .prl-b{cursor:default;padding-top:11px;padding-bottom:9px}
 }
+/* Le tableau de l'équipe, page d'un magasin (31/10/2026) : sur un écran large, la vendeuse et son cumul restent en place
+   quand les primes de la marque et du magasin défilent ; le nom a sa largeur fixe (l'ellipse au-delà). Plus étroit, seul
+   le nom reste en place. */
+@media (min-width:1000px){
+  .eq-nom{width:172px;min-width:172px;max-width:172px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis}
+  .eq-cumul{position:sticky;left:172px;z-index:1;background:var(--color-surface)}
+  th.eq-cumul{z-index:2}
+}
 
 /* Résultat › Année › 1 an : les clients mois par mois face à l'an passé (24/10/2026, clients-annee-tpl.js).
    2026 trait plein bordeaux, 2025 pointillé gris, bande bleue / orange — les codes de Trafic clients. */
