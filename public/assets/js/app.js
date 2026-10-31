@@ -14,6 +14,7 @@ import { valsVerification } from './verification-vals.js';
 import { valsVerifFlux, valsVerifFuites } from './verification-flux-vals.js';
 import { valsVerifEvol } from './verification-evol-vals.js';
 import { valsVerifMatieres } from './verification-matieres-vals.js';
+import { valsVerifCa } from './verification-ca-vals.js';
 import { valsPromoTableau, valsPromoEdition, promosBadges, peMonter } from './promotions-vals.js';
 // MétaDonnée : un module à part, qui tient son DOM (window.CockpitMetaDonnee) — monté après chaque rendu.
 import './metadonnee.js';
@@ -388,6 +389,8 @@ class App {
       verifEvol: 'verification/evolution',
       // Lot 4 (31/10/2026) : la matière consommée entre deux inventaires, face aux ventes × recettes.
       verifMatieres: 'verification/matieres',
+      // Lot 5 (31/10/2026) : la caisse face au P&L, aux redevances et au CA que la matière laisse attendre.
+      verifCa: 'verification/ca',
       // MétaDonnée (28/10/2026) : les formulaires Meta et Instagram vers l'ERP du franchisé.
       mdFormulaires: 'metadonnee-formulaires', mdMapping: 'metadonnee-mapping', mdLeads: 'metadonnee-leads', mdSms: 'metadonnee-sms',
       // Franchisés · évaluation et suivi (09/10/2026)
@@ -1127,6 +1130,7 @@ class App {
       verifRecettes: ['Recettes à corriger', 'Chaque produit vendu doit avoir une recette complète, chiffrée et plausible : sinon l’écart de matière, la marge et le CA attendu sont faux. Dix règles, magasin par magasin, sur les ventes des trente derniers jours, classées par chiffre d’affaires concerné — et la part du CA déjà couverte, vers 100 %.'],
       verifEvol: ['Évolution', 'Les mêmes indicateurs semaine après semaine, lus dans la base quotidienne : poubelle, non expliqué, invendu, journées mesurées, recettes fiables — magasin par magasin et pour le réseau, et les premières semaines face aux dernières. Pour voir si la gestion s’améliore.'],
       verifMatieres: ['Matières ↔ recettes', 'D’un inventaire hebdomadaire à l’autre, la matière consommée par chaque magasin — stock du début, plus les commandes validées à la réception, moins le stock de fin — face à ce que ses ventes et sa poubelle déclarée en expliquent par les recettes. Matière par matière, la cause probable de chaque écart : entrées non validées, recette, poubelle non déclarée, ni vendu ni jeté.'],
+      verifCa: ['Chiffre d’affaires', 'La caisse fait référence : les tickets du panel, jour par jour. Le P&L du panel, la base des redevances et le chiffre d’affaires que la matière consommée laisse attendre se lisent en écart, magasin par magasin ; à part, les lignes sans produit, les remises sur le ticket entier et les corrections — et les jours à regarder.'],
       inventaires: ['Entre deux inventaires', 'Par magasin, entre deux inventaires : ce qui est sorti du stock (compté au début + livré − compté à la fin) face à ce que la caisse et la poubelle expliquent, ramené aux matières par les recettes. La justesse des ventes en %, matière par matière, jour par jour et inventaire par inventaire.'],
       suiviTableau: ['Suivi des franchisés · visites', ''],
       suiviTablette: ['Visite sur tablette', 'L’application du consultant en visite (controle/), la même hors ligne : photo du jour, dossier du bureau, checklist du type, charte de communication (chaque support en photo, Oui ou Non), contrôles photo, points à travailler, météo du franchisé, signature. À la fin, le brouillon part au bureau.'],
@@ -1563,6 +1567,7 @@ class App {
         ['verifFlux', 'Audit des flux', 0],
         ['verifFuites', 'Fuites par magasin', 0],
         ['verifMatieres', 'Matières ↔ recettes', 0],
+        ['verifCa', 'Chiffre d’affaires', 0],
         ['verifRecettes', 'Recettes à corriger', ((S.vrData || {}).d || {}).total || 0],
         ['verifEvol', 'Évolution', 0]]],
       ['Produits', [
@@ -1667,8 +1672,8 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD'].forEach(k => common[k] = false);
-    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD'].forEach(k => common[k] = false);
+    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
@@ -2110,6 +2115,7 @@ class App {
     if (common.isVerifFuites) { valsVerifFuites(this, common); }
     if (common.isVerifEvol) { valsVerifEvol(this, common); }
     if (common.isVerifMat) { valsVerifMatieres(this, common); }
+    if (common.isVerifCa) { valsVerifCa(this, common); }
     if (common.isFF) valsFF(this, common);
     if (common.isCQM) valsCQM(this, common);
     if (common.isSvTableau) valsSvTableau(this, common);

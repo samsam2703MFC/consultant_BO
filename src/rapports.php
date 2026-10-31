@@ -2394,6 +2394,9 @@ function ep_rapports_cron(): array
     // Lot 4 : les semaines d'inventaire (matières ↔ recettes) pas encore calculées, et leur historique.
     try { if (function_exists('vmCron')) { $verification .= ' · matières : ' . vmCron(); } }
     catch (Throwable $eM4) { $verification .= ' · matières : échec — ' . $eM4->getMessage(); }
+    // Lot 5 : les tickets du mois (CA net) et la base quotidienne du chiffre d'affaires.
+    try { if (function_exists('vcCron')) { $verification .= ' · CA : ' . vcCron(); } }
+    catch (Throwable $eC5) { $verification .= ' · CA : échec — ' . $eC5->getMessage(); }
     // Le Résultat d'aujourd'hui se recalcule au même battement : le premier écran du matin le trouve prêt.
     $resultat = 'module absent';
     try { if (function_exists('exPrechauffer')) { $resultat = exPrechauffer(); } }

@@ -52,6 +52,7 @@ require __DIR__ . '/../../src/verification.php';
 require __DIR__ . '/../../src/verification_flux.php';
 require __DIR__ . '/../../src/verification_base.php';
 require __DIR__ . '/../../src/verification_matieres.php';
+require __DIR__ . '/../../src/verification_ca.php';
 require __DIR__ . '/../../src/notes_jour.php';
 require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
@@ -492,6 +493,8 @@ function route(string $method, string $path): mixed
             // Vérification, lot 3 (31/10/2026) : la base quotidienne, semaine par semaine.
             $path === '/verification/evolution'       => ep_verification_evolution(),
             $path === '/verification/matieres'        => ep_verification_matieres(),
+            $path === '/verification/ca'              => ep_verification_ca(),
+            $path === '/verification/ca/sonde'        => ep_verification_ca_sonde(),
             $path === '/stock/inventaires/ecart'      => ep_stock_inventaires_ecart(),
             $path === '/stock/inventaires/releve'     => ep_stock_inventaires_releve(),
             $path === '/ventes/reseau'                => ep_ventes_reseau(),

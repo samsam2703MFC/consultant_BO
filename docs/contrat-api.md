@@ -3382,6 +3382,38 @@ magasins, même ordre), `tolerances`, `seuils`, `causes`.
 L'Évolution (`/verification/evolution`) gagne l'indicateur `matiere` : Σ `couvert_eur` ÷ Σ `sorti_pos_eur` de
 `ceo_verif_inventaire`, rangé à la semaine de l'inventaire de fin.
 
+### `/verification/ca` — le chiffre d'affaires (Vérification, lot 5, 31/10/2026)
+
+Code : `src/verification_ca.php` ; écran `#/verification/ca` (`verification-ca-vals.js`, `-tpl.js`) ; maquette `d.png` ;
+tests `bin/tests_verification.php` (section lot 5). Lecture seule.
+
+**La caisse fait référence** : les tickets du panel, jour par jour (`caNet{magasin}:{jour}` : `b` TTC après remise, `t`
+TVA, `n` tickets — le relevé du CA net, `cnMois`, lu dans 20 s à la demande, chaque heure par le cron). Se lisent en
+écart (montant, % de la caisse, ton : ≤ 1 % vert, ≤ 4 % orange) :
+- **P&L** : `/consultant/shops/{id}/pnl/daily` (`revenue`, TTC), sommé sur les jours où la caisse est lue (gardé
+  `vcPnl:{shop}:{mois}`, 24 h pour un mois clos, 1 h sinon) ;
+- **redevances** : la base de calcul du Fonds (`fondsRoyaltiesCalcul` : `sales-kpis` × taux de la fiche), une fois le mois
+  lu en entier, avec le dû (`vcRed:{mois}`, 1 h) ;
+- **attendu par la matière** : sur les semaines de `ceo_verif_inventaire` closes dans le mois et à entrées validées,
+  R = (consommé − poubelle) ÷ ventes, au coût ; attendu = caisse × R ; écart = caisse ÷ attendu − 1.
+
+À part : `sansProduit` (lignes de ticket sans produit, `svP…['sp']` type `ligne`), `remises` (remises sur le ticket
+entier), `corrections` et `anomalies` ([nombre, montant|null] de `/shops/{id}/sales-corrections` et
+`/panel/sales-anomalies`, `null` tant que la route ne répond pas). **Jours à regarder** : P&L ≠ caisse de 20 € ou plus,
+lignes sans produit ≥ 30 € (ou trois lignes), remises sur le ticket entier ≥ 30 €.
+
+`GET /verification/ca[?mois=AAAA-MM][&shop=]` (le mois d'hier par défaut) : `mois`, `du`, `au`, `enCours`, `aLire`,
+`magasins[]` {`id`, `nom`, `caisse` {`ttc`, `ht`, `tva`, `tickets`, `joursLus`, `jours`, `complet`}, `pnl`, `redevances`
+(+ `active`, `du`), `attendu` (+ `semaines`), `matiere`, `recettesFiables`, `sansProduit` {`eur`, `n`}, `remises`,
+`corrections`, `anomalies`, `verdict`, `joursARegarder[]` {`date`, `ton`, `eur`, `type` pnl|divers|remise, `texte`},
+`nJoursARegarder`}, `reseau`, `shopJours` (le magasin des jours à regarder : demandé, ou le premier à regarder),
+`historique[]` (le réseau mois par mois depuis août : `caisse`, `pnl`, `attendu`, `recettes`, `complet`), `seuils`.
+`GET /verification/ca/sonde?shop=&mois=` : la forme brute des routes de corrections, d'anomalies et de rapports.
+
+**La base quotidienne du CA** : `ceo_verif_ca` (clé `shop_id`, `jour` ; `caisse_ttc`, `caisse_tva`, `tickets`, `pnl`,
+`sans_produit_eur`, `sans_produit_n`, `remises_ticket_eur`, `calcule_le`), écrite par le cron (`vcCron`) pour chaque jour
+clos du mois en cours (et du précédent les cinq premiers jours).
+
 ## 2. Mapping base de données → écran → champ
 
 ### Tables existantes réutilisées (`franchise_buddy_db`)

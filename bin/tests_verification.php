@@ -116,6 +116,7 @@ function svGrave(string $cle, array $v): void { Db::$reglages[$cle] = json_encod
 function invListe(int $sid): array { global $INVENTAIRES; return $INVENTAIRES[$sid] ?? []; }
 function invEcart(int $sid, string $de, string $a): ?array { global $ECARTS, $APPELS_ECART; $APPELS_ECART++; return $ECARTS[$sid . ':' . $de . ':' . $a] ?? null; }
 require __DIR__ . '/../src/verification_matieres.php';
+require __DIR__ . '/../src/verification_ca.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -472,6 +473,35 @@ $m3 = array_values(array_filter($ep4r['magasins'], static fn ($m) => $m['id'] ==
 verifie('un magasin sans inventaire relevé : signalé en retard, sans lecture', $m3['inventaireEnRetard'] === true && $m3['lecture'] === null);
 $SM = vjSeriesMatiere(array_values(Db::$inv), array_slice(vjSemaines(4, '2026-10-26'), 0, 4), [4, 3]);
 verifie('l’évolution lit la matière expliquée, semaine de l’inventaire de fin', $SM['4'][1] === $t4['explication'] && $SM['4'][2] !== null && $SM['3'][1] === null, json_encode($SM['4']));
+
+
+echo "Lot 5 — chiffre d’affaires\n";
+$jC = ['2026-09-01', '2026-09-02', '2026-09-03'];
+$caisse5 = ['2026-09-01' => [1000.0, 90.0, 50], '2026-09-02' => [1200.0, 100.0, 60], '2026-09-03' => [800.0, 70.0, 40]];
+$pnl5 = ['2026-09-01' => 1000.0, '2026-09-02' => 1050.0, '2026-09-03' => 800.0];
+$sp5 = ['2026-09-02' => ['spEur' => 45.0, 'spN' => 2, 'remEur' => 0.0, 'remN' => 0, 'ecartEur' => 0.0, 'noms' => ['divers']]];
+$L5 = vcLecture($caisse5, $pnl5, ['base' => 2850.0, 'active' => true, 'du' => 142.5], ['r' => 1.1, 'semaines' => 2], $sp5, ['corrections' => [3, 120.0], 'anomalies' => null], 3);
+verifie('la caisse fait référence : TTC, HT, tickets', $L5['caisse']['ttc'] === 3000.0 && $L5['caisse']['ht'] === 2740.0 && $L5['caisse']['tickets'] === 150);
+verifie('le P&L se lit en écart à la caisse : −150 €, −5 %, rouge', $L5['pnl']['ecart'] === -150.0 && $L5['pnl']['pct'] === -5.0 && $L5['pnl']['ton'] === 'ko');
+verifie('la base des redevances aussi', $L5['redevances']['ecart'] === -150.0 && $L5['redevances']['active'] === true);
+verifie('l’attendu par la matière : la caisse ÷ (caisse × 1,1) − 1 = −9,1 %', $L5['attendu']['valeur'] === 3300.0 && $L5['attendu']['pct'] === -9.1 && $L5['attendu']['ton'] === 'ko');
+verifie('le verdict : la base sous la caisse', $L5['verdict']['nom'] === 'Base sous la caisse' && $L5['verdict']['ton'] === 'ko');
+$jrT = array_column($L5['joursARegarder'], 'type');
+verifie('les jours à regarder : le 02/09 (P&L −150 €) et ses lignes sans produit (45 €)', in_array('pnl', $jrT, true) && in_array('divers', $jrT, true) && $L5['joursARegarder'][0]['date'] === '2026-09-02' && $L5['joursARegarder'][0]['eur'] === 150.0);
+verifie('les corrections du panel passent telles quelles ; l’anomalie non lue reste nulle', $L5['corrections'] === [3, 120.0] && $L5['anomalies'] === null);
+$L5b = vcLecture($caisse5, ['2026-09-01' => 1000.0, '2026-09-02' => 1200.0, '2026-09-03' => 800.0], ['base' => 3000.0, 'active' => true, 'du' => 150.0], null, [], null, 3);
+verifie('tout concorde quand P&L, redevances et caisse sont égaux', $L5b['verdict']['nom'] === 'Tout concorde' && $L5b['joursARegarder'] === []);
+$L5c = vcLecture(['2026-09-01' => [1000.0, 90.0, 50]], ['2026-09-01' => 1000.0, '2026-09-02' => 1300.0], ['base' => 2300.0, 'active' => true, 'du' => 0.0], null, [], null, 3);
+verifie('une caisse incomplète : le P&L se compare sur les jours lus, la base des redevances attend le mois complet', $L5c['pnl']['ecart'] === 0.0 && $L5c['redevances'] === null && str_contains($L5c['verdict']['pourquoi'], '1 jour sur 3'));
+verifie('le rapport matière exclut les semaines sans entrée validée', vcRapportMatiere([['jours' => 7, 'entrees_eur' => 0, 'sorties_eur' => 10, 'poubelle_eur' => 0, 'ventes_eur' => 5]]) === ['r' => null, 'semaines' => 0, 'exclues' => 1]
+    && vcRapportMatiere([['jours' => 7, 'entrees_eur' => 900, 'sorties_eur' => 1100, 'poubelle_eur' => 100, 'ventes_eur' => 800]])['r'] === 1.25);
+verifie('une liste du panel sans contrat : le nombre et le montant si un champ le porte', vcListeMontants(['data' => [['amount' => -12.5], ['amount' => 7.5]]]) === [2, 20.0] && vcListeMontants([['id' => 1]]) === [1, null] && vcListeMontants(null) === null);
+verifie('les jours d’un mois s’arrêtent à hier', vcJours(date('Y-m'))[0] === date('Y-m-01') || date('j') === '1');
+Db::$reglages['caNet4:2026-09-01'] = json_encode(['b' => 1000, 't' => 90, 'n' => 50, 'q' => time()]);
+verifie('la caisse se lit dans le relevé du CA net', vcCaisse(4, ['2026-09-01', '2026-09-02']) === ['2026-09-01' => [1000.0, 90.0, 50]]);
+Db::$reglages['svP4:2026-09-01'] = json_encode(['p' => [], 'sp' => [['type' => 'ligne', 'v' => 12.5, 'nom' => 'Divers'], ['type' => 'ticket', 'v' => -4.0, 'nom' => 'remise sur le ticket entier'], ['type' => 'ligne', 'v' => 3.0, 'nom' => 'Divers']]]);
+$sp4 = vcSansProduit(4, ['2026-09-01']);
+verifie('les lignes sans produit et les remises sur le ticket entier, jour par jour', $sp4['2026-09-01']['spEur'] === 15.5 && $sp4['2026-09-01']['spN'] === 2 && $sp4['2026-09-01']['remEur'] === 4.0 && $sp4['2026-09-01']['noms'] === ['Divers']);
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko > 0 ? 1 : 0);
