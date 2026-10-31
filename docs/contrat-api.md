@@ -3193,7 +3193,7 @@ Plan : `docs/plan-verification.md` § 3.5 ; maquette : `docs/maquettes/verificat
 `src/verification.php`, écran `#/verification/recettes` (`verification-vals.js`, `verification-tpl.js`,
 `verification.css`) ; tests : `php bin/tests_verification.php`.
 
-`GET /verification/recettes[?rafraichir=1]` applique neuf règles, magasin par magasin, aux produits vendus des
+`GET /verification/recettes[?rafraichir=1]` applique dix règles, magasin par magasin, aux produits vendus des
 trente derniers jours (aujourd'hui exclu) et rend la liste classée par CA concerné. Lecture seule : rien n'est écrit
 au panel. L'analyse est gardée une heure (`ceo_app_setting` `vfAnalyse`) ; `rafraichir=1` la recalcule et lit
 jusqu'à 16 recettes de plus (`VF_BUDGET_DEMANDE`). Le cron horaire (`/rapports/cron`, champ `verification`) en
@@ -3217,6 +3217,7 @@ Les règles (`VF_REGLES`) :
 | Code | Nom | Se déclenche quand |
 |---|---|---|
 | `sans` | Pas de recette | le produit vendu n'a pas d'`id_recipe` (ou n'est dans aucun products/available) |
+| `form` | Formule sans ses produits | une formule ou promotion (voir plus bas) vendue sans recette : un seul article sur le ticket, ses produits n'y sortent pas et leur matière quitte le stock sans vente. Ils doivent y figurer, chacun à prix réduit (promotion `BUNDLE_PROMOTION` du panel : `bundle_price`, articles) — demande du 31/10/2026 |
 | `vide` | Recette vide | la recette lue n'a aucune ligne |
 | `prix` | Matière sans prix | une matière de la recette n'a pas de prix (ou pas de ligne) dans `/materials` d'un magasin qui vend le produit |
 | `inv` | Coût invraisemblable | `recipe_cost_net` du magasin à 0, ou ≥ prix HT, ou sous `production.coutRatioMin` (5 %) du prix HT |
@@ -3226,6 +3227,12 @@ Les règles (`VF_REGLES`) :
 | `port` | Portion sans fraction | `is_divisible` = 1 et `portion_size` vide, nul ou ≥ 1 |
 | `orph` | Matière jamais en recette | en stock, employée par aucune recette vendue — jugée seulement quand 95 % des recettes sont lues ; emballages, hygiène et entretien écartés (`VF_HORS_RECETTE`) |
 
+**Formules et promotions** (31/10/2026 : gardées dans la liste, un interrupteur devant la liste les masque) : la
+catégorie du produit ou le groupe de sa catégorie contient « bundle », « promo » ou « formule » (products/available,
+sinon `panelCatalogueComplet` pour les produits qu'aucun magasin ne propose plus) ; ou le nom a la forme d'une offre
+(`VF_FORMULE_NOM` : « 2 Cookies », « 2x Merveilleux », « 5 +1 | … », « Sandwich (10 + 5) », « Promotie … »). Chaque
+ligne porte `formule` ; `couverture.horsFormules` est la même couverture sans elles, `couverture.formules` leur CA.
+
 Une même pièce ne porte que l'explication la plus précise : `vide`, `unite` ou `prix` effacent `inv` et `reseau` ;
 `inv` efface `reseau`. La couverture compte, dans le CA des trente jours, ce qui passe par une pièce sans aucune règle
 (une recette pas encore lue compte, mais `caARelire` le dit).
@@ -3233,11 +3240,12 @@ Une même pièce ne porte que l'explication la plus précise : `vide`, `unite` o
 ```json
 { "lignes": [ { "cle": "prix:2500003", "regle": "prix", "nomRegle": "Matière sans prix", "pid": 2500003, "rid": 580, "mid": null,
                 "nom": "Merveilleux", "cat": "Entremets - Individuel", "detail": "2 matières sans prix à Sombreffe : Sucre glace, Blancs d’œufs.",
-                "ca": 1980.0, "magasins": ["Sombreffe"], "shops": ["5"], "depuis": "2026-09-20" },
+                "ca": 1980.0, "magasins": ["Sombreffe"], "shops": ["5"], "depuis": "2026-09-20", "formule": false },
               { "cle": "orph:m950", "regle": "orph", "pid": null, "mid": 950, "nom": "Sucre perlé", "ca": 0, "valeur": 11.2, "…": "…" } ],
   "total": 37,
-  "couverture": { "caTotal": 126850.0, "caFiable": 118730.0, "caManquant": 8120.0, "caARelire": 0, "pct": 93.6, "partTop10": 72, "produits": 35 },
-  "parRegle": { "sans": 8, "vide": 3, "prix": 8, "inv": 5, "reseau": 4, "unite": 3, "rend": 2, "port": 2, "orph": 2 },
+  "couverture": { "caTotal": 126850.0, "caFiable": 118730.0, "caManquant": 8120.0, "caARelire": 0, "pct": 93.6, "partTop10": 72, "produits": 35,
+                  "horsFormules": { "caTotal": 118076.0, "caFiable": 109956.0, "pct": 93.1, "…": "…" }, "formules": { "ca": 8774.0, "produits": 1 } },
+  "parRegle": { "sans": 8, "form": 1, "vide": 3, "prix": 8, "inv": 5, "reseau": 4, "unite": 3, "rend": 2, "port": 2, "orph": 2 },
   "regles": [ { "code": "sans", "nom": "Pas de recette", "explication": "…" } ],
   "recettes": { "vendues": 312, "lues": 312, "orphJugees": true, "aLire": 0, "luesCePassage": 0, "complet": true },
   "corrigees": { "n": 4, "depuis": "2026-10-10" },

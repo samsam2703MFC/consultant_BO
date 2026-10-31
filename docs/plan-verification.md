@@ -135,6 +135,7 @@ produits reçus sans trace en caisse).
 | Règle | Détection |
 |---|---|
 | Pas de recette | produit vendu sur la période, `id_recipe` vide |
+| Formule sans ses produits | une formule ou une promotion vendue comme un seul article, sans recette : ses produits doivent sortir sur le ticket, chacun à prix réduit (promotion « bundle » du panel) — ajoutée le 31/10 |
 | Recette vide | aucune ligne |
 | Matière sans prix | `price_source` MISSING dans un magasin qui vend le produit |
 | Coût invraisemblable | coût de la pièce < 5 % ou ≥ 100 % du prix HT (le contrôle `svCoutPlausible` existe) |
@@ -148,7 +149,7 @@ On classe par **CA concerné sur 30 jours**. On montre la **couverture**, c'est-
 part du CA qui passe par une recette fiable, avec l'objectif de 100 %. « Repérée depuis »
 vient de la base quotidienne ; une ligne disparaît d'elle-même quand la recette est
 corrigée au panel. Le bouton « Ouvrir au panel » mène à la recette. **On n'écrit rien au
-panel.** La liste est **pour le CEO seul** (31/10) : pas d'envoi, un export suffit.
+panel.** La liste est **pour le CEO seul** (31/10) : pas d'envoi, un export suffit. Les formules et promotions restent dans la liste, avec un **interrupteur devant** qui les masque (31/10) ; éteint, la couverture se lit sans elles.
 
 ### 3.6 Gestes à surveiller
 

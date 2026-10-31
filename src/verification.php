@@ -10,6 +10,9 @@ declare(strict_types=1);
  * les produits vendus des trente derniers jours, rangées par chiffre d'affaires concerné :
  *
  *   sans   — pas de recette : produit vendu sans id_recipe ;
+ *   form   — formule sans ses produits (31/10/2026) : une formule ou une promotion vendue comme un seul article, sans
+ *            recette — ses produits ne sortent pas sur le ticket et leur matière quitte le stock sans vente ; ils
+ *            doivent y figurer, chacun à prix réduit (promotion BUNDLE_PROMOTION du panel : prix du lot, articles) ;
  *   vide   — recette vide : aucune ligne ;
  *   prix   — matière sans prix dans un magasin qui vend le produit ;
  *   inv    — coût invraisemblable : sous le seuil (production.coutRatioMin, 5 %) ou au-dessus du prix HT ;
@@ -54,6 +57,7 @@ const VF_RELUES_ORPH = 0.95;        // part des recettes relues pour juger les m
 /** Les règles : code => [nom, explication]. L'ordre est celui des pastilles à l'écran. */
 const VF_REGLES = [
     'sans'   => ['Pas de recette', 'produit vendu sans recette au panel'],
+    'form'   => ['Formule sans ses produits', 'formule vendue comme un seul article : ses produits doivent sortir sur le ticket, chacun à prix réduit (promotion « bundle » du panel)'],
     'vide'   => ['Recette vide', 'la recette n’a aucune ligne'],
     'prix'   => ['Matière sans prix', 'une matière de la recette n’a pas de prix dans un magasin qui vend le produit'],
     'inv'    => ['Coût invraisemblable', 'le coût de la pièce est sous le seuil ou au-dessus du prix HT'],
@@ -66,6 +70,18 @@ const VF_REGLES = [
 
 /** Les matières qui ne passent par aucune recette, par nature : emballages, hygiène, entretien. */
 const VF_HORS_RECETTE = '/emball|hygi[eè]n|nettoy|entretien|papeter|vaisselle|jetable|consommable|non[ -]?alimentaire|packag|sachet|bo[iî]te|gobelet|serviette|couvert|paille|\bsacs?\b|etiquet|étiquet|gant|film/iu';
+
+/** Les formules et promotions (décision du 31/10/2026 : on les garde, un interrupteur les masque) : leur catégorie ou
+ *  son groupe parle de bundle, de promotion ou de formule ; ou leur nom a la forme d'une offre (« 2 Cookies »,
+ *  « 2x Merveilleux », « 5 +1 | Mini-Viennoiserie », « Sandwich (10 + 5) », « Promotie - 1.5 euros »). Une portion (« 1/2 - Quiches ») n'en est pas une. */
+const VF_FORMULE_CAT = '/bundle|promo|formule/iu';
+const VF_FORMULE_NOM = '/^\d+\s*(?:[x×]\s*)?\p{L}|^\d+\s*\+\s*\d+|\(\s*\d+\s*\+\s*\d+\s*\)|^promoti|^formule|^menu\b/iu';
+
+function vfEstFormule(string $nom, string $cat, string $groupe = ''): bool
+{
+    if (preg_match(VF_FORMULE_CAT, $cat . ' ' . $groupe) === 1) { return true; }
+    return preg_match(VF_FORMULE_NOM, trim($nom)) === 1;
+}
 
 /* ---------------------------------------------------------------------------------------------
  * Petits outils
@@ -208,6 +224,7 @@ function vfProduitDe(array $l): ?array
     $co = isset($l['category']) && is_array($l['category']) ? $l['category'] : [];
     return ['pid' => $pid, 'nom' => vfTxt($l, ['base_name', 'name', 'product_name']),
         'cat' => vfTxt($l, ['base_category_name', 'category_name']) ?: vfTxt($co, ['base_name', 'name']),
+        'catId' => (int) (vfNum($l, ['id_category', 'category_id']) ?? vfNum($co, ['id']) ?? 0) ?: null,
         'recette' => $rid > 0 ? $rid : null, 'cout' => $cout, 'prixHt' => vfPrixHt($l),
         'divisible' => (int) ($l['is_divisible'] ?? 0) === 1, 'part' => vfNum($l, ['portion_size'])];
 }
@@ -342,18 +359,20 @@ function vfStocks(array $sids): array
  * @param array $M      [sid => [mid => prix|null]] — le prix des matières par magasin
  * @param array $S      [sid => [cle => matière en stock]]
  * @param float $ratioMin le seuil bas du coût (part du prix HT)
+ * @param array $F      [pid => true] — les formules et promotions (marquées, comptées à part dans la couverture)
  * @return array{lignes: array, couverture: array, parRegle: array, recettes: array, aLire: array}
  */
-function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S, float $ratioMin = 0.05, int $nJours = VF_JOURS): array
+function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S, float $ratioMin = 0.05, int $nJours = VF_JOURS, array $F = []): array
 {
     $info = [];          // pid => produit de référence (le premier magasin qui le connaît)
     foreach ($D as $sid => $ps) { foreach ($ps as $pid => $p) { $info[$pid] ??= $p; } }
-    $caTot = 0.0; $caParPid = [];
+    $caTot = 0.0; $caParPid = []; $fTot = 0.0;
     $aLire = []; $caRid = [];                         // rid => magasin de référence (celui qui vend le plus)
     foreach ($V as $sid => $ps) {
         foreach ($ps as $pid => $v) {
             if (($v['ca'] ?? 0) <= 0) { continue; }
             $caTot += $v['ca']; $caParPid[$pid] = ($caParPid[$pid] ?? 0) + $v['ca'];
+            if (isset($F[$pid])) { $fTot += $v['ca']; }
             $rid = ($D[$sid][$pid]['recette'] ?? null) ?: ($info[$pid]['recette'] ?? null);
             if ($rid && (!isset($caRid[$rid]) || $v['ca'] > $caRid[$rid])) { $caRid[$rid] = $v['ca']; $aLire[$rid] = $sid; }
         }
@@ -364,7 +383,7 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
 
     $flags = [];          // cle => ligne en construction
     $nonFiable = [];      // sid:pid => true
-    $caARelire = 0.0; $caFiable = 0.0;
+    $caARelire = 0.0; $caFiable = 0.0; $fFiable = 0.0; $fARelire = 0.0;
     $ajoute = static function (string $regle, int $pid, int $sid, float $ca, string $detail, array $extra = []) use (&$flags, $mags): void {
         $cle = $regle . ':' . $pid;
         if (!isset($flags[$cle])) { $flags[$cle] = ['cle' => $cle, 'regle' => $regle, 'pid' => $pid, 'ca' => 0.0, 'shops' => [], 'detail' => $detail, 'caDetail' => -1.0] + $extra; }
@@ -386,6 +405,11 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
             $base = ['nom' => $nom !== '' ? $nom : (string) ($v['nom'] ?? ''), 'cat' => $cat];
             $rid = ($p['recette'] ?? null) ?: ($ref['recette'] ?? null);
             $k = $sid . ':' . $pid;
+            if (!$rid && isset($F[$pid])) {
+                $ajoute('form', $pid, $sid, $ca, 'Vendu ' . vfQte(round((float) $v['q'], 1), 'fois') . ' en ' . $nJours . ' jours (' . vfEur($ca, 0) . ') comme un seul article, sans recette ni produits : ses produits ne sortent pas sur le ticket, leur matière quitte le stock sans vente. Ils doivent y figurer, chacun à prix réduit (promotion « bundle » du panel).', $base + ['rid' => null]);
+                $nonFiable[$k] = true;
+                continue;
+            }
             if (!$rid) {
                 $ajoute('sans', $pid, $sid, $ca, $ref === null
                     ? 'Vendu ' . vfQte(round((float) $v['q'], 1), 'fois') . ' en ' . $nJours . ' jours (' . vfEur($ca, 0) . '), absent des produits disponibles du panel : recette inconnue.'
@@ -476,8 +500,8 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
             if (isset($cand['inv'])) { unset($cand['reseau']); }
             foreach ($cand as $regle => [$detail, $extra]) { $ajoute($regle, $pid, $sid, $ca, $detail, $base + ['rid' => $rid] + $extra); }
             if ($cand !== []) { $nonFiable[$k] = true; }
-            elseif ($r === null) { $caARelire += $ca; }
-            if ($cand === []) { $caFiable += $ca; }
+            elseif ($r === null) { $caARelire += $ca; if (isset($F[$pid])) { $fARelire += $ca; } }
+            if ($cand === []) { $caFiable += $ca; if (isset($F[$pid])) { $fFiable += $ca; } }
         }
     }
 
@@ -519,6 +543,7 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
         if (isset($f['valeur'])) { $f['valeur'] = $f['valeur'] > 0 ? round((float) $f['valeur'], 2) : null; }
         $f['magasins'] = array_values($f['shops']); $f['shops'] = array_map('strval', array_keys($f['shops']));
         $f['nomRegle'] = VF_REGLES[$f['regle']][0];
+        $f['formule'] = $f['pid'] !== null && isset($F[$f['pid']]);
         $lignes[] = $f;
     }
     usort($lignes, static function ($a, $b) {
@@ -533,11 +558,20 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
     foreach ($V as $sid => $ps) { foreach ($ps as $pid => $v) { if (isset($nonFiable[$sid . ':' . $pid]) && ($v['ca'] ?? 0) > 0) { $caManquant += $v['ca']; } } }
     $top10 = 0.0; $vus = [];
     foreach ($lignes as $l) { if ($l['regle'] === 'orph' || isset($vus[$l['pid']])) { continue; } $vus[$l['pid']] = true; if (count($vus) <= 10) { $top10 += $l['ca']; } }
+    // La même couverture sans les formules et promotions (l'interrupteur de l'écran).
+    $fManquant = 0.0; $top10h = 0.0; $vusH = [];
+    foreach ($V as $sid => $ps) { foreach ($ps as $pid => $v) { if (isset($F[$pid], $nonFiable[$sid . ':' . $pid]) && ($v['ca'] ?? 0) > 0) { $fManquant += $v['ca']; } } }
+    foreach ($lignes as $l) { if ($l['regle'] === 'orph' || !empty($l['formule']) || isset($vusH[$l['pid']])) { continue; } $vusH[$l['pid']] = true; if (count($vusH) <= 10) { $top10h += $l['ca']; } }
+    $hTot = $caTot - $fTot; $hFiable = $caFiable - $fFiable; $hManquant = $caManquant - $fManquant;
     return [
         'lignes' => $lignes,
         'couverture' => ['caTotal' => round($caTot, 2), 'caFiable' => round($caFiable, 2), 'caManquant' => round($caManquant, 2), 'caARelire' => round($caARelire, 2),
             'pct' => $caTot > 0 ? round(100 * $caFiable / $caTot, 1) : null, 'partTop10' => $caManquant > 0 ? round(100 * min($top10, $caManquant) / $caManquant, 0) : null,
-            'produits' => count($vus)],
+            'produits' => count($vus),
+            'horsFormules' => ['caTotal' => round($hTot, 2), 'caFiable' => round($hFiable, 2), 'caManquant' => round($hManquant, 2), 'caARelire' => round($caARelire - $fARelire, 2),
+                'pct' => $hTot > 0 ? round(100 * $hFiable / $hTot, 1) : null, 'partTop10' => $hManquant > 0 ? round(100 * min($top10h, $hManquant) / $hManquant, 0) : null,
+                'produits' => count($vusH)],
+            'formules' => ['ca' => round($fTot, 2), 'produits' => count(array_intersect_key($F, $caParPid))]],
         'parRegle' => $parRegle,
         'recettes' => ['vendues' => $nRid, 'lues' => $nLues, 'orphJugees' => $orphJuge],
         'aLire' => array_diff_key($aLire, $R),
@@ -566,7 +600,8 @@ function vfAnalyse(int $budget): array
     $S = vfStocks($sids);
     $p = setting('production', []);
     $ratioMin = (is_array($p) && isset($p['coutRatioMin'])) ? (float) $p['coutRatioMin'] : 0.05;
-    $a = vfRegles($mags, $V['ventes'], $D, $R, $M, $S, $ratioMin, VF_JOURS);
+    $F = vfFormules($V['ventes'], $D);
+    $a = vfRegles($mags, $V['ventes'], $D, $R, $M, $S, $ratioMin, VF_JOURS, $F);
     $complet = $a['aLire'] === [];
     $a['depuis'] = vfRegistre($a['lignes'], $complet);
     foreach ($a['lignes'] as &$l) { $l['depuis'] = $a['depuis']['cles'][$l['cle']] ?? date('Y-m-d'); }
@@ -585,6 +620,32 @@ function vfAnalyse(int $budget): array
     ];
     vfGarder('vfAnalyse', $out);
     return $out;
+}
+
+/**
+ * Les formules et promotions parmi les produits vendus : [pid => true]. La catégorie vient de products/available, sinon
+ * du catalogue complet du panel (les produits qu'aucun magasin ne propose plus) ; son groupe, du catalogue.
+ */
+function vfFormules(array $V, array $D): array
+{
+    $cats = []; $complet = [];
+    try { if (function_exists('panelCatalogue')) { $cats = (array) (panelCatalogue()['categories'] ?? []); } } catch (Throwable $e) { $cats = []; }
+    try { if (function_exists('panelCatalogueComplet')) { $complet = (array) (panelCatalogueComplet()['produits'] ?? []); } } catch (Throwable $e) { $complet = []; }
+    $F = []; $vu = [];
+    foreach ($V as $ps) {
+        foreach ($ps as $pid => $v) {
+            if (isset($vu[$pid])) { continue; }
+            $vu[$pid] = true;
+            $ref = null; foreach ($D as $ps2) { if (isset($ps2[$pid])) { $ref = $ps2[$pid]; break; } }
+            $x = (array) ($complet[$pid] ?? []);
+            $cat = (string) (($ref['cat'] ?? '') ?: ($x['cat'] ?? ''));
+            $cid = (int) (($ref['catId'] ?? 0) ?: ($x['catId'] ?? 0));
+            $groupe = $cid > 0 ? (string) ($cats[$cid]['groupe'] ?? '') : '';
+            $nom = (string) (($ref['nom'] ?? '') ?: (($x['nom'] ?? '') ?: ($v['nom'] ?? '')));
+            if (vfEstFormule($nom, $cat, $groupe)) { $F[(int) $pid] = true; }
+        }
+    }
+    return $F;
 }
 
 /** Crée le registre au besoin. */

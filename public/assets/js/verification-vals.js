@@ -13,7 +13,7 @@ import { readOne } from './api.js';
 const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }).replace(/[\u202f\u00a0]/g, '\u00a0');
 const fE = (n, d) => n == null ? '—' : nf(n, d) + ' €';
 const pc = (n, d) => n == null ? '—' : nf(n, d == null ? 1 : d) + ' %';
-const CLASSES = { sans: 'pb-sans', vide: 'pb-vide', prix: 'pb-prix', inv: 'pb-inv', reseau: 'pb-reseau', unite: 'pb-unite', rend: 'pb-rend', port: 'pb-port', orph: 'pb-orph' };
+const CLASSES = { sans: 'pb-sans', form: 'pb-form', vide: 'pb-vide', prix: 'pb-prix', inv: 'pb-inv', reseau: 'pb-reseau', unite: 'pb-unite', rend: 'pb-rend', port: 'pb-port', orph: 'pb-orph' };
 const jour = s => { const d = new Date(String(s || '').slice(0, 10) + 'T12:00:00'); return isNaN(d) ? null : d; };
 const jjmm = s => { const d = jour(s); return d ? String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') : ''; };
 const heure = s => { const d = new Date(s || ''); return isNaN(d) ? '' : String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
@@ -61,7 +61,11 @@ export function valsVerification(app, common){
   common.vr = v;
   if (!d) { return; }
 
-  const tous = d.lignes || [];
+  // Les formules et promotions (décision du 31/10/2026) : gardées, un interrupteur devant la liste les masque ;
+  // éteint, la couverture se lit sans elles.
+  const avecF = S.vrFormules !== false;
+  const toutes = d.lignes || [];
+  const tous = avecF ? toutes : toutes.filter(l => !l.formule);
   const dansShop = shop ? tous.filter(l => (l.shops || []).indexOf(shop) >= 0) : tous;
   const n = {}; dansShop.forEach(l => { n[l.regle] = (n[l.regle] || 0) + 1; });
   let L = regle ? dansShop.filter(l => l.regle === regle) : dansShop.slice();
@@ -77,8 +81,10 @@ export function valsVerification(app, common){
       ca: l.ca > 0 ? fE(l.ca) : null, caBrut: l.ca > 0 ? l.ca : null, valeur: l.valeur ? fE(l.valeur) + ' en stock' : null, valeurBrute: l.valeur || null,
       magasinsTxt: (l.magasins || []).length === mags.length && mags.length > 2 ? 'les ' + mags.length + ' magasins' : (l.magasins || []).join(' · '),
       depuis: jours == null ? '' : (jours === 0 ? 'aujourd’hui' : jours + ' j'), depuisDate: l.depuis || '', depuisTitre: l.depuis ? 'repérée le ' + jjmm(l.depuis) : '',
-      rid: l.rid || null, lien: lien(l.rid) };
+      rid: l.rid || null, lien: lien(l.rid), formule: !!l.formule };
   });
+  v.formules = { on: avecF, n: (shop ? toutes.filter(l => (l.shops || []).indexOf(shop) >= 0) : toutes).filter(l => l.formule).length,
+    ca: fE(((d.couverture || {}).formules || {}).ca), basculer: () => app.setState({ vrFormules: !avecF }) };
   v.vide = tous.length === 0;
   v.videFiltre = !v.vide && v.lignes.length === 0;
   v.total = tous.length;
@@ -92,12 +98,13 @@ export function valsVerification(app, common){
   v.exporter = () => exporter(v.lignes, d);
 
   // La couverture : la part du CA qui passe par une recette fiable, vers 100 %.
-  const c = d.couverture || {};
+  const c = avecF ? (d.couverture || {}) : Object.assign({}, (d.couverture || {}).horsFormules || d.couverture || {});
   const pct = c.pct;
   v.cov = { pct: pct == null ? '—' : pc(pct), largeur: pct == null ? 0 : Math.max(0, Math.min(100, pct)),
     ton: pct == null ? 'mu' : (pct >= 97 ? 'ok' : (pct >= 90 ? 'att' : 'ko')),
     manque: pc(pct == null ? null : 100 - pct), caManquant: fE(c.caManquant), caTotal: fE(c.caTotal), jours: (d.periode || {}).jours || 30,
-    partTop10: c.partTop10 == null ? null : nf(c.partTop10) + ' %', aRelire: c.caARelire > 0 ? fE(c.caARelire) : null, produits: c.produits || 0 };
+    partTop10: c.partTop10 == null ? null : nf(c.partTop10) + ' %', aRelire: c.caARelire > 0 ? fE(c.caARelire) : null, produits: c.produits || 0,
+    horsFormules: !avecF };
   const r = d.recettes || {};
   v.lecture = { vendues: r.vendues || 0, lues: r.lues || 0, aLire: r.aLire || 0, complet: !!r.complet, orph: !!r.orphJugees };
   v.corrigees = d.corrigees && d.corrigees.n ? { n: d.corrigees.n, depuis: jjmm(d.corrigees.depuis) } : null;

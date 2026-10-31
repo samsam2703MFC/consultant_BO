@@ -137,7 +137,7 @@ $par = [];
 foreach ($a['lignes'] as $l) { $par[$l['regle']][] = $l; }
 $regles = static fn (int $pid) => array_values(array_map(static fn ($l) => $l['regle'], array_filter($a['lignes'], static fn ($l) => $l['pid'] === $pid)));
 
-echo "Les neuf règles\n";
+echo "Les règles\n";
 verifie('pas de recette : Pâtes Amatriciana, dans les quatre magasins', $regles(100) === ['sans'] && count($par['sans'][0]['magasins']) === 4);
 verifie('recette vide : Cookie Noix & Caramel', $regles(101) === ['vide'], implode(',', $regles(101)));
 verifie('matière sans prix : Merveilleux, à Sombreffe seulement', $regles(102) === ['prix'] && $par['prix'][0]['magasins'] === ['Sombreffe'], json_encode($par['prix'] ?? null, JSON_UNESCAPED_UNICODE));
@@ -180,6 +180,24 @@ verifie('le rendement divise les quantités et les coûts', abs($c['lignes'][0][
 verifie('une sous-recette est dépliée et nommée', ($c['lignes'][1]['sous'] ?? '') === 'Crème' && abs($c['lignes'][1]['cout'] - 0.45) < 1e-9);
 verifie('le prix HT de la pièce entière d’un produit divisible', abs((float) vfPrixHt(['is_divisible' => 1, 'portion_size' => 0.25, 'portion_price_net' => 1.0]) - 4.0) < 1e-9);
 
+echo "Formules et promotions\n";
+$oui = [['Lunch ( salade ou baguette garnie + boisson + dessert)', 'Bundle'], ['Panier du jour - 15€', 'Bundle'], ['2 Cookies', ''], ['2 pains classiques', ''],
+    ['Sandwich (10 + 5)', ''], ['4 Tendresses', ''], ['Promotie - 1.5 euros', ''], ['2x Merveilleux', ''], ['5 +1 | Mini-Viennoiserie', ''], ['1 croissant + 1 café', ''], ['Croissant', 'Viennoiserie', 'Promotions']];
+$non = [['1/2 - Quiches', ''], ['1/4', ''], ['1/2 - Chocolade', ''], ['Croissant', 'Viennoiserie Ind.'], ['Pain 10 Céréales', 'Pain'], ['Halloumi & Légumes grillés', ''], ['Plateau mini sandwiches - 30 pièces', 'Plateau Sandwich']];
+verifie('les formules et promotions sont reconnues (catégorie, groupe ou forme du nom)', array_filter($oui, static fn ($x) => !vfEstFormule($x[0], $x[1], $x[2] ?? '')) === [],
+    implode(' | ', array_map(static fn ($x) => $x[0], array_filter($oui, static fn ($x) => !vfEstFormule($x[0], $x[1], $x[2] ?? '')))));
+verifie('les portions et les produits ordinaires n’en sont pas', array_filter($non, static fn ($x) => vfEstFormule($x[0], $x[1])) === [],
+    implode(' | ', array_map(static fn ($x) => $x[0], array_filter($non, static fn ($x) => vfEstFormule($x[0], $x[1])))));
+$Ff = [100 => true];   // les pâtes jouent la formule
+$af = vfRegles($mags, $V, $D, $R, $M, $S, 0.05, 30, $Ff);
+$lf = array_values(array_filter($af['lignes'], static fn ($l) => $l['pid'] === 100));
+verifie('la ligne d’une formule est marquée, les autres non', ($lf[0]['formule'] ?? null) === true && count(array_filter($af['lignes'], static fn ($l) => !empty($l['formule']))) === 1);
+verifie('une formule sans recette sort en « formule sans ses produits », pas en « pas de recette »', ($lf[0]['regle'] ?? '') === 'form' && count($lf) === 1 && str_contains($lf[0]['detail'], 'prix réduit'));
+$h = $af['couverture']['horsFormules'];
+verifie('la couverture hors formules retire leur CA du total et du manquant', abs($h['caTotal'] - ($af['couverture']['caTotal'] - 4 * 200.0)) < 0.01 && abs($h['caManquant'] - ($af['couverture']['caManquant'] - 4 * 200.0)) < 0.01);
+verifie('hors formules, le CA fiable ne change pas (la formule n’était pas fiable)', abs($h['caFiable'] - $af['couverture']['caFiable']) < 0.01 && $h['pct'] > $af['couverture']['pct']);
+verifie('le poids des formules est rendu', abs($af['couverture']['formules']['ca'] - 800.0) < 0.01 && $af['couverture']['formules']['produits'] === 1);
+
 echo "Bout en bout, sur les doublures\n";
 Db::$shops = [['id' => 4, 'name' => 'Atelier by - Halle'], ['id' => 3, 'name' => 'Atelier by Max & Sandra - Gosselies']];
 // Les ventes gravées par la moisson : chaque jour, un croissant et un FlipFlap au thon dans les deux magasins, des pâtes à Gosselies.
@@ -187,7 +205,7 @@ for ($i = 1; $i <= 30; $i++) {
     $j = date('Y-m-d', strtotime('-' . $i . ' day'));
     foreach ([4, 3] as $sid) {
         $p = ['8' => ['2130006' => ['Croissant', 10, 12.0, 3.1], '2300010' => ['FlipFlap - Thon', 4, 22.0, null]]];
-        if ($sid === 3) { $p['12'] = ['2400001' => ['Pâtes Amatriciana', 3, 19.5, null], '2400002:77' => ['Tarte — 1/2', 2, 14.0, 4.4]]; }
+        if ($sid === 3) { $p['12'] = ['2400001' => ['Pâtes Amatriciana', 3, 19.5, null], '2400002:77' => ['Tarte — 1/2', 2, 14.0, 4.4], '5100003' => ['Lunch', 1, 12.0, null]]; }
         Db::$reglages['svP' . $sid . ':' . $j] = json_encode(['quand' => time(), 'p' => $p]);
     }
 }
@@ -200,6 +218,7 @@ foreach ([4, 3] as $sid) {
         $ligneDispo(2300010, 'FlipFlap - Thon', 574, $sid === 4 ? 0.79 : 3.80, 4.67),
         $ligneDispo(2400001, 'Pâtes Amatriciana', null, null, 6.13),
         $ligneDispo(2400002, 'Tarte', 575, 8.85, 3.0, ['is_divisible' => 1, 'portion_size' => 0.5]),
+        $ligneDispo(5100003, 'Lunch ( salade ou baguette garnie + boisson + dessert)', null, null, 11.0, ['base_category_name' => 'Bundle']),
     ];
     PanelApi::$routes['/shops/' . $sid . '/materials'] = [['id' => 1, 'base_unit_price_net' => 0.7], ['id' => 2, 'base_unit_price_net' => 8.6], ['id' => 3, 'base_unit_price_net' => 26.43], ['id' => 4, 'base_unit_price_net' => 1.1]];
     PanelApi::$routes['/shops/' . $sid . '/material-inventory'] = [['id_material' => 1, 'material_name' => 'Farine T65', 'category_name' => 'Farines', 'current_quantity' => 50, 'unit_name' => 'kg', 'exist_in_inventory' => 1]];
@@ -217,7 +236,9 @@ verifie('pas de recette : les pâtes, à Gosselies', ($regles1['sans'] ?? 0) ===
 verifie('hors norme : le thon à Halle n’a que deux magasins — pas de médiane des autres, pas de signalement', !isset($regles1['reseau']));
 verifie('coût invraisemblable : la tarte, coût de la pièce entière au-dessus du prix de la pièce', ($regles1['inv'] ?? 0) === 1, json_encode($regles1));
 verifie('la farine en stock est employée : aucune matière orpheline', !isset($regles1['orph']));
-verifie('les ventes d’aujourd’hui sont exclues', abs($r1['couverture']['caTotal'] - 30 * (2 * (12 + 22) + 19.5 + 14)) < 0.01, (string) $r1['couverture']['caTotal']);
+verifie('les ventes d’aujourd’hui sont exclues', abs($r1['couverture']['caTotal'] - 30 * (2 * (12 + 22) + 19.5 + 14 + 12)) < 0.01, (string) $r1['couverture']['caTotal']);
+verifie('le lunch (catégorie Bundle) sort en « formule sans ses produits », marqué formule', count(array_filter($r1['lignes'], static fn ($l) => $l['pid'] === 5100003 && $l['regle'] === 'form' && $l['formule'] === true)) === 1);
+verifie('la couverture hors formules est rendue avec la réponse', abs(($r1['couverture']['horsFormules']['caTotal'] ?? 0) - 30 * (2 * (12 + 22) + 19.5 + 14)) < 0.01);
 verifie('chaque ligne dit depuis quand elle est repérée', count(array_filter($r1['lignes'], static fn ($l) => ($l['depuis'] ?? '') === date('Y-m-d'))) === count($r1['lignes']));
 verifie('le registre garde chaque signalement', count(Db::$registre) === count($r1['lignes']));
 $r2 = ep_verification_recettes();
