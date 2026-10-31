@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Les primes de votre équipe — mode d'emploi du franchisé</title>
+<link rel="stylesheet" href="commun.css">
+<style>
+h1{font-size:30pt;margin:5mm 0 2.2mm}
+.page{padding:11mm 14mm 9mm}
+.tete img{height:10.5mm}
+.lead{font-size:9.6pt;line-height:1.5;max-width:170mm;color:var(--encre)}
+.lead b{color:var(--rubis)}
+section{margin-top:5mm}
+.familles{display:grid;grid-template-columns:1fr 1fr;gap:5mm}
+.fam{border-radius:3.5mm;background:var(--beige2);padding:4mm 4.5mm 3.6mm;border-top:1mm solid var(--rubis);display:flex;flex-direction:column}
+.fam.g{border-top-color:var(--ambre)}
+.fam h3{font-size:11pt;font-weight:600;margin-bottom:1.4mm}
+.fam .qui{font-size:8.6pt;color:var(--gris);margin-bottom:2.4mm}
+.fam ul{list-style:none;display:flex;flex-wrap:wrap;gap:1.2mm}
+.fam li{font-size:7.8pt;line-height:1;background:#fff;border-radius:99px;padding:1.2mm 2.3mm}
+.fam .paie{font-size:8.4pt;margin-top:auto;padding-top:2.4mm;border-top:.3mm solid var(--filet)}
+.fam ul{margin-bottom:3mm}
+.fam.m .paie b{color:var(--rubis)}.fam.g .paie b{color:var(--ambre-t)}
+.gestes{display:grid;grid-template-columns:repeat(3,1fr);gap:5mm}
+.geste{border:.3mm solid var(--filet);border-radius:3.5mm;padding:3.4mm 4mm 3.6mm}
+.geste .n{display:inline-flex;align-items:center;justify-content:center;width:6.5mm;height:6.5mm;border-radius:50%;background:var(--rubis);color:#fff;font-size:9pt;font-weight:500}
+.geste .h{display:flex;align-items:center;gap:2.4mm;margin-bottom:1.6mm}
+.geste h4{font-size:11pt;font-weight:600}
+.geste p{font-size:8.4pt}
+.btn{display:inline-block;margin:0 0 1.6mm;background:var(--rubis);color:#fff;border-radius:99px;padding:.6mm 2.4mm;font-size:7.8pt;font-weight:500;white-space:nowrap}
+/* La ligne d'une vendeuse, en miniature : ce que le tableau montre. */
+.mini{margin-top:3mm;border:.3mm solid var(--filet);border-radius:2.5mm;padding:2.4mm 3mm;font-size:7.6pt;line-height:1.35}
+.mini .l{display:flex;justify-content:space-between;align-items:baseline;white-space:nowrap}
+.mini>.s{white-space:nowrap;font-size:7.2pt}
+.mini .v{font-weight:500;font-size:9pt}.mini .s{color:var(--gris)}
+.barre{display:flex;height:1.3mm;border-radius:1mm;background:rgba(34,34,34,.1);overflow:hidden;margin:1.3mm 0 1mm}
+.barre i{display:block}
+.regles{display:grid;grid-template-columns:repeat(3,1fr);gap:2.6mm 6mm}
+.regle{border-top:.3mm solid var(--filet);padding-top:2mm}
+.regle .k{display:block;font-size:8.6pt;font-weight:600;color:var(--rubis);margin-bottom:.8mm}
+.regle p{font-size:8.2pt;line-height:1.4}
+.astuce{margin-top:5mm;background:var(--beige);border-radius:3.5mm;padding:3.8mm 5mm;display:grid;grid-template-columns:auto 1fr;gap:2mm 6mm;align-items:start}
+.astuce h2{grid-row:span 2;color:var(--rubis);margin:0;font-size:9pt;line-height:1.35;width:28mm}
+.astuce ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:1.8mm 6mm}
+.astuce li{font-size:8.6pt;padding-left:5mm;position:relative}
+.astuce li::before{content:'✓';position:absolute;left:0;color:var(--vert);font-weight:500}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="tete"><img src="../../public/assets/img/logo.png" alt="L'Atelier by"><span class="etiq">Mode d'emploi · franchisé</span></div>
+
+  <h1>Les primes de votre équipe</h1>
+  <p class="lead">Chaque mois, vos vendeuses gagnent des primes qui s'additionnent. Elles suivent les leurs en direct sur leur
+    téléphone, dans l'app employé ; vous suivez toute l'équipe sur votre page du cockpit, <b>Primes du magasin</b>.</p>
+
+  <section>
+    <h2>Deux familles de primes</h2>
+    <div class="familles">
+      <div class="fam m">
+        <h3><span class="pt m"></span>Les primes de la marque</h3>
+        <p class="qui">Posées et payées par la marque, ou par un sponsor. Rien à régler, rien à payer de votre côté.</p>
+        <ul><li>Ventes croisées</li><li>Bats ton record</li><li>Objectif magasin</li><li>Note Google</li><li>Meilleure vendeuse</li><li>Catégories et promos</li><li>Grands prix de l'année</li></ul>
+        <p class="paie"><b>Payées en bons</b> par la marque, début du mois suivant.</p>
+      </div>
+      <div class="fam g">
+        <h3><span class="pt g"></span>Les primes du magasin</h3>
+        <p class="qui">Les vôtres : vous les créez, vous les payez, et seules vos vendeuses les voient.</p>
+        <ul><li>Promotion</li><li>Catégorie</li><li>Ventes croisées</li><li>Objectif CA</li><li>Note Google</li><li>Clients pro (B2B)</li></ul>
+        <p class="paie"><b>À votre charge</b> : en euros ou en cadeau, sur la période de votre choix, six primes de chaque sorte au plus.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Votre page, en trois gestes</h2>
+    <div class="gestes">
+      <div class="geste">
+        <div class="h"><span class="n">1</span><h4>Créer</h4></div>
+        <span class="btn">+ Créer une nouvelle prime</span>
+        <p>En haut de la page : la sorte, le seuil, la récompense, la période. Elle compte dès ce mois ; vos vendeuses la voient aussitôt dans l'app.</p>
+      </div>
+      <div class="geste">
+        <div class="h"><span class="n">2</span><h4>Suivre</h4></div>
+        <p><b>«&nbsp;Où en sont tes vendeuses&nbsp;»</b> s'ouvre en premier : le total de l'équipe, puis une ligne par vendeuse — atteint / en jeu.</p>
+        <div class="mini">
+          <div class="l"><b>Julie</b><span><span class="v">115 €</span> <span class="s">/ 170 €</span></span></div>
+          <div class="barre"><i style="width:47%;background:var(--rubis)"></i><i style="width:21%;background:var(--ambre)"></i></div>
+          <div class="s"><span class="pt m"></span>80 € marque&nbsp;&nbsp;<span class="pt g"></span>35 € magasin</div>
+        </div>
+      </div>
+      <div class="geste">
+        <div class="h"><span class="n">3</span><h4>Ajuster</h4></div>
+        <p>Les volets dessous : vos primes (allumer, éteindre, modifier), celles de la marque, les promotions du panel, <b>les chiffres
+          face au réseau</b> pour régler vos seuils, les fiches de l'équipe.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Les règles du jeu</h2>
+    <div class="regles">
+      <div class="regle"><span class="k">Le cumul</span><p>Ce que la vendeuse a <b>déjà atteint</b>, face à tout ce qui est <b>en jeu</b> pour elle ce mois-ci, marque et magasin.</p></div>
+      <div class="regle"><span class="k">Une case</span><p><span style="color:var(--vert);font-weight:600">✓ gagnée</span>, <span style="color:var(--rubis);font-weight:600">en tête</span> (1re du magasin pour l'instant), ou sa valeur et la barre vers l'objectif.</p></div>
+      <div class="regle"><span class="k">«&nbsp;Équipe&nbsp;»</span><p>L'objectif CA et la note Google se gagnent ensemble, par toutes celles au planning (20 h minimum par défaut).</p></div>
+      <div class="regle"><span class="k">Le mois complet</span><p>Les ventes encaissées <b>à son nom</b>, les heures du <b>planning du panel</b> ; le mois en cours est une projection.</p></div>
+      <div class="regle"><span class="k">Le paiement</span><p>Le mois clos se paie début du mois suivant : en bons par la marque, par vous pour les primes du magasin.</p></div>
+      <div class="regle"><span class="k">Pour toutes</span><p>Un ticket sans vendeuse compte au magasin, jamais à une personne. Un chiffre vous semble faux ? On vérifie.</p></div>
+    </div>
+  </section>
+
+  <div class="astuce">
+    <h2>Pour que ça marche</h2>
+    <ul>
+      <li>Chaque vendeuse encaisse <b>à son nom</b>.</li>
+      <li>Le planning du panel est <b>à jour</b>.</li>
+      <li>L'affiche «&nbsp;Tes primes, dans ta poche&nbsp;» est en magasin : chacune installe l'app.</li>
+      <li>Commencez par <b>une prime simple et atteignable</b>, puis montez.</li>
+    </ul>
+  </div>
+
+  <div class="pied"><span>L'Atelier by · Primes du magasin</span><span>Votre page : https://185.180.206.46/consulant_bo/#/primes?shop=<i>n° de votre magasin</i></span></div>
+</div>
+</body>
+</html>
