@@ -1,12 +1,14 @@
 # Note de marché « La boulangerie en Belgique : ce qui aura de la valeur dans 5 et 10 ans », octobre 2026. Une page A4 en
 # français et la même page en néerlandais, deux PDF séparés, rendus par le Chromium de Playwright (rendre.js, à côté de ce
 # fichier), qui refuse un rendu qui déborderait de la page.
-# Demandes du 31 octobre 2026 : sources belges seulement ; un texte simple, écrit naturellement ; mettre en avant ce qui aura de
-# la valeur dans 5 et 10 ans (l'IA et l'automatisation changent beaucoup de métiers, mais il faudra toujours manger) ; finir
-# sur ce que nous offrons : un réseau solide aux finances saines, vingt ans d'expérience, une deuxième génération qui a traversé
-# les crises, le goût du développement, des investissements faits chez nous (usines, transports), et on mange ce qu'on produit.
-# Les sources sont citées en pied de page, lues le 31 octobre 2026 ; les vues à 5 et 10 ans sont une lecture de ces sources,
-# pas une prévision chiffrée.
+# Demandes du 31 octobre 2026 : sources belges seulement ; un texte simple, écrit naturellement ; montrer, sources à l'appui,
+# que les boulangers vont manquer, que la qualité compte, que la franchise aide à gérer et limite les erreurs, et qu'une marque
+# compte ; mettre en avant ce qui aura de la valeur dans 5 et 10 ans (l'IA et l'automatisation changent beaucoup de métiers,
+# mais il faudra toujours manger) ; finir sur ce que nous offrons (réseau solide aux finances saines, vingt ans d'expérience,
+# deuxième génération qui a traversé les crises, passion du développement, investissements faits chez nous, et on mange ce
+# qu'on produit).
+# Les sources sont citées sur la page, lues le 31 octobre 2026 ; les vues à 5 et 10 ans sont une lecture de ces sources, pas
+# une prévision chiffrée.
 #   python3 generer.py   → Marche-boulangerie-2026-FR.pdf et Markt-bakkerij-2026-NL.pdf dans ce dossier
 import base64, os, re, subprocess
 
@@ -19,7 +21,7 @@ TMP = '/tmp/marche-boulangerie'
 
 def insec(s):
     """Espaces insécables avant les unités, dans les nombres et devant la ponctuation haute."""
-    s = re.sub(r'(\d) (?=(%|€|ans|jaar|millions|miljoen|milliard|miljard))', '\\1\u00a0', s)
+    s = re.sub(r'(\d) (?=(%|€|ans|jaar|millions|miljoen|milliard|miljard|fois|keer))', '\\1\u00a0', s)
     s = re.sub(r'(\d) (?=\d{3}\b)', '\\1\u00a0', s)
     s = re.sub(r' ([:;?!»])', '\u00a0\\1', s)
     s = re.sub(r'(«) ', '\\1\u00a0', s)
@@ -32,33 +34,40 @@ T = {
   hd='Note de marché · octobre 2026', code='FR',
   h1='La boulangerie en Belgique', h1b='Ce qui aura de la valeur dans 5 et 10 ans',
   sous='Un état des lieux du marché belge, avec un regard sur les terminaux de cuisson haut de gamme.',
-  tiles=[
-   ('1 sur 4', 'C’est la part des boulangeries belges qui ont fermé en quinze ans (Unizo, 2026).'),
-   ('69 %', 'des Belges francophones achètent leur pain en grande surface. Autant qu’en boulangerie (APAQ-W, 2024).'),
-   ('65 %', 'des emplois belges vont être transformés par l’IA, surtout dans les bureaux (ING, 2024).'),
-  ],
   s1='Où en est le marché',
   marche=[
-   'Les Belges n’ont pas arrêté de manger du pain. 82 % des francophones en achètent chaque semaine, et les trois quarts disent qu’ils n’en mangent pas moins que l’an dernier. Ce qui change, c’est l’endroit où ils l’achètent. La grande surface et le hard discount font maintenant jeu égal avec la boulangerie. On y va pour le prix. Chez le boulanger, on vient pour la qualité et la fraîcheur, même si deux clients sur trois trouvent ça cher.',
-   'Les boulangers de quartier, eux, s’en vont. Un quart a fermé en quinze ans. En Flandre, il en reste 2 640, soit 817 de moins qu’il y a dix ans, et Bruxelles en a perdu 11 % entre 2018 et 2022. Le plus souvent, il n’y a pas de repreneur, ou on ne trouve plus personne pour travailler la nuit et le week-end.',
-   'En face, les industriels belges grandissent. La Lorraine, qui possède Panos, a dépassé 1,5 milliard d’euros de chiffre d’affaires en 2025, et Vandemoortele a annoncé le rachat de Délifrance. Le haut de gamme arrive aussi : Copains s’installe à Bruxelles avec les prix de Paris, 2,90 € le pain au chocolat.',
+   'Les Belges n’ont pas arrêté de manger du pain : 82 % des francophones en achètent chaque semaine, et les trois quarts n’en mangent pas moins que l’an dernier. Ce qui change, c’est l’endroit. La grande surface et le hard discount font maintenant jeu égal avec la boulangerie : 69 % des acheteurs passent par l’une, 69 % par l’autre. On va au supermarché pour le prix.',
+   'Pendant ce temps, les boulangers de quartier ferment et les industriels grandissent. La Lorraine, qui possède Panos, a dépassé 1,5 milliard d’euros de chiffre d’affaires en 2025, et Vandemoortele a annoncé le rachat de Délifrance. Le haut de gamme arrive aussi, avec Copains qui s’installe à Bruxelles.',
   ],
-  s2='Ce qui aura de la valeur dans 5 et 10 ans',
-  intro='L’IA et l’automatisation vont changer beaucoup de métiers. Selon ING, deux emplois belges sur trois seront touchés, surtout dans les bureaux, alors que les métiers du geste y échappent en grande partie. Un logiciel peut écrire un rapport, il ne fera pas le pain du matin. Et il faudra toujours manger : la Belgique comptait 11,8 millions d’habitants en 2025, et le Bureau fédéral du Plan en attend 13,1 millions en 2080. Ce qui se goûte, se sent et se partage garde sa valeur.',
+  s2='Ce que montrent les chiffres',
+  preuves=[
+   ('Les boulangers vont manquer',
+    'Le métier est sur la liste officielle des métiers en pénurie, en Flandre comme en Wallonie. Un quart des boulangeries a fermé en quinze ans, et la Flandre compte 817 boulangers de moins qu’il y a dix ans.',
+    'VDAB 2026 · liste wallonne 2025-2026 · Unizo · Provincies in Cijfers'),
+   ('La qualité fait la différence',
+    'Pour choisir leur pain, les clients regardent d’abord la fraîcheur (83 %) et le goût (81 %). Le prix vient après (64 %). Et ceux qui vont chez le boulanger y vont d’abord pour la qualité (71 %).',
+    'APAQ-W et Listen, étude sur le pain, 2024'),
+   ('La franchise aide à gérer et évite des erreurs',
+    'Près d’un commerce de détail sur deux lancé en 2020 avait déjà fermé fin 2024. Le franchisé démarre avec une méthode qui a fait ses preuves, l’appui du réseau et sa logistique. Dans l’alimentation, un magasin franchisé fait plus de six fois le chiffre d’un magasin non franchisé.',
+    'Startersatlas 2025 · Fédération belge de la franchise, 2022'),
+   ('Une marque, ça compte',
+    'Quand l’avenir est incertain, les Belges restent fidèles aux marques installées, celles qu’ils jugent fiables. Une marque forte tient aussi son prix : Copains vend à Bruxelles au prix de Paris, 2,90 € le pain au chocolat. Et près d’un client sur deux achète toujours son pain au même endroit.',
+    'Best Brands Belgium 2023 (GfK) · Paris Match Belgique · APAQ-W'),
+  ],
+  s3='Ce qui aura de la valeur dans 5 et 10 ans',
+  intro='L’IA et l’automatisation vont changer beaucoup de métiers. Selon ING, deux emplois belges sur trois seront touchés, surtout dans les bureaux, beaucoup moins les métiers du geste. Un logiciel peut écrire un rapport, il ne fera pas le pain du matin. Et il faudra toujours manger : la Belgique comptait 11,8 millions d’habitants en 2025, et le Bureau fédéral du Plan en attend 13,1 millions en 2080.',
   h5='Dans 5 ans', a5='2031', h10='Dans 10 ans', a10='2036',
   val5=[
-   'Les bons emplacements, là où les gens passent. Beaucoup vont se libérer avec les fermetures.',
-   'Un produit qu’on vient chercher exprès, et une marque qu’on reconnaît.',
-   'Des équipes qui restent. Trouver et garder du monde sera le vrai problème.',
-   'Un magasin qui vit toute la journée : petit-déjeuner, midi, café, goûter.',
-   'L’IA au service du magasin, pour prévoir les ventes, commander juste et jeter moins.',
+   'Les bons emplacements, qui se libèrent avec les fermetures.',
+   'Un produit qu’on vient chercher exprès, sous une marque qu’on reconnaît.',
+   'Des équipes formées, qui restent.',
+   'L’IA pour prévoir les ventes et jeter moins.',
   ],
   val10=[
-   'Le savoir-faire. Il y aura moins de boulangers formés, et ceux qui en ont auront une longueur d’avance.',
-   'Son propre atelier. La pâte se fera de plus en plus en atelier central, et celui qui n’a pas le sien dépendra de celui des autres.',
-   'La confiance du client : savoir d’où vient la farine, ce qu’il y a dedans et qui l’a fait.',
-   'Le lieu. Un endroit chaleureux où l’on s’arrête, ce que ni l’IA ni la livraison ne remplacent.',
-   'La taille du réseau, pour acheter mieux et faire tourner l’atelier.',
+   'Le savoir-faire, quand les boulangers formés seront rares.',
+   'Son propre atelier. Celui qui n’en a pas dépendra des autres.',
+   'La confiance : savoir d’où vient la farine et qui a fait le pain.',
+   'Le lieu, un endroit chaleureux que ni l’IA ni la livraison ne remplacent.',
   ],
   ck='Ce que nous offrons',
   ch='Un réseau qui fabrique lui-même ce qu’il vend.',
@@ -72,7 +81,7 @@ T = {
   ],
   fin='Et n’oublions pas : on mange ce qu’on produit. Et nous, on aime bien manger.',
   srck='Sources',
-  src='APAQ-W et Listen, étude sur le pain (septembre 2024) · Unizo via VRT (avril 2026) · Provincies in Cijfers (mai 2024) · NSZ via BRUZZ (juin 2025) · RetailDetail (La Lorraine, 2025) · Brussels Times (Vandemoortele et Délifrance, mars 2025) · L’Écho via Paris Match Belgique (septembre 2025) · La Libre Belgique (mai 2022) · ING Economic Focus (avril 2024) · Bureau fédéral du Plan (février 2026).',
+  src='APAQ-W et Listen, étude sur le pain (septembre 2024) · VDAB, Knelpuntberoepen 2026 (février 2026) · Liste wallonne des métiers en pénurie, 2025-2026 (septembre 2025) · Unizo via VRT (avril 2026) · Provincies in Cijfers (mai 2024) · Startersatlas 2025, Unizo, UCM et Graydon (juillet 2025) · Fédération belge de la franchise (octobre 2022) · GfK et NielsenIQ, Best Brands Belgium (mars 2023) · RetailDetail (La Lorraine, 2025) · Brussels Times (mars 2025) · L’Écho via Paris Match Belgique (septembre 2025) · La Libre Belgique (mai 2022) · ING Economic Focus (avril 2024) · Bureau fédéral du Plan (février 2026).',
   lim='Les chiffres de consommation portent sur les Belges francophones. Les vues à 5 et 10 ans sont notre lecture de ces sources, pas une prévision.',
   pied='L’Atelier by · note de marché · sources lues le 31 octobre 2026',
  ),
@@ -81,33 +90,40 @@ T = {
   hd='Marktnota · oktober 2026', code='NL',
   h1='De bakkerij in België', h1b='Wat over 5 en 10 jaar waarde heeft',
   sous='Een stand van zaken van de Belgische markt, met een blik op premium afbakpunten.',
-  tiles=[
-   ('1 op 4', 'Belgische bakkerijen sloot de voorbije vijftien jaar de deuren (Unizo, 2026).'),
-   ('69 %', 'van de Franstalige Belgen koopt brood in de supermarkt. Even veel als bij de bakker (APAQ-W, 2024).'),
-   ('65 %', 'van de Belgische jobs zal door AI veranderen, vooral op kantoor (ING, 2024).'),
-  ],
   s1='Waar staat de markt',
   marche=[
-   'De Belg is niet gestopt met brood eten. 82 % van de Franstalige Belgen koopt elke week brood, en drie op vier zeggen dat ze er niet minder van eten dan vorig jaar. Wat wel verandert, is waar ze het kopen. De supermarkt en de harddiscount doen het nu even goed als de bakker. Daar gaat men voor de prijs. Bij de bakker komt men voor kwaliteit en versheid, ook al vinden twee op de drie klanten het duur.',
-   'De buurtbakker verdwijnt intussen. In vijftien jaar sloot een kwart van de zaken. In Vlaanderen zijn er nog 2 640 bakkers, 817 minder dan tien jaar geleden, en Brussel verloor tussen 2018 en 2022 11 % van zijn bakkerijen. Meestal is er geen overnemer, of vindt men niemand meer die ’s nachts en in het weekend wil werken.',
-   'Aan de andere kant groeien de Belgische industriële bakkers. La Lorraine, de eigenaar van Panos, haalde in 2025 meer dan 1,5 miljard euro omzet, en Vandemoortele kondigde de overname van Délifrance aan. Ook het topsegment komt eraan: Copains opent in Brussel met Parijse prijzen, 2,90 € voor een chocoladebroodje.',
+   'De Belg is niet gestopt met brood eten: 82 % van de Franstalige Belgen koopt elke week brood, en drie op vier eten er niet minder van dan vorig jaar. Wat verandert, is waar ze het kopen. De supermarkt en de harddiscount doen het nu even goed als de bakker: 69 % van de kopers gaat naar de ene, 69 % naar de andere. Naar de supermarkt gaat men voor de prijs.',
+   'Intussen sluiten de buurtbakkers en groeien de industriële bakkers. La Lorraine, de eigenaar van Panos, haalde in 2025 meer dan 1,5 miljard euro omzet, en Vandemoortele kondigde de overname van Délifrance aan. Ook het topsegment komt eraan, met Copains dat zich in Brussel vestigt.',
   ],
-  s2='Wat over 5 en 10 jaar waarde heeft',
-  intro='AI en automatisering gaan veel jobs veranderen. Volgens ING geldt dat voor twee op de drie Belgische jobs, vooral op kantoor, terwijl handwerk grotendeels buiten schot blijft. Software kan een rapport schrijven, maar geen ochtendbrood bakken. En eten moeten we altijd: België telde 11,8 miljoen inwoners in 2025, en het Federaal Planbureau verwacht er 13,1 miljoen in 2080. Wat je kan proeven, ruiken en delen, houdt zijn waarde.',
+  s2='Wat de cijfers tonen',
+  preuves=[
+   ('Er komen bakkers tekort',
+    'Het beroep staat op de officiële lijst van knelpuntberoepen, in Vlaanderen en in Wallonië. In vijftien jaar sloot een kwart van de bakkerijen, en Vlaanderen telt 817 bakkers minder dan tien jaar geleden.',
+    'VDAB 2026 · Waalse lijst 2025-2026 · Unizo · Provincies in Cijfers'),
+   ('Kwaliteit maakt het verschil',
+    'Bij het kiezen van hun brood kijken klanten eerst naar versheid (83 %) en smaak (81 %). De prijs komt pas daarna (64 %). Wie naar de bakker gaat, doet dat in de eerste plaats voor de kwaliteit (71 %).',
+    'APAQ-W en Listen, studie over brood, 2024'),
+   ('Franchise helpt beheren en voorkomt fouten',
+    'Van de winkels die in 2020 opstartten, was bijna de helft eind 2024 al dicht. Een franchisenemer start met een beproefde methode, de steun van het net en zijn logistiek. In de voeding draait een franchisewinkel meer dan zes keer de omzet van een winkel zonder franchise.',
+    'Startersatlas 2025 · Belgische Federatie van de Franchise, 2022'),
+   ('Een merk telt',
+    'Als de toekomst onzeker is, blijven Belgen trouw aan gevestigde merken die ze betrouwbaar vinden. Een sterk merk houdt ook zijn prijs: Copains verkoopt in Brussel aan Parijse prijzen, 2,90 € voor een chocoladebroodje. En bijna één klant op twee koopt zijn brood altijd op dezelfde plek.',
+    'Best Brands Belgium 2023 (GfK) · Paris Match België · APAQ-W'),
+  ],
+  s3='Wat over 5 en 10 jaar waarde heeft',
+  intro='AI en automatisering gaan veel jobs veranderen. Volgens ING geldt dat voor twee op de drie Belgische jobs, vooral op kantoor, veel minder voor handwerk. Software kan een rapport schrijven, maar geen ochtendbrood bakken. En eten moeten we altijd: België telde 11,8 miljoen inwoners in 2025, en het Federaal Planbureau verwacht er 13,1 miljoen in 2080.',
   h5='Over 5 jaar', a5='2031', h10='Over 10 jaar', a10='2036',
   val5=[
-   'Goede locaties, waar veel mensen passeren. Door de sluitingen komen er heel wat vrij.',
-   'Een product waarvoor klanten speciaal komen, en een merk dat ze herkennen.',
-   'Teams die blijven. Mensen vinden en houden wordt het echte probleem.',
-   'Een winkel die de hele dag leeft: ontbijt, middag, koffie, vieruurtje.',
-   'AI ten dienste van de winkel, om de verkoop te voorspellen, juist te bestellen en minder weg te gooien.',
+   'Goede locaties, die vrijkomen door de sluitingen.',
+   'Een product waarvoor klanten speciaal komen, onder een merk dat ze kennen.',
+   'Opgeleide teams die blijven.',
+   'AI om de verkoop te voorspellen en minder weg te gooien.',
   ],
   val10=[
-   'Vakmanschap. Er zullen minder opgeleide bakkers zijn, en wie ze heeft, heeft een voorsprong.',
-   'Een eigen atelier. Het deeg wordt steeds vaker centraal gemaakt, en wie geen eigen atelier heeft, hangt af van dat van een ander.',
-   'Het vertrouwen van de klant: weten waar de bloem vandaan komt, wat erin zit en wie het gemaakt heeft.',
-   'De plek zelf. Een warme zaak waar je even blijft, iets wat AI of levering niet vervangen.',
-   'De omvang van het net, om beter in te kopen en het atelier te laten draaien.',
+   'Vakmanschap, wanneer opgeleide bakkers zeldzaam zijn.',
+   'Een eigen atelier. Wie er geen heeft, hangt af van anderen.',
+   'Vertrouwen: weten waar de bloem vandaan komt en wie het brood bakte.',
+   'De plek zelf, een warme zaak die AI noch levering vervangt.',
   ],
   ck='Wat wij bieden',
   ch='Een net dat zelf maakt wat het verkoopt.',
@@ -121,7 +137,7 @@ T = {
   ],
   fin='En vergeet niet: we eten wat we maken. En wij eten graag.',
   srck='Bronnen',
-  src='APAQ-W en Listen, studie over brood (september 2024) · Unizo via VRT (april 2026) · Provincies in Cijfers (mei 2024) · NSZ via BRUZZ (juni 2025) · RetailDetail (La Lorraine, 2025) · Brussels Times (Vandemoortele en Délifrance, maart 2025) · L’Echo via Paris Match België (september 2025) · La Libre Belgique (mei 2022) · ING Economic Focus (april 2024) · Federaal Planbureau (februari 2026).',
+  src='APAQ-W en Listen, studie over brood (september 2024) · VDAB, Knelpuntberoepen 2026 (februari 2026) · Waalse lijst van knelpuntberoepen, 2025-2026 (september 2025) · Unizo via VRT (april 2026) · Provincies in Cijfers (mei 2024) · Startersatlas 2025, Unizo, UCM en Graydon (juli 2025) · Belgische Federatie van de Franchise (oktober 2022) · GfK en NielsenIQ, Best Brands Belgium (maart 2023) · RetailDetail (La Lorraine, 2025) · Brussels Times (maart 2025) · L’Echo via Paris Match België (september 2025) · La Libre Belgique (mei 2022) · ING Economic Focus (april 2024) · Federaal Planbureau (februari 2026).',
   lim='De consumptiecijfers gaan over Franstalige Belgen. De blik op 5 en 10 jaar is onze lezing van deze bronnen, geen voorspelling.',
   pied='L’Atelier by · marktnota · bronnen gelezen op 31 oktober 2026',
  ),
@@ -134,39 +150,39 @@ CSS = '''
 @page{size:A4;margin:0}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-body{font-family:Gotham,Helvetica,Arial,sans-serif;color:#221E1A;font-size:7.6pt;line-height:1.42;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.page{width:210mm;height:297mm;padding:9mm 13mm 0;position:relative;overflow:hidden;display:flex;flex-direction:column}
-.hd{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #8D1D2C;padding-bottom:1.8mm;margin-bottom:4mm;font-size:6.8pt;letter-spacing:.08em;text-transform:uppercase;color:#7a736a}
+body{font-family:Gotham,Helvetica,Arial,sans-serif;color:#221E1A;font-size:7.4pt;line-height:1.4;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;height:297mm;padding:8mm 13mm 0;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.hd{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #8D1D2C;padding-bottom:1.6mm;margin-bottom:3.4mm;font-size:6.8pt;letter-spacing:.08em;text-transform:uppercase;color:#7a736a}
 .hd .logo{height:4.4mm;width:auto;display:block}
-h1{font-family:Vank,Georgia,serif;font-weight:400;font-size:26pt;margin:0;letter-spacing:-.01em;line-height:1.02}
-h1 span{display:block;color:#8D1D2C;font-size:17pt;margin-top:1mm}
-.sous{font-size:8.4pt;color:#7a736a;margin:1.6mm 0 3.8mm}
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin-bottom:4.2mm}
-.tile{border:1px solid #e6e0d8;border-radius:7px;background:#fbf9f5;padding:2.6mm 3.4mm 2.8mm}
-.tile .v{font-family:Vank,Georgia,serif;font-size:20pt;color:#8D1D2C;line-height:1.05;margin-bottom:.8mm;white-space:nowrap}
-.tile .s{font-size:7.1pt;color:#5a534b;line-height:1.4}
-.sec{font-family:Vank,Georgia,serif;font-size:13pt;margin:0 0 2.2mm;padding-bottom:1mm;border-bottom:1.2pt solid #8D1D2C;line-height:1.15}
-.prose{column-count:2;column-gap:7mm;margin-bottom:3.8mm}
-.prose p{margin:0 0 1.6mm}
-.intro{border-left:3px solid #8D1D2C;background:#fbf9f5;padding:2.2mm 3.4mm;margin-bottom:2.8mm;font-size:7.9pt;line-height:1.45}
-.cols{display:grid;grid-template-columns:1fr 1fr;column-gap:5mm;margin-bottom:3.8mm}
-.carte{border:1px solid #e6e0d8;border-radius:7px;padding:2.4mm 3.4mm 1mm}
-.carte .tt{display:flex;align-items:center;justify-content:space-between;border-bottom:.5pt solid #e6e0d8;padding-bottom:1mm;margin-bottom:1.8mm}
-.carte .tt span{font-family:Vank,Georgia,serif;font-size:12pt;line-height:1.1}
-.carte .tt em{font-style:normal;font-size:6.6pt;letter-spacing:.1em;color:#fff;background:#8D1D2C;border-radius:3mm;padding:.4mm 2.3mm}
+h1{font-family:Vank,Georgia,serif;font-weight:400;font-size:24pt;margin:0;letter-spacing:-.01em;line-height:1.02}
+h1 span{display:block;color:#8D1D2C;font-size:16pt;margin-top:.8mm}
+.sous{font-size:8.2pt;color:#7a736a;margin:1.4mm 0 3.6mm}
+.sec{font-family:Vank,Georgia,serif;font-size:12.5pt;margin:0 0 2mm;padding-bottom:.9mm;border-bottom:1.2pt solid #8D1D2C;line-height:1.15}
+.prose{column-count:2;column-gap:7mm;margin-bottom:3.4mm}
+.prose p{margin:0 0 1.4mm}
+.preuves{display:grid;grid-template-columns:1fr 1fr;gap:2.6mm 4mm;margin-bottom:3.6mm}
+.preuve{border:1px solid #e6e0d8;border-radius:7px;background:#fbf9f5;padding:2.2mm 3.2mm 2mm;display:flex;flex-direction:column}
+.preuve h3{font-family:Vank,Georgia,serif;font-weight:400;font-size:11.5pt;color:#8D1D2C;margin:0 0 1mm;line-height:1.12}
+.preuve .ps{margin-top:auto;padding-top:1.2mm;font-size:6.1pt;color:#8a8379;line-height:1.35}
+.intro{border-left:3px solid #8D1D2C;background:#fbf9f5;padding:2mm 3.4mm;margin-bottom:2.6mm;font-size:7.7pt;line-height:1.42}
+.cols{display:grid;grid-template-columns:1fr 1fr;column-gap:4mm;margin-bottom:3.4mm}
+.carte{border:1px solid #e6e0d8;border-radius:7px;padding:2mm 3.2mm .8mm}
+.carte .tt{display:flex;align-items:center;justify-content:space-between;border-bottom:.5pt solid #e6e0d8;padding-bottom:.9mm;margin-bottom:1.5mm}
+.carte .tt span{font-family:Vank,Georgia,serif;font-size:11.5pt;line-height:1.1}
+.carte .tt em{font-style:normal;font-size:6.4pt;letter-spacing:.1em;color:#fff;background:#8D1D2C;border-radius:3mm;padding:.4mm 2.2mm}
 .pts{margin:0;padding:0;list-style:none}
-.pts li{position:relative;padding-left:3.4mm;margin-bottom:1.3mm}
-.pts li:before{content:'';position:absolute;left:0;top:1.45mm;width:1.5mm;height:1.5mm;border-radius:50%%;background:#8D1D2C}
-.concl{border:1.4pt solid #8D1D2C;border-radius:8px;background:#fbf9f5;padding:2.8mm 3.8mm 1.4mm}
+.pts li{position:relative;padding-left:3.4mm;margin-bottom:1.1mm}
+.pts li:before{content:'';position:absolute;left:0;top:1.35mm;width:1.4mm;height:1.4mm;border-radius:50%%;background:#8D1D2C}
+.concl{border:1.4pt solid #8D1D2C;border-radius:8px;background:#fbf9f5;padding:2.4mm 3.8mm 1.2mm}
 .concl .k{font-size:6.8pt;letter-spacing:.12em;text-transform:uppercase;color:#8D1D2C;font-weight:500}
-.concl h2{font-family:Vank,Georgia,serif;font-weight:400;font-size:14pt;margin:.4mm 0 1.8mm;line-height:1.12}
-.concl .offre{margin-bottom:1.4mm}
-.concl .fin{font-family:Vank,Georgia,serif;font-size:12.5pt;color:#8D1D2C;line-height:1.2;border-top:.5pt solid #e6d6d2;padding:1.5mm 0 .8mm}
-.bas{margin-top:auto;padding:2mm 0 6mm}
-.src{font-size:6.1pt;color:#8a8379;line-height:1.45;border-top:.5pt solid #e6e0d8;padding-top:1.6mm}
+.concl h2{font-family:Vank,Georgia,serif;font-weight:400;font-size:13.5pt;margin:.3mm 0 1.6mm;line-height:1.12}
+.concl .offre{margin-bottom:1.2mm}
+.concl .fin{font-family:Vank,Georgia,serif;font-size:12.5pt;color:#8D1D2C;line-height:1.2;border-top:.5pt solid #e6d6d2;padding:1.4mm 0 .8mm}
+.bas{margin-top:auto;padding:1.6mm 0 5.5mm}
+.src{font-size:5.9pt;color:#8a8379;line-height:1.42;border-top:.5pt solid #e6e0d8;padding-top:1.4mm}
 .src .k{color:#7a736a;font-weight:500;letter-spacing:.08em;text-transform:uppercase;margin-right:1.2mm}
-.src p{margin:0 0 .7mm}
-.pied{display:flex;justify-content:space-between;font-size:6.2pt;color:#9a938a;margin-top:1.2mm}
+.src p{margin:0 0 .6mm}
+.pied{display:flex;justify-content:space-between;font-size:6.1pt;color:#9a938a;margin-top:1mm}
 '''
 
 
@@ -179,15 +195,16 @@ def prose(paras):
 
 
 def page(t):
-    tiles = ''.join(f'<div class="tile"><div class="v">{v}</div><div class="s">{s}</div></div>' for v, s in t['tiles'])
+    preuves = ''.join(f'<div class="preuve"><h3>{h}</h3><div>{x}</div><div class="ps">{s}</div></div>' for h, x, s in t['preuves'])
     corps = f'''<section class="page">
 <div class="hd"><img class="logo" src="{LOGO}" alt="L’Atelier by"><span>{t['hd']}</span><span>{t['code']}</span></div>
 <h1>{t['h1']}<span>{t['h1b']}</span></h1>
 <div class="sous">{t['sous']}</div>
-<div class="tiles">{tiles}</div>
 <div class="sec">{t['s1']}</div>
 {prose(t['marche'])}
 <div class="sec">{t['s2']}</div>
+<div class="preuves">{preuves}</div>
+<div class="sec">{t['s3']}</div>
 <div class="intro">{t['intro']}</div>
 <div class="cols">
 <div class="carte"><div class="tt"><span>{t['h5']}</span><em>{t['a5']}</em></div>{pts(t['val5'])}</div>
