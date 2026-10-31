@@ -369,10 +369,12 @@
       var y = ys[k] || ys[2], coul = COUL[m.cle] || TRONC, nb = m.niveaux.length;
       svg += '<path d="M30,' + y + ' L440,' + y + '" stroke="' + coul + '" stroke-width="7" fill="none" stroke-linecap="round"/>';
       st += '<div class="fm-ligne-nom" style="left:18px;top:' + (y - 34) + 'px;color:' + coul + '">' + esc(m.libelle) + '</div>';
+      // L'étiquette tient dans l'écart entre deux stations, avec 10 px de marge : pas de collision (31/10/2026).
+      var pas = 300 / Math.max(nb - 1, 1), larg = Math.min(104, Math.floor(pas) - 10);
       m.niveaux.forEach(function (n, i) {
-        var x = 60 + i * (300 / Math.max(nb - 1, 1));
+        var x = 60 + i * pas;
         st += station(x, y, coul, '#/postes/' + m.id + '/' + n.id, n.nom, pl(n.total, 'compétence'), n.personnes,
-          i === m.maitrise ? '<span class="fm-st__mt" style="background:' + coul + '">maîtrise</span><br>' : '', i === m.maitrise);
+          i === m.maitrise ? '<span class="fm-st__mt" style="background:' + coul + '">maîtrise</span><br>' : '', i === m.maitrise, false, larg);
       });
     });
     var P = C.polyvalence;
@@ -386,19 +388,19 @@
       var nv = x.niveaux[x.niveaux.length - 1];
       if (!nv) return;
       total += nv.nouvelles;
-      st += station([690, 790][k] || 790, 280, TRONC, '#/postes/' + x.id + '/' + nv.id, x.nom, '+' + nv.nouvelles + ' · <b>' + total + ' au total</b>', nv.personnes, '', false, false, 92);
+      st += station([690, 790][k] || 790, 280, TRONC, '#/postes/' + x.id + '/' + nv.id, x.nom, '+' + nv.nouvelles + ' · <b>' + total + ' au total</b>', nv.personnes, '', false, false, 86);
     });
     var entre = C.chemin.entrepreneur.filter(function (x) { return x.code !== 'P9'; }), loc = C.chemin.entrepreneur.filter(function (x) { return x.code === 'P9'; })[0];
     var xs = [900, 995, 1092];
     entre.forEach(function (x, k) {
       var nv = x.niveaux[x.niveaux.length - 1];
       if (!nv) return;
-      st += station(xs[k] || 1092, 280, TRONC, '#/postes/' + x.id + '/' + nv.id, x.nom, nv.nouvelles ? '+' + pl(nv.nouvelles, 'compétence') : 'compétences à définir', nv.personnes, '', false, !nv.nouvelles, 92);
+      st += station(xs[k] || 1092, 280, TRONC, '#/postes/' + x.id + '/' + nv.id, x.nom, nv.nouvelles ? '+' + pl(nv.nouvelles, 'compétence') : 'compétences à définir', nv.personnes, '', false, !nv.nouvelles, 86);
     });
     if (loc && loc.niveaux.length) {
       var nl = loc.niveaux[loc.niveaux.length - 1];
       svg += '<path d="M900,280 C900,180 910,120 960,120 L995,120" stroke="' + TRONC + '" stroke-width="5" stroke-dasharray="2 9" fill="none" stroke-linecap="round"/>';
-      st += station(995, 120, TRONC, '#/postes/' + loc.id + '/' + nl.id, loc.nom, nl.nouvelles ? '+' + pl(nl.nouvelles, 'compétence') : 'compétences à définir', nl.personnes, '', false, !nl.nouvelles, 92);
+      st += station(995, 120, TRONC, '#/postes/' + loc.id + '/' + nl.id, loc.nom, nl.nouvelles ? '+' + pl(nl.nouvelles, 'compétence') : 'compétences à définir', nl.personnes, '', false, !nl.nouvelles, 86);
     }
     var zones = '<div class="fm-zone" style="left:0;width:650px"><b>Opérationnel</b></div><div class="fm-zone fm-zone--c" style="left:650px;width:200px"><b>Cadre et direction</b></div>' +
       '<div class="fm-zone fm-zone--e" style="left:850px;width:300px"><b>Devenir entrepreneur</b></div>';
