@@ -1246,3 +1246,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T20:05:40Z vérification lot 5 : corrections après encaissement lues (sales-corrections), jours à regarder
 2026-10-31T20:06:00Z vérification lot 5 : cache des corrections renouvelé
 2026-10-31T20:07:26Z vérification lot 5 : attendu par la matière sans les semaines aux entrées incomplètes
+2026-10-31T20:21:46Z vérification : mouvements d'un produit ou d'une matière sur une période (#/verification/mouvements)
