@@ -1226,3 +1226,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T13:31:37Z formation : lisibilité, familles de postes, tableau de bord, création du poste multi-boutique dans le panel
 2026-10-31T13:38:50Z [234] Moce produkcyjne : nagłówek dni
 2026-10-31T13:51:42Z jeton de service vers l'API Marketing (X-Marketing-Service)
+2026-10-31T14:14:36Z [233] Wpłata z e-maila : potwierdzenie przelewu klienta → OCR → zatwierdzenie
