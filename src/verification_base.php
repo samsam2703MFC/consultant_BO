@@ -169,8 +169,12 @@ function vjSeries(array $rows, array $semaines, array $sids): array
     return $out;
 }
 
-/** Avant / après : la moyenne des premières semaines renseignées face à celle des dernières, et le sens du changement. */
-function vjAvantApres(array $v, bool $hautMieux): ?array
+/**
+ * Avant / après : la moyenne des premières semaines renseignées face à celle des dernières, et le sens du changement.
+ * $versZero : le non expliqué se juge à sa distance à zéro — −12 % (vendu plus que produit : cuissons non saisies) n'est
+ * pas mieux que +3 %.
+ */
+function vjAvantApres(array $v, bool $hautMieux, bool $versZero = false): ?array
 {
     $vals = array_values(array_filter($v, static fn ($x) => $x !== null));
     $n = count($vals);
@@ -179,7 +183,8 @@ function vjAvantApres(array $v, bool $hautMieux): ?array
     $moy = static fn (array $a) => array_sum($a) / count($a);
     $av = $moy(array_slice($vals, 0, $k)); $ap = $moy(array_slice($vals, -$k));
     $d = $ap - $av;
-    $sens = abs($d) < VJ_SEUIL_STABLE ? 'stable' : ((($d > 0) === $hautMieux) ? 'mieux' : 'moins bien');
+    $dj = $versZero ? abs($ap) - abs($av) : $d;
+    $sens = abs($dj) < VJ_SEUIL_STABLE ? 'stable' : ((($dj > 0) === $hautMieux) ? 'mieux' : 'moins bien');
     return ['avant' => round($av, 1), 'apres' => round($ap, 1), 'ecart' => round($d, 1), 'sens' => $sens, 'semaines' => $k];
 }
 
@@ -199,7 +204,12 @@ function ep_verification_evolution(): array
     $S = vjSeries($rows, $sem, array_keys($mags));
     $lecture = static function (array $s): array {
         $o = ['series' => $s, 'comparaison' => []];
-        foreach (VJ_INDICATEURS as $code => [$nom, $haut]) { $o['comparaison'][$code] = vjAvantApres((array) ($s[$code] ?? []), $haut); }
+        foreach (VJ_INDICATEURS as $code => [$nom, $haut]) {
+            $vals = (array) ($s[$code] ?? []);
+            // Une semaine sans aucune poubelle déclarée n'est pas une semaine parfaite : la poubelle n'y est pas déclarée.
+            if ($code === 'poubelle') { $vals = array_map(static fn ($x) => $x !== null && (float) $x <= 0.0 ? null : $x, $vals); }
+            $o['comparaison'][$code] = vjAvantApres($vals, $haut, $code === 'nonExpl');
+        }
         return $o;
     };
     $magasins = [];

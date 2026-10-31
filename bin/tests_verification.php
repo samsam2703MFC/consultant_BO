@@ -376,8 +376,23 @@ verifie('un magasin sans données reste vide, le réseau suit le magasin', $Sx['
 $cmp = vjAvantApres($Sx['4']['poubelle'], false);
 verifie('avant / après : la poubelle baisse, c’est mieux', $cmp['avant'] === 9.0 && $cmp['apres'] === 5.0 && $cmp['sens'] === 'mieux', json_encode($cmp));
 verifie('la part mesurée qui monte, c’est mieux ; une seule valeur ne se compare pas', vjAvantApres([10.0, 40.0, 60.0], true)['sens'] === 'mieux' && vjAvantApres([null, 93.0], true) === null);
+verifie('le non expliqué se juge à sa distance à zéro : de −11,6 % à 2,8 %, c’est mieux, pas moins bien', vjAvantApres([-11.6, -11.6, 2.8, 2.8], false, true)['sens'] === 'mieux' && vjAvantApres([2.0, 2.0, -6.0, -6.0], false, true)['sens'] === 'moins bien');
 $ev = ep_verification_evolution();
 verifie('l’évolution rend douze semaines, chaque magasin, le réseau et l’état de la base', count($ev['semaines']) === 12 && count($ev['magasins']) === 2 && isset($ev['reseau']['series']['poubelle']) && $ev['base']['lignes'] === count(Db::$verif));
+
+// Une semaine sans poubelle déclarée n'est pas une semaine parfaite : quand la poubelle apparaît, ce n'est pas « moins bien ».
+$S4 = vjSemaines(4);
+$sauve = Db::$verif; Db::$verif = [];
+foreach ([0.0, 0.0, 4.0, 4.0] as $i => $pb) {
+    $j = $S4[$i]['du'];
+    Db::$verif['3:' . $j] = ['shop_id' => 3, 'jour' => $j, 'dispo_eur' => 100.0, 'vendu_eur' => 90.0, 'poubelle_eur' => $pb, 'invendu_eur' => 5.0, 'nonexpl_eur' => 5.0 - $pb, 'mesure_eur' => 0.0,
+        'recettes_ca_total' => null, 'recettes_ca_fiable' => null, 'flux_le' => null, 'recettes_le' => null];
+}
+$_GET = ['semaines' => '4'];
+$ev4 = ep_verification_evolution();
+$m3 = array_values(array_filter($ev4['magasins'], static fn ($m) => $m['id'] === '3'))[0];
+verifie('la poubelle qui apparaît (0 → 4 %) n’est pas une dégradation : les semaines à zéro ne se comparent pas', $m3['series']['poubelle'] === [0.0, 0.0, 4.0, 4.0] && $m3['comparaison']['poubelle']['sens'] === 'stable', json_encode($m3['comparaison']['poubelle']));
+Db::$verif = $sauve; $_GET = [];
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko > 0 ? 1 : 0);

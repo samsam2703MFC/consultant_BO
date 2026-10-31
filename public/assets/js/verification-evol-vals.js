@@ -45,11 +45,13 @@ function charge(app, chemin, force){
 }
 
 /** Une échelle « ronde » pour l'axe des valeurs. */
-function echelle(max, ind){
-  if (ind === 'mesure' || ind === 'recettes') { return { haut: 100, pas: 25 }; }
+function echelle(max, min, ind){
+  if (ind === 'mesure' || ind === 'recettes') { return { haut: 100, bas: 0, pas: 25 }; }
   const m = Math.max(max, ind === 'poubelle' ? 10 : (ind === 'nonExpl' ? 7 : 4));
-  const pas = m <= 8 ? 2 : (m <= 20 ? 4 : (m <= 40 ? 10 : 20));
-  return { haut: Math.ceil(m * 1.1 / pas) * pas, pas };
+  // Sous zéro (vendu plus que produit : cuissons non saisies), l'axe descend aussi.
+  const etendue = m - Math.min(0, min);
+  const pas = etendue <= 8 ? 2 : (etendue <= 20 ? 4 : (etendue <= 40 ? 10 : 20));
+  return { haut: Math.ceil(m * 1.1 / pas) * pas, bas: min < 0 ? Math.floor(min * 1.1 / pas) * pas : 0, pas };
 }
 
 /** Le graphique : des polylignes (une par magasin, le réseau en pointillé), les bandes des seuils, les étiquettes de fin. */
@@ -60,12 +62,12 @@ function graphique(d, ind, shop, mags){
   const xs = i => G + (n <= 1 ? 0 : i * (W - G - D) / (n - 1));
   const series = mags.map((m, k) => ({ id: m.id, nom: m.nom, couleur: COULEURS[k % COULEURS.length], s: (m.series || {}) }))
     .concat([{ id: 'reseau', nom: 'Réseau', couleur: '#222', reseau: true, s: ((d.reseau || {}).series || {}) }]);
-  let max = 0;
-  series.forEach(S => (S.s[ind] || []).forEach(v => { if (v != null && v > max) { max = v; } }));
-  const E = echelle(max, ind);
-  const ys = v => Hh + (H - Hh - B) * (1 - Math.min(v, E.haut) / E.haut);
+  let max = 0, min = 0;
+  series.forEach(S => (S.s[ind] || []).forEach(v => { if (v != null && v > max) { max = v; } if (v != null && v < min) { min = v; } }));
+  const E = echelle(max, min, ind);
+  const ys = v => Hh + (H - Hh - B) * (1 - (Math.max(E.bas, Math.min(v, E.haut)) - E.bas) / (E.haut - E.bas));
   const grille = [];
-  for (let v = 0; v <= E.haut + 1e-9; v += E.pas) { grille.push({ y: ys(v), txt: nf(v) + ' %' }); }
+  for (let v = E.bas; v <= E.haut + 1e-9; v += E.pas) { grille.push({ y: ys(v), txt: (v < 0 ? '−' + nf(-v) : nf(v)) + ' %', zero: v === 0 && E.bas < 0 }); }
   const seuil = (d.seuils || {})[BANDES[ind]];
   const bandes = seuil ? [{ y1: ys(Math.min(seuil[0], E.haut)), y2: ys(0), ton: 'ok' }, { y1: ys(Math.min(seuil[1], E.haut)), y2: ys(Math.min(seuil[0], E.haut)), ton: 'att' }] : [];
   const lignes = series.map(S => {
@@ -120,14 +122,14 @@ function compare(c, vals){
 }
 
 /** Ce que les semaines disent, en une phrase : qui s'améliore, qui se dégrade, sur quel indicateur. */
-function synthese(mags, reseau){
+function synthese(mags, reseau, auPlan){
   const nomCourt = s => s.replace(/^Atelier by\s*(?:[^-]*-\s*)?/i, '');
   const mieux = [], pire = [];
   mags.forEach(m => {
     const cm = m.comparaison || {};
     ['poubelle', 'nonExpl', 'recettes'].forEach(k => {
       const c = cm[k];
-      if (!c || c.sens === 'stable') { return; }
+      if (!c || c.sens === 'stable' || (ESTIMABLE[k] && auPlan(m))) { return; }
       const t = nomCourt(m.nom) + ' (' + LIB[k][0].toLowerCase() + ' ' + pc(c.avant) + ' → ' + pc(c.apres) + ')';
       (c.sens === 'mieux' ? mieux : pire).push({ t, nom: m.nom, poids: Math.abs(c.ecart) });
     });
@@ -137,6 +139,9 @@ function synthese(mags, reseau){
   const morceaux = [];
   if (mieux.length) { morceaux.push('s’améliorent : ' + top(mieux)); }
   if (pire.length) { morceaux.push('se dégradent : ' + top(pire)); }
+  // Les magasins qui ne déclarent aucune poubelle : rien à comparer, et c'est à dire.
+  const muets = mags.filter(m => { const p = ((m.series || {}).poubelle || []).filter(x => x != null); return p.length > 0 && p.every(x => x <= 0); }).map(m => nomCourt(m.nom));
+  if (muets.length) { morceaux.push((muets.length > 1 ? muets.join(', ') + ' ne déclarent' : muets[0] + ' ne déclare') + ' aucune poubelle sur la période'); }
   const r = (reseau.comparaison || {}).poubelle;
   if (r) { morceaux.push('poubelle du réseau ' + pc(r.avant) + ' → ' + pc(r.apres) + ' (' + r.sens + ')'); }
   return morceaux.length ? morceaux.join(' ; ') + '.' : '';
@@ -178,13 +183,17 @@ export function valsVerifEvol(app, common){
   // « Tout estimé » : aucune semaine d'aucun magasin n'est mesurée (sans cuissons validées, le produit est le plan).
   const est = mags.map(m => (m.series || {}).estime || []).flat();
   v.toutEstime = est.some(e => e === true) && !est.some(e => e === false);
-  v.synthese = synthese(mags, d.reseau || {});
+  // Une ligne est « au plan » quand les dernières semaines comparées sont toutes estimées : pas de jugement sur son non
+  // expliqué ni son invendu (comme à l'audit des flux).
+  const auPlan = L => { const e = ((L.series || {}).estime || []).filter(x => x != null); const k = Math.max(1, Math.min(4, Math.floor(e.length / 2))); return e.length > 0 && e.slice(-k).every(x => x === true); };
+  v.synthese = synthese(mags, d.reseau || {}, auPlan);
   v.g = graphique(d, ind, shop, mags);
   v.colonnes = ORDRE.map(k => ({ id: k, nom: LIB[k][0], on: k === ind, choisir: () => app.setState({ veInd: k }) }));
-  // Une ligne est « au plan » quand les dernières semaines comparées sont toutes estimées.
-  const auPlan = L => { const e = ((L.series || {}).estime || []).filter(x => x != null); const k = Math.max(1, Math.min(4, Math.floor(e.length / 2))); return e.length > 0 && e.slice(-k).every(x => x === true); };
   const ligne = (id, nom, L, reseau) => ({ id, nom, reseau, fort: !!shop && id === shop, choisir: reseau ? () => app.setState({ veShop: '' }) : () => app.setState({ veShop: shop === id ? '' : id }),
-    cases: ORDRE.map(k => Object.assign({ id: k, on: k === ind, estime: !!ESTIMABLE[k] && auPlan(L) }, compare((L.comparaison || {})[k], (L.series || {})[k]))) });
+    cases: ORDRE.map(k => { const est = !!ESTIMABLE[k] && auPlan(L); const c = compare((L.comparaison || {})[k], (L.series || {})[k]);
+      // Estimé : l'écart au plan ne dit rien de la gestion — ni flèche ni couleur.
+      if (est && !c.vide) { Object.assign(c, { ton: 'mu', fleche: '·', sens: 'écart au plan' }); }
+      return Object.assign({ id: k, on: k === ind, estime: est }, c); }) });
   v.lignes = mags.map(m => ligne(m.id, m.nom, m, false)).concat([ligne('reseau', 'Réseau', d.reseau || {}, true)]);
   v.compareN = Math.max(0, ...v.lignes.flatMap(l => l.cases.map(c => c.semaines || 0)));
   v.seuils = d.seuils || {};
