@@ -7595,7 +7595,7 @@ function tplPrimesApp(c, x){
     const imprimer = item('imprimer', 'Fiches à imprimer et à envoyer', FR.resumes.imprimer, '',
       `<div style="${groupeSt};margin-top:12px">${IM.fiches.map(ligneFiche).join('')}</div>${envoiAff}`);
     // L'ordre (31/10/2026) : les chiffres du magasin tout en haut (toujours visibles, Sam : « mets les chiffres du magasin
-    // tout en haut »), l'avancement des vendeuses (déplié à l'ouverture), puis « Paramètres » (replié) — les primes du magasin, les fiches à imprimer et à envoyer, la marque, les promotions du
+    // tout en haut »), l'avancement des vendeuses (replié à l'ouverture, son total en une ligne), puis « Paramètres » (replié) — les primes du magasin, les fiches à imprimer et à envoyer, la marque, les promotions du
     // panel. Les fiches de l'équipe (« Mon profil ») ont quitté la page le même jour, à la demande de Sam.
     const VP = FR.volets.parametres;
     const parametres = `<section data-pr-volet="parametres" data-ouvert="${VP.ouvert ? 1 : 0}">

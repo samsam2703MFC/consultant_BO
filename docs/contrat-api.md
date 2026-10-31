@@ -4278,7 +4278,7 @@ tournent (une prime du magasin en un geste).
 **La page en volets** (31/10/2026, demande de Sam : « réorganiser la page en toggle, au-dessus créer une nouvelle
 prime ; à l'ouverture, l'avancement des vendeuses, la marque et le magasin bien séparés, et pour chacune le cumul et ce
 qui est déjà atteint » ; refaite le jour même, plus sobre : « c'est moche »). « + Créer une nouvelle prime » est sur la
-ligne des onglets (le choix de la sorte). Dessous, une carte blanche « Où en sont tes vendeuses », dépliée à l'ouverture
+ligne des onglets (le choix de la sorte). Dessous, une carte blanche « Où en sont tes vendeuses », repliée à l'ouverture (son total en une ligne)
 (son titre la replie) : une ligne de l'équipe — ce qui est atteint face à ce qui est en jeu, une barre en deux couleurs,
 la marque, le magasin et les vendeuses primées — puis le tableau. Ses colonnes se rangent en deux familles, chacune sous
 son intitulé souligné de sa couleur — **la marque** (et ses sponsors) en rubis, **le magasin** en ambre (`payeur:
