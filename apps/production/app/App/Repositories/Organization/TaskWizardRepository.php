@@ -89,10 +89,50 @@ final class TaskWizardRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COUNT(DISTINCT id_group) AS n FROM n_prod_day_close WHERE work_date = ?', [$day])[0]['n'] ?? 0);
     }
 
+    // --- Tablety [229] : dzień grupy, zmiana, pakowanie, trasa ------------------------------------------------------
+
+    /** Dzień grupy (kod grupy) : zatwierdzony na tablecie (godzina) i pozycje wpisane (zrobione, plan → zrobione). */
+    public function groupDay(string $day, string $groupCode): array
+    {
+        $g = $this->all('SELECT id FROM n_prod_group WHERE code = ?', [$groupCode])[0]['id'] ?? null;
+        if ($g === null) return ['group' => false, 'closed_at' => null, 'lines' => 0, 'produced' => 0];
+        $closed = $this->all('SELECT MIN(closed_at) AS at FROM n_prod_day_close WHERE work_date = ? AND id_group = ?', [$day, $g])[0]['at'] ?? null;
+        $l = $this->all('SELECT COUNT(*) AS n, COALESCE(SUM(produced), 0) AS produced FROM n_prod_day_line WHERE work_date = ? AND id_group = ?', [$day, $g])[0] ?? [];
+        return ['group' => true, 'closed_at' => $closed, 'lines' => (int) ($l['n'] ?? 0), 'produced' => (float) ($l['produced'] ?? 0)];
+    }
+
+    /** Zmiana : grupy z produkcją w dniu (pozycje na tablecie) i ile z nich zatwierdziło dzień. */
+    public function shiftDay(string $day): array
+    {
+        $worked = array_map('intval', array_column($this->all('SELECT DISTINCT id_group FROM n_prod_day_line WHERE work_date = ?', [$day]), 'id_group'));
+        $closed = array_map('intval', array_column($this->all('SELECT DISTINCT id_group FROM n_prod_day_close WHERE work_date = ?', [$day]), 'id_group'));
+        $all = array_values(array_unique([...$worked, ...$closed]));
+        return ['groups' => count($all), 'closed' => count(array_intersect($all, $closed))];
+    }
+
+    /** Pakowanie dnia wysyłki : produkty, spakowane do końca, kartony spakowane / do spakowania, palety dnia. */
+    public function packingDay(string $day): array
+    {
+        $r = $this->all('SELECT COUNT(*) AS n, SUM(packed >= base_count) AS done, COALESCE(SUM(LEAST(packed, base_count)), 0) AS packed, COALESCE(SUM(base_count), 0) AS base
+                FROM n_packing_count WHERE ship_date = ? AND base_count > 0', [$day])[0] ?? [];
+        $pallets = (int) ($this->all('SELECT COUNT(*) AS n FROM palets_delivery WHERE delivery_date = ?', [$day])[0]['n'] ?? 0);
+        return ['products' => (int) ($r['n'] ?? 0), 'done' => (int) ($r['done'] ?? 0), 'packed' => (int) ($r['packed'] ?? 0), 'base' => (int) ($r['base'] ?? 0), 'pallets' => $pallets];
+    }
+
+    /** Trasa dnia : przejazdy (rozpoczęte, zakończone), dostawy potwierdzone, palety dnia. */
+    public function routeDay(string $day): array
+    {
+        $r = $this->all('SELECT COUNT(*) AS runs, SUM(started_at IS NOT NULL) AS started, SUM(finished_at IS NOT NULL) AS finished, MAX(finished_at) AS last FROM n_delivery_run WHERE ship_date = ?', [$day])[0] ?? [];
+        $stops = $this->all("SELECT COUNT(*) AS n, SUM(status = 'delivered') AS delivered, SUM(status = 'problem') AS problems FROM n_delivery_stop WHERE ship_date = ?", [$day])[0] ?? [];
+        $pallets = (int) ($this->all('SELECT COUNT(*) AS n FROM palets_delivery WHERE delivery_date = ?', [$day])[0]['n'] ?? 0);
+        return ['runs' => (int) ($r['runs'] ?? 0), 'started' => (int) ($r['started'] ?? 0), 'finished' => (int) ($r['finished'] ?? 0), 'last' => $r['last'] ?? null,
+            'stops' => (int) ($stops['n'] ?? 0), 'delivered' => (int) ($stops['delivered'] ?? 0), 'problems' => (int) ($stops['problems'] ?? 0), 'pallets' => $pallets];
+    }
+
     /** Grupy produkcji aktywne (tablety). */
     public function activeGroups(): array
     {
-        return $this->all('SELECT id, name_pl FROM n_prod_group WHERE active = 1 ORDER BY sort_order, name_pl');
+        return $this->all('SELECT id, code, name_pl FROM n_prod_group WHERE active = 1 ORDER BY sort_order, name_pl');
     }
 
     /** Dni zatwierdzone na tabletach w przedziale [from, to] : grupa i godzina. */

@@ -25,6 +25,8 @@ final class PositionTaskService
     public const WEEKDAYS = [1 => 'poniedziałek', 2 => 'wtorek', 3 => 'środa', 4 => 'czwartek', 5 => 'piątek', 6 => 'sobota', 7 => 'niedziela'];
     public const DAY_SHORT = [1 => 'Pn', 2 => 'Wt', 3 => 'Śr', 4 => 'Cz', 5 => 'Pt', 6 => 'So', 7 => 'Nd'];
     private const DAY_ABBR = [1 => 'pon.', 2 => 'wt.', 3 => 'śr.', 4 => 'czw.', 5 => 'pt.', 6 => 'sob.', 7 => 'niedz.'];
+    /** Krótkie nazwy stanowisk pracowni w wierszu « Kto co zrobił » [229]. */
+    private const SHORT_NAMES = ['BRYGADZISTA' => 'Brygadzista', 'PAKOWACZ' => 'Pakowanie', 'KIEROWCA' => 'Kierowca'];
     /** Czas pracy tygodnia, do którego porównuje się zadania stałe (min). */
     public const WEEK_MINUTES = 2400;
     /** Zadanie zajmuje najwyżej tyle minut (jedno wykonanie). */
@@ -35,6 +37,8 @@ final class PositionTaskService
         '/production/forecast' => ['Prognoza 13 tygodni (sezony z panelu, zakupy)', 'Prognoza'],
         '/production/plan-wizard' => ['Plan produkcji tygodnia (kreator)', 'Plan tygodnia'],
         '/shipping/wizard' => ['Wysyłka dnia (kreator : WZ, CMR, WDT)', 'Wysyłka'],
+        '/logistics/live' => ['Pakowanie i paletyzacja na żywo (tablet pakowania)', 'Pakowanie'],
+        '/logistics/deliveries' => ['Potwierdzenia dostaw (tablet kierowcy)', 'Dostawy'],
         '/logistics/plan' => ['Plan logistyki 13 tygodni', 'Plan logistyki'],
         '/finances/costs' => ['Finanse : koszty usług miesiąca', 'Koszty usług'],
         '/workshop/supply#tab=invoices&inv=wizard' => ['Kreator faktur (zatwierdzanie pozycji)', 'Kreator faktur'],
@@ -593,6 +597,11 @@ final class PositionTaskService
         };
     }
 
+    private static function plural(int $n, string $one, string $few, string $many): string
+    {
+        return $n === 1 ? $one : (in_array($n % 10, [2, 3, 4], true) && !in_array($n % 100, [12, 13, 14], true) ? $few : $many);
+    }
+
     /** wd3 → « 3. dzień roboczy », d5 → « 5. dzień », brak → « ostatni dzień ». */
     public static function monthRuleLabel(?string $rule): string
     {
@@ -612,7 +621,7 @@ final class PositionTaskService
         [$from, $to] = $this->periodRange($task['frequency'], (string) $o['period_key'], (string) $o['due_date']);
         if ($from > $today->format('Y-m-d') . ' 23:59:59') return $o;
         try {
-            $state = $this->wizards->state($code, $from, $to, (string) $o['due_date']);
+            $state = $this->wizards->state($code, $from, $to, (string) $o['due_date'], $task['position_code'] ?? null);
         } catch (\PDOException) {
             return $o;
         }
@@ -657,6 +666,8 @@ final class PositionTaskService
         $today = $now->setTime(0, 0);
         $held = [];
         foreach ($this->positions->users() as $u) if ($u['id_position']) $held[(int) $u['id_position']] = true;
+        // [229] stanowiska pracowni (tablety) : zadanie dnia bez konta ERP, zaliczane przez tablet
+        foreach ($this->positions->positions() as $p) if (($p['kind'] ?? '') === 'atelier' && (int) $p['active'] === 1) $held[(int) $p['id']] = true;
         $byId = [];
         $keys = [];
         foreach ($this->positions->tasks(null, true) as $t) {
@@ -717,8 +728,10 @@ final class PositionTaskService
         $users = $this->positions->users();
         $people = [];
         foreach ($users as $u) if ($u['id_position']) $people[(int) $u['id_position']][] = trim((string) ($u['displayed_name'] ?: $u['login']));
+        $atelier = [];
+        foreach ($this->positions->positions() as $p) if (($p['kind'] ?? '') === 'atelier' && (int) $p['active'] === 1) $atelier[(int) $p['id']] = $p;
         $tasks = [];
-        foreach ($this->positions->tasks(null, true) as $t) if (isset($people[(int) $t['id_position']])) $tasks[(int) $t['id']] = $t;
+        foreach ($this->positions->tasks(null, true) as $t) if (isset($people[(int) $t['id_position']]) || isset($atelier[(int) $t['id_position']])) $tasks[(int) $t['id']] = $t;
         $occ = [];
         foreach ($this->positions->occurrencesRange(array_keys($tasks), $from, $to) as $o) {
             $t = $tasks[(int) $o['id_task']];
@@ -731,7 +744,8 @@ final class PositionTaskService
         $lateList = [];
         foreach ($this->positions->positions() as $p) {
             $pid = (int) $p['id'];
-            if (!isset($people[$pid])) continue;
+            if (!isset($people[$pid]) && !isset($atelier[$pid])) continue;
+            if (!isset($people[$pid]) && !array_filter($tasks, fn($t) => (int) $t['id_position'] === $pid)) continue;
             $cells = [];
             $count = ['done' => 0, 'total' => 0, 'late' => 0];
             foreach ($cols as $c) {
@@ -740,12 +754,17 @@ final class PositionTaskService
                     if ((int) $t['id_position'] !== $pid) continue;
                     foreach ($this->dueDates($t, $c['from'], $c['to']) as $due) {
                         $o = $occ[$tid][$due] ?? null;
+                        // Bez wystąpienia (dzień bez otwarcia listy, zadanie nowsze) : stan kreatora z tego dnia, tylko odczyt.
+                        if ($o === null && ($t['auto_code'] ?? null) !== null && $due <= $todayStr) {
+                            $virtual = $this->virtualState($t, $due);
+                            if ($virtual !== null) $o = $virtual;
+                        }
                         $status = $o['status'] ?? 'planned';
                         $done = in_array($status, ['done', 'skipped'], true);
                         $late = !$done && $due < $todayStr;
                         $running = !$done && isset($o['wizard_state']) && ($o['wizard_state']['step'] ?? null) !== null;
                         $state = $done ? ($o['done_by'] === null ? 'auto' : 'ok') : ($late ? 'late' : ($running ? 'run' : ($due > $todayStr ? 'plan' : 'todo')));
-                        $item = ['occurrence' => $o ? (int) $o['id'] : null, 'task' => $tid, 'title' => $t['title_pl'], 'due' => $due, 'state' => $state,
+                        $item = ['occurrence' => !empty($o['id']) ? (int) $o['id'] : null, 'task' => $tid, 'title' => $t['title_pl'], 'due' => $due, 'state' => $state,
                             'minutes' => isset($t['minutes']) ? (int) $t['minutes'] : null, 'done_by' => $o['done_by_name'] ?? null, 'done_at' => $o['done_at'] ?? null,
                             'summary' => $o['summary'] ?? ($o['wizard_state']['summary'] ?? null), 'step' => $running ? $o['wizard_state']['step'] . '/' . $o['wizard_state']['steps'] : null,
                             'step_label' => $running ? $o['wizard_state']['step_label'] : null, 'note' => $o['note'] ?? null, 'escalated' => !empty($o['escalated_at']),
@@ -768,9 +787,35 @@ final class PositionTaskService
                 }
                 $cells[] = $items;
             }
-            $rows[] = ['id' => $pid, 'name' => $p['name_pl'], 'people' => $people[$pid], 'tasks' => count(array_filter($tasks, fn($t) => (int) $t['id_position'] === $pid)),
+            $rows[] = ['id' => $pid, 'code' => $p['code'], 'atelier' => isset($atelier[$pid]) && !isset($people[$pid]), 'name' => $p['name_pl'], 'people' => $people[$pid] ?? [],
+                'sub' => null, 'tasks' => count(array_filter($tasks, fn($t) => (int) $t['id_position'] === $pid)),
                 'cells' => $cells, 'done' => $count['done'], 'total' => $count['total'], 'late' => $count['late']];
         }
+        // [229] Stanowiska pracowni (tablety) w dwóch wierszach, jak na makiecie : grupy produkcji i pozostałe (zmiana,
+        // pakowanie, trasa) ; grupy bez stanowiska (np. Tarty) z zatwierdzeń dnia na tabletach.
+        $groupRows = array_values(array_filter($rows, fn($r) => $r['atelier'] && isset(TaskWizards::POSITION_GROUP[$r['code']])));
+        $otherRows = array_values(array_filter($rows, fn($r) => $r['atelier'] && !isset(TaskWizards::POSITION_GROUP[$r['code']])));
+        $rows = array_values(array_filter($rows, fn($r) => !$r['atelier']));
+        $merge = function (array $list, string $name, string $sub) use ($cols): array {
+            $cells = array_fill(0, count($cols), []);
+            foreach ($list as $r) foreach ($r['cells'] as $i => $items) foreach ($items as $it) $cells[$i][] = $it + ['who' => $r['name']];
+            return ['id' => null, 'code' => null, 'atelier' => true, 'name' => $name, 'people' => [], 'sub' => $sub, 'tasks' => array_sum(array_column($list, 'tasks')),
+                'cells' => $cells, 'done' => array_sum(array_column($list, 'done')), 'total' => array_sum(array_column($list, 'total')), 'late' => array_sum(array_column($list, 'late'))];
+        };
+        $tabletsMerged = false;
+        if ($groupRows) {
+            $row = $merge($groupRows, 'Produkcja — grupy (tablety)', count($groupRows) . ' ' . self::plural(count($groupRows), 'grupa', 'grupy', 'grup') . ' · dzień zatwierdzony na tablecie');
+            $extra = $this->tabletsRow($cols, $today->format('Y-m-d'), $work, array_values(TaskWizards::POSITION_GROUP));
+            if ($extra) {
+                foreach ($extra['cells'] as $i => $items) foreach ($items as $it) $row['cells'][$i][] = ['occurrence' => null, 'task' => null, 'due' => $cols[$i]['from'], 'minutes' => null, 'done_by' => null,
+                    'done_at' => null, 'summary' => $it['at'] ? 'dzień zatwierdzony ' . $it['at'] : null, 'step' => null, 'step_label' => null, 'note' => null, 'escalated' => false, 'late_days' => 0,
+                    'link' => '/production/follow-up', 'who' => 'Grupa bez stanowiska'] + $it;
+                $row['sub'] .= ' · + ' . implode(', ', array_unique(array_map(fn($it) => $it['title'], $extra['cells'][0] ?? [])));
+            }
+            $rows[] = $row;
+            $tabletsMerged = true;
+        }
+        if ($otherRows) $rows[] = $merge($otherRows, implode(' · ', array_map(fn($r) => self::SHORT_NAMES[$r['code']] ?? $r['name'], $otherRows)) . ' (tablety)', 'zmiana, pakowanie, trasa — zatwierdzone na tabletach');
         try {
             $runs = $this->runs->runsBetween($from . ' 00:00:00', date('Y-m-d', strtotime($to . ' +1 day')) . ' 00:00:00');
         } catch (\PDOException) {
@@ -782,7 +827,7 @@ final class PositionTaskService
             foreach ($cols as $i => $c) if ($d >= $c['from'] && $d <= $c['to']) $system[$i][] = ['title' => $r['title_pl'], 'at' => $r['started_at'],
                 'state' => $r['ok'] === null ? 'run' : ((int) $r['ok'] ? 'auto' : 'late'), 'summary' => $r['summary'], 'error' => $r['error']];
         }
-        $tablets = $this->tabletsRow($cols, $todayStr, $work);
+        $tablets = $tabletsMerged ? null : $this->tabletsRow($cols, $todayStr, $work);
         // Spóźnione : jedno zadanie raz (najstarszy termin), z liczbą niezrobionych terminów (np. codzienne).
         $byTask = [];
         foreach ($lateList as $it) {
@@ -800,14 +845,29 @@ final class PositionTaskService
             'tiles' => $tiles + ['runs' => count($runs), 'runs_ok' => $runsOk, 'runs_failed' => count(array_filter($runs, fn($r) => $r['ok'] !== null && !(int) $r['ok']))]];
     }
 
+    /** Stan kreatora zadania w dniu bez wystąpienia (odczyt) : zrobione samo albo w toku ; null = nic. */
+    private function virtualState(array $t, string $due): ?array
+    {
+        $p = $this->taskPeriod($t, new DateTimeImmutable($due));
+        if (!$p || TaskWizards::info($t['auto_code']) === null) return null;
+        [$from, $to] = $this->periodRange($t['frequency'], $p['key'], $p['due']);
+        try {
+            $st = $this->wizards->state($t['auto_code'], $from, $to, $p['due'], $t['position_code'] ?? null);
+        } catch (\PDOException) {
+            return null;
+        }
+        if ($st['done']) return ['id' => null, 'status' => 'done', 'done_by' => null, 'done_by_name' => null, 'done_at' => null, 'summary' => $st['summary'], 'note' => null, 'escalated_at' => null, 'wizard_state' => $st];
+        return $st['step'] !== null ? ['id' => null, 'status' => 'open', 'done_by' => null, 'escalated_at' => null, 'wizard_state' => $st] : null;
+    }
+
     /**
      * Wiersz « Produkcja — grupy (tablety) » : dzień zatwierdzony na tablecie grupy (zatwierdzenia produkcji). Bez
      * « spóźnione » — grupa nie musi pracować każdego dnia ; tylko zatwierdzone (zielone) i reszta.
      */
-    private function tabletsRow(array $cols, string $today, array $work): ?array
+    private function tabletsRow(array $cols, string $today, array $work, array $skipCodes = []): ?array
     {
         try {
-            $groups = $this->runs->activeGroups();
+            $groups = array_values(array_filter($this->runs->activeGroups(), fn($g) => !in_array($g['code'] ?? '', $skipCodes, true)));
             if (!$groups) return null;
             $closes = [];
             foreach ($this->runs->groupCloses($cols[0]['from'], end($cols)['to']) as $c) $closes[$c['work_date']][(int) $c['id_group']] = substr((string) $c['closed_at'], 11, 5);

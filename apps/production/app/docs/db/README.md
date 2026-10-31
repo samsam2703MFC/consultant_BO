@@ -162,6 +162,21 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   en liens sous la tâche dans Dzisiaj (« też : Oferty · Dostawcy ») et dans le panneau d'édition des tâches du poste (ajout
   depuis la liste des pages, suppression) ; validées à l'enregistrement (chemin ERP, sans doublon), copiées avec le plan.
 
+### Tâches quotidiennes des tablettes (migration 148, 31/10/2026)
+
+- Une tâche du jour par poste d'atelier (`n_position.kind = 'atelier'`, sans compte ERP), cochée par la tablette :
+  Piekarz, Rogal, Cukiernik, Garmażer → `group_day_closed` (journée du groupe validée, `n_prod_day_close` ; groupe du poste :
+  `TaskWizards::POSITION_GROUP`, PIEKARZ → PIEKARNIA, ROGAL → ROGAL, CUKIERNIK → CUKIERNIA, GARMAZER → GARMAZERIA ; lignes
+  saisies sans validation = en cours), Brygadzista → `shift_day_validated` (tous les groupes ayant des lignes ce jour-là ont
+  validé ; « 1 z 2 grup »), Pakowacz → `packing_done` (`n_packing_count` : emballé ≥ prévu pour chaque produit du jour
+  d'expédition ; jour sans emballage ni palette = fait), Kierowca → `route_done` (`n_delivery_run.finished_at` pour toutes
+  les tournées du jour ; livraisons et problèmes de `n_delivery_stop` dans le résumé ; jour sans tournée ni palette = fait).
+  Sans rappel ni supérieur dans la cloche (`remind_time` et `escalate_days` vides) : le responsable suit dans « Kto co zrobił ».
+- Occurrences créées par le cron pour les postes d'atelier actifs même sans utilisateur ERP (`ensureCurrent`).
+- « Kto co zrobił » : postes d'atelier en deux lignes (maquette 227-3) : « Produkcja — grupy (tablety) » (+ groupes sans poste,
+  p. ex. Tarty, depuis les validations de journée) et « Brygadzista · Pakowanie · Kierowca (tablety) » ; un jour passé sans
+  occurrence (tâche créée après, liste jamais ouverte) affiche l'état de l'assistant ce jour-là (lecture seule).
+
 ### Prévision 13 semaines glissantes (migration 141, 30/10/2026)
 
 - Page : Produkcja › « Prognoza 13 tygodni » (`/production/forecast`, onglet de la page Produkcja, maquettes 220-1 à 3 ;

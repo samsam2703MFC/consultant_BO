@@ -27,7 +27,15 @@ final class TaskWizards
         'logistics_plan_approved' => ['Plan logistyki 13 tygodni', '/logistics/plan', 'tydzień planu zatwierdzony', 1],
         'month_closed' => ['Zamknięcie miesiąca', '/month-close', 'miesiąc zamknięty (8 kroków)', 8],
         'services_closed' => ['Koszty usług miesiąca', '/finances/costs', 'miesiąc zamknięty w Finansach', 1],
+        // Tablety [229] : zadanie dnia stanowiska pracowni, zaliczane przez zatwierdzenie na tablecie.
+        'group_day_closed' => ['Dzień grupy (tablet produkcji)', '/production/follow-up', 'grupa zatwierdziła dzień na tablecie', 1],
+        'shift_day_validated' => ['Zmiana (wszystkie grupy)', '/production/follow-up', 'wszystkie grupy z produkcją zatwierdziły dzień', 1],
+        'packing_done' => ['Pakowanie dnia (tablet pakowania)', '/logistics/live', 'wszystko spakowane na dzień wysyłki', 1],
+        'route_done' => ['Trasa dnia (tablet kierowcy)', '/logistics/deliveries', 'trasa zakończona na tablecie kierowcy', 1],
     ];
+
+    /** Stanowisko pracowni → grupa produkcji (dzień grupy na tablecie). */
+    public const POSITION_GROUP = ['PIEKARZ' => 'PIEKARNIA', 'ROGAL' => 'ROGAL', 'CUKIERNIK' => 'CUKIERNIA', 'GARMAZER' => 'GARMAZERIA'];
 
     /** Zalicza się samo, gdy… (lista do planu stanowiska). */
     public const AUTO = [
@@ -42,6 +50,10 @@ final class TaskWizards
         'logistics_plan_approved' => 'gdy tydzień planu logistyki jest zatwierdzony',
         'month_closed' => 'gdy poprzedni miesiąc jest zamknięty (zamknięcie miesiąca, 8 kroków)',
         'services_closed' => 'gdy koszty usług poprzedniego miesiąca są zamknięte (Finanse)',
+        'group_day_closed' => 'gdy grupa stanowiska zatwierdzi dzień na tablecie produkcji',
+        'shift_day_validated' => 'gdy wszystkie grupy z produkcją zatwierdzą dzień na tabletach',
+        'packing_done' => 'gdy wszystkie produkty dnia wysyłki są spakowane (tablet pakowania)',
+        'route_done' => 'gdy trasy dnia są zakończone na tablecie kierowcy',
     ];
 
     private const MONTH_STEPS = ['cartons' => 'Kartony', 'staff' => 'Personel', 'media' => 'Media', 'fixed' => 'Koszty stałe i logistyka',
@@ -72,7 +84,7 @@ final class TaskWizards
      * Stan kreatora w okresie zadania [from, to) (`day` = dzień zadania codziennego, termin dla pozostałych).
      * @return array{done:bool, summary:?string, step:?int, steps:int, step_label:?string}
      */
-    public function state(string $code, string $from, string $to, string $day): array
+    public function state(string $code, string $from, string $to, string $day, ?string $positionCode = null): array
     {
         $info = self::info($code) ?? throw new \InvalidArgumentException('Nieznany kreator: ' . $code);
         $out = ['done' => false, 'summary' => null, 'step' => null, 'steps' => $info['steps'], 'step_label' => null];
@@ -122,6 +134,31 @@ final class TaskWizards
                 break;
             case 'logistics_plan_approved':
                 if (($n = $this->repo->logisticsApproved($from, $to)) > 0) $out = ['done' => true, 'summary' => $n . ' ' . self::pl($n, 'tydzień zatwierdzony', 'tygodnie zatwierdzone', 'tygodni zatwierdzonych')] + $out;
+                break;
+            case 'group_day_closed':
+                $group = self::POSITION_GROUP[$positionCode ?? ''] ?? null;
+                if ($group === null) break;
+                $r = $this->repo->groupDay($day, $group);
+                if ($r['closed_at']) $out = ['done' => true, 'summary' => 'dzień zatwierdzony ' . $hm($r['closed_at']) . ($r['lines'] ? ' · ' . $r['lines'] . ' ' . self::pl($r['lines'], 'pozycja', 'pozycje', 'pozycji') : '')] + $out;
+                elseif ($r['lines'] > 0) $out = ['step' => 1, 'step_label' => $r['lines'] . ' ' . self::pl($r['lines'], 'pozycja wpisana', 'pozycje wpisane', 'pozycji wpisanych') . ', dzień niezatwierdzony'] + $out;
+                break;
+            case 'shift_day_validated':
+                $r = $this->repo->shiftDay($day);
+                if ($r['groups'] > 0 && $r['closed'] >= $r['groups']) $out = ['done' => true, 'summary' => $r['groups'] . ' ' . self::pl($r['groups'], 'grupa zatwierdziła', 'grupy zatwierdziły', 'grup zatwierdziło') . ' dzień'] + $out;
+                elseif ($r['groups'] > 0) $out = ['step' => $r['closed'] + 1, 'steps' => $r['groups'], 'step_label' => $r['closed'] . ' z ' . $r['groups'] . ' grup zatwierdziło'] + $out;
+                break;
+            case 'packing_done':
+                $r = $this->repo->packingDay($day);
+                if ($r['products'] === 0 && $r['pallets'] === 0) $out = ['done' => true, 'summary' => 'brak wysyłek tego dnia'] + $out;
+                elseif ($r['products'] > 0 && $r['done'] >= $r['products']) $out = ['done' => true, 'summary' => $r['products'] . ' ' . self::pl($r['products'], 'produkt', 'produkty', 'produktów') . ' · ' . self::num($r['packed']) . ' szt. spakowane'] + $out;
+                elseif ($r['packed'] > 0) $out = ['step' => 1, 'step_label' => self::num($r['packed']) . ' z ' . self::num($r['base']) . ' szt. spakowane'] + $out;
+                break;
+            case 'route_done':
+                $r = $this->repo->routeDay($day);
+                if ($r['runs'] === 0 && $r['pallets'] === 0) $out = ['done' => true, 'summary' => 'brak trasy tego dnia'] + $out;
+                elseif ($r['runs'] > 0 && $r['finished'] >= $r['runs']) $out = ['done' => true, 'summary' => $r['delivered'] . ' ' . self::pl($r['delivered'], 'dostawa', 'dostawy', 'dostaw') . ' · trasa zakończona ' . $hm($r['last'])
+                    . ($r['problems'] ? ' · ' . $r['problems'] . ' ' . self::pl($r['problems'], 'problem', 'problemy', 'problemów') : '')] + $out;
+                elseif ($r['started'] > 0) $out = ['step' => 1, 'step_label' => $r['delivered'] . ' ' . self::pl($r['delivered'], 'dostawa potwierdzona', 'dostawy potwierdzone', 'dostaw potwierdzonych') . ', trasa w toku'] + $out;
                 break;
             case 'month_closed':
                 $ym = date('Y-m', strtotime(substr($from, 0, 7) . '-01 -1 month'));

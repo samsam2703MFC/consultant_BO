@@ -31,8 +31,9 @@ final class PositionRepository extends WorkshopRepository
         if ($positionId !== null) { $where[] = 't.id_position = ?'; $params[] = $positionId; }
         if ($activeOnly) $where[] = 't.active = 1';
         return $this->all(
-            "SELECT t.*, c.code AS category_code, c.name_pl AS category_name, c.name_fr AS category_name_fr, c.icon AS category_icon, c.sort_order AS category_sort
-             FROM n_position_task t LEFT JOIN n_task_category c ON c.id = t.id_category" . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
+            "SELECT t.*, c.code AS category_code, c.name_pl AS category_name, c.name_fr AS category_name_fr, c.icon AS category_icon, c.sort_order AS category_sort,
+                    pp.code AS position_code, pp.kind AS position_kind
+             FROM n_position_task t LEFT JOIN n_task_category c ON c.id = t.id_category LEFT JOIN n_position pp ON pp.id = t.id_position" . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
             . " ORDER BY t.id_position, FIELD(t.frequency, 'daily', 'weekly', 'monthly', 'quarterly'), t.sort_order, t.id",
             $params
         );

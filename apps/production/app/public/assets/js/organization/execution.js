@@ -64,7 +64,7 @@
 
     function table() {
         const head = D.columns.map(c => `<th class="c${c.today ? ' today' : ''}">${esc(c.label)}</th>`).join('');
-        const body = D.rows.map((r, ri) => `<tr><td class="who"><b>${esc(r.name)}</b><small>${esc(r.people.join(', '))} · ${r.tasks} ${plural(r.tasks, 'zadanie', 'zadania', 'zadań')}</small></td>
+        const body = D.rows.map((r, ri) => `<tr class="${r.atelier ? 'ex-sys' : ''}"><td class="who"><b>${r.atelier ? '<i class="bi bi-tablet"></i> ' : ''}${esc(r.name)}</b><small>${r.sub ? esc(r.sub) : `${esc(r.people.join(', '))} · ${r.tasks} ${plural(r.tasks, 'zadanie', 'zadania', 'zadań')}`}</small></td>
             ${r.cells.map((items, ci) => `<td class="${D.columns[ci].today ? 'today' : ''}">${dots(items, `p${ri}-${ci}`)}</td>`).join('')}
             <td class="r">${rateHtml(r.done, r.total, r.late ? ` · ${r.late} ${plural(r.late, 'spóźnione', 'spóźnione', 'spóźnionych')}` : '')}</td></tr>`).join('');
         const tb = D.tablets;
@@ -86,7 +86,8 @@
             const ri = Number(kind.slice(1));
             const [ci, ii] = rest.map(Number);
             const r = D.rows[ri];
-            return r && {...r.cells[ci][ii], who: r.name, people: r.people};
+            const it = r && r.cells[ci][ii];
+            return it && {...it, who: it.who || r.name, people: r.people.length ? r.people : null};
         }
         const [ci, ii] = rest.map(Number);
         if (kind === 'g') return D.tablets && {...D.tablets.cells[ci][ii], who: 'Produkcja — grupa (tablet)', group: true};
