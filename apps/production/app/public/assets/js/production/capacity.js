@@ -123,7 +123,7 @@
             + (s.name === 'Chłodzenie i mrożenie' && !groupSel ? freezerRow() : '') + s.rows.map(machineRow).join('')).join('');
         const hasCold = D.sections.some(s => s.name === 'Chłodzenie i mrożenie');
         return `<div class="mc-card"><div class="table-responsive"><table class="mc-tbl"><thead><tr><th>Maszyna</th><th>Wsad</th><th>Na zmianę</th><th class="r">Dostępne</th><th class="r">Zaplanowane</th>
-            <th>Wykorzystanie <small class="mc-th">(| cel ${D.target} %)</small></th><th>${D.week.days.map(d => esc(d.short.replace('.', ''))).join(' ')}</th><th class="r">Wolne</th></tr></thead>
+            <th>Wykorzystanie <small class="mc-th">(| cel ${D.target} %)</small></th><th><div class="mc-days hd">${D.week.days.map(d => `<span class="${d.date === D.today ? 'today' : ''}">${esc(d.short.replace('.', ''))}</span>`).join('')}</div></th><th class="r">Wolne</th></tr></thead>
             <tbody>${!hasCold && !groupSel ? `<tr class="grp"><td colspan="8">Chłodzenie i mrożenie</td></tr>${freezerRow()}` : ''}${sections}${teamRows()}</tbody></table></div>
             <p class="mc-note">Dostępne = zmiany, na których pracuje maszyna (zespół grupy, zmiany « co jeśli », zmiany włączone na maszynie) × dni produkcji × TRS. Zaplanowane = etapy kart produkcyjnych × ilości planu tygodnia (dni z Planu zespołów ; obramowany = dziś).
             ${RO() ? 'Ustawienia maszyn i symulacje : administrator albo dyrektor zakładu.' : 'Kliknij maszynę, aby zmienić jej ustawienia.'}</p></div>`;
