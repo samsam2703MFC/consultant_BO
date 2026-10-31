@@ -2384,11 +2384,15 @@ function ep_rapports_cron(): array
     $recurrence = 'module absent';
     try { if (function_exists('rpCron')) { $recurrence = rpCron(); } }
     catch (Throwable $eRp) { $recurrence = 'échec — ' . $eRp->getMessage(); }
+    // Vérification, lot 1 (31/10/2026) : un lot de recettes lues, la liste des recettes à corriger remise à jour.
+    $verification = 'module absent';
+    try { if (function_exists('vfCron')) { $verification = vfCron(); } }
+    catch (Throwable $eV) { $verification = 'échec — ' . $eV->getMessage(); }
     // Le Résultat d'aujourd'hui se recalcule au même battement : le premier écran du matin le trouve prêt.
     $resultat = 'module absent';
     try { if (function_exists('exPrechauffer')) { $resultat = exPrechauffer(); } }
     catch (Throwable $eR) { $resultat = 'échec — ' . $eR->getMessage(); }
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'recurrence' => $recurrence, 'resultat' => $resultat];
+    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'recurrence' => $recurrence, 'verification' => $verification, 'resultat' => $resultat];
 }
 
 /**

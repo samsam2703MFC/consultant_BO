@@ -3242,6 +3242,79 @@ l'écran, mise en file et rejouée au retour du réseau ; les photos sont
 réduites sur l'appareil (bord long 1600 px, JPEG 0,7, EXIF retiré) avant
 d'entrer dans la file.
 
+
+### `/verification/recettes` — les recettes douteuses ou manquantes (Vérification, lot 1, 31/10/2026)
+
+Plan : `docs/plan-verification.md` § 3.5 ; maquette : `docs/maquettes/verification/e.png` ; code :
+`src/verification.php`, écran `#/verification/recettes` (`verification-vals.js`, `verification-tpl.js`,
+`verification.css`) ; tests : `php bin/tests_verification.php`.
+
+`GET /verification/recettes[?rafraichir=1]` applique neuf règles, magasin par magasin, aux produits vendus des
+trente derniers jours (aujourd'hui exclu) et rend la liste classée par CA concerné. Lecture seule : rien n'est écrit
+au panel. L'analyse est gardée une heure (`ceo_app_setting` `vfAnalyse`) ; `rafraichir=1` la recalcule et lit
+jusqu'à 16 recettes de plus (`VF_BUDGET_DEMANDE`). Le cron horaire (`/rapports/cron`, champ `verification`) en
+lit 120 par passage (`VF_BUDGET_CRON`) : le panel ne tient que quatre lectures de front.
+
+Sources :
+
+- les ventes : les tickets gravés par la moisson (`svP{magasin}:{jour}`, `p[heure][produit ou produit:portion] =
+  [nom, quantité, CA TTC, coût]`), jamais relus ici ; une portion compte pour son produit ;
+- `/shops/{id}/products/available` : `id_recipe`, `recipe_cost_net`, `portion_price_net` (sinon le TTC ÷ TVA),
+  `is_divisible`, `portion_size`, la catégorie — prix de la pièce entière = prix de la portion ÷ `portion_size` ;
+- `/shops/{id}/recipes/{recette}/cost`, lu UNE fois par recette (dans le magasin qui la vend le plus) et gardé
+  24 h (`vfRec:{recette}`) : `elements` (sous-recettes dépliées sur 4 niveaux), `required_quantity`, `unit_name`,
+  `price_net`, `calculated_req_price_net`, `yield_quantity`, `cost_net`, `cost_complete` ;
+- `/shops/{id}/materials` (par `mfMatieresApi`) : `base_unit_price_net` de chaque matière dans chaque magasin ;
+- `/shops/{id}/material-inventory`, gardé 6 h (`vfStock:{magasin}`) : les matières en stock (`current_quantity`
+  > 0, `exist_in_inventory`), pour les matières jamais en recette.
+
+Les règles (`VF_REGLES`) :
+
+| Code | Nom | Se déclenche quand |
+|---|---|---|
+| `sans` | Pas de recette | le produit vendu n'a pas d'`id_recipe` (ou n'est dans aucun products/available) |
+| `vide` | Recette vide | la recette lue n'a aucune ligne |
+| `prix` | Matière sans prix | une matière de la recette n'a pas de prix (ou pas de ligne) dans `/materials` d'un magasin qui vend le produit |
+| `inv` | Coût invraisemblable | `recipe_cost_net` du magasin à 0, ou ≥ prix HT, ou sous `production.coutRatioMin` (5 %) du prix HT |
+| `reseau` | Coût hors norme du réseau | plus de 40 % d'écart à la médiane des AUTRES magasins (deux au moins) |
+| `unite` | Unité suspecte | coût hors des bornes ET une ligne pèse plus de la moitié du coût ET ×1000 ou ÷1000 de cette ligne ramène la pièce entre 5 % et 80 % du prix HT |
+| `rend` | Rendement à zéro | `yield_quantity` vaut 0 (vide = 1, comme partout dans le cockpit) |
+| `port` | Portion sans fraction | `is_divisible` = 1 et `portion_size` vide, nul ou ≥ 1 |
+| `orph` | Matière jamais en recette | en stock, employée par aucune recette vendue — jugée seulement quand 95 % des recettes sont lues ; emballages, hygiène et entretien écartés (`VF_HORS_RECETTE`) |
+
+Une même pièce ne porte que l'explication la plus précise : `vide`, `unite` ou `prix` effacent `inv` et `reseau` ;
+`inv` efface `reseau`. La couverture compte, dans le CA des trente jours, ce qui passe par une pièce sans aucune règle
+(une recette pas encore lue compte, mais `caARelire` le dit).
+
+```json
+{ "lignes": [ { "cle": "prix:2500003", "regle": "prix", "nomRegle": "Matière sans prix", "pid": 2500003, "rid": 580, "mid": null,
+                "nom": "Merveilleux", "cat": "Entremets - Individuel", "detail": "2 matières sans prix à Sombreffe : Sucre glace, Blancs d’œufs.",
+                "ca": 1980.0, "magasins": ["Sombreffe"], "shops": ["5"], "depuis": "2026-09-20" },
+              { "cle": "orph:m950", "regle": "orph", "pid": null, "mid": 950, "nom": "Sucre perlé", "ca": 0, "valeur": 11.2, "…": "…" } ],
+  "total": 37,
+  "couverture": { "caTotal": 126850.0, "caFiable": 118730.0, "caManquant": 8120.0, "caARelire": 0, "pct": 93.6, "partTop10": 72, "produits": 35 },
+  "parRegle": { "sans": 8, "vide": 3, "prix": 8, "inv": 5, "reseau": 4, "unite": 3, "rend": 2, "port": 2, "orph": 2 },
+  "regles": [ { "code": "sans", "nom": "Pas de recette", "explication": "…" } ],
+  "recettes": { "vendues": 312, "lues": 312, "orphJugees": true, "aLire": 0, "luesCePassage": 0, "complet": true },
+  "corrigees": { "n": 4, "depuis": "2026-10-10" },
+  "magasins": [ { "id": "4", "nom": "Halle", "joursLus": 30 } ],
+  "periode": { "du": "2026-10-01", "au": "2026-10-30", "jours": 30 },
+  "seuils": { "coutRatioMin": 0.05, "ecartReseau": 40, "partUnite": 0.5 },
+  "lienRecette": "", "lu": "2026-10-31T18:40:00+01:00", "cache": { "le": "…", "age": 120 }, "source": "…" }
+```
+
+- Sans compte panel : `{ "indispo": true, "motif": "…", "lignes": [], "total": 0 }`.
+- `lienRecette` : le réglage `verifLienRecette` (`ceo_app_setting`), une adresse du panel avec `{rid}` — vide par
+  défaut, l'écran montre alors « recette 580 » ; posé, il devient « Ouvrir au panel ↗ ».
+- Le registre `ceo_verif_recette` (créé au premier appel) : `cle`, `regle`, `product_id`, `material_id`, `nom`,
+  `detail`, `ca_30j`, `magasins`, `premier_vu`, `dernier_vu`, `resolu_le`. Un signalement qui disparaît d'une analyse
+  COMPLÈTE (toutes les recettes lues) est noté résolu ce jour-là ; `corrigees` compte ceux des trente derniers jours.
+- La liste est pour le CEO seul (décision du 31/10/2026) : l'écran l'exporte en CSV, il ne l'envoie pas.
+
+`GET /verification/recettes/sonde?shop=4[&pid=]` (lecture seule, pour mesurer) : les clés d'une ligne de
+products/available et celle du produit demandé, sa recette telle que `/cost` la rend (trois premières lignes), une
+ligne de `/materials` et de `/material-inventory`, et la dernière erreur du panel.
+
 ## 2. Mapping base de données → écran → champ
 
 ### Tables existantes réutilisées (`franchise_buddy_db`)

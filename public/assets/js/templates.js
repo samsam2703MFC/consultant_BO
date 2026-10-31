@@ -8,6 +8,7 @@ import { tplSvTableau, tplSvTablette, tplSvMsp, tplSvFranchise, tplSvAdmin, tplS
 import { tplFF, tplCQM } from './franchises-tpl.js';
 import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
 import { tplFidelite } from './fidelite-tpl.js';
+import { tplVerification } from './verification-tpl.js';
 import { tplPromoTableau, tplPromoEdition } from './promotions-tpl.js';
 
 /* Entrée du rail : feuille (bouton simple) ou sous-menu (parent repliable +
@@ -161,6 +162,7 @@ export function render(c, x){
       ${c.isInvendus ? tplInvendus(c, x) : ''}
       ${c.isSvTableau ? tplSvTableau(c, x) : ''}${c.isSvTablette ? tplSvTablette(c, x) : ''}${c.isSvMsp ? tplSvMsp(c, x) : ''}${c.isSvFranchise ? tplSvFranchise(c, x) : ''}${c.isSvAdmin ? tplSvAdmin(c, x) : ''}${c.isSvSources ? tplSvSources(c, x) : ''}
       ${c.isInventaires ? tplInventaires(c, x) : ''}
+      ${c.isVerifR ? tplVerification(c, x) : ''}
       ${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}

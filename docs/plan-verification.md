@@ -355,12 +355,14 @@ recette se voit comme une amélioration, à partir du jour où elle a eu lieu.
 | Lot | Contenu | Dépend de | Taille |
 |---|---|---|---|
 | **0. Sonde** | Mesurer les routes « à sonder » (§ 4), écrire le contrat | compte panel | S |
-| **1. Recettes à corriger** | La bascule et ses neuf règles, la couverture, le registre | routes déjà connues | M |
+| **1. Recettes à corriger** — **livré le 31/10** | La liste et ses neuf règles, la couverture, le registre ; écran `#/verification/recettes`, route `GET /verification/recettes` (contrat : `docs/contrat-api.md`), lecture des recettes par le cron horaire, tests `bin/tests_verification.php` | routes déjà connues | M |
 | **2. Audit des flux + Fuites (produits finis)** | Jour, semaine, mois ; un tableau par magasin ; la matrice | données déjà lues | M |
 | **3. Base quotidienne + Évolution** | Tables, cron 4 h 30, recalcul sur 7 jours, onglet Évolution | lot 2 | M |
 | **4. Matières ↔ recettes** | Inventaires, livraisons, recettes dépliées, tolérances, attribution ; Fuites en matières | lots 0 et 1 | L |
 | **5. Chiffre d'affaires** | Caisse, P&L, redevances, CA attendu, lignes sans produit, annulations, anomalies | lots 0 et 4 | M |
 | ~~6. Alertes~~ | **Pas pour l'instant (31/10).** Plus tard : un magasin rouge deux jours de suite, une commande livrée non validée depuis 24 h | lot 3 | S |
+
+**Déjà dans le cockpit pour le lot 4** (relevé du 31/10, après fusion de la version en ligne) : l'écran **Inventaires** (`src/inventaires.php`, `#/inventaires`, depuis le 12/10) calcule, entre deux inventaires, les sorties réelles du stock face aux ventes × recettes et à la poubelle (« justesse des ventes »). Il a mesuré que le stock matière du panel ne se décompte pas avec les ventes (dernier comptage + livraisons), que le panel ne rend pas ses inventaires passés, et que le cockpit relève donc le stock toutes les cinq minutes. Le lot 4 partira de là au lieu de le refaire.
 
 L'ordre est choisi pour que **les recettes passent d'abord** : tant qu'une recette est
 fausse, l'écart matière et le CA attendu le sont aussi.

@@ -1,0 +1,60 @@
+/* Cockpit CEO — Vérification › Recettes à corriger (préfixe vr-). Repris de la maquette
+ * docs/maquettes/verification (vf.css) ; couleurs de verdict du cockpit. */
+.vr{--vr-ok:#2d7a3e;--vr-att:#B26A00;--vr-ko:#C0182B;--vr-trait:rgba(34,34,34,.10)}
+.vr-haut{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.vr-sp{flex:1}
+.vr-lu{font-size:11.5px;color:var(--color-text-muted)}
+.vr-btn{font:500 12px var(--font-ui);padding:7px 13px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer}
+.vr-btn:disabled{opacity:.55;cursor:default}
+.vr-card{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden}
+.vr-etat{padding:22px 24px;font-size:12.5px;color:var(--color-text-muted);display:flex;align-items:center;gap:12px}
+.vr-etat.ko{color:#8D1D2C}
+.vr-roue{width:14px;height:14px;border-radius:50%;border:2px solid #e5ddd3;border-top-color:var(--color-primary);animation:vr-tourne .9s linear infinite;flex:0 0 14px}
+@keyframes vr-tourne{to{transform:rotate(360deg)}}
+
+/* La couverture */
+.vr-cov{padding:16px 18px;display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;border-bottom:.5px solid var(--vr-trait)}
+.vr-cov .big{font:400 44px var(--font-display);line-height:1;white-space:nowrap}
+.vr-cov .big small{font:600 12px var(--font-ui);color:var(--color-text-muted);display:block;margin-top:6px;letter-spacing:.02em}
+.vr-cov .big.ok{color:var(--vr-ok)}.vr-cov .big.att{color:var(--vr-att)}.vr-cov .big.ko{color:var(--vr-ko)}.vr-cov .big.mu{color:var(--color-text-muted)}
+.vr-cov .jg{position:relative;height:16px;border-radius:999px;background:#f1ece5;overflow:hidden}
+.vr-cov .jg i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#D97706,#2d7a3e)}
+.vr-cov .jg i.ko{background:linear-gradient(90deg,#C0182B,#D97706)}
+.vr-cov .jg u{position:absolute;top:-4px;bottom:-4px;right:0;width:2px;background:#222}
+.vr-cov .tx{font-size:12px;color:var(--color-text-muted);margin-top:8px;line-height:1.5}
+.vr-cov .tx b,.vr-cov .tx2 b{color:var(--color-text);font-weight:600}
+.vr-cov .tx2{font-size:11.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.5}
+
+/* Les règles en pastilles */
+.vr-chips{display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px;border-bottom:.5px solid var(--vr-trait)}
+.vr-chips button{border:.5px solid var(--color-border-secondary);border-radius:999px;padding:4px 11px;font:600 11px var(--font-ui);color:var(--color-text-muted);background:var(--color-surface);white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.vr-chips button b{color:var(--color-text)}
+.vr-chips button.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}.vr-chips button.on b{color:#fff}
+.vr-pt{display:inline-block;width:9px;height:9px;border-radius:50%}
+.vr-fil{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 18px}
+.vr-sel{font:500 12px var(--font-ui);border:.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 10px;background:var(--color-surface);color:var(--color-text)}
+
+/* La liste */
+.vr-tw{overflow-x:auto}
+.vr-t{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+.vr-t th{font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:9px 8px;border-bottom:.5px solid var(--vr-trait);text-align:right;white-space:nowrap;vertical-align:bottom}
+.vr-t th small{display:block;font:500 9.5px var(--font-ui);letter-spacing:0;text-transform:none;color:#999;margin-top:2px}
+.vr-t td{padding:9px 8px;border-bottom:.5px solid var(--vr-trait);text-align:right;white-space:nowrap;vertical-align:middle}
+.vr-t .g{text-align:left}
+.vr-t td.nom b{font-weight:600}
+.vr-t td.nom small{display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:1px}
+.vr-det{white-space:normal!important;max-width:440px;font-size:11.5px;line-height:1.4}
+.vr-t td.vr-mu,.vr-mu{color:var(--color-text-muted)}
+.vr-t td.g.vr-mu{white-space:normal;max-width:160px}
+.vr-rang{display:inline-flex;width:22px;height:22px;border-radius:50%;align-items:center;justify-content:center;font:700 10.5px var(--font-ui);background:#f2ece4;color:#555}
+.vr-rang.h{background:var(--color-primary);color:#fff}
+.vr-lien{font:600 11.5px var(--font-ui);color:var(--color-primary);text-decoration:none;border:.5px solid var(--color-primary);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.vr-pb{display:inline-block;font:600 10.5px var(--font-ui);padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pb-sans{background:#C0182B;color:#fff}.pb-vide{background:#8D1D2C;color:#fff}.pb-prix{background:#D97706;color:#fff}.pb-inv{background:#fbe3e6;color:#C0182B}
+.pb-reseau{background:#fdecd2;color:#8a5200}.pb-unite{background:#e4ecf5;color:#2F5D8A}.pb-rend{background:#ece6f3;color:#5b3f86}.pb-port{background:#e9f1ea;color:#2d6a3a}.pb-orph{background:#efe9e1;color:#5d554d}
+.vr-pt.pb-inv{background:#e88c98}.vr-pt.pb-reseau{background:#e0a24a}.vr-pt.pb-unite{background:#6f93bd}.vr-pt.pb-rend{background:#8c72b3}.vr-pt.pb-port{background:#5e9a69}.vr-pt.pb-orph{background:#a39789}
+.vr-vide{padding:22px 18px;font-size:12.5px;color:var(--color-text-muted)}
+.vr-vide.ok{color:var(--vr-ok);font-weight:600}
+.vr-pied{padding:10px 18px;font-size:11px;color:var(--color-text-muted);line-height:1.55;border-top:.5px solid var(--vr-trait);background:#fcfaf7}
+.vr-pied b{font-weight:600;color:#555}
+@media (max-width:900px){.vr-cov{grid-template-columns:1fr}.vr-cov .big{font-size:36px}}

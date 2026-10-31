@@ -49,6 +49,7 @@ require __DIR__ . '/../../src/stats_ventes.php';
 require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
 require __DIR__ . '/../../src/inventaires.php';
+require __DIR__ . '/../../src/verification.php';
 require __DIR__ . '/../../src/notes_jour.php';
 require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
@@ -477,6 +478,9 @@ function route(string $method, string $path): mixed
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
             $path === '/stock/inventaires/sonde'      => ep_stock_inventaires_sonde(),
             $path === '/stock/inventaires'            => ep_stock_inventaires(),
+            // Vérification, lot 1 (31/10/2026) : les recettes douteuses ou manquantes.
+            $path === '/verification/recettes'        => ep_verification_recettes(),
+            $path === '/verification/recettes/sonde'  => ep_verification_sonde(),
             $path === '/stock/inventaires/ecart'      => ep_stock_inventaires_ecart(),
             $path === '/stock/inventaires/releve'     => ep_stock_inventaires_releve(),
             $path === '/ventes/reseau'                => ep_ventes_reseau(),
