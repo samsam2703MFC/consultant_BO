@@ -890,6 +890,7 @@ final class PositionTaskService
                     if (isset($closes[$date][(int) $g['id']])) { $n++; $at = $closes[$date][(int) $g['id']]; }
                 }
                 $future = $c['from'] > $today;
+                if (!$future && $days === 0 && $n === 0) continue; // dzień wolny (sobota, niedziela) : bez kropki
                 $state = $future ? 'plan' : ($days && $n >= $days ? 'auto' : ($n ? 'run' : 'todo'));
                 $items[] = ['title' => $g['name_pl'], 'state' => $state, 'closed' => $n, 'days' => $days, 'at' => $c['from'] === $c['to'] ? $at : null];
                 $done += $n;
