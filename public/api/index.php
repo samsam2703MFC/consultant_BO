@@ -324,7 +324,8 @@ function route(string $method, string $path): mixed
             $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
             // La tablette des vendeuses (public/tablette/) : son book de données, tiré du catalogue.
             // Le module Formation (public/formation/) : le référentiel RH du panel — postes, niveaux,
-            // compétences, formations, procédures — et le manuel opératoire qui s'en déduit. Lecture seule.
+            // compétences, formations, procédures — et le manuel opératoire qui s'en déduit. Les écritures
+            // (relues au panel, journalisées) sont plus bas, avec les autres POST/PUT/PATCH/DELETE.
             $path === '/formation/referentiel'         => ep_formation_referentiel(),
             $path === '/formation/liens'               => ep_formation_liens(),
             $path === '/formation/competence'          => ep_formation_competence(),
