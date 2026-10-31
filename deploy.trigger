@@ -1237,3 +1237,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T18:37:51Z [239] Sesja pod awatarem : administrator ogląda ERP jak stanowisko
 2026-10-31T18:43:48Z vérification : recettes à corriger (lot 1) — #/verification/recettes, neuf règles, couverture, registre ceo_verif_recette, lecture des recettes par le cron horaire
 2026-10-31T18:55:56Z vérification : formules et promotions — interrupteur devant la liste, règle « formule sans ses produits » (produits à prix réduit sur le ticket)
+2026-10-31T19:12:17Z vérification lot 2 : audit des flux (#/verification/flux) et fuites par magasin (#/verification/fuites), mesuré ou estimé ; fiche recette au clic
