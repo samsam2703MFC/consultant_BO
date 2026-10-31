@@ -60,6 +60,14 @@ final class ForecastController extends BaseController
         return $this->respond(fn() => ['message' => 'Zapisano.', 'data' => $this->forecast->link((int) $id, $this->input(), $this->userId())]);
     }
 
+    /** Klient w prognozie albo wyłączony [226] — body {included: bool}. */
+    public function client($id)
+    {
+        $included = (bool) ($this->input()['included'] ?? true);
+        return $this->respond(fn() => ['message' => $included ? 'Klient wrócił do prognozy.' : 'Klient wyłączony z prognozy.',
+            'data' => $this->forecast->setClient((int) $id, $included, $this->userId())]);
+    }
+
     private function respond(callable $fn)
     {
         try {

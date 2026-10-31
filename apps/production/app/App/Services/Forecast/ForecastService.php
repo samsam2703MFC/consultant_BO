@@ -96,7 +96,7 @@ final class ForecastService
             'weeks' => array_map(fn($w) => ['week_start' => $w['week_start'], 'iso_week' => $w['iso_week']], $f['weeks']),
             'products' => array_map(fn($p) => ['id' => $p['product_id'], 'name' => $p['name'], 'kind' => $p['kind'], 'values' => $p['values'], 'sources' => $p['sources'],
                 'cost_per_carton' => $p['cost_per_carton']['total'] ?? null], $f['products']),
-            'totals' => $f['totals'], 'cost' => $f['cost'], 'trend' => $f['trend'], 'seasons' => array_map(fn($s) => ['id' => $s['id'], 'name' => $s['name'], 'from' => $s['from'], 'to' => $s['to'], 'cartons' => $s['cartons']], $f['seasons']),
+            'totals' => $f['totals'], 'cost' => $f['cost'], 'trend' => $f['trend'], 'clients_excluded' => $f['clients_excluded'], 'seasons' => array_map(fn($s) => ['id' => $s['id'], 'name' => $s['name'], 'from' => $s['from'], 'to' => $s['to'], 'cartons' => $s['cartons']], $f['seasons']),
             'purchases' => array_map(fn($m) => ['id' => $m['id'], 'name' => $m['name'], 'need' => $m['need'], 'to_buy' => $m['to_buy'], 'order_by' => $m['order_by'], 'value' => $m['value']], $f['purchases']['rows']),
         ];
         $this->tx->execute(fn() => $this->repo->saveRun([
@@ -139,6 +139,14 @@ final class ForecastService
             if ($pid <= 0 || !$this->repo->productExists($pid)) throw new CustomException('Wybierz nasz produkt z listy.', 'errors', 422);
             $this->repo->savePanelLink($panelProductId, $name, $pid, false, $userId);
         });
+        return $this->page($today, $now);
+    }
+
+    /** Klient w prognozie albo wyłączony [226] (0 = « Bez klienta »). */
+    public function setClient(int $clientId, bool $included, ?int $userId, ?string $today = null, ?int $now = null): array
+    {
+        if ($clientId < 0 || ($clientId > 0 && !$this->repo->clientExists($clientId))) throw new CustomException('Nie ma takiego klienta.', 'errors', 404);
+        $this->repo->setClientExcluded($clientId, !$included, $userId);
         return $this->page($today, $now);
     }
 
@@ -263,6 +271,33 @@ final class ForecastService
         }
         usort($rows, fn($a, $b) => [$a['kind'] === 'season' ? 1 : 0, -$a['total'], $a['name']] <=> [$b['kind'] === 'season' ? 1 : 0, -$b['total'], $b['name']]);
 
+        // Kto bierze ile [225] ; klienci wyłączeni [226] : ich kartony (zamówienia i prognoza wg udziału) poza wszystkimi sumami.
+        $clients = $this->clientSplit($rows, $weeks, $recent, $seasonal, $end);
+        $excluded = $this->repo->excludedClients();
+        $minus = [];
+        foreach ($clients as &$c) {
+            $c['excluded'] = isset($excluded[$c['id']]) ? $excluded[$c['id']] : null;
+            if ($c['excluded'] === null) continue;
+            foreach ($c['products'] as $cp) foreach ($cp['values'] as $i => $q) if ($q > 0) $minus[$cp['product_id']][$i] = ($minus[$cp['product_id']][$i] ?? 0) + $q;
+        }
+        unset($c);
+        if ($minus) {
+            foreach ($rows as $k => &$r) {
+                if (!isset($minus[$r['product_id']])) continue;
+                foreach ($minus[$r['product_id']] as $i => $q) {
+                    $r['values'][$i] = max(0, $r['values'][$i] - $q);
+                    if ($r['values'][$i] === 0) $r['sources'][$i] = 'none';
+                }
+                $r['excluded_cartons'] = array_sum($minus[$r['product_id']]);
+                $r['total'] = array_sum($r['values']);
+                if ($r['total'] === 0 && $r['kind'] !== 'season') unset($rows[$k]);
+            }
+            unset($r);
+            $rows = array_values($rows);
+            usort($rows, fn($a, $b) => [$a['kind'] === 'season' ? 1 : 0, -$a['total'], $a['name']] <=> [$b['kind'] === 'season' ? 1 : 0, -$b['total'], $b['name']]);
+        }
+        $offClients = array_values(array_filter($clients, fn($c) => $c['excluded'] !== null));
+
         // Sumy tygodni : kartony, palety, godziny wobec zdolności (dni pracy bez świąt kraju wyjazdu).
         $dep = strtoupper($this->params->get('logistics.plan_departure_country', 'PL'));
         $holidays = Holidays::between($start, $end, [$dep]);
@@ -297,7 +332,6 @@ final class ForecastService
                 'shape' => $shape[$i] !== null ? round($shape[$i], 2) : null, 'no_cpp' => $noCpp, 'no_hours' => $noHours];
         }
         $seasonsOut = $this->presentSeasons($seasons['list'], $rows, $by, $weeks, $t, $sales);
-        $clients = $this->clientSplit($rows, $weeks, $recent, $seasonal, $end);
         $purchases = $this->purchases($rows, $weeks, $today, $seasonal);
         // Szczyt i tygodnie ponad zdolność : bez tygodnia bieżącego (produkcja w toku, zamówienia już wysłane).
         $ahead = array_slice(array_keys($weekRows), 1, null);
@@ -322,6 +356,7 @@ final class ForecastService
         return [
             'today' => $today, 'weeks' => $weekRows, 'products' => $rows, 'trend' => $trend + ['weeks' => $trendWeeks], 'capacity' => $capacity, 'cost' => $cost,
             'seasons' => $seasonsOut, 'panel_products' => $seasons['unlinked'], 'purchases' => $purchases, 'clients' => $clients,
+            'clients_excluded' => ['count' => count($offClients), 'cartons' => array_sum(array_column($offClients, 'total')), 'names' => array_column($offClients, 'name')],
             'totals' => ['cartons' => (int) array_sum(array_column($weekRows, 'cartons')), 'season_cartons' => (int) array_sum(array_column($weekRows, 'season_cartons')),
                 'pallets' => round(array_sum(array_column($weekRows, 'pallets')), 1), 'hours' => $totalHours,
                 'peak_week' => $peak !== null ? $weekRows[$peak]['iso_week'] : null, 'peak_pct' => $peak !== null ? $weekRows[$peak]['load_pct'] : null,
@@ -617,7 +652,7 @@ final class ForecastService
      * klienta, który zamówił ; prognoza ponad zamówienia — wg udziału klienta w produkcie : sezonowe w tej samej gamie rok
      * temu, całoroczne w ostatnich tygodniach trendu ; bez tej historii wg zamówień w oknie, inaczej « bez klienta » (id 0).
      * @return list<array{id:int, name:string, values:list<int>, ordered:list<int>, total:int,
-     *   products:list<array{product_id:int, values:list<int>, ordered:list<int>, total:int}>}>
+     *   products:list<array{product_id:int, name:string, cpp:?int, values:list<int>, ordered:list<int>, total:int}>}>
      */
     private function clientSplit(array $rows, array $weeks, array $recent, array $seasonal, string $end): array
     {
@@ -669,10 +704,12 @@ final class ForecastService
             }
         }
         $names = $this->repo->clientNames(array_keys($out));
+        $info = array_column($rows, null, 'product_id');
         $list = [];
         foreach ($out as $c => $x) {
             $products = [];
-            foreach ($x['products'] as $pid => $p) $products[] = ['product_id' => $pid, 'values' => $p['values'], 'ordered' => $p['ordered'], 'total' => array_sum($p['values'])];
+            foreach ($x['products'] as $pid => $p) $products[] = ['product_id' => $pid, 'name' => $info[$pid]['name'] ?? ('#' . $pid), 'cpp' => $info[$pid]['cpp'] ?? null,
+                'values' => $p['values'], 'ordered' => $p['ordered'], 'total' => array_sum($p['values'])];
             usort($products, fn($a, $b) => $b['total'] <=> $a['total'] ?: $a['product_id'] <=> $b['product_id']);
             $list[] = ['id' => (int) $c, 'name' => $c ? ($names[$c] ?? ('Klient #' . $c)) : 'Bez klienta', 'values' => $x['values'], 'ordered' => $x['ordered'],
                 'total' => array_sum($x['values']), 'products' => $products];

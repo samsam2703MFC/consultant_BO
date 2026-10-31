@@ -42,4 +42,5 @@ return function(RouteCollector $r) {
     $r->addRoute('POST', '/ajax/forecast/reopen', ['controller' => $fc, 'method' => 'reopen']);
     $r->addRoute('POST', '/ajax/forecast/panel-refresh', ['controller' => $fc, 'method' => 'refresh']);
     $r->addRoute('POST', '/ajax/forecast/panel-links/{id:\d+}', ['controller' => $fc, 'method' => 'link']);
+    $r->addRoute('POST', '/ajax/forecast/clients/{id:\d+}', ['controller' => $fc, 'method' => 'client']);
 };

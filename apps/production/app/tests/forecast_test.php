@@ -114,7 +114,7 @@ try {
     foreach (['customer', 'customer_order', 'customer_order_product', 'final_product', 'category_product', 'product_recipe', 'n_prod_item', 'n_prod_product_settings',
                  'n_prod_group', 'n_prod_routing_step', 'n_prod_routing_alternative', 'n_prod_workstation', 'n_stock_period', 'n_stock_period_item', 'n_prod_param',
                  'n_prod_employee', 'user', 'raw_material', 'unit', 'category_material', 'supplier', 'n_mp_supply', 'n_mp_count', 'n_po', 'n_po_line', 'n_po_receipt',
-                 'carton_stock', 'flattened_recipe_ingredient', 'n_mp_offer', 'n_forecast_run', 'n_forecast_panel_read', 'n_forecast_panel_link',
+                 'carton_stock', 'flattened_recipe_ingredient', 'n_mp_offer', 'n_forecast_run', 'n_forecast_panel_read', 'n_forecast_panel_link', 'n_forecast_client_excluded',
                  'cost_month', 'cost_month_employee', 'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'cost_month_logistics',
                  'cost_month_section', 'production_sections', 'n_section_target', 'document_wdt', 'document_wdt_product', 'n_wdt_superseded', 'erp_company_other_settings'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
@@ -263,6 +263,18 @@ try {
     expectFc($cp(1, 1)['values'][3] + $cp(2, 1)['values'][3] === 20 && in_array($cp(2, 1)['values'][3], [7, 8], true) && $cp(1, 1)['ordered'][3] === 5,
         'zamówienie 5 < prognoza 20 : Alfa 5 + połowa reszty, Beta połowa reszty (7,5) ; ' . $cp(1, 1)['values'][3] . ' / ' . $cp(2, 1)['values'][3]);
     expectFc($cp(1, 1)['values'][1] === 10 && $cp(2, 1)['values'][1] === 10 && $cp(2, 1)['ordered'][1] === 0, 'bez zamówień : prognoza 20 wg udziału 10 / 10');
+    // Klient wyłączony [226] : Beta poza prognozą — Bagietka tydz. 2 : 20 → 10, sumy i palety bez Bety ; ponowne włączenie przywraca.
+    $x = $fc->setClient(2, false, null, $today, $now);
+    $xb = array_column($x['products'], null, 'product_id')[1];
+    $xcl = array_column($x['clients'], null, 'id');
+    expectFc($xb['values'][1] === 10 && $xb['values'][2] === 50 && $xb['excluded_cartons'] === array_sum($cp(2, 1)['values']),
+        'wyłączony klient : jego kartony poza prognozą produktu (20 → 10), zamówienie Alfy zostaje (50)');
+    expectFc($x['clients_excluded']['count'] === 1 && $x['clients_excluded']['names'] === ['Beta sp. z o.o.'] && $xcl[2]['excluded'] !== null && $xcl[1]['excluded'] === null
+        && $x['totals']['cartons'] === $f['totals']['cartons'] - $cl[2]['total'] && $x['weeks'][1]['cartons'] === $W[1]['cartons'] - $cl[2]['values'][1],
+        'wyłączony klient : sumy tygodni i 13 tygodni bez jego kartonów ; lista pokazuje go jako wyłączonego');
+    $y = $fc->setClient(2, true, null, $today, $now);
+    expectFc($y['totals']['cartons'] === $f['totals']['cartons'] && $y['clients_excluded']['count'] === 0, 'ponowne włączenie : prognoza jak przed');
+    try { $fc->setClient(999, false, null, $today, $now); expectFc(false, 'nieznany klient odrzucony'); } catch (CustomException $e) { expectFc($e->getCode() === 404 || str_contains($e->getMessage(), 'klienta'), 'nieznany klient odrzucony'); }
     $s = $rows[3];
     expectFc($s['kind'] === 'regular' && $s['all_year_in'] === ['Saint-Nicolas'], 'Spéculoos : w gamie Saint-Nicolas, ale sprzedawany cały rok → całoroczny');
     expectFc(!isset($rows[41009]) && $rows[2]['kind'] === 'season', 'produkt gamy całorocznej nie jest sezonowy ; Cougnou sezonowy');

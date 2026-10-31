@@ -99,6 +99,7 @@
         const appr = D.approval;
         const sum = (f) => W.map((w, i) => f(w, i));
         const C = D.cost;
+        const XC = D.clients_excluded || {count: 0, cartons: 0, names: []};
         const mln = (v) => v >= 1e6 ? num(v / 1e6, 2) + ' mln' : num(v / 1000, 0) + ' tys.';
         const costTitle = `Wydatki : kartony × (surowce i opakowania + płace i media działu produkcji + wspólne działy produkcji${C.shared_sections.length ? ' : ' + C.shared_sections.join(', ') : ''}), z ${C.basis || 'brak miesięcy kosztowych'} : surowce ${num(C.raw)} zł, płace ${num(C.labor)} zł, media ${num(C.media)} zł, wspólne działy ${num(C.shared)} zł. Poza wydatkami : inwestycje ${num(C.excluded.investment)} zł (amortyzacja ${num(C.excluded.depreciation)} zł, kredyt i leasing ${num(C.excluded.financing)} zł), pozostałe koszty stałe (Finanse) ${num(C.excluded.fixed)} zł, ${C.admin_sections.length ? C.admin_sections.join(', ') : 'Administracja'} ${num(C.excluded.admin)} zł ; logistyka osobno ${num(C.logistics)} zł.`;
         const wTitle = (w) => `${num(w.cost)} zł : surowce ${num(w.cost_raw)}, płace ${num(w.cost_labor)}, media ${num(w.cost_media)}, wspólne działy ${num(w.cost_shared)}`;
@@ -107,7 +108,7 @@
                 ${appr ? `<span class="kw-badge ok">zatwierdzona : ${when(appr.approved_at)}${appr.by ? ' — ' + esc(appr.by) : ''}</span>${appr.changed ? ' <span class="kw-badge warn">liczby zmieniły się od zatwierdzenia</span>' : ''}` : '<span class="kw-badge warn">do zatwierdzenia w tym tygodniu</span>'}</h5>
             <p class="kw-lead">Co tydzień te same ${W.length} tygodni do przodu. Kartony na tydzień : zamówienia już złożone (tydzień bieżący : tylko zamówienia), inaczej sprzedaż ostatnich ${D.trend.weeks} tygodni × kształt tego samego tygodnia rok temu (N-1 × trend), a produkty sezonowe z gam panelu TF Buddy (daty gamy w tym roku + nasze kartony w tej samej gamie rok temu × trend sieci). Z prognozy : palety (plan logistyki), godziny produkcji, pieniądze na produkcję (zł) i zakupy surowców.</p>
             <div class="kw-tiles">
-                <div><span>Kartony ${W.length} tygodni</span><b>${num(T.cartons)}</b><small>w tym sezonowe ${num(T.season_cartons)}${T.cartons ? ` (${Math.round(T.season_cartons / T.cartons * 100)} %)` : ''}</small></div>
+                <div><span>Kartony ${W.length} tygodni</span><b>${num(T.cartons)}</b><small>w tym sezonowe ${num(T.season_cartons)}${T.cartons ? ` (${Math.round(T.season_cartons / T.cartons * 100)} %)` : ''}${XC.count ? ` · <button type="button" class="fc-cl fc-warn" data-fc-clients="" title="${esc(XC.names.join(', '))}">bez ${XC.count} ${pl(XC.count, 'klienta', 'klientów', 'klientów')} (${num(XC.cartons)} kart.)</button>` : ''}</small></div>
                 <div><span>Palety</span><b>${num(T.pallets)}</b><small>średnio ${num(T.pallets / W.length, 1)} na tydzień${T.no_cpp ? ` · ${T.no_cpp} ${pl(T.no_cpp, 'produkt', 'produkty', 'produktów')} bez kart./pal.` : ''}</small></div>
                 <div class="${T.over.length ? 'todo' : 'ok'}"><span>Szczyt produkcji</span><b>${T.peak_week !== null ? `tydz. ${T.peak_week} — ${T.peak_pct ?? '—'} %` : '—'}</b><small>${num(T.peak_hours)} h z ${num(T.peak_capacity)} h zdolności · ${T.over.length} tyg. ponad 100 %</small></div>
                 <div><span>Sezony w oknie (panel)</span><b>${seasonsIn.length}</b><small>${seasonsIn.length ? esc(seasonsIn.map(s => s.name).join(', ')) : (D.panel_status.read_at ? 'brak gam sezonowych w tych tygodniach' : 'panel jeszcze nie odczytany')}</small></div>
@@ -144,46 +145,76 @@
         const W = D.weeks;
         const week = opts.week ?? null;
         const pid = opts.product ?? null;
-        const prod = pid !== null ? D.products.find(p => p.product_id === pid) : null;
-        const names = Object.fromEntries(D.products.map(p => [p.product_id, p.name]));
-        const list = (D.clients || []).map(c => {
-            if (pid === null) return c;
-            const p = c.products.find(x => x.product_id === pid);
-            return p ? {...c, values: p.values, ordered: p.ordered, total: p.total, products: []} : null;
-        }).filter(c => c && c.total > 0);
-        if (week !== null) list.sort((a, b) => (b.values[week] - a.values[week]) || (b.total - a.total));
         const open = new Set();
         let q = '';
+        let busy = false;
         const box = document.createElement('div');
         box.className = 'fc-modal';
-        const title = prod ? `${prod.name} — kto bierze ile` : (week !== null ? `Kto bierze ile — tydz. ${W[week].iso_week} (${dm(W[week].week_start)})` : `Kto bierze ile — ${W.length} tygodni`);
-        const cell = (v, o, i) => `<td class="${v ? '' : 'z'}${v && o >= v ? ' o' : ''}${i === week ? ' hl' : ''}" title="${v ? (o >= v ? 'zamówione' : (o ? `zamówione ${num(o)} + prognoza ${num(v - o)}` : 'prognoza')) : ''}">${v ? num(v) : '—'}</td>`;
+        const prod0 = pid !== null ? D.products.find(p => p.product_id === pid) : null;
+        const title = prod0 ? `${prod0.name} — kto bierze ile` : (week !== null ? `Kto bierze ile — tydz. ${W[week].iso_week} (${dm(W[week].week_start)})` : `Kto bierze ile — ${W.length} tygodni`);
+        const sumOf = (a) => a.reduce((t, v) => t + v, 0);
+        // Lista z bieżących danych (po włączeniu / wyłączeniu klienta dane strony się zmieniają).
+        const build = () => {
+            // Palety : kartony produktu ÷ kartony na paletę z karty produktu (produkt bez tej liczby — bez palet).
+            const pal = (ps) => W.map((_, i) => ps.reduce((a, p) => a + (p.cpp ? p.values[i] / p.cpp : 0), 0));
+            const noCpp = (ps) => ps.filter(p => !p.cpp && p.total > 0).length;
+            const list = (D.clients || []).map(c => {
+                if (pid === null) return {...c, pallets: pal(c.products), no_cpp: noCpp(c.products)};
+                const p = c.products.find(x => x.product_id === pid);
+                return p ? {...c, values: p.values, ordered: p.ordered, total: p.total, products: [], pallets: pal([p]), no_cpp: noCpp([p])} : null;
+            }).filter(c => c && c.total > 0);
+            list.sort((a, b) => (!!a.excluded - !!b.excluded) || (week !== null ? b.values[week] - a.values[week] : 0) || (b.total - a.total));
+            return {list, pal};
+        };
+        const pv = (x) => x > 0 ? `<small class="fc-pal">${num(x, x < 100 ? 1 : 0)} pal.</small>` : '';
+        const cell = (v, o, i, x) => `<td class="${v ? '' : 'z'}${v && o >= v ? ' o' : ''}${i === week ? ' hl' : ''}" title="${v ? (o >= v ? 'zamówione' : (o ? `zamówione ${num(o)} + prognoza ${num(v - o)}` : 'prognoza')) + (x > 0 ? ` · ${num(x, 1)} palet` : '') : ''}">${v ? num(v) + pv(x) : '—'}</td>`;
+        const toggle = (c) => `<button type="button" class="fc-inc${c.excluded ? ' off' : ''}" data-fc-inc="${c.id}" data-on="${c.excluded ? 1 : 0}" aria-pressed="${c.excluded ? 'false' : 'true'}"
+            title="${c.excluded ? `Wyłączony z prognozy${c.excluded.by ? ' — ' + esc(c.excluded.by) : ''} (${when(c.excluded.at)}) : kliknij, żeby liczyć` : 'Liczony w prognozie : kliknij, żeby wyłączyć (kartony, palety, godziny, pieniądze, zakupy)'}">${c.excluded ? '<i class="bi bi-x-lg"></i> poza' : '<i class="bi bi-check-lg"></i> w prognozie'}</button>`;
         const rowsHtml = () => {
+            const {list, pal} = build();
             const ql = q.trim().toLowerCase();
             const shown = list.filter(c => !ql || c.name.toLowerCase().includes(ql));
-            const tot = W.map((_, i) => shown.reduce((a, c) => a + c.values[i], 0));
+            const inc = shown.filter(c => !c.excluded);
+            const tot = W.map((_, i) => sumOf(inc.map(c => c.values[i])));
+            const totPal = W.map((_, i) => sumOf(inc.map(c => c.pallets[i])));
+            const off = shown.filter(c => c.excluded);
             return shown.map(c => {
                 const canOpen = pid === null && c.products.length;
                 const isOpen = open.has(c.id);
-                return `<tr class="${canOpen ? 'fc-clrow' : ''}"${canOpen ? ` data-fc-open="${c.id}"` : ''}><td>${canOpen ? `<i class="bi bi-chevron-${isOpen ? 'down' : 'right'}"></i> ` : ''}${esc(c.name)}${canOpen ? ` <span class="at-sub">${c.products.length} ${pl(c.products.length, 'produkt', 'produkty', 'produktów')}</span>` : ''}</td>
-                    ${c.values.map((v, i) => cell(v, c.ordered[i], i)).join('')}<td class="s">${num(c.total)}</td></tr>`
-                    + (isOpen ? c.products.map(p => `<tr class="fc-clsub"><td title="${esc(names[p.product_id] || '#' + p.product_id)}">${esc(names[p.product_id] || '#' + p.product_id)}</td>${p.values.map((v, i) => cell(v, p.ordered[i], i)).join('')}<td>${num(p.total)}</td></tr>`).join('') : '');
-            }).join('') + `<tr class="tot"><td>Razem${ql ? ' (filtr)' : ''}</td>${tot.map((v, i) => `<td class="${i === week ? 'hl' : ''}">${num(v)}</td>`).join('')}<td>${num(tot.reduce((a, v) => a + v, 0))}</td></tr>`;
+                return `<tr class="${canOpen ? 'fc-clrow' : ''}${c.excluded ? ' fc-off-row' : ''}"${canOpen ? ` data-fc-open="${c.id}"` : ''}><td><span class="fc-clname">${canOpen ? `<i class="bi bi-chevron-${isOpen ? 'down' : 'right'}"></i> ` : ''}${esc(c.name)}${canOpen ? ` <span class="at-sub">${c.products.length} ${pl(c.products.length, 'produkt', 'produkty', 'produktów')}</span>` : ''}${c.no_cpp ? ` <span class="at-sub" title="Bez kartonów na paletę w karcie produktu — nie liczone w paletach">(${c.no_cpp} bez palet)</span>` : ''}</span>${toggle(c)}</td>
+                    ${c.values.map((v, i) => cell(v, c.ordered[i], i, c.pallets[i])).join('')}<td class="s">${num(c.total)}${pv(sumOf(c.pallets))}</td></tr>`
+                    + (isOpen ? c.products.map(p => { const pp = pal([p]); const nm = p.name; return `<tr class="fc-clsub${c.excluded ? ' fc-off-row' : ''}"><td title="${esc(nm)}">${esc(nm)}</td>${p.values.map((v, i) => cell(v, p.ordered[i], i, pp[i])).join('')}<td>${num(p.total)}${pv(sumOf(pp))}</td></tr>`; }).join('') : '');
+            }).join('') + `<tr class="tot"><td>Razem w prognozie${ql ? ' (filtr)' : ''}${off.length ? ` <span class="at-sub">bez ${off.length} ${pl(off.length, 'wyłączonego', 'wyłączonych', 'wyłączonych')}</span>` : ''}</td>${tot.map((v, i) => `<td class="${i === week ? 'hl' : ''}">${num(v)}${pv(totPal[i])}</td>`).join('')}<td>${num(sumOf(tot))}${pv(sumOf(totPal))}</td></tr>`;
         };
-        const head = `<tr><th>Klient <span class="at-sub">(kartony)</span></th>${W.map((w, i) => `<th class="${i === week ? 'hl' : ''}"><b>${w.iso_week}</b>${dm(w.week_start)}</th>`).join('')}<th>Razem</th></tr>`;
+        const head = `<tr><th>Klient <span class="at-sub">(kartony / palety)</span></th>${W.map((w, i) => `<th class="${i === week ? 'hl' : ''}"><b>${w.iso_week}</b>${dm(w.week_start)}</th>`).join('')}<th>Razem</th></tr>`;
+        const any = build().list.length;
         box.innerHTML = `<div class="fc-modal-box" role="dialog" aria-modal="true" aria-label="${esc(title)}">
             <div class="fc-modal-head"><h4>${esc(title)}</h4><button type="button" class="kw-btn" data-close>Zamknij</button></div>
-            <p class="at-sub mb-0">Kartony na klienta i tydzień. <span class="fc-o">Zielone</span> = zamówienia już złożone ; reszta prognozy rozdzielona wg udziału klienta w produkcie : ostatnie ${D.trend.weeks} tygodni, produkty sezonowe — ta sama gama rok temu. ${pid === null ? 'Kliknij klienta : jego produkty.' : ''}</p>
-            ${list.length > 8 ? '<input type="search" class="form-control fc-modal-q" placeholder="Szukaj klienta…" aria-label="Szukaj klienta" data-fc-q>' : ''}
-            ${list.length ? `<div class="table-responsive"><table class="fc-t fc-clt"><thead>${head}</thead><tbody>${rowsHtml()}</tbody></table></div>` : '<p class="at-sub">Brak klientów z tym produktem w prognozie.</p>'}
+            <p class="at-sub mb-0">Kartony i palety na klienta i tydzień (palety = kartony ÷ kartony na paletę z karty produktu). <span class="fc-o">Zielone</span> = zamówienia już złożone ; reszta prognozy rozdzielona wg udziału klienta w produkcie : ostatnie ${D.trend.weeks} tygodni, produkty sezonowe — ta sama gama rok temu. <b>« w prognozie » / « poza »</b> : klient wyłączony nie liczy się w prognozie (kartony, palety, godziny, pieniądze na produkcję, zakupy) — dla wszystkich, do ponownego włączenia. ${pid === null ? 'Kliknij klienta : jego produkty.' : ''}</p>
+            ${(D.clients || []).length > 8 ? '<input type="search" class="form-control fc-modal-q" placeholder="Szukaj klienta…" aria-label="Szukaj klienta" data-fc-q>' : ''}
+            ${any ? `<div class="table-responsive"><table class="fc-t fc-clt"><thead>${head}</thead><tbody>${rowsHtml()}</tbody></table></div>` : '<p class="at-sub">Brak klientów z tym produktem w prognozie.</p>'}
         </div>`;
         document.body.appendChild(box);
         const body = box.querySelector('tbody');
         const close = () => { box.remove(); document.removeEventListener('keydown', onKey); };
         const onKey = (e) => { if (e.key === 'Escape') close(); };
         document.addEventListener('keydown', onKey);
-        box.addEventListener('click', (e) => {
+        box.addEventListener('click', async (e) => {
             if (e.target === box || e.target.closest('[data-close]')) return close();
+            const tg = e.target.closest('[data-fc-inc]');
+            if (tg) {
+                if (busy) return;
+                busy = true; tg.disabled = true;
+                const id = parseInt(tg.dataset.fcInc, 10);
+                const include = tg.dataset.on === '1';
+                try {
+                    const res = await call('POST', `/ajax/forecast/clients/${id}`, {included: include});
+                    D = Object.assign(res.data, {product_options: OPTIONS});
+                    render();
+                    if (body) body.innerHTML = rowsHtml();
+                } catch (err) { fail(err); tg.disabled = false; } finally { busy = false; }
+                return;
+            }
             const r = e.target.closest('[data-fc-open]');
             if (!r || !body) return;
             const id = parseInt(r.dataset.fcOpen, 10);

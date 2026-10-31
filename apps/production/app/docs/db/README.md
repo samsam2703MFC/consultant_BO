@@ -144,6 +144,13 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   saisonniers : même gamme un an plus tôt ; sans historique : commandes de la fenêtre, sinon « Bez klienta »). Cartons entiers
   (plus grands restes), somme = prévision du produit et de la semaine (`ForecastService::clientSplit`,
   `ForecastRepository::cartonsByClient`). Clic sur un client : ses produits. Pas enregistré à la validation.
+  Palettes par client et semaine (31/10/2026) : cartons de chaque produit ÷ cartons par palette de la fiche produit (produit sans
+  ce nombre : sans palettes, signalé). Client dans la prévision ou exclu (migration 145, `n_forecast_client_excluded` :
+  `client_id` (0 = « Bez klienta »), `created_by`, `created_at` ; une ligne = client exclu) : bouton « w prognozie » / « poza »
+  dans la fenêtre, POST `/ajax/forecast/clients/{id}` `{included}`. Les cartons d'un client exclu (commandes et prévision
+  selon sa part) sont retirés des produits avant toutes les sommes : cartons, palettes, heures, argent pour produire, achats ;
+  pour tout le monde jusqu'à réinclusion. Tuile « Kartony 13 tygodni » : « bez N klientów (X kart.) » ; liste des exclus dans
+  l'enregistrement de la validation (`payload.clients_excluded`).
 - API du panel TF Buddy, lecture seule (GET) : `/product-availability-periods` (gammes, `from_md` → `to_md`, aussi à cheval
   sur le Nouvel An ; gamme saisonnière = active et ≤ 200 jours, gamme de plus de 200 jours = toute l'année, 1 jour = ignorée),
   `/product-availability-periods/{id}/products` (produits des magasins), `/material-suppliers` → SL Food →

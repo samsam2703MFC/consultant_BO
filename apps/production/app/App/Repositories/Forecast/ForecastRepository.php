@@ -59,6 +59,26 @@ final class ForecastRepository extends WorkshopRepository
         return $out;
     }
 
+    /** @return array<int, array{by:?string, at:string}> klienci wyłączeni z prognozy [226] (0 = bez klienta) */
+    public function excludedClients(): array
+    {
+        $out = [];
+        foreach ($this->all("SELECT x.client_id, x.created_at, COALESCE(NULLIF(TRIM(u.displayed_name), ''), u.login) AS by_name
+                FROM n_forecast_client_excluded x LEFT JOIN user u ON u.id = x.created_by") as $r) $out[(int) $r['client_id']] = ['by' => $r['by_name'], 'at' => (string) $r['created_at']];
+        return $out;
+    }
+
+    public function setClientExcluded(int $clientId, bool $excluded, ?int $userId): void
+    {
+        if ($excluded) $this->db->prepare('INSERT IGNORE INTO n_forecast_client_excluded (client_id, created_by) VALUES (?, ?)')->execute([$clientId, $userId]);
+        else $this->db->prepare('DELETE FROM n_forecast_client_excluded WHERE client_id = ?')->execute([$clientId]);
+    }
+
+    public function clientExists(int $id): bool
+    {
+        return (bool) $this->all('SELECT 1 AS x FROM customer WHERE id = ?', [$id]);
+    }
+
     /**
      * Produkty ERP : nazwa, sztuki w kartonie, kartony na paletę, aktywność, dział, koszt surowców kartonu (zł), karta
      * produkcji (n_prod_item) i tryb.
