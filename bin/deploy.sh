@@ -254,6 +254,12 @@ chown www-data:www-data "$CFG"
 # --- 5. Apache : alias + AllowOverride ----------------------------------
 log "Configuration Apache (alias $ALIAS_PATH → $TARGET_DIR/public)…"
 cat > /etc/apache2/conf-available/consulant_bo.conf <<APACHE
+# Le module Formation à la racine du serveur, comme /marketing/ (31/10/2026) : la page
+# (public/formation) et son API juste à côté d'elle — le contrôleur lit tout ce qui suit
+# /api/cockpit. Les Alias se lisent dans l'ordre : l'API (AliasMatch) avant la page.
+RedirectMatch 301 ^/formation\$ /formation/
+AliasMatch ^/formation/api/cockpit(/.*)?\$ ${TARGET_DIR}/public/api/index.php
+Alias /formation/ ${TARGET_DIR}/public/formation/
 Alias ${ALIAS_PATH} ${TARGET_DIR}/public
 <Directory ${TARGET_DIR}/public>
     AllowOverride All
@@ -916,6 +922,13 @@ if [[ -n "$WIRE_BIN" && -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; t
     SELECT CONCAT('mois budgétés       : ', COUNT(*)) FROM ceo_shop_month_perf WHERE revenue_budget IS NOT NULL;" 2>&1 \
     | sed 's/^/    /' || warn "volumes : lecture impossible"
 fi
+
+# Le module Formation à la racine : la page, et son API à côté d'elle (31/10/2026).
+fm_page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1/formation/" 2>/dev/null || echo 000)
+fm_https=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1/formation/" 2>/dev/null || echo 000)
+fm_api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "http://127.0.0.1/formation/api/cockpit/formation/equipe" 2>/dev/null || echo 000)
+log "Formation : /formation/ → HTTP ${fm_page} (https ${fm_https}) ; API /formation/api/cockpit → HTTP ${fm_api} (200 attendu, 503 = compte panel à brancher)."
+[[ "$fm_page" == "200" ]] || warn "Formation : la page /formation/ ne répond pas 200 — alias Apache à vérifier."
 
 if [[ $rc -eq 0 ]]; then
   log "Recette OK. Cockpit disponible sur ${PUBLIC_BASE}/"

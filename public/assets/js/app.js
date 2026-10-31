@@ -1596,6 +1596,12 @@ class App {
           [['cockpit', 'Cockpit'], ['panel', 'Panel tfbuddy'], ['erp', 'ERP admin'], ['base', 'Base partagée'], ['sms', 'SMS · Twilio']]
             .map(([cle, nom]) => ['apiModule', nom, ((this._apiL || {}).erreurs || {})[cle] || 0, [], { apiSrc: cle }])) }]],
         // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
+      // Le module Formation (demande du 31/10/2026) : une application à part (formation/), au
+      // design du module marketing — le référentiel RH du panel (postes, niveaux, compétences,
+      // formations, procédures) et le manuel opératoire en ligne, ouvert en mode tablette.
+      ['Formation', [
+        ['ext:formation/', 'Module Formation ↗', 0],
+        ['ext:formation/?tablette=1#/manuel', 'Manuel opératoire ↗', 0]]],
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];

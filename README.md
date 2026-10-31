@@ -93,6 +93,10 @@ public/
     dashboard.css       styles de la page
   tablette/             tablette des vendeuses « Book vendeuses » — application
                         compilée (dépôt pwa_sales_tablet), copiée telle quelle
+  formation/            module Formation — référentiel RH du panel (postes,
+                        sous-postes, compétences, formations, procédures),
+                        manuel opératoire en ligne (tablette), doc des routes
+                        API ; design du module marketing (docs/formation.md)
 src/
   Db.php                connexion PDO
   endpoints.php         lectures (GET) — un endpoint par écran
@@ -104,6 +108,7 @@ src/
   social_publication.php publication Facebook / Instagram / LinkedIn, horloge /marketing/publication/cron
   linkedin_api.php      client LinkedIn (API Posts, dépôt d'images)
   meta_graph.php        client Meta Graph (lecture des pages, publication)
+  formation.php         module Formation : lectures du référentiel RH du panel
   installer.php         auto-installation du schéma au premier appel
   auth.php              authentification intégrée (optionnelle)
 sql/
@@ -116,6 +121,8 @@ config/
   config.example.php    modèle de configuration
 docs/
   contrat-api.md        contrat JSON par endpoint + mapping DB + DDL
+  formation.md          module Formation : écrans, modèle, constats, API
+  formation-routes.md   les 237 routes formation du swagger (généré)
 ```
 
 ## API — aperçu
@@ -142,6 +149,12 @@ Base : `/api/cockpit`. Lectures (GET) : `/meta`, `/referentiels/leviers`,
 
 Chaque écriture produit une ligne dans `ceo_journal_entry` (écran Journal).
 Détail complet, exemples JSON et DDL : `docs/contrat-api.md`.
+
+Module Formation (lectures, et écritures relues au panel sous `/formation/niveau`,
+`/formation/competence(s)`, `/formation/employe`) : `/formation/referentiel`, `/formation/liens`,
+`/formation/competence`, `/formation/niveau`, `/formation/procedure`,
+`/formation/formation`, `/formation/ressource`, `/formation/equipe`,
+`/formation/sonde`, `/formation/pdf` — voir `docs/formation.md`.
 
 ## Contrôle des posts Facebook
 

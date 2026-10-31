@@ -114,6 +114,7 @@ require __DIR__ . '/../../src/promos_reseau.php';
 require __DIR__ . '/../../src/sms.php';
 require __DIR__ . '/../../src/recurrence_pwa.php';
 require __DIR__ . '/../../src/leviers.php';
+require __DIR__ . '/../../src/formation.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -416,6 +417,19 @@ function route(string $method, string $path): mixed
             $path === '/production/periode/produits'   => ep_prod_periode_produits(),
             $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
             // La tablette des vendeuses (public/tablette/) : son book de données, tiré du catalogue.
+            // Le module Formation (public/formation/) : le référentiel RH du panel — postes, niveaux,
+            // compétences, formations, procédures — et le manuel opératoire qui s'en déduit. Les écritures
+            // (relues au panel, journalisées) sont plus bas, avec les autres POST/PUT/PATCH/DELETE.
+            $path === '/formation/referentiel'         => ep_formation_referentiel(),
+            $path === '/formation/liens'               => ep_formation_liens(),
+            $path === '/formation/competence'          => ep_formation_competence(),
+            $path === '/formation/niveau'              => ep_formation_niveau(),
+            $path === '/formation/procedure'           => ep_formation_procedure(),
+            $path === '/formation/formation'           => ep_formation_formation(),
+            $path === '/formation/ressource'           => ep_formation_ressource(),
+            $path === '/formation/equipe'              => ep_formation_equipe(),
+            $path === '/formation/sonde'               => ep_formation_sonde(),
+            $path === '/formation/pdf'                 => ep_formation_pdf(),
             $path === '/tablette/book'                 => ep_tablette_book(),
             // L'accueil de la tablette : CA et vente additionnelle de la semaine et du mois face à l'objectif.
             $path === '/tablette/objectifs'            => ep_tablette_objectifs(),
@@ -632,6 +646,16 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/projects') { return wr_project_create(); }
     if ($method === 'POST' && preg_match('#^/connecteurs/([\w-]+)/test$#', $path, $m)) { return wr_connecteur_test($m[1]); }
     if ($method === 'POST' && $path === '/push/abonnements') { return wr_push_abonnement(); }
+    // Module Formation : les écritures dans le référentiel RH du panel, toutes relues après coup.
+    if ($method === 'POST' && preg_match('#^/formation/niveau/(\d+)/competences$#', $path, $m)) { return wr_formation_niveau_ajouter((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/formation/niveau/(\d+)/competences/(\d+)$#', $path, $m)) { return wr_formation_niveau_retirer((int) $m[1], (int) $m[2]); }
+    if ($method === 'POST' && preg_match('#^/formation/competence/(\d+)/liens$#', $path, $m)) { return wr_formation_lien_ajouter((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/formation/competence/(\d+)/liens/(formation|procedure|ressource)/(\d+)$#', $path, $m)) { return wr_formation_lien_retirer((int) $m[1], $m[2], (int) $m[3]); }
+    if ($method === 'POST' && $path === '/formation/competences') { return wr_formation_competence_creer(); }
+    if ($method === 'PATCH' && preg_match('#^/formation/competences/(\d+)$#', $path, $m)) { return wr_formation_competence_modifier((int) $m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/formation/competences/(\d+)$#', $path, $m)) { return wr_formation_competence_supprimer((int) $m[1]); }
+    if (($method === 'PUT' || $method === 'DELETE') && preg_match('#^/formation/employe/(\d+)/competences/(\d+)$#', $path, $m)) { return wr_formation_employe_competence($method, (int) $m[1], (int) $m[2]); }
+    if ($method === 'PUT' && preg_match('#^/formation/employe/(\d+)/poste$#', $path, $m)) { return wr_formation_employe_poste((int) $m[1]); }
     if ($method === 'DELETE' && $path === '/push/abonnements') { return wr_push_desabonnement(); }
     if ($method === 'POST' && $path === '/push/essai') { return wr_push_essai(); }
     if ($method === 'DELETE' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_delete($m[1]); }
