@@ -4690,3 +4690,31 @@ fenêtre de six semaines avant à dix semaines après aujourd'hui est gardée, c
 fenêtre vient aussi de la table. Dans la fenêtre, la route fait foi : un service effacé au panel ne revient pas de la
 table. Sans réponse du cockpit, la page Planning de l'app le dit au lieu d'afficher une semaine vide.
 Tests : `php bin/tests_planning_moi.php`.
+
+### Le pointage des vendeuses — arrivée et départ depuis l'app (01/11/2026, demande de Sam)
+
+« Dans leur application, un clock in / clock out : on pousse le bouton, la caméra s'ouvre pour scanner le QR code ;
+avec le listing des pointages dans le profil, in / out en fonction de leur shift. » Maquette validée :
+`docs/maquettes/pointage-app`. Serveur : `src/pointage.php` ; tables `mot_pointage`, `mot_borne`.
+
+**Le QR code** est affiché par une **borne** : `borne/?b=<jeton>` (page statique `public/borne/`), ouverte sur la
+tablette du magasin avec le lien que le cockpit donne (page Pointages). Il porte un lien vers l'app,
+`employee/pointage?c=ATP1:<magasin>:<tranche>:<signature>` — l'appareil photo du téléphone ouvre donc aussi l'app —,
+change toutes les 30 secondes, vaut 90 secondes et ne sert que pour son magasin (HMAC, clé `pointage.key` dans le
+dossier privé). Sous le QR, un code à six chiffres pour une caméra qui ne marche pas.
+
+| Méthode | Route | Qui | Rôle |
+|---|---|---|---|
+| POST | `/ventes/moi/pointage` | l'app (identité signée), avant la session | `{lu}` (texte du QR, lien `…?c=`, ou six chiffres) → `{sens: arrivee \| depart \| deja, pointage}`. Un pointage ouvert (moins de 16 h) → le départ ; sinon l'arrivée, rattachée au service du jour : dès 30 min avant, en retard au-delà de 5 min, « hors planning » sans service. Deux scans en moins de 2 min = un. 422 `{motif: illisible \| faux \| expire \| trop_tot, a_partir_de?}`. |
+| GET | `/ventes/moi/pointages?du=&au=` | l'app | `{jours:[{date, prevus:[{debut, fin, shop, shop_name}], pointages:[…]}], totaux:{pointe_min, prevu_min, a_verifier}, ouvert}` (deux mois au plus). Un pointage : `{id, jour, shop, shop_name, entree, sortie, sortie_par, prevu, arrivee: a_l_heure \| retard \| hors_planning, retard_min, duree_min, etat: en_service \| fait \| non_pointe \| a_valider}`. |
+| POST | `/ventes/moi/pointage/depart` | l'app | `{id, heure}` — un départ oublié : après l'arrivée, dans les 16 h, pas dans le futur ; il attend la validation (`a_valider`). 422 sinon. |
+| GET | `/pointage/borne?b=` | la borne (son jeton), avant la session | `{shop, magasin, nom, qr, code, reste, periode, heure}` ; 404 pour un jeton inconnu ou retiré. |
+| GET | `/ventes/equipe/pointages?shop=&du=&au=` | le cockpit (session) | Les pointages d'un magasin (le premier sans `shop`), avec le nom de chacun et `valide_par` ; `magasins`, `bornes`. |
+| POST | `/ventes/equipe/pointages/valider` | le cockpit | `{id, refuser?}` — valide un départ déclaré (ou le refuse : il redevient « non pointé »). Au journal. |
+| GET / POST | `/pointage/bornes?shop=` / `/pointage/bornes` | le cockpit | La liste des bornes (sans jeton) ; `{shop, nom}` crée une borne et rend son `jeton` une seule fois (gardé haché). Au journal. |
+| POST | `/pointage/bornes/retirer` | le cockpit | `{id}` — le lien ne marche plus. Au journal. |
+
+Côté app : `GET|POST /pointage` (la caméra : BarcodeDetector, sinon jsQR 1.4.0 servi par l'app), `GET /me/pointages`
+(la semaine face au planning), `POST /me/pointage/depart` ; la carte de l'Accueil. Côté cockpit : la page
+**Pointages** (`#/pointages`, rail « Application employé », badge : les départs à valider). Tests :
+`php bin/tests_pointage_app.php`.

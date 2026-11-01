@@ -383,6 +383,8 @@ class App {
       primesApp: 'primes',
       // L'API du module (24/10/2026) : « #/api », et une source avec « ?source=panel ».
       apiModule: 'api',
+      // Les pointages des vendeuses (01/11/2026) : la semaine d'un magasin, les départs déclarés à valider, ses bornes.
+      pointages: 'pointages',
       brandGuard: 'brandguard', invendus: 'invendus', inventaires: 'inventaires',
       // Vérification, lot 1 (31/10/2026) : les recettes douteuses ou manquantes.
       verifRecettes: 'verification/recettes', verifFlux: 'verification/flux', verifFuites: 'verification/fuites',
@@ -1119,6 +1121,7 @@ class App {
       promoTableau: ['Tableau d’analyse', 'Quelle promotion est utilisée dans quel magasin, et ce qu’elle pèse dans le CA du magasin et dans le CA général — lues au panel et dans les tickets.'],
       promoEdition: ['Édition', 'Le formulaire du dashboard magasin, avec le magasin à choisir — ou tous les magasins : une promotion « X achetés + Y » s’écrit au panel, réservée au magasin ou pour tout le réseau, sans validation.'],
       apiModule: ['API du module', 'Primes et application employé : ce que chaque page lit et écrit, d’où viennent les données, et ce que chaque route répond à l’instant.'],
+      pointages: ['Pointages', 'Les arrivées et les départs que les vendeuses pointent dans l’app, en scannant le QR code de la borne du magasin, face à leur planning. Les départs oubliés, déclarés par la vendeuse, se valident ici ; la borne s’ouvre sur la tablette du magasin avec son lien.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       fidelite: ['Fidélité', 'Les points, les cartes à tampons, les bons et les cadeaux du client : ce qui les déclenche, quand les points comptent double, ce que le programme coûte. Et ce que les clients en font : qui revient, à quel rythme, pour quel type d’achat.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
@@ -1634,6 +1637,8 @@ class App {
         ['primesApp', 'Page admin', 0, [], { prSection: 'marque', prShop: '' }],
         ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise', prShop: '' }],
         ['ext:employee/auth', 'Application ↗', 0],
+        // Les pointages (01/11/2026) : le badge, les départs déclarés à valider du magasin ouvert.
+        ['pointages', 'Pointages', ((this._ptL || {}).aValider) || 0],
         // Ce que le module appelle, source par source, et ce que chaque route répond à l'instant (24/10/2026, Sam).
         // Le badge : les routes en erreur, une fois la page ouverte.
         { sub: 'API du module', children: [['apiModule', 'Vue d’ensemble', 0, [], { apiSrc: '' }]].concat(
@@ -1679,11 +1684,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
       mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -2100,6 +2105,7 @@ class App {
     if (common.isVentes) { this.ventesCharge(); this.crossCharge(); this.valsVentes(common); this.valsCross(common); }
     if (common.isPrimesApp) { this.valsPrimesParams(common); }
     if (common.isApiModule) { this.valsApiModule(common); }
+    if (common.isPointages) { this.valsPointages(common); }
     if (common.isFid) { valsFidelite(this, common); }
     if (common.isPromoTab) { valsPromoTableau(this, common); }
     if (common.isPromoEd) { valsPromoEdition(this, common); }
@@ -7502,6 +7508,68 @@ class App {
       q: S.apiQ || '', poserQ: e => this.setState({ apiQ: e.target.value }),
       filtre: src ? (sources.find(s => s.cle === src) || {}).nom || '' : '', toutVoir: () => this.setState({ apiSrc: '', apiPage: '', apiQ: '' }),
       sources: vues, vide: !!d && !vues.length,
+    };
+  }
+  /**
+   * Les pointages (01/11/2026, src/pointage.php) : un magasin, une semaine — qui a pointé quand, face au service prévu ;
+   * les départs oubliés que la vendeuse a déclarés, à valider ou refuser ; les bornes du magasin (le lien qui ouvre le
+   * QR code sur la tablette, montré une seule fois à sa création).
+   */
+  valsPointages(common){
+    const S = this.state;
+    const L = this._ptL || (this._ptL = { cle: '', d: undefined, enCours: false, aValider: 0 });
+    const auj = new Date(this.M && this.M.TODAY ? this.M.TODAY : Date.now());
+    const ymd = t => t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+    const decal = +S.ptSem || 0;
+    const lundi = new Date(auj.getFullYear(), auj.getMonth(), auj.getDate() - ((auj.getDay() + 6) % 7) + 7 * decal);
+    const dimanche = new Date(lundi.getFullYear(), lundi.getMonth(), lundi.getDate() + 6);
+    const du = ymd(lundi), au = ymd(dimanche);
+    const shop = S.ptShop || '';
+    const cle = shop + '|' + du;
+    const charger = () => {
+      L.enCours = true; L.cle = cle;
+      readOne('/ventes/equipe/pointages?du=' + du + '&au=' + au + (shop ? '&shop=' + encodeURIComponent(shop) : '')).then(x => {
+        if (L.cle !== cle) { return; }
+        L.enCours = false; L.d = x && !x.error && Array.isArray(x.lignes) ? x : null;
+        L.aValider = L.d ? L.d.lignes.filter(l => l.etat === 'a_valider').length : 0;
+        this.setState({});
+      }).catch(() => { L.enCours = false; L.d = null; this.setState({}); });
+    };
+    if ((L.cle !== cle || L.d === undefined) && !(L.enCours && L.cle === cle)) { L.d = undefined; charger(); }
+    const d = L.d || null;
+    const relire = () => { L.d = undefined; L.cle = ''; this.setState({}); };
+    const ecrire = (chemin, corps, apres) => write('api', 'POST', chemin, corps).then(r => {
+      if (!r.ok) { this.setState({ ptMsg: r.error || 'L’enregistrement a échoué.' }); return; }
+      this.setState(Object.assign({ ptMsg: '' }, apres ? apres(r) : {})); relire();
+    });
+    const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+    const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+    const jourLib = s => { const t = new Date(s + 'T12:00:00'); return JOURS[t.getDay()] + ' ' + t.getDate() + ' ' + MOIS[t.getMonth()]; };
+    const duree = m => (m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0'));
+    const racine = API_BASE.replace(/api\/cockpit\/?$/, '');
+    const lignes = d ? d.lignes.map(l => ({
+      id: l.id, nom: l.nom, jour: jourLib(l.jour), prevu: l.prevu ? l.prevu.debut + ' – ' + l.prevu.fin : 'hors planning',
+      autreShop: false, entree: l.entree, arrivee: l.arrivee, retard: l.retard_min,
+      sortie: l.sortie || '', etat: l.etat, duree: l.etat === 'non_pointe' ? '' : duree(l.duree_min),
+      valider: l.etat === 'a_valider' ? () => ecrire('/ventes/equipe/pointages/valider', { id: l.id }) : null,
+      refuser: l.etat === 'a_valider' ? () => ecrire('/ventes/equipe/pointages/valider', { id: l.id, refuser: true }) : null,
+    })) : [];
+    const nb = k => lignes.filter(l => l.etat === k).length;
+    const lien = S.ptLien && S.ptLien.shop === (d ? d.shop : 0) ? S.ptLien : null;
+    common.pt = {
+      chargement: L.d === undefined, motif: L.d === null ? 'Les pointages n’ont pas pu être lus.' : '',
+      magasins: d ? d.magasins.map(m => ({ nom: m.nom, on: m.id === d.shop, aller: () => this.setState({ ptShop: String(m.id), ptLien: null }) })) : [],
+      semaine: lundi.getDate() + (lundi.getMonth() !== dimanche.getMonth() ? ' ' + MOIS[lundi.getMonth()] : '') + ' – ' + dimanche.getDate() + ' ' + MOIS[dimanche.getMonth()],
+      courante: decal === 0, prec: () => this.setState({ ptSem: decal - 1 }), suiv: () => this.setState({ ptSem: decal + 1 }), cetteSemaine: () => this.setState({ ptSem: 0 }),
+      relire, msg: S.ptMsg || '',
+      tuiles: [['Pointages', String(lignes.length)], ['Retards', String(lignes.filter(l => l.arrivee === 'retard').length)],
+        ['Départs non pointés', String(nb('non_pointe'))], ['À valider', String(nb('a_valider'))]].map(([lib, v]) => ({ lib, v })),
+      lignes,
+      bornes: d ? d.bornes.map(b => ({ nom: b.nom, cree: b.cree ? jourLib(b.cree.slice(0, 10)) : '',
+        vue: b.vue_le ? 'vue ' + jourLib(b.vue_le.slice(0, 10)) + ' à ' + b.vue_le.slice(11, 16) : 'jamais ouverte',
+        retirer: () => { if (window.confirm('Retirer cette borne ? Son lien ne marchera plus.')) { ecrire('/pointage/bornes/retirer', { id: b.id }); } } })) : [],
+      creerBorne: d ? () => ecrire('/pointage/bornes', { shop: d.shop, nom: 'Tablette du magasin' }, r => ({ ptLien: { shop: d.shop, url: location.origin + racine + 'borne/?b=' + r.jeton } })) : null,
+      lien: lien ? { url: lien.url, copier: () => { try { navigator.clipboard.writeText(lien.url).then(() => this.setState({ ptMsg: 'Lien copié.' })); } catch (e) { /* le texte reste sélectionnable */ } }, fermer: () => this.setState({ ptLien: null }) } : null,
     };
   }
   valsGrandsPrix(common){

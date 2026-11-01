@@ -289,6 +289,25 @@ gardé dans l'app ni dans le cockpit ; la feuille se vide en se fermant. À savo
 (`franchisee_employee.pin`) et `PATCH /employees/{id}` ne vérifie que la validité du jeton, pas qu'il s'agit de la
 personne elle-même.
 
+## Pointer (01/11/2026) : l'arrivée et le départ, avec le QR code de la borne
+
+Demande de Sam (« un clock in / clock out : on pousse le bouton, la caméra s'ouvre pour scanner le QR code ; le listing
+des pointages dans le profil, in / out en fonction de leur shift » ; maquette `docs/maquettes/pointage-app`).
+
+- **L'Accueil** : en tête, le service du jour et « Pointer l'arrivée » ; en service, la barre du service, l'heure
+  d'arrivée et « Pointer le départ » ; la journée pointée en une ligne ; sans service, « Pointer quand même »
+  (`PointageService::aujourdhui`, `dashboard.twig`).
+- **`/pointage`** (`Pointage/PointageController`, `Views/pointage/scanner.twig`) : la caméra plein écran vise le QR
+  code de la borne du magasin — BarcodeDetector, sinon jsQR (`assets/vendor/jsqr`, Apache-2.0, vérifié contre le
+  paquet npm) —, ou on tape le code à six chiffres ; le résultat en feuille (à l'heure, en retard, hors planning ;
+  trop tôt). `/pointage?c=…` (le QR lu par l'appareil photo du téléphone) pointe sans caméra.
+- **Profil › Mes pointages** (`/me/pointages`, `Views/pointage/liste.twig`) : la semaine, jour par jour, face au
+  planning — l'arrivée, le départ, la barre du prévu et celle du pointé, ce qui est à vérifier ; un départ oublié se
+  dit ici et le magasin le valide.
+
+Rien n'est gardé dans l'app : le cockpit décide (`src/pointage.php`, `POST /ventes/moi/pointage`). Textes
+`translations/page/{fr,en,it,nl,pl}/pointage.json` (et `dashboard.json`, `me.json`).
+
 `/statistiques` (`StatsController`, `Views/stats/statistiques.twig`, styles `assets/atelier/stats.css`, textes
 `translations/page/{fr,en,it,nl,pl}/stats.json`) : **ses chiffres à elle, rien que les siens**, depuis la même
 fiche que Primes (`GET /ventes/moi` du cockpit, rien n'est calculé dans l'app).
