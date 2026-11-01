@@ -241,6 +241,17 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
       "pwaBase" => getenv("COCKPIT_PWA_BASE") ?: null,
       "auth"    => false,
       "seed"    => false,   // base vide par défaut ; pas de données de démo
+      // Module RH / Dimona (/hr) : la console franchisé qui identifie (API vue du navigateur et du
+      // serveur), la PROD fermée tant que HR_DIMONA_PROD_ENABLED ne vaut pas 1, et les surcharges
+      // éventuelles des adresses ONSS (sinon celles du YAML OpenAPI). Voir docs/dimona.md.
+      "hr" => array_filter([
+        "consoleApi"         => getenv("HR_CONSOLE_API_BASE") ?: "/webshop/api",
+        "consoleApiInternal" => getenv("HR_CONSOLE_API_INTERNAL") ?: "http://127.0.0.1/webshop/api",
+        "prodEnabled"        => (getenv("HR_DIMONA_PROD_ENABLED") ?: "0") === "1",
+        "tokenUrlSim"        => getenv("HR_DIMONA_TOKEN_URL_SIM") ?: null,
+        "tokenUrlProd"       => getenv("HR_DIMONA_TOKEN_URL_PROD") ?: null,
+        "masterKey"          => getenv("HR_DIMONA_MASTER_KEY") ?: null,
+      ], fn ($v) => $v !== null),
     ];
     echo "<?php\nreturn " . var_export($cfg, true) . ";\n";
   ' > "$CFG"
@@ -260,6 +271,11 @@ cat > /etc/apache2/conf-available/consulant_bo.conf <<APACHE
 RedirectMatch 301 ^/formation\$ /formation/
 AliasMatch ^/formation/api/cockpit(/.*)?\$ ${TARGET_DIR}/public/api/index.php
 Alias /formation/ ${TARGET_DIR}/public/formation/
+# Le module RH / Dimona à la racine du serveur, comme /formation/ (01/11/2026) : la page (public/hr) et son
+# API juste à côté d'elle (public/api/hr/index.php, routes /api/v1/erp/dimona/…).
+RedirectMatch 301 ^/hr\$ /hr/
+AliasMatch ^/hr/api/v1/erp/dimona(/.*)?\$ ${TARGET_DIR}/public/api/hr/index.php
+Alias /hr/ ${TARGET_DIR}/public/hr/
 Alias ${ALIAS_PATH} ${TARGET_DIR}/public
 <Directory ${TARGET_DIR}/public>
     AllowOverride All
@@ -593,6 +609,7 @@ chmod +x "$TARGET_DIR/bin/social_cron.sh"
 chmod +x "$TARGET_DIR/bin/visites_cron.sh"
 chmod +x "$TARGET_DIR/bin/metadonnee_cron.sh"
 chmod +x "$TARGET_DIR/bin/stock_cron.sh"
+chmod +x "$TARGET_DIR/bin/hr_dimona_cron.sh"
 # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
 # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
 # passer les tâches de l'heure pile.
@@ -612,6 +629,10 @@ chmod +x "$TARGET_DIR/bin/stock_cron.sh"
   # Le stock matière des magasins : relu toutes les 5 minutes pour garder chaque inventaire et chaque
   # livraison du panel au moment où ils passent (l'API ne rend que le stock courant).
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/stock_cron.sh >/dev/null 2>&1"
+  # Module RH / Dimona : chaque minute, la relecture des déclarations en attente (5 s, 15 s, 30 s… : le
+  # script tourne 55 s) et l'alerte des certificats à moins de 60 jours. Sous www-data : c'est lui qui
+  # possède le dossier privé et la clé maître du module.
+  echo "* * * * * www-data ${TARGET_DIR}/bin/hr_dimona_cron.sh >/dev/null 2>&1"
 } > /etc/cron.d/cockpit-rapports
 # cron refuse un fichier de /etc/cron.d écrivable par un autre que root.
 chown root:root /etc/cron.d/cockpit-rapports
@@ -912,6 +933,13 @@ fm_page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1
 fm_https=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1/formation/" 2>/dev/null || echo 000)
 fm_api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "http://127.0.0.1/formation/api/cockpit/formation/equipe" 2>/dev/null || echo 000)
 log "Formation : /formation/ → HTTP ${fm_page} (https ${fm_https}) ; API /formation/api/cockpit → HTTP ${fm_api} (200 attendu, 503 = compte panel à brancher)."
+hr_page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1/hr/" 2>/dev/null || echo 000)
+hr_https=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1/hr/" 2>/dev/null || echo 000)
+hr_api=$(curl -s --max-time 30 "http://127.0.0.1/hr/api/v1/erp/dimona/health" 2>/dev/null | head -c 300 || true)
+hr_console=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1/webshop/api/bo/franchisee/me" 2>/dev/null || echo 000)
+log "Module RH : /hr/ → HTTP ${hr_page} (https ${hr_https}) ; API /hr/api/v1/erp/dimona/health → ${hr_api:-pas de réponse}"
+log "Module RH : identité par la console franchisé — /webshop/api/bo/franchisee/me → HTTP ${hr_console} (401 attendu = comptes actifs ; 500 = section « bo » de la console à configurer)."
+[[ "$hr_page" == "200" ]] || warn "Module RH : la page /hr/ ne répond pas 200 — alias Apache à vérifier."
 [[ "$fm_page" == "200" ]] || warn "Formation : la page /formation/ ne répond pas 200 — alias Apache à vérifier."
 
 if [[ $rc -eq 0 ]]; then
