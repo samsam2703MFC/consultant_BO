@@ -40,7 +40,7 @@ function apiModInventaire(): array
             'groupes' => [
                 ['nom' => 'Lectures', 'routes' => [
                     ['m' => 'GET', 'r' => '/ventes/primes-reglages', 'dit' => 'Les primes posées (marque, sponsors, franchisés), la récompense, le SMS', 'pages' => $AF, 'garde' => '', 'sonde' => ['reglage' => 'ventePrimesApp']],
-                    ['m' => 'GET', 'r' => '/ventes/primes-fiches/equipe?shop=', 'dit' => 'Les fiches à imprimer, et qui recevra l’affiche par mail (adresse masquée)', 'pages' => ['franchise'], 'garde' => ''],
+                    ['m' => 'GET', 'r' => '/ventes/primes-fiches/equipe?shop=', 'dit' => 'Les fiches à imprimer, et qui recevra l’affiche par mail (adresse masquée)', 'pages' => ['franchise'], 'garde' => '', 'sonde' => ['pas' => 'lue à la demande, pour un magasin']],
                     ['m' => 'GET', 'r' => '/ventes/primes-equipe?shop=&m=', 'dit' => 'Qui a quelle prime, à quel niveau, dans un magasin et un mois', 'pages' => ['franchise'], 'garde' => '10 min · 1 j', 'sonde' => ['cache' => 'primesEq']],
                     ['m' => 'GET', 'r' => '/ventes/primes-annee?y=[&shop=]', 'dit' => 'L’année des primes, par magasin ou par vendeuse', 'pages' => $AF, 'garde' => '1 h · 1 j', 'sonde' => ['cache' => 'primesAn']],
                     ['m' => 'GET', 'r' => '/ventes/primes-moyennes?n=', 'dit' => 'Les moyennes du réseau, pour caler un objectif', 'pages' => ['admin'], 'garde' => '1 j', 'sonde' => ['cache' => 'prMoy']],
@@ -49,6 +49,10 @@ function apiModInventaire(): array
                     ['m' => 'GET', 'r' => '/ventes/primes-reference?ids=&du=&au=&shops=', 'dit' => 'Ce que des produits ont vendu, pour proposer un objectif', 'pages' => $AF, 'garde' => '', 'sonde' => ['pas' => 'calculée à la demande, rien n’en est gardé']],
                     ['m' => 'GET', 'r' => '/ventes/grands-prix[?shop=]', 'dit' => 'Les grands prix et leur classement', 'pages' => $AF, 'garde' => '1 h', 'sonde' => ['cache' => 'grandsPrix']],
                     ['m' => 'GET', 'r' => '/ventes/moi?m=', 'dit' => 'La fiche « Mes primes » de la personne connectée (son jeton, vérifié chez le panel)', 'pages' => ['app'], 'garde' => '15 min · 1 j', 'sonde' => ['cache' => 'primesMoi']],
+                    ['m' => 'GET', 'r' => '/ventes/moi/pointages?du=&au=', 'dit' => 'Les pointages de la personne connectée, jour par jour face à son planning', 'pages' => ['app'], 'garde' => '', 'sonde' => ['pas' => 'il faut le jeton de la personne']],
+                    ['m' => 'GET', 'r' => '/ventes/equipe/pointages?shop=&du=&au=', 'dit' => 'Les pointages d’un magasin sur une semaine, les départs déclarés à valider, ses bornes', 'pages' => ['admin'], 'garde' => '', 'sonde' => ['table' => ['mot_pointage']]],
+                    ['m' => 'GET', 'r' => '/pointage/borne?b=', 'dit' => 'Le QR code et le code à six chiffres du moment, pour la borne du magasin (son jeton)', 'pages' => ['app'], 'garde' => '', 'sonde' => ['pas' => 'il faut le lien d’une borne']],
+                    ['m' => 'GET', 'r' => '/pointage/bornes?shop=', 'dit' => 'Les bornes d’un magasin, sans leur lien', 'pages' => ['admin'], 'garde' => '', 'sonde' => ['table' => ['mot_borne']]],
                     ['m' => 'GET', 'r' => '/ventes/moi/planning?du=&au=', 'dit' => 'Le planning de la personne connectée, lu à la route du planning du panel (ses services seuls)', 'pages' => ['app'], 'garde' => '5 min', 'sonde' => ['cache' => 'planShop']],
                     ['m' => 'GET', 'r' => '/ventes/moi/profil?panel=', 'dit' => '« Mon profil » de la personne connectée, déchiffré pour elle seule', 'pages' => ['app'], 'garde' => '', 'sonde' => ['pas' => 'il faut le jeton de la personne']],
                     ['m' => 'GET', 'r' => '/ventes/equipe/profils?shop=', 'dit' => 'Les fiches d’un magasin : rempli à combien, ce qui manque, ce qui est à reporter au panel', 'pages' => ['franchise'], 'garde' => '', 'sonde' => ['pas' => 'lue à la demande dans mot_profil']],
@@ -63,6 +67,12 @@ function apiModInventaire(): array
                     ['m' => 'POST', 'r' => '/ventes/grands-prix', 'dit' => 'Crée, modifie, allume ou éteint un grand prix', 'pages' => ['admin']],
                     ['m' => 'POST', 'r' => '/ventes/grands-prix/retirer', 'dit' => 'Retire un grand prix', 'pages' => ['admin']],
                     ['m' => 'POST', 'r' => '/ventes/moi/profil', 'dit' => 'Enregistre une fiche de « Mon profil » (contrôlée, chiffrée)', 'pages' => ['app']],
+                    ['m' => 'POST', 'r' => '/ventes/moi/pointage', 'dit' => 'Pointe l’arrivée ou le départ, avec ce que la caméra a lu (QR signé, ou code à six chiffres)', 'pages' => ['app']],
+                    ['m' => 'POST', 'r' => '/ventes/moi/pointage/depart', 'dit' => 'Un départ oublié, dit par la personne (à valider au cockpit)', 'pages' => ['app']],
+                    ['m' => 'POST', 'r' => '/ventes/equipe/pointages/valider', 'dit' => 'Valide ou refuse un départ déclaré', 'pages' => ['admin']],
+                    ['m' => 'POST', 'r' => '/pointage/bornes', 'dit' => 'Crée une borne : son lien n’est montré qu’une fois', 'pages' => ['admin']],
+                    ['m' => 'POST', 'r' => '/pointage/borne/pointer', 'dit' => 'La caisse pointe une personne dont elle a vérifié le PIN (clé de caisse seule)', 'pages' => ['app']],
+                    ['m' => 'POST', 'r' => '/pointage/bornes/retirer', 'dit' => 'Retire une borne : son lien ne marche plus', 'pages' => ['admin']],
                     ['m' => 'POST', 'r' => '/ventes/moi/profil/carte', 'dit' => 'Dépose une photo de la carte d’identité (chiffrée)', 'pages' => ['app']],
                 ]],
             ]],
@@ -122,6 +132,8 @@ function apiModInventaire(): array
                     ['m' => 'ÉCRIT', 'r' => 'mot_reglage', 'dit' => 'Les réglages des primes, les SMS déjà envoyés', 'pages' => $AF, 'garde' => '', 'sonde' => ['table' => ['mot_reglage']]],
                     ['m' => 'ÉCRIT', 'r' => 'mot_cache', 'dit' => 'Les calculs gardés (fiches, mois, équipe, année)', 'pages' => $AFE, 'garde' => '', 'sonde' => ['table' => ['mot_cache']]],
                     ['m' => 'ÉCRIT', 'r' => 'mot_grand_prix', 'dit' => 'Les grands prix', 'pages' => ['admin'], 'garde' => '', 'sonde' => ['table' => ['mot_grand_prix']]],
+                    ['m' => 'ÉCRIT', 'r' => 'mot_pointage', 'dit' => 'Les pointages : arrivée, départ, le service prévu figé à l’arrivée, la validation d’un départ déclaré', 'pages' => ['admin', 'app'], 'garde' => '', 'sonde' => ['table' => ['mot_pointage']]],
+                    ['m' => 'ÉCRIT', 'r' => 'mot_borne', 'dit' => 'Les bornes de pointage des magasins (le jeton du lien, haché)', 'pages' => ['admin', 'app'], 'garde' => '', 'sonde' => ['table' => ['mot_borne']]],
                     ['m' => 'ÉCRIT', 'r' => 'mot_profil', 'dit' => 'Les profils des employés, chiffrés (la clé et les photos de la carte hors du site)', 'pages' => ['franchise', 'app'], 'garde' => '', 'sonde' => ['table' => ['mot_profil']]],
                     ['m' => 'ÉCRIT', 'r' => 'ceo_app_setting', 'dit' => 'Les mois de ventes gravés (un mois clos ne se relit plus)', 'pages' => $AFE, 'garde' => '', 'sonde' => ['table' => ['ceo_app_setting']]],
                 ]],
@@ -316,6 +328,7 @@ function apiModMesurer(array $inv): array
     // Le cockpit : l'âge des calculs gardés, la date des réglages (les tables mot_ créées au besoin).
     if (function_exists('motTables')) { try { motTables(); } catch (Throwable $e) { /* la lecture dira l'erreur */ } }
     if (function_exists('profilTable')) { try { profilTable(); } catch (Throwable $e) { /* la lecture dira l'erreur */ } }
+    if (function_exists('ptgTables')) { try { ptgTables(); } catch (Throwable $e) { /* la lecture dira l'erreur */ } }
     foreach ($routes as [$src, $r]) {
         $id = apiModId($src, $r);
         try {

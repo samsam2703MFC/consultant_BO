@@ -29,6 +29,8 @@
   "pf_box": "Box",
   "pf_cancel": "Cancel",
   "pf_city": "City",
+  "pf_clockings": "My clockings",
+  "pf_clockings_hint": "clock-ins and outs",
   "pf_competencies": "Skills",
   "pf_complete": "Profile {p}% complete",
   "pf_contact": "Contact details",
