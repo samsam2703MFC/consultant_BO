@@ -3244,3 +3244,21 @@ button.mc-name:hover b { color: #8e1f2f; }
 .mw-next i.mi { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--at-bg-2); font-size: 18px; }
 @media (max-width: 1100px) { .mw-prog { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .mw-prog { grid-template-columns: 1fr; } }
+
+/* [241] Kreator maszyny : krok « Maszyna » (nowa / zmiana), maszyna wspólna */
+.mw-form { display: grid; gap: 14px; }
+.mw-fl { display: grid; gap: 6px; margin: 0; }
+.mw-fl > span { font-size: 12px; font-weight: 700; color: var(--at-muted); }
+.mw-fl .form-control { min-height: 44px; border-radius: 10px; }
+.mw-num { max-width: 140px; text-align: right; font-variant-numeric: tabular-nums; }
+.mw-in-l { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; font-size: 12.5px; }
+.mw-sub { display: grid; gap: 6px; margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--at-bg-2); }
+.mw-sub b { font-size: 12.5px; }
+.mw-chip i { margin-right: 2px; }
+.mw-stepbtn { border: 0; font: inherit; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; background: rgba(46,125,79,.1); color: #1f5a37; min-height: 32px; }
+.mw-stepbtn:hover { background: rgba(46,125,79,.18); }
+.mw-sh { color: #2b5f9e; font-weight: 600; white-space: nowrap; }
+.mc-name .mw-sh i, .mc-name small i.bi-share { width: auto; height: auto; background: none; display: inline; font-size: inherit; border-radius: 0; margin-right: 2px; }
+tr.mw-shared td { background: #f7f9fc; }
+tr.mw-addrow td { padding-top: 2px; padding-bottom: 8px; border: 0; }
+tr.mw-addrow .tt-link { font-size: 12px; min-height: 32px; }

@@ -17,9 +17,18 @@ final class CapacityRepository extends WorkshopRepository
         $out = [];
         foreach ($this->all(
             'SELECT w.id, w.code, w.name_pl, w.name_fr, w.type, w.id_group, w.capacity_per_pass, w.capacity_unit, w.efficiency_pct, w.cycle_s, w.capacity_view,
-                    w.oee_tracked, w.active, g.code AS group_code, g.name_pl AS group_name, g.color AS group_color
+                    w.oee_tracked, w.active, g.code AS group_code, g.name_pl AS group_name, g.color AS group_color,
+                    (SELECT GROUP_CONCAT(CONCAT(sg.id, \':\', sg.name_pl) ORDER BY sg.sort_order SEPARATOR \'|\') FROM n_prod_workstation_share sh
+                       JOIN n_prod_group sg ON sg.id = sh.id_group AND sg.active = 1 WHERE sh.id_workstation = w.id) AS shared_raw
              FROM n_prod_workstation w LEFT JOIN n_prod_group g ON g.id = w.id_group
              WHERE w.active = 1 ORDER BY g.sort_order, g.name_pl, FIELD(w.type, \'froid\', \'surgelation\', \'four\', \'machine\', \'fermentation\', \'robot\', \'manuel\'), w.name_pl') as $w) {
+            // [241] Maszyna wspólna : grupy korzystające (id => nazwa), poza grupą maszyny.
+            $w['shared'] = [];
+            foreach (array_filter(explode('|', (string) ($w['shared_raw'] ?? ''))) as $pair) {
+                [$gid, $gname] = explode(':', $pair, 2) + [1 => ''];
+                if ((int) $gid !== (int) $w['id_group']) $w['shared'][(int) $gid] = $gname;
+            }
+            unset($w['shared_raw']);
             $out[(int) $w['id']] = $w;
         }
         return $out;

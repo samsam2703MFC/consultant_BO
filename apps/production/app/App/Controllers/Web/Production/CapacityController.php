@@ -79,6 +79,30 @@ final class CapacityController extends BaseController
         }
     }
 
+    /** [241] POST : nowa maszyna z kreatora (nazwa, rodzaj, grupa, wspólna z grupami…) → dane kreatora nowej maszyny. */
+    public function createMachine()
+    {
+        try {
+            $this->guardMachines();
+            $r = $this->machines->saveMachine(null, $this->getJson(Request::createFromGlobals()) ?? [], $this->userId());
+            return $this->json(['data' => $this->machines->machine($r['id']) + ['created' => true], 'message' => 'Maszyna dodana — teraz zaznacz jej produkty.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** [241] PUT : zmiana maszyny z kreatora (krok « Maszyna »). */
+    public function updateMachine($id)
+    {
+        try {
+            $this->guardMachines();
+            $r = $this->machines->saveMachine((int) $id, $this->getJson(Request::createFromGlobals()) ?? [], $this->userId());
+            return $this->json(['data' => $this->machines->machine($r['id']), 'message' => 'Maszyna zapisana.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     /** Dane : ta sama zgoda co strona (Produkcja). */
     private function guard(): void
     {

@@ -9,7 +9,9 @@ use App\Core\TransactionManager;
 use App\Exceptions\CustomException;
 use App\Repositories\Workshop\CapacityRepository;
 use App\Repositories\Workshop\MachineDataRepository;
+use App\Core\Api\Workshop\ApiException;
 use App\Services\Workshop\Referentiel\AuditTrail;
+use App\Services\Workshop\Referentiel\WorkstationService;
 
 /**
  * Dane maszyn [240] (makiety 12–13) — kierownik produkcji uzupełnia dane maszyna po maszynie :
@@ -30,6 +32,9 @@ final class MachineDataService
     private const MAX_PER_BATCH = 1000000;
     private const MAX_PER_HOUR = 600;
     private const MAX_PEOPLE = 50;
+    /** [241] Komory (rozrost, chłodnia, mrożenie) : pojemność maszyny = ile wózków mieści (czas oczekiwania). */
+    private const CHAMBERS = ['fermentation', 'froid', 'surgelation'];
+    private const MAX_CHAMBER = 10000;
 
     public function __construct(
         private MachineDataRepository $repo,
@@ -38,6 +43,7 @@ final class MachineDataService
         private WeekService $week,
         private TransactionManager $tx,
         private AuditTrail $audit,
+        private WorkstationService $workstations,
     ) {
     }
 
@@ -77,19 +83,29 @@ final class MachineDataService
         $candidates = [];
         foreach ($groups as $gi => $g) {
             $rows = [];
+            $own = 0;
             foreach ($ws as $w) {
-                if ((int) ($w['id_group'] ?? 0) !== $g['id']) continue;
-                $rows[] = $this->machineRow($w, count($onMachine[(int) $w['id']] ?? []), count($incomplete[(int) $w['id']] ?? []), $batch[(int) $w['id']] ?? []);
+                $mine = (int) ($w['id_group'] ?? 0) === $g['id'];
+                // [241] Maszyna wspólna : pokazana też w grupach, które z niej korzystają (liczona raz, w swojej grupie).
+                if (!$mine && !isset($w['shared'][$g['id']])) continue;
+                $r = $this->machineRow($w, count($onMachine[(int) $w['id']] ?? []), count($incomplete[(int) $w['id']] ?? []), $batch[(int) $w['id']] ?? []);
+                $r['shared_from'] = $mine ? null : $w['group_name'];
+                if ($mine) {
+                    $own++;
+                    if ($r['products'] > 0) $machinesWith++;
+                    else $candidates[] = ['id' => $r['id'], 'key' => [isset($planGroups[$g['id']]) ? 0 : 1, self::TYPE_ORDER[$r['type']] ?? 9, $gi, $r['name']]];
+                }
+                $rows[] = $r;
             }
-            foreach ($rows as $r) {
-                if ($r['products'] > 0) $machinesWith++;
-                else $candidates[] = ['id' => $r['id'], 'key' => [isset($planGroups[$g['id']]) ? 0 : 1, self::TYPE_ORDER[$r['type']] ?? 9, $gi, $r['name']]];
-            }
-            $out[] = ['id' => $g['id'], 'name' => $g['name_pl'], 'products' => $groupProducts[$g['id']] ?? 0, 'products_with' => $groupWith[$g['id']] ?? 0, 'machines' => $rows];
+            usort($rows, fn($a, $b) => [$a['shared_from'] !== null, $a['_order']] <=> [$b['shared_from'] !== null, $b['_order']]);
+            foreach ($rows as &$r) unset($r['_order']);
+            unset($r);
+            $out[] = ['id' => $g['id'], 'name' => $g['name_pl'], 'products' => $groupProducts[$g['id']] ?? 0, 'products_with' => $groupWith[$g['id']] ?? 0,
+                'own' => $own, 'machines' => $rows];
         }
         // Maszyny bez grupy (np. wspólne) — osobna sekcja.
         $loose = [];
-        foreach ($ws as $w) if ($w['id_group'] === null) $loose[] = $this->machineRow($w, count($onMachine[(int) $w['id']] ?? []), count($incomplete[(int) $w['id']] ?? []), $batch[(int) $w['id']] ?? []);
+        foreach ($ws as $w) if ($w['id_group'] === null) { $r = $this->machineRow($w, count($onMachine[(int) $w['id']] ?? []), count($incomplete[(int) $w['id']] ?? []), $batch[(int) $w['id']] ?? []); unset($r['_order']); $loose[] = $r + ['shared_from' => null]; }
         foreach ($loose as $r) { if ($r['products'] > 0) $machinesWith++; else $candidates[] = ['id' => $r['id'], 'key' => [1, self::TYPE_ORDER[$r['type']] ?? 9, 99, $r['name']]]; }
         if ($loose) $out[] = ['id' => null, 'name' => 'Bez grupy', 'products' => 0, 'products_with' => 0, 'machines' => $loose];
         usort($candidates, fn($a, $b) => $a['key'] <=> $b['key']);
@@ -104,6 +120,7 @@ final class MachineDataService
             ],
             'todo' => count($ws) - $machinesWith,
             'groups' => $out,
+            'all_groups' => array_map(fn($g) => ['id' => $g['id'], 'name' => $g['name_pl']], $groups),
             'next' => $candidates[0]['id'] ?? null,
             'order' => array_column($candidates, 'id'),
         ];
@@ -114,6 +131,7 @@ final class MachineDataService
     {
         $w = $this->repo->workstation($id);
         if (!$w || (int) $w['active'] !== 1) throw new CustomException('Nie znaleziono maszyny.', 'errors', 404);
+        $shared = $this->repo->shares()[$id] ?? [];
         $byItem = $this->stepsByItem();
         $plan = $this->planItems($date);
         $groupNames = array_column($this->repo->groups(), 'name_pl', 'id');
@@ -147,9 +165,108 @@ final class MachineDataService
             'machine' => ['id' => (int) $w['id'], 'name' => $w['name_pl'], 'type' => $w['type'], 'type_name' => self::TYPE_NAMES[$w['type']] ?? $w['type'],
                 'icon' => self::ICONS[$w['type']] ?? 'bi-gear', 'group_id' => $w['id_group'] !== null ? (int) $w['id_group'] : null, 'group' => $w['group_name'],
                 'capacity' => (float) $w['capacity_per_pass'], 'unit' => CapacityService::UNITS[$w['capacity_unit']] ?? $w['capacity_unit'],
-                'efficiency_pct' => (float) $w['efficiency_pct'], 'shift_h' => round($shiftH, 2)],
+                'efficiency_pct' => (float) $w['efficiency_pct'], 'shift_h' => round($shiftH, 2),
+                // [241] Formularz « Maszyna » : rodzaj, tryb robota, grupa, wspólna z grupami, pojemność komory.
+                'robot_mode' => $w['robot_mode'], 'operator_share' => $w['operator_share'] !== null ? (float) $w['operator_share'] : null,
+                'shared_ids' => $shared, 'shared' => array_values(array_filter(array_map(fn($g) => $groupNames[$g] ?? null, $shared))),
+                'group_ids' => array_values(array_unique(array_merge($w['id_group'] !== null ? [(int) $w['id_group']] : [], $shared)))],
+            'groups' => array_map(fn($k, $v) => ['id' => $k, 'name' => $v], array_keys($groupNames), array_values($groupNames)),
             'products' => $out,
         ];
+    }
+
+    /**
+     * [241] Krok « Maszyna » : nowa maszyna (id null) albo zmiana maszyny — nazwa, rodzaj (+ tryb robota), grupa,
+     * wspólna z innymi grupami (które), pojemność komory (rozrost, chłodnia, mrożenie). Zapis : n_prod_workstation
+     * (WorkstationService, dziennik) + n_prod_workstation_share. Zmiany pracy maszyny : jak zespoły jej grup.
+     * @return array{id:int, created:bool}
+     */
+    public function saveMachine(?int $id, array $in, ?int $userId): array
+    {
+        $cur = null;
+        if ($id !== null) {
+            $cur = $this->repo->workstation($id);
+            if (!$cur || (int) $cur['active'] !== 1) throw new CustomException('Nie znaleziono maszyny.', 'errors', 404);
+        }
+        $name = trim(preg_replace('/\s+/u', ' ', (string) ($in['name'] ?? '')));
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 100) throw new CustomException('Wpisz nazwę maszyny (2–100 znaków).', 'errors', 422);
+        $type = (string) ($in['type'] ?? '');
+        if (!isset(self::TYPE_NAMES[$type])) throw new CustomException('Wybierz rodzaj maszyny.', 'errors', 422);
+        $groupNames = array_column($this->repo->groups(), 'name_pl', 'id');
+        $groupId = (int) ($in['group_id'] ?? 0);
+        if (!isset($groupNames[$groupId])) throw new CustomException('Wybierz grupę, do której należy maszyna.', 'errors', 422);
+        $mode = null;
+        $share = null;
+        if ($type === 'robot') {
+            $mode = (string) ($in['robot_mode'] ?? '');
+            if (!in_array($mode, WorkstationService::ROBOT_MODES, true)) throw new CustomException('Robot : wybierz, czy pracuje sam, z operatorem czy jako cobot.', 'errors', 422);
+            if ($mode === 'collaboratif') {
+                $share = self::num($in['operator_share'] ?? null);
+                if ($share === null || $share <= 0 || $share > 1) throw new CustomException('Cobot : część czasu jednej osoby od 0,05 do 1 (np. 0,25 = 1 osoba na 4 coboty).', 'errors', 422);
+                $share = round(max(0.05, $share), 2);
+            }
+        }
+        $chamber = null;
+        if (in_array($type, self::CHAMBERS, true)) {
+            $chamber = self::num($in['capacity'] ?? null);
+            if ($chamber !== null && ($chamber <= 0 || $chamber > self::MAX_CHAMBER)) throw new CustomException('Ile wózków mieści komora : od 1 do ' . self::MAX_CHAMBER . '.', 'errors', 422);
+        }
+        $sharedIds = [];
+        if (!empty($in['shared'])) {
+            foreach ((array) ($in['share_groups'] ?? []) as $g) {
+                $g = (int) $g;
+                if (!isset($groupNames[$g])) throw new CustomException('Nieznana grupa.', 'errors', 422);
+                if ($g !== $groupId) $sharedIds[$g] = $g;
+            }
+            if (!$sharedIds) throw new CustomException('Maszyna wspólna : zaznacz grupy, które też z niej korzystają.', 'errors', 422);
+        }
+        $sharedIds = array_values($sharedIds);
+        foreach ($this->capacityRepo->workstations() as $w) {
+            if ((int) $w['id'] !== $id && mb_strtolower($w['name_pl']) === mb_strtolower($name)) throw new CustomException("Maszyna « {$name} » już jest (grupa {$w['group_name']}).", 'errors', 422);
+        }
+
+        $ctx = new ApiContext('machine-data-' . bin2hex(random_bytes(4)), new Translator('pl'), $userId, [], ['prod.referentiel.write' => true]);
+        $data = ['group_id' => $groupId, 'name_pl' => $name, 'type' => $type, 'robot_mode' => $mode, 'operator_share' => $share];
+        if ($cur === null) {
+            $data += ['code' => $this->newCode($name), 'name_fr' => $name, 'capacity_per_pass' => $chamber ?? 1, 'capacity_unit' => $chamber !== null || in_array($type, self::CHAMBERS, true) ? 'chariot' : 'piece'];
+        } else {
+            if ((string) $cur['name_fr'] === '' || $cur['name_fr'] === $cur['name_pl']) $data['name_fr'] = $name;
+            if ($chamber !== null) $data += ['capacity_per_pass' => $chamber, 'capacity_unit' => 'chariot'];
+        }
+        if ($type !== 'robot') unset($data['robot_mode'], $data['operator_share']);
+        elseif ($mode !== 'collaboratif') unset($data['operator_share']);
+        try {
+            $newId = $this->tx->execute(function () use ($cur, $id, $data, $sharedIds, $ctx) {
+                if ($cur === null) $wid = (int) $this->workstations->create($data, $ctx)['id'];
+                else { $this->workstations->update($id, $data, $ctx); $wid = $id; }
+                $before = $this->repo->shares()[$wid] ?? [];
+                sort($before);
+                $after = $sharedIds;
+                sort($after);
+                if ($before !== $after) {
+                    $this->repo->replaceShares($wid, $sharedIds);
+                    $this->audit->record($ctx, 'update', 'workstation_share', $wid, ['groups' => $before], ['groups' => $after, 'source' => 'kreator maszyny']);
+                }
+                return $wid;
+            });
+        } catch (ApiException $e) {
+            $fields = implode(', ', array_unique(array_map(fn($f) => is_array($f) ? ($f['field'] ?? '') . ' ' . ($f['code'] ?? '') : (string) $f, $e->fieldErrors())));
+            throw new CustomException('Nie można zapisać maszyny' . ($fields !== '' ? " ({$fields})" : '') . '.', 'errors', 422);
+        }
+        return ['id' => (int) $newId, 'created' => $cur === null];
+    }
+
+    /** Kod maszyny z nazwy (A–Z, 0–9, _), unikalny. */
+    private function newCode(string $name): string
+    {
+        $t = strtr(mb_strtoupper($name), ['Ą' => 'A', 'Ć' => 'C', 'Ę' => 'E', 'Ł' => 'L', 'Ń' => 'N', 'Ó' => 'O', 'Ś' => 'S', 'Ź' => 'Z', 'Ż' => 'Z',
+            'À' => 'A', 'Â' => 'A', 'Ä' => 'A', 'Ç' => 'C', 'É' => 'E', 'È' => 'E', 'Ê' => 'E', 'Ë' => 'E', 'Î' => 'I', 'Ï' => 'I', 'Ô' => 'O', 'Ö' => 'O', 'Ù' => 'U', 'Û' => 'U', 'Ü' => 'U']);
+        $base = trim((string) preg_replace('/[^A-Z0-9]+/', '_', $t), '_');
+        $base = substr($base !== '' ? $base : 'MASZYNA', 0, 26);
+        if (strlen($base) < 2) $base .= '_M';
+        $code = $base;
+        for ($n = 2; $this->repo->workstationCodeTaken($code); $n++) $code = substr($base, 0, 26) . '_' . $n;
+        return $code;
     }
 
     /**
@@ -237,6 +354,7 @@ final class MachineDataService
             'icon' => self::ICONS[$w['type']] ?? 'bi-gear', 'capacity' => (float) $w['capacity_per_pass'],
             'unit' => CapacityService::UNITS[$w['capacity_unit']] ?? $w['capacity_unit'], 'products' => $products, 'incomplete' => $incomplete,
             'batch_min' => $batch ? min($batch) : null, 'batch_max' => $batch ? max($batch) : null,
+            'shared' => array_values($w['shared'] ?? []), '_order' => self::TYPE_ORDER[$w['type']] ?? 9,
             'state' => $products === 0 ? 'todo' : ($incomplete > 0 ? 'part' : 'ok')];
     }
 

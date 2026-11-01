@@ -240,6 +240,24 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   non lu de moins de 7 jours ; tâche faite entre-temps (jour validé, assistant terminé) → fermé, disparaît. Au tableau :
   « przeczytane 10:51 (J. K., PIN) ».
 
+### Nouvelle machine et machine partagée (migration 156, 01/11/2026)
+
+- Kreator maszyny : nouvelle première étape **« 1 · Maszyna »** (4 étapes : Maszyna › Produkty › Wsad i tempo › Gotowe).
+  Bouton « Nowa maszyna » (en haut, « + maszyna w grupie … » sous chaque groupe, « Dodaj maszynę » dans un groupe sans
+  machine) : nom, rodzaj (piec, maszyna, robot / linia + tryb sam / z operatorem / cobot avec part d'une personne,
+  stanowisko ręczne, komora rozrostu, chłodnia, mrożenie — pour les komory : nombre de wózków), groupe propriétaire,
+  **wspólna z innymi grupami ? Nie / Tak → quelles grupy**. Pour une machine existante, l'étape « Maszyna » se rouvre
+  depuis les étapes 2–3 (bouton crayon). Écriture via `WorkstationService` (code généré depuis le nom, unique ;
+  journal `workstation`) ; noms en double refusés.
+- `n_prod_workstation_share` (id_workstation, id_group — PK, CASCADE) : groupes qui utilisent la machine d'un autre groupe
+  (journal `workstation_share`, source « kreator maszyny »). Effets : la machine apparaît dans chaque groupe (Dane maszyn :
+  « wspólna — maszyna grupy … », comptée une seule fois ; Wykorzystanie : « + Tarty » et filtre de groupe ; tablette TRS
+  du groupe) ; elle travaille sur les shifts des équipes de chacun de ces groupes ; le temps de travail d'un produit sur
+  la machine est compté à l'équipe du groupe du produit si ce groupe partage la machine, sinon au groupe de la machine.
+  Filtre « Grupa » de l'assistant : produits du groupe propriétaire + des groupes qui partagent.
+- Routes : `POST /ajax/production/capacity/machine-data` (nouvelle), `PUT /ajax/production/capacity/machine-data/{id}/machine`.
+  Tests : `tests/machine_data_test.php`, `tests/capacity_test.php`.
+
 ### Dane maszyn : kreator maszyny (01/11/2026, sans migration)
 
 - Page : Produkcja › Moce produkcyjne › onglet « Dane maszyn » (maquettes 12 et 13). Pour le Kierownik produkcji (droit de

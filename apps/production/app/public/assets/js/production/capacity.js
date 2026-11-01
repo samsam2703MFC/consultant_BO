@@ -95,7 +95,7 @@
         const cap = m.mode === 'delay' ? `${nf(m.capacity_per_pass)} ${esc(m.unit)}<small>miejsca (oczekiwanie)</small>`
             : `${nf(m.capacity_per_pass, 1)} ${esc(m.unit)}<small>${m.cycle_s ? 'cykl ' + mins(m.cycle_s) : (m.no_steps ? 'brak etapów w kartach' : '')}</small>`;
         const per = m.passes_shift ? `${m.passes_shift} wsadów<small>× ${m.shifts_week} zm. w tyg.</small>` : `${m.shifts_week} zm.<small>${esc(m.shift_names.join(', ') || 'brak zmiany')}</small>`;
-        const nm = `<i class="bi ${ICON[m.type] || 'bi-gear'}"></i><span><b>${esc(m.name)}</b><small>${esc(m.group || '')}${m.efficiency_pct < 100 ? ` · TRS ${nf(m.efficiency_pct)} %` : ''}</small></span>`;
+        const nm = `<i class="bi ${ICON[m.type] || 'bi-gear'}"></i><span><b>${esc(m.name)}</b><small>${esc(m.group || '')}${m.shared && m.shared.length ? ` + ${m.shared.map(esc).join(', ')} <i class="bi bi-share" title="maszyna wspólna"></i>` : ''}${m.efficiency_pct < 100 ? ` · TRS ${nf(m.efficiency_pct)} %` : ''}</small></span>`;
         return `<tr class="${m.pct >= D.target ? 'hot' : ''}" data-machine="${m.id}"><td>${RO() ? `<span class="mc-name">${nm}</span>` : `<button type="button" class="mc-name" data-edit="${m.id}" title="Ustawienia maszyny">${nm}</button>`}</td>
             <td>${cap}</td><td>${per}</td>
             <td class="r">${nf(m.avail_h, 1)} h</td><td class="r"${m.top ? ` title="Najwięcej : ${esc(m.top.name)}"` : ''}>${nf(m.load_h, 1)} h${m.passes ? `<small>${nf(m.passes)} wsadów</small>` : ''}</td>
@@ -191,7 +191,8 @@
                 <small>bez nich ERP nie liczy obciążenia</small></div>
             <div class="mc-tile ${t.plan_without ? 'warn' : 'ok'}"><span>Plan tygodnia bez danych</span><b>${t.plan_without} z ${t.plan}</b><div class="mw-bar"><i class="warn" style="width:${pct(t.plan - t.plan_without, t.plan)}%"></i></div>
                 <small>${t.plan_without ? names + (t.plan_without > t.plan_without_names.length ? '…' : '') + ' — zacznij od nich' : 'wszystkie produkty planu mają dane'}</small></div>
-            <div class="mw-acts">${MD.next ? `<button type="button" class="kw-btn pri mw-start" data-wiz="${MD.next}"><i class="bi bi-magic"></i> Zacznij : następna maszyna bez danych</button>` : '<span class="mw-st ok"><i class="bi bi-check2"></i> każda maszyna ma produkty</span>'}</div></div>`;
+            <div class="mw-acts">${MD.next ? `<button type="button" class="kw-btn pri mw-start" data-wiz="${MD.next}"><i class="bi bi-magic"></i> Zacznij : następna maszyna bez danych</button>` : '<span class="mw-st ok"><i class="bi bi-check2"></i> każda maszyna ma produkty</span>'}
+                <button type="button" class="kw-btn" data-wnew=""><i class="bi bi-plus-lg"></i> Nowa maszyna</button></div></div>`;
     }
 
     function mdState(m) {
@@ -210,14 +211,16 @@
     function mdTable() {
         const full = !RO();
         const rows = MD.groups.map(g => `<tr class="grp"><td colspan="5">${esc(g.name)}${g.products ? ` <small>${g.products} ${pl(g.products, 'produkt', 'produkty', 'produktów')} · ${g.products_with} z danymi</small>` : ''}</td></tr>`
-            + (g.machines.length ? g.machines.map(m => `<tr class="${m.state === 'todo' && m.id === MD.next ? 'hot' : ''}"><td><span class="mc-name"><i class="bi ${m.icon}"></i><span><b>${esc(m.name)}</b><small>${esc(m.type_name)}</small></span></span></td>
+            + (g.machines.length ? g.machines.map(m => `<tr class="${m.state === 'todo' && m.id === MD.next && !m.shared_from ? 'hot' : ''}${m.shared_from ? ' mw-shared' : ''}"><td><span class="mc-name"><i class="bi ${m.icon}"></i><span><b>${esc(m.name)}</b><small>${esc(m.type_name)}${m.shared_from ? ` · <span class="mw-sh"><i class="bi bi-share"></i> wspólna — maszyna grupy ${esc(m.shared_from)}</span>` : (m.shared && m.shared.length ? ` · <span class="mw-sh"><i class="bi bi-share"></i> wspólna z : ${m.shared.map(esc).join(', ')}</span>` : '')}</small></span></span></td>
                 <td class="r">${mdBatch(m)}</td><td class="r">${m.products}</td><td>${mdState(m)}</td>
                 <td class="r mw-btns">${full ? `<button type="button" class="kw-btn kw-sm" data-edit="${m.id}" title="Wsad, cykl, TRS, zmiany"><i class="bi bi-sliders"></i><span class="d-none d-xl-inline"> Ustawienia</span></button>` : ''}
                     <button type="button" class="kw-btn kw-sm ${m.state === 'todo' ? 'pri' : ''}" data-wiz="${m.id}"><i class="bi bi-magic"></i> ${m.state === 'todo' ? 'Uzupełnij' : 'Zmień'}</button></td></tr>`).join('')
-                : `<tr><td colspan="4"><span class="mw-st todo"><i class="bi bi-exclamation-circle"></i> brak maszyn w grupie ${esc(g.name)}</span> <small class="at-sub">dodaj maszyny (np. piec, mikser), potem przypisz produkty</small></td>
-                    <td class="r">${full ? `<a class="kw-btn kw-sm" href="${esc(at.root)}/workshop/workstations"><i class="bi bi-plus-lg"></i> Dodaj maszynę</a>` : ''}</td></tr>`)).join('');
+                : `<tr><td colspan="4"><span class="mw-st todo"><i class="bi bi-exclamation-circle"></i> brak maszyn w grupie ${esc(g.name)}</span> <small class="at-sub">dodaj maszynę (np. piec, mikser) albo zaznacz maszynę innej grupy jako wspólną</small></td>
+                    <td class="r"><button type="button" class="kw-btn kw-sm pri" data-wnew="${g.id ?? ''}"><i class="bi bi-plus-lg"></i> Dodaj maszynę</button></td></tr>`)
+            + (g.machines.length && g.id ? `<tr class="mw-addrow"><td colspan="5"><button type="button" class="tt-link" data-wnew="${g.id}"><i class="bi bi-plus-lg"></i> maszyna w grupie ${esc(g.name)}</button></td></tr>` : '')).join('');
         return `<div class="mc-card"><div class="table-responsive"><table class="mc-tbl"><thead><tr><th>Maszyna</th><th class="r">Wsad wg produktu</th><th class="r">Produkty</th><th>Dane</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-            <p class="mc-note">Kliknij « Uzupełnij » : zaznacz produkty robione na maszynie, potem wpisz ile sztuk w jednym wsadzie, ile wsadów na godzinę i ile osób przy wsadzie. Dane trafiają do etapów kart produkcyjnych.${full ? ' Nowa maszyna : <a href="' + esc(at.root) + '/workshop/workstations">Stanowiska</a>.' : ''}</p></div>`;
+            <p class="mc-note">Kliknij « Uzupełnij » : zaznacz produkty robione na maszynie, potem wpisz ile sztuk w jednym wsadzie, ile wsadów na godzinę i ile osób przy wsadzie. Dane trafiają do etapów kart produkcyjnych.
+                « Nowa maszyna » : nazwa, rodzaj, grupa i czy jest wspólna z innymi grupami (których). Maszyna wspólna pokazuje się w każdej z tych grup.</p></div>`;
     }
 
     function settingsTab() {
@@ -245,6 +248,69 @@
     const num = (v) => { const t = String(v ?? '').replace(/\s/g, '').replace(',', '.'); return t === '' || isNaN(Number(t)) ? null : Number(t); };
     const fmtIn = (v) => v === null || v === undefined ? '' : String(Number(v)).replace('.', ',');
 
+    // [241] Krok « Maszyna » (nowa albo zmiana) : nazwa, rodzaj, tryb robota, grupa, wspólna z grupami, pojemność komory.
+    const MTYPES = [['four', 'bi-fire', 'Piec'], ['machine', 'bi-gear', 'Maszyna (mikser, dzielarka…)'], ['robot', 'bi-robot', 'Robot / linia'], ['manuel', 'bi-person-workspace', 'Stanowisko ręczne'],
+        ['fermentation', 'bi-hourglass-split', 'Komora rozrostu'], ['froid', 'bi-thermometer-snow', 'Chłodnia'], ['surgelation', 'bi-snow', 'Mrożenie szokowe']];
+    const CHAMBER = ['fermentation', 'froid', 'surgelation'];
+    const RMODES = [['autonome', 'Sam (bez obsługi)'], ['avec_operateur', 'Z operatorem'], ['collaboratif', 'Cobot (pracuje z osobą)']];
+    const formFrom = (m) => ({name: m ? m.name : '', type: m ? m.type : '', robot_mode: m && m.robot_mode ? m.robot_mode : '', operator_share: m && m.operator_share ? fmtIn(m.operator_share) : '0,25',
+        capacity: m && CHAMBER.includes(m.type) ? fmtIn(m.capacity) : '', group_id: m ? m.group_id : null, shared: !!(m && m.shared_ids && m.shared_ids.length), share_groups: m && m.shared_ids ? m.shared_ids.slice() : []});
+
+    function openNewMachine(groupId) {
+        const f = formFrom(null);
+        f.group_id = groupId || null;
+        modal = {kind: 'wizard', id: null, step: 0, busy: false, data: null, form: f, sel: [], vals: {}, filter: 'group', q: '', result: null};
+        render();
+        const n = app.querySelector('[data-mf="name"]');
+        if (n) n.focus();
+    }
+
+    async function wizSaveMachine() {
+        const f = modal.form;
+        const body = {name: f.name, type: f.type, robot_mode: f.robot_mode, operator_share: f.operator_share, capacity: f.capacity, group_id: f.group_id, shared: f.shared, share_groups: f.shared ? f.share_groups : []};
+        modal.busy = true; render();
+        const res = modal.id ? await at.send(`/ajax/production/capacity/machine-data/${modal.id}/machine`, 'PUT', body) : await at.send('/ajax/production/capacity/machine-data', 'POST', body);
+        modal.busy = false;
+        if (!res.ok || !res.data) { at.notify(false, res.message || 'Błąd zapisu maszyny.'); return render(); }
+        at.notify(true, res.message || 'Zapisano.');
+        const d = res.data;
+        modal.id = d.machine.id;
+        modal.data = d;
+        modal.form = formFrom(d.machine);
+        modal.sel = modal.sel.length ? modal.sel : d.products.filter(p => p.on).map(p => p.id);
+        d.products.forEach(p => { if (p.on && !modal.vals[p.id]) modal.vals[p.id] = {per_batch: fmtIn(p.per_batch), per_hour: fmtIn(p.per_hour), people: fmtIn(p.people)}; });
+        modal.filter = 'group';
+        modal.step = 1;
+        MD = null;
+        render();
+        load();
+    }
+
+    function wizStep0() {
+        const f = modal.form;
+        const groups = (modal.data && modal.data.groups) || (MD && MD.all_groups) || [];
+        const chip = (on, attr, label, icon) => `<button type="button" class="mw-chip ${on ? 'on' : ''}" ${attr}>${icon ? `<i class="bi ${icon}"></i> ` : ''}${esc(label)}</button>`;
+        const owner = groups.find(g => g.id === f.group_id);
+        const others = groups.filter(g => g.id !== f.group_id);
+        const t = MTYPES.find(x => x[0] === f.type);
+        const m = modal.data ? modal.data.machine : {name: f.name || 'Nowa maszyna', icon: t ? t[1] : 'bi-plus-lg', group: owner ? owner.name : '', type_name: t ? t[2].toLowerCase() : 'nowa maszyna'};
+        return `${wizHead(m)}
+            <div class="mw-form">
+                <label class="mw-fl"><span>Nazwa maszyny</span><input class="form-control" data-mf="name" maxlength="100" value="${esc(f.name)}" placeholder="np. Piec rotacyjny 2" autocomplete="off"></label>
+                <div class="mw-fl"><span>Rodzaj</span><div class="mw-filter">${MTYPES.map(([k, ic, l]) => chip(f.type === k, `data-mft="${k}"`, l, ic)).join('')}</div></div>
+                ${f.type === 'robot' ? `<div class="mw-fl"><span>Jak pracuje robot ?</span><div class="mw-filter">${RMODES.map(([k, l]) => chip(f.robot_mode === k, `data-mfr="${k}"`, l)).join('')}</div>
+                    ${f.robot_mode === 'collaboratif' ? `<label class="mw-in-l">Część czasu jednej osoby <input class="form-control mw-num" data-mf="operator_share" inputmode="decimal" value="${esc(f.operator_share)}"> <small class="at-sub">0,25 = 1 osoba obsługuje 4 coboty</small></label>` : ''}</div>` : ''}
+                ${CHAMBER.includes(f.type) ? `<label class="mw-fl"><span>Ile wózków mieści komora ?</span><input class="form-control mw-num" data-mf="capacity" inputmode="decimal" value="${esc(f.capacity)}" placeholder="np. 12"></label>` : ''}
+                <div class="mw-fl"><span>Grupa — do kogo należy maszyna</span><div class="mw-filter">${groups.map(g => chip(f.group_id === g.id, `data-mfg="${g.id}"`, g.name)).join('')}</div></div>
+                <div class="mw-fl"><span>Czy maszyna jest wspólna z innymi grupami ?</span><div class="mw-filter">
+                    ${chip(!f.shared, 'data-mfs="0"', `Nie — tylko ${owner ? owner.name : 'ta grupa'}`)}${chip(f.shared, 'data-mfs="1"', 'Tak, wspólna', 'bi-share')}</div>
+                    ${f.shared ? `<div class="mw-sub"><b>Które grupy też z niej korzystają ?</b><div class="mw-filter">${others.map(g => chip(f.share_groups.includes(g.id), `data-mfsg="${g.id}"`, g.name)).join('') || '<span class="at-sub">brak innych grup</span>'}</div>
+                        <div class="mc-note">Maszyna pokaże się w każdej z tych grup (Dane maszyn, tablet TRS grupy), pracuje na zmianach każdej z nich, a praca przy ich produktach liczy się ich zespołom.</div></div>` : ''}</div>
+            </div>
+            <div class="mw-foot"><button type="button" class="tt-link" data-close>Anuluj</button><span class="sp"></span>
+                <button type="button" class="kw-btn pri" data-wmsave ${modal.busy ? 'disabled' : ''}>${modal.busy ? '<span class="spinner-border spinner-border-sm"></span> ' : ''}${modal.id ? 'Zapisz' : 'Dodaj maszynę'} i dalej : produkty <i class="bi bi-arrow-right"></i></button></div>`;
+    }
+
     async function openWizard(id) {
         modal = {kind: 'wizard', id, step: 1, busy: true, data: null};
         render();
@@ -254,7 +320,7 @@
         const sel = d.products.filter(p => p.on).map(p => p.id);
         const vals = {};
         d.products.forEach(p => { if (p.on) vals[p.id] = {per_batch: fmtIn(p.per_batch), per_hour: fmtIn(p.per_hour), people: fmtIn(p.people)}; });
-        modal = {kind: 'wizard', id, step: 1, busy: false, data: d, sel, vals, filter: d.machine.group_id ? 'group' : 'all', q: '', result: null};
+        modal = {kind: 'wizard', id, step: 1, busy: false, data: d, sel, vals, filter: d.machine.group_id ? 'group' : 'all', q: '', result: null, form: formFrom(d.machine)};
         render();
     }
 
@@ -263,7 +329,7 @@
         const q = modal.q.trim().toLowerCase();
         return d.products.filter(p => {
             if (q) return p.name.toLowerCase().includes(q);
-            if (modal.filter === 'group') return p.group_id === d.machine.group_id || modal.sel.includes(p.id);
+            if (modal.filter === 'group') return (d.machine.group_ids || [d.machine.group_id]).includes(p.group_id) || modal.sel.includes(p.id);
             if (modal.filter === 'nodata') return !p.has_data || modal.sel.includes(p.id);
             if (modal.filter === 'plan') return p.in_plan || modal.sel.includes(p.id);
             return true;
@@ -271,23 +337,30 @@
     }
 
     function wizHead(m) {
-        const st = (n, l) => `<span class="${modal.step === n ? 'on' : (modal.step > n ? 'done' : '')}">${modal.step > n ? '<i class="bi bi-check2"></i> ' : ''}${n} · ${l}</span>`;
-        return `<div class="mw-steps">${st(1, 'Produkty')}<em>›</em>${st(2, 'Wsad i tempo')}<em>›</em>${st(3, 'Gotowe')}</div>
-            <div class="mw-head"><i class="big bi ${m.icon}"></i><div><b>${esc(m.name)}</b><small>${esc(m.group || 'bez grupy')} · ${esc(m.type_name)} · pojemność wg produktu${modal.step === 2 ? ` · zmiana ${nf(m.shift_h, 1)} h · wydajność ${nf(m.efficiency_pct)} %` : ''}</small></div></div>`;
+        const st = (n, l) => {
+            const cls = modal.step === n ? 'on' : (modal.step > n ? 'done' : '');
+            const inner = `${modal.step > n ? '<i class="bi bi-check2"></i> ' : ''}${n + 1} · ${l}`;
+            // « Maszyna » : powrót do danych maszyny (nazwa, grupa, wspólna) z kroków 1–2 istniejącej maszyny.
+            return n === 0 && modal.id && (modal.step === 1 || modal.step === 2) ? `<button type="button" class="${cls} mw-stepbtn" data-wstep="0" title="Zmień nazwę, rodzaj, grupę, wspólną">${inner} <i class="bi bi-pencil"></i></button>` : `<span class="${cls}">${inner}</span>`;
+        };
+        const shared = m.shared && m.shared.length ? ` · <span class="mw-sh"><i class="bi bi-share"></i> wspólna z : ${m.shared.map(esc).join(', ')}</span>` : '';
+        return `<div class="mw-steps">${st(0, 'Maszyna')}<em>›</em>${st(1, 'Produkty')}<em>›</em>${st(2, 'Wsad i tempo')}<em>›</em>${st(3, 'Gotowe')}</div>
+            <div class="mw-head"><i class="big bi ${m.icon}"></i><div><b>${esc(m.name)}</b><small>${esc(m.group || 'bez grupy')} · ${esc(m.type_name)}${modal.step === 0 ? '' : ' · pojemność wg produktu'}${shared}${modal.step === 2 ? ` · zmiana ${nf(m.shift_h, 1)} h · wydajność ${nf(m.efficiency_pct)} %` : ''}</small></div></div>`;
     }
 
     function wizStep1() {
         const d = modal.data;
         const m = d.machine;
-        const count = (f) => d.products.filter(p => f === 'group' ? p.group_id === m.group_id : (f === 'nodata' ? !p.has_data : (f === 'plan' ? p.in_plan : true))).length;
-        const chips = [['group', `Grupa ${m.group || ''}`], ['nodata', 'Bez danych'], ['plan', 'W planie tygodnia'], ['all', 'Wszystkie']].filter(([k]) => k !== 'group' || m.group_id)
+        const gids = m.group_ids || [m.group_id];
+        const count = (f) => d.products.filter(p => f === 'group' ? gids.includes(p.group_id) : (f === 'nodata' ? !p.has_data : (f === 'plan' ? p.in_plan : true))).length;
+        const chips = [['group', m.shared && m.shared.length ? `Grupy ${[m.group, ...m.shared].join(' + ')}` : `Grupa ${m.group || ''}`], ['nodata', 'Bez danych'], ['plan', 'W planie tygodnia'], ['all', 'Wszystkie']].filter(([k]) => k !== 'group' || m.group_id)
             .map(([k, l]) => `<button type="button" class="mw-chip ${modal.filter === k && !modal.q ? 'on' : ''}" data-wf="${k}">${esc(l)} (${count(k)})</button>`).join('');
         const list = wizProducts();
         const items = list.map(p => {
             const on = modal.sel.includes(p.id);
             const sub = p.on ? 'już na tej maszynie — zmiana w kroku 2' : (p.has_data ? 'już ma etapy : ' + p.others.slice(0, 3).join(', ') + (p.others.length > 3 ? '…' : '') : 'bez danych maszyn');
             return `<button type="button" class="mw-item ${on ? 'on' : ''}${p.on ? ' lock' : ''}" data-wsel="${p.id}" aria-pressed="${on}" ${p.on ? 'aria-disabled="true"' : ''}>
-                <span class="ck">${on ? '<i class="bi bi-check"></i>' : ''}</span><span class="nm">${esc(p.name)}<small>${esc(sub)}${p.group && p.group_id !== m.group_id ? ' · ' + esc(p.group) : ''}</small></span>
+                <span class="ck">${on ? '<i class="bi bi-check"></i>' : ''}</span><span class="nm">${esc(p.name)}<small>${esc(sub)}${p.group && (p.group_id !== m.group_id || (m.shared && m.shared.length)) ? ' · ' + esc(p.group) : ''}</small></span>
                 ${p.in_plan ? `<span class="mw-st ${p.has_data ? 'ok' : 'part'}">plan tyg.</span>` : '<span></span>'}</button>`;
         }).join('') || '<p class="at-sub m-2">Brak produktów — zmień filtr albo wyszukaj.</p>';
         return `${wizHead(m)}
@@ -352,7 +425,8 @@
 
     function wizHtml() {
         let body;
-        if (!modal.data) body = '<p class="at-sub m-3"><span class="spinner-border spinner-border-sm"></span> Ładowanie…</p>';
+        if (modal.step === 0) body = wizStep0();
+        else if (!modal.data) body = '<p class="at-sub m-3"><span class="spinner-border spinner-border-sm"></span> Ładowanie…</p>';
         else body = modal.step === 1 ? wizStep1() : (modal.step === 2 ? wizStep2() : wizStep3());
         return `<div class="fc-modal" data-modal><div class="fc-modal-box mc-modal-box mw-box" role="dialog" aria-modal="true" aria-label="Kreator maszyny">${body}</div></div>`;
     }
@@ -501,8 +575,23 @@
     app.addEventListener('click', async (e) => {
         const t = e.target;
         if (t.closest('[data-modal]')) {
-            if (t.closest('[data-close]') || (t.matches('[data-modal]') && !(modal && modal.kind === 'wizard' && modal.step === 2))) { modal = null; return render(); }
+            if (t.closest('[data-close]') || (t.matches('[data-modal]') && !(modal && modal.kind === 'wizard' && (modal.step === 2 || modal.step === 0)))) { modal = null; return render(); }
             if (modal && modal.kind === 'wizard') {
+                const f = modal.form;
+                const mt = t.closest('[data-mft]');
+                if (mt) { f.type = mt.dataset.mft; if (f.type !== 'robot') f.robot_mode = ''; return render(); }
+                const mr = t.closest('[data-mfr]');
+                if (mr) { f.robot_mode = mr.dataset.mfr; return render(); }
+                const mg = t.closest('[data-mfg]');
+                if (mg) { f.group_id = Number(mg.dataset.mfg); f.share_groups = f.share_groups.filter(x => x !== f.group_id); return render(); }
+                const ms = t.closest('[data-mfs]');
+                if (ms) { f.shared = ms.dataset.mfs === '1'; return render(); }
+                const msg = t.closest('[data-mfsg]');
+                if (msg) { const g = Number(msg.dataset.mfsg); f.share_groups = f.share_groups.includes(g) ? f.share_groups.filter(x => x !== g) : [...f.share_groups, g]; return render(); }
+                if (t.closest('[data-wmsave]')) return wizSaveMachine();
+                if (t.closest('[data-wstep]')) { modal.step = 0; return render(); }
+                const wn = t.closest('[data-wnew]');
+                if (wn) return openNewMachine(wn.dataset.wnew ? Number(wn.dataset.wnew) : null);
                 const wz = t.closest('[data-wiz]');
                 if (wz) return openWizard(Number(wz.dataset.wiz));
                 const ws = t.closest('[data-wsel]');
@@ -556,6 +645,8 @@
         if (tb) { tab = tb.dataset.tab; try { history.replaceState(null, '', location.search + '#tab=' + tab); } catch (x) { /* */ } return render(); }
         const wz = t.closest('[data-wiz]');
         if (wz) return openWizard(Number(wz.dataset.wiz));
+        const wn = t.closest('[data-wnew]');
+        if (wn) return openNewMachine(wn.dataset.wnew ? Number(wn.dataset.wnew) : null);
         const wk = t.closest('[data-week]');
         if (wk) { filters.date = wk.dataset.week; return load(); }
         if (t.closest('[data-shifts]')) { filters.shifts = []; return load(); }
@@ -578,6 +669,7 @@
     app.addEventListener('input', (e) => {
         const t = e.target;
         if (t.matches('[data-sim-qty]')) { sim.qty = t.value; return; }
+        if (modal && modal.kind === 'wizard' && t.matches('[data-mf]')) { modal.form[t.dataset.mf] = t.value; return; }
         if (modal && modal.kind === 'wizard' && t.matches('[data-wv]')) {
             const id = Number(t.dataset.wid);
             modal.vals[id] = modal.vals[id] || {};
