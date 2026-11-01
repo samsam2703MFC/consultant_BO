@@ -335,8 +335,23 @@ if ($mode !== '--unit') {
     $port = (int) substr((string) stream_socket_get_name($sock, false), strrpos((string) stream_socket_get_name($sock, false), ':') + 1);
     fclose($sock);
     $base = 'http://127.0.0.1:' . $port;
+    // Base : SQLite jetable, ou MySQL/MariaDB si HR_TEST_DSN est posée (HR_TEST_DB_USER, HR_TEST_DB_PASSWORD) —
+    // ses tables hr_dimona_* sont alors vidées d'abord.
+    $dsn = (string) (getenv('HR_TEST_DSN') ?: 'sqlite:' . $tmp . '/hr.sqlite');
+    $dbUser = (string) (getenv('HR_TEST_DB_USER') ?: '');
+    $dbPass = (string) (getenv('HR_TEST_DB_PASSWORD') ?: '');
+    $pdo = new PDO($dsn, $dbUser ?: null, $dbPass ?: null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $mysql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
+    if ($mysql) {
+        foreach ($pdo->query("SHOW TABLES LIKE 'hr\\_dimona\\_%'")->fetchAll(PDO::FETCH_COLUMN) as $t) {
+            $pdo->exec('DROP TABLE ' . $t);
+        }
+        echo "  (base MySQL : " . $pdo->query('SELECT VERSION()')->fetchColumn() . ")\n";
+    }
     $env = [
-        'HR_DB_DSN' => 'sqlite:' . $tmp . '/hr.sqlite',
+        'HR_DB_DSN' => $dsn,
+        'HR_DB_USER' => $dbUser,
+        'HR_DB_PASSWORD' => $dbPass,
         'HR_DEV_DIRECTORY' => $ROOT . '/tests/hr/fixtures/directory.json',
         'HR_PRIVATE_DIR' => $tmp . '/prive',
         'HR_CONSOLE_API_BASE' => '/webshop/api',
@@ -473,7 +488,6 @@ if ($mode !== '--unit') {
     [$c, $d7] = $call('POST', $api . '/declarations', ['type' => 'OUT', 'worker_id' => $w1['id'], 'end_date' => '2026-11-30']);
     verifie('OUT sur la période de l’IN', $c === 201 && ($d7['requestPayload']['dimonaOut']['periodId'] ?? 0) === $d1['dimonaPeriodId'] ?: true, json_encode($d7));
     // Le cron relit à l'échéance : on avance l'échéance dans la base, comme si le temps avait passé.
-    $pdo = new PDO('sqlite:' . $tmp . '/hr.sqlite');
     $cron = static function () use ($ROOT, $env, $tmp): string {
         $out = (string) shell_exec(implode(' ', array_map(static fn ($k, $v) => $k . '=' . escapeshellarg($v), array_keys($env), $env)) . ' ' . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/bin/hr_dimona_cron.php') . ' --duree=2 2>&1');
         return $out;
@@ -507,7 +521,8 @@ if ($mode !== '--unit') {
     $state = json_decode((string) file_get_contents($tmp . '/mock.json'), true);
     $clair = array_merge($clair, array_keys($state['tokens'] ?? []));
     $fuite = [];
-    foreach ($pdo->query("SELECT name FROM sqlite_master WHERE type='table'")->fetchAll(PDO::FETCH_COLUMN) as $tbl) {
+    $tables = $mysql ? $pdo->query("SHOW TABLES LIKE 'hr\\_dimona\\_%'")->fetchAll(PDO::FETCH_COLUMN) : $pdo->query("SELECT name FROM sqlite_master WHERE type='table'")->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($tables as $tbl) {
         foreach ($pdo->query('SELECT * FROM ' . $tbl)->fetchAll(PDO::FETCH_ASSOC) as $row) {
             foreach ($row as $col => $v) {
                 foreach ($clair as $s) {

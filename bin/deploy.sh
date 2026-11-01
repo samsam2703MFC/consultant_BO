@@ -189,8 +189,16 @@ chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
 # qui chiffre le profil des employés et les photos chiffrées de leur carte d'identité (src/profil_employe.php).
 # Perdre profil.key rend ces données illisibles : il se sauvegarde avec la base.
 mkdir -p /var/lib/consulant_bo/prive/cartes
+# La clé maître du module RH / Dimona (01/11/2026) : tirée une fois, ici, pour qu'elle appartienne à www-data
+# (l'API et le cron du module tournent sous www-data ; une clé créée par root leur serait illisible). Elle
+# chiffre les clés privées des certificats, les NISS et les jetons ONSS : elle se sauvegarde avec la base.
+# HR_DIMONA_MASTER_KEY, si elle est fournie, prime sur ce fichier.
+if [[ ! -s /var/lib/consulant_bo/prive/hr_dimona.key ]]; then
+  ( umask 077; head -c 32 /dev/urandom | base64 > /var/lib/consulant_bo/prive/hr_dimona.key )
+fi
 chown -R www-data:www-data /var/lib/consulant_bo/prive
 chmod 700 /var/lib/consulant_bo/prive /var/lib/consulant_bo/prive/cartes
+chmod 600 /var/lib/consulant_bo/prive/hr_dimona.key
 
 # Visuels des campagnes de l'assistant : même règle que les photos plano.
 mkdir -p "$TARGET_DIR/public/assistant/uploads"

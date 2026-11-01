@@ -26,6 +26,17 @@ final class CockpitDirectory implements Directory
         if ($this->shops !== null) {
             return $this->shops;
         }
+        // Gardée dix minutes (hr_dimona_meta) : la liste des boutiques change rarement, la page la demande à
+        // chaque chargement.
+        try {
+            $c = \Hr\Support\Database::row('SELECT v FROM hr_dimona_meta WHERE k = ?', ['shops_cache']);
+            $j = $c !== null ? json_decode((string) $c['v'], true) : null;
+            if (is_array($j) && ($j['at'] ?? 0) > time() - 600 && is_array($j['shops'] ?? null) && $j['shops'] !== []) {
+                return $this->shops = $j['shops'];
+            }
+        } catch (\Throwable $e) {
+            // pas de cache : on relit
+        }
         $out = [];
         if (class_exists('PanelApi') && \PanelApi::configured()) {
             $r = \PanelApi::get('/shops');
@@ -42,6 +53,14 @@ final class CockpitDirectory implements Directory
                 }
             } catch (\Throwable $e) {
                 // ni API ni table : la liste reste vide, l'écran affiche les numéros
+            }
+        }
+        if ($out !== []) {
+            try {
+                \Hr\Support\Database::exec('DELETE FROM hr_dimona_meta WHERE k = ?', ['shops_cache']);
+                \Hr\Support\Database::insert('hr_dimona_meta', ['k' => 'shops_cache', 'v' => (string) json_encode(['at' => time(), 'shops' => $out], JSON_UNESCAPED_UNICODE)]);
+            } catch (\Throwable $e) {
+                // le cache n'est qu'un raccourci
             }
         }
         return $this->shops = $out;

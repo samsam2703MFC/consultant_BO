@@ -7,7 +7,8 @@ declare(strict_types=1);
  *
  * Production : la base du cockpit (Db::pdo()), l'annuaire du panel (PanelApi) et le profil chiffré des
  * employés (src/profil_employe.php). Développement local seulement (php -S ou CLI) : HR_DB_DSN (ex.
- * sqlite:/tmp/hr.sqlite) et HR_DEV_DIRECTORY (annuaire JSON) remplacent la base et l'annuaire.
+ * sqlite:/tmp/hr.sqlite, ou mysql:… avec HR_DB_USER / HR_DB_PASSWORD) et HR_DEV_DIRECTORY (annuaire JSON)
+ * remplacent la base et l'annuaire.
  */
 
 use Hr\App;
@@ -43,7 +44,7 @@ foreach (['panel_api.php', 'profil_employe.php'] as $f) {
 return (static function (): App {
     $local = PHP_SAPI === 'cli' || PHP_SAPI === 'cli-server';
     $dsn = $local ? (string) (getenv('HR_DB_DSN') ?: '') : '';
-    Database::set($dsn !== '' ? new PDO($dsn) : Db::pdo());
+    Database::set($dsn !== '' ? new PDO($dsn, (string) (getenv('HR_DB_USER') ?: '') ?: null, (string) (getenv('HR_DB_PASSWORD') ?: '') ?: null) : Db::pdo());
 
     $file = Db::config()['hr'] ?? [];
     $config = Config::load(is_array($file) ? $file : []);
