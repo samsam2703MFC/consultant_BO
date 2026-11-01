@@ -58,9 +58,11 @@ final class MachineDataService
         }
         $onMachine = [];
         $incomplete = [];
+        $batch = []; // pojemność wsadu wg produktu (etap karty), nie jedna liczba maszyny
         foreach ($byItem as $itemId => $steps) foreach ($steps as $s) {
             $w = (int) $s['id_workstation'];
             $onMachine[$w][$itemId] = true;
+            if ((float) $s['capacity_per_pass'] > 0) $batch[$w][] = (float) $s['capacity_per_pass'];
             if ((int) $s['fixed_time_s'] === 0 && (float) $s['variable_time_s'] == 0.0) $incomplete[$w][$itemId] = true;
         }
         $known = array_flip(array_map(fn($p) => (int) $p['id'], $products));
@@ -77,7 +79,7 @@ final class MachineDataService
             $rows = [];
             foreach ($ws as $w) {
                 if ((int) ($w['id_group'] ?? 0) !== $g['id']) continue;
-                $rows[] = $this->machineRow($w, count($onMachine[(int) $w['id']] ?? []), count($incomplete[(int) $w['id']] ?? []));
+                $rows[] = $this->machineRow($w, count($onMachine[(int) $w['id']] ?? []), count($incomplete[(int) $w['id']] ?? []), $batch[(int) $w['id']] ?? []);
             }
             foreach ($rows as $r) {
                 if ($r['products'] > 0) $machinesWith++;
@@ -87,7 +89,7 @@ final class MachineDataService
         }
         // Maszyny bez grupy (np. wspólne) — osobna sekcja.
         $loose = [];
-        foreach ($ws as $w) if ($w['id_group'] === null) $loose[] = $this->machineRow($w, count($onMachine[(int) $w['id']] ?? []), count($incomplete[(int) $w['id']] ?? []));
+        foreach ($ws as $w) if ($w['id_group'] === null) $loose[] = $this->machineRow($w, count($onMachine[(int) $w['id']] ?? []), count($incomplete[(int) $w['id']] ?? []), $batch[(int) $w['id']] ?? []);
         foreach ($loose as $r) { if ($r['products'] > 0) $machinesWith++; else $candidates[] = ['id' => $r['id'], 'key' => [1, self::TYPE_ORDER[$r['type']] ?? 9, 99, $r['name']]]; }
         if ($loose) $out[] = ['id' => null, 'name' => 'Bez grupy', 'products' => 0, 'products_with' => 0, 'machines' => $loose];
         usort($candidates, fn($a, $b) => $a['key'] <=> $b['key']);
@@ -225,14 +227,16 @@ final class MachineDataService
         $w = $this->repo->workstation($id);
         if (!$w) return null;
         return ['id' => $id, 'name' => $w['name_pl'], 'group' => $w['group_name'], 'icon' => self::ICONS[$w['type']] ?? 'bi-gear',
-            'capacity' => (float) $w['capacity_per_pass'], 'unit' => CapacityService::UNITS[$w['capacity_unit']] ?? $w['capacity_unit']];
+            'type_name' => self::TYPE_NAMES[$w['type']] ?? $w['type'], 'capacity' => (float) $w['capacity_per_pass'], 'unit' => CapacityService::UNITS[$w['capacity_unit']] ?? $w['capacity_unit']];
     }
 
-    private function machineRow(array $w, int $products, int $incomplete): array
+    /** @param list<float> $batch pojemność wsadu produktów na tej maszynie */
+    private function machineRow(array $w, int $products, int $incomplete, array $batch = []): array
     {
         return ['id' => (int) $w['id'], 'name' => $w['name_pl'], 'type' => $w['type'], 'type_name' => self::TYPE_NAMES[$w['type']] ?? $w['type'],
             'icon' => self::ICONS[$w['type']] ?? 'bi-gear', 'capacity' => (float) $w['capacity_per_pass'],
             'unit' => CapacityService::UNITS[$w['capacity_unit']] ?? $w['capacity_unit'], 'products' => $products, 'incomplete' => $incomplete,
+            'batch_min' => $batch ? min($batch) : null, 'batch_max' => $batch ? max($batch) : null,
             'state' => $products === 0 ? 'todo' : ($incomplete > 0 ? 'part' : 'ok')];
     }
 

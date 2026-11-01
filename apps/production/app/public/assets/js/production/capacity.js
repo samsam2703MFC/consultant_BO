@@ -200,16 +200,23 @@
         return m.state === 'part' ? `<span class="mw-st part"><i class="bi bi-dash-circle"></i> ${n} · ${m.incomplete} bez tempa</span>` : `<span class="mw-st ok"><i class="bi bi-check2"></i> ${n}</span>`;
     }
 
+    // Pojemność maszyny zależy od produktu : zakres z etapów kart (np. 216–432 szt. / wsad).
+    function mdBatch(m) {
+        if (m.batch_min === null || m.batch_min === undefined) return '<span class="at-sub">—</span>';
+        const r = m.batch_min === m.batch_max ? nf(m.batch_min) : `${nf(m.batch_min)}–${nf(m.batch_max)}`;
+        return `${r} <small class="at-sub">/ wsad</small>`;
+    }
+
     function mdTable() {
         const full = !RO();
         const rows = MD.groups.map(g => `<tr class="grp"><td colspan="5">${esc(g.name)}${g.products ? ` <small>${g.products} ${pl(g.products, 'produkt', 'produkty', 'produktów')} · ${g.products_with} z danymi</small>` : ''}</td></tr>`
             + (g.machines.length ? g.machines.map(m => `<tr class="${m.state === 'todo' && m.id === MD.next ? 'hot' : ''}"><td><span class="mc-name"><i class="bi ${m.icon}"></i><span><b>${esc(m.name)}</b><small>${esc(m.type_name)}</small></span></span></td>
-                <td>${nf(m.capacity, 1)} ${esc(m.unit)}</td><td class="r">${m.products}</td><td>${mdState(m)}</td>
+                <td class="r">${mdBatch(m)}</td><td class="r">${m.products}</td><td>${mdState(m)}</td>
                 <td class="r mw-btns">${full ? `<button type="button" class="kw-btn kw-sm" data-edit="${m.id}" title="Wsad, cykl, TRS, zmiany"><i class="bi bi-sliders"></i><span class="d-none d-xl-inline"> Ustawienia</span></button>` : ''}
                     <button type="button" class="kw-btn kw-sm ${m.state === 'todo' ? 'pri' : ''}" data-wiz="${m.id}"><i class="bi bi-magic"></i> ${m.state === 'todo' ? 'Uzupełnij' : 'Zmień'}</button></td></tr>`).join('')
                 : `<tr><td colspan="4"><span class="mw-st todo"><i class="bi bi-exclamation-circle"></i> brak maszyn w grupie ${esc(g.name)}</span> <small class="at-sub">dodaj maszyny (np. piec, mikser), potem przypisz produkty</small></td>
                     <td class="r">${full ? `<a class="kw-btn kw-sm" href="${esc(at.root)}/workshop/workstations"><i class="bi bi-plus-lg"></i> Dodaj maszynę</a>` : ''}</td></tr>`)).join('');
-        return `<div class="mc-card"><div class="table-responsive"><table class="mc-tbl"><thead><tr><th>Maszyna</th><th>Wsad</th><th class="r">Produkty</th><th>Dane</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+        return `<div class="mc-card"><div class="table-responsive"><table class="mc-tbl"><thead><tr><th>Maszyna</th><th class="r">Wsad wg produktu</th><th class="r">Produkty</th><th>Dane</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
             <p class="mc-note">Kliknij « Uzupełnij » : zaznacz produkty robione na maszynie, potem wpisz ile sztuk w jednym wsadzie, ile wsadów na godzinę i ile osób przy wsadzie. Dane trafiają do etapów kart produkcyjnych.${full ? ' Nowa maszyna : <a href="' + esc(at.root) + '/workshop/workstations">Stanowiska</a>.' : ''}</p></div>`;
     }
 
@@ -266,7 +273,7 @@
     function wizHead(m) {
         const st = (n, l) => `<span class="${modal.step === n ? 'on' : (modal.step > n ? 'done' : '')}">${modal.step > n ? '<i class="bi bi-check2"></i> ' : ''}${n} · ${l}</span>`;
         return `<div class="mw-steps">${st(1, 'Produkty')}<em>›</em>${st(2, 'Wsad i tempo')}<em>›</em>${st(3, 'Gotowe')}</div>
-            <div class="mw-head"><i class="big bi ${m.icon}"></i><div><b>${esc(m.name)}</b><small>${esc(m.group || 'bez grupy')} · ${esc(m.type_name)} · wsad ${nf(m.capacity, 1)} ${esc(m.unit)}${modal.step === 2 ? ` · zmiana ${nf(m.shift_h, 1)} h · wydajność ${nf(m.efficiency_pct)} %` : ''}</small></div></div>`;
+            <div class="mw-head"><i class="big bi ${m.icon}"></i><div><b>${esc(m.name)}</b><small>${esc(m.group || 'bez grupy')} · ${esc(m.type_name)} · pojemność wg produktu${modal.step === 2 ? ` · zmiana ${nf(m.shift_h, 1)} h · wydajność ${nf(m.efficiency_pct)} %` : ''}</small></div></div>`;
     }
 
     function wizStep1() {
@@ -314,7 +321,8 @@
             <td class="r">${inp(p, 'per_batch', esc(p.unit), '?')}</td><td class="r">${inp(p, 'per_hour', '× / h', '?')}</td><td class="r">${inp(p, 'people', 'os.', '1')}</td>
             <td class="r mw-res ${c.ok ? 'ok' : 'none'}" data-wh>${c.hour}</td><td class="r mw-res ${c.ok ? 'ok' : 'none'}" data-ws>${c.shift}</td></tr>`; }).join('');
         return `${wizHead(d.machine)}
-            <div class="mw-hint"><b>Sztuk w 1 wsadzie</b> = ile wchodzi na maszynę na raz (np. 18 blach × 12 bagietek = 216).
+            <div class="mw-hint">Pojemność maszyny zależy od produktu : wpisz ją osobno dla każdego produktu.
+                <b>Sztuk w 1 wsadzie</b> = ile tego produktu wchodzi na maszynę na raz (np. 18 blach × 12 bagietek = 216).
                 <b>Wsadów na godzinę</b> = ile razy na godzinę maszyna się napełnia (np. 25 min + 5 min załadunku = 30 min → 2).
                 <b>Osób przy wsadzie</b> = ile osób pracuje przy tym wsadzie (puste = 1).</div>
             <div class="table-responsive"><table class="mw-tbl"><thead><tr><th>Produkt</th><th class="r">Sztuk w 1 wsadzie</th>
@@ -337,7 +345,7 @@
                 ${r.empty ? `<br>${r.empty} ${pl(r.empty, 'produkt', 'produkty', 'produktów')} bez danych — wróć później.` : ''}
                 ${r.load_pct !== null && r.load_pct !== undefined ? `<br>Obciążenie maszyny w tym tygodniu : <b>${nf(r.load_pct)} %</b>` : ''}</div></div>
             ${nx ? `<div class="mw-lab">Następna maszyna bez danych</div>
-                <div class="mw-next"><i class="mi bi ${nx.icon}"></i><div><b>${esc(nx.name)}</b><div class="mc-note">${esc(nx.group || '')} · wsad ${nf(nx.capacity, 1)} ${esc(nx.unit)}</div></div>
+                <div class="mw-next"><i class="mi bi ${nx.icon}"></i><div><b>${esc(nx.name)}</b><div class="mc-note">${esc(nx.group || '')} · ${esc(nx.type_name || '')}</div></div>
                     <button type="button" class="kw-btn pri" data-wiz="${nx.id}">Dalej <i class="bi bi-arrow-right"></i></button></div>` : '<div class="mw-lab">Każda maszyna ma już produkty.</div>'}
             <div class="mw-foot"><span class="sp"></span><button type="button" class="kw-btn" data-close>Wróć do listy maszyn</button></div>`;
     }

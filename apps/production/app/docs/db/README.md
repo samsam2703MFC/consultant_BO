@@ -250,7 +250,8 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Clic sur une machine → mini-assistant en 3 étapes : 1. produits faits sur la machine (filtres groupe / bez danych /
   w planie / wszystkie, recherche ; les produits déjà sur la machine restent cochés) ; 2. pour chaque produit : sztuk w
   jednym wsadzie, wsadów na godzinę, **osób przy wsadzie** (calcul en direct : durée du wsad, pièces et cartons à l'heure ;
-  « Kopiuj do pustych ») ; 3. résumé (créés / modifiés), charge de la machine, machine suivante.
+  « Kopiuj do pustych ») ; la capacité est celle de la machine **pour ce produit** (pas un chiffre unique par
+  machine : colonne « Wsad wg produktu » = plage des wsad des produits liés) ; 3. résumé (créés / modifiés), charge de la machine, machine suivante.
 - Écriture : `n_prod_routing_step` du produit (aucune nouvelle table). Étape existante sur la machine → mise à jour ; sinon
   nouvelle étape en fin de karta (`step_no` = max + 1, nom = nom de la machine). `capacity_per_pass` = sztuk w wsadzie,
   `fixed_time_s` = 3600 ÷ wsadów na godzinę (arrondi), `variable_time_s` = 0, `operators_required` = osób (1 par défaut

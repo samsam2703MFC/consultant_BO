@@ -104,7 +104,12 @@ try {
     expectMd($r['updated'] === 1 && (float) $b['capacity_per_pass'] == 200 && (int) $b['fixed_time_s'] === 1200 && (float) $b['variable_time_s'] == 0 && (float) $b['operators_required'] == 1.5, 'formierka : bagietka zmieniona, 1,5 osoby');
     $log = $pdo->query("SELECT before_json, after_json FROM n_prod_audit_log WHERE entity_id = 2 AND action = 'update'")->fetch();
     expectMd($log && str_contains((string) $log['before_json'], '600') && str_contains((string) $log['after_json'], 'kreator maszyny'), 'dziennik : przed / po');
-    expectMd($s->overview()['tiles']['products_with'] === 3, 'po zapisie : 3 produkty z danymi');
+    $o = $s->overview();
+    expectMd($o['tiles']['products_with'] === 3, 'po zapisie : 3 produkty z danymi');
+    $byId = [];
+    foreach ($o['groups'] as $g) foreach ($g['machines'] as $m) $byId[$m['id']] = $m;
+    expectMd($byId[5]['batch_min'] == 200 && $byId[5]['batch_max'] == 200, 'wsad wg produktu (zakres z etapów) ' . json_encode($byId[5]));
+    foreach ($byId as $m) if ($m['products'] === 0) expectMd($m['batch_min'] === null, 'maszyna bez produktów : brak wsadu');
 
     // --- Refus ------------------------------------------------------------------------------------------------------------------
     foreach ([
