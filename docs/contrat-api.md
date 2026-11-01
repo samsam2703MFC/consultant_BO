@@ -1129,7 +1129,8 @@ critère d'admission `manuel` — ou un `poste` que le panel n'a pas ; `409` pou
 Manuel opératoire (1er nov. 2026) : `GET /formation/manuel` rend `{parties: [preouverture, ouverture, operationnel, formation],
 procedures{id: {partie | null, videos[{url, titre}], majLe}}, formationsDefaut{FO: partie}, formations{FO: partie}}` (réglages du
 cockpit ; sans ligne, la partie d'une procédure se déduit de la section du panel, celle d'une formation de src/data/manuel_formations.json) ;
-`PATCH /formation/manuel/formation/{FO} {partie | null}` (null = répartition par défaut) ; `PATCH /formation/manuel/procedure/{id} {partie?: cle | null, videos?: [{url, titre}]}` (clé absente = inchangée ; https
+`PATCH /formation/manuel/formation/{FO} {partie?: cle | null, supports?: [{url, titre, etape: 0-9 | null}]}` (null = répartition par défaut ;
+clé absente = inchangée ; supports https, vingt au plus) ; `GET /formation/manuel` rend aussi `supports{FO: [...]}` ; `PATCH /formation/manuel/procedure/{id} {partie?: cle | null, videos?: [{url, titre}]}` (clé absente = inchangée ; https
 seulement, dix vidéos au plus ; 422 sinon). Rien n'est écrit au panel.
 `GET /formation/carte` (carte des métiers, à garder en cache côté écran : `_cache=300`) rend `{chemin{metiers[{id, nom, cle, libelle,
 maitrise, maitriseCompetences, niveaux[{id, nom, nouvelles, total, avecFormation, personnes}]}], tronc[], entrepreneur[], reseau[{id, nom}]},

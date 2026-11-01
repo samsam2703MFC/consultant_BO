@@ -238,6 +238,12 @@ $parPartie = array_count_values($defFo);
 verifie('formations : les quatre parties sont garnies', count($parPartie) === 4 && min($parPartie) >= 1, json_encode($parPartie));
 verifie('formations : le parcours du candidat franchisé avant l’ouverture, la stratégie d’ouverture à l’ouverture', $defFo['FO-31'] === 'preouverture' && $defFo['FO-37'] === 'preouverture' && $defFo['FO-38'] === 'ouverture' && $defFo['FO-01'] === 'operationnel' && $defFo['FO-39'] === 'formation');
 verifie('formations : fichier absent = aucune répartition (rien d’inventé)', mnFormationsDefaut('/nulle/part.json') === []);
+$sup = mnSupports([['url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'titre' => ' Vidéo ', 'etape' => 0], ['url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'etape' => 0],
+    ['url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'etape' => null], ['url' => 'https://x.be/guide.pdf', 'etape' => '3'], ['url' => 'https://x.be/a.pdf', 'etape' => 12],
+    ['url' => 'javascript:alert(1)'], ['url' => 'http://x.be/b.pdf'], 'https://x.be/c.pdf']);
+verifie('supports : https seulement, une même adresse par étape une seule fois, étape 0 à 9 sinon la formation entière',
+    array_map(static fn ($x) => [$x['url'], $x['etape']], $sup) === [['https://www.youtube.com/watch?v=aqz-KE-bpKQ', 0], ['https://www.youtube.com/watch?v=aqz-KE-bpKQ', null], ['https://x.be/guide.pdf', 3], ['https://x.be/a.pdf', null]], json_encode($sup));
+verifie('supports : titre rogné, vingt au plus', $sup[0]['titre'] === 'Vidéo' && count(mnSupports(array_map(static fn ($i) => ['url' => 'https://x.be/' . $i . '.pdf'], range(1, 30)))) === 20);
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko === 0 ? 0 : 1);

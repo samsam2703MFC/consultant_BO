@@ -345,6 +345,27 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
   « ↺ Par défaut »), table `ceo_manuel_formation` ; la liste des formations a une colonne « Partie du
   manuel ». Une formation du panel sans code FO se lit dans Formation continue (« Autres formations du
   panel »).
+- **La fiche d'une formation dans le manuel = « une fiche à lire »** (proposition A des maquettes
+  `docs/maquettes/manuel-formation/`, choisie le 1er nov. 2026, « avec au clic une fenêtre avec les
+  détails, vidéo, matériel didactique, PDF intégré ») : `#/manuel/formation/FO-xx` — code et rubrique
+  du manuel (`S.v25.manuel`, envoyé par `/formation/v25`), titre, la phrase de la rubrique, quatre
+  repères (fréquence, nombre d'étapes, qui la suit, qui la valide — le rôle, sans le nom), « Ouvrir la
+  procédure » (la première procédure du panel rattachée à ses compétences ; sinon la référence MO §),
+  « Imprimer », puis les sections numérotées : Ce que vous saurez faire · Au programme (bloc du plan
+  de formation) · Matériel didactique · Comment on la valide · En boutique, ensuite (checklist du bloc)
+  · Pour qui (obligatoire ; recommandée en pointillés). Une section vide n'est pas affichée.
+  **Au toucher, une fenêtre de détail** (`S.modale.type = 'mn'`, `fenetreManuel`) : une compétence
+  (description, vérification, procédures, supports), le programme (contenu, indicateurs, formations
+  du même bloc), un support (son lecteur), une étape (sa description du panel, « Validée par » sur
+  l'étape de validation, ses supports). Grande fenêtre (980 px), plein écran sous 760 px, ✕ et Échap.
+  **Supports** : rangés dans le cockpit (`ceo_manuel_formation.supports`, JSON `[{url, titre, etape}]`,
+  https, vingt au plus, `etape` = index de l'étape ou null pour la formation entière), plus les
+  ressources du panel rattachées à ses compétences et leur lien de support. Lecteurs : vidéos (comme les
+  procédures), PDF (cadre + « Ouvrir en plein écran », l'iPad n'affiche qu'une page dans un cadre),
+  Google Docs / Slides / Sheets et fichiers Drive en aperçu (`/preview` : le document doit être partagé
+  à « toute personne disposant du lien »), autre adresse = un bouton « Ouvrir ». Ajout et retrait par un
+  consultant (hors mode tablette) : « Matériel didactique », adresse, titre, étape. La fiche du
+  référentiel (`#/formations/FO-xx`) ne change pas.
 - **Vidéos** : en tête de la procédure, avant son texte. Celles ajoutées dans le cockpit (adresse +
   titre, dix au plus, https seulement) puis celles que le panel cite déjà (liens du contenu et des
   sections, pièces jointes vidéo). Lues dans la page : YouTube (youtube-nocookie), Vimeo (avec le
@@ -362,7 +383,7 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
   820 × 1180 et 768 × 1024 en tactile : aucun chevauchement, aucune cible sous 40 px, aucun
   débordement horizontal. La page mobile des parcours s'élargit à 720 px sur tablette.
 - Routes : `GET /formation/manuel` → `{parties[], procedures{id: {partie, videos[{url, titre}], majLe}}, formationsDefaut{FO: partie}, formations{FO: partie}}` ;
-  `PATCH /formation/manuel/formation/{FO} {partie | null}` (null = répartition par défaut) ;
+  `PATCH /formation/manuel/formation/{FO} {partie?: cle | null, supports?: [{url, titre, etape}]}` (null = répartition par défaut ; clé absente = inchangée) ;
   `PATCH /formation/manuel/procedure/{id} {partie?: cle | null, videos?: [{url, titre}]}` (clé absente =
   inchangée ; partie inconnue ou adresse refusée = 422).
 - Traductions : `lang_code` n'est pas appliqué par le panel aujourd'hui ; le module lit le français.
