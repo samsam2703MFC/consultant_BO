@@ -308,6 +308,16 @@ Piège rencontré : la méthode ne pouvait pas s'appeler `caCharge()` — la
 Centrale d'achat en a déjà une, et la **dernière** définition d'une classe
 écrase la première, sans erreur. D'où `carteCharge()`.
 
+## Module RH · Dimona (/hr)
+
+Les franchisés déclarent les Dimona de leur personnel (entrée, sortie, modification, annulation) à l'ONSS,
+par l'API REST Dimona v2, depuis **https://185.180.206.46/hr/** : une page autonome dans le design system
+Marketing, tout en assistants (« Connexion ONSS », « Engager »), avec la trace de chaque déclaration et de
+son résultat. Identité : le compte de la console franchisé (le siège lit, ne déclare pas). Simulation seule
+tant que la production n'est pas ouverte ; un certificat par société. Code `src/hr/`, page `public/hr/`,
+API `/api/v1/erp/dimona/*`, tables `hr_dimona_*`, tests `php tests/hr/run.php`. Tout est dans
+**`docs/dimona.md`**.
+
 ## Dashboard magasin
 
 Une page à part, `public/dashboard/?shop=4&vue=mois&date=…`, hors SPA : cinq
