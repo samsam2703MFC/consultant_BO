@@ -751,3 +751,45 @@ button.filter.confirm__danger {
 .pc-row strong, .ph-list strong, .ph-now-title, .pc-sheet__box h3 { font-weight: 600; }
 .ph-now .chip { border-radius: 6px; }
 .ph-cta button, .choice-card strong { font-weight: 600; }
+
+/* Nouveau parcours › Pour qui ? — les candidats franchisés du CRM (31/10/2026). */
+.pc-row > span.pc-tag:last-child {
+  flex: 0 0 auto;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(63, 122, 82, 0.1);
+  color: #2d6a43;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pc-row strong, .pc-row .muted {
+  overflow-wrap: anywhere;
+}
+.pc-libre {
+  margin: 10px 0 0;
+}
+.pc-lien {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.pc-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.pc-aide {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+}

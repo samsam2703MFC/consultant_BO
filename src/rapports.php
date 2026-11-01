@@ -2384,11 +2384,24 @@ function ep_rapports_cron(): array
     $recurrence = 'module absent';
     try { if (function_exists('rpCron')) { $recurrence = rpCron(); } }
     catch (Throwable $eRp) { $recurrence = 'échec — ' . $eRp->getMessage(); }
+    // Vérification, lot 1 (31/10/2026) : un lot de recettes lues, la liste des recettes à corriger remise à jour.
+    $verification = 'module absent';
+    try { if (function_exists('vfCron')) { $verification = vfCron(); } }
+    catch (Throwable $eV) { $verification = 'échec — ' . $eV->getMessage(); }
+    // Vérification, lot 2 : les journées closes de l'audit des flux qui manquent, par lots.
+    try { if (function_exists('vxCron')) { $verification .= ' · flux : ' . vxCron(); } }
+    catch (Throwable $eX) { $verification .= ' · flux : échec — ' . $eX->getMessage(); }
+    // Lot 4 : les semaines d'inventaire (matières ↔ recettes) pas encore calculées, et leur historique.
+    try { if (function_exists('vmCron')) { $verification .= ' · matières : ' . vmCron(); } }
+    catch (Throwable $eM4) { $verification .= ' · matières : échec — ' . $eM4->getMessage(); }
+    // Lot 5 : les tickets du mois (CA net) et la base quotidienne du chiffre d'affaires.
+    try { if (function_exists('vcCron')) { $verification .= ' · CA : ' . vcCron(); } }
+    catch (Throwable $eC5) { $verification .= ' · CA : échec — ' . $eC5->getMessage(); }
     // Le Résultat d'aujourd'hui se recalcule au même battement : le premier écran du matin le trouve prêt.
     $resultat = 'module absent';
     try { if (function_exists('exPrechauffer')) { $resultat = exPrechauffer(); } }
     catch (Throwable $eR) { $resultat = 'échec — ' . $eR->getMessage(); }
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'recurrence' => $recurrence, 'resultat' => $resultat];
+    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'recurrence' => $recurrence, 'verification' => $verification, 'resultat' => $resultat];
 }
 
 /**

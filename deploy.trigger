@@ -1235,3 +1235,18 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T16:16:02Z [237][238] Tarty : własne stanowisko ; zastępstwo zadań (Kontrola przyjęć : Jakość → Kierownik)
 2026-10-31T18:28:18Z scouting : l'écran « où ouvrir » quitte le cockpit, il vit dans le CRM (Étude de faisabilité) ; cron OSM retiré, relecture par le CRM
 2026-10-31T18:37:51Z [239] Sesja pod awatarem : administrator ogląda ERP jak stanowisko
+2026-10-31T18:43:48Z vérification : recettes à corriger (lot 1) — #/verification/recettes, neuf règles, couverture, registre ceo_verif_recette, lecture des recettes par le cron horaire
+2026-10-31T18:55:56Z vérification : formules et promotions — interrupteur devant la liste, règle « formule sans ses produits » (produits à prix réduit sur le ticket)
+2026-10-31T19:12:17Z vérification lot 2 : audit des flux (#/verification/flux) et fuites par magasin (#/verification/fuites), mesuré ou estimé ; fiche recette au clic
+2026-10-31 19:25 — liste des candidats franchisés du CRM (Nouveau parcours › Pour qui ?)
+2026-10-31T19:26:42Z vérification lot 3 : base quotidienne ceo_verif_jour, écran Évolution (#/verification/evolution), semaine par semaine et avant / maintenant
+2026-10-31T19:32:07Z vérification lot 3 : évolution — non expliqué jugé à sa distance à zéro, poubelle non déclarée exclue de la comparaison, axe sous zéro
+2026-10-31T19:52:56Z vérification lot 4 : matières ↔ recettes (#/verification/matieres), causes des écarts, catégories, historique ceo_verif_inventaire
+2026-10-31T20:01:55Z vérification lot 5 : chiffre d'affaires (#/verification/ca), caisse face au P&L, aux redevances et à l'attendu, jours à regarder, base ceo_verif_ca
+2026-10-31T20:05:40Z vérification lot 5 : corrections après encaissement lues (sales-corrections), jours à regarder
+2026-10-31T20:06:00Z vérification lot 5 : cache des corrections renouvelé
+2026-10-31T20:07:26Z vérification lot 5 : attendu par la matière sans les semaines aux entrées incomplètes
+2026-10-31T20:21:46Z vérification : mouvements d'un produit ou d'une matière sur une période (#/verification/mouvements)
+2026-10-31T20:33:52Z vérification : mouvements d'un produit, un tableau par semaine (colonnes datées, + et −)
+2026-10-31T20:39:03Z inventaires-dans-verification
+2026-10-31T20:41:26Z vérification : mouvements d'un produit, colonnes inversées, semaine par semaine avec l'écart

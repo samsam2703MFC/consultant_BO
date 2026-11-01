@@ -1304,7 +1304,12 @@ ou un écart à la relecture : `502 {ok: false, error, appels}`.
 Parcours compétences (`/formation/parcours/`, 31/10/2026) : `GET /parcours/destinations?employe=&shop=` (sans employé : un
 candidat) rend la personne et chaque destination `{cle, titre, sous, groupe, competences[{id, nom, acquise}], formations[{fo, nom,
 evaluations, competences, acquise}], aFaire, facultatives, admission[{cle, type: poste|fo|manuel, libelle, source: panel|referentiel, ok, preuve,
-manque[]}], admis}` ; `POST /parcours {employe?, shop?, nom?, cible, rythme, acquis[], suivies[]}`
+manque[]}], admis}` ; `GET /parcours/candidats` (les dossiers en cours du CRM atelier-espace-candidat, `crm_candidates`, lus en lecture seule
+dans la base partagée : `{crm: {table, colonnes[], etapes} | null, candidats[{ref, nom, statut (étape du pipeline), personne:
+candidat|contact|null, zone, le, maj, parcours: {id, statut} | null}], total, parType: {candidat, contact}}` — ni e-mail ni
+téléphone, dossiers arrêtés écartés ; `crm: null` : pas de CRM dans cette base ; `?frais=1` recherche la table à nouveau) ;
+`POST /parcours {employe?, shop?, nom?, candidat?, cible, rythme, acquis[], suivies[]}` (`candidat` : la `ref` du CRM — le nom est relu
+dans sa fiche, `404` si elle n'existe pas ou si le dossier est arrêté ; un parcours actif du même candidat est arrêté)
 crée le parcours et rend `{parcours, etapes[]}` ; `GET /parcours?id=`, `GET /parcours/liste` ; `PATCH /parcours/{id}/etape/{FO}
 {evaluation, fait}` (la dernière valide la formation et coche ses compétences dans le panel : `panel {ok, cochees, attendues}`) ;
 `POST /parcours/{id}/acquis/{cid}` (confirmer une compétence déclarée) ; `PATCH /parcours/{id}/admission/{cle} {fait}` (valider un
@@ -3185,6 +3190,262 @@ gardée en IndexedDB ; chaque écriture porte un `client_id`, est appliquée à
 l'écran, mise en file et rejouée au retour du réseau ; les photos sont
 réduites sur l'appareil (bord long 1600 px, JPEG 0,7, EXIF retiré) avant
 d'entrer dans la file.
+
+
+### `/verification/recettes` — les recettes douteuses ou manquantes (Vérification, lot 1, 31/10/2026)
+
+Plan : `docs/plan-verification.md` § 3.5 ; maquette : `docs/maquettes/verification/e.png` ; code :
+`src/verification.php`, écran `#/verification/recettes` (`verification-vals.js`, `verification-tpl.js`,
+`verification.css`) ; tests : `php bin/tests_verification.php`.
+
+`GET /verification/recettes[?rafraichir=1]` applique dix règles, magasin par magasin, aux produits vendus des
+trente derniers jours (aujourd'hui exclu) et rend la liste classée par CA concerné. Lecture seule : rien n'est écrit
+au panel. L'analyse est gardée une heure (`ceo_app_setting` `vfAnalyse`) ; `rafraichir=1` la recalcule et lit
+jusqu'à 16 recettes de plus (`VF_BUDGET_DEMANDE`). Le cron horaire (`/rapports/cron`, champ `verification`) en
+lit 120 par passage (`VF_BUDGET_CRON`) : le panel ne tient que quatre lectures de front.
+
+Sources :
+
+- les ventes : les tickets gravés par la moisson (`svP{magasin}:{jour}`, `p[heure][produit ou produit:portion] =
+  [nom, quantité, CA TTC, coût]`), jamais relus ici ; une portion compte pour son produit ;
+- `/shops/{id}/products/available` : `id_recipe`, `recipe_cost_net`, `portion_price_net` (sinon le TTC ÷ TVA),
+  `is_divisible`, `portion_size`, la catégorie — prix de la pièce entière = prix de la portion ÷ `portion_size` ;
+- `/shops/{id}/recipes/{recette}/cost`, lu UNE fois par recette (dans le magasin qui la vend le plus) et gardé
+  24 h (`vfRec:{recette}`) : `elements` (sous-recettes dépliées sur 4 niveaux), `required_quantity`, `unit_name`,
+  `price_net`, `calculated_req_price_net`, `yield_quantity`, `cost_net`, `cost_complete` ;
+- `/shops/{id}/materials` (par `mfMatieresApi`) : `base_unit_price_net` de chaque matière dans chaque magasin ;
+- `/shops/{id}/material-inventory`, gardé 6 h (`vfStock:{magasin}`) : les matières en stock (`current_quantity`
+  > 0, `exist_in_inventory`), pour les matières jamais en recette.
+
+Les règles (`VF_REGLES`) :
+
+| Code | Nom | Se déclenche quand |
+|---|---|---|
+| `sans` | Pas de recette | le produit vendu n'a pas d'`id_recipe` (ou n'est dans aucun products/available) |
+| `form` | Formule sans ses produits | une formule ou promotion (voir plus bas) vendue sans recette : un seul article sur le ticket, ses produits n'y sortent pas et leur matière quitte le stock sans vente. Ils doivent y figurer, chacun à prix réduit (promotion `BUNDLE_PROMOTION` du panel : `bundle_price`, articles) — demande du 31/10/2026 |
+| `vide` | Recette vide | la recette lue n'a aucune ligne |
+| `prix` | Matière sans prix | une matière de la recette n'a pas de prix (ou pas de ligne) dans `/materials` d'un magasin qui vend le produit |
+| `inv` | Coût invraisemblable | `recipe_cost_net` du magasin à 0, ou ≥ prix HT, ou sous `production.coutRatioMin` (5 %) du prix HT |
+| `reseau` | Coût hors norme du réseau | plus de 40 % d'écart à la médiane des AUTRES magasins (deux au moins) |
+| `unite` | Unité suspecte | coût hors des bornes ET une ligne pèse plus de la moitié du coût ET ×1000 ou ÷1000 de cette ligne ramène la pièce entre 5 % et 80 % du prix HT |
+| `rend` | Rendement à zéro | `yield_quantity` vaut 0 (vide = 1, comme partout dans le cockpit) |
+| `port` | Portion sans fraction | `is_divisible` = 1 et `portion_size` vide, nul ou ≥ 1 |
+| `orph` | Matière jamais en recette | en stock, employée par aucune recette vendue — jugée seulement quand 95 % des recettes sont lues ; emballages, hygiène et entretien écartés (`VF_HORS_RECETTE`) |
+
+**Formules et promotions** (31/10/2026 : gardées dans la liste, un interrupteur devant la liste les masque) : la
+catégorie du produit ou le groupe de sa catégorie contient « bundle », « promo » ou « formule » (products/available,
+sinon `panelCatalogueComplet` pour les produits qu'aucun magasin ne propose plus) ; ou le nom a la forme d'une offre
+(`VF_FORMULE_NOM` : « 2 Cookies », « 2x Merveilleux », « 5 +1 | … », « Sandwich (10 + 5) », « Promotie … »). Chaque
+ligne porte `formule` ; `couverture.horsFormules` est la même couverture sans elles, `couverture.formules` leur CA.
+
+Une même pièce ne porte que l'explication la plus précise : `vide`, `unite` ou `prix` effacent `inv` et `reseau` ;
+`inv` efface `reseau`. La couverture compte, dans le CA des trente jours, ce qui passe par une pièce sans aucune règle
+(une recette pas encore lue compte, mais `caARelire` le dit).
+
+```json
+{ "lignes": [ { "cle": "prix:2500003", "regle": "prix", "nomRegle": "Matière sans prix", "pid": 2500003, "rid": 580, "mid": null,
+                "nom": "Merveilleux", "cat": "Entremets - Individuel", "detail": "2 matières sans prix à Sombreffe : Sucre glace, Blancs d’œufs.",
+                "ca": 1980.0, "magasins": ["Sombreffe"], "shops": ["5"], "depuis": "2026-09-20", "formule": false },
+              { "cle": "orph:m950", "regle": "orph", "pid": null, "mid": 950, "nom": "Sucre perlé", "ca": 0, "valeur": 11.2, "…": "…" } ],
+  "total": 37,
+  "couverture": { "caTotal": 126850.0, "caFiable": 118730.0, "caManquant": 8120.0, "caARelire": 0, "pct": 93.6, "partTop10": 72, "produits": 35,
+                  "horsFormules": { "caTotal": 118076.0, "caFiable": 109956.0, "pct": 93.1, "…": "…" }, "formules": { "ca": 8774.0, "produits": 1 } },
+  "parRegle": { "sans": 8, "form": 1, "vide": 3, "prix": 8, "inv": 5, "reseau": 4, "unite": 3, "rend": 2, "port": 2, "orph": 2 },
+  "regles": [ { "code": "sans", "nom": "Pas de recette", "explication": "…" } ],
+  "recettes": { "vendues": 312, "lues": 312, "orphJugees": true, "aLire": 0, "luesCePassage": 0, "complet": true },
+  "corrigees": { "n": 4, "depuis": "2026-10-10" },
+  "magasins": [ { "id": "4", "nom": "Halle", "joursLus": 30 } ],
+  "periode": { "du": "2026-10-01", "au": "2026-10-30", "jours": 30 },
+  "seuils": { "coutRatioMin": 0.05, "ecartReseau": 40, "partUnite": 0.5 },
+  "lienRecette": "", "lu": "2026-10-31T18:40:00+01:00", "cache": { "le": "…", "age": 120 }, "source": "…" }
+```
+
+- Sans compte panel : `{ "indispo": true, "motif": "…", "lignes": [], "total": 0 }`.
+- `lienRecette` : le réglage `verifLienRecette` (`ceo_app_setting`), une adresse du panel avec `{rid}` — vide par
+  défaut, l'écran montre alors « recette 580 » ; posé, il devient « Ouvrir au panel ↗ ».
+- Le registre `ceo_verif_recette` (créé au premier appel) : `cle`, `regle`, `product_id`, `material_id`, `nom`,
+  `detail`, `ca_30j`, `magasins`, `premier_vu`, `dernier_vu`, `resolu_le`. Un signalement qui disparaît d'une analyse
+  COMPLÈTE (toutes les recettes lues) est noté résolu ce jour-là ; `corrigees` compte ceux des trente derniers jours.
+- La liste est pour le CEO seul (décision du 31/10/2026) : l'écran l'exporte en CSV, il ne l'envoie pas.
+
+`GET /verification/recettes/sonde?shop=4[&pid=]` (lecture seule, pour mesurer) : les clés d'une ligne de
+products/available et celle du produit demandé, sa recette telle que `/cost` la rend (trois premières lignes), une
+ligne de `/materials` et de `/material-inventory`, et la dernière erreur du panel.
+
+
+`GET /verification/recettes/fiche?pid=[&shop=]` (31/10/2026) : la recette d'un produit, ouverte au clic sur son nom dans
+la liste — `recette` (`nom`, `rendement`, `total`, `luDans`, `lignes[]` : `mid`, `nom`, `q`, `u`, `cout`, `sous`, `part`,
+`prixMagasins` {magasin : prix | null (sans prix) | "inconnu"}), `magasins[]` (`cout`, `prixHt`, `coef`, `food`,
+`divisible`, `part`), `signalements[]` (les lignes de la liste pour ce produit), `lienPanel`. Lecture seule. Le lien
+mène à la page produit du panel, `/panel/products/{pid}` (mesuré : la route existe, `/panel/recipes/{id}` rend 404) ;
+le réglage `verifLienRecette` (avec `{pid}`) le remplace. La correction depuis le cockpit attend la mesure du format
+de `PATCH /recipes/{id}` : la sonde rend désormais `recetteBrute` (`/recipes/{id}`) et `produitBrut` (`/products/{id}`).
+
+### `/verification/flux` et `/verification/fuites` — l'audit des flux et les fuites par magasin (Vérification, lot 2, 31/10/2026)
+
+Code : `src/verification_flux.php` ; écrans `#/verification/flux` et `#/verification/fuites`
+(`verification-flux-vals.js`, `verification-flux-tpl.js`) ; tests : `php bin/tests_verification.php`.
+
+Une journée d'un magasin, produit par produit, est celle de la **clôture de la Production** : `ep_production_flux_cloture`
+est appelée telle quelle (les mêmes chiffres que l'écran Clôture). Gravée par jour (`ceo_app_setting` `vxJ:{shop}:{jour}` :
+`l[]` = `p` produit, `n` nom, `c` catégorie, `g` groupe, `x` prix, `k` se garde, `v` durée de vie, `s0` gardé d'hier,
+`so` sorti, `ok` cuissons validées, `vd` vendu, `jd` poubelle déclarée, `r` invendu gardé, `co` compté ; `enr` clôture
+enregistrée, `cv`/`cu` cuissons validées / à valider), avec la signature de `ppFait` et des deux `pfCloture` : une
+validation faite après coup la fait recalculer ; les sept derniers jours se recalculent une fois par jour. Le cron horaire
+(`/rapports/cron`, champ `verification` « flux : … ») remplit les cinq dernières semaines par lots de 40 journées ; un
+écran calcule au plus 20 secondes et dit ce qui reste (`manquants`).
+
+```
+disponible = gardé d'hier + sorti (cuissons validées, sinon le plan)
+non expliqué = disponible − vendu − poubelle déclarée − invendu gardé      (au prix de vente ; en % du disponible)
+```
+
+**Mesuré ou estimé.** Une pièce est mesurée quand toutes ses cuissons du jour sont validées. `mesure` = la part du
+disponible mesurée ; sous 50 % (`VX_MESURE_MIN`), le verdict est « Non mesuré » et l'écart est un **écart au plan** (gris),
+pas une fuite. Relevé du 31/10/2026 : aucun magasin ne valide ses cuissons ni n'enregistre sa clôture. Verdicts sur une
+période mesurée : « À regarder » (non expliqué > 6 %), « Poubelle haute » (> 9 %), « Vendu plus que produit » (écart
+négatif au-delà de 3 % : cuissons ou entrées non saisies), « À suivre » (> 3 %), « Tout s'explique ».
+
+`GET /verification/flux?vue=jour|semaine|mois&date=AAAA-MM-JJ[&shop=]` : semaine = lundi → dimanche, mois = 1er → dernier
+jour, l'un et l'autre arrêtés à hier ; le jour peut être aujourd'hui (relu toutes les dix minutes). Une lecture (`reseau`,
+chaque magasin, chaque jour, chaque catégorie, chaque produit) porte : `pcs` et `eur` (`garde0`, `prod`, `dispo`, `vendu`,
+`poubelle`, `invendu`, `nonExpl`), `taux` (en % du disponible), `tons`, `mesure`, `verdict` {`ton`, `nom`, `pourquoi`},
+`jours`, `cuissonsValidees`, `cuissons`, `clotures`, `comptes`. Réponse : `magasins[]` (avec `parJour[]`), `reseau`,
+`manquants`, `calculesCePassage`, `seuils` ; avec `shop` : `categories[]` ; avec `shop` et `vue=jour` : `produits[]` et
+`journee` {`clotureEnregistree`, `cuissonsValidees`, `cuissons`, `poubelleLue`}.
+
+`GET /verification/fuites?vue=&date=` : `magasins[]`, chacun avec `categories[]` dans **le même ordre pour tous**
+(groupe, puis nom ; une catégorie que le magasin ne vend pas reste, vide), chaque catégorie avec `produits[]` ; la même
+lecture que ci-dessus. Gardé d'hier et gardé pour demain sont les sommes des journées : sorti = gardé d'hier + produit −
+gardé pour demain, delta = sorti − ventes − poubelle = la somme des non-expliqués des jours. `matrice[]` : catégories ×
+magasins (et réseau).
+
+### `/verification/evolution` — la base quotidienne, semaine par semaine (Vérification, lot 3, 31/10/2026)
+
+Code : `src/verification_base.php` ; écran `#/verification/evolution` (`verification-evol-vals.js`, `-tpl.js`) ;
+maquette `docs/maquettes/verification/f.png` ; tests `bin/tests_verification.php` (section lot 3). Lecture seule.
+
+**La table `ceo_verif_jour`** (clé `shop_id`, `jour`) — des agrégats calculés par le cockpit, jamais une copie des
+sources :
+- l'audit des flux de la journée (lot 2) : `dispo_eur`, `vendu_eur`, `poubelle_eur`, `invendu_eur`, `nonexpl_eur`,
+  `mesure_eur` (la part du disponible venue de cuissons validées), au prix de vente ; `dispo_pcs` … `nonexpl_pcs` ;
+  `lignes`, `cuissons_validees`, `cuissons`, `cloture`, `comptes`, `flux_le`. Écrit par `vxJour` dès qu'une journée est
+  calculée, et par `vjRattrape` (cron horaire, `vxCron`) pour les journées gravées absentes ou plus récentes que la ligne ;
+- la couverture des recettes (lot 1) : `recettes_ca_total`, `recettes_ca_fiable`, `recettes_signalees`, `recettes_le` —
+  la photo du jour, par magasin, prise par `vfCron` quand toutes les recettes sont lues.
+
+`GET /verification/evolution[?semaines=12]` (4 à 26) : semaines ISO, la dernière étant celle d'hier.
+- `semaines[]` : `cle` (`2026-44`), `num` (`S44`), `du`, `au` ;
+- `magasins[]` : `id`, `nom`, `series` et `comparaison` ; `reseau` : `series` et `comparaison` ;
+- `series` : `poubelle`, `nonExpl`, `invendu`, `mesure` (en % du disponible, somme des journées sur somme des
+  disponibles), `recettes` (CA fiable / CA, en %), `estime` (vrai quand moins de 50 % du disponible est mesuré : produit =
+  plan) et `jours` — un tableau par indicateur, une valeur (ou `null`) par semaine ;
+- `comparaison` : par indicateur, `null` (moins de deux semaines renseignées) ou {`avant`, `apres`, `ecart` (points),
+  `sens` : `mieux` | `moins bien` | `stable` (moins de 0,3 point), `semaines` : le nombre de semaines moyennées de chaque
+  côté, au plus 4} — moins de poubelle, de non expliqué et d'invendu, c'est mieux ; plus de mesuré et de recettes fiables,
+  aussi ;
+- `indicateurs[]` {`code`, `nom`, `hautMieux`}, `base` {`lignes`, `premier`, `dernier`, `fluxLe`, `recettesLe`,
+  `magasins`, [`erreur`]}, `seuils` {`nonExpl` [3, 6], `poubelle` [6, 9], `mesureMin` 50}, `lu`, `source`.
+
+### `/verification/matieres` — matières ↔ recettes (Vérification, lot 4, 31/10/2026)
+
+Code : `src/verification_matieres.php` (moteur : `invEcart` de `src/inventaires.php`) ; écran `#/verification/matieres`
+(`verification-matieres-vals.js`, `-tpl.js`) ; maquettes `c.png` et `g-matieres.png` ; tests `bin/tests_verification.php`
+(section lot 4). Lecture seule.
+
+Une **semaine** est une paire d'inventaires **consécutifs relevés en direct** (`r…` : le cockpit relève le stock du panel
+toutes les cinq minutes ; la copie locale s'arrête à la mi-juillet) ; un inventaire partiel (moins de la moitié des
+matières d'un comptage habituel) ne borne pas de semaine. Calculée une fois (≈ 5 s, `invEcart`), gardée sous
+`vmP:{shop}:{de}:{a}` quand ses tickets sont complets, et écrite dans **`ceo_verif_inventaire`** (clé `shop_id`, `de`, `a` ;
+`de_at`, `a_at`, `jours`, `debut_eur`, `entrees_eur`, `fin_eur`, `sorties_eur`, `ventes_eur`, `poubelle_eur`,
+`sorti_pos_eur`, `couvert_eur`, `manquant_eur`, `excedent_eur`, `matieres`, `calcule_le`). Le cron horaire (`vmCron`)
+calcule les semaines manquantes (45 s au plus) ; la route calcule à la demande dans 25 s.
+
+Par matière : consommé réel `s` = début + entré (commandes validées à la réception) − fin ; expliqué `e` = ventes ×
+recette aplatie + poubelle déclarée × recette ; écart = `s − e` (quantité, % de `s`, € au prix d'achat moyen HTVA).
+**Cause** (`vmCause`, dans l'ordre) : `recette` si un ordre de grandeur sépare `s` et `e` (≥ 6) ; `tolerance` sous le
+seuil (`verifTolerances` : `{unite: {pce: 3, g: 8, ml: 8}, categorie: {…}}`) ou pour une pièce / moins de 5 € ; `entree`
+si `s ≤ 0` ou `e > s` (stock monté sans commande validée, ou recette surdosée) ; `recette` si `e = 0` ou si un produit
+qui l'emploie est dans « Recettes à corriger » ; `poubelle` si rien de jeté déclaré ; sinon `horsCaisse`.
+**Matière expliquée** = Σ min(e, s) ÷ Σ s sur les matières sorties (€) ; seuils 3 % / 6 % d'écart.
+
+`GET /verification/matieres` (réseau) : `magasins[]` {`id`, `nom`, `dernierInventaire`, `ageInventaire`,
+`inventaireEnRetard` (> 8 jours), `semaines`, `aCalculer`, `de`, `a`, `jours`, `lecture` {`totaux`, `verdict`,
+`attribution`, `categories`, `sansEntree`}}, `reseau` (les magasins lisibles), `reseauSans`, `matrice[]` (catégories ×
+magasins, même ordre), `tolerances`, `seuils`, `causes`.
+`GET /verification/matieres?shop=&semaines=1|4[&de=&a=]` : `semaines[]` {`de`, `a`, `deAt`, `aAt`, `jours`}, `periode`,
+`lecture` {`totaux` (`debut`, `entrees`, `fin`, `sorties`, `ventes`, `poubelle`, `explique`, `ecart`, `manquant`,
+`excedent`, `explication`, `ecartPct`, `ton`), `verdict`, `attribution` {`manque`[], `depasse`[]} ({`code`, `nom`, `eur`,
+`n`, `exemples`}), `categories[]` (avec `matieres[]`), `matieres[]` ({…, `ecartPct`, `ecartEur`, `tolerance`, `cause`,
+`pourquoi`, `produits`}), `sansEntree`, `nEntreeManquante`}, `sansRecette[]`, `caSansRecette`, `horsInventaire`, `notes`.
+
+L'Évolution (`/verification/evolution`) gagne l'indicateur `matiere` : Σ `couvert_eur` ÷ Σ `sorti_pos_eur` de
+`ceo_verif_inventaire`, rangé à la semaine de l'inventaire de fin.
+
+### `/verification/ca` — le chiffre d'affaires (Vérification, lot 5, 31/10/2026)
+
+Code : `src/verification_ca.php` ; écran `#/verification/ca` (`verification-ca-vals.js`, `-tpl.js`) ; maquette `d.png` ;
+tests `bin/tests_verification.php` (section lot 5). Lecture seule.
+
+**La caisse fait référence** : les tickets du panel, jour par jour (`caNet{magasin}:{jour}` : `b` TTC après remise, `t`
+TVA, `n` tickets — le relevé du CA net, `cnMois`, lu dans 20 s à la demande, chaque heure par le cron). Se lisent en
+écart (montant, % de la caisse, ton : ≤ 1 % vert, ≤ 4 % orange) :
+- **P&L** : `/consultant/shops/{id}/pnl/daily` (`revenue`, TTC), sommé sur les jours où la caisse est lue (gardé
+  `vcPnl:{shop}:{mois}`, 24 h pour un mois clos, 1 h sinon) ;
+- **redevances** : la base de calcul du Fonds (`fondsRoyaltiesCalcul` : `sales-kpis` × taux de la fiche), une fois le mois
+  lu en entier, avec le dû (`vcRed:{mois}`, 1 h) ;
+- **attendu par la matière** : sur les semaines de `ceo_verif_inventaire` closes dans le mois, à entrées validées et
+  complètes (excédent « vendu sans être sorti » sous le quart des ventes),
+  R = (consommé − poubelle) ÷ ventes, au coût ; attendu = caisse × R ; écart = caisse ÷ attendu − 1.
+
+À part : `sansProduit` (lignes de ticket sans produit, `svP…['sp']` type `ligne`), `remises` (remises sur le ticket
+entier), `corrections` ([nombre, € TTC] des corrections de ventes après encaissement du mois — mesuré le 31/10 :
+`/shops/{id}/sales-corrections` rend `items[]` {`correction_number`, `status`, `original_insert_timestamp`, `gross_delta`,
+`tax_delta`, `net_delta`, `created_at`, `cancelled_at`, `employee_name`} et ignore le filtre de dates, le mois se choisit
+sur `created_at`, les annulées écartées ; chacune devient un jour à regarder), `anomalies` (toujours `null` :
+`/panel/sales-anomalies` répond 403 « Shop context required » au compte consultant). **Jours à regarder** : P&L ≠ caisse de 20 € ou plus,
+lignes sans produit ≥ 30 € (ou trois lignes), remises sur le ticket entier ≥ 30 €, correction après encaissement.
+
+`GET /verification/ca[?mois=AAAA-MM][&shop=]` (le mois d'hier par défaut) : `mois`, `du`, `au`, `enCours`, `aLire`,
+`magasins[]` {`id`, `nom`, `caisse` {`ttc`, `ht`, `tva`, `tickets`, `joursLus`, `jours`, `complet`}, `pnl`, `redevances`
+(+ `active`, `du`), `attendu` (+ `semaines`), `matiere`, `recettesFiables`, `sansProduit` {`eur`, `n`}, `remises`,
+`corrections`, `anomalies`, `verdict`, `joursARegarder[]` {`date`, `ton`, `eur`, `type` pnl|divers|remise, `texte`},
+`nJoursARegarder`}, `reseau`, `shopJours` (le magasin des jours à regarder : demandé, ou le premier à regarder),
+`historique[]` (le réseau mois par mois depuis août : `caisse`, `pnl`, `attendu`, `recettes`, `complet`), `seuils`.
+`GET /verification/ca/sonde?shop=&mois=` : la forme brute des routes de corrections, d'anomalies et de rapports.
+
+**La base quotidienne du CA** : `ceo_verif_ca` (clé `shop_id`, `jour` ; `caisse_ttc`, `caisse_tva`, `tickets`, `pnl`,
+`sans_produit_eur`, `sans_produit_n`, `remises_ticket_eur`, `calcule_le`), écrite par le cron (`vcCron`) pour chaque jour
+clos du mois en cours (et du précédent les cinq premiers jours).
+
+### `/verification/mouvements` — les mouvements d'un produit ou d'une matière sur une période (31/10/2026)
+
+Demande du 31/10 : « pouvoir prendre un produit et avoir tous les mouvements pendant une période ». Code :
+`src/verification_mouvements.php` ; écran `#/verification/mouvements` (`verification-mouvements-vals.js`, `-tpl.js`) ;
+tests `bin/tests_verification.php`. Lecture seule. Un clic sur une matière de « Matières ↔ recettes » l'ouvre ici, sur
+la même semaine d'inventaire.
+
+`GET /verification/mouvements/liste?shop=` : `magasins[]`, `produits[]` {`id`, `nom`, `cat`, `q` (vendus en 30 jours)}
+— ceux du relevé des tickets et des journées de l'audit des flux —, `matieres[]` {`id`, `nom`, `cat`, `unite`, `n`} —
+celles du relevé du stock (`ceo_stock_releve`) ; gardé une heure (`vmoListe:{shop}`).
+
+`GET /verification/mouvements?shop=&p=ID&du=&au=` (un **produit**, neuf semaines au plus ; par défaut la semaine d'hier et la précédente, du lundi) : `jours[]`
+{`date`, `calcule`, `auPlan`, `garde0`, `prod`, `mesure` (cuissons validées), `dispo`, `vendu`, `ca`, `poubelle`, `garde`,
+`compte`, `nonExpl`, `heures` {h: pièces}} — les journées gravées de l'audit des flux (`vxJ:`, calculées dans 15 s si
+elles manquent) et les tickets heure par heure (`svP`, portions ramenées à la pièce) ; `totaux` ; `matieres[]` (la recette
+aplatie : `parPiece`, `theorique` = (vendu + poubelle) × recette, `mouvements[]`, et la fiche de stock jour par jour `jours[]` / `totaux` comme pour une matière — consommation de tous les produits qui l'emploient) ; `journal[]` {`date`, `h` (matin, 07h…,
+05:01, soir), `type` (garde0, prod, vente, poubelle, garde, nonExpl, stock:livraison|entree|inventaire|effacement|correction),
+`q`, `texte`}, trié dans l'ordre du jour.
+
+`GET /verification/mouvements?shop=&m=ID&du=&au=` (une **matière**) : `jours[]` {`date`, `stockMatin`, `livre` (livraisons validées), `entree` (à la main), `corrige`, `ventes`, `poubelle` (× recette),
+`inventaire` {`compte`, `avant`, `ecart`}, `theorique`, `stockSoir`, `mouvements[]`}, `totaux` {`stockDebut`, `livre`,
+`corrige`, `inventaires`, `ecartInventaires`, `theorique`, `stockFin`}, `produits[]` (ceux qui l'emploient, vendus ou
+jetés : `parPiece`, `vendu`, `poubelle`, `consomme`), `journal[]`. Un mouvement relevé {`at`, `type`, `avant`, `apres`,
+`delta`} : une rafale montante est une livraison validée, une rafale où des quantités baissent un inventaire ; un
+inventaire qui suit une remise à zéro se lit face au solde effacé (ce que le panel attendait) ; un mouvement isolé est une
+entrée ou une correction à la main.
+
+L'écran (demandes du 31/10 : un tableau par semaine, puis « inverser les colonnes pour voir les écarts entre les semaines ») montre **une colonne par mouvement** (la vitrine, puis le stock de chaque matière) : « Semaine par semaine », une ligne par semaine avec, sous chaque chiffre, l'écart à la semaine d'avant ; puis « Jour par jour », une ligne par jour et un total par semaine. + ce qui entre, − ce qui sort. Produit : gardé d'hier (le matin), + produit (« plan » si la cuisson n'est pas validée), − vendu (l'heure par heure au survol), − poubelle déclarée, − gardé pour demain, = non expliqué ; puis le stock du panel de chaque matière de sa recette. Matière : stock du matin, + livraison validée, + entrée à la main, +/− correction, +/− inventaire (écart au stock attendu, compté), − ventes × recette, − poubelle × recette, = stock du soir. Le total d'une semaine somme les flux et reprend le stock du premier matin et du dernier soir.
 
 ## 2. Mapping base de données → écran → champ
 

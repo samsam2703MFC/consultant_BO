@@ -48,6 +48,12 @@ require __DIR__ . '/../../src/stats_ventes.php';
 require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
 require __DIR__ . '/../../src/inventaires.php';
+require __DIR__ . '/../../src/verification.php';
+require __DIR__ . '/../../src/verification_flux.php';
+require __DIR__ . '/../../src/verification_base.php';
+require __DIR__ . '/../../src/verification_matieres.php';
+require __DIR__ . '/../../src/verification_ca.php';
+require __DIR__ . '/../../src/verification_mouvements.php';
 require __DIR__ . '/../../src/notes_jour.php';
 require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
@@ -434,6 +440,8 @@ function route(string $method, string $path): mixed
             // Parcours compétences (public/formation/parcours/) : l'assistant et la frise de chaque personne.
             $path === '/formation/carte'               => ep_formation_carte(),
             $path === '/parcours/destinations'         => ep_parcours_destinations(),
+            // Les candidats franchisés du CRM (atelier-espace-candidat), lus dans la base partagée.
+            $path === '/parcours/candidats'            => ep_parcours_candidats(),
             $path === '/parcours', $path === '/parcours/liste' => ep_parcours(),
             $path === '/tablette/book'                 => ep_tablette_book(),
             // L'accueil de la tablette : CA et vente additionnelle de la semaine et du mois face à l'objectif.
@@ -476,6 +484,20 @@ function route(string $method, string $path): mixed
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
             $path === '/stock/inventaires/sonde'      => ep_stock_inventaires_sonde(),
             $path === '/stock/inventaires'            => ep_stock_inventaires(),
+            // Vérification, lot 1 (31/10/2026) : les recettes douteuses ou manquantes.
+            $path === '/verification/recettes'        => ep_verification_recettes(),
+            $path === '/verification/recettes/sonde'  => ep_verification_sonde(),
+            $path === '/verification/recettes/fiche'  => ep_verification_fiche(),
+            // Vérification, lot 2 (31/10/2026) : l'audit des flux et les fuites par magasin.
+            $path === '/verification/flux'            => ep_verification_flux(),
+            $path === '/verification/fuites'          => ep_verification_fuites(),
+            // Vérification, lot 3 (31/10/2026) : la base quotidienne, semaine par semaine.
+            $path === '/verification/evolution'       => ep_verification_evolution(),
+            $path === '/verification/matieres'        => ep_verification_matieres(),
+            $path === '/verification/ca'              => ep_verification_ca(),
+            $path === '/verification/ca/sonde'        => ep_verification_ca_sonde(),
+            $path === '/verification/mouvements'      => ep_verification_mouvements(),
+            $path === '/verification/mouvements/liste' => ep_verification_mouvements_liste(),
             $path === '/stock/inventaires/ecart'      => ep_stock_inventaires_ecart(),
             $path === '/stock/inventaires/releve'     => ep_stock_inventaires_releve(),
             $path === '/ventes/reseau'                => ep_ventes_reseau(),
