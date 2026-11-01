@@ -4713,6 +4713,13 @@ dossier privé). Sous le QR, un code à six chiffres pour une caméra qui ne mar
 | POST | `/ventes/equipe/pointages/valider` | le cockpit | `{id, refuser?}` — valide un départ déclaré (ou le refuse : il redevient « non pointé »). Au journal. |
 | GET / POST | `/pointage/bornes?shop=` / `/pointage/bornes` | le cockpit | La liste des bornes (sans jeton) ; `{shop, nom}` crée une borne et rend son `jeton` une seule fois (gardé haché). Au journal. |
 | POST | `/pointage/bornes/retirer` | le cockpit | `{id}` — le lien ne marche plus. Au journal. |
+| POST | `/pointage/borne/pointer` | la caisse (sa clé), avant la session | `{b, emp}` — la caisse pointe une personne dont ELLE a vérifié le PIN (le PIN ne quitte pas la caisse) : l'arrivée ou le départ au magasin de la clé, mêmes règles que l'app, `par = pin`. Rend `{sens, pointage, nom}` ; 422 `{motif: trop_tot, a_partir_de}` ; 403 pour le lien d'un écran ; 404 clé inconnue ou retirée ; 400 sans `emp`. |
+
+**La caisse** (01/11/2026, Sam : « le prompt pour Szymon, le dev du POS ») : une borne a une `sorte` — `ecran` (le
+lien de la page, visible sur la tablette : QR seulement) ou `caisse` (une clé gardée dans la configuration de la
+caisse : QR, et pointage au PIN). La page Pointages crée l'une ou l'autre. `GET /pointage/borne` et
+`POST /pointage/borne/pointer` répondent aux autres adresses (CORS `*`, `OPTIONS` → 204) : la clé voyage dans la
+requête, jamais dans un cookie. La consigne pour la caisse : `docs/consignes/caisse-pointage-szymon.md` (en anglais).
 
 Côté app : `GET|POST /pointage` (la caméra : BarcodeDetector, sinon jsQR 1.4.0 servi par l'app), `GET /me/pointages`
 (la semaine face au planning), `POST /me/pointage/depart` ; la carte de l'Accueil. Côté cockpit : la page

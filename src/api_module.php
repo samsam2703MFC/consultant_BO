@@ -71,6 +71,7 @@ function apiModInventaire(): array
                     ['m' => 'POST', 'r' => '/ventes/moi/pointage/depart', 'dit' => 'Un départ oublié, dit par la personne (à valider au cockpit)', 'pages' => ['app']],
                     ['m' => 'POST', 'r' => '/ventes/equipe/pointages/valider', 'dit' => 'Valide ou refuse un départ déclaré', 'pages' => ['admin']],
                     ['m' => 'POST', 'r' => '/pointage/bornes', 'dit' => 'Crée une borne : son lien n’est montré qu’une fois', 'pages' => ['admin']],
+                    ['m' => 'POST', 'r' => '/pointage/borne/pointer', 'dit' => 'La caisse pointe une personne dont elle a vérifié le PIN (clé de caisse seule)', 'pages' => ['app']],
                     ['m' => 'POST', 'r' => '/pointage/bornes/retirer', 'dit' => 'Retire une borne : son lien ne marche plus', 'pages' => ['admin']],
                     ['m' => 'POST', 'r' => '/ventes/moi/profil/carte', 'dit' => 'Dépose une photo de la carte d’identité (chiffrée)', 'pages' => ['app']],
                 ]],
