@@ -214,9 +214,25 @@ try {
         echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
+    // La caisse peut être une page web d'une autre adresse : les deux routes de la borne s'ouvrent à elle (CORS). La clé
+    // voyage dans la requête, jamais dans un cookie : rien d'autre ne s'ouvre.
+    if ($path === '/pointage/borne' || $path === '/pointage/borne/pointer') {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Accept');
+        header('Access-Control-Max-Age: 600');
+        if ($method === 'OPTIONS') { http_response_code(204); exit; }
+    }
     if ($method === 'GET' && $path === '/pointage/borne') {
         header('Cache-Control: no-store');
         $out = ep_pointage_borne();
+        echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    // La caisse pointe une personne dont elle a vérifié le PIN (sa clé de caisse ; src/pointage.php).
+    if ($method === 'POST' && $path === '/pointage/borne/pointer') {
+        header('Cache-Control: no-store');
+        $out = wr_pointage_caisse();
         echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }

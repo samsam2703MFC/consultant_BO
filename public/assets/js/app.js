@@ -7565,11 +7565,13 @@ class App {
       tuiles: [['Pointages', String(lignes.length)], ['Retards', String(lignes.filter(l => l.arrivee === 'retard').length)],
         ['Départs non pointés', String(nb('non_pointe'))], ['À valider', String(nb('a_valider'))]].map(([lib, v]) => ({ lib, v })),
       lignes,
-      bornes: d ? d.bornes.map(b => ({ nom: b.nom, cree: b.cree ? jourLib(b.cree.slice(0, 10)) : '',
+      bornes: d ? d.bornes.map(b => ({ nom: b.nom, sorte: b.sorte === 'caisse' ? 'Clé de caisse' : 'Écran (tablette)', cree: b.cree ? jourLib(b.cree.slice(0, 10)) : '',
         vue: b.vue_le ? 'vue ' + jourLib(b.vue_le.slice(0, 10)) + ' à ' + b.vue_le.slice(11, 16) : 'jamais ouverte',
         retirer: () => { if (window.confirm('Retirer cette borne ? Son lien ne marchera plus.')) { ecrire('/pointage/bornes/retirer', { id: b.id }); } } })) : [],
       creerBorne: d ? () => ecrire('/pointage/bornes', { shop: d.shop, nom: 'Tablette du magasin' }, r => ({ ptLien: { shop: d.shop, url: location.origin + racine + 'borne/?b=' + r.jeton } })) : null,
-      lien: lien ? { url: lien.url, copier: () => { try { navigator.clipboard.writeText(lien.url).then(() => this.setState({ ptMsg: 'Lien copié.' })); } catch (e) { /* le texte reste sélectionnable */ } }, fermer: () => this.setState({ ptLien: null }) } : null,
+      // La clé de la caisse (01/11/2026) : la caisse montre le QR et pointe au PIN ; la clé va dans sa configuration.
+      creerCaisse: d ? () => ecrire('/pointage/bornes', { shop: d.shop, nom: 'Caisse', sorte: 'caisse' }, r => ({ ptLien: { shop: d.shop, cle: r.jeton, api: location.origin + API_BASE } })) : null,
+      lien: lien ? { url: lien.url || '', cle: lien.cle || '', api: lien.api || '', copier: () => { try { navigator.clipboard.writeText(lien.cle || lien.url).then(() => this.setState({ ptMsg: lien.cle ? 'Clé copiée.' : 'Lien copié.' })); } catch (e) { /* le texte reste sélectionnable */ } }, fermer: () => this.setState({ ptLien: null }) } : null,
     };
   }
   valsGrandsPrix(common){

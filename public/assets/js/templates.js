@@ -7072,18 +7072,19 @@ function tplPointages(c, x){
         ${td(l.valider ? `<div style="display:flex;gap:6px;justify-content:flex-end"><button ${x.A(l.valider)} style="${btP}" data-pt-valider>Valider</button><button ${x.A(l.refuser)} style="${btS}" data-pt-refuser>Refuser</button></div>` : '')}</tr>`).join('')}</tbody></table></div>`
     : `<div style="${carte};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">Personne n’a pointé dans ce magasin cette semaine.</div>`;
   const lien = P.lien ? `<div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--color-background-secondary)" data-pt-lien>
-      <div style="font:600 13px ${sf}">Le lien de la borne — ouvrez-le sur la tablette du magasin</div>
-      <div style="margin-top:6px;font:400 12.5px ui-monospace,Menlo,monospace;word-break:break-all;user-select:all">${esc(P.lien.url)}</div>
-      <div style="display:flex;gap:8px;margin-top:10px"><button ${x.A(P.lien.copier)} style="${btP}">Copier</button><a href="${esc(P.lien.url)}" target="_blank" rel="noopener" style="${btS};text-decoration:none">Ouvrir ↗</a><button ${x.A(P.lien.fermer)} style="${btS}">Fermer</button></div>
-      <div style="margin-top:8px;font:400 12px ${sf};color:${muet}">Il ne s’affiche qu’une fois : gardez-le, ou créez-en un autre et retirez celui-ci.</div></div>` : '';
+      <div style="font:600 13px ${sf}">${P.lien.cle ? 'La clé de la caisse — à mettre dans la configuration de la caisse' : 'Le lien de la borne — ouvrez-le sur la tablette du magasin'}</div>
+      <div style="margin-top:6px;font:400 12.5px ui-monospace,Menlo,monospace;word-break:break-all;user-select:all">${esc(P.lien.cle || P.lien.url)}</div>
+      ${P.lien.cle ? `<div style="margin-top:6px;font:400 12px ${sf};color:${muet}">Adresse de l’API : <span style="font-family:ui-monospace,Menlo,monospace;user-select:all">${esc(P.lien.api)}</span> — routes GET /pointage/borne?b=&lt;clé&gt; et POST /pointage/borne/pointer.</div>` : ''}
+      <div style="display:flex;gap:8px;margin-top:10px"><button ${x.A(P.lien.copier)} style="${btP}">Copier</button>${P.lien.url ? `<a href="${esc(P.lien.url)}" target="_blank" rel="noopener" style="${btS};text-decoration:none">Ouvrir ↗</a>` : ''}<button ${x.A(P.lien.fermer)} style="${btS}">Fermer</button></div>
+      <div style="margin-top:8px;font:400 12px ${sf};color:${muet}">${P.lien.cle ? 'Elle ne s’affiche qu’une fois. Ne la mettez jamais dans une adresse visible : avec elle, la caisse pointe une personne au PIN.' : 'Il ne s’affiche qu’une fois : gardez-le, ou créez-en un autre et retirez celui-ci.'}</div></div>` : '';
   const bornes = `<div style="${carte};margin-top:18px;padding:16px 18px" data-pt-bornes>
       <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px">
         <div style="font:600 15px ${sf}">Borne de pointage</div>
         <div style="margin-top:3px;font:400 13px/1.45 ${sf};color:${muet}">Une page qui montre le QR code du magasin ; il change toutes les 30 secondes et ne vaut que pour ce magasin. Ouvrez son lien sur la tablette du comptoir et laissez-la allumée.</div></div>
-        ${P.creerBorne ? `<button ${x.A(P.creerBorne)} style="${btP}" data-pt-creer>Créer un lien de borne</button>` : ''}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${P.creerBorne ? `<button ${x.A(P.creerBorne)} style="${btP}" data-pt-creer>Créer un lien de borne</button>` : ''}${P.creerCaisse ? `<button ${x.A(P.creerCaisse)} style="${btS}" data-pt-caisse>Clé pour la caisse</button>` : ''}</div></div>
       ${lien}
       ${P.bornes.length ? `<div style="margin-top:12px">${P.bornes.map((b, i) => `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;${i ? `border-top:${filet}` : `border-top:${filet}`}">
-        <span style="font:500 14px ${sf}">${esc(b.nom)}</span><span style="font:400 12.5px ${sf};color:${muet}">créée ${esc(b.cree)} · ${esc(b.vue)}</span>
+        <span style="font:500 14px ${sf}">${esc(b.nom)}</span><span style="font:400 12.5px ${sf};color:${muet}">${esc(b.sorte)} · créée ${esc(b.cree)} · ${esc(b.vue)}</span>
         <button ${x.A(b.retirer)} style="${btS};margin-left:auto">Retirer</button></div>`).join('')}</div>`
       : `<div style="margin-top:10px;font:400 13px ${sf};color:${muet}">Pas encore de borne pour ce magasin.</div>`}</div>`;
   return `<section data-pt>${barre}${msg}${tuiles}${tableau}${bornes}</section>`;

@@ -33,6 +33,7 @@ final class Db
             self::$p->exec('CREATE TABLE mot_pointage (id INTEGER PRIMARY KEY AUTOINCREMENT, emp INT, shop INT, jour TEXT, entree TEXT, sortie TEXT NULL,
                 entree_par TEXT, sortie_par TEXT NULL, sortie_validee_par TEXT NULL, sortie_validee_le TEXT NULL, prevu_debut TEXT NULL, prevu_fin TEXT NULL,
                 hors_planning INT DEFAULT 0, cree TEXT DEFAULT CURRENT_TIMESTAMP, maj TEXT DEFAULT CURRENT_TIMESTAMP)');
+            // La table d'avant la clé de caisse : sans « sorte », que ptgTables() ajoute.
             self::$p->exec('CREATE TABLE mot_borne (id INTEGER PRIMARY KEY AUTOINCREMENT, shop INT, nom TEXT, jeton_hash TEXT UNIQUE, actif INT DEFAULT 1,
                 cree TEXT DEFAULT CURRENT_TIMESTAMP, vue_le TEXT NULL)');
             self::$p->exec('CREATE TABLE shops (id INT, active INT)');
@@ -45,6 +46,7 @@ final class Db
     public static function exec(string $sql, array $a = []): int
     {
         if (str_starts_with($sql, 'CREATE TABLE IF NOT EXISTS mot_')) { return 0; }
+        $sql = str_replace("ADD COLUMN sorte VARCHAR(10) NOT NULL DEFAULT 'ecran'", "ADD COLUMN sorte TEXT NOT NULL DEFAULT 'ecran'", $sql);
         $s = self::pdo()->prepare($sql); $s->execute($a); return $s->rowCount();
     }
 }
@@ -204,6 +206,44 @@ $_GET = ['b' => $b['jeton']];
 ep_pointage_borne($T0);
 verifie('retirée : son lien ne marche plus', http_response_code() === 404);
 http_response_code(200);
+
+echo "\nLa caisse : sa clé, le pointage au PIN\n";
+verifie('la colonne « sorte » ajoutée à la table d’avant', array_key_exists('sorte', (array) Db::row("SELECT * FROM mot_borne WHERE nom = 'Tablette du comptoir'")));
+$GLOBALS['CORPS'] = ['shop' => 4, 'sorte' => 'caisse'];
+$k = wr_pointage_borne_creer();
+verifie('une clé de caisse : sa sorte, son nom par défaut', $k['sorte'] === 'caisse' && $k['nom'] === 'Caisse' && strlen($k['jeton']) >= 30);
+$_GET = ['b' => $k['jeton']];
+verifie('la caisse lit le QR à montrer avec sa clé', ep_pointage_borne($T0)['qr'] === ptgQr(4, $tr));
+Db::exec('DELETE FROM mot_pointage');
+$GLOBALS['CORPS'] = ['b' => $k['jeton'], 'emp' => 12];
+$r = wr_pointage_caisse($T0);
+verifie('PIN vérifié par la caisse : l’arrivée, au magasin de la clé, « par pin », avec le nom', http_response_code() === 200 && $r['sens'] === 'arrivee'
+    && $r['pointage']['shop'] === 4 && $r['nom'] === 'Bram Claes' && Db::row('SELECT entree_par FROM mot_pointage')['entree_par'] === 'pin', json_encode($r));
+$r = wr_pointage_caisse($t('2026-10-31 16:02'));
+verifie('puis le départ', $r['sens'] === 'depart' && Db::row('SELECT sortie_par FROM mot_pointage')['sortie_par'] === 'pin');
+$GLOBALS['CORPS'] = ['b' => $k['jeton'], 'emp' => 11];
+$r = wr_pointage_caisse($t('2026-10-31 07:10'));
+verifie('trop tôt : 422, à partir de 07:30', http_response_code() === 422 && $r['motif'] === 'trop_tot' && $r['a_partir_de'] === '07:30');
+http_response_code(200);
+$GLOBALS['CORPS'] = ['b' => $k['jeton']];
+wr_pointage_caisse($T0);
+verifie('sans personne : 400', http_response_code() === 400);
+http_response_code(200);
+$GLOBALS['CORPS'] = ['shop' => 4];
+$ecran = wr_pointage_borne_creer();
+$GLOBALS['CORPS'] = ['b' => $ecran['jeton'], 'emp' => 12];
+wr_pointage_caisse($T0);
+verifie('le lien d’un écran (visible sur la tablette) ne pointe personne : 403', http_response_code() === 403);
+http_response_code(200);
+$GLOBALS['CORPS'] = ['b' => 'cle-inconnue-cle-inconnue-cle-in', 'emp' => 12];
+wr_pointage_caisse($T0);
+verifie('une clé inconnue : 404', http_response_code() === 404);
+http_response_code(200);
+$_GET = ['shop' => '4'];
+verifie('la liste dit la sorte de chaque borne', array_column(ep_pointage_bornes()['bornes'], 'sorte') === ['caisse', 'ecran'], json_encode(array_column(ep_pointage_bornes()['bornes'], 'sorte')));
+$index = (string) file_get_contents(__DIR__ . '/../public/api/index.php');
+verifie('route de la caisse avant la session, CORS sur les deux routes de la borne', strpos($index, "\$path === '/pointage/borne/pointer')") < strpos($index, 'function routeGardee')
+    && str_contains($index, "Access-Control-Allow-Origin: *") && str_contains($index, "if (\$method === 'OPTIONS') { http_response_code(204); exit; }"));
 
 echo "\nLa route de l'app\n";
 Db::exec('DELETE FROM mot_pointage');

@@ -19,8 +19,14 @@ declare(strict_types=1);
  * en retard au-delà de 5 minutes ; sans service ce jour-là, acceptée et marquée « hors planning ». Deux scans en moins
  * de deux minutes ne font qu'un. Un départ oublié : la personne dit son heure ; le magasin la valide (page franchisé).
  *
+ * La caisse (01/11/2026, Sam : « le prompt pour Szymon, le dev du POS : QR sur un bouton, ou PIN si elle n'a pas son
+ * téléphone ») : une borne de sorte « caisse » a une clé que la caisse garde dans sa configuration (jamais dans une adresse
+ * visible). Avec elle, la caisse lit le QR à montrer (GET /pointage/borne), et pointe une personne dont ELLE a vérifié le
+ * PIN, comme elle le fait déjà pour la vente (POST /pointage/borne/pointer) : le PIN ne quitte jamais la caisse.
+ *
  * Les routes : l'app (identité signée de « Mes primes ») — POST /ventes/moi/pointage, GET /ventes/moi/pointages,
- * POST /ventes/moi/pointage/depart ; la borne (son jeton) — GET /pointage/borne ; le cockpit (session) —
+ * POST /ventes/moi/pointage/depart ; la borne (son jeton) — GET /pointage/borne, et la caisse seule
+ * POST /pointage/borne/pointer ; le cockpit (session) —
  * GET /ventes/equipe/pointages, POST /ventes/equipe/pointages/valider, GET|POST /pointage/bornes,
  * POST /pointage/bornes/retirer.
  */
@@ -49,8 +55,8 @@ function ptgTables(): void
         . 'jour DATE NOT NULL,'                        // le jour de l'arrivée
         . 'entree DATETIME NOT NULL,'
         . 'sortie DATETIME NULL,'
-        . 'entree_par VARCHAR(10) NOT NULL,'           // qr | code
-        . 'sortie_par VARCHAR(10) NULL,'               // qr | code | declare
+        . 'entree_par VARCHAR(10) NOT NULL,'           // qr | code | pin (à la caisse)
+        . 'sortie_par VARCHAR(10) NULL,'               // qr | code | pin | declare
         . 'sortie_validee_par VARCHAR(80) NULL,'       // un départ déclaré, validé au cockpit
         . 'sortie_validee_le DATETIME NULL,'
         . 'prevu_debut CHAR(5) NULL,'                  // le service planifié, figé à l'arrivée
@@ -65,11 +71,15 @@ function ptgTables(): void
         . 'shop INT NOT NULL,'
         . 'nom VARCHAR(60) NOT NULL,'
         . 'jeton_hash CHAR(64) NOT NULL,'              // sha256 du jeton du lien : le jeton lui-même n'est jamais gardé
+        . "sorte VARCHAR(10) NOT NULL DEFAULT 'ecran',"  // ecran (la page de la borne) | caisse (la caisse : QR, et pointage par PIN)
         . 'actif TINYINT NOT NULL DEFAULT 1,'
         . 'cree TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,'
         . 'vue_le DATETIME NULL,'
         . 'UNIQUE KEY ux_mot_borne_jeton (jeton_hash), KEY ix_mot_borne_shop (shop)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin');
+    // La sorte d'une borne (01/11/2026, la caisse de Szymon) : la table d'avant n'avait pas la colonne.
+    try { Db::row('SELECT sorte FROM mot_borne LIMIT 1'); }
+    catch (Throwable $e) { Db::exec("ALTER TABLE mot_borne ADD COLUMN sorte VARCHAR(10) NOT NULL DEFAULT 'ecran'"); }
 }
 
 /** La clé qui signe les QR : 32 octets tirés une fois, dans le dossier privé (0600), comme celle du profil. */
@@ -359,6 +369,27 @@ function ep_pointage_borne(?int $maintenant = null): array
         'reste' => PTG_PERIODE - ($maintenant % PTG_PERIODE), 'periode' => PTG_PERIODE, 'heure' => date('H:i', $maintenant)];
 }
 
+/**
+ * POST /pointage/borne/pointer {b, emp} — la caisse pointe une personne dont elle a vérifié le PIN : l'arrivée ou le
+ * départ, au magasin de la clé, avec les mêmes règles que l'app. Réservé aux clés de sorte « caisse » (403 pour le lien
+ * d'un écran : il est visible sur la tablette).
+ */
+function wr_pointage_caisse(?int $maintenant = null): array
+{
+    $maintenant ??= time();
+    $b = function_exists('body') ? body() : (json_decode((string) file_get_contents('php://input'), true) ?: []);
+    $borne = ptgBorneDuJeton((string) ($b['b'] ?? ''));
+    if ($borne === null) { http_response_code(404); return ['error' => 'clé inconnue ou retirée']; }
+    if (($borne['sorte'] ?? 'ecran') !== 'caisse') { http_response_code(403); return ['error' => 'réservé à une clé de caisse']; }
+    $emp = (int) ($b['emp'] ?? 0);
+    if ($emp <= 0) { http_response_code(400); return ['error' => 'emp attendu (l’identifiant de la personne au panel)']; }
+    Db::exec('UPDATE mot_borne SET vue_le = ? WHERE id = ?', [date('Y-m-d H:i:s', $maintenant), (int) $borne['id']]);
+    $r = ptgPointer($emp, (int) $borne['shop'], 'pin', $maintenant);
+    if (isset($r['motif'])) { http_response_code(422); return ['error' => 'trop tôt'] + $r; }
+    $emps = function_exists('venteEmployes') ? venteEmployes() : [];
+    return $r + ['nom' => (string) ($emps[$emp]['nom'] ?? '')];
+}
+
 /* ======================================================================
    Les routes du cockpit (session) : la page franchisé
    ====================================================================== */
@@ -369,22 +400,26 @@ function ep_pointage_bornes(): array
     $shop = (int) ($_GET['shop'] ?? 0);
     if ($shop <= 0) { http_response_code(400); return ['error' => 'magasin attendu']; }
     ptgTables();
-    return ['shop' => $shop, 'bornes' => array_map(static fn ($r) => ['id' => (int) $r['id'], 'nom' => (string) $r['nom'], 'cree' => (string) $r['cree'], 'vue_le' => $r['vue_le']],
-        Db::rows('SELECT id, nom, cree, vue_le FROM mot_borne WHERE shop = ? AND actif = 1 ORDER BY id', [$shop]))];
+    return ['shop' => $shop, 'bornes' => array_map(static fn ($r) => ['id' => (int) $r['id'], 'nom' => (string) $r['nom'], 'sorte' => (string) $r['sorte'], 'cree' => (string) $r['cree'], 'vue_le' => $r['vue_le']],
+        Db::rows('SELECT id, nom, sorte, cree, vue_le FROM mot_borne WHERE shop = ? AND actif = 1 ORDER BY id', [$shop]))];
 }
 
-/** POST /pointage/bornes {shop, nom} — une borne : rend son jeton, une seule fois (le lien s'en construit). */
+/**
+ * POST /pointage/bornes {shop, nom, sorte?} — une borne : « ecran » (le lien de la page, pour la tablette) ou « caisse »
+ * (la clé de la caisse). Rend son jeton, une seule fois.
+ */
 function wr_pointage_borne_creer(): array
 {
     $b = body();
     $shop = (int) ($b['shop'] ?? 0);
-    $nom = mb_substr(trim((string) ($b['nom'] ?? '')), 0, 60) ?: 'Tablette du magasin';
+    $sorte = ($b['sorte'] ?? '') === 'caisse' ? 'caisse' : 'ecran';
+    $nom = mb_substr(trim((string) ($b['nom'] ?? '')), 0, 60) ?: ($sorte === 'caisse' ? 'Caisse' : 'Tablette du magasin');
     if ($shop <= 0) { http_response_code(400); return ['error' => 'magasin attendu']; }
     ptgTables();
     $jeton = rtrim(strtr(base64_encode(random_bytes(24)), '+/', '-_'), '=');
-    Db::exec('INSERT INTO mot_borne (shop, nom, jeton_hash) VALUES (?,?,?)', [$shop, $nom, hash('sha256', $jeton)]);
-    if (function_exists('journalAdd')) { journalAdd('CEO', 'Pointage', null, 'Borne de pointage créée : magasin ' . $shop . ' · ' . $nom); }
-    return ['shop' => $shop, 'nom' => $nom, 'jeton' => $jeton];
+    Db::exec('INSERT INTO mot_borne (shop, nom, jeton_hash, sorte) VALUES (?,?,?,?)', [$shop, $nom, hash('sha256', $jeton), $sorte]);
+    if (function_exists('journalAdd')) { journalAdd('CEO', 'Pointage', null, ($sorte === 'caisse' ? 'Clé de caisse' : 'Borne de pointage') . ' créée : magasin ' . $shop . ' · ' . $nom); }
+    return ['shop' => $shop, 'nom' => $nom, 'sorte' => $sorte, 'jeton' => $jeton];
 }
 
 /** POST /pointage/bornes/retirer {id} — le lien ne marche plus. */
