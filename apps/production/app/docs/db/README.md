@@ -240,6 +240,46 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   non lu de moins de 7 jours ; tâche faite entre-temps (jour validé, assistant terminé) → fermé, disparaît. Au tableau :
   « przeczytane 10:51 (J. K., PIN) ».
 
+### Nouvelle machine et machine partagée (migration 156, 01/11/2026)
+
+- Kreator maszyny : nouvelle première étape **« 1 · Maszyna »** (4 étapes : Maszyna › Produkty › Wsad i tempo › Gotowe).
+  Bouton « Nowa maszyna » (en haut, « + maszyna w grupie … » sous chaque groupe, « Dodaj maszynę » dans un groupe sans
+  machine) : nom, rodzaj (piec, maszyna, robot / linia + tryb sam / z operatorem / cobot avec part d'une personne,
+  stanowisko ręczne, komora rozrostu, chłodnia, mrożenie — pour les komory : nombre de wózków), groupe propriétaire,
+  **wspólna z innymi grupami ? Nie / Tak → quelles grupy**. Pour une machine existante, l'étape « Maszyna » se rouvre
+  depuis les étapes 2–3 (bouton crayon). Écriture via `WorkstationService` (code généré depuis le nom, unique ;
+  journal `workstation`) ; noms en double refusés.
+- `n_prod_workstation_share` (id_workstation, id_group — PK, CASCADE) : groupes qui utilisent la machine d'un autre groupe
+  (journal `workstation_share`, source « kreator maszyny »). Effets : la machine apparaît dans chaque groupe (Dane maszyn :
+  « wspólna — maszyna grupy … », comptée une seule fois ; Wykorzystanie : « + Tarty » et filtre de groupe ; tablette TRS
+  du groupe) ; elle travaille sur les shifts des équipes de chacun de ces groupes ; le temps de travail d'un produit sur
+  la machine est compté à l'équipe du groupe du produit si ce groupe partage la machine, sinon au groupe de la machine.
+  Filtre « Grupa » de l'assistant : produits du groupe propriétaire + des groupes qui partagent.
+- Routes : `POST /ajax/production/capacity/machine-data` (nouvelle), `PUT /ajax/production/capacity/machine-data/{id}/machine`.
+  Tests : `tests/machine_data_test.php`, `tests/capacity_test.php`.
+
+### Dane maszyn : kreator maszyny (01/11/2026, sans migration)
+
+- Page : Produkcja › Moce produkcyjne › onglet « Dane maszyn » (maquettes 12 et 13). Pour le Kierownik produkcji (droit de
+  la page Produkty `/workshop/products`) et l'administrateur. Trois compteurs : maszyny z kompletem danych, produkty z
+  etapem na maszynie, produkty z planu tygodnia bez danych ; tableau par groupe (machines, produits liés, état
+  « do uzupełnienia / częściowo / komplet »), ordre conseillé (d'abord les groupes avec produits du plan sans données,
+  puis fours, puis machines).
+- Clic sur une machine → mini-assistant en 3 étapes : 1. produits faits sur la machine (filtres groupe / bez danych /
+  w planie / wszystkie, recherche ; les produits déjà sur la machine restent cochés) ; 2. pour chaque produit : sztuk w
+  jednym wsadzie, wsadów na godzinę, **osób przy wsadzie** (calcul en direct : durée du wsad, pièces et cartons à l'heure ;
+  « Kopiuj do pustych ») ; la capacité est celle de la machine **pour ce produit** (pas un chiffre unique par
+  machine : colonne « Wsad wg produktu » = plage des wsad des produits liés) ; 3. résumé (créés / modifiés), charge de la machine, machine suivante.
+- Écriture : `n_prod_routing_step` du produit (aucune nouvelle table). Étape existante sur la machine → mise à jour ; sinon
+  nouvelle étape en fin de karta (`step_no` = max + 1, nom = nom de la machine). `capacity_per_pass` = sztuk w wsadzie,
+  `fixed_time_s` = 3600 ÷ wsadów na godzinę (arrondi), `variable_time_s` = 0, `operators_required` = osób (1 par défaut
+  pour une nouvelle étape ; vide = inchangé). Lignes vides ou inchangées ignorées. Journal `n_prod_audit_log`
+  (`source` « kreator maszyny »). Limites : wsad 0–1 000 000 szt., 0–600 wsadów/h, 0–50 osób ; produit inconnu → 422,
+  machine inactive → 404.
+- Routes : `GET /ajax/production/capacity/machine-data`, `GET|PUT /ajax/production/capacity/machine-data/{id}`
+  (`MachineDataService`, `MachineDataRepository`). Test : `tests/machine_data_test.php`. Formulaire A4 à imprimer
+  (maquette 14) : pas fait.
+
 ### Sesja sous l'avatar : l'administrateur voit l'ERP comme un poste (31/10/2026, sans migration)
 
 - Menu de l'avatar (en haut à droite), administrateur seulement : « Sesja » — Pełny widok, puis un choix par poste ERP actif

@@ -3183,3 +3183,82 @@ button.mc-name:hover b { color: #8e1f2f; }
 .at-vs-item.on b { color: #8e1f2f; }
 .at-vs-check { color: #8e1f2f; font-size: 1.1rem; flex: 0 0 auto; }
 .at-vs-on { color: #8e1f2f !important; font-weight: 600; }
+
+/* [240] Dane maszyn (makiety 12–13) : co trzeba uzupełnić + kreator maszyny */
+.mc-tab-n { margin-left: 4px; background: #fff; color: #8e1f2f; border-radius: 6px; padding: 0 6px; font-size: 11px; }
+.mc-tabs button:not(.on) .mc-tab-n { background: #8e1f2f; color: #fff; }
+.mw-prog { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; margin-bottom: 12px; align-items: stretch; }
+.mw-prog .mc-tile b { font-size: 22px; }
+.mw-bar { height: 8px; border-radius: 6px; background: var(--at-bg-2); overflow: hidden; margin: 6px 0 4px; }
+.mw-bar i { display: block; height: 100%; background: #2E7D4F; border-radius: 6px; }
+.mw-bar i.bad { background: #9a1730; } .mw-bar i.warn { background: #C17A2A; }
+.mw-acts { display: grid; gap: 8px; align-content: center; }
+.mw-start { min-height: 48px; }
+.mw-st { display: inline-flex; align-items: center; gap: 5px; border-radius: 8px; padding: 3px 9px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.mw-st.todo { background: rgba(154,23,48,.08); color: #9a1730; }
+.mw-st.part { background: rgba(193,122,42,.13); color: #8a5208; }
+.mw-st.ok { background: rgba(46,125,79,.1); color: #1f5a37; }
+.mw-btns { white-space: nowrap; } .mw-btns .kw-btn { min-height: 40px; }
+.mw-box { width: min(980px, 100%); gap: 12px; }
+.mw-steps { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; font-weight: 700; color: var(--at-muted); }
+.mw-steps span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; background: var(--at-bg-2); }
+.mw-steps span.on { background: #8e1f2f; color: #fff; }
+.mw-steps span.done { background: rgba(46,125,79,.1); color: #1f5a37; }
+.mw-steps em { font-style: normal; color: var(--at-line-2); }
+.mw-head { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; }
+.mw-head i.big { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--at-bg-2); font-size: 22px; }
+.mw-head b { font-size: 17px; display: block; } .mw-head small { color: var(--at-muted); font-size: 12px; }
+.mw-q { min-height: 44px; border-radius: 10px; }
+.mw-filter { display: flex; gap: 6px; flex-wrap: wrap; }
+.mw-chip { min-height: 40px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 10px; border: 1px solid var(--at-line-2); font-size: 12.5px; font-weight: 600; background: var(--at-surface); color: inherit; }
+.mw-chip.on { background: #f7ece9; border-color: #e3c4c8; color: #8e1f2f; }
+.mw-lab { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--at-muted); }
+.mw-list { display: grid; gap: 4px; max-height: 46vh; overflow: auto; padding-right: 2px; }
+.mw-item { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; min-height: 46px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--at-line); background: var(--at-surface); font-size: 13px; text-align: left; color: inherit; width: 100%; }
+.mw-item.on { border-color: #e3c4c8; background: #fdf7f6; }
+.mw-item.lock { cursor: default; }
+.mw-item .ck { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--at-line-2); display: grid; place-items: center; color: #fff; font-size: 13px; }
+.mw-item.on .ck { background: #8e1f2f; border-color: #8e1f2f; }
+.mw-item.lock .ck { background: #b98a92; border-color: #b98a92; }
+.mw-item .nm small { color: var(--at-muted); font-size: 11.5px; display: block; }
+.mw-foot { display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--at-line); padding-top: 12px; flex-wrap: wrap; }
+.mw-foot .sp { flex: 1; } .mw-foot small { color: var(--at-muted); }
+.mw-tbl { width: 100%; border-collapse: separate; border-spacing: 0 6px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.mw-tbl th { font-size: 10px; color: var(--at-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; text-align: left; padding: 0 8px; vertical-align: bottom; }
+.mw-tbl th.r, .mw-tbl td.r { text-align: right; }
+.mw-tbl td { background: var(--at-surface); border-top: 1px solid var(--at-line); border-bottom: 1px solid var(--at-line); padding: 6px 8px; vertical-align: middle; }
+.mw-tbl td:first-child { border-left: 1px solid var(--at-line); border-radius: 10px 0 0 10px; }
+.mw-tbl td:last-child { border-right: 1px solid var(--at-line); border-radius: 0 10px 10px 0; }
+.mw-tbl td small { display: block; color: var(--at-muted); font-size: 11px; }
+.mw-cell { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.mw-in { min-height: 44px; width: 92px; border-radius: 10px; text-align: right; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+.mw-unit { color: var(--at-muted); font-size: 11.5px; min-width: 30px; text-align: left; }
+.mw-res { white-space: nowrap; } .mw-res b { font-size: 14px; display: block; }
+.mw-res.ok b { color: #1f5a37; } .mw-res.none b { color: #c4b8b0; }
+.mw-hint { border-radius: 12px; background: var(--at-bg-2); padding: 10px 12px; font-size: 12.5px; line-height: 1.55; }
+.mw-copy { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 700; color: #2b5f9e; background: none; border: 0; padding: 2px 0; text-transform: none; letter-spacing: 0; }
+.mw-done { display: grid; gap: 8px; justify-items: center; text-align: center; padding: 6px 0; }
+.mw-done i.big { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: rgba(46,125,79,.12); color: #1f5a37; font-size: 28px; }
+.mw-done-t { font-size: 17px; }
+.mw-next { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--at-line); border-radius: 12px; padding: 10px 12px; }
+.mw-next i.mi { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--at-bg-2); font-size: 18px; }
+@media (max-width: 1100px) { .mw-prog { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .mw-prog { grid-template-columns: 1fr; } }
+
+/* [241] Kreator maszyny : krok « Maszyna » (nowa / zmiana), maszyna wspólna */
+.mw-form { display: grid; gap: 14px; }
+.mw-fl { display: grid; gap: 6px; margin: 0; }
+.mw-fl > span { font-size: 12px; font-weight: 700; color: var(--at-muted); }
+.mw-fl .form-control { min-height: 44px; border-radius: 10px; }
+.mw-num { max-width: 140px; text-align: right; font-variant-numeric: tabular-nums; }
+.mw-in-l { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; font-size: 12.5px; }
+.mw-sub { display: grid; gap: 6px; margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--at-bg-2); }
+.mw-sub b { font-size: 12.5px; }
+.mw-chip i { margin-right: 2px; }
+.mw-stepbtn { border: 0; font: inherit; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; background: rgba(46,125,79,.1); color: #1f5a37; min-height: 32px; }
+.mw-stepbtn:hover { background: rgba(46,125,79,.18); }
+.mw-sh { color: #2b5f9e; font-weight: 600; white-space: nowrap; }
+.mc-name .mw-sh i, .mc-name small i.bi-share { width: auto; height: auto; background: none; display: inline; font-size: inherit; border-radius: 0; margin-right: 2px; }
+tr.mw-shared td { background: #f7f9fc; }
+tr.mw-addrow td { padding-top: 2px; padding-bottom: 8px; border: 0; }
+tr.mw-addrow .tt-link { font-size: 12px; min-height: 32px; }

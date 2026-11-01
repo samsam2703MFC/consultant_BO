@@ -216,6 +216,24 @@ try {
     // --- Filtr grupy ---------------------------------------------------------------------------------------------
     $g = $svc->data($date, [], 99);
     expectCap($g['sections'] === [] && $g['products'] === [] && $g['teams'] === [] && $g['group'] === 99, 'filtr innej grupy : pusto');
+
+    // --- [241] Maszyna wspólna : piec Piekarni, z którego korzysta Tarty (zespół popołudniowy) -------------------------
+    $team = fn(array $x, int $gid) => array_values(array_filter($x['teams'], fn($t) => $t['id'] === $gid))[0] ?? null;
+    $before = $team($svc->data($date), 1);
+    $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, sort_order) VALUES (2, 'TARTY', 'Tarty', 'Tartes', 2)");
+    $pdo->exec("INSERT INTO n_prod_team (id, code, id_group, id_shift_template, name, planned_headcount, active) VALUES (2, 'TART-P', 2, 2, 'Tarty popołudnie', 1, 1)");
+    $pdo->exec('INSERT INTO n_prod_workstation_share (id_workstation, id_group) VALUES (11, 2)');
+    $pdo->exec('UPDATE n_prod_product_settings SET id_primary_group = 2 WHERE id_item = 1'); // bagietka « należy » do Tarty (test)
+    $sh = $svc->data($date);
+    $piec = null;
+    foreach ($sh['sections'] as $s) foreach ($s['rows'] as $r) if ($r['id'] === 11) $piec = $r;
+    expectCap($piec && $piec['shared'] === ['Tarty'] && in_array(1, $piec['shift_ids'], true) && in_array(2, $piec['shift_ids'], true), 'piec wspólny : zmiany Piekarni i Tarty ' . json_encode($piec['shift_ids'] ?? null));
+    $tarty = $team($sh, 2);
+    $piek = $team($sh, 1);
+    // Wypiek bagietki : 2400 ÷ 48 = 50 wsadów × 1500 s × 1 osoba = 75 000 s → zespół Tarty (grupa produktu korzysta z pieca).
+    expectCap($tarty && abs($tarty['load_s'] - 75000) < 1 && abs(($before['load_s'] - $piek['load_s']) - 75000) < 1, 'praca na piecu wspólnym → zespół grupy produktu ' . json_encode([$tarty['load_s'] ?? null, $before['load_s'], $piek['load_s']]));
+    $gt = $svc->data($date, [], 2);
+    expectCap(array_column(array_merge(...array_map(fn($s) => $s['rows'], $gt['sections'])), 'id') === [11], 'filtr Tarty : piec wspólny');
 } finally {
     $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 }

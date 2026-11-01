@@ -53,7 +53,7 @@ final class CapacityService
         $machines = [];
         $hidden = [];
         foreach ($c['machines'] as $m) {
-            if ($groupId !== null && $m['group_id'] !== $groupId) continue;
+            if ($groupId !== null && $m['group_id'] !== $groupId && !in_array($groupId, $m['shared_ids'], true)) continue; // [241] + maszyny wspólne
             if ($m['view']) $machines[] = $m; else $hidden[] = $m;
         }
         $products = array_values(array_filter($c['products'], fn($p) => $groupId === null || $p['group_id'] === $groupId));
@@ -197,6 +197,18 @@ final class CapacityService
 
     // --- Obliczenie -----------------------------------------------------------------------------------------------------
 
+    /**
+     * [241] Zespół, któremu liczy się praca etapu : grupa produktu, jeśli korzysta z tej maszyny (maszyna wspólna),
+     * inaczej grupa maszyny.
+     */
+    private function labourGroup(array $wsAll, int $wsId, mixed $itemGroup): ?int
+    {
+        if (!isset($wsAll[$wsId])) return null;
+        $w = $wsAll[$wsId];
+        if ($itemGroup !== null && isset($w['shared'][(int) $itemGroup])) return (int) $itemGroup;
+        return $w['id_group'] !== null ? (int) $w['id_group'] : null;
+    }
+
     private function compute(?string $date, array $whatIf): array
     {
         $date = $date !== null && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) ? $date : date('Y-m-d');
@@ -227,6 +239,7 @@ final class CapacityService
                 $flag = $mShifts[$id][$sid] ?? null;
                 // « Co jeśli » otwiera zmianę dla wszystkich maszyn (także wyłączonych na niej w Stanowiskach) — symulacja.
                 $team = isset($teams[(int) $w['id_group']][$sid]);
+                foreach (array_keys($w['shared'] ?? []) as $sg) if (isset($teams[$sg][$sid])) $team = true; // [241] maszyna wspólna : zmiany każdej grupy
                 if ($flag === 1 || isset($whatIfIds[$sid]) || ($team && $flag !== 0)) $works[$sid] = $s;
             }
             $avail = [];
@@ -240,6 +253,7 @@ final class CapacityService
             $machines[$id] = ['id' => $id, 'code' => $w['code'], 'name' => $w['name_pl'], 'type' => $w['type'], 'group_id' => $w['id_group'] !== null ? (int) $w['id_group'] : null,
                 'group' => $w['group_name'], 'group_color' => $w['group_color'], 'capacity_per_pass' => (float) $w['capacity_per_pass'], 'unit' => self::UNITS[$w['capacity_unit']] ?? $w['capacity_unit'],
                 'unit_code' => $w['capacity_unit'], 'eff' => $eff, 'efficiency_pct' => round($eff * 100, 1), 'cycle_s' => $w['cycle_s'] !== null ? (int) $w['cycle_s'] : null, 'cycle_set' => $w['cycle_s'] !== null ? (int) $w['cycle_s'] : null,
+                'shared' => array_values($w['shared'] ?? []), 'shared_ids' => array_keys($w['shared'] ?? []),
                 'view' => (bool) $w['capacity_view'], 'shift_ids' => array_map('intval', array_keys($works)), 'shift_names' => array_values(array_map(fn($s) => $s['name_pl'], $works)),
                 'shift_s' => $shiftS, 'avail_day' => $avail, 'avail_s' => array_sum($avail), 'load_s' => 0.0, 'load_day' => array_fill_keys($days, 0.0), 'passes' => 0,
                 'occupancy' => 0.0, 'occ_day' => array_fill_keys($days, 0.0), 'per_pass' => [], 'contrib' => [], 'step_count' => 0, 'shifts_week' => $shiftCount];
@@ -277,6 +291,7 @@ final class CapacityService
         $heads = $this->repo->teamHeadcount();
         $groupNames = [];
         foreach ($wsAll as $w) if ($w['id_group'] !== null) $groupNames[(int) $w['id_group']] = $w['group_name'];
+        foreach ($wsAll as $w) foreach ($w['shared'] ?? [] as $gid => $gname) $groupNames[$gid] ??= $gname; // [241] grupy z maszynami wspólnymi
         foreach ($heads as $gid => $byShift) {
             if (!isset($groupNames[$gid])) continue;
             $base = max($byShift ?: [0]);
@@ -295,7 +310,7 @@ final class CapacityService
                 'avail_s' => array_sum($avail), 'load_s' => 0.0, 'load_day' => array_fill_keys($days, 0.0)];
         }
         foreach ($q['items'] as $id => $it) foreach ($routings[$id] ?? [] as $s) {
-            $g = isset($wsAll[(int) $s['id_workstation']]) ? (int) $wsAll[(int) $s['id_workstation']]['id_group'] : null;
+            $g = $this->labourGroup($wsAll, (int) $s['id_workstation'], $items[$id]['id_primary_group'] ?? null);
             if ($g === null || !isset($teams[$g]) || (float) $s['capacity_per_pass'] <= 0) continue;
             $teams[$g]['load_s'] += StandardTime::step($s, (float) $it['quantity'])['labour_s'];
             foreach ($it['slots'] as $d => $qd) if (isset($teams[$g]['load_day'][$d]) && $qd > 0) $teams[$g]['load_day'][$d] += StandardTime::step($s, (float) $qd)['labour_s'];
@@ -383,7 +398,7 @@ final class CapacityService
             $labour = [];
             foreach ($steps as $s) {
                 $cap = (float) $s['capacity_per_pass'];
-                $g = isset($wsAll[(int) $s['id_workstation']]) ? (int) $wsAll[(int) $s['id_workstation']]['id_group'] : null;
+                $g = $this->labourGroup($wsAll, (int) $s['id_workstation'], $items[$id]['id_primary_group'] ?? null);
                 if ($cap <= 0 || $g === null) continue;
                 $labour[$g] = ($labour[$g] ?? 0.0) + ((float) $s['fixed_time_s'] / $cap + (float) $s['variable_time_s']) * (float) ($s['operators_required'] ?? 1);
             }
