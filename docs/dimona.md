@@ -71,10 +71,36 @@ boutiques lui appartiennent.
 Le **jeton admin réseau** de la console (`X-Admin-Token`) n’est **pas** accepté. Il est le même pour tout le
 réseau et ne dit pas qui est connecté : une Dimona et un NISS ne peuvent pas reposer dessus.
 
-**Pour l’activer en production**, côté console :
-- la section `bo` de la configuration de la console doit exister. Sans elle, `/bo/franchisee/me` répond 500
-  « non configuré », et `/hr/` affiche « Les comptes de la console franchisé ne sont pas encore activés » ;
-- des comptes `bo_users` doivent exister (rôle `franchise` avec leurs `bo_user_shops`, ou rôle `siege`) ;
+**Activation en production** (01/11/2026) : `bin/console_bo.php`, lancé par chaque livraison du cockpit (root
+sur le serveur), s’en charge et ne refait rien quand c’est fait :
+- il ajoute la section `bo` au `config.php` de l’API de la console **si elle manque**. Les deux secrets HMAC
+  sont tirés sur le serveur et jamais affichés. Le fichier est sauvegardé (`config.php.avant-bo-…`), contrôlé
+  (syntaxe, mêmes clés plus `bo`), puis remis tel quel si `GET /health` de la console ne répond plus comme
+  avant ;
+- il désactive tout compte qui accepte encore le mot de passe de démonstration publié (audit WebShop du
+  15/08) ;
+- il crée ou met à jour les comptes du secret GitHub **`CONSOLE_BO_ACCOUNTS`** (Settings › Secrets and
+  variables › Actions), un JSON :
+  ```json
+  [
+    {"email": "siege@…", "name": "Sam (siège)", "role": "siege", "password": "au moins 12 caractères"},
+    {"email": "franchise@…", "name": "Julie", "role": "franchise", "shops": [2, 3], "password": "…"}
+  ]
+  ```
+  `shops` contient les ids de la table `shops`, ceux du cockpit et du panel. Le mot de passe n’est réécrit
+  que s’il change ; un compte existant peut être repassé sans mot de passe, pour changer son nom, son rôle ou
+  ses boutiques.
+
+Les journaux de livraison, publics, ne portent que des nombres : jamais un secret, un mot de passe ni une
+adresse e-mail. Chacun change son mot de passe depuis `/hr` (« Mot de passe »), qui appelle
+`POST /bo/{franchisee|franchisor}/password` de la console. Ces comptes s’écrivent directement dans les tables
+`bo_users` et `bo_user_shops` de la console, comme son gabarit `seed-bo-users.example.sql` : la console n’a
+aucune route pour créer un compte avec son mot de passe.
+
+Ce qu’il faut côté console :
+- la section `bo` de sa configuration. Sans elle, `/bo/franchisee/me` répond 500 « non configuré », et
+  `/hr/` affiche « Les comptes de la console franchisé ne sont pas encore activés » ;
+- des comptes `bo_users` : rôle `franchise` avec leurs `bo_user_shops`, ou rôle `siege` ;
 - le cookie de session est `Secure` : ouvrir `/hr/` en **https**.
 
 Les écritures exigent l’en-tête `X-HR-Request: 1` et une origine identique (protection CSRF). Chaque geste va

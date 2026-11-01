@@ -955,6 +955,11 @@ fm_page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1
 fm_https=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1/formation/" 2>/dev/null || echo 000)
 fm_api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "http://127.0.0.1/formation/api/cockpit/formation/equipe" 2>/dev/null || echo 000)
 log "Formation : /formation/ → HTTP ${fm_page} (https ${fm_https}) ; API /formation/api/cockpit → HTTP ${fm_api} (200 attendu, 503 = compte panel à brancher)."
+# Les comptes de la console franchisé (dépôt WebShop), qui identifient au module RH : section « bo » de sa
+# configuration posée si elle manque (sauvegarde, contrôle, retour arrière si la console ne répond plus comme
+# avant), comptes de démonstration au mot de passe publié désactivés, comptes demandés par le secret
+# CONSOLE_BO_ACCOUNTS créés ou mis à jour. Idempotent ; n'écrit ni secret, ni mot de passe, ni e-mail.
+php "$TARGET_DIR/bin/console_bo.php" 2>&1 | while IFS= read -r l; do log "$l"; done || true
 hr_page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1/hr/" 2>/dev/null || echo 000)
 hr_https=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1/hr/" 2>/dev/null || echo 000)
 hr_api=$(curl -s --max-time 30 "http://127.0.0.1/hr/api/v1/erp/dimona/health" 2>/dev/null | head -c 300 || true)

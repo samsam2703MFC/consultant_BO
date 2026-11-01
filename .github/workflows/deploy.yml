@@ -137,10 +137,12 @@ jobs:
           HR_CONSOLE_API_BASE: ${{ vars.HR_CONSOLE_API_BASE }}
           HR_CONSOLE_API_INTERNAL: ${{ vars.HR_CONSOLE_API_INTERNAL }}
           HR_DIMONA_MASTER_KEY: ${{ secrets.HR_DIMONA_MASTER_KEY }}
+          # Comptes de la console franchisé à créer ou mettre à jour (JSON, docs/dimona.md) — facultatif.
+          CONSOLE_BO_ACCOUNTS: ${{ secrets.CONSOLE_BO_ACCOUNTS }}
         run: |
           {
             printf 'COCKPIT_DB_USER=%s\nCOCKPIT_DB_PASSWORD=%s\n' "${DBU:-}" "${DBP:-}"
-            for k in HR_DIMONA_PROD_ENABLED HR_DIMONA_TOKEN_URL_SIM HR_DIMONA_TOKEN_URL_PROD HR_CONSOLE_API_BASE HR_CONSOLE_API_INTERNAL HR_DIMONA_MASTER_KEY; do
+            for k in HR_DIMONA_PROD_ENABLED HR_DIMONA_TOKEN_URL_SIM HR_DIMONA_TOKEN_URL_PROD HR_CONSOLE_API_BASE HR_CONSOLE_API_INTERNAL HR_DIMONA_MASTER_KEY CONSOLE_BO_ACCOUNTS; do
               [ -n "${!k:-}" ] && printf '%s=%q\n' "$k" "${!k}"
             done
             true
