@@ -1610,6 +1610,15 @@ html.db-fiche-ouverte{overflow:hidden}
 .op-dleg i{display:inline-block;width:18px;height:3px;margin-right:6px;vertical-align:3px}
 .op-dleg i.la{background:var(--color-primary)}.op-dleg i.l7{background:#2F6EA5}.op-dleg i.lap{background:#7A5C2E}.op-dleg i.l7p{background:#b39a70}.op-dleg i.now{background:none;border-top:2px dashed #222;height:0}
 .op-dleg b.tv{display:none;font-weight:700;color:var(--color-text)}
+/* Le panier moyen heure par heure (01/11/2026) : les clients de l'heure en barres pâles, un point creux quand l'heure pèse peu. */
+.op-crb .cl{fill:#efe8dc}.op-crb .cln{font-size:9.5px;fill:#a1978a}
+.op-crb .pal{fill:#fff;stroke:var(--color-primary);stroke-width:2}.op-crb .p7l{fill:#fff;stroke:#2F6EA5;stroke-width:1.5}
+.op-crb .tpa{font-size:10.5px;fill:var(--color-primary);font-weight:700;font-variant-numeric:tabular-nums}.op-crb .tpa.lg{fill:#b98a90;font-weight:600}
+.op-crb .pmj{stroke:var(--color-primary);stroke-width:1.2;stroke-dasharray:2 4;opacity:.55}.op-crb .objr{font-size:10.5px;fill:var(--color-primary);font-weight:600}
+.op-dleg b{font-weight:700;color:var(--color-text)}
+.op-dleg i.pmj{background:none;border-top:2px dotted var(--color-primary);height:0;opacity:.7}.op-dleg i.cl{background:#efe8dc;width:12px;height:9px;vertical-align:-1px}
+.op-dleg i.pal{width:6px;height:6px;border-radius:50%;border:2px solid var(--color-primary);background:#fff;vertical-align:0}
+.op-pk{margin-left:auto}.op-pk b{font-weight:700;color:var(--color-text)}
 .op-dt{padding:4px 16px 8px}
 .op-dl{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr) minmax(0,1fr);align-items:center;gap:12px;padding:10px 0;border-top:.5px solid var(--color-border-tertiary);font-variant-numeric:tabular-nums}
 .op-dl:first-child{border-top:none}
