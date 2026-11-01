@@ -1447,7 +1447,7 @@
     // …/procedure/{id}/partie/{cle} : ouverte depuis une partie du manuel.
     var depuis = S.route.a[2] === 'partie' && NOM_PARTIE[S.route.a[3]] ? S.route.a[3] : null;
     var p0 = id != null ? I.procedure.get(id) : null;
-    if (depuis || (!ctx.poste && !c && p0)) { var cle = depuis || partieDe(p0); fil.push([NOM_PARTIE[cle], '#/manuel/partie/' + cle]); }
+    if (depuis || (!ctx.poste && !c && p0 && S.mn)) { var cle = depuis || partieDe(p0); fil.push([NOM_PARTIE[cle], '#/manuel/partie/' + cle]); }
     if (ctx.poste) fil.push(['Opérationnel', '#/manuel/partie/operationnel'], [ctx.poste.nom, '#/manuel/poste/' + ctx.pk + (ctx.niveau ? '/' + ctx.niveau.id : '')]);
     if (ctx.niveau) fil.push([ctx.niveau.nom, '#/manuel/poste/' + ctx.pk + '/' + ctx.niveau.id]);
     if (c) fil.push([c.nom, '#/manuel/competence/' + cid + (ctx.poste ? '/' + ctx.pk + (ctx.niveau ? '/' + ctx.niveau.id : '') : '')]);
@@ -1485,7 +1485,7 @@
     return (m.formations && m.formations[code]) || (m.formationsDefaut && m.formationsDefaut[code]) || 'formation';
   }
   function foRegle(code) { return !!(S.mn && S.mn.formations && S.mn.formations[code]); }
-  function fosDePartie(cle) { var l = formationsFo(); return l ? l.filter(function (x) { return partieFo(x.code) === cle; }) : null; }
+  function fosDePartie(cle) { var l = formationsFo(); return l && S.mn ? l.filter(function (x) { return partieFo(x.code) === cle; }) : null; }
   function procsDePartie(cle) {
     return Array.from(I.procedure.values()).filter(function (p) { return partieDe(p) === cle; })
       .sort(function (a, b) { return (a.categorie || '~').localeCompare(b.categorie || '~', 'fr') || a.titre.localeCompare(b.titre, 'fr'); });
@@ -1519,6 +1519,7 @@
 
   /** La partie du manuel d'une formation FO (réglage caché en mode tablette). */
   function blocPartieFo(code) {
+    if (!S.mn) return S.mnErreur ? '<p class="error">' + esc(S.mnErreur) + '</p>' : '';
     var cle = partieFo(code), regle = foRegle(code), def = S.mn && S.mn.formationsDefaut && S.mn.formationsDefaut[code];
     var h = '<div class="fm-mn"><p class="fm-mn__partie"><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/' + cle + '">' + esc(NOM_PARTIE[cle]) + '</a>' +
       (S.mn && !regle && !S.tablette ? ' <span class="muted fm-small">répartition par défaut</span>' : '') + '</p>';
@@ -1532,13 +1533,14 @@
 
   function manuelFormation() {
     var code = /^FO-\d+$/.test(S.route.a[1] || '') ? S.route.a[1] : null;
-    var depuis = S.route.a[2] === 'partie' && NOM_PARTIE[S.route.a[3]] ? S.route.a[3] : (code ? partieFo(code) : 'formation');
-    var fil = [['Manuel', '#/manuel'], [NOM_PARTIE[depuis], '#/manuel/partie/' + depuis]];
+    var depuis = S.route.a[2] === 'partie' && NOM_PARTIE[S.route.a[3]] ? S.route.a[3] : (code && S.mn ? partieFo(code) : null);
+    var fil = [['Manuel', '#/manuel']];
+    if (depuis) fil.push([NOM_PARTIE[depuis], '#/manuel/partie/' + depuis]);
     var f = code && formationsFo() ? formationsFo().filter(function (x) { return x.code === code; })[0] : null;
     fil.push([f ? f.code + ' · ' + f.nom : (code || 'Formation'), null]);
     if (!code) return { titre: 'Manuel opératoire', corps: filAriane(fil) + '<p class="error">Formation inconnue.</p>' };
     var v = ficheFo(code, true);
-    return { titre: f ? f.nom : code, kicker: 'Formation · ' + NOM_PARTIE[partieFo(code)], corps: filAriane(fil) + v.corps };
+    return { titre: f ? f.nom : code, kicker: S.mn ? 'Formation · ' + NOM_PARTIE[partieFo(code)] : 'Formation', corps: filAriane(fil) + v.corps };
   }
 
   function nbVideosAjoutees(id) { var r = reglageProc(id); return r && r.videos ? r.videos.length : 0; }
@@ -1548,9 +1550,10 @@
     var x = PARTIES.filter(function (p) { return p[0] === cle; })[0];
     var h = barreParties(cle) + filAriane([['Manuel', '#/manuel'], [x[1], null]]) + '<p class="muted fm-part-sous">' + esc(x[2]) + '</p>';
     if (cle === 'operationnel') h += '<div class="section-label">Par poste</div>' + grillePostes();
-    var procs = procsDePartie(cle);
-    h += '<div class="section-label">Procédures · ' + n(procs.length) + '</div>';
-    if (!procs.length) {
+    var procs = S.mn ? procsDePartie(cle) : null;
+    h += '<div class="section-label">Procédures · ' + (procs ? n(procs.length) : '…') + '</div>';
+    if (!procs) { h += S.mnErreur ? '<p class="error">' + esc(S.mnErreur) + '</p>' : attente('Lecture du manuel…'); procs = []; }
+    else if (!procs.length) {
       h += '<section class="card pending"><h2>Aucune procédure dans cette partie</h2><p class="muted">' +
         (S.tablette ? 'Cette partie du manuel n’est pas encore rédigée.' : 'Ouvrez une procédure et choisissez « ' + esc(x[1]) + ' » dans « Partie du manuel ».') + '</p></section>';
     }
@@ -1565,7 +1568,7 @@
     if (ouvert) h += '</ul>';
     var fos = fosDePartie(cle);
     h += '<div class="section-label">Formations · ' + (fos ? n(fos.length) : '…') + '</div>';
-    if (!fos) h += S.v25Erreur ? '<p class="error">' + esc(S.v25Erreur) + '</p>' : attente('Lecture du référentiel des formations…');
+    if (!fos) h += S.v25Erreur || S.mnErreur ? '<p class="error">' + esc(S.v25Erreur || S.mnErreur) + '</p>' : attente('Lecture des formations du manuel…');
     else if (!fos.length) h += '<p class="muted" style="margin-top:8px">Aucune formation dans cette partie.</p>';
     else h += '<ul class="type-grid">' + fos.map(function (f) { return carteFo(f, '#/manuel/formation/' + f.code + '/partie/' + cle); }).join('') + '</ul>';
     if (cle === 'formation') {
@@ -1619,6 +1622,7 @@
 
   /** Partie du manuel et vidéos, sur la page d'une procédure (réglages cachés en mode tablette). */
   function blocManuel(id, p, secs, pieces) {
+    if (!S.mn && !S.mnErreur) return '';
     var cle = partieDe(p), r = reglageProc(id), regle = !!(r && r.partie);
     var h = '<div class="fm-mn">';
     h += '<p class="fm-mn__partie"><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/' + cle + '">' + esc(NOM_PARTIE[cle]) + '</a>' +
