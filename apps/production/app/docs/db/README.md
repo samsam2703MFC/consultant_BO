@@ -240,6 +240,19 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   non lu de moins de 7 jours ; tâche faite entre-temps (jour validé, assistant terminé) → fermé, disparaît. Au tableau :
   « przeczytane 10:51 (J. K., PIN) ».
 
+### Reklamacje : bascule « Lista / Wykres » — frise de toutes les réclamations (01/11/2026, sans migration)
+
+- `/franchise-complaints` : à côté de « Pobierz nowe », bascule **Lista / Wykres** (mémorisée dans le navigateur ;
+  lien direct `/franchise-complaints#wykres`). « Wykres » = maquette 16 : chaque réclamation est un point — ligne =
+  groupe de production du produit (`n_prod_product_settings.id_primary_group`, sinon « bez grupy » ; réclamation sans
+  produit → « bez produktu »), position = jour de signalement (`reported_at`, sinon `acceptance_timestamp`), taille =
+  valeur (quantité × prix du carton de la WDT, `single_purchase_price`), couleur = décision (Przyjęte / Odrzucone /
+  Otwarte = NEW + IN_REVIEW). Info-bulle : produit, date, client, quantité, valeur, valeur acceptée (quantité acceptée ×
+  prix, comme le rapport mensuel), motif, décision. Clic ou Entrée → retour à la liste, réclamation dépliée.
+- Filtres : période (3 mois, 12 mois, cette année, tout), client, groupe, décision ; sous la frise, nombre de réclamations
+  par mois. Aucune écriture : lecture seule (`ComplaintRepository::chartRows`, `ComplaintService::chart`,
+  `public/assets/js/client/complaints-chart.js`).
+
 ### Nouvelle machine et machine partagée (migration 156, 01/11/2026)
 
 - Kreator maszyny : nouvelle première étape **« 1 · Maszyna »** (4 étapes : Maszyna › Produkty › Wsad i tempo › Gotowe).

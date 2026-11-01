@@ -93,6 +93,34 @@ class ComplaintRepository extends BaseRepository
         return array_column($rows, 'day', 'id_customer');
     }
 
+    /**
+     * [243] Wykres « Oś czasu » : każda reklamacja z dniem zgłoszenia, decyzją, grupą produkcji produktu (karta produktu,
+     * grupa główna), ilością, ilością przyjętą i ceną kartonu z WDT.
+     */
+    public function chartRows(): array
+    {
+        return $this->query(
+            "SELECT c.id, DATE(COALESCE(c.reported_at, c.acceptance_timestamp)) AS day, COALESCE(c.acceptance_status, 'NEW') AS status,
+                    c.complaint_type, c.complaint_reason, c.id_customer, cust.company AS customer, p.name AS product,
+                    c.product_quantity, c.accepted_quantity, c.single_purchase_price,
+                    (SELECT g.id FROM n_prod_item i
+                       JOIN n_prod_product_settings s ON s.id_item = i.id
+                       JOIN n_prod_group g ON g.id = s.id_primary_group
+                      WHERE i.id_final_product = c.id_product ORDER BY g.sort_order, g.id LIMIT 1) AS group_id
+             FROM complaint c
+             LEFT JOIN customer cust ON cust.id = c.id_customer
+             LEFT JOIN final_product p ON p.id = c.id_product
+             WHERE COALESCE(c.reported_at, c.acceptance_timestamp) IS NOT NULL
+             ORDER BY day, c.id"
+        ) ?: [];
+    }
+
+    /** [243] Grupy produkcji (wiersze osi czasu), w kolejności menu. */
+    public function chartGroups(): array
+    {
+        return $this->query('SELECT id, name_pl FROM n_prod_group WHERE active = 1 ORDER BY sort_order, name_pl') ?: [];
+    }
+
     public function getAll()
     {
         $sql = "SELECT

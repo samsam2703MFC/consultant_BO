@@ -3266,3 +3266,46 @@ button.mc-name:hover b { color: #8e1f2f; }
 tr.mw-shared td { background: #f7f9fc; }
 tr.mw-addrow td { padding-top: 2px; padding-bottom: 8px; border: 0; }
 tr.mw-addrow .tt-link { font-size: 12px; min-height: 32px; }
+
+/* [243] Reklamacje › « Lista / Wykres » : oś czasu wszystkich reklamacji (makieta 16).
+   Kolory decyzji = 3 pierwsze kolory kategorii palety referencyjnej (sprawdzone pod daltonizm, wszystkie pary). */
+.rk-chart-root, .rk-seg { --rk-acc: #2a78d6; --rk-rej: #eb6834; --rk-open: #1baf7a; --rk-one: #8e1f2f; --rk-grid: #ece7e1; }
+.rk-seg { display: inline-flex; border: 1px solid var(--at-line-2); border-radius: 10px; overflow: hidden; background: #fff; }
+.rk-seg button { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; font-size: 13px; font-weight: 600; border: 0; border-right: 1px solid var(--at-line); background: #fff; color: var(--at-muted); }
+.rk-seg button:last-child { border-right: 0; } .rk-seg button.on { background: #8e1f2f; color: #fff; }
+.rk-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0 12px; }
+.rk-lab { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--at-muted); margin-right: 2px; }
+.rk-chip { display: inline-flex; align-items: center; min-height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--at-line-2); background: #fff; font-size: 12.5px; font-weight: 600; color: var(--at-muted); }
+.rk-chip.on { background: #f7ece9; border-color: #e3c4c8; color: #8e1f2f; }
+.rk-sp { flex: 1; }
+.rk-sel { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 4px 0 10px; border-radius: 10px; border: 1px solid var(--at-line-2); background: #fff; margin: 0; }
+.rk-sel select { border: 0; background: transparent; font-size: 12.5px; font-weight: 600; min-height: 36px; padding-right: 6px; max-width: 220px; }
+.rk-panel { position: relative; border: 1px solid var(--at-line); border-radius: 12px; padding: 12px 14px 8px; background: #fff; }
+.rk-panel h5 { margin: 0; font-size: 14px; font-weight: 700; }
+.rk-sub { font-size: 12px; color: var(--at-muted); margin: 2px 0 8px; }
+.rk-legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--at-muted); margin: 2px 0 6px; min-height: 34px; }
+.rk-legend b { color: var(--at-text); font-variant-numeric: tabular-nums; margin-left: 2px; }
+.rk-legend i.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.rk-legend .rk-size { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.rk-muted { color: var(--at-muted); }
+.rk-plot { width: 100%; overflow: hidden; }
+.rk-svg { display: block; font-family: inherit; }
+.rk-svg .rk-grid { stroke: var(--rk-grid); stroke-width: 1; }
+.rk-svg .rk-base { stroke: #cfc8c0; stroke-width: 1; }
+.rk-svg .rk-ax { font-size: 11px; fill: #8b857e; font-variant-numeric: tabular-nums; }
+.rk-svg .rk-dl { font-size: 11.5px; font-weight: 700; fill: var(--at-text); font-variant-numeric: tabular-nums; }
+.rk-svg .rk-rowname { font-size: 13px; font-weight: 700; fill: var(--at-text); }
+.rk-svg .rk-bar { fill: var(--rk-one); }
+.rk-svg .rk-pt { cursor: pointer; outline: none; }
+.rk-svg .rk-hit { fill: transparent; }
+.rk-svg .rk-dot { fill-opacity: .9; stroke: #fff; stroke-width: 2; transition: stroke .1s; }
+.rk-svg .rk-pt:hover .rk-dot, .rk-svg .rk-pt:focus-visible .rk-dot { stroke: var(--at-text); stroke-width: 2; fill-opacity: 1; }
+.rk-tip { position: absolute; z-index: 5; background: #1d1b19; color: #fff; border-radius: 10px; padding: 9px 12px; font-size: 12px; line-height: 1.55; box-shadow: 0 8px 24px rgba(0,0,0,.18); pointer-events: none; min-width: 210px; max-width: 300px; font-variant-numeric: tabular-nums; }
+.rk-tip > b { font-size: 12.5px; display: block; margin-bottom: 2px; }
+.rk-tip .r { display: flex; justify-content: space-between; gap: 14px; } .rk-tip .r span { opacity: .75; }
+.rk-tip .r i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+.rk-tip .go { margin-top: 4px; color: #ffd5da; font-weight: 700; }
+.rk-empty { padding: 36px 8px; text-align: center; color: var(--at-muted); font-size: 13px; }
+.rk-note { font-size: 12px; color: var(--at-muted); margin: 8px 0 0; }
+.complaint-item.rk-flash { box-shadow: 0 0 0 3px rgba(142,31,47,.35); transition: box-shadow .4s; }
+@media (max-width: 575.98px) { .rk-sel select { max-width: 150px; } .rk-legend .rk-size, .rk-legend .rk-muted { display: none; } }
