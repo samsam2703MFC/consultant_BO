@@ -1,6 +1,8 @@
 // Moce produkcyjne [234] (makieta 10 — wykorzystanie i co jeszcze zmieszczę, makieta 11 — ilość na zmianę i ustawienia maszyny).
 // Zakładki : Wykorzystanie (maszyny wg rodzaju, zespoły, mroźnia, dni, panel symulacji), Co jeszcze zmieszczę (symulacja +
 // ranking wartości), Ilość na zmianę (produkty : wąskie gardło), Ustawienia maszyn (wsad, cykl, TRS, zmiany, widoczność, mroźnia).
+// [240] Dane maszyn (makiety 12–13) : co trzeba uzupełnić + kreator maszyny (produkty → wsad, wsadów / h, osób → gotowe) ;
+// także dla kierownika produkcji (stan obecny + zakładka « Dane maszyn »).
 (() => {
     const app = document.getElementById('mcApp');
     if (!app) return;
@@ -11,8 +13,12 @@
     const UNITS = {piece: 'szt.', plaque: 'blach', kg: 'kg', chariot: 'wózków', bac: 'pojemników', litre: 'l'};
     // Produkcja (bez prawa « pełna wersja ») : tylko stan obecny — tydzień bieżący, do odczytu, bez zakładek i symulacji.
     const RO = () => !!D.readonly;
+    // [240] Dane maszyn : zakładka « Ustawienia maszyn » (pełna wersja) albo « Dane maszyn » (kierownik produkcji — karty produktów).
+    const tabList = () => RO() ? (D.machines_edit ? [['use', 'bi-speedometer2', 'Stan obecny'], ['settings', 'bi-ui-checks-grid', 'Dane maszyn']] : []) : TABS;
     let tab = (location.hash.match(/tab=(\w+)/) || [])[1] || 'use';
-    if (!TABS.some(([k]) => k === tab) || RO()) tab = 'use';
+    if (!tabList().some(([k]) => k === tab)) tab = 'use';
+    let MD = null; // przegląd danych maszyn (ładowany przy otwarciu zakładki)
+    let mdLoading = false;
     let filters = {date: D.week ? D.week.start : null, group: D.group ?? '', shifts: []};
     if (D.what_if && D.what_if.afternoon) filters.shifts.push('afternoon');
     let sim = {item: null, qty: '', res: null, busy: false};
@@ -172,21 +178,202 @@
             <p class="mc-note">Ilość na zmianę = najwolniejszy etap produktu (czas stały ÷ wsad + czas zmienny, × TRS maszyny ; oczekiwanie w komorze : miejsca × czas). Kliknij maszynę, aby zmienić jej ustawienia.</p></div>`;
     }
 
+    // --- Dane maszyn [240] (makieta 12) : co trzeba uzupełnić, maszyny wg grup, kreator maszyny -----------------------
+    const pl = (n, a, b, c) => n === 1 ? a : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? b : c);
+    function mdTiles() {
+        const t = MD.tiles;
+        const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+        const names = t.plan_without_names.map(esc).join(', ');
+        return `<div class="mw-prog">
+            <div class="mc-tile ${t.machines_with < t.machines ? 'warn' : 'ok'}"><span>Maszyny z produktami</span><b>${t.machines_with} z ${t.machines}</b><div class="mw-bar"><i style="width:${pct(t.machines_with, t.machines)}%"></i></div>
+                <small>${t.machines - t.machines_with ? `${t.machines - t.machines_with} ${pl(t.machines - t.machines_with, 'maszyna', 'maszyny', 'maszyn')} bez żadnego produktu` : 'wszystkie maszyny mają produkty'}</small></div>
+            <div class="mc-tile ${pct(t.products_with, t.products) < 50 ? 'bad' : 'warn'}"><span>Produkty z danymi maszyn</span><b>${t.products_with} z ${t.products}</b><div class="mw-bar"><i class="bad" style="width:${pct(t.products_with, t.products)}%"></i></div>
+                <small>bez nich ERP nie liczy obciążenia</small></div>
+            <div class="mc-tile ${t.plan_without ? 'warn' : 'ok'}"><span>Plan tygodnia bez danych</span><b>${t.plan_without} z ${t.plan}</b><div class="mw-bar"><i class="warn" style="width:${pct(t.plan - t.plan_without, t.plan)}%"></i></div>
+                <small>${t.plan_without ? names + (t.plan_without > t.plan_without_names.length ? '…' : '') + ' — zacznij od nich' : 'wszystkie produkty planu mają dane'}</small></div>
+            <div class="mw-acts">${MD.next ? `<button type="button" class="kw-btn pri mw-start" data-wiz="${MD.next}"><i class="bi bi-magic"></i> Zacznij : następna maszyna bez danych</button>` : '<span class="mw-st ok"><i class="bi bi-check2"></i> każda maszyna ma produkty</span>'}</div></div>`;
+    }
+
+    function mdState(m) {
+        if (m.state === 'todo') return '<span class="mw-st todo"><i class="bi bi-exclamation-circle"></i> do uzupełnienia</span>';
+        const n = `${m.products} ${pl(m.products, 'produkt', 'produkty', 'produktów')}`;
+        return m.state === 'part' ? `<span class="mw-st part"><i class="bi bi-dash-circle"></i> ${n} · ${m.incomplete} bez tempa</span>` : `<span class="mw-st ok"><i class="bi bi-check2"></i> ${n}</span>`;
+    }
+
+    function mdTable() {
+        const full = !RO();
+        const rows = MD.groups.map(g => `<tr class="grp"><td colspan="5">${esc(g.name)}${g.products ? ` <small>${g.products} ${pl(g.products, 'produkt', 'produkty', 'produktów')} · ${g.products_with} z danymi</small>` : ''}</td></tr>`
+            + (g.machines.length ? g.machines.map(m => `<tr class="${m.state === 'todo' && m.id === MD.next ? 'hot' : ''}"><td><span class="mc-name"><i class="bi ${m.icon}"></i><span><b>${esc(m.name)}</b><small>${esc(m.type_name)}</small></span></span></td>
+                <td>${nf(m.capacity, 1)} ${esc(m.unit)}</td><td class="r">${m.products}</td><td>${mdState(m)}</td>
+                <td class="r mw-btns">${full ? `<button type="button" class="kw-btn kw-sm" data-edit="${m.id}" title="Wsad, cykl, TRS, zmiany"><i class="bi bi-sliders"></i><span class="d-none d-xl-inline"> Ustawienia</span></button>` : ''}
+                    <button type="button" class="kw-btn kw-sm ${m.state === 'todo' ? 'pri' : ''}" data-wiz="${m.id}"><i class="bi bi-magic"></i> ${m.state === 'todo' ? 'Uzupełnij' : 'Zmień'}</button></td></tr>`).join('')
+                : `<tr><td colspan="4"><span class="mw-st todo"><i class="bi bi-exclamation-circle"></i> brak maszyn w grupie ${esc(g.name)}</span> <small class="at-sub">dodaj maszyny (np. piec, mikser), potem przypisz produkty</small></td>
+                    <td class="r">${full ? `<a class="kw-btn kw-sm" href="${esc(at.root)}/workshop/workstations"><i class="bi bi-plus-lg"></i> Dodaj maszynę</a>` : ''}</td></tr>`)).join('');
+        return `<div class="mc-card"><div class="table-responsive"><table class="mc-tbl"><thead><tr><th>Maszyna</th><th>Wsad</th><th class="r">Produkty</th><th>Dane</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+            <p class="mc-note">Kliknij « Uzupełnij » : zaznacz produkty robione na maszynie, potem wpisz ile sztuk w jednym wsadzie, ile wsadów na godzinę i ile osób przy wsadzie. Dane trafiają do etapów kart produkcyjnych.${full ? ' Nowa maszyna : <a href="' + esc(at.root) + '/workshop/workstations">Stanowiska</a>.' : ''}</p></div>`;
+    }
+
     function settingsTab() {
-        const all = [];
-        D.sections.forEach(s => s.rows.forEach(m => all.push(m)));
-        const hidden = D.hidden || [];
+        if (!MD) { if (!mdLoading) loadMD(); return '<div class="kw-card"><p class="at-sub mb-0"><span class="spinner-border spinner-border-sm"></span> Ładowanie danych maszyn…</p></div>'; }
+        if (RO()) return mdTiles() + mdTable();
         const f = D.freezer;
-        return `<div class="mc-split"><div class="mc-card"><div class="table-responsive"><table class="mc-tbl"><thead><tr><th>Maszyna</th><th>Rodzaj</th><th>Wsad</th><th>Cykl</th><th>TRS</th><th>Zmiany</th><th></th></tr></thead><tbody>
-            ${all.concat(hidden).map(m => `<tr><td><span class="mc-name"><i class="bi ${ICON[m.type] || 'bi-gear'}"></i><span><b>${esc(m.name)}</b><small>${esc(m.group || '')}${m.view ? '' : ' · ukryta'}</small></span></span></td>
-                <td>${esc(m.type)}</td><td>${nf(m.capacity_per_pass, 1)} ${esc(m.unit)}</td><td>${m.cycle_s ? mins(m.cycle_s) : '—'}</td><td>${nf(m.efficiency_pct)} %</td><td>${esc(m.shift_names.join(', ') || '—')}</td>
-                <td class="r"><button type="button" class="kw-btn kw-sm" data-edit="${m.id}"><i class="bi bi-sliders"></i> Ustawienia</button></td></tr>`).join('')}</tbody></table></div>
-            <p class="mc-note">Nowa maszyna (np. piec piętrowy do bagietek) : <a href="${esc(at.root)}/workshop/workstations">Stanowiska</a>, potem jej etapy w kartach produkcyjnych (Etapy i czasy).</p></div>
+        return `${mdTiles()}<div class="mc-split">${mdTable()}
             <div class="mc-panel"><h5><i class="bi bi-snow2"></i> Mroźnia zapasu</h5>
                 <div class="mc-f"><label>Miejsca paletowe<input class="form-control" data-fz-places inputmode="numeric" value="${f.places || ''}"></label>
                 <label>Ostrzeżenie od (%)<input class="form-control" data-fz-alert inputmode="decimal" value="${f.alert_pct}"></label></div>
                 <div class="mc-calc">Zapas dziś : <b>${nf(f.now, 1)} palet</b>${f.places ? ` · ${nf(f.pct)} %` : ''}<br>Produkcja na zapas w tygodniu : + ${nf(f.mts_week, 1)} palet (bez wysyłek)</div>
                 <div class="mc-actions"><button type="button" class="kw-btn pri" data-fz-save><i class="bi bi-check2"></i> Zapisz</button></div></div></div>`;
+    }
+
+    async function loadMD() {
+        mdLoading = true;
+        const res = await at.send('/ajax/production/capacity/machine-data', 'GET');
+        mdLoading = false;
+        if (!res.ok || !res.data) { at.notify(false, res.message || 'Błąd ładowania danych maszyn.'); MD = {tiles: {machines_with: 0, machines: 0, products_with: 0, products: 0, plan_without: 0, plan: 0, plan_without_names: []}, groups: [], next: null, todo: 0}; }
+        else MD = res.data;
+        render();
+    }
+
+    // --- Kreator maszyny [240] (makieta 13) : 1 · Produkty › 2 · Wsad i tempo (+ osób) › 3 · Gotowe --------------------
+    const num = (v) => { const t = String(v ?? '').replace(/\s/g, '').replace(',', '.'); return t === '' || isNaN(Number(t)) ? null : Number(t); };
+    const fmtIn = (v) => v === null || v === undefined ? '' : String(Number(v)).replace('.', ',');
+
+    async function openWizard(id) {
+        modal = {kind: 'wizard', id, step: 1, busy: true, data: null};
+        render();
+        const res = await at.send(`/ajax/production/capacity/machine-data/${id}`, 'GET');
+        if (!res.ok || !res.data) { modal = null; at.notify(false, res.message || 'Błąd.'); return render(); }
+        const d = res.data;
+        const sel = d.products.filter(p => p.on).map(p => p.id);
+        const vals = {};
+        d.products.forEach(p => { if (p.on) vals[p.id] = {per_batch: fmtIn(p.per_batch), per_hour: fmtIn(p.per_hour), people: fmtIn(p.people)}; });
+        modal = {kind: 'wizard', id, step: 1, busy: false, data: d, sel, vals, filter: d.machine.group_id ? 'group' : 'all', q: '', result: null};
+        render();
+    }
+
+    function wizProducts() {
+        const d = modal.data;
+        const q = modal.q.trim().toLowerCase();
+        return d.products.filter(p => {
+            if (q) return p.name.toLowerCase().includes(q);
+            if (modal.filter === 'group') return p.group_id === d.machine.group_id || modal.sel.includes(p.id);
+            if (modal.filter === 'nodata') return !p.has_data || modal.sel.includes(p.id);
+            if (modal.filter === 'plan') return p.in_plan || modal.sel.includes(p.id);
+            return true;
+        });
+    }
+
+    function wizHead(m) {
+        const st = (n, l) => `<span class="${modal.step === n ? 'on' : (modal.step > n ? 'done' : '')}">${modal.step > n ? '<i class="bi bi-check2"></i> ' : ''}${n} · ${l}</span>`;
+        return `<div class="mw-steps">${st(1, 'Produkty')}<em>›</em>${st(2, 'Wsad i tempo')}<em>›</em>${st(3, 'Gotowe')}</div>
+            <div class="mw-head"><i class="big bi ${m.icon}"></i><div><b>${esc(m.name)}</b><small>${esc(m.group || 'bez grupy')} · ${esc(m.type_name)} · wsad ${nf(m.capacity, 1)} ${esc(m.unit)}${modal.step === 2 ? ` · zmiana ${nf(m.shift_h, 1)} h · wydajność ${nf(m.efficiency_pct)} %` : ''}</small></div></div>`;
+    }
+
+    function wizStep1() {
+        const d = modal.data;
+        const m = d.machine;
+        const count = (f) => d.products.filter(p => f === 'group' ? p.group_id === m.group_id : (f === 'nodata' ? !p.has_data : (f === 'plan' ? p.in_plan : true))).length;
+        const chips = [['group', `Grupa ${m.group || ''}`], ['nodata', 'Bez danych'], ['plan', 'W planie tygodnia'], ['all', 'Wszystkie']].filter(([k]) => k !== 'group' || m.group_id)
+            .map(([k, l]) => `<button type="button" class="mw-chip ${modal.filter === k && !modal.q ? 'on' : ''}" data-wf="${k}">${esc(l)} (${count(k)})</button>`).join('');
+        const list = wizProducts();
+        const items = list.map(p => {
+            const on = modal.sel.includes(p.id);
+            const sub = p.on ? 'już na tej maszynie — zmiana w kroku 2' : (p.has_data ? 'już ma etapy : ' + p.others.slice(0, 3).join(', ') + (p.others.length > 3 ? '…' : '') : 'bez danych maszyn');
+            return `<button type="button" class="mw-item ${on ? 'on' : ''}${p.on ? ' lock' : ''}" data-wsel="${p.id}" aria-pressed="${on}" ${p.on ? 'aria-disabled="true"' : ''}>
+                <span class="ck">${on ? '<i class="bi bi-check"></i>' : ''}</span><span class="nm">${esc(p.name)}<small>${esc(sub)}${p.group && p.group_id !== m.group_id ? ' · ' + esc(p.group) : ''}</small></span>
+                ${p.in_plan ? `<span class="mw-st ${p.has_data ? 'ok' : 'part'}">plan tyg.</span>` : '<span></span>'}</button>`;
+        }).join('') || '<p class="at-sub m-2">Brak produktów — zmień filtr albo wyszukaj.</p>';
+        return `${wizHead(m)}
+            <div><b>Które produkty są robione na tej maszynie ?</b><div class="mc-note">Zaznacz wszystkie — w następnym kroku wpiszesz ile sztuk na raz, ile razy na godzinę i ile osób.</div></div>
+            <input class="form-control mw-q" type="search" data-wq placeholder="szukaj produktu…" value="${esc(modal.q)}" aria-label="Szukaj produktu">
+            <div class="mw-filter">${chips}</div>
+            <div class="mw-lab">Zaznaczone : ${modal.sel.length}</div>
+            <div class="mw-list">${items}</div>
+            <div class="mw-foot"><button type="button" class="tt-link" data-close>Anuluj</button><span class="sp"></span><small>${modal.sel.length} ${pl(modal.sel.length, 'produkt', 'produkty', 'produktów')}</small>
+                <button type="button" class="kw-btn pri" data-wnext ${modal.sel.length ? '' : 'disabled'}>Dalej <i class="bi bi-arrow-right"></i></button></div>`;
+    }
+
+    function wizCalc(p) {
+        const m = modal.data.machine;
+        const v = modal.vals[p.id] || {};
+        const b = num(v.per_batch), h = num(v.per_hour), ppl = num(v.people);
+        if (!(b > 0) || !(h > 0)) return {hour: '<b>—</b><small>' + (b > 0 || h > 0 ? 'wpisz ' + (b > 0 ? 'tempo' : 'wsad') : '') + '</small>', shift: '<b>—</b>', ok: false};
+        const perH = b * h;
+        const perShift = perH * m.shift_h * (m.efficiency_pct || 100) / 100;
+        const people = ppl === null ? 1 : ppl;
+        return {hour: `<b>${nf(perH)} ${esc(p.unit)}</b><small>${nf(60 / h, 1)} min / wsad</small>`,
+            shift: `<b>${nf(perShift)} ${esc(p.unit)}</b><small>${p.ppc ? nf(perShift / p.ppc) + ' kart. · ' : ''}${nf(people, 1)} ${pl(Math.round(people), 'osoba', 'osoby', 'osób')}</small>`, ok: true};
+    }
+
+    function wizStep2() {
+        const d = modal.data;
+        const rows = modal.sel.map(id => d.products.find(p => p.id === id)).filter(Boolean);
+        const filled = rows.filter(p => wizCalc(p).ok).length;
+        const inp = (p, k, unit, ph) => `<span class="mw-cell"><input class="form-control mw-in" data-wv="${k}" data-wid="${p.id}" inputmode="decimal" value="${esc((modal.vals[p.id] || {})[k] || '')}" placeholder="${ph}" aria-label="${esc(p.name)} — ${unit}"><span class="mw-unit">${unit}</span></span>`;
+        const body = rows.map(p => { const c = wizCalc(p); return `<tr data-wrow="${p.id}"><td><b>${esc(p.name)}</b><small>${p.in_plan ? 'w planie tygodnia' : (p.on ? 'już na tej maszynie' : esc(p.group || ''))}</small></td>
+            <td class="r">${inp(p, 'per_batch', esc(p.unit), '?')}</td><td class="r">${inp(p, 'per_hour', '× / h', '?')}</td><td class="r">${inp(p, 'people', 'os.', '1')}</td>
+            <td class="r mw-res ${c.ok ? 'ok' : 'none'}" data-wh>${c.hour}</td><td class="r mw-res ${c.ok ? 'ok' : 'none'}" data-ws>${c.shift}</td></tr>`; }).join('');
+        return `${wizHead(d.machine)}
+            <div class="mw-hint"><b>Sztuk w 1 wsadzie</b> = ile wchodzi na maszynę na raz (np. 18 blach × 12 bagietek = 216).
+                <b>Wsadów na godzinę</b> = ile razy na godzinę maszyna się napełnia (np. 25 min + 5 min załadunku = 30 min → 2).
+                <b>Osób przy wsadzie</b> = ile osób pracuje przy tym wsadzie (puste = 1).</div>
+            <div class="table-responsive"><table class="mw-tbl"><thead><tr><th>Produkt</th><th class="r">Sztuk w 1 wsadzie</th>
+                <th class="r">Wsadów na godzinę <button type="button" class="mw-copy" data-wcopy="per_hour"><i class="bi bi-arrow-down"></i> kopiuj do wszystkich</button></th>
+                <th class="r">Osób przy wsadzie <button type="button" class="mw-copy" data-wcopy="people"><i class="bi bi-arrow-down"></i> kopiuj</button></th>
+                <th class="r">= na godzinę</th><th class="r">Na zmianę</th></tr></thead><tbody>${body}</tbody></table></div>
+            <div class="mc-note">Zapis : w karcie produkcyjnej każdego produktu powstaje (albo zmienia się) etap « ${esc(d.machine.name)} » z tymi liczbami. Puste wiersze nie są zapisywane — możesz wrócić później. Kolejność etapów zmienisz w karcie produktu.</div>
+            <div class="mw-foot"><button type="button" class="kw-btn" data-wback><i class="bi bi-arrow-left"></i> Wstecz</button><span class="sp"></span><small data-wfilled>${filled} z ${rows.length} uzupełnione</small>
+                <button type="button" class="kw-btn pri" data-wsave ${modal.busy ? 'disabled' : ''}><i class="bi bi-check2"></i> Zapisz</button></div>`;
+    }
+
+    function wizStep3() {
+        const r = modal.result;
+        const m = modal.data.machine;
+        const n = r.created + r.updated;
+        const nx = r.next_machine;
+        return `${wizHead(m)}
+            <div class="mw-done"><i class="big bi bi-check2-circle"></i><b class="mw-done-t">${esc(m.name)} : ${n ? `${n} ${pl(n, 'produkt zapisany', 'produkty zapisane', 'produktów zapisanych')}` : 'bez zmian'}</b>
+                <div class="mc-note">${r.created ? `${r.created} ${pl(r.created, 'nowy etap', 'nowe etapy', 'nowych etapów')} w kartach` : ''}${r.created && r.updated ? ' · ' : ''}${r.updated ? `${r.updated} ${pl(r.updated, 'etap zmieniony', 'etapy zmienione', 'etapów zmienionych')}` : ''}${r.unchanged ? ` · ${r.unchanged} bez zmian` : ''}
+                ${r.empty ? `<br>${r.empty} ${pl(r.empty, 'produkt', 'produkty', 'produktów')} bez danych — wróć później.` : ''}
+                ${r.load_pct !== null && r.load_pct !== undefined ? `<br>Obciążenie maszyny w tym tygodniu : <b>${nf(r.load_pct)} %</b>` : ''}</div></div>
+            ${nx ? `<div class="mw-lab">Następna maszyna bez danych</div>
+                <div class="mw-next"><i class="mi bi ${nx.icon}"></i><div><b>${esc(nx.name)}</b><div class="mc-note">${esc(nx.group || '')} · wsad ${nf(nx.capacity, 1)} ${esc(nx.unit)}</div></div>
+                    <button type="button" class="kw-btn pri" data-wiz="${nx.id}">Dalej <i class="bi bi-arrow-right"></i></button></div>` : '<div class="mw-lab">Każda maszyna ma już produkty.</div>'}
+            <div class="mw-foot"><span class="sp"></span><button type="button" class="kw-btn" data-close>Wróć do listy maszyn</button></div>`;
+    }
+
+    function wizHtml() {
+        let body;
+        if (!modal.data) body = '<p class="at-sub m-3"><span class="spinner-border spinner-border-sm"></span> Ładowanie…</p>';
+        else body = modal.step === 1 ? wizStep1() : (modal.step === 2 ? wizStep2() : wizStep3());
+        return `<div class="fc-modal" data-modal><div class="fc-modal-box mc-modal-box mw-box" role="dialog" aria-modal="true" aria-label="Kreator maszyny">${body}</div></div>`;
+    }
+
+    function wizUpdateRow(id) {
+        const tr = app.querySelector(`[data-wrow="${id}"]`);
+        const p = modal.data.products.find(x => x.id === id);
+        if (!tr || !p) return;
+        const c = wizCalc(p);
+        const h = tr.querySelector('[data-wh]'), s2 = tr.querySelector('[data-ws]');
+        h.innerHTML = c.hour; s2.innerHTML = c.shift;
+        h.className = s2.className = `r mw-res ${c.ok ? 'ok' : 'none'}`;
+        const rows = modal.sel.map(i => modal.data.products.find(x => x.id === i)).filter(Boolean);
+        const f = app.querySelector('[data-wfilled]');
+        if (f) f.textContent = `${rows.filter(x => wizCalc(x).ok).length} z ${rows.length} uzupełnione`;
+    }
+
+    async function wizSave() {
+        const rows = modal.sel.map(id => ({item_id: id, ...(modal.vals[id] || {})}));
+        modal.busy = true; render();
+        const res = await at.send(`/ajax/production/capacity/machine-data/${modal.id}`, 'PUT', {rows});
+        modal.busy = false;
+        if (!res.ok) { at.notify(false, res.message || 'Błąd zapisu.'); return render(); }
+        at.notify(true, res.message || 'Zapisano.');
+        modal.step = 3;
+        modal.result = res.data;
+        MD = null;
+        render();
+        load();
     }
 
     // --- Okno ustawień maszyny (makieta 11) --------------------------------------------------------------------------
@@ -215,6 +402,7 @@
     }
 
     function modalHtml() {
+        if (modal.kind === 'wizard') return wizHtml();
         if (modal.kind === 'freezer') {
             const f = D.freezer;
             return `<div class="fc-modal" data-modal><div class="fc-modal-box mc-modal-box" role="dialog" aria-modal="true" aria-label="Mroźnia zapasu">
@@ -256,15 +444,21 @@
     function render() {
         if (D.error) { app.innerHTML = `<div class="kw"><div class="kw-card"><p class="text-danger mb-0">${esc(D.error)}</p></div></div>`; return; }
         const y = window.scrollY;
+        // Kreator : lista produktów i okno zachowują przewinięcie po przerysowaniu.
+        const keep = ['.mw-list', '.mw-box'].map(sel => [sel, app.querySelector(sel)?.scrollTop || 0]);
         let body = '';
-        if (RO()) body = useTable();
+        if (RO()) body = tab === 'settings' ? settingsTab() : useTable();
         else if (tab === 'use') body = `<div class="mc-wrap">${useTable()}<div class="mc-side">${simPanel(false)}${ranking(5)}</div></div>`;
         else if (tab === 'more') body = moreTab();
         else if (tab === 'shift') body = shiftTab();
         else body = settingsTab();
-        const tabs = RO() ? '' : `<div class="mc-tabs" role="tablist">${TABS.map(([k, ic, l]) => `<button type="button" role="tab" aria-selected="${k === tab}" class="${k === tab ? 'on' : ''}" data-tab="${k}"><i class="bi ${ic}"></i> ${l}</button>`).join('')}</div>`;
+        const tl = tabList();
+        const badge = (k) => k === 'settings' && MD && MD.todo ? ` <b class="mc-tab-n">${MD.todo}</b>` : '';
+        const tabs = tl.length ? `<div class="mc-tabs" role="tablist">${tl.map(([k, ic, l]) => `<button type="button" role="tab" aria-selected="${k === tab}" class="${k === tab ? 'on' : ''}" data-tab="${k}"><i class="bi ${ic}"></i> ${l}${badge(k)}</button>`).join('')}</div>` : '';
+        const head = tab === 'settings' ? '' : `${bar0()}${tiles()}${warn()}`;
         app.innerHTML = `<div class="kw mc${RO() ? ' ro' : ''}">${tabs}
-            ${bar0()}${tiles()}${warn()}${body}</div>${modal ? modalHtml() : ''}`;
+            ${head}${body}</div>${modal ? modalHtml() : ''}`;
+        keep.forEach(([sel, top]) => { const el = app.querySelector(sel); if (el && top) el.scrollTop = top; });
         window.scrollTo(0, y);
     }
 
@@ -299,7 +493,33 @@
     app.addEventListener('click', async (e) => {
         const t = e.target;
         if (t.closest('[data-modal]')) {
-            if (t.closest('[data-close]') || t.matches('[data-modal]')) { modal = null; return render(); }
+            if (t.closest('[data-close]') || (t.matches('[data-modal]') && !(modal && modal.kind === 'wizard' && modal.step === 2))) { modal = null; return render(); }
+            if (modal && modal.kind === 'wizard') {
+                const wz = t.closest('[data-wiz]');
+                if (wz) return openWizard(Number(wz.dataset.wiz));
+                const ws = t.closest('[data-wsel]');
+                if (ws) {
+                    const id = Number(ws.dataset.wsel);
+                    const p = modal.data.products.find(x => x.id === id);
+                    if (p && p.on) return;
+                    modal.sel = modal.sel.includes(id) ? modal.sel.filter(x => x !== id) : [...modal.sel, id];
+                    return render();
+                }
+                const wf = t.closest('[data-wf]');
+                if (wf) { modal.filter = wf.dataset.wf; modal.q = ''; return render(); }
+                if (t.closest('[data-wnext]')) { modal.sel.forEach(id => { modal.vals[id] = modal.vals[id] || {per_batch: '', per_hour: '', people: ''}; }); modal.step = 2; return render(); }
+                if (t.closest('[data-wback]')) { modal.step = 1; return render(); }
+                const wc = t.closest('[data-wcopy]');
+                if (wc) {
+                    const k = wc.dataset.wcopy;
+                    const src = modal.sel.map(id => (modal.vals[id] || {})[k]).find(v => num(v) !== null);
+                    if (src === undefined) return at.notify(false, 'Wpisz wartość w pierwszym wierszu.');
+                    modal.sel.forEach(id => { modal.vals[id] = modal.vals[id] || {}; if (num(modal.vals[id][k]) === null) modal.vals[id][k] = src; });
+                    return render();
+                }
+                if (t.closest('[data-wsave]')) return wizSave();
+                return;
+            }
             const sh = t.closest('[data-mshift]');
             if (sh) { modal.values.shifts[sh.dataset.mshift] = !modal.values.shifts[sh.dataset.mshift]; return render(); }
             if (t.closest('[data-msave]')) {
@@ -326,6 +546,8 @@
         }
         const tb = t.closest('[data-tab]');
         if (tb) { tab = tb.dataset.tab; try { history.replaceState(null, '', location.search + '#tab=' + tab); } catch (x) { /* */ } return render(); }
+        const wz = t.closest('[data-wiz]');
+        if (wz) return openWizard(Number(wz.dataset.wiz));
         const wk = t.closest('[data-week]');
         if (wk) { filters.date = wk.dataset.week; return load(); }
         if (t.closest('[data-shifts]')) { filters.shifts = []; return load(); }
@@ -348,6 +570,20 @@
     app.addEventListener('input', (e) => {
         const t = e.target;
         if (t.matches('[data-sim-qty]')) { sim.qty = t.value; return; }
+        if (modal && modal.kind === 'wizard' && t.matches('[data-wv]')) {
+            const id = Number(t.dataset.wid);
+            modal.vals[id] = modal.vals[id] || {};
+            modal.vals[id][t.dataset.wv] = t.value;
+            return wizUpdateRow(id);
+        }
+        if (modal && modal.kind === 'wizard' && t.matches('[data-wq]')) {
+            modal.q = t.value;
+            const pos = t.selectionStart;
+            render();
+            const q = app.querySelector('[data-wq]');
+            if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (x) { /* */ } }
+            return;
+        }
         if (modal && t.matches('input[data-mv]')) { modal.values[t.dataset.mv] = t.value; updateCalc(); }
     });
     app.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('[data-sim-qty]')) { e.preventDefault(); runSim(); } });

@@ -41,6 +41,10 @@ return function(RouteCollector $r) {
     $r->addRoute('GET', '/ajax/production/capacity/simulate', ['controller' => $cc, 'method' => 'simulate']);
     $r->addRoute('PUT', '/ajax/production/capacity/workstations/{id:\d+}', ['controller' => $cc, 'method' => 'saveMachine']);
     $r->addRoute('PUT', '/ajax/production/capacity/freezer', ['controller' => $cc, 'method' => 'saveFreezer']);
+    // Dane maszyn [240] : przegląd + kreator maszyny (produkty, wsad, wsadów na godzinę, osób przy wsadzie).
+    $r->addRoute('GET', '/ajax/production/capacity/machine-data', ['controller' => $cc, 'method' => 'machineData']);
+    $r->addRoute('GET', '/ajax/production/capacity/machine-data/{id:\d+}', ['controller' => $cc, 'method' => 'machineProducts']);
+    $r->addRoute('PUT', '/ajax/production/capacity/machine-data/{id:\d+}', ['controller' => $cc, 'method' => 'saveMachineProducts']);
 
     // Prognoza 13 tygodni [220] : zamówienia, N-1 × trend, gamy sezonowe panelu TF Buddy (tylko odczyt), zakupy, zatwierdzenie w poniedziałek.
     $fc = App\Controllers\Web\Production\ForecastController::class;

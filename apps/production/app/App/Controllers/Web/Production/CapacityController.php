@@ -8,6 +8,7 @@ use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
 use App\Services\Organization\PageAccessService;
 use App\Services\Workshop\Planning\CapacityService;
+use App\Services\Workshop\Planning\MachineDataService;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -15,6 +16,8 @@ use Symfony\Component\HttpFoundation\Request;
  * ilość na zmianę produktu (wąskie gardło), « co jeszcze zmieszczę », ustawienia maszyn.
  * Pełna wersja : administrator i stanowiska z prawem « capacity_full » (dyrektor zakładu) ; produkcja (prawo « production »)
  * widzi tylko stan obecny — tydzień bieżący, do odczytu.
+ * Dane maszyn [240] (makiety 12–13) : przegląd i kreator maszyny (produkty, wsad, wsadów na godzinę, osób) — pełna wersja
+ * albo prawo do kart produktów (kierownik produkcji) ; zapis w etapach kart produkcyjnych.
  */
 final class CapacityController extends BaseController
 {
@@ -23,8 +26,57 @@ final class CapacityController extends BaseController
     private const PATH = '/production/capacity';
     private const FULL = '/production/capacity/full';
 
-    public function __construct(private CapacityService $capacity, private PageAccessService $access)
+    public function __construct(private CapacityService $capacity, private PageAccessService $access, private MachineDataService $machines)
     {
+    }
+
+    /** [240] Dane maszyn : pełna wersja albo karty produktów (etapy produktów). */
+    private function canEditMachines(): bool
+    {
+        return $this->full() || $this->access->canSee($this->userId(), '/workshop/products');
+    }
+
+    private function guardMachines(): void
+    {
+        $this->guard();
+        if (!$this->canEditMachines()) throw new CustomException('Dane maszyn : prawo do kart produktów albo pełna wersja mocy produkcyjnych.', 'errors', 403);
+    }
+
+    /** GET : przegląd danych maszyn (makieta 12). */
+    public function machineData()
+    {
+        try {
+            $this->guardMachines();
+            return $this->json(['data' => $this->machines->overview()]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** GET : kreator maszyny — maszyna i produkty. */
+    public function machineProducts($id)
+    {
+        try {
+            $this->guardMachines();
+            return $this->json(['data' => $this->machines->machine((int) $id)]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** PUT {rows: [{item_id, per_batch, per_hour, people}]} : zapis kreatora maszyny. */
+    public function saveMachineProducts($id)
+    {
+        try {
+            $this->guardMachines();
+            $rows = $this->getJson(Request::createFromGlobals())['rows'] ?? null;
+            if (!is_array($rows)) throw new CustomException('Brak wierszy.', 'errors', 422);
+            $r = $this->machines->save((int) $id, $rows, $this->userId());
+            $n = $r['created'] + $r['updated'];
+            return $this->json(['data' => $r, 'message' => $n ? "Zapisano : {$n} " . ($n === 1 ? 'produkt' : ($n % 10 >= 2 && $n % 10 <= 4 && ($n % 100 < 12 || $n % 100 > 14) ? 'produkty' : 'produktów')) . '.' : 'Bez zmian.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
     }
 
     /** Dane : ta sama zgoda co strona (Produkcja). */
@@ -47,7 +99,8 @@ final class CapacityController extends BaseController
 
     private function payload(): array
     {
-        return $this->full() ? $this->capacity->data($this->date(), $this->whatIf(), $this->group()) : $this->capacity->state($this->group());
+        $d = $this->full() ? $this->capacity->data($this->date(), $this->whatIf(), $this->group()) : $this->capacity->state($this->group());
+        return $d + ['machines_edit' => $this->canEditMachines()];
     }
 
     public function index()
