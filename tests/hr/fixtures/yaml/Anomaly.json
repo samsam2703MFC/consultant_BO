@@ -1,0 +1,10 @@
+{
+  "errorId": "errorId",
+  "label": {
+    "de": "de",
+    "fr": "fr",
+    "nl": "nl"
+  },
+  "type": "type",
+  "value": "value"
+}

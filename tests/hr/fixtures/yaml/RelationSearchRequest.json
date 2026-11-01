@@ -1,0 +1,21 @@
+{
+  "activeFromDate": "2000-12-31",
+  "activeToDate": "2000-12-31",
+  "employer": {
+    "employerId": 480497095,
+    "enterpriseNumber": "enterpriseNumber",
+    "excludedSectorIndicators": [
+      "publicPla",
+      "publicPla"
+    ],
+    "includedSectorIndicators": [
+      "publicPla",
+      "publicPla"
+    ]
+  },
+  "worker": {
+    "ssin": "ssin",
+    "familyName": "Doe",
+    "givenName": "John"
+  }
+}

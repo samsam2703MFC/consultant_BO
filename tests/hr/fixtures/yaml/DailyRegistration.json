@@ -1,0 +1,10 @@
+{
+  "periodId": 123456789123,
+  "endHour": "1645",
+  "isCanceled": true,
+  "endDate": "2000-12-31",
+  "startHour": "1545",
+  "creationDate": "2000-12-29",
+  "dailyRegistrationId": 234567891234,
+  "startDate": "2000-12-30"
+}
