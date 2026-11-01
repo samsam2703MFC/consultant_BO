@@ -140,7 +140,7 @@ adresses ONSS seulement, le YAML sert de dernière source.
 | `HR_DIMONA_PROD_ENABLED` | `1` ouvre la production | fermée |
 | `HR_DIMONA_BASE_URL_SIM` / `_PROD` | URL de l’API Dimona | `servers` du YAML |
 | `HR_DIMONA_TOKEN_URL_SIM` / `_PROD` | serveur de jetons (aussi l’`aud` du JWT) | `tokenUrl` du YAML |
-| `HR_DIMONA_MASTER_KEY` | clé maître, 32 octets en base64 | `hr_dimona.key`, tiré une fois dans le dossier privé (`/var/lib/consulant_bo/prive`, 0600) |
+| `HR_DIMONA_MASTER_KEY` | clé maître, 32 octets en base64 | `hr_dimona.key`, tirée une fois par `bin/deploy.sh` dans le dossier privé (`/var/lib/consulant_bo/prive`, 0600) et recopiée à chaque livraison dans `config.php` (bloc `hr`, `masterKey`). Sous Apache, PHP n’atteint pas le dossier privé (mesuré le 01/11/2026), mais il lit `config.php`. |
 | `HR_CONSOLE_API_BASE` | API de la console vue du navigateur | `/webshop/api` (deploy) |
 | `HR_CONSOLE_API_INTERNAL` | API de la console vue du serveur | `http://127.0.0.1/webshop/api` (deploy) |
 | `HR_DIMONA_CERT_ALERT_DAYS` | seuil de l’alerte certificat | 60 |

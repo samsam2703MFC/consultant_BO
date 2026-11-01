@@ -118,7 +118,8 @@ final class Config
                 return rtrim($c, '/');
             }
         }
-        throw new \RuntimeException('aucun dossier privé où écrire (module RH)');
+        $ob = (string) ini_get('open_basedir');
+        throw new \RuntimeException('aucun dossier privé où écrire (module RH' . ($ob !== '' ? ' ; open_basedir = ' . $ob : '') . ') : poser la clé maître dans config.php (bloc hr, masterKey) ou HR_DIMONA_MASTER_KEY');
     }
 
     /**

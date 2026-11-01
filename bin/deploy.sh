@@ -228,6 +228,16 @@ if [[ -z "$COCKPIT_DB_USER" || -z "$COCKPIT_DB_PASSWORD" ]]; then
   fi
 fi
 
+# La clé maître du module RH passe par config.php (01/11/2026) : sous Apache, PHP n'atteint pas le dossier
+# privé (mesuré en ligne : « aucun dossier privé où écrire »), alors qu'il lit config.php comme le mot de passe
+# MySQL. Le fichier du dossier privé reste la référence, que root relit à chaque livraison. Un secret
+# HR_DIMONA_MASTER_KEY, s'il est fourni, prime — et doit alors rester le même d'une livraison à l'autre.
+if [[ -z "${HR_DIMONA_MASTER_KEY:-}" && -s /var/lib/consulant_bo/prive/hr_dimona.key ]]; then
+  HR_DIMONA_MASTER_KEY="$(tr -d '\n\r ' < /var/lib/consulant_bo/prive/hr_dimona.key)"
+  export HR_DIMONA_MASTER_KEY
+  log "Module RH : clé maître reprise du dossier privé pour config.php (non affichée)."
+fi
+
 # --- 4. config/config.php (génération sûre via var_export) ---------------
 CFG="$TARGET_DIR/config/config.php"
 if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
