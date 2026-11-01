@@ -18,6 +18,7 @@ const S = {
   session: null, societeId: null, view: 'equipe', param: null,
   team: null, worker: null, decls: null, audit: null, filter: '', declFilter: '',
   wiz: null, toast: null, revealed: null, loading: false, loginBo: 'franchisee', loginError: null, loginBusy: false,
+  pwd: null,
 };
 
 /* ------------------------------------------------------------------ outils */
@@ -174,6 +175,7 @@ function render() {
         <div class="topbar__actions">
           ${societes().length > 1 ? `<label class="field hr-societe">Société <select data-change="societe">${societes().map((e) => `<option value="${e.id}"${e.id === S.societeId ? ' selected' : ''}>${esc(e.name)}</option>`).join('')}</select></label>` : ''}
           <div class="hr-user"><strong>${esc(me().name)}</strong>${me().role === 'franchisor' ? 'Franchiseur · lecture seule' : 'Franchisé'}</div>
+          ${S.session.console.bo ? '<button type="button" class="btn btn--ghost btn--sm" data-act="pwdOpen">Mot de passe</button>' : ''}
           <button type="button" class="btn btn--ghost btn--sm" data-act="logout">Se déconnecter</button>
         </div>
       </header>
@@ -181,7 +183,21 @@ function render() {
         ${body()}
       </main>
     </div>
-  </div>`;
+  </div>${S.pwd ? pwdModal() : ''}`;
+}
+
+/** Changer son mot de passe de la console (POST {console}/bo/{bo}/password, jeton CSRF de la session). */
+function pwdModal() {
+  const p = S.pwd;
+  return `<div class="confirm" role="dialog" aria-modal="true" aria-labelledby="hr-pwd-t"><form class="confirm__box card" data-form="pwd" novalidate>
+    <h3 id="hr-pwd-t">Changer mon mot de passe</h3>
+    <p class="muted">Celui de votre compte de la console franchisé : il vaut ici et dans la console.</p>
+    <label class="field field--grow">Mot de passe actuel<input type="password" name="current" autocomplete="current-password" required /></label>
+    <label class="field field--grow">Nouveau mot de passe<input type="password" name="new" autocomplete="new-password" minlength="12" required /><span class="hr-hint">12 caractères au moins.</span></label>
+    <label class="field field--grow">Le nouveau, une seconde fois<input type="password" name="again" autocomplete="new-password" required /></label>
+    ${p.error ? `<p class="error">${esc(p.error)}</p>` : ''}${p.done ? '<p class="muted">Mot de passe changé.</p>' : ''}
+    <div class="confirm__actions"><button type="button" class="btn btn--ghost" data-act="pwdClose">${p.done ? 'Fermer' : 'Annuler'}</button>${p.done ? '' : `<button type="submit" class="btn btn--primary"${p.busy ? ' disabled' : ''}>${p.busy ? 'Un instant…' : 'Changer'}</button>`}</div>
+  </form></div>`;
 }
 
 function certFoot(c) {
@@ -791,6 +807,8 @@ async function act(name, ds, el) {
         await loadSession(); render(); break;
       }
       case 'open': go(ds.href); break;
+      case 'pwdOpen': S.pwd = { error: null, busy: false, done: false }; render(); app.querySelector('[data-form="pwd"] input')?.focus(); break;
+      case 'pwdClose': S.pwd = null; render(); break;
       case 'step': if (w && Number(ds.i) <= (w.reach ?? w.step)) { w.step = Number(ds.i); w.errors = {}; render(); } break;
       case 'prev': if (w && w.step > 0) { w.step--; w.errors = {}; render(); } break;
       case 'quit': S.wiz = null; break;
@@ -901,6 +919,25 @@ app.addEventListener('change', async (e) => {
 
 app.addEventListener('submit', async (e) => {
   const form = e.target;
+  if (form.dataset.form === 'pwd') {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const nw = String(fd.get('new') || '');
+    S.pwd.error = null;
+    if (nw.length < 12) S.pwd.error = 'Le nouveau mot de passe doit faire 12 caractères au moins.';
+    else if (nw !== String(fd.get('again') || '')) S.pwd.error = 'Les deux saisies du nouveau mot de passe diffèrent.';
+    if (S.pwd.error) { render(); return; }
+    S.pwd.busy = true; render();
+    try {
+      const c = S.session.console;
+      await consoleCall(c.bo, 'password', { current: fd.get('current'), new: nw }, c.csrf);
+      S.pwd = { done: true };
+    } catch (err) {
+      S.pwd = { error: err.message, busy: false, done: false };
+    }
+    render();
+    return;
+  }
   if (form.dataset.form !== 'login') return;
   e.preventDefault();
   const fd = new FormData(form);

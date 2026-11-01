@@ -58,7 +58,7 @@ $accounts = [
     'franchise@test.be' => ['id' => 11, 'role' => 'franchisee', 'display_name' => 'Julie Franchisée', 'shops' => [4, 7]],
     'siege@test.be' => ['id' => 21, 'role' => 'franchisor', 'display_name' => 'Siège L’Atelier', 'shops' => null],
 ];
-if (preg_match('#^/webshop/api/bo/(franchisee|franchisor)/(login|me|logout)$#', $uri, $m)) {
+if (preg_match('#^/webshop/api/bo/(franchisee|franchisor)/(login|me|logout|password)$#', $uri, $m)) {
     [$all, $bo, $action] = $m;
     $cookieName = 'fb_' . $bo . '_session';
     if (getenv('HR_MOCK_CONSOLE_OFF') === '1') {
@@ -67,7 +67,7 @@ if (preg_match('#^/webshop/api/bo/(franchisee|franchisor)/(login|me|logout)$#', 
     if ($action === 'login' && $method === 'POST') {
         $j = json_decode($raw, true) ?: [];
         $a = $accounts[strtolower((string) ($j['email'] ?? ''))] ?? null;
-        if ($a === null || ($j['password'] ?? '') !== 'test1234' || $a['role'] !== $bo) {
+        if ($a === null || ($j['password'] ?? '') !== ($state['passwords'][(string) $a['id']] ?? 'test1234') || $a['role'] !== $bo) {
             $out(401, ['error' => 'Identifiants incorrects.']);
         }
         $tok = 'mock.' . bin2hex(random_bytes(8));
@@ -85,6 +85,21 @@ if (preg_match('#^/webshop/api/bo/(franchisee|franchisor)/(login|me|logout)$#', 
     }
     if ($acc === null) {
         $out(401, ['error' => 'Non authentifié.', 'login_url' => '/webshop/backoffice_' . $bo . '/']);
+    }
+    // php-api/bo/auth.php : changer son mot de passe (guard + CSRF double-submit, 8 caractères au moins)
+    if ($action === 'password' && $method === 'POST') {
+        if (($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '') !== 'csrf-' . $acc['id']) {
+            $out(403, ['error' => 'Jeton CSRF invalide.']);
+        }
+        $j = json_decode($raw, true) ?: [];
+        if (strlen((string) ($j['new'] ?? '')) < 8) {
+            $out(400, ['error' => 'Nouveau mot de passe trop court (min. 8).']);
+        }
+        if (($j['current'] ?? '') !== ($state['passwords'][(string) $acc['id']] ?? 'test1234')) {
+            $out(401, ['error' => 'Mot de passe actuel incorrect.']);
+        }
+        $state['passwords'][(string) $acc['id']] = (string) $j['new'];
+        $out(200, ['ok' => true]);
     }
     if ($action === 'logout') {
         unset($state['sessions'][$tok]);
