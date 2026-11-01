@@ -38,7 +38,7 @@ $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
     foreach (['n_prod_group', 'n_prod_workstation', 'n_prod_item', 'n_prod_product_settings', 'final_product', 'product_recipe', 'n_prod_routing_step',
-                 'n_prod_routing_alternative', 'n_prod_audit_log', 'n_prod_shift_template', 'n_prod_param'] as $table) {
+                 'n_prod_routing_alternative', 'n_prod_audit_log', 'n_prod_shift_template', 'n_prod_param', 'n_prod_workstation_share', 'n_prod_workstation_shift'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -51,6 +51,7 @@ try {
         (9, 'PIEC', 1, 'Piec rotacyjny', 'Four rotatif', 'four', 18, 'plaque', 85, 1),
         (4, 'DZIEL', 1, 'Dzielarka', 'Diviseuse', 'machine', 30, 'piece', 100, 1),
         (30, 'OLD', 1, 'Stary piec', 'Vieux four', 'four', 10, 'plaque', 100, 0)");
+    $pdo->exec('INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES (\'workstation.capacity_units\', \'["piece","plaque","kg","chariot"]\', \'["piece"]\', \'json\')');
     $pdo->exec("INSERT INTO n_prod_shift_template (id, code, name_pl, name_fr, start_time, end_time, active, sort_order) VALUES (1, 'JOUR', 'Dzienna', 'Jour', '06:00:00', '14:00:00', 1, 1)");
     $pdo->exec("INSERT INTO final_product (id, name, active, ppc) VALUES (101, 'Baguette tradition', 1, 12), (102, 'Pain doré', 1, 6), (103, 'Ciabatta', 1, NULL), (104, 'Stary chleb', 0, NULL), (105, 'Tarte citron', 1, 8)");
     $pdo->exec("INSERT INTO n_prod_item (id, item_type, id_final_product, base_unit) VALUES (1, 'product', 101, 'piece'), (2, 'product', 102, 'piece'), (3, 'product', 103, 'piece'), (4, 'product', 104, 'piece'), (5, 'product', 105, 'piece')");
@@ -128,6 +129,65 @@ try {
         }
     }
     expectMd((int) $pdo->query('SELECT COUNT(*) FROM n_prod_routing_step')->fetchColumn() === 5, 'odmowy : nic nie zapisane');
+
+    // --- [241] Nowa maszyna i maszyna wspólna ---------------------------------------------------------------------------------
+    $tartyRows = fn() => array_values(array_filter($s->overview()['groups'], fn($g) => $g['id'] === 7))[0];
+    expectMd($tartyRows()['machines'] === [], 'Tarty : jeszcze bez maszyn');
+    $machinesBefore = $s->overview()['tiles']['machines'];
+    $r = $s->saveMachine(null, ['name' => '  Piec  do tart ', 'type' => 'four', 'group_id' => 7, 'shared' => false], 1);
+    $new = $pdo->query("SELECT * FROM n_prod_workstation WHERE id = {$r['id']}")->fetch();
+    expectMd($r['created'] && $new['name_pl'] === 'Piec do tart' && $new['code'] === 'PIEC_DO_TART' && (int) $new['id_group'] === 7 && $new['type'] === 'four'
+        && $new['capacity_unit'] === 'piece' && (int) $new['active'] === 1, 'nowa maszyna Tarty ' . json_encode($new));
+    $t = $tartyRows();
+    expectMd(count($t['machines']) === 1 && $t['own'] === 1 && $t['machines'][0]['state'] === 'todo' && $t['machines'][0]['shared_from'] === null, 'Tarty : własny piec');
+    // Wspólna : piec rotacyjny Piekarni, z którego korzysta Tarty.
+    $s->saveMachine(9, ['name' => 'Piec rotacyjny', 'type' => 'four', 'group_id' => 1, 'shared' => true, 'share_groups' => [7, 1]], 1);
+    expectMd($pdo->query('SELECT GROUP_CONCAT(id_group) FROM n_prod_workstation_share WHERE id_workstation = 9')->fetchColumn() === '7', 'wspólna z Tarty (bez własnej grupy)');
+    $o = $s->overview();
+    $t = $tartyRows();
+    $shared = array_values(array_filter($t['machines'], fn($m) => $m['id'] === 9))[0] ?? null;
+    expectMd($shared && $shared['shared_from'] === 'Piekarnia' && $t['own'] === 1 && $t['machines'][0]['id'] === $r['id'], 'Tarty : piec Piekarni jako wspólny, po własnych');
+    $pk = array_values(array_filter($o['groups'], fn($g) => $g['id'] === 1))[0];
+    $piec = array_values(array_filter($pk['machines'], fn($m) => $m['id'] === 9))[0];
+    expectMd($piec['shared'] === ['Tarty'] && $piec['shared_from'] === null, 'Piekarnia : piec wspólny z Tarty');
+    expectMd($o['tiles']['machines'] === $machinesBefore + 1, 'maszyna wspólna liczona raz');
+    $m9 = $s->machine(9)['machine'];
+    expectMd($m9['group_ids'] === [1, 7] && $m9['shared'] === ['Tarty'], 'kreator : grupy maszyny (produkty Piekarni i Tarty) ' . json_encode($m9['group_ids']));
+    $log = $pdo->query("SELECT after_json FROM n_prod_audit_log WHERE entity = 'workstation_share' AND entity_id = 9")->fetchColumn();
+    expectMd($log && str_contains($log, 'kreator maszyny'), 'dziennik : grupy maszyny');
+    // Komora : wózki ; robot współpracujący.
+    $k = $s->saveMachine(null, ['name' => 'Komora rozrostu T', 'type' => 'fermentation', 'group_id' => 7, 'capacity' => '12'], 1);
+    $kr = $pdo->query("SELECT capacity_per_pass, capacity_unit FROM n_prod_workstation WHERE id = {$k['id']}")->fetch();
+    expectMd((float) $kr['capacity_per_pass'] == 12 && $kr['capacity_unit'] === 'chariot', 'komora : 12 wózków');
+    $c = $s->saveMachine(null, ['name' => 'Cobot dekoracji', 'type' => 'robot', 'robot_mode' => 'collaboratif', 'operator_share' => '0,25', 'group_id' => 7], 1);
+    $cr = $pdo->query("SELECT robot_mode, operator_share FROM n_prod_workstation WHERE id = {$c['id']}")->fetch();
+    expectMd($cr['robot_mode'] === 'collaboratif' && (float) $cr['operator_share'] == 0.25, 'cobot : 0,25 osoby');
+    // Zmiana : piec Tarty → robot sam, potem nie-robot (tryb znika) ; koniec wspólnej.
+    $s->saveMachine($c['id'], ['name' => 'Cobot dekoracji', 'type' => 'manuel', 'group_id' => 7], 1);
+    $cr = $pdo->query("SELECT type, robot_mode, operator_share FROM n_prod_workstation WHERE id = {$c['id']}")->fetch();
+    expectMd($cr['type'] === 'manuel' && $cr['robot_mode'] === null && $cr['operator_share'] === null, 'zmiana rodzaju : bez trybu robota');
+    $s->saveMachine(9, ['name' => 'Piec rotacyjny', 'type' => 'four', 'group_id' => 1, 'shared' => false], 1);
+    expectMd((int) $pdo->query('SELECT COUNT(*) FROM n_prod_workstation_share')->fetchColumn() === 0, 'koniec wspólnej');
+    // Odmowy.
+    foreach ([
+        [null, ['name' => 'X', 'type' => 'four', 'group_id' => 7], 'nazwę'],
+        [null, ['name' => 'Piec 2', 'type' => 'toster', 'group_id' => 7], 'rodzaj'],
+        [null, ['name' => 'Piec 2', 'type' => 'four', 'group_id' => 99], 'grupę'],
+        [null, ['name' => 'Piec 2', 'type' => 'four', 'group_id' => 7, 'shared' => true, 'share_groups' => [7]], 'zaznacz grupy'],
+        [null, ['name' => 'piec ROTACYJNY', 'type' => 'four', 'group_id' => 7], 'już jest'],
+        [null, ['name' => 'Robot 2', 'type' => 'robot', 'group_id' => 7], 'Robot'],
+        [null, ['name' => 'Robot 2', 'type' => 'robot', 'robot_mode' => 'collaboratif', 'operator_share' => '2', 'group_id' => 7], 'Cobot'],
+        [null, ['name' => 'Komora 2', 'type' => 'froid', 'group_id' => 7, 'capacity' => '-3'], 'wózków'],
+        [30, ['name' => 'Stary piec', 'type' => 'four', 'group_id' => 1], 'Nie znaleziono'],
+    ] as [$mid, $in, $word]) {
+        try {
+            $s->saveMachine($mid, $in, 1);
+            expectMd(false, "odmowa maszyny : {$word}");
+        } catch (CustomException $e) {
+            expectMd(str_contains($e->getMessage(), $word), "odmowa maszyny {$word} : {$e->getMessage()}");
+        }
+    }
+    expectMd((int) $pdo->query('SELECT COUNT(*) FROM n_prod_workstation')->fetchColumn() === 8, 'odmowy maszyn : nic nie dodane');
 } finally {
     $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 }

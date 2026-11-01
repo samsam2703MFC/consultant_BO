@@ -14,8 +14,10 @@ final class OeeRepository extends WorkshopRepository
     /** Maszyny z TRS (aktywne), opcjonalnie jednej grupy. */
     public function machines(?int $groupId = null): array
     {
-        return $this->all(self::MACHINE . ' WHERE w.active = 1 AND w.oee_tracked = 1' . ($groupId !== null ? ' AND w.id_group = ?' : '')
-            . ' ORDER BY g.sort_order, w.name_pl, w.id', $groupId !== null ? [$groupId] : []);
+        // [241] Grupa widzi też maszyny wspólne innych grup, z których korzysta.
+        return $this->all(self::MACHINE . ' WHERE w.active = 1 AND w.oee_tracked = 1'
+            . ($groupId !== null ? ' AND (w.id_group = ? OR EXISTS (SELECT 1 FROM n_prod_workstation_share sh WHERE sh.id_workstation = w.id AND sh.id_group = ?))' : '')
+            . ' ORDER BY g.sort_order, w.name_pl, w.id', $groupId !== null ? [$groupId, $groupId] : []);
     }
 
     public function machine(int $id): ?array

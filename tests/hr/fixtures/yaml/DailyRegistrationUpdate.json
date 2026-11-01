@@ -1,0 +1,12 @@
+{
+  "endHour": "1645",
+  "references": {
+    "employer": "employer",
+    "worker": "worker",
+    "declaration": "declaration"
+  },
+  "endDate": "2000-12-31",
+  "startHour": "1545",
+  "dailyRegistrationId": 234567891234,
+  "startDate": "2000-12-30"
+}

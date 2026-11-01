@@ -29,6 +29,8 @@
   "pf_box": "Bus",
   "pf_cancel": "Annuleren",
   "pf_city": "Gemeente",
+  "pf_clockings": "Mijn klokuren",
+  "pf_clockings_hint": "in en uit",
   "pf_competencies": "Vaardigheden",
   "pf_complete": "Profiel voor {p}% ingevuld",
   "pf_contact": "Contactgegevens",

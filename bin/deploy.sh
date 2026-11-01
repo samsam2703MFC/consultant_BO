@@ -189,8 +189,20 @@ chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
 # qui chiffre le profil des employés et les photos chiffrées de leur carte d'identité (src/profil_employe.php).
 # Perdre profil.key rend ces données illisibles : il se sauvegarde avec la base.
 mkdir -p /var/lib/consulant_bo/prive/cartes
+# La clé maître du module RH / Dimona (01/11/2026) : tirée une fois, ici, pour qu'elle appartienne à www-data
+# (l'API et le cron du module tournent sous www-data ; une clé créée par root leur serait illisible). Elle
+# chiffre les clés privées des certificats, les NISS et les jetons ONSS : elle se sauvegarde avec la base.
+# HR_DIMONA_MASTER_KEY, si elle est fournie, prime sur ce fichier.
+if [[ ! -s /var/lib/consulant_bo/prive/hr_dimona.key ]]; then
+  ( umask 077; head -c 32 /dev/urandom | base64 > /var/lib/consulant_bo/prive/hr_dimona.key )
+fi
 chown -R www-data:www-data /var/lib/consulant_bo/prive
 chmod 700 /var/lib/consulant_bo/prive /var/lib/consulant_bo/prive/cartes
+# Le parent doit se TRAVERSER (x) pour que www-data atteigne prive/ : créé par root, /var/lib/consulant_bo ne
+# l'était pas (mesuré le 01/11/2026 — le module RH, en ligne de commande sous www-data comme sous Apache, n'y
+# accédait pas). 711 : on passe, on ne liste pas ; prive/ reste 700 à www-data.
+chmod 711 /var/lib/consulant_bo
+chmod 600 /var/lib/consulant_bo/prive/hr_dimona.key
 
 # Visuels des campagnes de l'assistant : même règle que les photos plano.
 mkdir -p "$TARGET_DIR/public/assistant/uploads"
@@ -220,6 +232,16 @@ if [[ -z "$COCKPIT_DB_USER" || -z "$COCKPIT_DB_PASSWORD" ]]; then
   fi
 fi
 
+# La clé maître du module RH passe par config.php (01/11/2026) : sous Apache, PHP n'atteint pas le dossier
+# privé (mesuré en ligne : « aucun dossier privé où écrire »), alors qu'il lit config.php comme le mot de passe
+# MySQL. Le fichier du dossier privé reste la référence, que root relit à chaque livraison. Un secret
+# HR_DIMONA_MASTER_KEY, s'il est fourni, prime — et doit alors rester le même d'une livraison à l'autre.
+if [[ -z "${HR_DIMONA_MASTER_KEY:-}" && -s /var/lib/consulant_bo/prive/hr_dimona.key ]]; then
+  HR_DIMONA_MASTER_KEY="$(tr -d '\n\r ' < /var/lib/consulant_bo/prive/hr_dimona.key)"
+  export HR_DIMONA_MASTER_KEY
+  log "Module RH : clé maître reprise du dossier privé pour config.php (non affichée)."
+fi
+
 # --- 4. config/config.php (génération sûre via var_export) ---------------
 CFG="$TARGET_DIR/config/config.php"
 if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
@@ -241,6 +263,17 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
       "pwaBase" => getenv("COCKPIT_PWA_BASE") ?: null,
       "auth"    => false,
       "seed"    => false,   // base vide par défaut ; pas de données de démo
+      // Module RH / Dimona (/hr) : la console franchisé qui identifie (API vue du navigateur et du
+      // serveur), la PROD fermée tant que HR_DIMONA_PROD_ENABLED ne vaut pas 1, et les surcharges
+      // éventuelles des adresses ONSS (sinon celles du YAML OpenAPI). Voir docs/dimona.md.
+      "hr" => array_filter([
+        "consoleApi"         => getenv("HR_CONSOLE_API_BASE") ?: "/webshop/api",
+        "consoleApiInternal" => getenv("HR_CONSOLE_API_INTERNAL") ?: "http://127.0.0.1/webshop/api",
+        "prodEnabled"        => (getenv("HR_DIMONA_PROD_ENABLED") ?: "0") === "1",
+        "tokenUrlSim"        => getenv("HR_DIMONA_TOKEN_URL_SIM") ?: null,
+        "tokenUrlProd"       => getenv("HR_DIMONA_TOKEN_URL_PROD") ?: null,
+        "masterKey"          => getenv("HR_DIMONA_MASTER_KEY") ?: null,
+      ], fn ($v) => $v !== null),
     ];
     echo "<?php\nreturn " . var_export($cfg, true) . ";\n";
   ' > "$CFG"
@@ -260,6 +293,11 @@ cat > /etc/apache2/conf-available/consulant_bo.conf <<APACHE
 RedirectMatch 301 ^/formation\$ /formation/
 AliasMatch ^/formation/api/cockpit(/.*)?\$ ${TARGET_DIR}/public/api/index.php
 Alias /formation/ ${TARGET_DIR}/public/formation/
+# Le module RH / Dimona à la racine du serveur, comme /formation/ (01/11/2026) : la page (public/hr) et son
+# API juste à côté d'elle (public/api/hr/index.php, routes /api/v1/erp/dimona/…).
+RedirectMatch 301 ^/hr\$ /hr/
+AliasMatch ^/hr/api/v1/erp/dimona(/.*)?\$ ${TARGET_DIR}/public/api/hr/index.php
+Alias /hr/ ${TARGET_DIR}/public/hr/
 Alias ${ALIAS_PATH} ${TARGET_DIR}/public
 <Directory ${TARGET_DIR}/public>
     AllowOverride All
@@ -593,6 +631,7 @@ chmod +x "$TARGET_DIR/bin/social_cron.sh"
 chmod +x "$TARGET_DIR/bin/visites_cron.sh"
 chmod +x "$TARGET_DIR/bin/metadonnee_cron.sh"
 chmod +x "$TARGET_DIR/bin/stock_cron.sh"
+chmod +x "$TARGET_DIR/bin/hr_dimona_cron.sh"
 # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
 # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
 # passer les tâches de l'heure pile.
@@ -612,6 +651,10 @@ chmod +x "$TARGET_DIR/bin/stock_cron.sh"
   # Le stock matière des magasins : relu toutes les 5 minutes pour garder chaque inventaire et chaque
   # livraison du panel au moment où ils passent (l'API ne rend que le stock courant).
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/stock_cron.sh >/dev/null 2>&1"
+  # Module RH / Dimona : chaque minute, la relecture des déclarations en attente (5 s, 15 s, 30 s… : le
+  # script tourne 55 s) et l'alerte des certificats à moins de 60 jours. Sous www-data : c'est lui qui
+  # possède le dossier privé et la clé maître du module.
+  echo "* * * * * www-data ${TARGET_DIR}/bin/hr_dimona_cron.sh >/dev/null 2>&1"
 } > /etc/cron.d/cockpit-rapports
 # cron refuse un fichier de /etc/cron.d écrivable par un autre que root.
 chown root:root /etc/cron.d/cockpit-rapports
@@ -912,6 +955,21 @@ fm_page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1
 fm_https=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1/formation/" 2>/dev/null || echo 000)
 fm_api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "http://127.0.0.1/formation/api/cockpit/formation/equipe" 2>/dev/null || echo 000)
 log "Formation : /formation/ → HTTP ${fm_page} (https ${fm_https}) ; API /formation/api/cockpit → HTTP ${fm_api} (200 attendu, 503 = compte panel à brancher)."
+# Les comptes de la console franchisé (dépôt WebShop), qui identifient au module RH : section « bo » de sa
+# configuration posée si elle manque (sauvegarde, contrôle, retour arrière si la console ne répond plus comme
+# avant), comptes de démonstration au mot de passe publié désactivés, comptes demandés par le secret
+# CONSOLE_BO_ACCOUNTS créés ou mis à jour. Idempotent ; n'écrit ni secret, ni mot de passe, ni e-mail.
+php "$TARGET_DIR/bin/console_bo.php" 2>&1 | while IFS= read -r l; do log "$l"; done || true
+hr_page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1/hr/" 2>/dev/null || echo 000)
+hr_https=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1/hr/" 2>/dev/null || echo 000)
+hr_api=$(curl -s --max-time 30 "http://127.0.0.1/hr/api/v1/erp/dimona/health" 2>/dev/null | head -c 300 || true)
+hr_console=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1/webshop/api/bo/franchisee/me" 2>/dev/null || echo 000)
+log "Module RH : /hr/ → HTTP ${hr_page} (https ${hr_https}) ; API /hr/api/v1/erp/dimona/health → ${hr_api:-pas de réponse}"
+log "Module RH : identité par la console franchisé — /webshop/api/bo/franchisee/me → HTTP ${hr_console} (401 attendu = comptes actifs ; 500 = section « bo » de la console à configurer)."
+[[ "$hr_page" == "200" ]] || warn "Module RH : la page /hr/ ne répond pas 200 — alias Apache à vérifier."
+# Le module en ligne de commande, sous l'utilisateur du cron (www-data) : s'il ne démarre pas, son erreur est ici.
+hr_cli=$(runuser -u www-data -- php "$TARGET_DIR/bin/hr_dimona_cron.php" --duree=1 2>&1 | tail -n 4 || true)
+log "Module RH : cron sous www-data → ${hr_cli:-OK, rien à relire}"
 [[ "$fm_page" == "200" ]] || warn "Formation : la page /formation/ ne répond pas 200 — alias Apache à vérifier."
 
 if [[ $rc -eq 0 ]]; then

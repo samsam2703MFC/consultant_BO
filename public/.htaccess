@@ -36,6 +36,10 @@ RewriteRule ^formation/api/cockpit(/.*)?$ api/index.php [L,QSA]
 # repli SPA renverrait le shell HTML avec un statut 200.
 RewriteRule ^api/v1/marketing(/.*)?$ api/marketing/index.php [L,QSA]
 
+# API du module RH / Dimona (page hr/). Elle appelle hr/api/v1/erp/dimona/… depuis hr/ ; sous l'alias
+# racine /hr/ (bin/deploy.sh) la même API répond à /hr/api/v1/erp/dimona/….
+RewriteRule ^(hr/)?api/v1/erp/dimona(/.*)?$ api/hr/index.php [L,QSA]
+
 # Photos annexées au planogramme, et visuels de l'assistant de campagne.
 #
 # Rien n'y est EXÉCUTÉ : un fichier déposé dont le nom finirait en .php doit

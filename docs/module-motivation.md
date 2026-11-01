@@ -23,6 +23,8 @@ tables, toutes sous le préfixe `mot_` (décision du 23/10/2026, Sam).
 | `mot_cache` | Ce qui se recalcule (fiches du mois, moyennes, catalogue, ventes du jour relues) : une clé, une valeur JSON. | Oui, sans rien perdre |
 | `mot_grand_prix` | Les grands prix de l'année, du réseau ou d'un magasin, une ligne chacun. | Jamais |
 | `mot_profil` | « Mon profil » de chaque employé (identité, coordonnées, urgence, paie, tenue, disponibilités), chiffré. Créée par `src/profil_employe.php`. | Jamais |
+| `mot_pointage` | Les pointages des vendeuses (arrivée, départ, le service prévu figé à l'arrivée, un départ déclaré et sa validation). Créée par `src/pointage.php`. | Jamais |
+| `mot_borne` | Les bornes de pointage des magasins : le jeton de leur lien, haché, et la dernière fois qu'elles ont été vues. | Jamais |
 
 ### `mot_reglage`
 
@@ -75,7 +77,8 @@ Les clés commencent par :
 La clé (`profil.key`, 0600) et les photos de la carte d'identité (`cartes/<emp>-recto.bin`, chiffrées elles aussi)
 vivent dans le dossier privé `/var/lib/consulant_bo/prive`, hors du site et hors de la livraison (`bin/deploy.sh` le
 crée, `rsync --delete` ne le touche pas). **Perdre `profil.key`, c'est rendre les profils illisibles : la sauvegarder
-avec la base.**
+avec la base.** La clé des QR de pointage (`pointage.key`) vit à côté : la perdre ne fait que changer les codes des
+bornes (une nouvelle clé est tirée), rien n'est perdu.
 
 ## Reprise depuis `ceo_app_setting`
 

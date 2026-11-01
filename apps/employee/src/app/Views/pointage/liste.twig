@@ -1,0 +1,164 @@
+{% extends "layouts/mobile_base.twig" %}
+{# Profil › Mes pointages (01/11/2026, maquette docs/maquettes/pointage-app, écran E) : la semaine, jour par jour, face au
+   planning — le service prévu, l'arrivée (à l'heure, en retard), le départ (pointé, déclaré à valider, oublié), la barre
+   du prévu et celle du pointé sur la journée. Un départ oublié se dit ici ; le magasin le valide. #}
+{% set T = translations %}
+{% set active_nav = 'profile' %}
+{% set S = semaine %}
+{% set L = liste %}
+{% macro duree(m) %}{% if m < 60 %}{{ m }} min{% else %}{{ m // 60 }} h{% if m % 60 %} {{ '%02d'|format(m % 60) }}{% endif %}{% endif %}{% endmacro %}
+{% import _self as f %}
+{% block title %}{{ T.pt_my_clockings ?? 'Mes pointages' }}{% endblock %}
+{% block page_title %}{{ T.pt_my_clockings ?? 'Mes pointages' }}{% endblock %}
+{% block page_subtitle %}{{ (T.pt_week_n ?? 'Semaine {n}')|replace({'{n}': S.numero}) }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}">
+<style>
+  .pt-retour{display:inline-flex;align-items:center;gap:2px;margin:0 0 10px;font:400 16px var(--s-police);color:var(--s-accent);text-decoration:none}
+  .pt-sem{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .pt-sem a.f{width:38px;height:38px;border-radius:50%;background:var(--s-carte);display:flex;align-items:center;justify-content:center;color:var(--s-accent);text-decoration:none}
+  .pt-sem div{text-align:center}.pt-sem b{display:block;font:600 16px var(--s-police)}
+  .pt-sem small{font:400 12.5px var(--s-police);color:var(--s-second)}.pt-sem small a{color:var(--s-accent);text-decoration:none}
+  .pt-kpis{display:grid;grid-template-columns:repeat(3,1fr);background:var(--s-carte);border-radius:16px;margin-bottom:12px}
+  .pt-kpis div{padding:11px 14px;min-width:0}.pt-kpis div+div{border-left:.5px solid var(--s-trait)}
+  .pt-kpis b{display:block;font:600 20px/1.2 var(--s-police);font-variant-numeric:tabular-nums}
+  .pt-kpis small{font:400 12px var(--s-police);color:var(--s-second)}
+  .pt-kpis .att b{color:#B25E09}
+  .pt-jours{background:var(--s-carte);border-radius:16px;overflow:hidden}
+  .pt-jour{display:flex;gap:12px;padding:11px 14px 12px}
+  .pt-jour+.pt-jour{border-top:.5px solid var(--s-trait)}
+  .pt-jour.passe .pt-d{opacity:.6}
+  .pt-d{flex:0 0 34px;text-align:center}
+  .pt-d small{display:block;font:600 10.5px var(--s-police);text-transform:uppercase;color:var(--s-second)}
+  .pt-d b{display:flex;align-items:center;justify-content:center;width:30px;height:30px;margin:1px auto 0;border-radius:50%;font:600 16px var(--s-police)}
+  .pt-jour.auj .pt-d small{color:var(--s-accent)}.pt-jour.auj .pt-d b{background:var(--s-accent);color:#fff}
+  .pt-c{flex:1;min-width:0}
+  .pt-l1{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .pt-prevu{font:400 12.5px var(--s-police);color:var(--s-second);min-width:0}
+  .pt-tot{font:600 14px var(--s-police);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .pt-tot.att{color:#B25E09}.pt-tot.v{color:var(--s-vert)}
+  .pt-es{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .pt-es span{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:var(--s-remplir);font:500 13px var(--s-police);font-variant-numeric:tabular-nums}
+  .pt-es span i{font-size:12px}
+  .pt-es .v{background:var(--s-vert-doux);color:var(--s-vert)}
+  .pt-es .o{background:rgba(178,94,9,.11);color:#B25E09}
+  .pt-es .r{background:rgba(179,38,30,.09);color:#B3261E}
+  .pt-axe{position:relative;height:10px;margin-top:8px;border-radius:5px;background:var(--s-remplir)}
+  .pt-axe .p{position:absolute;top:0;bottom:0;border-radius:5px;box-shadow:inset 0 0 0 1.5px rgba(60,60,67,.35)}
+  .pt-axe .r{position:absolute;top:2px;bottom:2px;border-radius:4px;background:var(--s-accent)}
+  .pt-axe .r.enc{background:var(--s-vert)}
+  .pt-repos{font:400 14px var(--s-police);color:var(--s-second);padding-top:6px}
+  .pt-agir{display:inline-block;margin-top:6px;padding:0;border:0;background:none;font:500 13px var(--s-police);color:var(--s-accent)}
+  .pt-leg{display:flex;gap:14px;flex-wrap:wrap;margin:9px 4px 0;font:400 12px var(--s-police);color:var(--s-second)}
+  .pt-leg i{display:inline-block;width:18px;height:8px;border-radius:4px;margin-right:5px}
+  .pt-voile{position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.32);display:none}
+  .pt-feuille{position:fixed;left:0;right:0;bottom:0;z-index:1002;background:var(--s-fond);border-radius:18px 18px 0 0;padding:8px 18px calc(26px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(0,0,0,.18);transform:translateY(105%);visibility:hidden;transition:transform .25s,visibility .25s}
+  .pt-feuille.on{transform:none;visibility:visible}
+  .pt-poignee{width:38px;height:5px;border-radius:3px;background:var(--s-tertiaire);margin:0 auto 14px}
+  .pt-feuille h2{margin:0 0 4px;font:600 19px var(--s-police);text-align:center}
+  .pt-feuille p{margin:0 0 14px;font:400 13.5px/1.4 var(--s-police);color:var(--s-second);text-align:center}
+  .pt-feuille input{display:block;width:100%;padding:12px 14px;border:0;border-radius:14px;background:var(--s-carte);font:600 26px var(--s-police);text-align:center;font-variant-numeric:tabular-nums;color:var(--s-texte)}
+  .pt-feuille .err{color:#B3261E;min-height:18px;margin:6px 0 8px;text-align:center;font:500 13px var(--s-police)}
+  .pt-ok{display:block;width:100%;padding:14px 0;border-radius:14px;border:0;background:var(--s-accent);color:#fff;font:600 17px var(--s-police)}
+  .pt-lien{display:block;width:100%;margin-top:10px;border:0;background:none;font:400 15px var(--s-police);color:var(--s-accent)}
+</style>
+{% endblock %}
+{% block content %}
+<a class="pt-retour" href="{{ ROOT }}/me"><i class="bi bi-chevron-left"></i>{{ T.pt_profile ?? 'Profil' }}</a>
+{% set memeMois = S.lundi|date('m') == S.dimanche|date('m') %}
+<nav class="pt-sem" aria-label="{{ (T.pt_week_n ?? 'Semaine {n}')|replace({'{n}': S.numero}) }}">
+  <a class="f" href="{{ ROOT }}/me/pointages?semaine={{ S.prec }}" aria-label="{{ T.pt_prev_week ?? 'Semaine précédente' }}"><i class="bi bi-chevron-left"></i></a>
+  <div><b>{{ S.lundi|date('j') }}{% if not memeMois %} {{ mois(S.lundi, true) }}{% endif %} – {{ S.dimanche|date('j') }} {{ mois(S.dimanche, true) }}</b>
+    <small>{% if S.courante %}{{ T.pt_this_week ?? 'cette semaine' }}{% else %}<a href="{{ ROOT }}/me/pointages">{{ T.pt_back_this_week ?? 'revenir à cette semaine' }}</a>{% endif %}</small></div>
+  <a class="f" href="{{ ROOT }}/me/pointages?semaine={{ S.suiv }}" aria-label="{{ T.pt_next_week ?? 'Semaine suivante' }}"><i class="bi bi-chevron-right"></i></a>
+</nav>
+
+{% if not L %}
+<div class="pr-card"><div class="note" style="margin:0">{{ T.pt_unavailable ?? 'Les pointages ne se lisent pas pour l’instant. Réessaie dans un moment.' }}</div></div>
+{% else %}
+<div class="pt-kpis" data-totaux>
+  <div><b>{{ f.duree(L.totaux.pointe_min) }}</b><small>{{ T.pt_clocked ?? 'pointées' }}</small></div>
+  <div><b>{{ f.duree(L.totaux.prevu_min) }}</b><small>{{ T.pt_on_schedule ?? 'au planning' }}</small></div>
+  <div class="{{ L.totaux.a_verifier > 0 ? 'att' }}"><b>{{ L.totaux.a_verifier }}</b><small>{{ T.pt_to_check ?? 'à vérifier' }}</small></div>
+</div>
+
+<div class="pt-jours">
+  {% for j in L.jours %}
+  <div class="pt-jour{{ j.aujourdhui ? ' auj' }}{{ j.passe ? ' passe' }}" data-jour="{{ j.date }}" data-statut="{{ j.statut }}">
+    <div class="pt-d"><small>{{ jour(j.date) }}</small><b>{{ j.date|date('j') }}</b></div>
+    <div class="pt-c">
+      {% if j.statut == 'repos' %}
+      <div class="pt-repos">{{ T.pt_day_off ?? 'Repos' }}</div>
+      {% else %}
+      <div class="pt-l1">
+        <span class="pt-prevu">{% for p in j.prevus %}{{ (T.pt_planned_short ?? 'prévu {a} – {b}')|replace({'{a}': p.debut, '{b}': p.fin}) }}{% if p.autreShop and p.shop_name %} · {{ (T.pt_at_shop ?? 'à {n}')|replace({'{n}': p.shop_name}) }}{% endif %}{{ loop.last ? '' : ' · ' }}{% else %}{{ T.pt_unplanned_day ?? 'pointé hors planning' }}{% endfor %}</span>
+        {% if j.statut == 'en_service' %}<span class="pt-tot v">{{ T.pt_in_service ?? 'en service' }}</span>
+        {% elseif j.statut == 'a_verifier' %}<span class="pt-tot att">{{ T.pt_to_check_one ?? 'à vérifier' }}</span>
+        {% elseif j.total > 0 %}<span class="pt-tot">{{ f.duree(j.total) }}</span>{% endif %}
+      </div>
+      <div class="pt-es">
+        {% for p in j.pointages %}
+          {% if p.arrivee == 'retard' %}<span class="o"><i class="bi bi-box-arrow-in-right"></i>{{ p.entree }} · +{{ p.retard_min }} min</span>
+          {% elseif p.arrivee == 'hors_planning' %}<span><i class="bi bi-box-arrow-in-right"></i>{{ p.entree }}</span>
+          {% else %}<span class="v"><i class="bi bi-box-arrow-in-right"></i>{{ p.entree }}</span>{% endif %}
+          {% if p.etat == 'fait' %}<span><i class="bi bi-box-arrow-right"></i>{{ p.sortie }}</span>
+          {% elseif p.etat == 'a_valider' %}<span class="o"><i class="bi bi-box-arrow-right"></i>{{ p.sortie }} · {{ T.pt_declared ?? 'déclaré, à valider' }}</span>
+          {% elseif p.etat == 'en_service' %}<span>{{ T.pt_departure_to_clock ?? 'départ à pointer' }}</span>
+          {% else %}<span class="r"><i class="bi bi-exclamation-circle"></i>{{ T.pt_not_clocked ?? 'départ non pointé' }}</span>{% endif %}
+        {% else %}
+          {% if j.statut == 'pas_pointe' %}<span class="r"><i class="bi bi-exclamation-circle"></i>{{ T.pt_no_clock ?? 'pas pointé' }}</span>{% endif %}
+        {% endfor %}
+      </div>
+      {% for p in j.pointages %}{% if p.etat == 'non_pointe' %}<button type="button" class="pt-agir" data-depart="{{ p.id }}" data-entree="{{ p.entree }}">{{ T.pt_tell_departure ?? 'Dire mon heure de départ' }} ›</button>{% endif %}{% endfor %}
+      {% if j.prevus or j.pointages %}
+      <div class="pt-axe">{% for p in j.prevus %}<i class="p" style="left:{{ p.gauche }}%;width:{{ p.largeur }}%"></i>{% endfor %}{% for p in j.pointages %}<i class="r{{ p.etat == 'en_service' ? ' enc' }}" style="left:{{ p.gauche }}%;width:{{ p.largeur }}%"></i>{% endfor %}</div>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<div class="pt-leg"><span><i style="box-shadow:inset 0 0 0 1.5px rgba(60,60,67,.35)"></i>{{ T.pt_legend_plan ?? 'au planning' }}</span><span><i style="background:var(--s-accent)"></i>{{ T.pt_legend_clock ?? 'pointé' }}</span><span>{{ (T.pt_legend_day ?? 'journée de {a} h à {b} h')|replace({'{a}': L.axe.de, '{b}': L.axe.a}) }}</span></div>
+{% endif %}
+
+<div class="pt-voile" id="pt-voile"></div>
+<div class="pt-feuille" id="pt-dep" role="dialog" aria-modal="true">
+  <div class="pt-poignee"></div>
+  <h2>{{ T.pt_departure_sheet ?? 'Mon heure de départ' }}</h2>
+  <p id="pt-dep-aide">{{ T.pt_departure_note ?? 'Ton magasin la valide. Elle compte une fois validée.' }}</p>
+  <input type="time" id="pt-dep-h" step="60">
+  <div class="err" id="pt-dep-err"></div>
+  <button type="button" class="pt-ok" id="pt-dep-ok">{{ T.pt_save ?? 'Enregistrer' }}</button>
+  <button type="button" class="pt-lien" id="pt-dep-ferme">{{ T.pt_cancel ?? 'Annuler' }}</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var ROOT = {{ ROOT|json_encode|raw }};
+  var T = {{ { err: T.pt_departure_bad ?? 'Cette heure ne va pas : après ton arrivée, et pas dans le futur.', error: T.pt_error ?? 'Le pointage n’a pas pu être enregistré. Réessaie.', saving: T.pt_sending ?? 'Envoi…', save: T.pt_save ?? 'Enregistrer' }|json_encode|raw }};
+  var $ = function (id) { return document.getElementById(id); };
+  var id = 0;
+  function feuille(on) { $('pt-voile').style.display = on ? 'block' : 'none'; $('pt-dep').classList.toggle('on', on); }
+  document.querySelectorAll('[data-depart]').forEach(function (b) {
+    b.addEventListener('click', function () { id = +b.getAttribute('data-depart'); $('pt-dep-h').value = ''; $('pt-dep-err').textContent = ''; feuille(true); });
+  });
+  $('pt-dep-ferme').addEventListener('click', function () { feuille(false); });
+  $('pt-voile').addEventListener('click', function () { feuille(false); });
+  $('pt-dep-ok').addEventListener('click', function () {
+    var h = $('pt-dep-h').value, bt = this;
+    if (!/^\d{2}:\d{2}$/.test(h)) { $('pt-dep-err').textContent = T.err; return; }
+    bt.disabled = true; bt.textContent = T.saving;
+    fetch(ROOT + '/me/pointage/depart', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ id: id, heure: h }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { code: r.status, d: d }; }); })
+      .then(function (x) {
+        if (x.code === 200) { location.reload(); return; }
+        bt.disabled = false; bt.textContent = T.save;
+        $('pt-dep-err').textContent = x.code === 422 ? T.err : T.error;
+      })
+      .catch(function () { bt.disabled = false; bt.textContent = T.save; $('pt-dep-err').textContent = T.error; });
+  });
+})();
+</script>
+{% endblock %}

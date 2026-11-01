@@ -66,4 +66,14 @@ return [
     // données — aucune donnée fictive n'est chargée. true (ou COCKPIT_SEED=1) :
     // charge sql/seed.sql (réseau belge de démo) si la base est vide.
     'seed' => (getenv('COCKPIT_SEED') ?: '0') === '1',
+
+    // Module RH / Dimona (/hr) — docs/dimona.md. Les variables d'environnement HR_* priment ; les adresses
+    // ONSS non renseignées sont celles du YAML OpenAPI (docs/dimona/openapi_dimona_v2.yaml).
+    'hr' => [
+        'consoleApi'         => getenv('HR_CONSOLE_API_BASE') ?: null,      // API de la console vue du navigateur
+        'consoleApiInternal' => getenv('HR_CONSOLE_API_INTERNAL') ?: null,  // la même, vue du serveur
+        'prodEnabled'        => (getenv('HR_DIMONA_PROD_ENABLED') ?: '0') === '1',  // simulation seule sinon
+        // 'tokenUrlSim'  => '…',  // si le serveur de jetons de la simulation diffère de celui du YAML
+        // 'masterKey'    => '…',  // 32 octets en base64 ; sinon hr_dimona.key du dossier privé
+    ],
 ];

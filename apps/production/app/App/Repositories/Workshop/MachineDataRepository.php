@@ -46,10 +46,34 @@ final class MachineDataRepository extends WorkshopRepository
     public function workstation(int $id): ?array
     {
         return $this->all(
-            'SELECT w.id, w.name_pl, w.name_fr, w.type, w.id_group, w.capacity_per_pass, w.capacity_unit, w.efficiency_pct, w.active, g.name_pl AS group_name
+            'SELECT w.id, w.code, w.name_pl, w.name_fr, w.type, w.robot_mode, w.operator_share, w.id_group, w.capacity_per_pass, w.capacity_unit, w.efficiency_pct, w.active, g.name_pl AS group_name
              FROM n_prod_workstation w LEFT JOIN n_prod_group g ON g.id = w.id_group WHERE w.id = ?',
             [$id]
         )[0] ?? null;
+    }
+
+    /** [241] Maszyny wspólne : maszyna → grupy, które z niej korzystają (poza grupą maszyny). @return array<int, list<int>> */
+    public function shares(): array
+    {
+        $out = [];
+        foreach ($this->all('SELECT sh.id_workstation, sh.id_group FROM n_prod_workstation_share sh JOIN n_prod_group g ON g.id = sh.id_group
+                             WHERE g.active = 1 ORDER BY g.sort_order, g.name_pl') as $r) {
+            $out[(int) $r['id_workstation']][] = (int) $r['id_group'];
+        }
+        return $out;
+    }
+
+    /** @param list<int> $groupIds */
+    public function replaceShares(int $workstationId, array $groupIds): void
+    {
+        $this->db->prepare('DELETE FROM n_prod_workstation_share WHERE id_workstation = ?')->execute([$workstationId]);
+        $ins = $this->db->prepare('INSERT INTO n_prod_workstation_share (id_workstation, id_group) VALUES (?, ?)');
+        foreach ($groupIds as $g) $ins->execute([$workstationId, $g]);
+    }
+
+    public function workstationCodeTaken(string $code): bool
+    {
+        return (bool) $this->all('SELECT 1 AS x FROM n_prod_workstation WHERE code = ?', [$code]);
     }
 
     public function stepOn(int $itemId, int $workstationId): ?array

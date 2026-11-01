@@ -1,0 +1,40 @@
+{
+  "periodId": 123456789123,
+  "fromCreationDate": "2000-12-31",
+  "toCreationDate": "2000-12-31",
+  "references": {
+    "employer": "employer",
+    "worker": "worker",
+    "declaration": "declaration"
+  },
+  "channel": [
+    "SFTP",
+    "WRST"
+  ],
+  "employer": {
+    "employerId": 480497095,
+    "enterpriseNumber": "enterpriseNumber",
+    "excludedSectorIndicators": [
+      "publicPla",
+      "publicPla"
+    ],
+    "includedSectorIndicators": [
+      "publicPla",
+      "publicPla"
+    ]
+  },
+  "worker": {
+    "ssin": "ssin",
+    "familyName": "Doe",
+    "givenName": "John"
+  },
+  "dimonaDeclarationType": [
+    "dimonaIn",
+    "dimonaUpdate"
+  ],
+  "dailyRegistrationId": 234567891234,
+  "dimonaDeclarationStatus": [
+    "blocking",
+    "warning"
+  ]
+}

@@ -1252,3 +1252,10 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-31T20:41:26Z vérification : mouvements d'un produit, colonnes inversées, semaine par semaine avec l'écart
 [240] Dane maszyn : kreator maszyny (produkty, wsad, wsadów na godzinę, osób przy wsadzie) — 2026-11-01T12:52:04Z
 [240b] Dane maszyn : pojemność wg produktu — 2026-11-01T13:00:25Z
+2026-11-01T13:11:22Z [app] Pointage : arrivee et depart, borne QR du magasin (#90)
+2026-11-01T13:21:51Z [cockpit] Pointage a la caisse : cle de caisse, PIN (#91)
+[241] Dane maszyn : nowa maszyna + maszyna wspólna (migracja 156) — 2026-11-01T13:23:02Z
+2026-11-01T13:26:23Z module RH Dimona à /hr : connexion ONSS, engager, sortie, simulation seule
+2026-11-01T13:36:06Z module RH : motif du démarrage, diagnostic sous www-data
+2026-11-01T13:41:56Z module RH : clé maître par config.php, dossier privé traversable
+2026-11-01T14:04:03Z console franchisé : comptes activés (section bo), mot de passe depuis /hr

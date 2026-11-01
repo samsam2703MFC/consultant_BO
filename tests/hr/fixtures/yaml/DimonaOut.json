@@ -1,0 +1,9 @@
+{
+  "periodId": 123456789123,
+  "references": {
+    "employer": "employer",
+    "worker": "worker",
+    "declaration": "declaration"
+  },
+  "endDate": "2000-12-31"
+}
