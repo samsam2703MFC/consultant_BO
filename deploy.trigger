@@ -1263,3 +1263,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-01T15:40:27Z formation : manuel en quatre parties (procédures et 53 formations), vidéos dans les procédures, toutes les vues sur tablette
 2026-11-01T15:44:00Z formation : manuel, « … » tant que la répartition n'est pas lue
 [242] Mój tydzień : colonnes fixes — 2026-11-01T16:21:45Z
+[243] Reklamacje : Lista / Wykres (oś czasu) — 2026-11-01T18:37:50Z
