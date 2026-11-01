@@ -793,3 +793,18 @@ button.filter.confirm__danger {
   font-size: 12.5px;
   line-height: 1.45;
 }
+
+/* Tablette (1er nov. 2026) : la page s'élargit au lieu de rester une colonne de
+   téléphone, le texte grandit d'un cran, et chaque lien se touche du doigt. */
+@media (min-width: 700px) {
+  .pc { max-width: 720px; padding: 0 32px 140px; }
+  .pc .ph-title { font-size: 34px; }
+  .pc .ph-sous, .pc-row .muted { font-size: 14px; }
+  .pc-row strong { font-size: 16px; }
+  .pc-row { padding: 14px 18px; }
+  .ph-cta { width: min(656px, calc(100% - 64px)); }
+}
+@media (pointer: coarse) {
+  .pc-head a, .pc-lien { min-height: 44px; display: inline-flex; align-items: center; }
+  .pc .filter, .pc button { min-height: 44px; }
+}

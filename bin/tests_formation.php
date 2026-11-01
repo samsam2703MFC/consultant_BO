@@ -221,5 +221,16 @@ verifie('le nom : le nom complet du CRM, sinon prénom et nom', pcCrmNom(['compl
     && pcCrmNom(['complet' => '', 'prenom' => 'Léo', 'nom' => 'Fictif']) === 'Léo Fictif' && pcCrmNom(['complet' => null, 'prenom' => null, 'nom' => null]) === '');
 verifie('statut lisible', pcCrmStatut('entretien_planifie') === 'Entretien planifie' && pcCrmStatut('') === null && pcCrmStatut(null) === null);
 
+
+echo "\nManuel opératoire : parties et vidéos\n";
+verifie('les quatre parties, dans l’ordre de la vie du magasin', MN_PARTIES === ['preouverture', 'ouverture', 'operationnel', 'formation']);
+verifie('partie valable ou null', mnPartie('ouverture') === 'ouverture' && mnPartie('Ouverture') === null && mnPartie(null) === null && mnPartie(3) === null);
+$vids = mnVideos([['url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'titre' => '  Vitrine  '], ['url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ'],
+    ['url' => 'javascript:alert(1)'], ['url' => 'http://exemple.be/v.mp4'], ['url' => 'https://exemple.be/a b.mp4'], 'https://vimeo.com/76979871', ['url' => 'https://x.be/"onerror="']]);
+verifie('vidéos : https seulement, sans doublon, sans caractère qui sortirait d’un attribut', array_column($vids, 'url') === ['https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'https://vimeo.com/76979871'], json_encode($vids));
+verifie('titre rogné, vide permis', $vids[0]['titre'] === 'Vitrine' && $vids[1]['titre'] === '');
+verifie('dix vidéos au plus', count(mnVideos(array_map(static fn ($i) => 'https://vimeo.com/1000000' . $i, range(0, 14)))) === 10);
+verifie('rien de lisible : liste vide', mnVideos('https://vimeo.com/1') === [] && mnVideos(null) === []);
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko === 0 ? 0 : 1);

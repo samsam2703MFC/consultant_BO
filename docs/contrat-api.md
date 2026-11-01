@@ -1126,6 +1126,10 @@ crée le parcours et rend `{parcours, etapes[]}` ; `GET /parcours?id=`, `GET /pa
 `POST /parcours/{id}/acquis/{cid}` (confirmer une compétence déclarée) ; `PATCH /parcours/{id}/admission/{cle} {fait}` (valider un
 critère d'admission `manuel` — ou un `poste` que le panel n'a pas ; `409` pour un critère vérifié ou de formations) ; `PATCH /parcours/{id}
 {rythme | statut: arrete | atteint}` (`atteint` : `409` tant qu'une formation ou un critère d'admission manque).
+Manuel opératoire (1er nov. 2026) : `GET /formation/manuel` rend `{parties: [preouverture, ouverture, operationnel, formation],
+procedures{id: {partie | null, videos[{url, titre}], majLe}}}` (réglages du cockpit ; sans ligne, la partie se déduit de la section du
+panel) ; `PATCH /formation/manuel/procedure/{id} {partie?: cle | null, videos?: [{url, titre}]}` (clé absente = inchangée ; https
+seulement, dix vidéos au plus ; 422 sinon). Rien n'est écrit au panel.
 `GET /formation/carte` (carte des métiers, à garder en cache côté écran : `_cache=300`) rend `{chemin{metiers[{id, nom, cle, libelle,
 maitrise, maitriseCompetences, niveaux[{id, nom, nouvelles, total, avecFormation, personnes}]}], tronc[], entrepreneur[], reseau[{id, nom}]},
 polyvalence{competences, metiers[{cle, libelle, niveau, competences, personnes}], paliers{3,2,1,0}, avecCompetences}, effectifs{actifs,
