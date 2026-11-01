@@ -1,0 +1,1274 @@
+/* Design system du module Marketing (dépôt samsam2703MFC/marketing, src/styles/global.css, commit acacbf9).
+ * Sections utiles à la page RH, extraites telles quelles (bornes ajustées aux règles entières) ; seules les
+ * URL des polices sont réécrites (fonts/…). Ne pas modifier ici : les règles propres au module vivent dans hr.css. */
+
+/* --- global.css, lignes 1–362 --- */
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Regular.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Medium.otf') format('opentype');
+  font-weight: 500;
+  font-display: swap;
+}
+
+:root {
+  --ink: #1c1a17;
+  --muted: #7a736a;
+  --line: #e6e0d8;
+  --paper: #faf7f2;
+  --accent: #8D1D2C;
+  --danger: #b3261e;
+  --chip: #EDE7DE;
+  --table-head: #FBF9F5;
+  --row-line: rgba(34, 34, 34, 0.06);
+  --muted-2: #5c5852;
+  --faint: #B8B2A8;
+  --green: #3f7a52;
+  --total-line: #F8F4EE;
+
+  color-scheme: light;
+  font-family: 'Gotham', system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+h2 {
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.muted {
+  color: var(--muted);
+  margin: 0;
+}
+
+.error {
+  color: var(--danger);
+  margin: 0.5rem 0 0;
+}
+
+.metric {
+  font-size: 2rem;
+  font-weight: 500;
+  margin: 0 0 0.5rem;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+ /* Listes en prose uniquement.
+   Sans le :not([class]), cette règle l'emportait — par spécificité — sur
+   toutes les grilles et rangées de pastilles définies plus bas, qui se
+   retrouvaient sans marge et indentées de 1,1 rem. Une liste qui porte une
+   classe de mise en page gère son espacement elle-même. */
+.card ul:not([class]) {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+/* Connexion */
+.auth {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.auth__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: min(24rem, 100%);
+}
+
+.auth__logo {
+  width: 72px;
+  align-self: center;
+  margin-bottom: 0.5rem;
+}
+
+.auth__card label {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+input {
+  font: inherit;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  font: inherit;
+  margin-top: 1.25rem;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+button.ghost {
+  margin: 0;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+/* Boutons d'action — un seul système pour le module.
+   Un bouton FAIT quelque chose ; une pastille (.filter, .choice-pill, .choice-card)
+   CHOISIT. Les deux ne doivent jamais se ressembler : le bordeaux plein est
+   réservé à l'action principale de l'écran (une seule), et une sélection se lit
+   au liseré bordeaux sur fond teinté.
+     .btn            secondaire : blanc, filet, encre — la plupart des actions ;
+     .btn--primary   l'action qui fait avancer (Suivant, Valider) ;
+     .btn--ghost     sortie discrète, sans cadre (Quitter sans enregistrer) ;
+     .btn--danger    retirer, effacer, réinitialiser : discret, rouge au survol ;
+     .btn--sm        dans le contenu, à côté des champs ;
+     .btn--icon      un seul signe (✕), carré.
+   Les mêmes classes vont sur un <a> (lien externe ↗) ou un <label> (dépôt de
+   fichier) : l'aspect suit le rôle, pas la balise. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  margin: 0;
+  padding: 7px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: 500 13px/1.2 'Gotham', system-ui, sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--muted-2);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn.is-busy {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: #6f1622;
+  border-color: #6f1622;
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted-2);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.btn--danger {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted-2);
+}
+
+.btn--danger:hover:not(:disabled) {
+  border-color: transparent;
+  background: rgba(179, 38, 30, 0.07);
+  color: var(--danger);
+}
+
+.btn--sm {
+  min-height: 30px;
+  padding: 5px 11px;
+  font-size: 12px;
+}
+
+.btn--icon {
+  flex: none;
+  width: 28px;
+  min-height: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 12px;
+}
+
+/* Application */
+.app__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.app__header > button {
+  margin-left: auto;
+}
+
+.app__logo {
+  width: 40px;
+}
+
+.app__body {
+  padding: 1.5rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+/* Pastilles de statut et de levier — les couleurs viennent de l'API, jamais d'ici */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.chip--lever {
+  background: var(--chip);
+  color: var(--ink);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+/* Tableaux */
+.table-card {
+  margin-top: 1rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+thead th {
+  text-align: left;
+  font-weight: 400;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--table-head);
+  padding: 10px 14px;
+}
+
+tbody td {
+  padding: 13px 14px;
+  border-top: 1px solid var(--row-line);
+}
+
+.num {
+  text-align: right;
+}
+
+/* ---------------------------------------------------------------------------
+   Coquille : barre latérale 246 px, contenu à droite.
+   Jetons repris du handoff — pas d'ombre, la hiérarchie repose sur les
+   bordures et les fonds.
+   --------------------------------------------------------------------------- */
+.workspace {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* --- global.css, lignes 363–486 --- */
+
+.workspace__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar {
+  flex: 0 0 246px;
+  background: #fff;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+
+.sidebar__head {
+  padding: 20px 16px 8px;
+}
+
+.sidebar__logo {
+  height: 26px;
+  display: block;
+}
+
+.sidebar__kicker {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+  margin-top: 9px;
+}
+
+.sidebar__back {
+  padding: 6px 12px 4px;
+}
+
+.sidebar__back a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--paper);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 13px;
+  color: var(--muted-2);
+  text-decoration: none;
+}
+
+/* L'enseigne du périmètre : un libellé, plus un menu déroulant. Elle garde la
+   place et le gabarit de l'ancien sélecteur — le cadre sans la bordure ni la
+   flèche, qui invitaient à cliquer sur ce qui ne se change plus. */
+.sidebar__brand {
+  margin: 10px 12px 0;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--table-head);
+  border-radius: 9px;
+}
+
+.sidebar__groups {
+  padding: 2px 12px 0;
+}
+
+.sidebar__group {
+  margin-top: 18px;
+}
+
+.sidebar__group-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 500;
+  padding: 0 10px 8px;
+}
+
+/* Le bouton en tête d'un groupe (« Nouvelle campagne ») : l'entrée principale du module. */
+.sidebar__action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 2px 12px 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 500;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.sidebar__action:hover,
+.sidebar__action.is-active {
+  background: #6f1622;
+  color: #fff;
+}
+
+
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--muted-2);
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.sidebar__item:hover {
+  background: var(--paper);
+}
+
+.sidebar__item.is-active {
+  background: rgba(141, 29, 44, 0.08);
+  color: var(--accent);
+}
+
+
+/* --- global.css, lignes 487–632 --- */
+/* Barre supérieure */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.topbar__kicker {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
+
+.topbar h1 {
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.role-switch {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.role-switch button {
+  margin: 0;
+  border-radius: 0;
+  background: #fff;
+  color: var(--muted-2);
+  padding: 7px 14px;
+  font-size: 12.5px;
+}
+
+.role-switch button.is-on {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* La zone de contenu défile sur toute la largeur, et ce sont ses enfants qui
+   sont bornés à 1180 px.
+   La largeur était portée par le conteneur défilant lui-même : sa barre de
+   défilement se plaçait donc à 1180 px du bord, au milieu de l'écran, avec du
+   vide à sa droite. Elle passait pour un trait de séparation entre le
+   formulaire et le panneau — un meuble que rien ne justifiait. Elle revient
+   maintenant au bord de la fenêtre, où on l'attend. */
+.app__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px 24px 40px;
+}
+
+.app__body > * {
+  max-width: 1180px;
+}
+
+/* Sauf un voile de confirmation : il couvre la fenêtre, pas la colonne de
+   lecture. Plafonné à 1180 px il s'arrêtait net au bord du contenu et laissait
+   une bande claire à droite, où le clic passait encore. */
+.app__body > .confirm {
+  max-width: none;
+}
+
+/* L'assistant est une surface de travail, pas un document : il prend toute la
+   largeur disponible.
+   1180 px est une largeur de lecture — bonne pour un tableau de bord ou une
+   liste, étouffante pour un composeur d'offre, qui laissait sept cents pixels
+   de vide à sa droite sur un écran ordinaire. Ici, plus de plafond : le
+   rembourrage de la zone de contenu suffit à ménager les bords. */
+.app__body--wide > * {
+  max-width: none;
+}
+
+.screen-subtitle {
+  font-size: 21px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+  margin: 4px 0 14px;
+}
+
+/* Filtres */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filters__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Badges rectangulaires, comme les cartes de choix de l'assistant. Le rayon
+   est proportionné à la hauteur : 11 px sur une carte de 60 px de haut donne
+   8 px sur une pastille de 28 px, sinon la forme retombe sur l'ovale. */
+.filter {
+  margin: 0;
+  padding: 6px 13px;
+  font-size: 12.5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted-2);
+}
+
+.filter.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.filter.back {
+  margin-bottom: 12px;
+}
+
+.field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.field input {
+  padding: 5px 9px;
+  font-size: 12.5px;
+}
+
+/* --- global.css, lignes 1041–1166 --- */
+/* Un champ désactivé ne doit pas ressembler à un bouton : sans fond plein, il
+   se lit comme « pas encore disponible » plutôt que comme « cliquez ici ». */
+input:disabled,
+select:disabled {
+  background: transparent;
+  color: var(--faint);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+
+/* Cartes de type de campagne, portée et cible.
+   Mesures reprises de la maquette de référence
+   (design_handoff_marketing_franchise/design/Reseau.dc.html) : rayon 11 px,
+   padding 14 px, bordure 1 px au repos et 2 px bordeaux à la sélection sur
+   fond teinté. La bordure épaissit à la sélection sans décaler la grille
+   parce que la compensation se fait sur le padding. */
+.type-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.type-card,
+.choice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: #fff;
+  border: 1px solid rgba(34, 34, 34, 0.12);
+  border-radius: 11px;
+  padding: 14px;
+  color: var(--muted-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.type-card:hover,
+.choice-card:hover {
+  border-color: rgba(34, 34, 34, 0.28);
+}
+
+.type-card.is-on,
+.choice-card.is-on {
+  border: 2px solid var(--accent);
+  background: rgba(141, 29, 44, 0.05);
+  color: var(--accent);
+  padding: 13px;
+}
+
+.type-card__name,
+.choice-card strong {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: inherit;
+}
+
+.type-card__kpi {
+  font-size: 0.78rem;
+}
+
+/* Pastille de levier. La couleur vient de mar_lever via le type — jamais d'ici. */
+.lever-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.6;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--faint);
+}
+
+.section-label {
+  margin: 1.5rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.choice-row .choice-card {
+  flex: 1 1 14rem;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.choice-row .choice-card.is-on {
+  padding: 11px;
+}
+
+.choice-pill {
+  margin: 0;
+  background: #fff;
+  border: 1px solid rgba(34, 34, 34, 0.14);
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted-2);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.choice-pill.is-on {
+  border: 2px solid var(--accent);
+  background: rgba(141, 29, 44, 0.05);
+  color: var(--accent);
+  padding: 8px 15px;
+}
+
+/* --- global.css, lignes 2188–2192 --- */
+:root {
+  --prize: #B0792A;
+  --prize-soft: #F6E7CE;
+  --prize-ink: #7A5207;
+}
+
+/* --- global.css, lignes 2396–2399 --- */
+:root {
+  --stop: #A32014;
+  --stop-soft: #F7E0DC;
+}
+
+/* --- global.css, lignes 2436–2448 --- */
+.tag-warn,
+.tag-stop {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.tag-warn { background: var(--prize-soft); color: var(--prize-ink); }
+.tag-stop { background: var(--stop-soft); color: var(--stop); }
+
+/* --- global.css, lignes 2629–2780 --- */
+/* Champ occupant la largeur, pour les zones de texte et les curseurs */
+.field--block,
+.field--grow {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin-top: 0.6rem;
+}
+
+.field--grow {
+  max-width: 32rem;
+}
+
+.field--block textarea,
+.field--grow input {
+  width: 100%;
+  padding: 6px 9px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  resize: vertical;
+}
+
+.field--grow input[type='range'] {
+  padding: 0;
+  border: none;
+  accent-color: var(--accent);
+}
+
+/* =========================================================================
+   Assistant de campagne — rythme vertical
+   -------------------------------------------------------------------------
+   Le formulaire empile sept blocs de nature différente (grilles, rangées de
+   pastilles, tableaux, champs). S'en remettre aux marges de chacun donnait un
+   espacement au hasard : ici deux blocs collés, là un trou. La règle vit donc
+   sur le conteneur, qui est le seul à voir la suite complète.
+   ========================================================================= */
+.wizard-card {
+  padding: 1.5rem 1.5rem 1.75rem;
+}
+
+.wizard-card > * {
+  margin-top: 1rem;
+}
+
+.wizard-card > *:first-child {
+  margin-top: 0;
+}
+
+.wizard-card > h2 {
+  margin: 0 0 0.2rem;
+}
+
+/* Le chapô suit son titre sans rupture : c'est une même unité de lecture. */
+.wizard-card > h2 + p.muted {
+  margin-top: 0;
+}
+
+.wizard-card > p.muted {
+  max-width: 78ch;
+}
+
+/* Un intertitre ouvre une section : de l'air avant, peu après. */
+.wizard-card > .section-label {
+  margin-top: 1.9rem;
+}
+
+.wizard-card > .section-label + * {
+  margin-top: 0.55rem;
+}
+
+/* Les blocs de canaux (physique / digital) n'ont pas d'intertitre propre au
+   niveau du conteneur : ils portent le leur à l'intérieur. */
+.wizard-card > div > .section-label:first-child {
+  margin-top: 1.9rem;
+}
+
+.wizard-card > div > .section-label + * {
+  margin-top: 0.55rem;
+}
+
+/* Étiquette au-dessus du champ dans les rangées du formulaire : les contrôles
+   s'alignent alors par le haut. Mélanger étiquette à gauche et étiquette
+   au-dessus décalait les champs les uns par rapport aux autres. Les cases à
+   cocher des tableaux gardent leur disposition en ligne. */
+.wizard-card .filters__row > .field {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+/* Les tableaux de l'assistant tiennent dans sa carte.
+   `table { min-width: 820px }` vise les listes de données — un suivi de leads,
+   un grand livre — pour qu'elles gardent leurs colonnes lisibles et défilent
+   plutôt que de s'écraser. Dans l'assistant, la carte fait 746 px dès que le
+   panneau des comptes occupe la colonne de droite : la règle y poussait la
+   colonne des chiffres hors du cadre. Le tableau des secteurs n'affichait donc
+   plus que ses libellés, et il fallait deviner qu'on pouvait le faire défiler
+   pour lire les effectifs — c'est-à-dire la seule chose qu'il ait à dire. */
+.wizard-card table {
+  min-width: 0;
+}
+
+/* Champs de saisie — un seul rembourrage pour tous.
+   Ils se côtoient dans les mêmes rangées : deux valeurs différentes se voient
+   immédiatement sur la hauteur des bordures. */
+.field input,
+.field select,
+.field textarea,
+.field--block textarea,
+.field--grow input,
+.line-list input,
+.input--grow,
+table input[type='number'],
+table input[type='text'],
+table select,
+.wizard-card select {
+  padding: 6px 10px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+/* Le curseur de cadrage n'est pas un champ bordé. */
+.field--grow input[type='range'] {
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.field input[type='checkbox'] {
+  padding: 0;
+  border: none;
+}
+
+/* Une ligne d'offre n'a pas besoin de toute la largeur : au-delà, l'œil perd
+   le lien entre le champ et son bouton. */
+.line-list input {
+  max-width: 26rem;
+}
+
+/* Deux choix côte à côte, pas deux panneaux. */
+.choice-row .choice-card {
+  max-width: 22rem;
+}
+
+/* --- global.css, lignes 3175–3216 --- */
+/* Pied de l'assistant : une barre d'actions collée au bas de l'écran.
+   Les étapes font jusqu'à 2 400 px de haut ; au bout de la page, « Suivant »
+   ne se trouvait qu'en défilant. La barre reste visible, dans un ordre fixe :
+   quitter (sans / en enregistrant) à gauche, l'état au milieu, puis
+   « Précédent » et l'action principale tout à droite. */
+.wizard-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 1.1rem;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 -6px 18px rgba(34, 34, 34, 0.08);
+}
+
+/* L'action qui avance est plus large que celle qui recule : à taille égale,
+   le geste juste ne se distingue plus du retour en arrière. */
+.wizard-actions .btn--primary {
+  padding-inline: 24px;
+}
+
+/* Deux blocs qui ne se mélangent pas : sortir à gauche, naviguer à droite. Sur
+   une colonne étroite, la navigation passe dessous, toujours calée à droite. */
+.wizard-actions__group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wizard-actions__group--nav {
+  margin-left: auto;
+}
+
+.wizard-actions__state {
+  font-size: 12px;
+}
+
+/* --- global.css, lignes 3382–3432 --- */
+.campaign__delete:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(24, 18, 20, 0.42);
+}
+
+.confirm__box {
+  width: min(460px, 100%);
+  padding: 22px 24px;
+}
+
+.confirm__box h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* Le bouton destructeur porte la couleur d'alerte : c'est le seul de la paire
+   dont le clic ne se rattrape pas. */
+.confirm__danger {
+  color: #fff;
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.confirm__danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.confirm__danger:disabled,
+.confirm__actions .filter:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* --- global.css, lignes 3555–3640 --- */
+/* ── Saisie d'un mouvement de fonds ──────────────────────────────────────
+   Le sens en premier : il change la lecture de tout le reste, et un montant
+   ne porte jamais son signe ici. */
+.movement { display: flex; flex-direction: column; gap: 16px; padding: 20px 22px; }
+
+.movement__title { margin: 0; font-size: 15px; font-weight: 600; }
+
+.movement__sens {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.movement__sens .choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 11px 14px;
+  font-size: 14px;
+  text-align: left;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.movement__sens .choice.is-on {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft, rgba(141, 29, 44, 0.06));
+}
+
+.movement__sens .choice span { font-size: 12px; }
+
+.movement__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+/* Étiquette au-dessus du champ, et non à côté : « Période couverte — du »
+   posé en ligne recouvrait le champ voisin, et le formulaire se lisait en
+   diagonale. */
+.movement__grid .field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  margin-top: 0;
+}
+
+.movement__grid .field input,
+.movement__grid .field select {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.movement__grid .objectives__pct { display: flex; align-items: center; gap: 6px; }
+
+/* Le libellé prend toute la largeur : c'est lui qu'on relit dans le grand
+   livre, et un champ de 190 px le tronque à la saisie. */
+.movement__grid .field--block { grid-column: 1 / -1; }
+
+.movement__apercu { font-size: 13px; }
+
+/* Le rythme au-dessus des champs qu'il commande : choisir « tous les mois »
+   change la question posée juste en dessous. */
+.movement__rythme { display: flex; flex-direction: column; gap: 7px; }
+
+.field__legend { font-size: 12px; color: var(--muted-2); }
+
+.movement__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* La suppression à l'opposé de l'enregistrement : côte à côte, on clique la
+   mauvaise une fois sur dix, et celle-ci ne se rattrape pas. */
+
+/* --- global.css, lignes 3761–3773 --- */
+.linklike {
+  padding: 2px 4px;
+  font-size: 12px;
+  color: var(--muted-2);
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.linklike:hover { color: var(--accent); }
+
+/* --- global.css, lignes 3998–4104 --- */
+/* --- Assistant « hub » : sept étapes, colonne de droite --------------------
+   La maquette validée : l'en-tête dit quelle campagne on tient, le fil relie les
+   sept étapes, et la colonne de droite garde la campagne sous les yeux. */
+.hub-head { margin: 4px 0 14px; }
+.hub-head__crumb {
+  font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+.hub-head__name {
+  margin: 2px 0 6px; font-size: 26px; font-weight: 500; letter-spacing: .02em; text-transform: uppercase; color: var(--ink);
+}
+.hub-head__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--muted-2); }
+.hub-chip { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+
+.hub-steps {
+  display: flex; align-items: center; flex-wrap: wrap; row-gap: 4px;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px;
+}
+.hub-steps__item { display: flex; align-items: center; flex: 0 0 auto; }
+.hub-steps__line { width: 14px; height: 1px; background: var(--line); margin: 0 3px; }
+.hub-steps__line.is-done { background: var(--green); }
+/* La règle `button` globale pose un fond bordeaux et une marge haute : remise à zéro. */
+.hub-step {
+  margin: 0; display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px;
+  border: none; background: none; color: var(--muted-2); font: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer; white-space: nowrap; border-radius: 8px;
+}
+.hub-step i {
+  font-style: normal; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px;
+  border: 1px solid var(--line); background: #fff; font-size: 12px; font-weight: 600; color: var(--muted-2);
+}
+.hub-step.is-cur { color: var(--accent); }
+.hub-step.is-cur i { background: var(--accent); border-color: var(--accent); color: #fff; }
+.hub-step.is-done i { background: var(--green); border-color: var(--green); color: #fff; }
+.hub-step:disabled { cursor: default; color: var(--faint); }
+.hub-step:hover:not(:disabled) { background: var(--table-head); }
+.hub-sub { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; border-bottom: 1px solid var(--line); }
+/* Les sous-étapes sont des onglets : soulignés quand on y est, jamais en bordeaux
+   plein — c'est l'aspect de l'action principale, et le bouton « Offre » se
+   confondait avec « Suivant ». */
+.hub-sub__tab {
+  margin: 0 0 -1px; padding: 8px 12px; border: none; border-bottom: 2px solid transparent; border-radius: 0;
+  background: none; color: var(--muted-2); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.hub-sub__tab:hover:not(:disabled) { color: var(--ink); }
+.hub-sub__tab.is-on { color: var(--accent); border-bottom-color: var(--accent); }
+.hub-sub__tab:disabled { color: var(--faint); cursor: default; opacity: 1; }
+
+/* Dans l'assistant, une pastille sélectionnée se lit comme une carte de choix :
+   liseré bordeaux, fond teinté — plus jamais comme le bouton principal. Le
+   filet s'épaissit par une ombre intérieure pour ne pas décaler la rangée. */
+.builder .filter { cursor: pointer; }
+.builder .filter:hover:not(:disabled) { border-color: var(--muted-2); }
+.builder .filter.is-on {
+  background: rgba(141, 29, 44, 0.05);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  color: var(--accent);
+  font-weight: 500;
+}
+.builder .filter:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Formulaire à gauche, la campagne en un coup d'œil à droite ; empilés sur écran étroit. */
+.hub-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .hub-layout { grid-template-columns: minmax(0, 1fr); } }
+.hub-aside { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 12px; }
+.hub-aside__card { padding: 16px 18px; }
+.hub-aside__card h3 { margin: 4px 0 10px; font-size: 15px; font-weight: 500; }
+.hub-aside__card p { margin: 6px 0 0; font-size: 12.5px; font-weight: 400; line-height: 1.45; }
+.hub-aside__kicker { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.hub-kv { margin: 0; }
+.hub-kv > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--row-line); font-size: 12.5px; }
+.hub-kv dt { color: var(--muted); font-weight: 500; flex: 0 0 auto; }
+.hub-kv dd { margin: 0; text-align: right; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.hub-kv code { font-size: 11px; background: var(--table-head); padding: 2px 5px; border-radius: 4px; font-weight: 500; }
+.hub-attached__ad { display: flex; flex-direction: column; gap: 2px; margin: 8px 0 0; font-size: 12.5px; }
+
+/* Canaux : ce que le module Social fait pour la campagne. */
+.hub-social { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.hub-social__card { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: #fff; }
+.hub-social__card p { margin: 4px 0 0; font-size: 12.5px; }
+.hub-social__card .filters__row { margin-top: 8px; }
+.hub-social__card a.filter { text-decoration: none; }
+.hub-social__ic { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; }
+.hub-social__ic--fb { background: #1877F2; }
+.hub-social__ic--meta { background: #0866FF; }
+
+/* Traçabilité : un lien par canal, lisible et copiable. */
+table.hub-links code { font-size: 11.5px; overflow-wrap: anywhere; word-break: break-all; }
+
+/* Récap : tableau de bord, puis ce qui manque. */
+.hub-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.hub-kpi { display: flex; flex-direction: column; gap: 4px; background: var(--table-head); border-radius: 10px; padding: 12px; }
+.hub-kpi b { font-size: 20px; font-weight: 500; color: var(--ink); }
+.hub-kpi .muted { font-size: 11.5px; }
+.hub-check { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 16px; }
+.hub-check li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted-2); }
+.hub-check li span { width: 18px; height: 18px; border-radius: 5px; border: 1px solid var(--faint); display: inline-grid; place-items: center; font-size: 11px; color: #fff; }
+.hub-check li.is-ok { color: var(--ink); }
+.hub-check li.is-ok span { background: var(--green); border-color: var(--green); }
+/* Le tableau de bord ouvre le récap : sans marge haute, et détaché du récapitulatif qui suit. */
+.hub-board { display: flex; flex-direction: column; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.wizard-card > .hub-board > .section-label { margin: 0; }
+.wizard-card > .hub-board > .section-label:first-child { margin-top: 0; }
+.wizard-card .hub-board + h2 { margin-top: 18px; }
+/* Campagne déjà lancée : ce que l'assistant enregistre, et ce qu'il laisse tel quel. */
+.hub-banner { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: #FCE7C8; color: #6b3d0a; font-size: 12.5px; line-height: 1.5; }
+
+
+/* --- global.css, lignes 4235–4246 --- */
+/* Onglets d'une entrée du menu qui regroupe plusieurs écrans (Offres, Performance,
+   Bilan) : soulignés comme les sous-étapes de l'assistant, jamais en
+   bordeaux plein. Au-dessus d'un écran du module Social, ils gardent la marge. */
+.page-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 16px; border-bottom: 1px solid var(--line); }
+.app__body--frame > .page-tabs { margin: 0; padding: 6px 24px 0; background: #fff; }
+.page-tabs__tab {
+  margin: 0 0 -1px; padding: 8px 12px; border: none; border-bottom: 2px solid transparent; border-radius: 0;
+  background: none; color: var(--muted-2); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.page-tabs__tab:hover { color: var(--ink); }
+.page-tabs__tab.is-on { color: var(--accent); border-bottom-color: var(--accent); }
+

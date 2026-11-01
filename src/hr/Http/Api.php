@@ -375,7 +375,8 @@ final class Api
                 $rows[] = $this->teamRow($w, null, $shopNames);
             }
         }
-        usort($rows, static fn (array $a, array $b): int => [$a['dimona'] === 'none', $a['name']] <=> [$b['dimona'] === 'none', $b['name']]);
+        $rang = ['problem' => 0, 'pending' => 1, 'declared' => 2, 'closed' => 3, 'canceled' => 3, 'none' => 4];
+        usort($rows, static fn (array $a, array $b): int => [$rang[$a['dimona']], $a['name']] <=> [$rang[$b['dimona']], $b['name']]);
         return Response::json(['societeId' => $sid, 'items' => $rows]);
     }
 
@@ -390,9 +391,12 @@ final class Api
         $period = $w !== null ? PeriodRepository::active((int) $w['id']) : null;
         $last = $w !== null ? DeclarationRepository::lastForWorker((int) $w['id']) : null;
         $shop = $erp['shopId'] ?? ($w['shop_id'] ?? null);
+        $shown = $period ?? ($w !== null ? (PeriodRepository::forWorker((int) $w['id'])[0] ?? null) : null);
         $state = 'none';
         if ($period !== null) {
             $state = 'declared';
+        } elseif ($shown !== null) {
+            $state = $shown['status'] === PeriodRepository::CANCELED ? 'canceled' : 'closed';
         }
         if ($last !== null && in_array($last['status'], [StatusMapper::PENDING, StatusMapper::WAITING_SIGEDIS], true)) {
             $state = 'pending';
@@ -411,7 +415,7 @@ final class Api
             'hasSsin' => $w !== null && !empty($w['ssin_encrypted']),
             'workerType' => $period['worker_type'] ?? ($w['worker_type'] ?? null),
             'dimona' => $state,
-            'period' => $period !== null ? PeriodRepository::view($period) : null,
+            'period' => $shown !== null ? PeriodRepository::view($shown) : null,
             'lastDeclaration' => $last !== null ? ['id' => (int) $last['id'], 'type' => $last['type'], 'status' => $last['status'], 'at' => \Hr\Support\Clock::iso($last['created_at'])] : null,
         ];
     }
