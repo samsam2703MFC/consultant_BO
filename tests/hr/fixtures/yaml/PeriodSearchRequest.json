@@ -1,0 +1,53 @@
+{
+  "activeFromDate": "2000-12-31",
+  "activeToDate": "2000-12-31",
+  "isCanceled": true,
+  "modificationFromStartDate": "2000-12-30",
+  "isAllowedFlexiJob": true,
+  "inOrOutOnly": true,
+  "features": {
+    "subEntityNumber": "1234567891",
+    "excludedWorkerTypes": [
+      "STU",
+      "STU"
+    ],
+    "jointCommissionNumbers": [
+      "124",
+      "124"
+    ],
+    "excludedJointCommissionNumbers": [
+      "124",
+      "124"
+    ],
+    "userEnterpriseSearch": {
+      "jointCommissionNumber": "124",
+      "enterpriseNumber": "enterpriseNumber",
+      "name": "name"
+    },
+    "workerTypes": [
+      "STU",
+      "STU"
+    ]
+  },
+  "isCanceledNsso": true,
+  "isLate": true,
+  "modificationToEndDate": "2000-12-31",
+  "isLocked": true,
+  "employer": {
+    "employerId": 480497095,
+    "enterpriseNumber": "enterpriseNumber",
+    "excludedSectorIndicators": [
+      "publicPla",
+      "publicPla"
+    ],
+    "includedSectorIndicators": [
+      "publicPla",
+      "publicPla"
+    ]
+  },
+  "worker": {
+    "ssin": "ssin",
+    "familyName": "Doe",
+    "givenName": "John"
+  }
+}

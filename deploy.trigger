@@ -1255,3 +1255,10 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-01T13:11:22Z [app] Pointage : arrivee et depart, borne QR du magasin (#90)
 2026-11-01T13:21:51Z [cockpit] Pointage a la caisse : cle de caisse, PIN (#91)
 [241] Dane maszyn : nowa maszyna + maszyna wspólna (migracja 156) — 2026-11-01T13:23:02Z
+2026-11-01T13:26:23Z module RH Dimona à /hr : connexion ONSS, engager, sortie, simulation seule
+2026-11-01T13:36:06Z module RH : motif du démarrage, diagnostic sous www-data
+2026-11-01T13:41:56Z module RH : clé maître par config.php, dossier privé traversable
+2026-11-01T14:04:03Z console franchisé : comptes activés (section bo), mot de passe depuis /hr
+2026-11-01T14:05:45Z dashboard opérationnel : Heure par heure, bascule Panier (panier moyen de chaque heure face à J−7)
+2026-11-01T15:40:27Z formation : manuel en quatre parties (procédures et 53 formations), vidéos dans les procédures, toutes les vues sur tablette
+2026-11-01T15:44:00Z formation : manuel, « … » tant que la répartition n'est pas lue

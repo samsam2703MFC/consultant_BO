@@ -1,0 +1,121 @@
+/* Module RH / Dimona — ce qui lui est propre. La base (jetons, boutons, champs, cartes, assistant hub-steps,
+   wizard-actions, confirm) vient de ds.css, le design system du module Marketing. Même règles : pas d'ombre
+   sauf la barre d'actions de l'assistant, la hiérarchie par les bordures et les fonds, le bordeaux plein
+   réservé à l'action principale. */
+
+/* La règle globale `button{}` de ds.css peint tout bouton nu en bordeaux : ici, tout bouton a une classe. */
+button.hr-plain { margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+
+.hr-boot { padding: 2rem; }
+
+/* --- connexion ------------------------------------------------------------------------------------ */
+.hr-login {
+  min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--paper);
+}
+.hr-login__card {
+  width: min(420px, 100%); background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 2rem 2rem 1.75rem; box-shadow: 0 20px 60px rgba(34, 34, 34, 0.08);
+}
+.hr-login__card img { height: 26px; display: block; }
+.hr-login__card h1 { margin: 1.4rem 0 0.25rem; font-size: 22px; font-weight: 400; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.hr-login__card form { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 1rem; }
+.hr-login__card .field--grow { max-width: none; }
+.hr-login__card .btn--primary { margin-top: 1rem; width: 100%; }
+.hr-login__who { display: flex; gap: 8px; margin-top: 1rem; }
+.hr-login__who .choice-pill { flex: 1; justify-content: center; }
+.hr-login__note { margin-top: 1rem; font-size: 12px; }
+
+/* --- enveloppe ------------------------------------------------------------------------------------- */
+.hr-env { display: inline-flex; align-items: center; gap: 6px; }
+.hr-user { display: flex; flex-direction: column; align-items: flex-end; font-size: 12px; color: var(--muted); line-height: 1.35; }
+.hr-user strong { color: var(--ink); font-weight: 500; font-size: 13px; }
+.hr-societe select { min-width: 220px; }
+.sidebar__foot { margin-top: auto; padding: 14px 16px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+.sidebar { display: flex; flex-direction: column; }
+
+/* --- statuts Dimona : vert A, orange W, rouge B / erreur, gris S et en attente ---------------------- */
+.st { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; white-space: nowrap; }
+.st::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+.st--ok { color: #3f7a52; background: rgba(63, 122, 82, 0.13); }
+.st--warn { color: #b26a00; background: rgba(200, 120, 20, 0.13); }
+.st--ko { color: var(--stop); background: var(--stop-soft); }
+.st--wait { color: #8a847c; background: rgba(120, 116, 110, 0.12); }
+.st--none { color: var(--muted-2); background: var(--chip); }
+.st--wait.is-live::before { animation: hr-pulse 1.2s ease-in-out infinite; }
+@keyframes hr-pulse { 50% { opacity: 0.25; } }
+
+/* --- équipe ---------------------------------------------------------------------------------------- */
+.hr-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.hr-strip .card { padding: 14px 16px; }
+.hr-strip__k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.hr-strip__v { margin-top: 6px; font-size: 22px; color: var(--ink); }
+.hr-strip__s { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.hr-team td { vertical-align: middle; }
+.hr-team tr.is-click { cursor: pointer; }
+.hr-team tr.is-click:hover td { background: var(--table-head); }
+.hr-team .hr-name { font-weight: 500; color: var(--ink); }
+.hr-team .hr-sub { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.hr-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hr-strip + .hr-toolbar { margin-top: 14px; }
+.hr-toolbar .field input { min-width: 240px; }
+.hr-toolbar__grow { margin-left: auto; display: flex; gap: 8px; }
+.hr-empty { text-align: center; padding: 2.25rem 1.5rem; }
+.hr-empty h2 { margin: 0 0 0.5rem; font-size: 20px; font-weight: 400; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.hr-empty p { max-width: 520px; margin: 0 auto 1.2rem; }
+
+/* --- fiche ----------------------------------------------------------------------------------------- */
+.hr-person { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .hr-person { grid-template-columns: minmax(0, 1fr); } }
+.hr-person__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.hr-person__head h2 { margin: 0; font-size: 22px; font-weight: 400; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.hr-kv { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px 14px; margin: 0; font-size: 13px; }
+.hr-kv dt { color: var(--muted); }
+.hr-kv dd { margin: 0; color: var(--ink); }
+.hr-niss { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.hr-niss > span { white-space: nowrap; }
+.hr-period { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--table-head); }
+.hr-period__dates { font-size: 18px; color: var(--ink); margin: 4px 0 8px; }
+.hr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.hr-history { list-style: none; margin: 0; padding: 0; }
+.hr-history > li { border-top: 1px solid var(--row-line); padding: 12px 0; }
+.hr-history > li:first-child { border-top: 0; }
+.hr-history__row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hr-history__type { font-weight: 500; color: var(--ink); min-width: 110px; }
+.hr-history__meta { font-size: 12px; color: var(--muted); }
+.hr-anomalies { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.hr-anomalies li { font-size: 12.5px; padding: 8px 10px; border-radius: 8px; background: var(--paper); border-left: 3px solid var(--line); }
+.hr-anomalies li.is-ko { border-left-color: var(--stop); }
+.hr-anomalies li.is-warn { border-left-color: #c88a14; }
+.hr-anomalies code { font-size: 11px; color: var(--muted); }
+.hr-anomalies small { display: block; color: var(--muted); margin-top: 2px; }
+
+/* --- assistants ------------------------------------------------------------------------------------- */
+.hr-files { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.hr-file { border: 1px dashed var(--line); border-radius: 12px; padding: 14px 16px; background: #fff; }
+.hr-file.is-done { border-style: solid; border-color: rgba(63, 122, 82, 0.45); background: rgba(63, 122, 82, 0.04); }
+.hr-file strong { display: block; color: var(--ink); font-weight: 500; }
+.hr-file p { margin: 4px 0 10px; font-size: 12px; }
+.hr-file input[type='file'] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.hr-code { position: relative; margin: 0; padding: 12px 14px; border-radius: 8px; background: #1c1a17; color: #f3eee7; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-all; }
+.hr-steps-list { margin: 0; padding-left: 1.2rem; font-size: 13px; line-height: 1.6; color: var(--ink); }
+.hr-steps-list li + li { margin-top: 4px; }
+.hr-result { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--table-head); }
+.hr-result.is-ok { border-color: rgba(63, 122, 82, 0.4); background: rgba(63, 122, 82, 0.06); }
+.hr-result.is-ko { border-color: rgba(163, 32, 20, 0.35); background: var(--stop-soft); }
+.hr-result.is-warn { border-color: rgba(200, 120, 20, 0.4); background: rgba(200, 120, 20, 0.07); }
+.hr-result__icon { font-size: 20px; line-height: 1; }
+.hr-result h3 { margin: 0 0 4px; font-size: 15px; color: var(--ink); font-weight: 500; text-transform: none; letter-spacing: 0; }
+.hr-result p { margin: 0; font-size: 13px; }
+.hr-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; max-height: 360px; overflow: auto; padding: 2px; }
+.hr-pick .choice-card { text-align: left; }
+.hr-pick .choice-card small { display: block; margin-top: 3px; color: var(--muted); font-size: 11.5px; }
+.field__error { color: var(--danger); font-size: 11.5px; }
+.field.is-bad input, .field.is-bad select, .field--grow.is-bad input { border-color: var(--danger); }
+.hr-hint { font-size: 12px; color: var(--muted); }
+.hr-sim { display: inline-flex; gap: 6px; align-items: center; padding: 3px 9px; border-radius: 4px; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--prize-ink); background: var(--prize-soft); }
+.hr-sim--prod { color: #fff; background: var(--accent); }
+.hub-kv { margin: 0; }
+.hr-badge-days { font-size: 11.5px; }
+.hr-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 16px; }
+.hr-toast { position: fixed; right: 18px; bottom: 18px; z-index: 50; max-width: 380px; padding: 12px 16px; border-radius: 12px; background: var(--ink); color: #fff; font-size: 13px; box-shadow: 0 8px 22px rgba(34, 34, 34, 0.14); }
+.hr-toast.is-ko { background: var(--stop); }

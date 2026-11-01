@@ -1,0 +1,8 @@
+{
+  "references": {
+    "employer": "employer",
+    "worker": "worker",
+    "declaration": "declaration"
+  },
+  "dailyRegistrationId": 234567891234
+}

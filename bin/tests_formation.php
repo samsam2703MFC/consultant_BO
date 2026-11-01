@@ -221,5 +221,23 @@ verifie('le nom : le nom complet du CRM, sinon prénom et nom', pcCrmNom(['compl
     && pcCrmNom(['complet' => '', 'prenom' => 'Léo', 'nom' => 'Fictif']) === 'Léo Fictif' && pcCrmNom(['complet' => null, 'prenom' => null, 'nom' => null]) === '');
 verifie('statut lisible', pcCrmStatut('entretien_planifie') === 'Entretien planifie' && pcCrmStatut('') === null && pcCrmStatut(null) === null);
 
+
+echo "\nManuel opératoire : parties et vidéos\n";
+verifie('les quatre parties, dans l’ordre de la vie du magasin', MN_PARTIES === ['preouverture', 'ouverture', 'operationnel', 'formation']);
+verifie('partie valable ou null', mnPartie('ouverture') === 'ouverture' && mnPartie('Ouverture') === null && mnPartie(null) === null && mnPartie(3) === null);
+$vids = mnVideos([['url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'titre' => '  Vitrine  '], ['url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ'],
+    ['url' => 'javascript:alert(1)'], ['url' => 'http://exemple.be/v.mp4'], ['url' => 'https://exemple.be/a b.mp4'], 'https://vimeo.com/76979871', ['url' => 'https://x.be/"onerror="']]);
+verifie('vidéos : https seulement, sans doublon, sans caractère qui sortirait d’un attribut', array_column($vids, 'url') === ['https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'https://vimeo.com/76979871'], json_encode($vids));
+verifie('titre rogné, vide permis', $vids[0]['titre'] === 'Vitrine' && $vids[1]['titre'] === '');
+verifie('dix vidéos au plus', count(mnVideos(array_map(static fn ($i) => 'https://vimeo.com/1000000' . $i, range(0, 14)))) === 10);
+verifie('rien de lisible : liste vide', mnVideos('https://vimeo.com/1') === [] && mnVideos(null) === []);
+$defFo = mnFormationsDefaut(__DIR__ . '/../src/data/manuel_formations.json');
+$v25Fo = array_column(json_decode((string) file_get_contents(__DIR__ . '/../src/data/referentiel_v25.json'), true)['formations'], 'code');
+verifie('formations : chacune des ' . count($v25Fo) . ' formations du référentiel a sa partie par défaut, et rien d’autre', array_keys($defFo) === $v25Fo || (count($defFo) === count($v25Fo) && !array_diff($v25Fo, array_keys($defFo))), json_encode(array_diff($v25Fo, array_keys($defFo))));
+$parPartie = array_count_values($defFo);
+verifie('formations : les quatre parties sont garnies', count($parPartie) === 4 && min($parPartie) >= 1, json_encode($parPartie));
+verifie('formations : le parcours du candidat franchisé avant l’ouverture, la stratégie d’ouverture à l’ouverture', $defFo['FO-31'] === 'preouverture' && $defFo['FO-37'] === 'preouverture' && $defFo['FO-38'] === 'ouverture' && $defFo['FO-01'] === 'operationnel' && $defFo['FO-39'] === 'formation');
+verifie('formations : fichier absent = aucune répartition (rien d’inventé)', mnFormationsDefaut('/nulle/part.json') === []);
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko === 0 ? 0 : 1);

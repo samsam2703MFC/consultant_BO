@@ -1,0 +1,112 @@
+{
+  "serviceType": "short",
+  "isCanceled": true,
+  "endDate": "2000-12-31",
+  "dimonaFeatures": {
+    "workerType": "STU",
+    "subEntityNumber": "1234567891",
+    "userEnterprise": {
+      "employerId": 480497095,
+      "address": {
+        "country": 231,
+        "street": "street",
+        "houseNumber": "houseNumber",
+        "municipality": {
+          "code": 64246,
+          "name": "name"
+        },
+        "boxNumber": "boxNumber",
+        "postCode": "postCode"
+      },
+      "jointCommissionNumber": "124",
+      "enterpriseNumber": "enterpriseNumber",
+      "name": "name"
+    },
+    "jointCommissionNumber": "124"
+  },
+  "lastUpdateDate": "2000-12-31",
+  "lastDimonaType": "in",
+  "isCanceledNsso": true,
+  "constructionControlCards": {
+    "firstMonthC32aNumber": "firstMonthC32aNumber",
+    "nextMonthC32aNumber": "nextMonthC32aNumber"
+  },
+  "isLate": true,
+  "isLocked": true,
+  "employer": {
+    "employerId": 480497095,
+    "enterpriseNumber": "enterpriseNumber"
+  },
+  "plannedHoursNumber": 160,
+  "smallStatutesInformation": {
+    "employmentNature": "worker",
+    "activityWithRisk": 401,
+    "workerStatus": "F1"
+  },
+  "worker": {
+    "ssin": "ssin",
+    "nationality": 641,
+    "gender": null,
+    "familyName": "Doe",
+    "givenName": "John",
+    "givenNames": "givenNames",
+    "birthDate": "2000-12-31"
+  },
+  "periodId": 123456789123,
+  "plannedDaysNumber": 111,
+  "isAllowedFlexiJob": true,
+  "isAllowedStarterJob": true,
+  "creationDate": "2000-12-31",
+  "anomalies": [
+    {
+      "errorId": "errorId",
+      "label": {
+        "de": "de",
+        "fr": "fr",
+        "nl": "nl"
+      },
+      "type": "type",
+      "value": "value"
+    },
+    {
+      "errorId": "errorId",
+      "label": {
+        "de": "de",
+        "fr": "fr",
+        "nl": "nl"
+      },
+      "type": "type",
+      "value": "value"
+    }
+  ],
+  "endHour": "1645",
+  "startHour": "1545",
+  "anomalySeverity": "blocking",
+  "quotaFeatures": [
+    {
+      "quotaType": "article17",
+      "exceedingQuotaDays": 111,
+      "exceedingQuotaHours": 160
+    },
+    {
+      "quotaType": "article17",
+      "exceedingQuotaDays": 111,
+      "exceedingQuotaHours": 160
+    }
+  ],
+  "studentPlaceOfWork": {
+    "address": {
+      "country": 231,
+      "street": "street",
+      "houseNumber": "houseNumber",
+      "municipality": {
+        "code": 64246,
+        "name": "name"
+      },
+      "boxNumber": "boxNumber",
+      "postCode": "postCode"
+    },
+    "name": "name"
+  },
+  "startDate": "2000-12-30"
+}

@@ -2847,7 +2847,8 @@
     if (!hA.length || !h7.length) { return ''; }
     // Les clients ne se dessinent que si les deux journées ont leurs tickets heure par heure.
     const aTk = hA.some(x => x.tickets != null) && h7.some(x => x.tickets != null);
-    const mode = aTk && S.opCrb === 'tk' ? 'tk' : 'ca', champ = mode === 'tk' ? 'tickets' : 'ca';
+    // Panier (01/11/2026) : le panier moyen de chaque heure, pas un cumul — il demande les tickets heure par heure, comme Clients.
+    const mode = aTk && (S.opCrb === 'tk' || S.opCrb === 'pan') ? S.opCrb : 'ca', champ = mode === 'tk' ? 'tickets' : 'ca';
     // Comptoir et pro séparés, ou combinés (23/10/2026, Sam) : les tickets pro d'aujourd'hui et de J−7 heure par heure
     // (heuresPro, j7.heures[].pro) ; sans eux, une ligne par journée comme avant, sans bascule.
     const proOk = !!(m && Array.isArray(m.heuresPro) && h7.some(x => x.pro != null))
@@ -2855,11 +2856,14 @@
     const sep = proOk && S.opPro !== 'combi';
     const proA = new Map(((m && m.heuresPro) || []).map(x => [+x.h, x]));
     const vPro = (x, a) => a ? (mode === 'tk' ? (proA.get(+x.h) || {}).n || 0 : (proA.get(+x.h) || {}).ca || 0) : (mode === 'tk' ? +x.proN || 0 : +x.pro || 0);
+    const hNow = now == null ? 24 : Math.floor(now / 60), frac = now == null ? 0 : (now % 60) / 60;
+    const bascule = aTk ? `<span class="op-crbtog" role="tablist">${[['ca', 'CA'], ['tk', 'Clients'], ['pan', 'Panier']].map(([k, t]) => `<button type="button" class="${mode === k ? 'on' : ''}" data-opcrb="${k}">${t}</button>`).join('')}</span>` : '';
+    const basculePro = proOk ? `<span class="op-crbtog" role="tablist"><button type="button" class="${sep ? 'on' : ''}" data-oppro="sep">Comptoir et pro séparés</button><button type="button" class="${sep ? '' : 'on'}" data-oppro="combi">Combinés</button></span>` : '';
+    if (mode === 'pan') { return opPanierHeures(D, { B, hA, h7, sep, proA, hNow, frac, entete: basculePro + bascule }); }
     const fmtV = v => mode === 'tk' ? fN(Math.round(v)) + ' clients' : fE(v);
     const cible = mode === 'tk' ? (m && m.refTickets ? m.refTickets : null) : (sep ? B.objC : B.obj);
     const cibleLib = cible == null ? '' : (mode === 'tk' ? 'référence ' + fN(Math.round(cible)) + ' clients' : (sep ? 'objectif comptoir ' : 'objectif ') + fE(cible));
     const cibleB = sep && mode === 'ca' && B.objB ? B.objB : null;
-    const hNow = now == null ? 24 : Math.floor(now / 60), frac = now == null ? 0 : (now % 60) / 60;
     const cumul = (hs, limite, val) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += Math.max(0, val(x)); out.push({ h: x.h, v: c }); }); return out; };
     const lim = fin ? null : hNow, jn = esc(B.jourNom) + ' dernier', auj = fin ? 'cette journée' : 'aujourd’hui';
     // Les courbes : [points, classe de la ligne, classe du point, étiquette de fin (ou ''), classe de l'étiquette, en paliers].
@@ -2899,14 +2903,81 @@
       }
       return g + '</svg>';
     };
-    const bascule = aTk ? `<span class="op-crbtog" role="tablist"><button type="button" class="${mode === 'ca' ? 'on' : ''}" data-opcrb="ca">CA</button><button type="button" class="${mode === 'tk' ? 'on' : ''}" data-opcrb="tk">Clients</button></span>` : '';
-    const basculePro = proOk ? `<span class="op-crbtog" role="tablist"><button type="button" class="${sep ? 'on' : ''}" data-oppro="sep">Comptoir et pro séparés</button><button type="button" class="${sep ? '' : 'on'}" data-oppro="combi">Combinés</button></span>` : '';
     const leg = sep
       ? [['la', auj + ' · comptoir', fins[2]], ['lap', auj + ' · pro', fins[3]], ['l7', jn + ' · comptoir (' + fD(j7.date) + ')', fins[0]], ['l7p', jn + ' · pro', fins[1]]]
       : [['la', auj, fins[1]], ['l7', jn + ' (' + fD(j7.date) + ')', fins[0]]];
     return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${basculePro}${bascule}</div>
       <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
       <div class="op-dleg">${leg.map(([c, t, v]) => `<span><i class="${c}"></i>${t}<b class="tv"> ${fmtV(v)}</b></span>`).join('')}${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
+  }
+  /**
+   * Le panier moyen heure par heure (01/11/2026, Sam : « l'évolution du panier moyen par rapport aux heures ») : le CA de
+   * chaque heure ÷ ses clients, aujourd'hui face à J−7 — pas un cumul. Le panier du jour en pointillé. Les clients de l'heure
+   * en barres pâles au pied du graphique, pour peser chaque point : sous 5 clients, ou l'heure en cours, le point est creux.
+   * Comptoir et pro séparés : le panier du comptoir seul, comme le duel ; combinés : tous les tickets.
+   */
+  function opPanierHeures(D, o) {
+    const { now, fin } = D;
+    const { B, hA, h7, sep, proA, hNow, frac, entete } = o, j7 = B.j7;
+    const par = (hs, auj, lim) => hs.slice().sort((p, q) => p.h - q.h).filter(x => lim == null || x.h <= lim).map(x => {
+      const pr = auj ? proA.get(+x.h) || {} : { ca: +x.pro || 0, n: +x.proN || 0 };
+      const ca = Math.max(0, (+x.ca || 0) - (sep ? +pr.ca || 0 : 0)), n = Math.max(0, (+x.tickets || 0) - (sep ? +pr.n || 0 : 0));
+      return { h: +x.h, ca, n, v: n > 0 ? ca / n : null };
+    });
+    const PA = par(hA, true, fin ? null : hNow), P7 = par(h7, false, null);
+    const vA = PA.filter(p => p.v != null), v7 = P7.filter(p => p.v != null);
+    if (!vA.length || !v7.length) { return ''; }
+    const moyDe = L => { const n = L.reduce((s, p) => s + p.n, 0); return n ? L.reduce((s, p) => s + p.ca, 0) / n : null; };
+    const panA = moyDe(PA), pan7 = moyDe(P7), de7 = new Map(P7.map(p => [p.h, p]));
+    const SEUIL = 5, enCours = p => !fin && now != null && p.h === hNow, leger = p => p.n < SEUIL || enCours(p);
+    const h0 = Math.min(6, PA[0].h, P7[0].h), h1 = Math.max(19, PA[PA.length - 1].h + 1, P7[P7.length - 1].h + 1);
+    const haut = Math.max(...vA.map(p => p.v), ...v7.map(p => p.v), panA || 0, pan7 || 0);
+    const pasE = haut > 40 ? 10 : 5, mx = Math.ceil(haut * 1.12 / pasE) * pasE, nMx = Math.max(1, ...PA.map(p => p.n));
+    const auj = fin ? 'cette journée' : 'aujourd’hui', jn = esc(B.jourNom) + ' dernier', cpt = sep ? ' · comptoir' : '';
+    const fV = v => v == null ? '—' : nf(v, 2) + ' €';
+    const dessine = (W, Hh, pas, cls) => {
+      const tel = cls === 'tel';
+      const X0 = 44, X1 = W - 16, Y0 = 14, Y1 = Hh - 26;
+      const x = hh => X0 + (X1 - X0) * (hh - h0) / (h1 - h0), y = v => Y1 - (Y1 - Y0) * v / mx;
+      const yB = n => Y1 - (Y1 - Y0) * 0.22 * n / nMx;   // les clients : le pied du graphique, à leur échelle
+      const chemin = L => { let d = '', suite = false; L.forEach(p => { if (p.v == null) { suite = false; return; } d += (suite ? 'L' : 'M') + x(p.h + 0.5).toFixed(1) + ' ' + y(p.v).toFixed(1) + ' '; suite = true; }); return d.trim(); };
+      let g = `<svg class="op-crb ${cls}" viewBox="0 0 ${W} ${Hh}">`;
+      for (let v = pasE; v <= mx; v += pasE) { g += `<line x1="${X0}" x2="${X1}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="gr"/><text x="${X0 - 6}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end" class="ax">${v} €</text>`; }
+      PA.forEach(p => {
+        if (!p.n) { return; }
+        const bx = x(p.h + 0.2), bw = x(p.h + 0.8) - bx;
+        g += `<rect x="${bx.toFixed(1)}" y="${yB(p.n).toFixed(1)}" width="${bw.toFixed(1)}" height="${(Y1 - yB(p.n)).toFixed(1)}" rx="2" class="cl"/>`
+          + (tel ? '' : `<text x="${x(p.h + 0.5).toFixed(1)}" y="${(Y1 - 4).toFixed(1)}" text-anchor="middle" class="cln">${fN(p.n)}</text>`);   // au pied de la barre, loin des points
+      });
+      // Le panier du jour : la ligne pointillée, son étiquette là où elle ne touche ni un point ni une valeur (à droite, à
+      // gauche, puis le long de la ligne) ; sans place libre, la légende seule la nomme.
+      if (panA != null) {
+        g += `<line x1="${X0}" x2="${X1}" y1="${y(panA).toFixed(1)}" y2="${y(panA).toFixed(1)}" class="pmj"/>`;
+        const txt = `panier ${fin ? 'de la journée' : 'du jour'} ${fV(panA)}`, lw = txt.length * 5.8, yl = y(panA);
+        const occupe = [...vA, ...v7].map(p => [x(p.h + 0.5), y(p.v)]).concat(tel ? [] : vA.map(p => { const q = de7.get(p.h); return [x(p.h + 0.5), y(p.v) + (!q || q.v == null || p.v >= q.v ? -13 : 13)]; }));
+        const cands = [[X1 - 4 - lw, -5], [X0 + 4, -5], [X1 - 4 - lw, 13], [X0 + 4, 13]];
+        for (let hh = h0 + 1; x(hh) + lw < X1; hh++) { cands.push([x(hh), -5], [x(hh), 13]); }
+        const libre = cands.find(([xa, dy]) => !occupe.some(([px, py]) => px > xa - 8 && px < xa + lw + 8 && py > yl + dy - 16 && py < yl + dy + 6));
+        if (libre) { g += `<text x="${libre[0].toFixed(1)}" y="${(yl + libre[1]).toFixed(1)}" class="objr">${txt}</text>`; }
+      }
+      for (let hh = h0; hh <= h1; hh += pas) { g += `<text x="${x(hh).toFixed(1)}" y="${Hh - 8}" text-anchor="middle" class="ax">${hh} h</text>`; }
+      g += `<path d="${chemin(P7)}" class="l7"/><path d="${chemin(PA)}" class="la"/>`;
+      if (!fin && now != null) { g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${Y0 + 10}" class="nowt">${opHM(now)}</text>`; }
+      v7.forEach(p => { g += `<circle cx="${x(p.h + 0.5).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="3" class="${p.n < SEUIL ? 'p7l' : 'p7'}"><title>${jn} · ${p.h} – ${p.h + 1} h · panier ${fV(p.v)} · ${fN(p.n)} client${p.n > 1 ? 's' : ''}</title></circle>`; });
+      vA.forEach(p => {
+        const q = de7.get(p.h), lg = leger(p);
+        g += `<circle cx="${x(p.h + 0.5).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4" class="${lg ? 'pal' : 'pa'}"><title>${auj} · ${p.h} – ${p.h + 1} h${enCours(p) ? ' (en cours)' : ''} · panier ${fV(p.v)} · ${fN(p.n)} client${p.n > 1 ? 's' : ''}${q && q.v != null ? ' · ' + jn + ' ' + fV(q.v) : ''}</title></circle>`;
+        // La valeur du point : au-dessus quand J−7 est en dessous, sinon en dessous — la ligne pointillée ne la barre pas.
+        if (!tel) { const dessus = !q || q.v == null || p.v >= q.v; g += `<text x="${x(p.h + 0.5).toFixed(1)}" y="${(y(p.v) + (dessus ? -9 : 17)).toFixed(1)}" text-anchor="middle" class="tpa${lg ? ' lg' : ''}">${nf(p.v, 2)}</text>`; }
+      });
+      return g + '</svg>';
+    };
+    // Le plus haut et le plus bas de la journée, sur les heures assez pleines pour compter.
+    const pleins = vA.filter(p => !leger(p)).sort((a, b) => b.v - a.v);
+    const pic = pleins.length > 1 ? `<span class="db-mini op-pk">le plus haut <b>${pleins[0].h} h · ${fV(pleins[0].v)}</b> · le plus bas <b>${pleins[pleins.length - 1].h} h · ${fV(pleins[pleins.length - 1].v)}</b></span>` : '';
+    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${entete}${pic}</div>
+      <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
+      <div class="op-dleg"><span><i class="la"></i>${auj}${cpt}</span><span><i class="pmj"></i>panier ${fin ? 'de la journée' : 'du jour'} <b>${fV(panA)}</b></span><span><i class="l7"></i>${jn} (${fD(j7.date)})${cpt} · panier de la journée <b>${fV(pan7)}</b></span><span><i class="cl"></i>clients de l’heure</span>${vA.some(leger) || v7.some(p => p.n < SEUIL) ? `<span><i class="pal"></i>moins de ${SEUIL} clients${fin ? '' : ' ou heure en cours'}</span>` : ''}${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
   }
   /** Le duel, chiffre par chiffre : aujourd'hui, J−7 à la même heure, l'écart, la journée de J−7, la référence. */
   function opDuelTable(D, opt) {

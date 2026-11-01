@@ -1,0 +1,46 @@
+{
+  "type": "urn:problem-type:belgif:badRequest",
+  "href": "https://www.belgif.be/specification/rest/api-guide/problems/badRequest.html",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "The input message is incorrect",
+  "instance": "urn:uuid:123456-1234-1235-4567489798",
+  "issues": [
+    {
+      "type": "urn:problem-type:belgif:input-validation:schemaViolation",
+      "title": "Input isn't valid with respect to schema",
+      "detail": "enterpriseNumber abc should be numeric",
+      "in": "path",
+      "name": "enterpriseNumber",
+      "value": "abc"
+    },
+    {
+      "type": "urn:problem-type:cbss:input-validation:replacedSsin",
+      "href": "https://api.ksz-bcss.fgov.be/problems/replacedSsin",
+      "title": "SSIN has been replaced. Use new ssin.",
+      "detail": "SSIN 12345678901 has been replaced by 23456789012",
+      "in": "body",
+      "name": "parent[0].ssin",
+      "value": "12345678901",
+      "replacedBy": "23456789012"
+    },
+    {
+      "type": "urn:problem-type:cbss:input-validation:invalidPeriod",
+      "title": "period is invalid",
+      "detail": "endDate should be after startDate",
+      "in": "body",
+      "name": "period",
+      "value": {
+        "startDate": "2020-12-31",
+        "endDate": "2020-01-01"
+      }
+    },
+    {
+      "type": "urn:problem-type:cbss:input-validation:invalidSsin",
+      "title": "There is no person with the given SSIN",
+      "in": "path",
+      "name": "ssin",
+      "value": "12345678911"
+    }
+  ]
+}

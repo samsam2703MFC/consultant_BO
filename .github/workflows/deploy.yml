@@ -83,6 +83,11 @@ jobs:
       # borne, le job occupe la file jusqu'au délai du workflow entier. On
       # borne, on réessaie, et on retombe sur le paquet téléchargé directement
       # si le dépôt reste injoignable.
+      # Le module RH / Dimona : ses tests unitaires (JWT, cache du jeton, statuts, backoff, YAML, chiffrement),
+      # sans réseau ni ONSS. Les tests d'intégration (faux ONSS servi par php -S) : php tests/hr/run.php.
+      - name: Tests du module RH (sans réseau, sans ONSS)
+        run: php tests/hr/run.php --unit
+
       - name: Installer sshpass
         timeout-minutes: 4
         run: |
@@ -124,9 +129,24 @@ jobs:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
           DBU: ${{ secrets.COCKPIT_DB_USER }}
           DBP: ${{ secrets.COCKPIT_DB_PASSWORD }}
+          # Module RH / Dimona — tous facultatifs (docs/dimona.md). Vides : console à /webshop/api, PROD fermée,
+          # adresses ONSS du YAML, clé maître tirée une fois dans le dossier privé du serveur.
+          HR_DIMONA_PROD_ENABLED: ${{ vars.HR_DIMONA_PROD_ENABLED }}
+          HR_DIMONA_TOKEN_URL_SIM: ${{ vars.HR_DIMONA_TOKEN_URL_SIM }}
+          HR_DIMONA_TOKEN_URL_PROD: ${{ vars.HR_DIMONA_TOKEN_URL_PROD }}
+          HR_CONSOLE_API_BASE: ${{ vars.HR_CONSOLE_API_BASE }}
+          HR_CONSOLE_API_INTERNAL: ${{ vars.HR_CONSOLE_API_INTERNAL }}
+          HR_DIMONA_MASTER_KEY: ${{ secrets.HR_DIMONA_MASTER_KEY }}
+          # Comptes de la console franchisé à créer ou mettre à jour (JSON, docs/dimona.md) — facultatif.
+          CONSOLE_BO_ACCOUNTS: ${{ secrets.CONSOLE_BO_ACCOUNTS }}
         run: |
-          printf 'COCKPIT_DB_USER=%s\nCOCKPIT_DB_PASSWORD=%s\n' "${DBU:-}" "${DBP:-}" \
-            | sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+          {
+            printf 'COCKPIT_DB_USER=%s\nCOCKPIT_DB_PASSWORD=%s\n' "${DBU:-}" "${DBP:-}"
+            for k in HR_DIMONA_PROD_ENABLED HR_DIMONA_TOKEN_URL_SIM HR_DIMONA_TOKEN_URL_PROD HR_CONSOLE_API_BASE HR_CONSOLE_API_INTERNAL HR_DIMONA_MASTER_KEY CONSOLE_BO_ACCOUNTS; do
+              [ -n "${!k:-}" ] && printf '%s=%q\n' "$k" "${!k}"
+            done
+            true
+          } | sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
                 "cat > ${SRC_DIR}/.deployenv && chmod 600 ${SRC_DIR}/.deployenv"
 
       - name: Déployer (install + config + auto-install + recette locale)
@@ -263,6 +283,26 @@ jobs:
           sans=$(curl -fsS "${APP_BASE}/api/cockpit/people" | grep -o '"joignable":false' | wc -l)
           [ "$sans" -gt 0 ] && echo "::notice::$sans compte(s) sans adresse e-mail — un rapport ne peut pas leur être envoyé"
           true
+
+          # Le module RH / Dimona à la racine : la page, son API (santé publique), et ce qui doit rester fermé.
+          echo "== module RH (/hr) =="
+          HR_BASE="http://${SSH_HOST}/hr"
+          if ! curl -fsS "${HR_BASE}/" | grep -q 'hr.js'; then
+            echo "::error::/hr/ ne sert pas la page du module RH"; fail=1
+          else echo "OK  /hr/ sert la page du module RH"; fi
+          hh=$(curl -fsS --max-time 60 "${HR_BASE}/api/v1/erp/dimona/health" || echo '{}')
+          if ! echo "$hh" | grep -q '"ok":true'; then echo "::error::/hr/api/v1/erp/dimona/health : $(curl -sS --max-time 60 "${HR_BASE}/api/v1/erp/dimona/health" | head -c 400)"; fail=1
+          else echo "OK  API du module RH : $hh"; fi
+          rc=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "${HR_BASE}/api/v1/erp/dimona/employers")
+          if [ "$rc" != "403" ]; then echo "::error::une écriture sans en-tête X-HR-Request répond HTTP $rc (403 attendu)"; fail=1
+          else echo "OK  écriture sans en-tête du module refusée (403)"; fi
+          rc=$(curl -s -o /dev/null -w '%{http_code}' "${HR_BASE}/api/v1/erp/dimona/employers")
+          if [ "$rc" != "401" ] && [ "$rc" != "503" ]; then echo "::error::une lecture sans session répond HTTP $rc (401, ou 503 tant que la console n'identifie pas)"; fail=1
+          else echo "OK  lecture sans session refusée (HTTP $rc)"; fi
+          ss=$(curl -fsS "${HR_BASE}/api/v1/erp/dimona/session" || echo '{}')
+          if echo "$ss" | grep -q '"prodEnabled":true'; then echo "::notice::production Dimona ouverte (HR_DIMONA_PROD_ENABLED)"
+          elif echo "$ss" | grep -q '"prodEnabled":false'; then echo "OK  production Dimona fermée (simulation seule)"; fi
+          echo "$ss" | grep -q '"available":false' && echo "::warning::module RH en ligne, mais la console franchisé n'identifie pas encore : $(echo "$ss" | grep -o '"message":"[^"]*"')"
 
           [ "$fail" = "0" ] && echo "Recette publique OK — cockpit en ligne sur ${APP_BASE}/"
           exit $fail
