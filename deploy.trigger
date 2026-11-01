@@ -1254,3 +1254,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 [240b] Dane maszyn : pojemność wg produktu — 2026-11-01T13:00:25Z
 2026-11-01T13:11:22Z [app] Pointage : arrivee et depart, borne QR du magasin (#90)
 2026-11-01T13:21:51Z [cockpit] Pointage a la caisse : cle de caisse, PIN (#91)
+[241] Dane maszyn : nowa maszyna + maszyna wspólna (migracja 156) — 2026-11-01T13:23:02Z
