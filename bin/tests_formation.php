@@ -231,6 +231,13 @@ verifie('vidéos : https seulement, sans doublon, sans caractère qui sortirait 
 verifie('titre rogné, vide permis', $vids[0]['titre'] === 'Vitrine' && $vids[1]['titre'] === '');
 verifie('dix vidéos au plus', count(mnVideos(array_map(static fn ($i) => 'https://vimeo.com/1000000' . $i, range(0, 14)))) === 10);
 verifie('rien de lisible : liste vide', mnVideos('https://vimeo.com/1') === [] && mnVideos(null) === []);
+$defFo = mnFormationsDefaut(__DIR__ . '/../src/data/manuel_formations.json');
+$v25Fo = array_column(json_decode((string) file_get_contents(__DIR__ . '/../src/data/referentiel_v25.json'), true)['formations'], 'code');
+verifie('formations : chacune des ' . count($v25Fo) . ' formations du référentiel a sa partie par défaut, et rien d’autre', array_keys($defFo) === $v25Fo || (count($defFo) === count($v25Fo) && !array_diff($v25Fo, array_keys($defFo))), json_encode(array_diff($v25Fo, array_keys($defFo))));
+$parPartie = array_count_values($defFo);
+verifie('formations : les quatre parties sont garnies', count($parPartie) === 4 && min($parPartie) >= 1, json_encode($parPartie));
+verifie('formations : le parcours du candidat franchisé avant l’ouverture, la stratégie d’ouverture à l’ouverture', $defFo['FO-31'] === 'preouverture' && $defFo['FO-37'] === 'preouverture' && $defFo['FO-38'] === 'ouverture' && $defFo['FO-01'] === 'operationnel' && $defFo['FO-39'] === 'formation');
+verifie('formations : fichier absent = aucune répartition (rien d’inventé)', mnFormationsDefaut('/nulle/part.json') === []);
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko === 0 ? 0 : 1);

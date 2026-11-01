@@ -330,6 +330,21 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
   Référentiel › Procédures), « Partie du manuel », quatre boutons et « ↺ Partie déduite » ; la liste
   des procédures a une colonne « Partie du manuel » (pleine = rangée, pâle = déduite). Rien n'est
   écrit au panel ; journal « Formation ».
+- **Les 53 formations du référentiel (FO-xx) dans les quatre parties** (client : « réorganiser les
+  formations dans ces 4 sections ») : chaque partie liste ses formations (carte : code, nom, fréquence,
+  évaluations, qui forme) après ses procédures ; la fiche d'une formation se lit dans le manuel
+  (`#/manuel/formation/FO-xx`, liens vers les compétences du manuel, sans retour au référentiel).
+  Répartition **par défaut**, versionnée dans `src/data/manuel_formations.json` (avec la règle de chaque
+  partie) : Pré-ouverture 9 (FO-29 recrutement, FO-30 intégration, FO-31 à FO-37 le parcours du
+  candidat franchisé) · Ouverture 4 (FO-38 stratégie d'ouverture, et ce que tient le garant :
+  FO-20 vitrine, FO-24 planning et effectif, FO-27 casse et invendus) · Opérationnel 30 (le métier au
+  quotidien, vente, production, hygiène, stocks, encadrement de la boutique, click & collect, webshop) ·
+  Formation continue 10 (FO-39 à FO-45, FO-48 à FO-50 : master class, veille, finance avancée,
+  multi-boutique, communication locale, réglementation avancée, animation commerciale, e-commerce).
+  Un consultant la change formation par formation (fiche de la formation, « Partie du manuel » ;
+  « ↺ Par défaut »), table `ceo_manuel_formation` ; la liste des formations a une colonne « Partie du
+  manuel ». Une formation du panel sans code FO se lit dans Formation continue (« Autres formations du
+  panel »).
 - **Vidéos** : en tête de la procédure, avant son texte. Celles ajoutées dans le cockpit (adresse +
   titre, dix au plus, https seulement) puis celles que le panel cite déjà (liens du contenu et des
   sections, pièces jointes vidéo). Lues dans la page : YouTube (youtube-nocookie), Vimeo (avec le
@@ -346,7 +361,8 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
   40 px ; champs à 16 px (sinon l'iPad zoome). Contrôlé sur 14 vues à 1180 × 820, 1024 × 768,
   820 × 1180 et 768 × 1024 en tactile : aucun chevauchement, aucune cible sous 40 px, aucun
   débordement horizontal. La page mobile des parcours s'élargit à 720 px sur tablette.
-- Routes : `GET /formation/manuel` → `{parties[], procedures{id: {partie, videos[{url, titre}], majLe}}}` ;
+- Routes : `GET /formation/manuel` → `{parties[], procedures{id: {partie, videos[{url, titre}], majLe}}, formationsDefaut{FO: partie}, formations{FO: partie}}` ;
+  `PATCH /formation/manuel/formation/{FO} {partie | null}` (null = répartition par défaut) ;
   `PATCH /formation/manuel/procedure/{id} {partie?: cle | null, videos?: [{url, titre}]}` (clé absente =
   inchangée ; partie inconnue ou adresse refusée = 422).
 - Traductions : `lang_code` n'est pas appliqué par le panel aujourd'hui ; le module lit le français.

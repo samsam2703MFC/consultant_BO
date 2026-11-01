@@ -1127,8 +1127,9 @@ crée le parcours et rend `{parcours, etapes[]}` ; `GET /parcours?id=`, `GET /pa
 critère d'admission `manuel` — ou un `poste` que le panel n'a pas ; `409` pour un critère vérifié ou de formations) ; `PATCH /parcours/{id}
 {rythme | statut: arrete | atteint}` (`atteint` : `409` tant qu'une formation ou un critère d'admission manque).
 Manuel opératoire (1er nov. 2026) : `GET /formation/manuel` rend `{parties: [preouverture, ouverture, operationnel, formation],
-procedures{id: {partie | null, videos[{url, titre}], majLe}}}` (réglages du cockpit ; sans ligne, la partie se déduit de la section du
-panel) ; `PATCH /formation/manuel/procedure/{id} {partie?: cle | null, videos?: [{url, titre}]}` (clé absente = inchangée ; https
+procedures{id: {partie | null, videos[{url, titre}], majLe}}, formationsDefaut{FO: partie}, formations{FO: partie}}` (réglages du
+cockpit ; sans ligne, la partie d'une procédure se déduit de la section du panel, celle d'une formation de src/data/manuel_formations.json) ;
+`PATCH /formation/manuel/formation/{FO} {partie | null}` (null = répartition par défaut) ; `PATCH /formation/manuel/procedure/{id} {partie?: cle | null, videos?: [{url, titre}]}` (clé absente = inchangée ; https
 seulement, dix vidéos au plus ; 422 sinon). Rien n'est écrit au panel.
 `GET /formation/carte` (carte des métiers, à garder en cache côté écran : `_cache=300`) rend `{chemin{metiers[{id, nom, cle, libelle,
 maitrise, maitriseCompetences, niveaux[{id, nom, nouvelles, total, avecFormation, personnes}]}], tronc[], entrepreneur[], reseau[{id, nom}]},

@@ -1220,7 +1220,11 @@ function mnClassement(): array
 /** GET /formation/manuel — la partie et les vidéos de chaque procédure réglée dans le cockpit. */
 function ep_formation_manuel(): array
 {
-    return ['parties' => MN_PARTIES, 'procedures' => (object) mnClassement()];
+    ensureManuelFormations();
+    $reglees = [];
+    foreach (Db::rows('SELECT code, partie FROM ceo_manuel_formation') as $r) { if (($q = mnPartie($r['partie'])) !== null) { $reglees[(string) $r['code']] = $q; } }
+    return ['parties' => MN_PARTIES, 'procedures' => (object) mnClassement(),
+        'formationsDefaut' => (object) mnFormationsDefaut(), 'formations' => (object) $reglees];
 }
 
 /**
@@ -1253,4 +1257,49 @@ function wr_formation_manuel_procedure(int $pid): array
     if (array_key_exists('videos', $b)) { $quoi[] = count($videos) . ' vidéo(s)'; }
     fmJournal('Procédure #' . $pid, 'Manuel opératoire — ' . implode(' · ', $quoi));
     return ['ok' => true, 'id' => $pid, 'partie' => $partie, 'videos' => $videos];
+}
+
+/* Les formations du référentiel (FO-xx) dans les quatre parties : une répartition par défaut,
+ * versionnée (src/data/manuel_formations.json), et le réglage du cockpit qui l'emporte
+ * (`ceo_manuel_formation`). */
+
+function ensureManuelFormations(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_manuel_formation ('
+        . 'code VARCHAR(8) NOT NULL PRIMARY KEY,'    // FO-01…
+        . 'partie VARCHAR(16) NOT NULL,'
+        . 'maj_le DATETIME NOT NULL,'
+        . 'par VARCHAR(120) NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** La répartition par défaut : [code FO => partie], les parties inconnues écartées. */
+function mnFormationsDefaut(?string $fichier = null): array
+{
+    $d = json_decode((string) @file_get_contents($fichier ?? __DIR__ . '/data/manuel_formations.json'), true);
+    $out = [];
+    foreach (is_array($d['formations'] ?? null) ? $d['formations'] : [] as $code => $p) {
+        if (preg_match('/^FO-\d{1,3}$/', (string) $code) && ($q = mnPartie($p)) !== null) { $out[(string) $code] = $q; }
+    }
+    return $out;
+}
+
+/** PATCH /formation/manuel/formation/{FO} {partie | null} — null = revenir à la répartition par défaut. */
+function wr_formation_manuel_formation(string $code): array
+{
+    if (!preg_match('/^FO-\d{1,3}$/', $code)) { return fmRefus(422, 'code de formation attendu (FO-01…)'); }
+    $b = fmCorps();
+    if (!array_key_exists('partie', $b)) { return fmRefus(422, 'partie attendue'); }
+    $p = $b['partie'] === null || $b['partie'] === '' ? null : mnPartie($b['partie']);
+    if ($b['partie'] !== null && $b['partie'] !== '' && $p === null) { return fmRefus(422, 'partie inconnue : ' . implode(', ', MN_PARTIES)); }
+    ensureManuelFormations();
+    if ($p === null) { Db::exec('DELETE FROM ceo_manuel_formation WHERE code = ?', [$code]); }
+    else { Db::exec('INSERT INTO ceo_manuel_formation (code, partie, maj_le) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE partie = VALUES(partie), maj_le = NOW()', [$code, $p]); }
+    $noms = ['preouverture' => 'Pré-ouverture', 'ouverture' => 'Ouverture', 'operationnel' => 'Opérationnel', 'formation' => 'Formation continue'];
+    $def = mnFormationsDefaut()[$code] ?? null;
+    fmJournal($code, 'Manuel opératoire — formation rangée dans ' . ($p !== null ? '« ' . $noms[$p] . ' »' : 'sa partie par défaut' . ($def ? ' (« ' . $noms[$def] . ' »)' : '')));
+    return ['ok' => true, 'code' => $code, 'partie' => $p, 'defaut' => $def];
 }
