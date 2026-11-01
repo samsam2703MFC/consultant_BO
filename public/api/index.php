@@ -111,6 +111,7 @@ require __DIR__ . '/../../src/api_module.php';
 require __DIR__ . '/../../src/profil_employe.php';
 require __DIR__ . '/../../src/primes_fiches.php';
 require __DIR__ . '/../../src/planning_moi.php';
+require __DIR__ . '/../../src/pointage.php';
 require __DIR__ . '/../../src/grands_prix.php';
 require __DIR__ . '/../../src/promos_magasin.php';
 require __DIR__ . '/../../src/promos_bons.php';
@@ -198,6 +199,24 @@ try {
     if ($method === 'GET' && $path === '/ventes/moi/planning' && primesVoieApp()) {
         $out = ep_planning_moi();
         tempsServeur($tCharge, $tInstall);
+        echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    // Le pointage (01/11/2026, src/pointage.php) : l'app avec l'identité signée ; la borne du magasin avec son jeton.
+    if (str_starts_with($path, '/ventes/moi/pointage') && primesVoieApp()) {
+        $out = match (true) {
+            $method === 'POST' && $path === '/ventes/moi/pointage'         => wr_pointage_moi(),
+            $method === 'GET' && $path === '/ventes/moi/pointages'         => ep_pointages_moi(),
+            $method === 'POST' && $path === '/ventes/moi/pointage/depart'  => wr_pointage_depart(),
+            default => (static function (): array { http_response_code(404); return ['error' => 'route inconnue']; })(),
+        };
+        tempsServeur($tCharge, $tInstall);
+        echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    if ($method === 'GET' && $path === '/pointage/borne') {
+        header('Cache-Control: no-store');
+        $out = ep_pointage_borne();
         echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
@@ -514,6 +533,8 @@ function route(string $method, string $path): mixed
             $path === '/ventes/primes-annee'          => ep_primes_annee(),
             $path === '/ventes/primes-api'            => ep_primes_api(),
             $path === '/ventes/equipe/profils'        => ep_profils_equipe(),
+            $path === '/ventes/equipe/pointages'      => ep_pointages_equipe(),
+            $path === '/pointage/bornes'              => ep_pointage_bornes(),
             $path === '/ventes/primes-fiches/equipe'  => ep_primes_fiches_equipe(),
             $path === '/ventes/equipe/profil'         => ep_profil_equipe(),
             $path === '/ventes/equipe/profil/carte'   => ep_profil_carte(),
@@ -740,6 +761,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ventes/cross-paliers') { return wr_ventes_cross_paliers(); }
     if ($method === 'POST' && $path === '/ventes/primes-montants') { return wr_ventes_primes_montants(); }
     if ($method === 'POST' && $path === '/ventes/croisees') { return wr_croisees(); }
+    if ($method === 'POST' && $path === '/ventes/equipe/pointages/valider') { return wr_pointages_valider(); }
+    if ($method === 'POST' && $path === '/pointage/bornes') { return wr_pointage_borne_creer(); }
+    if ($method === 'POST' && $path === '/pointage/bornes/retirer') { return wr_pointage_borne_retirer(); }
     if ($method === 'POST' && $path === '/ventes/primes-app') { return wr_primes_app(); }
     if ($method === 'POST' && $path === '/ventes/primes-icone') { return wr_primes_icone(); }
     if ($method === 'POST' && $path === '/ventes/primes-fiches/envoyer') { return wr_primes_fiches_envoyer(); }

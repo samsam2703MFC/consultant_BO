@@ -29,6 +29,8 @@
   "pf_box": "Boîte",
   "pf_cancel": "Annuler",
   "pf_city": "Ville",
+  "pf_clockings": "Mes pointages",
+  "pf_clockings_hint": "arrivées et départs",
   "pf_competencies": "Compétences",
   "pf_complete": "Profil complet à {p} %",
   "pf_contact": "Coordonnées",

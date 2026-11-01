@@ -155,6 +155,7 @@ export function render(c, x){
       ${c.isMD ? tplMetaDonnee(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
       ${c.isApiModule ? tplApiModule(c, x) : ''}
+      ${c.isPointages ? tplPointages(c, x) : ''}
       ${c.isPromoTab ? tplPromoTableau(c, x) : ''}${c.isPromoEd ? tplPromoEdition(c, x) : ''}
       ${c.isMktObj ? tplMktObj(c, x) : ''}
       ${c.isScoringTri ? tplScoringTri(c, x) : ''}
@@ -7033,6 +7034,61 @@ function tplPrWiz(W, x){
 /* L'API du module (24/10/2026) : les sources du module des primes et de l'application employé, qui appelle qui, puis
    chaque route — méthode, chemin, ce qu'elle fait, ses pages, ce que le cockpit en garde, ce qu'elle répond à l'instant.
    Maquette : docs/maquettes/api-module. */
+/* Les pointages (01/11/2026) : un magasin, une semaine ; les départs déclarés à valider ; les bornes. */
+function tplPointages(c, x){
+  const { esc } = x;
+  const P = c.pt;
+  if (!P) { return ''; }
+  const sf = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Segoe UI',system-ui,sans-serif";
+  const muet = 'var(--color-text-muted)';
+  const filet = '0.5px solid var(--color-border-tertiary)';
+  const carte = 'background:var(--color-surface);border-radius:14px';
+  const btS = `border:0;border-radius:999px;padding:7px 14px;font:500 13px ${sf};background:var(--color-background-secondary);color:var(--color-text);cursor:pointer`;
+  const btP = `border:0;border-radius:999px;padding:7px 14px;font:600 13px ${sf};background:var(--color-primary);color:#fff;cursor:pointer`;
+  const pastille = (t, coul, fond) => `<span style="display:inline-block;padding:2px 8px;border-radius:7px;font:500 12.5px ${sf};font-variant-numeric:tabular-nums;color:${coul};background:${fond}">${esc(t)}</span>`;
+  const VERT = ['#2d7a3e', 'rgba(45,122,62,.12)'], ORANGE = ['#A35F00', '#FBEFE0'], ROUGE = ['#B3261E', 'rgba(179,38,30,.09)'], GRIS = ['var(--color-text)', 'var(--color-background-secondary)'];
+  const arrivee = l => l.arrivee === 'retard' ? pastille(l.entree + ' · +' + l.retard + ' min', ...ORANGE) : l.arrivee === 'hors_planning' ? pastille(l.entree, ...GRIS) : pastille(l.entree, ...VERT);
+  const depart = l => l.etat === 'fait' ? pastille(l.sortie, ...GRIS) : l.etat === 'en_service' ? pastille('en service', ...VERT)
+    : l.etat === 'a_valider' ? pastille(l.sortie + ' · déclaré', ...ORANGE) : pastille('non pointé', ...ROUGE);
+  const barre = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px">
+      <div style="display:flex;gap:4px;flex-wrap:wrap">${P.magasins.map(m => `<button ${x.A(m.aller)} style="${m.on ? btP : btS}" data-pt-magasin="${esc(m.nom)}">${esc(m.nom)}</button>`).join('')}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+        <button ${x.A(P.prec)} style="${btS}" aria-label="Semaine précédente">‹</button>
+        <span style="font:600 14px ${sf};min-width:120px;text-align:center">${esc(P.semaine)}</span>
+        <button ${x.A(P.suiv)} style="${btS}" aria-label="Semaine suivante">›</button>
+        ${P.courante ? '' : `<button ${x.A(P.cetteSemaine)} style="${btS}">Cette semaine</button>`}
+        <button ${x.A(P.relire)} style="${btS}">Relire</button></div></div>`;
+  const msg = P.msg ? `<div style="margin-top:10px;font:500 13px ${sf};color:var(--color-primary)">${esc(P.msg)}</div>` : '';
+  if (P.chargement) { return `<section data-pt>${barre}<div style="${carte};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">Lecture des pointages…</div></section>`; }
+  if (P.motif) { return `<section data-pt>${barre}<div style="${carte};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">${esc(P.motif)} <button ${x.A(P.relire)} style="${btS}">Relire</button></div></section>`; }
+  const tuiles = `<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));${carte};margin-top:14px">${P.tuiles.map((t, i) => `<div style="padding:12px 16px;${i ? `border-left:${filet}` : ''}">
+      <div style="font:600 22px/1.2 ${sf};font-variant-numeric:tabular-nums">${esc(t.v)}</div><div style="font:400 12.5px ${sf};color:${muet}">${esc(t.lib)}</div></div>`).join('')}</div>`;
+  const th = t => `<th style="text-align:left;padding:9px 12px;font:600 11px ${sf};letter-spacing:.04em;text-transform:uppercase;color:${muet};white-space:nowrap">${t}</th>`;
+  const td = (h, s) => `<td style="padding:10px 12px;border-top:${filet};font:400 13.5px ${sf};vertical-align:middle;${s || ''}">${h}</td>`;
+  const tableau = P.lignes.length ? `<div style="${carte};margin-top:14px;overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+      <thead><tr>${th('Jour')}${th('Vendeuse')}${th('Prévu')}${th('Arrivée')}${th('Départ')}${th('Durée')}${th('')}</tr></thead>
+      <tbody>${P.lignes.map(l => `<tr data-pt-ligne="${esc(String(l.id))}" data-pt-etat="${esc(l.etat)}">${td(esc(l.jour), 'white-space:nowrap')}${td(`<b style="font-weight:600">${esc(l.nom)}</b>`)}
+        ${td(esc(l.prevu), `color:${muet};white-space:nowrap`)}${td(arrivee(l))}${td(depart(l))}${td(esc(l.duree), 'font-variant-numeric:tabular-nums;white-space:nowrap')}
+        ${td(l.valider ? `<div style="display:flex;gap:6px;justify-content:flex-end"><button ${x.A(l.valider)} style="${btP}" data-pt-valider>Valider</button><button ${x.A(l.refuser)} style="${btS}" data-pt-refuser>Refuser</button></div>` : '')}</tr>`).join('')}</tbody></table></div>`
+    : `<div style="${carte};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">Personne n’a pointé dans ce magasin cette semaine.</div>`;
+  const lien = P.lien ? `<div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--color-background-secondary)" data-pt-lien>
+      <div style="font:600 13px ${sf}">Le lien de la borne — ouvrez-le sur la tablette du magasin</div>
+      <div style="margin-top:6px;font:400 12.5px ui-monospace,Menlo,monospace;word-break:break-all;user-select:all">${esc(P.lien.url)}</div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button ${x.A(P.lien.copier)} style="${btP}">Copier</button><a href="${esc(P.lien.url)}" target="_blank" rel="noopener" style="${btS};text-decoration:none">Ouvrir ↗</a><button ${x.A(P.lien.fermer)} style="${btS}">Fermer</button></div>
+      <div style="margin-top:8px;font:400 12px ${sf};color:${muet}">Il ne s’affiche qu’une fois : gardez-le, ou créez-en un autre et retirez celui-ci.</div></div>` : '';
+  const bornes = `<div style="${carte};margin-top:18px;padding:16px 18px" data-pt-bornes>
+      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px">
+        <div style="font:600 15px ${sf}">Borne de pointage</div>
+        <div style="margin-top:3px;font:400 13px/1.45 ${sf};color:${muet}">Une page qui montre le QR code du magasin ; il change toutes les 30 secondes et ne vaut que pour ce magasin. Ouvrez son lien sur la tablette du comptoir et laissez-la allumée.</div></div>
+        ${P.creerBorne ? `<button ${x.A(P.creerBorne)} style="${btP}" data-pt-creer>Créer un lien de borne</button>` : ''}</div>
+      ${lien}
+      ${P.bornes.length ? `<div style="margin-top:12px">${P.bornes.map((b, i) => `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;${i ? `border-top:${filet}` : `border-top:${filet}`}">
+        <span style="font:500 14px ${sf}">${esc(b.nom)}</span><span style="font:400 12.5px ${sf};color:${muet}">créée ${esc(b.cree)} · ${esc(b.vue)}</span>
+        <button ${x.A(b.retirer)} style="${btS};margin-left:auto">Retirer</button></div>`).join('')}</div>`
+      : `<div style="margin-top:10px;font:400 13px ${sf};color:${muet}">Pas encore de borne pour ce magasin.</div>`}</div>`;
+  return `<section data-pt>${barre}${msg}${tuiles}${tableau}${bornes}</section>`;
+}
+
 function tplApiModule(c, x){
   const { esc } = x;
   const A = c.am;

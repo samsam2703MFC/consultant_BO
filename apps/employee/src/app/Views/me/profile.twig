@@ -227,6 +227,7 @@
   <div class="pf-l fixe"><span class="pf-k">{{ T.pf_shop ?? 'Magasin' }}</span><span class="pf-v">{{ shopNom ?: '—' }}</span></div>
   <div class="pf-l fixe"><span class="pf-k">{{ T.pf_positions ?? 'Postes' }}</span><span class="pf-v">{% for p in positions %}{{ p.getName() }}{{ loop.last ? '' : ', ' }}{% else %}{{ T.pf_none ?? 'Aucun' }}{% endfor %}</span></div>
   <button type="button" class="pf-l" data-ouvre="competences"{{ comps is empty ? ' disabled' }}><span class="pf-k">{{ T.pf_competencies ?? 'Compétences' }}</span><span class="pf-v">{{ comps|length }}</span></button>
+  <a class="pf-l" href="{{ ROOT }}/me/pointages" data-pointages><span class="pf-k">{{ T.pf_clockings ?? 'Mes pointages' }}</span><span class="pf-v">{{ T.pf_clockings_hint ?? 'arrivées et départs' }}</span></a>
 </div>
 <div class="pf-esp"></div>
 

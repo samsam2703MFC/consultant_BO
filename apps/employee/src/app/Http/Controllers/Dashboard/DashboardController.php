@@ -3,6 +3,7 @@
 namespace App\Employee\app\Http\Controllers\Dashboard;
 
 use App\Employee\app\Http\Controllers\Controller;
+use App\Employee\app\Services\Pointage\PointageService;
 use App\Employee\app\Services\Primes\PrimesPlan;
 use App\Employee\app\Services\Primes\PrimesService;
 use App\Employee\app\Services\Schedule\ScheduleService;
@@ -21,6 +22,7 @@ class DashboardController extends Controller
         private PrimesService $primesService,
         private ScheduleService $scheduleService,
         private TaskService $taskService,
+        private PointageService $pointageService,
     ) {}
 
     #[Route('GET', '/dashboard')]
@@ -55,6 +57,9 @@ class DashboardController extends Controller
             }
         } catch (\Throwable $e) { $service = null; }
         $data['service'] = $service;
+
+        // Le pointage (01/11/2026) : le service du jour et « Pointer l'arrivée », ou « En service » et « Pointer le départ ».
+        try { $data['pointage'] = $this->pointageService->aujourdhui(); } catch (\Throwable $e) { $data['pointage'] = null; }
 
         $taches = null;
         try {
