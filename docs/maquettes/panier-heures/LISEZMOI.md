@@ -42,7 +42,7 @@ Régénérer : `node docs/maquettes/panier-heures/generer.js`
 
 ## Statut
 
-**Codée le 01/11/2026 sur la branche, pas encore mise en ligne** : `opPanierHeures()` dans
+**Codée et mise en ligne le 01/11/2026** (déploiement n°1914, vérifiée sur le serveur à 15:08) : `opPanierHeures()` dans
 `public/dashboard/dashboard.js`, appelée par `opDuelHeures()` quand `S.opCrb === 'pan'` ; le
 troisième bouton dans la bascule `data-opcrb` ; les styles `.op-crb .cl/.cln/.pal/.p7l/.tpa/.pmj/.objr`,
 `.op-dleg i.cl/i.pal/i.pmj` et `.op-pk` dans `public/dashboard/dashboard.css`. Les modes CA et
