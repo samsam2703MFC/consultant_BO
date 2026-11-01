@@ -1258,3 +1258,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-01T13:26:23Z module RH Dimona à /hr : connexion ONSS, engager, sortie, simulation seule
 2026-11-01T13:36:06Z module RH : motif du démarrage, diagnostic sous www-data
 2026-11-01T13:41:56Z module RH : clé maître par config.php, dossier privé traversable
+2026-11-01T14:04:03Z console franchisé : comptes activés (section bo), mot de passe depuis /hr
