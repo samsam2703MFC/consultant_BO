@@ -198,6 +198,10 @@ if [[ ! -s /var/lib/consulant_bo/prive/hr_dimona.key ]]; then
 fi
 chown -R www-data:www-data /var/lib/consulant_bo/prive
 chmod 700 /var/lib/consulant_bo/prive /var/lib/consulant_bo/prive/cartes
+# Le parent doit se TRAVERSER (x) pour que www-data atteigne prive/ : créé par root, /var/lib/consulant_bo ne
+# l'était pas (mesuré le 01/11/2026 — le module RH, en ligne de commande sous www-data comme sous Apache, n'y
+# accédait pas). 711 : on passe, on ne liste pas ; prive/ reste 700 à www-data.
+chmod 711 /var/lib/consulant_bo
 chmod 600 /var/lib/consulant_bo/prive/hr_dimona.key
 
 # Visuels des campagnes de l'assistant : même règle que les photos plano.
