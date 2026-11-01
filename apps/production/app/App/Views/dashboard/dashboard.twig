@@ -56,7 +56,7 @@
                 <a class="kw-btn pri" href="{{ root }}{{ it.link }}">Rozpocznij <i class="bi bi-arrow-right"></i></a>
             {% endif %}
             {% if manual and it.id %}
-                <button type="button" class="kw-btn wt-chk" data-wk-toggle="{{ it.id }}" aria-pressed="{{ it.done ? 'true' : 'false' }}" title="{{ it.done ? 'Cofnij' : 'Zrobione' }}" aria-label="{{ it.done ? 'Cofnij' : 'Zrobione' }}"><i class="bi bi-check-lg"></i>{{ it.link ? '' : ' Zrobione' }}</button>
+                <button type="button" class="kw-btn wt-chk{{ it.link ? '' : ' solo' }}" data-wk-toggle="{{ it.id }}" aria-pressed="{{ it.done ? 'true' : 'false' }}" title="{{ it.done ? 'Cofnij' : 'Zrobione' }}" aria-label="{{ it.done ? 'Cofnij' : 'Zrobione' }}"><i class="bi bi-check-lg"></i>{{ it.link ? '' : ' Zrobione' }}</button>
             {% endif %}
         </div>
     </div>

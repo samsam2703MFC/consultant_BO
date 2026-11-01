@@ -2787,12 +2787,15 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
 .wk-prog .at-sub { font-size: 12.5px; font-variant-numeric: tabular-nums; } .wk-prog .wk-all { font-size: 13px; font-weight: 600; }
 .wk-h { font-size: 13px; font-weight: 700; margin: 16px 0 8px; } .wk-card .wk-h:first-of-type { margin-top: 0; }
 .wt-list { display: grid; gap: 8px; }
-.wt { display: grid; grid-template-columns: 6px minmax(0, 1fr) minmax(0, 250px) auto; gap: 14px; align-items: center; background: #fff; border: 1px solid var(--at-line); border-radius: 12px; padding: 12px 14px 12px 0; }
+.wt { display: grid; grid-template-columns: 6px minmax(0, 1fr) 280px 232px; gap: 14px; align-items: center; background: #fff; border: 1px solid var(--at-line); border-radius: 12px; padding: 12px 14px 12px 0; }
 .wt .bar { align-self: stretch; border-radius: 12px 0 0 12px; background: var(--c, #8e1f2f); }
 .wt h6 { margin: 0 0 3px; font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
 .wt .meta { font-size: 12.5px; color: var(--at-muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .wt-state { font-size: 12.5px; display: grid; gap: 5px; min-width: 0; } .wt-state .at-sub { font-size: 12px; }
-.wt-act { display: flex; gap: 6px; justify-content: flex-end; align-items: center; } .wt-act .kw-btn { min-height: 46px; } .wt-act .kw-btn .bi { font-size: 16px; }
+/* [242] Colonnes fixes : statut (280 px) et action (bouton principal à largeur fixe + case ✓ toujours au même endroit). */
+.wt-act { display: grid; grid-template-columns: minmax(0, 1fr) 46px; gap: 6px; align-items: center; justify-items: stretch; }
+.wt-act .kw-btn { min-height: 46px; justify-content: center; white-space: nowrap; } .wt-act .kw-btn .bi { font-size: 16px; }
+.wt-act > a.kw-btn, .wt-act .wt-chk.solo { grid-column: 1; } .wt-act .wt-chk { grid-column: 2; padding: 0; width: 46px; } .wt-act .wt-chk.solo { width: auto; padding: 0 12px; }
 .wt-chk[aria-pressed=true] { background: #1f5a37; color: #fff; border-color: transparent; }
 .wt.done { background: #fbfdfb; } .wt.done h6 { color: #1f5a37; }
 .wt.late { box-shadow: inset 0 0 0 2px rgba(154,23,48,.35); }
@@ -2808,8 +2811,9 @@ tr.tfb-row-focus > td { background: #fdf6ea; }
 .wk-legend { display: flex; gap: 14px; font-size: 12px; color: var(--at-muted); flex-wrap: wrap; margin-top: 10px; } .wk-legend > span { display: inline-flex; align-items: center; gap: 5px; } .wk-legend .ic { width: 16px; height: 16px; font-size: 9px; }
 .wk-later { display: flex; gap: 8px; flex-wrap: wrap; } .wk-later .wk-chip { margin: 0; background: var(--at-bg-2); min-height: 44px; } .wk-later .wk-chip small { color: var(--at-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wk-foot { margin: 12px 0 0; }
-@media (max-width: 991.98px) { .wt { grid-template-columns: 6px minmax(0, 1fr) auto; } .wt-state { grid-column: 2 / 4; grid-row: 2; } }
-@media (max-width: 575.98px) { .wt { grid-template-columns: 6px minmax(0, 1fr); } .wt-act { grid-column: 2; justify-content: flex-start; } .wt-state { grid-column: 2; grid-row: auto; } }
+@media (max-width: 1199.98px) { .wt { grid-template-columns: 6px minmax(0, 1fr) 220px 214px; } }
+@media (max-width: 991.98px) { .wt { grid-template-columns: 6px minmax(0, 1fr) 214px; } .wt-state { grid-column: 2 / 4; grid-row: 2; } }
+@media (max-width: 575.98px) { .wt { grid-template-columns: 6px minmax(0, 1fr); } .wt-act { grid-column: 2; grid-template-columns: minmax(0, 220px) 46px; } .wt-state { grid-column: 2; grid-row: auto; } }
 
 /* [219] Plan tygodnia stanowiska (administrator) : dni, minuty, link, czas rzeczywisty, obciążenie dni. */
 .ad-days { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
