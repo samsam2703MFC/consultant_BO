@@ -90,7 +90,7 @@
     cat: null, catErreur: null, catCharge: false,
     v25: null, v25Charge: false, pcListe: null, pcErreur: null, pcCharge: false, pcFiltre: '',
     api: { ouvert: {}, sondes: {}, chemins: {} },
-    f: { q: '', categorie: '', vue: 'tous', fq: '', pq: '', rq: '', mq: '', aFam: '', aStatut: '', aQ: '', aDemande: false },
+    f: { q: '', categorie: '', vue: 'tous', fq: '', pq: '', rq: '', mq: '', aFam: '', aStatut: '', aQ: '', aDemande: false, mvUrl: '', mvTitre: '' },
     menu: false,
     tablette: false,
     modale: null,   // fenêtre de saisie ouverte : {type, …}
@@ -208,7 +208,8 @@
 
   function coquille(v) {
     var actions = '';
-    if (S.ref && S.route.ecran !== 'api') {
+    // En mode tablette (le magasin), pas de relecture complète du panel : c'est un geste de consultant.
+    if (S.ref && S.route.ecran !== 'api' && !S.tablette) {
       actions += '<button type="button" class="filter" data-act="rafraichir" title="Relire le référentiel dans le panel, sans le cache">Rafraîchir</button>';
     }
     if (S.route.ecran === 'manuel' || S.tablette) {
@@ -934,11 +935,12 @@
       '<div class="fm-seg" role="group" style="margin-left:auto"><button type="button" data-act="filtre" data-k="foVue" data-v="liste"' + (S.f.foVue !== 'matrice' ? ' class="is-on"' : '') + '>Liste</button>' +
       '<button type="button" data-act="filtre" data-k="foVue" data-v="matrice"' + (S.f.foVue === 'matrice' ? ' class="is-on"' : '') + '>Qui doit suivre quoi</button></div></div></div>';
     if (S.f.foVue === 'matrice') return { titre: TITRES.formations, corps: h + matriceFormations(liste) };
-    h += '<section class="card table-card" style="margin-top:0"><div class="table-scroll"><table><thead><tr><th>Formation</th><th>Évaluations</th><th>Ce qu’on apprend</th><th>Obligatoire pour</th></tr></thead><tbody>';
+    h += '<section class="card table-card" style="margin-top:0"><div class="table-scroll"><table><thead><tr><th>Formation</th><th>Partie du manuel</th><th>Évaluations</th><th>Ce qu’on apprend</th><th>Obligatoire pour</th></tr></thead><tbody>';
     liste.forEach(function (x) {
       var ob = obligatoirePour(x), tous = ob.api.concat(ob.v25);
       var prio = x.v25 && x.v25.priorites.length ? ' <span class="muted fm-small">· ' + x.v25.priorites.map(function (k) { return PRIO[k] || k; }).join(', ') + '</span>' : '';
       h += '<tr class="row-link" data-href="#/formations/' + x.code + '"><td><span class="fm-code">' + x.code + '</span> ' + esc(x.nom) + prio + '</td>' +
+        '<td class="fm-nowrap"><span class="chip ' + (foRegle(x.code) ? 'chip--accent' : 'chip--soft') + '" title="' + (foRegle(x.code) ? 'Rangée dans le cockpit' : 'Répartition par défaut') + '">' + (S.mn ? esc(NOM_PARTIE[partieFo(x.code)]) : '…') + '</span></td>' +
         '<td>' + (x.evaluations.length ? n(x.evaluations.length) : '<span class="muted">pas encore dans le panel</span>') + '</td>' +
         '<td>' + (I.liens ? (x.comps.size ? chipsListe(Array.from(x.comps).map(function (id) { return I.comp.get(id) || { id: id, nom: '#' + id }; }), 2) : '<span class="muted">—</span>') : '<span class="muted">…</span>') + '</td>' +
         '<td>' + (tous.length ? chipsListe(tous.map(function (nm, i) { return { id: i, nom: nm }; }), 2, 'chip--accent') : '<span class="muted">—</span>') + '</td></tr>';
@@ -980,32 +982,33 @@
     return h + '</tbody></table></div></section>';
   }
 
-  function ficheFo(code) {
-    var h = retour('#/formations', 'Formations');
+  function ficheFo(code, manuel) {
+    var h = manuel ? '' : retour('#/formations', 'Formations');
     if (!S.v25) return { titre: TITRES.formations, corps: h + attente('Lecture du référentiel des formations…') };
     var x = formationsFo().filter(function (y) { return y.code === code; })[0];
     if (!x) return { titre: TITRES.formations, corps: h + '<p class="error">Formation ' + esc(code) + ' inconnue.</p>' };
     var v = x.v25, ob = obligatoirePour(x);
     var prio = v && v.priorites.length ? '<ul class="chips">' + v.priorites.map(function (k) { return '<li class="chip chip--lever">' + esc(PRIO[k] || k) + '</li>'; }).join('') + '</ul>' : '';
     h += '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(x.nom) + '</h2><p class="muted">' + esc([x.code, v && v.frequence, v && v.controleur ? 'contrôlée par ' + v.controleur : null, v && v.procedure ? v.procedure.split(' — ')[0] : null].filter(Boolean).join(' · ')) + '</p></div>' + prio + '</div>';
+    h += blocPartieFo(code);
     h += '<div class="fm-cols" style="margin-top:16px">';
     h += '<section class="card"><h2>Obligatoire pour</h2>' + (ob.api.length || ob.v25.length ? '<ul class="chips">' +
       ob.api.map(function (nm) { return '<li class="chip chip--accent">' + esc(nm) + '</li>'; }).join('') + ob.v25.map(function (nm) { return '<li class="chip chip--soft">' + esc(nm) + '</li>'; }).join('') + '</ul>' : '<p class="muted">Aucun poste.</p>') + '</section>';
     h += '<section class="card"><h2>Comment on la valide · ' + (x.evaluations.length || 5) + ' étapes</h2>' + (x.evaluations.length ? '<ol class="fiche-ol">' +
-      x.evaluations.map(function (t) { return '<li><a href="#/formations/' + t.id + '" style="color:inherit">' + esc(sansCode(t.nom)) + '</a></li>'; }).join('') + '</ol>' :
+      x.evaluations.map(function (t) { return '<li>' + (manuel ? esc(sansCode(t.nom)) : '<a href="#/formations/' + t.id + '" style="color:inherit">' + esc(sansCode(t.nom)) + '</a>') + '</li>'; }).join('') + '</ol>' :
       '<p class="muted" style="line-height:1.5">Pas encore d’évaluations « [' + esc(x.code) + '] » dans le panel : le parcours utilise cinq étapes génériques (théorie, pratique, mise en situation, validation, re-évaluation J+30).</p>') + '</section>';
     h += '</div><div class="fm-cols" style="margin-top:16px">';
     var comps = Array.from(x.comps).map(function (id) { return I.comp.get(id); }).filter(Boolean).sort(function (a, b) { return a.nom.localeCompare(b.nom, 'fr'); });
     var v25c = (S.v25.competences || []).filter(function (c) { return c.formation === x.code; });
     h += '<section class="card"><h2>Ce qu’on apprend · ' + (comps.length || v25c.length) + ' compétences</h2>' + (comps.length ? '<ul class="chips">' +
-      comps.map(function (c) { return '<li><a class="chip chip--soft" href="#/competences/' + c.id + '">' + esc(c.nom) + '</a></li>'; }).join('') + '</ul><p class="muted fm-small" style="margin-top:10px">Cochées pour la personne dès que la formation est validée dans son parcours.</p>' :
+      comps.map(function (c) { return '<li><a class="chip chip--soft" href="' + (manuel ? '#/manuel/competence/' : '#/competences/') + c.id + '">' + esc(c.nom) + '</a></li>'; }).join('') + '</ul><p class="muted fm-small" style="margin-top:10px">Cochées pour la personne dès que la formation est validée dans son parcours.</p>' :
       v25c.length ? '<ul class="fiche-ul">' + v25c.map(function (c) { return '<li><strong>' + esc(c.nom) + '</strong><span class="muted"> — ' + esc(court(c.description, 90)) + '</span></li>'; }).join('') + '</ul>' : (I.liens ? '<p class="muted">Aucune compétence rattachée.</p>' : attente('Liens en cours de lecture…'))) + '</section>';
     var plans = (S.v25.plans || []).map(function (pl2) {
       var b = pl2.blocs.filter(function (bl) { return bl.formations.indexOf(x.code) >= 0; });
       return b.length ? [pl2.nom, b.map(function (bl) { return bl.code + ' ' + bl.nom; }).join(', ')] : null;
     }).filter(Boolean);
     h += '<section class="card"><h2>Dans les plans</h2>' + (plans.length ? '<ul class="fiche-ul">' + plans.map(function (z) { return '<li>' + esc(z[0]) + ' · <span class="muted">' + esc(z[1]) + '</span></li>'; }).join('') + '</ul>' : '<p class="muted">Dans aucun plan de formation.</p>') + '</section>';
-    h += '</div><p class="muted fm-small" style="margin-top:14px">Le panel d’abord (évaluations, compétences, niveaux en bordeaux) ; le référentiel v25 complète ce qu’il n’a pas (nom, fréquence, priorités, postes en beige, plans).</p>';
+    h += '</div>' + (manuel ? '' : '<p class="muted fm-small" style="margin-top:14px">Le panel d’abord (évaluations, compétences, niveaux en bordeaux) ; le référentiel v25 complète ce qu’il n’a pas (nom, fréquence, priorités, postes en beige, plans).</p>');
     return { titre: TITRES.formations, kicker: 'Référentiel', corps: h };
   }
 
@@ -1057,13 +1060,15 @@
       '<span class="muted fm-small">' + pl(liste.length, 'procédure') + '</span></div></div><section class="card table-card" style="margin-top:0">';
     if (!liste.length) h += '<p class="muted">' + (toutes.length ? 'Aucune procédure ne correspond.' : 'Le panel ne rend aucune procédure (/operational-procedures).') + '</p>';
     else {
-      h += '<div class="table-scroll"><table><thead><tr><th>Procédure</th><th>Sous-catégorie</th><th>Compétences</th><th>Mise à jour</th></tr></thead><tbody>';
+      h += '<div class="table-scroll"><table><thead><tr><th>Procédure</th><th>Partie du manuel</th><th>Sous-catégorie</th><th>Compétences</th><th>Mise à jour</th></tr></thead><tbody>';
       var cat = null;
       liste.forEach(function (p) {
         var k = p.categorie || 'Sans catégorie';
-        if (k !== cat) { cat = k; h += '<tr class="fm-group"><td colspan="4">' + esc(k) + '</td></tr>'; }
+        if (k !== cat) { cat = k; h += '<tr class="fm-group"><td colspan="5">' + esc(k) + '</td></tr>'; }
         var cids = I.liens ? I.compParProcedure.get(p.id) || [] : null;
+        var pr = partieDe(p), pregle = !!(reglageProc(p.id) && reglageProc(p.id).partie);
         h += '<tr class="row-link" data-href="#/procedures/' + p.id + '"><td>' + esc(p.titre) + (p.description ? '<p class="muted">' + esc(court(p.description, 150)) + '</p>' : '') + '</td>' +
+          '<td class="fm-nowrap"><span class="chip ' + (pregle ? 'chip--accent' : 'chip--soft') + '" title="' + (pregle ? 'Rangée dans le cockpit' : 'Déduite de la section du panel') + '">' + esc(NOM_PARTIE[pr]) + '</span></td>' +
           '<td>' + esc(p.sousCategorie || '—') + '</td><td>' + (cids ? chipsListe(cids.map(function (x) { return I.comp.get(x) || { id: x, nom: '#' + x }; }), 2) : '<span class="muted">…</span>') + '</td>' +
           '<td class="fm-nowrap muted fm-small">' + (p.majLe ? esc(String(p.majLe).slice(0, 10)) : '—') + '</td></tr>';
       });
@@ -1084,6 +1089,7 @@
       '<div class="fm-links"><a class="filter" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=procedure&id=' + id + '">PDF ↗</a>' +
       '<button type="button" class="filter" data-act="imprimer">Imprimer</button></div></div>';
     if (p.description) h += '<div class="fm-doc__lead fm-rich" style="margin-top:10px">' + riche(p.description) + '</div>';
+    h += blocManuel(id, p, secs, pieces);
     if (p.contenu) h += '<section class="card fm-doc__section"><div class="fm-rich">' + riche(p.contenu) + '</div></section>';
     if (!secs.length && !p.contenu) h += '<section class="card fm-doc__section"><p class="muted">Le panel ne rend aucune section pour cette procédure.</p></section>';
     secs.forEach(function (s, i) {
@@ -1321,6 +1327,8 @@
     if (vue === 'poste') return manuelPoste();
     if (vue === 'competence') return manuelCompetence();
     if (vue === 'procedure') return manuelProcedure();
+    if (vue === 'partie') return manuelPartie();
+    if (vue === 'formation') return manuelFormation();
     var R = S.ref, q = norm(S.f.mq);
     var h = '<div class="fm-manuel-search"><input type="search" placeholder="Chercher une compétence, une procédure…" data-input="mq" value="' + esc(S.f.mq) + '" /></div>';
     if (q) {
@@ -1334,15 +1342,20 @@
       }).join('') + '</ul>' : '<p class="muted" style="margin-top:8px">Aucune procédure.</p>';
       return { titre: 'Manuel opératoire', kicker: 'Recherche', corps: h };
     }
-    var postes = R.postes.filter(function (p) { return p.niveaux.length || p.id != null; });
-    if (!postes.length) h += '<section class="card pending"><h2>Aucun poste</h2><p class="muted">Le manuel se construit à partir des postes du panel ; aucun n’a été rendu.</p></section>';
-    h += '<div class="campaign-grid">' + postes.map(function (p) {
+    h += accueilParties();
+    return { titre: 'Manuel opératoire', kicker: 'Manuel en ligne', corps: bandeauLiens() + h };
+  }
+
+  /** Les postes du panel, en cartes : l'entrée « Par poste » de la partie Opérationnel. */
+  function grillePostes() {
+    var postes = S.ref.postes.filter(function (p) { return p.niveaux.length || p.id != null; });
+    if (!postes.length) return '<section class="card pending"><h2>Aucun poste</h2><p class="muted">Le manuel se construit à partir des postes du panel ; aucun n’a été rendu.</p></section>';
+    return '<div class="campaign-grid">' + postes.map(function (p) {
       var set = new Set(); p.niveaux.forEach(function (nv) { nv.competences.forEach(function (c) { set.add(c); }); });
       return '<a class="card campaign" href="#/manuel/poste/' + (p.id != null ? p.id : 'sans') + '"><div class="fm-card-band"><span class="fm-card-band__letter">' + esc((p.nom || '?').trim().charAt(0).toUpperCase()) + '</span>' +
         '<span class="fm-card-band__count">' + pl(p.niveaux.length, 'niveau') + '</span></div><div class="campaign__body"><div class="campaign__head"><h3>' + esc(p.nom) + '</h3></div>' +
         '<p class="muted campaign__meta">' + pl(set.size, 'compétence') + (p.description ? ' · ' + esc(court(p.description, 90)) : '') + '</p></div></a>';
     }).join('') + '</div>';
-    return { titre: 'Manuel opératoire', kicker: 'Manuel en ligne', corps: bandeauLiens() + h };
   }
 
   function posteParArg(v) {
@@ -1356,7 +1369,7 @@
     var nid = arg(2);
     var niveau = (nid != null && poste.niveaux.filter(function (x) { return x.id === nid; })[0]) || poste.niveaux[0];
     var pk = poste.id != null ? poste.id : 'sans';
-    var h = filAriane([['Manuel', '#/manuel'], [poste.nom, null]]);
+    var h = filAriane([['Manuel', '#/manuel'], ['Opérationnel', '#/manuel/partie/operationnel'], [poste.nom, null]]);
     h += '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(poste.nom) + '</h2>' + (poste.description ? '<p class="muted">' + esc(poste.description) + '</p>' : '') + '</div>' +
       '<div class="fm-links">' + (niveau ? '<a class="filter" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=niveau&id=' + niveau.id + '">Fiche du niveau ↗</a>' : '') +
       (poste.id != null ? '<a class="filter" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=poste&id=' + poste.id + '">Fiche du poste ↗</a>' : '') + '</div></div>';
@@ -1394,7 +1407,7 @@
     if (!c && u && u.data) c = u.data.competence;
     var ctx = contexteManuel(2);
     var fil = [['Manuel', '#/manuel']];
-    if (ctx.poste) fil.push([ctx.poste.nom, '#/manuel/poste/' + ctx.pk + (ctx.niveau ? '/' + ctx.niveau.id : '')]);
+    if (ctx.poste) fil.push(['Opérationnel', '#/manuel/partie/operationnel'], [ctx.poste.nom, '#/manuel/poste/' + ctx.pk + (ctx.niveau ? '/' + ctx.niveau.id : '')]);
     if (ctx.niveau) fil.push([ctx.niveau.nom, '#/manuel/poste/' + ctx.pk + '/' + ctx.niveau.id]);
     if (!c) return { titre: 'Manuel opératoire', corps: filAriane(fil.concat([['Compétence', null]])) + (u && u.erreur ? '<p class="error">' + esc(u.erreur) + '</p>' : attente('Lecture de la compétence…')) };
     fil.push([c.nom, null]);
@@ -1431,12 +1444,218 @@
     var c = cid != null ? I.comp.get(cid) : null;
     var ctx = contexteManuel(3);
     var fil = [['Manuel', '#/manuel']];
-    if (ctx.poste) fil.push([ctx.poste.nom, '#/manuel/poste/' + ctx.pk + (ctx.niveau ? '/' + ctx.niveau.id : '')]);
+    // …/procedure/{id}/partie/{cle} : ouverte depuis une partie du manuel.
+    var depuis = S.route.a[2] === 'partie' && NOM_PARTIE[S.route.a[3]] ? S.route.a[3] : null;
+    var p0 = id != null ? I.procedure.get(id) : null;
+    if (depuis || (!ctx.poste && !c && p0)) { var cle = depuis || partieDe(p0); fil.push([NOM_PARTIE[cle], '#/manuel/partie/' + cle]); }
+    if (ctx.poste) fil.push(['Opérationnel', '#/manuel/partie/operationnel'], [ctx.poste.nom, '#/manuel/poste/' + ctx.pk + (ctx.niveau ? '/' + ctx.niveau.id : '')]);
     if (ctx.niveau) fil.push([ctx.niveau.nom, '#/manuel/poste/' + ctx.pk + '/' + ctx.niveau.id]);
     if (c) fil.push([c.nom, '#/manuel/competence/' + cid + (ctx.poste ? '/' + ctx.pk + (ctx.niveau ? '/' + ctx.niveau.id : '') : '')]);
     var p = id != null ? I.procedure.get(id) : null;
     fil.push([(p && p.titre) || 'Procédure', null]);
     return { titre: (p && p.titre) || 'Procédure', kicker: 'Procédure opératoire', corps: filAriane(fil) + lectureProcedure(id, function (x) { return '#/manuel/competence/' + x; }) };
+  }
+
+  /* ── Manuel : quatre parties et vidéos (1er nov. 2026) ──────────────────
+   * Pré-ouverture · Ouverture · Opérationnel · Formation continue. Le panel ne
+   * connaît pas ces parties : la partie d'une procédure (et ses vidéos ajoutées)
+   * se règle dans le cockpit (GET/PATCH /formation/manuel…) ; sans réglage, elle
+   * se déduit de la section du panel (« Formations & Contrôle Continu » →
+   * Formation continue, le reste → Opérationnel). */
+  var PARTIES = [
+    ['preouverture', 'Pré-ouverture', 'Avant l’ouverture : mise en place, recrutement, formation initiale.'],
+    ['ouverture', 'Ouverture', 'Le jour J et les six semaines de lancement : ce que tient le garant d’ouverture.'],
+    ['operationnel', 'Opérationnel', 'Le quotidien du magasin, poste par poste.'],
+    ['formation', 'Formation continue', 'Se former, se contrôler, se remettre à niveau.'],
+  ];
+  var NOM_PARTIE = {};
+  PARTIES.forEach(function (x) { NOM_PARTIE[x[0]] = x[1]; });
+
+  function reglageProc(id) { var m = S.mn && S.mn.procedures; return (m && m[id]) || null; }
+  function partieDeduite(p) {
+    var st = S.ref && S.ref.structure, cat = null, sec = null;
+    if (st && p.categorieId != null) cat = (st.categories || []).filter(function (c) { return c.id === p.categorieId; })[0] || null;
+    if (st && cat) sec = (st.sections || []).filter(function (x) { return x.id === cat.sectionId; })[0] || null;
+    return /formation|controle continu/.test(norm(((sec && sec.nom) || '') + ' ' + (p.categorie || ''))) ? 'formation' : 'operationnel';
+  }
+  function partieDe(p) { var r = reglageProc(p.id); return (r && r.partie) || partieDeduite(p); }
+  /** La partie d'une formation FO : le réglage du cockpit, sinon la répartition par défaut (src/data/manuel_formations.json). */
+  function partieFo(code) {
+    var m = S.mn || {};
+    return (m.formations && m.formations[code]) || (m.formationsDefaut && m.formationsDefaut[code]) || 'formation';
+  }
+  function foRegle(code) { return !!(S.mn && S.mn.formations && S.mn.formations[code]); }
+  function fosDePartie(cle) { var l = formationsFo(); return l ? l.filter(function (x) { return partieFo(x.code) === cle; }) : null; }
+  function procsDePartie(cle) {
+    return Array.from(I.procedure.values()).filter(function (p) { return partieDe(p) === cle; })
+      .sort(function (a, b) { return (a.categorie || '~').localeCompare(b.categorie || '~', 'fr') || a.titre.localeCompare(b.titre, 'fr'); });
+  }
+
+  function accueilParties() {
+    var h = '<div class="fm-parts">';
+    PARTIES.forEach(function (x, i) {
+      var nb = procsDePartie(x[0]).length;
+      var fos = fosDePartie(x[0]);
+      var plus = (fos ? ' · ' + pl(fos.length, 'formation') : '') + (x[0] === 'operationnel' ? ' · ' + pl(S.ref.postes.filter(function (p) { return p.niveaux.length || p.id != null; }).length, 'poste') : '');
+      h += '<a class="fm-part" href="#/manuel/partie/' + x[0] + '"><span class="fm-part__n">' + (i + 1) + '</span><span class="fm-part__txt"><strong>' + esc(x[1]) + '</strong>' +
+        '<span class="muted">' + esc(x[2]) + '</span><span class="fm-part__nb">' + pl(nb, 'procédure') + plus + (S.mn && S.v25 ? '' : ' …') + '</span></span></a>';
+    });
+    return h + '</div>';
+  }
+
+  function barreParties(actif) {
+    return '<nav class="fm-parties" aria-label="Parties du manuel">' + PARTIES.map(function (x, i) {
+      var on = x[0] === actif;
+      return '<a href="#/manuel/partie/' + x[0] + '" class="fm-parties__a' + (on ? ' is-on' : '') + '"' + (on ? ' aria-current="page"' : '') + '><span class="fm-parties__n">' + (i + 1) + '</span>' + esc(x[1]) + '</a>';
+    }).join('') + '</nav>';
+  }
+
+  function carteFo(f, href) {
+    var v = f.v25 || {};
+    var sous = [v.frequence, f.evaluations.length ? pl(f.evaluations.length, 'évaluation') : (v.nbEvaluations ? pl(v.nbEvaluations, 'évaluation') : null),
+      v.executant && v.executant !== '—' ? 'par ' + v.executant : null].filter(Boolean).join(' · ');
+    return '<li><a class="choice-card" href="' + href + '"><strong><span class="fm-code">' + esc(f.code) + '</span> ' + esc(f.nom) + '</strong><span class="muted">' + esc(sous || 'Formation du réseau') + '</span></a></li>';
+  }
+
+  /** La partie du manuel d'une formation FO (réglage caché en mode tablette). */
+  function blocPartieFo(code) {
+    var cle = partieFo(code), regle = foRegle(code), def = S.mn && S.mn.formationsDefaut && S.mn.formationsDefaut[code];
+    var h = '<div class="fm-mn"><p class="fm-mn__partie"><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/' + cle + '">' + esc(NOM_PARTIE[cle]) + '</a>' +
+      (S.mn && !regle && !S.tablette ? ' <span class="muted fm-small">répartition par défaut</span>' : '') + '</p>';
+    if (!S.tablette && S.mn) {
+      h += '<div class="fm-seg fm-mn__seg" role="group" aria-label="Ranger dans une partie du manuel">' + PARTIES.map(function (x) {
+        return '<button type="button" class="' + (x[0] === cle ? 'is-on' : '') + '" data-act="mn-fo-partie" data-code="' + esc(code) + '" data-v="' + x[0] + '"' + (S.occupe ? ' disabled' : '') + '>' + esc(x[1]) + '</button>';
+      }).join('') + '</div>' + (regle ? ' <button type="button" class="filter fm-small" data-act="mn-fo-partie" data-code="' + esc(code) + '" data-v=""' + (S.occupe ? ' disabled' : '') + '>↺ Par défaut' + (def ? ' (' + esc(NOM_PARTIE[def]) + ')' : '') + '</button>' : '');
+    }
+    return h + '</div>';
+  }
+
+  function manuelFormation() {
+    var code = /^FO-\d+$/.test(S.route.a[1] || '') ? S.route.a[1] : null;
+    var depuis = S.route.a[2] === 'partie' && NOM_PARTIE[S.route.a[3]] ? S.route.a[3] : (code ? partieFo(code) : 'formation');
+    var fil = [['Manuel', '#/manuel'], [NOM_PARTIE[depuis], '#/manuel/partie/' + depuis]];
+    var f = code && formationsFo() ? formationsFo().filter(function (x) { return x.code === code; })[0] : null;
+    fil.push([f ? f.code + ' · ' + f.nom : (code || 'Formation'), null]);
+    if (!code) return { titre: 'Manuel opératoire', corps: filAriane(fil) + '<p class="error">Formation inconnue.</p>' };
+    var v = ficheFo(code, true);
+    return { titre: f ? f.nom : code, kicker: 'Formation · ' + NOM_PARTIE[partieFo(code)], corps: filAriane(fil) + v.corps };
+  }
+
+  function nbVideosAjoutees(id) { var r = reglageProc(id); return r && r.videos ? r.videos.length : 0; }
+
+  function manuelPartie() {
+    var cle = NOM_PARTIE[S.route.a[1]] ? S.route.a[1] : 'operationnel';
+    var x = PARTIES.filter(function (p) { return p[0] === cle; })[0];
+    var h = barreParties(cle) + filAriane([['Manuel', '#/manuel'], [x[1], null]]) + '<p class="muted fm-part-sous">' + esc(x[2]) + '</p>';
+    if (cle === 'operationnel') h += '<div class="section-label">Par poste</div>' + grillePostes();
+    var procs = procsDePartie(cle);
+    h += '<div class="section-label">Procédures · ' + n(procs.length) + '</div>';
+    if (!procs.length) {
+      h += '<section class="card pending"><h2>Aucune procédure dans cette partie</h2><p class="muted">' +
+        (S.tablette ? 'Cette partie du manuel n’est pas encore rédigée.' : 'Ouvrez une procédure et choisissez « ' + esc(x[1]) + ' » dans « Partie du manuel ».') + '</p></section>';
+    }
+    var cat = null, ouvert = false;
+    procs.forEach(function (p) {
+      var k = p.categorie || 'Sans catégorie';
+      if (k !== cat) { if (ouvert) h += '</ul>'; cat = k; ouvert = true; h += '<div class="fm-part-cat">' + esc(k) + '</div><ul class="type-grid">'; }
+      var nv = nbVideosAjoutees(p.id);
+      h += '<li><a class="choice-card" href="#/manuel/procedure/' + p.id + '/partie/' + cle + '"><strong>' + esc(p.titre) + '</strong><span class="muted">' + esc(court(p.description || p.sousCategorie || '', 120)) + '</span>' +
+        (nv ? '<ul class="chips"><li class="chip chip--accent">▶ Vidéo</li></ul>' : '') + '</a></li>';
+    });
+    if (ouvert) h += '</ul>';
+    var fos = fosDePartie(cle);
+    h += '<div class="section-label">Formations · ' + (fos ? n(fos.length) : '…') + '</div>';
+    if (!fos) h += S.v25Erreur ? '<p class="error">' + esc(S.v25Erreur) + '</p>' : attente('Lecture du référentiel des formations…');
+    else if (!fos.length) h += '<p class="muted" style="margin-top:8px">Aucune formation dans cette partie.</p>';
+    else h += '<ul class="type-grid">' + fos.map(function (f) { return carteFo(f, '#/manuel/formation/' + f.code + '/partie/' + cle); }).join('') + '</ul>';
+    if (cle === 'formation') {
+      // Les formations du panel sans code FO (hors référentiel) : elles se lisent ici.
+      var autres = Array.from(I.formation.values()).filter(function (t) { return !codeFo(t.nom); }).sort(function (a, b) { return a.nom.localeCompare(b.nom, 'fr'); });
+      if (autres.length) {
+        h += '<div class="section-label">Autres formations du panel · ' + n(autres.length) + '</div><ul class="type-grid">' + autres.map(function (f) {
+          var dedans = '<strong>' + esc(f.nom) + '</strong><span class="muted">' + esc(court(f.description || [f.categorie, f.sousCategorie].filter(Boolean).join(' › ') || 'Formation du réseau', 140)) + '</span>';
+          return '<li>' + (S.tablette ? '<div class="choice-card" style="cursor:default">' + dedans + '</div>' : '<a class="choice-card" href="#/formations/' + f.id + '">' + dedans + '</a>') + '</li>';
+        }).join('') + '</ul>';
+      }
+    }
+    return { titre: x[1], kicker: 'Manuel opératoire', corps: bandeauLiens() + h };
+  }
+
+  /** Une adresse de vidéo → ce que la page lit. Le cadre est construit depuis l'identifiant, jamais depuis l'adresse brute. */
+  function videoDe(url, toutes) {
+    var u = String(url || '').trim(), m;
+    if (!/^https:\/\//i.test(u)) return null;
+    if ((m = u.match(/^https:\/\/(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#\s]*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/i))) return { cle: 'yt:' + m[1], src: 'https://www.youtube-nocookie.com/embed/' + m[1] + '?rel=0', genre: 'YouTube' };
+    if ((m = u.match(/^https:\/\/(?:www\.|player\.)?vimeo\.com\/(?:video\/)?(\d{6,12})(?:\/([0-9a-f]{6,20}))?/i))) return { cle: 'vm:' + m[1], src: 'https://player.vimeo.com/video/' + m[1] + (m[2] ? '?h=' + m[2] : ''), genre: 'Vimeo' };
+    if ((m = u.match(/^https:\/\/(?:www\.)?loom\.com\/(?:share|embed)\/([0-9a-f]{32})/i))) return { cle: 'lm:' + m[1], src: 'https://www.loom.com/embed/' + m[1], genre: 'Loom' };
+    // Un lien Google Drive peut être un PDF : il n'est une vidéo que si on l'ajoute comme telle.
+    if (toutes && (m = u.match(/^https:\/\/drive\.google\.com\/(?:file\/d\/|open\?id=)([A-Za-z0-9_-]{20,})/i))) return { cle: 'gd:' + m[1], src: 'https://drive.google.com/file/d/' + m[1] + '/preview', genre: 'Google Drive' };
+    if (/^https:\/\/[^\s"'<>]+\.(mp4|webm|m4v|mov)(?:[?#][^\s"'<>]*)?$/i.test(u)) return { cle: 'f:' + u, src: u, fichier: true, genre: 'Vidéo' };
+    return null;
+  }
+
+  function cadreVideo(v, titre) {
+    var t = esc(titre || v.genre);
+    var lecteur = v.fichier ? '<video controls preload="metadata" playsinline src="' + esc(v.src) + '"></video>' :
+      '<iframe src="' + esc(v.src) + '" title="' + t + '" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+    return '<figure class="fm-video"><div class="fm-video__cadre">' + lecteur + '</div>' + (titre ? '<figcaption>' + t + '</figcaption>' : '') + '</figure>';
+  }
+
+  /** Les vidéos d'une procédure : celles ajoutées dans le cockpit, puis celles citées par le panel (contenu, sections, pièces). */
+  function videosProcedure(id, p, secs, pieces) {
+    var vus = {}, out = [];
+    function ajouter(v, titre, i) { if (v && !vus[v.cle]) { vus[v.cle] = 1; out.push({ v: v, titre: titre, i: i }); } }
+    var r = reglageProc(id);
+    (r && r.videos || []).forEach(function (x, i) { ajouter(videoDe(x.url, true), x.titre, i); });
+    var textes = [p.description, p.contenu].concat(secs.map(function (x) { return x.contenu; })).join(' ');
+    (String(textes || '').match(/https:\/\/[^\s"'<>]+/g) || []).forEach(function (u) { ajouter(videoDe(u.replace(/&amp;/g, '&'), false), null, null); });
+    pieces.forEach(function (x) {
+      var v = videoDe(x.url, false);
+      if (!v && /^video\//i.test(x.type || '') && /^https:\/\//i.test(x.url || '')) v = { cle: 'f:' + x.url, src: x.url, fichier: true, genre: 'Vidéo' };
+      ajouter(v, v ? x.nom : null, null);
+    });
+    return out;
+  }
+
+  /** Partie du manuel et vidéos, sur la page d'une procédure (réglages cachés en mode tablette). */
+  function blocManuel(id, p, secs, pieces) {
+    var cle = partieDe(p), r = reglageProc(id), regle = !!(r && r.partie);
+    var h = '<div class="fm-mn">';
+    h += '<p class="fm-mn__partie"><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/' + cle + '">' + esc(NOM_PARTIE[cle]) + '</a>' +
+      (S.mn && !regle && !S.tablette ? ' <span class="muted fm-small">déduite du panel</span>' : '') + '</p>';
+    if (!S.tablette && S.mn) {
+      h += '<div class="fm-seg fm-mn__seg" role="group" aria-label="Ranger dans une partie du manuel">' + PARTIES.map(function (x) {
+        return '<button type="button" class="' + (x[0] === cle ? 'is-on' : '') + '" data-act="mn-partie" data-id="' + id + '" data-v="' + x[0] + '"' + (S.occupe ? ' disabled' : '') + '>' + esc(x[1]) + '</button>';
+      }).join('') + '</div>' + (regle ? ' <button type="button" class="filter fm-small" data-act="mn-partie" data-id="' + id + '" data-v=""' + (S.occupe ? ' disabled' : '') + '>↺ Partie déduite (' + esc(NOM_PARTIE[partieDeduite(p)]) + ')</button>' : '');
+    }
+    h += '</div>';
+    var vids = videosProcedure(id, p, secs, pieces);
+    if (vids.length || (!S.tablette && S.mn)) {
+      h += '<section class="card fm-doc__section fm-videos"><h2>Vidéos' + (vids.length ? ' · ' + vids.length : '') + '</h2>';
+      vids.forEach(function (x) {
+        h += '<div class="fm-videos__une" data-vcle="' + esc(x.v.cle) + '">' + cadreVideo(x.v, x.titre) +
+          (!S.tablette && x.i != null ? '<button type="button" class="filter fm-small" data-act="mn-video-retirer" data-id="' + id + '" data-i="' + x.i + '"' + (S.occupe ? ' disabled' : '') + '>Retirer cette vidéo</button>' : '') + '</div>';
+      });
+      if (!S.tablette && S.mn) {
+        h += '<div class="fm-videos__ajout"><input type="url" class="fm-search" placeholder="Adresse YouTube, Vimeo, Loom, Google Drive ou .mp4" data-vinput="mvUrl" value="' + esc(S.f.mvUrl) + '" />' +
+          '<input type="text" class="fm-search" maxlength="120" placeholder="Titre (facultatif)" data-vinput="mvTitre" value="' + esc(S.f.mvTitre) + '" />' +
+          bouton('mn-video', 'mn-video-ajout', '+ Ajouter la vidéo', ' data-id="' + id + '"') + '</div>';
+      }
+      h += '</section>';
+    }
+    return h;
+  }
+
+  /** Une vidéo en cours (cadre touché, fichier qui joue) : on ne redessine pas la page sous elle. */
+  function videoEnCours() {
+    var a = document.activeElement;
+    if (a && a.tagName === 'IFRAME' && a.closest && a.closest('.fm-video')) return true;
+    return Array.prototype.some.call(document.querySelectorAll('.fm-video video'), function (v) { return !v.paused && !v.ended; });
+  }
+
+  function majManuel(r) {
+    if (!S.mn) S.mn = { procedures: {}, formations: {}, formationsDefaut: {} };
+    S.mn.procedures[r.id] = { partie: r.partie, videos: r.videos || [] };
   }
 
   /* ── Routes API (documentation) ─────────────────────────────────────── */
@@ -1599,7 +1818,7 @@
    * serveur (déjà relue au panel) corrige l'état de l'écran par `appliquer`,
    * qui rend le message à afficher. Une erreur reste dans la fenêtre ouverte.
    */
-  function ecrire(cle, methode, chemin, corps, appliquer) {
+  function ecrire(cle, methode, chemin, corps, appliquer, quiRefuse) {
     if (S.occupe) return;
     S.occupe = cle;
     if (S.modale) S.modale.erreur = null;
@@ -1611,7 +1830,7 @@
       rendre(true);
     }, function (e) {
       S.occupe = null;
-      var msg = 'Le panel n’a pas enregistré : ' + e.message;
+      var msg = (quiRefuse || 'Le panel n’a pas enregistré') + ' : ' + e.message;
       if (S.modale) S.modale.erreur = msg; else flash('error', msg);
       rendre(true);
     });
@@ -1812,6 +2031,9 @@
   };
 
   function rendre(garder) {
+    // Une lecture qui revient pendant qu'une vidéo joue attendra : redessiner la recharge.
+    if (garder && videoEnCours()) { S.rendreApres = true; return; }
+    S.rendreApres = false;
     document.body.classList.toggle('fm-tablette', S.tablette);
     var actif = document.activeElement, focus = null;
     if (actif && actif.getAttribute) {
@@ -1851,7 +2073,7 @@
     if (e === 'competences' && arg(0) != null && !I.liens) chargerUn(S.competences, arg(0), '/formation/competence?id=' + arg(0));
     if (e === 'manuel' && S.route.a[0] === 'competence' && arg(1) != null && !I.liens) chargerUn(S.competences, arg(1), '/formation/competence?id=' + arg(1));
     if (e === 'formations' && arg(0) != null) chargerUn(S.formations, arg(0), '/formation/formation?id=' + arg(0));
-    if ((e === 'formations' || e === 'postes' || e === 'tableau') && !S.v25 && !S.v25Charge) {
+    if ((e === 'formations' || e === 'postes' || e === 'tableau' || e === 'manuel') && !S.v25 && !S.v25Charge) {
       S.v25Charge = true;
       lire('/formation/v25', 30000).then(function (d) { S.v25 = d; rendre(true); }, function (er) { S.v25Erreur = er.message; rendre(true); });
     }
@@ -1866,6 +2088,11 @@
         S.pcCharge = true;
         lire('/parcours/liste', 60000).then(function (d) { S.pcListe = d.parcours || []; S.pcCharge = false; rendre(true); }, function (er) { S.pcErreur = er.message; S.pcCharge = false; rendre(true); });
       }
+    }
+    if ((e === 'manuel' || e === 'procedures' || e === 'formations') && !S.mn && !S.mnCharge && !S.mnErreur) {
+      S.mnCharge = true;
+      lire('/formation/manuel', 30000).then(function (d) { S.mn = { procedures: d.procedures || {}, formations: d.formations || {}, formationsDefaut: d.formationsDefaut || {} }; S.mnCharge = false; rendre(true); },
+        function (er) { S.mnErreur = er.message; S.mnCharge = false; rendre(true); });
     }
     if (e === 'procedures' && arg(0) != null) chargerUn(S.procedures, arg(0), '/formation/procedure?id=' + arg(0));
     if (e === 'manuel' && S.route.a[0] === 'procedure' && arg(1) != null) chargerUn(S.procedures, arg(1), '/formation/procedure?id=' + arg(1));
@@ -2038,6 +2265,40 @@
       if (S.tablette && S.route.ecran !== 'manuel') location.hash = '#/manuel'; else rendre(true);
       return;
     }
+    if (act === 'mn-partie') {
+      var mpid = +t.getAttribute('data-id'), mv = t.getAttribute('data-v') || null;
+      ecrire('mn-partie', 'PATCH', '/formation/manuel/procedure/' + mpid, { partie: mv }, function (r) {
+        majManuel(r);
+        return mv ? 'Procédure rangée dans « ' + NOM_PARTIE[mv] + ' ».' : 'La procédure reprend la partie déduite du panel.';
+      }, 'Le cockpit n’a pas enregistré');
+      return;
+    }
+    if (act === 'mn-fo-partie') {
+      var fcode = t.getAttribute('data-code'), fv = t.getAttribute('data-v') || null;
+      ecrire('mn-fo', 'PATCH', '/formation/manuel/formation/' + encodeURIComponent(fcode), { partie: fv }, function (r) {
+        if (!S.mn.formations) S.mn.formations = {};
+        if (r.partie) S.mn.formations[r.code] = r.partie; else delete S.mn.formations[r.code];
+        return fv ? fcode + ' rangée dans « ' + NOM_PARTIE[fv] + ' ».' : fcode + ' reprend sa partie par défaut.';
+      }, 'Le cockpit n’a pas enregistré');
+      return;
+    }
+    if (act === 'mn-video-ajout' || act === 'mn-video-retirer') {
+      var vpid = +t.getAttribute('data-id'), reg = reglageProc(vpid), liste = (reg && reg.videos ? reg.videos : []).slice();
+      if (act === 'mn-video-ajout') {
+        var url = (S.f.mvUrl || '').trim();
+        if (!videoDe(url, true)) { flash('error', 'Adresse non reconnue : une vidéo YouTube, Vimeo, Loom, Google Drive ou un fichier .mp4, en https://.'); rendre(true); return; }
+        if (liste.length >= 10) { flash('error', 'Dix vidéos au plus par procédure.'); rendre(true); return; }
+        liste.push({ url: url, titre: (S.f.mvTitre || '').trim() });
+      } else {
+        liste.splice(+t.getAttribute('data-i'), 1);
+      }
+      ecrire('mn-video', 'PATCH', '/formation/manuel/procedure/' + vpid, { videos: liste }, function (r) {
+        majManuel(r);
+        if (act === 'mn-video-ajout') { S.f.mvUrl = ''; S.f.mvTitre = ''; }
+        return act === 'mn-video-ajout' ? 'Vidéo ajoutée à la procédure.' : 'Vidéo retirée.';
+      }, 'Le cockpit n’a pas enregistré');
+      return;
+    }
     if (act === 'rafraichir') { chargerReferentiel(true); return; }
     if (act === 'imprimer') { window.print(); return; }
     if (act === 'filtre') { S.f[t.getAttribute('data-k')] = t.getAttribute('data-v'); rendre(true); return; }
@@ -2063,6 +2324,8 @@
     var t = ev.target;
     var k = t.getAttribute && t.getAttribute('data-input');
     if (k) { S.f[k] = t.value; rendre(true); return; }
+    var vk = t.getAttribute && t.getAttribute('data-vinput');
+    if (vk) { S.f[vk] = t.value; return; }
     var mk = t.getAttribute && t.getAttribute('data-minput');
     if (mk && S.modale) { S.modale[mk] = t.value; if (mk === 'poste') S.modale.niveau = ''; rendre(true); return; }
     var mf = t.getAttribute && t.getAttribute('data-mform');
@@ -2082,6 +2345,10 @@
     if (ev.key === 'Escape' && S.menu) { S.menu = false; rendre(true); }
   });
 
+  // La page revient au premier plan (on a quitté le cadre de la vidéo, ou elle s'est arrêtée) :
+  // ce qui attendait se dessine.
+  window.addEventListener('focus', function () { if (S.rendreApres && !videoEnCours()) rendre(true); });
+  document.addEventListener('pause', function (ev) { if (ev.target && ev.target.tagName === 'VIDEO' && S.rendreApres) setTimeout(function () { if (!videoEnCours()) rendre(true); }, 0); }, true);
   window.addEventListener('hashchange', function () {
     lireRoute();
     S.menu = false;

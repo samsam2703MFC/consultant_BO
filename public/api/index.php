@@ -474,6 +474,8 @@ function route(string $method, string $path): mixed
             $path === '/formation/v25'                 => ep_formation_v25(),
             // Parcours compétences (public/formation/parcours/) : l'assistant et la frise de chaque personne.
             $path === '/formation/carte'               => ep_formation_carte(),
+            // Le manuel opératoire : la partie (Pré-ouverture · Ouverture · Opérationnel · Formation continue) et les vidéos de chaque procédure.
+            $path === '/formation/manuel'              => ep_formation_manuel(),
             $path === '/parcours/destinations'         => ep_parcours_destinations(),
             // Les candidats franchisés du CRM (atelier-espace-candidat), lus dans la base partagée.
             $path === '/parcours/candidats'            => ep_parcours_candidats(),
@@ -717,6 +719,8 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && preg_match('#^/formation/competence/(\d+)/liens/(formation|procedure|ressource)/(\d+)$#', $path, $m)) { return wr_formation_lien_retirer((int) $m[1], $m[2], (int) $m[3]); }
     if ($method === 'POST' && $path === '/formation/competences') { return wr_formation_competence_creer(); }
     if ($method === 'POST' && $path === '/formation/postes') { return wr_formation_poste_creer(); }
+    if ($method === 'PATCH' && preg_match('#^/formation/manuel/procedure/(\d{1,9})$#', $path, $m)) { return wr_formation_manuel_procedure((int) $m[1]); }
+    if ($method === 'PATCH' && preg_match('#^/formation/manuel/formation/(FO-\d{1,3})$#', $path, $m)) { return wr_formation_manuel_formation($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/formation/competences/(\d+)$#', $path, $m)) { return wr_formation_competence_modifier((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/formation/competences/(\d+)$#', $path, $m)) { return wr_formation_competence_supprimer((int) $m[1]); }
     if (($method === 'PUT' || $method === 'DELETE') && preg_match('#^/formation/employe/(\d+)/competences/(\d+)$#', $path, $m)) { return wr_formation_employe_competence($method, (int) $m[1], (int) $m[2]); }
