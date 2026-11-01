@@ -289,7 +289,7 @@ jobs:
             echo "::error::/hr/ ne sert pas la page du module RH"; fail=1
           else echo "OK  /hr/ sert la page du module RH"; fi
           hh=$(curl -fsS --max-time 60 "${HR_BASE}/api/v1/erp/dimona/health" || echo '{}')
-          if ! echo "$hh" | grep -q '"ok":true'; then echo "::error::/hr/api/v1/erp/dimona/health : $(echo "$hh" | head -c 300)"; fail=1
+          if ! echo "$hh" | grep -q '"ok":true'; then echo "::error::/hr/api/v1/erp/dimona/health : $(curl -sS --max-time 60 "${HR_BASE}/api/v1/erp/dimona/health" | head -c 400)"; fail=1
           else echo "OK  API du module RH : $hh"; fi
           rc=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "${HR_BASE}/api/v1/erp/dimona/employers")
           if [ "$rc" != "403" ]; then echo "::error::une écriture sans en-tête X-HR-Request répond HTTP $rc (403 attendu)"; fail=1
@@ -298,7 +298,8 @@ jobs:
           if [ "$rc" != "401" ] && [ "$rc" != "503" ]; then echo "::error::une lecture sans session répond HTTP $rc (401, ou 503 tant que la console n'identifie pas)"; fail=1
           else echo "OK  lecture sans session refusée (HTTP $rc)"; fi
           ss=$(curl -fsS "${HR_BASE}/api/v1/erp/dimona/session" || echo '{}')
-          echo "$ss" | grep -q '"prodEnabled":false' && echo "OK  production Dimona fermée (simulation seule)" || echo "::notice::production Dimona ouverte (HR_DIMONA_PROD_ENABLED)"
+          if echo "$ss" | grep -q '"prodEnabled":true'; then echo "::notice::production Dimona ouverte (HR_DIMONA_PROD_ENABLED)"
+          elif echo "$ss" | grep -q '"prodEnabled":false'; then echo "OK  production Dimona fermée (simulation seule)"; fi
           echo "$ss" | grep -q '"available":false' && echo "::warning::module RH en ligne, mais la console franchisé n'identifie pas encore : $(echo "$ss" | grep -o '"message":"[^"]*"')"
 
           [ "$fail" = "0" ] && echo "Recette publique OK — cockpit en ligne sur ${APP_BASE}/"

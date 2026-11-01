@@ -19,9 +19,13 @@ use Hr\Http\Response;
 try {
     $app = require __DIR__ . '/../../../src/hr/bootstrap.php';
 } catch (Throwable $e) {
-    error_log('[hr] démarrage : ' . $e->getMessage());
+    error_log('[hr] démarrage : ' . get_class($e) . ' : ' . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine());
     require_once __DIR__ . '/../../../src/hr/autoload.php';
-    Response::error('Module RH indisponible (base ou configuration).', 503, [], 'unavailable')->emit();
+    // Le motif, sans secret : une erreur de base reste générique (son message peut nommer l'utilisateur
+    // MySQL) ; les autres messages du module sont écrits pour être lus.
+    $motif = $e instanceof PDOException ? 'base de données injoignable'
+        : get_class($e) . ' : ' . mb_substr($e->getMessage(), 0, 200) . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')';
+    (new Response(503, ['error' => 'Module RH indisponible (base ou configuration).', 'code' => 'unavailable', 'motif' => $motif]))->emit();
     return;
 }
 

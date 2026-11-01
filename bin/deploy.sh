@@ -948,6 +948,9 @@ hr_console=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.
 log "Module RH : /hr/ → HTTP ${hr_page} (https ${hr_https}) ; API /hr/api/v1/erp/dimona/health → ${hr_api:-pas de réponse}"
 log "Module RH : identité par la console franchisé — /webshop/api/bo/franchisee/me → HTTP ${hr_console} (401 attendu = comptes actifs ; 500 = section « bo » de la console à configurer)."
 [[ "$hr_page" == "200" ]] || warn "Module RH : la page /hr/ ne répond pas 200 — alias Apache à vérifier."
+# Le module en ligne de commande, sous l'utilisateur du cron (www-data) : s'il ne démarre pas, son erreur est ici.
+hr_cli=$(runuser -u www-data -- php "$TARGET_DIR/bin/hr_dimona_cron.php" --duree=1 2>&1 | tail -n 4 || true)
+log "Module RH : cron sous www-data → ${hr_cli:-OK, rien à relire}"
 [[ "$fm_page" == "200" ]] || warn "Formation : la page /formation/ ne répond pas 200 — alias Apache à vérifier."
 
 if [[ $rc -eq 0 ]]; then

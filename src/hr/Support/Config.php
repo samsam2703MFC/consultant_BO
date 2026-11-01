@@ -113,13 +113,7 @@ final class Config
      */
     public function privateDir(): string
     {
-        $cands = array_filter([
-            is_string($this->v['privateDir'] ?? null) ? $this->v['privateDir'] : '',
-            (string) (getenv('COCKPIT_PRIVE') ?: ''),
-            '/var/lib/consulant_bo/prive',
-            dirname(__DIR__, 3) . '/var/prive',
-        ]);
-        foreach ($cands as $c) {
+        foreach ($this->privateCandidates() as $c) {
             if ((is_dir($c) || @mkdir($c, 0700, true)) && is_writable($c)) {
                 return rtrim($c, '/');
             }
@@ -142,6 +136,13 @@ final class Config
             }
             return $k;
         }
+        // Une clé déjà posée (bin/deploy.sh la tire pour www-data) se lit même si le dossier n'est pas
+        // inscriptible pour PHP ; il ne faut pouvoir écrire que pour la créer.
+        foreach ($this->privateCandidates() as $c) {
+            if (is_readable($c . '/hr_dimona.key')) {
+                return $this->readKey($c . '/hr_dimona.key');
+            }
+        }
         $f = $this->privateDir() . '/hr_dimona.key';
         if (!is_file($f)) {
             $tmp = $f . '.' . bin2hex(random_bytes(4));
@@ -152,10 +153,26 @@ final class Config
             }
             @unlink($tmp);
         }
-        $k = base64_decode(trim((string) file_get_contents($f)), true);
+        return $this->readKey($f);
+    }
+
+    private function readKey(string $f): string
+    {
+        $k = base64_decode(trim((string) @file_get_contents($f)), true);
         if ($k === false || strlen($k) !== 32) {
-            throw new \RuntimeException('clé maître du module RH illisible');
+            throw new \RuntimeException('clé maître du module RH illisible (' . basename($f) . ')');
         }
         return $k;
+    }
+
+    /** @return list<string> */
+    private function privateCandidates(): array
+    {
+        return array_values(array_filter([
+            is_string($this->v['privateDir'] ?? null) ? $this->v['privateDir'] : '',
+            (string) (getenv('COCKPIT_PRIVE') ?: ''),
+            '/var/lib/consulant_bo/prive',
+            dirname(__DIR__, 3) . '/var/prive',
+        ]));
     }
 }
