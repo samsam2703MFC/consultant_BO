@@ -1589,11 +1589,17 @@
     if (x.evaluations.length) return x.evaluations.map(function (t) { return { nom: sansCode(t.nom), description: t.description || '', id: t.id }; });
     return ['Théorie', 'Pratique', 'Mise en situation', 'Validation', 'Re-évaluation J+30'].map(function (n2) { return { nom: n2, description: '', id: null }; });
   }
-  /** Les compétences que la formation enseigne : celles du panel, sinon celles du référentiel. */
+  /** La méthode de vérification du panel, en clair (« self », « instructor »). */
+  var VERIF = { self: 'Auto-évaluation par la personne, confirmée par son responsable.', instructor: 'Validée par le formateur, en mise en situation.' };
+  /** Les compétences que la formation enseigne : celles du panel, puis celles du référentiel qu'il n'a pas. */
   function competencesFo(x) {
     var api = Array.from(x.comps).map(function (id) { return I.comp.get(id); }).filter(Boolean).sort(function (a, b) { return a.nom.localeCompare(b.nom, 'fr'); });
-    if (api.length) return api.map(function (c) { return { id: c.id, nom: c.nom, description: c.description || '', verification: c.verification || '', lien: c.lien || '', niveau: null }; });
-    return ((S.v25 && S.v25.competences) || []).filter(function (c) { return c.formation === x.code; }).map(function (c) { return { id: null, code: c.code, nom: c.nom, description: c.description || '', verification: '', lien: '', niveau: c.niveau || null }; });
+    // Le panel d'abord, puis le référentiel pour ce que le panel n'a pas encore (même nom = une seule ligne).
+    var lues = api.map(function (c) { return { id: c.id, nom: c.nom, description: c.description || '', verification: VERIF[c.verification] || c.verification || '', lien: c.lien || '', niveau: null }; });
+    var deja = {};
+    lues.forEach(function (c) { deja[norm(c.nom)] = 1; });
+    return lues.concat(((S.v25 && S.v25.competences) || []).filter(function (c) { return c.formation === x.code && !deja[norm(c.nom)]; })
+      .map(function (c) { return { id: null, code: c.code, nom: c.nom, description: c.description || '', verification: '', lien: '', niveau: c.niveau || null }; }));
   }
   /** Les supports : ceux rangés dans le cockpit (formation entière ou étape), puis ceux du panel (ressources et supports des compétences). */
   function supportsFo(x) {
