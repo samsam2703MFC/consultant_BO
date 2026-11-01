@@ -36,6 +36,17 @@ final class ConsoleIdentityResolver implements IdentityResolver
         }
         $cookie = $r->header('cookie');
         if ($cookie === '') {
+            // Personne n'est connecté ; on demande quand même à la console si ses comptes existent, pour que
+            // l'écran le dise avant le formulaire plutôt qu'après (401 = comptes actifs, 500 = pas configurée).
+            try {
+                $probe = $this->http->request('GET', $base . '/bo/franchisee/me', ['Accept' => 'application/json'], null, 8);
+            } catch (HttpTransportException $e) {
+                throw new ConsoleUnavailableException('La console franchisé ne répond pas : ' . $e->getMessage());
+            }
+            $j = $probe->json();
+            if ($probe->status === 500 && is_array($j) && str_contains((string) ($j['error'] ?? ''), 'non configur')) {
+                throw new ConsoleUnavailableException('Les comptes de la console franchisé ne sont pas encore activés sur ce serveur (section « bo » de la configuration de la console).');
+            }
             return null;
         }
         $unconfigured = 0;

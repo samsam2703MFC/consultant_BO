@@ -299,13 +299,20 @@ if ($mode !== '--integration') {
     verifie('franchiseur : tout le réseau, lecture seule', $who !== null && $who->role === Identity::FRANCHISOR && $who->seesAll() && !$who->canWrite());
     $res = new ConsoleIdentityResolver(new FakeHttp(static fn () => new HttpResponse(401, [], '{}')), $cfgC);
     verifie('session inconnue ⇒ non connecté', $res->resolve($req) === null);
-    verifie('pas de cookie ⇒ non connecté, sans appel', $res->resolve(new Request('GET', '/session')) === null);
+    verifie('pas de cookie ⇒ non connecté', $res->resolve(new Request('GET', '/session')) === null);
     $res = new ConsoleIdentityResolver(new FakeHttp(static fn () => new HttpResponse(500, [], '{"error":"Back-office \'franchisee\' non configuré (section \'bo\' de config.php)"}')), $cfgC);
     try {
         $res->resolve($req);
         verifie('console sans comptes activés ⇒ indisponible (503)', false);
     } catch (ConsoleUnavailableException $e) {
         verifie('console sans comptes activés ⇒ indisponible (503)', true);
+    }
+    $res = new ConsoleIdentityResolver(new FakeHttp(static fn () => new HttpResponse(500, [], '{"error":"Back-office \'franchisee\' non configuré (section \'bo\' de config.php)"}')), $cfgC);
+    try {
+        $res->resolve(new Request('GET', '/session'));
+        verifie('sans cookie, console sans comptes ⇒ dit avant le formulaire', false);
+    } catch (ConsoleUnavailableException $e) {
+        verifie('sans cookie, console sans comptes ⇒ dit avant le formulaire', true);
     }
     $adminOnly = new ConsoleIdentityResolver(new FakeHttp(static fn () => new HttpResponse(401, [], '{}')), $cfgC);
     verifie('le jeton admin réseau n’ouvre rien', $adminOnly->resolve(new Request('GET', '/session', [], [], ['x-admin-token' => 'secret-reseau'])) === null);
