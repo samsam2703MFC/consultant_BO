@@ -9740,6 +9740,13 @@ class App {
       let base = familles.filter(f => dansSel(f) && cherche(f));
       if (vue === 'portions') { base = base.filter(f => f.portion); }
       const totV = familles.reduce((s, f) => s + f.v, 0);
+      // Les 20 % de produits qui font le plus de chiffre (règle des 80/20, 04/11/2026) : les produits du réseau classés
+      // par CA, le premier cinquième marqué d'une étoile ; la légende dit la part du chiffre qu'ils font vraiment.
+      const TOP_PCT = 20;
+      const classes = familles.slice().sort((a, b) => b.v - a.v);
+      const nTop = familles.length ? Math.ceil(TOP_PCT / 100 * familles.length) : 0;
+      const etoiles = new Set(classes.slice(0, nTop).map(f => f.id));
+      const caTop = classes.slice(0, nTop).reduce((s, f) => s + f.v, 0);
       let lignes = [];
       if (vue === 'categories') {
         const G = {};
@@ -9804,6 +9811,7 @@ class App {
           ca: fE(l.v), part: fP(l.part), w: (100 * l.v / max).toFixed(1),
           marge: l.m == null ? '?' : fE(l.m), margeTitre: l.m == null ? 'coût de recette inconnu partout' : '', taux: fP0(l.taux), tauxCoul: coulT(l.taux), coef: coef(l.taux),
           sans: l.nSans ? (vue === 'categories' ? pl(l.nSans, 'produit') + ' sans coût quelque part' : 'sans coût dans ' + pl(l.nSans, 'magasin')) : '',
+          etoile: vue !== 'categories' && etoiles.has(l.id), etoiles: vue === 'categories' ? l.prods.filter(f => etoiles.has(f.id)).length : 0,
           entier: '', ouvert, ouvrir: ouvre(l.id), det: [], detMag: [] };
         if (ouvert) {
           const ligneDet = (nom, sous, x) => ({ nom, sous, pieces: fQ(Math.round(x.q * 10) / 10), prix: x.q > 0 ? fU(x.v / x.q) : '—', ca: fE(x.v), part: l.v > 0 ? fP0(100 * x.v / l.v) : '', marge: x.m == null ? '?' : fE(x.m), taux: x.m != null && x.v > 0 ? fP0(100 * x.m / x.v) : '', tauxCoul: coulT(x.m != null && x.v > 0 ? 100 * x.m / x.v : null) });
@@ -9824,6 +9832,7 @@ class App {
       const manquent = (P.magasins || []).filter(m => m.joursManquants > 0 || m.instantanes > 0);
       const nDiv = familles.filter(f => f.portion).length;
       out.prod = { vue, tri, q, qBrut: String(S.rnQ || ''), jauges,
+        top: nTop ? { titre: 'Parmi les ' + TOP_PCT + ' % de produits qui font le plus de chiffre dans le réseau', txt: 'les ' + nTop + ' premiers produits (' + TOP_PCT + ' % des ' + familles.length + ') font ' + fP0(totV > 0 ? 100 * caTop / totV : null) + ' du chiffre du réseau' } : null,
         vues: [['produits', 'Produits'], ['categories', 'Catégories'], ['portions', 'Divisibles']].map(([k, nom]) => ({ nom: nom + (k === 'portions' && nDiv ? ' · ' + nDiv : ''), on: vue === k, go: () => this.setState({ rnVue: k, rnOuv: null }) })),
         tris: [['v', 'CA'], ['q', 'Pièces'], ['m', 'Marge brute']].map(([k, nom]) => ({ nom, on: tri === k, go: () => this.setState({ rnTri: k }) })),
         setQ: e => this.setState({ rnQ: e.target.value }),
