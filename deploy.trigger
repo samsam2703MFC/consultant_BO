@@ -1267,3 +1267,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-04T19:07:00Z console franchisé : clé de dépôt du serveur
 [244] Rail Administracja : Uprawnienia funkcji — 2026-11-04T19:10:32Z
 2026-11-04T19:18:49Z console franchisé : comptes de Sam (liste scellée)
+2026-11-04T19:38:03Z console franchisé : ancien compte rendu, siège à part
