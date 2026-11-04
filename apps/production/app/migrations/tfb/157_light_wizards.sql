@@ -4,7 +4,11 @@
 --   i oszczędności (co miesiąc), Wydajność i straty (co kwartał). Zadanie zalicza się samo (n_wizard_done).
 
 -- Niezgodności : kategoria przyczyny (krok 2 kreatora : transport, dostawca, magazyn, produkcja, inne).
-ALTER TABLE n_nc ADD COLUMN IF NOT EXISTS cause_cat VARCHAR(16) NULL AFTER root_cause;
+-- (MySQL nie zna ADD COLUMN IF NOT EXISTS : sprawdzenie w information_schema, jak w 155.)
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'n_nc' AND COLUMN_NAME = 'cause_cat');
+SET @s := IF(@c = 0, 'ALTER TABLE n_nc ADD COLUMN cause_cat VARCHAR(16) NULL AFTER root_cause', 'DO 0');
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Audyt dostawcy (co kwartał, krok 3 kreatora niezgodności) : planowany / zrobiony, wynik, notatka.
 CREATE TABLE IF NOT EXISTS n_supplier_audit (
