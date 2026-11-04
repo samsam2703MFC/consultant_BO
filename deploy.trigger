@@ -1273,3 +1273,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 [245] Reklamacje : onglet Przegląd — 2026-11-04T21:18:23Z
 [246] Formation : fiche « à lire » dans le manuel (vidéos, PDF, documents) — 2026-11-04T21:48:03Z
 2026-11-04T21:50:34Z ventes par produit du réseau : portions regroupées, jauge des secteurs
+2026-11-04T22:04:53Z Lot lżej : Mój tydzień allégé, 5 assistants de tâches, nouveaux produits pour le Kierownik
