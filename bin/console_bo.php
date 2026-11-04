@@ -17,9 +17,14 @@ declare(strict_types=1);
  *    Section présente : on n'y touche jamais.
  * 2. Les comptes de démonstration dont le mot de passe a été publié (« Test1234! », audit go-live WebShop du
  *    15/08) : tout compte actif qui l'accepte encore est désactivé.
- * 3. Les comptes demandés, s'il y en a : variable CONSOLE_BO_ACCOUNTS (secret GitHub du même nom), JSON
+ * 3. Les comptes demandés, s'il y en a : variable CONSOLE_BO_ACCOUNTS (secret GitHub du même nom) et/ou
+ *    config/console_bo_accounts.sealed (la même liste chiffrée pour la clé publique de ce serveur, voir
+ *    bin/console_bo_seal.php), JSON
  *      [{"email": "…", "name": "…", "role": "siege|franchise", "shops": [2, 3], "password": "…"}, …]
- *    Créés ou mis à jour (nom, rôle, actif, boutiques ; le mot de passe seulement s'il a changé).
+ *    Créés, ou mis à jour (nom, rôle, actif, boutiques). Le mot de passe ne sert qu'à la création : ensuite
+ *    il appartient à la personne ; « reset_password »: true le repose.
+ * 4. La clé de dépôt : une paire RSA tirée ici une fois (dossier privé, 0600) ; sa clé PUBLIQUE est écrite au
+ *    journal pour chiffrer la liste des comptes — seul ce serveur peut la lire.
  *
  * Les journaux de livraison sont publics : ce script n'écrit jamais un secret, un mot de passe, un hachage ni
  * une adresse e-mail — seulement des comptes et des faits.
@@ -240,7 +245,9 @@ function cbProvision(PDO $pdo, string $json): array
         } else {
             $id = (int) $cur['id'];
             $pdo->prepare('UPDATE bo_users SET display_name = ?, role = ?, active = 1 WHERE id = ?')->execute([$name !== '' ? $name : $email, $role, $id]);
-            if ($pw !== '' && !password_verify($pw, (string) $cur['password_hash'])) {
+            // Le mot de passe donné ne sert qu'à la CRÉATION : ensuite, il est à la personne (elle le change
+            // depuis /hr) et une livraison ne doit pas le lui reprendre. « reset_password »: true le repose.
+            if ($pw !== '' && !empty($a['reset_password']) && !password_verify($pw, (string) $cur['password_hash'])) {
                 $pdo->prepare('UPDATE bo_users SET password_hash = ? WHERE id = ?')->execute([password_hash($pw, PASSWORD_BCRYPT), $id]);
             }
             $updated++;
@@ -254,6 +261,76 @@ function cbProvision(PDO $pdo, string $json): array
         }
     }
     return [$created, $updated, $refused];
+}
+
+const CB_SEAL_KEY = '/var/lib/consulant_bo/prive/console_bo_seal.pem';
+
+/** La clé privée de dépôt (tirée une fois, 0600) ; rend la clé publique PEM. */
+function cbSealPath(): string
+{
+    return (string) (getenv('CB_SEAL_KEY_FILE') ?: CB_SEAL_KEY);
+}
+
+function cbSealKey(?string $file = null): string
+{
+    $file ??= cbSealPath();
+    if (!is_file($file)) {
+        $k = openssl_pkey_new(['private_key_bits' => 3072, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        $pem = '';
+        openssl_pkey_export($k, $pem);
+        $old = umask(077);
+        file_put_contents($file, $pem);
+        umask($old);
+        chmod($file, 0600);
+    }
+    $k = openssl_pkey_get_private((string) file_get_contents($file));
+    if ($k === false) {
+        throw new RuntimeException('clé de dépôt illisible');
+    }
+    return (string) openssl_pkey_get_details($k)['key'];
+}
+
+/** Empreinte (SHA-256 du DER) d'une clé publique PEM. */
+function cbKeyFingerprint(string $publicPem): string
+{
+    $der = base64_decode((string) preg_replace('/-----[^-]+-----|\s/', '', $publicPem));
+    return hash('sha256', (string) $der);
+}
+
+/** Chiffre pour une clé publique : AES-256-GCM, clé AES scellée en RSA-OAEP. */
+function cbSeal(string $plain, string $publicPem): string
+{
+    $aes = random_bytes(32);
+    $iv = random_bytes(12);
+    $tag = '';
+    $ct = openssl_encrypt($plain, 'aes-256-gcm', $aes, OPENSSL_RAW_DATA, $iv, $tag, '', 16);
+    $ek = '';
+    if ($ct === false || !openssl_public_encrypt($aes, $ek, $publicPem, OPENSSL_PKCS1_OAEP_PADDING)) {
+        throw new RuntimeException('chiffrement impossible');
+    }
+    return (string) json_encode(['v' => 1, 'fp' => cbKeyFingerprint($publicPem), 'k' => base64_encode($ek),
+        'iv' => base64_encode($iv), 'tag' => base64_encode($tag), 'ct' => base64_encode($ct)], JSON_PRETTY_PRINT) . "\n";
+}
+
+/** Déchiffre un pli scellé avec la clé privée de dépôt ; null s'il n'est pas pour cette clé ou altéré. */
+function cbUnseal(string $sealed, ?string $privatePemFile = null): ?string
+{
+    $privatePemFile ??= cbSealPath();
+    $j = json_decode($sealed, true);
+    $k = is_file($privatePemFile) ? openssl_pkey_get_private((string) file_get_contents($privatePemFile)) : false;
+    if (!is_array($j) || ($j['v'] ?? 0) !== 1 || $k === false) {
+        return null;
+    }
+    if (($j['fp'] ?? '') !== cbKeyFingerprint((string) openssl_pkey_get_details($k)['key'])) {
+        return null;
+    }
+    $aes = '';
+    if (!openssl_private_decrypt((string) base64_decode((string) $j['k']), $aes, $k, OPENSSL_PKCS1_OAEP_PADDING)) {
+        return null;
+    }
+    $p = openssl_decrypt((string) base64_decode((string) $j['ct']), 'aes-256-gcm', $aes, OPENSSL_RAW_DATA,
+        (string) base64_decode((string) $j['iv']), (string) base64_decode((string) $j['tag']));
+    return $p === false ? null : $p;
 }
 
 /** Ce qu'il y a, en nombres seulement. */
@@ -289,16 +366,39 @@ if (PHP_SAPI === 'cli' && realpath($argv[0] ?? '') === realpath(__FILE__)) {
         $pdo = cbPdo($dir);
         $n = cbDisableDemo($pdo);
         cbLog($n > 0 ? "{$n} compte(s) de démonstration au mot de passe publié désactivé(s)" : 'aucun compte n’accepte le mot de passe de démonstration publié');
+        $sources = [];
         $json = (string) (getenv('CONSOLE_BO_ACCOUNTS') ?: '');
         if ($json !== '') {
-            [$c, $u, $refused] = cbProvision($pdo, $json);
-            cbLog("comptes demandés : {$c} créé(s), {$u} mis à jour" . ($refused !== [] ? ' ; refusés — ' . implode(' ; ', $refused) : ''));
-        } else {
-            cbLog('aucun compte demandé (secret CONSOLE_BO_ACCOUNTS vide)');
+            $sources['secret CONSOLE_BO_ACCOUNTS'] = $json;
+        }
+        $sealedFile = (string) (getenv('CB_SEALED_FILE') ?: dirname(__DIR__) . '/config/console_bo_accounts.sealed');
+        if (is_file($sealedFile)) {
+            $plain = cbUnseal((string) file_get_contents($sealedFile));
+            if ($plain === null) {
+                cbLog('config/console_bo_accounts.sealed : illisible pour la clé de ce serveur (autre clé, ou altéré) — ignoré');
+            } else {
+                $sources['liste scellée'] = $plain;
+            }
+        }
+        foreach ($sources as $src => $j) {
+            [$c, $u, $refused] = cbProvision($pdo, $j);
+            cbLog("comptes demandés ({$src}) : {$c} créé(s), {$u} mis à jour" . ($refused !== [] ? ' ; refusés — ' . implode(' ; ', $refused) : ''));
+        }
+        if ($sources === []) {
+            cbLog('aucun compte demandé (ni secret CONSOLE_BO_ACCOUNTS, ni liste scellée)');
         }
         cbLog('comptes de la console : ' . cbSummary($pdo));
     } catch (Throwable $e) {
         cbLog('comptes : base de la console injoignable (' . get_class($e) . ')');
     }
     cbLog($ok ? 'connexion par la console : active' : 'connexion par la console : pas encore active');
+    try {
+        $pub = cbSealKey();
+        cbLog('clé publique de dépôt (empreinte ' . substr(cbKeyFingerprint($pub), 0, 16) . '…), pour bin/console_bo_seal.php :');
+        foreach (explode("\n", trim($pub)) as $l) {
+            cbLog('| ' . $l);
+        }
+    } catch (Throwable $e) {
+        cbLog('clé de dépôt : ' . $e->getMessage());
+    }
 }
