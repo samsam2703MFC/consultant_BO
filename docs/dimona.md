@@ -87,9 +87,17 @@ sur le serveur), s’en charge et ne refait rien quand c’est fait :
     {"email": "franchise@…", "name": "Julie", "role": "franchise", "shops": [2, 3], "password": "…"}
   ]
   ```
-  `shops` contient les ids de la table `shops`, ceux du cockpit et du panel. Le mot de passe n’est réécrit
-  que s’il change ; un compte existant peut être repassé sans mot de passe, pour changer son nom, son rôle ou
-  ses boutiques.
+  `shops` contient les ids de la table `shops`, ceux du cockpit et du panel. Le mot de passe ne sert qu’à la
+  **création** : ensuite il appartient à la personne, qui le change depuis `/hr`, et aucune livraison ne le
+  lui reprend (`"reset_password": true` le repose). Un compte existant se repasse sans mot de passe pour
+  changer son nom, son rôle ou ses boutiques ;
+- la même liste peut aussi être commise **scellée**, dans `config/console_bo_accounts.sealed`. Le serveur tire
+  une paire RSA une fois et garde la clé privée dans son dossier privé ; chaque livraison écrit la clé
+  **publique** dans son journal. On chiffre la liste avec cette clé publique, sur son poste :
+  ```bash
+  php bin/console_bo_seal.php cle-publique.pem comptes.json > config/console_bo_accounts.sealed
+  ```
+  Seul le serveur sait lire ce pli. `comptes.json`, lui, ne se commet jamais.
 
 Les journaux de livraison, publics, ne portent que des nombres : jamais un secret, un mot de passe ni une
 adresse e-mail. Chacun change son mot de passe depuis `/hr` (« Mot de passe »), qui appelle

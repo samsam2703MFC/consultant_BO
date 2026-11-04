@@ -90,7 +90,8 @@ if ($dsn !== '') {
     usleep(500000);
     $base = 'http://127.0.0.1:' . $port . '/webshop/api';
     $run = static function (string $accounts = '') use ($ROOT, $tmp, $base): string {
-        return (string) shell_exec('CB_OPCACHE_WAIT=0 WEBSHOP_API_LOCAL=' . escapeshellarg($base) . ' CONSOLE_BO_ACCOUNTS=' . escapeshellarg($accounts)
+        return (string) shell_exec('CB_OPCACHE_WAIT=0 CB_SEAL_KEY_FILE=' . escapeshellarg($tmp . '/seal.pem') . ' CB_SEALED_FILE=' . escapeshellarg($tmp . '/comptes.sealed')
+            . ' WEBSHOP_API_LOCAL=' . escapeshellarg($base) . ' CONSOLE_BO_ACCOUNTS=' . escapeshellarg($accounts)
             . ' ' . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/bin/console_bo.php') . ' --api-dir=' . escapeshellarg($tmp . '/api') . ' 2>&1');
     };
     verifie('avant : /bo/franchisee/me rend 500 (non configuré)', cbHealth($base . '/bo/franchisee/me') === 500);
@@ -127,6 +128,33 @@ if ($dsn !== '') {
     $run((string) json_encode([['email' => 'julie@exemple.be', 'name' => 'Julie', 'role' => 'franchise', 'shops' => [5]]]));
     $shops = $pdo->query('SELECT shop_id FROM bo_user_shops WHERE user_id = ' . (int) $julie['id'])->fetchAll(PDO::FETCH_COLUMN);
     verifie('boutiques remplacées, mot de passe gardé sans en redonner', array_map('intval', $shops) === [5] && password_verify('mot-de-passe-solide-2', (string) $pdo->query("SELECT password_hash FROM bo_users WHERE email = 'julie@exemple.be'")->fetchColumn()));
+
+    // le mot de passe est à la personne : une livraison ne le lui reprend pas
+    $pdo->prepare("UPDATE bo_users SET password_hash = ? WHERE email = 'julie@exemple.be'")->execute([password_hash('choisi-par-julie-elle-meme', PASSWORD_BCRYPT)]);
+    $run($comptes);
+    verifie('mot de passe changé par la personne : pas écrasé par la liste', password_verify('choisi-par-julie-elle-meme', (string) $pdo->query("SELECT password_hash FROM bo_users WHERE email = 'julie@exemple.be'")->fetchColumn()));
+    $run((string) json_encode([['email' => 'julie@exemple.be', 'name' => 'Julie', 'role' => 'franchise', 'shops' => [2, 3], 'password' => 'mot-de-passe-solide-2', 'reset_password' => true]]));
+    verifie('reset_password : le mot de passe donné est reposé', password_verify('mot-de-passe-solide-2', (string) $pdo->query("SELECT password_hash FROM bo_users WHERE email = 'julie@exemple.be'")->fetchColumn()));
+
+    // la liste scellée pour la clé du serveur
+    $out5 = $run();
+    preg_match_all('/\| (.*)$/m', $out5, $mm);
+    $pub = implode("\n", $mm[1]) . "\n";
+    verifie('la clé publique de dépôt est écrite au journal, jamais la privée', openssl_pkey_get_public($pub) !== false && !str_contains($out5, 'PRIVATE'), $out5);
+    $liste = (string) json_encode([['email' => 'scelle@exemple.be', 'name' => 'Scellé', 'role' => 'franchise', 'shops' => [3], 'password' => 'mot-de-passe-scelle-123']]);
+    file_put_contents($tmp . '/liste.json', $liste);
+    file_put_contents($tmp . '/pub.pem', $pub);
+    $pli = (string) shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/bin/console_bo_seal.php') . ' ' . escapeshellarg($tmp . '/pub.pem') . ' ' . escapeshellarg($tmp . '/liste.json') . ' 2>/dev/null');
+    verifie('pli scellé : ni e-mail ni mot de passe en clair', $pli !== '' && !str_contains($pli, 'scelle@') && !str_contains($pli, 'mot-de-passe-scelle'), $pli);
+    file_put_contents($tmp . '/comptes.sealed', $pli);
+    $out6 = $run();
+    $sc = $pdo->query("SELECT password_hash FROM bo_users WHERE email = 'scelle@exemple.be'")->fetchColumn();
+    verifie('liste scellée lue par le serveur : compte créé', $sc && password_verify('mot-de-passe-scelle-123', (string) $sc) && str_contains($out6, 'liste scellée'), $out6);
+    $autre = openssl_pkey_get_details(openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]))['key'];
+    file_put_contents($tmp . '/comptes.sealed', cbSeal($liste, $autre));
+    $out7 = $run();
+    verifie('pli scellé pour une autre clé : ignoré', str_contains($out7, 'illisible pour la clé de ce serveur'), $out7);
+    @unlink($tmp . '/comptes.sealed');
 
     // une config qui casse la console : l'ancienne est remise
     file_put_contents($tmp . '/api/config.php', $conf);
