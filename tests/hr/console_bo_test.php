@@ -90,7 +90,7 @@ if ($dsn !== '') {
     usleep(500000);
     $base = 'http://127.0.0.1:' . $port . '/webshop/api';
     $run = static function (string $accounts = '') use ($ROOT, $tmp, $base): string {
-        return (string) shell_exec('CB_OPCACHE_WAIT=0 CB_JOURNAL_FILE=' . escapeshellarg($tmp . '/journal.jsonl') . ' CB_SEAL_KEY_FILE=' . escapeshellarg($tmp . '/seal.pem') . ' CB_SEALED_FILE=' . escapeshellarg($tmp . '/comptes.sealed')
+        return (string) shell_exec('CB_OPCACHE_WAIT=0 CB_RESETS_FILE=' . escapeshellarg($tmp . '/resets.json') . ' CB_JOURNAL_FILE=' . escapeshellarg($tmp . '/journal.jsonl') . ' CB_SEAL_KEY_FILE=' . escapeshellarg($tmp . '/seal.pem') . ' CB_SEALED_FILE=' . escapeshellarg($tmp . '/comptes.sealed')
             . ' WEBSHOP_API_LOCAL=' . escapeshellarg($base) . ' CONSOLE_BO_ACCOUNTS=' . escapeshellarg($accounts)
             . ' ' . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/bin/console_bo.php') . ' --api-dir=' . escapeshellarg($tmp . '/api') . ' 2>&1');
     };
@@ -133,8 +133,12 @@ if ($dsn !== '') {
     $pdo->prepare("UPDATE bo_users SET password_hash = ? WHERE email = 'julie@exemple.be'")->execute([password_hash('choisi-par-julie-elle-meme', PASSWORD_BCRYPT)]);
     $run($comptes);
     verifie('mot de passe changé par la personne : pas écrasé par la liste', password_verify('choisi-par-julie-elle-meme', (string) $pdo->query("SELECT password_hash FROM bo_users WHERE email = 'julie@exemple.be'")->fetchColumn()));
-    $run((string) json_encode([['email' => 'julie@exemple.be', 'name' => 'Julie', 'role' => 'franchise', 'shops' => [2, 3], 'password' => 'mot-de-passe-solide-2', 'reset_password' => true]]));
+    $reset = (string) json_encode([['email' => 'julie@exemple.be', 'name' => 'Julie', 'role' => 'franchise', 'shops' => [2, 3], 'password' => 'mot-de-passe-solide-2', 'reset_password' => 'essai-1']]);
+    $run($reset);
     verifie('reset_password : le mot de passe donné est reposé', password_verify('mot-de-passe-solide-2', (string) $pdo->query("SELECT password_hash FROM bo_users WHERE email = 'julie@exemple.be'")->fetchColumn()));
+    $pdo->prepare("UPDATE bo_users SET password_hash = ? WHERE email = 'julie@exemple.be'")->execute([password_hash('rechange-par-julie-ensuite', PASSWORD_BCRYPT)]);
+    $run($reset);
+    verifie('reset_password à usage unique : pas rejoué à la livraison suivante', password_verify('rechange-par-julie-ensuite', (string) $pdo->query("SELECT password_hash FROM bo_users WHERE email = 'julie@exemple.be'")->fetchColumn()));
 
     // la liste scellée pour la clé du serveur
     $out5 = $run();

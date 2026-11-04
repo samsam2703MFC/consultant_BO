@@ -22,7 +22,7 @@ declare(strict_types=1);
  *    bin/console_bo_seal.php), JSON
  *      [{"email": "…", "name": "…", "role": "siege|franchise", "shops": [2, 3], "password": "…"}, …]
  *    Créés, ou mis à jour (nom, rôle, actif, boutiques). Le mot de passe ne sert qu'à la création : ensuite
- *    il appartient à la personne ; « reset_password »: true le repose.
+ *    il appartient à la personne ; « reset_password »: "<identifiant>" le repose une seule fois.
  * 4. La clé de dépôt : une paire RSA tirée ici une fois (dossier privé, 0600) ; sa clé PUBLIQUE est écrite au
  *    journal pour chiffrer la liste des comptes — seul ce serveur peut la lire.
  *
@@ -206,6 +206,31 @@ function cbJournal(array $before): void
     umask($old);
 }
 
+function cbResetsFile(): string
+{
+    return (string) (getenv('CB_RESETS_FILE') ?: '/var/lib/consulant_bo/prive/console_bo_resets.json');
+}
+
+function cbResetDone(string $key): bool
+{
+    $j = json_decode((string) @file_get_contents(cbResetsFile()), true);
+    return is_array($j) && isset($j[$key]);
+}
+
+function cbResetRecord(string $key): void
+{
+    $f = cbResetsFile();
+    if (!is_dir(dirname($f))) {
+        return;
+    }
+    $j = json_decode((string) @file_get_contents($f), true);
+    $j = is_array($j) ? $j : [];
+    $j[$key] = gmdate('c');
+    $old = umask(077);
+    file_put_contents($f, json_encode($j, JSON_PRETTY_PRINT));
+    umask($old);
+}
+
 /** Les boutiques qu'un compte a eues, d'après la console : son journal d'actions et ses sessions PIN. */
 function cbShopsFromHistory(PDO $pdo, int $userId): array
 {
@@ -228,7 +253,8 @@ function cbShopsFromHistory(PDO $pdo, int $userId): array
  * 3. Les comptes demandés. Rend [créés, mis à jour, remarques].
  *
  * Un compte qui existe déjà garde son rôle (« role_change »: true pour le changer), son mot de passe (posé
- * seulement s'il n'en a pas, ou avec « reset_password »: true) et ses boutiques si « shops » n'est pas donné ;
+ * seulement s'il n'en a pas, ou une fois avec « reset_password »: "<identifiant>") et ses boutiques si
+ * « shops » n'est pas donné ;
  * « shops_from_history »: true les reprend de l'historique de la console. Avant toute modification, son
  * état d'avant est écrit au journal privé.
  *
@@ -297,9 +323,19 @@ function cbProvision(PDO $pdo, string $json): array
                 ->execute([$name !== '' ? $name : (string) $cur['display_name'], $role, $id]);
             // Le mot de passe donné ne sert qu'à un compte qui n'en a pas : ensuite il appartient à la personne
             // (elle le change depuis /hr) et une livraison ne doit pas le lui reprendre. « reset_password » le repose.
+            // « reset_password » est un identifiant à usage unique (ex. "2026-11-04-essai") : le serveur note
+            // qu'il l'a appliqué, et ne le rejoue jamais — un mot de passe changé ensuite reste à la personne.
             $hash = (string) $cur['password_hash'];
-            if ($pw !== '' && ($hash === '' || (!empty($a['reset_password']) && !password_verify($pw, $hash)))) {
+            $resetKey = is_string($a['reset_password'] ?? null) && trim($a['reset_password']) !== '' ? $id . ':' . trim($a['reset_password']) : null;
+            $doReset = $resetKey !== null && !cbResetDone($resetKey);
+            if ($pw !== '' && ($hash === '' || ($doReset && !password_verify($pw, $hash)))) {
                 $pdo->prepare('UPDATE bo_users SET password_hash = ? WHERE id = ?')->execute([password_hash($pw, PASSWORD_BCRYPT), $id]);
+                if ($doReset) {
+                    $notes[] = $n . ' : mot de passe réinitialisé (une fois)';
+                }
+            }
+            if ($doReset) {
+                cbResetRecord($resetKey);
             }
             $updated++;
         }

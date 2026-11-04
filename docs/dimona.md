@@ -89,7 +89,8 @@ sur le serveur), s’en charge et ne refait rien quand c’est fait :
   ```
   `shops` contient les ids de la table `shops`, ceux du cockpit et du panel. Le mot de passe ne sert qu’à la
   **création** : ensuite il appartient à la personne, qui le change depuis `/hr`, et aucune livraison ne le
-  lui reprend (`"reset_password": true` le repose). Un compte existant se repasse sans mot de passe pour
+  lui reprend. `"reset_password": "<identifiant>"` le repose **une seule fois** : le serveur note l’identifiant
+  appliqué et ne le rejoue jamais. Un compte existant se repasse sans mot de passe pour
   changer son nom, son rôle ou ses boutiques ;
 - la même liste peut aussi être commise **scellée**, dans `config/console_bo_accounts.sealed`. Le serveur tire
   une paire RSA une fois et garde la clé privée dans son dossier privé ; chaque livraison écrit la clé
