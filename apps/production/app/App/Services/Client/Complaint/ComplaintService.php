@@ -428,6 +428,8 @@ class ComplaintService
                 'value' => round($qty * $price, 2),
                 'accepted_value' => $status === 'ACCEPTED' ? round((float) ($r['accepted_quantity'] ?? 0) * $price, 2) : null,
                 'reason' => \App\Core\Helpers\ComplaintReasonTranslator::translate($r['complaint_reason'] ?? null),
+                // Czas decyzji (dni od zgłoszenia do decyzji, jak raport miesięczny) ; ujemny = dane niespójne → pominięty.
+                'decision_days' => $r['decision_days'] !== null && (float) $r['decision_days'] >= 0 ? round((float) $r['decision_days'], 1) : null,
             ];
         }
         return ['complaints' => $out, 'groups' => $groups, 'today' => date('Y-m-d')];

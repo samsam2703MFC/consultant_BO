@@ -485,15 +485,20 @@ $nextShipping = $next_shipping ?? [];
 
                 <?php if (!empty($chart)): ?>
                 <div id="rk-chart" class="rk-chart-root" hidden>
+                    <div class="rk-tabs" role="tablist" aria-label="Wykres">
+                        <button type="button" role="tab" data-rk-tab="overview" class="on" aria-selected="true"><i class="bi bi-grid-1x2"></i> Przegląd</button>
+                        <button type="button" role="tab" data-rk-tab="timeline" aria-selected="false"><i class="bi bi-distribute-horizontal"></i> Oś czasu</button>
+                    </div>
                     <div class="rk-filters" data-rk-filters></div>
-                    <div class="rk-panel">
+                    <div data-rk-pane="overview"></div>
+                    <div class="rk-panel" data-rk-pane="timeline" hidden>
                         <h5>Wszystkie reklamacje na osi czasu</h5>
                         <div class="rk-sub">wiersz = grupa produkcji · położenie = dzień zgłoszenia · wielkość = wartość reklamacji (ilość × cena kartonu z WDT) · kolor = decyzja</div>
                         <div class="rk-legend" data-rk-legend></div>
                         <div class="rk-plot" data-rk-plot></div>
-                        <div class="rk-tip" data-rk-tip hidden></div>
                     </div>
-                    <p class="rk-note"><i class="bi bi-info-circle"></i> Najedź na punkt → szczegóły ; kliknij → reklamacja otwiera się na liście. Kilka reklamacji tego samego dnia w grupie = punkty jeden nad drugim.</p>
+                    <div class="rk-tip" data-rk-tip hidden></div>
+                    <p class="rk-note" data-rk-note></p>
                     <script type="application/json" id="rk-chart-data"><?= json_encode($chart, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
                 </div>
                 <?php endif; ?>

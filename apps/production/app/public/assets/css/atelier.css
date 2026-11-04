@@ -3309,3 +3309,31 @@ tr.mw-addrow .tt-link { font-size: 12px; min-height: 32px; }
 .rk-note { font-size: 12px; color: var(--at-muted); margin: 8px 0 0; }
 .complaint-item.rk-flash { box-shadow: 0 0 0 3px rgba(142,31,47,.35); transition: box-shadow .4s; }
 @media (max-width: 575.98px) { .rk-sel select { max-width: 150px; } .rk-legend .rk-size, .rk-legend .rk-muted { display: none; } }
+
+/* [245] Reklamacje › Wykres : zakładki « Przegląd » (makieta 15) i « Oś czasu » (makieta 16). */
+.rk-chart-root { position: relative; }
+.rk-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--at-bg-2, #f3efe9); margin-bottom: 10px; }
+.rk-tabs button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-size: 13px; font-weight: 600; color: var(--at-muted); }
+.rk-tabs button.on { background: #fff; color: var(--at-text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.rk-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.rk-tile { border: 1px solid var(--at-line); border-radius: 12px; padding: 12px 14px; background: #fff; }
+.rk-tile span { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--at-muted); }
+.rk-tile b { display: block; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 2px 0; }
+.rk-tile small { color: var(--at-muted); font-size: 12px; }
+.rk-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.rk-col { display: grid; gap: 12px; min-width: 0; }
+.rk-card2 { border: 1px solid var(--at-line); border-radius: 12px; padding: 12px 14px 10px; background: #fff; min-width: 0; }
+.rk-card2 h5 { margin: 0; font-size: 14px; font-weight: 700; }
+.rk-legend i.sq { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.rk-svg .rk-hitcol { fill: transparent; cursor: default; outline: none; }
+.rk-svg .rk-hitcol:hover, .rk-svg .rk-hitcol:focus-visible { fill: rgba(0,0,0,.03); }
+.rk-bars { display: grid; gap: 4px; }
+.rk-bar { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) 54px 88px; gap: 10px; align-items: center; font-size: 12.5px; min-height: 30px; width: 100%; border: 0; background: transparent; padding: 0 6px; border-radius: 8px; text-align: left; color: inherit; }
+button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } .rk-bar.on { background: #f7ece9; }
+.rk-bar .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rk-bar .tr { height: 12px; position: relative; }
+.rk-bar .tr i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--rk-one); border-radius: 0 4px 4px 0; }
+.rk-bar .n { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rk-bar .v { text-align: right; color: var(--at-muted); font-variant-numeric: tabular-nums; }
+.rk-bar.hd { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--at-muted); min-height: 18px; }
+@media (max-width: 991.98px) { .rk-grid { grid-template-columns: minmax(0, 1fr); } .rk-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

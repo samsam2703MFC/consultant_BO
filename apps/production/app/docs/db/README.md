@@ -249,6 +249,10 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   valeur (quantité × prix du carton de la WDT, `single_purchase_price`), couleur = décision (Przyjęte / Odrzucone /
   Otwarte = NEW + IN_REVIEW). Info-bulle : produit, date, client, quantité, valeur, valeur acceptée (quantité acceptée ×
   prix, comme le rapport mensuel), motif, décision. Clic ou Entrée → retour à la liste, réclamation dépliée.
+- Deux onglets dans « Wykres » : **Przegląd** (maquette 15, par défaut) — 4 tuiles (réclamations, valeur acceptée, % acceptées
+  sur les décidées, temps moyen de décision = `reported_at` → `acceptance_timestamp`), réclamations par mois empilées par
+  décision (info-bulle), valeur acceptée par mois, motifs, groupes de production (clic = filtre du groupe), 6 produits les
+  plus réclamés ; **Oś czasu** (maquette 16, ci-dessous).
 - Filtres : période (3 mois, 12 mois, cette année, tout), client, groupe, décision ; sous la frise, nombre de réclamations
   par mois. Aucune écriture : lecture seule (`ComplaintRepository::chartRows`, `ComplaintService::chart`,
   `public/assets/js/client/complaints-chart.js`).

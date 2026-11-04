@@ -103,6 +103,8 @@ class ComplaintRepository extends BaseRepository
             "SELECT c.id, DATE(COALESCE(c.reported_at, c.acceptance_timestamp)) AS day, COALESCE(c.acceptance_status, 'NEW') AS status,
                     c.complaint_type, c.complaint_reason, c.id_customer, cust.company AS customer, p.name AS product,
                     c.product_quantity, c.accepted_quantity, c.single_purchase_price,
+                    CASE WHEN c.acceptance_status IN ('ACCEPTED', 'REJECTED') AND c.reported_at IS NOT NULL AND c.acceptance_timestamp IS NOT NULL
+                         THEN TIMESTAMPDIFF(HOUR, c.reported_at, c.acceptance_timestamp) / 24 END AS decision_days,
                     (SELECT g.id FROM n_prod_item i
                        JOIN n_prod_product_settings s ON s.id_item = i.id
                        JOIN n_prod_group g ON g.id = s.id_primary_group

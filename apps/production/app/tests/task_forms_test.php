@@ -93,7 +93,8 @@ try {
     $pdo->exec("INSERT INTO n_prod_week_slot (week_start, id_item, work_date, quantity) VALUES ('{$d1}', {$item}, '{$d1}', 200), ('{$d1}', {$item}, '{$d2}', 100)");
     $pdo->exec("INSERT INTO n_prod_output (work_date, id_group, id_item, quantity, lot_code) VALUES ('{$d1}', 1, {$item}, 200, 'TF-TEST-01'), ('{$d2}', 1, {$item}, 60, 'TF-TEST-02')");
     $pdo->exec("INSERT INTO n_prod_waste (work_date, id_group, id_item, quantity, reason) VALUES ('{$d1}', 1, {$item}, 10, 'burnt'), ('{$d2}', 1, {$item}, 3, 'quality')");
-    $pdo->exec("INSERT INTO n_prod_day_close (work_date, id_group, summary) VALUES ('{$d1}', 1, '[]')");
+    // Dzień mógł już zostać zatwierdzony w kopii bazy (prawdziwe dane) : wtedy zostaje, test liczy « co najmniej ».
+    $pdo->exec("INSERT IGNORE INTO n_prod_day_close (work_date, id_group, summary) VALUES ('{$d1}', 1, '[]')");
     $f = $followUp->summary($d1, $d2);
     $g = array_values(array_filter($f['groups'], fn($r) => $r['id'] === 1))[0] ?? null;
     $day2 = array_values(array_filter($f['days'], fn($d) => $d['date'] === $d2))[0] ?? null;
