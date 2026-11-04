@@ -9706,73 +9706,138 @@ class App {
       const vue = ['produits', 'categories', 'portions'].includes(S.rnVue) ? S.rnVue : 'produits';
       const tri = ['v', 'q', 'm'].includes(S.rnTri) ? S.rnTri : 'v';
       const q = String(S.rnQ || '').trim().toLowerCase();
-      const trie = (a, b) => tri === 'm' ? ((b.m == null ? -Infinity : b.m) - (a.m == null ? -Infinity : a.m)) || b.v - a.v : (b[tri] - a[tri]) || b.v - a.v;
+      const mesure = S.rnMesure === 'q' ? 'q' : 'v';
+      const trie = (a, b) => tri === 'm' ? ((b.m == null ? -Infinity : b.m) - (a.m == null ? -Infinity : a.m)) || b.v - a.v
+        : (tri === 'q' ? (b.qEq - a.qEq) || b.v - a.v : (b.v - a.v));
       const tous = P.produits || [];
       const parId = {}; tous.forEach(p => { parId[p.id] = p; });
-      const cherche = p => !q || (p.nom + ' ' + p.cat + ' ' + (p.groupe || '')).toLowerCase().includes(q);
-      let base = tous.filter(cherche);
-      if (vue === 'portions') { base = base.filter(p => p.portion); }
-      const totV = tous.reduce((s, p) => s + p.v, 0);
+      const secteurDe = p => String(p.groupe || 'Sans secteur').split(' · ')[0];
+      // Une famille = un produit et ses portions (½, ¼…) : une seule ligne pour lire ce qui se vend (04/11/2026).
+      // La fraction d'une portion se lit dans son libellé (« — 1/2 ») ; les pièces se comptent aussi en
+      // équivalent pièce entière (12 × ½ = 6 pièces).
+      const fracDe = nom => { const m = /—\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(nom || ''); return m && +m[2] > 0 ? +m[1] / +m[2] : null; };
+      const fmtDe = nom => { const m = /—\s*([^—]+)$/.exec(nom || ''); return m ? m[1].trim() : 'portion'; };
+      const FAM = {};
+      tous.forEach(p => {
+        const k = String(p.pid || p.id), fr = p.portion ? (fracDe(p.nom) || 0.5) : 1;
+        const f = FAM[k] || (FAM[k] = { id: 'f:' + k, pid: p.pid, nom: '', cat: p.cat, groupe: p.groupe, q: 0, qEq: 0, v: 0, m: null, vChiffre: 0, nSans: 0, portion: false, formats: [], mags: {} });
+        if (!p.portion) { f.nom = p.nom; f.cat = p.cat; f.groupe = p.groupe; } else if (!f.nom) { f.nom = p.nom.replace(/\s*—\s*[^—]+$/, ''); }
+        f.q += p.q; f.qEq += p.q * fr; f.v += p.v;
+        if (p.m != null) { f.m = (f.m || 0) + p.m; f.vChiffre += p.vChiffre || 0; }
+        f.nSans = Math.max(f.nSans, p.nSans || 0);
+        if (p.portion) { f.portion = true; }
+        f.formats.push({ lib: p.portion ? fmtDe(p.nom) : 'entière', fr, q: p.q, v: p.v, m: p.m, taux: p.taux, prix: p.prix });
+        (p.magasins || []).forEach(x => { const g = f.mags[x.s] || (f.mags[x.s] = { s: x.s, q: 0, qEq: 0, v: 0, m: 0, mConnu: true }); g.q += x.q; g.qEq += x.q * fr; g.v += x.v; if (x.m == null) { g.mConnu = false; } else { g.m += x.m; } });
+      });
+      const familles = Object.values(FAM).map(f => Object.assign(f, {
+        secteur: secteurDe(f), taux: f.m != null && f.vChiffre > 0 ? 100 * f.m / f.vChiffre : null, prix: f.qEq > 0 ? f.v / f.qEq : null,
+        magasins: Object.values(f.mags).map(g => ({ s: g.s, q: g.q, qEq: g.qEq, v: g.v, m: g.mConnu ? g.m : null })).sort((a, b) => b.v - a.v),
+        formats: f.formats.sort((a, b) => b.fr - a.fr || b.v - a.v) }));
+      // Un secteur choisi dans la jauge filtre le tableau.
+      const sect = S.rnSect && familles.some(f => f.secteur === S.rnSect) ? S.rnSect : null;
+      const dansSel = f => !sect || f.secteur === sect;
+      const cherche = f => !q || (f.nom + ' ' + f.cat + ' ' + (f.groupe || '')).toLowerCase().includes(q);
+      let base = familles.filter(f => dansSel(f) && cherche(f));
+      if (vue === 'portions') { base = base.filter(f => f.portion); }
+      const totV = familles.reduce((s, f) => s + f.v, 0);
       let lignes = [];
       if (vue === 'categories') {
         const G = {};
-        base.forEach(p => {
-          const g = G[p.cat] || (G[p.cat] = { id: 'c:' + p.cat, nom: p.cat, groupe: p.groupe, q: 0, v: 0, vC: 0, m: null, refs: 0, nSans: 0, mags: {}, prods: [] });
-          g.q += p.q; g.v += p.v; g.refs++; g.prods.push(p);
-          if (p.m != null) { g.m = (g.m || 0) + p.m; g.vC += p.vChiffre || 0; }
-          if (p.nSans) { g.nSans++; }
-          (p.magasins || []).forEach(x => { g.mags[x.s] = true; });
+        base.forEach(f => {
+          const g = G[f.cat] || (G[f.cat] = { id: 'c:' + f.cat, nom: f.cat, groupe: f.groupe, secteur: f.secteur, q: 0, qEq: 0, v: 0, vChiffre: 0, m: null, refs: 0, nSans: 0, mags: {}, prods: [] });
+          g.q += f.q; g.qEq += f.qEq; g.v += f.v; g.refs++; g.prods.push(f);
+          if (f.m != null) { g.m = (g.m || 0) + f.m; g.vChiffre += f.vChiffre; }
+          if (f.nSans) { g.nSans++; }
+          f.magasins.forEach(x => { g.mags[x.s] = true; });
         });
-        lignes = Object.values(G).map(g => Object.assign(g, { taux: g.m != null && g.vC > 0 ? 100 * g.m / g.vC : null, nMag: Object.keys(g.mags).length, prix: null, part: totV > 0 ? 100 * g.v / totV : null }));
+        lignes = Object.values(G).map(g => Object.assign(g, { taux: g.m != null && g.vChiffre > 0 ? 100 * g.m / g.vChiffre : null, nMag: Object.keys(g.mags).length, prix: null, part: totV > 0 ? 100 * g.v / totV : null }));
       } else {
-        lignes = base.map(p => Object.assign({}, p, { nMag: (p.magasins || []).length }));
+        lignes = base.map(f => Object.assign({}, f, { nMag: f.magasins.length, part: totV > 0 ? 100 * f.v / totV : null }));
       }
       lignes.sort(trie);
       const max = Math.max(1, ...lignes.map(l => l.v));
       const n = lignes.length, LIM = 25, tout = !!S.rnTout || q !== '';
       const vues = lignes.slice(0, tout ? n : LIM);
       const ouvre = id => () => this.setState({ rnOuv: S.rnOuv === id ? null : id });
+      // La couleur suit le secteur, jamais son rang (palette validée : 7 teintes + « Autres »).
+      const PAL = ['#AD3442', '#C99A1E', '#0E8F80', '#D96A35', '#3A6CB8', '#5E8F2A', '#9157AE'];
+      const FIXE = { 'Pâtisserie': 0, 'Boulangerie': 1, 'Traiteur': 2, 'Viennoiserie': 3, 'Fêtes & Occasions': 4, 'Quiches': 5, 'Tartes': 6 };
+      const AUTRES = '#B9B2A8';
+      const parSect = {};
+      familles.forEach(f => { parSect[f.secteur] = (parSect[f.secteur] || 0) + f.v; });
+      const coulSect = {}; const pris = new Set(Object.keys(parSect).filter(s => FIXE[s] != null).map(s => FIXE[s])); const libres = PAL.map((c, i) => i).filter(i => !pris.has(i));
+      Object.keys(parSect).sort((a, b) => parSect[b] - parSect[a]).forEach(s => { if (FIXE[s] != null) { coulSect[s] = PAL[FIXE[s]]; } else if (libres.length) { coulSect[s] = PAL[libres.shift()]; } });
+      const coulDe = s => coulSect[s] || AUTRES;
+      // L'étiquette d'un bloc : le nom et la part s'ils tiennent (5,6 px par signe environ, jauge d'au moins 900 px), la part seule sinon, rien en dessous.
+      const etiq = (nom, part) => { const px = part * 9, pc = fP0(part), np = nom + ' · ' + pc; return np.length * 5.6 + 16 <= px ? np : (pc.length * 5.6 + 14 <= px ? pc : ''); };
+      const encre = hex => { const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#1c1a17' : '#ffffff'; };
+      const mVal = f => mesure === 'q' ? f.qEq : f.v;
+      const mTxt = v => mesure === 'q' ? fQ(Math.round(v)) + ' pièces' : fE(v);
+      // La jauge des secteurs : des blocs proportionnels, le reste plié dans « Autres » ; la part écrite dans le bloc quand elle tient.
+      const jauge = (items, seuil, maxN, autreLib, choisir, actif) => {
+        const tot = items.reduce((s, it) => s + it.val, 0);
+        if (tot <= 0) { return { blocs: [], legende: [], vide: true }; }
+        const tries = items.slice().sort((a, b) => b.val - a.val);
+        const gardes = tries.filter((it, i) => i < maxN && 100 * it.val / tot >= seuil && it.coul !== AUTRES);
+        const reste = tries.filter(it => !gardes.includes(it));
+        const blocs = gardes.map((it, i) => ({ nom: it.nom, part: 100 * it.val / tot, coul: it.coul, titre: it.nom + ' · ' + mTxt(it.val) + ' · ' + fP(100 * it.val / tot) + (it.sous ? ' · ' + it.sous : ''), go: choisir ? () => choisir(it.nom) : null, on: actif === it.nom, eteint: actif != null && actif !== it.nom }));
+        const rV = reste.reduce((s, it) => s + it.val, 0);
+        if (rV > 0) { blocs.push({ nom: autreLib + ' (' + reste.length + ')', part: 100 * rV / tot, coul: AUTRES, titre: reste.slice(0, 12).map(it => it.nom + ' ' + fP0(100 * it.val / tot)).join(' · ') + (reste.length > 12 ? ' …' : ''), go: null, on: false, eteint: actif != null }); }
+        blocs.forEach(b => { b.w = b.part.toFixed(2); b.lib = etiq(b.nom, b.part); b.encre = encre(b.coul); });
+        return { blocs, legende: blocs.map(b => ({ nom: b.nom, coul: b.coul, on: b.on })), vide: false };
+      };
+      const choixSect = s => this.setState({ rnSect: S.rnSect === s ? null : s, rnOuv: null, rnTout: false });
+      const jS = jauge(Object.keys(parSect).map(s => ({ nom: s, val: familles.filter(f => f.secteur === s).reduce((t, f) => t + mVal(f), 0), coul: coulDe(s) })), 1.5, 7, 'Autres secteurs', choixSect, sect);
+      const fil = [{ nom: 'Tout le réseau', go: sect ? () => this.setState({ rnSect: null, rnOuv: null }) : null }].concat(sect ? [{ nom: sect, coul: coulDe(sect), go: null }] : []);
+      const jauges = { mesure, fil, effacer: sect ? () => this.setState({ rnSect: null, rnOuv: null }) : null,
+        mesures: [['v', 'CA'], ['q', 'Pièces']].map(([k, nom]) => ({ nom, on: mesure === k, go: () => this.setState({ rnMesure: k }) })),
+        lignes: [{ lib: 'Secteurs', sous: mesure === 'q' ? 'en pièces entières équivalentes · cliquer pour filtrer' : 'cliquer un secteur pour filtrer les produits', j: jS }] };
+      const fmtTxt = l => l.formats.length > 1 || l.portion ? l.formats.map(x => x.lib === 'entière' ? fQ(x.q) + ' entière' + (x.q > 1 ? 's' : '') : fQ(x.q) + ' × ' + x.lib.replace('1/2', '½').replace('1/4', '¼').replace('1/3', '⅓')).join(' · ') : '';
       const rows = vues.map((l, i) => {
         const ouvert = S.rnOuv === l.id;
-        const r = { id: l.id, rang: i + 1, nom: l.nom, portion: !!l.portion, cat: vue === 'categories' ? [l.groupe, pl(l.refs, 'référence')].filter(Boolean).join(' · ') : [l.cat, l.groupe].filter((v, k, a) => v && a.indexOf(v) === k).join(' · '),
-          nMag: l.nMag + ' / ' + nVend, nMagTitre: vue === 'categories' ? '' : (l.magasins || []).map(x => (magNom[x.s] || x.s) + ' ' + fQ(x.q)).join(' · '),
-          pieces: fQ(l.q), prix: vue === 'categories' ? '' : fU(l.prix), ca: fE(l.v), part: fP(l.part), w: (100 * l.v / max).toFixed(1),
+        const r = { id: l.id, rang: i + 1, nom: l.nom, portion: vue !== 'categories' && !!l.portion, coul: coulDe(l.secteur),
+          cat: vue === 'categories' ? [l.secteur, pl(l.refs, 'produit')].filter(Boolean).join(' · ') : [l.cat, l.secteur].filter((v, k, a) => v && a.indexOf(v) === k).join(' · '),
+          formats: vue === 'categories' ? '' : fmtTxt(l),
+          nMag: l.nMag + ' / ' + nVend, nMagTitre: vue === 'categories' ? '' : l.magasins.map(x => (magNom[x.s] || x.s) + ' ' + fQ(Math.round(x.qEq * 10) / 10)).join(' · '),
+          pieces: l.portion && vue !== 'categories' ? fQ(Math.round(l.qEq)) : fQ(Math.round(l.qEq * 10) / 10), piecesSous: l.portion && vue !== 'categories' ? 'éq. entières' : '', piecesTitre: l.portion ? 'en équivalent pièce entière : ' + fmtTxt(l) : '',
+          prix: vue === 'categories' ? '' : fU(l.prix), prixTitre: l.portion ? 'CA ÷ pièces entières équivalentes' : '',
+          ca: fE(l.v), part: fP(l.part), w: (100 * l.v / max).toFixed(1),
           marge: l.m == null ? '?' : fE(l.m), margeTitre: l.m == null ? 'coût de recette inconnu partout' : '', taux: fP0(l.taux), tauxCoul: coulT(l.taux), coef: coef(l.taux),
           sans: l.nSans ? (vue === 'categories' ? pl(l.nSans, 'produit') + ' sans coût quelque part' : 'sans coût dans ' + pl(l.nSans, 'magasin')) : '',
-          entier: '', ouvert, ouvrir: ouvre(l.id), det: [] };
-        if (vue === 'portions') {
-          const e = parId[String(l.pid)];
-          r.entier = e ? 'pièce entière : ' + pl(e.q, 'vendue') + ' · ' + fE(e.v) : 'pas de pièce entière vendue';
-        }
+          entier: '', ouvert, ouvrir: ouvre(l.id), det: [], detMag: [] };
         if (ouvert) {
-          r.det = vue === 'categories'
-            ? l.prods.slice().sort(trie).slice(0, 15).map(p => ({ nom: p.nom, sous: pl((p.magasins || []).length, 'magasin'), pieces: fQ(p.q), prix: fU(p.prix), ca: fE(p.v), part: l.v > 0 ? fP0(100 * p.v / l.v) : '', marge: p.m == null ? '?' : fE(p.m), taux: fP0(p.taux), tauxCoul: coulT(p.taux) }))
-              .concat(l.prods.length > 15 ? [{ nom: 'et ' + pl(l.prods.length - 15, 'autre produit'), sous: '', pieces: '', prix: '', ca: '', part: '', marge: '', taux: '', tauxCoul: '', reste: true }] : [])
-            : (l.magasins || []).map(x => ({ nom: magNom[x.s] || x.s, sous: x.m == null ? 'sans coût de recette ici' : '', pieces: fQ(x.q), prix: x.q > 0 ? fU(x.v / x.q) : '—', ca: fE(x.v), part: l.v > 0 ? fP0(100 * x.v / l.v) : '',
-              marge: x.m == null ? '?' : fE(x.m), taux: x.m != null && x.v > 0 ? fP0(100 * x.m / x.v) : '', tauxCoul: coulT(x.m != null && x.v > 0 ? 100 * x.m / x.v : null) }));
+          const ligneDet = (nom, sous, x) => ({ nom, sous, pieces: fQ(Math.round(x.q * 10) / 10), prix: x.q > 0 ? fU(x.v / x.q) : '—', ca: fE(x.v), part: l.v > 0 ? fP0(100 * x.v / l.v) : '', marge: x.m == null ? '?' : fE(x.m), taux: x.m != null && x.v > 0 ? fP0(100 * x.m / x.v) : '', tauxCoul: coulT(x.m != null && x.v > 0 ? 100 * x.m / x.v : null) });
+          if (vue === 'categories') {
+            r.det = l.prods.slice().sort(trie).slice(0, 15).map(p => Object.assign(ligneDet(p.nom, p.portion ? fmtTxt(p) : pl(p.magasins.length, 'magasin'), { q: p.qEq, v: p.v, m: p.m }), { prix: fU(p.prix) }))
+              .concat(l.prods.length > 15 ? [{ nom: 'et ' + pl(l.prods.length - 15, 'autre produit'), sous: '', pieces: '', prix: '', ca: '', part: '', marge: '', taux: '', tauxCoul: '', reste: true }] : []);
+          } else {
+            if (l.formats.length > 1) { r.det = l.formats.map(x => ligneDet(x.lib === 'entière' ? 'Pièce entière' : 'Portion ' + x.lib.replace('1/2', '½').replace('1/4', '¼'), x.lib === 'entière' ? '' : '= ' + fQ(Math.round(x.q * x.fr * 10) / 10) + ' pièce' + (x.q * x.fr > 1 ? 's' : '') + ' entière' + (x.q * x.fr > 1 ? 's' : ''), x)); }
+            r.detMag = l.magasins.map(x => ligneDet(magNom[x.s] || x.s, x.m == null ? 'sans coût de recette ici' : '', { q: x.qEq, v: x.v, m: x.m }));
+          }
         }
         return r;
       });
-      const sel = q !== '' || vue === 'portions';
-      const sV = lignes.reduce((s, l) => s + l.v, 0), sQ = lignes.reduce((s, l) => s + l.q, 0);
-      const sM = lignes.reduce((s, l) => s + (l.m || 0), 0), sVC = lignes.reduce((s, l) => s + (l.m != null ? (l.vChiffre != null ? l.vChiffre : l.vC) || 0 : 0), 0);
+      const sel = q !== '' || vue === 'portions' || !!sect;
+      const sV = lignes.reduce((s, l) => s + l.v, 0), sQ = lignes.reduce((s, l) => s + l.qEq, 0);
+      const sM = lignes.reduce((s, l) => s + (l.m || 0), 0), sVC = lignes.reduce((s, l) => s + (l.m != null ? l.vChiffre || 0 : 0), 0);
       const T = P.totaux || {}, L = P.lecture || {};
       const manquent = (P.magasins || []).filter(m => m.joursManquants > 0 || m.instantanes > 0);
-      out.prod = { vue, tri, q, qBrut: String(S.rnQ || ''),
-        vues: [['produits', 'Produits'], ['categories', 'Catégories'], ['portions', 'Portions']].map(([k, nom]) => ({ nom: nom + (k === 'portions' && T.portions ? ' · ' + T.portions : ''), on: vue === k, go: () => this.setState({ rnVue: k, rnOuv: null }) })),
+      const nDiv = familles.filter(f => f.portion).length;
+      out.prod = { vue, tri, q, qBrut: String(S.rnQ || ''), jauges,
+        vues: [['produits', 'Produits'], ['categories', 'Catégories'], ['portions', 'Divisibles']].map(([k, nom]) => ({ nom: nom + (k === 'portions' && nDiv ? ' · ' + nDiv : ''), on: vue === k, go: () => this.setState({ rnVue: k, rnOuv: null }) })),
         tris: [['v', 'CA'], ['q', 'Pièces'], ['m', 'Marge brute']].map(([k, nom]) => ({ nom, on: tri === k, go: () => this.setState({ rnTri: k }) })),
         setQ: e => this.setState({ rnQ: e.target.value }),
-        rows, vide: !rows.length ? (vue === 'portions' ? 'Aucune portion vendue sur ' + perLib + (q ? ' pour « ' + S.rnQ + ' »' : '') + ' : les produits divisibles se sont vendus entiers.' : (q ? 'Aucun produit pour « ' + S.rnQ + ' ».' : 'Aucune vente de produit lue sur ' + perLib + '.')) : '',
-        plus: !tout && n > LIM ? { txt: 'Voir les ' + nf(n) + ' ' + (vue === 'categories' ? 'catégories' : (vue === 'portions' ? 'portions' : 'produits')), go: () => this.setState({ rnTout: true }) } : null,
+        rows, vide: !rows.length ? (vue === 'portions' ? 'Aucun produit vendu en portions sur ' + perLib + (q ? ' pour « ' + S.rnQ + ' »' : '') + '.' : (q ? 'Aucun produit pour « ' + S.rnQ + ' ».' : 'Aucune vente de produit lue sur ' + perLib + '.')) : '',
+        plus: !tout && n > LIM ? { txt: 'Voir les ' + nf(n) + ' ' + (vue === 'categories' ? 'catégories' : 'produits'), go: () => this.setState({ rnTout: true }) } : null,
         moins: S.rnTout && !q && n > LIM ? { txt: 'Revenir aux ' + LIM + ' premiers', go: () => this.setState({ rnTout: false, rnOuv: null }) } : null,
-        entNom: vue === 'categories' ? 'Catégorie' : (vue === 'portions' ? 'Portion' : 'Produit'),
-        total: { lib: sel ? 'Sélection' : 'Total réseau', sous: sel ? pl(n, vue === 'portions' ? 'portion' : 'ligne') + ' · ' + fP(totV > 0 ? 100 * sV / totV : null) + ' du CA produits' : pl(T.refs || 0, 'référence') + (T.portions ? ' dont ' + pl(T.portions, 'portion') : '') + ' · ' + pl(nVend, 'magasin'),
-          pieces: fQ(Math.round(sQ * 10) / 10), ca: fE(sV), marge: fE(sel ? sM : T.m), taux: fP0(sel ? (sVC > 0 ? 100 * sM / sVC : null) : T.taux), tauxCoul: coulT(sel ? (sVC > 0 ? 100 * sM / sVC : null) : T.taux) },
+        entNom: vue === 'categories' ? 'Catégorie' : 'Produit',
+        total: { lib: sel ? 'Sélection' : 'Total réseau', sous: sel ? pl(n, vue === 'categories' ? 'catégorie' : 'produit') + ' · ' + fP(totV > 0 ? 100 * sV / totV : null) + ' du CA produits' : pl(familles.length, 'produit') + (nDiv ? ' dont ' + nDiv + ' en portions' : '') + ' · ' + pl(nVend, 'magasin'),
+          pieces: fQ(Math.round(sQ)), ca: fE(sV), marge: fE(sel ? sM : T.m), taux: fP0(sel ? (sVC > 0 ? 100 * sM / sVC : null) : T.taux), tauxCoul: coulT(sel ? (sVC > 0 ? 100 * sM / sVC : null) : T.taux) },
         ca: fE(T.ca), tauxReseau: T.taux != null ? fP(T.taux) : '—', tauxCoul: coulT(T.taux),
         tauxSous: T.vChiffre != null && T.ca > 0 ? 'marge brute sur ' + fP0(100 * T.vChiffre / T.ca) + ' du CA chiffré' : '',
-        sousTitre: perLib + ' · ' + pl(nVend, 'magasin') + ' · ' + pl(T.refs || 0, 'référence') + ' vendue' + ((T.refs || 0) > 1 ? 's' : ''),
+        sousTitre: perLib + ' · ' + pl(nVend, 'magasin') + ' · ' + pl(familles.length, 'produit') + ' vendu' + (familles.length > 1 ? 's' : ''),
         lecture: manquent.length ? 'Lecture partielle : ' + manquent.map(m => m.nom + ' ' + (m.joursLus - m.instantanes) + '/' + m.jours + ' jour' + (m.jours > 1 ? 's' : '') + (m.instantanes ? ' (+' + m.instantanes + ' en relevé ancien)' : '')).join(' · ') + ' — les tickets se relèvent au cron, chaque heure.' : '',
-        note: 'CA = ventes TTC des tickets, ligne par ligne ; marge brute = ventes − quantité × coût de la recette du magasin (portion : la fraction du coût de la pièce). Une portion (½, ¼) est une ligne à part, comme au dashboard magasin. Les bundles restent dans leur catégorie : la carte « Promotions et bundles » les détaille. La somme des produits peut différer du CA du tableau : lignes de caisse sans produit, remises sur ticket.'
+        note: 'CA = ventes TTC des tickets, ligne par ligne ; marge brute = ventes − quantité × coût de la recette du magasin (portion : la fraction du coût de la pièce). Un produit et ses portions (½, ¼) ne font qu’une ligne : les pièces se comptent en équivalent pièce entière (12 × ½ = 6), le détail s’ouvre d’un clic. Les bundles restent dans leur catégorie : la carte « Promotions et bundles » les détaille.'
           + (L.secondes != null ? ' Calcul : ' + nf(L.secondes, 1) + ' s' + (L.ticketsLus ? ', ' + pl(L.ticketsLus, 'ticket') + ' lu' + (L.ticketsLus > 1 ? 's' : '') : '') + '.' : '') };
       // Les produits sans coût, magasin par magasin.
       const scOuv = S.rnScOuv || {};

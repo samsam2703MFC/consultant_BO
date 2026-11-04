@@ -90,7 +90,7 @@
     cat: null, catErreur: null, catCharge: false,
     v25: null, v25Charge: false, pcListe: null, pcErreur: null, pcCharge: false, pcFiltre: '',
     api: { ouvert: {}, sondes: {}, chemins: {} },
-    f: { q: '', categorie: '', vue: 'tous', fq: '', pq: '', rq: '', mq: '', aFam: '', aStatut: '', aQ: '', aDemande: false, mvUrl: '', mvTitre: '' },
+    f: { q: '', categorie: '', vue: 'tous', fq: '', pq: '', rq: '', mq: '', aFam: '', aStatut: '', aQ: '', aDemande: false, mvUrl: '', mvTitre: '', msUrl: '', msTitre: '', msEtape: '' },
     menu: false,
     tablette: false,
     modale: null,   // fenêtre de saisie ouverte : {type, …}
@@ -1539,8 +1539,203 @@
     var f = code && formationsFo() ? formationsFo().filter(function (x) { return x.code === code; })[0] : null;
     fil.push([f ? f.code + ' · ' + f.nom : (code || 'Formation'), null]);
     if (!code) return { titre: 'Manuel opératoire', corps: filAriane(fil) + '<p class="error">Formation inconnue.</p>' };
-    var v = ficheFo(code, true);
+    var v = { corps: ficheFoLecture(code, depuis || 'formation') };
     return { titre: f ? f.nom : code, kicker: S.mn ? 'Formation · ' + NOM_PARTIE[partieFo(code)] : 'Formation', corps: filAriane(fil) + v.corps };
+  }
+
+  /* ── La fiche d'une formation dans le manuel : « une fiche à lire » (proposition A, 1er nov. 2026)
+   * Une colonne de lecture ; un clic sur une compétence, le programme, un support ou une étape de
+   * validation ouvre une fenêtre avec le détail : vidéos, PDF et documents intégrés. Les supports
+   * d'une formation se rangent dans le cockpit (PATCH /formation/manuel/formation/{FO} {supports}),
+   * pour la formation entière ou pour une étape ; les ressources du panel rattachées à ses
+   * compétences s'y ajoutent d'office. */
+  var GENRES = { video: ['▶', 'Vidéo'], pdf: ['PDF', 'PDF'], document: ['DOC', 'Document'], diaporama: ['DIA', 'Présentation'], tableur: ['TAB', 'Tableur'], fichier: ['FIC', 'Fichier'], lien: ['↗', 'Lien'] };
+
+  /** Une adresse → ce qu'on affiche : vidéo, PDF, document Google, fichier Drive, ou un lien. */
+  function supportDe(url) {
+    var u = String(url || '').trim(), m;
+    if (!/^https:\/\//i.test(u)) return null;
+    var v = videoDe(u, false);
+    if (v) return { genre: 'video', cle: v.cle, v: v, url: u };
+    if ((m = u.match(/^https:\/\/docs\.google\.com\/(document|presentation|spreadsheets)\/d\/([A-Za-z0-9_-]{20,})/i))) {
+      return { genre: m[1] === 'presentation' ? 'diaporama' : m[1] === 'spreadsheets' ? 'tableur' : 'document', cle: 'gdoc:' + m[2], src: 'https://docs.google.com/' + m[1] + '/d/' + m[2] + '/preview', url: u };
+    }
+    if ((m = u.match(/^https:\/\/drive\.google\.com\/(?:file\/d\/|open\?id=)([A-Za-z0-9_-]{20,})/i))) return { genre: 'fichier', cle: 'gd:' + m[1], src: 'https://drive.google.com/file/d/' + m[1] + '/preview', url: u };
+    if (/^https:\/\/[^\s"'<>]+\.pdf(?:[?#][^\s"'<>]*)?$/i.test(u)) return { genre: 'pdf', cle: 'pdf:' + u, src: u, url: u };
+    return { genre: 'lien', cle: 'l:' + u, url: u };
+  }
+
+  /** Le lecteur d'un support, dans la fenêtre. */
+  function lecteurSupport(sp, titre) {
+    if (sp.genre === 'video') return cadreVideo(sp.v, null);
+    var ouvrir = '<p class="fm-embed__ouvrir"><a class="filter" target="_blank" rel="noopener noreferrer" href="' + esc(sp.url) + '">' + (sp.genre === 'lien' ? 'Ouvrir le lien ↗' : 'Ouvrir en plein écran ↗') + '</a></p>';
+    if (sp.genre === 'lien') return '<p class="muted" style="word-break:break-all">' + esc(sp.url) + '</p>' + ouvrir;
+    return '<div class="fm-video fm-embed"><iframe src="' + esc(sp.src) + '" title="' + esc(titre || GENRES[sp.genre][1]) + '" loading="lazy" allow="fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>' + ouvrir;
+  }
+
+  function foParCode(code) { var l = formationsFo(); return l ? l.filter(function (x) { return x.code === code; })[0] || null : null; }
+  function rubriqueFo(code) {
+    var r = null;
+    ((S.v25 && S.v25.manuel) || []).forEach(function (d) { (d.sousCategories || []).forEach(function (sc) { if (!r && (sc.formations || []).indexOf(code) >= 0) r = { domaine: d.nom, rubrique: sc.nom, description: sc.description }; }); });
+    return r;
+  }
+  function blocFo(code) {
+    var r = null;
+    ((S.v25 && S.v25.plans) || []).forEach(function (pl2) { (pl2.blocs || []).forEach(function (b) { if (!r && (b.formations || []).indexOf(code) >= 0) r = { plan: pl2.nom, bloc: b }; }); });
+    return r;
+  }
+  /** Les étapes de validation : les évaluations « [FO-xx] » du panel, sinon les cinq étapes génériques. */
+  function etapesFo(x) {
+    if (x.evaluations.length) return x.evaluations.map(function (t) { return { nom: sansCode(t.nom), description: t.description || '', id: t.id }; });
+    return ['Théorie', 'Pratique', 'Mise en situation', 'Validation', 'Re-évaluation J+30'].map(function (n2) { return { nom: n2, description: '', id: null }; });
+  }
+  /** La méthode de vérification du panel, en clair (« self », « instructor »). */
+  var VERIF = { self: 'Auto-évaluation par la personne, confirmée par son responsable.', instructor: 'Validée par le formateur, en mise en situation.' };
+  /** Les compétences que la formation enseigne : celles du panel, puis celles du référentiel qu'il n'a pas. */
+  function competencesFo(x) {
+    var api = Array.from(x.comps).map(function (id) { return I.comp.get(id); }).filter(Boolean).sort(function (a, b) { return a.nom.localeCompare(b.nom, 'fr'); });
+    // Le panel d'abord, puis le référentiel pour ce que le panel n'a pas encore (même nom = une seule ligne).
+    var lues = api.map(function (c) { return { id: c.id, nom: c.nom, description: c.description || '', verification: VERIF[c.verification] || c.verification || '', lien: c.lien || '', niveau: null }; });
+    var deja = {};
+    lues.forEach(function (c) { deja[norm(c.nom)] = 1; });
+    return lues.concat(((S.v25 && S.v25.competences) || []).filter(function (c) { return c.formation === x.code && !deja[norm(c.nom)]; })
+      .map(function (c) { return { id: null, code: c.code, nom: c.nom, description: c.description || '', verification: '', lien: '', niveau: c.niveau || null }; }));
+  }
+  /** Les supports : ceux rangés dans le cockpit (formation entière ou étape), puis ceux du panel (ressources et supports des compétences). */
+  function supportsFo(x) {
+    var out = [], vus = {};
+    function ajouter(url, titre, etape, i) {
+      var sp = supportDe(url);
+      if (!sp) return;
+      var k = sp.cle + '|' + (etape == null ? '' : etape);
+      if (vus[k]) return;
+      vus[k] = 1;
+      out.push({ sp: sp, titre: titre || GENRES[sp.genre][1], etape: etape == null ? null : etape, i: i });
+    }
+    ((S.mn && S.mn.supports && S.mn.supports[x.code]) || []).forEach(function (s2, i) { ajouter(s2.url, s2.titre, s2.etape, i); });
+    competencesFo(x).forEach(function (c) {
+      if (c.lien) ajouter(c.lien, 'Support — ' + c.nom, null, null);
+      var l = c.id != null ? liensDe(c.id) : null;
+      (l ? l.ressources : []).forEach(function (r0) { var r = I.ressource.get(r0.id) || {}; if (r.url) ajouter(r.url, r.titre || r0.nom, null, null); });
+    });
+    return out;
+  }
+  function procsFo(x) {
+    var vus = {}, out = [];
+    competencesFo(x).forEach(function (c) { var l = c.id != null ? liensDe(c.id) : null; (l ? l.procedures : []).forEach(function (p0) { if (!vus[p0.id]) { vus[p0.id] = 1; out.push(I.procedure.get(p0.id) || { id: p0.id, titre: p0.nom }); } }); });
+    return out;
+  }
+  function tuileSupport(code, t) {
+    var g = GENRES[t.sp.genre];
+    return '<button type="button" class="fm-fa-sup" data-act="mn-voir" data-k="support" data-code="' + esc(code) + '" data-cle="' + esc(t.sp.cle + '|' + (t.etape == null ? '' : t.etape)) + '">' +
+      '<span class="fm-fa-sup__g fm-fa-sup__g--' + t.sp.genre + '">' + esc(g[0]) + '</span><span class="fm-fa-sup__t"><strong>' + esc(t.titre) + '</strong><span class="muted">' + esc(g[1]) + (t.etape != null ? ' · étape ' + (t.etape + 1) : '') + '</span></span></button>';
+  }
+
+  function ficheFoLecture(code, partie) {
+    if (!S.v25) return S.v25Erreur ? '<p class="error">' + esc(S.v25Erreur) + '</p>' : attente('Lecture de la formation…');
+    var x = foParCode(code);
+    if (!x) return '<p class="error">Formation ' + esc(code) + ' inconnue.</p>';
+    var v = x.v25 || {}, rub = rubriqueFo(code), bl = blocFo(code), et = etapesFo(x), comps = competencesFo(x), sups = S.mn ? supportsFo(x) : [], procs = procsFo(x);
+    var ob = obligatoirePour(x), noms = (S.v25 && S.v25.nomsPanel) || {};
+    var reco = Object.keys(v.attendu || {}).filter(function (k) { return v.attendu[k] === 'R'; }).map(function (k) { return noms[k] || k; });
+    var nom = x.nom.replace(/^Formation\s+/, '');
+    var role = function (r) { return String(r || '').replace(/\s*\(.*\)\s*$/, '').trim(); };
+    var h = '<article class="fm-fa">';
+    h += '<div class="fm-fa__tete"><span class="fm-code">' + esc(code) + '</span>' + (rub ? ' <span class="fm-fa__rub">' + esc(rub.domaine + ' › ' + rub.rubrique) + '</span>' : '') +
+      '<h2>' + esc(nom) + '</h2>' + (rub && rub.description ? '<p class="fm-fa__lead">' + esc(rub.description) + '</p>' : '') + '</div>';
+    h += '<div class="fm-fa__faits"><div><b>' + esc(v.frequence || '—') + '</b><span>fréquence</span></div><div><b>' + pl(et.length, 'étape') + '</b><span>pour la valider</span></div>' +
+      '<div><b>' + esc(role(v.executant) && role(v.executant) !== '—' ? role(v.executant) : '—') + '</b><span>la suit</span></div><div><b>' + esc(role(v.controleur) || '—') + '</b><span>la valide</span></div></div>';
+    h += '<div class="fm-fa__actions">' + (procs.length ? '<a class="filter is-on" href="#/manuel/procedure/' + procs[0].id + '/partie/' + partie + '">Ouvrir la procédure' + (v.procedure ? ' ' + esc(v.procedure.split(' — ')[0]) : '') + '</a>' :
+      (v.procedure ? '<span class="fm-fa__mo">Manuel opératoire ' + esc(v.procedure.split(' — ')[0]) + '</span>' : '')) +
+      '<button type="button" class="filter" data-act="imprimer">Imprimer</button></div>';
+    var n2 = 0;
+    var sec = function (titre, corps) { n2++; return '<section class="fm-fa__sec"><h3><i>' + n2 + '</i>' + esc(titre) + '</h3>' + corps + '</section>'; };
+    if (comps.length) {
+      h += sec('Ce que vous saurez faire', '<ul class="fm-fa__liste">' + comps.map(function (c, i) {
+        return '<li><button type="button" class="fm-fa__clic" data-act="mn-voir" data-k="comp" data-code="' + esc(code) + '" data-i="' + i + '"><strong>' + esc(c.nom) + '</strong>' +
+          (c.description ? '<span>' + esc(court(c.description, 160)) + '</span>' : '') + (c.niveau ? '<em>Niveau attendu : ' + esc(c.niveau.toLowerCase()) + '</em>' : '') + '<b class="fm-fa__plus">›</b></button></li>';
+      }).join('') + '</ul>');
+    }
+    if (bl && bl.bloc.contenu && bl.bloc.contenu.length) {
+      h += sec('Au programme', '<button type="button" class="fm-fa__clic fm-fa__prog" data-act="mn-voir" data-k="plan" data-code="' + esc(code) + '"><ul>' +
+        bl.bloc.contenu.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul><span class="muted">' + esc(bl.plan) + ' · bloc ' + esc(bl.bloc.code) + ' ' + esc(bl.bloc.nom) + '</span><b class="fm-fa__plus">›</b></button>');
+    }
+    var generaux = sups.filter(function (t) { return t.etape == null; });
+    if (generaux.length || (!S.tablette && S.mn)) {
+      var c2 = generaux.length ? '<div class="fm-fa__sups">' + generaux.map(function (t) { return tuileSupport(code, t); }).join('') + '</div>' : '<p class="muted">Aucun support pour l’instant.</p>';
+      if (!S.tablette && S.mn) {
+        c2 += '<div class="fm-videos__ajout fm-fa__ajout"><input type="url" class="fm-search" placeholder="Adresse : YouTube, Vimeo, PDF, Google Docs ou Drive…" data-vinput="msUrl" value="' + esc(S.f.msUrl || '') + '" />' +
+          '<input type="text" class="fm-search" maxlength="120" placeholder="Titre" data-vinput="msTitre" value="' + esc(S.f.msTitre || '') + '" />' +
+          '<select class="fm-select" data-vinput="msEtape"><option value="">Toute la formation</option>' + et.map(function (e2, i) { return '<option value="' + i + '"' + (String(S.f.msEtape) === String(i) ? ' selected' : '') + '>Étape ' + (i + 1) + ' · ' + esc(e2.nom) + '</option>'; }).join('') + '</select>' +
+          bouton('mn-sup', 'mn-sup-ajout', '+ Ajouter', ' data-code="' + esc(code) + '"') + '</div>';
+      }
+      h += sec('Matériel didactique', c2);
+    }
+    h += sec('Comment on la valide', '<ol class="fm-fa__etapes">' + et.map(function (e2, i) {
+      var nb = sups.filter(function (t) { return t.etape === i; }).length;
+      return '<li><button type="button" class="fm-fa__clic" data-act="mn-voir" data-k="etape" data-code="' + esc(code) + '" data-i="' + i + '"><span class="fm-fa__n">' + (i + 1) + '</span><span><strong>' + esc(e2.nom) + '</strong>' +
+        (e2.description ? '<span>' + esc(court(e2.description, 140)) + '</span>' : '') + (nb ? '<em>' + pl(nb, 'support') + '</em>' : '') + '</span><b class="fm-fa__plus">›</b></button></li>';
+    }).join('') + '</ol>');
+    if (bl && bl.bloc.checklist && bl.bloc.checklist.length) {
+      h += sec('En boutique, ensuite', '<ul class="fm-fa__check">' + bl.bloc.checklist.map(function (c) { return '<li><span class="fm-fa__ck"></span>' + esc(c) + '</li>'; }).join('') + '</ul>');
+    }
+    var pour = ob.api.concat(ob.v25);
+    if (pour.length || reco.length) {
+      h += sec('Pour qui', '<p class="fm-fa__pour">' + pour.map(function (p2) { return '<span class="fm-fa__poste">' + esc(p2) + '</span>'; }).join('') +
+        reco.map(function (p2) { return '<span class="fm-fa__poste fm-fa__poste--r">' + esc(p2) + '</span>'; }).join('') + '</p>' + (reco.length ? '<p class="muted fm-small">Pointillés : recommandée.</p>' : ''));
+    }
+    return h + '</article>';
+  }
+
+  /** La fenêtre de détail : une compétence, le programme, un support, ou une étape de validation. */
+  function fenetreManuel(m) {
+    var x = foParCode(m.code);
+    if (!x) return '';
+    var titre = '', sous = '', corps = '';
+    var sups = supportsFo(x), et = etapesFo(x), v = x.v25 || {};
+    if (m.k === 'support') {
+      var t = sups.filter(function (s2) { return s2.sp.cle + '|' + (s2.etape == null ? '' : s2.etape) === m.cle; })[0];
+      if (!t) return '';
+      titre = t.titre; sous = GENRES[t.sp.genre][1] + (t.etape != null ? ' · étape ' + (t.etape + 1) + ' · ' + et[t.etape].nom : '') + ' · ' + x.code;
+      corps = lecteurSupport(t.sp, t.titre);
+      if (!S.tablette && t.i != null) corps += '<p style="margin-top:12px">' + bouton('mn-sup', 'mn-sup-retirer', 'Retirer ce support', ' data-code="' + esc(m.code) + '" data-i="' + t.i + '"') + '</p>';
+    } else if (m.k === 'etape') {
+      var e2 = et[m.i];
+      if (!e2) return '';
+      titre = (m.i + 1) + ' · ' + e2.nom; sous = x.code + ' · ' + x.nom.replace(/^Formation\s+/, '');
+      corps = e2.description ? '<div class="fm-rich fm-mnf__texte">' + riche(e2.description) + '</div>' : '<p class="muted fm-mnf__texte">Cette étape n’est pas encore décrite dans le panel.</p>';
+      var iVal = -1;
+      et.forEach(function (z, k) { if (iVal < 0 && /valid/i.test(z.nom)) iVal = k; });
+      if (iVal < 0) iVal = et.length - 1;
+      if (v.controleur && m.i === iVal) corps += '<p class="fm-mnf__qui">Validée par <b>' + esc(String(v.controleur).replace(/\s*\(.*\)\s*$/, '')) + '</b></p>';
+      var se = sups.filter(function (s2) { return s2.etape === m.i; });
+      corps += se.length ? se.map(function (s2) { return '<div class="fm-mnf__sup"><h4>' + esc(s2.titre) + '</h4>' + lecteurSupport(s2.sp, s2.titre) + '</div>'; }).join('') :
+        (S.tablette ? '' : '<p class="muted">Aucun support pour cette étape : ajoutez-en dans « Matériel didactique » en choisissant l’étape.</p>');
+    } else if (m.k === 'comp') {
+      var c = competencesFo(x)[m.i];
+      if (!c) return '';
+      titre = c.nom; sous = 'Compétence' + (c.niveau ? ' · niveau ' + c.niveau.toLowerCase() : '') + ' · ' + x.code;
+      corps = c.description ? '<div class="fm-rich fm-mnf__texte">' + riche(c.description) + '</div>' : '';
+      if (c.verification) corps += '<h4>Comment c’est vérifié</h4><div class="fm-rich">' + riche(c.verification) + '</div>';
+      var l = c.id != null ? liensDe(c.id) : null;
+      if (l && l.procedures.length) corps += '<h4>Procédures</h4><ul class="fm-mnf__liens">' + l.procedures.map(function (p0) { var p1 = I.procedure.get(p0.id) || {}; return '<li><a href="#/manuel/procedure/' + p0.id + '" data-act="modale-fermer">' + esc(p1.titre || p0.nom) + ' ›</a></li>'; }).join('') + '</ul>';
+      var cs = [];
+      if (c.lien) cs.push({ sp: supportDe(c.lien), titre: 'Support de la compétence' });
+      (l ? l.ressources : []).forEach(function (r0) { var r = I.ressource.get(r0.id) || {}; if (r.url && supportDe(r.url)) cs.push({ sp: supportDe(r.url), titre: r.titre || r0.nom }); });
+      cs.filter(function (z) { return z.sp; }).forEach(function (z) { corps += '<div class="fm-mnf__sup"><h4>' + esc(z.titre) + '</h4>' + lecteurSupport(z.sp, z.titre) + '</div>'; });
+      if (!corps) corps = '<p class="muted">Pas de détail pour cette compétence.</p>';
+    } else if (m.k === 'plan') {
+      var bl = blocFo(m.code);
+      if (!bl) return '';
+      titre = bl.bloc.code + ' · ' + bl.bloc.nom; sous = bl.plan;
+      corps = '<h4>Au programme</h4><ul class="fm-mnf__liste">' + bl.bloc.contenu.map(function (z) { return '<li>' + esc(z) + '</li>'; }).join('') + '</ul>';
+      if (bl.bloc.kpis && bl.bloc.kpis.length) corps += '<h4>Ce qu’on mesure</h4><ul class="fm-mnf__liste">' + bl.bloc.kpis.map(function (z) { return '<li>' + esc(z) + '</li>'; }).join('') + '</ul>';
+      var autres = (bl.bloc.formations || []).filter(function (c2) { return c2 !== m.code; });
+      if (autres.length) corps += '<h4>Dans le même bloc</h4><ul class="fm-mnf__liens">' + autres.map(function (c2) { var f = foParCode(c2); return '<li><a href="#/manuel/formation/' + c2 + '" data-act="modale-fermer"><span class="fm-code">' + c2 + '</span> ' + esc(f ? f.nom.replace(/^Formation\s+/, '') : c2) + ' ›</a></li>'; }).join('') + '</ul>';
+    }
+    return '<div class="confirm fm-mnf-fond" data-act="modale-fond"><div class="confirm__box card fm-modale fm-mnf" role="dialog" aria-modal="true" aria-label="' + esc(titre) + '">' +
+      '<div class="fm-mnf__tete"><div><p class="fm-mnf__sous">' + esc(sous) + '</p><h3>' + esc(titre) + '</h3></div><button type="button" class="filter fm-mnf__x" data-act="modale-fermer" aria-label="Fermer">✕</button></div>' +
+      '<div class="fm-mnf__corps">' + corps + '</div>' + (m.erreur ? '<p class="error">' + esc(m.erreur) + '</p>' : '') + '</div></div>';
   }
 
   function nbVideosAjoutees(id) { var r = reglageProc(id); return r && r.videos ? r.videos.length : 0; }
@@ -1653,12 +1848,12 @@
   /** Une vidéo en cours (cadre touché, fichier qui joue) : on ne redessine pas la page sous elle. */
   function videoEnCours() {
     var a = document.activeElement;
-    if (a && a.tagName === 'IFRAME' && a.closest && a.closest('.fm-video')) return true;
+    if (a && a.tagName === 'IFRAME' && a.closest && a.closest('.fm-video, .fm-embed')) return true;
     return Array.prototype.some.call(document.querySelectorAll('.fm-video video'), function (v) { return !v.paused && !v.ended; });
   }
 
   function majManuel(r) {
-    if (!S.mn) S.mn = { procedures: {}, formations: {}, formationsDefaut: {} };
+    if (!S.mn) S.mn = { procedures: {}, formations: {}, formationsDefaut: {}, supports: {} };
     S.mn.procedures[r.id] = { partie: r.partie, videos: r.videos || [] };
   }
 
@@ -1963,6 +2158,7 @@
   function fenetre() {
     var m = S.modale;
     if (!m) return '';
+    if (m.type === 'mn') return fenetreManuel(m);
     var titre = '', corps = '', actions = '<button type="button" class="filter" data-act="modale-fermer">' + (m.type === 'confirmer' || m.type === 'competence' || m.type === 'poste' ? 'Annuler' : 'Fermer') + '</button>';
     var q = norm(m.q);
     var recherche = function (ph) { return '<input class="fm-search fm-modale__q" type="search" placeholder="' + esc(ph) + '" data-minput="q" value="' + esc(m.q || '') + '" />'; };
@@ -2095,7 +2291,7 @@
     }
     if ((e === 'manuel' || e === 'procedures' || e === 'formations') && !S.mn && !S.mnCharge && !S.mnErreur) {
       S.mnCharge = true;
-      lire('/formation/manuel', 30000).then(function (d) { S.mn = { procedures: d.procedures || {}, formations: d.formations || {}, formationsDefaut: d.formationsDefaut || {} }; S.mnCharge = false; rendre(true); },
+      lire('/formation/manuel', 30000).then(function (d) { S.mn = { procedures: d.procedures || {}, formations: d.formations || {}, formationsDefaut: d.formationsDefaut || {}, supports: d.supports || {} }; S.mnCharge = false; rendre(true); },
         function (er) { S.mnErreur = er.message; S.mnCharge = false; rendre(true); });
     }
     if (e === 'procedures' && arg(0) != null) chargerUn(S.procedures, arg(0), '/formation/procedure?id=' + arg(0));
@@ -2283,6 +2479,31 @@
         if (!S.mn.formations) S.mn.formations = {};
         if (r.partie) S.mn.formations[r.code] = r.partie; else delete S.mn.formations[r.code];
         return fv ? fcode + ' rangée dans « ' + NOM_PARTIE[fv] + ' ».' : fcode + ' reprend sa partie par défaut.';
+      }, 'Le cockpit n’a pas enregistré');
+      return;
+    }
+    if (act === 'mn-voir') {
+      S.modale = { type: 'mn', k: t.getAttribute('data-k'), code: t.getAttribute('data-code'), i: +t.getAttribute('data-i'), cle: t.getAttribute('data-cle') };
+      rendre(true);
+      return;
+    }
+    if (act === 'mn-sup-ajout' || act === 'mn-sup-retirer') {
+      var scode = t.getAttribute('data-code'), sl = ((S.mn && S.mn.supports && S.mn.supports[scode]) || []).slice();
+      if (act === 'mn-sup-ajout') {
+        var surl = (S.f.msUrl || '').trim();
+        if (!supportDe(surl)) { flash('error', 'Adresse non reconnue : elle doit commencer par https://.'); rendre(true); return; }
+        if (sl.length >= 20) { flash('error', 'Vingt supports au plus par formation.'); rendre(true); return; }
+        sl.push({ url: surl, titre: (S.f.msTitre || '').trim(), etape: S.f.msEtape === '' || S.f.msEtape == null ? null : +S.f.msEtape });
+      } else {
+        sl.splice(+t.getAttribute('data-i'), 1);
+      }
+      var fermer = act === 'mn-sup-retirer';
+      ecrire('mn-sup', 'PATCH', '/formation/manuel/formation/' + encodeURIComponent(scode), { supports: sl }, function (r) {
+        if (!S.mn.supports) S.mn.supports = {};
+        S.mn.supports[r.code] = r.supports || [];
+        if (fermer) S.modale = null;
+        if (act === 'mn-sup-ajout') { S.f.msUrl = ''; S.f.msTitre = ''; S.f.msEtape = ''; }
+        return act === 'mn-sup-ajout' ? 'Support ajouté à ' + r.code + '.' : 'Support retiré.';
       }, 'Le cockpit n’a pas enregistré');
       return;
     }

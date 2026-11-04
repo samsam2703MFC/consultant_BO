@@ -1221,10 +1221,13 @@ function mnClassement(): array
 function ep_formation_manuel(): array
 {
     ensureManuelFormations();
-    $reglees = [];
-    foreach (Db::rows('SELECT code, partie FROM ceo_manuel_formation') as $r) { if (($q = mnPartie($r['partie'])) !== null) { $reglees[(string) $r['code']] = $q; } }
+    $reglees = []; $supports = [];
+    foreach (Db::rows('SELECT code, partie, supports FROM ceo_manuel_formation') as $r) {
+        if (($q = mnPartie($r['partie'])) !== null) { $reglees[(string) $r['code']] = $q; }
+        if (($sp = mnSupports(json_decode((string) $r['supports'], true))) !== []) { $supports[(string) $r['code']] = $sp; }
+    }
     return ['parties' => MN_PARTIES, 'procedures' => (object) mnClassement(),
-        'formationsDefaut' => (object) mnFormationsDefaut(), 'formations' => (object) $reglees];
+        'formationsDefaut' => (object) mnFormationsDefaut(), 'formations' => (object) $reglees, 'supports' => (object) $supports];
 }
 
 /**
@@ -1270,10 +1273,40 @@ function ensureManuelFormations(): void
     $fait = true;
     Db::exec('CREATE TABLE IF NOT EXISTS ceo_manuel_formation ('
         . 'code VARCHAR(8) NOT NULL PRIMARY KEY,'    // FO-01…
-        . 'partie VARCHAR(16) NOT NULL,'
+        . 'partie VARCHAR(16) NULL,'                 // null = répartition par défaut
+        . 'supports TEXT NULL,'                      // JSON [{url, titre, etape}] : vidéos, PDF, documents
         . 'maj_le DATETIME NOT NULL,'
         . 'par VARCHAR(120) NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Table créée le 1er nov. 2026 sans supports, la partie obligatoire.
+    try { Db::exec('ALTER TABLE ceo_manuel_formation ADD COLUMN supports TEXT NULL AFTER partie'); } catch (Throwable $e) { /* déjà là */ }
+    try { Db::exec('ALTER TABLE ceo_manuel_formation MODIFY partie VARCHAR(16) NULL'); } catch (Throwable $e) { /* déjà ainsi */ }
+}
+
+/**
+ * Les supports d'une formation (vidéos, PDF, documents), propres : https seulement, vingt au
+ * plus, sans doublon (même adresse et même étape), titre de 120 caractères au plus, étape =
+ * index de l'étape de validation (0 à 9) ou null (la formation entière).
+ *
+ * @return list<array{url:string,titre:string,etape:?int}>
+ */
+function mnSupports(mixed $l): array
+{
+    $out = []; $vus = [];
+    foreach (is_array($l) ? $l : [] as $v) {
+        if (!is_array($v)) { continue; }
+        $url = trim((string) ($v['url'] ?? ''));
+        if ($url === '' || mb_strlen($url) > 500 || !preg_match('#^https://[^\s<>"\']+$#i', $url)) { continue; }
+        $et = $v['etape'] ?? null;
+        $et = is_int($et) || (is_string($et) && preg_match('/^\d$/', $et)) ? (int) $et : null;
+        if ($et !== null && ($et < 0 || $et > 9)) { $et = null; }
+        $k = $url . '|' . $et;
+        if (isset($vus[$k])) { continue; }
+        $vus[$k] = true;
+        $out[] = ['url' => $url, 'titre' => trim(mb_substr((string) ($v['titre'] ?? ''), 0, 120)), 'etape' => $et];
+        if (count($out) >= 20) { break; }
+    }
+    return $out;
 }
 
 /** La répartition par défaut : [code FO => partie], les parties inconnues écartées. */
@@ -1287,19 +1320,37 @@ function mnFormationsDefaut(?string $fichier = null): array
     return $out;
 }
 
-/** PATCH /formation/manuel/formation/{FO} {partie | null} — null = revenir à la répartition par défaut. */
+/**
+ * PATCH /formation/manuel/formation/{FO} {partie?: cle | null, supports?: [{url, titre, etape}]} —
+ * ranger la formation (null = répartition par défaut) et/ou remplacer ses supports. Clé absente =
+ * inchangée. La ligne disparaît quand il ne reste ni partie ni support.
+ */
 function wr_formation_manuel_formation(string $code): array
 {
     if (!preg_match('/^FO-\d{1,3}$/', $code)) { return fmRefus(422, 'code de formation attendu (FO-01…)'); }
     $b = fmCorps();
-    if (!array_key_exists('partie', $b)) { return fmRefus(422, 'partie attendue'); }
-    $p = $b['partie'] === null || $b['partie'] === '' ? null : mnPartie($b['partie']);
-    if ($b['partie'] !== null && $b['partie'] !== '' && $p === null) { return fmRefus(422, 'partie inconnue : ' . implode(', ', MN_PARTIES)); }
+    if (!array_key_exists('partie', $b) && !array_key_exists('supports', $b)) { return fmRefus(422, 'rien à changer : partie ou supports'); }
+    if (array_key_exists('partie', $b) && $b['partie'] !== null && $b['partie'] !== '' && mnPartie($b['partie']) === null) {
+        return fmRefus(422, 'partie inconnue : ' . implode(', ', MN_PARTIES));
+    }
     ensureManuelFormations();
-    if ($p === null) { Db::exec('DELETE FROM ceo_manuel_formation WHERE code = ?', [$code]); }
-    else { Db::exec('INSERT INTO ceo_manuel_formation (code, partie, maj_le) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE partie = VALUES(partie), maj_le = NOW()', [$code, $p]); }
+    $avant = Db::row('SELECT partie, supports FROM ceo_manuel_formation WHERE code = ?', [$code]);
+    $p = array_key_exists('partie', $b) ? mnPartie($b['partie']) : mnPartie($avant['partie'] ?? null);
+    $sp = array_key_exists('supports', $b) ? mnSupports($b['supports']) : mnSupports(json_decode((string) ($avant['supports'] ?? ''), true));
+    if (array_key_exists('supports', $b) && is_array($b['supports']) && count($sp) < count(array_filter($b['supports']))) {
+        return fmRefus(422, 'un support n’est pas valable (adresse https://…, vingt au plus, sans doublon)');
+    }
+    if ($p === null && $sp === []) { Db::exec('DELETE FROM ceo_manuel_formation WHERE code = ?', [$code]); }
+    else {
+        Db::exec('INSERT INTO ceo_manuel_formation (code, partie, supports, maj_le) VALUES (?, ?, ?, NOW())'
+            . ' ON DUPLICATE KEY UPDATE partie = VALUES(partie), supports = VALUES(supports), maj_le = NOW()',
+            [$code, $p, $sp ? json_encode($sp, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null]);
+    }
     $noms = ['preouverture' => 'Pré-ouverture', 'ouverture' => 'Ouverture', 'operationnel' => 'Opérationnel', 'formation' => 'Formation continue'];
     $def = mnFormationsDefaut()[$code] ?? null;
-    fmJournal($code, 'Manuel opératoire — formation rangée dans ' . ($p !== null ? '« ' . $noms[$p] . ' »' : 'sa partie par défaut' . ($def ? ' (« ' . $noms[$def] . ' »)' : '')));
-    return ['ok' => true, 'code' => $code, 'partie' => $p, 'defaut' => $def];
+    $quoi = [];
+    if (array_key_exists('partie', $b)) { $quoi[] = 'rangée dans ' . ($p !== null ? '« ' . $noms[$p] . ' »' : 'sa partie par défaut' . ($def ? ' (« ' . $noms[$def] . ' »)' : '')); }
+    if (array_key_exists('supports', $b)) { $quoi[] = count($sp) . ' support(s)'; }
+    fmJournal($code, 'Manuel opératoire — formation ' . implode(' · ', $quoi));
+    return ['ok' => true, 'code' => $code, 'partie' => $p, 'defaut' => $def, 'supports' => $sp];
 }

@@ -3007,10 +3007,27 @@ function tplResultatReseauProduits(c, x){
         <input id="rn-q" value="${esc(P.qBrut)}" ${x.I(P.setQ)} placeholder="Chercher un produit, une catégorie…" style="margin-left:auto;font-family:var(--font-ui);font-size:12px;padding:7px 11px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);min-width:230px">
       </div>`;
     const cel = (v, st) => `<td style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num}${st ? ';' + st : ''}">${v}</td>`;
-    const det = l => l.det.map(d => `<tr style="background:var(--color-background-secondary);font-size:11.5px">
+    const sousTitre = t => `<tr style="background:var(--color-background-secondary)"><td></td><td colspan="9" style="padding:7px 9px 2px 21px;${bord};font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)">${esc(t)}</td></tr>`;
+    const det = l => (l.det.length && l.detMag.length ? sousTitre('Par format') : '') + detL(l.det) + (l.detMag.length ? sousTitre('Par magasin') + detL(l.detMag) : '');
+    const detL = L => L.map(d => `<tr style="background:var(--color-background-secondary);font-size:11.5px">
         <td></td><td style="padding:5px 9px;${bord}"><span style="padding-left:12px;${d.reste ? 'color:var(--color-text-muted)' : ''}">${esc(d.nom)}</span>${d.sous ? ` <span style="font-size:10px;color:#C17A2A">${esc(d.sous)}</span>` : ''}</td>
         <td style="${bord}"></td>${cel(esc(d.pieces))}${cel(esc(d.prix), 'color:var(--color-text-muted)')}${cel(esc(d.ca), 'font-weight:500')}${cel(esc(d.part), 'color:var(--color-text-muted)')}
         ${cel(esc(d.marge), d.marge === '?' ? 'color:var(--color-text-muted)' : '')}${cel(esc(d.taux), 'color:' + (d.tauxCoul || 'inherit'))}<td style="${bord}"></td></tr>`).join('');
+    // La jauge des secteurs : des blocs proportionnels séparés de 2 px, la part écrite dans le bloc quand elle tient,
+    // le nom au survol et dans la légende. Un clic sur un secteur filtre le tableau.
+    const J = P.jauges;
+    const barreJ = (blocs, haut, clic) => `<div style="display:flex;gap:2px;height:${haut}px;width:100%">${blocs.map(b => `<div ${clic && b.go ? x.A(b.go) : ''} title="${esc(b.titre)}" style="flex:0 0 calc(${b.w}% - 2px);min-width:2px;border-radius:4px;background:${b.coul};${b.eteint ? 'opacity:.28;' : ''}${b.on ? 'box-shadow:0 0 0 2px var(--color-surface),0 0 0 3.5px ' + b.coul + ';' : ''}display:flex;align-items:center;overflow:visible;cursor:${clic && b.go ? 'pointer' : 'default'}">${b.lib ? `<span style="padding:0 7px;font-size:10.5px;font-weight:600;color:${b.encre};white-space:nowrap;${num}">${esc(b.lib)}</span>` : ''}</div>`).join('')}</div>`;
+    const legJ = L => `<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">${L.map(g => `<span style="display:inline-flex;align-items:center;gap:5px;${g.on ? 'color:var(--color-text);font-weight:600' : ''}"><i style="width:9px;height:9px;border-radius:2px;background:${g.coul}"></i>${esc(g.nom)}</span>`).join('')}</div>`;
+    const jauges = `<div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:var(--color-surface)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <div style="font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${J.fil.map((f, i) => `${i ? '<span style="color:var(--color-text-muted)">›</span>' : ''}${f.go ? `<button ${x.A(f.go)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;color:var(--color-primary)">${esc(f.nom)}</button>` : `<b style="font-weight:600">${f.coul ? `<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.coul};margin-right:5px;vertical-align:0"></i>` : ''}${esc(f.nom)}</b>`}`).join('')}${J.effacer ? ` <button ${x.A(J.effacer)} title="Revenir à tout le réseau" style="border:none;background:none;cursor:pointer;color:var(--color-text-muted);font-size:13px;padding:0 3px">×</button>` : ''}</div>
+          <span style="margin-left:auto;font-size:11px;color:var(--color-text-muted)">mesurer en</span>${seg(J.mesures, true)}
+        </div>
+        ${J.lignes.map(g => `<div style="display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:start;margin-top:9px">
+            <div style="padding-top:5px"><div style="${cap}">${esc(g.lib)}</div>${g.sous ? `<div style="font-size:10px;color:var(--color-text-muted);margin-top:2px">${esc(g.sous)}</div>` : ''}</div>
+            <div>${g.j.vide ? '<div style="font-size:11px;color:var(--color-text-muted);padding-top:5px">rien de vendu</div>' : barreJ(g.j.blocs, 28, true) + legJ(g.j.legende)}</div>
+          </div>`).join('')}
+      </div>`;
     const corps = P.vide ? `<div style="padding:16px 0 6px;font-size:12px;color:var(--color-text-muted)">${esc(P.vide)}</div>` : `
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
         <tr>${th('#', false, '26px')}${th(esc(P.entNom))}${th('Magasins', true)}${th('Pièces', true)}${th('Prix moyen', true)}${th('CA', true)}${th('Part', true)}${th('Marge brute', true)}${th('Taux', true)}${th('Coef', true)}</tr>
@@ -3018,12 +3035,12 @@ function tplResultatReseauProduits(c, x){
           <tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer;${l.ouvert ? 'background:var(--color-background-secondary)' : ''}">
             <td style="padding:8px 9px;${bord};font-size:11px;color:var(--color-text-muted);${num}">${l.rang}</td>
             <td style="padding:8px 9px;${bord};min-width:240px">
-              <div style="display:flex;align-items:center;gap:6px"><span style="font-size:9px;color:var(--color-text-muted)">${l.ouvert ? '▾' : '▸'}</span><span style="font-weight:500">${esc(l.nom)}</span>${l.portion ? '<span style="font-size:9.5px;font-weight:600;padding:0 6px;border-radius:999px;background:#FBEFE0;color:#8a4e05">portion</span>' : ''}</div>
-              <div style="font-size:10px;color:var(--color-text-muted);padding-left:15px">${esc(l.cat)}${l.entier ? ' · ' + esc(l.entier) : ''}${l.sans ? ` · <b style="color:#C17A2A;font-weight:600">${esc(l.sans)}</b>` : ''}</div>
-              <div style="height:3px;border-radius:999px;background:var(--color-background-secondary);margin:4px 0 0 15px;max-width:260px;overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;background:${l.tauxCoul};opacity:.75"></i></div>
+              <div style="display:flex;align-items:center;gap:6px"><span style="font-size:9px;color:var(--color-text-muted)">${l.ouvert ? '▾' : '▸'}</span><i title="secteur" style="flex:none;width:8px;height:8px;border-radius:2px;background:${l.coul}"></i><span style="font-weight:500">${esc(l.nom)}</span>${l.portion ? '<span style="font-size:9.5px;font-weight:600;padding:0 6px;border-radius:999px;background:#FBEFE0;color:#8a4e05">en portions</span>' : ''}</div>
+              <div style="font-size:10px;color:var(--color-text-muted);padding-left:29px">${esc(l.cat)}${l.formats ? ' · <span style="color:var(--color-text)">' + esc(l.formats) + '</span>' : ''}${l.sans ? ` · <b style="color:#C17A2A;font-weight:600">${esc(l.sans)}</b>` : ''}</div>
+              <div style="height:3px;border-radius:999px;background:var(--color-background-secondary);margin:4px 0 0 29px;max-width:260px;overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;background:${l.coul};opacity:.8"></i></div>
             </td>
             <td title="${esc(l.nMagTitre)}" style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num};color:var(--color-text-muted)">${esc(l.nMag)}</td>
-            ${cel(esc(l.pieces))}${cel(esc(l.prix) || mu, 'color:var(--color-text-muted)')}${cel(esc(l.ca), 'font-weight:600')}${cel(esc(l.part), 'color:var(--color-text-muted)')}
+            <td${l.piecesTitre ? ` title="${esc(l.piecesTitre)}"` : ''} style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num}">${esc(l.pieces)}${l.piecesSous ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.piecesSous)}</div>` : ''}</td><td${l.prixTitre ? ` title="${esc(l.prixTitre)}"` : ''} style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num};color:var(--color-text-muted)">${esc(l.prix) || mu}</td>${cel(esc(l.ca), 'font-weight:600')}${cel(esc(l.part), 'color:var(--color-text-muted)')}
             <td${l.margeTitre ? ` title="${esc(l.margeTitre)}"` : ''} style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num}${l.marge === '?' ? ';color:var(--color-text-muted)' : ''}">${esc(l.marge)}</td>
             ${cel(esc(l.taux), 'font-weight:600;color:' + l.tauxCoul)}${cel(esc(l.coef), 'color:var(--color-text-muted)')}
           </tr>${l.ouvert ? det(l) : ''}`).join('')}
@@ -3037,7 +3054,7 @@ function tplResultatReseauProduits(c, x){
         </tr>
       </table></div>
       ${P.plus || P.moins ? `<div style="text-align:center;margin-top:10px">${P.plus ? `<button ${x.A(P.plus.go)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:6px 16px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">${esc(P.plus.txt)} ▾</button>` : ''}${P.moins ? `<button ${x.A(P.moins.go)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:6px 16px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">${esc(P.moins.txt)} ▴</button>` : ''}</div>` : ''}`;
-    prod = tete('Ventes par produit — tout le réseau', P.sousTitre, droite) + barre + corps
+    prod = tete('Ventes par produit — tout le réseau', P.sousTitre, droite) + jauges + barre + corps
       + (P.lecture ? `<div style="font-size:11px;color:#8a4e05;background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-top:10px;line-height:1.45">${esc(P.lecture)}</div>` : '')
       + `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(P.note)}</div>`;
   }

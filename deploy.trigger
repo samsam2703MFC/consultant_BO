@@ -1271,3 +1271,5 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-04T20:20:28Z résultat : le réseau sous le tableau des magasins — produits, portions, offres, sans coût
 2026-11-04T20:45:04Z console franchisé : mot de passe choisi sur les comptes de Sam
 [245] Reklamacje : onglet Przegląd — 2026-11-04T21:18:23Z
+[246] Formation : fiche « à lire » dans le manuel (vidéos, PDF, documents) — 2026-11-04T21:48:03Z
+2026-11-04T21:50:34Z ventes par produit du réseau : portions regroupées, jauge des secteurs
