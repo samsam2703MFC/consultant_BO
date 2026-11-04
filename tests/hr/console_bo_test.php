@@ -57,7 +57,7 @@ if ($dsn !== '') {
     echo "Activation complète (fausse console + base locale)\n";
     $pdo = new PDO($dsn, (string) getenv('CB_TEST_USER'), (string) getenv('CB_TEST_PASSWORD'), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
-    foreach (['bo_user_shops', 'bo_users', 'shops'] as $t) {
+    foreach (['bo_audit', 'bo_user_shops', 'bo_users', 'shops'] as $t) {
         $pdo->exec("DROP TABLE IF EXISTS $t");
     }
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
@@ -90,7 +90,7 @@ if ($dsn !== '') {
     usleep(500000);
     $base = 'http://127.0.0.1:' . $port . '/webshop/api';
     $run = static function (string $accounts = '') use ($ROOT, $tmp, $base): string {
-        return (string) shell_exec('CB_OPCACHE_WAIT=0 CB_SEAL_KEY_FILE=' . escapeshellarg($tmp . '/seal.pem') . ' CB_SEALED_FILE=' . escapeshellarg($tmp . '/comptes.sealed')
+        return (string) shell_exec('CB_OPCACHE_WAIT=0 CB_RESETS_FILE=' . escapeshellarg($tmp . '/resets.json') . ' CB_JOURNAL_FILE=' . escapeshellarg($tmp . '/journal.jsonl') . ' CB_SEAL_KEY_FILE=' . escapeshellarg($tmp . '/seal.pem') . ' CB_SEALED_FILE=' . escapeshellarg($tmp . '/comptes.sealed')
             . ' WEBSHOP_API_LOCAL=' . escapeshellarg($base) . ' CONSOLE_BO_ACCOUNTS=' . escapeshellarg($accounts)
             . ' ' . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/bin/console_bo.php') . ' --api-dir=' . escapeshellarg($tmp . '/api') . ' 2>&1');
     };
@@ -133,8 +133,12 @@ if ($dsn !== '') {
     $pdo->prepare("UPDATE bo_users SET password_hash = ? WHERE email = 'julie@exemple.be'")->execute([password_hash('choisi-par-julie-elle-meme', PASSWORD_BCRYPT)]);
     $run($comptes);
     verifie('mot de passe changé par la personne : pas écrasé par la liste', password_verify('choisi-par-julie-elle-meme', (string) $pdo->query("SELECT password_hash FROM bo_users WHERE email = 'julie@exemple.be'")->fetchColumn()));
-    $run((string) json_encode([['email' => 'julie@exemple.be', 'name' => 'Julie', 'role' => 'franchise', 'shops' => [2, 3], 'password' => 'mot-de-passe-solide-2', 'reset_password' => true]]));
+    $reset = (string) json_encode([['email' => 'julie@exemple.be', 'name' => 'Julie', 'role' => 'franchise', 'shops' => [2, 3], 'password' => 'mot-de-passe-solide-2', 'reset_password' => 'essai-1']]);
+    $run($reset);
     verifie('reset_password : le mot de passe donné est reposé', password_verify('mot-de-passe-solide-2', (string) $pdo->query("SELECT password_hash FROM bo_users WHERE email = 'julie@exemple.be'")->fetchColumn()));
+    $pdo->prepare("UPDATE bo_users SET password_hash = ? WHERE email = 'julie@exemple.be'")->execute([password_hash('rechange-par-julie-ensuite', PASSWORD_BCRYPT)]);
+    $run($reset);
+    verifie('reset_password à usage unique : pas rejoué à la livraison suivante', password_verify('rechange-par-julie-ensuite', (string) $pdo->query("SELECT password_hash FROM bo_users WHERE email = 'julie@exemple.be'")->fetchColumn()));
 
     // la liste scellée pour la clé du serveur
     $out5 = $run();
@@ -155,6 +159,27 @@ if ($dsn !== '') {
     $out7 = $run();
     verifie('pli scellé pour une autre clé : ignoré', str_contains($out7, 'illisible pour la clé de ce serveur'), $out7);
     @unlink($tmp . '/comptes.sealed');
+
+    // ce qui est arrivé en ligne le 04/11 : un compte franchisé existant, sans mot de passe, à l'adresse d'un siège demandé
+    $pdo->exec("CREATE TABLE IF NOT EXISTS bo_audit (id BIGINT AUTO_INCREMENT PRIMARY KEY, user_id INT, action VARCHAR(60), shop_id INT NULL) ENGINE=InnoDB");
+    $pdo->exec("INSERT INTO bo_users (email, password_hash, display_name, role) VALUES ('ancien@exemple.be', '', 'Ancien', 'franchise')");
+    $ancien = (int) $pdo->lastInsertId();
+    $pdo->exec("INSERT INTO bo_user_shops (user_id, shop_id) VALUES ($ancien, 3)");
+    $pdo->exec("INSERT INTO bo_audit (user_id, action, shop_id) VALUES ($ancien, 'x', 3), ($ancien, 'y', 5)");
+    $out8 = $run((string) json_encode([['email' => 'ancien@exemple.be', 'name' => 'Siège', 'role' => 'siege', 'password' => 'mot-de-passe-solide-9']]));
+    $r = $pdo->query("SELECT role, display_name, password_hash FROM bo_users WHERE id = $ancien")->fetch(PDO::FETCH_ASSOC);
+    verifie('compte existant d’un autre rôle : inchangé sans « role_change »', $r['role'] === 'franchise' && $r['display_name'] === 'Ancien' && $r['password_hash'] === ''
+        && (int) $pdo->query("SELECT COUNT(*) FROM bo_user_shops WHERE user_id = $ancien")->fetchColumn() === 1 && str_contains($out8, 'existe déjà avec un autre rôle'), $out8);
+    $pdo->exec("DELETE FROM bo_user_shops WHERE user_id = $ancien");
+    $out9 = $run((string) json_encode([['email' => 'ancien@exemple.be', 'name' => 'Ancien', 'role' => 'franchise', 'shops_from_history' => true, 'password' => 'mot-de-passe-solide-9']]));
+    $sh = array_map('intval', $pdo->query("SELECT shop_id FROM bo_user_shops WHERE user_id = $ancien ORDER BY shop_id")->fetchAll(PDO::FETCH_COLUMN));
+    verifie('boutiques retrouvées dans l’historique de la console', $sh === [3, 5] && str_contains($out9, '2 boutique(s) retrouvée(s)'), json_encode($sh) . ' ' . $out9);
+    verifie('compte sans mot de passe : celui de la liste est posé', password_verify('mot-de-passe-solide-9', (string) $pdo->query("SELECT password_hash FROM bo_users WHERE id = $ancien")->fetchColumn()));
+    $j = array_values(array_filter(array_map(static fn ($l) => json_decode($l, true), file($tmp . '/journal.jsonl')), static fn ($x) => is_array($x) && $x['id'] === $ancien));
+    verifie('état d’avant écrit au journal privé, sans hachage', $j !== [] && end($j)['role'] === 'franchise' && !str_contains((string) file_get_contents($tmp . '/journal.jsonl'), '$2y$'), json_encode($j));
+    $out10 = $run((string) json_encode([['email' => 'ancien@exemple.be', 'role' => 'siege', 'role_change' => true]]));
+    verifie('« role_change » : le rôle change, les boutiques d’un siège sont retirées', $pdo->query("SELECT role FROM bo_users WHERE id = $ancien")->fetchColumn() === 'siege'
+        && (int) $pdo->query("SELECT COUNT(*) FROM bo_user_shops WHERE user_id = $ancien")->fetchColumn() === 0, $out10);
 
     // une config qui casse la console : l'ancienne est remise
     file_put_contents($tmp . '/api/config.php', $conf);

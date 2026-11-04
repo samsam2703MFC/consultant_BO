@@ -1266,3 +1266,7 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 [243] Reklamacje : Lista / Wykres (oś czasu) — 2026-11-01T18:37:50Z
 2026-11-04T19:07:00Z console franchisé : clé de dépôt du serveur
 [244] Rail Administracja : Uprawnienia funkcji — 2026-11-04T19:10:32Z
+2026-11-04T19:18:49Z console franchisé : comptes de Sam (liste scellée)
+2026-11-04T19:38:03Z console franchisé : ancien compte rendu, siège à part
+2026-11-04T20:20:28Z résultat : le réseau sous le tableau des magasins — produits, portions, offres, sans coût
+2026-11-04T20:45:04Z console franchisé : mot de passe choisi sur les comptes de Sam
