@@ -1269,3 +1269,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-04T19:18:49Z console franchisé : comptes de Sam (liste scellée)
 2026-11-04T19:38:03Z console franchisé : ancien compte rendu, siège à part
 2026-11-04T20:20:28Z résultat : le réseau sous le tableau des magasins — produits, portions, offres, sans coût
+2026-11-04T20:45:04Z console franchisé : mot de passe choisi sur les comptes de Sam
