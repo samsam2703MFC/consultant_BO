@@ -306,8 +306,8 @@ function ep_commandes_courbe(): array
                 COUNT(*) total, SUM(accepting_timestamp IS NULL) sansPrise FROM client_order')[0] ?? null;
     } catch (Throwable $e) { $out['client_order'] = ['erreur' => $e->getMessage()]; }
     // 2. Les autres canaux : lequel prend le relais, et quand.
-    foreach ([['ws_orders', 'created_at'], ['pwa_orders', 'created_at'],
-              ['pwa_cafe_orders', 'created_at'], ['ws_stock_reservation', 'created_at']] as [$t, $c]) {
+    // (ws_orders et ws_stock_reservation : la boutique en ligne du webshop, retirée.)
+    foreach ([['pwa_orders', 'created_at'], ['pwa_cafe_orders', 'created_at']] as [$t, $c]) {
         try {
             $l = [];
             foreach (Db::rows("SELECT DATE_FORMAT(`$c`, '%Y-%m') mois, COUNT(*) n FROM `$t`
@@ -343,7 +343,6 @@ function ep_commandes_sonde(): array
     // [table, colonne magasin, colonne statut, colonne date de référence]
     $plan = [
         ['client_order', 'id_shop', 'order_status', 'pick_up_datetime'],
-        ['ws_orders', 'shop_id', 'status', 'delivery_date'],
         ['material_order', 'id_shop', 'status', 'expected_date'],
         ['pwa_orders', 'shop_id', 'state', 'created_at'],
     ];
@@ -375,10 +374,6 @@ function ep_commandes_sonde(): array
                         MIN(CASE WHEN delivered_on IS NULL AND expected_date >= CURDATE()
                                  THEN expected_date END) prochaine
                     FROM material_order WHERE id_shop = ?', [$sid])[0] ?? null;
-            }
-            if ($t === 'ws_orders') {
-                $bloc['extra'] = Db::rows('SELECT mode, COUNT(*) n, MAX(delivery_date) recent
-                    FROM ws_orders WHERE shop_id = ? GROUP BY mode', [$sid]);
             }
         } catch (Throwable $e) {
             $bloc['erreur'] = $e->getMessage();
@@ -432,8 +427,6 @@ function ep_commandes_sonde(): array
         $out['reseau'] = [
             'client_order' => Db::rows('SELECT id_shop, COUNT(*) n, MAX(pick_up_datetime) recent
                 FROM client_order GROUP BY id_shop ORDER BY id_shop'),
-            'ws_orders' => Db::rows('SELECT shop_id, COUNT(*) n, MAX(delivery_date) recent
-                FROM ws_orders GROUP BY shop_id ORDER BY shop_id'),
             'material_order' => Db::rows('SELECT id_shop, COUNT(*) n, MAX(expected_date) attendue,
                 MAX(delivered_on) livree FROM material_order GROUP BY id_shop ORDER BY id_shop'),
         ];
