@@ -4,6 +4,18 @@ use FastRoute\RouteCollector;
 return function(RouteCollector $r) {
 
 
+    // [247] Kreatory « lżej » : Plan na jutro (codziennie) i Wydajność i straty (co kwartał).
+    $tp = App\Controllers\Web\Production\TomorrowPlanController::class;
+    $r->addRoute('GET', '/production/tomorrow', ['controller' => $tp, 'method' => 'index']);
+    $r->addRoute('GET', '/production/tomorrow/pdf', ['controller' => $tp, 'method' => 'pdf']);
+    $r->addRoute('GET', '/ajax/production/tomorrow', ['controller' => $tp, 'method' => 'data']);
+    $r->addRoute('POST', '/ajax/production/tomorrow/move', ['controller' => $tp, 'method' => 'move']);
+    $r->addRoute('POST', '/ajax/production/tomorrow/confirm', ['controller' => $tp, 'method' => 'confirm']);
+    $yr = App\Controllers\Web\Production\YieldReviewController::class;
+    $r->addRoute('GET', '/production/yield-review', ['controller' => $yr, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/production/yield-review', ['controller' => $yr, 'method' => 'data']);
+    $r->addRoute('POST', '/ajax/production/yield-review/finish', ['controller' => $yr, 'method' => 'finish']);
+
     // Dawna « lista zamówień » i kreator « Planuj produkcję » : jedna strona « Plan zespołów » (listy dnia PDF w środku).
     $r->addRoute('GET', '/production/planning', ['redirect' => '/workshop/team-sheet']);
     $r->addRoute('GET', '/production/plan-wizard', ['redirect' => '/workshop/team-sheet']);

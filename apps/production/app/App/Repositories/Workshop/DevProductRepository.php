@@ -54,6 +54,14 @@ final class DevProductRepository extends WorkshopRepository
         return $this->all(self::PRODUCT . ' WHERE tp.id_type = 1 ORDER BY COALESCE(d.stage_changed_at, d.updated_at, tp.create_timestamp) DESC, tp.id DESC');
     }
 
+    /** [249] Produkty testowe utworzone z reela (karta technologiczna z linku Facebook / Pinterest). @return array<int, true> */
+    public function reelIds(): array
+    {
+        $out = [];
+        foreach ($this->all("SELECT DISTINCT id_test_product FROM n_dev_card WHERE id_test_product IS NOT NULL AND source_kind IN ('facebook', 'pinterest')") as $r) $out[(int) $r['id_test_product']] = true;
+        return $out;
+    }
+
     /** Ustawienia rozwoju produktu : tylko podane kolumny (wiersz tworzony, gdy go nie ma). */
     public function saveDev(int $id, array $data): void
     {

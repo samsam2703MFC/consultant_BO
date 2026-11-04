@@ -33,7 +33,11 @@
     } catch (e) { /* bez pamięci */ }
 
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]));
-    const nf = (v, d = 0) => Number(v || 0).toLocaleString('pl-PL', {minimumFractionDigits: d, maximumFractionDigits: d}).replace(/ /g, ' ');
+    // [248] Zawsze z odstępem tysięcy (« 3 450 € » jak « 12 638 € ») — kolumny wartości wyrównane.
+    const nf = (v, d = 0) => {
+        const n = Number(v || 0), [i, f] = Math.abs(n).toFixed(d).split('.');
+        return (n < 0 && Number(Math.abs(n).toFixed(d)) !== 0 ? '−' : '') + i.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + (f ? ',' + f : '');
+    };
     const plural = (n, a, b, c) => n === 1 ? a : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? b : c);
     function parseDay(s) { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); }
     function fmtDay(d) { return `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${d.getUTCFullYear()}`; }

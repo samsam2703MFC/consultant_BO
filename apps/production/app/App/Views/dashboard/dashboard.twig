@@ -3,73 +3,29 @@
 {# Mój tydzień [227] : czas « 1 h 05 » / « 45 min », wiersz « Na dziś » (zadanie = kreator) i znaczek tygodnia. #}
 {% macro hm(m) %}{{ m // 60 }} h {{ '%02d'|format(m % 60) }}{% endmacro %}
 {% macro dur(m) %}{% if not m %}0{% elseif m < 60 %}{{ m }} min{% elseif m % 60 == 0 %}{{ m // 60 }} h{% else %}{{ m // 60 }} h {{ '%02d'|format(m % 60) }}{% endif %}{% endmacro %}
-{% macro today(it, root) %}
-    {% import _self as wk %}
+{# « Lżej » [247] (makieta 18) : jeden wiersz na zadanie — kropka stanu, krótki tytuł, termin, czas, kroki, jeden lekki przycisk. #}
+{% macro dots(it) %}{% if it.stage is defined and it.stage %}<span class="mt-dots" title="etap : {{ it.stage.label }}">{% for s in 1..it.stage.steps %}<i class="{{ s < it.stage.step ? 'on' : (s == it.stage.step ? 'cur' : '') }}"></i>{% endfor %}</span>{% elseif it.wizard and it.wizard.steps > 1 %}{% set st = it.progress ? it.progress.step : (it.done ? it.wizard.steps + 1 : 0) %}<span class="mt-dots" title="{{ it.progress ? 'krok ' ~ it.progress.step ~ ' z ' ~ it.wizard.steps : it.wizard.steps ~ ' kroki' }}">{% for s in 1..it.wizard.steps %}<i class="{{ s < st ? 'on' : (s == st ? 'cur' : '') }}"></i>{% endfor %}</span>{% endif %}{% endmacro %}
+{% macro sub(it) %}{% import _self as wk %}{% if it.dev is defined and it.dev %}nowy produkt{{ it.dev.reel ? ' z reela' : '' }} · {{ it.dev.next }}{% elseif it.done %}{% if it.summary %}{{ it.summary }}{% elseif it.status == 'skipped' %}pominięte{% else %}{{ it.auto_done ? 'zaliczone samo' : 'zrobione' }}{{ it.done_by ? ' · ' ~ it.done_by : '' }}{% endif %}{{ it.done_at ? ' · ' ~ it.done_at|date('H:i') : '' }}{% else %}{{ it.frequency|lower }}{% if it.backup_for %} · zastępstwo : {{ it.backup_for }}{% endif %}{% if it.progress %} · krok {{ it.progress.step }} z {{ it.progress.steps }}{{ it.progress.label ? ' : ' ~ it.progress.label : '' }}{% elseif it.prepared %} · przygotowane {{ it.prepared.at }}{% elseif it.cron %} · system o {{ it.cron.time }}{% endif %}{% endif %}{% endmacro %}
+{% macro when(it, kind) %}{% if it.done %}{{ it.done_at ? it.done_at|date('d.m') : '' }}{% elseif kind == 'late' %}od {{ it.due_label ?: it.due|date('d.m') }}{% if it.late_count is defined and it.late_count > 1 %} · {{ it.late_count }}×{% endif %}{% elseif kind == 'today' %}{{ it.due_time ? 'do ' ~ it.due_time : 'dziś' }}{% else %}{{ it.due_label ?: '' }}{% endif %}{% endmacro %}
+{% macro act(it, root, primary) %}
     {% set manual = not it.wizard and not it.cron and not it.form %}
-    <div class="wt{{ it.done ? ' done' : '' }}{{ it.late ? ' late' : '' }}" style="--c:{{ it.color }}" data-wt="{{ it.id }}">
-        <span class="bar"></span>
-        <div class="wt-main">
-            <h6>{% if it.done %}<i class="bi bi-check-circle-fill"></i> {% endif %}{{ it.title }}</h6>
-            <div class="meta">
-                {% if it.backup_for %}<span class="kw-badge" title="Na tym stanowisku nikogo nie ma — zadanie robi Twoje stanowisko"><i class="bi bi-person-check"></i> zastępstwo : {{ it.backup_for }}</span>{% endif %}
-                {% if it.wizard %}<span class="kw-badge new"><i class="bi bi-magic"></i> kreator{{ it.wizard.steps > 1 ? ' · ' ~ it.wizard.steps|plural_pl('krok', 'kroki', 'kroków') : '' }}</span>
-                {% elseif it.cron %}<span class="kw-badge"><i class="bi bi-robot"></i> automatycznie</span>
-                {% elseif it.form %}<span class="kw-badge"><i class="bi bi-journal-text"></i> protokół</span>{% endif %}
-                <span>{{ it.when }}{% if it.late and it.freq == 'daily' %} · {{ it.due|date('d.m') }}{% endif %}</span>
-                {% if it.minutes %}<span>{{ wk.dur(it.minutes) }}</span>{% endif %}
-            </div>
-            {% if it.extra %}<div class="wt-more">też : {% for x in it.extra %}<a href="{{ root }}{{ x.link }}">{{ x.label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
-        </div>
-        <div class="wt-state">
-            {% if it.done %}
-                {% set at = it.done_at ? it.done_at|date('H:i') : '' %}
-                {% if it.status == 'skipped' %}<span class="wt-sum muted">pominięte{{ it.done_by ? ' · ' ~ it.done_by : '' }}</span>
-                {% elseif it.auto_done and it.cron and not it.wizard %}<span class="wt-sum">wykonane przez system · {{ at }}</span>
-                {% elseif it.auto_done %}<span class="wt-sum">zaliczone samo · {{ at }}</span>
-                {% else %}<span class="wt-sum">zrobione{{ it.done_by ? ' · ' ~ it.done_by : '' }}{{ at ? ', ' ~ at : '' }}</span>{% endif %}
-                {% if it.summary %}<span class="at-sub">{{ it.summary }}</span>{% endif %}
-            {% elseif it.late %}
-                <span><span class="kw-badge bad"><i class="bi bi-bell"></i> spóźnione {{ it.late_days|plural_pl('dzień', 'dni', 'dni') }}</span>{% if it.late_count is defined and it.late_count > 1 %} <span class="at-sub">{{ it.late_count }}× niezrobione</span>{% endif %}</span>
-                {% if it.escalated %}<span class="at-sub">przełożony powiadomiony{{ it.escalate_days ? ' (po ' ~ it.escalate_days|plural_pl('dniu', 'dniach', 'dniach') ~ ')' : '' }}</span>
-                {% elseif it.escalate_days and it.late_days < it.escalate_days %}<span class="at-sub">po {{ it.escalate_days|plural_pl('dniu', 'dniach', 'dniach') }} : przełożony</span>{% endif %}
-            {% elseif it.progress %}
-                <span>krok {{ it.progress.step }} z {{ it.progress.steps }}{% if it.progress.label %} · <b>{{ it.progress.label }}</b>{% endif %}</span>
-                {% if it.progress.steps > 1 %}<span class="wt-steps">{% for s in 1..it.progress.steps %}<i class="{{ s < it.progress.step ? 'on' : (s == it.progress.step ? 'cur' : '') }}"></i>{% endfor %}</span>{% endif %}
-            {% elseif it.prepared %}
-                <span><span class="kw-badge ok"><i class="bi bi-robot"></i> przygotowane {{ it.prepared.at }}</span></span>
-                <span class="at-sub">{{ it.prepared.summary ? it.prepared.summary ~ ' · ' : '' }}czeka na Ciebie</span>
-            {% elseif it.cron %}
-                <span class="at-sub"><i class="bi bi-robot"></i> system uruchomi o {{ it.cron.time }}{{ it.cron.then == 'done' ? ' · zaliczy się samo' : ' · potem Ty' }}</span>
-                {% if it.cron.last and it.cron.last.ok is same as(false) %}<span class="kw-badge bad">ostatnie uruchomienie : błąd</span>{% endif %}
-            {% else %}
-                <span class="at-sub">{{ it.due_time ? 'do ' ~ it.due_time : (it.due and it.due != 'now'|date('Y-m-d') ? 'termin ' ~ it.due|date('d.m') : 'dziś') }}{{ it.wizard ? ' · zalicza się samo na ostatnim kroku' : '' }}</span>
-            {% endif %}
-        </div>
-        <div class="wt-act">
-            {% if it.form and it.id %}
-                <a class="kw-btn{{ it.done ? ' ghost' : ' pri' }}" href="{{ root }}/my-tasks/{{ it.id }}/form">{{ it.done ? 'Zobacz' : 'Wypełnij protokół' }}</a>
-            {% elseif it.done %}
-                {% if it.link %}<a class="kw-btn ghost" href="{{ root }}{{ it.link }}">Zobacz</a>{% endif %}
-            {% elseif it.link and it.progress %}
-                <a class="kw-btn" href="{{ root }}{{ it.link }}">Wznów <i class="bi bi-play-fill"></i></a>
-            {% elseif it.link %}
-                <a class="kw-btn pri" href="{{ root }}{{ it.link }}">Rozpocznij <i class="bi bi-arrow-right"></i></a>
-            {% endif %}
-            {% if manual and it.id %}
-                <button type="button" class="kw-btn wt-chk{{ it.link ? '' : ' solo' }}" data-wk-toggle="{{ it.id }}" aria-pressed="{{ it.done ? 'true' : 'false' }}" title="{{ it.done ? 'Cofnij' : 'Zrobione' }}" aria-label="{{ it.done ? 'Cofnij' : 'Zrobione' }}"><i class="bi bi-check-lg"></i>{{ it.link ? '' : ' Zrobione' }}</button>
-            {% endif %}
-        </div>
-    </div>
+    {% set cls = primary ? 'mt-btn pri' : 'mt-btn' %}
+    {% if it.form and it.id %}<a class="{{ cls }}" href="{{ root }}/my-tasks/{{ it.id }}/form">{{ it.done ? 'Zobacz' : (primary ? 'Rozpocznij' : 'Otwórz') }}{% if primary and not it.done %} <i class="bi bi-arrow-right"></i>{% endif %}</a>
+    {% elseif manual and it.id and not it.link %}<button type="button" class="{{ cls }}" data-wk-toggle="{{ it.id }}" aria-pressed="{{ it.done ? 'true' : 'false' }}">{{ it.done ? 'Cofnij' : 'Zrobione' }}</button>
+    {% elseif it.link and not it.done %}<a class="{{ cls }}" href="{{ root }}{{ it.link }}">{{ it.progress ? 'Wznów' : (primary ? 'Rozpocznij' : 'Otwórz') }}{% if primary %} <i class="bi bi-arrow-right"></i>{% endif %}</a>
+    {% elseif it.link %}<a class="mt-btn ghost" href="{{ root }}{{ it.link }}">Zobacz</a>{% endif %}
+    {% if manual and it.id and it.link %}<button type="button" class="mt-btn chk" data-wk-toggle="{{ it.id }}" aria-pressed="{{ it.done ? 'true' : 'false' }}" title="{{ it.done ? 'Cofnij' : 'Zrobione' }}" aria-label="{{ it.done ? 'Cofnij' : 'Zrobione' }}"><i class="bi bi-check-lg"></i></button>{% endif %}
 {% endmacro %}
-{% macro chip(it) %}
-    {% if it.late %}{% set ic = 'late' %}{% set tx = '!' %}
-    {% elseif it.done and it.auto_done and it.cron and not it.wizard %}{% set ic = 'ok' %}{% set tx = '<i class="bi bi-robot"></i>' %}
-    {% elseif it.done %}{% set ic = 'ok' %}{% set tx = '✓' %}
-    {% elseif it.progress %}{% set ic = 'run' %}{% set tx = it.progress.step ~ '/' ~ it.progress.steps %}
-    {% elseif it.cron %}{% set ic = '' %}{% set tx = '<i class="bi bi-robot"></i>' %}
-    {% elseif it.wizard %}{% set ic = '' %}{% set tx = '<i class="bi bi-magic"></i>' %}
-    {% else %}{% set ic = 'plain' %}{% set tx = '' %}{% endif %}
-    <div class="wk-chip{{ it.done ? ' done' : '' }}" style="--c:{{ it.color }}"{% if it.id %} data-chip="{{ it.id }}"{% endif %} data-min="{{ it.minutes ?? 0 }}" title="{{ it.title }}{{ it.summary ? ' — ' ~ it.summary : '' }}"><span class="ic {{ ic }}">{{ tx|raw }}</span><span>{{ it.wizard ? it.wizard.label : it.title }}</span></div>
+{% macro row(it, root, kind) %}
+    {% import _self as wk %}
+    <div class="mt-row{{ it.done ? ' done' : '' }}"{% if it.id %} data-wt="{{ it.id }}"{% endif %} data-min="{{ it.minutes ?? 0 }}">
+        <span class="mt-d {{ it.done ? 'ok' : kind }}">{% if it.done %}<i class="bi bi-check-lg"></i>{% endif %}</span>
+        <div class="mt-t" title="{{ it.title }}">{{ it.short }}<small>{{ wk.sub(it) }}</small></div>
+        <span class="mt-w{{ kind == 'late' and not it.done ? ' late' : '' }}">{{ wk.when(it, kind) }}</span>
+        <span class="mt-m">{{ it.minutes ? wk.dur(it.minutes) : '' }}</span>
+        <span class="mt-p">{{ wk.dots(it) }}</span>
+        <span class="mt-a">{{ wk.act(it, root, false) }}</span>
+    </div>
 {% endmacro %}
 {% import _self as wk %}
 
@@ -143,46 +99,44 @@
             </div>
             {% else %}
             {% set t = week.totals %}
-            {% set todayN = 'now'|date('N') %}
-            <div class="kw-card wk-card" id="myWeek">
-                <h5>Mój tydzień <span class="kw-badge">{{ member.position_name }} · {{ member.displayed_name ?: member.login }}</span>
-                    <span class="kw-badge">tydz. {{ week.week.number }} · {{ week.week.from|date('d.m') }} – {{ week.week.to|date('d.m') }}</span>
-                    <span class="wk-sp"></span>
-                    <span class="kw-badge ok" data-wk="done">{{ t.done }} z {{ t.total }} zrobione</span>
-                    {% if t.running %}<span class="kw-badge warn">{{ t.running }} w toku</span>{% endif %}
-                    {% if t.late + t.overdue %}<span class="kw-badge bad">{{ t.late + t.overdue }} spóźnione</span>{% endif %}</h5>
-                <div class="wk-prog"><div class="wk-bar"><i data-wk="bar" style="width: {{ t.minutes ? (t.done_minutes * 100 / t.minutes)|round : 0 }}%"></i></div>
-                    <span class="at-sub" data-wk="done-min">{{ wk.dur(t.done_minutes) }} z {{ wk.dur(t.minutes) }} zaplanowanych</span>
-                    <a class="wk-all" href="{{ root }}/my-tasks">Wszystkie moje zadania</a>
-                    {% if can_see('/organization/execution') %}<a class="wk-all" href="{{ root }}/organization/execution"><i class="bi bi-people"></i> Kto co zrobił</a>{% endif %}
-                    {% if can_see('/organization/week-plan/' ~ member.id_position) %}<a class="wk-all" href="{{ root }}/organization/week-plan/{{ member.id_position }}"><i class="bi bi-sliders"></i> Zadania stanowiska</a>{% endif %}</div>
-
-                <h6 class="wk-h">Na dziś — {{ t.today_name }} {{ 'now'|date('d.m') }}</h6>
-                {% if week.today %}
-                    <div class="wt-list">{% for it in week.today %}{{ wk.today(it, root) }}{% endfor %}</div>
-                {% else %}
-                    <p class="at-empty mb-0"><i class="bi bi-check2-circle"></i> Na dziś nic więcej — zadania stałe są zrobione albo zaplanowane na inne dni.</p>
-                {% endif %}
-
-                <h6 class="wk-h">Ten tydzień</h6>
-                <div class="wk" style="--wk-days: {{ week.days|length }}">
-                    {% for n, d in week.days %}
-                        <div class="wk-day{{ d.today ? ' today' : '' }}{{ d.past ? ' past' : '' }}" data-wk-day="{{ n }}">
-                            <h6>{{ d.short }} {{ d.date|date('d.m') }}<small>{{ wk.dur(d.done_minutes) }} / {{ wk.dur(d.minutes) }}</small></h6>
-                            {% set cnt = 0 %}
-                            {% for it in d.items %}{{ wk.chip(it) }}{% set cnt = cnt + 1 %}{% endfor %}
-                            {% for row in week.strip %}{% if row.slots[n] is defined %}{{ wk.chip(row.slots[n]) }}{% set cnt = cnt + 1 %}{% endif %}{% endfor %}
-                            {% if not cnt %}<p class="wk-free">bez zadań stałych</p>{% endif %}
-                        </div>
-                    {% endfor %}
+            {% set f = week.flow %}
+            <div class="kw-card mt-card-root" id="myWeek" data-done="{{ t.done }}" data-total="{{ t.total }}" data-min="{{ t.minutes }}" data-done-min="{{ t.done_minutes }}">
+              <div class="mt-wrap">
+                <div class="mt-main">
+                    {% if f.now %}{% set n = f.now %}
+                    <div class="mt-now" data-wt="{{ n.id }}" data-min="{{ n.minutes ?? 0 }}">
+                        <span class="mt-d {{ n.late ? 'late' : 'today' }}"></span>
+                        <div><div class="k">Teraz · {% if n.late %}spóźnione {{ n.late_days|plural_pl('dzień', 'dni', 'dni') }}{% elseif n.progress %}w toku : krok {{ n.progress.step }} z {{ n.progress.steps }}{% elseif n.due_time %}termin dziś do {{ n.due_time }}{% else %}na dziś{% endif %}</div>
+                            <h4 title="{{ n.title }}">{{ n.short }}</h4>
+                            <p>{{ n.frequency }}{% if n.wizard and n.wizard.steps > 1 %} · {{ n.wizard.steps|plural_pl('krok', 'kroki', 'kroków') }}{% endif %}{% if n.minutes %} · ok. {{ wk.dur(n.minutes) }}{% endif %}{% if n.wizard %} · <span class="at-sub">zalicza się samo, {{ n.wizard.event }}</span>{% endif %}</p></div>
+                        <div class="mt-now-a">{{ wk.act(n, root, true) }}</div>
+                    </div>
+                    {% else %}
+                    <div class="mt-now calm"><span class="mt-d ok"><i class="bi bi-check-lg"></i></span><div><div class="k">Teraz</div><h4>Na dziś wszystko zrobione</h4><p>Następne zadania niżej, w « Później ».</p></div></div>
+                    {% endif %}
+                    <div class="mt-list">
+                        {% if f.late %}<div class="mt-sec late"><i class="bi bi-exclamation-circle"></i> Zaległe <b>· {{ f.late|length }}</b></div>{% for it in f.late %}{{ wk.row(it, root, 'late') }}{% endfor %}{% endif %}
+                        {% if f.today %}<div class="mt-sec"><i class="bi bi-sun"></i> Dziś · {{ t.today_name }} {{ 'now'|date('j.m') }} <b>· {{ f.today|length }}</b></div>{% for it in f.today %}{{ wk.row(it, root, 'today') }}{% endfor %}{% endif %}
+                        {% if f.next %}<div class="mt-sec"><i class="bi bi-calendar3"></i> Później <b>· {{ f.next|length }}</b></div>{% for it in f.next %}{{ wk.row(it, root, 'next') }}{% endfor %}{% endif %}
+                        {% if not f.late and not f.today and not f.next %}<p class="at-empty mt-none"><i class="bi bi-check2-circle"></i> Nic więcej w tym tygodniu.</p>{% endif %}
+                        {% if f.done %}<details class="mt-fold"><summary><i class="bi bi-check2-circle"></i> Zrobione w tym tygodniu · {{ f.done|length }}<span class="wk-sp"></span><i class="bi bi-chevron-down"></i></summary>{% for it in f.done %}{{ wk.row(it, root, 'done') }}{% endfor %}</details>{% endif %}
+                    </div>
                 </div>
-                <div class="wk-legend"><span><span class="ic"><i class="bi bi-magic"></i></span>kreator do zrobienia</span><span><span class="ic run">2/3</span>w toku (krok)</span><span><span class="ic ok">✓</span>zrobione / zaliczone samo</span><span><span class="ic ok"><i class="bi bi-robot"></i></span>wykonane automatycznie</span><span><span class="ic late">!</span>spóźnione</span></div>
-                {% set later = week.later|filter(it => not it.done) %}
-                {% if later %}
-                    <h6 class="wk-h">Miesiąc i kwartał</h6>
-                    <div class="wk-later">{% for it in later %}<a class="wk-chip" style="--c:{{ it.color }}" href="{{ it.link ? root ~ it.link : '#' }}"><span class="ic{{ it.progress ? ' run' : (it.wizard ? '' : ' plain') }}">{% if it.progress %}{{ it.progress.step }}/{{ it.progress.steps }}{% elseif it.wizard %}<i class="bi bi-magic"></i>{% endif %}</span><span>{{ it.title }}</span><small>do {{ it.due|date('d.m') }}</small></a>{% endfor %}</div>
-                {% endif %}
-                <p class="kw-lead wk-foot">Bez pól do zaznaczania : przycisk otwiera kreator, zadanie zalicza się samo na ostatnim kroku, a wiersz pokazuje wynik liczbowy. Zadania bez kreatora : « Zrobione » zapisuje dzień i godzinę.</p>
+                <aside class="mt-side">
+                    <div class="mt-box">
+                        <h6>Mój tydzień <small>tydz. {{ week.week.number }} · {{ week.week.from|date('d.m') }} – {{ week.week.to|date('d.m') }}</small></h6>
+                        <div class="mt-big"><span data-wk="done">{{ t.done }} z {{ t.total }}</span></div>
+                        <div class="wk-bar mt-bar"><i data-wk="bar" style="width: {{ t.minutes ? (t.done_minutes * 100 / t.minutes)|round : 0 }}%"></i></div>
+                        <span class="at-sub" data-wk="done-min">zadań zrobionych · {{ wk.dur(t.done_minutes) }} z {{ wk.dur(t.minutes) }}</span>
+                        <p class="mt-who">{{ member.position_name }} · {{ member.displayed_name ?: member.login }}</p>
+                    </div>
+                    <div class="mt-box mt-links">
+                        <a href="{{ root }}/my-tasks"><i class="bi bi-list-check"></i> Wszystkie moje zadania</a>
+                        {% if can_see('/organization/execution') %}<a href="{{ root }}/organization/execution"><i class="bi bi-people"></i> Kto co zrobił</a>{% endif %}
+                        {% if can_see('/organization/week-plan/' ~ member.id_position) %}<a href="{{ root }}/organization/week-plan/{{ member.id_position }}"><i class="bi bi-sliders"></i> Zadania stanowiska</a>{% endif %}
+                    </div>
+                </aside>
+              </div>
             </div>
             {% endif %}
         </div>
@@ -420,23 +374,20 @@
 {% include 'page_components/ajax_helpers.twig' %}
 <script>
 (() => {
-    // Mój tydzień : « Zrobione » / « Cofnij » (zadania bez kreatora) — wiersz « Na dziś », znaczek tygodnia i licznik bez przeładowania.
+    // Mój tydzień [247] : « Zrobione » / « Cofnij » (zadania bez kreatora) — wiersz i licznik bez przeładowania.
     const week = document.getElementById('myWeek');
     const dur = (m) => !m ? '0' : (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h` + (m % 60 ? ` ${String(m % 60).padStart(2, '0')}` : ''));
-    function recount() {
+    function recount(delta, min) {
         if (!week) return;
-        let done = 0, total = 0, min = 0, doneMin = 0;
-        week.querySelectorAll('.wk-day [data-min]').forEach(el => {
-            const m = Number(el.dataset.min) || 0;
-            total++; min += m;
-            if (el.classList.contains('done')) { done++; doneMin += m; }
-        });
-        week.querySelector('[data-wk=done]').textContent = `${done} z ${total} zrobione`;
-        week.querySelector('[data-wk=done-min]').textContent = `${dur(doneMin)} z ${dur(min)} zaplanowanych`;
-        week.querySelector('[data-wk=bar]').style.width = (min ? Math.round(doneMin * 100 / min) : 0) + '%';
+        const d = week.dataset;
+        d.done = Number(d.done) + delta;
+        d.doneMin = Number(d.doneMin) + delta * min;
+        week.querySelector('[data-wk=done]').textContent = `${d.done} z ${d.total}`;
+        week.querySelector('[data-wk=done-min]').textContent = `zadań zrobionych · ${dur(Number(d.doneMin))} z ${dur(Number(d.min))}`;
+        week.querySelector('[data-wk=bar]').style.width = (Number(d.min) ? Math.round(Number(d.doneMin) * 100 / Number(d.min)) : 0) + '%';
     }
     document.querySelectorAll('[data-wk-toggle]').forEach(button => button.addEventListener('click', () => {
-        const id = button.dataset.wkToggle, row = button.closest('.wt');
+        const id = button.dataset.wkToggle, row = button.closest('.mt-row, .mt-now');
         const done = button.getAttribute('aria-pressed') === 'true';
         button.disabled = true;
         at.send(`/ajax/my-tasks/${id}`, 'PATCH', {status: done ? 'open' : 'done', note: null}).then(res => {
@@ -444,15 +395,12 @@
             at.notify(res.ok, res.message);
             if (!res.ok) return;
             button.setAttribute('aria-pressed', done ? 'false' : 'true');
-            button.title = button.ariaLabel = done ? 'Zrobione' : 'Cofnij';
+            if (!button.classList.contains('chk')) button.textContent = done ? 'Zrobione' : 'Cofnij';
+            else button.title = button.ariaLabel = done ? 'Zrobione' : 'Cofnij';
             row?.classList.toggle('done', !done);
-            week?.querySelectorAll(`[data-chip="${id}"]`).forEach(chip => {
-                chip.classList.toggle('done', !done);
-                const ic = chip.querySelector('.ic');
-                ic.className = 'ic ' + (done ? 'plain' : 'ok');
-                ic.textContent = done ? '' : '✓';
-            });
-            recount();
+            const dot = row?.querySelector('.mt-d');
+            if (dot) { dot.classList.toggle('ok', !done); dot.innerHTML = done ? '' : '<i class="bi bi-check-lg"></i>'; }
+            recount(done ? -1 : 1, Number(row?.dataset.min) || 0);
         });
     }));
 })();

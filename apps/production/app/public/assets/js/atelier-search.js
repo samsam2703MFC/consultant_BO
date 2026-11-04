@@ -116,7 +116,9 @@
         'utilisation': 'wykorzystanie', 'saturation': 'wykorzystanie obciazenie', 'occupation': 'wykorzystanie', 'taux': 'wykorzystanie', 'goulot': 'waskie gardlo ogranicza', 'etranglement': 'waskie gardlo',
         'batteur': 'mikser miksery miesiarki', 'batteurs': 'miksery miesiarki', 'petrin': 'miesiarki', 'petrins': 'miesiarki', 'sole': 'piec piece', 'baguette': 'bagietek', 'baguettes': 'bagietek',
         'pousse': 'rozrostu', 'etuve': 'rozrostu', 'fermentation': 'rozrostu', 'cellule': 'szokowe', 'incorporer': 'zmieszcze', 'encore': 'jeszcze', 'reste': 'jeszcze wolne', 'disponible': 'wolne jeszcze',
-        'trs': 'trs wydajnosc', 'oee': 'trs wydajnosc', 'cycle': 'cykl', 'fournee': 'wsadu', 'simulation': 'symulacja', 'simuler': 'symulacja', 'quantite': 'ilosc', 'pic': 'szczytu', 'justificatif': 'potwierdzenie przelewu', 'ocr': 'odczytaj odczyt ocr', 'lire': 'odczytaj odczyt', 'verifier': 'zweryfikuj sprawdzenia sprawdz', 'materiel': 'maszyn stanowiska', 'equipement': 'maszyn stanowiska', 'equipements': 'maszyn stanowiska'
+        'trs': 'trs wydajnosc', 'oee': 'trs wydajnosc', 'cycle': 'cykl', 'fournee': 'wsadu', 'simulation': 'symulacja', 'simuler': 'symulacja', 'quantite': 'ilosc', 'pic': 'szczytu', 'justificatif': 'potwierdzenie przelewu', 'ocr': 'odczytaj odczyt ocr', 'lire': 'odczytaj odczyt', 'verifier': 'zweryfikuj sprawdzenia sprawdz', 'materiel': 'maszyn stanowiska', 'equipement': 'maszyn stanowiska', 'equipements': 'maszyn stanowiska',
+        // [247] Kreatory « lżej » : plan na jutro, zebranie, niezgodności miesiąca, koszty surowców, wydajność i straty.
+        'demain': 'jutro na jutro', 'reunion': 'zebranie zebrania', 'proces': 'protokol', 'verbal': 'protokol', 'pv': 'protokol', 'audit': 'audyt audyty', 'audits': 'audyt audyty', 'surcharge': 'ponad obsade obciazenie', 'deplacer': 'przesun przesuniecie'
     };
 
     var menu = null;
