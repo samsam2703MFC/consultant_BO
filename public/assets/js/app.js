@@ -1826,6 +1826,8 @@ class App {
       this.valsResultatOnglets(common);
       if (common.rjOnglet === 'jour') { this.rjCharge(false); this.valsResultatJour(common); }
       else { this.rpCharge(false); this.valsResultatPeriode(common); }
+      // Sous le tableau des magasins : le réseau, produit par produit (04/11/2026).
+      common.rn = common.rjOnglet === 'reseau' ? null : this.rnVals(common.rjOnglet);
     }
     // --- suivi budget magasin
     // Relu à CHAQUE ouverture de l'écran : ce tableau est la lecture du budget,
@@ -9792,6 +9794,180 @@ class App {
       this.D.rres[cle] = (d && d.periodes) ? d : { erreur: (d && d.error) || 'lecture impossible' };
     }).catch(e => { this.D.rres[cle] = { erreur: (e && e.message) || 'lecture impossible' }; })
       .finally(() => { this._rrEnCours[cle] = false; this.setState({}); });
+  }
+  /* --- Le réseau sous le tableau des magasins (04/11/2026) : les ventes par produit de tous les magasins (portions
+   * comprises), les promotions et bundles, et les produits vendus sans coût, magasin par magasin. La période suit
+   * l'onglet ouvert (le jour choisi, sa semaine, son mois) ; la lecture part une fois le tableau des magasins arrivé,
+   * pour ne pas le ralentir, et se garde cinq minutes côté serveur (`_cache=300`). --- */
+  rnCharge(on, date, du, au, force){
+    const cle = on + '|' + date;
+    if (!this.D.rnet) { this.D.rnet = {}; }
+    if (!this.D.rnoff) { this.D.rnoff = {}; }
+    if (!this._rnEnCours) { this._rnEnCours = {}; }
+    const fr = force ? '&rafraichir=1' : '';
+    if (!this._rnEnCours['p' + cle] && (force || !this.D.rnet[cle])) {
+      this._rnEnCours['p' + cle] = true;
+      readOne('/ventes/stats/reseau?vue=' + on + '&date=' + encodeURIComponent(date) + '&_cache=300' + fr).then(d => {
+        this.D.rnet[cle] = d && Array.isArray(d.produits) ? d : { erreur: (d && d.error) || 'lecture impossible — API injoignable' };
+      }).catch(e => { this.D.rnet[cle] = { erreur: (e && e.message) || 'lecture impossible' }; })
+        .finally(() => { this._rnEnCours['p' + cle] = false; this.setState({}); });
+    }
+    if (!this._rnEnCours['o' + cle] && (force || !this.D.rnoff[cle])) {
+      this._rnEnCours['o' + cle] = true;
+      const qo = on === 'jour' ? 'periode=jour&date=' + encodeURIComponent(date) : 'date=' + encodeURIComponent(date) + '&du=' + encodeURIComponent(du) + '&au=' + encodeURIComponent(au);
+      readOne('/exploitation/offres?' + qo + '&_cache=300' + fr).then(d => {
+        this.D.rnoff[cle] = d && Array.isArray(d.offres) ? d : { erreur: (d && d.error) || 'lecture impossible — API injoignable' };
+      }).catch(e => { this.D.rnoff[cle] = { erreur: (e && e.message) || 'lecture impossible' }; })
+        .finally(() => { this._rnEnCours['o' + cle] = false; this.setState({}); });
+    }
+  }
+  rnVals(on){
+    const S = this.state, D = this.D;
+    let date = null, du = null, au = null;
+    if (on === 'jour') { const rj = (D.rjour || {})[this.rjCle()]; if (rj && !rj.erreur && rj.date) { date = rj.date; du = au = rj.date; } }
+    else { const rp = (D.rper || {})[this.rpCle(on)]; if (rp && !rp.erreur && rp.date && rp.du && rp.au) { date = rp.date; du = rp.du; au = rp.au < rp.date ? rp.au : rp.date; } }
+    if (!date) { return null; }
+    this.rnCharge(on, date, du, au, false);
+    const cle = on + '|' + date, P = (D.rnet || {})[cle], O = (D.rnoff || {})[cle];
+    const enCours = this._rnEnCours || {};
+    const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+    const fE = n => n == null ? '—' : nf(Math.round(n)) + ' €';
+    const fU = n => n == null || !isFinite(n) ? '—' : nf(n, 2) + ' €';
+    const fP = n => n == null || !isFinite(n) ? '' : nf(n, 1) + ' %';
+    const fP0 = n => n == null || !isFinite(n) ? '' : nf(n, 0) + ' %';
+    const fQ = n => n == null ? '—' : nf(n, n % 1 ? 1 : 0);
+    const pl = (n, u, us) => nf(n) + ' ' + (n > 1 ? (us || u + 's') : u);
+    const coulT = t => t == null ? 'var(--color-text-muted)' : (t < 40 ? '#C0182B' : (t < 60 ? '#B26A00' : '#2d7a3e'));
+    const coef = t => t == null || t >= 100 ? '' : '× ' + nf(1 / (1 - t / 100), 2);
+    const perLib = on === 'jour' ? 'le ' + this.fDA(date) : (on === 'semaine' ? 'la semaine du ' + this.fD(du) + ' au ' + this.fD(au) : 'le mois, du ' + this.fD(du) + ' au ' + this.fD(au));
+    const out = { perLib, relire: () => this.rnCharge(on, date, du, au, true),
+      prod: null, off: null, sc: null,
+      prodChargement: !P, prodErreur: P && P.erreur ? P.erreur : '', offChargement: !O, offErreur: O && O.erreur ? O.erreur : '',
+      relecture: !!(enCours['p' + cle] || enCours['o' + cle]) && !!(P && O) };
+    if (P && !P.erreur) {
+      const magNom = {}; (P.magasins || []).forEach(m => { magNom[m.shop] = m.nom; });
+      const nVend = (P.magasins || []).filter(m => m.ca > 0).length;
+      const vue = ['produits', 'categories', 'portions'].includes(S.rnVue) ? S.rnVue : 'produits';
+      const tri = ['v', 'q', 'm'].includes(S.rnTri) ? S.rnTri : 'v';
+      const q = String(S.rnQ || '').trim().toLowerCase();
+      const trie = (a, b) => tri === 'm' ? ((b.m == null ? -Infinity : b.m) - (a.m == null ? -Infinity : a.m)) || b.v - a.v : (b[tri] - a[tri]) || b.v - a.v;
+      const tous = P.produits || [];
+      const parId = {}; tous.forEach(p => { parId[p.id] = p; });
+      const cherche = p => !q || (p.nom + ' ' + p.cat + ' ' + (p.groupe || '')).toLowerCase().includes(q);
+      let base = tous.filter(cherche);
+      if (vue === 'portions') { base = base.filter(p => p.portion); }
+      const totV = tous.reduce((s, p) => s + p.v, 0);
+      let lignes = [];
+      if (vue === 'categories') {
+        const G = {};
+        base.forEach(p => {
+          const g = G[p.cat] || (G[p.cat] = { id: 'c:' + p.cat, nom: p.cat, groupe: p.groupe, q: 0, v: 0, vC: 0, m: null, refs: 0, nSans: 0, mags: {}, prods: [] });
+          g.q += p.q; g.v += p.v; g.refs++; g.prods.push(p);
+          if (p.m != null) { g.m = (g.m || 0) + p.m; g.vC += p.vChiffre || 0; }
+          if (p.nSans) { g.nSans++; }
+          (p.magasins || []).forEach(x => { g.mags[x.s] = true; });
+        });
+        lignes = Object.values(G).map(g => Object.assign(g, { taux: g.m != null && g.vC > 0 ? 100 * g.m / g.vC : null, nMag: Object.keys(g.mags).length, prix: null, part: totV > 0 ? 100 * g.v / totV : null }));
+      } else {
+        lignes = base.map(p => Object.assign({}, p, { nMag: (p.magasins || []).length }));
+      }
+      lignes.sort(trie);
+      const max = Math.max(1, ...lignes.map(l => l.v));
+      const n = lignes.length, LIM = 25, tout = !!S.rnTout || q !== '';
+      const vues = lignes.slice(0, tout ? n : LIM);
+      const ouvre = id => () => this.setState({ rnOuv: S.rnOuv === id ? null : id });
+      const rows = vues.map((l, i) => {
+        const ouvert = S.rnOuv === l.id;
+        const r = { id: l.id, rang: i + 1, nom: l.nom, portion: !!l.portion, cat: vue === 'categories' ? [l.groupe, pl(l.refs, 'référence')].filter(Boolean).join(' · ') : [l.cat, l.groupe].filter((v, k, a) => v && a.indexOf(v) === k).join(' · '),
+          nMag: l.nMag + ' / ' + nVend, nMagTitre: vue === 'categories' ? '' : (l.magasins || []).map(x => (magNom[x.s] || x.s) + ' ' + fQ(x.q)).join(' · '),
+          pieces: fQ(l.q), prix: vue === 'categories' ? '' : fU(l.prix), ca: fE(l.v), part: fP(l.part), w: (100 * l.v / max).toFixed(1),
+          marge: l.m == null ? '?' : fE(l.m), margeTitre: l.m == null ? 'coût de recette inconnu partout' : '', taux: fP0(l.taux), tauxCoul: coulT(l.taux), coef: coef(l.taux),
+          sans: l.nSans ? (vue === 'categories' ? pl(l.nSans, 'produit') + ' sans coût quelque part' : 'sans coût dans ' + pl(l.nSans, 'magasin')) : '',
+          entier: '', ouvert, ouvrir: ouvre(l.id), det: [] };
+        if (vue === 'portions') {
+          const e = parId[String(l.pid)];
+          r.entier = e ? 'pièce entière : ' + pl(e.q, 'vendue') + ' · ' + fE(e.v) : 'pas de pièce entière vendue';
+        }
+        if (ouvert) {
+          r.det = vue === 'categories'
+            ? l.prods.slice().sort(trie).slice(0, 15).map(p => ({ nom: p.nom, sous: pl((p.magasins || []).length, 'magasin'), pieces: fQ(p.q), prix: fU(p.prix), ca: fE(p.v), part: l.v > 0 ? fP0(100 * p.v / l.v) : '', marge: p.m == null ? '?' : fE(p.m), taux: fP0(p.taux), tauxCoul: coulT(p.taux) }))
+              .concat(l.prods.length > 15 ? [{ nom: 'et ' + pl(l.prods.length - 15, 'autre produit'), sous: '', pieces: '', prix: '', ca: '', part: '', marge: '', taux: '', tauxCoul: '', reste: true }] : [])
+            : (l.magasins || []).map(x => ({ nom: magNom[x.s] || x.s, sous: x.m == null ? 'sans coût de recette ici' : '', pieces: fQ(x.q), prix: x.q > 0 ? fU(x.v / x.q) : '—', ca: fE(x.v), part: l.v > 0 ? fP0(100 * x.v / l.v) : '',
+              marge: x.m == null ? '?' : fE(x.m), taux: x.m != null && x.v > 0 ? fP0(100 * x.m / x.v) : '', tauxCoul: coulT(x.m != null && x.v > 0 ? 100 * x.m / x.v : null) }));
+        }
+        return r;
+      });
+      const sel = q !== '' || vue === 'portions';
+      const sV = lignes.reduce((s, l) => s + l.v, 0), sQ = lignes.reduce((s, l) => s + l.q, 0);
+      const sM = lignes.reduce((s, l) => s + (l.m || 0), 0), sVC = lignes.reduce((s, l) => s + (l.m != null ? (l.vChiffre != null ? l.vChiffre : l.vC) || 0 : 0), 0);
+      const T = P.totaux || {}, L = P.lecture || {};
+      const manquent = (P.magasins || []).filter(m => m.joursManquants > 0 || m.instantanes > 0);
+      out.prod = { vue, tri, q, qBrut: String(S.rnQ || ''),
+        vues: [['produits', 'Produits'], ['categories', 'Catégories'], ['portions', 'Portions']].map(([k, nom]) => ({ nom: nom + (k === 'portions' && T.portions ? ' · ' + T.portions : ''), on: vue === k, go: () => this.setState({ rnVue: k, rnOuv: null }) })),
+        tris: [['v', 'CA'], ['q', 'Pièces'], ['m', 'Marge brute']].map(([k, nom]) => ({ nom, on: tri === k, go: () => this.setState({ rnTri: k }) })),
+        setQ: e => this.setState({ rnQ: e.target.value }),
+        rows, vide: !rows.length ? (vue === 'portions' ? 'Aucune portion vendue sur ' + perLib + (q ? ' pour « ' + S.rnQ + ' »' : '') + ' : les produits divisibles se sont vendus entiers.' : (q ? 'Aucun produit pour « ' + S.rnQ + ' ».' : 'Aucune vente de produit lue sur ' + perLib + '.')) : '',
+        plus: !tout && n > LIM ? { txt: 'Voir les ' + nf(n) + ' ' + (vue === 'categories' ? 'catégories' : (vue === 'portions' ? 'portions' : 'produits')), go: () => this.setState({ rnTout: true }) } : null,
+        moins: S.rnTout && !q && n > LIM ? { txt: 'Revenir aux ' + LIM + ' premiers', go: () => this.setState({ rnTout: false, rnOuv: null }) } : null,
+        entNom: vue === 'categories' ? 'Catégorie' : (vue === 'portions' ? 'Portion' : 'Produit'),
+        total: { lib: sel ? 'Sélection' : 'Total réseau', sous: sel ? pl(n, vue === 'portions' ? 'portion' : 'ligne') + ' · ' + fP(totV > 0 ? 100 * sV / totV : null) + ' du CA produits' : pl(T.refs || 0, 'référence') + (T.portions ? ' dont ' + pl(T.portions, 'portion') : '') + ' · ' + pl(nVend, 'magasin'),
+          pieces: fQ(Math.round(sQ * 10) / 10), ca: fE(sV), marge: fE(sel ? sM : T.m), taux: fP0(sel ? (sVC > 0 ? 100 * sM / sVC : null) : T.taux), tauxCoul: coulT(sel ? (sVC > 0 ? 100 * sM / sVC : null) : T.taux) },
+        ca: fE(T.ca), tauxReseau: T.taux != null ? fP(T.taux) : '—', tauxCoul: coulT(T.taux),
+        tauxSous: T.vChiffre != null && T.ca > 0 ? 'marge brute sur ' + fP0(100 * T.vChiffre / T.ca) + ' du CA chiffré' : '',
+        sousTitre: perLib + ' · ' + pl(nVend, 'magasin') + ' · ' + pl(T.refs || 0, 'référence') + ' vendue' + ((T.refs || 0) > 1 ? 's' : ''),
+        lecture: manquent.length ? 'Lecture partielle : ' + manquent.map(m => m.nom + ' ' + (m.joursLus - m.instantanes) + '/' + m.jours + ' jour' + (m.jours > 1 ? 's' : '') + (m.instantanes ? ' (+' + m.instantanes + ' en relevé ancien)' : '')).join(' · ') + ' — les tickets se relèvent au cron, chaque heure.' : '',
+        note: 'CA = ventes TTC des tickets, ligne par ligne ; marge brute = ventes − quantité × coût de la recette du magasin (portion : la fraction du coût de la pièce). Une portion (½, ¼) est une ligne à part, comme au dashboard magasin. Les bundles restent dans leur catégorie : la carte « Promotions et bundles » les détaille. La somme des produits peut différer du CA du tableau : lignes de caisse sans produit, remises sur ticket.'
+          + (L.secondes != null ? ' Calcul : ' + nf(L.secondes, 1) + ' s' + (L.ticketsLus ? ', ' + pl(L.ticketsLus, 'ticket') + ' lu' + (L.ticketsLus > 1 ? 's' : '') : '') + '.' : '') };
+      // Les produits sans coût, magasin par magasin.
+      const scOuv = S.rnScOuv || {};
+      const M = (P.magasins || []).slice().sort((a, b) => (b.caSansCout - a.caSansCout) || a.nom.localeCompare(b.nom));
+      const concernes = M.filter(m => m.nSansCout > 0);
+      const frequents = tous.filter(p => p.nSans > 1).sort((a, b) => (b.nSans - a.nSans) || b.vSans - a.vSans).slice(0, 4);
+      const tousOuv = !!S.rnScTout;
+      out.sc = {
+        kpi: [
+          ['Produits sans coût', nf(T.nSansCout || 0), T.nSansCout ? 'références distinctes, vendues sans coût de recette dans au moins un magasin' : 'tout ce qui s’est vendu est chiffré'],
+          ['Ventes concernées', fE(T.caSansCout || 0), T.ca > 0 ? fP(100 * (T.caSansCout || 0) / T.ca) + ' du CA produits · leur marge reste hors des taux ci-dessus' : ''],
+          ['Magasins concernés', concernes.length + ' / ' + M.length, concernes.length ? concernes.slice(0, 3).map(m => m.nom + ' ' + m.nSansCout).join(' · ') + (concernes.length > 3 ? ' …' : '') : 'aucun'],
+        ],
+        frequents: frequents.length ? 'Sans coût dans plusieurs magasins : ' + frequents.map(p => p.nom + ' (' + p.nSans + ')').join(' · ') : '',
+        toutTxt: concernes.length ? (tousOuv ? 'tout replier ▴' : 'tout déplier ▾') : '', tout: () => this.setState({ rnScTout: !tousOuv, rnScOuv: {} }),
+        mags: M.map(m => {
+          const ouvert = scOuv[m.shop] != null ? scOuv[m.shop] : tousOuv;
+          return { nom: m.nom, n: m.nSansCout, ok: m.nSansCout === 0 && m.joursLus > 0, lu: m.joursLus > 0,
+            etat: m.joursLus === 0 ? 'tickets non lus' : (m.nSansCout === 0 ? 'tout est chiffré' : pl(m.nSansCout, 'produit')),
+            ca: m.nSansCout ? fE(m.caSansCout) : '', part: m.nSansCout && m.ca > 0 ? fP(100 * m.caSansCout / m.ca) + ' de ses ventes' : '',
+            ouvert: ouvert && m.nSansCout > 0, ouvrir: m.nSansCout ? () => this.setState({ rnScOuv: Object.assign({}, scOuv, { [m.shop]: !ouvert }) }) : null,
+            chevron: m.nSansCout ? (ouvert ? '▾' : '▸') : '',
+            produits: (m.sansCout || []).map(x => ({ nom: x.nom, cat: x.cat || '', q: fQ(x.q), v: fU(x.v), ailleurs: (parId[x.id] && parId[x.id].magasins.length > parId[x.id].nSans) ? 'chiffré ailleurs dans le réseau' : '' })) };
+        }),
+        note: 'À chiffrer dans le panel : recette ou coût de revient du produit, pour le magasin. Un produit chiffré ailleurs a souvent une recette sans prix pour une matière de ce magasin. Les ventes sans coût se rechiffrent à la recette du moment à chaque lecture.' };
+    }
+    if (O && !O.erreur) {
+      const K = O.kpi || {}, M = O.magasins || [];
+      const VERD = { garder: ['Garder', 'ok'], ajuster: ['Ajuster', 'att'], arreter: ['Arrêter', 'ko'], tot: ['Trop tôt', 'tot'] };
+      const CAN = { comptoir: ['Comptoir', 'c'], cc: ['Click & collect', 'w'], liv: ['Livraison', 'l'], webshop: ['Webshop', 'w'] };
+      const dlt = v => v.delta == null ? '' : (v.delta >= 0 ? '+' : '−') + nf(Math.abs(v.delta)) + ' % ';
+      const lignes = (O.offres || []).map(o => {
+        const cells = M.map(m => { const v = o.magasins[m.shop]; if (!v) { return { txt: '', verdict: '' }; } const verd = VERD[v.verdict] || VERD.tot;
+          return { txt: v.pieces != null ? fQ(v.pieces) : fE(v.ca), sous: v.pieces != null ? fE(v.ca) : '', verdict: verd[1], titre: m.nom + ' : ' + verd[0] + ' · ' + dlt(v) + (v.mot || '') }; });
+        const comptes = {}; Object.values(o.magasins).forEach(v => { comptes[v.verdict] = (comptes[v.verdict] || 0) + 1; });
+        return { type: o.type, typeLib: o.type === 'bundle' ? 'Bundle' : 'Promo', nom: o.nom, regle: o.regle || '', depuis: o.depuis ? this.fD(o.depuis) : '—',
+          canaux: (o.canaux || []).map(c => ({ lib: (CAN[c] || [c])[0], cls: (CAN[c] || [c, 'c'])[1] })), cells,
+          total: o.pieces ? fQ(o.pieces) : fE(o.ca), totalSous: o.pieces ? fE(o.ca) : '', marge: o.marge != null ? fP0(o.marge) : '', margeCoul: o.marge == null ? '' : (o.marge >= 60 ? '#2d7a3e' : (o.marge >= 50 ? '#B26A00' : '#C0182B')),
+          verdicts: ['garder', 'ajuster', 'arreter', 'tot'].filter(k => comptes[k]).map(k => ({ lib: VERD[k][0], cls: VERD[k][1], n: comptes[k] })) };
+      });
+      const nAj = (O.offres || []).filter(o => Object.values(o.magasins || {}).some(v => v.verdict === 'ajuster' || v.verdict === 'arreter')).length;
+      out.off = { cols: M.map(m => ({ shop: m.shop, nom: m.nom })), lignes, multi: M.length > 1,
+        colLib: on === 'jour' ? 'ce jour-là' : perLib,
+        kpi: [
+          ['CA des offres', fE(K.ca), (K.part != null ? fP(K.part) + ' du CA de la caisse' : '—') + (K.pieces ? ' · ' + pl(K.pieces, 'pièce') : '')],
+          ['Marge brute des offres', K.marge != null ? fP0(K.marge) : '—', K.marge != null && K.marge < 100 ? 'coef ' + coef(K.marge) + ' · sur les bundles, 7 jours au moins' : 'coût matière inconnu'],
+          ['Actives', String((K.bundles || 0) + (K.promos || 0)), pl(K.bundles || 0, 'bundle') + ', ' + pl(K.promos || 0, 'promotion') + (nAj ? ' · ' + nAj + ' à ajuster quelque part' : '')],
+        ],
+        vide: !lignes.length ? 'Aucune offre sur ' + perLib + ' : pas de bundle vendu dans les tickets, pas de promotion posée sur les jours creux.' : '' };
+    }
+    return out;
   }
   /**
    * La courbe des clients — N en trait plein, N-1 en pointillé — en repère
