@@ -494,6 +494,14 @@
                     </a>
                 </li>
 
+                {# [244] Uprawnienia funkcji : która funkcja widzi które strony (tylko administrator — dla innych link znika). #}
+                <li class="sidebar-item">
+                    <a href="{{ root }}/organization/access" class="sidebar-link">
+                        <i class="bi bi-shield-lock"></i>
+                        <span>Uprawnienia funkcji</span>
+                    </a>
+                </li>
+
                 {# Aktywność i licznik stron w zakładkach (N7). #}
                 {% set g = page_tab_groups().usage %}
                 <li class="sidebar-item">
@@ -509,7 +517,7 @@
                 <li class="sidebar-title">Ustawienia</li>
 
                 <li class="sidebar-item">
-                    <a href="{{ root }}/settings" class="sidebar-link" data-also="/other-settings /settings/languages /settings/ksef /settings/panel-api /settings/mail-footers /communication/email-settings /devices /aliases /users /organization/positions /organization/access /logistics/tours /logistics/vehicles /product-carriers /communication/document-templates /communication/templates">
+                    <a href="{{ root }}/settings" class="sidebar-link" data-also="/other-settings /settings/languages /settings/ksef /settings/panel-api /settings/mail-footers /communication/email-settings /devices /aliases /users /organization/positions /logistics/tours /logistics/vehicles /product-carriers /communication/document-templates /communication/templates">
                         <i class="bi bi-gear-fill"></i>
                         <span>Ustawienia</span>
                     </a>
