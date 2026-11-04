@@ -26,6 +26,11 @@ RewriteEngine On
 # API REST → contrôleur frontal
 RewriteRule ^api/cockpit(/.*)?$ api/index.php [L,QSA]
 
+# Le module Formation appelle l'API À CÔTÉ de lui (formation/api/cockpit/…) : il se
+# sert ainsi à l'identique sous le cockpit et à la racine du serveur (/formation/,
+# alias Apache posé par bin/deploy.sh). Le contrôleur lit tout ce qui suit /api/cockpit.
+RewriteRule ^formation/api/cockpit(/.*)?$ api/index.php [L,QSA]
+
 # API de l'assistant de campagne (copie du module marketing). L'assistant
 # appelle ../api/v1/marketing/… depuis /assistant/ ; sans cette règle, le
 # repli SPA renverrait le shell HTML avec un statut 200.

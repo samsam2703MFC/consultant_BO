@@ -11,7 +11,8 @@
  */
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-if (str_starts_with($uri, '/api/cockpit')) {
+// Le module Formation appelle l'API à côté de lui (formation/api/cockpit), comme sur le serveur.
+if (str_starts_with($uri, '/api/cockpit') || str_starts_with($uri, '/formation/api/cockpit')) {
     require __DIR__ . '/api/index.php';
     return true;
 }
