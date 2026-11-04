@@ -1319,6 +1319,117 @@ function ep_stats_ventes(): array
 }
 
 /**
+ * GET /ventes/stats/reseau?vue=jour|semaine|mois&date=YYYY-MM-DD — les ventes de produits de TOUT le réseau (04/11/2026).
+ *
+ * Sous le tableau des magasins du Résultat : chaque produit vendu sur la période, tous magasins confondus, avec ses
+ * pièces, son CA, sa marge brute et le détail magasin par magasin ; une PORTION (une demi-tarte, un quart) reste une
+ * ligne à part (clé « produit:portion »), comme dans le dashboard magasin. Et, magasin par magasin, les produits vendus
+ * sans coût de recette (à chiffrer dans le panel).
+ *
+ * Les relevés de tickets gravés (svP{shop}:{jour}) se lisent tels quels ; les jours à relire passent par
+ * svProduitsJour, jour par jour en remontant et magasin par magasin, dans un budget commun en tickets et en secondes.
+ * Un relevé périmé de la journée en cours sert quand le budget est épuisé (`instantanes`) : une réponse un peu ancienne
+ * vaut mieux qu'un trou. Les ventes sans coût se rechiffrent à la recette du moment (svRechiffrer) tant qu'il reste du
+ * temps. Les bundles restent dans leur catégorie : la carte « Promotions et bundles » les détaille.
+ */
+function ep_stats_ventes_reseau(): array
+{
+    $auj = date('Y-m-d');
+    $vue = (string) ($_GET['vue'] ?? 'jour');
+    if (!in_array($vue, ['jour', 'semaine', 'mois'], true)) { $vue = 'jour'; }
+    $date = (string) ($_GET['date'] ?? $auj);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
+    if (!PanelApi::configured()) { return ['error' => 'compte panel non configuré']; }
+    [$du, $au, $jours] = svJours($vue, $date);
+    $jours = array_values(array_filter($jours, static fn ($j) => $j >= SV_DEBUT));
+    @set_time_limit(240);
+    $t0 = microtime(true);
+    $noms = jcMagasins();
+    $cout = 0; $budget = SV_BUDGET_DEMANDE * 3; $tMax = SV_TEMPS_DEMANDE + 10;
+    // Par magasin : clé produit → [nom, q, v, c|null] sur toute la période.
+    $acc = []; $etat = [];
+    foreach ($noms as $sid => $nom) { $acc[(string) $sid] = []; $etat[(string) $sid] = ['lus' => 0, 'instant' => 0, 'manque' => 0]; }
+    foreach (array_reverse($jours) as $j) {
+        foreach ($noms as $sid => $nom) {
+            $s = (string) $sid;
+            $g = setting('svP' . $s . ':' . $j);
+            $p = null; $instant = false;
+            if (svGraveValide($g, 'p', $j)) { $p = $g['p']; }
+            elseif (microtime(true) - $t0 < $tMax) { $p = svProduitsJour((int) $sid, $j, $cout, $budget, false); }
+            if ($p === null && is_array($g) && is_array($g['p'] ?? null)) { $p = $g['p']; $instant = true; }
+            if ($p === null) { $etat[$s]['manque']++; continue; }
+            $etat[$s]['lus']++; if ($instant) { $etat[$s]['instant']++; }
+            foreach ((array) $p as $lst) {
+                foreach ((array) $lst as $k => $x) {
+                    if (!is_array($x) || !isset($x[1], $x[2])) { continue; }
+                    $ks = (string) $k;
+                    if (!isset($acc[$s][$ks])) { $acc[$s][$ks] = [(string) ($x[0] ?? ''), 0.0, 0.0, 0.0]; }
+                    $acc[$s][$ks][1] += (float) $x[1]; $acc[$s][$ks][2] += (float) $x[2];
+                    if (($x[3] ?? null) === null) { $acc[$s][$ks][3] = null; } elseif ($acc[$s][$ks][3] !== null) { $acc[$s][$ks][3] += (float) $x[3]; }
+                }
+            }
+        }
+    }
+    // Les ventes sans coût, au coût de la recette du moment — magasin par magasin, tant qu'il reste du temps.
+    $rechiffres = 0;
+    foreach ($acc as $s => $lst) {
+        if (microtime(true) - $t0 > $tMax + 15) { break; }
+        $aussi = false; foreach ($lst as $x) { if ($x[3] === null) { $aussi = true; break; } }
+        if (!$aussi) { continue; }
+        $r = svRechiffrer(['p' => ['0' => $lst]], (int) $s);
+        $acc[$s] = (array) ($r['p']['0'] ?? $lst); $rechiffres++;
+    }
+    $catDe = svCategories(); $grpDe = svGroupes();
+    $R = []; $mags = [];
+    foreach ($acc as $s => $lst) {
+        $ca = 0.0; $sans = [];
+        foreach ($lst as $ks => $x) {
+            if ($x[2] <= 0 && $x[1] <= 0) { continue; }
+            $pid = (int) $ks; $ca += $x[2];
+            $cat = $catDe[$pid] ?? 'Sans catégorie';
+            if (!isset($R[$ks])) {
+                $R[$ks] = ['id' => (string) $ks, 'pid' => $pid, 'nom' => svNomProduit($ks, $x[0]), 'cat' => $cat, 'groupe' => $grpDe[$cat] ?? null, 'portion' => str_contains((string) $ks, ':'),
+                    'q' => 0.0, 'v' => 0.0, 'vC' => 0.0, 'cC' => 0.0, 'vS' => 0.0, 'nS' => 0, 'mags' => []];
+            }
+            $L =& $R[$ks];
+            $L['q'] += $x[1]; $L['v'] += $x[2];
+            if ($x[3] !== null) { $L['vC'] += $x[2]; $L['cC'] += $x[3]; }
+            elseif ($x[2] > 0) { $L['vS'] += $x[2]; $L['nS']++; $sans[] = ['id' => (string) $ks, 'nom' => $L['nom'], 'cat' => $cat, 'q' => round($x[1], 1), 'v' => round($x[2], 2)]; }
+            $L['mags'][] = ['s' => (string) $s, 'q' => round($x[1], 1), 'v' => round($x[2], 2), 'm' => $x[3] === null ? null : round($x[2] - $x[3], 2)];
+            unset($L);
+        }
+        usort($sans, static fn ($a, $b) => $b['v'] <=> $a['v']);
+        $e = $etat[$s];
+        $mags[] = ['shop' => (string) $s, 'nom' => (string) ($noms[$s] ?? $s), 'jours' => count($jours), 'joursLus' => $e['lus'], 'instantanes' => $e['instant'], 'joursManquants' => $e['manque'],
+            'ca' => round($ca, 2), 'refs' => count(array_filter($lst, static fn ($x) => $x[2] > 0 || $x[1] > 0)),
+            'sansCout' => $sans, 'nSansCout' => count($sans), 'caSansCout' => round(array_sum(array_column($sans, 'v')), 2)];
+    }
+    $vT = array_sum(array_column($R, 'v'));
+    $produits = []; $tot = ['q' => 0.0, 'v' => 0.0, 'vC' => 0.0, 'cC' => 0.0, 'vS' => 0.0];
+    foreach ($R as $L) {
+        usort($L['mags'], static fn ($a, $b) => $b['v'] <=> $a['v']);
+        $m = $L['vC'] > 0 ? round($L['vC'] - $L['cC'], 2) : null;
+        $produits[] = ['id' => $L['id'], 'pid' => $L['pid'], 'nom' => $L['nom'], 'cat' => $L['cat'], 'groupe' => $L['groupe'], 'portion' => $L['portion'],
+            'q' => round($L['q'], 1), 'v' => round($L['v'], 2), 'prix' => $L['q'] > 0 ? round($L['v'] / $L['q'], 2) : null,
+            'm' => $m, 'taux' => $m !== null ? round(100 * $m / $L['vC'], 1) : null, 'vChiffre' => round($L['vC'], 2),
+            'vSans' => round($L['vS'], 2), 'nSans' => $L['nS'], 'part' => $vT > 0 ? round(100 * $L['v'] / $vT, 2) : null,
+            'magasins' => $L['mags']];
+        foreach (['q', 'v', 'vC', 'cC', 'vS'] as $k) { $tot[$k] += $L[$k]; }
+    }
+    usort($produits, static fn ($a, $b) => ($b['v'] <=> $a['v']) ?: strcmp($a['nom'], $b['nom']));
+    $mT = $tot['vC'] > 0 ? round($tot['vC'] - $tot['cC'], 2) : null;
+    $nSansDistincts = count(array_filter($produits, static fn ($p) => $p['nSans'] > 0));
+    $complet = array_sum(array_column($mags, 'joursManquants')) === 0 && array_sum(array_column($mags, 'instantanes')) === 0;
+    return ['vue' => $vue, 'date' => $date, 'du' => $du, 'au' => $au, 'aujourdhui' => $auj, 'jours' => $jours,
+        'produits' => $produits, 'magasins' => $mags,
+        'totaux' => ['refs' => count($produits), 'portions' => count(array_filter($produits, static fn ($p) => $p['portion'])), 'q' => round($tot['q'], 1), 'ca' => round($tot['v'], 2),
+            'm' => $mT, 'taux' => $mT !== null ? round(100 * $mT / $tot['vC'], 1) : null, 'vChiffre' => round($tot['vC'], 2),
+            'nSansCout' => $nSansDistincts, 'caSansCout' => round($tot['vS'], 2)],
+        'lecture' => ['complet' => $complet, 'ticketsLus' => $cout, 'rechiffres' => $rechiffres, 'secondes' => round(microtime(true) - $t0, 1)],
+        'source' => 'tickets du panel avec leurs lignes (relevés gravés), coût matière des recettes de chaque magasin'];
+}
+
+/**
  * La moisson des tickets au cron : du premier jour moissonné jusqu'à hier,
  * tous les magasins, un lot borné par battement. Dit où elle en est.
  */
