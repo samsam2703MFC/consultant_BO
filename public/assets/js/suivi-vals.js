@@ -432,6 +432,7 @@ function rapVals(app, sv, id){
     budget: budgetDe(v.budgetCa),
     score: scoreVals(d.score),
     evaluation: evalVals(d.evaluation),
+    personnel: equipeVals(v.personnel),
     a: d.envoi.a, source: d.envoi.source, copies: d.envoi.copies.map(x => x.nom + (x.email ? '' : ' (sans adresse)')).join(', ') || 'personne',
     envoie: d.roles.envoieNom, adapte: d.roles.adapteNom, smtp: d.envoi.smtp,
     dernier: d.envoi.dernier ? (d.envoi.dernier.envoye ? 'Dernier courriel : envoyé à ' + d.envoi.dernier.a + ' (' + (d.envoi.dernier.langue || '') + ')' + (d.envoi.dernier.pdf ? ', PDF joint' : ', sans PDF (moteur PDF muet)') + '.' : 'Dernier courriel non parti : ' + d.envoi.dernier.motif + '.') : null,
@@ -452,6 +453,17 @@ function scoreVals(sc){
   return { score: a.score, n: a.n, ton: ton(a.score),
     prec: p ? 'visite du ' + fmtD(sc.precedent.le) + ' : ' + p.score : 'première visite notée', ecart: p ? ec(a.score - p.score) : null,
     modules: a.modules.map(m => ({ nom: m.nom, score: m.score, ton: ton(m.score), ecart: avant[m.id] != null ? ec(m.score - avant[m.id]) : null })) };
+}
+/** L'équipe en poste notée à la tablette (05/11/2026) : interne au bureau. Chaque personne, sa note, ses trois contrôles, sa remarque. */
+function equipeVals(pe){
+  const L = pe && Array.isArray(pe.personnes) ? pe.personnes : [];
+  if (!L.length) { return null; }
+  const ton = x => x == null ? 'mu' : x >= 4 ? 'ok' : x === 3 ? 'att' : 'ko';
+  const ck = (x, nom) => x === 1 ? { nom, cls: 'ok', txt: '✓ ' + nom } : x === 0 ? { nom, cls: 'ko', txt: '✗ ' + nom } : null;
+  const vus = L.filter(p => p.vu !== false), n = vus.map(p => p.note).filter(x => x >= 1);
+  return { moyenne: n.length ? (n.reduce((a, b) => a + b, 0) / n.length).toFixed(1).replace('.', ',') : '—', nVus: vus.length, nPasVus: L.length - vus.length,
+    personnes: L.map(p => ({ nom: p.nom, heures: p.heures || '', pasVu: p.vu === false, note: p.note ? p.note + ' / 5' : '—', ton: ton(p.note), com: p.com || '',
+      checks: [ck(p.tenue, 'tenue'), ck(p.sbam, 'SBAM'), ck(p.xp, 'XP client')].filter(Boolean) })) };
 }
 /**
  * L'évaluation rapide de fin de visite (05/11/2026) : le radar dessiné par le serveur (le même que dans le PDF), la moyenne

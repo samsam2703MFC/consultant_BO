@@ -170,13 +170,19 @@ function tplRapport(r, x){
     `<div class="sv-sc"><b>${esc(Ev.moyenne)}</b><span>/ 5 · moyenne</span><em>${esc(Ev.prec)}</em>${Ev.ecart ? `<i class="${esc(Ev.ecart.cls)}">${esc(Ev.ecart.txt)}</i>` : ''}</div>
     <div class="sv-ev-radar">${Ev.svg}</div>
     <div class="sv-ev">${Ev.axes.map(a => `<span class="nom">${esc(a.nom)}</span><b class="${esc(a.ton)}">${esc(a.note)}</b><em class="${a.ecart ? esc(a.ecart.cls) : ''}">${a.ecart ? esc(a.ecart.txt) : ''}</em><span class="com">${esc(a.com)}</span>`).join('')}</div>`) : '';
+  // L'équipe en poste (05/11/2026) : notée à la tablette, interne — elle ne part pas au franchisé.
+  const Pe = r.personnel;
+  const personnel = Pe ? carte('L’équipe en poste', 'interne · ne part pas au franchisé',
+    `<div class="sv-sc"><b>${esc(Pe.moyenne)}</b><span>/ 5 · moyenne</span><em>${esc(Pe.nVus + ' personne' + (Pe.nVus > 1 ? 's' : '') + ' notée' + (Pe.nVus > 1 ? 's' : '') + (Pe.nPasVus ? ' · ' + Pe.nPasVus + ' pas vue' + (Pe.nPasVus > 1 ? 's' : '') : ''))}</em></div>
+    <div class="sv-eq">${Pe.personnes.map(p => `<div class="r${p.pasVu ? ' pv' : ''}"><span class="nom">${esc(p.nom)}<small>${esc(p.heures)}</small></span>${p.pasVu ? '<em class="mko-mu">pas vue</em>' : `<b class="${esc(p.ton)}">${esc(p.note)}</b>`}
+      <span class="ck">${p.checks.map(c => `<i class="${esc(c.cls)}">${esc(c.txt)}</i>`).join('')}</span>${p.com ? `<span class="com">${esc(p.com)}</span>` : ''}</div>`).join('')}</div>`) : '';
   const ck = carte('La checklist', esc(r.checklist), r.ecarts.length ? `<ul class="sv-ul">${r.ecarts.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : '<div class="mko-mu">Aucun écart relevé.</div>');
   const envoi = carte('L’envoi', esc(r.statut),
     `<div class="sv-kv"><span>À</span><b class="${r.a ? '' : 'ko'}">${esc(r.a || 'aucune adresse — réglez-la dans Qui fait quoi')}</b><span>Langue</span><b>${esc(r.langue)}</b><span>En copie</span><b>${esc(r.copies)}</b><span>Envoie</span><b>${esc(r.envoie || '—')}</b></div>
     ${r.delai ? `<div class="${r.delaiKo ? 'ko' : 'att'}" style="font-weight:600;font-size:12.5px;margin-top:8px">${esc(r.delai)}</div>` : ''}
     ${!r.smtp ? '<div class="gc-pill att" style="margin-top:8px">SMTP non configuré : le rapport ira sur la page du franchisé, sans courriel</div>' : ''}
     ${r.dernier ? `<div class="mko-mu" style="margin-top:8px">${esc(r.dernier)}</div>` : ''}`);
-  return `<div class="sva-rap"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${score}${evaluation}${budget}${photos}${ck}</div></div>
+  return `<div class="sva-rap"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${score}${evaluation}${budget}${photos}${ck}${personnel}</div></div>
     <div class="sva-act"><button ${x.A(r.voir)} class="cx-btn">Voir le rapport</button>
       ${r.envoye ? `<button ${x.A(r.renvoyer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Renvoyer le courriel</button>`
         : `<button ${x.A(r.envoyer)} class="cx-btn prim sva-lg" ${r.busy ? 'disabled' : ''}>${r.busy ? 'Envoi…' : 'Envoyer au franchisé →'}</button><button ${x.A(r.enregistrer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Enregistrer</button>`}</div>`;
