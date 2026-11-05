@@ -24,24 +24,37 @@
             <div class="navbar-center flex-grow-1 d-flex justify-content-center">
 
                 <div class="quick-tags d-flex align-items-center">
+                    {# [255] Skróty tylko do stron, które użytkownik widzi (bez 403). #}
+                    {% if can_see('/dashboard') %}
                     <a href="{{ root }}/dashboard" class="badge bg-dark me-2 py-2 px-3 at-profit-pill" data-profit title="Koszt personelu / sprzedaż w bieżącym miesiącu">
                         <i class="icon bi bi-graph-up"></i> Rentowność <span data-profit-value></span>
                     </a>
+                    {% endif %}
+                    {% if can_see('/shipping/wizard') %}
                     <a href="{{ root }}/shipping/wizard" class="badge bg-primary me-2 py-2 px-3" title="Kreator wysyłki (tryb klasyczny : link na stronie kreatora)">
                         <i class="icon bi bi-truck"></i> Wysyłka
                     </a>
+                    {% endif %}
+                    {% if can_see('/workshop/team-sheet') %}
                     <a href="{{ root }}/workshop/team-sheet" class="badge bg-secondary me-2 py-2 px-3" title="Plan zespołów na tydzień (PDF, tablet) i listy dnia (PDF)">
                         <i class="icon dripicons-document"></i> Listy produkcyjne
                     </a>
+                    {% endif %}
+                    {% if can_see('/client-orders') %}
                     <a href="{{ root }}/client-orders" class="badge bg-info me-2 py-2 px-3">
                         <i class="icon dripicons-user-group"></i> Zamówienia
                     </a>
+                    {% endif %}
+                    {% if can_see('/test-products/new') %}
                     <a href="{{ root }}/test-products/new" class="badge bg-success me-2 py-2 px-3" title="Nowy produkt testowy : z filmu (karta technologiczna), z karty .docx albo sam pomysł">
                         <i class="icon bi bi-stars"></i> Nowy produkt
                     </a>
+                    {% endif %}
+                    {% if can_see('/franchise-complaints') %}
                     <a href="{{ root }}/franchise-complaints" class="badge bg-warning me-2 py-2 px-3">
                         <i class="icon dripicons-warning"></i> Reklamacje <span class="at-count" data-count="complaints" hidden></span>
                     </a>
+                    {% endif %}
                 </div>
             </div>
 

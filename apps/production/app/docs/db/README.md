@@ -1545,7 +1545,7 @@ Avant, l'état du stock (`/workshop/stock` : Stan magazynu, Zapas MTS, Prognoza 
   « Uprawnienia i menu », ligne Magazyn → « dostęp » ou « w menu » (cela donne tout le droit Produkcja).
 - Liens masqués quand la page n'est pas visible (`PageAccess::visible`) : à faire de Dzisiaj (ex. « produits sous le stock
   minimum »), boutons de la file « Do obsłużenia », résultats de la recherche globale (tous les groupes, plus de lien vers une
-  page en 403).
+  page en 403), raccourcis de la barre du haut (Rentowność, Wysyłka, Listy produkcyjne, Zamówienia, Nowy produkt, Reklamacje).
 - Tests : `tests/rail_menu_test.php`.
 
 ## Conventions
