@@ -140,7 +140,13 @@
     return `<details class="fr-rap" data-rap="${r.id}"${nouveau ? ' data-nouveau="1"' : ''}>${sum}<div class="c">${ev}${bloc(L.positif, r.positif)}${bloc(L.vu, r.diagnostic)}
       ${r.causes && r.causes.length ? `<div><h3>${esc(L.causes)}</h3><p>${r.causes.map(esc).join(' · ')}</p></div>` : ''}${bloc(L.reco, r.reco)}
       ${r.points && r.points.length ? `<div><h3>${esc(L.ptsRap)}</h3><ul>${r.points.map(p => `<li><b>${esc(p.priorite)}</b> · ${esc(p.titre)}${p.echeance ? ' — ' + esc(L.pour) + ' ' + esc(fD(p.echeance)) : ''}</li>`).join('')}</ul></div>` : ''}
-      ${r.photos && r.photos.length ? `<div><h3>${esc(L.photos)}</h3><div class="fr-phs">${r.photos.map(p => `<a href="${esc(src(p.chemin))}" target="_blank" rel="noopener"><img src="${esc(src(p.chemin))}" alt="" loading="lazy"></a>`).join('')}</div></div>` : ''}</div></details>`;
+      ${r.photos && r.photos.length ? `<div><h3>${esc(L.photos)}</h3>${annotees(r.photos)}<div class="fr-phs">${r.photos.filter(p => !(p.reperes || []).length).map(p => `<a href="${esc(src(p.chemin))}" target="_blank" rel="noopener"><img src="${esc(src(p.chemin))}" alt="" loading="lazy"></a>`).join('')}</div></div>` : ''}</div></details>`;
+  }
+  // Les photos annotées par le consultant (05/11/2026) : en grand, les cadres numérotés posés dessus, chaque remarque dessous.
+  function annotees(ps) {
+    const pc = v => (Math.max(0, Math.min(1, +v || 0)) * 100).toFixed(2) + '%';
+    return ps.filter(p => (p.reperes || []).length).map(p => `<figure class="fr-ann"><span class="i"><img src="${esc(src(p.chemin))}" alt="" loading="lazy">${p.reperes.map((x, i) => `<i class="k n${x.n}" style="--c:${esc(x.couleur)};left:${pc(x.x)};top:${pc(x.y)};width:${pc(x.l)};height:${pc(x.h)}"><b>${i + 1}</b></i>`).join('')}</span>
+      <figcaption>${p.reperes.map((x, i) => `<div><b class="n" style="--c:${esc(x.couleur)}">${i + 1}</b><em style="color:${esc(x.couleur)}">${esc(x.grav)}</em>${x.txt ? ' — ' + esc(x.txt) : ''}</div>`).join('')}</figcaption></figure>`).join('');
   }
 
   // La photo réduite avant l'envoi : 1600 px au plus grand côté, JPEG — une photo de téléphone passe de 4 Mo à ~300 Ko.

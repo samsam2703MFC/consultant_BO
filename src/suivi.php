@@ -321,6 +321,11 @@ function suL(string $k, string $l): string
             'nl' => 'Elk punt in orde telt volgens zijn gewicht. Tellen niet mee: N.v.t.-antwoorden, vrije tekst, vragen buiten de score.',
             'en' => 'Each compliant point counts according to its weight. Not counted: N/A answers, free text, questions outside the score.',
             'de' => 'Jeder Punkt in Ordnung zählt nach seinem Gewicht. Nicht gezählt: N/A-Antworten, Freitext, Fragen ohne Bewertung.'],
+        'rp_1' => ['fr' => 'critique', 'nl' => 'kritiek', 'en' => 'critical', 'de' => 'kritisch'],
+        'rp_2' => ['fr' => 'majeur', 'nl' => 'groot', 'en' => 'major', 'de' => 'schwer'],
+        'rp_3' => ['fr' => 'mineur', 'nl' => 'klein', 'en' => 'minor', 'de' => 'gering'],
+        'rp_4' => ['fr' => 'conforme', 'nl' => 'in orde', 'en' => 'compliant', 'de' => 'in Ordnung'],
+        'rp_5' => ['fr' => 'exemplaire', 'nl' => 'voorbeeldig', 'en' => 'exemplary', 'de' => 'vorbildlich'],
         'eval' => ['fr' => 'Évaluation rapide', 'nl' => 'Snelle evaluatie', 'en' => 'Quick assessment', 'de' => 'Schnellbewertung'],
         'eval_moy' => ['fr' => 'moyenne', 'nl' => 'gemiddelde', 'en' => 'average', 'de' => 'Durchschnitt'],
         'eval_premiere' => ['fr' => 'première évaluation', 'nl' => 'eerste evaluatie', 'en' => 'first assessment', 'de' => 'erste Bewertung'],
@@ -818,7 +823,8 @@ function suRapportPhotos(array $v, array $r): array
     $out = []; $n = 0;
     foreach (Db::rows('SELECT * FROM con_visite_photo WHERE visite_id = ? AND genre NOT IN (\'signature\', \'sig_consultant\') ORDER BY prise_a', [(int) $v['id']]) as $p) {
         $l = viPhotoLigne($p);
-        $l['inclus'] = array_key_exists((string) $p['id'], $incl) ? (bool) $incl[(string) $p['id']] : $n < 6;
+        // Une photo annotée à la tablette (ses repères) part d'office ; les autres, les six premières.
+        $l['inclus'] = array_key_exists((string) $p['id'], $incl) ? (bool) $incl[(string) $p['id']] : ($n < 6 || !empty($l['reperes']));
         $n++;
         $out[] = $l;
     }
@@ -1135,6 +1141,32 @@ function suEvalHtml(?array $ev, string $l, callable $e): string
         . '<div style="color:#888;font-size:10.5px;margin-top:6px">' . $e(suL('eval_regle', $l)) . '</div></div>';
 }
 
+/**
+ * Une photo du rapport avec ses repères (05/11/2026) : les cadres numérotés posés sur l'image, à la couleur de leur
+ * gravité (plus épais quand c'est plus grave, en pointillé pour un constat conforme), puis chaque remarque. Une photo
+ * sans repère reste une vignette.
+ */
+function suPhotoReperesHtml(string $src, array $reperes, string $l): string
+{
+    $e = static fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+    if (!$reperes) { return '<img src="' . $e($src) . '" style="width:31%;margin:0 1.5% 8px 0;border-radius:6px;vertical-align:top" alt="">'; }
+    $niv = [];
+    foreach (function_exists('viReperesNiveaux') ? viReperesNiveaux() : [] as $x) { $niv[(int) $x['n']] = $x['couleur']; }
+    $pc = static fn ($v): string => number_format(max(0, min(1, (float) $v)) * 100, 2, '.', '') . '%';
+    $cadres = ''; $lignes = '';
+    foreach (array_values($reperes) as $i => $r) {
+        $n = (int) ($r['niveau'] ?? 3); $c = $niv[$n] ?? '#D97706'; $num = $i + 1;
+        $bord = $n <= 2 ? '4px solid ' : ($n === 3 ? '3px solid ' : '2px dashed ');
+        $cadres .= '<div style="position:absolute;left:' . $pc($r['x'] ?? 0) . ';top:' . $pc($r['y'] ?? 0) . ';width:' . $pc($r['l'] ?? .1) . ';height:' . $pc($r['h'] ?? .1)
+            . ';border:' . $bord . $c . ';border-radius:4px;box-sizing:border-box"></div>'
+            . '<div style="position:absolute;left:' . $pc($r['x'] ?? 0) . ';top:' . $pc($r['y'] ?? 0) . ';margin:-10px 0 0 -4px;background:' . $c . ';color:#fff;border:1.5px solid #fff;font:700 11px/1.35 Helvetica,Arial,sans-serif;padding:1px 6px;border-radius:5px">' . $num . '</div>';
+        $lignes .= '<div style="margin:3px 0;font-size:11px;line-height:1.4"><span style="display:inline-block;background:' . $c . ';color:#fff;font-weight:700;border-radius:4px;padding:0 5px;margin-right:5px">' . $num . '</span>'
+            . '<b style="color:' . $c . '">' . $e(suL('rp_' . $n, $l)) . '</b>' . (trim((string) ($r['txt'] ?? '')) !== '' ? ' — ' . $e($r['txt']) : '') . '</div>';
+    }
+    return '<div style="display:inline-block;width:48%;margin:0 2% 12px 0;vertical-align:top;page-break-inside:avoid">'
+        . '<div style="position:relative;line-height:0"><img src="' . $e($src) . '" style="width:100%;border-radius:6px;display:block" alt="">' . $cadres . '</div>' . $lignes . '</div>';
+}
+
 /** L'évaluation pour l'écran du bureau et la page du franchisé : les notes, la moyenne, la précédente, le radar déjà dessiné. */
 function suEvalVue(array $v, string $l): ?array
 {
@@ -1199,12 +1231,14 @@ function suRapportHtml(array $v, string $l): string
     }
     $h .= $sec(suL('points', $l), $lp !== '' ? '<table style="border-collapse:collapse;width:100%">' . $lp . '</table>' : '<div style="color:#666">' . $e(suL('vide_points', $l)) . '</div>');
     if ($photos) {
+        // Les photos annotées d'abord, deux par ligne pour que les cadres se lisent, leurs remarques dessous ; les autres ensuite.
+        usort($photos, static fn ($a, $b) => (int) empty($a['reperes']) <=> (int) empty($b['reperes']));
         $imgs = '';
         foreach (array_slice($photos, 0, 9) as $p) {
             $f = $racine . '/' . $p['chemin'];
             if (!is_file($f)) { continue; }
             $mime = (string) (mime_content_type($f) ?: 'image/jpeg');
-            $imgs .= '<img src="data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($f)) . '" style="width:31%;margin:0 1.5% 8px 0;border-radius:6px;vertical-align:top" alt="">';
+            $imgs .= suPhotoReperesHtml('data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($f)), (array) ($p['reperes'] ?? []), $l);
         }
         if ($imgs !== '') { $h .= $sec(suL('photos', $l), '<div>' . $imgs . '</div>'); }
     }
@@ -1625,7 +1659,12 @@ function ep_suivi_franchise(): array
             $ck = suChecklistBilan($v); $ancien = ($v['rapport_statut'] ?? null) === null;
             $r = suJson($v['rapport'] ?? null); $c = suRapportContenu($v);
             $plans = $ancien ? [] : array_values(array_filter(suRapportPlans($v, $r), static fn ($p) => $p['inclus'] && $p['statut'] !== 'interne'));
-            $photos = $ancien ? [] : array_map(static fn ($p) => ['chemin' => $p['chemin'], 'genre' => $p['genre']], array_values(array_filter(suRapportPhotos($v, $r), static fn ($p) => $p['inclus'])));
+            // Les repères posés à la tablette, avec leur couleur et leur gravité dans la langue du magasin.
+            $nivC = []; foreach (viReperesNiveaux() as $x) { $nivC[(int) $x['n']] = $x['couleur']; }
+            $photos = $ancien ? [] : array_map(static fn ($p) => ['chemin' => $p['chemin'], 'genre' => $p['genre'],
+                'reperes' => array_map(static fn ($x) => ['x' => $x['x'], 'y' => $x['y'], 'l' => $x['l'], 'h' => $x['h'], 'txt' => (string) ($x['txt'] ?? ''),
+                    'couleur' => $nivC[(int) ($x['niveau'] ?? 3)] ?? '#D97706', 'grav' => suL('rp_' . (int) ($x['niveau'] ?? 3), $l), 'n' => (int) ($x['niveau'] ?? 3)], array_values((array) ($p['reperes'] ?? [])))],
+                array_values(array_filter(suRapportPhotos($v, $r), static fn ($p) => $p['inclus'])));
             $raps[] = ['id' => (int) $v['id'], 'le' => $v['prevu_le'], 'type' => suTypeNom((string) (($v['type_code'] ?? '') ?: 'reguliere'), $l), 'consultant' => $v['consultant_nom'],
                 'checklist' => ['ok' => $ck['ok'], 'total' => $ck['total']], 'ancien' => $ancien, 'phrase' => $ancien ? '' : ($c['phrase'] ?: suRapportVue($v)['contenu']['phrase']),
                 'positif' => $ancien ? '' : $c['positif'], 'reco' => $c['reco'], 'causes' => $ancien ? [] : array_map(static fn ($k) => suL('c_' . $k, $l), $c['causes']),

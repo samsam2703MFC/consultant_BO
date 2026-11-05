@@ -152,7 +152,7 @@ function tplRapport(r, x){
       ${p.modifiable ? `<div class="sv-plan-d"><input class="mko-inp" value="${esc(p.detail)}" placeholder="Le détail, ce qui est attendu" ${x.I(p.setDetail)}>${sel(x, esc, p.setPrio, p.prios, 'width:70px')}<input type="date" class="mko-inp" style="width:140px" value="${esc(p.echeance)}" ${x.C(p.setEcheance)}></div>` : (p.detail ? `<div class="mko-mu">${esc(p.detail)}</div>` : '')}</div>`).join('')
       : '<div class="mko-mu">Aucun point proposé par la tablette.</div>');
   const photos = carte('Les photos', 'cochées = dans le rapport',
-    r.photos.length ? `<div class="sv-photos">${r.photos.map(p => `<button ${x.A(p.basculer)} class="sv-ph${p.inclus ? ' on' : ''}"${p.basculer ? '' : ' disabled'}><img src="${esc(p.src)}" alt="" loading="lazy"><span>${esc(p.genre)}</span></button>`).join('')}</div>` : '<div class="mko-mu">Aucune photo prise pendant la visite.</div>');
+    r.photos.length ? `<div class="sv-photos">${r.photos.map(p => `<button ${x.A(p.basculer)} class="sv-ph${p.inclus ? ' on' : ''}"${p.basculer ? '' : ' disabled'}><img src="${esc(p.src)}" alt="" loading="lazy"><span>${esc(p.genre)}</span>${p.reperes ? `<em class="sv-rp" title="repères posés à la tablette">✎ ${esc(p.reperes)}</em>` : ''}</button>`).join('')}</div>` : '<div class="mko-mu">Aucune photo prise pendant la visite.</div>');
   const B = r.budget;
   const budget = B ? carte('Le chiffre face au budget', esc(B.ecarts + (B.arrete ? ' · ' + B.arrete : '')),
     `${B.pourquoi ? `<div class="f sv-f1"><label>Pourquoi · noté avec le franchisé</label><div class="sv-com">${esc(B.pourquoi)}</div></div>` : ''}
