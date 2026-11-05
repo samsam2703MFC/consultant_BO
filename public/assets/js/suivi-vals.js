@@ -431,6 +431,7 @@ function rapVals(app, sv, id){
     nInclus: inclus.length, nInternes: d.plans.length - inclus.length,
     budget: budgetDe(v.budgetCa),
     score: scoreVals(d.score),
+    evaluation: evalVals(d.evaluation),
     a: d.envoi.a, source: d.envoi.source, copies: d.envoi.copies.map(x => x.nom + (x.email ? '' : ' (sans adresse)')).join(', ') || 'personne',
     envoie: d.roles.envoieNom, adapte: d.roles.adapteNom, smtp: d.envoi.smtp,
     dernier: d.envoi.dernier ? (d.envoi.dernier.envoye ? 'Dernier courriel : envoyé à ' + d.envoi.dernier.a + ' (' + (d.envoi.dernier.langue || '') + ')' + (d.envoi.dernier.pdf ? ', PDF joint' : ', sans PDF (moteur PDF muet)') + '.' : 'Dernier courriel non parti : ' + d.envoi.dernier.motif + '.') : null,
@@ -451,6 +452,22 @@ function scoreVals(sc){
   return { score: a.score, n: a.n, ton: ton(a.score),
     prec: p ? 'visite du ' + fmtD(sc.precedent.le) + ' : ' + p.score : 'première visite notée', ecart: p ? ec(a.score - p.score) : null,
     modules: a.modules.map(m => ({ nom: m.nom, score: m.score, ton: ton(m.score), ecart: avant[m.id] != null ? ec(m.score - avant[m.id]) : null })) };
+}
+/**
+ * L'évaluation rapide de fin de visite (05/11/2026) : le radar dessiné par le serveur (le même que dans le PDF), la moyenne
+ * face à la précédente, chaque axe avec sa note, l'écart et le commentaire.
+ */
+function evalVals(ev){
+  if (!ev || !ev.axes) { return null; }
+  const nf = x => x == null ? '—' : Number(x).toFixed(1).replace('.', ',');
+  const ec = (d, entier) => d == null ? null : { txt: (d > 0 ? '+' : d < 0 ? '−' : '±') + (entier ? Math.abs(d) : nf(Math.abs(Math.round(d * 10) / 10))), cls: d > 0 ? 'ok' : d < 0 ? 'ko' : 'mu' };
+  const ton = x => x == null ? 'mu' : x >= 4 ? 'ok' : x === 3 ? 'att' : 'ko';
+  const P = ev.precedent;
+  return { svg: ev.svg, moyenne: nf(ev.moyenne),
+    prec: P ? 'visite du ' + fmtD(P.le) + ' : ' + nf(P.moyenne) + ' / 5' : 'première évaluation',
+    ecart: P && P.moyenne != null && ev.moyenne != null ? ec(ev.moyenne - P.moyenne) : null,
+    axes: ev.axes.map(a => ({ nom: a.nom, note: a.note == null ? '—' : a.note + ' / 5', ton: ton(a.note), com: a.com || '',
+      ecart: a.note != null && a.avant != null ? ec(a.note - a.avant, true) : null })) };
 }
 /** Le CA sous le budget, noté à la tablette avec le franchisé : les écarts, le pourquoi, ses trois pistes et l'échéance. */
 function budgetDe(bc){
