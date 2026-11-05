@@ -60,6 +60,7 @@ function ensureInstalled(): void
     ensureVisites();
     ensureFacebook();
     ensureTabletteRemarques();
+    ensureFormation();
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['schemaVu', json_encode($emp)]);
 }

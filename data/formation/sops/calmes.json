@@ -1,0 +1,215 @@
+{
+  "id": "calmes",
+  "code": "CHK-WKL-005",
+  "type": "Checklist",
+  "dossier": "03",
+  "version": "2.0",
+  "statut": null,
+  "langue_origine": "NL",
+  "poste": "vente",
+  "moment": "journee",
+  "duree": null,
+  "titre": {
+    "fr": "Moments calmes à l'Atelier Halle – tâches à faire pendant les périodes calmes",
+    "nl": "Rustige momenten bij Atelier Halle – taken uit te voeren tijdens rustige periodes"
+  },
+  "objectif": {
+    "fr": "Utilisez cette checklist pour le nettoyage, le réassort et la préparation pendant les moments calmes.",
+    "nl": "Gebruik deze checklist voor schoonmaak, aanvulling en voorbereiding tijdens rustige momenten."
+  },
+  "pour": {
+    "fr": "Équipe de vente du magasin, pendant les moments calmes de la journée.",
+    "nl": "Verkoopteam van de winkel, tijdens de rustige momenten van de dag."
+  },
+  "sections": [
+    {
+      "titre": {"fr": "Propreté générale et vaisselle", "nl": "Algemene netheid en afwas"},
+      "etapes": [
+        {"numero": "1", "titre": null,
+         "texte": {"fr": "Nettoyez les éviers.", "nl": "Maak de spoelbakken schoon."},
+         "critique": false, "photo": null},
+        {"numero": "2", "titre": null,
+         "texte": {"fr": "Nettoyez toutes les surfaces avec le bon spray et des chiffons humides.", "nl": "Maak alle oppervlakken schoon met de juiste spray en vochtige doeken."},
+         "critique": false, "photo": null},
+        {"numero": "3", "titre": null,
+         "texte": {"fr": "Faites la vaisselle. Essuyez tout et rangez tout.", "nl": "Doe de afwas. Droog alles af en berg alles op."},
+         "critique": false, "photo": null},
+        {"numero": "4", "titre": null,
+         "texte": {"fr": "Gardez toujours les plans de travail propres.", "nl": "Houd de werkbladen altijd schoon."},
+         "critique": false, "photo": null},
+        {"numero": "5", "titre": null,
+         "texte": {"fr": "Nettoyez la zone de préparation des sandwichs et des quiches.", "nl": "Maak de zone voor de bereiding van sandwiches en quiches schoon."},
+         "critique": true, "photo": null},
+        {"numero": "6", "titre": null,
+         "texte": {"fr": "Nettoyez l'intérieur de tous les tiroirs et enlevez les miettes accumulées.", "nl": "Maak de binnenkant van alle laden schoon en verwijder opgehoopte kruimels."},
+         "critique": false, "photo": null},
+        {"numero": "7", "titre": null,
+         "texte": {"fr": "Nettoyez l'écran de la caisse et la zone autour.", "nl": "Maak het kassascherm en de zone eromheen schoon."},
+         "critique": false, "photo": null},
+        {"numero": "8", "titre": null,
+         "texte": {"fr": "Nettoyez les vitres et les appuis de fenêtre si nécessaire.", "nl": "Maak de ramen en vensterbanken schoon indien nodig."},
+         "critique": false, "photo": null},
+        {"numero": "9", "titre": null,
+         "texte": {"fr": "Balayez le sol si nécessaire.", "nl": "Veeg de vloer indien nodig."},
+         "critique": false, "photo": null},
+        {"numero": "10", "titre": null,
+         "texte": {"fr": "Nettoyez les poubelles avec le bon spray et les bons chiffons.", "nl": "Maak de afvalbakken schoon met de juiste spray en doeken."},
+         "critique": false, "photo": null},
+        {"numero": "11", "titre": null,
+         "texte": {"fr": "Videz les poubelles pleines et mettez un nouveau sac.", "nl": "Leeg volle afvalbakken en plaats een nieuwe zak."},
+         "critique": false, "photo": null}
+      ]
+    },
+    {
+      "titre": {"fr": "Machines et appareils", "nl": "Machines en apparatuur"},
+      "etapes": [
+        {"numero": "12", "titre": null,
+         "texte": {"fr": "Nettoyez la trancheuse à pain avec la brosse qui se trouve dans le tiroir sous la machine à café.", "nl": "Maak de broodmachine schoon met de borstel uit de lade onder de koffiemachine."},
+         "critique": false, "photo": null},
+        {"numero": "13", "titre": null,
+         "texte": {"fr": "Videz le bac de récupération sous la trancheuse à pain.", "nl": "Leeg de opvangbak onder de broodmachine."},
+         "critique": false, "photo": null},
+        {"numero": "14", "titre": null,
+         "texte": {"fr": "Nettoyez l'intérieur et les vitres des fours.", "nl": "Maak de binnenkant en de ruiten van de ovens schoon."},
+         "critique": false, "photo": null}
+      ]
+    },
+    {
+      "titre": {"fr": "Comptoirs, frigos et saladette", "nl": "Toonbanken, koelkasten en saladette"},
+      "etapes": [
+        {"numero": "15", "titre": null,
+         "texte": {"fr": "Nettoyez les vitres des comptoirs et des frigos.", "nl": "Maak de ruiten van de toonbanken en koelkasten schoon."},
+         "critique": false, "photo": null},
+        {"numero": "16", "titre": null,
+         "texte": {"fr": "Nettoyez les portes des frigos, à l'intérieur et à l'extérieur.", "nl": "Maak de koelkastdeuren aan de binnen- en buitenkant schoon."},
+         "critique": false, "photo": null},
+        {"numero": "17", "titre": null,
+         "texte": {"fr": "Nettoyez l'intérieur du frigo de la saladette.", "nl": "Maak de binnenkant van de koelkast van de saladette schoon."},
+         "critique": true, "photo": null},
+        {"numero": "18", "titre": null,
+         "texte": {"fr": "Couvrez les bacs gastro de la saladette avec du film et notez la date.", "nl": "Dek de gastrobakken in de saladette af met folie en noteer de datum."},
+         "critique": true, "photo": null},
+        {"numero": "19", "titre": null,
+         "texte": {"fr": "Réassortissez le frigo à boissons s'il reste du stock.", "nl": "Vul de drankenkoelkast aan als er nog voorraad is."},
+         "critique": false, "photo": null},
+        {"numero": "20", "titre": null,
+         "texte": {"fr": "Avancez les boissons vers l'avant et contrôlez le facing.", "nl": "Schuif de dranken naar voren en controleer de facing."},
+         "critique": false, "photo": null},
+        {"numero": "21", "titre": null,
+         "texte": {"fr": "Contrôlez les étiquettes de nom des produits. Réécrivez-les si elles ne sont pas bien lisibles.", "nl": "Controleer de productnaamkaartjes. Schrijf ze opnieuw als ze niet goed leesbaar zijn."},
+         "critique": false, "photo": null},
+        {"numero": "22", "titre": null,
+         "texte": {"fr": "Rendez le comptoir, la présentation et la zone clients visible nets et accueillants.", "nl": "Zet de toonbank, de presentatie en de zichtbare klantenzone netjes en uitnodigend."},
+         "critique": false, "photo": null}
+      ]
+    },
+    {
+      "titre": {"fr": "Moments calmes – suite : rangement, réassort et stock", "nl": "Rustige momenten – vervolg: opruimen, aanvullen en voorraad"},
+      "etapes": [
+        {"numero": "23", "titre": null,
+         "texte": {"fr": "Placez toutes les grilles vides sur le grand chariot entre le four et le frigo.", "nl": "Plaats alle lege roosters op de grote kar tussen de oven en de koelkast."},
+         "critique": false, "photo": null},
+        {"numero": "24", "titre": null,
+         "texte": {"fr": "Nettoyez les chariots.", "nl": "Maak de karren schoon."},
+         "critique": false, "photo": null},
+        {"numero": "25", "titre": null,
+         "texte": {"fr": "Nettoyez les grilles.", "nl": "Maak de roosters schoon."},
+         "critique": false, "photo": null},
+        {"numero": "26", "titre": null,
+         "texte": {"fr": "Ramenez les chariots vides à l'arrière.", "nl": "Breng lege karren terug naar achteren."},
+         "critique": false, "photo": null},
+        {"numero": "27", "titre": null,
+         "texte": {"fr": "Réassortissez les étagères en sachets et en boîtes.", "nl": "Vul de rekken aan met zakjes en dozen."},
+         "critique": false, "photo": null},
+        {"numero": "28", "titre": null,
+         "texte": {"fr": "Utilisez d'abord le contenu des tiroirs du haut. Les tiroirs du bas sont le stock de réserve.", "nl": "Gebruik eerst de inhoud van de bovenste laden. De onderste laden zijn de reservevoorraad."},
+         "critique": false, "photo": null},
+        {"numero": "29", "titre": null,
+         "texte": {"fr": "Notez sur le tableau blanc à l'arrière chaque produit dont le stock est presque épuisé.", "nl": "Noteer op het whiteboard achteraan elk product waarvan de voorraad bijna op is."},
+         "critique": false, "photo": null}
+      ]
+    },
+    {
+      "titre": {"fr": "Préparation pour le lendemain", "nl": "Voorbereiding voor de volgende dag"},
+      "etapes": [
+        {"numero": "30", "titre": null,
+         "texte": {"fr": "Garnissez des grilles de papier pour le lendemain : 6 en semaine / 8 le week-end.", "nl": "Bekleed roosters met papier voor de volgende dag: 6 op weekdagen / 8 in het weekend."},
+         "critique": false, "photo": null},
+        {"numero": "31", "titre": null,
+         "texte": {"fr": "Coupez les semelles à tarte en deux si nécessaire.", "nl": "Snijd de taartonderleggers indien nodig doormidden."},
+         "critique": false, "photo": null},
+        {"numero": "32", "titre": null,
+         "texte": {"fr": "Découpez les bandes de carton pour les tartes.", "nl": "Snijd de kartonnen stroken voor de taarten."},
+         "critique": false, "photo": null}
+      ]
+    },
+    {
+      "titre": {"fr": "Tâches liées à l'heure", "nl": "Tijdgebonden taken"},
+      "etapes": [
+        {"numero": "33",
+         "titre": {"fr": "Uniquement après 14 h", "nl": "Alleen na 14.00 uur"},
+         "texte": {"fr": "UNIQUEMENT APRÈS 14 H : nettoyez le sol de la cuisine avec l'autolaveuse.", "nl": "ALLEEN NA 14.00 UUR: maak de keukenvloer schoon met de schrobmachine."},
+         "critique": true, "photo": null},
+        {"numero": "34",
+         "titre": {"fr": "Au plus tard à 14 h 30", "nl": "Uiterlijk 14.30 uur"},
+         "texte": {"fr": "AU PLUS TARD À 14 H 30 : cuisez des baguettes supplémentaires si nécessaire.", "nl": "UITERLIJK 14.30 UUR: bak indien nodig extra baguettes af."},
+         "critique": true, "photo": null},
+        {"numero": "35",
+         "titre": {"fr": "Pas avant 16 h", "nl": "Niet vóór 16.00 uur"},
+         "texte": {"fr": "PAS AVANT 16 H : nettoyez la machine à café et toute la zone autour et derrière.", "nl": "NIET VÓÓR 16.00 UUR: maak de koffiemachine en de volledige zone eromheen en erachter schoon."},
+         "critique": true, "photo": null},
+        {"numero": "36",
+         "titre": {"fr": "Après 16 h", "nl": "Na 16.00 uur"},
+         "texte": {"fr": "APRÈS 16 H : lancez le programme de nettoyage des fours.", "nl": "NA 16.00 UUR: start het reinigingsprogramma van de ovens."},
+         "critique": true, "photo": null},
+        {"numero": "37",
+         "titre": {"fr": "Au plus tard à 16 h", "nl": "Uiterlijk 16.00 uur"},
+         "texte": {"fr": "AU PLUS TARD À 16 H : cuisez des pains supplémentaires si nécessaire.", "nl": "UITERLIJK 16.00 UUR: bak indien nodig extra broden af."},
+         "critique": true, "photo": null}
+      ]
+    },
+    {
+      "titre": {"fr": "Remarque", "nl": "Opmerking"},
+      "etapes": [
+        {"numero": "1", "titre": null,
+         "texte": {"fr": "Ne cochez une tâche qu'après avoir vérifié qu'elle est entièrement faite.", "nl": "Vink een taak pas af nadat je hebt gecontroleerd dat ze volledig is uitgevoerd."},
+         "critique": false, "photo": null}
+      ]
+    }
+  ],
+  "points_critiques": [
+    {"fr": "Saladette : couvrir les bacs gastro avec du film et noter la date.", "nl": "Saladette: de gastrobakken afdekken met folie en de datum noteren."},
+    {"fr": "Garder propres la zone de préparation des sandwichs et des quiches et l'intérieur du frigo de la saladette.", "nl": "De zone voor de bereiding van sandwiches en quiches en de binnenkant van de koelkast van de saladette schoon houden."},
+    {"fr": "Sol de la cuisine à l'autolaveuse uniquement après 14 h.", "nl": "Keukenvloer met de schrobmachine alleen na 14.00 uur."},
+    {"fr": "Baguettes supplémentaires au plus tard à 14 h 30 ; pains supplémentaires au plus tard à 16 h.", "nl": "Extra baguettes uiterlijk om 14.30 uur; extra broden uiterlijk om 16.00 uur."},
+    {"fr": "Machine à café pas avant 16 h ; programme de nettoyage des fours après 16 h.", "nl": "Koffiemachine niet vóór 16.00 uur; reinigingsprogramma van de ovens na 16.00 uur."},
+    {"fr": "Ne cocher une tâche qu'après avoir vérifié qu'elle est entièrement faite.", "nl": "Een taak pas afvinken nadat je gecontroleerd hebt dat ze volledig is uitgevoerd."}
+  ],
+  "quiz": [
+    {"question": {"fr": "Combien de grilles garnies de papier prépare-t-on pour le lendemain en semaine ?", "nl": "Hoeveel roosters bekleed je op weekdagen met papier voor de volgende dag?"},
+     "choix": {"fr": ["4", "6", "8"], "nl": ["4", "6", "8"]},
+     "bonne": 1},
+    {"question": {"fr": "Quand peut-on nettoyer le sol de la cuisine avec l'autolaveuse ?", "nl": "Wanneer mag je de keukenvloer schoonmaken met de schrobmachine?"},
+     "choix": {"fr": ["Uniquement après 14 h", "Uniquement avant l'ouverture", "Au plus tard à 14 h 30"], "nl": ["Alleen na 14.00 uur", "Alleen vóór de opening", "Uiterlijk om 14.30 uur"]},
+     "bonne": 0},
+    {"question": {"fr": "Pour les sachets et les boîtes, quels tiroirs utilise-t-on en premier ?", "nl": "Welke laden gebruik je eerst voor zakjes en dozen?"},
+     "choix": {"fr": ["Les tiroirs du bas", "N'importe lequel", "Les tiroirs du haut ; ceux du bas sont la réserve"], "nl": ["De onderste laden", "Om het even welke", "De bovenste laden; de onderste zijn de reservevoorraad"]},
+     "bonne": 2}
+  ],
+  "corrections": [
+    "Décision 4 (nettoyage des fours après 16 h, partout) : « OM 16.00 UUR: start het reinigingsprogramma van de ovens » devient « NA 16.00 UUR » (étape 36), en français « APRÈS 16 H ».",
+    "Astérisques et crochets Markdown parasites (« \\[ \\] », « ** ») supprimés ; les cases à cocher sont rendues par des étapes numérotées 1 à 37 dans l'ordre du document.",
+    "Titre de la page 2 « RUSTIGE MOMENTEN - VERVOLGOPRUIMEN, AANVULLEN EN VOORRAAD » lu comme « Rustige momenten – vervolg: opruimen, aanvullen en voorraad » (mots collés).",
+    "En-têtes de page répétés (« L'ATELIER HALLE | CHECKLIST A4 Versie 2.0 ») non dupliqués ; l'encadré d'introduction est repris dans « objectif ».",
+    "Traduction française complète réalisée à partir du néerlandais."
+  ],
+  "remarques": [
+    "« broodmachine » (étapes 12 et 13 : brosse, bac de récupération) est traduit par « trancheuse à pain » : à confirmer.",
+    "Écart avec la SOP Fermeture v1.3 : ici la machine à café se nettoie « pas avant 16 h », la Fermeture v1.3 (phase 3.1) dit « à partir de 16 h 30, quand on ne prend plus de commandes de café ». À harmoniser.",
+    "Écart avec la SOP Fermeture v1.3 : ici le sol de la cuisine à l'autolaveuse « uniquement après 14 h », la Fermeture v1.3 (phase 6.2, partie A) le place vers 16 h. À confirmer.",
+    "Étape 14 (intérieur et vitres des fours pendant les moments calmes) : le document ne dit pas si le four doit être éteint ou refroidi. À préciser.",
+    "Le public visé n'est pas indiqué dans le document ; « équipe de vente » d'après le poste donné dans la liste de répartition.",
+    "Aucune photo dans le document (export PDF vérifié : 0 image)."
+  ],
+  "source": {"fichiers": {"gdoc": "1CrGf6Qcs-Oka_SQ-orj83UzeAYZPLih3UglaAUQLM8I"}, "lu": "gdoc"}
+}

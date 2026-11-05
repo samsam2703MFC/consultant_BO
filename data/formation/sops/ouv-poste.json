@@ -1,0 +1,377 @@
+{
+  "id": "ouv-poste",
+  "code": "SOP-CUI-OUV-01",
+  "type": "SOP",
+  "dossier": "02",
+  "version": "1.1",
+  "statut": null,
+  "langue_origine": "FR",
+  "poste": "cuisson",
+  "moment": "ouverture",
+  "duree": "de 4 h à 6 h",
+  "titre": {
+    "fr": "Ouverture du poste et premières cuissons",
+    "nl": "Opening van de bakpost en eerste bakbeurten"
+  },
+  "objectif": {
+    "fr": "Mettre l’atelier en route et lancer les premières cuissons dans le bon ordre.",
+    "nl": "Het atelier opstarten en de eerste bakbeurten in de juiste volgorde starten."
+  },
+  "pour": {
+    "fr": "Le cuiseur chargé de l’ouverture.",
+    "nl": "De afbakker die instaat voor de opening."
+  },
+  "sections": [
+    {
+      "titre": {"fr": "Informations clés", "nl": "Belangrijke informatie"},
+      "etapes": [
+        {
+          "numero": "0.1",
+          "titre": {"fr": "Quand commencer", "nl": "Wanneer beginnen"},
+          "texte": {
+            "fr": "À l’arrivée au poste, autour de 4 h.",
+            "nl": "Bij aankomst op de post, rond 4 u."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "0.2",
+          "titre": {"fr": "Document clé", "nl": "Kerndocument"},
+          "texte": {
+            "fr": "La liste de production active : commandes, restes, production réelle et écarts.",
+            "nl": "De actieve productielijst: bestellingen, overschotten, werkelijke productie en afwijkingen."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Ouvrir le poste et lancer les premières cuissons — marche à suivre (respecter cet ordre)",
+        "nl": "De post openen en de eerste bakbeurten starten — werkwijze (volg deze volgorde)"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {"fr": "Commencer le service", "nl": "De dienst beginnen"},
+          "texte": {
+            "fr": "Désarmer l’alarme. Allumer les lumières. Mettre son tablier. Se pointer sur la pointeuse.",
+            "nl": "Het alarm uitschakelen. De lichten aansteken. Je schort aandoen. Inprikken op de prikklok."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {"fr": "Allumer les équipements", "nl": "De toestellen aanzetten"},
+          "texte": {
+            "fr": "Allumer la climatisation du magasin avec le boîtier sur le mur, à côté de l’évier de la machine à café.\nAllumer les frigos comptoirs avec le « gros » bouton.\nAllumer les deux fours.\nAllumer le bain-marie sur 1,5.",
+            "nl": "De airco van de winkel aanzetten met het bedieningskastje aan de muur, naast de spoelbak van de koffiemachine.\nDe toogkoelingen aanzetten met de “grote” knop.\nDe twee ovens aanzetten.\nDe bain-marie aanzetten op 1,5."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {"fr": "Vérifier la production du jour", "nl": "De productie van de dag nakijken"},
+          "texte": {
+            "fr": "Prendre la liste de production active. Lire les commandes particulières avant de sortir ou cuire les produits.",
+            "nl": "De actieve productielijst nemen. De speciale bestellingen lezen voordat je producten uithaalt of bakt."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4",
+          "titre": {"fr": "Sortir et préparer le matériel", "nl": "Het materiaal uithalen en klaarzetten"},
+          "texte": {
+            "fr": "Sortir du grand congélateur le chariot bâché de pains préparé la veille.\nMonter le pistolet à dorer et remplir son réservoir d’œufs liquides.",
+            "nl": "De afgedekte rekwagen met broden die de dag voordien werd klaargezet uit de grote diepvries halen.\nHet eipistool in elkaar zetten en het reservoir vullen met vloeibaar ei."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {"fr": "Lancer les programmes dans le bon four", "nl": "De programma’s in de juiste oven starten"},
+          "texte": {
+            "fr": "Utiliser les programmes enregistrés sans modifier leurs paramètres.",
+            "nl": "De opgeslagen programma’s gebruiken zonder hun instellingen te wijzigen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5.1",
+          "titre": {"fr": "Fours et programmes", "nl": "Ovens en programma’s"},
+          "texte": {
+            "fr": "Pains et pains spéciaux : four gauche, programme « grands pains ».\nBaguettes et pistolets : four droit, programme « baguettes ».",
+            "nl": "Broden en speciale broden: linkeroven, programma “grands pains”.\nBaguettes en pistolets: rechteroven, programma “baguettes”."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5.2",
+          "titre": {"fr": "Repère", "nl": "Richtpunt"},
+          "texte": {
+            "fr": "Pour ces familles, la fin du programme signifie que les produits sont cuits.",
+            "nl": "Voor deze productfamilies betekent het einde van het programma dat de producten gebakken zijn."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Terminer les pains et avancer jusqu’à 6 h — suite de la marche à suivre",
+        "nl": "De broden afwerken en verder werken tot 6 u — vervolg van de werkwijze"
+      },
+      "etapes": [
+        {
+          "numero": "5.3",
+          "titre": {"fr": "Priorité", "nl": "Voorrang"},
+          "texte": {
+            "fr": "Une fin de cuisson ou une sonnerie de pousse passe avant une nouvelle tâche.",
+            "nl": "Het einde van een bakbeurt of een signaal van de rijskast gaat voor op een nieuwe taak."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6",
+          "titre": {"fr": "Ranger les produits cuits sur le chariot double", "nl": "De gebakken producten op de dubbele rekwagen zetten"},
+          "texte": {
+            "fr": "Placer les pains et pains spéciaux d’un côté.\nPlacer les baguettes et pistolets de l’autre côté.\nLe week-end, placer aussi les pains spéciaux du côté baguettes et pistolets.",
+            "nl": "De broden en speciale broden aan één kant zetten.\nDe baguettes en pistolets aan de andere kant zetten.\nIn het weekend ook de speciale broden aan de kant van de baguettes en pistolets zetten."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7",
+          "titre": {"fr": "Cuire les pains de la veille", "nl": "De broden van gisteren opbakken"},
+          "texte": {
+            "fr": "Après la cuisson de tous les grands pains, les charger directement dans le même four. Ne pas relancer de programme. Sélectionner « ajouter du temps » : 4 min et 20 % d’humidité. Cette recuisson ne vaut que pour la catégorie pain.",
+            "nl": "Nadat alle grote broden gebakken zijn, de broden van gisteren meteen in dezelfde oven laden. Geen programma opnieuw starten. “ajouter du temps” (tijd toevoegen) kiezen: 4 min en 20 % vochtigheid. Dit opbakken geldt alleen voor de categorie brood."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "8",
+          "titre": {"fr": "Déplacer le chariot vers le magasin", "nl": "De rekwagen naar de winkel brengen"},
+          "texte": {
+            "fr": "Attendre que tous les pains, pains spéciaux, baguettes et pistolets soient cuits. Garder les pains de la veille identifiables et préciser oralement leur emplacement à la vente dès son arrivée.",
+            "nl": "Wachten tot alle broden, speciale broden, baguettes en pistolets gebakken zijn. De broden van gisteren herkenbaar houden en hun plaats mondeling doorgeven aan de verkoop zodra die aankomt."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "9",
+          "titre": {"fr": "Avancer pendant les cycles", "nl": "Verder werken tijdens de bakcycli"},
+          "texte": {
+            "fr": "Compter les restes encore vendables.\nDéduire la production à réaliser à partir de la liste active.\nNoter la production réelle et les écarts sur la liste.\nSortir les éclairs et, lorsque la liste le prévoit, les choux.\nSortir les tartes froides prévues sur un chariot à l’arrière.\nContrôler les tartes et quiches de la veille avant présentation.\nPréparer les quiches et tartes à cuire prévues sur la liste.",
+            "nl": "De nog verkoopbare overschotten tellen.\nDe te maken productie afleiden uit de actieve lijst.\nDe werkelijke productie en de afwijkingen op de lijst noteren.\nDe eclairs uithalen en, als de lijst het voorziet, de soezen.\nDe geplande koude taarten uithalen op een rekwagen achteraan.\nDe taarten en quiches van gisteren controleren voordat ze in de winkel komen.\nDe quiches en te bakken taarten klaarmaken die op de lijst staan."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "10",
+          "titre": {"fr": "Traiter immédiatement les sonneries", "nl": "De signalen meteen opvolgen"},
+          "texte": {
+            "fr": "4 h 20 et 4 h 30 : pousses de viennoiseries.\n5 h : pousse des sandwiches.\nTerminer uniquement l’action courte engagée, puis traiter la pousse.",
+            "nl": "4.20 u en 4.30 u: rijskasten met koffiekoeken.\n5 u: rijskast met sandwiches.\nAlleen de korte handeling waarmee je bezig bent afwerken, daarna de rijskast afhandelen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "11",
+          "titre": {"fr": "Encoder les pertes avant l’ouverture", "nl": "De verliezen ingeven vóór de opening"},
+          "texte": {
+            "fr": "Regrouper les pertes et les encoder en une fois à la caisse avant 6 h, selon l’Afvalregistratie de la SOP fermeture.",
+            "nl": "De verliezen verzamelen en ze in één keer vóór 6 u in de kassa ingeven, volgens de Afvalregistratie van de SOP sluiting."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Contrôle rapide avant 6 h", "nl": "Snelle controle vóór 6 u"},
+      "etapes": [
+        {
+          "numero": "C1",
+          "titre": {"fr": "Utilisation", "nl": "Gebruik"},
+          "texte": {
+            "fr": "Employer cette page comme contrôle rapide avant l’ouverture du magasin.",
+            "nl": "Deze pagina gebruiken als snelle controle vóór de opening van de winkel."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C2",
+          "titre": null,
+          "texte": {"fr": "Liste active et commandes vérifiées.", "nl": "Actieve lijst en bestellingen nagekeken."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C3",
+          "titre": null,
+          "texte": {"fr": "Climatisation, frigos comptoirs, fours et bain-marie allumés.", "nl": "Airco, toogkoelingen, ovens en bain-marie aangezet."},
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "C4",
+          "titre": null,
+          "texte": {"fr": "Programmes « grands pains » et « baguettes » lancés dans le bon four.", "nl": "Programma’s “grands pains” en “baguettes” in de juiste oven gestart."},
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "C5",
+          "titre": null,
+          "texte": {"fr": "Restes comptés ; production réelle et écarts notés.", "nl": "Overschotten geteld; werkelijke productie en afwijkingen genoteerd."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C6",
+          "titre": null,
+          "texte": {"fr": "Pertes regroupées et encodées avant 6 h.", "nl": "Verliezen verzameld en vóór 6 u ingegeven."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C7",
+          "titre": null,
+          "texte": {"fr": "Pains de la veille cuits, identifiables et signalés à la vente.", "nl": "Broden van gisteren opgebakken, herkenbaar en gemeld aan de verkoop."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C8",
+          "titre": null,
+          "texte": {"fr": "Sonneries de 4 h 20, 4 h 30 et 5 h prises en charge.", "nl": "Signalen van 4.20 u, 4.30 u en 5 u opgevolgd."},
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Qui prévenir et en cas de doute", "nl": "Wie verwittigen en bij twijfel"},
+      "etapes": [
+        {
+          "numero": "P1",
+          "titre": {"fr": "J’appelle", "nl": "Ik bel"},
+          "texte": {
+            "fr": "Programme absent ou différent ; four ou pousse qui ne démarre pas ; rupture empêchant une commande.",
+            "nl": "Programma ontbreekt of is anders; oven of rijskast die niet start; tekort waardoor een bestelling niet kan worden gemaakt."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "P2",
+          "titre": {"fr": "J’écris dans Shyfter · production", "nl": "Ik schrijf in Shyfter · production"},
+          "texte": {
+            "fr": "Climatisation ou frigos comptoirs qui ne s’allument pas.",
+            "nl": "Airco of toogkoelingen die niet aangaan."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "P3",
+          "titre": {"fr": "En cas de doute qualité", "nl": "Bij twijfel over de kwaliteit"},
+          "texte": {
+            "fr": "Demander l’avis du gérant ou de la personne expérimentée présente. Si personne n’est disponible, mettre le produit de côté, ne pas le présenter et écrire dans Shyfter · production.",
+            "nl": "De zaakvoerder of de ervaren persoon die aanwezig is om advies vragen. Als niemand beschikbaar is, het product apart zetten, het niet in de winkel leggen en in Shyfter · production schrijven."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Utiliser les programmes enregistrés sans modifier leurs paramètres : pains et pains spéciaux au four gauche (« grands pains »), baguettes et pistolets au four droit (« baguettes »).",
+      "nl": "De opgeslagen programma’s gebruiken zonder hun instellingen te wijzigen: broden en speciale broden in de linkeroven (“grands pains”), baguettes en pistolets in de rechteroven (“baguettes”)."
+    },
+    {
+      "fr": "Une fin de cuisson ou une sonnerie de pousse (4 h 20, 4 h 30, 5 h) passe avant une nouvelle tâche.",
+      "nl": "Het einde van een bakbeurt of een signaal van de rijskast (4.20 u, 4.30 u, 5 u) gaat voor op een nieuwe taak."
+    },
+    {
+      "fr": "Pains de la veille : dans le même four après les grands pains, sans relancer de programme, « ajouter du temps » 4 min et 20 % d’humidité — catégorie pain uniquement.",
+      "nl": "Broden van gisteren: in dezelfde oven na de grote broden, zonder een programma opnieuw te starten, “ajouter du temps” (tijd toevoegen) 4 min en 20 % vochtigheid — alleen voor de categorie brood."
+    },
+    {
+      "fr": "Pertes regroupées et encodées en une fois à la caisse avant 6 h.",
+      "nl": "Verliezen verzameld en in één keer vóór 6 u in de kassa ingegeven."
+    },
+    {
+      "fr": "Produit douteux : demander un avis ; si personne n’est disponible, le mettre de côté, ne pas le présenter et écrire dans Shyfter · production.",
+      "nl": "Twijfelachtig product: advies vragen; als niemand beschikbaar is, het apart zetten, niet in de winkel leggen en in Shyfter · production schrijven."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Dans quel four et avec quel programme cuit-on les baguettes et les pistolets ?",
+        "nl": "In welke oven en met welk programma bak je de baguettes en pistolets?"
+      },
+      "choix": {
+        "fr": ["Four droit, programme « baguettes »", "Four gauche, programme « grands pains »", "Four droit, programme « grands pains »"],
+        "nl": ["Rechteroven, programma “baguettes”", "Linkeroven, programma “grands pains”", "Rechteroven, programma “grands pains”"]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Comment recuit-on les pains de la veille ?",
+        "nl": "Hoe bak je de broden van gisteren op?"
+      },
+      "choix": {
+        "fr": ["On relance le programme « grands pains » dans l’autre four", "Dans le même four après les grands pains, sans relancer de programme : « ajouter du temps » 4 min et 20 % d’humidité", "5 min avec le programme « baguettes »"],
+        "nl": ["Je start het programma “grands pains” opnieuw in de andere oven", "In dezelfde oven na de grote broden, zonder een programma opnieuw te starten: “ajouter du temps” (tijd toevoegen) 4 min en 20 % vochtigheid", "5 min met het programma “baguettes”"]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Avant quelle heure les pertes doivent-elles être encodées à la caisse ?",
+        "nl": "Vóór welk uur moeten de verliezen in de kassa ingegeven zijn?"
+      },
+      "choix": {
+        "fr": ["4 h 30", "5 h", "6 h"],
+        "nl": ["4.30 u", "5 u", "6 u"]
+      },
+      "bonne": 2
+    }
+  ],
+  "corrections": [
+    "Étape 7 (pains de la veille) : ajout de la phrase « Cette recuisson ne vaut que pour la catégorie pain. » — décision 2 : la recuisson du matin (+4 min, 20 % d’humidité, même four, sans relancer de programme) ne vaut que pour la catégorie pain. Le point critique correspondant le précise aussi."
+  ],
+  "remarques": [
+    "Le PDF v1.1 a été relu : son texte est identique au DOCX.",
+    "« J’appelle » : la personne à appeler n’est pas nommée dans le document.",
+    "Le libellé d’écran « ajouter du temps » est gardé en français dans la version néerlandaise, avec la traduction entre parenthèses.",
+    "Le programme des baguettes s’appelle « baguettes » ici, mais « BAGUETTE » dans la SOP-CUI-001 et sur la photo de l’écran du four : libellé exact à vérifier.",
+    "La phrase « les charger » de l’étape 7 renvoie aux pains de la veille (titre de l’étape) ; c’est explicité dans la traduction néerlandaise."
+  ],
+  "source": {
+    "fichiers": {"pdf": "1NH9VxrGbWfBf9QMHKgFrTxIhqmSWSW2r", "docx": "1fcbzIneF3vSyL2N9tkjzttJ_30gVA_Ck"},
+    "lu": "docx"
+  }
+}

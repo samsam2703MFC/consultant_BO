@@ -814,6 +814,7 @@ CREATE TABLE IF NOT EXISTS ceo_scouting_population (
   ins         CHAR(5) PRIMARY KEY,            -- code NIS de la commune
   population  INT UNSIGNED NOT NULL,
   imported_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------------------------------------------------------
 -- Contrôle des posts Facebook des magasins

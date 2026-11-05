@@ -79,6 +79,7 @@ require __DIR__ . '/../../src/kpi_table.php';
 require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
+require __DIR__ . '/../../src/formation.php';
 require __DIR__ . '/../../src/primes.php';
 $tCharge = microtime(true);
 
@@ -130,6 +131,17 @@ try {
         tempsServeur($tCharge, $tInstall);
         echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
+    }
+
+    // La tablette du poste (Formation) : ouverte sans session cockpit — chaque écriture porte le PIN
+    // d'un employé, vérifié au panel, ou un jeton signé (src/formation.php).
+    if (str_starts_with($path, '/formation/tablette/')) {
+        $out = formationRoute($method, $path, true);
+        if ($out !== null) {
+            tempsServeur($tCharge, $tInstall);
+            echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+        }
     }
 
     $out = authRoute($method, $path);       // /auth/* : toujours accessibles
@@ -192,6 +204,11 @@ function routeGardee(string $method, string $path): mixed
 
 function route(string $method, string $path): mixed
 {
+    // --- Formation : les standards du réseau (src/formation.php)
+    if (str_starts_with($path, '/formation/')) {
+        $f = formationRoute($method, $path);
+        if ($f !== null) { return $f; }
+    }
     // --- lectures (une par écran + référentiels)
     if ($method === 'GET') {
         return match (true) {
