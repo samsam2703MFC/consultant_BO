@@ -28,20 +28,25 @@ Trois pistes : le mois en cours, le trimestre, l'année. Chacune va de 0 au budg
 
 Sur une journée passée, la journée compte entière.
 
-Le chiffre est le **CA total, pro compris**, face au budget mensuel du magasin. Un mois sans budget (avant l'ouverture,
-par exemple) n'ajoute que son chiffre.
+Le chiffre est le **CA total, pro compris**, face au budget de la période.
+
+**Le budget d'un mois** est celui du cockpit (05/11/2026, Sam : « budget année ») : le budget encodé, à défaut le
+budget théorique. C'est la même règle que le suivi budget, les vues Trimestre et Année et le plan de développement. La
+ligne le dit quand des mois y comptent au théorique (« dont janv., févr. au budget théorique »).
 
 ## Les chiffres de Halle le 05/11/2026 au matin
 
 | Période | Réalisé | Attendu à cette heure | Budget | Atteinte | Au rythme actuel |
 |---|---|---|---|---|---|
-| Novembre (jour 5 sur 30) | 8 010 € | 8 346 € | 61 000 € | 96 % | 58 545 € |
-| T4 2026 (jour 36 sur 92) | 66 893 € | 69 346 € | 183 000 € | 96 % | 176 528 € |
-| Année 2026 (jour 309 sur 365) | 434 667 € | 501 346 € | 615 000 € | 87 % | 533 206 € |
+| Novembre (jour 5 sur 30) | 8 017 € | 8 346 € | 61 000 € | 96 % | 58 595 € |
+| T4 2026 (jour 36 sur 92) | 66 900 € | 69 346 € | 183 000 € | 96 % | 176 546 € |
+| Année 2026 (jour 309 sur 365) | 434 674 € | 635 746 € | 749 400 € | 68 % | 512 382 € |
 
 **Recoupements.**
 - Le réalisé du T4 (octobre 58 883 € + novembre à ce jour) est celui du plan de développement (vue Trimestre).
-- Le budget de l'année est celui des mois de mars à décembre ; le magasin n'a pas de budget en janvier et février.
+- Le budget de l'année (749 400 €) est le « budget mensuel total » du plan : 615 000 € encodés de mars à décembre,
+  plus janvier (75 600 €) et février (58 800 €) au théorique. L'objectif engagé de l'année est un autre chiffre
+  (840 000 €, vue Année) ; ce n'est pas le budget.
 
 ## Captures
 

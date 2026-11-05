@@ -2849,7 +2849,9 @@
    *  - le trait « attendu » : le budget des jours passés et des mois clos, plus la part de l'objectif du jour qu'on fait
    *    d'habitude à cette heure (projectionPart du Résultat du jour) ; une journée finie compte entière ;
    *  - la projection au rythme actuel, hachurée : le budget de la période × réalisé ÷ attendu.
-   * CA total, pro compris, face au budget (le budget mensuel du magasin ; un mois sans budget n'ajoute que son chiffre).
+   * CA total, pro compris, face au budget de la période. Le budget d'un mois est celui du cockpit (05/11/2026, Sam : « budget
+   * année ») : le budget encodé, à défaut le budget théorique — comme le suivi budget, les vues Trimestre et Année et le plan.
+   * La ligne dit quand des mois y comptent au théorique.
    * La couleur suit l'atteinte de l'attendu, comme le calendrier : rouge < 80 %, orange < 95, vert < 105, doré au-delà.
    */
   function opBudgetPeriodes(D) {
@@ -2869,11 +2871,13 @@
     const jA = jours.find(j => j.date === S.date);
     realM += ca != null ? +ca : (jA ? +jA.ca || 0 : 0);
     if (jA && !jA.ferme) { attM += (+jA.objectif || 0) * (part != null ? part : 0); }
-    const budC = c => c && c.caBudget != null ? +c.caBudget : 0;
-    const duMois = mm => mm < mo ? (c => ({ real: +c.ca || 0, bud: budC(c), att: budC(c) }))(cells.find(x => +x.mois === mm) || {})
-      : mm === mo ? { real: realM, bud: pm.objectif != null ? +pm.objectif : budC(cells.find(x => +x.mois === mm)), att: attM }
-      : { real: 0, bud: budC(cells.find(x => +x.mois === mm)), att: 0 };
-    const somme = ms => ms.map(duMois).reduce((a, x) => ({ real: a.real + x.real, bud: a.bud + x.bud, att: a.att + x.att }), { real: 0, bud: 0, att: 0 });
+    const budC = c => c && c.caBudget != null ? +c.caBudget : (c && c.caTheorique != null ? +c.caTheorique : 0);
+    const theo = c => !!c && c.caBudget == null && c.caTheorique != null;
+    const MC = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+    const duMois = mm => { const c = cells.find(x => +x.mois === mm); const t = theo(c) && !(mm === mo && pm.objectif != null);
+      const x = mm < mo ? { real: +((c || {}).ca) || 0, bud: budC(c), att: budC(c) } : mm === mo ? { real: realM, bud: pm.objectif != null ? +pm.objectif : budC(c), att: attM } : { real: 0, bud: budC(c), att: 0 };
+      return Object.assign(x, { theo: t ? [MC[mm - 1]] : [] }); };
+    const somme = ms => ms.map(duMois).reduce((a, x) => ({ real: a.real + x.real, bud: a.bud + x.bud, att: a.att + x.att, theo: a.theo.concat(x.theo) }), { real: 0, bud: 0, att: 0, theo: [] });
     const jour = d => Math.round((new Date(d + 'T12:00:00') - new Date(Y + '-01-01T12:00:00')) / 864e5);
     const nbJ = (a, b) => jour(b) - jour(a) + 1;
     const p2 = n => String(n).padStart(2, '0'), finM = mm => Y + '-' + p2(mm) + '-' + p2(new Date(Y, mm, 0).getDate());
@@ -2892,7 +2896,7 @@
       return `<div class="op-bp"><div class="pl"><b>${esc(x.nom)}</b><small>${esc(x.sous)}</small></div>
         <div class="pb"><div class="seg" style="width:${pA.toFixed(1)}%;background:${col(r)}"></div>${pP != null && pP > pA ? `<div class="seg proj" style="left:${pA.toFixed(1)}%;width:${(pP - pA).toFixed(1)}%;--c:${col(r)}" title="au rythme actuel : ${fE(proj)}"></div>` : ''}
           ${x.att > 0 ? `<i class="att${pT > 78 ? ' g' : ''}" style="left:${pT.toFixed(1)}%"><span>attendu ${fE(x.att)}</span></i>` : ''}${pB < 99.5 ? `<i class="bud" style="left:${pB.toFixed(1)}%" title="budget ${fE(x.bud)}"></i>` : ''}</div>
-        <div class="pv"><b>${fE(x.real)}</b> <span>${fP0(100 * x.real / x.bud)} du budget ${fE(x.bud)}</span>
+        <div class="pv"><b>${fE(x.real)}</b> <span>${fP0(100 * x.real / x.bud)} du budget ${fE(x.bud)}</span>${x.theo && x.theo.length ? `<small class="th" title="pas de budget encodé pour ce mois : le budget théorique du cockpit">dont ${esc(x.theo.join(', '))} au budget théorique</small>` : ''}
           <small>${x.att > 0 ? `<em style="color:${col(r)}">${ec >= 0 ? '+ ' : '− '}${fE(Math.abs(ec))}</em> face à l’attendu<span class="am"> ${fE(x.att)}</span> (${fP0(100 * r)})` : 'rien d’attendu encore'}${proj != null ? ` · au rythme : ${fE(proj)}` : ''}</small></div></div>`;
     };
     return tete + `<div class="op-bps">${L.map(piste).join('')}</div>
