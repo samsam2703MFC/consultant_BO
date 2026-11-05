@@ -1285,3 +1285,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-05T18:12:10Z jauge des secteurs : mêmes couleurs en tout, comptoir et B2B
 2026-11-05T19:09:17Z rail : marque et marketing ne garde que fonds et royalties
 2026-11-05T20:01:08Z ERP production : Analiza sprzedaży lisible (verdict, sections ventes et marge)
+2026-11-05T20:24:54Z ERP production : menu sans doublons (25 entrées), menu par poste, Uprawnienia i menu (migration 160)
