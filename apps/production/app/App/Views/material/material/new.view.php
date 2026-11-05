@@ -82,16 +82,17 @@
                                     <input value="<?= old_value('pack_price') ?>" type="number" min="0.01" step="0.01" class="form-control" id="pack_price" name="pack_price" placeholder="0,00" required>
                                 </div>
                                 <div class="col-6 col-md-3">
-                                    <label class="form-label" for="waste_perc">Wykorzystanie [%]</label>
+                                    <label class="form-label" for="waste_perc">Odpad przy obróbce [%]</label>
                                     <div class="input-group">
-                                        <input value="<?= htmlspecialchars((string) old_value('waste_perc', '100')) ?>" type="number" min="1" max="100" step="1" inputmode="numeric" class="form-control text-end" id="waste_perc" name="waste_perc" data-usable>
+                                        <input value="<?= htmlspecialchars((string) old_value('waste_perc', '0')) ?>" type="number" min="0" max="99.99" step="0.01" inputmode="decimal" class="form-control text-end" id="waste_perc" name="waste_perc" data-loss>
                                         <span class="input-group-text">%</span>
                                     </div>
                                 </div>
                                 <div class="col-12 col-md-9 align-self-end">
-                                    <div class="form-text mt-0">Część użyteczna po obróbce (obieranie, gniazda, pestki, ości) : 100 = bez odpadu ; jabłko 65 = 35 % odpadu.</div>
-                                    <div class="form-text" data-usable-out aria-live="polite"></div>
+                                    <div class="form-text mt-0">Obieranie, gniazda, pestki, ości : 0 = bez odpadu ; jabłko 35 = z 1 kg zostaje 650 g.</div>
+                                    <div class="form-text" data-loss-out aria-live="polite"></div>
                                 </div>
+                            </div>
                             </div>
                             <div class="at-new-supplier border rounded-3 p-3 mt-3" hidden data-new-supplier-box>
                                 <h6 class="mb-2">Nowy dostawca</h6>
@@ -250,4 +251,4 @@
     })();
 </script>
 <script src="<?= ROOT ?>/assets/js/at-form-steps.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>
-<script src="<?= ROOT ?>/assets/js/material/usable.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>
+<script src="<?= ROOT ?>/assets/js/material/loss.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>

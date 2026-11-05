@@ -100,12 +100,12 @@ try {
     // --- Karta surowca
     $pdo->exec("INSERT INTO unit (id, name) VALUES (1, 'g')");
     $pdo->exec("INSERT INTO raw_material (id, name, waste_perc, id_unit, id_category, package_size_in_base_unit, price_per_unit, energy_100g, fat_100g, saturated_fat_100g,
-        carbohydrates_100g, sugars_100g, salt_100g, fiber_100g, proteins_100g, is_part_of_package) VALUES (5, 'Cukier', 100, 1, 3, 1000, 0.004, 400, 0, 0, 100, 100, 0.01, 0, 0, 0)");
+        carbohydrates_100g, sugars_100g, salt_100g, fiber_100g, proteins_100g, is_part_of_package) VALUES (5, 'Cukier', 0, 1, 3, 1000, 0.004, 400, 0, 0, 100, 100, 0.01, 0, 0, 0)");
     $pdo->exec("INSERT INTO n_material_nutrition_source (id_raw_material, source, ref, label, sample, applied_at) VALUES (5, 'off', 'en:sugars', 'Cukry', 40, NOW())");
     $materials = new MaterialService(new MaterialRepository($pdo), new NutritionRepository($pdo), new \App\Repositories\Utils\RecordHistoryRepository($pdo));
     // Jak na serwerze (DB_SQL_MODE strict) : puste pola BDO formularza nie mogą blokować zapisu
     $pdo->exec("SET SESSION sql_mode = 'STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
-    $form = ['name' => 'Cukier', 'waste_perc' => 100, 'id_unit' => 1, 'id_category' => 3, 'pack_price' => 4, 'package_size_in_base_unit' => 1000, 'id_current_supplier' => 1,
+    $form = ['name' => 'Cukier', 'waste_perc' => 0, 'id_unit' => 1, 'id_category' => 3, 'pack_price' => 4, 'package_size_in_base_unit' => 1000, 'id_current_supplier' => 1,
         'bdo_material_category' => '', 'packaging_usage_type' => '', 'packaging_unit_weight_g' => '',
         'energy_100g' => '400', 'fat_100g' => '0', 'saturated_fat_100g' => '0', 'carbohydrates_100g' => '100', 'sugars_100g' => '100', 'salt_100g' => '0,01', 'fiber_100g' => '0', 'proteins_100g' => '0'];
     expectLot($materials->validate($form) === true, 'nowy surowiec : 0 g tłuszczu, białka, błonnika jest poprawne');

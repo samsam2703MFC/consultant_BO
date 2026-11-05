@@ -92,14 +92,14 @@
                             <option value="1">{{ translations.package_materials }}</option>
                         </select>
                     </div>
-                    {# [250] Wykorzystanie [%] : surowce z odpadem i wartości do sprawdzenia (≤ 20 % — wpisany odpad?) #}
-                    {% set usable_check = rows|filter(m => m.waste_perc is not null and m.waste_perc <= 20)|length %}
-                    {% set usable_waste = rows|filter(m => m.waste_perc is not null and m.waste_perc < 100)|length %}
+                    {# [251] Odpad przy obróbce [%] : surowce z odpadem i do sprawdzenia (przeniesione automatycznie albo ≥ 80 %) #}
+                    {% set loss_check = rows|filter(m => m.waste_review or m.waste_perc >= 80)|length %}
+                    {% set loss_waste = rows|filter(m => m.waste_perc > 0)|length %}
                     <div class="col-12 col-md-3">
-                        <select class="form-select" id="usableFilter" aria-label="{{ translations.usable_title }}">
-                            <option value="">{{ translations.usable_all }}</option>
-                            <option value="waste">{{ translations.usable_waste }} ({{ usable_waste }})</option>
-                            <option value="check">{{ translations.usable_check }} ({{ usable_check }})</option>
+                        <select class="form-select" id="lossFilter" aria-label="{{ translations.loss_title }}">
+                            <option value="">{{ translations.loss_all }}</option>
+                            <option value="waste">{{ translations.loss_waste }} ({{ loss_waste }})</option>
+                            <option value="check">{{ translations.loss_check }} ({{ loss_check }})</option>
                         </select>
                     </div>
                 </div>
@@ -122,7 +122,7 @@
                                 <th>{{ translations.supplier }}</th>
                                 <th>{{ translations.unit }}</th>
                                 <th class="text-end">{{ translations.price_per_1000 }}</th>
-                                <th class="text-end" title="{{ translations.usable_title }}">{{ translations.usable }}</th>
+                                <th class="text-end" title="{{ translations.loss_title }}">{{ translations.loss }}</th>
                                 <th style="width: 120px" class="text-center">{{ translations.is_package_part }}</th>
                                 <th class="text-center">{{ translations.actions }}</th>
                             </tr>
@@ -140,7 +140,8 @@
                                         data-material-name="{{ material.name|lower }}"
                                         data-category="{{ material.id_category|default('') }}"
                                         data-is-package="{{ material.is_part_of_package }}"
-                                        data-usable="{{ material.waste_perc ?? 100 }}">
+                                        data-loss="{{ material.waste_perc ?? 0 }}"
+                                        data-loss-review="{{ material.waste_review ? 1 : 0 }}">
                                         <td class="text-center">
                                             {% if material.is_part_of_package == 1 %}
                                                 <i class="bi bi-box-seam icon-package"
@@ -183,13 +184,14 @@
                                             {% endif %}
                                         </td>
                                         <td class="text-end text-nowrap" style="font-variant-numeric: tabular-nums">
-                                            {% set up = material.waste_perc ?? 100 %}
-                                            {% if up <= 20 %}
-                                                <span class="at-pill at-pill-warn" title="{{ translations.usable_check_title }}">{{ up }} % · {{ translations.usable_check_badge }}</span>
-                                            {% elseif up < 100 %}
-                                                {{ up }} %
+                                            {% set lp = (material.waste_perc ?? 0) + 0 %}
+                                            {% set lpf = lp == lp|round ? lp|number_format(0, ',', ' ') : lp|number_format(1, ',', ' ') %}
+                                            {% if material.waste_review or lp >= 80 %}
+                                                <span class="at-pill at-pill-warn" title="{{ translations.loss_check_title }}">{{ lpf }} % · {{ translations.loss_check_badge }}</span>
+                                            {% elseif lp > 0 %}
+                                                {{ lpf }} %
                                             {% else %}
-                                                <span class="text-muted">100 %</span>
+                                                <span class="text-muted">—</span>
                                             {% endif %}
                                         </td>
                                         <td class="text-center">
@@ -346,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
 const searchInput = document.getElementById('searchMaterials');
 const categoryFilter = document.getElementById('categoryFilter');
 const typeFilter = document.getElementById('typeFilter');
-const usableFilter = document.getElementById('usableFilter');
+const lossFilter = document.getElementById('lossFilter');
 const materialsTableBody = document.getElementById('materialsTableBody');
 const visibleCount = document.getElementById('visibleCount');
 const totalMaterials = {{ rows|length }};
@@ -356,7 +358,7 @@ function applyFilters() {
     const searchTerm = searchInput.value.toLowerCase().trim();
     const categoryValue = categoryFilter.value;
     const typeValue = typeFilter.value;
-    const usableValue = usableFilter ? usableFilter.value : '';
+    const lossValue = lossFilter ? lossFilter.value : '';
     let visible = 0;
 
     document.querySelectorAll('.material-row').forEach(row => {
@@ -367,10 +369,11 @@ function applyFilters() {
         const matchesSearch = !searchTerm || materialName.includes(searchTerm);
         const matchesCategory = !categoryValue || category === categoryValue;
         const matchesType = !typeValue || isPackage === typeValue;
-        const usable = Number(row.dataset.usable || 100);
-        const matchesUsable = !usableValue || (usableValue === 'waste' ? usable < 100 : usable <= 20);
+        const loss = Number(row.dataset.loss || 0);
+        const lossReview = row.dataset.lossReview === '1';
+        const matchesLoss = !lossValue || (lossValue === 'waste' ? loss > 0 : (lossReview || loss >= 80));
 
-        const isVisible = matchesSearch && matchesCategory && matchesType && matchesUsable;
+        const isVisible = matchesSearch && matchesCategory && matchesType && matchesLoss;
         row.style.display = isVisible ? '' : 'none';
 
         if (isVisible) visible++;
@@ -391,10 +394,10 @@ categoryFilter.addEventListener('change', function () {
         ? `{{ root }}/material-categories/${categoryFilter.value}/materials/new` : '{{ root }}/materials/new';
 });
 typeFilter.addEventListener('change', applyFilters);
-if (usableFilter) usableFilter.addEventListener('change', applyFilters);
+if (lossFilter) lossFilter.addEventListener('change', applyFilters);
 {
-    const u = new URLSearchParams(window.location.search).get('usable');
-    if (usableFilter && (u === 'check' || u === 'waste')) { usableFilter.value = u; applyFilters(); }
+    const u = new URLSearchParams(window.location.search).get('odpad');
+    if (lossFilter && (u === 'check' || u === 'waste')) { lossFilter.value = u; applyFilters(); }
 }
 if (categoryFilter.value) applyFilters();
 

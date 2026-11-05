@@ -84,22 +84,26 @@
                                         </select>
                                     </div>
                                     <?php
-                                    // [250] Wykorzystanie [%] : cena z karty za 1 kg / 1 l / 1 szt. do podglądu kosztu jednostki użytecznej.
+                                    // [251] Odpad przy obróbce [%] : cena z karty za 1 kg / 1 l / 1 szt. do podglądu kosztu jednostki użytecznej.
                                     $unitName = strtolower(trim((string) ($row['unit_name'] ?? '')));
-                                    $usableMult = in_array($unitName, ['g', 'ml'], true) ? 1000 : 1;
-                                    $usableUnit = $unitName === 'g' ? 'kg' : ($unitName === 'ml' ? 'l' : ($unitName ?: 'jedn.'));
-                                    $usablePrice = (float) ($row['price_per_unit'] ?? 0) * $usableMult;
+                                    $lossMult = in_array($unitName, ['g', 'ml'], true) ? 1000 : 1;
+                                    $lossUnit = $unitName === 'g' ? 'kg' : ($unitName === 'ml' ? 'l' : ($unitName ?: 'jedn.'));
+                                    $lossPrice = (float) ($row['price_per_unit'] ?? 0) * $lossMult;
+                                    $lossNow = rtrim(rtrim(number_format((float) ($row['waste_perc'] ?? 0), 2, '.', ''), '0'), '.');
                                     ?>
                                     <div class="row mt-3">
-                                        <label class="form-label" for="waste_perc">Wykorzystanie [%]</label>
+                                        <label class="form-label" for="waste_perc">Odpad przy obróbce [%]</label>
                                         <div class="input-group">
-                                            <input value="<?= htmlspecialchars((string) old_value('waste_perc', $row['waste_perc'] ?? 100)) ?>" type="number" min="1" max="100" step="1" inputmode="numeric"
-                                                   class="form-control text-end" id="waste_perc" name="waste_perc" data-usable
-                                                   <?= $usablePrice > 0 ? 'data-usable-price="' . round($usablePrice, 4) . '" data-usable-unit="' . htmlspecialchars($usableUnit) . '"' : '' ?>>
+                                            <input value="<?= htmlspecialchars((string) (isset($_POST['waste_perc']) ? $_POST['waste_perc'] : $lossNow)) ?>" type="number" min="0" max="99.99" step="0.01" inputmode="decimal"
+                                                   class="form-control text-end" id="waste_perc" name="waste_perc" data-loss
+                                                   <?= $lossPrice > 0 ? 'data-loss-price="' . round($lossPrice, 4) . '" data-loss-unit="' . htmlspecialchars($lossUnit) . '"' : '' ?>>
                                             <span class="input-group-text">%</span>
                                         </div>
-                                        <div class="form-text">Część użyteczna po obróbce (obieranie, gniazda, pestki, ości) : 100 = bez odpadu ; jabłko 65 = 35 % odpadu.</div>
-                                        <div class="form-text" data-usable-out aria-live="polite"></div>
+                                        <div class="form-text">Obieranie, gniazda, pestki, ości : 0 = bez odpadu ; jabłko 35 = z 1 kg zostaje 650 g.</div>
+                                        <div class="form-text" data-loss-out aria-live="polite"></div>
+                                        <?php if (!empty($row['waste_review'])): ?>
+                                            <div class="form-text text-danger"><b>Do sprawdzenia :</b> wartość przeniesiona automatycznie (dawniej pole znaczyło « wykorzystanie »). Popraw albo zapisz kartę, aby potwierdzić.</div>
+                                        <?php endif; ?>
                                         <div class="form-text text-muted">Na razie informacja : koszt receptur liczy cenę zakupu bez odpadu.</div>
                                     </div>
 
@@ -238,7 +242,7 @@
         </section>
     </div>
 <?php $this->view("page_components/footer"); ?>
-<script src="<?= ROOT ?>/assets/js/material/usable.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>
+<script src="<?= ROOT ?>/assets/js/material/loss.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>
 <script>
     document.getElementById('is_part_of_package').addEventListener('change', function () {
         document.getElementById('bdo-packaging-fields').style.display = this.checked ? '' : 'none';

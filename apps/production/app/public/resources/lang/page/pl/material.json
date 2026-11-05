@@ -78,11 +78,11 @@
   "allergens": "Alergeny…",
   "delete": "Usuń…",
   "categories_help": "Kategorie surowców : nazwa (zakupy, receptury, BDO). « Surowce kategorii » otwiera listę z filtrem tej kategorii.",
-  "usable": "Wykorzyst.",
-  "usable_title": "Wykorzystanie : część użyteczna po obróbce (100 % = bez odpadu)",
-  "usable_all": "Wykorzystanie : wszystkie",
-  "usable_waste": "Z odpadem (< 100 %)",
-  "usable_check": "Do sprawdzenia (≤ 20 %)",
-  "usable_check_badge": "sprawdź",
-  "usable_check_title": "Bardzo mało : czy nie wpisano odpadu zamiast części użytecznej ? (jogurt = 100 %, nie 1 %)"
+  "loss": "Odpad",
+  "loss_title": "Odpad przy obróbce : obieranie, gniazda, pestki, ości (0 % = bez odpadu)",
+  "loss_all": "Odpad : wszystkie",
+  "loss_waste": "Z odpadem (> 0 %)",
+  "loss_check": "Do sprawdzenia",
+  "loss_check_badge": "sprawdź",
+  "loss_check_title": "Do sprawdzenia : wartość przeniesiona automatycznie (dawniej « wykorzystanie ») albo bardzo duży odpad (≥ 80 %). Zapis karty potwierdza."
 }
