@@ -2280,6 +2280,10 @@
     lireAux(cleOpSuivi(), '/production/flux/suivi?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force);
     if (S.eqOuvert && S.eqDeplie) { lireAux('eqh|' + S.shop + '|' + S.date, '/exploitation/equipe-heures?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); }
     lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force);
+    // Le chiffre face au budget sur le mois, le trimestre et l'année (05/11/2026) : le mois jour par jour (la même lecture que
+    // la frise), les autres mois de l'année avec leur budget (la même que la vue Trimestre).
+    lireAux('frJ|' + S.date.slice(0, 7), '/exploitation/periode?vue=mois&date=' + finMois(S.date.slice(0, 7)), force);
+    lireAux(clePerf(), cheminPerf(), force);
     lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force);
     lireAux('cmd|' + S.shop, '/ventes/commandes?shop=' + encodeURIComponent(S.shop), force);
     lireAux(cleCanaux(), cheminCanaux(), force);
@@ -2837,6 +2841,63 @@
     h += `<div class="op-dax ab"><span>0 €</span>${pO != null ? `<span class="o${pO > 80 ? ' d' : ''}" style="left:${pO.toFixed(1)}%">part B2B habituelle ${fE(objB)}</span>` : ''}</div>`;
     return h + '</div>';
   }
+  /**
+   * Le chiffre face au budget sur le mois, le trimestre et l'année (05/11/2026, Sam : « une jauge mensuelle, trimestrielle
+   * et annuelle de la jauge de CA par rapport au budget »). Trois pistes, chacune de 0 au budget de sa période :
+   *  - le réalisé : les jours passés du mois (/exploitation/periode, jour par jour), aujourd'hui en direct (comme la jauge du
+   *    jour), les mois clos de l'année (/stores/perf) ;
+   *  - le trait « attendu » : le budget des jours passés et des mois clos, plus la part de l'objectif du jour qu'on fait
+   *    d'habitude à cette heure (projectionPart du Résultat du jour) ; une journée finie compte entière ;
+   *  - la projection au rythme actuel, hachurée : le budget de la période × réalisé ÷ attendu.
+   * CA total, pro compris, face au budget (le budget mensuel du magasin ; un mois sans budget n'ajoute que son chiffre).
+   * La couleur suit l'atteinte de l'attendu, comme le calendrier : rouge < 80 %, orange < 95, vert < 105, doré au-delà.
+   */
+  function opBudgetPeriodes(D) {
+    const { m, ca, fin } = D;
+    const Y = +S.date.slice(0, 4), mo = +S.date.slice(5, 7), q = Math.floor((mo - 1) / 3) + 1;
+    const P = S.aux['frJ|' + S.date.slice(0, 7)], perf = S.aux[clePerf()];
+    const tete = `<div class="db-card op-bloc op-bud"><div class="ct"><span class="op-h2">Le chiffre face au budget</span><span class="db-mini">CA total, pro compris · le trait : l’attendu ${fin ? 'à la fin de cette journée' : 'à cette heure'}, au rythme du budget jour par jour · hachuré : au rythme actuel</span></div>`;
+    if (!P || !perf) { return tete + `<div style="padding:10px 16px 14px">${S.err['frJ|' + S.date.slice(0, 7)] || S.err[clePerf()] ? '<span class="db-mini ko">' + esc(S.err['frJ|' + S.date.slice(0, 7)] || S.err[clePerf()]) + '</span>' : opSk() + opSk() + opSk()}</div></div>`; }
+    const pm = (P.magasins || []).find(x => String(x.shopId) === String(S.shop));
+    if (!pm) { return ''; }
+    const cells = (Array.isArray(perf) ? perf : []).filter(c => String(c.storeId) === String(S.shop) && +c.annee === Y);
+    // Le mois : les jours passés tels qu'ils sont, aujourd'hui en direct, et la part de l'objectif du jour attendue à cette heure.
+    const jours = Array.isArray(pm.jours) ? pm.jours : [];
+    const part = fin ? 1 : (m && m.projectionPart != null ? Math.max(0, Math.min(100, +m.projectionPart)) / 100 : null);
+    let realM = 0, attM = 0;
+    jours.forEach(j => { if (j.date < S.date) { realM += +j.ca || 0; attM += j.ferme ? 0 : (+j.objectif || 0); } });
+    const jA = jours.find(j => j.date === S.date);
+    realM += ca != null ? +ca : (jA ? +jA.ca || 0 : 0);
+    if (jA && !jA.ferme) { attM += (+jA.objectif || 0) * (part != null ? part : 0); }
+    const budC = c => c && c.caBudget != null ? +c.caBudget : 0;
+    const duMois = mm => mm < mo ? (c => ({ real: +c.ca || 0, bud: budC(c), att: budC(c) }))(cells.find(x => +x.mois === mm) || {})
+      : mm === mo ? { real: realM, bud: pm.objectif != null ? +pm.objectif : budC(cells.find(x => +x.mois === mm)), att: attM }
+      : { real: 0, bud: budC(cells.find(x => +x.mois === mm)), att: 0 };
+    const somme = ms => ms.map(duMois).reduce((a, x) => ({ real: a.real + x.real, bud: a.bud + x.bud, att: a.att + x.att }), { real: 0, bud: 0, att: 0 });
+    const jour = d => Math.round((new Date(d + 'T12:00:00') - new Date(Y + '-01-01T12:00:00')) / 864e5);
+    const nbJ = (a, b) => jour(b) - jour(a) + 1;
+    const p2 = n => String(n).padStart(2, '0'), finM = mm => Y + '-' + p2(mm) + '-' + p2(new Date(Y, mm, 0).getDate());
+    const qD = Y + '-' + p2(3 * q - 2) + '-01', qF = finM(3 * q);
+    const MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const L = [Object.assign({ nom: MOIS[mo - 1], sous: 'jour ' + +S.date.slice(8, 10) + ' sur ' + new Date(Y, mo, 0).getDate() }, duMois(mo)),
+      Object.assign({ nom: 'T' + q + ' ' + Y, sous: 'jour ' + nbJ(qD, S.date) + ' sur ' + nbJ(qD, qF) }, somme([3 * q - 2, 3 * q - 1, 3 * q])),
+      Object.assign({ nom: 'Année ' + Y, sous: 'jour ' + nbJ(Y + '-01-01', S.date) + ' sur ' + nbJ(Y + '-01-01', Y + '-12-31') }, somme([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]))];
+    const col = r => r == null ? '#B9B2A8' : r < 0.8 ? '#8D1D2C' : r < 0.95 ? '#C17A2A' : r < 1.05 ? '#2d7a3e' : '#C9A227';
+    const piste = x => {
+      if (!x.bud) { return `<div class="op-bp"><div class="pl"><b>${esc(x.nom)}</b><small>${esc(x.sous)}</small></div><div class="pb"></div><div class="pv"><b>${fE(x.real)}</b><small>pas de budget pour cette période</small></div></div>`; }
+      // Une période complète (tout son budget attendu) n'a plus de « au rythme » : il redirait le réalisé.
+      const r = x.att > 0 ? x.real / x.att : null, proj = r != null && x.att < x.bud * 0.999 ? x.bud * r : null, ec = x.real - x.att;
+      const ech = Math.max(x.bud, x.real, proj || 0) * (Math.max(x.real, proj || 0) > x.bud ? 1.04 : 1), pc = v => Math.max(0, Math.min(100, 100 * v / ech));
+      const pA = pc(x.real), pP = proj != null ? pc(proj) : null, pT = pc(x.att), pB = pc(x.bud);
+      return `<div class="op-bp"><div class="pl"><b>${esc(x.nom)}</b><small>${esc(x.sous)}</small></div>
+        <div class="pb"><div class="seg" style="width:${pA.toFixed(1)}%;background:${col(r)}"></div>${pP != null && pP > pA ? `<div class="seg proj" style="left:${pA.toFixed(1)}%;width:${(pP - pA).toFixed(1)}%;--c:${col(r)}" title="au rythme actuel : ${fE(proj)}"></div>` : ''}
+          ${x.att > 0 ? `<i class="att${pT > 78 ? ' g' : ''}" style="left:${pT.toFixed(1)}%"><span>attendu ${fE(x.att)}</span></i>` : ''}${pB < 99.5 ? `<i class="bud" style="left:${pB.toFixed(1)}%" title="budget ${fE(x.bud)}"></i>` : ''}</div>
+        <div class="pv"><b>${fE(x.real)}</b> <span>${fP0(100 * x.real / x.bud)} du budget ${fE(x.bud)}</span>
+          <small>${x.att > 0 ? `<em style="color:${col(r)}">${ec >= 0 ? '+ ' : '− '}${fE(Math.abs(ec))}</em> face à l’attendu<span class="am"> ${fE(x.att)}</span> (${fP0(100 * r)})` : 'rien d’attendu encore'}${proj != null ? ` · au rythme : ${fE(proj)}` : ''}</small></div></div>`;
+    };
+    return tete + `<div class="op-bps">${L.map(piste).join('')}</div>
+      <div class="op-dleg"><span><i class="bpv"></i>réalisé : la couleur suit l’atteinte de l’attendu (rouge &lt; 80 % · orange &lt; 95 · vert &lt; 105 · doré au-delà)</span><span><i class="now"></i>attendu ${fin ? 'à la fin de cette journée' : 'à cette heure'}</span><span><i class="bpp"></i>au rythme actuel</span></div></div>`;
+  }
   /** Le cumul heure par heure d'aujourd'hui face à celui de J−7 : le CA jusqu'à l'objectif, ou les clients
    *  face à la référence des mêmes jours (bascule CA / Clients, demande du 08/10/2026). */
   function opDuelHeures(D) {
@@ -3031,7 +3092,7 @@
     // Une donnée, un seul endroit (11/10/2026) : la jauge porte le CA face à l'objectif et à J−7 ; le duel, les clients
     // et le panier ; la courbe, l'heure par heure. Les quatre tuiles (heure, vitrine, équipe, cuissons) redisaient les
     // cartes du dessous : retirées au téléphone.
-    let h = opDuelSplit(D) + opDuelTable(D, { sansCa: true }) + opDuelHeures(D);
+    let h = opDuelSplit(D) + opBudgetPeriodes(D) + opDuelTable(D, { sansCa: true }) + opDuelHeures(D);
     // La vitrine : ce qui demande un geste, puis le reste replié.
     if (U) {
       h += opVitrine(D, true);
@@ -3217,6 +3278,7 @@
     // Les vignettes du moment (l'heure, vitrine, équipe en poste, cuissons) sont retirées au bureau aussi (23/10/2026, Sam ;
     // au téléphone depuis le 11/10/2026) : les cartes du dessous les disent.
     h += opDuelSplit(D);
+    h += opBudgetPeriodes(D);
     h += opDuelHeures(D);
     const PJ = m ? jourPieces(m, JD, ST) : null;
     const attente = t => `<div class="db-card"><div class="ct"><span class="db-lab">${t}</span><span class="db-mini">${S.err['jourM|' + S.date] ? esc(S.err['jourM|' + S.date]) : 'lecture du Résultat du jour…'}</span></div><div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`;
