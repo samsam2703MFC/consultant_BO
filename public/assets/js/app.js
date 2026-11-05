@@ -244,7 +244,7 @@ function prIconePhoto(fichier){
 class App {
   constructor(root){
     this.root = root;
-    this.state = { ready: false, screen: 'resultatJour', bStore: 'cha', tkStore: 'tous', openProjId: null,
+    this.state = { ready: false, screen: 'resultatJour', bStore: 'cha', tkStore: 'tous',
       sortKey: 'caPct', sortDir: -1, zoneF: 'Toutes les zones', hmMetric: 'pct', hmYear: null, hmHover: null,
       horizon: 'h1', logType: 'Tous les types', logQui: 'Tous les auteurs', logQ: '', rel: null, toast: null,
       sFood: null, sLabour: null, statutOv: {}, familleOv: {}, relanced: {}, logsExtra: [], tpl: {},
@@ -363,7 +363,7 @@ class App {
       // Les promotions (26/10/2026) : une section du rail, sortie de l'onglet d'Analyse magasin et du dashboard magasin.
       promoTableau: 'promotions', promoEdition: 'promotions/edition',
       croisements: 'croisements',
-      projets: 'projets', fonds: 'fonds',
+      fonds: 'fonds',
       mktTypes: 'parametres/campagnes', mktObjectifs: 'objectifs/produits', scoringTri: 'fiche/scoring', clientMystere: 'parametres/mystere',
       suivi: 'suivi/taches', controle: 'suivi/controles', suiviMensuel: 'suivi/mois', kpiTable: 'parametres/kpi', reporting: 'reporting',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
@@ -1154,7 +1154,7 @@ class App {
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
-      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets de développement', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     // La page du franchisé (?shop=) : rien de la marque ni des sponsors, pas même dans l'en-tête.
     if (S.screen === 'primesApp' && S.prSection === 'franchise') { common.screenTitle = 'Primes du magasin'; common.screenSub = 'Ce que tes vendeuses gagnent dans l’app : les primes de la marque et des sponsors qui tournent chez toi, et celles que tu poses pour ton magasin.'; }
@@ -1248,7 +1248,6 @@ class App {
 
     if (!S.ready){ common.nav = []; return common; }
     const D = this.D, M = this.M;
-    common.np = S.np; common.npLevs = M.LEVIERS; common.npAxes = Object.keys(D.projTemplates); common.npKpis = M.KPI_LIST;
     const addD = (iso, n) => { const dt = new Date(iso + 'T12:00:00'); dt.setDate(dt.getDate() + n); const p = x => String(x).padStart(2, '0'); return dt.getFullYear() + '-' + p(dt.getMonth() + 1) + '-' + p(dt.getDate()); };
     common.npOwners = D.consultants.map(c => ({ val: 'c:' + c.id, nom: c.nom + ' — Consultant' })).concat(D.suppliers.map(s => ({ val: 's:' + s.id, nom: s.nom + ' — Fournisseur' })));
     const wizSteps = (labels, cur, go, maxReached) => labels.map((label, i) => { const n = i + 1, done = n < cur, act = n === cur;
@@ -1259,30 +1258,6 @@ class App {
         labSt: 'font-size:12.5px;white-space:nowrap;font-weight:' + (act ? '500' : '400') + ';color:' + (act ? 'var(--color-text)' : 'var(--color-text-muted)'),
         sepSt: 'flex:1;height:1px;margin:0 14px;background:' + (done ? 'var(--color-primary)' : 'var(--color-border-tertiary)') };
     });
-
-    // --- assistant projet
-    if (S.np){
-      const f = S.np, st = f.step || 1, reached = f.reached || 1;
-      common.npS1 = st === 1; common.npS2 = st === 2; common.npS3 = st === 3; common.npS4 = st === 4;
-      common.npSteps = wizSteps(['Cadrage', 'Valeur & priorité', 'Rétroplanning & tâches', 'Budget & récap'], st, n => this.setState(s2 => ({ np: Object.assign({}, s2.np, { step: n }) })), reached);
-      common.npStepSub = ['Nom, levier, axe et fenêtre de réalisation du projet.', 'Ce que le projet doit rapporter et son degré de priorité.', 'Jalons du rétroplanning et tâches confiées aux intervenants.', 'Postes budgétés et vérification avant création.'][st - 1];
-      const okStep = n => n === 1 ? !!f.nom.trim() : n === 2 ? true : n === 3 ? f.jalons.some(j => j.nom.trim()) || f.taches.some(t => t.nom.trim()) : true;
-      common.npCanPrev = st > 1; common.npCanNext = st < 4;
-      common.npWarn = st === 1 && !okStep(1) ? 'Nom du projet requis' : st === 3 && !okStep(3) ? 'Au moins un jalon ou une tâche' : '';
-      common.npWarnCol = '#8D1D2C';
-      common.npPrev = () => this.setState(s2 => ({ np: Object.assign({}, s2.np, { step: Math.max(1, (s2.np.step || 1) - 1) }) }));
-      common.npNext = () => { if (!okStep(st)){ this.notify(common.npWarn); return; }
-        this.setState(s2 => { const n = Math.min(4, (s2.np.step || 1) + 1); return { np: Object.assign({}, s2.np, { step: n, reached: Math.max(s2.np.reached || 1, n) }) }; }); };
-      if (st === 4){
-        const lev = M.LEVIERS.find(l => l.slug === f.lev), tot = f.couts.reduce((a, c) => a + (+c.prevu || 0), 0);
-        const val = +f.valeur || 0;
-        common.npRecap = [
-          { k: 'Projet', v: f.nom.trim() || '' }, { k: 'Axe', v: f.axe }, { k: 'Levier', v: lev ? lev.nom : f.lev }, { k: 'Priorité', v: f.prio },
-          { k: 'Fenêtre', v: this.fD(f.debut) + ' → ' + this.fD(f.fin) }, { k: 'Jalons', v: f.jalons.filter(j => j.nom.trim()).length + ' jalon(s)' },
-          { k: 'Tâches', v: f.taches.filter(t => t.nom.trim()).length + ' tâche(s)' },
-          { k: 'Budget / valeur', v: this.fE(tot) + ' → ' + (val ? this.fE(val) : 'à chiffrer') }];
-      }
-    }
 
     // --- assistant tâche
     // Aucune valeur inventée : le projet, l'intervenant et l'échéance viennent
@@ -1336,169 +1311,8 @@ class App {
         this.log('Tâche', proj.nom, jr);
         this.notify('Tâche créée et assignée à ' + (own ? own.nom : '')); };
     }
-    common.npOpen = () => this.setState({ np: { step: 1, reached: 1, nom: '',
-      lev: (M.LEVIERS[0] || {}).slug || '', axe: 'Ventes', prio: 'Moyenne',
-      debut: M.TODAY, fin: this.dansNJours(180), valeur: '', valeurTxt: '', kpi: '',
-      // Le rétroplanning du type de projet est posé dès l'ouverture : ouvrir sur
-      // une ligne vide obligeait à cliquer « charger le template » pour obtenir
-      // ce qui est de toute façon le point de départ attendu.
-      jalons: (((D.projTemplates || {})['Ventes'] || {}).jalons || []).length
-        ? D.projTemplates['Ventes'].jalons.map(j => ({ nom: j.nom, cible: addD(this.dansNJours(180), j.j) }))
-        : [{ nom: '', cible: this.dansNJours(180) }],
-      taches: [{ nom: '', who: this.premierIntervenant(), due: this.dansNJours(60) }],
-      couts: [{ poste: 'Jours-homme consultants', prevu: '' }],
-      // Hypothèses économiques : ce que le projet doit rapporter, et à qui.
-      // Vides au départ — un projet dont on n'a pas encore chiffré l'économie
-      // doit pouvoir se créer, et des zéros pré-remplis se seraient enregistrés
-      // comme des hypothèses posées.
-      margeCible: '', prixVente: '', volMag: '', volReseau: '', royaltiesTaux: '',
-      royaltiesEuro: '', margeMagAn: '' } });
-    common.npClose = () => this.setState({ np: null });
-    const npSet = k => e => this.setState(s2 => ({ np: Object.assign({}, s2.np, { [k]: e.target.value }) }));
-    common.npNom = npSet('nom'); common.npLev = npSet('lev'); common.npDebut = npSet('debut'); common.npFin = npSet('fin');
-    // Le levier se choisit sur des pastilles PORTANT SA COULEUR : c'est la même
-    // couleur qui identifiera le projet partout ailleurs (cartes, kanban,
-    // rapports). Un menu déroulant la cachait, et il fallait créer le projet
-    // pour découvrir sa couleur.
-    common.npLevChips = (M.LEVIERS || []).map(l => { const on = S.np && S.np.lev === l.slug;
-      return { slug: l.slug, nom: l.nom, desc: l.desc || '', couleur: l.color || '#666',
-        st: 'display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:var(--font-ui);'
-          + 'font-size:12.5px;padding:7px 13px;border-radius:8px;'
-          + (on ? 'border:1px solid ' + (l.color || '#666') + ';background:' + (l.color || '#666') + '1f;font-weight:500;color:var(--color-text)'
-                : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)'),
-        dotSt: 'width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:' + (l.color || '#666'),
-        go: () => this.setState(s2 => ({ np: Object.assign({}, s2.np, { lev: l.slug }) })) }; });
-    // Changer d'axe recharge le rétroplanning : un template de jalons par TYPE
-    // de projet, appliqué sans qu'on ait à y penser. Les jalons déjà saisis à
-    // la main ne sont pas écrasés — on ne détruit pas un travail en cours.
-    common.npAxe = e => { const ax = e.target.value;
-      this.setState(s2 => { const f2 = s2.np || {};
-        const tpl = (this.D.projTemplates || {})[ax];
-        const saisis = (f2.jalons || []).some(j => (j.nom || '').trim() !== '');
-        const jal = (tpl && !saisis)
-          ? tpl.jalons.map(j => ({ nom: j.nom, cible: addD(f2.fin, j.j) }))
-          : f2.jalons;
-        return { np: Object.assign({}, f2, { axe: ax, jalons: jal }) }; }); };
-    common.npValeur = npSet('valeur'); common.npValeurTxt = npSet('valeurTxt'); common.npKpi = npSet('kpi');
-    const npPrio = p => () => this.setState(s2 => ({ np: Object.assign({}, s2.np, { prio: p }) }));
-    const npPrioSt = p => 'cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:500;padding:8px 16px;border-radius:8px;' + (S.np && S.np.prio === p ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)');
-    common.npPrioH = npPrio('Haute'); common.npPrioM = npPrio('Moyenne'); common.npPrioB = npPrio('Basse');
-    common.npPrioHSt = npPrioSt('Haute'); common.npPrioMSt = npPrioSt('Moyenne'); common.npPrioBSt = npPrioSt('Basse');
-    const npRow = (list, i, k) => e => this.setState(s2 => { const arr = s2.np[list].slice(); arr[i] = Object.assign({}, arr[i], { [k]: e.target.value }); return { np: Object.assign({}, s2.np, { [list]: arr }) }; });
-    const npAdd = (list, tpl) => () => this.setState(s2 => ({ np: Object.assign({}, s2.np, { [list]: s2.np[list].concat([tpl]) }) }));
-    const npDel = (list, i) => () => this.setState(s2 => ({ np: Object.assign({}, s2.np, { [list]: s2.np[list].filter((_, j) => j !== i) }) }));
-    if (S.np){ const f = S.np;
-      common.npJalons = f.jalons.map((j, i) => ({ nom: j.nom, cible: j.cible, setNom: npRow('jalons', i, 'nom'), setCible: npRow('jalons', i, 'cible'), del: npDel('jalons', i) }));
-      common.npTaches = f.taches.map((t, i) => ({ nom: t.nom, who: t.who, due: t.due, setNom: npRow('taches', i, 'nom'), setWho: npRow('taches', i, 'who'), setDue: npRow('taches', i, 'due'), del: npDel('taches', i) }));
-      common.npCouts = f.couts.map((c, i) => ({ poste: c.poste, prevu: c.prevu, setPoste: npRow('couts', i, 'poste'), setPrevu: npRow('couts', i, 'prevu'), del: npDel('couts', i) }));
-      common.npJalAdd = npAdd('jalons', { nom: '', cible: f.fin }); common.npTacheAdd = npAdd('taches', { nom: '', who: this.premierIntervenant(), due: f.fin }); common.npCoutAdd = npAdd('couts', { poste: '', prevu: '0' });
-      common.npLoadJalons = () => { const tpl = D.projTemplates[f.axe]; if (!tpl) return;
-        this.setState(s2 => ({ np: Object.assign({}, s2.np, { jalons: tpl.jalons.map(j => ({ nom: j.nom, cible: addD(f.fin, j.j) })) }) }));
-        this.notify('Template rétroplanning « ' + f.axe + ' » chargé (' + tpl.jalons.length + ' jalons)'); };
-      common.npLoadCouts = () => { const tpl = D.projTemplates[f.axe]; if (!tpl) return;
-        this.setState(s2 => ({ np: Object.assign({}, s2.np, { couts: tpl.couts.map(c => ({ poste: c.poste, prevu: String(c.prevu) })) }) }));
-        this.notify('Template coûts « ' + f.axe + ' » chargé (' + tpl.couts.length + ' postes)'); };
-      common.npBudgetTot = this.fE(f.couts.reduce((a, c) => a + (+c.prevu || 0), 0));
-
-      // --- l'économie du projet : ce qu'il rapporte, et à qui.
-      //
-      // Trois saisies suffisent — marge visée, prix de vente, volume par
-      // magasin. Le reste se déduit, s'affiche, et reste MODIFIABLE : le calcul
-      // est une proposition, pas une contrainte. Un chiffre corrigé à la main
-      // n'est plus recalculé, sinon on écraserait ce que quelqu'un a voulu
-      // poser.
-      const nb = v => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : 0; };
-      const nOuv = this.open().length || 1;
-      const tauxRoy = f.royaltiesTaux !== '' ? nb(f.royaltiesTaux)
-        : ((this.meta && this.meta.seuils && this.meta.seuils.royalties) || 0);
-      const volMag = nb(f.volMag);
-      const volRes = f.volReseau !== '' ? nb(f.volReseau) : volMag * nOuv;
-      const prix = nb(f.prixVente);
-      const caRes = prix * volRes;
-      const caMag = prix * volMag;
-      const margeMag = f.margeMagAn !== '' ? nb(f.margeMagAn) : caMag * nb(f.margeCible) / 100;
-      const roy = f.royaltiesEuro !== '' ? nb(f.royaltiesEuro) : caRes * tauxRoy / 100;
-      const npEcoSet = k => e => this.setState(s2 => ({ np: Object.assign({}, s2.np, { [k]: e.target.value }) }));
-      common.npEco = {
-        margeCible: f.margeCible, setMargeCible: npEcoSet('margeCible'),
-        prixVente: f.prixVente, setPrixVente: npEcoSet('prixVente'),
-        volMag: f.volMag, setVolMag: npEcoSet('volMag'),
-        // Le volume réseau se déduit du volume magasin ; le corriger le fige.
-        volReseau: f.volReseau !== '' ? f.volReseau : (volMag ? String(Math.round(volRes)) : ''),
-        setVolReseau: npEcoSet('volReseau'),
-        volReseauAuto: f.volReseau === '' && volMag > 0,
-        volReseauAide: nOuv + ' boutique(s) ouvertes',
-        royaltiesTaux: f.royaltiesTaux !== '' ? f.royaltiesTaux : (tauxRoy ? String(tauxRoy) : ''),
-        setRoyaltiesTaux: npEcoSet('royaltiesTaux'),
-        royaltiesEuro: f.royaltiesEuro !== '' ? f.royaltiesEuro : (roy ? String(Math.round(roy)) : ''),
-        setRoyaltiesEuro: npEcoSet('royaltiesEuro'),
-        royaltiesAuto: f.royaltiesEuro === '' && roy > 0,
-        margeMagAn: f.margeMagAn !== '' ? f.margeMagAn : (margeMag ? String(Math.round(margeMag)) : ''),
-        setMargeMagAn: npEcoSet('margeMagAn'),
-        margeMagAuto: f.margeMagAn === '' && margeMag > 0,
-        caReseau: caRes ? this.fE(caRes) : '',
-        caMagasin: caMag ? this.fE(caMag) : '',
-        // Une ligne de lecture, en français : c'est elle qu'on relira dans six
-        // mois pour savoir ce qui avait été promis.
-        resume: (prix && volMag)
-          ? 'Prix ' + this.fE(prix) + ' × ' + Math.round(volMag) + ' pièces par boutique = '
-            + this.fE(caMag) + ' de CA magasin, ' + this.fE(caRes) + ' réseau'
-            + (nb(f.margeCible) ? ' · marge visée ' + String(f.margeCible).replace('.', ',') + ' % → ' + this.fE(margeMag) + ' par boutique' : '')
-            + (roy ? ' · royalties marque ' + this.fE(roy) : '')
-          : 'Renseignez le prix et le volume par boutique pour chiffrer le projet.',
-      };
-
-      // --- jalons : plusieurs modèles selon le type de développement.
-      //
-      // Un projet produit et un projet d'ouverture ne se jalonnent pas pareil,
-      // et un même projet peut emprunter aux deux. Les modèles s'AJOUTENT donc
-      // au rétroplanning au lieu de le remplacer — sauf quand il est vide.
-      common.npJalonModeles = Object.keys(D.projTemplates || {}).map(ax => {
-        const tpl = (D.projTemplates || {})[ax] || {};
-        return { axe: ax, n: (tpl.jalons || []).length,
-          charger: () => this.setState(s2 => { const f2 = s2.np || {};
-            const vides = (f2.jalons || []).filter(j => (j.nom || '').trim() !== '');
-            const neufs = (tpl.jalons || []).map(j => ({ nom: j.nom, cible: addD(f2.fin, j.j) }));
-            const fusion = vides.concat(neufs.filter(n2 => !vides.some(v => v.nom === n2.nom)));
-            this.notify(neufs.length + ' jalon(s) « ' + ax + ' » ajouté(s)'
-              + (vides.length ? ' au rétroplanning existant' : ''));
-            return { np: Object.assign({}, f2, { jalons: fusion.length ? fusion : neufs }) }; }) };
-      }).filter(m => m.n > 0);
-    }
-    const FAM_BY_AXE = { 'Ventes': 'Produits', 'Marge nette franchisé': 'Organisation & coûts', 'Développement réseau': 'Développement réseau', 'Produit — Interne (production)': 'Produits', 'Produit — Externe (achat)': 'Produits' };
-    common.npCreate = () => { const f = S.np; if (!f) return;
-      if (!f.nom.trim()){ this.notify('Donnez un nom au projet.'); return; }
-      // Les valeurs déduites partent telles qu'elles sont AFFICHÉES : ce que
-      // l'écran montre est ce qui s'enregistre.
-      const eco = common.npEco || {};
-      const id = 'px' + Date.now();
-      const couts = f.couts.filter(c => c.poste.trim()).map(c => ({ poste: c.poste.trim(), prevu: +c.prevu || 0, reel: 0 }));
-      const budget = couts.reduce((a, c) => a + c.prevu, 0);
-      const taches = f.taches.filter(t => t.nom.trim()).map((t, i) => { const w = t.who.split(':'); return { id: 't' + id + i, nom: t.nom.trim(), owner: { t: w[0], id: w[1] }, due: t.due, done: null, relance: null }; });
-      const jalons = f.jalons.filter(j => j.nom.trim()).map(j => ({ nom: j.nom.trim(), cible: j.cible, reel: null }));
-      const famille = FAM_BY_AXE[f.axe] || 'Organisation & coûts';
-      D.projects.push({ id, nom: f.nom.trim(), famille, statut: 'À lancer', prio: f.prio, debut: f.debut, fin: f.fin, axes: [f.axe], leviers: [f.lev], produit: null, categorie: null, budget,
-        valeurEst: +f.valeur || null, valeurReal: null, valeurTxt: f.valeurTxt.trim() || 'à chiffrer', kpis: f.kpi.trim() ? [f.kpi.trim()] : [], jalons, taches, couts });
-      const jr = 'Projet créé — statut « À lancer », échéance ' + this.fD(f.fin) + ', budget ' + this.fE(budget) + ', ' + taches.length + ' tâche(s), ' + jalons.length + ' jalon(s)';
-      this.api('POST', '/projects', { id, nom: f.nom.trim(), famille, statut: 'À lancer', prio: f.prio, debut: f.debut, fin: f.fin,
-        axes: [f.axe], leviers: [f.lev], budget, valeurEst: +f.valeur || null, valeurTxt: f.valeurTxt.trim() || 'à chiffrer',
-        kpis: f.kpi.trim() ? [f.kpi.trim()] : [], jalons, couts, taches: taches.map(t => ({ id: t.id, nom: t.nom, owner: t.owner, due: t.due })),
-        economie: {
-          margeCible: f.margeCible === '' ? null : +String(f.margeCible).replace(',', '.'),
-          prixVente: f.prixVente === '' ? null : +String(f.prixVente).replace(',', '.'),
-          volMagasin: f.volMag === '' ? null : +String(f.volMag).replace(',', '.'),
-          volReseau: eco.volReseau === '' ? null : +String(eco.volReseau).replace(',', '.'),
-          royaltiesTaux: eco.royaltiesTaux === '' ? null : +String(eco.royaltiesTaux).replace(',', '.'),
-          royaltiesEuro: eco.royaltiesEuro === '' ? null : +String(eco.royaltiesEuro).replace(',', '.'),
-          margeMagasinAn: eco.margeMagAn === '' ? null : +String(eco.margeMagAn).replace(',', '.'),
-        },
-        journal: jr });
-      this.log('Création', f.nom.trim(), jr);
-      this.setState({ np: null, openProjId: id }); this.notify('Projet « ' + f.nom.trim() + ' » créé'); };
     const flat = this.tasksFlat();
     const lateTasks = flat.filter(x => x.st === 'En retard');
-    const projEff = D.projects.map(p => Object.assign({}, p, { statut: this.pStatut(p) }));
-    const nLate = projEff.filter(p => p.statut === 'En retard').length;
 
     // Le rail suit les QUESTIONS du métier, pas l'historique des modules :
     // qu'est-ce qui se passe aujourd'hui ? comment vont les magasins, et que
@@ -1592,25 +1406,11 @@ class App {
       ['Promotions', [
         ['promoEdition', 'Édition', promosBadges(this).brouillons],
         ['promoTableau', 'Tableau d’analyse', promosBadges(this).sousRepere]]],
-      // Ce que la marque investit (projets, fonds) et ce qu'elle met en avant
-      // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
-      // l'autre — les deux anciennes sections n'en font qu'une.
-      // Le marketing réuni (demande du 13/10/2026) : les posts Facebook (venus de
-      // « Contrôle ») et les newsletters (venues d'« ERP franchisé ») rejoignent les
-      // campagnes, et le module Marketing (marketing/) les lit tous ensemble —
-      // calendrier commun, ce qui demande un geste, la vue d'un magasin. Depuis le
-      // 16/10/2026, posts et newsletters ne vivent plus que là ; Offres et canaux
-      // est retiré, comme la Centrale d'achat.
+      // Marque & marketing : depuis le 05/11/2026 (Sam), la section ne garde que Fonds & Royalties. Les entrées
+      // Marketing ↗ (/marketing/), Marketing en magasin ↗ (/signage/) et Projets de développement sont retirées
+      // du cockpit ; les deux applications restent sur le serveur, les projets et leurs tâches restent en base
+      // (les tâches se suivent dans Suivi › Tâches).
       ['Marque & marketing', [
-        // L'entrée Marketing (#/marketing, la page « Aujourd'hui ») a quitté le rail (23/10/2026, Sam).
-        // Le Marketing lui-même (dépôt marketing, servi à /marketing/ à côté du cockpit) : campagnes et leur
-        // assistant, réseaux sociaux, publicités Meta. Il s'ouvre dans un onglet à part.
-        ['ext:../marketing/', 'Marketing ↗', 0],
-        // Le marketing en magasin (30/10/2026, Sam) : la régie d'affichage des écrans des magasins (dépôt signage,
-        // servie à /signage/ sur le même serveur) — films, promotions TFBuddy à l'écran, planning, réseau d'écrans.
-        // Une campagne s'y prolonge en boutique ; comme le Marketing, elle s'ouvre dans un onglet à part.
-        ['ext:../signage/', 'Marketing en magasin ↗', 0],
-        ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
       // en attendant — la prospection autour du magasin, sa tablette.
@@ -1684,8 +1484,8 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD'].forEach(k => common[k] = false);
-    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD'].forEach(k => common[k] = false);
+    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
@@ -2115,8 +1915,6 @@ class App {
     // --- scoring produits
     // --- marge
     if (common.isMarge) this.valsMarge(common);
-    // --- projets
-    if (common.isProjets) this.valsProjets(common, projEff);
     // --- contrôle des tâches (checklists consultants du panel)
     if (common.isControle) { this.iaStatut(); this.valsControle(common); }
     if (common.isSuiviM) this.valsSuiviM(common);
@@ -2151,41 +1949,6 @@ class App {
     if (common.isParams) this.valsParams(common);
     if (common.isScoring) this.valsParams(common);   // même bloc de réglages, écran dédié
 
-    // --- fiche projet
-    const opP = S.openProjId && D.projects.find(p => p.id === S.openProjId);
-    if (opP){
-      const st = this.pStatut(opP); const c = this.cout(opP); const bt = this.budgetTot(opP); const dep = c - opP.budget;
-      const v = opP.valeurReal || opP.valeurEst; const roi = v ? v - c : null; const av = this.avance(opP);
-      common.op = { nom: opP.nom, statut: st, prio: opP.prio, debut: this.fDY(opP.debut), fin: this.fDY(opP.fin),
-        av: Math.round(av * 100) + ' %', axes: opP.axes.join(' · '), valeur: v ? this.fK(v) : 'étude', valeurTxt: opP.valeurTxt,
-        levs: opP.leviers.map(sl => M.LEVIERS.find(l => l.slug === sl)),
-        setStatut: e => { const ns = e.target.value; this.setState(s2 => ({ statutOv: Object.assign({}, s2.statutOv, { [opP.id]: ns }) }));
-          this.api('PATCH', '/projects/' + opP.id, { statut: ns });
-          this.log('Statut', opP.nom, 'Statut passé de « ' + st + ' » à « ' + ns + ' » (fiche projet)'); this.notify('Statut de « ' + opP.nom + ' » : ' + ns); },
-        jalons: opP.jalons.map(j => { const done = !!j.reel; const late = !done && j.cible < M.TODAY; const wasLate = done && j.reel > j.cible;
-          return { nom: j.nom, cible: this.fDY(j.cible),
-            dotSt: 'width:11px;height:11px;border-radius:50%;flex:0 0 auto;margin-top:3px;' + (done ? 'background:#2d7a3e' : late ? 'background:#8D1D2C' : 'background:var(--color-surface);border:2px solid var(--color-border-secondary)'),
-            etat: done ? ('Atteint le ' + this.fD(j.reel) + (wasLate ? ' — en retard' : ' — à temps')) : late ? ('En retard de ' + Math.round((new Date(M.TODAY) - new Date(j.cible)) / 86400000) + ' j') : 'À venir',
-            etatSt: 'font-size:11.5px;margin-top:2px;' + (done && !wasLate ? 'color:#2d7a3e' : late || wasLate ? 'color:#8D1D2C;font-weight:500' : 'color:var(--color-text-muted)') }; }),
-        taches: opP.taches.map(t => { const xx = { t, p: opP, st: this.taskState(t), o: this.ownerOf(t) }; const rl = S.relanced[t.id];
-          return { nom: t.nom, owner: xx.o.nom, ownerType: xx.o.type, due: this.fD(t.due), statut: xx.st + (xx.st === 'En retard' ? ' · en cause' : ''), statutSt: this.taskPillSt(xx.st),
-            relancable: !t.done && !rl, relancer: () => this.openRelTask(xx) }; }),
-        couts: opP.couts.map(cc => ({ poste: cc.poste, prevu: this.fE(cc.prevu), reel: this.fE(cc.reel) })),
-        budgetTot: this.fE(bt), reelTot: this.fE(c),
-        ecartTxt: dep > 0 ? 'Dépassement de budget : +' + this.fE(dep) + ' (+' + this.fP(dep / opP.budget, 0) + ')' : 'Sous le budget : ' + this.fE(dep) + ' (' + this.fP(c / opP.budget, 0) + ' consommé)',
-        ecartSt: 'margin-top:6px;font-size:12px;font-weight:500;padding:8px 12px;border-radius:8px;' + (dep > 0 ? 'background:rgba(141,29,44,0.08);color:#8D1D2C' : 'background:rgba(45,122,62,0.08);color:#2d7a3e'),
-        roi: roi == null ? '' : '+' + this.fK(roi), roiCl: roi != null && roi > 0 ? '#2d7a3e' : 'var(--color-text)',
-        roiPct: roi == null ? 'valeur non chiffrée' : '+' + this.fP(roi / c, 0), kpis: opP.kpis.join(' · ') };
-      common.closeProj = () => this.setState({ openProjId: null });
-      common.deleteProj = () => {
-        if (typeof confirm === 'function' && !confirm('Supprimer définitivement le projet « ' + opP.nom + ' » et tout son suivi (jalons, tâches, coûts) ?')) return;
-        this.api('DELETE', '/projects/' + opP.id);
-        this.log('Suppression', opP.nom, 'Projet supprimé');
-        this.D.projects = (this.D.projects || []).filter(p => p.id !== opP.id);
-        this.setState({ openProjId: null });
-        this.notify('Projet « ' + opP.nom + ' » supprimé');
-      };
-    } else { common.op = false; common.closeProj = () => this.setState({ openProjId: null }); }
 
     return common;
   }
@@ -8297,21 +8060,16 @@ class App {
       aller: () => this.setState({ screen: 'resultatJour', rjOnglet: 'mois', rpSel: null, gq: '' }) }));
     ajoute('Magasins', coupe(mags));
 
-    // 5. Projets et leurs tâches.
-    const projets = [];
+    // 5. Les tâches des consultants, vers le suivi des tâches (l'écran Projets de développement est retiré du cockpit, 05/11/2026).
+    const taches = [];
     (D.projects || []).forEach(p => {
-      if (trouve(colle(p.nom, p.famille, (p.leviers || []).join(' ')))) {
-        projets.push({ titre: p.nom, detail: this.pFamille(p) + ' · ' + this.pStatut(p),
-          aller: () => this.setState({ screen: 'projets', openProjId: p.id, gq: '' }) });
-      }
       (p.taches || []).forEach(t => {
         if (trouve(colle(t.nom, t.desc))) {
-          projets.push({ titre: t.nom, detail: 'tâche · ' + p.nom,
-            aller: () => this.setState({ screen: 'projets', openProjId: p.id, gq: '' }) });
+          taches.push({ titre: t.nom, detail: 'tâche · ' + p.nom, aller: () => this.setState({ screen: 'suivi', gq: '' }) });
         }
       });
     });
-    ajoute('Projets & tâches', coupe(projets));
+    ajoute('Tâches', coupe(taches));
 
     // 6. Intervenants : consultants et fournisseurs.
     const gens = [];
@@ -12505,8 +12263,8 @@ class App {
         necessaire: !!p.necessaire,
         decision: dc[0], dcCol: dc[1], dcFond: dc[2], dcBord: dc[3], dcNec: !!dc[4],
         dcTitre: dc[4] ? 'Nécessaire : gardée quoi qu’en disent la marge et le score' : 'Décision selon le score et vos seuils' }; });
-    // --- détail d'une référence : le score décomposé, et les deux suites
-    // possibles — l'envoyer aux projets, ou programmer son arrêt.
+    // --- détail d'une référence : le score décomposé, et la suite possible —
+    // programmer son arrêt.
     const det = S.pdDet ? base.find(p2 => String(p2.id) === String(S.pdDet.id)) : null;
     if (S.pdDet && det) {
       const dd = S.pdDet;
@@ -12548,32 +12306,6 @@ class App {
         // Fin de gamme déjà programmée ? Elle s'affiche, et s'annule d'ici.
         finLe: cat2.finLe ? this.fD(cat2.finLe) + '/' + String(cat2.finLe).slice(0, 4) : '',
         finNote: cat2.finNote || '',
-        adaptations: ['Adapter la recette', 'Revoir le prix', 'Changer la présentation / packaging',
-          'Repositionner au comptoir', 'Campagne de relance'],
-        adaptation: dd.adaptation || 'Adapter la recette',
-        setAdaptation: e => patchDet({ adaptation: e.target.value }),
-        precision: dd.precision || '',
-        setPrecision: e => patchDet({ precision: e.target.value }),
-        envoyerProjet: () => {
-          const d2 = this.state.pdDet || {};
-          const adaptation = d2.adaptation || 'Adapter la recette';
-          const id2 = 'px' + Date.now();
-          const nom2 = adaptation + ' — ' + det.nom;
-          const valeurTxt = (d2.precision || '').trim() || ('Issu du scoring produit : score ' + Math.round(det.score) + ' (' + vd2[0] + '), ' + _c.periode);
-          const corps = { id: id2, nom: nom2, famille: 'Produits', statut: 'À lancer', prio: 'Moyenne',
-            debut: (M2t => M2t)(this.M.TODAY), fin: this.dansNJours(90), axes: ['Produit — Interne (production)'],
-            leviers: [], budget: 0, valeurEst: null, valeurTxt, kpis: [], jalons: [], couts: [], taches: [],
-            journal: 'Ligne créée depuis le scoring — ' + det.nom + ' (' + det.id + '), ' + adaptation };
-          this.api('POST', '/projects', corps).then(r => {
-            if (r && r.ok === false) { return; }
-            D.projects.push({ id: id2, nom: nom2, famille: 'Produits', statut: 'À lancer', prio: 'Moyenne',
-              debut: this.M.TODAY, fin: this.dansNJours(90), axes: ['Produit — Interne (production)'], leviers: [],
-              budget: 0, valeurEst: null, valeurReal: null, valeurTxt, kpis: [], jalons: [], taches: [], couts: [] });
-            this.log('Projet', nom2, 'Créé depuis le scoring produit');
-            this.setState({ pdDet: null });
-            this.notify('« ' + nom2 + ' » créé dans les projets');
-          });
-        },
         finDate: dd.finDate || '',
         setFinDate: e => patchDet({ finDate: e.target.value }),
         finTexte: dd.finTexte || '',
@@ -14142,308 +13874,6 @@ class App {
         ? { ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: false,
             ia: r || { motif: 'assistance injoignable' } }) } : {}));
   }
-  /* --- projets (kanban) ---------------------------------------------------------- */
-  /**
-   * Trois lectures d'un même portefeuille de projets.
-   *
-   * Le kanban dit OÙ en est chaque projet. La vue budgets dit ce qu'il coûte et
-   * ce qu'il rapporte — la question de la direction. La fiche franchisé dit ce
-   * que le projet demande et apporte À UNE BOUTIQUE, ce qui n'est pas la même
-   * question et ne se lit pas dans un kanban.
-   *
-   * Les trois lisent la MÊME donnée : rien n'est recalculé d'un onglet à
-   * l'autre, sinon deux chiffres finiraient par se contredire à l'écran.
-   */
-  valsProjetsVues(common, projEff){
-    const S = this.state, D = this.D, M = this.M;
-    const vue = ['budgets', 'franchise'].indexOf(S.pjVue) >= 0 ? S.pjVue : 'kanban';
-    common.pjVue = vue;
-    common.pjVueBtns = [['kanban', 'Kanban'], ['budgets', 'Budgets & ROI'], ['franchise', 'Vue franchisé']]
-      .map(([v, nom]) => ({ nom, on: vue === v, go: () => this.setState({ pjVue: v }) }));
-    if (vue === 'kanban') { common.pjBudgets = false; common.pjFranchise = false; common.pjPeriodes = false; return; }
-
-    const nbMag = (D.stores || []).filter(s => s.status === 'Ouvert').length || 1;
-    const som = (arr, k) => (arr || []).reduce((a, c) => a + (+c[k] || 0), 0);
-    const mois = (a, b) => {
-      if (!a || !b) { return 0; }
-      const d1 = new Date(a), d2 = new Date(b);
-      return Math.max(0, (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth()));
-    };
-    const aujourdhui = (M && M.TODAY) || new Date().toISOString().slice(0, 10);
-
-    // Un projet, ses chiffres. Le prévu des postes de coût EST l'engagement ;
-    // le réel est ce qui est sorti. On ne déduit pas l'engagé des tâches
-    // livrées : une tâche livrée sans budget saisi vaudrait alors zéro.
-    const lignes = projEff.map(p => {
-      const vote = +p.budget || 0;
-      const engage = som(p.couts, 'prevu');
-      const conso = som(p.couts, 'reel');
-      const est = p.valeurEst == null ? null : +p.valeurEst;
-      const real = p.valeurReal == null ? null : +p.valeurReal;
-      const roi = (real != null && conso > 0) ? real / conso : null;
-      const roiEst = (est != null && (engage > 0 || vote > 0)) ? est / (engage || vote) : null;
-      const ecoules = mois(p.debut, aujourdhui);
-      // Le retour ne se calcule QUE sur du réalisé, et seulement si assez de
-      // temps a passé : extrapoler un mois de valeur sur douze annoncerait un
-      // retour qui n'a pas été observé.
-      const retour = (real != null && real > 0 && conso > 0 && ecoules >= 1)
-        ? Math.round(conso / (real / ecoules)) : null;
-      return { id: p.id, nom: p.nom, famille: this.pFamille(p), statut: this.pStatut(p),
-        leviers: p.leviers || [], kpis: p.kpis || [], valeurTxt: p.valeurTxt || '',
-        debut: p.debut, fin: p.fin, jalons: p.jalons || [], taches: p.taches || [],
-        vote, engage, conso, est, real, roi, roiEst, retour, ecoules, p };
-    });
-
-    if (vue === 'budgets') {
-      const T = { vote: 0, engage: 0, conso: 0, real: 0 };
-      lignes.forEach(l => { T.vote += l.vote; T.engage += l.engage; T.conso += l.conso; T.real += (l.real || 0); });
-
-      // Ce que la marque a dans la caisse face à ce que les projets réclament.
-      // Le fonds est tenu par le module marketing : on le lit, on n'en fait pas
-      // une seconde comptabilité.
-      if (!D.fonds && !this._foEnCours) {
-        this._foEnCours = true;
-        readOne('/fonds').then(f2 => { this._foEnCours = false;
-          this.D.fonds = f2 || { erreurs: ['module injoignable'] }; this.setState({}); });
-      }
-      const F = D.fonds;
-      const mv = this.fondsMouvements(F);
-      const alim = mv.entrees, dep = mv.sorties;
-      const solde = (F && F.ledger && F.ledger.closing_balance != null)
-        ? +F.ledger.closing_balance : alim - dep;
-      common.pjFonds = !F ? { chargement: true } : {
-        chargement: false,
-        erreur: (F.erreurs || []).length ? F.erreurs.join(' · ') : '',
-        alim: this.fE(alim), dep: this.fE(dep), solde: this.fE(solde),
-        engage: this.fE(T.engage),
-        couvre: solde > 0 ? Math.max(0, Math.min(100, 100 * T.engage / solde)) : 0,
-        // Le verdict tient en une phrase : le fonds suffit-il à ce qui est
-        // engagé ? C'est la seule question que pose ce rapprochement.
-        verdict: T.engage === 0 ? 'Aucun engagement de projet à financer pour l’instant.'
-          : (solde <= 0 ? 'Le fonds n’a plus de solde : les projets engagés ne sont pas couverts.'
-            : (T.engage <= solde ? 'Le solde du fonds couvre ce que les projets ont engagé.'
-              : 'Les projets engagent ' + this.fE(T.engage - solde) + ' de plus que le solde du fonds.')),
-        verdictCol: (T.engage === 0 || (solde > 0 && T.engage <= solde)) ? '#2d7a3e' : 'var(--color-primary)',
-        // Le rattachement projet → mouvement du fonds n'existe pas : le
-        // rapprochement est GLOBAL, et le dire évite de le prendre pour un
-        // suivi ligne à ligne.
-        note: 'Rapprochement global : aucun champ ne rattache encore un projet à un mouvement du fonds. '
-          + 'Les écritures se font dans le module marketing.',
-        ouvrir: () => this.setState({ screen: 'fonds' }),
-      };
-
-      // --- les sorties, mois par mois : la caisse face au budget.
-      //
-      // Trois séries sur le même calendrier : ce qui SORT réellement du fonds
-      // (le grand livre du module marketing), et ce que les projets font
-      // sortir — prévu puis réel.
-      //
-      // Seul ce qui porte une DATE peut se placer sur un mois : le budget des
-      // tâches, à l'échéance pour le prévisionnel, à la date de réalisation
-      // pour le réel. Les postes de coût du projet n'ont pas de date en base :
-      // ils comptent dans les totaux, jamais sur ce calendrier — les étaler
-      // sur la durée du projet inventerait un échéancier que personne n'a
-      // posé.
-      const parMois = new Map();
-      const clef = d => (d || '').slice(0, 7);
-      const seau = m => { if (!parMois.has(m)) { parMois.set(m, { m, fonds: 0, prev: 0, reel: 0, nbP: 0, nbR: 0 }); }
-        return parMois.get(m); };
-      mv.parPeriode.forEach(p => { if (p.cle) { seau(clef(p.cle)).fonds += p.sorties; } });
-      let datees = 0, sansDate = 0;
-      lignes.forEach(l => (l.taches || []).forEach(t => {
-        const b = +t.budget || 0;
-        if (!b) { return; }
-        if (!t.due && !t.done) { sansDate += b; return; }
-        datees += b;
-        if (t.due) { const s = seau(clef(t.due)); s.prev += b; s.nbP++; }
-        if (t.done) { const s = seau(clef(t.done)); s.reel += b; s.nbR++; }
-      }));
-      const moisTri = Array.from(parMois.values()).filter(x => x.m).sort((a, b) => a.m < b.m ? -1 : 1);
-      const maxi = moisTri.reduce((a, x) => Math.max(a, x.fonds, x.prev, x.reel), 0);
-      const totF = moisTri.reduce((a, x) => a + x.fonds, 0);
-      const totP = moisTri.reduce((a, x) => a + x.prev, 0);
-      const totR = moisTri.reduce((a, x) => a + x.reel, 0);
-      common.pjPeriodes = {
-        vide: !moisTri.length,
-        lignes: moisTri.map(x => ({
-          mois: this.fPeriode(x.m + '-01'),
-          fonds: x.fonds ? this.fE(x.fonds) : '',
-          prev: x.prev ? this.fE(x.prev) : '',
-          reel: x.reel ? this.fE(x.reel) : '',
-          // L'écart ne se lit qu'une fois le mois joué : avant, un réel à zéro
-          // n'est pas un écart, c'est un mois qui n'a pas encore eu lieu.
-          ecart: (x.nbR ? this.fE(x.reel - x.prev) : ''),
-          ecartCol: !x.nbR ? 'var(--color-text-muted)'
-            : (x.reel > x.prev ? 'var(--color-primary)' : '#2d7a3e'),
-          detail: [x.nbP ? x.nbP + ' tâche(s) à échéance' : '', x.nbR ? x.nbR + ' réalisée(s)' : '']
-            .filter(Boolean).join(' · '),
-          bFonds: maxi > 0 ? 100 * x.fonds / maxi : 0,
-          bPrev: maxi > 0 ? 100 * x.prev / maxi : 0,
-          bReel: maxi > 0 ? 100 * x.reel / maxi : 0,
-        })),
-        totFonds: totF ? this.fE(totF) : '',
-        totPrev: totP ? this.fE(totP) : '',
-        totReel: totR ? this.fE(totR) : '',
-        // Ce que le calendrier NE PORTE PAS, dit chiffre en main. Un poste de
-        // coût à zéro n'est pas un poste absent : la phrase distingue les deux,
-        // sinon on chercherait une saisie qui existe déjà.
-        horsCal: (T.engage > 0 || T.conso > 0)
-          ? 'Hors calendrier : ' + this.fE(T.engage) + ' engagés et ' + this.fE(T.conso)
-            + ' consommés sur les postes de coût, qui ne portent pas de date.'
-          : (lignes.some(l => ((l.p.couts || []).length))
-            ? 'Les postes de coût des projets sont tous à zéro : rien à placer sur le calendrier.'
-            : 'Aucun poste de coût saisi sur les projets.'),
-        sansDate: sansDate > 0 ? this.fE(sansDate) + ' de budget de tâches sans échéance ni date de réalisation.' : '',
-        vidTaches: datees === 0,
-        note: 'Aucun champ ne rattache un mouvement du fonds à un projet : les deux séries se lisent '
-          + 'côte à côte, mois par mois — elles ne se soldent pas l’une l’autre.',
-      };
-
-      const pct = (a, b) => b > 0 ? Math.max(0, Math.min(100, 100 * a / b)) : 0;
-      common.pjBudgets = {
-        tuiles: [
-          { k: 'Budget voté', v: this.fE(T.vote), aide: lignes.length + ' projet(s)' },
-          { k: 'Engagé', v: this.fE(T.engage), aide: T.vote > 0 ? Math.round(pct(T.engage, T.vote)) + ' % du voté' : 'aucun budget voté',
-            barre: pct(T.engage, T.vote), col: 'var(--color-primary)' },
-          { k: 'Consommé', v: this.fE(T.conso), aide: T.vote > 0 ? 'reste ' + this.fE(Math.max(0, T.vote - T.conso)) : '',
-            barre: pct(T.conso, T.vote), col: '#c9a06a' },
-          { k: 'Valeur réalisée', v: T.real > 0 ? this.fE(T.real) : '',
-            aide: (T.real > 0 && T.conso > 0) ? '× ' + (T.real / T.conso).toFixed(1).replace('.', ',') + ' le consommé'
-              : 'aucune valeur réalisée saisie' },
-        ],
-        lignes: lignes.map(l => ({
-          nom: l.nom, famille: l.famille, statut: l.statut,
-          leviers: this.pjLeviers(l.leviers),
-          vote: this.fE(l.vote), engage: this.fE(l.engage), conso: this.fE(l.conso),
-          est: l.est == null ? '' : this.fE(l.est),
-          real: l.real == null ? '' : this.fE(l.real),
-          roi: l.roi != null ? '×' + l.roi.toFixed(1).replace('.', ',')
-            : (l.roiEst != null ? '×' + l.roiEst.toFixed(1).replace('.', ',') : ''),
-          roiEstime: l.roi == null && l.roiEst != null,
-          roiCol: l.roi == null ? 'var(--color-text-muted)'
-            : (l.roi >= 1 ? '#2d7a3e' : 'var(--color-primary)'),
-          retour: l.retour != null ? l.retour + ' mois' : '',
-          ouvrir: () => this.setState({ pjVue: 'franchise', pjSel: l.id }),
-        })),
-        vide: !lignes.length,
-        // Sans coûts saisis, la colonne ne peut rien dire : mieux vaut
-        // l'annoncer que laisser lire des zéros comme une gratuité.
-        note: lignes.every(l => l.engage === 0 && l.conso === 0)
-          ? 'Aucun coût saisi sur les projets — « engagé » et « consommé » restent à zéro tant que les postes de coût ne sont pas remplis dans la fiche projet.'
-          : '',
-      };
-      common.pjFranchise = false;
-      return;
-    }
-
-    // --- vue franchisé : un projet à la fois, celui qu'on regarde.
-    const sel = lignes.find(l => l.id === S.pjSel) || lignes[0] || null;
-    common.pjBudgets = false; common.pjPeriodes = false;
-    if (!sel) { common.pjFranchise = { vide: true }; return; }
-    const jal = (sel.jalons || []).map((j, i) => ({ nom: j.nom, date: this.fD(j.cible),
-      fait: !!j.reel, courant: !j.reel, i }));
-    const faits = jal.filter(j => j.fait).length;
-    const etapes = jal.concat((sel.taches || []).map(t => ({ nom: t.nom, date: this.fD(t.due),
-      fait: !!t.done, tache: true })))
-      .sort((a, b) => (a.date || '').split('/').reverse().join('') < (b.date || '').split('/').reverse().join('') ? -1 : 1);
-
-    common.pjFranchise = {
-      vide: false,
-      choix: lignes.map(l => ({ id: l.id, nom: l.nom, on: l.id === sel.id,
-        go: () => this.setState({ pjSel: l.id }) })),
-      nom: sel.nom, famille: sel.famille, statut: sel.statut,
-      periode: (sel.debut ? this.fD(sel.debut) : '') + ' → ' + (sel.fin ? this.fD(sel.fin) : ''),
-      leviers: this.pjLeviers(sel.leviers),
-      // « Ce qui est recherché » : les KPI visés, tels qu'ils ont été choisis.
-      // Aucune cible chiffrée n'existe en base — l'inventer donnerait un
-      // objectif que personne n'a fixé.
-      kpis: sel.kpis,
-      kpisVide: !(sel.kpis || []).length,
-      pourquoi: sel.valeurTxt || '',
-      tuiles: [
-        { k: 'Ce que ça coûte à une boutique', v: sel.vote > 0 ? this.fE(sel.vote / nbMag) : '',
-          aide: sel.vote > 0 ? this.fE(sel.vote) + ' réseau ÷ ' + nbMag + ' boutiques' : 'budget non voté' },
-        { k: 'Ce que ça rapporte', v: sel.est != null ? this.fE(sel.est / nbMag) : '',
-          aide: sel.est != null ? 'estimation réseau répartie' : 'valeur estimée non saisie',
-          vert: sel.est != null },
-        { k: 'Retour', v: sel.retour != null ? sel.retour + ' mois' : '',
-          aide: sel.retour != null ? 'sur la valeur réellement constatée' : 'pas encore de valeur réalisée' },
-        { k: 'Où en est le projet', v: jal.length ? faits + ' / ' + jal.length : '',
-          aide: jal.length ? 'jalons livrés' : 'aucun jalon posé' },
-      ],
-      etapes: etapes.slice(0, 8).map(e => ({ nom: e.nom, date: e.date, fait: e.fait, tache: !!e.tache,
-        col: e.fait ? '#2d7a3e' : 'var(--color-primary)' })),
-      etapesVide: !etapes.length,
-      // Ce que la fiche ne peut pas encore porter, et pourquoi.
-      manque: [
-        { champ: 'Ce que ça rapporte À MA boutique',
-          source: 'API panel — le volume vendu par référence ET par magasin n’est pas exposé '
-            + '(sold_qty est une valeur réseau, identique dans les quatre boutiques). '
-            + 'La valeur est donc répartie à parts égales, pas mesurée.' },
-        { champ: 'Les références portées par le projet',
-          source: 'Aucun lien projet → référence n’existe dans le cockpit : il reste à créer '
-            + 'pour afficher ici le minimum à tenir et l’emplacement au comptoir.' },
-      ],
-    };
-  }
-  /** Les leviers d'un projet, avec la couleur du référentiel. */
-  pjLeviers(slugs){
-    const ref = (this.M && this.M.LEVIERS) || [];
-    return (slugs || []).map(s => {
-      const l = ref.find(r => r.slug === s) || {};
-      return { slug: s, nom: l.nom || s, couleur: l.color || '#666666', desc: l.desc || '' };
-    });
-  }
-  valsProjets(common, projEff){
-    const S = this.state, D = this.D, M = this.M;
-    this.valsProjetsVues(common, projEff);
-    const mkCard = p => { const av = this.avance(p); const lateT = p.taches.filter(t => this.taskState(t) === 'En retard').length;
-      const ouvert = !!S.openCards[p.id], st = this.pStatut(p);
-      const quote = p.taches.length ? this.budgetTot(p) / p.taches.length : 0;
-      const steps = p.jalons.map((j, i) => ({ k: p.id + ':j' + i, type: 'Jalon', nom: j.nom, due: j.cible, done: j.reel, obj: j, ji: i }))
-        .concat(p.taches.map(t => ({ k: p.id + ':' + t.id, type: 'Tâche', nom: t.nom, due: t.due, done: t.done, obj: t })))
-        .sort((a, b) => a.due < b.due ? -1 : 1);
-      const nReste = steps.filter(e => !e.done).length;
-      return { nom: p.nom, levs: p.leviers, fin: this.fD(p.fin), av: Math.round(av * 100) + ' %', avSt: 'height:100%;border-radius:8px;background:var(--color-primary);width:' + (av * 100) + '%',
-        statut: st, statutSt: this.statutStyle(st),
-        alerte: st === 'En retard' ? 'échéance dépassée' : (lateT ? lateT + ' tâche(s) en retard' : false),
-        ouvert, rienReste: ouvert && steps.length === 0,
-        resteTxt: nReste ? 'reste ' + nReste + (nReste > 1 ? ' étapes' : ' étape') : 'rien en attente',
-        cardSt: 'background:var(--color-surface);border:0.5px solid ' + (ouvert ? 'var(--color-primary)' : 'var(--color-border-tertiary)') + ';border-radius:10px;padding:13px;cursor:pointer',
-        chevSt: 'margin-left:auto;font-size:11px;line-height:1.4;color:var(--color-text-muted);transition:transform 0.15s;transform:rotate(' + (ouvert ? '180deg' : '0deg') + ')',
-        etapes: steps.map(e => { const done = !!e.done, late = !done && e.due < M.TODAY, info = !!S.openInfo[e.k];
-          const own = e.type === 'Tâche' ? this.ownerOf(e.obj) : null;
-          const rows = [{ k: 'Type', v: e.type }, { k: 'Porteur', v: own ? own.nom + ' — ' + own.type : 'Jalon projet — pilotage CEO' }];
-          if (own) rows.push({ k: 'Contact', v: own.email });
-          rows.push({ k: 'Échéance', v: this.fD(e.due) + (done ? ' · livrée le ' + this.fD(e.done) : late ? ' · dépassée' : '') });
-          rows.push({ k: 'Budget', v: e.obj.budget != null ? this.fE(e.obj.budget) : e.type === 'Tâche' ? this.fE(Math.round(quote)) + ' (quote-part)' : this.fE(this.budgetTot(p)) + ' (budget projet)' });
-          rows.push({ k: 'Description', v: e.obj.desc || 'Aucune description saisie pour cette étape.' });
-          return { nom: e.nom, meta: (own ? own.nom : 'Jalon') + ' · ' + (done ? 'livrée' : late ? 'en retard' : 'à faire'), due: this.fD(e.due), done, info, rows,
-            rowSt: 'display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:7px;background:' + (done ? 'rgba(45,122,62,0.09)' : late ? 'rgba(141,29,44,0.06)' : 'transparent'),
-            boxSt: 'flex:0 0 auto;width:15px;height:15px;margin-top:1px;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:10px;line-height:1;border:1px solid ' + (done ? '#2d7a3e' : 'var(--color-border-secondary)') + ';background:' + (done ? '#2d7a3e' : 'transparent') + ';color:#fff',
-            boxTxt: done ? '✓' : '',
-            nomSt: 'font-size:12px;line-height:1.4;' + (done ? 'color:var(--color-text-muted);text-decoration:line-through' : ''),
-            dueSt: 'font-weight:500;white-space:nowrap;color:' + (late ? '#8D1D2C' : 'var(--color-text-muted)'),
-            iSt: 'flex:0 0 auto;width:15px;height:15px;margin-top:1px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-style:italic;font-weight:600;font-family:var(--font-ui);border:1px solid ' + (info ? 'var(--color-primary)' : 'var(--color-border-secondary)') + ';background:none;color:' + (info ? 'var(--color-primary)' : 'var(--color-text-muted)'),
-            infoT: ev => { ev.stopPropagation(); this.setState(s2 => ({ openInfo: Object.assign({}, s2.openInfo, { [e.k]: !s2.openInfo[e.k] }) })); },
-            check: ev => { ev.stopPropagation();
-              const nv = done ? null : M.TODAY;
-              if (e.type === 'Tâche'){ e.obj.done = nv; this.api('PATCH', '/projects/' + p.id + '/tasks/' + e.obj.id, { done: nv }); }
-              else { e.obj.reel = nv; this.api('PATCH', '/projects/' + p.id + '/milestones/' + e.ji, { reel: nv }); }
-              this.log('Étape', p.nom, 'Étape « ' + e.nom + (done ? ' » rouverte' : ' » cochée comme faite le ' + this.fD(M.TODAY)));
-              this.forceUpdate(); } }; }),
-        toggle: () => this.setState(s2 => ({ openCards: Object.assign({}, s2.openCards, { [p.id]: !s2.openCards[p.id] }) })),
-        open: e => { e.stopPropagation(); this.setState({ openProjId: p.id }); },
-        drag: e => { e.dataTransfer.setData('text/plain', p.id); } }; };
-    const cols = M.FAMILLES || ['Produits', 'Services', 'Organisation & coûts', 'Développement réseau'];
-    common.kanban = cols.map(fa => { const items = projEff.filter(p => this.pFamille(p) === fa);
-      return { nom: fa, n: items.length, items: items.map(mkCard),
-        drop: e => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain'); const p = D.projects.find(x2 => x2.id === id); if (!p || this.pFamille(p) === fa) return;
-          this.setState(s2 => ({ familleOv: Object.assign({}, s2.familleOv, { [id]: fa }) }));
-          this.api('PATCH', '/projects/' + id, { famille: fa });
-          this.log('Famille', p.nom, 'Famille passée de « ' + this.pFamille(p) + ' » à « ' + fa + ' » (kanban)'); this.notify('« ' + p.nom + ' » → ' + fa); } }; });
-  }
-
   /* --- suivi des tâches ------------------------------------------------------------- */
   /**
    * Ce qui a été validé sur la période, et les signalements à traiter.
@@ -15658,18 +15088,7 @@ class App {
     common.paramMagasins = nMag + ' magasin' + (nMag > 1 ? 's' : '') + ' · ' + zones + ' zone' + (zones > 1 ? 's' : '');
     const s = this.seuils();
     common.paramLeviers = M.LEVIERS;
-    const ax = S.tplAxe || common.npAxes[0]; const tpl = (ax && D.projTemplates[ax]) || { jalons: [], couts: [] };
-    common.tplAxe = ax || ''; common.setTplAxe = e => this.setState({ tplAxe: e.target.value });
-    const persistTpl = () => this.api('PUT', '/parametres/template-' + encodeURIComponent(ax), { jalons: tpl.jalons, couts: tpl.couts });
-    const mut = fn => { fn(); persistTpl(); this.forceUpdate(); };
-    common.tplJalons = tpl.jalons.map((j, i) => ({ nom: j.nom, j: j.j,
-      setNom: e => mut(() => { j.nom = e.target.value; }), setJ: e => mut(() => { j.j = Math.min(0, +e.target.value || 0); }),
-      del: () => mut(() => tpl.jalons.splice(i, 1)) }));
-    common.tplJalAdd = () => mut(() => tpl.jalons.push({ nom: '', j: -30 }));
-    common.tplCouts = tpl.couts.map((c, i) => ({ poste: c.poste, prevu: c.prevu,
-      setPoste: e => mut(() => { c.poste = e.target.value; }), setPrevu: e => mut(() => { c.prevu = +e.target.value || 0; }),
-      del: () => mut(() => tpl.couts.splice(i, 1)) }));
-    common.tplCoutAdd = () => mut(() => tpl.couts.push({ poste: '', prevu: 0 }));
+    // Les « templates de projet par axe » sont partis avec l'écran Projets de développement (05/11/2026).
     common.sFoodVal = s.f; common.sLabourVal = s.l;
     common.setSFood = e => { this.setState({ sFood: e.target.value }); this.api('PUT', '/parametres/seuil-food', { valeur: +e.target.value }); };
     common.setSLabour = e => { this.setState({ sLabour: e.target.value }); this.api('PUT', '/parametres/seuil-labour', { valeur: +e.target.value }); };
