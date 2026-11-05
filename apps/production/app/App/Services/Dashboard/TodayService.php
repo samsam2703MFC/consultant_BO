@@ -80,11 +80,14 @@ class TodayService
 
     /**
      * „Do zrobienia” oznaczone według stanowisk : każda pozycja ma stanowiska odpowiedzialne (kody
-     * n_position) ; pozycje stanowiska użytkownika są oznaczone jako jego i idą na początek listy.
+     * n_position) ; pozycje stanowiska użytkownika są oznaczone jako jego i idą na początek listy. Pozycje prowadzące
+     * do stron, których użytkownik nie widzi (PageAccess), są pomijane.
      * @param array<string,string> $positionNames kod => nazwa
      */
     public function markTodo(array $todo, ?string $positionCode, array $positionNames): array
     {
+        // [255] Pozycje z linkiem do strony, której użytkownik nie widzi (np. Magazyn bez prawa Produkcja), pomijane.
+        $todo = array_values(array_filter($todo, fn($item) => empty($item['url']) || \App\Core\Web\PageAccess::visible((string) $item['url'])));
         foreach ($todo as $i => &$item) {
             $item['mine'] = $positionCode !== null && in_array($positionCode, $item['positions'] ?? [], true);
             $item['owners'] = array_values(array_filter(array_map(fn($code) => $positionNames[$code] ?? null, $item['positions'] ?? [])));

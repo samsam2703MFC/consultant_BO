@@ -144,6 +144,9 @@ class GlobalSearchService
             ], $this->repository->wdt($pattern, $n))],
         ];
 
+        // [255] Tylko wyniki prowadzące do stron, które użytkownik widzi (jak rail) — bez linków kończących się na 403.
+        foreach ($groups as &$g) $g['items'] = array_values(array_filter($g['items'], static fn($i) => \App\Core\Web\PageAccess::visible((string) $i['url'])));
+        unset($g);
         $groups = array_values(array_filter($groups, static fn($g) => !empty($g['items'])));
 
         return [

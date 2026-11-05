@@ -19,8 +19,9 @@ final class PageAccess
         'dashboard' => ['Rentowność (pulpit, wynik i produkcja grup, raport miesięczny)', 'Analiza', ['/dashboard'], false],
         'sales' => ['Analiza sprzedaży', 'Analiza', ['/finances/sales-analytics'], false],
         'margins' => ['Marże i koszty (marże, koszty produktu i działów, kalkulator, zamknięcie miesiąca ; Finanse : faktury i koszty, koszty usług miesiąca)', 'Analiza', ['/finances', '/cost-calculator', '/month-close'], false],
-        'production' => ['Produkcja (arkusz, plan tygodnia, plan zespołów, prognoza 13 tygodni, stany, ruchy magazynowe, partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
-            ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock-movements', '/workshop/traceability', '/production', '/purchasing/nc', '/purchasing/nc-review', '/workshop/workstations', '/workshop/data-sheet'], false],
+        // [255] Magazyn (stan, zapas MTS, prognoza zapasu) i dostawy surowców : pod prawem Produkcja (wcześniej poza katalogiem = dla wszystkich).
+        'production' => ['Produkcja i magazyn (arkusz, plan tygodnia, plan zespołów, prognoza 13 tygodni, dostawy surowców, magazyn : stan, zapas MTS, prognoza zapasu, ruchy magazynowe ; partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
+            ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock', '/workshop/stock-movements', '/workshop/deliveries', '/workshop/traceability', '/production', '/purchasing/nc', '/purchasing/nc-review', '/workshop/workstations', '/workshop/data-sheet'], false],
         // Moce produkcyjne [234] : bez tego prawa — tylko stan obecny (tydzień bieżący, do odczytu) ; z nim — pełna wersja.
         'capacity_full' => ['Moce produkcyjne — pełna wersja (co jeszcze zmieszczę, ilość na zmianę, ustawienia maszyn, co jeśli, wartość w €) : administrator, dyrektor zakładu ; bez tego prawa — tylko stan obecny', 'Produkcja',
             ['/production/capacity/full'], false],

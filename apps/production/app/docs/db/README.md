@@ -1535,6 +1535,19 @@ l'entrée). Aucune page n'est dans deux groupes d'onglets ; les anciennes adress
   file, recalculé au plus toutes les 5 minutes par session) — `/ajax/rail-counters`.
 - Tests : `tests/rail_menu_test.php`.
 
+### Magazyn et Dostawy surowców sous le droit Produkcja — 255 (sans migration)
+
+Avant, l'état du stock (`/workshop/stock` : Stan magazynu, Zapas MTS, Prognoza zapasu) et les livraisons fournisseurs
+(`/workshop/deliveries`) étaient hors catalogue des droits, donc ouverts à tous les postes. Ils sont maintenant dans le droit
+« Produkcja » (`PageAccess::PAGES['production']`), comme les mouvements de stock (`/workshop/stock-movements`).
+
+- Un poste sans le droit Produkcja ne voit plus l'entrée Magazyn (rail) et reçoit 403 sur ces pages. Pour le rendre :
+  « Uprawnienia i menu », ligne Magazyn → « dostęp » ou « w menu » (cela donne tout le droit Produkcja).
+- Liens masqués quand la page n'est pas visible (`PageAccess::visible`) : à faire de Dzisiaj (ex. « produits sous le stock
+  minimum »), boutons de la file « Do obsłużenia », résultats de la recherche globale (tous les groupes, plus de lien vers une
+  page en 403).
+- Tests : `tests/rail_menu_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

@@ -73,7 +73,7 @@
                         <td class="oq-sub">{{ i.owners|join(', ') }}</td>
                         <td>
                             <div class="oq-actions">
-                                {% for a in i.actions %}
+                                {% for a in i.actions|filter(a => a.post is defined or can_see(a.url)) %}
                                     {% if a.post is defined %}
                                         <button type="button" class="btn btn-sm {{ a.primary ?? false ? 'btn-primary' : 'btn-outline-secondary' }}" data-post="{{ a.post }}" data-confirm="{{ a.confirm ?? '' }}">{{ a.label }}</button>
                                     {% else %}

@@ -19,6 +19,8 @@ final class PageAccessService
 {
     /** @var array<int, array{admin:bool, keys:array<string,bool>}> */
     private array $cache = [];
+    /** @var array<int, list<string>> [255] prawa stanowiska sesji administratora (jedno zapytanie na żądanie) */
+    private array $viewGrants = [];
     /** @var array<int, array<string, ?string>>|null menu stanowisk (n_position_menu) */
     private ?array $menus = null;
     /** @var array<int, array{id:int, code:string, name_pl:string}>|null stanowiska ERP do wyboru jako sesja */
@@ -84,7 +86,8 @@ final class PageAccessService
         if ($view === null) return $this->canSee($userId, $path);
         $key = PageAccess::keyFor($path);
         if ($key === null) return true;
-        return !PageAccess::adminOnly($key) && in_array($key, $this->repo->positionGrants($view), true);
+        $this->viewGrants[$view] ??= $this->repo->positionGrants($view);
+        return !PageAccess::adminOnly($key) && in_array($key, $this->viewGrants[$view], true);
     }
 
     /**
@@ -326,6 +329,7 @@ final class PageAccessService
         $this->repo->setMenu($positionId, $ordered ?: ['today' => null], $actorId);
         $this->menus = null;
         $this->cache = [];
+        $this->viewGrants = [];
         $after = $this->menuStates($positionId);
         $side = [];
         foreach ($after as $other => $s) {
@@ -362,6 +366,7 @@ final class PageAccessService
         if ($unknown) throw new CustomException('Nieznana strona albo strona tylko dla administratora : ' . implode(', ', $unknown) . '.', 'errors', 422);
         $this->repo->setGrants($positionId, array_values(array_intersect($grantable, $keys)), $actorId);
         $this->cache = [];
+        $this->viewGrants = [];
         $this->menus = null;
         return $this->repo->positionGrants($positionId);
     }

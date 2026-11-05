@@ -52,6 +52,19 @@ foreach ($old as $p) expectRail(Rail::itemFor($p) !== null, "dawny link {$p} bez
 expectRail(Rail::itemFor('/purchasing/nc') === 'production' && Rail::itemFor('/purchasing/cost-review') === 'materials' && Rail::itemFor('/logistics/live') === 'shipping_day'
     && Rail::itemFor('/mail/settings') === 'mail' && Rail::itemFor('/workshop/manager') === 'team' && Rail::itemFor('/communication/outbox') === 'settings', 'przeniesione strony');
 expectRail(Rail::itemFor('/tablet/office') === null, 'tablet : przycisk, nie strona ERP');
+// [255] Magazyn i dostawy surowców pod prawem Produkcja (nie dla wszystkich).
+foreach (['/workshop/stock', '/workshop/stock/mts', '/workshop/stock/forecast', '/workshop/stock-movements', '/workshop/deliveries'] as $p) {
+    expectRail(App\Core\Web\PageAccess::keyFor($p) === 'production', "{$p} → prawo Produkcja (" . App\Core\Web\PageAccess::keyFor($p) . ')');
+}
+expectRail(App\Core\Web\PageAccess::keyFor('/workshop/products') === 'product_cards', 'Karty produktów bez zmian');
+// Dzisiaj : pozycja « poniżej stanu minimalnego » (→ Magazyn) pominięta, gdy użytkownik nie widzi strony.
+$today = (new ReflectionClass(App\Services\Dashboard\TodayService::class))->newInstanceWithoutConstructor();
+$todoIn = [['url' => '/workshop/stock', 'positions' => ['LOGISTYKA']], ['url' => '/client-orders', 'positions' => ['ADMINISTRACJA']], ['url' => null, 'positions' => []]];
+App\Core\Web\PageAccess::$checker = fn(string $p) => App\Core\Web\PageAccess::keyFor($p) !== 'production';
+$todoOut = $today->markTodo($todoIn, 'ADMINISTRACJA', ['ADMINISTRACJA' => 'Administracja']);
+expectRail(array_column($todoOut, 'url') === ['/client-orders', null], 'Dzisiaj bez linku do Magazynu dla stanowiska bez prawa Produkcja ' . json_encode(array_column($todoOut, 'url')));
+App\Core\Web\PageAccess::$checker = null;
+expectRail(count($today->markTodo($todoIn, null, [])) === 3, 'administrator : wszystkie pozycje');
 // Uprawnienia pozycji (klucze PageAccess) i pozycje administratora.
 expectRail(array_diff(['supply', 'receiving'], Rail::accessKeys('purchasing')) === [] && Rail::accessKeys('today') === [], 'klucze stron pozycji');
 expectRail(Rail::adminOnly('access') && !Rail::adminOnly('activity') && !Rail::adminOnly('team'), 'pozycje tylko dla administratora');
