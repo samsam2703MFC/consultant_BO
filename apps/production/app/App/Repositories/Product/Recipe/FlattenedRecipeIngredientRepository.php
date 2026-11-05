@@ -38,8 +38,9 @@ class FlattenedRecipeIngredientRepository extends BaseRepository
 
     public function getIngredientsCostSumByRecipeId($recipeId)
     {
+        // [251] Receptura w wadze po obróbce : cena kg użytecznego = cena zakupu ÷ (1 − odpad) — MaterialLoss.
         $sql = "SELECT
-                    SUM(fri.quantity * mat.price_per_unit) as raw_cost 
+                    SUM(fri.quantity * " . \App\Services\Material\MaterialLoss::priceSql('mat') . ") as raw_cost 
                 FROM flattened_recipe_ingredient fri 
                 INNER JOIN raw_material mat
                     ON fri.material_id = mat.id

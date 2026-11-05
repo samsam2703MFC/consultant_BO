@@ -135,6 +135,9 @@ final class RecipeCalculationViewService
                 'qty' => $qty, 'unit_price' => $unitPrice, 'price_unit' => self::priceUnit((string) ($e['unit_name'] ?? '')),
                 'price_factor' => self::priceFactor((string) ($e['unit_name'] ?? '')),
                 'cost' => $cost, 'share' => $total > 0 ? $cost / $total * 100 : 0.0,
+                // [251] Odpad przy obróbce : cena w kolumnie = kg użyteczny (zakup ÷ (1 − odpad)).
+                'loss' => $isSub ? 0.0 : (float) ($e['waste_perc'] ?? 0),
+                'purchase_price' => $isSub ? null : (float) ($e['purchase_unit_price'] ?? ($e['suggested_base_unit_price'] ?? 0)),
                 'packaging' => !$isSub && !empty($e['is_packaging']),
                 'missing' => !$isSub && $qty > 0 && (float) ($e['suggested_base_unit_price'] ?? 0) <= 0,
                 'cycle' => !empty($e['cycle_detected']),
@@ -155,7 +158,8 @@ final class RecipeCalculationViewService
                 if (($e['type'] ?? '') === 'sub-recipe') { $walk($e['elements'] ?? []); continue; }
                 $id = (int) ($e['id'] ?? 0);
                 $out[$id] ??= ['id' => $id, 'name' => (string) $e['name'], 'unit' => (string) ($e['unit_name'] ?? ''), 'qty' => 0.0, 'cost' => 0.0,
-                    'unit_price' => (float) ($e['suggested_base_unit_price'] ?? 0), 'packaging' => !empty($e['is_packaging']), 'uses' => 0];
+                    'unit_price' => (float) ($e['suggested_base_unit_price'] ?? 0), 'packaging' => !empty($e['is_packaging']), 'uses' => 0,
+                    'loss' => (float) ($e['waste_perc'] ?? 0), 'purchase_price' => (float) ($e['purchase_unit_price'] ?? ($e['suggested_base_unit_price'] ?? 0))];
                 $out[$id]['qty'] += (float) ($e['required_quantity'] ?? 0);
                 $out[$id]['cost'] += (float) ($e['price_for_required_quantity'] ?? 0);
                 $out[$id]['uses']++;

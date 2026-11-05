@@ -131,7 +131,7 @@ class RecipeRepository extends BaseRepository
         if (empty($ids)) return [];
         $params = [];
         foreach (array_values($ids) as $i => $id) $params['m' . $i] = (int) $id;
-        $sql = "SELECT rm.id, rm.name, rm.price_per_unit, unit.name AS unit_name
+        $sql = "SELECT rm.id, rm.name, rm.price_per_unit, rm.waste_perc, unit.name AS unit_name
                 FROM raw_material rm
                 INNER JOIN unit ON rm.id_unit = unit.id
                 WHERE rm.id IN (:" . implode(', :', array_keys($params)) . ")";
@@ -345,6 +345,8 @@ class RecipeRepository extends BaseRepository
                     'quantity_in_recipe' => $itemQty,
                     'required_quantity' => $quantity_to_recipe,
                     'suggested_base_unit_price' => $ppu,
+                    'purchase_unit_price' => (float) ($item['purchase_unit_price'] ?? $ppu),
+                    'waste_perc' => (float) ($item['waste_perc'] ?? 0),
                     'id_unit' => $item['id_unit'],
                     'unit_name' => $item['unit_name'],
                     'is_packaging' => (int) ($item['is_packaging'] ?? 0),
@@ -420,7 +422,9 @@ class RecipeRepository extends BaseRepository
                     IF(prc.child_ingredient_id IS NOT NULL,
                         mat.name,  
                         IF(pr.name IS NULL, prod.name, pr.name)) as ing_name,
-                    mat.price_per_unit as suggested_base_unit_price,
+                    " . \App\Services\Material\MaterialLoss::priceSql('mat') . " as suggested_base_unit_price,
+                    mat.price_per_unit as purchase_unit_price,
+                    IFNULL(mat.waste_perc, 0) as waste_perc,
                     IFNULL(mat.is_part_of_package, 0) as is_packaging,
                     IF(prc.child_ingredient_id IS NOT NULL, mat.id_unit, pr.id_unit) as id_unit,
                     IF(prc.child_ingredient_id IS NOT NULL, mat_unit.name, rec_unit.name) as unit_name,

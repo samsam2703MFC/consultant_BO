@@ -159,7 +159,7 @@ final class ProfitabilityRepository extends WorkshopRepository
     public function materialCatalog(): array
     {
         return $this->all(
-            'SELECT m.id, m.name, u.name AS unit, m.id_category, c.name AS category, s.name AS supplier, m.price_per_unit
+            'SELECT m.id, m.name, u.name AS unit, m.id_category, c.name AS category, s.name AS supplier, m.price_per_unit, m.waste_perc
              FROM raw_material m
              LEFT JOIN unit u ON u.id = m.id_unit
              LEFT JOIN category_material c ON c.id = m.id_category

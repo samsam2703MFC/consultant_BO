@@ -21,7 +21,8 @@ class MaterialController extends BaseController
         private UnitService             $unitService,
         private AllergenService $allergenService,
         private MaterialCreationService $creation,
-        private \App\Services\Material\MaterialPriceService $priceService
+        private \App\Services\Material\MaterialPriceService $priceService,
+        private \App\Services\Recipe\RecipeCostRecalculationService $recipeCosts
     )
     {
     }
@@ -73,8 +74,15 @@ class MaterialController extends BaseController
 
             if ($this->materialService->validateUpdate($_POST)) {
                 // handleAction zwraca tablicę także przy błędzie : sprawdzamy « ok », nie samą wartość
-                $result = $this->handleAction(function () use ($id) {
-                    return $this->materialService->update($id, $_POST) !== false;
+                $lossBefore = is_array($data['row']) ? (float) ($data['row']['waste_perc'] ?? 0) : null;
+                $result = $this->handleAction(function () use ($id, $lossBefore) {
+                    $ok = $this->materialService->update($id, $_POST) !== false;
+                    // [251] Odpad w koszcie : inny odpad → koszt receptur z tym surowcem przeliczony od razu (jak po zmianie ceny).
+                    if ($ok && array_key_exists('waste_perc', $_POST) && $lossBefore !== null
+                        && abs(MaterialService::lossValue($_POST['waste_perc']) - $lossBefore) > 0.001) {
+                        $this->recipeCosts->recalculateForMaterial((int) $id);
+                    }
+                    return $ok;
                 }, default: false);
 
                 if (!empty($result['ok'])) {

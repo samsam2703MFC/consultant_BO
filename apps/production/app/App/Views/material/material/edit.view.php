@@ -104,7 +104,7 @@
                                         <?php if (!empty($row['waste_review'])): ?>
                                             <div class="form-text text-danger"><b>Do sprawdzenia :</b> wartość przeniesiona automatycznie (dawniej pole znaczyło « wykorzystanie »). Popraw albo zapisz kartę, aby potwierdzić.</div>
                                         <?php endif; ?>
-                                        <div class="form-text text-muted">Na razie informacja : koszt receptur liczy cenę zakupu bez odpadu.</div>
+                                        <div class="form-text text-muted">Receptury podają wagę po obróbce : koszt receptur liczy cenę kg użytecznego. Zapis karty przelicza koszt receptur z tym surowcem.</div>
                                     </div>
 
                                 </div>

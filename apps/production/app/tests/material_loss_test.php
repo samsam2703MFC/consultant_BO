@@ -12,6 +12,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../public/vendor/autoload.php';
 
 use App\Services\Material\MaterialService;
+use App\Services\Material\MaterialLoss;
 
 function expectMl(bool $condition, string $message): void
 {
@@ -50,5 +51,17 @@ expectMl($adj['waste_perc'] === 0.0 && $adj['waste_review'] === 0, 'adjustData :
 expectMl($svc->adjustData(['waste_perc' => '35'])['waste_perc'] === 35.0, 'adjustData : 35');
 $untouched = $svc->adjustData(['name' => 'x']);
 expectMl(!array_key_exists('waste_perc', $untouched) && !array_key_exists('waste_review', $untouched), 'adjustData : champ absent laissé absent');
+
+// [251] Perte dans le coût : recettes pesées après épluchage → prix du kg utilisable = prix ÷ (1 − perte)
+expectMl(abs(MaterialLoss::factor(35) - 1 / 0.65) < 1e-9, 'facteur 35 % = 1/0,65');
+expectMl(MaterialLoss::factor(0) === 1.0 && MaterialLoss::factor(null) === 1.0 && MaterialLoss::factor('') === 1.0 && MaterialLoss::factor(-5) === 1.0, 'sans perte = 1');
+expectMl(MaterialLoss::factor(150) === MaterialLoss::factor(99.99), 'perte bornée à 99,99 %');
+expectMl(abs(MaterialLoss::usablePrice(0.012, 35) * 1000 - 18.4615) < 0.001, 'jabłko : 12,00 zł/kg → 18,46 zł/kg utilisable');
+expectMl(MaterialLoss::usablePrice(-1, 35) === 0.0, 'prix négatif = 0');
+expectMl(str_contains(MaterialLoss::priceSql('mat'), 'mat.price_per_unit') && str_contains(MaterialLoss::factorSql('rm'), 'rm.waste_perc'), 'SQL avec l\'alias');
+// Kalkulacja : prix utilisable dans la colonne, perte et prix d'achat pour l'étiquette
+$rows = \App\Services\Recipe\RecipeCalculationViewService::rows([[ 'type' => 'ingredient', 'id' => 4053, 'name' => 'jabłko', 'unit_name' => 'g',
+    'required_quantity' => 650, 'suggested_base_unit_price' => 0.012 / 0.65, 'purchase_unit_price' => 0.012, 'waste_perc' => 35, 'price_for_required_quantity' => 12.0 ]], 12.0);
+expectMl(abs($rows[0]['loss'] - 35.0) < 1e-9 && abs($rows[0]['purchase_price'] - 0.012) < 1e-9 && abs($rows[0]['cost'] - 12.0) < 1e-9, 'kalkulacja : perte et prix d\'achat');
 
 echo "material_loss_test: OK\n";

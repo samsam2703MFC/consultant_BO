@@ -184,7 +184,7 @@ final class DevCardCostService
         foreach ($this->cards->costMaterials() as $x) {
             $id = (int) $x['id'];
             $m[$id] = ['id' => $id, 'ref' => 'm' . $id, 'kind' => 'm', 'type' => 'Surowiec', 'name' => trim((string) $x['name']),
-                'unit' => mb_strtolower(trim((string) $x['unit'])) ?: 'g', 'price' => max(0.0, (float) $x['price_per_unit']), 'uses' => (int) $x['uses'],
+                'unit' => mb_strtolower(trim((string) $x['unit'])) ?: 'g', 'price' => \App\Services\Material\MaterialLoss::usablePrice($x['price_per_unit'], $x['waste_perc'] ?? 0), 'uses' => (int) $x['uses'],
                 '_words' => IngredientMatcher::words((string) $x['name'])];
         }
         $r = [];
