@@ -1430,6 +1430,29 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .at-page-tab { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--at-radius); color: var(--at-text); font-size: .9rem; text-decoration: none; white-space: nowrap; }
 .at-page-tab:hover { background: var(--at-primary-soft); color: var(--at-primary); }
 .at-page-tab.active { background: var(--at-primary); color: #fff; }
+.at-page-tab.active .at-count { background: #fff; color: var(--at-primary); }
+/* [253] Uprawnienia i menu : przełącznik widoków, stany pozycji (w menu / dostęp / brak). */
+.at-access-views { display: inline-flex; gap: 6px; padding: 6px; margin: 0 0 14px; border-radius: var(--at-radius-lg); background: var(--at-surface); border: 1px solid var(--at-line); }
+.at-view-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border: 0; border-radius: var(--at-radius); background: transparent; color: var(--at-text); font-weight: 600; }
+.at-view-btn.active { background: var(--at-primary); color: #fff; }
+.at-menu-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin-bottom: 12px; font-size: 13px; }
+.at-state { display: inline-block; padding: 2px 9px; border-radius: 7px; font-size: 12px; font-weight: 600; margin-right: 4px; }
+.at-state-menu { background: var(--at-primary); color: #fff; }
+.at-state-access { background: var(--at-bg-2); color: var(--at-text); border: 1px solid var(--at-line-2); }
+.at-state-none { background: transparent; color: var(--at-muted); border: 1px dashed var(--at-line-2); }
+.at-state-select { min-width: 112px; min-height: 36px; font-weight: 600; border-radius: 8px; }
+.at-state-select.at-state-menu { background-color: var(--at-primary); color: #fff; border-color: var(--at-primary); }
+.at-state-select.at-state-access { background-color: var(--at-bg-2); }
+.at-state-select.at-state-none { color: var(--at-muted); border-style: dashed; }
+.at-menu-count { font-size: 12.5px; margin-top: 4px; }
+.at-menu-table .at-access-page a { font-weight: 600; }
+/* [253] Przyciski otwierające tablety (nowa karta) : za zakładkami, obrys zamiast tła. */
+.at-page-tab-open { border: 1px dashed var(--at-line-2); color: var(--at-muted); }
+.at-page-tab-open:first-of-type, .at-page-tab:not(.at-page-tab-open) + .at-page-tab-open { margin-left: auto; }
+/* [253] Rail : « Więcej : szukaj strony » (strony spoza menu stanowiska) na końcu menu. */
+.sidebar-wrapper .menu .at-rail-more { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--at-line); }
+.sidebar-wrapper .menu .at-rail-more .sidebar-link { color: var(--at-muted); font-size: .88rem; }
+.at-kbd { margin-left: auto; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--at-line-2); background: var(--at-bg-2); color: var(--at-muted); font-size: 10.5px; font-family: inherit; box-shadow: none; }
 @media (max-width: 576px) { .at-page-tabs { flex-wrap: nowrap; overflow-x: auto; } .at-page-tabs-title { display: none; } }
 /* Dzień wysyłki : 7 etapów dnia (AppExtension::shippingDaySteps) pod zakładkami grupy */
 .at-day-steps { margin: -6px 0 14px; padding: 10px 12px; border-radius: var(--at-radius-lg); background: var(--at-bg-2); border: 1px solid var(--at-line); }

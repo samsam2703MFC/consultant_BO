@@ -101,11 +101,14 @@ class App
                         // Menu (rail, linki) : w sesji administratora [239] — jak u wybranego stanowiska ; dostęp bez zmian.
                         \App\Core\Web\PageAccess::$checker = fn(string $path) => $access->menuSees($userId, $path);
                         \App\Core\Web\ViewSession::$menu = fn() => $access->sessionMenu($userId);
+                        // [253] Menu stanowiska (rail) : pozycje i strony otwierane ; null = całe menu.
+                        \App\Core\Web\Rail::$only = $access->railMenu($userId);
                         $denied = !str_starts_with($uri, '/ajax/') && !$access->canSee($userId, $uri);
                     } catch (\Throwable $e) {
                         error_log('[page-access] ' . $e->getMessage());
                         \App\Core\Web\PageAccess::$checker = null;
                         \App\Core\Web\PageAccess::$rail = [];
+                        \App\Core\Web\Rail::$only = null;
                     }
                     if ($denied) {
                         if ($uri === '/dashboard' && $method === 'GET') {

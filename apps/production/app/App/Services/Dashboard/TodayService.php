@@ -71,6 +71,13 @@ class TodayService
         ];
     }
 
+    /** [253] Liczba spraw kolejki « Do obsłużenia » (licznik w railu) ; null, gdy kolejka nie odpowiada. */
+    public function queueTotal(): ?int
+    {
+        $counts = $this->queueCounts();
+        return $counts === null ? null : (int) array_sum($counts);
+    }
+
     /**
      * „Do zrobienia” oznaczone według stanowisk : każda pozycja ma stanowiska odpowiedzialne (kody
      * n_position) ; pozycje stanowiska użytkownika są oznaczone jako jego i idą na początek listy.

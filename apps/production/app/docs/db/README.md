@@ -1511,6 +1511,30 @@ de « Wynik grup ».
   mois par mois.
 - Tests : `tests/sales_analytics_test.php` (règles), `tests/profitability_test.php` (marges = Wynik grup).
 
+### Menu ERP sans doublons, menu par poste — `160_position_menu`
+
+Le rail (menu de gauche) est défini à un seul endroit, `App\Core\Web\Rail` : 25 entrées au lieu de 65 (maquette 25), une
+entrée = un travail ; les autres pages de l'entrée sont des onglets en haut de la page (`PageTabs::GROUPS`, même clé que
+l'entrée). Aucune page n'est dans deux groupes d'onglets ; les anciennes adresses fonctionnent toujours.
+
+- Entrées : Dzisiaj, Poczta, Zadania zespołu ; Analiza (Rentowność, Marże i ceny, Koszty) ; Produkcja (Produkcja, Magazyn,
+  Zespół, Tablety) ; Zakupy (Zakupy, Surowce i ceny, Dostawcy) ; Produkt (Produkty, Opakowania) ; Sprzedaż (Zamówienia,
+  Klienci, Reklamacje i zwroty, Faktury i płatności) ; Logistyka (Dzień wysyłki, Ciężarówki, Wysyłki i dokumenty) ;
+  Administracja (Ustawienia, Uprawnienia i menu, Aktywność). En bas : « Więcej : szukaj strony » (Ctrl K ou « / »).
+- `n_position_menu` (id_position, item, open_path) : menu d'un poste (maquette 26) et page ouverte par l'entrée (Jakość :
+  « Zakupy » ouvre le contrôle des réceptions). Poste sans ligne = tout le menu, limité à ce qu'il a le droit de voir.
+  Valeurs de départ : Kierownik produkcji 11 entrées, Jakość 6, Logistyka 6, Administracja i fakturowanie 7.
+- Administrateur : les 25 entrées ; en session « comme un poste » : le menu de ce poste.
+- Les droits d'accès aux pages ne changent pas (`n_page_access`) : une page hors du menu reste ouverte par la recherche et
+  les liens.
+- Page « Uprawnienia i menu » (`/organization/access`) : tableau poste × entrée, trois états — « w menu », « dostęp » (pages
+  accessibles, pas dans le menu), « brak ». « Brak » retire toutes les pages de l'entrée ; une entrée qui partage des pages
+  avec elle (ex. Magazyn et Produkcja) perd aussi l'accès, et la page le dit. Bouton « całe menu » : retour au menu complet.
+  L'ancien tableau page par page reste sous « Strony szczegółowo ».
+- Compteurs : Poczta (non lus), Reklamacje i zwroty (sans décision), Zamówienia et l'onglet « Do obsłużenia » (cas de la
+  file, recalculé au plus toutes les 5 minutes par session) — `/ajax/rail-counters`.
+- Tests : `tests/rail_menu_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

@@ -16,6 +16,7 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/organization/access', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'index']);
     $r->addRoute('PUT', '/ajax/organization/access/{id:\d+}', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'save']);
     $r->addRoute('PUT', '/ajax/organization/access/{id:\d+}/home', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'saveHome']);
+    $r->addRoute('PUT', '/ajax/organization/menu/{id:\d+}', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'saveMenu']);
     $r->addRoute('GET', '/home', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'home']);
     // [239] Sesja administratora (menu pod awatarem) : ERP widziane jak dane stanowisko.
     $r->addRoute('POST', '/ajax/view-session', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'session']);

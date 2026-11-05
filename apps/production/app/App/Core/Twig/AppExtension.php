@@ -25,6 +25,9 @@ class AppExtension extends AbstractExtension
             // Zakładki grupy stron (BDO, PPWR, zwroty, archiwum) nad nagłówkiem ; lista grup dla railu i wyszukiwarki.
             new TwigFunction('page_tabs_html', fn(mixed $date = null) => \App\Core\Web\PageTabs::html(ROOT, null, is_string($date) ? $date : null), ['is_safe' => ['html']]),
             new TwigFunction('page_tab_groups', fn() => \App\Core\Web\PageTabs::GROUPS),
+            // [253] Rail : menu bieżącego użytkownika (sekcje, pozycje) i wszystkie pozycje (wyszukiwarka).
+            new TwigFunction('rail_menu', fn() => \App\Core\Web\Rail::menu()),
+            new TwigFunction('rail_all', fn() => \App\Core\Web\Rail::all()),
             // Dzień wysyłki : 7 etapów dnia nad zakładkami tej grupy (Załadunek, Wyślij dzień, Dokumenty, Powiadomienia, Potwierdzenia).
             new TwigFunction('shipping_day_steps', [self::class, 'shippingDaySteps'], ['is_safe' => ['html']]),
             // Uprawnienia stanowisk : czy użytkownik widzi stronę ; prefiksy stron z widocznością dla railu i wyszukiwarki.

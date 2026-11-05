@@ -18,7 +18,8 @@ class PageAccessController extends BaseController
 
     public function index()
     {
-        $this->view('organization/access', $this->access->matrix());
+        // [253] « Uprawnienia i menu » : menu stanowisk (pozycje railu) i strony szczegółowo.
+        $this->view('organization/access', $this->access->matrix() + ['menu' => $this->access->menuMatrix()]);
     }
 
     public function save($id)
@@ -26,6 +27,18 @@ class PageAccessController extends BaseController
         try {
             $keys = $this->access->save((int) $id, $this->getJson(Request::createFromGlobals()), $this->userId());
             return $this->json(['message' => 'Zapisano uprawnienia stanowiska.', 'data' => ['pages' => $keys]]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** PUT /ajax/organization/menu/{id} : stan pozycji menu stanowiska ({item, state}) albo całe menu ({reset: true}). */
+    public function saveMenu($id)
+    {
+        try {
+            $res = $this->access->saveMenuState((int) $id, $this->getJson(Request::createFromGlobals()), $this->userId());
+            $message = 'Zapisano menu stanowiska.' . ($res['side'] ? ' Bez dostępu także (wspólne strony) : ' . implode(', ', $res['side']) . '.' : '');
+            return $this->json(['message' => $message, 'data' => ['states' => $res['states'], 'count' => count(array_filter($res['states'], fn($s) => $s === 'menu'))]]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }

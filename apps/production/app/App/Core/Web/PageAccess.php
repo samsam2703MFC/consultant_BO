@@ -56,7 +56,7 @@ final class PageAccess
             ['/users', '/aliases', '/settings', '/communication/email-settings', '/other-settings'], false],
         'devices' => ['Urządzenia (dostęp API)', 'Administracja', ['/devices'], false],
         'manager' => ['Kierownik produkcji : stanowisko, cele, raport, premia, rozmowa, audyt', 'Administracja', ['/workshop/manager'], true],
-        'access' => ['Uprawnienia funkcji', 'Administracja', ['/organization/access'], true],
+        'access' => ['Uprawnienia i menu (stanowiska)', 'Administracja', ['/organization/access'], true],
         'week_plan' => ['Zadania stanowisk (kreator, kiedy, minuty, automatycznie — cron, przypomnienia)', 'Administracja', ['/organization/week-plan'], true],
         'execution' => ['Kto co zrobił i Zadania zespołu (wykonanie zadań stanowisk i grup, filtry, spóźnione, przypomnij osobie albo grupie)', 'Administracja', ['/organization/execution', '/organization/team-tasks'], false],
         'activity' => ['Aktywność w ERP (sesje, strony, kliknięcia, koszt czasu)', 'Administracja', ['/organization/activity'], true],

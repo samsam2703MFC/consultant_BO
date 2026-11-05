@@ -24,7 +24,7 @@ class SettingsHubController extends BaseController
         ]],
         'Organizacja' => ['bi-diagram-3', 'Kto co robi i co widzi', [
             ['/organization/positions', 'Funkcje i zadania', 'bi-diagram-3', 'Funkcje (stanowiska pracy biura), karty funkcji, zadania cykliczne'],
-            ['/organization/access', 'Uprawnienia funkcji', 'bi-shield-lock', 'Które strony widzi każda funkcja'],
+            ['/organization/access', 'Uprawnienia i menu', 'bi-shield-lock', 'Menu każdego stanowiska i strony, które widzi'],
             ['/users', 'Użytkownicy systemu', 'bi-people', 'Konta ERP, funkcja, hasło'],
         ]],
         'Klienci i dokumenty' => ['bi-file-earmark-richtext', 'Ceny, sieci, wzory i dystrybucja dokumentów', [

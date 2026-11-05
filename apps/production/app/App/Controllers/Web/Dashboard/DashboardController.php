@@ -96,7 +96,7 @@ class DashboardController extends BaseController
     /** Liczniki przy pozycjach menu i wskaźnik rentowności w górnym pasku (assets/js/notifications.js). */
     public function ajaxCounters()
     {
-        return $this->json($this->today->counters() + ['mail' => $this->userId() ? $this->mail->unread($this->userId()) : 0, 'profit' => $this->profitBadge()]);
+        return $this->json($this->today->counters() + ['mail' => $this->userId() ? $this->mail->unread($this->userId()) : 0, 'queue' => $this->queueBadge(), 'profit' => $this->profitBadge()]);
     }
 
     public function saveTargets()
@@ -144,26 +144,40 @@ class DashboardController extends BaseController
     /** Wskaźnik bieżącego miesiąca, liczony najwyżej raz na 5 minut na sesję. */
     private function profitBadge(): ?array
     {
-        $cached = $_SESSION['tfb_profit_badge'] ?? null;
-        if (is_array($cached) && ($cached['at'] ?? 0) > time() - 300) {
-            return $cached['data'];
-        }
-        try {
+        return $this->sessionCached('tfb_profit_badge', function () {
             $t = $this->profitability->overview('month')['totals'];
-            $data = $t['staff_pct'] === null ? null : [
+            return $t['staff_pct'] === null ? null : [
                 'staff_pct' => round($t['staff_pct'], 1),
                 'target' => $t['staff_target'],
                 'missing' => round($t['staff_missing']),
                 'ok' => $t['staff_ok'],
             ];
+        });
+    }
+
+    /** [253] Licznik « Do obsłużenia » (pozycja Zamówienia i jej zakładka), najwyżej raz na 5 minut na sesję. */
+    private function queueBadge(): int
+    {
+        return (int) $this->sessionCached('tfb_queue_badge', fn() => $this->today->queueTotal());
+    }
+
+    /** Wynik liczony najwyżej raz na 5 minut na sesję ; błąd = null. */
+    private function sessionCached(string $key, callable $compute): mixed
+    {
+        $cached = $_SESSION[$key] ?? null;
+        if (is_array($cached) && ($cached['at'] ?? 0) > time() - 300) {
+            return $cached['data'];
+        }
+        try {
+            $data = $compute();
         } catch (\Throwable $e) {
             $data = null;
         }
         // Liczniki (/ajax/rail-counters) działają z zamkniętą sesją : na chwilę ją otwieramy, by zapisać wynik.
         if (session_status() === PHP_SESSION_ACTIVE) {
-            $_SESSION['tfb_profit_badge'] = ['at' => time(), 'data' => $data];
+            $_SESSION[$key] = ['at' => time(), 'data' => $data];
         } elseif (!headers_sent() && session_start()) {
-            $_SESSION['tfb_profit_badge'] = ['at' => time(), 'data' => $data];
+            $_SESSION[$key] = ['at' => time(), 'data' => $data];
             session_write_close();
         }
         return $data;

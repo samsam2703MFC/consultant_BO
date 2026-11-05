@@ -89,4 +89,29 @@ final class PageAccessRepository extends WorkshopRepository
         $this->db->prepare('INSERT INTO n_position_home (id_position, home_page, updated_by) VALUES (?, ?, ?)
                             ON DUPLICATE KEY UPDATE home_page = VALUES(home_page), updated_by = VALUES(updated_by)')->execute([$positionId, $page, $userId]);
     }
+
+    /**
+     * [253] Menu stanowisk (n_position_menu) : stanowisko => [pozycja railu => strona otwierana albo null]. Stanowisko bez
+     * wierszy nie ma własnego menu. Brak tabeli (migracja 160 jeszcze nie wykonana) = brak menu stanowisk.
+     * @return array<int, array<string, ?string>>
+     */
+    public function menus(): array
+    {
+        try {
+            $rows = $this->all('SELECT id_position, item, open_path FROM n_position_menu');
+        } catch (\PDOException $e) {
+            return [];
+        }
+        $out = [];
+        foreach ($rows as $r) $out[(int) $r['id_position']][$r['item']] = $r['open_path'] !== null && $r['open_path'] !== '' ? $r['open_path'] : null;
+        return $out;
+    }
+
+    /** Zastępuje menu stanowiska (pusta lista = brak własnego menu → całe menu). @param array<string, ?string> $items */
+    public function setMenu(int $positionId, array $items, ?int $userId): void
+    {
+        $this->db->prepare('DELETE FROM n_position_menu WHERE id_position = ?')->execute([$positionId]);
+        $insert = $this->db->prepare('INSERT INTO n_position_menu (id_position, item, open_path, updated_by) VALUES (?, ?, ?, ?)');
+        foreach ($items as $item => $open) $insert->execute([$positionId, $item, $open, $userId]);
+    }
 }
