@@ -291,5 +291,15 @@ $avec = suPhotoReperesHtml('data:image/jpeg;base64,AAAA', [['n' => 1, 'x' => 0.1
 verifie('une photo annotée : en grand, ses cadres numérotés, chaque remarque et sa gravité dans la langue du magasin', str_contains($avec, 'width:48%') && substr_count($avec, 'border-radius:4px;box-sizing:border-box') === 2
     && str_contains($avec, 'left:10.00%;top:20.00%;width:30.00%;height:25.00%') && str_contains($avec, 'Grilles vides à 11 h') && str_contains($avec, 'groot') && str_contains($avec, 'in orde') && str_contains($avec, '2px dashed'));
 
+echo "\nL'équipe en poste (05/11/2026)\n";
+require_once __DIR__ . '/../src/visites_equipe.php';
+$pe = viPersonnel(['personnes' => [['emp' => 12, 'nom' => ' Lina V. ', 'heures' => '04:00 – 12:00', 'note' => 4, 'tenue' => 1, 'sbam' => 0, 'xp' => 7, 'com' => 'Accueil souriant'],
+    ['emp' => 13, 'nom' => 'Tom C.', 'vu' => false, 'note' => 5, 'tenue' => 1, 'com' => 'ne doit pas rester'], ['nom' => '', 'note' => 3], ['emp' => 14, 'nom' => 'Emma D.', 'note' => 9]]], 'Loic V.');
+verifie('chaque personne : la note de 1 à 5, les contrôles Oui / Non seulement, la remarque', $pe !== null && $pe['personnes'][0] === ['emp' => 12, 'nom' => 'Lina V.', 'heures' => '04:00 – 12:00', 'vu' => true, 'note' => 4, 'com' => 'Accueil souriant', 'tenue' => 1, 'sbam' => 0, 'xp' => null], json_encode($pe, JSON_UNESCAPED_UNICODE));
+verifie('« pas vue » : ni note, ni contrôle, ni remarque ; sans nom : écartée ; note hors bornes : vide', $pe['personnes'][1]['vu'] === false && $pe['personnes'][1]['note'] === null && $pe['personnes'][1]['tenue'] === null && $pe['personnes'][1]['com'] === ''
+    && count($pe['personnes']) === 3 && $pe['personnes'][2]['note'] === null);
+verifie('rien de noté pour personne : pas de note d’équipe', viPersonnel([['nom' => 'Emma D.']], 'x') === null && viPersonnel('?', 'x') === null);
+verifie('trois contrôles éclair : tenue, SBAM, expérience client', array_column(VI_EQUIPE_CHECKS, 'k') === ['tenue', 'sbam', 'xp']);
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

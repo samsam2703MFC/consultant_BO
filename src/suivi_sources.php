@@ -34,6 +34,7 @@ const SS_ROUTES = [
     ['tablette', 'PUT', '/visites/photos/{id}/reperes', 'wr_visites_photo_reperes', 'Les repères posés sur une photo'],
     ['tablette', 'GET', '/visites/boutique/{shop}', 'ep_visites_boutique', 'Le dossier du magasin pour la visite'],
     ['tablette', 'GET', '/visites/kpi/{shop}', 'ep_visites_kpi', 'KPI et santé du magasin'],
+    ['tablette', 'GET', '/visites/equipe/{shop}', 'ep_visites_equipe', 'L’équipe au planning du jour, à noter'],
     ['tablette', 'GET', '/visites/budget/{shop}', 'ep_visites_budget', 'Le CA face au budget, le mini P&L'],
     ['tablette', 'GET', '/visites/taches/{shop}', 'ep_visites_taches', 'Les tâches des derniers mois'],
     ['tablette', 'GET', '/visites/conformite', 'ep_visites_conformite', 'Assortiment obligatoire, planogramme'],

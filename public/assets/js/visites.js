@@ -486,6 +486,25 @@
 .vi.tab .tb-step .phs{gap:12px}
 .vi.tab .tb-step .phs .ph{height:210px;border-radius:14px;font-size:15px}
 .vi.tab .tb-vide{padding:30px;text-align:center;color:var(--color-text-muted);font-size:14px}
+/* L'équipe en poste (05/11/2026) : le planning du jour, chaque personne notée de 1 à 5, trois contrôles éclair, une remarque. */
+.vi .eq-som{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.vi .eq-som .k{font:400 30px/1 var(--font-display);color:var(--color-primary)}.vi .eq-som .sp{flex:1}
+.vi .eq-som .t{display:flex;gap:6px;flex-wrap:wrap}.vi .eq-som .t span{font:600 11.5px var(--font-ui);padding:5px 9px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted)}.vi .eq-som .t span b{color:var(--color-text)}
+.vi .eq-p{padding:12px 14px}.vi .eq-p .h{display:flex;align-items:center;gap:10px}.vi .eq-p .h .sp{flex:1}
+.vi .eq-av{flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:#F4ECE6;color:var(--color-primary);display:flex;align-items:center;justify-content:center;font:700 14px var(--font-ui)}
+.vi .eq-p .h b{display:block;font-size:15px}.vi .eq-p .h small{display:block;font-size:12px;color:var(--color-text-muted);margin-top:1px}
+.vi .eq-st{font:700 10.5px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;padding:4px 8px;border-radius:7px;background:#E6F2E9;color:#2d7a3e;white-space:nowrap}.vi .eq-st.off{background:var(--color-background-secondary);color:var(--color-text-muted)}
+.vi .eq-g{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:14px;margin-top:10px;align-items:start}
+.vi .eq-lab{font:600 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px;display:flex;gap:6px}.vi .eq-lab b{color:var(--color-text);letter-spacing:0;text-transform:none;font-size:12px}
+.vi .eq-g .ev-notes{margin:0}.vi .eq-g .ev-notes button{min-height:52px}
+.vi .eq-ck{display:flex;flex-direction:column;gap:6px}
+.vi .eq-ck .r{display:flex;align-items:center;gap:10px;padding:4px 0}.vi .eq-ck .r > span:first-child{flex:1;min-width:0;font-size:13px;font-weight:600;line-height:1.25}.vi .eq-ck .r small{display:block;font-weight:500;font-size:11px;color:var(--color-text-muted)}
+.vi .eq-yn{display:inline-flex;border:.5px solid var(--color-border-secondary);border-radius:9px;overflow:hidden;flex:0 0 auto}
+.vi .eq-yn button{border:none;background:var(--color-surface);font:700 12.5px var(--font-ui);color:var(--color-text-muted);width:62px;height:38px;cursor:pointer}.vi .eq-yn button + button{border-left:.5px solid var(--color-border-secondary)}
+.vi .eq-yn button.on.oui{background:#2d7a3e;color:#fff}.vi .eq-yn button.on.non{background:#C0182B;color:#fff}
+.vi .eq-p textarea{margin-top:10px;min-height:40px;font-size:12.5px}
+.vi .eq-p.pv{opacity:.7}.vi .eq-p.pv .h{gap:10px}
+.vi .eq-aussi .eq-p{padding:9px 14px}
+@media (max-width:900px){.vi .eq-g{grid-template-columns:1fr}}
 /* Les repères sur une photo (05/11/2026, comme dans Contrôle des tâches) : la visionneuse les montre avec leurs remarques ;
    « Annoter » ouvre l'éditeur : on glisse le doigt pour tracer un cadre numéroté, à la gravité choisie, puis sa remarque. */
 .vi .voir.v2{justify-content:flex-start;align-items:stretch;padding:0;background:#0d0b09;z-index:50}
@@ -670,7 +689,7 @@
   const TEMPS = [['ext', 'Extérieur'], ['int', 'Intérieur'], ['suivi', 'Suivi de projet'], ['analyse', 'Analyse'], ['dev', 'Développement'], ['fin', 'Météo et fin']];
   // Les étapes bloquantes livrées (26/10/2026) : ce qui se remplit sur place bloque ; ce qui dépend d'une lecture extérieure
   // (contrôles du jour de l'équipe, checklist du panel) ne bloque pas. Réglages › Contrôle guidé les change étape par étape.
-  const BLOQUE_DEFAUT = { photos_ext: true, photos_int: true, 'mod:*': true, controles: false, checklist: false, pistes: true, constat: true, meteo: true, evaluation: true };
+  const BLOQUE_DEFAUT = { photos_ext: true, photos_int: true, 'mod:*': true, controles: false, checklist: false, pistes: true, constat: true, meteo: true, evaluation: true, equipe: false };
   // Les points d'une checklist qui se regardent dehors : ils forment le module « L'extérieur ».
   const RX_EXT = /fa[cç]ade|enseigne|vitrine ext|ext[ée]rieur|terrasse|abords|parking|trottoir/i;
   // Le module Produit commence par les produits obligatoires (26/10/2026), avec ce que le cockpit en sait (vus en caisse).
@@ -695,6 +714,7 @@
     bureau: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12l2 2 4-4"/>',
     meteo: '<circle cx="9" cy="9" r="3.5"/><path d="M9 2v2M2 9h2M4 4l1.4 1.4M14 4l-1.4 1.4"/><path d="M8 19h10a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.5A2.8 2.8 0 0 0 8 19z"/>',
     fin: '<path d="M3 17c3-1 4-6 6-6s1 5 3 5 2-3 4-3 2 2 5 2"/><path d="M3 21h18"/>',
+    equipe: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.8-3.6 3.2-5.5 6-5.5s5.2 1.9 6 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c2.6.2 4.6 2 5.2 5"/>',
     eval: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 7.5l4.5 3-1.5 5H9.5L7.5 10z"/>',
     // La visite en six temps (26/10/2026).
     t_ext: '<path d="M3 10l1.5-5h15L21 10"/><path d="M3 10c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3"/><path d="M5 13v8h14v-8M10 21v-5h4v5"/>',
@@ -713,6 +733,9 @@
   const EVAL_AXES = [['proprete', 'Propreté', 'magasin, labo, vitrines, sanitaires'], ['metier', 'Capacité métier', 'cuissons, gestes, connaissance des produits'],
     ['management', 'Management', 'équipe, planning, consignes'], ['commercial', 'Développement commercial', 'B2B, actions locales, ventes additionnelles'],
     ['client', 'Contact client', 'accueil, conseil, sourire'], ['normes', 'Respect des normes', 'charte, hygiène, prix, procédures']];
+  // L'équipe en poste (05/11/2026) : les trois contrôles éclair de chaque personne (src/visites_equipe.php, VI_EQUIPE_CHECKS).
+  const EQ_CHECKS = [['tenue', 'En tenue de travail', 'tablier, tenue de la marque, cheveux attachés', 'tenue'], ['sbam', 'SBAM', 'sourire, bonjour, au revoir, merci', 'SBAM'],
+    ['xp', 'Expérience client', 'conseil, dégustation, mise en avant', 'XP client']];
   const EVAL_NOTES = [[1, 'Insuffisant'], [2, 'À améliorer'], [3, 'Correct'], [4, 'Bien'], [5, 'Très bien']];
   // Les libellés néerlandais des axes : seulement pour mesurer la place du radar (la traduction de l'écran passe par visites-nl.js).
   const EVAL_NL = { proprete: 'Netheid', metier: 'Vakkennis', management: 'Management', commercial: 'Commerciële ontwikkeling', client: 'Klantcontact', normes: 'Naleving van de normen' };
@@ -758,7 +781,7 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.VB = {}; this.vbVue = null; this.AN = {}; this.LV = {}; this.TM = {}; this.tmN = 6; this.TMP = {}; this.tmFile = []; this.tmV = null; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.cqSeul = false; this.S = null; this.R = null;
+      this.D = null; this.EQ = {}; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.VB = {}; this.vbVue = null; this.AN = {}; this.LV = {}; this.TM = {}; this.tmN = 6; this.TMP = {}; this.tmFile = []; this.tmV = null; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.cqSeul = false; this.S = null; this.R = null;
       this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
@@ -1992,6 +2015,7 @@
       f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.meteo = v.meteo || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || '';
       const ev = (v.evaluation && v.evaluation.notes) || {};
       EVAL_AXES.forEach(([k]) => { f['ev_' + k] = (ev[k] && ev[k].note) || 0; f['evc_' + k] = (ev[k] && ev[k].com) || ''; });
+      f.pe = {}; ((v.personnel && v.personnel.personnes) || []).forEach(p => { f.pe[p.emp > 0 ? 'e' + p.emp : 'n' + p.nom] = Object.assign({}, p); });
     }
     /** Ce qui manque à l'étape Météo : le temps, la réponse sur les paiements, et le détail s'ils ne sont pas à temps. */
     meteoManque(f) {
@@ -2082,8 +2106,15 @@
       etapes.push(...modsDe('ext'));
       // 2. L'intérieur : la photo, l'expérience client, les modules de la checklist, les contrôles en photo du jour
       // (la bande du dashboard, la note rapide sous chaque photo ; faite quand plus rien n'attend une note).
+      // L'équipe en poste (05/11/2026) : lue au planning du jour, notée juste après l'expérience client.
+      this.chargerEquipe(v.shop); const EQ = this.EQ[v.shop]; const eqL = this.equipeListe(v.shop);
+      const eqA = eqL.filter(p => p.statut === 'en poste'); const eqF = eqA.filter(p => this.equipeFaite(f, p)).length;
+      const etEquipe = { cle: 'equipe', tps: 'int', ic: 'equipe', court: 'Équipe', titre: 'L’équipe en poste',
+        etat: EQ && EQ.d ? (eqA.length ? eqF + ' / ' + eqA.length + ' noté' + (eqF > 1 ? 's' : '') : 'personne en poste') : (EQ && EQ.erreur ? 'planning indisponible' : 'lecture du planning…'),
+        fait: !!(EQ && EQ.d) && eqF === eqA.length, eqReste: eqA.length - eqF, html: () => this.equipeHtml(v) };
       etapes.push({ cle: 'photos_int', tps: 'int', ic: 'photo', court: 'Photo', titre: 'L’intérieur en photo', etat: (jourPris('jour_interieur') ? '1 / 1' : 'à prendre') + (rInt ? ' · à noter' : ''), fait: jourPris('jour_interieur') && !rInt, reste: rInt, html: () => this.photosJourHtml(v.shop, v, ['jour_interieur'], true) });
-      etapes.push(...modsDe('int'));
+      const mInt = modsDe('int'); mInt.splice(mInt.findIndex(e => e.cle === 'mod:xp') + 1, 0, etEquipe);
+      etapes.push(...mInt);
       const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
       etapes.push({ cle: 'controles', tps: 'int', ic: 'controles', court: 'Contrôles du jour', titre: 'Les contrôles en photo du jour', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
         fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) });
@@ -2146,6 +2177,7 @@
         else if (e.pistes) { e.manque = 'le pourquoi, les trois pistes et l’horizon'; }
         else if (e.revue) { e.manque = 'ce que vous avez vu et la recommandation'; }
         else if (e.ic === 'meteo') { e.manque = e.mtManque || 'la météo du franchisé'; }
+        else if (e.cle === 'equipe' && e.eqReste > 0) { e.manque = e.eqReste + ' personne' + (e.eqReste > 1 ? 's' : '') + ' à noter'; }
         else if (e.cle === 'evaluation') { e.manque = e.evReste + ' note' + (e.evReste > 1 ? 's' : '') + ' à donner'; }
         else if (e.cle === 'checklist') { e.manque = 'la checklist du consultant'; }
       });
@@ -2455,7 +2487,7 @@
       [].concat(D.checklist || [], ...((D.types || []).map(t => t.checklist || []))).forEach(m => ajoute(m.id, m.nom, m.id === 'msp' ? 'analyse' : 'int'));
       ajoute('bureau', 'Demandé par le bureau', 'suivi'); ajoute('leviers', MOD_LEVIERS.nom, 'analyse');
       const lignes = [['ext', 'photos_ext', 'L’extérieur en photo'], ...mods.filter(m => m[2] === 'ext').map(m => [m[2], m[0], m[1]]),
-        ['int', 'photos_int', 'L’intérieur en photo'], ...mods.filter(m => m[2] === 'int').map(m => [m[2], m[0], m[1]]), ['int', 'controles', 'Les contrôles en photo du jour (photos de l’équipe)'],
+        ['int', 'photos_int', 'L’intérieur en photo'], ...mods.filter(m => m[2] === 'int').map(m => [m[2], m[0], m[1]]), ['int', 'equipe', 'L’équipe en poste (planning du jour)'], ['int', 'controles', 'Les contrôles en photo du jour (photos de l’équipe)'],
         ['suivi', null, 'Dossier du bureau'], ...mods.filter(m => m[2] === 'suivi').map(m => [m[2], m[0], m[1]]), ['suivi', null, 'Les points décidés aux visites précédentes'], ['suivi', 'checklist', 'Checklist du consultant (panel)'],
         ['analyse', null, 'KPI et santé du magasin'], ...mods.filter(m => m[2] === 'analyse').map(m => [m[2], m[0], m[1]]), ['analyse', null, 'Les tâches des derniers mois'],
         ['dev', 'pistes', 'Le CA sous le budget : pourquoi et trois pistes'], ['dev', 'constat', 'Vu sur place et recommandation'], ['dev', null, 'Points à travailler'],
@@ -2539,6 +2571,10 @@
       // Les repères sur une photo (05/11/2026) : l'éditeur, comme dans Contrôle des tâches.
       if (a === 'ed-ouvrir') { const p = this.photoPar(v); if (p) { this.ed = { pid: p.client_id || String(p.id), rep: (p.reperes || []).map(r => Object.assign({}, r)), niv: 3, sel: null }; this.rendre(); } return; }
       if (this.ed && a.startsWith('ed-')) { this.edAction(a, v); return; }
+      // L'équipe en poste : la note, un contrôle Oui / Non (un second toucher l'efface), « pas vue », noter quelqu'un hors poste.
+      if (a === 'eq') { const P = this.form.pe || (this.form.pe = {}); const x = P[parts[0]] || (P[parts[0]] = { vu: true }); const val = Number(parts[2]); x[parts[1]] = x[parts[1]] === val ? null : val; x.vu = true; this.rendre(); return; }
+      if (a === 'eq-vu') { const P = this.form.pe || (this.form.pe = {}); const x = P[v] || (P[v] = {}); x.vu = x.vu === false; this.rendre(); return; }
+      if (a === 'eq-ouv') { this.ouvert['eq:' + v] = !this.ouvert['eq:' + v]; this.rendre(); return; }
       if (a === 'cq-f') { this.cqF[parts[0]] = parts[1]; this.rendre(); return; }
       if (a === 'cq-voir') { this.cqV = { shop: parts[0], taskId: parts[1] }; this.rendre(); return; }
       if (a === 'cq-fermer') { this.cqV = null; this.rendre(); return; }
@@ -2638,6 +2674,7 @@
       const parts = f.split('|');
       if (parts[0] === 'form') { this.form[parts[1]] = el.value; return; }
       if (parts[0] === 'ed') { const r = this.ed && this.ed.rep[Number(parts[1])]; if (r) { r.txt = el.value; } return; }
+      if (parts[0] === 'eqc') { const P = this.form.pe || (this.form.pe = {}); const x = P[parts[1]] || (P[parts[1]] = { vu: true }); x.com = el.value; return; }
       if (parts[0] === 'vb') { const vb = this.form.vb; if (vb) { if (parts[1] === 'p') { vb.pistes[Number(parts[2])] = el.value; } else { vb[parts[1]] = el.value; } } return; }
       if (parts[0] === 'pa') { if (this.form.pa && this.form.pa[Number(parts[1])]) { this.form.pa[Number(parts[1])][parts[2]] = el.value; } return; }
       if (parts[0] === 'ckc') { this.ckF[parts[1]] = Object.assign(this.ckF[parts[1]] || {}, { commentaire: el.value }); return; }
@@ -2757,7 +2794,7 @@
         this.D.photos.unshift({ client_id: cid, visite_id: v.id, shop: v.shop, genre: 'signature', data: f.sig, prise_a: maintenant(), attente: true });
         this.ecrire({ method: 'POST', path: '/visites/photos', body: { client_id: cid, shop: v.shop, visite_id: v.id, genre: 'signature', data: f.sig, prise_a: maintenant(), par: this.role }, apres: 'photo' });
       }
-      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, meteo: f.meteo || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '', evaluation: this.evalCorps(f) });
+      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, meteo: f.meteo || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '', evaluation: this.evalCorps(f), personnel: this.equipeCorps(v, f) });
       const b = this.boutique(v.shop); if (b) { b.visiteEnCours = null; b.derniereVisite = { id: v.id, le: v.prevu_le, consultant: v.consultantNom }; if (b.prochaineVisite && String(b.prochaineVisite.id) === String(v.id)) { b.prochaineVisite = null; } }
       v.rapportStatut = 'brouillon';
       this.form = {};
@@ -2936,6 +2973,57 @@
         <div class="sc-mods"><span class="h">${nl ? 'Module' : 'Module'}</span><span class="h n">${nl ? 'Vorig' : 'Précédente'}</span><span class="h n">${nl ? 'Nu' : 'Actuelle'}</span><span class="h n">${nl ? 'Verschil' : 'Écart'}</span>
           ${a.modules.map(m => `<span>${esc(nomDe(m, nl ? 'nl' : 'fr'))}</span><span class="n mu">${avant[m.id] != null ? avant[m.id] : '—'}</span><span class="n"><b class="${ton(m.score)}">${m.score}</b></span><span class="n">${avant[m.id] != null ? ec(m.score - avant[m.id]) : ''}</span>`).join('')}</div>
         <div class="xs mu" style="margin-top:6px">${nl ? 'Op ' + a.n + ' gescoorde vragen: elk punt in orde telt volgens zijn gewicht. Tellen niet mee: N.v.t., vrije tekst, vragen buiten de score.' : 'Sur ' + a.n + ' questions notées : chaque point conforme compte selon son poids. Ne comptent pas : N/A, texte libre, questions hors score.'}</div></div>`;
+    }
+    /** Le planning du jour du magasin (GET /visites/equipe/{shop}) : lu une fois par session et par jour, gardé hors ligne. */
+    chargerEquipe(shop) {
+      const k = shop + '|' + auj(); if (!shop || this.EQ[shop] && this.EQ[shop].k === k) { return; }
+      this.EQ[shop] = { k, chargement: true };
+      this.lire('/visites/equipe/' + encodeURIComponent(shop) + '?date=' + auj(), 'eq:' + k)
+        .then(d => { this.EQ[shop] = { k, d }; }, () => { this.EQ[shop] = { k, erreur: true }; }).then(() => this.rendre());
+    }
+    /** Les personnes du planning, chacune avec son statut à l'heure qu'il est : en poste, arrive à…, partie à… */
+    equipeListe(shop) {
+      const E = this.EQ[shop]; const L = (E && E.d && E.d.personnes) || [];
+      const n = new Date(); const hm = String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
+      return L.map(p => {
+        const cr = p.creneaux || []; const dans = cr.some(c => c[0] <= hm && hm < c[1]); const apres = cr.filter(c => c[0] > hm);
+        const statut = dans ? 'en poste' : apres.length ? 'arrive à ' + apres[0][0] : 'partie à ' + (cr.length ? cr[cr.length - 1][1] : '');
+        return Object.assign({}, p, { k: p.emp > 0 ? 'e' + p.emp : 'n' + p.nom, statut, heures: cr.map(c => c[0] + ' – ' + c[1]).join(' · ') });
+      }).sort((a, b) => (a.statut === 'en poste' ? 0 : 1) - (b.statut === 'en poste' ? 0 : 1));
+    }
+    equipeFaite(f, p) { const x = (f.pe || {})[p.k]; return !!x && (x.vu === false || x.note >= 1); }
+    /** La note de l'équipe telle qu'elle part avec la visite : les personnes notées ou « pas vues ». */
+    equipeCorps(v, f) {
+      const P = f.pe || {}; const L = this.equipeListe(v.shop); const out = [];
+      L.forEach(p => { const x = P[p.k]; if (x && (x.vu === false || x.note >= 1 || x.tenue != null || x.sbam != null || x.xp != null || String(x.com || '').trim())) {
+        out.push({ emp: p.emp, nom: p.nom, heures: p.heures, vu: x.vu !== false, note: x.note || null, com: String(x.com || '').trim(), tenue: x.tenue == null ? null : x.tenue, sbam: x.sbam == null ? null : x.sbam, xp: x.xp == null ? null : x.xp }); } });
+      return out.length ? { personnes: out } : null;
+    }
+    /** Une personne : sa note de 1 à 5, les trois contrôles éclair Oui / Non, sa remarque — ou « pas vue ». */
+    equipePersonneHtml(p, x) {
+      const ini = String(p.nom).split(/\s+/).map(m => m.charAt(0)).join('').slice(0, 2).toUpperCase();
+      const ent = `<div class="h"><span class="eq-av">${esc(ini)}</span><div><b>${esc(p.nom)}</b><small>${esc(p.heures)}${p.postes && p.postes.length ? ' · ' + esc(p.postes.join(', ')) : ''}</small></div><span class="eq-st${p.statut === 'en poste' ? '' : ' off'}">${esc(p.statut)}</span><span class="sp"></span>`;
+      if (x && x.vu === false) { return `<div class="card eq-p pv">${ent}<span class="xs mu">pas vue pendant la visite</span><button type="button" class="chip" data-a="eq-vu" data-v="${esc(p.k)}">Annuler</button></div></div>`; }
+      const n = x && x.note || 0; const yn = c => `<span class="eq-yn">${[[1, 'Oui', 'oui'], [0, 'Non', 'non']].map(([val, l, cls]) => `<button type="button" data-a="eq" data-v="${esc(p.k)}|${c}|${val}" class="${x && x[c] === val ? 'on ' + cls : ''}">${l}</button>`).join('')}</span>`;
+      return `<div class="card eq-p">${ent}<button type="button" class="chip" data-a="eq-vu" data-v="${esc(p.k)}">Pas vue</button></div>
+        <div class="eq-g"><div><div class="eq-lab">Note rapide${n ? ` <b class="${evalTon(n) === 'ok' ? 'up' : ''}">${n} / 5</b>` : ''}</div><div class="ev-notes">${EVAL_NOTES.map(([k, l]) => `<button type="button" data-a="eq" data-v="${esc(p.k)}|note|${k}" class="${n === k ? 'on ' + evalTon(k) : ''}">${k}<small>${esc(l)}</small></button>`).join('')}</div></div>
+          <div><div class="eq-lab">Contrôle éclair</div><div class="eq-ck">${EQ_CHECKS.map(([c, l, aide]) => `<div class="r"><span>${esc(l)}<small>${esc(aide)}</small></span>${yn(c)}</div>`).join('')}</div></div></div>
+        <textarea data-f="eqc|${esc(p.k)}" rows="1" placeholder="Remarque — ce qu’on a vu (accueil, conseil, gestes)">${esc((x && x.com) || '')}</textarea></div>`;
+    }
+    /** L'étape : le planning du jour, la synthèse, chaque personne en poste ; les autres du jour repliées. */
+    equipeHtml(v) {
+      const E = this.EQ[v.shop]; const f = this.form; const P = f.pe || {};
+      if (!E || E.chargement) { return '<div class="card sm mu">Lecture du planning du jour…</div>'; }
+      if (E.erreur || !E.d) { return '<div class="card sm mu">Le planning du jour ne se lit pas (panel injoignable, et rien en réserve sur la tablette). L’étape ne bloque pas.</div>'; }
+      const L = this.equipeListe(v.shop); const A = L.filter(p => p.statut === 'en poste'); const H = L.filter(p => p.statut !== 'en poste');
+      const notes = A.map(p => P[p.k]).filter(x => x && x.vu !== false);
+      const moy = (() => { const n = notes.map(x => x.note).filter(x => x >= 1); return n.length ? n.reduce((a, b) => a + b, 0) / n.length : null; })();
+      const tx = c => { const r = notes.filter(x => x[c] === 1 || x[c] === 0); return r.length ? `<span>${esc(EQ_CHECKS.find(q => q[0] === c)[3])} <b>${r.filter(x => x[c] === 1).length} / ${r.length}</b></span>` : ''; };
+      const som = `<div class="card eq-som"><div><div class="xs mu">Planning du jour · ${esc(E.d.source === 'panel' ? 'lu au panel' : E.d.source || '—')}</div><div class="sm" style="margin-top:3px"><b>${A.length} en poste</b>${H.length ? ' · ' + H.length + ' autre' + (H.length > 1 ? 's' : '') + ' au planning aujourd’hui' : ''}</div></div>
+        <span class="sp"></span>${moy != null ? `<div style="text-align:right"><span class="k">${moy.toFixed(1).replace('.', ',')}</span> <span class="xs mu">/ 5 · moyenne</span></div>` : ''}<div class="t">${EQ_CHECKS.map(q => tx(q[0])).join('')}</div></div>`;
+      const aussi = H.length ? `<div class="cap">Aussi au planning aujourd’hui</div><div class="eq-aussi">${H.map(p => this.ouvert['eq:' + p.k] || P[p.k] ? this.equipePersonneHtml(p, P[p.k]) : `<div class="card eq-p"><div class="h"><span class="eq-av">${esc(String(p.nom).split(/\s+/).map(m => m.charAt(0)).join('').slice(0, 2).toUpperCase())}</span><div><b>${esc(p.nom)}</b><small>${esc(p.heures)}${p.postes && p.postes.length ? ' · ' + esc(p.postes.join(', ')) : ''}</small></div><span class="eq-st off">${esc(p.statut)}</span><span class="sp"></span><button type="button" class="chip" data-a="eq-ouv" data-v="${esc(p.k)}">Noter quand même</button></div></div>`).join('')}</div>` : '';
+      return som + (A.length ? A.map(p => this.equipePersonneHtml(p, P[p.k])).join('') : '<div class="card sm mu">Personne n’est en poste à cette heure d’après le planning.</div>')
+        + aussi + '<div class="xs mu" style="margin:4px 2px">Notée pendant la visite, sans le dire à voix haute. Interne : reste au bureau, ne part pas dans le rapport du franchisé.</div>';
     }
     /** Une photo de la tablette par son id ou son client_id (une photo prise hors ligne n'a pas encore d'id). */
     photoPar(v) { return (this.D.photos || []).find(x => String(x.id) === String(v) || x.client_id === v) || null; }

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 // L'évaluation rapide de fin de visite : les six axes, le contrôle de ce qu'envoie la tablette.
 require_once __DIR__ . '/visites_evaluation.php';
+// L'équipe en poste, lue au planning et notée pendant la visite.
+require_once __DIR__ . '/visites_equipe.php';
 
 /**
  * Visites terrain — l'application du consultant (PWA `visites/`).
@@ -228,6 +230,10 @@ function ensureVisites(): void
     $sansRep = true;
     try { $sansRep = Db::row("SHOW COLUMNS FROM con_visite_photo LIKE 'reperes'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
     if ($sansRep) { try { Db::exec('ALTER TABLE con_visite_photo ADD COLUMN reperes TEXT NULL'); } catch (Throwable $e) { /* déjà là */ } }
+    // L'équipe en poste notée pendant la visite (05/11/2026) : JSON (viPersonnel).
+    $sansPers = true;
+    try { $sansPers = Db::row("SHOW COLUMNS FROM con_visite LIKE 'personnel'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    if ($sansPers) { try { Db::exec('ALTER TABLE con_visite ADD COLUMN personnel TEXT NULL'); } catch (Throwable $e) { /* déjà là */ } }
     // Le jeton de l'horloge : lu en base par bin/visites_cron.sh à chaque appel.
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
         ['visitesJeton', json_encode(bin2hex(random_bytes(24)))]);
@@ -485,7 +491,9 @@ function viVisiteLigne(array $v): array
         // Le CA sous le budget, noté avec le franchisé : pourquoi, trois pistes, l'horizon (visites_kpi.php, /visites/budget).
         'budgetCa' => !empty($v['budget_ca']) ? (json_decode((string) $v['budget_ca'], true) ?: null) : null,
         // L'évaluation rapide de fin de visite : six notes de 1 à 5, leur commentaire (viEvaluation).
-        'evaluation' => !empty($v['evaluation']) ? (json_decode((string) $v['evaluation'], true) ?: null) : null];
+        'evaluation' => !empty($v['evaluation']) ? (json_decode((string) $v['evaluation'], true) ?: null) : null,
+        // L'équipe en poste, notée pendant la visite (viPersonnel) : interne au bureau.
+        'personnel' => !empty($v['personnel']) ? (json_decode((string) $v['personnel'], true) ?: null) : null];
 }
 
 /**
@@ -869,7 +877,7 @@ function viPourFranchise(array $e, array $visites, array $points, array $photos,
     $caches = [];
     $visites = array_values(array_filter(array_map(static function (array $v) use ($auj, &$caches): ?array {
         if (in_array($v['statut'], ['planifiee', 'confirmee', 'en_cours'], true) && $v['prevu_le'] >= $auj && empty($v['annoncee'])) { $caches[] = $v['id']; return null; }
-        $v['prep'] = null; $v['notes'] = null; $v['meteo'] = null;
+        $v['prep'] = null; $v['notes'] = null; $v['meteo'] = null; $v['personnel'] = null;
         if (($v['rapportStatut'] ?? null) === 'brouillon') {
             foreach (['positif', 'diagnostic', 'reco', 'execution', 'clients', 'sentiment', 'evaluation'] as $k) { $v[$k] = null; }
             $v['causes'] = [];
@@ -1010,6 +1018,7 @@ function wr_visites_put(string $id): array
     if (isset($b['type']) && function_exists('vcTypeCode')) { if (function_exists('ensureVisitesCadre')) { ensureVisitesCadre(); } $set[] = 'type_code = ?'; $args[] = vcTypeCode($b['type']); }
     if (array_key_exists('annoncee', $b)) { $set[] = 'annoncee = ?'; $args[] = $b['annoncee'] === null || $b['annoncee'] === '' ? null : ((bool) $b['annoncee'] ? 1 : 0); }
     if (array_key_exists('budgetCa', $b)) { $bc = viBudgetCa($b['budgetCa'], viQui($b)); $set[] = 'budget_ca = ?'; $args[] = $bc !== null ? json_encode($bc, JSON_UNESCAPED_UNICODE) : null; }
+    if (array_key_exists('personnel', $b)) { $pe = viPersonnel($b['personnel'], viQui($b)); $set[] = 'personnel = ?'; $args[] = $pe !== null ? json_encode($pe, JSON_UNESCAPED_UNICODE) : null; }
     if (array_key_exists('evaluation', $b)) { $ev = viEvaluation($b['evaluation'], viQui($b)); $set[] = 'evaluation = ?'; $args[] = $ev !== null ? json_encode($ev, JSON_UNESCAPED_UNICODE) : null; }
     if (!$set) { return ['ok' => true, 'visite' => viVisiteLigne($v)]; }
     $set[] = 'maj_le = ?'; $args[] = date('Y-m-d H:i:s'); $args[] = (int) $v['id'];
