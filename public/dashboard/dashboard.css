@@ -1607,19 +1607,6 @@ html.db-fiche-ouverte{overflow:hidden}
 .op-crb .ta{font-size:11px;fill:var(--color-primary);font-weight:700}
 .op-crb .t7{font-size:11px;fill:#2F6EA5;font-weight:700}
 .op-dleg{display:flex;gap:16px;flex-wrap:wrap;padding:0 16px 12px;font-size:10.5px;color:var(--color-text-muted)}
-/* Le chiffre face au budget, mois, trimestre, année (05/11/2026) : une piste par période, le trait de l'attendu, la projection hachurée. */
-.op-bps{padding:8px 16px 4px;display:flex;flex-direction:column;gap:16px}
-.op-bp{display:grid;grid-template-columns:150px minmax(0,1fr) 270px;gap:14px;align-items:center}
-.op-bp .pl b{display:block;font:400 18px/1.1 var(--font-display)}.op-bp .pl small{display:block;font-size:11px;color:var(--color-text-muted);margin-top:2px}
-.op-bp .pb{position:relative;height:26px;border-radius:7px;background:#EFE9E1}
-.op-bp .seg{position:absolute;left:0;top:0;bottom:0;border-radius:7px}
-.op-bp .seg.proj{border-radius:0 7px 7px 0;background:repeating-linear-gradient(135deg,var(--c) 0 3px,transparent 3px 8px);opacity:.38}
-.op-bp .att{position:absolute;top:-5px;bottom:-5px;width:0;border-left:2px dashed #222}
-.op-bp .att span{position:absolute;left:6px;top:-16px;white-space:nowrap;font:600 10.5px var(--font-ui);color:#222}.op-bp .att.g span{left:auto;right:6px}
-.op-bp .bud{position:absolute;top:-3px;bottom:-3px;width:0;border-left:2px solid #777}
-.op-bp .pv{font-variant-numeric:tabular-nums}.op-bp .pv b{font:400 20px var(--font-display)}.op-bp .pv span{font-size:12px;color:var(--color-text-muted)}
-.op-bp .pv small{display:block;font-size:11px;color:var(--color-text-muted);margin-top:2px}.op-bp .pv em{font-style:normal;font-weight:700}.op-bp .pv .am{display:none}
-.op-bud .op-dleg{padding-top:10px}.op-dleg i.bpv{background:#2d7a3e;height:8px;width:14px;border-radius:2px;vertical-align:0}.op-dleg i.bpp{height:8px;width:14px;background:repeating-linear-gradient(135deg,#2d7a3e 0 3px,transparent 3px 7px);opacity:.5;vertical-align:0}
 .op-dleg i{display:inline-block;width:18px;height:3px;margin-right:6px;vertical-align:3px}
 .op-dleg i.la{background:var(--color-primary)}.op-dleg i.l7{background:#2F6EA5}.op-dleg i.lap{background:#7A5C2E}.op-dleg i.l7p{background:#b39a70}.op-dleg i.now{background:none;border-top:2px dashed #222;height:0}
 .op-dleg b.tv{display:none;font-weight:700;color:var(--color-text)}
@@ -1658,8 +1645,6 @@ html.db-fiche-ouverte{overflow:hidden}
   .op-piste{margin-top:14px}.op-piste + .op-piste{margin-top:26px}
   .op-dax{margin:24px 0 0 0}
   .op-crb{display:none}.op-crb.tel{display:block}
-  .op-bp{grid-template-columns:1fr;gap:6px}.op-bp .pl{display:flex;align-items:baseline;gap:8px}.op-bp .pl small{margin:0}
-  .op-bp .att span{display:none}.op-bp .pv .am{display:inline}
   .op-dleg b.tv{display:inline}
   .op-crb-w{padding:10px 8px 4px}
   .op-dl{grid-template-columns:1fr 1fr;gap:8px 12px}
