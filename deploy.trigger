@@ -1280,3 +1280,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-05T06:51:42Z Fiche matière : % de perte (migration 158)
 2026-11-05T07:10:08Z Perte dans le coût des recettes (migration 159)
 2026-11-05T07:24:46Z tablette de contrôle : évaluation rapide en radar, repères sur toutes les photos, équipe en poste (planning), mois/trimestre/année face au budget
+2026-11-05T07:29:46Z Besoins d'achat en poids acheté (perte)
