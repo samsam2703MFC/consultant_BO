@@ -2997,7 +2997,7 @@ function tplResultatReseauProduits(c, x){
   else if (!P) { prod = tete('Ventes par produit — tout le réseau', r.perLib) + attente('Lecture des tickets du réseau, magasin par magasin…'); }
   else {
     const droite = `<div style="display:flex;align-items:flex-start;gap:22px">
-        <div style="text-align:right"><div style="${cap}">CA produits</div><div style="font-family:var(--font-display);font-size:23px;line-height:1.1;${num}">${esc(P.ca)}</div></div>
+        <div style="text-align:right"><div style="${cap}">${esc(P.caLib)}</div><div style="font-family:var(--font-display);font-size:23px;line-height:1.1;${num}">${esc(P.ca)}</div></div>
         <div style="text-align:right"><div style="${cap}">Marge brute</div><div style="font-family:var(--font-display);font-size:23px;line-height:1.1;color:${P.tauxCoul};${num}">${esc(P.tauxReseau)}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(P.tauxSous)}</div></div>
         <button ${x.A(r.relire)} title="Relire les ventes du réseau" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:transparent;border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text-muted)">${r.relecture ? '<i class="rj-ring" style="margin:0"></i>' : '⟳'}</button>
       </div>`;
@@ -3023,8 +3023,10 @@ function tplResultatReseauProduits(c, x){
     const jauges = `<div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:var(--color-surface)">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <div style="font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${J.fil.map((f, i) => `${i ? '<span style="color:var(--color-text-muted)">›</span>' : ''}${f.go ? `<button ${x.A(f.go)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;color:var(--color-primary)">${esc(f.nom)}</button>` : `<b style="font-weight:600">${f.coul ? `<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.coul};margin-right:5px;vertical-align:0"></i>` : ''}${esc(f.nom)}</b>`}`).join('')}${J.effacer ? ` <button ${x.A(J.effacer)} title="Revenir à tout le réseau" style="border:none;background:none;cursor:pointer;color:var(--color-text-muted);font-size:13px;padding:0 3px">×</button>` : ''}</div>
-          <span style="margin-left:auto;font-size:11px;color:var(--color-text-muted)">mesurer en</span>${seg(J.mesures, true)}
+          <span style="margin-left:auto;font-size:11px;color:var(--color-text-muted)">ventes</span>${seg(J.canaux, true)}
+          <span style="font-size:11px;color:var(--color-text-muted);margin-left:6px">mesurer en</span>${seg(J.mesures, true)}
         </div>
+        ${J.canalInfo ? `<div style="font-size:11px;color:var(--color-text-muted);margin:-4px 0 4px">${esc(J.canalInfo)}</div>` : ''}
         ${J.lignes.map(g => `<div style="display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:start;margin-top:9px">
             <div style="padding-top:5px"><div style="${cap}">${esc(g.lib)}</div>${g.sous ? `<div style="font-size:10px;color:var(--color-text-muted);margin-top:2px">${esc(g.sous)}</div>` : ''}</div>
             <div>${g.j.vide ? '<div style="font-size:11px;color:var(--color-text-muted);padding-top:5px">rien de vendu</div>' : barreJ(g.j.blocs, 28, true) + legJ(g.j.legende)}</div>

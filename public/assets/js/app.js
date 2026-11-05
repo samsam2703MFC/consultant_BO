@@ -9709,8 +9709,23 @@ class App {
       const mesure = S.rnMesure === 'q' ? 'q' : 'v';
       const trie = (a, b) => tri === 'm' ? ((b.m == null ? -Infinity : b.m) - (a.m == null ? -Infinity : a.m)) || b.v - a.v
         : (tri === 'q' ? (b.qEq - a.qEq) || b.v - a.v : (b.v - a.v));
-      const tous = P.produits || [];
-      const parId = {}; tous.forEach(p => { parId[p.id] = p; });
+      // Comptoir ou B2B (05/11/2026) : le classement, la jauge des secteurs et les étoiles se lisent sur le canal choisi.
+      // B2B = les tickets des clients pro à TVA valide (`pro` de chaque produit) ; comptoir = le reste.
+      const canal = ['comptoir', 'b2b'].includes(S.rnCanal) ? S.rnCanal : 'tout';
+      const canalLib = { tout: '', comptoir: 'comptoir', b2b: 'B2B' }[canal];
+      const tousBruts = P.produits || [];
+      const enCanal = p => {
+        if (canal === 'tout') { return p; }
+        const pr = p.pro || { q: 0, v: 0, m: null, vChiffre: 0 }, b2b = canal === 'b2b';
+        const q = b2b ? pr.q : Math.max(0, p.q - pr.q), v = b2b ? pr.v : Math.max(0, p.v - pr.v);
+        const vChiffre = b2b ? (pr.vChiffre || 0) : Math.max(0, (p.vChiffre || 0) - (pr.vChiffre || 0));
+        const m = b2b ? pr.m : (p.m == null ? null : p.m - (pr.m || 0));
+        const mags = (p.magasins || []).map(x => b2b ? { s: x.s, q: x.pq || 0, v: x.pv || 0, m: x.pq ? x.pm : null }
+          : { s: x.s, q: Math.max(0, x.q - (x.pq || 0)), v: Math.max(0, x.v - (x.pv || 0)), m: x.m == null ? null : x.m - (x.pm || 0) }).filter(x => x.v > 0 || x.q > 0);
+        return Object.assign({}, p, { q, v, vChiffre, m: vChiffre > 0 ? m : null, taux: vChiffre > 0 && m != null ? Math.round(1000 * m / vChiffre) / 10 : null, prix: q > 0 ? v / q : null, magasins: mags });
+      };
+      const tous = tousBruts.map(enCanal).filter(p => p.v > 0 || p.q > 0);
+      const parId = {}; tousBruts.forEach(p => { parId[p.id] = p; });
       const secteurDe = p => String(p.groupe || 'Sans secteur').split(' · ')[0];
       // Une famille = un produit et ses portions (½, ¼…) : une seule ligne pour lire ce qui se vend (04/11/2026).
       // La fraction d'une portion se lit dans son libellé (« — 1/2 ») ; les pièces se comptent aussi en
@@ -9798,6 +9813,11 @@ class App {
       const fil = [{ nom: 'Tout le réseau', go: sect ? () => this.setState({ rnSect: null, rnOuv: null }) : null }].concat(sect ? [{ nom: sect, coul: coulDe(sect), go: null }] : []);
       const jauges = { mesure, fil, effacer: sect ? () => this.setState({ rnSect: null, rnOuv: null }) : null,
         mesures: [['v', 'CA'], ['q', 'Pièces']].map(([k, nom]) => ({ nom, on: mesure === k, go: () => this.setState({ rnMesure: k }) })),
+        canaux: [['tout', 'Tout'], ['comptoir', 'Comptoir'], ['b2b', 'B2B']].map(([k, nom]) => ({ nom, on: canal === k, go: () => this.setState({ rnCanal: k, rnOuv: null, rnTout: false }) })),
+        canalInfo: (() => { const T0 = P.totaux || {}, pc = T0.ca > 0 && T0.proCa != null ? 100 * T0.proCa / T0.ca : null;
+          const mq = (P.magasins || []).reduce((t, m) => t + (m.proJoursManquants || 0), 0), lus = (P.magasins || []).reduce((t, m) => t + (m.proJoursLus || 0), 0);
+          return (T0.proCa != null ? 'B2B ' + fE(T0.proCa) + (pc != null ? ' · ' + fP(pc) + ' du CA produits' : '') + ' · clients pro à TVA valide' : '')
+            + (mq ? ' · B2B lu sur ' + lus + ' jour' + (lus > 1 ? 's' : '') + '-magasin sur ' + (lus + mq) + ', le reste se complète au cron chaque heure' : ''); })(),
         lignes: [{ lib: 'Secteurs', sous: mesure === 'q' ? 'en pièces entières équivalentes · cliquer pour filtrer' : 'cliquer un secteur pour filtrer les produits', j: jS }] };
       const fmtTxt = l => l.formats.length > 1 || l.portion ? l.formats.map(x => x.lib === 'entière' ? fQ(x.q) + ' entière' + (x.q > 1 ? 's' : '') : fQ(x.q) + ' × ' + x.lib.replace('1/2', '½').replace('1/4', '¼').replace('1/3', '⅓')).join(' · ') : '';
       const rows = vues.map((l, i) => {
@@ -9829,10 +9849,13 @@ class App {
       const sV = lignes.reduce((s, l) => s + l.v, 0), sQ = lignes.reduce((s, l) => s + l.qEq, 0);
       const sM = lignes.reduce((s, l) => s + (l.m || 0), 0), sVC = lignes.reduce((s, l) => s + (l.m != null ? l.vChiffre || 0 : 0), 0);
       const T = P.totaux || {}, L = P.lecture || {};
+      // Les chiffres d'en-tête et du total suivent le canal : sur « Tout », ceux du serveur ; sinon la somme des produits du canal.
+      const Tc = canal === 'tout' ? T : (() => { const ca = familles.reduce((t, f) => t + f.v, 0), mm = familles.reduce((t, f) => t + (f.m || 0), 0), vC = familles.reduce((t, f) => t + (f.m != null ? f.vChiffre : 0), 0);
+        return { ca, m: vC > 0 ? mm : null, taux: vC > 0 ? 100 * mm / vC : null, vChiffre: vC }; })();
       const manquent = (P.magasins || []).filter(m => m.joursManquants > 0 || m.instantanes > 0);
       const nDiv = familles.filter(f => f.portion).length;
       out.prod = { vue, tri, q, qBrut: String(S.rnQ || ''), jauges,
-        top: nTop ? { titre: 'Parmi les ' + TOP_PCT + ' % de produits qui font le plus de chiffre dans le réseau', txt: 'les ' + nTop + ' premiers produits (' + TOP_PCT + ' % des ' + familles.length + ') font ' + fP0(totV > 0 ? 100 * caTop / totV : null) + ' du chiffre du réseau' } : null,
+        top: nTop ? { titre: 'Parmi les ' + TOP_PCT + ' % de produits qui font le plus de chiffre ' + (canal === 'tout' ? '' : canalLib + ' ') + 'dans le réseau', txt: 'les ' + nTop + ' premiers produits (' + TOP_PCT + ' % des ' + familles.length + ') font ' + fP0(totV > 0 ? 100 * caTop / totV : null) + ' du chiffre ' + (canal === 'tout' ? '' : canalLib + ' ') + 'du réseau' } : null,
         vues: [['produits', 'Produits'], ['categories', 'Catégories'], ['portions', 'Divisibles']].map(([k, nom]) => ({ nom: nom + (k === 'portions' && nDiv ? ' · ' + nDiv : ''), on: vue === k, go: () => this.setState({ rnVue: k, rnOuv: null }) })),
         tris: [['v', 'CA'], ['q', 'Pièces'], ['m', 'Marge brute']].map(([k, nom]) => ({ nom, on: tri === k, go: () => this.setState({ rnTri: k }) })),
         setQ: e => this.setState({ rnQ: e.target.value }),
@@ -9841,10 +9864,10 @@ class App {
         moins: S.rnTout && !q && n > LIM ? { txt: 'Revenir aux ' + LIM + ' premiers', go: () => this.setState({ rnTout: false, rnOuv: null }) } : null,
         entNom: vue === 'categories' ? 'Catégorie' : 'Produit',
         total: { lib: sel ? 'Sélection' : 'Total réseau', sous: sel ? pl(n, vue === 'categories' ? 'catégorie' : 'produit') + ' · ' + fP(totV > 0 ? 100 * sV / totV : null) + ' du CA produits' : pl(familles.length, 'produit') + (nDiv ? ' dont ' + nDiv + ' en portions' : '') + ' · ' + pl(nVend, 'magasin'),
-          pieces: fQ(Math.round(sQ)), ca: fE(sV), marge: fE(sel ? sM : T.m), taux: fP0(sel ? (sVC > 0 ? 100 * sM / sVC : null) : T.taux), tauxCoul: coulT(sel ? (sVC > 0 ? 100 * sM / sVC : null) : T.taux) },
-        ca: fE(T.ca), tauxReseau: T.taux != null ? fP(T.taux) : '—', tauxCoul: coulT(T.taux),
-        tauxSous: T.vChiffre != null && T.ca > 0 ? 'marge brute sur ' + fP0(100 * T.vChiffre / T.ca) + ' du CA chiffré' : '',
-        sousTitre: perLib + ' · ' + pl(nVend, 'magasin') + ' · ' + pl(familles.length, 'produit') + ' vendu' + (familles.length > 1 ? 's' : ''),
+          pieces: fQ(Math.round(sQ)), ca: fE(sV), marge: fE(sel ? sM : Tc.m), taux: fP0(sel ? (sVC > 0 ? 100 * sM / sVC : null) : Tc.taux), tauxCoul: coulT(sel ? (sVC > 0 ? 100 * sM / sVC : null) : Tc.taux) },
+        ca: fE(Tc.ca), caLib: canal === 'tout' ? 'CA produits' : 'CA produits · ' + canalLib, tauxReseau: Tc.taux != null ? fP(Tc.taux) : '—', tauxCoul: coulT(Tc.taux),
+        tauxSous: Tc.vChiffre != null && Tc.ca > 0 ? 'marge brute sur ' + fP0(100 * Tc.vChiffre / Tc.ca) + ' du CA chiffré' : '',
+        sousTitre: perLib + ' · ' + pl(nVend, 'magasin') + ' · ' + pl(familles.length, 'produit') + ' vendu' + (familles.length > 1 ? 's' : '') + (canal === 'tout' ? '' : (canal === 'b2b' ? ' en B2B' : ' au comptoir')),
         lecture: manquent.length ? 'Lecture partielle : ' + manquent.map(m => m.nom + ' ' + (m.joursLus - m.instantanes) + '/' + m.jours + ' jour' + (m.jours > 1 ? 's' : '') + (m.instantanes ? ' (+' + m.instantanes + ' en relevé ancien)' : '')).join(' · ') + ' — les tickets se relèvent au cron, chaque heure.' : '',
         note: 'CA = ventes TTC des tickets, ligne par ligne ; marge brute = ventes − quantité × coût de la recette du magasin (portion : la fraction du coût de la pièce). Un produit et ses portions (½, ¼) ne font qu’une ligne : les pièces se comptent en équivalent pièce entière (12 × ½ = 6), le détail s’ouvre d’un clic. Les bundles restent dans leur catégorie : la carte « Promotions et bundles » les détaille.'
           + (L.secondes != null ? ' Calcul : ' + nf(L.secondes, 1) + ' s' + (L.ticketsLus ? ', ' + pl(L.ticketsLus, 'ticket') + ' lu' + (L.ticketsLus > 1 ? 's' : '') : '') + '.' : '') };
@@ -9852,7 +9875,7 @@ class App {
       const scOuv = S.rnScOuv || {};
       const M = (P.magasins || []).slice().sort((a, b) => (b.caSansCout - a.caSansCout) || a.nom.localeCompare(b.nom));
       const concernes = M.filter(m => m.nSansCout > 0);
-      const frequents = tous.filter(p => p.nSans > 1).sort((a, b) => (b.nSans - a.nSans) || b.vSans - a.vSans).slice(0, 4);
+      const frequents = tousBruts.filter(p => p.nSans > 1).sort((a, b) => (b.nSans - a.nSans) || b.vSans - a.vSans).slice(0, 4);
       const tousOuv = !!S.rnScTout;
       out.sc = {
         kpi: [
