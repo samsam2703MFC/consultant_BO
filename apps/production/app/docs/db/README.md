@@ -1477,8 +1477,12 @@ perte 35 % → 18,46 zł le kg de recette.
   fiche aujourd'hui) et au coût des nouveaux produits (`DevCardCostService`).
 - Quantités achetées (`MaterialCostRepository::consumption`, `productsUsing`) = quantité de recette ÷ (1 − perte) :
   « Koszty surowców », optimisation des coûts, appels d'offres.
-- **Non modifié** : quantités à peser sur les tablettes (poids après épluchage) et besoins d'achat du plan
-  (Zaopatrzenie, zakupy tygodnia, prévision, listes de besoins) — toujours en poids de recette.
+- Besoins d'achat en **poids acheté** (sans migration) : `SupplyRepository::recipes`, `consumed`, `consumedSinceCount`
+  (Zaopatrzenie, zakupy tygodnia, prévision 13 semaines, plan des équipes, plan de demain, stock estimé depuis
+  l'inventaire), `PlanningRepository::materials` (matières du plan) et `RequirementListRepository` (listes de besoins
+  des commandes) = quantité de recette ÷ (1 − perte). Colonnes « Potrzeba (waga kupiona) ».
+- **Non modifié** : quantités à peser sur les tablettes et lots des ingrédients (poids de recette, après épluchage),
+  composition des produits (export, étiquettes, PPWR).
 - Modifier la perte sur la fiche matière recalcule tout de suite le coût des recettes qui l'utilisent
   (`RecipeCostRecalculationService::recalculateForMaterial`).
 - Migration 159 : recalcul du coût de toutes les recettes au contenu aplati, coûts d'avant dans

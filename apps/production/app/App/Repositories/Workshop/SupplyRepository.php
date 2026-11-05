@@ -69,9 +69,11 @@ final class SupplyRepository extends WorkshopRepository
         $since = $this->all('SELECT MIN(count_date) AS d FROM n_mp_count')[0]['d'] ?? null;
         if ($since === null) return $out;
         foreach ($this->all(
-            'SELECT fri.material_id, SUM(c.n * fri.quantity) AS qty
+            // [252] Zużycie w wadze kupionej : receptura (po obróbce) ÷ (1 − odpad karty surowca).
+            'SELECT fri.material_id, SUM(c.n * fri.quantity * ' . \App\Services\Material\MaterialLoss::factorSql('rm') . ') AS qty
              FROM (SELECT id_raw_material, MAX(count_date) AS d FROM n_mp_count GROUP BY id_raw_material) lc
              JOIN flattened_recipe_ingredient fri ON fri.material_id = lc.id_raw_material
+             JOIN raw_material rm ON rm.id = fri.material_id
              JOIN final_product fp ON fp.id_recipe = fri.recipe_id
              JOIN (SELECT id_product, date_add, COUNT(*) AS n FROM carton_stock WHERE date_add > ? GROUP BY id_product, date_add) c
                   ON c.id_product = fp.id AND c.date_add > lc.d
@@ -86,25 +88,32 @@ final class SupplyRepository extends WorkshopRepository
     {
         $out = [];
         foreach ($this->all(
-            'SELECT fri.material_id, SUM(c.n * fri.quantity) AS qty
+            // [252] W wadze kupionej (odpad z karty surowca).
+            'SELECT fri.material_id, SUM(c.n * fri.quantity * ' . \App\Services\Material\MaterialLoss::factorSql('rm') . ') AS qty
              FROM (SELECT id_product, COUNT(*) AS n FROM carton_stock WHERE date_add BETWEEN ? AND ? GROUP BY id_product) c
              JOIN final_product fp ON fp.id = c.id_product
              JOIN flattened_recipe_ingredient fri ON fri.recipe_id = fp.id_recipe
+             JOIN raw_material rm ON rm.id = fri.material_id
              GROUP BY fri.material_id',
             [$from, $to]
         ) as $r) $out[(int) $r['material_id']] = (float) $r['qty'];
         return $out;
     }
 
-    /** @return array<int, list<array{material_id:int, quantity:float}>> karta produktu → receptura na karton */
+    /**
+     * @return array<int, list<array{material_id:int, quantity:float}>> karta produktu → surowce na karton W WADZE KUPIONEJ
+     * [252] : receptura podaje wagę po obróbce, zakupy i stan — wagę kupioną (÷ (1 − odpad karty surowca)). Zapotrzebowanie
+     * Zakupów, zakupy tygodnia, prognoza 13 tygodni, plan zespołów i plan na jutro. Tablety ważą według receptury (bez odpadu).
+     */
     public function recipes(): array
     {
         $out = [];
         foreach ($this->all(
-            "SELECT i.id AS item_id, fri.material_id, fri.quantity
+            "SELECT i.id AS item_id, fri.material_id, fri.quantity * " . \App\Services\Material\MaterialLoss::factorSql('rm') . " AS quantity
              FROM n_prod_item i
              JOIN final_product fp ON fp.id = i.id_final_product AND fp.ppc > 0
              JOIN flattened_recipe_ingredient fri ON fri.recipe_id = fp.id_recipe
+             JOIN raw_material rm ON rm.id = fri.material_id
              WHERE i.item_type = 'product'"
         ) as $r) $out[(int) $r['item_id']][] = ['material_id' => (int) $r['material_id'], 'quantity' => (float) $r['quantity']];
         return $out;

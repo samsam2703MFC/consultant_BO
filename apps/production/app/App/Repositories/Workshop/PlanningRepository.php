@@ -182,12 +182,14 @@ final class PlanningRepository extends WorkshopRepository
     /**
      * Surowce i opakowania planu : sztuki do produkcji ÷ sztuk w kartonie × receptura na karton
      * (receptura wypłaszczona : surowce półproduktów już w niej, więc linie półproduktów się nie liczą).
+     * [252] W wadze kupionej : receptura (po obróbce) ÷ (1 − odpad karty surowca).
      */
     public function materials(int $planId): array
     {
+        $f = \App\Services\Material\MaterialLoss::factorSql('rm');
         return $this->all(
             "SELECT rm.id, rm.name, u.name AS unit, rm.price_per_unit, COALESCE(c.id_group, 0) = 1 AS packaging,
-                    SUM(l.qty_final / fp.ppc * fri.quantity) AS quantity, SUM(l.qty_final / fp.ppc * fri.quantity) * rm.price_per_unit AS value,
+                    SUM(l.qty_final / fp.ppc * fri.quantity * {$f}) AS quantity, SUM(l.qty_final / fp.ppc * fri.quantity * {$f}) * rm.price_per_unit AS value,
                     COUNT(DISTINCT i.id) AS products
              FROM n_prod_plan_line l
              JOIN n_prod_item i ON i.id = l.id_item AND i.item_type = 'product'

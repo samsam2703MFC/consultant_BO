@@ -605,7 +605,7 @@
     "team_sheet_col_supplier": "Dostawca",
     "team_sheet_col_material": "Surowiec",
     "team_sheet_col_quantity": "Dostawa",
-    "team_sheet_col_need": "Potrzeba zespołu",
+    "team_sheet_col_need": "Potrzeba zespołu (waga kupiona)",
     "team_sheet_col_for": "Do produktów",
     "team_sheet_undated": "termin do ustalenia",
     "team_sheet_received": "przyjęte",
@@ -627,7 +627,7 @@
     "day_list_col_time": "Godz.",
     "day_list_col_qty": "Ilość",
     "day_list_materials": "Zapotrzebowanie surowców i opakowań dnia",
-    "day_list_col_need": "Potrzeba",
+    "day_list_col_need": "Potrzeba (waga kupiona)",
     "day_list_no_recipe": "Bez receptury lub bez sztuk w kartonie (pominięte w zapotrzebowaniu) : {list}"
   }
 }

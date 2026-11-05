@@ -47,7 +47,7 @@
   "col_supplier": "Dostawca",
   "col_material": "Surowiec",
   "col_quantity": "Dostawa",
-  "col_need": "Potrzeba zespołu",
+  "col_need": "Potrzeba zespołu (waga kupiona)",
   "col_for": "Do produktów",
   "undated": "termin do ustalenia",
   "delivery_received": "przyjęte",

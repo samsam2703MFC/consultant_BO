@@ -28,7 +28,7 @@
   "next_week": "Następny tydzień produkcji",
   "only_to_order": "Tylko do zamówienia",
   "search": "Szukaj surowca lub dostawcy…",
-  "rule": "Potrzeba = do produkcji z arkusza tygodnia ÷ sztuk w kartonie × receptura na karton. Stan = inwentaryzacja + przyjęcia − zużycie z produkcji. Na stanie : gdy po produkcji < min., uzupełnienie do maks. ; na zamówienie : brakująca ilość ; w górę do pełnych opakowań dostawcy.",
+  "rule": "Potrzeba = do produkcji z arkusza tygodnia ÷ sztuk w kartonie × receptura na karton, w wadze kupionej : receptura (po obróbce) ÷ (1 − odpad z karty surowca), np. jabłko odpad 35 % → 1 kg w recepturze = 1,54 kg do kupienia. Stan = inwentaryzacja + przyjęcia − zużycie z produkcji (też w wadze kupionej). Na stanie : gdy po produkcji < min., uzupełnienie do maks. ; na zamówienie : brakująca ilość ; w górę do pełnych opakowań dostawcy.",
   "summary": "{n} pozycji do zamówienia u {suppliers} dostawców · {value}",
   "create_all": "Utwórz zamówienia z zaznaczonych",
   "create_one": "Utwórz zamówienie",

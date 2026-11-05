@@ -25,11 +25,11 @@ class RequirementListRepository extends BaseRepository
         $sql = "SELECT 
                   mat.id,
                   mat.name as material_name,
-                  SUM(cop.quantity_carton * fri.quantity) AS required,
+                  SUM(cop.quantity_carton * fri.quantity * " . \App\Services\Material\MaterialLoss::factorSql('mat') . ") AS required,
                   0 as in_stock,
                   mat.price_per_unit,
                   mat.id_unit,
-                  SUM(cop.quantity_carton * fri.quantity) * mat.price_per_unit as approx_value
+                  SUM(cop.quantity_carton * fri.quantity * " . \App\Services\Material\MaterialLoss::factorSql('mat') . ") * mat.price_per_unit as approx_value
                 FROM customer_order_product cop
                 JOIN final_product fp
                   ON cop.id_product = fp.id
@@ -48,11 +48,11 @@ class RequirementListRepository extends BaseRepository
         $sql = "SELECT 
                   mat.id,
                   mat.name as material_name,
-                  SUM(cop.quantity_carton * fri.quantity) + SUM(fp.stock_minimum * fri.quantity)  AS required,
+                  SUM(cop.quantity_carton * fri.quantity * " . \App\Services\Material\MaterialLoss::factorSql('mat') . ") + SUM(fp.stock_minimum * fri.quantity * " . \App\Services\Material\MaterialLoss::factorSql('mat') . ")  AS required,
                   0 as in_stock,
                   mat.price_per_unit,
                   mat.id_unit,
-                  (SUM(cop.quantity_carton * fri.quantity) + SUM(fp.stock_minimum * fri.quantity)) * mat.price_per_unit as approx_value
+                  (SUM(cop.quantity_carton * fri.quantity * " . \App\Services\Material\MaterialLoss::factorSql('mat') . ") + SUM(fp.stock_minimum * fri.quantity * " . \App\Services\Material\MaterialLoss::factorSql('mat') . ")) * mat.price_per_unit as approx_value
                 FROM customer_order_product cop
                 JOIN final_product fp
                   ON cop.id_product = fp.id

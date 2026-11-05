@@ -43,7 +43,7 @@
             r.state === 'short' ? `${tw.pill('brakuje ' + nf(r.missing, 1) + ' ' + r.unit, 'bad')} <a class="tw-btn ghost sm" href="${at.root}/workshop/buy">Zamów</a>` : tw.pill(r.state === 'delivery' ? 'z dostawą OK' : 'sprawdź', r.state === 'delivery' ? 'ok' : 'warn')]}));
         return `${tw.table([{label: 'Grupa'}, {label: 'Ludzie', num: true}, {label: 'Godziny ludzi', num: true}, {label: 'Godziny planu', num: true}, {label: 'Zapas', num: true}], ppl)}
             <div class="tw-cap">Surowce na ${esc(D.label)}</div>
-            ${m.rows.length ? tw.table([{label: 'Surowiec'}, {label: 'Potrzeba', num: true}, {label: 'Stan', num: true}, {label: 'Dostawa w tym dniu'}, {label: 'Uwagi'}], mat)
+            ${m.rows.length ? tw.table([{label: 'Surowiec'}, {label: 'Potrzeba (waga kupiona)', num: true}, {label: 'Stan', num: true}, {label: 'Dostawa w tym dniu'}, {label: 'Uwagi'}], mat)
                 : tw.alert(`Wszystkie surowce na ${esc(D.label)} są na stanie (${m.ok}).`, 'ok', 'bi-check-circle')}
             <p class="tw-note">Tylko surowce z brakiem albo z dostawą tego dnia${m.ok && m.rows.length ? ` — ${m.ok} innych jest na stanie` : ''}. Obsada : plan zespołów (bez nieobecności).${D.no_recipe.length ? ` Bez receptury : ${D.no_recipe.map(esc).join(', ')}.` : ''}</p>`;
     }

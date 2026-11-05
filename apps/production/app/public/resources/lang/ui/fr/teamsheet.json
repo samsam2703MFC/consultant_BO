@@ -47,7 +47,7 @@
   "col_supplier": "Fournisseur",
   "col_material": "Matière",
   "col_quantity": "Livraison",
-  "col_need": "Besoin de l'équipe",
+  "col_need": "Besoin de l'équipe (poids acheté)",
   "col_for": "Pour les produits",
   "undated": "date à confirmer",
   "delivery_received": "reçu",

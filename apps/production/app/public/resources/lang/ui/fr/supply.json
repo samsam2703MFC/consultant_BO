@@ -28,7 +28,7 @@
   "next_week": "Prochaine semaine de production",
   "only_to_order": "Seulement à commander",
   "search": "Chercher une matière ou un fournisseur…",
-  "rule": "Besoin = à produire de la feuille de la semaine ÷ pièces par carton × recette par carton. Stock = inventaire + réceptions − consommation de la production. En stock : si après production < min., réassort jusqu’au max. ; à la commande : ce qui manque ; arrondi au colis du fournisseur.",
+  "rule": "Besoin = à produire selon la feuille de la semaine ÷ pièces par carton × recette par carton, en poids acheté : recette (après épluchage) ÷ (1 − perte de la fiche matière), p. ex. pomme perte 35 % → 1 kg en recette = 1,54 kg à acheter. Stock = inventaire + réceptions − consommation de la production (aussi en poids acheté). En stock : sous le min. après production, complément jusqu'au max. ; sur commande : quantité manquante ; arrondi aux emballages complets du fournisseur.",
   "summary": "{n} articles à commander chez {suppliers} fournisseurs · {value}",
   "create_all": "Créer les commandes des lignes cochées",
   "create_one": "Créer la commande",
