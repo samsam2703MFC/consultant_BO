@@ -73,7 +73,7 @@ Régénérer : `node docs/maquettes/reperes-photos/generer.js` (php et pdftoppm 
 
 ## Statut
 
-**Codée le 05/11/2026 sur la branche, à valider avant la mise en ligne.**
+**Codée et mise en ligne le 05/11/2026.**
 
 - **Tablette** (`public/assets/js/visites.js`) :
   - la visionneuse : `voirHtml` ;

@@ -58,7 +58,7 @@ Régénérer : `node docs/maquettes/budget-tablette/generer.js`
 
 ## Statut
 
-**Codée le 05/11/2026 sur la branche, à valider avant la mise en ligne.**
+**Codée et mise en ligne le 05/11/2026.**
 
 - `vb3Html()` dans `public/assets/js/visites.js`, appelée en tête de `budgetHtml()`. Styles `.vb3` dans le même
   fichier ; traductions dans `visites-nl.js`.

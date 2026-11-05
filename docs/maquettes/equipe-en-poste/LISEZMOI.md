@@ -48,7 +48,7 @@ Régénérer : `node docs/maquettes/equipe-en-poste/generer.js`
 
 ## Statut
 
-**Codée le 05/11/2026 sur la branche, à valider avant la mise en ligne.**
+**Codée et mise en ligne le 05/11/2026.**
 
 - **Tablette** : l'étape `equipe` dans `public/assets/js/visites.js` (`chargerEquipe`, `equipeListe`, `equipeHtml`,
   `equipePersonneHtml`, `equipeCorps`) ; traductions dans `visites-nl.js`.

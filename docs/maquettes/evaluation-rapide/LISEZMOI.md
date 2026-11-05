@@ -59,7 +59,7 @@ Régénérer : `node docs/maquettes/evaluation-rapide/generer.js` (php et pdftop
 
 ## Statut
 
-**Codée le 05/11/2026 sur la branche, pas encore mise en ligne.**
+**Codée et mise en ligne le 05/11/2026.**
 
 - Tablette : l'étape `evaluation` dans `public/assets/js/visites.js` (`evalHtml`, `evalRadar`, `evalPrecedente`,
   `evalCorps`). L'évaluation part avec « Terminer », dans le `PUT /visites/{id}`.
