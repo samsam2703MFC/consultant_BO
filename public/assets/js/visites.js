@@ -486,6 +486,22 @@
 .vi.tab .tb-step .phs{gap:12px}
 .vi.tab .tb-step .phs .ph{height:210px;border-radius:14px;font-size:15px}
 .vi.tab .tb-vide{padding:30px;text-align:center;color:var(--color-text-muted);font-size:14px}
+/* L'évaluation rapide de fin de visite (05/11/2026) : le radar à gauche, les six axes à droite ; empilés sur un écran étroit. */
+.vi .ev{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:12px;align-items:start}
+.vi .ev-radar{position:sticky;top:8px;text-align:center}.vi .ev-radar svg{width:100%;height:auto;display:block}
+.vi .ev-moy{display:flex;align-items:baseline;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:2px}.vi .ev-moy b{font:400 34px/1.05 var(--font-display);color:var(--color-primary)}.vi .ev-moy span{font-size:13px;color:var(--color-text-muted)}
+.vi .ev-moy .up{color:#2d7a3e;font-weight:700}.vi .ev-moy .dn{color:#C0182B;font-weight:700}
+.vi .ev-leg{display:flex;justify-content:center;gap:14px;font-size:11.5px;color:var(--color-text-muted);margin-top:2px}.vi .ev-leg i{display:inline-block;width:18px;height:0;border-top:3px solid var(--color-primary);vertical-align:3px;margin-right:5px}.vi .ev-leg i.p{border-top:2px dashed #2F6EA5}
+.vi .ev-ax{padding:10px 12px;margin-bottom:8px}.vi .ev-ax .h{display:flex;align-items:baseline;gap:8px}.vi .ev-ax .h b{font-size:14.5px}.vi .ev-ax .h small{font-size:11.5px;color:var(--color-text-muted);flex:1;min-width:0}
+.vi .ev-ax .h .n{font:700 13px var(--font-ui);white-space:nowrap}.vi .ev-ax .h .n.ok{color:#2d7a3e}.vi .ev-ax .h .n.att{color:#B45309}.vi .ev-ax .h .n.ko{color:#C0182B}.vi .ev-ax .h .n.mu{color:var(--color-text-muted);font-weight:600}
+.vi .ev-notes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:8px 0}
+.vi .ev-notes button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:10px;min-height:48px;padding:4px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--color-text);font:700 17px var(--font-ui)}
+.vi .ev-notes button small{font:500 10px var(--font-ui);color:var(--color-text-muted)}
+.vi .ev-notes button.on{color:#fff}.vi .ev-notes button.on small{color:#fff;opacity:.9}
+.vi .ev-notes button.on.ko{background:#C0182B;border-color:#C0182B}.vi .ev-notes button.on.att{background:#D97706;border-color:#D97706}.vi .ev-notes button.on.ok{background:#2d7a3e;border-color:#2d7a3e}
+.vi .ev-ax textarea{min-height:40px;font-size:12.5px}
+.vi.tab .ev-notes button{min-height:56px}
+@media (max-width:960px){.vi .ev{grid-template-columns:1fr}.vi .ev-radar{position:static}.vi .ev-radar svg{max-width:560px;margin:0 auto}}
 @media (orientation:portrait){.vi.tab .tb-shops{grid-template-columns:1fr 1fr}.vi.tab .tb-cal .j{min-height:92px}}
 @media (max-width:700px){.vi.tab .tb-shops{grid-template-columns:1fr}.vi.tab .tb-bar .lb,.vi.tab .tb-bar .es{display:none}}
 `;
@@ -609,7 +625,7 @@
   const TEMPS = [['ext', 'Extérieur'], ['int', 'Intérieur'], ['suivi', 'Suivi de projet'], ['analyse', 'Analyse'], ['dev', 'Développement'], ['fin', 'Météo et fin']];
   // Les étapes bloquantes livrées (26/10/2026) : ce qui se remplit sur place bloque ; ce qui dépend d'une lecture extérieure
   // (contrôles du jour de l'équipe, checklist du panel) ne bloque pas. Réglages › Contrôle guidé les change étape par étape.
-  const BLOQUE_DEFAUT = { photos_ext: true, photos_int: true, 'mod:*': true, controles: false, checklist: false, pistes: true, constat: true, meteo: true };
+  const BLOQUE_DEFAUT = { photos_ext: true, photos_int: true, 'mod:*': true, controles: false, checklist: false, pistes: true, constat: true, meteo: true, evaluation: true };
   // Les points d'une checklist qui se regardent dehors : ils forment le module « L'extérieur ».
   const RX_EXT = /fa[cç]ade|enseigne|vitrine ext|ext[ée]rieur|terrasse|abords|parking|trottoir/i;
   // Le module Produit commence par les produits obligatoires (26/10/2026), avec ce que le cockpit en sait (vus en caisse).
@@ -634,6 +650,7 @@
     bureau: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12l2 2 4-4"/>',
     meteo: '<circle cx="9" cy="9" r="3.5"/><path d="M9 2v2M2 9h2M4 4l1.4 1.4M14 4l-1.4 1.4"/><path d="M8 19h10a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.5A2.8 2.8 0 0 0 8 19z"/>',
     fin: '<path d="M3 17c3-1 4-6 6-6s1 5 3 5 2-3 4-3 2 2 5 2"/><path d="M3 21h18"/>',
+    eval: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 7.5l4.5 3-1.5 5H9.5L7.5 10z"/>',
     // La visite en six temps (26/10/2026).
     t_ext: '<path d="M3 10l1.5-5h15L21 10"/><path d="M3 10c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3"/><path d="M5 13v8h14v-8M10 21v-5h4v5"/>',
     t_int: '<path d="M3 15c2.5-7 15.5-7 18 0"/><path d="M3 15h18"/><path d="M5 19h14"/>',
@@ -646,6 +663,15 @@
   // La météo du franchisé, notée en fin de contrôle (12/10/2026).
   const METEO = [[5, '☀️', 'Grand soleil', 'motivé, moteur'], [4, '🌤️', 'Éclaircies', 'plutôt confiant'], [3, '⛅', 'Nuageux', 'mitigé'], [2, '🌧️', 'Pluie', 'découragé'], [1, '⛈️', 'Orage', 'tendu, en conflit']];
   const meteoDe = n => METEO.find(m => m[0] === Number(n)) || null;
+  // L'évaluation rapide de fin de visite (05/11/2026, Sam) : six axes notés de 1 à 5 avec le franchisé, un commentaire
+  // chacun ; elle part dans le rapport, en radar (src/suivi.php, suEvalHtml : même dessin, mêmes clés que viEvalAxes).
+  const EVAL_AXES = [['proprete', 'Propreté', 'magasin, labo, vitrines, sanitaires'], ['metier', 'Capacité métier', 'cuissons, gestes, connaissance des produits'],
+    ['management', 'Management', 'équipe, planning, consignes'], ['commercial', 'Développement commercial', 'B2B, actions locales, ventes additionnelles'],
+    ['client', 'Contact client', 'accueil, conseil, sourire'], ['normes', 'Respect des normes', 'charte, hygiène, prix, procédures']];
+  const EVAL_NOTES = [[1, 'Insuffisant'], [2, 'À améliorer'], [3, 'Correct'], [4, 'Bien'], [5, 'Très bien']];
+  // Les libellés néerlandais des axes : seulement pour mesurer la place du radar (la traduction de l'écran passe par visites-nl.js).
+  const EVAL_NL = { proprete: 'Netheid', metier: 'Vakkennis', management: 'Management', commercial: 'Commerciële ontwikkeling', client: 'Klantcontact', normes: 'Naleving van de normen' };
+  const evalTon = n => n >= 4 ? 'ok' : n === 3 ? 'att' : n >= 1 ? 'ko' : 'mu';
   const MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const jours = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
   const lundiDe = (iso, dec) => { const d = new Date(iso + 'T12:00:00'); const j = (d.getDay() + 6) % 7; d.setDate(d.getDate() - j + 7 * (dec || 0)); return d.toISOString().slice(0, 10); };
@@ -1912,6 +1938,8 @@
       f.pa = finie ? [] : (ecarts || this.ecartsDe(v)).map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true }));
       if (!finie && v.budgetCa) { this.vbPistesDansPlan(v.budgetCa); }
       f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.meteo = v.meteo || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || '';
+      const ev = (v.evaluation && v.evaluation.notes) || {};
+      EVAL_AXES.forEach(([k]) => { f['ev_' + k] = (ev[k] && ev[k].note) || 0; f['evc_' + k] = (ev[k] && ev[k].com) || ''; });
     }
     /** Ce qui manque à l'étape Météo : le temps, la réponse sur les paiements, et le détail s'ils ne sont pas à temps. */
     meteoManque(f) {
@@ -2037,6 +2065,10 @@
       const mt = meteoDe(f.meteo); const mtManque = this.meteoManque(f);
       etapes.push({ cle: 'meteo', tps: 'fin', ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: (mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne')) + (f.mt_paye === 0 ? ' · paiements en retard' : ''),
         fait: !mtManque, mtManque, html: () => this.meteoHtml(f) + this.financesHtml(f) + this.meteoDetailHtml(v) });
+      // L'évaluation rapide (05/11/2026) : six notes avant les signatures ; elle part dans le rapport.
+      const evN = EVAL_AXES.filter(([k]) => f['ev_' + k] >= 1).length; const evM = this.evalMoyenne(f);
+      etapes.push({ cle: 'evaluation', tps: 'fin', ic: 'eval', court: 'Évaluation', titre: 'Évaluation rapide', etat: evN === EVAL_AXES.length ? 'moyenne ' + evM.toFixed(1).replace('.', ',') + ' / 5' : evN + ' / ' + EVAL_AXES.length + ' notés',
+        fait: evN === EVAL_AXES.length, evReste: EVAL_AXES.length - evN, html: () => this.evalHtml(v, f) });
       etapes.push({ tps: 'fin', ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig && f.sigC ? 'signée des deux' : f.sig || f.sigC ? '1 signature sur 2' : 'signatures, envoi au bureau', fait: false, html: () => this.finHtml(v) });
       const ORD = this.tempsOrdre(); const rangT = k => ORD.findIndex(t => t[0] === k);
       etapes.sort((a, b) => rangT(a.tps) - rangT(b.tps));
@@ -2062,6 +2094,7 @@
         else if (e.pistes) { e.manque = 'le pourquoi, les trois pistes et l’horizon'; }
         else if (e.revue) { e.manque = 'ce que vous avez vu et la recommandation'; }
         else if (e.ic === 'meteo') { e.manque = e.mtManque || 'la météo du franchisé'; }
+        else if (e.cle === 'evaluation') { e.manque = e.evReste + ' note' + (e.evReste > 1 ? 's' : '') + ' à donner'; }
         else if (e.cle === 'checklist') { e.manque = 'la checklist du consultant'; }
       });
       etapes.forEach(e => { if (e.fait) { e.auto = true; } e.bloquante = !!e.manque && this.etapeBloquante(e.cle); });
@@ -2374,7 +2407,7 @@
         ['suivi', null, 'Dossier du bureau'], ...mods.filter(m => m[2] === 'suivi').map(m => [m[2], m[0], m[1]]), ['suivi', null, 'Les points décidés aux visites précédentes'], ['suivi', 'checklist', 'Checklist du consultant (panel)'],
         ['analyse', null, 'KPI et santé du magasin'], ...mods.filter(m => m[2] === 'analyse').map(m => [m[2], m[0], m[1]]), ['analyse', null, 'Les tâches des derniers mois'],
         ['dev', 'pistes', 'Le CA sous le budget : pourquoi et trois pistes'], ['dev', 'constat', 'Vu sur place et recommandation'], ['dev', null, 'Points à travailler'],
-        ['fin', 'meteo', 'Météo du franchisé et ses finances'], ['fin', null, 'Fin de visite'], ['*', 'mod:*', 'Les autres modules de checklist (nouveaux types, revisites)']];
+        ['fin', 'meteo', 'Météo du franchisé et ses finances'], ['fin', 'evaluation', 'Évaluation rapide (six notes)'], ['fin', null, 'Fin de visite'], ['*', 'mod:*', 'Les autres modules de checklist (nouveaux types, revisites)']];
       const ORD = this.tempsOrdre(this.form.seuils && this.form.seuils.ordreTemps);
       const nomT = k => k === '*' ? '—' : (ORD.findIndex(x => x[0] === k) + 1) + ' · ' + (TEMPS.find(x => x[0] === k) || ['', ''])[1];
       lignes.sort((a, b) => (a[0] === '*' ? 99 : ORD.findIndex(x => x[0] === a[0])) - (b[0] === '*' ? 99 : ORD.findIndex(x => x[0] === b[0])));
@@ -2668,7 +2701,7 @@
         this.D.photos.unshift({ client_id: cid, visite_id: v.id, shop: v.shop, genre: 'signature', data: f.sig, prise_a: maintenant(), attente: true });
         this.ecrire({ method: 'POST', path: '/visites/photos', body: { client_id: cid, shop: v.shop, visite_id: v.id, genre: 'signature', data: f.sig, prise_a: maintenant(), par: this.role }, apres: 'photo' });
       }
-      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, meteo: f.meteo || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '' });
+      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, meteo: f.meteo || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '', evaluation: this.evalCorps(f) });
       const b = this.boutique(v.shop); if (b) { b.visiteEnCours = null; b.derniereVisite = { id: v.id, le: v.prevu_le, consultant: v.consultantNom }; if (b.prochaineVisite && String(b.prochaineVisite.id) === String(v.id)) { b.prochaineVisite = null; } }
       v.rapportStatut = 'brouillon';
       this.form = {};
@@ -2847,6 +2880,71 @@
         <div class="sc-mods"><span class="h">${nl ? 'Module' : 'Module'}</span><span class="h n">${nl ? 'Vorig' : 'Précédente'}</span><span class="h n">${nl ? 'Nu' : 'Actuelle'}</span><span class="h n">${nl ? 'Verschil' : 'Écart'}</span>
           ${a.modules.map(m => `<span>${esc(nomDe(m, nl ? 'nl' : 'fr'))}</span><span class="n mu">${avant[m.id] != null ? avant[m.id] : '—'}</span><span class="n"><b class="${ton(m.score)}">${m.score}</b></span><span class="n">${avant[m.id] != null ? ec(m.score - avant[m.id]) : ''}</span>`).join('')}</div>
         <div class="xs mu" style="margin-top:6px">${nl ? 'Op ' + a.n + ' gescoorde vragen: elk punt in orde telt volgens zijn gewicht. Tellen niet mee: N.v.t., vrije tekst, vragen buiten de score.' : 'Sur ' + a.n + ' questions notées : chaque point conforme compte selon son poids. Ne comptent pas : N/A, texte libre, questions hors score.'}</div></div>`;
+    }
+    /** L'évaluation telle qu'elle part : { notes: { axe: { note, com } } } (la forme que le serveur rend), null si rien n'est noté. */
+    evalCorps(f) {
+      const o = {}; let n = 0;
+      EVAL_AXES.forEach(([k]) => { const x = Number(f['ev_' + k]) || 0; if (x >= 1) { n++; } o[k] = { note: x >= 1 ? x : null, com: String(f['evc_' + k] || '').trim() }; });
+      return n ? { notes: o } : null;
+    }
+    evalMoyenne(f) {
+      const n = EVAL_AXES.map(([k]) => Number(f['ev_' + k]) || 0).filter(x => x >= 1);
+      return n.length ? Math.round(n.reduce((a, b) => a + b, 0) / n.length * 10) / 10 : null;
+    }
+    /** La dernière évaluation de ce magasin avant cette visite (tous types : les six axes sont les mêmes partout). */
+    evalPrecedente(v) {
+      const av = (this.D.visites || []).filter(x => String(x.shop) === String(v.shop) && x.statut === 'terminee' && String(x.id) !== String(v.id) && x.prevu_le <= v.prevu_le && x.evaluation && x.evaluation.notes)
+        .sort((a, b) => a.prevu_le < b.prevu_le ? 1 : (a.prevu_le > b.prevu_le ? -1 : Number(b.id) - Number(a.id)));
+      return av.length ? { le: av[0].prevu_le, notes: av[0].evaluation.notes } : null;
+    }
+    /**
+     * Le radar des six axes (même dessin que le rapport, suivi.php suEvalRadarSvg) : les anneaux de 1 à 5, cette visite en
+     * rouge plein, la précédente en pointillé bleu ; chaque axe porte son nom et sa note.
+     */
+    evalRadar(notes, prec, nl) {
+      // La largeur suit le plus long libellé de côté (le néerlandais est plus long), comme suivi.php.
+      const n = EVAL_AXES.length, R = 108, P = 13;
+      const long = Math.max(...EVAL_AXES.filter((a, i) => i % 3 !== 0).map(a => (nl ? EVAL_NL[a[0]] || a[1] : a[1]).length));
+      const cx = Math.ceil(R * 0.87 + 16 + long * P * 0.6 + 8), W = 2 * cx, H = Math.ceil(2 * (R + 16) + 4 * P + 34), cy = Math.round(R + 16 + 2 * P + 14);
+      const pt = (i, v) => { const a = -Math.PI / 2 + 2 * Math.PI * i / n; return [cx + Math.cos(a) * R * v / 5, cy + Math.sin(a) * R * v / 5]; };
+      const f1 = x => x.toFixed(1);
+      const poly = val => EVAL_AXES.map(([k], i) => pt(i, val(k)).map(f1).join(',')).join(' ');
+      const coul = x => !x ? '#999' : x >= 4 ? '#2d7a3e' : x === 3 ? '#B45F06' : '#C0182B';
+      let g = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Évaluation rapide" style="font-family:var(--font-ui)">`;
+      for (let r = 1; r <= 5; r++) { g += `<polygon points="${poly(() => r)}" fill="${r === 5 ? '#FBF8F4' : 'none'}" stroke="${r === 5 ? '#D9CFC3' : '#EAE3DA'}" stroke-width="1"/>`; }
+      EVAL_AXES.forEach((a, i) => { const [x, y] = pt(i, 5); g += `<line x1="${cx}" y1="${cy}" x2="${f1(x)}" y2="${f1(y)}" stroke="#EAE3DA" stroke-width="1"/>`; });
+      for (let r = 1; r <= 5; r++) { const [x0, y0] = pt(0, r), [x1, y1] = pt(1, r); g += `<text x="${f1((x0 + x1) / 2 + 2)}" y="${f1((y0 + y1) / 2 + 3)}" font-size="9" fill="#a1978a" stroke="#fff" stroke-width="3" paint-order="stroke">${r}</text>`; }
+      if (prec) { g += `<polygon points="${poly(k => (prec[k] && prec[k].note) || 0)}" fill="none" stroke="#2F6EA5" stroke-width="1.6" stroke-dasharray="5 4"/>`; }
+      g += `<polygon points="${poly(k => notes[k] || 0)}" fill="#8D1D2C" fill-opacity=".16" stroke="#8D1D2C" stroke-width="2.4" stroke-linejoin="round"/>`;
+      EVAL_AXES.forEach(([k, nom], i) => {
+        const v = notes[k] || 0;
+        if (v) { const [x, y] = pt(i, v); g += `<circle cx="${f1(x)}" cy="${f1(y)}" r="5" fill="#8D1D2C" stroke="#fff" stroke-width="1.5"/>`; }
+        const a = -Math.PI / 2 + 2 * Math.PI * i / n, lx = cx + Math.cos(a) * (R + 16), ly = cy + Math.sin(a) * (R + 16);
+        const anc = Math.abs(Math.cos(a)) < 0.2 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end', dy = Math.sin(a) < -0.9 ? -(P * 1.2 + 5) : Math.sin(a) > 0.9 ? P + 2 : -3;
+        g += `<text x="${f1(lx)}" y="${f1(ly + dy)}" text-anchor="${anc}" font-size="${P}" font-weight="700" fill="#333">${esc(nom)}</text>`
+          + `<text x="${f1(lx)}" y="${f1(ly + dy + P * 1.2)}" text-anchor="${anc}" font-size="${P}" font-weight="700" fill="${coul(v)}">${v ? v + ' / 5' : '—'}</text>`;
+      });
+      return g + '</svg>';
+    }
+    /** L'étape de l'évaluation rapide : le radar qui se dessine à chaque note, les six axes, une note de 1 à 5 et un commentaire chacun. */
+    evalHtml(v, f) {
+      const notes = {}; EVAL_AXES.forEach(([k]) => { notes[k] = Number(f['ev_' + k]) || 0; });
+      const P = this.evalPrecedente(v); const moy = this.evalMoyenne(f);
+      const nP = P ? EVAL_AXES.map(([k]) => P.notes[k] && P.notes[k].note).filter(x => x >= 1) : [];
+      const moyP = nP.length ? Math.round(nP.reduce((a, b) => a + b, 0) / nP.length * 10) / 10 : null; const n1 = x => x.toFixed(1).replace('.', ',');
+      const d = moy != null && moyP != null ? Math.round((moy - moyP) * 10) / 10 : null;
+      const ecart = d == null ? '' : ` · <span class="${d > 0 ? 'up' : d < 0 ? 'dn' : ''}">${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d).toFixed(1).replace('.', ',')}</span>`;
+      const radar = `<div class="card ev-radar"><div class="ev-moy"><b>${moy != null ? n1(moy) : '—'}</b><span>/ 5 · moyenne</span>${P ? `<span>visite précédente (${String(P.le).slice(8, 10)}/${String(P.le).slice(5, 7)}) : ${moyP != null ? n1(moyP) : '—'}${ecart}</span>` : '<span>première évaluation</span>'}</div>
+        ${this.evalRadar(notes, P ? P.notes : null, this.lngDe(v) === 'nl')}
+        <div class="ev-leg"><span><i></i>cette visite</span>${P ? '<span><i class="p"></i>visite précédente</span>' : ''}</div>
+        <div class="xs mu" style="margin-top:8px">Notée avec le franchisé. Elle part dans le rapport : le radar, chaque note et son commentaire.</div></div>`;
+      const axes = EVAL_AXES.map(([k, nom, aide]) => {
+        const x = notes[k]; const av = P && P.notes[k] && P.notes[k].note;
+        return `<div class="card ev-ax"><div class="h"><b>${esc(nom)}</b><small>${esc(aide)}</small><span class="n ${evalTon(x)}">${x ? x + ' / 5' : 'à noter'}</span></div>
+          <div class="ev-notes">${EVAL_NOTES.map(([n, l]) => `<button data-a="form" data-v="ev_${k}|${n}" class="${x === n ? 'on ' + evalTon(n) : ''}">${n}<small>${esc(l)}</small></button>`).join('')}</div>
+          <textarea data-f="form|evc_${k}" rows="1" placeholder="Commentaire${av ? ' · la dernière fois : ' + av + ' / 5' : ''} — part dans le rapport">${esc(f['evc_' + k] || '')}</textarea></div>`;
+      }).join('');
+      return `<div class="ev"><div>${radar}</div><div>${axes}</div></div>`;
     }
     finHtml(v) {
       const pts = this.pointsDe(v.id); const phs = this.photosDe(v.id); let total = 0, faits = 0, ko = 0;
