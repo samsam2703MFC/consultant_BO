@@ -1276,3 +1276,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-04T22:04:53Z Lot lżej : Mój tydzień allégé, 5 assistants de tâches, nouveaux produits pour le Kierownik
 2026-11-04T22:10:07Z ventes par produit du réseau : étoile des 20 % de produits qui font le plus de chiffre
 2026-11-04T22:12:55Z Lot lżej : migration 157 compatible MySQL
+2026-11-05T06:36:11Z Fiche matière : Wykorzystanie [%] (part utilisable) saisi et contrôlé
