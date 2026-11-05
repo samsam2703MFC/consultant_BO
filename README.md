@@ -85,11 +85,14 @@ public/
     index.html          coquille
     dashboard.js        état S, rendre()/brancher(), lectures lireAux()
     dashboard.css       styles de la page
+  formation/            les standards du réseau (SOP) FR/NL : module du cockpit (index.html,
+                        formation.js), tablette du poste (tablette.html), photos des SOP
   tablette/             tablette des vendeuses « Book vendeuses » — application
                         compilée (dépôt pwa_sales_tablet), copiée telle quelle
 src/
   Db.php                connexion PDO
   endpoints.php         lectures (GET) — un endpoint par écran
+  formation.php         Formation : SOP en base (FR/NL), versions, suivi, compétences, tablette, PDF
   writes.php            écritures (POST/PATCH/PUT) + journalisation
   fbcontrole.php        agent de contrôle des posts Facebook (moteur de règles)
   installer.php         auto-installation du schéma au premier appel

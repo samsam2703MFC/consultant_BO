@@ -1357,6 +1357,9 @@ class App {
         { sub: 'Suivi de terrain', children: [
           ['gestionConsultant', 'Gestion consultant', 0],
           ['ext:visites/?role=admin', 'Visites ↗', 0],
+          // Les standards du réseau (SOP) en FR et en NL, lus sur la tablette du poste, et les compétences
+          // acquises (« vu faire » par la responsable du magasin) : un module à part, formation/ (05/11/2026).
+          ['ext:formation/', 'Formation ↗', 0],
           ['scoringTri', 'Client mystère', 0, null, { sqVue: 'msp' }],
           ['assortiment', 'Conformité du comptoir', 0]] }]],
       // LE cœur du métier : d'abord constater (performance), puis agir

@@ -55,6 +55,12 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^tablette(/|$) - [R=404,L]
 
+# La formation (formation/ : module, tablette du poste, photos des SOP) : même règle — une photo ou un script
+# ABSENT rend un 404, jamais le shell du cockpit avec un statut 200.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^formation/ - [R=404,L]
+
 # SPA : tout chemin qui n'est pas un fichier réel → index.html
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

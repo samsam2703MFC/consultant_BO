@@ -42,7 +42,7 @@
   const S = {
     shop: Q.get('shop') || localStorage.getItem('foShop') || '',
     poste: Q.get('poste') || localStorage.getItem('foPoste') || 'tous',
-    langue: localStorage.getItem('foLangue') === 'nl' ? 'nl' : 'fr',
+    langue: (Q.get('langue') || localStorage.getItem('foLangue')) === 'nl' ? 'nl' : 'fr',
     init: null, moi: null, jeton: null, suivi: {},
     vue: 'liste', sop: null, etape: 0, vuEtapes: {}, qi: 0, reponses: [], choix: null, resultat: null,
     pinPour: null, pin: '', valideur: null, note: '', occupe: false, erreur: null, magasins: null

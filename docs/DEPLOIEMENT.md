@@ -322,3 +322,30 @@ renouvellement automatique à vérifier) avant d'équiper les tablettes.
 `tablette/img/__absent__.png` répond 404, `api/cockpit/tablette/book` porte
 `"products":[`. Le contrôle de syntaxe `node --check` ignore `public/tablette/`
 (bundle Vite, comme `public/assistant/`).
+
+## Formation — les standards du réseau (SOP)
+
+Adresses : **`https://185.180.206.46/consulant_bo/formation/`** (le module du cockpit, entrée « Formation ↗ » du
+rail, sous Suivi de terrain) et **`…/consulant_bo/formation/tablette.html?shop=<id>&poste=cuisson`** (la tablette du
+poste ; l'onglet **SOP** de l'app Cuisine y mène avec le magasin et la langue de l'appareil).
+
+**Rien à installer à la main.** Au premier appel de l'API après le déploiement, `ensureFormation()`
+(`src/formation.php`) crée `ceo_sop`, `ceo_sop_version`, `ceo_sop_suivi`, `ceo_sop_personne`, puis range les 25 SOP de
+`data/formation/sops/*.json` (reprise du Drive du 05/11/2026, FR et NL). La reprise n'écrase jamais une SOP déjà en
+base : nos tables sont la source, on modifie dans Formation › Rédaction et versions. `data/formation/` et
+`public/formation/photos/` doivent donc partir avec le reste (`rsync` du dépôt).
+
+**Le PIN des employés** est vérifié au panel (`GET /shops/{id}/employees`, le même champ que les checklists de l'app
+Cuisine) avec le compte consultant de Paramètres : sans ce compte, la tablette lit mais ne compte rien. Le PIN ne
+quitte jamais le serveur ; 5 essais manqués bloquent la personne 10 minutes. La responsable du magasin (rôle du panel,
+ou case « valide vu faire » dans Formation › Compétences) est seule à valider « vu faire ».
+
+**Les compétences** sont celles du panel : lues sur une route de liste si elle existe, sinon sur les fiches
+techniques des produits (`/products/{id}/technical-sheet/raw`), gardées un jour (bouton « Relire le panel »). Chaque
+SOP s'y rattache dans Rédaction et versions.
+
+**PDF** : le Manuel opératoire et chaque SOP, en FR ou en NL, passent par le moteur PDF des rapports (§ 4) ; sans
+moteur, la page s'ouvre prête à imprimer.
+
+**App Cuisine** (`pwa_kitchen`) : l'onglet SOP redirige vers la tablette ; son adresse se règle par la variable
+d'environnement `FORMATION_URL` de l'app Cuisine (par défaut `https://<même serveur>/consulant_bo/formation/tablette.html`).

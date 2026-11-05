@@ -6,7 +6,7 @@
  * /api/cockpit/*  → API REST
  * fichiers réels  → servis tels quels
  * dossier avec son index.html (tablette/, planogramme/…) → cet index.html
- * fichier absent sous tablette/ ou uploads/ → 404, comme le .htaccess
+ * fichier absent sous tablette/, formation/ ou uploads/ → 404, comme le .htaccess
  * tout le reste   → index.html (SPA)
  */
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -33,7 +33,7 @@ if ($uri !== '/' && is_dir(__DIR__ . $uri) && is_file(rtrim(__DIR__ . $uri, '/')
     }
     return false; // le serveur intégré sert l'index.html du dossier
 }
-if (preg_match('#^/(tablette|uploads|assistant/uploads)(/|$)#', $uri)) {
+if (preg_match('#^/(tablette|formation|uploads|assistant/uploads)(/|$)#', $uri)) {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
     echo 'Fichier absent';
