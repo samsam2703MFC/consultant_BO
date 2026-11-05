@@ -283,5 +283,13 @@ verifie('dans le rapport : la moyenne, l’écart à la précédente, chaque axe
 verifie('sans précédente : « première évaluation » ; sans évaluation : rien', str_contains(suEvalHtml(['notes' => $notes, 'precedent' => null], 'fr', $e), 'première évaluation') && suEvalHtml(null, 'fr', $e) === '');
 verifie('en néerlandais dans le rapport de Halle', str_contains(suEvalHtml(['notes' => $notes, 'precedent' => null], 'nl', $e), 'Snelle evaluatie'));
 
+echo "\nRepères sur les photos de la tablette (05/11/2026)\n";
+$sans = suPhotoReperesHtml('data:image/jpeg;base64,AAAA', [], 'fr');
+verifie('une photo sans repère reste une vignette', str_contains($sans, 'width:31%') && !str_contains($sans, 'position:absolute'));
+$avec = suPhotoReperesHtml('data:image/jpeg;base64,AAAA', [['n' => 1, 'x' => 0.1, 'y' => 0.2, 'l' => 0.3, 'h' => 0.25, 'niveau' => 2, 'txt' => 'Grilles vides à 11 h'],
+    ['n' => 2, 'x' => 0.6, 'y' => 0.1, 'l' => 0.2, 'h' => 0.2, 'niveau' => 4, 'txt' => '']], 'nl');
+verifie('une photo annotée : en grand, ses cadres numérotés, chaque remarque et sa gravité dans la langue du magasin', str_contains($avec, 'width:48%') && substr_count($avec, 'border-radius:4px;box-sizing:border-box') === 2
+    && str_contains($avec, 'left:10.00%;top:20.00%;width:30.00%;height:25.00%') && str_contains($avec, 'Grilles vides à 11 h') && str_contains($avec, 'groot') && str_contains($avec, 'in orde') && str_contains($avec, '2px dashed'));
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

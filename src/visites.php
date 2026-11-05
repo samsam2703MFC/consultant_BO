@@ -224,6 +224,10 @@ function ensureVisites(): void
     $sansEval = true;
     try { $sansEval = Db::row("SHOW COLUMNS FROM con_visite LIKE 'evaluation'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
     if ($sansEval) { try { Db::exec('ALTER TABLE con_visite ADD COLUMN evaluation TEXT NULL'); } catch (Throwable $e) { /* déjà là */ } }
+    // Les repères posés sur une photo à la tablette (05/11/2026, comme dans Contrôle des tâches) : cadres numérotés, gravité, remarque.
+    $sansRep = true;
+    try { $sansRep = Db::row("SHOW COLUMNS FROM con_visite_photo LIKE 'reperes'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    if ($sansRep) { try { Db::exec('ALTER TABLE con_visite_photo ADD COLUMN reperes TEXT NULL'); } catch (Throwable $e) { /* déjà là */ } }
     // Le jeton de l'horloge : lu en base par bin/visites_cron.sh à chaque appel.
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
         ['visitesJeton', json_encode(bin2hex(random_bytes(24)))]);
@@ -517,7 +521,9 @@ function viPhotoLigne(array $p): array
 {
     return ['id' => (int) $p['id'], 'client_id' => $p['client_id'], 'visite_id' => $p['visite_id'] !== null ? (int) $p['visite_id'] : null,
         'shop' => (string) $p['shop_id'], 'plan_id' => $p['plan_id'] !== null ? (int) $p['plan_id'] : null, 'ref' => $p['point_ref'],
-        'genre' => $p['genre'], 'chemin' => $p['chemin'], 'prise_a' => $p['prise_a'], 'par' => $p['par']];
+        'genre' => $p['genre'], 'chemin' => $p['chemin'], 'prise_a' => $p['prise_a'], 'par' => $p['par'],
+        // Les repères posés à la tablette : [{ n, x, y, l, h (fractions de la photo), niveau, txt }].
+        'reperes' => !empty($p['reperes']) ? (json_decode((string) $p['reperes'], true) ?: []) : []];
 }
 
 function viPlanLigne(array $p): array
@@ -837,6 +843,8 @@ function ep_visites_app(): array
         'visites' => $visites, 'points' => $points, 'photos' => $photos, 'plans' => $e['plans'],
         'msp' => $e['msp'], 'equipe' => $e['equipe'], 'checklist' => viChecklist(), 'photosQuestions' => viPhotos(), 'charte' => viCharte(), 'types' => $types, 'cadre' => function_exists('vcCadre') ? vcCadre() : [], 'taches' => $taches,
         'causes' => viCausesPlano(), 'causesDiag' => viCausesDiag(), 'seuils' => viSeuils(),
+        // Les repères sur photo (05/11/2026) : le barème de gravité du Contrôle des tâches (réglage « signalement »), ses couleurs.
+        'reperesNiveaux' => viReperesNiveaux(),
         // Bilingue (26/10/2026) : la langue de chaque magasin (Qui fait quoi, sinon sa région) ouvre la checklist en FR ou en NL.
         'langues' => function_exists('suLangue') ? (object) array_map(static fn ($id) => suLangue((string) $id), array_combine(array_keys($mags), array_keys($mags)) ?: []) : (object) [],
         'typesReponse' => VI_TYPES_REPONSE,
@@ -1153,6 +1161,31 @@ function viPhotoEnregistrer(array $b): array
          $genre, $chemin, $prise, $lat, $lng, $info[0] ?? null, $info[1] ?? null, strlen($bin), in_array($b['par'] ?? '', VI_ROLES, true) ? $b['par'] : 'consultant']);
     $id = (int) Db::pdo()->lastInsertId();
     return ['ok' => true, 'photo' => viPhotoLigne(Db::row('SELECT * FROM con_visite_photo WHERE id = ?', [$id]))];
+}
+
+/** Le barème des repères : celui du Contrôle des tâches (réglage « signalement »), sinon le barème livré. */
+function viReperesNiveaux(): array
+{
+    $sig = setting('signalement', []);
+    $l = is_array($sig) && !empty($sig['niveaux']) ? $sig['niveaux'] : (function_exists('signalementDefaut') ? signalementDefaut()['niveaux'] : []);
+    return array_values(array_map(static fn ($n) => ['n' => (int) $n['n'], 'nom' => (string) $n['nom'], 'couleur' => (string) ($n['couleur'] ?? '#D97706')], array_filter((array) $l, 'is_array')));
+}
+
+/**
+ * PUT /visites/photos/{id}/reperes — les repères d'une photo de la tablette (05/11/2026) : { reperes: [{ x, y, l, h,
+ * niveau, txt }] }, la photo par son id ou son client_id (une photo prise hors ligne n'a pas encore d'id). Une liste
+ * vide efface. Les cadres sont bornés comme ceux du Contrôle des tâches (annotationNormalise).
+ */
+function wr_visites_photo_reperes(string $id): array
+{
+    ensureVisites();
+    $p = ctype_digit($id) ? Db::row('SELECT * FROM con_visite_photo WHERE id = ?', [(int) $id]) : null;
+    $p = $p ?? Db::row('SELECT * FROM con_visite_photo WHERE client_id = ?', [mb_substr($id, 0, 40)]);
+    if ($p === null) { http_response_code(404); return ['error' => 'photo inconnue']; }
+    $b = body();
+    $liste = annotationNormalise(is_array($b['reperes'] ?? null) ? $b['reperes'] : []);
+    Db::exec('UPDATE con_visite_photo SET reperes = ? WHERE id = ?', [$liste ? json_encode($liste, JSON_UNESCAPED_UNICODE) : null, (int) $p['id']]);
+    return ['ok' => true, 'n' => count($liste), 'photo' => viPhotoLigne(Db::row('SELECT * FROM con_visite_photo WHERE id = ?', [(int) $p['id']]))];
 }
 
 /* --- écritures : plans d'action ---------------------------------------------- */

@@ -486,6 +486,51 @@
 .vi.tab .tb-step .phs{gap:12px}
 .vi.tab .tb-step .phs .ph{height:210px;border-radius:14px;font-size:15px}
 .vi.tab .tb-vide{padding:30px;text-align:center;color:var(--color-text-muted);font-size:14px}
+/* Les repères sur une photo (05/11/2026, comme dans Contrôle des tâches) : la visionneuse les montre avec leurs remarques ;
+   « Annoter » ouvre l'éditeur : on glisse le doigt pour tracer un cadre numéroté, à la gravité choisie, puis sa remarque. */
+.vi .voir.v2{justify-content:flex-start;align-items:stretch;padding:0;background:#0d0b09;z-index:50}
+.vi .vw-hd{display:flex;align-items:center;gap:10px;padding:12px 16px;color:#fff;font:600 13px var(--font-ui)}.vi .vw-hd .sp{flex:1}
+.vi .vw-hd .btn{height:40px}.vi .vw-x{width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:17px;cursor:pointer}
+.vi .vw-ph{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 16px}
+.vi .rp-surf{position:relative;display:inline-block;line-height:0;max-width:100%}
+.vi .rp-surf img{display:block;max-width:100%;max-height:calc(100dvh - 250px);border-radius:6px;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;pointer-events:none}
+.vi .rp-k{position:absolute;box-sizing:border-box;border-radius:5px;border:3px solid var(--c);outline:2px solid rgba(255,255,255,.85)}
+.vi .rp-k.l1{box-shadow:inset 0 0 0 3px rgba(255,255,255,.9),inset 0 0 0 6px var(--c)}.vi .rp-k.l4,.vi .rp-k.l5{border-width:2px;border-style:dashed}
+.vi .rp-k b{position:absolute;left:-4px;top:-15px;min-width:24px;height:24px;padding:0 5px;border-radius:7px;display:flex;align-items:center;justify-content:center;font:700 13px var(--font-ui);color:#fff;background:var(--c);border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.vi .rp-k.on{outline:3px solid #fff;z-index:3}.vi .rp-k.tmp{border-style:dashed;outline:none}
+.vi .vw-pied{background:var(--color-surface);color:var(--color-text);margin:10px 16px calc(14px + env(safe-area-inset-bottom,0px));border-radius:14px;padding:10px 14px;max-height:30dvh;overflow-y:auto}
+.vi .rp-l{display:flex;gap:9px;align-items:flex-start;font-size:13px;line-height:1.4;padding:4px 0}.vi .rp-l em{font-style:normal;font-weight:700;font-size:11.5px;white-space:nowrap}
+.vi .rp-n{flex:0 0 auto;min-width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--font-ui);color:#fff;padding:0 4px;background:var(--c)}
+.vi .rp-bdg{position:absolute;left:6px;top:5px;font:700 10.5px var(--font-ui);background:#fff;color:var(--color-primary);padding:2px 6px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.vi .ph-v .rp-bdg{left:3px;top:3px;font-size:9.5px;padding:1px 4px}
+.vi .ed{position:fixed;inset:0;z-index:52;background:var(--color-surface);display:flex;flex-direction:column;color:var(--color-text)}
+.vi .ed-hd{display:flex;align-items:flex-start;gap:14px;padding:12px 18px;border-bottom:.5px solid var(--color-border-tertiary)}.vi .ed-hd .sp{flex:1}
+.vi .ed-hd small{font:600 10.5px var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--color-text-muted)}.vi .ed-hd b{display:block;font:600 17px var(--font-ui);margin-top:2px}.vi .ed-hd span.s{display:block;font-size:12px;color:var(--color-text-muted);margin-top:2px}
+.vi .ed-hd .vw-x{background:var(--color-background-secondary);color:var(--color-text-muted)}
+.vi .ed-c{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px}
+.vi .ed-g{display:flex;flex-direction:column;min-width:0;min-height:0}
+.vi .ed-ph{flex:1;min-height:0;background:#141110;display:flex;align-items:center;justify-content:center;padding:18px}
+.vi .ed-ph .rp-surf{touch-action:none;cursor:crosshair}.vi .ed-ph .rp-surf img{max-height:calc(100dvh - 230px)}
+.vi .ed-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;background:var(--color-background-secondary);border-top:.5px solid var(--color-border-tertiary)}
+.vi .ed-bar .lab{font:600 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}.vi .ed-bar .sp{flex:1}.vi .ed-bar .aide{font-size:11.5px;color:var(--color-text-muted)}
+.vi .ed-bar .sep{width:1px;height:26px;background:var(--color-border-tertiary);margin:0 2px}
+.vi .ed-niv,.vi .ed-out{display:inline-flex;align-items:center;gap:7px;border-radius:9px;height:40px;padding:0 13px;font:600 12px var(--font-ui);cursor:pointer;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)}
+.vi .ed-niv i{width:12px;height:12px;border-radius:3px;background:var(--c)}.vi .ed-niv.on{border:2px solid var(--c);color:var(--c);padding:0 12px}
+.vi .ed-out:disabled{opacity:.45;cursor:not-allowed}
+.vi .ed-d{border-left:.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;min-height:0}
+.vi .ed-d .tt{padding:12px 14px 8px;font:600 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
+.vi .ed-ls{flex:1;overflow-y:auto}
+.vi .ed-r{padding:10px 14px;border-top:.5px solid var(--color-border-tertiary)}.vi .ed-r.on{background:rgba(141,29,44,.045);box-shadow:inset 3px 0 0 var(--color-primary)}
+.vi .ed-r .h{display:flex;align-items:center;gap:8px}.vi .ed-r .h .sp{flex:1}.vi .ed-r .h b{font-size:12.5px}
+.vi .ed-r .x{border:none;background:none;color:var(--color-text-muted);font-size:15px;cursor:pointer;width:32px;height:32px}
+.vi .ed-r .nv{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:7px 0}
+.vi .ed-r .nv button{height:32px;padding:0 2px;font-size:10.5px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:7px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);font:600 11px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
+.vi .ed-r .nv button.on{color:#fff;border-color:transparent;background:var(--c)}
+.vi .ed-r textarea{min-height:44px;font-size:13px}
+.vi .ed-vide{padding:6px 16px 20px;color:var(--color-text-muted);font-size:13px;line-height:1.5}
+.vi .ed-bil{padding:9px 14px;display:flex;gap:12px;flex-wrap:wrap;font-size:12px;border-top:.5px solid var(--color-border-tertiary);color:var(--color-text-muted)}.vi .ed-bil b{color:var(--c)}
+.vi .ed-act{display:flex;gap:8px;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));border-top:.5px solid var(--color-border-tertiary)}.vi .ed-act .btn{flex:1;height:46px}
+@media (max-width:900px){.vi .ed-c{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}.vi .ed-d{border-left:none;border-top:.5px solid var(--color-border-tertiary);max-height:42dvh}.vi .ed-ph .rp-surf img{max-height:calc(58dvh - 150px)}}
 /* L'évaluation rapide de fin de visite (05/11/2026) : le radar à gauche, les six axes à droite ; empilés sur un écran étroit. */
 .vi .ev{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:12px;align-items:start}
 .vi .ev-radar{position:sticky;top:8px;text-align:center}.vi .ev-radar svg{width:100%;height:auto;display:block}
@@ -671,6 +716,10 @@
   const EVAL_NOTES = [[1, 'Insuffisant'], [2, 'À améliorer'], [3, 'Correct'], [4, 'Bien'], [5, 'Très bien']];
   // Les libellés néerlandais des axes : seulement pour mesurer la place du radar (la traduction de l'écran passe par visites-nl.js).
   const EVAL_NL = { proprete: 'Netheid', metier: 'Vakkennis', management: 'Management', commercial: 'Commerciële ontwikkeling', client: 'Klantcontact', normes: 'Naleving van de normen' };
+  // Le barème des repères, si le serveur ne l'envoie pas : celui du Contrôle des tâches (installer.php, signalementDefaut).
+  const REP_NIV = [{ n: 5, nom: 'Exemplaire', couleur: '#C9A227' }, { n: 4, nom: 'Conforme', couleur: '#2D7A3E' }, { n: 3, nom: 'Non conforme — mineur', couleur: '#D97706' },
+    { n: 2, nom: 'Non conforme — majeur', couleur: '#C0182B' }, { n: 1, nom: 'Non conforme — critique', couleur: '#8D1D2C' }];
+  const repCourt = nom => { const c = String(nom || '').replace(/^Non conforme\s*[—-]\s*/i, ''); return c.charAt(0).toUpperCase() + c.slice(1); };
   const evalTon = n => n >= 4 ? 'ok' : n === 3 ? 'att' : n >= 1 ? 'ko' : 'mu';
   const MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const jours = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
@@ -713,13 +762,13 @@
       this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
-      this.toast = null; this.voir = null; this.ouvert = {}; this.CK = null; this.ckF = {};
+      this.toast = null; this.voir = null; this.ed = null; this.ouvert = {}; this.CK = null; this.ckF = {};
       if (!document.getElementById('vi-css')) { const st = document.createElement('style'); st.id = 'vi-css'; st.textContent = CSS; document.head.appendChild(st); }
       host.innerHTML = '<div class="vi ' + (o.tablette ? 'tab' : o.mobile ? 'mob' : 'desk') + '"><div class="sc"><div class="mu sm" style="padding:20px 0">Lecture…</div></div></div>';
       host.addEventListener('click', e => this.clic(e));
       host.addEventListener('input', e => this.saisie(e));
       host.addEventListener('change', e => this.change(e));
-      this.ecouterSignature(host); this.ecouterGlisse(host);
+      this.ecouterSignature(host); this.ecouterGlisse(host); this.ecouterReperes(host);
       window.addEventListener('online', () => { this.enLigne = true; this.rejouer(); this.rendre(); });
       window.addEventListener('offline', () => { this.enLigne = false; this.rendre(); });
       if (o.mobile || o.tablette) { window.addEventListener('hashchange', () => this.deHash()); this.deHash(true); }
@@ -797,6 +846,7 @@
       if (op.apres === 'plans' && j.plans) { j.plans.forEach(p => { const i = D.plans.findIndex(x => x.client_id === p.client_id || x.id === p.id); if (i >= 0) { D.plans[i] = p; } else { D.plans.push(p); } }); }
       if (op.apres === 'plan' && j.plan) { const i = D.plans.findIndex(x => x.id === j.plan.id || (x.client_id && x.client_id === j.plan.client_id)); if (i >= 0) { D.plans[i] = j.plan; } }
       if (op.apres === 'photo' && j.photo) { const i = D.photos.findIndex(x => x.client_id === j.photo.client_id); if (i >= 0) { D.photos[i] = j.photo; } else { D.photos.unshift(j.photo); } }
+      if (op.apres === 'reperes' && j.photo) { const i = D.photos.findIndex(x => String(x.id) === String(j.photo.id) || (x.client_id && x.client_id === j.photo.client_id)); if (i >= 0) { D.photos[i] = Object.assign({}, D.photos[i], { reperes: j.photo.reperes }); } }
       if (op.apres === 'tache' && j.tache) { const i = (D.taches || []).findIndex(x => x.id === j.tache.id); if (i >= 0) { D.taches[i] = j.tache; } }
       if (op.apres === 'controle') { const t = this.cqTache(op.body); if (t) { t.attente = false; delete t._avant; } this.dire('Note ' + (op.body || {}).note + '/5 enregistrée.'); }
     }
@@ -813,6 +863,8 @@
         if (op.apres === 'photo' && !D.photos.some(x => x.client_id === b.client_id)) { D.photos.unshift({ client_id: b.client_id, visite_id: b.visite_id || null, shop: b.shop, plan_id: b.plan_id || null, ref: b.ref || null, genre: b.genre, data: b.data, prise_a: b.prise_a, attente: true }); }
         if (op.apres === 'plans') { (b.plans || []).forEach(p => { if (!D.plans.some(x => x.client_id === p.client_id)) { D.plans.push(Object.assign({ id: p.client_id, statut: 'ouvert', cree_le: op.quand, maj_le: op.quand, retard: 0, age: 0, attente: true }, p)); } }); }
         if (op.apres === 'plan') { const p = this.plan(op.path.split('/')[2]); if (p) { Object.assign(p, b, { attente: true }); } }
+        // Des repères posés hors ligne : la photo relue les retrouve tant qu'ils attendent dans la file.
+        if (op.apres === 'reperes') { const p = this.photoPar(decodeURIComponent(op.path.split('/')[3])); if (p) { p.reperes = b.reperes || []; } }
       });
     }
 
@@ -1334,7 +1386,7 @@
         + (tab ? '' : `<div class="sc">${this.etat()}${V}</div>`)
         + (this.o.mobile && !this.o.sansOnglets && !tab ? `<div class="bas" style="grid-template-columns:repeat(${onglets.length},1fr)">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}"><i>${t[1]}</i>${t[2]}</button>`).join('')}</div>` : '')
         + (this.toast ? `<div class="toast">${esc(this.toast)}</div>` : '')
-        + (this.voir ? `<div class="voir" data-a="fermer-voir"><img src="${esc(this.voir.src)}" alt=""><div class="txt">${esc(this.voir.txt)}</div></div>` : '')
+        + (this.ed ? this.edHtml() : this.voir ? this.voirHtml() : '')
         + (this.cqV ? this.cqLoupe() : '') + (this.tmV ? this.tmLoupe() : '');
       // La tablette en néerlandais (26/10/2026) : visites-nl.js relit l'écran rendu et le traduit.
       const lng = tab ? this.lngTab() : 'fr'; vi.setAttribute('lang', lng);
@@ -1737,7 +1789,7 @@
       const pj = this.photosJour(shop); const t = auj();
       // Au contrôle, chaque photo porte sa question : la réponse dessous, du type réglé (Réglages › Checklist).
       const rep = avecRep && vEnCours ? g => { const q = this.photosQ().points.find(x => x.ref === g); return q ? this.photoReponseHtml(vEnCours, q) : ''; } : null;
-      const jour = GENRES_JOUR.filter(([g]) => !genres || genres.includes(g)).map(([g, l]) => { const p = pj.find(x => x.genre === g && String(x.prise_a).slice(0, 10) === t); const tuile = p ? `<div class="ph" style="background-image:url('${esc(this.photoSrc(p))}')" data-a="voir" data-v="${esc(p.client_id || p.id)}"><small>${fmtH(p.prise_a)}</small>${p.attente ? '<span class="att">à envoyer</span>' : ''}</div>` : `<div class="ph vide" data-a="photo" data-v="${g}|${esc(shop)}${vEnCours ? '|' + vEnCours.id : ''}">📷 ${l}</div>`; return rep ? `<div class="phq">${tuile}${rep(g)}</div>` : tuile; }).join('');
+      const jour = GENRES_JOUR.filter(([g]) => !genres || genres.includes(g)).map(([g, l]) => { const p = pj.find(x => x.genre === g && String(x.prise_a).slice(0, 10) === t); const tuile = p ? `<div class="ph" style="background-image:url('${esc(this.photoSrc(p))}')" data-a="voir" data-v="${esc(p.client_id || p.id)}"><small>${fmtH(p.prise_a)}</small>${this.repBadge(p)}${p.attente ? '<span class="att">à envoyer</span>' : ''}</div>` : `<div class="ph vide" data-a="photo" data-v="${g}|${esc(shop)}${vEnCours ? '|' + vEnCours.id : ''}">📷 ${l}</div>`; return rep ? `<div class="phq">${tuile}${rep(g)}</div>` : tuile; }).join('');
       return `<div class="cap">${genres && genres.length === 1 ? 'La photo du jour' : 'Les photos du jour'}</div><div class="phs${rep ? ' rep' : ''}">${jour}</div><div class="xs mu" style="margin:4px 2px">Horodatée, position si consentie, EXIF retiré à la réduction · ${pj.length ? pj.length + ' photos sur 90 j' : 'première photo'}</div>`;
     }
     /** La question d'une photo du jour : son libellé, sa réponse (OK / Écart / N/A, Oui / Non, note, choix…), une remarque. */
@@ -1897,7 +1949,7 @@
             const aide = libDe({ libelle: pt.aide, libelle_nl: pt.aide_nl }, l);
             const lib = `<b${tab ? '' : ' class="sm"'} style="flex:1">${esc(libDe(pt, l))}${aide ? `<small class="aide">${esc(aide)}</small>` : ''}</b>`;
             const photoBtn = pt.photo || phs.length ? `<button class="chip${sansPh ? ' exige' : ''}" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' ' + (phs.length > 1 ? T.photos : T.photo.toLowerCase()) : sansPh ? T.phExige : T.photo}</button>` : '';
-            const act = `<div class="act">${typeBtn}${photoBtn}${phs.map(x => `<button class="ph-v" data-a="voir" data-v="${esc(x.client_id || x.id)}" style="background-image:url('${esc(this.photoSrc(x))}')"><small>${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</small></button>`).join('')}
+            const act = `<div class="act">${typeBtn}${photoBtn}${phs.map(x => `<button class="ph-v" data-a="voir" data-v="${esc(x.client_id || x.id)}" style="background-image:url('${esc(this.photoSrc(x))}')"><small>${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</small>${this.repBadge(x)}</button>`).join('')}
               ${pt.pct ? Object.keys(causes).map(c => `<button class="chip ${(p.causes || []).includes(c) ? 'on' : ''}" data-a="cause" data-v="${k}|${c}">${esc(causes[c])}</button>`).join('') : ''}
               ${t === 'texte' ? '' : `<input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="${pt.commentaireNon && p.etat === 'ko' ? T.comNon : T.rem}"${sansCom ? ' class="exige"' : ''} style="flex:1;${tab ? 'min-width:180px;padding:6px 10px' : 'min-width:120px;padding:5px 8px;font-size:12px'}">`}</div>`;
             if (tab) { return `<div class="pt t ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1">${lib}${ligne}</div>${dessous}${att}${act}</div>`; }
@@ -2483,7 +2535,10 @@
       const a = el.dataset.a; const v = el.dataset.v || ''; const parts = v.split('|');
       if (a === 'go') { const [vue, p] = v.split('/'); this.go(vue, p); return; }
       if (a === 'fermer-voir') { this.voir = null; this.rendre(); return; }
-      if (a === 'voir') { const p = (this.D.photos || []).find(x => String(x.id) === v || x.client_id === v); if (p) { this.voir = { src: this.photoSrc(p), txt: (this.boutique(p.shop) || {}).court + ' · ' + fmtDJ(p.prise_a) + ' ' + fmtH(p.prise_a) + ' · ' + p.genre.replace('jour_', '') + (p.attente ? ' · pas encore envoyée' : '') }; this.rendre(); } return; }
+      if (a === 'voir') { const p = this.photoPar(v); if (p) { this.voir = { src: this.photoSrc(p), pid: p.client_id || String(p.id), txt: this.photoTitre(p) + (p.attente ? ' · pas encore envoyée' : '') }; this.rendre(); } return; }
+      // Les repères sur une photo (05/11/2026) : l'éditeur, comme dans Contrôle des tâches.
+      if (a === 'ed-ouvrir') { const p = this.photoPar(v); if (p) { this.ed = { pid: p.client_id || String(p.id), rep: (p.reperes || []).map(r => Object.assign({}, r)), niv: 3, sel: null }; this.rendre(); } return; }
+      if (this.ed && a.startsWith('ed-')) { this.edAction(a, v); return; }
       if (a === 'cq-f') { this.cqF[parts[0]] = parts[1]; this.rendre(); return; }
       if (a === 'cq-voir') { this.cqV = { shop: parts[0], taskId: parts[1] }; this.rendre(); return; }
       if (a === 'cq-fermer') { this.cqV = null; this.rendre(); return; }
@@ -2582,6 +2637,7 @@
       const el = e.target; const f = el.dataset && el.dataset.f; if (!f) { return; }
       const parts = f.split('|');
       if (parts[0] === 'form') { this.form[parts[1]] = el.value; return; }
+      if (parts[0] === 'ed') { const r = this.ed && this.ed.rep[Number(parts[1])]; if (r) { r.txt = el.value; } return; }
       if (parts[0] === 'vb') { const vb = this.form.vb; if (vb) { if (parts[1] === 'p') { vb.pistes[Number(parts[2])] = el.value; } else { vb[parts[1]] = el.value; } } return; }
       if (parts[0] === 'pa') { if (this.form.pa && this.form.pa[Number(parts[1])]) { this.form.pa[Number(parts[1])][parts[2]] = el.value; } return; }
       if (parts[0] === 'ckc') { this.ckF[parts[1]] = Object.assign(this.ckF[parts[1]] || {}, { commentaire: el.value }); return; }
@@ -2880,6 +2936,98 @@
         <div class="sc-mods"><span class="h">${nl ? 'Module' : 'Module'}</span><span class="h n">${nl ? 'Vorig' : 'Précédente'}</span><span class="h n">${nl ? 'Nu' : 'Actuelle'}</span><span class="h n">${nl ? 'Verschil' : 'Écart'}</span>
           ${a.modules.map(m => `<span>${esc(nomDe(m, nl ? 'nl' : 'fr'))}</span><span class="n mu">${avant[m.id] != null ? avant[m.id] : '—'}</span><span class="n"><b class="${ton(m.score)}">${m.score}</b></span><span class="n">${avant[m.id] != null ? ec(m.score - avant[m.id]) : ''}</span>`).join('')}</div>
         <div class="xs mu" style="margin-top:6px">${nl ? 'Op ' + a.n + ' gescoorde vragen: elk punt in orde telt volgens zijn gewicht. Tellen niet mee: N.v.t., vrije tekst, vragen buiten de score.' : 'Sur ' + a.n + ' questions notées : chaque point conforme compte selon son poids. Ne comptent pas : N/A, texte libre, questions hors score.'}</div></div>`;
+    }
+    /** Une photo de la tablette par son id ou son client_id (une photo prise hors ligne n'a pas encore d'id). */
+    photoPar(v) { return (this.D.photos || []).find(x => String(x.id) === String(v) || x.client_id === v) || null; }
+    /** Ce que montre une photo : le magasin, le jour, et ce qu'elle est (photo du jour, point de checklist, correction…). */
+    photoTitre(p) {
+      const j = GENRES_JOUR.find(g => g[0] === p.genre);
+      let quoi = j ? j[1] : ({ correction: 'Correction', avant: 'Avant', apres: 'Après', msp: 'Client mystère' })[p.genre] || 'Photo';
+      if (p.ref) { (this.D.checklist || []).concat(...((this.D.types || []).map(t => t.checklist || []))).forEach(m => (m.points || []).forEach(pt => { if (pt.ref === p.ref) { quoi = pt.libelle; } })); }
+      return (this.boutique(p.shop) || {}).court + ' · ' + quoi + ' · ' + fmtDJ(p.prise_a) + ' ' + fmtH(p.prise_a);
+    }
+    /** Le barème des repères : celui du serveur (Contrôle des tâches), sinon le barème livré. */
+    repNiveaux() { const l = (this.D && this.D.reperesNiveaux) || []; return (l.length ? l : REP_NIV).slice().sort((a, b) => a.n - b.n); }
+    repNiv(n) { const l = this.repNiveaux(); return l.find(x => +x.n === +n) || l.find(x => +x.n === 3) || l[0]; }
+    /** Les cadres d'une photo, en pourcentage d'elle : ils suivent la taille d'affichage. */
+    repCadres(rep, sel) {
+      return (rep || []).map((r, i) => { const lv = this.repNiv(r.niveau); return `<i class="rp-k l${+r.niveau}${sel === i ? ' on' : ''}" data-a="ed-sel" data-v="${i}" style="--c:${esc(lv.couleur)};left:${(r.x * 100).toFixed(2)}%;top:${(r.y * 100).toFixed(2)}%;width:${(r.l * 100).toFixed(2)}%;height:${(r.h * 100).toFixed(2)}%"><b>${i + 1}</b></i>`; }).join('');
+    }
+    /** La pastille d'une vignette qui porte des repères. */
+    repBadge(p) { const n = p && p.reperes ? p.reperes.length : 0; return n ? `<span class="rp-bdg">✎ ${n}</span>` : ''; }
+    /** La photo en grand : ses repères et leurs remarques ; « Annoter » ouvre l'éditeur. */
+    voirHtml() {
+      const V = this.voir; const p = V.pid ? this.photoPar(V.pid) : null;
+      if (!p) { return `<div class="voir" data-a="fermer-voir"><img src="${esc(V.src)}" alt=""><div class="txt">${esc(V.txt)}</div></div>`; }
+      const rep = p.reperes || [];
+      return `<div class="voir v2" role="dialog"><div class="vw-hd"><span>${esc(V.txt)}</span><span class="sp"></span><button type="button" class="btn p" data-a="ed-ouvrir" data-v="${esc(V.pid)}">✎ ${rep.length ? 'Modifier les repères' : 'Annoter la photo'}</button><button type="button" class="vw-x" data-a="fermer-voir" aria-label="fermer">✕</button></div>
+        <div class="vw-ph"><span class="rp-surf"><img src="${esc(V.src)}" alt="">${this.repCadres(rep, null)}</span></div>
+        ${rep.length ? `<div class="vw-pied">${rep.map((r, i) => { const lv = this.repNiv(r.niveau); return `<div class="rp-l"><span class="rp-n" style="--c:${esc(lv.couleur)}">${i + 1}</span><em style="color:${esc(lv.couleur)}">${esc(repCourt(lv.nom))}</em><span>${esc(r.txt || '')}</span></div>`; }).join('')}</div>` : ''}</div>`;
+    }
+    /** L'éditeur : la photo à gauche (glisser pour tracer), la gravité du prochain repère dessous, les remarques à droite. */
+    edHtml() {
+      const E = this.ed; const p = this.photoPar(E.pid); if (!p) { this.ed = null; return ''; }
+      const N = this.repNiveaux().slice().reverse();
+      const bilan = N.map(lv => ({ lv, n: E.rep.filter(r => +r.niveau === +lv.n).length })).filter(x => x.n);
+      const lignes = E.rep.map((r, i) => { const lv = this.repNiv(r.niveau); return `<div class="ed-r${E.sel === i ? ' on' : ''}" data-a="ed-sel" data-v="${i}"><div class="h"><span class="rp-n" style="--c:${esc(lv.couleur)}">${i + 1}</span><b style="color:${esc(lv.couleur)}">${esc(repCourt(lv.nom))}</b><span class="sp"></span><button type="button" class="x" data-a="ed-suppr" data-v="${i}" aria-label="retirer le repère">✕</button></div>
+        <div class="nv">${N.map(l2 => `<button type="button" data-a="ed-rniv" data-v="${i}|${l2.n}" class="${+l2.n === +r.niveau ? 'on' : ''}" style="--c:${esc(l2.couleur)}">${esc(repCourt(l2.nom))}</button>`).join('')}</div>
+        <textarea data-f="ed|${i}" rows="2" placeholder="Ce qu’on voit, ce qu’il faut reprendre">${esc(r.txt || '')}</textarea></div>`; }).join('');
+      return `<div class="ed" role="dialog" aria-label="Repères sur la photo"><div class="ed-hd"><div><small>Repères sur la photo</small><b>${esc(this.photoTitre(p))}</b><span class="s">Ils partent dans le rapport avec la photo, numérotés, chacun avec sa remarque.</span></div><span class="sp"></span><button type="button" class="vw-x" data-a="ed-annuler" aria-label="fermer sans enregistrer">✕</button></div>
+        <div class="ed-c"><div class="ed-g"><div class="ed-ph"><span class="rp-surf" data-edsurf><img src="${esc(this.photoSrc(p))}" alt="">${this.repCadres(E.rep, E.sel)}</span></div>
+          <div class="ed-bar"><span class="lab">Gravité du prochain repère</span>${N.map(lv => `<button type="button" class="ed-niv${+lv.n === +E.niv ? ' on' : ''}" data-a="ed-niv" data-v="${lv.n}" style="--c:${esc(lv.couleur)}"><i></i>${esc(repCourt(lv.nom))}</button>`).join('')}
+            <span class="sep"></span><button type="button" class="ed-out" data-a="ed-undo"${E.rep.length ? '' : ' disabled'}>↶ Retirer le dernier</button><button type="button" class="ed-out" data-a="ed-vider"${E.rep.length ? '' : ' disabled'}>Tout effacer</button>
+            <span class="sp"></span><span class="aide">Glissez le doigt sur la zone — le numéro s’ajoute tout seul</span></div></div>
+          <div class="ed-d"><div class="tt">${E.rep.length ? E.rep.length + ' repère' + (E.rep.length > 1 ? 's' : '') : 'Aucun repère'}</div>
+            <div class="ed-ls">${lignes || '<div class="ed-vide">Tracez un cadre sur ce qui ne va pas — ou sur ce qui est exemplaire. Chaque cadre reçoit un numéro, sa gravité et une remarque.</div>'}</div>
+            ${bilan.length ? `<div class="ed-bil">${bilan.map(x => `<span style="--c:${esc(x.lv.couleur)}"><b>${x.n}</b> ${esc(repCourt(x.lv.nom).toLowerCase())}</span>`).join('')}</div>` : ''}
+            <div class="ed-act"><button type="button" class="btn" data-a="ed-annuler">Annuler</button><button type="button" class="btn p" data-a="ed-enreg">Enregistrer</button></div></div></div></div>`;
+    }
+    /** Les gestes de l'éditeur. Enregistrer met la photo à jour tout de suite et envoie (file hors ligne comprise). */
+    edAction(a, v) {
+      const E = this.ed;
+      if (a === 'ed-annuler') { this.ed = null; }
+      else if (a === 'ed-niv') { E.niv = Number(v); }
+      else if (a === 'ed-sel') { E.sel = Number(v); }
+      else if (a === 'ed-rniv') { const [i, n] = v.split('|').map(Number); if (E.rep[i]) { E.rep[i].niveau = n; E.sel = i; } }
+      else if (a === 'ed-suppr') { E.rep.splice(Number(v), 1); E.sel = null; }
+      else if (a === 'ed-undo') { E.rep.pop(); E.sel = null; }
+      else if (a === 'ed-vider') { E.rep = []; E.sel = null; }
+      else if (a === 'ed-enreg') {
+        const p = this.photoPar(E.pid);
+        if (p) {
+          p.reperes = E.rep.map((r, i) => ({ n: i + 1, x: r.x, y: r.y, l: r.l, h: r.h, niveau: r.niveau, txt: String(r.txt || '').trim() }));
+          this.ecrire({ method: 'PUT', path: '/visites/photos/' + encodeURIComponent(E.pid) + '/reperes', body: { reperes: p.reperes, qui: this.qui() }, apres: 'reperes' });
+          this.dire(p.reperes.length ? (p.reperes.length > 1 ? p.reperes.length + ' repères enregistrés' : '1 repère enregistré') : 'Repères effacés');
+        }
+        this.ed = null;
+      }
+      this.rendre();
+    }
+    /** Tracer un cadre au doigt (ou à la souris) sur la photo de l'éditeur : en fractions de la photo, 1,5 % au moins. */
+    ecouterReperes(host) {
+      host.addEventListener('pointerdown', e => {
+        const s = e.target.closest && e.target.closest('[data-edsurf]'); if (!s || !this.ed || e.target.closest('.rp-k')) { return; }
+        e.preventDefault(); const r = s.getBoundingClientRect(); if (!r.width || !r.height) { return; }
+        const k = document.createElement('i'); k.className = 'rp-k tmp'; k.style.setProperty('--c', this.repNiv(this.ed.niv).couleur); s.appendChild(k);
+        this._edT = { s, r, k, x0: (e.clientX - r.left) / r.width, y0: (e.clientY - r.top) / r.height, x1: null, y1: null };
+        try { s.setPointerCapture(e.pointerId); } catch (er) { /* sans capture */ }
+      });
+      host.addEventListener('pointermove', e => {
+        const T = this._edT; if (!T) { return; } e.preventDefault();
+        T.x1 = Math.max(0, Math.min(1, (e.clientX - T.r.left) / T.r.width)); T.y1 = Math.max(0, Math.min(1, (e.clientY - T.r.top) / T.r.height));
+        const x = Math.min(T.x0, T.x1), y = Math.min(T.y0, T.y1);
+        Object.assign(T.k.style, { left: x * 100 + '%', top: y * 100 + '%', width: Math.abs(T.x1 - T.x0) * 100 + '%', height: Math.abs(T.y1 - T.y0) * 100 + '%' });
+      });
+      const fin = () => {
+        const T = this._edT; if (!T) { return; } this._edT = null;
+        if (T.x1 == null) { T.k.remove(); return; }
+        const l = Math.abs(T.x1 - T.x0), h = Math.abs(T.y1 - T.y0);
+        if (l < 0.015 || h < 0.015) { T.k.remove(); return; }
+        const r4 = x => Math.round(x * 10000) / 10000;
+        this.ed.rep.push({ x: r4(Math.min(T.x0, T.x1)), y: r4(Math.min(T.y0, T.y1)), l: r4(l), h: r4(h), niveau: this.ed.niv, txt: '' });
+        this.ed.sel = this.ed.rep.length - 1; this.rendre();
+      };
+      host.addEventListener('pointerup', fin); host.addEventListener('pointercancel', fin);
     }
     /** L'évaluation telle qu'elle part : { notes: { axe: { note, com } } } (la forme que le serveur rend), null si rien n'est noté. */
     evalCorps(f) {

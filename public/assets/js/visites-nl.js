@@ -274,6 +274,16 @@
     'Des paiements sont en retard : notez d’abord quoi et le détail, dans la météo du franchisé.': 'Er zijn betalingen achter: noteer eerst wat en het detail, in het weerbericht van de franchisenemer.',
     'Météo du franchisé et ses finances': 'Weerbericht van de franchisenemer en zijn financiën',
     'Enregistrer la météo': 'Weerbericht opslaan', 'Météo enregistrée.': 'Weerbericht opgeslagen.', 'La météo est vide.': 'Het weerbericht is leeg.', 'éclaircies (fin de contrôle)': 'opklaringen (einde controle)', 'éclaircies (fin de contrôle': 'opklaringen (einde controle',
+    // Les repères sur une photo (05/11/2026).
+    'Annoter la photo': 'Foto aanduiden', 'Modifier les repères': 'Aanduidingen wijzigen', 'Repères sur la photo': 'Aanduidingen op de foto',
+    'Ils partent dans le rapport avec la photo, numérotés, chacun avec sa remarque.': 'Ze gaan mee in het verslag met de foto, genummerd, elk met zijn opmerking.',
+    'Gravité du prochain repère': 'Ernst van de volgende aanduiding', 'Retirer le dernier': 'Laatste verwijderen', '↶ Retirer le dernier': '↶ Laatste verwijderen', '✎ Annoter la photo': '✎ Foto aanduiden', '✎ Modifier les repères': '✎ Aanduidingen wijzigen', 'Tout effacer': 'Alles wissen',
+    'Glissez le doigt sur la zone': 'Sleep met de vinger over de zone', 'le numéro s’ajoute tout seul': 'het nummer komt er vanzelf bij',
+    '# repères': '# aanduidingen', '# repère': '# aanduiding', 'Aucun repère': 'Geen aanduiding',
+    'Tracez un cadre sur ce qui ne va pas — ou sur ce qui est exemplaire. Chaque cadre reçoit un numéro, sa gravité et une remarque.': 'Teken een kader rond wat niet goed is — of rond wat voorbeeldig is. Elk kader krijgt een nummer, zijn ernst en een opmerking.',
+    'Ce qu’on voit, ce qu’il faut reprendre': 'Wat we zien, wat moet worden hersteld', 'Exemplaire': 'Voorbeeldig', 'Conforme': 'In orde',
+    'Mineur': 'Klein', 'Majeur': 'Groot', 'Critique': 'Kritiek', 'mineur': 'klein', 'majeur': 'groot', 'critique': 'kritiek', 'exemplaire': 'voorbeeldig', 'conforme': 'in orde',
+    '# repères enregistrés': '# aanduidingen opgeslagen', '1 repère enregistré': '1 aanduiding opgeslagen', 'Repères effacés': 'Aanduidingen gewist', 'Correction': 'Correctie',
     // L'évaluation rapide de fin de visite (05/11/2026).
     'Évaluation rapide': 'Snelle evaluatie', 'Évaluation': 'Evaluatie', 'Évaluation rapide (six notes)': 'Snelle evaluatie (zes scores)',
     'moyenne # / #': 'gemiddelde # / #', '# / # notés': '# / # gescoord', '# notes à donner': 'nog # scores te geven', '# note à donner': 'nog # score te geven',
