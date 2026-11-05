@@ -1520,7 +1520,7 @@ l'entrée). Aucune page n'est dans deux groupes d'onglets ; les anciennes adress
 - Entrées : Dzisiaj, Poczta, Zadania zespołu ; Analiza (Rentowność, Marże i ceny, Koszty) ; Produkcja (Produkcja, Magazyn,
   Zespół, Tablety) ; Zakupy (Zakupy, Surowce i ceny, Dostawcy) ; Produkt (Produkty, Opakowania) ; Sprzedaż (Zamówienia,
   Klienci, Reklamacje i zwroty, Faktury i płatności) ; Logistyka (Dzień wysyłki, Ciężarówki, Wysyłki i dokumenty) ;
-  Administracja (Ustawienia, Uprawnienia i menu, Aktywność). En bas : « Więcej : szukaj strony » (Ctrl K ou « / »).
+  Administracja (Ustawienia, Uprawnienia i menu, Aktywność). En bas : « Szukaj strony » (Ctrl K ou « / ») pour les pages hors menu.
 - `n_position_menu` (id_position, item, open_path) : menu d'un poste (maquette 26) et page ouverte par l'entrée (Jakość :
   « Zakupy » ouvre le contrôle des réceptions). Poste sans ligne = tout le menu, limité à ce qu'il a le droit de voir.
   Valeurs de départ : Kierownik produkcji 11 entrées, Jakość 6, Logistyka 6, Administracja i fakturowanie 7.

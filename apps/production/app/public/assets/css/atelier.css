@@ -1452,7 +1452,7 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 /* [253] Rail : « Więcej : szukaj strony » (strony spoza menu stanowiska) na końcu menu. */
 .sidebar-wrapper .menu .at-rail-more { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--at-line); }
 .sidebar-wrapper .menu .at-rail-more .sidebar-link { color: var(--at-muted); font-size: .88rem; }
-.at-kbd { margin-left: auto; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--at-line-2); background: var(--at-bg-2); color: var(--at-muted); font-size: 10.5px; font-family: inherit; box-shadow: none; }
+.at-kbd { margin-left: auto; white-space: nowrap; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--at-line-2); background: var(--at-bg-2); color: var(--at-muted); font-size: 10.5px; font-family: inherit; box-shadow: none; }
 @media (max-width: 576px) { .at-page-tabs { flex-wrap: nowrap; overflow-x: auto; } .at-page-tabs-title { display: none; } }
 /* Dzień wysyłki : 7 etapów dnia (AppExtension::shippingDaySteps) pod zakładkami grupy */
 .at-day-steps { margin: -6px 0 14px; padding: 10px 12px; border-radius: var(--at-radius-lg); background: var(--at-bg-2); border: 1px solid var(--at-line); }
