@@ -425,12 +425,14 @@ function rapVals(app, sv, id){
       titre: f.titre, detail: f.detail, priorite: f.priorite, echeance: f.echeance,
       basculer: () => majPl(p.id, { inclus: !f.inclus }), setTitre: e => majPl(p.id, { titre: e.target.value }), setDetail: e => majPl(p.id, { detail: e.target.value }),
       setEcheance: e => majPl(p.id, { echeance: e.target.value }), prios: ['P0', 'P1', 'P2'].map(x => ({ v: x, nom: x, on: f.priorite === x })), setPrio: e => majPl(p.id, { priorite: e.target.value }) }; }),
-    photos: d.photos.map(p => ({ src: racine() + p.chemin, genre: p.genre, inclus: !!F.photos[p.id], basculer: envoye ? null : () => maj({ photos: Object.assign({}, F.photos, { [p.id]: !F.photos[p.id] }) }) })),
+    photos: d.photos.map(p => ({ src: racine() + p.chemin, genre: p.genre, inclus: !!F.photos[p.id], reperes: (p.reperes || []).length, basculer: envoye ? null : () => maj({ photos: Object.assign({}, F.photos, { [p.id]: !F.photos[p.id] }) }) })),
     checklist: d.checklist.ok + ' / ' + d.checklist.total + ' conformes' + (d.checklist.na ? ' · ' + d.checklist.na + ' sans objet' : ''),
     ecarts: d.checklist.ecarts.map(e => e.libelle + (e.reponse ? ' : ' + e.reponse : '') + (e.commentaire ? ' — ' + e.commentaire : '')),
     nInclus: inclus.length, nInternes: d.plans.length - inclus.length,
     budget: budgetDe(v.budgetCa),
     score: scoreVals(d.score),
+    evaluation: evalVals(d.evaluation),
+    personnel: equipeVals(v.personnel),
     a: d.envoi.a, source: d.envoi.source, copies: d.envoi.copies.map(x => x.nom + (x.email ? '' : ' (sans adresse)')).join(', ') || 'personne',
     envoie: d.roles.envoieNom, adapte: d.roles.adapteNom, smtp: d.envoi.smtp,
     dernier: d.envoi.dernier ? (d.envoi.dernier.envoye ? 'Dernier courriel : envoyé à ' + d.envoi.dernier.a + ' (' + (d.envoi.dernier.langue || '') + ')' + (d.envoi.dernier.pdf ? ', PDF joint' : ', sans PDF (moteur PDF muet)') + '.' : 'Dernier courriel non parti : ' + d.envoi.dernier.motif + '.') : null,
@@ -451,6 +453,33 @@ function scoreVals(sc){
   return { score: a.score, n: a.n, ton: ton(a.score),
     prec: p ? 'visite du ' + fmtD(sc.precedent.le) + ' : ' + p.score : 'première visite notée', ecart: p ? ec(a.score - p.score) : null,
     modules: a.modules.map(m => ({ nom: m.nom, score: m.score, ton: ton(m.score), ecart: avant[m.id] != null ? ec(m.score - avant[m.id]) : null })) };
+}
+/** L'équipe en poste notée à la tablette (05/11/2026) : interne au bureau. Chaque personne, sa note, ses trois contrôles, sa remarque. */
+function equipeVals(pe){
+  const L = pe && Array.isArray(pe.personnes) ? pe.personnes : [];
+  if (!L.length) { return null; }
+  const ton = x => x == null ? 'mu' : x >= 4 ? 'ok' : x === 3 ? 'att' : 'ko';
+  const ck = (x, nom) => x === 1 ? { nom, cls: 'ok', txt: '✓ ' + nom } : x === 0 ? { nom, cls: 'ko', txt: '✗ ' + nom } : null;
+  const vus = L.filter(p => p.vu !== false), n = vus.map(p => p.note).filter(x => x >= 1);
+  return { moyenne: n.length ? (n.reduce((a, b) => a + b, 0) / n.length).toFixed(1).replace('.', ',') : '—', nVus: vus.length, nPasVus: L.length - vus.length,
+    personnes: L.map(p => ({ nom: p.nom, heures: p.heures || '', pasVu: p.vu === false, note: p.note ? p.note + ' / 5' : '—', ton: ton(p.note), com: p.com || '',
+      checks: [ck(p.tenue, 'tenue'), ck(p.sbam, 'SBAM'), ck(p.xp, 'XP client')].filter(Boolean) })) };
+}
+/**
+ * L'évaluation rapide de fin de visite (05/11/2026) : le radar dessiné par le serveur (le même que dans le PDF), la moyenne
+ * face à la précédente, chaque axe avec sa note, l'écart et le commentaire.
+ */
+function evalVals(ev){
+  if (!ev || !ev.axes) { return null; }
+  const nf = x => x == null ? '—' : Number(x).toFixed(1).replace('.', ',');
+  const ec = (d, entier) => d == null ? null : { txt: (d > 0 ? '+' : d < 0 ? '−' : '±') + (entier ? Math.abs(d) : nf(Math.abs(Math.round(d * 10) / 10))), cls: d > 0 ? 'ok' : d < 0 ? 'ko' : 'mu' };
+  const ton = x => x == null ? 'mu' : x >= 4 ? 'ok' : x === 3 ? 'att' : 'ko';
+  const P = ev.precedent;
+  return { svg: ev.svg, moyenne: nf(ev.moyenne),
+    prec: P ? 'visite du ' + fmtD(P.le) + ' : ' + nf(P.moyenne) + ' / 5' : 'première évaluation',
+    ecart: P && P.moyenne != null && ev.moyenne != null ? ec(ev.moyenne - P.moyenne) : null,
+    axes: ev.axes.map(a => ({ nom: a.nom, note: a.note == null ? '—' : a.note + ' / 5', ton: ton(a.note), com: a.com || '',
+      ecart: a.note != null && a.avant != null ? ec(a.note - a.avant, true) : null })) };
 }
 /** Le CA sous le budget, noté à la tablette avec le franchisé : les écarts, le pourquoi, ses trois pistes et l'échéance. */
 function budgetDe(bc){

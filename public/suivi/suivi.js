@@ -16,7 +16,7 @@
       points: 'Vos points à travailler', aucunPoint: 'Aucun point ouvert : bravo.', pour: 'pour le', retard: 'en retard de {n} j', st_ouvert: 'à corriger', st_reprendre: 'à reprendre', st_escalade: 'urgent',
       st_attente: 'photo envoyée, en attente de validation', retour: 'Le bureau demande', photo: 'Prendre la photo de la correction', autre: 'Changer de photo', mot: 'Un mot pour le bureau (facultatif)',
       envoyer: 'Envoyer la correction', envoi: 'Envoi…', envoye: 'Envoyé : le bureau valide votre photo.', vide: 'Ajoutez une photo ou un mot.', visite: 'visite du', msp: 'client mystère',
-      valides: 'Validés ce mois-ci', rapports: 'Vos rapports de visite', aucunRap: 'Pas encore de rapport.', conformes: 'points conformes', nouveau: 'nouveau', positif: 'Ce qui va bien', vu: 'Vu sur place',
+      valides: 'Validés ce mois-ci', rapports: 'Vos rapports de visite', evalT: 'Évaluation rapide', evMoy: 'moyenne', evPrec: 'visite précédente', evPrem: 'première évaluation', aucunRap: 'Pas encore de rapport.', conformes: 'points conformes', nouveau: 'nouveau', positif: 'Ce qui va bien', vu: 'Vu sur place',
       causes: 'Les causes', reco: 'Recommandation', ptsRap: 'Les points à travailler', photos: 'Les photos', ancien: 'Visite faite avant les rapports en ligne : demandez le détail à votre consultant.',
       mspT: 'Client mystère', pdf: 'Le rapport (PDF)', scoring: 'Scoring du trimestre', rang: '{r}ᵉ sur {m}', prec: 'précédent',
       postes: { google: 'Note Google', taches: 'Tâches', msp: 'Client mystère', budget: 'Budget' }, postesDef: 'Chaque poste vaut 5 : la note Google, vos tâches, le client mystère, le budget.', erreur: 'La page ne répond pas. Réessayez dans un instant.', min: 'min' },
@@ -24,7 +24,7 @@
       points: 'Uw werkpunten', aucunPoint: 'Geen open punten: proficiat.', pour: 'tegen', retard: '{n} d. te laat', st_ouvert: 'te verbeteren', st_reprendre: 'opnieuw te doen', st_escalade: 'dringend',
       st_attente: 'foto verstuurd, wacht op goedkeuring', retour: 'Het kantoor vraagt', photo: 'Foto van de verbetering nemen', autre: 'Andere foto', mot: 'Een woordje voor het kantoor (optioneel)',
       envoyer: 'Verbetering versturen', envoi: 'Versturen…', envoye: 'Verstuurd: het kantoor keurt uw foto goed.', vide: 'Voeg een foto of een woordje toe.', visite: 'bezoek van', msp: 'mystery shopper',
-      valides: 'Goedgekeurd deze maand', rapports: 'Uw bezoekverslagen', aucunRap: 'Nog geen verslag.', conformes: 'punten in orde', nouveau: 'nieuw', positif: 'Wat goed gaat', vu: 'Ter plaatse gezien',
+      valides: 'Goedgekeurd deze maand', rapports: 'Uw bezoekverslagen', evalT: 'Snelle evaluatie', evMoy: 'gemiddelde', evPrec: 'vorig bezoek', evPrem: 'eerste evaluatie', aucunRap: 'Nog geen verslag.', conformes: 'punten in orde', nouveau: 'nieuw', positif: 'Wat goed gaat', vu: 'Ter plaatse gezien',
       causes: 'De oorzaken', reco: 'Aanbeveling', ptsRap: 'De werkpunten', photos: 'De foto’s', ancien: 'Bezoek van vóór de online verslagen: vraag de details aan uw consultant.',
       mspT: 'Mystery shopper', pdf: 'Het verslag (PDF)', scoring: 'Kwartaalscore', rang: '{r}e van {m}', prec: 'vorige',
       postes: { google: 'Google-score', taches: 'Taken', msp: 'Mystery shopper', budget: 'Budget' }, postesDef: 'Elk onderdeel telt voor 5: de Google-score, uw taken, de mystery shopper, het budget.', erreur: 'De pagina antwoordt niet. Probeer het zo meteen opnieuw.', min: 'min' },
@@ -32,7 +32,7 @@
       points: 'Your points to work on', aucunPoint: 'No open points: well done.', pour: 'by', retard: '{n} d late', st_ouvert: 'to fix', st_reprendre: 'to redo', st_escalade: 'urgent',
       st_attente: 'photo sent, awaiting approval', retour: 'The office asks', photo: 'Take a photo of the fix', autre: 'Change photo', mot: 'A note for the office (optional)',
       envoyer: 'Send the fix', envoi: 'Sending…', envoye: 'Sent: the office will review your photo.', vide: 'Add a photo or a note.', visite: 'visit of', msp: 'mystery shopper',
-      valides: 'Approved this month', rapports: 'Your visit reports', aucunRap: 'No report yet.', conformes: 'points compliant', nouveau: 'new', positif: 'What is going well', vu: 'Seen on site',
+      valides: 'Approved this month', rapports: 'Your visit reports', evalT: 'Quick assessment', evMoy: 'average', evPrec: 'previous visit', evPrem: 'first assessment', aucunRap: 'No report yet.', conformes: 'points compliant', nouveau: 'new', positif: 'What is going well', vu: 'Seen on site',
       causes: 'The causes', reco: 'Recommendation', ptsRap: 'Points to work on', photos: 'Photos', ancien: 'Visit made before online reports: ask your consultant for the details.',
       mspT: 'Mystery shopper', pdf: 'The report (PDF)', scoring: 'Quarterly score', rang: 'rank {r} of {m}', prec: 'previous',
       postes: { google: 'Google rating', taches: 'Tasks', msp: 'Mystery shopper', budget: 'Budget' }, postesDef: 'Each part is worth 5: the Google rating, your tasks, the mystery shopper, the budget.', erreur: 'The page is not responding. Try again in a moment.', min: 'min' },
@@ -40,7 +40,7 @@
       points: 'Ihre Arbeitspunkte', aucunPoint: 'Keine offenen Punkte: bravo.', pour: 'bis zum', retard: '{n} T. überfällig', st_ouvert: 'zu beheben', st_reprendre: 'nachzubessern', st_escalade: 'dringend',
       st_attente: 'Foto gesendet, wartet auf Freigabe', retour: 'Das Büro bittet', photo: 'Foto der Korrektur aufnehmen', autre: 'Anderes Foto', mot: 'Eine Notiz für das Büro (optional)',
       envoyer: 'Korrektur senden', envoi: 'Senden…', envoye: 'Gesendet: das Büro prüft Ihr Foto.', vide: 'Fügen Sie ein Foto oder eine Notiz hinzu.', visite: 'Besuch vom', msp: 'Testkauf',
-      valides: 'Diesen Monat freigegeben', rapports: 'Ihre Besuchsberichte', aucunRap: 'Noch kein Bericht.', conformes: 'Punkte konform', nouveau: 'neu', positif: 'Was gut läuft', vu: 'Vor Ort gesehen',
+      valides: 'Diesen Monat freigegeben', rapports: 'Ihre Besuchsberichte', evalT: 'Schnellbewertung', evMoy: 'Durchschnitt', evPrec: 'letzter Besuch', evPrem: 'erste Bewertung', aucunRap: 'Noch kein Bericht.', conformes: 'Punkte konform', nouveau: 'neu', positif: 'Was gut läuft', vu: 'Vor Ort gesehen',
       causes: 'Die Ursachen', reco: 'Empfehlung', ptsRap: 'Die Arbeitspunkte', photos: 'Die Fotos', ancien: 'Besuch vor den Online-Berichten: fragen Sie Ihren Berater nach den Details.',
       mspT: 'Testkauf', pdf: 'Der Bericht (PDF)', scoring: 'Quartalsbewertung', rang: 'Platz {r} von {m}', prec: 'vorher',
       postes: { google: 'Google-Bewertung', taches: 'Aufgaben', msp: 'Testkauf', budget: 'Budget' }, postesDef: 'Jeder Teil zählt 5: die Google-Bewertung, Ihre Aufgaben, der Testkauf, das Budget.', erreur: 'Die Seite antwortet nicht. Versuchen Sie es gleich noch einmal.', min: 'Min.' }
@@ -133,10 +133,20 @@
     const sum = `<summary><b>${esc(fDL(r.le))} · ${esc(r.type)}</b>${nouveau ? `<span class="fr-new" style="display:inline">${esc(L.nouveau)}</span>` : ''}<span>${esc(L.avec)} ${esc(r.consultant)} · ${r.checklist.total ? esc(r.checklist.ok + ' / ' + r.checklist.total + ' ' + L.conformes) : ''}${r.phrase ? ' — ' + esc(r.phrase) : ''}</span></summary>`;
     if (r.ancien) { return `<details class="fr-rap">${sum}<div class="c"><p class="fr-mu">${esc(L.ancien)}</p>${r.reco ? `<div><h3>${esc(L.reco)}</h3><p>${esc(r.reco)}</p></div>` : ''}</div></details>`; }
     const bloc = (t, v) => v ? `<div><h3>${esc(t)}</h3><p>${esc(v).replace(/\n/g, '<br>')}</p></div>` : '';
-    return `<details class="fr-rap" data-rap="${r.id}"${nouveau ? ' data-nouveau="1"' : ''}>${sum}<div class="c">${bloc(L.positif, r.positif)}${bloc(L.vu, r.diagnostic)}
+    // L'évaluation rapide de fin de visite (05/11/2026) : le radar dessiné par le serveur, chaque note et son commentaire.
+    const E = r.evaluation, nf = x => Number(x).toFixed(1).replace('.', ',');
+    const ev = E ? `<div><h3>${esc(L.evalT)}</h3><p><b class="fr-evm">${E.moyenne != null ? esc(nf(E.moyenne)) : '—'}</b> / 5 · ${esc(L.evMoy)}<span class="fr-mu"> · ${E.precedent ? esc(L.evPrec) + ' ' + esc(fD(E.precedent.le)) + ' : ' + esc(nf(E.precedent.moyenne)) : esc(L.evPrem)}</span></p>
+      <div class="fr-evr">${E.svg}</div><div class="fr-ev">${E.axes.map(a => `<b>${esc(a.nom)}</b><span class="n${a.note >= 4 ? ' ok' : a.note === 3 ? ' att' : a.note ? ' ko' : ''}">${a.note ? a.note + ' / 5' : '—'}</span><span class="fr-mu">${esc(a.com || '')}</span>`).join('')}</div></div>` : '';
+    return `<details class="fr-rap" data-rap="${r.id}"${nouveau ? ' data-nouveau="1"' : ''}>${sum}<div class="c">${ev}${bloc(L.positif, r.positif)}${bloc(L.vu, r.diagnostic)}
       ${r.causes && r.causes.length ? `<div><h3>${esc(L.causes)}</h3><p>${r.causes.map(esc).join(' · ')}</p></div>` : ''}${bloc(L.reco, r.reco)}
       ${r.points && r.points.length ? `<div><h3>${esc(L.ptsRap)}</h3><ul>${r.points.map(p => `<li><b>${esc(p.priorite)}</b> · ${esc(p.titre)}${p.echeance ? ' — ' + esc(L.pour) + ' ' + esc(fD(p.echeance)) : ''}</li>`).join('')}</ul></div>` : ''}
-      ${r.photos && r.photos.length ? `<div><h3>${esc(L.photos)}</h3><div class="fr-phs">${r.photos.map(p => `<a href="${esc(src(p.chemin))}" target="_blank" rel="noopener"><img src="${esc(src(p.chemin))}" alt="" loading="lazy"></a>`).join('')}</div></div>` : ''}</div></details>`;
+      ${r.photos && r.photos.length ? `<div><h3>${esc(L.photos)}</h3>${annotees(r.photos)}<div class="fr-phs">${r.photos.filter(p => !(p.reperes || []).length).map(p => `<a href="${esc(src(p.chemin))}" target="_blank" rel="noopener"><img src="${esc(src(p.chemin))}" alt="" loading="lazy"></a>`).join('')}</div></div>` : ''}</div></details>`;
+  }
+  // Les photos annotées par le consultant (05/11/2026) : en grand, les cadres numérotés posés dessus, chaque remarque dessous.
+  function annotees(ps) {
+    const pc = v => (Math.max(0, Math.min(1, +v || 0)) * 100).toFixed(2) + '%';
+    return ps.filter(p => (p.reperes || []).length).map(p => `<figure class="fr-ann"><span class="i"><img src="${esc(src(p.chemin))}" alt="" loading="lazy">${p.reperes.map((x, i) => `<i class="k n${x.n}" style="--c:${esc(x.couleur)};left:${pc(x.x)};top:${pc(x.y)};width:${pc(x.l)};height:${pc(x.h)}"><b>${i + 1}</b></i>`).join('')}</span>
+      <figcaption>${p.reperes.map((x, i) => `<div><b class="n" style="--c:${esc(x.couleur)}">${i + 1}</b><em style="color:${esc(x.couleur)}">${esc(x.grav)}</em>${x.txt ? ' — ' + esc(x.txt) : ''}</div>`).join('')}</figcaption></figure>`).join('');
   }
 
   // La photo réduite avant l'envoi : 1600 px au plus grand côté, JPEG — une photo de téléphone passe de 4 Mo à ~300 Ko.

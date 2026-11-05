@@ -167,6 +167,20 @@
 .vi .vb-j i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#2d7a3e}.vi .vb-j i.dn{background:#C0182B}.vi .vb-j i.or{background:#E0A526}.vi .vb-j i.mu{background:#a99e92}
 .vi .vb-j em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--color-text)}
 .vi .vb-jl{display:flex;justify-content:space-between;gap:8px;margin-top:4px}
+/* Le mois, le trimestre, l'année d'un coup d'œil (05/11/2026) : trois jauges face au budget, au-dessus des onglets. */
+.vi .vb3{padding:12px 14px 10px}.vi .vb3 .t{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}.vi .vb3 .t b{font-size:14px}
+.vi .vb3-r{display:grid;grid-template-columns:150px minmax(0,1fr) 250px;gap:14px;align-items:center;padding:14px 4px 8px;border:none;background:none;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;border-radius:10px}
+.vi .vb3-r + .vb3-r{border-top:.5px solid var(--color-border-tertiary);border-radius:0}.vi .vb3-r.on{background:var(--color-background-secondary)}
+.vi .vb3-r .pl b{display:block;font:400 19px/1.1 var(--font-display)}.vi .vb3-r .pl small{display:block;font-size:11px;color:var(--color-text-muted);margin-top:2px}
+.vi .vb3-b{position:relative;height:24px;border-radius:7px;background:#EFE9E1}
+.vi .vb3-b i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:#2d7a3e}.vi .vb3-b i.dn{background:#C0182B}.vi .vb3-b i.or{background:#E0A526}.vi .vb3-b i.mu{background:#a99e92}
+.vi .vb3-b i.pj{border-radius:0 7px 7px 0;opacity:.35;background:repeating-linear-gradient(135deg,var(--c) 0 3px,transparent 3px 8px)}
+.vi .vb3-b em{position:absolute;top:-5px;bottom:-5px;width:0;border-left:2px dashed var(--color-text)}
+.vi .vb3-b em span{position:absolute;left:6px;top:-17px;white-space:nowrap;font:600 10.5px var(--font-ui);font-style:normal;color:var(--color-text)}.vi .vb3-b em.g span{left:auto;right:6px}
+.vi .vb3-r .pv{font-variant-numeric:tabular-nums}.vi .vb3-r .pv b{font:400 20px var(--font-display)}.vi .vb3-r .pv span{font-size:12px;color:var(--color-text-muted)}
+.vi .vb3-r .pv small{display:block;font-size:11.5px;color:var(--color-text-muted);margin-top:2px}.vi .vb3-r .pv small b{font:700 11.5px var(--font-ui)}
+.vi .vb3 .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);margin-top:6px}.vi .vb3 .leg i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0}
+@media (max-width:760px){.vi .vb3-r{grid-template-columns:1fr;gap:6px}.vi .vb3-b em span{display:none}}
 .vi .vb-f .vb-l{font:600 12.5px var(--font-ui);margin:12px 0 5px}
 .vi .vb-p{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .vi .vb-p .n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--color-primary);color:#fff;font:700 12px var(--font-ui);display:flex;align-items:center;justify-content:center}
@@ -486,6 +500,86 @@
 .vi.tab .tb-step .phs{gap:12px}
 .vi.tab .tb-step .phs .ph{height:210px;border-radius:14px;font-size:15px}
 .vi.tab .tb-vide{padding:30px;text-align:center;color:var(--color-text-muted);font-size:14px}
+/* L'équipe en poste (05/11/2026) : le planning du jour, chaque personne notée de 1 à 5, trois contrôles éclair, une remarque. */
+.vi .eq-som{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.vi .eq-som .k{font:400 30px/1 var(--font-display);color:var(--color-primary)}.vi .eq-som .sp{flex:1}
+.vi .eq-som .t{display:flex;gap:6px;flex-wrap:wrap}.vi .eq-som .t span{font:600 11.5px var(--font-ui);padding:5px 9px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted)}.vi .eq-som .t span b{color:var(--color-text)}
+.vi .eq-p{padding:12px 14px}.vi .eq-p .h{display:flex;align-items:center;gap:10px}.vi .eq-p .h .sp{flex:1}
+.vi .eq-av{flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:#F4ECE6;color:var(--color-primary);display:flex;align-items:center;justify-content:center;font:700 14px var(--font-ui)}
+.vi .eq-p .h b{display:block;font-size:15px}.vi .eq-p .h small{display:block;font-size:12px;color:var(--color-text-muted);margin-top:1px}
+.vi .eq-st{font:700 10.5px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;padding:4px 8px;border-radius:7px;background:#E6F2E9;color:#2d7a3e;white-space:nowrap}.vi .eq-st.off{background:var(--color-background-secondary);color:var(--color-text-muted)}
+.vi .eq-g{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:14px;margin-top:10px;align-items:start}
+.vi .eq-lab{font:600 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px;display:flex;gap:6px}.vi .eq-lab b{color:var(--color-text);letter-spacing:0;text-transform:none;font-size:12px}
+.vi .eq-g .ev-notes{margin:0}.vi .eq-g .ev-notes button{min-height:52px}
+.vi .eq-ck{display:flex;flex-direction:column;gap:6px}
+.vi .eq-ck .r{display:flex;align-items:center;gap:10px;padding:4px 0}.vi .eq-ck .r > span:first-child{flex:1;min-width:0;font-size:13px;font-weight:600;line-height:1.25}.vi .eq-ck .r small{display:block;font-weight:500;font-size:11px;color:var(--color-text-muted)}
+.vi .eq-yn{display:inline-flex;border:.5px solid var(--color-border-secondary);border-radius:9px;overflow:hidden;flex:0 0 auto}
+.vi .eq-yn button{border:none;background:var(--color-surface);font:700 12.5px var(--font-ui);color:var(--color-text-muted);width:62px;height:38px;cursor:pointer}.vi .eq-yn button + button{border-left:.5px solid var(--color-border-secondary)}
+.vi .eq-yn button.on.oui{background:#2d7a3e;color:#fff}.vi .eq-yn button.on.non{background:#C0182B;color:#fff}
+.vi .eq-p textarea{margin-top:10px;min-height:40px;font-size:12.5px}
+.vi .eq-p.pv{opacity:.7}.vi .eq-p.pv .h{gap:10px}
+.vi .eq-aussi .eq-p{padding:9px 14px}
+@media (max-width:900px){.vi .eq-g{grid-template-columns:1fr}}
+/* Les repères sur une photo (05/11/2026, comme dans Contrôle des tâches) : la visionneuse les montre avec leurs remarques ;
+   « Annoter » ouvre l'éditeur : on glisse le doigt pour tracer un cadre numéroté, à la gravité choisie, puis sa remarque. */
+.vi .voir.v2{justify-content:flex-start;align-items:stretch;padding:0;background:#0d0b09;z-index:50}
+.vi .vw-hd{display:flex;align-items:center;gap:10px;padding:12px 16px;color:#fff;font:600 13px var(--font-ui)}.vi .vw-hd .sp{flex:1}
+.vi .vw-hd .btn{height:40px}.vi .vw-x{width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:17px;cursor:pointer}
+.vi .vw-ph{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 16px}
+.vi .rp-surf{position:relative;display:inline-block;line-height:0;max-width:100%}
+.vi .rp-surf img{display:block;max-width:100%;max-height:calc(100dvh - 250px);border-radius:6px;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;pointer-events:none}
+.vi .rp-k{position:absolute;box-sizing:border-box;border-radius:5px;border:3px solid var(--c);outline:2px solid rgba(255,255,255,.85)}
+.vi .rp-k.l1{box-shadow:inset 0 0 0 3px rgba(255,255,255,.9),inset 0 0 0 6px var(--c)}.vi .rp-k.l4,.vi .rp-k.l5{border-width:2px;border-style:dashed}
+.vi .rp-k b{position:absolute;left:-4px;top:-15px;min-width:24px;height:24px;padding:0 5px;border-radius:7px;display:flex;align-items:center;justify-content:center;font:700 13px var(--font-ui);color:#fff;background:var(--c);border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.vi .rp-k.on{outline:3px solid #fff;z-index:3}.vi .rp-k.tmp{border-style:dashed;outline:none}
+.vi .vw-pied{background:var(--color-surface);color:var(--color-text);margin:10px 16px calc(14px + env(safe-area-inset-bottom,0px));border-radius:14px;padding:10px 14px;max-height:30dvh;overflow-y:auto}
+.vi .rp-l{display:flex;gap:9px;align-items:flex-start;font-size:13px;line-height:1.4;padding:4px 0}.vi .rp-l em{font-style:normal;font-weight:700;font-size:11.5px;white-space:nowrap}
+.vi .rp-n{flex:0 0 auto;min-width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--font-ui);color:#fff;padding:0 4px;background:var(--c)}
+.vi .rp-bdg{position:absolute;left:6px;top:5px;font:700 10.5px var(--font-ui);background:#fff;color:var(--color-primary);padding:2px 6px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.vi .ph-v .rp-bdg{left:3px;top:3px;font-size:9.5px;padding:1px 4px}
+.vi .ed{position:fixed;inset:0;z-index:52;background:var(--color-surface);display:flex;flex-direction:column;color:var(--color-text)}
+.vi .ed-hd{display:flex;align-items:flex-start;gap:14px;padding:12px 18px;border-bottom:.5px solid var(--color-border-tertiary)}.vi .ed-hd .sp{flex:1}
+.vi .ed-hd small{font:600 10.5px var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--color-text-muted)}.vi .ed-hd b{display:block;font:600 17px var(--font-ui);margin-top:2px}.vi .ed-hd span.s{display:block;font-size:12px;color:var(--color-text-muted);margin-top:2px}
+.vi .ed-hd .vw-x{background:var(--color-background-secondary);color:var(--color-text-muted)}
+.vi .ed-c{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px}
+.vi .ed-g{display:flex;flex-direction:column;min-width:0;min-height:0}
+.vi .ed-ph{flex:1;min-height:0;background:#141110;display:flex;align-items:center;justify-content:center;padding:18px}
+.vi .ed-ph .rp-surf{touch-action:none;cursor:crosshair}.vi .ed-ph .rp-surf img{max-height:calc(100dvh - 230px)}
+.vi .ed-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;background:var(--color-background-secondary);border-top:.5px solid var(--color-border-tertiary)}
+.vi .ed-bar .lab{font:600 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}.vi .ed-bar .sp{flex:1}.vi .ed-bar .aide{font-size:11.5px;color:var(--color-text-muted)}
+.vi .ed-bar .sep{width:1px;height:26px;background:var(--color-border-tertiary);margin:0 2px}
+.vi .ed-niv,.vi .ed-out{display:inline-flex;align-items:center;gap:7px;border-radius:9px;height:40px;padding:0 13px;font:600 12px var(--font-ui);cursor:pointer;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)}
+.vi .ed-niv i{width:12px;height:12px;border-radius:3px;background:var(--c)}.vi .ed-niv.on{border:2px solid var(--c);color:var(--c);padding:0 12px}
+.vi .ed-out:disabled{opacity:.45;cursor:not-allowed}
+.vi .ed-d{border-left:.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;min-height:0}
+.vi .ed-d .tt{padding:12px 14px 8px;font:600 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
+.vi .ed-ls{flex:1;overflow-y:auto}
+.vi .ed-r{padding:10px 14px;border-top:.5px solid var(--color-border-tertiary)}.vi .ed-r.on{background:rgba(141,29,44,.045);box-shadow:inset 3px 0 0 var(--color-primary)}
+.vi .ed-r .h{display:flex;align-items:center;gap:8px}.vi .ed-r .h .sp{flex:1}.vi .ed-r .h b{font-size:12.5px}
+.vi .ed-r .x{border:none;background:none;color:var(--color-text-muted);font-size:15px;cursor:pointer;width:32px;height:32px}
+.vi .ed-r .nv{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:7px 0}
+.vi .ed-r .nv button{height:32px;padding:0 2px;font-size:10.5px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:7px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);font:600 11px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
+.vi .ed-r .nv button.on{color:#fff;border-color:transparent;background:var(--c)}
+.vi .ed-r textarea{min-height:44px;font-size:13px}
+.vi .ed-vide{padding:6px 16px 20px;color:var(--color-text-muted);font-size:13px;line-height:1.5}
+.vi .ed-bil{padding:9px 14px;display:flex;gap:12px;flex-wrap:wrap;font-size:12px;border-top:.5px solid var(--color-border-tertiary);color:var(--color-text-muted)}.vi .ed-bil b{color:var(--c)}
+.vi .ed-act{display:flex;gap:8px;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));border-top:.5px solid var(--color-border-tertiary)}.vi .ed-act .btn{flex:1;height:46px}
+@media (max-width:900px){.vi .ed-c{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}.vi .ed-d{border-left:none;border-top:.5px solid var(--color-border-tertiary);max-height:42dvh}.vi .ed-ph .rp-surf img{max-height:calc(58dvh - 150px)}}
+/* L'évaluation rapide de fin de visite (05/11/2026) : le radar à gauche, les six axes à droite ; empilés sur un écran étroit. */
+.vi .ev{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:12px;align-items:start}
+.vi .ev-radar{position:sticky;top:8px;text-align:center}.vi .ev-radar svg{width:100%;height:auto;display:block}
+.vi .ev-moy{display:flex;align-items:baseline;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:2px}.vi .ev-moy b{font:400 34px/1.05 var(--font-display);color:var(--color-primary)}.vi .ev-moy span{font-size:13px;color:var(--color-text-muted)}
+.vi .ev-moy .up{color:#2d7a3e;font-weight:700}.vi .ev-moy .dn{color:#C0182B;font-weight:700}
+.vi .ev-leg{display:flex;justify-content:center;gap:14px;font-size:11.5px;color:var(--color-text-muted);margin-top:2px}.vi .ev-leg i{display:inline-block;width:18px;height:0;border-top:3px solid var(--color-primary);vertical-align:3px;margin-right:5px}.vi .ev-leg i.p{border-top:2px dashed #2F6EA5}
+.vi .ev-ax{padding:10px 12px;margin-bottom:8px}.vi .ev-ax .h{display:flex;align-items:baseline;gap:8px}.vi .ev-ax .h b{font-size:14.5px}.vi .ev-ax .h small{font-size:11.5px;color:var(--color-text-muted);flex:1;min-width:0}
+.vi .ev-ax .h .n{font:700 13px var(--font-ui);white-space:nowrap}.vi .ev-ax .h .n.ok{color:#2d7a3e}.vi .ev-ax .h .n.att{color:#B45309}.vi .ev-ax .h .n.ko{color:#C0182B}.vi .ev-ax .h .n.mu{color:var(--color-text-muted);font-weight:600}
+.vi .ev-notes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:8px 0}
+.vi .ev-notes button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:10px;min-height:48px;padding:4px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--color-text);font:700 17px var(--font-ui)}
+.vi .ev-notes button small{font:500 10px var(--font-ui);color:var(--color-text-muted)}
+.vi .ev-notes button.on{color:#fff}.vi .ev-notes button.on small{color:#fff;opacity:.9}
+.vi .ev-notes button.on.ko{background:#C0182B;border-color:#C0182B}.vi .ev-notes button.on.att{background:#D97706;border-color:#D97706}.vi .ev-notes button.on.ok{background:#2d7a3e;border-color:#2d7a3e}
+.vi .ev-ax textarea{min-height:40px;font-size:12.5px}
+.vi.tab .ev-notes button{min-height:56px}
+@media (max-width:960px){.vi .ev{grid-template-columns:1fr}.vi .ev-radar{position:static}.vi .ev-radar svg{max-width:560px;margin:0 auto}}
 @media (orientation:portrait){.vi.tab .tb-shops{grid-template-columns:1fr 1fr}.vi.tab .tb-cal .j{min-height:92px}}
 @media (max-width:700px){.vi.tab .tb-shops{grid-template-columns:1fr}.vi.tab .tb-bar .lb,.vi.tab .tb-bar .es{display:none}}
 `;
@@ -526,7 +620,8 @@
   const fmtD = iso => { if (!iso) { return '—'; } const d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return d.getDate() + ' ' + MOIS[d.getMonth()]; };
   const fmtDJ = iso => { if (!iso) { return '—'; } const d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]; };
   const fmtH = dt => dt ? String(dt).slice(11, 16) : '';
-  const eur = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE').replace(/ | /g, ' ') + ' €';
+  const EUR = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE').replace(/ | /g, ' ') + ' €';
+  const eur = EUR;
   // Un écart en % au dixième, signé : « −14,2 % », « +3 % ».
   const vbPct = e => e == null ? '—' : (e > 0 ? '+' : e < 0 ? '−' : '') + String(Math.abs(Math.round(e * 10) / 10)).replace('.', ',') + ' %';
   const cap1 = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
@@ -609,7 +704,7 @@
   const TEMPS = [['ext', 'Extérieur'], ['int', 'Intérieur'], ['suivi', 'Suivi de projet'], ['analyse', 'Analyse'], ['dev', 'Développement'], ['fin', 'Météo et fin']];
   // Les étapes bloquantes livrées (26/10/2026) : ce qui se remplit sur place bloque ; ce qui dépend d'une lecture extérieure
   // (contrôles du jour de l'équipe, checklist du panel) ne bloque pas. Réglages › Contrôle guidé les change étape par étape.
-  const BLOQUE_DEFAUT = { photos_ext: true, photos_int: true, 'mod:*': true, controles: false, checklist: false, pistes: true, constat: true, meteo: true };
+  const BLOQUE_DEFAUT = { photos_ext: true, photos_int: true, 'mod:*': true, controles: false, checklist: false, pistes: true, constat: true, meteo: true, evaluation: true, equipe: false };
   // Les points d'une checklist qui se regardent dehors : ils forment le module « L'extérieur ».
   const RX_EXT = /fa[cç]ade|enseigne|vitrine ext|ext[ée]rieur|terrasse|abords|parking|trottoir/i;
   // Le module Produit commence par les produits obligatoires (26/10/2026), avec ce que le cockpit en sait (vus en caisse).
@@ -634,6 +729,8 @@
     bureau: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12l2 2 4-4"/>',
     meteo: '<circle cx="9" cy="9" r="3.5"/><path d="M9 2v2M2 9h2M4 4l1.4 1.4M14 4l-1.4 1.4"/><path d="M8 19h10a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.5A2.8 2.8 0 0 0 8 19z"/>',
     fin: '<path d="M3 17c3-1 4-6 6-6s1 5 3 5 2-3 4-3 2 2 5 2"/><path d="M3 21h18"/>',
+    equipe: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.8-3.6 3.2-5.5 6-5.5s5.2 1.9 6 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c2.6.2 4.6 2 5.2 5"/>',
+    eval: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 7.5l4.5 3-1.5 5H9.5L7.5 10z"/>',
     // La visite en six temps (26/10/2026).
     t_ext: '<path d="M3 10l1.5-5h15L21 10"/><path d="M3 10c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3"/><path d="M5 13v8h14v-8M10 21v-5h4v5"/>',
     t_int: '<path d="M3 15c2.5-7 15.5-7 18 0"/><path d="M3 15h18"/><path d="M5 19h14"/>',
@@ -646,6 +743,22 @@
   // La météo du franchisé, notée en fin de contrôle (12/10/2026).
   const METEO = [[5, '☀️', 'Grand soleil', 'motivé, moteur'], [4, '🌤️', 'Éclaircies', 'plutôt confiant'], [3, '⛅', 'Nuageux', 'mitigé'], [2, '🌧️', 'Pluie', 'découragé'], [1, '⛈️', 'Orage', 'tendu, en conflit']];
   const meteoDe = n => METEO.find(m => m[0] === Number(n)) || null;
+  // L'évaluation rapide de fin de visite (05/11/2026, Sam) : six axes notés de 1 à 5 avec le franchisé, un commentaire
+  // chacun ; elle part dans le rapport, en radar (src/suivi.php, suEvalHtml : même dessin, mêmes clés que viEvalAxes).
+  const EVAL_AXES = [['proprete', 'Propreté', 'magasin, labo, vitrines, sanitaires'], ['metier', 'Capacité métier', 'cuissons, gestes, connaissance des produits'],
+    ['management', 'Management', 'équipe, planning, consignes'], ['commercial', 'Développement commercial', 'B2B, actions locales, ventes additionnelles'],
+    ['client', 'Contact client', 'accueil, conseil, sourire'], ['normes', 'Respect des normes', 'charte, hygiène, prix, procédures']];
+  // L'équipe en poste (05/11/2026) : les trois contrôles éclair de chaque personne (src/visites_equipe.php, VI_EQUIPE_CHECKS).
+  const EQ_CHECKS = [['tenue', 'En tenue de travail', 'tablier, tenue de la marque, cheveux attachés', 'tenue'], ['sbam', 'SBAM', 'sourire, bonjour, au revoir, merci', 'SBAM'],
+    ['xp', 'Expérience client', 'conseil, dégustation, mise en avant', 'XP client']];
+  const EVAL_NOTES = [[1, 'Insuffisant'], [2, 'À améliorer'], [3, 'Correct'], [4, 'Bien'], [5, 'Très bien']];
+  // Les libellés néerlandais des axes : seulement pour mesurer la place du radar (la traduction de l'écran passe par visites-nl.js).
+  const EVAL_NL = { proprete: 'Netheid', metier: 'Vakkennis', management: 'Management', commercial: 'Commerciële ontwikkeling', client: 'Klantcontact', normes: 'Naleving van de normen' };
+  // Le barème des repères, si le serveur ne l'envoie pas : celui du Contrôle des tâches (installer.php, signalementDefaut).
+  const REP_NIV = [{ n: 5, nom: 'Exemplaire', couleur: '#C9A227' }, { n: 4, nom: 'Conforme', couleur: '#2D7A3E' }, { n: 3, nom: 'Non conforme — mineur', couleur: '#D97706' },
+    { n: 2, nom: 'Non conforme — majeur', couleur: '#C0182B' }, { n: 1, nom: 'Non conforme — critique', couleur: '#8D1D2C' }];
+  const repCourt = nom => { const c = String(nom || '').replace(/^Non conforme\s*[—-]\s*/i, ''); return c.charAt(0).toUpperCase() + c.slice(1); };
+  const evalTon = n => n >= 4 ? 'ok' : n === 3 ? 'att' : n >= 1 ? 'ko' : 'mu';
   const MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const jours = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
   const lundiDe = (iso, dec) => { const d = new Date(iso + 'T12:00:00'); const j = (d.getDay() + 6) % 7; d.setDate(d.getDate() - j + 7 * (dec || 0)); return d.toISOString().slice(0, 10); };
@@ -683,17 +796,17 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.VB = {}; this.vbVue = null; this.AN = {}; this.LV = {}; this.TM = {}; this.tmN = 6; this.TMP = {}; this.tmFile = []; this.tmV = null; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.cqSeul = false; this.S = null; this.R = null;
+      this.D = null; this.EQ = {}; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.VB = {}; this.vbVue = null; this.AN = {}; this.LV = {}; this.TM = {}; this.tmN = 6; this.TMP = {}; this.tmFile = []; this.tmV = null; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.cqSeul = false; this.S = null; this.R = null;
       this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
-      this.toast = null; this.voir = null; this.ouvert = {}; this.CK = null; this.ckF = {};
+      this.toast = null; this.voir = null; this.ed = null; this.ouvert = {}; this.CK = null; this.ckF = {};
       if (!document.getElementById('vi-css')) { const st = document.createElement('style'); st.id = 'vi-css'; st.textContent = CSS; document.head.appendChild(st); }
       host.innerHTML = '<div class="vi ' + (o.tablette ? 'tab' : o.mobile ? 'mob' : 'desk') + '"><div class="sc"><div class="mu sm" style="padding:20px 0">Lecture…</div></div></div>';
       host.addEventListener('click', e => this.clic(e));
       host.addEventListener('input', e => this.saisie(e));
       host.addEventListener('change', e => this.change(e));
-      this.ecouterSignature(host); this.ecouterGlisse(host);
+      this.ecouterSignature(host); this.ecouterGlisse(host); this.ecouterReperes(host);
       window.addEventListener('online', () => { this.enLigne = true; this.rejouer(); this.rendre(); });
       window.addEventListener('offline', () => { this.enLigne = false; this.rendre(); });
       if (o.mobile || o.tablette) { window.addEventListener('hashchange', () => this.deHash()); this.deHash(true); }
@@ -771,6 +884,7 @@
       if (op.apres === 'plans' && j.plans) { j.plans.forEach(p => { const i = D.plans.findIndex(x => x.client_id === p.client_id || x.id === p.id); if (i >= 0) { D.plans[i] = p; } else { D.plans.push(p); } }); }
       if (op.apres === 'plan' && j.plan) { const i = D.plans.findIndex(x => x.id === j.plan.id || (x.client_id && x.client_id === j.plan.client_id)); if (i >= 0) { D.plans[i] = j.plan; } }
       if (op.apres === 'photo' && j.photo) { const i = D.photos.findIndex(x => x.client_id === j.photo.client_id); if (i >= 0) { D.photos[i] = j.photo; } else { D.photos.unshift(j.photo); } }
+      if (op.apres === 'reperes' && j.photo) { const i = D.photos.findIndex(x => String(x.id) === String(j.photo.id) || (x.client_id && x.client_id === j.photo.client_id)); if (i >= 0) { D.photos[i] = Object.assign({}, D.photos[i], { reperes: j.photo.reperes }); } }
       if (op.apres === 'tache' && j.tache) { const i = (D.taches || []).findIndex(x => x.id === j.tache.id); if (i >= 0) { D.taches[i] = j.tache; } }
       if (op.apres === 'controle') { const t = this.cqTache(op.body); if (t) { t.attente = false; delete t._avant; } this.dire('Note ' + (op.body || {}).note + '/5 enregistrée.'); }
     }
@@ -787,6 +901,8 @@
         if (op.apres === 'photo' && !D.photos.some(x => x.client_id === b.client_id)) { D.photos.unshift({ client_id: b.client_id, visite_id: b.visite_id || null, shop: b.shop, plan_id: b.plan_id || null, ref: b.ref || null, genre: b.genre, data: b.data, prise_a: b.prise_a, attente: true }); }
         if (op.apres === 'plans') { (b.plans || []).forEach(p => { if (!D.plans.some(x => x.client_id === p.client_id)) { D.plans.push(Object.assign({ id: p.client_id, statut: 'ouvert', cree_le: op.quand, maj_le: op.quand, retard: 0, age: 0, attente: true }, p)); } }); }
         if (op.apres === 'plan') { const p = this.plan(op.path.split('/')[2]); if (p) { Object.assign(p, b, { attente: true }); } }
+        // Des repères posés hors ligne : la photo relue les retrouve tant qu'ils attendent dans la file.
+        if (op.apres === 'reperes') { const p = this.photoPar(decodeURIComponent(op.path.split('/')[3])); if (p) { p.reperes = b.reperes || []; } }
       });
     }
 
@@ -1308,7 +1424,7 @@
         + (tab ? '' : `<div class="sc">${this.etat()}${V}</div>`)
         + (this.o.mobile && !this.o.sansOnglets && !tab ? `<div class="bas" style="grid-template-columns:repeat(${onglets.length},1fr)">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}"><i>${t[1]}</i>${t[2]}</button>`).join('')}</div>` : '')
         + (this.toast ? `<div class="toast">${esc(this.toast)}</div>` : '')
-        + (this.voir ? `<div class="voir" data-a="fermer-voir"><img src="${esc(this.voir.src)}" alt=""><div class="txt">${esc(this.voir.txt)}</div></div>` : '')
+        + (this.ed ? this.edHtml() : this.voir ? this.voirHtml() : '')
         + (this.cqV ? this.cqLoupe() : '') + (this.tmV ? this.tmLoupe() : '');
       // La tablette en néerlandais (26/10/2026) : visites-nl.js relit l'écran rendu et le traduit.
       const lng = tab ? this.lngTab() : 'fr'; vi.setAttribute('lang', lng);
@@ -1428,8 +1544,43 @@
       // Le formulaire (pourquoi, trois pistes) se remplit au développement ; ici, l'appel à y aller.
       const E = this._etapes; const sousB = (B.sous || []).length;
       const renvoi = sousB ? `<div class="card ${this.vbExige(v) === 'fait' ? '' : 'alerte'} sm"><b class="${this.vbExige(v) === 'fait' ? 'up' : 'dn'}">CA à plus de ${String(B.seuil).replace('.', ',')} % sous le budget</b> — ${this.vbExige(v) === 'fait' ? 'le pourquoi et les trois pistes sont notés.' : 'le pourquoi et les trois pistes du franchisé se notent ensemble au développement.'}${E && E.pistes >= 0 ? ` <button class="chip" data-a="etape" data-v="${E.pistes}">${this.vbExige(v) === 'fait' ? 'Revoir' : 'Y aller'}</button>` : ''}</div>` : '';
-      return cap + `<div class="card vb">${tabs}<div class="vb-c">${corps}${this.pnlHtml(x.pnl, B.seuilsPnl || {}, B.arrete)}</div></div>` + renvoi
+      return cap + this.vb3Html(P, B, vue) + `<div class="card vb">${tabs}<div class="vb-c">${corps}${this.pnlHtml(x.pnl, B.seuilsPnl || {}, B.arrete)}</div></div>` + renvoi
         + `<div class="xs mu" style="margin:2px 2px 10px">${esc(B.source || '')}${(B.manques || []).length ? ' · relu dans quelques minutes : ' + esc(B.manques.join(', ')) : ''}.</div>`;
+    }
+    /**
+     * Le mois, le trimestre et l'année d'un coup d'œil (05/11/2026, Sam : « une jauge mensuelle, trimestrielle et annuelle de
+     * la jauge de CA par rapport au budget », dans la tablette de contrôle) : trois jauges de 0 à l'objectif de l'étendue, les
+     * mêmes chiffres que les onglets (/visites/budget, arrêtés à la veille) — le réalisé à la couleur du statut, le trait de
+     * l'attendu à date, au rythme actuel en hachuré (objectif × réalisé ÷ attendu), l'écart et ce qui manque. Un toucher
+     * ouvre l'onglet de l'étendue, avec son mini P&L.
+     */
+    vb3Html(P, B, vue) {
+      const L = ['mois', 'trimestre', 'annee'].filter(k => P[k]); if (!L.length) { return ''; }
+      const cls = st => st === 'sous' ? 'dn' : st === 'proche' ? 'or' : st === 'ok' ? 'up' : 'mu';
+      const coul = { dn: '#C0182B', or: '#E0A526', up: '#2d7a3e', mu: '#a99e92' };
+      const SRC = { budget: 'budget validé', theorique: 'CA théorique de l’étude', mixte: 'budget validé et CA théorique' };
+      const MC = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+      // Un nombre ne se coupe pas en fin de ligne : ses milliers en espace fine insécable, que visites-nl.js lit comme un nombre.
+      const eur = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE').replace(/[\s\u202f\u00a0]/g, '\u202f') + ' €';
+      const ligne = k => {
+        const x = P[k]; const c = cls(x.statut);
+        const nom = k === 'trimestre' ? 'T' + (Math.floor((+String(x.du).slice(5, 7) - 1) / 3) + 1) + ' ' + String(x.du).slice(0, 4) : cap1(x.lab);
+        const jT = x.du && x.au ? Math.round((new Date(x.au + 'T12:00:00') - new Date(x.du + 'T12:00:00')) / 864e5) + 1 : null;
+        const jE = x.du && B.arrete ? Math.max(0, Math.min(jT, Math.round((new Date(B.arrete + 'T12:00:00') - new Date(x.du + 'T12:00:00')) / 864e5) + 1)) : null;
+        const sous = (jT ? 'jour ' + jE + ' sur ' + jT : '') + (x.rang ? ' · ' + x.rang + (x.rang === 1 ? 'er' : 'e') + ' sur ' + x.sur : '');
+        if (x.statut === 'sans' || !(x.objectif > 0)) { return `<button type="button" class="vb3-r${k === vue ? ' on' : ''}" data-a="vb-vue" data-v="${k}"><div class="pl"><b>${esc(nom)}</b><small>${esc(sous)}</small></div><div class="vb3-b"></div><div class="pv"><b>${eur(x.realise)}</b><small>${esc(x.motif || 'pas de budget')}</small></div></button>`; }
+        const obj = x.objectif, r = x.attendu > 0 ? x.realise / x.attendu : null, proj = r != null && x.attendu < obj * 0.999 ? obj * r : null;
+        const ech = Math.max(obj, x.realise, proj || 0) * (Math.max(x.realise, proj || 0) > obj ? 1.04 : 1), pc = n => Math.max(0, Math.min(100, 100 * n / ech));
+        const pA = pc(x.realise), pP = proj != null ? pc(proj) : null, pT = pc(x.attendu);
+        const hors = (x.sansBudget || []).map(m => MC[+m - 1]).filter(Boolean);
+        return `<button type="button" class="vb3-r${k === vue ? ' on' : ''}" data-a="vb-vue" data-v="${k}"><div class="pl"><b>${esc(nom)}</b><small>${esc(sous)}</small></div>
+          <div class="vb3-b"><i class="${c}" style="width:${pA.toFixed(1)}%"></i>${pP != null && pP > pA ? `<i class="pj" style="left:${pA.toFixed(1)}%;width:${(pP - pA).toFixed(1)}%;--c:${coul[c]}"></i>` : ''}${x.attendu > 0 ? `<em class="${pT > 72 ? 'g' : ''}" style="left:${pT.toFixed(1)}%"><span>attendu ${eur(x.attendu)}</span></em>` : ''}</div>
+          <div class="pv"><b>${eur(x.realise)}</b> <span>${x.atteintePct != null ? String(Math.round(x.atteintePct)) + ' % de ' + eur(obj) : ''}</span>
+            <small><b class="${c}">${vbPct(x.ecartPct)}</b> face à l’attendu · ${x.manque > 0 ? 'il manque ' + eur(x.manque) : 'd’avance de ' + eur(-x.manque)}${proj != null ? ' · au rythme : ' + eur(proj) : ''}</small>
+            ${x.source && x.source !== 'budget' || hors.length ? `<small>${esc(SRC[x.source] || 'budget')}${hors.length ? ' · hors comparaison : ' + esc(hors.join(', ')) : ''}</small>` : ''}</div></button>`;
+      };
+      return `<div class="card vb3"><div class="t"><b>Le mois, le trimestre, l’année</b><span class="xs mu">face au budget, arrêtés au ${esc(B.arrete ? fmtDJ(B.arrete) : '')} · toucher une ligne ouvre son détail</span></div>${L.map(ligne).join('')}
+        <div class="leg"><span><i style="background:#2d7a3e"></i>au budget</span><span><i style="background:#E0A526"></i>proche</span><span><i style="background:#C0182B"></i>sous le budget</span><span><i style="background:none;border-left:2px dashed var(--color-text);height:12px;width:0;margin-right:7px;vertical-align:-2px"></i>l’attendu à date</span><span><i style="background:repeating-linear-gradient(135deg,#2d7a3e 0 3px,transparent 3px 7px);opacity:.5"></i>au rythme actuel</span></div></div>`;
     }
     /**
      * Le mini P&L de l'étendue (26/10/2026) : le CA, le coût matière, la marge brute, les invendus (jour, semaine, mois),
@@ -1711,7 +1862,7 @@
       const pj = this.photosJour(shop); const t = auj();
       // Au contrôle, chaque photo porte sa question : la réponse dessous, du type réglé (Réglages › Checklist).
       const rep = avecRep && vEnCours ? g => { const q = this.photosQ().points.find(x => x.ref === g); return q ? this.photoReponseHtml(vEnCours, q) : ''; } : null;
-      const jour = GENRES_JOUR.filter(([g]) => !genres || genres.includes(g)).map(([g, l]) => { const p = pj.find(x => x.genre === g && String(x.prise_a).slice(0, 10) === t); const tuile = p ? `<div class="ph" style="background-image:url('${esc(this.photoSrc(p))}')" data-a="voir" data-v="${esc(p.client_id || p.id)}"><small>${fmtH(p.prise_a)}</small>${p.attente ? '<span class="att">à envoyer</span>' : ''}</div>` : `<div class="ph vide" data-a="photo" data-v="${g}|${esc(shop)}${vEnCours ? '|' + vEnCours.id : ''}">📷 ${l}</div>`; return rep ? `<div class="phq">${tuile}${rep(g)}</div>` : tuile; }).join('');
+      const jour = GENRES_JOUR.filter(([g]) => !genres || genres.includes(g)).map(([g, l]) => { const p = pj.find(x => x.genre === g && String(x.prise_a).slice(0, 10) === t); const tuile = p ? `<div class="ph" style="background-image:url('${esc(this.photoSrc(p))}')" data-a="voir" data-v="${esc(p.client_id || p.id)}"><small>${fmtH(p.prise_a)}</small>${this.repBadge(p)}${p.attente ? '<span class="att">à envoyer</span>' : ''}</div>` : `<div class="ph vide" data-a="photo" data-v="${g}|${esc(shop)}${vEnCours ? '|' + vEnCours.id : ''}">📷 ${l}</div>`; return rep ? `<div class="phq">${tuile}${rep(g)}</div>` : tuile; }).join('');
       return `<div class="cap">${genres && genres.length === 1 ? 'La photo du jour' : 'Les photos du jour'}</div><div class="phs${rep ? ' rep' : ''}">${jour}</div><div class="xs mu" style="margin:4px 2px">Horodatée, position si consentie, EXIF retiré à la réduction · ${pj.length ? pj.length + ' photos sur 90 j' : 'première photo'}</div>`;
     }
     /** La question d'une photo du jour : son libellé, sa réponse (OK / Écart / N/A, Oui / Non, note, choix…), une remarque. */
@@ -1871,7 +2022,7 @@
             const aide = libDe({ libelle: pt.aide, libelle_nl: pt.aide_nl }, l);
             const lib = `<b${tab ? '' : ' class="sm"'} style="flex:1">${esc(libDe(pt, l))}${aide ? `<small class="aide">${esc(aide)}</small>` : ''}</b>`;
             const photoBtn = pt.photo || phs.length ? `<button class="chip${sansPh ? ' exige' : ''}" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' ' + (phs.length > 1 ? T.photos : T.photo.toLowerCase()) : sansPh ? T.phExige : T.photo}</button>` : '';
-            const act = `<div class="act">${typeBtn}${photoBtn}${phs.map(x => `<button class="ph-v" data-a="voir" data-v="${esc(x.client_id || x.id)}" style="background-image:url('${esc(this.photoSrc(x))}')"><small>${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</small></button>`).join('')}
+            const act = `<div class="act">${typeBtn}${photoBtn}${phs.map(x => `<button class="ph-v" data-a="voir" data-v="${esc(x.client_id || x.id)}" style="background-image:url('${esc(this.photoSrc(x))}')"><small>${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</small>${this.repBadge(x)}</button>`).join('')}
               ${pt.pct ? Object.keys(causes).map(c => `<button class="chip ${(p.causes || []).includes(c) ? 'on' : ''}" data-a="cause" data-v="${k}|${c}">${esc(causes[c])}</button>`).join('') : ''}
               ${t === 'texte' ? '' : `<input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="${pt.commentaireNon && p.etat === 'ko' ? T.comNon : T.rem}"${sansCom ? ' class="exige"' : ''} style="flex:1;${tab ? 'min-width:180px;padding:6px 10px' : 'min-width:120px;padding:5px 8px;font-size:12px'}">`}</div>`;
             if (tab) { return `<div class="pt t ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1">${lib}${ligne}</div>${dessous}${att}${act}</div>`; }
@@ -1912,6 +2063,9 @@
       f.pa = finie ? [] : (ecarts || this.ecartsDe(v)).map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true }));
       if (!finie && v.budgetCa) { this.vbPistesDansPlan(v.budgetCa); }
       f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.meteo = v.meteo || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || '';
+      const ev = (v.evaluation && v.evaluation.notes) || {};
+      EVAL_AXES.forEach(([k]) => { f['ev_' + k] = (ev[k] && ev[k].note) || 0; f['evc_' + k] = (ev[k] && ev[k].com) || ''; });
+      f.pe = {}; ((v.personnel && v.personnel.personnes) || []).forEach(p => { f.pe[p.emp > 0 ? 'e' + p.emp : 'n' + p.nom] = Object.assign({}, p); });
     }
     /** Ce qui manque à l'étape Météo : le temps, la réponse sur les paiements, et le détail s'ils ne sont pas à temps. */
     meteoManque(f) {
@@ -2002,8 +2156,15 @@
       etapes.push(...modsDe('ext'));
       // 2. L'intérieur : la photo, l'expérience client, les modules de la checklist, les contrôles en photo du jour
       // (la bande du dashboard, la note rapide sous chaque photo ; faite quand plus rien n'attend une note).
+      // L'équipe en poste (05/11/2026) : lue au planning du jour, notée juste après l'expérience client.
+      this.chargerEquipe(v.shop); const EQ = this.EQ[v.shop]; const eqL = this.equipeListe(v.shop);
+      const eqA = eqL.filter(p => p.statut === 'en poste'); const eqF = eqA.filter(p => this.equipeFaite(f, p)).length;
+      const etEquipe = { cle: 'equipe', tps: 'int', ic: 'equipe', court: 'Équipe', titre: 'L’équipe en poste',
+        etat: EQ && EQ.d ? (eqA.length ? eqF + ' / ' + eqA.length + ' noté' + (eqF > 1 ? 's' : '') : 'personne en poste') : (EQ && EQ.erreur ? 'planning indisponible' : 'lecture du planning…'),
+        fait: !!(EQ && EQ.d) && eqF === eqA.length, eqReste: eqA.length - eqF, html: () => this.equipeHtml(v) };
       etapes.push({ cle: 'photos_int', tps: 'int', ic: 'photo', court: 'Photo', titre: 'L’intérieur en photo', etat: (jourPris('jour_interieur') ? '1 / 1' : 'à prendre') + (rInt ? ' · à noter' : ''), fait: jourPris('jour_interieur') && !rInt, reste: rInt, html: () => this.photosJourHtml(v.shop, v, ['jour_interieur'], true) });
-      etapes.push(...modsDe('int'));
+      const mInt = modsDe('int'); mInt.splice(mInt.findIndex(e => e.cle === 'mod:xp') + 1, 0, etEquipe);
+      etapes.push(...mInt);
       const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
       etapes.push({ cle: 'controles', tps: 'int', ic: 'controles', court: 'Contrôles du jour', titre: 'Les contrôles en photo du jour', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
         fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) });
@@ -2037,6 +2198,10 @@
       const mt = meteoDe(f.meteo); const mtManque = this.meteoManque(f);
       etapes.push({ cle: 'meteo', tps: 'fin', ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: (mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne')) + (f.mt_paye === 0 ? ' · paiements en retard' : ''),
         fait: !mtManque, mtManque, html: () => this.meteoHtml(f) + this.financesHtml(f) + this.meteoDetailHtml(v) });
+      // L'évaluation rapide (05/11/2026) : six notes avant les signatures ; elle part dans le rapport.
+      const evN = EVAL_AXES.filter(([k]) => f['ev_' + k] >= 1).length; const evM = this.evalMoyenne(f);
+      etapes.push({ cle: 'evaluation', tps: 'fin', ic: 'eval', court: 'Évaluation', titre: 'Évaluation rapide', etat: evN === EVAL_AXES.length ? 'moyenne ' + evM.toFixed(1).replace('.', ',') + ' / 5' : evN + ' / ' + EVAL_AXES.length + ' notés',
+        fait: evN === EVAL_AXES.length, evReste: EVAL_AXES.length - evN, html: () => this.evalHtml(v, f) });
       etapes.push({ tps: 'fin', ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig && f.sigC ? 'signée des deux' : f.sig || f.sigC ? '1 signature sur 2' : 'signatures, envoi au bureau', fait: false, html: () => this.finHtml(v) });
       const ORD = this.tempsOrdre(); const rangT = k => ORD.findIndex(t => t[0] === k);
       etapes.sort((a, b) => rangT(a.tps) - rangT(b.tps));
@@ -2062,6 +2227,8 @@
         else if (e.pistes) { e.manque = 'le pourquoi, les trois pistes et l’horizon'; }
         else if (e.revue) { e.manque = 'ce que vous avez vu et la recommandation'; }
         else if (e.ic === 'meteo') { e.manque = e.mtManque || 'la météo du franchisé'; }
+        else if (e.cle === 'equipe' && e.eqReste > 0) { e.manque = e.eqReste + ' personne' + (e.eqReste > 1 ? 's' : '') + ' à noter'; }
+        else if (e.cle === 'evaluation') { e.manque = e.evReste + ' note' + (e.evReste > 1 ? 's' : '') + ' à donner'; }
         else if (e.cle === 'checklist') { e.manque = 'la checklist du consultant'; }
       });
       etapes.forEach(e => { if (e.fait) { e.auto = true; } e.bloquante = !!e.manque && this.etapeBloquante(e.cle); });
@@ -2370,11 +2537,11 @@
       [].concat(D.checklist || [], ...((D.types || []).map(t => t.checklist || []))).forEach(m => ajoute(m.id, m.nom, m.id === 'msp' ? 'analyse' : 'int'));
       ajoute('bureau', 'Demandé par le bureau', 'suivi'); ajoute('leviers', MOD_LEVIERS.nom, 'analyse');
       const lignes = [['ext', 'photos_ext', 'L’extérieur en photo'], ...mods.filter(m => m[2] === 'ext').map(m => [m[2], m[0], m[1]]),
-        ['int', 'photos_int', 'L’intérieur en photo'], ...mods.filter(m => m[2] === 'int').map(m => [m[2], m[0], m[1]]), ['int', 'controles', 'Les contrôles en photo du jour (photos de l’équipe)'],
+        ['int', 'photos_int', 'L’intérieur en photo'], ...mods.filter(m => m[2] === 'int').map(m => [m[2], m[0], m[1]]), ['int', 'equipe', 'L’équipe en poste (planning du jour)'], ['int', 'controles', 'Les contrôles en photo du jour (photos de l’équipe)'],
         ['suivi', null, 'Dossier du bureau'], ...mods.filter(m => m[2] === 'suivi').map(m => [m[2], m[0], m[1]]), ['suivi', null, 'Les points décidés aux visites précédentes'], ['suivi', 'checklist', 'Checklist du consultant (panel)'],
         ['analyse', null, 'KPI et santé du magasin'], ...mods.filter(m => m[2] === 'analyse').map(m => [m[2], m[0], m[1]]), ['analyse', null, 'Les tâches des derniers mois'],
         ['dev', 'pistes', 'Le CA sous le budget : pourquoi et trois pistes'], ['dev', 'constat', 'Vu sur place et recommandation'], ['dev', null, 'Points à travailler'],
-        ['fin', 'meteo', 'Météo du franchisé et ses finances'], ['fin', null, 'Fin de visite'], ['*', 'mod:*', 'Les autres modules de checklist (nouveaux types, revisites)']];
+        ['fin', 'meteo', 'Météo du franchisé et ses finances'], ['fin', 'evaluation', 'Évaluation rapide (six notes)'], ['fin', null, 'Fin de visite'], ['*', 'mod:*', 'Les autres modules de checklist (nouveaux types, revisites)']];
       const ORD = this.tempsOrdre(this.form.seuils && this.form.seuils.ordreTemps);
       const nomT = k => k === '*' ? '—' : (ORD.findIndex(x => x[0] === k) + 1) + ' · ' + (TEMPS.find(x => x[0] === k) || ['', ''])[1];
       lignes.sort((a, b) => (a[0] === '*' ? 99 : ORD.findIndex(x => x[0] === a[0])) - (b[0] === '*' ? 99 : ORD.findIndex(x => x[0] === b[0])));
@@ -2450,7 +2617,14 @@
       const a = el.dataset.a; const v = el.dataset.v || ''; const parts = v.split('|');
       if (a === 'go') { const [vue, p] = v.split('/'); this.go(vue, p); return; }
       if (a === 'fermer-voir') { this.voir = null; this.rendre(); return; }
-      if (a === 'voir') { const p = (this.D.photos || []).find(x => String(x.id) === v || x.client_id === v); if (p) { this.voir = { src: this.photoSrc(p), txt: (this.boutique(p.shop) || {}).court + ' · ' + fmtDJ(p.prise_a) + ' ' + fmtH(p.prise_a) + ' · ' + p.genre.replace('jour_', '') + (p.attente ? ' · pas encore envoyée' : '') }; this.rendre(); } return; }
+      if (a === 'voir') { const p = this.photoPar(v); if (p) { this.voir = { src: this.photoSrc(p), pid: p.client_id || String(p.id), txt: this.photoTitre(p) + (p.attente ? ' · pas encore envoyée' : '') }; this.rendre(); } return; }
+      // Les repères sur une photo (05/11/2026) : l'éditeur, comme dans Contrôle des tâches.
+      if (a === 'ed-ouvrir') { const p = this.photoPar(v); if (p) { this.ed = { pid: p.client_id || String(p.id), rep: (p.reperes || []).map(r => Object.assign({}, r)), niv: 3, sel: null }; this.rendre(); } return; }
+      if (this.ed && a.startsWith('ed-')) { this.edAction(a, v); return; }
+      // L'équipe en poste : la note, un contrôle Oui / Non (un second toucher l'efface), « pas vue », noter quelqu'un hors poste.
+      if (a === 'eq') { const P = this.form.pe || (this.form.pe = {}); const x = P[parts[0]] || (P[parts[0]] = { vu: true }); const val = Number(parts[2]); x[parts[1]] = x[parts[1]] === val ? null : val; x.vu = true; this.rendre(); return; }
+      if (a === 'eq-vu') { const P = this.form.pe || (this.form.pe = {}); const x = P[v] || (P[v] = {}); x.vu = x.vu === false; this.rendre(); return; }
+      if (a === 'eq-ouv') { this.ouvert['eq:' + v] = !this.ouvert['eq:' + v]; this.rendre(); return; }
       if (a === 'cq-f') { this.cqF[parts[0]] = parts[1]; this.rendre(); return; }
       if (a === 'cq-voir') { this.cqV = { shop: parts[0], taskId: parts[1] }; this.rendre(); return; }
       if (a === 'cq-fermer') { this.cqV = null; this.rendre(); return; }
@@ -2549,6 +2723,8 @@
       const el = e.target; const f = el.dataset && el.dataset.f; if (!f) { return; }
       const parts = f.split('|');
       if (parts[0] === 'form') { this.form[parts[1]] = el.value; return; }
+      if (parts[0] === 'ed') { const r = this.ed && this.ed.rep[Number(parts[1])]; if (r) { r.txt = el.value; } return; }
+      if (parts[0] === 'eqc') { const P = this.form.pe || (this.form.pe = {}); const x = P[parts[1]] || (P[parts[1]] = { vu: true }); x.com = el.value; return; }
       if (parts[0] === 'vb') { const vb = this.form.vb; if (vb) { if (parts[1] === 'p') { vb.pistes[Number(parts[2])] = el.value; } else { vb[parts[1]] = el.value; } } return; }
       if (parts[0] === 'pa') { if (this.form.pa && this.form.pa[Number(parts[1])]) { this.form.pa[Number(parts[1])][parts[2]] = el.value; } return; }
       if (parts[0] === 'ckc') { this.ckF[parts[1]] = Object.assign(this.ckF[parts[1]] || {}, { commentaire: el.value }); return; }
@@ -2668,7 +2844,7 @@
         this.D.photos.unshift({ client_id: cid, visite_id: v.id, shop: v.shop, genre: 'signature', data: f.sig, prise_a: maintenant(), attente: true });
         this.ecrire({ method: 'POST', path: '/visites/photos', body: { client_id: cid, shop: v.shop, visite_id: v.id, genre: 'signature', data: f.sig, prise_a: maintenant(), par: this.role }, apres: 'photo' });
       }
-      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, meteo: f.meteo || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '' });
+      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, meteo: f.meteo || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '', evaluation: this.evalCorps(f), personnel: this.equipeCorps(v, f) });
       const b = this.boutique(v.shop); if (b) { b.visiteEnCours = null; b.derniereVisite = { id: v.id, le: v.prevu_le, consultant: v.consultantNom }; if (b.prochaineVisite && String(b.prochaineVisite.id) === String(v.id)) { b.prochaineVisite = null; } }
       v.rapportStatut = 'brouillon';
       this.form = {};
@@ -2847,6 +3023,214 @@
         <div class="sc-mods"><span class="h">${nl ? 'Module' : 'Module'}</span><span class="h n">${nl ? 'Vorig' : 'Précédente'}</span><span class="h n">${nl ? 'Nu' : 'Actuelle'}</span><span class="h n">${nl ? 'Verschil' : 'Écart'}</span>
           ${a.modules.map(m => `<span>${esc(nomDe(m, nl ? 'nl' : 'fr'))}</span><span class="n mu">${avant[m.id] != null ? avant[m.id] : '—'}</span><span class="n"><b class="${ton(m.score)}">${m.score}</b></span><span class="n">${avant[m.id] != null ? ec(m.score - avant[m.id]) : ''}</span>`).join('')}</div>
         <div class="xs mu" style="margin-top:6px">${nl ? 'Op ' + a.n + ' gescoorde vragen: elk punt in orde telt volgens zijn gewicht. Tellen niet mee: N.v.t., vrije tekst, vragen buiten de score.' : 'Sur ' + a.n + ' questions notées : chaque point conforme compte selon son poids. Ne comptent pas : N/A, texte libre, questions hors score.'}</div></div>`;
+    }
+    /** Le planning du jour du magasin (GET /visites/equipe/{shop}) : lu une fois par session et par jour, gardé hors ligne. */
+    chargerEquipe(shop) {
+      const k = shop + '|' + auj(); if (!shop || this.EQ[shop] && this.EQ[shop].k === k) { return; }
+      this.EQ[shop] = { k, chargement: true };
+      this.lire('/visites/equipe/' + encodeURIComponent(shop) + '?date=' + auj(), 'eq:' + k)
+        .then(d => { this.EQ[shop] = { k, d }; }, () => { this.EQ[shop] = { k, erreur: true }; }).then(() => this.rendre());
+    }
+    /** Les personnes du planning, chacune avec son statut à l'heure qu'il est : en poste, arrive à…, partie à… */
+    equipeListe(shop) {
+      const E = this.EQ[shop]; const L = (E && E.d && E.d.personnes) || [];
+      const n = new Date(); const hm = String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
+      return L.map(p => {
+        const cr = p.creneaux || []; const dans = cr.some(c => c[0] <= hm && hm < c[1]); const apres = cr.filter(c => c[0] > hm);
+        const statut = dans ? 'en poste' : apres.length ? 'arrive à ' + apres[0][0] : 'partie à ' + (cr.length ? cr[cr.length - 1][1] : '');
+        return Object.assign({}, p, { k: p.emp > 0 ? 'e' + p.emp : 'n' + p.nom, statut, heures: cr.map(c => c[0] + ' – ' + c[1]).join(' · ') });
+      }).sort((a, b) => (a.statut === 'en poste' ? 0 : 1) - (b.statut === 'en poste' ? 0 : 1));
+    }
+    equipeFaite(f, p) { const x = (f.pe || {})[p.k]; return !!x && (x.vu === false || x.note >= 1); }
+    /** La note de l'équipe telle qu'elle part avec la visite : les personnes notées ou « pas vues ». */
+    equipeCorps(v, f) {
+      const P = f.pe || {}; const L = this.equipeListe(v.shop); const out = [];
+      L.forEach(p => { const x = P[p.k]; if (x && (x.vu === false || x.note >= 1 || x.tenue != null || x.sbam != null || x.xp != null || String(x.com || '').trim())) {
+        out.push({ emp: p.emp, nom: p.nom, heures: p.heures, vu: x.vu !== false, note: x.note || null, com: String(x.com || '').trim(), tenue: x.tenue == null ? null : x.tenue, sbam: x.sbam == null ? null : x.sbam, xp: x.xp == null ? null : x.xp }); } });
+      return out.length ? { personnes: out } : null;
+    }
+    /** Une personne : sa note de 1 à 5, les trois contrôles éclair Oui / Non, sa remarque — ou « pas vue ». */
+    equipePersonneHtml(p, x) {
+      const ini = String(p.nom).split(/\s+/).map(m => m.charAt(0)).join('').slice(0, 2).toUpperCase();
+      const ent = `<div class="h"><span class="eq-av">${esc(ini)}</span><div><b>${esc(p.nom)}</b><small>${esc(p.heures)}${p.postes && p.postes.length ? ' · ' + esc(p.postes.join(', ')) : ''}</small></div><span class="eq-st${p.statut === 'en poste' ? '' : ' off'}">${esc(p.statut)}</span><span class="sp"></span>`;
+      if (x && x.vu === false) { return `<div class="card eq-p pv">${ent}<span class="xs mu">pas vue pendant la visite</span><button type="button" class="chip" data-a="eq-vu" data-v="${esc(p.k)}">Annuler</button></div></div>`; }
+      const n = x && x.note || 0; const yn = c => `<span class="eq-yn">${[[1, 'Oui', 'oui'], [0, 'Non', 'non']].map(([val, l, cls]) => `<button type="button" data-a="eq" data-v="${esc(p.k)}|${c}|${val}" class="${x && x[c] === val ? 'on ' + cls : ''}">${l}</button>`).join('')}</span>`;
+      return `<div class="card eq-p">${ent}<button type="button" class="chip" data-a="eq-vu" data-v="${esc(p.k)}">Pas vue</button></div>
+        <div class="eq-g"><div><div class="eq-lab">Note rapide${n ? ` <b class="${evalTon(n) === 'ok' ? 'up' : ''}">${n} / 5</b>` : ''}</div><div class="ev-notes">${EVAL_NOTES.map(([k, l]) => `<button type="button" data-a="eq" data-v="${esc(p.k)}|note|${k}" class="${n === k ? 'on ' + evalTon(k) : ''}">${k}<small>${esc(l)}</small></button>`).join('')}</div></div>
+          <div><div class="eq-lab">Contrôle éclair</div><div class="eq-ck">${EQ_CHECKS.map(([c, l, aide]) => `<div class="r"><span>${esc(l)}<small>${esc(aide)}</small></span>${yn(c)}</div>`).join('')}</div></div></div>
+        <textarea data-f="eqc|${esc(p.k)}" rows="1" placeholder="Remarque — ce qu’on a vu (accueil, conseil, gestes)">${esc((x && x.com) || '')}</textarea></div>`;
+    }
+    /** L'étape : le planning du jour, la synthèse, chaque personne en poste ; les autres du jour repliées. */
+    equipeHtml(v) {
+      const E = this.EQ[v.shop]; const f = this.form; const P = f.pe || {};
+      if (!E || E.chargement) { return '<div class="card sm mu">Lecture du planning du jour…</div>'; }
+      if (E.erreur || !E.d) { return '<div class="card sm mu">Le planning du jour ne se lit pas (panel injoignable, et rien en réserve sur la tablette). L’étape ne bloque pas.</div>'; }
+      const L = this.equipeListe(v.shop); const A = L.filter(p => p.statut === 'en poste'); const H = L.filter(p => p.statut !== 'en poste');
+      const notes = A.map(p => P[p.k]).filter(x => x && x.vu !== false);
+      const moy = (() => { const n = notes.map(x => x.note).filter(x => x >= 1); return n.length ? n.reduce((a, b) => a + b, 0) / n.length : null; })();
+      const tx = c => { const r = notes.filter(x => x[c] === 1 || x[c] === 0); return r.length ? `<span>${esc(EQ_CHECKS.find(q => q[0] === c)[3])} <b>${r.filter(x => x[c] === 1).length} / ${r.length}</b></span>` : ''; };
+      const som = `<div class="card eq-som"><div><div class="xs mu">Planning du jour · ${esc(E.d.source === 'panel' ? 'lu au panel' : E.d.source || '—')}</div><div class="sm" style="margin-top:3px"><b>${A.length} en poste</b>${H.length ? ' · ' + H.length + ' autre' + (H.length > 1 ? 's' : '') + ' au planning aujourd’hui' : ''}</div></div>
+        <span class="sp"></span>${moy != null ? `<div style="text-align:right"><span class="k">${moy.toFixed(1).replace('.', ',')}</span> <span class="xs mu">/ 5 · moyenne</span></div>` : ''}<div class="t">${EQ_CHECKS.map(q => tx(q[0])).join('')}</div></div>`;
+      const aussi = H.length ? `<div class="cap">Aussi au planning aujourd’hui</div><div class="eq-aussi">${H.map(p => this.ouvert['eq:' + p.k] || P[p.k] ? this.equipePersonneHtml(p, P[p.k]) : `<div class="card eq-p"><div class="h"><span class="eq-av">${esc(String(p.nom).split(/\s+/).map(m => m.charAt(0)).join('').slice(0, 2).toUpperCase())}</span><div><b>${esc(p.nom)}</b><small>${esc(p.heures)}${p.postes && p.postes.length ? ' · ' + esc(p.postes.join(', ')) : ''}</small></div><span class="eq-st off">${esc(p.statut)}</span><span class="sp"></span><button type="button" class="chip" data-a="eq-ouv" data-v="${esc(p.k)}">Noter quand même</button></div></div>`).join('')}</div>` : '';
+      return som + (A.length ? A.map(p => this.equipePersonneHtml(p, P[p.k])).join('') : '<div class="card sm mu">Personne n’est en poste à cette heure d’après le planning.</div>')
+        + aussi + '<div class="xs mu" style="margin:4px 2px">Notée pendant la visite, sans le dire à voix haute. Interne : reste au bureau, ne part pas dans le rapport du franchisé.</div>';
+    }
+    /** Une photo de la tablette par son id ou son client_id (une photo prise hors ligne n'a pas encore d'id). */
+    photoPar(v) { return (this.D.photos || []).find(x => String(x.id) === String(v) || x.client_id === v) || null; }
+    /** Ce que montre une photo : le magasin, le jour, et ce qu'elle est (photo du jour, point de checklist, correction…). */
+    photoTitre(p) {
+      const j = GENRES_JOUR.find(g => g[0] === p.genre);
+      let quoi = j ? j[1] : ({ correction: 'Correction', avant: 'Avant', apres: 'Après', msp: 'Client mystère' })[p.genre] || 'Photo';
+      if (p.ref) { (this.D.checklist || []).concat(...((this.D.types || []).map(t => t.checklist || []))).forEach(m => (m.points || []).forEach(pt => { if (pt.ref === p.ref) { quoi = pt.libelle; } })); }
+      return (this.boutique(p.shop) || {}).court + ' · ' + quoi + ' · ' + fmtDJ(p.prise_a) + ' ' + fmtH(p.prise_a);
+    }
+    /** Le barème des repères : celui du serveur (Contrôle des tâches), sinon le barème livré. */
+    repNiveaux() { const l = (this.D && this.D.reperesNiveaux) || []; return (l.length ? l : REP_NIV).slice().sort((a, b) => a.n - b.n); }
+    repNiv(n) { const l = this.repNiveaux(); return l.find(x => +x.n === +n) || l.find(x => +x.n === 3) || l[0]; }
+    /** Les cadres d'une photo, en pourcentage d'elle : ils suivent la taille d'affichage. */
+    repCadres(rep, sel) {
+      return (rep || []).map((r, i) => { const lv = this.repNiv(r.niveau); return `<i class="rp-k l${+r.niveau}${sel === i ? ' on' : ''}" data-a="ed-sel" data-v="${i}" style="--c:${esc(lv.couleur)};left:${(r.x * 100).toFixed(2)}%;top:${(r.y * 100).toFixed(2)}%;width:${(r.l * 100).toFixed(2)}%;height:${(r.h * 100).toFixed(2)}%"><b>${i + 1}</b></i>`; }).join('');
+    }
+    /** La pastille d'une vignette qui porte des repères. */
+    repBadge(p) { const n = p && p.reperes ? p.reperes.length : 0; return n ? `<span class="rp-bdg">✎ ${n}</span>` : ''; }
+    /** La photo en grand : ses repères et leurs remarques ; « Annoter » ouvre l'éditeur. */
+    voirHtml() {
+      const V = this.voir; const p = V.pid ? this.photoPar(V.pid) : null;
+      if (!p) { return `<div class="voir" data-a="fermer-voir"><img src="${esc(V.src)}" alt=""><div class="txt">${esc(V.txt)}</div></div>`; }
+      const rep = p.reperes || [];
+      return `<div class="voir v2" role="dialog"><div class="vw-hd"><span>${esc(V.txt)}</span><span class="sp"></span><button type="button" class="btn p" data-a="ed-ouvrir" data-v="${esc(V.pid)}">✎ ${rep.length ? 'Modifier les repères' : 'Annoter la photo'}</button><button type="button" class="vw-x" data-a="fermer-voir" aria-label="fermer">✕</button></div>
+        <div class="vw-ph"><span class="rp-surf"><img src="${esc(V.src)}" alt="">${this.repCadres(rep, null)}</span></div>
+        ${rep.length ? `<div class="vw-pied">${rep.map((r, i) => { const lv = this.repNiv(r.niveau); return `<div class="rp-l"><span class="rp-n" style="--c:${esc(lv.couleur)}">${i + 1}</span><em style="color:${esc(lv.couleur)}">${esc(repCourt(lv.nom))}</em><span>${esc(r.txt || '')}</span></div>`; }).join('')}</div>` : ''}</div>`;
+    }
+    /** L'éditeur : la photo à gauche (glisser pour tracer), la gravité du prochain repère dessous, les remarques à droite. */
+    edHtml() {
+      const E = this.ed; const p = this.photoPar(E.pid); if (!p) { this.ed = null; return ''; }
+      const N = this.repNiveaux().slice().reverse();
+      const bilan = N.map(lv => ({ lv, n: E.rep.filter(r => +r.niveau === +lv.n).length })).filter(x => x.n);
+      const lignes = E.rep.map((r, i) => { const lv = this.repNiv(r.niveau); return `<div class="ed-r${E.sel === i ? ' on' : ''}" data-a="ed-sel" data-v="${i}"><div class="h"><span class="rp-n" style="--c:${esc(lv.couleur)}">${i + 1}</span><b style="color:${esc(lv.couleur)}">${esc(repCourt(lv.nom))}</b><span class="sp"></span><button type="button" class="x" data-a="ed-suppr" data-v="${i}" aria-label="retirer le repère">✕</button></div>
+        <div class="nv">${N.map(l2 => `<button type="button" data-a="ed-rniv" data-v="${i}|${l2.n}" class="${+l2.n === +r.niveau ? 'on' : ''}" style="--c:${esc(l2.couleur)}">${esc(repCourt(l2.nom))}</button>`).join('')}</div>
+        <textarea data-f="ed|${i}" rows="2" placeholder="Ce qu’on voit, ce qu’il faut reprendre">${esc(r.txt || '')}</textarea></div>`; }).join('');
+      return `<div class="ed" role="dialog" aria-label="Repères sur la photo"><div class="ed-hd"><div><small>Repères sur la photo</small><b>${esc(this.photoTitre(p))}</b><span class="s">Ils partent dans le rapport avec la photo, numérotés, chacun avec sa remarque.</span></div><span class="sp"></span><button type="button" class="vw-x" data-a="ed-annuler" aria-label="fermer sans enregistrer">✕</button></div>
+        <div class="ed-c"><div class="ed-g"><div class="ed-ph"><span class="rp-surf" data-edsurf><img src="${esc(this.photoSrc(p))}" alt="">${this.repCadres(E.rep, E.sel)}</span></div>
+          <div class="ed-bar"><span class="lab">Gravité du prochain repère</span>${N.map(lv => `<button type="button" class="ed-niv${+lv.n === +E.niv ? ' on' : ''}" data-a="ed-niv" data-v="${lv.n}" style="--c:${esc(lv.couleur)}"><i></i>${esc(repCourt(lv.nom))}</button>`).join('')}
+            <span class="sep"></span><button type="button" class="ed-out" data-a="ed-undo"${E.rep.length ? '' : ' disabled'}>↶ Retirer le dernier</button><button type="button" class="ed-out" data-a="ed-vider"${E.rep.length ? '' : ' disabled'}>Tout effacer</button>
+            <span class="sp"></span><span class="aide">Glissez le doigt sur la zone — le numéro s’ajoute tout seul</span></div></div>
+          <div class="ed-d"><div class="tt">${E.rep.length ? E.rep.length + ' repère' + (E.rep.length > 1 ? 's' : '') : 'Aucun repère'}</div>
+            <div class="ed-ls">${lignes || '<div class="ed-vide">Tracez un cadre sur ce qui ne va pas — ou sur ce qui est exemplaire. Chaque cadre reçoit un numéro, sa gravité et une remarque.</div>'}</div>
+            ${bilan.length ? `<div class="ed-bil">${bilan.map(x => `<span style="--c:${esc(x.lv.couleur)}"><b>${x.n}</b> ${esc(repCourt(x.lv.nom).toLowerCase())}</span>`).join('')}</div>` : ''}
+            <div class="ed-act"><button type="button" class="btn" data-a="ed-annuler">Annuler</button><button type="button" class="btn p" data-a="ed-enreg">Enregistrer</button></div></div></div></div>`;
+    }
+    /** Les gestes de l'éditeur. Enregistrer met la photo à jour tout de suite et envoie (file hors ligne comprise). */
+    edAction(a, v) {
+      const E = this.ed;
+      if (a === 'ed-annuler') { this.ed = null; }
+      else if (a === 'ed-niv') { E.niv = Number(v); }
+      else if (a === 'ed-sel') { E.sel = Number(v); }
+      else if (a === 'ed-rniv') { const [i, n] = v.split('|').map(Number); if (E.rep[i]) { E.rep[i].niveau = n; E.sel = i; } }
+      else if (a === 'ed-suppr') { E.rep.splice(Number(v), 1); E.sel = null; }
+      else if (a === 'ed-undo') { E.rep.pop(); E.sel = null; }
+      else if (a === 'ed-vider') { E.rep = []; E.sel = null; }
+      else if (a === 'ed-enreg') {
+        const p = this.photoPar(E.pid);
+        if (p) {
+          p.reperes = E.rep.map((r, i) => ({ n: i + 1, x: r.x, y: r.y, l: r.l, h: r.h, niveau: r.niveau, txt: String(r.txt || '').trim() }));
+          this.ecrire({ method: 'PUT', path: '/visites/photos/' + encodeURIComponent(E.pid) + '/reperes', body: { reperes: p.reperes, qui: this.qui() }, apres: 'reperes' });
+          this.dire(p.reperes.length ? (p.reperes.length > 1 ? p.reperes.length + ' repères enregistrés' : '1 repère enregistré') : 'Repères effacés');
+        }
+        this.ed = null;
+      }
+      this.rendre();
+    }
+    /** Tracer un cadre au doigt (ou à la souris) sur la photo de l'éditeur : en fractions de la photo, 1,5 % au moins. */
+    ecouterReperes(host) {
+      host.addEventListener('pointerdown', e => {
+        const s = e.target.closest && e.target.closest('[data-edsurf]'); if (!s || !this.ed || e.target.closest('.rp-k')) { return; }
+        e.preventDefault(); const r = s.getBoundingClientRect(); if (!r.width || !r.height) { return; }
+        const k = document.createElement('i'); k.className = 'rp-k tmp'; k.style.setProperty('--c', this.repNiv(this.ed.niv).couleur); s.appendChild(k);
+        this._edT = { s, r, k, x0: (e.clientX - r.left) / r.width, y0: (e.clientY - r.top) / r.height, x1: null, y1: null };
+        try { s.setPointerCapture(e.pointerId); } catch (er) { /* sans capture */ }
+      });
+      host.addEventListener('pointermove', e => {
+        const T = this._edT; if (!T) { return; } e.preventDefault();
+        T.x1 = Math.max(0, Math.min(1, (e.clientX - T.r.left) / T.r.width)); T.y1 = Math.max(0, Math.min(1, (e.clientY - T.r.top) / T.r.height));
+        const x = Math.min(T.x0, T.x1), y = Math.min(T.y0, T.y1);
+        Object.assign(T.k.style, { left: x * 100 + '%', top: y * 100 + '%', width: Math.abs(T.x1 - T.x0) * 100 + '%', height: Math.abs(T.y1 - T.y0) * 100 + '%' });
+      });
+      const fin = () => {
+        const T = this._edT; if (!T) { return; } this._edT = null;
+        if (T.x1 == null) { T.k.remove(); return; }
+        const l = Math.abs(T.x1 - T.x0), h = Math.abs(T.y1 - T.y0);
+        if (l < 0.015 || h < 0.015) { T.k.remove(); return; }
+        const r4 = x => Math.round(x * 10000) / 10000;
+        this.ed.rep.push({ x: r4(Math.min(T.x0, T.x1)), y: r4(Math.min(T.y0, T.y1)), l: r4(l), h: r4(h), niveau: this.ed.niv, txt: '' });
+        this.ed.sel = this.ed.rep.length - 1; this.rendre();
+      };
+      host.addEventListener('pointerup', fin); host.addEventListener('pointercancel', fin);
+    }
+    /** L'évaluation telle qu'elle part : { notes: { axe: { note, com } } } (la forme que le serveur rend), null si rien n'est noté. */
+    evalCorps(f) {
+      const o = {}; let n = 0;
+      EVAL_AXES.forEach(([k]) => { const x = Number(f['ev_' + k]) || 0; if (x >= 1) { n++; } o[k] = { note: x >= 1 ? x : null, com: String(f['evc_' + k] || '').trim() }; });
+      return n ? { notes: o } : null;
+    }
+    evalMoyenne(f) {
+      const n = EVAL_AXES.map(([k]) => Number(f['ev_' + k]) || 0).filter(x => x >= 1);
+      return n.length ? Math.round(n.reduce((a, b) => a + b, 0) / n.length * 10) / 10 : null;
+    }
+    /** La dernière évaluation de ce magasin avant cette visite (tous types : les six axes sont les mêmes partout). */
+    evalPrecedente(v) {
+      const av = (this.D.visites || []).filter(x => String(x.shop) === String(v.shop) && x.statut === 'terminee' && String(x.id) !== String(v.id) && x.prevu_le <= v.prevu_le && x.evaluation && x.evaluation.notes)
+        .sort((a, b) => a.prevu_le < b.prevu_le ? 1 : (a.prevu_le > b.prevu_le ? -1 : Number(b.id) - Number(a.id)));
+      return av.length ? { le: av[0].prevu_le, notes: av[0].evaluation.notes } : null;
+    }
+    /**
+     * Le radar des six axes (même dessin que le rapport, suivi.php suEvalRadarSvg) : les anneaux de 1 à 5, cette visite en
+     * rouge plein, la précédente en pointillé bleu ; chaque axe porte son nom et sa note.
+     */
+    evalRadar(notes, prec, nl) {
+      // La largeur suit le plus long libellé de côté (le néerlandais est plus long), comme suivi.php.
+      const n = EVAL_AXES.length, R = 108, P = 13;
+      const long = Math.max(...EVAL_AXES.filter((a, i) => i % 3 !== 0).map(a => (nl ? EVAL_NL[a[0]] || a[1] : a[1]).length));
+      const cx = Math.ceil(R * 0.87 + 16 + long * P * 0.6 + 8), W = 2 * cx, H = Math.ceil(2 * (R + 16) + 4 * P + 34), cy = Math.round(R + 16 + 2 * P + 14);
+      const pt = (i, v) => { const a = -Math.PI / 2 + 2 * Math.PI * i / n; return [cx + Math.cos(a) * R * v / 5, cy + Math.sin(a) * R * v / 5]; };
+      const f1 = x => x.toFixed(1);
+      const poly = val => EVAL_AXES.map(([k], i) => pt(i, val(k)).map(f1).join(',')).join(' ');
+      const coul = x => !x ? '#999' : x >= 4 ? '#2d7a3e' : x === 3 ? '#B45F06' : '#C0182B';
+      let g = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Évaluation rapide" style="font-family:var(--font-ui)">`;
+      for (let r = 1; r <= 5; r++) { g += `<polygon points="${poly(() => r)}" fill="${r === 5 ? '#FBF8F4' : 'none'}" stroke="${r === 5 ? '#D9CFC3' : '#EAE3DA'}" stroke-width="1"/>`; }
+      EVAL_AXES.forEach((a, i) => { const [x, y] = pt(i, 5); g += `<line x1="${cx}" y1="${cy}" x2="${f1(x)}" y2="${f1(y)}" stroke="#EAE3DA" stroke-width="1"/>`; });
+      for (let r = 1; r <= 5; r++) { const [x0, y0] = pt(0, r), [x1, y1] = pt(1, r); g += `<text x="${f1((x0 + x1) / 2 + 2)}" y="${f1((y0 + y1) / 2 + 3)}" font-size="9" fill="#a1978a" stroke="#fff" stroke-width="3" paint-order="stroke">${r}</text>`; }
+      if (prec) { g += `<polygon points="${poly(k => (prec[k] && prec[k].note) || 0)}" fill="none" stroke="#2F6EA5" stroke-width="1.6" stroke-dasharray="5 4"/>`; }
+      g += `<polygon points="${poly(k => notes[k] || 0)}" fill="#8D1D2C" fill-opacity=".16" stroke="#8D1D2C" stroke-width="2.4" stroke-linejoin="round"/>`;
+      EVAL_AXES.forEach(([k, nom], i) => {
+        const v = notes[k] || 0;
+        if (v) { const [x, y] = pt(i, v); g += `<circle cx="${f1(x)}" cy="${f1(y)}" r="5" fill="#8D1D2C" stroke="#fff" stroke-width="1.5"/>`; }
+        const a = -Math.PI / 2 + 2 * Math.PI * i / n, lx = cx + Math.cos(a) * (R + 16), ly = cy + Math.sin(a) * (R + 16);
+        const anc = Math.abs(Math.cos(a)) < 0.2 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end', dy = Math.sin(a) < -0.9 ? -(P * 1.2 + 5) : Math.sin(a) > 0.9 ? P + 2 : -3;
+        g += `<text x="${f1(lx)}" y="${f1(ly + dy)}" text-anchor="${anc}" font-size="${P}" font-weight="700" fill="#333">${esc(nom)}</text>`
+          + `<text x="${f1(lx)}" y="${f1(ly + dy + P * 1.2)}" text-anchor="${anc}" font-size="${P}" font-weight="700" fill="${coul(v)}">${v ? v + ' / 5' : '—'}</text>`;
+      });
+      return g + '</svg>';
+    }
+    /** L'étape de l'évaluation rapide : le radar qui se dessine à chaque note, les six axes, une note de 1 à 5 et un commentaire chacun. */
+    evalHtml(v, f) {
+      const notes = {}; EVAL_AXES.forEach(([k]) => { notes[k] = Number(f['ev_' + k]) || 0; });
+      const P = this.evalPrecedente(v); const moy = this.evalMoyenne(f);
+      const nP = P ? EVAL_AXES.map(([k]) => P.notes[k] && P.notes[k].note).filter(x => x >= 1) : [];
+      const moyP = nP.length ? Math.round(nP.reduce((a, b) => a + b, 0) / nP.length * 10) / 10 : null; const n1 = x => x.toFixed(1).replace('.', ',');
+      const d = moy != null && moyP != null ? Math.round((moy - moyP) * 10) / 10 : null;
+      const ecart = d == null ? '' : ` · <span class="${d > 0 ? 'up' : d < 0 ? 'dn' : ''}">${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d).toFixed(1).replace('.', ',')}</span>`;
+      const radar = `<div class="card ev-radar"><div class="ev-moy"><b>${moy != null ? n1(moy) : '—'}</b><span>/ 5 · moyenne</span>${P ? `<span>visite précédente (${String(P.le).slice(8, 10)}/${String(P.le).slice(5, 7)}) : ${moyP != null ? n1(moyP) : '—'}${ecart}</span>` : '<span>première évaluation</span>'}</div>
+        ${this.evalRadar(notes, P ? P.notes : null, this.lngDe(v) === 'nl')}
+        <div class="ev-leg"><span><i></i>cette visite</span>${P ? '<span><i class="p"></i>visite précédente</span>' : ''}</div>
+        <div class="xs mu" style="margin-top:8px">Notée avec le franchisé. Elle part dans le rapport : le radar, chaque note et son commentaire.</div></div>`;
+      const axes = EVAL_AXES.map(([k, nom, aide]) => {
+        const x = notes[k]; const av = P && P.notes[k] && P.notes[k].note;
+        return `<div class="card ev-ax"><div class="h"><b>${esc(nom)}</b><small>${esc(aide)}</small><span class="n ${evalTon(x)}">${x ? x + ' / 5' : 'à noter'}</span></div>
+          <div class="ev-notes">${EVAL_NOTES.map(([n, l]) => `<button data-a="form" data-v="ev_${k}|${n}" class="${x === n ? 'on ' + evalTon(n) : ''}">${n}<small>${esc(l)}</small></button>`).join('')}</div>
+          <textarea data-f="form|evc_${k}" rows="1" placeholder="Commentaire${av ? ' · la dernière fois : ' + av + ' / 5' : ''} — part dans le rapport">${esc(f['evc_' + k] || '')}</textarea></div>`;
+      }).join('');
+      return `<div class="ev"><div>${radar}</div><div>${axes}</div></div>`;
     }
     finHtml(v) {
       const pts = this.pointsDe(v.id); const phs = this.photosDe(v.id); let total = 0, faits = 0, ko = 0;

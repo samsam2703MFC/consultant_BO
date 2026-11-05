@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// L'évaluation rapide de fin de visite : les six axes, le contrôle de ce qu'envoie la tablette.
+require_once __DIR__ . '/visites_evaluation.php';
+
 /**
  * Suivi des franchisés (24/10/2026) — le circuit d'une visite, de l'ordinateur à
  * la tablette et retour, et ce que le franchisé en reçoit.
@@ -318,6 +321,19 @@ function suL(string $k, string $l): string
             'nl' => 'Elk punt in orde telt volgens zijn gewicht. Tellen niet mee: N.v.t.-antwoorden, vrije tekst, vragen buiten de score.',
             'en' => 'Each compliant point counts according to its weight. Not counted: N/A answers, free text, questions outside the score.',
             'de' => 'Jeder Punkt in Ordnung zählt nach seinem Gewicht. Nicht gezählt: N/A-Antworten, Freitext, Fragen ohne Bewertung.'],
+        'rp_1' => ['fr' => 'critique', 'nl' => 'kritiek', 'en' => 'critical', 'de' => 'kritisch'],
+        'rp_2' => ['fr' => 'majeur', 'nl' => 'groot', 'en' => 'major', 'de' => 'schwer'],
+        'rp_3' => ['fr' => 'mineur', 'nl' => 'klein', 'en' => 'minor', 'de' => 'gering'],
+        'rp_4' => ['fr' => 'conforme', 'nl' => 'in orde', 'en' => 'compliant', 'de' => 'in Ordnung'],
+        'rp_5' => ['fr' => 'exemplaire', 'nl' => 'voorbeeldig', 'en' => 'exemplary', 'de' => 'vorbildlich'],
+        'eval' => ['fr' => 'Évaluation rapide', 'nl' => 'Snelle evaluatie', 'en' => 'Quick assessment', 'de' => 'Schnellbewertung'],
+        'eval_moy' => ['fr' => 'moyenne', 'nl' => 'gemiddelde', 'en' => 'average', 'de' => 'Durchschnitt'],
+        'eval_premiere' => ['fr' => 'première évaluation', 'nl' => 'eerste evaluatie', 'en' => 'first assessment', 'de' => 'erste Bewertung'],
+        'eval_ceci' => ['fr' => 'cette visite', 'nl' => 'dit bezoek', 'en' => 'this visit', 'de' => 'dieser Besuch'],
+        'eval_regle' => ['fr' => 'Six axes notés de 1 à 5 avec le franchisé, en fin de visite. En pointillé : la visite précédente.',
+            'nl' => 'Zes assen, met de franchisenemer gescoord van 1 tot 5 aan het einde van het bezoek. Gestippeld: het vorige bezoek.',
+            'en' => 'Six areas scored from 1 to 5 with the franchisee at the end of the visit. Dotted: the previous visit.',
+            'de' => 'Sechs Bereiche, am Ende des Besuchs mit dem Franchisenehmer von 1 bis 5 bewertet. Gepunktet: der letzte Besuch.'],
         'positif' => ['fr' => 'Ce qui va bien', 'nl' => 'Wat goed gaat', 'en' => 'What is going well', 'de' => 'Was gut läuft'],
         'vu' => ['fr' => 'Vu sur place', 'nl' => 'Ter plaatse gezien', 'en' => 'Seen on site', 'de' => 'Vor Ort gesehen'],
         'probleme' => ['fr' => 'Le vrai problème', 'nl' => 'Het echte probleem', 'en' => 'The real issue', 'de' => 'Das eigentliche Problem'],
@@ -807,7 +823,8 @@ function suRapportPhotos(array $v, array $r): array
     $out = []; $n = 0;
     foreach (Db::rows('SELECT * FROM con_visite_photo WHERE visite_id = ? AND genre NOT IN (\'signature\', \'sig_consultant\') ORDER BY prise_a', [(int) $v['id']]) as $p) {
         $l = viPhotoLigne($p);
-        $l['inclus'] = array_key_exists((string) $p['id'], $incl) ? (bool) $incl[(string) $p['id']] : $n < 6;
+        // Une photo annotée à la tablette (ses repères) part d'office ; les autres, les six premières.
+        $l['inclus'] = array_key_exists((string) $p['id'], $incl) ? (bool) $incl[(string) $p['id']] : ($n < 6 || !empty($l['reperes']));
         $n++;
         $out[] = $l;
     }
@@ -846,6 +863,8 @@ function suRapportVue(array $v): array
         'delai' => suRapportDelai($v), 'contenu' => $contenu, 'checklist' => $ck, 'plans' => $plans, 'photos' => suRapportPhotos($v, $r),
         // Le score (26/10/2026) : la visite et la précédente comparable. Visible ici et dans le rapport, pas sur la tablette (sauf avant de signer).
         'score' => suScore($v),
+        // L'évaluation rapide (05/11/2026) : dans le rapport tel quel, le radar dessiné par le serveur (le même que le PDF).
+        'evaluation' => suEvalVue($v, 'fr'),
         'causesDiag' => viCausesDiag(), 'roles' => $roles,
         'envoi' => ['a' => $ad['email'], 'source' => $ad['source'], 'langue' => $l, 'langueNom' => SU_LANGUES[$l], 'copies' => $copies,
             'envoyeLe' => $v['rapport_envoye_le'] ?? null, 'envoyePar' => $v['rapport_envoye_par'] ?? null, 'luLe' => $v['rapport_lu_le'] ?? null,
@@ -1011,6 +1030,158 @@ function suScoreHtml(?array $sc, string $l, callable $e): string
         . '<div style="color:#888;font-size:10.5px;margin-top:6px">' . $e(suL('score_regle', $l)) . '</div></div>';
 }
 
+/**
+ * L'évaluation rapide d'une visite (05/11/2026) et celle de la visite terminée d'avant du même magasin qui en a une
+ * (tous types confondus : les six axes sont les mêmes partout) ; null si la visite n'en a pas.
+ */
+function suEvaluation(array $v): ?array
+{
+    $a = suJson($v['evaluation'] ?? null);
+    if (!is_array($a['notes'] ?? null)) { return null; }
+    $prec = null;
+    foreach (Db::rows('SELECT id, prevu_le, evaluation FROM con_visite WHERE shop_id = ? AND statut = \'terminee\' AND id <> ? AND prevu_le <= ? AND evaluation IS NOT NULL
+        ORDER BY prevu_le DESC, id DESC LIMIT 6', [(string) $v['shop_id'], (int) $v['id'], (string) $v['prevu_le']]) as $x) {
+        $p = suJson($x['evaluation']);
+        if (is_array($p['notes'] ?? null)) { $prec = ['le' => (string) $x['prevu_le'], 'notes' => $p['notes']]; break; }
+    }
+    return ['notes' => $a['notes'], 'precedent' => $prec];
+}
+
+/** La moyenne des notes données (1 décimale), null sans note. */
+function suEvalMoyenne(array $notes): ?float
+{
+    $n = array_values(array_filter(array_map(static fn ($x) => is_array($x) ? ($x['note'] ?? null) : null, $notes), static fn ($x) => $x !== null));
+    return $n ? round(array_sum($n) / count($n), 1) : null;
+}
+
+/**
+ * Le radar des six axes en SVG (le rapport, son PDF, l'écran du bureau, la page du franchisé) : les anneaux de 1 à 5,
+ * cette visite en rouge plein, la précédente en pointillé bleu ; chaque axe porte son nom et sa note. Même dessin que la
+ * tablette (visites.js, evalRadar).
+ */
+function suEvalRadarSvg(array $notes, ?array $prec, string $l, int $largeur = 520, float $police = 12.5): string
+{
+    $axes = viEvalAxes(); $n = count($axes);
+    // La largeur suit le plus long libellé de côté (une police plus grande pour l'écran étroit du bureau et le téléphone).
+    $R = 108; $long = 0;
+    foreach ($axes as $i => $a) { if ($i % 3 !== 0) { $long = max($long, mb_strlen((string) ($a[$l] ?? $a['fr']))); } }
+    $cx = (int) ceil($R * 0.87 + 16 + $long * $police * 0.6 + 8); $W = 2 * $cx;
+    $H = (int) ceil(2 * ($R + 16) + 4 * $police + 34); $cy = (int) round($R + 16 + 2 * $police + 14);
+    $pt = static function (int $i, float $v) use ($n, $cx, $cy, $R): array {
+        $ang = -M_PI / 2 + 2 * M_PI * $i / $n;
+        return [$cx + cos($ang) * $R * $v / 5, $cy + sin($ang) * $R * $v / 5];
+    };
+    $f = static fn (float $x): string => number_format($x, 1, '.', '');
+    $poly = static function (callable $val) use ($axes, $pt, $f): string {
+        $p = [];
+        foreach ($axes as $i => $a) { [$x, $y] = $pt($i, (float) $val($a['k'])); $p[] = $f($x) . ',' . $f($y); }
+        return implode(' ', $p);
+    };
+    $note = static fn (array $src, string $k): ?int => isset($src[$k]['note']) && $src[$k]['note'] !== null ? (int) $src[$k]['note'] : null;
+    $coul = static fn (?int $x): string => $x === null ? '#999' : ($x >= 4 ? '#2d7a3e' : ($x === 3 ? '#B45F06' : '#C0182B'));
+    $e = static fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+    $g = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' . $W . ' ' . $H . '" width="' . $largeur . '" style="max-width:100%;height:auto;font-family:Helvetica,Arial,sans-serif" role="img" aria-label="' . $e(suL('eval', $l)) . '">';
+    for ($r = 1; $r <= 5; $r++) {
+        $g .= '<polygon points="' . $poly(static fn () => $r) . '" fill="' . ($r === 5 ? '#FBF8F4' : 'none') . '" stroke="' . ($r === 5 ? '#D9CFC3' : '#EAE3DA') . '" stroke-width="1"/>';
+    }
+    foreach ($axes as $i => $a) { [$x, $y] = $pt($i, 5); $g .= '<line x1="' . $cx . '" y1="' . $cy . '" x2="' . $f($x) . '" y2="' . $f($y) . '" stroke="#EAE3DA" stroke-width="1"/>'; }
+    // Les chiffres des anneaux entre les deux premiers axes, là où aucun point ne tombe.
+    for ($r = 1; $r <= 5; $r++) { [$x0, $y0] = $pt(0, $r); [$x1, $y1] = $pt(1, $r); $g .= '<text x="' . $f(($x0 + $x1) / 2 + 2) . '" y="' . $f(($y0 + $y1) / 2 + 3) . '" font-size="9" fill="#a1978a" stroke="#fff" stroke-width="3" paint-order="stroke">' . $r . '</text>'; }
+    if ($prec !== null) {
+        $g .= '<polygon points="' . $poly(static fn (string $k) => $note($prec['notes'], $k) ?? 0) . '" fill="none" stroke="#2F6EA5" stroke-width="1.6" stroke-dasharray="5 4"/>';
+    }
+    $g .= '<polygon points="' . $poly(static fn (string $k) => $note($notes, $k) ?? 0) . '" fill="#8D1D2C" fill-opacity=".16" stroke="#8D1D2C" stroke-width="2.4" stroke-linejoin="round"/>';
+    foreach ($axes as $i => $a) {
+        $v = $note($notes, $a['k']);
+        if ($v !== null) { [$x, $y] = $pt($i, $v); $g .= '<circle cx="' . $f($x) . '" cy="' . $f($y) . '" r="4.5" fill="#8D1D2C" stroke="#fff" stroke-width="1.5"/>'; }
+        // Le nom de l'axe et sa note, dehors : centrés en haut et en bas, à droite ou à gauche ailleurs.
+        $ang = -M_PI / 2 + 2 * M_PI * $i / $n; $lx = $cx + cos($ang) * ($R + 16); $ly = $cy + sin($ang) * ($R + 16);
+        $anc = abs(cos($ang)) < .2 ? 'middle' : (cos($ang) > 0 ? 'start' : 'end');
+        $dy = sin($ang) < -.9 ? -($police * 1.2 + 5) : (sin($ang) > .9 ? $police + 2 : -3);
+        $nom = (string) ($a[$l] ?? $a['fr']);
+        $g .= '<text x="' . $f($lx) . '" y="' . $f($ly + $dy) . '" text-anchor="' . $anc . '" font-size="' . $police . '" font-weight="700" fill="#333">' . $e($nom) . '</text>'
+            . '<text x="' . $f($lx) . '" y="' . $f($ly + $dy + $police * 1.2) . '" text-anchor="' . $anc . '" font-size="' . $police . '" font-weight="700" fill="' . $coul($v) . '">' . ($v !== null ? $v . ' / 5' : '—') . '</text>';
+    }
+    return $g . '</svg>';
+}
+
+/** Le bloc de l'évaluation rapide dans le rapport : le radar, la moyenne face à la précédente, chaque axe avec sa note et son commentaire. */
+function suEvalHtml(?array $ev, string $l, callable $e): string
+{
+    if ($ev === null) { return ''; }
+    $moy = suEvalMoyenne($ev['notes']); $p = $ev['precedent']; $moyP = $p !== null ? suEvalMoyenne($p['notes']) : null;
+    $nf = static fn (?float $x): string => $x === null ? '—' : str_replace('.', ',', number_format($x, 1, '.', ''));
+    $ecart = static function (?float $d, bool $entier = false) use ($nf): string {
+        if ($d === null) { return ''; }
+        $c = $d > 0 ? '#2d7a3e' : ($d < 0 ? '#C0182B' : '#888');
+        return '<span style="color:' . $c . ';font-weight:700">' . ($d > 0 ? '+' : ($d < 0 ? '−' : '±')) . ($entier ? (string) (int) abs($d) : $nf(abs($d))) . '</span>';
+    };
+    $coul = static fn (int $x): string => $x >= 4 ? '#2d7a3e' : ($x === 3 ? '#D97706' : '#C0182B');
+    $prec = $p !== null
+        ? $e(suL('score_prec', $l)) . ' (' . date('d/m', strtotime($p['le'])) . ') : ' . $nf($moyP) . ($moy !== null && $moyP !== null ? ' · ' . $ecart(round($moy - $moyP, 1)) : '')
+        : $e(suL('eval_premiere', $l));
+    $lignes = '';
+    foreach (viEvalAxes() as $a) {
+        $x = $ev['notes'][$a['k']] ?? []; $v = isset($x['note']) && $x['note'] !== null ? (int) $x['note'] : null;
+        $av = $p !== null && isset($p['notes'][$a['k']]['note']) && $p['notes'][$a['k']]['note'] !== null ? (int) $p['notes'][$a['k']]['note'] : null;
+        $pastilles = '';
+        for ($i = 1; $i <= 5; $i++) { $pastilles .= '<span style="display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:2px;background:' . ($v !== null && $i <= $v ? $coul($v) : '#EFE9E1') . '"></span>'; }
+        $lignes .= '<tr><td style="padding:5px 10px 5px 0;vertical-align:top;white-space:nowrap;font-weight:700">' . $e($a[$l] ?? $a['fr']) . '</td>'
+            . '<td style="padding:7px 8px 5px 0;vertical-align:top;white-space:nowrap">' . $pastilles . '</td>'
+            . '<td style="padding:5px 8px 5px 0;vertical-align:top;white-space:nowrap;font-weight:700;color:' . ($v !== null ? $coul($v) : '#999') . '">' . ($v !== null ? $v . ' / 5' : '—') . '</td>'
+            . '<td style="padding:5px 8px 5px 0;vertical-align:top;white-space:nowrap;font-size:11px">' . ($v !== null && $av !== null ? $ecart((float) ($v - $av), true) : '') . '</td>'
+            . '<td style="padding:5px 0;vertical-align:top;color:#444;width:100%">' . nl2br($e((string) ($x['com'] ?? ''))) . '</td></tr>';
+    }
+    return '<div style="margin:0 0 14px;padding:12px 14px;border:1px solid #EAE3DA;border-radius:10px;page-break-inside:avoid">'
+        . '<div style="font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 4px">' . $e(suL('eval', $l)) . '</div>'
+        . '<div style="margin:0 0 4px"><span style="font-family:Georgia,serif;font-size:34px;color:#8D1D2C">' . $nf($moy) . '</span><span style="color:#888"> / 5 · ' . $e(suL('eval_moy', $l)) . '</span>'
+        . '<span style="color:#666;font-size:12px;margin-left:12px">' . $prec . '</span></div>'
+        . '<div style="text-align:center;margin:4px 0 6px">' . suEvalRadarSvg($ev['notes'], $p, $l, 520) . '</div>'
+        . '<table style="border-collapse:collapse;width:100%;font-size:12px">' . $lignes . '</table>'
+        . '<div style="color:#888;font-size:10.5px;margin-top:6px">' . $e(suL('eval_regle', $l)) . '</div></div>';
+}
+
+/**
+ * Une photo du rapport avec ses repères (05/11/2026) : les cadres numérotés posés sur l'image, à la couleur de leur
+ * gravité (plus épais quand c'est plus grave, en pointillé pour un constat conforme), puis chaque remarque. Une photo
+ * sans repère reste une vignette.
+ */
+function suPhotoReperesHtml(string $src, array $reperes, string $l): string
+{
+    $e = static fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+    if (!$reperes) { return '<img src="' . $e($src) . '" style="width:31%;margin:0 1.5% 8px 0;border-radius:6px;vertical-align:top" alt="">'; }
+    $niv = [];
+    foreach (function_exists('viReperesNiveaux') ? viReperesNiveaux() : [] as $x) { $niv[(int) $x['n']] = $x['couleur']; }
+    $pc = static fn ($v): string => number_format(max(0, min(1, (float) $v)) * 100, 2, '.', '') . '%';
+    $cadres = ''; $lignes = '';
+    foreach (array_values($reperes) as $i => $r) {
+        $n = (int) ($r['niveau'] ?? 3); $c = $niv[$n] ?? '#D97706'; $num = $i + 1;
+        $bord = $n <= 2 ? '4px solid ' : ($n === 3 ? '3px solid ' : '2px dashed ');
+        $cadres .= '<div style="position:absolute;left:' . $pc($r['x'] ?? 0) . ';top:' . $pc($r['y'] ?? 0) . ';width:' . $pc($r['l'] ?? .1) . ';height:' . $pc($r['h'] ?? .1)
+            . ';border:' . $bord . $c . ';border-radius:4px;box-sizing:border-box"></div>'
+            . '<div style="position:absolute;left:' . $pc($r['x'] ?? 0) . ';top:' . $pc($r['y'] ?? 0) . ';margin:-10px 0 0 -4px;background:' . $c . ';color:#fff;border:1.5px solid #fff;font:700 11px/1.35 Helvetica,Arial,sans-serif;padding:1px 6px;border-radius:5px">' . $num . '</div>';
+        $lignes .= '<div style="margin:3px 0;font-size:11px;line-height:1.4"><span style="display:inline-block;background:' . $c . ';color:#fff;font-weight:700;border-radius:4px;padding:0 5px;margin-right:5px">' . $num . '</span>'
+            . '<b style="color:' . $c . '">' . $e(suL('rp_' . $n, $l)) . '</b>' . (trim((string) ($r['txt'] ?? '')) !== '' ? ' — ' . $e($r['txt']) : '') . '</div>';
+    }
+    return '<div style="display:inline-block;width:48%;margin:0 2% 12px 0;vertical-align:top;page-break-inside:avoid">'
+        . '<div style="position:relative;line-height:0"><img src="' . $e($src) . '" style="width:100%;border-radius:6px;display:block" alt="">' . $cadres . '</div>' . $lignes . '</div>';
+}
+
+/** L'évaluation pour l'écran du bureau et la page du franchisé : les notes, la moyenne, la précédente, le radar déjà dessiné. */
+function suEvalVue(array $v, string $l): ?array
+{
+    $ev = suEvaluation($v);
+    if ($ev === null) { return null; }
+    $p = $ev['precedent']; $axes = [];
+    foreach (viEvalAxes() as $a) {
+        $x = $ev['notes'][$a['k']] ?? [];
+        $axes[] = ['k' => $a['k'], 'nom' => (string) ($a[$l] ?? $a['fr']), 'note' => isset($x['note']) ? $x['note'] : null, 'com' => (string) ($x['com'] ?? ''),
+            'avant' => $p !== null && isset($p['notes'][$a['k']]['note']) ? $p['notes'][$a['k']]['note'] : null];
+    }
+    return ['axes' => $axes, 'moyenne' => suEvalMoyenne($ev['notes']), 'precedent' => $p !== null ? ['le' => $p['le'], 'moyenne' => suEvalMoyenne($p['notes'])] : null,
+        'svg' => suEvalRadarSvg($ev['notes'], $p, $l, 520, 17)];
+}
+
 function suRapportHtml(array $v, string $l): string
 {
     $e = static fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
@@ -1026,6 +1197,8 @@ function suRapportHtml(array $v, string $l): string
         . ' · ' . $ck['ok'] . ' / ' . $ck['total'] . ' ' . $e(suL('conformes', $l)) . '</div>'
         . '<p style="font-size:14px;margin:0 0 14px"><b>' . $e($c['phrase']) . '</b></p>';
     $h .= suScoreHtml(suScore($v), $l, $e);
+    // L'évaluation rapide de fin de visite (05/11/2026) : le radar des six axes, les notes et leurs commentaires.
+    $h .= suEvalHtml(suEvaluation($v), $l, $e);
     $sec = static fn (string $t, string $corps): string => '<div style="margin:0 0 12px"><div style="font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 3px">' . htmlspecialchars($t, ENT_QUOTES, 'UTF-8') . '</div>' . $corps . '</div>';
     if ($c['positif'] !== '') { $h .= $sec(suL('positif', $l), '<div>' . nl2br($e($c['positif'])) . '</div>'); }
     $vu = [];
@@ -1058,12 +1231,14 @@ function suRapportHtml(array $v, string $l): string
     }
     $h .= $sec(suL('points', $l), $lp !== '' ? '<table style="border-collapse:collapse;width:100%">' . $lp . '</table>' : '<div style="color:#666">' . $e(suL('vide_points', $l)) . '</div>');
     if ($photos) {
+        // Les photos annotées d'abord, deux par ligne pour que les cadres se lisent, leurs remarques dessous ; les autres ensuite.
+        usort($photos, static fn ($a, $b) => (int) empty($a['reperes']) <=> (int) empty($b['reperes']));
         $imgs = '';
         foreach (array_slice($photos, 0, 9) as $p) {
             $f = $racine . '/' . $p['chemin'];
             if (!is_file($f)) { continue; }
             $mime = (string) (mime_content_type($f) ?: 'image/jpeg');
-            $imgs .= '<img src="data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($f)) . '" style="width:31%;margin:0 1.5% 8px 0;border-radius:6px;vertical-align:top" alt="">';
+            $imgs .= suPhotoReperesHtml('data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($f)), (array) ($p['reperes'] ?? []), $l);
         }
         if ($imgs !== '') { $h .= $sec(suL('photos', $l), '<div>' . $imgs . '</div>'); }
     }
@@ -1484,12 +1659,17 @@ function ep_suivi_franchise(): array
             $ck = suChecklistBilan($v); $ancien = ($v['rapport_statut'] ?? null) === null;
             $r = suJson($v['rapport'] ?? null); $c = suRapportContenu($v);
             $plans = $ancien ? [] : array_values(array_filter(suRapportPlans($v, $r), static fn ($p) => $p['inclus'] && $p['statut'] !== 'interne'));
-            $photos = $ancien ? [] : array_map(static fn ($p) => ['chemin' => $p['chemin'], 'genre' => $p['genre']], array_values(array_filter(suRapportPhotos($v, $r), static fn ($p) => $p['inclus'])));
+            // Les repères posés à la tablette, avec leur couleur et leur gravité dans la langue du magasin.
+            $nivC = []; foreach (viReperesNiveaux() as $x) { $nivC[(int) $x['n']] = $x['couleur']; }
+            $photos = $ancien ? [] : array_map(static fn ($p) => ['chemin' => $p['chemin'], 'genre' => $p['genre'],
+                'reperes' => array_map(static fn ($x) => ['x' => $x['x'], 'y' => $x['y'], 'l' => $x['l'], 'h' => $x['h'], 'txt' => (string) ($x['txt'] ?? ''),
+                    'couleur' => $nivC[(int) ($x['niveau'] ?? 3)] ?? '#D97706', 'grav' => suL('rp_' . (int) ($x['niveau'] ?? 3), $l), 'n' => (int) ($x['niveau'] ?? 3)], array_values((array) ($p['reperes'] ?? [])))],
+                array_values(array_filter(suRapportPhotos($v, $r), static fn ($p) => $p['inclus'])));
             $raps[] = ['id' => (int) $v['id'], 'le' => $v['prevu_le'], 'type' => suTypeNom((string) (($v['type_code'] ?? '') ?: 'reguliere'), $l), 'consultant' => $v['consultant_nom'],
                 'checklist' => ['ok' => $ck['ok'], 'total' => $ck['total']], 'ancien' => $ancien, 'phrase' => $ancien ? '' : ($c['phrase'] ?: suRapportVue($v)['contenu']['phrase']),
                 'positif' => $ancien ? '' : $c['positif'], 'reco' => $c['reco'], 'causes' => $ancien ? [] : array_map(static fn ($k) => suL('c_' . $k, $l), $c['causes']),
                 'diagnostic' => $ancien ? '' : $c['diagnostic'], 'points' => array_map(static fn ($p) => ['titre' => $p['titre'], 'priorite' => $p['priorite'], 'echeance' => $p['echeance']], $plans),
-                'photos' => $photos, 'envoyeLe' => $v['rapport_envoye_le'] ?? null, 'luLe' => $v['rapport_lu_le'] ?? null];
+                'photos' => $photos, 'evaluation' => $ancien ? null : suEvalVue($v, $l), 'envoyeLe' => $v['rapport_envoye_le'] ?? null, 'luLe' => $v['rapport_lu_le'] ?? null];
         }
         $out['rapports'] = $raps;
     }

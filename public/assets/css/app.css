@@ -1122,6 +1122,12 @@ tr.clan-sel td:first-child{box-shadow:inset 3px 0 0 var(--color-primary);color:v
 .sv-ph{position:relative;border:2px solid transparent;border-radius:9px;padding:0;overflow:hidden;cursor:pointer;background:var(--color-background-secondary);aspect-ratio:1;max-width:100%}
 .sv-ph img{width:100%;height:100%;object-fit:cover;display:block;opacity:.45}.sv-ph.on{border-color:#2d7a3e}.sv-ph.on img{opacity:1}
 .sv-ph span{position:absolute;left:4px;bottom:4px;font:600 9.5px var(--font-ui);background:rgba(0,0,0,.55);color:#fff;border-radius:4px;padding:1px 5px}
+/* L'équipe en poste au rapport du bureau (05/11/2026, interne). */
+.sv-eq .r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:7px 0;border-top:.5px solid var(--color-border-tertiary);font-size:12.5px;align-items:baseline}.sv-eq .r:first-child{border-top:none}
+.sv-eq .nom{font-weight:600}.sv-eq .nom small{display:block;font-weight:500;color:var(--color-text-muted);font-size:11px}.sv-eq b.ok{color:#2d7a3e}.sv-eq b.att{color:#B45309}.sv-eq b.ko{color:#C0182B}.sv-eq b.mu{color:var(--color-text-muted)}
+.sv-eq .ck{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}.sv-eq .ck i{font-style:normal;font:600 11px var(--font-ui);padding:2px 7px;border-radius:6px}.sv-eq .ck i.ok{background:#E6F2E9;color:#2d7a3e}.sv-eq .ck i.ko{background:#F7E4E6;color:#C0182B}
+.sv-eq .com{grid-column:1/-1;color:var(--color-text-muted)}.sv-eq .r.pv{opacity:.6}
+.sv-rp{position:absolute;right:4px;top:4px;font:700 10px var(--font-ui);font-style:normal;background:#fff;color:var(--color-primary);border-radius:5px;padding:1px 5px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .sv-kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:12.5px}.sv-kv span{color:var(--color-text-muted)}.sv-kv b{font-weight:600;overflow-wrap:anywhere}
 .sv-corrs{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:12px}
 .sv-corr{border:.5px solid var(--color-border-tertiary);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
@@ -1385,6 +1391,11 @@ a.cx-btn,a.mko-pied-btn{display:inline-flex;align-items:center;text-decoration:n
 .sv-sc i.ok,.sv-scm em.ok{color:#2d7a3e}.sv-sc i.ko,.sv-scm em.ko{color:#C0182B}.sv-sc i.mu,.sv-scm em.mu{color:var(--color-text-muted)}
 .sv-scb{background:var(--color-background-secondary);border-radius:4px;height:8px;overflow:hidden;margin:8px 0 4px}.sv-scb i{display:block;height:8px;background:var(--color-primary)}
 .sv-scb i.ok{background:#2d7a3e}.sv-scb i.att{background:#D97706}.sv-scb i.ko{background:#C0182B}
+/* L'évaluation rapide dans le rapport (05/11/2026) : le radar du serveur, puis chaque axe, sa note, l'écart, le commentaire. */
+.sv-ev-radar{margin:6px 0 4px;text-align:center}.sv-ev-radar svg{width:100%;max-width:520px;height:auto}
+.sv-ev{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:2px 10px;font-size:12.5px;align-items:baseline}
+.sv-ev .nom{font-weight:600;padding-top:6px}.sv-ev .nom + b,.sv-ev .nom + b + em{padding-top:6px}.sv-ev .com{grid-column:1/-1;line-height:1.4}.sv-ev .com:empty{display:none}.sv-ev b{white-space:nowrap}.sv-ev b.ok{color:#2d7a3e}.sv-ev b.att{color:#B45309}.sv-ev b.ko{color:#C0182B}.sv-ev b.mu{color:var(--color-text-muted)}
+.sv-ev em{font-style:normal;font-weight:700;font-size:11.5px}.sv-ev em.ok{color:#2d7a3e}.sv-ev em.ko{color:#C0182B}.sv-ev em.mu{color:var(--color-text-muted)}.sv-ev .com{color:var(--color-text-muted)}
 .sv-scm{display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr) 32px 34px;gap:2px 10px;align-items:center;font-size:12px;margin-top:6px}.sv-scm .sv-scb{margin:0}.sv-scm b{text-align:right}.sv-scm em{font-style:normal;font-weight:700;font-size:11px;text-align:right}
 /* Résultat — le réseau sous le tableau des magasins (04/11/2026) : les pastilles des offres, comme sur l’écran Offres et canaux. */
 .rn-net .co-leg{display:flex;gap:12px;flex-wrap:wrap;padding:10px 0 0;font-size:10.5px;color:var(--color-text-muted);align-items:center}

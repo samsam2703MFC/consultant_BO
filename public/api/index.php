@@ -650,6 +650,7 @@ function route(string $method, string $path): mixed
             $path === '/suivi/sources'                 => ep_suivi_sources(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
             preg_match('#^/visites/kpi/(\d{1,10})$#', $path, $m) === 1 => ep_visites_kpi($m[1]),
+            preg_match('#^/visites/equipe/(\d{1,10})$#', $path, $m) === 1 => ep_visites_equipe($m[1]),
             preg_match('#^/visites/taches/(\d{1,10})$#', $path, $m) === 1 => ep_visites_taches($m[1]),
             preg_match('#^/visites/budget/(\d{1,10})$#', $path, $m) === 1 => ep_visites_budget($m[1]),
             $path === '/marketing/social/regles'   => ep_fb_regles(),
@@ -907,6 +908,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/visites/reglages') { return wr_visites_reglages_put(); }
     if ($method === 'POST' && $path === '/visites/tick') { return wr_visites_tick(); }
     if ($method === 'POST' && $path === '/visites/photos') { return wr_visites_photos_post(); }
+    if ($method === 'PUT' && preg_match('#^/visites/photos/([\w-]{1,40})/reperes$#', $path, $m)) { return wr_visites_photo_reperes($m[1]); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})/points$#', $path, $m)) { return wr_visites_points_put($m[1]); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})$#', $path, $m)) { return wr_visites_put($m[1]); }
     if ($method === 'PUT' && preg_match('#^/suivi/preparation/([\w-]{1,40})$#', $path, $m)) { return wr_suivi_preparation($m[1]); }

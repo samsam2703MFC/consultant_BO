@@ -262,5 +262,44 @@ verifie('payé à temps : ni retard ni détail', frMeteoPaiements(['paye_a_temps
 verifie('pas demandé (météo d’avant) : ni oui ni non', frMeteoPaiements(['moral' => 3])['payeATemps'] === null);
 verifie('le ressenti financier est une échelle de la météo (1 à 5)', isset(FR_METEO_ECHELLES['finances']) && count(FR_METEO_RETARDS) === 7);
 
+echo "\nÉvaluation rapide (05/11/2026)\n";
+verifie('six axes, dans les quatre langues', count(viEvalAxes()) === 6 && !array_filter(viEvalAxes(), static fn ($a) => !isset($a['fr'], $a['nl'], $a['en'], $a['de'])));
+$ev = viEvaluation(['proprete' => ['note' => 4, 'com' => '  net  '], 'metier' => ['note' => 7], 'client' => ['note' => '5', 'com' => str_repeat('x', 600)], 'inconnu' => ['note' => 3]], 'Loic V.');
+verifie('les notes de 1 à 5 seulement, les axes connus, le commentaire nettoyé et borné', $ev !== null && $ev['n'] === 2 && $ev['notes']['proprete'] === ['note' => 4, 'com' => 'net']
+    && $ev['notes']['metier']['note'] === null && $ev['notes']['client']['note'] === 5 && mb_strlen($ev['notes']['client']['com']) === 500 && !isset($ev['notes']['inconnu']) && count($ev['notes']) === 6, json_encode($ev));
+verifie('la forme envoyée par la tablette ({ notes: … }) se lit comme les axes directs', viEvaluation(['notes' => ['normes' => ['note' => 3, 'com' => 'ok']]], 'x')['notes']['normes'] === ['note' => 3, 'com' => 'ok']);
+verifie('rien de noté : pas d’évaluation', viEvaluation(['proprete' => ['note' => 0, 'com' => 'texte']], 'x') === null && viEvaluation('n’importe quoi', 'x') === null);
+verifie('la moyenne des notes données, à une décimale', suEvalMoyenne(['a' => ['note' => 4], 'b' => ['note' => 3], 'c' => ['note' => null]]) === 3.5 && suEvalMoyenne([]) === null);
+$notes = ['proprete' => ['note' => 4, 'com' => 'Comptoir net'], 'metier' => ['note' => 3, 'com' => ''], 'management' => ['note' => 2, 'com' => 'Pas de briefing'],
+    'commercial' => ['note' => 3, 'com' => ''], 'client' => ['note' => 5, 'com' => ''], 'normes' => ['note' => 4, 'com' => '']];
+$prec = ['le' => '2026-10-24', 'notes' => ['proprete' => ['note' => 3], 'metier' => ['note' => 3], 'management' => ['note' => 3], 'commercial' => ['note' => 2], 'client' => ['note' => 4], 'normes' => ['note' => 3]]];
+$svg = suEvalRadarSvg($notes, $prec, 'nl');
+verifie('le radar : six libellés dans la langue, cette visite et la précédente en pointillé', substr_count($svg, '<polygon') === 7 && str_contains($svg, 'Naleving van de normen') && str_contains($svg, 'stroke-dasharray'));
+verifie('le radar s’élargit pour le plus long libellé de côté', (int) preg_replace('/.*viewBox="0 0 (\d+) .*/s', '$1', suEvalRadarSvg($notes, null, 'nl')) > (int) preg_replace('/.*viewBox="0 0 (\d+) .*/s', '$1', suEvalRadarSvg($notes, null, 'fr')));
+$e = static fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+$h = suEvalHtml(['notes' => $notes, 'precedent' => $prec], 'fr', $e);
+verifie('dans le rapport : la moyenne, l’écart à la précédente, chaque axe et son commentaire', str_contains($h, 'Évaluation rapide') && str_contains($h, '3,5') && str_contains($h, '+0,5')
+    && str_contains($h, 'Pas de briefing') && str_contains($h, '−1') && str_contains($h, '<svg'));
+verifie('sans précédente : « première évaluation » ; sans évaluation : rien', str_contains(suEvalHtml(['notes' => $notes, 'precedent' => null], 'fr', $e), 'première évaluation') && suEvalHtml(null, 'fr', $e) === '');
+verifie('en néerlandais dans le rapport de Halle', str_contains(suEvalHtml(['notes' => $notes, 'precedent' => null], 'nl', $e), 'Snelle evaluatie'));
+
+echo "\nRepères sur les photos de la tablette (05/11/2026)\n";
+$sans = suPhotoReperesHtml('data:image/jpeg;base64,AAAA', [], 'fr');
+verifie('une photo sans repère reste une vignette', str_contains($sans, 'width:31%') && !str_contains($sans, 'position:absolute'));
+$avec = suPhotoReperesHtml('data:image/jpeg;base64,AAAA', [['n' => 1, 'x' => 0.1, 'y' => 0.2, 'l' => 0.3, 'h' => 0.25, 'niveau' => 2, 'txt' => 'Grilles vides à 11 h'],
+    ['n' => 2, 'x' => 0.6, 'y' => 0.1, 'l' => 0.2, 'h' => 0.2, 'niveau' => 4, 'txt' => '']], 'nl');
+verifie('une photo annotée : en grand, ses cadres numérotés, chaque remarque et sa gravité dans la langue du magasin', str_contains($avec, 'width:48%') && substr_count($avec, 'border-radius:4px;box-sizing:border-box') === 2
+    && str_contains($avec, 'left:10.00%;top:20.00%;width:30.00%;height:25.00%') && str_contains($avec, 'Grilles vides à 11 h') && str_contains($avec, 'groot') && str_contains($avec, 'in orde') && str_contains($avec, '2px dashed'));
+
+echo "\nL'équipe en poste (05/11/2026)\n";
+require_once __DIR__ . '/../src/visites_equipe.php';
+$pe = viPersonnel(['personnes' => [['emp' => 12, 'nom' => ' Lina V. ', 'heures' => '04:00 – 12:00', 'note' => 4, 'tenue' => 1, 'sbam' => 0, 'xp' => 7, 'com' => 'Accueil souriant'],
+    ['emp' => 13, 'nom' => 'Tom C.', 'vu' => false, 'note' => 5, 'tenue' => 1, 'com' => 'ne doit pas rester'], ['nom' => '', 'note' => 3], ['emp' => 14, 'nom' => 'Emma D.', 'note' => 9]]], 'Loic V.');
+verifie('chaque personne : la note de 1 à 5, les contrôles Oui / Non seulement, la remarque', $pe !== null && $pe['personnes'][0] === ['emp' => 12, 'nom' => 'Lina V.', 'heures' => '04:00 – 12:00', 'vu' => true, 'note' => 4, 'com' => 'Accueil souriant', 'tenue' => 1, 'sbam' => 0, 'xp' => null], json_encode($pe, JSON_UNESCAPED_UNICODE));
+verifie('« pas vue » : ni note, ni contrôle, ni remarque ; sans nom : écartée ; note hors bornes : vide', $pe['personnes'][1]['vu'] === false && $pe['personnes'][1]['note'] === null && $pe['personnes'][1]['tenue'] === null && $pe['personnes'][1]['com'] === ''
+    && count($pe['personnes']) === 3 && $pe['personnes'][2]['note'] === null);
+verifie('rien de noté pour personne : pas de note d’équipe', viPersonnel([['nom' => 'Emma D.']], 'x') === null && viPersonnel('?', 'x') === null);
+verifie('trois contrôles éclair : tenue, SBAM, expérience client', array_column(VI_EQUIPE_CHECKS, 'k') === ['tenue', 'sbam', 'xp']);
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);
