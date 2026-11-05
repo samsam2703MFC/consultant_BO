@@ -7,7 +7,6 @@
 import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, apiTraces, apiTracesRaz, joinPerf } from './api.js';
 import { render as tplRender, tplPsImpression } from './templates.js';
 import { valsGC, valsFF, valsRO, valsCQM } from './franchises-vals.js';
-import { Scouting } from './scouting.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
 // prêtent (la fiche franchisé) replient le menu en tiroir et grossissent leurs cibles tactiles.
@@ -215,6 +214,10 @@ class App {
       const juste = this.adresseDe(depart);
       if (location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
     }
+    // Un écran parti dans une AUTRE application : l'accueil s'ouvre, mais en
+    // disant où le retrouver (le rendu n'a pas encore eu lieu : l'état suffit).
+    const parti = this.departVers();
+    if (parti) { this.state.toast = parti; this._tt = setTimeout(() => this.setState({ toast: null }), 7000); }
     // Reculer dans l'historique doit reculer d'écran. Le changement qu'on
     // provoque nous-même est ignoré : sinon chaque navigation se rejouerait.
     // L'application Production intégrée renvoie le jour choisi dans sa barre des jours : le
@@ -226,7 +229,7 @@ class App {
     window.addEventListener('hashchange', () => {
       if (this._hashInterne === location.hash) { this._hashInterne = null; return; }
       const id = this.ecranDeAdresse();
-      if (!id) { return; }
+      if (!id) { const parti = this.departVers(); if (parti) { this.notify(parti); } return; }
       if (App.PERF_ONGLETS[id]) { this.setState({ screen: 'performance', pfOnglet: id, hmHover: null }); return; }
       if (id !== this.state.screen) { this.setState({ screen: id, hmHover: null }); return; }
       // Même écran, mais adresse retirée (« #/stock » alors qu'on est déjà sur
@@ -288,11 +291,11 @@ class App {
       // #/parametres depuis un signet résolvait vers un écran inconnu et
       // l'affichage tombait — « rendu impossible », page blanche.
       diagnostic: 'diagnostic', parametres: 'parametres', usageConsole: 'usage-console',
-      // Ces trois-là n'avaient PAS d'adresse, et le défaut « garde son
+      // Ces deux-là n'avaient PAS d'adresse, et le défaut « garde son
       // identifiant » ne suffisait pas : `ecranDeAdresse` n'accepte un
       // identifiant nu que s'il est CLÉ de cette table. L'ancre affichait
       // donc « #/journal » — que rouvrir ramenait aux tâches, sans un mot.
-      journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
+      journal: 'journal', scoring: 'scoring-reglages',
       demarchage: 'developpement-commercial', newsletter: 'newsletter', newsletterShop: 'newsletter-magasin',
       prospection: 'prospection', prospectionMobile: 'prospection-mobile',
       tablette: 'tablette-vendeuses',
@@ -315,6 +318,18 @@ class App {
     return { stock: 'caAchats', 'commandes-franchises': 'caAchats', 'resultat-du-jour': 'resultatJour',
       // L'application consultant a quitté le rail : elle vit sur le téléphone (visites/).
       'app-consultant': 'suivi', 'app-plans-action': 'suivi', 'app-synthese': 'suivi', 'app-mobile': 'suivi', 'app-reglages': 'suivi' };
+  }
+  /**
+   * Les écrans partis dans une AUTRE application : leur adresse ne mène plus
+   * à rien ici, alors on dit où ils vivent désormais.
+   */
+  static get ADRESSES_PARTIES(){
+    return { scouting: 'Le Scouting — où ouvrir vit désormais dans le CRM : Développement → Étude de faisabilité.' };
+  }
+  /** Où vit désormais l'écran que l'adresse désigne, s'il est parti ailleurs. */
+  departVers(){
+    const brut = String(location.hash || '').replace(/^#\/?/, '').split('?')[0].trim();
+    return App.ADRESSES_PARTIES[brut] || '';
   }
   /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
   ecranDeAdresse(){
@@ -603,12 +618,6 @@ class App {
       if (el && el !== document.activeElement){
         el.focus(); if (selStart != null && el.setSelectionRange) el.setSelectionRange(selStart, selStart);
       }
-    }
-    // Le scouting garde sa carte Leaflet entre deux rendus : son élément
-    // racine est créé une fois et simplement ré-attaché ici.
-    if (this.state.ready && this.state.screen === 'scouting'){
-      if (!this.scouting) this.scouting = new Scouting(this);
-      this.scouting.mount(document.getElementById('scouting-root'));
     }
     // Prospection et Newsletter sont des modules à part (partagés avec la page
     // mobile) : ils tiennent leur DOM, on les ré-attache après chaque rendu.
@@ -931,7 +940,6 @@ class App {
     const titles = {
       brandGuard: ['Paramètres — Brand Guard', 'La charte de marque, règle par règle, et la page Facebook de chaque magasin. Le contrôle des posts relit la charte telle qu’elle est ici : chaque changement fait une nouvelle version.'],
       posts: ['Contrôle des posts Facebook', 'Chaque post soumis par un magasin est relu par l’agent — charte, mentions légales, rédaction, visuel, diffusion. Il note et liste les écarts ; vous validez ou refusez avant publication.'],
-      scouting: ['Scouting commercial', '11 provinces et régions · boulangeries OpenStreetMap · population OSM/StatBel · zones d’exclusion et zones prioritaires · modèle CA GeoConsulting (Halle, 08-2024).'],
       analysemag: ['Analyse magasin', 'Un magasin, trois leviers chiffrés par mois et par an : l’assortiment qui lui manque, les catégories où il est en retrait du réseau, les prix sous les autres — puis le plan qui fusionne le tout. Estimations à comportement constant, jamais un objectif contractuel.'],
       croisements: ['Croisements', 'Deux familles — catégorie ou produit — et la lecture : sur les tickets qui contiennent A, la part qui contient aussi B. Par mois, réseau et magasin par magasin, vendeuse par vendeuse au clic. Les combos qui servent s’enregistrent et reviennent chaque mois.'],
       ventes: ['Target de vente & classement', 'Qui vend le mieux, personne par personne — au CA par heure prestée du planning, jamais au CA brut. Le panier et les lignes par ticket complètent la lecture ; chaque mois, la marque prime la meilleure de chaque magasin et la meilleure du réseau.'],
@@ -1372,8 +1380,9 @@ class App {
         // Le suivi du franchisé ne garde que la part des invendus dans le CA (09/10/2026) :
         // le détail — pièces, motifs, produits — reste ici, sous Magasins.
         ['invendus', 'Invendus et poubelle', 0],
-        ['plan', 'Plan de développement', 0],
-        ['scouting', 'Scouting — où ouvrir', 0]]],
+        // « Scouting — où ouvrir » a quitté le rail (31/10/2026) : il vit dans
+        // le CRM, Développement → Étude de faisabilité.
+        ['plan', 'Plan de développement', 0]]],
       // Le produit tel qu'il est (catalogue, comptoir), puis ce qu'il vaut.
       // Quatre questions, quatre entrées : le produit tel qu'il est (catalogue,
       // assortiment, comptoir — trois onglets d'une même liste), ce qu'il vaut
@@ -1450,8 +1459,8 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO', 'isCQM'].forEach(k => common[k] = false);
-    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', controlesQualite: 'isCQM', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO', 'isCQM'].forEach(k => common[k] = false);
+    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', controlesQualite: 'isCQM', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
