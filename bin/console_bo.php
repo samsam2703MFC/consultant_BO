@@ -17,9 +17,14 @@ declare(strict_types=1);
  *    Section présente : on n'y touche jamais.
  * 2. Les comptes de démonstration dont le mot de passe a été publié (« Test1234! », audit go-live WebShop du
  *    15/08) : tout compte actif qui l'accepte encore est désactivé.
- * 3. Les comptes demandés, s'il y en a : variable CONSOLE_BO_ACCOUNTS (secret GitHub du même nom), JSON
+ * 3. Les comptes demandés, s'il y en a : variable CONSOLE_BO_ACCOUNTS (secret GitHub du même nom) et/ou
+ *    config/console_bo_accounts.sealed (la même liste chiffrée pour la clé publique de ce serveur, voir
+ *    bin/console_bo_seal.php), JSON
  *      [{"email": "…", "name": "…", "role": "siege|franchise", "shops": [2, 3], "password": "…"}, …]
- *    Créés ou mis à jour (nom, rôle, actif, boutiques ; le mot de passe seulement s'il a changé).
+ *    Créés, ou mis à jour (nom, rôle, actif, boutiques). Le mot de passe ne sert qu'à la création : ensuite
+ *    il appartient à la personne ; « reset_password »: "<identifiant>" le repose une seule fois.
+ * 4. La clé de dépôt : une paire RSA tirée ici une fois (dossier privé, 0600) ; sa clé PUBLIQUE est écrite au
+ *    journal pour chiffrer la liste des comptes — seul ce serveur peut la lire.
  *
  * Les journaux de livraison sont publics : ce script n'écrit jamais un secret, un mot de passe, un hachage ni
  * une adresse e-mail — seulement des comptes et des faits.
@@ -189,8 +194,69 @@ function cbDisableDemo(PDO $pdo): int
     return $n;
 }
 
+/** Le journal privé des comptes modifiés (état d'avant, sans hachage), pour pouvoir revenir en arrière. */
+function cbJournal(array $before): void
+{
+    $f = (string) (getenv('CB_JOURNAL_FILE') ?: '/var/lib/consulant_bo/prive/console_bo_journal.jsonl');
+    if (!is_dir(dirname($f))) {
+        return;
+    }
+    $old = umask(077);
+    @file_put_contents($f, json_encode(['at' => gmdate('c')] + $before, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
+    umask($old);
+}
+
+function cbResetsFile(): string
+{
+    return (string) (getenv('CB_RESETS_FILE') ?: '/var/lib/consulant_bo/prive/console_bo_resets.json');
+}
+
+function cbResetDone(string $key): bool
+{
+    $j = json_decode((string) @file_get_contents(cbResetsFile()), true);
+    return is_array($j) && isset($j[$key]);
+}
+
+function cbResetRecord(string $key): void
+{
+    $f = cbResetsFile();
+    if (!is_dir(dirname($f))) {
+        return;
+    }
+    $j = json_decode((string) @file_get_contents($f), true);
+    $j = is_array($j) ? $j : [];
+    $j[$key] = gmdate('c');
+    $old = umask(077);
+    file_put_contents($f, json_encode($j, JSON_PRETTY_PRINT));
+    umask($old);
+}
+
+/** Les boutiques qu'un compte a eues, d'après la console : son journal d'actions et ses sessions PIN. */
+function cbShopsFromHistory(PDO $pdo, int $userId): array
+{
+    $out = [];
+    foreach (['bo_audit', 'bo_pin_session'] as $t) {
+        try {
+            $st = $pdo->prepare("SELECT DISTINCT shop_id FROM {$t} WHERE user_id = ? AND shop_id IS NOT NULL");
+            $st->execute([$userId]);
+            foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $s) {
+                $out[] = (int) $s;
+            }
+        } catch (Throwable $e) {
+            // table absente : rien à en tirer
+        }
+    }
+    return array_values(array_unique(array_filter($out)));
+}
+
 /**
- * 3. Les comptes demandés (CONSOLE_BO_ACCOUNTS). Rend [créés, mis à jour, refusés].
+ * 3. Les comptes demandés. Rend [créés, mis à jour, remarques].
+ *
+ * Un compte qui existe déjà garde son rôle (« role_change »: true pour le changer), son mot de passe (posé
+ * seulement s'il n'en a pas, ou une fois avec « reset_password »: "<identifiant>") et ses boutiques si
+ * « shops » n'est pas donné ;
+ * « shops_from_history »: true les reprend de l'historique de la console. Avant toute modification, son
+ * état d'avant est écrit au journal privé.
  *
  * @return array{0: int, 1: int, 2: list<string>}
  */
@@ -198,38 +264,49 @@ function cbProvision(PDO $pdo, string $json): array
 {
     $list = json_decode($json, true);
     if (!is_array($list)) {
-        return [0, 0, ['CONSOLE_BO_ACCOUNTS n’est pas un JSON valide']];
+        return [0, 0, ['la liste de comptes n’est pas un JSON valide']];
     }
     $shopIds = array_map('intval', $pdo->query('SELECT id FROM shops')->fetchAll(PDO::FETCH_COLUMN));
     $created = 0;
     $updated = 0;
-    $refused = [];
+    $notes = [];
     foreach (array_values($list) as $i => $a) {
+        $n = 'compte n° ' . ($i + 1);
         $email = strtolower(trim((string) ($a['email'] ?? '')));
         $role = ($a['role'] ?? '') === 'siege' ? 'siege' : (($a['role'] ?? '') === 'franchise' ? 'franchise' : null);
         $pw = (string) ($a['password'] ?? '');
         $name = mb_substr(trim((string) ($a['name'] ?? '')), 0, 120);
+        $giveShops = array_key_exists('shops', $a);
+        $fromHistory = !empty($a['shops_from_history']);
         $shops = array_values(array_unique(array_map('intval', (array) ($a['shops'] ?? []))));
         $why = null;
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $why = 'e-mail invalide';
         } elseif ($role === null) {
             $why = 'rôle attendu : siege ou franchise';
-        } elseif ($role === 'franchise' && $shops === []) {
-            $why = 'un franchisé a besoin d’au moins une boutique';
         } elseif (array_diff($shops, $shopIds) !== []) {
             $why = 'boutique inconnue : ' . implode(', ', array_diff($shops, $shopIds));
         } elseif ($pw !== '' && (strlen($pw) < 12 || $pw === CB_DEMO_PASSWORD)) {
             $why = 'mot de passe trop court (12 caractères au moins)';
         }
-        $st = $pdo->prepare('SELECT id, password_hash FROM bo_users WHERE LOWER(TRIM(email)) = ?');
-        $st->execute([$email]);
-        $cur = $why === null ? $st->fetch() : false;
-        if ($why === null && $cur === false && $pw === '') {
-            $why = 'mot de passe obligatoire pour un nouveau compte';
+        $cur = false;
+        if ($why === null) {
+            $st = $pdo->prepare('SELECT id, password_hash, role, display_name, active FROM bo_users WHERE LOWER(TRIM(email)) = ?');
+            $st->execute([$email]);
+            $cur = $st->fetch();
+        }
+        if ($why === null && $cur === false) {
+            if ($pw === '') {
+                $why = 'mot de passe obligatoire pour un nouveau compte';
+            } elseif ($role === 'franchise' && $shops === []) {
+                $why = 'un franchisé a besoin d’au moins une boutique';
+            }
+        }
+        if ($why === null && $cur !== false && $cur['role'] !== $role && empty($a['role_change'])) {
+            $why = 'existe déjà avec un autre rôle — inchangé (« role_change »: true pour le changer)';
         }
         if ($why !== null) {
-            $refused[] = 'compte n° ' . ($i + 1) . ' : ' . $why;
+            $notes[] = $n . ' : ' . $why;
             continue;
         }
         if ($cur === false) {
@@ -239,21 +316,116 @@ function cbProvision(PDO $pdo, string $json): array
             $created++;
         } else {
             $id = (int) $cur['id'];
-            $pdo->prepare('UPDATE bo_users SET display_name = ?, role = ?, active = 1 WHERE id = ?')->execute([$name !== '' ? $name : $email, $role, $id]);
-            if ($pw !== '' && !password_verify($pw, (string) $cur['password_hash'])) {
+            $avant = array_map('intval', $pdo->query('SELECT shop_id FROM bo_user_shops WHERE user_id = ' . $id)->fetchAll(PDO::FETCH_COLUMN));
+            cbJournal(['id' => $id, 'role' => $cur['role'], 'display_name' => $cur['display_name'], 'active' => (int) $cur['active'],
+                'password' => (string) $cur['password_hash'] !== '', 'shops' => $avant]);
+            $pdo->prepare('UPDATE bo_users SET display_name = ?, role = ?, active = 1 WHERE id = ?')
+                ->execute([$name !== '' ? $name : (string) $cur['display_name'], $role, $id]);
+            // Le mot de passe donné ne sert qu'à un compte qui n'en a pas : ensuite il appartient à la personne
+            // (elle le change depuis /hr) et une livraison ne doit pas le lui reprendre. « reset_password » le repose.
+            // « reset_password » est un identifiant à usage unique (ex. "2026-11-04-essai") : le serveur note
+            // qu'il l'a appliqué, et ne le rejoue jamais — un mot de passe changé ensuite reste à la personne.
+            $hash = (string) $cur['password_hash'];
+            $resetKey = is_string($a['reset_password'] ?? null) && trim($a['reset_password']) !== '' ? $id . ':' . trim($a['reset_password']) : null;
+            $doReset = $resetKey !== null && !cbResetDone($resetKey);
+            if ($pw !== '' && ($hash === '' || ($doReset && !password_verify($pw, $hash)))) {
                 $pdo->prepare('UPDATE bo_users SET password_hash = ? WHERE id = ?')->execute([password_hash($pw, PASSWORD_BCRYPT), $id]);
+                if ($doReset) {
+                    $notes[] = $n . ' : mot de passe réinitialisé (une fois)';
+                }
+            }
+            if ($doReset) {
+                cbResetRecord($resetKey);
             }
             $updated++;
         }
-        $pdo->prepare('DELETE FROM bo_user_shops WHERE user_id = ?')->execute([$id]);
-        if ($role === 'franchise') {
-            $ins = $pdo->prepare('INSERT INTO bo_user_shops (user_id, shop_id) VALUES (?, ?)');
-            foreach ($shops as $s) {
-                $ins->execute([$id, $s]);
+        if ($fromHistory) {
+            $found = array_values(array_intersect(cbShopsFromHistory($pdo, $id), $shopIds));
+            $shops = array_values(array_unique(array_merge($shops, $found)));
+            $giveShops = true;
+            $notes[] = $n . ' : ' . count($found) . ' boutique(s) retrouvée(s) dans l’historique de la console';
+        }
+        if ($giveShops || $role === 'siege') {
+            $pdo->prepare('DELETE FROM bo_user_shops WHERE user_id = ?')->execute([$id]);
+            if ($role === 'franchise') {
+                $ins = $pdo->prepare('INSERT INTO bo_user_shops (user_id, shop_id) VALUES (?, ?)');
+                foreach ($shops as $s) {
+                    $ins->execute([$id, $s]);
+                }
             }
         }
     }
-    return [$created, $updated, $refused];
+    return [$created, $updated, $notes];
+}
+
+const CB_SEAL_KEY = '/var/lib/consulant_bo/prive/console_bo_seal.pem';
+
+/** La clé privée de dépôt (tirée une fois, 0600) ; rend la clé publique PEM. */
+function cbSealPath(): string
+{
+    return (string) (getenv('CB_SEAL_KEY_FILE') ?: CB_SEAL_KEY);
+}
+
+function cbSealKey(?string $file = null): string
+{
+    $file ??= cbSealPath();
+    if (!is_file($file)) {
+        $k = openssl_pkey_new(['private_key_bits' => 3072, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        $pem = '';
+        openssl_pkey_export($k, $pem);
+        $old = umask(077);
+        file_put_contents($file, $pem);
+        umask($old);
+        chmod($file, 0600);
+    }
+    $k = openssl_pkey_get_private((string) file_get_contents($file));
+    if ($k === false) {
+        throw new RuntimeException('clé de dépôt illisible');
+    }
+    return (string) openssl_pkey_get_details($k)['key'];
+}
+
+/** Empreinte (SHA-256 du DER) d'une clé publique PEM. */
+function cbKeyFingerprint(string $publicPem): string
+{
+    $der = base64_decode((string) preg_replace('/-----[^-]+-----|\s/', '', $publicPem));
+    return hash('sha256', (string) $der);
+}
+
+/** Chiffre pour une clé publique : AES-256-GCM, clé AES scellée en RSA-OAEP. */
+function cbSeal(string $plain, string $publicPem): string
+{
+    $aes = random_bytes(32);
+    $iv = random_bytes(12);
+    $tag = '';
+    $ct = openssl_encrypt($plain, 'aes-256-gcm', $aes, OPENSSL_RAW_DATA, $iv, $tag, '', 16);
+    $ek = '';
+    if ($ct === false || !openssl_public_encrypt($aes, $ek, $publicPem, OPENSSL_PKCS1_OAEP_PADDING)) {
+        throw new RuntimeException('chiffrement impossible');
+    }
+    return (string) json_encode(['v' => 1, 'fp' => cbKeyFingerprint($publicPem), 'k' => base64_encode($ek),
+        'iv' => base64_encode($iv), 'tag' => base64_encode($tag), 'ct' => base64_encode($ct)], JSON_PRETTY_PRINT) . "\n";
+}
+
+/** Déchiffre un pli scellé avec la clé privée de dépôt ; null s'il n'est pas pour cette clé ou altéré. */
+function cbUnseal(string $sealed, ?string $privatePemFile = null): ?string
+{
+    $privatePemFile ??= cbSealPath();
+    $j = json_decode($sealed, true);
+    $k = is_file($privatePemFile) ? openssl_pkey_get_private((string) file_get_contents($privatePemFile)) : false;
+    if (!is_array($j) || ($j['v'] ?? 0) !== 1 || $k === false) {
+        return null;
+    }
+    if (($j['fp'] ?? '') !== cbKeyFingerprint((string) openssl_pkey_get_details($k)['key'])) {
+        return null;
+    }
+    $aes = '';
+    if (!openssl_private_decrypt((string) base64_decode((string) $j['k']), $aes, $k, OPENSSL_PKCS1_OAEP_PADDING)) {
+        return null;
+    }
+    $p = openssl_decrypt((string) base64_decode((string) $j['ct']), 'aes-256-gcm', $aes, OPENSSL_RAW_DATA,
+        (string) base64_decode((string) $j['iv']), (string) base64_decode((string) $j['tag']));
+    return $p === false ? null : $p;
 }
 
 /** Ce qu'il y a, en nombres seulement. */
@@ -289,16 +461,39 @@ if (PHP_SAPI === 'cli' && realpath($argv[0] ?? '') === realpath(__FILE__)) {
         $pdo = cbPdo($dir);
         $n = cbDisableDemo($pdo);
         cbLog($n > 0 ? "{$n} compte(s) de démonstration au mot de passe publié désactivé(s)" : 'aucun compte n’accepte le mot de passe de démonstration publié');
+        $sources = [];
         $json = (string) (getenv('CONSOLE_BO_ACCOUNTS') ?: '');
         if ($json !== '') {
-            [$c, $u, $refused] = cbProvision($pdo, $json);
-            cbLog("comptes demandés : {$c} créé(s), {$u} mis à jour" . ($refused !== [] ? ' ; refusés — ' . implode(' ; ', $refused) : ''));
-        } else {
-            cbLog('aucun compte demandé (secret CONSOLE_BO_ACCOUNTS vide)');
+            $sources['secret CONSOLE_BO_ACCOUNTS'] = $json;
+        }
+        $sealedFile = (string) (getenv('CB_SEALED_FILE') ?: dirname(__DIR__) . '/config/console_bo_accounts.sealed');
+        if (is_file($sealedFile)) {
+            $plain = cbUnseal((string) file_get_contents($sealedFile));
+            if ($plain === null) {
+                cbLog('config/console_bo_accounts.sealed : illisible pour la clé de ce serveur (autre clé, ou altéré) — ignoré');
+            } else {
+                $sources['liste scellée'] = $plain;
+            }
+        }
+        foreach ($sources as $src => $j) {
+            [$c, $u, $refused] = cbProvision($pdo, $j);
+            cbLog("comptes demandés ({$src}) : {$c} créé(s), {$u} mis à jour" . ($refused !== [] ? ' ; ' . implode(' ; ', $refused) : ''));
+        }
+        if ($sources === []) {
+            cbLog('aucun compte demandé (ni secret CONSOLE_BO_ACCOUNTS, ni liste scellée)');
         }
         cbLog('comptes de la console : ' . cbSummary($pdo));
     } catch (Throwable $e) {
         cbLog('comptes : base de la console injoignable (' . get_class($e) . ')');
     }
     cbLog($ok ? 'connexion par la console : active' : 'connexion par la console : pas encore active');
+    try {
+        $pub = cbSealKey();
+        cbLog('clé publique de dépôt (empreinte ' . substr(cbKeyFingerprint($pub), 0, 16) . '…), pour bin/console_bo_seal.php :');
+        foreach (explode("\n", trim($pub)) as $l) {
+            cbLog('| ' . $l);
+        }
+    } catch (Throwable $e) {
+        cbLog('clé de dépôt : ' . $e->getMessage());
+    }
 }

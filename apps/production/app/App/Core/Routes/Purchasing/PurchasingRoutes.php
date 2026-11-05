@@ -22,6 +22,18 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/purchasing/tenders/{id:\d+}/award', ['controller' => $c, 'method' => 'awardTender']);
 
     $r->addRoute('GET', '/purchasing/nc', ['controller' => $c, 'method' => 'nc']);
+    // [247] Kreatory « lżej » : Niezgodności miesiąca (Jakość) i Koszty surowców (Kierownik produkcji).
+    $nr = App\Controllers\Web\Purchasing\NcReviewController::class;
+    $r->addRoute('GET', '/purchasing/nc-review', ['controller' => $nr, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/purchasing/nc-review', ['controller' => $nr, 'method' => 'data']);
+    $r->addRoute('POST', '/ajax/purchasing/nc-review/{id:\d+}/action', ['controller' => $nr, 'method' => 'action']);
+    $r->addRoute('POST', '/ajax/purchasing/nc-review/audit', ['controller' => $nr, 'method' => 'audit']);
+    $r->addRoute('POST', '/ajax/purchasing/nc-review/mail', ['controller' => $nr, 'method' => 'mail']);
+    $r->addRoute('POST', '/ajax/purchasing/nc-review/finish', ['controller' => $nr, 'method' => 'finish']);
+    $cr = App\Controllers\Web\Purchasing\CostReviewController::class;
+    $r->addRoute('GET', '/purchasing/cost-review', ['controller' => $cr, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/purchasing/cost-review', ['controller' => $cr, 'method' => 'data']);
+    $r->addRoute('POST', '/ajax/purchasing/cost-review/finish', ['controller' => $cr, 'method' => 'finish']);
     // Lot 4 [230] : kontrola przyjęć dnia (podsumowanie wpisów z tabletu pakowania › Przyjęcia), zdjęcia niezgodności.
     $rw = App\Controllers\Web\Purchasing\ReceivingWizardController::class;
     $r->addRoute('GET', '/workshop/receiving', ['controller' => $rw, 'method' => 'index']);

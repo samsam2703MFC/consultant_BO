@@ -494,6 +494,14 @@
                     </a>
                 </li>
 
+                {# [244] Uprawnienia funkcji : która funkcja widzi które strony (tylko administrator — dla innych link znika). #}
+                <li class="sidebar-item">
+                    <a href="{{ root }}/organization/access" class="sidebar-link">
+                        <i class="bi bi-shield-lock"></i>
+                        <span>Uprawnienia funkcji</span>
+                    </a>
+                </li>
+
                 {# Aktywność i licznik stron w zakładkach (N7). #}
                 {% set g = page_tab_groups().usage %}
                 <li class="sidebar-item">
@@ -509,7 +517,7 @@
                 <li class="sidebar-title">Ustawienia</li>
 
                 <li class="sidebar-item">
-                    <a href="{{ root }}/settings" class="sidebar-link" data-also="/other-settings /settings/languages /settings/ksef /settings/panel-api /settings/mail-footers /communication/email-settings /devices /aliases /users /organization/positions /organization/access /logistics/tours /logistics/vehicles /product-carriers /communication/document-templates /communication/templates">
+                    <a href="{{ root }}/settings" class="sidebar-link" data-also="/other-settings /settings/languages /settings/ksef /settings/panel-api /settings/mail-footers /communication/email-settings /devices /aliases /users /organization/positions /logistics/tours /logistics/vehicles /product-carriers /communication/document-templates /communication/templates">
                         <i class="bi bi-gear-fill"></i>
                         <span>Ustawienia</span>
                     </a>
@@ -601,6 +609,7 @@
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-upc-scan"></i> Tablet : numery partii surowców od razu na liniach receptury (wpis ręczny, zdjęcie worka z OCR, skan) — licznik partii, zapis z partią produkcji (lot, numéro de lot, matière première, traçabilité)</a></li>
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-box"></i> Tablet : receptura — przełącznik « Opakowania » (domyślnie ukryte, składniki i surowce na całą szerokość) (emballages, masquer, afficher)</a></li>
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-chat-square-text"></i> Tablet : reklamacje klientów przyjęte przez biuro na produkty grupy (tylko do wiadomości) — ekran startowy bez PIN i zakładka « Reklamacje » : 30 / 90 / 365 dni, produkt, sklep, powód, ilość, komentarz klienta i odpowiedź biura przetłumaczone na język tabletu, zdjęcia</a></li>
+                <li><a href="{{ root }}/franchise-complaints#wykres" data-where="Sprzedaż › Franczyza › Reklamacje"><i class="bi bi-bar-chart-line"></i> Reklamacje — wykres : oś czasu wszystkich reklamacji (grupa produkcji, dzień, wartość, decyzja), filtry okres / klient / grupa</a></li>
                 <li><a href="{{ root }}/franchise-complaints" data-where="Sprzedaż › Franczyza › Reklamacje"><i class="bi bi-people"></i> Reklamacja przyjęta (ACCEPTED) → widoczna na tablecie grupy produktu : odpowiedź biura czyta zespół produkcji</a></li>
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-trophy"></i> Tablet : zakładka « Premia » — sprzedaż grupy na osobę w miesiącu, progi premii, premia każdej osoby (onglet prime)</a></li>
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-ui-checks"></i> Tablet : zatwierdzenie produkcji z planu linia po linii (zrobione, strata ilość + zdjęcie + powód), zatwierdź dzień</a></li>
@@ -632,6 +641,11 @@
                 <li><a href="{{ root }}/finances/payments-day" data-where="Sprzedaż › Płatności dnia › Z poczty"><i class="bi bi-envelope-check"></i> Potwierdzenie przelewu od klienta z e-maila (PDF, zdjęcie) : odczyt OCR — kwota, data, numer proformy, rachunek, płacący → proforma dopasowana → « Zatwierdź wpłatę » (opłacona, dowód przy proformie, przypomnienia zatrzymane)</a></li>
                 <li><a href="{{ root }}/mail" data-where="Poczta › Zweryfikuj wpłatę"><i class="bi bi-cash-coin"></i> Poczta : « Zweryfikuj wpłatę » w wiadomości klienta z proformą niezapłaconą, « Odczytaj » przy załączniku (PDF, zdjęcie)</a></li>
                 <li><a href="{{ root }}/purchasing/supplier-review" data-where="Zakupy › Oferty i zapytania › Ocena dostawców"><i class="bi bi-award"></i> Ocena dostawców co kwartał : zakupy, dostawy, na czas, niezgodności, zmiana cen → ocena A / B / C (40 / 30 / 30 %), decyzja (zostaje, obserwuj, zmień), surowce do zapytania, szkic zapytania ofertowego</a></li>
+                {# [247] Kreatory « lżej » (makiety 19–23) : zadania stanowisk w 3 krokach. #}
+                <li><a href="{{ root }}/production/tomorrow" data-where="Produkcja › Plan na jutro"><i class="bi bi-calendar-check"></i> Plan na jutro : obciążenie grup jutro (godziny planu vs ludzie), przesuń blok, gdy grupa ponad obsadę, ludzie i brakujące surowce, wiadomość na tablety, lista dnia PDF ; zadanie kierownika produkcji zaliczane samo</a></li>
+                <li><a href="{{ root }}/purchasing/nc-review" data-where="Zakupy › Niezgodności miesiąca"><i class="bi bi-exclamation-triangle"></i> Niezgodności miesiąca : lista NC, przyczyna i działanie korygujące dla każdej, dostawcy z NC (ocena A / B / C), audyt dostawcy co kwartał, e-mail do dostawcy ze zdjęciami ; zadanie Jakości</a></li>
+                <li><a href="{{ root }}/purchasing/cost-review" data-where="Zakupy › Koszty surowców — kreator miesiąca"><i class="bi bi-graph-up-arrow"></i> Koszty surowców i oszczędności : co zdrożało (wpływ zł / miesiąc), tańsze oferty innych dostawców, decyzja zmień / zapytaj / zostaw, zapytanie ofertowe ; zadanie co miesiąc</a></li>
+                <li><a href="{{ root }}/production/yield-review" data-where="Produkcja › Wydajność i straty kwartału"><i class="bi bi-recycle"></i> Wydajność i straty kwartału : straty wg grup i przyczyn (wartość surowców), sztuki na godzinę, TRS maszyn, 3 działania z celem → zebranie produkcyjne i tablety</a></li>
                 <li><a href="{{ root }}/organization/team-tasks" data-where="Zadania zespołu"><i class="bi bi-list-check"></i> Zadania zespołu (Kierownik produkcji) : zadania wszystkich grup i osób — zrobione / niezrobione / spóźnione, filtry (okres, grupa, osoba, stan, częstotliwość, kategoria, szukaj), « Przypomnij » : osoba — dzwonek + e-mail, grupa — komunikat na tablecie potwierdzany PIN-em</a></li>
                 <li><a href="{{ root }}/tablet/production" data-where="Tablety › Tablet grupy"><i class="bi bi-bell"></i> Komunikat kierownika na tablecie (grupy, pakowania, kierowcy) : « Przeczytane (PIN) », znika sam, gdy zadanie się zaliczy</a></li>
                 <li><a href="{{ root }}/organization/execution" data-where="Kto co zrobił"><i class="bi bi-people"></i> Kto co zrobił (przełożony) : stanowiska × dni (dziś, tydzień, miesiąc), zrobione, w toku, spóźnione, grupy produkcji (tablety), System — zadania automatyczne, lista spóźnionych z « Przypomnij », szczegóły zadania</a></li>

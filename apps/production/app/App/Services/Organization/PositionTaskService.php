@@ -64,6 +64,13 @@ final class PositionTaskService
         '/shipments' => ['Wysyłki', 'Wysyłki'],
         '/communication/messages' => ['Wiadomości', 'Wiadomości'],
         '/communication/automations' => ['E-maile automatyczne', 'E-maile'],
+        // [247] Lot « lżej » : kreatory zadań bez wcześniejszego kreatora.
+        '/production/tomorrow' => ['Plan na jutro (kreator : obciążenie grup, ludzie i surowce, tablety)', 'Plan na jutro'],
+        '/purchasing/nc-review' => ['Niezgodności miesiąca (kreator : przyczyna i działanie, dostawcy, audyt)', 'Niezgodności miesiąca'],
+        '/purchasing/cost-review' => ['Koszty surowców i oszczędności (kreator)', 'Koszty surowców'],
+        '/production/yield-review' => ['Wydajność i straty kwartału (kreator)', 'Wydajność i straty'],
+        '/workshop/gantt' => ['Tablica tygodnia (przeciągnij i upuść)', 'Tablica tygodnia'],
+        '/purchasing/supplier-review' => ['Ocena dostawców (kreator kwartału)', 'Ocena dostawców'],
     ];
 
     /** Zadanie zalicza się samo, gdy kreator jest zakończony w okresie zadania (katalog : TaskWizards). */
@@ -82,6 +89,10 @@ final class PositionTaskService
         '/logistics/plan' => 'logistics_plan_approved',
         '/month-close' => 'month_closed',
         '/finances/costs' => 'services_closed',
+        '/production/tomorrow' => 'tomorrow_sent',
+        '/purchasing/nc-review' => 'nc_reviewed',
+        '/purchasing/cost-review' => 'material_costs_reviewed',
+        '/production/yield-review' => 'yield_reviewed',
     ];
 
     /** Kolor kategorii na kartach tygodnia (pasek z lewej). */
@@ -90,7 +101,8 @@ final class PositionTaskService
     private const FALLBACK_COLORS = ['#1f5a37', '#2b5f9e', '#5b3a85', '#c17a2a', '#3f6b7c', '#8e1f2f'];
 
     public function __construct(private PositionRepository $positions, private ParamRepository $params, private PageAccessService $access,
-        private TaskWizards $wizards, private TaskWizardRepository $runs, private \App\Services\Notification\AppNotificationService $notifier)
+        private TaskWizards $wizards, private TaskWizardRepository $runs, private \App\Services\Notification\AppNotificationService $notifier,
+        private \App\Repositories\Workshop\DevProductRepository $devProducts)
     {
     }
 
@@ -448,7 +460,137 @@ final class PositionTaskService
         usort($view['later'], fn($a, $b) => [$a['done'], $a['due']] <=> [$b['done'], $b['due']]);
         $view['totals'] = $this->weekTotals($view, $today);
         $view['today'] = $this->todayList($view, $today);
+        $view['flow'] = $this->flow($view, $today, $this->devItems($user, $today));
         return $view;
+    }
+
+    /**
+     * [249] Nowe produkty w rozwoju (m.in. dodane przez administratora z reela) : zadania kierownika produkcji w Mój tydzień —
+     * jeden wiersz na produkt z następnym krokiem (zaplanuj test, test na tablecie grupy, oceń test, zatwierdź recepturę,
+     * wprowadź produkt) i terminem (test zaplanowany, data docelowa albo kilka dni od zmiany etapu). Link : karta produktu.
+     */
+    private function devItems(?array $user, DateTimeImmutable $today): array
+    {
+        if (!$user || ($user['position_code'] ?? null) !== 'KIEROWNIK_PRODUKCJI') return [];
+        try {
+            $rows = $this->devProducts->pipeline();
+            $reel = $this->devProducts->reelIds();
+        } catch (\Throwable) {
+            return [];
+        }
+        $flow = ['idea' => 1, 'test1' => 2, 'test2' => 3, 'recipe' => 4, 'launch' => 5];
+        $labels = ['idea' => 'pomysł', 'test1' => 'test 1', 'test2' => 'test 2', 'recipe' => 'receptura', 'launch' => 'wprowadzenie'];
+        $date = $today->format('Y-m-d');
+        $plus = fn(?string $from, int $days) => date('Y-m-d', strtotime(substr((string) ($from ?: $date), 0, 10) . " +{$days} days"));
+        $items = [];
+        foreach ($rows as $r) {
+            $stage = (string) $r['stage'];
+            if (!isset($flow[$stage])) continue;
+            // Stare produkty testowe sprzed CRM (bez ustawień rozwoju, starsze niż 120 dni) — poza listą.
+            if ($r['updated_at'] === null && $r['stage_changed_at'] === null && (string) $r['create_timestamp'] < $today->modify('-120 days')->format('Y-m-d')) continue;
+            $group = $r['group_pl'] ? ' · ' . $r['group_pl'] : '';
+            $changed = $r['stage_changed_at'] ?: $r['create_timestamp'];
+            if (in_array($stage, ['idea', 'test1', 'test2'], true) && $r['next_trial_date']) {
+                $next = 'test ' . (int) $r['next_trial_no'] . ' na tablecie' . $group;
+                $due = (string) $r['next_trial_date'];
+            } elseif (in_array($stage, ['test1', 'test2'], true) && $r['last_result']) {
+                $next = 'oceń test (' . (['ok' => 'OK', 'fix' => 'do poprawy', 'ko' => 'nie'][$r['last_result']] ?? $r['last_result']) . ') i wybierz następny krok';
+                $due = $plus($r['last_trial_at'], 2);
+            } elseif (in_array($stage, ['idea', 'test1', 'test2'], true)) {
+                $next = 'zaplanuj test ' . ($stage === 'test2' ? '2' : '1') . ' na tablecie grupy' . $group;
+                $due = $plus($changed, 3);
+            } elseif ($stage === 'recipe') {
+                $next = 'zatwierdź recepturę';
+                $due = $plus($changed, 3);
+            } else {
+                $next = 'wprowadź produkt (karta produktu ERP)';
+                $due = $r['target_date'] && $r['target_date'] < $plus($changed, 7) ? (string) $r['target_date'] : $plus($changed, 7);
+            }
+            $late = $due < $date ? (int) floor((strtotime($date) - strtotime($due)) / 86400) : 0;
+            $id = (int) $r['id'];
+            $items[] = ['id' => null, 'task_id' => -$id, 'title' => 'Nowy produkt : ' . $r['name'], 'short' => (string) $r['name'], 'frequency' => 'Nowy produkt', 'freq' => 'dev',
+                'status' => 'open', 'done' => false, 'late' => $late > 0, 'late_days' => $late, 'due' => $due, 'due_time' => null,
+                'due_label' => self::DAY_ABBR[(int) date('N', strtotime($due))] . ' ' . date('j.m', strtotime($due)),
+                'minutes' => null, 'link' => '/test-products/' . $id . '/tablet', 'wizard' => null, 'progress' => null, 'form' => null, 'cron' => null, 'prepared' => null,
+                'backup_for' => null, 'summary' => null, 'color' => '#c17a2a', 'extra' => [], 'auto_done' => false, 'done_at' => null, 'done_by' => null,
+                'stage' => ['step' => $flow[$stage], 'steps' => 5, 'label' => $labels[$stage]],
+                'dev' => ['reel' => isset($reel[$id]), 'next' => $next, 'target' => $r['target_date']]];
+        }
+        usort($items, fn($a, $b) => [$a['due'], $a['short']] <=> [$b['due'], $b['short']]);
+        return $items;
+    }
+
+    /**
+     * « Lżej » [247] (makieta 18) : jedno zadanie « Teraz » (pierwsze niezrobione z listy na dziś : najstarsze spóźnione,
+     * potem dzisiejsze wg godziny), potem sekcje Zaległe, Dziś, Później (najbliższe wystąpienie każdego zadania w kolejnych
+     * dniach tygodnia, potem miesiąc i kwartał) i Zrobione w tym tygodniu (zwinięte).
+     * @return array{now:?array, late:list<array>, today:list<array>, next:list<array>, done:list<array>}
+     */
+    private function flow(array $view, DateTimeImmutable $today, array $dev = []): array
+    {
+        $todayN = (int) $today->format('N');
+        // Jedno zadanie = jeden wiersz : spóźnione wystąpienia i dzisiejsze tego samego zadania → najstarsze z liczbą.
+        $open = [];
+        $byTask = [];
+        foreach ($view['today'] as $it) {
+            if ($it['done']) continue;
+            $k = $it['task_id'];
+            if (isset($byTask[$k])) { $open[$byTask[$k]]['late_count'] = ($open[$byTask[$k]]['late_count'] ?? 1) + ($it['late_count'] ?? 1); continue; }
+            $byTask[$k] = count($open);
+            $open[] = $it;
+        }
+        $now = $open[0] ?? null;
+        $rest = array_slice($open, 1);
+        $seen = [];
+        foreach ($open as $it) $seen[$it['task_id']] = true;
+        $next = [];
+        foreach ($view['days'] as $n => $day) {
+            if ($n <= $todayN) continue;
+            $items = $day['items'];
+            foreach ($view['strip'] as $row) if (isset($row['slots'][$n])) $items[] = $row['slots'][$n];
+            usort($items, fn($a, $b) => [$a['due_time'] ?? '99', $a['title']] <=> [$b['due_time'] ?? '99', $b['title']]);
+            foreach ($items as $it) {
+                if ($it['done'] || isset($seen[$it['task_id']])) continue;
+                $seen[$it['task_id']] = true;
+                $next[] = $it;
+            }
+        }
+        foreach ($view['later'] as $it) {
+            if ($it['done'] || isset($seen[$it['task_id']])) continue;
+            $seen[$it['task_id']] = true;
+            $next[] = $it;
+        }
+        $monday = $view['week']['from'];
+        $done = [];
+        $all = [...$view['later'], ...$view['overdue']];
+        foreach ($view['days'] as $day) foreach ($day['items'] as $it) $all[] = $it;
+        foreach ($view['strip'] as $row) foreach ($row['slots'] as $it) $all[] = $it;
+        foreach ($all as $it) {
+            if ($it['done'] && $it['id'] !== null && (string) $it['done_at'] >= $monday) $done[$it['id']] = $it;
+        }
+        $done = array_values($done);
+        usort($done, fn($a, $b) => strcmp((string) $b['done_at'], (string) $a['done_at']));
+        // [249] Nowe produkty : zaległe / dziś / później według terminu następnego kroku (nie zastępują « Teraz »).
+        $date = $today->format('Y-m-d');
+        $late = array_values(array_filter($rest, fn($it) => $it['late']));
+        $todo = array_values(array_filter($rest, fn($it) => !$it['late']));
+        foreach ($dev as $it) {
+            if ($it['late']) $late[] = $it;
+            elseif ($it['due'] === $date) $todo[] = $it;
+            else $next[] = $it;
+        }
+        return ['now' => $now, 'late' => $late, 'today' => $todo, 'next' => $next, 'done' => $done, 'dev' => count($dev)];
+    }
+
+    /** Krótki tytuł zadania (makieta 18) : część przed « : », « ( » albo « — » — opis zostaje w kreatorze. */
+    public static function shortTitle(string $title): string
+    {
+        $t = trim($title);
+        foreach ([' : ', ' (', ' — ', ' – '] as $sep) {
+            $p = mb_strpos($t, $sep);
+            if ($p !== false && $p >= 6) $t = mb_substr($t, 0, $p);
+        }
+        return rtrim($t, " .,;:");
     }
 
     /**
@@ -556,6 +698,8 @@ final class PositionTaskService
             'id' => $o ? (int) $o['id'] : null,
             'task_id' => (int) $task['id'],
             'title' => $task['title_pl'],
+            'short' => self::shortTitle((string) $task['title_pl']),
+            'due_label' => $due !== null ? self::DAY_ABBR[(int) date('N', strtotime($due))] . ' ' . date('j.m', strtotime($due)) : null,
             'backup_for' => $task['backup_for'] ?? null,
             'category' => $task['category_name'] ?? null,
             'color' => $this->color($task),
@@ -577,7 +721,8 @@ final class PositionTaskService
             'button' => $link !== null ? (self::LINKS[$link][1] ?? 'Otwórz') : null,
             'auto' => ($task['auto_code'] ?? null) ? (self::AUTO[$task['auto_code']] ?? null) : null,
             'auto_done' => $o !== null && $status === 'done' && $o['done_by'] === null && (($task['auto_code'] ?? null) !== null || $cronOn),
-            'wizard' => $wizard ? ['label' => $wizard['label'], 'steps' => $wizard['steps'], 'event' => $wizard['event']] : null,
+            'wizard' => $wizard ? ['label' => $wizard['label'], 'steps' => $wizard['steps'], 'event' => $wizard['event']]
+                : (($task['form_code'] ?? null) === 'production_meeting' ? ['label' => 'Zebranie produkcyjne', 'steps' => 3, 'event' => 'gdy protokół jest zapisany'] : null),
             'progress' => $state && !$state['done'] && $state['step'] !== null ? ['step' => (int) $state['step'], 'steps' => (int) $state['steps'], 'label' => $state['step_label']] : null,
             'summary' => $o['summary'] ?? ($state['summary'] ?? null),
             'cron' => $cronOn ? ['time' => substr((string) $task['cron_time'], 0, 5), 'then' => $task['cron_then'] ?? 'wait', 'label' => TaskCronService::ACTIONS[$task['cron_action']] ?? $task['cron_action'],

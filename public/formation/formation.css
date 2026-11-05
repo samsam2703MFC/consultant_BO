@@ -2121,3 +2121,158 @@ td .fm-barre { display: block; }
    en 11 px pour tenir dans l'étiquette — l'écart de 10 px entre deux étiquettes reste libre. */
 .fm-st__nm { font-size: 12px; }
 .fm-st--serre .fm-st__dt { white-space: nowrap; font-size: 11px; }
+
+/* ── 6. Manuel en quatre parties, vidéos, tablette (1er nov. 2026) ──────────
+   Pré-ouverture · Ouverture · Opérationnel · Formation continue ; des vidéos
+   dans les procédures ; tout se lit et se touche sur tablette. */
+
+/* Accueil du manuel : les quatre parties, dans l'ordre de la vie du magasin. */
+.fm-parts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 4px; }
+@media (max-width: 1100px) { .fm-parts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .fm-parts { grid-template-columns: minmax(0, 1fr); } }
+.fm-part { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; align-items: start; padding: 20px; min-height: 150px;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); text-decoration: none; }
+.fm-part:hover { border-color: var(--accent); }
+.fm-part:active { background: #fbf8f4; }
+.fm-part__n { width: 44px; height: 44px; border-radius: 10px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 20px; font-weight: 800; }
+.fm-part__txt { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fm-part__txt strong { font-size: 18px; font-weight: 700; line-height: 1.2; }
+.fm-part__txt .muted { font-size: 14px; line-height: 1.45; }
+.fm-part__nb { margin-top: auto; font-size: 13px; font-weight: 600; color: var(--accent); }
+
+/* Barre des parties : toujours visible en haut de la partie (elle colle au défilement). */
+.fm-parties { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
+  margin: -22px -24px 14px; padding: 12px 24px; background: rgba(250, 247, 242, 0.96); border-bottom: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+@media (max-width: 1024px) { .fm-parties { top: 0; margin: -16px -16px 12px; padding: 10px 16px; } }
+.fm-parties__a { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 6px 10px; border: 1px solid var(--line);
+  border-radius: 10px; background: #fff; color: var(--muted-2); font-size: 14.5px; font-weight: 600; text-decoration: none; text-align: center; line-height: 1.2; }
+.fm-parties__a.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fm-parties__n { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; font-size: 13px; background: var(--chip); color: var(--ink); }
+.fm-parties__a.is-on .fm-parties__n { background: rgba(255, 255, 255, 0.22); color: #fff; }
+@media (max-width: 600px) { .fm-parties { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.fm-part-sous { margin: 6px 0 0; font-size: 14.5px; }
+.fm-part-cat { margin: 18px 0 8px; font-size: 13px; font-weight: 600; color: var(--muted-2); }
+
+/* Sur la page d'une procédure : sa partie du manuel. */
+.fm-mn { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 14px 0 4px; }
+.fm-mn__partie { margin: 0; display: flex; align-items: center; gap: 8px; }
+.fm-mn__seg { flex-wrap: wrap; }
+
+/* Vidéos : un cadre 16:9 qui prend la largeur de la colonne de lecture. */
+.fm-videos h2 { margin-bottom: 12px; }
+.fm-videos__une { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.fm-videos__une + .fm-videos__une { margin-top: 18px; }
+.fm-video { margin: 0; width: 100%; }
+.fm-video__cadre { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #1d1a17; border-radius: 12px; overflow: hidden; }
+.fm-video__cadre iframe, .fm-video__cadre video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.fm-video figcaption { margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--ink); }
+.fm-videos__ajout .fm-search { width: 100%; min-width: 0; max-width: none; }
+.fm-videos__ajout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--row-line); }
+@media (max-width: 760px) { .fm-videos__ajout { grid-template-columns: minmax(0, 1fr); } }
+@media print { .fm-videos, .fm-mn__seg, .fm-parties { display: none !important; } }
+
+/* Lecture en mode tablette : une colonne de texte centrée, de grands caractères. */
+.fm-tablette .fm-doc { max-width: 860px; margin-left: auto; margin-right: auto; }
+.fm-tablette .fm-rich, .fm-tablette .fm-doc__lead { font-size: 18px; line-height: 1.65; }
+.fm-tablette .fm-rich li { margin: 4px 0; }
+.fm-tablette .fm-rich img { max-width: 100%; height: auto; border-radius: 8px; }
+.fm-tablette .fm-doc__section { padding: 22px 24px; }
+.fm-tablette .fm-doc__section h3 { font-size: 20px; }
+.fm-tablette .screen-subtitle { font-size: 26px; }
+.fm-tablette .fm-part-cat, .fm-tablette .section-label { font-size: 14px; }
+.fm-tablette .type-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+
+/* Écrans tactiles (tablettes), toutes les vues : des cibles de 44 px au moins,
+   des champs à 16 px (sinon l'iPad zoome à chaque saisie), rien qui ne se lise
+   qu'au survol. */
+@media (pointer: coarse) {
+  .filter, .fm-seg button, .sidebar__item, .fm-burger, .fm-crumbs a, .wizard__step a { min-height: 44px; }
+  .filter { padding: 10px 16px; font-size: 14px; display: inline-flex; align-items: center; }
+  .fm-seg button { padding: 10px 18px; font-size: 14.5px; }
+  .sidebar__item { display: flex; align-items: center; }
+  .fm-crumbs a { display: inline-flex; align-items: center; }
+  a.chip { min-height: 40px; display: inline-flex; align-items: center; padding: 6px 12px; }
+  .fm-tree__poste, .fm-tree__niveau { min-height: 44px; }
+  .fm-comp > a { min-height: 40px; display: flex; align-items: center; }
+  input[type="search"], input[type="text"], input[type="url"], input[type="number"], select, textarea, .fm-search, .fm-select { min-height: 44px; font-size: 16px; }
+  .choice-card { min-height: 64px; padding: 16px; }
+  table { font-size: 14.5px; }
+  td, th { padding-top: 11px; padding-bottom: 11px; }
+  .row-link:active td { background: #f6f1ea; }
+  .table-scroll { -webkit-overflow-scrolling: touch; }
+}
+
+/* ── 7. Fiche d'une formation dans le manuel : « une fiche à lire » + fenêtre de détail (1er nov. 2026) */
+.fm-fa { max-width: 860px; margin: 0 auto; }
+.fm-fa__tete h2 { font-size: 32px; font-weight: 800; line-height: 1.15; margin: 10px 0 8px; }
+.fm-fa__rub { display: inline-block; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 6px; background: var(--chip); color: var(--muted-2); vertical-align: middle; }
+.fm-fa__lead { font-size: 18px; line-height: 1.55; margin: 0; color: var(--ink); }
+.fm-fa__faits { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 18px 0 14px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+.fm-fa__faits div { padding: 14px 16px; border-left: 1px solid var(--line); min-width: 0; }
+.fm-fa__faits div:first-child { border-left: 0; }
+.fm-fa__faits b { display: block; font-size: 16.5px; font-weight: 700; overflow-wrap: anywhere; }
+.fm-fa__faits span { font-size: 13px; color: var(--muted); }
+@media (max-width: 700px) { .fm-fa__faits { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fm-fa__faits div:nth-child(3) { border-left: 0; } .fm-fa__faits div:nth-child(n+3) { border-top: 1px solid var(--line); } }
+.fm-fa__actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 26px; }
+.fm-fa__mo { font-size: 14px; font-weight: 600; color: var(--muted-2); padding: 8px 12px; border: 1px dashed var(--faint); border-radius: 8px; }
+.fm-fa__sec { margin: 0 0 28px; }
+.fm-fa__sec h3 { display: flex; align-items: center; gap: 12px; font-size: 21px; font-weight: 700; margin: 0 0 12px; }
+.fm-fa__sec h3 i { font-style: normal; flex: 0 0 auto; width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 15px; }
+/* Ce qui s'ouvre au toucher : une ligne entière, une flèche à droite. */
+.fm-fa__clic { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; margin: 0; padding: 14px 44px 14px 16px; text-align: left;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); font: inherit; cursor: pointer; }
+.fm-fa__clic:hover { border-color: var(--accent); }
+.fm-fa__clic:active { background: #fbf8f4; }
+.fm-fa__clic strong { font-size: 17px; font-weight: 600; }
+.fm-fa__clic span { font-size: 15px; line-height: 1.5; color: var(--muted-2); }
+.fm-fa__clic em { font-style: normal; font-size: 13px; font-weight: 600; color: var(--accent); }
+.fm-fa__plus { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 24px; font-weight: 400; color: var(--faint); }
+.fm-fa__liste, .fm-fa__etapes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.fm-fa__prog ul { margin: 0 0 4px; padding-left: 20px; font-size: 17px; line-height: 1.7; color: var(--ink); }
+.fm-fa__prog > .muted { font-size: 13px; }
+.fm-fa__etapes .fm-fa__clic { flex-direction: row; align-items: center; gap: 14px; }
+.fm-fa__etapes .fm-fa__clic > span:not(.fm-fa__n) { display: flex; flex-direction: column; gap: 3px; }
+.fm-fa__n { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 17px; border: 2px solid var(--accent); color: var(--accent); display: grid; place-items: center; font-size: 15px; font-weight: 700; }
+.fm-fa__sups { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.fm-fa-sup { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 12px; font: inherit; color: var(--ink); cursor: pointer; }
+.fm-fa-sup:hover { border-color: var(--accent); }
+.fm-fa-sup__g { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--chip); color: var(--ink); }
+.fm-fa-sup__g--video { background: var(--accent); color: #fff; font-size: 16px; }
+.fm-fa-sup__g--pdf { background: #b3261e; color: #fff; }
+.fm-fa-sup__t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fm-fa-sup__t strong { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.fm-fa-sup__t .muted { font-size: 13px; }
+.fm-fa__ajout { grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) auto; }
+@media (max-width: 900px) { .fm-fa__ajout { grid-template-columns: minmax(0, 1fr); } }
+.fm-fa__check { list-style: none; margin: 0; padding: 0; }
+.fm-fa__check li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--row-line); font-size: 16.5px; line-height: 1.45; }
+.fm-fa__check li:first-child { border-top: 0; }
+.fm-fa__ck { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--faint); }
+.fm-fa__pour { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 6px; }
+.fm-fa__poste { display: inline-flex; align-items: center; min-height: 36px; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600; background: rgba(141, 29, 44, 0.09); color: var(--accent); }
+.fm-fa__poste--r { background: #fff; border: 1px dashed var(--faint); color: var(--muted-2); }
+
+/* La fenêtre de détail : grande, le contenu défile, les vidéos et documents à la largeur. */
+.confirm__box.fm-mnf { width: min(980px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.fm-mnf__tete { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 18px 22px 14px; border-bottom: 1px solid var(--line); }
+.fm-mnf__tete h3 { margin: 2px 0 0; font-size: 22px; font-weight: 800; }
+.fm-mnf__sous { margin: 0; font-size: 13px; color: var(--muted); }
+.fm-mnf__x { flex: 0 0 auto; min-width: 44px; min-height: 44px; justify-content: center; font-size: 18px; }
+.fm-mnf__corps { padding: 18px 22px 24px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.fm-mnf__corps h4 { font-size: 16px; font-weight: 700; margin: 18px 0 8px; }
+.fm-mnf__corps .fm-rich, .fm-mnf__texte { font-size: 17px; line-height: 1.6; }
+.fm-mnf__qui { font-size: 15px; margin: 10px 0 0; }
+.fm-mnf__sup { margin-top: 18px; }
+.fm-mnf__liste { margin: 0; padding-left: 20px; font-size: 16px; line-height: 1.7; }
+.fm-mnf__liens { list-style: none; margin: 0; padding: 0; }
+.fm-mnf__liens a { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 16px; font-weight: 600; color: var(--accent); text-decoration: none; border-top: 1px solid var(--row-line); }
+.fm-mnf__liens li:first-child a { border-top: 0; }
+.fm-embed { margin: 0; width: 100%; }
+.fm-embed iframe { display: block; width: 100%; height: min(68vh, 900px); min-height: 360px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.fm-embed__ouvrir { margin: 10px 0 0; }
+@media (max-width: 760px) {
+  .fm-mnf-fond { padding: 0; }
+  .confirm__box.fm-mnf { width: 100%; max-height: 100vh; height: 100vh; border-radius: 0; }
+}
+@media print { .fm-fa__ajout, .fm-fa__plus { display: none !important; } .fm-fa__clic { border: 0; padding: 4px 0; } }

@@ -38,6 +38,13 @@ $nextShipping = $next_shipping ?? [];
                 </div>
 
                 <div class="d-flex gap-2 align-items-center">
+                    <?php if (!empty($chart)): ?>
+                    <!-- [243] Lista / Wykres (oś czasu wszystkich reklamacji, makieta 16) -->
+                    <div class="rk-seg" role="group" aria-label="Widok reklamacji">
+                        <button type="button" data-rk-view="list" class="on" aria-pressed="true"><i class="bi bi-list-ul"></i> Lista</button>
+                        <button type="button" data-rk-view="chart" aria-pressed="false"><i class="bi bi-bar-chart-line"></i> Wykres</button>
+                    </div>
+                    <?php endif; ?>
                     <button class="btn btn-outline-secondary" onclick="getNewComplaints()">
                         <i class="bi bi-cloud-download"></i> Pobierz nowe
                     </button>
@@ -56,6 +63,7 @@ $nextShipping = $next_shipping ?? [];
                     </div>
                 <?php endif; ?>
 
+                <div id="rk-list">
                 <div class="at-tabs mt-2" id="status-tabs" role="tablist" aria-label="Filtruj po statusie">
                     <?php foreach (['NEW' => 'Nowe', 'IN_REVIEW' => 'W weryfikacji', 'ACCEPTED' => 'Przyjęte', 'REJECTED' => 'Odrzucone', 'ALL' => 'Wszystkie'] as $code => $label): ?>
                         <?php $n = $code === 'ALL' ? count($complaints ?? []) : ($statusCounts[$code] ?? 0); ?>
@@ -473,6 +481,27 @@ $nextShipping = $next_shipping ?? [];
                     </div><!-- accordion -->
 
                 <?php endif; ?>
+                </div><!-- rk-list -->
+
+                <?php if (!empty($chart)): ?>
+                <div id="rk-chart" class="rk-chart-root" hidden>
+                    <div class="rk-tabs" role="tablist" aria-label="Wykres">
+                        <button type="button" role="tab" data-rk-tab="overview" class="on" aria-selected="true"><i class="bi bi-grid-1x2"></i> Przegląd</button>
+                        <button type="button" role="tab" data-rk-tab="timeline" aria-selected="false"><i class="bi bi-distribute-horizontal"></i> Oś czasu</button>
+                    </div>
+                    <div class="rk-filters" data-rk-filters></div>
+                    <div data-rk-pane="overview"></div>
+                    <div class="rk-panel" data-rk-pane="timeline" hidden>
+                        <h5>Wszystkie reklamacje na osi czasu</h5>
+                        <div class="rk-sub">wiersz = grupa produkcji · położenie = dzień zgłoszenia · wielkość = wartość reklamacji (ilość × cena kartonu z WDT) · kolor = decyzja</div>
+                        <div class="rk-legend" data-rk-legend></div>
+                        <div class="rk-plot" data-rk-plot></div>
+                    </div>
+                    <div class="rk-tip" data-rk-tip hidden></div>
+                    <p class="rk-note" data-rk-note></p>
+                    <script type="application/json" id="rk-chart-data"><?= json_encode($chart, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+                </div>
+                <?php endif; ?>
 
             </div><!-- card-body -->
         </div><!-- card -->
@@ -857,5 +886,8 @@ $nextShipping = $next_shipping ?? [];
     })();
 
 </script>
+<?php if (!empty($chart)): ?>
+<script src="<?=ROOT?>/assets/js/client/complaints-chart.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>
+<?php endif; ?>
 
 <?php $this->view("page_components/footer"); ?>

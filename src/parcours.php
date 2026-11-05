@@ -1271,6 +1271,7 @@ function ep_formation_v25(): array
     }
     foreach ($v['postes'] as $p) { $noms[$p['code']] ??= $p['nom']; }
     return ['source' => $v['source'] ?? null, 'postes' => $v['postes'], 'nomsPanel' => $noms, 'formations' => $v['formations'], 'plans' => $v['plans'],
+        'manuel' => $v['manuel'] ?? [],
         'competences' => $v['competences'], 'admission' => (object) pcAdmissionDefs(), 'niveauxV25' => (object) $niveaux, 'horsPanel' => $horsPanel,
         'familles' => (object) $familles];
 }

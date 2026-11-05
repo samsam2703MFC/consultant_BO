@@ -495,21 +495,34 @@ function ep_exploitation_offres(): array
     $noms = jcMagasins();
     $lignes = []; $mags = []; $kpi = ['ca' => 0.0, 'caJour' => 0.0, 'caPeriode' => 0.0, 'aAjuster' => 0];
     $cout = 0; $parMag = max(6.0, SV_TEMPS_DEMANDE / max(1, count($noms)));
+    // Les bornes (04/11/2026) : la semaine ou le mois du Résultat, comme pour un magasin. La marge d'une offre se pondère
+    // par le CA de sa fenêtre dans chaque magasin ; `depuis` est le premier jour vendu dans le réseau.
+    $mV = 0.0; $mM = 0.0; $pieces = 0.0;
     foreach ($noms as $sid => $nom) {
-        $m = coOffresMagasin((int) $sid, $date, $periode, $cout, $parMag);
-        $mags[] = ['shop' => (string) $sid, 'nom' => $nom, 'kpi' => $m['kpi']];
+        $m = $parBornes ? coOffresMagasin((int) $sid, $date, $periode, $cout, $parMag, $du, $au) : coOffresMagasin((int) $sid, $date, $periode, $cout, $parMag);
+        $mags[] = ['shop' => (string) $sid, 'nom' => $nom, 'kpi' => $m['kpi'], 'periodeJours' => $m['periodeJours'] ?? null];
         $kpi['ca'] += $m['kpi']['ca']; $kpi['caJour'] += $m['kpi']['caJour']; $kpi['caPeriode'] += $m['kpi']['caPeriode']; $kpi['aAjuster'] += $m['kpi']['aAjuster'];
         foreach ($m['offres'] as $o) {
             $k = $o['type'] . '|' . mb_strtolower($o['nom']);
-            if (!isset($lignes[$k])) { $lignes[$k] = ['type' => $o['type'], 'nom' => $o['nom'], 'regle' => $o['regle'], 'canaux' => $o['canaux'], 'magasins' => [], 'pieces' => 0.0, 'ca' => 0.0]; }
-            $lignes[$k]['magasins'][(string) $sid] = ['pieces' => $o['periode']['pieces'], 'ca' => $o['periode']['ca'], 'verdict' => $o['verdict'], 'verdictLib' => $o['verdictLib'], 'mot' => $o['mot'], 'delta' => $o['delta']];
-            $lignes[$k]['pieces'] += (float) ($o['periode']['pieces'] ?? 0); $lignes[$k]['ca'] += $o['periode']['ca'];
+            if (!isset($lignes[$k])) { $lignes[$k] = ['type' => $o['type'], 'nom' => $o['nom'], 'regle' => $o['regle'], 'canaux' => $o['canaux'], 'magasins' => [], 'pieces' => 0.0, 'ca' => 0.0, 'caJour' => 0.0, 'depuis' => null, 'mV' => 0.0, 'mM' => 0.0]; }
+            $lignes[$k]['magasins'][(string) $sid] = ['pieces' => $o['periode']['pieces'], 'ca' => $o['periode']['ca'], 'verdict' => $o['verdict'], 'verdictLib' => $o['verdictLib'], 'mot' => $o['mot'], 'delta' => $o['delta'], 'marge' => $o['marge'], 'depuis' => $o['depuis'] ?? null];
+            $lignes[$k]['pieces'] += (float) ($o['periode']['pieces'] ?? 0); $lignes[$k]['ca'] += $o['periode']['ca']; $lignes[$k]['caJour'] += (float) ($o['auj']['ca'] ?? 0);
+            if (!empty($o['depuis']) && ($lignes[$k]['depuis'] === null || $o['depuis'] < $lignes[$k]['depuis'])) { $lignes[$k]['depuis'] = $o['depuis']; }
+            if ($o['marge'] !== null && ($o['fen']['ca'] ?? 0) > 0) { $lignes[$k]['mV'] += $o['fen']['ca']; $lignes[$k]['mM'] += $o['fen']['ca'] * $o['marge'] / 100; }
         }
     }
+    foreach ($lignes as &$l) {
+        $l['marge'] = $l['mV'] > 0 ? round(100 * $l['mM'] / $l['mV'], 1) : null;
+        $l['pieces'] = round($l['pieces'], 1); $l['ca'] = round($l['ca'], 2); $l['caJour'] = round($l['caJour'], 2);
+        $mV += $l['mV']; $mM += $l['mM']; $pieces += $l['pieces'];
+        unset($l['mV'], $l['mM']);
+    }
+    unset($l);
     $L = array_values($lignes);
     usort($L, static fn ($a, $b) => $b['ca'] <=> $a['ca']);
-    return ['date' => $date, 'periode' => $periode, 'offres' => $L, 'magasins' => $mags,
-        'kpi' => ['ca' => round($kpi['ca'], 2), 'caJour' => round($kpi['caJour'], 2), 'part' => $kpi['caPeriode'] > 0 ? round(100 * $kpi['ca'] / $kpi['caPeriode'], 1) : null,
+    return ['date' => $date, 'periode' => $parBornes ? 'bornes' : $periode] + ($parBornes ? ['du' => $du, 'au' => $au] : []) + ['offres' => $L, 'magasins' => $mags,
+        'kpi' => ['ca' => round($kpi['ca'], 2), 'caJour' => round($kpi['caJour'], 2), 'caPeriode' => round($kpi['caPeriode'], 2), 'pieces' => round($pieces, 1),
+            'part' => $kpi['caPeriode'] > 0 ? round(100 * $kpi['ca'] / $kpi['caPeriode'], 1) : null, 'marge' => $mV > 0 ? round(100 * $mM / $mV, 1) : null,
             'bundles' => count(array_filter($L, static fn ($o) => $o['type'] === 'bundle')), 'promos' => count(array_filter($L, static fn ($o) => $o['type'] === 'promo')), 'aAjuster' => $kpi['aAjuster']]];
 }
 

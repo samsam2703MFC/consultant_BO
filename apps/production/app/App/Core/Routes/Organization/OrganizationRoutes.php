@@ -51,6 +51,9 @@ return function (RouteCollector $r) {
     $f = App\Controllers\Web\Organization\TaskFormController::class;
     $r->addRoute('GET', '/my-tasks/{id:\d+}/form', ['controller' => $f, 'method' => 'form']);
     $r->addRoute('PUT', '/ajax/my-tasks/{id:\d+}/form', ['controller' => $f, 'method' => 'save']);
+    // [247] Kreator zebrania : decyzje na tablety, działania z przeglądów kwartału.
+    $r->addRoute('POST', '/ajax/my-tasks/{id:\d+}/form/tablets', ['controller' => $f, 'method' => 'meetingTablets']);
+    $r->addRoute('POST', '/ajax/wizard-actions/{id:\d+}', ['controller' => $f, 'method' => 'reviewAction']);
     $r->addRoute('GET', '/task-forms', ['controller' => $f, 'method' => 'list']);
     $r->addRoute('GET', '/task-forms/{id:\d+}', ['controller' => $f, 'method' => 'show']);
     $r->addRoute('GET', '/production/follow-up', ['controller' => $f, 'method' => 'followUp']);

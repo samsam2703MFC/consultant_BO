@@ -29,6 +29,13 @@ class ComplaintController extends BaseController
     {
         $data['complaints'] = $this->complaintService->getComplaints();
         $data['next_shipping'] = $this->complaintService->getNextShippingDates();
+        // [243] Przełącznik « Lista / Wykres » : dane osi czasu (błąd nie blokuje listy).
+        try {
+            $data['chart'] = $this->complaintService->chart();
+        } catch (\Throwable $e) {
+            error_log('[complaints-chart] ' . $e->getMessage());
+            $data['chart'] = null;
+        }
 
         $this->view('/client/complaint/overview', $data);
     }

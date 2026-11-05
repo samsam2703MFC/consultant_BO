@@ -108,6 +108,16 @@ try {
     expectTw($t['total'] === 11 && $t['minutes'] === 195 && $t['done'] === 0 && $t['share'] === 8, 'razem : 11 zadań, 195 min = 8 % z 40 h');
     expectTw($t['today']['count'] === 3 && $t['today']['minutes'] === 55 && $t['today_name'] === 'środa' && $t['late'] === 1 && $t['overdue'] === 1, 'dziś : 3 zadania, 55 min ; zaległe 1 + 1');
     expectTw($w['days'][1]['minutes'] === 65 && $w['days'][3]['minutes'] === 55 && $w['days'][4]['minutes'] === 55 && $w['days'][5]['minutes'] === 10, 'minuty dni (z paskiem codziennym)');
+    // [247] « Lżej » (makieta 18) : jedno « Teraz » (najstarsze zaległe, wystąpienia scalone), sekcje, później bez powtórzeń.
+    $fl = $w['flow'];
+    expectTw($fl['now']['title'] === 'Zakupy tygodnia' && $fl['now']['late_count'] === 2 && $fl['now']['short'] === 'Zakupy tygodnia', 'teraz : zakupy tygodnia (2 wystąpienia) ' . json_encode([$fl['now']['title'], $fl['now']['late_count'] ?? null]));
+    $nextTitles = array_map(fn($i) => $i['title'], $fl['next']);
+    expectTw(in_array('Nowe ceny', $nextTitles, true) && in_array('Oferty cenowe', $nextTitles, true) && !in_array('Sprawdź przyjęcia', $nextTitles, true) && count($fl['next']) === 3,
+        'później : czwartek + miesiąc, bez dzisiejszego codziennego ' . json_encode($nextTitles));
+    expectTw(!in_array('Zakupy tygodnia', array_map(fn($i) => $i['title'], [...$fl['late'], ...$fl['today']]), true) && $fl['done'] === [], 'zaległe i dziś bez « Teraz », nic zrobionego');
+    expectTw(App\Services\Organization\PositionTaskService::shortTitle('Faktury tygodnia : wgraj (PDF / KSeF), sprawdź pozycje') === 'Faktury tygodnia'
+        && App\Services\Organization\PositionTaskService::shortTitle('Zebranie produkcyjne — protokół') === 'Zebranie produkcyjne'
+        && App\Services\Organization\PositionTaskService::shortTitle('Plan produkcji tygodnia (kreator : zatwierdź plan)') === 'Plan produkcji tygodnia', 'krótkie tytuły');
 
     // Zrobione ręcznie.
     $s->setStatus((int) $wedItems['Zatwierdź faktury tygodnia']['id'], ['status' => 'done'], 2);

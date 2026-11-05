@@ -1,0 +1,18 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Koszty surowców{% endblock %}
+
+{% block content %}
+{# Kreator « Koszty surowców i oszczędności » [247] (makieta 22) : App\Services\Organization\Wizards\CostReviewService — widok
+   w assets/js/purchasing/cost-review.js. Zadanie Kierownika produkcji (co miesiąc) zalicza się samo po « Zapisz decyzje ». #}
+<section class="section">
+    <div id="crApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="crBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/purchasing/cost-review.js?v={{ asset_v() }}"></script>
+{% endblock %}

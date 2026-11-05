@@ -1260,3 +1260,19 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-01T13:41:56Z module RH : clé maître par config.php, dossier privé traversable
 2026-11-01T14:04:03Z console franchisé : comptes activés (section bo), mot de passe depuis /hr
 2026-11-01T14:05:45Z dashboard opérationnel : Heure par heure, bascule Panier (panier moyen de chaque heure face à J−7)
+2026-11-01T15:40:27Z formation : manuel en quatre parties (procédures et 53 formations), vidéos dans les procédures, toutes les vues sur tablette
+2026-11-01T15:44:00Z formation : manuel, « … » tant que la répartition n'est pas lue
+[242] Mój tydzień : colonnes fixes — 2026-11-01T16:21:45Z
+[243] Reklamacje : Lista / Wykres (oś czasu) — 2026-11-01T18:37:50Z
+2026-11-04T19:07:00Z console franchisé : clé de dépôt du serveur
+[244] Rail Administracja : Uprawnienia funkcji — 2026-11-04T19:10:32Z
+2026-11-04T19:18:49Z console franchisé : comptes de Sam (liste scellée)
+2026-11-04T19:38:03Z console franchisé : ancien compte rendu, siège à part
+2026-11-04T20:20:28Z résultat : le réseau sous le tableau des magasins — produits, portions, offres, sans coût
+2026-11-04T20:45:04Z console franchisé : mot de passe choisi sur les comptes de Sam
+[245] Reklamacje : onglet Przegląd — 2026-11-04T21:18:23Z
+[246] Formation : fiche « à lire » dans le manuel (vidéos, PDF, documents) — 2026-11-04T21:48:03Z
+2026-11-04T21:50:34Z ventes par produit du réseau : portions regroupées, jauge des secteurs
+2026-11-04T22:04:53Z Lot lżej : Mój tydzień allégé, 5 assistants de tâches, nouveaux produits pour le Kierownik
+2026-11-04T22:10:07Z ventes par produit du réseau : étoile des 20 % de produits qui font le plus de chiffre
+2026-11-04T22:12:55Z Lot lżej : migration 157 compatible MySQL

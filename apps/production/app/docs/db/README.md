@@ -240,6 +240,23 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   non lu de moins de 7 jours ; tâche faite entre-temps (jour validé, assistant terminé) → fermé, disparaît. Au tableau :
   « przeczytane 10:51 (J. K., PIN) ».
 
+### Reklamacje : bascule « Lista / Wykres » — frise de toutes les réclamations (01/11/2026, sans migration)
+
+- `/franchise-complaints` : à côté de « Pobierz nowe », bascule **Lista / Wykres** (mémorisée dans le navigateur ;
+  lien direct `/franchise-complaints#wykres`). « Wykres » = maquette 16 : chaque réclamation est un point — ligne =
+  groupe de production du produit (`n_prod_product_settings.id_primary_group`, sinon « bez grupy » ; réclamation sans
+  produit → « bez produktu »), position = jour de signalement (`reported_at`, sinon `acceptance_timestamp`), taille =
+  valeur (quantité × prix du carton de la WDT, `single_purchase_price`), couleur = décision (Przyjęte / Odrzucone /
+  Otwarte = NEW + IN_REVIEW). Info-bulle : produit, date, client, quantité, valeur, valeur acceptée (quantité acceptée ×
+  prix, comme le rapport mensuel), motif, décision. Clic ou Entrée → retour à la liste, réclamation dépliée.
+- Deux onglets dans « Wykres » : **Przegląd** (maquette 15, par défaut) — 4 tuiles (réclamations, valeur acceptée, % acceptées
+  sur les décidées, temps moyen de décision = `reported_at` → `acceptance_timestamp`), réclamations par mois empilées par
+  décision (info-bulle), valeur acceptée par mois, motifs, groupes de production (clic = filtre du groupe), 6 produits les
+  plus réclamés ; **Oś czasu** (maquette 16, ci-dessous).
+- Filtres : période (3 mois, 12 mois, cette année, tout), client, groupe, décision ; sous la frise, nombre de réclamations
+  par mois. Aucune écriture : lecture seule (`ComplaintRepository::chartRows`, `ComplaintService::chart`,
+  `public/assets/js/client/complaints-chart.js`).
+
 ### Nouvelle machine et machine partagée (migration 156, 01/11/2026)
 
 - Kreator maszyny : nouvelle première étape **« 1 · Maszyna »** (4 étapes : Maszyna › Produkty › Wsad i tempo › Gotowe).
@@ -1378,6 +1395,56 @@ Lignes : base de développement le 24/10/2026 (indicatif).
 | `n_user_mail_sent` | 14 | 0 | `user` |
 
 Mots de passe IMAP / SMTP chiffrés (AES-256-GCM, clé dérivée de `PRODUCTION_JWT_SECRET`) ; `n_user_mail` garde les en-têtes et le texte des messages (index plein texte pour la recherche), le HTML et les pièces jointes restent dans la boîte et sont lus à l'ouverture.
+
+### Lot « lżej » : Mój tydzień allégé et une tâche = un assistant — `157_light_wizards`
+
+**Mój tydzień (maquette 18).** `PositionTaskService::week()` renvoie en plus `flow` : une seule tâche « Teraz » (la plus
+ancienne en retard, puis celles du jour par heure), puis les sections Zaległe / Dziś / Później et « Zrobione w tym
+tygodniu » repliée. Une tâche apparaît sur une seule ligne : ses occurrences en retard et celle du jour sont fusionnées
+(« od wt. 20.10 · 3× »). Titre court = partie avant « : », « ( » ou « — » (`shortTitle`). Une ligne = point d'état,
+titre, échéance, durée, étapes, un bouton léger « Otwórz » ; le seul bouton plein est celui de « Teraz ». Le calendrier
+par jour et la légende disparaissent. Textes alignés sur une même verticale (point 22 px + 12 px).
+
+**Nouveaux produits (demande du 4.11).** Pour le poste `KIEROWNIK_PRODUKCJI`, chaque produit test en développement
+(`n_dev_product`, étapes idée → test 1 → test 2 → recette → lancement ; y compris ceux créés depuis un reel —
+`n_dev_card.source_kind` facebook / pinterest) devient une ligne de Mój tydzień : prochaine action (planifier le test
+sur la tablette du groupe, test prévu, évaluer le test, valider la recette, lancer le produit), échéance (test prévu,
+date cible ou quelques jours après le changement d'étape), étapes en points, lien vers la fiche produit. Les anciens
+produits test sans suivi (> 120 jours) sont ignorés.
+
+**Coque commune** : `assets/js/organization/task-wizard.js` (`tw.frame`, tuiles, tableaux, cases, fin) et CSS `.tw-*`.
+Nombres toujours groupés (« 5 430 »), en-têtes de colonnes numériques à droite.
+
+| Assistant | Page | Tâche | Validée quand |
+|---|---|---|---|
+| Plan na jutro | `/production/tomorrow` | Kierownik, chaque jour | plan du lendemain confirmé (`tomorrow_sent`) |
+| Zebranie produkcyjne | `/my-tasks/{id}/form` (3 étapes ; `?classic=1` = formulaire complet) | Kierownik, chaque semaine | procès-verbal final |
+| Niezgodności miesiąca | `/purchasing/nc-review` | Jakość, chaque mois (remplace aussi « Audyt dostawcy ») | chaque NC ouverte a cause + action (`nc_reviewed`) |
+| Koszty surowców | `/purchasing/cost-review` | Kierownik, chaque mois | décisions enregistrées (`material_costs_reviewed`) |
+| Wydajność i straty | `/production/yield-review` | Kierownik, chaque trimestre | revue validée (`yield_reviewed`) |
+
+- **Plan na jutro** : prochain jour de production (`week.production_days`). Groupes = plan de la semaine
+  (`WeekService::week`, `TeamSheetService::dayList`) : produits, cartons, heures du plan, heures des personnes, charge.
+  Groupe au-dessus de son effectif → une proposition : déplacer le plus petit bloc qui couvre l'excès vers le premier
+  jour suivant de la même semaine qui a la place (`WeekService::move`). Étape 2 : effectifs et matières en manque ou
+  livrées ce jour-là. Étape 3 : les tablettes lisent le plan en direct ; message optionnel « Od kierownika produkcji »
+  (`n_task_reminder`, audience `group:<id>`), liste du jour en PDF (`/production/tomorrow/pdf`).
+- **Zebranie** : chiffres de la semaine (suivi de production, réclamations, TRS), actions des réunions précédentes et
+  des revues trimestrielles (`n_wizard_action`), nouvelles décisions (sujet — décision, qui, pour quand) → actions du
+  procès-verbal (`n_task_action`), décisions sur les tablettes des groupes.
+- **Niezgodności** : NC du mois précédent + anciennes encore ouvertes ; cause (`n_nc.cause_cat` : transport, dostawca,
+  magazyn, produkcja, inne), action, responsable, échéance ; fournisseurs avec NC sur 3 mois + dernière note A/B/C →
+  audit (`n_supplier_audit`, un par trimestre ; résultat saisi en fin de trimestre). E-mail au fournisseur (langue
+  `supplier.order_lang`, photos des NC) mis en file d'envoi seulement après confirmation.
+- **Koszty surowców** : prix de base actuel vs 3 mois avant (journal des prix), consommation mensuelle (commandes ×
+  recettes, moyenne 3 mois) → impact zł/mois. Option moins chère : meilleure offre valide (`n_mp_offer`) sinon dernier
+  prix d'un autre fournisseur. « Zmień » (seulement avec offre) = `OfferService::apply` ; « Zapytaj » = un brouillon
+  d'appel d'offres (`TenderService::create`, rien n'est envoyé) ; décisions dans `n_cost_review`.
+- **Wydajność i straty** : trimestre précédent vs celui d'avant ; pertes en zł = pièces ÷ pièces par carton × coût
+  matières du carton ; pièces/heure = pièces faites ÷ heures pointées ; TRS des machines ; au plus 3 actions
+  (`n_wizard_action`) → reviennent à la réunion de production, bannière sur la tablette du groupe.
+
+Tests : `tests/light_wizards_test.php`, `tests/task_week_test.php` (sections et titres courts).
 
 ## Conventions
 

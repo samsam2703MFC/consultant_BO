@@ -36,6 +36,11 @@ final class TaskWizards
         'receiving_checked' => ['Kontrola przyjęć dnia', '/workshop/receiving', 'wszystkie dostawy dnia sprawdzone', 3],
         'payments_reviewed' => ['Płatności dnia', '/finances/payments-day', 'wpłaty, przypomnienia i różnice dostaw przejrzane', 3],
         'suppliers_reviewed' => ['Ocena dostawców', '/purchasing/supplier-review', 'ocena kwartału zatwierdzona', 3],
+        // Lot « lżej » [247] (makiety 19–23) : zadania, które nie miały kreatora.
+        'tomorrow_sent' => ['Plan na jutro', '/production/tomorrow', 'plan jutra wysłany na tablety', 3],
+        'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
+        'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
+        'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
     ];
 
     /** Stanowisko pracowni → grupa produkcji (dzień grupy na tablecie). */
@@ -61,6 +66,10 @@ final class TaskWizards
         'receiving_checked' => 'gdy wszystkie dostawy dnia są sprawdzone (tablet pakowania › Przyjęcia)',
         'payments_reviewed' => 'po kroku 3 kreatora płatności (wpłaty, przypomnienia, różnice dostaw)',
         'suppliers_reviewed' => 'gdy ocena dostawców kwartału jest zatwierdzona (kreator oceny)',
+        'tomorrow_sent' => 'gdy plan na jutro jest wysłany na tablety (kreator « Plan na jutro », krok 3)',
+        'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (kreator, krok 3)',
+        'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (kreator kosztów surowców)',
+        'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (kreator)',
     ];
 
     private const MONTH_STEPS = ['cartons' => 'Kartony', 'staff' => 'Personel', 'media' => 'Media', 'fixed' => 'Koszty stałe i logistyka',
@@ -177,6 +186,14 @@ final class TaskWizards
             case 'payments_reviewed':
                 if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 elseif (($n = $this->repo->paymentsRecorded($day)) > 0) $out = ['step' => 2, 'step_label' => $n . ' ' . self::pl($n, 'wpłata zapisana', 'wpłaty zapisane', 'wpłat zapisanych')] + $out;
+                break;
+            case 'tomorrow_sent':
+                if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                break;
+            case 'nc_reviewed':
+            case 'material_costs_reviewed':
+            case 'yield_reviewed':
+                if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
                 break;
             case 'suppliers_reviewed':
                 if ($r = $this->repo->wizardDone($code, substr($from, 0, 10), substr($to, 0, 10))) $out = ['done' => true, 'summary' => $r['summary']] + $out;

@@ -1386,3 +1386,16 @@ a.cx-btn,a.mko-pied-btn{display:inline-flex;align-items:center;text-decoration:n
 .sv-scb{background:var(--color-background-secondary);border-radius:4px;height:8px;overflow:hidden;margin:8px 0 4px}.sv-scb i{display:block;height:8px;background:var(--color-primary)}
 .sv-scb i.ok{background:#2d7a3e}.sv-scb i.att{background:#D97706}.sv-scb i.ko{background:#C0182B}
 .sv-scm{display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr) 32px 34px;gap:2px 10px;align-items:center;font-size:12px;margin-top:6px}.sv-scm .sv-scb{margin:0}.sv-scm b{text-align:right}.sv-scm em{font-style:normal;font-weight:700;font-size:11px;text-align:right}
+/* Résultat — le réseau sous le tableau des magasins (04/11/2026) : les pastilles des offres, comme sur l’écran Offres et canaux. */
+.rn-net .co-leg{display:flex;gap:12px;flex-wrap:wrap;padding:10px 0 0;font-size:10.5px;color:var(--color-text-muted);align-items:center}
+.rn-net .co-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.rn-net .co-mode{display:inline-flex;align-items:center;font:600 10.5px var(--font-ui);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.rn-net .co-mode.w{background:#e6eef5;color:#1f5f8b}.rn-net .co-mode.l{background:#dde7ef;color:#0f3b5c}.rn-net .co-mode.c{background:var(--color-background-secondary);color:var(--color-text)}
+.rn-net .co-type{display:inline-block;font:700 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;border-radius:5px;padding:2px 6px;margin-right:6px;color:#fff}
+.rn-net .co-type.b{background:#7a4a12}.rn-net .co-type.p{background:#F08A2C}
+.rn-net .co-verdict{font:700 10.5px var(--font-ui);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.rn-net .co-verdict.ok{background:#E6F2E9;color:#2d7a3e}.rn-net .co-verdict.att{background:#FBEFE0;color:#B26A00}.rn-net .co-verdict.ko{background:#F8E3E5;color:#C0182B}.rn-net .co-verdict.tot{background:var(--color-background-secondary);color:var(--color-text-muted)}
+.rn-net .co-cell{display:inline-flex;flex-direction:column;align-items:flex-end;padding-right:12px;position:relative}
+.rn-net .co-cell::after{content:"";position:absolute;right:0;top:6px;width:7px;height:7px;border-radius:50%;background:var(--color-border-secondary)}
+.rn-net .co-cell.ok::after{background:#2d7a3e}.rn-net .co-cell.att::after{background:#B26A00}.rn-net .co-cell.ko::after{background:#C0182B}
+.rn-net .co-cell small{font-size:10.5px;color:var(--color-text-muted)}

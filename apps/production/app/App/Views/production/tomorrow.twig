@@ -1,0 +1,19 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Plan na jutro{% endblock %}
+
+{% block content %}
+{# Kreator « Plan na jutro » [247] (makieta 19) : App\Services\Organization\Wizards\TomorrowPlanService — widok w
+   assets/js/production/tomorrow.js, rama kreatora w assets/js/organization/task-wizard.js. Zadanie « Plan produkcji na jutro »
+   (Kierownik produkcji, codziennie) zalicza się samo po « Zatwierdź plan ». #}
+<section class="section">
+    <div id="tpApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="tpBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/production/tomorrow.js?v={{ asset_v() }}"></script>
+{% endblock %}

@@ -399,6 +399,42 @@ class ComplaintService
         return $this->complaintRepository->getNextShippingDates();
     }
 
+    /**
+     * [243] Reklamacje › Wykres (makieta 16) : wszystkie reklamacje na osi czasu — wiersz = grupa produkcji, dzień
+     * zgłoszenia, wartość (ilość × cena kartonu z WDT), decyzja (przyjęta / odrzucona / otwarta). Wartość przyjęta =
+     * ilość przyjęta × cena kartonu (jak raport miesięczny).
+     */
+    public function chart(): array
+    {
+        $groups = array_map(fn($g) => ['id' => (int) $g['id'], 'name' => (string) $g['name_pl']], $this->complaintRepository->chartGroups());
+        $known = array_flip(array_column($groups, 'id'));
+        $out = [];
+        foreach ($this->complaintRepository->chartRows() as $r) {
+            $price = (float) ($r['single_purchase_price'] ?? 0);
+            $qty = (float) ($r['product_quantity'] ?? 0);
+            $status = (string) $r['status'];
+            $nonProduct = ($r['complaint_type'] ?? 'PRODUCT') === 'NON_PRODUCT';
+            $gid = $r['group_id'] !== null && isset($known[(int) $r['group_id']]) ? (int) $r['group_id'] : null;
+            $out[] = [
+                'id' => (int) $r['id'],
+                'day' => (string) $r['day'],
+                'state' => $status === 'ACCEPTED' ? 'acc' : ($status === 'REJECTED' ? 'rej' : 'open'),
+                'status' => $status,
+                'row' => $nonProduct ? 'other' : ($gid !== null ? 'g' . $gid : 'none'),
+                'product' => $nonProduct ? 'Reklamacja bez produktu' : (string) ($r['product'] ?? '—'),
+                'customer_id' => $r['id_customer'] !== null ? (int) $r['id_customer'] : null,
+                'customer' => (string) ($r['customer'] ?? '—'),
+                'qty' => round($qty, 2),
+                'value' => round($qty * $price, 2),
+                'accepted_value' => $status === 'ACCEPTED' ? round((float) ($r['accepted_quantity'] ?? 0) * $price, 2) : null,
+                'reason' => \App\Core\Helpers\ComplaintReasonTranslator::translate($r['complaint_reason'] ?? null),
+                // Czas decyzji (dni od zgłoszenia do decyzji, jak raport miesięczny) ; ujemny = dane niespójne → pominięty.
+                'decision_days' => $r['decision_days'] !== null && (float) $r['decision_days'] >= 0 ? round((float) $r['decision_days'], 1) : null,
+            ];
+        }
+        return ['complaints' => $out, 'groups' => $groups, 'today' => date('Y-m-d')];
+    }
+
     public function getComplaints()
     {
         $res = $this->complaintRepository->getAll();

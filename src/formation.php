@@ -1149,3 +1149,208 @@ function wr_formation_employe_poste(int $eid): array
     fmJournal(fmNomEmploye($shop, $eid), 'Niveau affecté : ' . $nouveau . ' (avant : ' . $ancien . ')');
     return ['ok' => true, 'employe' => $apres, 'appels' => $appels];
 }
+
+/* ── Manuel opératoire : quatre parties et vidéos (1er nov. 2026) ──────────────
+ * Le client : « séparer le Manuel opératoire en Pré-ouverture · Ouverture ·
+ * Opérationnel · Formation continue », « sur certaines procédures, des vidéos
+ * intégrées », « le tout sur tablette ». Le panel ne connaît pas ces parties (ses
+ * procédures sont rangées par thème : section › catégorie) : la partie de chaque
+ * procédure et ses vidéos ajoutées vivent ICI, dans `ceo_manuel_procedure`. Sans
+ * ligne, la partie se déduit à l'écran de la section du panel (« Formations &
+ * Contrôle Continu » → Formation continue, le reste → Opérationnel). Le contenu
+ * de la procédure reste celui du panel : rien n'y est écrit.
+ * ------------------------------------------------------------------------- */
+
+const MN_PARTIES = ['preouverture', 'ouverture', 'operationnel', 'formation'];
+const MN_VIDEOS_MAX = 10;
+
+function ensureManuel(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_manuel_procedure ('
+        . 'procedure_id INT NOT NULL PRIMARY KEY,'   // l'identifiant de la procédure dans le panel
+        . 'partie VARCHAR(16) NULL,'                 // preouverture | ouverture | operationnel | formation ; null = déduite
+        . 'videos TEXT NULL,'                        // JSON [{url, titre}] : vidéos ajoutées dans le cockpit
+        . 'maj_le DATETIME NOT NULL,'
+        . 'par VARCHAR(120) NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** Une partie du manuel valide, ou null (« déduite de la section du panel »). */
+function mnPartie(mixed $v): ?string
+{
+    return is_string($v) && in_array($v, MN_PARTIES, true) ? $v : null;
+}
+
+/**
+ * Les vidéos d'une procédure, propres : adresses https seulement (une vidéo se lit
+ * dans un cadre que l'écran construit depuis l'identifiant, jamais depuis l'adresse
+ * brute), dix au plus, sans doublon, titre de 120 caractères au plus.
+ *
+ * @return list<array{url:string,titre:string}>
+ */
+function mnVideos(mixed $l): array
+{
+    $out = []; $vus = [];
+    foreach (is_array($l) ? $l : [] as $v) {
+        $url = trim((string) (is_array($v) ? ($v['url'] ?? '') : $v));
+        if ($url === '' || mb_strlen($url) > 500 || !preg_match('#^https://[^\s<>"\']+$#i', $url)) { continue; }
+        if (isset($vus[$url])) { continue; }
+        $vus[$url] = true;
+        $titre = trim(mb_substr((string) (is_array($v) ? ($v['titre'] ?? '') : ''), 0, 120));
+        $out[] = ['url' => $url, 'titre' => $titre];
+        if (count($out) >= MN_VIDEOS_MAX) { break; }
+    }
+    return $out;
+}
+
+/** Les réglages du manuel : {procedureId: {partie, videos}}. */
+function mnClassement(): array
+{
+    ensureManuel();
+    $out = [];
+    foreach (Db::rows('SELECT procedure_id, partie, videos, maj_le FROM ceo_manuel_procedure') as $r) {
+        $out[(string) (int) $r['procedure_id']] = ['partie' => mnPartie($r['partie']), 'videos' => mnVideos(json_decode((string) $r['videos'], true)), 'majLe' => $r['maj_le']];
+    }
+    return $out;
+}
+
+/** GET /formation/manuel — la partie et les vidéos de chaque procédure réglée dans le cockpit. */
+function ep_formation_manuel(): array
+{
+    ensureManuelFormations();
+    $reglees = []; $supports = [];
+    foreach (Db::rows('SELECT code, partie, supports FROM ceo_manuel_formation') as $r) {
+        if (($q = mnPartie($r['partie'])) !== null) { $reglees[(string) $r['code']] = $q; }
+        if (($sp = mnSupports(json_decode((string) $r['supports'], true))) !== []) { $supports[(string) $r['code']] = $sp; }
+    }
+    return ['parties' => MN_PARTIES, 'procedures' => (object) mnClassement(),
+        'formationsDefaut' => (object) mnFormationsDefaut(), 'formations' => (object) $reglees, 'supports' => (object) $supports];
+}
+
+/**
+ * PATCH /formation/manuel/procedure/{id} {partie?, videos?} — ranger une procédure
+ * dans une partie du manuel (null = revenir à la partie déduite) et/ou remplacer
+ * ses vidéos ajoutées. Clé absente = inchangée. Rien n'est écrit au panel.
+ */
+function wr_formation_manuel_procedure(int $pid): array
+{
+    if ($pid <= 0) { return fmRefus(422, 'procédure attendue'); }
+    $b = fmCorps();
+    if (!array_key_exists('partie', $b) && !array_key_exists('videos', $b)) { return fmRefus(422, 'rien à changer : partie ou vidéos'); }
+    if (array_key_exists('partie', $b) && $b['partie'] !== null && mnPartie($b['partie']) === null) {
+        return fmRefus(422, 'partie inconnue : ' . implode(', ', MN_PARTIES));
+    }
+    ensureManuel();
+    $avant = Db::row('SELECT partie, videos FROM ceo_manuel_procedure WHERE procedure_id = ?', [$pid]);
+    $partie = array_key_exists('partie', $b) ? mnPartie($b['partie']) : mnPartie($avant['partie'] ?? null);
+    $videos = array_key_exists('videos', $b) ? mnVideos($b['videos']) : mnVideos(json_decode((string) ($avant['videos'] ?? ''), true));
+    if (array_key_exists('videos', $b) && is_array($b['videos']) && count($videos) < count(array_filter($b['videos']))) {
+        return fmRefus(422, 'une adresse de vidéo n’est pas valable (https://…, dix vidéos au plus, sans doublon)');
+    }
+    $par = function_exists('authUser') ? (string) (authUser()['nom'] ?? '') : '';
+    Db::exec('INSERT INTO ceo_manuel_procedure (procedure_id, partie, videos, maj_le, par) VALUES (?, ?, ?, NOW(), ?)'
+        . ' ON DUPLICATE KEY UPDATE partie = VALUES(partie), videos = VALUES(videos), maj_le = NOW(), par = VALUES(par)',
+        [$pid, $partie, $videos ? json_encode($videos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null, $par !== '' ? mb_substr($par, 0, 120) : null]);
+    $noms = ['preouverture' => 'Pré-ouverture', 'ouverture' => 'Ouverture', 'operationnel' => 'Opérationnel', 'formation' => 'Formation continue'];
+    $quoi = [];
+    if (array_key_exists('partie', $b)) { $quoi[] = 'partie : ' . ($partie !== null ? $noms[$partie] : 'déduite du panel'); }
+    if (array_key_exists('videos', $b)) { $quoi[] = count($videos) . ' vidéo(s)'; }
+    fmJournal('Procédure #' . $pid, 'Manuel opératoire — ' . implode(' · ', $quoi));
+    return ['ok' => true, 'id' => $pid, 'partie' => $partie, 'videos' => $videos];
+}
+
+/* Les formations du référentiel (FO-xx) dans les quatre parties : une répartition par défaut,
+ * versionnée (src/data/manuel_formations.json), et le réglage du cockpit qui l'emporte
+ * (`ceo_manuel_formation`). */
+
+function ensureManuelFormations(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_manuel_formation ('
+        . 'code VARCHAR(8) NOT NULL PRIMARY KEY,'    // FO-01…
+        . 'partie VARCHAR(16) NULL,'                 // null = répartition par défaut
+        . 'supports TEXT NULL,'                      // JSON [{url, titre, etape}] : vidéos, PDF, documents
+        . 'maj_le DATETIME NOT NULL,'
+        . 'par VARCHAR(120) NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Table créée le 1er nov. 2026 sans supports, la partie obligatoire.
+    try { Db::exec('ALTER TABLE ceo_manuel_formation ADD COLUMN supports TEXT NULL AFTER partie'); } catch (Throwable $e) { /* déjà là */ }
+    try { Db::exec('ALTER TABLE ceo_manuel_formation MODIFY partie VARCHAR(16) NULL'); } catch (Throwable $e) { /* déjà ainsi */ }
+}
+
+/**
+ * Les supports d'une formation (vidéos, PDF, documents), propres : https seulement, vingt au
+ * plus, sans doublon (même adresse et même étape), titre de 120 caractères au plus, étape =
+ * index de l'étape de validation (0 à 9) ou null (la formation entière).
+ *
+ * @return list<array{url:string,titre:string,etape:?int}>
+ */
+function mnSupports(mixed $l): array
+{
+    $out = []; $vus = [];
+    foreach (is_array($l) ? $l : [] as $v) {
+        if (!is_array($v)) { continue; }
+        $url = trim((string) ($v['url'] ?? ''));
+        if ($url === '' || mb_strlen($url) > 500 || !preg_match('#^https://[^\s<>"\']+$#i', $url)) { continue; }
+        $et = $v['etape'] ?? null;
+        $et = is_int($et) || (is_string($et) && preg_match('/^\d$/', $et)) ? (int) $et : null;
+        if ($et !== null && ($et < 0 || $et > 9)) { $et = null; }
+        $k = $url . '|' . $et;
+        if (isset($vus[$k])) { continue; }
+        $vus[$k] = true;
+        $out[] = ['url' => $url, 'titre' => trim(mb_substr((string) ($v['titre'] ?? ''), 0, 120)), 'etape' => $et];
+        if (count($out) >= 20) { break; }
+    }
+    return $out;
+}
+
+/** La répartition par défaut : [code FO => partie], les parties inconnues écartées. */
+function mnFormationsDefaut(?string $fichier = null): array
+{
+    $d = json_decode((string) @file_get_contents($fichier ?? __DIR__ . '/data/manuel_formations.json'), true);
+    $out = [];
+    foreach (is_array($d['formations'] ?? null) ? $d['formations'] : [] as $code => $p) {
+        if (preg_match('/^FO-\d{1,3}$/', (string) $code) && ($q = mnPartie($p)) !== null) { $out[(string) $code] = $q; }
+    }
+    return $out;
+}
+
+/**
+ * PATCH /formation/manuel/formation/{FO} {partie?: cle | null, supports?: [{url, titre, etape}]} —
+ * ranger la formation (null = répartition par défaut) et/ou remplacer ses supports. Clé absente =
+ * inchangée. La ligne disparaît quand il ne reste ni partie ni support.
+ */
+function wr_formation_manuel_formation(string $code): array
+{
+    if (!preg_match('/^FO-\d{1,3}$/', $code)) { return fmRefus(422, 'code de formation attendu (FO-01…)'); }
+    $b = fmCorps();
+    if (!array_key_exists('partie', $b) && !array_key_exists('supports', $b)) { return fmRefus(422, 'rien à changer : partie ou supports'); }
+    if (array_key_exists('partie', $b) && $b['partie'] !== null && $b['partie'] !== '' && mnPartie($b['partie']) === null) {
+        return fmRefus(422, 'partie inconnue : ' . implode(', ', MN_PARTIES));
+    }
+    ensureManuelFormations();
+    $avant = Db::row('SELECT partie, supports FROM ceo_manuel_formation WHERE code = ?', [$code]);
+    $p = array_key_exists('partie', $b) ? mnPartie($b['partie']) : mnPartie($avant['partie'] ?? null);
+    $sp = array_key_exists('supports', $b) ? mnSupports($b['supports']) : mnSupports(json_decode((string) ($avant['supports'] ?? ''), true));
+    if (array_key_exists('supports', $b) && is_array($b['supports']) && count($sp) < count(array_filter($b['supports']))) {
+        return fmRefus(422, 'un support n’est pas valable (adresse https://…, vingt au plus, sans doublon)');
+    }
+    if ($p === null && $sp === []) { Db::exec('DELETE FROM ceo_manuel_formation WHERE code = ?', [$code]); }
+    else {
+        Db::exec('INSERT INTO ceo_manuel_formation (code, partie, supports, maj_le) VALUES (?, ?, ?, NOW())'
+            . ' ON DUPLICATE KEY UPDATE partie = VALUES(partie), supports = VALUES(supports), maj_le = NOW()',
+            [$code, $p, $sp ? json_encode($sp, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null]);
+    }
+    $noms = ['preouverture' => 'Pré-ouverture', 'ouverture' => 'Ouverture', 'operationnel' => 'Opérationnel', 'formation' => 'Formation continue'];
+    $def = mnFormationsDefaut()[$code] ?? null;
+    $quoi = [];
+    if (array_key_exists('partie', $b)) { $quoi[] = 'rangée dans ' . ($p !== null ? '« ' . $noms[$p] . ' »' : 'sa partie par défaut' . ($def ? ' (« ' . $noms[$def] . ' »)' : '')); }
+    if (array_key_exists('supports', $b)) { $quoi[] = count($sp) . ' support(s)'; }
+    fmJournal($code, 'Manuel opératoire — formation ' . implode(' · ', $quoi));
+    return ['ok' => true, 'code' => $code, 'partie' => $p, 'defaut' => $def, 'supports' => $sp];
+}

@@ -42,7 +42,7 @@ Comme le reste du cockpit : HTML/CSS/JS sans dépendance ni compilation (`index.
 | | Base de connaissances | `#/ressources` | Les ressources (type, catégorie, lien) et les compétences qui s'y appuient. |
 | | Compétences produit | `#/produit` | Les compétences attachées aux produits et sous-recettes. |
 | Équipes | Compétences des équipes | `#/equipes/{magasin}` | Pour chaque personne : poste et niveau tenus, compétences validées / exigées, ce qui manque, les formations qui le couvrent. |
-| Manuel opératoire | Manuel en ligne | `#/manuel/…` | Postes en cartes → niveaux en étapes → compétences en cartes → procédure à lire. Recherche plein texte. Mode tablette (plein écran, cibles tactiles agrandies). |
+| Manuel opératoire | Manuel en ligne | `#/manuel/…` | Quatre parties : Pré-ouverture · Ouverture · Opérationnel · Formation continue (`#/manuel/partie/{cle}`) ; Opérationnel garde l'entrée par poste (postes → niveaux → compétences → procédure). Vidéos dans les procédures. Recherche plein texte. Mode tablette (plein écran, cibles tactiles agrandies). |
 | Documentation | Routes API | `#/api[/{famille}]` | Les 237 routes du référentiel dans le swagger : verbe, état, paramètres, corps, champs de réponse, codes — et un bouton **Tester** qui appelle la route en lecture avec le compte du cockpit. |
 
 ## Parcours compétences (31/10/2026) — `/formation/parcours/`
@@ -310,4 +310,80 @@ et de procédures affichent « … » et un bandeau le dit.
   les compétences produit et leurs traductions, et `POST /packages` : routes sans contrat, corps à
   mesurer d'abord à la sonde.
 - Manuel **hors ligne** sur la tablette (service worker et copie des procédures).
+
+## Manuel opératoire en quatre parties, vidéos, tablette (1er nov. 2026)
+
+Le client : « séparer le Manuel opératoire en Pré-ouverture · Ouverture · Opérationnel · Formation
+continue », « le tout sur tablette », « réadapter pour une optimisation sur tablette de toutes les vues
+et de la lecture », « sur certaines procédures, des vidéos intégrées ».
+
+- **Accueil du manuel** = les quatre parties, dans l'ordre de la vie du magasin (cartes 1 à 4 : nom,
+  une ligne, nombre de procédures ; « · N postes » pour Opérationnel, « · N formations » pour Formation
+  continue). Une partie (`#/manuel/partie/{preouverture|ouverture|operationnel|formation}`) : barre des
+  quatre parties collée en haut, ses procédures rangées par thème (catégorie du panel) ; Opérationnel
+  commence par « Par poste » (l'ancien manuel) ; Formation continue finit par les formations du réseau.
+- **La partie d'une procédure** : le panel ne la connaît pas (ses procédures sont rangées par thème) ;
+  elle vit dans le cockpit, table `ceo_manuel_procedure` (`procedure_id`, `partie`, `videos` JSON,
+  `maj_le`). Sans réglage, elle se **déduit** de la section du panel : « Formations & Contrôle
+  Continu » (ou une catégorie « Formation… ») → Formation continue, le reste → Opérationnel.
+  Pré-ouverture et Ouverture ne se remplissent qu'à la main. Réglage : page de la procédure (manuel ou
+  Référentiel › Procédures), « Partie du manuel », quatre boutons et « ↺ Partie déduite » ; la liste
+  des procédures a une colonne « Partie du manuel » (pleine = rangée, pâle = déduite). Rien n'est
+  écrit au panel ; journal « Formation ».
+- **Les 53 formations du référentiel (FO-xx) dans les quatre parties** (client : « réorganiser les
+  formations dans ces 4 sections ») : chaque partie liste ses formations (carte : code, nom, fréquence,
+  évaluations, qui forme) après ses procédures ; la fiche d'une formation se lit dans le manuel
+  (`#/manuel/formation/FO-xx`, liens vers les compétences du manuel, sans retour au référentiel).
+  Répartition **par défaut**, versionnée dans `src/data/manuel_formations.json` (avec la règle de chaque
+  partie) : Pré-ouverture 9 (FO-29 recrutement, FO-30 intégration, FO-31 à FO-37 le parcours du
+  candidat franchisé) · Ouverture 4 (FO-38 stratégie d'ouverture, et ce que tient le garant :
+  FO-20 vitrine, FO-24 planning et effectif, FO-27 casse et invendus) · Opérationnel 30 (le métier au
+  quotidien, vente, production, hygiène, stocks, encadrement de la boutique, click & collect, webshop) ·
+  Formation continue 10 (FO-39 à FO-45, FO-48 à FO-50 : master class, veille, finance avancée,
+  multi-boutique, communication locale, réglementation avancée, animation commerciale, e-commerce).
+  Un consultant la change formation par formation (fiche de la formation, « Partie du manuel » ;
+  « ↺ Par défaut »), table `ceo_manuel_formation` ; la liste des formations a une colonne « Partie du
+  manuel ». Une formation du panel sans code FO se lit dans Formation continue (« Autres formations du
+  panel »).
+- **La fiche d'une formation dans le manuel = « une fiche à lire »** (proposition A des maquettes
+  `docs/maquettes/manuel-formation/`, choisie le 1er nov. 2026, « avec au clic une fenêtre avec les
+  détails, vidéo, matériel didactique, PDF intégré ») : `#/manuel/formation/FO-xx` — code et rubrique
+  du manuel (`S.v25.manuel`, envoyé par `/formation/v25`), titre, la phrase de la rubrique, quatre
+  repères (fréquence, nombre d'étapes, qui la suit, qui la valide — le rôle, sans le nom), « Ouvrir la
+  procédure » (la première procédure du panel rattachée à ses compétences ; sinon la référence MO §),
+  « Imprimer », puis les sections numérotées : Ce que vous saurez faire · Au programme (bloc du plan
+  de formation) · Matériel didactique · Comment on la valide · En boutique, ensuite (checklist du bloc)
+  · Pour qui (obligatoire ; recommandée en pointillés). Une section vide n'est pas affichée.
+  **Au toucher, une fenêtre de détail** (`S.modale.type = 'mn'`, `fenetreManuel`) : une compétence
+  (description, vérification, procédures, supports), le programme (contenu, indicateurs, formations
+  du même bloc), un support (son lecteur), une étape (sa description du panel, « Validée par » sur
+  l'étape de validation, ses supports). Grande fenêtre (980 px), plein écran sous 760 px, ✕ et Échap.
+  **Supports** : rangés dans le cockpit (`ceo_manuel_formation.supports`, JSON `[{url, titre, etape}]`,
+  https, vingt au plus, `etape` = index de l'étape ou null pour la formation entière), plus les
+  ressources du panel rattachées à ses compétences et leur lien de support. Lecteurs : vidéos (comme les
+  procédures), PDF (cadre + « Ouvrir en plein écran », l'iPad n'affiche qu'une page dans un cadre),
+  Google Docs / Slides / Sheets et fichiers Drive en aperçu (`/preview` : le document doit être partagé
+  à « toute personne disposant du lien »), autre adresse = un bouton « Ouvrir ». Ajout et retrait par un
+  consultant (hors mode tablette) : « Matériel didactique », adresse, titre, étape. La fiche du
+  référentiel (`#/formations/FO-xx`) ne change pas.
+- **Vidéos** : en tête de la procédure, avant son texte. Celles ajoutées dans le cockpit (adresse +
+  titre, dix au plus, https seulement) puis celles que le panel cite déjà (liens du contenu et des
+  sections, pièces jointes vidéo). Lues dans la page : YouTube (youtube-nocookie), Vimeo (avec le
+  hachage d'une vidéo non répertoriée), Loom, fichiers .mp4/.webm/.mov ; Google Drive seulement si on
+  l'ajoute comme vidéo (un lien Drive du texte peut être un PDF). Le cadre est construit depuis
+  l'**identifiant** extrait par expression régulière, jamais depuis l'adresse brute. Une page ne se
+  redessine pas sous une vidéo en cours (cadre touché, fichier qui joue) : ce qui arrive pendant ce
+  temps se dessine quand on la quitte. Les champs d'ajout ne redessinent pas la page (`data-vinput`).
+- **Mode tablette** (`?tablette=1`, l'icône du manifeste) : ni barre latérale, ni « Rafraîchir » (une
+  relecture complète du panel est un geste de consultant), ni réglages (partie, vidéos) ; texte de
+  lecture à 18 px, colonne de 860 px, sections aérées.
+- **Toutes les vues sur écran tactile** (`@media (pointer: coarse)`) : boutons, onglets, liens du fil
+  d'Ariane, entrées du menu, lignes de l'arbre des postes et des compétences à 44 px ; puces-liens à
+  40 px ; champs à 16 px (sinon l'iPad zoome). Contrôlé sur 14 vues à 1180 × 820, 1024 × 768,
+  820 × 1180 et 768 × 1024 en tactile : aucun chevauchement, aucune cible sous 40 px, aucun
+  débordement horizontal. La page mobile des parcours s'élargit à 720 px sur tablette.
+- Routes : `GET /formation/manuel` → `{parties[], procedures{id: {partie, videos[{url, titre}], majLe}}, formationsDefaut{FO: partie}, formations{FO: partie}}` ;
+  `PATCH /formation/manuel/formation/{FO} {partie?: cle | null, supports?: [{url, titre, etape}]}` (null = répartition par défaut ; clé absente = inchangée) ;
+  `PATCH /formation/manuel/procedure/{id} {partie?: cle | null, videos?: [{url, titre}]}` (clé absente =
+  inchangée ; partie inconnue ou adresse refusée = 422).
 - Traductions : `lang_code` n'est pas appliqué par le panel aujourd'hui ; le module lit le français.

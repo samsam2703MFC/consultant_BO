@@ -2965,7 +2965,159 @@ function tplResultat(c, x){
       <span style="font-size:11.5px;color:var(--color-text-muted)">marge, valeur et CA face aux cibles, puis douze mois de clients et de panier</span>
     </div>
     ${tplMagasins(c, x)}` : '')}
+    ${c.rn ? tplResultatReseauProduits(c, x) : ''}
   </div>`;
+}
+
+/**
+ * Sous le tableau des magasins (04/11/2026) : le réseau en trois cartes — les ventes par produit de tous les magasins
+ * (produits, catégories, portions ; une ligne s'ouvre sur le détail magasin par magasin), les promotions et bundles
+ * (les offres en lignes, les magasins en colonnes), et les produits vendus sans coût, magasin par magasin.
+ */
+function tplResultatReseauProduits(c, x){
+  const { esc } = x, r = c.rn;
+  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const bord = 'border-top:0.5px solid var(--color-border-tertiary)';
+  const th = (t, droite, w) => `<th style="text-align:${droite ? 'right' : 'left'};padding:0 9px 7px;${cap};white-space:nowrap${w ? ';width:' + w : ''}">${t}</th>`;
+  const mu = '<span style="color:var(--color-text-muted)">—</span>';
+  const attente = txt => `<div style="display:flex;align-items:center;font-size:12px;color:var(--color-text-muted);padding:14px 0 4px"><i class="rj-ring"></i>${esc(txt)}</div>`;
+  const tete = (titre, sous, droite) => `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      <div><div style="${cap}">${esc(titre)}</div>${sous ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(sous)}</div>` : ''}</div>${droite || ''}</div>`;
+  const kpis = L => `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:13px">${L.map(k => `<div style="background:var(--color-background-secondary);border-radius:9px;padding:10px 12px">
+      <div style="${cap}">${esc(k[0])}</div><div style="font-family:var(--font-display);font-size:20px;line-height:1.15;margin-top:3px;${num}">${esc(k[1])}</div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px;line-height:1.4">${esc(k[2])}</div></div>`).join('')}</div>`;
+  const seg = (L, petit) => `<div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:999px">${L.map(o => `<button ${x.A(o.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:${petit ? 11 : 12}px;font-weight:500;padding:${petit ? '5px 11px' : '6px 14px'};border-radius:999px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`).join('')}</div>`;
+
+  // 1 · Les ventes par produit.
+  const P = r.prod;
+  let prod;
+  if (r.prodErreur) { prod = tete('Ventes par produit — tout le réseau', r.perLib) + `<div style="font-size:12px;color:#8D1D2C">${esc(r.prodErreur)}</div>`; }
+  else if (!P) { prod = tete('Ventes par produit — tout le réseau', r.perLib) + attente('Lecture des tickets du réseau, magasin par magasin…'); }
+  else {
+    const droite = `<div style="display:flex;align-items:flex-start;gap:22px">
+        <div style="text-align:right"><div style="${cap}">CA produits</div><div style="font-family:var(--font-display);font-size:23px;line-height:1.1;${num}">${esc(P.ca)}</div></div>
+        <div style="text-align:right"><div style="${cap}">Marge brute</div><div style="font-family:var(--font-display);font-size:23px;line-height:1.1;color:${P.tauxCoul};${num}">${esc(P.tauxReseau)}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(P.tauxSous)}</div></div>
+        <button ${x.A(r.relire)} title="Relire les ventes du réseau" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:transparent;border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text-muted)">${r.relecture ? '<i class="rj-ring" style="margin:0"></i>' : '⟳'}</button>
+      </div>`;
+    const barre = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        ${seg(P.vues)}
+        <span style="font-size:11px;color:var(--color-text-muted);margin-left:6px">trier par</span>${seg(P.tris, true)}
+        <input id="rn-q" value="${esc(P.qBrut)}" ${x.I(P.setQ)} placeholder="Chercher un produit, une catégorie…" style="margin-left:auto;font-family:var(--font-ui);font-size:12px;padding:7px 11px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);min-width:230px">
+      </div>`;
+    const cel = (v, st) => `<td style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num}${st ? ';' + st : ''}">${v}</td>`;
+    // L'étoile : le produit fait partie des 20 % de produits qui font le plus de chiffre dans le réseau.
+    const etoile = t => `<svg viewBox="0 0 24 24" width="11" height="11" role="img" aria-label="${esc(t)}" style="flex:none;vertical-align:-1px"><title>${esc(t)}</title><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="var(--color-text)"/></svg>`;
+    const sousTitre = t => `<tr style="background:var(--color-background-secondary)"><td></td><td colspan="9" style="padding:7px 9px 2px 21px;${bord};font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)">${esc(t)}</td></tr>`;
+    const det = l => (l.det.length && l.detMag.length ? sousTitre('Par format') : '') + detL(l.det) + (l.detMag.length ? sousTitre('Par magasin') + detL(l.detMag) : '');
+    const detL = L => L.map(d => `<tr style="background:var(--color-background-secondary);font-size:11.5px">
+        <td></td><td style="padding:5px 9px;${bord}"><span style="padding-left:12px;${d.reste ? 'color:var(--color-text-muted)' : ''}">${esc(d.nom)}</span>${d.sous ? ` <span style="font-size:10px;color:#C17A2A">${esc(d.sous)}</span>` : ''}</td>
+        <td style="${bord}"></td>${cel(esc(d.pieces))}${cel(esc(d.prix), 'color:var(--color-text-muted)')}${cel(esc(d.ca), 'font-weight:500')}${cel(esc(d.part), 'color:var(--color-text-muted)')}
+        ${cel(esc(d.marge), d.marge === '?' ? 'color:var(--color-text-muted)' : '')}${cel(esc(d.taux), 'color:' + (d.tauxCoul || 'inherit'))}<td style="${bord}"></td></tr>`).join('');
+    // La jauge des secteurs : des blocs proportionnels séparés de 2 px, la part écrite dans le bloc quand elle tient,
+    // le nom au survol et dans la légende. Un clic sur un secteur filtre le tableau.
+    const J = P.jauges;
+    const barreJ = (blocs, haut, clic) => `<div style="display:flex;gap:2px;height:${haut}px;width:100%">${blocs.map(b => `<div ${clic && b.go ? x.A(b.go) : ''} title="${esc(b.titre)}" style="flex:0 0 calc(${b.w}% - 2px);min-width:2px;border-radius:4px;background:${b.coul};${b.eteint ? 'opacity:.28;' : ''}${b.on ? 'box-shadow:0 0 0 2px var(--color-surface),0 0 0 3.5px ' + b.coul + ';' : ''}display:flex;align-items:center;overflow:visible;cursor:${clic && b.go ? 'pointer' : 'default'}">${b.lib ? `<span style="padding:0 7px;font-size:10.5px;font-weight:600;color:${b.encre};white-space:nowrap;${num}">${esc(b.lib)}</span>` : ''}</div>`).join('')}</div>`;
+    const legJ = L => `<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">${L.map(g => `<span style="display:inline-flex;align-items:center;gap:5px;${g.on ? 'color:var(--color-text);font-weight:600' : ''}"><i style="width:9px;height:9px;border-radius:2px;background:${g.coul}"></i>${esc(g.nom)}</span>`).join('')}</div>`;
+    const jauges = `<div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:var(--color-surface)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <div style="font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${J.fil.map((f, i) => `${i ? '<span style="color:var(--color-text-muted)">›</span>' : ''}${f.go ? `<button ${x.A(f.go)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;color:var(--color-primary)">${esc(f.nom)}</button>` : `<b style="font-weight:600">${f.coul ? `<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.coul};margin-right:5px;vertical-align:0"></i>` : ''}${esc(f.nom)}</b>`}`).join('')}${J.effacer ? ` <button ${x.A(J.effacer)} title="Revenir à tout le réseau" style="border:none;background:none;cursor:pointer;color:var(--color-text-muted);font-size:13px;padding:0 3px">×</button>` : ''}</div>
+          <span style="margin-left:auto;font-size:11px;color:var(--color-text-muted)">mesurer en</span>${seg(J.mesures, true)}
+        </div>
+        ${J.lignes.map(g => `<div style="display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:start;margin-top:9px">
+            <div style="padding-top:5px"><div style="${cap}">${esc(g.lib)}</div>${g.sous ? `<div style="font-size:10px;color:var(--color-text-muted);margin-top:2px">${esc(g.sous)}</div>` : ''}</div>
+            <div>${g.j.vide ? '<div style="font-size:11px;color:var(--color-text-muted);padding-top:5px">rien de vendu</div>' : barreJ(g.j.blocs, 28, true) + legJ(g.j.legende)}</div>
+          </div>`).join('')}
+      </div>`;
+    const corps = P.vide ? `<div style="padding:16px 0 6px;font-size:12px;color:var(--color-text-muted)">${esc(P.vide)}</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
+        <tr>${th('#', false, '26px')}${th(esc(P.entNom))}${th('Magasins', true)}${th('Pièces', true)}${th('Prix moyen', true)}${th('CA', true)}${th('Part', true)}${th('Marge brute', true)}${th('Taux', true)}${th('Coef', true)}</tr>
+        ${P.rows.map(l => `
+          <tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer;${l.ouvert ? 'background:var(--color-background-secondary)' : ''}">
+            <td style="padding:8px 9px;${bord};font-size:11px;color:var(--color-text-muted);${num}">${l.rang}</td>
+            <td style="padding:8px 9px;${bord};min-width:240px">
+              <div style="display:flex;align-items:center;gap:6px"><span style="font-size:9px;color:var(--color-text-muted)">${l.ouvert ? '▾' : '▸'}</span><i title="secteur" style="flex:none;width:8px;height:8px;border-radius:2px;background:${l.coul}"></i><span style="font-weight:500">${esc(l.nom)}</span>${l.etoile && P.top ? etoile(P.top.titre) : ''}${l.portion ? '<span style="font-size:9.5px;font-weight:600;padding:0 6px;border-radius:999px;background:#FBEFE0;color:#8a4e05">en portions</span>' : ''}</div>
+              <div style="font-size:10px;color:var(--color-text-muted);padding-left:29px">${esc(l.cat)}${l.etoiles && P.top ? ' · ' + etoile(P.top.titre) + ' ' + l.etoiles + ' produit' + (l.etoiles > 1 ? 's' : '') : ''}${l.formats ? ' · <span style="color:var(--color-text)">' + esc(l.formats) + '</span>' : ''}${l.sans ? ` · <b style="color:#C17A2A;font-weight:600">${esc(l.sans)}</b>` : ''}</div>
+              <div style="height:3px;border-radius:999px;background:var(--color-background-secondary);margin:4px 0 0 29px;max-width:260px;overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;background:${l.coul};opacity:.8"></i></div>
+            </td>
+            <td title="${esc(l.nMagTitre)}" style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num};color:var(--color-text-muted)">${esc(l.nMag)}</td>
+            <td${l.piecesTitre ? ` title="${esc(l.piecesTitre)}"` : ''} style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num}">${esc(l.pieces)}${l.piecesSous ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(l.piecesSous)}</div>` : ''}</td><td${l.prixTitre ? ` title="${esc(l.prixTitre)}"` : ''} style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num};color:var(--color-text-muted)">${esc(l.prix) || mu}</td>${cel(esc(l.ca), 'font-weight:600')}${cel(esc(l.part), 'color:var(--color-text-muted)')}
+            <td${l.margeTitre ? ` title="${esc(l.margeTitre)}"` : ''} style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num}${l.marge === '?' ? ';color:var(--color-text-muted)' : ''}">${esc(l.marge)}</td>
+            ${cel(esc(l.taux), 'font-weight:600;color:' + l.tauxCoul)}${cel(esc(l.coef), 'color:var(--color-text-muted)')}
+          </tr>${l.ouvert ? det(l) : ''}`).join('')}
+        <tr style="background:var(--color-background-secondary)">
+          <td style="border-top:1px solid var(--color-border-secondary)"></td>
+          <td style="padding:9px;border-top:1px solid var(--color-border-secondary);font-weight:500">${esc(P.total.lib)} <span style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(P.total.sous)}</span></td>
+          <td style="border-top:1px solid var(--color-border-secondary)"></td>
+          ${cel(esc(P.total.pieces), 'border-top:1px solid var(--color-border-secondary);font-weight:500')}<td style="border-top:1px solid var(--color-border-secondary)"></td>
+          ${cel(esc(P.total.ca), 'border-top:1px solid var(--color-border-secondary);font-weight:600')}<td style="border-top:1px solid var(--color-border-secondary)"></td>
+          ${cel(esc(P.total.marge), 'border-top:1px solid var(--color-border-secondary);font-weight:500')}${cel(esc(P.total.taux), 'border-top:1px solid var(--color-border-secondary);font-weight:600;color:' + P.total.tauxCoul)}<td style="border-top:1px solid var(--color-border-secondary)"></td>
+        </tr>
+      </table></div>
+      ${P.plus || P.moins ? `<div style="text-align:center;margin-top:10px">${P.plus ? `<button ${x.A(P.plus.go)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:6px 16px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">${esc(P.plus.txt)} ▾</button>` : ''}${P.moins ? `<button ${x.A(P.moins.go)} class="hv-line" style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:6px 16px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">${esc(P.moins.txt)} ▴</button>` : ''}</div>` : ''}`;
+    const legTop = P.top ? `<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-muted);margin:-2px 0 8px">${etoile(P.top.titre)}<span>${esc(P.top.txt)}</span></div>` : '';
+    prod = tete('Ventes par produit — tout le réseau', P.sousTitre, droite) + jauges + barre + legTop + corps
+      + (P.lecture ? `<div style="font-size:11px;color:#8a4e05;background:#FBEFE0;border:1px solid #E8C9A0;padding:6px 9px;border-radius:7px;margin-top:10px;line-height:1.45">${esc(P.lecture)}</div>` : '')
+      + `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(P.note)}</div>`;
+  }
+
+  // 2 · Les promotions et les bundles.
+  const O = r.off;
+  let off;
+  const offLib = 'Promotions et bundles — ce qu’elles rapportent dans le réseau';
+  if (r.offErreur) { off = tete(offLib, r.perLib) + `<div style="font-size:12px;color:#8D1D2C">${esc(r.offErreur)}</div>`; }
+  else if (!O) { off = tete(offLib, r.perLib) + attente('Lecture des bundles et des promotions, magasin par magasin…'); }
+  else {
+    const td = `padding:8px 9px;${bord};font-size:12.5px`;
+    const cell = v => v.txt ? `<span class="co-cell ${v.verdict}" title="${esc(v.titre || '')}"><b>${v.txt}</b>${v.sous ? `<small>${v.sous}</small>` : ''}</span>` : mu;
+    off = tete(offLib, r.perLib + ' · bundles = produits de la catégorie « Bundle & Promotion » du panel · promotions = celles posées par le cockpit sur les jours creux · référence : les 4 semaines d’avant') + kpis(O.kpi)
+      + (O.vide ? `<div style="font-size:12px;color:var(--color-text-muted);padding:4px 0">${esc(O.vide)}</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:820px">
+        <tr>${th('Offre')}${th('Canaux')}${th('Depuis')}${O.cols.map(s => th(esc(s.nom), true)).join('')}${th('Réseau', true)}${th('Marge', true)}${th('Verdict')}</tr>
+        ${O.lignes.map(l => `<tr>
+          <td style="${td};min-width:200px"><span class="co-type ${l.type === 'bundle' ? 'b' : 'p'}">${l.typeLib}</span><b style="font-weight:600">${esc(l.nom)}</b><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.regle)}</div></td>
+          <td style="${td}">${l.canaux.map(k => `<span class="co-mode ${k.cls}">${esc(k.lib)}</span>`).join(' ')}</td>
+          <td style="${td};color:var(--color-text-muted);${num}">${esc(l.depuis)}</td>
+          ${l.cells.map(v => `<td style="${td};text-align:right;white-space:nowrap;${num}">${cell(v)}</td>`).join('')}
+          <td style="${td};text-align:right;font-weight:700;white-space:nowrap;${num}">${l.total}${l.totalSous ? `<div style="font-size:10.5px;color:var(--color-text-muted);font-weight:400">${l.totalSous}</div>` : ''}</td>
+          <td style="${td};text-align:right;font-weight:600;${num};color:${l.margeCoul || 'var(--color-text-muted)'}">${l.marge || '—'}</td>
+          <td style="${td}">${l.verdicts.map(v => `<span class="co-verdict ${v.cls}">${esc(v.lib)}${O.multi ? ' × ' + v.n : ''}</span>`).join(' ')}</td>
+        </tr>`).join('')}
+      </table></div>`)
+      + `<div class="co-leg"><span>pièces vendues ${esc(O.colLib)} (CA pour une promotion) · la pastille est le verdict du magasin, face à sa propre référence</span><span><span class="co-verdict ok">Garder</span> ≥ +8 % ou marge tenue</span><span><span class="co-verdict att">Ajuster</span> entre −3 % et +8 %, ou marge sous 50 %</span><span><span class="co-verdict ko">Arrêter</span> sous −3 %</span><span><span class="co-verdict tot">Trop tôt</span> moins de 5 jours lus</span></div>`;
+  }
+
+  // 3 · Les produits sans coût, magasin par magasin.
+  const SC = P ? r.sc : null;
+  let sc;
+  const scLib = 'Produits sans coût — magasin par magasin';
+  if (r.prodErreur) { sc = tete(scLib, r.perLib) + `<div style="font-size:12px;color:#8D1D2C">${esc(r.prodErreur)}</div>`; }
+  else if (!SC) { sc = tete(scLib, r.perLib) + attente('Lecture des tickets et des recettes…'); }
+  else {
+    const droite = SC.toutTxt ? `<button ${x.A(SC.tout)} style="border:none;background:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;color:var(--color-primary);font-weight:500">${esc(SC.toutTxt)}</button>` : '';
+    sc = tete(scLib, r.perLib + ' · les produits vendus sans coût de recette, à chiffrer dans le panel', droite) + kpis(SC.kpi)
+      + (SC.frequents ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin:-3px 0 10px">${esc(SC.frequents)}</div>` : '')
+      + `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:620px">
+        <tr>${th('Magasin')}${th('Produits sans coût')}${th('Ventes concernées', true)}${th('Part', true)}</tr>
+        ${SC.mags.map(m => `<tr ${m.ouvrir ? x.A(m.ouvrir) + ' class="hv-bg"' : ''} style="${m.ouvrir ? 'cursor:pointer;' : ''}${m.ouvert ? 'background:var(--color-background-secondary)' : ''}">
+            <td style="padding:8px 9px;${bord};font-weight:500;white-space:nowrap"><span style="display:inline-block;width:12px;font-size:9px;color:var(--color-text-muted)">${m.chevron}</span>${esc(m.nom)}</td>
+            <td style="padding:8px 9px;${bord}"><span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;${m.ok ? 'background:#E6F2E9;color:#2d7a3e' : (m.lu ? 'background:#FBEFE0;color:#8a4e05' : 'background:var(--color-background-secondary);color:var(--color-text-muted)')}">${esc(m.etat)}</span></td>
+            <td style="padding:8px 9px;${bord};text-align:right;${num};font-weight:600">${esc(m.ca) || mu}</td>
+            <td style="padding:8px 9px;${bord};text-align:right;${num};color:var(--color-text-muted)">${esc(m.part)}</td>
+          </tr>${m.ouvert ? `<tr><td colspan="4" style="padding:4px 9px 12px 30px;background:var(--color-background-secondary)">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <tr>${th('Produit')}${th('Catégorie')}${th('Qté', true)}${th('CA', true)}</tr>
+              ${m.produits.map(p => `<tr><td style="padding:5px 9px;${bord}">${esc(p.nom)}${p.ailleurs ? ` <span style="font-size:10px;color:var(--color-text-muted)">· ${esc(p.ailleurs)}</span>` : ''}</td><td style="padding:5px 9px;${bord};color:var(--color-text-muted)">${esc(p.cat)}</td><td style="padding:5px 9px;${bord};text-align:right;${num}">${esc(p.q)}</td><td style="padding:5px 9px;${bord};text-align:right;${num}">${esc(p.v)}</td></tr>`).join('')}
+            </table></td></tr>` : ''}`).join('')}
+      </table></div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(SC.note)}</div>`;
+  }
+
+  return `
+    <div class="rn-net" style="${carte};padding:17px 19px">${prod}</div>
+    <div class="rn-net" style="${carte};padding:17px 19px">${off}</div>
+    <div class="rn-net" style="${carte};padding:17px 19px">${sc}</div>`;
 }
 
 /**
