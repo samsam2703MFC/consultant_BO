@@ -274,6 +274,12 @@
     'Des paiements sont en retard : notez d’abord quoi et le détail, dans la météo du franchisé.': 'Er zijn betalingen achter: noteer eerst wat en het detail, in het weerbericht van de franchisenemer.',
     'Météo du franchisé et ses finances': 'Weerbericht van de franchisenemer en zijn financiën',
     'Enregistrer la météo': 'Weerbericht opslaan', 'Météo enregistrée.': 'Weerbericht opgeslagen.', 'La météo est vide.': 'Het weerbericht is leeg.', 'éclaircies (fin de contrôle)': 'opklaringen (einde controle)', 'éclaircies (fin de contrôle': 'opklaringen (einde controle',
+    // Le mois, le trimestre, l'année face au budget (05/11/2026).
+    'Le mois, le trimestre, l’année': 'De maand, het kwartaal, het jaar', 'face au budget, arrêtés au §': 'tegenover het budget, stand op §',
+    'toucher une ligne ouvre son détail': 'tik op een lijn voor het detail', 'jour # sur #': 'dag # van #',
+    'attendu # €': 'verwacht # €', '# % de # €': '# % van # €', 'face à l’attendu': 'tegenover het verwachte', 'au rythme': 'aan dit tempo',
+    'au budget': 'op budget', 'proche': 'dichtbij', 'sous le budget': 'onder het budget', 'l’attendu à date': 'het verwachte tot nu', 'au rythme actuel': 'aan het huidige tempo',
+    'hors comparaison': 'buiten de vergelijking', 'Année #': 'Jaar #',
     // L'équipe en poste (05/11/2026).
     'L’équipe en poste': 'Het team van dienst', 'L’équipe en poste (planning du jour)': 'Het team van dienst (planning van vandaag)', 'Expérience client': 'Klantbeleving',
     'personne en poste': 'niemand van dienst', '# / # noté': '# / # gescoord', 'lecture du planning…': 'planning wordt gelezen…', 'Lecture du planning du jour…': 'Planning van vandaag wordt gelezen…',

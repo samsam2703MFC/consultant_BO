@@ -167,6 +167,20 @@
 .vi .vb-j i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#2d7a3e}.vi .vb-j i.dn{background:#C0182B}.vi .vb-j i.or{background:#E0A526}.vi .vb-j i.mu{background:#a99e92}
 .vi .vb-j em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--color-text)}
 .vi .vb-jl{display:flex;justify-content:space-between;gap:8px;margin-top:4px}
+/* Le mois, le trimestre, l'année d'un coup d'œil (05/11/2026) : trois jauges face au budget, au-dessus des onglets. */
+.vi .vb3{padding:12px 14px 10px}.vi .vb3 .t{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}.vi .vb3 .t b{font-size:14px}
+.vi .vb3-r{display:grid;grid-template-columns:150px minmax(0,1fr) 250px;gap:14px;align-items:center;padding:14px 4px 8px;border:none;background:none;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;border-radius:10px}
+.vi .vb3-r + .vb3-r{border-top:.5px solid var(--color-border-tertiary);border-radius:0}.vi .vb3-r.on{background:var(--color-background-secondary)}
+.vi .vb3-r .pl b{display:block;font:400 19px/1.1 var(--font-display)}.vi .vb3-r .pl small{display:block;font-size:11px;color:var(--color-text-muted);margin-top:2px}
+.vi .vb3-b{position:relative;height:24px;border-radius:7px;background:#EFE9E1}
+.vi .vb3-b i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:#2d7a3e}.vi .vb3-b i.dn{background:#C0182B}.vi .vb3-b i.or{background:#E0A526}.vi .vb3-b i.mu{background:#a99e92}
+.vi .vb3-b i.pj{border-radius:0 7px 7px 0;opacity:.35;background:repeating-linear-gradient(135deg,var(--c) 0 3px,transparent 3px 8px)}
+.vi .vb3-b em{position:absolute;top:-5px;bottom:-5px;width:0;border-left:2px dashed var(--color-text)}
+.vi .vb3-b em span{position:absolute;left:6px;top:-17px;white-space:nowrap;font:600 10.5px var(--font-ui);font-style:normal;color:var(--color-text)}.vi .vb3-b em.g span{left:auto;right:6px}
+.vi .vb3-r .pv{font-variant-numeric:tabular-nums}.vi .vb3-r .pv b{font:400 20px var(--font-display)}.vi .vb3-r .pv span{font-size:12px;color:var(--color-text-muted)}
+.vi .vb3-r .pv small{display:block;font-size:11.5px;color:var(--color-text-muted);margin-top:2px}.vi .vb3-r .pv small b{font:700 11.5px var(--font-ui)}
+.vi .vb3 .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);margin-top:6px}.vi .vb3 .leg i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0}
+@media (max-width:760px){.vi .vb3-r{grid-template-columns:1fr;gap:6px}.vi .vb3-b em span{display:none}}
 .vi .vb-f .vb-l{font:600 12.5px var(--font-ui);margin:12px 0 5px}
 .vi .vb-p{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .vi .vb-p .n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--color-primary);color:#fff;font:700 12px var(--font-ui);display:flex;align-items:center;justify-content:center}
@@ -606,7 +620,8 @@
   const fmtD = iso => { if (!iso) { return '—'; } const d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return d.getDate() + ' ' + MOIS[d.getMonth()]; };
   const fmtDJ = iso => { if (!iso) { return '—'; } const d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]; };
   const fmtH = dt => dt ? String(dt).slice(11, 16) : '';
-  const eur = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE').replace(/ | /g, ' ') + ' €';
+  const EUR = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE').replace(/ | /g, ' ') + ' €';
+  const eur = EUR;
   // Un écart en % au dixième, signé : « −14,2 % », « +3 % ».
   const vbPct = e => e == null ? '—' : (e > 0 ? '+' : e < 0 ? '−' : '') + String(Math.abs(Math.round(e * 10) / 10)).replace('.', ',') + ' %';
   const cap1 = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
@@ -1529,8 +1544,43 @@
       // Le formulaire (pourquoi, trois pistes) se remplit au développement ; ici, l'appel à y aller.
       const E = this._etapes; const sousB = (B.sous || []).length;
       const renvoi = sousB ? `<div class="card ${this.vbExige(v) === 'fait' ? '' : 'alerte'} sm"><b class="${this.vbExige(v) === 'fait' ? 'up' : 'dn'}">CA à plus de ${String(B.seuil).replace('.', ',')} % sous le budget</b> — ${this.vbExige(v) === 'fait' ? 'le pourquoi et les trois pistes sont notés.' : 'le pourquoi et les trois pistes du franchisé se notent ensemble au développement.'}${E && E.pistes >= 0 ? ` <button class="chip" data-a="etape" data-v="${E.pistes}">${this.vbExige(v) === 'fait' ? 'Revoir' : 'Y aller'}</button>` : ''}</div>` : '';
-      return cap + `<div class="card vb">${tabs}<div class="vb-c">${corps}${this.pnlHtml(x.pnl, B.seuilsPnl || {}, B.arrete)}</div></div>` + renvoi
+      return cap + this.vb3Html(P, B, vue) + `<div class="card vb">${tabs}<div class="vb-c">${corps}${this.pnlHtml(x.pnl, B.seuilsPnl || {}, B.arrete)}</div></div>` + renvoi
         + `<div class="xs mu" style="margin:2px 2px 10px">${esc(B.source || '')}${(B.manques || []).length ? ' · relu dans quelques minutes : ' + esc(B.manques.join(', ')) : ''}.</div>`;
+    }
+    /**
+     * Le mois, le trimestre et l'année d'un coup d'œil (05/11/2026, Sam : « une jauge mensuelle, trimestrielle et annuelle de
+     * la jauge de CA par rapport au budget », dans la tablette de contrôle) : trois jauges de 0 à l'objectif de l'étendue, les
+     * mêmes chiffres que les onglets (/visites/budget, arrêtés à la veille) — le réalisé à la couleur du statut, le trait de
+     * l'attendu à date, au rythme actuel en hachuré (objectif × réalisé ÷ attendu), l'écart et ce qui manque. Un toucher
+     * ouvre l'onglet de l'étendue, avec son mini P&L.
+     */
+    vb3Html(P, B, vue) {
+      const L = ['mois', 'trimestre', 'annee'].filter(k => P[k]); if (!L.length) { return ''; }
+      const cls = st => st === 'sous' ? 'dn' : st === 'proche' ? 'or' : st === 'ok' ? 'up' : 'mu';
+      const coul = { dn: '#C0182B', or: '#E0A526', up: '#2d7a3e', mu: '#a99e92' };
+      const SRC = { budget: 'budget validé', theorique: 'CA théorique de l’étude', mixte: 'budget validé et CA théorique' };
+      const MC = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+      // Un nombre ne se coupe pas en fin de ligne : ses milliers en espace fine insécable, que visites-nl.js lit comme un nombre.
+      const eur = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE').replace(/[\s\u202f\u00a0]/g, '\u202f') + ' €';
+      const ligne = k => {
+        const x = P[k]; const c = cls(x.statut);
+        const nom = k === 'trimestre' ? 'T' + (Math.floor((+String(x.du).slice(5, 7) - 1) / 3) + 1) + ' ' + String(x.du).slice(0, 4) : cap1(x.lab);
+        const jT = x.du && x.au ? Math.round((new Date(x.au + 'T12:00:00') - new Date(x.du + 'T12:00:00')) / 864e5) + 1 : null;
+        const jE = x.du && B.arrete ? Math.max(0, Math.min(jT, Math.round((new Date(B.arrete + 'T12:00:00') - new Date(x.du + 'T12:00:00')) / 864e5) + 1)) : null;
+        const sous = (jT ? 'jour ' + jE + ' sur ' + jT : '') + (x.rang ? ' · ' + x.rang + (x.rang === 1 ? 'er' : 'e') + ' sur ' + x.sur : '');
+        if (x.statut === 'sans' || !(x.objectif > 0)) { return `<button type="button" class="vb3-r${k === vue ? ' on' : ''}" data-a="vb-vue" data-v="${k}"><div class="pl"><b>${esc(nom)}</b><small>${esc(sous)}</small></div><div class="vb3-b"></div><div class="pv"><b>${eur(x.realise)}</b><small>${esc(x.motif || 'pas de budget')}</small></div></button>`; }
+        const obj = x.objectif, r = x.attendu > 0 ? x.realise / x.attendu : null, proj = r != null && x.attendu < obj * 0.999 ? obj * r : null;
+        const ech = Math.max(obj, x.realise, proj || 0) * (Math.max(x.realise, proj || 0) > obj ? 1.04 : 1), pc = n => Math.max(0, Math.min(100, 100 * n / ech));
+        const pA = pc(x.realise), pP = proj != null ? pc(proj) : null, pT = pc(x.attendu);
+        const hors = (x.sansBudget || []).map(m => MC[+m - 1]).filter(Boolean);
+        return `<button type="button" class="vb3-r${k === vue ? ' on' : ''}" data-a="vb-vue" data-v="${k}"><div class="pl"><b>${esc(nom)}</b><small>${esc(sous)}</small></div>
+          <div class="vb3-b"><i class="${c}" style="width:${pA.toFixed(1)}%"></i>${pP != null && pP > pA ? `<i class="pj" style="left:${pA.toFixed(1)}%;width:${(pP - pA).toFixed(1)}%;--c:${coul[c]}"></i>` : ''}${x.attendu > 0 ? `<em class="${pT > 72 ? 'g' : ''}" style="left:${pT.toFixed(1)}%"><span>attendu ${eur(x.attendu)}</span></em>` : ''}</div>
+          <div class="pv"><b>${eur(x.realise)}</b> <span>${x.atteintePct != null ? String(Math.round(x.atteintePct)) + ' % de ' + eur(obj) : ''}</span>
+            <small><b class="${c}">${vbPct(x.ecartPct)}</b> face à l’attendu · ${x.manque > 0 ? 'il manque ' + eur(x.manque) : 'd’avance de ' + eur(-x.manque)}${proj != null ? ' · au rythme : ' + eur(proj) : ''}</small>
+            ${x.source && x.source !== 'budget' || hors.length ? `<small>${esc(SRC[x.source] || 'budget')}${hors.length ? ' · hors comparaison : ' + esc(hors.join(', ')) : ''}</small>` : ''}</div></button>`;
+      };
+      return `<div class="card vb3"><div class="t"><b>Le mois, le trimestre, l’année</b><span class="xs mu">face au budget, arrêtés au ${esc(B.arrete ? fmtDJ(B.arrete) : '')} · toucher une ligne ouvre son détail</span></div>${L.map(ligne).join('')}
+        <div class="leg"><span><i style="background:#2d7a3e"></i>au budget</span><span><i style="background:#E0A526"></i>proche</span><span><i style="background:#C0182B"></i>sous le budget</span><span><i style="background:none;border-left:2px dashed var(--color-text);height:12px;width:0;margin-right:7px;vertical-align:-2px"></i>l’attendu à date</span><span><i style="background:repeating-linear-gradient(135deg,#2d7a3e 0 3px,transparent 3px 7px);opacity:.5"></i>au rythme actuel</span></div></div>`;
     }
     /**
      * Le mini P&L de l'étendue (26/10/2026) : le CA, le coût matière, la marge brute, les invendus (jour, semaine, mois),
