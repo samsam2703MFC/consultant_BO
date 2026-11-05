@@ -41,13 +41,15 @@ final class MaterialCostRepository extends WorkshopRepository
     {
         $rows = $this->all(
             // Kartony zamówione zsumowane najpierw na produkt, dopiero potem receptura (146 ms → 23 ms, 12 miesięcy).
-            'SELECT fri.material_id, SUM(c.cartons * fri.quantity) AS qty
+            // [251] Ilość kupiona : receptura w wadze po obróbce ÷ (1 − odpad karty surowca).
+            'SELECT fri.material_id, SUM(c.cartons * fri.quantity * ' . \App\Services\Material\MaterialLoss::factorSql('rm') . ') AS qty
              FROM (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons
                    FROM customer_order co JOIN customer_order_product cop ON cop.id_order = co.id
                    WHERE co.expected_shipping_date >= CURDATE() - INTERVAL ? MONTH
                    GROUP BY cop.id_product) c
              JOIN final_product fp ON fp.id = c.id_product
              JOIN flattened_recipe_ingredient fri ON fri.recipe_id = fp.id_recipe
+             JOIN raw_material rm ON rm.id = fri.material_id
              GROUP BY fri.material_id',
             [$months]
         );
@@ -93,9 +95,11 @@ final class MaterialCostRepository extends WorkshopRepository
     public function productsUsing(int $materialId, int $months): array
     {
         return $this->all(
-            'SELECT fp.id, fp.name, fp.ppc, fri.quantity AS qty_per_carton, pr.precalculated_material_cost,
+            // [251] Ilość kupiona na karton (po odpadzie), jak koszt receptury.
+            'SELECT fp.id, fp.name, fp.ppc, fri.quantity * ' . \App\Services\Material\MaterialLoss::factorSql('rm') . ' AS qty_per_carton, pr.precalculated_material_cost,
                     COALESCE(sold.cartons, 0) AS cartons
              FROM flattened_recipe_ingredient fri
+             JOIN raw_material rm ON rm.id = fri.material_id
              JOIN final_product fp ON fp.id_recipe = fri.recipe_id AND fp.active = 1
              JOIN product_recipe pr ON pr.id = fri.recipe_id
              LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons

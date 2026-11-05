@@ -78,6 +78,8 @@ class MaterialService
             $errors['id_current_supplier'] = "Wybierz obecnego dostawcę";
         }
 
+        if ($e = self::lossError($data['waste_perc'] ?? null)) $errors['waste_perc'] = $e;
+
         foreach (self::NUTRITION_ERRORS as $field => $message)
         {
             $empty = trim((string) ($data[$field] ?? '')) === '';
@@ -108,6 +110,8 @@ class MaterialService
             $errors['id_category'] = "Wybierz kategorię";
         }
 
+        if ($e = self::lossError($data['waste_perc'] ?? null)) $errors['waste_perc'] = $e;
+
         // Edycja : puste pole = 0, ale wartość ujemna albo nieliczbowa jest błędem
         foreach (self::NUTRITION_ERRORS as $field => $message)
         {
@@ -133,6 +137,31 @@ class MaterialService
         return (float) $value;
     }
 
+    /**
+     * Odpad przy obróbce [%] (kolumna waste_perc) : obieranie, gniazda, pestki, ości — 0 = bez odpadu, jabłko 35 = z 1 kg
+     * zostaje 650 g. Puste = 0. Liczba 0–99,99 (przecinek albo kropka), inaczej komunikat błędu.
+     */
+    public static function lossError(mixed $raw): ?string
+    {
+        if ($raw === null || trim((string) $raw) === '') return null;
+        $v = str_replace(',', '.', trim((string) $raw));
+        if (!is_numeric($v) || (float) $v < 0 || (float) $v >= 100) return 'Odpad : liczba od 0 do 99 % (0 = bez odpadu, jabłko 35)';
+        return null;
+    }
+
+    /** Wartość do zapisu : puste = 0, inaczej liczba 0–99,99 zaokrąglona do 0,01. */
+    public static function lossValue(mixed $raw): float
+    {
+        if ($raw === null || trim((string) $raw) === '') return 0.0;
+        return max(0.0, min(99.99, round((float) str_replace(',', '.', trim((string) $raw)), 2)));
+    }
+
+    /** Odpad podejrzanie duży (≥ 80 %) : prawdopodobnie wpisano część użyteczną zamiast odpadu. */
+    public static function lossSuspicious(mixed $pct): bool
+    {
+        return $pct !== null && $pct !== '' && (float) $pct >= 80;
+    }
+
     public function adjustData($data)
     {
         foreach (array_keys(self::NUTRITION_ERRORS) as $field)
@@ -140,6 +169,8 @@ class MaterialService
             $data[$field] = self::nutritionValue($data[$field] ?? null) ?? 0;
         }
         if(!isset($data['is_part_of_package'])) $data['is_part_of_package'] = 0;
+        // Odpad z formularza : zapis karty potwierdza wartość (koniec « do sprawdzenia » po przeniesieniu z migracji 158).
+        if (array_key_exists('waste_perc', $data)) { $data['waste_perc'] = self::lossValue($data['waste_perc']); $data['waste_review'] = 0; }
         foreach (self::PACKAGING_FIELDS as $field)
         {
             if (array_key_exists($field, $data) && trim((string) $data[$field]) === '') $data[$field] = null;
@@ -151,8 +182,9 @@ class MaterialService
 
     public function insert($data)
     {
-        // « Wykorzystanie materiału [%] » nie wchodzi do żadnego kosztu (tylko eksport) : pole usunięte z formularzy, kolumna = 100
-        if (!isset($data['waste_perc']) || $data['waste_perc'] === '') $data['waste_perc'] = 100;
+        // « Odpad [%] » (karta surowca, krok Zakup kreatora) : puste = 0 (bez odpadu). Na razie informacja na karcie
+        // i liście — koszt receptur liczy cenę zakupu bez odpadu.
+        $data['waste_perc'] = self::lossValue($data['waste_perc'] ?? null);
         $data['price_per_unit'] = $data['pack_price'] / $data['package_size_in_base_unit'];
         $data = $this->adjustData($data);
 

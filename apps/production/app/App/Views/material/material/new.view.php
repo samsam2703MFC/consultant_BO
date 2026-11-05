@@ -26,7 +26,7 @@
                     <?php if(!empty($errors)):?>
                         <div class="alert alert-danger"><?= implode("<br>", array_map('htmlspecialchars', $errors)) ?></div>
                     <?php endif; ?>
-                    <?php $steps_error = ''; foreach (['name', 'id_category', 'id_unit', 'id_current_supplier', 'package_size_in_base_unit', 'pack_price'] as $f) { if (!empty($errors[$f])) { $steps_error = $f; break; } } ?>
+                    <?php $steps_error = ''; foreach (['name', 'id_category', 'id_unit', 'id_current_supplier', 'package_size_in_base_unit', 'pack_price', 'waste_perc'] as $f) { if (!empty($errors[$f])) { $steps_error = $f; break; } } ?>
 
                     <form method="POST" data-at-steps data-at-steps-error="<?= htmlspecialchars($steps_error) ?>" class="at-form-steps">
                         <section data-step="Surowiec">
@@ -81,6 +81,18 @@
                                     <label class="form-label" for="pack_price">Cena / opakowanie [zł] *</label>
                                     <input value="<?= old_value('pack_price') ?>" type="number" min="0.01" step="0.01" class="form-control" id="pack_price" name="pack_price" placeholder="0,00" required>
                                 </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label" for="waste_perc">Odpad przy obróbce [%]</label>
+                                    <div class="input-group">
+                                        <input value="<?= htmlspecialchars((string) old_value('waste_perc', '0')) ?>" type="number" min="0" max="99.99" step="0.01" inputmode="decimal" class="form-control text-end" id="waste_perc" name="waste_perc" data-loss>
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-9 align-self-end">
+                                    <div class="form-text mt-0">Obieranie, gniazda, pestki, ości : 0 = bez odpadu ; jabłko 35 = z 1 kg zostaje 650 g.</div>
+                                    <div class="form-text" data-loss-out aria-live="polite"></div>
+                                </div>
+                            </div>
                             </div>
                             <div class="at-new-supplier border rounded-3 p-3 mt-3" hidden data-new-supplier-box>
                                 <h6 class="mb-2">Nowy dostawca</h6>
@@ -239,3 +251,4 @@
     })();
 </script>
 <script src="<?= ROOT ?>/assets/js/at-form-steps.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>
+<script src="<?= ROOT ?>/assets/js/material/loss.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>

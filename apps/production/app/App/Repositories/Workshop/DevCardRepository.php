@@ -151,7 +151,7 @@ final class DevCardRepository extends WorkshopRepository
      */
     public function costMaterials(): array
     {
-        return $this->all('SELECT r.id, r.name, COALESCE(u.name, \'g\') AS unit, r.price_per_unit, COALESCE(x.n, 0) AS uses
+        return $this->all('SELECT r.id, r.name, COALESCE(u.name, \'g\') AS unit, r.price_per_unit, r.waste_perc, COALESCE(x.n, 0) AS uses
             FROM raw_material r
             LEFT JOIN unit u ON u.id = r.id_unit
             LEFT JOIN (SELECT child_ingredient_id AS id, COUNT(DISTINCT parent_recipe_id) AS n FROM product_recipe_connection

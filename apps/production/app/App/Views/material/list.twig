@@ -71,13 +71,13 @@
             <div class="card-body">
                 <!-- Filters -->
                 <div class="row g-3 mb-3">
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <input type="text"
                                class="form-control"
                                id="searchMaterials"
                                placeholder="{{ translations.search_materials|default('Szukaj surowców...') }}">
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <select class="form-select" id="categoryFilter">
                             <option value="">{{ translations.all_categories }}</option>
                             {% for c in categories %}
@@ -85,11 +85,21 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <select class="form-select" id="typeFilter">
                             <option value="">{{ translations.all_types }}</option>
                             <option value="0">{{ translations.regular_materials }}</option>
                             <option value="1">{{ translations.package_materials }}</option>
+                        </select>
+                    </div>
+                    {# [251] Odpad przy obróbce [%] : surowce z odpadem i do sprawdzenia (przeniesione automatycznie albo ≥ 80 %) #}
+                    {% set loss_check = rows|filter(m => m.waste_review or m.waste_perc >= 80)|length %}
+                    {% set loss_waste = rows|filter(m => m.waste_perc > 0)|length %}
+                    <div class="col-12 col-md-3">
+                        <select class="form-select" id="lossFilter" aria-label="{{ translations.loss_title }}">
+                            <option value="">{{ translations.loss_all }}</option>
+                            <option value="waste">{{ translations.loss_waste }} ({{ loss_waste }})</option>
+                            <option value="check">{{ translations.loss_check }} ({{ loss_check }})</option>
                         </select>
                     </div>
                 </div>
@@ -112,6 +122,7 @@
                                 <th>{{ translations.supplier }}</th>
                                 <th>{{ translations.unit }}</th>
                                 <th class="text-end">{{ translations.price_per_1000 }}</th>
+                                <th class="text-end" title="{{ translations.loss_title }}">{{ translations.loss }}</th>
                                 <th style="width: 120px" class="text-center">{{ translations.is_package_part }}</th>
                                 <th class="text-center">{{ translations.actions }}</th>
                             </tr>
@@ -119,7 +130,7 @@
                         <tbody id="materialsTableBody">
                             {% if rows is empty %}
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="9" class="text-center text-muted py-4">
                                         {{ translations.no_materials }}
                                     </td>
                                 </tr>
@@ -128,7 +139,9 @@
                                     <tr class="material-row"
                                         data-material-name="{{ material.name|lower }}"
                                         data-category="{{ material.id_category|default('') }}"
-                                        data-is-package="{{ material.is_part_of_package }}">
+                                        data-is-package="{{ material.is_part_of_package }}"
+                                        data-loss="{{ material.waste_perc ?? 0 }}"
+                                        data-loss-review="{{ material.waste_review ? 1 : 0 }}">
                                         <td class="text-center">
                                             {% if material.is_part_of_package == 1 %}
                                                 <i class="bi bi-box-seam icon-package"
@@ -168,6 +181,17 @@
                                                 {{ material.price_per_1000|number_format(2, ',', ' ') }} zł
                                             {% else %}
                                                 <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end text-nowrap" style="font-variant-numeric: tabular-nums">
+                                            {% set lp = (material.waste_perc ?? 0) + 0 %}
+                                            {% set lpf = lp == lp|round ? lp|number_format(0, ',', ' ') : lp|number_format(1, ',', ' ') %}
+                                            {% if material.waste_review or lp >= 80 %}
+                                                <span class="at-pill at-pill-warn" title="{{ translations.loss_check_title }}">{{ lpf }} % · {{ translations.loss_check_badge }}</span>
+                                            {% elseif lp > 0 %}
+                                                {{ lpf }} %
+                                            {% else %}
+                                                <span class="text-muted">—</span>
                                             {% endif %}
                                         </td>
                                         <td class="text-center">
@@ -324,6 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
 const searchInput = document.getElementById('searchMaterials');
 const categoryFilter = document.getElementById('categoryFilter');
 const typeFilter = document.getElementById('typeFilter');
+const lossFilter = document.getElementById('lossFilter');
 const materialsTableBody = document.getElementById('materialsTableBody');
 const visibleCount = document.getElementById('visibleCount');
 const totalMaterials = {{ rows|length }};
@@ -333,6 +358,7 @@ function applyFilters() {
     const searchTerm = searchInput.value.toLowerCase().trim();
     const categoryValue = categoryFilter.value;
     const typeValue = typeFilter.value;
+    const lossValue = lossFilter ? lossFilter.value : '';
     let visible = 0;
 
     document.querySelectorAll('.material-row').forEach(row => {
@@ -343,8 +369,11 @@ function applyFilters() {
         const matchesSearch = !searchTerm || materialName.includes(searchTerm);
         const matchesCategory = !categoryValue || category === categoryValue;
         const matchesType = !typeValue || isPackage === typeValue;
+        const loss = Number(row.dataset.loss || 0);
+        const lossReview = row.dataset.lossReview === '1';
+        const matchesLoss = !lossValue || (lossValue === 'waste' ? loss > 0 : (lossReview || loss >= 80));
 
-        const isVisible = matchesSearch && matchesCategory && matchesType;
+        const isVisible = matchesSearch && matchesCategory && matchesType && matchesLoss;
         row.style.display = isVisible ? '' : 'none';
 
         if (isVisible) visible++;
@@ -365,6 +394,11 @@ categoryFilter.addEventListener('change', function () {
         ? `{{ root }}/material-categories/${categoryFilter.value}/materials/new` : '{{ root }}/materials/new';
 });
 typeFilter.addEventListener('change', applyFilters);
+if (lossFilter) lossFilter.addEventListener('change', applyFilters);
+{
+    const u = new URLSearchParams(window.location.search).get('odpad');
+    if (lossFilter && (u === 'check' || u === 'waste')) { lossFilter.value = u; applyFilters(); }
+}
 if (categoryFilter.value) applyFilters();
 
 // Kategoria : nowa / zmiana nazwy

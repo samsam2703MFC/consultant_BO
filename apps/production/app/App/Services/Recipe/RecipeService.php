@@ -170,7 +170,7 @@ class RecipeService
     /**
      * Koszt surowców szkicu receptury (jeszcze niezapisanej), na 1 szt. produktu.
      * Te same zasady co strona kalkulacji (getRecipeCalculation, wydajność 1):
-     * surowiec = ilość × price_per_unit, półprodukt = koszt jego własnej receptury
+     * surowiec = ilość × cena kg użytecznego (price_per_unit ÷ (1 − odpad)), półprodukt = koszt jego własnej receptury
      * dla potrzebnej ilości (buildRecipeStructure + addTotalCalculatedPrice).
      * Tylko odczyt.
      *
@@ -189,7 +189,7 @@ class RecipeService
         }
         foreach ($materials as $id => $qty) {
             if (!isset($found[$id])) { $missing[] = 'material:' . $id; continue; }
-            $ppu = max(0.0, (float) $found[$id]['price_per_unit']);
+            $ppu = \App\Services\Material\MaterialLoss::usablePrice($found[$id]['price_per_unit'], $found[$id]['waste_perc'] ?? 0);
             $lines[] = [
                 'type'     => 'material',
                 'id'       => (int) $id,

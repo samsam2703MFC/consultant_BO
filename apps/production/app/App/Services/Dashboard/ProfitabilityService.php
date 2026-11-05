@@ -480,8 +480,18 @@ final class ProfitabilityService
         }
     }
 
-    /** Prix unitaire (PLN) et fournisseur d'une matière à une date : dernier changement de prix avant, sinon actuels. */
+    /**
+     * Prix unitaire (PLN) et fournisseur d'une matière à une date : dernier changement de prix avant, sinon actuels.
+     * [251] Prix du kg utilisable : recettes pesées après épluchage → prix ÷ (1 − perte de la fiche matière).
+     */
     private function priceAt(int $materialId, string $at): array
+    {
+        [$price, $supplier] = $this->purchasePriceAt($materialId, $at);
+        return [\App\Services\Material\MaterialLoss::usablePrice($price, $this->bom['materials'][$materialId]['waste_perc'] ?? 0), $supplier];
+    }
+
+    /** Prix d'achat (PLN) et fournisseur d'une matière à une date, sans la perte. */
+    private function purchasePriceAt(int $materialId, string $at): array
     {
         $m = $this->bom['materials'][$materialId];
         $price = (float) $m['price_per_unit'];

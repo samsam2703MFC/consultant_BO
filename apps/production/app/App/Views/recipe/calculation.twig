@@ -69,7 +69,7 @@
 .rc-state{display:inline-block;font-size:12px;font-weight:600;border-radius:6px;padding:2px 8px;background:#f1ece6;color:#6b625b;white-space:nowrap}
 .rc-state-ordered{background:rgba(141,29,44,.08);color:var(--at-primary)}.rc-state-in_production,.rc-state-accepted{background:rgba(183,121,31,.14);color:#8a5a12}
 .rc-state-ready,.rc-state-picked{background:rgba(46,125,79,.12);color:var(--at-success)}
-.rc-tag-pack{background:#f1eefa;color:#5a3d99}.rc-tag-sub{background:#f6e9eb;color:#8D1D2C}.rc-tag-miss{background:#fde8e8;color:#b42318}
+.rc-tag-pack{background:#f1eefa;color:#5a3d99}.rc-tag-loss{background:#fbf1e3;color:#8a5a12}.rc-tag-sub{background:#f6e9eb;color:#8D1D2C}.rc-tag-miss{background:#fde8e8;color:#b42318}
 .rc-split{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--at-bg-2);margin-top:4px}
 .rc-split i{display:block;height:100%}
 </style>
@@ -197,6 +197,7 @@
                                 {% if r.sub %}<span class="rc-tag rc-tag-sub">{{ r.kind == 'composition' ? 'kompozycja' : 'półprodukt' }} · {{ r.children }}</span>{% endif %}
                                 {% if r.producer %}<span class="rc-tag" style="background:{{ r.producer.color }}1f;color:{{ r.producer.color }}" title="Przygotowuje grupa"><i class="bi bi-people"></i> {{ r.producer.name_pl }}</span>{% endif %}
                                 {% if r.packaging %}<span class="rc-tag rc-tag-pack">opakowanie</span>{% endif %}
+                                {% if not r.sub and r.loss > 0 %}<span class="rc-tag rc-tag-loss" title="Odpad przy obróbce (karta surowca) : receptura w wadze po obróbce — cena zakupu {{ (r.purchase_price * r.price_factor)|number_format(2, ',', ' ') }} zł/{{ r.price_unit }} ÷ {{ (1 - r.loss / 100)|number_format(2, ',', ' ') }}">odpad {{ r.loss == r.loss|round ? r.loss|number_format(0) : r.loss|number_format(1, ',') }} %</span>{% endif %}
                                 {% if r.missing %}<span class="rc-tag rc-tag-miss">brak ceny</span>{% endif %}
                                 {% if r.cycle %}<span class="rc-tag rc-tag-miss">cykl</span>{% endif %}
                             </td>
@@ -218,6 +219,7 @@
                         <tr>
                             <td><a href="{{ root }}/materials/{{ m.id }}/edit" class="text-reset">{{ m.name }}</a>
                                 {% if m.packaging %}<span class="rc-tag rc-tag-pack">opakowanie</span>{% endif %}
+                                {% if m.loss > 0 %}<span class="rc-tag rc-tag-loss" title="Odpad przy obróbce (karta surowca) : receptura w wadze po obróbce — cena zakupu {{ (m.purchase_price * m.price_factor)|number_format(2, ',', ' ') }} zł/{{ m.price_unit }} ÷ {{ (1 - m.loss / 100)|number_format(2, ',', ' ') }}">odpad {{ m.loss == m.loss|round ? m.loss|number_format(0) : m.loss|number_format(1, ',') }} %</span>{% endif %}
                                 {% if m.missing %}<span class="rc-tag rc-tag-miss">brak ceny</span>{% endif %}
                                 {% if m.uses > 1 %}<span class="text-muted small ms-1">w {{ m.uses }} miejscach</span>{% endif %}</td>
                             <td class="n">{{ f.qty(m.qty) }} {{ m.unit }}</td>

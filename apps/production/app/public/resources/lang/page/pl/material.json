@@ -77,6 +77,12 @@
   "more_actions": "Więcej akcji",
   "allergens": "Alergeny…",
   "delete": "Usuń…",
-  "categories_help": "Kategorie surowców : nazwa (zakupy, receptury, BDO). « Surowce kategorii » otwiera listę z filtrem tej kategorii."
+  "categories_help": "Kategorie surowców : nazwa (zakupy, receptury, BDO). « Surowce kategorii » otwiera listę z filtrem tej kategorii.",
+  "loss": "Odpad",
+  "loss_title": "Odpad przy obróbce : obieranie, gniazda, pestki, ości (0 % = bez odpadu)",
+  "loss_all": "Odpad : wszystkie",
+  "loss_waste": "Z odpadem (> 0 %)",
+  "loss_check": "Do sprawdzenia",
+  "loss_check_badge": "sprawdź",
+  "loss_check_title": "Do sprawdzenia : wartość przeniesiona automatycznie (dawniej « wykorzystanie ») albo bardzo duży odpad (≥ 80 %). Zapis karty potwierdza."
 }
-

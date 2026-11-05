@@ -1446,6 +1446,46 @@ Nombres toujours groupés (« 5 430 »), en-têtes de colonnes numériques à dr
 
 Tests : `tests/light_wizards_test.php`, `tests/task_week_test.php` (sections et titres courts).
 
+### Odpad surowca przy obróbce [%] — `raw_material.waste_perc` (`158_raw_material_loss`)
+
+Saisi sur la fiche matière (`/materials/{id}/edit`), à l'étape « Zakup » de l'assistant de création (`/materials/new`),
+visible dans la liste (`/materials/all`, colonne « Odpad », filtres « Z odpadem (> 0 %) » et « Do sprawdzenia », lien
+direct `?odpad=check`).
+
+- Sens : **% de perte** à l'épluchage, aux trognons, noyaux, arêtes. 0 = sans perte (défaut et champ vide) ; jabłko
+  35 = d'1 kg il reste 650 g. DECIMAL(5,2), de 0 à 99,99 (`MaterialService::lossError`, `lossValue`).
+- Aide sous le champ : ce qui reste (100 − perte), prix du kg (l, pièce) utilisable = prix d'achat ÷ (1 − perte).
+- Migration 158 : la colonne contenait surtout la **part utilisable** (132 × 100, 76 × 99, jabłko 65…). Conversion
+  perte = 100 − ancienne valeur. Exceptions marquées `waste_review = 1` : ancienne valeur ≤ 20 (déjà une perte —
+  jogurt 1, skórka z cytryny 1, wytłoczki 1, pomidory puszka 5, cytryny 20 — laissée telle quelle) et valeur > 100
+  (Maślanka 850 → 0). Anciennes valeurs dans `n_raw_material_waste_before158` (retour possible).
+- « Do sprawdzenia » = `waste_review = 1` ou perte ≥ 80 % (`lossSuspicious`). Enregistrer la fiche confirme la valeur
+  (`waste_review = 0`).
+- Export JSON des matières : `waste_percentage` = cette perte.
+- Dans le coût depuis la migration 159 (section suivante).
+
+### Perte dans le coût des recettes — `159_loss_in_recipe_cost`
+
+Les recettes donnent le **poids après épluchage** : le coût d'une matière = quantité × prix d'achat ÷ (1 − perte)
+(`App\Services\Material\MaterialLoss` : `factor`, `usablePrice`, `priceSql`, `factorSql`). Jabłko 12,00 zł/kg,
+perte 35 % → 18,46 zł le kg de recette.
+
+- Appliqué au coût enregistré des recettes (`FlattenedRecipeIngredientRepository`, donc `precalculated_material_cost`
+  et `final_product.pre_calculated_raw_price_per_carton` → marges, Rentowność, magasin, kalkulator), à la structure de
+  recette et à « Kalkulacja receptury » (étiquette « odpad X % », prix d'achat en info-bulle), au coût d'un brouillon de
+  recette, aux versions de recette, à la rentabilité des mois passés (`ProfitabilityService::priceAt`, même perte que la
+  fiche aujourd'hui) et au coût des nouveaux produits (`DevCardCostService`).
+- Quantités achetées (`MaterialCostRepository::consumption`, `productsUsing`) = quantité de recette ÷ (1 − perte) :
+  « Koszty surowców », optimisation des coûts, appels d'offres.
+- **Non modifié** : quantités à peser sur les tablettes (poids après épluchage) et besoins d'achat du plan
+  (Zaopatrzenie, zakupy tygodnia, prévision, listes de besoins) — toujours en poids de recette.
+- Modifier la perte sur la fiche matière recalcule tout de suite le coût des recettes qui l'utilisent
+  (`RecipeCostRecalculationService::recalculateForMaterial`).
+- Migration 159 : recalcul du coût de toutes les recettes au contenu aplati, coûts d'avant dans
+  `n_recipe_cost_before159`, avant / après de chaque produit dans `n_margin_recalc` (+ un passage dans
+  `n_margin_recalc_run`) : « Marże kategorii » montre l'effet par produit (colonne « Efekt na sztukę »). Le recalcul met aussi
+  à jour les coûts enregistrés qui n'étaient plus à jour (comme le bouton « Przelicz wszystkie marże »).
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).
