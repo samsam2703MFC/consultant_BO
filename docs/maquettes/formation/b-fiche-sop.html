@@ -3,28 +3,46 @@
 <title>B — Fiche SOP</title>
 <link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="fo.css">
 <script src="donnees.js"></script><script src="coque.js"></script>
+<style>
+  .bil{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) auto;gap:4px 14px;padding:8px 0;border-bottom:.5px dashed var(--color-border-tertiary);align-items:start}
+  .bil .n{width:24px;height:24px;border-radius:50%;background:#F3EEE7;display:inline-flex;align-items:center;justify-content:center;font:700 10.5px var(--font-ui)}
+  .bil.crit .n{background:#C0182B;color:#fff}
+  .bil .fr{font-size:12.5px;line-height:1.45}
+  .bil .nl{font-size:12px;line-height:1.45;color:#3a3a3a}
+  .bil img{width:62px;height:46px;border-radius:7px;object-fit:cover}
+  .bil-h{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) auto;gap:14px;padding:0 0 6px;border-bottom:.5px solid var(--color-border-secondary)}
+</style>
 </head><body><script>
-/* B — La fiche d'une SOP : les étapes section par section (l'original, et sa traduction de travail quand
-   le document est en néerlandais), les points critiques, l'original PDF à un clic, la version, l'équipe face
-   à cette SOP, le quiz. Exemple : Ouverture du magasin — NL — v5, illustrée (photos de la caisse). */
-const F = FO.fiche, s = F.sop;
-const etapes = F.sections.map(sec => `<div class="sec"><b>${esc(sec.titre)}</b>${sec.titre_nl ? `<small>${esc(sec.titre_nl)}</small>` : ''}${sec.heure ? `<span class="pill">${esc(sec.heure)}</span>` : ''}</div>
-  ${sec.etapes.map(e => `<div class="et ${e.crit ? 'crit' : ''}"><span class="n">${esc(e.n)}</span><div class="x">${esc(e.fr)}${e.nl ? `<small>NL · ${esc(e.nl)}</small>` : ''}</div>${e.photo ? `<img class="ph" src="${e.photo}">` : ''}</div>`).join('')}`).join('');
-const eq = EQUIPE.filter(p => FO.halle.matrice[p.id][s.id] !== 'na');
-const LIB = { va: ['ok', 'vu faire'], qz: ['att', 'quiz réussi'], lu: ['', 'lue'], no: ['', 'pas ouverte'], rv: ['ko', 'à revoir'] };
-const equipe = `<div class="carte" style="margin-bottom:16px"><h3>Halle face à cette SOP<small>${eq.filter(p => FO.halle.matrice[p.id][s.id] === 'va').length} / ${eq.length} vus faire</small></h3>
-  ${eq.map(p => { const st = FO.halle.matrice[p.id][s.id]; return `<div class="fil"><div class="x"><b>${esc(p.nom)}</b><small>${esc(p.role)} · lit en ${p.langue}</small></div><span class="pill ${LIB[st][0]}">${LIB[st][1]}</span></div>`; }).join('')}
-  <div style="display:flex;gap:8px;margin-top:10px"><span class="b s">Rappeler aux 2 personnes</span><span class="b s g">✓ Vu faire…</span></div></div>`;
+/* B — La fiche d'une SOP, telle qu'elle est rangée dans nos bases : chaque étape en FR et en NL côte à côte
+   (NL d'origine, FR traduit et relu), la compétence dont elle fait partie, le PDF généré dans les deux langues
+   et sa place dans le Manuel opératoire, l'écart tranché qui la touche, l'équipe du magasin face à elle.
+   Exemple : Ouverture du magasin (SOP-WKL-001), v5, illustrée. */
+const F = FO.fiche, s = FO.sops.find(x => x.id === 'ouv-mag');
+const etapes = `<div class="bil-h"><span></span><span class="lab" style="margin:0">Français <span class="pill ok">relu</span></span><span class="lab" style="margin:0">Nederlands <span class="pill">origine</span></span><span></span></div>` +
+  F.sections.map(sec => `<div class="etapes"><div class="sec" style="margin-top:14px"><b>${esc(sec.titre)}</b>${sec.heure ? `<span class="pill">${esc(sec.heure)}</span>` : ''}</div></div>
+  ${sec.etapes.map(e => `<div class="bil ${e.crit ? 'crit' : ''}"><span class="n">${esc(e.n)}</span><div class="fr">${esc(e.fr)}</div><div class="nl">${esc(e.nl)}</div>${e.photo ? `<img src="${e.photo}">` : '<span></span>'}</div>`).join('')}`).join('');
+const comp = FO.competences.find(c => c.id === s.compId);
 const infos = `<div class="carte" style="margin-bottom:16px"><h3>La SOP</h3><dl class="kv">
-  <dt>Famille</dt><dd>${fam(s.dossier)}</dd><dt>Pour</dt><dd>${esc(F.pour)}</dd><dt>Moment</dt><dd>${esc(F.moment)}</dd>
-  <dt>Langue</dt><dd>${langues(s.langue, 'NL')} original · FR traduction de travail</dd><dt>Version</dt><dd>v${esc(s.version)} · ${esc(F.versionNote)}</dd>
-  <dt>Étapes</dt><dd>${s.nbEtapes} · ${F.sections.length} sections · 📷 ${s.photos} photos</dd><dt>Fichier</dt><dd><span class="lien">${esc(s.titreDrive)} ↗</span></dd></dl>
-  <div class="pdf" style="margin-top:12px">${F.pages.map(p => `<img src="${p}">`).join('')}</div>
-  <div class="mini" style="margin-top:6px">l’original, tel qu’il est dans le Drive — à un clic, plein écran</div></div>`;
-const crit = `<div class="carte" style="margin-bottom:16px"><h3>Points critiques<small>repris en rouge dans le pas à pas</small></h3><div class="crit-box"><ul>${F.crit.map(c => `<li>${esc(c)}</li>`).join('')}</ul></div></div>`;
-const rem = F.remarques.length ? `<div class="carte" style="margin-bottom:16px;border:1.5px solid #D97706"><h3>Relevé à la lecture<small>à régler dans le document avant publication</small></h3>${F.remarques.map(r => `<div class="fil"><div class="x" style="font-size:12px">${esc(r)}</div></div>`).join('')}</div>` : '';
-const quiz = `<div class="carte"><h3>Le quiz<small>3 questions · relu par le consultant</small></h3>${F.quiz.map((q, i) => `<div class="question"><b>${i + 1}. ${esc(q.q)}</b><div class="opt">${q.choix.map((c, j) => `<span class="${j === q.ok ? 'rec' : ''}">${esc(c)}</span>`).join('')}</div></div>`).join('')}</div>`;
-const tete = `<div class="titre"><span class="lien">← Bibliothèque</span><h1>${esc(s.court)}</h1>${langues(s.langue, 'NL')}<span class="lg on">v${esc(s.version)}</span><span class="ss">${esc(F.objectif)}</span></div>`;
-const barre = `<div class="filtres"><em>Afficher</em><span>NL · original</span><span class="on">FR · traduction de travail</span><span>Les deux</span><span class="sep">|</span><span>Les étapes</span><span>Le PDF</span><span style="margin-left:auto;background:#222;color:#fff;border-color:#222;font-weight:600">▶ Pas à pas sur la tablette</span></div>`;
-coque('bib', `${tete}${barre}<div class="grille g2"><div class="carte etapes">${etapes}</div><div>${infos}${rem}${crit}${equipe}${quiz}</div></div>`, { boutons: ['Imprimer', 'Assigner…'], prim: 1 });
+  <dt>Code</dt><dd>${esc(s.code)} · ${fam(s.dossier)}</dd><dt>Pour</dt><dd>Vente · équipe du matin · tablette du comptoir</dd><dt>Moment</dt><dd>${esc(F.moment)}</dd>
+  <dt>Langues</dt><dd>${trad(s)} NL d’origine · FR traduit, relu</dd><dt>Version</dt><dd>v${esc(s.version)} · rangée dans nos bases le 05/11</dd>
+  <dt>Étapes</dt><dd>${s.nbEtapes} · ${F.sections.length} sections · 📷 ${s.photos} photos de la caisse</dd>
+  <dt>Compétence</dt><dd><span class="comp">${esc(comp.nom)}</span> <span class="mini">${comp.sops.length} SOP</span></dd></dl></div>`;
+const pdf = `<div class="carte" style="margin-bottom:16px"><h3>PDF et Manuel opératoire<small>générés depuis nos bases</small></h3>
+  <div class="pdf">${F.pages.map(p => `<img src="${p}">`).join('')}</div>
+  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="b s">⬇ PDF FR</span><span class="b s">⬇ PDF NL</span><span class="b s">Manuel opératoire › 01 › ${esc(s.code)} ↗</span><span class="b s">Original du Drive (archive)</span></div>
+  <div class="mini" style="margin-top:6px">Une seule SOP, rangée une fois : la tablette, le PDF et le Manuel opératoire lisent la même. On la corrige ici, pas dans le Drive.</div></div>`;
+const D = FO.decisions.filter(d => d.touche.includes('ouv-mag'));
+const ecart = `<div class="carte" style="margin-bottom:16px;border:1.5px solid #2d7a3e"><h3>Écart tranché<small>reporté dans la SOP</small></h3>
+  ${D.map(d => `<div class="dec2"><span class="ic">✓</span><div><b>${esc(d.t)}</b><small>${esc(d.d)}</small></div></div>`).join('')}
+  <div class="mini" style="margin-top:6px">Pas de numéro de version dans le PDF d’origine : « v5 » vient du nom du fichier, repris tel quel.</div></div>`;
+const crit = `<div class="carte" style="margin-bottom:16px"><h3>Points critiques<small>en rouge sur la tablette</small></h3><div class="crit-box"><ul>${F.crit.map(c => `<li>${esc(c)}</li>`).join('')}</ul></div></div>`;
+const eq = EQUIPE.filter(p => FO.halle.matrice[p.id][s.id] !== 'na');
+const LIB = { va: ['ok', 'vu faire'], qz: ['att', 'quiz réussi · à voir faire'], lu: ['', 'lue'], no: ['', 'pas ouverte'], rv: ['ko', 'à revoir'] };
+const equipe = `<div class="carte" style="margin-bottom:16px"><h3>Halle face à cette SOP<small>${eq.filter(p => FO.halle.matrice[p.id][s.id] === 'va').length} / ${eq.length} vus faire par la responsable</small></h3>
+  ${eq.map(p => { const st = FO.halle.matrice[p.id][s.id]; return `<div class="fil"><div class="x"><b>${esc(p.nom)}</b><small>${esc(p.role)} · lit en ${p.langue}</small></div><span class="pill ${LIB[st][0]}">${LIB[st][1]}</span></div>`; }).join('')}
+  <div class="mini" style="margin-top:8px">« Vu faire » : Elke V., responsable, sur la tablette du comptoir, avec son PIN. Les autres magasins : onglet Compétences.</div></div>`;
+const quiz = `<div class="carte"><h3>Le quiz<small>3 questions · FR et NL</small></h3>${F.quiz.map((q, i) => `<div class="question"><b>${i + 1}. ${esc(q.q)}</b><div class="opt">${q.choix.map((c, j) => `<span class="${j === q.ok ? 'rec' : ''}">${esc(c)}</span>`).join('')}</div></div>`).join('')}</div>`;
+const tete = `<div class="titre"><span class="lien">← Standards</span><h1>${esc(s.court)}</h1>${trad(s)}<span class="lg on">v${esc(s.version)}</span><span class="ss">${esc(F.objectif)}</span></div>`;
+const barre = `<div class="filtres"><em>Afficher</em><span>FR</span><span>NL</span><span class="on">FR et NL côte à côte</span><span class="sep">|</span><span class="on">Les étapes</span><span>Le PDF</span><span style="margin-left:auto;background:#222;color:#fff;border-color:#222;font-weight:600">✎ Modifier</span></div>`;
+coque('bib', `${tete}${barre}<div class="grille g2"><div class="carte">${etapes}</div><div>${infos}${pdf}${ecart}${crit}${equipe}${quiz}</div></div>`, { boutons: ['Ouvrir sur la tablette', 'Imprimer FR · NL'], prim: 1 });
 </script></body></html>

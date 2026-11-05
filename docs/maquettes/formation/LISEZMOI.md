@@ -1,46 +1,54 @@
-# Formation — les SOP dans `/consulant_bo/formation/` (maquettes, 05/11/2026)
+# Formation — les standards du réseau dans `/consulant_bo/formation/` (maquettes v2, 05/11/2026)
 
-Intégrer toutes les SOP du dossier Drive « L’Atelier Halle — SOP — dernières versions retrouvées »
-(44 fichiers → **25 SOP**, PDF et DOCX réunis, 402 étapes) dans un module `/formation/`, à côté du
-cockpit et de l’App worker (`/consulant_bo/employee/`).
+Les 25 SOP du Drive « L’Atelier Halle — SOP — dernières versions retrouvées » (44 fichiers, 402 étapes)
+sont **reprises et rangées dans nos bases**, qui deviennent la source. Chacune existe **en FR et en NL**,
+étape par étape, avec son PDF dans les deux langues ; ensemble elles forment le **Manuel opératoire**.
+L’équipe les lit **sur la tablette du poste** (onglet SOP de l’app Cuisine `pwa_kitchen`, et au comptoir) :
+son nom, son PIN, le pas à pas, le quiz. La **responsable du magasin** valide « vu faire » et la personne
+acquiert la **compétence**. Les standards valent pour **tout le réseau**.
 
-Le principe : **le Drive reste la source**. Le module relit le dossier, découpe chaque SOP en étapes et
-en points critiques. L’équipe lit les SOP pas à pas sur la tablette du poste ou au téléphone dans l’App
-worker, puis répond à 3 questions. La responsable ou le consultant valide « vu faire » sur place.
+SOP, étapes, points critiques, quiz et écarts : réels (lus le 05/11/2026). Le NL de l’écran C2 et de
+l’éditeur (F) est une traduction faite pour la maquette, à relire. **Équipe de Halle, progression,
+chiffres des autres magasins : fictifs.** Noms des 14 compétences : proposés.
 
-Sur design system (`/public/assets/ds/global.css`). **SOP réelles** : titres, versions, langues,
-étapes, points critiques, quiz et écarts entre documents, lus le 05/11/2026. Les traductions FR des
-documents NL sont des traductions de travail. **L’équipe de Halle, sa progression et les dates sont
-fictives.**
+| Fichier | Écran |
+|---|---|
+| `planche.png` | les 8 écrans, ce qui est décidé, ce qui reste à confirmer |
+| `a-bibliotheque.png` | A — Standards : 25 SOP en 4 familles, FR et NL (traduction à relire signalée), compétence, progression réseau |
+| `b-fiche-sop.png` | B — Fiche SOP : Ouverture du magasin, FR et NL côte à côte, photos, PDF FR · NL, Manuel, écart tranché, équipe, quiz |
+| `c1-tablette-qui.png` | C1 — Tablette, onglet SOP de l’app Cuisine : SOP du poste par compétence, « Qui lit ? » nom + PIN |
+| `c2-tablette-etape.png` | C2 — Tablette, pas à pas en néerlandais (Tom W.) ; l’écart tranché dans le texte |
+| `c3-tablette-validation.png` | C3 — Tablette, quiz réussi ; la responsable valide « vu faire » avec son PIN → compétence acquise |
+| `d-manuel.png` | D — Manuel opératoire : sommaire, PDF complet FR et NL, la même SOP dans les deux langues |
+| `e-competences.png` | E — Compétences : réseau × compétences, Halle personne × compétence, à voir faire par la responsable |
+| `f-redaction.png` | F — Rédaction et versions : SOP en base, FR / NL relues ou à relire, 7 écarts tranchés, modifier et publier |
 
-| Fichier | Écran | Ce qu’il montre |
-|---|---|---|
-| `planche.png` | Planche | les 6 écrans et les 9 points à valider |
-| `a-bibliotheque.png` | A — Bibliothèque | les 25 SOP en 4 familles (comme le Drive), filtres poste / moment / langue, l’équipe face à chaque SOP, « À valider » |
-| `b-fiche-sop.png` | B — Fiche SOP | Ouverture du magasin (NL v5) : étapes, original NL et traduction FR, photos de la caisse, points critiques, PDF, ce qui a été relevé à la lecture, équipe, quiz |
-| `c-tablette.png` | C — Pas à pas (tablette 1280 × 800) | Ouverture du poste et premières cuissons (FR v1.1), étape 7 : une étape par écran, point critique, repères, « j’appelle si » |
-| `d-telephone.png` | D — Téléphone (App worker) | onglet Formation : mon parcours, le quiz, « il reste à être vue faire » |
-| `e-equipes.png` | E — Équipes | matrice personnes × SOP (lu, quiz, vu faire, à revoir), validations à donner sur place, le fil |
-| `f-sources.png` | F — Sources et versions | le dossier Drive SOP par SOP, **7 écarts entre SOP à trancher**, comment une SOP arrive, relecture du quiz, hors collection |
+## Décidé le 05/11
 
-## À valider avant de coder
+1. Nos bases sont la source ; le Drive devient l’archive.
+2. Étapes structurées + PDF FR / NL généré ; les SOP vivent dans Formation et dans le Manuel opératoire.
+3. Tout en FR et en NL, y compris tout le Manuel opératoire.
+4. Lecture sur la tablette du poste (nom + PIN, comme les checklists de l’app Cuisine).
+5. « Vu faire » validé par la responsable du magasin.
+6. Cuisson des baguettes et pains « À VALIDER » : laissée visible, sans validation.
+7. Standards valables pour tout le réseau.
+8. Écarts : monnayeur automatique (pas de comptage de caisse) · recuisson du matin pour la catégorie pain
+   seulement (deux produits différents) · la SOP Flans v1.1 fait foi (Fiche programmes corrigée) ·
+   nettoyage des fours après 16 h.
+9. Couplé aux compétences à acquérir.
 
-1. Le Drive reste la source ? (proposé : oui)
-2. Étapes structurées + PDF à un clic, ou PDF seul ?
-3. Langues : original + traduction de travail signalée (6 SOP NL seulement, 17 FR seulement, 2 FR + NL) ?
-4. Où l’équipe lit : tablette du poste et/ou App worker (suivi par personne) ?
-5. Qui valide « vu faire » : responsable, consultant, les deux ?
-6. Cuisson des baguettes et pains v1.0 « À VALIDER » : visible en lecture seule ou cachée ?
-7. Périmètre : Halle d’abord, ou tout le réseau ?
-8. Les 7 écarts entre SOP (écran F) : qui tranche, dans le Drive ?
-9. Cockpit : entrée « Formation ↗ » dans le rail, taux « vu faire » dans la fiche franchisé et le cadre de visite ?
+## Encore à confirmer
+
+- Les 14 compétences : reprendre celles du panel (fiche technique › compétences requises) ou garder celles-ci ?
+- Qui relit les 19 traductions faites à la reprise (un néerlandophone, un francophone) ?
+- Écarts 5 à 7, proposés : checklist de fermeture alignée sur la v1.3 ; traduction de la Fermeture refaite ;
+  Recuisson de l’après-midi rangée en 01 avec un seul code.
+- Fermeture v1.3 : l’étape « compter la caisse » est retirée (monnayeur) — à confirmer.
+- Le branchement avec le Manuel Opératoire du panel (table `formation` de `franchise_buddy_db`, structure inconnue ici).
 
 ## Fichiers
 
-- `sops.json` — les SOP lues dans le Drive (sections, étapes, points critiques, quiz, remarques, texte
-  complet de 3 SOP) ; `photos/` — les 8 photos de la caisse et 3 pages de l’Ouverture du magasin v5.
-- `preparer.js` + `preparer-detail.js` → `donnees.js` (SOP + progression fictive de l’équipe).
-- `coque.js` (en-tête, onglets), `fo.css` (styles des maquettes), `capturer.cjs` (captures Playwright).
-
-Régénérer : `node docs/maquettes/formation/preparer.js`, puis un serveur à la racine du dépôt
-(`php -S 127.0.0.1:8099 -t .`) et `node docs/maquettes/formation/capturer.cjs`.
+`sops.json` (SOP lues dans le Drive), `photos/`, `preparer.js` + `preparer-detail.js` → `donnees.js`,
+`coque.js` (cockpit), `tablette.js` (tablette), `fo.css`, `capturer.cjs`.
+Régénérer : `node docs/maquettes/formation/preparer.js`, serveur à la racine (`php -S 127.0.0.1:8099 -t .`),
+puis `node docs/maquettes/formation/capturer.cjs`.

@@ -19,10 +19,11 @@ module.exports = function ({ sops, S, SRC }) {
       const caisse = /ADDENDUM/i.test(t) && /^\d+$/.test(it.n);
       if (caisse) { photo++; }
       const fr = sansPoint(it.fr), nl = sansPoint(it.original);
-      return { n: /^\d/.test(it.n) ? it.n : '!', fr, nl: nl.length > 120 ? nl.slice(0, 117) + '…' : nl,
+      return { n: /^\d/.test(it.n) ? it.n : '!', fr, nl,
         crit: /Norme|HYGI|°C|interdit|verboden|code 12|jamais|nooit/i.test(it.n + ' ' + fr), photo: caisse && photo <= 8 ? 'photos/caisse-' + photo + '.jpg' : null };
     });
-    sections.push({ titre, titre_nl: '', heure: h || '', etapes });
+    const nlT = String(sec.section || '').replace(/^FASE \d[^—]*—\s*/i, '').replace(/^AANVULLING OP SOP-WKL-001 — /i, 'Aanvulling · ');
+    sections.push({ titre, titre_nl: '', titreNl: nlT && nlT !== t ? nlT : '', heure: h || '', etapes });
   }
   const regles = (tc.find(x => /RÈGLES D'OR/i.test(x.section_fr || x.section || '')) || { items: [] }).items.map(it => sansPoint(it.fr));
   const so = S('ouv-mag');

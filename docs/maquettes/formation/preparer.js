@@ -53,13 +53,42 @@ for (const s of SRC.sops) {
     crit: (g(s, 'points_critiques') || []).map(propre), photos: typeof ph === 'number' ? ph : (ph && ph.count) || (ph === true ? 1 : 0),
     materiel: g(s, 'materiel') || [], fichiers: fichiers.length ? fichiers : ['PDF'], decoupe: sections.length > 0,
     quiz: (g(s, 'quiz') || []).map(q => ({ q: g(q, 'question', 'q'), choix: g(q, 'choices', 'choix', 'options') || [], ok: +g(q, 'correct', 'ok', 'answer') || 0 })),
-    texte: g(s, 'texte_complet') || null
+    texte: g(s, 'texte_complet') || null, code: g(s, 'code_doc') || null
   });
 }
 sops.sort((a, b) => a.dossier.localeCompare(b.dossier) || CLES.findIndex(c => c[0] === a.id) - CLES.findIndex(c => c[0] === b.id));
 const S = id => sops.find(s => s.id === id);
 ['fermeture', 'flans'].forEach(id => { if (S(id)) { S(id).revoir = true; } });
 sops.forEach(s => { s.quizRelu = !s.statut && !['tgtg', 'eclairs', 'cookies'].includes(s.id); });
+
+// --- Décisions du 05/11 (v2) -----------------------------------------------------------------------------
+// Nos bases deviennent la source ; toutes les SOP en FR et en NL ; les standards valent pour tout le réseau ;
+// la Recuisson de l'après-midi, écrite pour la vente, passe en 01 (une seule SOP, un seul code).
+if (S('recuisson')) { Object.assign(S('recuisson'), { dossier: '01', deplacee: 'de 02 Cuisson', code: 'SOP-VEN-001' }); }
+const CODES = { caisse: 'SOP-WKL-002', fermeture: 'SOP-WKL-003', 'ferm-quot': 'CHK-WKL-004', calmes: 'CHK-WKL-005', programmes: 'FICHE-CUI-01' };
+sops.forEach(s => { if (!s.code) { s.code = CODES[s.id] || null; } });
+// La langue d'origine reste notée ; l'autre est traduite à la reprise, puis relue (relecture : à désigner).
+const RELUES = ['ouv-mag', 'recuisson', 'fermeture', 'ouv-poste', 'cremes', 'vienn'];
+sops.forEach(s => {
+  const o = s.langue.split('-');
+  s.origine = s.langue;
+  s.trad = { FR: o.includes('FR') ? 'original' : (RELUES.includes(s.id) ? 'relue' : 'à relire'), NL: o.includes('NL') ? 'original' : (RELUES.includes(s.id) ? 'relue' : 'à relire') };
+  s.langue = 'FR-NL';
+});
+sops.sort((a, b) => a.dossier.localeCompare(b.dossier) || CLES.findIndex(c => c[0] === a.id) - CLES.findIndex(c => c[0] === b.id));
+// Les compétences à acquérir : une compétence regroupe les SOP d'un même geste ; elle est acquise quand la
+// responsable a vu faire chacune de ses SOP. Noms proposés, à caler sur les compétences du panel (fiche technique).
+const COMP = [
+  ['c-ouv-mag', 'Ouvrir le magasin', 'vente', ['ouv-mag']], ['c-caisse', 'Caisse et commandes clients', 'vente', ['caisse']],
+  ['c-tgtg', 'Too Good To Go', 'vente', ['tgtg']], ['c-recuisson', 'Recuire les pains l’après-midi', 'vente', ['recuisson']],
+  ['c-fermer', 'Périodes calmes et fermeture', 'vente', ['calmes', 'fermeture', 'ferm-quot']],
+  ['c-ouv-poste', 'Ouvrir le poste de cuisson', 'cuisson', ['ouv-poste', 'memo', 'programmes']], ['c-pousses', 'Plaquage et pousses', 'cuisson', ['plaquage']],
+  ['c-vienn', 'Viennoiseries et sandwiches', 'cuisson', ['vienn']], ['c-pains', 'Pains et baguettes', 'cuisson', ['baguettes']],
+  ['c-fin', 'Fin de poste et fours', 'cuisson', ['fin-poste', 'fours']],
+  ['c-tartes', 'Crèmes et tartes', 'production', ['cremes', 't-fruits', 'flans', 't-class', 't-froides']], ['c-choux', 'Choux et nappages', 'production', ['eclairs', 'fondants']],
+  ['c-biscuits', 'Biscuits, cakes et brioches', 'production', ['cookies', 'cramiques']], ['c-sale', 'Salé : quiches et pommes parisiennes', 'production', ['quiches']]
+].map(c => ({ id: c[0], nom: c[1], poste: c[2], sops: c[3].filter(S) }));
+sops.forEach(s => { const c = COMP.find(x => x.sops.includes(s.id)); s.comp = c ? c.nom : null; s.compId = c ? c.id : null; });
 
 // --- L'équipe de Halle : FICTIVE ------------------------------------------------------------------------
 // va = vu faire · qz = quiz réussi · lu = lue · no = pas ouverte · rv = à revoir (nouvelle version) ; absent = pas son poste.
@@ -69,7 +98,7 @@ const PROG = {
   ib: { 'ouv-mag': 'qz', caisse: 'lu', tgtg: 'va', recuisson: 'va', fermeture: 'rv', calmes: 'lu', 'ferm-quot': 'qz' },
   jp: { 'ouv-mag': 'va', caisse: 'qz', tgtg: 'no', recuisson: 'lu', fermeture: 'rv', calmes: 'no', 'ferm-quot': 'va' },
   ka: { memo: 'va', programmes: 'va', 'ouv-poste': 'va', plaquage: 'va', vienn: 'va', baguettes: 'lu', 'fin-poste': 'va', fours: 'qz', quiches: 'va', cramiques: 'qz', cookies: 'lu', flans: 'rv', cremes: 'va', 't-fruits': 'va' },
-  tw: { recuisson: 'va', programmes: 'va', 'fin-poste': 'qz', fours: 'va', fermeture: 'rv', 'ferm-quot': 'va', calmes: 'va', plaquage: 'lu', memo: 'va' },
+  tw: { 'ouv-poste': 'qz', recuisson: 'va', programmes: 'va', 'fin-poste': 'qz', fours: 'va', fermeture: 'rv', 'ferm-quot': 'va', calmes: 'va', plaquage: 'lu', memo: 'va' },
   mr: { memo: 'va', cremes: 'va', 't-fruits': 'qz', flans: 'qz', 't-class': 'lu', fondants: 'lu', 't-froides': 'no', eclairs: 'no', cookies: 'no', quiches: 'no' }
 };
 const matrice = {};
@@ -86,16 +115,16 @@ for (const p of Object.keys(PROG)) {
   }
 }
 const aValider = [
-  ['05/11', 'Mila R.', 't-fruits', 'parcours Production · jour 3'], ['05/11', 'Mila R.', 'flans', 'parcours Production · jour 3'],
-  ['04/11', 'Inès B.', 'ouv-mag', 'lue en FR (traduction de travail), l’original est en NL'], ['03/11', 'Tom W.', 'fin-poste', 'demande faite à Elke V.'],
+  ['05/11', 'Tom W.', 'ouv-poste', 'remplace Karim A. le samedi · dernière SOP de la compétence'], ['05/11', 'Mila R.', 't-fruits', 'parcours Production · jour 3'], ['05/11', 'Mila R.', 'flans', 'parcours Production · jour 3'],
+  ['04/11', 'Inès B.', 'ouv-mag', 'lue en FR · l’original est en NL'], ['03/11', 'Tom W.', 'fin-poste', 'demande faite à Elke V.'],
   ['02/11', 'Jana P.', 'caisse', 'week-end : à voir samedi'], ['30/10', 'Karim A.', 'cramiques', 'à la visite production du 12/11 ?'],
   ['29/10', 'Karim A.', 'fours', 'à la visite production du 12/11 ?'], ['31/10', 'Inès B.', 'ferm-quot', '']
 ].map(a => ({ le: a[0], qui: a[1], sop: S(a[2]) ? S(a[2]).court : a[2], quiz: '3 / 3', note: a[3] || 'en attente depuis ' + a[0] }));
 const nomS = id => S(id) ? S(id).court : id;
 const fil = [
   { le: '05/11', x: `<b>Mila R.</b> réussit le quiz de <b>${nomS('t-fruits')}</b> et de <b>${nomS('flans')}</b> (3 / 3)`, s: 'reste à être vue faire' },
-  { le: '05/11', x: `<b>Drive relu</b> : ${sops.length} SOP, 1 à valider (${nomS('baguettes')} v1.0)`, s: '44 fichiers · PDF et DOCX réunis' },
-  { le: '04/11', x: `<b>Inès B.</b> lit <b>${nomS('ouv-mag')}</b> en FR et réussit le quiz`, s: 'l’original est en NL : traduction de travail' },
+  { le: '05/11', x: `<b>Reprise du Drive</b> : ${sops.length} SOP rangées dans nos bases, en FR et en NL`, s: '44 fichiers · 7 écarts tranchés · 1 SOP à valider (' + nomS('baguettes') + ')' },
+  { le: '04/11', x: `<b>Inès B.</b> lit <b>${nomS('ouv-mag')}</b> en FR et réussit le quiz`, s: 'sur la tablette du comptoir' },
   { le: '04/11', x: `<b>${nomS('fermeture')} v1.3</b> publiée : 4 personnes passent en « à revoir »`, s: 'Sofie M., Inès B., Jana P., Tom W.' },
   { le: '03/11', x: `<b>Mila R.</b> arrive · parcours <b>Production</b> assigné (10 SOP)`, s: 'par Elke V.' },
   { le: '03/11', x: `<b>Elke V.</b> a vu faire Mila R. : <b>${nomS('cremes')}</b> ✓`, s: '' },
@@ -109,12 +138,47 @@ const tel = {
   quiz2: { court: nomS('t-fruits'), quiz: (S('t-fruits') || {}).quiz || [] }, suivante: nomS('t-class')
 };
 
+// --- Compétences de l'équipe de Halle (FICTIVE), déduites de la matrice -----------------------------------
+const compPers = {};
+for (const p of Object.keys(PROG)) {
+  compPers[p] = {};
+  for (const c of COMP) {
+    const l = c.sops.filter(id => matrice[p][id] && matrice[p][id] !== 'na');
+    if (!l.length) { compPers[p][c.id] = { st: 'na' }; continue; }
+    const v = l.filter(id => matrice[p][id] === 'va').length;
+    const rv = l.some(id => matrice[p][id] === 'rv');
+    const vu = l.some(id => ['qz', 'lu', 'va'].includes(matrice[p][id]));
+    compPers[p][c.id] = { st: rv ? 'rv' : v === l.length ? 'acq' : vu ? 'enc' : 'aq', v, n: l.length };
+  }
+}
+let acqH = 0, attH = 0;
+Object.values(compPers).forEach(r => Object.values(r).forEach(x => { if (x.st !== 'na') { attH++; if (x.st === 'acq') { acqH++; } } }));
+// Le réseau : les standards valent pour les 4 magasins — chiffres FICTIFS (déploiement à partir du 05/11).
+const reseau = [
+  { nom: 'Halle', equipe: 7, taux: Math.round(acqH / attH * 100), resp: 'Elke V.', aValider: 9 },
+  { nom: 'Gosselies', equipe: 6, taux: 22, resp: 'responsable', aValider: 4 },
+  { nom: 'Corbais', equipe: 5, taux: 14, resp: 'responsable', aValider: 2 },
+  { nom: 'Sombreffe', equipe: 5, taux: 6, resp: 'responsable', aValider: 1 }
+];
+const graine = (a, b) => { let h = 0; for (const ch of a + b) { h = (h * 31 + ch.charCodeAt(0)) % 997; } return h; };
+reseau.forEach(m => { m.parComp = {}; COMP.forEach(c => { m.parComp[c.id] = c.id === 'c-pains' ? null : m.nom === 'Halle' ? null : Math.max(0, Math.min(100, Math.round(m.taux + (graine(m.nom, c.id) % 40) - 20))); }); });
+COMP.filter(c => c.id !== 'c-pains').forEach(c => { const l = Object.keys(PROG).filter(p => compPers[p][c.id].st !== 'na'); reseau[0].parComp[c.id] = l.length ? Math.round(l.filter(p => compPers[p][c.id].st === 'acq').length / l.length * 100) : null; });
+// Les écarts entre SOP : tranchés le 05/11 (1 à 4 par toi, 5 à 7 proposés par défaut).
+const decisions = [
+  { t: 'Caisse : on ne compte pas', d: 'Le monnayeur automatique gère le cash. Ouverture : code 12, valeur 0. Fermeture v1.3 : l’étape « compter la caisse » est retirée.', touche: ['ouv-mag', 'fermeture'], par: 'tranché' },
+  { t: 'Pains de la veille : catégorie pain seulement', d: 'Deux produits différents. La recuisson du matin (+4 min, 20 % d’humidité) ne vaut que pour la catégorie pain ; chaque SOP dit à quel produit s’applique son temps.', touche: ['ouv-poste', 'programmes', 'baguettes'], par: 'tranché' },
+  { t: 'Flan et tarte au sucre : la SOP v1.1 fait foi', d: 'Flan : centre ferme au toucher. Tarte au sucre : centre entre flan et liquide. La Fiche programmes est corrigée.', touche: ['flans', 'programmes'], par: 'tranché' },
+  { t: 'Nettoyage des fours : après 16 h', d: 'Écrit pareil dans la Fermeture v1.3, la checklist de fermeture et la SOP Nettoyage des fours.', touche: ['fermeture', 'ferm-quot', 'fours'], par: 'tranché' },
+  { t: 'Fermeture quotidienne alignée sur la v1.3', d: 'La checklist reprend les photos Too Good To Go de 17 h.', touche: ['ferm-quot'], par: 'proposé' },
+  { t: 'Fermeture v1.3 : traduction refaite', d: '« koude producten » → « produits froids » ; le signal d’alarme et le champ « Approuvé par » restent à remplir.', touche: ['fermeture'], par: 'proposé' },
+  { t: 'Recuisson l’après-midi : une SOP, en 01', d: 'Écrite pour la vente : rangée dans 01 Magasin et vente, un seul code (SOP-VEN-001), FR et NL.', touche: ['recuisson'], par: 'proposé' }
+];
 module.exports = { sops, S, SRC };
 if (require.main === module) {
   const extra = require('./preparer-detail.js')({ sops, S, SRC });
   const FO = Object.assign({ lu_le: SRC.lu_le || '2026-11-05', sops: sops.map(s => { const c = Object.assign({}, s); delete c.texte; return c; }),
     halle: { matrice, valides, attendues, aRevoir, taux: Math.round(valides / attendues * 100), parSop, aValider, fil, mila: tel.faits + ' / ' + milaIds.length + ' vus faire' },
-    tel, quizExemple: { court: nomS('eclairs'), quiz: (S('eclairs') || {}).quiz || [] },
+    tel, competences: COMP, compPers, reseau, decisions, quizExemple: { court: nomS('eclairs'), quiz: (S('eclairs') || {}).quiz || [] },
     // Les écarts relevés en lisant les SOP entre elles (sops.json › remarques) — réels.
     incoherences: [
       { t: 'Caisse : ouverture ou fermeture, on compte ?', d: 'Ouverture du magasin v5 : code 12, valeur 0, on ne compte pas. Fermeture du magasin v1.3 : on compte et on saisit le montant réel (« 12 » et « 0 » marqués TE BEVESTIGEN).', qui: 'vente' },

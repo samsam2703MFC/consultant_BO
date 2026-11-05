@@ -15,7 +15,7 @@ body{margin:0;background:var(--color-bg,#EAE4DC);font-family:var(--font-ui,'Goth
 .b.p{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
 .b.g{border-color:#2d7a3e;color:#2d7a3e}
 .b.s{padding:5px 11px;font-size:11.5px}
-.qui{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-muted)}
+.qui{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-muted);white-space:nowrap}
 .qui i{width:30px;height:30px;border-radius:50%;background:#EFE3DE;color:var(--color-primary);display:inline-flex;align-items:center;justify-content:center;font:700 11px var(--font-ui);font-style:normal}
 .tabs{display:flex;gap:26px;padding:16px 8px 0;border-bottom:.5px solid var(--color-border-tertiary);margin-bottom:18px}
 .tabs span{padding:6px 2px 10px;font-size:14px;color:var(--color-text-muted)}
@@ -218,3 +218,55 @@ table.src{width:100%;border-collapse:collapse}
 .tel .rep{display:block;border-radius:14px;border:1.5px solid var(--color-border-secondary);background:#fff;padding:14px 16px;font:500 14.5px/1.35 var(--font-ui);margin-bottom:10px}
 .tel .rep.on{border-color:var(--color-primary);background:#FDF4F5;box-shadow:0 0 0 2px rgba(141,29,44,.12)}
 .tel .rep.bon{border-color:#2d7a3e;background:#F0F7F2}
+
+/* v2 — langue, traductions, compétences, manuel */
+.bascule-s{display:inline-flex;border-radius:999px;background:#F3EEE7;padding:3px}
+.bascule-s span{padding:5px 12px;border-radius:999px;font:700 12px var(--font-ui);color:var(--color-text-muted)}
+.bascule-s span.on{background:#222;color:#fff}
+.lg.ar{background:#FFF1D6;color:#8a5a00;border-color:#E8C27A}
+.comp{display:inline-flex;align-items:center;gap:5px;font:600 10.5px var(--font-ui);color:#1f3f7a;background:#EEF2FA;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.comp::before{content:'◆';font-size:8px}
+.cp{display:inline-flex;min-width:46px;height:24px;border-radius:6px;align-items:center;justify-content:center;font:700 10.5px var(--font-ui);padding:0 6px}
+.cp.acq{background:#2d7a3e;color:#fff}.cp.enc{background:#FFE7B8;color:#8a5a00}.cp.aq{background:#F3EEE7;color:#999}.cp.rv{background:#fff;color:#C0182B;box-shadow:inset 0 0 0 1.5px #C0182B}.cp.na{background:transparent;color:#ccc}
+.heat{display:inline-flex;width:46px;height:24px;border-radius:6px;align-items:center;justify-content:center;font:700 10.5px var(--font-ui)}
+table.cm{width:100%;border-collapse:collapse}
+.cm th{font:700 10px var(--font-ui);letter-spacing:.04em;color:var(--color-text-muted);text-align:center;padding:6px 3px;border-bottom:.5px solid var(--color-border-secondary);vertical-align:bottom;line-height:1.25}
+.cm th.l{text-align:left}
+.cm td{padding:5px 3px;border-bottom:.5px solid var(--color-border-tertiary);text-align:center;font-size:12px}
+.cm td.p{text-align:left;padding:7px 10px 7px 2px;white-space:nowrap}
+.cm td.p b{display:block;font-size:13px}
+.cm td.p small{display:block;font-size:10.5px;color:var(--color-text-muted)}
+.cm th .po{display:block;font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.dec2{display:flex;gap:10px;padding:9px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.dec2:last-child{border-bottom:none}
+.dec2 .ic{width:22px;height:22px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font:700 11px var(--font-ui);background:#2d7a3e;color:#fff}
+.dec2 .ic.pr{background:#F2C9A0;color:#6b4420}
+.dec2 b{display:block;font-size:12.5px}
+.dec2 small{display:block;font-size:11.5px;color:var(--color-text-muted);line-height:1.45;margin-top:1px}
+.dec2 .tch{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.deux-l{display:grid;grid-template-columns:1fr 1fr;gap:0;border:.5px solid var(--color-border-secondary);border-radius:12px;overflow:hidden}
+.deux-l>div{padding:12px 14px}
+.deux-l>div+div{border-left:.5px solid var(--color-border-secondary)}
+.deux-l .lab{display:flex;align-items:center;gap:6px}
+.deux-l .t{font:600 15px/1.3 var(--font-ui);margin-bottom:6px}
+.deux-l .x{font-size:13px;line-height:1.5}
+.deux-l ins{text-decoration:none;background:#E3F0E5;color:#1f5a2e;border-radius:4px;padding:0 3px}
+.deux-l del{background:#F7DADA;color:#8a1b1b;border-radius:4px;padding:0 3px}
+/* l'aperçu d'une page PDF du manuel */
+.feuille{background:#fff;border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,.14);padding:26px 28px;font-size:10.5px;line-height:1.45;color:#222;aspect-ratio:210/297;overflow:hidden;position:relative}
+.feuille .fh{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--color-primary);padding-bottom:8px;margin-bottom:10px}
+.feuille .fh b{font:400 19px/1.05 var(--font-display);display:block}
+.feuille .fh small{font:600 8.5px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-muted)}
+.feuille .cart{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:9.5px;background:#F7F4F0;border-radius:4px;padding:6px 8px;margin-bottom:9px}
+.feuille .cart dt{color:var(--color-text-muted)}
+.feuille .cart dd{margin:0;font-weight:600}
+.feuille h5{font:700 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--color-primary);padding:3px 7px;margin:9px 0 5px;border-radius:2px}
+.feuille .st{display:flex;gap:7px;margin:3px 0}
+.feuille .st i{font-style:normal;font-weight:700;color:var(--color-primary);flex:0 0 22px}
+.feuille .cr{border-left:2.5px solid #C0182B;background:#FDF1F2;padding:5px 8px;margin:7px 0;font-size:9.5px}
+.feuille .ft{position:absolute;left:28px;right:28px;bottom:14px;display:flex;justify-content:space-between;font-size:8px;color:var(--color-text-muted);border-top:.5px solid #ddd;padding-top:5px}
+.couv{background:linear-gradient(160deg,#8D1D2C,#5a1320);color:#fff;display:flex;flex-direction:column;justify-content:space-between}
+.couv b{font:400 30px/1.05 var(--font-display)}
+.couv small{color:rgba(255,255,255,.75)}
+.tdm{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:.5px dotted #ccc;font-size:10px}
+.tdm span:last-child{color:var(--color-text-muted)}

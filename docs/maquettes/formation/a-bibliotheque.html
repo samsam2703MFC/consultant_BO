@@ -1,42 +1,46 @@
 <!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>A — Bibliothèque des SOP</title>
+<title>A — Les standards du réseau</title>
 <link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="fo.css">
 <script src="donnees.js"></script><script src="coque.js"></script>
 </head><body><script>
-/* A — La bibliothèque : toutes les SOP du Drive, une carte par SOP (PDF et DOCX réunis), rangées par famille comme
-   dans le Drive, filtrées par poste, moment, langue, type. Sur chaque carte : ce que dit la SOP, son nombre d'étapes,
-   ses photos, sa langue et sa version, et où en est l'équipe du magasin choisi. */
-const S = FO.sops;
+/* A — Les standards : les 25 SOP rangées dans nos bases, une carte par SOP, en FR et en NL (la langue d'origine
+   est notée, l'autre traduite puis relue). Chaque SOP fait partie d'une compétence à acquérir. Les standards valent
+   pour tout le réseau : la progression est celle des 4 magasins. */
+const S = FO.sops, R = FO.reseau;
 const nbVal = S.filter(s => s.statut).length;
-const nbNL = S.filter(s => /NL/.test(s.langue) && !/FR/.test(s.langue)).length;
+const aRelire = S.filter(s => s.trad.FR === 'à relire' || s.trad.NL === 'à relire').length;
 const nbEt = S.reduce((a, s) => a + (s.nbEtapes || 0), 0);
+// La progression réseau d'une SOP : Halle (fictive, détaillée) + les autres magasins au prorata de leur taux (fictif).
+const res = id => { const h = FO.halle.parSop[id] || { v: 0, n: 0 }; let v = h.v, n = h.n;
+  R.slice(1).forEach(m => { const k = Math.round(h.n * m.equipe / 7); n += k; v += Math.round(k * m.taux / 100); }); return { v, n }; };
 const kpis = `<div class="kpis">
-  <div class="kpi"><div class="k">SOP en vigueur</div><div class="v">${S.length - nbVal}<small> + ${nbVal} à valider</small></div><div class="s">${nbEt} étapes · ${S.filter(s => s.photos).length} documents illustrés · 4 familles</div></div>
-  <div class="kpi"><div class="k">Équipe de Halle formée</div><div class="v att">${FO.halle.taux} %</div><div class="s">${FO.halle.valides} validations terrain sur ${FO.halle.attendues} attendues · 7 personnes</div></div>
-  <div class="kpi"><div class="k">À revoir · nouvelle version</div><div class="v ko">${FO.halle.aRevoir}</div><div class="s">Fermeture du magasin v1.3 · Flans et tartes au sucre v1.1</div></div>
-  <div class="kpi"><div class="k">Langues</div><div class="v">${S.filter(s => s.langue === 'FR').length} FR · ${nbNL} NL<small> · ${S.filter(s => s.langue.includes('-') || s.paire).length} FR + NL</small></div><div class="s">l’original s’affiche ; traduction de travail signalée comme telle</div></div>
+  <div class="kpi"><div class="k">Standards du réseau</div><div class="v">${S.length - nbVal}<small> + ${nbVal} à valider</small></div><div class="s">${nbEt} étapes · ${FO.competences.length} compétences · 4 familles</div></div>
+  <div class="kpi"><div class="k">Compétences acquises · réseau</div><div class="v att">${Math.round(R.reduce((a, m) => a + m.taux * m.equipe, 0) / R.reduce((a, m) => a + m.equipe, 0))} %</div><div class="s">${R.map(m => m.nom + ' ' + m.taux + ' %').join(' · ')}</div></div>
+  <div class="kpi"><div class="k">FR et NL</div><div class="v">${S.length} / ${S.length}</div><div class="s">${S.length - aRelire} relues dans les deux langues · <span class="att">${aRelire} traductions à relire</span></div></div>
+  <div class="kpi"><div class="k">Écarts entre SOP</div><div class="v ok">7 / 7</div><div class="s">tranchés le 05/11 · corrections reportées dans les SOP</div></div>
 </div>`;
-const filtres = `<div class="filtres"><em>Poste</em><span class="on">Tous</span><span>Vente · caisse</span><span>Cuisson</span><span>Production</span><span>Nettoyage</span>
+const filtres = `<div class="filtres"><em>Poste</em><span class="on">Tous</span><span>Vente · comptoir</span><span>Cuisson</span><span>Production</span><span>Nettoyage</span>
   <span class="sep">|</span><em>Moment</em><span>Ouverture</span><span>Journée</span><span>Après-midi</span><span>Fermeture</span>
-  <span class="sep">|</span><em>Langue</em><span>FR</span><span>NL</span>
-  <span class="sep">|</span><span>📷 Illustrées</span><span style="border-color:#D97706;color:#8a5a00">À valider · ${nbVal}</span></div>`;
+  <span class="sep">|</span><em>Compétence</em><span>Toutes ▾</span>
+  <span class="sep">|</span><span>📷 Illustrées</span><span style="border-color:#E8C27A;color:#8a5a00">Traduction à relire · ${aRelire}</span><span style="border-color:#D97706;color:#8a5a00">À valider · ${nbVal}</span></div>`;
 const carte = s => {
-  const eq = FO.halle.parSop[s.id] || { v: 0, n: 0 };
-  const pct = eq.n ? Math.round(eq.v / eq.n * 100) : 0;
+  const r = res(s.id), pct = r.n ? Math.round(r.v / r.n * 100) : 0;
   return `<div class="sop ${s.statut ? 'vl' : ''}">
-    <div class="ty"><span class="pill">${esc(s.type)}</span>${langues(s.langue)}<span class="lg">v${esc(s.version)}</span>${s.statut ? '<span class="pill att">À valider</span>' : ''}${s.revoir ? '<span class="pill ko">nouvelle version</span>' : ''}</div>
+    <div class="ty"><span class="pill">${esc(s.type)}</span>${trad(s)}<span class="lg">v${esc(s.version)}</span>${s.statut ? '<span class="pill att">À valider</span>' : ''}${s.revoir ? '<span class="pill ko">nouvelle version</span>' : ''}${s.deplacee ? '<span class="pill">déplacée ' + esc(s.deplacee) + '</span>' : ''}</div>
     <div class="tt">${esc(s.court)}</div>
     <div class="ob">${esc(s.objectif)}</div>
-    ${eq.n ? `<div class="eq"><span>Halle</span><div class="prog"><i style="width:${pct}%" class="${pct < 50 ? 'att' : ''}"></i></div><span><b style="color:var(--color-text)">${eq.v}/${eq.n}</b> validés</span></div>` : ''}
-    <div class="pd"><span><b>${s.nbEtapes || '—'}</b> étapes</span>${s.duree ? `<span>⏱ ${esc(String(s.duree).split(/[;(]/)[0].trim().slice(0, 26))}</span>` : ''}${s.photos ? `<span>📷 ${s.photos}</span>` : ''}<span class="r">${s.fichiers.join(' + ')}</span></div>
+    ${s.comp ? `<div><span class="comp">${esc(s.comp)}</span></div>` : ''}
+    ${r.n && !s.statut ? `<div class="eq"><span>Réseau</span><div class="prog"><i style="width:${pct}%" class="${pct < 40 ? 'att' : ''}"></i></div><span><b style="color:var(--color-text)">${r.v}/${r.n}</b> vus faire</span></div>` : s.statut ? '<div class="eq"><span>Lisible, sans validation tant qu’elle est à valider</span></div>' : ''}
+    <div class="pd"><span><b>${s.nbEtapes || '—'}</b> étapes</span>${s.photos ? `<span>📷 ${s.photos}</span>` : ''}<span class="r" style="white-space:nowrap">${esc(s.code || '')}</span></div>
   </div>`;
 };
 const familles = Object.keys(FAM).map(d => {
   const l = S.filter(s => s.dossier === d);
-  return `<div class="famille"><div class="fh"><span class="fam ${FAM[d].c}" style="font-size:11px;padding:3px 8px">${d}</span><h2>${FAM[d].nom}</h2><span>${l.length} document${l.length > 1 ? 's' : ''} · ${l.reduce((a, s) => a + (s.nbEtapes || 0), 0)} étapes</span></div>
+  return `<div class="famille"><div class="fh"><span class="fam ${FAM[d].c}" style="font-size:11px;padding:3px 8px">${d}</span><h2>${FAM[d].nom}</h2><span>${l.length} SOP · ${l.reduce((a, s) => a + (s.nbEtapes || 0), 0)} étapes</span></div>
     <div class="cartes">${l.map(carte).join('')}</div></div>`;
 }).join('');
-coque('bib', `<div class="titre"><h1>Bibliothèque</h1><span class="ss">les dernières versions retenues dans le Drive · une carte par SOP, PDF et DOCX réunis · relu le 05/11/2026 à 12:03</span></div>${kpis}${filtres}${familles}`,
-  { boutons: ['Ouvrir sur la tablette', 'Assigner un parcours'], prim: 1 });
+const leg = `<div class="mini" style="margin:-4px 2px 14px"><span class="lg on">FR</span> <span class="lg on">NL</span> langue relue ou d’origine · <span class="lg ar">NL ·</span> traduite à la reprise, à relire · une SOP se lit sur la tablette du poste, en FR ou en NL, et s’imprime en PDF dans les deux langues</div>`;
+coque('bib', `<div class="titre"><h1>Les standards du réseau</h1><span class="ss">les 25 SOP reprises du Drive et rangées dans nos bases · une carte par SOP · chaque SOP en FR et en NL · valables pour les 4 magasins</span></div>${kpis}${filtres}${leg}${familles}`,
+  { boutons: ['Nouvelle SOP', 'Imprimer le manuel'], prim: 0 });
 </script></body></html>

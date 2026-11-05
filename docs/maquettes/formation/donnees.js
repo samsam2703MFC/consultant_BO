@@ -8,7 +8,7 @@ const FO = {
    "court": "Ouverture du magasin",
    "titreDrive": "SOP — Ouverture du magasin — NL — v5 — Illustrée",
    "type": "SOP",
-   "langue": "NL",
+   "langue": "FR-NL",
    "version": "5",
    "statut": null,
    "dossier": "01",
@@ -146,7 +146,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-WKL-001",
+   "quizRelu": true,
+   "origine": "NL",
+   "trad": {
+    "FR": "relue",
+    "NL": "original"
+   },
+   "comp": "Ouvrir le magasin",
+   "compId": "c-ouv-mag"
   },
   {
    "id": "caisse",
@@ -154,7 +162,7 @@ const FO = {
    "court": "Encodage des commandes clients en caisse",
    "titreDrive": "SOP — Encodage des commandes clients en caisse — NL — v1.0",
    "type": "SOP",
-   "langue": "NL",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "01",
@@ -229,7 +237,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-WKL-002",
+   "quizRelu": true,
+   "origine": "NL",
+   "trad": {
+    "FR": "à relire",
+    "NL": "original"
+   },
+   "comp": "Caisse et commandes clients",
+   "compId": "c-caisse"
   },
   {
    "id": "tgtg",
@@ -237,7 +253,7 @@ const FO = {
    "court": "Gestion des paniers Too Good To Go",
    "titreDrive": "SOP — Gestion des paniers Too Good To Go — NL — v1.0",
    "type": "SOP",
-   "langue": "NL",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "01",
@@ -328,7 +344,105 @@ const FO = {
      "ok": 0
     }
    ],
-   "quizRelu": false
+   "code": "SOP-VER-TGTG",
+   "quizRelu": false,
+   "origine": "NL",
+   "trad": {
+    "FR": "à relire",
+    "NL": "original"
+   },
+   "comp": "Too Good To Go",
+   "compId": "c-tgtg"
+  },
+  {
+   "id": "recuisson",
+   "mini": "Recuisson après-midi",
+   "court": "Recuisson des pains et baguettes l’après-midi",
+   "titreDrive": "SOP — Recuisson des pains et baguettes l’après-midi — FR — v1.0",
+   "type": "SOP",
+   "langue": "FR-NL",
+   "version": "1.0",
+   "statut": null,
+   "dossier": "01",
+   "poste": "vente (vendeurs)",
+   "moment": "après-midi",
+   "objectif": "Maintenir une quantité suffisante de pains et de baguettes en vente pendant l'après-midi.",
+   "sections": [
+    {
+     "titre": "Marche à suivre · respecter cet ordre",
+     "titre_nl": "",
+     "etapes": [
+      "Lancer dès qu'il reste 4 pains d'une sorte ou 4 baguettes",
+      "Prendre le stock au congélateur cuisine ou au grand congélateur",
+      "Choisir GRANDS PAINS ou BAGUETTE, appuyer sur START / STOP",
+      "Attendre la fin du préchauffage avant d'enfourner",
+      "Pains : 1 grille de 5–6 par sorte ; baguettes : 1–2 grilles de 4",
+      "Laisser finir le programme sans modifier temps ni température",
+      "Pains : attendre 10–15 min avant de couper ou vendre"
+     ]
+    }
+   ],
+   "nbEtapes": 7,
+   "duree": "Refroidissement des pains : 10–15 min",
+   "crit": [
+    "Seuil de lancement : 4 pièces restantes",
+    "Ne rien enfourner pendant le préchauffage",
+    "Ne pas modifier le temps ni la température du programme",
+    "Ne jamais couper ni vendre un pain encore chaud (10–15 min)",
+    "L'attente de 10–15 min ne s'applique pas aux baguettes"
+   ],
+   "photos": 0,
+   "materiel": [
+    "Four",
+    "Programmes GRANDS PAINS et BAGUETTE",
+    "Grilles",
+    "Congélateur de la cuisine",
+    "Grand congélateur arrière (chariot)"
+   ],
+   "fichiers": [
+    "PDF"
+   ],
+   "decoupe": true,
+   "quiz": [
+    {
+     "q": "À partir de combien de pièces restantes faut-il lancer une recuisson ?",
+     "choix": [
+      "2",
+      "4",
+      "6"
+     ],
+     "ok": 1
+    },
+    {
+     "q": "Combien de temps attendre avant de couper un pain sorti du four ?",
+     "choix": [
+      "Aucune attente",
+      "10 à 15 minutes",
+      "30 minutes"
+     ],
+     "ok": 1
+    },
+    {
+     "q": "Combien de baguettes par grille ?",
+     "choix": [
+      "4",
+      "6",
+      "10"
+     ],
+     "ok": 0
+    }
+   ],
+   "code": "SOP-VEN-001",
+   "paire": true,
+   "quizRelu": true,
+   "deplacee": "de 02 Cuisson",
+   "origine": "FR-NL",
+   "trad": {
+    "FR": "original",
+    "NL": "original"
+   },
+   "comp": "Recuire les pains l’après-midi",
+   "compId": "c-recuisson"
   },
   {
    "id": "plaquage",
@@ -336,7 +450,7 @@ const FO = {
    "court": "Plaquage et programmation des pousses",
    "titreDrive": "SOP — Plaquage et programmation des pousses — FR — v1.0",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "02",
@@ -433,7 +547,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-POU-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Plaquage et pousses",
+   "compId": "c-pousses"
   },
   {
    "id": "t-fruits",
@@ -441,7 +563,7 @@ const FO = {
    "court": "Tartes aux fruits",
    "titreDrive": "SOP — Tartes aux fruits — FR — v1.0",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "02",
@@ -525,7 +647,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-TFR-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Crèmes et tartes",
+   "compId": "c-tartes"
   },
   {
    "id": "flans",
@@ -533,7 +663,7 @@ const FO = {
    "court": "Flans et tartes au sucre",
    "titreDrive": "SOP — Flans et tartes au sucre — FR — v1.1",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.1",
    "statut": null,
    "dossier": "02",
@@ -618,8 +748,16 @@ const FO = {
      "ok": 1
     }
    ],
+   "code": "SOP-CUI-FLA-01",
    "revoir": true,
-   "quizRelu": true
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Crèmes et tartes",
+   "compId": "c-tartes"
   },
   {
    "id": "fin-poste",
@@ -627,7 +765,7 @@ const FO = {
    "court": "Fin de poste de cuisson",
    "titreDrive": "SOP — Fin de poste de cuisson — FR — v1.0",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "02",
@@ -721,7 +859,15 @@ const FO = {
      "ok": 0
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-FIN-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Fin de poste et fours",
+   "compId": "c-fin"
   },
   {
    "id": "cremes",
@@ -729,7 +875,7 @@ const FO = {
    "court": "Crème fraîche et crème pâtissière",
    "titreDrive": "SOP — Crème fraîche et crème pâtissière — FR — v1.1",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.1",
    "statut": null,
    "dossier": "02",
@@ -816,7 +962,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-CRE-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "relue"
+   },
+   "comp": "Crèmes et tartes",
+   "compId": "c-tartes"
   },
   {
    "id": "cramiques",
@@ -824,7 +978,7 @@ const FO = {
    "court": "Cramiques et craquelins",
    "titreDrive": "SOP — Cramiques et craquelins — FR — v1.0",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "02",
@@ -892,7 +1046,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-CRA-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Biscuits, cakes et brioches",
+   "compId": "c-biscuits"
   },
   {
    "id": "vienn",
@@ -900,7 +1062,7 @@ const FO = {
    "court": "Viennoiseries et sandwiches",
    "titreDrive": "SOP — Viennoiseries et sandwiches — FR — v1.0",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "02",
@@ -984,7 +1146,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-VIE-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "relue"
+   },
+   "comp": "Viennoiseries et sandwiches",
+   "compId": "c-vienn"
   },
   {
    "id": "t-class",
@@ -992,7 +1162,7 @@ const FO = {
    "court": "Tartes classiques et Brookie",
    "titreDrive": "SOP — Tartes classiques et Brookie — FR — v1.0",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "02",
@@ -1073,7 +1243,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-TAR-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Crèmes et tartes",
+   "compId": "c-tartes"
   },
   {
    "id": "t-froides",
@@ -1081,7 +1259,7 @@ const FO = {
    "court": "Tartes froides",
    "titreDrive": "SOP — Tartes froides — FR — v1.0",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "02",
@@ -1174,7 +1352,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-FRO-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Crèmes et tartes",
+   "compId": "c-tartes"
   },
   {
    "id": "quiches",
@@ -1182,7 +1368,7 @@ const FO = {
    "court": "Quiches et pommes parisiennes",
    "titreDrive": "SOP — Quiches et pommes parisiennes — FR — v1.0",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "02",
@@ -1261,7 +1447,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-QUI-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Salé : quiches et pommes parisiennes",
+   "compId": "c-sale"
   },
   {
    "id": "ouv-poste",
@@ -1269,7 +1463,7 @@ const FO = {
    "court": "Ouverture du poste et premières cuissons",
    "titreDrive": "SOP — Ouverture du poste et premières cuissons — FR — v1.1",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.1",
    "statut": null,
    "dossier": "02",
@@ -1356,7 +1550,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-OUV-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "relue"
+   },
+   "comp": "Ouvrir le poste de cuisson",
+   "compId": "c-ouv-poste"
   },
   {
    "id": "fondants",
@@ -1364,7 +1566,7 @@ const FO = {
    "court": "Fondants et nappage",
    "titreDrive": "SOP — Fondants et nappage — FR — v1.0",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "02",
@@ -1458,7 +1660,15 @@ const FO = {
      "ok": 0
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-NAP-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Choux et nappages",
+   "compId": "c-choux"
   },
   {
    "id": "eclairs",
@@ -1466,7 +1676,7 @@ const FO = {
    "court": "Éclairs et choux",
    "titreDrive": "SOP — Éclairs et choux — FR — v1.0",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "02",
@@ -1548,7 +1758,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": false
+   "code": "SOP-CUI-ECL-01",
+   "quizRelu": false,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Choux et nappages",
+   "compId": "c-choux"
   },
   {
    "id": "cookies",
@@ -1556,7 +1774,7 @@ const FO = {
    "court": "Cookies, cakes et financiers",
    "titreDrive": "SOP — Cookies, cakes et financiers — FR — v1.0",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "02",
@@ -1650,88 +1868,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": false
-  },
-  {
-   "id": "recuisson",
-   "mini": "Recuisson après-midi",
-   "court": "Recuisson des pains et baguettes l’après-midi",
-   "titreDrive": "SOP — Recuisson des pains et baguettes l’après-midi — FR — v1.0",
-   "type": "SOP",
-   "langue": "FR-NL",
-   "version": "1.0",
-   "statut": null,
-   "dossier": "02",
-   "poste": "vente (vendeurs)",
-   "moment": "après-midi",
-   "objectif": "Maintenir une quantité suffisante de pains et de baguettes en vente pendant l'après-midi.",
-   "sections": [
-    {
-     "titre": "Marche à suivre · respecter cet ordre",
-     "titre_nl": "",
-     "etapes": [
-      "Lancer dès qu'il reste 4 pains d'une sorte ou 4 baguettes",
-      "Prendre le stock au congélateur cuisine ou au grand congélateur",
-      "Choisir GRANDS PAINS ou BAGUETTE, appuyer sur START / STOP",
-      "Attendre la fin du préchauffage avant d'enfourner",
-      "Pains : 1 grille de 5–6 par sorte ; baguettes : 1–2 grilles de 4",
-      "Laisser finir le programme sans modifier temps ni température",
-      "Pains : attendre 10–15 min avant de couper ou vendre"
-     ]
-    }
-   ],
-   "nbEtapes": 7,
-   "duree": "Refroidissement des pains : 10–15 min",
-   "crit": [
-    "Seuil de lancement : 4 pièces restantes",
-    "Ne rien enfourner pendant le préchauffage",
-    "Ne pas modifier le temps ni la température du programme",
-    "Ne jamais couper ni vendre un pain encore chaud (10–15 min)",
-    "L'attente de 10–15 min ne s'applique pas aux baguettes"
-   ],
-   "photos": 0,
-   "materiel": [
-    "Four",
-    "Programmes GRANDS PAINS et BAGUETTE",
-    "Grilles",
-    "Congélateur de la cuisine",
-    "Grand congélateur arrière (chariot)"
-   ],
-   "fichiers": [
-    "PDF"
-   ],
-   "decoupe": true,
-   "quiz": [
-    {
-     "q": "À partir de combien de pièces restantes faut-il lancer une recuisson ?",
-     "choix": [
-      "2",
-      "4",
-      "6"
-     ],
-     "ok": 1
-    },
-    {
-     "q": "Combien de temps attendre avant de couper un pain sorti du four ?",
-     "choix": [
-      "Aucune attente",
-      "10 à 15 minutes",
-      "30 minutes"
-     ],
-     "ok": 1
-    },
-    {
-     "q": "Combien de baguettes par grille ?",
-     "choix": [
-      "4",
-      "6",
-      "10"
-     ],
-     "ok": 0
-    }
-   ],
-   "paire": true,
-   "quizRelu": true
+   "code": "SOP-CUI-BIS-01",
+   "quizRelu": false,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Biscuits, cakes et brioches",
+   "compId": "c-biscuits"
   },
   {
    "id": "baguettes",
@@ -1739,7 +1884,7 @@ const FO = {
    "court": "Cuisson des baguettes et pains",
    "titreDrive": "SOP — Cuisson des baguettes et pains — FR — v1.0 — À VALIDER",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": "À valider",
    "dossier": "02",
@@ -1814,7 +1959,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": false
+   "code": "SOP-CUI-001",
+   "quizRelu": false,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Pains et baguettes",
+   "compId": "c-pains"
   },
   {
    "id": "fermeture",
@@ -1822,7 +1975,7 @@ const FO = {
    "court": "Fermeture du magasin",
    "titreDrive": "SOP — Fermeture du magasin — NL-FR — v1.3",
    "type": "SOP",
-   "langue": "NL-FR",
+   "langue": "FR-NL",
    "version": "1.3",
    "statut": null,
    "dossier": "03",
@@ -2016,8 +2169,16 @@ const FO = {
      "ok": 1
     }
    ],
+   "code": "SOP-WKL-003",
    "revoir": true,
-   "quizRelu": true
+   "quizRelu": true,
+   "origine": "NL-FR",
+   "trad": {
+    "FR": "original",
+    "NL": "original"
+   },
+   "comp": "Périodes calmes et fermeture",
+   "compId": "c-fermer"
   },
   {
    "id": "calmes",
@@ -2025,7 +2186,7 @@ const FO = {
    "court": "Tâches pendant les périodes calmes",
    "titreDrive": "Checklist — Tâches pendant les périodes calmes — NL — v2.0",
    "type": "Checklist",
-   "langue": "NL",
+   "langue": "FR-NL",
    "version": "2.0",
    "statut": null,
    "dossier": "03",
@@ -2161,7 +2322,15 @@ const FO = {
      "ok": 0
     }
    ],
-   "quizRelu": true
+   "code": "CHK-WKL-005",
+   "quizRelu": true,
+   "origine": "NL",
+   "trad": {
+    "FR": "à relire",
+    "NL": "original"
+   },
+   "comp": "Périodes calmes et fermeture",
+   "compId": "c-fermer"
   },
   {
    "id": "fours",
@@ -2169,7 +2338,7 @@ const FO = {
    "court": "Nettoyage des fours",
    "titreDrive": "SOP — Nettoyage des fours — NL — v1.1",
    "type": "SOP",
-   "langue": "NL",
+   "langue": "FR-NL",
    "version": "1.1",
    "statut": null,
    "dossier": "03",
@@ -2237,7 +2406,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-VER-002",
+   "quizRelu": true,
+   "origine": "NL",
+   "trad": {
+    "FR": "à relire",
+    "NL": "original"
+   },
+   "comp": "Fin de poste et fours",
+   "compId": "c-fin"
   },
   {
    "id": "ferm-quot",
@@ -2245,7 +2422,7 @@ const FO = {
    "court": "Fermeture quotidienne",
    "titreDrive": "Checklist — Fermeture quotidienne — NL — v1.2",
    "type": "Checklist",
-   "langue": "NL",
+   "langue": "FR-NL",
    "version": "1.2",
    "statut": null,
    "dossier": "03",
@@ -2355,7 +2532,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "CHK-WKL-004",
+   "quizRelu": true,
+   "origine": "NL",
+   "trad": {
+    "FR": "à relire",
+    "NL": "original"
+   },
+   "comp": "Périodes calmes et fermeture",
+   "compId": "c-fermer"
   },
   {
    "id": "memo",
@@ -2363,7 +2548,7 @@ const FO = {
    "court": "Organisation quotidienne du poste de cuisson",
    "titreDrive": "Mémo — Organisation quotidienne du poste de cuisson — FR — v1.0",
    "type": "Mémo",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "04",
@@ -2485,7 +2670,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "MEMO-CUI-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Ouvrir le poste de cuisson",
+   "compId": "c-ouv-poste"
   },
   {
    "id": "programmes",
@@ -2493,7 +2686,7 @@ const FO = {
    "court": "Programmes de cuisson et de pousse",
    "titreDrive": "Fiche — Programmes de cuisson et de pousse — FR — v1.0",
    "type": "Fiche",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.0",
    "statut": null,
    "dossier": "04",
@@ -2613,7 +2806,15 @@ const FO = {
      "ok": 0
     }
    ],
-   "quizRelu": true
+   "code": "FICHE-CUI-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "à relire"
+   },
+   "comp": "Ouvrir le poste de cuisson",
+   "compId": "c-ouv-poste"
   }
  ],
  "halle": {
@@ -2622,6 +2823,7 @@ const FO = {
     "ouv-mag": "va",
     "caisse": "va",
     "tgtg": "va",
+    "recuisson": "va",
     "plaquage": "na",
     "t-fruits": "na",
     "flans": "na",
@@ -2636,7 +2838,6 @@ const FO = {
     "fondants": "na",
     "eclairs": "na",
     "cookies": "na",
-    "recuisson": "va",
     "baguettes": "na",
     "fermeture": "va",
     "calmes": "va",
@@ -2649,6 +2850,7 @@ const FO = {
     "ouv-mag": "va",
     "caisse": "va",
     "tgtg": "va",
+    "recuisson": "va",
     "plaquage": "na",
     "t-fruits": "na",
     "flans": "na",
@@ -2663,7 +2865,6 @@ const FO = {
     "fondants": "na",
     "eclairs": "na",
     "cookies": "na",
-    "recuisson": "va",
     "baguettes": "na",
     "fermeture": "rv",
     "calmes": "va",
@@ -2676,6 +2877,7 @@ const FO = {
     "ouv-mag": "qz",
     "caisse": "lu",
     "tgtg": "va",
+    "recuisson": "va",
     "plaquage": "na",
     "t-fruits": "na",
     "flans": "na",
@@ -2690,7 +2892,6 @@ const FO = {
     "fondants": "na",
     "eclairs": "na",
     "cookies": "na",
-    "recuisson": "va",
     "baguettes": "na",
     "fermeture": "rv",
     "calmes": "lu",
@@ -2703,6 +2904,7 @@ const FO = {
     "ouv-mag": "va",
     "caisse": "qz",
     "tgtg": "no",
+    "recuisson": "lu",
     "plaquage": "na",
     "t-fruits": "na",
     "flans": "na",
@@ -2717,7 +2919,6 @@ const FO = {
     "fondants": "na",
     "eclairs": "na",
     "cookies": "na",
-    "recuisson": "lu",
     "baguettes": "na",
     "fermeture": "rv",
     "calmes": "no",
@@ -2730,6 +2931,7 @@ const FO = {
     "ouv-mag": "na",
     "caisse": "na",
     "tgtg": "na",
+    "recuisson": "na",
     "plaquage": "va",
     "t-fruits": "va",
     "flans": "rv",
@@ -2744,7 +2946,6 @@ const FO = {
     "fondants": "na",
     "eclairs": "na",
     "cookies": "lu",
-    "recuisson": "na",
     "baguettes": "lu",
     "fermeture": "na",
     "calmes": "na",
@@ -2757,6 +2958,7 @@ const FO = {
     "ouv-mag": "na",
     "caisse": "na",
     "tgtg": "na",
+    "recuisson": "va",
     "plaquage": "lu",
     "t-fruits": "na",
     "flans": "na",
@@ -2767,11 +2969,10 @@ const FO = {
     "t-class": "na",
     "t-froides": "na",
     "quiches": "na",
-    "ouv-poste": "na",
+    "ouv-poste": "qz",
     "fondants": "na",
     "eclairs": "na",
     "cookies": "na",
-    "recuisson": "va",
     "baguettes": "na",
     "fermeture": "rv",
     "calmes": "va",
@@ -2784,6 +2985,7 @@ const FO = {
     "ouv-mag": "na",
     "caisse": "na",
     "tgtg": "na",
+    "recuisson": "na",
     "plaquage": "na",
     "t-fruits": "qz",
     "flans": "qz",
@@ -2798,7 +3000,6 @@ const FO = {
     "fondants": "lu",
     "eclairs": "no",
     "cookies": "no",
-    "recuisson": "na",
     "baguettes": "na",
     "fermeture": "na",
     "calmes": "na",
@@ -2809,7 +3010,7 @@ const FO = {
    }
   },
   "valides": 35,
-  "attendues": 62,
+  "attendues": 63,
   "aRevoir": 5,
   "taux": 56,
   "parSop": {
@@ -2879,7 +3080,7 @@ const FO = {
    },
    "ouv-poste": {
     "v": 1,
-    "n": 1
+    "n": 2
    },
    "cookies": {
     "v": 0,
@@ -2917,6 +3118,13 @@ const FO = {
   "aValider": [
    {
     "le": "05/11",
+    "qui": "Tom W.",
+    "sop": "Ouverture du poste et premières cuissons",
+    "quiz": "3 / 3",
+    "note": "remplace Karim A. le samedi · dernière SOP de la compétence"
+   },
+   {
+    "le": "05/11",
     "qui": "Mila R.",
     "sop": "Tartes aux fruits",
     "quiz": "3 / 3",
@@ -2934,7 +3142,7 @@ const FO = {
     "qui": "Inès B.",
     "sop": "Ouverture du magasin",
     "quiz": "3 / 3",
-    "note": "lue en FR (traduction de travail), l’original est en NL"
+    "note": "lue en FR · l’original est en NL"
    },
    {
     "le": "03/11",
@@ -2980,13 +3188,13 @@ const FO = {
    },
    {
     "le": "05/11",
-    "x": "<b>Drive relu</b> : 25 SOP, 1 à valider (Cuisson des baguettes et pains v1.0)",
-    "s": "44 fichiers · PDF et DOCX réunis"
+    "x": "<b>Reprise du Drive</b> : 25 SOP rangées dans nos bases, en FR et en NL",
+    "s": "44 fichiers · 7 écarts tranchés · 1 SOP à valider (Cuisson des baguettes et pains)"
    },
    {
     "le": "04/11",
     "x": "<b>Inès B.</b> lit <b>Ouverture du magasin</b> en FR et réussit le quiz",
-    "s": "l’original est en NL : traduction de travail"
+    "s": "sur la tablette du comptoir"
    },
    {
     "le": "04/11",
@@ -3101,6 +3309,677 @@ const FO = {
   },
   "suivante": "Tartes classiques et Brookie"
  },
+ "competences": [
+  {
+   "id": "c-ouv-mag",
+   "nom": "Ouvrir le magasin",
+   "poste": "vente",
+   "sops": [
+    "ouv-mag"
+   ]
+  },
+  {
+   "id": "c-caisse",
+   "nom": "Caisse et commandes clients",
+   "poste": "vente",
+   "sops": [
+    "caisse"
+   ]
+  },
+  {
+   "id": "c-tgtg",
+   "nom": "Too Good To Go",
+   "poste": "vente",
+   "sops": [
+    "tgtg"
+   ]
+  },
+  {
+   "id": "c-recuisson",
+   "nom": "Recuire les pains l’après-midi",
+   "poste": "vente",
+   "sops": [
+    "recuisson"
+   ]
+  },
+  {
+   "id": "c-fermer",
+   "nom": "Périodes calmes et fermeture",
+   "poste": "vente",
+   "sops": [
+    "calmes",
+    "fermeture",
+    "ferm-quot"
+   ]
+  },
+  {
+   "id": "c-ouv-poste",
+   "nom": "Ouvrir le poste de cuisson",
+   "poste": "cuisson",
+   "sops": [
+    "ouv-poste",
+    "memo",
+    "programmes"
+   ]
+  },
+  {
+   "id": "c-pousses",
+   "nom": "Plaquage et pousses",
+   "poste": "cuisson",
+   "sops": [
+    "plaquage"
+   ]
+  },
+  {
+   "id": "c-vienn",
+   "nom": "Viennoiseries et sandwiches",
+   "poste": "cuisson",
+   "sops": [
+    "vienn"
+   ]
+  },
+  {
+   "id": "c-pains",
+   "nom": "Pains et baguettes",
+   "poste": "cuisson",
+   "sops": [
+    "baguettes"
+   ]
+  },
+  {
+   "id": "c-fin",
+   "nom": "Fin de poste et fours",
+   "poste": "cuisson",
+   "sops": [
+    "fin-poste",
+    "fours"
+   ]
+  },
+  {
+   "id": "c-tartes",
+   "nom": "Crèmes et tartes",
+   "poste": "production",
+   "sops": [
+    "cremes",
+    "t-fruits",
+    "flans",
+    "t-class",
+    "t-froides"
+   ]
+  },
+  {
+   "id": "c-choux",
+   "nom": "Choux et nappages",
+   "poste": "production",
+   "sops": [
+    "eclairs",
+    "fondants"
+   ]
+  },
+  {
+   "id": "c-biscuits",
+   "nom": "Biscuits, cakes et brioches",
+   "poste": "production",
+   "sops": [
+    "cookies",
+    "cramiques"
+   ]
+  },
+  {
+   "id": "c-sale",
+   "nom": "Salé : quiches et pommes parisiennes",
+   "poste": "production",
+   "sops": [
+    "quiches"
+   ]
+  }
+ ],
+ "compPers": {
+  "ev": {
+   "c-ouv-mag": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-caisse": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-tgtg": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-recuisson": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-fermer": {
+    "st": "acq",
+    "v": 3,
+    "n": 3
+   },
+   "c-ouv-poste": {
+    "st": "na"
+   },
+   "c-pousses": {
+    "st": "na"
+   },
+   "c-vienn": {
+    "st": "na"
+   },
+   "c-pains": {
+    "st": "na"
+   },
+   "c-fin": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-tartes": {
+    "st": "na"
+   },
+   "c-choux": {
+    "st": "na"
+   },
+   "c-biscuits": {
+    "st": "na"
+   },
+   "c-sale": {
+    "st": "na"
+   }
+  },
+  "sm": {
+   "c-ouv-mag": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-caisse": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-tgtg": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-recuisson": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-fermer": {
+    "st": "rv",
+    "v": 2,
+    "n": 3
+   },
+   "c-ouv-poste": {
+    "st": "na"
+   },
+   "c-pousses": {
+    "st": "na"
+   },
+   "c-vienn": {
+    "st": "na"
+   },
+   "c-pains": {
+    "st": "na"
+   },
+   "c-fin": {
+    "st": "na"
+   },
+   "c-tartes": {
+    "st": "na"
+   },
+   "c-choux": {
+    "st": "na"
+   },
+   "c-biscuits": {
+    "st": "na"
+   },
+   "c-sale": {
+    "st": "na"
+   }
+  },
+  "ib": {
+   "c-ouv-mag": {
+    "st": "enc",
+    "v": 0,
+    "n": 1
+   },
+   "c-caisse": {
+    "st": "enc",
+    "v": 0,
+    "n": 1
+   },
+   "c-tgtg": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-recuisson": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-fermer": {
+    "st": "rv",
+    "v": 0,
+    "n": 3
+   },
+   "c-ouv-poste": {
+    "st": "na"
+   },
+   "c-pousses": {
+    "st": "na"
+   },
+   "c-vienn": {
+    "st": "na"
+   },
+   "c-pains": {
+    "st": "na"
+   },
+   "c-fin": {
+    "st": "na"
+   },
+   "c-tartes": {
+    "st": "na"
+   },
+   "c-choux": {
+    "st": "na"
+   },
+   "c-biscuits": {
+    "st": "na"
+   },
+   "c-sale": {
+    "st": "na"
+   }
+  },
+  "jp": {
+   "c-ouv-mag": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-caisse": {
+    "st": "enc",
+    "v": 0,
+    "n": 1
+   },
+   "c-tgtg": {
+    "st": "aq",
+    "v": 0,
+    "n": 1
+   },
+   "c-recuisson": {
+    "st": "enc",
+    "v": 0,
+    "n": 1
+   },
+   "c-fermer": {
+    "st": "rv",
+    "v": 1,
+    "n": 3
+   },
+   "c-ouv-poste": {
+    "st": "na"
+   },
+   "c-pousses": {
+    "st": "na"
+   },
+   "c-vienn": {
+    "st": "na"
+   },
+   "c-pains": {
+    "st": "na"
+   },
+   "c-fin": {
+    "st": "na"
+   },
+   "c-tartes": {
+    "st": "na"
+   },
+   "c-choux": {
+    "st": "na"
+   },
+   "c-biscuits": {
+    "st": "na"
+   },
+   "c-sale": {
+    "st": "na"
+   }
+  },
+  "ka": {
+   "c-ouv-mag": {
+    "st": "na"
+   },
+   "c-caisse": {
+    "st": "na"
+   },
+   "c-tgtg": {
+    "st": "na"
+   },
+   "c-recuisson": {
+    "st": "na"
+   },
+   "c-fermer": {
+    "st": "na"
+   },
+   "c-ouv-poste": {
+    "st": "acq",
+    "v": 3,
+    "n": 3
+   },
+   "c-pousses": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-vienn": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-pains": {
+    "st": "enc",
+    "v": 0,
+    "n": 1
+   },
+   "c-fin": {
+    "st": "enc",
+    "v": 1,
+    "n": 2
+   },
+   "c-tartes": {
+    "st": "rv",
+    "v": 2,
+    "n": 3
+   },
+   "c-choux": {
+    "st": "na"
+   },
+   "c-biscuits": {
+    "st": "enc",
+    "v": 0,
+    "n": 2
+   },
+   "c-sale": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   }
+  },
+  "tw": {
+   "c-ouv-mag": {
+    "st": "na"
+   },
+   "c-caisse": {
+    "st": "na"
+   },
+   "c-tgtg": {
+    "st": "na"
+   },
+   "c-recuisson": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-fermer": {
+    "st": "rv",
+    "v": 2,
+    "n": 3
+   },
+   "c-ouv-poste": {
+    "st": "enc",
+    "v": 2,
+    "n": 3
+   },
+   "c-pousses": {
+    "st": "enc",
+    "v": 0,
+    "n": 1
+   },
+   "c-vienn": {
+    "st": "na"
+   },
+   "c-pains": {
+    "st": "na"
+   },
+   "c-fin": {
+    "st": "enc",
+    "v": 1,
+    "n": 2
+   },
+   "c-tartes": {
+    "st": "na"
+   },
+   "c-choux": {
+    "st": "na"
+   },
+   "c-biscuits": {
+    "st": "na"
+   },
+   "c-sale": {
+    "st": "na"
+   }
+  },
+  "mr": {
+   "c-ouv-mag": {
+    "st": "na"
+   },
+   "c-caisse": {
+    "st": "na"
+   },
+   "c-tgtg": {
+    "st": "na"
+   },
+   "c-recuisson": {
+    "st": "na"
+   },
+   "c-fermer": {
+    "st": "na"
+   },
+   "c-ouv-poste": {
+    "st": "acq",
+    "v": 1,
+    "n": 1
+   },
+   "c-pousses": {
+    "st": "na"
+   },
+   "c-vienn": {
+    "st": "na"
+   },
+   "c-pains": {
+    "st": "na"
+   },
+   "c-fin": {
+    "st": "na"
+   },
+   "c-tartes": {
+    "st": "enc",
+    "v": 1,
+    "n": 5
+   },
+   "c-choux": {
+    "st": "enc",
+    "v": 0,
+    "n": 2
+   },
+   "c-biscuits": {
+    "st": "aq",
+    "v": 0,
+    "n": 1
+   },
+   "c-sale": {
+    "st": "aq",
+    "v": 0,
+    "n": 1
+   }
+  }
+ },
+ "reseau": [
+  {
+   "nom": "Halle",
+   "equipe": 7,
+   "taux": 49,
+   "resp": "Elke V.",
+   "aValider": 9,
+   "parComp": {
+    "c-ouv-mag": 75,
+    "c-caisse": 50,
+    "c-tgtg": 75,
+    "c-recuisson": 80,
+    "c-fermer": 20,
+    "c-ouv-poste": 67,
+    "c-pousses": 50,
+    "c-vienn": 100,
+    "c-pains": null,
+    "c-fin": 33,
+    "c-tartes": 0,
+    "c-choux": 0,
+    "c-biscuits": 0,
+    "c-sale": 50
+   }
+  },
+  {
+   "nom": "Gosselies",
+   "equipe": 6,
+   "taux": 22,
+   "resp": "responsable",
+   "aValider": 4,
+   "parComp": {
+    "c-ouv-mag": 7,
+    "c-caisse": 15,
+    "c-tgtg": 15,
+    "c-recuisson": 19,
+    "c-fermer": 26,
+    "c-ouv-poste": 15,
+    "c-pousses": 15,
+    "c-vienn": 19,
+    "c-pains": null,
+    "c-fin": 39,
+    "c-tartes": 12,
+    "c-choux": 26,
+    "c-biscuits": 18,
+    "c-sale": 20
+   }
+  },
+  {
+   "nom": "Corbais",
+   "equipe": 5,
+   "taux": 14,
+   "resp": "responsable",
+   "aValider": 2,
+   "parComp": {
+    "c-ouv-mag": 27,
+    "c-caisse": 10,
+    "c-tgtg": 24,
+    "c-recuisson": 0,
+    "c-fermer": 21,
+    "c-ouv-poste": 30,
+    "c-pousses": 0,
+    "c-vienn": 3,
+    "c-pains": null,
+    "c-fin": 28,
+    "c-tartes": 7,
+    "c-choux": 10,
+    "c-biscuits": 4,
+    "c-sale": 29
+   }
+  },
+  {
+   "nom": "Sombreffe",
+   "equipe": 5,
+   "taux": 6,
+   "resp": "responsable",
+   "aValider": 1,
+   "parComp": {
+    "c-ouv-mag": 0,
+    "c-caisse": 0,
+    "c-tgtg": 0,
+    "c-recuisson": 2,
+    "c-fermer": 5,
+    "c-ouv-poste": 0,
+    "c-pousses": 3,
+    "c-vienn": 10,
+    "c-pains": null,
+    "c-fin": 8,
+    "c-tartes": 0,
+    "c-choux": 17,
+    "c-biscuits": 14,
+    "c-sale": 0
+   }
+  }
+ ],
+ "decisions": [
+  {
+   "t": "Caisse : on ne compte pas",
+   "d": "Le monnayeur automatique gère le cash. Ouverture : code 12, valeur 0. Fermeture v1.3 : l’étape « compter la caisse » est retirée.",
+   "touche": [
+    "ouv-mag",
+    "fermeture"
+   ],
+   "par": "tranché"
+  },
+  {
+   "t": "Pains de la veille : catégorie pain seulement",
+   "d": "Deux produits différents. La recuisson du matin (+4 min, 20 % d’humidité) ne vaut que pour la catégorie pain ; chaque SOP dit à quel produit s’applique son temps.",
+   "touche": [
+    "ouv-poste",
+    "programmes",
+    "baguettes"
+   ],
+   "par": "tranché"
+  },
+  {
+   "t": "Flan et tarte au sucre : la SOP v1.1 fait foi",
+   "d": "Flan : centre ferme au toucher. Tarte au sucre : centre entre flan et liquide. La Fiche programmes est corrigée.",
+   "touche": [
+    "flans",
+    "programmes"
+   ],
+   "par": "tranché"
+  },
+  {
+   "t": "Nettoyage des fours : après 16 h",
+   "d": "Écrit pareil dans la Fermeture v1.3, la checklist de fermeture et la SOP Nettoyage des fours.",
+   "touche": [
+    "fermeture",
+    "ferm-quot",
+    "fours"
+   ],
+   "par": "tranché"
+  },
+  {
+   "t": "Fermeture quotidienne alignée sur la v1.3",
+   "d": "La checklist reprend les photos Too Good To Go de 17 h.",
+   "touche": [
+    "ferm-quot"
+   ],
+   "par": "proposé"
+  },
+  {
+   "t": "Fermeture v1.3 : traduction refaite",
+   "d": "« koude producten » → « produits froids » ; le signal d’alarme et le champ « Approuvé par » restent à remplir.",
+   "touche": [
+    "fermeture"
+   ],
+   "par": "proposé"
+  },
+  {
+   "t": "Recuisson l’après-midi : une SOP, en 01",
+   "d": "Écrite pour la vente : rangée dans 01 Magasin et vente, un seul code (SOP-VEN-001), FR et NL.",
+   "touche": [
+    "recuisson"
+   ],
+   "par": "proposé"
+  }
+ ],
  "quizExemple": {
   "court": "Éclairs et choux",
   "quiz": [
@@ -3179,7 +4058,7 @@ const FO = {
    "court": "Ouverture du magasin",
    "titreDrive": "SOP — Ouverture du magasin — NL — v5 — Illustrée",
    "type": "SOP",
-   "langue": "NL",
+   "langue": "FR-NL",
    "version": "5",
    "statut": null,
    "dossier": "01",
@@ -3317,39 +4196,48 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-WKL-001",
+   "quizRelu": true,
+   "origine": "NL",
+   "trad": {
+    "FR": "relue",
+    "NL": "original"
+   },
+   "comp": "Ouvrir le magasin",
+   "compId": "c-ouv-mag"
   },
   "sections": [
    {
     "titre": "1. Démarrage personnel et enregistrement (dès 06:00)",
     "titre_nl": "",
+    "titreNl": "1. Persoonlijke opstart & Systeemregistratie (Direct om 06:00 uur)",
     "heure": "06:00 – 07:00",
     "etapes": [
      {
       "n": "1.1",
       "fr": "Mettre le tablier : dès l'arrivée, enfiler un tablier propre et sans plis. Veiller à une présentation professionnelle et hygiénique.",
-      "nl": "Schort aandoen: Trek direct bij binnenkomst een schone, strijkvrije welschort aan. Zorg voor een professionele en hyg…",
+      "nl": "Schort aandoen: Trek direct bij binnenkomst een schone, strijkvrije welschort aan. Zorg voor een professionele en hygiënische uitstraling.",
       "crit": true,
       "photo": null
      },
      {
       "n": "1.2",
       "fr": "Pointage (Shyfter) : aller à la tablette Shyfter. Saisir son code PIN personnel et taper sur « Inklokken » (pointer). Il est strictement interdit de pointer pour un collègue ou sous son nom.",
-      "nl": "Tijdregistratie (Shyfter): Ga naar de Shyfter-tablet. Voer je persoonlijke PIN-code in en tik op 'Inklokken'. Het is …",
+      "nl": "Tijdregistratie (Shyfter): Ga naar de Shyfter-tablet. Voer je persoonlijke PIN-code in en tik op 'Inklokken'. Het is ten strengste verboden in te klokken voor of onder de naam van een collega.",
       "crit": true,
       "photo": null
      },
      {
       "n": "1.3",
       "fr": "Démarrer la caisse : allumer le système de caisse et se connecter avec son propre compte/nom. Vérifier qu'il y a assez de papier de caisse et de tickets.",
-      "nl": "Kassa opstarten: Zet het kassasysteem aan en log in met je eigen account/naam. Controleer of er voldoende kassa- en b…",
+      "nl": "Kassa opstarten: Zet het kassasysteem aan en log in met je eigen account/naam. Controleer of er voldoende kassa- en bonnetjespapier aanwezig is.",
       "crit": false,
       "photo": null
      },
      {
       "n": "1.4",
       "fr": "Ouvrir l'entrée clients : déverrouiller la porte d'entrée et la mettre en position ouverte. Le magasin est désormais officiellement ouvert aux clients.",
-      "nl": "Klanteningang openen: Ontgrendel de voordeur en zet deze op de openingsstand. De winkel is vanaf nu officieel geopend…",
+      "nl": "Klanteningang openen: Ontgrendel de voordeur en zet deze op de openingsstand. De winkel is vanaf nu officieel geopend voor klanten.",
       "crit": false,
       "photo": null
      }
@@ -3358,19 +4246,20 @@ const FO = {
    {
     "titre": "2. Contrôle infrastructure et logistique",
     "titre_nl": "",
+    "titreNl": "2. Infrastructuur & Logistiek Controle",
     "heure": "",
     "etapes": [
      {
       "n": "2.1",
       "fr": "Contrôler les froids et frigos : passer devant tous les comptoirs réfrigérés et réfrigérateurs. Vérifier qu'ils sont sous tension et que les afficheurs indiquent la bonne température (+2 °C à +5 °C). Signaler immédiatement toute panne.",
-      "nl": "Koelingen & Frigo's controleren: Loop langs alle koeltoog-eenheden en koelkasten. Controleer of de stroom aan staat e…",
+      "nl": "Koelingen & Frigo's controleren: Loop langs alle koeltoog-eenheden en koelkasten. Controleer of de stroom aan staat en of de displays de correcte temperatuur aangeven (+2°C tot +5°C). Meld eventuele storingen direct.",
       "crit": true,
       "photo": null
      },
      {
       "n": "2.2",
       "fr": "Consulter le carnet de commandes : regarder le carnet papier ou le module de commandes numérique pour voir quelles commandes à retirer sont prévues le matin.",
-      "nl": "Bestellingenboek raadplegen: Bekijk het fysieke bestelboek of de digitale bestelmodule om te zien welke afgehaalde be…",
+      "nl": "Bestellingenboek raadplegen: Bekijk het fysieke bestelboek of de digitale bestelmodule om te zien welke afgehaalde bestellingen voor de ochtend gepland staan.",
       "crit": false,
       "photo": null
      }
@@ -3379,6 +4268,7 @@ const FO = {
    {
     "titre": "3. Remplissage des comptoirs (ordre d'exécution)",
     "titre_nl": "",
+    "titreNl": "3. Vullen van de Toonbanken (Volgorde van uitvoering)",
     "heure": "",
     "etapes": [
      {
@@ -3391,14 +4281,14 @@ const FO = {
      {
       "n": "3.1",
       "fr": "Viennoiseries (koffiekoeken et croissants) : prendre les grilles, les couvrir soigneusement du papier cuisson prévu et disposer les viennoiseries fraîches de façon lisible.",
-      "nl": "Viennoiserie (Koffiekoeken & Croissants): Neem de roosters, bedek ze strak met het voorziene bakpapier en rangschik d…",
+      "nl": "Viennoiserie (Koffiekoeken & Croissants): Neem de roosters, bedek ze strak met het voorziene bakpapier en rangschik de verse viennoiserie overzichtelijk.",
       "crit": false,
       "photo": null
      },
      {
       "n": "3.2",
       "fr": "Rayon pain : remplir l'étagère à pain selon le planogramme défini. Appliquer le principe FIFO (premier entré, premier sorti).",
-      "nl": "Broodafdeling: Vul het broodrek op volgens het vastgestelde schappenplan. Pas het FIFO-principe toe (First In, First …",
+      "nl": "Broodafdeling: Vul het broodrek op volgens het vastgestelde schappenplan. Pas het FIFO-principe toe (First In, First Out).",
       "crit": false,
       "photo": null
      },
@@ -3412,7 +4302,7 @@ const FO = {
      {
       "n": "3.4",
       "fr": "Comptoir tartissières et pâtisserie : remplir le comptoir réfrigéré. Veiller à ce que toutes les étiquettes produits et plaquettes de présentation soient bien tournées vers le client.",
-      "nl": "Toonbank Tartissières & Patisserie: Vul de gekoelde toog. Zorg dat alle productetiketten en presentatiebordjes strak …",
+      "nl": "Toonbank Tartissières & Patisserie: Vul de gekoelde toog. Zorg dat alle productetiketten en presentatiebordjes strak naar de klant gericht staan.",
       "crit": false,
       "photo": null
      },
@@ -3426,14 +4316,14 @@ const FO = {
      {
       "n": "3.6",
       "fr": "Préparer les commandes clients : préparer les commandes prévues, les emballer soigneusement avec le bon de commande et les placer à l'emplacement d'enlèvement réservé.",
-      "nl": "Klantbestellingen klaarmaken: Bereid de geplande bestellingen voor, verpak ze netjes met het bestelbonnetje en plaats…",
+      "nl": "Klantbestellingen klaarmaken: Bereid de geplande bestellingen voor, verpak ze netjes met het bestelbonnetje en plaats ze op de gereserveerde afhaalplek.",
       "crit": false,
       "photo": null
      },
      {
       "n": "3.7",
       "fr": "Chariot de réserve viennoiseries : placer le chariot de réserve à son emplacement fixe derrière le comptoir pour réassortir facilement pendant la matinée.",
-      "nl": "Reservekar Viennoiserie: Plaats de reservekar op de vaste standplaats achter de toonbank om gedurende de ochtend vlot…",
+      "nl": "Reservekar Viennoiserie: Plaats de reservekar op de vaste standplaats achter de toonbank om gedurende de ochtend vlot te kunnen bijvullen.",
       "crit": false,
       "photo": null
      }
@@ -3442,19 +4332,20 @@ const FO = {
    {
     "titre": "1. Focus commercial et orientation client",
     "titre_nl": "",
+    "titreNl": "1. Commerciële Focus & Klantgerichtheid",
     "heure": "dès 07:00",
     "etapes": [
      {
       "n": "1.1",
       "fr": "VENDRE VENDRE VENDRE : dès 07:00 commence le flux intensif de clients. Le client est 100 % au centre. Saluer chacun avec un sourire et un contact visuel.",
-      "nl": "VENDRE VENDRE VENDRE: Vanaf 07:00 uur start de intensieve klantenstroom. De klant staat 100% centraal. Begroet iedere…",
+      "nl": "VENDRE VENDRE VENDRE: Vanaf 07:00 uur start de intensieve klantenstroom. De klant staat 100% centraal. Begroet iedereen met een glimlach en oogcontact.",
       "crit": false,
       "photo": null
      },
      {
       "n": "1.2",
       "fr": "Vente active : proposer activement des produits complémentaires (par ex. « Voulez-vous une délicieuse quiche du jour ou un croissant en plus ? »).",
-      "nl": "Actieve verkoop: Bied actief aanvullende producten aan (bijv. \"Wilt u er een heerlijke dagverse quiche of een extra c…",
+      "nl": "Actieve verkoop: Bied actief aanvullende producten aan (bijv. \"Wilt u er een heerlijke dagverse quiche of een extra croissantje bij?\").",
       "crit": false,
       "photo": null
      }
@@ -3463,19 +4354,20 @@ const FO = {
    {
     "titre": "2. Stock et continuité",
     "titre_nl": "",
+    "titreNl": "2. Voorraad & Continuiteit",
     "heure": "",
     "etapes": [
      {
       "n": "2.1",
       "fr": "Matériel d'emballage : contrôler régulièrement les tiroirs de sacs à pain, boîtes à pâtisserie, papier d'emballage et ruban. Remplir au niveau maximum pour ne jamais en manquer pendant le rush.",
-      "nl": "Verpakkingsmateriaal: Controleer regelmatig de lades met broodzakken, gebaksdozen, inpakpapier en lint. Vul bij tot h…",
+      "nl": "Verpakkingsmateriaal: Controleer regelmatig de lades met broodzakken, gebaksdozen, inpakpapier en lint. Vul bij tot het maximale niveau zodat je tijdens de drukte nooit misgrijpt.",
       "crit": true,
       "photo": null
      },
      {
       "n": "2.2",
       "fr": "Maintenir les comptoirs à niveau : utiliser le chariot de réserve pour combler immédiatement les vides du comptoir viennoiseries. Un comptoir plein vend mieux !",
-      "nl": "Toonbanken op peil houden: Gebruik de reservekar om lege plekken in de viennoiserietoog meteen aan te vullen. Een vol…",
+      "nl": "Toonbanken op peil houden: Gebruik de reservekar om lege plekken in de viennoiserietoog meteen aan te vullen. Een volle toog verkoopt beter!",
       "crit": false,
       "photo": null
      }
@@ -3484,19 +4376,20 @@ const FO = {
    {
     "titre": "3. Production et hygiène",
     "titre_nl": "",
+    "titreNl": "3. Productie & Hygiëne",
     "heure": "",
     "etapes": [
      {
       "n": "3.1",
       "fr": "Production de Flip-Flaps : préparer les Flip-Flaps et/ou aider l'atelier à l'assemblage selon la fiche recette officielle.",
-      "nl": "Flip-Flap Productie: Bereid de Flip-Flaps voor en/of ondersteun het atelier bij de assemblage volgens de officiele re…",
+      "nl": "Flip-Flap Productie: Bereid de Flip-Flaps voor en/of ondersteun het atelier bij de assemblage volgens de officiele receptfiche.",
       "crit": false,
       "photo": null
      },
      {
       "n": "3.2",
       "fr": "Propreté du magasin (en continu) : garder à tout moment le magasin, les comptoirs et la trancheuse à pain impeccables. Essuyer les miettes immédiatement.",
-      "nl": "Winkel netheid (Continu): Houd de winkel, toonbanken en broedsnijmachine op elk moment smetteloos schoon. Veeg kruime…",
+      "nl": "Winkel netheid (Continu): Houd de winkel, toonbanken en broedsnijmachine op elk moment smetteloos schoon. Veeg kruimels meteen weg.",
       "crit": false,
       "photo": null
      }
@@ -3505,26 +4398,27 @@ const FO = {
    {
     "titre": "Addendum · OUVRIR LA CAISSE, PARTIE 1 — DE L'ÉCRAN ÉTEINT À LA GESTION",
     "titre_nl": "",
+    "titreNl": "Aanvulling · KASSA OPENEN - DEEL 1 — VAN UITGESCHAKELD SCHERM NAAR BEHEER",
     "heure": "caisse",
     "etapes": [
      {
       "n": "1",
       "fr": "Allumer l'écran — FAIRE : appuyer une fois sur le bouton marche/arrêt en bas, juste sous le coin droit de l'écran. ATTENDRE : que le bureau Windows bleu apparaisse.",
-      "nl": "Scherm aanzetten — DOEN: Druk één keer op de aan/uitknop onderaan, net onder de rechterhoek van het scherm. WACHT TOT…",
+      "nl": "Scherm aanzetten — DOEN: Druk één keer op de aan/uitknop onderaan, net onder de rechterhoek van het scherm. WACHT TOT: het blauwe Windows-bureaublad verschijnt.",
       "crit": false,
       "photo": "photos/caisse-1.jpg"
      },
      {
       "n": "2",
       "fr": "Lancer le programme de caisse — FAIRE : taper deux fois brièvement sur l'icône POS au milieu du bureau. ATTENDRE : que le programme de caisse soit entièrement ouvert.",
-      "nl": "Kassaprogramma starten — DOEN: Tik twee keer kort op het pictogram POS midden op het bureaublad. WACHT TOT: het kassa…",
+      "nl": "Kassaprogramma starten — DOEN: Tik twee keer kort op het pictogram POS midden op het bureaublad. WACHT TOT: het kassaprogramma volledig geopend is.",
       "crit": false,
       "photo": "photos/caisse-2.jpg"
      },
      {
       "n": "3",
       "fr": "Choisir son propre nom — FAIRE : taper sur le nom en haut de l'écran puis choisir son propre nom dans la liste. CONTRÔLE : votre nom apparaît en haut.",
-      "nl": "Kies je eigen naam — DOEN: Tik bovenaan het scherm op de naam en kies daarna je eigen naam in de lijst. CONTROLE: jou…",
+      "nl": "Kies je eigen naam — DOEN: Tik bovenaan het scherm op de naam en kies daarna je eigen naam in de lijst. CONTROLE: jouw naam staat bovenaan.",
       "crit": false,
       "photo": "photos/caisse-3.jpg"
      },
@@ -3547,19 +4441,20 @@ const FO = {
    {
     "titre": "Addendum · OUVRIR LA CAISSE, PARTIE 2 — DU CODE DE GESTION À LA CAISSE PRÊTE",
     "titre_nl": "",
+    "titreNl": "Aanvulling · KASSA OPENEN - DEEL 2 — VAN BEHEERCODE NAAR VERKOOPSKLAAR",
     "heure": "caisse",
     "etapes": [
      {
       "n": "5",
       "fr": "Saisir le code 12 — FAIRE : taper 1 puis 2. Confirmer si l'écran le demande. CODE FIXE : toujours 12, jamais un code PIN personnel.",
-      "nl": "Voer code 12 in — DOEN: Tik op 1 en daarna op 2. Bevestig indien het scherm daarom vraagt. VASTE CODE: altijd 12, noo…",
+      "nl": "Voer code 12 in — DOEN: Tik op 1 en daarna op 2. Bevestig indien het scherm daarom vraagt. VASTE CODE: altijd 12, nooit een persoonlijke pincode.",
       "crit": true,
       "photo": "photos/caisse-5.jpg"
      },
      {
       "n": "6",
       "fr": "Ouvrir/fermer la journée — FAIRE : dans l'écran de gestion, taper sur Dag openen/sluiten. ENSUITE : l'écran demande la valeur d'ouverture.",
-      "nl": "Dag openen/sluiten — DOEN: Tik in het beheerscherm op Dag openen/sluiten. DAARNA: het scherm vraagt naar de openingsw…",
+      "nl": "Dag openen/sluiten — DOEN: Tik in het beheerscherm op Dag openen/sluiten. DAARNA: het scherm vraagt naar de openingswaarde.",
       "crit": false,
       "photo": "photos/caisse-6.jpg"
      },
@@ -3573,7 +4468,7 @@ const FO = {
      {
       "n": "8",
       "fr": "Choisir à nouveau son nom — FAIRE : taper à nouveau sur le nom en haut et choisir son propre nom. TERMINÉ : votre nom est visible et la caisse est prête pour la première vente.",
-      "nl": "Kies opnieuw je naam — DOEN: Tik opnieuw bovenaan op de naam en kies je eigen naam. KLAAR: jouw naam is zichtbaar en …",
+      "nl": "Kies opnieuw je naam — DOEN: Tik opnieuw bovenaan op de naam en kies je eigen naam. KLAAR: jouw naam is zichtbaar en de kassa is klaar voor de eerste verkoop.",
       "crit": false,
       "photo": "photos/caisse-8.jpg"
      },
@@ -3660,7 +4555,7 @@ const FO = {
    "court": "Ouverture du poste et premières cuissons",
    "titreDrive": "SOP — Ouverture du poste et premières cuissons — FR — v1.1",
    "type": "SOP",
-   "langue": "FR",
+   "langue": "FR-NL",
    "version": "1.1",
    "statut": null,
    "dossier": "02",
@@ -3747,7 +4642,15 @@ const FO = {
      "ok": 1
     }
    ],
-   "quizRelu": true
+   "code": "SOP-CUI-OUV-01",
+   "quizRelu": true,
+   "origine": "FR",
+   "trad": {
+    "FR": "original",
+    "NL": "relue"
+   },
+   "comp": "Ouvrir le poste de cuisson",
+   "compId": "c-ouv-poste"
   },
   "sections": [
    {

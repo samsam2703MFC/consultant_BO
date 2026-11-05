@@ -5,10 +5,12 @@ const BASE = 'http://127.0.0.1:8099/docs/maquettes/formation/';
 const PAGES = [
   ['a-bibliotheque', 1500, 1000],
   ['b-fiche-sop', 1500, 1000],
-  ['c-tablette', 1280, 800, true],
-  ['d-telephone', 1320, 900],
-  ['e-equipes', 1500, 1000],
-  ['f-sources', 1500, 1000],
+  ['c1-tablette-qui', 1280, 800, true],
+  ['c2-tablette-etape', 1280, 800, true],
+  ['c3-tablette-validation', 1280, 800, true],
+  ['d-manuel', 1500, 1000],
+  ['e-competences', 1500, 1000],
+  ['f-redaction', 1500, 1000],
   ['planche', 1600, 1000]
 ];
 (async () => {
