@@ -1278,3 +1278,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-04T22:12:55Z Lot lżej : migration 157 compatible MySQL
 2026-11-05T06:36:11Z Fiche matière : Wykorzystanie [%] (part utilisable) saisi et contrôlé
 2026-11-05T06:51:42Z Fiche matière : % de perte (migration 158)
+2026-11-05T07:10:08Z Perte dans le coût des recettes (migration 159)
