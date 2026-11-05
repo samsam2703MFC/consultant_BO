@@ -160,7 +160,6 @@ export function render(c, x){
       ${c.isMktObj ? tplMktObj(c, x) : ''}
       ${c.isScoringTri ? tplScoringTri(c, x) : ''}
       ${c.isCltMyst ? tplCltMyst(c, x) : ''}
-      ${c.isProjets ? tplProjets(c, x) : ''}
       ${c.isControle ? tplControle(c, x) : ''}
       ${c.isSuiviM ? tplSuiviM(c, x) : ''}
       ${c.isKpiT ? tplKpiT(c, x) : ''}
@@ -181,7 +180,6 @@ export function render(c, x){
     </div>
   </main>
 
-  ${c.op ? tplFicheProjet(c, x) : ''}
   ${c.rel ? tplRelance(c, x) : ''}
   ${c.repPrev ? tplRepPrev(c, x) : ''}
   ${c.eqRep ? tplEqRep(c, x) : ''}
@@ -191,7 +189,6 @@ export function render(c, x){
   ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
   ${c.ctrlZoom ? tplCtrlZoom(c, x) : ''}
   ${c.anDetail ? tplAnalyseDetail(c, x) : ''}
-  ${c.np ? tplWizardProjet(c, x) : ''}
   ${c.nt ? tplWizardTache(c, x) : ''}
 
   ${c.toast ? `<div style="position:fixed;bottom:24px;right:24px;z-index:100;background:#222222;color:#fff;border-radius:10px;padding:12px 18px;font-size:13px;box-shadow:0 10px 30px rgba(34,34,34,0.3);animation:toastIn 200ms ease;max-width:420px">${esc(c.toast)}</div>` : ''}
@@ -2591,78 +2588,6 @@ function tplCtrlHeat(c, x, card){
   </div>`;
 }
 
-/* --- Projets (kanban par famille) -------------------------------------------- */
-function tplProjets(c, x){
-  const { esc } = x;
-  return `
-  <div data-screen="projets" style="display:flex;flex-direction:column;gap:14px">
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <!-- Trois lectures d'un même portefeuille : où en est chaque projet, ce
-           qu'il coûte et rapporte, et ce qu'il demande à une boutique. La
-           troisième question ne se lit pas dans un kanban. -->
-      ${(c.pjVueBtns || []).map(v => `<button ${x.A(v.go)} style="border-radius:9px;height:32px;padding:0 14px;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer;${v.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(v.nom)}</button>`).join('')}
-      <div style="flex:1"></div>
-      <button ${x.A(c.npOpen)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:8px">+ Nouveau projet</button>
-    </div>
-    ${c.pjBudgets ? tplProjetsBudgets(c, x) : ''}
-    ${c.pjFranchise ? tplProjetsFranchise(c, x) : ''}
-    ${c.pjVue !== 'kanban' ? '' : `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start">
-      ${c.kanban.map(col => `
-        <div ${x.DP(col.drop)} style="background:rgba(255,255,255,0.55);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px;min-height:220px">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px 10px">
-            <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-text-muted)">${esc(col.nom)}</span>
-            <span style="font-size:11px;color:var(--color-text-muted)">${col.n}</span>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            ${col.items.map(p => `
-              <div draggable="true" ${x.DS(p.drag)} ${x.A(p.toggle)} style="${p.cardSt}">
-                <div style="display:flex;align-items:flex-start;gap:8px">
-                  <div style="font-size:13.5px;font-weight:500;line-height:1.4;min-width:0">${esc(p.nom)}</div>
-                  <span style="${p.chevSt}">▾</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px">
-                  <span style="${p.statutSt}">${p.statut}</span>
-                  ${p.levs.map(l => `<span class="levier-dot" data-lev="${l}" title="${l}"></span>`).join('')}
-                  <span style="font-size:11px;color:var(--color-text-muted);margin-left:auto;white-space:nowrap">Échéance ${p.fin}</span>
-                </div>
-                <div style="height:4px;border-radius:8px;background:var(--color-background-secondary);margin-top:10px;overflow:hidden"><div style="${p.avSt}"></div></div>
-                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:7px;font-size:11px;color:var(--color-text-muted)">
-                  <span style="white-space:nowrap">${p.av} avancé · ${p.resteTxt}</span>
-                  ${p.alerte ? `<span style="color:var(--color-primary);font-weight:500;white-space:nowrap">${p.alerte}</span>` : ''}
-                </div>
-                ${p.ouvert ? `
-                  <div style="margin-top:11px;padding-top:10px;border-top:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;gap:8px">
-                    <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-text-muted)">Étapes du projet</div>
-                    ${p.etapes.map(e => `
-                      <div style="display:flex;flex-direction:column">
-                        <div style="${e.rowSt}">
-                          <span ${x.A(e.check)} style="${e.boxSt}">${e.boxTxt}</span>
-                          <div style="min-width:0;flex:1">
-                            <div style="${e.nomSt}">${esc(e.nom)}</div>
-                            <div style="font-size:10.5px;margin-top:2px"><span style="${e.dueSt}">${e.due}</span><span style="color:var(--color-text-muted)"> · ${esc(e.meta)}</span></div>
-                          </div>
-                          <span ${x.A(e.infoT)} style="${e.iSt}" title="Détail de l'étape">i</span>
-                        </div>
-                        ${e.info ? `
-                          <div style="margin:2px 0 6px 23px;padding:9px 11px;border:0.5px solid var(--color-border-tertiary);border-radius:8px;background:var(--color-background-secondary);display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;row-gap:4px">
-                            ${e.rows.map(r => `
-                              <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);white-space:nowrap">${r.k}</span>
-                              <span style="font-size:11.5px;line-height:1.4;text-wrap:pretty">${esc(r.v)}</span>`).join('')}
-                          </div>` : ''}
-                      </div>`).join('')}
-                    ${p.rienReste ? `<div style="font-size:11.5px;color:var(--color-text-muted)">Aucune étape enregistrée.</div>` : ''}
-                    <button ${x.A(p.open)} class="hv-line" style="align-self:flex-start;margin-top:2px;border:0.5px solid var(--color-border-secondary);background:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;font-weight:500;color:var(--color-text);padding:5px 12px;border-radius:8px">Ouvrir la fiche projet</button>
-                  </div>` : ''}
-              </div>`).join('')}
-          </div>
-        </div>`).join('')}
-    </div>
-    <div style="font-size:12px;color:var(--color-text-muted)">Colonnes = famille de projet. Cliquez une carte pour dérouler ses étapes, cochez-les au fil de l'eau, (i) pour le détail. Glissez-déposez une carte pour changer de famille — tout est tracé dans le journal.</div>`}
-  </div>`;
-}
-
-
 /* --- Fonds & Royalties : lu chez le module marketing -------------------------
    Le cockpit ne recopie pas le grand livre : il le lit là où il est tenu. Deux
    soldes pour le même fonds, et c'est celui qui a tort qu'on regarderait. */
@@ -2736,14 +2661,7 @@ function tplScoringDetail(c, x){
         <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">Marge brute = CA − volume × coût matière. Sans coût connu, la marge reste vide.</div>` : ''}
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
-        <div style="border:0.5px solid var(--color-border-secondary);border-radius:11px;padding:13px 15px">
-          <div style="font-size:13px;font-weight:600">→ Envoyer aux projets</div>
-          <div style="font-size:11px;color:var(--color-text-muted);margin:3px 0 10px;line-height:1.45">Crée une ligne dans Projets de développement, rattachée à la référence, avec l’adaptation demandée.</div>
-          <select ${x.C(d.setAdaptation)} style="${inp};margin-bottom:8px">${d.adaptations.map(a => `<option${a === d.adaptation ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select>
-          <input id="pdd-prec" value="${esc(d.precision)}" ${x.I(d.setPrecision)} placeholder="Précision (facultatif)" style="${inp};margin-bottom:10px">
-          <button ${x.A(d.envoyerProjet)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Créer la ligne projet</button>
-        </div>
+      <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:16px">
         <div style="border:0.5px solid var(--color-border-secondary);border-radius:11px;padding:13px 15px">
           <div style="font-size:13px;font-weight:600">⏹ Arrêter le produit</div>
           <div style="font-size:11px;color:var(--color-text-muted);margin:3px 0 10px;line-height:1.45">Programme la fin de la référence et l’annonce au réseau — bandeau au Catalogue et à l’Assortiment.</div>
@@ -2997,7 +2915,7 @@ function tplResultatReseauProduits(c, x){
   else if (!P) { prod = tete('Ventes par produit — tout le réseau', r.perLib) + attente('Lecture des tickets du réseau, magasin par magasin…'); }
   else {
     const droite = `<div style="display:flex;align-items:flex-start;gap:22px">
-        <div style="text-align:right"><div style="${cap}">CA produits</div><div style="font-family:var(--font-display);font-size:23px;line-height:1.1;${num}">${esc(P.ca)}</div></div>
+        <div style="text-align:right"><div style="${cap}">${esc(P.caLib)}</div><div style="font-family:var(--font-display);font-size:23px;line-height:1.1;${num}">${esc(P.ca)}</div></div>
         <div style="text-align:right"><div style="${cap}">Marge brute</div><div style="font-family:var(--font-display);font-size:23px;line-height:1.1;color:${P.tauxCoul};${num}">${esc(P.tauxReseau)}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(P.tauxSous)}</div></div>
         <button ${x.A(r.relire)} title="Relire les ventes du réseau" class="hv-bg" style="border:0.5px solid var(--color-border-secondary);background:transparent;border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text-muted)">${r.relecture ? '<i class="rj-ring" style="margin:0"></i>' : '⟳'}</button>
       </div>`;
@@ -3023,8 +2941,10 @@ function tplResultatReseauProduits(c, x){
     const jauges = `<div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:var(--color-surface)">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <div style="font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${J.fil.map((f, i) => `${i ? '<span style="color:var(--color-text-muted)">›</span>' : ''}${f.go ? `<button ${x.A(f.go)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;color:var(--color-primary)">${esc(f.nom)}</button>` : `<b style="font-weight:600">${f.coul ? `<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.coul};margin-right:5px;vertical-align:0"></i>` : ''}${esc(f.nom)}</b>`}`).join('')}${J.effacer ? ` <button ${x.A(J.effacer)} title="Revenir à tout le réseau" style="border:none;background:none;cursor:pointer;color:var(--color-text-muted);font-size:13px;padding:0 3px">×</button>` : ''}</div>
-          <span style="margin-left:auto;font-size:11px;color:var(--color-text-muted)">mesurer en</span>${seg(J.mesures, true)}
+          <span style="margin-left:auto;font-size:11px;color:var(--color-text-muted)">ventes</span>${seg(J.canaux, true)}
+          <span style="font-size:11px;color:var(--color-text-muted);margin-left:6px">mesurer en</span>${seg(J.mesures, true)}
         </div>
+        ${J.canalInfo ? `<div style="font-size:11px;color:var(--color-text-muted);margin:-4px 0 4px">${esc(J.canalInfo)}</div>` : ''}
         ${J.lignes.map(g => `<div style="display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:start;margin-top:9px">
             <div style="padding-top:5px"><div style="${cap}">${esc(g.lib)}</div>${g.sous ? `<div style="font-size:10px;color:var(--color-text-muted);margin-top:2px">${esc(g.sous)}</div>` : ''}</div>
             <div>${g.j.vide ? '<div style="font-size:11px;color:var(--color-text-muted);padding-top:5px">rien de vendu</div>' : barreJ(g.j.blocs, 28, true) + legJ(g.j.legende)}</div>
@@ -4296,226 +4216,6 @@ function tplFonds(c, x){
   </div>`;
 }
 
-/* --- Projets · le fonds de la marque face aux projets ------------------------ */
-/**
- * Le rapprochement se fait sur le SOLDE, pas sur la ligne : rien ne rattache
- * encore un mouvement du fonds à un projet, et la carte le dit — sinon on
- * lirait une couverture projet par projet qui n'existe pas.
- */
-function tplProjetsFonds(c, x){
-  const { esc } = x;
-  const f = c.pjFonds;
-  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
-  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500';
-  if (f.chargement) {
-    return `<div style="${carte};padding:15px 18px;font-size:12.5px;color:var(--color-text-muted)">Lecture du fonds de la marque…</div>`;
-  }
-  return `
-  <div style="${carte};padding:15px 18px">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
-      <span style="font-size:13px;font-weight:500">Le fonds de la marque face aux projets</span>
-      <button ${x.A(f.ouvrir)} style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:27px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:500;cursor:pointer">Fonds &amp; Royalties</button>
-    </div>
-    ${f.erreur ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:7px;line-height:1.45">${esc(f.erreur)}</div>` : ''}
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:13px">
-      <div><div style="${k}">Alimenté</div><div style="font-size:19px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums">${esc(f.alim)}</div></div>
-      <div><div style="${k}">Dépensé</div><div style="font-size:19px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums">${esc(f.dep)}</div></div>
-      <div><div style="${k}">Solde disponible</div><div style="font-size:19px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums;color:${f.verdictCol}">${esc(f.solde)}</div></div>
-      <div><div style="${k}">Engagé par les projets</div><div style="font-size:19px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums">${esc(f.engage)}</div></div>
-    </div>
-    <div style="height:9px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden;margin-top:12px">
-      <i style="display:block;height:100%;border-radius:8px;width:${f.couvre.toFixed(1)}%;background:${f.verdictCol}"></i>
-    </div>
-    <div style="font-size:12px;color:${f.verdictCol};margin-top:7px;font-weight:500">${esc(f.verdict)}</div>
-    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:5px;line-height:1.45">${esc(f.note)}</div>
-  </div>`;
-}
-
-/* --- Projets · les sorties d'argent, mois par mois --------------------------- */
-/**
- * Le calendrier des sorties : ce qui quitte le fonds, et ce que les projets
- * font sortir — prévisionnel en GRIS, réel en NOIR.
- *
- * Seul ce qui porte une date figure ici. Ce qui n'en porte pas est annoncé
- * sous le tableau plutôt que réparti au jugé.
- */
-function tplProjetsPeriodes(c, x){
-  const { esc } = x;
-  const p = c.pjPeriodes;
-  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
-  const th = 'text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 10px 7px';
-  const td = 'padding:9px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
-  const num = 'text-align:right;font-variant-numeric:tabular-nums';
-  const GRIS = '#C2BDB7', NOIR = 'var(--color-text)', FONDS = 'var(--color-primary)';
-  const puce = (col, nom) => `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-muted)"><span style="width:11px;height:4px;border-radius:2px;background:${col}"></span>${nom}</span>`;
-  return `
-  <div style="${carte};overflow:hidden">
-    <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
-      <span style="font-size:13px;font-weight:500">Les sorties d’argent, mois par mois</span>
-      <span style="display:flex;gap:14px;flex-wrap:wrap">${puce(FONDS, 'Sortie du fonds')}${puce(GRIS, 'Budget prévisionnel')}${puce(NOIR, 'Budget réel')}</span>
-    </div>
-    ${p.vide ? `<div style="padding:22px 18px;font-size:12.5px;color:var(--color-text-muted)">Aucune sortie datée — ni du fonds, ni des projets.</div>` : `
-    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:640px">
-      <thead><tr>
-        <th style="${th};padding-left:18px">Mois</th>
-        <th style="${th};${num}">Sortie du fonds</th>
-        <th style="${th};${num}">Prévisionnel</th>
-        <th style="${th};${num}">Réel</th>
-        <th style="${th};${num}">Écart</th>
-        <th style="${th};width:34%;padding-right:18px">Comparaison</th>
-      </tr></thead>
-      <tbody>${p.lignes.map(l => `<tr>
-        <td style="${td};padding-left:18px;white-space:nowrap"><span style="font-weight:500">${esc(l.mois)}</span>${l.detail ? `<div style="font-size:10.5px;color:var(--color-text-muted);font-weight:400">${esc(l.detail)}</div>` : ''}</td>
-        <td style="${td};${num};color:${FONDS}">${esc(l.fonds)}</td>
-        <td style="${td};${num};color:var(--color-text-muted)">${esc(l.prev)}</td>
-        <td style="${td};${num};font-weight:500">${esc(l.reel)}</td>
-        <td style="${td};${num};color:${l.ecartCol}">${esc(l.ecart)}</td>
-        <td style="${td};padding-right:18px">
-          <div style="display:flex;flex-direction:column;gap:3px">
-            <div style="height:5px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:8px;width:${l.bFonds.toFixed(1)}%;background:${FONDS}"></i></div>
-            <div style="height:5px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:8px;width:${l.bPrev.toFixed(1)}%;background:${GRIS}"></i></div>
-            <div style="height:5px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:8px;width:${l.bReel.toFixed(1)}%;background:${NOIR}"></i></div>
-          </div>
-        </td>
-      </tr>`).join('')}</tbody>
-      <tfoot><tr>
-        <td style="${td};padding-left:18px;font-weight:500;border-top-width:1px">Total</td>
-        <td style="${td};${num};color:${FONDS};font-weight:500;border-top-width:1px">${esc(p.totFonds)}</td>
-        <td style="${td};${num};color:var(--color-text-muted);border-top-width:1px">${esc(p.totPrev)}</td>
-        <td style="${td};${num};font-weight:500;border-top-width:1px">${esc(p.totReel)}</td>
-        <td style="${td};border-top-width:1px"></td><td style="${td};border-top-width:1px"></td>
-      </tr></tfoot>
-    </table></div>`}
-    <div style="padding:11px 18px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-muted);line-height:1.5">
-      Le calendrier ne porte que ce qui a une date : le budget des tâches, placé à l’échéance pour le prévisionnel et à la date de réalisation pour le réel.${p.vidTaches ? ' Aucune tâche ne porte de budget — la ligne des projets reste donc vide.' : ''} ${esc(p.horsCal)}${p.sansDate ? ' ' + esc(p.sansDate) : ''} ${esc(p.note)}
-    </div>
-  </div>`;
-}
-
-/* --- Projets · budgets engagés et retour ------------------------------------- */
-function tplProjetsBudgets(c, x){
-  const { esc } = x;
-  const b = c.pjBudgets;
-  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500';
-  const th = 'text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:500;padding:0 10px 7px';
-  const td = 'padding:9px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
-  const num = 'text-align:right;font-variant-numeric:tabular-nums';
-  return `
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
-    ${b.tuiles.map(t => `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:15px 17px">
-      <div style="${k}">${esc(t.k)}</div>
-      <div style="font-size:25px;font-weight:500;line-height:1.05;margin-top:3px">${esc(t.v)}</div>
-      ${t.barre != null ? `<div style="height:8px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden;margin-top:7px"><i style="display:block;height:100%;border-radius:8px;width:${t.barre.toFixed(1)}%;background:${t.col}"></i></div>` : ''}
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px;line-height:1.4">${esc(t.aide)}</div>
-    </div>`).join('')}
-  </div>
-
-  ${c.pjFonds ? tplProjetsFonds(c, x) : ''}
-  ${c.pjPeriodes ? tplProjetsPeriodes(c, x) : ''}
-
-  <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
-    <div style="padding:13px 18px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;font-weight:500">Par projet — ce qui est engagé, ce qui revient</div>
-    ${b.vide ? `<div style="padding:24px 18px;font-size:12.5px;color:var(--color-text-muted)">Aucun projet.</div>` : `
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr>
-        <th style="${th};padding-left:18px">Projet</th>
-        <th style="${th}">Famille</th>
-        <th style="${th};${num}">Voté</th>
-        <th style="${th};${num}">Engagé</th>
-        <th style="${th};${num}">Consommé</th>
-        <th style="${th};${num}">Valeur est.</th>
-        <th style="${th};${num}">Valeur réal.</th>
-        <th style="${th};${num}">ROI</th>
-        <th style="${th};${num};padding-right:18px">Retour</th>
-      </tr></thead>
-      <tbody>${b.lignes.map(l => `<tr ${x.A(l.ouvrir)} title="Voir la fiche franchisé" style="cursor:pointer">
-        <td style="${td};padding-left:18px">
-          <span style="font-weight:500">${esc(l.nom)}</span>
-          ${l.leviers.length ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">${l.leviers.map(lv => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:500;padding:1px 8px;border-radius:8px;background:${lv.couleur}1f;border:1px solid ${lv.couleur};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${lv.couleur}"></span>${esc(lv.nom)}</span>`).join('')}</div>` : ''}
-        </td>
-        <td style="${td};color:var(--color-text-muted)">${esc(l.famille)}<div style="font-size:10.5px">${esc(l.statut)}</div></td>
-        <td style="${td};${num}">${esc(l.vote)}</td>
-        <td style="${td};${num}">${esc(l.engage)}</td>
-        <td style="${td};${num}">${esc(l.conso)}</td>
-        <td style="${td};${num};color:var(--color-text-muted)">${esc(l.est)}</td>
-        <td style="${td};${num}">${esc(l.real)}</td>
-        <td style="${td};${num};color:${l.roiCol};font-weight:500">${esc(l.roi)}${l.roiEstime ? `<div style="font-size:10px;font-weight:400;color:var(--color-text-muted)">estimé</div>` : ''}</td>
-        <td style="${td};${num};padding-right:18px">${esc(l.retour)}</td>
-      </tr>`).join('')}</tbody>
-    </table>`}
-  </div>
-  <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">« Engagé » = le prévu des postes de coût, « consommé » = leur réel. Le ROI se lit sur la valeur RÉALISÉE ; tant qu’elle manque, la colonne rend l’estimation et le dit. Le retour n’est calculé qu’avec au moins un mois écoulé — extrapoler un mois sur douze annoncerait un retour que personne n’a observé.${b.note ? ' ' + esc(b.note) : ''}</div>`;
-}
-
-/* --- Projets · la fiche que lit un franchisé --------------------------------- */
-function tplProjetsFranchise(c, x){
-  const { esc } = x;
-  const f = c.pjFranchise;
-  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500';
-  const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:15px 17px';
-  if (f.vide) {
-    return `<div style="${carte};font-size:12.5px;color:var(--color-text-muted)">Aucun projet à présenter.</div>`;
-  }
-  return `
-  <div style="display:flex;gap:7px;flex-wrap:wrap">
-    ${f.choix.map(o => `<button ${x.A(o.go)} style="border-radius:8px;height:29px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;${o.on ? 'border:1px solid var(--color-primary);background:rgba(141,29,44,0.08);color:var(--color-primary)' : 'border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(o.nom)}</button>`).join('')}
-  </div>
-
-  <div style="${carte}">
-    <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:22px">
-      <div>
-        <div style="${k}">Ce que ce projet développe</div>
-        ${f.leviers.length
-          ? `<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">${f.leviers.map(lv => `<span title="${esc(lv.desc)}" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:4px 11px;border-radius:8px;background:${lv.couleur}1f;border:1px solid ${lv.couleur};color:var(--color-text)"><span style="width:9px;height:9px;border-radius:3px;background:${lv.couleur}"></span>${esc(lv.nom)}</span>`).join('')}</div>
-             ${f.leviers[0].desc ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:8px;line-height:1.5">${esc(f.leviers[0].desc)}</div>` : ''}`
-          : `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">Aucun levier choisi sur ce projet.</div>`}
-      </div>
-      <div>
-        <div style="${k}">Ce qui est recherché</div>
-        ${f.kpisVide
-          ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px;line-height:1.5">Aucun indicateur choisi. Sans lui, on saura que le projet est fini, pas s’il a marché.</div>`
-          : `<div style="display:flex;flex-direction:column;gap:5px;margin-top:8px">${f.kpis.map(kp => `<div style="font-size:12.5px">${esc(kp)}</div>`).join('')}</div>
-             <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">Aucune cible chiffrée n’est enregistrée — l’inventer donnerait un objectif que personne n’a fixé.</div>`}
-      </div>
-      <div>
-        <div style="${k}">Pourquoi ce projet</div>
-        <div style="font-size:12.5px;line-height:1.55;margin-top:8px">${f.pourquoi ? esc(f.pourquoi) : '<span style="color:var(--color-text-muted)">Rien n’est écrit sur ce que le projet doit apporter.</span>'}</div>
-        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">${esc(f.famille)} · ${esc(f.statut)} · ${esc(f.periode)}</div>
-      </div>
-    </div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
-    ${f.tuiles.map(t => `<div style="${carte}">
-      <div style="${k}">${esc(t.k)}</div>
-      <div style="font-size:24px;font-weight:500;line-height:1.05;margin-top:3px${t.vert ? ';color:#2d7a3e' : ''}">${esc(t.v)}</div>
-      <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px;line-height:1.4">${esc(t.aide)}</div>
-    </div>`).join('')}
-  </div>
-
-  <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:12px;align-items:start">
-    <div style="${carte}">
-      <div style="font-size:13px;font-weight:500;margin-bottom:9px">Ce qui attend la boutique</div>
-      ${f.etapesVide
-        ? `<div style="font-size:12px;color:var(--color-text-muted)">Aucun jalon ni tâche sur ce projet.</div>`
-        : f.etapes.map(e => `<div style="display:flex;gap:11px;align-items:flex-start;padding:8px 0;border-top:0.5px solid var(--color-border-tertiary)">
-            <span style="flex:0 0 auto;width:9px;height:9px;border-radius:999px;margin-top:5px;background:${e.fait ? '#2d7a3e' : 'var(--color-border-secondary)'}"></span>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12.5px;${e.fait ? 'color:var(--color-text-muted)' : 'font-weight:500'}">${esc(e.nom)}${e.fait ? ' — fait' : ''}</div>
-              <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(e.date)}${e.tache ? ' · tâche' : ' · jalon'}</div>
-            </div>
-          </div>`).join('')}
-    </div>
-    <div style="${carte}">
-      <div style="font-size:13px;font-weight:500;margin-bottom:9px">Ce que cette fiche ne peut pas encore dire</div>
-      ${f.manque.map(m => `<div style="display:flex;gap:8px;align-items:flex-start;margin-top:9px">
-        <span style="font-size:10px;font-weight:500;padding:2px 8px;border-radius:8px;background:#FBEFE0;color:var(--color-on-abricot);border:1px solid #E8C9A0;white-space:nowrap;flex:0 0 auto">manque</span>
-        <div style="font-size:11.5px;line-height:1.5"><b style="font-weight:500">${esc(m.champ)}</b><div style="color:var(--color-text-muted)">${esc(m.source)}</div></div>
-      </div>`).join('')}
-    </div>
-  </div>`;
-}
-
 /* --- Tâches consultants ------------------------------------------------------ */
 /* Styles du dépli de validation, nommés une fois plutôt que recopiés six. */
 const dkv = 'display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:14px;row-gap:7px';
@@ -5502,36 +5202,6 @@ function tplParams(c, x){
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">Variables : {destinataire} {tache} {projet} {echeance} {zone}</div>
       </div>
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
-        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Templates de projet par axe</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px">Jalons (jours avant échéance) et postes de coût proposés au chargement dans « Nouveau projet ».</div>
-        <select ${x.C(c.setTplAxe)} style="width:100%;box-sizing:border-box;font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 10px;background:var(--color-surface);color:var(--color-text);margin-bottom:12px">
-          ${opts(c.npAxes, c.tplAxe)}
-        </select>
-        <div style="font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">Jalons du rétroplanning</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          ${c.tplJalons.map(jl => `
-            <div style="display:grid;grid-template-columns:1fr 108px 22px;gap:6px;align-items:center">
-              <input value="${esc(jl.nom)}" ${x.C(jl.setNom)} style="${rowInput}">
-              <div style="display:flex;align-items:center;gap:5px">
-                <input type="number" value="${jl.j}" ${x.C(jl.setJ)} max="0" style="width:56px;box-sizing:border-box;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-background-secondary);color:var(--color-text)">
-                <span style="font-size:10.5px;color:var(--color-text-muted)">jours</span>
-              </div>
-              <button ${x.A(jl.del)} title="Supprimer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:13px;padding:0">✕</button>
-            </div>`).join('')}
-        </div>
-        <button ${x.A(c.tplJalAdd)} style="border:none;background:transparent;cursor:pointer;color:var(--color-primary);font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 0 12px">+ Ajouter un jalon</button>
-        <div style="font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">Postes de coût</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          ${c.tplCouts.map(ct => `
-            <div style="display:grid;grid-template-columns:1fr 108px 22px;gap:6px;align-items:center">
-              <input value="${esc(ct.poste)}" ${x.C(ct.setPoste)} style="${rowInput}">
-              <input type="number" value="${ct.prevu}" ${x.C(ct.setPrevu)} min="0" step="500" style="width:100%;box-sizing:border-box;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-background-secondary);color:var(--color-text)">
-              <button ${x.A(ct.del)} title="Supprimer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:13px;padding:0">✕</button>
-            </div>`).join('')}
-        </div>
-        <button ${x.A(c.tplCoutAdd)} style="border:none;background:transparent;cursor:pointer;color:var(--color-primary);font-family:var(--font-ui);font-size:12px;font-weight:500;padding:6px 0 0">+ Ajouter un poste</button>
-      </div>
-      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">Général</div>
         <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Année de référence des objectifs</span><span style="font-weight:500">${c.paramExo || ''}</span></div>
@@ -5543,108 +5213,6 @@ function tplParams(c, x){
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Intervenants</span><span style="font-weight:500">${esc(c.paramIntervenants)}</span></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Magasins / zones d'implantation</span><span style="font-weight:500">${esc(c.paramMagasins)}</span></div>
         </div>
-      </div>
-    </div>
-  </div>`;
-}
-
-/* --- Fiche projet (panneau latéral) ------------------------------------------ */
-function tplFicheProjet(c, x){
-  const { esc } = x;
-  const op = c.op;
-  const sec = 'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)';
-  return `
-  <div ${x.A(c.closeProj)} style="position:fixed;inset:0;background:rgba(34,34,34,0.35);z-index:60;animation:fadeIn 160ms ease"></div>
-  <div style="position:fixed;top:0;right:0;bottom:0;width:600px;background:var(--color-surface);z-index:61;box-shadow:-12px 0 40px rgba(34,34,34,0.18);overflow-y:auto;animation:panelIn 200ms ease">
-    <div style="padding:24px 28px 60px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
-        <div>
-          <div style="${sec}">Fiche projet</div>
-          <h2 style="font-family:var(--font-display);font-size:24px;font-weight:400;margin:4px 0 0;line-height:1.2">${esc(op.nom)}</h2>
-        </div>
-        <button ${x.A(c.closeProj)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">✕</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap">
-        <select ${x.C(op.setStatut)} style="font-size:12px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 10px;background:var(--color-surface);color:var(--color-text)">
-          ${opts(['À lancer', 'En cours', 'En retard', 'En pause', 'Terminé', 'Abandonné'], op.statut)}
-        </select>
-        ${op.levs.map(l => `<span class="levier-badge" data-lev="${l.slug}"><span class="levier-dot"></span>${esc(l.nom)}</span>`).join('')}
-        <span style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted)">${esc(op.axes)}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px">
-        <div><div style="font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Début</div><div style="font-size:13px;font-weight:500;margin-top:2px">${op.debut}</div></div>
-        <div><div style="font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Échéance</div><div style="font-size:13px;font-weight:500;margin-top:2px">${op.fin}</div></div>
-        <div><div style="font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Priorité</div><div style="font-size:13px;font-weight:500;margin-top:2px">${op.prio}</div></div>
-        <div><div style="font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Avancement</div><div style="font-size:13px;font-weight:500;margin-top:2px">${op.av}</div></div>
-      </div>
-      <div style="background:var(--color-background-secondary);border-radius:10px;padding:12px 14px;margin-top:14px;font-size:12.5px">
-        <span style="font-weight:500">Valeur visée : ${op.valeur}</span> — ${esc(op.valeurTxt)}
-      </div>
-
-      <div style="${sec};margin:22px 0 10px">Rétroplanning — jalons (calculés depuis l'échéance du ${op.fin})</div>
-      <div style="display:flex;flex-direction:column;gap:0">
-        ${op.jalons.map(jl => `
-          <div style="display:flex;gap:12px">
-            <div style="display:flex;flex-direction:column;align-items:center;width:14px;flex:0 0 auto">
-              <span style="${jl.dotSt}"></span>
-              <span style="flex:1;width:1.5px;background:var(--color-border-tertiary)"></span>
-            </div>
-            <div style="padding-bottom:16px;min-width:0;flex:1">
-              <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
-                <span style="font-size:13px;font-weight:500">${esc(jl.nom)}</span>
-                <span style="font-size:11.5px;color:var(--color-text-muted);white-space:nowrap">limite ${jl.cible}</span>
-              </div>
-              <div style="${jl.etatSt}">${jl.etat}</div>
-            </div>
-          </div>`).join('')}
-      </div>
-
-      <div style="${sec};margin:14px 0 10px">Tâches &amp; responsables</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${op.taches.map(t => `
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:10px 12px">
-            <div style="min-width:0">
-              <div style="font-size:12.5px;font-weight:500">${esc(t.nom)}</div>
-              <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(t.owner)} · ${t.ownerType} · échéance ${t.due}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
-              <span style="${t.statutSt}">${t.statut}</span>
-              ${t.relancable ? `<button ${x.A(t.relancer)} style="border:none;border-radius:7px;padding:5px 10px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Relancer</button>` : ''}
-            </div>
-          </div>`).join('')}
-      </div>
-
-      <div style="${sec};margin:22px 0 10px">Coût de développement — budget vs réel</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
-        <tbody>
-          ${op.couts.map(ct => `
-            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-              <td style="padding:8px 0">${esc(ct.poste)}</td>
-              <td style="padding:8px 0;text-align:right;color:var(--color-text-muted)">${ct.prevu}</td>
-              <td style="padding:8px 0 8px 16px;text-align:right;font-weight:500">${ct.reel}</td>
-            </tr>`).join('')}
-          <tr>
-            <td style="padding:10px 0;font-weight:500">Total</td>
-            <td style="padding:10px 0;text-align:right;color:var(--color-text-muted)">${op.budgetTot}</td>
-            <td style="padding:10px 0 10px 16px;text-align:right;font-weight:700">${op.reelTot}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div style="${op.ecartSt}">${op.ecartTxt}</div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px">
-        <div style="background:var(--color-background-secondary);border-radius:10px;padding:14px">
-          <div style="font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">ROI</div>
-          <div style="font-size:22px;font-weight:500;margin-top:4px;color:${op.roiCl}">${op.roi}</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted)">${op.roiPct} du coût engagé</div>
-        </div>
-        <div style="background:var(--color-background-secondary);border-radius:10px;padding:14px">
-          <div style="font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">KPI de suivi</div>
-          <div style="font-size:13px;font-weight:500;margin-top:6px;line-height:1.5">${esc(op.kpis)}</div>
-        </div>
-      </div>
-      <div style="margin-top:28px;padding-top:16px;border-top:0.5px solid var(--color-border-tertiary);display:flex;justify-content:flex-end">
-        <button ${x.A(c.deleteProj)} title="Supprimer définitivement ce projet et son suivi" style="border:0.5px solid rgba(141,29,44,0.4);border-radius:8px;padding:8px 14px;background:transparent;color:#8D1D2C;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">Supprimer le projet</button>
       </div>
     </div>
   </div>`;
@@ -5792,185 +5360,6 @@ function tplEqRep(c, x){
             </div>
             <span style="${t.stSt}">${t.st}</span>
           </div>`).join('')}
-      </div>
-    </div>
-  </div>`;
-}
-
-/* --- Assistant « Nouveau projet » ---------------------------------------------- */
-function tplWizardProjet(c, x){
-  const { esc } = x;
-  const lbl = 'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px';
-  const inp = 'width:100%;box-sizing:border-box;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;font-family:var(--font-ui);font-size:13px;background:var(--color-background-secondary);color:var(--color-text)';
-  const inpD = inp.replace('padding:10px 12px', 'padding:9px 12px');
-  return `
-  <div ${x.A(c.npClose)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
-  <div data-scroll="wizard-projet" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:860px;max-height:88vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:26px 28px">
-    <div style="font-family:var(--font-display);font-size:20px">Nouveau projet</div>
-    <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:4px">${esc(c.npStepSub)}</div>
-    <div style="display:flex;align-items:center;gap:0;margin:20px 0 22px">
-      ${c.npSteps.map(s => `
-        <button ${x.A(s.go)} style="${s.btnSt}">
-          <span style="${s.dotSt}">${s.num}</span>
-          <span style="${s.labSt}">${s.label}</span>
-        </button>
-        ${s.sep ? `<span style="${s.sepSt}"></span>` : ''}`).join('')}
-    </div>
-    <div style="display:flex;flex-direction:column;gap:14px">
-      ${c.npS1 ? `
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div>
-          <div style="${lbl}">Nom du projet</div>
-          <input value="${esc(c.np.nom)}" ${x.C(c.npNom)} placeholder="Ex. Refonte carte automne" style="${inp}">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-          <div style="grid-column:1 / -1">
-            <div style="${lbl}">Levier principal</div>
-            <div style="display:flex;gap:7px;flex-wrap:wrap">
-              ${(c.npLevChips || []).map(l => `<button ${x.A(l.go)} title="${esc(l.desc)}" style="${l.st}">
-                <span style="${l.dotSt}"></span>${esc(l.nom)}</button>`).join('')}
-            </div>
-          </div>
-          <div>
-            <div style="${lbl}">Axe</div>
-            <select ${x.C(c.npAxe)} style="${inp}">${opts(c.npAxes, c.np.axe)}</select>
-          </div>
-          <div>
-            <div style="${lbl}">Début</div>
-            <input type="date" value="${c.np.debut}" ${x.C(c.npDebut)} style="${inpD}">
-          </div>
-          <div>
-            <div style="${lbl}">Échéance</div>
-            <input type="date" value="${c.np.fin}" ${x.C(c.npFin)} style="${inpD}">
-          </div>
-        </div>
-      </div>` : ''}
-      ${c.npS2 ? `
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-          <div>
-            <div style="${lbl}">Valeur visée (€ / an)</div>
-            <input type="number" value="${c.np.valeur}" ${x.C(c.npValeur)} min="0" step="1000" placeholder="Ex. 54000" style="${inpD}">
-          </div>
-          <div>
-            <div style="${lbl}">KPI de suivi</div>
-            <select ${x.C(c.npKpi)} style="${inp}">
-              <option value=""${c.np.kpi === '' ? ' selected' : ''}>— Aucun —</option>
-              ${opts(c.npKpis, c.np.kpi)}
-            </select>
-          </div>
-        </div>
-        <div>
-          <div style="${lbl}">Valeur — description</div>
-          <input value="${esc(c.np.valeurTxt)}" ${x.C(c.npValeurTxt)} placeholder="Ex. Économie annuelle réseau (9 sites)" style="${inpD}">
-        </div>
-        <div>
-          <div style="${lbl}">Priorité</div>
-          <div style="display:flex;gap:8px">
-            <button ${x.A(c.npPrioH)} style="${c.npPrioHSt}">Haute</button>
-            <button ${x.A(c.npPrioM)} style="${c.npPrioMSt}">Moyenne</button>
-            <button ${x.A(c.npPrioB)} style="${c.npPrioBSt}">Basse</button>
-          </div>
-        </div>
-
-        <!-- L'économie du projet : trois saisies, le reste se déduit et reste
-             modifiable. Un chiffre corrigé à la main n'est plus recalculé. -->
-        <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:14px">
-          <div style="${lbl};margin-bottom:2px">Économie du projet</div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px">Ce que le projet rapporte, et à qui. Les trois premières cases suffisent : le reste se calcule et se corrige.</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-            <div><div style="${lbl}">Marge ciblée franchisé (%)</div>
-              <input type="number" step="0.1" min="0" max="100" value="${esc(String(c.npEco.margeCible))}" ${x.C(c.npEco.setMargeCible)} placeholder="Ex. 62" style="${inpD}"></div>
-            <div><div style="${lbl}">Prix de vente global (€)</div>
-              <input type="number" step="0.01" min="0" value="${esc(String(c.npEco.prixVente))}" ${x.C(c.npEco.setPrixVente)} placeholder="Ex. 3,90" style="${inpD}"></div>
-            <div><div style="${lbl}">Volume prévisionnel / magasin</div>
-              <input type="number" step="1" min="0" value="${esc(String(c.npEco.volMag))}" ${x.C(c.npEco.setVolMag)} placeholder="pièces / an" style="${inpD}"></div>
-            <div><div style="${lbl}">Volume prévisionnel réseau${c.npEco.volReseauAuto ? ' <span style="text-transform:none;letter-spacing:0;font-weight:400">— calculé</span>' : ''}</div>
-              <input type="number" step="1" min="0" value="${esc(String(c.npEco.volReseau))}" ${x.C(c.npEco.setVolReseau)} placeholder="${esc(c.npEco.volReseauAide)}" style="${inpD}"></div>
-            <div><div style="${lbl}">Retour royalties marque (€)${c.npEco.royaltiesAuto ? ' <span style="text-transform:none;letter-spacing:0;font-weight:400">— calculé</span>' : ''}</div>
-              <input type="number" step="1" min="0" value="${esc(String(c.npEco.royaltiesEuro))}" ${x.C(c.npEco.setRoyaltiesEuro)} placeholder="au taux ${esc(String(c.npEco.royaltiesTaux || ''))} %" style="${inpD}"></div>
-            <div><div style="${lbl}">Marge moyenne / magasin / an (€)${c.npEco.margeMagAuto ? ' <span style="text-transform:none;letter-spacing:0;font-weight:400">— calculée</span>' : ''}</div>
-              <input type="number" step="1" min="0" value="${esc(String(c.npEco.margeMagAn))}" ${x.C(c.npEco.setMargeMagAn)} placeholder="prix × volume × marge" style="${inpD}"></div>
-          </div>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5">${esc(c.npEco.resume)}</div>
-        </div>
-      </div>` : ''}
-      ${c.npS3 ? `
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
-            <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Rétroplanning — jalons</div>
-          </div>
-          <!-- Plusieurs modèles : un projet produit et une ouverture ne se
-               jalonnent pas pareil, et un même projet peut emprunter aux deux.
-               Les jalons s'AJOUTENT, ils ne remplacent pas. -->
-          <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">
-            <span style="font-size:11px;color:var(--color-text-muted);align-self:center">Modèles :</span>
-            ${(c.npJalonModeles || []).map(m2 => `<button ${x.A(m2.charger)} title="Ajoute les ${m2.n} jalons du modèle « ${esc(m2.axe)} », datés depuis l’échéance" style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">+ ${esc(m2.axe)} <span style="color:var(--color-text-muted)">(${m2.n})</span></button>`).join('')}
-          </div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            ${c.npJalons.map(jl => `
-              <div style="display:grid;grid-template-columns:1fr 150px 28px;gap:8px;align-items:center">
-                <input value="${esc(jl.nom)}" ${x.C(jl.setNom)} placeholder="Nom du jalon" style="${inp.replace('padding:10px 12px', 'padding:8px 12px')}">
-                <input type="date" value="${jl.cible}" ${x.C(jl.setCible)} style="${inp.replace('padding:10px 12px', 'padding:7px 10px').replace('font-size:13px', 'font-size:12.5px')}">
-                <button ${x.A(jl.del)} title="Supprimer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:14px;padding:0">✕</button>
-              </div>`).join('')}
-          </div>
-          <button ${x.A(c.npJalAdd)} style="border:none;background:transparent;cursor:pointer;color:var(--color-primary);font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:8px 0 0">+ Ajouter un jalon</button>
-        </div>
-        <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:14px">
-          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">Tâches &amp; responsables</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            ${c.npTaches.map(t => `
-              <div style="display:grid;grid-template-columns:1fr 190px 150px 28px;gap:8px;align-items:center">
-                <input value="${esc(t.nom)}" ${x.C(t.setNom)} placeholder="Nom de la tâche" style="${inp.replace('padding:10px 12px', 'padding:8px 12px')}">
-                <select ${x.C(t.setWho)} style="${inp.replace('padding:10px 12px', 'padding:8px 10px').replace('font-size:13px', 'font-size:12.5px')}">${opts(c.npOwners, t.who, o => o.val, o => esc(o.nom))}</select>
-                <input type="date" value="${t.due}" ${x.C(t.setDue)} style="${inp.replace('padding:10px 12px', 'padding:7px 10px').replace('font-size:13px', 'font-size:12.5px')}">
-                <button ${x.A(t.del)} title="Supprimer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:14px;padding:0">✕</button>
-              </div>`).join('')}
-          </div>
-          <button ${x.A(c.npTacheAdd)} style="border:none;background:transparent;cursor:pointer;color:var(--color-primary);font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:8px 0 0">+ Ajouter une tâche</button>
-        </div>
-      </div>` : ''}
-      ${c.npS4 ? `
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
-            <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Coût de développement — postes budgétés</div>
-            <button ${x.A(c.npLoadCouts)} title="Postes types de l'axe. Modifiables dans Paramètres." style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:500;cursor:pointer">Charger le template de l'axe</button>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            ${c.npCouts.map(ct => `
-              <div style="display:grid;grid-template-columns:1fr 150px 28px;gap:8px;align-items:center">
-                <input value="${esc(ct.poste)}" ${x.C(ct.setPoste)} placeholder="Poste (ex. Jours-homme consultants)" style="${inp.replace('padding:10px 12px', 'padding:8px 12px')}">
-                <input type="number" value="${ct.prevu}" ${x.C(ct.setPrevu)} min="0" step="500" style="${inp.replace('padding:10px 12px', 'padding:7px 10px').replace('font-size:13px', 'font-size:12.5px')}">
-                <button ${x.A(ct.del)} title="Supprimer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:14px;padding:0">✕</button>
-              </div>`).join('')}
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-            <button ${x.A(c.npCoutAdd)} style="border:none;background:transparent;cursor:pointer;color:var(--color-primary);font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:0">+ Ajouter un poste</button>
-            <div style="font-size:12.5px;color:var(--color-text-muted)">Budget total : <span style="font-weight:500;color:var(--color-text)">${c.npBudgetTot}</span></div>
-          </div>
-        </div>
-        <div style="background:var(--color-background-secondary);border-radius:10px;padding:16px 18px">
-          <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:10px">Récapitulatif</div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
-            ${c.npRecap.map(r => `
-              <div>
-                <div style="font-size:10.5px;color:var(--color-text-muted)">${r.k}</div>
-                <div style="font-size:12.5px;font-weight:500;margin-top:3px;line-height:1.35">${esc(r.v)}</div>
-              </div>`).join('')}
-          </div>
-        </div>
-      </div>` : ''}
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:24px;padding-top:18px;border-top:0.5px solid var(--color-border-tertiary)">
-      <button ${x.A(c.npClose)} style="border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 0;color:var(--color-text-muted)">Annuler</button>
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:12px;color:${c.npWarnCol}">${c.npWarn}</span>
-        ${c.npCanPrev ? `<button ${x.A(c.npPrev)} style="border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:8px;color:var(--color-text)">Précédent</button>` : ''}
-        ${c.npCanNext ? `<button ${x.A(c.npNext)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:8px">Suivant</button>` : ''}
-        ${c.npS4 ? `<button ${x.A(c.npCreate)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 20px;border-radius:8px">Créer le projet</button>` : ''}
       </div>
     </div>
   </div>`;
