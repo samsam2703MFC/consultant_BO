@@ -83,6 +83,25 @@
                                             <?php endif; ?>
                                         </select>
                                     </div>
+                                    <?php
+                                    // [250] Wykorzystanie [%] : cena z karty za 1 kg / 1 l / 1 szt. do podglądu kosztu jednostki użytecznej.
+                                    $unitName = strtolower(trim((string) ($row['unit_name'] ?? '')));
+                                    $usableMult = in_array($unitName, ['g', 'ml'], true) ? 1000 : 1;
+                                    $usableUnit = $unitName === 'g' ? 'kg' : ($unitName === 'ml' ? 'l' : ($unitName ?: 'jedn.'));
+                                    $usablePrice = (float) ($row['price_per_unit'] ?? 0) * $usableMult;
+                                    ?>
+                                    <div class="row mt-3">
+                                        <label class="form-label" for="waste_perc">Wykorzystanie [%]</label>
+                                        <div class="input-group">
+                                            <input value="<?= htmlspecialchars((string) old_value('waste_perc', $row['waste_perc'] ?? 100)) ?>" type="number" min="1" max="100" step="1" inputmode="numeric"
+                                                   class="form-control text-end" id="waste_perc" name="waste_perc" data-usable
+                                                   <?= $usablePrice > 0 ? 'data-usable-price="' . round($usablePrice, 4) . '" data-usable-unit="' . htmlspecialchars($usableUnit) . '"' : '' ?>>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                        <div class="form-text">Część użyteczna po obróbce (obieranie, gniazda, pestki, ości) : 100 = bez odpadu ; jabłko 65 = 35 % odpadu.</div>
+                                        <div class="form-text" data-usable-out aria-live="polite"></div>
+                                        <div class="form-text text-muted">Na razie informacja : koszt receptur liczy cenę zakupu bez odpadu.</div>
+                                    </div>
 
                                 </div>
                                 <div class="col-1"></div>
@@ -219,6 +238,7 @@
         </section>
     </div>
 <?php $this->view("page_components/footer"); ?>
+<script src="<?= ROOT ?>/assets/js/material/usable.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>
 <script>
     document.getElementById('is_part_of_package').addEventListener('change', function () {
         document.getElementById('bdo-packaging-fields').style.display = this.checked ? '' : 'none';

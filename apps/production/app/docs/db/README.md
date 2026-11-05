@@ -1446,6 +1446,21 @@ Nombres toujours groupés (« 5 430 »), en-têtes de colonnes numériques à dr
 
 Tests : `tests/light_wizards_test.php`, `tests/task_week_test.php` (sections et titres courts).
 
+### Wykorzystanie surowca [%] — `raw_material.waste_perc` (sans migration)
+
+Colonne existante, de nouveau saisie sur la fiche matière (`/materials/{id}/edit`), à l'étape « Zakup » de l'assistant de
+création (`/materials/new`) et visible dans la liste (`/materials/all`, colonne « Wykorzyst. », filtre « Z odpadem » /
+« Do sprawdzenia (≤ 20 %) », lien direct `?usable=check`).
+
+- Sens : **part utilisable** après épluchage, trognons, noyaux, arêtes, en % du poids acheté. 100 = sans perte (valeur par
+  défaut et valeur d'un champ vide) ; jabłko 65 = 35 % de perte. Entier de 1 à 100 (`MaterialService::usableError`,
+  `usableValue`).
+- Aide sous le champ : perte = 100 − %, prix du kg (ou l, ou pièce) utilisable = prix d'achat ÷ (% ÷ 100).
+- Valeur douteuse : ≤ 20 % (`MaterialService::usableSuspicious`), signalée « sprawdź » dans la liste — souvent la perte
+  saisie à la place de la part utilisable (jogurt 1 %, skórka z cytryny 1 %, pomidory puszka 5 %).
+- **Pas encore dans le coût** : le coût des recettes reste Σ quantité × prix (le plus haut prix validé), sans la perte. À
+  brancher quand on sait si les recettes donnent le poids brut (avant épluchage) ou net, et après la revue des valeurs.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).
