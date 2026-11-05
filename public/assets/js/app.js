@@ -9787,8 +9787,19 @@ class App {
       const AUTRES = '#B9B2A8';
       const parSect = {};
       familles.forEach(f => { parSect[f.secteur] = (parSect[f.secteur] || 0) + f.v; });
-      const coulSect = {}; const pris = new Set(Object.keys(parSect).filter(s => FIXE[s] != null).map(s => FIXE[s])); const libres = PAL.map((c, i) => i).filter(i => !pris.has(i));
-      Object.keys(parSect).sort((a, b) => parSect[b] - parSect[a]).forEach(s => { if (FIXE[s] != null) { coulSect[s] = PAL[FIXE[s]]; } else if (libres.length) { coulSect[s] = PAL[libres.shift()]; } });
+      // Les couleurs se décident une fois pour les trois vues (05/11/2026) : les 7 secteurs qui pèsent le plus dans l'une
+      // d'elles (tout, comptoir ou B2B — en B2B, le Lunch du secteur « Bundle & Promotion » fait 35 % du chiffre) ont une
+      // teinte ; un secteur habituel garde la sienne, les autres prennent les teintes libres. Passer de Tout à B2B ne repeint rien.
+      const poids = {};
+      [p => p.v, p => (p.pro || {}).v || 0, p => Math.max(0, p.v - ((p.pro || {}).v || 0))].forEach(val => {
+        const m0 = {}; let t0 = 0;
+        tousBruts.forEach(p => { const v0 = val(p); if (v0 > 0) { const sc = secteurDe(p); m0[sc] = (m0[sc] || 0) + v0; t0 += v0; } });
+        Object.keys(m0).forEach(sc => { poids[sc] = Math.max(poids[sc] || 0, t0 > 0 ? m0[sc] / t0 : 0); });
+      });
+      const coulSect = {}; const top7 = Object.keys(poids).sort((a, b) => poids[b] - poids[a]).slice(0, PAL.length);
+      const pris = new Set(top7.filter(s => FIXE[s] != null).map(s => FIXE[s])); const libres = PAL.map((c, i) => i).filter(i => !pris.has(i));
+      top7.forEach(s => { if (FIXE[s] != null) { coulSect[s] = PAL[FIXE[s]]; } else if (libres.length) { coulSect[s] = PAL[libres.shift()]; } });
+      Object.keys(parSect).forEach(s => { if (!coulSect[s] && FIXE[s] != null && !Object.values(coulSect).includes(PAL[FIXE[s]])) { coulSect[s] = PAL[FIXE[s]]; } });
       const coulDe = s => coulSect[s] || AUTRES;
       // L'étiquette d'un bloc : le nom et la part s'ils tiennent (5,6 px par signe environ, jauge d'au moins 900 px), la part seule sinon, rien en dessous.
       const etiq = (nom, part) => { const px = part * 9, pc = fP0(part), np = nom + ' · ' + pc; return np.length * 5.6 + 16 <= px ? np : (pc.length * 5.6 + 14 <= px ? pc : ''); };
