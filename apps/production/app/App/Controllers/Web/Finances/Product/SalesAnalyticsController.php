@@ -14,38 +14,39 @@ class SalesAnalyticsController extends BaseController
     }
 
     /**
-     * GET /finances/sales-analytics
-     * Widok główny: tabela średniej sprzedaży produktów + wykres miesięczny.
+     * GET /finances/sales-analytics — [254] « czy sprzedajemy więcej niż rok temu ? » (makiety 32 + 34) :
+     * werdykt, przyciski działów (sprzedaż i marża), miesiące obok roku wcześniej, produkty w górę / w dół.
+     * Domyślnie « Ten rok » (do ostatniego zamkniętego miesiąca) ; section_id = strona jednego działu.
      */
     public function overview(): void
     {
         $request    = Request::createFromGlobals();
         $customerId = $this->customerId($request);
-        $defaults   = $this->salesAnalyticsService->getDefaultDateRange($customerId);
-        $dateFrom   = $request->query->get('date_from', $defaults['from']);
-        $dateTo     = $request->query->get('date_to',   $defaults['to']);
-
-        $sectionId    = $this->positiveInt($request, 'section_id');
-
-        $summary      = $this->salesAnalyticsService->getSummary($dateFrom, $dateTo, $customerId, $sectionId);
-        $monthlyChart = $this->salesAnalyticsService->getMonthlyChartData($dateFrom, $dateTo, $customerId, $sectionId);
-        $products     = $this->salesAnalyticsService->getAverageProductSales($dateFrom, $dateTo, $customerId, $sectionId);
+        $sectionId  = $this->positiveInt($request, 'section_id');
+        $presets    = $this->presets();
+        $default    = array_column($presets, null, 'key')['year'];
+        $dateFrom   = $this->month($request->query->get('date_from'), $default['from']);
+        $dateTo     = $this->month($request->query->get('date_to'), $default['to']);
+        if ($dateTo < $dateFrom) [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
 
         $data = [
-            'date_from'     => $dateFrom,
-            'date_to'       => $dateTo,
-            'customer_id'   => $customerId ?? 0,
-            'customers'     => $this->salesAnalyticsService->getFilterableCustomers(),
-            'section_id'    => $sectionId ?? 0,
-            'sections'      => $this->salesAnalyticsService->getSections(),
-            'by_section'    => $this->salesAnalyticsService->getSectionTotals($dateFrom, $dateTo, $customerId),
-            'summary'       => $summary,
-            'monthly_chart' => $monthlyChart,
-            'products'      => $products,
-            'presets'       => $this->presets(),
+            'date_from'   => $dateFrom,
+            'date_to'     => $dateTo,
+            'customer_id' => $customerId ?? 0,
+            'customers'   => $this->salesAnalyticsService->getFilterableCustomers(),
+            'section_id'  => $sectionId ?? 0,
+            'presets'     => $presets,
+            'page'        => $this->salesAnalyticsService->overview($dateFrom, $dateTo, $customerId, $sectionId),
+            'margin_low'  => SalesAnalyticsService::MARGIN_LOW,
         ];
 
         $this->view('finances/sales-analytics/overview', $data);
+    }
+
+    /** Miesiąc RRRR-MM z zapytania albo wartość domyślna. */
+    private function month(mixed $value, string $default): string
+    {
+        return is_string($value) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $value) ? $value : $default;
     }
 
     /**
@@ -61,10 +62,10 @@ class SalesAnalyticsController extends BaseController
         $quarterStart = date('Y', $now) . '-' . sprintf('%02d', (int) (floor(((int) date('n', $now) - 1) / 3) * 3 + 1));
         $year = date('Y', $now);
         return [
-            ['key' => 'month', 'label' => 'Ten miesiąc', 'from' => $month, 'to' => $month],
-            ['key' => 'quarter', 'label' => 'Ten kwartał', 'from' => $quarterStart, 'to' => $month],
-            ['key' => 'year', 'label' => 'Ten rok (do ost. zamkniętego mies.)', 'from' => $year . '-01', 'to' => $lastClosed >= $year . '-01' ? $lastClosed : $month],
-            ['key' => '12m', 'label' => 'Ostatnie 12 mies.', 'from' => date('Y-m', strtotime(date('Y-m-01', $now) . ' -12 months')), 'to' => $lastClosed],
+            ['key' => '12m', 'label' => 'Ostatnie 12 mies.', 'title' => 'ostatnie 12 zamkniętych miesięcy', 'from' => date('Y-m', strtotime(date('Y-m-01', $now) . ' -12 months')), 'to' => $lastClosed],
+            ['key' => 'year', 'label' => 'Ten rok', 'title' => 'od stycznia do ostatniego zamkniętego miesiąca', 'from' => $year . '-01', 'to' => $lastClosed >= $year . '-01' ? $lastClosed : $month],
+            ['key' => 'quarter', 'label' => 'Ten kwartał', 'title' => 'do dziś', 'from' => $quarterStart, 'to' => $month],
+            ['key' => 'month', 'label' => 'Ten miesiąc', 'title' => 'do dziś, obok tych samych dni rok temu', 'from' => $month, 'to' => $month],
         ];
     }
 

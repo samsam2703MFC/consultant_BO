@@ -140,11 +140,23 @@ class SalesAnalyticsRepository extends BaseRepository
         return $this->query('SELECT id, name FROM production_sections ORDER BY name') ?: [];
     }
 
-    /** Zakres RRRR-MM → dni sprzedaży w WdtSalesRepository. */
+    /** Zakres RRRR-MM (całe miesiące) albo RRRR-MM-DD (dokładne dni) → dni sprzedaży w WdtSalesRepository. */
     private function sales(string $dateFrom, string $dateTo, array $filters, array $groupBy = []): array
     {
-        [$from, $to] = WdtSalesRepository::monthBounds($dateFrom, $dateTo);
+        [$from, $to] = self::bounds($dateFrom, $dateTo);
         return $this->wdt->sales($from, $to, $filters, $groupBy);
+    }
+
+    /**
+     * [254] Granice zakresu : RRRR-MM = cały miesiąc, RRRR-MM-DD = ten dzień. Dni pozwalają porównać bieżący
+     * miesiąc do dziś z tymi samymi dniami rok wcześniej (a nie z całym miesiącem).
+     * @return array{0: string, 1: string}
+     */
+    public static function bounds(string $from, string $to): array
+    {
+        $first = strlen($from) === 7 ? $from . '-01' : $from;
+        $last = strlen($to) === 7 ? date('Y-m-t', strtotime($to . '-01')) : $to;
+        return [$first, $last];
     }
 
     /** Filtr klienta (i działu) każdej agregacji. */

@@ -137,6 +137,24 @@ try {
     near($sep['shared']['sections'][0]['staff_share'], 20, 'personel działu wspólnego w % sprzedaży firmy');
     near($sep['shared']['sections'][0]['people'], 1, 'osoby działu wspólnego');
 
+    // [254] Analiza sprzedaży : marże działów dla zakresu = te same liczby co Wynik grup ; przyciski działów i werdykt.
+    $range = $service->range('2026-09', '2026-09', $today);
+    near($range['groups'][1]['margin_pct'] ?? null, 38, 'range : marża Piekarni = Wynik grup');
+    near($range['groups'][1]['contribution'] ?? null, 1900, 'range : marża Piekarni w €');
+    expectProfit(!isset($range['groups'][2]) && $service->range('2026-12', '2026-12', $today)['groups'] === [], 'range : bez działu wspólnego, bez przyszłych miesięcy');
+    $sales = new App\Services\Finances\SalesAnalyticsService(new App\Repositories\Analysis\SalesAnalyticsRepository($pdo, new WdtSalesRepository($pdo)), $service);
+    $pageSep = $sales->overview('2026-09', '2026-09', null, null, $today);
+    near($pageSep['total']['value'], 5000, 'analiza : sprzedaż wrzesień');
+    expectProfit($pageSep['total']['change'] === null && $pageSep['sections']['count'] === 1, 'analiza : bez roku wcześniej, jeden dział');
+    $item = $pageSep['sections']['items'][0];
+    expectProfit($item['name'] === 'Piekarnia' && $item['margin_level'] === 'ok' && $item['rank_sales'] === 1, 'analiza : przycisk Piekarni (marża 38 % ≥ cel 30 %)');
+    near($item['margin_pct'], 38, 'analiza : marża w przycisku');
+    near($pageSep['sections']['company_margin'], 38, 'analiza : marża działów firmy');
+    $pageClient = $sales->overview('2026-09', '2026-09', 999999, null, $today);
+    expectProfit($pageClient['sections']['company_margin'] === null, 'analiza : filtr klienta — bez marży działów');
+    $pageSection = $sales->overview('2026-09', '2026-09', null, 1, $today);
+    expectProfit(($pageSection['selected']['name'] ?? '') === 'Piekarnia' && $pageSection['products'] !== [], 'analiza : wybrany dział z produktami');
+
     // --- Bieżący miesiąc : koszty października nie są wprowadzone → wrzesień, personel proporcjonalnie (19/31)
     $oct = $service->overview('month', $today);
     expectProfit($oct['period']['current'] === true && $oct['period']['end'] === '2026-10-31', 'bieżący miesiąc do 31.10');

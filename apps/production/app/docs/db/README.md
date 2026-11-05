@@ -1490,6 +1490,27 @@ perte 35 % → 18,46 zł le kg de recette.
   `n_margin_recalc_run`) : « Marże kategorii » montre l'effet par produit (colonne « Efekt na sztukę »). Le recalcul met aussi
   à jour les coûts enregistrés qui n'étaient plus à jour (comme le bouton « Przelicz wszystkie marże »).
 
+### Analiza sprzedaży : vend-on plus que l'an dernier, quelle section vend et gagne le plus — 254 (sans migration)
+
+Page `/finances/sales-analytics` refaite (maquettes 32 + 34). Aucune table nouvelle : ventes WDT (`WdtSalesRepository`, la
+même définition que partout), marges des sections calculées par `Dashboard\ProfitabilityService::range()` avec les règles
+de « Wynik grup ».
+
+- Période par défaut : « Ten rok » (janvier → dernier mois clos). Comparaison : les mêmes jours un an plus tôt ; le mois en
+  cours est compté jusqu'à aujourd'hui et comparé aux mêmes jours de l'an dernier, pas au mois entier
+  (`SalesAnalyticsService::bounds`, 29 février → 28 février).
+- Une phrase en haut (« Sprzedajemy więcej / mniej niż rok temu : ±x % »), puis un bouton par section : ventes, % vs l'an
+  dernier, marge de la section (ce qui reste après matières, équipe et médias, comme « Wynik grup »), étiquettes « Najwięcej
+  sprzedaje », « Najszybciej rośnie », « Najlepsza marża », « Traci ». Couleur de la marge : ≥ objectif de la section en vert,
+  de 10 % (`MARGIN_LOW`) à l'objectif en orange, en dessous en rouge.
+- Clic sur une section : la même page pour la section seule (verdict, marge et objectif, rang parmi les sections, graphique,
+  produits). Avec un client choisi, pas de marge (l'équipe ne se répartit pas par client).
+- Graphique : chaque mois à côté du même mois l'an dernier, un seul axe en €, à partir de zéro. Alerte si le dernier mois
+  clos est à −30 % ou plus (et ≥ 1 000 € l'an dernier) : « tous les WDT sont-ils émis ? ».
+- 5 produits en hausse et 5 en baisse (en €), tableau complet replié avec recherche ; un clic ouvre les ventes du produit
+  mois par mois.
+- Tests : `tests/sales_analytics_test.php` (règles), `tests/profitability_test.php` (marges = Wynik grup).
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

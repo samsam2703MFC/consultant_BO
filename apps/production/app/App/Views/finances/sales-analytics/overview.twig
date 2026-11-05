@@ -1,254 +1,270 @@
 {% extends "layouts/base.twig" %}
+{#
+  [254] Analiza sprzedaży (makiety 32 + 34) : jedno zdanie « lepiej czy gorzej niż rok temu », przyciski działów
+  (sprzedaż, zmiana, marża działu z Wyniku grup, odznaki), miesiące obok tych samych miesięcy rok wcześniej (jedna oś,
+  od zera), 5 produktów w górę i 5 w dół, tabela wszystkich produktów schowana pod przyciskiem.
+#}
 
-{% block title %}Analiza sprzedaży WDT{% endblock %}
+{% macro k(v, sign) %}{% apply spaceless %}
+    {% set s = sign ? (v >= 0 ? '+' : '−') : (v < 0 ? '−' : '') %}
+    {% if v|abs < 1000 %}{{ s }}{{ v|abs|number_format(0, ',', ' ') }} €{% else %}{{ s }}{{ (v|abs / 1000)|number_format(0, ',', ' ') }} tys. €{% endif %}
+{% endapply %}{% endmacro %}
+{% macro pct(p) %}{{ p is null ? '—' : (p >= 0 ? '+' : '−') ~ (p|abs)|number_format(0, ',', ' ') ~ ' %' }}{% endmacro %}
+{% macro mpct(p) %}{{ p is null ? '—' : (p < 0 ? '−' : '') ~ (p|abs)|number_format(0, ',', ' ') ~ ' %' }}{% endmacro %}
+
+{% block title %}Analiza sprzedaży{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ root }}/assets/css/sales-analytics.css">
+{% endblock %}
 
 {% block page_heading %}
     <div class="page-heading">
         <div class="page-title">
-            <div class="row">
-                <div class="col-12 col-md-6 order-md-1 order-last">
-                    <h3>Analiza sprzedaży WDT</h3>
-                    <p class="text-subtitle text-muted">Średnia sprzedaż produktów na podstawie dokumentów WDT</p>
-                </div>
-                <div class="col-12 col-md-6 order-md-2 order-first">
-                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="{{ root }}/dashboard">Dashboard</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Analiza sprzedaży WDT</li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
+            <h3>Analiza sprzedaży</h3>
+            <p class="text-subtitle text-muted">Czy sprzedajemy więcej niż rok temu — cała firma i każdy dział (dokumenty WDT)</p>
         </div>
     </div>
 {% endblock %}
 
 {% block content %}
-<section class="section">
+{% import _self as f %}
+{% set base = root ~ '/finances/sales-analytics' %}
+{% set clientQ = customer_id ? '&customer_id=' ~ customer_id : '' %}
+{% set periodQ = 'date_from=' ~ date_from ~ '&date_to=' ~ date_to %}
+<section class="section sa">
 
-    {# ── Filtry ─────────────────────────────────────────────────── #}
-    <div class="card">
-        <div class="card-body">
-            <div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Szybkie okresy">
-                {% for p in presets %}
-                    {% set active = date_from == p.from and date_to == p.to %}
-                    <a class="btn btn-sm {{ active ? 'btn-primary' : 'btn-outline-primary' }}"
-                       href="{{ root }}/finances/sales-analytics?date_from={{ p.from }}&date_to={{ p.to }}{{ customer_id ? '&customer_id=' ~ customer_id : '' }}{{ section_id ? '&section_id=' ~ section_id : '' }}"
-                       title="{{ p.from }} → {{ p.to }}">{{ p.label }}</a>
+    {# ── Okres i klient ───────────────────────────────────────────── #}
+    <div class="sa-bar">
+        {% set known = presets|filter(p => p.from == date_from and p.to == date_to)|length > 0 %}
+        {% for p in presets %}
+            {% set active = date_from == p.from and date_to == p.to %}
+            <a class="sa-chip{{ active ? ' on' : '' }}" href="{{ base }}?date_from={{ p.from }}&date_to={{ p.to }}{{ clientQ }}{{ section_id ? '&section_id=' ~ section_id : '' }}" title="{{ p.title }}">{{ p.label }}</a>
+        {% endfor %}
+        <details class="sa-other"{{ known ? '' : ' open' }}>
+            <summary class="sa-chip{{ known ? '' : ' on' }}"><i class="bi bi-calendar3 me-2"></i>Inny okres</summary>
+            <form method="get" action="{{ base }}" class="sa-other-form">
+                <input type="month" class="form-control" name="date_from" value="{{ date_from }}" aria-label="Miesiąc od">
+                <span class="text-muted">→</span>
+                <input type="month" class="form-control" name="date_to" value="{{ date_to }}" aria-label="Miesiąc do">
+                {% if customer_id %}<input type="hidden" name="customer_id" value="{{ customer_id }}">{% endif %}
+                {% if section_id %}<input type="hidden" name="section_id" value="{{ section_id }}">{% endif %}
+                <button class="sa-btn" type="submit">Pokaż</button>
+            </form>
+        </details>
+        <span class="sa-spacer"></span>
+        <form method="get" action="{{ base }}" class="d-flex align-items-center gap-2">
+            <input type="hidden" name="date_from" value="{{ date_from }}">
+            <input type="hidden" name="date_to" value="{{ date_to }}">
+            {% if section_id %}<input type="hidden" name="section_id" value="{{ section_id }}">{% endif %}
+            <label class="text-muted small" for="customerSelect">Klient</label>
+            <select class="form-select sa-select" id="customerSelect" name="customer_id" onchange="this.form.submit()">
+                <option value="0">Wszyscy klienci</option>
+                {% for c in customers %}
+                    <option value="{{ c.id }}"{{ customer_id == c.id ? ' selected' : '' }}>{{ c.company }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    {% if page.empty %}
+        <div class="sa-card sa-pad text-muted">Ten okres jeszcze się nie zaczął — wybierz inny.</div>
+    {% else %}
+    {% set t = page.total %}
+    {% set secs = page.sections %}
+    {% set sel = page.selected %}
+
+    {# ── Przyciski działów (makieta 32) ───────────────────────────── #}
+    {% if secs.items|length > 0 %}
+    <nav class="sa-secs" aria-label="Działy">
+        {% set allOn = not section_id %}
+        <a class="sa-sec{{ allOn ? ' on' : '' }}" href="{{ base }}?{{ periodQ }}{{ clientQ }}"{{ allOn ? ' aria-current="page"' : '' }}>
+            <h6>Cała firma</h6>
+            <div class="v">{{ f.k(secs.company_value) }}</div>
+            <div class="r"><span>vs rok temu</span>{% if secs.company_change is null %}<span class="sa-pill none">—</span>{% else %}<span class="sa-pill {{ secs.company_change >= 0 ? 'up' : 'down' }}">{{ f.pct(secs.company_change) }}</span>{% endif %}</div>
+            <div class="r"><span>Marża działów</span>{% if secs.company_margin is null %}<span class="text-muted">—</span>{% else %}<b class="sa-m-{{ secs.company_level }}"><span class="sa-dot"></span>{{ f.mpct(secs.company_margin) }}</b>{% endif %}</div>
+            <div class="sa-badges"></div>
+        </a>
+        {% for s in secs.items %}
+            {% set on = section_id == s.id %}
+            <a class="sa-sec{{ on ? ' on' : '' }}" href="{{ base }}?{{ periodQ }}{{ clientQ }}&section_id={{ s.id }}"{{ on ? ' aria-current="page"' : '' }}>
+                <h6>{{ s.name }}</h6>
+                <div class="v">{{ f.k(s.value) }}</div>
+                <div class="r"><span>vs rok temu</span>{% if s.change is null %}<span class="sa-pill new">nowy</span>{% else %}<span class="sa-pill {{ s.change >= 0 ? 'up' : 'down' }}">{{ f.pct(s.change) }}</span>{% endif %}</div>
+                <div class="r"><span>Marża</span>{% if s.margin_pct is null %}<span class="text-muted" title="Marża działu tylko dla wszystkich klientów (personel nie dzieli się na klientów)">—</span>{% else %}<b class="sa-m-{{ s.margin_level }}" title="Po samych surowcach : {{ f.mpct(s.gross_pct) }}"><span class="sa-dot"></span>{{ f.mpct(s.margin_pct) }}</b>{% endif %}</div>
+                <div class="sa-badges">
+                    {% if 'sales' in s.badges %}<span class="sa-badge sales"><i class="bi bi-trophy-fill"></i> Najwięcej sprzedaje</span>{% endif %}
+                    {% if 'growth' in s.badges %}<span class="sa-badge growth"><i class="bi bi-graph-up-arrow"></i> Najszybciej rośnie</span>{% endif %}
+                    {% if 'margin' in s.badges %}<span class="sa-badge margin"><i class="bi bi-cash-coin"></i> Najlepsza marża</span>{% endif %}
+                    {% if 'loss' in s.badges %}<span class="sa-badge loss"><i class="bi bi-exclamation-triangle-fill"></i> Traci</span>{% endif %}
+                </div>
+            </a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+
+    {# ── Werdykt ──────────────────────────────────────────────────── #}
+    {% set who = sel ? sel.name ~ ' sprzedaje' : (customer_id ? 'Ten klient kupuje' : 'Sprzedajemy') %}
+    {% set ch = t.change %}
+    <div class="sa-card sa-verdict">
+        <div class="ic{{ ch is null ? ' none' : (ch < 0 ? ' down' : '') }}"><i class="bi bi-{{ ch is null ? 'dash-lg' : (ch < 0 ? 'arrow-down-right' : 'arrow-up-right') }}"></i></div>
+        <div>
+            {% if ch is null %}
+                <h2>{{ t.value > 0 ? 'Rok wcześniej brak sprzedaży — nie ma z czym porównać' : 'Brak sprzedaży w tym okresie' }}</h2>
+            {% elseif ch|abs < 1 %}
+                <h2>{{ who }} tyle samo co rok temu : <span class="text-muted">{{ f.pct(ch) }}</span></h2>
+            {% else %}
+                <h2>{{ who }} {{ ch >= 0 ? 'więcej' : 'mniej' }} niż rok temu : <span class="{{ ch >= 0 ? 'up' : 'down' }}">{{ f.pct(ch) }}</span></h2>
+            {% endif %}
+            <p>{{ page.label|capitalize }} : <b>{{ t.value|eur }}</b> · ten sam okres rok wcześniej {{ t.prev|eur }} · czyli <b class="{{ t.diff >= 0 ? 'up' : 'down' }}">{{ f.k(t.diff, true) }}</b></p>
+            {% if sel and sel.margin_pct is not null %}
+                {% set m = sel.margin_pct %}
+                <p class="mt-1">
+                    {% if m >= sel.margin_target %}
+                        <b class="sa-m-ok"><i class="bi bi-check-circle-fill"></i> Zostaje {{ f.mpct(m) }} sprzedaży ({{ f.k(sel.margin_eur) }})</b> — cel {{ f.mpct(sel.margin_target) }} osiągnięty.
+                    {% elseif m >= 0 %}
+                        <b class="sa-m-{{ sel.margin_level }}">Zostaje {{ f.mpct(m) }} sprzedaży ({{ f.k(sel.margin_eur) }})</b> — cel {{ f.mpct(sel.margin_target) }}, brakuje {{ (sel.margin_target - m)|number_format(0, ',', ' ') }} pkt.
+                    {% else %}
+                        <b class="sa-m-bad"><i class="bi bi-exclamation-triangle-fill"></i> Dział traci : {{ f.mpct(m) }} sprzedaży ({{ f.k(sel.margin_eur) }})</b> — cel {{ f.mpct(sel.margin_target) }}.
+                    {% endif %}
+                    Po samych surowcach : {{ f.mpct(sel.gross_pct) }}.
+                </p>
+            {% endif %}
+        </div>
+        <div class="fig"><b>{{ f.k(t.value) }}</b><small>{{ page.label }}</small></div>
+    </div>
+
+    {# ── Wybrany dział : miejsce wśród działów (makieta 34) ───────── #}
+    {% if sel and sel.rank_sales is defined %}
+        <div class="sa-strip">
+            <i class="bi bi-bar-chart-steps text-primary"></i>
+            <span>Wśród {{ secs.count }} działów : <b>{{ sel.rank_sales }}. miejsce w sprzedaży</b>{% if sel.rank_margin %} · <b>{{ sel.rank_margin }}. miejsce w marży</b>{% endif %}{% if sel.fastest %} · <b>{{ f.pct(sel.change) }}</b> — najszybszy wzrost ze wszystkich działów{% endif %}</span>
+            <span class="sa-spacer"></span>
+            <a class="sa-btn" href="#products" data-open-products>Produkty działu ({{ page.products|length }})</a>
+            <a class="sa-btn" href="{{ root }}/dashboard/results">Wynik grupy w Rentowności</a>
+        </div>
+    {% endif %}
+
+    {# ── Miesiąc po miesiącu ─────────────────────────────────────── #}
+    {% set top = page.axis.top %}
+    <div class="sa-card sa-pad mb-3">
+        <div class="sa-h">
+            <h5>{{ sel ? sel.name ~ ' miesiąc' : 'Miesiąc' }} po miesiącu</h5>
+            <span>każdy miesiąc obok tego samego miesiąca rok wcześniej</span>
+            <div class="sa-legend"><span><i style="background: var(--at-primary)"></i>Teraz</span><span><i style="background: #d9d2ca"></i>Rok wcześniej</span>{% if page.bounds.partial %}<span><i style="background: var(--at-warning)"></i>Miesiąc w toku</span>{% endif %}</div>
+        </div>
+        <div class="sa-chart">
+            <div class="sa-axis">
+                {% for v in page.axis.ticks %}<span style="bottom: {{ (v / top * 100)|round(2) }}%">{{ v == 0 ? '0' : f.k(v) }}</span>{% endfor %}
+            </div>
+            <div class="sa-plot">
+                <div class="sa-grid">{% for v in page.axis.ticks %}<i style="bottom: {{ (v / top * 100)|round(2) }}%"></i>{% endfor %}</div>
+                <div class="sa-cols">
+                    {% for m in page.months %}
+                        <div class="sa-col" title="{{ m.label }} {{ m.year }} : {{ m.value|eur }} · rok wcześniej : {{ m.prev|eur }}{{ m.partial ? ' · miesiąc w toku (do dziś)' : '' }}">
+                            <div class="sa-bars">
+                                <i class="prev" style="height: {{ (m.prev / top * 100)|round(2) }}%"></i>
+                                <i class="cur{{ m.partial ? ' partial' : '' }}" style="height: {{ (m.value / top * 100)|round(2) }}%"></i>
+                            </div>
+                            <div class="m">{{ m.label }}<small>{{ loop.first or m.ym ends with '-01' ? m.year : '' }}</small></div>
+                            {% if m.change is null %}
+                                <div class="p text-muted">{{ m.value > 0 ? 'nowe' : '—' }}</div>
+                            {% else %}
+                                <div class="p {{ m.change >= 0 ? 'up' : 'down' }}">{{ f.pct(m.change) }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% if page.alert %}
+            {% set a = page.alert %}
+            <div class="sa-alert">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <div><b>{{ a.name|capitalize }} {{ a.year }} : {{ f.k(a.value) }} zamiast {{ f.k(a.prev) }} rok wcześniej ({{ f.pct(a.change) }}).</b> Czy wszystkie WDT z tego miesiąca są już wystawione ?</div>
+                <span class="sa-spacer"></span>
+                <a class="sa-btn" href="{{ root }}/shipments?type=wdt">Lista WDT</a>
+            </div>
+        {% endif %}
+    </div>
+
+    {# ── Co sprzedaje się lepiej / gorzej ─────────────────────────── #}
+    <div class="sa-two">
+        {% for side in ['up', 'down'] %}
+            {% set list = page.movers[side] %}
+            <div class="sa-card sa-pad">
+                <div class="sa-h">
+                    {% if side == 'up' %}
+                        <h5 class="up"><i class="bi bi-arrow-up-right"></i> Co sprzedaje się lepiej</h5><span>największe wzrosty w €</span>
+                    {% else %}
+                        <h5 class="down"><i class="bi bi-arrow-down-right"></i> Co sprzedaje się gorzej</h5><span>największe spadki w €</span>
+                    {% endif %}
+                </div>
+                {% for p in list %}
+                    <div class="sa-mover product-row" data-product-id="{{ p.product_id }}" data-product-name="{{ p.name }}" role="button" tabindex="0">
+                        <div class="n">{{ p.name }}{% if p.new %} <span class="sa-pill new">nowy</span>{% endif %}
+                            <small>{{ p.section }} · rok wcześniej {{ f.k(p.prev) }} → teraz {{ f.k(p.value) }}</small></div>
+                        <div class="sa-track"><i style="width: {{ p.bar|round(1) }}%; background: {{ side == 'up' ? 'var(--at-success)' : '#b3261e' }}"></i></div>
+                        <div class="num {{ side }} fw-bold">{{ f.k(p.diff, true) }}</div>
+                    </div>
+                {% else %}
+                    <div class="sa-empty">{{ side == 'up' ? 'Żaden produkt nie sprzedaje się lepiej niż rok temu.' : 'Żaden produkt nie sprzedaje się gorzej niż rok temu.' }}</div>
                 {% endfor %}
             </div>
-            <form method="get" action="{{ root }}/finances/sales-analytics" class="row g-3 align-items-end">
-                <div class="col-6 col-md-2">
-                    <label class="form-label" for="input_date_from">Miesiąc od</label>
-                    <input type="month" class="form-control" id="input_date_from" name="date_from" value="{{ date_from }}">
-                </div>
-                <div class="col-6 col-md-2">
-                    <label class="form-label" for="input_date_to">Miesiąc do</label>
-                    <input type="month" class="form-control" id="input_date_to" name="date_to" value="{{ date_to }}">
-                </div>
-                <div class="col-12 col-md-3">
-                    <label class="form-label" for="input_customer_id">Klient</label>
-                    <select class="form-select" id="input_customer_id" name="customer_id">
-                        <option value="">Wszyscy klienci</option>
-                        {% for customer in customers %}
-                            <option value="{{ customer.id }}" {% if customer_id == customer.id %}selected{% endif %}>{{ customer.company }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-12 col-md-3">
-                    <label class="form-label" for="input_section_id">Dział</label>
-                    <select class="form-select" id="input_section_id" name="section_id">
-                        <option value="">Wszystkie działy</option>
-                        {% for sec in sections %}
-                            <option value="{{ sec.id }}" {% if section_id == sec.id %}selected{% endif %}>{{ sec.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-12 col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-search"></i> Analizuj
-                    </button>
-                </div>
-            </form>
-        </div>
+        {% endfor %}
     </div>
 
-    {# ── KPI ────────────────────────────────────────────────────── #}
-    {% if summary %}
-    <div class="row g-3 mt-1">
-        <div class="col-6 col-xl-3">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <div class="text-muted small mb-1">Łączna wartość sprzedaży</div>
-                    <div class="fs-4 fw-bold text-success">
-                        {{ summary.total_value|number_format(2, ',', ' ') }} €
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-xl-3">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <div class="text-muted small mb-1">Dokumenty WDT</div>
-                    <div class="fs-4 fw-bold">{{ summary.total_documents }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-xl-3">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <div class="text-muted small mb-1">Unikalnych klientów</div>
-                    <div class="fs-4 fw-bold">{{ summary.total_customers }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-xl-3">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <div class="text-muted small mb-1">Łącznie kartonów</div>
-                    <div class="fs-4 fw-bold">{{ summary.total_cartons }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {# ── Wykres miesięczny ──────────────────────────────────────── #}
-    {% if monthly_chart.labels|length > 0 %}
-    <div class="card mt-3">
-        <div class="card-header">
-            <h5 class="card-title mb-0"><i class="bi bi-graph-up"></i> Przychód miesięczny</h5>
-        </div>
-        <div class="card-body">
-            <canvas id="monthlyRevenueChart" style="max-height:320px;"></canvas>
-        </div>
-    </div>
-    {% endif %}
-
-    {# ── Sprzedaż wg działów (dawna osobna strona) ──────────────── #}
-    {% if by_section %}
-    {% set q = 'date_from=' ~ date_from ~ '&date_to=' ~ date_to ~ (customer_id ? '&customer_id=' ~ customer_id : '') %}
-    <div class="card mt-3">
-        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 class="card-title mb-0"><i class="bi bi-diagram-3"></i> Sprzedaż wg działów</h5>
-            {% if section_id %}<a class="btn btn-sm btn-outline-secondary" href="{{ root }}/finances/sales-analytics?{{ q }}"><i class="bi bi-x-lg"></i> Wszystkie działy</a>{% endif %}
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-sm mb-0">
-                    <thead class="table-light"><tr><th>Dział</th><th class="text-end">Produkty</th><th class="text-end">Kartony</th><th class="text-end">Wartość</th><th style="width:30%">Udział w wartości</th></tr></thead>
-                    <tbody>
-                    {% for sec in by_section %}
-                        <tr class="{{ section_id and section_id == sec.section_id ? 'table-active' : '' }}">
-                            <td>{% if sec.section_id %}<a href="{{ root }}/finances/sales-analytics?{{ q }}&section_id={{ sec.section_id }}">{{ sec.section_name }}</a>{% else %}{{ sec.section_name }}{% endif %}</td>
-                            <td class="text-end">{{ sec.products }}</td>
-                            <td class="text-end">{{ sec.total_quantity|number_format(0, ',', ' ') }}</td>
-                            <td class="text-end fw-bold">{{ sec.total_value|number_format(2, ',', ' ') }} €</td>
-                            <td>{% if sec.share is not null %}<div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:6px"><div class="progress-bar" style="width: {{ sec.share }}%"></div></div><span class="small text-muted">{{ sec.share|number_format(1, ',', ' ') }} %</span></div>{% endif %}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {# ── Tabela produktów ───────────────────────────────────────── #}
-    <div class="card mt-3">
-        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 class="card-title mb-0"><i class="bi bi-table"></i> Średnia sprzedaż produktów (miesięcznie)</h5>
-            <span class="d-flex align-items-center gap-2">
-                <small class="text-muted d-none d-md-block">Kliknij wiersz produktu, aby zobaczyć trend sprzedażowy</small>
-                {% if customer_id %}
-                    {% set ex = 'date_from=' ~ date_from ~ '-01&date_to=' ~ (date_to ~ '-01')|date('Y-m-t') %}
-                    <a class="btn btn-sm btn-outline-danger" href="{{ root }}/ajax/clients/{{ customer_id }}/sales-summary/export/pdf?{{ ex }}"><i class="bi bi-file-earmark-pdf"></i> PDF klienta</a>
-                    <a class="btn btn-sm btn-outline-success" href="{{ root }}/ajax/clients/{{ customer_id }}/sales-summary/export/xls?{{ ex }}"><i class="bi bi-filetype-csv"></i> CSV</a>
-                {% endif %}
-            </span>
-        </div>
-        <div class="card-body pb-2 pt-3">
-            <div class="input-group input-group-sm" style="max-width:380px;">
+    {# ── Wszystkie produkty (pod przyciskiem) ─────────────────────── #}
+    <details class="sa-card sa-all mb-3" id="products">
+        <summary><i class="bi bi-list-ul"></i> {{ sel ? 'Produkty działu ' ~ sel.name : 'Wszystkie produkty' }} ({{ page.products|length }}) — tabela z wyszukiwarką</summary>
+        <div class="sa-pad pb-2">
+            <div class="input-group mb-2" style="max-width: 420px">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" id="productSearch" class="form-control" placeholder="Szukaj produktu po nazwie…" autocomplete="off" aria-label="Szukaj produktu po nazwie">
-                <button type="button" class="btn btn-outline-secondary" id="productSearchClear" title="Wyczyść">
-                    <i class="bi bi-x-lg"></i>
-                </button>
+                <input type="text" class="form-control" id="productSearch" placeholder="Szukaj produktu…" autocomplete="off">
             </div>
-            <div id="productSearchNoResults" class="text-muted small mt-2 d-none">Brak wyników dla podanej frazy.</div>
+            <div class="small text-muted mb-2">Kliknij produkt : jego sprzedaż miesiąc po miesiącu.</div>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-sm mb-0" id="productsTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th data-sort="product_name" style="cursor:pointer;" class="sort-col">Produkt <i class="bi bi-arrow-down-up text-muted small"></i></th>
-                            <th data-sort="category_name" style="cursor:pointer;" class="sort-col">Kategoria <i class="bi bi-arrow-down-up text-muted small"></i></th>
-                            <th data-sort="section_name" style="cursor:pointer;" class="sort-col">Dział <i class="bi bi-arrow-down-up text-muted small"></i></th>
-                            <th data-sort="avg_quantity" style="cursor:pointer;" class="sort-col text-end">Śr. kartony/mies. <i class="bi bi-arrow-down-up text-muted small"></i></th>
-                            <th data-sort="avg_value" style="cursor:pointer;" class="sort-col text-end">Śr. wartość/mies. <i class="bi bi-arrow-down-up text-muted small"></i></th>
-                            <th data-sort="total_quantity" style="cursor:pointer;" class="sort-col text-end">Łącznie kartony <i class="bi bi-arrow-down-up text-muted small"></i></th>
-                            <th data-sort="total_value" style="cursor:pointer;" class="sort-col text-end">Łącznie wartość <i class="bi bi-arrow-down-up text-muted small"></i></th>
-                            <th data-sort="months_count" style="cursor:pointer;" class="sort-col text-end">Miesięcy <i class="bi bi-arrow-down-up text-muted small"></i></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for i, product in products %}
-                        <tr class="product-row" style="cursor:pointer;"
-                            data-product-id="{{ product.product_id }}"
-                            data-product-name="{{ product.product_name }}"
-                            data-sort-product_name="{{ product.product_name|lower }}"
-                            data-sort-category_name="{{ product.category_name|lower }}"
-                            data-sort-section_name="{{ product.section_name|lower }}"
-                            data-sort-avg_quantity="{{ product.avg_quantity }}"
-                            data-sort-avg_value="{{ product.avg_value }}"
-                            data-sort-total_quantity="{{ product.total_quantity }}"
-                            data-sort-total_value="{{ product.total_value }}"
-                            data-sort-months_count="{{ product.months_count }}"
-                            title="Kliknij, aby zobaczyć trend sprzedaży">
-                            <td>{{ i + 1 }}</td>
-                            <td>
-                                <strong>{{ product.product_name }}</strong>
-                            </td>
-                            <td><span class="badge bg-light text-dark">{{ product.category_name }}</span></td>
-                            <td class="small text-muted">{{ product.section_name }}</td>
-                            <td class="text-end">{{ product.avg_quantity|number_format(1, ',', ' ') }}</td>
-                            <td class="text-end fw-bold">{{ product.avg_value|number_format(2, ',', ' ') }} €</td>
-                            <td class="text-end text-muted">{{ product.total_quantity }}</td>
-                            <td class="text-end text-muted">{{ product.total_value|number_format(2, ',', ' ') }} €</td>
-                            <td class="text-end text-muted">{{ product.months_count }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
-                                Brak danych dla wybranego zakresu dat.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    {% if products %}
-                    <tfoot class="table-light">
-                        <tr>
-                            <th colspan="6">Razem ({{ products|length }} prod.)</th>
-                            <th class="text-end">{{ products|reduce((c, x) => c + x.total_quantity, 0)|number_format(0, ',', ' ') }}</th>
-                            <th class="text-end">{{ products|reduce((c, x) => c + x.total_value, 0)|number_format(2, ',', ' ') }} €</th>
-                            <th></th>
-                        </tr>
-                    </tfoot>
-                    {% endif %}
-                </table>
-            </div>
+        <div class="table-responsive">
+            <table class="sa-table" id="productsTable">
+                <thead><tr>
+                    <th class="num">#</th><th>Produkt</th><th style="width: 22%">Udział</th>
+                    <th class="num">Teraz</th><th class="num">Rok wcześniej</th><th class="num">Zmiana</th><th class="num">Kartony</th>
+                </tr></thead>
+                <tbody>
+                {% for p in page.products %}
+                    <tr class="product-row" data-product-id="{{ p.product_id }}" data-product-name="{{ p.name }}">
+                        <td class="num text-muted">{{ loop.index }}</td>
+                        <td><span class="fw-semibold">{{ p.name }}</span><small>{{ p.section }}{{ p.category ? ' · ' ~ p.category : '' }}</small></td>
+                        <td><div class="sa-track"><i style="width: {{ p.share|round(1) }}%; background: var(--at-primary)"></i></div></td>
+                        <td class="num fw-bold">{{ p.value|eur }}</td>
+                        <td class="num text-muted">{{ p.prev > 0 ? p.prev|eur : '—' }}</td>
+                        <td class="num">{% if p.new %}<span class="sa-pill new">nowy</span>{% else %}<span class="sa-pill {{ p.change >= 0 ? 'up' : 'down' }}">{{ f.pct(p.change) }}</span>{% endif %}</td>
+                        <td class="num">{{ p.cartons|number_format(0, ',', ' ') }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div id="productSearchNoResults" class="text-center text-muted py-3 d-none">Brak produktów dla tej frazy.</div>
         </div>
-    </div>
+    </details>
 
-    {# ── Modal z trendem ────────────────────────────────────────── #}
+    <div class="sa-note">
+        <b>Marża</b> = co zostaje działowi ze sprzedaży po surowcach, zespole i mediach (jak w Rentowność › Wynik grup), w tym samym okresie.
+        <span class="sa-m-ok"><span class="sa-dot"></span>≥ cel</span> ·
+        <span class="sa-m-mid"><span class="sa-dot"></span>{{ margin_low|number_format(0) }} % – cel</span> ·
+        <span class="sa-m-bad"><span class="sa-dot"></span>poniżej {{ margin_low|number_format(0) }} %</span>.
+        Bieżący miesiąc liczony do dziś i porównany z tymi samymi dniami rok wcześniej.
+        {% for w in secs.warnings %}<div class="mt-1"><i class="bi bi-info-circle"></i> {{ w }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Okno : sprzedaż produktu miesiąc po miesiącu ─────────────── #}
     <div class="modal fade" id="trendModal" tabindex="-1" aria-labelledby="trendModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="trendModalLabel">Trend sprzedażowy</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="trendModalLabel">Sprzedaż produktu</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
                 </div>
                 <div class="modal-body">
                     <div id="trendModalSpinner" class="text-center py-5 d-none">
@@ -256,94 +272,41 @@
                         <div class="mt-2 text-muted">Ładowanie danych…</div>
                     </div>
                     <div id="trendModalContent">
-                        <div class="row g-3 mb-3" id="trendKpiRow">
-                        </div>
-                        <canvas id="trendChart" style="max-height:380px;"></canvas>
+                        <div class="d-flex flex-wrap gap-4 mb-3" id="trendKpiRow"></div>
+                        <canvas id="trendChart" style="max-height: 380px;"></canvas>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
 </section>
 
-{# ── Chart.js ───────────────────────────────────────────────────── #}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
-const ROOT        = "{{ root }}";
-const DATE_FROM   = "{{ date_from }}";
-const DATE_TO     = "{{ date_to }}";
-const CUSTOMER_ID  = {{ customer_id|json_encode|raw }};
-const CURRENCY_SYMBOL = "€";
-
-// ── Wykres miesięczny ──────────────────────────────────────────────
-{% if monthly_chart.labels|length > 0 %}
-(function () {
-    const ctx = document.getElementById('monthlyRevenueChart');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: {{ monthly_chart.labels|json_encode|raw }},
-            datasets: [
-                {
-                    label: 'Wartość (' + CURRENCY_SYMBOL + ')',
-                    data: {{ monthly_chart.values|json_encode|raw }},
-                    backgroundColor: 'rgba(52, 152, 219, 0.7)',
-                    borderColor: 'rgba(52, 152, 219, 1)',
-                    borderWidth: 1,
-                    yAxisID: 'y',
-                    order: 2
-                },
-                {
-                    label: 'Kartony',
-                    data: {{ monthly_chart.cartons|json_encode|raw }},
-                    type: 'line',
-                    borderColor: 'rgba(231, 76, 60, 0.9)',
-                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                    pointBackgroundColor: 'rgba(231, 76, 60, 1)',
-                    tension: 0.3,
-                    yAxisID: 'y1',
-                    order: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { position: 'top' } },
-            scales: {
-                y:  { position: 'left',  title: { display: true, text: 'Wartość (' + CURRENCY_SYMBOL + ')' } },
-                y1: { position: 'right', title: { display: true, text: 'Kartony' }, grid: { drawOnChartArea: false } }
-            }
-        }
-    });
-})();
-{% endif %}
-
-// ── Trend produktu
+const ROOT = "{{ root }}";
+const DATE_FROM = "{{ date_from }}";
+const DATE_TO = "{{ date_to }}";
+const CUSTOMER_ID = {{ customer_id|json_encode|raw }};
 let trendChartInstance = null;
 
+// Produkt → okno ze sprzedażą miesiąc po miesiącu (jedna oś : €).
 document.querySelectorAll('.product-row').forEach(function (row) {
-    row.addEventListener('click', function () {
-        const productId   = row.dataset.productId;
-        const productName = row.dataset.productName;
-        openTrendModal(productId, productName);
-    });
+    const open = function () { openTrendModal(row.dataset.productId, row.dataset.productName); };
+    row.addEventListener('click', open);
+    row.addEventListener('keydown', function (e) { if (e.key === 'Enter') open(); });
 });
 
 function openTrendModal(productId, productName) {
-    document.getElementById('trendModalLabel').textContent = 'Trend sprzedażowy: ' + productName;
+    document.getElementById('trendModalLabel').textContent = productName + ' — sprzedaż miesiąc po miesiącu';
     document.getElementById('trendModalSpinner').classList.remove('d-none');
     document.getElementById('trendModalContent').classList.add('d-none');
-
-    const modal = new bootstrap.Modal(document.getElementById('trendModal'));
-    modal.show();
+    new bootstrap.Modal(document.getElementById('trendModal')).show();
 
     const url = ROOT + '/ajax/finances/sales-analytics/product-trend'
-        + '?product_id=' + productId
+        + '?product_id=' + encodeURIComponent(productId)
         + '&date_from=' + DATE_FROM
-        + '&date_to='   + DATE_TO
+        + '&date_to=' + DATE_TO
         + '&customer_id=' + encodeURIComponent(CUSTOMER_ID);
-
     fetch(url)
         .then(function (r) { return r.json(); })
         .then(function (res) {
@@ -352,181 +315,51 @@ function openTrendModal(productId, productName) {
         })
         .catch(function (err) {
             document.getElementById('trendModalSpinner').classList.add('d-none');
-            document.getElementById('trendModalContent').innerHTML =
-                '<div class="alert alert-danger">Błąd: ' + err.message + '</div>';
-            document.getElementById('trendModalContent').classList.remove('d-none');
+            const box = document.getElementById('trendModalContent');
+            box.textContent = 'Błąd : ' + err.message;
+            box.classList.remove('d-none');
         });
 }
 
 function renderTrend(data) {
     document.getElementById('trendModalSpinner').classList.add('d-none');
     document.getElementById('trendModalContent').classList.remove('d-none');
-
-    // KPI
-    const totalQty   = data.quantities.reduce(function (a, b) { return a + b; }, 0);
-    const totalVal   = data.values.reduce(function (a, b) { return a + b; }, 0);
-    const avgQty     = data.quantities.length ? (totalQty / data.quantities.length).toFixed(1) : 0;
-    const avgVal     = data.values.length     ? (totalVal / data.values.length).toFixed(2) : 0;
-
-    document.getElementById('trendKpiRow').innerHTML = [
-        kpiCard('Łącznie kartonów',    totalQty.toLocaleString(),                    'text-primary'),
-        kpiCard('Łącznie wartość',     totalVal.toLocaleString('pl-PL', {minimumFractionDigits: 2}) + ' ' + CURRENCY_SYMBOL, 'text-success'),
-        kpiCard('Śr. kartony/mies.',   avgQty,                                        'text-info'),
-        kpiCard('Śr. wartość/mies.',   parseFloat(avgVal).toLocaleString('pl-PL', {minimumFractionDigits: 2}) + ' ' + CURRENCY_SYMBOL, 'text-warning'),
-    ].join('');
-
-    // Wykres
-    const ctx = document.getElementById('trendChart');
-    if (trendChartInstance) { trendChartInstance.destroy(); }
-
-    trendChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.labels,
-            datasets: [
-                {
-                    label: 'Kartony',
-                    data: data.quantities,
-                    borderColor: 'rgba(52, 152, 219, 1)',
-                    backgroundColor: 'rgba(52, 152, 219, 0.15)',
-                    tension: 0.3,
-                    pointRadius: 5,
-                    fill: true,
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Wartość (' + CURRENCY_SYMBOL + ')',
-                    data: data.values,
-                    borderColor: 'rgba(39, 174, 96, 1)',
-                    backgroundColor: 'rgba(39, 174, 96, 0.1)',
-                    tension: 0.3,
-                    pointRadius: 5,
-                    fill: false,
-                    yAxisID: 'y1'
-                }
-            ]
-        },
+    const eur = function (v) { return Math.round(v).toLocaleString('pl-PL') + ' €'; };
+    const total = data.values.reduce(function (a, b) { return a + b; }, 0);
+    const cartons = data.quantities.reduce(function (a, b) { return a + b; }, 0);
+    const kpi = function (label, value) { return '<div><div class="text-muted small">' + label + '</div><div class="fs-5 fw-bold">' + value + '</div></div>'; };
+    document.getElementById('trendKpiRow').innerHTML = kpi('Razem', eur(total))
+        + kpi('Średnio na miesiąc', eur(data.values.length ? total / data.values.length : 0))
+        + kpi('Kartony', cartons.toLocaleString('pl-PL'));
+    if (trendChartInstance) trendChartInstance.destroy();
+    trendChartInstance = new Chart(document.getElementById('trendChart'), {
+        type: 'bar',
+        data: { labels: data.labels, datasets: [{ label: 'Sprzedaż (€)', data: data.values, backgroundColor: '#8D1D2C', borderRadius: 4 }] },
         options: {
             responsive: true,
-            interaction: { mode: 'index', intersect: false },
-            plugins: { legend: { position: 'top' } },
-            scales: {
-                y:  { position: 'left',  title: { display: true, text: 'Kartony' } },
-                y1: { position: 'right', title: { display: true, text: 'Wartość (' + CURRENCY_SYMBOL + ')' }, grid: { drawOnChartArea: false } }
-            }
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return eur(c.parsed.y); } } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return eur(v); } } } }
         }
     });
 }
 
-function kpiCard(label, value, colorClass) {
-    return '<div class="col-6 col-md-3">'
-        + '<div class="card h-100 text-center">'
-        + '<div class="card-body py-3">'
-        + '<div class="text-muted small">' + label + '</div>'
-        + '<div class="fs-5 fw-bold ' + colorClass + '">' + value + '</div>'
-        + '</div></div></div>';
-}
-
-// ── Wyszukiwarka produktów ─────────────────────────────────────────
+// Wszystkie produkty : wyszukiwarka ; « Produkty działu » otwiera tabelę.
 (function () {
-    const searchInput    = document.getElementById('productSearch');
-    const clearBtn       = document.getElementById('productSearchClear');
-    const noResults      = document.getElementById('productSearchNoResults');
-
-    if (!searchInput) return;
-
-    function filterRows() {
-        const phrase = searchInput.value.trim().toLowerCase();
-        const rows   = document.querySelectorAll('#productsTable tbody .product-row');
-        let visibleCount = 0;
-
-        rows.forEach(function (row) {
-            const name = (row.dataset.productName || '').toLowerCase();
-            if (!phrase || name.includes(phrase)) {
-                row.style.display = '';
-                visibleCount++;
-            } else {
-                row.style.display = 'none';
-            }
+    const input = document.getElementById('productSearch');
+    const none = document.getElementById('productSearchNoResults');
+    if (input) input.addEventListener('input', function () {
+        const phrase = input.value.trim().toLowerCase();
+        let visible = 0;
+        document.querySelectorAll('#productsTable tbody .product-row').forEach(function (row) {
+            const show = !phrase || (row.dataset.productName || '').toLowerCase().includes(phrase);
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
         });
-
-        noResults.classList.toggle('d-none', visibleCount > 0 || !phrase);
-        clearBtn.style.display = phrase ? '' : 'none';
-    }
-
-    searchInput.addEventListener('input', filterRows);
-
-    clearBtn.addEventListener('click', function () {
-        searchInput.value = '';
-        filterRows();
-        searchInput.focus();
+        none.classList.toggle('d-none', visible > 0 || !phrase);
     });
-
-    // inicjalne ukrycie przycisku clear
-    clearBtn.style.display = 'none';
-})();
-
-// ── Sortowanie kolumn ──────────────────────────────────────────────
-(function () {
-    const table   = document.getElementById('productsTable');
-    if (!table) return;
-    const tbody   = table.querySelector('tbody');
-    let currentCol = null;
-    let currentDir = 1; // 1 = ASC, -1 = DESC
-
-    table.querySelectorAll('th.sort-col').forEach(function (th) {
-        th.addEventListener('click', function () {
-            const col = th.dataset.sort;
-
-            if (currentCol === col) {
-                currentDir *= -1;
-            } else {
-                currentCol = col;
-                currentDir = 1;
-            }
-
-            // Aktualizuj ikonki nagłówków
-            table.querySelectorAll('th.sort-col').forEach(function (h) {
-                const icon = h.querySelector('i');
-                if (h.dataset.sort === col) {
-                    icon.className = currentDir === 1
-                        ? 'bi bi-arrow-up text-primary small'
-                        : 'bi bi-arrow-down text-primary small';
-                } else {
-                    icon.className = 'bi bi-arrow-down-up text-muted small';
-                }
-            });
-
-            // Pobierz tylko widoczne wiersze (po filtrowaniu wyszukiwarką)
-            const rows = Array.from(tbody.querySelectorAll('tr.product-row'));
-
-            const isNumeric = ['avg_quantity', 'avg_value', 'total_quantity', 'total_value', 'months_count'].includes(col);
-
-            rows.sort(function (a, b) {
-                const aVal = a.getAttribute('data-sort-' + col);
-                const bVal = b.getAttribute('data-sort-' + col);
-
-                if (isNumeric) {
-                    return (parseFloat(aVal) - parseFloat(bVal)) * currentDir;
-                }
-                return aVal.localeCompare(bVal, 'pl') * currentDir;
-            });
-
-            rows.forEach(function (row) { tbody.appendChild(row); });
-
-            // Przenumeruj wiersze (#)
-            let counter = 1;
-            rows.forEach(function (row) {
-                if (row.style.display !== 'none') {
-                    row.cells[0].textContent = counter++;
-                }
-            });
-        });
+    document.querySelectorAll('[data-open-products]').forEach(function (a) {
+        a.addEventListener('click', function () { document.getElementById('products').open = true; });
     });
 })();
 </script>
 {% endblock %}
-
-
-
-

@@ -89,6 +89,32 @@ final class ProfitabilityService
     }
 
     /**
+     * [254] Marże działów dla dowolnego zakresu miesięcy RRRR-MM (Analiza sprzedaży : przyciski działów) — te same
+     * reguły co Wynik grup : miesiące zamknięte w całości, bieżący miesiąc proporcjonalnie do dziś, przyszłe pominięte.
+     * @return array{groups: array<int, array>, totals: ?array, warnings: list<string>}
+     */
+    public function range(string $ymFrom, string $ymTo, ?DateTimeImmutable $today = null): array
+    {
+        $today ??= new DateTimeImmutable('today');
+        $current = $today->format('Y-m');
+        $months = [];
+        for ($d = new DateTimeImmutable($ymFrom . '-01'); $d->format('Y-m') <= min($ymTo, $current); $d = $d->modify('+1 month')) {
+            $ym = $d->format('Y-m');
+            $months[$ym] = $ym === $current ? (int) $today->format('j') / (int) $today->format('t') : 1.0;
+        }
+        if (!$months) return ['groups' => [], 'totals' => null, 'warnings' => []];
+        $isCurrent = isset($months[$current]);
+        $first = array_key_first($months) . '-01';
+        $last = $isCurrent ? $today->format('Y-m-d') : date('Y-m-t', strtotime(array_key_last($months) . '-01'));
+        $spec = ['key' => 'range', 'months' => $months, 'from' => $first, 'to' => $last, 'end' => $last, 'current' => $isCurrent,
+            'label' => self::monthLabel(array_key_first($months)) . ' – ' . self::monthLabel(array_key_last($months)),
+            'elapsed' => array_sum($months) / count($months)];
+        $rate = $this->repo->eurRate();
+        $data = $this->compute($spec, $this->sales($first, $last, $rate), [], $rate);
+        return ['groups' => array_column($data['groups'], null, 'id'), 'totals' => $data['totals'], 'warnings' => $data['warnings']];
+    }
+
+    /**
      * Zamówienia otwarte doliczane do bieżącego okresu : od 1. dnia bieżącego miesiąca — zamówienie spóźnione
      * (data wysyłki minęła, bez WDT) nadal zostanie sprzedane, więc liczy się w prognozie.
      */
