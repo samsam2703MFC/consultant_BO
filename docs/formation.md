@@ -17,15 +17,21 @@ documentées dans le module (écran *Routes API*) et dans `docs/formation-routes
 
 ## Design
 
-Celui du module Marketing, **à l'identique** : `public/formation/formation.css` commence par une
-copie conforme des règles de `tools/assistant-src/src/styles/global.css` (le front du module
-marketing) — jetons de couleur, barre latérale de 246 px (logo, « Module … », retour, enseigne,
-groupes), barre supérieure (sur-titre + titre de 26 px), cartes, tableaux, filtres, cartes de
-campagne, étapes de l'assistant, cartes de choix. Seuls changent les chemins des polices : la page
-vit sous `/formation/`, les fontes sont celles du cockpit (`../assets/ds/fonts/`, mêmes fichiers
-Gotham que la marque, mappés comme le marketing et la tablette : 400 → `Gotham_Regular.otf`,
-500 → `Gotham_Medium.otf`). La partie 2 du fichier ajoute les pièces propres au module (arbre des
-postes, verbes HTTP, lecture d'une procédure, mode tablette) avec les mêmes jetons.
+Le design system « L'Atelier By » du module Marketing (référence commune du 06/11/2026), dans une
+feuille unique : `public/formation/ds.css`, chargée en premier par `index.html`, `sop/tablette.html` et
+`parcours/index.html`. Elle porte les deux `@font-face` (400 = `fonts/Gotham_Medium.otf`, le trait du
+texte ; 700 = `fonts/Gotham_Regular.otf`, réservé aux accents : l'entrée active du rail, la valeur d'un
+chiffre clé), les jetons de couleur, les composants (boutons `.btn`, champs, filtres, sélecteur segmenté
+`.seg`, onglets `.page-tabs`, tableaux, pastilles et badges en rectangles de 6 px, KPI, interrupteur,
+fenêtre de confirmation), le rail de 246 px, la barre supérieure, le mode incorporé et l'impression (A4,
+couleurs exactes, en-têtes de tableau répétés, « Page n / N »). `formation.css`, `sop/sop.css` et
+`sop/tablette.css` n'ajoutent que les pièces du module, sur ces jetons : texte en 400, aucune ombre,
+aucune pilule.
+
+**Incorporé dans le Marketing** (`/formation/?embed=1#/…` dans un cadre) : `formation.js` pose la classe
+`is-embedded` (sans rail ni menu, la barre supérieure reste) ; la navigation se fait par l'ancre, la
+chaîne `?embed=1` reste donc dans l'adresse, et les liens vers une autre page du module la reçoivent
+(`garderEmbed`). Pas de lien « Retour à l'ERP » : aucune adresse dans la configuration du module.
 
 Comme le reste du cockpit : HTML/CSS/JS sans dépendance ni compilation (`index.html`,
 `formation.js`, `formation.css`, `catalogue.json`).
@@ -136,9 +142,11 @@ procédure ni de ressource** reliée.
   locataire-gérant, multi-boutique) ; **dans la marque** (le franchiseur, 31/10/2026) — direction opérationnelle,
   stratégie, consultants, contrôle qualité, client mystère… (famille `marque` : les postes hors matrice v25). Rangement côté serveur
   (`pcFamillePoste`, sur les noms du panel), rendu par `GET /formation/v25` (`familles`).
-- **Police** : `fonts/Gotham_Regular.otf` est en réalité Gotham *Black* (nom interne « Gotham-Black ») ; tout le texte
-  sortait en noir épais. Famille « Gotham Lisible » : Light pour le texte, Medium pour les libellés, Black pour les titres.
-- **Pas de badges** : étiquettes en rectangles aux coins arrondis ; titres de carte en clair (plus de capitales grises).
+- **Police** (remplacé le 06/11/2026 par le design system, voir « Design ») : `fonts/Gotham_Regular.otf` est en
+  réalité Gotham *Black* (nom interne « Gotham-Black ») ; la famille « Gotham Lisible » (Light / Medium / Black) a été
+  retirée : le texte est en `Gotham_Medium.otf` (400), le fichier « Regular » ne sert qu'aux accents (700).
+- **Pas de badges** : étiquettes en rectangles aux coins arrondis (toujours vrai : 6 px) ; les titres de carte, eux,
+  reviennent en petites capitales grises (design system, 06/11/2026).
 - **Tableau de bord** : six chiffres cliquables, *À compléter* (compétences sans formation, sans procédure, niveaux vides,
   postes à créer), *Parcours en cours*, *Les postes* par famille avec la part des compétences couvertes par une formation ;
   le détail technique des appels au panel est replié.
