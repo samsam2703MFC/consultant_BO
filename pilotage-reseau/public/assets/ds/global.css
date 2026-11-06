@@ -186,8 +186,7 @@ input, textarea, select, button, optgroup, option { font-family: inherit; }
 /* Pas de gras (§4.3) : les titres, en-têtes de tableau et mots « mis en
    valeur » sont en trait normal ; la hiérarchie vient de la taille, de la
    couleur et de l'espace. Un accent de la liste fermée pose 700 lui-même. */
-h1, h2, h3, h4, h5, h6, th, b, strong { font-weight: inherit; }
-h1, h2, h3, h4, h5, h6 { font-weight: 400; }
+h1, h2, h3, h4, h5, h6, th, b, strong { font-weight: 400; }
 
 /* Focus clavier visible partout — contour bordeaux 2 px (§7.4, §7.5, §12). */
 a:focus-visible, button:focus-visible, [role="button"]:focus-visible, summary:focus-visible {

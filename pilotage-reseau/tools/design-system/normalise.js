@@ -172,6 +172,11 @@ function normalisePhp(src) {
   return s;
 }
 
+function estCercle(win) {
+  const w = /(?:^|[;\s"{])width\s*:\s*(\d+(?:\.\d+)?)px/.exec(win), h = /(?:^|[;\s"{])height\s*:\s*(\d+(?:\.\d+)?)px/.exec(win);
+  return !!(w && h && w[1] === h[1]);
+}
+
 function normalise(src, kind) {
   if (kind === 'php') return normalisePhp(src);
   let s = src;
@@ -203,7 +208,9 @@ function normalise(src, kind) {
     return 'font-size:' + fmt(n) + 'px';
   });
   // 3. Rayons
-  s = s.replace(/border-radius\s*:\s*([0-9.]+px(?:\s+[0-9.]+px){0,3})/g, (m, v) => {
+  s = s.replace(/border-radius\s*:\s*([0-9.]+px(?:\s+[0-9.]+px){0,3})/g, (m, v, off, all) => {
+    // Un CERCLE (largeur = hauteur) reste rond (§2, §5 du 06/11/2026) : seule la pilule est interdite.
+    if (!/\s/.test(v) && parseFloat(v) >= 50 && estCercle(sizeWindow(all, off))) { bump('cercle gardé'); return 'border-radius:50%'; }
     const out = v.split(/\s+/).map(x => {
       const n = parseFloat(x);
       if (n >= 50) { bump('pilule→6'); return '6px'; }

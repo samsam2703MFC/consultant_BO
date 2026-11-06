@@ -340,3 +340,26 @@ Captures avant / après : `docs/design-system/captures/documents/`.
 - [x] E-mails : table 600 px, styles en ligne, un seul bouton, pied relevé, version texte.
 - [x] Aucune pilule.
 - [ ] Premier exemplaire de chaque pièce commerciale (offre, facture…) : ces pièces n'existent pas dans le BO.
+
+## 8. Report sur la branche de déploiement (06/11/2026)
+
+La PR samsam2703MFC/consultant_BO#95 avait été fusionnée sur une branche restée au 10/10 ; la
+production tourne sur `claude/deploiement-application-serveur-lmz1bm`, 1 722 commits plus loin, et le
+cockpit y vit désormais dans `pilotage-reseau/` (dépôt des quatre portails). Le design system y a été
+reporté ainsi :
+
+- les fichiers que la production n'avait pas remaniés ont pris les changements de la PR tels quels ;
+- les 25 fichiers remaniés (dont `templates.js`, `app.js`, `rapports.php`, `ventes.php`) repartent de la
+  version de production, sur laquelle les transformations ont été rejouées : coquille et rail,
+  normaliseur, pastilles d'état, une action bordeaux par écran, emoji d'interface, enveloppe PDF, pied,
+  rapport et garde e-mail — en gardant ce que la production y avait ajouté (`genereLib`, `piedHtml`) ;
+- les modules apparus depuis (Vérification, Promotions, Fidélité, MétaDonnée, Pointages, API du module,
+  suivi des franchisés…) et les nouvelles pièces (`ca_net_mois`, `cq_mail`, `documents`, `metadonnee`,
+  `pointages_mail`, `primes_fiches`, `suivi`, `visites_cadre`) passent au normaliseur ; Formation et RH
+  gardent leur propre feuille (`ds.css`), déjà au design system ;
+- les **icônes de promotion** (`PR_EMOJIS`) et l'icône par défaut d'une promotion restent : ce sont des
+  contenus publiés, pas des décorations d'interface ;
+- la référence commune a évolué le 06/11/2026 (`docs/DESIGN_SYSTEM.md` à la racine) : les **cercles**
+  (point de couleur, numéro d'étape, médaille, interrupteur) restent ronds, seule la pilule est
+  interdite ; la règle de base remet `h1`–`h6`, `th`, `b`, `strong` à 400. Le normaliseur et
+  `global.css` suivent ; la copie `pilotage-reseau/docs/design-system/DESIGN_SYSTEM.md` est resynchronisée.
