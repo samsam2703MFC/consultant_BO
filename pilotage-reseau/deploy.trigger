@@ -1293,3 +1293,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-06T06:36:33Z ERP production : Płace i premie (admin seul), Moja karta stanowiska A4
 2026-11-06T06:37:15Z Formation › Standards (SOP) : 25 SOP FR/NL dans le module Formation, Manuel en 4 parties, tablette du poste
 2026-11-06T10:43:27Z Formation › Manuel du réseau : référentiel commun v25, guides, tablette unique, design system
+2026-11-06T10:50:07Z dépôt des quatre portails : le cockpit vit dans pilotage-reseau/ (aucun autre changement)

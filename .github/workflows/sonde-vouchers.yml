@@ -16,7 +16,7 @@ name: Sonde — bons de l'API ERP (lecture seule)
 on:
   push:
     branches: [claude/admiring-archimedes-8cr84j]
-    paths: ['sonde-vouchers.trigger', 'tools/sonde_vouchers.php', '.github/workflows/sonde-vouchers.yml']
+    paths: ['pilotage-reseau/sonde-vouchers.trigger', 'pilotage-reseau/tools/sonde_vouchers.php', '.github/workflows/sonde-vouchers.yml']
   workflow_dispatch:
 
 concurrency:
@@ -29,6 +29,12 @@ env:
   SSH_USER: "root"
   SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
   TARGET_DIR: "/var/www/consulant_bo"
+
+# Le portail Pilotage réseau vit dans pilotage-reseau/ (dépôt des quatre portails) :
+# chaque commande s'exécute depuis ce dossier, comme avant depuis la racine.
+defaults:
+  run:
+    working-directory: pilotage-reseau
 
 jobs:
   sonde:
