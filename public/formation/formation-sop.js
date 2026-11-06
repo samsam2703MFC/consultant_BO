@@ -68,7 +68,7 @@ window.FormationSop = (function () {
       && (!q || [s.titre.fr, s.titre.nl, s.code, s.objectif.fr, s.objectif.nl, s.competence && s.competence.nom, codesC(s).join(' ')].join(' ').toLowerCase().includes(q)));
   }
   const attente = t => `<p class="muted">${esc(t)}</p>`;
-  function erreurOuAttente() { return D.erreur ? `<p class="error">${esc(D.erreur)}</p>` : attente('Lecture des SOP…'); }
+  function erreurOuAttente() { return D.erreur ? `<p class="error">${esc(D.erreur)}</p><p><button type="button" class="btn btn--sm" data-sa="relireListe">Réessayer</button></p>` : attente('Lecture des SOP…'); }
 
   /* ═══ Les SOP (liste) ═══ */
   function ecranListe() {
@@ -607,7 +607,8 @@ window.FormationSop = (function () {
 
   /* ═══ Lectures ═══ */
   function chargerListe(forcer) {
-    if ((D.liste && !forcer) || D.charge) { return; }
+    /* Une lecture ratée n'est pas relancée à chaque rendu (elle tournait en boucle) : « Réessayer » la force. */
+    if ((D.liste && !forcer) || D.charge || (D.erreur && !forcer)) { return; }
     D.charge = true;
     C.lire('/formation/sop/liste', 30000).then(d => { D.liste = d.sops; D.totaux = d.totaux; D.dossiers = d.dossiers; D.erreur = null; D.charge = false; C.rendre(true); },
       er => { D.erreur = er.message; D.charge = false; C.rendre(true); });
@@ -692,6 +693,7 @@ window.FormationSop = (function () {
           try { D.archive = await C.lire('/formation/sop/fiche/' + encodeURIComponent(d.id) + '/versions/' + encodeURIComponent(d.v)); } catch (x) { toast(x.message); }
           return C.rendre(true);
         case 'relirePanel': D.comp = null; return chargerComp(true, true);
+        case 'relireListe': D.erreur = null; return chargerListe(true);
         case 'nouv': D.nouv = { code: '', dossier: '01', type: 'SOP', poste: 'vente', fr: '', nl: '' }; return C.rendre(true);
         case 'annulerNouv': D.nouv = null; return C.rendre(true);
         case 'creer':
