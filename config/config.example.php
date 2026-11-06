@@ -62,6 +62,11 @@ return [
         'expediteur'  => getenv('SMS_EXPEDITEUR') ?: null,
     ],
 
+    // Manuel du réseau (06/11/2026) : le chemin du module Formation que GET /formation/ref donne au CRM pour ses liens
+    // (« Modifier dans le Cockpit ↗ »), ex. /consulant_bo/formation/. Vide : le CRM n'affiche pas de lien. Un réglage
+    // `formationUrl` en base prime, puis cette valeur, puis FORMATION_URL.
+    'formationUrl' => getenv('FORMATION_URL') ?: null,
+
     // Jeu de démonstration. false (défaut) : base vide, prête pour les vraies
     // données — aucune donnée fictive n'est chargée. true (ou COCKPIT_SEED=1) :
     // charge sql/seed.sql (réseau belge de démo) si la base est vide.

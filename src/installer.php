@@ -90,6 +90,8 @@ function ensureInstalled(): void
     if (function_exists('ensureSocialPublication')) { ensureSocialPublication(); }   // après les posts : elle les complète
     ensureTabletteRemarques();
     ensureSop();
+    // Le référentiel commun du Manuel du réseau (06/11/2026) : après les SOP, qu'il classe.
+    if (function_exists('ensureReferentiel')) { ensureReferentiel(); }
     if ($marOk) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
             ['schemaVu', json_encode($emp)]);
