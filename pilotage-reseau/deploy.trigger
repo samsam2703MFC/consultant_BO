@@ -1296,3 +1296,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-06T10:50:07Z dépôt des quatre portails : le cockpit vit dans pilotage-reseau/ (aucun autre changement)
 2026-11-06T12:16:01Z design system commun : écrans du cockpit et documents (PDF, e-mails) au gabarit A
 2026-11-06T12:24:01Z rail : Planogramme sur une ligne ; job routes-api depuis la racine du dépôt
+2026-11-06T18:10:56Z Opérationnel : feuilles Ventes B2B (noms des sociétés, articles) et Commandes du jour (comptoir, webshop, rapprochement)
