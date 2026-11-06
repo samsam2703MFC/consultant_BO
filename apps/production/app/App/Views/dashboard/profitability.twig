@@ -1,0 +1,203 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Rentowność produkcji{% endblock %}
+
+{% set t = totals %}
+{% set current = period.current %}
+{% set until = period.end|date('d.m') %}
+
+{# Pulpit : tylko to, co potrzebne — trzy liczby i grupy. Szczegóły (produkcja grup, wynik, zakupy, 6 miesięcy,
+   sprzedaż na osobę) : /dashboard/results. #}
+{% block page_heading %}
+    <div class="page-heading at-profit-head at-dash-head">
+        <div class="page-title">
+            <h3>Rentowność</h3>
+            <p class="text-subtitle text-muted">{{ period.label }}{% if current %} · stan na {{ period.to|date('d.m') }}, {{ (period.elapsed * 100)|round }} % okresu{% endif %}</p>
+        </div>
+        {% include 'dashboard/_period.twig' with {period_base: '/dashboard'} %}
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-dash">
+
+    {% for w in notices %}
+        <p class="at-dash-notice"><i class="bi bi-exclamation-circle"></i> {{ w }} <a href="{{ root }}/cost-calculator">Uzupełnij koszty</a></p>
+    {% endfor %}
+
+    <div class="at-dash-kpis">
+        <article class="at-dash-kpi">
+            <span class="at-dash-label">Personel / sprzedaż</span>
+            <strong class="at-dash-value {{ t.revenue <= 0 ? '' : (t.staff_ok ? 'is-ok' : 'is-bad') }}">{{ t.staff_pct|pct }}</strong>
+            <span class="at-dash-meta">cel ≤ {{ t.staff_target|pct(0) }}</span>
+            {% set progress = t.staff_needed > 0 ? min(100, t.revenue / t.staff_needed * 100) : 100 %}
+            <div class="at-dash-bar" title="Sprzedaż {{ t.revenue|eur }} z potrzebnych {{ t.staff_needed|eur }}">
+                <span class="{{ t.staff_ok ? 'is-ok' : '' }}" style="width: {{ progress|round(1) }}%"></span>
+                {% if current %}<i style="left: {{ (period.elapsed * 100)|round(1) }}%" title="Dziś"></i>{% endif %}
+            </div>
+            <span class="at-dash-foot">
+                {% if t.staff_missing > 0 %}Brakuje <strong>{{ t.staff_missing|eur }}</strong> sprzedaży{{ current ? ' do ' ~ until : '' }}
+                {% elseif t.revenue > 0 %}Cel osiągnięty · zapas {{ (t.revenue - t.staff_needed)|eur }}{% endif %}
+            </span>
+        </article>
+
+        <article class="at-dash-kpi">
+            <span class="at-dash-label">Wynik produkcji</span>
+            <strong class="at-dash-value {{ t.revenue <= 0 ? '' : (t.margin_ok ? 'is-ok' : 'is-bad') }}">{{ t.result|eur }}</strong>
+            <span class="at-dash-meta">{{ t.margin_pct|pct }} sprzedaży · cel ≥ {{ t.margin_target|pct(0) }}</span>
+            <span class="at-dash-foot">
+                {% if not t.margin_reachable %}Cel nieosiągalny przy surowcach {{ t.materials_pct|pct(0) }} sprzedaży
+                {% elseif t.margin_missing > 0 %}Do celu brakuje <strong>{{ t.margin_missing|eur }}</strong> sprzedaży
+                {% elseif t.revenue > 0 %}Cel osiągnięty{% endif %}
+            </span>
+        </article>
+
+        <article class="at-dash-kpi">
+            <span class="at-dash-label">Sprzedaż</span>
+            <strong class="at-dash-value">{{ t.revenue|eur }}</strong>
+            <span class="at-dash-meta">{{ t.cartons|plural_pl('karton', 'kartony', 'kartonów') }}{% if current and t.projection %} · <span class="text-nowrap">w tym tempie ok. {{ t.projection|eur }}</span>{% endif %}</span>
+            {% if current %}<span class="at-dash-foot">W zamówieniach do {{ until }}: <strong>{{ t.open|eur }}</strong></span>{% endif %}
+        </article>
+    </div>
+
+    <div class="at-dash-card at-anchor" id="grupy">
+        <div class="at-dash-card-head">
+            <h4>Grupy</h4>
+            <span class="at-dash-actions">
+                <a href="{{ root }}/dashboard/groups" class="at-dash-btn"><i class="bi bi-calendar-week"></i> Tydzień i miesiąc</a>
+                <a href="{{ root }}/staff/budget{{ selected != 'month' ? '?period=' ~ selected : '' }}" class="at-dash-btn"><i class="bi bi-wallet2"></i> Premie</a>
+                <a href="#profitTargets" class="at-dash-btn" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="profitTargets"><i class="bi bi-sliders"></i> Cele</a>
+            </span>
+        </div>
+        {% if groups %}
+        <div class="at-dash-list" role="table" aria-label="Grupy : personel / sprzedaż">
+            <div class="at-dash-row at-dash-row-head" role="row">
+                <span role="columnheader">Grupa</span><span role="columnheader" class="num">Sprzedaż</span>
+                <span role="columnheader">Personel / sprzedaż</span><span role="columnheader" class="num" title="Sprzedaż potrzebna, aby personel zmieścił się w celu grupy">Brakuje</span>
+            </div>
+            {% for g in groups %}
+                {% set width = g.staff_pct is null ? 100 : min(100, g.staff_pct / max(g.staff_target, 1) * 50) %}
+                <div class="at-dash-row" role="row">
+                    <span role="cell"><button type="button" class="at-dash-name" data-growth="{{ g.id }}" data-growth-name="{{ g.name }}" title="Rozwój sprzedaży grupy">{{ g.name }} <i class="bi bi-chevron-right"></i></button></span>
+                    <span role="cell" class="num">{{ g.revenue|eur }}</span>
+                    <span role="cell" class="at-dash-ratio" title="cel ≤ {{ g.staff_target|pct(0) }}">
+                        <span class="at-dash-track"><span class="{{ g.ok ? 'is-ok' : 'is-bad' }}" style="width: {{ width|round(1) }}%"></span><i></i></span>
+                        <b class="{{ g.ok ? 'is-ok' : 'is-bad' }}">{{ g.staff_pct|pct }}</b>
+                    </span>
+                    <span role="cell" class="num">{% if g.missing > 0 %}<strong>{{ g.missing|eur }}</strong>{% else %}<i class="bi bi-check-lg is-ok" title="w normie"></i>{% endif %}</span>
+                </div>
+            {% endfor %}
+            <div class="at-dash-row at-dash-row-total" role="row">
+                <span role="cell">Razem <span class="at-dash-sub">z działami wspólnymi</span></span>
+                <span role="cell" class="num">{{ t.revenue|eur }}</span>
+                <span role="cell" class="at-dash-ratio"><b class="{{ t.revenue <= 0 ? '' : (t.staff_ok ? 'is-ok' : 'is-bad') }}">{{ t.staff_pct|pct }}</b></span>
+                <span role="cell" class="num">{{ t.staff_missing > 0 ? t.staff_missing|eur : '—' }}</span>
+            </div>
+        </div>
+        {% else %}
+            <p class="at-empty">Brak sprzedaży i kosztów personelu w tym okresie.</p>
+        {% endif %}
+    </div>
+
+    {# --- Cele (zwinięte) ------------------------------------------------------- #}
+    <div class="collapse at-anchor" id="profitTargets">
+        <div class="card">
+            <div class="card-header"><h4 class="card-title">Cele</h4></div>
+            <div class="card-body pt-0">
+                <form id="profitGeneral" class="at-profit-targets">
+                    <label>Personel działu / sprzedaż działu, maks.
+                        <span class="input-group"><input class="form-control" name="profit.staff_target_pct" inputmode="decimal" value="{{ targets['profit.staff_target_pct'] }}" required><span class="input-group-text">%</span></span>
+                    </label>
+                    <label>Cały personel / sprzedaż, maks.
+                        <span class="input-group"><input class="form-control" name="profit.total_staff_target_pct" inputmode="decimal" value="{{ targets['profit.total_staff_target_pct'] }}" required><span class="input-group-text">%</span></span>
+                    </label>
+                    <label>Marża działu, min.
+                        <span class="input-group"><input class="form-control" name="profit.section_margin_target_pct" inputmode="decimal" value="{{ targets['profit.section_margin_target_pct'] }}" required><span class="input-group-text">%</span></span>
+                    </label>
+                    <label>Wynik produkcji, min.
+                        <span class="input-group"><input class="form-control" name="profit.margin_target_pct" inputmode="decimal" value="{{ targets['profit.margin_target_pct'] }}" required><span class="input-group-text">%</span></span>
+                    </label>
+                    <button class="btn btn-primary">Zapisz cele ogólne</button>
+                </form>
+
+                {% if groups %}
+                <h6 class="mt-4">Cele grup (puste = cel ogólny)</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Grupa</th><th>Personel / sprzedaż, maks.</th><th>Marża działu, min.</th></tr></thead>
+                        <tbody>
+                        {% for g in groups %}
+                            <tr data-section="{{ g.id }}">
+                                <td>{{ g.name }}</td>
+                                <td><span class="input-group input-group-sm at-profit-input"><input class="form-control" data-field="staff_pct_target" inputmode="decimal" value="{{ g.staff_target_custom ? g.staff_target : '' }}" placeholder="{{ targets['profit.staff_target_pct'] }}"><span class="input-group-text">%</span></span></td>
+                                <td><span class="input-group input-group-sm at-profit-input"><input class="form-control" data-field="margin_pct_target" inputmode="decimal" value="{{ g.margin_target_custom ? g.margin_target : '' }}" placeholder="{{ targets['profit.section_margin_target_pct'] }}"><span class="input-group-text">%</span></span></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <a class="at-dash-more" href="{{ root }}/dashboard/results{{ selected != 'month' ? '?period=' ~ selected : '' }}">
+        <span><strong>Wynik i produkcja grup</strong>
+            <span class="at-dash-sub">Co wyprodukowały grupy · od sprzedaży do wyniku · zakupy · 6 miesięcy · sprzedaż na osobę</span></span>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+    </a>
+    <a class="at-dash-more" href="{{ root }}/dashboard/groups">
+        <span><strong>Rentowność grup : tydzień i miesiąc</strong>
+            <span class="at-dash-sub">Godziny · produkcja · marża · sprzedaż · coboty · 12 tygodni na wykresie</span></span>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+    </a>
+
+    {% include 'dashboard/_growth_modal.twig' %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/growth.js" defer></script>
+<script>
+(() => {
+    // Wiersz tabeli okresów : całe pole klikalne (link w pierwszej kolumnie dla klawiatury).
+    document.querySelectorAll('.at-period-table tr[data-href]').forEach(row => row.addEventListener('click', (e) => {
+        if (!e.target.closest('a')) window.location.href = row.dataset.href;
+    }));
+    // #cele (np. z « Wynik i produkcja grup ») : cele rozwinięte.
+    if (location.hash === '#cele') {
+        const el = document.getElementById('profitTargets');
+        el.classList.add('show');
+        el.scrollIntoView({block: 'start'});
+    }
+    const root = {{ root|json_encode|raw }};
+    const send = (url, method, data) => fetch(root + url, {
+        method, credentials: 'same-origin',
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: JSON.stringify(data),
+    }).then(r => r.json().then(body => ({ok: r.ok, ...body})));
+    const notify = (ok, message) => (typeof showSnack === 'function' ? showSnack(ok, message) : alert(message));
+
+    document.getElementById('profitGeneral').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        send('/ajax/profitability/targets', 'POST', data).then(res => {
+            notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+            if (res.ok) window.setTimeout(() => window.location.reload(), 600);
+        });
+    });
+
+    document.querySelectorAll('[data-section]').forEach(row => {
+        row.addEventListener('change', (e) => {
+            const field = e.target.dataset.field;
+            if (!field) return;
+            send(`/ajax/profitability/sections/${row.dataset.section}`, 'PATCH', {[field]: e.target.value}).then(res => {
+                notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+                if (res.ok) window.setTimeout(() => window.location.reload(), 600);
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

@@ -388,6 +388,43 @@ function ep_prod_saisons(): array
 }
 
 /**
+ * « Nécessaire » fondu dans « Obligatoire » (18/10/2026, demande de Sam) : il ne reste qu'une case, imposée en boutique
+ * (assortiment, minimum, plan de production) et toujours gardée au score (décision « Garder »). Une référence cochée
+ * « nécessaire » devient obligatoire toute l'année, sans minimum — une obligatoire de saison reste ce qu'elle est —, puis
+ * la marque « nécessaire » s'efface (la colonne reste, à zéro). Une fois pour toutes, à la première requête qui suit la
+ * mise en ligne (ensureInstalled) ; chaque passage se note au journal. Rend le nombre de références devenues obligatoires.
+ */
+function aoFusionNecessaire(): int
+{
+    try { $refs = array_map(static fn ($r) => (string) $r['id_produit'], Db::rows('SELECT id_produit FROM ceo_prod_revue WHERE necessaire = 1')); }
+    catch (Throwable $e) { return 0; }
+    if ($refs === []) { return 0; }
+    aoEnsure();
+    $n = 0;
+    foreach ($refs as $ref) {
+        if (!preg_match('/^[\w-]{1,24}$/', $ref)) { continue; }
+        $deja = null;
+        try { $deja = Db::row('SELECT must FROM ceo_prod_product WHERE ref = ?', [$ref]); } catch (Throwable $e) { /* table absente */ }
+        if ($deja === null || (int) $deja['must'] !== 1) {
+            $nom = ''; $cat = '';
+            try {
+                $p = Db::rows('SELECT p.name, c.name AS cat FROM product p LEFT JOIN product_category c ON c.id = p.id_category WHERE p.id = ?', [(int) $ref]);
+                if ($p) { $nom = trim((string) $p[0]['name']); $cat = (string) ($p[0]['cat'] ?? ''); }
+            } catch (Throwable $e) { /* catalogue indisponible */ }
+            if ($nom === '') { $nom = $ref; }
+            Db::exec('INSERT INTO ceo_prod_product (ref, nom, categorie, pwa_id, must, qmin, saison_id, actif) VALUES (?,?,?,?,1,0,NULL,1)
+                      ON DUPLICATE KEY UPDATE saison_id = NULL, must = 1',
+                [$ref, mb_substr($nom, 0, 160), mb_substr($cat, 0, 60), ctype_digit($ref) ? (int) $ref : null]);
+            journalAdd('CEO', 'Assortiment obligatoire', $nom, 'obligatoire toute l’année — « nécessaire » fondu dans « obligatoire »');
+            $n++;
+        }
+        Db::exec('UPDATE ceo_prod_revue SET necessaire = 0 WHERE id_produit = ?', [$ref]);
+    }
+    Db::exec('DELETE FROM ceo_prod_revue WHERE note IS NULL AND necessaire = 0');
+    return $n;
+}
+
+/**
  * PUT /production/obligatoire/{ref} — {must: bool, saison: id|null, qmin?: int}
  * Ne touche que l'obligatoire, sa saison et son minimum : la fiche de production
  * (prix, coût, temps) reste ce qu'elle est — la route de la fiche réécrit tout.

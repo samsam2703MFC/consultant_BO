@@ -1,0 +1,7660 @@
+{
+ "genere": "2026-10-31",
+ "source": "Swagger du panel TFBuddy (/api/swagger/openapi.json), 933 chemins",
+ "familles": [
+  {
+   "cle": "postes",
+   "nom": "Postes & sous-postes (niveaux)",
+   "note": "Les postes du réseau et leurs niveaux (les sous-postes) : compétences exigées, exigences, tâches, fiche PDF."
+  },
+  {
+   "cle": "carriere",
+   "nom": "Parcours de carrière",
+   "note": "Parcours et étapes de carrière. Le swagger les déclare TOUTES en 500 (« missing controller ») : les postes et sous-postes passent par /positions et /position-levels."
+  },
+  {
+   "cle": "liens",
+   "nom": "Liens d’une compétence",
+   "note": "Ce qui s’apprend pour une compétence : procédures opératoires, ressources de la base de connaissances, formations."
+  },
+  {
+   "cle": "competences",
+   "nom": "Compétences RH",
+   "note": "Le catalogue des compétences, rangé par section › catégorie › sous-catégorie fonctionnelle."
+  },
+  {
+   "cle": "formations",
+   "nom": "Formations",
+   "note": "Les formations du cadre opérationnel et leurs formateurs (administrateurs ou employés)."
+  },
+  {
+   "cle": "structure",
+   "nom": "Structure fonctionnelle",
+   "note": "Sections, catégories et sous-catégories qui rangent compétences, formations et procédures."
+  },
+  {
+   "cle": "postesTravail",
+   "nom": "Postes de travail",
+   "note": "Les postes de travail (zones) du magasin, distincts des postes RH."
+  },
+  {
+   "cle": "procedures",
+   "nom": "Procédures opératoires",
+   "note": "Les procédures du manuel opératoire : sections, pièces jointes, PDF, alias de traduction."
+  },
+  {
+   "cle": "connaissances",
+   "nom": "Base de connaissances",
+   "note": "Les ressources (documents, liens, vidéos) rangées par catégorie."
+  },
+  {
+   "cle": "employes",
+   "nom": "Employés : postes et compétences",
+   "note": "Ce qu’une personne tient (poste, niveau) et ce qu’elle a validé (compétences)."
+  },
+  {
+   "cle": "cours",
+   "nom": "Cours & sessions",
+   "note": "Le modèle « cours » de l’ancien panel : sessions (commissions), groupes, ensembles, participants."
+  },
+  {
+   "cle": "produit",
+   "nom": "Compétences produit",
+   "note": "Les compétences attachées aux produits et sous-recettes (savoir-faire de fabrication)."
+  },
+  {
+   "cle": "packages",
+   "nom": "Packages",
+   "note": "Les packages (conditionnements) de produits et leur coût — rangés côté produit par le panel."
+  }
+ ],
+ "routes": [
+  {
+   "famille": "postes",
+   "methode": "GET",
+   "chemin": "/api/v1/levels/{param1}/tasks",
+   "resume": "",
+   "note": "Liste : niveaux › tâches.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OperationalActivities/TaskRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "POST",
+   "chemin": "/api/v1/levels/{param1}/tasks",
+   "resume": "",
+   "note": "Crée / ajoute : niveaux › tâches.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OperationalActivities/TaskRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "DELETE",
+   "chemin": "/api/v1/levels/{param1}/tasks/{param2}",
+   "resume": "",
+   "note": "Supprime / retire : niveaux › tâches.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OperationalActivities/TaskRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    },
+    {
+     "nom": "param2",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "GET",
+   "chemin": "/api/v1/position-levels",
+   "resume": "",
+   "note": "Tous les niveaux de tous les postes.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "postes",
+   "methode": "POST",
+   "chemin": "/api/v1/position-levels",
+   "resume": "",
+   "note": "Crée / ajoute : niveaux.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "GET",
+   "chemin": "/api/v1/position-levels/{param1}",
+   "resume": "",
+   "note": "Lit un élément : niveaux.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "postes",
+   "methode": "PATCH",
+   "chemin": "/api/v1/position-levels/{param1}",
+   "resume": "",
+   "note": "Modifie : niveaux.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "DELETE",
+   "chemin": "/api/v1/position-levels/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : niveaux.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "GET",
+   "chemin": "/api/v1/position-levels/{param1}/competencies",
+   "resume": "",
+   "note": "Les compétences exigées à ce niveau : le cœur du référentiel poste → compétences.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "postes",
+   "methode": "POST",
+   "chemin": "/api/v1/position-levels/{param1}/competencies",
+   "resume": "",
+   "note": "Ajoute une compétence exigée au niveau.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "DELETE",
+   "chemin": "/api/v1/position-levels/{param1}/competencies/{param2}",
+   "resume": "",
+   "note": "Retire une compétence du niveau.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    },
+    {
+     "nom": "param2",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "PATCH",
+   "chemin": "/api/v1/position-levels/{param1}/move-down",
+   "resume": "",
+   "note": "Descend le niveau d’un cran.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "PATCH",
+   "chemin": "/api/v1/position-levels/{param1}/move-up",
+   "resume": "",
+   "note": "Remonte le niveau d’un cran dans son poste.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "GET",
+   "chemin": "/api/v1/position-levels/{param1}/pdf",
+   "resume": "",
+   "note": "Fiche du niveau en PDF.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "postes",
+   "methode": "GET",
+   "chemin": "/api/v1/position-levels/{param1}/requirements",
+   "resume": "",
+   "note": "Les exigences du niveau (hors compétences : ancienneté, conditions…).",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "postes",
+   "methode": "POST",
+   "chemin": "/api/v1/position-levels/{param1}/requirements",
+   "resume": "",
+   "note": "Crée / ajoute : niveaux › exigences.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "PATCH",
+   "chemin": "/api/v1/position-levels/{param1}/requirements/{param2}",
+   "resume": "",
+   "note": "Modifie : niveaux › exigences.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    },
+    {
+     "nom": "param2",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "DELETE",
+   "chemin": "/api/v1/position-levels/{param1}/requirements/{param2}",
+   "resume": "",
+   "note": "Supprime / retire : niveaux › exigences.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    },
+    {
+     "nom": "param2",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "GET",
+   "chemin": "/api/v1/position-levels/{param1}/tasks",
+   "resume": "",
+   "note": "Les tâches attachées au niveau.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "postes",
+   "methode": "POST",
+   "chemin": "/api/v1/position-levels/{param1}/tasks",
+   "resume": "",
+   "note": "Crée / ajoute : niveaux › tâches.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "DELETE",
+   "chemin": "/api/v1/position-levels/{param1}/tasks/{param2}",
+   "resume": "",
+   "note": "Supprime / retire : niveaux › tâches.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    },
+    {
+     "nom": "param2",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "GET",
+   "chemin": "/api/v1/positions",
+   "resume": "",
+   "note": "Liste des postes RH du réseau.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "postes",
+   "methode": "POST",
+   "chemin": "/api/v1/positions",
+   "resume": "",
+   "note": "Crée / ajoute : postes.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "GET",
+   "chemin": "/api/v1/positions/{param1}",
+   "resume": "",
+   "note": "Lit un élément : postes.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "PATCH",
+   "chemin": "/api/v1/positions/{param1}",
+   "resume": "",
+   "note": "Modifie : postes.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "DELETE",
+   "chemin": "/api/v1/positions/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : postes.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postes",
+   "methode": "GET",
+   "chemin": "/api/v1/positions/{param1}/levels",
+   "resume": "",
+   "note": "Les niveaux (sous-postes) d’un poste, dans leur ordre.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "postes",
+   "methode": "GET",
+   "chemin": "/api/v1/positions/{param1}/pdf",
+   "resume": "",
+   "note": "Fiche de poste en PDF, générée par le panel.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/OrganisationalStructure/PositionRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "carriere",
+   "methode": "GET",
+   "chemin": "/api/v1/career-paths",
+   "resume": "",
+   "note": "Liste : parcours de carrière.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests missing App\\Api\\Controllers\\HR\\Career\\CareerPathController."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "POST",
+   "chemin": "/api/v1/career-paths",
+   "resume": "",
+   "note": "Crée / ajoute : parcours de carrière.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "GET",
+   "chemin": "/api/v1/career-paths/{careerPathId}",
+   "resume": "",
+   "note": "Lit un élément : parcours de carrière.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerPathId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "PATCH",
+   "chemin": "/api/v1/career-paths/{careerPathId}",
+   "resume": "",
+   "note": "Modifie : parcours de carrière.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerPathId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "DELETE",
+   "chemin": "/api/v1/career-paths/{careerPathId}",
+   "resume": "",
+   "note": "Supprime / retire : parcours de carrière.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerPathId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "GET",
+   "chemin": "/api/v1/career-paths/{careerPathId}/pdf",
+   "resume": "",
+   "note": "Liste : parcours de carrière › PDF.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerPathId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "500",
+     "note": "No auth middleware is active, but the registered handler requests missing App\\Api\\Controllers\\HR\\Career\\CareerDocumentController."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "GET",
+   "chemin": "/api/v1/career-paths/{careerPathId}/stages",
+   "resume": "",
+   "note": "Liste : parcours de carrière › étapes.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerPathId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests missing App\\Api\\Controllers\\HR\\Career\\PositionLevelController."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "GET",
+   "chemin": "/api/v1/career-stages",
+   "resume": "",
+   "note": "Liste : étapes de carrière.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "POST",
+   "chemin": "/api/v1/career-stages",
+   "resume": "",
+   "note": "Crée / ajoute : étapes de carrière.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "GET",
+   "chemin": "/api/v1/career-stages/{careerStageId}",
+   "resume": "",
+   "note": "Lit un élément : étapes de carrière.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "PATCH",
+   "chemin": "/api/v1/career-stages/{careerStageId}",
+   "resume": "",
+   "note": "Modifie : étapes de carrière.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "DELETE",
+   "chemin": "/api/v1/career-stages/{careerStageId}",
+   "resume": "",
+   "note": "Supprime / retire : étapes de carrière.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "GET",
+   "chemin": "/api/v1/career-stages/{careerStageId}/competencies",
+   "resume": "",
+   "note": "Liste : étapes de carrière › compétences.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "POST",
+   "chemin": "/api/v1/career-stages/{careerStageId}/competencies",
+   "resume": "",
+   "note": "Crée / ajoute : étapes de carrière › compétences.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "DELETE",
+   "chemin": "/api/v1/career-stages/{careerStageId}/competencies/{competencyId}",
+   "resume": "",
+   "note": "Supprime / retire : étapes de carrière › compétences.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    },
+    {
+     "nom": "competencyId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "PATCH",
+   "chemin": "/api/v1/career-stages/{careerStageId}/move-down",
+   "resume": "",
+   "note": "Modifie : étapes de carrière › descendre d’un cran.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "PATCH",
+   "chemin": "/api/v1/career-stages/{careerStageId}/move-up",
+   "resume": "",
+   "note": "Modifie : étapes de carrière › monter d’un cran.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "GET",
+   "chemin": "/api/v1/career-stages/{careerStageId}/pdf",
+   "resume": "",
+   "note": "Liste : étapes de carrière › PDF.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "500",
+     "note": "No auth middleware is active, but the registered handler requests missing App\\Api\\Controllers\\HR\\Career\\CareerDocumentController."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "GET",
+   "chemin": "/api/v1/career-stages/{careerStageId}/requirements",
+   "resume": "",
+   "note": "Liste : étapes de carrière › exigences.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests missing App\\Api\\Controllers\\HR\\Career\\CareerStageRequirementController."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "POST",
+   "chemin": "/api/v1/career-stages/{careerStageId}/requirements",
+   "resume": "",
+   "note": "Crée / ajoute : étapes de carrière › exigences.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "PATCH",
+   "chemin": "/api/v1/career-stages/{careerStageId}/requirements/{requirementId}",
+   "resume": "",
+   "note": "Modifie : étapes de carrière › exigences.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    },
+    {
+     "nom": "requirementId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "carriere",
+   "methode": "DELETE",
+   "chemin": "/api/v1/career-stages/{careerStageId}/requirements/{requirementId}",
+   "resume": "",
+   "note": "Supprime / retire : étapes de carrière › exigences.",
+   "statut": "casse",
+   "tag": "HR career routes",
+   "source": null,
+   "params": [
+    {
+     "nom": "careerStageId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    },
+    {
+     "nom": "requirementId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Registered handler requests a missing controller."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "liens",
+   "methode": "POST",
+   "chemin": "/api/v1/competencies/{competencyId}/knowledge-resources",
+   "resume": "",
+   "note": "Attache une ressource de la base de connaissances.",
+   "statut": "contrat",
+   "tag": "HR competency links",
+   "source": null,
+   "params": [
+    {
+     "nom": "competencyId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [
+    {
+     "champ": "knowledge_resource_id",
+     "type": "integer"
+    }
+   ],
+   "reponse": [
+    {
+     "champ": "status",
+     "type": "string (success)"
+    },
+    {
+     "champ": "message",
+     "type": "string"
+    },
+    {
+     "champ": "inserted_id",
+     "type": "integer"
+    }
+   ],
+   "codes": [
+    {
+     "code": "201",
+     "note": "Inserted connection identifier."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Missing or invalid link input can fail at runtime."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "liens",
+   "methode": "DELETE",
+   "chemin": "/api/v1/competencies/{competencyId}/knowledge-resources/{resourceId}",
+   "resume": "",
+   "note": "Détache une ressource.",
+   "statut": "contrat",
+   "tag": "HR competency links",
+   "source": null,
+   "params": [
+    {
+     "nom": "competencyId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    },
+    {
+     "nom": "resourceId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [
+    {
+     "champ": "status",
+     "type": "string (success)"
+    },
+    {
+     "champ": "message",
+     "type": "string"
+    }
+   ],
+   "codes": [
+    {
+     "code": "200",
+     "note": "Delete statement executed; success does not prove that a connection existed."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "liens",
+   "methode": "POST",
+   "chemin": "/api/v1/competencies/{competencyId}/operational-procedures",
+   "resume": "",
+   "note": "Attache une procédure opératoire à la compétence.",
+   "statut": "contrat",
+   "tag": "HR competency links",
+   "source": null,
+   "params": [
+    {
+     "nom": "competencyId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [
+    {
+     "champ": "id_operational_procedure",
+     "type": "integer"
+    }
+   ],
+   "reponse": [
+    {
+     "champ": "status",
+     "type": "string (success)"
+    },
+    {
+     "champ": "message",
+     "type": "string"
+    },
+    {
+     "champ": "inserted_id",
+     "type": "integer"
+    }
+   ],
+   "codes": [
+    {
+     "code": "201",
+     "note": "Inserted connection identifier."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Missing or invalid link input can fail at runtime."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "liens",
+   "methode": "DELETE",
+   "chemin": "/api/v1/competencies/{competencyId}/operational-procedures/{procedureId}",
+   "resume": "",
+   "note": "Détache une procédure.",
+   "statut": "contrat",
+   "tag": "HR competency links",
+   "source": null,
+   "params": [
+    {
+     "nom": "competencyId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    },
+    {
+     "nom": "procedureId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [
+    {
+     "champ": "status",
+     "type": "string (success)"
+    },
+    {
+     "champ": "message",
+     "type": "string"
+    }
+   ],
+   "codes": [
+    {
+     "code": "200",
+     "note": "Delete statement executed; success does not prove that a connection existed."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "liens",
+   "methode": "POST",
+   "chemin": "/api/v1/competencies/{competencyId}/trainings",
+   "resume": "",
+   "note": "Attache une formation à la compétence.",
+   "statut": "contrat",
+   "tag": "HR competency links",
+   "source": null,
+   "params": [
+    {
+     "nom": "competencyId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [
+    {
+     "champ": "training_id",
+     "type": "integer"
+    }
+   ],
+   "reponse": [
+    {
+     "champ": "status",
+     "type": "string (success)"
+    },
+    {
+     "champ": "message",
+     "type": "string"
+    },
+    {
+     "champ": "inserted_id",
+     "type": "integer"
+    }
+   ],
+   "codes": [
+    {
+     "code": "201",
+     "note": "Inserted connection identifier."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Missing or invalid link input can fail at runtime."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "liens",
+   "methode": "DELETE",
+   "chemin": "/api/v1/competencies/{competencyId}/trainings/{trainingId}",
+   "resume": "",
+   "note": "Détache une formation.",
+   "statut": "contrat",
+   "tag": "HR competency links",
+   "source": null,
+   "params": [
+    {
+     "nom": "competencyId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    },
+    {
+     "nom": "trainingId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [
+    {
+     "champ": "status",
+     "type": "string (success)"
+    },
+    {
+     "champ": "message",
+     "type": "string"
+    }
+   ],
+   "codes": [
+    {
+     "code": "200",
+     "note": "Delete statement executed; success does not prove that a connection existed."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "competences",
+   "methode": "GET",
+   "chemin": "/api/v1/competencies",
+   "resume": "",
+   "note": "Le catalogue complet des compétences (filtre facultatif section_id). Pas de pagination.",
+   "statut": "contrat",
+   "tag": "HR competencies",
+   "source": null,
+   "params": [
+    {
+     "nom": "section_id",
+     "ou": "query",
+     "type": "integer",
+     "requis": false,
+     "note": "Optional functional-category section ID. It is passed to the repository without validation; no pagination, sorting, or other filters exist."
+    },
+    {
+     "nom": "lang_code",
+     "ou": "query",
+     "type": "string",
+     "requis": false,
+     "note": "Normalised to pl, en, fr, it, or nl; unsupported values fall back to fr. The current repository query does not use it."
+    },
+    {
+     "nom": "alias_type",
+     "ou": "query",
+     "type": "string",
+     "requis": false,
+     "note": "Normalised to default, webshop, label, or product_label; unsupported values fall back to default. The current repository query does not use it."
+    }
+   ],
+   "corps": [],
+   "reponse": [
+    {
+     "champ": "[].id",
+     "type": "integer"
+    },
+    {
+     "champ": "[].id_subcategory",
+     "type": "integer"
+    },
+    {
+     "champ": "[].subcategory_id",
+     "type": "integer"
+    },
+    {
+     "champ": "[].name",
+     "type": "string"
+    },
+    {
+     "champ": "[].base_name",
+     "type": "string"
+    },
+    {
+     "champ": "[].description",
+     "type": "string?"
+    },
+    {
+     "champ": "[].base_description",
+     "type": "string?"
+    },
+    {
+     "champ": "[].verification_method",
+     "type": "string?"
+    },
+    {
+     "champ": "[].created_at",
+     "type": "string"
+    },
+    {
+     "champ": "[].subcategory_name",
+     "type": "string"
+    },
+    {
+     "champ": "[].base_subcategory_name",
+     "type": "string"
+    },
+    {
+     "champ": "[].id_category",
+     "type": "integer"
+    },
+    {
+     "champ": "[].category_id",
+     "type": "integer"
+    },
+    {
+     "champ": "[].category_name",
+     "type": "string"
+    },
+    {
+     "champ": "[].base_category_name",
+     "type": "string"
+    },
+    {
+     "champ": "[].section_id",
+     "type": "integer"
+    }
+   ],
+   "codes": [
+    {
+     "code": "200",
+     "note": "All matching competency rows; repository order is unspecified."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    }
+   ],
+   "demande": true,
+   "module": true
+  },
+  {
+   "famille": "competences",
+   "methode": "POST",
+   "chemin": "/api/v1/competencies",
+   "resume": "",
+   "note": "Crée une compétence dans une sous-catégorie.",
+   "statut": "contrat",
+   "tag": "HR competencies",
+   "source": null,
+   "params": [],
+   "corps": [
+    {
+     "champ": "id_subcategory",
+     "type": "integer"
+    },
+    {
+     "champ": "name",
+     "type": "string"
+    },
+    {
+     "champ": "description",
+     "type": "string"
+    },
+    {
+     "champ": "verification_method",
+     "type": "string"
+    }
+   ],
+   "reponse": [
+    {
+     "champ": "status",
+     "type": "string (success)"
+    },
+    {
+     "champ": "message",
+     "type": "string"
+    },
+    {
+     "champ": "inserted_id",
+     "type": "integer"
+    }
+   ],
+   "codes": [
+    {
+     "code": "201",
+     "note": "Inserted competency identifier."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Persistence or malformed/empty input failure."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "competences",
+   "methode": "GET",
+   "chemin": "/api/v1/competencies/{competencyId}",
+   "resume": "",
+   "note": "Une compétence ; include=operational_procedures,trainings,knowledge_resources ajoute ses liens. Rend [] si elle n’existe pas.",
+   "statut": "contrat",
+   "tag": "HR competencies",
+   "source": null,
+   "params": [
+    {
+     "nom": "competencyId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    },
+    {
+     "nom": "include",
+     "ou": "query",
+     "type": "string",
+     "requis": false,
+     "note": "Comma-separated values operational_procedures, trainings, and/or knowledge_resources. Unknown values are ignored."
+    },
+    {
+     "nom": "lang_code",
+     "ou": "query",
+     "type": "string",
+     "requis": false,
+     "note": "Normalised to pl, en, fr, it, or nl; unsupported values fall back to fr. It is currently not applied by the SQL."
+    },
+    {
+     "nom": "alias_type",
+     "ou": "query",
+     "type": "string",
+     "requis": false,
+     "note": "Normalised to default, webshop, label, or product_label; unsupported values fall back to default. It is currently not applied by the SQL."
+    }
+   ],
+   "corps": [],
+   "reponse": [
+    {
+     "champ": "id",
+     "type": "integer"
+    },
+    {
+     "champ": "id_subcategory",
+     "type": "integer"
+    },
+    {
+     "champ": "subcategory_id",
+     "type": "integer"
+    },
+    {
+     "champ": "name",
+     "type": "string"
+    },
+    {
+     "champ": "base_name",
+     "type": "string"
+    },
+    {
+     "champ": "description",
+     "type": "string?"
+    },
+    {
+     "champ": "base_description",
+     "type": "string?"
+    },
+    {
+     "champ": "verification_method",
+     "type": "string?"
+    },
+    {
+     "champ": "created_at",
+     "type": "string"
+    },
+    {
+     "champ": "subcategory_name",
+     "type": "string"
+    },
+    {
+     "champ": "base_subcategory_name",
+     "type": "string"
+    },
+    {
+     "champ": "id_category",
+     "type": "integer"
+    },
+    {
+     "champ": "category_id",
+     "type": "integer"
+    },
+    {
+     "champ": "category_name",
+     "type": "string"
+    },
+    {
+     "champ": "base_category_name",
+     "type": "string"
+    },
+    {
+     "champ": "section_id",
+     "type": "integer"
+    },
+    {
+     "champ": "operational_procedures",
+     "type": "array"
+    },
+    {
+     "champ": "operational_procedures[].id",
+     "type": "integer"
+    },
+    {
+     "champ": "operational_procedures[].id_operational_procedure",
+     "type": "integer"
+    },
+    {
+     "champ": "operational_procedures[].title",
+     "type": "string"
+    },
+    {
+     "champ": "operational_procedures[].base_title",
+     "type": "string"
+    },
+    {
+     "champ": "trainings",
+     "type": "array"
+    },
+    {
+     "champ": "trainings[].id",
+     "type": "integer"
+    },
+    {
+     "champ": "trainings[].training_id",
+     "type": "integer"
+    },
+    {
+     "champ": "trainings[].name",
+     "type": "string"
+    },
+    {
+     "champ": "trainings[].base_name",
+     "type": "string"
+    },
+    {
+     "champ": "knowledge_resources",
+     "type": "array"
+    },
+    {
+     "champ": "knowledge_resources[].id",
+     "type": "integer"
+    },
+    {
+     "champ": "knowledge_resources[].knowledge_resource_id",
+     "type": "integer"
+    },
+    {
+     "champ": "knowledge_resources[].title",
+     "type": "string"
+    },
+    {
+     "champ": "knowledge_resources[].base_title",
+     "type": "string"
+    }
+   ],
+   "codes": [
+    {
+     "code": "200",
+     "note": "Competency row, or [] when absent. Requested include properties are appended even when the competency is absent."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    }
+   ],
+   "demande": true,
+   "module": true
+  },
+  {
+   "famille": "competences",
+   "methode": "PATCH",
+   "chemin": "/api/v1/competencies/{competencyId}",
+   "resume": "",
+   "note": "Modifie une compétence. Un corps vide fait échouer la requête SQL.",
+   "statut": "decrit",
+   "tag": "HR competencies",
+   "source": null,
+   "params": [
+    {
+     "nom": "competencyId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [
+    {
+     "champ": "id_subcategory",
+     "type": "integer"
+    },
+    {
+     "champ": "name",
+     "type": "string"
+    },
+    {
+     "champ": "description",
+     "type": "string"
+    },
+    {
+     "champ": "verification_method",
+     "type": "string"
+    }
+   ],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "204",
+     "note": "Update attempted. Runtime attempts to emit a JSON success body despite HTTP 204; clients must not rely on a body."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "Malformed/empty update data can fail at runtime."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "competences",
+   "methode": "DELETE",
+   "chemin": "/api/v1/competencies/{competencyId}",
+   "resume": "",
+   "note": "Supprime une compétence (succès même si elle n’existait pas).",
+   "statut": "contrat",
+   "tag": "HR competencies",
+   "source": null,
+   "params": [
+    {
+     "nom": "competencyId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [
+    {
+     "champ": "status",
+     "type": "string (success)"
+    },
+    {
+     "champ": "message",
+     "type": "string"
+    }
+   ],
+   "codes": [
+    {
+     "code": "200",
+     "note": "Delete statement executed; success does not prove that a row existed."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "competences",
+   "methode": "GET",
+   "chemin": "/api/v1/competency-subcategories/{subcategoryId}/competencies",
+   "resume": "",
+   "note": "Compétences d’une sous-catégorie. Cassée : TypeError côté panel (sendUpdated reçoit un tableau).",
+   "statut": "casse",
+   "tag": "HR competencies",
+   "source": null,
+   "params": [
+    {
+     "nom": "subcategoryId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "One or more decimal digits, enforced by the route matcher. No application-level minimum or ownership check follows it."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    },
+    {
+     "code": "500",
+     "note": "The repository returns an array, but the controller passes it to ResponseHandler::sendUpdated(), whose message parameter is typed string. The resulting TypeError is handled as an internal server error before a success response is emitted."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "formations",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/trainings",
+   "resume": "",
+   "note": "Liste des formations.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/TrainingRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "formations",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-framework/trainings",
+   "resume": "",
+   "note": "Crée / ajoute : formations.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/TrainingRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "formations",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/trainings/{param1}",
+   "resume": "",
+   "note": "Lit un élément : formations.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/TrainingRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "formations",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/trainings/{param1}",
+   "resume": "",
+   "note": "Modifie : formations.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/TrainingRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "formations",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-framework/trainings/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : formations.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/TrainingRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "formations",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-framework/trainings/{param1}/admin-trainers",
+   "resume": "",
+   "note": "Crée / ajoute : formations › formateurs (administrateurs).",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/TrainingRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "formations",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-framework/trainings/{param1}/admin-trainers/{param2}",
+   "resume": "",
+   "note": "Supprime / retire : formations › formateurs (administrateurs).",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/TrainingRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    },
+    {
+     "nom": "param2",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "formations",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-framework/trainings/{param1}/employee-trainers",
+   "resume": "",
+   "note": "Crée / ajoute : formations › formateurs (employés).",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/TrainingRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "formations",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-framework/trainings/{param1}/employee-trainers/{param2}",
+   "resume": "",
+   "note": "Supprime / retire : formations › formateurs (employés).",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/TrainingRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    },
+    {
+     "nom": "param2",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "formations",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/trainings/{param1}/trainers",
+   "resume": "",
+   "note": "Formateurs d’une formation.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/TrainingRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "structure",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/categories/description-aliases",
+   "resume": "",
+   "note": "Liste : catégories › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/categories/name-aliases",
+   "resume": "",
+   "note": "Liste : catégories › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/categories/{param1}/description-aliases",
+   "resume": "",
+   "note": "Modifie : catégories › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/categories/{param1}/name-aliases",
+   "resume": "",
+   "note": "Modifie : catégories › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/sections/description-aliases",
+   "resume": "",
+   "note": "Liste : sections › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/sections/name-aliases",
+   "resume": "",
+   "note": "Liste : sections › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/sections/{param1}/description-aliases",
+   "resume": "",
+   "note": "Modifie : sections › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/sections/{param1}/name-aliases",
+   "resume": "",
+   "note": "Modifie : sections › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/structure/categories",
+   "resume": "",
+   "note": "Liste : structure › catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "structure",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-framework/structure/categories",
+   "resume": "",
+   "note": "Crée / ajoute : structure › catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/structure/categories/{param1}",
+   "resume": "",
+   "note": "Lit un élément : structure › catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/structure/categories/{param1}",
+   "resume": "",
+   "note": "Modifie : structure › catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-framework/structure/categories/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : structure › catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/structure/categories/{param1}/subcategories",
+   "resume": "",
+   "note": "Liste : structure › catégories › sous-catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-framework/structure/categories/{param1}/subcategories",
+   "resume": "",
+   "note": "Crée / ajoute : structure › catégories › sous-catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/structure/sections",
+   "resume": "",
+   "note": "Liste : structure › sections.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "structure",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-framework/structure/sections",
+   "resume": "",
+   "note": "Crée / ajoute : structure › sections.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/structure/sections/{param1}",
+   "resume": "",
+   "note": "Lit un élément : structure › sections.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/structure/sections/{param1}",
+   "resume": "",
+   "note": "Modifie : structure › sections.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-framework/structure/sections/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : structure › sections.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-framework/structure/sections/{param1}/categories",
+   "resume": "",
+   "note": "Crée / ajoute : structure › sections › catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/structure/subcategories/{param1}",
+   "resume": "",
+   "note": "Modifie : structure › sous-catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-framework/structure/subcategories/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : structure › sous-catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/StructureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/subcategories/description-aliases",
+   "resume": "",
+   "note": "Liste : sous-catégories › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/subcategories/name-aliases",
+   "resume": "",
+   "note": "Liste : sous-catégories › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/subcategories/{param1}/description-aliases",
+   "resume": "",
+   "note": "Modifie : sous-catégories › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "structure",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/subcategories/{param1}/name-aliases",
+   "resume": "",
+   "note": "Modifie : sous-catégories › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Structure/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/workstations",
+   "resume": "",
+   "note": "Liste : postes de travail.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Workstation/WorkstationRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-framework/workstations",
+   "resume": "",
+   "note": "Crée / ajoute : postes de travail.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Workstation/WorkstationRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/workstations/description-aliases",
+   "resume": "",
+   "note": "Liste : postes de travail › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Workstation/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/workstations/name-aliases",
+   "resume": "",
+   "note": "Liste : postes de travail › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Workstation/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-framework/workstations/{param1}",
+   "resume": "",
+   "note": "Lit un élément : postes de travail.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Workstation/WorkstationRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/workstations/{param1}",
+   "resume": "",
+   "note": "Modifie : postes de travail.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Workstation/WorkstationRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-framework/workstations/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : postes de travail.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Workstation/WorkstationRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/workstations/{param1}/description-aliases",
+   "resume": "",
+   "note": "Modifie : postes de travail › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Workstation/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-framework/workstations/{param1}/name-aliases",
+   "resume": "",
+   "note": "Modifie : postes de travail › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/OperationalFramework/Workstation/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "GET",
+   "chemin": "/api/v1/shops/workstations",
+   "resume": "",
+   "note": "Liste : magasins › postes de travail.",
+   "statut": "decrit",
+   "tag": "Franchisee employee work area",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "GET",
+   "chemin": "/api/v1/shops/workstations/{id}",
+   "resume": "",
+   "note": "Lit un élément : magasins › postes de travail.",
+   "statut": "decrit",
+   "tag": "Franchisee employee work area",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "GET",
+   "chemin": "/api/v1/workstations/aliases",
+   "resume": "",
+   "note": "Liste : postes de travail › traductions.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Shop/workstationAliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "postesTravail",
+   "methode": "PATCH",
+   "chemin": "/api/v1/workstations/{param1}/aliases",
+   "resume": "",
+   "note": "Modifie : postes de travail › traductions.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Shop/workstationAliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedure-attachments/label-aliases",
+   "resume": "",
+   "note": "Liste : pièces jointes de procédure › traductions du libellé.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-procedure-attachments/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : pièces jointes de procédure.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-procedure-attachments/{param1}/label-aliases",
+   "resume": "",
+   "note": "Modifie : pièces jointes de procédure › traductions du libellé.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedure-categories",
+   "resume": "",
+   "note": "Liste : catégories de procédures.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-procedure-categories",
+   "resume": "",
+   "note": "Crée / ajoute : catégories de procédures.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedure-categories/description-aliases",
+   "resume": "",
+   "note": "Liste : catégories de procédures › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedure-categories/name-aliases",
+   "resume": "",
+   "note": "Liste : catégories de procédures › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedure-categories/{param1}",
+   "resume": "",
+   "note": "Lit un élément : catégories de procédures.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-procedure-categories/{param1}",
+   "resume": "",
+   "note": "Modifie : catégories de procédures.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-procedure-categories/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : catégories de procédures.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-procedure-categories/{param1}/description-aliases",
+   "resume": "",
+   "note": "Modifie : catégories de procédures › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-procedure-categories/{param1}/name-aliases",
+   "resume": "",
+   "note": "Modifie : catégories de procédures › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedure-section-titles",
+   "resume": "",
+   "note": "Liste : titres de section.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-procedure-section-titles",
+   "resume": "",
+   "note": "Crée / ajoute : titres de section.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedure-section-titles/{param1}",
+   "resume": "",
+   "note": "Lit un élément : titres de section.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-procedure-section-titles/{param1}",
+   "resume": "",
+   "note": "Modifie : titres de section.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-procedure-section-titles/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : titres de section.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedure-sections",
+   "resume": "",
+   "note": "Liste : sections de procédure.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-procedure-sections",
+   "resume": "",
+   "note": "Crée / ajoute : sections de procédure.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedure-sections/description-aliases",
+   "resume": "",
+   "note": "Liste : sections de procédure › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedure-sections/{param1}",
+   "resume": "",
+   "note": "Lit un élément : sections de procédure.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-procedure-sections/{param1}",
+   "resume": "",
+   "note": "Modifie : sections de procédure.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-procedure-sections/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : sections de procédure.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-procedure-sections/{param1}/description-aliases",
+   "resume": "",
+   "note": "Modifie : sections de procédure › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedure-todo-links/note-aliases",
+   "resume": "",
+   "note": "Liste : liens procédure ↔ tâche › traductions de la note.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-procedure-todo-links/{param1}/note-aliases",
+   "resume": "",
+   "note": "Modifie : liens procédure ↔ tâche › traductions de la note.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedures",
+   "resume": "",
+   "note": "Liste : procédures.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "procedures",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-procedures",
+   "resume": "",
+   "note": "Crée / ajoute : procédures.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedures/description-aliases",
+   "resume": "",
+   "note": "Liste : procédures › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedures/title-aliases",
+   "resume": "",
+   "note": "Liste : procédures › traductions du titre.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedures/{param1}",
+   "resume": "",
+   "note": "Une procédure avec ses sections (le contenu du manuel).",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "procedures",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-procedures/{param1}",
+   "resume": "",
+   "note": "Modifie : procédures.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-procedures/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : procédures.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedures/{param1}/attachments",
+   "resume": "",
+   "note": "Liste : procédures › pièces jointes.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "procedures",
+   "methode": "POST",
+   "chemin": "/api/v1/operational-procedures/{param1}/attachments",
+   "resume": "",
+   "note": "Crée / ajoute : procédures › pièces jointes.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "DELETE",
+   "chemin": "/api/v1/operational-procedures/{param1}/attachments/{param2}",
+   "resume": "",
+   "note": "Supprime / retire : procédures › pièces jointes.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    },
+    {
+     "nom": "param2",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-procedures/{param1}/description-aliases",
+   "resume": "",
+   "note": "Modifie : procédures › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "procedures",
+   "methode": "GET",
+   "chemin": "/api/v1/operational-procedures/{param1}/pdf",
+   "resume": "",
+   "note": "Procédure en PDF.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/ProcedureRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "procedures",
+   "methode": "PATCH",
+   "chemin": "/api/v1/operational-procedures/{param1}/title-aliases",
+   "resume": "",
+   "note": "Modifie : procédures › traductions du titre.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Operations/AliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "connaissances",
+   "methode": "GET",
+   "chemin": "/api/v1/knowledge-base/categories",
+   "resume": "",
+   "note": "Liste : base de connaissances › catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "connaissances",
+   "methode": "POST",
+   "chemin": "/api/v1/knowledge-base/categories",
+   "resume": "",
+   "note": "Crée / ajoute : base de connaissances › catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "connaissances",
+   "methode": "GET",
+   "chemin": "/api/v1/knowledge-base/categories/{param1}",
+   "resume": "",
+   "note": "Lit un élément : base de connaissances › catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "connaissances",
+   "methode": "PATCH",
+   "chemin": "/api/v1/knowledge-base/categories/{param1}",
+   "resume": "",
+   "note": "Modifie : base de connaissances › catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "connaissances",
+   "methode": "DELETE",
+   "chemin": "/api/v1/knowledge-base/categories/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : base de connaissances › catégories.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "connaissances",
+   "methode": "GET",
+   "chemin": "/api/v1/knowledge-base/categories/{param1}/resources",
+   "resume": "",
+   "note": "Liste : base de connaissances › catégories › ressources.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "connaissances",
+   "methode": "GET",
+   "chemin": "/api/v1/knowledge-base/resources",
+   "resume": "",
+   "note": "Liste : base de connaissances › ressources.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "connaissances",
+   "methode": "POST",
+   "chemin": "/api/v1/knowledge-base/resources",
+   "resume": "",
+   "note": "Crée / ajoute : base de connaissances › ressources.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "connaissances",
+   "methode": "GET",
+   "chemin": "/api/v1/knowledge-base/resources/{param1}",
+   "resume": "",
+   "note": "Lit un élément : base de connaissances › ressources.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "connaissances",
+   "methode": "PATCH",
+   "chemin": "/api/v1/knowledge-base/resources/{param1}",
+   "resume": "",
+   "note": "Modifie : base de connaissances › ressources.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "connaissances",
+   "methode": "DELETE",
+   "chemin": "/api/v1/knowledge-base/resources/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : base de connaissances › ressources.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "connaissances",
+   "methode": "GET",
+   "chemin": "/api/v1/shops/{param1}/knowledge-base/resources",
+   "resume": "",
+   "note": "Liste : magasins › base de connaissances › ressources.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/KnowledgeBase/KnowledgeBaseRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "employes",
+   "methode": "GET",
+   "chemin": "/api/v1/employees/{employeeId}",
+   "resume": "",
+   "note": "Fiche employé ; include=competencies,positions ajoute compétences validées et postes tenus.",
+   "statut": "contrat",
+   "tag": "Employee",
+   "source": null,
+   "params": [
+    {
+     "nom": "employeeId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "Positive-looking decimal route segment (the router only enforces \\d+; the application does not impose a minimum or ownership check)."
+    },
+    {
+     "nom": "include",
+     "ou": "query",
+     "type": "string",
+     "requis": false,
+     "note": "RequestContext include value; competencies and positions are recognized."
+    }
+   ],
+   "corps": [],
+   "reponse": [
+    {
+     "champ": "id",
+     "type": "integer"
+    },
+    {
+     "champ": "id_shop",
+     "type": "integer"
+    },
+    {
+     "champ": "name",
+     "type": "string"
+    },
+    {
+     "champ": "surname",
+     "type": "string"
+    },
+    {
+     "champ": "display_name",
+     "type": "string"
+    },
+    {
+     "champ": "phone",
+     "type": "string"
+    },
+    {
+     "champ": "lang_code",
+     "type": "string"
+    },
+    {
+     "champ": "id_role",
+     "type": "integer"
+    },
+    {
+     "champ": "login",
+     "type": "string"
+    },
+    {
+     "champ": "money_per_hour",
+     "type": "number"
+    },
+    {
+     "champ": "email",
+     "type": "string"
+    },
+    {
+     "champ": "franchise_role",
+     "type": "string"
+    },
+    {
+     "champ": "employment_type",
+     "type": "string"
+    },
+    {
+     "champ": "workstations",
+     "type": "array"
+    },
+    {
+     "champ": "roles",
+     "type": "array"
+    },
+    {
+     "champ": "competencies",
+     "type": "array"
+    },
+    {
+     "champ": "competencies[].id",
+     "type": "integer"
+    },
+    {
+     "champ": "competencies[].id_subcategory",
+     "type": "integer"
+    },
+    {
+     "champ": "competencies[].subcategory_id",
+     "type": "integer"
+    },
+    {
+     "champ": "competencies[].name",
+     "type": "string"
+    },
+    {
+     "champ": "competencies[].base_name",
+     "type": "string"
+    },
+    {
+     "champ": "competencies[].description",
+     "type": "string?"
+    },
+    {
+     "champ": "competencies[].base_description",
+     "type": "string?"
+    },
+    {
+     "champ": "competencies[].verification_method",
+     "type": "string?"
+    },
+    {
+     "champ": "competencies[].created_at",
+     "type": "string"
+    },
+    {
+     "champ": "competencies[].subcategory_name",
+     "type": "string"
+    },
+    {
+     "champ": "competencies[].id_category",
+     "type": "integer"
+    },
+    {
+     "champ": "competencies[].category_id",
+     "type": "integer"
+    },
+    {
+     "champ": "competencies[].category_name",
+     "type": "string"
+    },
+    {
+     "champ": "competencies[].section_id",
+     "type": "integer"
+    },
+    {
+     "champ": "positions",
+     "type": "array"
+    },
+    {
+     "champ": "positions[].id",
+     "type": "integer"
+    },
+    {
+     "champ": "positions[].name",
+     "type": "string"
+    },
+    {
+     "champ": "positions[].description",
+     "type": "string?"
+    },
+    {
+     "champ": "positions[].level_id",
+     "type": "integer"
+    },
+    {
+     "champ": "positions[].level_name",
+     "type": "string"
+    },
+    {
+     "champ": "positions[].level_description",
+     "type": "string?"
+    },
+    {
+     "champ": "positions[].level_order",
+     "type": "integer"
+    }
+   ],
+   "codes": [
+    {
+     "code": "200",
+     "note": "Employee, including workstations and roles; missing row is returned as []."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "employes",
+   "methode": "GET",
+   "chemin": "/api/v1/employees/{employeeId}/competencies",
+   "resume": "",
+   "note": "Compétences validées par l’employé.",
+   "statut": "contrat",
+   "tag": "Employee",
+   "source": null,
+   "params": [
+    {
+     "nom": "employeeId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "Positive-looking decimal route segment (the router only enforces \\d+; the application does not impose a minimum or ownership check)."
+    }
+   ],
+   "corps": [],
+   "reponse": [
+    {
+     "champ": "[].id",
+     "type": "integer"
+    },
+    {
+     "champ": "[].id_subcategory",
+     "type": "integer"
+    },
+    {
+     "champ": "[].subcategory_id",
+     "type": "integer"
+    },
+    {
+     "champ": "[].name",
+     "type": "string"
+    },
+    {
+     "champ": "[].base_name",
+     "type": "string"
+    },
+    {
+     "champ": "[].description",
+     "type": "string?"
+    },
+    {
+     "champ": "[].base_description",
+     "type": "string?"
+    },
+    {
+     "champ": "[].verification_method",
+     "type": "string?"
+    },
+    {
+     "champ": "[].created_at",
+     "type": "string"
+    },
+    {
+     "champ": "[].subcategory_name",
+     "type": "string"
+    },
+    {
+     "champ": "[].id_category",
+     "type": "integer"
+    },
+    {
+     "champ": "[].category_id",
+     "type": "integer"
+    },
+    {
+     "champ": "[].category_name",
+     "type": "string"
+    },
+    {
+     "champ": "[].section_id",
+     "type": "integer"
+    }
+   ],
+   "codes": [
+    {
+     "code": "200",
+     "note": "Competencies joined with their functional category/subcategory. No active auth middleware."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "employes",
+   "methode": "PUT",
+   "chemin": "/api/v1/employees/{employeeId}/competencies",
+   "resume": "",
+   "note": "Valide une compétence pour l’employé (upsert).",
+   "statut": "decrit",
+   "tag": "Employee",
+   "source": null,
+   "params": [
+    {
+     "nom": "employeeId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "Positive-looking decimal route segment (the router only enforces \\d+; the application does not impose a minimum or ownership check)."
+    }
+   ],
+   "corps": [
+    {
+     "champ": "competency_id",
+     "type": "integer"
+    }
+   ],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "204",
+     "note": "Connection inserted/upserted; runtime emits a JSON success body despite HTTP 204."
+    },
+    {
+     "code": "400",
+     "note": "competency_id missing."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "employes",
+   "methode": "DELETE",
+   "chemin": "/api/v1/employees/{employeeId}/competencies/{competencyId}",
+   "resume": "",
+   "note": "Retire une compétence validée.",
+   "statut": "decrit",
+   "tag": "Employee",
+   "source": null,
+   "params": [
+    {
+     "nom": "employeeId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "Positive-looking decimal route segment (the router only enforces \\d+; the application does not impose a minimum or ownership check)."
+    },
+    {
+     "nom": "competencyId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "Positive-looking decimal route segment (the router only enforces \\d+; the application does not impose a minimum or ownership check)."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "204",
+     "note": "Deletion attempted; runtime emits a JSON success body despite HTTP 204."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "employes",
+   "methode": "GET",
+   "chemin": "/api/v1/employees/{employeeId}/positions",
+   "resume": "",
+   "note": "Postes et niveaux tenus par l’employé.",
+   "statut": "contrat",
+   "tag": "Employee",
+   "source": null,
+   "params": [
+    {
+     "nom": "employeeId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "Positive-looking decimal route segment (the router only enforces \\d+; the application does not impose a minimum or ownership check)."
+    }
+   ],
+   "corps": [],
+   "reponse": [
+    {
+     "champ": "[].id",
+     "type": "integer"
+    },
+    {
+     "champ": "[].name",
+     "type": "string"
+    },
+    {
+     "champ": "[].description",
+     "type": "string?"
+    },
+    {
+     "champ": "[].level_id",
+     "type": "integer"
+    },
+    {
+     "champ": "[].level_name",
+     "type": "string"
+    },
+    {
+     "champ": "[].level_description",
+     "type": "string?"
+    },
+    {
+     "champ": "[].level_order",
+     "type": "integer"
+    }
+   ],
+   "codes": [
+    {
+     "code": "200",
+     "note": "Employee positions joined to level information."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "employes",
+   "methode": "PUT",
+   "chemin": "/api/v1/employees/{employeeId}/positions",
+   "resume": "",
+   "note": "Affecte un poste et un niveau à l’employé.",
+   "statut": "decrit",
+   "tag": "Employee",
+   "source": null,
+   "params": [
+    {
+     "nom": "employeeId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "Positive-looking decimal route segment (the router only enforces \\d+; the application does not impose a minimum or ownership check)."
+    }
+   ],
+   "corps": [
+    {
+     "champ": "position_id",
+     "type": "integer"
+    },
+    {
+     "champ": "level_id",
+     "type": "integer"
+    }
+   ],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "204",
+     "note": "Connection inserted/upserted; runtime emits a JSON success body despite HTTP 204."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "employes",
+   "methode": "DELETE",
+   "chemin": "/api/v1/employees/{employeeId}/positions/{positionId}",
+   "resume": "",
+   "note": "Supprime / retire : employés › postes.",
+   "statut": "decrit",
+   "tag": "Employee",
+   "source": null,
+   "params": [
+    {
+     "nom": "employeeId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "Positive-looking decimal route segment (the router only enforces \\d+; the application does not impose a minimum or ownership check)."
+    },
+    {
+     "nom": "positionId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "Positive-looking decimal route segment (the router only enforces \\d+; the application does not impose a minimum or ownership check)."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "204",
+     "note": "Deletion attempted; runtime emits a JSON success body despite HTTP 204."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "employes",
+   "methode": "PUT",
+   "chemin": "/api/v1/employees/{employeeId}/workstations",
+   "resume": "",
+   "note": "Remplace / associe : employés › postes de travail.",
+   "statut": "decrit",
+   "tag": "Employee",
+   "source": null,
+   "params": [
+    {
+     "nom": "employeeId",
+     "ou": "path",
+     "type": "integer",
+     "requis": true,
+     "note": "Positive-looking decimal route segment (the router only enforces \\d+; the application does not impose a minimum or ownership check)."
+    }
+   ],
+   "corps": [
+    {
+     "champ": "workstation_ids",
+     "type": "array"
+    }
+   ],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "204",
+     "note": "Connections replaced; runtime emits a JSON success body despite HTTP 204."
+    },
+    {
+     "code": "401",
+     "note": "Missing or invalid Bearer token."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "employes",
+   "methode": "GET",
+   "chemin": "/api/v1/franchisee-employee/{id}/competences",
+   "resume": "",
+   "note": "Compétences d’un employé franchisé (modèle « cours » de l’ancien panel).",
+   "statut": "decrit",
+   "tag": "Franchisee employee",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "employes",
+   "methode": "GET",
+   "chemin": "/api/v1/franchisee-employee/{id}/courses",
+   "resume": "",
+   "note": "Cours suivis par un employé franchisé.",
+   "statut": "decrit",
+   "tag": "Franchisee employee",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "POST",
+   "chemin": "/api/v1/course",
+   "resume": "",
+   "note": "Crée / ajoute : cours.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "POST",
+   "chemin": "/api/v1/course-commission",
+   "resume": "Form post",
+   "note": "Crée / ajoute : session de cours.",
+   "statut": "decrit",
+   "tag": "Course commission",
+   "source": null,
+   "params": [],
+   "corps": [
+    {
+     "champ": "id_brand",
+     "type": "integer"
+    },
+    {
+     "champ": "name",
+     "type": "string"
+    }
+   ],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "PATCH",
+   "chemin": "/api/v1/course-commission/course/{id}",
+   "resume": "",
+   "note": "Modifie : session de cours › cours.",
+   "statut": "decrit",
+   "tag": "Course commission",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "DELETE",
+   "chemin": "/api/v1/course-commission/course/{id}",
+   "resume": "",
+   "note": "Supprime / retire : session de cours › cours.",
+   "statut": "decrit",
+   "tag": "Course commission",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-commission/courses",
+   "resume": "",
+   "note": "Liste : session de cours › cours.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-commission/{id}",
+   "resume": "",
+   "note": "Lit un élément : session de cours.",
+   "statut": "decrit",
+   "tag": "Course commission",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "DELETE",
+   "chemin": "/api/v1/course-commission/{id}",
+   "resume": "",
+   "note": "Supprime / retire : session de cours.",
+   "statut": "decrit",
+   "tag": "Course commission",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-commission/{id}/competences",
+   "resume": "",
+   "note": "Liste : session de cours › compétences.",
+   "statut": "decrit",
+   "tag": "Course commission",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-commission/{id}/franchisee-employee/{id}/document",
+   "resume": "",
+   "note": "Liste : session de cours › employé franchisé › document.",
+   "statut": "decrit",
+   "tag": "Course commission",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "POST",
+   "chemin": "/api/v1/course-commission/{param1}/participant",
+   "resume": "",
+   "note": "Crée / ajoute : session de cours › participant.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "DELETE",
+   "chemin": "/api/v1/course-commission/{param1}/participant/{param2}",
+   "resume": "",
+   "note": "Supprime / retire : session de cours › participant.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    },
+    {
+     "nom": "param2",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-commission/{param1}/participants",
+   "resume": "",
+   "note": "Liste : session de cours › participants.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-commissions",
+   "resume": "",
+   "note": "Liste : sessions de cours.",
+   "statut": "decrit",
+   "tag": "Course commission",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "POST",
+   "chemin": "/api/v1/course-group",
+   "resume": "Form post",
+   "note": "Crée / ajoute : groupe de cours.",
+   "statut": "decrit",
+   "tag": "Course group",
+   "source": null,
+   "params": [],
+   "corps": [
+    {
+     "champ": "id_brand",
+     "type": "integer"
+    },
+    {
+     "champ": "name",
+     "type": "string"
+    }
+   ],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-group/{id}",
+   "resume": "",
+   "note": "Lit un élément : groupe de cours.",
+   "statut": "decrit",
+   "tag": "Course group",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "PATCH",
+   "chemin": "/api/v1/course-group/{id}",
+   "resume": "",
+   "note": "Modifie : groupe de cours.",
+   "statut": "decrit",
+   "tag": "Course group",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "DELETE",
+   "chemin": "/api/v1/course-group/{id}",
+   "resume": "",
+   "note": "Supprime / retire : groupe de cours.",
+   "statut": "decrit",
+   "tag": "Course group",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-group/{param1}/subgroups",
+   "resume": "",
+   "note": "Liste : groupe de cours › subgroups.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-groups",
+   "resume": "",
+   "note": "Liste : groupes de cours.",
+   "statut": "decrit",
+   "tag": "Course group",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "POST",
+   "chemin": "/api/v1/course-set",
+   "resume": "Form post",
+   "note": "Crée / ajoute : ensemble de cours.",
+   "statut": "decrit",
+   "tag": "Course set",
+   "source": null,
+   "params": [],
+   "corps": [
+    {
+     "champ": "id_brand",
+     "type": "integer"
+    },
+    {
+     "champ": "name",
+     "type": "string"
+    }
+   ],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-set/{id}",
+   "resume": "",
+   "note": "Lit un élément : ensemble de cours.",
+   "statut": "decrit",
+   "tag": "Course set",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "PATCH",
+   "chemin": "/api/v1/course-set/{id}",
+   "resume": "",
+   "note": "Modifie : ensemble de cours.",
+   "statut": "decrit",
+   "tag": "Course set",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "DELETE",
+   "chemin": "/api/v1/course-set/{id}",
+   "resume": "",
+   "note": "Supprime / retire : ensemble de cours.",
+   "statut": "decrit",
+   "tag": "Course set",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-set/{id}/courses",
+   "resume": "",
+   "note": "Liste : ensemble de cours › cours.",
+   "statut": "decrit",
+   "tag": "Course set",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-sets",
+   "resume": "",
+   "note": "Liste : ensembles de cours.",
+   "statut": "decrit",
+   "tag": "Course set",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "POST",
+   "chemin": "/api/v1/course-subgroup",
+   "resume": "Form post",
+   "note": "Crée / ajoute : sous-groupe de cours.",
+   "statut": "decrit",
+   "tag": "Course subgroup",
+   "source": null,
+   "params": [],
+   "corps": [
+    {
+     "champ": "id_brand",
+     "type": "integer"
+    },
+    {
+     "champ": "name",
+     "type": "string"
+    }
+   ],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-subgroup/{id}",
+   "resume": "",
+   "note": "Lit un élément : sous-groupe de cours.",
+   "statut": "decrit",
+   "tag": "Course subgroup",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "PATCH",
+   "chemin": "/api/v1/course-subgroup/{id}",
+   "resume": "",
+   "note": "Modifie : sous-groupe de cours.",
+   "statut": "decrit",
+   "tag": "Course subgroup",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "DELETE",
+   "chemin": "/api/v1/course-subgroup/{id}",
+   "resume": "",
+   "note": "Supprime / retire : sous-groupe de cours.",
+   "statut": "decrit",
+   "tag": "Course subgroup",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course-subgroups",
+   "resume": "",
+   "note": "Liste : sous-groupes de cours.",
+   "statut": "decrit",
+   "tag": "Course subgroup",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course/{id}/competences",
+   "resume": "",
+   "note": "Liste : cours › compétences.",
+   "statut": "decrit",
+   "tag": "Course template",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/course/{param1}",
+   "resume": "",
+   "note": "Lit un élément : cours.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "PATCH",
+   "chemin": "/api/v1/course/{param1}",
+   "resume": "",
+   "note": "Modifie : cours.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "DELETE",
+   "chemin": "/api/v1/course/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : cours.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/courses",
+   "resume": "",
+   "note": "Liste : cours.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "POST",
+   "chemin": "/api/v1/franchisee-employee-role",
+   "resume": "Form post",
+   "note": "Crée / ajoute : rôle d’employé.",
+   "statut": "decrit",
+   "tag": "Franchisee employee role",
+   "source": null,
+   "params": [],
+   "corps": [
+    {
+     "champ": "id_brand",
+     "type": "integer"
+    },
+    {
+     "champ": "name",
+     "type": "string"
+    }
+   ],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/franchisee-employee-role/{id}",
+   "resume": "",
+   "note": "Lit un élément : rôle d’employé.",
+   "statut": "decrit",
+   "tag": "Franchisee employee role",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "PATCH",
+   "chemin": "/api/v1/franchisee-employee-role/{id}",
+   "resume": "",
+   "note": "Modifie : rôle d’employé.",
+   "statut": "decrit",
+   "tag": "Franchisee employee role",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "DELETE",
+   "chemin": "/api/v1/franchisee-employee-role/{id}",
+   "resume": "",
+   "note": "Supprime / retire : rôle d’employé.",
+   "statut": "decrit",
+   "tag": "Franchisee employee role",
+   "source": null,
+   "params": [
+    {
+     "nom": "id",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/franchisee-employee-role/{param1}/course",
+   "resume": "",
+   "note": "Liste : rôle d’employé › cours.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "PATCH",
+   "chemin": "/api/v1/franchisee-employee-role/{param1}/course",
+   "resume": "",
+   "note": "Modifie : rôle d’employé › cours.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/index.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "cours",
+   "methode": "GET",
+   "chemin": "/api/v1/franchisee-employee-roles",
+   "resume": "",
+   "note": "Liste : rôles d’employé.",
+   "statut": "decrit",
+   "tag": "Franchisee employee role",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "produit",
+   "methode": "GET",
+   "chemin": "/api/v1/product-competences",
+   "resume": "",
+   "note": "Liste des compétences produit.",
+   "statut": "decrit",
+   "tag": "Product competencies",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": true
+  },
+  {
+   "famille": "produit",
+   "methode": "POST",
+   "chemin": "/api/v1/product-competences",
+   "resume": "",
+   "note": "Crée / ajoute : compétences produit.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productCompetenceRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "produit",
+   "methode": "GET",
+   "chemin": "/api/v1/product-competences/description-aliases",
+   "resume": "",
+   "note": "Traductions des descriptions de compétences produit.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/aliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "produit",
+   "methode": "GET",
+   "chemin": "/api/v1/product-competences/name-aliases",
+   "resume": "",
+   "note": "Traductions des noms de compétences produit.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/aliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "produit",
+   "methode": "GET",
+   "chemin": "/api/v1/product-competences/{param1}",
+   "resume": "",
+   "note": "Lit un élément : compétences produit.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productCompetenceRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "produit",
+   "methode": "PATCH",
+   "chemin": "/api/v1/product-competences/{param1}",
+   "resume": "",
+   "note": "Modifie : compétences produit.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productCompetenceRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "produit",
+   "methode": "DELETE",
+   "chemin": "/api/v1/product-competences/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : compétences produit.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productCompetenceRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "produit",
+   "methode": "PATCH",
+   "chemin": "/api/v1/product-competences/{param1}/description-aliases",
+   "resume": "",
+   "note": "Écrit les traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/aliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "produit",
+   "methode": "PATCH",
+   "chemin": "/api/v1/product-competences/{param1}/name-aliases",
+   "resume": "",
+   "note": "Écrit les traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/aliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "produit",
+   "methode": "POST",
+   "chemin": "/api/v1/products/{param1}/competences",
+   "resume": "",
+   "note": "Crée / ajoute : produits › compétences.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "produit",
+   "methode": "POST",
+   "chemin": "/api/v1/subrecipes/{param1}/competences",
+   "resume": "",
+   "note": "Crée / ajoute : sous-recettes › compétences.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "packages",
+   "methode": "GET",
+   "chemin": "/api/v1/packages",
+   "resume": "",
+   "note": "Liste des packages.",
+   "statut": "decrit",
+   "tag": "Packages",
+   "source": null,
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "200",
+     "note": "The data"
+    },
+    {
+     "code": "404",
+     "note": "Empty data"
+    },
+    {
+     "code": "500",
+     "note": "Internal"
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "packages",
+   "methode": "POST",
+   "chemin": "/api/v1/packages",
+   "resume": "",
+   "note": "Crée un package (conditionnement produit). Route sans contrat dans le swagger.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productPackageRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": true,
+   "module": false
+  },
+  {
+   "famille": "packages",
+   "methode": "GET",
+   "chemin": "/api/v1/packages/{param1}",
+   "resume": "",
+   "note": "Lit un élément : packages.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productPackageRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "packages",
+   "methode": "PATCH",
+   "chemin": "/api/v1/packages/{param1}",
+   "resume": "",
+   "note": "Modifie : packages.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productPackageRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "packages",
+   "methode": "DELETE",
+   "chemin": "/api/v1/packages/{param1}",
+   "resume": "",
+   "note": "Supprime / retire : packages.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productPackageRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "packages",
+   "methode": "GET",
+   "chemin": "/api/v1/packages/{param1}/cost",
+   "resume": "",
+   "note": "Liste : packages › coût.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productPackageRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "packages",
+   "methode": "GET",
+   "chemin": "/api/v1/product-packages/description-aliases",
+   "resume": "",
+   "note": "Liste : packages produit › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/aliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "packages",
+   "methode": "GET",
+   "chemin": "/api/v1/product-packages/name-aliases",
+   "resume": "",
+   "note": "Liste : packages produit › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/aliasRoutes.php",
+   "params": [],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "packages",
+   "methode": "PATCH",
+   "chemin": "/api/v1/product-packages/{param1}/description-aliases",
+   "resume": "",
+   "note": "Modifie : packages produit › traductions de la description.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/aliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "packages",
+   "methode": "PATCH",
+   "chemin": "/api/v1/product-packages/{param1}/name-aliases",
+   "resume": "",
+   "note": "Modifie : packages produit › traductions du nom.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/aliasRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  },
+  {
+   "famille": "packages",
+   "methode": "GET",
+   "chemin": "/api/v1/shops/{param1}/packages/{param2}/cost",
+   "resume": "",
+   "note": "Liste : magasins › packages › coût.",
+   "statut": "runtime",
+   "tag": "",
+   "source": "v1/Routes/Product/productPackageRoutes.php",
+   "params": [
+    {
+     "nom": "param1",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    },
+    {
+     "nom": "param2",
+     "ou": "path",
+     "type": "string",
+     "requis": true,
+     "note": "Path segment required by the route template. Legacy route documentation does not establish a narrower input contract."
+    }
+   ],
+   "corps": [],
+   "reponse": [],
+   "codes": [
+    {
+     "code": "default",
+     "note": "Runtime response. Its status and payload contract are not established by static route registration alone."
+    }
+   ],
+   "demande": false,
+   "module": false
+  }
+ ]
+}

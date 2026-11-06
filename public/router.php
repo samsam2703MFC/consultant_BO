@@ -4,6 +4,7 @@
  *   php -S 0.0.0.0:8080 -t public public/router.php
  *
  * /api/cockpit/*  → API REST
+ * /api/v1/erp/dimona/* et /hr/api/v1/erp/dimona/* → API du module RH (public/api/hr)
  * fichiers réels  → servis tels quels
  * dossier avec son index.html (tablette/, planogramme/…) → cet index.html
  * fichier absent sous tablette/, formation/ ou uploads/ → 404, comme le .htaccess
@@ -11,8 +12,14 @@
  */
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-if (str_starts_with($uri, '/api/cockpit')) {
+// Le module Formation appelle l'API à côté de lui (formation/api/cockpit), comme sur le serveur.
+if (str_starts_with($uri, '/api/cockpit') || str_starts_with($uri, '/formation/api/cockpit')) {
     require __DIR__ . '/api/index.php';
+    return true;
+}
+// Le module RH (/hr) appelle son API à côté de lui, comme derrière l'alias Apache.
+if (str_contains($uri, '/api/v1/erp/dimona')) {
+    require __DIR__ . '/api/hr/index.php';
     return true;
 }
 if ($uri !== '/' && is_file(__DIR__ . $uri)) {

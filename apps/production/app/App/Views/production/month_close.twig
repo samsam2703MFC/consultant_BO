@@ -1,0 +1,279 @@
+{% extends "layouts/base.twig" %}
+
+{% set s = mc.steps %}
+{% set ym = mc.month %}
+{% set states = {done: ['Gotowe', 'is-done'], todo: ['Do zrobienia', 'is-todo'], warn: ['Do sprawdzenia', 'is-warn'], skip: ['Pominięty', 'is-skip']} %}
+{% set titles = {cartons: 'Kartony działów', staff: 'Personel', media: 'Media', fixed: 'Koszty stałe i logistyka', inventory: 'Inwentaryzacja surowców', recalc: 'Marże i stany min. / maks.', manager: 'Wartości kierownika produkcji', close: 'Zamknięcie i raport'} %}
+{% set editable = mc.exists and not mc.locked %}
+{% set short = {cartons: 'Kartony', staff: 'Personel', media: 'Media', fixed: 'Koszty stałe', inventory: 'Inwentaryzacja', recalc: 'Przeliczenia', manager: 'Kierownik', close: 'Zamknięcie'} %}
+
+{% block title %}Zamknięcie miesiąca {{ mc.label }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title d-flex flex-wrap align-items-end justify-content-between gap-2">
+            <div>
+                <h3>Zamknięcie miesiąca</h3>
+                <p class="text-subtitle text-muted mb-0">Osiem kroków na jednej stronie : kartony, personel, media, koszty stałe i logistyka, inwentaryzacja, przeliczenia, kierownik produkcji, zamknięcie i raport.</p>
+            </div>
+            <span class="d-flex flex-wrap align-items-center gap-3">
+                <label class="d-flex align-items-center gap-2 m-0 small" for="mcMonth">Miesiąc
+                    <select class="form-select form-select-sm" id="mcMonth" style="width:auto">
+                        {% for m in mc.months %}
+                            <option value="{{ m.ym }}" {{ m.ym == ym ? 'selected' }}>{{ m.label }}{{ m.status == 'LOCKED' ? ' · zamknięty' : (m.status == 'OPEN' ? ' · otwarty' : ' · nierozpoczęty') }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <a class="at-link" href="{{ root }}/cost-calculator/{{ ym }}"><i class="bi bi-calculator"></i> Kalkulator kosztów</a>
+                <a class="at-link" href="{{ root }}/dashboard/monthly?month={{ ym }}"><i class="bi bi-file-earmark-bar-graph"></i> Raport miesięczny</a>
+            </span>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-wizard mc" id="monthClose" data-month="{{ ym }}" data-month-id="{{ mc.month_id }}" data-from="{{ mc.from }}" data-to="{{ mc.to }}"
+         data-root="{{ root }}" data-api-base="{{ api_base }}" data-user="{{ session_user }}" data-labels="workshop"
+         data-report-to="{{ s.close.settings.recipients }}" data-report-lang="{{ s.close.settings.lang ?? 'pl' }}">
+
+    <ol class="at-steps mc-progress" aria-label="Kroki zamknięcia miesiąca">
+        {% for key in ['cartons', 'staff', 'media', 'fixed', 'inventory', 'recalc', 'manager', 'close'] %}
+            <li class="{{ s[key].state in ['done', 'skip'] ? 'is-done' }}{{ mc.next == key ? ' is-active' }}" data-step-tab="{{ loop.index }}" tabindex="0" data-go="mc-{{ key }}" title="{{ titles[key] }}"><span>{{ short[key] }}</span></li>
+        {% endfor %}
+    </ol>
+
+    <p class="mc-summary">
+        <strong>{{ mc.label|capitalize }}</strong> · {{ mc.done }} z 8 kroków gotowe
+        {% if mc.locked %} · <span class="text-success"><i class="bi bi-lock-fill"></i> zamknięty{{ mc.locked_at ? ' ' ~ mc.locked_at|date('d.m.Y H:i') }}{{ mc.locked_by ? ' (' ~ mc.locked_by ~ ')' }}</span>{% endif %}
+    </p>
+
+    {% if mc.locked %}
+        <div class="at-note at-note-safe"><i class="bi bi-shield-lock"></i><strong>Miesiąc jest zamknięty</strong> : kartony, personel i koszty są zamrożone (marże miesięcy i raport liczą się z tych wartości).
+            Żeby coś poprawić, otwórz miesiąc ponownie w <a href="{{ root }}/cost-calculator/{{ ym }}">kalkulatorze kosztów</a>.</div>
+    {% elseif mc.partial %}
+        <div class="at-note at-note-warn"><i class="bi bi-hourglass-split"></i>Miesiąc jeszcze trwa (do {{ mc.to|date('d.m.Y') }}) : sprzedaż, godziny i koszty są niepełne. Zamknij go po jego końcu.</div>
+    {% endif %}
+
+    {% if not mc.exists %}
+        <div class="card mc-start">
+            <div class="card-body d-flex flex-wrap align-items-center gap-3">
+                <div class="flex-grow-1"><h4 class="at-step-title">Miesiąc nie jest jeszcze rozpoczęty</h4>
+                    <p class="at-step-lead mb-0">Rozpoczęcie tworzy miesiąc w kalkulatorze kosztów z personelem z listy pracowników i kosztami z Budżetu personelu. Potem kroki 1–4 uzupełnisz tutaj.</p></div>
+                <button type="button" class="btn btn-primary" data-mc-action="start"><i class="bi bi-play-fill"></i> Rozpocznij {{ mc.label }}</button>
+            </div>
+        </div>
+    {% endif %}
+
+    {# --- 1. Kartony ------------------------------------------------------------------------------------- #}
+    {% set st = s.cartons %}
+    <div class="card mc-step {{ states[st.state][1] }}" id="mc-cartons">
+        <div class="card-body">
+            <div class="mc-head"><span class="mc-num">1</span><div class="mc-title"><h4>{{ titles.cartons }}</h4>
+                <p>Kartony miesiąca na dział dzielą koszty personelu, mediów i stałe na karton. Źródło zalecane : sprzedaż z WDT (te same kartony co rentowność).</p></div>
+                <span class="mc-state">{{ states[st.state][0] }}</span></div>
+            {% if st.sections %}
+                <div class="table-responsive"><table class="table table-sm mc-table">
+                    <thead><tr><th>Dział</th><th class="text-end">Zapisane</th><th>Źródło</th><th class="text-end">Sprzedaż WDT</th></tr></thead>
+                    <tbody>
+                    {% for r in st.sections %}
+                        <tr><td>{{ r.name }}</td><td class="text-end">{{ r.saved is null ? '—' : r.saved|number_format(0, ',', ' ') }}</td>
+                            <td>{{ {WDT: 'WDT', AUTO: 'z zamówień', MANUAL: 'ręcznie'}[r.source] ?? '—' }}</td>
+                            <td class="text-end{{ r.saved is not null and r.saved != r.wdt and r.source != 'MANUAL' ? ' text-warning' }}">{{ r.wdt|number_format(0, ',', ' ') }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot><tr><th>Razem</th><th class="text-end">{{ st.total|number_format(0, ',', ' ') }}</th><th></th><th class="text-end">{{ st.wdt_total|number_format(0, ',', ' ') }}</th></tr></tfoot>
+                </table></div>
+            {% else %}
+                <p class="at-empty"><i class="bi bi-inbox"></i> Brak sprzedaży WDT i kartonów w tym miesiącu.</p>
+            {% endif %}
+            {% if st.manual %}<p class="mc-hint"><i class="bi bi-pencil"></i> Działy z wpisem ręcznym ({{ st.manual }}) zostają bez zmian przy pobieraniu z WDT.</p>{% endif %}
+            <div class="mc-actions">
+                <button type="button" class="btn btn-sm btn-primary" data-mc-action="cartons" {{ editable and st.wdt_total > 0 ? '' : 'disabled' }}><i class="bi bi-download"></i> Pobierz kartony z WDT ({{ st.wdt_total|number_format(0, ',', ' ') }})</button>
+                <a class="at-link" href="{{ root }}/cost-calculator/{{ ym }}#tab-sections">Popraw w kalkulatorze <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    {# --- 2. Personel ------------------------------------------------------------------------------------ #}
+    {% set st = s.staff %}
+    <div class="card mc-step {{ states[st.state][1] }}" id="mc-staff">
+        <div class="card-body">
+            <div class="mc-head"><span class="mc-num">2</span><div class="mc-title"><h4>{{ titles.staff }}</h4>
+                <p>Koszt pracodawcy z Budżetu personelu (jedna karta płacy), porównanie z poprzednim miesiącem i godziny z tabletów.</p></div>
+                <span class="mc-state">{{ states[st.state][0] }}</span></div>
+            <div class="mc-figures">
+                <div><span>Osoby w miesiącu</span><strong>{{ st.count }}</strong><small>M-1 : {{ st.prev.count }}</small></div>
+                <div><span>Koszt personelu</span><strong>{{ st.total|pln }}</strong><small>M-1 : {{ st.prev.total|pln }}</small></div>
+                <div><span>Godziny z tabletów</span><strong>{{ st.tablet.hours|number_format(1, ',', ' ') }} h</strong><small>{{ st.tablet.people }} os.{{ st.tablet.open ? ' · ' ~ st.tablet.open ~ ' otwartych rejestracji' }}</small></div>
+                <div class="{{ st.budget_diff ? 'is-warn' }}"><span>Inny niż w budżecie</span><strong>{{ st.budget_diff }}</strong><small>{{ st.missing ? st.missing ~ ' os. spoza miesiąca' : 'wszyscy z listy' }}</small></div>
+            </div>
+            {% if st.rows %}
+                <details class="mc-details"><summary>Pracownicy miesiąca ({{ st.count }})</summary>
+                    <div class="table-responsive"><table class="table table-sm mc-table">
+                        <thead><tr><th>Pracownik</th><th>Dział</th><th class="text-end">Koszt miesiąca</th><th class="text-end">Budżet</th><th class="text-end">M-1</th><th class="text-end">Godziny (tablet)</th></tr></thead>
+                        <tbody>{% for r in st.rows %}
+                            <tr class="{{ r.differs ? 'mc-row-warn' }}"><td>{{ r.name }}</td><td>{{ r.section }}</td><td class="text-end">{{ r.cost|pln }}</td>
+                                <td class="text-end">{{ r.budget is null ? '—' : r.budget|pln }}</td><td class="text-end">{{ r.prev is null ? '—' : r.prev|pln }}</td>
+                                <td class="text-end">{{ r.hours is null ? '—' : r.hours|number_format(1, ',', ' ') ~ ' h' }}</td></tr>
+                        {% endfor %}</tbody>
+                    </table></div>
+                </details>
+            {% endif %}
+            <div class="mc-actions">
+                <button type="button" class="btn btn-sm btn-primary" data-mc-action="staff" data-diff="{{ st.budget_diff }}" {{ editable ? '' : 'disabled' }}><i class="bi bi-arrow-repeat"></i> Pobierz z budżetu (koszty i brakujące osoby)</button>
+                <a class="at-link" href="{{ root }}/staff/budget">Budżet personelu <i class="bi bi-arrow-right"></i></a>
+                <a class="at-link" href="{{ root }}/cost-calculator/{{ ym }}#tab-employees">Korekta w miesiącu <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    {# --- 3. Media --------------------------------------------------------------------------------------- #}
+    {% set st = s.media %}
+    <div class="card mc-step {{ states[st.state][1] }}" id="mc-media">
+        <div class="card-body">
+            <div class="mc-head"><span class="mc-num">3</span><div class="mc-title"><h4>{{ titles.media }}</h4>
+                <p>Prąd, gaz, woda… miesiąca i ich podział na działy. Bez wpisów kalkulator liczy stałe media działów (szacunek).</p></div>
+                <span class="mc-state">{{ states[st.state][0] }}</span></div>
+            {% include 'production/_month_close_cost.twig' with {c: st, category: 'media', anchor: 'tab-media', what: 'media'} %}
+        </div>
+    </div>
+
+    {# --- 4. Koszty stałe i logistyka ------------------------------------------------------------------- #}
+    {% set st = s.fixed %}
+    <div class="card mc-step {{ states[st.state][1] }}" id="mc-fixed">
+        <div class="card-body">
+            <div class="mc-head"><span class="mc-num">4</span><div class="mc-title"><h4>{{ titles.fixed }}</h4>
+                <p>Koszty stałe miesiąca (leasing, ubezpieczenia, biuro…) i koszty logistyki (transport, paliwo…).</p></div>
+                <span class="mc-state">{{ states[st.state][0] }}</span></div>
+            <h5 class="mc-sub">Koszty stałe</h5>
+            {% include 'production/_month_close_cost.twig' with {c: st.fixed, category: 'fixed', anchor: 'tab-fixed', what: 'koszty stałe'} %}
+            <h5 class="mc-sub">Logistyka</h5>
+            {% include 'production/_month_close_cost.twig' with {c: st.logistics, category: 'logistics', anchor: 'tab-logistics', what: 'koszty logistyki'} %}
+        </div>
+    </div>
+
+    {# --- 5. Inwentaryzacja ------------------------------------------------------------------------------ #}
+    {% set st = s.inventory %}
+    <div class="card mc-step {{ states[st.state][1] }}" id="mc-inventory">
+        <div class="card-body">
+            <div class="mc-head"><span class="mc-num">5</span><div class="mc-title"><h4>{{ titles.inventory }}</h4>
+                <p>Spis surowców i opakowań na koniec miesiąca (arkusz inwentaryzacji w Zaopatrzeniu) : stan, zużycie i propozycje min. / maks. liczą się od niego.</p></div>
+                <span class="mc-state">{{ states[st.state][0] }}</span></div>
+            {% if st.inventory %}
+                <p class="mc-line"><i class="bi bi-clipboard-check text-success"></i> Inwentaryzacja z {{ st.inventory.count_date|date('d.m.Y') }} : {{ st.inventory.materials }} surowców{{ st.inventory.by_name ? ' · ' ~ st.inventory.by_name }}.</p>
+            {% elseif st.last %}
+                <p class="mc-line"><i class="bi bi-exclamation-triangle text-warning"></i> Ostatnia inwentaryzacja : {{ st.last.count_date|date('d.m.Y') }} ({{ st.last.materials }} surowców) — poza okresem {{ st.window.from|date('d.m') }}–{{ st.window.to|date('d.m.Y') }}.</p>
+            {% else %}
+                <p class="mc-line"><i class="bi bi-info-circle"></i> Brak inwentaryzacji. Okres na spis tego miesiąca : {{ st.window.from|date('d.m') }}–{{ st.window.to|date('d.m.Y') }}.</p>
+            {% endif %}
+            {% if not st.inventory and st.counted_in_window %}<p class="mc-hint">Pojedyncze liczenia w tym okresie : {{ st.counted_in_window }} surowców (bez pełnego arkusza).</p>{% endif %}
+            <div class="mc-actions">
+                <a class="btn btn-sm btn-primary" href="{{ root }}/workshop/supply#tab=stock&inventory=1"><i class="bi bi-clipboard-check"></i> Otwórz arkusz inwentaryzacji</a>
+                <a class="at-link" href="{{ root }}/workshop/supply#tab=stock">Stan surowców <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    {# --- 6. Przeliczenia --------------------------------------------------------------------------------- #}
+    {% set st = s.recalc %}
+    <div class="card mc-step {{ states[st.state][1] }}" id="mc-recalc">
+        <div class="card-body">
+            <div class="mc-head"><span class="mc-num">6</span><div class="mc-title"><h4>{{ titles.recalc }}</h4>
+                <p>Koszt surowców receptur po ostatnich cenach (marże) i stany min. / maks. produktów na magazynie ze sprzedaży ostatnich tygodni — z listą zmian.</p></div>
+                <span class="mc-state">{{ states[st.state][0] }}</span></div>
+            <div class="mc-cols">
+                <div>
+                    <h5 class="mc-sub">Marże {% if st.margins.fresh %}<i class="bi bi-check-circle-fill text-success"></i>{% endif %}</h5>
+                    {% if st.margins.run %}
+                        <p class="mc-line">Ostatnie przeliczenie : {{ st.margins.run.run_at|date('d.m.Y H:i') }}{{ st.margins.run.by_name ? ' · ' ~ st.margins.run.by_name }} — zmiana kosztu u {{ st.margins.run.changed }} z {{ st.margins.run.products }} produktów.</p>
+                    {% else %}
+                        <p class="mc-line">Jeszcze nie przeliczano.</p>
+                    {% endif %}
+                    {% if st.margins.changes %}
+                        <table class="table table-sm mc-table"><thead><tr><th>Produkt</th><th class="text-end">Koszt kartonu przed → po</th><th class="text-end">Zmiana</th></tr></thead><tbody>
+                        {% for c in st.margins.changes %}
+                            <tr><td>{{ c.name }}</td><td class="text-end">{{ c.old_cost_carton|pln(2) }} → {{ c.new_cost_carton|pln(2) }}</td>
+                                <td class="text-end {{ c.new_cost_carton > c.old_cost_carton ? 'text-danger' : 'text-success' }}">{{ c.delta_pct is null ? '—' : (c.delta_pct > 0 ? '+' : '') ~ c.delta_pct|number_format(1, ',', ' ') ~ ' %' }}</td></tr>
+                        {% endfor %}</tbody></table>
+                    {% endif %}
+                    <div class="mc-actions">
+                        <button type="button" class="btn btn-sm btn-primary" data-mc-action="margins"><i class="bi bi-calculator"></i> Przelicz wszystkie marże</button>
+                        <a class="at-link" href="{{ root }}/finances/category-margin">Efekt na marżach <i class="bi bi-arrow-right"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h5 class="mc-sub">Stany min. / maks. {% if st.stocks.fresh %}<i class="bi bi-check-circle-fill text-success"></i>{% endif %}</h5>
+                    <p class="mc-line">{{ st.stocks.mts }} produktów na magazynie (MTS){% if st.stocks.latest %} · ostatnie obliczenie {{ st.stocks.latest|date('d.m.Y') }}{% endif %}{% if st.stocks.never %} · {{ st.stocks.never }} bez obliczenia{% endif %}.</p>
+                    <div id="mcStocks" aria-live="polite"><p class="text-muted small mb-0">Wczytywanie propozycji ze sprzedaży…</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# --- 7. Kierownik produkcji -------------------------------------------------------------------------- #}
+    {% set st = s.manager %}
+    <div class="card mc-step {{ states[st.state][1] }}" id="mc-manager">
+        <div class="card-body">
+            <div class="mc-head"><span class="mc-num">7</span><div class="mc-title"><h4>{{ titles.manager }}</h4>
+                <p>Wpisy miesiąca w module Kierownik produkcji : wskaźniki bez danych w ERP (wpis ręczny) i trzy działania na następny miesiąc.</p></div>
+                <span class="mc-state">{{ states[st.state][0] }}</span></div>
+            {% if st.error %}
+                <p class="mc-line text-danger">Nie udało się odczytać wskaźników kierownika.</p>
+            {% elseif not st.plan %}
+                <p class="mc-line"><i class="bi bi-info-circle"></i> Brak planu kierownika produkcji na {{ ym|slice(0, 4) }} — krok pominięty.</p>
+            {% else %}
+                <p class="mc-line">Kierownik : <strong>{{ st.holder ?? '—' }}</strong> · działania na następny miesiąc : {{ st.actions }} z 3.</p>
+                {% if st.missing %}<ul class="mc-list">{% for m in st.missing %}<li><i class="bi bi-pencil-square text-warning"></i> {{ m.name }} — {{ m.reason }}</li>{% endfor %}</ul>
+                {% else %}<p class="mc-line"><i class="bi bi-check-circle text-success"></i> Wszystkie wartości ręczne wpisane.</p>{% endif %}
+                {% if st.unverified %}<p class="mc-hint">Do weryfikacji przez dyrekcję (wpisane przez kierownika) : {{ st.unverified|map(u => u.name)|join(', ') }}.</p>{% endif %}
+            {% endif %}
+            <div class="mc-actions">
+                {% if can_see('/workshop/manager') %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}/workshop/manager#tab=report&month={{ ym }}"><i class="bi bi-person-badge"></i> Raport kierownika — {{ mc.label }}</a>
+                {% else %}<span class="mc-hint mb-0">Moduł Kierownik produkcji : tylko administrator.</span>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# --- 8. Zamknięcie i raport --------------------------------------------------------------------------- #}
+    {% set st = s.close %}
+    <div class="card mc-step {{ states[st.state][1] }}" id="mc-close">
+        <div class="card-body">
+            <div class="mc-head"><span class="mc-num">8</span><div class="mc-title"><h4>{{ titles.close }}</h4>
+                <p>Zamknięcie zamraża kartony, personel i koszty miesiąca ; raport miesięczny (PDF) wychodzi dopiero po zamknięciu.</p></div>
+                <span class="mc-state">{{ states[st.state][0] }}</span></div>
+            {% if not st.locked %}
+                {% if st.open_steps %}
+                    <div class="at-note at-note-warn"><i class="bi bi-exclamation-triangle"></i>Kroki niezakończone : {{ st.open_steps|map(k => titles[k])|join(', ') }}. Możesz zamknąć mimo to (np. brak danych), potwierdzając poniżej.</div>
+                    <label class="at-confirm mb-2"><input type="checkbox" class="form-check-input" id="mcForce"><span>Zamykam miesiąc mimo niezakończonych kroków.</span></label>
+                {% endif %}
+                <div class="mc-actions">
+                    <button type="button" class="btn btn-sm btn-primary" data-mc-action="lock" data-open="{{ st.open_steps|length }}" {{ mc.exists ? '' : 'disabled' }}><i class="bi bi-lock"></i> Zamknij {{ mc.label }}</button>
+                </div>
+            {% else %}
+                <p class="mc-line"><i class="bi bi-lock-fill text-success"></i> Zamknięty{{ mc.locked_at ? ' ' ~ mc.locked_at|date('d.m.Y H:i') }}{{ mc.locked_by ? ' przez ' ~ mc.locked_by }}.</p>
+            {% endif %}
+            <h5 class="mc-sub">Raport miesięczny</h5>
+            {% if st.sent %}
+                <ul class="mc-list">{% for m in st.sent %}<li><i class="bi {{ m.status == 'failed' ? 'bi-x-circle text-danger' : 'bi-envelope-check text-success' }}"></i> {{ m.recipient_email }} · {{ (m.sent_at ?? m.created_at)|date('d.m.Y H:i') }} · {{ {sent: 'wysłany', queued: 'w kolejce', processing: 'w trakcie wysyłki', draft: 'szkic', failed: 'błąd'}[m.status] ?? m.status }}{{ m.created_by starts with 'monthly-report:' ? ' · automatycznie' : ' · ' ~ m.created_by }}</li>{% endfor %}</ul>
+            {% else %}
+                <p class="mc-line">Raport za {{ mc.label }} jeszcze nie wysłany.</p>
+            {% endif %}
+            {% if st.settings.recipients %}
+                <p class="mc-hint">Wysyłka automatyczna : od {{ st.settings.send_day }}. dnia miesiąca do {{ st.settings.recipients }} ({{ (st.settings.lang ?? 'pl')|upper }}), gdy miesiąc jest zamknięty.</p>
+            {% else %}
+                <p class="mc-hint">Brak adresów raportu — ustaw je na stronie <a href="{{ root }}/dashboard/monthly?month={{ ym }}">Raport miesięczny</a> (wysyłka automatyczna jest wtedy wyłączona).</p>
+            {% endif %}
+            <div class="mc-actions">
+                <button type="button" class="btn btn-sm btn-outline-primary" data-mc-action="report" {{ st.locked and st.settings.recipients ? '' : 'disabled' }}><i class="bi bi-send"></i> Wyślij raport teraz</button>
+                <a class="at-link" href="{{ root }}/dashboard/monthly/pdf?month={{ ym }}&lang={{ st.settings.lang ?? 'pl' }}" target="_blank" rel="noopener">Podgląd PDF <i class="bi bi-box-arrow-up-right"></i></a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/workshop/api.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/pages/month-close.js?v={{ asset_v() }}"></script>
+{% endblock %}

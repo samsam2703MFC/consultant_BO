@@ -1,9 +1,32 @@
-{# dashboard/dashboard.twig — l'Accueil, centré sur la performance de la personne (06/10/2026). #}
+{# dashboard/dashboard.twig — l'Accueil, centré sur la performance de la personne (06/10/2026) ; ce qui est encore en jeu et le plan en tête, en forme sobre (23/10/2026). #}
 {% extends "layouts/mobile_base.twig" %}
 {% set active_nav = 'dashboard' %}
 {% set T = translations %}
+{% macro duree(m) %}{% if m < 60 %}{{ m }} min{% else %}{{ m // 60 }} h{% if m % 60 %} {{ '%02d'|format(m % 60) }}{% endif %}{% endif %}{% endmacro %}
+{% import _self as fp %}
 {% block title %}{{ T.home ?? 'Accueil' }}{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}">
+<style>
+  /* Le pointage (01/11/2026, maquette docs/maquettes/pointage-app, écrans A et D). */
+  .pt-carte{background:var(--s-carte);border-radius:18px;padding:16px 18px 18px;margin-bottom:12px}
+  .pt-sur{display:flex;align-items:center;gap:7px;font:400 15px var(--s-police);color:var(--s-second)}
+  .pt-sur i.on{width:8px;height:8px;border-radius:50%;background:var(--s-vert);box-shadow:0 0 0 4px var(--s-vert-doux)}
+  .pt-h{margin:4px 0 2px;font:600 40px/1.1 var(--s-police);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .pt-sous{font:400 15px var(--s-police);color:var(--s-second)}
+  .pt-sous b{color:var(--s-texte);font-weight:600}
+  .pt-barre{height:8px;border-radius:4px;background:var(--s-remplir);margin:12px 0 8px;overflow:hidden}
+  .pt-barre i{display:block;height:100%;background:var(--s-vert);border-radius:4px}
+  .pt-bouton{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:16px;padding:15px 0;border-radius:14px;background:var(--s-accent);color:#fff;font:600 17px var(--s-police);text-decoration:none}
+  .pt-bouton i{font-size:21px}
+  .pt-bouton:hover{color:#fff}
+  .pt-bouton.contour{background:none;color:var(--s-accent);box-shadow:inset 0 0 0 1.5px var(--s-accent)}
+  .pt-aide{display:flex;gap:8px;margin-top:10px;font:400 12.5px/1.4 var(--s-police);color:var(--s-second)}
+  .pt-pointe{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:.5px solid var(--s-trait);font:400 14px var(--s-police);color:var(--s-second)}
+  .pt-pointe b{color:var(--s-texte);font-weight:600;font-variant-numeric:tabular-nums}
+  .pt-pointe .v{color:var(--s-vert);font-weight:500}.pt-pointe .o{color:#B25E09;font-weight:500}
+  .pt-mini{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--s-carte);border-radius:16px;padding:13px 16px;margin-bottom:12px;color:inherit;text-decoration:none;font:400 15px var(--s-police)}
+  .pt-mini b{font-weight:600}.pt-mini span{color:var(--s-accent);white-space:nowrap}
+</style>{% endblock %}
 {% block page_title %}{{ T.hello ?? 'Bonjour' }}{% if prenom %} {{ prenom }}{% endif %}{% endblock %}
 {% block page_subtitle %}{% if primes %}{{ primes.magasin.nom|replace({'Atelier by - ': ''}) }} · {% endif %}{{ dateLib }}{% endblock %}
 
@@ -11,20 +34,50 @@
 {% set p = primes %}
 {% set eur = '€' %}
 
-{# ── 1. Mes primes : l'anneau, en tête ── #}
+{# ── 0. Le pointage : le service du jour et le bouton (01/11/2026) ── #}
+{% set PT = pointage %}
+{% if PT %}
+  {% if PT.ouvert %}{% set o = PT.ouvert %}
+<div class="pt-carte" data-pointage="en_service">
+  <div class="pt-sur"><i class="on"></i>{{ T.pt_on_shift ?? 'En service' }}</div>
+  <div class="pt-h">{% if PT.prevu %}{{ PT.prevu.debut }} – {{ PT.prevu.fin }}{% else %}{{ (T.pt_since ?? 'depuis {h}')|replace({'{h}': o.entree}) }}{% endif %}</div>
+  {% if PT.prevu %}<div class="pt-barre"><i style="width:{{ PT.avance }}%"></i></div>
+  <div class="pt-sous"><b>{{ (T.pt_left ?? 'encore {d}')|replace({'{d}': fp.duree(PT.reste)}) }}</b> · {{ (T.pt_until ?? 'jusqu’à {h}')|replace({'{h}': PT.prevu.fin}) }}</div>{% endif %}
+  <div class="pt-pointe"><i class="bi bi-box-arrow-in-right"></i>{{ T.pt_clocked_in_at ?? 'Arrivée pointée à' }} <b>{{ o.entree }}</b>{% if o.arrivee == 'retard' %} <span class="o">+{{ o.retard_min }} min</span>{% elseif o.arrivee == 'a_l_heure' %} <span class="v">{{ T.pt_on_time ?? 'à l’heure' }}</span>{% endif %}</div>
+  <a class="pt-bouton contour" href="{{ ROOT }}/pointage"><i class="bi bi-qr-code-scan"></i>{{ T.pt_clock_out ?? 'Pointer le départ' }}</a>
+  <div class="pt-aide"><i class="bi bi-info-circle"></i><span>{{ T.pt_help_out ?? 'Le même QR code, en partant. Un départ oublié se dit dans Profil › Mes pointages.' }}</span></div>
+</div>
+  {% elseif PT.prevu and (not PT.fait or PT.dans > 0) %}
+<div class="pt-carte" data-pointage="a_pointer">
+  <div class="pt-sur">{{ T.pt_shift_today ?? 'Ton service aujourd’hui' }}</div>
+  <div class="pt-h">{{ PT.prevu.debut }} – {{ PT.prevu.fin }}</div>
+  <div class="pt-sous">{% if PT.dans > 0 %}<b>{{ (T.pt_starts_in ?? 'commence dans {d}')|replace({'{d}': fp.duree(PT.dans)}) }}</b>{% else %}{{ (T.pt_started_at ?? 'a commencé à {h}')|replace({'{h}': PT.prevu.debut}) }}{% endif %}{% if PT.prevu.shop_name %} · {{ PT.prevu.shop_name }}{% endif %}</div>
+  <a class="pt-bouton" href="{{ ROOT }}/pointage"><i class="bi bi-qr-code-scan"></i>{{ T.pt_clock_in ?? 'Pointer l’arrivée' }}</a>
+  <div class="pt-aide"><i class="bi bi-info-circle"></i><span>{{ T.pt_help_in ?? 'La caméra s’ouvre : vise le QR code de la borne du magasin.' }}</span></div>
+</div>
+  {% elseif PT.fait %}
+<a class="pt-mini" href="{{ ROOT }}/me/pointages" data-pointage="fait"><div><b>{{ T.pt_day_done ?? 'Journée pointée' }}</b> · {{ PT.fait.entree }} – {{ PT.fait.sortie }}</div><span>{{ T.pt_my_clockings ?? 'Mes pointages' }} ›</span></a>
+  {% else %}
+<a class="pt-mini" href="{{ ROOT }}/pointage" data-pointage="sans_service"><div>{{ T.pt_no_shift_today ?? 'Pas de service prévu aujourd’hui' }}</div><span>{{ T.pt_clock_anyway ?? 'Pointer quand même' }} ›</span></a>
+  {% endif %}
+{% endif %}
+
+{# ── 1. Mes primes : ce qui est encore en jeu, en tête (23/10/2026, forme sobre) ── #}
 {% if p %}
-{% set part = p.aPortee > 0 ? min(1, p.acquis / p.aPortee) : 0 %}
-<a class="pr-card rubis anneau-carte acc-lien" href="{{ ROOT }}/primes">
-  <div class="anneau"><svg viewBox="0 0 120 120"><circle class="fond" cx="60" cy="60" r="52"/><circle class="val" cx="60" cy="60" r="52" style="stroke-dasharray:{{ (part * 326.7)|round(1) }} 326.7"/></svg>
-    <div class="centre"><b>{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b><small>{{ T.earned ?? 'acquis' }}</small></div></div>
-  <div class="tx">
-    <div class="k">{{ T.my_bonuses ?? 'Mes primes' }} · {{ mois(p.m) }}</div>
-    {% if p.enCours %}<div class="gros2">{{ T.up_to ?? 'jusqu’à' }} {{ p.aPortee|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div>
-    <div class="s">{{ T.earned_so_far ?? 'acquis si le mois finit comme ça' }} · {{ T.within_reach ?? 'si tu passes un cran de plus partout' }}</div>
-    {% else %}<div class="gros2">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div><div class="s">{{ T.month_closed ?? 'mois clos' }}</div>{% endif %}
-    {% set gg = p.google ?? null %}{% if gg and gg.actif and gg.note is not null and gg.coef != 1 %}<span class="puce google"><i class="bi bi-star-fill"></i> Google {{ gg.note|number_format(1, ',', ' ') }} → × {{ gg.coef|number_format(2, ',', ' ') }}</span>{% endif %}
-    <div class="acc-voir">{{ T.see_details ?? 'Voir le détail' }} <i class="bi bi-arrow-right"></i></div>
-  </div>
+{% set encore = max(0, (p.enJeu ?? p.aPortee ?? 0) - p.acquis) %}
+{% set enJeu = p.enJeu ?? p.aPortee ?? 0 %}
+<a class="sb-groupe sb-heros-carte" href="{{ ROOT }}/primes">
+  {% if p.enCours and encore > 0 %}
+  <span class="sb-sur">{{ T.still_in_play ?? 'Encore en jeu ce mois-ci' }}</span>
+  <span class="sb-chiffre">+{{ encore|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span>
+  <span class="sb-barre grande"><i style="width:{{ enJeu > 0 ? (100 * p.acquis / enJeu)|round(1) : 0 }}%"></i></span>
+  <span class="sb-sous"><b>{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b> {{ T.earned ?? 'acquis' }} · {{ enJeu|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.in_play ?? 'en jeu' }}</span>
+  {% else %}
+  <span class="sb-sur">{{ T.my_bonuses ?? 'Mes primes' }} · {{ mois(p.m) }}</span>
+  <span class="sb-chiffre">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span>
+  <span class="sb-sous">{{ p.enCours ? (T.earned_so_far ?? 'acquis si le mois finit comme ça') : (T.month_closed ?? 'mois clos') }}</span>
+  {% endif %}
+  <i class="bi bi-chevron-right sb-fleche"></i>
 </a>
 {% else %}
 <div class="pr-card"><div class="pr-h"><h2>{{ T.my_bonuses ?? 'Mes primes' }}</h2></div>
@@ -55,18 +108,11 @@
   </div>
 </div>
 
-{# ── 3. Les prochaines étapes qui rapportent ── #}
+{# ── 3. Comment y arriver : les trois primes les plus proches, comme sur l'écran Primes (23/10/2026) ── #}
 {% if p and p.enCours and etapes|length %}
-<div class="pr-card">
-  <div class="pr-h"><h2>{{ T.next_steps ?? 'Mes prochaines étapes' }}</h2><small>{{ T.closest_first ?? 'la plus proche d’abord' }}</small></div>
-  {% for e in etapes %}
-  <a class="ligne acc-etape" href="{{ ROOT }}/primes"><div>
-    {% if e.cle == 'croisees' %}<b>{{ T.cross_sales_title ?? 'Ventes croisées' }}</b><div class="d">{{ e.n }} {{ T.more_cross_to_reach ?? 'ventes croisées de plus pour passer' }} {{ e.taux }}&nbsp;%</div>
-    {% elseif e.cle == 'record' %}<b>{{ T.beat_your_record ?? 'Bats ton record' }}</b><div class="d">{{ T.at_lines_from_record ?? 'à' }} {{ e.ecart }} {{ T.line_from_record ?? 'ligne par ticket du record' }} {{ e.record }}</div>
-    {% elseif e.cle == 'concours' %}<b>👑 {{ e.lib }}</b><div class="d">{{ e.n }} {{ e.niveau == 'reseau' ? (T.more_pieces_network ?? 'pièces de plus pour la couronne du réseau') : (T.more_pieces_shop ?? 'pièces de plus pour la couronne du magasin') }}</div>
-    {% else %}<b>{{ T.best_seller ?? 'Meilleure vendeuse' }}</b><div class="d">{{ T.score ?? 'score' }} {{ e.score }}, {{ T.first_shop_is_at ?? 'la 1re du magasin est à' }} {{ e.premier }}</div>{% endif %}
-  </div><span class="puce rubis">+ {{ e.gain }}&nbsp;{{ eur }}</span></a>
-  {% endfor %}
+<h2 class="sb-titre">{{ T.how_to_get_there ?? 'Comment y arriver' }}<a href="{{ ROOT }}/primes">{{ T.see_all ?? 'tout voir' }}</a></h2>
+<div class="sb-groupe">
+  {% for e in etapes %}{% include "components/primes_etape.twig" with { e: e, T: T, ib: p.iconesBase ?? (ROOT ~ '/..'), lien: ROOT ~ '/primes#prime-' ~ e.cle } only %}{% endfor %}
 </div>
 {% endif %}
 
@@ -87,7 +133,7 @@
 {% if collection %}
 <a class="pr-card acc-lien acc-mag" href="{{ ROOT }}/primes#collection">
   <div><div class="k">{{ T.my_collection ?? 'Ma collection' }}</div>
-    <div class="s"><b>👑 {{ collection.n }} {{ T.titles_won ?? 'titres gagnés' }}</b>{% if collection.enCours %} · {{ collection.enCours }} {{ T.live ?? 'en cours' }} 🔥{% endif %}{% if collection.derniers|length %}{% set dt = collection.derniers[0] %} · {{ T.last ?? 'dernier' }} : {{ dt.cle starts with 'concours:' ? dt.lib : (dt.cle == 'croisees' ? (T.cross_sales_title ?? 'Ventes croisées') : (dt.cle == 'record' ? (T.record_beaten ?? 'Record battu') : (dt.cle == 'meilleure' ? (T.best_seller ?? 'Meilleure vendeuse') : (T.shop_bonus_title ?? 'Prime magasin')))) }}{% endif %}</div></div>
+    <div class="s"><b>{{ collection.n }} {{ T.titles_won ?? 'titres gagnés' }}</b>{% if collection.enCours %} · {{ collection.enCours }} {{ T.live ?? 'en cours' }}{% endif %}{% if collection.derniers|length %}{% set dt = collection.derniers[0] %} · {{ T.last ?? 'dernier' }} : {{ (dt.cle starts with 'concours:' or dt.cle starts with 'promo:' or dt.cle starts with 'cible:') ? dt.lib : (dt.cle == 'croisees' ? (T.cross_sales_title ?? 'Ventes croisées') : (dt.cle == 'record' ? (T.record_beaten ?? 'Record battu') : (dt.cle == 'meilleure' ? (T.best_seller ?? 'Meilleure vendeuse') : (dt.cle == 'google' ? (T.google_rating ?? 'Note Google') : (T.shop_bonus_title ?? 'Prime magasin'))))) }}{% endif %}</div></div>
   <i class="bi bi-chevron-right mu"></i>
 </a>
 {% endif %}

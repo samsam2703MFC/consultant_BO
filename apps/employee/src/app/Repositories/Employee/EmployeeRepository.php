@@ -23,6 +23,15 @@ class EmployeeRepository {
         return $response['data'] ? new EmployeeModel($response['data']) : null;
     }
 
+    /**
+     * Le PIN de caisse (30/10/2026) : le panel le garde dans franchisee_employee.pin, que PATCH /employees/{id} accepte
+     * avec le jeton de la personne. Rend la réponse d'ApiClient::patch (success, code, description).
+     */
+    public function changerPin(int $id, string $pin): array
+    {
+        return $this->apiClient->patch("/employees/{$id}", ['pin' => $pin]);
+    }
+
 
 
 

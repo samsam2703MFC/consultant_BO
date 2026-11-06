@@ -24,8 +24,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_milestone  TO '
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_cost       TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_task       TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_crm        TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_consultant         TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_consultant_visit   TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_consultant         TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_consultant_visit   TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_supplier           TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_person             TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_report_schedule    TO 'cockpit_app'@'localhost';
@@ -42,6 +42,11 @@ GRANT SELECT ON atelierby_db.of_tag           TO 'cockpit_app'@'localhost';
 GRANT SELECT ON atelierby_db.kpi              TO 'cockpit_app'@'localhost';
 GRANT SELECT ON atelierby_db.position         TO 'cockpit_app'@'localhost';
 GRANT SELECT ON atelierby_db.mac_report_share TO 'cockpit_app'@'localhost';
+
+-- Tables du CRM candidat : LECTURE SEULE. Ses réglages SMTP et ses clés Meta
+-- (MétaDonnée : les clés et l'accès du CRM, jamais écrits par le cockpit).
+GRANT SELECT ON atelierby_db.crm_settings     TO 'cockpit_app'@'localhost';
+GRANT SELECT ON atelierby_db.meta_connexion   TO 'cockpit_app'@'localhost';
 
 -- Exception : PUT /parametres/seuil-* met à jour les seuils dans `kpi`.
 -- Décommentez si vous voulez autoriser cette écriture depuis le cockpit :

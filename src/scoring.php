@@ -19,7 +19,7 @@ declare(strict_types=1);
  * étoiles sont le total ramené sur 5.
  *
  * Tout ce qui se lit ailleurs est relu, jamais recopié : la réputation
- * (`ceo_shop_reputation`), le relevé des tâches (`ceo_tache_jour`), le budget
+ * (`mar_avis_fiche`), le relevé des tâches (`con_tache_jour`), le budget
  * (`/stores/perf`). Deux tables à ce module : la note Google gelée en fin de
  * trimestre (sinon un trimestre passé ne se comparerait plus) et le rapport du
  * client mystère. Le rapport A4 part par le reporting, le 1er jour du
@@ -44,7 +44,7 @@ function ensureScoring(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_scoring_msp ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_scoring_msp ('
         . 'id INT AUTO_INCREMENT PRIMARY KEY,'
         . 'shop_id VARCHAR(32) NOT NULL,'
         . 'trimestre CHAR(7) NOT NULL,'
@@ -57,7 +57,7 @@ function ensureScoring(): void
         . 'le DATETIME NULL,'
         . 'UNIQUE KEY uq_sq_msp (shop_id, trimestre)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_scoring_google ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_scoring_google ('
         . 'shop_id VARCHAR(32) NOT NULL,'
         . 'trimestre CHAR(7) NOT NULL,'
         . 'note DECIMAL(3,2) NULL,'
@@ -144,12 +144,12 @@ function sqGoogle(array $tri): array
     $out = [];
     if ($tri['enCours'] || !$tri['clos']) {
         try {
-            foreach (Db::rows('SELECT shop_id, rating_avg, rating_count, synced_at FROM ceo_shop_reputation') as $r) {
+            foreach (Db::rows('SELECT shop_id, rating_avg, rating_count, synced_at FROM mar_avis_fiche') as $r) {
                 $sid = (string) $r['shop_id'];
                 $note = $r['rating_avg'] !== null ? round((float) $r['rating_avg'], 2) : null;
                 $out[$sid] = ['v' => $note, 'note' => $note, 'avis' => (int) $r['rating_count'], 'le' => $r['synced_at'] ? substr((string) $r['synced_at'], 0, 16) : null, 'gele' => false];
                 if ($note !== null) {
-                    Db::exec('INSERT INTO ceo_scoring_google (shop_id, trimestre, note, avis, le) VALUES (?,?,?,?,?)
+                    Db::exec('INSERT INTO con_scoring_google (shop_id, trimestre, note, avis, le) VALUES (?,?,?,?,?)
                               ON DUPLICATE KEY UPDATE note = VALUES(note), avis = VALUES(avis), le = VALUES(le)',
                         [$sid, $tri['cle'], $note, (int) $r['rating_count'], date('Y-m-d H:i:s')]);
                 }
@@ -158,7 +158,7 @@ function sqGoogle(array $tri): array
         if ($out !== []) { return $out; }
     }
     try {
-        foreach (Db::rows('SELECT shop_id, note, avis, le FROM ceo_scoring_google WHERE trimestre = ?', [$tri['cle']]) as $r) {
+        foreach (Db::rows('SELECT shop_id, note, avis, le FROM con_scoring_google WHERE trimestre = ?', [$tri['cle']]) as $r) {
             $note = $r['note'] !== null ? round((float) $r['note'], 2) : null;
             $out[(string) $r['shop_id']] = ['v' => $note, 'note' => $note, 'avis' => (int) $r['avis'], 'le' => $r['le'] ? substr((string) $r['le'], 0, 16) : null, 'gele' => true];
         }
@@ -218,7 +218,7 @@ function sqTaches(array $tri): array
     $parJour = [];
     try {
         // Le drapeau du jour quand le relevé l'a (NULL avant la colonne) — sinon la liste connue.
-        $sql = 'SELECT jour, id_shop, id_task, fait, note' . (sqColonneObligatoire() ? ', obligatoire' : ', NULL AS obligatoire') . ' FROM ceo_tache_jour WHERE jour BETWEEN ? AND ?';
+        $sql = 'SELECT jour, id_shop, id_task, fait, note' . (sqColonneObligatoire() ? ', obligatoire' : ', NULL AS obligatoire') . ' FROM con_tache_jour WHERE jour BETWEEN ? AND ?';
         foreach (Db::rows($sql, [$tri['du'], $tri['arrete']]) as $r) {
             $parJour[(string) $r['id_shop']][(string) $r['jour']][] = $r;
         }
@@ -252,7 +252,7 @@ function sqColonneObligatoire(): bool
 {
     static $ok = null;
     if ($ok !== null) { return $ok; }
-    try { Db::rows('SELECT obligatoire FROM ceo_tache_jour LIMIT 1'); $ok = true; } catch (PDOException $e) { $ok = false; }
+    try { Db::rows('SELECT obligatoire FROM con_tache_jour LIMIT 1'); $ok = true; } catch (PDOException $e) { $ok = false; }
     return $ok;
 }
 
@@ -266,7 +266,7 @@ function sqObligatoiresDetail(array $tri, string $shop): array
     // Le drapeau du jour quand le relevé l'a ; la liste connue pour les jours d'avant la colonne.
     $cond = $ids !== [] ? ($col ? '(obligatoire = 1 OR (obligatoire IS NULL AND id_task IN (' . implode(',', array_fill(0, count($ids), '?')) . ')))' : 'id_task IN (' . implode(',', array_fill(0, count($ids), '?')) . ')') : 'obligatoire = 1';
     try {
-        $rows = Db::rows("SELECT jour, id_task, nom, fait FROM ceo_tache_jour WHERE id_shop = ? AND jour BETWEEN ? AND ? AND $cond ORDER BY jour",
+        $rows = Db::rows("SELECT jour, id_task, nom, fait FROM con_tache_jour WHERE id_shop = ? AND jour BETWEEN ? AND ? AND $cond ORDER BY jour",
             array_merge([(int) $shop, $tri['du'], $tri['arrete']], $ids));
     } catch (PDOException $e) { return ['taches' => [], 'jours' => $jours]; }
     $t = [];
@@ -350,7 +350,7 @@ function sqMspLigne(array $r): array
 function sqMsp(array $tri): array
 {
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_scoring_msp WHERE trimestre = ?', [$tri['cle']]) as $r) { $out[(string) $r['shop_id']] = sqMspLigne($r); }
+    foreach (Db::rows('SELECT * FROM con_scoring_msp WHERE trimestre = ?', [$tri['cle']]) as $r) { $out[(string) $r['shop_id']] = sqMspLigne($r); }
     return $out;
 }
 
@@ -419,7 +419,7 @@ function ep_scoring_msp(): array
 {
     ensureScoring();
     $shop = trim((string) ($_GET['shop'] ?? ''));
-    $rows = Db::rows('SELECT * FROM ceo_scoring_msp' . ($shop !== '' ? ' WHERE shop_id = ?' : '') . ' ORDER BY trimestre DESC, shop_id', $shop !== '' ? [$shop] : []);
+    $rows = Db::rows('SELECT * FROM con_scoring_msp' . ($shop !== '' ? ' WHERE shop_id = ?' : '') . ' ORDER BY trimestre DESC, shop_id', $shop !== '' ? [$shop] : []);
     return ['shop' => $shop, 'msp' => array_map('sqMspLigne', $rows)];
 }
 
@@ -455,11 +455,11 @@ function wr_scoring_msp(): array
         $fichier = 'uploads/scoring/msp/' . $nom;
     }
     $par = mb_substr(trim((string) ($b['par'] ?? '')), 0, 120) ?: null;
-    Db::exec('INSERT INTO ceo_scoring_msp (shop_id, trimestre, obtenu, maximum, rubriques, commentaire, fichier, par, le) VALUES (?,?,?,?,?,?,?,?,?)
+    Db::exec('INSERT INTO con_scoring_msp (shop_id, trimestre, obtenu, maximum, rubriques, commentaire, fichier, par, le) VALUES (?,?,?,?,?,?,?,?,?)
               ON DUPLICATE KEY UPDATE obtenu = VALUES(obtenu), maximum = VALUES(maximum), rubriques = VALUES(rubriques), commentaire = VALUES(commentaire),
               fichier = COALESCE(VALUES(fichier), fichier), par = VALUES(par), le = VALUES(le)',
         [$shop, $tri['cle'], $obtenu, $max, json_encode($rub, JSON_UNESCAPED_UNICODE), mb_substr(trim((string) ($b['commentaire'] ?? '')), 0, 2000) ?: null, $fichier, $par, date('Y-m-d H:i:s')]);
-    $r = Db::row('SELECT * FROM ceo_scoring_msp WHERE shop_id = ? AND trimestre = ?', [$shop, $tri['cle']]);
+    $r = Db::row('SELECT * FROM con_scoring_msp WHERE shop_id = ? AND trimestre = ?', [$shop, $tri['cle']]);
     if (function_exists('journalAdd')) { journalAdd($par ?: 'CEO', 'Scoring', null, 'Client mystère ' . $tri['court'] . ' — ' . (sqMagasins()[$shop]['court'] ?? $shop) . ' : ' . $obtenu . ' / ' . $max); }
     return ['ok' => true, 'msp' => $r ? sqMspLigne($r) : null];
 }
@@ -468,10 +468,10 @@ function wr_scoring_msp(): array
 function wr_scoring_msp_suppr(int $id): array
 {
     ensureScoring();
-    $r = Db::row('SELECT * FROM ceo_scoring_msp WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM con_scoring_msp WHERE id = ?', [$id]);
     if ($r === null) { http_response_code(404); return ['error' => 'rapport inconnu']; }
     if ($r['fichier']) { @unlink(__DIR__ . '/../public/' . $r['fichier']); }
-    Db::exec('DELETE FROM ceo_scoring_msp WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM con_scoring_msp WHERE id = ?', [$id]);
     return ['ok' => true];
 }
 

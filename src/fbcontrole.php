@@ -29,12 +29,24 @@ declare(strict_types=1);
 function fbRegles(): array
 {
     $c = setting('fbControle', null);
-    if (!is_array($c) || !isset($c['regles'])) {
+    if (!is_array($c) || !isset($c['regles']) || !is_array($c['regles'])) {
         return fbReglesDefaut();
     }
     // Un pack partiel (édité à la main, ou écrit par une version antérieure)
     // ne doit pas faire tomber l'agent : on complète par le défaut.
-    return $c + fbReglesDefaut();
+    $defaut = fbReglesDefaut();
+    // Règle par règle aussi (13/10/2026) : l'écran renvoie le pack tel que
+    // /referentiels/facebook-regles le sert, SANS les paramètres. Une règle
+    // activée ou désactivée y perdait sa liste de mots, ses domaines, sa marque —
+    // « Conditions de promotion » ne trouvait plus aucune promotion, sans un mot.
+    // Les paramètres absents reviennent du défaut livré ; ceux qu'on a posés restent.
+    $parCode = array_column($defaut['regles'], null, 'code');
+    foreach ($c['regles'] as $i => $r) {
+        if (is_array($r) && !isset($r['params']) && isset($parCode[$r['code'] ?? ''])) {
+            $c['regles'][$i]['params'] = $parCode[$r['code']]['params'] ?? [];
+        }
+    }
+    return $c + $defaut;
 }
 
 /** Le seuil de publication — sous cette note, le post repart au franchisé. */
@@ -423,7 +435,7 @@ function fbDoublon(array $post, array $p, string $norm): array
     $depuis = date('Y-m-d H:i:s', strtotime(($post['publierLe'] ?: date('Y-m-d H:i:s')) . ' -' . $jours . ' days'));
     $rows = Db::rows(
         "SELECT p.id, p.message, s.name AS shop
-           FROM ceo_fb_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id
+           FROM mar_social_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id
           WHERE p.id <> ? AND p.shop_id <> ? AND p.status IN ('valide','publie')
             AND COALESCE(p.published_at, p.planned_at) >= ?",
         [(string) ($post['id'] ?? ''), (string) $post['shopId'], $depuis]);

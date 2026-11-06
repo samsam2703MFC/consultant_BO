@@ -1,0 +1,16 @@
+RewriteEngine On
+
+# Wewnętrzne API działa także po HTTP w sieci firmowej. Celowo nie ma tu
+# przekierowania HTTP → HTTPS; /api/* trafia bezpośrednio do api.php.
+# Nagłówki X-Device-Id i X-Api-Key są weryfikowane przez aplikację.
+# Przekierowanie na api.php dla ścieżek zaczynających się od /api
+RewriteCond %{REQUEST_URI} ^/api
+RewriteRule ^api/(.*)$ api.php [QSA,L]
+
+
+#accept loading of actual files and directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+#send everything else to the index page
+RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]

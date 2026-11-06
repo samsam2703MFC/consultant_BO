@@ -42,6 +42,19 @@ if [[ -f "$REPO_SRC/.deployenv" ]]; then
   COCKPIT_DB_PASSWORD="${COCKPIT_DB_PASSWORD:-}"
 fi
 
+# --- 0. Disque -------------------------------------------------------------
+# Un disque plein casse tout (apt, MySQL, sessions PHP : l'API répond 503). Relevé à chaque livraison ;
+# à 90 % ou plus, ménage sans toucher aux données (bin/menage_disque.sh : caches, journaux tournés,
+# images Docker inutilisées, binlogs MySQL de plus de 3 jours…), puis relance de MySQL s'il refusait
+# les connexions. Sous 300 Mo libres après le ménage, la livraison s'arrête AVANT de copier quoi que ce
+# soit : le site garde sa version précédente, au lieu d'une copie à moitié écrite.
+libre_disque="$(bash "$REPO_SRC/bin/menage_disque.sh" --seuil 90 --mysql | tee /dev/stderr | sed -n 's/^LIBRE_MO=//p' | tail -1)"
+if [[ -n "$libre_disque" && "$libre_disque" -lt 300 ]]; then
+  warn "Déploiement interrompu : ${libre_disque} Mo libres sur / après le ménage — il en faut 300."
+  warn "Libérer de la place sur le serveur (docs/DEPLOIEMENT.md › « Disque plein »), puis relancer la livraison."
+  exit 1
+fi
+
 # --- 1. Prérequis (sans perturber le panel déjà en place) ----------------
 log "Vérification des prérequis…"
 export DEBIAN_FRONTEND=noninteractive
@@ -154,6 +167,7 @@ rsync -a --delete \
   --exclude 'node_modules' --exclude '.deployenv' \
   --exclude 'public/uploads' \
   --exclude 'public/assistant/uploads' \
+  --exclude 'apps/production' \
   "$REPO_SRC/" "$TARGET_DIR/"
 
 # Photos annexées au planogramme : elles vivent HORS du dépôt et doivent
@@ -162,11 +176,33 @@ rsync -a --delete \
 mkdir -p "$TARGET_DIR/public/uploads/plano"
 mkdir -p "$TARGET_DIR/public/uploads/visites"
 mkdir -p "$TARGET_DIR/public/uploads/reclamations"
+mkdir -p "$TARGET_DIR/public/uploads/social"     # visuels des posts (portail Marketing → Publier)
 # Vignettes 640 px de la tablette des vendeuses (src/tablette.php) : sous
 # uploads/, donc protégées du rsync --delete par la même exclusion.
 mkdir -p "$TARGET_DIR/public/uploads/tablette"
+# Photos types des rayons (src/rayons_photos.php) : le comptoir attendu.
+mkdir -p "$TARGET_DIR/public/uploads/rayons"
 chown -R www-data:www-data "$TARGET_DIR/public/uploads"
 chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
+
+# Le dossier privé (30/10/2026) : hors du site web et hors du dépôt, la livraison n'y touche pas. Il garde la clé
+# qui chiffre le profil des employés et les photos chiffrées de leur carte d'identité (src/profil_employe.php).
+# Perdre profil.key rend ces données illisibles : il se sauvegarde avec la base.
+mkdir -p /var/lib/consulant_bo/prive/cartes
+# La clé maître du module RH / Dimona (01/11/2026) : tirée une fois, ici, pour qu'elle appartienne à www-data
+# (l'API et le cron du module tournent sous www-data ; une clé créée par root leur serait illisible). Elle
+# chiffre les clés privées des certificats, les NISS et les jetons ONSS : elle se sauvegarde avec la base.
+# HR_DIMONA_MASTER_KEY, si elle est fournie, prime sur ce fichier.
+if [[ ! -s /var/lib/consulant_bo/prive/hr_dimona.key ]]; then
+  ( umask 077; head -c 32 /dev/urandom | base64 > /var/lib/consulant_bo/prive/hr_dimona.key )
+fi
+chown -R www-data:www-data /var/lib/consulant_bo/prive
+chmod 700 /var/lib/consulant_bo/prive /var/lib/consulant_bo/prive/cartes
+# Le parent doit se TRAVERSER (x) pour que www-data atteigne prive/ : créé par root, /var/lib/consulant_bo ne
+# l'était pas (mesuré le 01/11/2026 — le module RH, en ligne de commande sous www-data comme sous Apache, n'y
+# accédait pas). 711 : on passe, on ne liste pas ; prive/ reste 700 à www-data.
+chmod 711 /var/lib/consulant_bo
+chmod 600 /var/lib/consulant_bo/prive/hr_dimona.key
 
 # Visuels des campagnes de l'assistant : même règle que les photos plano.
 mkdir -p "$TARGET_DIR/public/assistant/uploads"
@@ -196,6 +232,16 @@ if [[ -z "$COCKPIT_DB_USER" || -z "$COCKPIT_DB_PASSWORD" ]]; then
   fi
 fi
 
+# La clé maître du module RH passe par config.php (01/11/2026) : sous Apache, PHP n'atteint pas le dossier
+# privé (mesuré en ligne : « aucun dossier privé où écrire »), alors qu'il lit config.php comme le mot de passe
+# MySQL. Le fichier du dossier privé reste la référence, que root relit à chaque livraison. Un secret
+# HR_DIMONA_MASTER_KEY, s'il est fourni, prime — et doit alors rester le même d'une livraison à l'autre.
+if [[ -z "${HR_DIMONA_MASTER_KEY:-}" && -s /var/lib/consulant_bo/prive/hr_dimona.key ]]; then
+  HR_DIMONA_MASTER_KEY="$(tr -d '\n\r ' < /var/lib/consulant_bo/prive/hr_dimona.key)"
+  export HR_DIMONA_MASTER_KEY
+  log "Module RH : clé maître reprise du dossier privé pour config.php (non affichée)."
+fi
+
 # --- 4. config/config.php (génération sûre via var_export) ---------------
 CFG="$TARGET_DIR/config/config.php"
 if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
@@ -217,6 +263,17 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
       "pwaBase" => getenv("COCKPIT_PWA_BASE") ?: null,
       "auth"    => false,
       "seed"    => false,   // base vide par défaut ; pas de données de démo
+      // Module RH / Dimona (/hr) : la console franchisé qui identifie (API vue du navigateur et du
+      // serveur), la PROD fermée tant que HR_DIMONA_PROD_ENABLED ne vaut pas 1, et les surcharges
+      // éventuelles des adresses ONSS (sinon celles du YAML OpenAPI). Voir docs/dimona.md.
+      "hr" => array_filter([
+        "consoleApi"         => getenv("HR_CONSOLE_API_BASE") ?: "/webshop/api",
+        "consoleApiInternal" => getenv("HR_CONSOLE_API_INTERNAL") ?: "http://127.0.0.1/webshop/api",
+        "prodEnabled"        => (getenv("HR_DIMONA_PROD_ENABLED") ?: "0") === "1",
+        "tokenUrlSim"        => getenv("HR_DIMONA_TOKEN_URL_SIM") ?: null,
+        "tokenUrlProd"       => getenv("HR_DIMONA_TOKEN_URL_PROD") ?: null,
+        "masterKey"          => getenv("HR_DIMONA_MASTER_KEY") ?: null,
+      ], fn ($v) => $v !== null),
     ];
     echo "<?php\nreturn " . var_export($cfg, true) . ";\n";
   ' > "$CFG"
@@ -230,6 +287,17 @@ chown www-data:www-data "$CFG"
 # --- 5. Apache : alias + AllowOverride ----------------------------------
 log "Configuration Apache (alias $ALIAS_PATH → $TARGET_DIR/public)…"
 cat > /etc/apache2/conf-available/consulant_bo.conf <<APACHE
+# Le module Formation à la racine du serveur, comme /marketing/ (31/10/2026) : la page
+# (public/formation) et son API juste à côté d'elle — le contrôleur lit tout ce qui suit
+# /api/cockpit. Les Alias se lisent dans l'ordre : l'API (AliasMatch) avant la page.
+RedirectMatch 301 ^/formation\$ /formation/
+AliasMatch ^/formation/api/cockpit(/.*)?\$ ${TARGET_DIR}/public/api/index.php
+Alias /formation/ ${TARGET_DIR}/public/formation/
+# Le module RH / Dimona à la racine du serveur, comme /formation/ (01/11/2026) : la page (public/hr) et son
+# API juste à côté d'elle (public/api/hr/index.php, routes /api/v1/erp/dimona/…).
+RedirectMatch 301 ^/hr\$ /hr/
+AliasMatch ^/hr/api/v1/erp/dimona(/.*)?\$ ${TARGET_DIR}/public/api/hr/index.php
+Alias /hr/ ${TARGET_DIR}/public/hr/
 Alias ${ALIAS_PATH} ${TARGET_DIR}/public
 <Directory ${TARGET_DIR}/public>
     AllowOverride All
@@ -241,14 +309,28 @@ a2enconf consulant_bo >/dev/null
 # corrigé depuis) ont retenu des workers PHP jusqu'à coucher l'API — le temps
 # passé dans un process externe échappe à max_execution_time. On tue les
 # traînards et on REDÉMARRE PHP et Apache (un reload garde les workers).
-pkill -9 -f wkhtmltopdf 2>/dev/null || true
-pkill -9 -f xvfb-run    2>/dev/null || true
-pkill -9 -f Xvfb        2>/dev/null || true
-systemctl list-units 'php*-fpm.service' --no-legend 2>/dev/null | awk '{print $1}' | while read -r u; do
-  systemctl restart "$u" || true
+# Seulement s'il y en avait (26/10/2026) : un redémarrage coupe net chaque requête en cours, et le cockpit
+# affichait « Failed to fetch » à qui enregistrait à ce moment-là (le carnet d'un rapport, ce soir-là, avec
+# une livraison toutes les vingt minutes). Sans traînard, un reload en douceur : Apache finit les requêtes en
+# cours avant de passer à la nouvelle configuration, PHP-FPM relit la sienne.
+TRAINARDS=0
+for p in wkhtmltopdf xvfb-run Xvfb; do
+  if pgrep -f "$p" >/dev/null 2>&1; then TRAINARDS=1; pkill -9 -f "$p" 2>/dev/null || true; fi
 done
 apache2ctl configtest
-systemctl restart apache2
+if [[ "$TRAINARDS" == "1" ]]; then
+  warn "Rendus PDF suspendus : PHP et Apache redémarrés (les requêtes en cours sont coupées)."
+  systemctl list-units 'php*-fpm.service' --no-legend 2>/dev/null | awk '{print $1}' | while read -r u; do
+    systemctl restart "$u" || true
+  done
+  systemctl restart apache2
+else
+  systemctl list-units 'php*-fpm.service' --no-legend 2>/dev/null | awk '{print $1}' | while read -r u; do
+    systemctl reload "$u" || systemctl restart "$u" || true
+  done
+  systemctl reload apache2 || systemctl restart apache2
+  log "Apache et PHP rechargés en douceur : aucune requête en cours coupée."
+fi
 
 # --- 5a. HTTPS — la caméra du téléphone l'exige -----------------------------
 # Le scan du code-barres EN DIRECT (onglet Réclamation du dashboard au
@@ -296,12 +378,14 @@ if [[ "${COCKPIT_RESET:-0}" == "1" || "${COCKPIT_WIPE:-0}" == "1" ]]; then
     export MYSQL_PWD="$COCKPIT_DB_PASSWORD"
     mycli() { "$MYSQL_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" -u "$COCKPIT_DB_USER" "$@"; }
 
-    # a) DROP des tables ceo_* existantes (schéma potentiellement obsolète).
+    # a) DROP des tables ceo_* existantes (schéma potentiellement obsolète), et des tables
+    #    con_* des consultants et des visites (src/con_tables.php), nommées une à une :
+    #    aucun motif ne peut viser une table du panel.
     ceo_tables="$(mycli -N -B "$COCKPIT_DB_NAME" \
-      -e "SELECT table_name FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND table_name LIKE 'ceo\\_%';" 2>/dev/null || true)"
+      -e "SELECT table_name FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND (table_name LIKE 'ceo\\_%' OR table_name IN ('con_visite','con_visite_point','con_visite_photo','con_visite_action','con_visite_action_evt','con_equipe_releve','con_consultant_tache','con_consultant_checklist','con_franchise_meteo','con_consultant','con_consultant_visit','con_msp','con_scoring_msp','con_scoring_google','con_tache_jour','con_tache_jour_etat'));" 2>/dev/null || true)"
     ceo_n="$(printf '%s\n' "$ceo_tables" | grep -c . || true)"
     if [[ -n "$ceo_tables" ]]; then
-      log "Suppression de $ceo_n table(s) ceo_* : $(printf '%s ' $ceo_tables)"
+      log "Suppression de $ceo_n table(s) ceo_* / con_* : $(printf '%s ' $ceo_tables)"
       {
         echo "SET FOREIGN_KEY_CHECKS=0;"
         while IFS= read -r t; do [[ -n "$t" ]] && echo "DROP TABLE IF EXISTS \`$t\`;"; done <<< "$ceo_tables"
@@ -543,7 +627,11 @@ done
 # (le jeton cuit dans le fichier avait ces deux faiblesses).
 chmod +x "$TARGET_DIR/bin/rapports_cron.sh"
 chmod +x "$TARGET_DIR/bin/newsletter_cron.sh"
+chmod +x "$TARGET_DIR/bin/social_cron.sh"
 chmod +x "$TARGET_DIR/bin/visites_cron.sh"
+chmod +x "$TARGET_DIR/bin/metadonnee_cron.sh"
+chmod +x "$TARGET_DIR/bin/stock_cron.sh"
+chmod +x "$TARGET_DIR/bin/hr_dimona_cron.sh"
 # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
 # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
 # passer les tâches de l'heure pile.
@@ -555,7 +643,18 @@ chmod +x "$TARGET_DIR/bin/visites_cron.sh"
   # Newsletter : l'horloge des campagnes, toutes les 5 minutes (lots de 100 par
   # minute ; en mode test elle ne fait rien partir et le dit).
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/newsletter_cron.sh >/dev/null 2>&1"
+  # Publication : les posts validés partent sur Facebook, Instagram, LinkedIn à l'heure prévue
+  # (rien tant que la publication réelle est éteinte dans le portail Marketing).
+  echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/social_cron.sh >/dev/null 2>&1"
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/visites_cron.sh >/dev/null 2>&1"
+  echo "* * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/metadonnee_cron.sh >/dev/null 2>&1"
+  # Le stock matière des magasins : relu toutes les 5 minutes pour garder chaque inventaire et chaque
+  # livraison du panel au moment où ils passent (l'API ne rend que le stock courant).
+  echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/stock_cron.sh >/dev/null 2>&1"
+  # Module RH / Dimona : chaque minute, la relecture des déclarations en attente (5 s, 15 s, 30 s… : le
+  # script tourne 55 s) et l'alerte des certificats à moins de 60 jours. Sous www-data : c'est lui qui
+  # possède le dossier privé et la clé maître du module.
+  echo "* * * * * www-data ${TARGET_DIR}/bin/hr_dimona_cron.sh >/dev/null 2>&1"
 } > /etc/cron.d/cockpit-rapports
 # cron refuse un fichier de /etc/cron.d écrivable par un autre que root.
 chown root:root /etc/cron.d/cockpit-rapports
@@ -568,26 +667,17 @@ else
   warn "Horloge posée, mais l'essai immédiat a échoué — vérifier le jeton en base et la route /rapports/cron."
 fi
 
-# --- 6c. Cache OpenStreetMap du scouting : relu chaque semaine ----------------
+# --- 6c. Cache OpenStreetMap du scouting : parti dans le CRM -----------------
 #
-# Les neuf secteurs Overpass (communes, boulangeries, lieux peuplés) vivent dans
-# ceo_scouting_tile. Interroger Overpass prend une à trois minutes par secteur :
-# personne ne doit l'attendre à l'ouverture de l'écran. Le cron relit les
-# secteurs le dimanche à 4 h 15 ; bin/scouting_refresh.php ne touche pas à un
-# secteur relu depuis moins de six jours, et refuse de tourner deux fois en
-# même temps (verrou).
-{
-  echo "# Cockpit CEO — cache OpenStreetMap du scouting (écrit par bin/deploy.sh, ne pas éditer)."
-  echo "SHELL=/bin/sh"
-  echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
-  echo "15 4 * * 0 root php ${TARGET_DIR}/bin/scouting_refresh.php >>/var/log/cockpit-scouting.log 2>&1"
-  # Le zoning industriel a sa propre requête et ses propres secteurs (100 à
-  # 108) : il passe deux heures après les commerces, pour ne jamais leur
-  # disputer Overpass ni leur fenêtre de temps.
-  echo "15 6 * * 0 root php ${TARGET_DIR}/bin/scouting_refresh.php --zoning >>/var/log/cockpit-scouting.log 2>&1"
-} > /etc/cron.d/cockpit-scouting
-chown root:root /etc/cron.d/cockpit-scouting
-chmod 600 /etc/cron.d/cockpit-scouting
+# Le cache des neuf secteurs Overpass (ceo_scouting_tile) était relu ici chaque
+# dimanche par /etc/cron.d/cockpit-scouting (bin/scouting_refresh.php). L'écran
+# a quitté le cockpit le 31/10/2026, et sa relecture avec lui : c'est le CRM
+# qui la fait (workflow « Scouting — relecture OpenStreetMap », même base). Le
+# fichier cron déjà posé appellerait un script disparu : on l'enlève.
+if [ -e /etc/cron.d/cockpit-scouting ]; then
+  rm -f /etc/cron.d/cockpit-scouting
+  log "Cron du scouting retiré (/etc/cron.d/cockpit-scouting) : la relecture OpenStreetMap vit dans le CRM."
+fi
 
 # --- Les notifications de rupture de stock -----------------------------------
 # Toutes les quinze minutes aux heures d'ouverture : un stock qui tombe à 7 h du
@@ -617,14 +707,32 @@ log "Carte des sources : /etc/cron.d/cockpit-carte — chaque nuit à 3 h 40 (jo
 
 log "Notifications de stock : /etc/cron.d/cockpit-push — toutes les 15 min de 5 h à 20 h (journal : /var/log/cockpit-push.log)."
 
+# Le disque, surveillé entre deux livraisons (24/10/2026) : toutes les 6 heures, ménage sûr dès 85 %,
+# alerte à l'admin du cockpit (notification) s'il reste à 90 % ou plus — avant que MySQL ne tombe.
+{
+  echo "# Cockpit CEO — le disque du serveur (bin/deploy.sh)"
+  echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  echo "23 */6 * * * root bash ${TARGET_DIR}/bin/menage_disque.sh --seuil 85 --alerte --mysql >>/var/log/cockpit-disque.log 2>&1"
+} > /etc/cron.d/cockpit-disque
+chown root:root /etc/cron.d/cockpit-disque
+chmod 600 /etc/cron.d/cockpit-disque
+# Les journaux des tâches du cockpit tournent chaque semaine (4 semaines gardées, compressées, 50 Mo au
+# plus) : sans cela, ils grossissaient sans fin.
+cat > /etc/logrotate.d/cockpit <<'LOGROTATE'
+/var/log/cockpit-*.log {
+  weekly
+  rotate 4
+  maxsize 50M
+  compress
+  delaycompress
+  missingok
+  notifempty
+  copytruncate
+}
+LOGROTATE
+log "Disque : /etc/cron.d/cockpit-disque — relevé et ménage toutes les 6 h, alerte à 90 % (journal : /var/log/cockpit-disque.log) ; journaux du cockpit tournés chaque semaine (/etc/logrotate.d/cockpit)."
+
 systemctl reload cron 2>/dev/null || systemctl restart cron 2>/dev/null || service cron reload 2>/dev/null || true
-# Les secteurs absents ou trop vieux se relisent tout de suite, en arrière-plan :
-# la livraison n'attend pas Overpass, et le premier utilisateur non plus.
-nohup php "$TARGET_DIR/bin/scouting_refresh.php" >>/var/log/cockpit-scouting.log 2>&1 </dev/null &
-# Puis le zoning, en file derrière : deux passes qui ne se marchent pas dessus
-# (le verrou de scouting_refresh.php les sérialise de toute façon).
-nohup sh -c "sleep 900; php '$TARGET_DIR/bin/scouting_refresh.php' --zoning" >>/var/log/cockpit-scouting.log 2>&1 </dev/null &
-log "Cache OpenStreetMap du scouting : /etc/cron.d/cockpit-scouting — commerces dimanche 4 h 15, zoning d'activité dimanche 6 h 15 ; relecture des secteurs manquants lancée en arrière-plan (journal : /var/log/cockpit-scouting.log)."
 
 # Le catalogue et le coût matière viennent d'être branchés sur les vraies
 # tables. Un mauvais rapprochement ne lève aucune erreur : il rend un chiffre
@@ -841,6 +949,28 @@ if [[ -n "$WIRE_BIN" && -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; t
     SELECT CONCAT('mois budgétés       : ', COUNT(*)) FROM ceo_shop_month_perf WHERE revenue_budget IS NOT NULL;" 2>&1 \
     | sed 's/^/    /' || warn "volumes : lecture impossible"
 fi
+
+# Le module Formation à la racine : la page, et son API à côté d'elle (31/10/2026).
+fm_page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1/formation/" 2>/dev/null || echo 000)
+fm_https=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1/formation/" 2>/dev/null || echo 000)
+fm_api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "http://127.0.0.1/formation/api/cockpit/formation/equipe" 2>/dev/null || echo 000)
+log "Formation : /formation/ → HTTP ${fm_page} (https ${fm_https}) ; API /formation/api/cockpit → HTTP ${fm_api} (200 attendu, 503 = compte panel à brancher)."
+# Les comptes de la console franchisé (dépôt WebShop), qui identifient au module RH : section « bo » de sa
+# configuration posée si elle manque (sauvegarde, contrôle, retour arrière si la console ne répond plus comme
+# avant), comptes de démonstration au mot de passe publié désactivés, comptes demandés par le secret
+# CONSOLE_BO_ACCOUNTS créés ou mis à jour. Idempotent ; n'écrit ni secret, ni mot de passe, ni e-mail.
+php "$TARGET_DIR/bin/console_bo.php" 2>&1 | while IFS= read -r l; do log "$l"; done || true
+hr_page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1/hr/" 2>/dev/null || echo 000)
+hr_https=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1/hr/" 2>/dev/null || echo 000)
+hr_api=$(curl -s --max-time 30 "http://127.0.0.1/hr/api/v1/erp/dimona/health" 2>/dev/null | head -c 300 || true)
+hr_console=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1/webshop/api/bo/franchisee/me" 2>/dev/null || echo 000)
+log "Module RH : /hr/ → HTTP ${hr_page} (https ${hr_https}) ; API /hr/api/v1/erp/dimona/health → ${hr_api:-pas de réponse}"
+log "Module RH : identité par la console franchisé — /webshop/api/bo/franchisee/me → HTTP ${hr_console} (401 attendu = comptes actifs ; 500 = section « bo » de la console à configurer)."
+[[ "$hr_page" == "200" ]] || warn "Module RH : la page /hr/ ne répond pas 200 — alias Apache à vérifier."
+# Le module en ligne de commande, sous l'utilisateur du cron (www-data) : s'il ne démarre pas, son erreur est ici.
+hr_cli=$(runuser -u www-data -- php "$TARGET_DIR/bin/hr_dimona_cron.php" --duree=1 2>&1 | tail -n 4 || true)
+log "Module RH : cron sous www-data → ${hr_cli:-OK, rien à relire}"
+[[ "$fm_page" == "200" ]] || warn "Formation : la page /formation/ ne répond pas 200 — alias Apache à vérifier."
 
 if [[ $rc -eq 0 ]]; then
   log "Recette OK. Cockpit disponible sur ${PUBLIC_BASE}/"

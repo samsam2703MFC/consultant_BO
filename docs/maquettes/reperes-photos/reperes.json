@@ -1,0 +1,9 @@
+{
+  "_": "Les repères de la maquette, posés pour la capture sur une photo de comptoir de Gosselies du 06/10/2026 (illustration) : rien de cela n'est en base.",
+  "photo": "../dashboard-operationnel/photos/2026-10-06-1210.jpg",
+  "reperes": [
+    { "x": 0.09, "y": 0.35, "l": 0.32, "h": 0.28, "niveau": 2, "txt": "Moitié de la vitrine salée vide à midi : remplir, ou resserrer les produits." },
+    { "x": 0.56, "y": 0.41, "l": 0.13, "h": 0.22, "niveau": 3, "txt": "Grilles vides entre les plateaux : rapprocher." },
+    { "x": 0.68, "y": 0.40, "l": 0.27, "h": 0.23, "niveau": 4, "txt": "Planches de charcuterie bien présentées." }
+  ]
+}

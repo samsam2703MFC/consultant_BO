@@ -12,6 +12,7 @@ class ScheduleModel implements \JsonSerializable{
     private $work_date;
     private $create_timestamp;
     private $id_shop;
+    private $shop_name;
     private $name;
     private $surname;
     private $display_name;
@@ -26,6 +27,7 @@ class ScheduleModel implements \JsonSerializable{
         $this->work_date = $data['work_date'] ?? null;
         $this->create_timestamp = $data['create_timestamp'] ?? null;
         $this->id_shop = $data['id_shop'] ?? null;
+        $this->shop_name = $data['shop_name'] ?? null;
         $this->name = $data['name'] ?? null;
         $this->surname = $data['surname'] ?? null;
         $this->display_name = $data['display_name'] ?? null;
@@ -42,6 +44,7 @@ class ScheduleModel implements \JsonSerializable{
             'work_date' => $this->work_date,
             'create_timestamp' => $this->create_timestamp,
             'id_shop' => $this->id_shop,
+            'shop_name' => $this->shop_name,
             'name' => $this->name,
             'surname' => $this->surname,
             'display_name' => $this->display_name,
@@ -96,5 +99,10 @@ class ScheduleModel implements \JsonSerializable{
 
     public function getLangCode() {
         return $this->lang_code;
+    }
+
+    /** Le nom court du magasin (« Corbais »), donné par le cockpit ; null sans lui. */
+    public function getShopName() {
+        return $this->shop_name;
     }
 }

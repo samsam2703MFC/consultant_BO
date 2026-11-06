@@ -315,3 +315,500 @@ a.acc-etape{text-decoration:none;color:inherit}
 .vm-r{grid-area:r;font:700 11.5px var(--font-ui);background:var(--la-beige-doux);border-radius:999px;padding:5px 9px;white-space:nowrap;min-width:52px;text-align:center}
 .vm-r small{font-weight:500;color:var(--la-muet)}
 .vm-r.or{background:#f6e3a1}
+
+/* ── « Mes primes » (16/10/2026) : les primes en carrés deux par ligne, une demi-jauge (où elle en est, l'objectif),
+   le classement dans un menu qui monte du bas. Toutes les couleurs, polices, rayons et ombres sont des variables
+   (marque.css, d'après le design system). ── */
+.hx{background:linear-gradient(140deg,var(--la-rubis) 0%,var(--la-rubis-fonce) 100%);color:var(--la-blanc);border-radius:var(--radius-xl);padding:14px 16px 12px;margin-bottom:6px;box-shadow:var(--la-ombre-rubis)}
+.hx .l{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.hx b{display:block;font:400 34px/1 var(--font-display)}
+.hx small{display:block;font:600 10px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;opacity:.75;margin-top:5px}
+.hx .r{text-align:right}
+.hx .r b{font-size:22px;opacity:.92}
+.hx .bar{height:6px;border-radius:var(--radius-pill);background:var(--la-voile);margin-top:12px;overflow:hidden}
+.hx .bar i{display:block;height:100%;background:var(--la-blanc);border-radius:var(--radius-pill)}
+/* Les carrés. */
+.pq-grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:6px}
+.pq{position:relative;container-type:inline-size;aspect-ratio:1/1;display:flex;flex-direction:column;background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-xl);padding:9px 10px;box-shadow:var(--la-ombre);min-width:0}
+.pq.cliquable{cursor:pointer}
+.pq.gagne{border:1.5px solid var(--la-ok)}
+.pq.tete{border:1.5px solid var(--la-or)}
+.pq-h{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.pq-h .emo{width:28px;height:28px;border-radius:var(--radius-md);background:var(--la-beige-doux);display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;flex:0 0 auto;overflow:hidden}
+.pq-h .emo img{width:21px;height:21px;object-fit:contain;display:block}
+.pq.gagne .pq-h .emo{background:var(--la-ok-doux)}
+.pq.tete .pq-h .emo{background:var(--la-or-doux)}
+.pq-m{font:400 19px/1 var(--font-display);color:var(--la-rubis);text-align:right;white-space:nowrap}
+.pq-m i{font:600 8.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--la-muet);margin-left:2px;font-style:normal}
+.pq-m .typ{display:block;width:max-content;margin:3px 0 0 auto}
+.pq.gagne .pq-m{color:var(--la-ok)}
+.pq-n{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:600 12.5px/1.2 var(--font-ui);margin-top:4px;color:var(--la-encre)}
+.pq-n small{display:block;font:500 10px var(--font-ui);color:var(--la-muet);margin-top:1px}
+.typ{display:inline-block;font:700 8.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:var(--radius-pill)}
+.typ.target{background:var(--la-beige-doux);color:var(--la-encre)}
+.typ.categorie{background:var(--la-or-doux);color:var(--la-or-encre)}
+.typ.promo{background:var(--la-abricot);color:var(--la-abricot-encre)}
+.typ.classement{background:var(--la-brun);color:var(--la-blanc)}
+/* La demi-jauge : la piste, mon niveau (le trait et le point rubis), l'objectif (le repère sombre), le jour J (pointillé). */
+/* La jauge prend toute la place libre du carré, quelle que soit sa taille (16/10/2026 : plus de vide sous le nom). */
+.pq-g{position:relative;flex:1 1 0;min-height:58px;display:flex;align-items:flex-end;justify-content:center;margin-top:4px}
+.dj{display:block;height:100%;width:auto;max-width:100%;overflow:visible}
+.dj .fond,.dj .val{fill:none;stroke-width:9;stroke-linecap:round}
+.dj .fond{stroke:var(--la-beige-doux)}
+.dj .val{stroke:var(--la-rubis)}
+.dj .rep{stroke:var(--la-encre);stroke-width:2.5;stroke-linecap:round}
+.dj .rep-p{fill:var(--la-encre);stroke:var(--la-blanc);stroke-width:1.5}
+.dj .jr{stroke:var(--la-muet);stroke-width:1.5;stroke-dasharray:2.5 2.5}
+.dj .moi{fill:var(--la-blanc);stroke:var(--la-rubis);stroke-width:3.5}
+.pq.gagne .dj .val{stroke:var(--la-ok)}.pq.gagne .dj .moi{stroke:var(--la-ok)}
+.pq.tete .dj .val{stroke:var(--la-or)}.pq.tete .dj .moi{stroke:var(--la-or)}
+.pq-v{position:absolute;left:0;right:0;bottom:0;text-align:center;font:400 clamp(19px,12cqw,34px)/1 var(--font-display);color:var(--la-encre);white-space:nowrap}
+.pq-v small{font:500 clamp(10px,5cqw,13px) var(--font-ui);color:var(--la-muet);margin-left:2px}
+.pq-v i{display:block;font:600 clamp(8.5px,4cqw,10.5px) var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);font-style:normal;margin-top:2px}
+/* L'objectif en clair, avec le même repère que la jauge ; puis l'état et ce qui l'explique. */
+/* Les targets (16/10/2026, le « drapeau ») : une par ligne, en couleur d'office. La valeur en haut à droite ; une
+   barre, le trait noir de l'objectif (toujours à 75 %, aligné d'une ligne à l'autre) et la récompense posée dessus ;
+   la passer active la prime (vert). Le pointillé : où en être au jour J. Toucher la ligne déroule son
+   détail, une seule ouverte à la fois. */
+/* Le sélecteur de mois (16/10/2026) : centré, une flèche de chaque côté ; grisée au bout (pas de mois à venir). */
+.mois-sel{display:flex;align-items:center;justify-content:center;gap:16px;margin:0 0 12px}
+.ms-f{width:38px;height:38px;flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--la-blanc);border:.5px solid var(--la-trait2);color:var(--la-encre);font-size:15px;text-decoration:none;box-shadow:var(--la-ombre)}
+.ms-f:hover{color:var(--la-rubis)}
+.ms-f.off{opacity:.35;box-shadow:none}
+.ms-l{min-width:150px;text-align:center}
+.ms-l b{display:block;font:400 23px/1.05 var(--font-display);color:var(--la-encre)}
+.ms-l small{display:block;font:600 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--la-muet);margin-top:3px}
+.mois-sel.charge .ms-l{opacity:.45}
+.mois-sel.charge .ms-f{pointer-events:none}
+
+/* Le mois est compté mais aucun ticket à son nom : un mot clair en tête, plutôt que des « pas encore compté ». */
+.pl-vide{display:flex;gap:12px;align-items:flex-start;background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-lg);padding:13px 14px;box-shadow:var(--la-ombre);margin:12px 0 4px}
+.pl-vide .bi{font-size:21px;color:var(--la-rubis);line-height:1}
+.pl-vide b{display:block;font:600 14px/1.3 var(--font-ui);color:var(--la-encre)}
+.pl-vide span{display:block;font:500 12.5px/1.4 var(--font-ui);color:var(--la-muet);margin-top:3px}
+.pl-liste{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
+.pl{background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-xl);box-shadow:var(--la-ombre)}
+.pl-b{padding:11px 14px 10px;cursor:pointer;outline:none;border-radius:inherit}
+.pl-b:focus-visible{box-shadow:inset 0 0 0 2px var(--la-rubis)}
+.pl-h{display:flex;align-items:center;gap:9px}
+.pl-h .emo{width:30px;height:30px;border-radius:var(--radius-md);background:var(--la-beige-doux);display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;flex:0 0 auto;overflow:hidden}
+.pl-h .emo img{width:21px;height:21px;object-fit:contain;display:block}
+.pl.ok .pl-h .emo{background:var(--la-ok-doux)}
+.pl-t{flex:1;min-width:0;font:600 14px/1.25 var(--font-ui);color:var(--la-encre);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-v{font:400 21px/1 var(--font-display);color:var(--la-rubis);white-space:nowrap}
+.pl-v small{font:600 12px var(--font-ui);color:var(--la-muet);margin-left:3px}
+.pl.ok .pl-v{color:var(--la-ok)}
+.pl-b .chev{display:inline-block;font-size:12px;color:var(--la-muet);transition:transform .2s}
+.pl-b[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.pl-j{position:relative;height:10px;margin:30px 0 0;border-radius:var(--radius-pill);background:var(--la-beige)}
+.pl-j > i{position:absolute;left:0;top:0;bottom:0;border-radius:var(--radius-pill);background:var(--la-rubis)}
+.pl.ok .pl-j > i{background:var(--la-ok)}
+.pl-j .ob{position:absolute;left:75%;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--la-encre)}
+.pl-j .jr{position:absolute;top:-4px;bottom:-4px;border-left:2px dashed var(--la-muet)}
+.pl-j .fl{position:absolute;left:75%;bottom:calc(100% + 7px);transform:translateX(-50%);font:700 11px var(--font-ui);padding:3px 8px;border-radius:var(--radius-pill);background:var(--la-encre);color:var(--la-blanc);white-space:nowrap}
+.pl.ok .pl-j .fl{background:var(--la-ok)}
+.pl-s{display:flex;justify-content:space-between;gap:10px;font:500 11px var(--font-ui);color:var(--la-muet);margin-top:8px}
+.pl-s > span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-s .ok,.pl-s .okp{color:var(--la-ok);font-weight:700}
+.pl-s b{font-weight:600}
+.pl-s .jr-l{display:inline-block;width:9px;border-top:1.5px dashed var(--la-muet);vertical-align:middle;margin-right:3px}
+.pl-d{border-top:.5px solid var(--la-trait);margin:0 12px;padding:4px 2px 12px}
+.pl-l{margin:0}
+.pl-l > div{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:.5px dashed var(--la-trait2)}
+.pl-l > div:last-child{border-bottom:0}
+.pl-l dt{font:500 12.5px/1.3 var(--font-ui);color:var(--la-muet)}
+.pl-l dd{margin:0;font:600 13px/1.3 var(--font-ui);color:var(--la-encre);text-align:right;white-space:nowrap}
+.pl-l dd small{display:block;font:500 11px var(--font-ui);color:var(--la-muet)}
+.pl-l dd.ok{color:var(--la-ok)}
+.pl-l dd.att{color:var(--la-abricot-encre)}
+.pl-n{font:500 11.5px/1.4 var(--font-ui);color:var(--la-muet);margin:4px 0 0}
+.pl-cl{display:inline-flex;align-items:center;gap:6px;margin-top:8px;border:0;background:var(--la-beige-doux);color:var(--la-encre);border-radius:var(--radius-pill);padding:7px 12px;font:600 12px var(--font-ui);cursor:pointer}
+
+/* Le podium du magasin, dans le détail d'une catégorie : les trois premières, elle surlignée (rubis ; or quand elle
+   mène) ; à la 3e ligne, à son rang, quand elle est plus loin. */
+.pd{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.pd li{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:var(--radius-md);font:500 12.5px/1.25 var(--font-ui);color:var(--la-encre);min-width:0}
+.pd .r{width:18px;flex:0 0 auto;text-align:center;font-weight:700;color:var(--la-muet)}
+.pd .n{flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pd .q{font-weight:700;font-variant-numeric:tabular-nums}
+.pd li.moi{background:var(--la-rubis);color:var(--la-blanc)}
+.pd li.moi .r{color:var(--la-blanc)}
+.pd li.moi.un{background:var(--la-or-doux);color:var(--la-or-encre)}
+.pd li.moi.un .r{color:var(--la-or-encre)}
+.pl-st{font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);margin:10px 0 6px}
+.pl-s .rg{color:var(--la-encre)}
+.pl.ok .pl-s .rg{color:var(--la-ok)}
+.pq-o{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:var(--la-encre);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pq-o b{font-weight:700}
+.pq-o .lg{width:8px;height:8px;border-radius:50%;background:var(--la-encre);box-shadow:0 0 0 1.5px var(--la-blanc),0 0 0 2.5px var(--la-encre);flex:0 0 auto}
+.pq-f{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px 5px;margin-top:4px;min-width:0}
+.pq-c .jr-l{display:inline-block;width:9px;border-top:1.5px dashed var(--la-muet);vertical-align:middle;margin-right:3px}
+.pq-c{font-size:10.5px;color:var(--la-muet);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pq-c b{color:var(--la-encre);font-weight:600}
+.etat{font:700 10.5px var(--font-ui);padding:3px 8px;border-radius:var(--radius-pill);white-space:nowrap;flex:0 0 auto}
+.etat.ok{background:var(--la-ok-doux);color:var(--la-ok)}
+.etat.or{background:var(--la-or-doux);color:var(--la-or-encre)}
+.etat.att{background:var(--la-abricot);color:var(--la-abricot-encre)}
+.etat.mu{background:var(--la-beige-doux);color:var(--la-encre)}
+/* Une prime pas (encore) gagnée : en gris. Gagnée : en vert ; en tête : en or. Le repère de l'objectif reste lisible. */
+.pq.non{background:var(--la-gris-doux);border-color:var(--la-trait);box-shadow:none}
+.pq.non .pq-h .emo{filter:grayscale(1);opacity:.55;background:var(--la-gris-trait)}
+.pq.non .pq-n,.pq.non .pq-m,.pq.non .pq-v{color:var(--la-gris)}
+.pq.non .typ{filter:grayscale(1);opacity:.7}
+.pq.non .dj .fond{stroke:var(--la-gris-trait)}
+.pq.non .dj .val{stroke:var(--la-gris)}
+.pq.non .dj .moi{stroke:var(--la-gris)}
+.pq.non .etat.att,.pq.non .etat.mu{background:var(--la-gris-trait);color:var(--la-encre)}
+/* Le menu du classement : un bouton (l'icône, le nom, le type, mon rang) qui ouvre une feuille montant du bas. */
+.dd{width:100%;display:flex;align-items:center;gap:10px;background:var(--la-blanc);border:1.5px solid var(--la-encre);border-radius:var(--radius-lg);padding:9px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.dd .emo,.feuille li .emo{width:34px;height:34px;border-radius:var(--radius-md);background:var(--la-beige-doux);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex:0 0 auto;overflow:hidden}
+.dd .emo img,.feuille li .emo img{width:24px;height:24px;object-fit:contain;display:block}
+.dd .t,.feuille li .t{flex:1;min-width:0}
+.dd b,.feuille li b{display:block;font:600 14.5px/1.2 var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dd .typ,.feuille li .typ{margin-top:3px}
+.dd-r{font:400 20px/1 var(--font-display);color:var(--la-rubis);white-space:nowrap}
+.dd-r small{font:500 10px var(--font-ui);color:var(--la-muet);margin-left:2px}
+.dd .bi{font-size:16px;color:var(--la-encre)}
+.dd[aria-expanded="true"] .bi{transform:rotate(180deg)}
+.feuille{position:fixed;inset:0;z-index:1080}
+.feuille[hidden]{display:none}
+.feuille-fond{position:absolute;inset:0;background:var(--la-encre);opacity:0;transition:opacity .2s}
+.feuille.ouverte .feuille-fond{opacity:.45}
+.feuille-c{position:absolute;left:0;right:0;bottom:0;max-height:78vh;overflow:auto;background:var(--la-blanc);border-radius:var(--radius-xl) var(--radius-xl) 0 0;padding:6px 14px calc(14px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .2s ease-out}
+.feuille.ouverte .feuille-c{transform:none}
+.feuille-poignee{width:38px;height:4px;border-radius:var(--radius-pill);background:var(--la-trait2);margin:4px auto 8px}
+.feuille-t{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.feuille-t b{font:400 20px var(--font-display)}
+.feuille-x{border:0;background:var(--la-beige-doux);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--la-encre)}
+.feuille ul{list-style:none;margin:0;padding:0}
+.feuille li{display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:var(--radius-lg);cursor:pointer;outline:none}
+.feuille li + li{border-top:.5px solid var(--la-trait)}
+.feuille li .t small{display:block;font-size:11px;color:var(--la-muet);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feuille li .coche{color:var(--la-rubis);font-size:18px;visibility:hidden}
+.feuille li[aria-selected="true"]{background:var(--la-beige-doux)}
+.feuille li[aria-selected="true"] .coche{visibility:visible}
+.feuille li:focus-visible{box-shadow:0 0 0 2px var(--la-rubis)}
+/* Mon magasin / Réseau : un sélecteur segmenté. */
+.seg{display:flex;background:var(--la-beige-doux);border-radius:var(--radius-pill);padding:3px;margin-bottom:6px}
+.seg button{flex:1;border:0;background:transparent;border-radius:var(--radius-pill);padding:7px 10px;font:600 12.5px var(--font-ui);color:var(--la-muet)}
+.seg button.on{background:var(--la-blanc);color:var(--la-encre);box-shadow:var(--la-ombre)}
+.cl-carte{background:var(--la-blanc);border:.5px solid var(--la-trait);border-radius:var(--radius-xl);padding:12px 14px;margin:10px 0 12px;box-shadow:var(--la-ombre)}
+.podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;align-items:end;gap:6px;margin:10px 0 4px;text-align:center}
+.pod{min-width:0}
+.pod .cr{display:block;font-size:22px;line-height:1;margin-bottom:2px}
+.pod .av{width:44px;height:44px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font:700 16px var(--font-ui);color:var(--la-blanc)}
+.pod.p1 .av{width:58px;height:58px;font-size:21px;box-shadow:0 0 0 3px var(--la-or-doux)}
+.pod.moi .av{box-shadow:0 0 0 3px var(--la-rubis)}
+.pod b{display:block;font:600 12.5px var(--font-ui);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pod.moi b{color:var(--la-rubis)}
+.pod small{display:block;font-size:10px;color:var(--la-muet);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pod .q{font:400 20px/1 var(--font-display);margin-top:4px}
+.pod .q small{display:inline;font:500 10px var(--font-ui)}
+.pod .socle{margin-top:6px;border-radius:var(--radius-md) var(--radius-md) 0 0;background:var(--la-beige-doux);font:400 18px var(--font-display);color:var(--la-muet);padding-top:5px}
+.pod.p1 .socle{height:52px;background:var(--la-or-doux);color:var(--la-or-encre)}
+.pod.p2 .socle{height:36px}
+.pod.p3 .socle{height:24px}
+.cl-row .av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 11px var(--font-ui);color:var(--la-blanc);flex:0 0 auto}
+.cl-row.moi .av{box-shadow:0 0 0 2px var(--la-rubis)}
+.cl-row.ecart{justify-content:center;color:var(--la-muet);padding:2px 0;border-top:none;letter-spacing:2px}
+.av.t0{background:var(--la-teinte-1)}.av.t1{background:var(--la-teinte-2)}.av.t2{background:var(--la-teinte-3)}.av.t3{background:var(--la-teinte-4)}
+.av.t4{background:var(--la-teinte-5)}.av.t5{background:var(--la-teinte-6)}.av.t6{background:var(--la-teinte-7)}.av.t7{background:var(--la-teinte-8)}
+.av.moi{background:var(--la-rubis)}
+
+/* Un mois à venir (16/10/2026) : les primes prévues, sans barre ni détail. */
+.pl.av .pl-b{cursor:default}
+.pl.av .pl-v small{margin-left:2px}
+
+/* La fiche d'une prime (16/10/2026) : ce qu'on gagne, la description, qui l'offre (logo, site), la règle. */
+.pq.cliquable,.pl.av.cliquable{cursor:pointer}
+.pdm-h{display:flex;align-items:center;gap:10px;margin:2px 0 10px}
+.pdm-h .emo{width:38px;height:38px;border-radius:var(--radius-md);background:var(--la-beige-doux);display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;flex:0 0 auto}
+.pdm-h .emo img{width:28px;height:28px;object-fit:contain}
+.pdm-h b{flex:1;font:600 17px/1.25 var(--font-ui);color:var(--la-encre)}
+.pdm-g{display:flex;align-items:baseline;justify-content:space-between;gap:10px;background:var(--la-beige-doux);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:10px}
+.pdm-g small{font:600 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--la-muet)}
+.pdm-g b{font:600 16px/1.3 var(--font-ui);color:var(--la-rubis);text-align:right}
+.pdm-g i{font-style:normal;font-weight:500;color:var(--la-muet);font-size:13px}
+.pdm-d{font:500 14px/1.45 var(--font-ui);color:var(--la-encre);margin:0 2px 12px}
+.pdm-s{display:flex;align-items:center;gap:12px;border:.5px solid var(--la-trait);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:12px}
+.pdm-s img{width:52px;height:52px;object-fit:contain;flex:0 0 auto;border-radius:var(--radius-sm)}
+.pdm-s small{display:block;font:600 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--la-muet)}
+.pdm-s b{display:block;font:600 15px/1.3 var(--font-ui);color:var(--la-encre)}
+.pdm-s span{display:block;font:500 13px/1.4 var(--font-ui);color:var(--la-muet);margin-top:2px}
+.pdm-s a{display:inline-block;font:600 13px var(--font-ui);color:var(--la-rubis);margin-top:4px;text-decoration:none}
+.pl-d .pdm-g{margin-top:4px}
+.pdm-a{font:600 13.5px/1.45 var(--font-ui);color:var(--la-encre);background:var(--la-beige-doux);border-radius:var(--radius-md);padding:9px 12px;margin:0 0 12px}
+
+/* ══ Forme sobre, façon iOS (23/10/2026, demande : « l'UX doit être plus minimaliste, type Apple ») ══
+   Par-dessus ce qui précède, pour l'écran Primes et l'Accueil (et Statistiques, qui charge la même feuille) : la police
+   du système, un fond clair, des listes groupées blanches sans bordure ni ombre, une seule couleur d'accent (le rubis),
+   le vert pour ce qui est gagné, des icônes au trait. Les pièces gardent leurs classes et leur fonctionnement. */
+:root{
+  --s-police:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',system-ui,sans-serif;
+  --s-fond:#F2F1EE;--s-carte:#fff;--s-texte:#1C1C1E;--s-second:#6E6E73;--s-tertiaire:#C7C7CC;
+  --s-trait:rgba(60,60,67,.14);--s-remplir:rgba(118,118,128,.12);--s-doux:#F4F3F1;
+  --s-accent:var(--la-rubis,#8D1D2C);--s-accent-doux:rgba(141,29,44,.09);--s-vert:#248A3D;--s-vert-doux:rgba(36,138,61,.11);
+}
+body{background:var(--s-fond)}
+.emp-content,.emp-topbar{--font-ui:var(--s-police);--font-display:var(--s-police);font-family:var(--s-police);color:var(--s-texte)}
+.emp-topbar{background:rgba(242,241,238,.86);border-bottom-color:var(--s-trait)}
+html .emp-title{font:700 1.3rem/1.15 var(--s-police);letter-spacing:-.02em}
+.emp-subtitle{font:400 .85rem var(--s-police);color:var(--s-second)}
+
+/* Les pièces communes. */
+.sb-titre{display:flex;align-items:baseline;gap:8px;margin:26px 4px 8px;font:700 20px/1.2 var(--s-police);letter-spacing:-.01em;color:var(--s-texte)}
+.sb-titre a{margin-left:auto;font:400 15px var(--s-police);color:var(--s-accent);text-decoration:none;letter-spacing:0}
+.sb-pied{margin:6px 0 0;font:400 13px/1.4 var(--s-police);color:var(--s-second)}
+.sb-barre{display:block;flex:1;height:6px;border-radius:3px;background:var(--s-remplir);overflow:hidden}
+.sb-barre i{display:block;height:100%;border-radius:3px;background:var(--s-accent)}
+.sb-barre.grande{height:8px;border-radius:4px}
+/* Combien : un grand chiffre. */
+.sb-heros{padding:6px 4px 4px}
+.sb-sur{margin:0;font:400 15px var(--s-police);color:var(--s-second)}
+.sb-chiffre{margin:2px 0 12px;font:700 48px/1.05 var(--s-police);letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--s-texte)}
+.sb-sous{margin:8px 0 0;font:400 15px/1.35 var(--s-police);color:var(--s-second)}
+.sb-sous b{font-weight:600;color:var(--s-texte)}
+/* Les listes groupées et leurs lignes (le plan). */
+.sb-groupe{background:var(--s-carte);border-radius:16px;overflow:hidden;margin-bottom:12px}
+.sb-groupe>*{position:relative}
+.sb-groupe>*+*::before{content:'';position:absolute;left:60px;right:0;top:0;border-top:.5px solid var(--s-trait)}
+.sb-ligne{position:relative;display:flex;align-items:flex-start;gap:12px;padding:12px 16px;color:inherit;text-decoration:none}
+a.sb-ligne{padding-right:34px}
+a.sb-ligne::after{content:'';position:absolute;right:17px;top:50%;width:7px;height:7px;margin-top:-5px;border-right:2px solid var(--s-tertiaire);border-bottom:2px solid var(--s-tertiaire);transform:rotate(-45deg)}
+a.sb-ligne:active{background:var(--s-doux)}
+.sb-ic{flex:0 0 auto;width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--s-accent-doux);color:var(--s-accent);font-size:16px;overflow:hidden}
+.sb-ic img{width:22px;height:22px;object-fit:contain}
+.sb-corps{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sb-l1{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.sb-l1 b{font:600 16px/1.3 var(--s-police);color:var(--s-texte)}
+.sb-gain{flex:0 0 auto;font:600 16px var(--s-police);font-variant-numeric:tabular-nums;color:var(--s-vert);white-space:nowrap}
+.sb-l2{display:block;font:400 13.5px/1.4 var(--s-police);color:var(--s-second)}
+.sb-tag{display:inline-block;font:500 11px var(--s-police);color:var(--s-accent);background:var(--s-accent-doux);border-radius:6px;padding:1px 6px;margin-left:2px;white-space:nowrap}
+.sb-prog{display:flex;align-items:center;gap:10px;margin-top:7px}
+.sb-bornes{flex:0 0 auto;font:400 12px var(--s-police);font-variant-numeric:tabular-nums;color:var(--s-second)}
+.sb-etape.dur .sb-gain{color:var(--s-second)}
+[id^="prime-"],#classement{scroll-margin-top:calc(70px + env(safe-area-inset-top,0px))}
+
+/* Le mois : une ligne, deux chevrons. */
+.mois-sel{justify-content:space-between;gap:8px;margin:0 0 6px}
+.ms-f{width:36px;height:36px;border:0;background:var(--s-carte);box-shadow:none;color:var(--s-accent);font-size:14px}
+.ms-f.off{opacity:.3}
+.ms-l b{font:600 17px/1.2 var(--s-police);color:var(--s-texte)}
+.ms-l small{font:400 12px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second);margin-top:1px}
+
+/* Les en-têtes de groupe (Targets, Promos), comme ceux des réglages d'iOS. */
+.titre-section{margin:14px 16px 6px}
+.titre-section h2{font:500 13px var(--s-police);letter-spacing:.02em;text-transform:uppercase;color:var(--s-second)}
+.titre-section small{font:400 13px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second)}
+
+/* Où tu en es : une liste groupée, une ligne par prime. */
+.pl-liste{gap:0;background:var(--s-carte);border-radius:16px;overflow:hidden;margin-bottom:6px}
+.pl{border:0;border-radius:0;box-shadow:none;background:transparent;position:relative}
+.pl+.pl::before{content:'';position:absolute;left:58px;right:0;top:0;border-top:.5px solid var(--s-trait)}
+.pl-b{padding:12px 16px 11px;border-radius:0}
+.pl-b:active{background:var(--s-doux)}
+.pl-h{gap:12px}
+.pl-h .emo{width:32px;height:32px;border-radius:9px;background:var(--s-accent-doux);color:var(--s-accent);font-size:16px}
+.pl-h .emo img{width:22px;height:22px}
+.pl.ok .pl-h .emo{background:var(--s-vert-doux);color:var(--s-vert)}
+.pl-t{font:600 16px/1.3 var(--s-police);color:var(--s-texte)}
+.pl-v{font:600 17px/1 var(--s-police);font-variant-numeric:tabular-nums;color:var(--s-texte)}
+.pl.ok .pl-v{color:var(--s-vert)}
+.pl-v small{font:400 12px var(--s-police);color:var(--s-second)}
+.pl-b .chev{color:var(--s-tertiaire)}
+.pl-j{height:6px;margin:28px 0 0 44px;background:var(--s-remplir)}
+.pl-j > i{background:var(--s-accent)}
+.pl.ok .pl-j > i{background:var(--s-vert)}
+.pl-j .ob{top:-5px;bottom:-5px;width:2px;margin-left:-1px;background:var(--s-texte)}
+.pl-j .jr{border-left-color:var(--s-second)}
+.pl-j .fl{font:600 11px var(--s-police);padding:2px 7px;background:var(--s-texte)}
+.pl.ok .pl-j .fl{background:var(--s-vert)}
+.pl-s{font:400 12.5px var(--s-police);color:var(--s-second);margin:7px 0 0 44px}
+.pl-s .ok,.pl-s .okp,.pl.ok .pl-s .rg{color:var(--s-vert);font-weight:600}
+.pl-s .rg{color:var(--s-texte)}
+.pl-d{border-top:.5px solid var(--s-trait);margin:0 16px 0 60px;padding:6px 0 14px}
+.pl-l > div{border-bottom:.5px solid var(--s-trait)}
+.pl-l dt{font:400 13.5px/1.3 var(--s-police);color:var(--s-second)}
+.pl-l dd{font:600 14px/1.3 var(--s-police);color:var(--s-texte)}
+.pl-l dd small{font:400 12px var(--s-police);color:var(--s-second)}
+.pl-l dd.ok{color:var(--s-vert)}
+.pl-n,.pl-st{font:400 12.5px/1.4 var(--s-police);color:var(--s-second);letter-spacing:0;text-transform:none}
+.pl-cl{background:var(--s-remplir);color:var(--s-accent);border-radius:999px;font:500 13px var(--s-police)}
+.pd li{font:400 14px/1.25 var(--s-police)}
+.pd li.moi,.pd li.moi.un{background:var(--s-accent-doux);color:var(--s-accent)}
+.pd li.moi .r,.pd li.moi.un .r{color:var(--s-accent)}
+.pl-vide{border:0;box-shadow:none;border-radius:16px;background:var(--s-carte);padding:14px 16px}
+.pl-vide .bi{color:var(--s-accent)}
+.pl-vide b{font:600 15px/1.3 var(--s-police)}
+.pl-vide span{font:400 13.5px/1.4 var(--s-police);color:var(--s-second)}
+.typ{font:500 10.5px var(--s-police);letter-spacing:0;text-transform:none;padding:1px 7px;border-radius:6px}
+.typ.target,.typ.categorie,.typ.promo,.typ.classement{background:var(--s-remplir);color:var(--s-second)}
+
+/* La fiche d'une prime et son indication. */
+.pdm-g{background:var(--s-doux);border-radius:12px}
+.pdm-g small{font:400 13px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second)}
+.pdm-g b{font:600 16px/1.3 var(--s-police);color:var(--s-texte)}
+.pdm-d{font:400 14.5px/1.45 var(--s-police)}
+.pdm-a{font:400 14px/1.45 var(--s-police);background:var(--s-accent-doux);color:var(--s-texte);border-radius:12px}
+.pdm-a .bi{color:var(--s-accent);margin-right:4px}
+.pdm-s{border:0;background:var(--s-doux);border-radius:12px}
+.pdm-s small{font:400 12px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second)}
+.pdm-s a{color:var(--s-accent);font-weight:500}
+.pdm-h b{font:600 18px/1.25 var(--s-police)}
+.pdm-h .emo{border-radius:9px;background:var(--s-accent-doux);color:var(--s-accent)}
+
+/* Le classement : le menu, la feuille, le sélecteur, le podium, les lignes. */
+.dd{border:0;border-radius:16px;padding:12px 16px;background:var(--s-carte)}
+.dd .emo,.feuille li .emo{width:32px;height:32px;border-radius:9px;background:var(--s-accent-doux);color:var(--s-accent);font-size:16px}
+.dd b,.feuille li b{font:600 16px/1.25 var(--s-police)}
+.dd-r{font:600 17px/1 var(--s-police);color:var(--s-texte)}
+.dd-r small{font:400 12px var(--s-police);color:var(--s-second)}
+.dd .bi-chevron-down{font-size:14px;color:var(--s-tertiaire)}
+.feuille-c{border-radius:14px 14px 0 0;padding:6px 16px calc(16px + env(safe-area-inset-bottom))}
+.feuille-t b{font:600 17px var(--s-police)}
+.feuille-x{background:var(--s-remplir);color:var(--s-second)}
+.feuille li{border-radius:10px}
+.feuille li + li{border-top-color:var(--s-trait)}
+.feuille li[aria-selected="true"]{background:var(--s-doux)}
+.feuille li .coche{color:var(--s-accent)}
+.cl-carte{border:0;box-shadow:none;border-radius:16px;padding:12px;margin:10px 0 12px}
+.seg{border-radius:9px;padding:2px;background:var(--s-remplir)}
+.seg button{border-radius:7px;padding:6px 10px;font:500 13px var(--s-police);color:var(--s-texte)}
+.seg button.on{background:var(--s-carte);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12),0 1px 1px rgba(0,0,0,.04)}
+.pod .av,.cl-row .av{background:var(--s-remplir);color:var(--s-second)}
+.av.t0,.av.t1,.av.t2,.av.t3,.av.t4,.av.t5,.av.t6,.av.t7{background:#E5E5EA;color:var(--s-second)}
+.av.moi{background:var(--s-accent);color:#fff}
+.pod.p1 .av{box-shadow:none}
+.pod.moi .av{box-shadow:none}
+.pod b{font:600 13px var(--s-police)}
+.pod.moi b{color:var(--s-accent)}
+.pod .q{font:700 20px/1 var(--s-police);font-variant-numeric:tabular-nums}
+.pod .socle{font:600 15px var(--s-police);background:var(--s-doux);color:var(--s-second);border-radius:10px 10px 0 0}
+.pod.p1 .socle{background:var(--s-accent-doux);color:var(--s-accent)}
+.cl-row{font:400 15px var(--s-police);border-top-color:var(--s-trait)}
+.cl-row .r{font:600 15px var(--s-police);color:var(--s-second)}
+.cl-row.moi{background:var(--s-accent-doux);border-radius:10px}
+.cl-row.moi .nom{color:var(--s-accent);font-weight:600}
+.cl-row .val{font:600 15px var(--s-police);font-variant-numeric:tabular-nums}
+
+/* L'Accueil : ce qui reste en jeu en carte, et ses cartes (Aujourd'hui, Ma semaine, le bilan, la collection). */
+.sb-heros-carte{display:block;padding:16px 40px 16px 16px;color:inherit;text-decoration:none}
+.sb-heros-carte>span{display:block}
+.sb-heros-carte>*::before{display:none}
+.sb-heros-carte .sb-chiffre{font-size:40px;margin:2px 0 10px}
+.sb-fleche{position:absolute;right:16px;top:50%;margin-top:-8px;color:var(--s-tertiaire);font-size:16px}
+.pr-card{background:var(--s-carte);border:none;border-radius:16px;padding:14px 16px}
+.pr-h h2{font:600 17px/1.2 var(--s-police)}
+.pr-h small,.note,.mu{color:var(--s-second)}
+.k{font:500 12px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second)}
+.auj .cercle{width:76px;height:76px;background:conic-gradient(var(--s-accent) var(--p),var(--s-remplir) 0)}
+.auj .cercle::before{inset:6px;background:var(--s-carte)}
+.auj .cercle b{font:700 22px/1 var(--s-police)}
+.auj .tx{font-size:13.5px;color:var(--s-second)}
+.auj .tx .q{font:600 16px/1.25 var(--s-police);color:var(--s-texte)}
+.acc-tuile{background:var(--s-doux)}
+.acc-tuile i{color:var(--s-accent)}
+.acc-tuile b{font:600 15px/1.2 var(--s-police)}
+.acc-tuile small{font:400 12px var(--s-police);color:var(--s-second)}
+.acc-kpis b{font:700 20px/1.1 var(--s-police);font-variant-numeric:tabular-nums}
+.acc-kpis small{font:400 11px var(--s-police);color:var(--s-second)}
+.acc-bilan.ok>i{color:var(--s-vert)}
+.acc-bilan.att>i{color:var(--s-accent)}
+
+/* La meilleure vendeuse (23/10/2026) : une jauge dont le bout est la 1re du magasin (son initiale, posée juste après,
+   pour que le point reste lisible tout près d'elle) et le point la vendeuse ; dans la ligne de la prime, la récompense
+   au-dessus du bout. Elle en tête : le point au bout, en vert. */
+.pl-mv,.sb-jv{position:relative;display:block;height:6px;border-radius:3px;background:var(--s-remplir)}
+.pl-mv{margin:30px 34px 0 44px}
+.sb-jv{flex:1;margin-right:28px}
+.pl-mv>i,.sb-jv>i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--s-accent)}
+.pl-mv .pt,.sb-jv .pt{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--s-carte);border:3px solid var(--s-accent);box-shadow:0 1px 3px rgba(0,0,0,.18);box-sizing:border-box;z-index:2}
+.pl-mv .bout,.sb-jv .bout{position:absolute;left:calc(100% + 6px);top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;background:#E5E5EA;color:var(--s-second);font:600 11px/24px var(--s-police);text-align:center;z-index:1}
+.sb-jv .bout{width:20px;height:20px;margin-top:-10px;left:calc(100% + 5px);font-size:10px;line-height:20px}
+.pl-mv .fl{position:absolute;right:-30px;bottom:calc(100% + 14px);font:600 11px var(--s-police);padding:2px 7px;border-radius:999px;background:var(--s-texte);color:#fff;white-space:nowrap}
+.pl.ok .pl-mv>i,.pl-mv.un>i{background:var(--s-vert)}
+.pl.ok .pl-mv .pt,.pl-mv.un .pt{border-color:var(--s-vert)}
+.pl.ok .pl-mv .fl{background:var(--s-vert)}
+
+/* Ce qu'il faut faire, dans la ligne d'une prime (23/10/2026). */
+.pl-how{margin:8px 0 0 44px;font:400 13.5px/1.4 var(--s-police);color:var(--s-texte)}
+.pl-how.dur{color:var(--s-second)}
+
+/* Bats ton record, en trois étapes (23/10/2026) : poser son record, le battre, gagner. */
+.pl-s .et{font-weight:600;color:var(--s-texte)}
+.pl.ok .pl-s .et{color:var(--s-vert)}
+.pl-et{list-style:none;margin:6px 0 4px;padding:0;display:grid;grid-template-columns:repeat(3,1fr)}
+.pl-et li{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;min-width:0}
+.pl-et li + li::before{content:"";position:absolute;top:10px;left:calc(-50% + 14px);right:calc(50% + 14px);height:2px;border-radius:1px;background:var(--s-remplir)}
+.pl-et li.fait + li::before{background:var(--s-vert)}
+.pl-et .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:600 12px/1 var(--s-police);background:var(--s-remplir);color:var(--s-second)}
+.pl-et li.ici .n{background:var(--s-accent);color:#fff}
+.pl-et li.fait .n{background:var(--s-vert);color:#fff}
+.pl-et b{font:600 13px/1.25 var(--s-police);color:var(--s-second);margin-top:3px}
+.pl-et li.ici b,.pl-et li.fait b{color:var(--s-texte)}
+.pl-et em{font:400 12px/1.25 var(--s-police);font-style:normal;color:var(--s-second);white-space:nowrap}
+.pl-et li.ici em{color:var(--s-texte);font-weight:600}
+.pl-et em.ok,.pl-et li.ici em.ok{color:var(--s-vert);font-weight:600}
+.pl-j.plein i,.pl-j.plein .fl{background:var(--s-vert)}
+.pl-et + .pl-n{margin-top:8px}
+/* Le détail d'une ligne, plus compact (23/10/2026) : « à gagner » et « offerte par » dans une seule carte, sur deux lignes. */
+.pl-d .pdm-g{padding:8px 12px;margin-bottom:8px}
+.pl-d .pdm-g b{font-size:15px}
+.pl-d .pdm-g + .pdm-s{margin-top:-8px;border-top:.5px solid var(--s-trait);border-radius:0 0 12px 12px}
+.pl-d .pdm-g:has(+ .pdm-s){border-radius:12px 12px 0 0}
+.pl-d .pdm-s{padding:7px 12px;gap:8px;margin-bottom:8px}
+.pl-d .pdm-s img{width:28px;height:28px}
+.pl-d .pdm-s div{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 4px}
+.pl-d .pdm-s small{display:inline;font:400 13px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second)}
+.pl-d .pdm-s b{display:inline;font:600 13px var(--s-police)}
+.pl-d .pdm-s span,.pl-d .pdm-s a{flex-basis:100%}
+
+/* La prime B2B (23/10/2026) : ses clients pro, sans leur nom — le jour de la 1re commande, ce qu'ils rapportent. */
+.b2b-cl{list-style:none;margin:0 0 6px;padding:0}
+.b2b-cl li{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:.5px solid var(--s-trait)}
+.b2b-cl li:last-child{border-bottom:0}
+.b2b-cl .n{font:500 14px/1.3 var(--s-police);color:var(--s-texte);min-width:0}
+.b2b-cl .n small{display:block;font:400 12px/1.35 var(--s-police);color:var(--s-second);margin-top:2px}
+.b2b-cl b{font:600 14px var(--s-police);color:var(--s-texte);white-space:nowrap}
+.b2b-cl b.ok{color:var(--s-vert)}
+.pdm-g.long{flex-direction:column;align-items:flex-start;gap:2px}
+.pdm-g.long b{text-align:left}
+
+/* Les grands prix de l'année (23/10/2026) : des cartes qui défilent, le lot en haut sur un fond teinté (ou sa photo). */
+.gp-rail{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 10px;margin:0 -6px;padding:2px 10px 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.gp-rail::-webkit-scrollbar{display:none}
+.gp-c{flex:0 0 86%;max-width:360px;scroll-snap-align:start;background:var(--s-carte);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+.gp-img{position:relative;height:120px;display:flex;align-items:center;justify-content:center;font-size:46px;color:var(--s-accent);background:linear-gradient(135deg,#FBEFE3,#F2C9A0)}
+.gp-img.d-b2b{background:linear-gradient(135deg,#EEF3F7,#CFDDEA);color:#3A5A78}
+.gp-img.d-ticket{background:linear-gradient(135deg,#F3EEF6,#DCCFE6);color:#5E4A7A}
+.gp-img.d-croisees{background:linear-gradient(135deg,#FBF4E6,#EFD9A8);color:#8A6A1F}
+.gp-img.d-progression{background:linear-gradient(135deg,#FBEEF0,#EFC4CB)}
+.gp-img.d-magasin{background:linear-gradient(135deg,#F6EAEA,#E6C3C3)}
+.gp-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.gp-val{position:absolute;top:10px;right:10px;font:700 14px var(--s-police);font-variant-numeric:tabular-nums;background:var(--s-carte);color:var(--s-texte);border-radius:999px;padding:4px 10px}
+.gp-b{padding:12px 14px 12px;display:flex;flex-direction:column;gap:3px;flex:1}
+.gp-off{font:600 10.5px var(--s-police);letter-spacing:.06em;text-transform:uppercase;color:var(--s-second)}
+.gp-t{font:700 18px/1.25 var(--s-police);letter-spacing:-.01em;color:var(--s-texte)}
+.gp-lot{font:400 13px/1.35 var(--s-police);color:var(--s-second)}
+.gp-d{font:400 13px/1.4 var(--s-police);color:var(--s-second)}
+.gp-d b{font-weight:600;color:var(--s-texte)}
+.gp-moi{display:flex;align-items:baseline;gap:8px;margin-top:8px;padding:9px 11px;border-radius:12px;background:var(--s-accent-doux);font:400 13.5px/1.35 var(--s-police);color:var(--s-texte)}
+.gp-moi b{font:700 20px var(--s-police);color:var(--s-accent)}
+.gp-moi b small{font:500 12px var(--s-police);color:var(--s-second)}
+.gp-moi em{margin-left:auto;font:600 14px var(--s-police);font-style:normal;font-variant-numeric:tabular-nums;white-space:nowrap}
+.gp-moi.mu{display:block;background:var(--s-doux);color:var(--s-second)}
+.gp-top{list-style:none;margin:8px 0 0;padding:0}
+.gp-top li{display:flex;align-items:baseline;gap:8px;padding:5px 0;border-top:.5px solid var(--s-trait);font:400 13.5px var(--s-police)}
+.gp-top li:first-child{border-top:0}
+.gp-top .r{width:14px;font-weight:700;color:var(--s-second)}
+.gp-top li:first-child .r{color:var(--s-accent)}
+.gp-top .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gp-top .n small{color:var(--s-second)}
+.gp-top .v{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.gp-top li.moi .n{font-weight:700;color:var(--s-accent)}
+.gp-fin{display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:10px;font:400 12px var(--s-police);color:var(--s-second)}
+.gp-fin .sb-barre{height:5px}
+.gp-fin a{margin-left:auto;color:var(--s-accent);text-decoration:none;white-space:nowrap}
+.gp-c.finie .gp-img{filter:saturate(.7)}
+.gp-pied{margin:2px 4px 0}
+#grands-prix{scroll-margin-top:calc(70px + env(safe-area-inset-top,0px))}

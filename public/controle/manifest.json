@@ -1,0 +1,15 @@
+{
+  "name": "Contrôles franchisés — L'Atelier by",
+  "short_name": "Contrôles",
+  "description": "Les boutiques et l'agenda des contrôles, puis le contrôle étape par étape, sur tablette.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#EAE4DC",
+  "theme_color": "#ffffff",
+  "lang": "fr",
+  "icons": [
+    { "src": "../assets/img/logo.png", "sizes": "any", "type": "image/png", "purpose": "any" }
+  ]
+}

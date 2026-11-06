@@ -115,6 +115,156 @@ function ep_stats_ventes_sonde(): array
 }
 
 /**
+ * GET /ventes/tickets?shop=4&date=2026-10-10&cat=Cookies (ou &q=cookie) — les tickets d'un jour qui portent
+ * une catégorie (ou un mot du nom d'un produit), ligne par ligne (10/10/2026) : l'heure, le total du ticket et
+ * sa remise, et chaque ligne avec sa quantité, son prix unitaire, sa remise et son total. Pour lire une
+ * promotion, un « 2 achetés » ou une remise à la main. Lecture seule ; rien n'est gardé : ni client, ni
+ * vendeur, ni remarque — seulement des produits, des montants et des heures.
+ */
+function ep_ventes_tickets(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    $cat = trim((string) ($_GET['cat'] ?? '')); $mot = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
+    $remise = !empty($_GET['remise']);   // ?remise=1 : les tickets qui portent une remise (une promotion déclenchée), toutes catégories
+    // ?service=0 (11/10/2026) : les tickets d'un mode de service, toutes leurs lignes. Mesuré à Halle : 0 = sur place
+    // (le compte colle heure par heure à eat_in_qty de l'heure par heure), 2 = à emporter. Seuls ces tickets se lisent.
+    $service = isset($_GET['service']) && is_numeric($_GET['service']) ? (int) $_GET['service'] : null;
+    // ?client=1 (11/10/2026) : les tickets rattachés à un client du panel, pro ou particulier, toutes leurs lignes, avec
+    // facturé et différé. Jamais le nom ni l'identifiant du client.
+    $client = !empty($_GET['client']);
+    // ?commandes=1 (11/10/2026) : chaque ticket dit s'il encaisse une commande client du panel (précommande au comptoir,
+    // click & collect, livraison), lue dans /shops/{id}/client-orders des quatorze jours d'avant (l'encaissement porte
+    // `id_transaction`). Sans le drapeau, la réponse garde seulement la référence de commande et la source de la liste.
+    $avecCmd = !empty($_GET['commandes']);
+    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || ($cat === '' && $mot === '' && !$remise && $service === null && !$client)) { http_response_code(400); return ['error' => 'shop, date et cat, q, remise, service ou client requis']; }
+    if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
+    $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
+    if (!is_array($liste)) { return ['indispo' => true, 'motif' => 'le panel ne rend pas les tickets du jour']; }
+    $ids = []; $pro = []; $svc = []; $cpt = []; $cid = []; $orig = []; $nJour = 0;
+    foreach (analyseListe($liste) as $t) {
+        $id = (int) ($t['id'] ?? 0);
+        if ($id <= 0) { continue; }
+        $nJour++;
+        $svc[$id] = isset($t['id_serving_method']) && is_numeric($t['id_serving_method']) ? (int) $t['id_serving_method'] : null;
+        if ($service !== null && $svc[$id] !== $service) { continue; }
+        $aClient = !empty($t['id_client']) && (string) $t['id_client'] !== '0';
+        if ($client && !$aClient) { continue; }
+        if ($aClient) { $cid[$id] = (string) $t['id_client']; }
+        $cpt[$id] = ['client' => $aClient, 'facture' => !empty($t['will_be_invoiced']), 'differe' => !empty($t['deferral_payment'])];
+        $orig[$id] = ['refCommande' => trim((string) ($t['order_ref'] ?? '')) !== '' && trim((string) ($t['order_ref'] ?? '')) !== '0', 'source' => (string) ($t['source'] ?? '')];
+        $ids[] = $id; if (!empty($t['is_client_b2b'])) { $pro[$id] = true; }
+    }
+    // Pro = client pro du panel ET TVA valide sur sa fiche (11/10/2026).
+    if ($pro !== [] && function_exists('vpTvaValides')) {
+        $okT = vpTvaValides($sid, array_map(static fn ($i) => 'c' . ($cid[$i] ?? ''), array_keys($pro)));
+        foreach (array_keys($pro) as $i) { if (($okT['c' . ($cid[$i] ?? '')] ?? null) === false) { unset($pro[$i]); } }
+    }
+    $tous = ($service !== null || $client) && $cat === '' && $mot === '' && !$remise;   // le mode de service ou le client seul : toutes les lignes
+    $catDe = function_exists('svCategories') ? svCategories() : [];
+    $n = static fn ($v) => is_numeric($v) ? round((float) $v, 2) : null;
+    $tickets = []; $lus = 0;
+    foreach (array_chunk($ids, 40) as $lot) {
+        $chemins = []; foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
+        $res = PanelApi::getParallele($chemins, 8);
+        foreach ($lot as $id) {
+            $t = $res[$id] ?? null; if (!is_array($t)) { continue; }
+            $lus++;
+            $lignes = []; $vise = false;
+            foreach ((array) ($t['products'] ?? []) as $l) {
+                $pid = (int) ($l['id_product'] ?? 0);
+                $nom = trim((string) ($l['product_display_name'] ?? $l['product_name'] ?? '')) ?: 'ligne sans produit';
+                $c = $pid > 0 ? (string) ($catDe[$pid] ?? '') : '';
+                $ok = $tous || ($cat !== '' && $c === $cat) || ($mot !== '' && mb_strpos(mb_strtolower($nom), $mot) !== false) || ($remise && (float) ($l['item_discount_value'] ?? 0) > 0.004);
+                $vise = $vise || $ok;
+                $lignes[] = ['pid' => $pid ?: null, 'nom' => $nom, 'cat' => $c, 'vise' => $ok, 'q' => $n($l['quantity'] ?? null), 'pu' => $n($l['unit_gross_price'] ?? null),
+                    'remise' => $n($l['item_discount_value'] ?? null), 'total' => $n($l['total_gross_value_after_discount'] ?? null), 'portion' => $l['product_portion_label'] ?? null];
+            }
+            if (!$vise && !($remise && (float) ($t['discount_total_value'] ?? 0) > 0.004)) { continue; }
+            $tickets[] = ['id' => $id, 'heure' => substr((string) ($t['insert_timestamp'] ?? ''), 11, 5), 'total' => $n($t['total_gross_amount_after_discount'] ?? null),
+                'remiseTicket' => $n($t['discount_total_value'] ?? null), 'bon' => !empty($t['id_voucher']), 'pro' => isset($pro[$id]), 'service' => $svc[$id] ?? null] + ($cpt[$id] ?? []) + ($orig[$id] ?? []) + ['lignes' => $lignes];
+        }
+    }
+    usort($tickets, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
+    $nCmd = null;
+    if ($avecCmd) {
+        $cmd = []; $nCmd = 0;
+        $r = PanelApi::sondeGet('/shops/' . $sid . '/client-orders?date_from=' . date('Y-m-d', strtotime($date . ' -14 days')), 25);
+        if ((int) ($r['code'] ?? 0) === 200 && is_array($r['corps'] ?? null)) {
+            foreach (analyseListe($r['corps']) as $o) {
+                if (!is_array($o)) { continue; }
+                $nCmd++;
+                $tk = (int) ($o['id_transaction'] ?? 0);
+                if ($tk <= 0) { continue; }
+                $canal = function_exists('coCanal') ? coCanal($o) : (!empty($o['is_webshop']) ? 'cc' : 'compt');
+                $cmd[$tk] = ['canal' => $canal, 'retrait' => substr((string) ($o['pick_up_datetime'] ?? ''), 0, 16) ?: null,
+                    'passee' => substr((string) ($o['insert_timestamp'] ?? $o['created_at'] ?? $o['order_date'] ?? ''), 0, 16) ?: null];
+            }
+        }
+        foreach ($tickets as &$tk) { $tk['commande'] = $cmd[$tk['id']] ?? null; }
+        unset($tk);
+    }
+    // La fiche du client (11/10/2026), avec ?client=1 : un numéro de TVA y est-il, est-il valide, la fiche est-elle
+    // marquée pro. Une lecture par client, en parallèle. Rien d'autre ne sort de la fiche : ni nom, ni numéro.
+    $clesFiche = [];
+    if ($client && $cid !== []) {
+        $chemins = [];
+        foreach (array_unique(array_values($cid)) as $c) { $chemins[$c] = '/shops/' . $sid . '/clients/' . rawurlencode($c); }
+        $res = PanelApi::getParallele($chemins, 6);
+        $fiche = [];
+        foreach ($chemins as $c => $p) { $fiche[$c] = vtFicheClient($res[$c] ?? null); $clesFiche += array_flip($fiche[$c]['cles'] ?? []); }
+        // `compte` : le rang du client dans la réponse (1, 2, 3…), pour compter les clients sans montrer qui ils sont.
+        $rang = array_flip(array_keys($chemins));
+        foreach ($tickets as &$tk) { if (isset($cid[$tk['id']])) { $f = $fiche[$cid[$tk['id']]]; unset($f['cles']); $tk['fiche'] = $f + ['compte' => $rang[$cid[$tk['id']]] + 1]; } }
+        unset($tk);
+    }
+    return ['shop' => $sid, 'date' => $date, 'cat' => $cat, 'q' => $mot, 'service' => $service, 'client' => $client] + ($nCmd !== null ? ['commandesLues' => $nCmd] : []) + ($clesFiche !== [] ? ['champsFiche' => array_keys($clesFiche)] : []) + ['ticketsDuJour' => $nJour, 'ticketsLus' => $lus, 'tickets' => $tickets];
+}
+
+/**
+ * Ce qu'on garde d'une fiche client du panel (11/10/2026) : la TVA présente ou non, valide ou non, le pays de son
+ * préfixe, et le drapeau pro de la fiche. Jamais le nom, l'adresse ni le numéro. `cles` = les noms des champs de la
+ * fiche (pour savoir où le panel range la TVA), retirés avant de sortir ticket par ticket.
+ * Validité : un numéro belge (BE + 10 chiffres, 0 ou 1 en tête) se vérifie par sa clé modulo 97 ; un autre pays de
+ * l'UE n'est vérifié que sur sa forme (`valide` null).
+ */
+function vtFicheClient(mixed $r): array
+{
+    if (!is_array($r)) { return ['lue' => false]; }
+    $f0 = isset($r['data']) && is_array($r['data']) && !array_is_list($r['data']) ? $r['data'] : $r;
+    // La fiche du panel se range en blocs (`client`, `profile`, mesuré à Halle le 11/10) : un niveau se déplie, « bloc.champ ».
+    $f = [];
+    foreach ($f0 as $k => $v) {
+        if (is_array($v) && $v !== [] && !array_is_list($v)) { foreach ($v as $k2 => $v2) { if (!is_array($v2)) { $f[$k . '.' . $k2] = $v2; } } }
+        elseif (!is_array($v)) { $f[(string) $k] = $v; }
+    }
+    $out = ['lue' => true, 'tva' => false, 'valide' => null, 'pays' => null, 'pro' => null, 'societe' => false, 'cles' => array_keys($f)];
+    // Un nom de société sur la fiche : oui ou non, jamais le nom.
+    foreach ($f as $k => $v) { if (preg_match('/(^|\.)company_name$/', (string) $k) && is_string($v) && trim($v) !== '') { $out['societe'] = true; break; } }
+    foreach ($f as $k => $v) {
+        if (!is_scalar($v) || is_bool($v) || $v === '') { continue; }
+        if (preg_match('/vat|tva|btw|tax_?(number|id|no|code)|company_?number|enterprise_?number|\bkbo\b|\bbce\b/i', (string) $k) && !preg_match('/rate|taux|regime|exempt|valid|verified|checked|_at$/i', (string) $k)) {
+            $n = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $v));
+            if (strlen($n) < 8) { continue; }   // un drapeau (0, 1) ou un code de régime, pas un numéro
+            $out['tva'] = true;
+            if (preg_match('/^\d{9,10}$/', $n)) { $n = 'BE' . str_pad($n, 10, '0', STR_PAD_LEFT); }
+            $out['pays'] = preg_match('/^[A-Z]{2}/', $n) ? substr($n, 0, 2) : null;
+            if ($out['pays'] === 'BE') {
+                $d = substr($n, 2);
+                $out['valide'] = preg_match('/^[01]\d{9}$/', $d) === 1 && 97 - ((int) substr($d, 0, 8) % 97) === (int) substr($d, 8, 2);
+            } elseif ($out['pays'] !== null) {
+                $out['valide'] = preg_match('/^[A-Z]{2}[A-Z0-9]{8,12}$/', $n) === 1 ? null : false;
+            } else { $out['valide'] = false; }
+            break;
+        }
+    }
+    foreach ($f as $k => $v) {
+        if (preg_match('/b2b|is_?pro|professional|is_?company|is_?business/i', (string) $k) && (is_bool($v) || $v === 0 || $v === 1 || $v === '0' || $v === '1')) { $out['pro'] = (bool) $v; break; }
+    }
+    return $out;
+}
+
+/**
  * GET /ventes/notifications?shop=4 — les messages du panel pour un magasin,
  * tels que la route /shops/{id}/notifications les rend (titre, message,
  * priorité, type, statut, visibilité, date, action). Les messages publiés et
@@ -226,7 +376,7 @@ function ep_stats_tendance(): array
     if (empty($_GET['force'])) {
         $v = setting($cle);
         if (is_string($v)) { $v = json_decode($v, true); }
-        if (is_array($v) && isset($v['jours'])) { return $v + ['cache' => true]; }
+        if (is_array($v) && isset($v['jours'])) { return svTendPro($sid, $v) + ['cache' => true]; }
     }
     $jd = new DateTimeImmutable($date);
     $wd = (int) $jd->format('N');
@@ -251,6 +401,24 @@ function ep_stats_tendance(): array
     $jours = array_values(array_slice($jours, -7));
     $out = ['shop' => $sid, 'date' => $date, 'jourSemaine' => $wd, 'jours' => $jours, 'quand' => date('c')];
     if ($jours !== []) { try { svGrave($cle, $out); } catch (Throwable $e) { /* sans cache */ } }
+    return svTendPro($sid, $out);
+}
+
+/**
+ * Le panier de chaque jour de la tendance hors clients pro (21/10/2026) : ajouté à la lecture, pas gravé — les tendances
+ * gravées avant en profitent, et une fiche client complétée plus tard (TVA) compte dès la lecture suivante. Un jour sans
+ * tickets pro lus garde `panierComptoir` null (`panierBase` = total) : le dashboard ne le range pas à côté d'un hors pro.
+ */
+function svTendPro(int $sid, array $out): array
+{
+    if (!function_exists('vpLu') || !function_exists('vpSplit') || !is_array($out['jours'] ?? null)) { return $out; }
+    foreach ($out['jours'] as $i => $j) {
+        $dt = (string) ($j['date'] ?? '');
+        $b = $dt === '' || (defined('SV_DEBUT') && $dt < SV_DEBUT) ? null : vpLu($sid, $dt);
+        $s = vpSplit($b, (float) ($j['ca'] ?? 0), (int) ($j['tickets'] ?? 0));
+        $out['jours'][$i]['panierComptoir'] = $b === null ? null : ($s['panierComptoir'] ?? null);
+        $out['jours'][$i]['panierBase'] = $b === null ? 'total' : 'comptoir';
+    }
     return $out;
 }
 
@@ -484,14 +652,23 @@ function svHeuresJours(int $sid, array $jours): array
  * toutes les dix minutes, 298 tickets à Corbais, 8 s. Un ticket déjà lu qui a disparu
  * de la liste (annulé) fait tout relire.
  */
-function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $detail = false): ?array
+function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $detail = false, int $attendu = 0): ?array
 {
     $cle = 'svP' . $sid . ':' . $j;
     $c = setting($cle);
+    // `$attendu` (11/10/2026) : les tickets que l'heure par heure du panel compte déjà. Un relevé du jour qui en a lu
+    // moins se complète tout de suite (les nouveaux seulement), sans attendre ses dix minutes, une fois par minute au plus.
+    // Mesuré à Halle le 11/10 : le ticket de 11:17 (45,40 €) manquait aux catégories et la carte « À compléter » le
+    // donnait pour une vente sans produit.
+    $retard = $attendu > 0 && $j === date('Y-m-d') && is_array($c) && (int) ($c['n'] ?? 0) < $attendu && (int) ($c['quand'] ?? 0) < time() - 60;
     // `sp` (10/10/2026) : les lignes de caisse sans produit et les écarts de ticket. Un relevé qui ne les
     // porte pas encore se relit une fois en entier : aujourd'hui, ou un jour passé ouvert seul (`$detail`).
-    $sansSp = is_array($c) && !array_key_exists('sp', $c) && ($j === date('Y-m-d') || $detail);
-    if (!$sansSp && svGraveValide($c, 'p', $j)) { return $c['p']; }
+    // `r` (10/10/2026) : les tickets qui portent une remise de ligne, pour reconnaître les promotions du panel. Même règle.
+    // `pbc` (11/10/2026) : les pièces pro par client, pour ne garder pro que les clients à TVA valide. Même règle.
+    // `pbv` (05/11/2026) : les lignes pro par client et par ligne de produit (portion comprise), quantité ET valeur — le
+    // classement des produits du réseau sépare le comptoir du B2B. Même règle.
+    $sansSp = is_array($c) && (!array_key_exists('sp', $c) || !array_key_exists('r', $c) || !array_key_exists('pbc', $c) || !array_key_exists('pbv', $c)) && ($j === date('Y-m-d') || $detail);
+    if (!$sansSp && !$retard && svGraveValide($c, 'p', $j)) { return $c['p']; }
     if ($cout >= $budget) { return null; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $j);
     if (!is_array($liste)) { return null; }
@@ -499,7 +676,7 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
     foreach (analyseListe($liste) as $t) {
         if ((int) ($t['id'] ?? 0) <= 0) { continue; }
         $ids[] = (int) $t['id'];
-        if (!empty($t['is_client_b2b'])) { $pro[(int) $t['id']] = true; }
+        if (!empty($t['is_client_b2b'])) { $pro[(int) $t['id']] = function_exists('vpCleCompte') ? vpCleCompte($t) : ''; }
     }
     // Ce qui est déjà lu : un relevé qui garde ses tickets, et aucun d'eux disparu de la liste.
     $base = null;
@@ -516,11 +693,18 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
     // La part des clients pro, produit par produit : elle ne passe pas par le
     // comptoir, les rotations du planogramme la retirent.
     $pb = $base !== null ? (array) ($base['pb'] ?? []) : [];
+    // `pbc` = les mêmes pièces pro, client par client ({clé de compte: {pid: q}}) : svPbValide n'en garde que les clients à TVA valide.
+    $pbc = $base !== null ? (array) ($base['pbc'] ?? []) : [];
+    // `pbv` = les lignes pro, client par client ({clé de compte: {clé de ligne: [q, valeur]}}).
+    $pbv = $base !== null ? (array) ($base['pbv'] ?? []) : [];
     // La minute du dernier ticket de chaque produit (portions comprises) : la clôture la montre.
     $der = $base !== null ? (array) ($base['d'] ?? []) : [];
     // Ce que les produits ne ventilent pas : les lignes sans produit (libellé de caisse, montant) et l'écart
     // entre le total du ticket et la somme de ses lignes (remise sur le ticket entier, arrondi).
     $sp = $base !== null ? (array) ($base['sp'] ?? []) : [];
+    // Les tickets à remise de ligne, entiers : [t, mn, lignes [clé, pid, q, prix unitaire, remise, total]]. Le ticket
+    // entier, parce qu'une promotion « 2 achetés, le 3e remisé » se déclenche sur des lignes sans remise.
+    $rm = $base !== null ? (array) ($base['r'] ?? []) : [];
     foreach (array_chunk($nouveaux, 40) as $lot) {
         $chemins = [];
         foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
@@ -531,7 +715,7 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
             $h = (string) (int) substr((string) ($t['insert_timestamp'] ?? '00'), 11, 2);
             $mn = substr((string) ($t['insert_timestamp'] ?? ''), 11, 5);
             if (!preg_match('/^\d{2}:\d{2}$/', $mn)) { $mn = null; }
-            $sommeL = 0.0;
+            $sommeL = 0.0; $lR = []; $aRemise = false;
             foreach ((array) ($t['products'] ?? []) as $l) {
                 $sommeL += (float) ($l['total_gross_value_after_discount'] ?? 0);
                 $pid = (int) ($l['id_product'] ?? 0);
@@ -548,6 +732,9 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
                 // Pommes à 4,42 € quand la pièce vaut 8,85 €.
                 $portion = svPortion($l);
                 $k = $portion['id'] > 0 ? $pid . ':' . $portion['id'] : $pid;   // la clé de la ligne, pas celle du gravé
+                $remL = round((float) ($l['item_discount_value'] ?? 0), 2);
+                if ($remL > 0.004) { $aRemise = true; }
+                $lR[] = [(string) $k, $pid, round($q, 3), round((float) ($l['unit_gross_price'] ?? ($q > 0 ? ($v + $remL) / $q : 0)), 2), $remL, round($v, 2)];
                 $piece = isset($coutsM[$pid]) ? (float) $coutsM[$pid] : (isset($couts[$pid]['mat']) ? (float) $couts[$pid]['mat'] : null);
                 $cu = $piece !== null ? $piece * $portion['fraction'] : $portion['cout'];
                 if (!isset($p[$h][$k])) {
@@ -561,9 +748,13 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
                 $p[$h][$k][1] += $q;
                 $p[$h][$k][2] += $v;
                 if ($cu !== null && $p[$h][$k][3] !== null) { $p[$h][$k][3] += $q * $cu; }
-                if (isset($pro[$id])) { $pb[(string) $pid] = ($pb[(string) $pid] ?? 0.0) + $q; }
+                if (isset($pro[$id])) {
+                    $pb[(string) $pid] = ($pb[(string) $pid] ?? 0.0) + $q; $pbc[$pro[$id]][(string) $pid] = ($pbc[$pro[$id]][(string) $pid] ?? 0.0) + $q;
+                    $x0 = $pbv[$pro[$id]][(string) $k] ?? [0.0, 0.0]; $pbv[$pro[$id]][(string) $k] = [(float) $x0[0] + $q, (float) $x0[1] + $v];
+                }
                 if ($mn !== null && $q > 0 && $mn > ($der[(string) $pid] ?? '')) { $der[(string) $pid] = $mn; }
             }
+            if ($aRemise) { $rm[] = ['t' => $id, 'mn' => $mn, 'l' => $lR]; }
             $totT = isset($t['total_gross_amount_after_discount']) && is_numeric($t['total_gross_amount_after_discount']) ? (float) $t['total_gross_amount_after_discount'] : null;
             if ($totT !== null && abs($totT - $sommeL) >= 0.01) {
                 $sp[] = ['t' => $id, 'mn' => $mn, 'nom' => $totT < $sommeL ? 'remise sur le ticket entier' : 'écart sur le ticket', 'q' => 0, 'v' => round($totT - $sommeL, 2), 'type' => 'ticket'];
@@ -573,14 +764,34 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
     $cout += count($nouveaux);
     foreach ($p as $h => $lst) { foreach ($lst as $pid => $x) { $p[$h][$pid] = [$x[0], round($x[1], 3), round($x[2], 2), $x[3] === null ? null : round($x[3], 2)]; } }
     foreach ($pb as $pid => $q) { $pb[$pid] = round($q, 3); }
+    foreach ($pbc as $k => $lst) { foreach ((array) $lst as $pid => $q) { $pbc[$k][$pid] = round((float) $q, 3); } $pbc[$k] = (object) $pbc[$k]; }
+    $pbv = svPbvArrondi($pbv);
     // Le pro du jour (tickets B2B) se grave avec les produits : la liste est déjà lue.
     // `pb` = les unités vendues aux clients pro, par produit ({} si aucune).
     // `d` = la minute du dernier ticket par produit ({pid: "HH:MM"}) ; absente des jours gravés avant le 04/10/2026.
     // `ids` = les tickets déjà lus : la relecture suivante ne lit que les nouveaux.
-    $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p, 'pb' => (object) $pb, 'd' => (object) $der, 'ids' => $ids, 'sp' => $sp];
+    $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p, 'pb' => (object) $pb, 'pbc' => (object) $pbc, 'pbv' => $pbv, 'd' => (object) $der, 'ids' => $ids, 'sp' => $sp, 'r' => $rm];
     if (function_exists('vpDuListe')) { $grave['b'] = vpDuListe($liste); }
     svGrave($cle, $grave);
     return $p;
+}
+
+/**
+ * La portion d'une ligne gravée, lue sur son nom (« Brownies — 1/4 ») : le libellé et la fraction de la pièce entière.
+ * Fraction nulle quand le libellé ne la dit pas.
+ */
+function svPortionDuNom(string $nom): array
+{
+    $pos = mb_strrpos($nom, ' — ');
+    $lib = $pos !== false ? trim(mb_substr($nom, $pos + 3)) : '';
+    $f = null;
+    if (preg_match('#^(\d+)\s*/\s*(\d+)$#', $lib, $m) && (int) $m[2] > 0) { $f = (int) $m[1] / (int) $m[2]; }
+    else {
+        foreach (['half' => 0.5, 'demi' => 0.5, 'quarter' => 0.25, 'quart' => 0.25, 'third' => 1 / 3, 'tiers' => 1 / 3, 'sixth' => 1 / 6, 'eighth' => 0.125] as $k => $v) {
+            if (stripos($lib, $k) !== false) { $f = stripos($lib, 'three') !== false || stripos($lib, 'trois') !== false ? 3 * $v : $v; break; }
+        }
+    }
+    return ['lib' => $lib, 'f' => $f !== null ? round($f, 4) : null];
 }
 
 /** La minute du dernier ticket de chaque produit un jour : [pid => "HH:MM"] ; vide si le relevé ne la porte pas. */
@@ -905,7 +1116,8 @@ function ep_stats_ventes(): array
         if ($j < SV_DEBUT) { continue; }
         $dejaLu = svGraveValide(setting('svP' . $sid . ':' . $j), 'p', $j);
         if (!$dejaLu && microtime(true) - $t0 > SV_TEMPS_DEMANDE) { $tempsEpuise = true; continue; }
-        $p = svProduitsJour($sid, $j, $cout, $budget, $vue === 'jour');
+        $attendu = $j === $auj ? (int) array_sum(array_column($heures[$j] ?? [], 'tickets')) : 0;
+        $p = svProduitsJour($sid, $j, $cout, $budget, $vue === 'jour', $attendu);
         if ($p !== null) { $prod[$j] = $p; $joursProd[] = $j; }
     }
 
@@ -1017,12 +1229,15 @@ function ep_stats_ventes(): array
         elseif ($x['v'] > 0) { $ccT[$cn]['nSans']++; $ccT[$cn]['vSans'] += $x['v']; }
     }
     // Les produits de chaque catégorie, du plus vendu au moins vendu, avec leur part dans la catégorie.
-    $prodDe = [];
+    $prodDe = []; $pidsPortion = [];
     foreach ($ppT as $x) {
         if ($x['v'] <= 0 && $x['q'] <= 0) { continue; }
         $m = $x['cInconnu'] ? null : round($x['v'] - $x['c'], 2);
         $prodDe[$x['cat']][] = ['id' => $x['id'], 'nom' => $x['nom'], 'q' => round($x['q'], 1), 'v' => round($x['v'], 2), 'c' => $x['cInconnu'] ? null : round($x['c'], 2), 'm' => $m,
-            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null] + (isset($x['bundle']) ? ['bundle' => $x['bundle']] : []);
+            'taux' => ($m !== null && $x['v'] > 0) ? round(100 * $m / $x['v'], 1) : null] + (isset($x['bundle']) ? ['bundle' => $x['bundle']] : [])
+            // Une portion (10/10/2026, onglet Portions) : son libellé et la fraction de la pièce entière.
+            + (is_string($x['id']) && str_contains($x['id'], ':') ? ['portion' => svPortionDuNom((string) $x['nom'])] : []);
+        if (is_string($x['id']) && str_contains($x['id'], ':')) { $pidsPortion[(int) explode(':', $x['id'])[0]] = true; }
     }
     foreach ($ccT as $x) {
         $chiffre = $x['vC'] > 0 || $x['nSans'] === 0;
@@ -1039,9 +1254,10 @@ function ep_stats_ventes(): array
     $bundles = svBundles($prod, $catDe, $grpDe);
     // À compléter pour des chiffres justes (10/10/2026) : les lignes de caisse que les produits ne ventilent
     // pas (relevé `sp` des jours lus, quand il le porte) et les produits vendus sans coût de recette.
-    $nvL = []; $nvDetail = $joursProd !== [];
+    $nvL = []; $nvDetail = $joursProd !== []; $nLus = 0; $luA = null;
     foreach ($joursProd as $jP) {
         $gP = setting('svP' . $sid . ':' . $jP);
+        if (is_array($gP)) { $nLus += (int) ($gP['n'] ?? 0); if ($jP === $auj && (int) ($gP['quand'] ?? 0) > 0) { $luA = date('H:i', (int) $gP['quand']); } }
         if (!is_array($gP) || !array_key_exists('sp', $gP)) { $nvDetail = false; continue; }
         foreach ((array) $gP['sp'] as $x) { if (is_array($x)) { $nvL[] = $x + ['j' => $jP]; } }
     }
@@ -1058,7 +1274,10 @@ function ep_stats_ventes(): array
     $aCompleter = ['detail' => $nvDetail, 'lignes' => array_slice($nvL, 0, 80), 'nLignes' => count($nvL),
         'caLignes' => round(array_sum(array_map(static fn ($x) => ($x['type'] ?? '') === 'ligne' ? (float) $x['v'] : 0.0, $nvL)), 2),
         'caTickets' => round(array_sum(array_map(static fn ($x) => ($x['type'] ?? '') === 'ticket' ? (float) $x['v'] : 0.0, $nvL)), 2),
-        'sansCout' => array_slice($sansCout, 0, 60), 'nSansCout' => count($sansCout), 'caSansCout' => round(array_sum(array_column($sansCout, 'v')), 2)];
+        'sansCout' => array_slice($sansCout, 0, 60), 'nSansCout' => count($sansCout), 'caSansCout' => round(array_sum(array_column($sansCout, 'v')), 2)]
+        // Les tickets lus dans les relevés et, aujourd'hui, l'heure de la dernière lecture (11/10/2026) : ce que le CA
+        // compte en plus, ce sont des tickets passés depuis, pas des ventes sans produit.
+        + ['ticketsLus' => $nLus, 'luA' => $luA];
     $tot = ['tickets' => 0, 'ca' => 0.0, 'mat' => 0.0, 'trav' => 0.0, 'res' => 0.0];
     foreach ($lignes as $l) { $tot['tickets'] += $l['tickets']; $tot['ca'] += $l['ca']; $tot['mat'] += $l['mat']; $tot['trav'] += $l['trav']; $tot['res'] += $l['res']; }
     $tot['mb'] = round($tot['ca'] - $tot['mat'], 2);
@@ -1066,6 +1285,21 @@ function ep_stats_ventes(): array
     $tot['mbPct'] = $tot['ca'] > 0 ? round(100 * $tot['mb'] / $tot['ca'], 1) : null;
     $tot['resPct'] = $tot['ca'] > 0 ? round(100 * $tot['res'] / $tot['ca'], 1) : null;
     foreach (['ca', 'mat', 'trav', 'res'] as $k) { $tot[$k] = round($tot[$k], 2); }
+    // Le panier hors clients pro, heure par heure (21/10/2026) : les tickets pro gravés de chaque jour ouvert (vpJoursLus,
+    // quatre listes relues au plus — la journée en cours se relit passé dix minutes) se retirent de leur heure. Seulement
+    // si tous les jours ouverts sont lus ; sinon chaque heure garde le panier total et le dit (`panierBase` = total).
+    if (function_exists('vpPanier') && function_exists('vpProJours') && function_exists('vpJoursLus')) {
+        $proH = null;
+        if ($joursOuverts !== [] && (!defined('SV_DEBUT') || min($joursOuverts) >= SV_DEBUT)) {
+            $pH = vpProJours($sid, $joursOuverts, true, vpJoursLus([$sid], $joursOuverts, 4)[$sid] ?? []);
+            if ($pH['lus'] === $pH['jours']) { $proH = $pH; }
+        }
+        foreach ($lignes as $i => $l) {
+            $x = $proH['h'][(int) $l['h']] ?? [0.0, 0];
+            $lignes[$i] += vpPanier($proH === null ? null : max(0.0, $l['ca'] - $x[0]), $proH === null ? null : max(0, $l['tickets'] - $x[1]), $l['panier']);
+        }
+        $tot += vpPanier($proH === null ? null : max(0.0, $tot['ca'] - $proH['ca']), $proH === null ? null : max(0, $tot['tickets'] - $proH['tk']), $tot['panier']);
+    }
     $meilleure = null; $pire = null;
     foreach ($lignes as $l) {
         if ($meilleure === null || $l['res'] > $meilleure['res']) { $meilleure = $l; }
@@ -1077,7 +1311,12 @@ function ep_stats_ventes(): array
         'produits' => ['jours' => $joursProd, 'total' => count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
             'ticketsLus' => $cout, 'complet' => count($joursProd) === count(array_filter($jours, static fn ($j) => $j >= SV_DEBUT)),
             'aSuivre' => $tempsEpuise || $cout >= $budget, 'secondes' => round(microtime(true) - $t0, 1)],
-        'heures' => $lignes, 'categories' => $catsT, 'bundles' => $bundles + ['part' => $tot['ca'] > 0 ? round(100 * $bundles['ca'] / $tot['ca'], 1) : null], 'aCompleter' => $aCompleter, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
+        'heures' => $lignes, 'categories' => $catsT,
+        // Les promotions du panel reconnues dans les tickets des jours lus (10/10/2026) : l'onglet Promotions des catégories.
+        'promos' => function_exists('pvPromotions') ? pvPromotions($sid, $joursProd) : null,
+        // Le prix de la pièce entière au catalogue du magasin, pour les produits vendus en portions.
+        'portions' => ['prix' => (object) array_intersect_key(function_exists('cataloguePrixMagasin') ? cataloguePrixMagasin($sid) : [], $pidsPortion)],
+        'bundles' => $bundles + ['part' => $tot['ca'] > 0 ? round(100 * $bundles['ca'] / $tot['ca'], 1) : null], 'aCompleter' => $aCompleter, 'totaux' => $tot, 'nJoursOuverts' => count($joursOuverts),
         'matiere' => ['heuresEstimees' => $matEstimee, 'heuresInconnues' => $matInconnue,
             'source' => $matInconnue > 0 ? 'coût matière inconnu sur ' . $matInconnue . ' heure' . ($matInconnue > 1 ? 's' : '') . ' (tickets non lus)' : ($matEstimee > 0 ? 'recettes vendues sur ' . $matEstimee . ' heure' . ($matEstimee > 1 ? 's' : '') . ' que le panel ne chiffre pas' : 'panel')],
         'periodes' => svPeriodes($heures),
@@ -1085,6 +1324,146 @@ function ep_stats_ventes(): array
         'pire' => $pire ? ['h' => $pire['h'], 'res' => $pire['res'], 'moy' => $pire['moy']['res']] : null,
         'source' => ['heures' => 'panel hourly-distribution (ventes, matière, personnel, marge de l’heure)',
             'produits' => 'tickets du panel avec leurs lignes, coût matière des recettes']];
+}
+
+/**
+ * GET /ventes/stats/reseau?vue=jour|semaine|mois&date=YYYY-MM-DD — les ventes de produits de TOUT le réseau (04/11/2026).
+ *
+ * Sous le tableau des magasins du Résultat : chaque produit vendu sur la période, tous magasins confondus, avec ses
+ * pièces, son CA, sa marge brute et le détail magasin par magasin ; une PORTION (une demi-tarte, un quart) reste une
+ * ligne à part (clé « produit:portion »), comme dans le dashboard magasin. Et, magasin par magasin, les produits vendus
+ * sans coût de recette (à chiffrer dans le panel).
+ *
+ * Les relevés de tickets gravés (svP{shop}:{jour}) se lisent tels quels ; les jours à relire passent par
+ * svProduitsJour, jour par jour en remontant et magasin par magasin, dans un budget commun en tickets et en secondes.
+ * Un relevé périmé de la journée en cours sert quand le budget est épuisé (`instantanes`) : une réponse un peu ancienne
+ * vaut mieux qu'un trou. Les ventes sans coût se rechiffrent à la recette du moment (svRechiffrer) tant qu'il reste du
+ * temps. Les bundles restent dans leur catégorie : la carte « Promotions et bundles » les détaille.
+ */
+function ep_stats_ventes_reseau(): array
+{
+    $auj = date('Y-m-d');
+    $vue = (string) ($_GET['vue'] ?? 'jour');
+    if (!in_array($vue, ['jour', 'semaine', 'mois'], true)) { $vue = 'jour'; }
+    $date = (string) ($_GET['date'] ?? $auj);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
+    if (!PanelApi::configured()) { return ['error' => 'compte panel non configuré']; }
+    [$du, $au, $jours] = svJours($vue, $date);
+    $jours = array_values(array_filter($jours, static fn ($j) => $j >= SV_DEBUT));
+    @set_time_limit(240);
+    $t0 = microtime(true);
+    $noms = jcMagasins();
+    $cout = 0; $budget = SV_BUDGET_DEMANDE * 3; $tMax = SV_TEMPS_DEMANDE + 10;
+    // Par magasin : clé produit → [nom, q, v, c|null] sur toute la période.
+    $acc = []; $etat = [];
+    foreach ($noms as $sid => $nom) { $acc[(string) $sid] = []; $etat[(string) $sid] = ['lus' => 0, 'instant' => 0, 'manque' => 0, 'proLus' => 0, 'proManque' => 0]; }
+    // Le B2B (05/11/2026) : les lignes pro des clients à TVA valide, par magasin et par clé de ligne — [q, valeur].
+    $pro = []; $proAFaire = [];
+    $ajoutePro = static function (string $s, array $pv) use (&$pro, &$etat): void {
+        foreach ($pv as $ks => $x) { $o = $pro[$s][(string) $ks] ?? [0.0, 0.0]; $pro[$s][(string) $ks] = [$o[0] + (float) $x[0], $o[1] + (float) $x[1]]; }
+        $etat[$s]['proLus']++;
+    };
+    foreach (array_reverse($jours) as $j) {
+        foreach ($noms as $sid => $nom) {
+            $s = (string) $sid;
+            $g = setting('svP' . $s . ':' . $j);
+            $p = null; $instant = false; $relu = false;
+            if (svGraveValide($g, 'p', $j)) { $p = $g['p']; }
+            elseif (microtime(true) - $t0 < $tMax) { $p = svProduitsJour((int) $sid, $j, $cout, $budget, false); $relu = $p !== null; }
+            if ($p === null && is_array($g) && is_array($g['p'] ?? null)) { $p = $g['p']; $instant = true; }
+            if ($p === null) { $etat[$s]['manque']++; continue; }
+            $etat[$s]['lus']++; if ($instant) { $etat[$s]['instant']++; }
+            $gp = $relu ? setting('svP' . $s . ':' . $j) : $g;
+            $pv = is_array($gp) ? svPbvValide((int) $sid, $gp) : null;
+            if ($pv === null) { $proAFaire[] = [$s, $j]; } else { $ajoutePro($s, $pv); }
+            foreach ((array) $p as $lst) {
+                foreach ((array) $lst as $k => $x) {
+                    if (!is_array($x) || !isset($x[1], $x[2])) { continue; }
+                    $ks = (string) $k;
+                    if (!isset($acc[$s][$ks])) { $acc[$s][$ks] = [(string) ($x[0] ?? ''), 0.0, 0.0, 0.0]; }
+                    $acc[$s][$ks][1] += (float) $x[1]; $acc[$s][$ks][2] += (float) $x[2];
+                    if (($x[3] ?? null) === null) { $acc[$s][$ks][3] = null; } elseif ($acc[$s][$ks][3] !== null) { $acc[$s][$ks][3] += (float) $x[3]; }
+                }
+            }
+        }
+    }
+    // Un jour relevé avant le 05/11/2026 n'a pas encore ses lignes pro avec leur valeur : on relit ses seuls tickets pro
+    // (un appel pour la liste, un par ticket pro), tant qu'il reste du temps ; le cron complète les autres.
+    foreach ($proAFaire as [$s, $j]) {
+        if (microtime(true) - $t0 > $tMax + 10) { $etat[$s]['proManque']++; continue; }
+        svProduitsB2b((int) $s, $j, $cout, $budget);
+        $g2 = setting('svP' . $s . ':' . $j);
+        $pv = is_array($g2) ? svPbvValide((int) $s, $g2) : null;
+        if ($pv === null) { $etat[$s]['proManque']++; } else { $ajoutePro($s, $pv); }
+    }
+    // Les ventes sans coût, au coût de la recette du moment — magasin par magasin, tant qu'il reste du temps.
+    $rechiffres = 0;
+    foreach ($acc as $s => $lst) {
+        if (microtime(true) - $t0 > $tMax + 15) { break; }
+        $aussi = false; foreach ($lst as $x) { if ($x[3] === null) { $aussi = true; break; } }
+        if (!$aussi) { continue; }
+        $r = svRechiffrer(['p' => ['0' => $lst]], (int) $s);
+        $acc[$s] = (array) ($r['p']['0'] ?? $lst); $rechiffres++;
+    }
+    $catDe = svCategories(); $grpDe = svGroupes();
+    $R = []; $mags = [];
+    foreach ($acc as $s => $lst) {
+        $ca = 0.0; $sans = [];
+        foreach ($lst as $ks => $x) {
+            if ($x[2] <= 0 && $x[1] <= 0) { continue; }
+            $pid = (int) $ks; $ca += $x[2];
+            $cat = $catDe[$pid] ?? 'Sans catégorie';
+            if (!isset($R[$ks])) {
+                $R[$ks] = ['id' => (string) $ks, 'pid' => $pid, 'nom' => svNomProduit($ks, $x[0]), 'cat' => $cat, 'groupe' => $grpDe[$cat] ?? null, 'portion' => str_contains((string) $ks, ':'),
+                    'q' => 0.0, 'v' => 0.0, 'vC' => 0.0, 'cC' => 0.0, 'vS' => 0.0, 'nS' => 0, 'mags' => [], 'pq' => 0.0, 'pv' => 0.0, 'pvC' => 0.0, 'pcC' => 0.0];
+            }
+            $L =& $R[$ks];
+            $L['q'] += $x[1]; $L['v'] += $x[2];
+            if ($x[3] !== null) { $L['vC'] += $x[2]; $L['cC'] += $x[3]; }
+            // La part B2B de la ligne, bornée à la ligne ; son coût au prorata des pièces.
+            $px = $pro[$s][(string) $ks] ?? [0.0, 0.0];
+            $pq = max(0.0, min((float) $x[1], (float) $px[0])); $ppv = max(0.0, min((float) $x[2], (float) $px[1]));
+            $pc = $x[3] !== null && $x[1] > 0 ? $x[3] * $pq / $x[1] : null;
+            $L['pq'] += $pq; $L['pv'] += $ppv;
+            if ($pc !== null) { $L['pvC'] += $ppv; $L['pcC'] += $pc; }
+            elseif ($x[2] > 0) { $L['vS'] += $x[2]; $L['nS']++; $sans[] = ['id' => (string) $ks, 'nom' => $L['nom'], 'cat' => $cat, 'q' => round($x[1], 1), 'v' => round($x[2], 2)]; }
+            $L['mags'][] = ['s' => (string) $s, 'q' => round($x[1], 1), 'v' => round($x[2], 2), 'm' => $x[3] === null ? null : round($x[2] - $x[3], 2),
+                'pq' => round($pq, 1), 'pv' => round($ppv, 2), 'pm' => $pc === null ? null : round($ppv - $pc, 2)];
+            unset($L);
+        }
+        usort($sans, static fn ($a, $b) => $b['v'] <=> $a['v']);
+        $e = $etat[$s];
+        $mags[] = ['shop' => (string) $s, 'nom' => (string) ($noms[$s] ?? $s), 'jours' => count($jours), 'joursLus' => $e['lus'], 'instantanes' => $e['instant'], 'joursManquants' => $e['manque'],
+            'proJoursLus' => $e['proLus'], 'proJoursManquants' => $e['proManque'],
+            'ca' => round($ca, 2), 'refs' => count(array_filter($lst, static fn ($x) => $x[2] > 0 || $x[1] > 0)),
+            'sansCout' => $sans, 'nSansCout' => count($sans), 'caSansCout' => round(array_sum(array_column($sans, 'v')), 2)];
+    }
+    $vT = array_sum(array_column($R, 'v'));
+    $produits = []; $tot = ['q' => 0.0, 'v' => 0.0, 'vC' => 0.0, 'cC' => 0.0, 'vS' => 0.0, 'pq' => 0.0, 'pv' => 0.0];
+    foreach ($R as $L) {
+        usort($L['mags'], static fn ($a, $b) => $b['v'] <=> $a['v']);
+        $m = $L['vC'] > 0 ? round($L['vC'] - $L['cC'], 2) : null;
+        $produits[] = ['id' => $L['id'], 'pid' => $L['pid'], 'nom' => $L['nom'], 'cat' => $L['cat'], 'groupe' => $L['groupe'], 'portion' => $L['portion'],
+            'q' => round($L['q'], 1), 'v' => round($L['v'], 2), 'prix' => $L['q'] > 0 ? round($L['v'] / $L['q'], 2) : null,
+            'm' => $m, 'taux' => $m !== null ? round(100 * $m / $L['vC'], 1) : null, 'vChiffre' => round($L['vC'], 2),
+            'vSans' => round($L['vS'], 2), 'nSans' => $L['nS'], 'part' => $vT > 0 ? round(100 * $L['v'] / $vT, 2) : null,
+            // La part B2B (clients pro à TVA valide) ; le comptoir est le reste. m : marge brute sur `vChiffre` (coût connu).
+            'pro' => ['q' => round($L['pq'], 1), 'v' => round($L['pv'], 2), 'm' => $L['pvC'] > 0 ? round($L['pvC'] - $L['pcC'], 2) : null, 'vChiffre' => round($L['pvC'], 2)],
+            'magasins' => $L['mags']];
+        foreach (['q', 'v', 'vC', 'cC', 'vS', 'pq', 'pv'] as $k) { $tot[$k] += $L[$k]; }
+    }
+    usort($produits, static fn ($a, $b) => ($b['v'] <=> $a['v']) ?: strcmp($a['nom'], $b['nom']));
+    $mT = $tot['vC'] > 0 ? round($tot['vC'] - $tot['cC'], 2) : null;
+    $nSansDistincts = count(array_filter($produits, static fn ($p) => $p['nSans'] > 0));
+    $complet = array_sum(array_column($mags, 'joursManquants')) === 0 && array_sum(array_column($mags, 'instantanes')) === 0;
+    return ['vue' => $vue, 'date' => $date, 'du' => $du, 'au' => $au, 'aujourdhui' => $auj, 'jours' => $jours,
+        'produits' => $produits, 'magasins' => $mags,
+        'totaux' => ['refs' => count($produits), 'portions' => count(array_filter($produits, static fn ($p) => $p['portion'])), 'q' => round($tot['q'], 1), 'ca' => round($tot['v'], 2),
+            'm' => $mT, 'taux' => $mT !== null ? round(100 * $mT / $tot['vC'], 1) : null, 'vChiffre' => round($tot['vC'], 2),
+            'nSansCout' => $nSansDistincts, 'caSansCout' => round($tot['vS'], 2), 'proQ' => round($tot['pq'], 1), 'proCa' => round($tot['pv'], 2)],
+        'lecture' => ['complet' => $complet, 'ticketsLus' => $cout, 'rechiffres' => $rechiffres, 'secondes' => round(microtime(true) - $t0, 1),
+            'proComplet' => array_sum(array_column($mags, 'proJoursManquants')) === 0],
+        'source' => 'tickets du panel avec leurs lignes (relevés gravés), coût matière des recettes de chaque magasin'];
 }
 
 /**
@@ -1126,36 +1505,96 @@ function svProduitsB2b(int $sid, string $j, int &$cout, int $budget): ?array
     $cle = 'svP' . $sid . ':' . $j;
     $c = setting($cle);
     if (!is_array($c) || !isset($c['p'])) { return null; }
-    if (isset($c['pb']) && is_array($c['pb'])) { return $c['pb']; }
-    if ($cout >= $budget || !PanelApi::configured()) { return null; }
+    if (isset($c['pbc']) && is_array($c['pbc']) && isset($c['pbv'])) { return svPbValide($sid, $c); }
+    // Un relevé sans `pbc` (avant le 11/10/2026) relit ses tickets pro pour les ranger client par client ; faute de
+    // budget, il garde son `pb` d'avant, tous les clients pro du panel compris.
+    $repli = isset($c['pb']) && is_array($c['pb']) ? $c['pb'] : null;
+    if ($cout >= $budget || !PanelApi::configured()) { return $repli; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $j);
     $cout++;
-    if (!is_array($liste)) { return null; }
+    if (!is_array($liste)) { return $repli; }
     $ids = [];
     foreach (analyseListe($liste) as $t) {
-        if ((int) ($t['id'] ?? 0) > 0 && !empty($t['is_client_b2b'])) { $ids[] = (int) $t['id']; }
+        if ((int) ($t['id'] ?? 0) > 0 && !empty($t['is_client_b2b'])) { $ids[(int) $t['id']] = function_exists('vpCleCompte') ? vpCleCompte($t) : ''; }
     }
-    if ($cout + count($ids) > $budget) { return null; }   // ce jour attendra le prochain lot
-    $pb = [];
-    foreach (array_chunk($ids, 40) as $lot) {
+    if ($cout + count($ids) > $budget) { return $repli; }   // ce jour attendra le prochain lot
+    $pb = []; $pbc = []; $pbv = [];
+    foreach (array_chunk(array_keys($ids), 40) as $lot) {
         $chemins = [];
         foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
         $res = PanelApi::getParallele($chemins, 8);
         foreach ($lot as $id) {
             $t = $res[$id] ?? null;
-            if (!is_array($t)) { return null; }   // un ticket pro manquant : le jour ne se grave pas à moitié
+            if (!is_array($t)) { return $repli; }   // un ticket pro manquant : le jour ne se grave pas à moitié
             foreach ((array) ($t['products'] ?? []) as $l) {
                 $pid = (int) ($l['id_product'] ?? 0);
-                if ($pid > 0) { $pb[(string) $pid] = ($pb[(string) $pid] ?? 0.0) + (float) ($l['quantity'] ?? 0); }
+                if ($pid <= 0) { continue; }
+                $q = (float) ($l['quantity'] ?? 0);
+                $pb[(string) $pid] = ($pb[(string) $pid] ?? 0.0) + $q;
+                $pbc[$ids[$id]][(string) $pid] = ($pbc[$ids[$id]][(string) $pid] ?? 0.0) + $q;
+                // La ligne pro avec sa valeur, sous la clé du relevé (« produit:portion » pour une portion).
+                $portion = svPortion($l); $k = (string) ($portion['id'] > 0 ? $pid . ':' . $portion['id'] : $pid);
+                $x0 = $pbv[$ids[$id]][$k] ?? [0.0, 0.0]; $pbv[$ids[$id]][$k] = [$x0[0] + $q, $x0[1] + (float) ($l['total_gross_value_after_discount'] ?? 0)];
             }
         }
     }
     $cout += count($ids);
     foreach ($pb as $pid => $q) { $pb[$pid] = round($q, 3); }
+    foreach ($pbc as $k => $lst) { foreach ($lst as $pid => $q) { $pbc[$k][$pid] = round($q, 3); } }
     $c['pb'] = (object) $pb;
+    $c['pbc'] = (object) array_map(static fn ($x) => (object) $x, $pbc);
+    $c['pbv'] = svPbvArrondi($pbv);
     if (!isset($c['b']) && function_exists('vpDuListe')) { $c['b'] = vpDuListe($liste); }
     svGrave($cle, $c);
+    return svPbValide($sid, json_decode(json_encode($c), true));
+}
+
+/**
+ * Les pièces pro d'un relevé, des seuls clients à TVA valide (11/10/2026) — [pid => unités]. Un relevé avec `pbc`
+ * se filtre client par client (vpTvaValides) ; sans `pbc`, son `pb` d'avant tel quel ; sans l'un ni l'autre, null.
+ */
+function svPbValide(int $sid, array $c): ?array
+{
+    if (!isset($c['pbc']) || !is_array($c['pbc'])) { return isset($c['pb']) && is_array($c['pb']) ? $c['pb'] : null; }
+    $ok = function_exists('vpTvaValides') ? vpTvaValides($sid, array_map('strval', array_keys($c['pbc']))) : [];
+    $pb = [];
+    foreach ($c['pbc'] as $k => $lst) {
+        if (($ok[(string) $k] ?? null) === false) { continue; }
+        foreach ((array) $lst as $pid => $q) { $pb[(string) $pid] = ($pb[(string) $pid] ?? 0.0) + (float) $q; }
+    }
+    foreach ($pb as $pid => $q) { $pb[$pid] = round($q, 3); }
     return $pb;
+}
+
+/** `pbv` arrondi et prêt à graver : {clé de compte: {clé de ligne: [q, valeur]}}, des objets même vides. */
+function svPbvArrondi(array $pbv): object
+{
+    $out = [];
+    foreach ($pbv as $kc => $lst) {
+        $o = [];
+        foreach ((array) $lst as $ks => $x) { $x = (array) $x; $o[(string) $ks] = [round((float) ($x[0] ?? 0), 3), round((float) ($x[1] ?? 0), 2)]; }
+        $out[(string) $kc] = (object) $o;
+    }
+    return (object) $out;
+}
+
+/**
+ * Les lignes pro d'un relevé, des seuls clients à TVA valide (05/11/2026) — [clé de ligne => [q, valeur]] ; null si le
+ * relevé ne porte pas encore `pbv` (jour gravé avant : svProduitsB2b le complète en ne relisant que les tickets pro).
+ */
+function svPbvValide(int $sid, array $c): ?array
+{
+    if (!isset($c['pbv']) || !is_array($c['pbv'])) { return null; }
+    $ok = $c['pbv'] !== [] && function_exists('vpTvaValides') ? vpTvaValides($sid, array_map('strval', array_keys($c['pbv']))) : [];
+    $out = [];
+    foreach ($c['pbv'] as $kc => $lst) {
+        if (($ok[(string) $kc] ?? null) === false) { continue; }
+        foreach ((array) $lst as $ks => $x) {
+            $x = (array) $x; $o = $out[(string) $ks] ?? [0.0, 0.0];
+            $out[(string) $ks] = [$o[0] + (float) ($x[0] ?? 0), $o[1] + (float) ($x[1] ?? 0)];
+        }
+    }
+    return $out;
 }
 
 /**
@@ -1172,9 +1611,11 @@ function svB2bMoisson(int $budget = 250): array
     for ($j = $hier; $j >= SV_DEBUT; $j = date('Y-m-d', strtotime($j . ' -1 day'))) {
         foreach ($shops as $sid) {
             $c = setting('svP' . $sid . ':' . $j);
-            if (!is_array($c) || !isset($c['p']) || isset($c['pb'])) { continue; }
+            if (!is_array($c) || !isset($c['p']) || (isset($c['pbc']) && isset($c['pbv']))) { continue; }
             if ($cout >= $budget) { $restants++; continue; }
-            if (svProduitsB2b($sid, $j, $cout, $budget) !== null) { $faits++; } else { $restants++; }
+            svProduitsB2b($sid, $j, $cout, $budget);
+            $c2 = setting('svP' . $sid . ':' . $j);
+            if (is_array($c2) && isset($c2['pbc']) && isset($c2['pbv'])) { $faits++; } else { $restants++; }
         }
     }
     return ['ok' => true, 'joursFaits' => $faits, 'appels' => $cout, 'joursRestants' => $restants];
@@ -1189,6 +1630,8 @@ function svCron(): string
     if (function_exists('vpMoisson')) { try { $vp = vpMoisson(); $pro = $vp['ok'] ? ' · pro : ' . $vp['joursFaits'] . ' jour(s) complétés, ' . $vp['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro = ' · pro : échec'; } }
     // Et la part pro produit par produit, que les rotations du comptoir retirent.
     try { $pb = svB2bMoisson(); $pro .= $pb['ok'] ? ' · produits pro : ' . $pb['joursFaits'] . ' jour(s) complétés, ' . $pb['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro .= ' · produits pro : échec'; }
+    // Le personnel et les frais de chaque jour de l'année (11/10/2026) : le tableau « mois par mois » et le P&L des mois passés.
+    if (function_exists('resCoutsMoisson')) { try { $rc = resCoutsMoisson(); $pro .= $rc['ok'] ? ' · coûts du panel : ' . $rc['lectures'] . ' jour(s) lus, ' . $rc['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro .= ' · coûts du panel : échec'; } }
     return ($r['ok'] ? ($r['joursFaits'] . ' jour(s) moissonnés, ' . $r['etat']) : ('échec : ' . ($r['motif'] ?? '?'))) . $pro;
 }
 

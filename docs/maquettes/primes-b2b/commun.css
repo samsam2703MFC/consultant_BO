@@ -1,0 +1,60 @@
+/* Maquettes « prime B2B » (23/10/2026) : le cadre du cockpit, l'abricot foncé en couleur dominante. */
+@font-face{font-family:'Vank';src:url('../../../public/assets/ds/fonts/GC_Vank.ttf') format('truetype')}
+:root{
+  --abf:#A8561C;--abf-2:#8C4514;--abf-encre:#5E300E;--ab:#E8964B;--ab-doux:#FBE9D6;--ab-pale:#FDF5EC;--ab-trait:#EDC9A4;
+  --fond:#F4EFE8;--carte:#FFFFFF;--texte:#222;--muet:#6E665E;--trait:rgba(34,34,34,.10);--trait2:rgba(34,34,34,.16);
+  --vert:#2E7D4F;--vert-doux:#E3F1E8;--rubis:#8D1D2C;
+  --ui:'Inter',system-ui,sans-serif;--titre:'Vank','Inter Display','Inter',serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--fond);font:400 13px/1.45 var(--ui);color:var(--texte);-webkit-font-smoothing:antialiased}
+.ecran{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+/* Le rail */
+.rail{background:#2A211C;color:#E9DFD4;padding:18px 0;font-size:12.5px}
+.rail .logo{font:400 22px var(--titre);color:#fff;padding:0 20px 16px;letter-spacing:.01em}
+.rail .gr{padding:10px 20px 4px;font:600 10px var(--ui);letter-spacing:.1em;text-transform:uppercase;color:#9C8E82}
+.rail a{display:flex;align-items:center;gap:10px;padding:7px 20px;color:#E9DFD4;text-decoration:none}
+.rail a.sous{padding-left:42px;font-size:12px;color:#CBBCAE}
+.rail a.on{background:rgba(232,150,75,.16);color:#fff;box-shadow:inset 3px 0 0 var(--ab)}
+.rail i{width:16px;text-align:center;font-style:normal;opacity:.8}
+/* La page */
+.page{padding:22px 30px 40px;min-width:0}
+.fil{font-size:11.5px;color:var(--muet);margin-bottom:6px}
+.fil b{color:var(--abf);font-weight:600}
+h1{font:400 30px/1.1 var(--titre);margin:0 0 4px}
+.chapo{color:var(--muet);font-size:13px;margin:0 0 18px;max-width:760px}
+.carte{background:var(--carte);border:.5px solid var(--trait);border-radius:14px}
+.lab{display:block;font:600 10.5px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muet);margin-bottom:7px}
+.bt{border:0;border-radius:999px;padding:9px 18px;font:600 13px var(--ui);cursor:pointer;background:var(--fond);color:var(--texte)}
+.bt.p{background:var(--abf);color:#fff}
+.bt.l{background:var(--carte);border:1px solid var(--trait2)}
+.puce{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--trait2);background:var(--carte);border-radius:999px;padding:6px 12px;font:500 12.5px var(--ui);color:var(--texte)}
+.puce.on{background:var(--abf);border-color:var(--abf);color:#fff}
+.puce.doux{background:var(--ab-doux);border-color:var(--ab-trait);color:var(--abf-encre)}
+.chp{border:1px solid var(--trait2);border-radius:10px;padding:9px 12px;font:500 14px var(--ui);background:var(--carte);color:var(--texte);display:inline-flex;align-items:center;gap:8px}
+.chp small{color:var(--muet);font-weight:400}
+.mu{color:var(--muet)}
+.typ{display:inline-block;font:700 9px var(--ui);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+.typ.b2b{background:var(--abf);color:#fff}
+.typ.promo{background:#F2C9A0;color:#6b4420}
+.typ.target{background:var(--fond);color:var(--texte)}
+.typ.cat{background:#FAC775;color:#6b3d0a}
+table{border-collapse:collapse;width:100%}
+th{font:600 10px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muet);text-align:left;padding:9px 12px;border-bottom:.5px solid var(--trait2)}
+td{padding:10px 12px;border-bottom:.5px solid var(--trait);vertical-align:middle}
+.tuile{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--fond);font-size:17px}
+.tuile.ab{background:var(--ab-doux)}
+.inter{display:inline-block;width:36px;height:20px;border-radius:10px;background:var(--abf);position:relative;vertical-align:middle}
+.inter::after{content:"";position:absolute;top:2px;left:18px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.inter.off{background:var(--trait2)}.inter.off::after{left:2px}
+/* Le téléphone (l'app de la vendeuse) */
+.tel{width:330px;border-radius:44px;background:#1C1C1E;padding:12px;box-shadow:0 30px 60px rgba(60,30,10,.25)}
+.tel .ec{background:#F2F1EE;border-radius:34px;overflow:hidden;height:660px;position:relative;font-family:var(--ui)}
+.tel .barre{height:34px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font:600 13px var(--ui)}
+.tel h3{font:700 26px/1.1 var(--ui);margin:6px 18px 12px;letter-spacing:-.01em}
+.tel .gp{background:#fff;border-radius:14px;margin:0 12px 12px;overflow:hidden}
+.tel .lg{display:flex;gap:10px;padding:11px 14px;border-bottom:.5px solid rgba(60,60,67,.14)}
+.tel .lg:last-child{border-bottom:0}
+.tel .ic{flex:0 0 32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--ab-doux);font-size:16px}
+.tel .ttl{font:600 11px var(--ui);letter-spacing:.04em;text-transform:uppercase;color:#6E6E73;margin:14px 26px 6px;display:flex;justify-content:space-between}

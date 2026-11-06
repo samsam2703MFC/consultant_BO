@@ -1,0 +1,86 @@
+/* Les cartes du magasin hors du dashboard (26/10/2026) : le style de assets/js/cartes-magasin.js (l'année mois par
+   mois face à l'an passé, les six leviers) pour la tablette du consultant (controle/) et toute page qui monte
+   visites.js sans dashboard.css. Repris tel quel de dashboard/dashboard.css (db-card, db-tui, db-s6*, lv-*…) : une
+   règle changée là-bas se reporte ici.
+   Chaque règle est préfixée .cm (le cadre que la tablette pose autour des cartes) : elle passe ainsi devant les
+   classes courtes de visites.js (.k, .bar, .mu) sans toucher au reste de la page. */
+.cm .db-ong{display:inline-flex;background:var(--color-background-secondary);border-radius:10px;padding:3px}
+.cm .db-ong button{border:none;background:none;border-radius:8px;padding:7px 16px;font:600 12.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
+.cm .db-ong button.on{background:var(--color-primary);color:#fff}
+.cm .db-ong-p{border-radius:8px;padding:2px}.cm .db-ong-p button{padding:4px 11px;font-size:11.5px;border-radius:6px}
+.cm .db-lab{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.cm .db-card{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;margin-bottom:12px}
+.cm .db-card>.ct{padding:11px 16px;border-bottom:.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cm .db-card>.ct .db-mini{margin-left:auto}
+.cm .db-mini{font-size:10.5px;color:var(--color-text-muted)}
+.cm .db-tui{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:11px;padding:11px 13px;min-width:0;min-height:104px;display:flex;flex-direction:column}
+.cm .db-tui .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm .db-tui .v{font-family:var(--font-display);font-size:24px;margin:3px 0 2px;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm .db-tui .s{font-size:10.5px;line-height:1.35;color:var(--color-text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em;margin-top:auto}
+.cm .db-tui.vif{border-color:var(--color-primary);background:#fdf4f5}.cm .db-tui.vif .v{color:var(--color-primary)}
+.cm .db-tui.bon{border-color:#bfdcc6;background:#f0f7f2}.cm .db-tui.bon .v{color:#2d7a3e}
+.cm .db-axe{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:22px 16px 10px;font-size:10.5px;color:var(--color-text-muted)}
+.cm .db-axe i{display:inline-block;width:14px;height:3px;background:var(--color-text);vertical-align:middle;margin-right:5px;border-radius:2px}
+.cm .db-axe i.p{background:var(--color-primary);height:10px;width:10px;border-radius:2px}
+.cm .db-axe i.t{background:#D97706}
+.cm .db-axe i.c{width:10px;height:10px;border-radius:2px}
+.cm .db-note{font-size:11px;line-height:1.5;color:var(--color-text-muted);padding:0 16px 12px}
+.cm .db-err{background:#F6E4E7;border:1px solid #e8b4bb;color:var(--color-primary);border-radius:9px;padding:8px 12px;font-size:12px;margin-bottom:12px}
+.cm .db-sk{background:linear-gradient(90deg,var(--color-background-secondary) 25%,#fff 50%,var(--color-background-secondary) 75%);background-size:400% 100%;animation:db-sk 1.4s ease infinite;border-radius:8px;height:14px}
+@keyframes db-sk{0%{background-position:100% 0}100%{background-position:0 0}}
+.cm .db-tui{position:relative}
+.cm .db-perleg{display:flex;gap:14px;font-size:11px;color:var(--color-text-muted);padding:8px 16px 12px;flex-wrap:wrap;align-items:center}.cm .db-perleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.cm .db-s6{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:14px;align-items:stretch}.cm .db-s6c{width:100%;height:auto;display:block}
+.cm .db-s6ch{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:10px}.cm .db-s6ch .ch{background:var(--color-background-secondary);border-radius:7px;padding:6px 8px;font-size:10.5px;display:flex;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;min-width:0;overflow:hidden}.cm .db-s6ch .ch>span{min-width:0;overflow:hidden;text-overflow:ellipsis;line-height:1.25}.cm .db-s6ch .ch>span>span{display:block;font-size:9.5px;color:var(--color-text-muted)}.cm .db-s6ch .ch b{font-family:var(--font-ui)}.cm .db-s6ch .ch em{font-style:normal;font-weight:600;padding:1px 6px;border-radius:8px;color:#fff;font-size:10.5px;flex:none}.cm .db-s6ch .ch em.sans{background:transparent;color:var(--color-text);padding-right:0}
+.cm .db-s6t{display:grid;grid-template-rows:1fr 1fr 1fr;gap:8px}.cm .db-s6t .db-tui{min-height:0;justify-content:center;background:var(--color-background-secondary);border-color:transparent}.cm .db-s6t .db-tui .s{margin-top:0;min-height:0}
+@media (max-width:900px){.cm .db-s6{grid-template-columns:1fr}.cm .db-s6ch{grid-template-columns:repeat(3,minmax(0,1fr))}.cm .db-s6t{grid-template-rows:none;grid-template-columns:repeat(3,minmax(0,1fr))}}
+.cm .lv-card>.ct .lv-st{margin-left:0}
+.cm .lv-seg{margin-left:auto;display:inline-flex;background:var(--color-background-secondary);border-radius:9px;padding:3px}
+.cm .lv-seg button{font:600 11.5px var(--font-ui);padding:5px 12px;border-radius:7px;border:none;background:transparent;color:var(--color-text-muted);cursor:pointer}
+.cm .lv-seg button.on{background:var(--color-primary);color:#fff}
+.cm .lv-seg button:disabled{opacity:.45;cursor:default}
+.cm .lv-g{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;padding:14px 16px 12px}
+@media (max-width:1180px){.cm .lv-g{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:620px){.cm .lv-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cm .lv-tu{border:.5px solid var(--color-border-tertiary);border-radius:11px;padding:0 12px 10px;background:var(--color-surface);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.cm .lv-tu.vide{background:var(--color-background-secondary)}
+.cm .lv-tu.vide .bar{opacity:.45}
+.cm .lv-tu .bar{height:4px;margin:0 -12px 9px}
+.cm .lv-tu .k{font:700 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase}
+.cm .lv-tu .q{font-size:10.5px;color:var(--color-text-muted);margin-top:1px}
+.cm .lv-tu .v{font:700 22px var(--font-ui);margin:6px 0 4px;display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums}
+.cm .lv-tu .v.mu{color:var(--color-text-muted);font-weight:500}
+.cm .lv-tu .l{font-size:10.5px;color:var(--color-text-muted);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1.45}
+.cm .lv-tu .lv-pied{margin-top:auto;padding-top:10px}
+.cm .lv-p{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+.cm .lv-p.v{background:#2d7a3e}.cm .lv-p.o{background:#D97706}.cm .lv-p.r{background:#C0182B}
+.cm .lv-c{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.cm .lv-c.b{background:rgba(45,122,62,.12);color:#2d7a3e}.cm .lv-c.m{background:rgba(192,24,43,.1);color:#C0182B}
+.cm .lv-c.z{background:var(--color-background-secondary);color:var(--color-text-muted);font-weight:600}
+.cm .lv-al{display:block;width:100%;font-size:10px;color:#B45309;font-weight:600}
+.cm .lv-leg .lv-p{margin:0 2px 0 4px;vertical-align:-1px;border-radius:50%;width:9px;height:9px}
+.cm .lv-vide{padding:16px;font-size:12px;color:var(--color-text-muted)}
+
+/* La tablette seulement : sa règle .vi .bar (les jauges) arrondit et rogne le liseré de couleur des leviers. */
+.cm .lv-tu .bar{border-radius:0;overflow:visible}
+/* Sur la tablette (26/10/2026) : les sélecteurs des cartes occupent toute la largeur, en rectangles aux coins arrondis. */
+.cm .db-ong,.cm .lv-seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);flex:1 1 100%;width:100%;margin-left:0}
+.cm .db-ong button,.cm .lv-seg button{text-align:center}
+.cm .lv-card .ct{flex-wrap:wrap;gap:8px}
+.cm .lv-c{border-radius:6px}
+/* Les leviers, l’évolution de l’année (26/10/2026) : une ligne par levier, une barre fine par mois. */
+.cm .lv-c.o{background:rgba(217,119,6,.12);color:#B45309}
+.cm .lv-evs{padding:4px 16px 2px}
+.cm .lv-ev{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(150px,1fr) minmax(0,1.7fr) minmax(130px,.9fr);gap:18px;align-items:center;padding:9px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.cm .lv-ev:last-child{border-bottom:none}
+.cm .lv-ev .nm{min-width:0}.cm .lv-ev .nm b{display:block;font:700 12.5px var(--font-ui)}.cm .lv-ev .nm small{display:block;font-size:10.5px;color:var(--color-text-muted);line-height:1.35;margin-top:2px}
+.cm .lv-ev .br{min-width:0}
+.cm .lv-ev .sp{display:flex;align-items:flex-end;gap:6px;height:24px;border-bottom:1px solid var(--color-border-tertiary);padding:0 1px}
+.cm .lv-ev .sp i{flex:0 0 4px;border-radius:2px 2px 0 0;background:#8d857c}
+.cm .lv-ev .sp i.v{background:#2d7a3e}.cm .lv-ev .sp i.o{background:#D97706}.cm .lv-ev .sp i.r{background:#C0182B}.cm .lv-ev .sp i.n{background:var(--color-border-tertiary)}
+.cm .lv-ev .sp i.h{background:repeating-linear-gradient(180deg,#D97706 0 2px,transparent 2px 4px)}
+.cm .lv-ev .lb{display:flex;gap:6px;margin-top:3px;padding:0 1px}.cm .lv-ev .lb span{flex:0 0 4px;min-width:0;display:flex;justify-content:center;white-space:nowrap;font:600 8.5px var(--font-ui);color:var(--color-text-muted)}.cm .lv-ev .lb span.cur{color:var(--color-text);font-weight:700}
+.cm .lv-ev .bm{display:flex;flex-wrap:wrap;gap:3px 14px;font-size:11px;color:var(--color-text-muted);line-height:1.5;min-width:0}.cm .lv-ev .bm b{color:var(--color-text);font-weight:600}.cm .lv-ev .bm .mu{flex-basis:100%;font-size:10.5px}
+.cm .lv-ev .bm .lv-c{font-size:10px;padding:1px 7px;font-weight:600}
+.cm .lv-ev .an{text-align:right;min-width:0}.cm .lv-ev .an b{display:block;font:700 15px var(--font-ui);font-variant-numeric:tabular-nums}.cm .lv-ev .an small{display:block;font-size:10.5px;color:var(--color-text-muted);margin:1px 0 3px}.cm .lv-ev .an .lv-c{font-size:10px;padding:1px 7px;font-weight:600}
+@media (max-width:760px){.cm .lv-ev{grid-template-columns:minmax(0,1fr) auto;gap:8px 12px}.cm .lv-ev .bm{grid-column:1/-1;order:3}.cm .lv-ev .an{grid-column:2;grid-row:1}}

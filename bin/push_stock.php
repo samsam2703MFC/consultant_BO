@@ -23,6 +23,7 @@ require __DIR__ . '/../src/Db.php';
 require __DIR__ . '/../src/endpoints.php';
 require __DIR__ . '/../src/writes.php';
 require __DIR__ . '/../src/panel_api.php';
+require __DIR__ . '/../src/motivation.php';
 require __DIR__ . '/../src/ventes.php';
 require __DIR__ . '/../src/push.php';
 

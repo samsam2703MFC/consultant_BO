@@ -1,0 +1,14 @@
+{
+  "periodId": 123456789123,
+  "endHour": "1645",
+  "references": {
+    "employer": "employer",
+    "worker": "worker",
+    "declaration": "declaration"
+  },
+  "endDate": "2000-12-31",
+  "startHour": "1545",
+  "plannedDaysNumber": 111,
+  "plannedHoursNumber": 160,
+  "startDate": "2000-12-30"
+}

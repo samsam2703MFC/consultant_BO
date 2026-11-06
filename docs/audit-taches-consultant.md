@@ -46,12 +46,12 @@ cockpit. Cet audit dit ce qui existe déjà (cockpit, panel), ce qui manque, et 
 
 | Objet | Table | Ce qu'il porte |
 |---|---|---|
-| Visite | `ceo_visite` | magasin, consultant (id, nom), date, heure, durée, motif (régulière, asap, due, revisite), statut (planifiée → confirmée → en cours → terminée, annulée), début et fin réels, review (exécution, clients, causes, diagnostic, recommandation) |
-| Point de contrôle | `ceo_visite_point` | module, référence, libellé, verdict, note, photo, % (planogramme) |
-| Photo | `ceo_visite_photo` | genre (façade, intérieur, arrière, point, avant, après, correction, msp), chemin |
-| Plan d'action | `ceo_visite_action`, `_evt` | titre, priorité P0 à P2, assigné (franchisé, équipe, consultant, admin), échéance, statut (ouvert, attente, validé, reprendre, fermé, escalade), transitions par rôle, campagne |
-| Client mystère | `ceo_msp` | rapport, note |
-| Effectif | `ceo_equipe_releve` | effectif, prévu, départs |
+| Visite | `con_visite` | magasin, consultant (id, nom), date, heure, durée, motif (régulière, asap, due, revisite), statut (planifiée → confirmée → en cours → terminée, annulée), début et fin réels, review (exécution, clients, causes, diagnostic, recommandation) |
+| Point de contrôle | `con_visite_point` | module, référence, libellé, verdict, note, photo, % (planogramme) |
+| Photo | `con_visite_photo` | genre (façade, intérieur, arrière, point, avant, après, correction, msp), chemin |
+| Plan d'action | `con_visite_action`, `_evt` | titre, priorité P0 à P2, assigné (franchisé, équipe, consultant, admin), échéance, statut (ouvert, attente, validé, reprendre, fermé, escalade), transitions par rôle, campagne |
+| Client mystère | `con_msp` | rapport, note |
+| Effectif | `con_equipe_releve` | effectif, prévu, départs |
 
 Règles déjà là : fréquence de visite par magasin (`viFrequence`, réglable), visite « due » et feu par magasin
 (`viFeu` : P0 ouvert, note Google, planogramme, dernière visite), checklist standard de 23 points en six modules
@@ -74,7 +74,7 @@ dans le rail du cockpit.
 - **Tâches consultants** (`#/taches`, hors rail, atteint par son adresse) : ce qui attend le consultant — tâches
   photographiées à noter (revues), ses propres tâches de projets, projets en retard, alertes de marge ; puis la
   liste filtrable par intervenant et par magasin.
-- **Contrôle des tâches** (heatmap magasin × mois, `/taches/suivi`, relevé `ceo_tache_jour`) et le classement du
+- **Contrôle des tâches** (heatmap magasin × mois, `/taches/suivi`, relevé `con_tache_jour`) et le classement du
   jour (`/taches/classement`, lu sur `/consultant/network/tasks/ranking`).
 - **Plan de développement** : projets avec jalons et tâches (qui, échéance).
 - **Scoring du trimestre**, **client mystère**, **journal** (`journalAdd`).
@@ -137,8 +137,8 @@ magasin (`visitesFrequence`, en jours), un motif par visite (`VI_MOTIFS`) et une
 |---|---|---|
 | Type de visite (réglage `visitesTypes`) | code, libellé, durée, profil demandé, checklist (modules et points, même forme que `visitesChecklist`), tâches à faire (avant J−n, pendant, après J+n), actif, dynamique | la liste déroulante : choisir le type, c'est prendre sa checklist et ses tâches |
 | Cadre par magasin (réglage `visitesCadre`) | magasin, type, nombre par mois (ou par trimestre), profil, consultant responsable | combien de visites de chaque type, par qui ; génère « À planifier », la couverture et les visites dues |
-| Visite `ceo_visite` | + `type_code` (défaut `reguliere`), + `cadre_id` | le motif reste (régulière, asap, due, revisite) : il dit pourquoi, le type dit quoi |
-| Tâche consultant `ceo_consultant_tache` | consultant, magasin, visite, source, quand (avant, pendant, après), délai, titre, échéance, statut | les tâches du type deviennent des tâches du consultant à la planification, avec leur échéance |
+| Visite `con_visite` | + `type_code` (défaut `reguliere`), + `cadre_id` | le motif reste (régulière, asap, due, revisite) : il dit pourquoi, le type dit quoi |
+| Tâche consultant `con_consultant_tache` | consultant, magasin, visite, source, quand (avant, pendant, après), délai, titre, échéance, statut | les tâches du type deviennent des tâches du consultant à la planification, avec leur échéance |
 
 Types proposés, modifiables dans l'onglet Cadre de visite : Régulière (90 min, 23 points, 6 modules), Production
 (180 min, 14 points : mise en place, cuisson, recuissons, invendus), Hygiène et qualité (60 min, 12 points), Client
@@ -235,7 +235,7 @@ réponse (lue en meilleur effort).
 |---|---|---|---|
 | 1 — Écran dans le rail | lecture `GET /consultants/gestion?consultant=` (visites, plans assignés, tâches, cas helpdesk, fréquences, feu) ; vue mois ; vue réseau | 2 j | 3 j |
 | 2 — Cadre de visite | `ceo_visite_type`, `ceo_visite_cadre`, `type_code` sur la visite, migration de la checklist et de la fréquence, la PWA lit le type | 2 j | 2 j |
-| 3 — Tâches consultant | table `ceo_consultant_tache` (consultant, magasin, titre, source, échéance, statut, visite, quand), `POST/PUT`, tâches générées par le cadre et par le type | 2 j | 2 j |
+| 3 — Tâches consultant | table `con_consultant_tache` (consultant, magasin, titre, source, échéance, statut, visite, quand), `POST/PUT`, tâches générées par le cadre et par le type | 2 j | 2 j |
 | 4 — Agenda Google | `GET /consultants/{id}/visites.ics` (jeton), lien par visite, invitation `.ics` à la planification et à chaque changement (SMTP) | 1,5 j | 0,5 j |
 | 5 — Affectation et réglages | le consultant de chaque ligne du cadre, les profils, l'onglet Cadre de visite | 0,5 j | 1,5 j |
 | 6 — Panel | note `VISIT` écrite à la clôture d'une visite ; cas du helpdesk lus comme tâches ; plus tard, évaluations d'employés | 1 j | — |

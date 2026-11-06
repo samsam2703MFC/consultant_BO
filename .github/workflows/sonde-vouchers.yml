@@ -1,0 +1,61 @@
+name: Sonde — bons de l'API ERP (lecture seule)
+
+# Ce que l'API admin TFBuddy rend VRAIMENT pour les campagnes de bons
+# (/admin/voucher-campaigns, /admin/voucher-codes) avec le compte admin du
+# cockpit, et si ce compte a le droit d'écrire. Le script tools/sonde_vouchers.php
+# part sur le serveur par l'entrée standard de `php` : rien n'est déposé, rien
+# n'est enregistré côté ERP (les seuls essais d'écriture sont construits pour
+# être refusés — voir l'en-tête du script).
+#
+# Déclenchement : pousser un changement sur `sonde-vouchers.trigger` (ou sur le
+# script / ce fichier) dans la branche ci-dessous, ou « Run workflow ».
+# Ne déploie rien : le déploiement du cockpit reste dans deploy.yml.
+#
+# Ce que les passages du 24/10/2026 ont établi : dépôt WebShop, VOUCHERS_ERP.md.
+
+on:
+  push:
+    branches: [claude/admiring-archimedes-8cr84j]
+    paths: ['sonde-vouchers.trigger', 'tools/sonde_vouchers.php', '.github/workflows/sonde-vouchers.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: sonde-vouchers
+  cancel-in-progress: true
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  TARGET_DIR: "/var/www/consulant_bo"
+
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Contrôler la syntaxe du script
+        run: php -l tools/sonde_vouchers.php
+
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      - name: Sonder l'API des bons depuis le serveur du cockpit
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "php -- '${TARGET_DIR}'" < tools/sonde_vouchers.php

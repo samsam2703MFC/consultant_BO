@@ -38,7 +38,10 @@
   const sel = document.getElementById('pm-shop'), nom = document.getElementById('pm-nom'), sous = document.getElementById('pm-sous');
   function monter() {
     document.title = 'Prospection — ' + (nom.textContent || "L'Atelier by");
-    window.CockpitProspection.mount(document.getElementById('pm-root'), { shop, apiBase: API, mobile: true, leafletDir: '../assets/vendor/leaflet/' });
+    // Sur grand écran, la mise en page bureau (deux colonnes, carte, calcul, export CSV) ;
+    // sur le téléphone, la liste en tournée.
+    const mobile = !window.matchMedia('(min-width: 900px)').matches;
+    window.CockpitProspection.mount(document.getElementById('pm-root'), { shop, apiBase: API, mobile, leafletDir: '../assets/vendor/leaflet/' });
   }
   fetch(API + '/scouting/reseau', { headers: { Accept: 'application/json' }, credentials: 'same-origin' }).then(r => r.json()).then(R => {
     const ms = (R && R.magasins || []).filter(m => m.lat != null);

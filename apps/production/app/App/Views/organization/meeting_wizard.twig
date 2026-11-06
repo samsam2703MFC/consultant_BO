@@ -1,0 +1,21 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Zebranie produkcyjne{% endblock %}
+
+{% block content %}
+{# Kreator « Zebranie produkcyjne » [247] (makieta 20) nad protokołem zebrania (TaskFormService) : 1. tydzień w liczbach,
+   2. sprawy i decyzje, 3. protokół (+ decyzje na tablety). Widok : assets/js/organization/meeting-wizard.js ; pełny
+   formularz z 6 tematami : ?classic=1. Zapis końcowy = zadanie zrobione. #}
+<section class="section">
+    <div id="mwApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="mwBoot">{{ {occurrence_id: occurrence.id, period_key: occurrence.period_key, due_date: occurrence.due_date, form_id: form.id ?? null,
+    final: final, meeting_date: meeting_date, participants: participants, guests: guests, topics: topics, topic_labels: definition.topics,
+    follow_up: follow_up, actions: actions, carried: carried, users: users, complaints: complaints, review_actions: review_actions, groups: groups}|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/organization/meeting-wizard.js?v={{ asset_v() }}"></script>
+{% endblock %}

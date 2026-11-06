@@ -382,6 +382,8 @@ function wr_pwa_task_review(): array
         http_response_code(502);
         return ['error' => 'l’API du panel a refusé la note : ' . (PanelApi::$lastError ?? 'erreur inconnue')];
     }
+    // Le tableau des contrôles qualité du mois relira cette journée (sa garde est effacée).
+    if (function_exists('cqmOublier')) { cqmOublier($shopId, $date); }
 
     // Journal local (miroir). Deux auteurs possibles : la DIRECTION (le
     // cockpit), consignée dans les colonnes owner_* sans toucher à
@@ -858,7 +860,7 @@ function fbPostPourAgent(array $row): array
 
 function fbPostRow(string $id): ?array
 {
-    return Db::row('SELECT p.*, s.name AS shop_name FROM ceo_fb_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id WHERE p.id = ?', [$id]);
+    return Db::row('SELECT p.*, s.name AS shop_name FROM mar_social_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id WHERE p.id = ?', [$id]);
 }
 
 /**
@@ -871,18 +873,18 @@ function fbPostRow(string $id): ?array
 function fbEnregistrerControle(array $row): array
 {
     $ignores = array_map(fn ($r) => (string) $r['rule_code'],
-        Db::rows("SELECT rule_code FROM ceo_fb_finding WHERE post_id = ? AND status = 'ignore'", [$row['id']]));
+        Db::rows("SELECT rule_code FROM mar_social_ecart WHERE post_id = ? AND status = 'ignore'", [$row['id']]));
     $res = fbControler(fbPostPourAgent($row), $ignores);
 
     $pdo = Db::pdo();
     $pdo->beginTransaction();
     try {
-        Db::exec('DELETE FROM ceo_fb_finding WHERE post_id = ?', [$row['id']]);
+        Db::exec('DELETE FROM mar_social_ecart WHERE post_id = ?', [$row['id']]);
         foreach ($res['ecarts'] as $e) {
-            Db::exec('INSERT INTO ceo_fb_finding (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
+            Db::exec('INSERT INTO mar_social_ecart (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
                 [$row['id'], $e['code'], $e['regle'], $e['famille'], $e['type'], $e['gravite'], $e['message'], $e['extrait'], $e['statut'], date('Y-m-d H:i:s')]);
         }
-        Db::exec("UPDATE ceo_fb_post SET agent_note = ?, agent_summary = ?, agent_ran_at = ?, agent_runs = agent_runs + 1,
+        Db::exec("UPDATE mar_social_post SET agent_note = ?, agent_summary = ?, agent_ran_at = ?, agent_runs = agent_runs + 1,
                     status = CASE WHEN status = 'brouillon' THEN status ELSE 'a_valider' END WHERE id = ?",
             [$res['note'], $res['resume'], date('Y-m-d H:i:s'), $row['id']]);
         $pdo->commit();
@@ -904,23 +906,23 @@ function fbEnregistrerControle(array $row): array
             $ajout = 0;
             foreach ($bg['ecarts'] as $e) {
                 if (($e['moteur'] ?? '') !== 'claude') { continue; }
-                Db::exec('INSERT INTO ceo_fb_finding (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                Db::exec('INSERT INTO mar_social_ecart (post_id, rule_code, rule_name, famille, type, gravite, message, extrait, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
                     [$row['id'], 'bg:' . $e['regle'], $e['libelle'], $e['famille'], $e['libelle'],
                         BG_GRAVITES[$e['gravite']] ?? 1, mb_substr($e['constat'] . ($e['correction'] !== '' ? ' → ' . $e['correction'] : ''), 0, 400),
                         null, in_array('bg:' . $e['regle'], $ignores, true) ? 'ignore' : 'ouvert', date('Y-m-d H:i:s')]);
                 $ajout++;
             }
             if ($ajout > 0) {
-                $tous = Db::rows('SELECT gravite, status AS statut FROM ceo_fb_finding WHERE post_id = ?', [$row['id']]);
+                $tous = Db::rows('SELECT gravite, status AS statut FROM mar_social_ecart WHERE post_id = ?', [$row['id']]);
                 $note = fbNote(array_map(static fn ($f) => ['gravite' => (int) $f['gravite'], 'statut' => $f['statut']], $tous));
                 $res['note'] = $note;
                 $res['resume'] = fbResume($note, array_map(static fn ($f) => ['gravite' => (int) $f['gravite'], 'statut' => $f['statut'], 'famille' => 'charte'], $tous));
-                Db::exec('UPDATE ceo_fb_post SET agent_note = ?, agent_summary = ? WHERE id = ?', [$note, $bg['message'] ?? $res['resume'], $row['id']]);
+                Db::exec('UPDATE mar_social_post SET agent_note = ?, agent_summary = ? WHERE id = ?', [$note, $bg['message'] ?? $res['resume'], $row['id']]);
             }
             if ($bg['statut'] === 'bloque' && $row['status'] !== 'brouillon') {
                 $pire = null;
                 foreach ($bg['ecarts'] as $e) { if ($e['gravite'] === 'bloquant') { $pire = $e; break; } }
-                Db::exec("UPDATE ceo_fb_post SET status = 'refuse', note = ?, decision_famille = ?, decision_type = ?, decision_comment = ?, decided_at = ?, decided_by = 'Brand Guard' WHERE id = ?",
+                Db::exec("UPDATE mar_social_post SET status = 'refuse', note = ?, decision_famille = ?, decision_type = ?, decision_comment = ?, decided_at = ?, decided_by = 'Brand Guard' WHERE id = ?",
                     [$res['note'], $pire['famille'] ?? 'Charte de marque', $pire['libelle'] ?? 'Écart bloquant', $bg['message'], date('Y-m-d H:i:s'), $row['id']]);
                 journalAdd('Brand Guard', 'Refus', $row['shop_name'] ?? '—',
                     'Post « ' . fbTitre($row['message']) . ' » bloqué — ' . $bg['score'] . '/100 · ' . ($pire['libelle'] ?? 'écart bloquant') . ' (charte ' . $bg['charteVersion'] . ')');
@@ -955,12 +957,18 @@ function wr_fb_post_create(): array
     // Un brouillon reste au magasin : l'agent ne relit que ce qui est soumis.
     $statut = ($b['statut'] ?? 'a_controler') === 'brouillon' ? 'brouillon' : 'a_controler';
     $id = $b['id'] ?? ('fb' . substr((string) round(microtime(true) * 1000), -8));
-    Db::exec('INSERT INTO ceo_fb_post (id, shop_id, author, format, message, link, medias_json, planned_at, submitted_at, status) VALUES (?,?,?,?,?,?,?,?,?,?)', [
+    Db::exec('INSERT INTO mar_social_post (id, shop_id, author, format, message, link, medias_json, planned_at, submitted_at, status) VALUES (?,?,?,?,?,?,?,?,?,?)', [
         $id, $shopId, (string) ($b['auteur'] ?? 'Franchisé'), (string) ($b['format'] ?? 'Photo'),
         $message, ($b['lien'] ?? '') !== '' ? (string) $b['lien'] : null,
         isset($b['medias']) ? json_encode($b['medias'], JSON_UNESCAPED_UNICODE) : null,
         $b['publierLe'] ?? null, date('Y-m-d H:i:s'), $statut,
     ]);
+    // Ses réseaux et sa campagne (portail Marketing, 13/10/2026) : posés à part — une base que
+    // l'installateur n'a pas encore relue n'a pas les colonnes, et le post doit partir quand même.
+    $reseaux = function_exists('spReseauxDe') ? spReseauxDe(['reseaux' => $b['reseaux'] ?? 'facebook']) : ['facebook'];
+    $campagne = (int) ($b['campagneId'] ?? 0);
+    try { Db::exec('UPDATE mar_social_post SET reseaux = ?, campagne_id = ? WHERE id = ?', [implode(',', $reseaux), $campagne > 0 ? $campagne : null, $id]); }
+    catch (PDOException $e) { /* colonnes pas encore posées */ }
     $row = fbPostRow($id);
     journalAdd((string) ($b['auteur'] ?? 'Franchisé'), 'Post Facebook', $row['shop_name'] ?? '—',
         'Post « ' . fbTitre($message) . ' » ' . ($statut === 'brouillon' ? 'enregistré en brouillon' : 'soumis au contrôle'));
@@ -974,6 +982,15 @@ function wr_fb_controle(string $id): array
     $row = fbPostRow($id);
     if ($row === null) { http_response_code(404); return ['error' => 'post inconnu']; }
     if ($row['status'] === 'publie') { http_response_code(409); return ['error' => 'post déjà publié']; }
+    // { soumettre: true } fait sortir un brouillon du magasin (module Marketing,
+    // 13/10/2026) : sans cela, un post enregistré en brouillon ne pouvait plus
+    // jamais être soumis — il fallait le réécrire en entier.
+    if ($row['status'] === 'brouillon' && !empty(body()['soumettre'])) {
+        Db::exec("UPDATE mar_social_post SET status = 'a_controler', submitted_at = ? WHERE id = ?", [date('Y-m-d H:i:s'), $id]);
+        journalAdd((string) ($row['author'] ?? 'Franchisé'), 'Post Facebook', $row['shop_name'] ?? '—',
+            'Post « ' . fbTitre($row['message']) . ' » sorti du brouillon et soumis au contrôle');
+        $row = fbPostRow($id);
+    }
     return ['ok' => true, 'controle' => fbEnregistrerControle($row)];
 }
 
@@ -997,8 +1014,11 @@ function wr_fb_decision(string $id): array
             http_response_code(409);
             return ['error' => 'seul un post validé peut être marqué publié'];
         }
-        Db::exec("UPDATE ceo_fb_post SET status = 'publie', published_at = ?, fb_post_id = ? WHERE id = ?",
+        Db::exec("UPDATE mar_social_post SET status = 'publie', published_at = ?, fb_post_id = ? WHERE id = ?",
             [date('Y-m-d H:i:s'), ($b['fbId'] ?? '') !== '' ? (string) $b['fbId'] : null, $id]);
+        // Publié à la main : ce que le portail avait programmé ne doit plus partir — deux fois le même post.
+        try { Db::exec("UPDATE mar_social_publication SET statut = 'annule', erreur = 'publié à la main', maj_le = ? WHERE post_id = ? AND statut IN ('programme', 'erreur')", [date('Y-m-d H:i:s'), $id]); }
+        catch (PDOException $e) { /* table pas encore posée */ }
         journalAdd((string) ($b['par'] ?? 'CEO'), 'Publication', $mag, 'Post « ' . $titre . ' » marqué publié');
         return ['ok' => true];
     }
@@ -1024,13 +1044,15 @@ function wr_fb_decision(string $id): array
     }
 
     $par = (string) ($b['par'] ?? 'CEO');
-    Db::exec('UPDATE ceo_fb_post SET status = ?, note = ?, decision_famille = ?, decision_type = ?, decision_comment = ?, decided_at = ?, decided_by = ? WHERE id = ?', [
+    Db::exec('UPDATE mar_social_post SET status = ?, note = ?, decision_famille = ?, decision_type = ?, decision_comment = ?, decided_at = ?, decided_by = ? WHERE id = ?', [
         $decision === 'valide' ? 'valide' : 'refuse', $note,
         $fam !== '' ? $fam : null, $typ !== '' ? $typ : null,
         ($b['commentaire'] ?? '') !== '' ? (string) $b['commentaire'] : null,
         date('Y-m-d H:i:s'), $par, $id,
     ]);
     $ecart = $fam !== '' ? ' — ' . $fam . ' · ' . $typ : '';
+    // Validé : le portail le programme sur ses réseaux, si la publication automatique est réglée.
+    if ($decision === 'valide' && function_exists('spAutoProgrammer')) { spAutoProgrammer($id); }
     journalAdd($par, $decision === 'valide' ? 'Validation' : 'Refus', $mag,
         'Post « ' . $titre . ' » ' . ($decision === 'valide' ? 'validé' : 'refusé') . ' ' . $note . '/5'
         . $ecart . ($row['agent_note'] !== null && (int) $row['agent_note'] !== $note
@@ -1048,19 +1070,19 @@ function wr_fb_decision(string $id): array
 function wr_fb_ecart_patch(string $postId, int $ecartId): array
 {
     $b = body();
-    $e = Db::row('SELECT * FROM ceo_fb_finding WHERE id = ? AND post_id = ?', [$ecartId, $postId]);
+    $e = Db::row('SELECT * FROM mar_social_ecart WHERE id = ? AND post_id = ?', [$ecartId, $postId]);
     if ($e === null) { http_response_code(404); return ['error' => 'écart inconnu']; }
     $statut = (string) ($b['statut'] ?? '');
     if (!in_array($statut, ['ouvert', 'ignore', 'corrige'], true)) {
         http_response_code(422); return ['error' => 'statut attendu : ouvert, ignore ou corrige'];
     }
-    Db::exec('UPDATE ceo_fb_finding SET status = ? WHERE id = ?', [$statut, $ecartId]);
+    Db::exec('UPDATE mar_social_ecart SET status = ? WHERE id = ?', [$statut, $ecartId]);
 
     $row = fbPostRow($postId);
     $ecarts = fbEcartsDuPost($postId);
     $note = fbNote($ecarts);
     $resume = fbResume($note, $ecarts);
-    Db::exec('UPDATE ceo_fb_post SET agent_note = ?, agent_summary = ? WHERE id = ?', [$note, $resume, $postId]);
+    Db::exec('UPDATE mar_social_post SET agent_note = ?, agent_summary = ? WHERE id = ?', [$note, $resume, $postId]);
     journalAdd((string) ($b['par'] ?? 'CEO'), 'Contrôle', $row['shop_name'] ?? '—',
         'Écart « ' . $e['type'] . ' » ' . ($statut === 'ignore' ? 'écarté' : ($statut === 'corrige' ? 'marqué corrigé' : 'rouvert'))
         . ' sur « ' . fbTitre($row['message']) . ' » — note de l\'agent ' . $note . '/5');
@@ -2275,53 +2297,6 @@ function fournisseurAssure(?string $nom): void
 }
 
 /**
- * PUT /taches/maitrise — la main sur le contrôle par exception.
- *
- * Trois gestes, et un seul principe : le calcul propose, l'humain dispose.
- *  - « rouvrir » : un nouveau gérant, des travaux, une réclamation — le
- *    contrôle revient quelle que soit la moyenne, et tient une cadence
- *    complète (sinon le calcul l'effacerait au rendu suivant).
- *  - « permanent » / « auto » : hygiène et sécurité ne se gagnent pas au
- *    mérite ; on les sort du dispositif, ou on les y remet.
- */
-function wr_taches_maitrise(): array
-{
-    $b = body();
-    $sid = (int) ($b['shopId'] ?? 0);
-    $tid = (int) ($b['taskId'] ?? 0);
-    $action = (string) ($b['action'] ?? '');
-    if ($sid <= 0 || $tid <= 0 || !in_array($action, ['rouvrir', 'permanent', 'auto'], true)) {
-        http_response_code(422);
-        return ['error' => 'shopId, taskId et action (rouvrir | permanent | auto) sont requis'];
-    }
-    $u = setting('utilisateur', []);
-    $qui = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 80) : 'CEO';
-    $now = date('Y-m-d H:i:s');
-
-    if ($action === 'rouvrir') {
-        Db::exec('INSERT INTO ceo_task_maitrise (id_shop, id_task, etat, depuis, motif, force_par, force_le)
-                  VALUES (?,?,?,?,?,?,?)
-                  ON DUPLICATE KEY UPDATE etat = VALUES(etat), depuis = VALUES(depuis),
-                    recontrole_le = NULL, motif = VALUES(motif),
-                    force_par = VALUES(force_par), force_le = VALUES(force_le)',
-            [$sid, $tid, 'visible', $now, 'Rouvert manuellement par ' . $qui, $qui, $now]);
-        journalAdd('CEO', 'Contrôle', 'Boutique ' . $sid, 'Contrôle rouvert — tâche ' . $tid);
-        return ['ok' => true, 'etat' => 'visible'];
-    }
-
-    $perm = $action === 'permanent' ? 1 : 0;
-    Db::exec('INSERT INTO ceo_task_maitrise (id_shop, id_task, etat, depuis, jamais_masquer, motif)
-              VALUES (?,?,?,?,?,?)
-              ON DUPLICATE KEY UPDATE jamais_masquer = VALUES(jamais_masquer),
-                etat = VALUES(etat), depuis = VALUES(depuis), motif = VALUES(motif)',
-        [$sid, $tid, $perm ? 'visible' : 'visible', $now, $perm,
-         $perm ? 'Contrôle permanent — jamais masqué' : 'Remis en contrôle automatique']);
-    journalAdd('CEO', 'Contrôle', 'Boutique ' . $sid,
-        ($perm ? 'Contrôle rendu permanent' : 'Contrôle remis en automatique') . ' — tâche ' . $tid);
-    return ['ok' => true, 'permanent' => (bool) $perm];
-}
-
-/**
  * PUT /stores/{id}/charges?exercice=…&mois=… — les charges du mois.
  *
  * Les charges s'encodent chaque mois : un montant par poste, pour ce
@@ -2455,8 +2430,8 @@ function notePanelDeposer($shopId, string $type, string $texte, string $contexte
  * Le nom d'un consultant, cherché LÀ OÙ L'ÉCRAN L'A PRIS.
  *
  * `/consultants` rend « u<id de user_membership> » quand les tables du panel
- * sont là, et l'identifiant de `ceo_consultant` sinon (installation autonome).
- * L'écriture, elle, ne consultait que `ceo_consultant` : « u8 » n'y étant pas,
+ * sont là, et l'identifiant de `con_consultant` sinon (installation autonome).
+ * L'écriture, elle, ne consultait que `con_consultant` : « u8 » n'y étant pas,
  * chaque note au consultant repartait en « consultant inconnu » — l'écran
  * disait « Note non envoyée », et RIEN n'était écrit. Deux référentiels pour
  * une même question, c'est toujours l'écriture qui perd. On interroge donc les
@@ -2476,7 +2451,7 @@ function consultantNom(string $id): ?string
         } catch (PDOException $e) { /* tables du panel absentes : repli local */ }
     }
     try {
-        $r = Db::row('SELECT name FROM ceo_consultant WHERE id = ?', [$id]);
+        $r = Db::row('SELECT name FROM con_consultant WHERE id = ?', [$id]);
         if ($r !== null) { return (string) $r['name']; }
     } catch (PDOException $e) { /* pas de référentiel local non plus */ }
     return null;
@@ -2772,83 +2747,36 @@ function wr_mkt_types_ordre(): array
     return ['ok' => true, 'n' => count($ids)];
 }
 
-/* --- nettoyage du module marketing : une action EXPLICITE --------------------
+/* --- nettoyage du module marketing : RETIRÉ (22/10/2026) -----------------------
  *
- * Le module autonome est supprimé ; seuls restent au cockpit le Calendrier,
- * les Campagnes, les Types (mar_campaign*), le Fonds & Royalties (mar_fund*,
- * mar_royalt*) et leurs référentiels (mar_brand, mar_shop, mar_lever).
+ * Cette action supprimait toutes les tables mar_* sauf les campagnes, le fonds,
+ * les redevances et trois référentiels : le module Marketing autonome était
+ * alors tenu pour abandonné. Exécutée le 27/08/2026, elle a emporté 19 de ses
+ * tables (promotions, bundles, bons, CRM, présence locale, kits, coûts ROI) —
+ * ses écrans répondaient 500 depuis.
  *
- * Des DROP en masse ne partent PAS tout seuls au déploiement : l'écran
- * Diagnostic montre d'abord la liste exacte de ce qui tomberait (GET), et
- * l'exécution exige une confirmation explicite (POST {confirmer:true}).
- * Chaque objet supprimé est journalisé — un DROP ne se rejoue pas, la liste
- * doit pouvoir se relire.
+ * Le module autonome (/marketing/, dépôt marketing) est de nouveau le module
+ * officiel ; il recrée ses tables (sa migration 037). Et la liste de ce qui
+ * « tomberait » comprenait désormais les tables du cockpit lui-même (mar_nl_*,
+ * mar_avis*, mar_social_*, mar_campagne_*). L'action ne s'exécute donc plus :
+ * la lecture dit qu'elle est retirée — l'écran Diagnostic n'en montre plus la
+ * carte —, et l'exécution est refusée. La trace du nettoyage d'août reste lisible.
  */
 
-/** Une table mar_* est-elle nécessaire à ce que le cockpit sert encore ? */
-function marTableGardee(string $t): bool
-{
-    foreach (['mar_brand', 'mar_shop', 'mar_lever'] as $exact) {
-        if ($t === $exact) { return true; }
-    }
-    foreach (['mar_campaign', 'mar_fund', 'mar_royalt'] as $pfx) {
-        if (str_starts_with($t, $pfx)) { return true; }
-    }
-    return false;
-}
-
-/** GET /admin/marketing-nettoyage — ce qui serait gardé, ce qui tomberait. */
+/** GET /admin/marketing-nettoyage — retiré : plus rien n'est proposé à la suppression. */
 function ep_mar_nettoyage(): array
 {
     $fait = setting('marNettoyage');
-    try {
-        $objets = Db::rows(
-            "SELECT TABLE_NAME nom, TABLE_TYPE type, TABLE_ROWS lignes FROM information_schema.TABLES
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'mar\\\\_%' ORDER BY TABLE_NAME");
-    } catch (PDOException $e) {
-        return ['indispo' => true, 'raison' => 'information_schema inaccessible'];
-    }
-    $garde = []; $tombe = [];
-    foreach ($objets as $o) {
-        $l = ['nom' => $o['nom'], 'vue' => $o['type'] === 'VIEW',
-            'lignes' => $o['type'] === 'VIEW' ? null : (int) $o['lignes']];
-        if (marTableGardee($o['nom'])) { $garde[] = $l; } else { $tombe[] = $l; }
-    }
-    return ['garde' => $garde, 'tombe' => $tombe, 'dejaFait' => is_array($fait) ? $fait : null];
+    return ['indispo' => true, 'retire' => true,
+        'raison' => 'nettoyage retiré : le module Marketing autonome est de nouveau en service, ses tables restent',
+        'dejaFait' => is_array($fait) ? $fait : null];
 }
 
-/** POST /admin/marketing-nettoyage — exécute, sur confirmation explicite. */
+/** POST /admin/marketing-nettoyage — retiré : refusé, quelle que soit la confirmation. */
 function wr_mar_nettoyage(): array
 {
-    $b = body();
-    if (($b['confirmer'] ?? false) !== true) {
-        http_response_code(422);
-        return ['error' => 'confirmation requise : ces suppressions sont définitives'];
-    }
-    $etat = ep_mar_nettoyage();
-    if (!empty($etat['indispo'])) { http_response_code(500); return ['error' => $etat['raison']]; }
-    $tombees = [];
-    Db::exec('SET FOREIGN_KEY_CHECKS = 0');
-    try {
-        // Les vues d'abord : elles dépendent des tables.
-        foreach ($etat['tombe'] as $o) {
-            if (!$o['vue']) { continue; }
-            Db::exec('DROP VIEW IF EXISTS `' . str_replace('`', '', $o['nom']) . '`');
-            $tombees[] = $o['nom'] . ' (vue)';
-        }
-        foreach ($etat['tombe'] as $o) {
-            if ($o['vue']) { continue; }
-            Db::exec('DROP TABLE IF EXISTS `' . str_replace('`', '', $o['nom']) . '`');
-            $tombees[] = $o['nom'];
-        }
-    } finally {
-        Db::exec('SET FOREIGN_KEY_CHECKS = 1');
-    }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['marNettoyage', json_encode(['fait' => date('c'), 'supprimees' => $tombees], JSON_UNESCAPED_UNICODE)]);
-    journalAdd('CEO', 'Maintenance', null, 'Nettoyage du module marketing : '
-        . count($tombees) . ' objet(s) supprimé(s) — ' . implode(', ', $tombees));
-    return ['ok' => true, 'supprimees' => $tombees];
+    http_response_code(410);
+    return ['error' => 'nettoyage retiré : le module Marketing autonome est de nouveau en service, ses tables ne se suppriment plus'];
 }
 
 /**
@@ -3155,18 +3083,18 @@ function wr_reputation_fiche(string $shopId): array
     if ($placeId === '') {
         // Détacher : la fiche s'en va, les avis déjà rapatriés restent. Ils
         // décrivent ce qui a été dit ; les effacer réécrirait l'histoire.
-        Db::exec('DELETE FROM ceo_shop_reputation WHERE shop_id = ?', [$shopId]);
+        Db::exec('DELETE FROM mar_avis_fiche WHERE shop_id = ?', [$shopId]);
         journalAdd('CEO', 'Paramètre', $nomShop, 'Fiche Google détachée');
         return ['ok' => true, 'detache' => true];
     }
 
-    $dejaPris = Db::row('SELECT shop_id FROM ceo_shop_reputation WHERE place_id = ? AND shop_id <> ?', [$placeId, $shopId]);
+    $dejaPris = Db::row('SELECT shop_id FROM mar_avis_fiche WHERE place_id = ? AND shop_id <> ?', [$placeId, $shopId]);
     if ($dejaPris !== null) {
         http_response_code(409);
         return ['error' => 'Cette fiche Google est déjà raccordée à un autre magasin.'];
     }
 
-    Db::exec('INSERT INTO ceo_shop_reputation (shop_id, place_id) VALUES (?, ?)
+    Db::exec('INSERT INTO mar_avis_fiche (shop_id, place_id) VALUES (?, ?)
               ON DUPLICATE KEY UPDATE place_id = VALUES(place_id)', [$shopId, $placeId]);
     journalAdd('CEO', 'Paramètre', $nomShop, 'Fiche Google raccordée (' . $placeId . ')');
     // Synchroniser dans la foulée : raccorder sans lire laisserait une carte
@@ -3198,7 +3126,7 @@ function wr_reputation_sync(): array
 function reputationSynchroniser(?string $shopId): array
 {
     $sql = "SELECT s.id, s.name, r.place_id FROM ceo_shop s
-              JOIN ceo_shop_reputation r ON r.shop_id = s.id
+              JOIN mar_avis_fiche r ON r.shop_id = s.id
              WHERE r.place_id IS NOT NULL AND r.place_id <> ''";
     $args = [];
     if ($shopId !== null) { $sql .= ' AND s.id = ?'; $args[] = $shopId; }
@@ -3220,15 +3148,15 @@ function reputationSynchroniser(?string $shopId): array
             $erreurs[] = $c['name'] . ' : ' . (GoogleApi::$lastError ?? 'réponse vide');
             continue;
         }
-        Db::exec('UPDATE ceo_shop_reputation SET rating_avg = ?, rating_count = ?, profile_url = ?, synced_at = ? WHERE shop_id = ?',
+        Db::exec('UPDATE mar_avis_fiche SET rating_avg = ?, rating_count = ?, profile_url = ?, synced_at = ? WHERE shop_id = ?',
             [$lieu['note'], $lieu['avis'], $lieu['url'], date('Y-m-d H:i:s'), $c['id']]);
         foreach ($lieu['derniers'] as $a) {
             // INSERT IGNORE sur (source, external_id) : un avis déjà connu ne
             // se réécrit pas — son texte peut avoir été traduit d'un appel à
             // l'autre, et le premier reçu fait foi.
-            $avant = Db::row("SELECT id FROM ceo_shop_review WHERE source = 'google' AND external_id = ?", [$a['externalId']]);
+            $avant = Db::row("SELECT id FROM mar_avis WHERE source = 'google' AND external_id = ?", [$a['externalId']]);
             if ($avant !== null) { continue; }
-            Db::exec('INSERT INTO ceo_shop_review (shop_id, source, external_id, author, rating, comment, reviewed_at)
+            Db::exec('INSERT INTO mar_avis (shop_id, source, external_id, author, rating, comment, reviewed_at)
                       VALUES (?, ?, ?, ?, ?, ?, ?)',
                 [$c['id'], 'google', $a['externalId'], $a['auteur'], $a['note'], $a['texte'], $a['le']]);
             $nouveaux++;
@@ -3375,11 +3303,11 @@ function wr_campagne_objectifs(int $id): array
         $sid = (string) $shopId;
         if ($sid === '' || magasinConnu($sid) === null) { continue; }
         if ($montant === '' || $montant === null || (float) $montant <= 0) {
-            Db::exec('DELETE FROM ceo_campagne_objectif WHERE campagne_id = ? AND shop_id = ?', [$id, $sid]);
+            Db::exec('DELETE FROM mar_campagne_objectif WHERE campagne_id = ? AND shop_id = ?', [$id, $sid]);
             $effaces++;
             continue;
         }
-        Db::exec('INSERT INTO ceo_campagne_objectif (campagne_id, shop_id, objectif, maj) VALUES (?,?,?,?)
+        Db::exec('INSERT INTO mar_campagne_objectif (campagne_id, shop_id, objectif, maj) VALUES (?,?,?,?)
                   ON DUPLICATE KEY UPDATE objectif = VALUES(objectif), maj = VALUES(maj)',
             [$id, $sid, (float) $montant, date('Y-m-d H:i:s')]);
         $ecrits++;
@@ -3494,605 +3422,6 @@ function wr_task_delete(string $projectId, string $taskId): array
     return ['ok' => true, 'signalements' => $sig, 'panel' => $panel];
 }
 
-/* --- Scouting commercial ----------------------------------------------------- */
-
-/** PUT /scouting/tiles/{i} — dépose un secteur du cache OpenStreetMap (partagé entre navigateurs). */
-function wr_scouting_tile_put(int $sector): array
-{
-    $raw = file_get_contents('php://input') ?: '';
-    if (strlen($raw) > 12 * 1024 * 1024) { http_response_code(413); return ['error' => 'secteur trop volumineux']; }
-    $d = json_decode($raw, true);
-    if (!is_array($d) || !isset($d['c'], $d['b']) || !is_array($d['c']) || !is_array($d['b'])) {
-        http_response_code(400); return ['error' => 'secteur attendu : { t, c, b, p }'];
-    }
-    $ts = (int) round(((float) ($d['t'] ?? 0)) / 1000);
-    Db::exec('INSERT INTO ceo_scouting_tile (sector, fetched_at, payload) VALUES (?,?,?)'
-        . ' ON DUPLICATE KEY UPDATE fetched_at = VALUES(fetched_at), payload = VALUES(payload)',
-        [$sector, date('Y-m-d H:i:s', $ts > 0 ? $ts : time()), $raw]);
-    return ['ok' => true, 'communes' => count($d['c']), 'commerces' => count($d['b'])];
-}
-
-/**
- * POST /scouting/refresh/{n} — le serveur relit un secteur chez OpenStreetMap,
- * le dépose dans le cache partagé et le rend à l'écran. C'est « Recharger les
- * données » : le navigateur ne parle plus à Overpass quand l'API répond, et le
- * secteur relu profite à tout le monde. Compter une à trois minutes ; l'écran
- * en demande trois à la fois.
- */
-function wr_scouting_refresh(int $sector): array
-{
-    // 100 à 108 : le zoning industriel, sa propre requête et son propre cache.
-    // Un échec de zoning ne doit jamais toucher au relevé des commerces.
-    if ($sector >= ScoutingOsm::ZONING_BASE) {
-        $n = $sector - ScoutingOsm::ZONING_BASE;
-        if (!isset(ScoutingOsm::SECTEURS[$n])) { http_response_code(404); return ['error' => 'secteur de zoning inconnu (100 à 108)']; }
-        @set_time_limit(320);
-        @ini_set('memory_limit', '512M');
-        $z = ScoutingOsm::rafraichirZoning($n);
-        if ($z === null) {
-            http_response_code(502);
-            return ['error' => 'OpenStreetMap injoignable depuis le serveur — ' . (ScoutingOsm::$lastError ?? 'sans détail')];
-        }
-        journalAdd('CEO', 'Scouting', ScoutingOsm::SECTEURS[$n][1],
-            'Zoning relu — ' . count($z['z']) . ' zones d\'activité');
-        return $z;
-    }
-    if (!isset(ScoutingOsm::SECTEURS[$sector])) { http_response_code(404); return ['error' => 'secteur inconnu (0 à 8)']; }
-    @set_time_limit(320);
-    @ini_set('memory_limit', '512M');
-    $d = ScoutingOsm::rafraichir($sector);
-    if ($d === null) {
-        http_response_code(502);
-        return ['error' => 'OpenStreetMap injoignable depuis le serveur — ' . (ScoutingOsm::$lastError ?? 'sans détail')];
-    }
-    journalAdd('CEO', 'Scouting', ScoutingOsm::SECTEURS[$sector][1],
-        'Secteur OpenStreetMap relu — ' . count($d['c']) . ' communes, ' . count($d['b']) . ' commerces');
-    return $d;
-}
-
-/** PUT /scouting/competitors — note, avis, source et commentaire terrain par commerce (lot ≤ 500).
- *  Seules les clés présentes dans une ligne sont modifiées ; une ligne sans note,
- *  sans commentaire et hors interrogation Google disparaît. */
-function wr_scouting_competitors_put(): array
-{
-    $b = body();
-    $rows = $b['rows'] ?? [];
-    if (!is_array($rows) || $rows === []) { http_response_code(400); return ['error' => 'rows attendu']; }
-    $n = 0; $rated = 0;
-    $id = ''; $name = ''; $commune = ''; $rating = null; $comment = null;
-    foreach (array_slice(array_values($rows), 0, 500) as $r) {
-        if (!is_array($r)) { continue; }
-        $id = trim((string) ($r['id'] ?? ''));
-        if (!preg_match('/^[nwrm]\d{1,15}$/', $id)) { continue; }
-        $cur = Db::row('SELECT * FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
-        // La qualification terrain (09/10/2026) : le type réel du commerce, une force vue sur place (0 à 100,
-        // elle prime sur la note), le concurrent de référence, la visite et ce qu'on y a vu.
-        $type    = array_key_exists('type', $r) ? (in_array($r['type'], SCOUTING_TYPES, true) ? $r['type'] : null) : ($cur['type'] ?? null);
-        $force   = array_key_exists('force', $r) ? ($r['force'] === null || $r['force'] === '' ? null : max(0, min(100, (int) $r['force']))) : ($cur['force_manuelle'] ?? null);
-        $ref     = array_key_exists('reference', $r) ? (int) !empty($r['reference']) : (int) ($cur['reference'] ?? 0);
-        $visite  = array_key_exists('visiteLe', $r) ? (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $r['visiteLe']) ? (string) $r['visiteLe'] : null) : ($cur['visite_le'] ?? null);
-        $terrain = array_key_exists('terrain', $r) ? ($r['terrain'] === null || $r['terrain'] === '' ? null : mb_substr((string) $r['terrain'], 0, 500)) : ($cur['terrain'] ?? null);
-        $manuel  = $id[0] === 'm';
-        $qualifie = $type !== null || $force !== null || $ref === 1 || $visite !== null || $terrain !== null;
-        $rating  = array_key_exists('rating', $r)  ? ($r['rating'] === null ? null : max(0, min(5, round((float) $r['rating'], 1)))) : ($cur['rating'] ?? null);
-        $reviews = array_key_exists('reviews', $r) ? ($r['reviews'] === null ? null : max(0, (int) $r['reviews'])) : ($cur['reviews'] ?? null);
-        $source  = array_key_exists('source', $r)  ? (in_array($r['source'], ['google', 'manuel'], true) ? $r['source'] : null) : ($cur['rating_source'] ?? null);
-        $comment = array_key_exists('comment', $r) ? ($r['comment'] === null || $r['comment'] === '' ? null : mb_substr((string) $r['comment'], 0, 200)) : ($cur['comment'] ?? null);
-        $name    = ($r['name'] ?? '') !== ''    ? mb_substr((string) $r['name'], 0, 200)    : ($cur['name'] ?? '');
-        $commune = ($r['commune'] ?? '') !== '' ? mb_substr((string) $r['commune'], 0, 120) : ($cur['commune'] ?? '');
-        $arr     = ($r['arr'] ?? '') !== ''     ? mb_substr((string) $r['arr'], 0, 60)      : ($cur['arrondissement'] ?? '');
-        if ($rating === null && $comment === null && $source !== 'google' && !$qualifie && !$manuel) {
-            Db::exec('DELETE FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
-        } elseif ($manuel && $cur === null) {
-            continue;   // un commerce ajouté à la main naît par POST /scouting/concurrents, avec sa position
-        } else {
-            Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at, type, force_manuelle, reference, visite_le, terrain) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
-                . ' ON DUPLICATE KEY UPDATE name = VALUES(name), commune = VALUES(commune), arrondissement = VALUES(arrondissement),'
-                . ' rating = VALUES(rating), reviews = VALUES(reviews), rating_source = VALUES(rating_source), comment = VALUES(comment), updated_at = VALUES(updated_at),'
-                . ' type = VALUES(type), force_manuelle = VALUES(force_manuelle), reference = VALUES(reference), visite_le = VALUES(visite_le), terrain = VALUES(terrain)',
-                [$id, $name, $commune, $arr, $rating, $reviews, $source, $comment, date('Y-m-d H:i:s'), $type, $force, $ref, $visite, $terrain]);
-        }
-        $n++;
-        if ($rating !== null) { $rated++; }
-    }
-    if ($n === 0) { http_response_code(400); return ['error' => 'aucune ligne valide (id OSM attendu : n123, w456, r789)']; }
-    $who = ($name !== '' ? $name : $id) . ($commune !== '' ? ' (' . $commune . ')' : '');
-    $first = array_values($rows)[0];
-    if (!is_array($first)) { $first = []; }
-    if (count($rows) === 1 && array_key_exists('rating', $first)) {
-        journalAdd('CEO', 'Scouting', $name !== '' ? $name : $id,
-            ($rating === null ? 'Note terrain retirée' : 'Note terrain ' . str_replace('.', ',', (string) $rating) . '/5 saisie') . ' — ' . $who);
-    } elseif (count($rows) === 1 && array_key_exists('comment', $first)) {
-        journalAdd('CEO', 'Scouting', $name !== '' ? $name : $id,
-            ($comment === null ? 'Commentaire terrain retiré' : 'Commentaire terrain : « ' . $comment . ' »') . ' — ' . $who);
-    } elseif (count($rows) === 1 && (array_key_exists('type', $first) || array_key_exists('force', $first) || array_key_exists('reference', $first) || array_key_exists('visiteLe', $first) || array_key_exists('terrain', $first))) {
-        $q = [];
-        if (array_key_exists('type', $first)) { $q[] = 'type ' . ($first['type'] ?: '—'); }
-        if (array_key_exists('force', $first)) { $q[] = 'force terrain ' . ($first['force'] === null || $first['force'] === '' ? 'retirée' : (int) $first['force'] . ' %'); }
-        if (array_key_exists('reference', $first)) { $q[] = !empty($first['reference']) ? 'concurrent de référence' : 'plus de référence'; }
-        if (array_key_exists('visiteLe', $first)) { $q[] = 'visité le ' . $first['visiteLe']; }
-        if (array_key_exists('terrain', $first)) { $q[] = 'relevé : « ' . mb_substr((string) $first['terrain'], 0, 80) . ' »'; }
-        journalAdd('CEO', 'Scouting', $name !== '' ? $name : $id, 'Concurrent qualifié — ' . implode(', ', $q) . ' — ' . $who);
-    } else {
-        journalAdd('CEO', 'Scouting', 'Notes Google', 'Enrichissement Google Places — ' . $n . ' commerces traités, ' . $rated . ' notés');
-    }
-    return ['ok' => true, 'n' => $n];
-}
-
-/**
- * PUT /scouting/reseau/{id} — la position d'un magasin, pointée sur la carte.
- * Elle prime sur la fiche Google : c'est le geste pour un magasin sans fiche
- * raccordée, ou dont la fiche pointe au mauvais endroit.
- */
-function wr_scouting_reseau_put(string $shopId): array
-{
-    $b = body();
-    $lat = (float) ($b['lat'] ?? 0); $lng = (float) ($b['lng'] ?? 0);
-    if ($lat < 49.4 || $lat > 51.6 || $lng < 2.4 || $lng > 6.5) { http_response_code(400); return ['error' => 'position hors de Belgique']; }
-    $nom = magasinConnu($shopId);
-    if ($nom === null) {
-        try { $r = Db::row('SELECT name FROM shops WHERE id = ?', [$shopId]); $nom = $r['name'] ?? null; } catch (PDOException $e) { $nom = null; }
-    }
-    if ($nom === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
-    $pos = setting('scoutingReseau');
-    if (!is_array($pos)) { $pos = []; }
-    $pos[$shopId] = ['lat' => round($lat, 6), 'lng' => round($lng, 6), 'source' => 'saisie', 'le' => date('Y-m-d')];
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['scoutingReseau', json_encode($pos, JSON_UNESCAPED_UNICODE)]);
-    journalAdd('CEO', 'Scouting', $nom, 'Magasin positionné sur la carte du scouting (' . round($lat, 5) . ', ' . round($lng, 5) . ')');
-    return ['ok' => true, 'id' => $shopId, 'lat' => round($lat, 6), 'lng' => round($lng, 6), 'position' => 'saisie'];
-}
-
-/**
- * POST /scouting/concurrents/google — ce que Google dit d'un lot de
- * concurrents (≤ 10) pour le dossier d'implantation : la fiche (note, nombre
- * d'avis, adresse, lien), jusqu'à trois avis, une photo du lieu. Chaque
- * fiche est gardée 30 jours dans ceo_scouting_competitor (google_json) — la
- * limite que Google met au stockage de son contenu — et resservie d'ici là
- * sans nouvel appel. Un concurrent sans fiche raccordée est d'abord cherché
- * par son nom près de sa position, comme pour les notes.
- */
-function wr_scouting_concurrents_google(): array
-{
-    if (!GoogleApi::configured()) {
-        http_response_code(422);
-        return ['error' => 'Clé Google absente — renseignez-la dans Paramètres.'];
-    }
-    $b = body();
-    $rows = $b['rows'] ?? [];
-    if (!is_array($rows) || $rows === []) { http_response_code(400); return ['error' => 'rows attendu']; }
-    // `frais` : le dossier part en PDF — les avis sont relus chez Google, le
-    // cache de trente jours ne sert plus. Une fiche relue il y a moins d'une
-    // heure ne l'est pas deux fois (un second clic sur « PDF » ne coûte rien),
-    // et la photo déjà gardée est reprise : ce sont les avis qui vieillissent.
-    $frais = !empty($b['frais']);
-    @set_time_limit($frais ? 180 : 120);
-    $out = []; $erreur = null; $appels = 0; $caches = 0; $relues = 0;
-    foreach (array_slice(array_values($rows), 0, 10) as $r) {
-        if (!is_array($r)) { continue; }
-        $id = trim((string) ($r['id'] ?? ''));
-        if (!preg_match('/^[nwr]\d{1,15}$/', $id)) { continue; }
-        $name = mb_substr(trim((string) ($r['name'] ?? '')), 0, 200);
-        $lat = (float) ($r['lat'] ?? 0); $lng = (float) ($r['lng'] ?? 0);
-        if ($name === '' || preg_match('/sans nom/iu', $name)) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
-        $cur = Db::row('SELECT place_id, address, rating, reviews, rating_source, google_json, google_at, business_status, last_review_at FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
-        // du cache, s'il a moins de 30 jours — et s'il porte déjà le signe de
-        // vie (statut, dernier avis) : une fiche relevée avant qu'on le garde
-        // est redemandée, sinon le dormant passerait inaperçu un mois de plus
-        $ancien = $cur !== null && $cur['google_json'] !== null ? json_decode((string) $cur['google_json'], true) : null;
-        $age = $cur !== null && $cur['google_at'] !== null ? time() - (int) strtotime((string) $cur['google_at']) : PHP_INT_MAX;
-        if ($cur !== null && $cur['google_json'] !== null && $age < ($frais ? 3600 : 30 * 86400)
-            && ($cur['business_status'] !== null || $cur['last_review_at'] !== null)) {
-            $g = json_decode((string) $cur['google_json'], true);
-            if (is_array($g)) {
-                $g['id'] = $id; $g['cache'] = true;
-                $g['statut'] = (string) ($g['statut'] ?? ($cur['business_status'] ?? ''));
-                $g['dernierAvis'] = $g['dernierAvis'] ?? ($cur['last_review_at'] ?? null);
-                $out[] = $g; $caches++; continue;
-            }
-        }
-        $placeId = trim((string) ($cur['place_id'] ?? ''));
-        if ($placeId === '' && $name !== '' && $lat !== 0.0 && $lng !== 0.0) {
-            GoogleApi::$lastError = null;
-            $ou = trim((string) ($r['addr'] ?? ''));
-            $res = GoogleApi::noteProche($name . ' ' . ($ou !== '' ? $ou : mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120)) . ' Belgique', $lat, $lng);
-            $appels++;
-            if ($res === null) {
-                $msg = GoogleApi::$lastError ?? 'réponse vide';
-                if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) { $erreur = 'Google Places : ' . $msg; break; }
-            } else {
-                $placeId = (string) ($res['placeId'] ?? '');
-            }
-        }
-        if ($placeId === '') { $out[] = ['id' => $id, 'fiche' => false]; continue; }
-        GoogleApi::$lastError = null;
-        $f = GoogleApi::fiche($placeId);
-        $appels++;
-        // Une fiche gardée peut être refusée seule (403) quand Google a changé
-        // son identifiant : la recherche par le nom en redonne un, et un refus
-        // qui ne touche qu'une fiche n'arrête pas les autres. La clé, elle, est
-        // en cause quand la recherche est refusée aussi.
-        if ($f === null && $cur !== null && trim((string) ($cur['place_id'] ?? '')) === $placeId
-            && preg_match('/HTTP (403|404)\b/', (string) GoogleApi::$lastError) && $lat !== 0.0 && $lng !== 0.0) {
-            $ou = trim((string) ($r['addr'] ?? ''));
-            GoogleApi::$lastError = null;
-            $res = GoogleApi::noteProche($name . ' ' . ($ou !== '' ? $ou : mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120)) . ' Belgique', $lat, $lng);
-            $appels++;
-            if ($res === null) {
-                $msg = GoogleApi::$lastError ?? 'réponse vide';
-                if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) { $erreur = 'Google Places : ' . $msg; break; }
-            }
-            $neuf = $res !== null ? (string) ($res['placeId'] ?? '') : '';
-            if ($neuf === $placeId) {
-                // même identifiant : la fiche est bonne, c'est sa lecture directe
-                // que Google refuse — la recherche la rend, avis et photos compris
-                GoogleApi::$lastError = null;
-                $f = GoogleApi::ficheParRecherche($name . ' ' . ($ou !== '' ? $ou : mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120)) . ' Belgique', $placeId, $lat, $lng);
-                $appels++;
-                if ($f === null) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
-                $neuf = '';
-            }
-            if ($f === null && $neuf === '') { $out[] = ['id' => $id, 'fiche' => false]; continue; }
-            if ($f === null) {
-                $placeId = $neuf;
-                GoogleApi::$lastError = null;
-                $f = GoogleApi::fiche($placeId);
-                $appels++;
-                if ($f === null) { $out[] = ['id' => $id, 'fiche' => false]; continue; }
-            }
-        }
-        if ($f === null) {
-            $msg = GoogleApi::$lastError ?? 'réponse vide';
-            if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) { $erreur = 'Google Places : ' . $msg; break; }
-            $out[] = ['id' => $id, 'fiche' => false];
-            continue;
-        }
-        $avis = [];
-        foreach (array_slice($f['derniers'], 0, 3) as $a) {
-            $avis[] = ['auteur' => mb_substr((string) ($a['auteur'] ?? ''), 0, 60), 'note' => (int) $a['note'], 'le' => substr((string) $a['le'], 0, 10),
-                'texte' => $a['texte'] !== null ? mb_substr((string) $a['texte'], 0, 320) : ''];
-        }
-        $photo = null; $photoAuteur = $f['photos'] !== [] ? $f['photos'][0]['auteur'] : '';
-        if ($frais && is_array($ancien) && !empty($ancien['photo'])) {
-            $photo = (string) $ancien['photo']; $photoAuteur = (string) ($ancien['photoAuteur'] ?? $photoAuteur);
-        } elseif ($f['photos'] !== []) { $photo = GoogleApi::photo($f['photos'][0]['nom'], 480); $appels++; }
-        if ($frais) { $relues++; }
-        // Le signe de vie : le plus récent des avis que Google rend (cinq au
-        // plus) et le statut de l'établissement. Un commerce fermé, ou sans
-        // avis depuis plus d'un an, est écarté de l'étude par l'écran.
-        $dernier = null;
-        foreach ($f['derniers'] as $a) { $q = substr((string) ($a['le'] ?? ''), 0, 10); if ($q !== '' && ($dernier === null || $q > $dernier)) { $dernier = $q; } }
-        $statut = mb_substr((string) ($f['statut'] ?? ''), 0, 24);
-        $g = ['id' => $id, 'fiche' => true, 'placeId' => $placeId, 'nom' => $f['nom'], 'adresse' => $f['adresse'], 'note' => $f['note'], 'n' => $f['avis'],
-            'url' => $f['url'], 'avis' => $avis, 'photo' => $photo, 'photoAuteur' => $photoAuteur, 'le' => date('Y-m-d'),
-            'statut' => $statut, 'dernierAvis' => $dernier];
-        Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, updated_at, place_id, address, google_json, google_at, business_status, last_review_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
-            . ' ON DUPLICATE KEY UPDATE'
-            . " rating = IF(rating_source = 'manuel', rating, VALUES(rating)), reviews = IF(rating_source = 'manuel', reviews, VALUES(reviews)),"
-            . " rating_source = IF(rating_source = 'manuel', rating_source, VALUES(rating_source)), updated_at = VALUES(updated_at),"
-            . ' place_id = VALUES(place_id), address = VALUES(address), google_json = VALUES(google_json), google_at = VALUES(google_at),'
-            . ' business_status = VALUES(business_status), last_review_at = VALUES(last_review_at)',
-            [$id, $name, mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120), mb_substr(trim((string) ($r['arr'] ?? '')), 0, 60),
-             $f['note'] !== null ? round((float) $f['note'], 1) : null, $f['avis'], 'google', date('Y-m-d H:i:s'), $placeId, mb_substr((string) ($f['adresse'] ?? ''), 0, 200),
-             json_encode($g, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), $statut !== '' ? $statut : null, $dernier]);
-        $out[] = $g;
-    }
-    if ($out === [] && $erreur === null) { http_response_code(400); return ['error' => 'aucune ligne valide (id OSM, nom, lat, lng attendus)']; }
-    if ($appels > 0) {
-        journalAdd('CEO', 'Scouting', 'Avis Google', 'Fiches Google des concurrents pour un dossier' . ($frais ? ' (avis relus pour le PDF : ' . $relues . ')' : '') . ' — ' . count($out) . ' concurrents, ' . $appels . ' appels, ' . $caches . ' du cache'
-            . ($erreur !== null ? ' — interrompu : ' . $erreur : ''));
-    }
-    if ($out === [] && $erreur !== null) { http_response_code(502); return ['error' => $erreur, 'rows' => []]; }
-    return ['ok' => true, 'rows' => $out, 'appels' => $appels, 'caches' => $caches, 'relues' => $relues, 'erreur' => $erreur];
-}
-
-/**
- * POST /scouting/concurrents/vie — le signe de vie Google de toute la carte,
- * par lots : pour chaque concurrent noté par Google qui n'a pas encore de
- * statut, la fiche (place_id) est interrogée pour son statut et la date du
- * plus récent avis ; sans place_id, une recherche par le nom d'abord. Corps
- * `{ n }` (25 par défaut, 40 au plus) ; la réponse dit ce qui reste, l'appel
- * suivant continue. Une clé refusée ou un quota épuisé arrête le lot.
- */
-function wr_scouting_concurrents_vie(): array
-{
-    if (!GoogleApi::configured()) {
-        http_response_code(422);
-        return ['error' => 'Clé Google absente — renseignez-la dans Paramètres.'];
-    }
-    $b = body();
-    $n = max(1, min(40, (int) ($b['n'] ?? 25)));
-    @set_time_limit(120);
-    $fatal = '/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i';
-    $rows = Db::rows("SELECT osm_id, name, commune, place_id FROM ceo_scouting_competitor
-                       WHERE rating_source = 'google' AND business_status IS NULL AND name NOT LIKE '%sans nom%'
-                       ORDER BY (place_id IS NULL OR place_id = ''), osm_id LIMIT " . $n);
-    $faits = 0; $fermes = 0; $dormants = 0; $appels = 0; $erreur = null; $noms = [];
-    $ilYaUnAn = date('Y-m-d', strtotime('-365 days'));
-    foreach ($rows as $r) {
-        $placeId = trim((string) ($r['place_id'] ?? ''));
-        if ($placeId === '') {
-            // fiche jamais raccordée : la recherche par le nom, près de rien de
-            // précis (la commune), rend l'identifiant et déjà le statut
-            GoogleApi::$lastError = null;
-            $res = GoogleApi::noteProche(trim((string) $r['name'] . ' ' . (string) $r['commune']) . ' Belgique', 50.5, 4.5, 50000);
-            $appels++;
-            if ($res === null) {
-                $msg = GoogleApi::$lastError ?? 'réponse vide';
-                if (preg_match($fatal, $msg)) { $erreur = 'Google Places : ' . $msg; break; }
-                Db::exec("UPDATE ceo_scouting_competitor SET business_status = 'INCONNU' WHERE osm_id = ?", [$r['osm_id']]);
-                $faits++; continue;
-            }
-            $placeId = (string) ($res['placeId'] ?? '');
-            if ($placeId === '') {
-                Db::exec("UPDATE ceo_scouting_competitor SET business_status = 'INCONNU' WHERE osm_id = ?", [$r['osm_id']]);
-                $faits++; continue;
-            }
-            Db::exec('UPDATE ceo_scouting_competitor SET place_id = ? WHERE osm_id = ?', [mb_substr($placeId, 0, 80), $r['osm_id']]);
-        }
-        GoogleApi::$lastError = null;
-        $v = GoogleApi::vie($placeId);
-        $appels++;
-        if ($v === null) {
-            $msg = GoogleApi::$lastError ?? 'réponse vide';
-            if (preg_match($fatal, $msg)) { $erreur = 'Google Places : ' . $msg; break; }
-            // fiche disparue chez Google (404) : elle ne reviendra pas, on le note
-            Db::exec("UPDATE ceo_scouting_competitor SET business_status = 'INCONNU' WHERE osm_id = ?", [$r['osm_id']]);
-            $faits++; continue;
-        }
-        $statut = $v['statut'] !== '' ? mb_substr($v['statut'], 0, 24) : 'INCONNU';
-        Db::exec('UPDATE ceo_scouting_competitor SET business_status = ?, last_review_at = ? WHERE osm_id = ?', [$statut, $v['dernierAvis'], $r['osm_id']]);
-        $faits++;
-        if (str_starts_with($statut, 'CLOSED')) { $fermes++; $noms[] = $r['name'] . ' (' . $r['commune'] . ') — fermé'; }
-        elseif ($v['dernierAvis'] !== null && $v['dernierAvis'] < $ilYaUnAn) { $dormants++; $noms[] = $r['name'] . ' (' . $r['commune'] . ') — dernier avis ' . $v['dernierAvis']; }
-    }
-    $reste = (int) (Db::row("SELECT COUNT(*) n FROM ceo_scouting_competitor WHERE rating_source = 'google' AND business_status IS NULL AND name NOT LIKE '%sans nom%'")['n'] ?? 0);
-    if ($faits > 0) {
-        journalAdd('CEO', 'Scouting', 'Signe de vie', 'Signe de vie Google des concurrents — ' . $faits . ' fiches, ' . $fermes . ' fermée(s), ' . $dormants . ' sans avis depuis un an, ' . $appels . ' appels, reste ' . $reste
-            . ($erreur !== null ? ' — interrompu : ' . $erreur : ''));
-    }
-    return ['ok' => true, 'faits' => $faits, 'fermes' => $fermes, 'dormants' => $dormants, 'appels' => $appels, 'reste' => $reste, 'ecartes' => $noms, 'erreur' => $erreur];
-}
-
-/**
- * POST /scouting/notes — les notes Google d'un lot de commerces (≤ 40).
- *
- * La clé est celle du connecteur Google de Paramètres, la même que pour la
- * réputation des magasins : elle ne quitte pas le serveur, et l'écran n'a plus
- * rien à saisir. Chaque commerce est cherché par son nom près de sa position
- * OSM. Une clé refusée ou un quota épuisé arrête le lot : ce qui a été trouvé
- * avant est gardé et renvoyé, et l'erreur est dite telle que Google la formule.
- * Une note terrain (« manuel ») n'est jamais écrasée par Google.
- */
-function wr_scouting_notes(): array
-{
-    if (!GoogleApi::configured()) {
-        http_response_code(422);
-        return ['error' => 'Clé Google absente — renseignez-la dans Paramètres.'];
-    }
-    $b = body();
-    $rows = $b['rows'] ?? [];
-    if (!is_array($rows) || $rows === []) { http_response_code(400); return ['error' => 'rows attendu']; }
-    $out = []; $rated = 0; $erreur = null;
-    foreach (array_slice(array_values($rows), 0, 40) as $r) {
-        if (!is_array($r)) { continue; }
-        $id = trim((string) ($r['id'] ?? ''));
-        if (!preg_match('/^[nwr]\d{1,15}$/', $id)) { continue; }
-        $name    = mb_substr(trim((string) ($r['name'] ?? '')), 0, 200);
-        $commune = mb_substr(trim((string) ($r['commune'] ?? '')), 0, 120);
-        $arr     = mb_substr(trim((string) ($r['arr'] ?? '')), 0, 60);
-        $lat = (float) ($r['lat'] ?? 0); $lng = (float) ($r['lng'] ?? 0);
-        if ($name === '' || $lat === 0.0 || $lng === 0.0) { continue; }
-        // Un commerce sans nom dans OpenStreetMap ne se cherche pas : Google
-        // rendrait la fiche du voisin le plus proche, et on la lui prêterait.
-        if (preg_match('/sans nom/iu', $name)) { $out[] = ['id' => $id, 'rating' => null, 'reviews' => 0, 'adresse' => null]; continue; }
-        $ou = trim((string) ($r['addr'] ?? ''));
-        GoogleApi::$lastError = null;
-        $res = GoogleApi::noteProche($name . ' ' . ($ou !== '' ? $ou : $commune) . ' Belgique', $lat, $lng);
-        if ($res === null) {
-            $msg = GoogleApi::$lastError ?? 'réponse vide';
-            // Clé refusée, quota épuisé, facturation absente, réseau : les
-            // commerces suivants échoueraient pareil — on s'arrête et on le dit.
-            if (preg_match('/HTTP (0|400|401|403|429|5\d\d)\b|PERMISSION_DENIED|quota|billing|API key|appel impossible/i', $msg)) {
-                $erreur = 'Google Places : ' . $msg;
-                break;
-            }
-            $res = ['note' => null, 'avis' => 0, 'placeId' => '', 'adresse' => '', 'statut' => ''];   // fiche introuvable : retenu, pour ne pas redemander
-        }
-        $placeId = mb_substr((string) ($res['placeId'] ?? ''), 0, 80);
-        $adresse = mb_substr((string) ($res['adresse'] ?? ''), 0, 200);
-        $statut = mb_substr((string) ($res['statut'] ?? ''), 0, 24);
-        Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at, place_id, address, business_status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
-            . ' ON DUPLICATE KEY UPDATE name = VALUES(name), commune = VALUES(commune), arrondissement = VALUES(arrondissement),'
-            . " rating = IF(rating_source = 'manuel', rating, VALUES(rating)),"
-            . " reviews = IF(rating_source = 'manuel', reviews, VALUES(reviews)),"
-            . " rating_source = IF(rating_source = 'manuel', rating_source, VALUES(rating_source)),"
-            . ' updated_at = VALUES(updated_at),'
-            . " place_id = IF(VALUES(place_id) = '', place_id, VALUES(place_id)), address = IF(VALUES(address) = '', address, VALUES(address)),"
-            . ' business_status = IF(VALUES(business_status) IS NULL, business_status, VALUES(business_status))',
-            [$id, $name, $commune, $arr, $res['note'], $res['avis'], 'google', null, date('Y-m-d H:i:s'), $placeId !== '' ? $placeId : null, $adresse !== '' ? $adresse : null, $statut !== '' ? $statut : null]);
-        $out[] = ['id' => $id, 'rating' => $res['note'], 'reviews' => $res['avis'], 'adresse' => $adresse !== '' ? $adresse : null, 'statut' => $statut];
-        if ($res['note'] !== null) { $rated++; }
-    }
-    if ($out === [] && $erreur === null) {
-        http_response_code(400);
-        return ['error' => 'aucune ligne valide (id OSM, nom, lat, lng attendus)'];
-    }
-    if ($out !== []) {
-        journalAdd('CEO', 'Scouting', 'Notes Google', 'Enrichissement Google Places — ' . count($out) . ' commerces traités, '
-            . $rated . ' notés' . ($erreur !== null ? ' — interrompu : ' . $erreur : ''));
-    }
-    if ($out === [] && $erreur !== null) { http_response_code(502); return ['error' => $erreur, 'rows' => []]; }
-    return ['ok' => true, 'rows' => $out, 'n' => count($out), 'notes' => $rated, 'erreur' => $erreur];
-}
-
-/** POST /scouting/candidates — zone candidate retenue depuis sa fiche. */
-function wr_scouting_candidate_post(): array
-{
-    $b = body();
-    $id = (int) ($b['id'] ?? 0);
-    if ($id <= 0) { $id = (int) round(microtime(true) * 1000); }
-    $name = mb_substr((string) ($b['name'] ?? ''), 0, 200);
-    $commune = mb_substr((string) ($b['commune'] ?? ''), 0, 120);
-    // La zone dessinée (type, sommets, rayon) et les hypothèses du moment :
-    // le dossier d'une zone retenue se refait plus tard sur la même zone, et
-    // dit ce qui a changé depuis.
-    $zone = scoutingZoneJson($b['zone'] ?? null);
-    $hyp = null;
-    if (is_array($b['hyp'] ?? null)) {
-        $h = [];
-        foreach ($b['hyp'] as $k => $v) {
-            if (is_string($k) && preg_match('/^[a-zA-Z]{1,24}$/', $k) === 1 && is_numeric($v)) { $h[$k] = (float) $v; }
-            if (count($h) >= 24) { break; }
-        }
-        $hyp = $h === [] ? null : json_encode($h);
-    }
-    Db::exec('INSERT INTO ceo_scouting_candidate (id, name, commune, arrondissement, province, lat, lng, households, market, emprise, revenue, score, shops, strong, revenue_m2, zone_json, hyp_json, created_at)'
-        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name = VALUES(name)', [
-        $id, $name, $commune, mb_substr((string) ($b['arr'] ?? ''), 0, 60), mb_substr((string) ($b['prov'] ?? ''), 0, 60),
-        (float) ($b['lat'] ?? 0), (float) ($b['lng'] ?? 0),
-        max(0, (int) round((float) ($b['hh'] ?? 0))), max(0, (int) round((float) ($b['market'] ?? 0))),
-        max(0.0, min(1.0, (float) ($b['emprise'] ?? 0))), max(0, (int) round((float) ($b['ca'] ?? 0))),
-        max(0, min(100, (int) ($b['score'] ?? 0))), max(0, (int) ($b['n'] ?? 0)), max(0, (int) ($b['strong'] ?? 0)),
-        max(0, (int) round((float) ($b['m2'] ?? 0))), $zone, $hyp, date('Y-m-d H:i:s'),
-    ]);
-    journalAdd('CEO', 'Scouting', $commune !== '' ? $commune : '—',
-        'Zone candidate retenue — ' . $name . ' · CA estimé ' . number_format((float) ($b['ca'] ?? 0), 0, ',', '.') . ' € · score ' . (int) ($b['score'] ?? 0) . '/100');
-    return ['ok' => true, 'id' => $id];
-}
-
-/**
- * Une zone dessinée, telle que l'écran la garde : un type, des sommets
- * (au plus 400, en degrés), un rayon en km, le temps et le mode d'un
- * isochrone. Rien d'autre n'entre en base.
- */
-function scoutingZoneJson($z): ?string
-{
-    if (!is_array($z) || !is_array($z['poly'] ?? null)) { return null; }
-    $poly = [];
-    foreach ($z['poly'] as $p) {
-        if (!is_array($p) || !isset($p[0], $p[1]) || !is_numeric($p[0]) || !is_numeric($p[1])) { continue; }
-        $poly[] = [round((float) $p[0], 5), round((float) $p[1], 5)];
-        if (count($poly) >= 400) { break; }
-    }
-    if (count($poly) < 3) { return null; }
-    $type = (string) ($z['type'] ?? 'polygone');
-    if (!in_array($type, ['cercle', 'polygone', 'rectangle', 'isochrone'], true)) { $type = 'polygone'; }
-    $out = ['type' => $type, 'poly' => $poly];
-    if (isset($z['rayon']) && is_numeric($z['rayon'])) { $out['rayon'] = round((float) $z['rayon'], 2); }
-    if (isset($z['minutes']) && is_numeric($z['minutes'])) { $out['minutes'] = (int) $z['minutes']; }
-    if (isset($z['mode']) && in_array($z['mode'], ['auto', 'pedestrian'], true)) { $out['mode'] = $z['mode']; }
-    return json_encode($out);
-}
-
-/**
- * PUT /scouting/references — la liste complète des points de comparaison
- * saisis à la main (au plus trente). Chaque point : un nom, un statut, une
- * position facultative en Belgique, et des chiffres positifs ou absents.
- */
-function wr_scouting_references_put(): array
-{
-    $b = body();
-    $liste = is_array($b['references'] ?? null) ? $b['references'] : [];
-    $num = static function ($v): ?float {
-        if ($v === null || $v === '' || !is_numeric($v)) { return null; }
-        $f = (float) $v;
-        return is_finite($f) && $f >= 0 ? round($f, 4) : null;
-    };
-    $out = [];
-    foreach ($liste as $r) {
-        if (!is_array($r)) { continue; }
-        $nom = mb_substr(trim((string) ($r['nom'] ?? '')), 0, 80);
-        if ($nom === '') { continue; }
-        $lat = $num($r['lat'] ?? null); $lng = $num($r['lng'] ?? null);
-        if ($lat === null || $lng === null || $lat < 49.4 || $lat > 51.6 || $lng < 2.4 || $lng > 6.5) { $lat = null; $lng = null; }
-        $o = ['id' => mb_substr((string) ($r['id'] ?? ''), 0, 40) ?: (string) round(microtime(true) * 1000), 'nom' => $nom,
-            'statut' => mb_substr(trim((string) ($r['statut'] ?? '')), 0, 80), 'lat' => $lat, 'lng' => $lng];
-        foreach (['pop', 'hh', 'taille', 'revenu', 'jeunes', 'actifs', 'seniors', 'depense', 'marche', 'emprise', 'ca', 'surface'] as $k) { $o[$k] = $num($r[$k] ?? null); }
-        $out[] = $o;
-        if (count($out) >= 30) { break; }
-    }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['scoutingReferences', json_encode($out, JSON_UNESCAPED_UNICODE)]);
-    journalAdd('CEO', 'Scouting', '—', 'Points de comparaison du scouting enregistrés — ' . count($out) . ' point' . (count($out) > 1 ? 's' : ''));
-    return ['ok' => true, 'references' => $out];
-}
-
-/**
- * PUT /scouting/magasins/{id} — les données d'étude d'un magasin du réseau,
- * saisies à la main : ce que l'étude de marché disait (ménages, dépense,
- * emprise, CA, surface…), la date de l'étude, et le CA annuel prévu
- * réaliste après ouverture — celui auquel le réel se compare. Un corps vide
- * efface la saisie et rend le magasin à ses valeurs d'étude d'origine.
- * Ligne `ceo_app_setting.scoutingMagasins`, une entrée par magasin.
- */
-function wr_scouting_magasin_put(string $shopId): array
-{
-    $nom = magasinConnu($shopId);
-    if ($nom === null) {
-        try { $r = Db::row('SELECT name FROM shops WHERE id = ?', [$shopId]); $nom = $r['name'] ?? null; } catch (PDOException $e) { $nom = null; }
-    }
-    if ($nom === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
-    $b = body();
-    $num = static function ($v): ?float {
-        if ($v === null || $v === '' || !is_numeric($v)) { return null; }
-        $f = (float) $v;
-        return is_finite($f) && $f >= 0 ? round($f, 4) : null;
-    };
-    $o = [];
-    foreach (['pop', 'hh', 'taille', 'revenu', 'jeunes', 'actifs', 'seniors', 'depense', 'marche', 'emprise', 'ca', 'surface', 'caPrevu'] as $k) {
-        $v = $num($b[$k] ?? null);
-        if ($v !== null) { $o[$k] = $v; }
-    }
-    $etude = mb_substr(trim((string) ($b['etude'] ?? '')), 0, 40);
-    if ($etude !== '') { $o['etude'] = $etude; }
-    // l'ouverture : mm/aaaa ou aaaa-mm, gardée « AAAA-MM »
-    $ouv = trim((string) ($b['ouverture'] ?? ''));
-    if (preg_match('/^(\d{1,2})\s*[\/.-]\s*(\d{4})$/', $ouv, $m) === 1) { $o['ouverture'] = sprintf('%04d-%02d', (int) $m[2], max(1, min(12, (int) $m[1]))); }
-    elseif (preg_match('/^(\d{4})\s*[\/.-]\s*(\d{1,2})$/', $ouv, $m) === 1) { $o['ouverture'] = sprintf('%04d-%02d', (int) $m[1], max(1, min(12, (int) $m[2]))); }
-    elseif (preg_match('/^\d{4}$/', $ouv) === 1) { $o['ouverture'] = $ouv; }
-    $note = mb_substr(trim((string) ($b['note'] ?? '')), 0, 300);
-    if ($note !== '') { $o['note'] = $note; }
-    $tous = setting('scoutingMagasins');
-    if (!is_array($tous)) { $tous = []; }
-    if ($o === []) { unset($tous[$shopId]); } else { $o['le'] = date('Y-m-d'); $tous[$shopId] = $o; }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['scoutingMagasins', json_encode($tous, JSON_UNESCAPED_UNICODE)]);
-    journalAdd('CEO', 'Scouting', $nom, $o === [] ? 'Données d\'étude du magasin effacées — retour aux valeurs de l\'étude' :
-        'Données d\'étude du magasin saisies' . (isset($o['caPrevu']) ? ' — CA prévu réaliste ' . number_format($o['caPrevu'], 0, ',', ' ') . ' €' : ''));
-    return ['ok' => true, 'id' => $shopId, 'saisie' => $o === [] ? null : $o];
-}
-
-/** DELETE /scouting/candidates/{id} */
-function wr_scouting_candidate_delete(int $id): array
-{
-    $c = Db::row('SELECT name, commune FROM ceo_scouting_candidate WHERE id = ?', [$id]);
-    if ($c === null) { http_response_code(404); return ['error' => 'zone inconnue']; }
-    Db::exec('DELETE FROM ceo_scouting_candidate WHERE id = ?', [$id]);
-    journalAdd('CEO', 'Scouting', $c['commune'], 'Zone candidate retirée — ' . $c['name']);
-    return ['ok' => true];
-}
-
-/** PUT /scouting/populations — import CSV StatBel : { "populations": { "NIS": population } }. */
-function wr_scouting_populations_put(): array
-{
-    $b = body();
-    $pops = $b['populations'] ?? [];
-    if (!is_array($pops) || $pops === []) { http_response_code(400); return ['error' => 'populations attendu : { "NIS": population }']; }
-    $n = 0;
-    foreach ($pops as $ins => $pop) {
-        $ins = (string) $ins; $pop = (int) $pop;
-        if (!preg_match('/^\d{5}$/', $ins) || $pop <= 0) { continue; }
-        Db::exec('INSERT INTO ceo_scouting_population (ins, population, imported_at) VALUES (?,?,?)'
-            . ' ON DUPLICATE KEY UPDATE population = VALUES(population), imported_at = VALUES(imported_at)',
-            [$ins, $pop, date('Y-m-d H:i:s')]);
-        $n++;
-    }
-    $fichier = isset($b['fichier']) ? ' (' . mb_substr((string) $b['fichier'], 0, 80) . ')' : '';
-    journalAdd('CEO', 'Scouting', 'Population', 'Import StatBel — ' . $n . ' communes mises à jour' . $fichier);
-    return ['ok' => true, 'n' => $n];
-}
-
 /**
  * La photo du comptoir monté : une par magasin, zone et jour, prise sur la
  * tablette une fois le comptoir dressé. C'est la trace du montage, à côté de
@@ -4159,81 +3488,4 @@ function wr_plano_montage(): array
         . ' ON DUPLICATE KEY UPDATE photo = VALUES(photo), auteur = VALUES(auteur), quand = VALUES(quand)',
         [$sid, $zid, $jour, $chemin, $auteur, date('Y-m-d H:i:s')]);
     return ['ok' => true, 'photo' => $chemin, 'auteur' => $auteur, 'quand' => date('Y-m-d H:i:s')];
-}
-
-/** Les types de concurrent que le scouting distingue (retour de l'étude de potentiel du 09/10/2026). */
-const SCOUTING_TYPES = ['boulangerie', 'patisserie', 'sandwicherie', 'friterie', 'snack', 'supermarche', 'superette', 'autre'];
-
-/**
- * POST /scouting/concurrents — un commerce absent d'OpenStreetMap, vu sur place : nom, position, commune, type,
- * et la même qualification qu'un concurrent relevé. Identifiant « m » + horodatage ; il vit dans
- * ceo_scouting_competitor avec sa position, et l'écran le mêle aux commerces relevés.
- */
-function wr_scouting_concurrent_post(): array
-{
-    $b = body();
-    $name = mb_substr(trim((string) ($b['name'] ?? '')), 0, 200);
-    $lat = (float) ($b['lat'] ?? 0); $lng = (float) ($b['lng'] ?? 0);
-    if ($name === '' || $lat < 49.4 || $lat > 51.6 || $lng < 2.3 || $lng > 6.5) { http_response_code(400); return ['error' => 'nom et position en Belgique attendus']; }
-    $id = 'm' . (string) (int) round(microtime(true) * 1000);
-    $type = in_array($b['type'] ?? '', SCOUTING_TYPES, true) ? $b['type'] : 'boulangerie';
-    $rating = isset($b['rating']) && is_numeric($b['rating']) ? max(0, min(5, round((float) $b['rating'], 1))) : null;
-    $force = isset($b['force']) && is_numeric($b['force']) ? max(0, min(100, (int) $b['force'])) : null;
-    $commune = mb_substr(trim((string) ($b['commune'] ?? '')), 0, 120); $arr = mb_substr(trim((string) ($b['arr'] ?? '')), 0, 60);
-    $comment = ($b['comment'] ?? '') === '' ? null : mb_substr((string) $b['comment'], 0, 200);
-    $terrain = ($b['terrain'] ?? '') === '' ? null : mb_substr((string) $b['terrain'], 0, 500);
-    $visite = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['visiteLe'] ?? '')) ? (string) $b['visiteLe'] : null;
-    Db::exec('INSERT INTO ceo_scouting_competitor (osm_id, name, commune, arrondissement, rating, reviews, rating_source, comment, updated_at, type, force_manuelle, reference, visite_le, terrain, lat, lng) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-        [$id, $name, $commune, $arr, $rating, $rating !== null ? 0 : null, $rating !== null ? 'manuel' : null, $comment, date('Y-m-d H:i:s'), $type, $force, (int) !empty($b['reference']), $visite, $terrain, round($lat, 6), round($lng, 6)]);
-    journalAdd('CEO', 'Scouting', $commune !== '' ? $commune : $name, 'Concurrent ajouté à la main — ' . $name . ' (' . $type . ')' . ($commune !== '' ? ' · ' . $commune : '') . ' · ' . number_format($lat, 4, '.', '') . ', ' . number_format($lng, 4, '.', ''));
-    return ['ok' => true, 'id' => $id, 'concurrent' => ['id' => $id, 'name' => $name, 'commune' => $commune, 'arr' => $arr, 'lat' => round($lat, 6), 'lng' => round($lng, 6), 'type' => $type,
-        'rating' => $rating, 'reviews' => $rating !== null ? 0 : null, 'source' => $rating !== null ? 'manuel' : null, 'comment' => $comment, 'force' => $force,
-        'reference' => !empty($b['reference']), 'visiteLe' => $visite, 'terrain' => $terrain, 'adresse' => null, 'statut' => null, 'dernierAvis' => null]];
-}
-
-/** DELETE /scouting/concurrents/{m…} — retire un commerce ajouté à la main (jamais un relevé OpenStreetMap). */
-function wr_scouting_concurrent_delete(string $id): array
-{
-    if (!preg_match('/^m\d{1,15}$/', $id)) { http_response_code(400); return ['error' => 'identifiant « m… » attendu']; }
-    $cur = Db::row('SELECT name, commune FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
-    if ($cur === null) { http_response_code(404); return ['error' => 'concurrent inconnu']; }
-    Db::exec('DELETE FROM ceo_scouting_competitor WHERE osm_id = ?', [$id]);
-    journalAdd('CEO', 'Scouting', $cur['commune'] !== '' ? $cur['commune'] : $cur['name'], 'Concurrent ajouté à la main retiré — ' . $cur['name']);
-    return ['ok' => true];
-}
-
-/**
- * Le relevé terrain d'une zone candidate, tel qu'il entre en base : la visite, ce que le terrain montre
- * (visibilité, accès, façade, parking), les flux mesurés par axe, et des remarques. Chaînes bornées, rien
- * d'autre. Null si rien n'est rempli.
- */
-function scoutingTerrainJson($t): ?string
-{
-    if (!is_array($t)) { return null; }
-    $s = static fn ($v, int $max) => mb_substr(trim((string) (is_scalar($v) ? $v : '')), 0, $max);
-    $date = static fn ($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $v) ? (string) $v : '';
-    $out = ['visiteLe' => $date($t['visiteLe'] ?? ''), 'visibilite' => $s($t['visibilite'] ?? '', 300), 'acces' => $s($t['acces'] ?? '', 300),
-        'facade' => $s($t['facade'] ?? '', 300), 'parking' => $s($t['parking'] ?? '', 200), 'remarques' => $s($t['remarques'] ?? '', 800), 'flux' => []];
-    foreach ((array) ($t['flux'] ?? []) as $f) {
-        if (!is_array($f)) { continue; }
-        $axe = $s($f['axe'] ?? '', 80);
-        if ($axe === '') { continue; }
-        $out['flux'][] = ['axe' => $axe, 'vehJour' => max(0, (int) ($f['vehJour'] ?? 0)), 'sens' => $s($f['sens'] ?? '', 60), 'source' => $s($f['source'] ?? '', 80), 'le' => $date($f['le'] ?? '')];
-        if (count($out['flux']) >= 6) { break; }
-    }
-    $vide = $out['visiteLe'] === '' && $out['visibilite'] === '' && $out['acces'] === '' && $out['facade'] === '' && $out['parking'] === '' && $out['remarques'] === '' && $out['flux'] === [];
-    return $vide ? null : json_encode($out, JSON_UNESCAPED_UNICODE);
-}
-
-/** PUT /scouting/candidates/{id}/terrain — le relevé terrain d'une zone retenue ; un relevé vide l'efface. */
-function wr_scouting_candidate_terrain(int $id): array
-{
-    $cur = Db::row('SELECT id, name, commune FROM ceo_scouting_candidate WHERE id = ?', [$id]);
-    if ($cur === null) { http_response_code(404); return ['error' => 'zone candidate inconnue']; }
-    $json = scoutingTerrainJson(body());
-    Db::exec('UPDATE ceo_scouting_candidate SET terrain_json = ? WHERE id = ?', [$json, $id]);
-    $t = $json !== null ? json_decode($json, true) : null;
-    journalAdd('CEO', 'Scouting', (string) $cur['commune'], $t === null ? 'Relevé terrain effacé — ' . $cur['name']
-        : 'Relevé terrain — ' . $cur['name'] . ($t['visiteLe'] !== '' ? ' · visite du ' . $t['visiteLe'] : '') . ($t['flux'] !== [] ? ' · ' . count($t['flux']) . ' axe(s) mesuré(s)' : ''));
-    return ['ok' => true, 'id' => $id, 'terrain' => $t];
 }

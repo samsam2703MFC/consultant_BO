@@ -1,8 +1,10 @@
-{# components/bottom_nav.twig #}
+{# components/bottom_nav.twig — quatre onglets : Accueil et Planning (revenus le 24/10/2026, Sam : « il manque l'icône dans le
+   menu », « remettre aussi Planning »), Primes et Profil. Statistiques reste hors du menu pour le moment (la page reste à
+   /statistiques ; la connexion ouvre l'Accueil, où sont les tâches). Pour en remettre un : sa ligne ici, { key, label,
+   icon, href }. #}
 {% set items = items ?? [
-    { key: 'dashboard', label: translations.home ?? 'Home', icon: 'bi-house', href: ROOT ~ '/dashboard' },
+    { key: 'dashboard', label: translations.home ?? 'Home',         icon: 'bi-house',     href: ROOT ~ '/dashboard' },
     { key: 'schedule',  label: translations.schedule ?? 'Schedule', icon: 'bi-calendar3', href: ROOT ~ '/schedule' },
-    { key: 'tasks',     label: translations.tasks ?? 'Tasks', icon: 'bi-check2-square', href: ROOT ~ '/tasks' },
     { key: 'primes',    label: translations.bonuses ?? 'Bonuses', icon: 'bi-trophy', href: ROOT ~ '/primes' },
     { key: 'profile',   label: translations.profile ?? 'Profile', icon: 'bi-person', href: ROOT ~ '/me' },
 ] %}

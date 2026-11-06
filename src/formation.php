@@ -1,1320 +1,1356 @@
 <?php
 declare(strict_types=1);
 
-/*
- * FORMATION — LES STANDARDS DU RÉSEAU (SOP), EN FRANÇAIS ET EN NÉERLANDAIS.
+/**
+ * Module Formation (page /formation/, demande du 31/10/2026).
  *
- * Les 25 SOP du Drive « L'Atelier Halle — SOP — dernières versions retrouvées » ont été reprises en entier
- * (data/formation/sops/*.json : texte d'origine et sa traduction, photos dans public/formation/photos/) et
- * rangées dans nos tables au premier appel. Nos bases deviennent la source ; le Drive devient l'archive
- * (décisions du 05/11/2026, docs/maquettes/formation/LISEZMOI.md).
+ * Le référentiel RH du panel (TFBuddy), lu tel quel et rangé pour être lu :
  *
- *  ceo_sop           une ligne par SOP : code, famille (01 à 04), poste, version en vigueur, état des deux
- *                    langues (origine / relue / à relire), compétence du panel, titres FR et NL
- *  ceo_sop_version   le contenu de chaque version publiée — JSON FR + NL : sections, étapes, points
- *                    critiques, quiz. Les versions précédentes restent lisibles.
- *  ceo_sop_suivi     une personne × une SOP : lue, quiz réussi, « vu faire » par la responsable du magasin
- *  ceo_sop_personne  une personne d'un magasin : ses postes, sa langue, si elle valide « vu faire »
+ *   poste (/positions)
+ *     └── niveau = sous-poste (/positions/{id}/levels)
+ *           └── compétences du niveau (/position-levels/{id}/competencies)
+ *                 ├── formations       (/competencies/{id}?include=trainings)
+ *                 ├── procédures       (… include=operational_procedures)
+ *                 └── ressources       (… include=knowledge_resources)
  *
- * LA TABLETTE DU POSTE (public/formation/tablette.html — l'onglet SOP de l'app Cuisine y mène) : on choisit
- * son nom et on tape son PIN, vérifié au panel (GET /shops/{id}/employees) comme pour les checklists de l'app
- * Cuisine ; le PIN ne quitte jamais le serveur. Ensuite le pas à pas, le quiz, puis la responsable valide
- * « vu faire » avec SON PIN. Les routes /formation/tablette/* sont ouvertes sans session cockpit : chaque
- * écriture porte un PIN ou un jeton signé (HMAC, secret de session du cockpit, 4 h).
+ * Et à côté : le catalogue complet des compétences (/competencies, rangé par
+ * section › catégorie › sous-catégorie), les formations (/operational-
+ * framework/trainings), les procédures opératoires, la base de connaissances,
+ * les compétences produit, les postes de travail, et les équipes d'un magasin
+ * (compétences acquises face à celles du niveau tenu).
  *
- * LES COMPÉTENCES sont celles du panel (décision du 05/11/2026) : chaque SOP se rattache à une compétence
- * dans Rédaction. Une compétence est acquise par une personne quand chacune de ses SOP publiées, pour les
- * postes de cette personne, a été vue faire à la version en vigueur.
+ * LECTURE SEULE. Aucune route de ce fichier n'écrit dans le panel : les POST,
+ * PUT, PATCH et DELETE du référentiel sont documentés dans le catalogue de
+ * l'écran « API », pas appelés.
  *
- * Contrat : docs/contrat-api.md § Formation.
+ * Pourquoi /positions et pas /career-stages : le swagger du panel déclare
+ * toutes les routes « HR career routes » (career-paths, career-stages, leurs
+ * compétences et exigences) en 500 « Registered handler requests a missing
+ * controller ». Les postes et leurs niveaux vivent sous /positions et
+ * /position-levels, qui répondent. Les deux sont sondés par l'écran API.
+ *
+ * Les routes sans contrat dans le swagger (positions, niveaux, formations,
+ * procédures…) n'ont pas de forme garantie : chaque lecture prend le premier
+ * champ présent parmi plusieurs noms plausibles, et garde les autres champs
+ * scalaires dans `brut` pour que l'écran montre ce qui est vraiment venu.
  */
 
-const FO_LANGUES = ['fr', 'nl'];
-const FO_POSTES = ['vente', 'cuisson', 'production', 'nettoyage'];
-const FO_DOSSIERS = [
-    '01' => ['fr' => 'Magasin et vente', 'nl' => 'Winkel en verkoop'],
-    '02' => ['fr' => 'Cuisson et production', 'nl' => 'Bakken en productie'],
-    '03' => ['fr' => 'Nettoyage et fermeture', 'nl' => 'Schoonmaak en sluiting'],
-    '04' => ['fr' => 'Fiches de référence', 'nl' => 'Referentiefiches'],
-];
-const FO_TRAD = ['origine', 'relue', 'a_relire'];
-const FO_JETON_S = 4 * 3600;            // un jeton de la tablette vaut 4 h
-const FO_PIN_ESSAIS = 5;                // essais de PIN manqués avant blocage…
-const FO_PIN_BLOCAGE_S = 600;           // … de 10 minutes, pour cette personne de ce magasin
-const FO_EQUIPE_CACHE_S = 6 * 3600;     // les noms et rôles du panel, gardés 6 h (jamais le PIN)
-const FO_COMPETENCES_CACHE_S = 86400;   // la liste des compétences du panel, gardée un jour
-const FO_FIL_JOURS = 14;
-
-function foDataDir(): string { return __DIR__ . '/../data/formation'; }
-
-/* ═══ Schéma et reprise ═══════════════════════════════════════════════════════════════════════════ */
-
-/** Les tables de la formation ; la reprise du Drive au premier passage (ceo_sop vide). Idempotent. */
-function ensureFormation(): void
+/** Clés jamais renvoyées au navigateur (secrets, données personnelles, salaire). */
+function fmSecret(string $k): bool
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_sop ('
-        . 'id VARCHAR(32) NOT NULL PRIMARY KEY,'
-        . 'code VARCHAR(40) NULL,'
-        . "type VARCHAR(20) NOT NULL DEFAULT 'SOP',"
-        . "dossier CHAR(2) NOT NULL DEFAULT '01',"
-        . "poste VARCHAR(20) NOT NULL DEFAULT 'vente',"
-        . 'moment VARCHAR(20) NULL,'
-        . "statut VARCHAR(12) NOT NULL DEFAULT 'publiee',"
-        . "version VARCHAR(12) NOT NULL DEFAULT '1.0',"
-        . "version_revalider VARCHAR(12) NOT NULL DEFAULT '0',"
-        . "langue_origine VARCHAR(5) NOT NULL DEFAULT 'FR',"
-        . "trad_fr VARCHAR(10) NOT NULL DEFAULT 'origine',"
-        . "trad_nl VARCHAR(10) NOT NULL DEFAULT 'a_relire',"
-        . 'competence_id VARCHAR(40) NULL,'
-        . 'competence_nom VARCHAR(190) NULL,'
-        . 'titre_fr VARCHAR(190) NOT NULL,'
-        . "titre_nl VARCHAR(190) NOT NULL DEFAULT '',"
-        . 'objectif_fr TEXT NULL,'
-        . 'objectif_nl TEXT NULL,'
-        . 'duree VARCHAR(190) NULL,'
-        . 'nb_etapes INT NOT NULL DEFAULT 0,'
-        . 'nb_photos INT NOT NULL DEFAULT 0,'
-        . 'ordre INT NOT NULL DEFAULT 0,'
-        . 'source TEXT NULL,'
-        . 'maj_le DATETIME NOT NULL,'
-        . 'maj_par VARCHAR(120) NULL,'
-        . 'KEY idx_dossier (dossier, ordre)'
-        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_sop_version ('
-        . 'sop_id VARCHAR(32) NOT NULL,'
-        . 'version VARCHAR(12) NOT NULL,'
-        . 'contenu MEDIUMTEXT NOT NULL,'
-        . 'note VARCHAR(500) NULL,'
-        . 'revalider TINYINT(1) NOT NULL DEFAULT 0,'
-        . 'publie_le DATETIME NOT NULL,'
-        . 'publie_par VARCHAR(120) NULL,'
-        . 'PRIMARY KEY (sop_id, version)'
-        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_sop_suivi ('
-        . 'shop_id VARCHAR(32) NOT NULL,'
-        . 'employee_id INT NOT NULL,'
-        . 'sop_id VARCHAR(32) NOT NULL,'
-        . "employee_nom VARCHAR(120) NOT NULL DEFAULT '',"
-        . "version VARCHAR(12) NOT NULL DEFAULT '0',"
-        . 'lu_le DATETIME NULL,'
-        . 'quiz_le DATETIME NULL,'
-        . 'quiz_score TINYINT NULL,'
-        . 'quiz_essais INT NOT NULL DEFAULT 0,'
-        . 'vu_le DATETIME NULL,'
-        . 'vu_version VARCHAR(12) NULL,'
-        . 'vu_par_id INT NULL,'
-        . 'vu_par_nom VARCHAR(120) NULL,'
-        . 'note VARCHAR(500) NULL,'
-        . 'maj_le DATETIME NOT NULL,'
-        . 'PRIMARY KEY (shop_id, employee_id, sop_id),'
-        . 'KEY idx_sop (sop_id),'
-        . 'KEY idx_maj (shop_id, maj_le)'
-        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_sop_personne ('
-        . 'shop_id VARCHAR(32) NOT NULL,'
-        . 'employee_id INT NOT NULL,'
-        . "nom VARCHAR(120) NOT NULL DEFAULT '',"
-        . 'postes VARCHAR(80) NULL,'
-        . 'valideur TINYINT(1) NULL,'
-        . 'langue CHAR(2) NULL,'
-        . 'maj_le DATETIME NOT NULL,'
-        . 'PRIMARY KEY (shop_id, employee_id)'
-        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    if ((int) (Db::row('SELECT COUNT(*) AS n FROM ceo_sop')['n'] ?? 0) === 0) { foImporter(); }
+    return (bool) preg_match('/pass|^pin$|_pin$|^pin_|token|secret|hash|salt|login|phone|e-?mail|money|salary|wage|iban|bank|birth|pesel|^nip$|ssn|address|cookie|session/i', $k);
 }
 
-/**
- * La reprise : chaque data/formation/sops/<id>.json absent de ceo_sop y entre, version d'origine comprise.
- * Ne réécrit jamais une SOP déjà en base (nos bases sont la source). Rend le nombre de SOP ajoutées.
- */
-function foImporter(): int
+/** Copie récursive sans les clés sensibles, chaînes bornées. */
+function fmScrub(mixed $v, int $prof = 0): mixed
 {
-    $index = json_decode((string) @file_get_contents(foDataDir() . '/index.json'), true);
-    $ordre = is_array($index) && is_array($index['ordre'] ?? null) ? array_flip(array_map('strval', $index['ordre'])) : [];
-    $reprise = is_array($index) ? (string) ($index['reprise'] ?? '') : '';
+    if (is_string($v)) { return mb_substr($v, 0, 4000); }
+    if (!is_array($v)) { return $v; }
+    if ($prof > 6) { return '…'; }
+    $o = [];
     $n = 0;
-    foreach (glob(foDataDir() . '/sops/*.json') ?: [] as $f) {
-        $j = json_decode((string) file_get_contents($f), true);
-        if (!is_array($j) || !is_string($j['id'] ?? null)) { continue; }
-        $id = foId($j['id']);
-        if ($id === null || Db::row('SELECT id FROM ceo_sop WHERE id = ?', [$id]) !== null) { continue; }
-        $c = foContenu($j);
-        if ($c['titre']['fr'] === '' && $c['titre']['nl'] === '') { continue; }
-        $lo = strtoupper((string) ($j['langue_origine'] ?? 'FR'));
-        $lo = in_array($lo, ['FR', 'NL', 'FR-NL', 'NL-FR'], true) ? str_replace('NL-FR', 'FR-NL', $lo) : 'FR';
-        $ver = foVersion((string) ($j['version'] ?? '1.0'));
-        $now = date('Y-m-d H:i:s');
-        $st = foStats($c);
-        Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, moment, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
-                    titre_fr, titre_nl, objectif_fr, objectif_nl, duree, nb_etapes, nb_photos, ordre, source, maj_le, maj_par)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
-            $id, foCourt($j['code'] ?? null, 40), foType($j['type'] ?? 'SOP'), foDossier($j['dossier'] ?? '01'), foPoste($j['poste'] ?? 'vente'),
-            foCourt($j['moment'] ?? null, 20), ($j['statut'] ?? null) === 'a_valider' ? 'a_valider' : 'publiee', $ver, $ver, $lo,
-            str_contains($lo, 'FR') ? 'origine' : 'a_relire', str_contains($lo, 'NL') ? 'origine' : 'a_relire',
-            mb_substr($c['titre']['fr'] ?: $c['titre']['nl'], 0, 190), mb_substr($c['titre']['nl'], 0, 190), $c['objectif']['fr'], $c['objectif']['nl'],
-            foCourt($c['duree'], 190), $st['etapes'], $st['photos'], (int) ($ordre[$id] ?? 900 + $n),
-            isset($j['source']) ? json_encode($j['source'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null, $now, 'Reprise du Drive']);
-        Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
-            [$id, $ver, foJson($c), 'Reprise du Drive' . ($reprise !== '' ? ' (' . $reprise . ')' : ''), $now, 'Reprise du Drive']);
-        $n++;
+    foreach ($v as $k => $x) {
+        if (is_string($k) && fmSecret($k)) { continue; }
+        if (++$n > 200) { break; }
+        $o[$k] = fmScrub($x, $prof + 1);
     }
-    if ($n > 0) {
-        try { journalAdd('Formation', 'Reprise', null, $n . ' SOP reprises du Drive et rangées dans nos bases (FR et NL)'); } catch (Throwable $e) { /* le journal ne bloque pas */ }
+    return $o;
+}
+
+/** Les champs scalaires d'une ligne (hors secrets) : ce que l'écran affiche en « champs bruts ». */
+function fmScalaires(array $r): array
+{
+    $o = [];
+    foreach ($r as $k => $v) {
+        if (!is_string($k) || fmSecret($k)) { continue; }
+        if (is_scalar($v) || $v === null) { $o[$k] = is_string($v) ? mb_substr($v, 0, 1000) : $v; }
     }
-    return $n;
+    return $o;
 }
 
-/* ═══ Lectures du cockpit ═════════════════════════════════════════════════════════════════════════ */
-
-/** GET /formation/sops — les standards, rangés par famille, avec leur progression dans le réseau. */
-function ep_formation_sops(): array
+/** Première chaîne non vide parmi `$cles`. */
+function fmTexte(array $r, array $cles): ?string
 {
-    $rows = Db::rows('SELECT * FROM ceo_sop ORDER BY dossier, ordre, id');
-    $prog = foProgressionReseau();
-    $out = [];
-    foreach ($rows as $r) { $out[] = foSopLigne($r) + ['progression' => $prog[(string) $r['id']] ?? ['vu' => 0, 'quiz' => 0, 'lu' => 0, 'aRevoir' => 0]]; }
-    $aRelire = count(array_filter($out, static fn ($s) => in_array('a_relire', [$s['trad']['fr'], $s['trad']['nl']], true)));
-    return [
-        'dossiers' => foDossiers(),
-        'sops' => $out,
-        'totaux' => [
-            'sops' => count($out),
-            'aValider' => count(array_filter($out, static fn ($s) => $s['statut'] === 'a_valider')),
-            'etapes' => array_sum(array_column($out, 'nbEtapes')),
-            'tradARelire' => $aRelire,
-            'sansCompetence' => count(array_filter($out, static fn ($s) => $s['competence'] === null)),
-        ],
-    ];
-}
-
-/** GET /formation/sops/{id}?shop= — une SOP : son contenu en vigueur, ses versions, l'équipe du magasin face à elle. */
-function ep_formation_sop(string $id): array
-{
-    $r = foSopRow($id);
-    if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    $c = foContenuVersion((string) $r['id'], (string) $r['version']);
-    $vers = Db::rows('SELECT version, note, revalider, publie_le, publie_par FROM ceo_sop_version WHERE sop_id = ? ORDER BY publie_le DESC, version DESC', [$r['id']]);
-    $out = foSopLigne($r) + [
-        'contenu' => $c,
-        'versions' => array_map(static fn ($v) => ['version' => (string) $v['version'], 'note' => $v['note'], 'revalider' => (int) $v['revalider'] === 1,
-            'publieLe' => foIso($v['publie_le']), 'publiePar' => $v['publie_par']], $vers),
-        'source' => $r['source'] !== null ? json_decode((string) $r['source'], true) : null,
-    ];
-    $shop = foShopParam();
-    if ($shop !== null) {
-        $suivi = foSuiviMagasin($shop);
-        $equipe = [];
-        foreach (foEquipe($shop) as $p) {
-            $s = $suivi[$p['id']][(string) $r['id']] ?? null;
-            if ($s === null && !in_array((string) $r['poste'], $p['postes'], true)) { continue; }
-            $equipe[] = ['id' => $p['id'], 'nom' => $p['nom'], 'langue' => $p['langue'], 'valideur' => $p['valideur'],
-                'statut' => foStatut($s, $r), 'vuLe' => foIso($s['vu_le'] ?? null), 'vuPar' => $s['vu_par_nom'] ?? null];
-        }
-        $out['equipe'] = $equipe;
-        $out['magasin'] = ['id' => $shop, 'nom' => foMagasinNom($shop)];
+    foreach ($cles as $k) {
+        if (isset($r[$k]) && is_scalar($r[$k]) && trim((string) $r[$k]) !== '') { return trim((string) $r[$k]); }
     }
-    return $out;
-}
-
-/** GET /formation/sops/{id}/versions/{v} — le contenu d'une version, telle qu'elle a été publiée. */
-function ep_formation_sop_version(string $id, string $v): array
-{
-    $r = foSopRow($id);
-    if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    $row = Db::row('SELECT version, contenu, note, revalider, publie_le, publie_par FROM ceo_sop_version WHERE sop_id = ? AND version = ?', [$r['id'], $v]);
-    if ($row === null) { return foRefus(404, 'version inconnue'); }
-    return ['id' => (string) $r['id'], 'version' => (string) $row['version'], 'enVigueur' => (string) $row['version'] === (string) $r['version'],
-        'contenu' => json_decode((string) $row['contenu'], true), 'note' => $row['note'], 'publieLe' => foIso($row['publie_le']), 'publiePar' => $row['publie_par']];
-}
-
-/**
- * GET /formation/competences?shop= — les compétences du panel, les SOP qui y sont rattachées, le réseau
- * magasin par magasin (part des compétences acquises), et, pour un magasin, chaque personne × compétence.
- */
-function ep_formation_competences(): array
-{
-    $panel = foCompetencesPanel(!empty($_GET['rafraichir']));
-    $sops = Db::rows('SELECT * FROM ceo_sop ORDER BY dossier, ordre, id');
-    $comps = foCompetencesUtilisees($sops);
-    $magasins = [];
-    foreach (foMagasins() as $m) {
-        $eq = foEquipe($m['id'], false);
-        if ($eq === []) { $magasins[] = $m + ['equipe' => 0, 'taux' => null, 'aVoirFaire' => 0, 'parCompetence' => (object) []]; continue; }
-        $mat = foMatrice($m['id'], $eq, $sops, $comps);
-        $magasins[] = $m + ['equipe' => count($eq), 'taux' => $mat['taux'], 'aVoirFaire' => $mat['aVoirFaire'], 'parCompetence' => (object) $mat['parCompetence']];
-    }
-    $out = ['panel' => $panel, 'competences' => array_values($comps), 'magasins' => $magasins,
-        'sansCompetence' => array_values(array_map(static fn ($r) => ['id' => (string) $r['id'], 'titre' => (string) $r['titre_fr']],
-            array_filter($sops, static fn ($r) => $r['competence_id'] === null && $r['competence_nom'] === null)))];
-    $shop = foShopParam();
-    if ($shop !== null) {
-        $eq = foEquipe($shop);
-        $mat = foMatrice($shop, $eq, $sops, $comps);
-        $out['magasin'] = ['id' => $shop, 'nom' => foMagasinNom($shop), 'equipe' => $mat['personnes'], 'taux' => $mat['taux'], 'aVoirFaire' => $mat['liste']];
-    }
-    return $out;
-}
-
-/** GET /formation/equipe?shop= — les personnes du magasin (panel), leurs postes, leur langue, qui valide. */
-function ep_formation_equipe(): array
-{
-    $shop = foShopParam();
-    if ($shop === null) { return foRefus(400, 'magasin attendu (?shop=)'); }
-    return ['magasin' => ['id' => $shop, 'nom' => foMagasinNom($shop)], 'personnes' => foEquipe($shop),
-        'panel' => class_exists('PanelApi') && PanelApi::configured(), 'postes' => FO_POSTES];
-}
-
-/** GET /formation/fil?shop= — ce qui s'est passé ces 14 derniers jours au magasin (lectures, quiz, « vu faire »). */
-function ep_formation_fil(): array
-{
-    $shop = foShopParam();
-    if ($shop === null) { return foRefus(400, 'magasin attendu (?shop=)'); }
-    return ['fil' => foFil($shop, 40)];
-}
-
-/** GET /formation/manuel?langue=fr — le Manuel opératoire complet (SOP publiées et à valider), pour le Manuel Opératoire du panel. */
-function ep_formation_manuel(): array
-{
-    $l = foLangueParam();
-    $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop ORDER BY dossier, ordre, id') as $r) {
-        $c = foContenuVersion((string) $r['id'], (string) $r['version']);
-        $out[] = foSopLigne($r) + ['contenu' => foContenuLangue($c, $l, true)];
-    }
-    return ['langue' => $l, 'edition' => date('Y-m-d'), 'dossiers' => foDossiers(), 'sops' => $out];
-}
-
-/** GET /formation/manuel.pdf?langue=fr&dossier= — le Manuel opératoire en PDF (ou en page imprimable, sans moteur PDF). */
-function ep_formation_manuel_pdf(): array
-{
-    $l = foLangueParam();
-    $d = isset($_GET['dossier']) && isset(FO_DOSSIERS[(string) $_GET['dossier']]) ? (string) $_GET['dossier'] : null;
-    $rows = Db::rows('SELECT * FROM ceo_sop' . ($d !== null ? ' WHERE dossier = ?' : '') . ' ORDER BY dossier, ordre, id', $d !== null ? [$d] : []);
-    $titre = ($l === 'nl' ? 'Operationeel handboek' : 'Manuel opératoire') . ($d !== null ? ' — ' . FO_DOSSIERS[$d][$l] : '');
-    foPdfSortie($rows, $l, true, $titre, 'manuel-' . $l . ($d !== null ? '-' . $d : ''));
-    return [];
-}
-
-/** GET /formation/sops/{id}.pdf?langue=fr — une SOP en PDF. */
-function ep_formation_sop_pdf(string $id): array
-{
-    $r = foSopRow($id);
-    if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    $l = foLangueParam();
-    foPdfSortie([$r], $l, false, (string) ($l === 'nl' && $r['titre_nl'] !== '' ? $r['titre_nl'] : $r['titre_fr']), mktSlugFo((string) ($r['code'] ?: $r['id'])) . '-' . $l);
-    return [];
-}
-
-/* ═══ Écritures du cockpit ════════════════════════════════════════════════════════════════════════ */
-
-/**
- * PUT /formation/sops/{id} — publier une nouvelle version : {contenu, note, revalider, trad:{fr,nl}, par}.
- * La version monte d'un cran (1.1 → 1.2) ; avec `revalider`, ceux qui l'avaient vue faire repassent « à revoir ».
- */
-function wr_formation_publier(string $id): array
-{
-    $r = foSopRow($id);
-    if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    $b = body();
-    if (!is_array($b['contenu'] ?? null)) { return foRefus(400, 'contenu attendu'); }
-    $c = foContenu($b['contenu']);
-    $err = foContenuErreur($c);
-    if ($err !== null) { return foRefus(400, $err); }
-    $ver = foVersionSuivante((string) $r['version']);
-    $reval = !empty($b['revalider']);
-    $par = foPar($b);
-    $trad = is_array($b['trad'] ?? null) ? $b['trad'] : [];
-    $tfr = in_array($trad['fr'] ?? null, FO_TRAD, true) ? (string) $trad['fr'] : (string) $r['trad_fr'];
-    $tnl = in_array($trad['nl'] ?? null, FO_TRAD, true) ? (string) $trad['nl'] : (string) $r['trad_nl'];
-    $st = foStats($c);
-    $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [$r['id'], $ver, foJson($c), foCourt($b['note'] ?? null, 500), $reval ? 1 : 0, $now, $par]);
-    Db::exec('UPDATE ceo_sop SET version = ?, version_revalider = ?, titre_fr = ?, titre_nl = ?, objectif_fr = ?, objectif_nl = ?, duree = ?,
-                nb_etapes = ?, nb_photos = ?, trad_fr = ?, trad_nl = ?, maj_le = ?, maj_par = ? WHERE id = ?',
-        [$ver, $reval ? $ver : (string) $r['version_revalider'], mb_substr($c['titre']['fr'] ?: $c['titre']['nl'], 0, 190), mb_substr($c['titre']['nl'], 0, 190),
-            $c['objectif']['fr'], $c['objectif']['nl'], foCourt($c['duree'], 190), $st['etapes'], $st['photos'], $tfr, $tnl, $now, $par, $r['id']]);
-    $n = $reval ? (int) (Db::row('SELECT COUNT(*) AS n FROM ceo_sop_suivi WHERE sop_id = ? AND vu_le IS NOT NULL', [$r['id']])['n'] ?? 0) : 0;
-    try { journalAdd($par, 'Formation', (string) $r['titre_fr'], 'Version ' . $ver . ' publiée' . ($reval ? ' — ' . $n . ' personne(s) à revoir' : ' (précision)')); } catch (Throwable $e) { /* */ }
-    return ['ok' => true, 'version' => $ver, 'aRevoir' => $n, 'sop' => foSopLigne(foSopRow($id) ?? $r)];
-}
-
-/**
- * PATCH /formation/sops/{id} — les réglages d'une SOP, sans nouvelle version : compétence du panel
- * {competence: {id, nom} | null}, état d'une langue {trad: {nl: 'relue'}}, statut, poste, moment, famille, code.
- */
-function wr_formation_reglage(string $id): array
-{
-    $r = foSopRow($id);
-    if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    $b = body();
-    $set = [];
-    $p = [];
-    $quoi = [];
-    if (array_key_exists('competence', $b)) {
-        $c = $b['competence'];
-        if ($c === null) { $set[] = 'competence_id = NULL, competence_nom = NULL'; $quoi[] = 'compétence retirée'; }
-        elseif (is_array($c) && trim((string) ($c['nom'] ?? '')) !== '') {
-            $set[] = 'competence_id = ?, competence_nom = ?';
-            $p[] = foCourt(isset($c['id']) ? (string) $c['id'] : null, 40);
-            $p[] = foCourt((string) $c['nom'], 190);
-            $quoi[] = 'compétence « ' . trim((string) $c['nom']) . ' »';
-        } else { return foRefus(400, 'compétence attendue : {id, nom} ou null'); }
-    }
-    if (is_array($b['trad'] ?? null)) {
-        foreach (FO_LANGUES as $l) {
-            if (!isset($b['trad'][$l])) { continue; }
-            if (!in_array($b['trad'][$l], FO_TRAD, true)) { return foRefus(400, 'état de langue inconnu'); }
-            $set[] = 'trad_' . $l . ' = ?'; $p[] = $b['trad'][$l]; $quoi[] = strtoupper($l) . ' ' . str_replace('_', ' ', (string) $b['trad'][$l]);
-        }
-    }
-    foreach (['statut' => ['publiee', 'a_valider'], 'poste' => FO_POSTES] as $k => $ok) {
-        if (!isset($b[$k])) { continue; }
-        if (!in_array($b[$k], $ok, true)) { return foRefus(400, $k . ' inconnu'); }
-        $set[] = $k . ' = ?'; $p[] = $b[$k]; $quoi[] = $k . ' ' . $b[$k];
-    }
-    if (array_key_exists('moment', $b)) { $set[] = 'moment = ?'; $p[] = foCourt($b['moment'], 20); }
-    if (isset($b['dossier'])) { $set[] = 'dossier = ?'; $p[] = foDossier($b['dossier']); $quoi[] = 'famille ' . foDossier($b['dossier']); }
-    if (array_key_exists('code', $b)) { $set[] = 'code = ?'; $p[] = foCourt($b['code'], 40); }
-    if ($set === []) { return foRefus(400, 'rien à changer'); }
-    $par = foPar($b);
-    $set[] = 'maj_le = ?, maj_par = ?';
-    array_push($p, date('Y-m-d H:i:s'), $par, $r['id']);
-    Db::exec('UPDATE ceo_sop SET ' . implode(', ', $set) . ' WHERE id = ?', $p);
-    if ($quoi) { try { journalAdd($par, 'Formation', (string) $r['titre_fr'], implode(' · ', $quoi)); } catch (Throwable $e) { /* */ } }
-    return ['ok' => true, 'sop' => foSopLigne(foSopRow($id) ?? $r)];
-}
-
-/** POST /formation/sops — une nouvelle SOP : {code, dossier, type, poste, titre: {fr, nl}} → version 1.0, à valider. */
-function wr_formation_creer(): array
-{
-    $b = body();
-    $titre = foBi($b['titre'] ?? null);
-    if ($titre['fr'] === '' && $titre['nl'] === '') { return foRefus(400, 'titre attendu'); }
-    $base = foId(mktSlugFo((string) ($b['code'] ?? '') ?: ($titre['fr'] ?: $titre['nl'])));
-    if ($base === null) { return foRefus(400, 'identifiant impossible à former'); }
-    $id = $base;
-    for ($i = 2; foSopRow($id) !== null; $i++) { $id = substr($base, 0, 28) . '-' . $i; }
-    $c = foContenu(['titre' => $titre, 'objectif' => $b['objectif'] ?? null, 'sections' => [['titre' => ['fr' => 'Étapes', 'nl' => 'Stappen'], 'etapes' => []]]]);
-    $now = date('Y-m-d H:i:s');
-    $par = foPar($b);
-    $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) + 1 AS o FROM ceo_sop')['o'] ?? 1);
-    Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, statut, version, version_revalider, langue_origine, trad_fr, trad_nl, titre_fr, titre_nl, ordre, maj_le, maj_par)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [$id, foCourt($b['code'] ?? null, 40), foType($b['type'] ?? 'SOP'), foDossier($b['dossier'] ?? '01'), foPoste($b['poste'] ?? 'vente'), 'a_valider', '1.0', '1.0',
-            $titre['fr'] !== '' ? 'FR' : 'NL', $titre['fr'] !== '' ? 'origine' : 'a_relire', $titre['nl'] !== '' ? 'origine' : 'a_relire',
-            mb_substr($titre['fr'] ?: $titre['nl'], 0, 190), mb_substr($titre['nl'], 0, 190), $ordre, $now, $par]);
-    Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
-        [$id, '1.0', foJson($c), 'Création', $now, $par]);
-    try { journalAdd($par, 'Formation', $titre['fr'] ?: $titre['nl'], 'Nouvelle SOP créée (à valider)'); } catch (Throwable $e) { /* */ }
-    http_response_code(201);
-    return ['ok' => true, 'id' => $id];
-}
-
-/** PUT /formation/equipe/{shop}/{emp} — {postes: [...], valideur: bool, langue: fr|nl} pour une personne du magasin. */
-function wr_formation_personne(string $shop, int $emp): array
-{
-    if (!preg_match('/^[\w-]{1,32}$/', $shop) || $emp <= 0) { return foRefus(400, 'magasin ou personne mal formés'); }
-    $b = body();
-    $postes = null;
-    if (isset($b['postes'])) {
-        if (!is_array($b['postes'])) { return foRefus(400, 'postes : liste attendue'); }
-        $postes = implode(',', array_values(array_intersect(FO_POSTES, array_map('strval', $b['postes']))));
-    }
-    $val = array_key_exists('valideur', $b) ? (!empty($b['valideur']) ? 1 : 0) : null;
-    $lang = isset($b['langue']) && in_array($b['langue'], FO_LANGUES, true) ? (string) $b['langue'] : null;
-    $nom = '';
-    foreach (foEquipe($shop) as $p) { if ($p['id'] === $emp) { $nom = $p['nom']; } }
-    foPersonneEcrire($shop, $emp, $nom, $postes, $val, $lang);
-    return ['ok' => true, 'personnes' => foEquipe($shop)];
-}
-
-/** POST /formation/importer — rejoue la reprise pour les SOP absentes de la base (n'écrase rien). */
-function wr_formation_importer(): array
-{
-    return ['ok' => true, 'ajoutees' => foImporter()];
-}
-
-/* ═══ La tablette du poste (routes ouvertes, chaque écriture porte un PIN ou un jeton) ═══════════════ */
-
-/** GET /formation/tablette/init?shop=&poste= — le magasin, ses personnes (sans PIN), les SOP du poste. */
-function ep_formation_tablette_init(): array
-{
-    $shop = foShopParam();
-    if ($shop === null) { return foRefus(400, 'magasin attendu (?shop=)'); }
-    $poste = isset($_GET['poste']) && in_array($_GET['poste'], FO_POSTES, true) ? (string) $_GET['poste'] : null;
-    $rows = Db::rows('SELECT * FROM ceo_sop' . ($poste !== null ? ' WHERE poste = ?' : '') . ' ORDER BY dossier, ordre, id', $poste !== null ? [$poste] : []);
-    $personnes = array_map(static fn ($p) => ['id' => $p['id'], 'nom' => $p['nom'], 'valideur' => $p['valideur'], 'langue' => $p['langue'], 'postes' => $p['postes']], foEquipe($shop));
-    return ['magasin' => ['id' => $shop, 'nom' => foMagasinNom($shop)], 'poste' => $poste, 'postes' => FO_POSTES,
-        'personnes' => $personnes, 'sops' => array_map('foSopLigne', $rows), 'pinPanel' => class_exists('PanelApi') && PanelApi::configured()];
-}
-
-/** POST /formation/tablette/identifier — {shop, employe, pin} → jeton de 4 h, la personne, où elle en est. */
-function wr_formation_tablette_identifier(): array
-{
-    $b = body();
-    $shop = foShopVal($b['shop'] ?? null);
-    $emp = (int) ($b['employe'] ?? 0);
-    if ($shop === null || $emp <= 0) { return foRefus(400, 'magasin et personne attendus'); }
-    [$ok, $msg] = foPinOk($shop, $emp, (string) ($b['pin'] ?? ''));
-    if (!$ok) { return foRefus($msg === 'bloqué' ? 429 : 403, $msg === 'bloqué' ? 'trop d’essais : réessayer dans 10 minutes' : $msg); }
-    $p = foPersonne($shop, $emp);
-    if ($p === null) { return foRefus(404, 'personne inconnue dans ce magasin'); }
-    return ['jeton' => foJeton(['s' => $shop, 'e' => $emp, 'n' => $p['nom']]), 'personne' => $p, 'suivi' => (object) foSuiviPersonne($shop, $emp)];
-}
-
-/** GET /formation/tablette/moi?jeton= — où en est la personne identifiée, SOP par SOP. */
-function ep_formation_tablette_moi(): array
-{
-    $j = foJetonLire($_GET['jeton'] ?? null);
-    if ($j === null) { return foRefus(401, 'jeton absent ou expiré : s’identifier à nouveau'); }
-    return ['personne' => foPersonne($j['s'], (int) $j['e']), 'suivi' => (object) foSuiviPersonne($j['s'], (int) $j['e'])];
-}
-
-/** GET /formation/tablette/sop/{id} — la SOP en vigueur, FR et NL, quiz sans ses réponses. */
-function ep_formation_tablette_sop(string $id): array
-{
-    $r = foSopRow($id);
-    if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    $c = foContenuVersion((string) $r['id'], (string) $r['version']);
-    foreach ($c['quiz'] as &$q) { unset($q['bonne']); }
-    unset($q, $c['corrections'], $c['remarques']);
-    return foSopLigne($r) + ['contenu' => $c];
-}
-
-/** POST /formation/tablette/lu — {jeton, sop} : la personne a parcouru toutes les étapes. */
-function wr_formation_tablette_lu(): array
-{
-    $b = body();
-    $j = foJetonLire($b['jeton'] ?? null);
-    if ($j === null) { return foRefus(401, 'jeton absent ou expiré : s’identifier à nouveau'); }
-    $r = foSopRow((string) ($b['sop'] ?? ''));
-    if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO ceo_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, lu_le, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
-              ON DUPLICATE KEY UPDATE employee_nom = VALUES(employee_nom), lu_le = VALUES(lu_le), maj_le = VALUES(maj_le),
-                version = IF(vu_le IS NULL, VALUES(version), version)',
-        [$j['s'], (int) $j['e'], $r['id'], (string) $j['n'], (string) $r['version'], $now, $now]);
-    return ['ok' => true, 'statut' => foStatut(foSuiviLigne($j['s'], (int) $j['e'], (string) $r['id']), $r)];
-}
-
-/** POST /formation/tablette/quiz — {jeton, sop, reponses: [i, i, i]} → score ; réussi quand tout est juste. */
-function wr_formation_tablette_quiz(): array
-{
-    $b = body();
-    $j = foJetonLire($b['jeton'] ?? null);
-    if ($j === null) { return foRefus(401, 'jeton absent ou expiré : s’identifier à nouveau'); }
-    $r = foSopRow((string) ($b['sop'] ?? ''));
-    if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    if ($r['statut'] === 'a_valider') { return foRefus(409, 'SOP à valider : lisible, sans quiz ni validation pour l’instant'); }
-    $c = foContenuVersion((string) $r['id'], (string) $r['version']);
-    $rep = is_array($b['reponses'] ?? null) ? array_values($b['reponses']) : [];
-    $faux = [];
-    foreach ($c['quiz'] as $i => $q) { if (!isset($rep[$i]) || (int) $rep[$i] !== (int) $q['bonne']) { $faux[] = $i; } }
-    $total = count($c['quiz']);
-    $score = $total - count($faux);
-    $reussi = $total > 0 && $faux === [];
-    $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO ceo_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, lu_le, quiz_le, quiz_score, quiz_essais, maj_le)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-              ON DUPLICATE KEY UPDATE employee_nom = VALUES(employee_nom), quiz_essais = quiz_essais + 1, maj_le = VALUES(maj_le),
-                lu_le = COALESCE(lu_le, VALUES(lu_le)),
-                quiz_le = IF(VALUES(quiz_score) = ?, VALUES(quiz_le), quiz_le),
-                quiz_score = IF(VALUES(quiz_score) = ?, VALUES(quiz_score), quiz_score),
-                version = IF(vu_le IS NULL AND VALUES(quiz_score) = ?, VALUES(version), version)',
-        [$j['s'], (int) $j['e'], $r['id'], (string) $j['n'], (string) $r['version'], $now, $reussi ? $now : null, $reussi ? $score : null, $now, $total, $total, $total]);
-    return ['ok' => true, 'score' => $score, 'total' => $total, 'reussi' => $reussi, 'faux' => $faux,
-        'statut' => foStatut(foSuiviLigne($j['s'], (int) $j['e'], (string) $r['id']), $r)];
-}
-
-/**
- * POST /formation/tablette/vu — {shop, sop, employe, valideur, pin, decision: vu|pas_encore, note}.
- * La responsable du magasin (valideur) a vu la personne faire la SOP sur place ; son PIN est vérifié au panel.
- */
-function wr_formation_tablette_vu(): array
-{
-    $b = body();
-    $shop = foShopVal($b['shop'] ?? null);
-    $emp = (int) ($b['employe'] ?? 0);
-    $val = (int) ($b['valideur'] ?? 0);
-    if ($shop === null || $emp <= 0 || $val <= 0) { return foRefus(400, 'magasin, personne et responsable attendus'); }
-    $r = foSopRow((string) ($b['sop'] ?? ''));
-    if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    if ($r['statut'] === 'a_valider') { return foRefus(409, 'SOP à valider : lisible, sans validation pour l’instant'); }
-    $vp = foPersonne($shop, $val);
-    if ($vp === null || !$vp['valideur']) { return foRefus(403, 'seule la responsable du magasin valide « vu faire »'); }
-    if ($val === $emp) { return foRefus(403, 'on ne valide pas soi-même'); }
-    [$ok, $msg] = foPinOk($shop, $val, (string) ($b['pin'] ?? ''));
-    if (!$ok) { return foRefus($msg === 'bloqué' ? 429 : 403, $msg === 'bloqué' ? 'trop d’essais : réessayer dans 10 minutes' : $msg); }
-    $p = foPersonne($shop, $emp);
-    if ($p === null) { return foRefus(404, 'personne inconnue dans ce magasin'); }
-    $s = foSuiviLigne($shop, $emp, (string) $r['id']);
-    $c = foContenuVersion((string) $r['id'], (string) $r['version']);
-    $decision = ($b['decision'] ?? 'vu') === 'pas_encore' ? 'pas_encore' : 'vu';
-    if ($decision === 'vu' && $c['quiz'] !== [] && (empty($s['quiz_le']) || version_compare((string) $s['version'], (string) $r['version_revalider'], '<'))) {
-        return foRefus(409, 'le quiz de cette version n’est pas encore réussi');
-    }
-    $now = date('Y-m-d H:i:s');
-    $note = foCourt($b['note'] ?? null, 500);
-    if ($decision === 'vu') {
-        Db::exec('INSERT INTO ceo_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, lu_le, vu_le, vu_version, vu_par_id, vu_par_nom, note, maj_le)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                  ON DUPLICATE KEY UPDATE employee_nom = VALUES(employee_nom), version = VALUES(version), lu_le = COALESCE(lu_le, VALUES(lu_le)),
-                    vu_le = VALUES(vu_le), vu_version = VALUES(vu_version), vu_par_id = VALUES(vu_par_id), vu_par_nom = VALUES(vu_par_nom),
-                    note = VALUES(note), maj_le = VALUES(maj_le)',
-            [$shop, $emp, $r['id'], $p['nom'], (string) $r['version'], $now, $now, (string) $r['version'], $val, $vp['nom'], $note, $now]);
-    } else {
-        Db::exec('INSERT INTO ceo_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, note, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
-                  ON DUPLICATE KEY UPDATE note = VALUES(note), maj_le = VALUES(maj_le)',
-            [$shop, $emp, $r['id'], $p['nom'], (string) $r['version'], $note ?? 'pas encore', $now]);
-    }
-    try { journalAdd($vp['nom'], 'Formation', (string) $r['titre_fr'], $p['nom'] . ($decision === 'vu' ? ' : vu faire ✓' : ' : pas encore') . ' (' . foMagasinNom($shop) . ')'); } catch (Throwable $e) { /* */ }
-    // La compétence de la SOP : acquise maintenant ?
-    $acq = null;
-    if ($decision === 'vu' && ($r['competence_nom'] ?? null) !== null) {
-        $sops = Db::rows('SELECT * FROM ceo_sop');
-        $comps = foCompetencesUtilisees($sops);
-        $mat = foMatrice($shop, [$p], $sops, $comps);
-        $cle = foCompCle($r);
-        $etat = $mat['personnes'][0]['competences'][$cle] ?? null;
-        $acq = ['nom' => (string) $r['competence_nom'], 'acquise' => ($etat['statut'] ?? '') === 'acquise', 'vues' => $etat['vues'] ?? 0, 'total' => $etat['total'] ?? 0];
-    }
-    return ['ok' => true, 'decision' => $decision, 'statut' => foStatut(foSuiviLigne($shop, $emp, (string) $r['id']), $r), 'competence' => $acq];
-}
-
-/** PUT /formation/tablette/langue — {jeton, langue} : la tablette s'en souvient pour cette personne. */
-function wr_formation_tablette_langue(): array
-{
-    $b = body();
-    $j = foJetonLire($b['jeton'] ?? null);
-    if ($j === null) { return foRefus(401, 'jeton absent ou expiré'); }
-    $l = in_array($b['langue'] ?? null, FO_LANGUES, true) ? (string) $b['langue'] : null;
-    if ($l === null) { return foRefus(400, 'langue : fr ou nl'); }
-    foPersonneEcrire($j['s'], (int) $j['e'], (string) $j['n'], null, null, $l);
-    return ['ok' => true, 'langue' => $l];
-}
-
-/** Les routes de la formation ; null quand le chemin n'en est pas une. `$public` : seulement la tablette. */
-function formationRoute(string $method, string $path, bool $public = false): ?array
-{
-    if (!str_starts_with($path, '/formation/')) { return null; }
-    $t = match (true) {
-        $method === 'GET' && $path === '/formation/tablette/init' => ep_formation_tablette_init(),
-        $method === 'GET' && $path === '/formation/tablette/moi' => ep_formation_tablette_moi(),
-        $method === 'GET' && preg_match('#^/formation/tablette/sop/([\w-]{1,32})$#', $path, $m) === 1 => ep_formation_tablette_sop($m[1]),
-        $method === 'POST' && $path === '/formation/tablette/identifier' => wr_formation_tablette_identifier(),
-        $method === 'POST' && $path === '/formation/tablette/lu' => wr_formation_tablette_lu(),
-        $method === 'POST' && $path === '/formation/tablette/quiz' => wr_formation_tablette_quiz(),
-        $method === 'POST' && $path === '/formation/tablette/vu' => wr_formation_tablette_vu(),
-        $method === 'PUT' && $path === '/formation/tablette/langue' => wr_formation_tablette_langue(),
-        default => null,
-    };
-    if ($t !== null || $public) { return $t; }
-    return match (true) {
-        $method === 'GET' && $path === '/formation/sops' => ep_formation_sops(),
-        $method === 'GET' && preg_match('#^/formation/sops/([\w-]{1,32})\.pdf$#', $path, $m) === 1 => ep_formation_sop_pdf($m[1]),
-        $method === 'GET' && preg_match('#^/formation/sops/([\w-]{1,32})$#', $path, $m) === 1 => ep_formation_sop($m[1]),
-        $method === 'GET' && preg_match('#^/formation/sops/([\w-]{1,32})/versions/([\w.]{1,12})$#', $path, $m) === 1 => ep_formation_sop_version($m[1], $m[2]),
-        $method === 'GET' && $path === '/formation/competences' => ep_formation_competences(),
-        $method === 'GET' && $path === '/formation/equipe' => ep_formation_equipe(),
-        $method === 'GET' && $path === '/formation/fil' => ep_formation_fil(),
-        $method === 'GET' && $path === '/formation/manuel' => ep_formation_manuel(),
-        $method === 'GET' && $path === '/formation/manuel.pdf' => ep_formation_manuel_pdf(),
-        $method === 'POST' && $path === '/formation/sops' => wr_formation_creer(),
-        $method === 'PUT' && preg_match('#^/formation/sops/([\w-]{1,32})$#', $path, $m) === 1 => wr_formation_publier($m[1]),
-        $method === 'PATCH' && preg_match('#^/formation/sops/([\w-]{1,32})$#', $path, $m) === 1 => wr_formation_reglage($m[1]),
-        $method === 'PUT' && preg_match('#^/formation/equipe/([\w-]{1,32})/(\d+)$#', $path, $m) === 1 => wr_formation_personne($m[1], (int) $m[2]),
-        $method === 'POST' && $path === '/formation/importer' => wr_formation_importer(),
-        default => null,
-    };
-}
-
-/* ═══ Le suivi, les statuts, les compétences ══════════════════════════════════════════════════════ */
-
-/**
- * Le statut d'une personne face à une SOP : non, lu, quiz, vu, a_revoir. « vu » vaut tant qu'aucune
- * version publiée « à revalider » n'est venue après ; sinon « a_revoir » (aussi pour une lecture ancienne).
- */
-function foStatut(?array $s, array $sop): string
-{
-    if ($s === null) { return 'non'; }
-    $rv = (string) ($sop['version_revalider'] ?? '0');
-    if (!empty($s['vu_le'])) { return version_compare((string) ($s['vu_version'] ?? '0'), $rv, '>=') ? 'vu' : 'a_revoir'; }
-    if (empty($s['quiz_le']) && empty($s['lu_le'])) { return 'non'; }
-    if (version_compare((string) ($s['version'] ?? '0'), $rv, '<')) { return 'a_revoir'; }
-    return !empty($s['quiz_le']) ? 'quiz' : 'lu';
-}
-
-function foSuiviLigne(string $shop, int $emp, string $sop): ?array
-{
-    return Db::row('SELECT * FROM ceo_sop_suivi WHERE shop_id = ? AND employee_id = ? AND sop_id = ?', [$shop, $emp, $sop]);
-}
-
-/** [employee_id => [sop_id => ligne]] pour un magasin. */
-function foSuiviMagasin(string $shop): array
-{
-    $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop_suivi WHERE shop_id = ?', [$shop]) as $s) { $out[(int) $s['employee_id']][(string) $s['sop_id']] = $s; }
-    return $out;
-}
-
-/** [sop_id => {statut, luLe, quizLe, vuLe, vuPar, note}] pour une personne. */
-function foSuiviPersonne(string $shop, int $emp): array
-{
-    $sops = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop') as $r) { $sops[(string) $r['id']] = $r; }
-    $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop_suivi WHERE shop_id = ? AND employee_id = ?', [$shop, $emp]) as $s) {
-        $r = $sops[(string) $s['sop_id']] ?? null;
-        if ($r === null) { continue; }
-        $out[(string) $s['sop_id']] = ['statut' => foStatut($s, $r), 'luLe' => foIso($s['lu_le']), 'quizLe' => foIso($s['quiz_le']),
-            'vuLe' => foIso($s['vu_le']), 'vuPar' => $s['vu_par_nom'], 'note' => $s['note']];
-    }
-    return $out;
-}
-
-/** [sop_id => {vu, quiz, lu, aRevoir}] : le réseau entier, personnes distinctes. */
-function foProgressionReseau(): array
-{
-    $sops = [];
-    foreach (Db::rows('SELECT id, version_revalider FROM ceo_sop') as $r) { $sops[(string) $r['id']] = $r; }
-    $out = [];
-    foreach (Db::rows('SELECT sop_id, version, lu_le, quiz_le, vu_le, vu_version FROM ceo_sop_suivi') as $s) {
-        $r = $sops[(string) $s['sop_id']] ?? null;
-        if ($r === null) { continue; }
-        $st = foStatut($s, $r);
-        $o = &$out[(string) $s['sop_id']];
-        $o ??= ['vu' => 0, 'quiz' => 0, 'lu' => 0, 'aRevoir' => 0];
-        $k = ['vu' => 'vu', 'quiz' => 'quiz', 'lu' => 'lu', 'a_revoir' => 'aRevoir'][$st] ?? null;
-        if ($k !== null) { $o[$k]++; }
-        unset($o);
-    }
-    return $out;
-}
-
-/** La clé d'une compétence : l'id du panel s'il existe, sinon le nom (minuscules). */
-function foCompCle(array $r): string
-{
-    $id = trim((string) ($r['competence_id'] ?? ''));
-    return $id !== '' ? 'p:' . $id : 'n:' . mb_strtolower(trim((string) ($r['competence_nom'] ?? '')));
-}
-
-/** Les compétences rattachées aux SOP : [cle => {cle, id, nom, postes, sops: [...]}]. */
-function foCompetencesUtilisees(array $sops): array
-{
-    $out = [];
-    foreach ($sops as $r) {
-        if (($r['competence_nom'] ?? null) === null) { continue; }
-        $k = foCompCle($r);
-        $out[$k] ??= ['cle' => $k, 'id' => $r['competence_id'] !== null ? (string) $r['competence_id'] : null, 'nom' => (string) $r['competence_nom'], 'postes' => [], 'sops' => []];
-        $out[$k]['sops'][] = (string) $r['id'];
-        if (!in_array((string) $r['poste'], $out[$k]['postes'], true)) { $out[$k]['postes'][] = (string) $r['poste']; }
-    }
-    return $out;
-}
-
-/**
- * La matrice d'un magasin : chaque personne × chaque compétence (acquise, en_cours, a_acquerir, a_revoir,
- * na = pas son poste), le taux d'acquisition, ce que la responsable doit voir faire.
- */
-function foMatrice(string $shop, array $equipe, array $sops, array $comps): array
-{
-    $parId = [];
-    foreach ($sops as $r) { $parId[(string) $r['id']] = $r; }
-    $suivi = foSuiviMagasin($shop);
-    $personnes = [];
-    $acq = 0; $att = 0;
-    $parComp = [];
-    $liste = [];
-    foreach ($equipe as $p) {
-        $etats = [];
-        foreach ($comps as $k => $c) {
-            // Une SOP concerne la personne si elle est de son poste, ou si la personne l'a commencée.
-            $conc = array_values(array_filter($c['sops'], static fn ($id) => isset($parId[$id]) && $parId[$id]['statut'] === 'publiee'
-                && (in_array((string) $parId[$id]['poste'], $p['postes'], true) || isset($suivi[$p['id']][$id]))));
-            if ($conc === []) { $etats[$k] = ['statut' => 'na']; continue; }
-            $sts = array_map(static fn ($id) => foStatut($suivi[$p['id']][$id] ?? null, $parId[$id]), $conc);
-            $v = count(array_filter($sts, static fn ($s) => $s === 'vu'));
-            $st = in_array('a_revoir', $sts, true) ? 'a_revoir' : ($v === count($conc) ? 'acquise' : (array_diff($sts, ['non']) ? 'en_cours' : 'a_acquerir'));
-            $etats[$k] = ['statut' => $st, 'vues' => $v, 'total' => count($conc)];
-            $att++; if ($st === 'acquise') { $acq++; }
-            $parComp[$k] ??= ['acquises' => 0, 'personnes' => 0];
-            $parComp[$k]['personnes']++; if ($st === 'acquise') { $parComp[$k]['acquises']++; }
-        }
-        foreach ($suivi[$p['id']] ?? [] as $sid => $s) {
-            if (!isset($parId[$sid]) || foStatut($s, $parId[$sid]) !== 'quiz') { continue; }
-            $liste[] = ['employe' => $p['id'], 'nom' => $p['nom'], 'sop' => $sid, 'titre' => (string) $parId[$sid]['titre_fr'], 'quizLe' => foIso($s['quiz_le'])];
-        }
-        $personnes[] = $p + ['competences' => $etats];
-    }
-    usort($liste, static fn ($a, $b) => strcmp((string) $b['quizLe'], (string) $a['quizLe']));
-    $pc = [];
-    foreach ($parComp as $k => $x) { $pc[$k] = $x['personnes'] > 0 ? (int) round($x['acquises'] / $x['personnes'] * 100) : null; }
-    return ['personnes' => $personnes, 'taux' => $att > 0 ? (int) round($acq / $att * 100) : null, 'aVoirFaire' => count($liste), 'liste' => $liste, 'parCompetence' => $pc];
-}
-
-/**
- * La liste des compétences du panel, gardée un jour : une route de liste si elle existe, sinon les compétences
- * requises lues sur les fiches techniques des produits (GET /products/{id}/technical-sheet/raw — celles de
- * l'app Cuisine). {liste: [{id, nom, description}], source, indispo?}.
- */
-function foCompetencesPanel(bool $forcer = false): array
-{
-    $c = setting('foCompetencesPanel');
-    if (!$forcer && is_array($c) && (int) ($c['ts'] ?? 0) > time() - FO_COMPETENCES_CACHE_S && !empty($c['liste'])) {
-        return ['liste' => $c['liste'], 'source' => $c['source'] ?? '', 'lueLe' => date('c', (int) $c['ts'])];
-    }
-    $ancien = is_array($c) && is_array($c['liste'] ?? null) ? $c['liste'] : [];
-    if (!class_exists('PanelApi') || !PanelApi::configured()) {
-        return ['liste' => $ancien, 'source' => '', 'indispo' => true, 'motif' => 'compte consultant du panel non configuré (Paramètres)'];
-    }
-    $liste = [];
-    $source = '';
-    foreach (['/competences', '/consultant/competences', '/knowledge/competences'] as $p) {
-        $r = PanelApi::get($p);
-        $l = foCompetencesNormaliser(is_array($r) ? analyseListe($r) : []);
-        if ($l !== []) { $liste = $l; $source = $p; break; }
-    }
-    if ($liste === []) {
-        $prods = PanelApi::produits();
-        $ids = [];
-        foreach (is_array($prods) ? analyseListe($prods) : [] as $pr) {
-            $id = (int) ($pr['id'] ?? $pr['id_product'] ?? 0);
-            if ($id > 0) { $ids[] = $id; }
-            if (count($ids) >= 80) { break; }
-        }
-        $paths = [];
-        foreach ($ids as $id) { $paths['p' . $id] = '/products/' . $id . '/technical-sheet/raw?lang_code=fr'; }
-        $vu = [];
-        foreach (PanelApi::getParallele($paths, 4, 25) as $res) {
-            if (!is_array($res)) { continue; }
-            $cs = $res['competences'] ?? ($res['data']['competences'] ?? ($res['object']['required_competences'] ?? []));
-            foreach (foCompetencesNormaliser(is_array($cs) ? $cs : []) as $x) { $vu[$x['id'] ?? mb_strtolower($x['nom'])] = $x; }
-        }
-        $liste = array_values($vu);
-        usort($liste, static fn ($a, $b) => strcmp(mb_strtolower($a['nom']), mb_strtolower($b['nom'])));
-        $source = $liste !== [] ? 'fiches techniques (' . count($ids) . ' produits)' : '';
-    }
-    if ($liste === []) {
-        return ['liste' => $ancien, 'source' => '', 'indispo' => true, 'motif' => PanelApi::$lastError ?: 'aucune compétence trouvée au panel'];
-    }
-    try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['foCompetencesPanel', json_encode(['ts' => time(), 'liste' => $liste, 'source' => $source], JSON_UNESCAPED_UNICODE)]); } catch (Throwable $e) { /* */ }
-    return ['liste' => $liste, 'source' => $source, 'lueLe' => date('c')];
-}
-
-function foCompetencesNormaliser(array $l): array
-{
-    $out = [];
-    foreach ($l as $x) {
-        if (!is_array($x)) { continue; }
-        $nom = trim((string) ($x['name'] ?? $x['nom'] ?? $x['label'] ?? ''));
-        if ($nom === '') { continue; }
-        $id = $x['id'] ?? $x['id_competence'] ?? null;
-        $out[] = ['id' => $id !== null ? (string) $id : null, 'nom' => $nom, 'description' => trim((string) ($x['description'] ?? '')) ?: null];
-    }
-    return $out;
-}
-
-/* ═══ Les personnes du magasin ════════════════════════════════════════════════════════════════════ */
-
-/**
- * Les personnes d'un magasin : le panel (/shops/{id}/employees : id, nom, rôle — gardés 6 h, jamais le PIN),
- * complété par nos réglages (postes, langue, valideur). Sans panel : nos réglages seuls (et le jeu de
- * démonstration quand il est activé). `$lire` faux : seulement ce qui est déjà en cache (vue réseau).
- */
-function foEquipe(string $shop, bool $lire = true): array
-{
-    $base = foEquipePanel($shop, $lire);
-    $reg = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop_personne WHERE shop_id = ?', [$shop]) as $r) { $reg[(int) $r['employee_id']] = $r; }
-    $out = [];
-    foreach ($base as $id => $e) {
-        $r = $reg[$id] ?? null;
-        $out[] = foPersonneForme($id, $e['nom'], $e['role'], $r);
-        unset($reg[$id]);
-    }
-    if ($base === []) { foreach ($reg as $id => $r) { $out[] = foPersonneForme($id, (string) $r['nom'], '', $r); } }
-    usort($out, static fn ($a, $b) => [$b['valideur'], $a['nom']] <=> [$a['valideur'], $b['nom']]);
-    return $out;
-}
-
-function foPersonne(string $shop, int $emp): ?array
-{
-    foreach (foEquipe($shop) as $p) { if ($p['id'] === $emp) { return $p; } }
     return null;
 }
 
-function foPersonneForme(int $id, string $nom, string $role, ?array $r): array
+/** Premier entier parmi `$cles`. */
+function fmInt(array $r, array $cles): ?int
 {
-    $postes = $r !== null && $r['postes'] !== null ? array_values(array_filter(explode(',', (string) $r['postes']))) : foPostesDuRole($role);
-    $val = $r !== null && $r['valideur'] !== null ? (int) $r['valideur'] === 1 : foValideurDuRole($role);
-    return ['id' => $id, 'nom' => $nom, 'role' => $role, 'postes' => $postes, 'valideur' => $val,
-        'langue' => $r !== null && in_array($r['langue'], FO_LANGUES, true) ? (string) $r['langue'] : 'fr'];
+    foreach ($cles as $k) {
+        if (isset($r[$k]) && is_numeric($r[$k])) { return (int) $r[$k]; }
+    }
+    return null;
 }
 
-function foPersonneEcrire(string $shop, int $emp, string $nom, ?string $postes, ?int $valideur, ?string $langue): void
+/** Une réponse du panel ramenée à une liste de lignes. */
+function fmListe(mixed $d): array
 {
-    Db::exec('INSERT INTO ceo_sop_personne (shop_id, employee_id, nom, postes, valideur, langue, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
-              ON DUPLICATE KEY UPDATE nom = IF(VALUES(nom) = \'\', nom, VALUES(nom)), postes = COALESCE(VALUES(postes), postes),
-                valideur = COALESCE(VALUES(valideur), valideur), langue = COALESCE(VALUES(langue), langue), maj_le = VALUES(maj_le)',
-        [$shop, $emp, $nom, $postes, $valideur, $langue, date('Y-m-d H:i:s')]);
+    if (!is_array($d)) { return []; }
+    return PanelApi::liste($d);
 }
 
-/** [id => {nom, role}] du panel, gardé 6 h dans ceo_app_setting (`foEquipe:<shop>`) — ni PIN ni autre donnée personnelle. */
-function foEquipePanel(string $shop, bool $lire): array
+/** 503 si le compte du panel n'est pas branché — dit où le brancher. */
+function fmPret(): ?array
 {
-    $cle = 'foEquipe:' . $shop;
-    $c = setting($cle);
-    $ancien = is_array($c) && is_array($c['v'] ?? null) ? $c['v'] : [];
-    if ($ancien !== [] && ((int) ($c['ts'] ?? 0) > time() - FO_EQUIPE_CACHE_S || !$lire)) { return foEquipeCles($ancien); }
     if (!class_exists('PanelApi') || !PanelApi::configured()) {
-        if (seedEnabled()) { return foEquipeCles(foEquipeDemo($shop)); }
-        return foEquipeCles($ancien);
+        http_response_code(503);
+        return ['error' => 'compte API du panel non configuré', 'indispo' => true,
+            'raison' => 'Le module lit le référentiel RH du panel avec le compte consultant du cockpit : renseignez-le dans Paramètres › Panel consultant (ou config/config.php › panelApi).'];
     }
-    if (!$lire) { return foEquipeCles($ancien); }
-    $r = PanelApi::get('/shops/' . rawurlencode($shop) . '/employees');
-    $l = is_array($r) ? analyseListe($r) : [];
-    $out = [];
-    foreach ($l as $em) {
-        if (!is_array($em) || (int) ($em['id'] ?? 0) <= 0) { continue; }
-        if (isset($em['active']) && !$em['active']) { continue; }
-        $out[(string) (int) $em['id']] = ['nom' => function_exists('invNomCourt') ? invNomCourt($em) : trim((string) ($em['name'] ?? '')), 'role' => foRoleDe($em)];
+    return null;
+}
+
+/** Un identifiant entier strictement positif lu dans la requête, ou un 422. */
+function fmId(string $cle = 'id'): ?int
+{
+    $v = $_GET[$cle] ?? null;
+    if (!is_string($v) || !preg_match('/^\d{1,9}$/', $v) || (int) $v <= 0) { return null; }
+    return (int) $v;
+}
+
+/* ── Normalisation ─────────────────────────────────────────────────────── */
+
+function fmCompetence(array $r): array
+{
+    // Une ligne de liaison (niveau ↔ compétence) porte son propre `id` : la
+    // compétence est alors dans competency_id / id_competency.
+    $id = fmInt($r, ['competency_id', 'id_competency', 'competence_id', 'id']);
+    return [
+        'id'              => $id,
+        'nom'             => fmTexte($r, ['name', 'base_name', 'competency_name', 'title']) ?? ('Compétence ' . $id),
+        'nomBase'         => fmTexte($r, ['base_name']),
+        'description'     => fmTexte($r, ['description', 'base_description']),
+        'verification'    => fmTexte($r, ['verification_method']),
+        'sectionId'       => fmInt($r, ['section_id', 'id_section']),
+        'categorieId'     => fmInt($r, ['category_id', 'id_category']),
+        'categorie'       => fmTexte($r, ['category_name', 'base_category_name']),
+        'sousCategorieId' => fmInt($r, ['subcategory_id', 'id_subcategory']),
+        'sousCategorie'   => fmTexte($r, ['subcategory_name', 'base_subcategory_name']),
+        'creeLe'          => fmTexte($r, ['created_at']),
+        // Le lien que le panel attache à une compétence (vidéo, document) — lu sur les données réelles.
+        'lien'            => fmTexte($r, ['related_link', 'link', 'url']),
+    ];
+}
+
+function fmPoste(array $r): array
+{
+    return [
+        'id'          => fmInt($r, ['id', 'position_id', 'id_position']),
+        'nom'         => fmTexte($r, ['name', 'base_name', 'title', 'position_name']) ?? 'Poste',
+        'description' => fmTexte($r, ['description', 'base_description']),
+        'ordre'       => fmInt($r, ['sort_order', 'order', 'position_order']),
+        'brut'        => fmScalaires($r),
+    ];
+}
+
+function fmNiveau(array $r, ?int $posteId): array
+{
+    return [
+        'id'          => fmInt($r, ['id', 'level_id', 'id_level', 'position_level_id']),
+        'posteId'     => $posteId ?? fmInt($r, ['position_id', 'id_position']),
+        'nom'         => fmTexte($r, ['name', 'level_name', 'base_name', 'title']) ?? 'Niveau',
+        'description' => fmTexte($r, ['description', 'level_description', 'base_description']),
+        'ordre'       => fmInt($r, ['level_order', 'sort_order', 'order', 'position']),
+        'competences' => [],
+        'brut'        => fmScalaires($r),
+    ];
+}
+
+function fmFormation(array $r): array
+{
+    return [
+        'id'              => fmInt($r, ['id', 'training_id', 'id_training']),
+        'nom'             => fmTexte($r, ['name', 'base_name', 'title']) ?? 'Formation',
+        'description'     => fmTexte($r, ['description', 'base_description']),
+        'categorie'       => fmTexte($r, ['category_name', 'base_category_name']),
+        'sousCategorieId' => fmInt($r, ['subcategory_id', 'id_subcategory']),
+        'sousCategorie'   => fmTexte($r, ['subcategory_name', 'base_subcategory_name']),
+        'brut'            => fmScalaires($r),
+    ];
+}
+
+function fmProcedure(array $r): array
+{
+    return [
+        'id'              => fmInt($r, ['id', 'id_operational_procedure', 'procedure_id']),
+        'titre'           => fmTexte($r, ['title', 'base_title', 'name']) ?? 'Procédure',
+        'description'     => fmTexte($r, ['description', 'base_description']),
+        'categorieId'     => fmInt($r, ['category_id', 'id_category']),
+        'categorie'       => fmTexte($r, ['category_name', 'base_category_name']),
+        'sousCategorieId' => fmInt($r, ['subcategory_id', 'id_subcategory']),
+        'sousCategorie'   => fmTexte($r, ['subcategory_name', 'base_subcategory_name']),
+        'majLe'           => fmTexte($r, ['updated_at', 'created_at']),
+    ];
+}
+
+function fmRessource(array $r): array
+{
+    return [
+        'id'          => fmInt($r, ['id', 'knowledge_resource_id', 'resource_id']),
+        'titre'       => fmTexte($r, ['title', 'base_title', 'name']) ?? 'Ressource',
+        'description' => fmTexte($r, ['description', 'base_description']),
+        'type'        => fmTexte($r, ['type', 'resource_type', 'kind', 'mime_type']),
+        'url'         => fmTexte($r, ['url', 'link', 'file_url', 'external_url']),
+        'categorie'   => fmTexte($r, ['category_name', 'base_category_name']),
+        'brut'        => fmScalaires($r),
+    ];
+}
+
+function fmSimple(array $r, array $nom = ['name', 'base_name', 'title']): array
+{
+    return [
+        'id'          => fmInt($r, ['id']),
+        'nom'         => fmTexte($r, $nom) ?? '—',
+        'description' => fmTexte($r, ['description', 'base_description']),
+        'brut'        => fmScalaires($r),
+    ];
+}
+
+/** Une ligne d'appel pour le bandeau « ce que le panel a rendu ». */
+function fmAppel(string $cle, string $chemin, array $r, ?int $n = null): array
+{
+    return ['cle' => $cle, 'chemin' => $chemin, 'code' => $r['code'], 'ms' => $r['ms'],
+        'n' => $n ?? (is_array($r['data']) && (array_is_list($r['data']) || fmListe($r['data'])) ? count(fmListe($r['data'])) : null), 'erreur' => $r['erreur']];
+}
+
+/** Le résumé d'une volée de N appels du même gabarit (un par poste, un par niveau…). */
+function fmAppelVolee(string $cle, string $gabarit, array $res): array
+{
+    $ok = 0; $err = null; $ms = 0; $codes = [];
+    foreach ($res as $r) {
+        $ms = max($ms, $r['ms']);
+        $codes[(string) $r['code']] = ($codes[(string) $r['code']] ?? 0) + 1;
+        if ($r['code'] >= 200 && $r['code'] < 300) { $ok++; } elseif ($err === null) { $err = $r['erreur']; }
     }
-    if ($out === []) { return foEquipeCles($ancien); }
-    try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['ts' => time(), 'v' => $out], JSON_UNESCAPED_UNICODE)]); } catch (Throwable $e) { /* */ }
-    return foEquipeCles($out);
+    ksort($codes);
+    return ['cle' => $cle, 'chemin' => $gabarit, 'code' => $res ? ($ok === count($res) ? 200 : (int) array_key_last($codes)) : null,
+        'ms' => $ms, 'n' => count($res), 'ok' => $ok, 'codes' => $codes, 'erreur' => $err];
 }
 
-function foEquipeCles(array $v): array
-{
-    $out = [];
-    foreach ($v as $id => $e) { if (is_array($e)) { $out[(int) $id] = ['nom' => (string) ($e['nom'] ?? ''), 'role' => (string) ($e['role'] ?? '')]; } }
-    return $out;
-}
-
-/** Le rôle d'un employé du panel, quel que soit le nom du champ. */
-function foRoleDe(array $em): string
-{
-    foreach (['role', 'position', 'job', 'job_title', 'function', 'type', 'employee_type'] as $k) {
-        $v = $em[$k] ?? null;
-        if (is_array($v)) { $v = $v['name'] ?? $v['label'] ?? null; }
-        if (is_string($v) && trim($v) !== '') { return trim($v); }
-    }
-    return '';
-}
-
-function foPostesDuRole(string $role): array
-{
-    $r = mb_strtolower($role);
-    if ($r !== '' && preg_match('/respons|manag|gérant|gerant|franchis|chef|owner|admin|zaakvoerder|verantwoordelijk/u', $r)) { return FO_POSTES; }
-    $p = [];
-    if (preg_match('/vend|verko|caiss|kass|comptoir|sales|seller|winkel|toog/u', $r)) { $p[] = 'vente'; }
-    if (preg_match('/cuis|bak|boulang|four|oven|baker/u', $r)) { $p[] = 'cuisson'; }
-    if (preg_match('/prod|pât|pat|atelier|keuken|kitchen/u', $r)) { $p[] = 'production'; }
-    if ($p !== []) { $p[] = 'nettoyage'; }
-    return $p ?: ['vente', 'nettoyage'];
-}
-
-function foValideurDuRole(string $role): bool
-{
-    return $role !== '' && (bool) preg_match('/respons|manag|gérant|gerant|franchis|chef|owner|zaakvoerder|verantwoordelijk/u', mb_strtolower($role));
-}
+/* ── Lectures ──────────────────────────────────────────────────────────── */
 
 /**
- * Le jeu de démonstration (config `seed` activée et panel non configuré) : une équipe fictive par magasin,
- * PIN 1234 pour tous. Jamais lu quand le panel est branché.
+ * GET /formation/referentiel — tout le référentiel en une lecture.
+ *
+ * Trois volées : les listes (10 routes), puis les niveaux de chaque poste,
+ * puis les compétences de chaque niveau. Quatre connexions de front, comme le
+ * reste du cockpit. L'écran la demande avec `_cache=600`.
  */
-function foEquipeDemo(string $shop): array
+function ep_formation_referentiel(): array
 {
-    $noms = [['Elke V.', 'Responsable magasin'], ['Sofie M.', 'Vendeuse'], ['Inès B.', 'Vendeuse'], ['Karim A.', 'Boulanger cuisson'], ['Tom W.', 'Boulanger cuisson'], ['Mila R.', 'Production pâtisserie']];
-    $base = (abs(crc32($shop)) % 900 + 100) * 10;
-    $out = [];
-    foreach ($noms as $i => $n) { $out[(string) ($base + $i + 1)] = ['nom' => $n[0], 'role' => $n[1]]; }
-    return $out;
-}
+    if ($e = fmPret()) { return $e; }
+    @set_time_limit(150);
+    $chemins = [
+        'postes'        => '/positions',
+        'niveaux'       => '/position-levels',
+        'competences'   => '/competencies?lang_code=fr',
+        'formations'    => '/operational-framework/trainings',
+        'sections'      => '/operational-framework/structure/sections',
+        'categories'    => '/operational-framework/structure/categories',
+        'procedures'    => '/operational-procedures',
+        'ressources'    => '/knowledge-base/resources',
+        'produit'       => '/product-competences',
+        'postesTravail' => '/operational-framework/workstations',
+    ];
+    $v1 = PanelApi::getParalleleDetail($chemins, 4, 25);
+    $appels = [];
+    foreach ($chemins as $k => $c) { $appels[] = fmAppel($k, $c, $v1[$k]); }
 
-/**
- * Le PIN d'une personne, vérifié au panel (GET /shops/{id}/employees, champ `pin` — comme les checklists de
- * l'app Cuisine). 5 essais manqués bloquent la personne 10 minutes. Rend [ok, message].
- */
-function foPinOk(string $shop, int $emp, string $pin): array
-{
-    $pin = trim($pin);
-    if (!preg_match('/^\d{3,8}$/', $pin)) { return [false, 'PIN attendu (chiffres)']; }
-    $cle = 'foPin:' . $shop . ':' . $emp;
-    $b = setting($cle);
-    if (is_array($b) && (int) ($b['jusque'] ?? 0) > time()) { return [false, 'bloqué']; }
-    $vrai = null;
-    if (class_exists('PanelApi') && PanelApi::configured()) {
-        $r = PanelApi::get('/shops/' . rawurlencode($shop) . '/employees');
-        if (!is_array($r)) { return [false, 'panel injoignable : réessayer']; }
-        foreach (analyseListe($r) as $em) {
-            if (is_array($em) && (int) ($em['id'] ?? 0) === $emp) { $vrai = trim((string) ($em['pin'] ?? $em['pin_code'] ?? $em['pincode'] ?? '')); break; }
+    // --- Postes, puis leurs niveaux (un appel par poste).
+    $postes = [];
+    foreach (fmListe($v1['postes']['data']) as $r) {
+        $p = fmPoste($r);
+        if ($p['id'] !== null) { $postes[$p['id']] = $p + ['niveaux' => []]; }
+    }
+    $niveauxGlobaux = array_map(static fn ($r) => fmNiveau($r, null), fmListe($v1['niveaux']['data']));
+    $parPoste = [];
+    foreach (array_keys($postes) as $pid) { $parPoste['p' . $pid] = '/positions/' . $pid . '/levels'; }
+    // Les sous-catégories de chaque catégorie, dans la même volée : la création d'une
+    // compétence les demande (id_subcategory), et une sous-catégorie encore vide
+    // n'apparaît sur aucune compétence.
+    $cats = array_values(array_filter(array_map(static fn ($r) => fmInt($r, ['id']), fmListe($v1['categories']['data'])), static fn ($x) => $x !== null));
+    foreach ($cats as $cid) { $parPoste['s' . $cid] = '/operational-framework/structure/categories/' . $cid . '/subcategories'; }
+    $v2 = PanelApi::getParalleleDetail($parPoste, 4, 20);
+    $v2p = array_filter($v2, static fn ($k) => $k[0] === 'p', ARRAY_FILTER_USE_KEY);
+    $v2s = array_filter($v2, static fn ($k) => $k[0] === 's', ARRAY_FILTER_USE_KEY);
+    if ($v2p) { $appels[] = fmAppelVolee('niveauxParPoste', '/positions/{id}/levels', $v2p); }
+    if ($v2s) { $appels[] = fmAppelVolee('sousCategories', '/operational-framework/structure/categories/{id}/subcategories', $v2s); }
+    $niveaux = [];
+    foreach ($postes as $pid => $p) {
+        $r = $v2['p' . $pid] ?? null;
+        $liste = $r !== null && $r['code'] >= 200 && $r['code'] < 300 ? fmListe($r['data']) : null;
+        // La route par poste a échoué : la liste globale, si ses lignes disent leur poste.
+        $lignes = $liste !== null ? array_map(static fn ($x) => fmNiveau($x, $pid), $liste)
+            : array_values(array_filter($niveauxGlobaux, static fn ($n) => $n['posteId'] === $pid));
+        foreach ($lignes as $n) {
+            if ($n['id'] === null) { continue; }
+            $n['posteId'] = $pid;
+            $niveaux[$n['id']] = $n;
         }
-        if ($vrai === null) { return [false, 'personne inconnue dans ce magasin']; }
-        if ($vrai === '') { return [false, 'aucun PIN enregistré au panel pour cette personne']; }
-    } elseif (seedEnabled() && isset(foEquipeDemo($shop)[(string) $emp])) {
-        $vrai = '1234';
-    } else {
-        return [false, 'compte consultant du panel non configuré : PIN invérifiable'];
     }
-    $ok = hash_equals($vrai, $pin);
-    $n = $ok ? 0 : (int) (is_array($b) ? ($b['n'] ?? 0) : 0) + 1;
-    $val = $ok ? null : ['n' => $n, 'jusque' => $n >= FO_PIN_ESSAIS ? time() + FO_PIN_BLOCAGE_S : 0];
+    // Des niveaux que la liste globale connaît mais qu'aucun poste n'a rendus.
+    foreach ($niveauxGlobaux as $n) {
+        if ($n['id'] !== null && !isset($niveaux[$n['id']])) { $niveaux[$n['id']] = $n; }
+    }
+
+    // --- Compétences : le catalogue, puis celles de chaque niveau.
+    $competences = [];
+    foreach (fmListe($v1['competences']['data']) as $r) {
+        $c = fmCompetence($r);
+        if ($c['id'] !== null) { $competences[$c['id']] = $c; }
+    }
+    $parNiveau = [];
+    foreach (array_keys($niveaux) as $nid) { $parNiveau['n' . $nid] = '/position-levels/' . $nid . '/competencies'; }
+    $v3 = PanelApi::getParalleleDetail($parNiveau, 4, 20);
+    if ($v3) { $appels[] = fmAppelVolee('competencesParNiveau', '/position-levels/{id}/competencies', $v3); }
+    foreach ($niveaux as $nid => &$n) {
+        $r = $v3['n' . $nid] ?? null;
+        $n['competencesLues'] = $r !== null && $r['code'] >= 200 && $r['code'] < 300;
+        if (!$n['competencesLues']) { $n['competencesErreur'] = $r['erreur'] ?? null; continue; }
+        foreach (fmListe($r['data']) as $x) {
+            $c = fmCompetence($x);
+            if ($c['id'] === null) { continue; }
+            $n['competences'][] = $c['id'];
+            // Une compétence du niveau absente du catalogue : on la garde quand même.
+            if (!isset($competences[$c['id']])) { $competences[$c['id']] = $c + ['horsCatalogue' => true]; }
+        }
+        $n['competences'] = array_values(array_unique($n['competences']));
+    }
+    unset($n);
+
+    // Les niveaux rangés sous leur poste, dans l'ordre du panel.
+    $sansPoste = [];
+    foreach ($niveaux as $n) {
+        if ($n['posteId'] !== null && isset($postes[$n['posteId']])) { $postes[$n['posteId']]['niveaux'][] = $n; }
+        else { $sansPoste[] = $n; }
+    }
+    $tri = static fn ($a, $b) => [$a['ordre'] ?? PHP_INT_MAX, $a['id']] <=> [$b['ordre'] ?? PHP_INT_MAX, $b['id']];
+    foreach ($postes as &$p) { usort($p['niveaux'], $tri); }
+    unset($p);
+    $postes = array_values($postes);
+    // L'ordre du panel, sauf s'il en donne un explicite (usort est stable depuis PHP 8).
+    usort($postes, static fn ($a, $b) => ($a['ordre'] ?? PHP_INT_MAX) <=> ($b['ordre'] ?? PHP_INT_MAX));
+    if ($sansPoste) {
+        usort($sansPoste, $tri);
+        $postes[] = ['id' => null, 'nom' => 'Niveaux sans poste', 'description' => 'Niveaux rendus par /position-levels qu’aucun poste ne liste.',
+            'ordre' => null, 'brut' => [], 'niveaux' => $sansPoste];
+    }
+
+    // Les sous-catégories : celles du panel, complétées par celles que portent les compétences.
+    $sousCats = [];
+    foreach ($cats as $cid) {
+        $r = $v2['s' . $cid] ?? null;
+        if ($r === null || $r['code'] < 200 || $r['code'] >= 300) { continue; }
+        foreach (fmListe($r['data']) as $x) {
+            $id = fmInt($x, ['id', 'subcategory_id']);
+            if ($id !== null) { $sousCats[$id] = ['id' => $id, 'nom' => fmTexte($x, ['name', 'base_name', 'title']) ?? ('#' . $id), 'categorieId' => $cid]; }
+        }
+    }
+    foreach ($competences as $c) {
+        if ($c['sousCategorieId'] !== null && !isset($sousCats[$c['sousCategorieId']])) {
+            $sousCats[$c['sousCategorieId']] = ['id' => $c['sousCategorieId'], 'nom' => $c['sousCategorie'] ?? ('#' . $c['sousCategorieId']), 'categorieId' => $c['categorieId']];
+        }
+    }
+
+    $comp = array_values($competences);
+    usort($comp, static fn ($a, $b) => [$a['categorie'] ?? '', $a['sousCategorie'] ?? '', $a['nom']] <=> [$b['categorie'] ?? '', $b['sousCategorie'] ?? '', $b['nom']]);
+
+    $map = static fn (string $k, callable $f) => array_values(array_filter(array_map($f, fmListe($v1[$k]['data'])), static fn ($x) => $x['id'] !== null));
+    return [
+        'source'      => ['base' => PanelApi::config()['base'], 'lu' => date('c')],
+        'postes'      => $postes,
+        'competences' => $comp,
+        'formations'  => $map('formations', 'fmFormation'),
+        'procedures'  => $map('procedures', 'fmProcedure'),
+        'ressources'  => $map('ressources', 'fmRessource'),
+        'competencesProduit' => $map('produit', static fn ($r) => fmSimple($r)),
+        'postesTravail' => $map('postesTravail', static fn ($r) => fmSimple($r)),
+        'structure'   => [
+            'sections'   => $map('sections', static fn ($r) => fmSimple($r)),
+            'categories' => $map('categories', static fn ($r) => fmSimple($r) + ['sectionId' => fmInt($r, ['section_id', 'id_section'])]),
+            'sousCategories' => array_values($sousCats),
+        ],
+        'appels'      => $appels,
+    ];
+}
+
+/** Les liens d'une compétence (procédures, formations, ressources), normalisés. */
+function fmLiens(array $r): array
+{
+    $lire = static function (array $r, string $k, array $idCles, array $nomCles): array {
+        $o = [];
+        foreach (is_array($r[$k] ?? null) ? $r[$k] : [] as $x) {
+            if (!is_array($x)) { continue; }
+            $id = fmInt($x, $idCles);
+            if ($id === null) { continue; }
+            $o[] = ['id' => $id, 'nom' => fmTexte($x, $nomCles) ?? ('#' . $id)];
+        }
+        return $o;
+    };
+    return [
+        'procedures' => $lire($r, 'operational_procedures', ['id_operational_procedure', 'procedure_id', 'id'], ['title', 'base_title', 'name']),
+        'formations' => $lire($r, 'trainings', ['training_id', 'id_training', 'id'], ['name', 'base_name', 'title']),
+        'ressources' => $lire($r, 'knowledge_resources', ['knowledge_resource_id', 'resource_id', 'id'], ['title', 'base_title', 'name']),
+    ];
+}
+
+/**
+ * GET /formation/liens — pour CHAQUE compétence du catalogue, ses procédures,
+ * formations et ressources. Un appel par compétence (le panel n'a pas de
+ * lecture groupée) : c'est la lecture lente du module, demandée avec
+ * `_cache=900` et chargée après le référentiel.
+ */
+function ep_formation_liens(): array
+{
+    if ($e = fmPret()) { return $e; }
+    @set_time_limit(240);
+    $l = PanelApi::getParalleleDetail(['c' => '/competencies?lang_code=fr'], 1, 25);
+    if ($l['c']['code'] < 200 || $l['c']['code'] >= 300) {
+        http_response_code(502);
+        return ['error' => 'catalogue des compétences illisible', 'appels' => [fmAppel('competences', '/competencies', $l['c'])]];
+    }
+    $ids = [];
+    foreach (fmListe($l['c']['data']) as $r) { $id = fmInt($r, ['id']); if ($id !== null) { $ids[$id] = true; } }
+    // Les compétences des niveaux qui ne sont pas au catalogue, si l'écran les envoie.
+    foreach (explode(',', (string) ($_GET['en_plus'] ?? '')) as $x) {
+        if (preg_match('/^\d{1,9}$/', trim($x))) { $ids[(int) trim($x)] = true; }
+    }
+    $ids = array_slice(array_keys($ids), 0, 800);
+    $chemins = [];
+    foreach ($ids as $id) { $chemins['c' . $id] = '/competencies/' . $id . '?include=operational_procedures,trainings,knowledge_resources&lang_code=fr'; }
+    $v = PanelApi::getParalleleDetail($chemins, 4, 20);
+    $liens = [];
+    foreach ($ids as $id) {
+        $r = $v['c' . $id];
+        if ($r['code'] < 200 || $r['code'] >= 300 || !is_array($r['data'])) { continue; }
+        $liens[(string) $id] = fmLiens($r['data']);
+    }
+    return ['liens' => (object) $liens, 'lu' => date('c'),
+        'appels' => [fmAppel('competences', '/competencies', $l['c']), fmAppelVolee('liensParCompetence', '/competencies/{id}?include=operational_procedures,trainings,knowledge_resources', $v)]];
+}
+
+/** GET /formation/competence?id= — une compétence et ses liens. */
+function ep_formation_competence(): array
+{
+    if ($e = fmPret()) { return $e; }
+    $id = fmId();
+    if ($id === null) { http_response_code(422); return ['error' => 'id attendu']; }
+    $c = '/competencies/' . $id . '?include=operational_procedures,trainings,knowledge_resources&lang_code=fr';
+    $r = PanelApi::getParalleleDetail(['c' => $c], 1, 20)['c'];
+    if ($r['code'] < 200 || $r['code'] >= 300) { http_response_code(502); return ['error' => $r['erreur'] ?? 'lecture impossible', 'appels' => [fmAppel('competence', $c, $r)]]; }
+    // Le panel rend [] (avec les clés d'inclusion) pour une compétence absente.
+    $d = is_array($r['data']) ? $r['data'] : [];
+    if (fmInt($d, ['id']) === null) { http_response_code(404); return ['error' => 'compétence inconnue du panel']; }
+    return ['competence' => fmCompetence($d), 'liens' => fmLiens($d), 'appels' => [fmAppel('competence', $c, $r)]];
+}
+
+/** GET /formation/niveau?id= — un niveau (sous-poste) : fiche, compétences, exigences, tâches. */
+function ep_formation_niveau(): array
+{
+    if ($e = fmPret()) { return $e; }
+    $id = fmId();
+    if ($id === null) { http_response_code(422); return ['error' => 'id attendu']; }
+    $chemins = ['fiche' => '/position-levels/' . $id, 'competences' => '/position-levels/' . $id . '/competencies',
+        'exigences' => '/position-levels/' . $id . '/requirements', 'taches' => '/position-levels/' . $id . '/tasks'];
+    $v = PanelApi::getParalleleDetail($chemins, 4, 20);
+    $appels = [];
+    foreach ($chemins as $k => $c) { $appels[] = fmAppel($k, $c, $v[$k]); }
+    $fiche = is_array($v['fiche']['data']) && !array_is_list($v['fiche']['data']) ? fmNiveau($v['fiche']['data'], null) : null;
+    return [
+        'niveau'      => $fiche,
+        'competences' => array_values(array_filter(array_map('fmCompetence', fmListe($v['competences']['data'])), static fn ($c) => $c['id'] !== null)),
+        'exigences'   => array_map(static fn ($r) => fmSimple($r, ['name', 'title', 'requirement', 'base_name', 'description']), fmListe($v['exigences']['data'])),
+        'taches'      => array_map(static fn ($r) => fmSimple($r, ['name', 'title', 'task_name', 'base_name']), fmListe($v['taches']['data'])),
+        'appels'      => $appels,
+    ];
+}
+
+/**
+ * GET /formation/procedure?id= — une procédure opératoire et ses sections :
+ * la page du manuel. Le contenu des sections est rendu tel que le panel le
+ * tient (souvent du HTML d'éditeur) ; c'est l'écran qui le nettoie avant de
+ * l'afficher.
+ */
+function ep_formation_procedure(): array
+{
+    if ($e = fmPret()) { return $e; }
+    $id = fmId();
+    if ($id === null) { http_response_code(422); return ['error' => 'id attendu']; }
+    // MESURÉ sur le panel (31/10/2026) : sans `include=sections`, la fiche ne porte pas ses sections.
+    $chemins = ['fiche' => '/operational-procedures/' . $id . '?include=sections&lang_code=fr', 'pieces' => '/operational-procedures/' . $id . '/attachments'];
+    $v = PanelApi::getParalleleDetail($chemins, 2, 20);
+    $appels = [fmAppel('fiche', $chemins['fiche'], $v['fiche']), fmAppel('pieces', $chemins['pieces'], $v['pieces'])];
+    $d = $v['fiche']['data'];
+    if (!is_array($d) || array_is_list($d) || fmInt($d, ['id']) === null) {
+        http_response_code($v['fiche']['code'] >= 200 && $v['fiche']['code'] < 300 ? 404 : 502);
+        return ['error' => $v['fiche']['erreur'] ?? 'procédure inconnue du panel', 'appels' => $appels];
+    }
+    $sections = [];
+    foreach (is_array($d['sections'] ?? null) ? $d['sections'] : [] as $s) {
+        if (!is_array($s)) { continue; }
+        $sections[] = ['id' => fmInt($s, ['id']), 'titre' => fmTexte($s, ['title', 'base_title', 'name']),
+            'contenu' => fmTexte($s, ['content', 'base_content', 'description']), 'ordre' => fmInt($s, ['sort_order', 'order'])];
+    }
+    usort($sections, static fn ($a, $b) => [$a['ordre'] ?? PHP_INT_MAX, $a['id'] ?? 0] <=> [$b['ordre'] ?? PHP_INT_MAX, $b['id'] ?? 0]);
+    $pieces = [];
+    foreach (fmListe($v['pieces']['data']) as $p) {
+        $pieces[] = ['id' => fmInt($p, ['id', 'attachment_id']), 'nom' => fmTexte($p, ['label', 'name', 'title', 'file_name', 'original_name']),
+            'url' => fmTexte($p, ['url', 'presigned_url', 'file_url', 'link']), 'type' => fmTexte($p, ['mime_type', 'type', 'extension'])];
+    }
+    return ['procedure' => fmProcedure($d) + ['contenu' => fmTexte($d, ['content', 'base_content'])],
+        'sections' => $sections, 'pieces' => $pieces, 'appels' => $appels];
+}
+
+/** GET /formation/formation?id= — une formation et ses formateurs. */
+function ep_formation_formation(): array
+{
+    if ($e = fmPret()) { return $e; }
+    $id = fmId();
+    if ($id === null) { http_response_code(422); return ['error' => 'id attendu']; }
+    $chemins = ['fiche' => '/operational-framework/trainings/' . $id, 'formateurs' => '/operational-framework/trainings/' . $id . '/trainers'];
+    $v = PanelApi::getParalleleDetail($chemins, 2, 20);
+    $d = $v['fiche']['data'];
+    $formateurs = [];
+    foreach (fmListe($v['formateurs']['data']) as $t) {
+        $nom = fmTexte($t, ['display_name', 'full_name', 'name']);
+        $nom2 = fmTexte($t, ['surname', 'last_name']);
+        $formateurs[] = ['id' => fmInt($t, ['id', 'employee_id', 'admin_id']), 'nom' => trim(($nom ?? '') . ($nom2 !== null && $nom !== null && !str_contains($nom, $nom2) ? ' ' . $nom2 : '')) ?: '—',
+            'type' => fmTexte($t, ['type', 'trainer_type', 'kind'])];
+    }
+    return ['formation' => is_array($d) && !array_is_list($d) ? fmFormation($d) : null, 'formateurs' => $formateurs,
+        'appels' => [fmAppel('fiche', $chemins['fiche'], $v['fiche']), fmAppel('formateurs', $chemins['formateurs'], $v['formateurs'])]];
+}
+
+/** GET /formation/ressource?id= — une ressource de la base de connaissances. */
+function ep_formation_ressource(): array
+{
+    if ($e = fmPret()) { return $e; }
+    $id = fmId();
+    if ($id === null) { http_response_code(422); return ['error' => 'id attendu']; }
+    $c = '/knowledge-base/resources/' . $id;
+    $r = PanelApi::getParalleleDetail(['r' => $c], 1, 20)['r'];
+    $d = $r['data'];
+    return ['ressource' => is_array($d) && !array_is_list($d) ? fmRessource($d) + ['contenu' => fmTexte($d, ['content', 'body', 'text'])] : null,
+        'appels' => [fmAppel('ressource', $c, $r)]];
+}
+
+/**
+ * GET /formation/equipe?shop= — l'équipe d'un magasin : pour chacun, le poste
+ * et le niveau tenus, et les compétences acquises. L'écart avec le niveau se
+ * calcule à l'écran (il a le référentiel). Sans `shop` : la liste des
+ * magasins. Rien de personnel ne sort : ni téléphone, ni mail, ni taux.
+ */
+function ep_formation_equipe(): array
+{
+    if ($e = fmPret()) { return $e; }
+    $magasins = [];
     try {
-        if ($val === null) { Db::exec('DELETE FROM ceo_app_setting WHERE `key` = ?', [$cle]); }
-        else { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($val)]); }
-    } catch (Throwable $e) { /* */ }
-    return $ok ? [true, ''] : [false, $n >= FO_PIN_ESSAIS ? 'bloqué' : 'PIN incorrect'];
-}
-
-/** Un jeton signé pour la tablette : base64url(json) . '.' . HMAC-SHA256 (secret de session du cockpit). */
-function foJeton(array $d): string
-{
-    $d['x'] = time() + FO_JETON_S;
-    $p = rtrim(strtr(base64_encode((string) json_encode($d, JSON_UNESCAPED_UNICODE)), '+/', '-_'), '=');
-    return $p . '.' . hash_hmac('sha256', 'fo|' . $p, foSecret());
-}
-
-function foJetonLire(mixed $j): ?array
-{
-    if (!is_string($j) || !preg_match('/^([\w-]+)\.([a-f0-9]{64})$/', $j, $m)) { return null; }
-    if (!hash_equals(hash_hmac('sha256', 'fo|' . $m[1], foSecret()), $m[2])) { return null; }
-    $d = json_decode((string) base64_decode(strtr($m[1], '-_', '+/')), true);
-    if (!is_array($d) || (int) ($d['x'] ?? 0) < time() || !isset($d['s'], $d['e'])) { return null; }
-    return ['s' => (string) $d['s'], 'e' => (int) $d['e'], 'n' => (string) ($d['n'] ?? '')];
-}
-
-function foSecret(): string
-{
-    $s = function_exists('authSecret') ? authSecret() : '';
-    return $s !== '' ? $s : (string) (setting('authSecret', '') ?: 'formation');
-}
-
-/** Le fil d'un magasin : lectures, quiz réussis, « vu faire », des 14 derniers jours. */
-function foFil(string $shop, int $max): array
-{
-    $depuis = date('Y-m-d H:i:s', time() - FO_FIL_JOURS * 86400);
-    $rows = Db::rows('SELECT s.*, p.titre_fr FROM ceo_sop_suivi s JOIN ceo_sop p ON p.id = s.sop_id WHERE s.shop_id = ? AND s.maj_le >= ? ORDER BY s.maj_le DESC LIMIT 200', [$shop, $depuis]);
-    $ev = [];
-    foreach ($rows as $r) {
-        foreach ([['vu_le', 'vu'], ['quiz_le', 'quiz'], ['lu_le', 'lu']] as [$k, $t]) {
-            if (!empty($r[$k]) && $r[$k] >= $depuis) {
-                $ev[] = ['le' => foIso($r[$k]), 'type' => $t, 'nom' => (string) $r['employee_nom'], 'sop' => (string) $r['sop_id'], 'titre' => (string) $r['titre_fr'],
-                    'par' => $t === 'vu' ? $r['vu_par_nom'] : null];
-            }
+        foreach (ep_stores() as $s) {
+            // Le magasin du panel : `pwaId` (table partagée `shops`). Le repli de démonstration
+            // (ceo_shop) n'a pas d'identifiant panel — rien à lire chez le panel pour lui.
+            $pid = (int) ($s['pwaId'] ?? $s['id']);
+            if (($s['status'] ?? '') === 'Fermé' || $pid <= 0) { continue; }
+            $magasins[] = ['id' => $pid, 'nom' => (string) $s['nom']];
         }
+    } catch (Throwable $e) { /* sans table des magasins : la liste reste vide, l'écran le dit */ }
+    $sid = fmId('shop');
+    if ($sid === null) { return ['magasins' => $magasins, 'employes' => null]; }
+    @set_time_limit(120);
+    $c = '/shops/' . $sid . '/employees';
+    $l = PanelApi::getParalleleDetail(['e' => $c], 1, 20)['e'];
+    $appels = [fmAppel('employes', $c, $l)];
+    $emps = [];
+    foreach (fmListe($l['data']) as $r) {
+        $id = fmInt($r, ['id', 'employee_id']);
+        if ($id === null) { continue; }
+        $actif = $r['active'] ?? ($r['is_active'] ?? 1);
+        if (isset($r['soft_delete']) && (int) $r['soft_delete'] === 1) { continue; }
+        $nom = fmTexte($r, ['display_name']) ?? trim((fmTexte($r, ['name']) ?? '') . ' ' . (fmTexte($r, ['surname']) ?? ''));
+        $emps[$id] = ['id' => $id, 'nom' => $nom !== '' ? $nom : ('Employé ' . $id), 'actif' => (bool) (int) $actif,
+            'role' => fmTexte($r, ['franchise_role', 'role_name', 'employment_type']), 'postes' => [], 'competences' => [], 'lu' => false];
     }
-    usort($ev, static fn ($a, $b) => strcmp((string) $b['le'], (string) $a['le']));
-    return array_slice($ev, 0, $max);
+    $emps = array_slice($emps, 0, 120, true);
+    $chemins = [];
+    foreach (array_keys($emps) as $id) { $chemins['e' . $id] = '/employees/' . $id . '?include=competencies,positions'; }
+    $v = PanelApi::getParalleleDetail($chemins, 4, 20);
+    if ($v) { $appels[] = fmAppelVolee('fiches', '/employees/{id}?include=competencies,positions', $v); }
+    foreach ($emps as $id => &$e2) {
+        $r = $v['e' . $id] ?? null;
+        if ($r === null || $r['code'] < 200 || $r['code'] >= 300 || !is_array($r['data'])) { continue; }
+        $e2['lu'] = true;
+        foreach (is_array($r['data']['positions'] ?? null) ? $r['data']['positions'] : [] as $p) {
+            if (!is_array($p)) { continue; }
+            $e2['postes'][] = ['id' => fmInt($p, ['id', 'position_id']), 'nom' => fmTexte($p, ['name']), 'niveauId' => fmInt($p, ['level_id']),
+                'niveau' => fmTexte($p, ['level_name']), 'ordre' => fmInt($p, ['level_order'])];
+        }
+        foreach (is_array($r['data']['competencies'] ?? null) ? $r['data']['competencies'] : [] as $c2) {
+            if (is_array($c2) && ($cid = fmInt($c2, ['competency_id', 'id'])) !== null) { $e2['competences'][] = $cid; }
+        }
+        $e2['competences'] = array_values(array_unique($e2['competences']));
+    }
+    unset($e2);
+    $out = array_values($emps);
+    usort($out, static fn ($a, $b) => [!$a['actif'], $a['nom']] <=> [!$b['actif'], $b['nom']]);
+    return ['magasins' => $magasins, 'shop' => $sid, 'employes' => $out, 'appels' => $appels];
 }
 
-/* ═══ Le PDF (Manuel opératoire, une SOP) ═════════════════════════════════════════════════════════ */
+/** Les routes GET que la sonde accepte : le référentiel formation, rien d'autre. */
+const FM_SONDE = '#^/(positions(/\d+(/levels)?)?|position-levels(/\d+(/(competencies|requirements|tasks))?)?|levels/\d+/tasks'
+    . '|competencies(/\d+)?|competency-subcategories/\d+/competencies|career-paths(/\d+(/stages)?)?|career-stages(/\d+(/(competencies|requirements))?)?'
+    . '|employees/\d+(/(competencies|positions))?|franchisee-employee/\d+/(competences|courses)'
+    . '|product-competences(/\d+|/name-aliases|/description-aliases)?|packages(/\d+(/cost)?)?|products/\d+/competences'
+    . '|operational-framework/(trainings(/\d+(/trainers)?)?|workstations(/\d+)?|structure/(sections(/\d+)?|categories(/\d+(/subcategories)?)?))'
+    . '|operational-procedures(/\d+(/attachments)?)?|operational-procedure-(categories|sections|section-titles)(/\d+)?'
+    . '|knowledge-base/(categories(/\d+(/resources)?)?|resources(/\d+)?)|shops/\d+/knowledge-base/resources'
+    . '|courses|course/\d+(/competences)?|course-(commissions|groups|sets|subgroups)|course-commission/(courses|\d+(/competences|/participants)?)'
+    . '|course-set/\d+(/courses)?|course-group/\d+(/subgroups)?|course-subgroup/\d+|franchisee-employee-roles|franchisee-employee-role/\d+(/course)?'
+    . '|shops/workstations(/\d+)?)(\?[A-Za-z0-9_=&,%\-]*)?$#';
 
-/** Sort le PDF (moteur du cockpit, rapPdfRendu) ; sans moteur, la page imprimable — puis exit. */
-function foPdfSortie(array $rows, string $l, bool $couverture, string $titre, string $fichier): void
+/**
+ * GET /formation/sonde?chemin=/competencies — l'écran API teste une route :
+ * code HTTP, durée, forme de la réponse, champs, premier élément (nettoyé).
+ * GET seulement, et seulement les routes du référentiel formation.
+ */
+function ep_formation_sonde(): array
 {
-    $html = foPdfHtml($rows, $l, $couverture, $titre);
-    $pdf = function_exists('rapPdfRendu') ? rapPdfRendu($html, ['magasin' => 'L’Atelier', 'rapport' => $titre, 'genere' => date('d/m/Y'), 'envoye' => '']) : null;
-    if ($pdf !== null) {
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $fichier . '.pdf"');
-        echo $pdf;
-        exit;
+    if ($e = fmPret()) { return $e; }
+    $chemin = (string) ($_GET['chemin'] ?? '');
+    $chemin = preg_replace('#^/api/v1#', '', $chemin) ?? '';
+    if (!preg_match(FM_SONDE, $chemin)) {
+        http_response_code(422);
+        return ['error' => 'route hors du référentiel formation', 'chemin' => $chemin];
     }
-    header('Content-Type: text/html; charset=utf-8');
-    echo str_replace('</body>', '<script>window.addEventListener("load",function(){setTimeout(function(){window.print()},300)})</script></body>', $html);
+    $r = PanelApi::getParalleleDetail(['s' => $chemin], 1, 25)['s'];
+    $d = $r['data'];
+    $liste = is_array($d) ? fmListe($d) : [];
+    $type = $d === null ? 'vide' : (is_array($d) ? (array_is_list($d) ? 'liste' : ($liste ? 'objet contenant une liste' : 'objet')) : gettype($d));
+    $premier = $liste[0] ?? (is_array($d) && !array_is_list($d) ? $d : null);
+    $champs = is_array($premier) ? array_values(array_filter(array_keys($premier), static fn ($k) => !is_string($k) || !fmSecret($k))) : [];
+    return ['chemin' => $chemin, 'code' => $r['code'], 'ms' => $r['ms'], 'type' => $type,
+        'n' => is_array($d) && array_is_list($d) ? count($d) : ($liste ? count($liste) : null),
+        'champs' => $champs, 'exemple' => $premier !== null ? fmScrub($premier) : (is_scalar($d) ? $d : null), 'erreur' => $r['erreur']];
+}
+
+/**
+ * GET /formation/pdf?type=poste|niveau|procedure&id= — le PDF que le panel
+ * génère, relayé avec le jeton du cockpit (la tablette n'en a pas).
+ */
+function ep_formation_pdf(): array
+{
+    if ($e = fmPret()) { return $e; }
+    $id = fmId();
+    $gab = ['poste' => '/positions/%d/pdf', 'niveau' => '/position-levels/%d/pdf', 'procedure' => '/operational-procedures/%d/pdf'];
+    $type = (string) ($_GET['type'] ?? '');
+    if ($id === null || !isset($gab[$type])) { http_response_code(422); return ['error' => 'type (poste, niveau, procedure) et id attendus']; }
+    $chemin = sprintf($gab[$type], $id);
+    [$code, $octets, $mime] = PanelApi::binaire($chemin);
+    if ($code !== 200 || $octets === null || !str_starts_with($octets, '%PDF')) {
+        http_response_code(502);
+        $det = is_string($octets) ? json_decode($octets, true) : null;
+        return ['error' => 'le panel n’a pas rendu de PDF', 'chemin' => $chemin, 'code' => $code, 'type' => $mime,
+            'detail' => is_array($det) ? (fmTexte($det, ['description', 'message', 'error']) ?? null) : null];
+    }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: inline; filename="' . $type . '-' . $id . '.pdf"');
+    header('Content-Length: ' . strlen($octets));
+    echo $octets;
     exit;
 }
 
-function foPdfHtml(array $rows, string $l, bool $couverture, string $titre): string
+/* ── Écritures (31/10/2026) ────────────────────────────────────────────────
+ *
+ * Ce que le module écrit dans le panel, et rien d'autre :
+ *   - les compétences exigées par un niveau (sous-poste) ;
+ *   - les formations, procédures et ressources rattachées à une compétence ;
+ *   - le catalogue des compétences (créer, modifier, supprimer) ;
+ *   - pour une personne : valider ou retirer une compétence, changer de niveau.
+ *
+ * Trois règles :
+ *   1. TOUTE écriture est relue. Le panel répond « success » à un DELETE qui
+ *      n'a rien supprimé et à un POST dont il a ignoré le corps : seule la
+ *      relecture dit ce qui est vraiment enregistré. Un écart est une erreur.
+ *   2. Un retrait essaie d'abord l'identifiant de la CIBLE (compétence,
+ *      formation…), puis, si la relecture la montre encore, celui de la
+ *      LIAISON — les routes sans contrat ne disent pas lequel elles attendent.
+ *   3. Chaque écriture réussie laisse une ligne au journal du cockpit, et
+ *      corrige les lectures gardées en cache (référentiel, liens, équipe) :
+ *      l'écran suivant montre l'état écrit, sans tout relire au panel.
+ */
+
+/** La clé de cache d'une lecture gardée (même calcul que routeGardee()). */
+function fmCleCache(string $route, array $q = []): string
 {
-    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    $T = $l === 'nl'
-        ? ['manuel' => 'Operationeel handboek', 'std' => 'De standaarden van het netwerk', 'ed' => 'Editie van', 'som' => 'Inhoud', 'obj' => 'Doel', 'pour' => 'Voor',
-            'ver' => 'Versie', 'comp' => 'Competentie', 'crit' => 'Kritieke punten', 'trad' => 'Vertaling na te lezen', 'aval' => 'Te valideren', 'duree' => 'Duur', 'p' => 'p.']
-        : ['manuel' => 'Manuel opératoire', 'std' => 'Les standards du réseau', 'ed' => 'Édition du', 'som' => 'Sommaire', 'obj' => 'Objectif', 'pour' => 'Pour',
-            'ver' => 'Version', 'comp' => 'Compétence', 'crit' => 'Points critiques', 'trad' => 'Traduction à relire', 'aval' => 'À valider', 'duree' => 'Durée', 'p' => 'p.'];
-    $photos = realpath(__DIR__ . '/../public/formation/photos') ?: '';
-    $css = '@page{size:A4;margin:14mm 15mm 18mm}body{font-family:"Gotham","Helvetica Neue",Arial,sans-serif;font-size:10.5px;color:#222;line-height:1.45;margin:0}'
-        . '.couv{height:250mm;background:#8D1D2C;color:#fff;padding:28mm 20mm;box-sizing:border-box;page-break-after:always;display:flex;flex-direction:column;justify-content:space-between}'
-        . '.couv h1{font-size:44px;line-height:1.05;margin:0 0 10px}.couv small{opacity:.8;font-size:12px}'
-        . '.som{page-break-after:always}.som h2{font-size:20px;border-bottom:2px solid #8D1D2C;padding-bottom:6px}.som .ch{margin:12px 0 4px;font-weight:700;color:#8D1D2C;text-transform:uppercase;font-size:10px;letter-spacing:.1em}'
-        . '.som .l{display:flex;justify-content:space-between;border-bottom:.5px dotted #bbb;padding:3px 0}'
-        . '.sop{page-break-before:always}.sop:first-of-type{page-break-before:auto}'
-        . '.hd{display:flex;justify-content:space-between;border-bottom:2.5px solid #8D1D2C;padding-bottom:8px;margin-bottom:10px}.hd h1{font-size:22px;margin:2px 0}.hd small{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#777}'
-        . '.cart{background:#F5F1EB;border-radius:4px;padding:7px 10px;margin-bottom:10px;font-size:9.5px}.cart b{display:inline-block;min-width:80px;color:#777;font-weight:400}'
-        . 'h3{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:#8D1D2C;padding:4px 8px;margin:12px 0 6px;border-radius:2px;page-break-after:avoid}'
-        . '.st{display:flex;gap:8px;margin:4px 0;page-break-inside:avoid}.st i{font-style:normal;font-weight:700;color:#8D1D2C;flex:0 0 28px}.st.c{background:#FDF1F2;border-left:2.5px solid #C0182B;padding:3px 6px}'
-        . '.st img{max-width:140px;max-height:100px;border-radius:3px;margin-left:auto}.crit{border-left:3px solid #C0182B;background:#FDF1F2;padding:6px 10px;margin:10px 0;page-break-inside:avoid}'
-        . '.marque{font-size:8.5px;color:#8a5a00;background:#FFF1D6;border-radius:3px;padding:1px 6px;margin-left:6px}';
-    $h = '<!doctype html><html lang="' . $l . '"><head><meta charset="utf-8"><title>' . $e($titre) . '</title><style>' . $css . '</style></head><body>';
-    if ($couverture) {
-        $h .= '<div class="couv"><div><small>L’ATELIER · SUCRÉ · SALÉ · À EMPORTER</small></div><div><h1>' . $e($T['manuel']) . '</h1><div style="font-size:14px">' . $e($T['std'])
-            . ' · ' . count($rows) . ' SOP</div></div><div><small>' . $e($T['ed']) . ' ' . date('d/m/Y') . ' · ' . strtoupper($l) . '</small></div></div>';
-        $h .= '<div class="som"><h2>' . $e($T['som']) . '</h2>';
-        $cur = '';
-        foreach ($rows as $r) {
-            if ($r['dossier'] !== $cur) { $cur = (string) $r['dossier']; $h .= '<div class="ch">' . $e($cur . ' · ' . (FO_DOSSIERS[$cur][$l] ?? $cur)) . '</div>'; }
-            $h .= '<div class="l"><span>' . $e(($r['code'] ? $r['code'] . ' — ' : '') . foTitreL($r, $l)) . '</span><span>v' . $e($r['version']) . '</span></div>';
-        }
-        $h .= '</div>';
-    }
-    foreach ($rows as $r) {
-        $c = foContenuLangue(foContenuVersion((string) $r['id'], (string) $r['version']), $l, false);
-        $tradAR = ($r['trad_' . $l] ?? '') === 'a_relire';
-        $h .= '<div class="sop"><div class="hd"><div><small>' . $e($T['manuel'] . ' · ' . $r['dossier'] . ' · ' . (FO_DOSSIERS[(string) $r['dossier']][$l] ?? '')) . '</small><h1>' . $e($c['titre'])
-            . ($r['statut'] === 'a_valider' ? '<span class="marque">' . $e($T['aval']) . '</span>' : '') . ($tradAR ? '<span class="marque">' . $e($T['trad']) . '</span>' : '') . '</h1></div>'
-            . '<div style="text-align:right"><small>' . $e((string) $r['code']) . '</small><br><b>' . strtoupper($l) . '</b></div></div>';
-        $h .= '<div class="cart">' . ($c['objectif'] !== '' ? '<div><b>' . $e($T['obj']) . '</b>' . $e($c['objectif']) . '</div>' : '') . ($c['pour'] !== '' ? '<div><b>' . $e($T['pour']) . '</b>' . $e($c['pour']) . '</div>' : '')
-            . ($c['duree'] !== '' ? '<div><b>' . $e($T['duree']) . '</b>' . $e($c['duree']) . '</div>' : '')
-            . (($r['competence_nom'] ?? null) !== null ? '<div><b>' . $e($T['comp']) . '</b>' . $e($r['competence_nom']) . '</div>' : '')
-            . '<div><b>' . $e($T['ver']) . '</b>v' . $e($r['version']) . ' · ' . $e(substr((string) $r['maj_le'], 0, 10)) . '</div></div>';
-        foreach ($c['sections'] as $sec) {
-            $h .= '<h3>' . $e($sec['titre']) . '</h3>';
-            foreach ($sec['etapes'] as $st) {
-                $img = $st['photo'] !== null && $photos !== '' && is_file($photos . '/' . $st['photo']) ? '<img src="file://' . $e($photos . '/' . $st['photo']) . '">' : '';
-                $h .= '<div class="st' . ($st['critique'] ? ' c' : '') . '"><i>' . $e($st['numero']) . '</i><div>' . ($st['titre'] !== '' ? '<b>' . $e($st['titre']) . '</b> — ' : '') . nl2br($e($st['texte'])) . '</div>' . $img . '</div>';
-            }
-        }
-        if ($c['points_critiques'] !== []) {
-            $h .= '<div class="crit"><b>' . $e($T['crit']) . '</b><ul style="margin:4px 0 0;padding-left:16px">' . implode('', array_map(static fn ($x) => '<li>' . $e($x) . '</li>', $c['points_critiques'])) . '</ul></div>';
-        }
-        $h .= '</div>';
-    }
-    return $h . '</body></html>';
+    ksort($q);
+    return 'rcG:' . md5($route . '?' . http_build_query($q));
 }
 
-/* ═══ Le contenu d'une SOP ════════════════════════════════════════════════════════════════════════ */
-
-/** Le contenu, normalisé : chaque texte en {fr, nl}, les étapes numérotées, rien d'autre que les champs connus. */
-function foContenu(array $j): array
+/** Corrige une lecture gardée en place ; sans copie en cache, rien à faire. */
+function fmCachePatch(string $route, array $q, callable $f): void
 {
-    $sections = [];
-    foreach (is_array($j['sections'] ?? null) ? $j['sections'] : [] as $sec) {
-        if (!is_array($sec)) { continue; }
-        $et = [];
-        foreach (is_array($sec['etapes'] ?? null) ? $sec['etapes'] : [] as $i => $s) {
-            if (!is_array($s)) { continue; }
-            $photo = is_string($s['photo'] ?? null) && preg_match('/^[\w.-]{1,80}\.(jpe?g|png|webp)$/i', basename($s['photo'])) ? basename($s['photo']) : null;
-            $titre = foBi($s['titre'] ?? null);
-            $et[] = ['numero' => foCourt(isset($s['numero']) ? (string) $s['numero'] : (string) ($i + 1), 16) ?? (string) ($i + 1),
-                'titre' => $titre['fr'] === '' && $titre['nl'] === '' ? null : $titre, 'texte' => foBi($s['texte'] ?? null),
-                'critique' => !empty($s['critique']), 'photo' => $photo];
-        }
-        $sections[] = ['titre' => foBi($sec['titre'] ?? null), 'etapes' => $et];
-    }
-    $quiz = [];
-    foreach (is_array($j['quiz'] ?? null) ? $j['quiz'] : [] as $q) {
-        if (!is_array($q)) { continue; }
-        $ch = is_array($q['choix'] ?? null) ? $q['choix'] : [];
-        $fr = array_values(array_map('strval', is_array($ch['fr'] ?? null) ? $ch['fr'] : (array_is_list($ch) ? $ch : [])));
-        $nl = array_values(array_map('strval', is_array($ch['nl'] ?? null) ? $ch['nl'] : []));
-        if (count($fr) < 2 && count($nl) < 2) { continue; }
-        $n = max(count($fr), count($nl));
-        $quiz[] = ['question' => foBi($q['question'] ?? null), 'choix' => ['fr' => array_pad($fr, $n, ''), 'nl' => array_pad($nl, $n, '')],
-            'bonne' => max(0, min($n - 1, (int) ($q['bonne'] ?? 0)))];
-    }
-    return [
-        'titre' => foBi($j['titre'] ?? null),
-        'objectif' => foBi($j['objectif'] ?? null),
-        'pour' => foBi($j['pour'] ?? null),
-        'duree' => is_string($j['duree'] ?? null) ? trim($j['duree']) : null,
-        'sections' => $sections,
-        'points_critiques' => array_values(array_filter(array_map('foBi', is_array($j['points_critiques'] ?? null) ? $j['points_critiques'] : []),
-            static fn ($x) => $x['fr'] !== '' || $x['nl'] !== '')),
-        'quiz' => $quiz,
-        'corrections' => array_values(array_map('strval', array_filter(is_array($j['corrections'] ?? null) ? $j['corrections'] : [], 'is_scalar'))),
-        'remarques' => array_values(array_map('strval', array_filter(is_array($j['remarques'] ?? null) ? $j['remarques'] : [], 'is_scalar'))),
-    ];
+    try {
+        $k = fmCleCache($route, $q);
+        $c = setting($k);
+        if (!is_array($c) || !is_array($c['r'] ?? null)) { return; }
+        $c['r'] = $f($c['r']);
+        $j = json_encode($c, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+        if (is_string($j)) { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$k, $j]); }
+    } catch (Throwable $e) { /* le cache se refera à sa prochaine lecture */ }
 }
 
-/** Ce qui empêche de publier un contenu ; null s'il est publiable. */
-function foContenuErreur(array $c): ?string
+/** Le journal du cockpit, s'il est là (les tests n'en ont pas). */
+function fmJournal(?string $objet, string $message): void
 {
-    if ($c['titre']['fr'] === '' || $c['titre']['nl'] === '') { return 'le titre est attendu en FR et en NL'; }
-    $n = 0;
-    foreach ($c['sections'] as $si => $sec) {
-        foreach ($sec['etapes'] as $ei => $s) {
-            $n++;
-            if ($s['texte']['fr'] === '' || $s['texte']['nl'] === '') { return 'étape ' . $s['numero'] . ' (section ' . ($si + 1) . ') : texte attendu en FR et en NL'; }
+    if (!function_exists('journalAdd')) { return; }
+    try { journalAdd('CEO', 'Formation', $objet, $message); } catch (Throwable $e) { /* l'écriture est faite, le journal suivra */ }
+}
+
+/** Le corps JSON de la requête (writes.php le fournit ; repli pour les tests). */
+function fmCorps(): array
+{
+    if (function_exists('body')) { return body(); }
+    $d = json_decode((string) file_get_contents('php://input'), true);
+    return is_array($d) ? $d : [];
+}
+
+/** Un entier strictement positif lu dans le corps, ou null. */
+function fmIdCorps(array $b, string $k): ?int
+{
+    $v = $b[$k] ?? null;
+    if (is_int($v) && $v > 0) { return $v; }
+    if (is_string($v) && preg_match('/^\d{1,9}$/', $v) && (int) $v > 0) { return (int) $v; }
+    return null;
+}
+
+/** Un refus propre : code HTTP et message, avec ce que le panel a répondu. */
+function fmRefus(int $http, string $message, array $extra = []): array
+{
+    http_response_code($http);
+    return ['ok' => false, 'error' => $message] + $extra;
+}
+
+/** Une ligne d'appel d'écriture pour l'écran (jamais le corps complet). */
+function fmAppelEcrit(string $methode, string $chemin, array $r): array
+{
+    return ['methode' => $methode, 'chemin' => $chemin, 'code' => $r['code'], 'erreur' => $r['erreur'],
+        'reponse' => is_array($r['data']) ? fmScrub(array_slice($r['data'], 0, 6, true)) : (is_scalar($r['data']) ? $r['data'] : null)];
+}
+
+/** Les compétences d'un niveau, relues : `[ids, liaisons{cid: idLiaison}, appel]`. */
+function fmRelireNiveau(int $nid): array
+{
+    $c = '/position-levels/' . $nid . '/competencies';
+    $r = PanelApi::requete('GET', $c);
+    $ids = []; $liaisons = [];
+    if ($r['code'] >= 200 && $r['code'] < 300 && is_array($r['data'])) {
+        foreach (fmListe(isset($r['data']['data']) && !array_is_list($r['data']) ? $r['data']['data'] : $r['data']) as $x) {
+            $cid = fmInt($x, ['competency_id', 'id_competency', 'competence_id', 'id']);
+            if ($cid === null) { continue; }
+            $ids[] = $cid;
+            $lid = fmInt($x, ['id']);
+            if ($lid !== null && $lid !== $cid) { $liaisons[$cid] = $lid; }
         }
     }
-    if ($n === 0) { return 'au moins une étape'; }
-    foreach ($c['quiz'] as $i => $q) {
-        if ($q['question']['fr'] === '' || $q['question']['nl'] === '') { return 'question ' . ($i + 1) . ' du quiz : attendue en FR et en NL'; }
+    return [array_values(array_unique($ids)), $liaisons, $r];
+}
+
+/** Une compétence et ses liens, relus : `[competence|null, liens, brut, appel]`. */
+function fmRelireCompetence(int $cid): array
+{
+    $r = PanelApi::requete('GET', '/competencies/' . $cid . '?include=operational_procedures,trainings,knowledge_resources&lang_code=fr');
+    $d = $r['code'] >= 200 && $r['code'] < 300 && is_array($r['data']) ? (isset($r['data']['data']) && is_array($r['data']['data']) && !array_is_list($r['data']) ? $r['data']['data'] : $r['data']) : null;
+    if (!is_array($d) || fmInt($d, ['id']) === null) { return [null, fmLiens(is_array($d) ? $d : []), $d, $r]; }
+    return [fmCompetence($d), fmLiens($d), $d, $r];
+}
+
+/** Les postes et compétences d'une personne, relus. */
+function fmRelireEmploye(int $eid): array
+{
+    $r = PanelApi::requete('GET', '/employees/' . $eid . '?include=competencies,positions');
+    $d = $r['code'] >= 200 && $r['code'] < 300 && is_array($r['data']) ? (isset($r['data']['data']) && is_array($r['data']['data']) && !array_is_list($r['data']) ? $r['data']['data'] : $r['data']) : null;
+    if (!is_array($d)) { return [null, $r]; }
+    $postes = [];
+    foreach (is_array($d['positions'] ?? null) ? $d['positions'] : [] as $p) {
+        if (!is_array($p)) { continue; }
+        $postes[] = ['id' => fmInt($p, ['id', 'position_id']), 'nom' => fmTexte($p, ['name']), 'niveauId' => fmInt($p, ['level_id']),
+            'niveau' => fmTexte($p, ['level_name']), 'ordre' => fmInt($p, ['level_order'])];
+    }
+    $comps = [];
+    foreach (is_array($d['competencies'] ?? null) ? $d['competencies'] : [] as $c) {
+        if (is_array($c) && ($cid = fmInt($c, ['competency_id', 'id'])) !== null) { $comps[] = $cid; }
+    }
+    $nom = fmTexte($d, ['display_name']) ?? trim((fmTexte($d, ['name']) ?? '') . ' ' . (fmTexte($d, ['surname']) ?? ''));
+    return [['id' => $eid, 'nom' => $nom !== '' ? $nom : null, 'postes' => $postes, 'competences' => array_values(array_unique($comps))], $r];
+}
+
+/** Le niveau (et son poste) dans un référentiel en cache — pour le journal et les corrections. */
+function fmNiveauDans(array $ref, int $nid): ?array
+{
+    foreach ($ref['postes'] ?? [] as $p) {
+        foreach ($p['niveaux'] ?? [] as $n) {
+            if (($n['id'] ?? null) === $nid) { return ['poste' => $p['nom'] ?? '', 'niveau' => $n['nom'] ?? '']; }
+        }
     }
     return null;
 }
 
-/** Le contenu d'une version (normalisé) ; un contenu vide si la version manque. */
-function foContenuVersion(string $id, string $v): array
+/** Le libellé d'un niveau pour le journal, lu dans le cache du référentiel. */
+function fmNomNiveau(int $nid): string
 {
-    $r = Db::row('SELECT contenu FROM ceo_sop_version WHERE sop_id = ? AND version = ?', [$id, $v]);
-    $j = $r !== null ? json_decode((string) $r['contenu'], true) : null;
-    return foContenu(is_array($j) ? $j : []);
+    $c = setting(fmCleCache('/formation/referentiel'));
+    $n = is_array($c) && is_array($c['r'] ?? null) ? fmNiveauDans($c['r'], $nid) : null;
+    return $n ? $n['poste'] . ' › ' . $n['niveau'] : 'niveau #' . $nid;
 }
 
-/** Le contenu dans une langue : chaque {fr, nl} devient un texte (repli sur l'autre langue s'il est vide). */
-function foContenuLangue(array $c, string $l, bool $avecQuiz): array
+/** Le nom d'une compétence pour le journal (cache, sinon l'identifiant). */
+function fmNomCompetence(int $cid): string
 {
-    $o = $l === 'nl' ? 'fr' : 'nl';
-    $t = static fn (?array $x): string => $x === null ? '' : ((string) ($x[$l] ?? '') !== '' ? (string) $x[$l] : (string) ($x[$o] ?? ''));
-    $out = ['titre' => $t($c['titre']), 'objectif' => $t($c['objectif']), 'pour' => $t($c['pour']), 'duree' => (string) ($c['duree'] ?? ''), 'sections' => [],
-        'points_critiques' => array_map($t, $c['points_critiques'])];
-    foreach ($c['sections'] as $sec) {
-        $out['sections'][] = ['titre' => $t($sec['titre']), 'etapes' => array_map(static fn ($s) => ['numero' => $s['numero'], 'titre' => $t($s['titre']),
-            'texte' => $t($s['texte']), 'critique' => $s['critique'], 'photo' => $s['photo']], $sec['etapes'])];
+    $c = setting(fmCleCache('/formation/referentiel'));
+    foreach (is_array($c) && is_array($c['r'] ?? null) ? ($c['r']['competences'] ?? []) : [] as $x) {
+        if (($x['id'] ?? null) === $cid) { return (string) $x['nom']; }
     }
-    if ($avecQuiz) {
-        $out['quiz'] = array_map(static fn ($q) => ['question' => $t($q['question']), 'choix' => array_map(static fn ($a, $b) => $a !== '' ? $a : $b,
-            $q['choix'][$l] ?? [], $q['choix'][$o] ?? []), 'bonne' => $q['bonne']], $c['quiz']);
+    return 'compétence #' . $cid;
+}
+
+/** Corrige les compétences d'un niveau dans le référentiel en cache. */
+function fmPatchNiveau(int $nid, array $ids): void
+{
+    fmCachePatch('/formation/referentiel', [], static function (array $r) use ($nid, $ids): array {
+        foreach ($r['postes'] as &$p) {
+            foreach ($p['niveaux'] as &$n) {
+                if (($n['id'] ?? null) === $nid) { $n['competences'] = $ids; $n['competencesLues'] = true; }
+            }
+            unset($n);
+        }
+        unset($p);
+        return $r;
+    });
+}
+
+/**
+ * POST /formation/niveau/{nid}/competences {competence} — exiger une
+ * compétence à ce niveau. La route du panel n'a pas de contrat : le corps
+ * porte les deux noms usuels (competency_id, id_competency), le panel garde
+ * celui qu'il connaît. La relecture dit si c'est passé.
+ */
+function wr_formation_niveau_ajouter(int $nid): array
+{
+    if ($e = fmPret()) { return $e; }
+    $cid = fmIdCorps(fmCorps(), 'competence');
+    if ($cid === null) { return fmRefus(422, 'competence (identifiant) attendu'); }
+    [$avant] = fmRelireNiveau($nid);
+    if (in_array($cid, $avant, true)) { return ['ok' => true, 'deja' => true, 'niveau' => ['id' => $nid, 'competences' => $avant]]; }
+    $chemin = '/position-levels/' . $nid . '/competencies';
+    $w = PanelApi::requete('POST', $chemin, ['competency_id' => $cid, 'id_competency' => $cid]);
+    $appels = [fmAppelEcrit('POST', $chemin, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [$apres] = fmRelireNiveau($nid);
+    if (!in_array($cid, $apres, true)) {
+        return fmRefus(502, 'le panel a répondu HTTP ' . $w['code'] . ' mais la compétence n’apparaît pas au niveau — rien n’a changé', ['appels' => $appels]);
+    }
+    fmPatchNiveau($nid, $apres);
+    fmJournal(fmNomNiveau($nid), 'Compétence exigée ajoutée : « ' . fmNomCompetence($cid) . ' »');
+    return ['ok' => true, 'niveau' => ['id' => $nid, 'competences' => $apres], 'appels' => $appels];
+}
+
+/** DELETE /formation/niveau/{nid}/competences/{cid} — ne plus l'exiger à ce niveau. */
+function wr_formation_niveau_retirer(int $nid, int $cid): array
+{
+    if ($e = fmPret()) { return $e; }
+    [$avant, $liaisons] = fmRelireNiveau($nid);
+    if (!in_array($cid, $avant, true)) { return ['ok' => true, 'deja' => true, 'niveau' => ['id' => $nid, 'competences' => $avant]]; }
+    $appels = [];
+    $essais = [$cid];
+    if (isset($liaisons[$cid])) { $essais[] = $liaisons[$cid]; }
+    $apres = $avant;
+    foreach ($essais as $x) {
+        $chemin = '/position-levels/' . $nid . '/competencies/' . $x;
+        $w = PanelApi::requete('DELETE', $chemin);
+        $appels[] = fmAppelEcrit('DELETE', $chemin, $w);
+        [$apres] = fmRelireNiveau($nid);
+        if (!in_array($cid, $apres, true)) { break; }
+    }
+    if (in_array($cid, $apres, true)) {
+        return fmRefus(502, 'la compétence est toujours exigée à ce niveau après le retrait — le panel ne l’a pas supprimée', ['appels' => $appels]);
+    }
+    fmPatchNiveau($nid, $apres);
+    fmJournal(fmNomNiveau($nid), 'Compétence exigée retirée : « ' . fmNomCompetence($cid) . ' »');
+    return ['ok' => true, 'niveau' => ['id' => $nid, 'competences' => $apres], 'appels' => $appels];
+}
+
+/** Les trois sortes de liens d'une compétence : route du panel, champ du corps, clé de fmLiens(). */
+const FM_LIENS = [
+    'formation'  => ['trainings', 'training_id', 'formations', 'Formation'],
+    'procedure'  => ['operational-procedures', 'id_operational_procedure', 'procedures', 'Procédure'],
+    'ressource'  => ['knowledge-resources', 'knowledge_resource_id', 'ressources', 'Ressource'],
+];
+
+/** L'identifiant de liaison d'un lien, lu dans la compétence brute. */
+function fmIdLiaison(array $brut, string $type, int $cible): ?int
+{
+    $k = ['formation' => 'trainings', 'procedure' => 'operational_procedures', 'ressource' => 'knowledge_resources'][$type];
+    $cle = FM_LIENS[$type][1];
+    foreach (is_array($brut[$k] ?? null) ? $brut[$k] : [] as $x) {
+        if (is_array($x) && fmInt($x, [$cle]) === $cible) {
+            $lid = fmInt($x, ['id']);
+            return $lid !== null && $lid !== $cible ? $lid : null;
+        }
+    }
+    return null;
+}
+
+/** Corrige les liens d'une compétence dans le cache du lot des liens. */
+function fmPatchLiens(int $cid, array $liens): void
+{
+    fmCachePatch('/formation/liens', [], static function (array $r) use ($cid, $liens): array {
+        if (!isset($r['liens']) || !is_array($r['liens'])) { $r['liens'] = []; }
+        $r['liens'][(string) $cid] = $liens;
+        return $r;
+    });
+}
+
+/** POST /formation/competence/{cid}/liens {type: formation|procedure|ressource, id} — rattacher. */
+function wr_formation_lien_ajouter(int $cid): array
+{
+    if ($e = fmPret()) { return $e; }
+    $b = fmCorps();
+    $type = (string) ($b['type'] ?? '');
+    $id = fmIdCorps($b, 'id');
+    if (!isset(FM_LIENS[$type]) || $id === null) { return fmRefus(422, 'type (formation, procedure, ressource) et id attendus'); }
+    [$comp, $avant] = fmRelireCompetence($cid);
+    if ($comp === null) { return fmRefus(404, 'compétence inconnue du panel'); }
+    [$route, $champ, $cle, $lib] = FM_LIENS[$type];
+    $deja = static fn (array $l) => in_array($id, array_column($l[$cle], 'id'), true);
+    if ($deja($avant)) { return ['ok' => true, 'deja' => true, 'competence' => $cid, 'liens' => $avant]; }
+    $chemin = '/competencies/' . $cid . '/' . $route;
+    $w = PanelApi::requete('POST', $chemin, [$champ => $id]);
+    $appels = [fmAppelEcrit('POST', $chemin, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [, $apres] = fmRelireCompetence($cid);
+    if (!$deja($apres)) { return fmRefus(502, 'le panel a répondu HTTP ' . $w['code'] . ' mais le lien n’apparaît pas — rien n’a changé', ['appels' => $appels]); }
+    fmPatchLiens($cid, $apres);
+    $nom = array_values(array_filter($apres[$cle], static fn ($x) => $x['id'] === $id))[0]['nom'] ?? ('#' . $id);
+    fmJournal($comp['nom'], $lib . ' rattachée : « ' . $nom . ' »');
+    return ['ok' => true, 'competence' => $cid, 'liens' => $apres, 'appels' => $appels];
+}
+
+/** DELETE /formation/competence/{cid}/liens/{type}/{id} — détacher. */
+function wr_formation_lien_retirer(int $cid, string $type, int $id): array
+{
+    if ($e = fmPret()) { return $e; }
+    if (!isset(FM_LIENS[$type])) { return fmRefus(422, 'type inconnu'); }
+    [$comp, $avant, $brut] = fmRelireCompetence($cid);
+    if ($comp === null) { return fmRefus(404, 'compétence inconnue du panel'); }
+    [$route, , $cle, $lib] = FM_LIENS[$type];
+    $present = static fn (array $l) => in_array($id, array_column($l[$cle], 'id'), true);
+    if (!$present($avant)) { return ['ok' => true, 'deja' => true, 'competence' => $cid, 'liens' => $avant]; }
+    $nom = array_values(array_filter($avant[$cle], static fn ($x) => $x['id'] === $id))[0]['nom'] ?? ('#' . $id);
+    $essais = [$id];
+    if (($lid = fmIdLiaison(is_array($brut) ? $brut : [], $type, $id)) !== null) { $essais[] = $lid; }
+    $appels = [];
+    $apres = $avant;
+    foreach ($essais as $x) {
+        $chemin = '/competencies/' . $cid . '/' . $route . '/' . $x;
+        $w = PanelApi::requete('DELETE', $chemin);
+        $appels[] = fmAppelEcrit('DELETE', $chemin, $w);
+        [, $apres] = fmRelireCompetence($cid);
+        if (!$present($apres)) { break; }
+    }
+    if ($present($apres)) { return fmRefus(502, 'le lien est toujours là après le retrait — le panel ne l’a pas supprimé', ['appels' => $appels]); }
+    fmPatchLiens($cid, $apres);
+    fmJournal($comp['nom'], $lib . ' détachée : « ' . $nom . ' »');
+    return ['ok' => true, 'competence' => $cid, 'liens' => $apres, 'appels' => $appels];
+}
+
+/** Les champs d'une compétence lus dans le corps : nom, description, vérification, sous-catégorie. */
+function fmChampsCompetence(array $b, bool $creation): array
+{
+    $o = [];
+    $txt = static function ($v, int $max): ?string {
+        if (!is_string($v)) { return null; }
+        $v = trim(str_replace("\0", '', $v));
+        return mb_substr($v, 0, $max);
+    };
+    if (array_key_exists('nom', $b)) { $o['name'] = $txt($b['nom'], 255); }
+    if (array_key_exists('description', $b)) { $o['description'] = $txt($b['description'], 5000); }
+    if (array_key_exists('verification', $b)) { $o['verification_method'] = $txt($b['verification'], 2000); }
+    if (array_key_exists('sousCategorie', $b)) { $o['id_subcategory'] = fmIdCorps($b, 'sousCategorie'); }
+    $o = array_filter($o, static fn ($v) => $v !== null);
+    if ($creation && (($o['name'] ?? '') === '' || !isset($o['id_subcategory']))) { return []; }
+    if (isset($o['name']) && $o['name'] === '') { unset($o['name']); }
+    return $o;
+}
+
+/** Ajoute ou remplace une compétence dans le référentiel en cache. */
+function fmPatchCompetence(array $c): void
+{
+    fmCachePatch('/formation/referentiel', [], static function (array $r) use ($c): array {
+        $trouve = false;
+        foreach ($r['competences'] as &$x) {
+            if (($x['id'] ?? null) === $c['id']) { $x = $c + ['horsCatalogue' => false]; $trouve = true; }
+        }
+        unset($x);
+        if (!$trouve) { $r['competences'][] = $c; }
+        return $r;
+    });
+}
+
+/** POST /formation/competences {sousCategorie, nom, description?, verification?} — créer. */
+function wr_formation_competence_creer(): array
+{
+    if ($e = fmPret()) { return $e; }
+    $champs = fmChampsCompetence(fmCorps(), true);
+    if (!$champs) { return fmRefus(422, 'nom et sous-catégorie obligatoires'); }
+    $w = PanelApi::requete('POST', '/competencies', $champs);
+    $appels = [fmAppelEcrit('POST', '/competencies', $w)];
+    $nouv = is_array($w['data']) ? fmInt($w['data'], ['inserted_id', 'id']) : null;
+    if ($w['code'] < 200 || $w['code'] >= 300 || $nouv === null) {
+        return fmRefus(502, 'le panel n’a pas créé la compétence : ' . ($w['erreur'] ?? 'pas d’identifiant rendu'), ['appels' => $appels]);
+    }
+    [$comp] = fmRelireCompetence($nouv);
+    if ($comp === null) { return fmRefus(502, 'compétence #' . $nouv . ' annoncée créée, mais introuvable à la relecture', ['appels' => $appels]); }
+    fmPatchCompetence($comp);
+    fmPatchLiens($nouv, ['procedures' => [], 'formations' => [], 'ressources' => []]);
+    fmJournal($comp['nom'], 'Compétence créée (#' . $nouv . ', ' . ($comp['sousCategorie'] ?? 'sous-catégorie ' . $champs['id_subcategory']) . ')');
+    return ['ok' => true, 'competence' => $comp, 'appels' => $appels];
+}
+
+/** PATCH /formation/competences/{cid} {nom?, description?, verification?, sousCategorie?} — modifier. */
+function wr_formation_competence_modifier(int $cid): array
+{
+    if ($e = fmPret()) { return $e; }
+    $champs = fmChampsCompetence(fmCorps(), false);
+    // Un PATCH vide fait échouer la requête SQL du panel : on ne l'envoie pas.
+    if (!$champs) { return fmRefus(422, 'aucun champ à modifier'); }
+    [$avant] = fmRelireCompetence($cid);
+    if ($avant === null) { return fmRefus(404, 'compétence inconnue du panel'); }
+    $w = PanelApi::requete('PATCH', '/competencies/' . $cid, $champs);
+    $appels = [fmAppelEcrit('PATCH', '/competencies/' . $cid, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [$apres, , $brut] = fmRelireCompetence($cid);
+    if ($apres === null) { return fmRefus(502, 'compétence introuvable à la relecture', ['appels' => $appels]); }
+    // Comparé aux champs BRUTS : `nom` et `description` de l'écran retombent sur base_name /
+    // base_description quand le champ est vide, un effacement passerait pour un refus.
+    $ecarts = [];
+    $lus = ['name' => $brut['name'] ?? '', 'description' => $brut['description'] ?? '', 'verification_method' => $brut['verification_method'] ?? '',
+        'id_subcategory' => $brut['id_subcategory'] ?? ($brut['subcategory_id'] ?? '')];
+    foreach ($champs as $k => $v) {
+        if (trim((string) $lus[$k]) !== trim((string) $v)) { $ecarts[] = $k; }
+    }
+    if ($ecarts) { return fmRefus(502, 'le panel n’a pas enregistré : ' . implode(', ', $ecarts), ['appels' => $appels, 'competence' => $apres]); }
+    fmPatchCompetence($apres);
+    $noms = ['name' => 'nom', 'description' => 'description', 'verification_method' => 'méthode de vérification', 'id_subcategory' => 'sous-catégorie'];
+    fmJournal($apres['nom'], 'Compétence modifiée : ' . implode(', ', array_map(static fn ($k) => $noms[$k], array_keys($champs)))
+        . (isset($champs['name']) && $champs['name'] !== $avant['nom'] ? ' (ancien nom « ' . $avant['nom'] . ' »)' : ''));
+    return ['ok' => true, 'competence' => $apres, 'appels' => $appels];
+}
+
+/** DELETE /formation/competences/{cid} — supprimer du catalogue. */
+function wr_formation_competence_supprimer(int $cid): array
+{
+    if ($e = fmPret()) { return $e; }
+    [$avant] = fmRelireCompetence($cid);
+    if ($avant === null) { return ['ok' => true, 'deja' => true, 'competence' => $cid]; }
+    $w = PanelApi::requete('DELETE', '/competencies/' . $cid);
+    $appels = [fmAppelEcrit('DELETE', '/competencies/' . $cid, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [$apres] = fmRelireCompetence($cid);
+    if ($apres !== null) { return fmRefus(502, 'la compétence existe toujours après la suppression — le panel ne l’a pas supprimée (liée ailleurs ?)', ['appels' => $appels]); }
+    fmCachePatch('/formation/referentiel', [], static function (array $r) use ($cid): array {
+        $r['competences'] = array_values(array_filter($r['competences'], static fn ($x) => ($x['id'] ?? null) !== $cid));
+        foreach ($r['postes'] as &$p) {
+            foreach ($p['niveaux'] as &$n) { $n['competences'] = array_values(array_filter($n['competences'], static fn ($x) => $x !== $cid)); }
+            unset($n);
+        }
+        unset($p);
+        return $r;
+    });
+    fmJournal($avant['nom'], 'Compétence supprimée du catalogue (#' . $cid . ')');
+    return ['ok' => true, 'competence' => $cid, 'appels' => $appels];
+}
+
+/** Corrige la fiche d'une personne dans le cache de l'équipe de son magasin. */
+function fmPatchEmploye(?int $shop, array $fiche): void
+{
+    if ($shop === null) { return; }
+    fmCachePatch('/formation/equipe', ['shop' => (string) $shop], static function (array $r) use ($fiche): array {
+        foreach ($r['employes'] ?? [] as $i => $e) {
+            if (($e['id'] ?? null) === $fiche['id']) {
+                $r['employes'][$i]['postes'] = $fiche['postes'];
+                $r['employes'][$i]['competences'] = $fiche['competences'];
+                $r['employes'][$i]['lu'] = true;
+            }
+        }
+        return $r;
+    });
+}
+
+/** Le nom d'une personne pour le journal, lu dans le cache de l'équipe. */
+function fmNomEmploye(?int $shop, int $eid): string
+{
+    $c = $shop !== null ? setting(fmCleCache('/formation/equipe', ['shop' => (string) $shop])) : null;
+    foreach (is_array($c) && is_array($c['r'] ?? null) ? ($c['r']['employes'] ?? []) : [] as $e) {
+        if (($e['id'] ?? null) === $eid) { return (string) $e['nom']; }
+    }
+    return 'employé #' . $eid;
+}
+
+/**
+ * PUT /formation/employe/{eid}/competences/{cid} — la personne a validé la
+ * compétence. DELETE — on la lui retire. `?shop=` : le magasin, pour corriger
+ * l'écran Équipes en cache.
+ */
+function wr_formation_employe_competence(string $methode, int $eid, int $cid): array
+{
+    if ($e = fmPret()) { return $e; }
+    $shop = fmId('shop');
+    [$avant] = fmRelireEmploye($eid);
+    if ($avant === null) { return fmRefus(404, 'personne inconnue du panel'); }
+    $voulu = $methode === 'PUT';
+    if (in_array($cid, $avant['competences'], true) === $voulu) { return ['ok' => true, 'deja' => true, 'employe' => $avant]; }
+    $chemin = '/employees/' . $eid . '/competencies' . ($voulu ? '' : '/' . $cid);
+    $w = PanelApi::requete($methode, $chemin, $voulu ? ['competency_id' => $cid] : null);
+    $appels = [fmAppelEcrit($methode, $chemin, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [$apres] = fmRelireEmploye($eid);
+    if ($apres === null || in_array($cid, $apres['competences'], true) !== $voulu) {
+        return fmRefus(502, 'le panel a répondu HTTP ' . $w['code'] . ' mais la fiche n’a pas changé', ['appels' => $appels]);
+    }
+    fmPatchEmploye($shop, $apres);
+    fmJournal(fmNomEmploye($shop, $eid), ($voulu ? 'Compétence validée' : 'Validation retirée') . ' : « ' . fmNomCompetence($cid) . ' »');
+    return ['ok' => true, 'employe' => $apres, 'appels' => $appels];
+}
+
+/** PUT /formation/employe/{eid}/poste {poste, niveau} — affecter un poste et un niveau. */
+function wr_formation_employe_poste(int $eid): array
+{
+    if ($e = fmPret()) { return $e; }
+    $b = fmCorps();
+    $poste = fmIdCorps($b, 'poste');
+    $niveau = fmIdCorps($b, 'niveau');
+    $shop = fmId('shop');
+    if ($poste === null || $niveau === null) { return fmRefus(422, 'poste et niveau attendus'); }
+    [$avant] = fmRelireEmploye($eid);
+    if ($avant === null) { return fmRefus(404, 'personne inconnue du panel'); }
+    $tient = static fn (array $f) => (bool) array_filter($f['postes'], static fn ($p) => $p['id'] === $poste && $p['niveauId'] === $niveau);
+    if ($tient($avant)) { return ['ok' => true, 'deja' => true, 'employe' => $avant]; }
+    $chemin = '/employees/' . $eid . '/positions';
+    $w = PanelApi::requete('PUT', $chemin, ['position_id' => $poste, 'level_id' => $niveau]);
+    $appels = [fmAppelEcrit('PUT', $chemin, $w)];
+    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
+    [$apres] = fmRelireEmploye($eid);
+    if ($apres === null || !$tient($apres)) { return fmRefus(502, 'le panel a répondu HTTP ' . $w['code'] . ' mais le poste n’a pas changé', ['appels' => $appels]); }
+    fmPatchEmploye($shop, $apres);
+    $ancien = implode(', ', array_map(static fn ($p) => ($p['nom'] ?? 'poste') . ' · ' . ($p['niveau'] ?? 'niveau'), $avant['postes'])) ?: 'aucun';
+    $nouveau = fmNomNiveau($niveau);
+    fmJournal(fmNomEmploye($shop, $eid), 'Niveau affecté : ' . $nouveau . ' (avant : ' . $ancien . ')');
+    return ['ok' => true, 'employe' => $apres, 'appels' => $appels];
+}
+
+/* ── Manuel opératoire : quatre parties et vidéos (1er nov. 2026) ──────────────
+ * Le client : « séparer le Manuel opératoire en Pré-ouverture · Ouverture ·
+ * Opérationnel · Formation continue », « sur certaines procédures, des vidéos
+ * intégrées », « le tout sur tablette ». Le panel ne connaît pas ces parties (ses
+ * procédures sont rangées par thème : section › catégorie) : la partie de chaque
+ * procédure et ses vidéos ajoutées vivent ICI, dans `ceo_manuel_procedure`. Sans
+ * ligne, la partie se déduit à l'écran de la section du panel (« Formations &
+ * Contrôle Continu » → Formation continue, le reste → Opérationnel). Le contenu
+ * de la procédure reste celui du panel : rien n'y est écrit.
+ * ------------------------------------------------------------------------- */
+
+const MN_PARTIES = ['preouverture', 'ouverture', 'operationnel', 'formation'];
+const MN_VIDEOS_MAX = 10;
+
+function ensureManuel(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_manuel_procedure ('
+        . 'procedure_id INT NOT NULL PRIMARY KEY,'   // l'identifiant de la procédure dans le panel
+        . 'partie VARCHAR(16) NULL,'                 // preouverture | ouverture | operationnel | formation ; null = déduite
+        . 'videos TEXT NULL,'                        // JSON [{url, titre}] : vidéos ajoutées dans le cockpit
+        . 'maj_le DATETIME NOT NULL,'
+        . 'par VARCHAR(120) NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** Une partie du manuel valide, ou null (« déduite de la section du panel »). */
+function mnPartie(mixed $v): ?string
+{
+    return is_string($v) && in_array($v, MN_PARTIES, true) ? $v : null;
+}
+
+/**
+ * Les vidéos d'une procédure, propres : adresses https seulement (une vidéo se lit
+ * dans un cadre que l'écran construit depuis l'identifiant, jamais depuis l'adresse
+ * brute), dix au plus, sans doublon, titre de 120 caractères au plus.
+ *
+ * @return list<array{url:string,titre:string}>
+ */
+function mnVideos(mixed $l): array
+{
+    $out = []; $vus = [];
+    foreach (is_array($l) ? $l : [] as $v) {
+        $url = trim((string) (is_array($v) ? ($v['url'] ?? '') : $v));
+        if ($url === '' || mb_strlen($url) > 500 || !preg_match('#^https://[^\s<>"\']+$#i', $url)) { continue; }
+        if (isset($vus[$url])) { continue; }
+        $vus[$url] = true;
+        $titre = trim(mb_substr((string) (is_array($v) ? ($v['titre'] ?? '') : ''), 0, 120));
+        $out[] = ['url' => $url, 'titre' => $titre];
+        if (count($out) >= MN_VIDEOS_MAX) { break; }
     }
     return $out;
 }
 
-function foStats(array $c): array
+/** Les réglages du manuel : {procedureId: {partie, videos}}. */
+function mnClassement(): array
 {
-    $e = 0; $p = 0;
-    foreach ($c['sections'] as $sec) { foreach ($sec['etapes'] as $s) { $e++; if ($s['photo'] !== null) { $p++; } } }
-    return ['etapes' => $e, 'photos' => $p];
-}
-
-/** Une SOP telle que l'API la rend (sans son contenu). */
-function foSopLigne(array $r): array
-{
-    return [
-        'id' => (string) $r['id'], 'code' => $r['code'], 'type' => (string) $r['type'], 'dossier' => (string) $r['dossier'],
-        'poste' => (string) $r['poste'], 'moment' => $r['moment'], 'statut' => (string) $r['statut'], 'version' => (string) $r['version'],
-        'versionRevalider' => (string) $r['version_revalider'], 'langueOrigine' => (string) $r['langue_origine'],
-        'trad' => ['fr' => (string) $r['trad_fr'], 'nl' => (string) $r['trad_nl']],
-        'competence' => $r['competence_nom'] !== null ? ['id' => $r['competence_id'], 'nom' => (string) $r['competence_nom'], 'cle' => foCompCle($r)] : null,
-        'titre' => ['fr' => (string) $r['titre_fr'], 'nl' => (string) $r['titre_nl']],
-        'objectif' => ['fr' => (string) ($r['objectif_fr'] ?? ''), 'nl' => (string) ($r['objectif_nl'] ?? '')],
-        'duree' => $r['duree'], 'nbEtapes' => (int) $r['nb_etapes'], 'nbPhotos' => (int) $r['nb_photos'],
-        'majLe' => foIso($r['maj_le']), 'majPar' => $r['maj_par'],
-    ];
-}
-
-function foSopRow(string $id): ?array
-{
-    $id = foId($id);
-    return $id === null ? null : Db::row('SELECT * FROM ceo_sop WHERE id = ?', [$id]);
-}
-
-function foTitreL(array $r, string $l): string
-{
-    return $l === 'nl' && (string) $r['titre_nl'] !== '' ? (string) $r['titre_nl'] : (string) $r['titre_fr'];
-}
-
-function foDossiers(): array
-{
+    ensureManuel();
     $out = [];
-    foreach (FO_DOSSIERS as $k => $v) { $out[] = ['id' => $k, 'nom' => $v]; }
-    return $out;
-}
-
-/* ═══ Magasins, paramètres, petites aides ═════════════════════════════════════════════════════════ */
-
-/** Les magasins du réseau (/stores), ouverts d'abord : [{id, nom}]. */
-function foMagasins(): array
-{
-    $out = [];
-    foreach (function_exists('ep_stores') ? ep_stores() : [] as $s) {
-        if (!is_array($s) || !isset($s['id'])) { continue; }
-        if (($s['status'] ?? '') === 'Fermé') { continue; }
-        $out[] = ['id' => (string) $s['id'], 'nom' => function_exists('psCourt') ? psCourt((string) $s['nom']) : (string) $s['nom']];
+    foreach (Db::rows('SELECT procedure_id, partie, videos, maj_le FROM ceo_manuel_procedure') as $r) {
+        $out[(string) (int) $r['procedure_id']] = ['partie' => mnPartie($r['partie']), 'videos' => mnVideos(json_decode((string) $r['videos'], true)), 'majLe' => $r['maj_le']];
     }
     return $out;
 }
 
-function foMagasinNom(string $shop): string
+/** GET /formation/manuel — la partie et les vidéos de chaque procédure réglée dans le cockpit. */
+function ep_formation_manuel(): array
 {
-    foreach (foMagasins() as $m) { if ($m['id'] === $shop) { return $m['nom']; } }
-    return 'magasin ' . $shop;
+    ensureManuelFormations();
+    $reglees = []; $supports = [];
+    foreach (Db::rows('SELECT code, partie, supports FROM ceo_manuel_formation') as $r) {
+        if (($q = mnPartie($r['partie'])) !== null) { $reglees[(string) $r['code']] = $q; }
+        if (($sp = mnSupports(json_decode((string) $r['supports'], true))) !== []) { $supports[(string) $r['code']] = $sp; }
+    }
+    return ['parties' => MN_PARTIES, 'procedures' => (object) mnClassement(),
+        'formationsDefaut' => (object) mnFormationsDefaut(), 'formations' => (object) $reglees, 'supports' => (object) $supports];
 }
 
-function foShopParam(): ?string { return foShopVal($_GET['shop'] ?? null); }
-
-function foShopVal(mixed $v): ?string
+/**
+ * PATCH /formation/manuel/procedure/{id} {partie?, videos?} — ranger une procédure
+ * dans une partie du manuel (null = revenir à la partie déduite) et/ou remplacer
+ * ses vidéos ajoutées. Clé absente = inchangée. Rien n'est écrit au panel.
+ */
+function wr_formation_manuel_procedure(int $pid): array
 {
-    if (!is_scalar($v)) { return null; }
-    $v = trim((string) $v);
-    return preg_match('/^[\w-]{1,32}$/', $v) ? $v : null;
+    if ($pid <= 0) { return fmRefus(422, 'procédure attendue'); }
+    $b = fmCorps();
+    if (!array_key_exists('partie', $b) && !array_key_exists('videos', $b)) { return fmRefus(422, 'rien à changer : partie ou vidéos'); }
+    if (array_key_exists('partie', $b) && $b['partie'] !== null && mnPartie($b['partie']) === null) {
+        return fmRefus(422, 'partie inconnue : ' . implode(', ', MN_PARTIES));
+    }
+    ensureManuel();
+    $avant = Db::row('SELECT partie, videos FROM ceo_manuel_procedure WHERE procedure_id = ?', [$pid]);
+    $partie = array_key_exists('partie', $b) ? mnPartie($b['partie']) : mnPartie($avant['partie'] ?? null);
+    $videos = array_key_exists('videos', $b) ? mnVideos($b['videos']) : mnVideos(json_decode((string) ($avant['videos'] ?? ''), true));
+    if (array_key_exists('videos', $b) && is_array($b['videos']) && count($videos) < count(array_filter($b['videos']))) {
+        return fmRefus(422, 'une adresse de vidéo n’est pas valable (https://…, dix vidéos au plus, sans doublon)');
+    }
+    $par = function_exists('authUser') ? (string) (authUser()['nom'] ?? '') : '';
+    Db::exec('INSERT INTO ceo_manuel_procedure (procedure_id, partie, videos, maj_le, par) VALUES (?, ?, ?, NOW(), ?)'
+        . ' ON DUPLICATE KEY UPDATE partie = VALUES(partie), videos = VALUES(videos), maj_le = NOW(), par = VALUES(par)',
+        [$pid, $partie, $videos ? json_encode($videos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null, $par !== '' ? mb_substr($par, 0, 120) : null]);
+    $noms = ['preouverture' => 'Pré-ouverture', 'ouverture' => 'Ouverture', 'operationnel' => 'Opérationnel', 'formation' => 'Formation continue'];
+    $quoi = [];
+    if (array_key_exists('partie', $b)) { $quoi[] = 'partie : ' . ($partie !== null ? $noms[$partie] : 'déduite du panel'); }
+    if (array_key_exists('videos', $b)) { $quoi[] = count($videos) . ' vidéo(s)'; }
+    fmJournal('Procédure #' . $pid, 'Manuel opératoire — ' . implode(' · ', $quoi));
+    return ['ok' => true, 'id' => $pid, 'partie' => $partie, 'videos' => $videos];
 }
 
-function foLangueParam(): string { return ($_GET['langue'] ?? 'fr') === 'nl' ? 'nl' : 'fr'; }
+/* Les formations du référentiel (FO-xx) dans les quatre parties : une répartition par défaut,
+ * versionnée (src/data/manuel_formations.json), et le réglage du cockpit qui l'emporte
+ * (`ceo_manuel_formation`). */
 
-/** Un identifiant de SOP : minuscules, chiffres, tirets, 32 au plus. */
-function foId(mixed $v): ?string
+function ensureManuelFormations(): void
 {
-    if (!is_string($v)) { return null; }
-    $v = strtolower(trim($v));
-    return preg_match('/^[a-z0-9][a-z0-9-]{0,31}$/', $v) ? $v : null;
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_manuel_formation ('
+        . 'code VARCHAR(8) NOT NULL PRIMARY KEY,'    // FO-01…
+        . 'partie VARCHAR(16) NULL,'                 // null = répartition par défaut
+        . 'supports TEXT NULL,'                      // JSON [{url, titre, etape}] : vidéos, PDF, documents
+        . 'maj_le DATETIME NOT NULL,'
+        . 'par VARCHAR(120) NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Table créée le 1er nov. 2026 sans supports, la partie obligatoire.
+    try { Db::exec('ALTER TABLE ceo_manuel_formation ADD COLUMN supports TEXT NULL AFTER partie'); } catch (Throwable $e) { /* déjà là */ }
+    try { Db::exec('ALTER TABLE ceo_manuel_formation MODIFY partie VARCHAR(16) NULL'); } catch (Throwable $e) { /* déjà ainsi */ }
 }
 
-/** {fr, nl} depuis un tableau, une chaîne (→ fr) ou rien. */
-function foBi(mixed $v): array
+/**
+ * Les supports d'une formation (vidéos, PDF, documents), propres : https seulement, vingt au
+ * plus, sans doublon (même adresse et même étape), titre de 120 caractères au plus, étape =
+ * index de l'étape de validation (0 à 9) ou null (la formation entière).
+ *
+ * @return list<array{url:string,titre:string,etape:?int}>
+ */
+function mnSupports(mixed $l): array
 {
-    if (is_string($v)) { return ['fr' => trim($v), 'nl' => '']; }
-    if (!is_array($v)) { return ['fr' => '', 'nl' => '']; }
-    return ['fr' => trim(is_scalar($v['fr'] ?? null) ? (string) $v['fr'] : ''), 'nl' => trim(is_scalar($v['nl'] ?? null) ? (string) $v['nl'] : '')];
+    $out = []; $vus = [];
+    foreach (is_array($l) ? $l : [] as $v) {
+        if (!is_array($v)) { continue; }
+        $url = trim((string) ($v['url'] ?? ''));
+        if ($url === '' || mb_strlen($url) > 500 || !preg_match('#^https://[^\s<>"\']+$#i', $url)) { continue; }
+        $et = $v['etape'] ?? null;
+        $et = is_int($et) || (is_string($et) && preg_match('/^\d$/', $et)) ? (int) $et : null;
+        if ($et !== null && ($et < 0 || $et > 9)) { $et = null; }
+        $k = $url . '|' . $et;
+        if (isset($vus[$k])) { continue; }
+        $vus[$k] = true;
+        $out[] = ['url' => $url, 'titre' => trim(mb_substr((string) ($v['titre'] ?? ''), 0, 120)), 'etape' => $et];
+        if (count($out) >= 20) { break; }
+    }
+    return $out;
 }
 
-function foCourt(mixed $v, int $max): ?string
+/** La répartition par défaut : [code FO => partie], les parties inconnues écartées. */
+function mnFormationsDefaut(?string $fichier = null): array
 {
-    if (!is_scalar($v)) { return null; }
-    $v = trim((string) $v);
-    return $v === '' ? null : mb_substr($v, 0, $max);
+    $d = json_decode((string) @file_get_contents($fichier ?? __DIR__ . '/data/manuel_formations.json'), true);
+    $out = [];
+    foreach (is_array($d['formations'] ?? null) ? $d['formations'] : [] as $code => $p) {
+        if (preg_match('/^FO-\d{1,3}$/', (string) $code) && ($q = mnPartie($p)) !== null) { $out[(string) $code] = $q; }
+    }
+    return $out;
 }
 
-function foType(mixed $v): string { return in_array($v, ['SOP', 'Checklist', 'Mémo', 'Fiche'], true) ? (string) $v : 'SOP'; }
-function foDossier(mixed $v): string { $v = str_pad(substr((string) $v, 0, 2), 2, '0', STR_PAD_LEFT); return isset(FO_DOSSIERS[$v]) ? $v : '01'; }
-function foPoste(mixed $v): string { return in_array($v, FO_POSTES, true) ? (string) $v : 'vente'; }
-
-/** « v5 », « 1.1 », « 2.0 » → « 5 », « 1.1 », « 2.0 ». */
-function foVersion(string $v): string
+/**
+ * PATCH /formation/manuel/formation/{FO} {partie?: cle | null, supports?: [{url, titre, etape}]} —
+ * ranger la formation (null = répartition par défaut) et/ou remplacer ses supports. Clé absente =
+ * inchangée. La ligne disparaît quand il ne reste ni partie ni support.
+ */
+function wr_formation_manuel_formation(string $code): array
 {
-    $v = ltrim(trim($v), 'vV');
-    return preg_match('/^\d+(\.\d+){0,2}$/', $v) ? $v : '1.0';
-}
-
-/** La version suivante : 1.1 → 1.2, 5 → 5.1, 2.0.3 → 2.0.4. */
-function foVersionSuivante(string $v): string
-{
-    $p = explode('.', foVersion($v));
-    if (count($p) === 1) { return $p[0] . '.1'; }
-    $p[count($p) - 1] = (string) ((int) end($p) + 1);
-    return implode('.', $p);
-}
-
-function foPar(array $b): string
-{
-    $p = foCourt($b['par'] ?? null, 120);
-    if ($p !== null) { return $p; }
-    $u = setting('utilisateur', []);
-    return is_array($u) && trim((string) ($u['nom'] ?? '')) !== '' ? trim((string) $u['nom']) : 'Cockpit';
-}
-
-function foJson(array $c): string { return (string) json_encode($c, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); }
-
-function foIso(mixed $dt): ?string
-{
-    if ($dt === null || $dt === '') { return null; }
-    try { return (new DateTimeImmutable((string) $dt))->format('c'); } catch (Exception $e) { return null; }
-}
-
-function foRefus(int $code, string $msg): array
-{
-    http_response_code($code);
-    return ['error' => $msg];
-}
-
-/** Un nom de fichier : minuscules, chiffres, tirets. */
-function mktSlugFo(string $s): string
-{
-    $s = mb_strtolower($s);
-    $s = strtr($s, ['à' => 'a', 'â' => 'a', 'ä' => 'a', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e', 'î' => 'i', 'ï' => 'i', 'ô' => 'o', 'ö' => 'o', 'ù' => 'u', 'û' => 'u', 'ü' => 'u', 'ç' => 'c', '’' => '', "'" => '']);
-    return trim((string) preg_replace('/[^a-z0-9]+/', '-', $s), '-') ?: 'sop';
+    if (!preg_match('/^FO-\d{1,3}$/', $code)) { return fmRefus(422, 'code de formation attendu (FO-01…)'); }
+    $b = fmCorps();
+    if (!array_key_exists('partie', $b) && !array_key_exists('supports', $b)) { return fmRefus(422, 'rien à changer : partie ou supports'); }
+    if (array_key_exists('partie', $b) && $b['partie'] !== null && $b['partie'] !== '' && mnPartie($b['partie']) === null) {
+        return fmRefus(422, 'partie inconnue : ' . implode(', ', MN_PARTIES));
+    }
+    ensureManuelFormations();
+    $avant = Db::row('SELECT partie, supports FROM ceo_manuel_formation WHERE code = ?', [$code]);
+    $p = array_key_exists('partie', $b) ? mnPartie($b['partie']) : mnPartie($avant['partie'] ?? null);
+    $sp = array_key_exists('supports', $b) ? mnSupports($b['supports']) : mnSupports(json_decode((string) ($avant['supports'] ?? ''), true));
+    if (array_key_exists('supports', $b) && is_array($b['supports']) && count($sp) < count(array_filter($b['supports']))) {
+        return fmRefus(422, 'un support n’est pas valable (adresse https://…, vingt au plus, sans doublon)');
+    }
+    if ($p === null && $sp === []) { Db::exec('DELETE FROM ceo_manuel_formation WHERE code = ?', [$code]); }
+    else {
+        Db::exec('INSERT INTO ceo_manuel_formation (code, partie, supports, maj_le) VALUES (?, ?, ?, NOW())'
+            . ' ON DUPLICATE KEY UPDATE partie = VALUES(partie), supports = VALUES(supports), maj_le = NOW()',
+            [$code, $p, $sp ? json_encode($sp, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null]);
+    }
+    $noms = ['preouverture' => 'Pré-ouverture', 'ouverture' => 'Ouverture', 'operationnel' => 'Opérationnel', 'formation' => 'Formation continue'];
+    $def = mnFormationsDefaut()[$code] ?? null;
+    $quoi = [];
+    if (array_key_exists('partie', $b)) { $quoi[] = 'rangée dans ' . ($p !== null ? '« ' . $noms[$p] . ' »' : 'sa partie par défaut' . ($def ? ' (« ' . $noms[$def] . ' »)' : '')); }
+    if (array_key_exists('supports', $b)) { $quoi[] = count($sp) . ' support(s)'; }
+    fmJournal($code, 'Manuel opératoire — formation ' . implode(' · ', $quoi));
+    return ['ok' => true, 'code' => $code, 'partie' => $p, 'defaut' => $def, 'supports' => $sp];
 }

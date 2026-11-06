@@ -1,0 +1,250 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cockpit — API du module</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css">
+<!-- Maquette (24/10/2026, Sam : « un sous-menu dans le rail qui indique quelles API sont utilisées pour le module
+     entier »). Le rail est celui du cockpit en ligne ; « API du module » est le sous-menu ajouté sous Application
+     employé, ouvert sur sa Vue d'ensemble. L'inventaire est celui du code au 24/10/2026. -->
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text)}
+.shell{display:flex;min-height:100vh}
+/* ── le rail, tel qu'en ligne ── */
+.rail{width:236px;flex:0 0 236px;background:var(--color-surface);border-right:.5px solid var(--color-border-tertiary);display:flex;flex-direction:column}
+.rail .logo{padding:22px 20px 14px}
+.rail .logo img{width:176px;display:block}
+.rail .logo div{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);margin-top:8px}
+.rail .q{margin:0 12px 12px;height:32px;border:.5px solid var(--color-border-secondary);background:var(--color-background-secondary);border-radius:9px;padding:0 10px;font-size:12px;color:var(--color-text-muted);display:flex;align-items:center}
+.rail nav{padding:0 12px 16px;display:flex;flex-direction:column;gap:18px}
+.rail .gr{display:flex;flex-direction:column;gap:2px}
+.rail .gt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;padding:0 10px 7px}
+.rail a{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:300;padding:8px 10px;border-radius:8px;color:var(--color-text)}
+.rail a .ch{font-size:9px;color:var(--color-text-muted);width:8px;display:inline-block;margin-right:7px}
+.rail a.s{font-size:12.5px;padding:7px 10px 7px 24px;color:var(--color-text-muted)}
+.rail a.on{background:rgba(141,29,44,.08);color:var(--color-primary);font-weight:500}
+.rail .neuf{position:relative;border-radius:10px;box-shadow:0 0 0 1.5px var(--color-primary);margin:2px -4px;padding:2px 4px}
+.rail .neuf::after{content:'nouveau';position:absolute;right:6px;top:-8px;background:var(--color-primary);color:#fff;font:600 9px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:999px}
+.rail .pied{margin-top:auto;padding:14px 20px;border-top:.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;font-size:12px}
+.rail .pied i{width:30px;height:30px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font:500 12px var(--font-ui);font-style:normal}
+/* ── la page ── */
+main{flex:1;min-width:0;padding:26px 32px 60px;max-width:1460px;font-weight:300}
+main b,main h2,.nd,.tuile span,.segm span,.pg,.mt{font-weight:600}
+.nd small,.tuile em,.src .h p,.sous,.meta,.note,.direct{font-weight:300}
+h1{font-family:var(--font-display);font-size:30px;font-weight:400;margin:0;line-height:1.15}
+.sous{font-size:13px;color:var(--color-text-muted);margin:5px 0 0;max-width:700px}
+.tete{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px}
+.meta{font-size:12px;color:var(--color-text-muted)}
+.carte{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:14px}
+/* les sources en cinq chiffres */
+.tuiles{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.tuile{padding:14px 16px;cursor:pointer}
+.tuile.on{box-shadow:inset 0 0 0 1.5px var(--color-primary)}
+.tuile b{display:block;font:500 26px/1.1 var(--font-ui);font-variant-numeric:tabular-nums}
+.tuile b small{font-size:12px;font-weight:400;color:var(--color-text-muted);margin-left:4px}
+.tuile span{display:block;margin-top:6px;font-size:13px;font-weight:600}
+.tuile em{display:block;margin-top:2px;font-size:12px;font-style:normal;color:var(--color-text-muted);line-height:1.35}
+/* qui appelle qui */
+.flux{padding:16px 18px;margin-bottom:14px}
+.flux h2,.src h2{font:600 15px var(--font-ui);margin:0}
+.flux .grille{display:grid;grid-template-columns:1fr 40px 1.1fr 40px 1.3fr;align-items:center;margin-top:14px}
+.flux .col{display:flex;flex-direction:column;gap:8px}
+.nd{border:.5px solid var(--color-border-secondary);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;background:#fff}
+.nd small{display:block;font-weight:300;font-size:11.5px;color:var(--color-text-muted);margin-top:1px}
+.nd.coeur{background:rgba(141,29,44,.06);border-color:rgba(141,29,44,.35);padding:16px 14px}
+.nd.coeur code{font-weight:500}
+.fl{text-align:center;color:var(--color-text-muted);font-size:18px}
+.direct{margin-top:12px;font-size:12px;color:var(--color-text-muted);display:flex;align-items:center;gap:8px}
+.direct i{display:inline-block;width:28px;border-top:1.5px dashed var(--color-text-muted)}
+/* filtres */
+.barre{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 10px}
+.segm{display:inline-flex;background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:10px;padding:3px;gap:2px}
+.segm span{font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:7px}
+.segm span.on{background:var(--color-primary);color:#fff}
+.cherche{width:260px;height:32px;border:.5px solid var(--color-border-secondary);background:#fff;border-radius:9px;padding:0 10px;font-size:12px;color:var(--color-text-muted);display:flex;align-items:center}
+/* une source, ses routes */
+.src{margin-bottom:12px;overflow:hidden;padding:0}
+.src .h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:14px 18px 10px}
+.src .h p{margin:2px 0 0;font-size:12px;color:var(--color-text-muted)}
+.src .h .n{font-size:12px;color:var(--color-text-muted);white-space:nowrap}
+.src .grp{padding:8px 18px 4px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);border-top:.5px solid var(--color-border-tertiary)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
+td{padding:7px 18px;border-top:.5px solid var(--color-border-tertiary);vertical-align:top}
+tr:first-child td{border-top:none}
+td.m{width:62px;padding-right:0}
+td.r{width:34%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--color-text);word-break:break-all}
+td.p{width:200px;white-space:nowrap}
+td.c{width:104px;color:var(--color-text-muted);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.mt{display:inline-block;font:700 9.5px var(--font-ui);letter-spacing:.05em;padding:2px 6px;border-radius:5px}
+.mt.get{background:#E8F0EA;color:#2F6B3F}.mt.post{background:#FBEFE0;color:#8A4A12}
+.pg{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--color-background-secondary);color:var(--color-text-muted);margin-right:3px}
+.pg.a{background:#F6E3E6;color:#8D1D2C}.pg.f{background:#E6EDF5;color:#2a5a8a}.pg.e{background:#EEE8F6;color:#5B3F8A}
+.note{font-size:11.5px;color:var(--color-text-muted);padding:8px 18px 12px;border-top:.5px solid var(--color-border-tertiary)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.two td.r{width:42%}.two td.p{width:80px}.two td.c{width:60px}
+</style></head><body>
+<div class="shell">
+
+<aside class="rail">
+  <div class="logo"><img src="/public/assets/img/logo.png" alt=""><div>Cockpit</div></div>
+  <div class="q">Rechercher partout…</div>
+  <nav>
+    <div class="gr"><div class="gt">Pilotage</div><a>Résultat</a><a>Dashboard magasin ↗</a></div>
+    <div class="gr"><div class="gt">Franchisés · évaluation et suivi</div><a>Fiche &amp; scoring</a><a><span><span class="ch">▸</span>Suivi journalier et opérations</span></a><a><span><span class="ch">▸</span>Suivi de terrain</span></a></div>
+    <div class="gr"><div class="gt">Magasins</div><a>Analyse magasin</a><a>Budget</a><a>Invendus et poubelle</a><a>Inventaires</a><a>Scouting — où ouvrir</a></div>
+    <div class="gr"><div class="gt">Produits</div><a>Catalogue</a><a>Comptoir · planogramme</a></div>
+    <div class="gr"><div class="gt">Marque &amp; marketing</div><a>Marketing ↗</a><a>Projets de développement</a><a>Fonds &amp; Royalties</a></div>
+    <div class="gr"><div class="gt">ERP franchisé</div><a>Prospection ↗</a><a>Tablette vendeuses</a></div>
+    <div class="gr"><div class="gt">Application employé</div>
+      <a>Page admin</a><a>Page franchisé (magasin)</a><a>Application ↗</a>
+      <div class="neuf">
+        <a><span><span class="ch">▾</span>API du module</span></a>
+        <a class="s on">Vue d’ensemble</a>
+        <a class="s">Cockpit</a>
+        <a class="s">Panel tfbuddy</a>
+        <a class="s">ERP admin</a>
+        <a class="s">Base partagée</a>
+        <a class="s">SMS · Twilio</a>
+      </div>
+    </div>
+    <div class="gr"><div class="gt">Administration</div><a>Paramètres</a><a>Journal &amp; diagnostic</a></div>
+  </nav>
+  <div class="pied"><i>SV</i><div><div style="font-weight:500">Sam</div><div style="font-size:10px;color:var(--color-text-muted)">CEO</div></div></div>
+</aside>
+
+<main>
+  <header class="tete">
+    <div><h1>API du module</h1>
+      <p class="sous">Primes et application employé : ce que chaque page lit et écrit, et d’où viennent les données.</p></div>
+    <span class="meta">inventaire du code · 24 oct. 2026</span>
+  </header>
+
+  <!-- Les cinq sources : un toucher filtre la liste plus bas (comme les entrées du sous-menu). -->
+  <div class="tuiles">
+    <div class="carte tuile on"><b>14<small>routes</small></b><span>Cockpit</span><em>calcule les primes, garde les calculs</em></div>
+    <div class="carte tuile"><b>19<small>routes</small></b><span>Panel tfbuddy</span><em>ventes, tickets, personnes, planning, tâches</em></div>
+    <div class="carte tuile"><b>4<small>routes</small></b><span>ERP admin</span><em>les promotions actives, à transformer en primes</em></div>
+    <div class="carte tuile"><b>10<small>tables</small></b><span>Base partagée</span><em>heures, clients pro, note Google, réglages</em></div>
+    <div class="carte tuile"><b>1<small>route</small></b><span>SMS · Twilio</span><em>le SMS « prime gagnée »</em></div>
+  </div>
+
+  <!-- Qui appelle qui : les trois pages passent par le cockpit ; l'application parle aussi au panel en direct. -->
+  <div class="carte flux">
+    <h2>Qui appelle qui</h2>
+    <div class="grille">
+      <div class="col">
+        <div class="nd">Page admin<small>les primes de la marque et des sponsors</small></div>
+        <div class="nd">Page franchisé<small>les primes d’un magasin, son équipe</small></div>
+        <div class="nd">Application employé<small>Mes primes, Accueil, Statistiques</small></div>
+      </div>
+      <div class="fl">→</div>
+      <div class="nd coeur">Cockpit<small><code>…/consulant_bo/api/cockpit</code></small><small style="margin-top:6px">calcule chaque prime, garde les calculs de 10 min à 1 jour</small></div>
+      <div class="fl">→</div>
+      <div class="col">
+        <div class="nd">Panel tfbuddy<small>compte consultant · ventes par vendeuse, tickets, catégories</small></div>
+        <div class="nd">ERP admin<small>compte admin · les promotions</small></div>
+        <div class="nd">Base partagée<small>planning, clients pro, note Google, réglages</small></div>
+        <div class="nd">Twilio<small>le SMS, si config.php › sms est réglé</small></div>
+      </div>
+    </div>
+    <div class="direct"><i></i>L’application parle aussi au panel en direct, avec le jeton de la personne : connexion, planning, tâches, photos.</div>
+  </div>
+
+  <div class="barre">
+    <div class="segm"><span class="on">Toutes les pages</span><span>Page admin</span><span>Page franchisé</span><span>Application</span></div>
+    <div class="cherche">Chercher une route…</div>
+  </div>
+
+  <!-- ── Cockpit ── -->
+  <section class="carte src">
+    <div class="h"><div><h2>Cockpit</h2><p>Notre API, sur le même serveur. Les pages ne lisent qu’elle ; elle seule parle aux sources.</p></div><span class="n">14 routes</span></div>
+    <div class="grp">Lectures</div>
+    <table>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/ventes/primes-reglages</td><td>Les primes posées (marque, sponsors, franchisés), la récompense, le SMS</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c">—</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/ventes/primes-equipe?shop=&amp;m=</td><td>Qui a quelle prime, à quel niveau, dans un magasin et un mois</td><td class="p"><span class="pg f">Franchisé</span></td><td class="c">10 min · 1 j</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/ventes/primes-annee?y=[&amp;shop=]</td><td>L’année des primes, par magasin ou par vendeuse</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c">1 h · 1 j</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/ventes/primes-moyennes?n=</td><td>Les moyennes du réseau, pour caler un objectif</td><td class="p"><span class="pg a">Admin</span></td><td class="c">1 j</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/ventes/primes-promos</td><td>Les promotions actives de l’ERP, prêtes à devenir des primes</td><td class="p"><span class="pg a">Admin</span></td><td class="c">1 h</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/ventes/primes-catalogue</td><td>Les produits et catégories, pour cibler une prime</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c">—</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/ventes/primes-reference?ids=&amp;du=&amp;au=&amp;shops=</td><td>Ce que des produits ont vendu, pour proposer un objectif</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c">—</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/ventes/grands-prix[?shop=]</td><td>Les grands prix et leur classement</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c">1 h</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/ventes/moi?m=</td><td>La fiche « Mes primes » de la personne connectée (son jeton, vérifié chez le panel)</td><td class="p"><span class="pg e">App</span></td><td class="c">15 min · 1 j</td></tr>
+    </table>
+    <div class="grp">Écritures</div>
+    <table>
+      <tr><td class="m"><span class="mt post">POST</span></td><td class="r">/ventes/primes-app</td><td>Enregistre les primes, la récompense, les primes externes, le SMS</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt post">POST</span></td><td class="r">/ventes/primes-icone</td><td>Dépose l’icône d’une prime ou le logo d’un sponsor</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt post">POST</span></td><td class="r">/ventes/croisees</td><td>La règle des ventes croisées (cible, tickets minimum)</td><td class="p"><span class="pg a">Admin</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt post">POST</span></td><td class="r">/ventes/grands-prix</td><td>Crée, modifie, allume ou éteint un grand prix</td><td class="p"><span class="pg a">Admin</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt post">POST</span></td><td class="r">/ventes/grands-prix/retirer</td><td>Retire un grand prix</td><td class="p"><span class="pg a">Admin</span></td><td class="c"></td></tr>
+    </table>
+  </section>
+
+  <!-- ── Panel tfbuddy ── -->
+  <section class="carte src">
+    <div class="h"><div><h2>Panel tfbuddy</h2><p><code>atelierby.tfbuddy.com/api/v1</code> · la caisse et les personnes</p></div><span class="n">19 routes · lecture, sauf 3</span></div>
+    <div class="grp">Lu par le cockpit · compte consultant</div>
+    <table>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/shops/{id}/statistics/sales/employees/{date}</td><td>CA et tickets par vendeuse, jour par jour</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span><span class="pg e">App</span></td><td class="c">1 h · gravé</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/shops/{id}/statistics/sales/hourly-distribution/{date}</td><td>Les ventes par créneau (la difficulté du coefficient)</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span><span class="pg e">App</span></td><td class="c">1 h · gravé</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/shops/{id}/statistics/sales/kpis?date_from=&amp;date_to=</td><td>Panier moyen, articles par ticket du mois</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span><span class="pg e">App</span></td><td class="c">1 h</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/shops/{id}/transactions?date=</td><td>Les tickets (record, ventes croisées, catégories), moissonnés puis gardés</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span><span class="pg e">App</span></td><td class="c">10 min · gravé</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/transactions/{id}?include=products</td><td>Les lignes d’un ticket</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span><span class="pg e">App</span></td><td class="c">10 min · gravé</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/employees/{id}</td><td>Confirme le jeton d’une personne avant de rendre sa fiche</td><td class="p"><span class="pg e">App</span></td><td class="c">10 min</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/consultant/shops</td><td>Les magasins du compte</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c">1 j</td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/product-categories · /product-category-groups</td><td>Catégories et groupes, pour cibler une prime</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c">1 j</td></tr>
+    </table>
+    <div class="grp">Lu par l’application · jeton de la personne</div>
+    <table>
+      <tr><td class="m"><span class="mt post">POST</span></td><td class="r">/employees/authenticate · /employees/refresh</td><td>Connexion, puis la session renouvelée</td><td class="p"><span class="pg e">App</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/employees/{id}</td><td>Le profil</td><td class="p"><span class="pg e">App</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/employees/{id}/schedule?date_from=&amp;date_to=</td><td>Le planning de la semaine</td><td class="p"><span class="pg e">App</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/employees/{id}/tasks · /tasks/completions/{id}</td><td>Les tâches du jour, une tâche faite</td><td class="p"><span class="pg e">App</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt post">POST</span></td><td class="r">/employees/{id}/tasks/{task}/mark-as-done</td><td>Marque une tâche faite (avec ses photos)</td><td class="p"><span class="pg e">App</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/shops/{id}</td><td>Le magasin de la personne</td><td class="p"><span class="pg e">App</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/attachments/{id}/meta · /presigned-url</td><td>Les photos des tâches</td><td class="p"><span class="pg e">App</span></td><td class="c"></td></tr>
+    </table>
+  </section>
+
+  <div class="two">
+    <!-- ── ERP admin ── -->
+    <section class="carte src">
+      <div class="h"><div><h2>ERP admin</h2><p>Compte admin ERP (Paramètres) · connexion <code>POST /admin/auth/login</code></p></div><span class="n">4 routes</span></div>
+      <table>
+        <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/admin/promotions/bundles</td><td>Les menus</td><td class="p"><span class="pg a">Admin</span></td><td class="c">1 h</td></tr>
+        <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/admin/promotions/buy-x-get-y</td><td>Les « X achetés, Y offerts »</td><td class="p"><span class="pg a">Admin</span></td><td class="c">1 h</td></tr>
+        <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/admin/promotions/quantity</td><td>Les remises à la quantité</td><td class="p"><span class="pg a">Admin</span></td><td class="c">1 h</td></tr>
+        <tr><td class="m"><span class="mt get">GET</span></td><td class="r">/admin/promotions/scheduled-product-discount</td><td>Les remises programmées</td><td class="p"><span class="pg a">Admin</span></td><td class="c">1 h</td></tr>
+      </table>
+      <div class="note">Sans compte admin, le compte consultant est essayé : il reçoit 403.</div>
+    </section>
+    <!-- ── SMS ── -->
+    <section class="carte src">
+      <div class="h"><div><h2>SMS · Twilio</h2><p><code>api.twilio.com</code> · réglé dans config.php › sms</p></div><span class="n">1 route</span></div>
+      <table>
+        <tr><td class="m"><span class="mt post">POST</span></td><td class="r">/2010-04-01/Accounts/{sid}/Messages.json</td><td>« Bravo, prime gagnée » : un SMS par personne et par mois</td><td class="p"><span class="pg a">Admin</span></td><td class="c"></td></tr>
+      </table>
+      <div class="note">Le numéro : la fiche locale (franchisee_employee.phone), sinon celle du panel.</div>
+    </section>
+  </div>
+
+  <!-- ── Base partagée ── -->
+  <section class="carte src">
+    <div class="h"><div><h2>Base partagée</h2><p>MySQL du serveur · lue directement, sans passer par une API</p></div><span class="n">10 tables</span></div>
+    <div class="grp">Lues</div>
+    <table>
+      <tr><td class="m"><span class="mt get">LIT</span></td><td class="r">franchisee_employee_schedule</td><td>Les heures du planning (condition d’heures des primes)</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span><span class="pg e">App</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt get">LIT</span></td><td class="r">franchisee_employee</td><td>Les personnes, leur téléphone</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt get">LIT</span></td><td class="r">transaction ⨝ client</td><td>Les commandes pro (prime B2B), le plus gros ticket (grands prix)</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span><span class="pg e">App</span></td><td class="c">15 min · 1 j</td></tr>
+      <tr><td class="m"><span class="mt get">LIT</span></td><td class="r">mar_avis_fiche</td><td>La note Google du magasin (tenue par Réputation)</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span><span class="pg e">App</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt get">LIT</span></td><td class="r">ceo_shop_month_perf</td><td>L’objectif de CA du mois</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span><span class="pg e">App</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt get">LIT</span></td><td class="r">shops</td><td>Les magasins actifs</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c"></td></tr>
+    </table>
+    <div class="grp">Tenues par le module</div>
+    <table>
+      <tr><td class="m"><span class="mt post">ÉCRIT</span></td><td class="r">mot_reglage</td><td>Les réglages des primes, les SMS déjà envoyés</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt post">ÉCRIT</span></td><td class="r">mot_cache</td><td>Les calculs gardés (fiches, mois, équipe, année)</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span><span class="pg e">App</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt post">ÉCRIT</span></td><td class="r">mot_grand_prix</td><td>Les grands prix</td><td class="p"><span class="pg a">Admin</span></td><td class="c"></td></tr>
+      <tr><td class="m"><span class="mt post">ÉCRIT</span></td><td class="r">ceo_app_setting</td><td>Les mois de ventes gravés (un mois clos ne se relit plus)</td><td class="p"><span class="pg a">Admin</span><span class="pg f">Franchisé</span><span class="pg e">App</span></td><td class="c"></td></tr>
+    </table>
+  </section>
+</main>
+</div>
+</body></html>

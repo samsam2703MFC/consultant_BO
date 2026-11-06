@@ -53,7 +53,11 @@ class PrimesService
             curl_close($ch);
             if ($raw !== false && $code === 200) {
                 $d = json_decode((string) $raw, true);
-                if (is_array($d) && isset($d['emp'])) { return ['ok' => true, 'fiche' => $d]; }
+                if (is_array($d) && isset($d['emp'])) {
+                    // Les icônes des primes sont servies par le cockpit (public/uploads/primes) : son adresse, sans « /api/… ».
+                    $d['iconesBase'] = (string) preg_replace('#/api(/.*)?$#', '', COCKPIT_API_URL);
+                    return ['ok' => true, 'fiche' => $d];
+                }
                 $erreur = 'réponse illisible du cockpit';
                 continue;
             }

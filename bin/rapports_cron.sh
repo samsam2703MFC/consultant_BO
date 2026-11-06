@@ -16,8 +16,8 @@ JETON="$(php -r '
 # Jeton pas encore semé (il naît au premier chargement de l'écran Reporting).
 [[ -n "$JETON" ]] || exit 0
 curl -fsS -m 600 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/rapports/cron?jeton=${JETON}" >/dev/null
-# E-mail « commande fournisseur » (centrale d'achat) : même jeton, même heure.
-curl -fsS -m 300 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/centrale/commandes/mail/cron?jeton=${JETON}" >/dev/null || true
+# L'e-mail « commande fournisseur » de la centrale d'achat n'est plus appelé (16/10/2026) :
+# la centrale a quitté la console, plus personne ne peut en régler ni en arrêter l'envoi.
 # Brand Guard : chaque jour à 7 h, lecture des pages Facebook, copie des visuels, passage de
 # l'agent et rapport de contrôle ; le lundi, la semaine en plus (l'endpoint décide de l'heure).
 curl -fsS -m 900 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/marketing/brand-guard/cron?jeton=${JETON}" >/dev/null || true

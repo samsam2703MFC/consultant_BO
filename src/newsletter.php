@@ -37,7 +37,7 @@ const NL_STATUTS = ['draft', 'sched', 'live', 'sent'];
  * ------------------------------------------------------------------------- */
 function ensureNewsletter(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_nl_magasin ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_nl_magasin ('
         . 'shop_id VARCHAR(16) PRIMARY KEY,'          // « brand » ou l'id du magasin
         . 'nom VARCHAR(120) NOT NULL,'
         . 'sender_name VARCHAR(120) NOT NULL,'
@@ -47,7 +47,7 @@ function ensureNewsletter(): void
         . 'sort_order INT NOT NULL DEFAULT 0,'
         . 'updated_at DATETIME NULL'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_nl_source ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_nl_source ('
         . 'id VARCHAR(16) PRIMARY KEY,'
         . 'table_ref VARCHAR(60) NOT NULL,'
         . 'nom_json TEXT NOT NULL,'                  // {fr, nl, en}
@@ -55,7 +55,7 @@ function ensureNewsletter(): void
         . 'optin INT NOT NULL DEFAULT 0,'
         . 'sort_order INT NOT NULL DEFAULT 0'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_nl_segment ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_nl_segment ('
         . 'id VARCHAR(40) PRIMARY KEY,'
         . 'source_id VARCHAR(16) NOT NULL,'
         . 'shop_id VARCHAR(16) NOT NULL DEFAULT "",'  // "" = tous les magasins
@@ -70,7 +70,7 @@ function ensureNewsletter(): void
         . 'created_at DATETIME NULL,'
         . 'sort_order INT NOT NULL DEFAULT 0'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_nl_campagne ('
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_nl_campagne ('
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'nom VARCHAR(160) NOT NULL,'
         . 'source_id VARCHAR(16) NOT NULL,'
@@ -132,21 +132,21 @@ function nlSemer(): void
 {
     $shops = nlMagasinsReseau();
     $ordre = 0;
-    Db::exec('INSERT INTO ceo_nl_magasin (shop_id, nom, sender_name, sender_email, domain_status, can_send, sort_order, updated_at) VALUES (?,?,?,?,?,?,?,NOW())'
+    Db::exec('INSERT INTO mar_nl_magasin (shop_id, nom, sender_name, sender_email, domain_status, can_send, sort_order, updated_at) VALUES (?,?,?,?,?,?,?,NOW())'
         . ' ON DUPLICATE KEY UPDATE sort_order = VALUES(sort_order)',
         ['brand', "L'Atelier By", "L'Atelier By", 'bonjour@' . nlDomaine(), 'verified', 1, $ordre]);
     // Le premier semis portait le domaine du brief : il suit le vrai domaine.
     if (nlDomaine() !== 'latelier.by') {
-        Db::exec('UPDATE ceo_nl_magasin SET sender_email = ? WHERE shop_id = "brand" AND sender_email = "bonjour@latelier.by"', ['bonjour@' . nlDomaine()]);
+        Db::exec('UPDATE mar_nl_magasin SET sender_email = ? WHERE shop_id = "brand" AND sender_email = "bonjour@latelier.by"', ['bonjour@' . nlDomaine()]);
     }
     foreach ($shops as $s) {
         $ordre++;
         $nom = (string) ($s['zone'] ?: $s['nom']);
-        Db::exec('INSERT INTO ceo_nl_magasin (shop_id, nom, sender_name, sender_email, domain_status, can_send, sort_order, updated_at) VALUES (?,?,?,?,?,?,?,NOW())'
+        Db::exec('INSERT INTO mar_nl_magasin (shop_id, nom, sender_name, sender_email, domain_status, can_send, sort_order, updated_at) VALUES (?,?,?,?,?,?,?,NOW())'
             . ' ON DUPLICATE KEY UPDATE nom = VALUES(nom), sort_order = VALUES(sort_order)',
             [(string) $s['id'], $nom, "L'Atelier By " . $nom, '', 'unverified', 1, $ordre]);
     }
-    $n = Db::row('SELECT COUNT(*) AS n FROM ceo_nl_source');
+    $n = Db::row('SELECT COUNT(*) AS n FROM mar_nl_source');
     if ((int) ($n['n'] ?? 0) > 0) { return; }
 
     // --- bases (jeu d'essai, comptes du brief)
@@ -157,13 +157,13 @@ function nlSemer(): void
         ['crm', 'tfb_crm_candidates', ['fr' => 'Candidats (CRM)', 'nl' => 'Kandidaten (CRM)', 'en' => 'Candidates (CRM)'], 1540, 1546],
     ];
     foreach ($sources as $i => $s) {
-        Db::exec('INSERT INTO ceo_nl_source (id, table_ref, nom_json, total, optin, sort_order) VALUES (?,?,?,?,?,?)',
+        Db::exec('INSERT INTO mar_nl_source (id, table_ref, nom_json, total, optin, sort_order) VALUES (?,?,?,?,?,?)',
             [$s[0], $s[1], json_encode($s[2], JSON_UNESCAPED_UNICODE), $s[3], $s[4], $i]);
     }
     // --- segments : un « tous les clients » par magasin, puis les segments réseau
     $ordre = 0;
     $seg = function (string $id, string $src, string $shop, array $nom, array $regle, int $total, array $split, ?array $rules = null) use (&$ordre): void {
-        Db::exec('INSERT INTO ceo_nl_segment (id, source_id, shop_id, nom_json, regle_json, rules_json, total, split_fr, split_nl, split_en, created_by, created_at, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW(),?)',
+        Db::exec('INSERT INTO mar_nl_segment (id, source_id, shop_id, nom_json, regle_json, rules_json, total, split_fr, split_nl, split_en, created_by, created_at, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW(),?)',
             [$id, $src, $shop, json_encode($nom, JSON_UNESCAPED_UNICODE), json_encode($regle, JSON_UNESCAPED_UNICODE), $rules ? json_encode($rules, JSON_UNESCAPED_UNICODE) : null,
                 $total, $split[0], $split[1], $split[2], 'brand', $ordre++]);
     };
@@ -201,7 +201,7 @@ function nlSemer(): void
     $nomPremier = $premier ? (string) ($premier['zone'] ?: $premier['nom']) : 'Réseau';
     $exp = $premier ? (string) $premier['id'] : 'brand';
     $camp = function (string $nom, string $src, string $seg, string $tpl, string $channel, string $sujet, string $mode, ?string $trig, string $sendAt, ?int $maxV, string $sender, string $statut, ?array $stats, ?array $social) {
-        Db::exec('INSERT INTO ceo_nl_campagne (nom, source_id, segment_id, langues, template_id, channel, subjects_json, bodies_json, sms_json, social_json, send_mode, trigger_rule, send_at, max_vouchers, sender_shop_id, statut, test_sent, stats_json, exemple, created_by, created_at, updated_at)'
+        Db::exec('INSERT INTO mar_nl_campagne (nom, source_id, segment_id, langues, template_id, channel, subjects_json, bodies_json, sms_json, social_json, send_mode, trigger_rule, send_at, max_vouchers, sender_shop_id, statut, test_sent, stats_json, exemple, created_by, created_at, updated_at)'
             . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,1,?,NOW(),NOW())',
             [$nom, $src, $seg, 'fr,nl', $tpl, $channel, json_encode(['fr' => $sujet], JSON_UNESCAPED_UNICODE), null, null,
                 $social ? json_encode($social, JSON_UNESCAPED_UNICODE) : null, $mode, $trig, $sendAt, $maxV, $sender, $statut,
@@ -255,7 +255,8 @@ function nlCampagneRow(array $r): array
         'templateId' => $r['template_id'], 'channel' => $r['channel'], 'subjects' => nlJson($r['subjects_json'], []), 'bodies' => nlJson($r['bodies_json'], []), 'sms' => nlJson($r['sms_json'], []),
         'social' => nlJson($r['social_json'], []), 'sendMode' => $r['send_mode'], 'trigger' => $r['trigger_rule'], 'sendAt' => $r['send_at'], 'maxVouchers' => $r['max_vouchers'] !== null ? (int) $r['max_vouchers'] : null,
         'sender' => $r['sender_shop_id'], 'status' => $r['statut'], 'testSent' => (int) $r['test_sent'] === 1, 'stats' => is_array($stats) ? $stats : [], 'exemple' => (int) $r['exemple'] === 1,
-        'createdBy' => $r['created_by'], 'createdAt' => $r['created_at']];
+        'createdBy' => $r['created_by'], 'createdAt' => $r['created_at'], 'campagneId' => isset($r['campagne_id']) && $r['campagne_id'] !== null ? (int) $r['campagne_id'] : null,
+        'lien' => (string) ($r['lien'] ?? '')];
 }
 
 /**
@@ -268,23 +269,23 @@ function ep_newsletter(): array
 {
     ensureNewsletter();
     $role = nlRole();
-    $magasins = array_map('nlMagasinRow', Db::rows('SELECT * FROM ceo_nl_magasin ORDER BY sort_order, shop_id'));
+    $magasins = array_map('nlMagasinRow', Db::rows('SELECT * FROM mar_nl_magasin ORDER BY sort_order, shop_id'));
     $moi = null;
     foreach ($magasins as $m) { if ($m['id'] === $role) { $moi = $m; } }
     if ($role !== 'brand' && $moi === null) { http_response_code(404); return ['error' => 'magasin inconnu de la newsletter']; }
     // Une base qui a des contacts compte pour de vrai ; les autres gardent le jeu d'essai.
     $parSource = nlContactsParSource();
     $sources = array_map(fn ($r) => isset($parSource[$r['id']])
-        ? ['id' => $r['id'], 'table' => 'ceo_nl_contact', 'name' => nlJson($r['nom_json'], ''), 'count' => $parSource[$r['id']]['n'], 'optin' => $parSource[$r['id']]['optin'], 'sms' => $parSource[$r['id']]['sms'], 'reel' => true]
+        ? ['id' => $r['id'], 'table' => 'mar_nl_contact', 'name' => nlJson($r['nom_json'], ''), 'count' => $parSource[$r['id']]['n'], 'optin' => $parSource[$r['id']]['optin'], 'sms' => $parSource[$r['id']]['sms'], 'reel' => true]
         : ['id' => $r['id'], 'table' => $r['table_ref'], 'name' => nlJson($r['nom_json'], ''), 'count' => (int) $r['total'], 'optin' => (int) $r['optin'], 'reel' => false],
-        Db::rows('SELECT * FROM ceo_nl_source ORDER BY sort_order, id'));
+        Db::rows('SELECT * FROM mar_nl_source ORDER BY sort_order, id'));
     $segments = array_map(function ($r) use ($parSource) {
         $row = nlSegmentRow($r);
         $c = nlSegmentCompte($r, $parSource);
         if ($c !== null) { $row['count'] = $c['total']; $row['split'] = $c['split']; $row['reel'] = true; } else { $row['reel'] = false; }
         return $row;
-    }, Db::rows('SELECT * FROM ceo_nl_segment ORDER BY sort_order, created_at DESC'));
-    $campagnes = array_map('nlCampagneRow', Db::rows('SELECT * FROM ceo_nl_campagne ORDER BY COALESCE(send_at, created_at) DESC, id DESC'));
+    }, Db::rows('SELECT * FROM mar_nl_segment ORDER BY sort_order, created_at DESC'));
+    $campagnes = array_map('nlCampagneRow', Db::rows('SELECT * FROM mar_nl_campagne ORDER BY COALESCE(send_at, created_at) DESC, id DESC'));
     if ($role !== 'brand') {
         $segments = array_values(array_filter($segments, fn ($s) => $s['shop'] === '' || $s['shop'] === $role));
         $campagnes = array_values(array_filter($campagnes, fn ($c) => $c['createdBy'] === $role || $c['sender'] === $role));
@@ -339,13 +340,13 @@ function wr_newsletter_campagne_post(): array
     ensureNewsletter();
     $b = body();
     $role = nlRole();
-    $moi = Db::row('SELECT * FROM ceo_nl_magasin WHERE shop_id = ?', [$role]);
+    $moi = Db::row('SELECT * FROM mar_nl_magasin WHERE shop_id = ?', [$role]);
     if ($role !== 'brand') {
         if ($moi === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
         if ((int) $moi['can_send'] !== 1) { http_response_code(403); return ['error' => 'Envoi bloqué par la marque.']; }
     }
     $segId = mb_substr(trim((string) ($b['segment'] ?? '')), 0, 40);
-    $seg = Db::row('SELECT * FROM ceo_nl_segment WHERE id = ?', [$segId]);
+    $seg = Db::row('SELECT * FROM mar_nl_segment WHERE id = ?', [$segId]);
     if ($seg === null) { http_response_code(422); return ['error' => 'segment inconnu']; }
     if ($role !== 'brand' && $seg['shop_id'] !== '' && $seg['shop_id'] !== $role) { http_response_code(403); return ['error' => "Ce segment n'est pas celui de votre magasin."]; }
     $mode = ($b['sendMode'] ?? 'manual') === 'auto' ? 'auto' : 'manual';
@@ -354,7 +355,7 @@ function wr_newsletter_campagne_post(): array
     if ($mode === 'auto' && !in_array($trig, NL_DECLENCHEURS, true)) { http_response_code(422); return ['error' => 'déclencheur inconnu']; }
     $sender = mb_substr(trim((string) ($b['sender'] ?? $role)), 0, 16);
     if ($role !== 'brand' && $sender !== $role) { http_response_code(403); return ['error' => "Un franchisé envoie depuis l'adresse de son magasin."]; }
-    if (Db::row('SELECT 1 FROM ceo_nl_magasin WHERE shop_id = ?', [$sender]) === null) { http_response_code(422); return ['error' => 'expéditeur inconnu']; }
+    if (Db::row('SELECT 1 FROM mar_nl_magasin WHERE shop_id = ?', [$sender]) === null) { http_response_code(422); return ['error' => 'expéditeur inconnu']; }
     $tpl = in_array($b['templateId'] ?? '', NL_MODELES, true) ? $b['templateId'] : 'blank';
     $channel = in_array($b['channel'] ?? '', ['email', 'sms', 'both'], true) ? $b['channel'] : 'email';
     $statut = ($b['status'] ?? '') === 'draft' ? 'draft' : ($mode === 'auto' ? 'live' : 'sched');
@@ -367,6 +368,8 @@ function wr_newsletter_campagne_post(): array
     $maxV = isset($b['maxVouchers']) && $b['maxVouchers'] !== '' && $b['maxVouchers'] !== null ? max(0, min(100000, (int) $b['maxVouchers'])) : null;
     $nom = mb_substr(trim((string) ($b['name'] ?? '')), 0, 160);
     if ($nom === '') { http_response_code(422); return ['error' => 'nom attendu']; }
+    $lien = nlLienValide($b['lien'] ?? '');
+    if ($lien === null) { http_response_code(422); return ['error' => 'Lien du bouton : une adresse complète qui commence par https:// ({{code}} pour le code du destinataire).']; }
     $social = null;
     if (isset($b['social']) && is_array($b['social'])) {
         $s = [];
@@ -376,16 +379,19 @@ function wr_newsletter_campagne_post(): array
         }
         $social = json_encode($s, JSON_UNESCAPED_UNICODE);
     }
-    Db::exec('INSERT INTO ceo_nl_campagne (nom, source_id, segment_id, langues, template_id, channel, subjects_json, bodies_json, sms_json, social_json, send_mode, trigger_rule, send_at, max_vouchers, sender_shop_id, statut, test_sent, stats_json, exemple, created_by, created_at, updated_at, headlines_json, ctas_json, image)'
-        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,0,?,NOW(),NOW(),?,?,?)',
+    Db::exec('INSERT INTO mar_nl_campagne (nom, source_id, segment_id, langues, template_id, channel, subjects_json, bodies_json, sms_json, social_json, send_mode, trigger_rule, send_at, max_vouchers, sender_shop_id, statut, test_sent, stats_json, exemple, created_by, created_at, updated_at, headlines_json, ctas_json, image, lien)'
+        . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,0,?,NOW(),NOW(),?,?,?,?)',
         [$nom, $seg['source_id'], $segId, nlLangues($b['langs'] ?? 'fr'), $tpl, $channel,
             nlTextesParLangue($b['subjects'] ?? null, 200), nlTextesParLangue($b['bodies'] ?? null, 20000), nlTextesParLangue($b['sms'] ?? null, 400), $social,
             $mode, $trig, $sendAt, $maxV, $sender, $statut, !empty($b['testSent']) ? 1 : 0, $role,
-            nlTextesParLangue($b['headlines'] ?? null, 200), nlTextesParLangue($b['ctas'] ?? null, 80), nlImage($tpl)]);
+            nlTextesParLangue($b['headlines'] ?? null, 200), nlTextesParLangue($b['ctas'] ?? null, 80), nlImage($tpl), $lien !== '' ? $lien : null]);
     $id = (int) Db::pdo()->lastInsertId();
+    // La campagne marketing qu'elle sert (portail Marketing) : le lien que les dates ne faisaient que deviner.
+    $campagne = (int) ($b['campagne'] ?? 0);
+    if ($campagne > 0) { try { Db::exec('UPDATE mar_nl_campagne SET campagne_id = ? WHERE id = ?', [$campagne, $id]); } catch (PDOException $e) { /* colonne pas encore posée */ } }
     journalAdd($role === 'brand' ? 'Marque' : 'Magasin ' . $role, 'Newsletter', null,
         ($statut === 'draft' ? 'Brouillon gardé' : ($mode === 'auto' ? 'Automatisation créée' : 'Campagne programmée')) . ' : ' . $nom . (nlDispatch() ? '' : ' (mode test, aucun envoi ne part)'));
-    $r = Db::row('SELECT * FROM ceo_nl_campagne WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_nl_campagne WHERE id = ?', [$id]);
     return ['ok' => true, 'campagne' => $r ? nlCampagneRow($r) : null, 'test' => !nlDispatch()];
 }
 
@@ -394,11 +400,11 @@ function wr_newsletter_campagne_delete(int $id): array
 {
     ensureNewsletter();
     $role = nlRole();
-    $r = Db::row('SELECT * FROM ceo_nl_campagne WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_nl_campagne WHERE id = ?', [$id]);
     if ($r === null) { http_response_code(404); return ['error' => 'campagne inconnue']; }
     if ($role !== 'brand' && $r['created_by'] !== $role) { http_response_code(403); return ['error' => "Cette campagne n'est pas la vôtre."]; }
     if ($r['statut'] === 'sent') { http_response_code(409); return ['error' => 'Une campagne envoyée reste dans l’historique.']; }
-    Db::exec('DELETE FROM ceo_nl_campagne WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM mar_nl_campagne WHERE id = ?', [$id]);
     journalAdd($role === 'brand' ? 'Marque' : 'Magasin ' . $role, 'Newsletter', null, 'Campagne retirée : ' . $r['nom']);
     return ['ok' => true];
 }
@@ -413,9 +419,9 @@ function wr_newsletter_segment_post(): array
     $nom = mb_substr(trim((string) ($b['name'] ?? '')), 0, 160);
     if ($nom === '') { http_response_code(422); return ['error' => 'nom attendu']; }
     $src = mb_substr((string) ($b['src'] ?? 'indiv'), 0, 16);
-    if (Db::row('SELECT 1 FROM ceo_nl_source WHERE id = ?', [$src]) === null) { http_response_code(422); return ['error' => 'base inconnue']; }
+    if (Db::row('SELECT 1 FROM mar_nl_source WHERE id = ?', [$src]) === null) { http_response_code(422); return ['error' => 'base inconnue']; }
     $shop = mb_substr(trim((string) ($b['shop'] ?? '')), 0, 16);
-    if ($shop !== '' && Db::row('SELECT 1 FROM ceo_nl_magasin WHERE shop_id = ? AND shop_id <> "brand"', [$shop]) === null) { http_response_code(422); return ['error' => 'magasin inconnu']; }
+    if ($shop !== '' && Db::row('SELECT 1 FROM mar_nl_magasin WHERE shop_id = ? AND shop_id <> "brand"', [$shop]) === null) { http_response_code(422); return ['error' => 'magasin inconnu']; }
     $rules = ['magasin' => $shop !== '' ? $shop : null, 'produit' => in_array($b['product'] ?? '', ['tartine', 'cougnou', 'galette', 'tarte', 'plateau'], true) ? $b['product'] : null,
         'periode' => in_array((string) ($b['period'] ?? ''), ['30', '90', '365', 'dormant45'], true) ? (string) $b['period'] : '365',
         'panier_min' => isset($b['minBasket']) && (float) $b['minBasket'] > 0 ? (float) $b['minBasket'] : null];
@@ -424,10 +430,10 @@ function wr_newsletter_segment_post(): array
     $split[] = max(0, $total - $split[0] - $split[1]);
     $id = 'seg-' . substr(md5($nom . microtime(true)), 0, 12);
     $regle = mb_substr(trim((string) ($b['rule'] ?? '')), 0, 200);
-    Db::exec('INSERT INTO ceo_nl_segment (id, source_id, shop_id, nom_json, regle_json, rules_json, total, split_fr, split_nl, split_en, created_by, created_at, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW(),-1)',
+    Db::exec('INSERT INTO mar_nl_segment (id, source_id, shop_id, nom_json, regle_json, rules_json, total, split_fr, split_nl, split_en, created_by, created_at, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW(),-1)',
         [$id, $src, $shop, json_encode($nom, JSON_UNESCAPED_UNICODE), json_encode($regle, JSON_UNESCAPED_UNICODE), json_encode($rules, JSON_UNESCAPED_UNICODE), $total, $split[0], $split[1], $split[2], 'brand']);
     journalAdd('Marque', 'Newsletter', null, 'Segment créé : ' . $nom);
-    $r = Db::row('SELECT * FROM ceo_nl_segment WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_nl_segment WHERE id = ?', [$id]);
     return ['ok' => true, 'segment' => $r ? nlSegmentRow($r) : null];
 }
 
@@ -436,7 +442,7 @@ function wr_newsletter_magasin_put(string $id): array
 {
     ensureNewsletter();
     $role = nlRole();
-    $r = Db::row('SELECT * FROM ceo_nl_magasin WHERE shop_id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_nl_magasin WHERE shop_id = ?', [$id]);
     if ($r === null) { http_response_code(404); return ['error' => 'magasin inconnu']; }
     if ($role !== 'brand' && $role !== $id) { http_response_code(403); return ['error' => "Un franchisé ne modifie que l'adresse de son magasin."]; }
     $b = body();
@@ -453,11 +459,11 @@ function wr_newsletter_magasin_put(string $id): array
     $canSend = (int) $r['can_send'];
     if ($role === 'brand' && array_key_exists('canSend', $b) && $id !== 'brand') { $canSend = !empty($b['canSend']) ? 1 : 0; }
     if ($nom === '') { http_response_code(422); return ['error' => "nom d'expéditeur attendu"]; }
-    Db::exec('UPDATE ceo_nl_magasin SET sender_name = ?, sender_email = ?, domain_status = ?, can_send = ?, updated_at = NOW() WHERE shop_id = ?', [$nom, $email, $statut, $canSend, $id]);
+    Db::exec('UPDATE mar_nl_magasin SET sender_name = ?, sender_email = ?, domain_status = ?, can_send = ?, updated_at = NOW() WHERE shop_id = ?', [$nom, $email, $statut, $canSend, $id]);
     if ($canSend !== (int) $r['can_send']) {
         journalAdd('Marque', 'Newsletter', null, ($canSend ? 'Envoi autorisé' : 'Envoi bloqué') . ' : ' . $r['nom']);
     }
-    $m = Db::row('SELECT * FROM ceo_nl_magasin WHERE shop_id = ?', [$id]);
+    $m = Db::row('SELECT * FROM mar_nl_magasin WHERE shop_id = ?', [$id]);
     return ['ok' => true, 'magasin' => $m ? nlMagasinRow($m) : null];
 }
 
