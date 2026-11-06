@@ -123,6 +123,7 @@ require __DIR__ . '/../../src/leviers.php';
 require __DIR__ . '/../../src/formation.php';
 require __DIR__ . '/../../src/sop.php';
 require __DIR__ . '/../../src/referentiel.php';
+require __DIR__ . '/../../src/tablettes.php';
 require __DIR__ . '/../../src/parcours.php';
 $tCharge = microtime(true);
 
@@ -254,9 +255,10 @@ try {
     }
 
     // La tablette du poste (Formation › Standards, SOP) : ouverte sans session cockpit — chaque écriture porte
-    // le PIN d'un employé, vérifié au panel, ou un jeton signé (src/sop.php).
+    // le PIN d'un employé, vérifié au panel, ou un jeton signé (src/sop.php). Depuis le lot 5 (06/11/2026), le PIN
+    // du MAGASIN ouvre d'abord l'appareil (src/tablettes.php : état, ouvrir, fermer) ; les autres routes l'exigent.
     if (str_starts_with($path, '/formation/sop/tablette/')) {
-        $out = sopRoute($method, $path, true);
+        $out = tabRoutePublique($method, $path) ?? sopRoute($method, $path, true);
         if ($out !== null) {
             tempsServeur($tCharge, $tInstall);
             echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -327,6 +329,11 @@ function route(string $method, string $path): mixed
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
+        if ($f !== null) { return $f; }
+    }
+    // --- Formation › Manuel du réseau › Tablettes des magasins : la gestion (src/tablettes.php, lot 5)
+    if ($path === '/formation/tablettes' || str_starts_with($path, '/formation/tablettes/')) {
+        $f = tabRoute($method, $path);
         if ($f !== null) { return $f; }
     }
     // --- Formation › Manuel du réseau : le référentiel commun (src/referentiel.php, fusion du 06/11/2026)

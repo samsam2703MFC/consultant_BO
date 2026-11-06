@@ -26,7 +26,9 @@ declare(strict_types=1);
  * son nom et on tape son PIN, vérifié au panel (GET /shops/{id}/employees) comme pour les checklists de l'app
  * Cuisine ; le PIN ne quitte jamais le serveur. Ensuite le pas à pas, le quiz, puis la responsable valide
  * « vu faire » avec SON PIN. Les routes /formation/sop/tablette/* sont ouvertes sans session cockpit : chaque
- * écriture porte un PIN ou un jeton signé (HMAC, secret de session du cockpit, 4 h).
+ * écriture porte un PIN ou un jeton signé (HMAC, secret de session du cockpit, 4 h). Depuis le lot 5 de la fusion
+ * (06/11/2026, src/tablettes.php), elles exigent d'abord la session de l'APPAREIL, ouverte par le PIN du magasin :
+ * le magasin vient de cette session (foShopTablette), un jeton ne vaut que sur une tablette de son magasin.
  *
  * LES COMPÉTENCES sont celles du panel (GET /competencies, comme le module) : chaque SOP se rattache à une
  * compétence dans Rédaction. Une compétence est acquise par une personne quand chacune de ses SOP publiées, pour
@@ -458,25 +460,26 @@ function wr_sop_importer(): array
 
 /* ═══ La tablette du poste (routes ouvertes, chaque écriture porte un PIN ou un jeton) ═══════════════ */
 
-/** GET /formation/tablette/init?shop=&poste= — le magasin, ses personnes (sans PIN), les SOP du poste. */
+/** GET /formation/sop/tablette/init?poste= — le magasin (celui de l'appareil), ses personnes (sans PIN), les SOP du poste. */
 function ep_sop_tablette_init(): array
 {
-    $shop = foShopParam();
-    if ($shop === null) { return foRefus(400, 'magasin attendu (?shop=)'); }
+    $shop = foShopTablette();
+    if ($shop === null) { return foRefus(409, 'cette tablette n’est reliée à aucune boutique du panel (Cockpit › Formation › Tablettes)'); }
     $poste = isset($_GET['poste']) && in_array($_GET['poste'], FO_POSTES, true) ? (string) $_GET['poste'] : null;
     // Un brouillon (repris du CRM, pas encore relu) ne va pas sur la tablette du magasin.
     $rows = Db::rows('SELECT * FROM ceo_sop WHERE statut <> \'brouillon\'' . ($poste !== null ? ' AND poste = ?' : '') . ' ORDER BY dossier, ordre, id', $poste !== null ? [$poste] : []);
     $personnes = array_map(static fn ($p) => ['id' => $p['id'], 'nom' => $p['nom'], 'valideur' => $p['valideur'], 'langue' => $p['langue'], 'postes' => $p['postes'],
         'postesV25' => $p['postesV25'] ?? []], foEquipe($shop));
-    return ['magasin' => ['id' => $shop, 'nom' => foMagasinNom($shop)], 'poste' => $poste, 'postes' => FO_POSTES,
+    $app = function_exists('tabAppareil') ? tabAppareil() : null;
+    return ['magasin' => ['id' => $shop, 'nom' => $app !== null && $app['nom'] !== '' ? $app['nom'] : foMagasinNom($shop)], 'poste' => $poste, 'postes' => FO_POSTES,
         'personnes' => $personnes, 'sops' => array_map('foSopLigne', $rows), 'pinPanel' => class_exists('PanelApi') && PanelApi::configured()];
 }
 
-/** POST /formation/tablette/identifier — {shop, employe, pin} → jeton de 4 h, la personne, où elle en est. */
+/** POST /formation/sop/tablette/identifier — {employe, pin} → jeton de 4 h, la personne, où elle en est (magasin = celui de l'appareil). */
 function wr_sop_tablette_identifier(): array
 {
     $b = body();
-    $shop = foShopVal($b['shop'] ?? null);
+    $shop = foShopTablette($b['shop'] ?? null);
     $emp = (int) ($b['employe'] ?? 0);
     if ($shop === null || $emp <= 0) { return foRefus(400, 'magasin et personne attendus'); }
     [$ok, $msg] = foPinOk($shop, $emp, (string) ($b['pin'] ?? ''));
@@ -486,15 +489,15 @@ function wr_sop_tablette_identifier(): array
     return ['jeton' => foJeton(['s' => $shop, 'e' => $emp, 'n' => $p['nom']]), 'personne' => $p, 'suivi' => (object) foSuiviPersonne($shop, $emp)];
 }
 
-/** GET /formation/tablette/moi?jeton= — où en est la personne identifiée, SOP par SOP. */
+/** GET /formation/sop/tablette/moi?jeton= — où en est la personne identifiée, SOP par SOP. */
 function ep_sop_tablette_moi(): array
 {
-    $j = foJetonLire($_GET['jeton'] ?? null);
+    $j = foJetonTablette($_GET['jeton'] ?? null);
     if ($j === null) { return foRefus(401, 'jeton absent ou expiré : s’identifier à nouveau'); }
     return ['personne' => foPersonne($j['s'], (int) $j['e']), 'suivi' => (object) foSuiviPersonne($j['s'], (int) $j['e'])];
 }
 
-/** GET /formation/tablette/sop/{id} — la SOP en vigueur, FR et NL, quiz sans ses réponses. */
+/** GET /formation/sop/tablette/sop/{id} — la SOP en vigueur, FR et NL, quiz sans ses réponses. */
 function ep_sop_tablette_sop(string $id): array
 {
     $r = foSopRow($id);
@@ -505,11 +508,11 @@ function ep_sop_tablette_sop(string $id): array
     return foSopLigne($r) + ['contenu' => $c];
 }
 
-/** POST /formation/tablette/lu — {jeton, sop} : la personne a parcouru toutes les étapes. */
+/** POST /formation/sop/tablette/lu — {jeton, sop} : la personne a parcouru toutes les étapes. */
 function wr_sop_tablette_lu(): array
 {
     $b = body();
-    $j = foJetonLire($b['jeton'] ?? null);
+    $j = foJetonTablette($b['jeton'] ?? null);
     if ($j === null) { return foRefus(401, 'jeton absent ou expiré : s’identifier à nouveau'); }
     $r = foSopRow((string) ($b['sop'] ?? ''));
     if ($r === null || $r['statut'] === 'brouillon') { return foRefus(404, 'SOP inconnue'); }
@@ -521,11 +524,11 @@ function wr_sop_tablette_lu(): array
     return ['ok' => true, 'statut' => foStatut(foSuiviLigne($j['s'], (int) $j['e'], (string) $r['id']), $r)];
 }
 
-/** POST /formation/tablette/quiz — {jeton, sop, reponses: [i, i, i]} → score ; réussi quand tout est juste. */
+/** POST /formation/sop/tablette/quiz — {jeton, sop, reponses: [i, i, i]} → score ; réussi quand tout est juste. */
 function wr_sop_tablette_quiz(): array
 {
     $b = body();
-    $j = foJetonLire($b['jeton'] ?? null);
+    $j = foJetonTablette($b['jeton'] ?? null);
     if ($j === null) { return foRefus(401, 'jeton absent ou expiré : s’identifier à nouveau'); }
     $r = foSopRow((string) ($b['sop'] ?? ''));
     if ($r === null) { return foRefus(404, 'SOP inconnue'); }
@@ -551,13 +554,13 @@ function wr_sop_tablette_quiz(): array
 }
 
 /**
- * POST /formation/tablette/vu — {shop, sop, employe, valideur, pin, decision: vu|pas_encore, note}.
- * La responsable du magasin (valideur) a vu la personne faire la SOP sur place ; son PIN est vérifié au panel.
+ * POST /formation/sop/tablette/vu — {sop, employe, valideur, pin, decision: vu|pas_encore, note} (magasin = celui de
+ * l'appareil). La responsable du magasin (valideur) a vu la personne faire la SOP sur place ; son PIN est vérifié au panel.
  */
 function wr_sop_tablette_vu(): array
 {
     $b = body();
-    $shop = foShopVal($b['shop'] ?? null);
+    $shop = foShopTablette($b['shop'] ?? null);
     $emp = (int) ($b['employe'] ?? 0);
     $val = (int) ($b['valideur'] ?? 0);
     if ($shop === null || $emp <= 0 || $val <= 0) { return foRefus(400, 'magasin, personne et responsable attendus'); }
@@ -617,11 +620,11 @@ function wr_sop_tablette_vu(): array
     return ['ok' => true, 'decision' => $decision, 'statut' => foStatut(foSuiviLigne($shop, $emp, (string) $r['id']), $r), 'competence' => $acq, 'competences' => $acqs];
 }
 
-/** PUT /formation/tablette/langue — {jeton, langue} : la tablette s'en souvient pour cette personne. */
+/** PUT /formation/sop/tablette/langue — {jeton, langue} : la tablette s'en souvient pour cette personne. */
 function wr_sop_tablette_langue(): array
 {
     $b = body();
-    $j = foJetonLire($b['jeton'] ?? null);
+    $j = foJetonTablette($b['jeton'] ?? null);
     if ($j === null) { return foRefus(401, 'jeton absent ou expiré'); }
     $l = in_array($b['langue'] ?? null, FO_LANGUES, true) ? (string) $b['langue'] : null;
     if ($l === null) { return foRefus(400, 'langue : fr ou nl'); }
@@ -633,6 +636,9 @@ function wr_sop_tablette_langue(): array
 function sopRoute(string $method, string $path, bool $public = false): ?array
 {
     if (!str_starts_with($path, '/formation/sop/')) { return null; }
+    // La tablette du magasin (lot 5, src/tablettes.php) : chaque route exige la session de l'appareil, ouverte par
+    // le PIN du magasin ; sans elle, 401 `appareil` et la tablette revient à l'écran du PIN.
+    if (str_starts_with($path, '/formation/sop/tablette/') && function_exists('tabGarde') && ($g = tabGarde()) !== null) { return $g; }
     $t = match (true) {
         $method === 'GET' && $path === '/formation/sop/tablette/init' => ep_sop_tablette_init(),
         $method === 'GET' && $path === '/formation/sop/tablette/moi' => ep_sop_tablette_moi(),
@@ -1322,6 +1328,24 @@ function foShopVal(mixed $v): ?string
     if (!is_scalar($v)) { return null; }
     $v = trim((string) $v);
     return preg_match('/^[\w-]{1,32}$/', $v) ? $v : null;
+}
+
+/**
+ * Le magasin de la tablette : celui de la session de l'appareil (src/tablettes.php, PIN du magasin) — le magasin
+ * envoyé par la page n'est plus cru. Sans src/tablettes.php (installation partielle) : celui envoyé, comme avant.
+ */
+function foShopTablette(mixed $envoye = null): ?string
+{
+    if (function_exists('tabShop')) { return tabShop(); }
+    return foShopVal($envoye ?? ($_GET['shop'] ?? null));
+}
+
+/** Le jeton d'une personne, valable seulement sur une tablette de SON magasin. */
+function foJetonTablette(mixed $j): ?array
+{
+    $d = foJetonLire($j);
+    if ($d === null || !function_exists('tabShop')) { return $d; }
+    return $d['s'] === tabShop() ? $d : null;
 }
 
 function foLangueParam(): string { return ($_GET['langue'] ?? 'fr') === 'nl' ? 'nl' : 'fr'; }
