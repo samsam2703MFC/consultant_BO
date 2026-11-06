@@ -130,7 +130,7 @@ const LAYERS_CONC = { shops: true, cluster: true, excl: true, prio: false, heat:
 const LAYERS_PRIO = { shops: false, cluster: true, excl: false, prio: true, heat: false, roads: false, zoning: true };
 const ZONE_MAX = 1200;     // au-delà, la vue est illisible : on garde les plus grandes
 const ZONE_GENRE = { industrial: 'Zone industrielle', commercial: 'Zone d\'activité commerciale', retail: 'Zone de vente' };
-const R_COL = { high: '#1b5e20', mid: '#c17a2a', low: '#8D1D2C', none: '#78554B' };
+const R_COL = { high: '#3f7a52', mid: '#B0792A', low: '#8D1D2C', none: '#78554B' };
 // « Ath » doit trouver Ath, « chatelet » Châtelet et « SAINT-GHISLAIN »
 // Saint-Ghislain : on compare sans casse ni accents.
 const sansAccent = v => String(v == null ? '' : v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -146,10 +146,10 @@ const THEMES = [
   ['aucun', 'Rien — le fond de carte seul', '']
 ];
 const THEME_RAMPE = {
-  potentiel: ['#e9f0e6', '#bcd6b5', '#7fb076', '#2f7d32'],
+  potentiel: ['#E8EFEA', '#bcd6b5', '#7fb076', '#2f7d32'],
   menages: ['#eaf0f4', '#c2d4e0', '#8fb0c6', '#3f6f92'],
   concurrence: ['#f7e9ea', '#e3b9bd', '#c77c85', '#8D1D2C'],
-  ca: ['#e9f0e6', '#bcd6b5', '#7fb076', '#2f7d32'],
+  ca: ['#E8EFEA', '#bcd6b5', '#7fb076', '#2f7d32'],
   score: ['#faf3e4', '#f0d9a0', '#dfae55', '#b8791c']
 };
 // Les outils de dessin de la zone d'étude. « point » est le geste d'origine :
@@ -594,14 +594,14 @@ export class Scouting {
     this._rev = 0;          // révision des données (communes, commerces, notes) → redessin
     this.el = document.createElement('div');
     this.el.className = 'sc-root';
-    this.el.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden;position:relative';
+    this.el.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text);border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden;position:relative';
     this.el.innerHTML = '<div data-sc-part="top" style="flex:0 0 auto"></div>'
       + '<div style="flex:1;display:flex;min-height:0;position:relative">'
-      + '<div data-sc-part="left" id="sc-left" class="sc-scroll" style="width:296px;flex:0 1 296px;min-width:236px;background:var(--color-surface);border-right:0.5px solid var(--color-border-tertiary);overflow-y:auto;padding:16px;box-sizing:border-box"></div>'
-      + '<div style="flex:1 1 auto;position:relative;min-width:320px"><div id="scout-map" style="position:absolute;inset:0;background:#EAE4DC"></div>'
+      + '<div data-sc-part="left" id="sc-left" class="sc-scroll" style="width:296px;flex:0 1 296px;min-width:236px;background:var(--color-surface);border-right:1px solid var(--color-border-tertiary);overflow-y:auto;padding:16px;box-sizing:border-box"></div>'
+      + '<div style="flex:1 1 auto;position:relative;min-width:320px"><div id="scout-map" style="position:absolute;inset:0;background:var(--chip)"></div>'
       + '<div id="scout-map2" class="sc-panneau" style="left:33.34%;right:33.33%"></div><div id="scout-map3" class="sc-panneau" style="left:66.67%;right:0"></div>'
       + '<div data-sc-part="mapui"></div></div>'
-      + '<div data-sc-part="right" id="sc-right" class="sc-scroll" style="width:336px;flex:0 1 336px;min-width:260px;background:var(--color-surface);border-left:0.5px solid var(--color-border-tertiary);overflow-y:auto;padding:16px;box-sizing:border-box"></div>'
+      + '<div data-sc-part="right" id="sc-right" class="sc-scroll" style="width:336px;flex:0 1 336px;min-width:260px;background:var(--color-surface);border-left:1px solid var(--color-border-tertiary);overflow-y:auto;padding:16px;box-sizing:border-box"></div>'
       + '<div data-sc-part="overlays" style="display:contents"></div>'
       + '</div><div data-sc-part="modal"></div>';
     this.parts = {};
@@ -1219,7 +1219,7 @@ export class Scouting {
       + '<br>Note : ' + (r ? r.toFixed(1) + ' / 5 (' + ((rv && rv.n) || 0) + ' avis)' : 'non renseignée')
       + '<br>Force estimée : ' + Math.round(this.strength(b) * 100) + ' %'
       + (this.estChaine(b) ? '<br><b>Enseigne de chaîne — ' + esc(this.marqueDe(b)) + '</b>' : '')
-      + (this.isStrong(b) ? '<br><b style="color:#8D1D2C">Concurrent fort</b>' : '') + '</div>';
+      + (this.isStrong(b) ? '<br><b style="color:var(--accent)">Concurrent fort</b>' : '') + '</div>';
   }
 
   // clustering maison : agrégation en grille de 64 px, points individuels
@@ -1235,7 +1235,7 @@ export class Scouting {
       const col = !r ? R_COL.none : r >= 4.5 ? R_COL.high : r >= 3.5 ? R_COL.mid : R_COL.low;
       // Une enseigne de chaîne porte un liseré noir : on la reconnaît de loin,
       // quelle que soit sa note.
-      return L.circleMarker([b.lat, b.lng], { renderer: this.vecR, radius: ch ? 6 : 5, color: ch ? '#221E1A' : '#fff', weight: ch ? 2.2 : 1, fillColor: col, fillOpacity: .95 })
+      return L.circleMarker([b.lat, b.lng], { renderer: this.vecR, radius: ch ? 6 : 5, color: ch ? '#1c1a17' : '#fff', weight: ch ? 2.2 : 1, fillColor: col, fillOpacity: .95 })
         .bindPopup(this.shopPopup(b));
     };
     if (!s.layers.cluster || z >= 12){
@@ -1268,7 +1268,7 @@ export class Scouting {
           className: '', iconSize: [d, d], iconAnchor: [d / 2, d / 2],
           html: '<div style="width:' + d + 'px;height:' + d + 'px;border-radius:50%;display:flex;align-items:center;justify-content:center;'
             + 'background:rgba(40,34,30,.3);border:' + (fort ? '1px solid rgba(141,29,44,.8)' : 'none') + ';color:#fff;'
-            + 'font-family:Gotham,sans-serif;font-size:' + (arr.length >= 100 ? 8 : 9) + 'px;font-weight:500;letter-spacing:-0.02em;'
+            + 'font-family:Gotham,sans-serif;font-size:' + (arr.length >= 100 ? 8 : 9) + 'px;font-weight:400;letter-spacing:-0.02em;'
             + 'text-shadow:0 0 3px rgba(0,0,0,.7)">' + arr.length + '</div>'
         })
       });
@@ -1545,7 +1545,7 @@ export class Scouting {
       shops.filter(b => this.isStrong(b) && vb.contains([b.lat, b.lng])).forEach(b => {
         const c = L.circle([b.lat, b.lng], { renderer: this.vecR, radius: s.radius * 1000, color: '#8D1D2C', weight: peint ? 1.2 : 1, opacity: peint ? .55 : .5, fillColor: '#8D1D2C', fillOpacity: peint ? .05 : .18 });
         const r = this.rating(b);
-        c.bindPopup('<div class="sc-pop"><b style="color:#8D1D2C">Pas d\'installation — concurrence forte</b><br>'
+        c.bindPopup('<div class="sc-pop"><b style="color:var(--accent)">Pas d\'installation — concurrence forte</b><br>'
           + esc(b.name) + (r ? ' · ' + r.toFixed(1) + '/5' : '') + '<br>' + esc(b.addr || b.commune || '')
           + '<br>Rayon d\'exclusion : ' + s.radius.toFixed(1) + ' km</div>');
         this.gExcl.addLayer(c);
@@ -1570,13 +1570,13 @@ export class Scouting {
       best.forEach((p, i) => {
         const t = p.score / (top || 1);
         L.circle([p.lat, p.lng], {
-          renderer: this.vecR, radius: s.radius * 1000, color: '#1b5e20', weight: i < 5 ? 2 : 1,
-          opacity: 0.7, fillColor: '#1b5e20', fillOpacity: 0.10 + 0.16 * t, dashArray: i < 5 ? null : '4 4'
-        }).bindPopup('<div class="sc-pop"><b style="color:#1b5e20">Zone prioritaire nº' + (i + 1) + '</b><br>'
+          renderer: this.vecR, radius: s.radius * 1000, color: '#3f7a52', weight: i < 5 ? 2 : 1,
+          opacity: 0.7, fillColor: '#3f7a52', fillOpacity: 0.10 + 0.16 * t, dashArray: i < 5 ? null : '4 4'
+        }).bindPopup('<div class="sc-pop"><b style="color:var(--green)">Zone prioritaire nº' + (i + 1) + '</b><br>'
           + esc(p.commune) + ' · arr. ' + esc(p.arr) + '<br>Score ' + p.score + '/100<br>'
           + fmtInt(p.hh) + ' ménages · ' + fmtInt(p.n) + ' concurrents<br>CA estimé : ' + fmtEur(p.ca)
           + '<br><i>Clic sur le centre pour la fiche détaillée</i></div>').addTo(this.gPrio);
-        L.circleMarker([p.lat, p.lng], { renderer: this.vecR, radius: 5, color: '#fff', weight: 1.5, fillColor: '#1b5e20', fillOpacity: 1 })
+        L.circleMarker([p.lat, p.lng], { renderer: this.vecR, radius: 5, color: '#fff', weight: 1.5, fillColor: '#3f7a52', fillOpacity: 1 })
           .on('click', () => this.evaluate(p.lat, p.lng)).addTo(this.gPrio);
       });
     } catch (e) { console.error('[scouting] zones prioritaires', e); }
@@ -1591,7 +1591,7 @@ export class Scouting {
       const p95 = dens.length ? dens[Math.floor(dens.length * 0.95)] : 1;
       cs.forEach(c => {
         const t = Math.max(0, Math.min(1, c.dens / (p95 || 1)));
-        const col = t < .25 ? '#FDF6E7' : t < .45 ? '#FAC775' : t < .65 ? '#E8964B' : t < .85 ? '#C41E3A' : '#5C1018';
+        const col = t < .25 ? '#FDF6E7' : t < .45 ? '#F6E7CE' : t < .65 ? '#E8964B' : t < .85 ? '#C41E3A' : '#5C1018';
         L.circle([c.lat, c.lng], { renderer: this.vecR, radius: c.rKm * 1000 * 0.9, stroke: false, fillColor: col, fillOpacity: 0.42 })
           .bindPopup('<div class="sc-pop"><b>' + esc(c.name) + '</b><br>arr. ' + esc(c.arr)
             + '<br>' + fmtInt(c.pop) + ' habitants' + (c.est ? ' (estimation)' : c.official ? ' (StatBel)' : ' (OSM)')
@@ -1603,18 +1603,18 @@ export class Scouting {
     if (s.sel && s.sel.zone){
       // La zone tracée en trait plein ; le disque du rayon, au même centre, en
       // pointillé : c'est la comparaison que la fiche chiffre.
-      L.circle([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: s.radius * 1000, color: '#2b2b2b', weight: 1.6, dashArray: '5 6', fill: false, opacity: .8 }).addTo(this.gSel);
-      L.polygon(s.sel.zone.poly, { renderer: this.vecR, color: '#1b5e20', weight: 2.2, fillColor: '#1b5e20', fillOpacity: .12 }).addTo(this.gSel);
-      L.circleMarker([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: 6, color: '#fff', weight: 2, fillColor: '#1b5e20', fillOpacity: 1 }).addTo(this.gSel);
+      L.circle([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: s.radius * 1000, color: '#1c1a17', weight: 1.6, dashArray: '5 6', fill: false, opacity: .8 }).addTo(this.gSel);
+      L.polygon(s.sel.zone.poly, { renderer: this.vecR, color: '#3f7a52', weight: 2.2, fillColor: '#3f7a52', fillOpacity: .12 }).addTo(this.gSel);
+      L.circleMarker([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: 6, color: '#fff', weight: 2, fillColor: '#3f7a52', fillOpacity: 1 }).addTo(this.gSel);
     } else if (s.sel){
-      L.circle([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: s.radius * 1000, color: '#1b5e20', weight: 2, dashArray: '5 5', fillColor: '#1b5e20', fillOpacity: .08 }).addTo(this.gSel);
-      L.circleMarker([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: 7, color: '#fff', weight: 2, fillColor: '#1b5e20', fillOpacity: 1 }).addTo(this.gSel);
+      L.circle([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: s.radius * 1000, color: '#3f7a52', weight: 2, dashArray: '5 5', fillColor: '#3f7a52', fillOpacity: .08 }).addTo(this.gSel);
+      L.circleMarker([s.sel.lat, s.sel.lng], { renderer: this.vecR, radius: 7, color: '#fff', weight: 2, fillColor: '#3f7a52', fillOpacity: 1 }).addTo(this.gSel);
     }
     if (this.raster) this.raster._peindre();
     (this.rasters || []).forEach(r => r._peindre());
     this.el.classList.toggle('sc-dessine', (s.tool || 'point') !== 'point');
     s.candidates.forEach(c => {
-      L.circleMarker([c.lat, c.lng], { renderer: this.vecR, radius: 6, color: '#1b5e20', weight: 2, fillColor: '#FAC775', fillOpacity: 1 })
+      L.circleMarker([c.lat, c.lng], { renderer: this.vecR, radius: 6, color: '#3f7a52', weight: 2, fillColor: '#F6E7CE', fillOpacity: 1 })
         .bindPopup('<div class="sc-pop"><b>' + esc(c.name) + '</b><br>CA estimé : ' + fmtEur(c.ca) + '</div>').addTo(this.gSel);
     });
   }
@@ -2281,7 +2281,7 @@ export class Scouting {
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
     const cx = canvas.getContext('2d');
-    cx.fillStyle = '#EAE4DC'; cx.fillRect(0, 0, W, H);
+    cx.fillStyle = '#EDE7DE'; cx.fillRect(0, 0, W, H);
     const charges = [];
     for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + W) / 256); tx++) for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + H) / 256); ty++){
       charges.push(new Promise(res => {
@@ -2299,13 +2299,13 @@ export class Scouting {
       cx.fillStyle = 'rgba(255,255,255,.28)'; cx.fillRect(0, 0, W, H);
       mags.forEach(m => {
         const p = P([+m.lat, +m.lng]);
-        cx.fillStyle = '#221E1A'; cx.fillRect(p[0] - 6, p[1] - 6, 12, 12);
+        cx.fillStyle = '#1c1a17'; cx.fillRect(p[0] - 6, p[1] - 6, 12, 12);
         cx.lineWidth = 2; cx.strokeStyle = '#fff'; cx.strokeRect(p[0] - 6, p[1] - 6, 12, 12);
       });
       pts.forEach(l => {
         const p = P([l.lat, l.lng]);
         cx.beginPath(); cx.arc(p[0], p[1], 10, 0, 6.2832);
-        cx.fillStyle = '#1b5e20'; cx.fill(); cx.lineWidth = 2; cx.strokeStyle = '#fff'; cx.stroke();
+        cx.fillStyle = '#3f7a52'; cx.fill(); cx.lineWidth = 2; cx.strokeStyle = '#fff'; cx.stroke();
         cx.fillStyle = '#fff'; cx.font = 'bold 10px Helvetica, Arial, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
         cx.fillText(String(l.num), p[0], p[1] + 0.5);
       });
@@ -2313,7 +2313,7 @@ export class Scouting {
       cx.font = '11px Helvetica, Arial, sans-serif';
       const txt = '© OpenStreetMap', wt = cx.measureText(txt).width + 10;
       cx.fillStyle = 'rgba(255,255,255,.85)'; cx.fillRect(W - wt - 4, H - 18, wt, 16);
-      cx.fillStyle = '#333'; cx.fillText(txt, W - wt + 1, H - 6);
+      cx.fillStyle = '#5c5852'; cx.fillText(txt, W - wt + 1, H - 6);
       try { return canvas.toDataURL('image/jpeg', 0.88); } catch (e) { console.warn('[scouting] carte du plan :', e.message); return ''; }
     });
     return this._planImgP;
@@ -2901,7 +2901,7 @@ export class Scouting {
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
     const cx = canvas.getContext('2d');
-    cx.fillStyle = '#EAE4DC'; cx.fillRect(0, 0, W, H);
+    cx.fillStyle = '#EDE7DE'; cx.fillRect(0, 0, W, H);
     const charges = [];
     for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + W) / 256); tx++) for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + H) / 256); ty++){
       charges.push(new Promise(res => {
@@ -2920,7 +2920,7 @@ export class Scouting {
       if (g){
         // 10 minutes en vert clair dessous, 5 minutes en vert foncé dessus
         trace(g.iso10); cx.fillStyle = 'rgba(139,195,74,.30)'; cx.fill(); cx.lineWidth = 2; cx.strokeStyle = '#7cb342'; cx.stroke();
-        trace(g.iso5); cx.fillStyle = 'rgba(27,94,32,.34)'; cx.fill(); cx.lineWidth = 2.5; cx.strokeStyle = '#1b5e20'; cx.stroke();
+        trace(g.iso5); cx.fillStyle = 'rgba(27,94,32,.34)'; cx.fill(); cx.lineWidth = 2.5; cx.strokeStyle = '#3f7a52'; cx.stroke();
       }
       this.shops().forEach(b => {
         if (b.lat < vb.s || b.lat > vb.n || b.lng < vb.w || b.lng > vb.e) return;
@@ -2928,23 +2928,23 @@ export class Scouting {
         cx.beginPath(); cx.arc(p[0], p[1], 4.5, 0, 6.2832);
         cx.fillStyle = !r ? R_COL.none : r >= 4.5 ? R_COL.high : r >= 3.5 ? R_COL.mid : R_COL.low; cx.fill();
         cx.lineWidth = 1.2; cx.strokeStyle = '#fff'; cx.stroke();
-        if (this.estChaine(b)){ cx.beginPath(); cx.arc(p[0], p[1], 7.5, 0, 6.2832); cx.lineWidth = 1.6; cx.strokeStyle = '#221E1A'; cx.stroke(); }
+        if (this.estChaine(b)){ cx.beginPath(); cx.arc(p[0], p[1], 7.5, 0, 6.2832); cx.lineWidth = 1.6; cx.strokeStyle = '#1c1a17'; cx.stroke(); }
       });
       trace(pts);
       if (g){
         // la zone étudiée en pointillé : les isochrones gardent leurs couleurs
-        cx.setLineDash([6, 4]); cx.lineWidth = 1.6; cx.strokeStyle = '#2b2b2b'; cx.stroke(); cx.setLineDash([]);
+        cx.setLineDash([6, 4]); cx.lineWidth = 1.6; cx.strokeStyle = '#1c1a17'; cx.stroke(); cx.setLineDash([]);
       } else {
         cx.fillStyle = 'rgba(27,94,32,.14)'; cx.fill();
-        cx.lineWidth = 2.5; cx.strokeStyle = '#1b5e20'; cx.stroke();
+        cx.lineWidth = 2.5; cx.strokeStyle = '#3f7a52'; cx.stroke();
       }
       const c0 = P([x.lat, x.lng]);
       if (x.zone && !g){
         const rp = P([x.lat, x.lng + s.radius / (111.2 * Math.cos(x.lat * Math.PI / 180))]);
         cx.setLineDash([5, 5]); cx.beginPath(); cx.arc(c0[0], c0[1], Math.abs(rp[0] - c0[0]), 0, 6.2832);
-        cx.lineWidth = 1.4; cx.strokeStyle = '#2b2b2b'; cx.stroke(); cx.setLineDash([]);
+        cx.lineWidth = 1.4; cx.strokeStyle = '#1c1a17'; cx.stroke(); cx.setLineDash([]);
       }
-      cx.beginPath(); cx.arc(c0[0], c0[1], 6, 0, 6.2832); cx.fillStyle = '#1b5e20'; cx.fill(); cx.lineWidth = 2; cx.strokeStyle = '#fff'; cx.stroke();
+      cx.beginPath(); cx.arc(c0[0], c0[1], 6, 0, 6.2832); cx.fillStyle = '#3f7a52'; cx.fill(); cx.lineWidth = 2; cx.strokeStyle = '#fff'; cx.stroke();
       cx.font = '11px Helvetica, Arial, sans-serif';
       if (g){
         // la légende sur l'image : le PDF et l'impression la gardent
@@ -2955,14 +2955,14 @@ export class Scouting {
         let xl = 16;
         items.forEach(it => {
           if (it[0]){ cx.fillStyle = it[0]; cx.fillRect(xl, 14, 12, 12); }
-          else { cx.setLineDash([3, 2]); cx.strokeStyle = '#2b2b2b'; cx.lineWidth = 1.4; cx.strokeRect(xl + 0.5, 14.5, 11, 11); cx.setLineDash([]); }
-          cx.fillStyle = '#333'; cx.fillText(it[1], xl + 17, 24);
+          else { cx.setLineDash([3, 2]); cx.strokeStyle = '#1c1a17'; cx.lineWidth = 1.4; cx.strokeRect(xl + 0.5, 14.5, 11, 11); cx.setLineDash([]); }
+          cx.fillStyle = '#5c5852'; cx.fillText(it[1], xl + 17, 24);
           xl += 18 + cx.measureText(it[1]).width + 10;
         });
       }
       const txt = '© OpenStreetMap', wt = cx.measureText(txt).width + 10;
       cx.fillStyle = 'rgba(255,255,255,.85)'; cx.fillRect(W - wt - 4, H - 18, wt, 16);
-      cx.fillStyle = '#333'; cx.fillText(txt, W - wt + 1, H - 6);
+      cx.fillStyle = '#5c5852'; cx.fillText(txt, W - wt + 1, H - 6);
       // En JPEG : six fois plus léger qu'en PNG pour une carte, et le PDF part
       // avec une image de 120 Ko au lieu de 800.
       try { return canvas.toDataURL('image/jpeg', 0.88); } catch (e) { console.warn('[scouting] carte du dossier :', e.message); return ''; }
@@ -3182,12 +3182,12 @@ export class Scouting {
   tracerTemp(ll){
     const d = this._draw; if (!d || !this.map || !d.pts.length) return;
     this.gDraw.clearLayers();
-    const st = { renderer: this.vecR, color: '#1b5e20', weight: 1.5, dashArray: '4 4', fillColor: '#1b5e20', fillOpacity: .06 };
+    const st = { renderer: this.vecR, color: '#3f7a52', weight: 1.5, dashArray: '4 4', fillColor: '#3f7a52', fillOpacity: .06 };
     const c = d.pts[0];
     if (d.type === 'cercle') L.circle(c, Object.assign({}, st, { radius: Math.max(200, dist(c[0], c[1], ll.lat, ll.lng) * 1000) })).addTo(this.gDraw);
     else if (d.type === 'rectangle') L.rectangle([c, [ll.lat, ll.lng]], st).addTo(this.gDraw);
     else L.polyline(d.pts.concat([[ll.lat, ll.lng]]), Object.assign({}, st, { fill: false })).addTo(this.gDraw);
-    d.pts.forEach((p, i) => L.circleMarker(p, { renderer: this.vecR, radius: i ? 3 : 5, color: '#1b5e20', weight: 1.5, fillColor: '#fff', fillOpacity: 1 }).addTo(this.gDraw));
+    d.pts.forEach((p, i) => L.circleMarker(p, { renderer: this.vecR, radius: i ? 3 : 5, color: '#3f7a52', weight: 1.5, fillColor: '#fff', fillOpacity: 1 }).addTo(this.gDraw));
   }
 
   // L'isochrone : le polygone atteignable en N minutes, demandé au service de
@@ -3412,7 +3412,7 @@ export class Scouting {
         const p = map.latLngToContainerPoint([x.lat, x.lng]);
         cx.beginPath(); cx.arc(p.x, p.y, r, 0, 6.2832);
         cx.fillStyle = 'rgba(141,29,44,.75)'; cx.fill();
-        if (this.estChaine(x)){ cx.lineWidth = 1.4; cx.strokeStyle = '#221E1A'; cx.stroke(); }
+        if (this.estChaine(x)){ cx.lineWidth = 1.4; cx.strokeStyle = '#1c1a17'; cx.stroke(); }
       });
     }
   }
@@ -4122,7 +4122,7 @@ export class Scouting {
     const max = Math.max(1, ...counts);
     return {
       title: 'Ménages par commune — ' + (s.arr === 'all' ? 'sélection courante' : 'arr. ' + s.arr) + ' · ' + cs.length + ' communes. Les notes Google apparaîtront ici après enrichissement.',
-      bars: bins.map((b, i) => ({ label: labels[i], n: counts[i], h: Math.round(counts[i] / max * 100) + '%', color: '#c17a2a' }))
+      bars: bins.map((b, i) => ({ label: labels[i], n: counts[i], h: Math.round(counts[i] / max * 100) + '%', color: '#B0792A' }))
     };
   }
 
@@ -4405,7 +4405,7 @@ export class Scouting {
         arr: name, options: arrOptions.slice(1),
         setArr: e => self.setState({ [k]: e.target.value }),
         histTitle: 'Ménages par commune',
-        hist: counts.map((n, i) => ({ n: n, label: labels[i], h: Math.round(n / max * 100) + '%', color: '#c17a2a' })),
+        hist: counts.map((n, i) => ({ n: n, label: labels[i], h: Math.round(n / max * 100) + '%', color: '#B0792A' })),
         rows: st ? [
           { k: 'Communes', v: fmtInt(st.communes) },
           { k: 'Population', v: fmtInt(st.pop) },
@@ -4442,7 +4442,7 @@ export class Scouting {
 
     return Object.assign(this.liveVals(), {
       busy: s.busy, veil: s.busy && !s.bakeries.length, progress: s.progress, compare: s.compare, toast: s.toast,
-      statusColor: s.err ? '#8D1D2C' : s.busy ? '#c17a2a' : '#1b5e20',
+      statusColor: s.err ? '#8D1D2C' : s.busy ? '#B0792A' : '#3f7a52',
       statusLabel: s.err ? 'Erreur : ' + s.err : s.busy ? (s.progress || 'Chargement…') : fmtInt(s.bakeries.length) + ' commerces · ' + fmtInt(s.communes.length) + ' communes' + (self.osmDate() ? ' · OpenStreetMap relu le ' + self.osmDate() : '') + (self.useApi() ? '' : ' · saisies locales à ce navigateur'),
       // --- l'assistant ---------------------------------------------------
       wiz: (() => {
@@ -4633,7 +4633,7 @@ export class Scouting {
           pos: r.m.position, mois: r.m.mois, annualise: r.m.annualise,
           reel: r.m.caAnnuel ? fmtEur(r.m.caAnnuel) : 'CA réel inconnu', modele: r.ev ? fmtEur(r.ev.ca) : (r.m.lat == null ? 'position inconnue' : '—'),
           ecart: r.ratio ? (r.ratio >= 1 ? '+' : '−') + Math.round(Math.abs(r.ratio - 1) * 100) + ' %' : '—',
-          ecartColor: r.ratio ? (Math.abs(r.ratio - 1) <= 0.25 ? '#1b5e20' : '#c17a2a') : 'var(--color-text-muted)',
+          ecartColor: r.ratio ? (Math.abs(r.ratio - 1) <= 0.25 ? '#3f7a52' : '#B0792A') : 'var(--color-text-muted)',
           prevu: (() => { const f = self.magasinFiche(r.m); return (f.caPrevu ? 'prévu réaliste ' + fmtEur(f.caPrevu) + (r.m.caAnnuel ? ' · réel/prévu ' + (r.m.caAnnuel >= f.caPrevu ? '+' : '−') + Math.round(Math.abs(r.m.caAnnuel / f.caPrevu - 1) * 100) + ' %' : '') : '') + (f.phase ? (f.caPrevu ? ' · ' : '') + f.phase.libelle + (f.objectif && r.m.caAnnuel ? ' (réel ' + (r.m.caAnnuel >= f.objectif ? '+' : '−') + Math.round(Math.abs(r.m.caAnnuel / f.objectif - 1) * 100) + ' %)' : '') : ''); })(),
           place: () => { self.setState({ placing: r.m.id, view: 'map', reseau: false, compare: false }); self.notify('Clique sur la carte à l\'emplacement de ' + r.m.nom); }
         }));
@@ -4721,10 +4721,10 @@ export class Scouting {
         { color: R_COL.mid, label: 'Note 3,5 – 4,5' },
         { color: R_COL.low, label: 'Note inférieure à 3,5' },
         { color: R_COL.none, label: 'Note non renseignée' },
-        { color: '#fff', border: '#221E1A', label: 'Enseigne de chaîne — liseré noir' },
+        { color: '#fff', border: '#1c1a17', label: 'Enseigne de chaîne — liseré noir' },
         { color: 'rgba(141,29,44,.35)', label: 'Zone d\'exclusion — concurrence forte' },
-        { color: '#1b5e20', label: 'Zone prioritaire — score élevé' },
-        { color: '#FAC775', label: 'Zone candidate retenue' },
+        { color: '#3f7a52', label: 'Zone prioritaire — score élevé' },
+        { color: '#F6E7CE', label: 'Zone candidate retenue' },
         { color: 'rgba(107,122,143,.5)', label: 'Zoning d\'activité, de commerce, de vente' }
       ],
       ville: s.ville,
@@ -4768,7 +4768,7 @@ export class Scouting {
         + (x.hh >= x.disque.hh ? '+ ' : '− ') + fmtEur(Math.abs(x.hh - x.disque.hh) * s.spend) + ' de marché.' : '',
       selVerdict: x ? (x.blocked.length ? 'Zone exclue — concurrence forte' : x.score >= 55 ? 'Zone candidate prioritaire' : 'Zone candidate secondaire') : '',
       selVerdictBg: x ? (x.blocked.length ? 'rgba(141,29,44,.10)' : x.score >= 55 ? 'rgba(27,94,32,.10)' : 'var(--color-background-secondary)') : '',
-      selVerdictColor: x ? (x.blocked.length ? '#8D1D2C' : x.score >= 55 ? '#1b5e20' : 'var(--color-text)') : '',
+      selVerdictColor: x ? (x.blocked.length ? '#8D1D2C' : x.score >= 55 ? '#3f7a52' : 'var(--color-text)') : '',
       selVerdictNote: x ? (x.blocked.length
         ? x.blocked.length + ' concurrent(s) fort(s) à moins de ' + s.radius.toFixed(1) + ' km' + (x.zone ? ' du centre' : '') + ' : ' + x.blocked.slice(0, 3).map(o => o.b.name).join(', ')
         : 'Score d\'opportunité ' + x.score + '/100 — ménages accessibles pondérés par la pression concurrentielle.') : '',

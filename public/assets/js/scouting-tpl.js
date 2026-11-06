@@ -10,10 +10,10 @@
  * le glissement d'un curseur.
  */
 
-const selCss = 'width:100%;padding:8px;border:0.5px solid var(--color-border-secondary);border-radius:6px;background:var(--color-background-secondary);font-size:13px;font-family:var(--font-ui);color:var(--color-text)';
-const numCss = 'padding:4px 6px;border:0.5px solid var(--color-border-secondary);border-radius:6px;background:var(--color-background-secondary);font-size:12px;font-family:var(--font-ui);color:var(--color-text);text-align:right;box-sizing:border-box';
-const txtCss = 'padding:4px 6px;border:0.5px solid var(--color-border-tertiary);border-radius:6px;background:var(--color-background-secondary);font-size:11px;font-family:var(--font-ui);color:var(--color-text);box-sizing:border-box';
-const rowCss = 'display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)';
+const selCss = 'width:100%;padding:8px;border:1px solid var(--color-border-secondary);border-radius:6px;background:var(--color-background-secondary);font-size:13px;font-family:var(--font-ui);color:var(--color-text)';
+const numCss = 'padding:4px 6px;border:1px solid var(--color-border-secondary);border-radius:6px;background:var(--color-background-secondary);font-size:12px;font-family:var(--font-ui);color:var(--color-text);text-align:right;box-sizing:border-box';
+const txtCss = 'padding:4px 6px;border:1px solid var(--color-border-tertiary);border-radius:6px;background:var(--color-background-secondary);font-size:11px;font-family:var(--font-ui);color:var(--color-text);box-sizing:border-box';
+const rowCss = 'display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--color-border-tertiary)';
 
 function opts(list, val){
   return list.map(o => `<option value="${String(o.value).replace(/"/g, '&quot;')}"${String(o.value) === String(val) ? ' selected' : ''}>${o.label}</option>`).join('');
@@ -29,22 +29,22 @@ function info(esc, t){ return t ? `<i class="sc-i" data-sc-tip="${esc(t)}" title
 export function renderTop(c, x){
   const { esc } = x;
   return `
-  <div style="display:flex;align-items:center;gap:18px;padding:10px 18px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto">
+  <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;padding:10px 18px;background:var(--color-surface);border-bottom:1px solid var(--color-border-tertiary);flex:0 0 auto">
     <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--color-text-muted);min-width:0">
       <div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${c.statusColor}"></div>
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.statusLabel)}</span>
     </div>
     <div style="flex:1"></div>
-    <button ${x.A(c.ouvrirWiz)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap;border-color:var(--color-primary);color:var(--color-primary);font-weight:600">Où puis-je ouvrir ?</button>
-    <button ${x.A(c.ouvrirPlan)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap;border-color:#1b5e20;color:#1b5e20;font-weight:600">Plan d'expansion</button>
+    <button ${x.A(c.ouvrirWiz)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">Où puis-je ouvrir ?</button>
+    <button ${x.A(c.ouvrirPlan)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">Plan d'expansion</button>
     <button ${x.A(c.openReseau)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">Magasins du réseau</button>
     <button ${x.A(c.toggleTrio)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap${c.trio ? ';border-color:var(--color-primary);color:var(--color-primary)' : ''}">${c.trio ? 'Une lecture' : 'Trois lectures'}</button>
     <button ${x.A(c.toggleCompare)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">${c.compare ? 'Retour à la carte' : 'Comparer 2 arrondissements'}</button>
     <button ${x.A(c.reload)} class="btn-secondary" style="padding:7px 12px;font-size:12px;white-space:nowrap">Recharger les données</button>
     <button ${x.A(c.exportCsv)} class="btn-primary" style="padding:7px 14px;font-size:12px;white-space:nowrap">Exporter les candidats (${c.nCandidates})</button>
   </div>
-  <div style="display:flex;gap:4px;padding:0 18px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto">
-    ${c.views.map(v => `<button ${x.A(v.go)} class="hv-text" style="border:none;border-bottom:2px solid ${v.border};background:transparent;padding:9px 14px 7px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;color:${v.color}">${esc(v.label)}</button>`).join('')}
+  <div style="display:flex;gap:4px;padding:0 18px;background:var(--color-surface);border-bottom:1px solid var(--color-border-tertiary);flex:0 0 auto">
+    ${c.views.map(v => `<button ${x.A(v.go)} class="hv-text" style="border:none;border-bottom:2px solid ${v.border};background:transparent;padding:9px 14px 7px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;color:${v.color}">${esc(v.label)}</button>`).join('')}
   </div>`;
 }
 
@@ -78,7 +78,7 @@ export function renderLeft(c, x){
   <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 8px">${live('threshHint', esc, c)}</div>`;
 
   const couches = () => `
-  <div class="t-admin-label" style="margin-bottom:8px;color:#1b5e20">+ &nbsp;Potentiel</div>
+  <div class="t-admin-label" style="margin-bottom:8px;color:var(--green)">+ &nbsp;Potentiel</div>
   <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;border-left:2px solid rgba(27,94,32,.35);padding-left:10px">
     ${c.layersPlus.map(l => `
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
@@ -100,9 +100,9 @@ export function renderLeft(c, x){
     <button ${x.A(c.exportParams)} style="border:none;background:transparent;padding:0;font-family:var(--font-ui);font-size:11px;color:var(--color-primary);cursor:pointer">Exporter CSV</button>
   </div>
   <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:8px">Enregistrées automatiquement et reprises dans les zones candidates.</div>
-  <div style="border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;margin-bottom:10px">
+  <div style="border:1px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;margin-bottom:10px">
     ${c.params.map((p, i) => `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-surface)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-bottom:1px solid var(--color-border-tertiary);background:var(--color-surface)">
       <span style="font-size:11px;color:var(--color-text-muted);line-height:1.35;display:inline-flex;align-items:center">${esc(p.k)}${info(esc, p.i)}</span>
       <input id="sc-p${i}" type="number" step="any" value="${esc(p.v)}" ${x.C(p.set)} style="width:68px;flex:0 0 auto;${numCss}">
     </div>`).join('')}
@@ -111,17 +111,17 @@ export function renderLeft(c, x){
 
   const calage = () => `
   <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:8px;display:inline-flex;align-items:flex-start">${esc(c.calage.intro)}${info(esc, c.calage.tip)}</div>
-  <div style="border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;margin-bottom:8px">
+  <div style="border:1px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;margin-bottom:8px">
     ${c.calage.rows.map(r => `
-    <div style="padding:7px 9px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-surface)">
-      <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px"><span style="font-weight:500">${esc(r.nom)}</span><span style="font-weight:600;color:${r.ecartColor}">${esc(r.ecart)}</span></div>
+    <div style="padding:7px 9px;border-bottom:1px solid var(--color-border-tertiary);background:var(--color-surface)">
+      <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px"><span style="font-weight:400">${esc(r.nom)}</span><span style="font-weight:400;color:${r.ecartColor}">${esc(r.ecart)}</span></div>
       <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--color-text-muted);margin-top:2px"><span>réel ${esc(r.reel)}${r.annualise ? ' · ' + r.mois + ' mois' : ''}</span><span>modèle ${esc(r.modele)}</span></div>
       ${r.prevu ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(r.prevu)}</div>` : ''}
       ${r.pos ? '' : `<div style="margin-top:5px"><button ${x.A(r.place)} class="btn-secondary" style="padding:3px 8px;font-size:11px">Placer sur la carte</button></div>`}
     </div>`).join('')}
     ${c.calage.rows.length ? '' : `<div style="padding:8px 9px;font-size:11px;color:var(--color-text-muted)">${esc(c.calage.vide)}</div>`}
   </div>
-  ${c.calage.placing ? `<div style="font-size:11px;color:var(--color-primary);font-weight:500;margin-bottom:6px">Clique sur la carte pour placer le magasin.</div>` : ''}
+  ${c.calage.placing ? `<div style="font-size:11px;color:var(--color-primary);font-weight:400;margin-bottom:6px">Clique sur la carte pour placer le magasin.</div>` : ''}
   ${c.calage.med ? `<button ${x.A(c.calage.caler)} class="btn-secondary" style="width:100%;padding:8px;font-size:12px">${esc(c.calage.bouton)}</button>` : ''}
   <div style="font-size:11px;color:var(--color-text-muted);margin:6px 0 8px;line-height:1.5">${esc(c.calage.note)}</div>`;
 
@@ -133,8 +133,8 @@ export function renderLeft(c, x){
     <input type="file" accept=".csv,.txt" ${x.C(c.importPops)} style="display:none">
   </label>
   <div class="t-admin-label" style="margin-bottom:6px">Notes Google</div>
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 9px;border:0.5px solid var(--color-border-tertiary);border-radius:8px;background:var(--color-background-secondary)">
-    <div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${c.gOk ? '#1b5e20' : '#8D1D2C'}"></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 9px;border:1px solid var(--color-border-tertiary);border-radius:8px;background:var(--color-background-secondary)">
+    <div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${c.gOk ? '#3f7a52' : '#8D1D2C'}"></div>
     <div style="flex:1;font-size:11px;line-height:1.45;color:var(--color-text)">${esc(c.gLabel)}</div>
     ${c.gOk ? '' : `<button ${x.A(c.goParams)} class="btn-secondary" style="flex:0 0 auto;padding:4px 9px;font-size:11px">Paramètres</button>`}
   </div>
@@ -189,9 +189,9 @@ export function renderLeft(c, x){
 
   <div class="t-admin-label" style="margin-bottom:8px">Lecture de la carte</div>
   <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid rgba(27,94,32,.35);border-radius:8px;background:rgba(27,94,32,.07);cursor:pointer;margin-bottom:10px">
-    ${check(c.onlyPrio, c.toggleOnlyPrio, 'accent-color:#1b5e20;width:16px;height:16px')}
+    ${check(c.onlyPrio, c.toggleOnlyPrio, 'accent-color:var(--green);width:16px;height:16px')}
     <span style="flex:1">
-      <span style="display:block;font-size:13px;font-weight:500;color:#1b5e20">Zones intéressantes uniquement</span>
+      <span style="display:block;font-size:13px;font-weight:400;color:var(--green)">Zones intéressantes uniquement</span>
       <span style="display:block;font-size:11px;color:var(--color-text-muted)">Masque concurrents et zones rouges · ${esc(c.prioCount)} zones retenues</span>
     </span>
   </label>
@@ -239,7 +239,7 @@ export function renderMapUi(c, x){
   </div>` : ''}
   ${c.concForm ? `
   <div class="sc-dessin" style="width:300px">
-    <div style="font-size:12px;font-weight:600;margin-bottom:6px">Nouveau concurrent${c.concForm.commune ? ' · ' + esc(c.concForm.commune) : ''}</div>
+    <div style="font-size:12px;font-weight:400;margin-bottom:6px">Nouveau concurrent${c.concForm.commune ? ' · ' + esc(c.concForm.commune) : ''}</div>
     <input id="sc-cf-nom" type="text" maxlength="200" placeholder="Nom du commerce" value="${esc(c.concForm.name)}" ${x.C(c.concForm.set('name'))} style="width:100%;${txtCss}">
     <div style="display:flex;gap:6px;margin-top:6px">
       <select id="sc-cf-type" ${x.C(c.concForm.set('type'))} style="${selCss};flex:1">${c.concForm.types.map(t => `<option value="${esc(t[0])}"${t[0] === c.concForm.type ? ' selected' : ''}>${esc(t[1])}</option>`).join('')}</select>
@@ -253,11 +253,11 @@ export function renderMapUi(c, x){
   </div>` : ''}
   ${c.trio ? c.trioPans.map(pn => `
   <div class="sc-cap p${pn.i}">
-    ${pn.select ? `<select ${x.C(pn.select.set)} style="${selCss};padding:5px 7px;font-size:12px;font-weight:600">${opts(c.trioChoix, pn.select.value)}</select>`
-      : `<div style="font-size:11.5px;font-weight:600;padding:2px 0 4px;line-height:1.3" title="Le thème choisi dans le panneau de gauche">${esc(pn.label)}</div>`}
+    ${pn.select ? `<select ${x.C(pn.select.set)} style="${selCss};padding:5px 7px;font-size:12px;font-weight:400">${opts(c.trioChoix, pn.select.value)}</select>`
+      : `<div style="font-size:11.5px;font-weight:400;padding:2px 0 4px;line-height:1.3" title="Le thème choisi dans le panneau de gauche">${esc(pn.label)}</div>`}
     ${pn.rows.map(r => `<div class="r"><span class="sw" style="background:${r.color}"></span><span class="tx">${esc(r.label)}</span><span class="n">${esc(r.n)}</span></div>`).join('')}
   </div>`).join('') : ''}
-  <div class="sc-legende" style="position:absolute;top:12px;right:12px;z-index:500;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px 14px;width:208px;box-shadow:0 2px 10px rgba(0,0,0,.08)">
+  <div class="sc-legende" style="position:absolute;top:12px;right:12px;z-index:500;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:12px 14px;width:208px;">
     <div class="t-admin-label" style="margin-bottom:8px">Légende</div>
     ${c.legend.map(i => `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;line-height:1.3">
@@ -268,14 +268,14 @@ export function renderMapUi(c, x){
     <div style="font-size:11px;color:var(--color-text-muted);line-height:1.4">Un clic évalue un point dans son rayon ; les outils à gauche dessinent la zone — cercle, polygone, rectangle, isochrone.</div>
   </div>
 
-  <div class="sc-etat" style="position:absolute;bottom:14px;left:14px;z-index:500;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:8px 12px;font-size:11px;color:var(--color-text-muted)">${live('statsLine', esc, c)}</div>
+  <div class="sc-etat" style="position:absolute;bottom:14px;left:14px;z-index:500;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:10px;padding:8px 12px;font-size:11px;color:var(--color-text-muted)">${live('statsLine', esc, c)}</div>
 
   ${c.wiz.fait && !c.wiz.etape ? `
   <div class="wz-rappel">
     <span class="t">${c.wiz.nChauds ? c.wiz.nChauds + ' point' + (c.wiz.nChauds > 1 ? 's' : '') + ' chaud' + (c.wiz.nChauds > 1 ? 's' : '') : 'Aucun emplacement'}</span>
     ${c.wiz.resume.map(r => `<span class="ch">${esc(r)}</span>`).join('')}
     <span class="sp"></span>
-    ${c.wiz.obstacle ? `<span class="ch" style="background:#FBEFE0;color:#B26A00">${esc(c.wiz.obstacle)}</span>` : ''}
+    ${c.wiz.obstacle ? `<span class="ch" style="background:var(--prize-soft);color:var(--prize-ink)">${esc(c.wiz.obstacle)}</span>` : ''}
     ${c.wiz.caRange ? `<span class="ch ok">${esc(c.wiz.caRange)}</span>` : ''}
     <button ${x.A(c.wiz.rouvrir)} class="btn-secondary" style="padding:4px 11px;font-size:11px">Modifier</button>
     <button ${x.A(c.wiz.cacher)} class="btn-secondary" style="padding:4px 9px;font-size:11px">✕</button>
@@ -296,22 +296,22 @@ export function renderRight(c, x){
     <div class="t-admin-label" style="margin-bottom:4px">${c.selRang ? 'Point chaud nº' + c.selRang : c.selZone ? 'Zone dessinée' : 'Zone candidate'}</div>
     <div class="t-section-title" style="font-size:18px;margin-bottom:2px">${esc(c.selCommune)}</div>
     <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:${c.selZone ? 4 : 14}px">${esc(c.selGeo)}</div>
-    ${c.selZone ? `<div style="font-size:12px;font-weight:500;color:#1b5e20;margin-bottom:14px">${esc(c.selZone)}</div>` : ''}
+    ${c.selZone ? `<div style="font-size:12px;font-weight:400;color:var(--green);margin-bottom:14px">${esc(c.selZone)}</div>` : ''}
 
     <div style="background:${c.selVerdictBg};border-radius:10px;padding:12px 14px;margin-bottom:16px">
-      <div style="font-size:12px;color:${c.selVerdictColor};font-weight:600;margin-bottom:2px">${esc(c.selVerdict)}</div>
+      <div style="font-size:12px;color:${c.selVerdictColor};font-weight:400;margin-bottom:2px">${esc(c.selVerdict)}</div>
       <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5">${esc(c.selVerdictNote)}</div>
     </div>
 
     ${c.selRows.map(r => `
     <div style="${rowCss}">
       <span style="font-size:12px;color:var(--color-text-muted);display:inline-flex;align-items:center">${esc(r.k)}${info(esc, r.i)}</span>
-      <span style="font-size:13px;font-weight:500;text-align:right">${esc(r.v)}</span>
+      <span style="font-size:13px;font-weight:400;text-align:right">${esc(r.v)}</span>
     </div>`).join('')}
 
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:14px 0 4px">
-      <span style="font-size:13px;font-weight:500;display:inline-flex;align-items:center">CA annuel estimé TTC${info(esc, c.tips.ca)}</span>
-      <span style="font-family:var(--font-display);font-size:22px;color:var(--color-primary)">${esc(c.selCa)}</span>
+      <span style="font-size:13px;font-weight:400;display:inline-flex;align-items:center">CA annuel estimé TTC${info(esc, c.tips.ca)}</span>
+      <span style="font-family:var(--font-display);font-size:22px;color:var(--ink)">${esc(c.selCa)}</span>
     </div>
     <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:14px">${esc(c.selCaDetail)}</div>
     ${c.selDisque ? `<div style="font-size:11px;line-height:1.5;color:var(--color-text);background:var(--color-background-secondary);border-radius:8px;padding:9px 11px;margin-bottom:14px">${esc(c.selDisque)}</div>` : ''}
@@ -326,10 +326,10 @@ export function renderRight(c, x){
     <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:8px;line-height:1.5">Saisis une note pour requalifier un concurrent : elle prime sur Google et recalcule zone rouge, emprise et CA.</div>
     ${c.googleRayon.ok ? `<button ${x.A(c.googleRayon.charger)} class="btn-secondary" ${c.googleRayon.busy ? 'disabled' : ''} style="width:100%;padding:8px;margin-bottom:8px;font-size:12px">${c.googleRayon.busy ? esc(c.googleRayon.txt) : 'Charger notes et photos Google'}</button>` : ''}
     ${c.selCompetitors.map(k => `
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--color-border-tertiary)">
       ${k.photo ? `<img src="${k.photo}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex:0 0 auto">` : `<div style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:${k.color}"></div>`}
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${k.photo ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px;background:${k.color}"></span>` : ''}${esc(k.name)}${k.url ? ` <a href="${esc(k.url)}" target="_blank" rel="noopener" style="font-weight:400;font-size:10px;color:var(--color-text-muted)">Google ↗</a>` : ''}</div>
+        <div style="font-size:12px;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${k.photo ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px;background:${k.color}"></span>` : ''}${esc(k.name)}${k.url ? ` <a href="${esc(k.url)}" target="_blank" rel="noopener" style="font-weight:400;font-size:10px;color:var(--color-text-muted)">Google ↗</a>` : ''}</div>
         <div style="font-size:11px;color:var(--color-text-muted)">${esc(k.meta)} · ${esc(k.dist)}${k.manual ? ` · ajouté à la main · <button ${x.A(k.retirer)} type="button" title="Retirer ce commerce ajouté à la main" style="border:none;background:transparent;color:var(--color-primary);cursor:pointer;font-size:11px;padding:0;font-family:inherit">retirer</button>` : ''}</div>
         <input id="sc-sm-${esc(k.id)}" type="text" maxlength="200" placeholder="Commentaire terrain (200 car.)" value="${esc(k.comment)}" ${x.C(k.setComment)} style="width:100%;margin-top:4px;${txtCss}">
         <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
@@ -347,9 +347,9 @@ export function renderRight(c, x){
     <div style="display:flex;align-items:flex-end;gap:5px;height:130px;margin-bottom:20px">
       ${c.hist.map(h => `
       <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%">
-        <span style="font-size:9px;color:var(--color-text-muted)">${h.n}</span>
+        <span style="font-size:10px;color:var(--color-text-muted)">${h.n}</span>
         <div style="width:100%;border-radius:3px 3px 0 0;background:${h.color};height:${h.h}"></div>
-        <span style="font-size:9px;color:var(--color-text-muted)">${esc(h.label)}</span>
+        <span style="font-size:10px;color:var(--color-text-muted)">${esc(h.label)}</span>
       </div>`).join('')}
     </div>
     <div style="font-size:12px;color:var(--color-text-muted);line-height:1.6">Clique un point blanc de la carte pour évaluer une implantation : ménages accessibles, concurrence, emprise et CA estimé selon le modèle de l'étude Halle.</div>
@@ -385,9 +385,9 @@ export function renderRight(c, x){
   return `${sel}${classement}${chauds}
   <div class="t-admin-label" style="margin:22px 0 8px">Zones candidates retenues</div>
   ${c.candidates.map(k => `
-  <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+  <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--color-border-tertiary)">
     <div style="flex:1;min-width:0">
-      <div style="font-size:12px;font-weight:500">${esc(k.name)}</div>
+      <div style="font-size:12px;font-weight:400">${esc(k.name)}</div>
       <div style="font-size:11px;color:var(--color-text-muted)">${esc(k.meta)}</div>
     </div>
     <button ${x.A(k.focus)} class="icon-circle" style="width:22px;height:22px" title="Voir sur la carte">→</button>
@@ -402,30 +402,31 @@ export function renderRight(c, x){
 /* La même page sert à l'écran (overlay), à la fenêtre d'impression et,
    côté serveur, le PDF reprend les mêmes données. Les styles vivent ici pour
    suivre la page partout où elle va. */
+/* ds:doc — document imprimé hors de la feuille commune : valeurs hexadécimales du système */
 export const DOSS_CSS = `
-.sc-doss{font-family:var(--font-ui,Helvetica,Arial,sans-serif);color:#221E1A;background:#fff;width:210mm;max-width:100%;margin:0 auto;padding:14mm 16mm 16mm;box-sizing:border-box;box-shadow:0 4px 24px rgba(0,0,0,.13);font-size:12px;line-height:1.4}
+.sc-doss{font-family:'Gotham',Helvetica,Arial,sans-serif;color:#1c1a17;background:#fff;width:210mm;max-width:100%;margin:0 auto;padding:14mm 16mm 16mm;box-sizing:border-box;font-size:12px;line-height:1.4}
 .sc-doss .hd{display:flex;align-items:flex-start;gap:12px;border-bottom:2px solid #8D1D2C;padding-bottom:10px}
 .sc-doss .hd img{height:30px;display:block}
 .sc-doss .hd .t{flex:1;min-width:0}
-.sc-doss .hd .t b{display:block;font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-size:21px;line-height:1.15;font-weight:400;margin-top:4px}
+.sc-doss .hd .t b{display:block;font-family:'Gotham',Helvetica,Arial,sans-serif;font-size:21px;line-height:1.15;font-weight:400;margin-top:4px}
 .sc-doss .hd .t span{display:block;font-size:11.5px;color:#7a736a;margin-top:2px}
-.sc-doss .hd .t em{display:block;font-style:normal;font-size:12px;color:#2d7a3e;font-weight:600;margin-top:3px}
+.sc-doss .hd .t em{display:block;font-style:normal;font-size:12px;color:#3f7a52;font-weight:400;margin-top:3px}
 .sc-doss .hd .sc{text-align:right;flex:0 0 auto;padding-top:6px}
-.sc-doss .hd .sc b{display:block;font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-size:32px;line-height:1;color:#2d7a3e;font-weight:400}
-.sc-doss .hd .sc span{font-size:9.5px;color:#7a736a;letter-spacing:.08em;text-transform:uppercase}
+.sc-doss .hd .sc b{display:block;font-family:'Gotham',Helvetica,Arial,sans-serif;font-size:26px;line-height:1;color:#3f7a52;font-weight:400}
+.sc-doss .hd .sc span{font-size:10px;color:#7a736a;letter-spacing:.08em;text-transform:uppercase}
 /* le dossier : la marque en haut avec la date d'édition, le titre en dessous — comme le PDF */
 .sc-doss .hd.hdd{display:block;border-bottom:0;padding-bottom:0}
 .sc-doss .hdd .hd1{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:2px solid #8D1D2C;padding-bottom:10px}
 .sc-doss .hdd .hd1 img{height:36px;display:block}
-.sc-doss .hdd .hd1 .marque{font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-size:18px;font-weight:400}
+.sc-doss .hdd .hd1 .marque{font-family:'Gotham',Helvetica,Arial,sans-serif;font-size:18px;font-weight:400}
 .sc-doss .hdd .hd1 .ed{font-size:11px;color:#7a736a;text-align:right;line-height:1.55}
 .sc-doss .hdd .hd2{display:flex;align-items:flex-start;gap:16px;margin-top:8px}
-.sc-doss .hdd .hd2 .t b{font-size:27px;margin-top:6px;letter-spacing:-.01em}
+.sc-doss .hdd .hd2 .t b{font-size:26px;margin-top:6px;letter-spacing:-.01em}
 .sc-doss .hdd .hd2 .t span{margin-top:4px}
 .sc-doss .hdd .hd2 .t em{margin-top:4px}
 .sc-doss .hdd .hd2 .sc{padding-top:12px}
-.sc-doss .hdd .hd2 .sc b{font-size:40px}
-.sc-doss h3{font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-weight:400;font-size:15px;margin:18px 0 8px;padding-bottom:4px;border-bottom:1.4px solid #8D1D2C}
+.sc-doss .hdd .hd2 .sc b{font-size:26px}
+.sc-doss h3{font-family:'Gotham',Helvetica,Arial,sans-serif;font-weight:400;font-size:15px;margin:18px 0 8px;padding-bottom:4px;border-bottom:1.4px solid #8D1D2C}
 .sc-doss .verdict{border-radius:8px;padding:10px 12px;margin:14px 0 0}
 .sc-doss .verdict b{display:block;font-size:12.5px;margin-bottom:2px}
 .sc-doss .verdict span{font-size:11px;color:#7a736a;line-height:1.5}
@@ -433,57 +434,57 @@ export const DOSS_CSS = `
 .sc-doss .attente{height:200px;display:flex;align-items:center;justify-content:center;border:1px dashed #d8d0c4;border-radius:6px;color:#7a736a;font-size:12px}
 .sc-doss .legende{font-size:10.5px;color:#7a736a;margin-top:5px;line-height:1.5}
 .sc-doss .q{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
-.sc-doss .q>div{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:8px 10px}
-.sc-doss .q .k{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#7a736a;min-height:24px}
-.sc-doss .q .v{font-family:var(--font-display,Georgia,"DejaVu Serif",serif);font-size:19px;line-height:1.1;margin-top:3px}
+.sc-doss .q>div{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:8px 10px}
+.sc-doss .q .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#7a736a;min-height:24px}
+.sc-doss .q .v{font-family:'Gotham',Helvetica,Arial,sans-serif;font-size:18px;line-height:1.1;margin-top:3px}
 .sc-doss .q .s{font-size:10px;color:#7a736a;margin-top:2px}
 .sc-doss table{width:100%;border-collapse:collapse;font-size:11.5px}
-.sc-doss th{text-align:right;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:400;padding:5px 6px;border-bottom:1px solid #221E1A}
-.sc-doss td{text-align:right;padding:5px 6px;border-bottom:.5px solid #EAE3D8;vertical-align:top;font-variant-numeric:tabular-nums}
-.sc-doss .l{text-align:left}.sc-doss .mut{color:#7a736a}.sc-doss .acc{color:#8D1D2C}.sc-doss .ok{color:#2d7a3e}.sc-doss td.n{white-space:nowrap}
+.sc-doss th{text-align:right;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:400;padding:5px 6px;border-bottom:1px solid #1c1a17}
+.sc-doss td{text-align:right;padding:5px 6px;border-bottom:1px solid #EDE7DE;vertical-align:top;font-variant-numeric:tabular-nums}
+.sc-doss .l{text-align:left}.sc-doss .mut{color:#7a736a}.sc-doss .acc{color:#8D1D2C}.sc-doss .ok{color:#3f7a52}.sc-doss td.n{white-space:nowrap}
 .sc-doss td.com{min-width:124px}
 .sc-doss table.garde th.v5,.sc-doss table.garde td.v5{background:rgba(27,94,32,.10)}
 .sc-doss table.garde th.v10,.sc-doss table.garde td.v10{background:rgba(139,195,74,.16)}
 .sc-doss table.garde tr.kv td{padding-top:7px;padding-bottom:7px}
-.sc-doss table.garde tr.kv td b{font-weight:600}
+.sc-doss table.garde tr.kv td b{font-weight:400}
 .sc-doss table.rampe{margin-top:12px}
 .sc-doss .attente.ligne{height:auto;padding:9px 12px;justify-content:flex-start;margin-bottom:8px}
-.sc-doss .ccard{border:0.5px solid #e6e0d8;border-radius:8px;margin:0 0 10px;background:#fff;overflow:hidden}
+.sc-doss .ccard{border:1px solid #e6e0d8;border-radius:8px;margin:0 0 10px;background:#fff;overflow:hidden}
 .sc-doss .note + .ccard{margin-top:14px}
 .sc-doss .ccard.fort{border-color:rgba(141,29,44,.45)}
-.sc-doss .chead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:8px 12px;background:#fbf9f5;font-size:12px}
+.sc-doss .chead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:8px 12px;background:#FBF9F5;font-size:12px}
 .sc-doss .chead .num{color:#7a736a;font-variant-numeric:tabular-nums}
 .sc-doss .chead b{font-size:13px}
 .sc-doss .chead .chiffres{margin-left:auto;display:flex;gap:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .sc-doss .cbody{display:flex;gap:12px;padding:10px 12px}
-.sc-doss .gcard{display:flex;gap:12px;border:0.5px solid #e6e0d8;border-radius:8px;padding:10px 12px;margin-bottom:10px;background:#fff}
+.sc-doss .gcard{display:flex;gap:12px;border:1px solid #e6e0d8;border-radius:8px;padding:10px 12px;margin-bottom:10px;background:#fff}
 .sc-doss .gphoto{flex:0 0 150px}.sc-doss .gphoto img{width:150px;height:auto;display:block;border-radius:5px}
-.sc-doss .gcred{font-size:9px;color:#7a736a;margin-top:3px}
-.sc-doss .gtxt{flex:1;min-width:0}.sc-doss .gnom{font-size:13px;font-weight:600}.sc-doss .gnote{color:#2d7a3e}
+.sc-doss .gcred{font-size:10px;color:#7a736a;margin-top:3px}
+.sc-doss .gtxt{flex:1;min-width:0}.sc-doss .gnom{font-size:13px;font-weight:400}.sc-doss .gnote{color:#3f7a52}
 .sc-doss .gadr{font-size:11px;color:#7a736a;margin:2px 0 6px}
 .sc-doss .gavis{font-size:11.5px;line-height:1.5;margin-top:4px}
-.sc-doss .motfin{border:1.5px solid #8D1D2C;border-radius:8px;padding:14px 16px;margin-top:18px;font-family:Georgia,"DejaVu Serif",serif;font-size:13.5px;line-height:1.6}
-.sc-doss .motfin .k{font-family:var(--font-ui,Helvetica,Arial,sans-serif);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#8D1D2C;margin-bottom:6px}
-.sc-doss .hl{display:inline-block;padding:3px 8px;border-radius:6px;font-weight:700;background:#f1ede6}
-.sc-doss .hl.pos{background:rgba(27,94,32,.12);color:#1b5e20}
+.sc-doss .motfin{border:1.5px solid #8D1D2C;border-radius:8px;padding:14px 16px;margin-top:18px;font-family:'Gotham',Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6}
+.sc-doss .motfin .k{font-family:'Gotham',Helvetica,Arial,sans-serif;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#8D1D2C;margin-bottom:6px}
+.sc-doss .hl{display:inline-block;padding:3px 8px;border-radius:6px;font-weight:400;background:#f1ede6}
+.sc-doss .hl.pos{background:rgba(27,94,32,.12);color:#3f7a52}
 .sc-doss .hl.neg{background:rgba(141,29,44,.12);color:#8D1D2C}
-.sc-doss .motfin table.mini{margin:10px 0 0;font-family:var(--font-ui,Helvetica,Arial,sans-serif);font-size:11.5px}
+.sc-doss .motfin table.mini{margin:10px 0 0;font-family:'Gotham',Helvetica,Arial,sans-serif;font-size:11.5px}
 .sc-doss .motfin table.mini th,.sc-doss .motfin table.mini td{padding:4px 6px}
-.sc-doss .motfin table.mini td.cur{background:rgba(141,29,44,.08);font-weight:600;border-radius:4px}
-.sc-doss .motfin table.mini td.cur small{display:block;font-size:9px;font-weight:500;color:#8D1D2C;letter-spacing:.05em;text-transform:uppercase}
+.sc-doss .motfin table.mini td.cur{background:rgba(141,29,44,.08);font-weight:400;border-radius:4px}
+.sc-doss .motfin table.mini td.cur small{display:block;font-size:10px;font-weight:400;color:#8D1D2C;letter-spacing:.05em;text-transform:uppercase}
 .sc-doss table.plan th,.sc-doss table.plan td{padding:5px 4px}
 .sc-doss table.reseau td{vertical-align:middle;white-space:nowrap}
 .sc-doss table.reseau tr.p td{border-bottom:0;padding-bottom:1px}
-.sc-doss table.reseau tr.p td[rowspan]{border-bottom:.5px solid #EAE3D8}
+.sc-doss table.reseau tr.p td[rowspan]{border-bottom:1px solid #EDE7DE}
 .sc-doss table.reseau tr.r td{padding-top:1px}
 .sc-doss table.reseau td.mut{font-size:10px;letter-spacing:.04em;text-transform:uppercase}
 .sc-doss table.plan th{white-space:normal;hyphens:manual}
-.sc-doss tr.tot td{font-weight:600;border-top:1px solid #221E1A;border-bottom:0;background:#fbf9f5}
-.sc-doss .ch{display:inline-block;font-size:9.5px;font-weight:600;border-radius:9px;padding:1px 7px;background:#EEE9E1;color:#221E1A;margin-left:5px;white-space:nowrap}
-.sc-doss .note{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:9px 11px;font-size:10.5px;color:#7a736a;line-height:1.6;margin-top:10px}
-.sc-doss .note b{color:#221E1A}
+.sc-doss tr.tot td{font-weight:400;border-top:1px solid #1c1a17;border-bottom:0;background:#FBF9F5}
+.sc-doss .ch{display:inline-block;font-size:10px;font-weight:400;border-radius:9px;padding:1px 7px;background:#EEE9E1;color:#1c1a17;margin-left:5px;white-space:nowrap}
+.sc-doss .note{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:9px 11px;font-size:10.5px;color:#7a736a;line-height:1.6;margin-top:10px}
+.sc-doss .note b{color:#1c1a17}
 .sc-doss .hyp{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
-.sc-doss .hyp div{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:.5px solid #EAE3D8;font-size:11px}
+.sc-doss .hyp div{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #EDE7DE;font-size:11px}
 .sc-doss .hyp div span{color:#7a736a}
 `;
 export const DOSS_PRINT = `
@@ -493,6 +494,7 @@ body{margin:0;background:#fff}
 .sc-doss h3{page-break-after:avoid}
 .sc-doss tr,.sc-doss .q>div,.sc-doss .note{page-break-inside:avoid}
 `;
+/* ds:fin-doc */
 
 // Les sections de l'étude de marché locale : en attente tant qu'OpenStreetMap
 // n'a pas répondu, puis cinq tableaux.
@@ -545,7 +547,7 @@ export function dossierPage(d, esc, logo){
         <div class="sc"><b>${esc(d.score)}</b><span>score / 100</span></div>
       </div>
     </div>
-    <div class="verdict" style="background:${d.verdictOk ? '#E3EFE6' : '#F6E4E7'}"><b style="color:${d.verdictOk ? '#2d7a3e' : '#8D1D2C'}">${esc(d.verdict)}</b><span>${esc(d.verdictNote)}</span></div>
+    <div class="verdict" style="background:${d.verdictOk ? '#E8EFEA' : '#F6ECED'}"><b style="color:${d.verdictOk ? '#3f7a52' : '#8D1D2C'}">${esc(d.verdict)}</b><span>${esc(d.verdictNote)}</span></div>
 
     <h3>Situation</h3>
     ${d.carte ? `<img class="carte" src="${d.carte}" alt="">` : `<div class="attente">${d.carteAttente || 'Carte en cours d’assemblage…'}</div>`}
@@ -593,7 +595,7 @@ export function dossierPage(d, esc, logo){
         <td class="n"${sp}><b>${esc(r[7])}</b></td><td class="n"${sp}><span class="hl${r[10] ? ' ' + r[10] : ''}">${esc(r[8])}</span></td><td class="n mut"${sp}>${esc(r[9])}</td></tr>${reel ? `
         <tr class="r"><td class="l mut">réel</td>${[2, 4, 6].map(k => `<td class="n"><b>${esc(r[k])}</b></td>`).join('')}</tr>` : ''}`; }).join('')}
     </table>
-    ${d.reseauNote ? `<div class="legende" style="color:#221E1A">${esc(d.reseauNote)}</div>` : ''}
+    ${d.reseauNote ? `<div class="legende" style="color:var(--ink)">${esc(d.reseauNote)}</div>` : ''}
     <div class="legende">Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.</div>
     ${d.notes.map(n => `<div class="note">${esc(n)}</div>`).join('')}
 
@@ -645,8 +647,8 @@ function renderDossier(c, x){
   const { esc } = x;
   const d = c.dossier;
   return `
-  <div style="position:absolute;inset:0;z-index:1200;background:#EDE7DE;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto">
+  <div style="position:absolute;inset:0;z-index:1200;background:var(--chip);display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:1px solid var(--color-border-tertiary);flex:0 0 auto">
       <div class="t-section-title" style="font-size:16px">Dossier d'implantation</div>
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(d.commune)} · ${esc(d.zone)} · ${d.etude ? 'la fiche et l’étude de marché locale, mises en page' : d.etudeAttente && !/indisponible/.test(d.etudeAttente) ? 'étude locale en cours…' : 'les chiffres de la fiche, mis en page'}</div>
       <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy ? ';opacity:.6' : ''}">${d.busy ? (d.busyTxt || 'PDF en cours…') : 'Télécharger le PDF'}</button>
@@ -687,7 +689,7 @@ export function planPage(d, esc, logo, x){
     <h3>${esc(p.nom)} <span class="ch">${esc(p.detail)}</span></h3>
     ${p.lignes.length ? `
     <table class="plan"><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Arrondis&shy;sement</th><th>Score</th><th>Ménages</th><th>Concur&shy;rents</th><th class="l">Chaînes</th><th>Emprise</th><th>CA estimé TTC</th><th>€/m²</th></tr>
-      ${p.lignes.map(l => `<tr><td class="l mut">${l.num}</td><td class="l com"><b>${esc(l.commune)}</b>${x && l.dossier ? `<button ${x.A(l.dossier)} class="btn-secondary" style="padding:1px 6px;font-size:9.5px;margin-left:6px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button>` : ''}${l.voisinTxt ? `<div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3">${esc(l.voisinTxt)}</div>` : ''}</td><td class="l mut">${esc(l.arr)}</td><td class="${l.score >= d.minScore ? 'ok' : 'acc'}"><b>${l.score}</b></td><td>${nf(l.hh)}</td><td>${l.n}${l.forts ? ' <span class="acc">(' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')</span>' : ''}</td><td class="l mut">${esc(l.chaines || '—')}</td><td>${(l.emprise * 100).toFixed(1).replace('.', ',')} %</td><td class="n"><b>${eur(l.ca)}</b></td><td class="mut n">${eur(l.m2)}</td></tr>`).join('')}
+      ${p.lignes.map(l => `<tr><td class="l mut">${l.num}</td><td class="l com"><b>${esc(l.commune)}</b>${x && l.dossier ? `<button ${x.A(l.dossier)} class="btn-secondary" style="padding:1px 6px;font-size:10px;margin-left:6px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button>` : ''}${l.voisinTxt ? `<div class="mut" style="font-size:10px;font-weight:400;line-height:1.3">${esc(l.voisinTxt)}</div>` : ''}</td><td class="l mut">${esc(l.arr)}</td><td class="${l.score >= d.minScore ? 'ok' : 'acc'}"><b>${l.score}</b></td><td>${nf(l.hh)}</td><td>${l.n}${l.forts ? ' <span class="acc">(' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')</span>' : ''}</td><td class="l mut">${esc(l.chaines || '—')}</td><td>${(l.emprise * 100).toFixed(1).replace('.', ',')} %</td><td class="n"><b>${eur(l.ca)}</b></td><td class="mut n">${eur(l.m2)}</td></tr>`).join('')}
       <tr class="tot"><td colspan="4" class="l">${p.lignes.length} ouverture${p.lignes.length > 1 ? 's' : ''}</td><td>${nf(p.lignes.reduce((a, l) => a + l.hh, 0))}</td><td colspan="3"></td><td class="n">${eur(p.sousTotal)}</td><td></td></tr>
     </table>` : '<p class="mut" style="font-size:11.5px">Aucune zone hors des rayons d’exclusion dans cette province' + (d.seuil ? ', au-dessus du score ' + esc(d.minScore) : '') + '.</p>'}`).join('')}
 
@@ -707,8 +709,8 @@ function renderPlan(c, x){
   const { esc } = x;
   const d = c.plan;
   return `
-  <div style="position:absolute;inset:0;z-index:1200;background:#EDE7DE;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto;flex-wrap:wrap">
+  <div style="position:absolute;inset:0;z-index:1200;background:var(--chip);display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:1px solid var(--color-border-tertiary);flex:0 0 auto;flex-wrap:wrap">
       <div class="t-section-title" style="font-size:16px">Plan d'expansion</div>
       <div style="font-size:11px;color:var(--color-text-muted)">${d.enCours ? 'temps de route en cours…' : `${d.nPts} ouverture${d.nPts > 1 ? 's' : ''} · ${esc(d.total.toLocaleString ? Math.round(d.total).toLocaleString('fr-BE') : d.total)} € de CA annuel estimé`}</div>
       <select ${x.C(d.setN)} style="${selCss};width:auto;padding:6px 8px;font-size:12px">${opts(d.nChoix, d.nVal)}</select>
@@ -736,9 +738,9 @@ function renderPlan(c, x){
 
 /* --- Vues tabulaires et comparaison d'arrondissements ---------------------- */
 const overlayCss = 'position:absolute;inset:0;z-index:1200;background:var(--color-bg);overflow:auto;padding:16px';
-const boxCss = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow-x:auto;overflow-y:visible';
-const headCss = 'background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-secondary);min-width:max-content';
-const lineCss = 'align-items:center;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;min-width:max-content';
+const boxCss = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:10px;overflow-x:auto;overflow-y:visible';
+const headCss = 'background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-secondary);min-width:max-content';
+const lineCss = 'align-items:center;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;min-width:max-content';
 const ZONES_GRID = '48px 180px 160px 62px 90px 112px 64px 220px 80px 130px 90px';
 const CONC_GRID = '44px 230px 150px 170px 76px 64px 74px 64px 280px 64px';
 const ARR_GRID = '190px 84px 104px 104px 150px 92px 76px 96px 84px 110px';
@@ -762,15 +764,15 @@ export function renderOverlays(c, x){
       ${c.zonesRows.map(r => `
       <div ${x.A(r.open)} class="hv-bg" style="display:grid;grid-template-columns:${ZONES_GRID};${lineCss};cursor:pointer">
         <span style="padding:8px;color:var(--color-text-muted)">${r.rang}</span>
-        <span style="padding:8px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.commune)}<button ${x.A(r.dossier)} class="btn-secondary" style="padding:2px 7px;font-size:10px;margin-left:8px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button></span>
+        <span style="padding:8px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.commune)}<button ${x.A(r.dossier)} class="btn-secondary" style="padding:2px 7px;font-size:10px;margin-left:8px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button></span>
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
-        <span style="padding:8px;font-weight:600;color:#1b5e20">${r.score}</span>
+        <span style="padding:8px;font-weight:400;color:var(--green)">${r.score}</span>
         <span style="padding:8px">${esc(r.hh)}</span>
         <span style="padding:5px 8px;display:flex;align-items:center;gap:4px"${r.noms ? ` data-sc-tip="${esc(r.noms)}"` : ''}>${r.n}${r.photos.map(f => `<img src="${f.photo}" alt="" title="${esc(f.nom)}" style="width:24px;height:24px;object-fit:cover;border-radius:4px">`).join('')}</span>
         <span style="padding:8px;color:${r.forts ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${r.forts}</span>
-        <span style="padding:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.chainesN ? 'font-weight:500' : 'color:var(--color-text-muted)'}" title="${esc(r.chaines)}">${esc(r.chaines)}</span>
+        <span style="padding:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.chainesN ? 'font-weight:400' : 'color:var(--color-text-muted)'}" title="${esc(r.chaines)}">${esc(r.chaines)}</span>
         <span style="padding:8px">${esc(r.emprise)}</span>
-        <span style="padding:8px;font-weight:500">${esc(r.ca)}</span>
+        <span style="padding:8px;font-weight:400">${esc(r.ca)}</span>
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.m2)}</span>
       </div>`).join('')}
       ${c.zonesRows.length ? '' : `<div style="padding:14px 12px;font-size:12px;color:var(--color-text-muted)">${esc(c.zonesEmpty)}</div>`}
@@ -782,7 +784,7 @@ export function renderOverlays(c, x){
     <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
       <div class="t-section-title" style="font-size:16px">Top 5 par province</div>
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">Balayage de chaque province cochée sur toute son emprise · une zone par commune · sans score minimum (score sous ${c.minScore} en orange) · clic sur une ligne pour ouvrir la fiche</div>
-      <button ${x.A(c.ouvrirPlan)} class="btn-secondary" style="padding:7px 12px;font-size:12px;border-color:#1b5e20;color:#1b5e20;font-weight:600">Plan d'expansion</button>
+      <button ${x.A(c.ouvrirPlan)} class="btn-secondary" style="padding:7px 12px;font-size:12px;border-color:var(--green);color:var(--green);font-weight:400">Plan d'expansion</button>
       <button ${x.A(c.exportTop5)} class="btn-primary" style="padding:7px 12px;font-size:12px">Exporter CSV</button>
     </div>
     <div class="sc-scroll" style="${boxCss}">
@@ -790,22 +792,22 @@ export function renderOverlays(c, x){
         ${c.top5Cols.map(k => `<span class="t-admin-label" style="padding:9px 8px;display:inline-flex;align-items:center">${esc(k.label)}${info(esc, k.tip)}</span>`).join('')}
       </div>
       ${c.top5.map(g => `
-      <div style="display:flex;align-items:baseline;gap:10px;padding:10px 8px 6px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
-        <span style="font-size:12.5px;font-weight:600">${esc(g.prov)}</span>
+      <div style="display:flex;align-items:baseline;gap:10px;padding:10px 8px 6px;border-bottom:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+        <span style="font-size:12.5px;font-weight:400">${esc(g.prov)}</span>
         <span style="font-size:11px;color:var(--color-text-muted)">${esc(g.detail)}</span>
       </div>
       ${g.rows.map(r => `
       <div ${x.A(r.open)} class="hv-bg" style="display:grid;grid-template-columns:${ZONES_GRID};${lineCss};cursor:pointer">
         <span style="padding:8px;color:var(--color-text-muted)">${r.rang}</span>
-        <span style="padding:8px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.commune)}<button ${x.A(r.dossier)} class="btn-secondary" style="padding:2px 7px;font-size:10px;margin-left:8px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button></span>
+        <span style="padding:8px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.commune)}<button ${x.A(r.dossier)} class="btn-secondary" style="padding:2px 7px;font-size:10px;margin-left:8px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button></span>
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
-        <span style="padding:8px;font-weight:600;color:${r.score >= c.minScore ? '#1b5e20' : '#c17a2a'}">${r.score}</span>
+        <span style="padding:8px;font-weight:400;color:${r.score >= c.minScore ? '#3f7a52' : '#B0792A'}">${r.score}</span>
         <span style="padding:8px">${esc(r.hh)}</span>
         <span style="padding:8px"${r.noms ? ` data-sc-tip="${esc(r.noms)}"` : ''}>${r.n}</span>
         <span style="padding:8px;color:${r.forts ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${r.forts}</span>
-        <span style="padding:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.chaines !== '—' ? 'font-weight:500' : 'color:var(--color-text-muted)'}" title="${esc(r.chaines)}">${esc(r.chaines)}</span>
+        <span style="padding:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.chaines !== '—' ? 'font-weight:400' : 'color:var(--color-text-muted)'}" title="${esc(r.chaines)}">${esc(r.chaines)}</span>
         <span style="padding:8px">${esc(r.emprise)}</span>
-        <span style="padding:8px;font-weight:500">${esc(r.ca)}</span>
+        <span style="padding:8px;font-weight:400">${esc(r.ca)}</span>
         <span style="padding:8px;color:var(--color-text-muted)">${esc(r.m2)}</span>
       </div>`).join('')}
       ${g.rows.length ? '' : `<div style="padding:10px 12px;font-size:12px;color:var(--color-text-muted)">Aucune zone hors des rayons d'exclusion dans cette province.</div>`}`).join('')}
@@ -817,7 +819,7 @@ export function renderOverlays(c, x){
   <div id="sc-table" class="sc-scroll" style="${overlayCss}">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <div class="t-section-title" style="font-size:16px">Concurrents</div>
-      <input id="sc-q" type="text" placeholder="Filtrer par nom, commune, arrondissement" value="${esc(c.q)}" ${x.I(c.setQ)} style="flex:1;max-width:300px;padding:7px 9px;border:0.5px solid var(--color-border-secondary);border-radius:6px;background:var(--color-surface);font-size:12px;font-family:var(--font-ui);color:var(--color-text)">
+      <input id="sc-q" type="text" placeholder="Filtrer par nom, commune, arrondissement" value="${esc(c.q)}" ${x.I(c.setQ)} style="flex:1;max-width:300px;padding:7px 9px;border:1px solid var(--color-border-secondary);border-radius:6px;background:var(--color-surface);font-size:12px;font-family:var(--font-ui);color:var(--color-text)">
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(c.concCount)} · 400 lignes max</div>
       <button ${x.A(c.enrichAll)} class="btn-secondary" style="padding:7px 12px;font-size:12px">${esc(c.enrichAllLabel)}</button>
       ${c.googleListe.ok ? `<button ${x.A(c.googleListe.charger)} class="btn-secondary" title="La liste filtrée (100 commerces au plus) : note, nombre d’avis, avis et photo relus chez Google" style="padding:7px 12px;font-size:12px">${esc(c.googleListe.label)}</button>` : ''}
@@ -830,8 +832,8 @@ export function renderOverlays(c, x){
       </div>
       ${c.concRows.map(r => `
       <div style="display:grid;grid-template-columns:${CONC_GRID};${lineCss}">
-        ${r.photo ? `<img src="${r.photo}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:6px;margin:3px 0;box-shadow:0 0 0 2px ${r.color}">` : `<span style="width:8px;height:8px;border-radius:50%;background:${r.color};margin-left:4px"></span>`}
-        <span style="padding:6px 8px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}${r.url ? ` <a href="${esc(r.url)}" target="_blank" rel="noopener" style="font-weight:400;font-size:10px;color:var(--color-text-muted)">Google ↗</a>` : ''}</span>
+        ${r.photo ? `<img src="${r.photo}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:6px;margin:3px 0;{r.color}">` : `<span style="width:8px;height:8px;border-radius:50%;background:${r.color};margin-left:4px"></span>`}
+        <span style="padding:6px 8px;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}${r.url ? ` <a href="${esc(r.url)}" target="_blank" rel="noopener" style="font-weight:400;font-size:10px;color:var(--color-text-muted)">Google ↗</a>` : ''}</span>
         <span style="padding:6px 8px;color:var(--color-text-muted)">${esc(r.commune)}</span>
         <span style="padding:6px 8px;color:var(--color-text-muted)">${esc(r.arr)}</span>
         <input id="sc-cn-${esc(r.id)}" type="number" min="0" max="5" step="0.1" placeholder="–" value="${esc(r.note)}" ${x.C(r.setNote)} style="width:58px;margin:4px 8px;${numCss}">
@@ -857,11 +859,11 @@ export function renderOverlays(c, x){
       </div>
       ${c.arrRows.map(r => `
       <div ${x.A(r.pick)} class="hv-bg" style="display:grid;grid-template-columns:${ARR_GRID};${lineCss};cursor:pointer">
-        <span style="padding:8px;font-weight:500">${esc(r.arr)}</span>
+        <span style="padding:8px;font-weight:400">${esc(r.arr)}</span>
         <span style="padding:8px;color:var(--color-text-muted)">${r.communes}</span>
         <span style="padding:8px">${esc(r.pop)}</span>
         <span style="padding:8px">${esc(r.hh)}</span>
-        <span style="padding:8px;font-weight:500">${esc(r.market)}</span>
+        <span style="padding:8px;font-weight:400">${esc(r.market)}</span>
         <span style="padding:8px">${r.shops}</span>
         <span style="padding:8px;color:var(--color-primary)">${r.strong}</span>
         <span style="padding:8px">${esc(r.dens)}</span>
@@ -873,27 +875,27 @@ export function renderOverlays(c, x){
 
   if (c.compare) return `
   <div style="position:absolute;inset:0;z-index:700;background:var(--color-bg);display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary)">
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--color-surface);border-bottom:1px solid var(--color-border-tertiary)">
       <div class="t-section-title" style="font-size:16px">Comparaison d'arrondissements</div>
       <div style="flex:1"></div>
       <button ${x.A(c.toggleCompare)} class="btn-secondary" style="padding:6px 12px;font-size:12px">Retour à la carte</button>
     </div>
     <div id="sc-compare" class="sc-scroll" style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px;overflow-y:auto;align-content:start">
       ${c.compareCols.map(k => `
-      <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:16px">
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:16px">
         <select ${x.C(k.setArr)} style="${selCss};margin-bottom:14px">${opts(k.options, k.arr)}</select>
         ${k.rows.map(r => `
-        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--color-border-tertiary)">
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(r.k)}</span>
-          <span style="font-size:13px;font-weight:500">${esc(r.v)}</span>
+          <span style="font-size:13px;font-weight:400">${esc(r.v)}</span>
         </div>`).join('')}
         <div class="t-admin-label" style="margin:16px 0 8px">${esc(k.histTitle)}</div>
         <div style="display:flex;align-items:flex-end;gap:4px;height:96px">
           ${k.hist.map(h => `
           <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%">
-            <span style="font-size:9px;color:var(--color-text-muted)">${h.n}</span>
+            <span style="font-size:10px;color:var(--color-text-muted)">${h.n}</span>
             <div style="width:100%;border-radius:3px 3px 0 0;background:${h.color};height:${h.h}"></div>
-            <span style="font-size:9px;color:var(--color-text-muted)">${esc(h.label)}</span>
+            <span style="font-size:10px;color:var(--color-text-muted)">${esc(h.label)}</span>
           </div>`).join('')}
         </div>
       </div>`).join('')}
@@ -907,19 +909,19 @@ export function renderOverlays(c, x){
 export function renderModal(c, x){
   const { esc } = x;
   const col = (k, green) => `
-  <div style="flex:1 1 0;min-width:200px;border:${green ? '1px solid rgba(27,94,32,.4)' : '0.5px solid var(--color-border-tertiary)'};border-radius:10px;overflow:hidden">
-    <div style="padding:12px 14px;background:${green ? 'rgba(27,94,32,.08)' : 'var(--color-background-secondary)'};border-bottom:0.5px solid var(--color-border-tertiary)">
-      <div style="font-size:13px;font-weight:600;${green ? 'color:#1b5e20' : ''}">${esc(k.nom)}</div>
+  <div style="flex:1 1 0;min-width:200px;border:${green ? '1px solid rgba(27,94,32,.4)' : '1px solid var(--color-border-tertiary)'};border-radius:10px;overflow:hidden">
+    <div style="padding:12px 14px;background:${green ? 'rgba(27,94,32,.08)' : 'var(--color-background-secondary)'};border-bottom:1px solid var(--color-border-tertiary)">
+      <div style="font-size:13px;font-weight:400;${green ? 'color:var(--green)' : ''}">${esc(k.nom)}</div>
       <div style="font-size:11px;color:var(--color-text-muted)">${esc(k.statut)}</div>
     </div>
     ${k.rows.map(r => `
-    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:6px 12px;border-bottom:0.5px solid var(--color-border-tertiary)${r.fort ? ';background:rgba(141,29,44,.05)' : ''}">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:6px 12px;border-bottom:1px solid var(--color-border-tertiary)${r.fort ? ';background:rgba(141,29,44,.05)' : ''}">
       <span style="font-size:11px;color:${r.fort ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(r.k)}</span>
       <span style="font-size:12px;font-weight:${r.fort ? '600' : '500'};text-align:right">${esc(r.v)}</span>
     </div>`).join('')}
     ${green ? `
     <div style="display:flex;gap:6px;padding:10px 12px">
-      <button ${x.A(c.refDepuisZone)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px;border-color:#1b5e20;color:#1b5e20">Retenir comme point de comparaison</button>
+      <button ${x.A(c.refDepuisZone)} class="btn-secondary" style="flex:1;padding:7px 6px;font-size:11px;border-color:var(--green);color:var(--green)">Retenir comme point de comparaison</button>
     </div>` : `
     <div style="display:flex;gap:6px;padding:10px 12px;flex-wrap:wrap">
       ${k.magasin ? `<button ${x.A(k.modifier)} class="btn-primary" style="flex:1;padding:7px 6px;font-size:11px">Modifier</button>` : ''}
@@ -935,8 +937,8 @@ export function renderModal(c, x){
   // à remplir. Vide = la ligne affichera « — ».
   const formulaire = f => `
   <div style="flex:1 1 0;min-width:240px;max-width:300px;border:1px solid var(--color-primary);border-radius:10px;overflow:hidden">
-    <div style="padding:12px 14px;background:rgba(141,29,44,.06);border-bottom:0.5px solid var(--color-border-tertiary)">
-      <div style="font-size:13px;font-weight:600">${f.magasin ? esc(f.magasin) + ' — données du magasin' : f.neuf ? 'Nouveau point de comparaison' : 'Modifier le point'}</div>
+    <div style="padding:12px 14px;background:rgba(141,29,44,.06);border-bottom:1px solid var(--color-border-tertiary)">
+      <div style="font-size:13px;font-weight:400">${f.magasin ? esc(f.magasin) + ' — données du magasin' : f.neuf ? 'Nouveau point de comparaison' : 'Modifier le point'}</div>
       <div style="font-size:11px;color:var(--color-text-muted)">${f.magasin ? 'Le CA prévu réaliste est celui auquel le réel se compare ; les autres champs partent de l’étude de marché — corrige ce que tu sais.' : f.depuisZone ? 'Pré-rempli avec la zone évaluée — corrige ce que tu sais.' : 'Un magasin à ouvrir, une zone mesurée, un concurrent connu.'}</div>
     </div>
     <div style="padding:8px 12px 4px;display:flex;flex-direction:column;gap:6px">
@@ -958,8 +960,8 @@ export function renderModal(c, x){
 
   const modal = c.reseau ? `
   <div style="position:fixed;inset:0;z-index:900;background:rgba(34,34,34,.45);display:flex;align-items:center;justify-content:center;padding:32px;animation:fadeIn 140ms ease">
-    <div style="background:var(--color-surface);border-radius:14px;width:100%;max-width:1100px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.28)">
-      <div style="display:flex;align-items:baseline;gap:14px;padding:16px 20px;border-bottom:0.5px solid var(--color-border-tertiary)">
+    <div style="background:var(--color-surface);border-radius:12px;width:100%;max-width:1100px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="display:flex;align-items:baseline;gap:14px;padding:16px 20px;border-bottom:1px solid var(--color-border-tertiary)">
         <div class="t-section-title" style="font-size:18px">Magasins du réseau — points de comparaison</div>
         <div style="font-size:11px;color:var(--color-text-muted);flex:1">Chiffres des études GeoConsulting — Sombreffe, 17-04-2024 ; Halle, 28-08-2024 —, puis les points ajoutés à la main · la colonne verte reprend la zone évaluée en cours</div>
         <button ${x.A(c.closeReseau)} class="btn-secondary" style="padding:6px 12px;font-size:12px">Fermer</button>
@@ -976,7 +978,7 @@ export function renderModal(c, x){
 
   const wizard = renderWizard(c, x);
 
-  const toast = c.toast ? `<div style="position:fixed;bottom:24px;right:24px;z-index:1300;background:#222222;color:#fff;border-radius:10px;padding:12px 18px;font-size:13px;box-shadow:0 10px 30px rgba(34,34,34,0.3);animation:toastIn 200ms ease;max-width:420px">${esc(c.toast)}</div>` : '';
+  const toast = c.toast ? `<div style="position:fixed;bottom:24px;right:24px;z-index:1300;background:var(--ink);color:#fff;border-radius:10px;padding:12px 18px;font-size:13px;animation:toastIn 200ms ease;max-width:420px">${esc(c.toast)}</div>` : '';
   return modal + wizard + toast;
 }
 
@@ -1034,7 +1036,7 @@ export function renderWizard(c, x){
         <div class="s">Un commerce noté sous cette barre ne pèse rien dans la pression concurrentielle. <b>${n.ignores}</b> commerce${n.ignores > 1 ? 's sortent' : ' sort'} ainsi du calcul.</div></div>
       <div class="wz-s fort"><div class="k">Au-dessus, c’est un concurrent fort</div>
         <div class="v"><input id="wz-thresh" value="${w.thresh.toFixed(1).replace('.', ',')}" ${x.C(w.setThresh)}><em>★ sur 5</em></div>
-        <div class="s">Zone rouge de <input id="wz-radius" value="${w.radius.toFixed(1).replace('.', ',')}" ${x.C(w.setRadius)} style="width:44px;border:1px solid var(--color-border-secondary);border-radius:5px;padding:1px 4px;font:700 11px var(--font-ui);text-align:center"> km autour de lui, et poids majoré de moitié. <b>${n.forts}</b> commerce${n.forts > 1 ? 's sont' : ' est'} dans ce cas.</div></div>
+        <div class="s">Zone rouge de <input id="wz-radius" value="${w.radius.toFixed(1).replace('.', ',')}" ${x.C(w.setRadius)} style="width:44px;border:1px solid var(--color-border-secondary);border-radius:5px;padding:1px 4px;font:400 11px var(--font-ui);text-align:center"> km autour de lui, et poids majoré de moitié. <b>${n.forts}</b> commerce${n.forts > 1 ? 's sont' : ' est'} dans ce cas.</div></div>
     </div>
     <div class="wz-q" style="margin-top:4px">Où ces deux barres coupent</div>
     <p class="wz-a">${n.notes ? 'Les ' + n.notes + ' commerces notés de la sélection, par tranche de note.' : 'Aucun commerce noté dans cette sélection : les deux barres ne coupent rien pour l’instant. La force vient alors des signaux OpenStreetMap (enseigne, site, horaires), et les notes Google se chargent depuis l’écran.'}</p>
@@ -1050,7 +1052,7 @@ export function renderWizard(c, x){
     <div class="wz-seuil">
       <div class="wz-s"><div class="k">Concurrents dans le rayon</div>
         <div class="v"><input id="wz-nmax" value="${esc(w.nMaxTxt)}" placeholder="sans limite" ${x.C(w.setNMax)} style="width:104px;font-size:15px"><em>au plus</em></div>
-        <div class="s"><button ${x.A(w.toggleSansBoul)} class="btn-secondary" style="padding:3px 9px;font-size:10.5px;${w.sansBoul ? 'border-color:var(--color-primary);color:var(--color-primary);font-weight:600' : ''}">${w.sansBoul ? '✓ aucune boulangerie' : 'aucune boulangerie'}</button> — laissez vide pour ne pas filtrer.</div></div>
+        <div class="s"><button ${x.A(w.toggleSansBoul)} class="btn-secondary" style="padding:3px 9px;font-size:10.5px;${w.sansBoul ? 'border-color:var(--color-primary);color:var(--color-primary);font-weight:400' : ''}">${w.sansBoul ? '✓ aucune boulangerie' : 'aucune boulangerie'}</button> — laissez vide pour ne pas filtrer.</div></div>
       <div class="wz-s"><div class="k">Ménages minimum dans le rayon</div>
         <div class="v"><input id="wz-hhmin" value="${esc(w.hhMinTxt)}" placeholder="0" ${x.C(w.setHhMin)} style="width:104px;font-size:15px"><em>ménages</em></div>
         <div class="s">La densité, là où elle compte : les ménages du rayon de ${w.radius.toFixed(1).replace('.', ',')} km, pas ceux de la commune. À 0, aucun minimum.</div></div>
@@ -1058,7 +1060,7 @@ export function renderWizard(c, x){
     <div class="wz-seuil" style="grid-template-columns:1fr">
       <div class="wz-s"><div class="k">Près d’un zoning d’activité</div>
         <div class="v"><input id="wz-zone" value="${esc(w.zoneMaxTxt)}" placeholder="sans condition" ${x.C(w.setZoneMax)} style="width:134px;font-size:15px"${w.zoningPret ? '' : ' disabled'}><em>km au plus</em>
-          ${w.zoningPret ? `<button ${x.A(w.toggleZoning)} class="btn-secondary" style="padding:4px 10px;font-size:10.5px;margin-left:6px;${w.zoneMax != null ? 'border-color:var(--color-primary);color:var(--color-primary);font-weight:600' : ''}">${w.zoneMax != null ? '✓ à 2 km d’un zoning' : 'à 2 km d’un zoning'}</button>` : ''}</div>
+          ${w.zoningPret ? `<button ${x.A(w.toggleZoning)} class="btn-secondary" style="padding:4px 10px;font-size:10.5px;margin-left:6px;${w.zoneMax != null ? 'border-color:var(--color-primary);color:var(--color-primary);font-weight:400' : ''}">${w.zoneMax != null ? '✓ à 2 km d’un zoning' : 'à 2 km d’un zoning'}</button>` : ''}</div>
         <div class="s">${w.zoningPret
           ? 'Zones d’activité, de commerce et de vente relevées sur OpenStreetMap — <b>' + w.zoning.toLocaleString('fr-BE') + '</b> en Belgique. La distance se mesure au <b>bord</b> de la zone, pas à son centre. Les travailleurs d’un parc déjeunent à côté ; le passage y est en semaine, pas le dimanche.'
           : 'Le relevé du zoning n’est pas encore en cache. Il se fait le dimanche, séparément des commerces — le filtre s’allumera tout seul quand les zones seront là.'}</div></div>

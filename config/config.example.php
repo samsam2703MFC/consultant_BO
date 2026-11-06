@@ -21,6 +21,10 @@ return [
     // pwaBase de ceo_app_setting. Ex. : http://185.180.206.46/pwa_consultant
     'pwaBase' => getenv('COCKPIT_PWA_BASE') ?: null,
 
+    // Adresse de l'ERP — le lien « Retour à l’ERP » en tête du rail. Sans
+    // valeur, le rail n'affiche pas ce lien (rien n'est écrit en dur).
+    'erpUrl' => getenv('COCKPIT_ERP_URL') ?: null,
+
     // Écran de connexion intégré. false (défaut) : accès ouvert — les
     // utilisateurs arrivent redirigés depuis l'ERP, qui porte l'auth.
     // true : mot de passe défini au premier lancement, session 30 jours.

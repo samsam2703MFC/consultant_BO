@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f3efe9">
+<meta name="theme-color" content="#faf7f2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Visite">
@@ -15,6 +15,32 @@
 <link rel="stylesheet" href="assets/ds/global.css">
 <link rel="stylesheet" href="assets/css/app.css">
 <link rel="stylesheet" href="assets/css/controles-photo.css">
+<script>
+// Mode incorporé (design system §9) : la page servie dans le cadre du module
+// Marketing (?embed=1 dans un iframe) masque son rail — celui du Marketing
+// est déjà à gauche — et garde embed=1 sur ses liens internes.
+(function () {
+  try {
+    var embed = new URLSearchParams(location.search).get('embed') === '1' && window.parent !== window;
+    if (!embed) { return; }
+    document.documentElement.classList.add('is-embedded');
+    var garde = function (a) {
+      var href = a.getAttribute('href');
+      if (!href || href.charAt(0) === '#' || /^(mailto|tel|javascript):/i.test(href)) { return; }
+      var url = new URL(href, location.href);
+      if (url.origin === location.origin && !url.searchParams.has('embed')) {
+        url.searchParams.set('embed', '1');
+        a.setAttribute('href', url.pathname + url.search + url.hash);
+      }
+    };
+    // Les écrans sont dessinés après le chargement : on garde le lien au moment du clic.
+    document.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (a) { garde(a); }
+    }, true);
+  } catch (e) { /* sans cadre : la page seule */ }
+})();
+</script>
 <script>
 // L'application tablette du consultant (10/10/2026) : ?app=consultant ouvre la fiche franchisé en plein écran,
 // installable sur l'écran d'accueil (manifeste dédié). Le cockpit reste le même ailleurs.
@@ -29,7 +55,7 @@
 </script>
 </head>
 <body>
-<div id="app"><div style="padding:60px;color:#666;font-size:13px;font-family:sans-serif">Chargement des données du réseau…</div></div>
+<div id="app"><div style="padding:60px;color:var(--muted);font-size:13px">Chargement des données du réseau…</div></div>
 <script src="assets/js/prospection.js"></script>
 <script src="assets/js/newsletter.js"></script>
 <script type="module" src="assets/js/app.js"></script>
