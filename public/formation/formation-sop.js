@@ -774,3 +774,175 @@ window.FormationSop = (function () {
     nbPartie
   };
 })();
+
+/* Manuel du réseau › Tablettes des magasins (lot 5 de la fusion, 06/11/2026 ; src/tablettes.php).
+ *
+ *   #/tablettes      UNE tablette par magasin, celle du Cockpit (sop/tablette.html) : le PIN du MAGASIN (6 chiffres)
+ *                    ouvre l'appareil, le PIN de l'employé signe ensuite. Ici : l'adresse de la tablette, chaque
+ *                    tablette (nom, boutique du panel, PIN, ⧉ copier adresse + PIN, ↻ nouveau PIN qui déconnecte ses
+ *                    appareils, appareils connectés, archiver), le bilan de la reprise des magasins du CRM.
+ *
+ * Un bloc à part, branché sur l'objet de formation-sop.js (entrée du menu, icône, écran, lectures, gestes) sans toucher
+ * à ses entrées ; styles dans sop/tablettes.css (chargée à la demande, classes du design system de ref.css).
+ */
+(function (FS) {
+  'use strict';
+  if (!FS) { return; }
+  let C = null;
+  const T = { liste: null, erreur: null, charge: false, occupe: false, nom: '', shop: '' };
+  const esc = v => (C ? C.esc(v) : String(v == null ? '' : v));
+  const jour = iso => iso ? new Date(iso).toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+  const heure = iso => iso ? new Date(iso).toLocaleString('fr-BE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+  const pinLisible = p => String(p || '').replace(/^(\d{3})(\d{3})$/, '$1 $2');
+  /** L'adresse de la tablette, à côté du module (formation/sop/tablette.html) ; ?shop= pré-choisit le magasin. */
+  const urlTablette = shop => new URL('sop/tablette.html' + (shop ? '?shop=' + encodeURIComponent(shop) : ''), location.href).href;
+  function toast(m) { const el = document.createElement('div'); el.className = 'sop-toast'; el.textContent = m; document.body.appendChild(el); setTimeout(() => el.remove(), 3000); }
+  function feuille() {
+    if (document.getElementById('tbg-css')) { return; }
+    const l = document.createElement('link'); l.id = 'tbg-css'; l.rel = 'stylesheet'; l.href = 'sop/tablettes.css'; document.head.appendChild(l);
+  }
+  function copier(texte, ok) {
+    const repli = () => {
+      const z = document.createElement('textarea'); z.value = texte; z.setAttribute('readonly', ''); z.style.position = 'fixed'; z.style.opacity = '0';
+      document.body.appendChild(z); z.select();
+      let r = false; try { r = document.execCommand('copy'); } catch (e) { r = false; }
+      z.remove(); toast(r ? ok : 'Copie impossible : sélectionner le texte à la main.');
+    };
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(texte).then(() => toast(ok), repli); } else { repli(); }
+  }
+
+  function charger(forcer) {
+    if ((T.liste && !forcer) || T.charge) { return; }
+    T.charge = true;
+    C.lire('/formation/tablettes', 30000).then(d => { T.liste = d; T.erreur = null; T.charge = false; C.rendre(true); },
+      er => { T.erreur = er.message; T.charge = false; C.rendre(true); });
+  }
+  async function ecrire(methode, chemin, corps, msg) {
+    T.occupe = true; C.rendre(true);
+    try { const r = await C.appel(methode, chemin, corps || {}); T.liste = r; if (msg) { toast(typeof msg === 'function' ? msg(r) : msg); } }
+    catch (x) { toast(x.message); }
+    T.occupe = false; C.rendre(true);
+  }
+
+  /* ── L'écran ── */
+  function bilanReprise(L) {
+    const b = L.reprise;
+    if (!b || !b.reprises || !b.reprises.length) { return ''; }
+    const gardes = b.reprises.filter(r => r.pinGarde), neufs = b.reprises.filter(r => !r.pinGarde);
+    return `<section class="card tbg-bilan"><div class="tbg-bilan__t"><h2>Reprise du Manuel du CRM</h2><span class="muted fm-small">le ${esc(jour(b.le))}</span></div>
+      <p class="tbg-ligne">${b.reprises.length} tablette(s) reprise(s) du CRM · <span class="badge badge--ok">PIN gardé</span> ${gardes.length}</p>
+      ${neufs.map(r => `<p class="tbg-ligne"><span class="tag-warn">Nouveau PIN</span> ${esc(r.nom)} <span class="muted">· ${esc(r.raison || '')} — à communiquer au magasin</span></p>`).join('')}</section>`;
+  }
+  function carteMagasin(m, boutiques) {
+    const opts = `<option value="">Aucune boutique…</option>${boutiques.map(b => `<option value="${esc(b.id)}"${b.id === m.shopId ? ' selected' : ''}>${esc(b.nom)}</option>`).join('')}`
+      + (m.shopId && !boutiques.some(b => b.id === m.shopId) ? `<option value="${esc(m.shopId)}" selected>Boutique ${esc(m.shopId)} (fermée ou inconnue)</option>` : '');
+    const tags = [m.reprisCrm ? '<span class="chip chip--neutral">Repris du CRM</span>' : '', !m.shopId ? '<span class="tag-warn" title="La tablette s’ouvre mais ne montre rien : choisir sa boutique du panel">Sans boutique</span>' : '',
+      m.memeBoutique ? '<span class="tag-warn" title="Une autre tablette active a la même boutique">Même boutique qu’une autre tablette</span>' : ''].join('');
+    const app = m.appareils.length ? m.appareils.map(a => `<div class="tbg-app"><span class="tbg-app__n">${esc(a.appareil)}</span><span class="tbg-app__d">ouvert le ${esc(jour(a.creeLe))}${a.vuLe ? ' · vu le ' + esc(heure(a.vuLe)) : ''}</span>
+      <button type="button" class="btn btn--danger btn--sm" data-tb="deco" data-id="${a.id}" ${T.occupe ? 'disabled' : ''}>Déconnecter</button></div>`).join('')
+      : '<p class="muted tbg-vide">Aucun appareil : taper le PIN sur la tablette du magasin.</p>';
+    return `<section class="card tbg-mag">
+      <div class="tbg-mag__id">
+        <label class="tbg-lab" for="tbg-nom-${m.id}">Tablette</label>
+        <input id="tbg-nom-${m.id}" class="tbg-nom" value="${esc(m.nom)}" data-tbch="nom" data-id="${m.id}" maxlength="120" ${T.occupe ? 'disabled' : ''}>
+        <label class="tbg-lab" for="tbg-shop-${m.id}">Boutique du panel</label>
+        <select id="tbg-shop-${m.id}" class="tbg-sel" data-tbch="shop" data-id="${m.id}" ${T.occupe ? 'disabled' : ''}>${opts}</select>
+        <div class="tbg-tags">${tags}</div>
+        <span class="sub">Créée le ${esc(jour(m.creeLe))}${m.creePar ? ' · ' + esc(m.creePar) : ''}${m.shopId ? ' · ' + m.aujourdhui + ' geste(s) sur la tablette aujourd’hui' : ''}</span>
+      </div>
+      <div class="tbg-mag__pin">
+        <span class="tbg-lab">PIN du magasin</span>
+        <span class="tbg-pin">${esc(pinLisible(m.pin))}</span>
+        <span class="sub">${m.pinLe ? 'depuis le ' + esc(jour(m.pinLe)) : ''}</span>
+        <div class="tbg-actions"><button type="button" class="btn btn--sm" data-tb="copier" data-id="${m.id}">⧉ Copier adresse + PIN</button>
+          <button type="button" class="btn btn--sm" data-tb="pin" data-id="${m.id}" ${T.occupe ? 'disabled' : ''}>↻ Nouveau PIN</button></div>
+      </div>
+      <div class="tbg-mag__apps"><span class="tbg-lab">Appareils connectés · ${m.appareils.length}</span>${app}</div>
+      <div class="tbg-mag__fin"><button type="button" class="btn btn--danger btn--sm" data-tb="archiver" data-id="${m.id}" ${T.occupe ? 'disabled' : ''}>Archiver</button></div>
+    </section>`;
+  }
+  function ecran() {
+    feuille();
+    const K = FS.groupe || 'Manuel du réseau';
+    if (C.S.tablette) { return { titre: 'Tablettes', kicker: K, corps: '<p class="muted">La gestion des tablettes ne se fait pas en mode tablette.</p>' }; }
+    const L = T.liste;
+    if (!L) { return { titre: 'Tablettes', kicker: K, corps: T.erreur ? `<p class="error">${esc(T.erreur)}</p>` : '<p class="muted">Lecture des tablettes…</p>' }; }
+    const actifs = L.magasins.filter(m => !m.archive), archives = L.magasins.filter(m => m.archive);
+    const url = urlTablette('');
+    let h = `<section class="card tbg-tete">
+      <div class="tbg-adr"><span class="tbg-lab">Adresse de la tablette</span><a class="tbg-url" href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>
+        <span class="sub">Une seule tablette par magasin : le PIN du magasin ouvre l’appareil une fois, puis chaque employé s’identifie avec son PIN du panel. L’onglet SOP de l’app Cuisine y mène.</span></div>
+      <div class="tbg-adr__act"><button type="button" class="btn btn--sm" data-tb="copierUrl">⧉ Copier l’adresse</button>${L.crmDisponible ? `<button type="button" class="btn btn--sm" data-tb="reprise" ${T.occupe ? 'disabled' : ''} title="Les magasins du Manuel du CRM qui ne sont pas encore ici (même PIN quand il est libre)">Reprendre les magasins du CRM</button>` : ''}</div>
+      <div class="toolbar tbg-ajout"><input class="tbg-nouv" placeholder="Nom de la tablette (ex. L’Atelier By Corbais)" maxlength="120" data-tbin="nom" value="${esc(T.nom)}">
+        <select class="tbg-sel" data-tbin="shop"><option value="">Boutique du panel…</option>${L.boutiques.map(b => `<option value="${esc(b.id)}"${b.id === T.shop ? ' selected' : ''}>${esc(b.nom)}</option>`).join('')}</select>
+        <button type="button" class="btn btn--primary" data-tb="creer" ${T.occupe ? 'disabled' : ''}>＋ Tablette de magasin</button></div>
+    </section>`;
+    h += bilanReprise(L);
+    h += `<div class="section-label tbg-sl"><span>Tablettes actives · ${actifs.length}</span><span class="tbg-sl__aside">PIN du magasin : ${L.essais.ip15min} erreurs par appareil en 15 min, ${L.essais.heure} par heure et ${L.essais.jour} par jour pour tout le réseau</span></div>`;
+    h += actifs.length ? `<div class="tbg-liste">${actifs.map(m => carteMagasin(m, L.boutiques)).join('')}</div>` : '<p class="muted">Aucune tablette active.</p>';
+    if (archives.length) {
+      h += `<div class="section-label">Archivées · ${archives.length}</div><div class="tbg-archives">${archives.map(m => `<span class="tbg-arch"><span>${esc(m.nom)}</span>${m.boutique ? `<span class="muted">· ${esc(m.boutique)}</span>` : ''}<button type="button" class="btn btn--sm" data-tb="reactiver" data-id="${m.id}" title="Réactiver : le PIN reste le même" ${T.occupe ? 'disabled' : ''}>↺ Réactiver</button></span>`).join('')}</div>`;
+    }
+    return { titre: 'Tablettes', kicker: K, corps: h, large: true };
+  }
+
+  /* ── Gestes ── */
+  function brancher(root) {
+    root.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-tb]');
+      if (!b || !T.liste) { return; }
+      const d = b.dataset, id = +d.id, m = T.liste.magasins.find(x => x.id === id);
+      switch (d.tb) {
+        case 'copierUrl': return copier(urlTablette(''), 'Adresse copiée');
+        case 'copier': return copier(`Tablette du magasin — ${m.nom}\n${urlTablette(m.shopId)}\nPIN du magasin : ${pinLisible(m.pin)}`, 'Adresse et PIN copiés');
+        case 'creer': {
+          const nom = T.nom.trim();
+          if (!nom) { return toast('Donner un nom à la tablette'); }
+          return ecrire('POST', '/formation/tablettes', { nom, shopId: T.shop || null }, () => { T.nom = ''; T.shop = ''; return 'Tablette créée, avec son PIN'; });
+        }
+        case 'pin':
+          if (!confirm(`Nouveau PIN pour « ${m.nom} » ? Ses ${m.appareils.length} appareil(s) connecté(s) seront déconnectés : il faudra taper le nouveau PIN sur la tablette.`)) { return; }
+          return ecrire('POST', '/formation/tablettes/' + id + '/pin', {}, r => 'Nouveau PIN · ' + (r.deconnectes || 0) + ' appareil(s) déconnecté(s)');
+        case 'deco':
+          if (!confirm('Déconnecter cet appareil ? Il devra retaper le PIN du magasin.')) { return; }
+          return ecrire('DELETE', '/formation/tablettes/appareils/' + id, null, 'Appareil déconnecté');
+        case 'archiver':
+          if (!confirm(`Archiver « ${m.nom} » ? Ses appareils sont déconnectés et son PIN n’ouvre plus rien.`)) { return; }
+          return ecrire('PATCH', '/formation/tablettes/' + id, { archive: true }, 'Tablette archivée');
+        case 'reactiver': return ecrire('PATCH', '/formation/tablettes/' + id, { archive: false }, 'Tablette réactivée (même PIN)');
+        case 'reprise': return ecrire('POST', '/formation/tablettes/reprise-crm', {}, r => r.bilan && r.bilan.reprises && r.bilan.reprises.length ? r.bilan.reprises.length + ' tablette(s) reprise(s) du CRM' : 'Rien de nouveau au CRM');
+      }
+    });
+    root.addEventListener('input', ev => {
+      const t = ev.target, k = t.getAttribute && t.getAttribute('data-tbin');
+      if (k === 'nom') { T.nom = t.value; }
+    });
+    root.addEventListener('change', ev => {
+      const t = ev.target;
+      const k = t.getAttribute && t.getAttribute('data-tbin');
+      if (k === 'shop') {
+        T.shop = t.value;
+        const b = T.liste && T.liste.boutiques.find(x => x.id === t.value);
+        if (b && !T.nom.trim()) { T.nom = 'L’Atelier By ' + b.nom; C.rendre(true); }
+        return;
+      }
+      const c = t.getAttribute && t.getAttribute('data-tbch');
+      if (!c || !T.liste) { return; }
+      const id = +t.dataset.id, m = T.liste.magasins.find(x => x.id === id);
+      if (c === 'nom') {
+        const v = t.value.trim();
+        if (!v) { t.value = m.nom; return toast('Le nom ne peut pas être vide'); }
+        if (v !== m.nom) { ecrire('PATCH', '/formation/tablettes/' + id, { nom: v }, 'Tablette renommée'); }
+      }
+      if (c === 'shop' && t.value !== (m.shopId || '')) { ecrire('PATCH', '/formation/tablettes/' + id, { shopId: t.value || null }, t.value ? 'Boutique reliée' : 'Boutique retirée'); }
+    });
+  }
+
+  // Branché sur formation-sop.js : une entrée de plus dans le groupe « Manuel du réseau », sans toucher aux autres.
+  FS.nav.push(['tablettes', 'Tablettes']);
+  FS.icones.tablettes = 'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2';
+  FS.ecrans.tablettes = () => ecran();
+  const initAvant = FS.init, apresAvant = FS.apres;
+  FS.init = function (ctx, root) { initAvant.call(FS, ctx, root); C = ctx; brancher(root); };
+  FS.apres = function (e, a) { apresAvant.call(FS, e, a); if (e === 'tablettes') { charger(false); } };
+})(window.FormationSop);
