@@ -1447,10 +1447,11 @@ class App {
         // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
       // Le module Formation (demande du 31/10/2026) : une application à part (formation/), au
       // design du module marketing — le référentiel RH du panel (postes, niveaux, compétences,
-      // formations, procédures) et le manuel opératoire en ligne, ouvert en mode tablette.
+      // formations, procédures) et le Manuel du réseau (standards, classeur, phases, postes). Le
+      // « Manuel en ligne » en mode tablette a été retiré au lot 6 de la fusion (06/11/2026).
       ['Formation', [
         ['ext:formation/', 'Module Formation ↗', 0],
-        ['ext:formation/?tablette=1#/manuel', 'Manuel opératoire ↗', 0],
+        ['ext:formation/#/rfclasseur', 'Manuel du réseau ↗', 0],
         // Le parcours de chacun vers le poste visé (31/10/2026) : ici pour l'instant, il passera dans l'application employé.
         ['ext:formation/parcours/', 'Parcours compétences ↗', 0]]],
       ['Administration', [
