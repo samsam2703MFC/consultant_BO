@@ -1,0 +1,433 @@
+{
+    "source": "Recopié du CRM (atelier-espace-candidat, app/crm/api/lib) le 06/11/2026 par tools/formation/guides_depuis_crm.php",
+    "sections": [
+        {
+            "cle": "admin",
+            "type": "points",
+            "fr": "Démarches administratives et légales",
+            "nl": "Administratieve en wettelijke stappen",
+            "intro_fr": "Avant d’ouvrir, votre société doit être en ordre auprès de la BCE, de la TVA et de l’AFSCA. Chaque point a une preuve à garder : votre consultant la vérifie à la journée test.",
+            "intro_nl": "Vóór de opening moet uw vennootschap in orde zijn bij de KBO, de btw en het FAVV. Bij elk punt hoort een bewijs om te bewaren: uw consulent controleert het op de testdag.",
+            "points": [
+                {
+                    "cle": "bce",
+                    "fr": "Inscription à la BCE (guichet d’entreprise)",
+                    "nl": "Inschrijving in de KBO (ondernemingsloket)",
+                    "qui": "franchise",
+                    "j": 90,
+                    "preuve_fr": "Extrait BCE",
+                    "preuve_nl": "Uittreksel KBO"
+                },
+                {
+                    "cle": "tva",
+                    "fr": "Numéro de TVA activé",
+                    "nl": "Btw-nummer geactiveerd",
+                    "qui": "franchise",
+                    "j": 85,
+                    "preuve_fr": "Attestation",
+                    "preuve_nl": "Attest"
+                },
+                {
+                    "cle": "banque",
+                    "fr": "Compte bancaire professionnel",
+                    "nl": "Professionele bankrekening",
+                    "qui": "franchise",
+                    "j": 90,
+                    "preuve_fr": "Attestation bancaire",
+                    "preuve_nl": "Bankattest"
+                },
+                {
+                    "cle": "secsoc",
+                    "fr": "Affiliation à un secrétariat social",
+                    "nl": "Aansluiting bij een sociaal secretariaat",
+                    "qui": "franchise",
+                    "j": 60,
+                    "preuve_fr": "Contrat",
+                    "preuve_nl": "Contract"
+                },
+                {
+                    "cle": "onss",
+                    "fr": "Inscription comme employeur à l’ONSS",
+                    "nl": "Inschrijving als werkgever bij de RSZ",
+                    "qui": "franchise",
+                    "j": 45,
+                    "preuve_fr": "Numéro ONSS",
+                    "preuve_nl": "RSZ-nummer"
+                },
+                {
+                    "cle": "afsca",
+                    "fr": "Enregistrement et autorisation AFSCA",
+                    "nl": "Registratie en toelating FAVV",
+                    "qui": "franchise",
+                    "j": 45,
+                    "preuve_fr": "Autorisation",
+                    "preuve_nl": "Toelating"
+                },
+                {
+                    "cle": "rc",
+                    "fr": "Assurance responsabilité civile exploitation",
+                    "nl": "Verzekering burgerlijke aansprakelijkheid uitbating",
+                    "qui": "franchise",
+                    "j": 30,
+                    "preuve_fr": "Police",
+                    "preuve_nl": "Polis"
+                },
+                {
+                    "cle": "incendie",
+                    "fr": "Assurance incendie et dégâts des eaux",
+                    "nl": "Brand- en waterschadeverzekering",
+                    "qui": "franchise",
+                    "j": 30,
+                    "preuve_fr": "Police",
+                    "preuve_nl": "Polis"
+                },
+                {
+                    "cle": "at",
+                    "fr": "Assurance accidents du travail",
+                    "nl": "Arbeidsongevallenverzekering",
+                    "qui": "franchise",
+                    "j": 30,
+                    "preuve_fr": "Police",
+                    "preuve_nl": "Polis"
+                },
+                {
+                    "cle": "energie",
+                    "fr": "Contrats d’énergie et compteurs au nom de la société",
+                    "nl": "Energiecontracten en meters op naam van de vennootschap",
+                    "qui": "franchise",
+                    "j": 60,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "dechets",
+                    "fr": "Contrat de collecte des déchets",
+                    "nl": "Contract voor afvalophaling",
+                    "qui": "franchise",
+                    "j": 30,
+                    "preuve_fr": "Contrat",
+                    "preuve_nl": "Contract"
+                },
+                {
+                    "cle": "incendie_eq",
+                    "fr": "Extincteurs et couverture anti-feu",
+                    "nl": "Brandblussers en blusdeken",
+                    "qui": "franchise",
+                    "j": 38,
+                    "preuve_fr": "Facture",
+                    "preuve_nl": "Factuur"
+                },
+                {
+                    "cle": "reglement",
+                    "fr": "Règlement de travail",
+                    "nl": "Arbeidsreglement",
+                    "qui": "franchise",
+                    "j": 20,
+                    "preuve_fr": "Règlement signé",
+                    "preuve_nl": "Getekend reglement"
+                },
+                {
+                    "cle": "repas",
+                    "fr": "Contrat chèques-repas (Monizze…)",
+                    "nl": "Contract maaltijdcheques (Monizze…)",
+                    "qui": "franchise",
+                    "j": 22,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "unisono",
+                    "fr": "Unisono (diffusion de musique)",
+                    "nl": "Unisono (muziek in de winkel)",
+                    "qui": "franchise",
+                    "j": 15,
+                    "preuve_fr": "Déclaration",
+                    "preuve_nl": "Aangifte"
+                },
+                {
+                    "cle": "affichage",
+                    "fr": "Affichages obligatoires (prix, allergènes, horaires, tabac)",
+                    "nl": "Verplichte aanplakking (prijzen, allergenen, openingsuren, tabak)",
+                    "qui": "ensemble",
+                    "j": 7,
+                    "preuve_fr": "Photo",
+                    "preuve_nl": "Foto"
+                }
+            ]
+        },
+        {
+            "cle": "equipe",
+            "type": "points",
+            "fr": "Recruter et former son équipe",
+            "nl": "Uw team aanwerven en opleiden",
+            "intro_fr": "L’ouverture attend que chaque collaborateur ait validé son plan de formation (guide des formations et compétences, plans par profil).",
+            "intro_nl": "De opening wacht tot elke medewerker zijn opleidingsplan gevalideerd heeft (gids voor opleidingen en competenties, plannen per profiel).",
+            "points": [
+                {
+                    "cle": "besoin",
+                    "fr": "Définir l’équipe : postes, profils et horaires",
+                    "nl": "Het team bepalen: functies, profielen en uurroosters",
+                    "qui": "ensemble",
+                    "j": 60,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "offres",
+                    "fr": "Publier les offres d’emploi",
+                    "nl": "De vacatures publiceren",
+                    "qui": "franchise",
+                    "j": 55,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "entretiens",
+                    "fr": "Séances de recrutement des collaborateurs",
+                    "nl": "Rekruteringsgesprekken met de medewerkers",
+                    "qui": "ensemble",
+                    "j": 52,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "contrats",
+                    "fr": "Contrats de travail signés",
+                    "nl": "Arbeidsovereenkomsten getekend",
+                    "qui": "franchise",
+                    "j": 30,
+                    "preuve_fr": "Contrats",
+                    "preuve_nl": "Contracten"
+                },
+                {
+                    "cle": "dimona",
+                    "fr": "Déclarations Dimona avant le premier jour",
+                    "nl": "Dimona-aangiftes vóór de eerste dag",
+                    "qui": "franchise",
+                    "j": 10,
+                    "preuve_fr": "Accusés Dimona",
+                    "preuve_nl": "Ontvangstbewijzen Dimona"
+                },
+                {
+                    "cle": "uniformes",
+                    "fr": "Commande des uniformes",
+                    "nl": "Bestelling van de uniformen",
+                    "qui": "atelier",
+                    "j": 33,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "plans",
+                    "fr": "Plan de formation de chaque collaborateur",
+                    "nl": "Opleidingsplan van elke medewerker",
+                    "qui": "formateurs",
+                    "j": 20,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "formation",
+                    "fr": "Formation des collaborateurs",
+                    "nl": "Opleiding van de medewerkers",
+                    "qui": "formateurs",
+                    "j": 10,
+                    "preuve_fr": "Plans validés",
+                    "preuve_nl": "Gevalideerde plannen"
+                }
+            ]
+        },
+        {
+            "cle": "commandes",
+            "type": "points",
+            "fr": "Commandes et stock de départ",
+            "nl": "Bestellingen en startvoorraad",
+            "intro_fr": "Les commandes à long délai partent les premières ; le stock de départ arrive les derniers jours.",
+            "intro_nl": "Bestellingen met een lange levertijd gaan eerst; de startvoorraad komt de laatste dagen.",
+            "points": [
+                {
+                    "cle": "froid",
+                    "fr": "Chambre froide : confirmation de commande",
+                    "nl": "Koelcel: bevestiging van de bestelling",
+                    "qui": "franchise",
+                    "j": 61,
+                    "preuve_fr": "Bon de commande",
+                    "preuve_nl": "Bestelbon"
+                },
+                {
+                    "cle": "cuisine",
+                    "fr": "Mobilier de cuisine : livraison",
+                    "nl": "Keukenmeubilair: levering",
+                    "qui": "franchise",
+                    "j": 46,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "tpe",
+                    "fr": "Terminal de paiement : commande",
+                    "nl": "Betaalterminal: bestelling",
+                    "qui": "franchise",
+                    "j": 47,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "caisse",
+                    "fr": "Caisse : livraison et installation",
+                    "nl": "Kassa: levering en installatie",
+                    "qui": "atelier",
+                    "j": 25,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "entretien",
+                    "fr": "Produits et matériel d’entretien",
+                    "nl": "Schoonmaakproducten en -materiaal",
+                    "qui": "franchise",
+                    "j": 18,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "materiel",
+                    "fr": "Petit matériel de cuisine",
+                    "nl": "Klein keukenmateriaal",
+                    "qui": "franchise",
+                    "j": 17,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "disposables",
+                    "fr": "Emballages et disposables",
+                    "nl": "Verpakkingen en wegwerpartikelen",
+                    "qui": "franchise",
+                    "j": 10,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "matieres",
+                    "fr": "Premier stock de matières premières",
+                    "nl": "Eerste voorraad grondstoffen",
+                    "qui": "franchise",
+                    "j": 5,
+                    "preuve_fr": "Bons de livraison",
+                    "preuve_nl": "Leveringsbonnen"
+                },
+                {
+                    "cle": "boissons",
+                    "fr": "Stock de départ des boissons",
+                    "nl": "Startvoorraad dranken",
+                    "qui": "franchise",
+                    "j": 5,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                }
+            ]
+        },
+        {
+            "cle": "ouverture",
+            "type": "points",
+            "fr": "Journée test, soft opening, ouverture",
+            "nl": "Testdag, soft opening, opening",
+            "intro_fr": "La journée test est aussi l’examen de fin de formation (bloc 10) : l’ouverture attend l’attestation de fin de formation.",
+            "intro_nl": "De testdag is ook het examen van einde opleiding (blok 10): de opening wacht op het attest van einde opleiding.",
+            "points": [
+                {
+                    "cle": "essais",
+                    "fr": "Essai de tous les appareils",
+                    "nl": "Test van alle toestellen",
+                    "qui": "ensemble",
+                    "j": 15,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "test",
+                    "fr": "Journée test et examen (bloc 10)",
+                    "nl": "Testdag en examen (blok 10)",
+                    "qui": "formateurs",
+                    "j": 7,
+                    "preuve_fr": "Fiche du bloc 10 signée",
+                    "preuve_nl": "Getekende fiche van blok 10"
+                },
+                {
+                    "cle": "soft",
+                    "fr": "Soft opening",
+                    "nl": "Soft opening",
+                    "qui": "ensemble",
+                    "j": 3,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "conformite",
+                    "fr": "Vérification de la conformité du Point de Vente",
+                    "nl": "Controle van de conformiteit van het Verkooppunt",
+                    "qui": "atelier",
+                    "j": 2,
+                    "preuve_fr": "Bordereau de contrôle",
+                    "preuve_nl": "Controleformulier"
+                },
+                {
+                    "cle": "ouvrir",
+                    "fr": "Ouverture du Point de Vente",
+                    "nl": "Opening van het Verkooppunt",
+                    "qui": "ensemble",
+                    "j": 0,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                }
+            ]
+        },
+        {
+            "cle": "contacts",
+            "type": "contacts",
+            "fr": "Contacts utiles",
+            "nl": "Nuttige contacten",
+            "intro_fr": "Votre consultant et vos formateurs sont repris ci-dessous ; gardez ce guide à portée de main.",
+            "intro_nl": "Uw consulent en uw opleiders staan hieronder; houd deze gids bij de hand.",
+            "points": [
+                {
+                    "cle": "qualite",
+                    "fr": "Service qualité du réseau",
+                    "nl": "Kwaliteitsdienst van het netwerk",
+                    "qui": "atelier",
+                    "j": null,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "informatique",
+                    "fr": "Support informatique (caisse, TF Buddy)",
+                    "nl": "Informaticasupport (kassa, TF Buddy)",
+                    "qui": "atelier",
+                    "j": null,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "architecte",
+                    "fr": "Architecte du réseau",
+                    "nl": "Architect van het netwerk",
+                    "qui": "atelier",
+                    "j": null,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                },
+                {
+                    "cle": "comptable",
+                    "fr": "Votre comptable",
+                    "nl": "Uw boekhouder",
+                    "qui": "franchise",
+                    "j": null,
+                    "preuve_fr": "",
+                    "preuve_nl": ""
+                }
+            ]
+        }
+    ]
+}

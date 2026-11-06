@@ -123,6 +123,7 @@ require __DIR__ . '/../../src/leviers.php';
 require __DIR__ . '/../../src/formation.php';
 require __DIR__ . '/../../src/sop.php';
 require __DIR__ . '/../../src/referentiel.php';
+require __DIR__ . '/../../src/referentiel_guides.php';
 require __DIR__ . '/../../src/parcours.php';
 $tCharge = microtime(true);
 
