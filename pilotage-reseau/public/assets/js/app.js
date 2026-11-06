@@ -1401,7 +1401,7 @@ class App {
       ['Produits', [
         ['catalogue', 'Catalogue', (this._pdDcs || {}).effacer || 0,
           ['anaprod', 'manque', 'prixvolume', 'analyse']],
-        ['planogramme', 'Comptoir · planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment']]]],
+        ['planogramme', 'Planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment']]]],
       // Les promotions (26/10/2026, maquette A de docs/maquettes/promotions-cockpit) : sorties du dashboard magasin, qui
       // ne fait plus que les lire. L'Édition (l'assistant du dashboard, le magasin au choix) et le Tableau d'analyse
       // (toutes les promotions de tous les magasins). Les badges, une fois lues : les brouillons à reprendre, les

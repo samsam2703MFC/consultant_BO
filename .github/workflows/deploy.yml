@@ -322,6 +322,11 @@ jobs:
   routes-api:
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    # Ce job n'extrait pas le dépôt : le dossier pilotage-reseau/ n'existe pas sur
+    # son runner. Il travaille donc depuis la racine de l'espace de travail.
+    defaults:
+      run:
+        working-directory: .
     steps:
       - name: Installer sshpass
         timeout-minutes: 4
