@@ -11,6 +11,14 @@
  *   #/sopcomp             compétences : réseau × compétence, magasin × personne, réglages de l'équipe, fil
  *   #/sopred              rédaction : langues à relire, compétence du panel, statut, nouvelle SOP
  *
+ * MANUEL DU RÉSEAU (fusion du 06/11/2026, src/referentiel.php) — le groupe de la barre latérale s'appelle désormais
+ * « Manuel du réseau » :
+ *   #/rfclasseur[/D5]     le classeur par domaine du référentiel v25 : sous-catégories, chaîne standard → formation →
+ *                         compétence → contrôle, trous ; reprise du Manuel opératoire du CRM
+ *   #/rfphase/<phase>     par phase (calculée) · #/rfposte[/P3/<phase>] par poste × phase (calculée)
+ *   #/sopcomp             compétences : correspondance C-… ↔ panel (un clic), puis l'onglet « Acquisition en magasin »
+ *   la fiche d'une SOP gagne le bloc « Classement » (sous-catégorie, phases, postes, compétences, formations, checklists)
+ *
  * La tablette du poste (lire pas à pas, quiz, « vu faire ») est une page à part : sop/tablette.html.
  */
 window.FormationSop = (function () {
@@ -28,7 +36,10 @@ window.FormationSop = (function () {
     liste: null, totaux: null, dossiers: [], erreur: null, charge: false,
     fiche: {}, archive: null, comp: null, compCharge: false, fil: null, magasins: null,
     shop: '', vue: 'deux', f: { poste: '', relire: false, valider: false, sansComp: false },
-    ed: null, edMeta: null, edErr: null, occupe: false, nouv: null
+    ed: null, edMeta: null, edErr: null, occupe: false, nouv: null,
+    // Manuel du réseau : référentiel, correspondance, classements en cours d'édition, sous-catégorie éditée, reprise du CRM
+    ref: null, refErr: null, refCharge: false, cor: null, corErr: null, corCharge: false, corF: 'propose', corBilan: null,
+    cl: {}, scEd: null, imp: null, domSel: 'D5'
   };
   try { D.shop = localStorage.getItem('fm.sop.shop') || ''; D.vue = localStorage.getItem('fm.sop.vue') || 'deux'; } catch (e) { /* stockage indisponible */ }
 
@@ -41,7 +52,10 @@ window.FormationSop = (function () {
 
   /* ── Pièces ── */
   const trad = s => ['fr', 'nl'].map(l => { const t = s.trad[l]; return `<span class="sop-lg ${t === 'a_relire' ? 'is-ar' : 'is-on'}" title="${l.toUpperCase()} · ${TRAD_NOM[t]}">${l.toUpperCase()}${t === 'a_relire' ? ' ·' : ''}</span>`; }).join(' ');
-  const comp = s => s.competence ? `<span class="sop-comp">${esc(s.competence.nom)}</span>` : '<span class="sop-comp is-sans">sans compétence du panel</span>';
+  // La compétence d'une SOP : ses codes C-… du Manuel du réseau ; à défaut l'ancienne compétence du panel (repli).
+  const codesC = s => (s.classement && s.classement.competences) || [];
+  const comp = s => codesC(s).length ? codesC(s).map(c => `<span class="sop-comp" title="code du référentiel v25">${esc(c)}</span>`).join(' ')
+    : s.competence ? `<span class="sop-comp" title="compétence du panel (ancienne règle)">${esc(s.competence.nom)}</span>` : '<span class="sop-comp is-sans">sans compétence</span>';
   const famNom = d => L((D.dossiers.find(x => x.id === d) || {}).nom);
   const pdf = (chemin, l) => `${C.API}${chemin}${chemin.includes('?') ? '&' : '?'}langue=${l}`;
   const heat = v => v == null ? '<span class="muted">—</span>' : `<span class="sop-heat" style="background:${v < 20 ? 'var(--chip)' : v < 40 ? '#E3EFE2' : v < 60 ? '#C6E0CA' : v < 80 ? '#86BF94' : 'var(--green)'};color:${v < 20 ? 'var(--muted)' : v < 60 ? '#24502f' : '#fff'}">${v} %</span>`;
@@ -50,22 +64,22 @@ window.FormationSop = (function () {
   function filtrer(l) {
     const q = String(C.S.f.sopq || '').trim().toLowerCase();
     return l.filter(s => (!D.f.poste || s.poste === D.f.poste) && (!D.f.relire || s.trad.fr === 'a_relire' || s.trad.nl === 'a_relire')
-      && (!D.f.valider || s.statut === 'a_valider') && (!D.f.sansComp || !s.competence)
-      && (!q || [s.titre.fr, s.titre.nl, s.code, s.objectif.fr, s.objectif.nl, s.competence && s.competence.nom].join(' ').toLowerCase().includes(q)));
+      && (!D.f.valider || s.statut === 'a_valider') && (!D.f.sansComp || (!s.competence && !codesC(s).length))
+      && (!q || [s.titre.fr, s.titre.nl, s.code, s.objectif.fr, s.objectif.nl, s.competence && s.competence.nom, codesC(s).join(' ')].join(' ').toLowerCase().includes(q)));
   }
   const attente = t => `<p class="muted">${esc(t)}</p>`;
   function erreurOuAttente() { return D.erreur ? `<p class="error">${esc(D.erreur)}</p>` : attente('Lecture des SOP…'); }
 
   /* ═══ Les SOP (liste) ═══ */
   function ecranListe() {
-    if (!D.liste) { return { titre: 'Les SOP du réseau', kicker: 'Standards (SOP)', corps: erreurOuAttente() }; }
+    if (!D.liste) { return { titre: 'Standards', kicker: K, corps: erreurOuAttente() }; }
     const T = D.totaux, l = filtrer(D.liste);
     const vus = D.liste.reduce((a, s) => a + s.progression.vu, 0), quiz = D.liste.reduce((a, s) => a + s.progression.quiz, 0);
     let h = `<div class="fm-kpis">
-      <a class="fm-kpi" href="#/sop"><span class="fm-kpi__n">${T.sops - T.aValider}</span><span class="fm-kpi__l">SOP en vigueur</span><span class="fm-kpi__s">+ ${T.aValider} à valider · ${T.etapes} étapes · FR et NL</span></a>
+      <a class="fm-kpi" href="#/sop"><span class="fm-kpi__n">${T.sops - T.aValider - (T.brouillons || 0)}</span><span class="fm-kpi__l">SOP en vigueur</span><span class="fm-kpi__s">+ ${T.aValider} à valider${T.brouillons ? ' · ' + T.brouillons + ' brouillon(s)' : ''} · ${T.etapes} étapes · FR et NL</span></a>
       <a class="fm-kpi" href="#/sopcomp"><span class="fm-kpi__n">${vus}</span><span class="fm-kpi__l">vues faire · réseau</span><span class="fm-kpi__s">${quiz} quiz réussis en attente de la responsable</span></a>
       <a class="fm-kpi" href="#/sopred"><span class="fm-kpi__n">${T.tradARelire}</span><span class="fm-kpi__l">traductions à relire</span><span class="fm-kpi__s">la langue d’origine fait foi</span></a>
-      <a class="fm-kpi" href="#/sopred"><span class="fm-kpi__n">${T.sops - T.sansCompetence} / ${T.sops}</span><span class="fm-kpi__l">rattachées à une compétence</span><span class="fm-kpi__s">compétences du panel</span></a></div>`;
+      <a class="fm-kpi" href="#/rfclasseur"><span class="fm-kpi__n">${D.liste.filter(s => codesC(s).length).length} / ${T.sops}</span><span class="fm-kpi__l">reliées à une compétence</span><span class="fm-kpi__s">codes C-… du référentiel v25</span></a></div>`;
     const f = (k, v, lib, on) => `<button type="button" class="filter${on ? ' is-on' : ''}" data-sa="filtre" data-k="${k}" data-v="${v}">${lib}</button>`;
     h += `<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher une SOP, une compétence…" data-input="sopq" value="${esc(C.S.f.sopq || '')}">
       ${f('poste', '', 'Tous les postes', !D.f.poste)}${POSTES.map(p => f('poste', p, POSTE_NOM[p], D.f.poste === p)).join('')}
@@ -78,12 +92,12 @@ window.FormationSop = (function () {
       h += `<div class="section-label">${esc(d.id)} · ${esc(L(d.nom))} · ${g.length} SOP</div><ul class="sop-cartes">${g.map(carte).join('')}</ul>`;
     });
     if (!l.length) { h += '<p class="muted">Aucune SOP ne correspond.</p>'; }
-    return { titre: 'Les SOP du réseau', kicker: 'Standards (SOP)', corps: h, large: true };
+    return { titre: 'Standards', kicker: K, corps: h, large: true };
   }
   function carte(s) {
     const p = s.progression;
     return `<li><a class="sop-carte${s.statut === 'a_valider' ? ' is-av' : ''}" href="#/sop/${esc(s.id)}">
-      <span class="sop-tags"><span class="chip chip--soft">${esc(s.type)}</span>${trad(s)}<span class="sop-lg">v${esc(s.version)}</span>${s.statut === 'a_valider' ? '<span class="chip chip--warn">À valider</span>' : ''}<span class="chip chip--mute">${esc(NOM_PARTIE[s.partie] || '')}</span></span>
+      <span class="sop-tags"><span class="chip chip--soft">${esc(s.type)}</span>${trad(s)}<span class="sop-lg">v${esc(s.version)}</span>${s.statut === 'a_valider' ? '<span class="chip chip--warn">À valider</span>' : ''}${s.statut === 'brouillon' ? '<span class="chip chip--mute">Brouillon</span>' : ''}${(phasesDe(s) || [s.partie]).map(p => `<span class="chip chip--mute">${esc(NOM_PARTIE[p] || '')}</span>`).join('')}${s.classement && s.classement.souscat ? `<span class="chip chip--mute" title="sous-catégorie du référentiel v25">${esc(s.classement.souscat)}</span>` : '<span class="chip chip--warn">à classer</span>'}</span>
       <strong>${esc(s.titre.fr)}</strong><span class="sop-ob">${esc(L(s.objectif))}</span><span>${comp(s)}</span>
       <span class="muted fm-small">${p.vu} vu(s) faire · ${p.quiz} quiz · ${p.lu} lu(s)${p.aRevoir ? ` · ${p.aRevoir} à revoir` : ''}</span>
       <span class="sop-pied"><span><b>${s.nbEtapes}</b> étapes</span>${s.nbPhotos ? `<span>📷 ${s.nbPhotos}</span>` : ''}<span>${esc(POSTE_NOM[s.poste] || s.poste)}</span><span class="sop-code">${esc(s.code || '')}</span></span></a></li>`;
@@ -92,9 +106,9 @@ window.FormationSop = (function () {
   /* ═══ Une SOP ═══ */
   function ecranFiche(id) {
     const s = D.fiche[id];
-    const fil = C.filAriane([['Standards (SOP)', '#/sop'], [s && !s.error ? s.titre.fr : id, null]]);
-    if (!s) { return { titre: 'SOP', kicker: 'Standards (SOP)', corps: fil + attente('Lecture de la SOP…') }; }
-    if (s.error) { return { titre: 'SOP', kicker: 'Standards (SOP)', corps: fil + `<p class="error">${esc(s.error)}</p>` }; }
+    const fil = C.filAriane([['Standards', '#/sop'], [s && !s.error ? s.titre.fr : id, null]]);
+    if (!s) { return { titre: 'SOP', kicker: K, corps: fil + attente('Lecture de la SOP…') }; }
+    if (s.error) { return { titre: 'SOP', kicker: K, corps: fil + `<p class="error">${esc(s.error)}</p>` }; }
     const c = D.archive && D.archive.id === id ? D.archive.contenu : s.contenu;
     const deux = D.vue === 'deux', l1 = D.vue === 'nl' ? 'nl' : 'fr';
     let etapes = deux ? `<div class="sop-bil" style="border-bottom:1px solid var(--line)"><span></span><span class="muted fm-small">Français · ${TRAD_NOM[s.trad.fr]}</span><span class="muted fm-small">Nederlands · ${TRAD_NOM[s.trad.nl]}</span><span></span></div>` : '';
@@ -112,7 +126,7 @@ window.FormationSop = (function () {
       <a class="filter" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'fr')}" target="_blank">PDF FR</a><a class="filter" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'nl')}" target="_blank">PDF NL</a>
       <a class="filter" href="${tabletteLien(s.poste)}" target="_blank" rel="noopener">Tablette du poste ↗</a>
       ${tablette() ? '' : `<a class="filter is-on" href="#/sop/${esc(s.id)}/editer" style="margin-left:auto">Modifier</a>`}</div></div>`;
-    const partie = `<p><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/${esc(s.partie)}">${esc(NOM_PARTIE[s.partie])}</a>${s.partieReglee || tablette() ? '' : ' <span class="muted fm-small">déduite du moment</span>'}</p>
+    const partie = phasesDe(s) ? `<p><span class="muted">Parties du manuel</span> ${phasesDe(s).map(p => `<a class="chip chip--accent" href="#/manuel/partie/${esc(p)}">${esc(NOM_PARTIE[p] || p)}</a>`).join(' ')} <span class="muted fm-small">les phases du classement</span></p>` : `<p><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/${esc(s.partie)}">${esc(NOM_PARTIE[s.partie])}</a>${s.partieReglee || tablette() ? '' : ' <span class="muted fm-small">déduite du moment</span>'}</p>
       ${tablette() ? '' : `<div class="fm-seg fm-seg--petit" role="group">${PARTIES.map(p => `<button type="button" data-sa="partie" data-id="${esc(s.id)}" data-v="${p[0]}"${p[0] === s.partie ? ' class="is-on"' : ''}>${esc(p[1])}</button>`).join('')}</div>${s.partieReglee ? ` <button type="button" class="filter fm-small" data-sa="partie" data-id="${esc(s.id)}" data-v="">↺ Partie déduite</button>` : ''}`}`;
     const infos = `<section class="card"><h2>La SOP</h2><dl class="sop-dl">
       <dt>Code</dt><dd>${esc(s.code || '—')} · ${esc(s.dossier)} ${esc(famNom(s.dossier))}</dd><dt>Poste</dt><dd>${esc(POSTE_NOM[s.poste] || s.poste)}${s.moment ? ' · ' + esc(s.moment) : ''}</dd>
@@ -133,14 +147,14 @@ window.FormationSop = (function () {
       ${(c.remarques || []).map(x => `<div class="sop-ligne"><span class="chip chip--warn">à confirmer</span><div class="sop-ligne__x fm-small">${esc(x)}</div></div>`).join('')}</section>` : '';
     const arch = D.archive && D.archive.id === id ? C.bandeau(`Version archivée v${esc(D.archive.version)} (${esc(dth(D.archive.publieLe))}) — <button type="button" class="filter fm-small" data-sa="archive" data-id="${esc(id)}" data-v="">Revenir à la version en vigueur</button>`, 'warn') : '';
     const corps = fil + `<p class="muted">${trad(s)} <span class="sop-lg is-on">v${esc(D.archive && D.archive.id === id ? D.archive.version : s.version)}</span> ${esc(L(s.objectif))}</p>` + arch + outils +
-      `<div class="sop-deux"><section class="card">${etapes || '<p class="muted">Aucune étape.</p>'}</section><div>${infos}${eq}${crit}${quiz}${versions}${rel}</div></div>`;
-    return { titre: s.titre.fr, kicker: 'Standards (SOP) · ' + (s.code || ''), corps, large: true };
+      `<div class="sop-deux"><section class="card">${etapes || '<p class="muted">Aucune étape.</p>'}</section><div>${infos}${carteClassement(s)}${eq}${crit}${quiz}${versions}${rel}</div></div>`;
+    return { titre: s.titre.fr, kicker: K + ' · ' + (s.code || ''), corps, large: true };
   }
 
   /* ═══ Compétences ═══ */
   function ecranCompetences() {
     const X = D.comp;
-    if (!X) { return { titre: 'Compétences et SOP', kicker: 'Standards (SOP)', corps: attente('Lecture des compétences…') }; }
+    if (!X) { return { titre: 'Compétences et SOP', kicker: K, corps: attente('Lecture des compétences…') }; }
     const comps = X.competences;
     let h = X.panel.indispo ? C.bandeau('Compétences du panel : ' + esc(X.panel.motif || 'indisponibles') + (X.panel.liste.length ? ' — ' + X.panel.liste.length + ' gardées de la dernière lecture.' : '') + ' Les SOP se rattachent dans Rédaction et versions.', 'warn')
       : `<p class="muted fm-small">${X.panel.liste.length} compétences lues au panel (${esc(X.panel.source)}) · <button type="button" class="filter fm-small" data-sa="relirePanel">Relire le panel</button></p>`;
@@ -164,12 +178,12 @@ window.FormationSop = (function () {
           <select class="fm-select" data-sch="langue" data-id="${p.id}" style="width:auto"><option value="fr" ${p.langue === 'fr' ? 'selected' : ''}>FR</option><option value="nl" ${p.langue === 'nl' ? 'selected' : ''}>NL</option></select></div>`).join('') || '<p class="muted">Équipe introuvable au panel pour ce magasin.</p>'}</section></div>
         <section class="card"><h2>Le fil · 14 jours</h2>${(D.fil || []).map(f => `<div class="sop-ligne"><span class="sop-ligne__d">${esc(dt(f.le))}</span><div class="sop-ligne__x"><b>${esc(f.nom)}</b> · ${esc(f.titre)}<small>${f.type === 'vu' ? 'vu faire par ' + esc(f.par || '') : f.type === 'quiz' ? 'quiz réussi' : 'lue en entier'}</small></div></div>`).join('') || '<p class="muted">Rien ces 14 derniers jours.</p>'}</section></div>`;
     }
-    return { titre: 'Compétences et SOP', kicker: 'Standards (SOP)', corps: h, large: true };
+    return { titre: 'Compétences et SOP', kicker: K, corps: h, large: true };
   }
 
   /* ═══ Rédaction et versions ═══ */
   function ecranRedaction() {
-    if (!D.liste) { return { titre: 'Rédaction et versions', kicker: 'Standards (SOP)', corps: erreurOuAttente() }; }
+    if (!D.liste) { return { titre: 'Rédaction et versions', kicker: K, corps: erreurOuAttente() }; }
     const liste = (D.comp && D.comp.panel.liste) || [];
     const opts = s => `<option value="">— aucune —</option>${liste.map(c => `<option value="${esc(c.id || '')}|${esc(c.nom)}" ${s.competence && s.competence.nom === c.nom ? 'selected' : ''}>${esc((c.categorie ? c.categorie + ' › ' : '') + c.nom)}</option>`).join('')}
       ${s.competence && !liste.some(c => c.nom === s.competence.nom) ? `<option value="${esc(s.competence.id || '')}|${esc(s.competence.nom)}" selected>${esc(s.competence.nom)} (hors liste)</option>` : ''}<option value="*">Autre…</option>`;
@@ -187,15 +201,15 @@ window.FormationSop = (function () {
         <input class="sop-in" style="grid-column:span 2" placeholder="Titre FR" data-sin="nouv.fr" value="${esc(N.fr)}"><input class="sop-in" style="grid-column:span 2" placeholder="Titel NL" data-sin="nouv.nl" value="${esc(N.nl)}"></div>
         <p style="margin-top:10px"><button type="button" class="filter is-on" data-sa="creer">Créer (à valider)</button> <button type="button" class="filter" data-sa="annulerNouv">Annuler</button></p></section>`;
     }
-    h += `<section class="card table-card"><div class="table-scroll"><table><thead><tr><th>Famille</th><th>SOP</th><th>FR</th><th>NL</th><th>Version</th><th class="num">Étapes</th><th>Compétence du panel</th><th>Partie</th><th>Statut</th><th></th></tr></thead><tbody>
+    h += `<section class="card table-card"><div class="table-scroll"><table><thead><tr><th>Famille</th><th>SOP</th><th>FR</th><th>NL</th><th>Version</th><th class="num">Étapes</th><th title="la compétence du panel rattachée à la SOP : gardée en repli quand aucun code C-… n’est relié au panel">Compétence du panel (repli)</th><th>Partie</th><th>Statut</th><th></th></tr></thead><tbody>
       ${filtrer(D.liste).map(s => `<tr><td class="fm-small">${esc(s.dossier)} · ${esc(famNom(s.dossier))}</td><td><a href="#/sop/${esc(s.id)}"><b>${esc(s.titre.fr)}</b></a><br><span class="muted fm-small">${esc(s.code || '')} · ${esc(s.titre.nl)}</span></td>
         <td>${tr(s, 'fr')}</td><td>${tr(s, 'nl')}</td><td><span class="sop-lg is-on">v${esc(s.version)}</span><br><span class="muted fm-small">${esc(dt(s.majLe))}</span></td><td class="num">${s.nbEtapes}</td>
         <td><select class="fm-select" style="max-width:240px" data-sch="comp" data-id="${esc(s.id)}">${opts(s)}</select></td>
         <td class="fm-small">${esc(NOM_PARTIE[s.partie])}${s.partieReglee ? '' : '<br><span class="muted">déduite</span>'}</td>
-        <td><select class="fm-select" style="width:auto" data-sch="statut" data-id="${esc(s.id)}"><option value="publiee" ${s.statut === 'publiee' ? 'selected' : ''}>publiée</option><option value="a_valider" ${s.statut === 'a_valider' ? 'selected' : ''}>à valider</option></select></td>
+        <td><select class="fm-select" style="width:auto" data-sch="statut" data-id="${esc(s.id)}"><option value="publiee" ${s.statut === 'publiee' ? 'selected' : ''}>publiée</option><option value="a_valider" ${s.statut === 'a_valider' ? 'selected' : ''}>à valider</option><option value="brouillon" ${s.statut === 'brouillon' ? 'selected' : ''}>brouillon</option></select></td>
         <td><a class="filter fm-small" href="#/sop/${esc(s.id)}/editer">Modifier</a></td></tr>`).join('')}</tbody></table></div></section>
       <p class="muted fm-small">Reprise du Drive du 05/11/2026 (44 fichiers → 25 SOP) : corrections et points à confirmer dans <code>data/formation/REPRISE.md</code> et sur chaque fiche (« Relevé à la reprise »).</p>`;
-    return { titre: 'Rédaction et versions', kicker: 'Standards (SOP)', corps: h, large: true };
+    return { titre: 'Rédaction et versions', kicker: K, corps: h, large: true };
   }
 
   /* ═══ Éditeur ═══ */
@@ -203,9 +217,9 @@ window.FormationSop = (function () {
   function setP(o, p, v) { const k = p.split('.'); const last = k.pop(); const t = k.reduce((a, x) => a[x], o); t[last] = v; }
   const champ = (p, ph, area) => { const v = get(D.ed, p) || ''; return area ? `<textarea class="sop-in${v ? '' : ' is-vide'}" data-sin="ed.${p}" placeholder="${esc(ph)}">${esc(v)}</textarea>` : `<input class="sop-in${v ? '' : ' is-vide'}" data-sin="ed.${p}" placeholder="${esc(ph)}" value="${esc(v)}">`; };
   function ecranEditer(id) {
-    const fil = C.filAriane([['Standards (SOP)', '#/sop'], [D.edMeta ? D.edMeta.titre.fr : id, '#/sop/' + id], ['Modifier', null]]);
-    if (tablette()) { return { titre: 'Modifier', kicker: 'Standards (SOP)', corps: fil + '<p class="muted">La rédaction ne se fait pas en mode tablette.</p>' }; }
-    if (!D.ed || !D.edMeta || D.edMeta.id !== id) { return { titre: 'Modifier', kicker: 'Standards (SOP)', corps: fil + attente('Lecture de la SOP…') }; }
+    const fil = C.filAriane([['Standards', '#/sop'], [D.edMeta ? D.edMeta.titre.fr : id, '#/sop/' + id], ['Modifier', null]]);
+    if (tablette()) { return { titre: 'Modifier', kicker: K, corps: fil + '<p class="muted">La rédaction ne se fait pas en mode tablette.</p>' }; }
+    if (!D.ed || !D.edMeta || D.edMeta.id !== id) { return { titre: 'Modifier', kicker: K, corps: fil + attente('Lecture de la SOP…') }; }
     const s = D.edMeta, c = D.ed;
     const bi = (p, lib, area) => `<div style="display:grid;grid-template-columns:120px 1fr 1fr;gap:8px;align-items:start;margin-bottom:8px"><span class="muted" style="padding-top:6px">${lib}</span>${champ(p + '.fr', 'FR', area)}${champ(p + '.nl', 'NL', area)}</div>`;
     const secs = c.sections.map((sec, si) => `<div class="sop-ed-sec"><div class="sop-ed-sec__h">${champ('sections.' + si + '.titre.fr', 'Titre de la section (FR)')}${champ('sections.' + si + '.titre.nl', 'Titel van de sectie (NL)')}
@@ -232,11 +246,13 @@ window.FormationSop = (function () {
         <label class="fm-small"><input type="radio" name="sopreval" data-sch="reval" value="0" ${!D.edMeta.revalider ? 'checked' : ''}> Précision : ceux qui l’ont validée restent validés</label>
         <label class="fm-small"><input type="radio" name="sopreval" data-sch="reval" value="1" ${D.edMeta.revalider ? 'checked' : ''}> Le geste change : ils repassent « à revoir »</label>
         ${trSel('fr')}${trSel('nl')}<span style="flex:1"></span><a class="filter" href="#/sop/${esc(s.id)}">Annuler</a><button type="button" class="filter is-on" data-sa="publier" ${D.occupe ? 'disabled' : ''}>Publier la v${esc(pv)}</button></div>`;
-    return { titre: 'Modifier · ' + s.titre.fr, kicker: 'Standards (SOP)', corps, large: true };
+    return { titre: 'Modifier · ' + s.titre.fr, kicker: K, corps, large: true };
   }
 
   /* ═══ Le Manuel opératoire : les SOP de chaque partie ═══ */
-  function dePartie(cle) { return D.liste ? D.liste.filter(s => s.partie === cle) : null; }
+  /** Les SOP d'une partie du manuel : ses phases du Manuel du réseau quand elles sont posées, sinon la partie réglée ou déduite. */
+  const phasesDe = s => s.classement && s.classement.phases && s.classement.phases.length ? s.classement.phases : null;
+  function dePartie(cle) { return D.liste ? D.liste.filter(s => s.statut !== 'brouillon' && (phasesDe(s) ? phasesDe(s).includes(cle) : s.partie === cle)) : null; }
   function sectionPartie(cle) {
     const l = dePartie(cle);
     let h = `<div class="section-label">Standards (SOP) · ${l ? C.n(l.length) : '…'}</div>`;
@@ -251,6 +267,343 @@ window.FormationSop = (function () {
     return h + (ouvert ? '</ul>' : '');
   }
   function nbPartie(cle) { const l = dePartie(cle); return l ? l.length : null; }
+
+  /* ═══ Manuel du réseau : le référentiel commun (src/referentiel.php, fusion du 06/11/2026) ═══
+   *
+   * Une seule base, trois lectures : le Classeur (domaines D1–D8 du v25 et leurs sous-catégories, la chaîne
+   * standard → formation → compétence → contrôle, les trous), Par phase et Par poste (calculées, rien n'y est saisi).
+   * La fiche d'une SOP gagne son bloc « Classement » ; l'écran Compétences tranche la correspondance C-… ↔ panel.
+   */
+  const K = 'Manuel du réseau';
+  const PHASE_NOM = { preouverture: 'Pré-ouverture', ouverture: 'Ouverture', operationnel: 'Opérationnel', formation: 'Formation continue' };
+  const PHASES = Object.keys(PHASE_NOM);
+  const ST_STD = { a_valider: 'À valider', brouillon: 'Brouillon' };
+  const ETAT_COR = { valide: 'Validée', certain: 'Certaine', propose: 'À trancher', aucun: 'Aucune' };
+  const CL_LISTES = ['competences', 'formations', 'checklists'];
+  const CL_NOM = { competences: 'Compétences', formations: 'Formations', checklists: 'Checklists de contrôle' };
+
+  /** L'index du référentiel lu (domaines, sous-catégories, standards, formations, compétences), refait à chaque lecture. */
+  function rx() {
+    const R = D.ref;
+    if (!R) { return null; }
+    if (D._rx && D._rx.R === R) { return D._rx; }
+    const x = { R, dom: {}, sc: {}, std: {}, parSc: {}, fo: {}, comp: {}, poste: {}, sansStd: new Set(R.manques.competencesSansStandard), nd: new Set(R.competencesNonDecrites || []) };
+    R.domaines.forEach(d => d.souscats.forEach(s => { x.sc[s.cle] = Object.assign({ domaine: d.code }, s); x.parSc[s.cle] = []; }));
+    R.domaines.forEach(d => { x.dom[d.code] = d; });
+    R.standards.forEach(s => { x.std[s.id] = s; if (s.souscat && x.parSc[s.souscat]) { x.parSc[s.souscat].push(s); } });
+    R.formations.forEach(f => { x.fo[f.code] = f; });
+    R.competences.forEach(c => { x.comp[c.code] = c; });
+    R.postes.forEach(p => { x.poste[p.code] = p; });
+    D._rx = x;
+    return x;
+  }
+  const uniq = l => [...new Set(l)];
+  const plus = (...ls) => uniq([].concat(...ls));
+  const rcode = (c, titre, cls) => `<span class="rf-code${cls ? ' ' + cls : ''}"${titre ? ` title="${esc(titre)}"` : ''}>${esc(c)}</span>`;
+  const rfFo = (X, l) => l.map(c => rcode(c, (X.fo[c] || {}).fr)).join(' ');
+  const rfComp = (X, l) => l.map(c => X.nd.has(c) ? rcode(c, 'Citée par le v25, absente de sa feuille des compétences', 'is-nd')
+    : rcode(c, X.comp[c] ? X.comp[c].fr + (X.sansStd.has(c) ? ' — aucun standard ne la prouve encore' : '') : '', X.sansStd.has(c) ? 'is-trou' : '')).join(' ');
+  const rfChk = l => l.map(c => rcode(c)).join(' ');
+  const trou = t => `<span class="tag-warn">${esc(t)}</span>`;
+  const rfPhases = l => l.map(p => `<span class="chip chip--neutral">${esc(PHASE_NOM[p] || p)}</span>`).join(' ');
+  const rfStatut = s => ST_STD[s.statut] ? (s.statut === 'brouillon' ? `<span class="chip chip--neutral">${ST_STD[s.statut]}</span>` : trou(ST_STD[s.statut])) : '';
+  const kpi = (v, l, note) => `<div class="kpi"><div class="kpi__value">${esc(v)}</div><div class="kpi__label">${esc(l)}</div>${note ? `<div class="kpi__note">${esc(note)}</div>` : ''}</div>`;
+  const lienStd = s => `<a class="rf-std" href="#/sop/${esc(s.id)}">${s.code ? rcode(s.code) + ' ' : ''}<span>${esc(s.fr)}</span></a>`;
+  function refAttente(titre) {
+    return { titre, kicker: K, corps: D.refErr ? `<p class="error">${esc(D.refErr)}</p>` : attente('Lecture du référentiel…'), large: true };
+  }
+  /** Ce qu'un domaine réunit : ses sous-catégories et les standards qui y sont rangés. */
+  function contenuDomaine(X, code) {
+    const d = X.dom[code], stds = [].concat(...d.souscats.map(s => X.parSc[s.cle] || []));
+    return { d, stds,
+      fo: plus(...d.souscats.map(s => s.formations), ...stds.map(s => s.formations)),
+      comp: plus(...d.souscats.map(s => s.competences), ...stds.map(s => s.competences)),
+      chk: plus(...d.souscats.map(s => s.checklists), ...stds.map(s => s.checklists)) };
+  }
+
+  /* ── Le Classeur ── */
+  function ecranClasseur() {
+    const X = rx();
+    if (!X) { return refAttente('Classeur'); }
+    const R = X.R, a0 = C.S.route.a[0];
+    const dom = X.dom[a0] ? a0 : (X.dom[D.domSel] ? D.domSel : 'D5');
+    D.domSel = dom;
+    const scVides = Object.keys(X.parSc).filter(k => !X.parSc[k].length).length;
+    let h = `<div class="toolbar rf-barre"><p class="muted">Les 8 domaines du référentiel v25. Dans chaque sous-catégorie, la même chaîne : standard → formation → compétence → contrôle.</p>
+      <span class="rf-sp"></span><button type="button" class="btn" data-sa="rfImporter" ${D.occupe ? 'disabled' : ''} title="Les procédures du Manuel opératoire du CRM deviennent des standards en brouillon (sauf AC-01, AC-02, AC-03)">Reprendre le Manuel du CRM</button></div>`;
+    if (D.imp) {
+      const I = D.imp;
+      h += C.bandeau(!I.disponible ? esc(I.message) : `Reprise du Manuel du CRM : ${I.reprises.length} procédure(s) reprise(s) en brouillon, ${I.dejaLa.length} déjà là, ${I.ignorees.length} ignorée(s)`
+        + (I.photosNonReprises ? `, ${I.photosNonReprises} photo(s) restée(s) dans le CRM` : '') + '.' + (I.ignorees.length ? ' Ignorées : ' + I.ignorees.map(x => esc(x.code + ' (' + x.raison + ')')).join(' · ') : ''), I.disponible ? '' : 'warn');
+    }
+    h += `<section class="card rf-kpis"><div class="kpi-row">
+      ${kpi(`${R.standards.length - R.manques.standardsSansSouscat.length} / ${R.standards.length}`, 'standards classés', R.manques.standardsSansSouscat.length ? R.manques.standardsSansSouscat.length + ' à classer' : 'tous rangés')}
+      ${kpi(`${R.competences.length - R.manques.competencesSansStandard.length} / ${R.competences.length}`, 'compétences prouvées', R.manques.competencesSansStandard.length + ' sans standard')}
+      ${kpi(R.manques.standardsSansCompetence.length, 'standards sans compétence', 'rien à valider au « vu faire »')}
+      ${kpi(`${Object.keys(X.sc).length - scVides} / ${Object.keys(X.sc).length}`, 'sous-catégories couvertes', scVides + ' sans standard')}</div></section>`;
+    h += '<div class="rf-doms">' + R.domaines.map(d => {
+      const c = contenuDomaine(X, d.code);
+      const n = (v, l) => `<span class="rf-n"><span class="rf-n__v">${v}</span><span class="rf-n__l">${l}</span></span>`;
+      return `<a class="rf-dom${d.code === dom ? ' is-on' : ''}" href="#/rfclasseur/${esc(d.code)}"><span class="rf-dom__k">${esc(d.code)} · ${d.souscats.length} sous-catégories</span>
+        <span class="rf-dom__t">${esc(d.fr)}</span><span class="rf-dom__nl">${esc(d.nl || '')}</span>
+        <span class="rf-dom__ns">${n(c.stds.length, 'standards')}${n(c.fo.length, 'FO')}${n(c.comp.length, 'comp.')}${n(c.chk.length, 'chk')}</span></a>`;
+    }).join('') + '</div>';
+    const c = contenuDomaine(X, dom);
+    h += `<section class="card table-card"><div class="rf-tete"><h2>${esc(dom)} · ${esc(c.d.fr)}</h2><span class="muted fm-small">${c.d.souscats.length} sous-catégories · ${c.stds.length} standards · ${c.fo.length} formations · ${c.comp.length} compétences · ${c.chk.length} checklists</span></div>
+      <div class="table-scroll"><table class="rf-table"><thead><tr><th style="width:18%">Sous-catégorie</th><th style="width:27%">Standards</th><th>Formations</th><th>Compétences</th><th>Checklists</th><th>Phases</th></tr></thead><tbody>
+      ${c.d.souscats.map(s => ligneSouscat(X, s)).join('')}</tbody></table></div>
+      <p class="muted fm-small rf-legende">${rcode('C-…', '', 'is-trou')} compétence qu’aucun standard ne prouve encore · ${rcode('C-…', '', 'is-nd')} code cité par le v25 mais absent de sa feuille des compétences</p></section>`;
+    h += chaineDomaine(X, c);
+    const aClasser = R.manques.standardsSansSouscat.map(id => X.std[id]).filter(Boolean);
+    if (aClasser.length) {
+      h += `<section class="card table-card"><h2>Standards à classer · ${aClasser.length}</h2><p class="muted fm-small">sans sous-catégorie : ouvrir la fiche, bloc « Classement »</p>
+        <ul class="rf-liste">${aClasser.map(s => `<li>${lienStd(s)} ${rfStatut(s)}</li>`).join('')}</ul></section>`;
+    }
+    return { titre: 'Classeur', kicker: K, corps: h, large: true };
+  }
+  function ligneSouscat(X, s) {
+    const stds = X.parSc[s.cle] || [];
+    const fo = plus(s.formations, ...stds.map(x => x.formations)), comp = plus(s.competences, ...stds.map(x => x.competences));
+    const chk = plus(s.checklists, ...stds.map(x => x.checklists)), ph = plus(...stds.map(x => x.phases)).sort((a, b) => PHASES.indexOf(a) - PHASES.indexOf(b));
+    const E = D.scEd && D.scEd.cle === s.cle ? D.scEd : null;
+    const tete = E ? `<div class="rf-scform"><label class="rf-lab">Libellé NL<input class="rf-in" data-sin="scEd.nl" value="${esc(E.nl)}"></label>
+        <label class="rf-lab">Description<textarea class="rf-in" rows="3" data-sin="scEd.description">${esc(E.description)}</textarea></label>
+        ${E.err ? `<p class="error">${esc(E.err)}</p>` : ''}<span class="rf-actions"><button type="button" class="btn btn--sm btn--primary" data-sa="scSave" ${D.occupe ? 'disabled' : ''}>Enregistrer</button><button type="button" class="btn btn--sm btn--ghost" data-sa="scAnnuler">Annuler</button></span></div>`
+      : `<span class="rf-sc">${esc(s.cle)} · ${esc(s.fr)}</span><span class="sub">${esc(s.nl || '—')}${s.nlRelu ? '' : ' · NL à relire'}</span>
+        ${s.description ? `<span class="sub" title="${esc(s.description)}">${esc(s.description.length > 90 ? s.description.slice(0, 89) + '…' : s.description)}</span>` : ''}
+        ${tablette() ? '' : `<button type="button" class="linklike" data-sa="scEd" data-v="${esc(s.cle)}">Modifier</button>`}`;
+    return `<tr><td>${tete}</td><td>${stds.length ? stds.map(x => `<div class="rf-ligne">${lienStd(x)} ${rfStatut(x)}</div>`).join('') : trou('aucun standard')}</td>
+      <td>${rfFo(X, fo) || '<span class="muted">—</span>'}</td><td>${rfComp(X, comp) || '<span class="muted">—</span>'}</td><td>${rfChk(chk) || '<span class="muted">—</span>'}</td>
+      <td>${rfPhases(ph) || '<span class="muted">—</span>'}</td></tr>`;
+  }
+  function chaineDomaine(X, c) {
+    if (!c.stds.length) { return `<section class="card"><h2>La chaîne de chaque standard</h2><p class="muted">Aucun standard rangé dans ce domaine.</p></section>`; }
+    const panel = code => { const k = X.comp[code]; if (!k) { return ''; } const p = k.panel;
+      return p.etat === 'valide' || p.etat === 'certain' ? `<span class="sub">panel : ${esc(p.nom)}${p.etat === 'certain' ? ' (proposée)' : ''}</span>` : `<span class="sub">${p.etat === 'propose' ? 'panel : à trancher' : 'panel : aucune'}</span>`; };
+    return `<section class="card table-card"><h2>La chaîne de chaque standard · ${c.stds.length}</h2><div class="table-scroll"><table class="rf-table rf-chaine"><thead><tr><th style="width:34%">Standard</th><th class="rf-fl"></th><th>Formation</th><th class="rf-fl"></th><th style="width:26%">Compétence</th><th class="rf-fl"></th><th>Contrôle</th></tr></thead><tbody>
+      ${c.stds.map(s => `<tr><td>${lienStd(s)} ${rfStatut(s)}<span class="sub">${esc(X.sc[s.souscat] ? X.sc[s.souscat].fr : '')} · ${s.postes.length ? esc(s.postes.join(', ')) : 'postes à poser'}</span></td>
+        <td class="rf-fl">→</td><td>${s.formations.length ? rfFo(X, s.formations) : trou('à relier')}</td>
+        <td class="rf-fl">→</td><td>${s.competences.length ? s.competences.map(k => `<div>${rfComp(X, [k])}${panel(k)}</div>`).join('') : trou('à relier')}</td>
+        <td class="rf-fl">→</td><td>${s.checklists.length ? rfChk(s.checklists) : trou('à relier')}</td></tr>`).join('')}</tbody></table></div></section>`;
+  }
+
+  /* ── Par phase : calculée depuis les étiquettes des standards ── */
+  function ecranParPhase() {
+    const X = rx();
+    if (!X) { return refAttente('Par phase'); }
+    const R = X.R, a0 = C.S.route.a[0], ph = PHASE_NOM[a0] ? a0 : 'preouverture';
+    const parPh = p => R.standards.filter(s => s.phases.includes(p));
+    let h = `<div class="page-tabs" role="tablist">${PHASES.map(p => `<a class="page-tabs__tab${p === ph ? ' is-on' : ''}" href="#/rfphase/${p}" role="tab">${esc(PHASE_NOM[p])} · ${parPh(p).length}</a>`).join('')}</div>`;
+    const stds = parPh(ph);
+    const foStd = plus(...stds.map(s => s.formations)), foPart = R.formations.filter(f => f.partie === ph).map(f => f.code);
+    const fo = plus(foStd, foPart).sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
+    const comp = plus(...stds.map(s => s.competences));
+    const sansPh = R.standards.filter(s => !s.phases.length);
+    if (sansPh.length) { h += C.bandeau(`${sansPh.length} standard(s) sans phase, absents de cette lecture : ${sansPh.map(s => esc(s.code || s.id)).join(', ')} — les classer depuis leur fiche.`, 'warn'); }
+    let app = '';
+    R.domaines.forEach(d => {
+      const l = stds.filter(s => X.sc[s.souscat] && X.sc[s.souscat].domaine === d.code);
+      if (!l.length) { return; }
+      app += `<div class="section-label">${esc(d.code)} · ${esc(d.fr)} · ${l.length}</div>` + l.map(s => `<div class="rf-ligne">${lienStd(s)} ${rfStatut(s)}<span class="sub">${esc(X.sc[s.souscat].fr)} · ${esc(s.postes.join(', ') || 'postes à poser')}</span></div>`).join('');
+    });
+    const horsSc = stds.filter(s => !X.sc[s.souscat]);
+    if (horsSc.length) { app += `<div class="section-label">Sans sous-catégorie · ${horsSc.length}</div>` + horsSc.map(s => `<div class="rf-ligne">${lienStd(s)}</div>`).join(''); }
+    const appr = fo.map(c => { const f = X.fo[c] || {}; const n = stds.filter(s => s.formations.includes(c)).length;
+      return `<div class="rf-ligne">${rcode(c)} <span>${esc(f.fr || '')}</span><span class="sub">${esc([f.controleur, f.frequence].filter(Boolean).join(' · '))}${n ? ' · citée par ' + n + ' standard(s)' : ' · rangée dans cette partie du manuel'}</span></div>`; }).join('');
+    const prouv = comp.map(c => { const k = X.comp[c] || {}; const p = k.panel || { etat: 'aucun' };
+      return `<div class="rf-ligne">${rfComp(X, [c])} <span>${esc(k.fr || '')}</span><span class="sub">${p.etat === 'valide' || p.etat === 'certain' ? 'panel : ' + esc(p.nom) : 'panel : ' + ETAT_COR[p.etat].toLowerCase()}</span></div>`; }).join('');
+    h += `<div class="rf-trois"><section class="card"><h2>À appliquer · ${stds.length} standards</h2>${app || '<p class="muted">Aucun standard dans cette phase.</p>'}</section>
+      <section class="card"><h2>À apprendre · ${fo.length} formations</h2>${appr || '<p class="muted">Aucune formation.</p>'}</section>
+      <section class="card"><h2>À prouver · ${comp.length} compétences</h2>${prouv || '<p class="muted">Aucune compétence reliée.</p>'}</section></div>
+      <p class="muted fm-small">Calculé, rien n’est saisi ici : les standards portent leurs phases (fiche › Classement) ; les formations sont celles de ces standards et celles que le Manuel opératoire range dans cette partie.</p>`;
+    return { titre: 'Par phase', kicker: K, corps: h, large: true };
+  }
+
+  /* ── Par poste : la matrice postes × phases, calculée ── */
+  function cellule(X, p, ph) {
+    const R = X.R;
+    const stds = R.standards.filter(s => s.postes.includes(p) && s.phases.includes(ph));
+    const foOblig = R.formations.filter(f => f.partie === ph && f.attendu && f.attendu[p] === 'O').map(f => f.code);
+    const foRec = R.formations.filter(f => f.partie === ph && f.attendu && f.attendu[p] === 'R').map(f => f.code);
+    const fo = plus(...stds.map(s => s.formations), foOblig, foRec);
+    const comp = plus(...stds.map(s => s.competences), R.competences.filter(c => foOblig.includes(c.formation)).map(c => c.code));
+    return { stds, fo, foOblig, comp };
+  }
+  function ecranParPoste() {
+    const X = rx();
+    if (!X) { return refAttente('Par poste'); }
+    const R = X.R, a = C.S.route.a;
+    const sp = X.poste[a[0]] ? a[0] : null, sph = PHASE_NOM[a[1]] ? a[1] : null;
+    let h = `<section class="card table-card"><div class="table-scroll"><table class="rf-table rf-mat"><thead><tr><th style="width:22%">Poste (référentiel v25)</th>${PHASES.map(p => `<th>${esc(PHASE_NOM[p])}</th>`).join('')}</tr></thead><tbody>
+      ${R.postes.map(p => `<tr><td><span class="rf-sc">${esc(p.code)} · ${esc(p.fr)}</span><span class="sub">${esc(p.nl || '')}</span></td>${PHASES.map(ph => {
+        const c = cellule(X, p.code, ph), on = sp === p.code && sph === ph, vide = !c.stds.length && !c.fo.length;
+        return `<td><a class="rf-cell${on ? ' is-on' : ''}${vide ? ' is-vide' : ''}" href="#/rfposte/${esc(p.code)}/${ph}"><span>${c.stds.length} standard${c.stds.length > 1 ? 's' : ''}</span><span class="sub">${c.fo.length} FO · ${c.comp.length} compétence${c.comp.length > 1 ? 's' : ''}</span></a></td>`;
+      }).join('')}</tr>`).join('')}</tbody></table></div>
+      <p class="muted fm-small rf-legende">Calculé : les standards qui portent ce poste et cette phase ; les formations de ces standards et celles que le v25 attend pour ce poste (obligatoires ou recommandées) dans cette partie du manuel ; les compétences de ces standards et celles des formations obligatoires.</p></section>`;
+    if (sp && sph) {
+      const c = cellule(X, sp, sph), p = X.poste[sp];
+      h += `<h2 class="screen-subtitle">${esc(p.code)} · ${esc(p.fr)} · ${esc(PHASE_NOM[sph])}</h2><div class="rf-trois">
+        <section class="card"><h2>Standards · ${c.stds.length}</h2>${c.stds.map(s => `<div class="rf-ligne">${lienStd(s)} ${rfStatut(s)}<span class="sub">${esc(s.moment ? 'moment : ' + s.moment : 'sans moment')}</span></div>`).join('') || '<p class="muted">Aucun standard.</p>'}</section>
+        <section class="card"><h2>Formations · ${c.fo.length}</h2>${c.fo.map(k => `<div class="rf-ligne">${rcode(k)} <span>${esc((X.fo[k] || {}).fr || '')}</span><span class="sub">${c.foOblig.includes(k) ? 'obligatoire pour ce poste' : c.stds.some(s => s.formations.includes(k)) ? 'citée par un standard' : 'recommandée'}</span></div>`).join('') || '<p class="muted">Aucune formation.</p>'}</section>
+        <section class="card"><h2>Compétences · ${c.comp.length}</h2>${c.comp.map(k => `<div class="rf-ligne">${rfComp(X, [k])} <span>${esc((X.comp[k] || {}).fr || '')}</span></div>`).join('') || '<p class="muted">Aucune compétence.</p>'}</section></div>`;
+    }
+    return { titre: 'Par poste', kicker: K, corps: h, large: true };
+  }
+
+  /* ── Compétences : la correspondance C-… ↔ panel, puis l'acquisition en magasin ── */
+  function ecranCompetencesRef() {
+    const onglets = `<div class="page-tabs" role="tablist"><a class="page-tabs__tab${C.S.route.a[0] !== 'magasins' ? ' is-on' : ''}" href="#/sopcomp">Correspondance avec le panel</a>
+      <a class="page-tabs__tab${C.S.route.a[0] === 'magasins' ? ' is-on' : ''}" href="#/sopcomp/magasins">Acquisition en magasin</a></div>`;
+    const mag = C.S.route.a[0] === 'magasins';
+    const v = mag ? ecranCompetences() : ecranCorrespondance();
+    const note = mag ? C.bandeau('Le « vu faire » coche désormais au panel les compétences reliées aux codes C-… de chaque SOP (onglet Correspondance). Ce tableau suit encore la compétence du panel rattachée à chaque SOP dans Rédaction, gardée en repli pour une SOP sans code relié.', '') : '';
+    return { titre: 'Compétences', kicker: K, corps: onglets + note + v.corps, large: true };
+  }
+  function ecranCorrespondance() {
+    const X = D.cor;
+    if (!X) { return { corps: D.corErr ? `<p class="error">${esc(D.corErr)}</p>` : attente('Lecture de la correspondance…') }; }
+    const cv = X.couverture, f = D.corF, q = String(C.S.f.corq || '').trim().toLowerCase();
+    let h = X.panel.indispo ? C.bandeau('Compétences du panel : ' + esc(X.panel.motif || 'indisponibles') + (X.panel.total ? ' — ' + X.panel.total + ' gardées de la dernière lecture.' : '.'), 'warn')
+      : `<p class="muted fm-small">${X.panel.total} compétences lues au panel (${esc(X.panel.source)})${X.panel.lueLe ? ' le ' + esc(dth(X.panel.lueLe)) : ''} · <button type="button" class="linklike" data-sa="corRelire">Relire le panel</button></p>`;
+    if (D.corBilan) { const b = D.corBilan; h += C.bandeau(`Proposition automatique : ${b.certain} certaine(s), ${b.propose} à trancher, ${b.aucun} sans proposition ; ${b.gardees} déjà tranchée(s), gardée(s) telles quelles.`, ''); }
+    h += `<section class="card rf-kpis"><div class="kpi-row">${kpi(`${cv.valide + cv.certain} / ${cv.total}`, 'codes reliés au panel', cv.valide + ' validés · ' + cv.certain + ' certains')}
+      ${kpi(cv.propose, 'à trancher', 'jamais utilisés pour cocher')}${kpi(cv.aucun, 'sans correspondance', '')}
+      ${kpi(`${cv.panelRelies} / ${cv.panelTotal}`, 'compétences du panel reliées', '')}${kpi(cv.sansStandard, 'codes sans standard', 'aucune SOP ne les prouve')}</div></section>`;
+    const fb = (v, l, n) => `<button type="button" class="filter${f === v ? ' is-on' : ''}" data-sa="corF" data-v="${v}">${l} · ${n}</button>`;
+    h += `<div class="toolbar">${fb('propose', 'À trancher', cv.propose)}${fb('certain', 'Certaines', cv.certain)}${fb('valide', 'Validées', cv.valide)}${fb('aucun', 'Aucune', cv.aucun)}${fb('tous', 'Toutes', cv.total)}
+      <input type="search" placeholder="Rechercher un code, une compétence…" data-input="corq" value="${esc(C.S.f.corq || '')}">
+      <button type="button" class="btn btn--primary" data-sa="corProposer" ${D.occupe ? 'disabled' : ''} title="Relance la proposition automatique ; une correspondance tranchée par une personne n’est jamais réécrite">Proposer les correspondances</button></div>`;
+    const lignes = X.lignes.filter(l => (f === 'tous' || l.etat === f) && (!q || [l.code, l.fr, l.panel && l.panel.nom].join(' ').toLowerCase().includes(q)));
+    const opts = l => `<option value="">Autre compétence du panel…</option>${X.liste.map(p => `<option value="${p.id}"${l.panel && l.panel.id === p.id ? ' selected' : ''}>${esc((p.categorie ? p.categorie + ' › ' : '') + p.nom)}${p.codes.length && !(l.panel && l.panel.id === p.id) ? ' (déjà : ' + esc(p.codes.join(', ')) + ')' : ''}</option>`).join('')}`;
+    const etat = l => l.etat === 'valide' ? `<span class="badge badge--ok">Validée</span>` : l.etat === 'certain' ? `<span class="chip chip--neutral">Certaine</span>` : l.etat === 'propose' ? trou('À trancher') : `<span class="chip chip--neutral">Aucune</span>`;
+    h += `<section class="card table-card"><div class="table-scroll"><table class="rf-table"><thead><tr><th style="width:17%">Code</th><th style="width:23%">Compétence (v25)</th><th>Standards</th><th style="width:20%">Compétence du panel</th><th style="width:28%">Trancher</th></tr></thead><tbody>
+      ${lignes.map(l => `<tr><td>${rcode(l.code)}<span class="sub">${esc(l.famille)}${l.formation ? ' · ' + esc(l.formation) : ''}</span></td>
+        <td>${esc(l.fr)}${l.description ? `<span class="sub">${esc(l.description.length > 110 ? l.description.slice(0, 109) + '…' : l.description)}</span>` : ''}</td>
+        <td>${l.standards.length ? l.standards.map(s => `<a class="rf-std" href="#/sop/${esc(s.id)}"><span>${esc(s.titre)}</span></a>`).join('<br>') : trou('aucun standard')}</td>
+        <td>${etat(l)}${l.panel ? `<span class="sub">${esc(l.panel.nom)} (#${l.panel.id})</span>` : ''}${l.majPar ? `<span class="sub">${esc(l.majPar)}${l.majLe ? ' · ' + esc(dt(l.majLe)) : ''}</span>` : ''}</td>
+        <td><div class="rf-props">${l.etat === 'certain' ? `<button type="button" class="btn btn--sm" data-sa="corTrancher" data-code="${esc(l.code)}" data-v="${l.panel.id}">Confirmer</button>` : ''}
+          ${l.etat !== 'valide' && l.etat !== 'certain' ? l.propositions.map(p => `<button type="button" class="btn btn--sm" data-sa="corTrancher" data-code="${esc(l.code)}" data-v="${p.id}" title="score ${Math.round(p.score * 100)} %">${esc(p.nom)} · ${Math.round(p.score * 100)} %</button>`).join('') : ''}</div>
+          <div class="rf-props"><select class="rf-sel" data-sch="corSel" data-code="${esc(l.code)}">${opts(l)}</select>${l.etat !== 'aucun' || !l.tranche ? `<button type="button" class="btn btn--sm btn--danger" data-sa="corTrancher" data-code="${esc(l.code)}" data-v="">Aucune</button>` : ''}</div></td></tr>`).join('')
+        || `<tr><td colspan="5" class="muted">Rien dans ce filtre.</td></tr>`}</tbody></table></div></section>`;
+    const libres = X.liste.filter(p => !p.codes.length);
+    h += `<section class="card"><h2>Compétences du panel sans code C-… · ${libres.length} / ${X.liste.length}</h2><p class="muted fm-small">le « vu faire » ne les cochera jamais tant qu’aucun code n’y est relié</p>
+      <div class="rf-chips">${libres.map(p => `<span class="chip chip--neutral" title="${esc(p.categorie || '')}">${esc(p.nom)}</span>`).join('')}</div></section>`;
+    return { corps: h };
+  }
+
+  /* ── Le bloc « Classement » de la fiche d'une SOP ── */
+  function carteClassement(s) {
+    const X = rx();
+    if (!X) { return `<section class="card"><h2>Classement</h2>${D.refErr ? `<p class="error">${esc(D.refErr)}</p>` : attente('Lecture du référentiel…')}</section>`; }
+    const cur = s.classement || { souscat: null, phases: [], postes: [], competences: [], formations: [], checklists: [] };
+    const E = D.cl[s.id], v = E || cur, sc = X.sc[v.souscat];
+    if (tablette()) {
+      return `<section class="card"><h2>Classement</h2><dl class="sop-dl"><dt>Sous-catégorie</dt><dd>${sc ? esc(v.souscat + ' · ' + sc.fr) : '—'}</dd><dt>Phases</dt><dd>${rfPhases(v.phases) || '—'}</dd>
+        <dt>Postes</dt><dd>${esc(v.postes.join(', ') || '—')}</dd><dt>Compétences</dt><dd>${rfComp(X, v.competences) || '—'}</dd><dt>Formations</dt><dd>${rfFo(X, v.formations) || '—'}</dd></dl></section>`;
+    }
+    const pill = (k, val, lib, titre) => `<button type="button" class="choice-pill rf-pill${v[k].includes(val) ? ' is-on' : ''}" data-sa="clTog" data-id="${esc(s.id)}" data-k="${k}" data-v="${esc(val)}"${titre ? ` title="${esc(titre)}"` : ''}>${esc(lib)}</button>`;
+    const optsListe = k => {
+      if (k === 'competences') {
+        const fams = {};
+        X.R.competences.forEach(c => { (fams[c.famille] = fams[c.famille] || []).push(c); });
+        return Object.keys(fams).map(fa => `<optgroup label="${esc(fa)}">${fams[fa].filter(c => !v[k].includes(c.code)).map(c => `<option value="${esc(c.code)}">${esc(c.code)} · ${esc(c.fr)}</option>`).join('')}</optgroup>`).join('');
+      }
+      if (k === 'formations') { return X.R.formations.filter(f => !v[k].includes(f.code)).map(f => `<option value="${esc(f.code)}">${esc(f.code)} · ${esc(f.fr)}</option>`).join(''); }
+      return X.R.checklistsConnues.filter(c => !v[k].includes(c)).map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    };
+    const liste = k => {
+      const sug = sc ? (sc[k] || []).filter(c => !v[k].includes(c) && (k !== 'competences' || X.comp[c])) : [];
+      const nom = c => k === 'competences' ? (X.comp[c] || {}).fr : k === 'formations' ? (X.fo[c] || {}).fr : '';
+      return `<div class="rf-champ"><span class="rf-lab">${CL_NOM[k]}</span><div class="rf-toks">${v[k].map(c => `<span class="rf-tok" title="${esc(nom(c) || '')}">${esc(c)}<button type="button" class="btn btn--icon btn--danger" data-sa="clDel" data-id="${esc(s.id)}" data-k="${k}" data-v="${esc(c)}" aria-label="Retirer ${esc(c)}">✕</button></span>`).join('')}
+        <select class="rf-sel" data-sch="clAdd" data-id="${esc(s.id)}" data-k="${k}"><option value="">Ajouter…</option>${optsListe(k)}</select></div>
+        ${sug.length ? `<div class="rf-sug">Proposés par ${esc(v.souscat)} : ${sug.map(c => `<button type="button" class="linklike" data-sa="clSug" data-id="${esc(s.id)}" data-k="${k}" data-v="${esc(c)}">+ ${esc(c)}</button>`).join(' ')}</div>` : ''}</div>`;
+    };
+    const opts = X.R.domaines.map(d => `<optgroup label="${esc(d.code + ' · ' + d.fr)}">${d.souscats.map(x => `<option value="${esc(x.cle)}"${x.cle === v.souscat ? ' selected' : ''}>${esc(x.cle + ' · ' + x.fr)}</option>`).join('')}</optgroup>`).join('');
+    return `<section class="card rf-classement"><div class="rf-tete"><h2>Classement</h2><span class="muted fm-small">Manuel du réseau · référentiel v25</span></div>
+      <div class="rf-champ"><span class="rf-lab">Sous-catégorie</span><select class="rf-sel rf-sel--large" data-sch="clSc" data-id="${esc(s.id)}"><option value="">À classer…</option>${opts}</select>${sc ? `<span class="sub">${esc(X.dom[sc.domaine].fr)}${sc.description ? ' · ' + esc(sc.description) : ''}</span>` : ''}</div>
+      <div class="rf-champ"><span class="rf-lab">Phases</span><div class="rf-pills">${PHASES.map(p => pill('phases', p, PHASE_NOM[p])).join('')}</div></div>
+      <div class="rf-champ"><span class="rf-lab">Postes</span><div class="rf-pills">${X.R.postes.map(p => pill('postes', p.code, p.code, p.fr)).join('')}</div></div>
+      ${CL_LISTES.map(liste).join('')}
+      ${E && E.err ? `<p class="error">${esc(E.err)}</p>` : ''}
+      <div class="rf-actions"><button type="button" class="btn" data-sa="clSave" data-id="${esc(s.id)}" ${!E || D.occupe ? 'disabled' : ''}>Enregistrer le classement</button>${E ? `<button type="button" class="btn btn--ghost" data-sa="clAnnuler" data-id="${esc(s.id)}">Annuler</button><span class="muted fm-small">modifications non enregistrées</span>` : ''}</div></section>`;
+  }
+  /** Le classement en cours d'édition d'une SOP (copie de celui enregistré au premier geste). */
+  function clEd(id) {
+    if (!D.cl[id]) { const s = D.fiche[id], c = (s && s.classement) || {}; D.cl[id] = { souscat: c.souscat || null, phases: (c.phases || []).slice(), postes: (c.postes || []).slice(), competences: (c.competences || []).slice(), formations: (c.formations || []).slice(), checklists: (c.checklists || []).slice() }; }
+    return D.cl[id];
+  }
+
+  /* ── Lectures du référentiel ── */
+  function chargerRef(forcer) {
+    if ((D.ref && !forcer) || D.refCharge) { return; }
+    D.refCharge = true;
+    C.lire('/formation/ref?detail=1', 30000).then(d => { D.ref = d; D.refErr = null; D.refCharge = false; C.rendre(true); }, er => { D.refErr = er.message; D.refCharge = false; C.rendre(true); });
+  }
+  function chargerCor(forcer, rafraichir) {
+    if ((D.cor && !forcer) || D.corCharge) { return; }
+    D.corCharge = true;
+    C.lire('/formation/ref/correspondance' + (rafraichir ? '?rafraichir=1' : ''), 120000).then(d => { D.cor = d; D.corErr = null; D.corCharge = false; if (d.auto) { D.corBilan = d.auto; } C.rendre(true); },
+      er => { D.corErr = er.message; D.corCharge = false; C.rendre(true); });
+  }
+
+  /** Les gestes du Manuel du réseau ; vrai quand le geste était le sien. */
+  async function gesteRef(d, t) {
+    switch (d.sa) {
+      case 'rfImporter':
+        D.occupe = true; C.rendre(true);
+        try { D.imp = await C.appel('POST', '/formation/ref/importer-crm', {}); toast(D.imp.disponible ? D.imp.reprises.length + ' procédure(s) reprise(s)' : 'Manuel du CRM absent de cette base'); chargerRef(true); chargerListe(true); }
+        catch (x) { toast(x.message); }
+        D.occupe = false; C.rendre(true); return true;
+      case 'scEd': { const s = rx().sc[d.v]; D.scEd = { cle: d.v, nl: s.nl || '', description: s.description || '', err: null }; C.rendre(true); return true; }
+      case 'scAnnuler': D.scEd = null; C.rendre(true); return true;
+      case 'scSave':
+        D.occupe = true; C.rendre(true);
+        try { await C.appel('PUT', '/formation/ref/souscats/' + encodeURIComponent(D.scEd.cle), { nl: D.scEd.nl, description: D.scEd.description }); toast('Sous-catégorie enregistrée'); D.scEd = null; chargerRef(true); }
+        catch (x) { D.scEd.err = x.message; }
+        D.occupe = false; C.rendre(true); return true;
+      case 'clTog': { const e = clEd(d.id), l = e[d.k], i = l.indexOf(d.v); if (i >= 0) { l.splice(i, 1); } else { l.push(d.v); } e.err = null; C.rendre(true); return true; }
+      case 'clDel': { const e = clEd(d.id); e[d.k] = e[d.k].filter(x => x !== d.v); C.rendre(true); return true; }
+      case 'clSug': { const e = clEd(d.id); if (!e[d.k].includes(d.v)) { e[d.k].push(d.v); } C.rendre(true); return true; }
+      case 'clAnnuler': delete D.cl[d.id]; C.rendre(true); return true;
+      case 'clSave': {
+        const e = D.cl[d.id];
+        if (!e) { return true; }
+        D.occupe = true; C.rendre(true);
+        try {
+          const r = await C.appel('PUT', '/formation/ref/standards/' + encodeURIComponent(d.id), { souscat: e.souscat, phases: e.phases, postes: e.postes, competences: e.competences, formations: e.formations, checklists: e.checklists });
+          delete D.cl[d.id]; toast('Classement enregistré');
+          if (D.fiche[d.id]) { D.fiche[d.id].classement = { souscat: r.standard.souscat, phases: r.standard.phases, postes: r.standard.postes, competences: r.standard.competences, formations: r.standard.formations, checklists: r.standard.checklists }; }
+          chargerRef(true); chargerListe(true); if (D.cor) { chargerCor(true); }
+        } catch (x) { e.err = x.message + (x.data && x.data.invalides ? ' — ' + Object.keys(x.data.invalides).map(k => k + ' : ' + x.data.invalides[k].join(', ')).join(' · ') : ''); }
+        D.occupe = false; C.rendre(true); return true;
+      }
+      case 'corF': D.corF = d.v; C.rendre(true); return true;
+      case 'corRelire': D.cor = null; chargerCor(true, true); C.rendre(true); return true;
+      case 'corProposer':
+        D.occupe = true; C.rendre(true);
+        try { D.corBilan = await C.appel('POST', '/formation/ref/correspondance/proposer', {}, 120000); chargerCor(true); chargerRef(true); }
+        catch (x) { toast(x.message); }
+        D.occupe = false; C.rendre(true); return true;
+      case 'corTrancher': return trancher(d.code, d.v);
+    }
+    return false;
+  }
+  async function trancher(code, v) {
+    try {
+      await C.appel('PUT', '/formation/ref/correspondance/' + encodeURIComponent(code), { panelId: v ? +v : null });
+      toast(v ? code + ' relié au panel' : code + ' : aucune compétence du panel');
+      chargerCor(true); chargerRef(true);
+    } catch (x) { toast(x.message); }
+    return true;
+  }
+  /** Les choix (listes déroulantes) du Manuel du réseau ; vrai quand le choix était le sien. */
+  function choixRef(k, t) {
+    const d = t.dataset;
+    if (k === 'clSc') { const e = clEd(d.id); e.souscat = t.value || null; e.err = null; C.rendre(true); return true; }
+    if (k === 'clAdd') { if (t.value) { const e = clEd(d.id); if (!e[d.k].includes(t.value)) { e[d.k].push(t.value); } } C.rendre(true); return true; }
+    if (k === 'corSel') { if (t.value) { trancher(d.code, t.value); } return true; }
+    return false;
+  }
 
   /* ═══ Lectures ═══ */
   function chargerListe(forcer) {
@@ -297,12 +650,17 @@ window.FormationSop = (function () {
     if (e === 'sop' && a[0] && a[1] === 'editer') { chargerEditeur(a[0]); }
     else if (e === 'sop' && a[0] && D.fiche[a[0]] === undefined) { chargerFiche(a[0]); }
     if (e === 'sopcomp' || e === 'sopred') { chargerComp(false); }
+    if (e === 'rfclasseur' || e === 'rfphase' || e === 'rfposte' || e === 'sop' || e === 'sopcomp') { chargerRef(false); }
+    if (e === 'sopcomp' && a[0] !== 'magasins') { chargerCor(false); }
   }
 
   const ECRANS = {
     sop: () => { const a = C.S.route.a; return a[0] ? (a[1] === 'editer' ? ecranEditer(a[0]) : ecranFiche(a[0])) : ecranListe(); },
-    sopcomp: ecranCompetences,
-    sopred: ecranRedaction
+    sopcomp: ecranCompetencesRef,
+    sopred: ecranRedaction,
+    rfclasseur: ecranClasseur,
+    rfphase: ecranParPhase,
+    rfposte: ecranParPoste
   };
 
   /* ═══ Gestes (écouteurs propres aux SOP, sur #root) ═══ */
@@ -322,6 +680,7 @@ window.FormationSop = (function () {
       const b = ev.target.closest('[data-sa]');
       if (!b) { return; }
       const d = b.dataset, E = D.ed;
+      if (await gesteRef(d, b)) { return; }
       switch (d.sa) {
         case 'zoom': { const z = document.createElement('div'); z.className = 'sop-zoom'; z.innerHTML = `<img src="${esc(d.v)}" alt="">`; z.onclick = () => z.remove(); document.body.appendChild(z); return; }
         case 'filtre': D.f[d.k] = d.k === 'poste' ? d.v : d.v === 'true'; return C.rendre(true);
@@ -368,18 +727,20 @@ window.FormationSop = (function () {
       if (obj === 'ed' && D.ed) { setP(D.ed, p, p.endsWith('.photo') && t.value.trim() === '' ? null : t.value); t.classList.toggle('is-vide', !t.value); }
       else if (obj === 'edMeta' && D.edMeta) { D.edMeta[p] = t.value; }
       else if (obj === 'nouv' && D.nouv) { D.nouv[p] = t.value; }
+      else if (obj === 'scEd' && D.scEd) { D.scEd[p] = t.value; }
     });
     root.addEventListener('change', ev => {
       const t = ev.target, k = t.getAttribute && t.getAttribute('data-sch');
       if (!k) { return; }
       const d = t.dataset;
+      if (choixRef(k, t)) { return; }
       if (k === 'shop') { D.shop = t.value; try { localStorage.setItem('fm.sop.shop', D.shop); } catch (x) { /* */ } D.fiche = {}; D.comp = null; return C.rendre(true); }
       if (k.startsWith('ed.')) { setP(D.ed, k.slice(3), t.checked); return; }
       if (k.startsWith('nouv.')) { D.nouv[k.slice(5)] = t.value; return; }
       if (k === 'bonne') { D.ed.quiz[+d.i].bonne = +t.value; return; }
       if (k === 'reval') { D.edMeta.revalider = t.value === '1'; return; }
       if (k === 'edtrad') { D.edMeta.tradApres[d.l] = t.value; return; }
-      if (k === 'statut') { return patch(d.id, { statut: t.value }, t.value === 'publiee' ? 'Publiée' : 'À valider'); }
+      if (k === 'statut') { return patch(d.id, { statut: t.value }, { publiee: 'Publiée', a_valider: 'À valider', brouillon: 'Brouillon' }[t.value]); }
       if (k === 'comp') {
         let v = t.value;
         if (v === '*') { const nom = prompt('Nom exact de la compétence du panel :'); if (!nom) { return C.rendre(true); } v = '|' + nom.trim(); }
@@ -394,9 +755,13 @@ window.FormationSop = (function () {
   }
 
   return {
-    /** Les entrées de la barre latérale : [clé, libellé]. */
-    nav: [['sop', 'Les SOP du réseau'], ['sopcomp', 'Compétences et SOP'], ['sopred', 'Rédaction et versions']],
+    /** Le groupe de la barre latérale et ses entrées : [clé, libellé] (Manuel du réseau, 06/11/2026). */
+    groupe: 'Manuel du réseau',
+    nav: [['rfclasseur', 'Classeur'], ['rfphase', 'Par phase'], ['rfposte', 'Par poste'], ['sop', 'Standards'], ['sopcomp', 'Compétences'], ['sopred', 'Rédaction']],
     icones: {
+      rfclasseur: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+      rfphase: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+      rfposte: 'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9',
       sop: 'M9 11l3 3 8-8M4 4h11v4M4 4v16h16v-6',
       sopcomp: 'M12 2l3 6.5 7 .9-5 4.8 1.2 7L12 18l-6.2 3.2 1.2-7-5-4.8 7-.9z',
       sopred: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'
