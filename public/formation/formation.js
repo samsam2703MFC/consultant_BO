@@ -181,6 +181,12 @@
     ['Manuel opératoire', [['manuel', 'Manuel en ligne']]],
     ['Documentation', [['api', 'Routes API']]],
   ];
+  // Les SOP du réseau (formation-sop.js, src/sop.php) : un groupe à elles, avant la documentation.
+  var SOP = window.FormationSop || null;
+  if (SOP) {
+    NAV.splice(NAV.length - 1, 0, ['Standards (SOP)', SOP.nav]);
+    Object.keys(SOP.icones).forEach(function (k) { ICONES[k] = SOP.icones[k]; });
+  }
   var TITRES = {};
   NAV.forEach(function (g) { g[1].forEach(function (it) { TITRES[it[0]] = it[1]; }); });
 
@@ -1496,7 +1502,8 @@
     PARTIES.forEach(function (x, i) {
       var nb = procsDePartie(x[0]).length;
       var fos = fosDePartie(x[0]);
-      var plus = (fos ? ' · ' + pl(fos.length, 'formation') : '') + (x[0] === 'operationnel' ? ' · ' + pl(S.ref.postes.filter(function (p) { return p.niveaux.length || p.id != null; }).length, 'poste') : '');
+      var nbSop = SOP ? SOP.nbPartie(x[0]) : null;
+      var plus = (fos ? ' · ' + pl(fos.length, 'formation') : '') + (nbSop ? ' · ' + nbSop + ' SOP' : '') + (x[0] === 'operationnel' ? ' · ' + pl(S.ref.postes.filter(function (p) { return p.niveaux.length || p.id != null; }).length, 'poste') : '');
       h += '<a class="fm-part" href="#/manuel/partie/' + x[0] + '"><span class="fm-part__n">' + (i + 1) + '</span><span class="fm-part__txt"><strong>' + esc(x[1]) + '</strong>' +
         '<span class="muted">' + esc(x[2]) + '</span><span class="fm-part__nb">' + pl(nb, 'procédure') + plus + (S.mn && S.v25 ? '' : ' …') + '</span></span></a>';
     });
@@ -1761,6 +1768,7 @@
         (nv ? '<ul class="chips"><li class="chip chip--accent">▶ Vidéo</li></ul>' : '') + '</a></li>';
     });
     if (ouvert) h += '</ul>';
+    if (SOP) h += SOP.sectionPartie(cle);
     var fos = fosDePartie(cle);
     h += '<div class="section-label">Formations · ' + (fos ? n(fos.length) : '…') + '</div>';
     if (!fos) h += S.v25Erreur || S.mnErreur ? '<p class="error">' + esc(S.v25Erreur || S.mnErreur) + '</p>' : attente('Lecture des formations du manuel…');
@@ -2229,6 +2237,7 @@
     procedures: ecranProcedures, ressources: ecranRessources, produit: ecranProduit, equipes: ecranEquipes,
     manuel: ecranManuel, api: ecranApi, parcours: ecranParcoursEquipes,
   };
+  if (SOP) Object.keys(SOP.ecrans).forEach(function (k) { ECRANS[k] = SOP.ecrans[k]; });
 
   function rendre(garder) {
     // Une lecture qui revient pendant qu'une vidéo joue attendra : redessiner la recharge.
@@ -2245,7 +2254,8 @@
     var defil = garder && ancien ? ancien.scrollTop : 0;
 
     var e = S.route.ecran, v;
-    if (e !== 'api' && !I) v = { titre: TITRES[e] || 'Formation', corps: sansReferentiel() };
+    // Les SOP vivent dans nos tables : leurs écrans s'affichent même sans le référentiel du panel.
+    if (e !== 'api' && !I && !(SOP && SOP.ecrans[e])) v = { titre: TITRES[e] || 'Formation', corps: sansReferentiel() };
     else v = ECRANS[e]();
     root.innerHTML = coquille(v);
     document.title = v.titre + ' — Formation · L\'Atelier by';
@@ -2263,6 +2273,7 @@
   function apres() {
     var e = S.route.ecran;
     if (e === 'api' && !S.cat && !S.catCharge) chargerCatalogue();
+    if (SOP) SOP.apres(e, S.route.a);
     if (!I) return;
     if (e === 'postes' && S.route.a[0] !== 'v25') {
       var pid = arg(0), nid = arg(1);
@@ -2581,6 +2592,9 @@
     if (!S.occupe) S.modale = null;
     rendre(false);
   });
+
+  // Les écrans des SOP reçoivent les outils du module (formation-sop.js).
+  if (SOP) SOP.init({ esc: esc, n: n, lire: lire, appel: appel, rendre: rendre, S: S, filAriane: filAriane, bandeau: bandeau, API: API }, root);
 
   lireRoute();
   chargerReferentiel(false);

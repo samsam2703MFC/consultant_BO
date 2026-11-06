@@ -64,8 +64,9 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^tablette(/|$) - [R=404,L]
 
-# La formation (formation/ : module, tablette du poste, photos des SOP) : même règle — une photo ou un script
-# ABSENT rend un 404, jamais le shell du cockpit avec un statut 200.
+# Le module Formation (formation/ : le module, ses SOP sous formation/sop/ — tablette du poste, photos) : même
+# règle — une photo ou un script ABSENT rend un 404, jamais le shell du cockpit avec un statut 200. L'API du module
+# (formation/api/cockpit) est réécrite plus haut, avant cette règle.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^formation/ - [R=404,L]

@@ -1,0 +1,411 @@
+/* Module Formation › Standards (SOP) — les SOP du réseau, en français et en néerlandais (src/sop.php).
+ *
+ * Chargé AVANT formation.js, qui l'appelle par quelques accroches : la barre latérale (groupe « Standards (SOP) »),
+ * ses écrans, ses lectures, et chaque partie du Manuel opératoire, où les SOP se rangent à côté des procédures et des
+ * formations FO. Les SOP vivent dans nos tables : ces écrans s'affichent même quand le référentiel du panel est
+ * illisible.
+ *
+ *   #/sop                 les SOP par famille (FR et NL, compétence du panel, partie du manuel, progression)
+ *   #/sop/<id>            une SOP : FR et NL côte à côte, partie du manuel, compétence, PDF, équipe, quiz, versions
+ *   #/sop/<id>/editer     modifier dans les deux langues, publier une nouvelle version
+ *   #/sopcomp             compétences : réseau × compétence, magasin × personne, réglages de l'équipe, fil
+ *   #/sopred              rédaction : langues à relire, compétence du panel, statut, nouvelle SOP
+ *
+ * La tablette du poste (lire pas à pas, quiz, « vu faire ») est une page à part : sop/tablette.html.
+ */
+window.FormationSop = (function () {
+  'use strict';
+  let C = null;   // le contexte de formation.js : esc, lire, appel, rendre, S, filAriane, bandeau
+  const POSTES = ['vente', 'cuisson', 'production', 'nettoyage'];
+  const POSTE_NOM = { vente: 'Vente', cuisson: 'Cuisson', production: 'Production', nettoyage: 'Nettoyage' };
+  const TRAD_NOM = { origine: 'origine', relue: 'relue', a_relire: 'à relire' };
+  const ST_NOM = { non: 'pas commencée', lu: 'lue · quiz à faire', quiz: 'quiz réussi · à voir faire', vu: 'vue faire', a_revoir: 'à revoir (nouvelle version)' };
+  const ST_CHIP = { non: 'chip--mute', lu: 'chip--soft', quiz: 'chip--warn', vu: 'chip--ok', a_revoir: 'chip--ko' };
+  const PARTIES = [['preouverture', 'Pré-ouverture'], ['ouverture', 'Ouverture'], ['operationnel', 'Opérationnel'], ['formation', 'Formation continue']];
+  const NOM_PARTIE = Object.fromEntries(PARTIES);
+
+  const D = {
+    liste: null, totaux: null, dossiers: [], erreur: null, charge: false,
+    fiche: {}, archive: null, comp: null, compCharge: false, fil: null, magasins: null,
+    shop: '', vue: 'deux', f: { poste: '', relire: false, valider: false, sansComp: false },
+    ed: null, edMeta: null, edErr: null, occupe: false, nouv: null
+  };
+  try { D.shop = localStorage.getItem('fm.sop.shop') || ''; D.vue = localStorage.getItem('fm.sop.vue') || 'deux'; } catch (e) { /* stockage indisponible */ }
+
+  const esc = v => C.esc(v);
+  const L = (v, l) => { if (!v) { return ''; } if (typeof v === 'string') { return v; } l = l || 'fr'; return v[l] || v[l === 'nl' ? 'fr' : 'nl'] || ''; };
+  const dt = iso => iso ? new Date(iso).toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit' }) : '';
+  const dth = iso => iso ? new Date(iso).toLocaleString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  const tablette = () => !!(C && C.S.tablette);
+  function toast(m) { const el = document.createElement('div'); el.className = 'sop-toast'; el.textContent = m; document.body.appendChild(el); setTimeout(() => el.remove(), 3000); }
+
+  /* ── Pièces ── */
+  const trad = s => ['fr', 'nl'].map(l => { const t = s.trad[l]; return `<span class="sop-lg ${t === 'a_relire' ? 'is-ar' : 'is-on'}" title="${l.toUpperCase()} · ${TRAD_NOM[t]}">${l.toUpperCase()}${t === 'a_relire' ? ' ·' : ''}</span>`; }).join(' ');
+  const comp = s => s.competence ? `<span class="sop-comp">${esc(s.competence.nom)}</span>` : '<span class="sop-comp is-sans">sans compétence du panel</span>';
+  const famNom = d => L((D.dossiers.find(x => x.id === d) || {}).nom);
+  const pdf = (chemin, l) => `${C.API}${chemin}${chemin.includes('?') ? '&' : '?'}langue=${l}`;
+  const heat = v => v == null ? '<span class="muted">—</span>' : `<span class="sop-heat" style="background:${v < 20 ? 'var(--chip)' : v < 40 ? '#E3EFE2' : v < 60 ? '#C6E0CA' : v < 80 ? '#86BF94' : 'var(--green)'};color:${v < 20 ? 'var(--muted)' : v < 60 ? '#24502f' : '#fff'}">${v} %</span>`;
+  const tabletteLien = (poste) => `sop/tablette.html?${new URLSearchParams(Object.assign(D.shop ? { shop: D.shop } : {}, poste ? { poste } : {})).toString()}`;
+  const choixMagasin = () => `<select class="fm-select" data-sch="shop" style="max-width:240px"><option value="">Choisir un magasin…</option>${(D.magasins || []).map(m => `<option value="${esc(m.id)}" ${m.id === D.shop ? 'selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`;
+  function filtrer(l) {
+    const q = String(C.S.f.sopq || '').trim().toLowerCase();
+    return l.filter(s => (!D.f.poste || s.poste === D.f.poste) && (!D.f.relire || s.trad.fr === 'a_relire' || s.trad.nl === 'a_relire')
+      && (!D.f.valider || s.statut === 'a_valider') && (!D.f.sansComp || !s.competence)
+      && (!q || [s.titre.fr, s.titre.nl, s.code, s.objectif.fr, s.objectif.nl, s.competence && s.competence.nom].join(' ').toLowerCase().includes(q)));
+  }
+  const attente = t => `<p class="muted">${esc(t)}</p>`;
+  function erreurOuAttente() { return D.erreur ? `<p class="error">${esc(D.erreur)}</p>` : attente('Lecture des SOP…'); }
+
+  /* ═══ Les SOP (liste) ═══ */
+  function ecranListe() {
+    if (!D.liste) { return { titre: 'Les SOP du réseau', kicker: 'Standards (SOP)', corps: erreurOuAttente() }; }
+    const T = D.totaux, l = filtrer(D.liste);
+    const vus = D.liste.reduce((a, s) => a + s.progression.vu, 0), quiz = D.liste.reduce((a, s) => a + s.progression.quiz, 0);
+    let h = `<div class="fm-kpis">
+      <a class="fm-kpi" href="#/sop"><span class="fm-kpi__n">${T.sops - T.aValider}</span><span class="fm-kpi__l">SOP en vigueur</span><span class="fm-kpi__s">+ ${T.aValider} à valider · ${T.etapes} étapes · FR et NL</span></a>
+      <a class="fm-kpi" href="#/sopcomp"><span class="fm-kpi__n">${vus}</span><span class="fm-kpi__l">vues faire · réseau</span><span class="fm-kpi__s">${quiz} quiz réussis en attente de la responsable</span></a>
+      <a class="fm-kpi" href="#/sopred"><span class="fm-kpi__n">${T.tradARelire}</span><span class="fm-kpi__l">traductions à relire</span><span class="fm-kpi__s">la langue d’origine fait foi</span></a>
+      <a class="fm-kpi" href="#/sopred"><span class="fm-kpi__n">${T.sops - T.sansCompetence} / ${T.sops}</span><span class="fm-kpi__l">rattachées à une compétence</span><span class="fm-kpi__s">compétences du panel</span></a></div>`;
+    const f = (k, v, lib, on) => `<button type="button" class="filter${on ? ' is-on' : ''}" data-sa="filtre" data-k="${k}" data-v="${v}">${lib}</button>`;
+    h += `<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher une SOP, une compétence…" data-input="sopq" value="${esc(C.S.f.sopq || '')}">
+      ${f('poste', '', 'Tous les postes', !D.f.poste)}${POSTES.map(p => f('poste', p, POSTE_NOM[p], D.f.poste === p)).join('')}
+      ${f('relire', !D.f.relire, 'Traduction à relire', D.f.relire)}${f('valider', !D.f.valider, 'À valider', D.f.valider)}${f('sansComp', !D.f.sansComp, 'Sans compétence', D.f.sansComp)}
+      <a class="filter" href="${tabletteLien('')}" target="_blank" rel="noopener">Tablette du poste ↗</a></div></div>`;
+    h += `<p class="muted fm-small"><span class="sop-lg is-on">FR</span> <span class="sop-lg is-on">NL</span> langue d’origine ou relue · <span class="sop-lg is-ar">NL ·</span> traduite à la reprise, à relire</p>`;
+    D.dossiers.forEach(d => {
+      const g = l.filter(s => s.dossier === d.id);
+      if (!g.length) { return; }
+      h += `<div class="section-label">${esc(d.id)} · ${esc(L(d.nom))} · ${g.length} SOP</div><ul class="sop-cartes">${g.map(carte).join('')}</ul>`;
+    });
+    if (!l.length) { h += '<p class="muted">Aucune SOP ne correspond.</p>'; }
+    return { titre: 'Les SOP du réseau', kicker: 'Standards (SOP)', corps: h, large: true };
+  }
+  function carte(s) {
+    const p = s.progression;
+    return `<li><a class="sop-carte${s.statut === 'a_valider' ? ' is-av' : ''}" href="#/sop/${esc(s.id)}">
+      <span class="sop-tags"><span class="chip chip--soft">${esc(s.type)}</span>${trad(s)}<span class="sop-lg">v${esc(s.version)}</span>${s.statut === 'a_valider' ? '<span class="chip chip--warn">À valider</span>' : ''}<span class="chip chip--mute">${esc(NOM_PARTIE[s.partie] || '')}</span></span>
+      <strong>${esc(s.titre.fr)}</strong><span class="sop-ob">${esc(L(s.objectif))}</span><span>${comp(s)}</span>
+      <span class="muted fm-small">${p.vu} vu(s) faire · ${p.quiz} quiz · ${p.lu} lu(s)${p.aRevoir ? ` · ${p.aRevoir} à revoir` : ''}</span>
+      <span class="sop-pied"><span><b>${s.nbEtapes}</b> étapes</span>${s.nbPhotos ? `<span>📷 ${s.nbPhotos}</span>` : ''}<span>${esc(POSTE_NOM[s.poste] || s.poste)}</span><span class="sop-code">${esc(s.code || '')}</span></span></a></li>`;
+  }
+
+  /* ═══ Une SOP ═══ */
+  function ecranFiche(id) {
+    const s = D.fiche[id];
+    const fil = C.filAriane([['Standards (SOP)', '#/sop'], [s && !s.error ? s.titre.fr : id, null]]);
+    if (!s) { return { titre: 'SOP', kicker: 'Standards (SOP)', corps: fil + attente('Lecture de la SOP…') }; }
+    if (s.error) { return { titre: 'SOP', kicker: 'Standards (SOP)', corps: fil + `<p class="error">${esc(s.error)}</p>` }; }
+    const c = D.archive && D.archive.id === id ? D.archive.contenu : s.contenu;
+    const deux = D.vue === 'deux', l1 = D.vue === 'nl' ? 'nl' : 'fr';
+    let etapes = deux ? `<div class="sop-bil" style="border-bottom:1px solid var(--line)"><span></span><span class="muted fm-small">Français · ${TRAD_NOM[s.trad.fr]}</span><span class="muted fm-small">Nederlands · ${TRAD_NOM[s.trad.nl]}</span><span></span></div>` : '';
+    (c.sections || []).forEach(sec => {
+      etapes += `<div class="sop-sec">${esc(L(sec.titre, l1))}${deux && sec.titre.nl ? `<small>${esc(sec.titre.nl)}</small>` : ''}</div>`;
+      sec.etapes.forEach(e => {
+        etapes += `<div class="sop-bil${deux ? '' : ' is-une'}${e.critique ? ' is-crit' : ''}"><span class="sop-bil__n">${esc(e.numero)}</span>
+          <div class="sop-bil__tx">${e.titre && L(e.titre, l1) ? `<b>${esc(L(e.titre, l1))}</b>` : ''}${esc(L(e.texte, l1))}</div>
+          ${deux ? `<div class="sop-bil__tx is-nl">${e.titre && e.titre.nl ? `<b>${esc(e.titre.nl)}</b>` : ''}${esc(e.texte.nl || '')}</div>` : ''}
+          ${e.photo ? `<img src="sop/photos/${esc(e.photo)}" data-sa="zoom" data-v="sop/photos/${esc(e.photo)}" alt="">` : '<span></span>'}</div>`;
+      });
+    });
+    const vb = (v, lib) => `<button type="button" data-sa="vue" data-v="${v}"${D.vue === v ? ' class="is-on"' : ''}>${lib}</button>`;
+    const outils = `<div class="filters"><div class="filters__row"><div class="fm-seg" role="group">${vb('fr', 'FR')}${vb('nl', 'NL')}${vb('deux', 'FR et NL côte à côte')}</div>
+      <a class="filter" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'fr')}" target="_blank">PDF FR</a><a class="filter" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'nl')}" target="_blank">PDF NL</a>
+      <a class="filter" href="${tabletteLien(s.poste)}" target="_blank" rel="noopener">Tablette du poste ↗</a>
+      ${tablette() ? '' : `<a class="filter is-on" href="#/sop/${esc(s.id)}/editer" style="margin-left:auto">Modifier</a>`}</div></div>`;
+    const partie = `<p><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/${esc(s.partie)}">${esc(NOM_PARTIE[s.partie])}</a>${s.partieReglee || tablette() ? '' : ' <span class="muted fm-small">déduite du moment</span>'}</p>
+      ${tablette() ? '' : `<div class="fm-seg fm-seg--petit" role="group">${PARTIES.map(p => `<button type="button" data-sa="partie" data-id="${esc(s.id)}" data-v="${p[0]}"${p[0] === s.partie ? ' class="is-on"' : ''}>${esc(p[1])}</button>`).join('')}</div>${s.partieReglee ? ` <button type="button" class="filter fm-small" data-sa="partie" data-id="${esc(s.id)}" data-v="">↺ Partie déduite</button>` : ''}`}`;
+    const infos = `<section class="card"><h2>La SOP</h2><dl class="sop-dl">
+      <dt>Code</dt><dd>${esc(s.code || '—')} · ${esc(s.dossier)} ${esc(famNom(s.dossier))}</dd><dt>Poste</dt><dd>${esc(POSTE_NOM[s.poste] || s.poste)}${s.moment ? ' · ' + esc(s.moment) : ''}</dd>
+      <dt>Langues</dt><dd>${trad(s)} origine : ${esc(s.langueOrigine)}</dd><dt>Version</dt><dd>v${esc(s.version)} · ${esc(dt(s.majLe))}${s.majPar ? ' · ' + esc(s.majPar) : ''}</dd>
+      <dt>Étapes</dt><dd>${s.nbEtapes}${s.nbPhotos ? ' · 📷 ' + s.nbPhotos : ''}${c.duree ? ' · ' + esc(c.duree) : ''}</dd><dt>Compétence</dt><dd>${comp(s)}</dd>
+      ${s.statut === 'a_valider' ? '<dt>Statut</dt><dd><span class="chip chip--warn">À valider</span> lisible, sans quiz ni validation</dd>' : ''}</dl><div style="margin-top:12px">${partie}</div></section>`;
+    const eq = s.equipe ? `<section class="card"><h2>${esc(s.magasin.nom)} face à cette SOP</h2><p class="muted fm-small">${s.equipe.filter(p => p.statut === 'vu').length} / ${s.equipe.length} vus faire par la responsable</p>
+      ${s.equipe.map(p => `<div class="sop-ligne"><div class="sop-ligne__x"><b>${esc(p.nom)}</b><small>${p.valideur ? 'responsable · ' : ''}lit en ${esc(p.langue.toUpperCase())}${p.vuPar ? ' · vu faire par ' + esc(p.vuPar) + ' le ' + esc(dt(p.vuLe)) : ''}</small></div><span class="chip ${ST_CHIP[p.statut]}">${esc(ST_NOM[p.statut])}</span></div>`).join('') || '<p class="muted">Personne de ce poste dans ce magasin.</p>'}
+      <p style="margin-top:8px">${choixMagasin()}</p></section>`
+      : `<section class="card"><h2>L’équipe</h2><p class="muted">Qui a lu, réussi le quiz, été vu faire : choisir un magasin.</p><p>${choixMagasin()}</p></section>`;
+    const crit = (c.points_critiques || []).length ? `<section class="card"><h2>Points critiques</h2><div class="sop-crit"><ul>${c.points_critiques.map(x => `<li>${esc(L(x, l1))}${deux && x.nl ? `<br><span class="muted">${esc(x.nl)}</span>` : ''}</li>`).join('')}</ul></div></section>` : '';
+    const quiz = (c.quiz || []).length ? `<section class="card"><h2>Le quiz</h2><p class="muted fm-small">${c.quiz.length} questions · la bonne réponse en couleur</p>${c.quiz.map((q, i) => `<div class="sop-q"><b>${i + 1}. ${esc(L(q.question, l1))}</b>${deux && q.question.nl ? `<span class="muted fm-small">${esc(q.question.nl)}</span>` : ''}
+      <ul class="chips">${(q.choix[l1] && q.choix[l1].some(x => x) ? q.choix[l1] : q.choix.fr).map((x, j) => `<li class="chip ${j === q.bonne ? 'chip--accent' : 'chip--soft'}">${esc(x)}</li>`).join('')}</ul></div>`).join('')}</section>` : '';
+    const versions = `<section class="card"><h2>Versions</h2>${s.versions.map(v => `<div class="sop-ligne"><span class="sop-lg${v.version === s.version ? ' is-on' : ''}">v${esc(v.version)}</span><div class="sop-ligne__x">${esc(v.note || '—')}<small>${esc(dth(v.publieLe))}${v.publiePar ? ' · ' + esc(v.publiePar) : ''}${v.revalider ? ' · à revalider' : ''}</small></div>
+      ${v.version !== s.version ? `<button type="button" class="filter fm-small" data-sa="archive" data-id="${esc(s.id)}" data-v="${esc(v.version)}">Voir</button>` : ''}</div>`).join('')}</section>`;
+    const rel = ((c.corrections || []).length || (c.remarques || []).length) && !tablette() ? `<section class="card"><h2>Relevé à la reprise</h2>
+      ${(c.corrections || []).map(x => `<div class="sop-ligne"><span class="chip chip--ok">corrigé</span><div class="sop-ligne__x fm-small">${esc(x)}</div></div>`).join('')}
+      ${(c.remarques || []).map(x => `<div class="sop-ligne"><span class="chip chip--warn">à confirmer</span><div class="sop-ligne__x fm-small">${esc(x)}</div></div>`).join('')}</section>` : '';
+    const arch = D.archive && D.archive.id === id ? C.bandeau(`Version archivée v${esc(D.archive.version)} (${esc(dth(D.archive.publieLe))}) — <button type="button" class="filter fm-small" data-sa="archive" data-id="${esc(id)}" data-v="">Revenir à la version en vigueur</button>`, 'warn') : '';
+    const corps = fil + `<p class="muted">${trad(s)} <span class="sop-lg is-on">v${esc(D.archive && D.archive.id === id ? D.archive.version : s.version)}</span> ${esc(L(s.objectif))}</p>` + arch + outils +
+      `<div class="sop-deux"><section class="card">${etapes || '<p class="muted">Aucune étape.</p>'}</section><div>${infos}${eq}${crit}${quiz}${versions}${rel}</div></div>`;
+    return { titre: s.titre.fr, kicker: 'Standards (SOP) · ' + (s.code || ''), corps, large: true };
+  }
+
+  /* ═══ Compétences ═══ */
+  function ecranCompetences() {
+    const X = D.comp;
+    if (!X) { return { titre: 'Compétences et SOP', kicker: 'Standards (SOP)', corps: attente('Lecture des compétences…') }; }
+    const comps = X.competences;
+    let h = X.panel.indispo ? C.bandeau('Compétences du panel : ' + esc(X.panel.motif || 'indisponibles') + (X.panel.liste.length ? ' — ' + X.panel.liste.length + ' gardées de la dernière lecture.' : '') + ' Les SOP se rattachent dans Rédaction et versions.', 'warn')
+      : `<p class="muted fm-small">${X.panel.liste.length} compétences lues au panel (${esc(X.panel.source)}) · <button type="button" class="filter fm-small" data-sa="relirePanel">Relire le panel</button></p>`;
+    if (X.sansCompetence.length) { h += C.bandeau(`${X.sansCompetence.length} SOP sans compétence du panel — <a href="#/sopred">les rattacher</a>.`, 'warn'); }
+    h += `<p class="muted">Une compétence est acquise quand la responsable du magasin a vu faire chacune de ses SOP ; elle est alors cochée au panel pour la personne.</p>`;
+    const tete = `<tr><th></th>${comps.map(c => `<th>${esc(c.nom)}<br><span class="muted fm-small">${c.sops.length} SOP</span></th>`).join('')}<th>Acquises</th></tr>`;
+    h += `<section class="card table-card"><h2>Le réseau</h2><p class="muted fm-small">part des personnes concernées qui ont acquis chaque compétence</p>${comps.length ? `<div class="table-scroll"><table class="sop-mat"><thead>${tete}</thead><tbody>${X.magasins.map(m => `<tr><td><b>${esc(m.nom)}</b><br><span class="muted fm-small">${m.equipe ? m.equipe + ' personnes · ' + m.aVoirFaire + ' à voir faire' : 'équipe pas encore lue'}</span></td>${comps.map(c => `<td>${heat(m.parCompetence[c.cle])}</td>`).join('')}<td><b>${m.taux == null ? '—' : m.taux + ' %'}</b></td></tr>`).join('')}</tbody></table></div>`
+      : '<p class="muted">Aucune SOP n’est encore rattachée à une compétence du panel.</p>'}</section>`;
+    h += `<div class="filters"><div class="filters__row">${choixMagasin()}</div></div>`;
+    if (X.magasin) {
+      const M = X.magasin;
+      const cell = x => !x || x.statut === 'na' ? '' : `<span class="sop-cp ${x.statut}">${x.statut === 'acquise' ? '✓' : x.statut === 'a_revoir' ? '! à revoir' : x.vues + ' / ' + x.total}</span>`;
+      h += `<section class="card table-card"><h2>${esc(M.nom)} · qui a quoi</h2>${comps.length ? `<div class="table-scroll"><table class="sop-mat"><thead>${tete}</thead><tbody>${M.equipe.map(p => { const e = Object.values(p.competences).filter(x => x.statut !== 'na');
+        return `<tr><td><b>${esc(p.nom)}</b><br><span class="muted fm-small">${p.valideur ? 'responsable · ' : ''}${esc(p.postes.map(x => POSTE_NOM[x] || x).join(', '))} · ${esc(p.langue.toUpperCase())}</span></td>${comps.map(c => `<td>${cell(p.competences[c.cle])}</td>`).join('')}<td><b>${e.length ? e.filter(x => x.statut === 'acquise').length + ' / ' + e.length : '—'}</b></td></tr>`; }).join('')}</tbody></table></div>` : ''}</section>`;
+      h += `<div class="sop-deux"><div><section class="card"><h2>À voir faire</h2><p class="muted fm-small">quiz réussi · la responsable valide sur la tablette, avec son PIN</p>
+        ${M.aVoirFaire.map(a => `<div class="sop-ligne"><span class="sop-ligne__d">${esc(dt(a.quizLe))}</span><div class="sop-ligne__x"><b>${esc(a.nom)}</b> · <a href="#/sop/${esc(a.sop)}">${esc(a.titre)}</a></div><span class="chip chip--warn">à voir faire</span></div>`).join('') || '<p class="muted">Rien en attente.</p>'}</section>
+        <section class="card"><h2>L’équipe</h2><p class="muted fm-small">noms et rôles du panel · postes, langue et responsable réglables ici</p>
+        ${M.equipe.map(p => `<div class="sop-ligne" style="flex-wrap:wrap"><div class="sop-ligne__x" style="min-width:150px"><b>${esc(p.nom)}</b><small>${esc(p.role || '—')}</small></div>
+          <span class="sop-puces">${POSTES.map(x => `<label class="${p.postes.includes(x) ? 'is-on' : ''}"><input type="checkbox" data-sch="poste" data-id="${p.id}" value="${x}" ${p.postes.includes(x) ? 'checked' : ''}>${POSTE_NOM[x]}</label>`).join('')}</span>
+          <span class="sop-puces"><label class="${p.valideur ? 'is-on' : ''}"><input type="checkbox" data-sch="valideur" data-id="${p.id}" ${p.valideur ? 'checked' : ''}>valide « vu faire »</label></span>
+          <select class="fm-select" data-sch="langue" data-id="${p.id}" style="width:auto"><option value="fr" ${p.langue === 'fr' ? 'selected' : ''}>FR</option><option value="nl" ${p.langue === 'nl' ? 'selected' : ''}>NL</option></select></div>`).join('') || '<p class="muted">Équipe introuvable au panel pour ce magasin.</p>'}</section></div>
+        <section class="card"><h2>Le fil · 14 jours</h2>${(D.fil || []).map(f => `<div class="sop-ligne"><span class="sop-ligne__d">${esc(dt(f.le))}</span><div class="sop-ligne__x"><b>${esc(f.nom)}</b> · ${esc(f.titre)}<small>${f.type === 'vu' ? 'vu faire par ' + esc(f.par || '') : f.type === 'quiz' ? 'quiz réussi' : 'lue en entier'}</small></div></div>`).join('') || '<p class="muted">Rien ces 14 derniers jours.</p>'}</section></div>`;
+    }
+    return { titre: 'Compétences et SOP', kicker: 'Standards (SOP)', corps: h, large: true };
+  }
+
+  /* ═══ Rédaction et versions ═══ */
+  function ecranRedaction() {
+    if (!D.liste) { return { titre: 'Rédaction et versions', kicker: 'Standards (SOP)', corps: erreurOuAttente() }; }
+    const liste = (D.comp && D.comp.panel.liste) || [];
+    const opts = s => `<option value="">— aucune —</option>${liste.map(c => `<option value="${esc(c.id || '')}|${esc(c.nom)}" ${s.competence && s.competence.nom === c.nom ? 'selected' : ''}>${esc((c.categorie ? c.categorie + ' › ' : '') + c.nom)}</option>`).join('')}
+      ${s.competence && !liste.some(c => c.nom === s.competence.nom) ? `<option value="${esc(s.competence.id || '')}|${esc(s.competence.nom)}" selected>${esc(s.competence.nom)} (hors liste)</option>` : ''}<option value="*">Autre…</option>`;
+    const tr = (s, l) => { const t = s.trad[l]; return t === 'origine' ? '<span class="chip chip--mute">origine</span>' : `<button type="button" class="filter fm-small${t === 'relue' ? ' is-on' : ''}" data-sa="trad" data-id="${esc(s.id)}" data-l="${l}" data-v="${t === 'relue' ? 'a_relire' : 'relue'}">${t === 'relue' ? '✓ relue' : 'à relire → relue'}</button>`; };
+    let h = '';
+    if (D.comp && D.comp.panel.indispo) { h += C.bandeau('Compétences du panel : ' + esc(D.comp.panel.motif || '') + '. « Autre… » permet d’écrire le nom exact d’une compétence du panel en attendant.', 'warn'); }
+    const N = D.nouv;
+    h += `<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher…" data-input="sopq" value="${esc(C.S.f.sopq || '')}"><button type="button" class="filter is-on" data-sa="nouv" style="margin-left:auto">Nouvelle SOP</button></div></div>`;
+    if (N) {
+      h += `<section class="card"><h2>Nouvelle SOP</h2><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+        <input class="sop-in" placeholder="Code (ex. SOP-CUI-XYZ-01)" data-sin="nouv.code" value="${esc(N.code)}">
+        <select class="fm-select" data-sch="nouv.dossier">${D.dossiers.map(d => `<option value="${d.id}" ${N.dossier === d.id ? 'selected' : ''}>${d.id} · ${esc(d.nom.fr)}</option>`).join('')}</select>
+        <select class="fm-select" data-sch="nouv.type">${['SOP', 'Checklist', 'Mémo', 'Fiche'].map(x => `<option ${N.type === x ? 'selected' : ''}>${x}</option>`).join('')}</select>
+        <select class="fm-select" data-sch="nouv.poste">${POSTES.map(x => `<option value="${x}" ${N.poste === x ? 'selected' : ''}>${POSTE_NOM[x]}</option>`).join('')}</select>
+        <input class="sop-in" style="grid-column:span 2" placeholder="Titre FR" data-sin="nouv.fr" value="${esc(N.fr)}"><input class="sop-in" style="grid-column:span 2" placeholder="Titel NL" data-sin="nouv.nl" value="${esc(N.nl)}"></div>
+        <p style="margin-top:10px"><button type="button" class="filter is-on" data-sa="creer">Créer (à valider)</button> <button type="button" class="filter" data-sa="annulerNouv">Annuler</button></p></section>`;
+    }
+    h += `<section class="card table-card"><div class="table-scroll"><table><thead><tr><th>Famille</th><th>SOP</th><th>FR</th><th>NL</th><th>Version</th><th class="num">Étapes</th><th>Compétence du panel</th><th>Partie</th><th>Statut</th><th></th></tr></thead><tbody>
+      ${filtrer(D.liste).map(s => `<tr><td class="fm-small">${esc(s.dossier)} · ${esc(famNom(s.dossier))}</td><td><a href="#/sop/${esc(s.id)}"><b>${esc(s.titre.fr)}</b></a><br><span class="muted fm-small">${esc(s.code || '')} · ${esc(s.titre.nl)}</span></td>
+        <td>${tr(s, 'fr')}</td><td>${tr(s, 'nl')}</td><td><span class="sop-lg is-on">v${esc(s.version)}</span><br><span class="muted fm-small">${esc(dt(s.majLe))}</span></td><td class="num">${s.nbEtapes}</td>
+        <td><select class="fm-select" style="max-width:240px" data-sch="comp" data-id="${esc(s.id)}">${opts(s)}</select></td>
+        <td class="fm-small">${esc(NOM_PARTIE[s.partie])}${s.partieReglee ? '' : '<br><span class="muted">déduite</span>'}</td>
+        <td><select class="fm-select" style="width:auto" data-sch="statut" data-id="${esc(s.id)}"><option value="publiee" ${s.statut === 'publiee' ? 'selected' : ''}>publiée</option><option value="a_valider" ${s.statut === 'a_valider' ? 'selected' : ''}>à valider</option></select></td>
+        <td><a class="filter fm-small" href="#/sop/${esc(s.id)}/editer">Modifier</a></td></tr>`).join('')}</tbody></table></div></section>
+      <p class="muted fm-small">Reprise du Drive du 05/11/2026 (44 fichiers → 25 SOP) : corrections et points à confirmer dans <code>data/formation/REPRISE.md</code> et sur chaque fiche (« Relevé à la reprise »).</p>`;
+    return { titre: 'Rédaction et versions', kicker: 'Standards (SOP)', corps: h, large: true };
+  }
+
+  /* ═══ Éditeur ═══ */
+  const get = (o, p) => p.split('.').reduce((a, k) => a == null ? a : a[k], o);
+  function setP(o, p, v) { const k = p.split('.'); const last = k.pop(); const t = k.reduce((a, x) => a[x], o); t[last] = v; }
+  const champ = (p, ph, area) => { const v = get(D.ed, p) || ''; return area ? `<textarea class="sop-in${v ? '' : ' is-vide'}" data-sin="ed.${p}" placeholder="${esc(ph)}">${esc(v)}</textarea>` : `<input class="sop-in${v ? '' : ' is-vide'}" data-sin="ed.${p}" placeholder="${esc(ph)}" value="${esc(v)}">`; };
+  function ecranEditer(id) {
+    const fil = C.filAriane([['Standards (SOP)', '#/sop'], [D.edMeta ? D.edMeta.titre.fr : id, '#/sop/' + id], ['Modifier', null]]);
+    if (tablette()) { return { titre: 'Modifier', kicker: 'Standards (SOP)', corps: fil + '<p class="muted">La rédaction ne se fait pas en mode tablette.</p>' }; }
+    if (!D.ed || !D.edMeta || D.edMeta.id !== id) { return { titre: 'Modifier', kicker: 'Standards (SOP)', corps: fil + attente('Lecture de la SOP…') }; }
+    const s = D.edMeta, c = D.ed;
+    const bi = (p, lib, area) => `<div style="display:grid;grid-template-columns:120px 1fr 1fr;gap:8px;align-items:start;margin-bottom:8px"><span class="muted" style="padding-top:6px">${lib}</span>${champ(p + '.fr', 'FR', area)}${champ(p + '.nl', 'NL', area)}</div>`;
+    const secs = c.sections.map((sec, si) => `<div class="sop-ed-sec"><div class="sop-ed-sec__h">${champ('sections.' + si + '.titre.fr', 'Titre de la section (FR)')}${champ('sections.' + si + '.titre.nl', 'Titel van de sectie (NL)')}
+      <span><button type="button" class="filter fm-small" data-sa="secMove" data-i="${si}" data-d="-1">↑</button><button type="button" class="filter fm-small" data-sa="secMove" data-i="${si}" data-d="1">↓</button><button type="button" class="filter fm-small" data-sa="secSuppr" data-i="${si}">✕</button></span></div>
+      ${sec.etapes.map((e, ei) => { const p = 'sections.' + si + '.etapes.' + ei; if (!e.titre) { e.titre = { fr: '', nl: '' }; }
+        return `<div class="sop-ed-et"><div class="sop-ed-et__c"><input class="sop-in" data-sin="ed.${p}.numero" value="${esc(e.numero)}" style="text-align:center"><label class="fm-small"><input type="checkbox" data-sch="ed.${p}.critique" ${e.critique ? 'checked' : ''}> critique</label></div>
+          <div class="sop-ed-et__c">${champ(p + '.titre.fr', 'Titre (FR, facultatif)')}${champ(p + '.texte.fr', 'Texte (FR)', true)}</div>
+          <div class="sop-ed-et__c">${champ(p + '.titre.nl', 'Titel (NL, facultatief)')}${champ(p + '.texte.nl', 'Tekst (NL)', true)}</div>
+          <div class="sop-ed-et__c"><input class="sop-in" data-sin="ed.${p}.photo" placeholder="photo (fichier)" value="${esc(e.photo || '')}">${e.photo ? `<img src="sop/photos/${esc(e.photo)}" style="width:100%;border-radius:6px" alt="">` : ''}
+            <span><button type="button" class="filter fm-small" data-sa="etMove" data-i="${si}.${ei}" data-d="-1">↑</button><button type="button" class="filter fm-small" data-sa="etMove" data-i="${si}.${ei}" data-d="1">↓</button><button type="button" class="filter fm-small" data-sa="etSuppr" data-i="${si}.${ei}">✕</button></span></div></div>`; }).join('')}
+      <button type="button" class="filter fm-small" data-sa="etAjout" data-i="${si}">+ étape</button></div>`).join('');
+    const crit = c.points_critiques.map((x, i) => `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">${champ('points_critiques.' + i + '.fr', 'FR')}${champ('points_critiques.' + i + '.nl', 'NL')}<button type="button" class="filter fm-small" data-sa="critSuppr" data-i="${i}">✕</button></div>`).join('');
+    const quiz = c.quiz.map((q, i) => `<div class="sop-q"><div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px">${champ('quiz.' + i + '.question.fr', 'Question (FR)')}${champ('quiz.' + i + '.question.nl', 'Vraag (NL)')}<button type="button" class="filter fm-small" data-sa="quizSuppr" data-i="${i}">✕</button></div>
+      ${q.choix.fr.map((x, j) => `<div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;margin-top:6px;align-items:center"><label class="fm-small"><input type="radio" name="sopbonne${i}" data-sch="bonne" data-i="${i}" value="${j}" ${q.bonne === j ? 'checked' : ''}> bonne</label>${champ('quiz.' + i + '.choix.fr.' + j, 'Choix ' + (j + 1) + ' (FR)')}${champ('quiz.' + i + '.choix.nl.' + j, 'Keuze ' + (j + 1) + ' (NL)')}</div>`).join('')}</div>`).join('');
+    const pv = (() => { const p = s.version.split('.'); if (p.length === 1) { return p[0] + '.1'; } p[p.length - 1] = String(+p[p.length - 1] + 1); return p.join('.'); })();
+    const trSel = l => `<select class="fm-select" style="width:auto" data-sch="edtrad" data-l="${l}">${['origine', 'relue', 'a_relire'].map(t => `<option value="${t}" ${D.edMeta.tradApres[l] === t ? 'selected' : ''}>${l.toUpperCase()} ${TRAD_NOM[t]}</option>`).join('')}</select>`;
+    const corps = fil + `<p class="muted">${esc(s.code || '')} · v${esc(s.version)} en vigueur · chaque texte en FR et en NL (en orange : vide)</p>
+      <section class="card"><h2>En-tête</h2>${bi('titre', 'Titre')}${bi('objectif', 'Objectif', true)}${bi('pour', 'Pour')}<div style="display:grid;grid-template-columns:120px 1fr;gap:8px"><span class="muted" style="padding-top:6px">Durée</span><input class="sop-in" data-sin="ed.duree" value="${esc(c.duree || '')}"></div></section>
+      <section class="card"><h2>Les étapes · ${c.sections.reduce((a, x) => a + x.etapes.length, 0)}</h2>${secs}<button type="button" class="filter" data-sa="secAjout">+ section</button></section>
+      <section class="card"><h2>Points critiques</h2>${crit}<button type="button" class="filter fm-small" data-sa="critAjout">+ point critique</button></section>
+      <section class="card"><h2>Quiz</h2><p class="muted fm-small">3 questions conseillées · une bonne réponse par question</p>${quiz}<button type="button" class="filter fm-small" data-sa="quizAjout">+ question</button></section>
+      ${D.edErr ? `<p class="error">${esc(D.edErr)}</p>` : ''}
+      <div class="sop-ed-barre"><input class="sop-in" style="max-width:340px" placeholder="Ce qui change (note de version)" data-sin="edMeta.note" value="${esc(D.edMeta.note || '')}">
+        <label class="fm-small"><input type="radio" name="sopreval" data-sch="reval" value="0" ${!D.edMeta.revalider ? 'checked' : ''}> Précision : ceux qui l’ont validée restent validés</label>
+        <label class="fm-small"><input type="radio" name="sopreval" data-sch="reval" value="1" ${D.edMeta.revalider ? 'checked' : ''}> Le geste change : ils repassent « à revoir »</label>
+        ${trSel('fr')}${trSel('nl')}<span style="flex:1"></span><a class="filter" href="#/sop/${esc(s.id)}">Annuler</a><button type="button" class="filter is-on" data-sa="publier" ${D.occupe ? 'disabled' : ''}>Publier la v${esc(pv)}</button></div>`;
+    return { titre: 'Modifier · ' + s.titre.fr, kicker: 'Standards (SOP)', corps, large: true };
+  }
+
+  /* ═══ Le Manuel opératoire : les SOP de chaque partie ═══ */
+  function dePartie(cle) { return D.liste ? D.liste.filter(s => s.partie === cle) : null; }
+  function sectionPartie(cle) {
+    const l = dePartie(cle);
+    let h = `<div class="section-label">Standards (SOP) · ${l ? C.n(l.length) : '…'}</div>`;
+    if (!l) { return h + erreurOuAttente(); }
+    if (!l.length) { return h + `<p class="muted" style="margin-top:8px">Aucune SOP dans cette partie.</p>`; }
+    h += `<p class="muted fm-small"><a href="${tabletteLien('')}" target="_blank" rel="noopener">Lire pas à pas sur la tablette du poste ↗</a> · nom, PIN, quiz, « vu faire » par la responsable</p>`;
+    let fam = null, ouvert = false;
+    l.forEach(s => {
+      if (s.dossier !== fam) { if (ouvert) { h += '</ul>'; } fam = s.dossier; ouvert = true; h += `<div class="fm-part-cat">${esc(famNom(s.dossier))}</div><ul class="type-grid">`; }
+      h += `<li><a class="choice-card" href="#/sop/${esc(s.id)}"><strong><span class="fm-code">${esc(s.code || '')}</span> ${esc(s.titre.fr)}</strong><span class="muted">${esc(s.titre.nl)} · ${s.nbEtapes} étapes${s.statut === 'a_valider' ? ' · à valider' : ''}</span></a></li>`;
+    });
+    return h + (ouvert ? '</ul>' : '');
+  }
+  function nbPartie(cle) { const l = dePartie(cle); return l ? l.length : null; }
+
+  /* ═══ Lectures ═══ */
+  function chargerListe(forcer) {
+    if ((D.liste && !forcer) || D.charge) { return; }
+    D.charge = true;
+    C.lire('/formation/sop/liste', 30000).then(d => { D.liste = d.sops; D.totaux = d.totaux; D.dossiers = d.dossiers; D.erreur = null; D.charge = false; C.rendre(true); },
+      er => { D.erreur = er.message; D.charge = false; C.rendre(true); });
+  }
+  function chargerMagasins() {
+    if (D.magasins) { return; }
+    D.magasins = [];
+    C.lire('/stores', 30000).then(l => { D.magasins = (Array.isArray(l) ? l : []).filter(m => m.status !== 'Fermé').map(m => ({ id: String(m.id), nom: m.nom })); C.rendre(true); }, () => {});
+  }
+  function chargerFiche(id, forcer) {
+    if (D.fiche[id] && !forcer) { return; }
+    if (!forcer) { D.fiche[id] = null; }
+    C.lire('/formation/sop/fiche/' + encodeURIComponent(id) + (D.shop ? '?shop=' + encodeURIComponent(D.shop) : ''), 30000)
+      .then(d => { D.fiche[id] = d; C.rendre(true); }, er => { D.fiche[id] = { error: er.message }; C.rendre(true); });
+  }
+  function chargerComp(forcer, rafraichir) {
+    if ((D.comp && !forcer) || D.compCharge) { return; }
+    D.compCharge = true;
+    const q = [];
+    if (D.shop) { q.push('shop=' + encodeURIComponent(D.shop)); }
+    if (rafraichir) { q.push('rafraichir=1'); }
+    C.lire('/formation/sop/competences' + (q.length ? '?' + q.join('&') : ''), 120000).then(d => { D.comp = d; D.compCharge = false; C.rendre(true); }, er => { D.compCharge = false; toast(er.message); });
+    if (D.shop) { C.lire('/formation/sop/fil?shop=' + encodeURIComponent(D.shop), 30000).then(d => { D.fil = d.fil; C.rendre(true); }, () => {}); } else { D.fil = null; }
+  }
+  function chargerEditeur(id) {
+    if (D.edMeta && D.edMeta.id === id && D.ed) { return; }
+    D.ed = null; D.edMeta = { id, titre: { fr: id } };
+    C.lire('/formation/sop/fiche/' + encodeURIComponent(id), 30000).then(f => {
+      D.ed = JSON.parse(JSON.stringify(f.contenu)); D.edErr = null;
+      D.ed.sections.forEach(sec => sec.etapes.forEach(e => { if (!e.titre) { e.titre = { fr: '', nl: '' }; } }));
+      D.edMeta = Object.assign({}, f, { note: '', revalider: false, tradApres: { fr: f.trad.fr, nl: f.trad.nl } });
+      C.rendre(true);
+    }, er => { D.edErr = er.message; C.rendre(true); });
+  }
+
+  /** Les lectures de l'écran affiché (appelé par apres() de formation.js). */
+  function apres(e, a) {
+    if (e === 'sop' || e === 'sopred' || e === 'manuel') { chargerListe(false); }
+    if (e === 'sop' || e === 'sopcomp') { chargerMagasins(); }
+    if (e === 'sop' && a[0] && a[1] === 'editer') { chargerEditeur(a[0]); }
+    else if (e === 'sop' && a[0] && D.fiche[a[0]] === undefined) { chargerFiche(a[0]); }
+    if (e === 'sopcomp' || e === 'sopred') { chargerComp(false); }
+  }
+
+  const ECRANS = {
+    sop: () => { const a = C.S.route.a; return a[0] ? (a[1] === 'editer' ? ecranEditer(a[0]) : ecranFiche(a[0])) : ecranListe(); },
+    sopcomp: ecranCompetences,
+    sopred: ecranRedaction
+  };
+
+  /* ═══ Gestes (écouteurs propres aux SOP, sur #root) ═══ */
+  async function patch(id, corps, msg) {
+    try { await C.appel('PATCH', '/formation/sop/fiche/' + encodeURIComponent(id), corps); toast(msg || 'Enregistré'); D.fiche[id] = undefined; chargerListe(true); if (C.S.route.a[0] === id) { chargerFiche(id, true); } chargerCompSiOuvert(); }
+    catch (e) { toast(e.message); }
+  }
+  function chargerCompSiOuvert() { if (D.comp) { chargerComp(true); } }
+  async function personne(eid, corps) {
+    try { await C.appel('PUT', '/formation/sop/equipe/' + encodeURIComponent(D.shop) + '/' + eid, corps); toast('Enregistré'); chargerComp(true); }
+    catch (e) { toast(e.message); }
+  }
+  const vider = o => { const r = JSON.parse(JSON.stringify(o)); (function n(x) { if (x && typeof x === 'object') { Object.keys(x).forEach(k => { if (typeof x[k] === 'string') { x[k] = ''; } else { n(x[k]); } }); } })(r); return r; };
+
+  function brancher(root) {
+    root.addEventListener('click', async ev => {
+      const b = ev.target.closest('[data-sa]');
+      if (!b) { return; }
+      const d = b.dataset, E = D.ed;
+      switch (d.sa) {
+        case 'zoom': { const z = document.createElement('div'); z.className = 'sop-zoom'; z.innerHTML = `<img src="${esc(d.v)}" alt="">`; z.onclick = () => z.remove(); document.body.appendChild(z); return; }
+        case 'filtre': D.f[d.k] = d.k === 'poste' ? d.v : d.v === 'true'; return C.rendre(true);
+        case 'vue': D.vue = d.v; try { localStorage.setItem('fm.sop.vue', d.v); } catch (x) { /* */ } return C.rendre(true);
+        case 'partie': return patch(d.id, { partie: d.v || null }, d.v ? 'Rangée dans ' + NOM_PARTIE[d.v] : 'Partie déduite');
+        case 'trad': return patch(d.id, { trad: { [d.l]: d.v } }, d.l.toUpperCase() + (d.v === 'relue' ? ' relue' : ' à relire'));
+        case 'archive':
+          if (!d.v) { D.archive = null; return C.rendre(true); }
+          try { D.archive = await C.lire('/formation/sop/fiche/' + encodeURIComponent(d.id) + '/versions/' + encodeURIComponent(d.v)); } catch (x) { toast(x.message); }
+          return C.rendre(true);
+        case 'relirePanel': D.comp = null; return chargerComp(true, true);
+        case 'nouv': D.nouv = { code: '', dossier: '01', type: 'SOP', poste: 'vente', fr: '', nl: '' }; return C.rendre(true);
+        case 'annulerNouv': D.nouv = null; return C.rendre(true);
+        case 'creer':
+          try { const r = await C.appel('POST', '/formation/sop/fiche', { code: D.nouv.code, dossier: D.nouv.dossier, type: D.nouv.type, poste: D.nouv.poste, titre: { fr: D.nouv.fr, nl: D.nouv.nl } }); D.nouv = null; chargerListe(true); location.hash = '#/sop/' + r.id + '/editer'; }
+          catch (x) { toast(x.message); }
+          return;
+        case 'secMove': { const i = +d.i, j = i + (+d.d); if (j >= 0 && j < E.sections.length) { [E.sections[i], E.sections[j]] = [E.sections[j], E.sections[i]]; } return C.rendre(true); }
+        case 'secSuppr': if (confirm('Supprimer cette section et ses étapes ?')) { E.sections.splice(+d.i, 1); } return C.rendre(true);
+        case 'secAjout': E.sections.push({ titre: { fr: '', nl: '' }, etapes: [] }); return C.rendre(true);
+        case 'etAjout': { const sec = E.sections[+d.i]; sec.etapes.push({ numero: String(sec.etapes.length + 1), titre: { fr: '', nl: '' }, texte: { fr: '', nl: '' }, critique: false, photo: null }); return C.rendre(true); }
+        case 'etMove': { const [si, ei] = d.i.split('.').map(Number); const l = E.sections[si].etapes, j = ei + (+d.d); if (j >= 0 && j < l.length) { [l[ei], l[j]] = [l[j], l[ei]]; } return C.rendre(true); }
+        case 'etSuppr': { const [si, ei] = d.i.split('.').map(Number); E.sections[si].etapes.splice(ei, 1); return C.rendre(true); }
+        case 'critAjout': E.points_critiques.push({ fr: '', nl: '' }); return C.rendre(true);
+        case 'critSuppr': E.points_critiques.splice(+d.i, 1); return C.rendre(true);
+        case 'quizAjout': E.quiz.push(E.quiz[0] ? Object.assign(vider(E.quiz[0]), { bonne: 0 }) : { question: { fr: '', nl: '' }, choix: { fr: ['', '', ''], nl: ['', '', ''] }, bonne: 0 }); return C.rendre(true);
+        case 'quizSuppr': E.quiz.splice(+d.i, 1); return C.rendre(true);
+        case 'publier': {
+          D.occupe = true; D.edErr = null; C.rendre(true);
+          try {
+            const r = await C.appel('PUT', '/formation/sop/fiche/' + encodeURIComponent(D.edMeta.id), { contenu: E, note: D.edMeta.note, revalider: D.edMeta.revalider, trad: D.edMeta.tradApres });
+            toast('Version ' + r.version + ' publiée' + (r.aRevoir ? ' · ' + r.aRevoir + ' personne(s) à revoir' : ''));
+            const id = D.edMeta.id; D.occupe = false; D.ed = null; D.edMeta = null; D.fiche[id] = undefined; chargerListe(true); location.hash = '#/sop/' + id; return;
+          } catch (x) { D.edErr = x.message; }
+          D.occupe = false; return C.rendre(true);
+        }
+      }
+    });
+    root.addEventListener('input', ev => {
+      const t = ev.target, k = t.getAttribute && t.getAttribute('data-sin');
+      if (!k) { return; }
+      const [obj, ...reste] = k.split('.');
+      const p = reste.join('.');
+      if (obj === 'ed' && D.ed) { setP(D.ed, p, p.endsWith('.photo') && t.value.trim() === '' ? null : t.value); t.classList.toggle('is-vide', !t.value); }
+      else if (obj === 'edMeta' && D.edMeta) { D.edMeta[p] = t.value; }
+      else if (obj === 'nouv' && D.nouv) { D.nouv[p] = t.value; }
+    });
+    root.addEventListener('change', ev => {
+      const t = ev.target, k = t.getAttribute && t.getAttribute('data-sch');
+      if (!k) { return; }
+      const d = t.dataset;
+      if (k === 'shop') { D.shop = t.value; try { localStorage.setItem('fm.sop.shop', D.shop); } catch (x) { /* */ } D.fiche = {}; D.comp = null; return C.rendre(true); }
+      if (k.startsWith('ed.')) { setP(D.ed, k.slice(3), t.checked); return; }
+      if (k.startsWith('nouv.')) { D.nouv[k.slice(5)] = t.value; return; }
+      if (k === 'bonne') { D.ed.quiz[+d.i].bonne = +t.value; return; }
+      if (k === 'reval') { D.edMeta.revalider = t.value === '1'; return; }
+      if (k === 'edtrad') { D.edMeta.tradApres[d.l] = t.value; return; }
+      if (k === 'statut') { return patch(d.id, { statut: t.value }, t.value === 'publiee' ? 'Publiée' : 'À valider'); }
+      if (k === 'comp') {
+        let v = t.value;
+        if (v === '*') { const nom = prompt('Nom exact de la compétence du panel :'); if (!nom) { return C.rendre(true); } v = '|' + nom.trim(); }
+        if (!v) { return patch(d.id, { competence: null }, 'Compétence retirée'); }
+        const i = v.indexOf('|');
+        return patch(d.id, { competence: { id: v.slice(0, i) || null, nom: v.slice(i + 1) } }, 'Compétence rattachée');
+      }
+      if (k === 'poste') { const p = D.comp.magasin.equipe.find(x => String(x.id) === d.id); const s = new Set(p.postes); t.checked ? s.add(t.value) : s.delete(t.value); return personne(d.id, { postes: [...s] }); }
+      if (k === 'valideur') { return personne(d.id, { valideur: t.checked }); }
+      if (k === 'langue') { return personne(d.id, { langue: t.value }); }
+    });
+  }
+
+  return {
+    /** Les entrées de la barre latérale : [clé, libellé]. */
+    nav: [['sop', 'Les SOP du réseau'], ['sopcomp', 'Compétences et SOP'], ['sopred', 'Rédaction et versions']],
+    icones: {
+      sop: 'M9 11l3 3 8-8M4 4h11v4M4 4v16h16v-6',
+      sopcomp: 'M12 2l3 6.5 7 .9-5 4.8 1.2 7L12 18l-6.2 3.2 1.2-7-5-4.8 7-.9z',
+      sopred: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'
+    },
+    ecrans: ECRANS,
+    /** formation.js fournit ses outils une fois, au démarrage. */
+    init(ctx, root) { C = ctx; brancher(root); },
+    apres,
+    sectionPartie,
+    nbPartie
+  };
+})();

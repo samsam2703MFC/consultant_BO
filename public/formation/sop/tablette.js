@@ -1,10 +1,10 @@
-/* La tablette du poste — lire une SOP pas à pas, répondre au quiz, faire valider « vu faire » par la responsable.
+/* La tablette du poste (module Formation › Standards, SOP) — lire une SOP pas à pas, répondre au quiz, faire valider « vu faire » par la responsable.
  *
  * ?shop=<magasin>&poste=<cuisson|production|vente|nettoyage> — l'onglet SOP de l'app Cuisine ouvre cette page.
  * On s'identifie comme pour les checklists : son nom, puis son PIN (vérifié au panel par le cockpit ; le PIN ne
  * reste jamais dans la tablette). Sans identification on peut lire, mais rien n'est compté. Après 10 minutes sans
  * geste, la tablette se déconnecte : elle est partagée.
- * API : ../api/cockpit/formation/tablette/* (src/formation.php).
+ * API : ../api/cockpit/formation/sop/tablette/* (src/sop.php), à côté du module Formation.
  */
 (function () {
   'use strict';
@@ -83,11 +83,11 @@
   async function charger() {
     if (!S.shop) { return choisirMagasin(); }
     try {
-      S.init = await api('/formation/tablette/init?shop=' + encodeURIComponent(S.shop));
+      S.init = await api('/formation/sop/tablette/init?shop=' + encodeURIComponent(S.shop));
       localStorage.setItem('foShop', S.shop);
       const j = sessionStorage.getItem('foJeton');
       if (j) {
-        try { const m = await api('/formation/tablette/moi?jeton=' + encodeURIComponent(j)); S.jeton = j; S.moi = m.personne; S.suivi = m.suivi || {}; actif(); }
+        try { const m = await api('/formation/sop/tablette/moi?jeton=' + encodeURIComponent(j)); S.jeton = j; S.moi = m.personne; S.suivi = m.suivi || {}; actif(); }
         catch (e) { sessionStorage.removeItem('foJeton'); }
       }
       S.erreur = null;
@@ -102,7 +102,7 @@
   /* ── L'en-tête ── */
   function entete(retour) {
     const m = S.init ? S.init.magasin.nom : '';
-    return `<div class="tb-hd">${retour ? `<button class="tb-ret" data-a="liste">←</button>` : ''}<img src="../assets/img/logo.png" alt="L'Atelier">
+    return `<div class="tb-hd">${retour ? `<button class="tb-ret" data-a="liste">←</button>` : ''}<img src="../img/logo.png" alt="L'Atelier">
       <div class="t">${esc(t().titre)} · ${esc(m)}<small>${esc(S.sop ? (S.sop.code || '') + ' · v' + S.sop.version : (S.poste === 'tous' ? t().poste.tous : t().poste[S.poste]))}</small></div>
       <span class="sp"></span>
       <span class="tb-bascule"><button data-l="fr" class="${S.langue === 'fr' ? 'on' : ''}">FR</button><button data-l="nl" class="${S.langue === 'nl' ? 'on' : ''}">NL</button></span>
@@ -238,7 +238,7 @@
 
   async function ouvrir(id) {
     try {
-      S.sop = await api('/formation/tablette/sop/' + encodeURIComponent(id));
+      S.sop = await api('/formation/sop/tablette/sop/' + encodeURIComponent(id));
       S.vue = 'lecture'; S.etape = 0; S.vuEtapes = {}; S.qi = 0; S.reponses = []; S.choix = null; S.resultat = null; S.valideur = null; S.pin = ''; S.note = ''; S.erreur = null;
       rendre(); window.scrollTo(0, 0);
     } catch (e) { toast(e.message); }
@@ -251,7 +251,7 @@
     S.occupe = true; S.erreur = null; rendre();
     try {
       if (act === 'identifier') {
-        const r = await api('/formation/tablette/identifier', { shop: S.shop, employe: S.pinPour, pin: S.pin });
+        const r = await api('/formation/sop/tablette/identifier', { shop: S.shop, employe: S.pinPour, pin: S.pin });
         S.jeton = r.jeton; S.moi = r.personne; S.suivi = r.suivi || {};
         sessionStorage.setItem('foJeton', r.jeton);
         if (r.personne.langue && r.personne.langue !== S.langue) { S.langue = r.personne.langue; localStorage.setItem('foLangue', S.langue); }
@@ -264,10 +264,14 @@
   }
 
   async function valider(decision) {
-    const r = await api('/formation/tablette/vu', { shop: S.shop, sop: S.sop.id, employe: S.moi.id, valideur: S.valideur, pin: S.pin, decision, note: S.note || null });
+    const r = await api('/formation/sop/tablette/vu', { shop: S.shop, sop: S.sop.id, employe: S.moi.id, valideur: S.valideur, pin: S.pin, decision, note: S.note || null });
     S.suivi[S.sop.id] = Object.assign({}, S.suivi[S.sop.id] || {}, { statut: r.statut });
     let m = decision === 'vu' ? t().okVu : t().pasEncore;
-    if (r.competence && r.competence.acquise) { m = t().compAcq + ' : ' + r.competence.nom; }
+    if (r.competence && r.competence.acquise) {
+      m = t().compAcq + ' : ' + r.competence.nom;
+      // Cochée au panel pour la personne ; un refus du panel se dit, la validation reste enregistrée.
+      if (r.competence.panel && !r.competence.panel.ok) { m += ' · panel : ' + r.competence.panel.erreur; }
+    }
     else if (r.competence) { m += ' · ' + t().compEnc + ' ' + r.competence.vues + ' / ' + r.competence.total; }
     toast(m);
     S.vue = 'liste'; S.sop = null;
@@ -281,7 +285,7 @@
     if (d.shop) { S.shop = d.shop; return charger(); }
     if (d.l) {
       S.langue = d.l; localStorage.setItem('foLangue', S.langue);
-      if (S.jeton) { api('/formation/tablette/langue', { jeton: S.jeton, langue: S.langue }, 'PUT').catch(() => {}); }
+      if (S.jeton) { api('/formation/sop/tablette/langue', { jeton: S.jeton, langue: S.langue }, 'PUT').catch(() => {}); }
       return rendre();
     }
     if (d.poste) { S.poste = d.poste; localStorage.setItem('foPoste', S.poste); return rendre(); }
@@ -299,7 +303,7 @@
       case 'fini': {
         S.vuEtapes[S.etape] = true;
         if (!S.jeton) { toast(t().identifie); S.vue = 'liste'; S.sop = null; return rendre(); }
-        try { const r = await api('/formation/tablette/lu', { jeton: S.jeton, sop: S.sop.id }); S.suivi[S.sop.id] = Object.assign({}, S.suivi[S.sop.id] || {}, { statut: r.statut }); toast(t().okLu); }
+        try { const r = await api('/formation/sop/tablette/lu', { jeton: S.jeton, sop: S.sop.id }); S.suivi[S.sop.id] = Object.assign({}, S.suivi[S.sop.id] || {}, { statut: r.statut }); toast(t().okLu); }
         catch (e) { toast(e.message); }
         if (S.sop.statut === 'a_valider' || !(S.sop.contenu.quiz || []).length) { S.vue = 'liste'; S.sop = null; return rendre(); }
         S.vue = 'quiz'; S.qi = 0; S.reponses = []; S.choix = null; return rendre();
@@ -308,7 +312,7 @@
         S.reponses[S.qi] = S.choix; S.choix = null;
         if (S.qi < S.sop.contenu.quiz.length - 1) { S.qi++; return rendre(); }
         S.occupe = true;
-        try { S.resultat = await api('/formation/tablette/quiz', { jeton: S.jeton, sop: S.sop.id, reponses: S.reponses }); S.suivi[S.sop.id] = Object.assign({}, S.suivi[S.sop.id] || {}, { statut: S.resultat.statut }); S.vue = 'resultat'; }
+        try { S.resultat = await api('/formation/sop/tablette/quiz', { jeton: S.jeton, sop: S.sop.id, reponses: S.reponses }); S.suivi[S.sop.id] = Object.assign({}, S.suivi[S.sop.id] || {}, { statut: S.resultat.statut }); S.vue = 'resultat'; }
         catch (e) { toast(e.message); }
         S.occupe = false; return rendre();
       }

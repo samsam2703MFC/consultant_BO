@@ -89,6 +89,7 @@ function ensureInstalled(): void
     ensureFacebook();
     if (function_exists('ensureSocialPublication')) { ensureSocialPublication(); }   // après les posts : elle les complète
     ensureTabletteRemarques();
+    ensureSop();
     if ($marOk) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
             ['schemaVu', json_encode($emp)]);

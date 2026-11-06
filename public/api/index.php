@@ -121,6 +121,7 @@ require __DIR__ . '/../../src/sms.php';
 require __DIR__ . '/../../src/recurrence_pwa.php';
 require __DIR__ . '/../../src/leviers.php';
 require __DIR__ . '/../../src/formation.php';
+require __DIR__ . '/../../src/sop.php';
 require __DIR__ . '/../../src/parcours.php';
 $tCharge = microtime(true);
 
@@ -251,6 +252,17 @@ try {
         exit;
     }
 
+    // La tablette du poste (Formation › Standards, SOP) : ouverte sans session cockpit — chaque écriture porte
+    // le PIN d'un employé, vérifié au panel, ou un jeton signé (src/sop.php).
+    if (str_starts_with($path, '/formation/sop/tablette/')) {
+        $out = sopRoute($method, $path, true);
+        if ($out !== null) {
+            tempsServeur($tCharge, $tInstall);
+            echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+    }
+
     $out = authRoute($method, $path);       // /auth/* : toujours accessibles
     if ($out === null) {
         if (authEnabled() && !authOk()) {   // session exigée seulement si l'auth intégrée est activée
@@ -311,6 +323,11 @@ function routeGardee(string $method, string $path): mixed
 
 function route(string $method, string $path): mixed
 {
+    // --- Formation › Standards (SOP) : src/sop.php
+    if (str_starts_with($path, '/formation/sop/')) {
+        $f = sopRoute($method, $path);
+        if ($f !== null) { return $f; }
+    }
     // --- lectures (une par écran + référentiels)
     if ($method === 'GET') {
         return match (true) {
