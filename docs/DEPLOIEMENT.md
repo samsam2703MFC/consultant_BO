@@ -403,3 +403,25 @@ Contrat : `docs/contrat-api.md`, « MétaDonnée ».
 - **Vérifier** : « 🔍 Tester les connexions » (lecture seule, sur chaque écran du module) et, à l'étape 2,
   « Envoyer un lead d'essai » (un lead TEST réellement envoyé puis relu : à supprimer dans l'ERP).
   Kit d'essai hors ligne : `tools/metadonnee-essai/LISEZMOI.md`.
+
+## Formation › Standards (SOP)
+
+Une section du module Formation : **`…/consulant_bo/formation/#/sop`** (et à la racine, `/formation/#/sop`), et la
+tablette du poste **`…/formation/sop/tablette.html?shop=<id>&poste=cuisson`** (l’onglet **SOP** de l’app Cuisine y
+mène avec le magasin et la langue de l’appareil).
+
+**Rien à installer à la main.** Au premier appel de l’API, `ensureSop()` (`src/sop.php`) crée `ceo_sop`,
+`ceo_sop_version`, `ceo_sop_suivi`, `ceo_sop_personne` et range les 25 SOP de `data/formation/sops/*.json` (FR et NL).
+La reprise n’écrase jamais une SOP déjà en base. `data/formation/` et `public/formation/sop/photos/` partent avec le
+reste du dépôt.
+
+**Compte consultant du panel** (Paramètres) : il vérifie les PIN des employés (`GET /shops/{id}/employees`), lit les
+compétences (`GET /competencies`) et coche au panel une compétence acquise (`PUT /employees/{id}/competencies`). Sans
+lui, la tablette lit mais ne compte rien. 5 essais de PIN manqués bloquent la personne 10 minutes.
+
+**PDF** des SOP (FR ou NL, une SOP ou toutes) : le moteur PDF des rapports (§ 4) ; sans moteur, la page s’ouvre prête
+à imprimer.
+
+**App Cuisine** (`pwa_kitchen`) : l’adresse de la tablette se règle par la variable `FORMATION_URL` de l’app Cuisine
+(par défaut `https://<même serveur>/consulant_bo/formation/sop/tablette.html`).
+

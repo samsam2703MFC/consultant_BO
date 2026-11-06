@@ -89,18 +89,17 @@ public/
     index.html          coquille
     dashboard.js        état S, rendre()/brancher(), lectures lireAux()
     dashboard.css       styles de la page
-  formation/            les standards du réseau (SOP) FR/NL : module du cockpit (index.html,
-                        formation.js), tablette du poste (tablette.html), photos des SOP
   tablette/             tablette des vendeuses « Book vendeuses » — application
                         compilée (dépôt pwa_sales_tablet), copiée telle quelle
   formation/            module Formation — référentiel RH du panel (postes,
                         sous-postes, compétences, formations, procédures),
                         manuel opératoire en ligne (tablette), doc des routes
                         API ; design du module marketing (docs/formation.md)
+                        formation-sop.js + sop/ : les SOP du réseau (FR/NL) et la tablette
+                        du poste (sop/tablette.html)
 src/
   Db.php                connexion PDO
   endpoints.php         lectures (GET) — un endpoint par écran
-  formation.php         Formation : SOP en base (FR/NL), versions, suivi, compétences, tablette, PDF
   writes.php            écritures (POST/PATCH/PUT) + journalisation
   fbcontrole.php        agent de contrôle des posts Facebook (moteur de règles)
   marketing_hub.php     GET /marketing/hub — tous les canaux marketing en une lecture
@@ -110,6 +109,8 @@ src/
   linkedin_api.php      client LinkedIn (API Posts, dépôt d'images)
   meta_graph.php        client Meta Graph (lecture des pages, publication)
   formation.php         module Formation : lectures du référentiel RH du panel
+  sop.php               module Formation › Standards (SOP) : SOP en base (FR/NL), versions, suivi,
+                        compétences du panel, tablette du poste (PIN), PDF — docs/formation.md
   installer.php         auto-installation du schéma au premier appel
   auth.php              authentification intégrée (optionnelle)
 sql/

@@ -129,41 +129,43 @@ bas jusqu'à son dernier jour. Les mois sans rien sont rendus quand même, `ca`
 `jours` compte les jours distincts où au moins un ticket a été passé : il dit
 qu'un mois à 6 507 € sur 7 jours est un mois d'ouverture et non un mois raté.
 
-## Formation — les standards du réseau (`src/formation.php`)
+## Formation · Standards (SOP) — les SOP du réseau (`src/sop.php`)
 
+Une section du module Formation (`public/formation/`, groupe « Standards (SOP) », et chaque partie du Manuel opératoire).
 Les SOP vivent dans nos tables (`ceo_sop`, contenu de chaque version dans `ceo_sop_version`) ; chaque texte est
-un objet `{fr, nl}`. Statut d'une personne face à une SOP : `non`, `lu`, `quiz`, `vu`, `a_revoir` (une version
+un objet `{fr, nl}`. `partie` : la partie du Manuel opératoire (`preouverture`, `ouverture`, `operationnel`,
+`formation`), réglée ou déduite du moment (`partieReglee`). Statut d'une personne face à une SOP : `non`, `lu`, `quiz`, `vu`, `a_revoir` (une version
 publiée « à revalider » est venue après). État d'une langue : `origine`, `relue`, `a_relire`.
 
 **Cockpit** (session si l'auth intégrée est activée) :
 
 | Route | Rôle |
 |---|---|
-| `GET /formation/sops` | `{dossiers, sops[], totaux}` — chaque SOP : code, famille, poste, statut, version, `trad`, `competence`, titres, `progression {vu, quiz, lu, aRevoir}` (réseau) |
-| `GET /formation/sops/{id}?shop=` | la SOP + `contenu` (sections, étapes, points critiques, quiz avec `bonne`, corrections, remarques), `versions[]`, et avec `shop` : `equipe[]` (statut par personne) |
-| `GET /formation/sops/{id}/versions/{v}` | le contenu d'une version publiée |
-| `GET /formation/sops/{id}.pdf?langue=fr\|nl` | une SOP en PDF (page imprimable sans moteur PDF) |
-| `GET /formation/competences?shop=&rafraichir=1` | `panel {liste, source, indispo?}`, `competences[]` rattachées, `magasins[]` (taux, `parCompetence`), avec `shop` : `magasin {equipe[] × compétences, aVoirFaire[]}` |
-| `GET /formation/equipe?shop=` · `PUT /formation/equipe/{shop}/{emp}` | les personnes (panel) ; `{postes[], valideur, langue}` |
-| `GET /formation/fil?shop=` | lectures, quiz, « vu faire » des 14 derniers jours |
-| `GET /formation/manuel?langue=` · `GET /formation/manuel.pdf?langue=&dossier=` | le Manuel opératoire complet (pour le Manuel Opératoire du panel), et son PDF |
-| `PUT /formation/sops/{id}` | publier une version : `{contenu, note, revalider, trad: {fr, nl}}` → `{version, aRevoir}` ; refus 400 si un texte manque dans une langue |
-| `PATCH /formation/sops/{id}` | réglages sans nouvelle version : `competence {id, nom} \| null`, `trad {fr\|nl: relue\|a_relire}`, `statut`, `poste`, `moment`, `dossier`, `code` |
-| `POST /formation/sops` | nouvelle SOP `{code, dossier, type, poste, titre {fr, nl}}` (v1.0, à valider) |
-| `POST /formation/importer` | range les SOP de `data/formation/sops/` absentes de la base (n'écrase rien) |
+| `GET /formation/sop/liste` | `{dossiers, sops[], totaux}` — chaque SOP : code, famille, poste, statut, version, `trad`, `competence`, titres, `progression {vu, quiz, lu, aRevoir}` (réseau) |
+| `GET /formation/sop/fiche/{id}?shop=` | la SOP + `contenu` (sections, étapes, points critiques, quiz avec `bonne`, corrections, remarques), `versions[]`, et avec `shop` : `equipe[]` (statut par personne) |
+| `GET /formation/sop/fiche/{id}/versions/{v}` | le contenu d'une version publiée |
+| `GET /formation/sop/fiche/{id}.pdf?langue=fr\|nl` | une SOP en PDF (page imprimable sans moteur PDF) |
+| `GET /formation/sop/competences?shop=&rafraichir=1` | `panel {liste, source, indispo?}`, `competences[]` rattachées, `magasins[]` (taux, `parCompetence`), avec `shop` : `magasin {equipe[] × compétences, aVoirFaire[]}` |
+| `GET /formation/sop/equipe?shop=` · `PUT /formation/sop/equipe/{shop}/{emp}` | les personnes (panel) ; `{postes[], valideur, langue}` |
+| `GET /formation/sop/fil?shop=` | lectures, quiz, « vu faire » des 14 derniers jours |
+| `GET /formation/sop/manuel?langue=` · `GET /formation/sop/manuel.pdf?langue=&dossier=` | toutes les SOP, contenu compris, et leur PDF (complet ou par famille) |
+| `PUT /formation/sop/fiche/{id}` | publier une version : `{contenu, note, revalider, trad: {fr, nl}}` → `{version, aRevoir}` ; refus 400 si un texte manque dans une langue |
+| `PATCH /formation/sop/fiche/{id}` | réglages sans nouvelle version : `competence {id, nom} \| null` (compétence du panel, `GET /competencies`), `partie` (ou `null` : déduite), `trad {fr\|nl: relue\|a_relire}`, `statut`, `poste`, `moment`, `dossier`, `code` |
+| `POST /formation/sop/fiche` | nouvelle SOP `{code, dossier, type, poste, titre {fr, nl}}` (v1.0, à valider) |
+| `POST /formation/sop/importer` | range les SOP de `data/formation/sops/` absentes de la base (n'écrase rien) |
 
 **Tablette du poste** (ouvertes sans session ; chaque écriture porte un PIN vérifié au panel ou un jeton signé de 4 h) :
 
 | Route | Rôle |
 |---|---|
-| `GET /formation/tablette/init?shop=&poste=` | magasin, personnes (sans PIN), SOP du poste |
-| `POST /formation/tablette/identifier` | `{shop, employe, pin}` → `{jeton, personne, suivi}` · 403 PIN incorrect · 429 après 5 essais (10 min) |
-| `GET /formation/tablette/moi?jeton=` | où en est la personne, SOP par SOP |
-| `GET /formation/tablette/sop/{id}` | la SOP en vigueur, FR et NL, quiz sans les réponses |
-| `POST /formation/tablette/lu` | `{jeton, sop}` |
-| `POST /formation/tablette/quiz` | `{jeton, sop, reponses[]}` → `{score, total, reussi, faux[]}` · 409 sur une SOP à valider |
-| `POST /formation/tablette/vu` | `{shop, sop, employe, valideur, pin, decision: vu\|pas_encore, note}` — seule la responsable valide, jamais soi-même, quiz de la version exigé → `{statut, competence {nom, acquise, vues, total}}` |
-| `PUT /formation/tablette/langue` | `{jeton, langue}` |
+| `GET /formation/sop/tablette/init?shop=&poste=` | magasin, personnes (sans PIN), SOP du poste |
+| `POST /formation/sop/tablette/identifier` | `{shop, employe, pin}` → `{jeton, personne, suivi}` · 403 PIN incorrect · 429 après 5 essais (10 min) |
+| `GET /formation/sop/tablette/moi?jeton=` | où en est la personne, SOP par SOP |
+| `GET /formation/sop/tablette/sop/{id}` | la SOP en vigueur, FR et NL, quiz sans les réponses |
+| `POST /formation/sop/tablette/lu` | `{jeton, sop}` |
+| `POST /formation/sop/tablette/quiz` | `{jeton, sop, reponses[]}` → `{score, total, reussi, faux[]}` · 409 sur une SOP à valider |
+| `POST /formation/sop/tablette/vu` | `{shop, sop, employe, valideur, pin, decision: vu\|pas_encore, note}` — seule la responsable valide, jamais soi-même, quiz de la version exigé → `{statut, competence {nom, acquise, vues, total, panel {ok, deja?, erreur?}}}` — une compétence acquise est cochée au panel (`PUT /employees/{id}/competencies`, relue) |
+| `PUT /formation/sop/tablette/langue` | `{jeton, langue}` |
 
 ## 1. Endpoints
 

@@ -387,3 +387,30 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
   `PATCH /formation/manuel/procedure/{id} {partie?: cle | null, videos?: [{url, titre}]}` (clé absente =
   inchangée ; partie inconnue ou adresse refusée = 422).
 - Traductions : `lang_code` n'est pas appliqué par le panel aujourd'hui ; le module lit le français.
+
+## Standards (SOP) — les SOP du réseau en FR et en NL (06/11/2026)
+
+Les 25 SOP du Drive « L’Atelier Halle — SOP — dernières versions retrouvées » sont reprises **en entier** et rangées
+dans **nos tables** (`src/sop.php` : `ceo_sop`, `ceo_sop_version`, `ceo_sop_suivi`, `ceo_sop_personne`, créées et
+remplies au premier appel depuis `data/formation/sops/*.json`). Nos bases sont la source, le Drive l’archive.
+Chaque SOP existe en français et en néerlandais (la langue d’origine fait foi, l’autre est traduite à la reprise,
+« à relire » jusqu’à relecture). Maquettes validées : `docs/maquettes/formation/` ; relevé de la reprise (corrections,
+points à confirmer) : `data/formation/REPRISE.md`.
+
+| Où | Ce qu’on y trouve |
+|---|---|
+| Barre latérale › **Standards (SOP)** › *Les SOP du réseau* (`#/sop`) | les SOP par famille (01 Magasin et vente, 02 Cuisson et production, 03 Nettoyage et fermeture, 04 Fiches de référence), FR/NL, compétence, partie du manuel, progression du réseau |
+| une SOP (`#/sop/{id}`) | les étapes FR et NL côte à côte (ou une langue), photos, PDF FR et NL, **partie du manuel** (réglable, sinon déduite : ouverture → Ouverture, le reste → Opérationnel), l’équipe d’un magasin face à elle, points critiques, quiz, versions, relevé de la reprise |
+| *Compétences et SOP* (`#/sopcomp`) | réseau × compétence, magasin × personne, ce que la responsable doit voir faire, réglages de l’équipe (postes, langue, qui valide), le fil |
+| *Rédaction et versions* (`#/sopred`, `#/sop/{id}/editer`) | marquer une langue relue, rattacher une **compétence du panel** (`GET /competencies`), statut, nouvelle SOP ; l’éditeur FR/NL publie une nouvelle version (précision, ou « le geste change » : les personnes validées repassent à revoir) |
+| **Manuel opératoire** › chaque partie | un bloc *Standards (SOP)* à côté des procédures et des formations FO ; l’accueil compte les SOP de chaque partie |
+| **Tablette du poste** `formation/sop/tablette.html?shop=&poste=&langue=` | l’onglet SOP de l’app Cuisine y mène : son nom, son PIN (vérifié au panel, `GET /shops/{id}/employees`, comme les checklists), le pas à pas, le quiz ; la **responsable du magasin** valide « vu faire » avec son PIN |
+
+**Compétences** : une compétence est acquise quand chacune de ses SOP publiées (pour les postes de la personne) a été vue
+faire à la version en vigueur ; elle est alors **cochée au panel** pour la personne (`PUT /employees/{id}/competencies`,
+le même appel que « valider la compétence » de l’écran Équipes, relu puis journalisé). Un refus du panel est dit sur la
+tablette ; la validation « vu faire » reste enregistrée.
+
+Les écrans SOP vivent dans `public/formation/formation-sop.js` (chargé avant `formation.js`, qui l’appelle par ses
+accroches : `NAV`, `ICONES`, `ECRANS`, `apres()`, l’accueil et chaque partie du manuel) et `sop/sop.css` ; ils
+s’affichent même quand le référentiel du panel est illisible. Routes : `docs/contrat-api.md` § Formation · Standards (SOP).
