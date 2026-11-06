@@ -3507,3 +3507,52 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 .rk-bar { grid-template-columns: minmax(0, 1.7fr) minmax(0, 0.8fr) 54px 92px; }
 .rk-bar .nm { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; }
 .rk-bar.hd .n, .rk-bar.hd .v { text-align: right; }
+
+/* [256] Moja karta stanowiska : jedna strona A4 (makieta 35) — ekran = wydruk (210 × 297 mm), czcionka dopasowana (JS). */
+.pcard-wrap { overflow-x: auto; }
+.pcard-actions { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin: 0 auto 12px; width: 210mm; max-width: 100%; }
+.pcard-actions .btn { min-height: 44px; border-radius: 10px; }
+.pcard-sheet { --pcard-fs: 11.5px; width: 210mm; height: 297mm; margin: 0 auto; box-sizing: border-box; overflow: hidden; background: #fff; color: #2b2523; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 12mm 13mm 9mm; font-size: var(--pcard-fs); line-height: 1.36; display: flex; flex-direction: column; }
+.pcard-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 1.4em; border-bottom: 2px solid #8a1c2b; padding-bottom: .8em; margin-bottom: 1em; }
+.pcard-brand { font-size: .88em; letter-spacing: .18em; text-transform: uppercase; color: #7a706b; }
+.pcard-title { font-size: 1.8em; font-weight: 700; margin: .2em 0 0; color: #2b2523; line-height: 1.15; }
+.pcard-meta { text-align: right; font-size: .92em; color: #7a706b; white-space: nowrap; }
+.pcard-meta b { color: #2b2523; }
+.pcard-mission { background: #f6f2ef; border-radius: 8px; padding: .7em 1em; margin: 0; }
+.pcard-h { font-size: .92em; letter-spacing: .14em; text-transform: uppercase; color: #8a1c2b; margin: 1.2em 0 .4em; font-weight: 700; }
+.pcard-table { width: 100%; border-collapse: collapse; }
+.pcard-table th { font-size: .82em; letter-spacing: .08em; text-transform: uppercase; color: #7a706b; font-weight: 600; text-align: left; padding: .4em .5em; border-bottom: 1px solid #e7e0dc; }
+.pcard-table td { padding: .5em; border-bottom: 1px solid #f0ebe8; vertical-align: top; }
+.pcard-table ul { margin: .2em 0 0; padding-left: 1.2em; color: #4a423e; }
+.pcard-table li { margin: .05em 0; }
+.pcard-c1 { width: 50%; }
+.pcard-c2 { width: 13%; }
+.pcard-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pcard-sub { display: block; font-size: .88em; color: #7a706b; }
+.pcard-chip { display: inline-block; width: .85em; height: .85em; border-radius: 3px; margin-right: .5em; vertical-align: -.05em; }
+.pcard-mini { height: 5px; border-radius: 4px; background: #f0ebe8; margin-top: .3em; }
+.pcard-mini i { display: block; height: 5px; border-radius: 4px; }
+.pcard-goal { display: flex; justify-content: space-between; gap: .8em; padding: .05em 0; }
+.pcard-goal b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pcard-goal i { font-style: normal; color: #a39893; white-space: nowrap; }
+.pcard-total td { border-bottom: 0; }
+.pcard-sheet .pcard-table { font-size: 1em; line-height: 1.36; }
+.pcard-sheet .pcard-table td, .pcard-sheet .pcard-table li, .pcard-sheet .pcard-table ul { font-size: inherit; line-height: inherit; }
+.pcard-sheet .pcard-table th { font-size: .82em; line-height: 1.3; }
+.pcard-sheet .pcard-table .pcard-sub { font-size: .88em; line-height: 1.3; }
+.pcard-foot { margin-top: auto; padding-top: 1.2em; }
+.pcard-sign { display: flex; gap: 3em; font-size: .9em; color: #7a706b; }
+.pcard-sign div { flex: 1; border-top: 1px solid #cfc6c1; padding-top: .4em; }
+.pcard-note { display: flex; justify-content: space-between; font-size: .8em; color: #a39893; margin-top: .8em; }
+@media print {
+    @page { size: A4; margin: 0; }
+    html:has(.pcard-sheet), body:has(.pcard-sheet) { background: #fff !important; height: 297mm; overflow: hidden; }
+    body:has(.pcard-sheet) * { visibility: hidden; }
+    body:has(.pcard-sheet) .pcard-sheet, body:has(.pcard-sheet) .pcard-sheet * { visibility: visible; }
+    body:has(.pcard-sheet) .pcard-sheet { position: fixed; left: 0; top: 0; margin: 0; border-radius: 0; box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+.at-mycard { text-decoration: none; color: inherit; }
+.at-mycard .card-body { min-height: 72px; }
+.at-mycard-icon { font-size: 1.6rem; color: #8a1c2b; }
+.at-mycard .btn { min-height: 44px; border-radius: 10px; display: inline-flex; align-items: center; gap: 4px; }

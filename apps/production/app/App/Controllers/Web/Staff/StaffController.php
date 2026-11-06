@@ -28,6 +28,12 @@ class StaffController extends BaseController
         if (!$this->access->canSee($this->userId(), '/staff/team-bonus')) throw new CustomException('Premie zespołów ustala administrator.', 'errors', 403);
     }
 
+    /** [256] Płace (koszt pracodawcy, minimum, % premii) : zapis tylko dla administratora. */
+    private function guardBudget(): void
+    {
+        if (!$this->access->canSee($this->userId(), '/staff/budget')) throw new CustomException('Płace ustala administrator.', 'errors', 403);
+    }
+
     public function budget()
     {
         $data = $this->budget->overview((string) ($_GET['period'] ?? 'month'));
@@ -37,6 +43,7 @@ class StaffController extends BaseController
     public function savePay($id)
     {
         try {
+            $this->guardBudget();
             $result = $this->budget->savePay((int) $id, $this->getJson(Request::createFromGlobals()), $this->userId());
             unset($_SESSION['tfb_profit_badge']);
             return $this->json(['message' => $result['warning'] ?? 'Zapisano.', 'data' => $result]);
@@ -48,6 +55,7 @@ class StaffController extends BaseController
     public function saveDefaultPct()
     {
         try {
+            $this->guardBudget();
             $this->budget->saveDefaultPct($this->getJson(Request::createFromGlobals())['value'] ?? null, $this->userId());
             return $this->json(['message' => 'Zapisano % premii.']);
         } catch (\Throwable $e) {
@@ -58,6 +66,7 @@ class StaffController extends BaseController
     public function saveSectionPct($id)
     {
         try {
+            $this->guardBudget();
             $input = $this->getJson(Request::createFromGlobals());
             $this->profitability->saveTarget((int) $id, ['bonus_pct' => $input['bonus_pct'] ?? ''], $this->userId());
             return $this->json(['message' => 'Zapisano % premii działu.']);

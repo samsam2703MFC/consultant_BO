@@ -43,7 +43,7 @@
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="card-title mb-0">Grupy produktów: szczegóły</h4>
             <span class="d-flex gap-2 flex-wrap">
-                <a href="{{ root }}/staff/budget{{ selected != 'month' ? '?period=' ~ selected : '' }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-wallet2"></i> Minimum i premie</a>
+                {% if can_see('/staff/budget') %}<a href="{{ root }}/staff/budget{{ selected != 'month' ? '?period=' ~ selected : '' }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-wallet2"></i> Minimum i premie</a>{% endif %}
                 <a href="{{ root }}/dashboard{{ selected != 'month' ? '?period=' ~ selected : '' }}#cele" class="btn btn-sm btn-outline-primary"><i class="bi bi-bullseye"></i> Cele</a>
             </span>
         </div>

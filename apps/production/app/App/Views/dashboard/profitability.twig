@@ -65,7 +65,7 @@
             <h4>Grupy</h4>
             <span class="at-dash-actions">
                 <a href="{{ root }}/dashboard/groups" class="at-dash-btn"><i class="bi bi-calendar-week"></i> Tydzień i miesiąc</a>
-                <a href="{{ root }}/staff/budget{{ selected != 'month' ? '?period=' ~ selected : '' }}" class="at-dash-btn"><i class="bi bi-wallet2"></i> Premie</a>
+                {% if can_see('/staff/budget') %}<a href="{{ root }}/staff/budget{{ selected != 'month' ? '?period=' ~ selected : '' }}" class="at-dash-btn"><i class="bi bi-wallet2"></i> Premie</a>{% endif %}
                 <a href="#profitTargets" class="at-dash-btn" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="profitTargets"><i class="bi bi-sliders"></i> Cele</a>
             </span>
         </div>

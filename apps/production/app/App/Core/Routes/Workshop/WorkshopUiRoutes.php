@@ -21,6 +21,8 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/workshop/gantt', ['controller' => $c, 'method' => 'gantt']);
     $r->addRoute('GET', '/workshop/sheet', ['controller' => $c, 'method' => 'sheet']);
     $r->addRoute('GET', '/workshop/manager', ['controller' => $c, 'method' => 'manager']);
+    // [256] Karta stanowiska A4 osoby na stanowisku kierownika produkcji (strona wspólna, treść tylko dla niej i administratora).
+    $r->addRoute('GET', '/my-card', ['controller' => App\Controllers\Web\Workshop\ManagerCardController::class, 'method' => 'card']);
     $r->addRoute('GET', '/workshop/supply', ['controller' => $c, 'method' => 'supply']);
     // Zakupy tygodnia : kreator w 3 krokach (co kupić → komu i jak → wyślij), oferty, wyniki, dostawcy pozycji.
     $r->addRoute('GET', '/workshop/buy', ['controller' => $c, 'method' => 'buy']);

@@ -1548,18 +1548,28 @@ Avant, l'état du stock (`/workshop/stock` : Stan magazynu, Zapas MTS, Prognoza 
   page en 403), raccourcis de la barre du haut (Rentowność, Wysyłka, Listy produkcyjne, Zamówienia, Nowy produkt, Reklamacje).
 - Tests : `tests/rail_menu_test.php`.
 
-### Premie i oceny dans Administracja (admin seul) — 256 (sans migration)
+### Płace i premie dans Administracja (admin seul) + « Moja karta stanowiska » A4 — 256 (sans migration)
 
-Les primes et l'évaluation du Kierownik produkcji ne sont pas décidées par le chef de production : elles quittent
-Produkcja › Zespół pour une entrée du menu Administracja, « Premie i oceny » (26 entrées au lieu de 25).
+Les salaires, les primes et l'évaluation du Kierownik produkcji ne sont pas décidés par le chef de production : ils quittent
+Produkcja › Zespół pour une entrée du menu Administracja, « Płace i premie » (26 entrées au lieu de 25).
 
-- Onglets : « Premie zespołów » (`/staff/team-bonus` : seuils, minimum, onglet « Premia » des tablettes) et « Kierownik
-  produkcji » (`/workshop/manager` : karta stanowiska, cele, raport, premia, rozmowa, audyt kompetencji).
-- Droits : nouveau droit `team_bonus` réservé à l'administrateur (`PageAccess::PAGES`) ; `budget` (Budżet personelu) reste
-  donnable aux postes. Les enregistrements `PUT /ajax/staff/team-bonus` et `PATCH /ajax/staff/team-bonus/groups/{id}`
-  vérifient ce droit (403 sinon) — les routes `/ajax/` ne passent pas par le contrôle des pages.
-- Zespół garde : Pracownicy produkcji, Budżet personelu.
-- Tests : `tests/rail_menu_test.php`.
+- Onglets : « Budżet personelu » (`/staff/budget` : coût employeur, minimum, % de prime), « Premie zespołów »
+  (`/staff/team-bonus` : seuils, minimum, onglet « Premia » des tablettes) et « Kierownik produkcji » (`/workshop/manager` :
+  karta stanowiska, cele, raport, premia, rozmowa, audyt kompetencji). Zespół garde seulement « Pracownicy produkcji ».
+- Droits : `budget` et `team_bonus` réservés à l'administrateur (`PageAccess::PAGES`). Les enregistrements AJAX
+  (`PATCH /ajax/staff/employees/{id}/pay`, `PUT /ajax/staff/bonus-pct`, `PATCH /ajax/staff/sections/{id}/bonus-pct`,
+  `PUT /ajax/staff/team-bonus`, `PATCH /ajax/staff/team-bonus/groups/{id}`) vérifient ce droit (403 sinon) — les routes
+  `/ajax/` ne passent pas par le contrôle des pages.
+- Pracownicy produkcji sans le droit « płace » : pas de colonne coût dans la liste, pas de coût sur la fiche, pas d'étape
+  « Koszt i płaca » dans l'assistant. Le salarié est créé avec un coût 0 et la fiche dit que l'administrateur complète la paie.
+  Les liens vers Budżet personelu (clôture du mois, Pulpit, Wynik grup, calculateur) sont masqués sans ce droit.
+- « Moja karta stanowiska » (`/my-card`, maquette 35) : une page A4 (210 × 297 mm, police ajustée pour tenir sur une page,
+  impression identique) — missions et tâches, heures par mois et part du temps, objectifs validés (« cel do ustalenia »
+  sinon), seuil d'audit HACCP, signatures. Sans résultats, primes ni salaire. Visible par la personne désignée dans le plan de
+  l'année (`n_mgr_plan.holder_user_id`) et par l'administrateur (aperçu). `ManagerService::card()` / `cardFrom()`.
+- Dzisiaj : pour cette personne, la carte « Moje wskaźniki » (résultats, réalisation) est remplacée par un lien vers la page A4 ;
+  la direction (`prod.manager.read`) garde les indicateurs, avec un lien « Karta A4 (widok kierownika) ».
+- Tests : `tests/rail_menu_test.php`, `tests/manager_card_test.php`.
 
 ## Conventions
 

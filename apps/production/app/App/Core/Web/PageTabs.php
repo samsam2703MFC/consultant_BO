@@ -74,10 +74,9 @@ final class PageTabs
             ['/workshop/stock/forecast', 'Prognoza zapasu i okresy', 'bi-calendar2-range'],
             ['/workshop/stock-movements', 'Ruchy magazynowe', 'bi-arrow-left-right'],
         ]],
-        // Zespół : pracownicy, budżet personelu. [256] Premie zespołów i moduł kierownika → Administracja › Premie i oceny.
+        // Zespół : pracownicy produkcji. [256] Budżet personelu, premie zespołów i moduł kierownika → Administracja › Płace i premie.
         'team' => ['label' => 'Zespół', 'section' => 'Produkcja', 'icon' => 'bi-person-badge', 'tabs' => [
             ['/production-employees', 'Pracownicy produkcji', 'bi-person-badge'],
-            ['/staff/budget', 'Budżet personelu', 'bi-wallet2'],
         ]],
         // Tablety : zarządzanie (tablety, PIN, czas pracy), zatwierdzenia produkcji, zamówienia między grupami ;
         // przyciski otwierają tablety w nowej karcie.
@@ -186,8 +185,9 @@ final class PageTabs
         ]],
         // --- Administracja
         // Aktywność w ERP i licznik stron : jedna pozycja w Administracji (N7).
-        // [256] Premie i oceny (tylko administrator) : premie zespołów, moduł kierownika produkcji.
-        'bonuses' => ['label' => 'Premie i oceny', 'section' => 'Administracja', 'icon' => 'bi-trophy', 'tabs' => [
+        // [256] Płace i premie (tylko administrator) : budżet personelu, premie zespołów, moduł kierownika produkcji.
+        'bonuses' => ['label' => 'Płace i premie', 'section' => 'Administracja', 'icon' => 'bi-wallet2', 'tabs' => [
+            ['/staff/budget', 'Budżet personelu', 'bi-wallet2'],
             ['/staff/team-bonus', 'Premie zespołów', 'bi-trophy'],
             ['/workshop/manager', 'Kierownik produkcji', 'bi-person-workspace'],
         ]],

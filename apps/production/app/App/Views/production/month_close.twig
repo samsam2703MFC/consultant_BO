@@ -121,7 +121,7 @@
             {% endif %}
             <div class="mc-actions">
                 <button type="button" class="btn btn-sm btn-primary" data-mc-action="staff" data-diff="{{ st.budget_diff }}" {{ editable ? '' : 'disabled' }}><i class="bi bi-arrow-repeat"></i> Pobierz z budżetu (koszty i brakujące osoby)</button>
-                <a class="at-link" href="{{ root }}/staff/budget">Budżet personelu <i class="bi bi-arrow-right"></i></a>
+                {% if can_see('/staff/budget') %}<a class="at-link" href="{{ root }}/staff/budget">Budżet personelu <i class="bi bi-arrow-right"></i></a>{% endif %}
                 <a class="at-link" href="{{ root }}/cost-calculator/{{ ym }}#tab-employees">Korekta w miesiącu <i class="bi bi-arrow-right"></i></a>
             </div>
         </div>

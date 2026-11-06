@@ -83,10 +83,13 @@ class DashboardController extends BaseController
         } catch (\Throwable $e) {
             $data['profit'] = null;
         }
-        // Moje wskaźniki : osoba na stanowisku kierownika produkcji (plan roku w module kierownika).
+        // [256] Osoba na stanowisku kierownika produkcji : tylko « Moja karta stanowiska » (A4 : misje, godziny, cele),
+        // bez wyników i realizacji. Wskaźniki kierownika (wynik, cel, realizacja) — dyrekcja (prod.manager.read).
+        $data['manager_card'] = false;
         try {
+            $data['manager_card'] = $userId && $this->manager->card($userId) !== null;
             $canRead = $userId && in_array('prod.manager.read', array_column($this->auth->rolePermissions($userId), 'permission'), true);
-            $data['manager_kpis'] = $userId ? $this->manager->dashboard($userId, $canRead) : null;
+            $data['manager_kpis'] = $userId && !$data['manager_card'] && $canRead ? $this->manager->dashboard($userId, true) : null;
         } catch (\Throwable $e) {
             $data['manager_kpis'] = null;
         }
