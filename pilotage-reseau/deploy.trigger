@@ -1302,3 +1302,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-06T19:46:09Z Formation : parcours (#/parcours) et Compétences des équipes retirés ; tables du parcours effacées après sauvegarde
 2026-11-06T20:13:23Z Formation : correspondance dans la fiche de la compétence, Suivi en magasin, tablettes sans code
 2026-11-06T20:46:15Z Formation : deux menus (Formation, Opérationnel), tablette ouverte en trois onglets, assistant de création des SOP (photos, vidéos), suivi en magasin retiré
+2026-11-06T21:07:01Z Tablette : lecture d'une SOP en assistant de tablette (frise verticale des étapes, gros boutons, balayage)
