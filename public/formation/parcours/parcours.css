@@ -1,6 +1,9 @@
 /* Parcours compétences — page mobile (public/formation/parcours/).
-   Au-dessus de ../formation.css (le design du module Marketing) ; les pièces
-   reprises des maquettes validées (docs/maquettes/parcours-competences/). */
+   Au-dessus de ../ds.css (design system « L'Atelier By », DESIGN_SYSTEM.md, 06/11/2026) et de
+   ../formation.css (pièces du module) ; les pièces reprises des maquettes validées
+   (docs/maquettes/parcours-competences/), sur les jetons du système : texte en 400 (le 700 reste aux
+   chiffres clés), tailles de l'échelle §4.2, rayons du §5 (8 px boutons, 10 px messages, 12 px cartes,
+   6 px cases et pastilles ; ronds : les seuls points de la frise), aucune ombre ni dégradé. */
 
 body {
   background: var(--paper);
@@ -12,6 +15,7 @@ body {
   min-height: 100vh;
   padding: 0 20px 120px;
   position: relative;
+  font-size: 13px;        /* texte courant (§4.2) : sans lui, les aides prenaient les 16 px du navigateur */
 }
 
 .pc-head {
@@ -39,6 +43,12 @@ body {
   color: var(--accent);
 }
 
+.pc-head a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Les trois étapes de l'assistant : une barre fine par étape. */
 .ph-steps {
   display: flex;
   gap: 6px;
@@ -48,7 +58,7 @@ body {
 .ph-steps span {
   flex: 1;
   height: 4px;
-  border-radius: 2px;
+  border-radius: 4px;
   background: var(--line);
 }
 
@@ -56,6 +66,8 @@ body {
   background: var(--accent);
 }
 
+/* Le bouton du bas : l'action principale de l'écran (§7.4 .btn--primary), fixé à l'écran, sur un fond
+   de page pour que le contenu ne se lise pas au travers. */
 .ph-cta {
   position: fixed;
   left: 50%;
@@ -63,14 +75,40 @@ body {
   width: min(420px, calc(100% - 40px));
   bottom: max(20px, env(safe-area-inset-bottom));
   z-index: 5;
+  padding-top: 14px;
+  background: var(--paper);
 }
 
 .ph-cta button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  height: 52px;
+  min-height: 44px;
   margin: 0;
-  border-radius: 12px;
-  font-size: 15px;
+  padding: 7px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: 400 13px/1.2 'Gotham', system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.ph-cta button:hover:not(:disabled) {
+  background: #6f1622;
+  border-color: #6f1622;
+}
+
+.ph-cta button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ph-cta button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .pc .section-label {
@@ -85,23 +123,8 @@ body {
 }
 
 .ph-sous {
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1.45;
-}
-
-.ph-cta {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 26px;
-}
-
-.ph-cta button {
-  width: 100%;
-  height: 52px;
-  margin: 0;
-  border-radius: 12px;
-  font-size: 15px;
 }
 
 .ph-now {
@@ -131,8 +154,8 @@ body {
   font-size: 12px;
 }
 
-.phone .section-label {
-  margin-top: 18px;
+.choice-card strong {
+  font-weight: 400;
 }
 
 .ph-note {
@@ -144,8 +167,8 @@ body {
 .ph-ok {
   margin-top: 16px;
   padding: 12px 14px;
-  border-radius: 11px;
-  background: rgba(63, 122, 82, 0.1);
+  border-radius: 10px;
+  background: rgba(63, 122, 82, 0.12);
   color: var(--green);
   font-size: 13px;
   line-height: 1.45;
@@ -166,7 +189,7 @@ body {
   margin-bottom: 8px;
   background: #fff;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: 12px;
 }
 
 .ph-list li > span:last-child {
@@ -178,17 +201,18 @@ body {
 
 .ph-list strong {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .ph-list .muted {
   font-size: 11.5px;
 }
 
+/* Case à cocher dessinée : un carré aux coins de 6 px, vert plein quand c'est fait. */
 .ph-check {
   flex: 0 0 24px;
   height: 24px;
-  border-radius: 7px;
+  border-radius: 6px;
   border: 1.5px solid var(--faint);
   display: inline-grid;
   place-items: center;
@@ -201,20 +225,23 @@ body {
   border-color: var(--green);
 }
 
+/* Le résumé : le nombre de formations est le chiffre clé de l'écran (§7.10). */
 .ph-resume {
   margin-top: 18px;
   padding: 18px;
 }
 
 .ph-big {
-  font-size: 40px;
-  font-weight: 500;
-  line-height: 1;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
 .ph-big span {
   font-size: 15px;
   font-weight: 400;
+  letter-spacing: normal;
   color: var(--muted);
 }
 
@@ -246,7 +273,7 @@ body {
   font-size: 12px;
 }
 
-/* La mini-frise de l'aperçu */
+/* La mini-frise de l'aperçu (points : ronds, comme le point de couleur §7.9). */
 .mini {
   display: flex;
   align-items: center;
@@ -256,7 +283,7 @@ body {
 .mini__pt {
   width: 12px;
   height: 12px;
-  border-radius: 999px;
+  border-radius: 50%;
   border: 2px solid var(--faint);
   background: #fff;
   flex: 0 0 auto;
@@ -289,6 +316,12 @@ body {
   font-size: 16px;
 }
 
+.mini__plus {
+  margin-left: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 /* ── La frise de suivi ───────────────────────────────────────────────── */
 .ph-goal {
   display: flex;
@@ -310,20 +343,28 @@ body {
   text-transform: uppercase;
 }
 
+/* L'avancement du parcours : un chiffre clé (§7.10), à l'encre. */
 .ph-pct {
-  font-size: 34px;
-  font-weight: 500;
-  line-height: 1;
-  color: var(--accent);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--ink);
 }
 
 .ph-pct small {
   font-size: 15px;
+  font-weight: 400;
 }
 
 .frise {
   margin: 18px -20px 0 0;
-  overflow: hidden;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.frise::-webkit-scrollbar {
+  display: none;
 }
 
 .frise__track {
@@ -339,6 +380,7 @@ body {
   gap: 3px;
   padding-top: 34px;
   padding-right: 10px;
+  cursor: pointer;
 }
 
 /* le trait vers le jalon suivant */
@@ -349,7 +391,7 @@ body {
   left: 22px;
   right: 0;
   height: 3px;
-  border-radius: 2px;
+  border-radius: 4px;
   background: var(--line);
 }
 
@@ -361,13 +403,14 @@ body {
   background: var(--green);
 }
 
+/* Les jalons sont les points de la frise : ronds. Le jalon en cours porte un halo (un contour, pas une ombre). */
 .jalon__dot {
   position: absolute;
   top: 5px;
   left: 0;
   width: 22px;
   height: 22px;
-  border-radius: 999px;
+  border-radius: 50%;
   border: 2px solid var(--faint);
   background: #fff;
   display: grid;
@@ -384,13 +427,21 @@ body {
 .jalon.encours .jalon__dot {
   background: var(--accent);
   border-color: var(--accent);
-  box-shadow: 0 0 0 5px rgba(141, 29, 44, 0.15);
+  outline: 5px solid rgba(141, 29, 44, 0.15);
 }
 
 .jalon.cible .jalon__dot {
   border-color: var(--accent);
   color: var(--accent);
   font-size: 12px;
+}
+
+/* Validé ailleurs (déclaré, ou relu au panel) : le fond « réussite », le liseré vert. */
+.jalon.declaree .jalon__dot,
+.jalon.panel .jalon__dot {
+  background: rgba(63, 122, 82, 0.12);
+  border-color: var(--green);
+  color: var(--green);
 }
 
 .jalon__date {
@@ -400,7 +451,6 @@ body {
 
 .jalon.encours .jalon__date {
   color: var(--accent);
-  font-weight: 500;
 }
 
 .jalon__nom {
@@ -412,6 +462,10 @@ body {
   color: var(--muted-2);
 }
 
+.jalon.is-sel .jalon__nom {
+  color: var(--accent);
+}
+
 .ph-now-card {
   margin-top: 18px;
   padding: 16px;
@@ -419,8 +473,8 @@ body {
 
 .ph-now-title {
   display: block;
-  font-size: 17px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 400;
 }
 
 .ph-now-card .muted {
@@ -433,8 +487,9 @@ body {
   align-items: center;
   gap: 10px;
   padding: 7px 0;
-  font-size: 13.5px;
+  font-size: 13px;
   border-top: 1px solid var(--row-line);
+  cursor: pointer;
 }
 
 .ph-evals li:first-child {
@@ -445,13 +500,16 @@ body {
   color: var(--muted);
 }
 
+.ph-evals li.is-off {
+  cursor: default;
+}
+
 .ph-evals .ph-check {
   flex: 0 0 20px;
   height: 20px;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 11px;
 }
-
 
 /* Pastille d'initiales (reprise du module marketing, écran CRM). */
 .lead {
@@ -467,14 +525,14 @@ body {
   background: var(--chip);
   color: var(--accent);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 400;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .lead__name {
-  font-size: 13.5px;
+  font-size: 13px;
 }
 
 /* ── Pièces propres à la page réelle ─────────────────────────────────── */
@@ -485,6 +543,7 @@ a.choice-card {
   text-decoration: none;
 }
 
+/* Une ligne de liste (une personne, un parcours) : une carte cliquable. */
 .pc-row {
   display: flex;
   align-items: center;
@@ -494,7 +553,7 @@ a.choice-card {
   padding: 12px 14px;
   background: #fff;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: 12px;
   color: var(--ink);
   font: inherit;
   text-align: left;
@@ -504,6 +563,11 @@ a.choice-card {
 
 .pc-row:hover {
   border-color: var(--faint);
+}
+
+.pc-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .pc-row > span:last-child,
@@ -517,22 +581,45 @@ a.choice-card {
 
 .pc-row strong {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .pc-row .muted {
   font-size: 11.5px;
 }
 
+.pc-row strong,
+.pc-row .muted {
+  overflow-wrap: anywhere;
+}
+
 .pc-row__pct {
   font-size: 18px;
-  color: var(--accent);
-  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* Le pourcentage reste sur une ligne : la règle des colonnes de texte (dernier enfant) le mettait en pile. */
+.pc-row > span.pc-row__pct:last-child {
+  display: block;
+  flex: 0 0 auto;
 }
 
 .pc-row.is-lock {
   cursor: default;
-  background: rgba(63, 122, 82, 0.05);
+  background: var(--table-head);
+}
+
+/* Nouveau parcours › Pour qui ? — l'étiquette d'un candidat du CRM déjà suivi (badge « réussite » §7.9). */
+.pc-row > span.pc-tag:last-child {
+  flex: 0 0 auto;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(63, 122, 82, 0.12);
+  color: var(--green);
+  font-size: 11.5px;
+  white-space: nowrap;
 }
 
 .pc-select {
@@ -553,10 +640,11 @@ a.choice-card {
   margin-top: 6px;
 }
 
+/* Les points d'avancement d'une ligne : le point de couleur de 8 px (§7.9). */
 .pt {
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: 50%;
   border: 1.5px solid var(--faint);
   background: #fff;
 }
@@ -577,41 +665,10 @@ a.choice-card {
   font-size: 11px;
 }
 
-.frise {
-  margin: 18px -20px 0 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.frise::-webkit-scrollbar {
-  display: none;
-}
-
-.jalon {
-  cursor: pointer;
-}
-
-.jalon.is-sel .jalon__nom {
-  color: var(--accent);
-  font-weight: 500;
-}
-
-.jalon.declaree .jalon__dot,
-.jalon.panel .jalon__dot {
-  background: #8fb39a;
-  border-color: #8fb39a;
-}
-
-.ph-evals li {
-  cursor: pointer;
-}
-
-.ph-evals li.is-off {
-  cursor: default;
-}
-
 .pc-next {
-  margin-top: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
 }
 
 .pc-next li {
@@ -627,12 +684,6 @@ a.choice-card {
   border-top: none;
 }
 
-.pc-next {
-  list-style: none;
-  padding: 0;
-  margin: 8px 0 0;
-}
-
 .pc-actions {
   display: flex;
   flex-wrap: wrap;
@@ -644,6 +695,41 @@ a.choice-card {
   margin: 0;
 }
 
+/* Les gestes de la page (Continuer, Confirmer, Valider, Arrêter, Annuler) sont des boutons (§7.4 .btn--sm),
+   pas des filtres : un bouton fait, une pastille choisit. Dans une ligne, jamais en bordeaux plein ; dans une
+   fenêtre, la confirmation est l'action principale. Les choix (rythme, type) restent des filtres. */
+.pc-actions .filter,
+.pc-row .filter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pc-actions .filter:hover:not(:disabled),
+.pc-row .filter:hover:not(:disabled) {
+  border-color: var(--muted-2);
+}
+
+.pc-actions .filter.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.pc-actions .filter.is-on:hover:not(:disabled) {
+  background: #6f1622;
+  border-color: #6f1622;
+}
+
 .pc-msg {
   margin: 12px 0 0;
   padding: 10px 12px;
@@ -652,12 +738,12 @@ a.choice-card {
 }
 
 .pc-msg--ok {
-  background: rgba(63, 122, 82, 0.1);
+  background: rgba(63, 122, 82, 0.12);
   color: var(--green);
 }
 
 .pc-msg--ko {
-  background: rgba(179, 38, 30, 0.08);
+  background: rgba(179, 38, 30, 0.07);
   color: var(--danger);
 }
 
@@ -665,7 +751,7 @@ a.choice-card {
   margin-top: 18px;
   padding: 16px;
   border-radius: 12px;
-  background: rgba(63, 122, 82, 0.1);
+  background: rgba(63, 122, 82, 0.12);
   color: var(--green);
 }
 
@@ -675,6 +761,7 @@ a.choice-card {
   margin-bottom: 4px;
 }
 
+/* Fenêtre de confirmation, montée du bas (voile §7.11, carte aux coins de 12 px). */
 .pc-sheet {
   position: fixed;
   inset: 0;
@@ -689,13 +776,13 @@ a.choice-card {
   width: min(460px, 100%);
   padding: 20px 20px max(24px, env(safe-area-inset-bottom));
   background: #fff;
-  border-radius: 18px 18px 0 0;
+  border-radius: 12px 12px 0 0;
 }
 
 .pc-sheet__box h3 {
   margin: 0 0 6px;
-  font-size: 17px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 400;
 }
 
 .pc-sheet__box .pc-actions {
@@ -709,67 +796,15 @@ button.filter.confirm__danger {
   border-color: var(--danger);
 }
 
-/* Le bouton du bas : fixé à l'écran dans la page réelle (dans la maquette, au téléphone). */
-.ph-cta {
-  position: fixed;
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%);
-  width: min(420px, calc(100% - 40px));
-  bottom: max(20px, env(safe-area-inset-bottom));
-  z-index: 5;
-}
-
-.pc-row__pct {
-  white-space: nowrap;
-}
-
-/* Le bouton du bas sur un fond de page : le contenu ne se lit pas au travers. */
-.ph-cta {
-  padding-top: 14px;
-  background: linear-gradient(rgba(250, 247, 242, 0), var(--paper) 40%);
-}
-
-.ph-cta button:disabled {
-  opacity: 1;
-  background: var(--faint);
-  cursor: default;
-}
-
-.mini__plus {
-  margin-left: 10px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-/* Lisibilité (31/10/2026) : la famille « Gotham Lisible » de formation.css
-   (Light pour le texte, Medium pour les libellés, Black pour les titres). */
-.ph-title { font-weight: 800; }
-.ph-big { font-weight: 600; }
-.ph-big span { font-weight: 500; }
-.pc .section-label { font-weight: 600; }
-.pc-row strong, .ph-list strong, .ph-now-title, .pc-sheet__box h3 { font-weight: 600; }
-.ph-now .chip { border-radius: 6px; }
-.ph-cta button, .choice-card strong { font-weight: 600; }
-
-/* Nouveau parcours › Pour qui ? — les candidats franchisés du CRM (31/10/2026). */
-.pc-row > span.pc-tag:last-child {
-  flex: 0 0 auto;
-  display: inline-block;
-  padding: 4px 8px;
+.ph-now .chip {
   border-radius: 6px;
-  background: rgba(63, 122, 82, 0.1);
-  color: #2d6a43;
-  font-size: 11.5px;
-  font-weight: 600;
-  white-space: nowrap;
 }
-.pc-row strong, .pc-row .muted {
-  overflow-wrap: anywhere;
-}
+
 .pc-libre {
   margin: 10px 0 0;
 }
+
+/* Lien d'action dans le texte (« Saisir son nom ») : souligné, bordeaux. */
 .pc-lien {
   padding: 0;
   border: 0;
@@ -777,17 +812,24 @@ button.filter.confirm__danger {
   color: var(--accent);
   font: inherit;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 400;
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
 }
+
+.pc-lien:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .pc-types {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
 }
+
 .pc-aide {
   margin: 8px 0 0;
   font-size: 12.5px;
@@ -797,8 +839,7 @@ button.filter.confirm__danger {
 /* Tablette (1er nov. 2026) : la page s'élargit au lieu de rester une colonne de
    téléphone, le texte grandit d'un cran, et chaque lien se touche du doigt. */
 @media (min-width: 700px) {
-  .pc { max-width: 720px; padding: 0 32px 140px; }
-  .pc .ph-title { font-size: 34px; }
+  .pc { max-width: 720px; padding: 0 32px 140px; font-size: 14px; }
   .pc .ph-sous, .pc-row .muted { font-size: 14px; }
   .pc-row strong { font-size: 16px; }
   .pc-row { padding: 14px 18px; }
