@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquettes — B2B et commandes au téléphone</title>
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="mq.css">
+</head>
+<body>
+<div id="ecran"></div>
+<script>
+/* Trois écrans du dashboard au téléphone, onglet Opérationnel (06/11/2026) :
+ *   ?v=1  la jauge B2B touchée : le tableau se déroule dessous (par société, aujourd'hui face au vendredi dernier) ;
+ *   ?v=2  la même chose en feuille du bas : les tickets pro d'un jour et leurs articles ;
+ *   ?v=3  « Commandes du jour » : comptoir et webshop, et le CA en commandes rapproché de la caisse ;
+ *   ?v=planche  les trois côte à côte.
+ * Les jauges reprennent la capture de Halle du vendredi 6/11 à 18:38. Le détail (sociétés, tickets, articles,
+ * commandes) est illustratif. */
+const LOGO = '../../../public/assets/img/logo.png';
+const nbsp = ' ';
+const fx = (v, d) => { const s = Math.abs(v).toFixed(d).split('.'); return (v < 0 ? '− ' : '') + s[0].replace(/\B(?=(\d{3})+(?!\d))/g, nbsp) + (d ? ',' + s[1] : ''); };
+const fE = v => fx(v, 0) + nbsp + '€', fU = v => fx(v, 2) + nbsp + '€', fP = v => fx(v, 1).replace(/,0$/, '') + nbsp + '%';
+const pl = (n, m) => n + ' ' + m + (n > 1 ? 's' : '');
+
+/* ---------- les données ---------- */
+const JOUR = { maintenant: '18:38', comptoir: 1753, objC: 1700, proj: 1757, j7: { date: '30/10', ca: 1685, caJour: 1727, moment: '18:33' },
+  b2b: { ca: 0, n: 0, objB: 234, part: 12, j7: 327 }, ticketsJ7: 152 };
+// Les tickets pro du vendredi 30/10 (illustratifs, 327 € comme la jauge) : société, heure, règlement, articles.
+const PRO = [
+  { h: '06:14', soc: 'Société A', reg: 'f', lignes: [[20, 'Croissant', 1.40], [20, 'Pain au Chocolat', 1.60], [12, 'Couque à la Crème', 2.10], [2, 'Pain 10 Céréales', 5.40]] },
+  { h: '08:07', soc: 'Société B', reg: 'f', lignes: [[12, 'FlipFlap - Club', 5.90], [6, 'FlipFlap - Thon', 5.40], [3, 'Cookie Chocolat Lait', 2.10], [2, 'Jus d’orange 33 cl', 4.50]] },
+  { h: '11:42', soc: 'Société C', reg: 'd', lignes: [[4, '1/4 - Quiches', 4.90], [3, 'Sandwich', 5.50], [1, 'Tarte aux pommes 8 p.', 22.80]] },
+  { h: '12:21', soc: 'Société D', reg: 'c', lignes: [[3, 'Pain Tradition - 4 Céréales', 4.30], [10, 'Huit', 1.70], [1, 'Tarte aux fraises 6 p.', 23.70]] },
+];
+PRO.forEach(t => { t.mt = Math.round(t.lignes.reduce((a, l) => a + l[0] * l[2], 0) * 100) / 100; t.art = t.lignes.reduce((a, l) => a + l[0], 0); });
+const CAT = { 'Croissant': 'Viennoiserie', 'Pain au Chocolat': 'Viennoiserie', 'Couque à la Crème': 'Viennoiserie', 'Huit': 'Viennoiserie', 'Pain 10 Céréales': 'Boulangerie', 'Pain Tradition - 4 Céréales': 'Boulangerie',
+  'FlipFlap - Club': 'Traiteur', 'FlipFlap - Thon': 'Traiteur', '1/4 - Quiches': 'Traiteur', 'Sandwich': 'Traiteur', 'Cookie Chocolat Lait': 'Biscuiterie', 'Jus d’orange 33 cl': 'Boissons', 'Tarte aux pommes 8 p.': 'Tartes', 'Tarte aux fraises 6 p.': 'Tartes' };
+// Les comptes du vendredi : présence sur les quatre derniers vendredis (du plus ancien au 30/10).
+const COMPTES = [['Société A', [1, 1, 1, 1]], ['Société B', [1, 0, 1, 1]], ['Société C', [0, 1, 0, 1]], ['Société D', [0, 0, 0, 1]], ['Société E', [1, 0, 1, 0]]];
+
+// Les commandes dont le retrait (ou la livraison) tombe le 6/11. pay : caisse | ligne | attente | sans.
+const CMD = [
+  { h: '07:45', c: 'compt', lib: '14 articles', st: 'remise 07:48', pay: 'caisse', mt: 64.80 },
+  { h: '09:30', c: 'compt', lib: '6 articles', st: 'remise 09:34', pay: 'caisse', mt: 32.40 },
+  { h: '11:00', c: 'compt', lib: 'Gâteau d’anniversaire 8 p.', st: 'remise 11:06', pay: 'caisse', mt: 38.00 },
+  { h: '12:00', c: 'compt', lib: '8 articles', st: 'remise au panel 12:07', pay: 'sans', ouv: true,
+    lignes: [[2, 'Pain au Chocolat', 1.60], [2, 'Croissant', 1.40], [2, 'Pain 10 Céréales', 5.00], [2, 'FlipFlap - Club', 5.90]] },
+  { h: '17:00', c: 'compt', lib: 'Tarte aux fraises 6 p.', st: 'prête · retrait 17:00', pay: 'attente', mt: 34.00 },
+  { h: '17:30', c: 'compt', lib: '12 articles', st: 'prête · retrait 17:30', pay: 'attente', mt: 69.60 },
+  { h: '07:30', c: 'cc', lib: '4 articles', st: 'remise 07:31', pay: 'ligne', mt: 18.40 },
+  { h: '08:15', c: 'liv', lib: '18 articles', st: 'livrée 08:22', pay: 'ligne', mt: 62.50 },
+  { h: '09:00', c: 'cc', lib: '2 articles', st: 'remise 09:02', pay: 'caisse', mt: 9.80 },
+  { h: '10:30', c: 'cc', lib: '6 articles', st: 'remise 10:41', pay: 'ligne', mt: 27.90 },
+  { h: '11:00', c: 'liv', lib: '24 articles', st: 'livrée 11:09', pay: 'ligne', mt: 78.00 },
+  { h: '12:00', c: 'cc', lib: '3 articles', st: 'remise 12:03', pay: 'ligne', mt: 14.50 },
+  { h: '12:30', c: 'liv', lib: '12 articles', st: 'livrée 12:44', pay: 'ligne', mt: 45.50 },
+  { h: '16:00', c: 'cc', lib: '5 articles', st: 'remise 16:04', pay: 'caisse', mt: 22.60 },
+  { h: '17:30', c: 'cc', lib: '11 articles', st: 'remise 17:36', pay: 'ligne', mt: 49.80 },
+];
+CMD.forEach(o => { if (o.lignes) { o.mt = Math.round(o.lignes.reduce((a, l) => a + l[0] * l[2], 0) * 100) / 100; } });
+const somme = L => Math.round(L.reduce((a, o) => a + o.mt, 0) * 100) / 100;
+const CC = CMD.filter(o => o.c === 'compt'), CW = CMD.filter(o => o.c !== 'compt');
+const PAY = { caisse: ['Encaissées en caisse', '#6f8f72', 'dans le comptoir de la jauge'], ligne: ['Payées en ligne', '#1f5f8b', 'webshop, hors caisse : en plus du comptoir'],
+  attente: ['Prêtes, pas retirées', '#d9a520', 'pas encore encaissées'], sans: ['Remises sans ticket', '#8c1020', 'remises au panel, aucun ticket lié'] };
+const TAGPAY = { caisse: ['ok', 'en caisse'], ligne: ['w', 'en ligne'], attente: ['d', 'pas retirée'], sans: ['ko', 'sans ticket'] };
+
+/* ---------- les morceaux d'écran ---------- */
+const ICO = {
+  ops: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  exp: '<svg viewBox="0 0 24 24"><path d="M5 20V11M11 20V5M17 20v-8M2 20h20"/></svg>',
+  ctrl: '<svg viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.6"/></svg>',
+  sem: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  prim: '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M8.6 13.8 7 22l5-3 5 3-1.6-8.2"/></svg>' };
+const entete = () => `<div class="mb-hd"><img src="${LOGO}" alt=""><div><div class="t">Atelier by - Halle</div><div class="d ma-d"><button class="ma-pas">‹</button><b>aujourd’hui · ven. 6 nov.</b><button class="ma-pas" disabled>›</button></div></div><span class="sp"></span><button class="mb-ic">↻</button></div>`;
+const onglets = () => `<div class="mb-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['sem', 'Semaine'], ['prim', 'Primes']].map(([k, l]) => `<button class="${k === 'ops' ? 'on' : ''}">${ICO[k]}${l}</button>`).join('')}</div>`;
+
+/** La jauge du comptoir, comme en production, et la ligne « Commandes du jour » à son pied. */
+function jaugeComptoir() {
+  const J = JOUR, haut = Math.max(J.comptoir, J.j7.ca, J.j7.caJour, J.proj), ech = haut * 1.06, p = v => 100 * v / ech;
+  const pO = p(J.objC), pA = p(J.comptoir), pP = p(J.proj), p7 = p(J.j7.ca), p7j = p(J.j7.caJour);
+  const tot = somme(CMD), aVerif = CMD.filter(o => o.pay === 'attente' || o.pay === 'sans').length;
+  return `<div class="op-duel"><div class="dh"><span class="lab">Objectif comptoir du vendredi<b>${fE(J.objC)}</b></span><span class="chip" style="background:#f7edc8;color:#7d6310">objectif atteint</span><span class="dr">${J.maintenant} · 100 % de la journée écoulée</span></div>
+    <div class="op-piste"><div class="pl"><b>Aujourd’hui</b><small>comptoir · à ${J.maintenant}</small></div><div class="pb"><div class="seg or" style="width:${pA.toFixed(1)}%"></div><div class="seg proj" style="left:${pA.toFixed(1)}%;width:${(pP - pA).toFixed(1)}%"></div><i class="objm" style="left:${pO.toFixed(1)}%"></i><i class="temps" style="left:${pO.toFixed(1)}%"></i><span class="val dedans" style="left:${pA.toFixed(1)}%">${fE(J.comptoir)} · ${fx(100 * J.comptoir / J.objC, 0)} %</span><span class="val sous proj" style="left:${pP.toFixed(1)}%">projection ${fE(J.proj)}</span></div></div>
+    <div class="op-piste"><div class="pl"><b>Vendredi dernier</b><small>comptoir · ${J.j7.date}</small></div><div class="pb"><div class="seg j7" style="width:${p7.toFixed(1)}%"></div><div class="seg j7j" style="left:${p7.toFixed(1)}%;width:${(p7j - p7).toFixed(1)}%"></div><i class="objm" style="left:${pO.toFixed(1)}%"></i><i class="temps" style="left:${pO.toFixed(1)}%"></i><span class="val dedans" style="left:${p7.toFixed(1)}%">${fE(J.j7.ca)} à ${J.j7.moment}</span><span class="val sous" style="left:${p7j.toFixed(1)}%">journée ${fE(J.j7.caJour)} · ${fx(100 * J.j7.caJour / J.objC, 0)} %</span></div></div>
+    <div class="op-dax ab"><span>0 €</span><span class="o" style="left:${pO.toFixed(1)}%;transform:translateX(-100%)">objectif comptoir ${fE(J.objC)}</span></div>
+    <div class="cmd-l"><div class="t"><b>Commandes du jour</b><small>comptoir ${CC.length} · webshop ${CW.length} · <em>${aVerif} à vérifier</em></small></div><span class="v">${fU(tot)}</span><span class="ch">›</span></div></div>`;
+}
+
+/** La jauge B2B, comme en production ; ouverte, le tableau déroulé dessous. */
+function jaugeB2B(ouvert) {
+  const B = JOUR.b2b, ech = Math.max(B.objB, B.ca, B.j7, 1) * 1.08, p = v => 100 * v / ech, pO = p(B.objB), q7 = p(B.j7);
+  let h = `<div class="op-duel b2b${ouvert ? ' ouv' : ''}"><div class="dh"><span class="lab">Objectif B2B du vendredi<b>${fE(B.objB)}</b></span><span class="dr">${B.n} ticket pro · part habituelle ${B.part} %</span></div>
+    <div class="op-piste"><div class="pl"><b>Aujourd’hui</b><small>B2B · ${B.n} ticket pro</small></div><div class="pb"><div class="seg fait" style="width:1.6%"></div><i class="objm" style="left:${pO.toFixed(1)}%"></i><span class="val" style="left:1%">0 € · 0 %</span></div></div>
+    <div class="op-piste"><div class="pl"><b>Vendredi dernier</b><small>B2B · ${JOUR.j7.date}</small></div><div class="pb"><div class="seg j7" style="width:${q7.toFixed(1)}%"></div><i class="objm" style="left:${pO.toFixed(1)}%"></i><span class="val dedans" style="left:${q7.toFixed(1)}%">${fE(B.j7)} à ${JOUR.j7.moment}</span></div></div>
+    <div class="op-dax ab"><span>0 €</span><span class="o" style="left:${pO.toFixed(1)}%">part B2B habituelle ${fE(B.objB)}</span></div>`;
+  if (!ouvert) { return h + `<div class="tap"><span class="mu">le détail</span><span>▾</span></div></div>`; }
+  const j7 = Object.fromEntries(PRO.map(t => [t.soc, t]));
+  const rows = COMPTES.map(([soc, f]) => { const t = j7[soc]; const n = f.reduce((a, x) => a + x, 0);
+    return `<tr><td>${soc}<small>${t ? t.h + ' · ' + pl(t.art, 'article') : 'pas venue'}</small></td><td class="n mu">—</td><td class="n">${t ? fU(t.mt) : '<span class="mu">—</span>'}</td><td class="n"><span class="freq">${f.map(x => `<i class="${x ? 'o' : ''}"></i>`).join('')}</span>${n}/4</td><td class="c">›</td></tr>`; }).join('');
+  h += `<div class="drop"><div class="seg2"><span class="pil on">Par société</span><span class="pil">Par ticket</span></div>
+    <table class="tb"><thead><tr><th>Société</th><th class="n">Auj.</th><th class="n">Ven. ${JOUR.j7.date}</th><th class="n">4 ven.</th><th></th></tr></thead><tbody>${rows}
+    <tr class="tot"><td>Total</td><td class="n">${fU(0)}</td><td class="n">${fU(somme(PRO.map(t => ({ mt: t.mt }))))}</td><td></td><td></td></tr></tbody></table>
+    <div class="tap" style="margin:0 14px;border-top:none;padding-top:8px"><span class="mu">${COMPTES.length} sociétés · ${pl(PRO.length, 'ticket')} le ${JOUR.j7.date}</span><span>replier ▴</span></div></div>`;
+  return h + '</div>';
+}
+const page = ouvert => `${entete()}<div class="mb-sc">${jaugeComptoir()}${jaugeB2B(ouvert)}</div>`;
+
+/** La feuille du bas : posée sur la page assombrie. */
+const feuille = (corps) => `<div class="voile"></div><div class="fe"><div class="poi"></div>${corps}</div>`;
+
+function feuilleB2B() {
+  const tot = somme(PRO), caJ = JOUR.j7.caJour + tot, aF = somme(PRO.filter(t => t.reg === 'f')), dif = PRO.filter(t => t.reg === 'd');
+  const tkC = JOUR.ticketsJ7 - PRO.length;
+  const REG = { f: ['f', 'facturé'], d: ['d', 'différé'], c: ['', 'comptoir'] };
+  const lignes = PRO.map((t, i) => `<div class="li${i === 0 ? ' ouv' : ''}"><div class="r"><span class="h">${t.h}</span><span class="q"><b>${t.soc}</b><small>${pl(t.art, 'article')}</small></span><span class="m">${fU(t.mt)}<span class="tg ${REG[t.reg][0]}">${REG[t.reg][1]}</span></span><span class="c">${i === 0 ? '▴' : '▾'}</span></div>
+    ${i === 0 ? `<div class="art"><table>${t.lignes.map(l => `<tr><td>${l[0]} × ${l[1]}</td><td class="n p">${fU(l[2])}</td><td class="n">${fU(l[0] * l[2])}</td></tr>`).join('')}</table><div class="pied"><span>TVA valide · facture du mois</span><span>${fU(t.mt)}</span></div></div>` : ''}</div>`).join('');
+  const cats = {}; PRO.forEach(t => t.lignes.forEach(l => { const c = CAT[l[1]]; cats[c] = (cats[c] || 0) + l[0] * l[2]; }));
+  const CL = Object.entries(cats).sort((a, b) => b[1] - a[1]), mx = CL[0][1];
+  const bars = CL.map(([c, v]) => `<div class="b"><span>${c}</span><span class="tr"><i style="width:${(100 * v / mx).toFixed(1)}%"></i></span><span class="n">${fU(v)}</span></div>`).join('');
+  return feuille(`<div class="hd"><div class="t"><h2>Ventes B2B</h2><div class="s">Atelier by - Halle · tickets des clients pro</div></div><button class="x">✕</button></div>
+    <div class="ong"><span class="pil">Aujourd’hui <small>0 €</small></span><span class="pil on">Ven. ${JOUR.j7.date} <small>${fE(tot)}</small></span><span class="pil">4 derniers ven.</span></div>
+    <div class="bloc"><div class="k4">
+      <div><div class="k">CA B2B</div><div class="v">${fU(tot)}</div><div class="s">${fP(100 * tot / caJ)} du CA du jour</div></div>
+      <div><div class="k">Tickets pro</div><div class="v">${PRO.length}</div><div class="s">${PRO.length} sociétés · sur ${JOUR.ticketsJ7}</div></div>
+      <div><div class="k">Panier pro</div><div class="v">${fU(tot / PRO.length)}</div><div class="s">comptoir ${fU(JOUR.j7.caJour / tkC)}</div></div>
+      <div><div class="k">À facturer</div><div class="v">${fU(aF)}</div><div class="s">+ ${dif.length} différé ${fU(somme(dif))}</div></div>
+    </div><div class="lab">Les tickets</div></div>
+    ${lignes}
+    <div class="bloc"><div class="lab">Ce qu’ils ont acheté</div><div class="bars">${bars}</div></div>`);
+}
+
+function feuilleCommandes() {
+  const tot = somme(CMD), parPay = k => CMD.filter(o => o.pay === k);
+  const enCA = somme(parPay('caisse')) + somme(parPay('ligne')), caJour = JOUR.comptoir + somme(parPay('ligne'));
+  const bar = Object.keys(PAY).map(k => `<i style="width:${(100 * somme(parPay(k)) / tot).toFixed(2)}%;background:${PAY[k][1]}"></i>`).join('');
+  const rap = Object.keys(PAY).map(k => { const L = parPay(k); const quand = k === 'attente' || k === 'sans' ? ' · ' + L.map(o => o.h).join(', ') : '';
+    return `<div class="r"><i class="d" style="background:${PAY[k][1]}"></i><span><b>${PAY[k][0]}</b><small>${PAY[k][2]}${quand}</small></span><span class="n">${fU(somme(L))}<small>${L.length}</small></span></div>`; }).join('');
+  const CAN = { compt: 'Comptoir', cc: 'Click & collect', liv: 'Livraison' };
+  const ligne = o => `<div class="li${o.ouv ? ' ouv' : ''}"><div class="r"><span class="h">${o.h}</span><span class="q"><b>${o.c === 'compt' ? o.lib : CAN[o.c] + ' · ' + o.lib}</b><small>${o.st}</small></span><span class="m">${fU(o.mt)}<span class="tg ${TAGPAY[o.pay][0]}">${TAGPAY[o.pay][1]}</span></span><span class="c">${o.ouv ? '▴' : '▾'}</span></div>
+    ${o.ouv ? `<div class="art"><table>${o.lignes.map(l => `<tr><td>${l[0]} × ${l[1]}</td><td class="n p">${fU(l[2])}</td><td class="n">${fU(l[0] * l[2])}</td></tr>`).join('')}</table>
+      <div class="alerte">Remise au panel à 12:07, aucun ticket caisse lié. Un ticket de ${fU(o.mt)} sans client à 12:06 : la même vente ?</div></div>` : ''}</div>`;
+  const nCC = CW.filter(o => o.c === 'cc'), nLiv = CW.filter(o => o.c === 'liv');
+  return feuille(`<div class="hd"><div class="t"><h2>Commandes du jour</h2><div class="s">Atelier by - Halle · ven. 6 nov. · à ${JOUR.maintenant}</div></div><button class="x">✕</button></div>
+    <div class="ong"><span class="pil on">Toutes <small>${CMD.length}</small></span><span class="pil">Comptoir <small>${CC.length}</small></span><span class="pil">Webshop <small>${CW.length}</small></span></div>
+    <div class="bloc"><div class="lab" style="margin-top:4px">Le CA en commandes</div><div class="rap"><div class="bar">${bar}</div>${rap}
+      <div class="tot"><span>Pris en commande · ${CMD.length}</span><span>${fU(tot)}</span></div>
+      <div class="eq"><b>${fU(enCA)} dans le CA du jour</b>, ${fP(100 * enCA / caJour)} de ${fU(caJour)} (comptoir ${fE(JOUR.comptoir)} + webshop en ligne)</div></div></div>
+    <div class="sec"><b>Comptoir</b><span>${CC.length} · ${fU(somme(CC))}</span></div>${CC.map(ligne).join('')}
+    <div class="sec"><b>Webshop</b><span>${CW.length} · ${fU(somme(CW))} · retrait ${nCC.length} · livraison ${nLiv.length}</span></div>${CW.map(ligne).join('')}`);
+}
+
+/* ---------- les écrans ---------- */
+const tel = (contenu, cls) => `<div class="tel${cls ? ' ' + cls : ''}">${contenu}</div>`;
+const E = {
+  1: () => tel(page(true) + onglets()),
+  2: () => tel(page(false) + onglets() + feuilleB2B()),
+  3: () => tel(page(false) + onglets() + feuilleCommandes()),
+};
+const v = new URLSearchParams(location.search).get('v') || '1';
+const el = document.getElementById('ecran');
+if (v === 'planche') {
+  const leg = [['1 · Toucher la jauge B2B : le tableau', 'La carte s’ouvre sur place. Une ligne par société : aujourd’hui, le vendredi dernier et sa fréquence sur les 4 derniers vendredis. Une ligne touchée ouvre ses tickets (écran 2).'],
+    ['2 · Ou la feuille B2B : tickets et articles', 'La même demande en modale, plein écran. Le jour en haut (aujourd’hui, vendredi dernier, les 4 derniers), quatre chiffres, chaque ticket et ses articles, ce que les sociétés achètent.'],
+    ['3 · Commandes du jour : comptoir et webshop', 'Depuis la ligne « Commandes du jour » sous la jauge du comptoir. Le CA en commandes rapproché : en caisse, payé en ligne, pas retiré, remis sans ticket. Puis chaque commande.']];
+  el.innerHTML = `<div class="planche-c"><div class="planche-w"><div class="tete"><h1>Opérationnel au téléphone — le B2B et les commandes en détail</h1><p>Atelier by - Halle · vendredi 6 novembre 2026 à 18:38 · jauges de la capture, détail illustratif</p></div></div>
+    <div class="planche">${[1, 2, 3].map((k, i) => `<figure><figcaption><b>${leg[i][0]}</b>${leg[i][1]}</figcaption>${E[k]()}</figure>`).join('')}</div></div>`;
+} else { el.innerHTML = E[v](); }
+// La feuille du bas fixe la hauteur du téléphone : rien n'est coupé à la capture.
+document.querySelectorAll('.tel').forEach(t => { const f = t.querySelector('.fe'); if (f) { t.style.minHeight = Math.max(844, f.offsetTop + f.scrollHeight) + 'px'; } });
+</script>
+</body>
+</html>
