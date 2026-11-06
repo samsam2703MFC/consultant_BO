@@ -423,18 +423,33 @@ function wr_sop_creer(): array
     if ($base === null) { return foRefus(400, 'identifiant impossible à former'); }
     $id = $base;
     for ($i = 2; foSopRow($id) !== null; $i++) { $id = substr($base, 0, 28) . '-' . $i; }
-    $c = foContenu(['titre' => $titre, 'objectif' => $b['objectif'] ?? null, 'sections' => [['titre' => ['fr' => 'Étapes', 'nl' => 'Stappen'], 'etapes' => []]]]);
+    // L'assistant de création (06/11/2026) envoie la SOP entière (`contenu` : étapes, points critiques, quiz) et son
+    // moment ; sans `contenu`, une SOP vide à rédiger dans l'éditeur, comme avant. Le néerlandais peut manquer : la SOP
+    // reste « à valider », NL « à relire », et l'éditeur exige les deux langues pour publier une nouvelle version.
+    $avec = is_array($b['contenu'] ?? null);
+    $c = foContenu($avec ? array_merge($b['contenu'], ['titre' => $titre, 'objectif' => $b['objectif'] ?? ($b['contenu']['objectif'] ?? null)])
+        : ['titre' => $titre, 'objectif' => $b['objectif'] ?? null, 'sections' => [['titre' => ['fr' => 'Étapes', 'nl' => 'Stappen'], 'etapes' => []]]]);
+    if ($avec) {
+        $n = 0;
+        foreach ($c['sections'] as $sec) { foreach ($sec['etapes'] as $s) { if ($s['texte']['fr'] === '' && $s['texte']['nl'] === '') { return foRefus(400, 'étape ' . $s['numero'] . ' : texte attendu'); } $n++; } }
+        if ($n === 0) { return foRefus(400, 'au moins une étape'); }
+    }
+    $moment = $b['moment'] ?? null;
+    if ($moment !== null && !in_array($moment, ['ouverture', 'journee', 'apres-midi', 'fermeture'], true)) { return foRefus(400, 'moment inconnu'); }
+    $st = foStats($c);
     $now = date('Y-m-d H:i:s');
     $par = foPar($b);
     $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) + 1 AS o FROM ceo_sop')['o'] ?? 1);
-    Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, statut, version, version_revalider, langue_origine, trad_fr, trad_nl, titre_fr, titre_nl, ordre, maj_le, maj_par)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [$id, foCourt($b['code'] ?? null, 40), foType($b['type'] ?? 'SOP'), foDossier($b['dossier'] ?? '01'), foPoste($b['poste'] ?? 'vente'), 'a_valider', '1.0', '1.0',
+    Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, moment, statut, version, version_revalider, langue_origine, trad_fr, trad_nl, titre_fr, titre_nl,
+                objectif_fr, objectif_nl, duree, nb_etapes, nb_photos, ordre, maj_le, maj_par)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [$id, foCourt($b['code'] ?? null, 40), foType($b['type'] ?? 'SOP'), foDossier($b['dossier'] ?? '01'), foPoste($b['poste'] ?? 'vente'), $moment, 'a_valider', '1.0', '1.0',
             $titre['fr'] !== '' ? 'FR' : 'NL', $titre['fr'] !== '' ? 'origine' : 'a_relire', $titre['nl'] !== '' ? 'origine' : 'a_relire',
-            mb_substr($titre['fr'] ?: $titre['nl'], 0, 190), mb_substr($titre['nl'], 0, 190), $ordre, $now, $par]);
+            mb_substr($titre['fr'] ?: $titre['nl'], 0, 190), mb_substr($titre['nl'], 0, 190), $c['objectif']['fr'], $c['objectif']['nl'], foCourt($c['duree'], 190),
+            $st['etapes'], $st['photos'], $ordre, $now, $par]);
     Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, ?, ?, ?, 0, ?, ?)',
-        [$id, '1.0', foJson($c), 'Création', $now, $par]);
-    try { journalAdd($par, 'Formation', $titre['fr'] ?: $titre['nl'], 'Nouvelle SOP créée (à valider)'); } catch (Throwable $e) { /* */ }
+        [$id, '1.0', foJson($c), $avec ? 'Création (assistant)' : 'Création', $now, $par]);
+    try { journalAdd($par, 'Formation', $titre['fr'] ?: $titre['nl'], ($avec ? 'Nouvelle SOP créée avec l’assistant, ' . $st['etapes'] . ' étape(s)' : 'Nouvelle SOP créée') . ' (à valider)'); } catch (Throwable $e) { /* */ }
     http_response_code(201);
     return ['ok' => true, 'id' => $id];
 }
@@ -468,15 +483,15 @@ function wr_sop_importer(): array
 /** GET /formation/sop/tablette/init?poste= — le magasin (celui de l'appareil), ses personnes (sans PIN), les SOP du poste. */
 function ep_sop_tablette_init(): array
 {
-    $shop = foShopTablette();
-    if ($shop === null) { return foRefus(409, 'cette tablette n’est reliée à aucune boutique du panel (Cockpit › Formation › Tablettes)'); }
+    // La même tablette pour tous les magasins (06/11/2026) : les SOP, sans magasin ni équipe quand aucun appareil n'est ouvert.
+    $shop = function_exists('tabAppareil') && tabAppareil() !== null ? foShopTablette() : null;
     $poste = isset($_GET['poste']) && in_array($_GET['poste'], FO_POSTES, true) ? (string) $_GET['poste'] : null;
     // Un brouillon (repris du CRM, pas encore relu) ne va pas sur la tablette du magasin.
     $rows = Db::rows('SELECT * FROM ceo_sop WHERE statut <> \'brouillon\'' . ($poste !== null ? ' AND poste = ?' : '') . ' ORDER BY dossier, ordre, id', $poste !== null ? [$poste] : []);
     $personnes = array_map(static fn ($p) => ['id' => $p['id'], 'nom' => $p['nom'], 'valideur' => $p['valideur'], 'langue' => $p['langue'], 'postes' => $p['postes'],
-        'postesV25' => $p['postesV25'] ?? []], foEquipe($shop));
+        'postesV25' => $p['postesV25'] ?? []], $shop !== null ? foEquipe($shop) : []);
     $app = function_exists('tabAppareil') ? tabAppareil() : null;
-    return ['magasin' => ['id' => $shop, 'nom' => $app !== null && $app['nom'] !== '' ? $app['nom'] : foMagasinNom($shop)], 'poste' => $poste, 'postes' => FO_POSTES,
+    return ['magasin' => $shop !== null ? ['id' => $shop, 'nom' => $app !== null && $app['nom'] !== '' ? $app['nom'] : foMagasinNom($shop)] : null, 'poste' => $poste, 'postes' => FO_POSTES,
         'personnes' => $personnes, 'sops' => array_map('foSopLigne', $rows), 'pinPanel' => class_exists('PanelApi') && PanelApi::configured()];
 }
 
@@ -533,11 +548,20 @@ function wr_sop_tablette_lu(): array
 function wr_sop_tablette_quiz(): array
 {
     $b = body();
-    $j = foJetonTablette($b['jeton'] ?? null);
-    if ($j === null) { return foRefus(401, 'jeton absent ou expiré : s’identifier à nouveau'); }
+    // Sans jeton (tablette ouverte, personne d'identifié) : le quiz est corrigé, rien n'est enregistré (un exercice).
+    $j = isset($b['jeton']) && $b['jeton'] !== null && $b['jeton'] !== '' ? foJetonTablette($b['jeton']) : null;
+    if ($j === null && isset($b['jeton']) && $b['jeton'] !== null && $b['jeton'] !== '') { return foRefus(401, 'jeton absent ou expiré : s’identifier à nouveau'); }
     $r = foSopRow((string) ($b['sop'] ?? ''));
     if ($r === null) { return foRefus(404, 'SOP inconnue'); }
     if (in_array($r['statut'], ['a_valider', 'brouillon'], true)) { return foRefus(409, 'SOP à valider : lisible, sans quiz ni validation pour l’instant'); }
+    if ($j === null) {
+        $c = foContenuVersion((string) $r['id'], (string) $r['version']);
+        $rep = is_array($b['reponses'] ?? null) ? array_values($b['reponses']) : [];
+        $faux = [];
+        foreach ($c['quiz'] as $i => $q) { if (!isset($rep[$i]) || (int) $rep[$i] !== (int) $q['bonne']) { $faux[] = $i; } }
+        $total = count($c['quiz']);
+        return ['ok' => true, 'score' => $total - count($faux), 'total' => $total, 'reussi' => $total > 0 && $faux === [], 'faux' => $faux, 'exercice' => true];
+    }
     $c = foContenuVersion((string) $r['id'], (string) $r['version']);
     $rep = is_array($b['reponses'] ?? null) ? array_values($b['reponses']) : [];
     $faux = [];
@@ -643,7 +667,14 @@ function sopRoute(string $method, string $path, bool $public = false): ?array
     if (!str_starts_with($path, '/formation/sop/')) { return null; }
     // La tablette du magasin (lot 5, src/tablettes.php) : chaque route exige la session de l'appareil, ouverte par
     // le PIN du magasin ; sans elle, 401 `appareil` et la tablette revient à l'écran du PIN.
-    if (str_starts_with($path, '/formation/sop/tablette/') && function_exists('tabGarde') && ($g = tabGarde()) !== null) { return $g; }
+    // La tablette OUVERTE (06/11/2026, client : « la tablette doit être ouverte, et pour tous les magasins la même chose ») :
+    // lire la liste, une SOP et faire le quiz en exercice ne demandent plus la session de l'appareil ; le reste (s'identifier,
+    // compter une lecture, « vu faire ») la demande toujours.
+    $ouvert = ($method === 'GET' && ($path === '/formation/sop/tablette/init' || str_starts_with($path, '/formation/sop/tablette/sop/')))
+        || ($method === 'POST' && $path === '/formation/sop/tablette/quiz');
+    if (!$ouvert && str_starts_with($path, '/formation/sop/tablette/') && function_exists('tabGarde') && ($g = tabGarde()) !== null) { return $g; }
+    // Une photo envoyée par l'assistant de création : publique comme celles du dépôt (la tablette et la fiche l'affichent).
+    if ($method === 'GET' && preg_match('#^/formation/sop/photo/([\w.-]{1,90}\.(?:jpe?g|png|webp))$#i', $path, $m) === 1) { return ep_sop_photo($m[1]); }
     $t = match (true) {
         $method === 'GET' && $path === '/formation/sop/tablette/init' => ep_sop_tablette_init(),
         $method === 'GET' && $path === '/formation/sop/tablette/moi' => ep_sop_tablette_moi(),
@@ -667,6 +698,7 @@ function sopRoute(string $method, string $path, bool $public = false): ?array
         $method === 'GET' && $path === '/formation/sop/manuel' => ep_sop_manuel(),
         $method === 'GET' && $path === '/formation/sop/manuel.pdf' => ep_sop_manuel_pdf(),
         $method === 'POST' && $path === '/formation/sop/fiche' => wr_sop_creer(),
+        $method === 'POST' && $path === '/formation/sop/photo' => wr_sop_photo(),
         $method === 'PUT' && preg_match('#^/formation/sop/fiche/([\w-]{1,32})$#', $path, $m) === 1 => wr_sop_publier($m[1]),
         $method === 'PATCH' && preg_match('#^/formation/sop/fiche/([\w-]{1,32})$#', $path, $m) === 1 => wr_sop_reglage($m[1]),
         $method === 'PUT' && preg_match('#^/formation/sop/equipe/([\w-]{1,32})/(\d+)$#', $path, $m) === 1 => wr_sop_personne($m[1], (int) $m[2]),
@@ -1343,13 +1375,13 @@ function foPdfHtml(array $rows, string $l, bool $couverture, string $titre, stri
             $lignes = [];
             foreach ($sec['etapes'] as $st) {
                 // Cadre de 42 × 56 mm : une photo en largeur prend la largeur, une capture en hauteur la hauteur.
-                $img = $avecPhoto && $st['photo'] !== null && $photos !== '' ? foPdfImage($photos . '/' . $st['photo'], 500, 666) : null;
+                $img = $avecPhoto && $st['photo'] !== null && $photos !== '' ? foPdfImage(foPhotoFichier($st['photo']), 500, 666) : null;
                 $taille = $img !== null ? (($img['w'] * 56 >= $img['h'] * 42) ? 'width:42mm;height:' . round(42 * $img['h'] / $img['w'], 1) . 'mm'
                     : 'width:' . round(56 * $img['w'] / $img['h'], 1) . 'mm;height:56mm') : '';
                 $tag = $st['critique'] ? '<span class="tag">' . $e($T['pc']) . '</span>' : '';
                 $lignes[] = '<table class="st" cellpadding="0" cellspacing="0"><tr><td class="n">' . $e($st['numero']) . '</td><td>'
                     . ($st['titre'] !== '' ? '<b class="t">' . $e($st['titre']) . $tag . '</b>' : ($tag !== '' ? '<div>' . $tag . '</div>' : ''))
-                    . nl2br($e($st['texte'])) . '</td>'
+                    . nl2br($e($st['texte'])) . (!empty($st['video']) ? '<div class="vid">' . $e('▶ ' . $st['video']) . '</div>' : '') . '</td>'
                     . ($avecPhoto ? '<td class="ph">' . ($img !== null ? '<img src="' . $img['src'] . '" alt="" style="' . $taille . '">' : '') . '</td>' : '') . '</tr></table>';
             }
             // Le titre ne reste jamais seul en bas de page : il part avec la première étape.
@@ -1381,11 +1413,11 @@ function foContenu(array $j): array
         $et = [];
         foreach (is_array($sec['etapes'] ?? null) ? $sec['etapes'] : [] as $i => $s) {
             if (!is_array($s)) { continue; }
-            $photo = is_string($s['photo'] ?? null) && preg_match('/^[\w.-]{1,80}\.(jpe?g|png|webp)$/i', basename($s['photo'])) ? basename($s['photo']) : null;
+            $photo = foPhotoNom($s['photo'] ?? null);
             $titre = foBi($s['titre'] ?? null);
             $et[] = ['numero' => foCourt(isset($s['numero']) ? (string) $s['numero'] : (string) ($i + 1), 16) ?? (string) ($i + 1),
                 'titre' => $titre['fr'] === '' && $titre['nl'] === '' ? null : $titre, 'texte' => foBi($s['texte'] ?? null),
-                'critique' => !empty($s['critique']), 'photo' => $photo];
+                'critique' => !empty($s['critique']), 'photo' => $photo, 'video' => foVideo($s['video'] ?? null)];
         }
         $sections[] = ['titre' => foBi($sec['titre'] ?? null), 'etapes' => $et];
     }
@@ -1449,13 +1481,95 @@ function foContenuLangue(array $c, string $l, bool $avecQuiz): array
         'points_critiques' => array_map($t, $c['points_critiques'])];
     foreach ($c['sections'] as $sec) {
         $out['sections'][] = ['titre' => $t($sec['titre']), 'etapes' => array_map(static fn ($s) => ['numero' => $s['numero'], 'titre' => $t($s['titre']),
-            'texte' => $t($s['texte']), 'critique' => $s['critique'], 'photo' => $s['photo']], $sec['etapes'])];
+            'texte' => $t($s['texte']), 'critique' => $s['critique'], 'photo' => $s['photo'], 'video' => $s['video'] ?? null], $sec['etapes'])];
     }
     if ($avecQuiz) {
         $out['quiz'] = array_map(static fn ($q) => ['question' => $t($q['question']), 'choix' => array_map(static fn ($a, $b) => $a !== '' ? $a : $b,
             $q['choix'][$l] ?? [], $q['choix'][$o] ?? []), 'bonne' => $q['bonne']], $c['quiz']);
     }
     return $out;
+}
+
+/* ═══ Photos envoyées et vidéos des étapes (assistant de création, 06/11/2026) ══════════════════════════════════
+ * Une photo du dépôt : « nom.jpg » dans public/formation/sop/photos/. Une photo envoyée : « u/nom.jpg », gardée dans
+ * public/uploads/sop/ (que la livraison ne touche pas : `rsync --exclude public/uploads`) et servie par
+ * GET /formation/sop/photo/nom.jpg. Une vidéo : une adresse https (YouTube, Vimeo, un fichier), montrée sur la tablette. */
+
+const FO_PHOTO_MAX = 8 * 1024 * 1024;   // une photo envoyée, avant réduction
+const FO_PHOTO_COTE = 1600;             // le grand côté après réduction
+
+/** Le nom d'une photo d'étape : « u/… » (envoyée) gardé tel quel, sinon le nom de fichier du dépôt ; null sinon. */
+function foPhotoNom(mixed $v): ?string
+{
+    if (!is_string($v) || trim($v) === '') { return null; }
+    $v = trim($v);
+    if (preg_match('#^u/[\w.-]{1,90}\.(jpe?g|png|webp)$#i', $v) === 1) { return $v; }
+    $b = basename($v);
+    return preg_match('/^[\w.-]{1,80}\.(jpe?g|png|webp)$/i', $b) === 1 ? $b : null;
+}
+
+/** Le fichier d'une photo d'étape, sur le disque. */
+function foPhotoFichier(string $photo): string
+{
+    if (str_starts_with($photo, 'u/')) { return foPhotosEnvoyees() . '/' . basename(substr($photo, 2)); }
+    return (realpath(__DIR__ . '/../public/formation/sop/photos') ?: __DIR__ . '/../public/formation/sop/photos') . '/' . basename($photo);
+}
+function foPhotosEnvoyees(): string { return __DIR__ . '/../public/uploads/sop'; }
+
+/** Une vidéo d'étape : une adresse https lisible (300 caractères au plus), sinon null. */
+function foVideo(mixed $v): ?string
+{
+    if (!is_string($v)) { return null; }
+    $v = trim($v);
+    if ($v === '' || mb_strlen($v) > 300 || !str_starts_with($v, 'https://') || filter_var($v, FILTER_VALIDATE_URL) === false || preg_match('/[\s"<>]/', $v)) { return null; }
+    return $v;
+}
+
+/**
+ * POST /formation/sop/photo {data: "data:image/…;base64,…"} — une photo d'étape : JPEG, PNG ou WebP reconnus à leur
+ * signature, 8 Mo au plus, réduite à 1600 px de grand côté (JPEG) quand GD est là. Rend {photo: "u/nom.jpg", url}.
+ */
+function wr_sop_photo(): array
+{
+    $b = body();
+    $d = is_string($b['data'] ?? null) ? $b['data'] : '';
+    if (preg_match('#^data:image/(?:jpeg|png|webp);base64,#', $d, $m) !== 1) { return foRefus(400, 'photo attendue (JPEG, PNG ou WebP)'); }
+    $brut = base64_decode(substr($d, strlen($m[0])), true);
+    if ($brut === false || $brut === '') { return foRefus(400, 'photo illisible'); }
+    if (strlen($brut) > FO_PHOTO_MAX) { return foRefus(413, 'photo trop lourde (8 Mo au plus)'); }
+    $ext = str_starts_with($brut, "\xFF\xD8\xFF") ? 'jpg' : (str_starts_with($brut, "\x89PNG\r\n\x1A\n") ? 'png'
+        : (substr($brut, 0, 4) === 'RIFF' && substr($brut, 8, 4) === 'WEBP' ? 'webp' : ''));
+    if ($ext === '') { return foRefus(400, 'ce fichier n’est pas une photo (JPEG, PNG ou WebP)'); }
+    // Réduite et réécrite en JPEG par GD : rien d'autre que les pixels ne reste (ni métadonnées, ni position GPS).
+    if (function_exists('imagecreatefromstring') && ($im = @imagecreatefromstring($brut)) !== false) {
+        $w = imagesx($im); $h = imagesy($im);
+        $k = min(1, FO_PHOTO_COTE / max($w, $h));
+        $nw = max(1, (int) round($w * $k)); $nh = max(1, (int) round($h * $k));
+        $out = imagecreatetruecolor($nw, $nh);
+        imagefill($out, 0, 0, imagecolorallocate($out, 255, 255, 255));
+        imagecopyresampled($out, $im, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        ob_start(); imagejpeg($out, null, 82); $brut = (string) ob_get_clean();
+        imagedestroy($im); imagedestroy($out);
+        $ext = 'jpg';
+    }
+    $dir = foPhotosEnvoyees();
+    if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) { return foRefus(500, 'dossier des photos impossible à créer'); }
+    $nom = date('Ymd') . '-' . bin2hex(random_bytes(6)) . '.' . $ext;
+    if (@file_put_contents($dir . '/' . $nom, $brut) === false) { return foRefus(500, 'photo impossible à enregistrer'); }
+    return ['ok' => true, 'photo' => 'u/' . $nom, 'url' => 'formation/sop/photo/' . $nom];
+}
+
+/** GET /formation/sop/photo/{nom} — une photo envoyée (assistant de création). */
+function ep_sop_photo(string $nom): array
+{
+    $f = foPhotosEnvoyees() . '/' . basename($nom);
+    if (!is_file($f)) { return foRefus(404, 'photo inconnue'); }
+    $type = preg_match('/\.png$/i', $f) ? 'image/png' : (preg_match('/\.webp$/i', $f) ? 'image/webp' : 'image/jpeg');
+    header('Content-Type: ' . $type);
+    header('Cache-Control: public, max-age=604800, immutable');
+    header('Content-Length: ' . filesize($f));
+    readfile($f);
+    exit;
 }
 
 function foStats(array $c): array

@@ -359,7 +359,8 @@ cache hors ligne), et `.webmanifest` est servi en `application/manifest+json`.
 **Données et photos.** `GET /api/cockpit/tablette/book` (gardé six heures en
 base, clé `tabletteBook:…`) et `POST /api/cockpit/tablette/photos` — voir
 `docs/contrat-api.md`. Les vignettes carrées 640 px (`<ref>-640c.jpg`) vivent sous
-`public/uploads/tablette/` : créé et donné à www-data par `bin/deploy.sh`, hors
+`public/uploads/tablette/` (et, depuis le 06/11/2026, `public/uploads/sop/` : les photos des étapes envoyées par l’assistant de
+création des SOP) : créés et donnés à www-data par `bin/deploy.sh`, hors
 git, et protégé du `rsync --delete` par l'exclusion de `public/uploads`. Les
 photos d'origine restent sous `public/uploads/plano/panel/`, partagées avec le
 planogramme.

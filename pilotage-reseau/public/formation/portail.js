@@ -394,9 +394,9 @@
     const lien = new URL('sop/tablette.html', location.href).href;
     return `<section class="card pt-fiche"><div class="pt-kicker">${esc(MOMENTS_OP.find(x => x[0] === m)[1])}</div><div class="pt-titre">Les opérations</div>
       <div class="pt-mini"><span><b>${sops.length}</b>SOP</span><span><b>${faits} / ${ops.length}</b>opérations documentées</span></div>
-      <div class="pt-bloc"><h3>Opérations <i>une SOP chacune</i></h3>${ops.map(([lib, l]) => `<div class="pt-it"><span class="pt-it__cd">${l.length ? '<span class="pt-ok">● ' + l.length + ' SOP</span>' : '<span class="pt-ambre">à rédiger</span>'}</span>
+      <div class="pt-bloc"><h3>Opérations <i>une SOP chacune</i></h3>${ops.map(([lib, l]) => `<div class="pt-it"><span class="pt-it__cd">${l.length ? '<span class="pt-ok">● ' + l.length + ' SOP</span>' : `<a class="pt-ambre" href="#/sopnouvelle/${m}/${enc(lib)}" title="Rédiger cette SOP avec l’assistant">à rédiger ›</a>`}</span>
         <span class="pt-it__tx">${esc(lib)}${l.length ? `<small>${l.slice(0, 3).map(s => `<a href="#/sop/${enc(s.id)}">${esc(s.code || s.id)}</a>`).join(' · ')}${l.length > 3 ? ' …' : ''}</small>` : ''}</span></div>`).join('')}
-        <a class="linklike" href="#/sopred">Rédiger une nouvelle SOP</a></div>
+        <a class="linklike" href="#/sopnouvelle/${m}">＋ Nouvelle SOP pour ce moment (assistant)</a></div>
       <div class="pt-bloc"><h3>Sur la tablette</h3><p class="pt-desc">La tablette du magasin montre ces SOP sous l’onglet « ${esc(MOMENTS_OP.find(x => x[0] === m)[1])} ».</p>
         <a class="linklike" href="${esc(lien)}" target="_blank" rel="noopener">Ouvrir la tablette ↗</a> · <a class="linklike" href="#/operationnel/tablette">Comment elle marche</a></div></section>`;
   }
@@ -404,22 +404,22 @@
   function vueTablette(L) {
     const lien = new URL('sop/tablette.html', location.href).href;
     const pub = L.filter(s => s.statut === 'publiee').length;
+    // La tablette est ouverte et la même pour tous les magasins (06/11/2026) : ni PIN, ni identification, ni suivi.
     const pas = [
-      ['Ouvrir la tablette', 'Le PIN du magasin (6 chiffres), une seule fois par appareil. Chaque magasin a sa tablette, créée dans « Tablettes des magasins ».'],
-      ['Choisir le moment', 'Trois grands onglets : Ouverture · Journée de travail · Fermeture. Chacun montre les SOP du moment, par poste.'],
-      ['S’identifier', 'Son nom, puis son PIN : la lecture, le quiz et le « vu faire » sont comptés pour la personne. Sans identification, on lit sans être compté.'],
-      ['Suivre la SOP pas à pas', 'Les étapes une par une, avec leurs photos et les points critiques ; puis le quiz de la SOP.'],
-      ['Faire valider « vu faire »', 'La responsable du magasin regarde faire sur place et valide avec son PIN : la compétence est cochée au panel TF Buddy.'],
+      ['Ouvrir la tablette', 'Son adresse, dans le navigateur de la tablette (ou l’onglet SOP de l’app Cuisine). Elle est ouverte : ni PIN, ni identification, la même pour tous les magasins.'],
+      ['Choisir le moment', 'Trois grands onglets : Ouverture · Journée de travail · Fermeture. Chacun montre les SOP du moment ; l’onglet d’office suit l’heure.'],
+      ['Choisir son poste', 'Vente, Production, Cuisson, Nettoyage — ou toutes.'],
+      ['Suivre la SOP pas à pas', 'Les étapes une par une, avec leurs photos, leurs vidéos et les points critiques.'],
+      ['Faire le quiz', 'À la fin, quelques questions pour vérifier : un exercice, corrigé sur place, rien n’est enregistré.'],
     ];
     return `<div class="pt-lay"><div><section class="card pt-fiche"><div class="pt-kicker">Mode d’emploi</div><div class="pt-titre">La tablette du magasin</div>
-      <p class="pt-desc">Une seule tablette par magasin : elle porte toutes les SOP du magasin, rangées par moment de la journée. C’est le mode d’emploi du travail en magasin.</p>
+      <p class="pt-desc">La même tablette pour tous les magasins : toutes les SOP, rangées par moment de la journée. C’est le mode d’emploi du travail en magasin.</p>
       <ol class="pt-pas">${pas.map(([t2, d]) => `<li><b>${esc(t2)}</b><span>${esc(d)}</span></li>`).join('')}</ol></section></div>
       <div><section class="card pt-fiche"><div class="pt-kicker">La tablette</div><div class="pt-titre">${pub} SOP publiées</div>
         <div class="pt-mini">${MOMENTS_OP.slice(0, 3).map(([k, l]) => `<span><b>${L.filter(s => ongletDe(s.moment) === k).length}</b>${esc(l)}</span>`).join('')}</div>
         <div class="pt-bloc"><h3>Adresse</h3><p class="pt-desc"><a class="linklike" href="${esc(lien)}" target="_blank" rel="noopener">${esc(lien)}</a></p></div>
-        <div class="pt-bloc"><h3>Aller plus loin</h3><a class="pt-it" href="#/tablettes"><span class="pt-it__tx">Tablettes des magasins<small>créer la tablette d’un magasin, son PIN, ses appareils</small></span></a>
-          <a class="pt-it" href="#/suivi"><span class="pt-it__tx">Suivi en magasin<small>qui a lu, réussi le quiz, été vu faire</small></span></a>
-          <a class="pt-it" href="#/sopred"><span class="pt-it__tx">Rédaction des SOP<small>écrire, traduire, publier</small></span></a></div></section></div></div>`;
+        <div class="pt-bloc"><h3>Aller plus loin</h3>          <a class="pt-it" href="#/sopnouvelle"><span class="pt-it__tx">Nouvelle SOP<small>l’assistant de création, avec les photos et les vidéos</small></span></a>
+          <a class="pt-it" href="#/sopred"><span class="pt-it__tx">Rédaction des SOP<small>traduire, valider, publier</small></span></a></div></section></div></div>`;
   }
 
   async function changerMoment(id, v) {
@@ -529,7 +529,9 @@
 
   /* ── Branchement sur formation-sop.js et formation.js ─────────────────── */
 
-  const ECRANS = { rfformations: ecranFormations, rfmetiers: ecranPostes, rfcompetences: ecranCompetences, rfdonnees: ecranDonnees, operationnel: ecranOperationnel };
+  // #/tablettes (la gestion des PIN par magasin) mène à « La tablette » : elle est ouverte et la même pour tous (06/11/2026).
+  const versTablette = () => { setTimeout(() => { if (C.S.route.ecran === 'tablettes') { location.replace('#/operationnel/tablette'); } }, 0); return { titre: 'La tablette', kicker: 'Opérationnel', corps: '<p class="muted">…</p>' }; };
+  const ECRANS = { rfformations: ecranFormations, rfmetiers: ecranPostes, rfcompetences: ecranCompetences, rfdonnees: ecranDonnees, operationnel: ecranOperationnel, tablettes: versTablette };
   Object.keys(ECRANS).forEach(k => { FS.ecrans[k] = ECRANS[k]; });
   Object.assign(FS.icones, {
     rfformations: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5',
@@ -556,15 +558,15 @@
    */
   window.FormationPortail = {
     defaut: 'rfformations',
-    titres: { rfformations: 'Formations', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', suivi: 'Suivi en magasin', operationnel: 'Opérationnel' },
+    titres: { rfformations: 'Formations', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', operationnel: 'Opérationnel', sopnouvelle: 'Nouvelle SOP' },
     // Deux menus (06/11/2026, client : « tout ce qui est formation reste dans Formation, tout ce qui est opérationnel, et les
     // deux menus du rail »). Une entrée = [écran, libellé, écrans où elle reste allumée, sous-adresse facultative].
     rail: [
       ['Formation', [['rfformations', 'Formations', ['rfpre']], ['rfmetiers', 'Postes', []], ['rfcompetences', 'Compétences', ['rfform', 'sopcomp']],
-        ['suivi', 'Suivi en magasin', []], ['rfdonnees', 'Données du panel', ['tableau', 'postes', 'competences', 'formations', 'procedures', 'ressources', 'produit', 'api']]], false],
+        ['rfdonnees', 'Données du panel', ['tableau', 'postes', 'competences', 'formations', 'procedures', 'ressources', 'produit', 'api']]], false],
       ['Opérationnel', [['operationnel', 'Ouverture', [], 'ouverture'], ['operationnel', 'Journée de travail', [], 'journee'], ['operationnel', 'Fermeture', [], 'fermeture'],
-        ['operationnel', 'La tablette', [], 'tablette'], ['tablettes', 'Tablettes des magasins', []],
-        ['sopred', 'Rédaction des SOP', ['sop', 'rfclasseur', 'rfphase', 'rfposte', 'manuel']]], false],
+        ['operationnel', 'La tablette', [], 'tablette'],
+        ['sopred', 'Rédaction des SOP', ['sop', 'sopnouvelle', 'rfclasseur', 'rfphase', 'rfposte', 'manuel']]], false],
     ],
   };
 })(window.FormationSop);

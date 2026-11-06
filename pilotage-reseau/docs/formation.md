@@ -767,3 +767,31 @@ pour la tablette ; tout ce qui est formation reste dans Formation, tout ce qui e
   11 h ouverture, à partir de 17 h fermeture). Sans identification : filtre par poste ; identifiée : « Mes postes » (d'office)
   ou « Tout le magasin », avec l'état de chaque SOP. Les anciens onglets « Ma journée » / « Toutes les SOP » sont remplacés.
 
+## Assistant de création des SOP, tablette ouverte, suivi retiré (06/11/2026)
+
+Client : « je dois surtout avoir dans l'édition des SOP un assistant de création des SOP », « je dois pouvoir introduire
+des photos » ; « effacer le suivi, je n'ai pas besoin du suivi pour les SOP » ; « la tablette doit être ouverte, et pour
+tous les magasins la même chose ».
+- **Assistant** (`assistant-sop.js`, `assistant-sop.css`, `#/sopnouvelle[/<moment>[/<titre>]]`) : cinq étapes — 1 Où et
+  quand (moment = l'onglet de la tablette, poste, type, famille, code facultatif) · 2 Le sujet (titre FR exigé, NL
+  facultatif, objectif, pour qui, durée, compétences C-… et formations FO) · 3 Les étapes (titre, texte, **photo** —
+  réduite dans le navigateur à 1600 px JPEG puis `POST /formation/sop/photo` —, **vidéo** https YouTube / Vimeo / fichier,
+  point critique, ↑ ↓ ×) · 4 Points critiques et quiz (questions, réponses, la bonne cochée) · 5 Relire et créer.
+  À droite, l'aperçu « Sur la tablette ». Le brouillon est gardé dans l'onglet (`sessionStorage` `fm.sop.assistant`).
+  « Créer la SOP » : `POST /formation/sop/fiche` avec `contenu` et `moment` (v1.0 « à valider », NL « à relire »), puis le
+  classement (`PUT /formation/ref/standards/{id}`). Ensuite « Traduire et compléter » mène à l'éditeur (le NL est exigé
+  pour publier). Entrées : Rédaction des SOP « ＋ Nouvelle SOP (assistant) » (« Création rapide » = l'ancienne SOP vide),
+  Opérationnel « à rédiger › » d'une opération (moment et titre préremplis), « ＋ Nouvelle SOP pour ce moment », La
+  tablette. Une photo envoyée vaut « u/<nom>.jpg » sur l'étape, gardée dans `public/uploads/sop/` (exclu du `rsync
+  --delete`) et servie par `GET /formation/sop/photo/<nom>` ; la tablette, la fiche, l'éditeur et le PDF la lisent. La
+  vidéo : intégrée sur la tablette (YouTube sans cookie, Vimeo), sinon un lien ; un lien sur la fiche et dans le PDF ;
+  un champ dans l'éditeur complet.
+- **Tablette ouverte et la même pour tous les magasins** (`sop/tablette.js`) : plus de PIN du magasin, plus
+  d'identification ni de panneau « Qui lit ? » ; trois onglets, filtre par poste, la SOP pas à pas ; le quiz est un
+  exercice corrigé par le serveur, rien n'est enregistré. « Comment ça marche » : quatre pas (moment, poste, SOP, quiz).
+  Le portail : « Tablettes des magasins » quitte le rail et `#/tablettes` mène à « La tablette » ; le mode d'emploi du
+  portail dit la même chose. Les routes de gestion des tablettes et de l'ancienne identification restent sur le serveur.
+- **Suivi retiré du portail** : « Suivi en magasin » (`#/suivi`), l'onglet « Acquisition en magasin » de la
+  correspondance, le chiffre « vues faire » des Standards, la carte « l'équipe face à cette SOP » de la fiche et le choix
+  du magasin du portail. Les tables de suivi (`ceo_sop_suivi`…) restent en base.
+

@@ -150,8 +150,10 @@ publiée « à revalider » est venue après). État d'une langue : `origine`, `
 | `GET /formation/sop/fil?shop=` | lectures, quiz, « vu faire » des 14 derniers jours |
 | `GET /formation/sop/manuel?langue=` · `GET /formation/sop/manuel.pdf?langue=&dossier=` | toutes les SOP, contenu compris, et leur PDF (complet ou par famille) |
 | `PUT /formation/sop/fiche/{id}` | publier une version : `{contenu, note, revalider, trad: {fr, nl}}` → `{version, aRevoir}` ; refus 400 si un texte manque dans une langue |
-| `PATCH /formation/sop/fiche/{id}` | réglages sans nouvelle version : `competence {id, nom} \| null` (compétence du panel, `GET /competencies`), `partie` (ou `null` : déduite), `trad {fr\|nl: relue\|a_relire}`, `statut`, `poste`, `moment`, `dossier`, `code` |
-| `POST /formation/sop/fiche` | nouvelle SOP `{code, dossier, type, poste, titre {fr, nl}}` (v1.0, à valider) |
+| `PATCH /formation/sop/fiche/{id}` | réglages sans nouvelle version : `competence {id, nom} \| null` (compétence du panel, `GET /competencies`), `partie` (ou `null` : déduite), `trad {fr\|nl: relue\|a_relire}`, `statut`, `poste`, `moment` (`ouverture\|journee\|apres-midi\|fermeture` ou `null` « au besoin », 400 sinon ; noté au journal), `dossier`, `code` |
+| `POST /formation/sop/fiche` | nouvelle SOP `{code, dossier, type, poste, titre {fr, nl}, objectif?, moment?, contenu?}` (v1.0, à valider). Avec `contenu` (l'assistant de création, 06/11/2026) : la SOP entière d'un seul envoi — `pour`, `duree`, `sections[{titre, etapes[{numero, titre, texte, critique, photo, video}]}]`, `points_critiques`, `quiz` ; au moins une étape avec son texte ; le NL peut manquer (« à relire ») |
+| `POST /formation/sop/photo` | une photo d'étape `{data: "data:image/jpeg\|png\|webp;base64,…"}` (8 Mo au plus, reconnue à sa signature, réduite à 1600 px en JPEG par GD) → `{photo: "u/<nom>.jpg", url}` ; gardée dans `public/uploads/sop/` |
+| `GET /formation/sop/photo/{nom}` | une photo envoyée (publique, comme celles du dépôt) |
 | `POST /formation/sop/importer` | range les SOP de `data/formation/sops/` absentes de la base (n'écrase rien) |
 
 **Tablette du poste** (ouvertes sans session du cockpit ; depuis le lot 5, chacune EXIGE la session de l'appareil —
@@ -5001,3 +5003,9 @@ Côté app : `GET|POST /pointage` (la caméra : BarcodeDetector, sinon jsQR 1.4.
 (la semaine face au planning), `POST /me/pointage/depart` ; la carte de l'Accueil. Côté cockpit : la page
 **Pointages** (`#/pointages`, rail « Application employé », badge : les départs à valider). Tests :
 `php bin/tests_pointage_app.php`.
+
+**Tablette ouverte (06/11/2026).** `GET /formation/sop/tablette/init`, `GET /formation/sop/tablette/sop/{id}` et
+`POST /formation/sop/tablette/quiz` ne demandent plus la session de l'appareil : la tablette est ouverte et la même pour
+tous les magasins. Sans appareil ouvert, `init` rend `magasin: null`, `personnes: []` et toutes les SOP (hors brouillons).
+`quiz` sans `jeton` : corrigé, rien n'est enregistré (`exercice: true`). Une étape peut porter `video` (https). Les autres
+routes de la tablette (identifier, lu, vu, langue) gardent la session de l'appareil.

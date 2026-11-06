@@ -185,6 +185,8 @@ mkdir -p "$TARGET_DIR/public/uploads/social"     # visuels des posts (portail Ma
 mkdir -p "$TARGET_DIR/public/uploads/tablette"
 # Photos types des rayons (src/rayons_photos.php) : le comptoir attendu.
 mkdir -p "$TARGET_DIR/public/uploads/rayons"
+# Photos des étapes des SOP envoyées par l'assistant de création (src/sop.php, 06/11/2026) : servies par l'API.
+mkdir -p "$TARGET_DIR/public/uploads/sop"
 chown -R www-data:www-data "$TARGET_DIR/public/uploads"
 chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
 
