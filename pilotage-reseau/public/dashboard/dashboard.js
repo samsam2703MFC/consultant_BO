@@ -106,7 +106,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900 };
+  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'b2bs': 600, 'cmdd': 60 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -2793,7 +2793,8 @@
     h += depasse ? `<div class="op-dax ab"><span>0 €</span><span class="o${pO > 80 ? ' d' : ''}" style="left:${pO.toFixed(1)}%">objectif ${cpt ? 'comptoir ' : ''}${fE(obj)}</span></div>`
       : `<div class="op-dax"><span>0 €</span><span>${fE(echelle / 2)}</span><span>${obj ? 'objectif ' + (cpt ? 'comptoir ' : '') + fE(obj) : fE(echelle)}</span></div>`;
     // La ligne « face à samedi dernier · clients · panier · au rythme de la journée » est retirée (10/10/2026).
-    return h + '</div>';
+    // Les commandes du jour (06/11/2026) : une ligne qui ouvre leur feuille, comptoir et webshop.
+    return h + opCmdLigne(D) + '</div>';
   }
   /**
    * Les jauges du comptoir et du B2B (23/10/2026, Sam, maquette A) : la jauge du haut ne compte que le comptoir, face à
@@ -2824,18 +2825,159 @@
     const echelle = Math.max(objB || 0, ca, p7j || 0, 1) * 1.08, pct = v => Math.max(0, Math.min(100, 100 * (v || 0) / echelle)), pO = objB ? pct(objB) : null;
     const marque = pO != null ? `<i class="objm" style="left:${pO.toFixed(1)}%" title="part B2B habituelle ${fE(objB)}"></i>` : '';
     const val = (p, t, cls) => `<span class="val${cls ? ' ' + cls : ''}${p > 72 ? ' dedans' : ''}" style="left:${p.toFixed(1)}%">${t}</span>`;
-    const piste = (lb, sous, segs) => `<div class="op-piste"><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${marque}</div></div>`;
+    const piste = (lb, sous, segs, j) => `<div class="op-piste"${j ? ` data-b2bj="${esc(j)}"` : ''}><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${marque}</div></div>`;
     const tks = k => fN(k) + ' ticket' + (k > 1 ? 's' : '') + ' pro', jn = B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1);
-    let h = `<div class="op-duel b2b"><div class="dh"><span class="lab">${objB ? 'Objectif B2B du ' + esc(B.jourNom) + `<b>${fE(objB)}</b>` : 'B2B du ' + esc(B.jourNom)}</span><span class="dr">${tks(n)}${B.part != null ? ' · part habituelle ' + nf(B.part, 0) + ' %' : ' · part habituelle pas encore lue'}</span></div>`;
+    // Un appui ouvre la feuille « Ventes B2B » (06/11/2026) : sur une piste, son jour ; ailleurs, aujourd'hui s'il a des
+    // tickets pro, sinon le même jour la semaine d'avant.
+    const jDef = n || !(j7 && j7.date) ? S.date : j7.date;
+    let h = `<div class="op-duel b2b" data-b2b="${esc(jDef)}" role="button" tabindex="0" aria-label="Le détail des ventes B2B"><div class="dh"><span class="lab">${objB ? 'Objectif B2B du ' + esc(B.jourNom) + `<b>${fE(objB)}</b>` : 'B2B du ' + esc(B.jourNom)}</span><span class="dr">${tks(n)}${B.part != null ? ' · part habituelle ' + nf(B.part, 0) + ' %' : ' · part habituelle pas encore lue'}</span></div>`;
     const pA = pct(ca);
-    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', 'B2B · ' + tks(n), `<div class="seg fait" style="width:${pA.toFixed(1)}%"></div>${val(pA, fE(ca) + (objB ? ' · ' + fP0(100 * ca / objB) : ''))}`);
+    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', 'B2B · ' + tks(n), `<div class="seg fait" style="width:${pA.toFixed(1)}%"></div>${val(pA, fE(ca) + (objB ? ' · ' + fP0(100 * ca / objB) : ''))}`, S.date);
     if (p7 != null) {
       const q7 = pct(p7), q7j = pct(p7j);
       h += piste(jn + ' dernier', 'B2B · ' + fD(j7.date), `<div class="seg j7" style="width:${q7.toFixed(1)}%"></div>${p7j > p7 ? `<div class="seg j7j" style="left:${q7.toFixed(1)}%;width:${(q7j - q7).toFixed(1)}%"></div>` : ''}`
-        + val(q7, fE(p7) + (j7.moment ? ' à ' + esc(j7.moment) : '')) + (p7j > p7 ? val(q7j, 'journée ' + fE(p7j), 'fin') : ''));
+        + val(q7, fE(p7) + (j7.moment ? ' à ' + esc(j7.moment) : '')) + (p7j > p7 ? val(q7j, 'journée ' + fE(p7j), 'fin') : ''), j7.date);
     } else { h += `<div class="op-piste"><div class="pl"><b>${esc(jn)} dernier</b><small>B2B pas encore lu</small></div><div class="pb"></div></div>`; }
     h += `<div class="op-dax ab"><span>0 €</span>${pO != null ? `<span class="o${pO > 80 ? ' d' : ''}" style="left:${pO.toFixed(1)}%">part B2B habituelle ${fE(objB)}</span>` : ''}</div>`;
-    return h + '</div>';
+    return h + '<div class="op-tap"><span>le détail des tickets</span><span>›</span></div></div>';
+  }
+  /* ── Les feuilles « Ventes B2B » et « Commandes du jour » (06/11/2026, Sam, maquette b2b-commandes-mobile) ────────
+   * Un appui sur la jauge B2B ouvre « Ventes B2B » : un jour (celui de la piste touchée, ou le même jour la semaine
+   * d'avant) ou les cinq derniers mêmes jours de semaine ; chaque ticket avec sa société et ses articles. La ligne
+   * « Commandes du jour » sous la jauge du comptoir ouvre « Commandes du jour » : comptoir et webshop, le CA en commandes
+   * rapproché de la caisse. Au téléphone une feuille plein écran, au bureau la modale du dashboard. Sans bord coloré. */
+  const isoMoins = (d, n) => { const t = new Date(d + 'T12:00:00'); t.setDate(t.getDate() - n); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
+  const plu = (n, m) => fN(n) + ' ' + m + (Math.round(n) > 1 ? 's' : '');
+  const bmRemise = c => c.statut === 'remise' || c.statut === 'livrée';
+  /** La ligne « Commandes du jour » : lue dans /exploitation/canaux (déjà chargé par l'onglet) ; rien sans commande. */
+  function opCmdLigne(D) {
+    const L = D && Array.isArray(D.listeC) ? D.listeC : [];
+    if (!L.length) { return ''; }
+    const C = L.filter(c => c.canal === 'compt'), W = L.length - C.length, tot = L.reduce((a, c) => a + (+c.montant || 0), 0);
+    const maint = S.date < AUJ ? '24:00' : (D.now == null ? '24:00' : opHM(D.now));
+    // À vérifier : une précommande remise sans ticket caisse, ou une commande pas remise dont l'heure est passée.
+    const v = L.filter(c => bmRemise(c) ? c.canal === 'compt' && c.encaissee === false : String(c.heure || '') < maint).length;
+    return `<div class="op-cmdl" data-cmdm="1" role="button" tabindex="0"><div class="t"><b>Commandes du jour</b><small>comptoir ${C.length} · webshop ${W}${v ? ` · <em>${v} à vérifier</em>` : ''}</small></div><span class="v">${fU(tot)}</span><span class="ch">›</span></div>`;
+  }
+  /** Garder le défilement d'une feuille quand elle se redessine (une lecture qui arrive, le relu des deux minutes). */
+  function bmPeindre(box, html) {
+    const m0 = box.querySelector('.fi-modale'), y = m0 ? m0.scrollTop : 0;
+    box.innerHTML = html;
+    const m1 = box.querySelector('.fi-modale'); if (m1 && y) { m1.scrollTop = y; }
+  }
+  function bmFermerClasse() { if (!S.fiche && !S.invModale && !S.stk && !S.b2b && !S.cmdm) { document.documentElement.classList.remove('db-fiche-ouverte'); } }
+  const bmLignes = L => `<table class="bm-art">${L.map(l => `<tr><td>${l.q != null ? nf(l.q, l.q % 1 ? 1 : 0) + ' × ' : ''}${esc(l.nom)}</td><td class="n p">${l.pu != null ? fU(l.pu) : ''}</td><td class="n">${l.total != null ? fU(l.total) : ''}</td></tr>`).join('')}</table>`;
+
+  /* — Ventes B2B — */
+  const cheminB2B = j => '/exploitation/pro/detail?shop=' + encodeURIComponent(S.shop) + '&date=' + j;
+  const cleB2B = j => j === 'sem' ? 'b2bs|' + S.shop + '|' + S.date : 'b2bd|' + S.shop + '|' + j;
+  function b2bLire(force) { const B = S.b2b; if (!B) { return; } lireAux(cleB2B(B.j), B.j === 'sem' ? cheminB2B(S.date) + '&vue=semaines' : cheminB2B(B.j), force); }
+  function b2bOuvrir(j) { S.b2b = { j: j || S.date, ouv: {}, retour: document.activeElement }; b2bLire(false); b2bRendre(); }
+  function b2bFermer() { const r = S.b2b && S.b2b.retour; S.b2b = null; b2bRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* redessiné */ } } }
+  function b2bRendre() {
+    let box = document.getElementById('db-b2b');
+    if (!S.b2b) { if (box) { box.innerHTML = ''; } bmFermerClasse(); return; }
+    if (!box) { box = document.createElement('div'); box.id = 'db-b2b'; document.body.appendChild(box); }
+    document.documentElement.classList.add('db-fiche-ouverte');
+    const B = S.b2b, j7 = isoMoins(S.date, 7), jn = JOURS_L[new Date(S.date + 'T12:00:00').getDay()];
+    const caDe = j => { const X = S.aux[cleB2B(j)]; return X && X.jour ? ' <small>' + fE(X.jour.caPro) + '</small>' : ''; };
+    const ong = [[S.date, (S.date === AUJ ? 'Aujourd’hui' : jn.slice(0, 3) + '. ' + fD(S.date)) + caDe(S.date)], [j7, jn.slice(0, 3) + '. ' + fD(j7) + caDe(j7)], ['sem', '5 ' + jn + 's']]
+      .map(([k, l]) => `<button type="button" class="bm-pil${B.j === k ? ' on' : ''}" data-b2bj="${k}">${l}</button>`).join('');
+    const cle = cleB2B(B.j), D = S.aux[cle], err = S.err[cle];
+    let corps;
+    if (!D || (S.enCours[cle] && !D)) { corps = `<div class="bm-in bm-msg">${err ? 'Lecture impossible : ' + esc(err) : 'lecture des tickets pro au panel…'}</div>`; }
+    else if (D.indispo) { corps = `<div class="bm-in bm-msg">${esc(D.motif || 'indisponible')}</div>`; }
+    else if (B.j === 'sem') { corps = b2bSemaines(D, jn); }
+    else { corps = b2bJour(D, B); }
+    const quand = B.j === 'sem' ? 'les ' + jn + 's du ' + fD(isoMoins(S.date, 28)) + ' au ' + fD(S.date) : (B.j === AUJ ? 'aujourd’hui' : fDL(B.j));
+    bmPeindre(box, `<div class="fi-voile" data-b2bx="1"></div><div class="fi-modale bm-modale" role="dialog" aria-modal="true" aria-label="Ventes B2B"><div class="bm-poi"></div>
+      <div class="fi-hd"><div class="t"><h2>Ventes B2B</h2><div class="s">${esc(nomShop())} · ${esc(quand)}</div></div><button type="button" class="fi-x" data-b2bx="1" aria-label="Fermer">✕</button></div>
+      <div class="bm-ong">${ong}</div><div class="bm-bd">${corps}</div></div>`);
+    box.querySelectorAll('[data-b2bx]').forEach(b => b.addEventListener('click', b2bFermer));
+    box.querySelectorAll('[data-b2bj]').forEach(b => b.addEventListener('click', () => { S.b2b.j = b.dataset.b2bj; S.b2b.ouv = {}; b2bLire(false); b2bRendre(); const m = box.querySelector('.fi-modale'); if (m) { m.scrollTop = 0; } }));
+    box.querySelectorAll('[data-b2bt]').forEach(b => b.addEventListener('click', () => { const i = b.dataset.b2bt; S.b2b.ouv[i] = !S.b2b.ouv[i]; b2bRendre(); }));
+  }
+  function b2bJour(D, B) {
+    const J = D.jour || {}, T = Array.isArray(D.tickets) ? D.tickets : [], st = D.sansTva || {};
+    const tag = t => t.differe ? '<span class="bm-tg d">différé</span>' : (t.facture ? '<span class="bm-tg f">facturé</span>' : '<span class="bm-tg">comptoir</span>');
+    const k4 = `<div class="bm-in"><div class="bm-k4">
+      <div><div class="k">CA B2B</div><div class="v">${fU(J.caPro)}</div><div class="s">${J.part != null ? fP(J.part) + ' du CA du jour' : '—'}</div></div>
+      <div><div class="k">Tickets pro</div><div class="v">${fN(J.ticketsPro)}</div><div class="s">${plu(J.societes || 0, 'société')} · sur ${fN(J.tickets)}</div></div>
+      <div><div class="k">Panier pro</div><div class="v">${J.panierPro != null ? fU(J.panierPro) : '—'}</div><div class="s">${J.panierComptoir != null ? 'comptoir ' + fU(J.panierComptoir) : ''}</div></div>
+      <div><div class="k">À facturer</div><div class="v">${fU(J.aFacturer)}</div><div class="s">${J.differes && J.differes.n ? '+ ' + plu(J.differes.n, 'différé') + ' ' + fU(J.differes.ca) : plu(J.factures || 0, 'ticket') + ' facturé' + ((J.factures || 0) > 1 ? 's' : '')}</div></div></div></div>`;
+    const horsTva = st.tickets ? `<div class="bm-in bm-note">${plu(st.tickets, 'ticket')} marqué${st.tickets > 1 ? 's' : ''} pro sans TVA valide (${fU(st.ca)}) : compté${st.tickets > 1 ? 's' : ''} au comptoir.</div>` : '';
+    if (!T.length) { return k4 + `<div class="bm-in bm-msg">Aucun ticket pro ${B.j === AUJ ? 'aujourd’hui' : 'ce jour'}.</div>` + horsTva; }
+    const lignes = T.map((t, i) => { const o = !!B.ouv[i];
+      return `<div class="bm-li${o ? ' ouv' : ''}"><div class="r" data-b2bt="${i}" role="button" tabindex="0"><span class="h">${esc(t.heure)}</span><span class="q"><b>${esc(t.societe || 'compte sans nom au panel')}</b><small>${t.articles != null ? plu(t.articles, 'article') : 'articles non lus'}</small></span><span class="m">${fU(t.montant)}${tag(t)}</span><span class="c">${o ? '▴' : '▾'}</span></div>
+        ${o ? `<div class="art">${t.lignes && t.lignes.length ? bmLignes(t.lignes) : '<div class="bm-note">Le panel n’a pas rendu les articles de ce ticket.</div>'}</div>` : ''}</div>`; }).join('');
+    const C = Array.isArray(D.categories) ? D.categories : [], mx = C.length ? Math.max(...C.map(c => +c.ca || 0), 1) : 1;
+    const cats = C.length ? `<div class="bm-in"><div class="bm-lab">Ce qu’ils ont acheté</div><div class="bm-bars">${C.map(c => `<div class="b"><span>${esc(c.cat)}</span><span class="tr"><i style="width:${(100 * (+c.ca || 0) / mx).toFixed(1)}%"></i></span><span class="n">${fU(c.ca)}</span></div>`).join('')}</div></div>` : '';
+    return k4 + `<div class="bm-in"><div class="bm-lab">Les tickets</div></div><div class="bm-liste">${lignes}</div>` + cats + horsTva;
+  }
+  function b2bSemaines(D, jn) {
+    const J = Array.isArray(D.jours) ? D.jours : [], C = Array.isArray(D.comptes) ? D.comptes : [];
+    if (!C.length) { return `<div class="bm-in bm-msg">Aucun ticket pro ces ${J.length} ${jn}s.</div>`; }
+    const tete = J.map(j => `<th class="n">${fD(j)}</th>`).join('');
+    const rows = C.map(c => `<tr><td>${esc(c.societe || (c.compte ? 'compte sans nom au panel' : 'sans compte'))}<small>${c.n} ${jn}${c.n > 1 ? 's' : ''} sur ${J.length}</small></td>${(c.jours || []).map(v => `<td class="n${v == null ? ' mu' : ''}">${v == null ? '—' : fE(v)}</td>`).join('')}<td class="n"><b>${fE(c.total)}</b></td></tr>`).join('');
+    const tot = J.map((j, k) => C.reduce((a, c) => a + (+((c.jours || [])[k]) || 0), 0));
+    const nl = (D.lus || []).filter(x => !x).length;
+    return `<div class="bm-defil"><table class="bm-tab"><thead><tr><th>Société</th>${tete}<th class="n">Total</th></tr></thead><tbody>${rows}
+      <tr class="tot"><td>Total</td>${tot.map(v => `<td class="n">${fE(v)}</td>`).join('')}<td class="n">${fE(tot.reduce((a, v) => a + v, 0))}</td></tr></tbody></table></div>${nl ? `<div class="bm-in bm-note">${plu(nl, 'jour')} pas encore lu${nl > 1 ? 's' : ''}.</div>` : ''}`;
+  }
+
+  /* — Commandes du jour — */
+  const cleCmdm = () => 'cmdd|' + S.shop + '|' + S.date;
+  function cmdmOuvrir() { S.cmdm = { f: 'tous', ouv: {}, retour: document.activeElement }; lireAux(cleCmdm(), '/exploitation/commandes/detail?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, false); cmdmRendre(); }
+  function cmdmFermer() { const r = S.cmdm && S.cmdm.retour; S.cmdm = null; cmdmRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* redessiné */ } } }
+  // L'état de chaque commande face à la caisse du jour : libellé, couleur du repère, étiquette de la ligne.
+  const CMD_ETAT = {
+    caisse: ['Encaissées en caisse', '#6f8f72', 'dans les tickets du jour', ['ok', 'en caisse']],
+    avant: ['Encaissées un autre jour', '#a9bcab', 'payées à la commande', ['ok', 'payée avant']],
+    ligne: ['Webshop hors caisse', '#1f5f8b', 'payées en ligne : en plus des tickets', ['w', 'en ligne']],
+    attente: ['Pas retirées', '#d9a520', 'heure de retrait passée, pas encaissées', ['d', 'pas retirée']],
+    avenir: ['À venir', '#c9c2b8', 'retrait plus tard', ['', 'à venir']],
+    sans: ['Remises sans ticket', '#8c1020', 'remises au panel, aucun ticket caisse lié', ['ko', 'sans ticket']] };
+  const CMD_CANAL = { compt: 'Comptoir', cc: 'Click & collect', liv: 'Livraison' };
+  function cmdmRendre() {
+    let box = document.getElementById('db-cmdm');
+    if (!S.cmdm) { if (box) { box.innerHTML = ''; } bmFermerClasse(); return; }
+    if (!box) { box = document.createElement('div'); box.id = 'db-cmdm'; document.body.appendChild(box); }
+    document.documentElement.classList.add('db-fiche-ouverte');
+    const M = S.cmdm, cle = cleCmdm(), D = S.aux[cle], err = S.err[cle];
+    const tout = D && Array.isArray(D.commandes) ? D.commandes : [];
+    const L = M.f === 'compt' ? tout.filter(c => c.canal === 'compt') : (M.f === 'web' ? tout.filter(c => c.canal !== 'compt') : tout);
+    const nC = tout.filter(c => c.canal === 'compt').length;
+    const ong = [['tous', 'Toutes', tout.length], ['compt', 'Comptoir', nC], ['web', 'Webshop', tout.length - nC]]
+      .map(([k, l, n]) => `<button type="button" class="bm-pil${M.f === k ? ' on' : ''}" data-cmdf="${k}">${l}${D ? ' <small>' + n + '</small>' : ''}</button>`).join('');
+    let corps;
+    if (!D) { corps = `<div class="bm-in bm-msg">${err ? 'Lecture impossible : ' + esc(err) : 'lecture des commandes au panel…'}</div>`; }
+    else if (D.indispo) { corps = `<div class="bm-in bm-msg">${esc(D.motif || 'indisponible')}</div>`; }
+    else if (!L.length) { corps = `<div class="bm-in bm-msg">Aucune commande ${M.f === 'compt' ? 'au comptoir ' : (M.f === 'web' ? 'webshop ' : '')}${S.date === AUJ ? 'aujourd’hui' : 'ce jour'}.</div>`; }
+    else {
+      const somme = X => X.reduce((a, c) => a + (+c.montant || 0), 0), tot = somme(L);
+      const par = Object.keys(CMD_ETAT).map(k => [k, L.filter(c => c.etat === k)]).filter(x => x[1].length);
+      const bar = par.map(([k, X]) => `<i style="width:${(tot > 0 ? 100 * somme(X) / tot : 0).toFixed(2)}%;background:${CMD_ETAT[k][1]}"></i>`).join('');
+      const quand = (k, X) => k === 'avant' ? ' · ' + [...new Set(X.map(c => c.ticket && c.ticket.date ? fD(c.ticket.date) : '?'))].join(', ') : (['attente', 'avenir', 'sans'].includes(k) ? ' · ' + X.map(c => esc(c.heure)).join(', ') : '');
+      const rap = par.map(([k, X]) => `<div class="r"><i class="d" style="background:${CMD_ETAT[k][1]}"></i><span><b>${CMD_ETAT[k][0]}</b><small>${CMD_ETAT[k][2]}${quand(k, X)}</small></span><span class="n">${fU(somme(X))}<small>${X.length}</small></span></div>`).join('');
+      const dansCa = somme(L.filter(c => c.etat === 'caisse' || c.etat === 'ligne'));
+      const eq = `<div class="eq"><b>${fU(dansCa)} dans le CA du jour</b>${M.f === 'tous' && D.caisseJour ? ' · caisse du jour ' + fU(D.caisseJour) : ''}</div>`;
+      const ligne = c => { const i = tout.indexOf(c), o = !!M.ouv[i], T = CMD_ETAT[c.etat] || CMD_ETAT.avenir, ouvrable = (c.lignes && c.lignes.length) || c.etat === 'sans';
+        const lib = c.canal === 'compt' ? (c.articles != null ? plu(c.articles, 'article') : 'Précommande') : CMD_CANAL[c.canal] + (c.articles != null ? ' · ' + plu(c.articles, 'article') : '');
+        const sous = esc(c.statut) + (c.ticket && c.ticket.heure ? ' · ticket ' + (c.ticket.date && c.ticket.date !== D.date ? fD(c.ticket.date) + ' ' : '') + esc(c.ticket.heure) : '');
+        const det = c.etat === 'sans' ? `<div class="bm-alerte">Remise au panel, aucun ticket caisse lié.${c.candidat ? ` Un ticket de ${fU(c.candidat.montant)} à ${esc(c.candidat.heure)}, sans commande : la même vente ?` : ' Aucun ticket du même montant dans l’heure.'}</div>` : '';
+        return `<div class="bm-li${o ? ' ouv' : ''}"><div class="r"${ouvrable ? ` data-cmdt="${i}" role="button" tabindex="0"` : ''}><span class="h">${esc(c.heure)}</span><span class="q"><b>${lib}</b><small>${sous}</small></span><span class="m">${fU(c.montant)}<span class="bm-tg ${T[3][0]}">${T[3][1]}</span></span><span class="c">${ouvrable ? (o ? '▴' : '▾') : ''}</span></div>
+          ${o ? `<div class="art">${c.lignes && c.lignes.length ? bmLignes(c.lignes) : ''}${det}</div>` : ''}</div>`; };
+      const sec = (t, X, s) => X.length ? `<div class="bm-sec"><b>${t}</b><span>${s}</span></div><div class="bm-liste">${X.map(ligne).join('')}</div>` : '';
+      const LC = L.filter(c => c.canal === 'compt'), LW = L.filter(c => c.canal !== 'compt'), nCC = LW.filter(c => c.canal === 'cc').length;
+      corps = `<div class="bm-in"><div class="bm-lab" style="margin-top:2px">Le CA en commandes</div><div class="bm-rap"><div class="bar">${bar}</div>${rap}<div class="tot"><span>Pris en commande · ${L.length}</span><span>${fU(tot)}</span></div>${eq}</div></div>`
+        + sec('Comptoir', LC, LC.length + ' · ' + fU(somme(LC))) + sec('Webshop', LW, LW.length + ' · ' + fU(somme(LW)) + (LW.length ? ' · retrait ' + nCC + ' · livraison ' + (LW.length - nCC) : ''));
+    }
+    bmPeindre(box, `<div class="fi-voile" data-cmdx="1"></div><div class="fi-modale bm-modale" role="dialog" aria-modal="true" aria-label="Commandes du jour"><div class="bm-poi"></div>
+      <div class="fi-hd"><div class="t"><h2>Commandes du jour</h2><div class="s">${esc(nomShop())} · ${S.date === AUJ ? 'aujourd’hui' : esc(fDL(S.date))}${D && D.maintenant ? ' · à ' + esc(D.maintenant) : ''}</div></div><button type="button" class="fi-x" data-cmdx="1" aria-label="Fermer">✕</button></div>
+      <div class="bm-ong">${ong}</div><div class="bm-bd">${corps}</div></div>`);
+    box.querySelectorAll('[data-cmdx]').forEach(b => b.addEventListener('click', cmdmFermer));
+    box.querySelectorAll('[data-cmdf]').forEach(b => b.addEventListener('click', () => { S.cmdm.f = b.dataset.cmdf; S.cmdm.ouv = {}; cmdmRendre(); }));
+    box.querySelectorAll('[data-cmdt]').forEach(b => b.addEventListener('click', () => { const i = b.dataset.cmdt; S.cmdm.ouv[i] = !S.cmdm.ouv[i]; cmdmRendre(); }));
   }
   /** Le cumul heure par heure d'aujourd'hui face à celui de J−7 : le CA jusqu'à l'objectif, ou les clients
    *  face à la référence des mêmes jours (bascule CA / Clients, demande du 08/10/2026). */
@@ -7953,6 +8095,17 @@
     ficheRendre();
     invModaleRendre();
     stkRendre();
+    // Les feuilles B2B et Commandes (06/11/2026) : la jauge B2B (une piste ouvre son jour) et la ligne des commandes.
+    $.querySelectorAll('[data-b2b]').forEach(el => {
+      el.addEventListener('click', e => { const p = e.target.closest('[data-b2bj]'); b2bOuvrir(p ? p.dataset.b2bj : el.dataset.b2b); });
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); b2bOuvrir(el.dataset.b2b); } });
+    });
+    $.querySelectorAll('[data-cmdm]').forEach(el => {
+      el.addEventListener('click', cmdmOuvrir);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cmdmOuvrir(); } });
+    });
+    b2bRendre();
+    cmdmRendre();
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
