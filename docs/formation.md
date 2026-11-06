@@ -2,15 +2,17 @@
 
 Le référentiel RH du panel TFBuddy, rangé pour être lu : **postes et sous-postes (niveaux)**,
 **compétences** exigées, **formations**, **procédures opératoires**, **base de connaissances**,
-**compétences produit** ; les **équipes** d'un magasin face à leur niveau ; et le **manuel
-opératoire en ligne** pour la tablette. Toutes les routes API qui portent ces données sont
+**compétences produit** ; les **équipes** d'un magasin face à leur niveau ; et le **Manuel du réseau**
+(standards, classeur, phases, postes, guides, tablettes). L'ancien « Manuel en ligne » a été retiré au lot 6
+(voir § Lot 6). Toutes les routes API qui portent ces données sont
 documentées dans le module (écran *Routes API*) et dans `docs/formation-routes.md`.
 
 - Adresse : `https://185.180.206.46/formation/` (à la racine, comme `/marketing/` — alias Apache posé par
   `bin/deploy.sh`), et `…/consulant_bo/formation/` — rail du cockpit › **Formation** › *Module Formation ↗*.
-- Manuel sur tablette : `…/consulant_bo/formation/?tablette=1#/manuel` — rail › *Manuel opératoire ↗*.
-  La page s'ajoute à l'écran d'accueil (manifeste `formation/manifest.webmanifest`) et s'ouvre
-  directement sur le manuel, sans barre latérale.
+- Manuel du réseau : `…/consulant_bo/formation/#/rfclasseur` — rail › *Manuel du réseau ↗* (il s'appelait *Manuel
+  opératoire ↗* et ouvrait `?tablette=1#/manuel` jusqu'au lot 6). La page s'ajoute à l'écran d'accueil (manifeste
+  `formation/manifest.webmanifest`, « Manuel du réseau ») et s'ouvre alors sur le Classeur en mode tablette, sans barre
+  latérale. La tablette du MAGASIN est une autre page : `formation/sop/tablette.html` (§ Tablettes des magasins).
 - **Écritures** (voir plus bas) : compétences exigées par un niveau, formations / procédures / ressources
   d'une compétence, catalogue des compétences, compétences validées et niveau d'une personne. Toute
   écriture est relue au panel avant d'être annoncée, et journalisée dans le cockpit.
@@ -65,7 +67,7 @@ Comme le reste du cockpit : HTML/CSS/JS sans dépendance ni compilation (`index.
 | | Base de connaissances | `#/ressources` | Les ressources (type, catégorie, lien) et les compétences qui s'y appuient. |
 | | Compétences produit | `#/produit` | Les compétences attachées aux produits et sous-recettes. |
 | Équipes | Compétences des équipes | `#/equipes/{magasin}` | Pour chaque personne : poste et niveau tenus, compétences validées / exigées, ce qui manque, les formations qui le couvrent. |
-| Manuel opératoire | Manuel en ligne | `#/manuel/…` | Quatre parties : Pré-ouverture · Ouverture · Opérationnel · Formation continue (`#/manuel/partie/{cle}`) ; Opérationnel garde l'entrée par poste (postes → niveaux → compétences → procédure). Vidéos dans les procédures. Recherche plein texte. Mode tablette (plein écran, cibles tactiles agrandies). |
+| ~~Manuel opératoire~~ | ~~Manuel en ligne~~ | `#/manuel/…` | **Retiré au lot 6** (doublon du Manuel du réseau) : `#/manuel` mène au Classeur, `#/manuel/partie/{cle}` à `#/rfphase/{cle}`, un poste / une compétence / une procédure à sa page du référentiel ; seule `#/manuel/formation/FO-xx` (la fiche à lire d'une formation) reste. Voir § Lot 6. |
 | Documentation | Routes API | `#/api[/{famille}]` | Les 237 routes du référentiel dans le swagger : verbe, état, paramètres, corps, champs de réponse, codes — et un bouton **Tester** qui appelle la route en lecture avec le compte du cockpit. |
 
 ## Parcours compétences (31/10/2026) — `/formation/parcours/`
@@ -338,6 +340,11 @@ et de procédures affichent « … » et un bandeau le dit.
 
 ## Manuel opératoire en quatre parties, vidéos, tablette (1er nov. 2026)
 
+> **Depuis le lot 6 (06/11/2026), l'écran décrit ci-dessous est retiré** : ses parties sont les phases du Manuel du
+> réseau, ses procédures du panel se reprennent en standards, le mode tablette lit le Manuel du réseau. Ce qui reste et
+> où : § Lot 6. Les réglages (partie et vidéos d'une procédure, partie et supports d'une formation) et leurs routes
+> restent tels quels.
+
 Le client : « séparer le Manuel opératoire en Pré-ouverture · Ouverture · Opérationnel · Formation
 continue », « le tout sur tablette », « réadapter pour une optimisation sur tablette de toutes les vues
 et de la lecture », « sur certaines procédures, des vidéos intégrées ».
@@ -428,7 +435,7 @@ points à confirmer) : `data/formation/REPRISE.md`.
 | une SOP (`#/sop/{id}`) | les étapes FR et NL côte à côte (ou une langue), photos, PDF FR et NL, **partie du manuel** (réglable, sinon déduite : ouverture → Ouverture, le reste → Opérationnel), l’équipe d’un magasin face à elle, points critiques, quiz, versions, relevé de la reprise |
 | *Compétences et SOP* (`#/sopcomp`) | réseau × compétence, magasin × personne, ce que la responsable doit voir faire, réglages de l’équipe (postes, langue, qui valide), le fil |
 | *Rédaction et versions* (`#/sopred`, `#/sop/{id}/editer`) | marquer une langue relue, rattacher une **compétence du panel** (`GET /competencies`), statut, nouvelle SOP ; l’éditeur FR/NL publie une nouvelle version (précision, ou « le geste change » : les personnes validées repassent à revoir) |
-| **Manuel opératoire** › chaque partie | un bloc *Standards (SOP)* à côté des procédures et des formations FO ; l’accueil compte les SOP de chaque partie |
+| ~~**Manuel opératoire** › chaque partie~~ | jusqu’au lot 6, un bloc *Standards (SOP)* dans chaque partie du Manuel en ligne ; depuis, les SOP d’une phase se lisent dans Manuel du réseau › *Par phase* (§ Lot 6) |
 | **Tablette du poste** `formation/sop/tablette.html?shop=&poste=&langue=` | l’onglet SOP de l’app Cuisine y mène. Depuis le lot 5 (voir « Tablettes des magasins ») le **PIN du magasin** ouvre d’abord l’appareil, une fois ; puis son nom, son PIN (vérifié au panel, `GET /shops/{id}/employees`, comme les checklists), le pas à pas, le quiz ; la **responsable du magasin** valide « vu faire » avec son PIN |
 
 **Compétences** : une compétence est acquise quand chacune de ses SOP publiées (pour les postes de la personne) a été vue
@@ -493,7 +500,7 @@ se traduisent en postes v25 (`RF_POSTES_PERSONNE` : vente → P3, cuisson et pro
 valide « vu faire » tient aussi P4, P5, P8. Une SOP sans postes v25 garde l'ancienne règle (son poste de tablette).
 
 **Brouillons** : une SOP reprise du Manuel opératoire du CRM arrive au statut `brouillon` (FR seul, le NL à écrire) :
-ni sur la tablette, ni dans le Manuel imprimé, ni dans les parties du Manuel en ligne. Rédaction › Statut la fait
+ni sur la tablette, ni dans le Manuel imprimé (Par phase les montre, marqués « Brouillon »). Rédaction › Statut la fait
 passer « à valider » puis « publiée ».
 
 | Où | Ce qu'on y trouve |
@@ -629,3 +636,52 @@ comme dans le CRM), `formation_repere`. Sans `crm_settings` dans la base, le con
 
 Au-delà de 1640 px les blocs, le tableau et la fiche sont côte à côte ; en dessous, les blocs passent au-dessus, en
 grille ; sous 1100 px tout s'empile.
+
+## Lot 6 — retrait des doublons (06/11/2026)
+
+Dernière passe de la fusion (`docs/maquettes/fusion-manuel/PLAN.md`, lot 6) : rien n'est retiré sans remplaçant.
+
+**Le « Manuel en ligne » (`#/manuel`) quitte le module.** Il relisait les procédures du panel TF Buddy en quatre parties,
+ce que le Manuel du réseau fait désormais sur nos propres standards. Avant de le retirer :
+
+- **Reprise des procédures du panel** dans le référentiel : `POST /formation/ref/importer-panel` (`wr_rf_importer_panel`,
+  `src/referentiel.php`), bouton « Reprendre les procédures du panel » du Classeur, à côté de « Reprendre le Manuel du
+  CRM ». Chaque procédure (`GET /operational-procedures`, puis lue comme la page du manuel : `fmProcedureLue`,
+  `src/formation.php`, la lecture de `GET /formation/procedure`) devient une SOP **brouillon** : id `panel-<id>`, source
+  `panel:<id>`, code `TFB-<id>` (le code que le CRM lui donnait). Pas reprise quand elle est déjà un standard : déjà
+  reprise, reprise par le Manuel du CRM (code `TFB-<id>`), ou une SOP de même titre (mêmes mots : « Ouverture du magasin
+  et des comptoirs » ne double pas SOP-WKL-001). Une étape par section du panel qui a un contenu (le HTML de l'éditeur du
+  panel ramené à du texte ; une section vide ou à « 1 » est sautée), l'objectif = sa description ; phase = la partie
+  réglée dans le cockpit, sinon déduite comme le faisait l'écran ; sous-catégorie déduite par le nom de la sous-catégorie
+  puis de la catégorie du panel (`rfSouscatParNom`), sinon vide et **signalée** (« à classer depuis leur fiche ») ;
+  famille et poste de tablette déduits de la catégorie (nettoyage / hygiène → 03, cuisson / production → 02, sinon 01) ;
+  pièces jointes du panel et vidéos réglées notées dans les remarques. Bilan à l'écran (reprises, déjà là, illisibles,
+  à classer) et au journal. Idempotent. Essai : faux panel (`tests/formation/faux_panel.php`, cinq procédures FICTIVES).
+- Puis l'entrée de menu « Manuel opératoire › Manuel en ligne » disparaît, et les anciennes adresses mènent ailleurs
+  (`ancienManuel`, `formation.js` ; l'adresse est remplacée, `?tablette=1` et `?embed=1` restent).
+
+| Ce que le Manuel en ligne offrait | Ce qu'il est devenu |
+|---|---|
+| Accueil `#/manuel` (les quatre parties) | → **Classeur** (`#/rfclasseur`) ; les quatre parties = les quatre phases de **Par phase** |
+| Une partie `#/manuel/partie/{cle}` : procédures, SOP, formations FO de la partie | → `#/rfphase/{cle}` : les standards de la phase (« À appliquer », les SOP comprises, brouillons repris du panel compris), les formations (« À apprendre » : celles des standards et la répartition des FO par partie, inchangée), les compétences |
+| « Par poste » d'Opérationnel, `#/manuel/poste/{p}/{n}` | → `#/postes/{p}/{n}` (Référentiel › Postes & sous-postes : mêmes niveaux et compétences, fiches PDF du poste et du niveau) ; les postes v25 se lisent dans **Par poste** |
+| Une compétence `#/manuel/competence/{id}` | → `#/competences/{id}` (Référentiel › Compétences) |
+| Une procédure `#/manuel/procedure/{id}` : lecture, PDF, partie du manuel, vidéos | → `#/procedures/{id}` (Référentiel › Procédures : la même lecture, le PDF du panel, la partie du manuel et les vidéos, réglables) ; et, reprise, un standard brouillon `panel-<id>` |
+| La fiche à lire d'une formation `#/manuel/formation/FO-xx` (programme, matériel didactique, fenêtres de détail, « Imprimer ») | **gardée** et rattachée au Manuel du réseau : fil d'Ariane « Manuel du réseau › <phase> », les formations de Par phase et de Par poste y mènent d'un clic ; l'ancien lien « Guide › » du CRM (`?tablette=1#/manuel/formation/FO-xx`) marche toujours |
+| Réglage « Partie du manuel » d'une procédure, d'une formation ; vidéos ; supports | **gardés** (page d'une procédure du référentiel, fiche d'une formation) ; les liens de la partie mènent à Par phase |
+| Recherche plein texte (compétences, procédures du panel) | Référentiel › Compétences et Procédures (recherche), Standards (recherche des SOP) |
+| Mode tablette (`?tablette=1`, sans barre latérale, cibles agrandies, sans réglages) | **gardé** et rattaché au Manuel du réseau : bouton « Mode tablette » sur le Classeur, Par phase, Par poste, Standards et la fiche d'une formation ; en tablette, un sélecteur de la barre supérieure (Classeur · Par phase · Par poste · Standards) remplace la barre latérale ; sans adresse, la tablette s'ouvre sur le Classeur (manifeste : « Manuel du réseau », `?tablette=1#/rfclasseur`). La tablette du **magasin** reste `sop/tablette.html` |
+| PDF | le Manuel opératoire des SOP en PDF (`GET /formation/sop/manuel.pdf`, existait sans bouton) : « Manuel PDF FR / NL » du Classeur ; PDF d'une SOP (sa fiche), d'une procédure, d'un poste, d'un niveau (référentiel) inchangés |
+| Rail du cockpit « Manuel opératoire ↗ » (`formation/?tablette=1#/manuel`) | « Manuel du réseau ↗ » (`formation/#/rfclasseur`) |
+
+Code retiré de `formation.js` : accueil, parties, postes, compétences et procédures du manuel (et leurs styles :
+`fm-parts`, `fm-part*`, `fm-parties*`, `fm-manuel-search`, cartes des postes) ; de `formation-sop.js` : les SOP d'une
+partie (`sectionPartie`, `nbPartie`). **Gardé côté serveur** : `GET /formation/referentiel` et `GET /formation/procedure`
+(le CRM les lit), `GET|PATCH /formation/manuel*` (réglages des parties, vidéos, supports).
+
+**Côté CRM** (dépôt atelier-espace-candidat, même lot) : les routes d'écriture que son écran n'appelle plus (éditeur du
+Manuel opératoire, réglages de la pré-ouverture et des compétences) répondent 410 « s'édite désormais dans le Cockpit
+(Manuel du réseau) » ; les lectures restent. Son `CLAUDE.md` § Lot 6.
+
+**Code de gestion des tablettes** (même lot) : § Tablettes des magasins.
+
