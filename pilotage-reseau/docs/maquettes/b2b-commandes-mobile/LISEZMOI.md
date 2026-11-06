@@ -1,6 +1,18 @@
 # Le B2B et les commandes en détail, au téléphone — trois maquettes
 
-**Statut : maquette, rien n'est codé.** Demande du 06/11/2026 : « dans le dashboard day, je veux
+**Statut : codée le 06/11/2026** — écrans 2 et 3. Sam a choisi la **feuille du bas (écran 2)** pour le B2B, et
+**les noms des sociétés s'affichent**. Serveur : `GET /exploitation/pro/detail` (`src/ventes_pro.php`) et
+`GET /exploitation/commandes/detail` (`src/canaux_offres.php`), voir `docs/contrat-api.md`. Dashboard :
+`opDuelPro` (la jauge se touche), `opCmdLigne` (la ligne « Commandes du jour » sous la jauge du comptoir), feuilles
+`b2bRendre` et `cmdmRendre` (`#db-b2b`, `#db-cmdm`, styles `bm-*`). Au bureau, les mêmes feuilles s'ouvrent en modale
+depuis l'onglet Opérationnel. Captures de la version codée, API simulée (sociétés fictives) : `code-ops.png`,
+`code-b2b.png`, `code-b2b-semaines.png`, `code-commandes.png`, `code-bureau-b2b.png`.
+
+Écarts à la maquette, une fois codé : l'onglet « 4 derniers ven. » devient « 5 vendredis » (le jour et les quatre
+d'avant, un montant par jour) ; le rapprochement distingue en plus les commandes **payées un autre jour** (le panel les
+encaisse souvent à la commande, avant le jour du retrait) et celles **à venir**.
+
+Demande du 06/11/2026 : « dans le dashboard day, je veux
 pouvoir vérifier le CA en commandes ; en cliquant sur les ventes B2B, avoir le détail en modale ; le
 détail des commandes aussi en modale ; pour les commandes du magasin, il me faut comptoir et
 webshop ». Précisé ensuite : **au téléphone**, onglet Opérationnel. **Un appui sur les jauges B2B
@@ -14,10 +26,8 @@ cartes blanches, filet fin, rien sur le côté.
 | 3 | « Commandes du jour » en feuille du bas : Toutes, Comptoir, Webshop. En tête, **le CA en commandes rapproché** : encaissées en caisse, payées en ligne, prêtes pas retirées, remises sans ticket. Puis chaque commande ; une commande remise sans ticket montre ses articles et le ticket caisse qui pourrait être le sien | `ecran-3.png` |
 | | Les trois côte à côte | `planche.jpg` |
 
-Les écrans 1 et 2 répondent à la même demande : **à choisir**, le tableau dans la carte ou la
-feuille du bas. Les deux peuvent aussi s'enchaîner (une ligne du tableau ouvre la feuille de ses
-tickets). Au bureau (vue Jour), les mêmes contenus s'ouvriraient dans la modale existante
-(`fi-modale`, celle de la fiche produit).
+Les écrans 1 et 2 répondaient à la même demande : **la feuille du bas (écran 2) est retenue**, le tableau dans la
+carte (écran 1) n'est pas codé.
 
 ## Réel, illustratif
 
@@ -30,13 +40,12 @@ jauge), les 15 commandes du jour et leurs paiements. Les totaux sont calculés d
 tiennent : 167,60 € en caisse + 296,60 € en ligne + 103,60 € pas retirés + 27,80 € sans ticket
 = 595,60 € pris en commande.
 
-## Ce qu'il faudrait pour coder
+## Ce qu'il fallait pour coder (06/11/2026, avant le codage)
 
 - **Le B2B** : les tickets pro du jour sont déjà lus (`/exploitation/pro`, `ventes_pro.php`, pro =
   fiche client avec une TVA valide) ; il faut y ajouter les **lignes de chaque ticket** (les
   articles, déjà dans `/shops/{id}/transactions`) et le **nom de la société**. Le dashboard ne montre
-  aujourd'hui que l'heure et le montant (décision du 03/10/2026) : **à trancher, les noms des
-  sociétés au dashboard du magasin, oui ou non.** La fréquence sur 4 vendredis se lit dans les jours
+  aujourd'hui que l'heure et le montant (décision du 03/10/2026). **Tranché le 06/11 : les noms s'affichent.** La fréquence sur 4 vendredis se lit dans les jours
   gravés (`vpJoursLus`).
 - **Les commandes** : `/shops/{id}/client-orders` porte déjà le canal (`is_webshop`,
   `fulfilment_mode`), le statut, le montant, les articles (`products`) et le ticket qui l'encaisse
