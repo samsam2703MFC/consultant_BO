@@ -14,7 +14,8 @@
  * MANUEL DU RÉSEAU (fusion du 06/11/2026, src/referentiel.php) — le groupe de la barre latérale s'appelle désormais
  * « Manuel du réseau » :
  *   #/rfclasseur[/D5]     le classeur par domaine du référentiel v25 : sous-catégories, chaîne standard → formation →
- *                         compétence → contrôle, trous ; reprise du Manuel opératoire du CRM
+ *                         compétence → contrôle, trous ; reprise du Manuel opératoire du CRM et des procédures du
+ *                         panel (lot 6) ; le Manuel opératoire des SOP en PDF (FR, NL)
  *   #/rfphase/<phase>     par phase (calculée) · #/rfposte[/P3/<phase>] par poste × phase (calculée)
  *   #/sopcomp             compétences : correspondance C-… ↔ panel (un clic), puis l'onglet « Acquisition en magasin »
  *   la fiche d'une SOP gagne le bloc « Classement » (sous-catégorie, phases, postes, compétences, formations, checklists)
@@ -41,7 +42,7 @@ window.FormationSop = (function () {
     ed: null, edMeta: null, edErr: null, occupe: false, nouv: null,
     // Manuel du réseau : référentiel, correspondance, classements en cours d'édition, sous-catégorie éditée, reprise du CRM
     ref: null, refErr: null, refCharge: false, cor: null, corErr: null, corCharge: false, corF: 'propose', corBilan: null,
-    cl: {}, scEd: null, imp: null, domSel: 'D5'
+    cl: {}, scEd: null, imp: null, impPanel: null, domSel: 'D5'
   };
   try { D.shop = localStorage.getItem('fm.sop.shop') || ''; D.vue = localStorage.getItem('fm.sop.vue') || 'deux'; } catch (e) { /* stockage indisponible */ }
 
@@ -332,12 +333,23 @@ window.FormationSop = (function () {
     const dom = X.dom[a0] ? a0 : (X.dom[D.domSel] ? D.domSel : 'D5');
     D.domSel = dom;
     const scVides = Object.keys(X.parSc).filter(k => !X.parSc[k].length).length;
+    // Le Manuel opératoire en PDF : les SOP publiées et à valider (GET /formation/sop/manuel.pdf), FR ou NL.
+    const manuelPdf = l => `<a class="btn" href="${pdf('/formation/sop/manuel.pdf', l)}" target="_blank" rel="noopener" title="Le Manuel opératoire : les SOP publiées et à valider, en PDF">Manuel PDF ${l.toUpperCase()}</a>`;
     let h = `<div class="toolbar rf-barre"><p class="muted">Les 8 domaines du référentiel v25. Dans chaque sous-catégorie, la même chaîne : standard → formation → compétence → contrôle.</p>
-      <span class="rf-sp"></span><button type="button" class="btn" data-sa="rfImporter" ${D.occupe ? 'disabled' : ''} title="Les procédures du Manuel opératoire du CRM deviennent des standards en brouillon (sauf AC-01, AC-02, AC-03)">Reprendre le Manuel du CRM</button></div>`;
+      <span class="rf-sp"></span><span class="rf-barre__act">${manuelPdf('fr')}${manuelPdf('nl')}${tablette() ? '' : `<button type="button" class="btn" data-sa="rfImporter" ${D.occupe ? 'disabled' : ''} title="Les procédures du Manuel opératoire du CRM deviennent des standards en brouillon (sauf AC-01, AC-02, AC-03)">Reprendre le Manuel du CRM</button>
+      <button type="button" class="btn" data-sa="rfImporterPanel" ${D.occupe ? 'disabled' : ''} title="Les procédures opérationnelles du panel TF Buddy (l’ancien Manuel en ligne) deviennent des standards en brouillon ; celles déjà là ne sont pas reprises">Reprendre les procédures du panel</button>`}</span></div>`;
     if (D.imp) {
       const I = D.imp;
       h += C.bandeau(!I.disponible ? esc(I.message) : `Reprise du Manuel du CRM : ${I.reprises.length} procédure(s) reprise(s) en brouillon, ${I.dejaLa.length} déjà là, ${I.ignorees.length} ignorée(s)`
         + (I.photosNonReprises ? `, ${I.photosNonReprises} photo(s) restée(s) dans le CRM` : '') + '.' + (I.ignorees.length ? ' Ignorées : ' + I.ignorees.map(x => esc(x.code + ' (' + x.raison + ')')).join(' · ') : ''), I.disponible ? '' : 'warn');
+    }
+    if (D.impPanel) {
+      const P = D.impPanel, liste = l => l.map(x => esc(x.code + ' ' + x.titre + (x.raison ? ' (' + x.raison + ')' : x.categorie ? ' (' + x.categorie + ')' : ''))).join(' · ');
+      h += C.bandeau(!P.disponible ? esc(P.message) : `Reprise des procédures du panel : ${P.reprises.length} procédure(s) reprise(s) en brouillon, ${P.dejaLa.length} déjà dans le référentiel`
+        + (P.erreurs.length ? `, ${P.erreurs.length} illisible(s) au panel` : '') + (P.ignorees.length ? `, ${P.ignorees.length} ignorée(s)` : '') + '.'
+        + (P.aClasser.length ? ' Sans sous-catégorie reconnue, à classer depuis leur fiche : ' + liste(P.aClasser) + '.' : '')
+        + (P.erreurs.length ? ' Illisibles : ' + liste(P.erreurs) + '.' : '') + (P.dejaLa.length ? ' Déjà là : ' + liste(P.dejaLa) + '.' : ''),
+        !P.disponible || P.aClasser.length || P.erreurs.length ? 'warn' : '');
     }
     h += `<section class="card rf-kpis"><div class="kpi-row">
       ${kpi(`${R.standards.length - R.manques.standardsSansSouscat.length} / ${R.standards.length}`, 'standards classés', R.manques.standardsSansSouscat.length ? R.manques.standardsSansSouscat.length + ' à classer' : 'tous rangés')}
@@ -555,6 +567,11 @@ window.FormationSop = (function () {
       case 'rfImporter':
         D.occupe = true; C.rendre(true);
         try { D.imp = await C.appel('POST', '/formation/ref/importer-crm', {}); toast(D.imp.disponible ? D.imp.reprises.length + ' procédure(s) reprise(s)' : 'Manuel du CRM absent de cette base'); chargerRef(true); chargerListe(true); }
+        catch (x) { toast(x.message); }
+        D.occupe = false; C.rendre(true); return true;
+      case 'rfImporterPanel':
+        D.occupe = true; C.rendre(true);
+        try { D.impPanel = await C.appel('POST', '/formation/ref/importer-panel', {}, 300000); toast(D.impPanel.disponible ? D.impPanel.reprises.length + ' procédure(s) du panel reprise(s)' : 'Panel non configuré'); chargerRef(true); chargerListe(true); }
         catch (x) { toast(x.message); }
         D.occupe = false; C.rendre(true); return true;
       case 'scEd': { const s = rx().sc[d.v]; D.scEd = { cle: d.v, nl: s.nl || '', description: s.description || '', err: null }; C.rendre(true); return true; }

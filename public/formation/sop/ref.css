@@ -69,6 +69,8 @@
 .rf-barre { justify-content: space-between; }
 .rf-barre .muted { font-size: 12.5px; }
 .rf-sp { flex: 1; }
+/* Les gestes du Classeur (PDF du manuel, reprises) restent groupés, à droite, et passent à la ligne ensemble. */
+.rf-barre__act { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .rf-kpis { padding: 4px 6px; margin-bottom: 16px; }
 .rf-tete { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
 .rf-tete h2 { margin: 0; }
