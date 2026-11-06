@@ -128,13 +128,13 @@ function psPhrase(array $c): string
 function psMailHtml(array $sections, string $date, bool $reseau = false): array
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $F = "font-family:Gotham,Helvetica,Arial,sans-serif";
     $res = setting('reseau', []);
     $marque = is_array($res) ? ($res['nom'] ?? 'L’Atelier by') : 'L’Atelier by';
     $logoUri = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
     $logo = $logoUri !== ''
         ? '<img src="' . $logoUri . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
-        : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
+        : '<span style="' . $F . ';color:#1c1a17;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
     $dFr = cqMailDateFr($date);
     $nCas = array_sum(array_map(fn ($s) => count($s[2]), $sections));
     $nTk = array_sum(array_map(fn ($s) => array_sum(array_column($s[2], 'tickets')), $sections));
@@ -145,28 +145,28 @@ function psMailHtml(array $sections, string $date, bool $reseau = false): array
     $titre = $reseau ? count($sections) . ' magasin' . (count($sections) > 1 ? 's' : '') : 'Magasin ' . $deVille($sections[0][1]);
     $c = '<tr><td class="pad" style="' . $F . ';padding:20px 26px 6px">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:#FBEFE7;border-left:4px solid #A9521F;border-radius:8px;padding:14px 16px">'
-        . '<div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8A3F14;font-weight:700">Pointages suspects</div>'
-        . '<div class="titre" style="font-size:19px;font-weight:700;color:#221E1A;margin-top:4px">' . $e($titre) . ' · ' . $e($dFr) . '</div>'
+        . '<div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8A3F14;font-weight:400">Pointages suspects</div>'
+        . '<div class="titre" style="font-size:19px;font-weight:700;color:#1c1a17;margin-top:4px">' . $e($titre) . ' · ' . $e($dFr) . '</div>'
         . '<div style="font-size:13px;color:#5d554d;margin-top:3px">' . $nCas . ' cas · ' . $nTk . ' tickets encaissés au compte d’une autre personne</div>'
         . '</td></tr></table></td></tr>';
-    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#221E1A;padding:14px 26px 4px">'
+    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#1c1a17;padding:14px 26px 4px">'
         . 'Bonjour,<br><br>Nous avons détecté des pointages suspects aujourd’hui' . ($reseau ? '' : ' au magasin ' . $e($deVille($sections[0][1]))) . ' :</td></tr>';
     $base = cqMailBase();
     foreach ($sections as [$sid, $nom, $cas]) {
         $bloc = '';
-        if ($reseau) { $bloc .= '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8b8177;font-weight:700;margin:6px 0 6px">' . $e(cqMailVille($nom)) . '</div>'; }
+        if ($reseau) { $bloc .= '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#7a736a;font-weight:400;margin:6px 0 6px">' . $e(cqMailVille($nom)) . '</div>'; }
         foreach ($cas as $x) {
-            $bloc .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px"><tr><td style="' . $F . ';border:1px solid #EFE9DF;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.55;color:#221E1A">'
+            $bloc .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px"><tr><td style="' . $F . ';border:1px solid #ffffff;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.55;color:#1c1a17">'
                 . psPhrase($x) . '</td></tr></table>';
         }
         if ($base !== '') {
-            $bloc .= '<div style="margin:2px 0 8px"><a href="' . $e($base . '/dashboard/?shop=' . $sid . '&vue=ops&date=' . $date) . '" style="' . $F . ';font-size:13px;color:#8D1D2C;font-weight:700;text-decoration:none">Voir l’équipe du jour' . ($reseau ? ' — ' . $e(cqMailVille($nom)) : '') . ' ›</a></div>';
+            $bloc .= '<div style="margin:2px 0 8px"><a href="' . $e($base . '/dashboard/?shop=' . $sid . '&vue=ops&date=' . $date) . '" style="' . $F . ';font-size:13px;color:#8D1D2C;font-weight:400;text-decoration:none">Voir l’équipe du jour' . ($reseau ? ' — ' . $e(cqMailVille($nom)) : '') . ' ›</a></div>';
         }
         $c .= '<tr><td class="pad" style="' . $F . ';padding:8px 26px 0">' . $bloc . '</td></tr>';
     }
-    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#221E1A;padding:10px 26px 4px">'
+    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#1c1a17;padding:10px 26px 4px">'
         . 'Merci de rappeler à l’équipe de s’identifier à la caisse en début de poste : les ventes, les primes et le suivi de chacun en dépendent.</td></tr>';
-    $c .= '<tr><td class="pad" style="' . $F . ';font-size:11px;line-height:1.5;color:#8b8177;padding:10px 26px 0">'
+    $c .= '<tr><td class="pad" style="' . $F . ';font-size:11px;line-height:1.5;color:#7a736a;padding:10px 26px 0">'
         . 'Un cas : au moins ' . PS_MIN_TICKETS . ' tickets encaissés au compte de quelqu’un qui n’était pas en poste (parti, pas encore arrivé, pas au planning, ou sans vendeur) pendant qu’une seule personne était en vente, d’après le planning du jour.</td></tr>';
     $html = caMailSquelette('Équipe & caisse', 'message envoyé automatiquement en fin de journée, seulement quand des pointages suspects sont détectés.');
     $html = str_replace(['{{logo}}', '{{marque}}', '{{contenu}}'], [$logo, $e($marque), $c], $html);
@@ -249,7 +249,7 @@ function psDistribuer(array $rep, bool $apercu = false): array
     $resume = ($apercu ? 'Aperçu ' : 'Pointages suspects ') . date('H:i') . ' — ' . count($sections) . ' magasin(s) concerné(s)'
         . ($apercu ? '' : ', ' . $cpt('envoye') . ' prévenu(s), ' . $cpt('sans-adresse') . ' sans adresse' . ($cpt('echec') ? ', ' . $cpt('echec') . ' échec(s)' : '')
             . ($reseauEnv !== [] ? ', récapitulatif à ' . implode(', ', $reseauEnv) : ''));
-    $lst = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px">' . htmlspecialchars($resume) . '<ul>'
+    $lst = '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px">' . htmlspecialchars($resume) . '<ul>'
         . implode('', array_map(fn ($m2) => '<li>' . htmlspecialchars($m2['magasin'] . ' — ' . $m2['statut']
             . (!empty($m2['envoyes']) ? ' (' . implode(', ', $m2['envoyes']) . ')' : '') . (!empty($m2['note']) ? ' · ' . $m2['note'] : '')) . '</li>', $bilan['magasins']))
         . '</ul></div>';

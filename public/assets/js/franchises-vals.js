@@ -191,7 +191,7 @@ export function valsFF(app, common){
   f.kpis = [];
   f.journalier = [
     TU('taches', 'Tâches faites · 30 j', TA.pct != null ? TA.pct + ' %' : '—', TA.pct != null ? TA.rendues + ' / ' + TA.attendues + (TA.joursObligManques ? ' · obligatoire manquée ' + nZ(TA.joursObligManques, 'jour') : ' · obligatoires tenues') : (TA.motif || ''), pctCls(TA.pct),
-      (tj.lu ? 'Le ' + fmtD(tj.date) + ' : <b>' + tj.notees + ' / ' + tj.taches + '</b> photos notées' + (tj.aNoter ? ' · <b>' + tj.aNoter + ' à noter</b>' : '') : mu('Les revues du jour ne se lisent pas.')) + heat() + '<div class="gc-leg" style="margin-top:4px"><span><i style="background:#C9E3CD"></i>tout rendu</span><span><i style="background:#F5D58F"></i>partiel</span><span><i style="background:#E8A0A0"></i>obligatoire manquée</span><span><i style="background:#EDE7E0"></i>non relevé</span></div>',
+      (tj.lu ? 'Le ' + fmtD(tj.date) + ' : <b>' + tj.notees + ' / ' + tj.taches + '</b> photos notées' + (tj.aNoter ? ' · <b>' + tj.aNoter + ' à noter</b>' : '') : mu('Les revues du jour ne se lisent pas.')) + heat() + '<div class="gc-leg" style="margin-top:4px"><span><i style="background:rgba(63, 122, 82, 0.3)"></i>tout rendu</span><span><i style="background:var(--prize-soft)"></i>partiel</span><span><i style="background:#E8A0A0"></i>obligatoire manquée</span><span><i style="background:var(--chip)"></i>non relevé</span></div>',
       { modal: (TA.jours || []).length ? M('Tâches jour par jour · 30 jours', tab(['Jour', 'Rendues', 'Attendues', 'Obligatoire'], TA.jours.slice().reverse().map(x => [fmtDJ(x.jour), String(x.f), String(x.t), x.oblig ? '<b class="ko">manquée</b>' : 'tenue']))) : null, lien: go('suivi'), lienTxt: 'Tâches et contrôles photo' }),
     TU('notes', 'Points moyens', RV.lu && RV.moyenne != null ? nf(RV.moyenne, 1) + ' / 5' : '—', RV.lu ? (RV.notees ? RV.notees + ' notées · ' + (RV.parNote || []).map(p => p.note + '★ ' + p.n).join(' · ') : 'rien de noté sur 30 jours') : (RV.motif || ''), RV.lu && RV.moyenne != null ? (RV.moyenne >= 4 ? 'ok' : RV.moyenne >= 3 ? 'att' : 'ko') : 'mu',
       RV.lu && RV.notees ? '<div class="ff-rep">' + (RV.parNote || []).map(p => '<div><span>' + p.note + ' ★ ' + esc(p.nom) + '</span><i><b style="width:' + Math.round(100 * p.n / RV.notees) + '%"></b></i><span>' + p.n + '</span></div>').join('') + '</div>' : mu(RV.lu ? 'Aucune tâche notée sur 30 jours.' : (RV.motif || 'les revues ne se lisent pas')),
@@ -233,7 +233,7 @@ export function valsFF(app, common){
   const c5 = v => v == null ? 'mu' : (v >= 4 ? 'ok' : v >= 3 ? 'att' : 'ko');
   const joursM = (MO.jours || []).filter(x => x.passe && !x.ferme);
   const maxJ = Math.max(1, ...joursM.map(x => Math.max(+x.ca || 0, +x.objectif || 0)));
-  const barres = joursM.length ? '<div class="ff-bars">' + joursM.map(x => '<i title="' + esc(x.court) + ' : ' + nf(x.ca) + ' €' + (x.objectif != null ? ' / ' + nf(x.objectif) + ' €' : '') + '"><b class="' + (x.objectif != null && x.ca != null && x.ca < x.objectif ? 'ko' : 'ok') + '" style="height:' + Math.round(100 * (+x.ca || 0) / maxJ) + '%"></b>' + (x.objectif != null ? '<u style="bottom:' + Math.round(100 * x.objectif / maxJ) + '%"></u>' : '') + '</i>').join('') + '</div><div class="gc-leg" style="margin-top:2px"><span><i style="background:#8FBF98"></i>CA du jour</span><span><i style="background:#D98C8C"></i>sous le budget</span><span><i style="background:#333"></i>budget du jour</span></div>' : '';
+  const barres = joursM.length ? '<div class="ff-bars">' + joursM.map(x => '<i title="' + esc(x.court) + ' : ' + nf(x.ca) + ' €' + (x.objectif != null ? ' / ' + nf(x.objectif) + ' €' : '') + '"><b class="' + (x.objectif != null && x.ca != null && x.ca < x.objectif ? 'ko' : 'ok') + '" style="height:' + Math.round(100 * (+x.ca || 0) / maxJ) + '%"></b>' + (x.objectif != null ? '<u style="bottom:' + Math.round(100 * x.objectif / maxJ) + '%"></u>' : '') + '</i>').join('') + '</div><div class="gc-leg" style="margin-top:2px"><span><i style="background:#8FBF98"></i>CA du jour</span><span><i style="background:#D98C8C"></i>sous le budget</span><span><i style="background:var(--muted-2)"></i>budget du jour</span></div>' : '';
   f.sante = [
     TU('mois', 'CA du mois / budget', MO.lu ? (MO.atteinte != null ? nf(MO.atteinte) + ' %' : nf(MO.ca) + ' €') : '—', MO.lu ? nf(MO.ca) + ' €' + (MO.attendu != null ? ' sur ' + nf(MO.attendu) + ' € attendus à date' : ' · pas de budget') : (MO.motif || ''), MO.lu && MO.atteinte != null ? (MO.atteinte >= 100 ? 'ok' : MO.atteinte >= 90 ? 'att' : 'ko') : 'mu',
       MO.lu ? (MO.budget != null ? 'Budget du mois : <b>' + nf(MO.budget) + ' €</b>' + (MO.ecart != null ? ' · écart à date <b class="' + (MO.ecart < 0 ? 'ko' : 'ok') + '">' + (MO.ecart >= 0 ? '+ ' : '− ') + nf(Math.abs(MO.ecart)) + ' €</b>' : '') : mu('Aucun budget encodé pour ce mois.')) + (MO.tickets ? '<br>' + nf(MO.tickets) + ' tickets · panier ' + nf(MO.panier, 2) + ' €' : '') + barres : mu(MO.motif || 'le résultat du mois ne se lit pas'),
@@ -268,15 +268,15 @@ export function valsFF(app, common){
  * au barème (Exemplaire, Conforme, mineur, majeur, critique) ou son état (à noter, en attente, non
  * rendue). Lu par /controles/qualite, relu tant que des journées manquent ; la photo s'ouvre en
  * modale (/pwa/tasks/detail, URL fraîche) et s'y note (POST /pwa/tasks/review). */
-const CQM_ETATS = { a_noter: ['À noter', '#5b3d9e', '#EEE6FA'], en_attente: ['En attente', '#7a6a55', '#F4EFE8'], non_rendue: ['Non rendue', '#555', '#E9E6E1'] };
+const CQM_ETATS = { a_noter: ['À noter', '#5b3d9e', '#EEE6FA'], en_attente: ['En attente', '#7a6a55', '#F8F4EE'], non_rendue: ['Non rendue', '#5c5852', '#E9E6E1'] };
 export function cqmBadge(d, etat){
   if (typeof etat === 'number') {
     const nv = ((d && d.niveaux) || []).find(n => n.n === etat) || {};
     const nom = String(nv.nom || etat);
     const court = nom.includes('—') ? nom.split('—').pop().trim() : nom;
-    return { txt: court.charAt(0).toUpperCase() + court.slice(1), long: nom, fg: '#fff', bg: nv.couleur || '#666', n: etat };
+    return { txt: court.charAt(0).toUpperCase() + court.slice(1), long: nom, fg: '#fff', bg: nv.couleur || '#7a736a', n: etat };
   }
-  const e = CQM_ETATS[etat] || [etat, '#555', '#eee'];
+  const e = CQM_ETATS[etat] || [etat, '#5c5852', '#e6e0d8'];
   return { txt: e[0], long: e[0], fg: e[1], bg: e[2], n: null };
 }
 export function cqmCharge(app, mois, force, tours){

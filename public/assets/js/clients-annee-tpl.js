@@ -37,5 +37,5 @@ export function tplClientsAnnee(c, x){
 /** La cellule de la colonne « Clients (Panier, Articles) vs N-1 » du tableau des magasins. */
 export function tplClientsCellule(m, esc){
   if (!m) { return '<span style="color:var(--color-text-muted)">—</span>'; }
-  return `${esc(m.v)}${m.e ? ` <b style="font-weight:600;color:${esc(m.coul)}">${esc(m.e)}</b>` : ''}<div style="font-size:10px;color:var(--color-text-muted)"${m.titre ? ` title="${esc(m.titre)}"` : ''}>${esc(m.s)}</div>`;
+  return `${esc(m.v)}${m.e ? ` <b style="font-weight:400;color:${esc(m.coul)}">${esc(m.e)}</b>` : ''}<div style="font-size:10px;color:var(--color-text-muted)"${m.titre ? ` title="${esc(m.titre)}"` : ''}>${esc(m.s)}</div>`;
 }

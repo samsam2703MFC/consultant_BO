@@ -31,7 +31,7 @@ const sgE = v => (Math.round(v * 100) < 0 ? '−\u00A0' : '+\u00A0') + fE2(Math.
 const f2 = v => v == null ? '—' : v.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const sg2 = v => (Math.round(v * 100) < 0 ? '−\u00A0' : '+\u00A0') + f2(Math.abs(v));
 // Les seuils des barres jumelles de Trafic clients (rrBarres) : vert dès +3 %, rouge dès −3 %, ocre entre les deux.
-const teinte = v => v == null ? { bg: '#F1EEEA', tx: '#8a837a' } : v >= 3 ? { bg: '#E6F2E8', tx: '#2d7a3e' } : v <= -3 ? { bg: '#FBE5E7', tx: '#C0182B' } : { bg: '#F6EFD9', tx: '#8a6508' };
+const teinte = v => v == null ? { bg: '#F1EEEA', tx: '#8a837a' } : v >= 3 ? { bg: '#E8EFEA', tx: '#3f7a52' } : v <= -3 ? { bg: '#FBE5E7', tx: '#A32014' } : { bg: '#F6EFD9', tx: '#7A5207' };
 
 export function clAnCharge(app, an, force, articles){
   const D = app.D, cle = an + (articles ? ':ar' : '');
@@ -209,13 +209,13 @@ function geometrie(Pt, fv, ft){
     }
   }
   const segs = (cle, garde) => { const out = []; let cur = []; Pt.forEach(p => { if (p[cle] != null && garde(p)) { cur.push(p); } else { if (cur.length) { out.push(cur); } cur = []; } }); if (cur.length) { out.push(cur); } return out; };
-  segs('n1', () => true).forEach(s => { if (s.length > 1) { el.push(['polyline', { points: s.map(p => f(X(p.i)) + ',' + f(Y(p.n1))).join(' '), fill: 'none', stroke: '#b9b1a6', 'stroke-width': 2, 'stroke-dasharray': '5 4', 'stroke-linejoin': 'round' }]); } });
+  segs('n1', () => true).forEach(s => { if (s.length > 1) { el.push(['polyline', { points: s.map(p => f(X(p.i)) + ',' + f(Y(p.n1))).join(' '), fill: 'none', stroke: '#B8B2A8', 'stroke-width': 2, 'stroke-dasharray': '5 4', 'stroke-linejoin': 'round' }]); } });
   segs('n', p => !p.proj).forEach(s => { if (s.length > 1) { el.push(['polyline', { points: s.map(p => f(X(p.i)) + ',' + f(Y(p.n))).join(' '), fill: 'none', stroke: '#8D1D2C', 'stroke-width': 2.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }]); } });
   Pt.forEach(p => { if (p.proj && p.i > 0 && Pt[p.i - 1].n != null) { el.push(['line', { x1: f(X(p.i - 1)), y1: f(Y(Pt[p.i - 1].n)), x2: f(X(p.i)), y2: f(Y(p.n)), stroke: '#8D1D2C', 'stroke-width': 2.2, 'stroke-dasharray': '2 4', 'stroke-linecap': 'round' }]); } });
   Pt.forEach(p => {
     const up = p.n1 == null || p.n == null || p.n >= p.n1;
     if (p.n1 != null) {
-      el.push(['circle', { cx: f(X(p.i)), cy: f(Y(p.n1)), r: 3.4, fill: '#fff', stroke: '#b9b1a6', 'stroke-width': 2 }]);
+      el.push(['circle', { cx: f(X(p.i)), cy: f(Y(p.n1)), r: 3.4, fill: '#fff', stroke: '#B8B2A8', 'stroke-width': 2 }]);
       el.push(['text', { x: f(X(p.i)), y: f(Y(p.n1) + (up ? 15 : -8)), 'text-anchor': 'middle', 'font-size': 10, fill: '#7d776f' }, fv(p.n1)]);
     }
     if (p.n != null) {
@@ -225,7 +225,7 @@ function geometrie(Pt, fv, ft){
   });
   const yl = cb + 17, yp = cb + 26, hp = 18, pw = Math.min(cw - 6, 66);
   Pt.forEach(p => {
-    el.push(['text', { x: f(X(p.i)), y: f(yl), 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 600, fill: p.cur ? '#8D1D2C' : (p.etat === 'futur' ? '#a8a197' : '#222') }, p.lab + (p.cur && p.jl ? ' · ' + p.jl + ' j' : '')]);
+    el.push(['text', { x: f(X(p.i)), y: f(yl), 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 600, fill: p.cur ? '#8D1D2C' : (p.etat === 'futur' ? '#a8a197' : '#1c1a17') }, p.lab + (p.cur && p.jl ? ' · ' + p.jl + ' j' : '')]);
     if (p.etat === 'futur') { return; }
     const c = teinte(p.ecart);
     el.push(['rect', { x: f(X(p.i) - pw / 2), y: f(yp), width: f(pw), height: hp, rx: hp / 2, fill: c.bg }]);

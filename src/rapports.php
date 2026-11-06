@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// Gabarit commun des documents et e-mails (design system §13, version A).
+require_once __DIR__ . '/doc.php';
+
 /**
  * Générateur de rapports — un rapport = un POSTE (le destinataire) × une
  * FRÉQUENCE × des BLOCS À SEUIL, le tout classé par levier.
@@ -206,7 +209,7 @@ function ventesAfficheDistribuer(array $rep): array
         }
         $pieces = [['nom' => $aff['nom'], 'type' => 'application/pdf', 'contenu' => $aff['pdf']]];
         $libM = strftime_fr(strtotime(date('Y-m') . '-01'), 'M Y');
-        $corps = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#222;line-height:1.6">'
+        $corps = '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px;color:#1c1a17;line-height:1.6">'
             . '<p>Bonjour,</p><p>Voici <b>« Ce qu\'il y a à gagner ce mois-ci »</b> — ' . htmlspecialchars($libM)
             . ' : l\'affiche à imprimer pour le vestiaire, avec la barre à battre de chaque vendeuse.</p>'
             . '<p style="color:#7a736a;font-size:11px">Envoyée automatiquement par le cockpit, le 1er du mois.</p></div>';
@@ -222,7 +225,7 @@ function ventesAfficheDistribuer(array $rep): array
     $sans = count(array_filter($bilan['magasins'], fn ($m2) => $m2['statut'] === 'sans-adresse'));
     $resume = 'Affiche ' . strftime_fr(time(), 'M Y') . ' — ' . $servis . ' magasin(s) servi(s), ' . $sans . ' sans mail actif';
     // Un run d'archive pour la ligne du rapport : la trace de qui a été servi.
-    $html = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px">' . htmlspecialchars($resume) . '<ul>'
+    $html = '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px">' . htmlspecialchars($resume) . '<ul>'
         . implode('', array_map(fn ($m2) => '<li>' . htmlspecialchars($m2['magasin'] . ' — ' . $m2['statut']
             . (isset($m2['envoyes']) && $m2['envoyes'] !== [] ? ' (' . implode(', ', $m2['envoyes']) . ')' : '')) . '</li>', $bilan['magasins']))
         . '</ul></div>';
@@ -491,23 +494,23 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 $ttCum += $c; $ttA += $a;
                 if ($obj !== null) { $ttObj += $obj; $objConnu = true; }
                 $ecart = $a > 0 ? ($c / $a - 1) * 100 : null;
-                $rows[] = [$mag, $euro($c), [$a > 0 ? $euro($a) : '—', 'color:#8b8177'],
+                $rows[] = [$mag, $euro($c), [$a > 0 ? $euro($a) : '—', 'color:#7a736a'],
                     [$ecart === null ? '—' : ($ecart > 0 ? '+' : '') . str_replace('.', ',', (string) round($ecart, 1)) . ' %',
-                     $ecart === null ? 'color:#8b8177' : ($ecart >= 0 ? 'color:#2d7a3e;font-weight:700' : 'color:#8D1D2C;font-weight:700')],
-                    [$obj === null ? '—' : $euro($obj) . (($objSrc['source'] ?? '') === 'theorique' ? ' (théorique)' : ''), 'color:#8b8177'],
+                     $ecart === null ? 'color:#7a736a' : ($ecart >= 0 ? 'color:#3f7a52;font-weight:400' : 'color:#8D1D2C;font-weight:400')],
+                    [$obj === null ? '—' : $euro($obj) . (($objSrc['source'] ?? '') === 'theorique' ? ' (théorique)' : ''), 'color:#7a736a'],
                     [$obj === null ? 'objectif non encodé' : ($reste > 0 ? $euro($reste) : 'atteint'),
-                     $obj === null ? 'color:#8b8177' : ($reste > 0 ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e;font-weight:700')]];
+                     $obj === null ? 'color:#7a736a' : ($reste > 0 ? 'color:#8D1D2C;font-weight:400' : 'color:#3f7a52;font-weight:400')]];
             }
             if ($rows !== []) {
                 $ecartR = $ttA > 0 ? ($ttCum / $ttA - 1) * 100 : null;
                 $resteR = $objConnu ? $ttObj - $ttCum : null;
-                $rows[] = [['Réseau', 'font-weight:700'], [$euro($ttCum), 'font-weight:700'],
-                    [$ttA > 0 ? $euro($ttA) : '—', 'color:#8b8177;font-weight:700'],
+                $rows[] = [['Réseau', 'font-weight:400'], [$euro($ttCum), 'font-weight:400'],
+                    [$ttA > 0 ? $euro($ttA) : '—', 'color:#7a736a;font-weight:400'],
                     [$ecartR === null ? '—' : ($ecartR > 0 ? '+' : '') . str_replace('.', ',', (string) round($ecartR, 1)) . ' %',
-                     $ecartR === null ? 'color:#8b8177' : ($ecartR >= 0 ? 'color:#2d7a3e;font-weight:700' : 'color:#8D1D2C;font-weight:700')],
-                    [$objConnu ? $euro($ttObj) : '—', 'color:#8b8177;font-weight:700'],
+                     $ecartR === null ? 'color:#7a736a' : ($ecartR >= 0 ? 'color:#3f7a52;font-weight:400' : 'color:#8D1D2C;font-weight:400')],
+                    [$objConnu ? $euro($ttObj) : '—', 'color:#7a736a;font-weight:400'],
                     [$resteR === null ? '—' : ($resteR > 0 ? $euro($resteR) : 'atteint'),
-                     $resteR === null ? 'color:#8b8177' : ($resteR > 0 ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e;font-weight:700')]];
+                     $resteR === null ? 'color:#7a736a' : ($resteR > 0 ? 'color:#8D1D2C;font-weight:400' : 'color:#3f7a52;font-weight:400')]];
                 // Ce que les semaines RESTANTES ont rapporté l'an dernier, aux
                 // mêmes dates : la jauge s'en sert pour dire s'il manquera
                 // quelque chose à la fin du mois, sans attendre la fin du mois.
@@ -528,14 +531,14 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     $o = $objectifs[$mag] ?? null;
                     if ($o === null) { continue; }
                     $jauges .= (count($cumul['magasins']) > 1 && $perim === []
-                        ? '<div style="font-family:sans-serif;font-size:11.5px;font-weight:700;color:#221E1A;margin-top:12px">' . $e2($mag) . '</div>' : '')
+                        ? '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:11.5px;font-weight:400;color:#1c1a17;margin-top:12px">' . $e2($mag) . '</div>' : '')
                         . rapJaugeObjectif((float) ($v['ca'] ?? 0), (float) ((($proj['magasins'][$mag] ?? [])['ca']) ?? 0),
                             (float) $o['montant'], $semaines);
                 }
-                $b['htmlPar'][] = ['', '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:14px">'
+                $b['htmlPar'][] = ['', '<div style="font-size:12px;font-weight:400;font-family:Gotham,Helvetica,Arial,sans-serif;margin-top:14px">'
                     . 'Cumul du mois — du ' . $e2(date('d/m', strtotime($mois1))) . ' au ' . $e2(date('d/m', strtotime((string) $periode['au']))) . '</div>'
                     . rapTableHtml(['Magasin', 'Cumul', 'A-1', 'Écart', 'Objectif du mois', 'Reste à faire'], $rows)
-                    . '<div style="font-size:10.5px;color:#8b8177;font-family:sans-serif;margin:-2px 0 8px">'
+                    . '<div style="font-size:10.5px;color:#7a736a;font-family:Gotham,Helvetica,Arial,sans-serif;margin:-2px 0 8px">'
                     . 'Objectif : le budget de CA encodé pour le mois (écran Encodage du budget) ; à défaut, le CA théorique de '
                     . 'l’étude de marché, signalé « (théorique) ». « Reste à faire » = objectif − cumul, '
                     . 'sur le mois entier — pas au prorata des jours écoulés.</div>'
@@ -794,11 +797,11 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             $teinte = function (?float $p): array {
                 if ($p === null) { return ['#EEE9E1', '#8a8177']; }
                 if ($p < 0) { return ['#8D1D2C', '#ffffff']; }
-                if ($p < 5) { return ['#C17A2A', '#ffffff']; }
+                if ($p < 5) { return ['#B0792A', '#ffffff']; }
                 if ($p < 10) { return ['#A8B545', '#ffffff']; }
                 if ($p < 15) { return ['#7CB342', '#ffffff']; }
-                if ($p < 25) { return ['#3D8B44', '#ffffff']; }
-                return ['#C9A227', '#ffffff'];
+                if ($p < 25) { return ['#3f7a52', '#ffffff']; }
+                return ['#B0792A', '#ffffff'];
             };
             foreach ((array) $r['magasins'] as $m) {
                 if (!empty($m['indispo'])) { continue; }
@@ -808,16 +811,16 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     $val = !$j['ouvert'] ? 'fermé'
                         : ($j['netPct'] === null ? '—' : str_replace('.', ',', (string) $j['netPct']) . ' %');
                     $cells .= '<td style="background:' . $fond . ';color:' . $txt . ';border-radius:6px;padding:6px 9px;'
-                        . 'text-align:center;font-family:sans-serif;font-size:11px;white-space:nowrap">'
+                        . 'text-align:center;font-family:Gotham,Helvetica,Arial,sans-serif;font-size:11px;white-space:nowrap">'
                         . '<div style="font-size:9px;letter-spacing:0.04em;opacity:0.85">' . ($JR[(int) $j['wd']] ?? '') . '</div>'
-                        . '<div style="font-weight:700;margin-top:1px">' . $val . '</div></td>';
+                        . '<div style="font-weight:400;margin-top:1px">' . $val . '</div></td>';
                 }
                 $tot = $m['total'] ?? [];
                 $sous = isset($tot['netPct']) && $tot['netPct'] !== null
                     ? 'semaine : ' . str_replace('.', ',', (string) $tot['netPct']) . ' % de résultat net' : '';
                 $b['htmlPar'][] = [$m['nom'],
                     '<table cellpadding="0" cellspacing="3" style="border-collapse:separate;margin:4px 0 2px"><tr>' . $cells . '</tr></table>'
-                    . ($sous !== '' ? '<div style="font-size:11px;color:#6E645A">' . htmlspecialchars($sous) . '</div>' : '')];
+                    . ($sous !== '' ? '<div style="font-size:11px;color:#7a736a">' . htmlspecialchars($sous) . '</div>' : '')];
             }
             break;
         }
@@ -869,29 +872,29 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             };
             $mags2 = $t2['magasins'];
             foreach ($parCat as $cat2 => $liste2) {
-                $h2 = '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:10px">' . htmlspecialchars($cat2) . '</div>'
-                    . '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:sans-serif;margin-top:4px"><tr>'
-                    . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">KPI</th>';
+                $h2 = '<div style="font-size:12px;font-weight:400;font-family:Gotham,Helvetica,Arial,sans-serif;margin-top:10px">' . htmlspecialchars($cat2) . '</div>'
+                    . '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:Gotham,Helvetica,Arial,sans-serif;margin-top:4px"><tr>'
+                    . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#7a736a">KPI</th>';
                 foreach ($mags2 as $m2) {
-                    $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">'
+                    $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#7a736a">'
                         . htmlspecialchars(trim((string) array_reverse(explode(' - ', (string) $m2['nom']))[0])) . '</th>';
                 }
-                $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#8D1D2C">Réseau</th></tr>';
+                $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#8D1D2C">Réseau</th></tr>';
                 foreach ($liste2 as $k2) {
                     $deSid = array_column($k2['parMagasin'], 'valeur', 'shopId');
-                    $h2 .= '<tr><td style="padding:4px 6px;border-bottom:0.5px solid #e5e0d8">' . htmlspecialchars($k2['nom'])
-                        . ' <span style="color:#9a938a;font-size:9px">' . htmlspecialchars($k2['sousCategorie']) . '</span></td>';
+                    $h2 .= '<tr><td style="padding:4px 6px;border-bottom:1px solid #e6e0d8">' . htmlspecialchars($k2['nom'])
+                        . ' <span style="color:#7a736a;font-size:9px">' . htmlspecialchars($k2['sousCategorie']) . '</span></td>';
                     foreach ($mags2 as $m2) {
                         $v2 = $deSid[$m2['id']] ?? $deSid[(int) $m2['id']] ?? null;
                         $rouge = $v2 !== null && $k2['seuilAlerte'] !== null
                             && (($k2['sens'] === 'haut' && $v2 > $k2['seuilAlerte']) || ($k2['sens'] === 'bas' && $v2 < $k2['seuilAlerte']));
-                        $h2 .= '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;'
-                            . ($rouge ? 'color:#8D1D2C;font-weight:700' : '') . '">' . $fmtK($k2, $v2) . '</td>';
+                        $h2 .= '<td style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;'
+                            . ($rouge ? 'color:#8D1D2C;font-weight:400' : '') . '">' . $fmtK($k2, $v2) . '</td>';
                     }
-                    $h2 .= '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;font-weight:700">'
+                    $h2 .= '<td style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-weight:400">'
                         . $fmtK($k2, $k2['derniere']['valeur']) . '</td></tr>';
                 }
-                $h2 .= '</table><div style="font-size:9px;color:#9a938a;font-family:sans-serif;margin-top:2px">'
+                $h2 .= '</table><div style="font-size:9px;color:#7a736a;font-family:Gotham,Helvetica,Arial,sans-serif;margin-top:2px">'
                     . 'collecte du ' . htmlspecialchars((string) ($liste2[0]['derniere']['maj'] ?? '')) . '</div>';
                 $b['htmlPar'][] = ['', $h2];
             }
@@ -913,16 +916,16 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                 return number_format((float) $v, $dec, ',', ' ') . ($u !== '' && $u !== 'n' ? ' ' . $u : '');
             };
             $tuiles = static function (array $paires) use ($fmtK): string {
-                $h2 = '<table style="border-collapse:separate;border-spacing:4px;width:100%;font-family:sans-serif;margin-top:6px"><tr>';
+                $h2 = '<table style="border-collapse:separate;border-spacing:4px;width:100%;font-family:Gotham,Helvetica,Arial,sans-serif;margin-top:6px"><tr>';
                 foreach ($paires as [$k2, $v2]) {
-                    $h2 .= '<td style="width:' . (int) (100 / max(1, count($paires))) . '%;border:1px solid #e5e0d8;border-radius:8px;background:#fbf9f5;padding:8px 10px;vertical-align:top">'
-                        . '<div style="font-size:8.5px;text-transform:uppercase;letter-spacing:0.05em;color:#6E645A">' . htmlspecialchars($k2['nom']) . '</div>'
-                        . '<div style="font-family:Georgia,serif;font-size:16px;margin-top:3px">' . $fmtK($k2, $v2) . '</div>'
-                        . '<div style="font-size:8px;color:#9a938a;margin-top:2px">' . htmlspecialchars($k2['categorie'] . ($k2['sousCategorie'] !== '' ? ' · ' . $k2['sousCategorie'] : '')) . '</div></td>';
+                    $h2 .= '<td style="width:' . (int) (100 / max(1, count($paires))) . '%;border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:8px 10px;vertical-align:top">'
+                        . '<div style="font-size:8.5px;text-transform:uppercase;letter-spacing:0.05em;color:#7a736a">' . htmlspecialchars($k2['nom']) . '</div>'
+                        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:16px;margin-top:3px">' . $fmtK($k2, $v2) . '</div>'
+                        . '<div style="font-size:8px;color:#7a736a;margin-top:2px">' . htmlspecialchars($k2['categorie'] . ($k2['sousCategorie'] !== '' ? ' · ' . $k2['sousCategorie'] : '')) . '</div></td>';
                 }
                 return $h2 . '</tr></table>';
             };
-            $b['htmlPar'][] = ['', '<div style="font-size:12px;font-weight:700;font-family:sans-serif">Réseau</div>'
+            $b['htmlPar'][] = ['', '<div style="font-size:12px;font-weight:400;font-family:Gotham,Helvetica,Arial,sans-serif">Réseau</div>'
                 . $tuiles(array_map(fn ($k2) => [$k2, $k2['derniere']['valeur']], $liste))];
             foreach ($t2['magasins'] as $m2) {
                 $paires = [];
@@ -984,50 +987,50 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             }
             if ($donnees === [] || array_sum(array_column($donnees, 'ff')) === 0) { $b['motif'] = 'combos sans données sur les derniers mois'; break; }
             $tauxTd = static function (?float $t3, ?float $cible): string {
-                if ($t3 === null) { return '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8"></td>'; }
+                if ($t3 === null) { return '<td style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8"></td>'; }
                 $rouge = $cible !== null && $t3 < $cible;
-                return '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;'
-                    . ($rouge ? 'color:#8D1D2C;font-weight:700' : '') . '">'
+                return '<td style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;'
+                    . ($rouge ? 'color:#8D1D2C;font-weight:400' : '') . '">'
                     . str_replace('.', ',', (string) $t3) . ' %</td>';
             };
             // Le tableau réseau : une colonne par magasin.
-            $h2 = '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:sans-serif;margin-top:6px"><tr>'
-                . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Combo (' . htmlspecialchars($libM) . ')</th>'
-                . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#8D1D2C">Réseau</th>';
+            $h2 = '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:Gotham,Helvetica,Arial,sans-serif;margin-top:6px"><tr>'
+                . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#7a736a">Combo (' . htmlspecialchars($libM) . ')</th>'
+                . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#8D1D2C">Réseau</th>';
             foreach ($nomDeC as $nC) {
-                $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">'
+                $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#7a736a">'
                     . htmlspecialchars(trim((string) array_reverse(explode(' - ', $nC))[0])) . '</th>';
             }
-            $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Target</th></tr>';
+            $h2 .= '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#7a736a">Target</th></tr>';
             foreach ($donnees as $d2) {
-                $h2 .= '<tr><td style="padding:4px 6px;border-bottom:0.5px solid #e5e0d8">' . htmlspecialchars($d2['lib']) . '</td>'
+                $h2 .= '<tr><td style="padding:4px 6px;border-bottom:1px solid #e6e0d8">' . htmlspecialchars($d2['lib']) . '</td>'
                     . $tauxTd($d2['reseau'], $d2['target']);
                 foreach (array_keys($nomDeC) as $sidC) {
                     $xC = $d2['parShop'][(string) $sidC];
                     $h2 .= $tauxTd($xC['ff'] > 0 ? round(100 * $xC['avec'] / $xC['ff'], 1) : null, $d2['target']);
                 }
-                $h2 .= '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;color:#6E645A">'
+                $h2 .= '<td style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;color:#7a736a">'
                     . ($d2['target'] !== null ? str_replace('.', ',', (string) $d2['target']) . ' %' : '') . '</td></tr>';
             }
             $b['htmlPar'][] = ['', $h2 . '</table>'];
             // La version d'un magasin : vous / réseau / target / écart.
             foreach ($nomDeC as $sidC => $nC) {
-                $h3 = '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:sans-serif;margin-top:6px"><tr>'
-                    . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Combo (' . htmlspecialchars($libM) . ')</th>'
-                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Vous</th>'
-                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Réseau</th>'
-                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Target</th>'
-                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #ccc;font-size:9px;text-transform:uppercase;color:#6E645A">Écart</th></tr>';
+                $h3 = '<table style="border-collapse:collapse;width:100%;font-size:11px;font-family:Gotham,Helvetica,Arial,sans-serif;margin-top:6px"><tr>'
+                    . '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#7a736a">Combo (' . htmlspecialchars($libM) . ')</th>'
+                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#7a736a">Vous</th>'
+                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#7a736a">Réseau</th>'
+                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#7a736a">Target</th>'
+                    . '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-size:9px;text-transform:uppercase;color:#7a736a">Écart</th></tr>';
                 foreach ($donnees as $d2) {
                     $xC = $d2['parShop'][(string) $sidC];
                     $vous = $xC['ff'] > 0 ? round(100 * $xC['avec'] / $xC['ff'], 1) : null;
                     $dT = ($d2['target'] !== null && $vous !== null) ? round($vous - $d2['target'], 1) : null;
-                    $h3 .= '<tr><td style="padding:4px 6px;border-bottom:0.5px solid #e5e0d8">' . htmlspecialchars($d2['lib']) . '</td>'
+                    $h3 .= '<tr><td style="padding:4px 6px;border-bottom:1px solid #e6e0d8">' . htmlspecialchars($d2['lib']) . '</td>'
                         . $tauxTd($vous, $d2['target']) . $tauxTd($d2['reseau'], null)
-                        . '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;color:#6E645A">'
+                        . '<td style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;color:#7a736a">'
                         . ($d2['target'] !== null ? str_replace('.', ',', (string) $d2['target']) . ' %' : '') . '</td>'
-                        . '<td style="text-align:right;padding:4px 6px;border-bottom:0.5px solid #e5e0d8;font-weight:700;color:'
-                        . ($dT === null ? '#6E645A' : ($dT >= 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
+                        . '<td style="text-align:right;padding:4px 6px;border-bottom:1px solid #e6e0d8;font-weight:400;color:'
+                        . ($dT === null ? '#7a736a' : ($dT >= 0 ? '#3f7a52' : '#8D1D2C')) . '">'
                         . ($dT === null ? '' : ($dT >= 0 ? '+ ' : '− ') . str_replace('.', ',', (string) abs($dT)) . ' pt') . '</td></tr>';
                 }
                 $b['htmlPar'][] = [(string) $nC, $h3 . '</table>'];
@@ -1051,17 +1054,17 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     fn ($k2) => $k2['auRapport'] && $k2['source']['grain'] === 'jour'));
             }
             $coulPct = static function (float $p): array {
-                if ($p >= 90) { return ['#2d7a3e', '#fff']; }
-                if ($p >= 80) { return ['#a8c8ae', '#1c4527']; }
+                if ($p >= 90) { return ['#3f7a52', '#fff']; }
+                if ($p >= 80) { return ['#C5D7CB', '#3f7a52']; }
                 if ($p >= 70) { return ['#e3d29b', '#5f4a0a']; }
-                if ($p >= 60) { return ['#ecc08c', '#6b3a03']; }
+                if ($p >= 60) { return ['#ecc08c', '#7A5207']; }
                 return ['#c17983', '#fff'];
             };
             $coulCran = static function (float $v, array $bornes): array {
                 $i2 = 0;
                 foreach ($bornes as $b3) { if ($v >= (float) $b3) { $i2++; } }
-                return [['#c17983', '#fff'], ['#ecc08c', '#6b3a03'], ['#eceae6', '#222'],
-                    ['#a8c8ae', '#1c4527'], ['#2d7a3e', '#fff']][$i2];
+                return [['#c17983', '#fff'], ['#ecc08c', '#7A5207'], ['#eceae6', '#1c1a17'],
+                    ['#C5D7CB', '#3f7a52'], ['#3f7a52', '#fff']][$i2];
             };
             // D'abord les TÂCHES FAITES jour par jour — le relevé quotidien du
             // panel (Suivi mensuel), à sa maille naturelle : le jour. Le KPI de
@@ -1075,12 +1078,12 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                                        WHERE jour >= ? GROUP BY jour, id_shop', [$joursT[0]]) as $r2) {
                         $gT[(string) $r2['id_shop']][(string) $r2['jour']] = ['f' => (int) $r2['f'], 't' => (int) $r2['t']];
                     }
-                    $h2 = '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:10px">Tâches faites — jour par jour'
-                        . ' <span style="font-weight:400;color:#9a938a;font-size:9px">7 derniers jours relevés · part des tâches rendues</span></div>'
-                        . '<table style="border-collapse:separate;border-spacing:2px;font-family:sans-serif;font-size:10px;margin-top:4px"><tr>'
-                        . '<th style="text-align:left;font-size:8.5px;text-transform:uppercase;color:#6E645A;padding:2px 6px 2px 0">Magasin</th>';
+                    $h2 = '<div style="font-size:12px;font-weight:400;font-family:Gotham,Helvetica,Arial,sans-serif;margin-top:10px">Tâches faites — jour par jour'
+                        . ' <span style="font-weight:400;color:#7a736a;font-size:9px">7 derniers jours relevés · part des tâches rendues</span></div>'
+                        . '<table style="border-collapse:separate;border-spacing:2px;font-family:Gotham,Helvetica,Arial,sans-serif;font-size:10px;margin-top:4px"><tr>'
+                        . '<th style="text-align:left;font-size:8.5px;text-transform:uppercase;color:#7a736a;padding:2px 6px 2px 0">Magasin</th>';
                     foreach ($joursT as $j2) {
-                        $h2 .= '<th style="width:52px;font-size:8.5px;color:#6E645A;padding:2px 0;text-align:center">' . substr($j2, 8, 2) . '/' . substr($j2, 5, 2) . '</th>';
+                        $h2 .= '<th style="width:52px;font-size:8.5px;color:#7a736a;padding:2px 0;text-align:center">' . substr($j2, 8, 2) . '/' . substr($j2, 5, 2) . '</th>';
                     }
                     $h2 .= '</tr>';
                     $lignesT = array_map(fn ($m2) => [(string) $m2['id'], (string) $m2['nom']], $t2['magasins']);
@@ -1095,10 +1098,10 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                             } else {
                                 $f2 = $gT[$sid2][$j2]['f'] ?? 0; $tt2 = $gT[$sid2][$j2]['t'] ?? 0;
                             }
-                            if ($tt2 === 0) { $h2 .= '<td style="border:1px dashed #d8d2c8;border-radius:5px;height:22px"></td>'; continue; }
+                            if ($tt2 === 0) { $h2 .= '<td style="border:1px dashed #e6e0d8;border-radius:5px;height:22px"></td>'; continue; }
                             $p2 = round(100 * $f2 / $tt2);
                             [$bg2, $fg2] = $coulPct((float) $p2);
-                            $h2 .= '<td style="background:' . $bg2 . ';color:' . $fg2 . ';border-radius:5px;text-align:center;height:22px;font-weight:700">' . $p2 . '</td>';
+                            $h2 .= '<td style="background:' . $bg2 . ';color:' . $fg2 . ';border-radius:5px;text-align:center;height:22px;font-weight:400">' . $p2 . '</td>';
                         }
                         $h2 .= '</tr>';
                     }
@@ -1114,13 +1117,13 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                     [$k2['code'], $jours[0]]) as $r2) {
                     $grille[(string) $r2['shop']][(string) $r2['jour']] = $r2['valeur'] !== null ? (float) $r2['valeur'] : null;
                 }
-                $h2 = '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:10px">' . htmlspecialchars($k2['nom'])
-                    . ' <span style="font-weight:400;color:#9a938a;font-size:9px">7 derniers jours collectés'
+                $h2 = '<div style="font-size:12px;font-weight:400;font-family:Gotham,Helvetica,Arial,sans-serif;margin-top:10px">' . htmlspecialchars($k2['nom'])
+                    . ' <span style="font-weight:400;color:#7a736a;font-size:9px">7 derniers jours collectés'
                     . ($k2['unite'] !== '' ? ' · ' . htmlspecialchars($k2['unite']) : '') . '</span></div>'
-                    . '<table style="border-collapse:separate;border-spacing:2px;font-family:sans-serif;font-size:10px;margin-top:4px"><tr>'
-                    . '<th style="text-align:left;font-size:8.5px;text-transform:uppercase;color:#6E645A;padding:2px 6px 2px 0">Magasin</th>';
+                    . '<table style="border-collapse:separate;border-spacing:2px;font-family:Gotham,Helvetica,Arial,sans-serif;font-size:10px;margin-top:4px"><tr>'
+                    . '<th style="text-align:left;font-size:8.5px;text-transform:uppercase;color:#7a736a;padding:2px 6px 2px 0">Magasin</th>';
                 foreach ($jours as $j2) {
-                    $h2 .= '<th style="width:52px;font-size:8.5px;color:#6E645A;padding:2px 0;text-align:center">' . substr($j2, 8, 2) . '/' . substr($j2, 5, 2) . '</th>';
+                    $h2 .= '<th style="width:52px;font-size:8.5px;color:#7a736a;padding:2px 0;text-align:center">' . substr($j2, 8, 2) . '/' . substr($j2, 5, 2) . '</th>';
                 }
                 $h2 .= '</tr>';
                 foreach (array_merge(array_map(fn ($m2) => [(string) $m2['id'], (string) $m2['nom']], $t2['magasins']), [['*', 'RÉSEAU']]) as [$sid2, $nom2]) {
@@ -1128,11 +1131,11 @@ function rapBloc(string $slug, array $seuils, array $periode): array
                         . htmlspecialchars(trim((string) array_reverse(explode(' - ', $nom2))[0])) . '</td>';
                     foreach ($jours as $j2) {
                         $v2 = $grille[$sid2][$j2] ?? null;
-                        if ($v2 === null) { $h2 .= '<td style="border:1px dashed #d8d2c8;border-radius:5px;height:22px"></td>'; continue; }
+                        if ($v2 === null) { $h2 .= '<td style="border:1px dashed #e6e0d8;border-radius:5px;height:22px"></td>'; continue; }
                         [$bg2, $fg2] = $k2['echelle'] !== null ? $coulCran($v2, $k2['echelle'])
-                            : ($k2['unite'] === '%' ? $coulPct($v2) : ['#f1eee9', '#222']);
+                            : ($k2['unite'] === '%' ? $coulPct($v2) : ['#f1eee9', '#1c1a17']);
                         $dec2 = $v2 == (int) $v2 ? 0 : 1;
-                        $h2 .= '<td style="background:' . $bg2 . ';color:' . $fg2 . ';border-radius:5px;text-align:center;height:22px;font-weight:700">'
+                        $h2 .= '<td style="background:' . $bg2 . ';color:' . $fg2 . ';border-radius:5px;text-align:center;height:22px;font-weight:400">'
                             . number_format($v2, $dec2, ',', ' ') . '</td>';
                     }
                     $h2 .= '</tr>';
@@ -1375,7 +1378,7 @@ function rapObjectifsMois(string $date): array
 function rapJaugeObjectif(float $cumul, float $projection, float $objectif, int $semaines): string
 {
     if ($objectif <= 0) { return ''; }
-    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $F = "font-family:Gotham,Helvetica,Arial,sans-serif";
     $eur = fn ($v) => number_format($v, 0, ',', ' ') . ' €';
     $pct = fn ($v) => (string) round($v / $objectif * 100) . ' %';
     $vert = min($cumul, $objectif);
@@ -1386,29 +1389,29 @@ function rapJaugeObjectif(float $cumul, float $projection, float $objectif, int 
         . $c . ';vertical-align:-1px"></i> ' . $txt . '</span>';
     $cell = fn ($c, $v, $hachure = false) => $v <= 0 ? '' :
         '<td width="' . round($v / $objectif * 100, 2) . '%" style="background:'
-        . ($hachure ? 'repeating-linear-gradient(45deg,#C0182B,#C0182B 5px,#a91325 5px,#a91325 10px)' : $c)
+        . ($hachure ? 'repeating-linear-gradient(45deg,#A32014,#A32014 5px,#A32014 5px,#A32014 10px)' : $c)
         . ';height:26px;text-align:right;padding-right:5px;' . $F
-        . ';font-size:10px;color:#ffffff;font-weight:700;white-space:nowrap">'
+        . ';font-size:10px;color:#ffffff;font-weight:400;white-space:nowrap">'
         . ($v / $objectif > 0.07 ? $pct($v) : '') . '</td>';
 
-    return '<div style="' . $F . ';font-size:12px;font-weight:700;color:#221E1A;margin:14px 0 7px">Objectif du mois — '
+    return '<div style="' . $F . ';font-size:12px;font-weight:400;color:#1c1a17;margin:14px 0 7px">Objectif du mois — '
         . $eur($objectif) . '</div>'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-radius:6px;overflow:hidden;background:#EDE7DE"><tr>'
-        . $cell('#2D7A3E', $vert) . $cell('#E1A32B', $jaune) . $cell('#C0182B', $rouge, true)
+        . $cell('#3f7a52', $vert) . $cell('#E1A32B', $jaune) . $cell('#A32014', $rouge, true)
         . '</tr></table>'
-        . '<div style="' . $F . ';margin-top:7px;font-size:11px;color:#4a443c">'
-        . $lg('#2D7A3E', 'réalisé <b>' . $eur($cumul) . '</b>') . ' &nbsp; '
+        . '<div style="' . $F . ';margin-top:7px;font-size:11px;color:#5c5852">'
+        . $lg('#3f7a52', 'réalisé <b>' . $eur($cumul) . '</b>') . ' &nbsp; '
         . ($semaines > 0
             ? $lg('#E1A32B', $semaines . ' semaine' . ($semaines > 1 ? 's' : '') . ' à venir, au rythme de l’an dernier <b>'
                 . $eur($projection) . '</b>') . ' &nbsp; '
             : '')
-        . $lg('#C0182B', $rouge > 0 ? 'à trouver en plus <b>' . $eur($rouge) . '</b>' : '<b>objectif tenu</b>')
+        . $lg('#A32014', $rouge > 0 ? 'à trouver en plus <b>' . $eur($rouge) . '</b>' : '<b>objectif tenu</b>')
         . '</div>'
-        . '<div style="' . $F . ';margin-top:8px;font-size:11.5px;color:#221E1A;background:#F7F3EC;border-radius:8px;padding:8px 11px">'
+        . '<div style="' . $F . ';margin-top:8px;font-size:11.5px;color:#1c1a17;background:#FBF9F5;border-radius:8px;padding:8px 11px">'
         . ($depasse > 0
-            ? 'Objectif déjà dépassé de <b style="color:#2D7A3E">' . $eur($depasse) . '</b>.'
+            ? 'Objectif déjà dépassé de <b style="color:#3f7a52">' . $eur($depasse) . '</b>.'
             : ($rouge > 0
-                ? 'Au rythme de l’an dernier, il manquerait <b style="color:#C0182B">' . $eur($rouge) . '</b> à la fin du mois.'
+                ? 'Au rythme de l’an dernier, il manquerait <b style="color:#A32014">' . $eur($rouge) . '</b> à la fin du mois.'
                 : 'Au rythme de l’an dernier, l’objectif est tenu.'))
         . '</div>';
 }
@@ -1419,27 +1422,27 @@ function rapTableComparaison(array $now, array $avant, array $fen, string $cle, 
 {
     $e = fn ($x) => htmlspecialchars((string) $x, ENT_QUOTES, 'UTF-8');
     $ecart = function (?float $a, ?float $b): array {
-        if ($a === null || $b === null || $b == 0.0) { return ['—', 'color:#8b8177']; }
+        if ($a === null || $b === null || $b == 0.0) { return ['—', 'color:#7a736a']; }
         $v = ($a / $b - 1) * 100;
         $txt = ($v > 0 ? '+' : '') . str_replace('.', ',', (string) round($v, 1)) . ' %';
-        return [$txt, abs($v) < 1 ? 'color:#8b8177' : ($v > 0 ? 'color:#2d7a3e;font-weight:700' : 'color:#8D1D2C;font-weight:700')];
+        return [$txt, abs($v) < 1 ? 'color:#7a736a' : ($v > 0 ? 'color:#3f7a52;font-weight:400' : 'color:#8D1D2C;font-weight:400')];
     };
     $rows = [];
     foreach ($now['magasins'] as $mag => $v) {
         if ($perim !== [] && !in_array($mag, $perim, true)) { continue; }
         $a = $v[$cle] ?? null;
         $b = ($avant['magasins'][$mag] ?? [])[$cle] ?? null;
-        $rows[] = [$mag, $fmt($a), [$fmt($b), 'color:#8b8177'], $ecart($a === null ? null : (float) $a, $b === null ? null : (float) $b)];
+        $rows[] = [$mag, $fmt($a), [$fmt($b), 'color:#7a736a'], $ecart($a === null ? null : (float) $a, $b === null ? null : (float) $b)];
     }
     if ($rows === []) { return ''; }
     $rn = $now['reseau'][$cle] ?? null;
     $ra = ($avant['reseau'] ?? [])[$cle] ?? null;
-    $rows[] = [['Réseau', 'font-weight:700'], [$fmt($rn), 'font-weight:700'], [$fmt($ra), 'color:#8b8177;font-weight:700'],
+    $rows[] = [['Réseau', 'font-weight:400'], [$fmt($rn), 'font-weight:400'], [$fmt($ra), 'color:#7a736a;font-weight:400'],
         $ecart($rn === null ? null : (float) $rn, $ra === null ? null : (float) $ra)];
     // Le titre du bloc, juste au-dessus, dit déjà « Passage clients par jour » :
     // le réécrire ici donnait deux titres pour un tableau.
     return rapTableHtml(['Magasin', 'Période', $fen['code'], 'Écart'], $rows)
-        . '<div style="font-size:10.5px;color:#8b8177;font-family:sans-serif;margin:-2px 0 8px">'
+        . '<div style="font-size:10.5px;color:#7a736a;font-family:Gotham,Helvetica,Arial,sans-serif;margin:-2px 0 8px">'
         . $e($fen['code'] . ' = ' . $fen['label']) . ' — du ' . $e(date('d/m/Y', strtotime($fen['du'])))
         . ' au ' . $e(date('d/m/Y', strtotime($fen['au']))) . '.</div>';
 }
@@ -1607,7 +1610,7 @@ function rapBaseUrl(): string
 function rapportHtml(array $rep, array $sections, array $periode, array $seuils, string $resume, int $runId = 0): string
 {
     $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
-    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $F = 'font-family:' . DOC_FONT;
     $parMagasin = !empty($rep['par_magasin']);
     $reseau = setting('reseau', []);
     $marque = is_array($reseau) ? ($reseau['nom'] ?? 'L’Atelier By') : 'L’Atelier By';
@@ -1636,20 +1639,20 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             // un vieux run, saut forcé au slug et première page blanche.
             $h .= '<div data-titre-bloc="1" data-bloc="' . $e($s['slug'] ?? '') . '"'
                 . ' data-saut="' . (!empty($s['saut']) ? '1' : '0') . '" style="' . $F
-                . ';font-size:14.5px;font-weight:700;color:#221E1A;margin:24px 0 7px">'
+                . ';font-size:14.5px;font-weight:400;color:#1c1a17;margin:24px 0 7px">'
                 . $e($s['nom']) . '</div>';
             if ($s['motif'] !== null) {
-                $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="' . $F . ';color:#8a5a13;background:#FBEFE0;border:1px solid #E8C9A0;border-radius:8px;padding:8px 12px;font-size:12px">Donnée indisponible : ' . $e($s['motif']) . '</td></tr></table>';
+                $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="' . $F . ';color:#7A5207;background:#F6E7CE;border-radius:4px;padding:6px 10px;font-size:12px">Donnée indisponible : ' . $e($s['motif']) . '</td></tr></table>';
             }
             foreach ($lignes as $l) {
                 $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-                    . '<td width="16" valign="top" style="' . $F . ';padding:7px 0;font-size:12px;color:' . ($l[2] ? '#E0261A' : '#C17A2A') . ';font-weight:700">&#9679;</td>'
-                    . '<td style="' . $F . ';padding:7px 0;font-size:13px;color:#221E1A;border-bottom:1px solid #F0EAE1;line-height:1.5">'
+                    . '<td width="16" valign="top" style="' . $F . ';padding:7px 0;font-size:12px;color:' . ($l[2] ? '#A32014' : '#B0792A') . ';font-weight:400">&#9679;</td>'
+                    . '<td style="' . $F . ';padding:7px 0;font-size:13px;color:#1c1a17;border-bottom:1px solid #e6e0d8;line-height:1.5">'
                     . ($magasin === null ? '<b>' . $e($l[0]) . '</b> — ' : '') . $e($l[1]) . '</td></tr></table>';
             }
             foreach ($infos as $l) {
                 $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-                    . '<td style="' . $F . ';padding:6px 0 6px 16px;font-size:12px;color:#6E645A;border-bottom:1px solid #F5F0E8;line-height:1.5">'
+                    . '<td style="' . $F . ';padding:6px 0 6px 16px;font-size:12px;color:#7a736a;border-bottom:1px solid #e6e0d8;line-height:1.5">'
                     . ($magasin === null ? '<b>' . $e($l[0]) . '</b> — ' : '') . $e($l[1]) . '</td></tr></table>';
             }
             // Le nom du magasin en tête d'une grille ne sert qu'à DISTINGUER :
@@ -1664,17 +1667,17 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
                 // titre emporte un saut de page : chaque magasin sur sa
                 // feuille, absolument.
                 if ($magasin === null && $plusieursMags && $l[0] !== '') {
-                    $h .= '<div data-titre-magasin="1" data-saut-magasin="' . ($premierTM ? '0' : '1') . '" style="' . $F . ';font-size:12.5px;font-weight:700;margin-top:10px;color:#221E1A">' . $e($l[0]) . '</div>';
+                    $h .= '<div data-titre-magasin="1" data-saut-magasin="' . ($premierTM ? '0' : '1') . '" style="' . $F . ';font-size:12.5px;font-weight:400;margin-top:10px;color:#1c1a17">' . $e($l[0]) . '</div>';
                     $premierTM = false;
                 }
                 $h .= $l[1];
             }
             if ($lignes !== [] && $s['action'] !== '') {
-                $h .= '<div style="' . $F . ';font-size:11.5px;color:#8b8177;padding:7px 0 0;font-style:italic">&rarr; ' . $e($s['action']) . '</div>';
+                $h .= '<div style="' . $F . ';font-size:11.5px;color:#7a736a;padding:7px 0 0;font-style:italic">&rarr; ' . $e($s['action']) . '</div>';
             }
         }
         return $h !== '' ? $h
-            : '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="' . $F . ';padding:14px;background:#EDF5EE;border-radius:8px;color:#2d7a3e;font-size:13px;font-weight:600">Rien à signaler — tous les seuils sont respectés.</td></tr></table>';
+            : '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="' . $F . ';padding:10px 12px;background:#E8EFEA;border-radius:4px;color:#3f7a52;font-size:13px;font-weight:400">Rien à signaler — tous les seuils sont respectés.</td></tr></table>';
     };
 
     $corps = '';
@@ -1687,7 +1690,7 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
             // distribue feuille par feuille — deux magasins sur la même page
             // ne se découpent pas. Le premier reste collé à l'en-tête.
             $corps .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" data-saut-magasin="' . ($premierMag ? '0' : '1') . '" style="margin-top:26px"><tr>'
-                . '<td style="' . $F . ';background:#F7F3EC;border-left:4px solid #8D1D2C;border-radius:0 8px 8px 0;padding:10px 15px;font-size:15px;font-weight:700;color:#221E1A">' . $e($s['name']) . '</td></tr></table>'
+                . '<td style="' . $F . ';border-left:3px solid #8D1D2C;padding:2px 0 2px 12px;font-size:15px;font-weight:700;color:#1c1a17">' . $e($s['name']) . '</td></tr></table>'
                 . $rendSections($sections, (string) $s['name']);
             $premierMag = false;
         }
@@ -1699,8 +1702,8 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
     $lien = $base !== '' && $runId > 0 ? $base . '/api/cockpit/rapports/run/' . $runId : '';
     $bouton = $lien === '' ? '' :
         '<table data-cta="1" role="presentation" cellpadding="0" cellspacing="0" style="margin:2px 0 14px"><tr>'
-        . '<td style="background:#8D1D2C;border-radius:999px" align="center">'
-        . '<a href="' . $e($lien) . '" style="display:inline-block;padding:11px 24px;color:#ffffff;' . $F . ';font-size:13px;font-weight:700;text-decoration:none">Ouvrir dans le cockpit &rarr;</a>'
+        . '<td style="background:#8D1D2C;border-radius:8px" align="center">'
+        . '<a href="' . $e($lien) . '" style="display:inline-block;padding:12px 22px;color:#ffffff;' . $F . ';font-size:14px;font-weight:700;text-decoration:none">Ouvrir dans le cockpit</a>'
         . '</td></tr></table>';
 
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
@@ -1710,61 +1713,58 @@ function rapportHtml(array $rep, array $sections, array $periode, array $seuils,
         . '@media print{body{background:#ffffff !important;padding:0 !important}'
         . 'div[data-fiche]{page-break-inside:avoid}table[data-fiches] td{page-break-inside:avoid}'
         . '.ecran-seul{display:none !important}}</style></head>'
-        . '<body style="margin:0;padding:0;background:#EFE9DF">'
+        . '<body style="margin:0;padding:0;background:#ffffff">'
         // Les prises `data-fond`, `data-marge`, `data-carte` et `data-cta` ne
         // servent qu'au PDF : rapPdfHtml() s'en sert pour poser une mise en
         // page de PAPIER (pleine largeur, fond blanc, sans bouton) sans avoir
         // à deviner des styles en ligne.
-        . '<table data-fond="1" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF"><tr><td data-marge="1" align="center" style="padding:28px 12px">'
-        . '<!--ecran--><div class="ecran-seul" style="' . $F . ';max-width:680px;margin:0 auto 10px;text-align:right">'
+        . '<table data-fond="1" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff"><tr><td data-marge="1" align="center" style="padding:26px 30px">'
+        . '<!--ecran--><div class="ecran-seul" style="' . $F . ';max-width:600px;margin:0 auto 10px;text-align:right">'
         . ($base !== '' && $runId > 0
-            ? '<a href="' . $e($base . '/api/cockpit/rapports/run/' . $runId . '/pdf') . '" style="display:inline-block;border:none;border-radius:999px;padding:9px 18px;color:#ffffff;font-size:12px;font-weight:700;text-decoration:none;background:#8D1D2C;margin-right:8px">Télécharger le PDF</a>'
+            ? '<a href="' . $e($base . '/api/cockpit/rapports/run/' . $runId . '/pdf') . '" style="display:inline-block;border:1px solid #e6e0d8;border-radius:8px;padding:8px 16px;color:#1c1a17;font-size:12px;font-weight:400;text-decoration:none;background:#ffffff;margin-right:8px">Télécharger le PDF</a>'
             : '')
-        . '<a href="javascript:window.print()" style="display:inline-block;border:1px solid #CFC6B8;border-radius:999px;padding:8px 16px;color:#221E1A;font-size:12px;font-weight:600;text-decoration:none;background:#ffffff">Imprimer (A4)</a></div><!--/ecran-->'
-        . '<table data-carte="1" role="presentation" cellpadding="0" cellspacing="0" width="680" style="width:680px;max-width:96%">'
+        . '<a href="javascript:window.print()" style="display:inline-block;border:1px solid #e6e0d8;border-radius:8px;padding:8px 16px;color:#1c1a17;font-size:12px;font-weight:400;text-decoration:none;background:#ffffff">Imprimer (A4)</a></div><!--/ecran-->'
+        . '<table data-carte="1" role="presentation" cellpadding="0" cellspacing="0" width="600" style="width:600px;max-width:100%">'
         // — bandeau de marque : le LOGO OFFICIEL sur fond clair (le noir du
         //   logo serait invisible sur bordeaux), liseré bordeaux au-dessous.
-        . '<tr><td style="background:#ffffff;border-radius:14px 14px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 30px">'
+        . '<tr><td style="background:#ffffff;border-bottom:2px solid #8D1D2C;padding:0 0 10px">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
         . '<td>' . (rapLogoDataUri() !== ''
             ? '<img src="' . rapLogoDataUri() . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
-            : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>') . '</td>'
+            : '<span style="' . $F . ';color:#1c1a17;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>') . '</td>'
         // À droite du logo : le LEVIER dont parle le rapport, pas le poste du
         // destinataire — celui-ci le connaît, le levier est ce qu'il vient
         // chercher. Sans levier imprimé (rapport sans matière), le poste
         // reprend sa place plutôt qu'un blanc.
-        . '<td align="right" style="' . $F . ';color:#8b8177;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase">'
+        . '<td align="right" valign="bottom" style="' . $F . ';color:#7a736a;font-size:10px">'
         . ($leviersVus === []
             ? $e((string) $rep['poste'])
-            // Le levier en pastille à SA couleur, la même que la barre du bloc
-            // plus bas : deux fois la même couleur, donc un seul repère à
-            // apprendre. Vaut pour tous les rapports.
-            : implode('', array_map(fn ($code, $nom) => '<span style="display:inline-block;background:'
-                . (RAP_LEVIERS[$code]['couleur'] ?? '#8b8177') . ';color:#ffffff;border-radius:999px;'
-                . 'padding:4px 11px;margin-left:6px;font-size:9.5px;font-weight:700;letter-spacing:1.2px;'
-                . 'text-transform:uppercase;white-space:nowrap">' . $e($nom) . '</span>',
+            // Le levier en toutes lettres, précédé de son point de couleur
+            // (8 px, la seule forme ronde admise) : plus de pastille pleine
+            // (design system §13.4 / §13.6, version A).
+            : implode(' &middot; ', array_map(fn ($code, $nom) => '<span style="white-space:nowrap">'
+                . '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;vertical-align:0;margin-right:5px;background:'
+                . (RAP_LEVIERS[$code]['couleur'] ?? '#7a736a') . '"></span>' . $e($nom) . '</span>',
                 array_keys($leviersVus), $leviersVus)))
         . '</td>'
         . '</tr></table></td></tr>'
         // — en-tête du rapport
-        . '<tr><td style="background:#ffffff;padding:26px 30px 4px">'
-        . '<div style="' . $F . ';font-size:21px;font-weight:700;color:#221E1A">' . $e($rep['nom']) . '</div>'
-        . '<div style="' . $F . ';font-size:12px;color:#8b8177;margin-top:4px">' . $e(ucfirst($periode['label'])) . ' &middot; généré le ' . date('d/m/Y à H:i') . '</div>'
-        . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:12px"><tr>'
-        . '<td style="background:#F7ECEA;border-radius:999px;padding:7px 15px;white-space:nowrap;' . $F . ';font-size:12px;font-weight:700;color:#8D1D2C">' . $e($resume) . '</td>'
-        . '</tr></table>'
+        . '<tr><td style="background:#ffffff;padding:20px 0 4px">'
+        . '<div style="' . $F . ';font-size:21px;font-weight:700;color:#1c1a17">' . $e($rep['nom']) . '</div>'
+        . '<div style="' . $F . ';font-size:12px;color:#7a736a;margin-top:4px">' . $e(ucfirst($periode['label'])) . ' &middot; généré le ' . date('d/m/Y à H:i') . '</div>'
+        . '<div style="' . $F . ';font-size:13px;color:#1c1a17;margin-top:12px;padding:8px 0;border-top:1px solid #e6e0d8;border-bottom:1px solid #e6e0d8">' . $e($resume) . '</div>'
         . '</td></tr>'
         // — corps
-        . '<tr><td style="background:#ffffff;padding:4px 30px 18px">' . $corps . '</td></tr>'
+        . '<tr><td style="background:#ffffff;padding:4px 0 18px">' . $corps . '</td></tr>'
         // — pied
-        . '<tr data-pied="1"><td style="background:#F9F6F0;border-radius:0 0 14px 14px;border-top:1px solid #EDE7DE;padding:20px 30px">'
+        . '<tr data-pied="1"><td style="background:#ffffff;border-top:1px solid #e6e0d8;padding:14px 0 0">'
         . $bouton
-        . '<div style="' . $F . ';font-size:10.5px;color:#8b8177;line-height:1.6">Seuils : food ' . $seuils['food'] . ' % &middot; labour ' . $seuils['labour'] . ' % &middot; overhead ' . $seuils['overhead']
+        . '<div style="' . $F . ';font-size:9px;color:#7a736a;line-height:1.6">Seuils : food ' . $seuils['food'] . ' % &middot; labour ' . $seuils['labour'] . ' % &middot; overhead ' . $seuils['overhead']
         . ' % &middot; CA/ETP ' . number_format($seuils['caEtp'], 0, ',', ' ') . ' &euro; &middot; tâches &le; ' . $seuils['tacheNote'] . '/5 &middot; cible Google '
         . str_replace('.', ',', (string) $seuils['cibleGoogle']) . ' — réglables dans le cockpit (Catalogue des KPI). Sauf mode « complet », ce rapport ne liste que les seuils franchis.</div>'
         . '</td></tr>'
         . '</table>'
-        . '<div style="' . $F . ';font-size:10px;color:#a89f93;padding:14px">Généré automatiquement par le cockpit ' . $e($marque) . '</div>'
+        . '<div style="' . $F . ';font-size:9px;color:#7a736a;line-height:1.6;padding:9px 0;max-width:600px">Généré automatiquement par le cockpit ' . $e($marque) . (docMentions() !== '' ? '<br>' . $e(docMentions()) : '') . '</div>'
         . '</td></tr></table></body></html>';
 }
 
@@ -1792,63 +1792,26 @@ function rapPeriodeLabelRun(array $run): string
  */
 function rapMailGarde(array $rep, array $run, string $labelPeriode, string $nomPdf, string $base): string
 {
+    // Gabarit e-mail du design system (§13.6, version A) : 600 px, logo et
+    // objet sur le filet Ruby, corps en 14 px, une seule action, pied relevé.
     $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-    $F = "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif";
     $marque = (string) setting('marque', "L'Atelier by");
     $runId = (int) ($run['id'] ?? 0);
     $resume = (string) ($run['resume'] ?? '');
     $lien = $base !== '' && $runId > 0 ? $base . '/api/cockpit/rapports/run/' . $runId . '/pdf' : '';
-    return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
-        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
-        . '<title>' . $e($rep['nom']) . '</title></head>'
-        . '<body style="margin:0;padding:0;background:#EFE9DF">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF">'
-        . '<tr><td align="center" style="padding:28px 12px">'
-        . '<table role="presentation" cellpadding="0" cellspacing="0" width="600" style="width:600px;max-width:96%">'
-        // — bandeau de marque
-        . '<tr><td style="background:#ffffff;border-radius:14px 14px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 28px">'
-        . (rapLogoDataUri() !== ''
-            ? '<img src="' . rapLogoDataUri() . '" height="28" style="display:block;height:28px" alt="' . $e($marque) . '">'
-            : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>')
-        . '</td></tr>'
-        // — de quoi parle ce message
-        . '<tr><td style="background:#ffffff;padding:24px 28px 6px">'
-        . '<div style="' . $F . ';font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#8b8177">'
-        . $e(rapMagasinLabel($rep)) . '</div>'
-        . '<div style="' . $F . ';font-size:20px;font-weight:700;color:#221E1A;margin-top:5px">' . $e($rep['nom']) . '</div>'
-        . '<div style="' . $F . ';font-size:12px;color:#8b8177;margin-top:4px">' . $e(ucfirst($labelPeriode))
-        . ' &middot; généré le ' . date('d/m/Y à H:i') . '</div>'
-        . ($resume !== ''
-            ? '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:14px"><tr>'
-              . '<td style="background:#F7ECEA;border-radius:999px;padding:7px 15px;' . $F . ';font-size:12px;font-weight:700;color:#8D1D2C;white-space:nowrap">'
-              . $e($resume) . '</td></tr></table>'
-            : '')
-        . '</td></tr>'
-        // — la pièce jointe, nommée : on sait quoi ouvrir. La CARTE ELLE-MÊME
-        //   est le lien : un bouton en dessous répétait l'action et allongeait
-        //   le message pour rien. Le lien enveloppe le contenu de la cellule
-        //   (et non la table) — c'est la forme que les messageries respectent.
-        . '<tr><td style="background:#ffffff;padding:18px 28px 6px">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #EDE7DE;border-radius:12px;background:#F9F6F0">'
-        . '<tr><td style="padding:14px 16px" valign="middle">'
-        . ($lien !== '' ? '<a href="' . $e($lien) . '" style="display:block;text-decoration:none;color:inherit">' : '')
-        . '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
-        . '<td style="background:#8D1D2C;border-radius:8px;padding:9px 11px;' . $F . ';font-size:10px;font-weight:700;color:#ffffff;letter-spacing:0.6px">PDF</td>'
-        . '<td style="padding-left:12px;' . $F . '">'
-        . '<div style="font-size:13px;font-weight:700;color:#221E1A">' . $e($nomPdf) . '</div>'
-        . '<div style="font-size:11.5px;color:#8b8177;margin-top:2px">Le rapport complet est en pièce jointe de ce message'
-        . ($lien !== '' ? ' — cliquez pour l’ouvrir.' : '.') . '</div>'
-        . '</td></tr></table>'
-        . ($lien !== '' ? '</a>' : '')
-        . '</td></tr></table></td></tr>'
-        . '<tr><td style="background:#F9F6F0;border-radius:0 0 14px 14px;border-top:1px solid #EDE7DE;padding:16px 28px;'
-        . $F . ';font-size:10.5px;color:#8b8177;line-height:1.6">'
-        . 'Périmètre : ' . $e(rapMagasinLabel($rep)) . '. '
-        . 'Les seuils et le périmètre se règlent dans le cockpit.'
-        . '</td></tr>'
-        . '</table>'
-        . '<div style="' . $F . ';font-size:10px;color:#a89f93;padding:14px">Généré automatiquement par le cockpit ' . $e($marque) . '</div>'
-        . '</td></tr></table></body></html>';
+    $L = 'font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:' . DOC_MUTED . ';margin:0 0 5px';
+    $corps = '<div style="' . $L . '">' . $e(rapMagasinLabel($rep)) . '</div>'
+        . '<div style="font-size:21px;line-height:1.25;font-weight:700;color:' . DOC_INK . ';margin:0 0 4px">' . $e($rep['nom']) . '</div>'
+        . '<div style="font-size:12px;color:' . DOC_MUTED . ';margin:0 0 14px">' . $e(ucfirst($labelPeriode)) . ' &middot; généré le ' . date('d/m/Y à H:i') . '</div>'
+        . ($resume !== '' ? docMailP($e($resume)) : '')
+        . docMailP('Le rapport complet est en pièce jointe : <b style="font-weight:700">' . $e($nomPdf) . '</b>.')
+        . ($lien !== '' ? docMailBouton('Ouvrir le rapport', $lien) : '');
+    return docMail([
+        'sujet' => (string) $rep['nom'],
+        'corps' => $corps,
+        'pied' => docMailPied('Envoyé par le cockpit ' . $e($marque) . ' — périmètre : ' . $e(rapMagasinLabel($rep))
+            . '. Vous recevez ce message parce que ce rapport vous est adressé ; les seuils, le périmètre et les destinataires se règlent dans le cockpit.'),
+    ]);
 }
 
 function rapportEnvoyer(array $rep, int $runId, array $piecesExtra = []): array
@@ -2473,14 +2436,22 @@ function rapPdfHtml(string $html): string
     // Repli pour les runs enregistrés avant la prise `data-pied` : le rappel
     // des seuils s'y reconnaît à son texte.
     $html = (string) preg_replace('#<div[^>]*>Seuils\s*:\s*food.*?</div>#s', '', $html);
+    // Sans jeu de caractères déclaré, wkhtmltopdf lit l'UTF-8 en Latin-1 :
+    // « â€" » à la place des tirets (vu sur l'explication des primes).
+    if (stripos($html, '<meta charset') === false) {
+        $html = stripos($html, '<head>') !== false
+            ? (string) preg_replace('#<head>#i', '<head><meta charset="utf-8">', $html, 1)
+            : '<meta charset="utf-8">' . $html;
+    }
     $css = '<style>'
-        // Des marges de PAPIER, pas d'écran : 15 mm sur les côtés — la feuille
-        // respire, et un rapport agrafé ou perforé ne mange pas son texte.
-        // Le bas garde 20 mm : le pied de page (logo, magasin, dates,
-        // pagination) s'y loge, posé par le moteur sur chaque feuille.
-        . '@page{size:A4;margin:14mm 15mm 20mm}'
+        // Gabarit A4 du design system (§13.2, §13.4, version A) : Gotham en
+        // deux graisses, chargée dans le document, repli Helvetica / Arial ;
+        // aucune autre police (ni Georgia ni Vank) sur un document de gestion.
+        . docFontFaces()
+        . '@page{size:A4;margin:14mm 14mm 16mm}'
         . 'html,body{background:#ffffff !important;margin:0 !important;padding:0 !important;'
-        . '-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+        . 'color:' . DOC_INK . ';-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+        . "body,body *:not(code):not(pre){font-family:'Gotham',Helvetica,Arial,sans-serif !important}"
         . 'table[data-fond]{background:#ffffff !important}'
         . 'td[data-marge]{padding:0 !important}'
         . 'table[data-carte]{width:100% !important;max-width:100% !important}'
@@ -2521,11 +2492,11 @@ function rapPdfHtml(string $html): string
         // Les runs DÉJÀ enregistrés n'ont pas les prises : on vise alors leurs
         // styles en ligne, pour qu'un rapport d'hier s'imprime aussi bien
         // qu'un rapport de demain.
-        . 'table[style*="background:#EFE9DF"]{background:#ffffff !important}'
+        . 'table[style*="background:#ffffff"]{background:#ffffff !important}'
         . 'td[style*="padding:28px 12px"]{padding:0 !important}'
         . 'table[style*="width:680px"]{width:100% !important;max-width:100% !important}'
         // Les coins arrondis de la carte n'ont pas de sens sur une feuille.
-        . 'td[style*="border-radius:14px 14px 0 0"]{border-radius:0 !important}'
+        . 'td[style*="border-radius:8px 8px 0 0"]{border-radius:0 !important}'
         . 'td[style*="border-radius:0 0 14px 14px"]{border-radius:0 !important}'
         // Ce qui ne doit pas se couper entre deux pages.
         . 'div[data-fiche],table[data-fiches] td,tr{page-break-inside:avoid}'
@@ -2594,9 +2565,11 @@ function rapPdfHtml(string $html): string
  */
 function rapPdfPiedHtml(array $meta): string
 {
+    // Pied du gabarit A4 (§13.4, version A) : filet 1 px, 8,5 px gris ;
+    // à gauche ce qu'est la feuille (magasin, rapport, dates) puis les
+    // mentions légales de l'émetteur quand elles sont réglées ; à droite
+    // « Page n / N ». Le logo est dans l'en-tête, pas ici.
     $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-    $F = "font-family:Helvetica,Arial,sans-serif";
-    $logo = rapLogoDataUri();
     // `genereLib` : le libellé dans la langue du document (le plan d'expansion sort aussi en néerlandais).
     $dates = $e($meta['genereLib'] ?? 'Généré le') . ' ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
         . (($meta['envoye'] ?? '') !== '' ? ' · envoyé le ' . $e($meta['envoye']) : '');
@@ -2608,22 +2581,21 @@ function rapPdfPiedHtml(array $meta): string
     if ($magasin !== '' && $rapport !== '' && mb_stripos($rapport, $magasin) !== false) {
         $rapport = trim(str_ireplace($magasin, '', $rapport), " \t—–-·|");
     }
+    $quoi = implode(' · ', array_filter([$e($magasin), $e($rapport), $dates], 'strlen'));
+    $mentions = function_exists('docMentions') ? docMentions() : '';
     return '<!doctype html><html><head><meta charset="utf-8"><style>'
+        . docFontFaces()
         . 'html,body{margin:0;padding:0}'
-        . 'table{width:100%;border-collapse:collapse;border-top:0.5pt solid #DED6C9}'
-        . 'td{' . $F . ';font-size:6.5pt;color:#8b8177;vertical-align:middle;padding-top:2mm}'
+        . 'table{width:100%;border-collapse:collapse;border-top:1px solid ' . DOC_LINE . '}'
+        . "td{font-family:'Gotham',Helvetica,Arial,sans-serif;font-size:8.5px;line-height:1.6;color:" . DOC_MUTED . ';vertical-align:top;padding-top:9px}'
         . '</style><script>'
         . 'function pied(){var v={},q=document.location.search.substring(1).split("&");'
         . 'for(var i=0;i<q.length;i++){var kv=q[i].split("=");v[kv[0]]=decodeURIComponent(kv[1]||"");}'
-        . 'var el=document.getElementById("pg");if(el){el.textContent=(v.page||"")+"/"+(v.topage||"");}}'
+        . 'var el=document.getElementById("pg");if(el){el.textContent="Page "+(v.page||"")+" / "+(v.topage||"");}}'
         . '</script></head><body onload="pied()"><table><tr>'
-        // Le logo tient dans SA colonne : sans largeur, il passait sous le
-        // texte du magasin.
-        . '<td style="width:26mm">' . ($logo !== '' ? '<img src="' . $logo . '" style="height:4.5mm;display:block">' : '') . '</td>'
-        . '<td style="padding-left:4mm"><span style="color:#221E1A;font-weight:bold">' . $e($magasin) . '</span>'
-        . ($rapport !== '' ? ' · ' . $e($rapport) : '') . '</td>'
-        // Les dates et la pagination ne se coupent jamais en deux lignes.
-        . '<td align="right" style="white-space:nowrap">' . $dates . ' · <span id="pg"></span></td>'
+        . '<td>' . $quoi . ($mentions !== '' ? '<br>' . $e($mentions) : '') . '</td>'
+        // La pagination ne se coupe jamais en deux lignes.
+        . '<td align="right" style="white-space:nowrap;padding-left:24px"><span id="pg"></span></td>'
         . '</tr></table></body></html>';
 }
 
@@ -2639,8 +2611,9 @@ function rapPdfRendu(string $html, array $meta = []): ?string
     // `--print-media-type` : le document porte ses règles @media print — la
     // version corrigée de wkhtmltopdf les applique (celle des dépôts ignore
     // le drapeau, en le disant).
+    // Les marges du gabarit A4 (§13.4) : 14 mm, 16 mm en bas pour le pied.
     $wk = '--quiet --page-size A4 --print-media-type --enable-local-file-access'
-        . ' --margin-top 14mm --margin-bottom 20mm --margin-left 15mm --margin-right 15mm'
+        . ' --margin-top 14mm --margin-bottom 16mm --margin-left 14mm --margin-right 14mm'
         . ' --footer-spacing 4';
     // Paysage sur demande : les tableaux larges (une colonne par magasin)
     // ne tiennent pas en portrait.
@@ -2710,7 +2683,7 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
                       array $parTache = [], array $joursPeriode = []): string
 {
     $e = fn ($x) => htmlspecialchars((string) $x, ENT_QUOTES, 'UTF-8');
-    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $F = "font-family:Gotham,Helvetica,Arial,sans-serif";
     $pct = fn (int $n) => $demandees > 0 ? round($n / $demandees * 100) : 0;
     $nonRendues = max(0, $demandees - $rendues);
 
@@ -2725,25 +2698,25 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
     $h = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 10px"><tr>';
     foreach ($cases as [$lib, $val, $sous]) {
         $h .= '<td width="25%" valign="top" style="padding:0 5px 0 0">'
-            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EC;border-radius:9px;height:62px">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBF9F5;border-radius:9px;height:62px">'
             // Hauteur imposée ET troisième ligne toujours présente : sans
             // elles, la case « Demandées » — qui n'a rien à mettre dessous —
             // était plus courte que ses voisines, et la rangée bancale.
             . '<tr><td valign="top" height="62" style="height:62px;padding:9px 11px;' . $F . '">'
-            . '<div style="font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:#8b8177">' . $e($lib) . '</div>'
-            . '<div style="font-size:19px;font-weight:700;color:#221E1A;line-height:1.2">' . $e($val) . '</div>'
-            . '<div style="font-size:10.5px;color:#8b8177">' . ($sous !== '' ? $e($sous) : '&nbsp;') . '</div>'
+            . '<div style="font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:#7a736a">' . $e($lib) . '</div>'
+            . '<div style="font-size:19px;font-weight:700;color:#1c1a17;line-height:1.2">' . $e($val) . '</div>'
+            . '<div style="font-size:10.5px;color:#7a736a">' . ($sous !== '' ? $e($sous) : '&nbsp;') . '</div>'
             . '</td></tr></table></td>';
     }
     $h .= '</tr></table>';
     if ($sansPhoto > 0) {
-        $h .= '<div style="' . $F . ';font-size:11px;color:#8b8177;margin:-4px 0 10px">Dont ' . $sansPhoto
+        $h .= '<div style="' . $F . ';font-size:11px;color:#7a736a;margin:-4px 0 10px">Dont ' . $sansPhoto
             . ' tâche(s) rendue(s) sans photo.</div>';
     }
 
     // --- la dispersion des cotes : une barre par niveau, à sa couleur
     if ($notees > 0) {
-        $h .= '<div style="' . $F . ';font-size:11px;font-weight:700;color:#221E1A;margin:14px 0 6px">Dispersion des cotes</div>'
+        $h .= '<div style="' . $F . ';font-size:11px;font-weight:400;color:#1c1a17;margin:14px 0 6px">Dispersion des cotes</div>'
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">';
         foreach ($niveaux as $nv) {
             $n = (int) ($nv['n'] ?? 0);
@@ -2752,18 +2725,18 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
             // Une part non nulle garde au moins un filet visible : à 2 % sur
             // 300 px, une barre d'un pixel se confond avec l'absence de barre.
             $largeur = $nb === 0 ? 0 : max(2, round($part * 100));
-            $coul = (string) ($nv['couleur'] ?? '#8b8177');
+            $coul = (string) ($nv['couleur'] ?? '#7a736a');
             $h .= '<tr>'
-                . '<td width="26" style="' . $F . ';font-size:11.5px;font-weight:700;color:' . $coul . ';padding:2px 0">' . $n . '/5</td>'
-                . '<td width="150" style="' . $F . ';font-size:10.5px;color:#6E645A;padding:2px 8px 2px 0">' . $e($nv['nom'] ?? '') . '</td>'
+                . '<td width="26" style="' . $F . ';font-size:11.5px;font-weight:400;color:' . $coul . ';padding:2px 0">' . $n . '/5</td>'
+                . '<td width="150" style="' . $F . ';font-size:10.5px;color:#7a736a;padding:2px 8px 2px 0">' . $e($nv['nom'] ?? '') . '</td>'
                 . '<td style="padding:2px 0">'
-                . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F0EAE1;border-radius:999px"><tr>'
+                . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#e6e0d8;border-radius:6px"><tr>'
                 . ($largeur > 0
-                    ? '<td width="' . $largeur . '%" style="background:' . $coul . ';border-radius:999px;font-size:0;line-height:0;height:9px">&nbsp;</td>'
+                    ? '<td width="' . $largeur . '%" style="background:' . $coul . ';border-radius:6px;font-size:0;line-height:0;height:9px">&nbsp;</td>'
                     : '')
                 . '<td style="font-size:0;line-height:0;height:9px">&nbsp;</td></tr></table></td>'
-                . '<td width="64" align="right" style="' . $F . ';font-size:11px;color:#221E1A;padding:2px 0 2px 8px">'
-                . $nb . ($nb > 0 ? ' <span style="color:#8b8177">· ' . round($part * 100) . ' %</span>' : '')
+                . '<td width="64" align="right" style="' . $F . ';font-size:11px;color:#1c1a17;padding:2px 0 2px 8px">'
+                . $nb . ($nb > 0 ? ' <span style="color:#7a736a">· ' . round($part * 100) . ' %</span>' : '')
                 . '</td></tr>';
         }
         $h .= '</table>';
@@ -2793,7 +2766,7 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
         // tient déjà.
         usort($lignes, fn ($a, $b2) => ($a['moy'] ?? 9) <=> ($b2['moy'] ?? 9));
         $cols = count($lignes) > 10 ? 3 : 2;
-        $h .= '<div style="' . $F . ';font-size:11px;font-weight:700;color:#221E1A;margin:18px 0 6px">Détail par tâche</div>'
+        $h .= '<div style="' . $F . ';font-size:11px;font-weight:400;color:#1c1a17;margin:18px 0 6px">Détail par tâche</div>'
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">';
         foreach (array_chunk($lignes, $cols) as $rangee) {
             $h .= '<tr>';
@@ -2807,16 +2780,16 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
                         $vide = $ca['note'] === null;
                         $pastilles .= '<span title="' . $e(substr($ca['date'], 8, 2) . '/' . substr($ca['date'], 5, 2)) . '"'
                             . ' style="display:inline-block;min-width:13px;text-align:center;background:'
-                            . ($vide ? '#E4DCD0' : rapCouleurNote($ca['note']))
+                            . ($vide ? '#e6e0d8' : rapCouleurNote($ca['note']))
                             . ';color:' . ($vide ? '#B4A99A' : '#ffffff')
-                            . ';border-radius:4px;padding:1px 4px;margin-right:2px;font-size:9px;font-weight:700">'
+                            . ';border-radius:4px;padding:1px 4px;margin-right:2px;font-size:9px;font-weight:400">'
                             . ($vide ? '·' : $ca['note']) . '</span>';
                     }
-                    $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EC;border-radius:8px">'
+                    $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBF9F5;border-radius:8px">'
                         . '<tr><td style="padding:6px 9px;' . $F . '">'
-                        . '<div style="font-size:10px;font-weight:700;color:#221E1A;line-height:1.25">' . $e($l['nom']) . '</div>'
+                        . '<div style="font-size:10px;font-weight:400;color:#1c1a17;line-height:1.25">' . $e($l['nom']) . '</div>'
                         . '<div style="margin-top:3px;white-space:nowrap">' . $pastilles
-                        . '<span style="font-size:10px;color:#4a443c;font-weight:700;margin-left:4px">'
+                        . '<span style="font-size:10px;color:#5c5852;font-weight:400;margin-left:4px">'
                         . ($l['moy'] === null ? '—' : str_replace('.', ',', (string) round($l['moy'], 1)) . ' / 5') . '</span></div>'
                         . '</td></tr></table>';
                 } else {
@@ -2847,17 +2820,17 @@ function rapBilanHtml(int $demandees, int $rendues, int $notees, int $sansPhoto,
         // quoi il s'agit. La table ne sert plus qu'à porter le saut de page.
         $h .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 6px" data-encadre="5sur5">'
             . '<tr><td style="' . $F . '">'
-            . '<div style="font-size:14.5px;font-weight:700;color:#221E1A;margin:0 0 6px">Cette semaine, vous vous êtes distingué avec celles-ci'
-            . '<span style="font-weight:400;font-size:12px;color:#8b8177"> — ' . count($exemplaires) . ' tâche(s) à 5/5</span></div>'
+            . '<div style="font-size:14.5px;font-weight:400;color:#1c1a17;margin:0 0 6px">Cette semaine, vous vous êtes distingué avec celles-ci'
+            . '<span style="font-weight:400;font-size:12px;color:#7a736a"> — ' . count($exemplaires) . ' tâche(s) à 5/5</span></div>'
             . ($fichesExemplaires !== []
                 ? rapFichesGrille($fichesExemplaires, $colonnes, $rangees, false, $colonnes === 3 && $rangees === 4)
                 : '')
             . ($reste !== []
-                ? '<div style="font-size:11px;color:#4a443c;padding-top:' . ($fichesExemplaires !== [] ? '4' : '6') . 'px;line-height:1.45">'
+                ? '<div style="font-size:11px;color:#5c5852;padding-top:' . ($fichesExemplaires !== [] ? '4' : '6') . 'px;line-height:1.45">'
                     . ($fichesExemplaires !== [] ? 'Aussi : ' : '') . implode(' &middot; ', $reste) . '</div>'
                 : '')
             . '</td></tr></table>'
-            . '<div style="border-top:1px solid #E4DCD0;margin:2px 0 10px"></div>';
+            . '<div style="border-top:1px solid #e6e0d8;margin:2px 0 10px"></div>';
     }
     return $h;
 }
@@ -2915,7 +2888,7 @@ function wr_smtp_test(): array
     }
     $ok = Smtp::envoyer($a, 'Cockpit — test d’envoi SMTP',
         '<p>Ce message confirme que la machine d’envoi du cockpit fonctionne.</p>'
-        . '<p style="color:#6E645A;font-size:12px">Envoyé le ' . date('d/m/Y à H:i') . ' depuis les Paramètres.</p>');
+        . '<p style="color:#7a736a;font-size:12px">Envoyé le ' . date('d/m/Y à H:i') . ' depuis les Paramètres.</p>');
     journalAdd('CEO', 'Paramètre', '—', $ok ? 'Test SMTP réussi vers ' . $a : 'Test SMTP échoué — ' . (Smtp::$lastError ?? '?'));
     return $ok ? ['ok' => true, 'message' => 'Envoyé à ' . $a . ' — vérifiez la boîte (et les spams).']
         : ['ok' => false, 'error' => Smtp::$lastError ?? 'échec sans détail'];
@@ -2931,8 +2904,8 @@ function wr_smtp_test(): array
 function rapTableHtml(array $cols, array $rows): string
 {
     $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
-    $th = 'text-align:right;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;color:#8b8177;padding:6px 8px;border-bottom:1px solid #D8CEC0;font-family:sans-serif';
-    $h = '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin:6px 0;font-family:sans-serif;font-size:12px"><tr>';
+    $th = 'text-align:right;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;color:#7a736a;padding:6px 8px;border-bottom:1px solid #D8CEC0;font-family:Gotham,Helvetica,Arial,sans-serif';
+    $h = '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin:6px 0;font-family:Gotham,Helvetica,Arial,sans-serif;font-size:12px"><tr>';
     foreach ($cols as $i => $c2) { $h .= '<th style="' . $th . ($i === 0 ? ';text-align:left' : '') . '">' . $e($c2) . '</th>'; }
     $h .= '</tr>';
     foreach ($rows as $r) {
@@ -2950,11 +2923,11 @@ function rapTableHtml(array $cols, array $rows): string
 /** La couleur du chiffre selon l'écart à une référence — paliers de l'écran. */
 function rapCouleurEcart(?float $v, ?float $ref): string
 {
-    if ($v === null || $ref === null || $ref <= 0) { return 'color:#8b8177'; }
+    if ($v === null || $ref === null || $ref <= 0) { return 'color:#7a736a'; }
     $eC = $v / $ref - 1;
-    $c = $eC >= 0.20 ? '#C9A227' : ($eC >= 0.10 ? '#2d7a3e' : ($eC >= 0.05 ? '#7CB342'
-        : ($eC <= -0.20 ? '#E0261A' : ($eC <= -0.10 ? '#8D1D2C' : ($eC <= -0.05 ? '#C17A2A' : '')))));
-    return $c !== '' ? 'color:' . $c . ';font-weight:700' : '';
+    $c = $eC >= 0.20 ? '#B0792A' : ($eC >= 0.10 ? '#3f7a52' : ($eC >= 0.05 ? '#7CB342'
+        : ($eC <= -0.20 ? '#A32014' : ($eC <= -0.10 ? '#8D1D2C' : ($eC <= -0.05 ? '#B0792A' : '')))));
+    return $c !== '' ? 'color:' . $c . ';font-weight:400' : '';
 }
 
 function rapBlocComplet(string $slug, array $seuils, array $periode, array $filtre): ?array
@@ -2963,10 +2936,10 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
     $fmtP = fn ($v) => $v === null ? '—' : str_replace('.', ',', (string) round((float) $v, 1)) . ' %';
     $garde = fn (string $nom) => $filtre === [] || in_array($nom, $filtre, true);
     $stSeuil = function (?float $v, float $alerte, ?float $critique, string $sens): string {
-        if ($v === null) { return 'color:#8b8177'; }
+        if ($v === null) { return 'color:#7a736a'; }
         $mauvais = $sens === 'haut' ? $v >= $alerte : $v <= $alerte;
         $grave = $critique !== null && ($sens === 'haut' ? $v >= $critique : $v <= $critique);
-        return $grave ? 'color:#E0261A;font-weight:700' : ($mauvais ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e');
+        return $grave ? 'color:#A32014;font-weight:400' : ($mauvais ? 'color:#8D1D2C;font-weight:400' : 'color:#3f7a52');
     };
 
     switch ($slug) {
@@ -2976,9 +2949,9 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
             $rows = [];
             foreach ((array) $r['magasins'] as $m) {
                 if (!$garde($m['magasin'])) { continue; }
-                $rows[] = [$m['magasin'], $fmtE($m['n']), [$fmtE($m['n1']), 'color:#8b8177'],
+                $rows[] = [$m['magasin'], $fmtE($m['n']), [$fmtE($m['n1']), 'color:#7a736a'],
                     [$m['ecart'] === null ? '—' : ($m['ecart'] > 0 ? '+' : '') . $fmtP($m['ecart']),
-                     $m['ecart'] === null ? 'color:#8b8177' : $stSeuil((float) $m['ecart'], $seuils['ecartNvn1'], $seuils['ecartNvn1'] * 3, 'bas')]];
+                     $m['ecart'] === null ? 'color:#7a736a' : $stSeuil((float) $m['ecart'], $seuils['ecartNvn1'], $seuils['ecartNvn1'] * 3, 'bas')]];
             }
             return [['', rapTableHtml(['Magasin', 'CA N', 'CA N-1', 'Écart'], $rows)]];
         }
@@ -3014,10 +2987,10 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
                 $resRow = ['Réseau'];
                 for ($m = 1; $m <= $mMax; $m++) {
                     $v = (($k['reseau'] ?? [])[$m] ?? [])[$cle] ?? null;
-                    $resRow[] = [$v === null ? '—' : number_format((float) $v, $dec, ',', ' ') . $suf, 'font-weight:700'];
+                    $resRow[] = [$v === null ? '—' : number_format((float) $v, $dec, ',', ' ') . $suf, 'font-weight:400'];
                 }
                 $rows[] = $resRow;
-                $out[] = ['', '<div style="font-size:12px;font-weight:700;font-family:sans-serif;margin-top:6px">' . htmlspecialchars($titre) . ' — mois par mois</div>'
+                $out[] = ['', '<div style="font-size:12px;font-weight:400;font-family:Gotham,Helvetica,Arial,sans-serif;margin-top:6px">' . htmlspecialchars($titre) . ' — mois par mois</div>'
                     . rapTableHtml($cols, $rows)];
             }
             return $out;
@@ -3033,7 +3006,7 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
                 $ca = (float) ($t['ca'] ?? 0);
                 $fc = $ca > 0 ? ($ca - (float) ($t['margin_value'] ?? 0)) / $ca * 100 : null;
                 $rows[] = [$s['name'], [$fmtP($fc), $stSeuil($fc, $seuils['food'], kpiDefs()['food-cost-pct']['seuil_critique'] ?? null, 'haut')],
-                    [$fmtE($ca), 'color:#8b8177']];
+                    [$fmtE($ca), 'color:#7a736a']];
             }
             return [['', rapTableHtml(['Magasin', 'Food cost (mois en cours)', 'CA du mois'], $rows)]];
         }
@@ -3053,8 +3026,8 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
                 $ce = ($e2 && (float) $e2['etp'] > 0 && $m['n'] !== null) ? $m['n'] / (float) $e2['etp'] : null;
                 $rows[] = [$m['magasin'],
                     [$fmtE($ce), $stSeuil($ce, $seuils['caEtp'], kpiDefs()['ca-etp']['seuil_critique'] ?? null, 'bas')],
-                    [$e2 ? str_replace('.', ',', (string) $e2['etp']) . ' ETP' : 'planning inconnu', 'color:#8b8177'],
-                    [$e2 ? str_replace('.', ',', (string) $e2['heures']) . ' h' : '—', 'color:#8b8177']];
+                    [$e2 ? str_replace('.', ',', (string) $e2['etp']) . ' ETP' : 'planning inconnu', 'color:#7a736a'],
+                    [$e2 ? str_replace('.', ',', (string) $e2['heures']) . ' h' : '—', 'color:#7a736a']];
             }
             return [['', rapTableHtml(['Magasin', 'CA / ETP (mois)', 'ETP planifiés', 'Heures'], $rows)]];
         }
@@ -3070,8 +3043,8 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
                 $tot = $m['total'] ?? [];
                 $rows[] = [$m['nom'],
                     [count($rouges) . ' / 7', $stSeuil((float) count($rouges), $seuils['joursRouges'], 5, 'haut')],
-                    [$pire ? $fmtP($pire['netPct']) . ' (' . date('D d/m', strtotime($pire['date'])) . ')' : '—', 'color:#8b8177'],
-                    [isset($tot['netPct']) ? $fmtP($tot['netPct']) : '—', ($tot['netPct'] ?? 0) < 0 ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e']];
+                    [$pire ? $fmtP($pire['netPct']) . ' (' . date('D d/m', strtotime($pire['date'])) . ')' : '—', 'color:#7a736a'],
+                    [isset($tot['netPct']) ? $fmtP($tot['netPct']) : '—', ($tot['netPct'] ?? 0) < 0 ? 'color:#8D1D2C;font-weight:400' : 'color:#3f7a52']];
             }
             return [['', rapTableHtml(['Magasin', 'Jours négatifs', 'Pire jour', 'Résultat net semaine'], $rows)]];
         }
@@ -3083,10 +3056,10 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
             // « Pour atteindre la cible » ne doit jamais rester muet : un
             // magasin à la cible le dit, un magasin sans fiche aussi.
             $effort = static function (?int $requis, $note) use ($cible): array {
-                if ($note === null) { return ['fiche non raccordée', 'color:#8b8177']; }
-                if ($requis === null) { return ['hors d’atteinte par ajout d’avis', 'color:#8b8177']; }
-                if ($requis === 0) { return ['cible atteinte', 'color:#2d7a3e;font-weight:700']; }
-                return [$requis . ' avis 5★ à obtenir', 'color:#8D1D2C;font-weight:700'];
+                if ($note === null) { return ['fiche non raccordée', 'color:#7a736a']; }
+                if ($requis === null) { return ['hors d’atteinte par ajout d’avis', 'color:#7a736a']; }
+                if ($requis === 0) { return ['cible atteinte', 'color:#3f7a52;font-weight:400']; }
+                return [$requis . ' avis 5★ à obtenir', 'color:#8D1D2C;font-weight:400'];
             };
             $rows = [];
             foreach ((array) $r['magasins'] as $m) {
@@ -3094,18 +3067,18 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
                 $rows[] = [$m['nom'],
                     [$m['note'] === null ? '—' : str_replace('.', ',', (string) $m['note']) . ' ★',
                      $stSeuil($m['note'] !== null ? (float) $m['note'] : null, $seuils['cibleGoogle'], kpiDefs()['note-google']['seuil_critique'] ?? null, 'bas')],
-                    [(string) $m['avis'] . ' avis', 'color:#8b8177'],
+                    [(string) $m['avis'] . ' avis', 'color:#7a736a'],
                     $effort($m['avis5Requis'] === null ? null : (int) $m['avis5Requis'], $m['note'])];
             }
             $res = (array) ($r['reseau'] ?? []);
             if ($rows !== [] && ($res['moyenne'] ?? null) !== null) {
-                $rows[] = [['Réseau', 'font-weight:700'],
-                    [str_replace('.', ',', (string) $res['moyenne']) . ' ★', 'font-weight:700'],
-                    [(int) ($res['avis'] ?? 0) . ' avis', 'color:#8b8177;font-weight:700'],
+                $rows[] = [['Réseau', 'font-weight:400'],
+                    [str_replace('.', ',', (string) $res['moyenne']) . ' ★', 'font-weight:400'],
+                    [(int) ($res['avis'] ?? 0) . ' avis', 'color:#7a736a;font-weight:400'],
                     $effort($res['avis5Requis'] === null ? null : (int) $res['avis5Requis'], $res['moyenne'])];
             }
             return [['', rapTableHtml(['Magasin', 'Note Google', 'Volume', 'Pour atteindre ' . $vCible], $rows)
-                . '<div style="font-size:10.5px;color:#8b8177;font-family:sans-serif;margin:2px 0 8px">'
+                . '<div style="font-size:10.5px;color:#7a736a;font-family:Gotham,Helvetica,Arial,sans-serif;margin:2px 0 8px">'
                 . 'Avis 5★ à obtenir = avis × (cible − note) ÷ (5 − cible), arrondi au supérieur — '
                 . 'le nombre d’avis parfaits qui ramène la moyenne à ' . $vCible . '.</div>']];
         }
@@ -3126,10 +3099,10 @@ function rapBlocComplet(string $slug, array $seuils, array $periode, array $filt
             $rows = [];
             foreach ($par as $mag => $x) {
                 $moy = $x['notees'] > 0 ? $x['somme'] / $x['notees'] : null;
-                $rows[] = [$mag, [(string) $x['n'], 'color:#8b8177'], [(string) $x['notees'], 'color:#8b8177'],
+                $rows[] = [$mag, [(string) $x['n'], 'color:#7a736a'], [(string) $x['notees'], 'color:#7a736a'],
                     [$moy === null ? '—' : str_replace('.', ',', (string) round($moy, 1)) . ' / 5',
                      $stSeuil($moy, (float) $seuils['tacheNote'], 2.0, 'bas')],
-                    [(string) $x['sous'], $x['sous'] > 0 ? 'color:#8D1D2C;font-weight:700' : 'color:#2d7a3e']];
+                    [(string) $x['sous'], $x['sous'] > 0 ? 'color:#8D1D2C;font-weight:400' : 'color:#3f7a52']];
             }
             return [['', rapTableHtml(['Magasin', 'Tâches', 'Notées', 'Note moyenne', '≤ ' . $seuils['tacheNote'] . '/5'], $rows)]];
         }
@@ -3233,11 +3206,11 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
         fn () => rapAppel('ep_pwa_task_detail', ['shop' => $shopId, 'task' => $taskId, 'date' => $date]));
     if (!is_array($det)) { return ''; }
     $e = fn ($s2) => htmlspecialchars((string) $s2, ENT_QUOTES, 'UTF-8');
-    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $F = "font-family:Gotham,Helvetica,Arial,sans-serif";
     $reperes = (array) ((($det['reperes'] ?? [])['liste']) ?? []);
 
     $imgs = '';
-    $legende = fn (string $t) => '<div style="' . $F . ';font-size:8.5px;color:#8b8177;margin:3px 0 0;text-align:center;'
+    $legende = fn (string $t) => '<div style="' . $F . ';font-size:8.5px;color:#7a736a;margin:3px 0 0;text-align:center;'
         . 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' . $t . '</div>';
     $photo = rapImageGd((string) ($det['photo'] ?? ''), 420);
     if ($photo !== null && $reperes !== []) { rapDessineReperes($photo, $reperes); }
@@ -3301,11 +3274,11 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
     }
     if ($note !== null) {
         $coulN = rapCouleurNote($note);
-        $ligne = '<div style="' . $F . ';font-size:10.5px;text-align:center;margin:7px 0 4px;color:#221E1A">le ' . $quand
+        $ligne = '<div style="' . $F . ';font-size:10.5px;text-align:center;margin:7px 0 4px;color:#1c1a17">le ' . $quand
             . ' &nbsp;&middot;&nbsp; <span style="color:' . $coulN . ';font-size:8px">&#9679;</span> '
             . '<b style="color:' . $coulN . '">Note ' . $note . '/5</b></div>';
     } else {
-        $ligne = '<div style="' . $F . ';font-size:10.5px;text-align:center;margin:7px 0 4px;color:#8b8177">le '
+        $ligne = '<div style="' . $F . ';font-size:10.5px;text-align:center;margin:7px 0 4px;color:#7a736a">le '
             . $quand . ' &middot; non notée</div>';
     }
 
@@ -3317,30 +3290,30 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
     // commentaire ne s'affiche donc que s'il est SEUL à parler.
     $reperesParlants = array_filter($reperes, fn ($r) => trim((string) ($r['txt'] ?? '')) !== '');
     if (trim($commentaire) !== '' && $reperesParlants === []) {
-        $exp .= '<div style="' . $F . ';font-size:10px;color:#4a443c;padding:1px 0;line-height:1.4">' . $e(mb_substr($commentaire, 0, 200)) . '</div>';
+        $exp .= '<div style="' . $F . ';font-size:10px;color:#5c5852;padding:1px 0;line-height:1.4">' . $e(mb_substr($commentaire, 0, 200)) . '</div>';
     }
     $n = 0;
     foreach ($reperes as $r) {
         $n++;
         if (trim((string) ($r['txt'] ?? '')) === '') { continue; }
         $niv = (int) ($r['niveau'] ?? 3);
-        $coulR = $niv <= 2 ? '#E0261A' : ($niv === 3 ? '#C17A2A' : '#2d7a3e');
-        $exp .= '<div style="' . $F . ';font-size:10px;color:#3d382f;padding:1px 0;line-height:1.4"><span style="color:' . $coulR . ';font-weight:700">' . $n . '.</span> ' . $e($r['txt']) . '</div>';
+        $coulR = $niv <= 2 ? '#A32014' : ($niv === 3 ? '#B0792A' : '#3f7a52');
+        $exp .= '<div style="' . $F . ';font-size:10px;color:#1c1a17;padding:1px 0;line-height:1.4"><span style="color:' . $coulR . ';font-weight:400">' . $n . '.</span> ' . $e($r['txt']) . '</div>';
     }
     // En vignette : la PHOTO d'abord, le titre et la note dessous — inchangé.
     // En fiche riche : le titre court sur toute la largeur, CENTRÉ (ellipse
     // au-delà d'une ligne), puis les vignettes, la ligne date · note, et les
     // repères sur toute la largeur — le gabarit validé le 23/08.
     if ($compact) {
-        $titre = '<div style="' . $F . ';font-size:10px;font-weight:700;color:#221E1A;margin:5px 0 1px">' . $e($nomTache) . '</div>';
+        $titre = '<div style="' . $F . ';font-size:10px;font-weight:400;color:#1c1a17;margin:5px 0 1px">' . $e($nomTache) . '</div>';
         $noteL = $note !== null
-            ? '<div style="' . $F . ';font-size:11px;color:#221E1A;padding:1px 0">'
+            ? '<div style="' . $F . ';font-size:11px;color:#1c1a17;padding:1px 0">'
                 . '<span style="color:' . rapCouleurNote($note) . ';font-size:9px;line-height:1">&#9679;</span> '
                 . '<b style="color:' . rapCouleurNote($note) . '">Note ' . $note . '/5</b> · le ' . $quand . '</div>'
             : '';
         return $imgs . $titre . $noteL . $signature . $exp;
     }
-    $titre = '<div style="' . $F . ';font-size:10.5px;font-weight:700;color:#221E1A;text-align:center;margin:0 0 7px;'
+    $titre = '<div style="' . $F . ';font-size:10.5px;font-weight:400;color:#1c1a17;text-align:center;margin:0 0 7px;'
         . 'line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' . $e($nomTache) . '</div>';
     return $titre . $imgs . $ligne . $signature . $exp;
 }
@@ -3350,7 +3323,7 @@ function rapFicheTache(string $shopId, string $taskId, string $date, string $nom
  *  référentiel de validation, éclaircies pour rester lisibles sous le texte. */
 function rapCouleurNote(?int $note): string
 {
-    return [5 => '#C9A227', 4 => '#2D7A3E', 3 => '#D97706', 2 => '#C0182B', 1 => '#8D1D2C'][$note] ?? '#8b8177';
+    return [5 => '#B0792A', 4 => '#3f7a52', 3 => '#B0792A', 2 => '#A32014', 1 => '#8D1D2C'][$note] ?? '#7a736a';
 }
 
 /**
@@ -3362,8 +3335,8 @@ function rapCouleurNote(?int $note): string
 function rapFondNote(?int $note, bool $surFondTeinte = false): array
 {
     if ($surFondTeinte) { return ['fond' => '#FFFFFF']; }
-    return ['fond' => [5 => '#FBF6E7', 4 => '#EFF6F0', 3 => '#FDF2E5',
-        2 => '#FBEBED', 1 => '#F7E4E7'][$note] ?? '#FBF9F5'];
+    return ['fond' => [5 => '#FBF6E7', 4 => '#EFF6F0', 3 => '#F6E7CE',
+        2 => '#F6ECED', 1 => '#F7E4E7'][$note] ?? '#FBF9F5'];
 }
 
 function rapFichesGrille(array $cartes, int $colonnes = 2, int $rangees = 3, bool $paginer = true, bool $riches = false): string

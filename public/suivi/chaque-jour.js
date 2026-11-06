@@ -142,7 +142,7 @@
       const pctCls = p => p == null ? 'mu' : (p < 70 ? 'ko' : p < 85 ? 'att' : 'ok');
       const plusJours = (d, n) => { const t = new Date(d + 'T12:00:00'); t.setDate(t.getDate() + n); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
       const heat = () => { const parJ = {}; (TA.jours || []).forEach(x => { parJ[x.jour] = x; }); let s = ''; for (let i = 29; i >= 0; i--) { const d = plusJours(D.aujourdhui, -i); const x = parJ[d]; s += '<i class="' + (!x ? 'x' : (x.oblig ? 'm' : (x.f < x.t ? 'p' : ''))) + '" title="' + fD(d) + (x ? ' : ' + x.f + ' / ' + x.t : '') + '"></i>'; }
-        return '<div class="fr-heat">' + s + '</div><div class="fr-leg">' + ['#C9E3CD', '#F5D58F', '#E8A0A0', '#EDE7E0'].map((c, i) => '<span><i style="background:' + c + '"></i>' + esc(L.leg[i]) + '</span>').join('') + '</div>'; };
+        return '<div class="fr-heat">' + s + '</div><div class="fr-leg">' + ['#C5D7CB', '#F6E7CE', '#E8A0A0', '#EDE7DE'].map((c, i) => '<span><i style="background:' + c + '"></i>' + esc(L.leg[i]) + '</span>').join('') + '</div>'; };
       const niv = i => '<span class="fr-niv ' + esc(i.niveau) + '">' + esc(L.niv[i.niveau] || i.niveau) + '</span>';
       const suite = i => i.suite ? fD(i.suite.jour) + ' : ' + (i.suite.conforme ? '<span class="ok">' + esc(L.suite_ok) + '</span>' : '<span class="ko">' + esc(L.suite_ko) + '</span>') : mu(L.suite_att);
       const stRec = r => r.ouverte ? '<span class="ko">' + esc(L.st_rec.ouverte) + '</span>' : esc(r.statut === 'REJECTED' ? L.st_rec.refusee : r.statut === 'ACCEPTED' ? L.st_rec.acceptee : String(r.statut || '').toLowerCase());

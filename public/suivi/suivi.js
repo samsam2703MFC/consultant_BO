@@ -80,12 +80,12 @@
     if (V.prochaine) {
       const p = D.prochaine;
       h += `<div class="fr-carte fr-pro"><h2>${esc(L.pro)}</h2>${p ? `<b class="d">${esc(fDL(p.le))} · ${esc(p.h)}</b><div class="fr-mu">${esc(p.type)} · ${esc(L.avec)} ${esc(p.consultant)} · ${esc(p.duree)} ${esc(L.min)}</div>
-        ${p.sujets && p.sujets.length ? `<div style="margin-top:8px;font-weight:600;font-size:13px">${esc(L.sujets)}</div><ul>${p.sujets.map(s => '<li>' + esc(s) + '</li>').join('')}</ul>` : ''}` : `<div class="fr-mu">${esc(L.aucunePro)}</div>`}</div>`;
+        ${p.sujets && p.sujets.length ? `<div style="margin-top:8px;font-weight:400;font-size:13px">${esc(L.sujets)}</div><ul>${p.sujets.map(s => '<li>' + esc(s) + '</li>').join('')}</ul>` : ''}` : `<div class="fr-mu">${esc(L.aucunePro)}</div>`}</div>`;
     }
     if (V.points) {
       const pts = D.points || [];
       h += `<div class="fr-carte"><h2>${esc(L.points)}</h2>${pts.length ? pts.map(point).join('') : `<div class="fr-mu">${esc(L.aucunPoint)}</div>`}
-        ${(D.valides || []).length ? `<div style="margin-top:12px;font-weight:600;font-size:13px">${esc(L.valides)}</div><ul class="fr-val">${D.valides.map(v => '<li>✓ ' + esc(v.titre) + ' · ' + esc(fD(v.le)) + '</li>').join('')}</ul>` : ''}</div>`;
+        ${(D.valides || []).length ? `<div style="margin-top:12px;font-weight:400;font-size:13px">${esc(L.valides)}</div><ul class="fr-val">${D.valides.map(v => '<li>✓ ' + esc(v.titre) + ' · ' + esc(fD(v.le)) + '</li>').join('')}</ul>` : ''}</div>`;
     }
     // Le volet « chaque jour » et le journal, repris de l'ancienne page « Mon suivi » (chaque-jour.js).
     const J = window.SuiviJour ? window.SuiviJour.rendre(D, LG, { esc, nf, fD, fDL }) : { jour: '', fin: '' };

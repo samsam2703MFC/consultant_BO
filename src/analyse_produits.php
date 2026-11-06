@@ -839,15 +839,15 @@ function wr_prod_arbitrage_pdf(): array
     foreach ($listes as $k => $l) { usort($listes[$k], fn ($a, $b2) => (float) ($b2['score'] ?? 0) <=> (float) ($a['score'] ?? 0)); }
     $etoiles = function ($n) {
         $n = (int) $n;
-        if ($n <= 0) { return '<span style="color:#b8b2a8;letter-spacing:1px">&#9734;&#9734;&#9734;&#9734;&#9734;</span>'; }
-        return '<span style="color:#C9A227;letter-spacing:1px">' . str_repeat('&#9733;', min(5, $n)) . '</span>'
-            . '<span style="color:#d9d2c6;letter-spacing:1px">' . str_repeat('&#9734;', max(0, 5 - $n)) . '</span>';
+        if ($n <= 0) { return '<span style="color:#B8B2A8;letter-spacing:1px">&#9734;&#9734;&#9734;&#9734;&#9734;</span>'; }
+        return '<span style="color:#B0792A;letter-spacing:1px">' . str_repeat('&#9733;', min(5, $n)) . '</span>'
+            . '<span style="color:#e6e0d8;letter-spacing:1px">' . str_repeat('&#9734;', max(0, 5 - $n)) . '</span>';
     };
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:10.5pt}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:10.5pt}
       table.t{border-collapse:collapse;width:100%;font-size:8.5pt}
-      table.t th{font-size:7pt;text-transform:uppercase;letter-spacing:0.05em;color:#8b8177;text-align:right;padding:1.2mm 1.6mm;border-bottom:0.5pt solid #E5E0D8}
-      table.t td{padding:1.3mm 1.6mm;border-bottom:0.4pt solid #F0EDE7;text-align:right}
+      table.t th{font-size:7pt;text-transform:uppercase;letter-spacing:0.05em;color:#7a736a;text-align:right;padding:1.2mm 1.6mm;border-bottom:0.5pt solid #e6e0d8}
+      table.t td{padding:1.3mm 1.6mm;border-bottom:0.4pt solid #e6e0d8;text-align:right}
       table.t th.l,table.t td.l{text-align:left}
       table.t tr{page-break-inside:avoid}
       .bande{margin-top:5mm;padding:1.8mm 3mm;border-left:4px solid;page-break-after:avoid}
@@ -855,47 +855,47 @@ function wr_prod_arbitrage_pdf(): array
     </style>';
     $logo = rapLogoDataUri();
     $h = $css . '<div class="doc">'
-        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:2mm;margin-bottom:4mm"><tr>'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2mm;margin-bottom:4mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:34px">' : '<b>L’Atelier by</b>') . '</td>'
-        . '<td align="right" style="font-size:8.5pt;color:#7a736a;line-height:1.5"><b style="color:#221E1A;font-size:10.5pt">Arbitrage de gamme : réseau</b><br>' . $e($lib) . ' · scoring produits</td></tr></table>'
-        . '<div style="font-family:Georgia,serif;font-size:19pt;margin:1mm 0 0.5mm">La gamme en trois listes</div>'
-        . '<div style="font-size:8.5pt;color:#5d564e;margin-bottom:3mm">' . ($pond !== '' ? 'Score : ' . $e($pond) . '. ' : '')
+        . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Arbitrage de gamme : réseau</b><br>' . $e($lib) . ' · scoring produits</td></tr></table>'
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:19pt;margin:1mm 0 0.5mm">La gamme en trois listes</div>'
+        . '<div style="font-size:8.5pt;color:#5c5852;margin-bottom:3mm">' . ($pond !== '' ? 'Score : ' . $e($pond) . '. ' : '')
         . 'Revue : la note franchiseur de 1 à 5 étoiles, posée sur l’écran Scoring, qui pèse dans le score.'
         . ($nSans > 0 ? ' <b>Sans vente</b> (' . $nSans . ') : au catalogue, mais rien de vendu sur la période.' : '')
         . ($nNec > 0 ? ' <b>Obligatoire</b> (' . $nNec . ') : imposée en boutique, gardée quoi qu’en disent la marge et le score.' : '')
         . ' La case « Validé » se coche en réunion.</div>';
-    $tuile = fn (string $cap, int $n, string $coul, string $crit) => '<td width="33%" style="border:1.2px solid #E8C9A0;background:#FFF9EC;border-radius:3mm;padding:2.6mm 2mm;text-align:center">'
-        . '<div style="font-size:7.5pt;font-weight:bold;letter-spacing:0.09em;color:#8b8177">' . $cap . '</div>'
-        . '<div style="font-family:Georgia,serif;font-size:14pt;color:' . $coul . '">' . $n . '</div>'
-        . '<div style="font-size:7pt;color:#5d564e">' . $e($crit) . '</div></td>';
+    $tuile = fn (string $cap, int $n, string $coul, string $crit) => '<td width="33%" style="border:1.2px solid #F6E7CE;background:#F6E7CE;border-radius:3mm;padding:2.6mm 2mm;text-align:center">'
+        . '<div style="font-size:7.5pt;font-weight:400;letter-spacing:0.09em;color:#7a736a">' . $cap . '</div>'
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14pt;color:' . $coul . '">' . $n . '</div>'
+        . '<div style="font-size:7pt;color:#5c5852">' . $e($crit) . '</div></td>';
     $h .= '<table width="100%" cellpadding="0" cellspacing="4"><tr>'
-        . $tuile('GARDER', count($listes['garder']), '#2d7a3e', 'score > ' . $garder)
-        . $tuile('MODIFIER', count($listes['modifier']), '#b8671a', 'score de ' . $modifier . ' à ' . $garder)
-        . $tuile('EFFACER', count($listes['effacer']), '#C0182B', 'score < ' . $modifier) . '</tr></table>';
+        . $tuile('GARDER', count($listes['garder']), '#3f7a52', 'score > ' . $garder)
+        . $tuile('MODIFIER', count($listes['modifier']), '#B0792A', 'score de ' . $modifier . ' à ' . $garder)
+        . $tuile('EFFACER', count($listes['effacer']), '#A32014', 'score < ' . $modifier) . '</tr></table>';
     $sections = [
-        ['garder', 'Garder', '#2d7a3e', '#e6f2e8', 'score > ' . $garder],
-        ['modifier', 'Modifier — prix, recette ou mise en avant', '#b8671a', '#fdf2e5', 'score de ' . $modifier . ' à ' . $garder],
-        ['effacer', 'Effacer', '#C0182B', '#fbebed', 'score < ' . $modifier],
+        ['garder', 'Garder', '#3f7a52', '#E8EFEA', 'score > ' . $garder],
+        ['modifier', 'Modifier — prix, recette ou mise en avant', '#B0792A', '#F6E7CE', 'score de ' . $modifier . ' à ' . $garder],
+        ['effacer', 'Effacer', '#A32014', '#F6ECED', 'score < ' . $modifier],
     ];
     foreach ($sections as [$cle, $titre, $coul, $fond, $crit]) {
         $l = $listes[$cle];
         $h .= '<div class="bande" style="background:' . $fond . ';border-color:' . $coul . '"><table width="100%" cellpadding="0" cellspacing="0"><tr>'
-            . '<td style="font-family:Georgia,serif;font-size:14pt;color:' . $coul . '">' . $e($titre) . '</td>'
-            . '<td align="right" style="font-size:9pt;color:#5d564e">' . $e($crit) . ' · <b>' . count($l) . ' référence(s)</b></td></tr></table></div>';
-        if ($l === []) { $h .= '<div style="font-size:9pt;color:#8b8177;margin:1mm 0 0 1mm">Aucune référence.</div>'; continue; }
+            . '<td style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14pt;color:' . $coul . '">' . $e($titre) . '</td>'
+            . '<td align="right" style="font-size:9pt;color:#5c5852">' . $e($crit) . ' · <b>' . count($l) . ' référence(s)</b></td></tr></table></div>';
+        if ($l === []) { $h .= '<div style="font-size:9pt;color:#7a736a;margin:1mm 0 0 1mm">Aucune référence.</div>'; continue; }
         $h .= '<table class="t"><tr><th class="l">Référence</th><th class="l">Catégorie</th><th class="l">Fournisseur</th><th>Volume</th><th>Marge</th><th>Taux</th><th>Perte</th><th>Score</th><th style="text-align:center">Revue</th><th style="text-align:center">Validé</th></tr>';
         foreach ($l as $r) {
             $necL = filter_var($r['necessaire'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $sansV = filter_var($r['sansVente'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            $h .= '<tr><td class="l" style="font-weight:bold">' . $e($r['nom'] ?? '')
-                . ($necL ? ' <span style="font-size:6.5pt;font-weight:normal;color:#2d7a3e;border:0.6pt solid #bfdcc5;border-radius:2mm;padding:0 1.4mm;vertical-align:0.3mm">obligatoire</span>' : '')
-                . ($sansV ? ' <span style="font-size:6.5pt;font-weight:normal;color:#8b8177;border:0.6pt solid #d9d2c6;border-radius:2mm;padding:0 1.4mm;vertical-align:0.3mm">sans vente</span>' : '')
-                . '</td><td class="l" style="color:#8b8177">' . $e($r['cat'] ?? '') . '</td>'
-                . '<td class="l" style="color:#8b8177">' . $e($r['fourn'] ?? '') . '</td>'
+            $h .= '<tr><td class="l" style="font-weight:400">' . $e($r['nom'] ?? '')
+                . ($necL ? ' <span style="font-size:6.5pt;font-weight:normal;color:#3f7a52;border:0.6pt solid #C5D7CB;border-radius:2mm;padding:0 1.4mm;vertical-align:0.3mm">obligatoire</span>' : '')
+                . ($sansV ? ' <span style="font-size:6.5pt;font-weight:normal;color:#7a736a;border:0.6pt solid #e6e0d8;border-radius:2mm;padding:0 1.4mm;vertical-align:0.3mm">sans vente</span>' : '')
+                . '</td><td class="l" style="color:#7a736a">' . $e($r['cat'] ?? '') . '</td>'
+                . '<td class="l" style="color:#7a736a">' . $e($r['fourn'] ?? '') . '</td>'
                 . '<td>' . $e($r['vol'] ?? '') . '</td><td>' . $e($r['marge'] ?? '') . '</td><td>' . $e($r['taux'] ?? '') . '</td><td>' . $e($r['perte'] ?? '') . '</td>'
-                . '<td style="font-weight:bold;color:' . $coul . '">' . (int) round((float) ($r['score'] ?? 0)) . '</td>'
+                . '<td style="font-weight:400;color:' . $coul . '">' . (int) round((float) ($r['score'] ?? 0)) . '</td>'
                 . '<td style="text-align:center;font-size:9pt">' . $etoiles($r['revue'] ?? 0) . '</td>'
-                . '<td style="text-align:center"><span style="display:inline-block;width:3.6mm;height:3.6mm;border:0.6pt solid #8b8177;border-radius:0.8mm"></span></td></tr>';
+                . '<td style="text-align:center"><span style="display:inline-block;width:3.6mm;height:3.6mm;border:0.6pt solid #7a736a;border-radius:0.8mm"></span></td></tr>';
         }
         $h .= '</table>';
     }
@@ -1079,55 +1079,55 @@ function wr_prod_categorie_pdf(): array
         if (!empty($l['sansVente'])) { $nSans++; }
         if (!empty($l['necessaire'])) { $nNec++; }
     }
-    $coul = ['Garder' => '#2d7a3e', 'Modifier' => '#b8671a', 'Effacer' => '#C0182B'];
-    $fond = ['Garder' => '#e6f2e8', 'Modifier' => '#fdf2e5', 'Effacer' => '#fbebed'];
+    $coul = ['Garder' => '#3f7a52', 'Modifier' => '#B0792A', 'Effacer' => '#A32014'];
+    $fond = ['Garder' => '#E8EFEA', 'Modifier' => '#F6E7CE', 'Effacer' => '#F6ECED'];
     $etoiles = function ($n) {
         $n = (int) $n;
-        if ($n <= 0) { return '<span style="color:#c9c3b8">&#9734;&#9734;&#9734;&#9734;&#9734;</span>'; }
-        return '<span style="color:#C9A227">' . str_repeat('&#9733;', min(5, $n)) . '</span><span style="color:#d9d2c6">' . str_repeat('&#9734;', max(0, 5 - $n)) . '</span>';
+        if ($n <= 0) { return '<span style="color:#b8b2a8">&#9734;&#9734;&#9734;&#9734;&#9734;</span>'; }
+        return '<span style="color:#B0792A">' . str_repeat('&#9733;', min(5, $n)) . '</span><span style="color:#e6e0d8">' . str_repeat('&#9734;', max(0, 5 - $n)) . '</span>';
     };
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9.5pt}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:9.5pt}
       table.t{border-collapse:collapse;width:100%;font-size:7.6pt}
-      table.t th{font-size:6.3pt;text-transform:uppercase;letter-spacing:0.04em;color:#8b8177;text-align:right;padding:1.1mm 1.2mm;border-bottom:0.5pt solid #E5E0D8;vertical-align:bottom}
-      table.t td{padding:1.1mm 1.2mm;border-bottom:0.4pt solid #F0EDE7;text-align:right;vertical-align:middle}
+      table.t th{font-size:6.3pt;text-transform:uppercase;letter-spacing:0.04em;color:#7a736a;text-align:right;padding:1.1mm 1.2mm;border-bottom:0.5pt solid #e6e0d8;vertical-align:bottom}
+      table.t td{padding:1.1mm 1.2mm;border-bottom:0.4pt solid #e6e0d8;text-align:right;vertical-align:middle}
       table.t th.l,table.t td.l{text-align:left}
       table.t th.c,table.t td.c{text-align:center}
-      table.t th.mag{color:#8D1D2C;background:#FBF6F1}
-      table.t td.mag{background:#FBF6F1}
+      table.t th.mag{color:#8D1D2C;background:#FBF9F5}
+      table.t td.mag{background:#FBF9F5}
       table.t tr{page-break-inside:avoid}
-      table.t tfoot td{font-weight:bold;border-top:1pt solid #221E1A;background:#F7F4EF}
-      .badge{display:inline-block;border-radius:2mm;padding:0.3mm 1.6mm;font-size:6.6pt;font-weight:bold}
-      .etq{font-size:6pt;font-weight:normal;color:#8b8177;border:0.5pt solid #d9d2c6;border-radius:2mm;padding:0 1.2mm;vertical-align:0.3mm}
+      table.t tfoot td{font-weight:400;border-top:1pt solid #1c1a17;background:#F7F4EF}
+      .badge{display:inline-block;border-radius:2mm;padding:0.3mm 1.6mm;font-size:6.6pt;font-weight:400}
+      .etq{font-size:6pt;font-weight:normal;color:#7a736a;border:0.5pt solid #e6e0d8;border-radius:2mm;padding:0 1.2mm;vertical-align:0.3mm}
     </style>';
     $logo = rapLogoDataUri();
     $h = $css . '<div class="doc">'
-        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:2mm;margin-bottom:3mm"><tr>'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2mm;margin-bottom:3mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:30px">' : '<b>L’Atelier by</b>') . '</td>'
-        . '<td align="right" style="font-size:8pt;color:#7a736a;line-height:1.5"><b style="color:#221E1A;font-size:10pt">Fiche de catégorie : réseau</b><br>' . $e($lib) . ' · scoring produits</td></tr></table>'
-        . '<div style="font-family:Georgia,serif;font-size:18pt;margin:0 0 0.5mm">' . $e($cat) . '</div>'
-        . '<div style="font-size:8pt;color:#5d564e;margin-bottom:2.5mm">' . count($lignes) . ' référence(s), toutes les informations de l’écran Scoring.'
+        . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Fiche de catégorie : réseau</b><br>' . $e($lib) . ' · scoring produits</td></tr></table>'
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:18pt;margin:0 0 0.5mm">' . $e($cat) . '</div>'
+        . '<div style="font-size:8pt;color:#5c5852;margin-bottom:2.5mm">' . count($lignes) . ' référence(s), toutes les informations de l’écran Scoring.'
         . ($pond !== '' ? ' Score : ' . $e($pond) . '.' : '')
         . ' Décision : garder au-dessus de ' . $num($garder) . ', modifier à partir de ' . $num($modifier) . ', effacer en dessous ; « obligatoire » prime.'
         . ($nSans > 0 ? ' <b>Sans vente</b> (' . $nSans . ') : au catalogue, rien de vendu sur la période.' : '') . '</div>';
     // Les tuiles : ce que pèse la catégorie.
-    $tuile = fn (string $cap, string $val, string $sous) => '<td style="border:1.2px solid #E8C9A0;background:#FFF9EC;border-radius:3mm;padding:2mm 2mm;text-align:center">'
-        . '<div style="font-size:6.8pt;font-weight:bold;letter-spacing:0.09em;color:#8b8177">' . $cap . '</div>'
-        . '<div style="font-family:Georgia,serif;font-size:13pt;color:#221E1A">' . $val . '</div>'
-        . '<div style="font-size:6.5pt;color:#5d564e">' . $e($sous) . '</div></td>';
+    $tuile = fn (string $cap, string $val, string $sous) => '<td style="border:1.2px solid #F6E7CE;background:#F6E7CE;border-radius:3mm;padding:2mm 2mm;text-align:center">'
+        . '<div style="font-size:6.8pt;font-weight:400;letter-spacing:0.09em;color:#7a736a">' . $cap . '</div>'
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13pt;color:#1c1a17">' . $val . '</div>'
+        . '<div style="font-size:6.5pt;color:#5c5852">' . $e($sous) . '</div></td>';
     $h .= '<table width="100%" cellpadding="0" cellspacing="3"><tr>'
         . $tuile('RÉFÉRENCES', (string) count($lignes), ($nNec ? $nNec . ' obligatoire(s) · ' : '') . $nSans . ' sans vente')
         . $tuile('VOLUME', $num($volTot), 'pièces vendues sur la période')
         . $tuile('CHIFFRE D’AFFAIRES', $eur($caTot), $volTot > 0 ? 'prix moyen ' . $eur($caTot / $volTot) : '')
         . $tuile('MARGE BRUTE', $mgOk ? $eur($mgTot) : 'n.d.', $mgOk && $caTot > 0 ? $pct($mgTot / $caTot, 1) . ' du CA' : 'coût matière absent')
-        . $tuile('DÉCISIONS', '<span style="color:#2d7a3e">' . $dec['Garder'] . '</span> · <span style="color:#b8671a">' . $dec['Modifier'] . '</span> · <span style="color:#C0182B">' . $dec['Effacer'] . '</span>', 'garder · modifier · effacer')
+        . $tuile('DÉCISIONS', '<span style="color:#3f7a52">' . $dec['Garder'] . '</span> · <span style="color:#B0792A">' . $dec['Modifier'] . '</span> · <span style="color:#A32014">' . $dec['Effacer'] . '</span>', 'garder · modifier · effacer')
         . '</tr></table>';
     // La ventilation de la catégorie par magasin.
     if ($mags !== [] && $volTot > 0) {
         $h .= '<table width="100%" cellpadding="0" cellspacing="3" style="margin-top:1mm"><tr>';
         foreach ($mags as $i => $m) {
-            $h .= '<td style="border:0.6pt solid #E5E0D8;border-radius:2mm;padding:1.4mm 2mm"><div style="font-size:6.5pt;color:#8b8177;text-transform:uppercase;letter-spacing:0.05em">' . $e($m) . '</div>'
-                . '<div style="font-size:10pt"><b>' . $num($volMag[$i]) . '</b> <span style="font-size:7pt;color:#5d564e">pièces · ' . $pct($volMag[$i] / $volTot) . '</span></div></td>';
+            $h .= '<td style="border:0.6pt solid #e6e0d8;border-radius:2mm;padding:1.4mm 2mm"><div style="font-size:6.5pt;color:#7a736a;text-transform:uppercase;letter-spacing:0.05em">' . $e($m) . '</div>'
+                . '<div style="font-size:10pt"><b>' . $num($volMag[$i]) . '</b> <span style="font-size:7pt;color:#5c5852">pièces · ' . $pct($volMag[$i] / $volTot) . '</span></div></td>';
         }
         $h .= '</tr></table>';
     }
@@ -1137,24 +1137,24 @@ function wr_prod_categorie_pdf(): array
     $h .= '<th>CA</th><th>PV</th><th>Achat</th><th>Marge</th><th>Taux</th><th>Perte</th><th>Pos. gén.</th><th>Pos. cat.</th><th>Score</th><th class="c">Revue</th><th class="c">Décision</th></tr></thead><tbody>';
     foreach ($lignes as $l) {
         $d = (string) ($l['decision'] ?? '');
-        $h .= '<tr><td class="l" style="font-weight:bold">' . $e($l['nom'] ?? '')
-            . (!empty($l['necessaire']) ? ' <span class="etq" style="color:#2d7a3e;border-color:#bfdcc5">obligatoire</span>' : '')
+        $h .= '<tr><td class="l" style="font-weight:400">' . $e($l['nom'] ?? '')
+            . (!empty($l['necessaire']) ? ' <span class="etq" style="color:#3f7a52;border-color:#C5D7CB">obligatoire</span>' : '')
             . (!empty($l['sansVente']) ? ' <span class="etq">sans vente</span>' : '')
-            . '<div style="font-size:6pt;color:#8b8177;font-weight:normal">' . $e($l['id'] ?? '') . ((string) ($l['motifPerte'] ?? '') !== '' ? ' · rebut : ' . $e($l['motifPerte']) : '') . '</div></td>'
-            . '<td class="l" style="color:#8b8177">' . $e($l['fourn'] ?? '') . '</td>'
-            . '<td style="font-weight:bold">' . $num($l['vol'] ?? 0) . '</td>';
+            . '<div style="font-size:6pt;color:#7a736a;font-weight:normal">' . $e($l['id'] ?? '') . ((string) ($l['motifPerte'] ?? '') !== '' ? ' · rebut : ' . $e($l['motifPerte']) : '') . '</div></td>'
+            . '<td class="l" style="color:#7a736a">' . $e($l['fourn'] ?? '') . '</td>'
+            . '<td style="font-weight:400">' . $num($l['vol'] ?? 0) . '</td>';
         foreach ($mags as $i => $m) { $v = (array) ($l['parMagasin'] ?? []); $h .= '<td class="mag">' . (isset($v[$i]) ? $num($v[$i]) : '') . '</td>'; }
         $h .= '<td>' . $eur($l['ca'] ?? null) . '</td><td>' . $eur($l['pv'] ?? null) . '</td><td>' . $eur($l['achat'] ?? null) . '</td><td>' . $eur($l['marge'] ?? null) . '</td>'
-            . '<td>' . $pct($l['taux'] ?? null) . '</td><td>' . $pct($l['perte'] ?? null, 1) . ((isset($l['jete']) && $l['jete'] !== null && $l['jete'] !== '') ? ' <span style="color:#8b8177">(' . $num($l['jete']) . ')</span>' : '') . '</td>'
-            . '<td style="color:#8b8177">' . $e($l['posG'] ?? '') . '</td><td style="color:#8b8177">' . $e($l['posC'] ?? '') . '</td>'
-            . '<td style="font-weight:bold;color:' . ($coul[$d] ?? '#221E1A') . '">' . (int) round((float) ($l['score'] ?? 0)) . '</td>'
+            . '<td>' . $pct($l['taux'] ?? null) . '</td><td>' . $pct($l['perte'] ?? null, 1) . ((isset($l['jete']) && $l['jete'] !== null && $l['jete'] !== '') ? ' <span style="color:#7a736a">(' . $num($l['jete']) . ')</span>' : '') . '</td>'
+            . '<td style="color:#7a736a">' . $e($l['posG'] ?? '') . '</td><td style="color:#7a736a">' . $e($l['posC'] ?? '') . '</td>'
+            . '<td style="font-weight:400;color:' . ($coul[$d] ?? '#1c1a17') . '">' . (int) round((float) ($l['score'] ?? 0)) . '</td>'
             . '<td class="c" style="font-size:8pt">' . $etoiles($l['revue'] ?? 0) . '</td>'
-            . '<td class="c"><span class="badge" style="color:' . ($coul[$d] ?? '#221E1A') . ';background:' . ($fond[$d] ?? '#eee') . '">' . $e($d) . (!empty($l['necessaire']) ? ' ✓' : '') . '</span></td></tr>';
+            . '<td class="c"><span class="badge" style="color:' . ($coul[$d] ?? '#1c1a17') . ';background:' . ($fond[$d] ?? '#e6e0d8') . '">' . $e($d) . (!empty($l['necessaire']) ? ' ✓' : '') . '</span></td></tr>';
     }
     $h .= '</tbody><tfoot><tr><td class="l">Total catégorie</td><td></td><td>' . $num($volTot) . '</td>';
     foreach ($mags as $i => $m) { $h .= '<td class="mag">' . $num($volMag[$i]) . '</td>'; }
     $h .= '<td>' . $eur($caTot) . '</td><td></td><td></td><td>' . ($mgOk ? $eur($mgTot) : '') . '</td><td>' . ($mgOk && $caTot > 0 ? $pct($mgTot / $caTot) : '') . '</td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tfoot></table>'
-        . '<div style="font-size:6.8pt;color:#8b8177;margin-top:2mm">Volume, CA et ventilation par magasin : ventes du panel sur la période. Achat = coût matière (recettes du réseau, panel, ou saisie du cockpit). Perte = jeté / (vendu + jeté), le nombre jeté entre parenthèses. Positions par CA, sur la gamme entière et dans la catégorie.</div>';
+        . '<div style="font-size:6.8pt;color:#7a736a;margin-top:2mm">Volume, CA et ventilation par magasin : ventes du panel sur la période. Achat = coût matière (recettes du réseau, panel, ou saisie du cockpit). Perte = jeté / (vendu + jeté), le nombre jeté entre parenthèses. Positions par CA, sur la gamme entière et dans la catégorie.</div>';
     $h .= apCategorieDouzeMois($cat, $lignes, $e, $num, $eur);
     $h .= '</div>';
     $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' . $e($cat) . '</title></head><body>' . $h . '</body></html>';
@@ -1313,31 +1313,31 @@ function ppDoc(array $b): string
     $mgPond = 0.0; $caMg = 0.0;
     foreach ($lignes as $l) { if (isset($l['mn']) && is_numeric($l['mn'])) { $mgPond += (float) $l['mn'] * (float) ($l['ca'] ?? 0); $caMg += (float) ($l['ca'] ?? 0); } }
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
-      h2{font-family:Georgia,serif;font-weight:normal;font-size:14pt;margin:5mm 0 1mm}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:9pt}
+      h2{font-family:Gotham,Helvetica,Arial,sans-serif;font-weight:normal;font-size:14pt;margin:5mm 0 1mm}
       table.t{border-collapse:collapse;width:100%;font-size:7.4pt}
       table.t thead{display:table-header-group}
-      table.t th{font-size:6.2pt;text-transform:uppercase;letter-spacing:0.04em;color:#8b8177;text-align:right;padding:1mm 1.2mm;border-bottom:0.5pt solid #E5E0D8;vertical-align:bottom}
-      table.t td{padding:1mm 1.2mm;border-bottom:0.4pt solid #F0EDE7;text-align:right;vertical-align:middle}
+      table.t th{font-size:6.2pt;text-transform:uppercase;letter-spacing:0.04em;color:#7a736a;text-align:right;padding:1mm 1.2mm;border-bottom:0.5pt solid #e6e0d8;vertical-align:bottom}
+      table.t td{padding:1mm 1.2mm;border-bottom:0.4pt solid #e6e0d8;text-align:right;vertical-align:middle}
       table.t th.l,table.t td.l{text-align:left}
       table.t th.c,table.t td.c{text-align:center}
       table.t tr{page-break-inside:avoid}
-      .mu{color:#8b8177}.bas{color:#2F5D8A;font-weight:bold}.haut{color:#b8671a;font-weight:bold}.ok{color:#2d7a3e}.ko{color:#A61E1E}
+      .mu{color:#7a736a}.bas{color:#2F5D8A;font-weight:400}.haut{color:#B0792A;font-weight:400}.ok{color:#3f7a52}.ko{color:#A61E1E}
       .saut{page-break-before:always}
       table.t.grand{font-size:9pt} table.t.grand th{font-size:7.4pt}
     </style>';
     $logo = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
     $h = $css . '<div class="doc">'
-        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:2mm;margin-bottom:3mm"><tr>'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2mm;margin-bottom:3mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:30px">' : '<b>L’Atelier by</b>') . '</td>'
-        . '<td align="right" style="font-size:8pt;color:#7a736a;line-height:1.5"><b style="color:#221E1A;font-size:10pt">Catalogue : le 20/80 du réseau</b><br>' . $e($per) . '</td></tr></table>'
-        . '<div style="font-family:Georgia,serif;font-size:18pt;margin:0 0 0.5mm">Les références qui font ' . $seuil . ' % du chiffre</div>'
-        . '<div style="font-size:8pt;color:#5d564e;margin-bottom:2.5mm">Le chiffre d’affaires de chaque référence sur la période du score (' . $e($per) . '), la plus grosse d’abord, jusqu’à '
+        . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Catalogue : le 20/80 du réseau</b><br>' . $e($per) . '</td></tr></table>'
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:18pt;margin:0 0 0.5mm">Les références qui font ' . $seuil . ' % du chiffre</div>'
+        . '<div style="font-size:8pt;color:#5c5852;margin-bottom:2.5mm">Le chiffre d’affaires de chaque référence sur la période du score (' . $e($per) . '), la plus grosse d’abord, jusqu’à '
         . $seuil . ' % du chiffre du réseau. Puis, pour elles, le prix encaissé et le volume de chaque magasin (' . $e($perPx ?: $per) . ').</div>';
-    $tuile = static fn (string $cap, string $val, string $sous) => '<td style="border:1.2px solid #E8C9A0;background:#FFF9EC;border-radius:3mm;padding:2mm;text-align:center">'
-        . '<div style="font-size:6.8pt;font-weight:bold;letter-spacing:0.09em;color:#8b8177">' . $cap . '</div>'
-        . '<div style="font-family:Georgia,serif;font-size:13pt;color:#221E1A">' . $val . '</div>'
-        . '<div style="font-size:6.5pt;color:#5d564e">' . $sous . '</div></td>';
+    $tuile = static fn (string $cap, string $val, string $sous) => '<td style="border:1.2px solid #F6E7CE;background:#F6E7CE;border-radius:3mm;padding:2mm;text-align:center">'
+        . '<div style="font-size:6.8pt;font-weight:400;letter-spacing:0.09em;color:#7a736a">' . $cap . '</div>'
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13pt;color:#1c1a17">' . $val . '</div>'
+        . '<div style="font-size:6.5pt;color:#5c5852">' . $sous . '</div></td>';
     $h .= '<table width="100%" cellpadding="0" cellspacing="3"><tr>'
         . $tuile('RÉFÉRENCES', count($lignes) . ($nTot > 0 ? ' / ' . $nTot : ''), $nTot > 0 ? $e($num(100 * count($lignes) / $nTot, 0) . ' % des références vendues') : '')
         . $tuile('LEUR CHIFFRE', $e($eur($caPar, 0)), $caTot > 0 ? $e($num(100 * $caPar / $caTot, 1) . ' % du chiffre du réseau (' . $eur($caTot, 0) . ')') : '')
@@ -1351,11 +1351,11 @@ function ppDoc(array $b): string
         $pts = implode(' ', array_map(static fn ($v, $i) => round($i * $W / $n, 1) . ',' . round($H - $H * max(0, min(100, (float) $v)) / 100, 1), $cum, array_keys($cum)));
         $xs = $nTot > 0 ? round($W * count($lignes) / $nTot, 1) : null;
         $h .= '<table width="100%" style="margin-top:2mm"><tr><td style="width:95mm"><svg width="95mm" height="30mm" viewBox="-2 -4 254 80">'
-            . '<line x1="0" y1="' . round($H - $H * $seuil / 100, 1) . '" x2="250" y2="' . round($H - $H * $seuil / 100, 1) . '" stroke="#E8C9A0" stroke-width="0.8" stroke-dasharray="3,2"/>'
-            . ($xs !== null ? '<line x1="' . $xs . '" y1="0" x2="' . $xs . '" y2="70" stroke="#E8C9A0" stroke-width="0.8" stroke-dasharray="3,2"/>' : '')
+            . '<line x1="0" y1="' . round($H - $H * $seuil / 100, 1) . '" x2="250" y2="' . round($H - $H * $seuil / 100, 1) . '" stroke="#F6E7CE" stroke-width="0.8" stroke-dasharray="3,2"/>'
+            . ($xs !== null ? '<line x1="' . $xs . '" y1="0" x2="' . $xs . '" y2="70" stroke="#F6E7CE" stroke-width="0.8" stroke-dasharray="3,2"/>' : '')
             . '<polyline points="' . $pts . '" fill="none" stroke="#8D1D2C" stroke-width="1.6"/>'
-            . '<line x1="0" y1="70" x2="250" y2="70" stroke="#DED6C9" stroke-width="0.6"/></svg></td>'
-            . '<td style="font-size:7.5pt;color:#5d564e;vertical-align:middle;padding-left:4mm">La courbe : la part cumulée du chiffre (en hauteur) selon la part des références (en largeur), de la plus vendue à la moins vendue. '
+            . '<line x1="0" y1="70" x2="250" y2="70" stroke="#e6e0d8" stroke-width="0.6"/></svg></td>'
+            . '<td style="font-size:7.5pt;color:#5c5852;vertical-align:middle;padding-left:4mm">La courbe : la part cumulée du chiffre (en hauteur) selon la part des références (en largeur), de la plus vendue à la moins vendue. '
             . ($nTot > 0 ? '<b>' . $num(100 * count($lignes) / $nTot, 0) . ' % des références</b> font ' . $seuil . ' % du chiffre.' : '') . '</td></tr></table>';
     }
     // Le tableau du 20/80.
@@ -1382,7 +1382,7 @@ function ppDoc(array $b): string
         $blocs = []; $muettes = [];
         foreach ($PC as $c) {
             if ($c['top'] === []) { $muettes[] = $c['cat']; continue; }
-            $t = '<div style="border:0.8pt solid #E5E0D8;border-radius:2mm;padding:2mm 2.5mm 1mm;margin-bottom:3mm;page-break-inside:avoid">'
+            $t = '<div style="border:0.8pt solid #e6e0d8;border-radius:2mm;padding:2mm 2.5mm 1mm;margin-bottom:3mm;page-break-inside:avoid">'
                 . '<div style="font-size:12pt;margin-bottom:1mm"><b>' . $e($c['cat']) . '</b> <span class="mu" style="font-size:9pt">· ' . count($c['top']) . ' sur ' . $c['vendues']
                 . ' référence' . ($c['vendues'] > 1 ? 's' : '') . ' vendue' . ($c['vendues'] > 1 ? 's' : '') . ' · ' . $e($eur($c['ca'], 0))
                 . ($caTot > 0 ? ' · ' . $e($num(100 * $c['ca'] / $caTot, 1)) . ' % du réseau' : '') . '</span></div>'
@@ -1421,10 +1421,10 @@ function ppDoc(array $b): string
             $nSoO += count(array_filter($p['sortent'], static fn ($r) => !empty($r['oblig'])));
             foreach ($p['saisons'] as $x) { foreach ($x['retenues'] as $r) { $saisRet[(string) ($r['k'] ?? $r['nom'] ?? '')] = true; } }
         }
-        $COUL = ['g' => ['#E6F2E8', '#2d7a3e'], 'c' => ['#F4EFE8', '#5d564e'], 's' => ['#FDF2E5', '#a0620c'], 'r' => ['#FBEBED', '#A61E1E']];
+        $COUL = ['g' => ['#E8EFEA', '#3f7a52'], 'c' => ['#FBF9F5', '#5c5852'], 's' => ['#F6E7CE', '#7A5207'], 'r' => ['#F6ECED', '#A61E1E']];
         $tete = static fn (string $k, string $num, string $titre, string $sous) => '<td style="width:25%;vertical-align:top;background:' . $COUL[$k][0] . ';border-radius:2mm;padding:2mm 2.5mm">'
             . '<div style="font-size:11pt;color:' . $COUL[$k][1] . '"><span style="display:inline-block;width:5.2mm;height:5.2mm;line-height:5.2mm;border-radius:50%;background:' . $COUL[$k][1]
-            . ';color:#fff;text-align:center;font-size:9pt;font-weight:bold;margin-right:1.5mm">' . $num . '</span><b>' . $titre . '</b></div><div style="font-size:8.6pt;color:#3d3833;margin-top:0.8mm">' . $sous . '</div></td>';
+            . ';color:#fff;text-align:center;font-size:9pt;font-weight:400;margin-right:1.5mm">' . $num . '</span><b>' . $titre . '</b></div><div style="font-size:8.6pt;color:#3d3833;margin-top:0.8mm">' . $sous . '</div></td>';
         $h .= '<div class="saut"></div><h2 style="font-size:17pt">L’assortiment proposé, catégorie par catégorie</h2>'
             . '<div style="font-size:9.5pt;color:#3d3833;margin:1mm 0 3mm">Pour chaque catégorie, ce que nous proposons de vendre. Chaque fiche se lit de gauche à droite.</div>'
             . '<table width="100%" cellpadding="0" cellspacing="4" style="margin-bottom:3mm"><tr>'
@@ -1433,7 +1433,7 @@ function ppDoc(array $b): string
             . $tete('s', '3', $nS . ' produits par saison', 'Pour chaque saison du panel : les ' . $nS . ' meilleurs produits de la saison, sur les 12 derniers mois.')
             . $tete('r', '4', 'À retirer', 'Tout le reste de la catégorie.')
             . '</tr></table>'
-            . '<div style="font-size:10pt;margin-bottom:4mm;padding:2mm 3mm;border:0.8pt solid #E5E0D8;border-radius:2mm">Au total, <b>' . count($refs) . ' produits</b> aujourd’hui. Proposé : <b>'
+            . '<div style="font-size:10pt;margin-bottom:4mm;padding:2mm 3mm;border:0.8pt solid #e6e0d8;border-radius:2mm">Au total, <b>' . count($refs) . ' produits</b> aujourd’hui. Proposé : <b>'
             . ($nG + $nCl) . ' toute l’année</b> (' . $nG . ' à garder + ' . $nCl . ' classiques), <b>' . count($saisRet) . ' de saison</b>, <b>' . $nSo . ' à retirer</b>'
             . ($nSoO > 0 ? ', dont <b class="ko">' . $nSoO . ' obligatoire' . ($nSoO > 1 ? 's' : '') . ' aujourd’hui</b>' : '') . '.'
             . (array_key_exists('saisonsLues', $b) && !$b['saisonsLues'] ? '<br><span class="ko">Les ventes des 12 derniers mois n’ont pas pu être lues : pas de produit de saison proposé.</span>' : '')
@@ -1444,13 +1444,13 @@ function ppDoc(array $b): string
             $caCat = 0.0; foreach ($PC as $c) { if ($c['cat'] === $p['cat']) { $caCat = (float) $c['ca']; } }
             $g = implode('', array_map(static fn ($r) => $li($e($r['nom'] ?? ''), $caCat > 0 ? '<span class="mu">' . $num(100 * (float) ($r['ca'] ?? 0) / $caCat, 0) . ' % du chiffre de la catégorie</span>' : ''), $p['garde']))
                 ?: $vide('Aucune vente sur la période.');
-            $cl = implode('', array_map(static fn ($r) => $li($e($r['nom'] ?? ''), ($r['decision'] ?? '') === 'Effacer' ? '<span class="ko">⚠ score faible : à remplacer par un meilleur produit</span>' : ''), $p['classiques']))
+            $cl = implode('', array_map(static fn ($r) => $li($e($r['nom'] ?? ''), ($r['decision'] ?? '') === 'Effacer' ? '<span class="ko">score faible : à remplacer par un meilleur produit</span>' : ''), $p['classiques']))
                 . ($p['manque'] > 0 ? $vide(($p['classiques'] === [] ? 'Aucun classique' : 'Il manque ' . $p['manque'] . ' classique' . ($p['manque'] > 1 ? 's' : '')) . ' : pas d’autre produit vendu toute l’année dans cette catégorie.') : '');
             $sa = '';
             foreach ($p['saisons'] as $sid => $x) {
                 $sa .= '<div style="margin:0 0 2mm"><div style="font-size:9.6pt">' . ($nomS[(string) $sid] ?? $e((string) $sid)) . '</div>'
                     . ($x['retenues'] === [] ? $vide('aucun produit de la saison vendu sur 12 mois')
-                        : '<div style="margin-top:0.4mm">' . implode('<br>', array_map(static fn ($r) => $e($r['nom'] ?? '') . (($r['decision'] ?? '') === 'Effacer' ? ' <span class="ko" style="font-size:8pt">⚠ score faible</span>' : ''), $x['retenues'])) . '</div>')
+                        : '<div style="margin-top:0.4mm">' . implode('<br>', array_map(static fn ($r) => $e($r['nom'] ?? '') . (($r['decision'] ?? '') === 'Effacer' ? ' <span class="ko" style="font-size:8pt">score faible</span>' : ''), $x['retenues'])) . '</div>')
                     . '</div>';
             }
             if ($sa === '') { $sa = $vide('Pas de produit de saison dans cette catégorie.'); }
@@ -1458,9 +1458,9 @@ function ppDoc(array $b): string
                 . ((float) ($r['ca'] ?? 0) <= 0 && (float) ($r['caAn'] ?? 0) <= 0 ? '<span class="mu">jamais vendu</span>' : (!empty($r['saisonnier']) ? '<span class="mu">de saison, pas dans les ' . $nS . ' meilleurs</span>' : '')))), $p['sortent']))
                 ?: $vide('Rien à retirer.');
             $col = static fn (string $k, string $corps) => '<td style="width:25%;vertical-align:top;padding:2.5mm 3mm;border-top:2.5pt solid ' . $COUL[$k][1] . '">' . $corps . '</td>';
-            $h .= '<div style="page-break-inside:avoid;border:0.8pt solid #DED6C9;border-radius:2.5mm;margin-bottom:4mm;font-size:11pt">'
-                . '<div style="padding:2.2mm 3mm;border-bottom:0.6pt solid #E5E0D8"><span style="font-size:14pt"><b>' . $e($p['cat']) . '</b></span>'
-                . ' <span style="font-size:9.5pt;color:#5d564e">— aujourd’hui ' . $p['refs'] . ' produit' . ($p['refs'] > 1 ? 's' : '') . ' → ' . (count($p['garde']) + count($p['classiques'])) . ' toute l’année'
+            $h .= '<div style="page-break-inside:avoid;border:0.8pt solid #e6e0d8;border-radius:2.5mm;margin-bottom:4mm;font-size:11pt">'
+                . '<div style="padding:2.2mm 3mm;border-bottom:0.6pt solid #e6e0d8"><span style="font-size:14pt"><b>' . $e($p['cat']) . '</b></span>'
+                . ' <span style="font-size:9.5pt;color:#5c5852">— aujourd’hui ' . $p['refs'] . ' produit' . ($p['refs'] > 1 ? 's' : '') . ' → ' . (count($p['garde']) + count($p['classiques'])) . ' toute l’année'
                 . ($p['saisons'] !== [] ? ' + ' . $nS . ' par saison' : '') . ', ' . count($p['sortent']) . ' à retirer</span></div>'
                 . '<table width="100%" cellpadding="0" cellspacing="0"><tr>' . $col('g', $g) . $col('c', $cl) . $col('s', $sa) . $col('r', $so) . '</tr></table></div>';
         }
@@ -1470,7 +1470,7 @@ function ppDoc(array $b): string
     if ($mags !== []) {
         $S = ppSynthese($lignes, $mags);
         $h .= '<div class="saut"></div><h2>Le prix et le volume, magasin par magasin</h2>'
-            . '<div style="font-size:7.8pt;color:#5d564e;margin-bottom:2mm">Sur les ' . count($lignes) . ' références du 20/80 (' . $e($perPx ?: $per) . '). <b>Prix</b> : le prix encaissé (remises comprises) face au prix réseau, la médiane des magasins. '
+            . '<div style="font-size:7.8pt;color:#5c5852;margin-bottom:2mm">Sur les ' . count($lignes) . ' références du 20/80 (' . $e($perPx ?: $per) . '). <b>Prix</b> : le prix encaissé (remises comprises) face au prix réseau, la médiane des magasins. '
             . '<b>Volume</b> : les pièces vendues pour 10 000 € de chiffre du magasin, face aux autres magasins qui la vendent — à taille égale. <b>Alignement</b> : ce qu’un prix réseau changerait, en € par mois, à volume constant (positif : le magasin vend sous le réseau).</div>'
             . '<table class="t"><thead><tr><th class="l">Magasin</th><th>Vendues</th><th>Prix face au réseau</th><th>Plus cher · moins cher</th><th>Volume à taille égale</th><th>Alignement</th><th class="l">Ne vend pas</th></tr></thead><tbody>';
         foreach ($S as $o) {
@@ -1486,7 +1486,7 @@ function ppDoc(array $b): string
         // La grille : une ligne par référence, une colonne par magasin — le prix, puis les pièces et le volume à taille égale.
         $court = static fn ($m) => (string) ($m['nom'] ?? '');
         $h .= '<div class="saut"></div><h2>Référence par référence</h2>'
-            . '<div style="font-size:7.8pt;color:#5d564e;margin-bottom:2mm">Dans chaque case : le prix encaissé (<span class="bas">bleu</span> sous le prix réseau, <span class="haut">abricot</span> au-dessus), puis les pièces et le volume à taille égale face aux autres. « — » : pas vendue.</div>'
+            . '<div style="font-size:7.8pt;color:#5c5852;margin-bottom:2mm">Dans chaque case : le prix encaissé (<span class="bas">bleu</span> sous le prix réseau, <span class="haut">abricot</span> au-dessus), puis les pièces et le volume à taille égale face aux autres. « — » : pas vendue.</div>'
             . '<table class="t"><thead><tr><th class="l">Référence</th><th>Prix réseau</th><th>Écart</th>';
         foreach ($mags as $m) { $h .= '<th class="c">' . $e($court($m)) . '</th>'; }
         $h .= '</tr></thead><tbody>';
@@ -1506,7 +1506,7 @@ function ppDoc(array $b): string
         }
         $h .= '</tbody></table>';
     } else {
-        $h .= '<div style="margin-top:4mm;font-size:8pt;color:#8b8177">Le prix et le volume par magasin n’ont pas pu être lus : seule la liste du 20/80 est imprimée.</div>';
+        $h .= '<div style="margin-top:4mm;font-size:8pt;color:#7a736a">Le prix et le volume par magasin n’ont pas pu être lus : seule la liste du 20/80 est imprimée.</div>';
     }
     $h .= '</div>';
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Catalogue 20/80</title></head><body>' . $h . '</body></html>';
@@ -1576,7 +1576,7 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
     $court = fn (string $n) => trim(preg_replace('/^Atelier by\s*-?\s*/u', '', $n));
 
     // --- les graphiques : une page entière, quatre vues -------------------
-    $coulMag = ['#8D1D2C', '#C17A2A', '#2d7a3e', '#6b7fa8', '#C9A227', '#5d564e'];
+    $coulMag = ['#8D1D2C', '#B0792A', '#3f7a52', '#6b7fa8', '#B0792A', '#5c5852'];
     $sids = array_keys($shops);
     $colDe = fn (int $sid) => $coulMag[array_search($sid, $sids, true) % count($coulMag)];
     $legende = '';
@@ -1590,11 +1590,11 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
         foreach ($series as $sv) { foreach ($sv as $m => $v) { $tot[$m] += (float) $v; } }
         $max = max(1.0, max($tot));
         $pas = $gW / 12; $bw = $pas * 0.64;
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Helvetica,Arial,sans-serif">';
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Gotham,Helvetica,Arial,sans-serif">';
         for ($g = 0; $g <= 4; $g++) {
             $y = $mT + $gH - $gH * $g / 4;
-            $svg .= '<line x1="' . $mL . '" y1="' . round($y, 1) . '" x2="' . ($mL + $gW) . '" y2="' . round($y, 1) . '" stroke="#E5E0D8" stroke-width="0.6"/>'
-                . '<text x="' . ($mL - 3) . '" y="' . round($y + 2.5, 1) . '" font-size="7.5" fill="#8b8177" text-anchor="end">' . ($fmt === 'eur' ? $num($max * $g / 4 / 1000, 1) . ' k€' : $num($max * $g / 4)) . '</text>';
+            $svg .= '<line x1="' . $mL . '" y1="' . round($y, 1) . '" x2="' . ($mL + $gW) . '" y2="' . round($y, 1) . '" stroke="#e6e0d8" stroke-width="0.6"/>'
+                . '<text x="' . ($mL - 3) . '" y="' . round($y + 2.5, 1) . '" font-size="7.5" fill="#7a736a" text-anchor="end">' . ($fmt === 'eur' ? $num($max * $g / 4 / 1000, 1) . ' k€' : $num($max * $g / 4)) . '</text>';
         }
         foreach ($mois as $m => $t) {
             $x = $mL + $pas * $m + ($pas - $bw) / 2; $yCur = $mT + $gH;
@@ -1603,9 +1603,9 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
                 if ($hh > 0) { $yCur -= $hh; $svg .= '<rect x="' . round($x, 1) . '" y="' . round($yCur, 1) . '" width="' . round($bw, 1) . '" height="' . round($hh, 1) . '" fill="' . $coul[$i] . '"/>'; }
             }
             if ($etiquette && $tot[$m] > 0) {
-                $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . round($yCur - 2.5, 1) . '" font-size="7.5" font-weight="bold" fill="#221E1A" text-anchor="middle">' . ($fmt === 'eur' ? $num($tot[$m]) : $num($tot[$m])) . '</text>';
+                $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . round($yCur - 2.5, 1) . '" font-size="7.5" font-weight="bold" fill="#1c1a17" text-anchor="middle">' . ($fmt === 'eur' ? $num($tot[$m]) : $num($tot[$m])) . '</text>';
             }
-            $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . ($H - 7) . '" font-size="7.5" fill="#5d564e" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
+            $svg .= '<text x="' . round($x + $bw / 2, 1) . '" y="' . ($H - 7) . '" font-size="7.5" fill="#5c5852" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
         }
         return $svg . '</svg>';
     };
@@ -1615,14 +1615,14 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
         $max = 1.0;
         foreach ($series as $sv) { $max = max($max, max($sv)); }
         $pas = $gW / 12;
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Helvetica,Arial,sans-serif">';
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Gotham,Helvetica,Arial,sans-serif">';
         for ($g = 0; $g <= 4; $g++) {
             $y = $mT + $gH - $gH * $g / 4;
-            $svg .= '<line x1="' . $mL . '" y1="' . round($y, 1) . '" x2="' . ($mL + $gW) . '" y2="' . round($y, 1) . '" stroke="#E5E0D8" stroke-width="0.6"/>'
-                . '<text x="' . ($mL - 3) . '" y="' . round($y + 2.5, 1) . '" font-size="7.5" fill="#8b8177" text-anchor="end">' . $num($max * $g / 4) . '</text>';
+            $svg .= '<line x1="' . $mL . '" y1="' . round($y, 1) . '" x2="' . ($mL + $gW) . '" y2="' . round($y, 1) . '" stroke="#e6e0d8" stroke-width="0.6"/>'
+                . '<text x="' . ($mL - 3) . '" y="' . round($y + 2.5, 1) . '" font-size="7.5" fill="#7a736a" text-anchor="end">' . $num($max * $g / 4) . '</text>';
         }
         foreach ($mois as $m => $t) {
-            $svg .= '<text x="' . round($mL + $pas * $m + $pas / 2, 1) . '" y="' . ($H - 7) . '" font-size="7.5" fill="#5d564e" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
+            $svg .= '<text x="' . round($mL + $pas * $m + $pas / 2, 1) . '" y="' . ($H - 7) . '" font-size="7.5" fill="#5c5852" text-anchor="middle">' . $e($libM($t)) . ' ' . date('y', $t) . '</text>';
         }
         foreach ($series as $i => $sv) {
             $pts = [];
@@ -1644,28 +1644,28 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
         arsort($parMag);
         $W = 520; $rowH = 40; $H = 20 + $rowH * count($parMag); $mL = 150; $gW = $W - $mL - 90;
         $max = max(1.0, max($parMag));
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Helvetica,Arial,sans-serif">';
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $W . '" height="' . $H . '" viewBox="0 0 ' . $W . ' ' . $H . '" style="font-family:Gotham,Helvetica,Arial,sans-serif">';
         $i = 0;
         foreach ($parMag as $sid => $v) {
             $y = 10 + $rowH * $i; $w = $gW * $v / $max;
-            $svg .= '<text x="' . ($mL - 6) . '" y="' . ($y + 17) . '" font-size="9" fill="#221E1A" text-anchor="end">' . $e($court($shops[$sid])) . '</text>'
-                . '<rect x="' . $mL . '" y="' . $y . '" width="' . $gW . '" height="26" fill="#F0EDE7" rx="3"/>'
+            $svg .= '<text x="' . ($mL - 6) . '" y="' . ($y + 17) . '" font-size="9" fill="#1c1a17" text-anchor="end">' . $e($court($shops[$sid])) . '</text>'
+                . '<rect x="' . $mL . '" y="' . $y . '" width="' . $gW . '" height="26" fill="#e6e0d8" rx="3"/>'
                 . '<rect x="' . $mL . '" y="' . $y . '" width="' . round($w, 1) . '" height="18" fill="' . $colDe($sid) . '" rx="2"/>'
-                . '<text x="' . round($mL + $gW + 6, 1) . '" y="' . ($y + 17) . '" font-size="9" font-weight="bold" fill="#221E1A">' . $num($v) . ' <tspan font-weight="normal" fill="#5d564e">· ' . ($tot > 0 ? $num($v / $tot * 100) : '0') . ' %</tspan></text>';
+                . '<text x="' . round($mL + $gW + 6, 1) . '" y="' . ($y + 17) . '" font-size="9" font-weight="bold" fill="#1c1a17">' . $num($v) . ' <tspan font-weight="normal" fill="#5c5852">· ' . ($tot > 0 ? $num($v / $tot * 100) : '0') . ' %</tspan></text>';
             $i++;
         }
         return $svg . '</svg>';
     };
-    $cadre = fn (string $titre, string $sous, string $svg) => '<td width="50%" style="vertical-align:top;padding:1mm"><div style="border:0.6pt solid #E5E0D8;border-radius:2mm;padding:2mm 2mm 1mm">'
-        . '<div style="font-size:9pt;font-weight:bold">' . $titre . '</div><div style="font-size:6.8pt;color:#8b8177;margin-bottom:1mm">' . $sous . '</div>' . $svg . '</div></td>';
+    $cadre = fn (string $titre, string $sous, string $svg) => '<td width="50%" style="vertical-align:top;padding:1mm"><div style="border:0.6pt solid #e6e0d8;border-radius:2mm;padding:2mm 2mm 1mm">'
+        . '<div style="font-size:9pt;font-weight:400">' . $titre . '</div><div style="font-size:6.8pt;color:#7a736a;margin-bottom:1mm">' . $sous . '</div>' . $svg . '</div></td>';
     $serieMag = []; $coulSer = [];
     foreach ($shops as $sid => $nom) { $serieMag[] = $volMag[$sid]; $coulSer[] = $colDe($sid); }
     $pageGraph = '<div style="page-break-before:always"></div>'
-        . '<div style="font-family:Georgia,serif;font-size:15pt;margin:0 0 0.5mm">' . $e($cat) . ' : les graphiques</div>'
-        . '<div style="font-size:8pt;color:#5d564e;margin-bottom:1.5mm">Douze derniers mois, ' . $e($libM($mois[0])) . ' ' . date('Y', $mois[0]) . ' à ' . $e($libM($mois[11])) . ' ' . date('Y', $mois[11]) . '. ' . $legende . '</div>'
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:15pt;margin:0 0 0.5mm">' . $e($cat) . ' : les graphiques</div>'
+        . '<div style="font-size:8pt;color:#5c5852;margin-bottom:1.5mm">Douze derniers mois, ' . $e($libM($mois[0])) . ' ' . date('Y', $mois[0]) . ' à ' . $e($libM($mois[11])) . ' ' . date('Y', $mois[11]) . '. ' . $legende . '</div>'
         . '<table width="100%" cellpadding="0" cellspacing="0"><tr>'
         . $cadre('Volume réseau par mois', 'pièces vendues, empilées par magasin, total au-dessus', $barres($serieMag, $coulSer, 'n'))
-        . $cadre('Chiffre d’affaires réseau par mois', 'ventes du panel, en euros', $barres([$caMois], ['#221E1A'], 'eur'))
+        . $cadre('Chiffre d’affaires réseau par mois', 'ventes du panel, en euros', $barres([$caMois], ['#1c1a17'], 'eur'))
         . '</tr><tr>'
         . $cadre('Volume par magasin, mois par mois', 'une courbe par magasin', $courbes($serieMag, $coulSer))
         . $cadre('Part de chaque magasin sur douze mois', 'pièces vendues et part du réseau', $parts())
@@ -1674,36 +1674,36 @@ function apCategorieDouzeMois(string $cat, array $lignes, callable $e, callable 
     // --- le tableau : une colonne par mois --------------------------------
     $th = '<th class="l">Référence</th>';
     foreach ($mois as $t) { $th .= '<th>' . $e($libM($t)) . '<br><span style="font-weight:normal">' . date('Y', $t) . '</span></th>'; }
-    $th .= '<th style="color:#221E1A">Total</th>';
+    $th .= '<th style="color:#1c1a17">Total</th>';
     $tb = '';
     $ordre = array_keys($ids);
     usort($ordre, fn ($a, $b2) => array_sum($volRef[$b2] ?? []) <=> array_sum($volRef[$a] ?? []));
     foreach ($ordre as $pid) {
         $tot = array_sum($volRef[$pid] ?? []);
-        $tb .= '<tr><td class="l" style="font-weight:bold">' . $e($ids[$pid]) . '</td>';
+        $tb .= '<tr><td class="l" style="font-weight:400">' . $e($ids[$pid]) . '</td>';
         foreach ($mois as $m => $t) {
             $v = $volRef[$pid][$m] ?? 0.0;
-            $tb .= '<td' . ($v == 0.0 ? ' style="color:#c9c3b8"' : '') . '>' . ($v == 0.0 ? '·' : $num($v)) . '</td>';
+            $tb .= '<td' . ($v == 0.0 ? ' style="color:#b8b2a8"' : '') . '>' . ($v == 0.0 ? '·' : $num($v)) . '</td>';
         }
-        $tb .= '<td style="font-weight:bold">' . $num($tot) . '</td></tr>';
+        $tb .= '<td style="font-weight:400">' . $num($tot) . '</td></tr>';
     }
     $tf = '<tr><td class="l">Total catégorie</td>';
     foreach ($volMois as $v) { $tf .= '<td>' . $num($v) . '</td>'; }
     $tf .= '<td>' . $num(array_sum($volMois)) . '</td></tr>';
-    $tf .= '<tr><td class="l" style="font-weight:normal;color:#5d564e">Chiffre d’affaires</td>';
-    foreach ($caMois as $v) { $tf .= '<td style="font-weight:normal;color:#5d564e">' . ($v == 0.0 ? '' : $eur($v)) . '</td>'; }
-    $tf .= '<td style="font-weight:normal;color:#5d564e">' . $eur(array_sum($caMois)) . '</td></tr>';
+    $tf .= '<tr><td class="l" style="font-weight:normal;color:#5c5852">Chiffre d’affaires</td>';
+    foreach ($caMois as $v) { $tf .= '<td style="font-weight:normal;color:#5c5852">' . ($v == 0.0 ? '' : $eur($v)) . '</td>'; }
+    $tf .= '<td style="font-weight:normal;color:#5c5852">' . $eur(array_sum($caMois)) . '</td></tr>';
     foreach ($shops as $sid => $nom) {
         $col = $colDe($sid);
         $tf .= '<tr><td class="l" style="font-weight:normal"><span style="display:inline-block;width:2mm;height:2mm;background:' . $col . ';border-radius:0.4mm;margin-right:1.2mm"></span>' . $e($court($nom)) . '</td>';
-        foreach ($volMag[$sid] as $v) { $tf .= '<td style="font-weight:normal">' . ($v == 0.0 ? '<span style="color:#c9c3b8">·</span>' : $num($v)) . '</td>'; }
+        foreach ($volMag[$sid] as $v) { $tf .= '<td style="font-weight:normal">' . ($v == 0.0 ? '<span style="color:#b8b2a8">·</span>' : $num($v)) . '</td>'; }
         $tf .= '<td style="font-weight:normal">' . $num(array_sum($volMag[$sid])) . '</td></tr>';
     }
 
     return '<div style="page-break-before:always"></div>'
-        . '<div style="font-family:Georgia,serif;font-size:15pt;margin:0 0 0.5mm">' . $e($cat) . ' : les douze derniers mois</div>'
-        . '<div style="font-size:8pt;color:#5d564e;margin-bottom:2mm">Pièces vendues par mois, ' . $e($libM($mois[0])) . ' ' . date('Y', $mois[0]) . ' à ' . $e($libM($mois[11])) . ' ' . date('Y', $mois[11]) . ', tous magasins, puis le total de la catégorie, son chiffre d’affaires et la ventilation par magasin.</div>'
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:15pt;margin:0 0 0.5mm">' . $e($cat) . ' : les douze derniers mois</div>'
+        . '<div style="font-size:8pt;color:#5c5852;margin-bottom:2mm">Pièces vendues par mois, ' . $e($libM($mois[0])) . ' ' . date('Y', $mois[0]) . ' à ' . $e($libM($mois[11])) . ' ' . date('Y', $mois[11]) . ', tous magasins, puis le total de la catégorie, son chiffre d’affaires et la ventilation par magasin.</div>'
         . '<table class="t"><thead><tr>' . $th . '</tr></thead><tbody>' . $tb . '</tbody><tfoot>' . $tf . '</tfoot></table>'
-        . '<div style="font-size:6.8pt;color:#8b8177;margin-top:2mm">Un point marque un mois sans vente. Le CA est celui du panel, TVA comprise selon sa règle. Les graphiques sont en page suivante.</div>'
+        . '<div style="font-size:6.8pt;color:#7a736a;margin-top:2mm">Un point marque un mois sans vente. Le CA est celui du panel, TVA comprise selon sa règle. Les graphiques sont en page suivante.</div>'
         . $pageGraph;
 }

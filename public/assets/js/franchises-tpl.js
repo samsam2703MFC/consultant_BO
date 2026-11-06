@@ -95,7 +95,7 @@ export function tplFF(c, x){
       <div class="mko-corps mko-mu" style="padding-top:8px">Un clic sur une ligne ouvre la fiche du magasin. Le scoring : Note Google et Tâches viennent du volet journalier, Client mystère du terrain, Budget du pilotage${c.sqReseau ? ` · réseau ${esc(c.sqReseau.sur20)} / 20 en moyenne` : ''}.</div></div>`;
     return page(outils + table + (c.sqTri ? x.sqCartes(c, x) : ''));
   }
-  if (f.indispo) { return page(titre + `<div class="mko-carte" style="padding:20px 22px;color:#8D1D2C;font-size:13px">${esc(f.indispo)}</div>`); }
+  if (f.indispo) { return page(titre + `<div class="mko-carte" style="padding:20px 22px;color:var(--accent);font-size:13px">${esc(f.indispo)}</div>`); }
   if (f.chargement) { return page(titre + `<div class="mko-carte" style="padding:20px 22px;color:var(--color-text-muted);font-size:13px">Lecture de la fiche de ${esc(f.shopNom)} : tâches et leurs notes, invendus, réclamations, objectifs, visites, plans, scoring…</div>`); }
   const journal = `<div class="mko-carte" style="margin-top:12px"><div class="mko-ct"><span class="mko-lab">Journal — constaté, noté ou décidé</span><span class="mko-mini">60 jours</span></div><div class="mko-corps" style="padding-top:4px">${f.journal.length ? f.journal.map(e => `<div class="ff-jl"><span class="d">${esc(e.le)}</span><span class="gc-src ${e.volet === 'terrain' ? 't' : 'j'}">${esc(e.volet)}</span><span>${esc(e.texte)}</span></div>`).join('') : '<div class="mko-mu">Rien sur la période.</div>'}</div></div>`;
   // La fiche s'ouvre désormais sur ce magasin (B2) : avant sa première lecture, on attend.
@@ -105,13 +105,13 @@ export function tplFF(c, x){
   const bandeau = `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-corps" style="display:flex;flex-wrap:wrap;gap:18px;align-items:stretch">
     <div style="flex:1 1 220px;display:flex;flex-direction:column;gap:6px;justify-content:center">
       <span class="mko-lab">Scoring · ${esc(S2 ? S2.tri : 'du trimestre')}${S2 && S2.enCours ? ' · en cours' : ''}</span>
-      ${S2 ? `<div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:var(--font-display);font-size:46px;line-height:1">${esc(S2.total)}</span><span class="mko-mu" style="font-size:15px">/ ${S2.sur}</span></div>
+      ${S2 ? `<div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:var(--font-display);font-size:26px;line-height:1">${esc(S2.total)}</span><span class="mko-mu" style="font-size:15px">/ ${S2.sur}</span></div>
       <div>${st(S2.pct, S2.na, 'gd')}</div>
       <div class="mko-mu" style="font-size:12px">${S2.rang}<sup>e</sup> sur ${S2.magasins} · <span class="${S2.deltaCls}">${esc(S2.delta)}</span>${S2.manque ? ` · ${S2.manque} poste(s) sans donnée, compté(s) 0` : ''}${S2.rapport ? ` · <a href="${esc(S2.rapport)}" target="_blank" rel="noopener">rapport A4</a>` : ''}</div>` : '<div class="mko-mu">Pas de scoring calculé pour ce trimestre.</div>'}
     </div>
     ${S2 ? `<div style="flex:3 1 560px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">${S2.postes.map(p => `<div style="background:var(--color-background-secondary);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px">
       <span class="mko-lab">${esc(p.nom)}</span><div>${st(p.pct, p.na, 'sm')}</div><b style="font-size:16px">${esc(p.v)}${p.na ? '' : '<small class="mko-mu"> / 5</small>'}</b>
-      <span class="mko-mu" style="font-size:11.5px">${esc(p.d)}</span>${p.alerte ? `<span class="ko" style="font-size:11.5px;font-weight:500">${esc(p.alerte)}</span>` : ''}${p.encoder ? `<button ${x.A(p.encoder)} class="mko-pied-btn" style="align-self:flex-start;margin-top:2px">${p.na ? 'encoder' : 'modifier'}</button>` : ''}</div>`).join('')}</div>` : ''}
+      <span class="mko-mu" style="font-size:11.5px">${esc(p.d)}</span>${p.alerte ? `<span class="ko" style="font-size:11.5px;font-weight:400">${esc(p.alerte)}</span>` : ''}${p.encoder ? `<button ${x.A(p.encoder)} class="mko-pied-btn" style="align-self:flex-start;margin-top:2px">${p.na ? 'encoder' : 'modifier'}</button>` : ''}</div>`).join('')}</div>` : ''}
   </div></div>`;
   return page(titre + bandeau + carte('Santé du magasin', `<div class="ff-grille ff-g4">${f.sante.map(tuile).join('')}</div>`)
     + `<div class="ff-deux" style="margin-top:12px">${volet('j', 'Suivi journalier et opérations', f.journalier)}${volet('t', 'Suivi de terrain', f.terrain)}</div>${journal}`);
@@ -127,20 +127,20 @@ export function tplCQM(c, x){
       ${r.magasins.length ? `<span class="mko-mu" style="margin-left:10px">Magasin</span>${sel(x, esc, r.setShop, r.magasins)}<span class="mko-mu">Checklist</span>${sel(x, esc, r.setCl, r.checklists, 'max-width:260px')}` : ''}
       <span style="flex:1"></span>${r.lecture ? `<span class="mko-mu">${esc(r.lecture)}</span>` : ''}<button ${x.A(r.rafraichir)} class="mko-pied-btn">Relire</button></div>`;
   const modal = r.modal ? tplCQMModal(r.modal, x) : '';
-  if (r.indispo) { return `<div data-screen="controles-qualite">${entete}<div class="mko-carte" style="padding:20px 22px;color:#8D1D2C;font-size:13px">${esc(r.indispo)}</div>${modal}</div>`; }
+  if (r.indispo) { return `<div data-screen="controles-qualite">${entete}<div class="mko-carte" style="padding:20px 22px;color:var(--accent);font-size:13px">${esc(r.indispo)}</div>${modal}</div>`; }
   if (r.chargement) { return `<div data-screen="controles-qualite">${entete}<div class="mko-carte" style="padding:20px 22px;color:var(--color-text-muted);font-size:13px">Lecture des contrôles du mois au panel, magasin par magasin et jour par jour…</div>${modal}</div>`; }
   const puces = `<div class="cx-puces" style="margin:0 0 12px">${r.puces.map(p => `<button ${x.A(p.choisir)} class="cx-pu${p.on ? ' on' : ''}">${p.badge ? `<i class="cqm-pt" style="background:${p.badge.bg};border-color:${p.badge.fg}"></i>` : ''}${esc(p.nom)} · ${p.n}</button>`).join('')}</div>`;
   const shops = `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">Par magasin</span></div><div style="overflow-x:auto"><table class="mko-tab cqm-tab" style="min-width:760px"><thead><tr><th>Magasin</th><th class="n">Contrôles</th><th class="n">Rendus</th>${(r.parShop[0] ? r.parShop[0].niveaux : []).map(n => `<th class="n">${cqmB(esc, n.b)}</th>`).join('')}<th class="n">À noter</th><th class="n">Non rendues</th></tr></thead><tbody>
-    ${r.parShop.map(s => `<tr><td class="nom">${esc(s.nom)}</td><td class="n">${esc(s.total)}</td><td class="n">${esc(s.rendus)}</td>${s.niveaux.map(n => `<td class="n"${n.n && n.b.n <= 3 ? ' style="color:#C0182B;font-weight:700"' : ''}>${n.n || '·'}</td>`).join('')}<td class="n">${s.aNoter || '·'}</td><td class="n">${s.nonRendues || '·'}</td></tr>`).join('')}</tbody></table></div></div>`;
+    ${r.parShop.map(s => `<tr><td class="nom">${esc(s.nom)}</td><td class="n">${esc(s.total)}</td><td class="n">${esc(s.rendus)}</td>${s.niveaux.map(n => `<td class="n"${n.n && n.b.n <= 3 ? ' style="color:var(--stop);font-weight:400"' : ''}>${n.n || '·'}</td>`).join('')}<td class="n">${s.aNoter || '·'}</td><td class="n">${s.nonRendues || '·'}</td></tr>`).join('')}</tbody></table></div></div>`;
   const lignes = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">${esc(r.titre || '')}</span></div>
     ${r.lignes.length ? `<div style="overflow-x:auto"><table class="mko-tab cqm-tab"><thead><tr><th>Date</th><th>Magasin</th><th>Checklist</th><th>Contrôle</th><th class="n">Prévu</th><th class="n">Fait</th><th>Note</th><th>Motif</th><th></th></tr></thead><tbody>
-    ${r.lignes.map(l => `<tr ${x.A(l.ouvrir)} class="cqm-l"><td style="white-space:nowrap">${esc(l.date)}</td><td class="nom">${esc(l.shop)}</td><td class="mu">${esc(l.checklist)}</td><td>${esc(l.tache)}</td><td class="n">${esc(l.heure)}</td><td class="n">${esc(l.fait)}</td><td>${cqmB(esc, l.badge)}</td><td class="mu" style="max-width:260px">${esc(l.commentaire)}</td><td class="n">${l.photo ? '<span class="cqm-voir">📷 Voir</span>' : ''}</td></tr>`).join('')}
+    ${r.lignes.map(l => `<tr ${x.A(l.ouvrir)} class="cqm-l"><td style="white-space:nowrap">${esc(l.date)}</td><td class="nom">${esc(l.shop)}</td><td class="mu">${esc(l.checklist)}</td><td>${esc(l.tache)}</td><td class="n">${esc(l.heure)}</td><td class="n">${esc(l.fait)}</td><td>${cqmB(esc, l.badge)}</td><td class="mu" style="max-width:260px">${esc(l.commentaire)}</td><td class="n">${l.photo ? '<span class="cqm-voir">Voir</span>' : ''}</td></tr>`).join('')}
     </tbody></table></div>${r.plus ? `<div style="padding:10px 14px"><button ${x.A(r.plus)} class="mko-pied-btn">Voir les ${r.reste} suivants</button></div>` : ''}` : '<div class="mko-corps mko-mu">Aucun contrôle pour ce choix.</div>'}</div>`;
   return `<div data-screen="controles-qualite">${entete}${r.erreur ? `<div class="gc-msg ko">${esc(r.erreur)}</div>` : ''}<div class="gc-kpis">${r.kpis.map(k => kpi(esc, k)).join('')}</div>${puces}${shops}${lignes}${modal}</div>`;
 }
 function tplCQMModal(m, x){
   const { esc } = x;
-  const photo = m.chargement ? '<div class="cqm-ph vide">lecture de la photo…</div>' : m.indispo ? `<div class="cqm-ph vide" style="color:#8D1D2C">${esc(m.indispo)}</div>`
+  const photo = m.chargement ? '<div class="cqm-ph vide">lecture de la photo…</div>' : m.indispo ? `<div class="cqm-ph vide" style="color:var(--accent)">${esc(m.indispo)}</div>`
     : m.photo ? `<a href="${esc(m.photo)}" target="_blank" rel="noopener" class="cqm-ph"><img src="${esc(m.photo)}" alt=""></a>` : '<div class="cqm-ph vide">Pas de photo rendue pour ce contrôle.</div>';
   // La photo type du rayon À CÔTÉ de la photo rendue : le comptoir attendu en face du comptoir montré.
   const ry = m.rayon;

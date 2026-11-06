@@ -35,7 +35,7 @@ export function tplPromoTableau(c, x){
       <td class="r">${l.poids != null ? esc(l.poids) : mu('—')}</td>
       <td class="r">${l.remise != null ? esc(l.remise) : mu('—')}</td>
       <td class="r">${l.web != null ? esc(l.web) : mu('—')}</td>
-      <td class="r"${l.coefTitre ? ` title="${esc(l.coefTitre)}"` : ''}>${l.coef ? `<b class="${l.coefCls}">${esc(l.coef)}${l.coefCls === 'ko' ? ' ⚠' : ''}</b>` : mu('—')}</td>
+      <td class="r"${l.coefTitre ? ` title="${esc(l.coefTitre)}"` : ''}>${l.coef ? `<b class="${l.coefCls}">${esc(l.coef)}${l.coefCls === 'ko' ? ' ' : ''}</b>` : mu('—')}</td>
       <td class="act">${l.basculer ? `<button ${x.A(l.basculer)} class="ptb-dots${l.menu ? ' on' : ''}" aria-label="actions" aria-expanded="${l.menu}">${ICO_DOTS}</button>` : ''}</td></tr>
     ${l.menu ? `<tr class="ptb-actions"><td colspan="${NC}">${l.actions.map(a => `<button ${x.A(a.go)} class="ptb-btn${a.ko ? ' ko' : ''}">${esc(a.nom)}</button>`).join('')}</td></tr>` : ''}`;
   const tableau = T.vide ? `<div class="ptb-vide">${esc(T.vide)}</div>` : `<div class="ptb-large"><table class="ptb-tab">

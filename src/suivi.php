@@ -473,7 +473,7 @@ function suRendre(array $modele, array $vars, string $l): array
         if ($p === '') { continue; }
         if (preg_match('/^\{([a-z_]+)\}$/', $p, $m) && array_key_exists($m[1], $listes)) {
             $items = $listes[$m[1]];
-            if ($items === []) { $vide = suL('vide_' . $m[1], $l); $h .= '<p style="margin:0 0 12px;color:#666">' . htmlspecialchars($vide, ENT_QUOTES, 'UTF-8') . '</p>'; $t[] = $vide; continue; }
+            if ($items === []) { $vide = suL('vide_' . $m[1], $l); $h .= '<p style="margin:0 0 12px;color:#7a736a">' . htmlspecialchars($vide, ENT_QUOTES, 'UTF-8') . '</p>'; $t[] = $vide; continue; }
             $h .= '<ul style="margin:0 0 12px;padding-left:20px">' . implode('', array_map(static fn ($i) => '<li style="margin:0 0 4px">' . htmlspecialchars($i, ENT_QUOTES, 'UTF-8') . '</li>', $items)) . '</ul>';
             $t[] = implode("\n", array_map(static fn ($i) => '- ' . $i, $items));
             continue;
@@ -488,8 +488,8 @@ function suRendre(array $modele, array $vars, string $l): array
 
 function suCourrielHtml(string $corps): string
 {
-    return '<div style="font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#222;line-height:1.6;max-width:620px">'
-        . '<div style="font-family:Georgia,serif;font-size:18px;letter-spacing:.12em;color:#8D1D2C;margin:0 0 18px">L’ATELIER <span style="font-size:12px;letter-spacing:.2em;color:#666">by</span></div>'
+    return '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14px;color:#1c1a17;line-height:1.6;max-width:620px">'
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:18px;letter-spacing:.12em;color:#8D1D2C;margin:0 0 18px">L’ATELIER <span style="font-size:12px;letter-spacing:.2em;color:#7a736a">by</span></div>'
         . $corps . '</div>';
 }
 
@@ -1002,13 +1002,13 @@ function suScoreHtml(?array $sc, string $l, callable $e): string
 {
     if ($sc === null || ($sc['actuel']['score'] ?? null) === null) { return ''; }
     $a = $sc['actuel']; $p = $sc['precedent']['score'] ?? null;
-    $coul = static fn (int $x): string => $x >= 85 ? '#2d7a3e' : ($x >= 70 ? '#D97706' : '#C0182B');
+    $coul = static fn (int $x): string => $x >= 85 ? '#3f7a52' : ($x >= 70 ? '#B0792A' : '#A32014');
     $ecart = static function (?int $d): string {
         if ($d === null) { return ''; }
-        $c = $d > 0 ? '#2d7a3e' : ($d < 0 ? '#C0182B' : '#888');
-        return '<span style="color:' . $c . ';font-weight:700">' . ($d > 0 ? '+' : ($d < 0 ? '−' : '±')) . abs($d) . '</span>';
+        $c = $d > 0 ? '#3f7a52' : ($d < 0 ? '#A32014' : '#7a736a');
+        return '<span style="color:' . $c . ';font-weight:400">' . ($d > 0 ? '+' : ($d < 0 ? '−' : '±')) . abs($d) . '</span>';
     };
-    $barre = static fn (int $x, string $c, int $h): string => '<div style="background:#EFE9E1;border-radius:4px;height:' . $h . 'px;overflow:hidden"><div style="background:' . $c . ';width:' . max(0, min(100, $x)) . '%;height:' . $h . 'px"></div></div>';
+    $barre = static fn (int $x, string $c, int $h): string => '<div style="background:#EDE7DE;border-radius:4px;height:' . $h . 'px;overflow:hidden"><div style="background:' . $c . ';width:' . max(0, min(100, $x)) . '%;height:' . $h . 'px"></div></div>';
     $avant = [];
     foreach ((array) ($p['modules'] ?? []) as $m) { $avant[$m['id']] = (int) $m['score']; }
     $prec = $p !== null
@@ -1019,15 +1019,15 @@ function suScoreHtml(?array $sc, string $l, callable $e): string
         $nom = $l === 'nl' && ($m['nom_nl'] ?? '') !== '' ? $m['nom_nl'] : $m['nom'];
         $d = isset($avant[$m['id']]) ? (int) $m['score'] - $avant[$m['id']] : null;
         $lignes .= '<tr><td style="padding:3px 10px 3px 0;white-space:nowrap">' . $e($nom) . '</td><td style="width:100%;padding:3px 0">' . $barre((int) $m['score'], $coul((int) $m['score']), 8) . '</td>'
-            . '<td style="padding:3px 0 3px 10px;text-align:right;font-weight:700">' . (int) $m['score'] . '</td><td style="padding:3px 0 3px 8px;text-align:right;font-size:11px;white-space:nowrap">' . $ecart($d) . '</td></tr>';
+            . '<td style="padding:3px 0 3px 10px;text-align:right;font-weight:400">' . (int) $m['score'] . '</td><td style="padding:3px 0 3px 8px;text-align:right;font-size:11px;white-space:nowrap">' . $ecart($d) . '</td></tr>';
     }
     return '<div style="margin:0 0 14px;padding:12px 14px;border:1px solid #EAE3DA;border-radius:10px">'
-        . '<div style="font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 4px">' . $e(suL('score', $l)) . '</div>'
-        . '<div style="margin:0 0 6px"><span style="font-family:Georgia,serif;font-size:34px;color:#8D1D2C">' . (int) $a['score'] . '</span><span style="color:#888"> / 100</span>'
-        . '<span style="color:#666;font-size:12px;margin-left:12px">' . $prec . '</span></div>'
+        . '<div style="font-weight:400;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a736a;margin:0 0 4px">' . $e(suL('score', $l)) . '</div>'
+        . '<div style="margin:0 0 6px"><span style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:34px;color:#8D1D2C">' . (int) $a['score'] . '</span><span style="color:#7a736a"> / 100</span>'
+        . '<span style="color:#7a736a;font-size:12px;margin-left:12px">' . $prec . '</span></div>'
         . $barre((int) $a['score'], '#8D1D2C', 8)
         . '<table style="border-collapse:collapse;width:100%;margin-top:10px;font-size:12px">' . $lignes . '</table>'
-        . '<div style="color:#888;font-size:10.5px;margin-top:6px">' . $e(suL('score_regle', $l)) . '</div></div>';
+        . '<div style="color:#7a736a;font-size:10.5px;margin-top:6px">' . $e(suL('score_regle', $l)) . '</div></div>';
 }
 
 /**
@@ -1078,11 +1078,11 @@ function suEvalRadarSvg(array $notes, ?array $prec, string $l, int $largeur = 52
         return implode(' ', $p);
     };
     $note = static fn (array $src, string $k): ?int => isset($src[$k]['note']) && $src[$k]['note'] !== null ? (int) $src[$k]['note'] : null;
-    $coul = static fn (?int $x): string => $x === null ? '#999' : ($x >= 4 ? '#2d7a3e' : ($x === 3 ? '#B45F06' : '#C0182B'));
+    $coul = static fn (?int $x): string => $x === null ? '#B8B2A8' : ($x >= 4 ? '#3f7a52' : ($x === 3 ? '#B45F06' : '#A32014'));
     $e = static fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
-    $g = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' . $W . ' ' . $H . '" width="' . $largeur . '" style="max-width:100%;height:auto;font-family:Helvetica,Arial,sans-serif" role="img" aria-label="' . $e(suL('eval', $l)) . '">';
+    $g = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' . $W . ' ' . $H . '" width="' . $largeur . '" style="max-width:100%;height:auto;font-family:Gotham,Helvetica,Arial,sans-serif" role="img" aria-label="' . $e(suL('eval', $l)) . '">';
     for ($r = 1; $r <= 5; $r++) {
-        $g .= '<polygon points="' . $poly(static fn () => $r) . '" fill="' . ($r === 5 ? '#FBF8F4' : 'none') . '" stroke="' . ($r === 5 ? '#D9CFC3' : '#EAE3DA') . '" stroke-width="1"/>';
+        $g .= '<polygon points="' . $poly(static fn () => $r) . '" fill="' . ($r === 5 ? '#FBF9F5' : 'none') . '" stroke="' . ($r === 5 ? '#D9CFC3' : '#EAE3DA') . '" stroke-width="1"/>';
     }
     foreach ($axes as $i => $a) { [$x, $y] = $pt($i, 5); $g .= '<line x1="' . $cx . '" y1="' . $cy . '" x2="' . $f($x) . '" y2="' . $f($y) . '" stroke="#EAE3DA" stroke-width="1"/>'; }
     // Les chiffres des anneaux entre les deux premiers axes, là où aucun point ne tombe.
@@ -1099,7 +1099,7 @@ function suEvalRadarSvg(array $notes, ?array $prec, string $l, int $largeur = 52
         $anc = abs(cos($ang)) < .2 ? 'middle' : (cos($ang) > 0 ? 'start' : 'end');
         $dy = sin($ang) < -.9 ? -($police * 1.2 + 5) : (sin($ang) > .9 ? $police + 2 : -3);
         $nom = (string) ($a[$l] ?? $a['fr']);
-        $g .= '<text x="' . $f($lx) . '" y="' . $f($ly + $dy) . '" text-anchor="' . $anc . '" font-size="' . $police . '" font-weight="700" fill="#333">' . $e($nom) . '</text>'
+        $g .= '<text x="' . $f($lx) . '" y="' . $f($ly + $dy) . '" text-anchor="' . $anc . '" font-size="' . $police . '" font-weight="700" fill="#5c5852">' . $e($nom) . '</text>'
             . '<text x="' . $f($lx) . '" y="' . $f($ly + $dy + $police * 1.2) . '" text-anchor="' . $anc . '" font-size="' . $police . '" font-weight="700" fill="' . $coul($v) . '">' . ($v !== null ? $v . ' / 5' : '—') . '</text>';
     }
     return $g . '</svg>';
@@ -1113,10 +1113,10 @@ function suEvalHtml(?array $ev, string $l, callable $e): string
     $nf = static fn (?float $x): string => $x === null ? '—' : str_replace('.', ',', number_format($x, 1, '.', ''));
     $ecart = static function (?float $d, bool $entier = false) use ($nf): string {
         if ($d === null) { return ''; }
-        $c = $d > 0 ? '#2d7a3e' : ($d < 0 ? '#C0182B' : '#888');
-        return '<span style="color:' . $c . ';font-weight:700">' . ($d > 0 ? '+' : ($d < 0 ? '−' : '±')) . ($entier ? (string) (int) abs($d) : $nf(abs($d))) . '</span>';
+        $c = $d > 0 ? '#3f7a52' : ($d < 0 ? '#A32014' : '#7a736a');
+        return '<span style="color:' . $c . ';font-weight:400">' . ($d > 0 ? '+' : ($d < 0 ? '−' : '±')) . ($entier ? (string) (int) abs($d) : $nf(abs($d))) . '</span>';
     };
-    $coul = static fn (int $x): string => $x >= 4 ? '#2d7a3e' : ($x === 3 ? '#D97706' : '#C0182B');
+    $coul = static fn (int $x): string => $x >= 4 ? '#3f7a52' : ($x === 3 ? '#B0792A' : '#A32014');
     $prec = $p !== null
         ? $e(suL('score_prec', $l)) . ' (' . date('d/m', strtotime($p['le'])) . ') : ' . $nf($moyP) . ($moy !== null && $moyP !== null ? ' · ' . $ecart(round($moy - $moyP, 1)) : '')
         : $e(suL('eval_premiere', $l));
@@ -1125,20 +1125,20 @@ function suEvalHtml(?array $ev, string $l, callable $e): string
         $x = $ev['notes'][$a['k']] ?? []; $v = isset($x['note']) && $x['note'] !== null ? (int) $x['note'] : null;
         $av = $p !== null && isset($p['notes'][$a['k']]['note']) && $p['notes'][$a['k']]['note'] !== null ? (int) $p['notes'][$a['k']]['note'] : null;
         $pastilles = '';
-        for ($i = 1; $i <= 5; $i++) { $pastilles .= '<span style="display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:2px;background:' . ($v !== null && $i <= $v ? $coul($v) : '#EFE9E1') . '"></span>'; }
-        $lignes .= '<tr><td style="padding:5px 10px 5px 0;vertical-align:top;white-space:nowrap;font-weight:700">' . $e($a[$l] ?? $a['fr']) . '</td>'
+        for ($i = 1; $i <= 5; $i++) { $pastilles .= '<span style="display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:2px;background:' . ($v !== null && $i <= $v ? $coul($v) : '#EDE7DE') . '"></span>'; }
+        $lignes .= '<tr><td style="padding:5px 10px 5px 0;vertical-align:top;white-space:nowrap;font-weight:400">' . $e($a[$l] ?? $a['fr']) . '</td>'
             . '<td style="padding:7px 8px 5px 0;vertical-align:top;white-space:nowrap">' . $pastilles . '</td>'
-            . '<td style="padding:5px 8px 5px 0;vertical-align:top;white-space:nowrap;font-weight:700;color:' . ($v !== null ? $coul($v) : '#999') . '">' . ($v !== null ? $v . ' / 5' : '—') . '</td>'
+            . '<td style="padding:5px 8px 5px 0;vertical-align:top;white-space:nowrap;font-weight:400;color:' . ($v !== null ? $coul($v) : '#B8B2A8') . '">' . ($v !== null ? $v . ' / 5' : '—') . '</td>'
             . '<td style="padding:5px 8px 5px 0;vertical-align:top;white-space:nowrap;font-size:11px">' . ($v !== null && $av !== null ? $ecart((float) ($v - $av), true) : '') . '</td>'
-            . '<td style="padding:5px 0;vertical-align:top;color:#444;width:100%">' . nl2br($e((string) ($x['com'] ?? ''))) . '</td></tr>';
+            . '<td style="padding:5px 0;vertical-align:top;color:#5c5852;width:100%">' . nl2br($e((string) ($x['com'] ?? ''))) . '</td></tr>';
     }
     return '<div style="margin:0 0 14px;padding:12px 14px;border:1px solid #EAE3DA;border-radius:10px;page-break-inside:avoid">'
-        . '<div style="font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 4px">' . $e(suL('eval', $l)) . '</div>'
-        . '<div style="margin:0 0 4px"><span style="font-family:Georgia,serif;font-size:34px;color:#8D1D2C">' . $nf($moy) . '</span><span style="color:#888"> / 5 · ' . $e(suL('eval_moy', $l)) . '</span>'
-        . '<span style="color:#666;font-size:12px;margin-left:12px">' . $prec . '</span></div>'
+        . '<div style="font-weight:400;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a736a;margin:0 0 4px">' . $e(suL('eval', $l)) . '</div>'
+        . '<div style="margin:0 0 4px"><span style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:34px;color:#8D1D2C">' . $nf($moy) . '</span><span style="color:#7a736a"> / 5 · ' . $e(suL('eval_moy', $l)) . '</span>'
+        . '<span style="color:#7a736a;font-size:12px;margin-left:12px">' . $prec . '</span></div>'
         . '<div style="text-align:center;margin:4px 0 6px">' . suEvalRadarSvg($ev['notes'], $p, $l, 520) . '</div>'
         . '<table style="border-collapse:collapse;width:100%;font-size:12px">' . $lignes . '</table>'
-        . '<div style="color:#888;font-size:10.5px;margin-top:6px">' . $e(suL('eval_regle', $l)) . '</div></div>';
+        . '<div style="color:#7a736a;font-size:10.5px;margin-top:6px">' . $e(suL('eval_regle', $l)) . '</div></div>';
 }
 
 /**
@@ -1155,12 +1155,12 @@ function suPhotoReperesHtml(string $src, array $reperes, string $l): string
     $pc = static fn ($v): string => number_format(max(0, min(1, (float) $v)) * 100, 2, '.', '') . '%';
     $cadres = ''; $lignes = '';
     foreach (array_values($reperes) as $i => $r) {
-        $n = (int) ($r['niveau'] ?? 3); $c = $niv[$n] ?? '#D97706'; $num = $i + 1;
+        $n = (int) ($r['niveau'] ?? 3); $c = $niv[$n] ?? '#B0792A'; $num = $i + 1;
         $bord = $n <= 2 ? '4px solid ' : ($n === 3 ? '3px solid ' : '2px dashed ');
         $cadres .= '<div style="position:absolute;left:' . $pc($r['x'] ?? 0) . ';top:' . $pc($r['y'] ?? 0) . ';width:' . $pc($r['l'] ?? .1) . ';height:' . $pc($r['h'] ?? .1)
             . ';border:' . $bord . $c . ';border-radius:4px;box-sizing:border-box"></div>'
-            . '<div style="position:absolute;left:' . $pc($r['x'] ?? 0) . ';top:' . $pc($r['y'] ?? 0) . ';margin:-10px 0 0 -4px;background:' . $c . ';color:#fff;border:1.5px solid #fff;font:700 11px/1.35 Helvetica,Arial,sans-serif;padding:1px 6px;border-radius:5px">' . $num . '</div>';
-        $lignes .= '<div style="margin:3px 0;font-size:11px;line-height:1.4"><span style="display:inline-block;background:' . $c . ';color:#fff;font-weight:700;border-radius:4px;padding:0 5px;margin-right:5px">' . $num . '</span>'
+            . '<div style="position:absolute;left:' . $pc($r['x'] ?? 0) . ';top:' . $pc($r['y'] ?? 0) . ';margin:-10px 0 0 -4px;background:' . $c . ';color:#fff;border:1.5px solid #fff;font:400 11px/1.35 Gotham,Helvetica,Arial,sans-serif;padding:1px 6px;border-radius:5px">' . $num . '</div>';
+        $lignes .= '<div style="margin:3px 0;font-size:11px;line-height:1.4"><span style="display:inline-block;background:' . $c . ';color:#fff;font-weight:400;border-radius:4px;padding:0 5px;margin-right:5px">' . $num . '</span>'
             . '<b style="color:' . $c . '">' . $e(suL('rp_' . $n, $l)) . '</b>' . (trim((string) ($r['txt'] ?? '')) !== '' ? ' — ' . $e($r['txt']) : '') . '</div>';
     }
     return '<div style="display:inline-block;width:48%;margin:0 2% 12px 0;vertical-align:top;page-break-inside:avoid">'
@@ -1191,15 +1191,15 @@ function suRapportHtml(array $v, string $l): string
     $photos = array_values(array_filter(suRapportPhotos($v, $r), static fn ($p) => $p['inclus']));
     if ($c['phrase'] === '') { $c['phrase'] = $ck['ok'] . ' / ' . $ck['total'] . ' ' . suL('conformes', $l) . '.'; }
     $racine = realpath(__DIR__ . '/../public') ?: (__DIR__ . '/../public');
-    $h = '<div style="font-family:Helvetica,Arial,sans-serif;color:#222;font-size:12.5px;line-height:1.55">'
-        . '<div style="font-family:Georgia,serif;font-size:22px;color:#8D1D2C;margin:0 0 2px">' . $e(suL('titre', $l)) . ' — ' . $e(suCourt($shop)) . '</div>'
-        . '<div style="color:#666;margin:0 0 14px">' . $e(suL('du', $l) . ' ' . suDateLongue((string) $v['prevu_le'], $l) . ' · ' . suTypeNom((string) (($v['type_code'] ?? '') ?: 'reguliere'), $l) . ' · ' . suL('avec', $l) . ' ' . $v['consultant_nom'])
+    $h = '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:12.5px;line-height:1.55">'
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:22px;color:#8D1D2C;margin:0 0 2px">' . $e(suL('titre', $l)) . ' — ' . $e(suCourt($shop)) . '</div>'
+        . '<div style="color:#7a736a;margin:0 0 14px">' . $e(suL('du', $l) . ' ' . suDateLongue((string) $v['prevu_le'], $l) . ' · ' . suTypeNom((string) (($v['type_code'] ?? '') ?: 'reguliere'), $l) . ' · ' . suL('avec', $l) . ' ' . $v['consultant_nom'])
         . ' · ' . $ck['ok'] . ' / ' . $ck['total'] . ' ' . $e(suL('conformes', $l)) . '</div>'
         . '<p style="font-size:14px;margin:0 0 14px"><b>' . $e($c['phrase']) . '</b></p>';
     $h .= suScoreHtml(suScore($v), $l, $e);
     // L'évaluation rapide de fin de visite (05/11/2026) : le radar des six axes, les notes et leurs commentaires.
     $h .= suEvalHtml(suEvaluation($v), $l, $e);
-    $sec = static fn (string $t, string $corps): string => '<div style="margin:0 0 12px"><div style="font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 3px">' . htmlspecialchars($t, ENT_QUOTES, 'UTF-8') . '</div>' . $corps . '</div>';
+    $sec = static fn (string $t, string $corps): string => '<div style="margin:0 0 12px"><div style="font-weight:400;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a736a;margin:0 0 3px">' . htmlspecialchars($t, ENT_QUOTES, 'UTF-8') . '</div>' . $corps . '</div>';
     if ($c['positif'] !== '') { $h .= $sec(suL('positif', $l), '<div>' . nl2br($e($c['positif'])) . '</div>'); }
     $vu = [];
     if ($c['sentiment']) { $vu[] = suL('equipe', $l) . ' ' . $c['sentiment'] . ' / 5'; }
@@ -1215,7 +1215,7 @@ function suRapportHtml(array $v, string $l): string
     if (($bc['pourquoi'] ?? '') !== '' || array_filter((array) ($bc['pistes'] ?? []))) {
         $ecs = [];
         foreach ((array) ($bc['ecarts'] ?? []) as $k => $x) { $ecs[] = suL('p_' . $k, $l) . ' ' . ($x > 0 ? '+' : ($x < 0 ? '−' : '')) . str_replace('.', ',', (string) abs((float) $x)) . ' %'; }
-        $corps = $ecs ? '<div><b style="color:#C0182B">' . $e(implode(' · ', $ecs)) . '</b>' . (!empty($bc['arrete']) ? ' <span style="color:#666">· ' . $e(suL('b_arrete', $l)) . ' ' . date('d/m', strtotime((string) $bc['arrete'])) . '</span>' : '') . '</div>' : '';
+        $corps = $ecs ? '<div><b style="color:#A32014">' . $e(implode(' · ', $ecs)) . '</b>' . (!empty($bc['arrete']) ? ' <span style="color:#7a736a">· ' . $e(suL('b_arrete', $l)) . ' ' . date('d/m', strtotime((string) $bc['arrete'])) . '</span>' : '') . '</div>' : '';
         if (($bc['pourquoi'] ?? '') !== '') { $corps .= '<div style="margin-top:4px"><b>' . $e(suL('b_pourquoi', $l)) . '</b> — ' . nl2br($e($bc['pourquoi'])) . '</div>'; }
         $pi = array_values(array_filter(array_map('strval', (array) ($bc['pistes'] ?? [])), static fn (string $p): bool => trim($p) !== ''));
         if ($pi) {
@@ -1226,10 +1226,10 @@ function suRapportHtml(array $v, string $l): string
     }
     $lp = '';
     foreach ($plans as $p) {
-        $lp .= '<tr><td style="padding:4px 8px 4px 0;vertical-align:top"><b style="color:' . ($p['priorite'] === 'P0' ? '#C0182B' : '#222') . '">' . $e($p['priorite']) . '</b></td><td style="padding:4px 8px 4px 0">' . $e($p['titre'])
-            . ($p['detail'] ? '<div style="color:#666">' . $e($p['detail']) . '</div>' : '') . '</td><td style="padding:4px 0;white-space:nowrap;color:#666">' . ($p['echeance'] ? $e(suL('echeance', $l)) . ' ' . date('d/m', strtotime((string) $p['echeance'])) : '') . '</td></tr>';
+        $lp .= '<tr><td style="padding:4px 8px 4px 0;vertical-align:top"><b style="color:' . ($p['priorite'] === 'P0' ? '#A32014' : '#1c1a17') . '">' . $e($p['priorite']) . '</b></td><td style="padding:4px 8px 4px 0">' . $e($p['titre'])
+            . ($p['detail'] ? '<div style="color:#7a736a">' . $e($p['detail']) . '</div>' : '') . '</td><td style="padding:4px 0;white-space:nowrap;color:#7a736a">' . ($p['echeance'] ? $e(suL('echeance', $l)) . ' ' . date('d/m', strtotime((string) $p['echeance'])) : '') . '</td></tr>';
     }
-    $h .= $sec(suL('points', $l), $lp !== '' ? '<table style="border-collapse:collapse;width:100%">' . $lp . '</table>' : '<div style="color:#666">' . $e(suL('vide_points', $l)) . '</div>');
+    $h .= $sec(suL('points', $l), $lp !== '' ? '<table style="border-collapse:collapse;width:100%">' . $lp . '</table>' : '<div style="color:#7a736a">' . $e(suL('vide_points', $l)) . '</div>');
     if ($photos) {
         // Les photos annotées d'abord, deux par ligne pour que les cadres se lisent, leurs remarques dessous ; les autres ensuite.
         usort($photos, static fn ($a, $b) => (int) empty($a['reperes']) <=> (int) empty($b['reperes']));
@@ -1248,7 +1248,7 @@ function suRapportHtml(array $v, string $l): string
         $sig = Db::row('SELECT chemin FROM con_visite_photo WHERE visite_id = ? AND genre = ? ORDER BY id DESC LIMIT 1', [(int) $v['id'], $genre]);
         if (!$sig || !is_file($racine . '/' . $sig['chemin'])) { continue; }
         $qui = $genre === 'sig_consultant' ? (string) $v['consultant_nom'] : suCourt($shop);
-        $sigs .= '<td style="padding:0 18px 0 0;vertical-align:top"><div style="color:#666;font-size:11px">' . $e(suL($lib, $l)) . ($qui !== '' ? ' · ' . $e($qui) : '') . '</div>'
+        $sigs .= '<td style="padding:0 18px 0 0;vertical-align:top"><div style="color:#7a736a;font-size:11px">' . $e(suL($lib, $l)) . ($qui !== '' ? ' · ' . $e($qui) : '') . '</div>'
             . '<img src="data:image/png;base64,' . base64_encode((string) file_get_contents($racine . '/' . $sig['chemin'])) . '" style="height:70px" alt=""></td>';
     }
     if ($sigs !== '') { $h .= $sec(suL('signatures', $l), '<table style="border-collapse:collapse"><tr>' . $sigs . '</tr></table>'); }
@@ -1663,7 +1663,7 @@ function ep_suivi_franchise(): array
             $nivC = []; foreach (viReperesNiveaux() as $x) { $nivC[(int) $x['n']] = $x['couleur']; }
             $photos = $ancien ? [] : array_map(static fn ($p) => ['chemin' => $p['chemin'], 'genre' => $p['genre'],
                 'reperes' => array_map(static fn ($x) => ['x' => $x['x'], 'y' => $x['y'], 'l' => $x['l'], 'h' => $x['h'], 'txt' => (string) ($x['txt'] ?? ''),
-                    'couleur' => $nivC[(int) ($x['niveau'] ?? 3)] ?? '#D97706', 'grav' => suL('rp_' . (int) ($x['niveau'] ?? 3), $l), 'n' => (int) ($x['niveau'] ?? 3)], array_values((array) ($p['reperes'] ?? [])))],
+                    'couleur' => $nivC[(int) ($x['niveau'] ?? 3)] ?? '#B0792A', 'grav' => suL('rp_' . (int) ($x['niveau'] ?? 3), $l), 'n' => (int) ($x['niveau'] ?? 3)], array_values((array) ($p['reperes'] ?? [])))],
                 array_values(array_filter(suRapportPhotos($v, $r), static fn ($p) => $p['inclus'])));
             $raps[] = ['id' => (int) $v['id'], 'le' => $v['prevu_le'], 'type' => suTypeNom((string) (($v['type_code'] ?? '') ?: 'reguliere'), $l), 'consultant' => $v['consultant_nom'],
                 'checklist' => ['ok' => $ck['ok'], 'total' => $ck['total']], 'ancien' => $ancien, 'phrase' => $ancien ? '' : ($c['phrase'] ?: suRapportVue($v)['contenu']['phrase']),

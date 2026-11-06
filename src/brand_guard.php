@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/doc.php';
+
 /**
  * Brand Guard — contrôle de marque des posts Facebook du réseau.
  *
@@ -518,7 +520,7 @@ function bgNotifierSauvage(int $checkId, array $page, array $post, array $v): vo
             . '<p>Verdict : <b>' . $v['statut'] . '</b> · ' . (int) $v['score'] . '/100 · ' . count($v['ecarts']) . ' écart(s).</p>'
             . '<blockquote>' . nl2br(htmlspecialchars(mb_substr($post['texte'], 0, 600))) . '</blockquote>'
             . ($post['lien'] ? '<p><a href="' . htmlspecialchars($post['lien']) . '">Voir le post</a></p>' : '')
-            . '<p style="color:#666">Manquements de la boutique sur 90 jours : ' . bgSauvagesBoutique($page['shop_id'], $page['boutique'], 90) . '.</p>';
+            . '<p style="color:#7a736a">Manquements de la boutique sur 90 jours : ' . bgSauvagesBoutique($page['shop_id'], $page['boutique'], 90) . '.</p>';
         $envoye = Smtp::envoyer($a, '[Brand Guard] Post sauvage — ' . $page['boutique'], $html);
     }
     // La notification d'application : le badge du rail et le journal, lus par tous.
@@ -870,13 +872,13 @@ function bgRapportQuotidien(array $audit): array
         journalAdd('Brand Guard', 'Contrôle du jour', null, 'Aucun post publié depuis hier sur les pages lues (' . (int) ($audit['pages'] ?? 0) . ' page(s)).');
         return ['posts' => 0, 'aTraiter' => 0, 'envoye' => false];
     }
-    $h = '<h2 style="font-family:sans-serif">Brand Guard — contrôle du ' . date('d/m/Y') . '</h2>'
-        . '<p style="font-family:sans-serif">' . count($rows) . ' post(s) publié(s) depuis hier · <b>' . count($aTraiter) . ' à traiter</b> · ' . $conformes . ' conforme(s).</p>';
+    $h = '<h2 style="font-family:Gotham,Helvetica,Arial,sans-serif">Brand Guard — contrôle du ' . date('d/m/Y') . '</h2>'
+        . '<p style="font-family:Gotham,Helvetica,Arial,sans-serif">' . count($rows) . ' post(s) publié(s) depuis hier · <b>' . count($aTraiter) . ' à traiter</b> · ' . $conformes . ' conforme(s).</p>';
     if ($aTraiter) {
-        $h .= '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-family:sans-serif;font-size:13px"><tr><th>Boutique</th><th>Publié</th><th>Verdict</th><th>Écarts</th><th>Post</th></tr>';
+        $h .= '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px"><tr><th>Boutique</th><th>Publié</th><th>Verdict</th><th>Écarts</th><th>Post</th></tr>';
         foreach ($aTraiter as $r) {
             $ecarts = json_decode((string) ($r['ecarts_json'] ?? '[]'), true) ?: [];
-            $h .= '<tr' . ((int) $r['sauvage'] === 1 ? ' style="background:#fdecee"' : '') . '><td>' . htmlspecialchars((string) $r['boutique']) . ((int) $r['sauvage'] === 1 ? '<br><b style="color:#C0182B">SAUVAGE</b>' : '') . '</td>'
+            $h .= '<tr' . ((int) $r['sauvage'] === 1 ? ' style="background:#fdecee"' : '') . '><td>' . htmlspecialchars((string) $r['boutique']) . ((int) $r['sauvage'] === 1 ? '<br><b style="color:#A32014">SAUVAGE</b>' : '') . '</td>'
                 . '<td>' . htmlspecialchars(substr((string) ($r['publie_le'] ?? $r['created_at']), 0, 16)) . '</td>'
                 . '<td><b>' . $r['statut'] . '</b> · ' . (int) $r['score'] . '/100</td>'
                 . '<td>' . htmlspecialchars(implode(' · ', array_map(static fn ($e) => ($e['libelle'] ?? $e['regle']) . ' (' . ($e['gravite'] ?? '') . ')', array_slice($ecarts, 0, 4)))) . (count($ecarts) > 4 ? ' …' : '') . '</td>'
@@ -885,7 +887,7 @@ function bgRapportQuotidien(array $audit): array
         $h .= '</table>';
     }
     if (!empty($audit['erreurs'])) {
-        $h .= '<p style="font-family:sans-serif;color:#8a5a13"><b>Pages non lues :</b> ' . htmlspecialchars(implode(' · ', $audit['erreurs'])) . '</p>';
+        $h .= '<p style="font-family:Gotham,Helvetica,Arial,sans-serif;color:#7A5207"><b>Pages non lues :</b> ' . htmlspecialchars(implode(' · ', $audit['erreurs'])) . '</p>';
     }
     $envoye = $a !== '' && class_exists('Smtp') && Smtp::configured()
         ? Smtp::envoyer($a, '[Brand Guard] Contrôle du jour — ' . count($aTraiter) . ' à traiter sur ' . count($rows), $h) : false;
@@ -900,10 +902,10 @@ function bgRapportHebdo(): array
     $st = bgStatsPeriode(7);
     $depuis = date('Y-m-d H:i:s', time() - 7 * 86400);
     $rows = Db::rows('SELECT * FROM mar_bg_controle WHERE created_at >= ? ORDER BY sauvage DESC, score ASC, created_at DESC LIMIT 200', [$depuis]);
-    $h = '<h2 style="font-family:sans-serif">Brand Guard — semaine au ' . date('d/m/Y') . '</h2>'
+    $h = '<h2 style="font-family:Gotham,Helvetica,Arial,sans-serif">Brand Guard — semaine au ' . date('d/m/Y') . '</h2>'
         . '<p>' . $st['controles'] . ' post(s) contrôlé(s) · conformité ' . ($st['tauxConformite'] ?? '—') . ' % · score moyen ' . ($st['scoreMoyen'] ?? '—') . '/100 · <b>' . $st['sauvages'] . ' post(s) sauvage(s)</b>.</p>';
     if ($st['boutiques']) {
-        $h .= '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-family:sans-serif;font-size:13px"><tr><th>Boutique</th><th>Contrôles</th><th>Conformité</th><th>Score</th><th>Sauvages</th><th>Règles les plus violées</th></tr>';
+        $h .= '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px"><tr><th>Boutique</th><th>Contrôles</th><th>Conformité</th><th>Score</th><th>Sauvages</th><th>Règles les plus violées</th></tr>';
         foreach ($st['boutiques'] as $b) {
             $h .= '<tr><td>' . htmlspecialchars($b['boutique']) . '</td><td>' . $b['controles'] . '</td><td>' . ($b['tauxConformite'] ?? '—') . ' %</td><td>' . ($b['scoreMoyen'] ?? '—') . '</td><td>' . $b['sauvages'] . '</td><td>'
                 . htmlspecialchars(implode(' · ', array_map(static fn ($r) => $r['libelle'] . ' (' . $r['n'] . ')', $b['topRegles']))) . '</td></tr>';
@@ -911,9 +913,9 @@ function bgRapportHebdo(): array
         $h .= '</table>';
     }
     if ($rows) {
-        $h .= '<h3 style="font-family:sans-serif">Les posts, du pire au meilleur</h3><ul style="font-family:sans-serif;font-size:13px">';
+        $h .= '<h3 style="font-family:Gotham,Helvetica,Arial,sans-serif">Les posts, du pire au meilleur</h3><ul style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px">';
         foreach ($rows as $r) {
-            $h .= '<li>' . ((int) $r['sauvage'] === 1 ? '<b style="color:#C0182B">SAUVAGE</b> · ' : '') . htmlspecialchars((string) $r['boutique']) . ' · ' . $r['statut'] . ' ' . (int) $r['score'] . '/100 · ' . substr((string) ($r['publie_le'] ?? $r['created_at']), 0, 16)
+            $h .= '<li>' . ((int) $r['sauvage'] === 1 ? '<b style="color:#A32014">SAUVAGE</b> · ' : '') . htmlspecialchars((string) $r['boutique']) . ' · ' . $r['statut'] . ' ' . (int) $r['score'] . '/100 · ' . substr((string) ($r['publie_le'] ?? $r['created_at']), 0, 16)
                 . ($r['lien'] ? ' · <a href="' . htmlspecialchars((string) $r['lien']) . '">voir le post</a>' : '') . '</li>';
         }
         $h .= '</ul>';

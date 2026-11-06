@@ -143,13 +143,13 @@ function cqMailDateFr(string $date): string
 function cqMailHtml(int $sid, string $nom, string $date, array $jour, array $mois, string $heure): array
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $F = "font-family:Gotham,Helvetica,Arial,sans-serif";
     $reseau = setting('reseau', []);
     $marque = is_array($reseau) ? ($reseau['nom'] ?? 'L’Atelier by') : 'L’Atelier by';
     $logoUri = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
     $logo = $logoUri !== ''
         ? '<img src="' . $logoUri . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
-        : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
+        : '<span style="' . $F . ';color:#1c1a17;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
     $ville = cqMailVille($nom);
     $deVille = (preg_match('/^[aeiouyhâàéèêëîïôöûüAEIOUYHÂÀÉÈÊËÎÏÔÖÛÜ]/u', $ville) ? 'd’' : 'de ') . $ville;
     $dFr = cqMailDateFr($date);
@@ -159,13 +159,13 @@ function cqMailHtml(int $sid, string $nom, string $date, array $jour, array $moi
     // 1. Le constat.
     $c .= '<tr><td class="pad" style="' . $F . ';padding:20px 26px 6px">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:#FBEFE7;border-left:4px solid #A9521F;border-radius:8px;padding:14px 16px">'
-        . '<div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8A3F14;font-weight:700">Contrôle qualité non réalisé</div>'
-        . '<div class="titre" style="font-size:19px;font-weight:700;color:#221E1A;margin-top:4px">Magasin ' . $e($deVille) . ' · ' . $e($dFr) . '</div>'
+        . '<div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8A3F14;font-weight:400">Contrôle qualité non réalisé</div>'
+        . '<div class="titre" style="font-size:19px;font-weight:700;color:#1c1a17;margin-top:4px">Magasin ' . $e($deVille) . ' · ' . $e($dFr) . '</div>'
         . '<div style="font-size:13px;color:#5d554d;margin-top:3px">À ' . $e($heure) . ' : <b style="color:#8A3F14">0 photo</b> sur ' . $n . ' contrôle' . ($n > 1 ? 's' : '') . ' attendu' . ($n > 1 ? 's' : '') . '</div>'
         . '</td></tr></table></td></tr>';
 
     // 2. Le mot.
-    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#221E1A;padding:14px 26px 4px">'
+    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#1c1a17;padding:14px 26px 4px">'
         . 'Bonjour,<br><br>Nous vous informons que les tâches de contrôle qualité n’ont pas été réalisées aujourd’hui au magasin ' . $e($deVille)
         . ' : à ' . $e($heure) . ', aucune photo de contrôle n’a été déposée dans l’application.<br><br>'
         . 'Merci de les réaliser avant la fermeture si c’est encore possible, et de veiller à ce qu’elles soient faites chaque jour.'
@@ -188,15 +188,15 @@ function cqMailHtml(int $sid, string $nom, string $date, array $jour, array $moi
     }
     $li = '';
     foreach (array_slice($lignes, 0, 12) as $i => $l) {
-        $bd = $i ? 'border-top:1px solid #EFE9DF;' : '';
-        $li .= '<tr><td style="' . $F . ';font-size:13px;color:#221E1A;padding:7px 8px 7px 0;' . $bd . '">' . $e($l[0]) . '</td>'
+        $bd = $i ? 'border-top:1px solid #ffffff;' : '';
+        $li .= '<tr><td style="' . $F . ';font-size:13px;color:#1c1a17;padding:7px 8px 7px 0;' . $bd . '">' . $e($l[0]) . '</td>'
             . '<td align="right" style="' . $F . ';font-size:12px;color:#8A3F14;padding:7px 0;white-space:nowrap;' . $bd . '">' . $e($l[1]) . '</td></tr>';
     }
     if (count($lignes) > 12) {
-        $li .= '<tr><td colspan="2" style="' . $F . ';font-size:12px;color:#8b8177;padding:7px 0;border-top:1px solid #EFE9DF">+ ' . (count($lignes) - 12) . ' autre(s)</td></tr>';
+        $li .= '<tr><td colspan="2" style="' . $F . ';font-size:12px;color:#7a736a;padding:7px 0;border-top:1px solid #ffffff">+ ' . (count($lignes) - 12) . ' autre(s)</td></tr>';
     }
     $c .= '<tr><td class="pad" style="' . $F . ';padding:16px 26px 0">'
-        . '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8b8177;font-weight:700;margin-bottom:4px">Les contrôles attendus aujourd’hui</div>'
+        . '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#7a736a;font-weight:400;margin-bottom:4px">Les contrôles attendus aujourd’hui</div>'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' . $li . '</table></td></tr>';
 
     // 4. Le mois, une case par jour.
@@ -209,14 +209,14 @@ function cqMailHtml(int $sid, string $nom, string $date, array $jour, array $moi
         if ($v === null) { $vus['inconnu'] = true; return $gris('?'); }
         [$t, $f] = $v;
         if ($t <= 0) { $vus['ferme'] = true; return $gris('—'); }
-        $cadre = $j === $date ? 'box-shadow:0 0 0 2px #221E1A;' : '';
+        $cadre = $j === $date ? '' : '';
         if ($f >= $t) { $nT++; $st = 'background:#2E6DB4;color:#ffffff'; $s = '✓ ' . $f . '/' . $t; }
         elseif ($f > 0) { $nP++; $st = 'background:#DCE7F5;color:#1F4E85'; $s = $f . '/' . $t; }
         else { $nR++; $st = 'background:#A9521F;color:#ffffff'; $s = '✗ 0/' . $t; }
-        return '<td style="' . $base . $st . ';' . $cadre . '"><div style="font-size:13px;font-weight:700">' . $num . '</div><div style="font-size:10px">' . $s . '</div></td>';
+        return '<td style="' . $base . $st . ';' . $cadre . '"><div style="font-size:13px;font-weight:400">' . $num . '</div><div style="font-size:10px">' . $s . '</div></td>';
     };
     $premier = (int) date('N', strtotime(array_key_first($mois)));
-    $cal = '<tr>' . implode('', array_map(static fn ($d) => '<td style="' . $F . ';text-align:center;font-size:11px;color:#8b8177;padding-bottom:2px">' . $d . '</td>',
+    $cal = '<tr>' . implode('', array_map(static fn ($d) => '<td style="' . $F . ';text-align:center;font-size:11px;color:#7a736a;padding-bottom:2px">' . $d . '</td>',
         ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'])) . '</tr><tr>';
     for ($i = 1; $i < $premier; $i++) { $cal .= '<td></td>'; }
     $col = $premier; $k = 0; $nb = count($mois);
@@ -233,20 +233,20 @@ function cqMailHtml(int $sid, string $nom, string $date, array $jour, array $moi
     $pl = static fn (int $x, string $s) => $x . ' jour' . ($x > 1 ? 's' : '') . ' ' . $s . ($x > 1 && $s !== '' ? 's' : '');
     $leg = static fn ($bg, $t) => '<span style="display:inline-block;white-space:nowrap;margin:0 12px 4px 0"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' . $bg . ';vertical-align:-1px;margin-right:5px"></span>' . $t . '</span>';
     $c .= '<tr><td class="pad" style="' . $F . ';padding:22px 26px 0">'
-        . '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8b8177;font-weight:700">Vos contrôles qualité en ' . $libM . '</div>'
-        . '<div style="font-size:13px;color:#221E1A;margin:4px 0 10px"><b>' . $pl($nT, 'réalisé') . '</b>, ' . $pl($nP, 'partiel')
+        . '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#7a736a;font-weight:400">Vos contrôles qualité en ' . $libM . '</div>'
+        . '<div style="font-size:13px;color:#1c1a17;margin:4px 0 10px"><b>' . $pl($nT, 'réalisé') . '</b>, ' . $pl($nP, 'partiel')
         . ', <b style="color:#8A3F14">' . $nR . ' jour' . ($nR > 1 ? 's' : '') . ' sans aucun contrôle</b> (dont aujourd’hui).</div>'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="4" style="table-layout:fixed">' . $cal . '</table>'
-        . '<div style="font-size:12px;line-height:1.5;color:#221E1A;margin-top:8px">'
+        . '<div style="font-size:12px;line-height:1.5;color:#1c1a17;margin-top:8px">'
         . $leg('#2E6DB4', 'réalisé : toutes les photos') . $leg('#DCE7F5', 'partiel : une partie') . $leg('#A9521F', 'pas réalisé : aucune photo')
         . $leg('#F4F1EC', '<span style="color:#5d554d">' . ($vus['ferme'] ? '— aucun contrôle prévu · ' : '') . ($vus['inconnu'] ? '? pas encore relevé · ' : '') . 'à venir</span>')
-        . '</div><div style="font-size:11px;color:#8b8177">Dans chaque case : les contrôles faits avec leur photo sur les contrôles attendus ce jour-là. Aujourd’hui est encadré.</div></td></tr>';
+        . '</div><div style="font-size:11px;color:#7a736a">Dans chaque case : les contrôles faits avec leur photo sur les contrôles attendus ce jour-là. Aujourd’hui est encadré.</div></td></tr>';
 
     // 5. Le bouton, quand l'adresse du cockpit est connue.
     $base = cqMailBase();
     if ($base !== '') {
         $c .= '<tr><td class="pad" align="left" style="' . $F . ';padding:22px 26px 6px">'
-            . '<a href="' . $e($base . '/dashboard/?shop=' . $sid . '&vue=jour&date=' . $date) . '" style="display:inline-block;background:#8D1D2C;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 20px;border-radius:8px">Ouvrir les contrôles du jour</a>'
+            . '<a href="' . $e($base . '/dashboard/?shop=' . $sid . '&vue=jour&date=' . $date) . '" style="display:inline-block;background:#8D1D2C;color:#ffffff;text-decoration:none;font-size:14px;font-weight:400;padding:12px 20px;border-radius:8px">Ouvrir les contrôles du jour</a>'
             . '</td></tr>';
     }
 
@@ -298,7 +298,7 @@ function cqMailDistribuer(array $rep, bool $apercu = false): array
             . ($exemple ? ' — e-mail de ' . $exemple['magasin'] : ' — aucun e-mail à montrer')
         : 'Contrôle qualité ' . $heure . ' — ' . $cpt('envoye') . ' magasin(s) prévenu(s), ' . $cpt('fait') . ' avec photo(s), '
             . $cpt('sans-adresse') . ' sans adresse' . ($cpt('echec') ? ', ' . $cpt('echec') . ' échec(s)' : '');
-    $lst = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px">' . htmlspecialchars($resume) . '<ul>'
+    $lst = '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px">' . htmlspecialchars($resume) . '<ul>'
         . implode('', array_map(fn ($m2) => '<li>' . htmlspecialchars($m2['magasin'] . ' — ' . $m2['statut']
             . (!empty($m2['envoyes']) ? ' (' . implode(', ', $m2['envoyes']) . ')' : '') . (!empty($m2['note']) ? ' · ' . $m2['note'] : '')) . '</li>', $bilan['magasins']))
         . '</ul></div>';

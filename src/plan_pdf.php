@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/doc.php';
+
 /**
  * LE PLAN DE DÉVELOPPEMENT EN PDF — trois pages, plus le tableau de tous les
  * trimestres.
@@ -52,53 +54,53 @@ function planPdfHtml(array $d, int $q): string
     $trimNom = [1 => 'janvier – mars', 2 => 'avril – juin', 3 => 'juillet – septembre', 4 => 'octobre – décembre'];
 
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
-      .serif{font-family:Georgia,"DejaVu Serif","Times New Roman",serif}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:9pt}
+      .serif{font-family:Gotham,Helvetica,Arial,sans-serif}
       .k{font-size:7.2pt;letter-spacing:.09em;text-transform:uppercase;color:#7a736a;font-weight:normal}
-      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#2d7a3e}.wa{color:#B26A00}
+      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#3f7a52}.wa{color:#7A5207}
       .h1{font-size:20pt;letter-spacing:-.01em;margin:4mm 0 1mm}
       .soustitre{font-size:9pt;color:#7a736a;margin:0 0 5mm}
-      .sec{font-family:Georgia,"DejaVu Serif",serif;font-size:12pt;margin:5mm 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
-      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm}
-      .tile .v{font-family:Georgia,"DejaVu Serif",serif;font-size:15pt;margin-top:1mm;white-space:nowrap}
+      .sec{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:12pt;margin:5mm 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
+      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm}
+      .tile .v{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:15pt;margin-top:1mm;white-space:nowrap}
       .tile .s{font-size:7.5pt;color:#7a736a;margin-top:.8mm;line-height:1.45}
       table.grille{width:100%;border-collapse:separate;border-spacing:1.6mm 0;margin:0 -1.6mm 5mm}
       table.t{width:100%;border-collapse:collapse;margin-bottom:4mm}
-      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
-      .t td{font-size:8.6pt;text-align:right;padding:1.4mm 2mm;border-bottom:.5pt solid #EAE3D8;white-space:nowrap;vertical-align:top}
+      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #1c1a17}
+      .t td{font-size:8.6pt;text-align:right;padding:1.4mm 2mm;border-bottom:.5pt solid #EDE7DE;white-space:nowrap;vertical-align:top}
       .t .l{text-align:left;white-space:normal}
-      .t tr.cur td{background:#FBEFE0}
-      .t tr.tot td{border-top:1pt solid #221E1A;border-bottom:none;font-weight:bold;background:#FCFAF7}
-      .t td b{font-weight:bold}
+      .t tr.cur td{background:#F6E7CE}
+      .t tr.tot td{border-top:1pt solid #1c1a17;border-bottom:none;font-weight:400;background:#FBF9F5}
+      .t td b{font-weight:400}
       .rampe{width:100%;border-collapse:separate;border-spacing:3mm 0;margin:0 -3mm 2mm}
       .rampe td{vertical-align:bottom;text-align:center;width:20%}
-      .rampe .v{font-size:8pt;font-weight:bold;margin-bottom:1mm}
+      .rampe .v{font-size:8pt;font-weight:400;margin-bottom:1mm}
       .rampe .y{font-size:7.5pt;color:#7a736a;margin-top:1.2mm}
-      .barre{display:block;width:100%;border-radius:2mm 2mm 0 0;background:#EFE9DF;border:1px solid #d9d1c4;position:relative}
+      .barre{display:block;width:100%;border-radius:2mm 2mm 0 0;background:#ffffff;border:1px solid #d9d1c4;position:relative}
       .barre.cur{background:#8D1D2C;border-color:#8D1D2C}
-      .barre .fait{position:absolute;left:0;right:0;bottom:0;background:#C17A2A}
+      .barre .fait{position:absolute;left:0;right:0;bottom:0;background:#B0792A}
       .cadre{border:1px solid #8D1D2C;border-radius:8px;padding:2.5mm 3.5mm;margin-bottom:4mm}
-      .cadre .k{color:#8D1D2C;font-weight:bold}
-      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
+      .cadre .k{color:#8D1D2C;font-weight:400}
+      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
       .voix{margin-top:1.5mm;font-size:8.2pt;line-height:1.45}
       .voix b{display:inline-block;width:20mm;font-size:6.8pt;letter-spacing:.06em;text-transform:uppercase;vertical-align:top;padding-top:.6mm}
-      .voix.fr b{color:#8D1D2C}.voix.co b{color:#B26A00}.voix.ma b{color:#2d7a3e}
-      .voix span{display:inline-block;width:150mm;background:#fbf9f5;border-radius:2mm;padding:1.4mm 2.4mm;vertical-align:top}
-      .voix span.vide{color:#b5aea4;border:.5pt dashed #c9c1b5;background:#fff}
+      .voix.fr b{color:#8D1D2C}.voix.co b{color:#7A5207}.voix.ma b{color:#3f7a52}
+      .voix span{display:inline-block;width:150mm;background:#FBF9F5;border-radius:2mm;padding:1.4mm 2.4mm;vertical-align:top}
+      .voix span.vide{color:#B8B2A8;border:.5pt dashed #B8B2A8;background:#fff}
       .trim{border:1px solid #e6e0d8;border-radius:8px;padding:2.5mm 3.5mm;margin-bottom:3mm;page-break-inside:avoid}
       .trim.cur{border-color:#8D1D2C}
-      .trim .tt{font-family:Georgia,"DejaVu Serif",serif;font-size:11pt}
-      .st{display:inline-block;font-size:6.8pt;font-weight:bold;border-radius:3mm;padding:.5mm 2mm;white-space:nowrap}
-      .st-fait{background:#E3EFE6;color:#2d7a3e}.st-enc{background:#FBEFE0;color:#8a5a1c}.st-alanc{background:#EFE9DF;color:#7a736a}.st-aband{background:#F6E4E7;color:#8D1D2C}
+      .trim .tt{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:11pt}
+      .st{display:inline-block;font-size:6.8pt;font-weight:400;border-radius:3mm;padding:.5mm 2mm;white-space:nowrap}
+      .st-fait{background:#E8EFEA;color:#3f7a52}.st-enc{background:#F6E7CE;color:#7A5207}.st-alanc{background:#ffffff;color:#7a736a}.st-aband{background:#F6ECED;color:#8D1D2C}
       table.sig{width:100%;border-collapse:separate;border-spacing:3mm 0;margin:4mm -3mm 0}
-      .sig td{border-top:.6pt solid #221E1A;padding-top:1.5mm;font-size:7.5pt;color:#7a736a;width:33%;vertical-align:top;height:12mm}
+      .sig td{border-top:.6pt solid #1c1a17;padding-top:1.5mm;font-size:7.5pt;color:#7a736a;width:33%;vertical-align:top;height:12mm}
     </style>';
     $entete = static fn (string $droite) => '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">' : '<strong style="font-size:12pt">L’Atelier by</strong>') . '</td>'
-        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">' . $droite . '</td></tr></table>';
+        . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5">' . $droite . '</td></tr></table>';
     $tuile = static fn (string $lbl, string $val, string $sub, string $cl = '') =>
         '<td width="25%" valign="top" class="tile"><div class="k">' . $lbl . '</div><div class="v ' . $cl . '">' . $val . '</div><div class="s">' . $sub . '</div></td>';
-    $droite = 'Plan de développement<br>' . $e($court($d['magasin'])) . ' · revue T' . $q . ' ' . $ex . ' · au ' . $dt($d['aujourdhui']);
+    $droite = '<b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Plan de développement</b>' . $e($court($d['magasin'])) . ' · revue T' . $q . ' ' . $ex . ' · au ' . $dt($d['aujourdhui']);
 
     $R = $d['rampe']; $A = $d['annee'];
     $engs = (array) $d['engagements'];
@@ -240,10 +242,10 @@ function planPdfHtml(array $d, int $q): string
     } else { $h .= '<div class="methode" style="margin-bottom:4mm">Aucune action en cours ni à lancer.</div>'; }
     $suite = $tq ? ((array) $tq['notes'])['suite'] ?? null : null;
     $h .= '<div class="cadre"><div class="k">Ce qu’on se dit pour T' . $qSuiv . '</div>'
-        . '<div class="voix"><span style="width:170mm' . ($suite ? '' : ';color:#b5aea4;border:.5pt dashed #c9c1b5;background:#fff') . '">' . ($suite ? $e($suite['texte']) : 'pas encore écrit — étape 4 du rituel') . '</span></div></div>';
+        . '<div class="voix"><span style="width:170mm' . ($suite ? '' : ';color:#B8B2A8;border:.5pt dashed #B8B2A8;background:#fff') . '">' . ($suite ? $e($suite['texte']) : 'pas encore écrit — étape 4 du rituel') . '</span></div></div>';
     $prochaine = $q < 4 ? 'début ' . ['', 'avril', 'juillet', 'octobre'][$q] . ' ' . $ex . ' — constat de T' . $q : 'première semaine de janvier ' . ($ex + 1) . ' — constat de T4, bilan de l’engagement ' . $ex . ', et dépôt de l’engagement ' . ($ex + 1);
     $rv = $tq['revue'] ?? null;
-    $h .= '<div class="methode"><b style="color:#221E1A">Prochaine revue :</b> ' . $e($prochaine) . '.'
+    $h .= '<div class="methode"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Prochaine revue :</b> ' . $e($prochaine) . '.'
         . ($rv && $rv['valideLe'] ? ' Revue T' . $q . ' validée le ' . $dt($rv['valideLe']) . ($rv['validePar'] ? ' par ' . $e($rv['validePar']) : '') . '.' : ' Revue T' . $q . ' non validée.') . '</div>'
         . '<table class="sig"><tr><td>Le franchisé<br></td><td>Le consultant<br></td><td>La marque — L’Atelier by<br></td></tr></table>'
         . '</div></div>';

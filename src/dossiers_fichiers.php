@@ -107,11 +107,11 @@ function dsrCourriel(string $titre, string $message, array $fichiers): string
     $corps = '';
     foreach (array_filter(array_map('trim', preg_split('/\R\s*\R/', $message) ?: [])) as $p) { $corps .= '<p style="margin:0 0 12px">' . nl2br($h($p)) . '</p>'; }
     $liste = '';
-    foreach ($fichiers as $f) { $liste .= '<li>' . $h($f['nom']) . ' <span style="color:#777">· ' . dsrTaille((int) $f['octets']) . '</span></li>'; }
-    return '<!doctype html><html lang="fr"><body style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#222;line-height:1.5;margin:0;padding:24px">'
+    foreach ($fichiers as $f) { $liste .= '<li>' . $h($f['nom']) . ' <span style="color:#7a736a">· ' . dsrTaille((int) $f['octets']) . '</span></li>'; }
+    return '<!doctype html><html lang="fr"><body style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:15px;color:#1c1a17;line-height:1.5;margin:0;padding:24px">'
         . '<div style="max-width:640px"><h2 style="margin:0 0 16px;font-size:20px">' . $h($titre) . '</h2>' . $corps
         . '<p style="margin:16px 0 6px"><b>En pièces jointes</b></p><ul style="margin:0 0 16px;padding-left:20px">' . $liste . '</ul>'
-        . '<p style="color:#777;font-size:13px;margin:0">Envoyé par le cockpit de L’Atelier By le ' . date('d/m/Y à H:i') . '.</p></div></body></html>';
+        . '<p style="color:#7a736a;font-size:13px;margin:0">Envoyé par le cockpit de L’Atelier By le ' . date('d/m/Y à H:i') . '.</p></div></body></html>';
 }
 
 /**

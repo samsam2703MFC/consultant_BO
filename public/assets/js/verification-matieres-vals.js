@@ -30,7 +30,7 @@ const qteS = (q, u) => q == null ? '—' : (q > 0 ? '+' : (q < 0 ? '−' : '')) 
 const prixU = (p, u) => p == null ? 'sans prix' : (u === 'g' ? nf(p * 1000, 2) + ' € / kg' : (u === 'ml' ? nf(p * 1000, 2) + ' € / l' : nf(p, p < 1 ? 3 : 2) + ' € / pce'));
 
 const TONS_CAUSE = { entree: 'att', recette: 'ko', poubelle: 'ko', horsCaisse: 'ko', tolerance: 'ok' };
-const COULEUR_CAUSE = { entree: '#D97706', recette: '#8D1D2C', poubelle: '#C0182B', horsCaisse: '#5b3f86', tolerance: '#2d7a3e' };
+const COULEUR_CAUSE = { entree: '#B0792A', recette: '#8D1D2C', poubelle: '#A32014', horsCaisse: '#5b3f86', tolerance: '#3f7a52' };
 
 function charge(app, chemin, force){
   const b = app.state.vmData;

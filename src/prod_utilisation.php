@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/doc.php';
+
 /**
  * Cockpit CEO — l'usage du catalogue, magasin par magasin.
  *
@@ -636,10 +638,11 @@ function utilJamaisVendues(int $n, string $groupe = ''): array
 function utilJamaisPdfHtml(array $d, int $n): string
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-    $F = 'font-family:Helvetica,Arial,sans-serif';
-    $h = '<div style="' . $F . ';color:#222">'
-        . '<div style="font-size:17pt;font-weight:700;margin-bottom:2mm">Références jamais vendues</div>'
-        . '<div style="font-size:9pt;color:#6b6259;line-height:1.5;margin-bottom:6mm">'
+    $F = 'font-family:Gotham,Helvetica,Arial,sans-serif';
+    // En-tête du gabarit A4 (design system §13.4, version A).
+    $h = '<div style="' . $F . ';color:#1c1a17">'
+        . docEntete('Références jamais vendues', 'Réseau · ' . mktBriefJour($d['du']) . ' → ' . mktBriefJour($d['au']))
+        . '<div style="font-size:9pt;color:#7a736a;line-height:1.5;margin-bottom:6mm">'
         . 'Aucun magasin du réseau n’en a vendu une seule unité entre le ' . $e(mktBriefJour($d['du']))
         . ' et le ' . $e(mktBriefJour($d['au'])) . ' (' . $n . ' mois'
         . ($d['groupe'] !== '' ? ', groupe ' . $e($d['groupe']) : '') . ').<br>'
@@ -661,26 +664,26 @@ function utilJamaisPdfHtml(array $d, int $n): string
         . '</div>';
 
     if ($d['motif'] !== null) {
-        return $h . '<div style="font-size:10pt;color:#8D1D2C">' . $e($d['motif']) . '</div></div>';
+        return $h . '<div style="font-size:10pt;color:#b3261e">' . $e($d['motif']) . '</div></div>';
     }
     if ($d['lignes'] === []) {
-        return $h . '<div style="font-size:10pt;color:#2d7a3e">Aucune : chaque référence du catalogue a trouvé preneur au moins une fois.</div></div>';
+        return $h . '<div style="font-size:10pt;color:#3f7a52">Aucune : chaque référence du catalogue a trouvé preneur au moins une fois.</div></div>';
     }
 
     foreach ($d['lignes'] as $g) {
         $h .= '<div style="page-break-inside:avoid">'
-            . '<div style="' . $F . ';font-size:11pt;font-weight:700;border-bottom:1pt solid #222;padding-bottom:1.5mm;margin:6mm 0 2mm">'
-            . $e($g['groupe']) . ' <span style="font-weight:400;color:#6b6259">— ' . $g['total'] . ' référence'
+            . '<div style="' . $F . ';font-size:11pt;font-weight:400;border-bottom:1pt solid #1c1a17;padding-bottom:1.5mm;margin:6mm 0 2mm">'
+            . $e($g['groupe']) . ' <span style="font-weight:400;color:#7a736a">— ' . $g['total'] . ' référence'
             . ($g['total'] > 1 ? 's' : '') . '</span></div>';
         foreach ($g['categories'] as $c) {
-            $h .= '<div style="font-size:8.5pt;text-transform:uppercase;letter-spacing:0.06em;color:#6b6259;margin:3mm 0 1mm">'
+            $h .= '<div style="font-size:8.5pt;text-transform:uppercase;letter-spacing:0.06em;color:#7a736a;margin:3mm 0 1mm">'
                 . $e($c['nom']) . ' · ' . count($c['refs']) . '</div>'
                 . '<table style="width:100%;border-collapse:collapse;' . $F . ';font-size:9pt">';
             foreach ($c['refs'] as $r) {
                 $h .= '<tr>'
-                    . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #E7E0D6;width:22mm;color:#6b6259;font-size:8pt">' . $e($r['ref']) . '</td>'
-                    . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #E7E0D6">' . $e($r['nom']) . '</td>'
-                    . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #E7E0D6;text-align:right;width:20mm;color:#6b6259">'
+                    . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #e6e0d8;width:22mm;color:#7a736a;font-size:8pt">' . $e($r['ref']) . '</td>'
+                    . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #e6e0d8">' . $e($r['nom']) . '</td>'
+                    . '<td style="padding:1.2mm 0;border-bottom:0.5pt solid #e6e0d8;text-align:right;width:20mm;color:#7a736a">'
                     . ($r['prix'] === null ? '' : $e(number_format((float) $r['prix'], 2, ',', ' ') . ' €')) . '</td>'
                     . '</tr>';
             }

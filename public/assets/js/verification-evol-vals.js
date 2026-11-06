@@ -17,7 +17,7 @@ const jjmm = s => { const d = jourDe(s); return String(d.getDate()).padStart(2, 
 const heure = s => { const m = /(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/.exec(String(s || '')); return m ? jjmm(m[1]) + ' à ' + m[2] + ':' + m[3] : '—'; };
 
 /** Les couleurs des magasins, toujours dans le même ordre ; le réseau en noir pointillé. */
-const COULEURS = ['#2F5D8A', '#8D1D2C', '#B26A00', '#5b3f86', '#0f766e', '#a0522d', '#4b5563', '#be185d'];
+const COULEURS = ['#2F5D8A', '#8D1D2C', '#7A5207', '#5b3f86', '#0f766e', '#a0522d', '#4b5563', '#be185d'];
 /** Les bandes des seuils (vert, orange) pour les indicateurs qui en ont. */
 const BANDES = { nonExpl: 'nonExpl', poubelle: 'poubelle' };
 /** Ce qui n'est qu'une estimation quand la semaine n'est pas mesurée (produit = plan) : le non expliqué et l'invendu. */
@@ -62,7 +62,7 @@ function graphique(d, ind, shop, mags){
   const n = sem.length;
   const xs = i => G + (n <= 1 ? 0 : i * (W - G - D) / (n - 1));
   const series = mags.map((m, k) => ({ id: m.id, nom: m.nom, couleur: COULEURS[k % COULEURS.length], s: (m.series || {}) }))
-    .concat([{ id: 'reseau', nom: 'Réseau', couleur: '#222', reseau: true, s: ((d.reseau || {}).series || {}) }]);
+    .concat([{ id: 'reseau', nom: 'Réseau', couleur: '#1c1a17', reseau: true, s: ((d.reseau || {}).series || {}) }]);
   let max = 0, min = 0;
   series.forEach(S => (S.s[ind] || []).forEach(v => { if (v != null && v > max) { max = v; } if (v != null && v < min) { min = v; } }));
   const E = echelle(max, min, ind);

@@ -120,7 +120,7 @@ const KPI_SORTIES = ['tableau' => 'Tableau', 'heatmap' => 'Heatmap', 'barres' =>
 /** Le rendu email d'un KPI dérivé selon sa sortie — cellules et divs à fond plein. */
 function kpiRenduVisuel(array $def, array $lignes): string
 {
-    $coul = fn (int $n) => $n >= 2 ? '#8D1D2C' : ($n === 1 ? '#C17A2A' : '#3D8B44');
+    $coul = fn (int $n) => $n >= 2 ? '#8D1D2C' : ($n === 1 ? '#B0792A' : '#3f7a52');
     $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
     if ($lignes === []) { return ''; }
     $max = max(array_map(fn ($l) => $l['valeur'], $lignes)) ?: 1;
@@ -129,9 +129,9 @@ function kpiRenduVisuel(array $def, array $lignes): string
         case 'heatmap': {
             $cells = '';
             foreach ($lignes as $l) {
-                $cells .= '<td style="background:' . $coul($l['niveau']) . ';color:#fff;border-radius:6px;padding:7px 10px;text-align:center;font-family:sans-serif;font-size:11px">'
+                $cells .= '<td style="background:' . $coul($l['niveau']) . ';color:#fff;border-radius:6px;padding:7px 10px;text-align:center;font-family:Gotham,Helvetica,Arial,sans-serif;font-size:11px">'
                     . '<div style="font-size:9px;opacity:0.85">' . $e($l['magasin']) . '</div>'
-                    . '<div style="font-weight:700;margin-top:1px">' . $e(kpiFormatValeur($def, $l['valeur'])) . '</div></td>';
+                    . '<div style="font-weight:400;margin-top:1px">' . $e(kpiFormatValeur($def, $l['valeur'])) . '</div></td>';
             }
             return '<table cellpadding="0" cellspacing="3" style="border-collapse:separate;margin:4px 0"><tr>' . $cells . '</tr></table>';
         }
@@ -141,10 +141,10 @@ function kpiRenduVisuel(array $def, array $lignes): string
             $h = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:5px 0">';
             foreach ($lignes as $l) {
                 $w = max(6, (int) round($l['valeur'] / $max * 100));
-                $h .= '<tr><td width="170" style="font-family:sans-serif;font-size:11.5px;padding:3px 8px 3px 0;color:#221E1A;white-space:nowrap">' . $e($l['magasin']) . '</td>'
+                $h .= '<tr><td width="170" style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:11.5px;padding:3px 8px 3px 0;color:#1c1a17;white-space:nowrap">' . $e($l['magasin']) . '</td>'
                     . '<td style="padding:3px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-                    . '<td width="' . $w . '%" style="background:' . $coul($l['niveau']) . ';border-radius:5px;padding:4px 8px;font-family:sans-serif;font-size:10.5px;font-weight:700;color:#ffffff;white-space:nowrap">' . $e(kpiFormatValeur($def, $l['valeur'])) . '</td>'
-                    . '<td style="background:#EFE9DF;border-radius:0 5px 5px 0;font-size:0;line-height:0">&nbsp;</td>'
+                    . '<td width="' . $w . '%" style="background:' . $coul($l['niveau']) . ';border-radius:5px;padding:4px 8px;font-family:Gotham,Helvetica,Arial,sans-serif;font-size:10.5px;font-weight:400;color:#ffffff;white-space:nowrap">' . $e(kpiFormatValeur($def, $l['valeur'])) . '</td>'
+                    . '<td style="background:#ffffff;border-radius:0 5px 5px 0;font-size:0;line-height:0">&nbsp;</td>'
                     . '</tr></table></td></tr>';
             }
             return $h . '</table>';
@@ -155,12 +155,12 @@ function kpiRenduVisuel(array $def, array $lignes): string
             $h = '<table role="presentation" width="100%" cellpadding="0" cellspacing="3" style="border-collapse:separate;margin:5px 0"><tr>';
             foreach ($lignes as $l) {
                 $w = max(9, (int) round(max(0, $l['valeur']) / $somme * 100));
-                $h .= '<td width="' . $w . '%" style="background:' . $coul($l['niveau']) . ';border-radius:6px;padding:10px 8px;font-family:sans-serif;color:#ffffff">'
+                $h .= '<td width="' . $w . '%" style="background:' . $coul($l['niveau']) . ';border-radius:6px;padding:10px 8px;font-family:Gotham,Helvetica,Arial,sans-serif;color:#ffffff">'
                     . '<div style="font-size:9px;opacity:0.85;white-space:nowrap;overflow:hidden">' . $e($l['magasin']) . '</div>'
-                    . '<div style="font-size:11.5px;font-weight:700;white-space:nowrap">' . $e(kpiFormatValeur($def, $l['valeur'])) . '</div></td>';
+                    . '<div style="font-size:11.5px;font-weight:400;white-space:nowrap">' . $e(kpiFormatValeur($def, $l['valeur'])) . '</div></td>';
             }
             return $h . '</tr></table>'
-                . '<div style="font-size:10px;color:#6E645A;font-family:sans-serif">Largeur &prop; part de la valeur &middot; couleur = position vs seuils</div>';
+                . '<div style="font-size:10px;color:#7a736a;font-family:Gotham,Helvetica,Arial,sans-serif">Largeur &prop; part de la valeur &middot; couleur = position vs seuils</div>';
         }
     }
     return '';

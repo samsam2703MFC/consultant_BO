@@ -227,25 +227,25 @@ function docDeVille(string $nom): string
 function docMailMateriel(string $nom, string $materiel, ?array $contrat): array
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $F = "font-family:Gotham,Helvetica,Arial,sans-serif";
     $res = setting('reseau', []);
     $marque = is_array($res) ? ($res['nom'] ?? 'L’Atelier by') : 'L’Atelier by';
     $logoUri = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
     $logo = $logoUri !== '' ? '<img src="' . $logoUri . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
-        : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
+        : '<span style="' . $F . ';color:#1c1a17;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
     $deVille = docDeVille($nom);
     $c = '<tr><td class="pad" style="' . $F . ';padding:20px 26px 6px">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:#F4F1EC;border-left:4px solid #8D1D2C;border-radius:8px;padding:14px 16px">'
-        . '<div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8D1D2C;font-weight:700">Mise à disposition du matériel</div>'
-        . '<div class="titre" style="font-size:19px;font-weight:700;color:#221E1A;margin-top:4px">Magasin ' . $e($deVille) . '</div>'
+        . '<div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8D1D2C;font-weight:400">Mise à disposition du matériel</div>'
+        . '<div class="titre" style="font-size:19px;font-weight:700;color:#1c1a17;margin-top:4px">Magasin ' . $e($deVille) . '</div>'
         . '<div style="font-size:13px;color:#5d554d;margin-top:3px">Conditions d’entretien et de réparation</div>'
         . '</td></tr></table></td></tr>';
-    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#221E1A;padding:14px 26px 4px">'
+    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#1c1a17;padding:14px 26px 4px">'
         . 'Bonjour,<br><br>Nous vous confirmons que le matériel de votre magasin vous est <b>mis à disposition à l’état neuf</b> par ' . $e($marque) . '.</td></tr>';
     $bloc = static fn ($titre, $coul, $fond, $lignes) => '<tr><td class="pad" style="' . $F . ';padding:12px 26px 0">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:' . $fond . ';border-radius:8px;padding:12px 16px">'
-        . '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:' . $coul . ';font-weight:700;margin-bottom:6px">' . $titre . '</div>'
-        . implode('', array_map(static fn ($l) => '<div style="font-size:14px;line-height:1.55;color:#221E1A;padding:3px 0">' . $l . '</div>', $lignes))
+        . '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:' . $coul . ';font-weight:400;margin-bottom:6px">' . $titre . '</div>'
+        . implode('', array_map(static fn ($l) => '<div style="font-size:14px;line-height:1.55;color:#1c1a17;padding:3px 0">' . $l . '</div>', $lignes))
         . '</td></tr></table></td></tr>';
     $c .= $bloc('Mis à disposition par ' . $e($marque), '#2E6DB4', '#EAF1F9', ['✓ Le matériel du magasin, <b>neuf</b>, prêt à l’emploi']);
     $c .= $bloc('À votre charge', '#8A3F14', '#FBEFE7', [
@@ -254,15 +254,15 @@ function docMailMateriel(string $nom, string $materiel, ?array $contrat): array
     $materiel = trim($materiel);
     if ($materiel !== '') {
         $c .= '<tr><td class="pad" style="' . $F . ';padding:14px 26px 0">'
-            . '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8b8177;font-weight:700;margin-bottom:4px">Matériel concerné</div>'
-            . '<div style="font-size:14px;line-height:1.6;color:#221E1A">' . nl2br($e($materiel)) . '</div></td></tr>';
+            . '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#7a736a;font-weight:400;margin-bottom:4px">Matériel concerné</div>'
+            . '<div style="font-size:14px;line-height:1.6;color:#1c1a17">' . nl2br($e($materiel)) . '</div></td></tr>';
     }
-    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#221E1A;padding:14px 26px 4px">'
+    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#1c1a17;padding:14px 26px 4px">'
         . 'Le détail figure dans votre contrat de mise à disposition' . ($contrat !== null ? ', joint à ce message' : '') . '.<br><br>Pour toute question, n’hésitez pas à nous contacter.<br><br>Bien cordialement,<br><b>' . $e($marque) . '</b></td></tr>';
     if ($contrat !== null) {
         $ko = max(1, (int) round(((int) $contrat['octets']) / 1024));
         $c .= '<tr><td class="pad" style="' . $F . ';padding:12px 26px 4px">'
-            . '<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border:1px solid #EFE9DF;border-radius:8px;padding:8px 12px;font-size:13px;color:#221E1A">📎 ' . $e($contrat['nom']) . ' <span style="color:#8b8177">· ' . ($ko >= 1024 ? number_format($ko / 1024, 1, ',', ' ') . ' Mo' : $ko . ' Ko') . '</span></td></tr></table></td></tr>';
+            . '<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border:1px solid #ffffff;border-radius:8px;padding:8px 12px;font-size:13px;color:#1c1a17">📎 ' . $e($contrat['nom']) . ' <span style="color:#7a736a">· ' . ($ko >= 1024 ? number_format($ko / 1024, 1, ',', ' ') . ' Mo' : $ko . ' Ko') . '</span></td></tr></table></td></tr>';
     }
     $html = caMailSquelette('Franchise', 'message envoyé depuis le cockpit ; une copie est rangée dans les documents du magasin.');
     $html = str_replace(['{{logo}}', '{{marque}}', '{{contenu}}'], [$logo, $e($marque), $c], $html);

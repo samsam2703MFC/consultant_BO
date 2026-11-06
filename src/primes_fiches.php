@@ -66,7 +66,7 @@ function primesFichesEquipe(string $shop): array
 function primesFichesCourrier(string $nom, array $langues): array
 {
     $prenom = htmlspecialchars(explode(' ', trim($nom))[0] ?: $nom, ENT_QUOTES);
-    $lien = '<a href="' . PRIMES_FICHES_APP . '" style="color:#8D1D2C;font-weight:bold">' . PRIMES_FICHES_APP . '</a>';
+    $lien = '<a href="' . PRIMES_FICHES_APP . '" style="color:#8D1D2C;font-weight:400">' . PRIMES_FICHES_APP . '</a>';
     $fr = '<p>Bonjour ' . $prenom . ',</p>'
         . '<p>Ce que tu peux gagner ce mois-ci, comment y arriver, où tu en es : tout est dans <b>l’app employé</b>, sur ton téléphone.'
         . ' L’affiche est en pièce jointe ; depuis ton téléphone, ouvre directement ' . $lien . '.</p>'
@@ -80,8 +80,8 @@ function primesFichesCourrier(string $nom, array $langues): array
     $deux = in_array('fr', $langues, true) && in_array('nl', $langues, true);
     $sujet = $deux ? 'Tes primes, dans ta poche · Je premies, altijd op zak'
         : (in_array('nl', $langues, true) ? 'Je premies, altijd op zak — de medewerkersapp' : 'Tes primes, dans ta poche — l’app employé');
-    $corps = $deux ? $fr . '<hr style="border:0;border-top:1px solid #e5ded4;margin:18px 0">' . $nl : (in_array('nl', $langues, true) ? $nl : $fr);
-    return [$sujet, '<div style="font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#222;line-height:1.55;max-width:560px">' . $corps
+    $corps = $deux ? $fr . '<hr style="border:0;border-top:1px solid #e6e0d8;margin:18px 0">' . $nl : (in_array('nl', $langues, true) ? $nl : $fr);
+    return [$sujet, '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14px;color:#1c1a17;line-height:1.55;max-width:560px">' . $corps
         . '<p style="color:#7a736a;font-size:11px;margin-top:18px">L’Atelier by — envoyé depuis le cockpit par ton magasin.</p></div>'];
 }
 

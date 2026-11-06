@@ -120,18 +120,18 @@ function ep_rapports_ca_net(): array
 function cnMailHtml(array $d): array
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $F = "font-family:Gotham,Helvetica,Arial,sans-serif";
     $eur = static fn (float $v) => number_format($v, 2, ',', ' ') . ' €';
     $res = setting('reseau', []);
     $marque = is_array($res) ? ($res['nom'] ?? 'L’Atelier by') : 'L’Atelier by';
     $logoUri = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
     $logo = $logoUri !== '' ? '<img src="' . $logoUri . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
-        : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
+        : '<span style="' . $F . ';color:#1c1a17;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
     $lib = cnLibMois($d['mois']);
-    $th = static fn ($t, $a = 'right') => '<th align="' . $a . '" style="' . "font-family:'Segoe UI',Arial,sans-serif" . ';font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#8b8177;font-weight:700;padding:6px 6px;border-bottom:1px solid #EFE9DF">' . $t . '</th>';
-    $td = static fn ($t, $a = 'right', $s = '') => '<td align="' . $a . '" style="' . "font-family:'Segoe UI',Arial,sans-serif" . ';font-size:13px;color:#221E1A;padding:7px 6px;border-bottom:1px solid #EFE9DF;white-space:nowrap;' . $s . '">' . $t . '</td>';
+    $th = static fn ($t, $a = 'right') => '<th align="' . $a . '" style="' . "font-family:Gotham,Helvetica,Arial,sans-serif" . ';font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#7a736a;font-weight:400;padding:6px 6px;border-bottom:1px solid #ffffff">' . $t . '</th>';
+    $td = static fn ($t, $a = 'right', $s = '') => '<td align="' . $a . '" style="' . "font-family:Gotham,Helvetica,Arial,sans-serif" . ';font-size:13px;color:#1c1a17;padding:7px 6px;border-bottom:1px solid #ffffff;white-space:nowrap;' . $s . '">' . $t . '</td>';
     // Trois colonnes, lisibles sur un téléphone : le TTC et la TVA en petit sous le nom du magasin.
-    $nom = static fn (string $n, array $v) => $n . '<div style="font-size:11px;color:#8b8177;font-weight:400;white-space:normal">TTC ' . $eur($v['brut']) . ' · TVA ' . $eur($v['tva']) . '</div>';
+    $nom = static fn (string $n, array $v) => $n . '<div style="font-size:11px;color:#7a736a;font-weight:400;white-space:normal">TTC ' . $eur($v['brut']) . ' · TVA ' . $eur($v['tva']) . '</div>';
     $lignes = '';
     foreach ($d['magasins'] as $m) {
         $lignes .= '<tr>' . $td($nom($e(cqMailVille($m['nom'])), $m), 'left', 'white-space:normal') . $td('<b>' . $eur($m['net']) . '</b>') . $td(number_format($m['tickets'], 0, ',', ' '), 'right', 'color:#5d554d') . '</tr>';
@@ -139,13 +139,13 @@ function cnMailHtml(array $d): array
     $R = $d['reseau'];
     $lignes .= '<tr>' . $td($nom('<b>Réseau</b>', $R), 'left', 'border-bottom:0;white-space:normal') . $td('<b>' . $eur($R['net']) . '</b>', 'right', 'border-bottom:0') . $td(number_format($R['tickets'], 0, ',', ' '), 'right', 'border-bottom:0;color:#5d554d') . '</tr>';
     $c = '<tr><td class="pad" style="' . $F . ';padding:20px 26px 6px">'
-        . '<div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8D1D2C;font-weight:700">Chiffre d’affaires net</div>'
-        . '<div class="titre" style="font-size:19px;font-weight:700;color:#221E1A;margin-top:4px">' . $e(ucfirst($lib)) . ' · ' . $eur($R['net']) . ' hors TVA</div>'
+        . '<div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8D1D2C;font-weight:400">Chiffre d’affaires net</div>'
+        . '<div class="titre" style="font-size:19px;font-weight:700;color:#1c1a17;margin-top:4px">' . $e(ucfirst($lib)) . ' · ' . $eur($R['net']) . ' hors TVA</div>'
         . '<div style="font-size:13px;color:#5d554d;margin-top:3px">' . count($d['magasins']) . ' magasin' . (count($d['magasins']) > 1 ? 's' : '') . ' · du ' . $e(date('d/m', strtotime($d['du']))) . ' au ' . $e(date('d/m/Y', strtotime($d['au']))) . '</div></td></tr>';
-    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#221E1A;padding:12px 26px 4px">Bonjour,<br><br>Voici le chiffre d’affaires net (hors TVA) de ' . $e($lib) . ', magasin par magasin.</td></tr>';
+    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#1c1a17;padding:12px 26px 4px">Bonjour,<br><br>Voici le chiffre d’affaires net (hors TVA) de ' . $e($lib) . ', magasin par magasin.</td></tr>';
     $c .= '<tr><td class="pad" style="' . $F . ';padding:8px 20px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">'
         . '<tr>' . $th('Magasin', 'left') . $th('CA net (HTVA)') . $th('Tickets') . '</tr>' . $lignes . '</table></td></tr>';
-    $c .= '<tr><td class="pad" style="' . $F . ';font-size:11px;line-height:1.5;color:#8b8177;padding:12px 26px 0">CA net = montant TTC après remise moins la TVA, ticket par ticket, tels que la caisse du panel les enregistre ; tous les tickets, clients pro compris.</td></tr>';
+    $c .= '<tr><td class="pad" style="' . $F . ';font-size:11px;line-height:1.5;color:#7a736a;padding:12px 26px 0">CA net = montant TTC après remise moins la TVA, ticket par ticket, tels que la caisse du panel les enregistre ; tous les tickets, clients pro compris.</td></tr>';
     $html = caMailSquelette('Chiffre d’affaires', 'message envoyé depuis le cockpit.');
     $html = str_replace(['{{logo}}', '{{marque}}', '{{contenu}}'], [$logo, $e($marque), $c], $html);
     return ['Chiffre d’affaires net de ' . $lib . ' — tous les magasins', $html];

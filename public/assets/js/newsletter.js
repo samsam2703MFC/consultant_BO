@@ -24,7 +24,7 @@
   'use strict';
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const fmt = n => Number(n || 0).toLocaleString('fr-BE').replace(/ | /g, ' ');
-  const P = 'var(--color-primary)', MUTED = 'var(--color-text-muted)', SEC = 'var(--color-secondary)', ON = 'var(--color-on-abricot)', SURF = 'var(--color-surface)', BG2 = 'var(--color-background-secondary)', GREEN = '#2d7a3e';
+  const P = 'var(--color-primary)', MUTED = 'var(--color-text-muted)', SEC = 'var(--color-secondary)', ON = 'var(--color-on-abricot)', SURF = 'var(--color-surface)', BG2 = 'var(--color-background-secondary)', GREEN = '#3f7a52';
   const LANG_KEYS = ['fr', 'nl', 'en'];
   const TRIGGERS = ['dormant45', 'third', 'birthday', 'firstOffice', 'season'];
   const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -265,15 +265,15 @@
 .nl input,.nl select,.nl textarea{outline:none;box-sizing:border-box;color:var(--color-text)}
 .nl input:focus,.nl select:focus,.nl textarea:focus{border-color:var(--color-primary)!important}
 .nl a{color:var(--color-primary)}
-.nl-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px;background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;flex-wrap:wrap}
+.nl-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;flex-wrap:wrap}
 .nl-body{max-width:1180px;margin:0 auto;padding:22px 0 40px}
 .nl-row:hover{background:var(--color-background-secondary)}
 .nl-wiz{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,0.8fr);gap:28px;align-items:start}
 .nl-set{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,0.8fr);gap:24px;align-items:start}
 .nl-sticky{position:sticky;top:24px}
-.nl-tbl{display:grid;grid-template-columns:minmax(180px,2.2fr) minmax(120px,1.4fr) minmax(150px,1.8fr) minmax(100px,1fr) minmax(90px,0.9fr) minmax(90px,0.9fr) minmax(130px,1.3fr);gap:16px;align-items:center;padding:14px 20px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.nl-tbl{display:grid;grid-template-columns:minmax(180px,2.2fr) minmax(120px,1.4fr) minmax(150px,1.8fr) minmax(100px,1fr) minmax(90px,0.9fr) minmax(90px,0.9fr) minmax(130px,1.3fr);gap:16px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--color-border-tertiary)}
 .nl-tbl.h{padding:10px 20px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)}
-.nl-shop{display:grid;grid-template-columns:minmax(110px,1fr) minmax(200px,2fr) minmax(120px,1fr) 110px;gap:16px;align-items:center;padding:12px 20px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.nl-shop{display:grid;grid-template-columns:minmax(110px,1fr) minmax(200px,2fr) minmax(120px,1fr) 110px;gap:16px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--color-border-tertiary)}
 .nl-shop.h{padding:10px 20px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)}
 .nl-scroll{overflow-x:auto}
 .nl-scroll>div{min-width:860px}
@@ -393,7 +393,7 @@
       if (focK) { const e = this.el.querySelector('[data-f="' + focK + '"]'); if (e) { e.focus(); if (sel && e.setSelectionRange) { try { e.setSelectionRange(sel[0], sel[1]); } catch (x) { /* type sans sélection */ } } } }
       if (scT) { const s2 = this.el.querySelector('.nl-cand'); if (s2) s2.scrollTop = scT; }
     }
-    pill(label, bg, color, border) { return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;padding:4px 10px;border-radius:8px;white-space:nowrap;background:${bg};color:${color};border:0.5px solid ${border}">${esc(label)}</span>`; }
+    pill(label, bg, color, border) { return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:400;padding:4px 10px;border-radius:8px;white-space:nowrap;background:${bg};color:${color};border:1px solid ${border}">${esc(label)}</span>`; }
     statusPill(status) {
       const t = this.t();
       const S = { sent: [t.st_sent, BG2, 'var(--color-text)', 'var(--color-border-tertiary)'], live: [t.st_live, SEC, ON, SEC], sched: [t.st_sched, 'transparent', P, P], draft: [t.st_draft, 'transparent', MUTED, 'var(--color-border-secondary)'] }[status] || [status, 'transparent', MUTED, 'var(--color-border-secondary)'];
@@ -405,13 +405,13 @@
       return this.pill(S[0], S[1], S[2], S[3]);
     }
     cap(txt, extra) { return `<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:${MUTED};${extra || ''}">${txt}</div>`; }
-    btnP(a, label, v, extra) { return `<button data-a="${a}"${v != null ? ` data-v="${esc(v)}"` : ''} style="background:${P};color:#fff;border:none;border-radius:8px;padding:9px 16px;font-family:var(--font-ui);font-size:13px;font-weight:500;cursor:pointer;${extra || ''}">${label}</button>`; }
-    btnS(a, label, v, extra) { return `<button data-a="${a}"${v != null ? ` data-v="${esc(v)}"` : ''} style="background:none;border:0.5px solid var(--color-border-secondary);color:var(--color-text);border-radius:8px;padding:9px 14px;font-family:var(--font-ui);font-size:13px;font-weight:500;cursor:pointer;${extra || ''}">${label}</button>`; }
+    btnP(a, label, v, extra) { return `<button data-a="${a}"${v != null ? ` data-v="${esc(v)}"` : ''} style="background:${P};color:#fff;border:none;border-radius:8px;padding:9px 16px;font-family:var(--font-ui);font-size:13px;font-weight:400;cursor:pointer;${extra || ''}">${label}</button>`; }
+    btnS(a, label, v, extra) { return `<button data-a="${a}"${v != null ? ` data-v="${esc(v)}"` : ''} style="background:none;border:1px solid var(--color-border-secondary);color:var(--color-text);border-radius:8px;padding:9px 14px;font-family:var(--font-ui);font-size:13px;font-weight:400;cursor:pointer;${extra || ''}">${label}</button>`; }
     link(a, label, v, extra) { return `<button data-a="${a}"${v != null ? ` data-v="${esc(v)}"` : ''} style="background:none;border:none;padding:0;font-family:var(--font-ui);font-size:13px;color:${P};cursor:pointer;${extra || ''}">${label}</button>`; }
-    input(f, value, extra, attrs) { return `<input data-f="${f}" value="${esc(value)}" ${attrs || ''} style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;font-size:14px;font-family:var(--font-ui);background:${SURF};width:100%;${extra || ''}">`; }
+    input(f, value, extra, attrs) { return `<input data-f="${f}" value="${esc(value)}" ${attrs || ''} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;font-size:14px;font-family:var(--font-ui);background:${SURF};width:100%;${extra || ''}">`; }
     html() {
       const s = this.s, t = this.t(), d = this.data();
-      if (s.err && !s.data) return `<div style="padding:16px;border-radius:9px;background:#F6E4E7;border:1px solid #e8b4bb;color:${P};font-size:12px">Newsletter : ${esc(s.err)}</div>`;
+      if (s.err && !s.data) return `<div style="padding:16px;border-radius:9px;background:rgba(141, 29, 44, 0.08);border:1px solid rgba(141, 29, 44, 0.45);color:${P};font-size:12px">Newsletter : ${esc(s.err)}</div>`;
       if (!s.data) return `<div style="padding:60px 0;color:${MUTED};font-size:13px;text-align:center">Lecture des campagnes…</div>`;
       const view = s.view, isBrand = this.isBrand();
       const tabs = [['dashboard', t.campaigns], ['templates', t.templates], ...(isBrand ? [['settings', t.settings]] : [['settings', t.sender]])];
@@ -424,15 +424,15 @@
             <span style="font-family:var(--font-display);font-size:16px;color:${P}">L'Atelier By</span>
             <span style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:${MUTED}">Newsletter · ${isBrand ? esc(t.roleBrandShort) : esc(this.nomShop(this.role()))}</span>
           </div>
-          <div style="display:flex;gap:4px">${tabs.map(([id, label]) => `<button data-a="view" data-v="${id}" style="border:none;background:${tabOn(id) ? BG2 : 'transparent'};color:${tabOn(id) ? P : 'var(--color-text)'};font-family:var(--font-ui);font-size:13px;font-weight:500;padding:7px 12px;border-radius:8px;cursor:pointer">${esc(label)}</button>`).join('')}</div>
+          <div style="display:flex;gap:4px">${tabs.map(([id, label]) => `<button data-a="view" data-v="${id}" style="border:none;background:${tabOn(id) ? BG2 : 'transparent'};color:${tabOn(id) ? P : 'var(--color-text)'};font-family:var(--font-ui);font-size:13px;font-weight:400;padding:7px 12px;border-radius:8px;cursor:pointer">${esc(label)}</button>`).join('')}</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <span style="font-size:12px;color:${MUTED};border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 10px">${isBrand ? esc(t.roleBrand) : esc(t.viewShop + this.nomShop(this.role()))}</span>
-          <div style="display:flex;gap:2px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:2px">${LANG_KEYS.map(k => `<button data-a="lang" data-v="${k}" style="border:none;background:${s.lang === k ? P : 'transparent'};color:${s.lang === k ? '#fff' : MUTED};font-family:var(--font-ui);font-size:11px;font-weight:500;padding:4px 9px;border-radius:8px;cursor:pointer;letter-spacing:0.04em">${k.toUpperCase()}</button>`).join('')}</div>
-          ${canSend ? this.btnP('wizard', esc(t.newCampaign)) : `<span style="font-size:12px;color:${MUTED};border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 12px">${esc(t.sendDisabled)}</span>`}
+          <span style="font-size:12px;color:${MUTED};border:1px solid var(--color-border-secondary);border-radius:8px;padding:5px 10px">${isBrand ? esc(t.roleBrand) : esc(t.viewShop + this.nomShop(this.role()))}</span>
+          <div style="display:flex;gap:2px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:2px">${LANG_KEYS.map(k => `<button data-a="lang" data-v="${k}" style="border:none;background:${s.lang === k ? P : 'transparent'};color:${s.lang === k ? '#fff' : MUTED};font-family:var(--font-ui);font-size:11px;font-weight:400;padding:4px 9px;border-radius:8px;cursor:pointer;letter-spacing:0.04em">${k.toUpperCase()}</button>`).join('')}</div>
+          ${canSend ? this.btnP('wizard', esc(t.newCampaign)) : `<span style="font-size:12px;color:${MUTED};border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 12px">${esc(t.sendDisabled)}</span>`}
         </div>
       </div>
-      ${d.test ? `<div style="margin-top:8px;font-size:11.5px;color:${ON};background:${SEC};border-radius:8px;padding:6px 12px;display:inline-block">Mode test — aucun envoi ne part${d.reel ? '' : ' ; les bases et leurs comptes sont un jeu d’essai tant qu’aucun contact n’est importé'}.${isBrand ? ' Paramètres → Envois pour dispatcher.' : ''}</div>` : `<div style="margin-top:8px;font-size:11.5px;color:${GREEN};background:#E6F2E9;border-radius:8px;padding:6px 12px;display:inline-block">Envois dispatchés — les campagnes programmées partent par l’horloge, par lots de 100 par minute.</div>`}
+      ${d.test ? `<div style="margin-top:8px;font-size:11.5px;color:${ON};background:${SEC};border-radius:8px;padding:6px 12px;display:inline-block">Mode test — aucun envoi ne part${d.reel ? '' : ' ; les bases et leurs comptes sont un jeu d’essai tant qu’aucun contact n’est importé'}.${isBrand ? ' Paramètres → Envois pour dispatcher.' : ''}</div>` : `<div style="margin-top:8px;font-size:11.5px;color:${GREEN};background:rgba(63, 122, 82, 0.12);border-radius:8px;padding:6px 12px;display:inline-block">Envois dispatchés — les campagnes programmées partent par l’horloge, par lots de 100 par minute.</div>`}
       ${s.toast ? `<div style="position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--color-text);color:#fff;border-radius:8px;padding:9px 16px;font-size:12.5px;z-index:50">${esc(s.toast)}</div>` : ''}
       <div class="nl-body">
         ${view === 'dashboard' ? this.vDashboard() : view === 'wizard' ? this.vWizard() : view === 'templates' ? this.vTemplates() : view === 'retro' ? this.vRetro() : this.vSettings()}
@@ -445,20 +445,20 @@
       const camps = d.campagnes || [];
       const filtres = [['all', t.fAll, camps.length], ['auto', t.fAuto, camps.filter(c => c.sendMode === 'auto').length], ['manual', t.fManual, camps.filter(c => c.sendMode !== 'auto').length]];
       const rows = camps.filter(c => s.modeFilter === 'all' || (s.modeFilter === 'auto' ? c.sendMode === 'auto' : c.sendMode !== 'auto'));
-      const kpi = (lab, val, extra) => `<div>${this.cap(esc(lab))}<div style="font-size:22px;font-weight:300;margin-top:2px;${extra || ''}">${val}</div></div>`;
+      const kpi = (lab, val, extra) => `<div>${this.cap(esc(lab))}<div style="font-size:22px;font-weight:400;margin-top:2px;${extra || ''}">${val}</div></div>`;
       const v = ch.vouchers || [0, 0];
       return `
       <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px">
-        <div><h1 style="font-family:var(--font-display);font-size:32px;font-weight:400;line-height:1.2;margin:0">${esc(t.campaigns)}</h1><p style="margin:6px 0 0;color:${MUTED}">${esc(t.campaignsSub)}</p></div>
+        <div><h1 style="font-family:var(--font-display);font-size:26px;font-weight:400;line-height:1.2;margin:0">${esc(t.campaigns)}</h1><p style="margin:6px 0 0;color:${MUTED}">${esc(t.campaignsSub)}</p></div>
         <div style="display:flex;gap:28px">${kpi(t.optinContacts, fmt(ch.optin))}${kpi(t.sentThisMonth, fmt(ch.envoisMois))}${kpi(t.vouchersUsed, `${fmt(v[0])} <span style="font-size:13px;color:${MUTED}">/ ${fmt(v[1])}</span>`, `color:${P}`)}</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">${(d.sources || []).map(src => `
-        <div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px">
-          <div><div style="font-size:13px;font-weight:500">${esc(this.L(src.name))}</div><div style="font-size:11px;color:${MUTED};margin-top:1px">${src.reel ? 'contacts importés' : esc(src.table) + ' · jeu d’essai'}</div></div>
-          <div style="text-align:right"><div style="font-size:18px;font-weight:300">${fmt(src.count)}</div><div style="font-size:11px;color:${MUTED}">${fmt(src.optin)} ${esc(t.optin)}</div></div>
+        <div style="background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div><div style="font-size:13px;font-weight:400">${esc(this.L(src.name))}</div><div style="font-size:11px;color:${MUTED};margin-top:1px">${src.reel ? 'contacts importés' : esc(src.table) + ' · jeu d’essai'}</div></div>
+          <div style="text-align:right"><div style="font-size:18px;font-weight:400">${fmt(src.count)}</div><div style="font-size:11px;color:${MUTED}">${fmt(src.optin)} ${esc(t.optin)}</div></div>
         </div>`).join('')}</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">${filtres.map(([id, label, n]) => { const on = s.modeFilter === id; return `<button data-a="filtre" data-v="${id}" style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;background:${on ? P : 'transparent'};color:${on ? '#fff' : 'var(--color-text)'};border:0.5px solid ${on ? P : 'var(--color-border-secondary)'}">${esc(label)} <span style="font-weight:400;opacity:0.7">${n}</span></button>`; }).join('')}</div>
-      <div class="nl-scroll" style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px"><div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">${filtres.map(([id, label, n]) => { const on = s.modeFilter === id; return `<button data-a="filtre" data-v="${id}" style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;background:${on ? P : 'transparent'};color:${on ? '#fff' : 'var(--color-text)'};border:1px solid ${on ? P : 'var(--color-border-secondary)'}">${esc(label)} <span style="font-weight:400;opacity:0.7">${n}</span></button>`; }).join('')}</div>
+      <div class="nl-scroll" style="background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px"><div>
         <div class="nl-tbl h"><div>${esc(t.colName)}</div><div>${esc(t.colDate)}</div><div>${esc(t.colSegment)}</div><div>${esc(t.colStatus)}</div><div>${esc(t.colOpen)}</div><div>${esc(t.colClick)}</div><div>${esc(t.colVouchers)}</div></div>
         ${rows.length ? rows.map(c => this.rowCampagne(c)).join('') : `<div style="padding:22px 20px;font-size:13px;color:${MUTED}">Aucune campagne.</div>`}
       </div></div>
@@ -467,7 +467,7 @@
     rowCampagne(c) {
       const t = this.t(), st = this.stats(c), seg = this.segById(c.segment);
       const pills = [];
-      const pillM = (label, bg, color, border) => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:500;letter-spacing:0.04em;padding:2px 8px;border-radius:8px;background:${bg};color:${color};border:0.5px solid ${border}">${esc(label)}</span>`;
+      const pillM = (label, bg, color, border) => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:400;letter-spacing:0.04em;padding:2px 8px;border-radius:8px;background:${bg};color:${color};border:1px solid ${border}">${esc(label)}</span>`;
       if (c.channel === 'email' || c.channel === 'both') pills.push(pillM(t.chEmail, 'transparent', MUTED, 'var(--color-border-secondary)'));
       if (c.channel === 'sms' || c.channel === 'both') pills.push(pillM('SMS', 'transparent', MUTED, 'var(--color-border-secondary)'));
       pills.push(c.sendMode === 'auto' ? pillM(`${t.pillAuto} · ${t['tr_' + c.trigger] || c.trigger}`, SEC, ON, SEC) : pillM(t.pillManual, BG2, MUTED, 'var(--color-border-tertiary)'));
@@ -478,8 +478,8 @@
       const subject = (c.subjects && (c.subjects.fr || c.subjects[Object.keys(c.subjects)[0]])) || '';
       return `
         <div class="nl-row nl-tbl" ${retro ? `data-a="retro" data-v="${c.id}"` : ''} style="cursor:${retro ? 'pointer' : 'default'}">
-          <div><div style="font-weight:500">${esc(c.name)}${c.exemple ? ` <span title="jeu d’essai" style="font-size:10px;color:${MUTED};font-weight:400">· essai</span>` : ''}</div><div style="font-size:12px;color:${MUTED};margin-top:1px">${esc(subject)}</div>
-            <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center">${pills.join('')}${peutEnvoyer ? `<button data-a="envoyer" data-v="${c.id}" style="border:none;background:none;color:${P};font-size:11px;font-weight:500;cursor:pointer;padding:0 4px;font-family:var(--font-ui)">envoyer maintenant →</button>` : ''}${peutRetirer ? `<button data-a="retirer" data-v="${c.id}" title="Retirer" style="border:none;background:none;color:${MUTED};font-size:11px;cursor:pointer;padding:0 4px;font-family:var(--font-ui)">retirer ×</button>` : ''}${enCours ? `<span style="font-size:11px;color:${ON}">${fmt(st.sent)} envoyés${st.echecs ? ' · ' + st.echecs + ' échecs' : ''}</span>` : ''}</div></div>
+          <div><div style="font-weight:400">${esc(c.name)}${c.exemple ? ` <span title="jeu d’essai" style="font-size:10px;color:${MUTED};font-weight:400">· essai</span>` : ''}</div><div style="font-size:12px;color:${MUTED};margin-top:1px">${esc(subject)}</div>
+            <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center">${pills.join('')}${peutEnvoyer ? `<button data-a="envoyer" data-v="${c.id}" style="border:none;background:none;color:${P};font-size:11px;font-weight:400;cursor:pointer;padding:0 4px;font-family:var(--font-ui)">envoyer maintenant →</button>` : ''}${peutRetirer ? `<button data-a="retirer" data-v="${c.id}" title="Retirer" style="border:none;background:none;color:${MUTED};font-size:11px;cursor:pointer;padding:0 4px;font-family:var(--font-ui)">retirer ×</button>` : ''}${enCours ? `<span style="font-size:11px;color:${ON}">${fmt(st.sent)} envoyés${st.echecs ? ' · ' + st.echecs + ' échecs' : ''}</span>` : ''}</div></div>
           <div style="font-size:13px">${esc(this.fDate(c.sendAt, c.sendMode))}</div>
           <div style="font-size:13px;color:${MUTED}">${esc(this.L(seg.name))}</div>
           <div>${this.statusPill(c.status)}</div>
@@ -492,15 +492,15 @@
     /* --- 2. assistant nouvelle campagne -------------------------------------- */
     vWizard() {
       const s = this.s, t = this.t();
-      const steps = [t.s1, t.s2, t.s3, t.s5].map((label, i) => { const n = i + 1, active = n === s.step, done = n < s.step; return `<div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;background:${active ? SEC : done ? P : BG2};color:${active ? ON : done ? '#fff' : MUTED}">${n}</span><span style="font-size:13px;color:${active ? 'var(--color-text)' : MUTED}">${esc(label)}</span></div>`; }).join('');
+      const steps = [t.s1, t.s2, t.s3, t.s5].map((label, i) => { const n = i + 1, active = n === s.step, done = n < s.step; return `<div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:400;background:${active ? SEC : done ? P : BG2};color:${active ? ON : done ? '#fff' : MUTED}">${n}</span><span style="font-size:13px;color:${active ? 'var(--color-text)' : MUTED}">${esc(label)}</span></div>`; }).join('');
       const corps = [this.step1, this.step2, this.step3, this.step5][s.step - 1].call(this);
       return `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:28px">
-        <h1 style="font-family:var(--font-display);font-size:32px;font-weight:400;line-height:1.2;margin:0">${esc(t.newCampaign)}</h1>
+        <h1 style="font-family:var(--font-display);font-size:26px;font-weight:400;line-height:1.2;margin:0">${esc(t.newCampaign)}</h1>
         <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">${steps}</div>
       </div>
       <div class="nl-wiz">
-        <div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:28px;display:flex;flex-direction:column;gap:22px;min-height:420px">
+        <div style="background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px;padding:28px;display:flex;flex-direction:column;gap:22px;min-height:420px">
           ${corps}
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:8px">
             ${this.btnS('prev', esc(t.back), null, 'padding:10px 16px;visibility:' + (s.step === 1 ? 'hidden' : 'visible'))}
@@ -510,21 +510,21 @@
         ${this.preview()}
       </div>`;
     }
-    h2(titre, sous) { return `<div><h2 style="font-family:var(--font-display);font-size:20px;font-weight:400;margin:0 0 4px">${esc(titre)}</h2><p style="margin:0;color:${MUTED}">${esc(sous)}</p></div>`; }
+    h2(titre, sous) { return `<div><h2 style="font-family:var(--font-display);font-size:21px;font-weight:400;margin:0 0 4px">${esc(titre)}</h2><p style="margin:0;color:${MUTED}">${esc(sous)}</p></div>`; }
     step1() {
       const s = this.s, t = this.t(), d = this.data();
       const segs = this.segmentsVisibles();
-      const chips = (d.sources || []).map(x => { const on = x.id === s.sourceId; return `<button data-a="source" data-v="${esc(x.id)}" style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;background:${on ? P : 'transparent'};color:${on ? '#fff' : 'var(--color-text)'};border:0.5px solid ${on ? P : 'var(--color-border-secondary)'}">${esc(this.L(x.name))} <span style="font-weight:400;opacity:0.75">${fmt(x.optin)}</span></button>`; }).join('');
-      const rows = segs.filter(x => x.src === s.sourceId).map(x => { const on = x.id === s.segmentId; return `<button data-a="segment" data-v="${esc(x.id)}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '0.5px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 16px;cursor:pointer;font-family:var(--font-ui)"><span><span style="display:block;font-size:14px;font-weight:500;color:var(--color-text)">${esc(this.L(x.name))}</span><span style="display:block;font-size:12px;color:${MUTED};margin-top:1px">${esc(this.L(x.rule))}${x.reel === false ? ' · essai' : ''}</span></span><span style="font-size:14px;font-weight:500;color:${P};white-space:nowrap">${fmt(x.count)} <span style="font-weight:400;color:${MUTED};font-size:12px">${esc(t.recipients)}</span></span></button>`; }).join('');
+      const chips = (d.sources || []).map(x => { const on = x.id === s.sourceId; return `<button data-a="source" data-v="${esc(x.id)}" style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;background:${on ? P : 'transparent'};color:${on ? '#fff' : 'var(--color-text)'};border:1px solid ${on ? P : 'var(--color-border-secondary)'}">${esc(this.L(x.name))} <span style="font-weight:400;opacity:0.75">${fmt(x.optin)}</span></button>`; }).join('');
+      const rows = segs.filter(x => x.src === s.sourceId).map(x => { const on = x.id === s.segmentId; return `<button data-a="segment" data-v="${esc(x.id)}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '1px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 16px;cursor:pointer;font-family:var(--font-ui)"><span><span style="display:block;font-size:14px;font-weight:400;color:var(--color-text)">${esc(this.L(x.name))}</span><span style="display:block;font-size:12px;color:${MUTED};margin-top:1px">${esc(this.L(x.rule))}${x.reel === false ? ' · essai' : ''}</span></span><span style="font-size:14px;font-weight:400;color:${P};white-space:nowrap">${fmt(x.count)} <span style="font-weight:400;color:${MUTED};font-size:12px">${esc(t.recipients)}</span></span></button>`; }).join('');
       const seg = this.segById(s.segmentId), total = seg.split.reduce((a, b) => a + b, 0) || 1;
-      const langRows = LANG_KEYS.map((k, i) => { const on = s.sendLangs.includes(k), n = seg.split[i] || 0, pct = Math.round(100 * n / total) + '%'; return `<button data-a="lang-toggle" data-v="${k}" style="display:flex;flex-direction:column;gap:6px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '0.5px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 14px;cursor:pointer;font-family:var(--font-ui)"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:13px;font-weight:500;color:var(--color-text)">${esc(t['lang_' + k])}</span><span style="width:16px;height:16px;border-radius:50%;border:1.5px solid ${on ? P : 'var(--color-border-secondary)'};background:${on ? P : 'transparent'};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px">${on ? '✓' : ''}</span></span><span style="font-size:18px;font-weight:300;color:${P}">${fmt(n)} <span style="font-size:12px;color:${MUTED}">· ${pct}</span></span><span style="height:4px;border-radius:8px;background:${BG2};overflow:hidden;display:block"><span style="display:block;height:100%;width:${pct};background:${P}"></span></span></button>`; }).join('');
+      const langRows = LANG_KEYS.map((k, i) => { const on = s.sendLangs.includes(k), n = seg.split[i] || 0, pct = Math.round(100 * n / total) + '%'; return `<button data-a="lang-toggle" data-v="${k}" style="display:flex;flex-direction:column;gap:6px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '1px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 14px;cursor:pointer;font-family:var(--font-ui)"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:13px;font-weight:400;color:var(--color-text)">${esc(t['lang_' + k])}</span><span style="width:16px;height:16px;border-radius:50%;border:1.5px solid ${on ? P : 'var(--color-border-secondary)'};background:${on ? P : 'transparent'};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px">${on ? '✓' : ''}</span></span><span style="font-size:18px;font-weight:400;color:${P}">${fmt(n)} <span style="font-size:12px;color:${MUTED}">· ${pct}</span></span><span style="height:4px;border-radius:8px;background:${BG2};overflow:hidden;display:block"><span style="display:block;height:100%;width:${pct};background:${P}"></span></span></button>`; }).join('');
       const langSummary = s.sendLangs.length ? `${fmt(this.langTotal())} ${t.recipients} · ${LANG_KEYS.filter(k => s.sendLangs.includes(k)).map(k => k.toUpperCase()).join(' + ')}` : t.langNone;
       return `
       ${this.h2(t.s1Title, t.s1Sub)}
       <div>${this.cap(esc(t.database), 'margin-bottom:8px')}<div style="display:flex;gap:8px;flex-wrap:wrap">${chips}</div></div>
       <div>${this.cap(esc(t.segment), 'margin-bottom:8px')}<div style="display:flex;flex-direction:column;gap:8px">${rows || `<span style="font-size:12px;color:${MUTED}">Aucun segment sur cette base.</span>`}</div></div>
       ${s.segForm ? this.segForm() : (this.isBrand() ? this.link('segform', '+ ' + esc(t.newSegment), null, 'align-self:flex-start') : `<span style="font-size:12px;color:${MUTED}">${esc(t.segBrandOnly)}</span>`)}
-      <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:18px">
+      <div style="border-top:1px solid var(--color-border-tertiary);padding-top:18px">
         ${this.cap(esc(t.sendLangs), 'margin-bottom:4px')}<p style="margin:0 0 10px;font-size:12px;color:${MUTED}">${esc(t.sendLangsSub)}</p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">${langRows}</div>
         <p style="margin:10px 0 0;font-size:12px;color:${MUTED}">${esc(langSummary)}</p>
@@ -542,12 +542,12 @@
     }
     segForm() {
       const s = this.s, t = this.t(), src = (this.data().sources || []).find(x => x.id === s.sourceId);
-      const SEL = `border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;font-size:14px;font-family:var(--font-ui);background:${SURF};width:100%`;
+      const SEL = `border:1px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;font-size:14px;font-family:var(--font-ui);background:${SURF};width:100%`;
       const lab = (k, inner) => `<label style="display:flex;flex-direction:column;gap:6px">${this.cap(esc(k))}${inner}</label>`;
       const shops = this.magasins().filter(m => m.kind === 'franchise');
       return `
       <div style="border:1.5px solid ${P};border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px;background:${SURF}">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><div style="font-size:14px;font-weight:500">${esc(t.newSegment)}</div><div style="font-size:12px;color:${MUTED}">${esc(src ? this.L(src.name) : '')}</div></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><div style="font-size:14px;font-weight:400">${esc(t.newSegment)}</div><div style="font-size:12px;color:${MUTED}">${esc(src ? this.L(src.name) : '')}</div></div>
         ${lab(t.segName, this.input('segName', s.segName, '', `placeholder="${esc(t.segNamePlaceholder)}"`))}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
           ${lab(t.segShop, `<select data-f="segShop" style="${SEL}"><option value="all"${s.segShop === 'all' ? ' selected' : ''}>${esc(t.segAllShops)}</option>${shops.map(m => `<option value="${esc(m.id)}"${s.segShop === m.id ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`)}
@@ -555,8 +555,8 @@
           ${lab(t.segPeriod, `<select data-f="segPeriod" style="${SEL}">${[['30', t.p30], ['90', t.p90], ['365', t.p365], ['dormant45', t.pDormant]].map(o => `<option value="${o[0]}"${s.segPeriod === o[0] ? ' selected' : ''}>${esc(o[1])}</option>`).join('')}</select>`)}
           ${lab(t.segMinBasket, this.input('segMinBasket', s.segMinBasket, '', 'type="number" placeholder="0"'))}
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:0.5px solid var(--color-border-tertiary);padding-top:14px">
-          <div style="font-size:13px"><span style="font-size:18px;font-weight:300;color:${P}">${fmt(this.segEstimate())}</span> <span style="color:${MUTED}">${esc(t.recipients)} · ${esc(t.segEstimated)}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--color-border-tertiary);padding-top:14px">
+          <div style="font-size:13px"><span style="font-size:18px;font-weight:400;color:${P}">${fmt(this.segEstimate())}</span> <span style="color:${MUTED}">${esc(t.recipients)} · ${esc(t.segEstimated)}</span></div>
           <div style="display:flex;gap:8px">${this.btnS('segclose', esc(t.cancel))}${this.btnP('segsave', esc(t.segSave), null, 'padding:9px 14px;opacity:' + (s.segName.trim() ? 1 : 0.5))}</div>
         </div>
       </div>`;
@@ -564,32 +564,32 @@
     step2() {
       const s = this.s, t = this.t();
       return `${this.h2(t.s2Title, t.s2Sub)}
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">${TEMPLATES.map(x => { const on = x.id === s.templateId; return `<button data-a="template" data-v="${x.id}" style="display:flex;flex-direction:column;gap:10px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '0.5px solid var(--color-border-tertiary)'};border-radius:10px;padding:12px;cursor:pointer;font-family:var(--font-ui)"><div style="height:84px;border-radius:6px;background:${BG2};display:flex;align-items:center;justify-content:center;overflow:hidden;width:100%">${x.blank ? `<span style="font-size:24px;color:${MUTED};font-weight:300">+</span>` : `<img src="${esc(this.img(x))}" alt="" style="height:64px;width:auto;object-fit:contain">`}</div><div><div style="font-size:13px;font-weight:500;color:var(--color-text)">${esc(this.L(x.name))}</div><div style="font-size:11px;color:${MUTED};margin-top:2px">${esc(this.L(x.hint))}</div></div></button>`; }).join('')}</div>`;
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">${TEMPLATES.map(x => { const on = x.id === s.templateId; return `<button data-a="template" data-v="${x.id}" style="display:flex;flex-direction:column;gap:10px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '1px solid var(--color-border-tertiary)'};border-radius:10px;padding:12px;cursor:pointer;font-family:var(--font-ui)"><div style="height:84px;border-radius:6px;background:${BG2};display:flex;align-items:center;justify-content:center;overflow:hidden;width:100%">${x.blank ? `<span style="font-size:24px;color:${MUTED};font-weight:400">+</span>` : `<img src="${esc(this.img(x))}" alt="" style="height:64px;width:auto;object-fit:contain">`}</div><div><div style="font-size:13px;font-weight:400;color:var(--color-text)">${esc(this.L(x.name))}</div><div style="font-size:11px;color:${MUTED};margin-top:2px">${esc(this.L(x.hint))}</div></div></button>`; }).join('')}</div>`;
     }
     step3() {
       const s = this.s, t = this.t(), el = this.editLang(), seg = this.segById(s.segmentId);
       const subject = this.subject(), body = this.body(), sms = this.sms();
-      const tabBtn = (a, v, on, label) => `<button data-a="${a}" data-v="${v}" style="border:0.5px solid ${on ? P : 'var(--color-border-secondary)'};background:${on ? P : 'transparent'};color:${on ? '#fff' : MUTED};font-family:var(--font-ui);font-size:12px;font-weight:500;padding:5px 12px;border-radius:8px;cursor:pointer">${label}</button>`;
+      const tabBtn = (a, v, on, label) => `<button data-a="${a}" data-v="${v}" style="border:1px solid ${on ? P : 'var(--color-border-secondary)'};background:${on ? P : 'transparent'};color:${on ? '#fff' : MUTED};font-family:var(--font-ui);font-size:12px;font-weight:400;padding:5px 12px;border-radius:8px;cursor:pointer">${label}</button>`;
       const hasSms = s.channel !== 'email';
       const smsOptin = Math.round(this.langTotal() * 0.61);
       return `${this.h2(t.s3Title, t.s3Sub)}
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">${this.cap(esc(t.channel))}<div style="display:flex;gap:4px">${[['email', t.chEmail], ['sms', t.chSms], ['both', t.chBoth]].map(o => tabBtn('channel', o[0], s.channel === o[0], esc(o[1]))).join('')}</div><span style="font-size:12px;color:${MUTED}">${hasSms ? fmt(smsOptin) + ' ' + esc(t.smsOptin) : ''}</span></div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">${this.cap(esc(t.version))}<div style="display:flex;gap:4px">${LANG_KEYS.filter(k => s.sendLangs.includes(k)).map(k => tabBtn('editlang', k, k === el, k.toUpperCase() + ` <span style="font-weight:400;opacity:0.7">${fmt(seg.split[LANG_KEYS.indexOf(k)] || 0)}</span>`)).join('')}</div><span style="font-size:12px;color:${MUTED}">${esc(t.editLangHint)}</span></div>
       <label style="display:flex;flex-direction:column;gap:6px">${this.cap(esc(t.subject))}${this.input('subject', subject)}<span style="font-size:12px;color:${subject.length > 45 ? P : MUTED}">${esc(subject.length > 45 ? t.subjectLong : t.subjectGood)}</span></label>
-      <div style="display:flex;flex-direction:column;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
-        <div class="nl-tb" style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:0.5px solid var(--color-border-tertiary);background:${BG2};flex-wrap:wrap">
-          <select style="border:0.5px solid var(--color-border-tertiary);border-radius:6px;background:${SURF};font-size:12px;padding:4px 6px;font-family:var(--font-ui)"><option>Gotham</option><option>Vank</option></select>
-          <button data-a="wrap" data-v="**" style="width:28px;height:28px;border:none;background:none;border-radius:6px;font-weight:700;cursor:pointer;font-family:var(--font-ui)">B</button>
+      <div style="display:flex;flex-direction:column;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
+        <div class="nl-tb" style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--color-border-tertiary);background:${BG2};flex-wrap:wrap">
+          <select style="border:1px solid var(--color-border-tertiary);border-radius:6px;background:${SURF};font-size:12px;padding:4px 6px;font-family:var(--font-ui)"><option>Gotham</option><option>Vank</option></select>
+          <button data-a="wrap" data-v="**" style="width:28px;height:28px;border:none;background:none;border-radius:6px;font-weight:400;cursor:pointer;font-family:var(--font-ui)">B</button>
           <button data-a="wrap" data-v="_" style="width:28px;height:28px;border:none;background:none;border-radius:6px;font-style:italic;cursor:pointer;font-family:var(--font-ui)">I</button>
-          <span style="width:16px;height:16px;border-radius:50%;background:${P};margin:0 4px;border:2px solid ${SURF};box-shadow:0 0 0 0.5px var(--color-border-secondary)"></span><span style="width:16px;height:16px;border-radius:50%;background:${SEC};border:2px solid ${SURF};box-shadow:0 0 0 0.5px var(--color-border-secondary)"></span><span style="width:16px;height:16px;border-radius:50%;background:var(--color-text);border:2px solid ${SURF};box-shadow:0 0 0 0.5px var(--color-border-secondary)"></span>
+          <span style="width:16px;height:16px;border-radius:50%;background:${P};margin:0 4px;border:2px solid ${SURF};"></span><span style="width:16px;height:16px;border-radius:50%;background:${SEC};border:2px solid ${SURF};"></span><span style="width:16px;height:16px;border-radius:50%;background:var(--color-text);border:2px solid ${SURF};"></span>
           <span style="width:0.5px;height:20px;background:var(--color-border-secondary);margin:0 6px"></span>
-          <select data-f="insert" style="border:0.5px solid var(--color-border-tertiary);border-radius:6px;background:${SURF};font-size:12px;padding:4px 6px;color:${P};font-family:var(--font-ui)"><option value="">${esc(t.insert)}</option><option value="prenom">${esc(t.insFirstname)}</option><option value="code">${esc(t.insVoucher)}</option><option value="webshop">${esc(t.insWebshop)}</option><option value="boutique">${esc(t.insShop)}</option></select>
+          <select data-f="insert" style="border:1px solid var(--color-border-tertiary);border-radius:6px;background:${SURF};font-size:12px;padding:4px 6px;color:${P};font-family:var(--font-ui)"><option value="">${esc(t.insert)}</option><option value="prenom">${esc(t.insFirstname)}</option><option value="code">${esc(t.insVoucher)}</option><option value="webshop">${esc(t.insWebshop)}</option><option value="boutique">${esc(t.insShop)}</option></select>
         </div>
         <textarea data-f="body" rows="8" style="border:none;padding:14px;font-size:14px;line-height:1.6;font-family:var(--font-ui);resize:vertical;background:${SURF};width:100%">${esc(body)}</textarea>
       </div>
       <div style="display:flex;gap:16px;font-size:12px;color:${MUTED}"><span>${body.trim() ? body.trim().split(/\s+/).length : 0} ${esc(t.words)}</span><span>·</span><span>${esc(t.oneCta)}</span></div>
       ${s.channel !== 'sms' ? this.champLien() : ''}
-      ${hasSms ? `<label style="display:flex;flex-direction:column;gap:6px;border-top:0.5px solid var(--color-border-tertiary);padding-top:18px"><span style="display:flex;justify-content:space-between;gap:12px">${this.cap(esc(t.smsText))}<span style="font-size:12px;color:${sms.length > 160 ? P : MUTED}">${sms.length} / 160</span></span><textarea data-f="sms" rows="3" style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:12px;font-size:14px;line-height:1.5;font-family:var(--font-ui);resize:vertical;background:${SURF};width:100%">${esc(sms)}</textarea><span style="font-size:12px;color:${MUTED}">${esc(t.smsHint)}</span></label>` : ''}`;
+      ${hasSms ? `<label style="display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--color-border-tertiary);padding-top:18px"><span style="display:flex;justify-content:space-between;gap:12px">${this.cap(esc(t.smsText))}<span style="font-size:12px;color:${sms.length > 160 ? P : MUTED}">${sms.length} / 160</span></span><textarea data-f="sms" rows="3" style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:12px;font-size:14px;line-height:1.5;font-family:var(--font-ui);resize:vertical;background:${SURF};width:100%">${esc(sms)}</textarea><span style="font-size:12px;color:${MUTED}">${esc(t.smsHint)}</span></label>` : ''}`;
     }
     /** Le lien du bouton : une adresse par campagne, et en un clic le webshop du magasin, prêt pour le code du bon. */
     lienWebshop() { const shop = this.segById(this.s.segmentId).shop || (this.isBrand() ? '' : this.role()); return { shop, url: WEBSHOP + '/?' + (shop ? 'shop=' + encodeURIComponent(shop) + '&' : '') + 'mode=collect&voucher=' }; }
@@ -603,9 +603,9 @@
     }
     step5() {
       const s = this.s, t = this.t(), isAuto = s.sendMode === 'auto', seg = this.segById(s.segmentId), src = (this.data().sources || []).find(x => x.id === s.sourceId), tp = this.tpl(), sd = this.sender();
-      const SEL = `border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;font-size:14px;font-family:var(--font-ui);background:${SURF};width:100%`;
-      const modes = [['manual', t.modeManual, t.modeManualDesc], ...(this.isBrand() ? [['auto', t.modeAuto, t.modeAutoDesc]] : [])].map(o => { const on = s.sendMode === o[0]; return `<button data-a="mode" data-v="${o[0]}" style="text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '0.5px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 14px;cursor:pointer;font-family:var(--font-ui)"><span style="display:block;font-size:13px;font-weight:500;color:var(--color-text)">${esc(o[1])}</span><span style="display:block;font-size:12px;color:${MUTED};margin-top:2px">${esc(o[2])}</span></button>`; }).join('');
-      const senders = this.senders().map(x => { const on = x.id === sd.id; return `<button data-a="sender" data-v="${esc(x.id)}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '0.5px solid var(--color-border-tertiary)'};border-radius:8px;padding:11px 14px;cursor:pointer;font-family:var(--font-ui)"><span><span style="display:block;font-size:13px;font-weight:500;color:var(--color-text)">${esc(x.name)}</span><span style="display:block;font-size:12px;color:${MUTED};margin-top:1px">${esc(x.email)} · ${esc(t.replyTo)} ${esc(x.reply)}</span></span>${this.domainPill(x.status)}</button>`; }).join('');
+      const SEL = `border:1px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;font-size:14px;font-family:var(--font-ui);background:${SURF};width:100%`;
+      const modes = [['manual', t.modeManual, t.modeManualDesc], ...(this.isBrand() ? [['auto', t.modeAuto, t.modeAutoDesc]] : [])].map(o => { const on = s.sendMode === o[0]; return `<button data-a="mode" data-v="${o[0]}" style="text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '1px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 14px;cursor:pointer;font-family:var(--font-ui)"><span style="display:block;font-size:13px;font-weight:400;color:var(--color-text)">${esc(o[1])}</span><span style="display:block;font-size:12px;color:${MUTED};margin-top:2px">${esc(o[2])}</span></button>`; }).join('');
+      const senders = this.senders().map(x => { const on = x.id === sd.id; return `<button data-a="sender" data-v="${esc(x.id)}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '1px solid var(--color-border-tertiary)'};border-radius:8px;padding:11px 14px;cursor:pointer;font-family:var(--font-ui)"><span><span style="display:block;font-size:13px;font-weight:400;color:var(--color-text)">${esc(x.name)}</span><span style="display:block;font-size:12px;color:${MUTED};margin-top:1px">${esc(x.email)} · ${esc(t.replyTo)} ${esc(x.reply)}</span></span>${this.domainPill(x.status)}</button>`; }).join('');
       const checks = this.checks(), fails = checks.filter(c => !c[1]).length;
       const langSummary = s.sendLangs.length ? `${fmt(this.langTotal())} ${t.recipients} · ${LANG_KEYS.filter(k => s.sendLangs.includes(k)).map(k => k.toUpperCase()).join(' + ')}` : t.langNone;
       const modeSummary = isAuto ? `${t.modeAuto} · ${t['tr_' + s.trigger]}` : `${t.modeManual} · ${s.date.split('-').reverse().join('/')} ${s.time}`;
@@ -616,11 +616,11 @@
         : `<div class="nl-2"><label style="display:flex;flex-direction:column;gap:6px">${this.cap(esc(t.date))}${this.input('date', s.date, '', 'type="date"')}</label><label style="display:flex;flex-direction:column;gap:6px">${this.cap(esc(t.time))}${this.input('time', s.time, '', 'type="time"')}</label></div><p style="margin:-8px 0 0;font-size:12px;color:${MUTED}">${esc(t.bestTime)}</p>`}
       <div>${this.cap(esc(t.sender), 'margin-bottom:8px')}<div style="display:flex;flex-direction:column;gap:8px">${senders}</div></div>
       <div style="background:${BG2};border-radius:8px;padding:14px 16px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px">${this.cap(esc(t.spamCheck))}<span style="font-size:13px;font-weight:500;color:${fails ? P : GREEN}">${fails ? fails + ' · ' + esc(t.spamWarn) : esc(t.spamOk)}</span></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 20px">${checks.map(c => `<div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:${c[1] ? 'var(--color-text)' : P}"><span style="flex:none;width:14px;text-align:center;font-weight:500">${c[1] ? '✓' : '!'}</span><span>${esc(c[0])}</span></div>`).join('')}</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px">${this.cap(esc(t.spamCheck))}<span style="font-size:13px;font-weight:400;color:${fails ? P : GREEN}">${fails ? fails + ' · ' + esc(t.spamWarn) : esc(t.spamOk)}</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 20px">${checks.map(c => `<div style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:${c[1] ? 'var(--color-text)' : P}"><span style="flex:none;width:14px;text-align:center;font-weight:400">${c[1] ? '✓' : '!'}</span><span>${esc(c[0])}</span></div>`).join('')}</div>
       </div>
       <label style="display:flex;flex-direction:column;gap:6px;max-width:320px">${this.cap(esc(t.maxVouchers) + ` <span style="text-transform:none;letter-spacing:0">(${esc(t.optional)})</span>`)}${this.input('maxVouchers', s.maxVouchers, '', 'type="number" placeholder="30"')}<span style="font-size:12px;color:${MUTED}">${esc(s.maxVouchers ? s.maxVouchers + ' ' + t.voucherHintOn : t.voucherHintOff)}</span></label>
-      <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;font-size:13px">
+      <div style="border-top:1px solid var(--color-border-tertiary);padding-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;font-size:13px">
         ${rec(t.database, esc(src ? this.L(src.name) : ''))}${rec(t.segment, esc(this.L(seg.name)) + ' · ' + fmt(seg.count))}${rec(t.sendLangs, esc(langSummary))}${rec(t.channel, esc({ email: t.chEmail, sms: t.chSms, both: t.chBoth }[s.channel]))}
         ${rec(t.sendMode, esc(modeSummary))}${rec(t.template, esc(this.L(tp.name)))}${rec(t.sender, esc(sd.name) + ' · ' + esc(sd.email))}
         ${rec(t.subject, esc(this.subject()))}${s.channel !== 'sms' ? rec(t.ctaLink, `<span style="word-break:break-all">${esc(s.lien.trim() || t.ctaLinkDefault)}</span>`) : ''}${rec(t.sendTest, this.link('test', esc(s.testSent ? t.testDone : t.testSend)))}
@@ -633,20 +633,20 @@
       return `
       <div class="nl-sticky">
         ${this.cap(`<span>${esc(t.preview)} · ${el}</span><span>${esc(t.mobile)} · 360px</span>`, 'margin-bottom:10px;display:flex;justify-content:space-between')}
-        <div style="max-width:360px;margin:0 auto;background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(34,34,34,0.06)">
-          <div style="padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px"><div style="color:${MUTED}">${esc(sd.name)} · ${esc(sd.email)}</div><div style="font-weight:500;margin-top:2px">${esc(subject || t.subjectPlaceholder)}</div></div>
+        <div style="max-width:360px;margin:0 auto;background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden;">
+          <div style="padding:10px 14px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px"><div style="color:${MUTED}">${esc(sd.name)} · ${esc(sd.email)}</div><div style="font-weight:400;margin-top:2px">${esc(subject || t.subjectPlaceholder)}</div></div>
           <div style="background:${P};padding:16px;text-align:center"><img src="${esc(this.opts.imgDir + 'logo-white.png')}" alt="L'Atelier By" style="height:28px;width:auto"></div>
           ${tp.img ? `<div style="padding:22px 22px 8px;text-align:center"><img src="${esc(this.img(tp))}" alt="" style="height:110px;width:auto;object-fit:contain"></div>` : ''}
           <div style="padding:6px 24px 20px">
             ${this.LL(tp.headline) ? `<div style="font-family:var(--font-display);font-size:22px;line-height:1.2;color:${P};margin-bottom:10px">${esc(this.LL(tp.headline))}</div>` : ''}
             <div style="font-size:14px;line-height:1.6;white-space:pre-wrap">${esc(b.previewBody)}</div>
-            <div style="margin-top:18px"><span style="display:inline-block;background:${P};color:#fff;border-radius:8px;padding:11px 18px;font-size:13px;font-weight:500">${esc(this.LL(tp.cta))}</span></div>
-            ${tp.badge ? `<div style="margin-top:18px;display:inline-flex;align-items:center;gap:8px;background:${SEC};color:${ON};border-radius:8px;padding:5px 12px;font-size:11px;font-weight:500"><span style="width:6px;height:6px;border-radius:50%;background:${ON}"></span>${esc(t.badge3)}</div>` : ''}
+            <div style="margin-top:18px"><span style="display:inline-block;background:${P};color:#fff;border-radius:8px;padding:11px 18px;font-size:13px;font-weight:400">${esc(this.LL(tp.cta))}</span></div>
+            ${tp.badge ? `<div style="margin-top:18px;display:inline-flex;align-items:center;gap:8px;background:${SEC};color:${ON};border-radius:8px;padding:5px 12px;font-size:11px;font-weight:400"><span style="width:6px;height:6px;border-radius:50%;background:${ON}"></span>${esc(t.badge3)}</div>` : ''}
           </div>
-          <div style="padding:14px 24px 18px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:${MUTED};line-height:1.7"><div>${esc(t.footWebshop)} · ${esc(t.footShop)} · ${esc(t.footSupport)}</div><div>${esc(t.footHours)}</div><div style="margin-top:4px;text-decoration:underline">${esc(t.unsubscribe)}</div></div>
+          <div style="padding:14px 24px 18px;border-top:1px solid var(--color-border-tertiary);font-size:11px;color:${MUTED};line-height:1.7"><div>${esc(t.footWebshop)} · ${esc(t.footShop)} · ${esc(t.footSupport)}</div><div>${esc(t.footHours)}</div><div style="margin-top:4px;text-decoration:underline">${esc(t.unsubscribe)}</div></div>
         </div>
         ${s.channel !== 'sms' ? `<div style="max-width:360px;margin:10px auto 0;font-size:11px;color:${MUTED};word-break:break-all">${esc(t.ctaLinkTo)} : ${s.lien.trim() ? esc(s.lien.trim().replace(/\{\{code(_promo)?\}\}/g, 'K7M2DIAM')) : esc(t.ctaLinkDefault)}</div>` : ''}
-        ${hasSms ? `<div style="max-width:360px;margin:18px auto 0">${this.cap('SMS · ' + el, 'margin-bottom:10px')}<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start"><div style="font-size:11px;color:${MUTED};padding-left:4px">${esc(sd.name)} · +32 460 12 34 56</div><div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:16px 16px 16px 4px;padding:10px 14px;font-size:14px;line-height:1.5;max-width:290px;white-space:pre-wrap">${esc(smsPreview)}</div></div></div>` : ''}
+        ${hasSms ? `<div style="max-width:360px;margin:18px auto 0">${this.cap('SMS · ' + el, 'margin-bottom:10px')}<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start"><div style="font-size:11px;color:${MUTED};padding-left:4px">${esc(sd.name)} · +32 460 12 34 56</div><div style="background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px 12px 12px 4px;padding:10px 14px;font-size:14px;line-height:1.5;max-width:290px;white-space:pre-wrap">${esc(smsPreview)}</div></div></div>` : ''}
       </div>`;
     }
 
@@ -654,21 +654,21 @@
     vTemplates() {
       const t = this.t(), exp = this.isBrand() ? t.roleBrandShort : this.nomShop(this.role());
       return `
-      <div style="margin-bottom:24px"><h1 style="font-family:var(--font-display);font-size:32px;font-weight:400;line-height:1.2;margin:0">${esc(t.templates)}</h1><p style="margin:6px 0 0;color:${MUTED}">${esc(t.templatesSub)}</p></div>
+      <div style="margin-bottom:24px"><h1 style="font-family:var(--font-display);font-size:26px;font-weight:400;line-height:1.2;margin:0">${esc(t.templates)}</h1><p style="margin:6px 0 0;color:${MUTED}">${esc(t.templatesSub)}</p></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:20px">${TEMPLATES.filter(x => !x.blank).map(x => `
         <div style="display:flex;flex-direction:column;gap:12px">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div style="font-weight:500">${esc(this.L(x.name))}</div>${this.link('use', esc(t.useTemplate), x.id, 'font-size:12px')}</div>
-          <div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:14px;overflow:hidden">
-            <div style="padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px"><div style="color:${MUTED}">L'Atelier By · ${esc(exp)}</div><div style="font-weight:500;margin-top:2px">${esc(this.L(x.subject))}</div></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div style="font-weight:400">${esc(this.L(x.name))}</div>${this.link('use', esc(t.useTemplate), x.id, 'font-size:12px')}</div>
+          <div style="background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px"><div style="color:${MUTED}">L'Atelier By · ${esc(exp)}</div><div style="font-weight:400;margin-top:2px">${esc(this.L(x.subject))}</div></div>
             <div style="background:${P};padding:14px;text-align:center"><img src="${esc(this.opts.imgDir + 'logo-white.png')}" alt="" style="height:24px;width:auto"></div>
             <div style="padding:18px 18px 6px;text-align:center"><img src="${esc(this.img(x))}" alt="" style="height:96px;width:auto;object-fit:contain"></div>
             <div style="padding:6px 20px 18px">
-              <div style="font-family:var(--font-display);font-size:20px;line-height:1.2;color:${P};margin-bottom:8px">${esc(this.L(x.headline))}</div>
+              <div style="font-family:var(--font-display);font-size:21px;line-height:1.2;color:${P};margin-bottom:8px">${esc(this.L(x.headline))}</div>
               <div style="font-size:13px;line-height:1.6;white-space:pre-wrap">${esc(this.L(x.body).replace('{{prénom}}', 'Marie').replace('{{code_promo}}', 'K7M2DIAM'))}</div>
-              <div style="margin-top:16px"><span style="display:inline-block;background:${P};color:#fff;border-radius:8px;padding:10px 16px;font-size:12px;font-weight:500">${esc(this.L(x.cta))}</span></div>
-              ${x.badge ? `<div style="margin-top:16px;display:inline-flex;align-items:center;gap:8px;background:${SEC};color:${ON};border-radius:8px;padding:5px 12px;font-size:11px;font-weight:500"><span style="width:6px;height:6px;border-radius:50%;background:${ON}"></span>${esc(t.badge3)}</div>` : ''}
+              <div style="margin-top:16px"><span style="display:inline-block;background:${P};color:#fff;border-radius:8px;padding:10px 16px;font-size:12px;font-weight:400">${esc(this.L(x.cta))}</span></div>
+              ${x.badge ? `<div style="margin-top:16px;display:inline-flex;align-items:center;gap:8px;background:${SEC};color:${ON};border-radius:8px;padding:5px 12px;font-size:11px;font-weight:400"><span style="width:6px;height:6px;border-radius:50%;background:${ON}"></span>${esc(t.badge3)}</div>` : ''}
             </div>
-            <div style="padding:12px 20px 16px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:${MUTED};line-height:1.7"><div>${esc(t.footWebshop)} · ${esc(t.footShop)} · ${esc(t.footSupport)}</div><div>${esc(t.footHours)}</div><div style="margin-top:4px;text-decoration:underline">${esc(t.unsubscribe)}</div></div>
+            <div style="padding:12px 20px 16px;border-top:1px solid var(--color-border-tertiary);font-size:11px;color:${MUTED};line-height:1.7"><div>${esc(t.footWebshop)} · ${esc(t.footShop)} · ${esc(t.footSupport)}</div><div>${esc(t.footHours)}</div><div style="margin-top:4px;text-decoration:underline">${esc(t.unsubscribe)}</div></div>
           </div>
         </div>`).join('')}</div>`;
     }
@@ -701,13 +701,13 @@
       return `
       ${this.link('view', '← ' + esc(t.campaigns), 'dashboard', 'margin-bottom:14px')}
       <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:28px">
-        <div><h1 style="font-family:var(--font-display);font-size:32px;font-weight:400;line-height:1.2;margin:0">${esc(c.name)}</h1><p style="margin:6px 0 0;color:${MUTED}">${esc(this.fDate(c.sendAt, c.sendMode))} · ${esc(this.L(seg.name))} · ${esc(subject)}</p></div>
+        <div><h1 style="font-family:var(--font-display);font-size:26px;font-weight:400;line-height:1.2;margin:0">${esc(c.name)}</h1><p style="margin:6px 0 0;color:${MUTED}">${esc(this.fDate(c.sendAt, c.sendMode))} · ${esc(this.L(seg.name))} · ${esc(subject)}</p></div>
         <div style="display:flex;gap:10px">${this.canSend() ? this.btnS('dupAB', esc(t.duplicateAB), c.id) : ''}</div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px">${kpis.map(k => `<div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">${this.cap(esc(k[0]))}<div style="font-size:30px;font-weight:300;margin-top:6px;color:${k[4]}">${k[1]}</div><div style="font-size:12px;color:${MUTED};margin-top:2px">${esc(k[2])}</div><div style="font-size:12px;margin-top:10px;color:${k[3][1]}">${esc(k[3][0])}</div></div>`).join('')}</div>
-      <div style="margin-top:20px;background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:22px 24px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px">${kpis.map(k => `<div style="background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">${this.cap(esc(k[0]))}<div style="font-size:26px;font-weight:400;margin-top:6px;color:${k[4]}">${k[1]}</div><div style="font-size:12px;color:${MUTED};margin-top:2px">${esc(k[2])}</div><div style="font-size:12px;margin-top:10px;color:${k[3][1]}">${esc(k[3][0])}</div></div>`).join('')}</div>
+      <div style="margin-top:20px;background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px;padding:22px 24px">
         ${this.cap(esc(t.funnel) + (prev ? ' · ' + esc(t.vsPrev) + ' ' + esc(prev.name) : ''), 'margin-bottom:14px')}
-        <div style="display:flex;flex-direction:column;gap:10px">${funnel.map(f => `<div style="display:grid;grid-template-columns:130px 1fr 60px;gap:14px;align-items:center;font-size:13px"><div style="color:${MUTED}">${esc(f[0])}</div><div style="height:10px;border-radius:8px;background:${BG2};overflow:hidden;position:relative"><div style="height:100%;width:${f[2]}%;background:${f[4]};border-radius:8px"></div>${f[3] != null ? `<div style="position:absolute;top:0;bottom:0;left:${f[3]}%;width:1.5px;background:var(--color-text)"></div>` : ''}</div><div style="text-align:right;font-weight:500">${f[1]}</div></div>`).join('')}</div>
+        <div style="display:flex;flex-direction:column;gap:10px">${funnel.map(f => `<div style="display:grid;grid-template-columns:130px 1fr 60px;gap:14px;align-items:center;font-size:13px"><div style="color:${MUTED}">${esc(f[0])}</div><div style="height:10px;border-radius:8px;background:${BG2};overflow:hidden;position:relative"><div style="height:100%;width:${f[2]}%;background:${f[4]};border-radius:8px"></div>${f[3] != null ? `<div style="position:absolute;top:0;bottom:0;left:${f[3]}%;width:1.5px;background:var(--color-text)"></div>` : ''}</div><div style="text-align:right;font-weight:400">${f[1]}</div></div>`).join('')}</div>
         <div style="font-size:11px;color:${MUTED};margin-top:12px">${esc(t.funnelLegend)}</div>
       </div>`;
     }
@@ -715,25 +715,25 @@
     /* --- 5. paramètres (marque) / mon expéditeur (magasin) ------------------ */
     vSettings() {
       const t = this.t(), isBrand = this.isBrand(), ms = isBrand ? this.magasins() : this.magasins().filter(m => m.id === this.role());
-      const INP = `border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:7px 10px;font-size:13px;font-family:var(--font-ui);background:${SURF};width:100%`;
+      const INP = `border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 10px;font-size:13px;font-family:var(--font-ui);background:${SURF};width:100%`;
       const rows = ms.map(x => {
         const isB = x.kind === 'brand', locked = !isBrand && x.id !== this.role();
         return `<div class="nl-shop">
-          <div><div style="font-weight:500">${esc(x.nom)}</div><div style="font-size:11px;color:${MUTED}">${esc(isB ? t.kindBrand : t.kindFranchise)}</div></div>
+          <div><div style="font-weight:400">${esc(x.nom)}</div><div style="font-size:11px;color:${MUTED}">${esc(isB ? t.kindBrand : t.kindFranchise)}</div></div>
           <div style="display:flex;flex-direction:column;gap:6px"><input data-f="shopname-${esc(x.id)}" value="${esc(x.senderName)}" ${locked ? 'disabled' : ''} style="${INP}"><input data-f="shopmail-${esc(x.id)}" value="${esc(x.email)}" placeholder="adresse@${esc(this.data().domaine || 'latelier.by')}" ${locked ? 'disabled' : ''} style="${INP}"></div>
-          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">${this.domainPill(x.status)}${isBrand ? `<select data-f="shopstatus-${esc(x.id)}" style="border:0.5px solid var(--color-border-tertiary);border-radius:6px;background:${SURF};font-size:11px;padding:3px 6px;font-family:var(--font-ui)">${[['verified', t.verified], ['warmup', t.warmup], ['unverified', t.unverified]].map(o => `<option value="${o[0]}"${x.status === o[0] ? ' selected' : ''}>${esc(o[1])}</option>`).join('')}</select>` : ''}</div>
-          <div><button data-a="cansend" data-v="${esc(x.id)}" ${isB || !isBrand ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:0;cursor:${isB || !isBrand ? 'default' : 'pointer'};font-family:var(--font-ui);font-size:12px;color:var(--color-text)"><span style="width:32px;height:18px;border-radius:999px;background:${x.canSend ? P : 'var(--color-border-secondary)'};position:relative;display:inline-block;transition:background 120ms"><span style="position:absolute;top:2px;left:${x.canSend ? '16px' : '2px'};width:14px;height:14px;border-radius:50%;background:#fff;transition:left 120ms"></span></span>${esc(x.canSend ? t.canSendOn : t.canSendOff)}</button></div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">${this.domainPill(x.status)}${isBrand ? `<select data-f="shopstatus-${esc(x.id)}" style="border:1px solid var(--color-border-tertiary);border-radius:6px;background:${SURF};font-size:11px;padding:3px 6px;font-family:var(--font-ui)">${[['verified', t.verified], ['warmup', t.warmup], ['unverified', t.unverified]].map(o => `<option value="${o[0]}"${x.status === o[0] ? ' selected' : ''}>${esc(o[1])}</option>`).join('')}</select>` : ''}</div>
+          <div><button data-a="cansend" data-v="${esc(x.id)}" ${isB || !isBrand ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:0;cursor:${isB || !isBrand ? 'default' : 'pointer'};font-family:var(--font-ui);font-size:12px;color:var(--color-text)"><span style="width:32px;height:18px;border-radius:6px;background:${x.canSend ? P : 'var(--color-border-secondary)'};position:relative;display:inline-block;transition:background 120ms"><span style="position:absolute;top:2px;left:${x.canSend ? '16px' : '2px'};width:14px;height:14px;border-radius:50%;background:#fff;transition:left 120ms"></span></span>${esc(x.canSend ? t.canSendOn : t.canSendOff)}</button></div>
         </div>`;
       }).join('');
-      const rights = [['r_seg', true, false], ['r_tpl', true, false], ['r_auto', true, false], ['r_send', true, 'cond'], ['r_sender', true, true], ['r_stats', true, true]].map(([k, b, f]) => `<div style="color:var(--color-text)">${esc(t[k])}</div><div style="text-align:center;color:${GREEN};font-weight:500">${b ? '✓' : '—'}</div><div style="text-align:center;color:${f ? GREEN : MUTED};font-weight:500">${f === 'cond' ? '✓*' : f ? '✓' : '—'}</div>`).join('');
+      const rights = [['r_seg', true, false], ['r_tpl', true, false], ['r_auto', true, false], ['r_send', true, 'cond'], ['r_sender', true, true], ['r_stats', true, true]].map(([k, b, f]) => `<div style="color:var(--color-text)">${esc(t[k])}</div><div style="text-align:center;color:${GREEN};font-weight:400">${b ? '✓' : '—'}</div><div style="text-align:center;color:${f ? GREEN : MUTED};font-weight:400">${f === 'cond' ? '✓*' : f ? '✓' : '—'}</div>`).join('');
       return `
-      <div style="margin-bottom:24px"><h1 style="font-family:var(--font-display);font-size:32px;font-weight:400;line-height:1.2;margin:0">${esc(isBrand ? t.settings : t.sender)}</h1><p style="margin:6px 0 0;color:${MUTED}">${esc(t.settingsSub)}</p></div>
+      <div style="margin-bottom:24px"><h1 style="font-family:var(--font-display);font-size:26px;font-weight:400;line-height:1.2;margin:0">${esc(isBrand ? t.settings : t.sender)}</h1><p style="margin:6px 0 0;color:${MUTED}">${esc(t.settingsSub)}</p></div>
       <div class="nl-set">
-        <div class="nl-scroll" style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px"><div style="min-width:640px">
+        <div class="nl-scroll" style="background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px"><div style="min-width:640px">
           <div class="nl-shop h"><div>${esc(t.shop)}</div><div>${esc(t.shopSender)}</div><div>${esc(t.domain)}</div><div>${esc(t.canSendCol)}</div></div>${rows}
         </div></div>
         <div style="display:flex;flex-direction:column;gap:16px">
-          <div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">${this.cap(esc(t.rights), 'margin-bottom:12px')}
+          <div style="background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">${this.cap(esc(t.rights), 'margin-bottom:12px')}
             <div style="display:grid;grid-template-columns:1fr 60px 70px;gap:8px 12px;font-size:13px;align-items:center"><div></div>${this.cap(esc(t.roleBrandShort), 'text-align:center')}${this.cap(esc(t.roleFranchiseShort), 'text-align:center')}${rights}</div></div>
           <p style="margin:0;font-size:12px;color:${MUTED};line-height:1.6">${esc(t.rightsNote)}</p>
         </div>
@@ -743,14 +743,14 @@
     /** Marque : l'interrupteur des envois, le SMTP, les adresses de test, l'horloge ; les bases et leur import. */
     vEnvoisEtBases() {
       const d = this.data(), r = d.reglages || {}, s = this.s, ms = this.magasins().filter(m => m.kind === 'franchise');
-      const INP = `border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font-ui);background:${SURF};width:100%`;
-      const ligne = (k, v) => `<div style="display:grid;grid-template-columns:150px 1fr;gap:6px 14px;align-items:center;font-size:13px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="color:${MUTED}">${k}</div><div>${v}</div></div>`;
-      const sw = (on, a, lab) => `<button data-a="${a}" style="display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:13px;color:var(--color-text)"><span style="width:32px;height:18px;border-radius:999px;background:${on ? P : 'var(--color-border-secondary)'};position:relative;display:inline-block"><span style="position:absolute;top:2px;left:${on ? '16px' : '2px'};width:14px;height:14px;border-radius:50%;background:#fff"></span></span>${lab}</button>`;
+      const INP = `border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font-ui);background:${SURF};width:100%`;
+      const ligne = (k, v) => `<div style="display:grid;grid-template-columns:150px 1fr;gap:6px 14px;align-items:center;font-size:13px;padding:8px 0;border-bottom:1px solid var(--color-border-tertiary)"><div style="color:${MUTED}">${k}</div><div>${v}</div></div>`;
+      const sw = (on, a, lab) => `<button data-a="${a}" style="display:inline-flex;align-items:center;gap:8px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:13px;color:var(--color-text)"><span style="width:32px;height:18px;border-radius:6px;background:${on ? P : 'var(--color-border-secondary)'};position:relative;display:inline-block"><span style="position:absolute;top:2px;left:${on ? '16px' : '2px'};width:14px;height:14px;border-radius:50%;background:#fff"></span></span>${lab}</button>`;
       const tick = s.tick && typeof s.tick === 'object' ? (s.tick.motif ? s.tick.motif : ((s.tick.campagnes || []).map(c => `${c.nom} : ${c.envoyes} envoyés, ${c.reste} restants`).join(' · ') || 'rien à faire')) : (s.tick === 'en cours' ? 'passage en cours…' : '');
       const lots = d.lots || [];
       return `
       <div class="nl-set" style="margin-top:24px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
-        <div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">
+        <div style="background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">
           ${this.cap('Envois', 'margin-bottom:8px')}
           ${ligne('Régime', sw(!!d.dispatch, 'dispatch', d.dispatch ? '<b>Dispatché</b> — les campagnes partent vraiment' : '<b>Mode test</b> — rien ne part vers les clients'))}
           ${ligne('SMTP', r.smtp ? `configuré · ${esc(r.smtpExpediteur)}` : `<span style="color:${P}">non configuré</span> — Paramètres du cockpit → E-mail`)}
@@ -760,7 +760,7 @@
           ${ligne('Vouchers', `<span style="color:${MUTED}">codes uniques générés au départ, 8 caractères ; la boutique les encaisse par l’API (Stripe non branché).</span>`)}
           ${ligne('Horloge', `${this.btnS('tick', 'Passer l’horloge maintenant', null, 'padding:7px 12px;font-size:12px')}<span style="font-size:11px;color:${MUTED};margin-left:10px">${r.cronDernier ? 'dernier passage ' + esc(String(r.cronDernier)) : 'jamais passée'}${tick ? ' · ' + esc(tick) : ''}</span><div style="font-size:11px;color:${MUTED};margin-top:6px;word-break:break-all">cron (toutes les 5 min) : ${esc(r.cron || '')}</div>`)}
         </div>
-        <div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">
+        <div style="background:${SURF};border:1px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">
           ${this.cap('Bases de données', 'margin-bottom:8px')}
           ${(d.sources || []).map(x => ligne(esc(this.L(x.name)), x.reel ? `<b>${fmt(x.count)}</b> contacts · ${fmt(x.optin)} opt-in · ${fmt(x.sms || 0)} SMS` : `<span style="color:${MUTED}">jeu d’essai (${fmt(x.count)} · ${fmt(x.optin)} opt-in) — importez des contacts pour passer au réel</span>`)).join('')}
           <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
@@ -772,7 +772,7 @@
             <textarea data-f="impCsv" rows="5" placeholder="email;prenom;nom;langue;magasin;telephone;optin;optin_sms;dernier_achat;panier;produits;anniversaire&#10;marie@exemple.be;Marie;Dupont;fr;Corbais;;1;0;2026-08-30;14,20;tartine,cougnou;1988-05-12" style="${INP};font-family:ui-monospace,monospace;font-size:12px;resize:vertical">${esc(s.imp.csv)}</textarea>
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:11px;color:${MUTED};line-height:1.5">En-tête obligatoire, « email » requis ; séparateur , ; ou tabulation. Une adresse déjà connue est mise à jour. Une adresse désinscrite reste désinscrite.</span>${this.btnP('import', s.busy ? 'Import…' : 'Importer', null, 'padding:8px 14px;' + (s.busy ? 'opacity:.6' : ''))}</div>
           </div>
-          ${lots.length ? `<div style="margin-top:14px">${this.cap('Lots importés', 'margin-bottom:6px')}${lots.map(l => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span>${esc(l.lot)} <span style="color:${MUTED}">· ${esc(l.source)} · ${fmt(l.n)} contact(s) · ${esc(String(l.le || '').slice(0, 16))}</span></span><button data-a="lotdel" data-v="${esc(l.lot)}" style="border:none;background:none;color:${MUTED};font-size:11px;cursor:pointer;font-family:var(--font-ui)">retirer ×</button></div>`).join('')}</div>` : ''}
+          ${lots.length ? `<div style="margin-top:14px">${this.cap('Lots importés', 'margin-bottom:6px')}${lots.map(l => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:6px 0;border-bottom:1px solid var(--color-border-tertiary)"><span>${esc(l.lot)} <span style="color:${MUTED}">· ${esc(l.source)} · ${fmt(l.n)} contact(s) · ${esc(String(l.le || '').slice(0, 16))}</span></span><button data-a="lotdel" data-v="${esc(l.lot)}" style="border:none;background:none;color:${MUTED};font-size:11px;cursor:pointer;font-family:var(--font-ui)">retirer ×</button></div>`).join('')}</div>` : ''}
         </div>
       </div>`;
     }

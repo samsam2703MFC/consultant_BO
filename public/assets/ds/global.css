@@ -1,147 +1,31 @@
 /* ==========================================================================
-   L'Atelier By — Webshop
-   global.css — Design System & CSS Reference
-   Source: LAtelier_Design_System.docx (09/04/2026)
-   ==========================================================================
+   L'Atelier By — design system commun (feuille unique du BO consultant)
+   Référence : docs/design-system/DESIGN_SYSTEM.md (relevé du module Marketing,
+   état du 06/11/2026). Les valeurs ci-dessous en sont COPIÉES, pas
+   interprétées : une valeur change là-bas, elle change ici dans le même commit.
 
-   ⚠ ABSOLUTE RULES
-   - Zero hardcoded colors, fonts, or spacing anywhere in component code.
-   - Every value must reference a CSS variable. No exceptions.
-   - Theme is fetched once on app init and applied to :root via JS:
-       const theme = await GET /api/v1/theme?shop_type=webshop
-       Object.entries(theme).forEach(([k, v]) =>
-         document.documentElement.style.setProperty(k, v))
-   - The variables below are the defaults / fallbacks. Runtime theme
-     values override them on :root.
+   Ordre : polices (§4.1) · jetons (§3) · alias des anciens jetons · base ·
+   typographie (§4, §7.2) · composants (§7) · rail et coquille (§6, §8) ·
+   mode incorporé (§9) · leviers of_tag · classes historiques encore servies.
    ========================================================================== */
 
 
 /* --------------------------------------------------------------------------
-   Brand fonts — Gotham (UI) + Vank (display) + Playwrite DEVA (accent)
-   Self-hosted from /fonts.
+   Polices — §4.1. ATTENTION aux noms de fichier, ils trompent :
+   Gotham_Medium.otf est le trait NORMAL du système (le texte),
+   Gotham_Regular.otf le trait APPUYÉ (les accents de la liste fermée §4.3).
+   500 et 600 sont interdits : 500 retombe sur 400, 600 sur 700.
    -------------------------------------------------------------------------- */
+@font-face { font-family: 'Gotham'; src: url('fonts/Gotham_Medium.otf')  format('opentype'); font-weight: 400; font-display: swap; } /* texte */
+@font-face { font-family: 'Gotham'; src: url('fonts/Gotham_Regular.otf') format('opentype'); font-weight: 700; font-display: swap; } /* accents */
 
-/* --- Gotham (UI) — mapped across the 100–900 weight ladder ---
-   Note: the Gotham family shipped here is a partial set. Weights without a
-   dedicated file are mapped to the closest available cut so `font-weight`
-   still resolves predictably. Italics fall back to the nearest italic. */
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Thin.otf') format('opentype');
-  font-weight: 100; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Thin_Italic.otf') format('opentype');
-  font-weight: 100; font-style: italic; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Extra_Light.otf') format('opentype');
-  font-weight: 200; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Extra_Light_Italic.otf') format('opentype');
-  font-weight: 200; font-style: italic; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Light.otf') format('opentype');
-  font-weight: 300; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Extra_Light_Italic.otf') format('opentype');
-  font-weight: 300; font-style: italic; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Regular_New.otf') format('opentype');
-  font-weight: 400; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Italic.otf') format('opentype');
-  font-weight: 400; font-style: italic; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Medium.otf') format('opentype');
-  font-weight: 500; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Italic.otf') format('opentype');
-  font-weight: 500; font-style: italic; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Regular.otf') format('opentype');
-  font-weight: 600; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_ItalicBold.otf') format('opentype');
-  font-weight: 600; font-style: italic; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  /* No dedicated Gotham Bold file shipped — mapping 700 to Black (closest cut). */
-  src: url('fonts/Gotham_Black.otf') format('opentype');
-  font-weight: 700; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_ItalicBold.otf') format('opentype');
-  font-weight: 700; font-style: italic; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Black.otf') format('opentype');
-  font-weight: 800; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_ItalicBold.otf') format('opentype');
-  font-weight: 800; font-style: italic; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_Ultra.otf') format('opentype');
-  font-weight: 900; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'Gotham';
-  src: url('fonts/Gotham_ItalicBold.otf') format('opentype');
-  font-weight: 900; font-style: italic; font-display: swap;
-}
-
-/* --- Vank (display) — stylized glyphs limited to base ASCII;
-       Latin-1 accented characters intentionally fall through to Gotham
-       so words like "Châtelain" render with a clean accent. --- */
+/* Polices DE CONTENU (documents de campagne, aperçus de supports publiés —
+   §4.1 dernier alinéa, §13.2). Jamais pour l'interface. */
 @font-face {
   font-family: 'Vank';
   src: url('fonts/GC_Vank.ttf') format('truetype');
   font-weight: 400; font-style: normal; font-display: swap;
   unicode-range: U+0020-007E;
-}
-
-/* --- Playwrite DEVA (accent) — hand-script, four weights --- */
-@font-face {
-  font-family: 'Playwrite DEVA';
-  src: url('fonts/PlaywriteDEVA-Thin.ttf') format('truetype');
-  font-weight: 100; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'Playwrite DEVA';
-  src: url('fonts/PlaywriteDEVA-ExtraLight.ttf') format('truetype');
-  font-weight: 200; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'Playwrite DEVA';
-  src: url('fonts/PlaywriteDEVA-Light.ttf') format('truetype');
-  font-weight: 300; font-style: normal; font-display: swap;
 }
 @font-face {
   font-family: 'Playwrite DEVA';
@@ -151,1122 +35,428 @@
 
 
 /* ==========================================================================
-   1. TOKENS — :root
+   1. JETONS — §3, copiés tels quels
    ========================================================================== */
 :root {
-  /* --- Brand palette ----------------------------------------------------- */
-  --color-primary:            #8D1D2C;   /* Ruby Red — primary actions, badges, borders */
-  --color-secondary:          #F2C9A0;   /* Abricot — linked state, delivery mode ON */
-  --color-bg:                 #EAE4DC;   /* Beige — page background */
-  --color-surface:            #FFFFFF;   /* Blanc — cards, panels */
-  --color-text:               #222222;   /* Noir — body text */
-  --color-text-muted:         #666666;   /* Muted grey — secondary text, placeholders */
+  /* Texte */
+  --ink: #1c1a17;        /* texte principal, titres, valeurs */
+  --muted-2: #5c5852;    /* texte secondaire « actif » : libellés de boutons, entrées du rail, onglets au repos */
+  --muted: #7a736a;      /* texte secondaire : aides, légendes, en-têtes de tableau, kicker */
+  --faint: #B8B2A8;      /* libellés en capitales de groupe, champ désactivé */
 
-  /* Semantic aliases used by components */
-  --color-text-primary:       var(--color-text);
-  --color-text-secondary:     var(--color-text-muted);
-  --color-background-secondary: #F4EFE8;         /* faint beige — input / secondary surfaces */
-  --color-border-secondary:   rgba(34, 34, 34, 0.18);
-  --color-border-tertiary:    rgba(34, 34, 34, 0.10);
+  /* Surfaces et filets */
+  --paper: #faf7f2;      /* fond de l'application ; survol discret */
+  --table-head: #FBF9F5; /* en-tête de tableau, survol de ligne, bandeau de KPI */
+  --total-line: #F8F4EE; /* ligne de total */
+  --chip: #EDE7DE;       /* pastille neutre, piste d'interrupteur, fond de sélecteur segmenté */
+  --line: #e6e0d8;       /* TOUTES les bordures */
+  --row-line: rgba(34, 34, 34, 0.06); /* séparation entre lignes de tableau */
 
-  /* State + accent colors */
-  --color-linked:             #F2C9A0;   /* Office client linked (Abricot) */
-  --color-collect:            #8D1D2C;   /* Not linked / collect mode */
-  --color-on-abricot:         #6b4420;   /* Dark amber — text on Abricot backgrounds */
-  --color-collection-border:  #c17a2a;   /* Deep amber */
-  --color-collection-fill:    #FAC775;   /* Collection badge background */
-  --color-collection-icon:    #6b3d0a;   /* Collection badge icon/label */
+  /* Marque */
+  --accent: #8D1D2C;     /* bordeaux : action principale, sélection, focus ; survol : #6f1622 */
 
-  /* Website / marketing accents */
-  --color-popup:              #78554B;   /* Third color — Pop-Up markers & badges */
-  --color-ink:                #222222;   /* Illustration stroke ink */
+  /* États */
+  --danger: #b3261e;     /* erreur, action destructrice */
+  --green: #3f7a52;      /* réussite, « mesuré », valide */
+  --prize: #B0792A;      /* or : attention, interrupteur allumé, prime */
+  --prize-soft: #F6E7CE; /* fond d'avertissement */
+  --prize-ink: #7A5207;  /* texte d'avertissement */
+  --stop: #A32014;       /* arrêt : uniquement une valeur devenue négative (marge…) */
+  --stop-soft: #F7E0DC;  /* fond de l'arrêt */
 
-  /* --- Typography -------------------------------------------------------- */
-  /* Brand typography — strict. No system fallback allowed.
-     Vank ships full Latin so accents render natively; Gotham is the
-     last-resort fallback for any remaining missing glyph (e.g. € in
-     Regular/Italic, which falls through to Book/Medium). */
-  --font-display:             'Vank', 'Gotham';          /* informational / display */
-  --font-ui:                   'Gotham';                  /* body / UI */
-  --font-accent:               'Playwrite DEVA', 'Gotham'; /* script informational accent */
+  /* Réservées à l'identification — jamais pour un texte courant ni un fond de bloc */
+  --mc-fb: #1877F2;
+  --mc-ig: #D6286F;
+  --mc-meta: #0866FF;
+  --mc-gg: #1E8E3E;
+  --mc-nl: #6B4FBB;
+  --chart-real: #B03048;
+  --chart-prev: #EBD3D8;
+  --chart-goal: #1B6FA8;
+  --chart-goal-soft: #DEEAF3;
 
-  /* Type scale (px) */
-  --font-size-page-title:     32px;   /* Page title / brand name (display) */
-  --font-size-section-title:  20px;   /* Section title (display) */
-  --font-size-navbar-brand:   15px;   /* Brand name in navbar */
-  --font-size-body:           16px;   /* Body text */
-  --font-size-label:          13px;   /* Labels / secondary */
-  --font-size-small:          11px;   /* Small label / uppercase nav */
-  --font-size-button:         14px;   /* Button text */
-  --font-size-price:          14px;   /* Price (range 12–16px) */
-  --font-size-admin-label:    11px;   /* Section label (admin) */
+  color-scheme: light;
+  font-family: 'Gotham', system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
 
-  /* Line heights */
-  --line-height-display:      1.2;
-  --line-height-section:      1.3;
-  --line-height-body:         1.6;
+  /* --- Alias des anciens jetons du BO -----------------------------------
+     Les gabarits du cockpit (≈ 6 000 styles en ligne) lisent encore ces
+     noms. Chacun pointe sur le jeton du MÊME RÔLE (§10.1), pas sur la teinte
+     la plus proche. Table complète : docs/design-system/INVENTAIRE.md. */
+  --color-primary:            var(--accent);
+  --color-secondary:          var(--prize-soft);   /* ancien Abricot : n'existe plus à l'écran */
+  --color-bg:                 var(--paper);
+  --color-surface:            #fff;
+  --color-text:               var(--ink);
+  --color-text-muted:         var(--muted);
+  --color-text-primary:       var(--ink);
+  --color-text-secondary:     var(--muted);
+  --color-background-secondary: var(--table-head); /* fonds secondaires, bandeaux, survols */
+  --color-border-secondary:   var(--line);         /* §3 : --line pour TOUTES les bordures */
+  --color-border-tertiary:    var(--line);
+  --color-linked:             var(--prize-soft);
+  --color-collect:            var(--accent);
+  --color-on-abricot:         var(--prize-ink);
+  --color-collection-border:  var(--prize);
+  --color-collection-fill:    var(--prize-soft);
+  --color-collection-icon:    var(--prize-ink);
+  --color-popup:              #78554B;   /* Pop-Up — couleur d'identification de marque */
+  --color-ink:                var(--ink);
+  --color-success:            var(--green);
 
-  /* Letter spacing */
+  --font-display:             'Gotham', system-ui, sans-serif;  /* l'interface n'a qu'une police (§4.1) */
+  --font-ui:                  'Gotham', system-ui, sans-serif;
+  --font-accent:              'Gotham', system-ui, sans-serif;
+  --font-content-display:     'Vank', 'Gotham';                 /* contenu de campagne seulement */
+  --font-content-script:      'Playwrite DEVA', 'Gotham';
+
+  --font-size-page-title:     26px;
+  --font-size-section-title:  15px;
+  --font-size-navbar-brand:   13px;
+  --font-size-body:           13px;
+  --font-size-label:          12.5px;
+  --font-size-small:          11px;
+  --font-size-button:         13px;
+  --font-size-price:          13px;
+  --font-size-admin-label:    10.5px;
+  --line-height-display:      1.15;
+  --line-height-section:      normal;
+  --line-height-body:         1.5;
   --tracking-nav:             0.06em;
   --tracking-admin:           0.08em;
-
-  /* Font weights */
   --weight-regular:           400;
-  --weight-medium:            500;
+  --weight-medium:            400;   /* 500 interdit (§4.1) */
 
-  /* --- Grid -------------------------------------------------------------- */
-  --grid-cols-desktop:        6;   /* @kind other */
-  --grid-cols-tablet:         3;   /* @kind other */
-  --grid-cols-mobile:         2;   /* @kind other */
+  --grid-cols-desktop:        6;
+  --grid-cols-tablet:         3;
+  --grid-cols-mobile:         2;
   --grid-gap:                 12px;
 
-  /* --- Border radius ---------------------------------------------------- */
   --radius-sm:                6px;
   --radius-md:                8px;
   --radius-lg:                12px;
-  --radius-pill:              999px;
+  --radius-pill:              6px;   /* aucune pilule (§2, §5) : l'ancien nom rend un rectangle */
 
-  /* --- Spacing ---------------------------------------------------------- */
   --spacing-xs:               4px;
   --spacing-sm:               8px;
   --spacing-md:               16px;
   --spacing-lg:               24px;
   --spacing-xl:               32px;
 
-  /* --- PACKAGING — accents de variété (confitures & miels) ---------------
-     ⚠ PORTÉE LIMITÉE : ces couleurs s'appliquent UNIQUEMENT au packaging
-     (étiquettes 65×45 mm et pastille couvercle Ø52 mm). Elles ne remplacent
-     PAS la palette de marque (--color-primary, --color-secondary, etc.).
-     Usage : pastille couleur / accent de variété — jamais en fond pleine
-     surface. Fond d'étiquette : toujours blanc (--color-surface). @kind color
-     -------------------------------------------------------------------- */
-  /* Confitures — fruits rouges */
-  --pkg-fraise:               #8D1D2C;   /* Ruby Red maison */
-  --pkg-framboise:            #A61E4D;   /* Rosé magenta profond */
-  --pkg-groseille:            #C41E3A;   /* Rouge vif éclatant */
-  --pkg-cerise:               #7B1424;   /* Rouge griotte profond */
-  --pkg-mure:                 #4A1E3C;   /* Pourpre foncé */
-  --pkg-myrtille:             #3B3468;   /* Bleu-violet */
-  --pkg-cassis:               #2E1A47;   /* Violet nuit */
+  /* --- PACKAGING — accents de variété (étiquettes et couvercles seulement).
+     Jamais à l'écran comme couleur d'interface. -------------------------- */
+  --pkg-fraise: #8D1D2C; --pkg-framboise: #A61E4D; --pkg-groseille: #C41E3A; --pkg-cerise: #7B1424;
+  --pkg-mure: #4A1E3C; --pkg-myrtille: #3B3468; --pkg-cassis: #2E1A47;
+  --pkg-abricot: #E8964B; --pkg-peche: #F4A97F; --pkg-mirabelle: #E8B84B; --pkg-orange-amere: #D97B29; --pkg-coing: #D9A441;
+  --pkg-rhubarbe: #C96A6E; --pkg-figue: #6E3B5C; --pkg-prune: #5C3A6E; --pkg-poire: #C8C87A; --pkg-pomme: #A8C47A;
+  --pkg-miel-acacia: #F5DFA8; --pkg-miel-colza: #EFD9A0; --pkg-miel-toutes-fleurs: #E3B155; --pkg-miel-tilleul: #DCC26B;
+  --pkg-miel-lavande: #E8C97F; --pkg-miel-lavande-accent: #9A8FBF; --pkg-miel-chataignier: #9C6B2F;
+  --pkg-miel-foret: #6B4A26; --pkg-miel-sarrasin: #5C3D22;
 
-  /* Confitures — fruits jaunes / orangés */
-  --pkg-abricot:              #E8964B;   /* Abricot saturé (dérivé Abricot Pastel) */
-  --pkg-peche:                #F4A97F;   /* Pêche douce */
-  --pkg-mirabelle:            #E8B84B;   /* Jaune doré */
-  --pkg-orange-amere:         #D97B29;   /* Orange brûlé */
-  --pkg-coing:                #D9A441;   /* Ambre rosé */
-
-  /* Confitures — autres */
-  --pkg-rhubarbe:             #C96A6E;   /* Rose-vert (dominante rosée) */
-  --pkg-figue:                #6E3B5C;   /* Violet chaud */
-  --pkg-prune:                #5C3A6E;   /* Violet prune (prune / quetsche) */
-  --pkg-poire:                #C8C87A;   /* Vert-jaune doux */
-  --pkg-pomme:                #A8C47A;   /* Vert tendre */
-
-  /* Miels — dégradé d'ambres (clair → foncé = intensité du goût) */
-  --pkg-miel-acacia:          #F5DFA8;   /* Ambre très clair */
-  --pkg-miel-colza:           #EFD9A0;   /* Crème clair */
-  --pkg-miel-toutes-fleurs:   #E3B155;   /* Ambre classique */
-  --pkg-miel-tilleul:         #DCC26B;   /* Jaune-vert clair */
-  --pkg-miel-lavande:         #E8C97F;   /* Ambre doré */
-  --pkg-miel-lavande-accent:  #9A8FBF;   /* Accent secondaire lavande (autorisé) */
-  --pkg-miel-chataignier:     #9C6B2F;   /* Ambre foncé */
-  --pkg-miel-foret:           #6B4A26;   /* Brun foncé (miellat / forêt) */
-  --pkg-miel-sarrasin:        #5C3D22;   /* Brun très foncé */
-
-  /* --- LEVIERS (of_tag) — axes de performance du réseau de franchises -------
-     Système de gestion par levier. TOUT objet opérationnel (checklist, tâche,
-     KPI, formation, compétence) est rattaché à UN levier via of_tag.levid.
-     Ces couleurs SONT la source de vérité of_tag.color — l'UI ne code jamais
-     une couleur de levier en dur, elle lit ces variables (mappées depuis
-     of_tag.color au runtime : var(--lev-<tag-slug-en-minuscules>)).
-     ⚠ Labour Cost & Overhead Cost partagent #8b5cf6 → différencier par le nom.
-     Ordre d'affichage/regroupement : Trafic → Récurrence → Expérience Client
-     → Food Cost → Labour Cost → Overhead Cost. @kind color
-     -------------------------------------------------------------------- */
-  --lev-trafic:               #6366f1;   /* id 4 · TRAFIC */
-  --lev-recurrence:           #ec4899;   /* id 3 · RECURRENCE */
-  --lev-xp:                   #f59e0b;   /* id 2 · XP — Expérience Client */
-  --lev-food-cost:            #10b981;   /* id 5 · FOOD_COST */
-  --lev-labour-cost:          #8b5cf6;   /* id 6 · LABOUR_COST */
-  --lev-overhead-cost:        #8b5cf6;   /* id 7 · OVERHEAD_COST */
+  /* --- LEVIERS (of_tag) — couleurs d'identification des axes du réseau.
+     Source de vérité of_tag.color ; l'UI lit ces variables. -------------- */
+  --lev-trafic:        #6366f1;   /* id 4 · TRAFIC */
+  --lev-recurrence:    #ec4899;   /* id 3 · RECURRENCE */
+  --lev-xp:            #f59e0b;   /* id 2 · XP — Expérience Client */
+  --lev-food-cost:     #10b981;   /* id 5 · FOOD_COST */
+  --lev-labour-cost:   #8b5cf6;   /* id 6 · LABOUR_COST */
+  --lev-overhead-cost: #8b5cf6;   /* id 7 · OVERHEAD_COST */
 }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
 
 
 /* ==========================================================================
    2. BASE
    ========================================================================== */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
+html, body { margin: 0; padding: 0; }
 body {
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  background: var(--color-bg);
-  color: var(--color-text-primary);
-  font-family: var(--font-ui);
-  font-size: var(--font-size-body);
-  font-weight: var(--weight-regular);
-  line-height: var(--line-height-body);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Gotham', system-ui, sans-serif;
+  font-size: 13px;           /* texte courant (§4.2) */
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+/* Les contrôles natifs prennent la police de l'interface. */
+input, textarea, select, button, optgroup, option { font-family: inherit; }
 
-/* Strict typography — native form controls inherit the brand font.
-   Browsers default <input>, <textarea>, <select>, <button> to a system UA
-   font; force them onto Gotham so there is zero visual drift. */
-input,
-textarea,
-select,
-button,
-optgroup,
-option {
-  font-family: var(--font-ui);
+/* Pas de gras (§4.3) : les titres, en-têtes de tableau et mots « mis en
+   valeur » sont en trait normal ; la hiérarchie vient de la taille, de la
+   couleur et de l'espace. Un accent de la liste fermée pose 700 lui-même. */
+h1, h2, h3, h4, h5, h6, th, b, strong { font-weight: inherit; }
+h1, h2, h3, h4, h5, h6 { font-weight: 400; }
+
+/* Focus clavier visible partout — contour bordeaux 2 px (§7.4, §7.5, §12). */
+a:focus-visible, button:focus-visible, [role="button"]:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
 }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input:disabled, select:disabled, textarea:disabled { color: var(--faint); cursor: not-allowed; }
 
 
 /* ==========================================================================
-   3. TYPOGRAPHY
+   3. TYPOGRAPHIE — §4.2, §7.2
    ========================================================================== */
-.t-page-title {
-  font-family: var(--font-display);
-  font-size: var(--font-size-page-title);
-  font-weight: var(--weight-regular);
-  line-height: var(--line-height-display);
-  color: var(--color-text-primary);
-}
+.screen-subtitle { font-size: 21px; font-weight: 400; color: var(--ink); margin: 4px 0 14px; }
+.section-label { margin: 1.5rem 0 0; font-size: 0.72rem; font-weight: 400; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); }
+.section-label__aside { float: right; font-size: 11.5px; font-weight: 400; text-transform: none;
+  letter-spacing: normal; color: var(--muted); }
+.block-title { font-size: 0.95rem; font-weight: 400; margin: 0 0 0.5rem; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--muted); }          /* = h2 de bloc du Marketing (§7.2) */
+.muted { color: var(--muted); margin: 0; }
+.error { color: var(--danger); margin: 0.5rem 0 0; }
+.num { text-align: right; }
 
-.t-section-title {
-  font-family: var(--font-display);
-  font-size: var(--font-size-section-title);
-  font-weight: var(--weight-regular);
-  line-height: var(--line-height-section);
-  color: var(--color-text-primary);
-}
-
-.t-navbar-brand {
-  font-family: var(--font-display);
-  font-size: var(--font-size-navbar-brand);
-  font-weight: var(--weight-regular);
-  color: var(--color-primary);
-}
-
-.t-body {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-body);
-  font-weight: var(--weight-regular);
-  line-height: var(--line-height-body);
-  color: var(--color-text-primary);
-}
-
-.t-label {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-label);
-  font-weight: var(--weight-regular);
-  color: var(--color-text-secondary);
-}
-
-.t-small {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-small);
-  font-weight: var(--weight-regular);
-  letter-spacing: var(--tracking-nav);
-}
-
-.t-button {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-button);
-  font-weight: var(--weight-medium);
-}
-
-.t-price {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-price);
-  font-weight: var(--weight-medium);
-  color: var(--color-primary);
-  white-space: nowrap;
-}
-
-.t-admin-label {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-admin-label);
-  font-weight: var(--weight-regular);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-admin);
-  color: var(--color-text-secondary);
-}
+/* Classes historiques (scouting) ramenées au système */
+.t-page-title { font-size: 26px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); }
+.t-section-title { font-size: 15px; font-weight: 400; color: var(--ink); }
+.t-label { font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.t-small { font-size: 11px; font-weight: 400; }
+.t-admin-label { font-size: 10.5px; font-weight: 400; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 
 
 /* ==========================================================================
-   4. NAVBAR
-   ⚠ No logo anywhere in the navbar. Single row. No stacking. No wrapping.
-   ========================================================================== */
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 20px;
-  background: var(--color-surface);
-  border-bottom: 0.5px solid var(--color-border-tertiary);
-  width: 100%;
-  flex-wrap: nowrap;
-}
-
-.navbar__left,
-.navbar__right {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  flex-wrap: nowrap;
-  white-space: nowrap;
-}
-
-.navbar__brand {
-  font-family: var(--font-display);
-  font-size: var(--font-size-navbar-brand);
-  font-weight: var(--weight-regular);
-  color: var(--color-primary);
-}
-
-.navbar__date {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-label);
-  color: var(--color-text-primary);
-  border: none;
-  background: transparent;
-  text-decoration: none;
-}
-
-/* Mode badges (pill) */
-.mode-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  border-radius: var(--radius-pill);
-  padding: 4px 10px;
-  font-family: var(--font-ui);
-  font-size: var(--font-size-small);
-  font-weight: var(--weight-medium);
-  border: none;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.mode-badge--collect {   /* Collecte en magasin */
-  background: var(--color-primary);
-  color: var(--color-surface);
-}
-
-.mode-badge--delivery { /* Livraison au bureau */
-  background: var(--color-secondary);
-  color: var(--color-on-abricot);
-}
-
-/* Navbar right group */
-.shop-select {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  border: 0.5px solid var(--color-border-tertiary);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  padding: 4px 8px;
-  color: var(--color-text-primary);
-}
-
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-}
-
-.icon-btn__svg {
-  width: 18px;
-  height: 18px;
-  stroke: var(--color-text-secondary);
-  stroke-width: 1.5;
-  fill: none;
-}
-
-.cart-icon {
-  position: relative;
-}
-
-.cart-icon__badge {
-  position: absolute;
-  top: -4px;
-  right: -6px;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 4px;
-  border-radius: var(--radius-pill);
-  background: var(--color-primary);
-  color: var(--color-surface);
-  font-size: 9px;
-  font-weight: var(--weight-medium);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-/* Office Client icon — circular, state-dependent */
-.office-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-}
-
-.office-icon--linked {
-  background: var(--color-linked);
-  color: var(--color-on-abricot);
-}
-
-.office-icon--not-linked {
-  background: var(--color-collect);
-  color: var(--color-surface);
-}
-
-.office-icon--neutral {      /* not logged in */
-  background: var(--color-background-secondary);
-  color: var(--color-text-secondary);
-}
-
-/* Mobile navbar — stacked (4 rows) */
-@media (max-width: 599px) {
-  .navbar--mobile {
-    display: grid;
-    grid-template-rows: auto auto auto auto;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm) var(--spacing-md);
-  }
-  .navbar--mobile .navbar__row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-sm);
-  }
-  .navbar--mobile .navbar__brand {
-    font-size: 14px;
-  }
-  .mode-badge--mobile-tile {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-md);
-    padding: var(--spacing-sm);
-    font-size: var(--font-size-small);
-    height: 44px;
-  }
-  .navbar__date--mobile {
-    width: 100%;
-    background: var(--color-background-secondary);
-    border-radius: var(--radius-sm);
-    font-size: 12px;
-    padding: 8px 10px;
-    border: 0.5px solid var(--color-border-tertiary);
-  }
-}
-
-/* Date picker must never be hidden behind the navbar */
-.date-picker-popover {
-  z-index: 1000;
-}
-
-
-/* ==========================================================================
-   5. CATEGORY & COLLECTION BADGES
-   ========================================================================== */
-.badge-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-sm);
-  overflow-x: auto;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;    /* momentum on mobile */
-  padding: var(--spacing-sm) var(--spacing-md);
-}
-
-.badge-row::-webkit-scrollbar {
-  height: 0;
-}
-
-.category-badge,
-.collection-badge {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-.category-badge__tile {
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-background-secondary);
-  border: 0.5px solid var(--color-border-tertiary);
-  transition: background 120ms ease, border-color 120ms ease;
-}
-
-.category-badge__tile svg {
-  width: 28px;
-  height: 28px;
-  stroke: var(--color-text-secondary);
-  stroke-width: 1.5;
-  fill: none;
-}
-
-.category-badge__label {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-small);
-  font-weight: var(--weight-regular);
-  color: var(--color-text-secondary);
-  text-align: center;
-}
-
-/* Active state */
-.category-badge--active .category-badge__tile {
-  background: var(--color-bg);
-  border: 2px solid var(--color-primary);
-}
-
-.category-badge--active .category-badge__tile svg {
-  stroke: var(--color-primary);
-}
-
-.category-badge--active .category-badge__label {
-  color: var(--color-primary);
-  font-weight: var(--weight-medium);
-}
-
-/* Illustration placeholder (admin upload — dashed outline if unset) */
-.category-badge__tile--empty {
-  border: 1.5px dashed var(--color-border-secondary);
-  background: transparent;
-}
-
-/* Collection badge — distinct visual */
-.collection-badge__tile {
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radius-md);
-  background: var(--color-collection-fill);
-  border: 2px solid var(--color-collection-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.collection-badge__tile svg {
-  width: 28px;
-  height: 28px;
-  stroke: var(--color-collection-icon);
-  stroke-width: 1.5;
-  fill: none;
-}
-
-.collection-badge__label {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-small);
-  font-weight: var(--weight-medium);
-  color: var(--color-collection-border);
-  text-align: center;
-}
-
-
-/* ==========================================================================
-   6. PRODUCT CARD
-   ========================================================================== */
-.product-card {
-  border-radius: var(--radius-lg);
-  border: 0.5px solid var(--color-border-tertiary);
-  background: var(--color-surface);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.product-card__photo {
-  position: relative;
-  width: 100%;
-  height: 120px;
-  background: var(--color-bg);   /* placeholder when no image */
-  overflow: hidden;
-}
-
-.product-card__photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* Optional corner badge on photo */
-.product-card__corner-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: var(--color-primary);
-  color: var(--color-surface);
-  font-family: var(--font-ui);
-  font-size: 9px;
-  font-weight: var(--weight-medium);
-  border-radius: 10px;
-  padding: 2px 6px;
-  line-height: 1;
-}
-
-.product-card__body {
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* Line 1 — Portions row */
-.portions {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-}
-
-.portion {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1.5px solid var(--color-border-secondary);
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-}
-
-.portion svg {
-  width: 20px;
-  height: 20px;
-  fill: var(--color-text-secondary);
-}
-
-.portion--active {
-  border-color: var(--color-primary);
-}
-
-.portion--active svg {
-  fill: var(--color-primary);
-}
-
-/* Line 2 — Name + price */
-.product-card__name-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.product-card__name {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: var(--weight-medium);
-  color: var(--color-text-primary);
-  line-height: 1.3;
-  /* No truncation — show full name */
-}
-
-.product-card__price {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: var(--weight-medium);
-  color: var(--color-primary);
-  white-space: nowrap;
-}
-
-/* Line 3 — Allergens + icons + (+) */
-.product-card__meta-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.allergen-list {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.allergen {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  opacity: 0.15;
-}
-
-.product-card__actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Small circular icon buttons: O (options), ℹ (info) */
-.icon-circle {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 0.5px solid var(--color-border-secondary);
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-family: var(--font-ui);
-  font-size: 10px;
-  font-weight: var(--weight-medium);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-/* (+) add to cart */
-.add-btn {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: var(--color-surface);
-  border: none;
-  font-family: var(--font-ui);
-  font-size: 14px;
-  font-weight: var(--weight-medium);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-
-/* ==========================================================================
-   7. PRODUCT GRID
-   ========================================================================== */
-.product-grid {
-  display: grid;
-  grid-template-columns: repeat(var(--grid-cols-desktop), minmax(0, 1fr));
-  gap: var(--grid-gap);
-  padding: var(--spacing-md);
-}
-
-@media (max-width: 1024px) {
-  .product-grid {
-    grid-template-columns: repeat(var(--grid-cols-tablet), minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 599px) {
-  .product-grid {
-    grid-template-columns: repeat(var(--grid-cols-mobile), minmax(0, 1fr));
-  }
-}
-
-
-/* ==========================================================================
-   8. BASKET
-   ========================================================================== */
-.basket {
-  border-radius: var(--radius-lg);
-  border: 0.5px solid var(--color-border-tertiary);
-  background: var(--color-surface);
-  padding: var(--spacing-md);
-  max-width: 360px;
-}
-
-.basket__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-sm);
-}
-
-.basket__title {
-  font-family: var(--font-ui);
-  font-size: 14px;
-  font-weight: var(--weight-medium);
-  color: var(--color-text-primary);
-}
-
-.basket__back {
-  background: none;
-  border: none;
-  padding: 0;
-  font-family: var(--font-ui);
-  font-size: 12px;
-  color: var(--color-primary);
-  cursor: pointer;
-}
-
-/* Mode section dot */
-.mode-dot {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  margin: var(--spacing-sm) 0;
-}
-
-.mode-dot__bullet {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.mode-dot--collect .mode-dot__bullet {
-  background: var(--color-primary);
-}
-
-.mode-dot--delivery .mode-dot__bullet {
-  background: var(--color-secondary);
-  border: 1px solid var(--color-collection-border);
-}
-
-.mode-dot__label {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: var(--weight-medium);
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-nav);
-}
-
-/* Line items */
-.basket__item {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) 0;
-  border-bottom: 0.5px solid var(--color-border-tertiary);
-}
-
-.basket__item:last-of-type {
-  border-bottom: none;
-}
-
-.basket__item-name {
-  font-family: var(--font-ui);
-  font-size: 13px;
-  color: var(--color-text-primary);
-}
-
-.basket__item-options {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  margin-top: 2px;
-}
-
-.basket__item-price {
-  font-family: var(--font-ui);
-  font-size: 13px;
-  color: var(--color-text-primary);
-  white-space: nowrap;
-}
-
-/* Total bar */
-.basket__total {
-  border-top: 0.5px solid var(--color-border-tertiary);
-  padding-top: 12px;
-  margin-top: var(--spacing-sm);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.basket__total-label {
-  font-family: var(--font-ui);
-  font-size: 14px;
-  font-weight: var(--weight-medium);
-  color: var(--color-text-primary);
-}
-
-.basket__total-amount {
-  font-family: var(--font-ui);
-  font-size: 16px;
-  font-weight: var(--weight-medium);
-  color: var(--color-primary);
-}
-
-
-/* ==========================================================================
-   9. CHECKOUT
-   ========================================================================== */
-.checkout {
-  border-radius: var(--radius-lg);
-  border: 0.5px solid var(--color-border-tertiary);
-  background: var(--color-surface);
-  padding: var(--spacing-md);
-  max-width: 360px;
-}
-
-/* Step number circles */
-.step-num {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: var(--weight-medium);
-}
-
-.step-num--active {
-  background: var(--color-secondary);
-  color: var(--color-on-abricot);
-}
-
-.step-num--inactive {
-  background: var(--color-background-secondary);
-  color: var(--color-text-secondary);
-}
-
-/* Info rows (key / value) */
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  padding: 6px 0;
-}
-
-.info-row__key {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
-
-.info-row__value {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  color: var(--color-text-primary);
-}
-
-/* Invoice checkbox */
-.invoice-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-family: var(--font-ui);
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
-
-.invoice-checkbox input[type="checkbox"] {
-  accent-color: var(--color-primary);
-}
-
-/* VIES validation states */
-.vies-state {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-size: 11px;
-}
-
-.vies-state--valid  { color: #2d7a3e; }
-.vies-state--invalid{ color: var(--color-primary); }
-
-
-/* ==========================================================================
-   10. FOOTER
-   ========================================================================== */
-.footer-collapsed {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  background: var(--color-background-secondary);
-  border: 0.5px solid var(--color-border-tertiary);
-  border-radius: var(--radius-md);
-  padding: 10px 16px;
-  cursor: pointer;
-  font-family: var(--font-ui);
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
-
-.footer-collapsed svg {
-  width: 16px;
-  height: 16px;
-  stroke: var(--color-text-secondary);
-  fill: none;
-}
-
-.footer-expanded {
-  background: var(--color-background-secondary);
-  border: 0.5px solid var(--color-border-tertiary);
-  border-radius: var(--radius-md);
-  padding: 14px 20px;
-  width: 280px;
-}
-
-.footer-expanded__brand {
-  font-family: var(--font-display);
-  font-size: 16px;
-  color: var(--color-text-primary);
-}
-
-.footer-expanded__tagline {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  margin-bottom: 10px;
-}
-
-.footer-expanded__sep {
-  border-top: 0.5px solid var(--color-border-tertiary);
-  padding-top: 10px;
-}
-
-.footer-expanded__cols {
-  display: flex;
-  gap: var(--spacing-lg);
-}
-
-.footer-col__title {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: var(--weight-medium);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-xs);
-}
-
-.footer-col__link {
-  display: block;
-  font-family: var(--font-ui);
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  text-decoration: none;
-}
-
-.footer-expanded__hours {
-  font-family: var(--font-ui);
-  font-size: 10px;
-  color: var(--color-text-secondary);
-  margin-top: 10px;
-}
-
-@media (max-width: 599px) {
-  .footer-expanded__cols {
-    flex-direction: column;
-    gap: var(--spacing-sm);
-  }
-}
-
-
-/* ==========================================================================
-   11. BUTTONS & INTERACTIVE ELEMENTS
+   4. COMPOSANTS — §7 (CSS exact)
    ========================================================================== */
 
-/* Primary CTA — full-width in basket/checkout contexts */
-.btn-primary {
-  background: var(--color-primary);
-  color: var(--color-surface);
-  border: none;
-  border-radius: var(--radius-md);
-  padding: 11px 16px;
-  font-family: var(--font-ui);
-  font-size: var(--font-size-button);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-  line-height: 1.2;
-}
+/* 7.1 Barre supérieure et titre de page */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 18px 24px; border-bottom: 1px solid var(--line); background: #fff; }
+.topbar__kicker { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+.topbar h1 { font-size: 26px; font-weight: 400; letter-spacing: -0.01em; margin: 0; }
+.topbar__actions { display: flex; align-items: center; gap: 10px; }
 
-.btn-primary--block {
-  width: 100%;
-  padding: 11px;
-  margin-top: 12px;
-}
+/* 7.3 Carte */
+.card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem; }
+.card ul:not([class]) { margin: 0; padding-left: 1.1rem; font-size: 0.9rem; line-height: 1.7; }
 
-/* Secondary */
-.btn-secondary {
-  background: transparent;
-  border: 0.5px solid var(--color-border-secondary);
-  color: var(--color-text-primary);
-  border-radius: var(--radius-md);
-  padding: 11px 16px;
-  font-family: var(--font-ui);
-  font-size: var(--font-size-button);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
+/* 7.4 Boutons — un seul système */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 36px; margin: 0; padding: 7px 16px;
+  border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink);
+  font: 400 13px/1.2 'Gotham', system-ui, sans-serif;
+  text-decoration: none; white-space: nowrap; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
+.btn:hover:not(:disabled) { border-color: var(--muted-2); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.is-busy { opacity: 0.6; cursor: progress; }
+
+.btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn--primary:hover:not(:disabled) { background: #6f1622; border-color: #6f1622; }
+
+.btn--ghost { background: transparent; border-color: transparent; color: var(--muted-2); }
+.btn--ghost:hover:not(:disabled) { border-color: transparent; color: var(--ink); text-decoration: underline; }
+
+.btn--danger { background: transparent; border-color: transparent; color: var(--muted-2); }
+.btn--danger:hover:not(:disabled) { border-color: transparent; background: rgba(179, 38, 30, 0.07); color: var(--danger); }
+
+.btn--sm { min-height: 30px; padding: 5px 11px; font-size: 12px; }
+.btn--icon { flex: none; width: 28px; min-height: 28px; height: 28px; padding: 0; font-size: 12px; }
+
+.linklike { padding: 2px 4px; font-size: 12px; color: var(--muted-2); background: none; border: 0;
+  border-radius: 6px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.linklike:hover { color: var(--accent); }
+
+/* 7.5 Champs — appliqués aux champs marqués .input ou rangés dans .field / .toolbar / .ds-form :
+   les gabarits du cockpit posent encore leurs mesures en ligne. */
+.input, .ds-form input, .ds-form select, .ds-form textarea { font: inherit; padding: 0.6rem 0.7rem; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; color: var(--ink); }
+.input:disabled { background: transparent; color: var(--faint); border-color: var(--line); cursor: not-allowed; }
+.field { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.field input, .field select { padding: 5px 9px; font-size: 12.5px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); }
+.field-label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.toolbar input[type=search] { flex: 1 1 260px; min-width: 200px; height: 36px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 8px; font: 13px 'Gotham', system-ui, sans-serif; }
+.toolbar select { height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; font: 13px 'Gotham', system-ui, sans-serif; }
+
+/* 7.6 Choisir : filtres, pastilles de choix, sélecteur segmenté */
+.filter { margin: 0; padding: 6px 13px; font-size: 12.5px; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; color: var(--muted-2); cursor: pointer; }
+.filter.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.choice-pill { margin: 0; background: #fff; border: 1px solid rgba(34, 34, 34, 0.14); border-radius: 10px;
+  padding: 9px 16px; font-size: 12.5px; font-weight: 400; color: var(--muted-2); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s; }
+.choice-pill.is-on { border: 2px solid var(--accent); background: rgba(141, 29, 44, 0.05);
+  color: var(--accent); padding: 8px 15px; }
+
+.seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--chip); }
+.seg button { margin: 0; padding: 6px 11px; border: 0; border-radius: 7px; background: transparent;
+  color: var(--muted-2); font: 400 12.5px 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.seg button.is-on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+
+/* 7.7 Onglets de page */
+.page-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 16px; border-bottom: 1px solid var(--line); }
+.page-tabs__tab { margin: 0 0 -1px; padding: 8px 12px; border: none; border-bottom: 2px solid transparent;
+  border-radius: 0; background: none; color: var(--muted-2); font: inherit; font-size: 13px;
+  font-weight: 400; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+.page-tabs__tab:hover { color: var(--ink); }
+.page-tabs__tab.is-on { color: var(--accent); border-bottom-color: var(--accent); }
+/* Compteur d'un onglet : un nombre, sans pastille pleine (même forme que le compteur du rail, §8.3). */
+.page-tabs__count { font-size: 11px; color: var(--accent); }
+
+/* 7.8 Tableaux — sur un tableau marqué .ds-table ou rangé dans .table-card */
+.table-card { margin-top: 1rem; }
+.table-scroll { overflow-x: auto; }
+.table-card table, table.ds-table { width: 100%; min-width: 820px; border-collapse: collapse; font-size: 13px; }
+.table-card thead th, table.ds-table thead th { text-align: left; font-weight: 400; font-size: 10.5px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted); background: var(--table-head); padding: 10px 14px; }
+.table-card tbody td, table.ds-table tbody td { padding: 13px 14px; border-top: 1px solid var(--row-line); }
+.row-link { cursor: pointer; }
+.row-link:hover td { background: var(--table-head); }
+.table-card .sub, table.ds-table .sub, .cell-sub { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 400; color: var(--muted); }
+.total-row td { background: var(--total-line); }
+
+/* 7.9 Pastilles d'état, badges, étiquettes — rectangles, jamais en pilule */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px;
+  font-size: 11.5px; white-space: nowrap; }
+.chip--neutral { background: var(--chip); color: var(--ink); }
+.chip--ok { background: rgba(63, 122, 82, 0.12); color: var(--green); }
+.chip--draft { background: var(--chip); color: var(--muted-2); }
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+
+.badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 6px;
+  font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 400; }
+.badge--ok { background: rgba(63, 122, 82, 0.12); color: var(--green); }
+
+.tag-warn, .tag-stop { display: inline-flex; align-items: center; font-size: 11px; font-weight: 400;
+  padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.tag-warn { background: var(--prize-soft); color: var(--prize-ink); }
+.tag-stop { background: var(--stop-soft); color: var(--stop); }
+
+/* 7.10 Chiffres clés */
+.kpi-row { display: flex; flex-wrap: wrap; padding: 4px 0; }
+.kpi { flex: 1; min-width: 176px; padding: 13px 18px; border-left: 3px solid var(--line); }
+.kpi__value { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.kpi__label { font-size: 10.5px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--faint); margin-top: 5px; }
+.kpi__note { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+/* 7.11 Interrupteur, fenêtre de confirmation */
+.switch { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0; padding: 13px 16px;
+  text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); cursor: pointer; }
+.switch__track { flex: 0 0 auto; position: relative; width: 38px; height: 22px; border-radius: 999px;
+  background: var(--chip); transition: background 0.15s ease; }
+.switch__track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+  border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgba(28, 26, 23, 0.25); transition: transform 0.15s ease; }
+.switch.is-on .switch__track { background: var(--prize); }
+.switch.is-on .switch__track::after { transform: translateX(16px); }
+.switch__label { font-size: 14px; font-weight: 400; }
+.switch__hint { font-size: 12.5px; color: var(--muted); }
+
+.confirm { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: rgba(24, 18, 20, 0.42); }
+.confirm__box { width: min(460px, 100%); padding: 22px 24px; }
+.confirm__box h3 { margin: 0 0 8px; font-size: 16px; font-weight: 400; }
+.confirm__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.confirm__danger { color: #fff; background: var(--danger); border-color: var(--danger); }
+
+/* 7.12 Icônes : SVG linéaires 16 × 16, trait 1.7, couleur du texte */
+.ico { width: 16px; height: 16px; flex: 0 0 16px; fill: none; stroke: currentColor; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round; }
 
 
 /* ==========================================================================
-   12. ABSOLUTE RULES — enforced via CSS where possible
-   ==========================================================================
-   Many rules are behavioral (JS-level) and cannot be enforced in CSS alone:
-     - Mode toggle = instant clear (basket + date picker) → JS
-     - Price absent when no shop → render nothing, not '€0.00' → JS/template
-     - Clicking product photo/name: nothing → do not wrap in <a>
-     - No 'Default variant' label → template
-     - Single cart / delivery_mode source / forced e-payment → app logic
-     - Active badge in view → scrollIntoView on selection → JS
-
-   CSS-level guarantees below:
-   -------------------------------------------------------------------------- */
-
-/* No wrap / no stacking in the navbar (except the explicit mobile variant) */
-.navbar:not(.navbar--mobile) {
-  flex-wrap: nowrap;
-  white-space: nowrap;
-}
-
-/* Date picker always above the navbar */
-.navbar { position: relative; z-index: 10; }
-.date-picker-popover { z-index: 1000; }
-
-/* End of file */
-
-
-/* ==========================================================================
-   13. LEVIERS (of_tag) — badge · filtre · regroupement · code couleur
-   --------------------------------------------------------------------------
-   Système de gestion par levier. Chaque objet opérationnel porte 1 levier.
-   La couleur de chaque élément est TOUJOURS pilotée par --levc, une variable
-   locale posée par l'app depuis of_tag.color :
-       el.style.setProperty('--levc', theme[of_tag.tag] || 'var(--lev-trafic)')
-   ou, en statique, via une classe utilitaire lev--<slug> ci-dessous.
-   ⚠ Ne jamais coder une couleur de levier en dur dans un composant.
+   5. COQUILLE ET RAIL — §6, §8
    ========================================================================== */
+.workspace { display: flex; height: 100vh; overflow: hidden; }
+.workspace__main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.app__body { flex: 1; overflow-y: auto; padding: 22px 24px 40px; }
+.app__body > * { max-width: 1180px; }          /* largeur de lecture */
+.app__body--wide > * { max-width: none; }      /* surface de travail */
 
-/* Résolution du levier → --levc via un scope d'attribut [data-lev]
-   (au runtime, préférer poser --levc directement depuis of_tag.color) */
+.sidebar { flex: 0 0 246px; width: 246px; background: #fff; border-right: 1px solid var(--line); overflow-y: auto; padding-bottom: 24px; }
+
+.sidebar__head { padding: 20px 16px 8px; }
+.sidebar__logo { height: 26px; display: block; }
+.sidebar__kicker { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent);
+  font-weight: 400; margin-top: 9px; }
+
+.sidebar__back { padding: 6px 12px 4px; }
+.sidebar__back a { display: flex; align-items: center; gap: 9px; background: var(--paper); border-radius: 10px;
+  padding: 11px 13px; font-size: 13px; color: var(--muted-2); text-decoration: none; }
+
+.sidebar__brand { margin: 10px 12px 0; padding: 8px 10px; font-size: 13px; font-weight: 400; color: var(--ink);
+  background: var(--table-head); border-radius: 9px; }
+
+.sidebar__groups { padding: 2px 12px 0; }
+.sidebar__group { margin-top: 18px; }
+.sidebar__group-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
+  font-weight: 400; padding: 0 10px 8px; }
+
+.sidebar__action { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 12px 8px;
+  padding: 9px 12px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 400;
+  font-size: 13px; text-decoration: none; }
+.sidebar__action:hover, .sidebar__action.is-active { background: #6f1622; color: #fff; }
+
+.sidebar__item { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 9px;
+  font-size: 13px; font-weight: 400; color: var(--muted-2); text-decoration: none; transition: all 0.15s; }
+.sidebar__item:hover { background: var(--paper); }
+.sidebar__item.is-active { background: rgba(141, 29, 44, 0.08); color: var(--accent); font-weight: 700; }  /* le seul gras du rail */
+
+.sidebar__item:focus-visible, .sidebar__back a:focus-visible, .sidebar__action:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.sidebar__account { display: grid; gap: 4px; margin: 18px 16px 0; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 10px; font-size: 12px; }
+.sidebar__account.is-dev { border-color: rgba(141, 29, 44, 0.45); background: rgba(141, 29, 44, 0.04); }
+.sidebar__account-who { color: var(--ink); font-weight: 400; }
+.sidebar__account.is-dev .sidebar__account-who { color: var(--accent); }
+
+/* --- Ajouts propres au BO (signalés dans le compte rendu) ----------------- */
+/* Les entrées sont des <button> : on efface l'aspect natif. */
+button.sidebar__item { width: 100%; border: 0; background: transparent; font-family: inherit; text-align: left; cursor: pointer; }
+button.sidebar__item:hover { background: var(--paper); }
+button.sidebar__item.is-active { background: rgba(141, 29, 44, 0.08); }
+.sidebar__item-label { flex: 1; min-width: 0; }
+/* Compteur (§8.3) : un nombre en 11 px bordeaux poussé à droite, sans pastille pleine. */
+.sidebar__count { margin-left: auto; font-size: 11px; color: var(--accent); font-weight: 400; }
+/* Sous-menu repliable : l'entrée parente porte un chevron, les enfants sont décalés. */
+.sidebar__chevron { width: 16px; flex: 0 0 16px; display: inline-flex; justify-content: center; color: var(--faint); font-size: 10px; }
+.sidebar__item--child { padding-left: 35px; }
+/* Recherche globale du cockpit, sous l'en-tête. */
+.sidebar__search { padding: 8px 12px 0; position: relative; }
+.sidebar__search input { width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; color: var(--ink); font: 13px 'Gotham', system-ui, sans-serif; }
+.sidebar__search-clear { position: absolute; right: 18px; top: 50%; margin-top: 4px; transform: translateY(-50%); }
+.sidebar__results { position: absolute; left: 12px; right: 12px; top: 50px; z-index: 40; max-height: 62vh; overflow-y: auto;
+  background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.sidebar__results-group { padding: 9px 12px 4px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); border-top: 1px solid var(--line); }
+.sidebar__results-group:first-child { border-top: 0; }
+.sidebar__result { display: block; width: 100%; text-align: left; border: 0; background: transparent; cursor: pointer; padding: 6px 12px; font-family: inherit; }
+.sidebar__result:hover { background: var(--paper); }
+.sidebar__result-t { font-size: 12.5px; color: var(--ink); }
+.sidebar__result-m { font-size: 10.5px; color: var(--accent); }
+.sidebar__result-d { font-size: 10.5px; color: var(--muted); }
+.sidebar__note { padding: 14px 13px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+.sidebar__account-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sidebar__account-role { color: var(--muted); font-size: 11.5px; }
+.sidebar__account button.sidebar__account-open { display: grid; gap: 2px; border: 0; background: transparent; padding: 0; text-align: left; font: inherit; cursor: pointer; min-width: 0; }
+.sidebar__version { font-size: 10.5px; color: var(--faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+
+/* ==========================================================================
+   6. MODE INCORPORÉ — §9
+   La page ouverte dans le cadre du Marketing (?embed=1 dans un iframe) :
+   pas de second rail, sa barre supérieure en haut, même fond et même police.
+   ========================================================================== */
+.is-embedded .sidebar { display: none; }
+.is-embedded .workspace { height: 100vh; }
+
+
+/* ==========================================================================
+   7. LEVIERS (of_tag) — badge · point · regroupement
+   La couleur vient de --levc, posée par [data-lev] ou depuis of_tag.color.
+   ========================================================================== */
 [data-lev="trafic"]        { --levc: var(--lev-trafic); }
 [data-lev="recurrence"]    { --levc: var(--lev-recurrence); }
 [data-lev="xp"]            { --levc: var(--lev-xp); }
@@ -1274,217 +464,30 @@ option {
 [data-lev="labour-cost"]   { --levc: var(--lev-labour-cost); }
 [data-lev="overhead-cost"] { --levc: var(--lev-overhead-cost); }
 
-/* --- Badge levier — pastille + libellé (of_tag.name) ---------------------- */
-.levier-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: var(--radius-pill);
-  padding: 3px 10px 3px 8px;
-  font-family: var(--font-ui);
-  font-size: var(--font-size-small);
-  font-weight: var(--weight-medium);
-  line-height: 1;
-  white-space: nowrap;
-  color: var(--levc);
-  background: color-mix(in srgb, var(--levc) 12%, transparent);
-  border: 0.5px solid color-mix(in srgb, var(--levc) 35%, transparent);
-}
-
-/* Variante pleine (fond couleur du levier, texte blanc) */
-.levier-badge--solid {
-  color: var(--color-surface);
-  background: var(--levc);
-  border-color: transparent;
-}
-
-/* Pastille de couleur (le point coloré) */
-.levier-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-  background: var(--levc);
-}
-.levier-badge .levier-dot { width: 7px; height: 7px; }
-
-/* --- Filtre global par levier — puces sélectionnables --------------------- */
-.levier-filter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) 0;
-}
-
-.levier-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: var(--radius-pill);
-  padding: 5px 12px;
-  font-family: var(--font-ui);
-  font-size: var(--font-size-small);
-  font-weight: var(--weight-medium);
-  line-height: 1;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: 0.5px solid var(--color-border-secondary);
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
-}
-
-.levier-chip .levier-dot { background: var(--levc); }
-
-/* Puce sélectionnée — prend la couleur du levier */
-.levier-chip--active,
-.levier-chip[aria-pressed="true"] {
-  color: var(--levc);
-  background: color-mix(in srgb, var(--levc) 12%, transparent);
-  border-color: var(--levc);
-}
-
-/* --- Regroupement par levier — en-tête de section coloré ------------------ */
-.levier-group {
-  border-left: 3px solid var(--levc);
-  padding-left: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-}
-
-.levier-group__head {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
-}
-
-.levier-group__title {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-label);
-  font-weight: var(--weight-medium);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-admin);
-  color: var(--levc);
-}
-
-.levier-group__count {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-small);
-  color: var(--color-text-secondary);
-}
-
-/* Objet rattaché à un levier — liseré gauche coloré (checklist / tâche / KPI) */
-.levier-item {
-  border-left: 3px solid var(--levc);
-  padding-left: var(--spacing-md);
-}
-
-/* --- Dashboard par levier — carte d'agrégat ------------------------------- */
-.levier-card {
-  border-radius: var(--radius-lg);
-  border: 0.5px solid var(--color-border-tertiary);
-  border-top: 3px solid var(--levc);
-  background: var(--color-surface);
-  padding: var(--spacing-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.levier-card__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-sm);
-}
-
-/* Barre d'avancement (checklists) — remplissage couleur du levier */
-.levier-progress {
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--color-background-secondary);
-  overflow: hidden;
-}
-.levier-progress__fill {
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--levc);
-}
-
-/* KPI vs cible — seuils rouge / vert (indépendants de la couleur du levier) */
-.levier-kpi { display: flex; align-items: baseline; gap: 6px; }
-.levier-kpi__value {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-section-title);
-  font-weight: var(--weight-medium);
-}
-.levier-kpi--under .levier-kpi__value { color: var(--color-primary); }  /* sous le seuil → rouge marque */
-.levier-kpi--over  .levier-kpi__value { color: #2d7a3e; }               /* au-dessus → vert */
-.levier-kpi__target {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-small);
-  color: var(--color-text-secondary);
-}
+.levier-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 4px 10px 4px 8px;
+  font-size: 11.5px; font-weight: 400; line-height: 1; white-space: nowrap;
+  color: var(--ink); background: var(--chip); }
+.levier-badge--solid { color: #fff; background: var(--levc); }
+.levier-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; background: var(--levc); display: inline-block; }
+.levier-badge .levier-dot { width: 8px; height: 8px; }
+.levier-item { border-left: 3px solid var(--levc); padding-left: 16px; }
+.levier-progress { height: 6px; border-radius: 6px; background: var(--chip); overflow: hidden; }
+.levier-progress__fill { height: 100%; border-radius: 6px; background: var(--levc); }
 
 
 /* ==========================================================================
-   GLOBAL — Section breathing room (design-system rule)
-   Every section gets symmetric top + bottom padding so nothing touches edges
+   8. CLASSES HISTORIQUES encore servies (scouting) — ramenées au §7.4
    ========================================================================== */
-
-/* Universal section padding — applies to ALL <section> elements unless
-   explicitly overridden. 48px = --space-lg equivalent at desktop. */
-section {
-  padding-top: 48px;
-  padding-bottom: 48px;
-}
-
-/* Sections that need a stronger rhythm (block-level features) */
-.section,
-section.fx-block,
-section[class*="section"],
-.page-cta,
-.shops-page__section {
-  padding-top: max(var(--spacing-xl), 48px);
-  padding-bottom: max(var(--spacing-xl), 48px);
-}
-
-/* For tighter sections that already define their own bottom padding via
-   utility classes, this is overridden by their explicit value. */
-
-/* Common grid containers: ensure they don't bleed into the section edge */
-.fx-tiers,
-.fx-pillars,
-.fx-formation,
-.fx-timeline,
-.fx-pnl__table,
-.expressions-grid,
-.collabs-grid,
-.shops-list,
-.shops-list--grouped,
-.shops-list__group,
-.products-grid,
-.locations-grid {
-  margin-bottom: 0;
-}
-
-/* Last child of a grid container should never sit flush against the section */
-.section > *:last-child,
-section.fx-block > .container > *:last-child,
-section[class*="section"] > .container > *:last-child {
-  margin-bottom: 0;
-}
-
-/* For grids that ARE the last child of a section, ensure a gap below */
-section > .container > .fx-tiers:last-child,
-section > .container > .fx-pillars:last-child,
-section > .container > .fx-formation:last-child,
-section > .container > .fx-timeline:last-child,
-section > .container > .expressions-grid:last-child,
-section > .container > .collabs-grid:last-child,
-section > .container > .shops-list:last-child,
-section > .container > .shops-list--grouped:last-child,
-section > .container > .products-grid:last-child,
-section > .container > .locations-grid:last-child {
-  padding-bottom: var(--spacing-lg);
-}
+.btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--accent); color: #fff; border: 1px solid var(--accent); border-radius: 8px;
+  padding: 7px 16px; font: 400 13px/1.2 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.btn-primary:hover:not(:disabled) { background: #6f1622; border-color: #6f1622; }
+.btn-primary--block { width: 100%; margin-top: 12px; }
+.btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 16px; font: 400 13px/1.2 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.btn-secondary:hover:not(:disabled) { border-color: var(--muted-2); }
+.icon-circle { flex: none; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted-2);
+  font: 400 12px 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.icon-circle:hover { border-color: var(--muted-2); }

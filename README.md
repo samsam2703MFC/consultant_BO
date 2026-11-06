@@ -10,8 +10,11 @@ Instagram jusqu'à l'ERP du franchisé (par la connexion Meta du CRM, dont le fl
 leur traitement et les SMS au gérant (`src/metadonnee.php`, `docs/DEPLOIEMENT.md`).
 
 Implémentation du design **Claude Design « Cockpit CEO cliquable complet »**
-(bundle de handoff) — design system **L'Atelier by** (Gotham / Vank, couleurs
-`of_tag`), interface en français, desktop d'abord.
+(bundle de handoff), mise au **design system commun « L'Atelier By »**
+(`docs/design-system/DESIGN_SYSTEM.md`, relevé du module Marketing : Gotham en
+deux graisses, jetons, rail de 246 px, barre supérieure, mode incorporé
+`?embed=1`). Compte rendu, table de correspondance et écarts restants :
+`docs/design-system/INVENTAIRE.md`. Interface en français, desktop d'abord.
 
 ## Stack
 
@@ -74,7 +77,7 @@ public/
   .htaccess             règles Apache (API + SPA)
   api/index.php         contrôleur frontal de l'API REST
   assets/
-    ds/                 design system L'Atelier by (global.css + fontes)
+    ds/                 design system commun (global.css : jetons, composants, rail ; fontes)
     css/app.css         styles applicatifs (scrollbars, animations, hover)
     js/app.js           logique (état, calculs, écrans, écritures API)
     js/templates.js     gabarits HTML des 13 écrans + modales + assistants

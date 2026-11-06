@@ -85,7 +85,7 @@
       svg += `<polygon points="${X(i)},${Yp(a)} ${X(i + 1)},${Yp(b)} ${X(i + 1)},${Yp(b1)} ${X(i)},${Yp(a1)}" fill="${a + b >= a1 + b1 ? HAUT : BAS}" fill-opacity="0.14"/>`;
     }
     const seg = (get, garde) => { const out = []; let cur = []; T.forEach((w, i) => { const v = get(w, i); if (v != null && garde(w)) { cur.push(X(i) + ',' + Yp(v)); } else { if (cur.length) { out.push(cur); } cur = []; } }); if (cur.length) { out.push(cur); } return out; };
-    seg(v1T, () => true).forEach(s => { if (s.length > 1) { svg += `<polyline points="${s.join(' ')}" fill="none" stroke="#b9b1a6" stroke-width="2" stroke-dasharray="5 4"/>`; } });
+    seg(v1T, () => true).forEach(s => { if (s.length > 1) { svg += `<polyline points="${s.join(' ')}" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4"/>`; } });
     const projete = mk === 'clients';
     seg(vT, w => !(projete && w.enCours)).forEach(s => { if (s.length > 1) { svg += `<polyline points="${s.join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="2.5"/>`; } });
     if (iEc > 0 && vT(T[iEc], iEc) != null && vT(T[iEc - 1], iEc - 1) != null) {
@@ -93,12 +93,12 @@
     }
     T.forEach((w, i) => {
       const n = vT(w, i), n1 = v1T(w, i), up = n1 == null || n == null || n >= n1;
-      if (n1 != null) { svg += `<circle cx="${X(i)}" cy="${Yp(n1)}" r="3.5" fill="#fff" stroke="#b9b1a6" stroke-width="2"/><text x="${X(i)}" y="${(+Yp(n1) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#666" style="${ft}">${M.f(n1)}</text>`; }
+      if (n1 != null) { svg += `<circle cx="${X(i)}" cy="${Yp(n1)}" r="3.5" fill="#fff" stroke="#B8B2A8" stroke-width="2"/><text x="${X(i)}" y="${(+Yp(n1) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#7a736a" style="${ft}">${M.f(n1)}</text>`; }
       if (n != null) {
         svg += w.enCours ? `<circle cx="${X(i)}" cy="${Yp(n)}" r="4.4" fill="#fff" stroke="#8D1D2C" stroke-width="2"/>` : `<circle cx="${X(i)}" cy="${Yp(n)}" r="4" fill="#8D1D2C"/>`;
         svg += `<text x="${X(i)}" y="${(+Yp(n) + (up ? -9 : 16)).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${M.f(n)}</text>`;
       }
-      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${w.enCours ? '#8D1D2C' : (w.futur ? '#a8a197' : '#222')}" style="${ft}">${MO[i]}${w.enCours ? ' · ' + w.joursServis + ' j' : ''}</text>`;
+      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${w.enCours ? '#8D1D2C' : (w.futur ? '#a8a197' : '#1c1a17')}" style="${ft}">${MO[i]}${w.enCours ? ' · ' + w.joursServis + ' j' : ''}</text>`;
     });
     svg += '</svg>';
     const chips = T.map((w, i) => {
@@ -108,8 +108,8 @@
           + (n1 != null ? ' · ' + (Y - 1) + (w.enCours ? ' aux mêmes jours' : '') + ' : ' + M.f(n1) : ' · pas de N-1')
           + (i === iOuv || i === iOuv1 ? ' · mois d’ouverture, pas d’écart' : '');
       const pas1 = w.futur ? '<em style="background:transparent;color:var(--color-text-muted)">à venir</em>'
-        : (i === iOuv || i === iOuv1 ? '<em style="background:#c9c2b8">ouv.</em>'
-        : (avecN1 ? `<em style="background:${e == null ? '#c9c2b8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`));
+        : (i === iOuv || i === iOuv1 ? '<em style="background:var(--faint)">ouv.</em>'
+        : (avecN1 ? `<em style="background:${e == null ? '#B8B2A8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`));
       // Sans N-1, la valeur du mois est dans la pastille : elle ne se répète pas sous le nom du mois.
       const sous = w.enCours ? 'en cours' : (w.futur ? (nm != null ? M.f(nm) : '') : (!avecN1 ? '' : (n != null ? M.f(n) : '—')));
       return `<div class="ch" title="${esc(titre)}"><span><b>${MO[i]}</b><span>${sous}</span></span>${pas1}</div>`;
@@ -138,7 +138,7 @@
       tuile(mk === 'clients' ? 'Meilleur mois' : 'Mois le plus haut', meilleur ? M.f(M.v(meilleur)) : '—', meilleur ? MO[T.indexOf(meilleur)] + ' ' + Y : '')
     ].join('');
     const corps = `<div class="db-s6"><div>${svg}
-        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:#8D1D2C;border-radius:50%"></i>${esc(M.unite)}${projete && ec ? ' (le mois en cours prolongé au rythme de ses jours)' : ''}</span>${avecN1 ? `<span><i class="c" style="background:#b9b1a6;border-radius:50%"></i>même mois en ${Y - 1} (pointillé, mois entier)</span><span><i class="c" style="background:${HAUT};opacity:.35"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.35"></i>en dessous</span>` : ''}</div>
+        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:var(--accent);border-radius:50%"></i>${esc(M.unite)}${projete && ec ? ' (le mois en cours prolongé au rythme de ses jours)' : ''}</span>${avecN1 ? `<span><i class="c" style="background:var(--faint);border-radius:50%"></i>même mois en ${Y - 1} (pointillé, mois entier)</span><span><i class="c" style="background:${HAUT};opacity:.35"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.35"></i>en dessous</span>` : ''}</div>
         <div class="db-s6ch">${chips}</div></div>
       <div class="db-s6t">${tuiles}</div></div>`;
     return carte(corps, (D.source || '').replace(/ · N-1 = .*$/, '') + ' · écart du mois en cours aux mêmes jours de ' + (Y - 1));
@@ -214,7 +214,7 @@
       if (x.nonSaisi) { return tuile(l, '—', null, neutre('pas saisi ce mois'), l2, '% du CA'); }
       if (x.v == null) { return tuile(l, '—', null, 'pas de P&amp;L ce mois', l2, '% du CA'); }
       const l1 = x.n1 == null ? neutre(g.mois.ouverture ? 'mois d’ouverture' : 'pas de N-1') + (g.mois.ouverture ? '' : ' ' + esc(ouvLib)) : puce(x.delta, 1, ' pt', false) + ' N-1 ' + pct(x.n1);
-      const hors = l.cle === 'food' && (g.horsNorme || []).some(h => h.mois === ymSel) ? '<span class="lv-al">⚠ hors norme, à vérifier au P&amp;L</span>' : '';
+      const hors = l.cle === 'food' && (g.horsNorme || []).some(h => h.mois === ymSel) ? '<span class="lv-al">hors norme, à vérifier au P&amp;L</span>' : '';
       return tuile(l, pct(x.v), x.niveau, l1 + hors, l2, '% du CA');
     }).join('');
     const sous = (L.moisEnCours ? 'à date (' + L.jours + ' jours), ' : '') + 'face à ' + moisAn((L.annee - 1) + '-' + String(L.mois).padStart(2, '0'), true) + ' et au réseau';
@@ -278,7 +278,7 @@
       const meilleur = lus.reduce((a, p) => (haut ? p.v < a.v : p.v > a.v) ? p : a);
       const pire = lus.reduce((a, p) => (haut ? p.v > a.v : p.v < a.v) ? p : a);
       const cur = pts[pts.length - 1], eCur = cur.v != null && !cur.hors ? etat(cle, cur.v, cur.i) : '';
-      const curTxt = (cur.hors ? '⚠ hors norme' : (eCur ? (cle === 'trafic' ? STATUT_TRAFIC : STATUT)[eCur] : ''));
+      const curTxt = (cur.hors ? 'hors norme' : (eCur ? (cle === 'trafic' ? STATUT_TRAFIC : STATUT)[eCur] : ''));
       const m = moy(lus.map(p => p.v)), mr = moy(lus.map(p => reseau(cle, p.i)));
       // L'écart arrondi comme il s'affiche : −0,04 pt se lit « au niveau du réseau ».
       const dE = cle === 'trafic' ? 0 : 1, ecBrut = m != null && mr != null ? (cle === 'trafic' ? (m / mr - 1) * 100 : m - mr) : null;

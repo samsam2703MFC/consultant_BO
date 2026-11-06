@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// Gabarit commun des documents et e-mails (design system §13, version A).
+require_once __DIR__ . '/doc.php';
+
 /**
  * Centrale d'achat — e-mail « commande fournisseur ».
  *
@@ -85,6 +88,11 @@ function caMailSquelette(string $service = 'Centrale d’achat',
     //    colonnes qui se chevauchent sous 400 points ;
     //  · la pastille du nombre passe SOUS le nom du fournisseur, qu'elle
     //    recouvrait.
+    // Gabarit e-mail du design system (§13.6, version A) : fond blanc,
+    // 600 px, logo 30 px et service à droite sur le filet Ruby de 2 px, corps
+    // en 14 px, pied relevé (qui envoie, pourquoi, mentions de l'émetteur).
+    $F = 'font-family:' . DOC_FONT;
+    $mentions = docMentions();
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<meta name="color-scheme" content="light only">'
@@ -93,37 +101,29 @@ function caMailSquelette(string $service = 'Centrale d’achat',
         . ':root{color-scheme:light only;supported-color-schemes:light only}'
         . 'body,table,td{color-scheme:light only}'
         . 'img{border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic}'
-        // Deux paliers, pas un : une tablette de 700 points n'est pas un
-        // téléphone, mais la carte de 600 y touchait les bords. Le premier
-        // palier rend la carte fluide, le second resserre les marges et
-        // agrandit le texte — lire à bout de bras, debout en réserve.
-        . '@media only screen and (max-width:720px){'
+        . '@media only screen and (max-width:640px){'
         . '.carte{width:100% !important}'
-        . '.pad{padding-left:22px !important;padding-right:22px !important}'
-        . '}'
-        . '@media only screen and (max-width:480px){'
-        . '.carte{width:100% !important}'
-        . '.pad{padding-left:16px !important;padding-right:16px !important}'
+        . '.marge{padding:20px 16px !important}'
         . '.titre{font-size:17px !important}'
         . '.cmd{font-size:14px !important;line-height:1.6 !important;word-break:break-word}'
         . '}'
         . '</style></head>'
-        . '<body style="margin:0;padding:0;background:#EFE9DF;color:#221E1A">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DF">'
-        . '<tr><td align="center" style="padding:18px 10px">'
+        . '<body style="margin:0;padding:0;background:#ffffff;color:' . DOC_INK . '">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff">'
+        . '<tr><td align="center" class="marge" style="padding:26px 30px">'
         . '<table role="presentation" class="carte" cellpadding="0" cellspacing="0" width="600" style="width:600px;max-width:100%">'
-        // Bandeau : le logo seul sur sa ligne, la mention dessous — deux
-        // colonnes se chevauchaient sur un téléphone.
-        . '<tr><td class="pad" style="background:#ffffff;border-radius:12px 12px 0 0;border-bottom:3px solid #8D1D2C;padding:16px 26px 12px">'
-        . '{{logo}}'
-        . '<div style="font-family:\'Segoe UI\',Arial,sans-serif;color:#8b8177;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;margin-top:8px">' . $e($service) . '</div>'
-        . '</td></tr>'
-        . '<tr><td style="background:#ffffff;border-radius:0 0 12px 12px;padding:0 0 20px">'
+        . '<tr><td style="border-bottom:2px solid ' . DOC_RUBY . ';padding:0 0 10px">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+        . '<td valign="bottom">{{logo}}</td>'
+        . '<td valign="bottom" align="right" style="' . $F . ';color:' . DOC_MUTED . ';font-size:10px;padding-left:12px">' . $e($service) . '</td>'
+        . '</tr></table></td></tr>'
+        . '<tr><td style="padding:8px 0 6px">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{{contenu}}</table>'
         . '</td></tr>'
-        . '<tr><td class="pad" style="font-family:\'Segoe UI\',Arial,sans-serif;padding:12px 26px;color:#8b8177;font-size:11px;line-height:1.5;text-align:center">'
+        . '<tr><td style="padding:14px 0 0"><div style="' . $F . ';border-top:1px solid ' . DOC_LINE . ';padding-top:9px;color:' . DOC_MUTED . ';font-size:9px;line-height:1.6">'
         . '{{marque}} — ' . $e($signature)
-        . '</td></tr>'
+        . ($mentions !== '' ? '<br>' . $e($mentions) : '')
+        . '</div></td></tr>'
         . '</table></td></tr></table></body></html>';
 }
 
@@ -252,13 +252,13 @@ function caMailGabaritVieux(array $c): bool
 function caMailHtml(string $corps, array $g = [], array $c = []): string
 {
     $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $F = "font-family:Gotham,Helvetica,Arial,sans-serif";
     $reseau = setting('reseau', []);
     $marque = is_array($reseau) ? ($reseau['nom'] ?? 'L’Atelier by') : 'L’Atelier by';
     $logoUri = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
     $logo = $logoUri !== ''
         ? '<img src="' . $logoUri . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
-        : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
+        : '<span style="' . $F . ';color:#1c1a17;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
 
     // Le texte se découpe : les lignes « · … » sont des commandes, le reste du
     // discours. Une puce sans commande derrière n'invente pas de carte.
@@ -271,7 +271,7 @@ function caMailHtml(string $corps, array $g = [], array $c = []): string
     $par = function (array $lignes) use ($e, $F): string {
         $txt = trim(implode("\n", $lignes));
         if ($txt === '') { return ''; }
-        return '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#221E1A;padding:10px 26px 12px">'
+        return '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#1c1a17;padding:12px 0 0">'
             . nl2br($e($txt)) . '</td></tr>';
     };
 
@@ -300,28 +300,28 @@ function caMailHtml(string $corps, array $g = [], array $c = []): string
         if ($portail9 !== '' && preg_match('/Commande\s+(\S+)/u', $titre, $m9) === 1 && isset($idParCle[$m9[1]])) {
             $lien9 = $portail9 . '/' . $idParCle[$m9[1]];
         }
-        $blocCartes .= '<tr><td class="pad" style="padding:0 26px 8px">'
-            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EC;border-left:4px solid #8D1D2C;border-radius:0 8px 8px 0">'
-            . '<tr><td style="' . $F . ';padding:10px 13px">'
+        $blocCartes .= '<tr><td style="padding:0 0 10px">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:3px solid #8D1D2C">'
+            . '<tr><td style="' . $F . ';padding:2px 0 2px 12px">'
             // La clé d'une commande est longue : elle doit pouvoir se couper,
             // sinon elle déborde de l'écran d'un téléphone.
-            . '<div class="cmd" style="font-size:14px;font-weight:700;color:#221E1A;line-height:1.3;word-break:break-word">'
+            . '<div class="cmd" style="font-size:14px;font-weight:400;color:#1c1a17;line-height:1.3;word-break:break-word">'
             . ($lien9 !== ''
                 ? '<a href="' . $e($lien9) . '" target="_blank" style="color:#8D1D2C;text-decoration:underline">' . $e($titre) . '</a>'
                 : $e($titre)) . '</div>'
-            . ($morceaux !== [] ? '<div style="font-size:12.5px;color:#6E645A;margin-top:4px;line-height:1.45">' . $e(implode(' · ', $morceaux)) . '</div>' : '')
-            . ($retard !== '' ? '<div style="font-size:12px;font-weight:700;color:#8D1D2C;margin-top:5px">' . $e($retard) . '</div>' : '')
+            . ($morceaux !== [] ? '<div style="font-size:12.5px;color:#7a736a;margin-top:4px;line-height:1.45">' . $e(implode(' · ', $morceaux)) . '</div>' : '')
+            . ($retard !== '' ? '<div style="font-size:12px;font-weight:400;color:#7A5207;margin-top:5px">' . $e($retard) . '</div>' : '')
             . '</td></tr></table></td></tr>';
     }
 
-    // Le nom, puis la pastille DESSOUS : côte à côte, sur un téléphone, la
-    // pastille recouvrait le nom du fournisseur.
+    // Le nom, puis le nombre de commandes DESSOUS, en texte gris (plus de
+    // pastille : design system §13.6) — côte à côte, il recouvrait le nom.
     $n = (int) ($g['n'] ?? 0);
     $entete = ($g['nom'] ?? '') !== ''
-        ? '<tr><td class="pad" style="padding:18px 26px 4px">'
-          . '<div class="titre" style="' . $F . ';font-size:19px;font-weight:700;color:#221E1A;line-height:1.25">' . $e($g['nom']) . '</div>'
+        ? '<tr><td style="padding:20px 0 4px">'
+          . '<div class="titre" style="' . $F . ';font-size:21px;font-weight:700;color:#1c1a17;line-height:1.25">' . $e($g['nom']) . '</div>'
           . ($n > 0
-            ? '<div style="margin-top:7px"><span style="' . $F . ';display:inline-block;background:#F7ECEA;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;color:#8D1D2C">'
+            ? '<div style="margin-top:4px"><span style="' . $F . ';font-size:12px;font-weight:400;color:#7a736a">'
               . $n . ' commande' . ($n > 1 ? 's' : '') . ' en attente</span></div>'
             : '')
           . '</td></tr>'
@@ -332,14 +332,14 @@ function caMailHtml(string $corps, array $g = [], array $c = []): string
     // attend, puis le geste qui règle tout.
     $portail = trim((string) ($c['portailUrl'] ?? ''));
     $bouton = ($portail === '' || $blocCartes === '') ? ''
-        : '<tr><td class="pad" align="center" style="padding:14px 26px 4px">'
+        : '<tr><td align="left" style="padding:8px 0 4px">'
         . '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
-        . '<td style="background:#8D1D2C;border-radius:9px">'
-        . '<a href="' . $e($portail) . '" target="_blank" style="' . $F . ';display:inline-block;padding:12px 26px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none">Valider dans le portail &#8594;</a>'
+        . '<td style="background:#8D1D2C;border-radius:8px">'
+        . '<a href="' . $e($portail) . '" target="_blank" style="' . $F . ';display:inline-block;padding:12px 22px;font-size:14px;font-weight:400;color:#ffffff;text-decoration:none">Valider dans le portail</a>'
         . '</td></tr></table></td></tr>';
 
     $contenu = $entete . $par($avant) . $blocCartes . $bouton
-        . ($blocCartes !== '' ? '<tr><td style="padding:6px 30px 0"></td></tr>' : '')
+        . ($blocCartes !== '' ? '<tr><td style="padding:6px 0 0"></td></tr>' : '')
         . $par($apres);
 
     // Le squelette : celui des Paramètres s'il est posé, celui d'origine sinon.

@@ -6,7 +6,7 @@ const kpi = (esc, k) => `<div class="gc-kpi"><div class="k">${esc(k[0])}</div><d
 const sel = (x, esc, fn, opts, style) => `<select ${x.C(fn)} class="mko-sel" style="${style || ''}">${opts.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>`;
 const msgDe = (esc, m) => m ? `<div class="gc-msg ${m.ko ? 'ko' : ''}">${esc(m.txt)}</div>` : '';
 const attente = (esc, t) => `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(t)}</div>`;
-const panne = (esc, t) => `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:#8D1D2C">${esc(t)}</div>`;
+const panne = (esc, t) => `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--accent)">${esc(t)}</div>`;
 const bascule = (x, on, fn, lib) => `<button ${x.A(fn)} class="sv-bas${on ? ' on' : ''}" role="switch" aria-checked="${on ? 'true' : 'false'}"><i></i>${lib || ''}</button>`;
 const duo = (x, esc, a, b) => `<span class="sv-duo"><button ${x.A(a.fn)} class="${a.on ? 'on' : ''}">${esc(a.nom)}</button><button ${x.A(b.fn)} class="${b.on ? 'on ko' : ''}">${esc(b.nom)}</button></span>`;
 const carte = (titre, mini, corps, plus) => `<div class="mko-carte"${plus || ''}><div class="mko-ct"><span class="mko-lab">${titre}</span>${mini ? `<span class="mko-mini">${mini}</span>` : ''}</div><div class="mko-corps">${corps}</div></div>`;
@@ -179,7 +179,7 @@ function tplRapport(r, x){
   const ck = carte('La checklist', esc(r.checklist), r.ecarts.length ? `<ul class="sv-ul">${r.ecarts.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : '<div class="mko-mu">Aucun écart relevé.</div>');
   const envoi = carte('L’envoi', esc(r.statut),
     `<div class="sv-kv"><span>À</span><b class="${r.a ? '' : 'ko'}">${esc(r.a || 'aucune adresse — réglez-la dans Qui fait quoi')}</b><span>Langue</span><b>${esc(r.langue)}</b><span>En copie</span><b>${esc(r.copies)}</b><span>Envoie</span><b>${esc(r.envoie || '—')}</b></div>
-    ${r.delai ? `<div class="${r.delaiKo ? 'ko' : 'att'}" style="font-weight:600;font-size:12.5px;margin-top:8px">${esc(r.delai)}</div>` : ''}
+    ${r.delai ? `<div class="${r.delaiKo ? 'ko' : 'att'}" style="font-weight:400;font-size:12.5px;margin-top:8px">${esc(r.delai)}</div>` : ''}
     ${!r.smtp ? '<div class="gc-pill att" style="margin-top:8px">SMTP non configuré : le rapport ira sur la page du franchisé, sans courriel</div>' : ''}
     ${r.dernier ? `<div class="mko-mu" style="margin-top:8px">${esc(r.dernier)}</div>` : ''}`);
   return `<div class="sva-rap"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${score}${evaluation}${budget}${photos}${ck}${personnel}</div></div>

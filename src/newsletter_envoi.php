@@ -287,29 +287,29 @@ function nlRendre(array $camp, string $lang, array $contact, ?string $voucher, ?
     $corps = preg_replace('/^\s*(Bonjour|Dag|Hello)\s*,/u', '$1 ,', $corps);   // « Bonjour , » quand le prénom manque
     $corps = str_replace(' ,', ',', (string) $corps);
     $paras = array_filter(array_map('trim', preg_split('/\n\s*\n/', $corps)));
-    $htmlCorps = implode('', array_map(fn ($p) => '<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#222222">' . nl2br(htmlspecialchars($p, ENT_QUOTES)) . '</p>', $paras));
+    $htmlCorps = implode('', array_map(fn ($p) => '<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#1c1a17">' . nl2br(htmlspecialchars($p, ENT_QUOTES)) . '</p>', $paras));
     $titre = htmlspecialchars($sub(nlTexte($camp, 'headlines_json', $lang)), ENT_QUOTES);
     $cta = htmlspecialchars($sub(nlTexte($camp, 'ctas_json', $lang)) ?: 'Voir', ENT_QUOTES);
     $pied = ['fr' => ['Webshop', 'Votre boutique', 'Ouvert du mardi au dimanche, 7h – 18h30', 'Se désinscrire'], 'nl' => ['Webshop', 'Uw winkel', 'Open van dinsdag tot zondag, 7u – 18u30', 'Uitschrijven'], 'en' => ['Webshop', 'Your shop', 'Open Tuesday to Sunday, 7am – 6:30pm', 'Unsubscribe']][$lang] ?? ['Webshop', 'Votre boutique', '', 'Se désinscrire'];
-    $badge = ($camp['template_id'] ?? '') === 'fidelite' ? '<p style="margin:16px 0 0"><span style="display:inline-block;background:#F2C9A0;color:#6b4420;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:bold">'
+    $badge = ($camp['template_id'] ?? '') === 'fidelite' ? '<p style="margin:16px 0 0"><span style="display:inline-block;background:#F6E7CE;color:#7A5207;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:400">'
         . htmlspecialchars(['fr' => 'Votre 3e mail · fidélité débloquée', 'nl' => 'Uw 3e mail · trouwvoordeel ontgrendeld', 'en' => 'Your 3rd email · loyalty unlocked'][$lang] ?? '', ENT_QUOTES) . '</span></p>' : '';
-    $voucherHtml = $voucher ? '<p style="margin:16px 0 0;font-size:13px;color:#666666">' . (['fr' => 'Votre code', 'nl' => 'Uw code', 'en' => 'Your code'][$lang] ?? 'Code') . ' : <strong style="font-size:16px;color:#8D1D2C;letter-spacing:.08em">' . htmlspecialchars($voucher, ENT_QUOTES) . '</strong></p>' : '';
+    $voucherHtml = $voucher ? '<p style="margin:16px 0 0;font-size:13px;color:#7a736a">' . (['fr' => 'Votre code', 'nl' => 'Uw code', 'en' => 'Your code'][$lang] ?? 'Code') . ' : <strong style="font-size:16px;color:#8D1D2C;letter-spacing:.08em">' . htmlspecialchars($voucher, ENT_QUOTES) . '</strong></p>' : '';
     return '<!DOCTYPE html><html lang="' . $lang . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>' . htmlspecialchars($sub(nlTexte($camp, 'subjects_json', $lang)), ENT_QUOTES) . '</title></head>'
-        . '<body style="margin:0;padding:0;background:#EAE4DC;font-family:Helvetica,Arial,sans-serif;color:#222222">'
-        . '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#EAE4DC"><tr><td align="center" style="padding:24px 12px">'
-        . '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#FFFFFF;border-radius:14px;overflow:hidden">'
+        . '<body style="margin:0;padding:0;background:#ffffff;font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17">'
+        . '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff"><tr><td align="center" style="padding:24px 12px">'
+        . '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#FFFFFF;border-radius:8px;overflow:hidden">'
         . '<tr><td style="background:#8D1D2C;padding:18px;text-align:center"><img src="' . htmlspecialchars($base . '/assets/img/newsletter/logo-white.png', ENT_QUOTES) . '" alt="L\'Atelier By" height="28" style="height:28px;width:auto;display:inline-block"></td></tr>'
         . ($img !== '' ? '<tr><td style="padding:26px 24px 8px;text-align:center"><img src="' . htmlspecialchars($base . '/assets/img/newsletter/' . $img, ENT_QUOTES) . '" alt="" height="120" style="height:120px;width:auto;display:inline-block"></td></tr>' : '')
         . '<tr><td style="padding:10px 28px 24px">'
-        . ($titre !== '' ? '<h1 style="margin:0 0 12px;font-family:Georgia,serif;font-weight:normal;font-size:24px;line-height:1.2;color:#8D1D2C">' . $titre . '</h1>' : '')
+        . ($titre !== '' ? '<h1 style="margin:0 0 12px;font-family:Gotham,Helvetica,Arial,sans-serif;font-weight:normal;font-size:24px;line-height:1.2;color:#8D1D2C">' . $titre . '</h1>' : '')
         . $htmlCorps
-        . '<p style="margin:20px 0 0"><a href="' . htmlspecialchars($lien, ENT_QUOTES) . '" style="display:inline-block;background:#8D1D2C;color:#FFFFFF;text-decoration:none;border-radius:8px;padding:12px 20px;font-size:14px;font-weight:bold">' . $cta . '</a></p>'
+        . '<p style="margin:20px 0 0"><a href="' . htmlspecialchars($lien, ENT_QUOTES) . '" style="display:inline-block;background:#8D1D2C;color:#FFFFFF;text-decoration:none;border-radius:8px;padding:12px 20px;font-size:14px;font-weight:400">' . $cta . '</a></p>'
         . $voucherHtml . $badge
         . '</td></tr>'
-        . '<tr><td style="padding:14px 28px 20px;border-top:1px solid #EEE8E0;font-size:11px;line-height:1.7;color:#666666">'
+        . '<tr><td style="padding:14px 28px 20px;border-top:1px solid #EEE8E0;font-size:11px;line-height:1.7;color:#7a736a">'
         . htmlspecialchars($exp['sender_name'] . ($exp['nom'] && $exp['nom'] !== $exp['sender_name'] ? ' · ' . $exp['nom'] : ''), ENT_QUOTES) . '<br>'
         . htmlspecialchars($pied[0] . ' · ' . $pied[1], ENT_QUOTES) . '<br>' . htmlspecialchars($pied[2], ENT_QUOTES)
-        . '<br><a href="' . htmlspecialchars($unsub, ENT_QUOTES) . '" style="color:#666666;text-decoration:underline">' . htmlspecialchars($pied[3], ENT_QUOTES) . '</a>'
+        . '<br><a href="' . htmlspecialchars($unsub, ENT_QUOTES) . '" style="color:#7a736a;text-decoration:underline">' . htmlspecialchars($pied[3], ENT_QUOTES) . '</a>'
         . '</td></tr></table>' . $pixel . '</td></tr></table></body></html>';
 }
 
@@ -582,9 +582,9 @@ function nlSuivi(string $quoi, string $token): void
     if ($e) { Db::exec('UPDATE mar_nl_contact SET desinscrit_le = NOW(), optin = 0, optin_sms = 0 WHERE id = ?', [(int) $e['contact_id']]); $ok = true; }
     header('Content-Type: text/html; charset=utf-8');
     echo '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>L\'Atelier By</title></head>'
-        . '<body style="margin:0;background:#EAE4DC;font-family:Helvetica,Arial,sans-serif;color:#222"><div style="max-width:480px;margin:60px auto;background:#fff;border-radius:14px;padding:32px 28px;text-align:center">'
-        . '<div style="font-family:Georgia,serif;font-size:22px;color:#8D1D2C;margin-bottom:10px">' . ($ok ? 'C’est noté.' : 'Lien inconnu') . '</div>'
-        . '<p style="font-size:14px;line-height:1.6;color:#666;margin:0">' . ($ok ? 'Vous ne recevrez plus nos nouvelles par e-mail ni par SMS. Vous restez le bienvenu en boutique.' : 'Ce lien de désinscription n’est pas valable. Écrivez-nous et nous nous en occupons.') . '</p>'
+        . '<body style="margin:0;background:#ffffff;font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17"><div style="max-width:480px;margin:60px auto;background:#fff;border-radius:8px;padding:32px 28px;text-align:center">'
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:22px;color:#8D1D2C;margin-bottom:10px">' . ($ok ? 'C’est noté.' : 'Lien inconnu') . '</div>'
+        . '<p style="font-size:14px;line-height:1.6;color:#7a736a;margin:0">' . ($ok ? 'Vous ne recevrez plus nos nouvelles par e-mail ni par SMS. Vous restez le bienvenu en boutique.' : 'Ce lien de désinscription n’est pas valable. Écrivez-nous et nous nous en occupons.') . '</p>'
         . '</div></body></html>';
     exit;
 }
