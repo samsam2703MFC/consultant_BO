@@ -222,6 +222,57 @@ accès que `/formation/v25`). Doc : `docs/formation.md` § Manuel du réseau.
 
 Chaque écriture est journalisée (`ceo_journal_entry`, type « Formation »).
 
+**Les deux guides (lot 4b, `src/referentiel_guides.php`)** — le Cockpit est l'éditeur du Guide pré-ouverture et du
+Guide des formations et compétences ; le CRM les lit dans la même réponse. `GET /formation/ref` gagne trois clés
+(rien n'est retiré du contrat ci-dessus) :
+
+```json
+{
+  "preouverture": {"sections": [{"cle": "admin", "type": "points", "fr": "Démarches administratives et légales",
+    "nl": "Administratieve en wettelijke stappen", "intro_fr": "Avant d’ouvrir…", "intro_nl": "Vóór de opening…",
+    "points": [{"cle": "bce", "fr": "Inscription à la BCE (guichet d’entreprise)", "nl": "Inschrijving in de KBO (ondernemingsloket)",
+      "qui": "franchise", "j": 90, "preuve_fr": "Extrait BCE", "preuve_nl": "Uittreksel KBO"}]}]},
+  "blocs": [{"n": 7, "fr": "Production technique", "nl": "Technische productie", "role": "Formateur métier", "role_nl": "Vakopleider",
+    "fo": "FO-03, FO-07, FO-08, FO-09, FO-12", "heures": 48,
+    "items": [{"id": "C-PROD.Pain", "fr": "Pain et boulangerie technique", "nl": "Brood en technische bakkerij",
+      "dfr": "Pétrissage, hydratation…", "dnl": "Kneden, hydratatie…", "fo": "FO-07", "phase": "pre", "bloq": true, "poles": true,
+      "critere_fr": "Trois fournées de la gamme signature sans défaut…", "critere_nl": "Drie bakken…", "critere_propose": true,
+      "renouvellement": 0, "heures": "", "fiche": "", "fiche_nom": "", "video": "", "profils": ["gerant"]}]}],
+  "poles": {"fr": ["Finition", "Respect de la fiche technique", "Rapidité", "Propreté", "Organisation"],
+    "nl": ["Afwerking", "Naleving van de technische fiche", "Snelheid", "Netheid", "Organisatie"], "repere": 4}
+}
+```
+
+- Les textes de ces trois clés sont toujours des chaînes (`""` = pas de texte ; pas de `null`).
+- `preouverture.sections[]` dans l'ordre du guide ; `type` : `points` (qui, échéance, preuve) ou `contacts` (le
+  libellé = le rôle, `preuve_*` = le contact). `cle` d'une section ou d'un point : stable, jamais renommée (le CRM y
+  relie ses points de countdown ; la section `admin` compte les démarches d'un dossier). `qui` : `franchise`,
+  `atelier`, `ensemble`, `formateurs`. `j` : jours avant l'ouverture (entier, de −60 à 400) ou `null` (sans date).
+- `blocs[]` : les 11 blocs dans l'ordre (`n` = 1…11, la variable `formateur_<n>` du guide imprimé), `heures` prévues
+  (nombre). `items[]` dans leur ordre : `id` = le code `C-…` (compétence) ou `FO-…` (formation), clé des validations
+  des formateurs dans le CRM. `phase` : `pre` (pré-ouverture), `ouv` (ouverture), `con` (continu). `bloq` : bloquante
+  pour l'attestation ; `poles` : notée sur les 5 pôles. `critere_fr` / `critere_nl` = le critère « Réussi si… » en
+  vigueur : l'accepté (réécrit), sinon la proposition — `critere_propose: true` tant qu'il n'est pas accepté.
+  `renouvellement` en mois (0 = aucun), `heures` (texte libre), `fiche` et `video` (https, sinon `""`), `profils`
+  parmi `gerant`, `vendeur`, `etudiant`, `multi`.
+- `poles` : cinq noms par langue et le `repere` du réseau (0 à 5, 0 = aucun) tracé sur les graphiques.
+- `?detail=1` ajoute : `majLe`, `majPar` (sections, blocs, points), `heures_semis` (blocs), `critere_prop_fr`,
+  `critere_prop_nl`, `semis` (`{phase, bloq, poles, renouvellement, profils}` du départ) (points), `guidesReprise` (bilan
+  de la reprise des réglages du CRM), `guidesQui`, `guidesProfils`.
+- `version` tient compte des écritures dans les deux guides.
+
+| Route | Rôle |
+|---|---|
+| `PUT /formation/ref/preouverture` | `{sections: [{cle, type, fr, nl, intro_fr, intro_nl, points: [{cle, fr, nl, qui, j, preuve_fr, preuve_nl}]}]}` — le guide ENTIER, dans son ordre (remplace tout, dans une transaction). Une `cle` vide reçoit une clé neuve tirée du libellé ; une clé existante est gardée. **422** `{error, invalides: [messages]}` (rien n'est écrit) : guide vide, section ou point sans libellé français, `qui` inconnu, `j` hors de −60…400, plus de 20 sections ou de 60 points par section → `{ok, sections}` |
+| `PUT /formation/ref/blocs/{n}` | `{fr?, nl?, role?, role_nl?, fo?, heures?, ordre?: [ids]}` — clé absente = inchangée ; `ordre` = les points du bloc, chacun une fois, dans leur nouvel ordre ; 422 `invalides {cle: [..]}` ; 404 bloc inconnu → `{ok, bloc}` |
+| `POST /formation/ref/blocs/{n}/items` | `{id, fr, nl?, dfr?, …}` — un point de plus, à la fin du bloc (`id` : lettres, chiffres, point, tiret ; 60 caractères) ; 409 si l'`id` existe déjà → `{ok, item}` |
+| `POST /formation/ref/blocs/{n}/accepter` | accepte d'un coup les critères encore proposés du bloc → `{ok, acceptes}` |
+| `PUT /formation/ref/items/{id}` | `{fr?, nl?, dfr?, dnl?, fo?, phase?, bloq?, poles?, critere_fr?, critere_nl?, accepter?, renouvellement?, heures?, fiche?, fiche_nom?, video?, profils?, bloc?}` — clé absente = inchangée. `critere_fr` non vide = critère accepté (réécrit), vide = retour à la proposition ; `critere_nl` seul exige un critère accepté ; `accepter: true` accepte la proposition telle quelle ; `bloc` déplace le point à la fin d'un autre bloc. `fo` : `FO-<n>` ou vide ; `fiche`, `video` : https seulement ; `renouvellement` 0…60 ; 422 `invalides {cle: [..]}` ; 404 → `{ok, item}`. `{id}` URL-encodé (`C-PROD.P%C3%A2tisserie`) |
+| `DELETE /formation/ref/items/{id}` | retire un point (les validations déjà faites dans le CRM gardent la leur) → `{ok, id}` |
+| `PUT /formation/ref/poles` | `{fr?: [5], nl?: [5], repere?}` — un nom vide reprend celui de départ ; `repere` de 0 à 5 ; 422 → `{ok, poles}` |
+
+Chaque écriture des deux guides est journalisée (`ceo_journal_entry`, type « Formation »).
+
 **Effets sur les routes des SOP** : chaque SOP rendue par `/formation/sop/*` porte `classement {souscat, phases,
 postes, competences, formations, checklists}` ; chaque personne de la tablette porte `postesV25` ; `PATCH
 /formation/sop/fiche/{id}` accepte `statut: brouillon` ; un brouillon n'est ni dans `tablette/init`, ni lisible par
