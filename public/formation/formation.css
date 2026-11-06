@@ -150,15 +150,13 @@ a.filter {
 .fm-tree__niveau:focus-visible,
 .choice-card:focus-visible,
 .fm-kpi:focus-visible,
-.fm-part:focus-visible,
 .fm-fa__clic:focus-visible,
 .fm-fa-sup:focus-visible,
 .wizard__step a:focus-visible,
 .fm-escalier a:focus-visible,
 .fm-alerte:focus-visible,
 .fm-todo a:focus-visible,
-.fm-todo button:focus-visible,
-.campaign:focus-visible {
+.fm-todo button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -411,69 +409,6 @@ tbody tr.fm-detail > td {
 .table-card > h2 + .table-scroll,
 .table-card > h2 + p + .table-scroll {
   margin-top: 0.25rem;
-}
-
-/* ── Cartes cliquables (manuel : un poste par carte) ───────────────────── */
-
-.campaign-grid {
-  display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
-}
-
-.campaign {
-  display: block;
-  padding: 0;
-  overflow: hidden;
-  color: inherit;
-  text-decoration: none;
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
-
-.campaign:hover {
-  border-color: var(--accent);
-}
-
-.campaign__body {
-  padding: 16px 18px 18px;
-}
-
-.campaign__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.campaign__head h3 {
-  font-size: 14px;
-  margin: 0;
-}
-
-.campaign__meta {
-  font-size: 12px;
-  margin-top: 5px;
-}
-
-.fm-card-band {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  height: 96px;
-  padding: 14px 18px;
-  background: var(--chip);
-  color: var(--accent);
-}
-
-.fm-card-band__letter {
-  font-size: 26px;
-  line-height: 1;
-}
-
-.fm-card-band__count {
-  font-size: 12px;
-  color: var(--muted-2);
 }
 
 /* Barre d'avancement (page parcours). */
@@ -829,18 +764,6 @@ tbody tr.fm-detail > td {
 
 .fm-crumbs span[aria-hidden] {
   color: var(--faint);
-}
-
-.fm-manuel-search {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.fm-manuel-search input {
-  flex: 1;
-  max-width: 34rem;
 }
 
 /* ── Une procédure se lit comme un document ────────────────────────────── */
@@ -1212,49 +1135,18 @@ td .fm-barre {
 
 /* ── Carte des métiers : le plan (maquette 01a) et les effectifs (01c) ── */
 
-/* Les sélecteurs segmentés du module : ceux de ds.css (.seg). Alias de
-   transition pour les gabarits qui portent encore .fm-seg (formation-sop.js) :
-   à retirer une fois ces gabarits passés à .seg. */
-.fm-seg {
-  display: inline-flex;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 9px;
-  background: var(--chip);
-  align-self: center;
-  flex: 0 0 auto;
-}
-
-.fm-seg button {
-  margin: 0;
-  padding: 6px 11px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--muted-2);
-  font: 400 12.5px 'Gotham', system-ui, sans-serif;
-  cursor: pointer;
-}
-
-.fm-seg button.is-on {
-  background: #fff;
-  color: var(--ink);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-
+/* Les sélecteurs segmentés du module : ceux de ds.css (.seg) ; l'alias .fm-seg est retiré (lot 6). */
 .seg {
   align-self: center;
   flex: 0 0 auto;
 }
 
-.seg button:focus-visible,
-.fm-seg button:focus-visible {
+.seg button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-.seg.fm-seg--petit,
-.fm-seg--petit {
+.seg.fm-seg--petit {
   margin-bottom: 10px;
 }
 
@@ -1967,120 +1859,12 @@ a.fm-pc3:hover {
 }
 
 /* ── Manuel en quatre parties, vidéos, tablette (1er nov. 2026) ──────────
-   Pré-ouverture · Ouverture · Opérationnel · Formation continue. */
-
-/* Accueil du manuel : les quatre parties, dans l'ordre de la vie du magasin. */
-.fm-parts {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 4px;
-}
-
-.fm-part {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-  padding: 20px;
-  min-height: 150px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  color: var(--ink);
-  text-decoration: none;
-}
-
-.fm-part:hover {
-  border-color: var(--accent);
-}
-
-.fm-part:active {
-  background: var(--paper);
-}
-
-.fm-part__n {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: var(--chip);
-  color: var(--ink);
-  display: grid;
-  place-items: center;
-  font-size: 18px;
-}
-
-.fm-part__txt {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.fm-part__txt strong {
-  font-size: 18px;
-  line-height: 1.2;
-}
-
-.fm-part__txt .muted {
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.fm-part__nb {
-  margin-top: auto;
-  font-size: 13px;
-  color: var(--accent);
-}
-
-/* Les parties du manuel sont des onglets de page (.page-tabs de ds.css) qui
-   restent visibles en haut de la partie (ils collent au défilement). */
-.fm-parties {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--paper);
-}
-
-.fm-parties .page-tabs__tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-}
+   Pré-ouverture · Ouverture · Opérationnel · Formation continue. L'accueil et les
+   parties du Manuel en ligne ont été retirés au lot 6 (Manuel du réseau). */
 
 .page-tabs__tab:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-
-.fm-parties__n {
-  flex: 0 0 auto;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 4px;
-  border-radius: 6px;
-  display: grid;
-  place-items: center;
-  font-size: 11.5px;
-  background: var(--chip);
-  color: var(--ink);
-}
-
-.fm-parties .is-on .fm-parties__n {
-  background: rgba(141, 29, 44, 0.08);
-  color: var(--accent);
-}
-
-.fm-part-sous {
-  margin: 6px 0 0;
-  font-size: 14px;
-}
-
-.fm-part-cat {
-  margin: 18px 0 8px;
-  font-size: 13px;
-  color: var(--muted-2);
 }
 
 /* Sur la page d'une procédure : sa partie du manuel. */
@@ -2657,10 +2441,6 @@ a.fm-pc3:hover {
   }
 }
 
-@media (max-width: 1100px) {
-  .fm-parts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
 @media (max-width: 1000px) {
   .fm-deux { grid-template-columns: 1fr; }
 }
@@ -2681,12 +2461,9 @@ a.fm-pc3:hover {
   .fm-fa__faits div:nth-child(n+3) { border-top: 1px solid var(--line); }
 }
 
-@media (max-width: 560px) {
-  .fm-parts { grid-template-columns: minmax(0, 1fr); }
-}
-
-/* ── Mode tablette du manuel : plus de barre latérale, des cibles tactiles de
-   44 px au moins, un corps de texte plus grand (lecture debout, à distance). */
+/* ── Mode tablette (le Manuel du réseau en lecture depuis le lot 6) : plus de barre latérale, des cibles tactiles de
+   44 px au moins, un corps de texte plus grand (lecture debout, à distance) ; un sélecteur de la barre supérieure
+   mène d'une vue de lecture à l'autre. */
 .fm-tablette .sidebar,
 .fm-tablette .fm-burger {
   display: none;
@@ -2766,18 +2543,12 @@ a.fm-pc3:hover {
   font-size: 26px;
 }
 
-.fm-tablette .fm-part-cat,
 .fm-tablette .section-label {
   font-size: 14px;
 }
 
 .fm-tablette .fm-crumbs {
   font-size: 14px;
-}
-
-.fm-tablette .fm-manuel-search input {
-  padding: 12px 14px;
-  font-size: 15px;
 }
 
 .fm-tablette .type-grid {
@@ -2789,6 +2560,11 @@ a.fm-pc3:hover {
   font-size: 14px;
 }
 
+.fm-tablette .topbar__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 /* Écrans tactiles (tablettes), toutes les vues : des cibles de 44 px au moins,
    des champs à 16 px (sinon l'iPad zoome à chaque saisie), rien qui ne se lise
    qu'au survol. */
@@ -2796,7 +2572,6 @@ a.fm-pc3:hover {
   .filter,
   .btn,
   .seg button,
-  .fm-seg button,
   .sidebar__item,
   .fm-burger,
   .fm-crumbs a,
@@ -2813,8 +2588,7 @@ a.fm-pc3:hover {
     align-items: center;
   }
 
-  .seg button,
-  .fm-seg button {
+  .seg button {
     padding: 10px 18px;
     font-size: 14px;
   }
@@ -2890,7 +2664,7 @@ a.fm-pc3:hover {
   .fm-banner,
   .fm-videos,
   .fm-mn__seg,
-  .fm-parties,
+  .fm-seg-lecture,
   .fm-fa__ajout,
   .fm-fa__plus {
     display: none !important;

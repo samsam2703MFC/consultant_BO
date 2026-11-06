@@ -26,6 +26,10 @@ declare(strict_types=1);
  * Les deux guides que le CRM éditait encore (Guide pré-ouverture, Guide des formations et compétences : lot 4b)
  * vivent dans src/referentiel_guides.php ; ils s'ajoutent à GET /formation/ref (preouverture, blocs, poles).
  *
+ * Deux reprises en brouillon : le Manuel opératoire du CRM (POST /formation/ref/importer-crm) et, depuis le lot 6 qui
+ * retire l'écran « Manuel en ligne » du module, les procédures opérationnelles du panel (POST
+ * /formation/ref/importer-panel).
+ *
  * Contrat : docs/contrat-api.md § Formation · Manuel du réseau. Doc : docs/formation.md.
  */
 
@@ -859,6 +863,145 @@ function rfSouscatParNom(string $nom, array $souscats): ?string
     return $best !== null && !$ex && $bs >= 0.4 ? $best : null;
 }
 
+/* ═══ La reprise des procédures du panel (lot 6) ══════════════════════════════════════════════════ */
+
+/**
+ * POST /formation/ref/importer-panel — les procédures opérationnelles du panel TF Buddy (celles que lisait l'écran
+ * « Manuel en ligne », retiré au lot 6 de la fusion) deviennent des SOP en BROUILLON : id `panel-<id>`, source
+ * `panel:<id>`, code `TFB-<id>` (le code que le CRM leur donnait). Idempotent. Une procédure n'est pas reprise quand
+ * elle est déjà un standard : déjà reprise (id ou source), reprise par le Manuel du CRM (code TFB-<id>), ou une SOP de
+ * même titre (mêmes mots). Lecture de chaque procédure = celle de la page du manuel (fmProcedureLue : sections dans
+ * leur ordre, pièces jointes) ; une section restée vide ou à « 1 » dans le panel est sautée. Sous-catégorie déduite
+ * par le nom de la sous-catégorie, puis de la catégorie du panel (rfSouscatParNom) ; sinon vide, signalée dans le
+ * bilan (`aClasser`). Phase = la partie du manuel réglée dans le cockpit (ceo_manuel_procedure), sinon déduite comme
+ * le faisait l'écran (section ou catégorie « Formation… » ou « Contrôle continu » → formation continue, le reste →
+ * opérationnel). Les vidéos réglées dans le cockpit et les pièces jointes du panel sont notées dans les remarques
+ * (non reprises). Rien n'est écrit au panel.
+ */
+function wr_rf_importer_panel(): array
+{
+    $vide = ['reprises' => [], 'dejaLa' => [], 'ignorees' => [], 'erreurs' => [], 'aClasser' => []];
+    if (!class_exists('PanelApi') || !PanelApi::configured()) {
+        return ['ok' => true, 'disponible' => false, 'message' => 'Compte API du panel non configuré (Paramètres › Panel consultant) : les procédures du panel ne se lisent pas.'] + $vide;
+    }
+    @set_time_limit(300);
+    $chemins = ['procedures' => '/operational-procedures', 'sections' => '/operational-framework/structure/sections',
+        'categories' => '/operational-framework/structure/categories'];
+    $v = PanelApi::getParalleleDetail($chemins, 3, 25);
+    if ($v['procedures']['code'] < 200 || $v['procedures']['code'] >= 300) {
+        return rfRefus(502, 'Procédures du panel illisibles : ' . ($v['procedures']['erreur'] ?? ('HTTP ' . $v['procedures']['code'])));
+    }
+    $secNom = [];
+    foreach (fmListe($v['sections']['data']) as $r) { if (($i = fmInt($r, ['id'])) !== null) { $secNom[$i] = (string) (fmTexte($r, ['name', 'base_name', 'title']) ?? ''); } }
+    $catSec = [];
+    foreach (fmListe($v['categories']['data']) as $r) { if (($i = fmInt($r, ['id'])) !== null) { $catSec[$i] = fmInt($r, ['section_id', 'id_section']); } }
+    $reglees = function_exists('mnClassement') ? mnClassement() : [];
+    $souscats = Db::rows('SELECT cle, fr FROM ceo_ref_souscat ORDER BY domaine, rang');
+    $titres = [];
+    foreach (Db::rows('SELECT id, code, titre_fr FROM ceo_sop') as $r) {
+        $n = rfNorm((string) $r['titre_fr']);
+        if ($n !== '' && !isset($titres[$n])) { $titres[$n] = (string) ($r['code'] ?: $r['id']); }
+    }
+    $par = foPar(body());
+    $bilan = ['ok' => true, 'disponible' => true] + $vide;
+    $ordre = (int) (Db::row('SELECT COALESCE(MAX(ordre), 0) AS o FROM ceo_sop')['o'] ?? 0);
+    foreach (fmListe($v['procedures']['data']) as $brut) {
+        $p = fmProcedure($brut);
+        $pid = (int) ($p['id'] ?? 0);
+        $titre = trim((string) $p['titre']);
+        $ligne = ['id' => 'panel-' . $pid, 'code' => 'TFB-' . $pid, 'titre' => $titre];
+        if ($pid <= 0) { $bilan['ignorees'][] = $ligne + ['raison' => 'sans identifiant']; continue; }
+        if ($titre === '' || $titre === 'Procédure') { $bilan['ignorees'][] = $ligne + ['raison' => 'sans titre']; continue; }
+        $deja = Db::row('SELECT id, code, source FROM ceo_sop WHERE id = ? OR source = ? OR code = ? LIMIT 1', [$ligne['id'], 'panel:' . $pid, $ligne['code']]);
+        if ($deja !== null) {
+            $bilan['dejaLa'][] = $ligne + ['raison' => str_starts_with((string) $deja['source'], 'crm:') ? 'reprise par le Manuel du CRM (' . $deja['id'] . ')' : 'déjà reprise'];
+            continue;
+        }
+        if (isset($titres[rfNorm($titre)])) { $bilan['dejaLa'][] = $ligne + ['raison' => 'même titre que ' . $titres[rfNorm($titre)]]; continue; }
+        $lu = fmProcedureLue($pid);
+        if (!$lu['ok']) { $bilan['erreurs'][] = $ligne + ['raison' => (string) $lu['error']]; continue; }
+        $q = $lu['procedure'];
+        $cat = trim((string) ($q['categorie'] ?? $p['categorie'] ?? ''));
+        $sous = trim((string) ($q['sousCategorie'] ?? $p['sousCategorie'] ?? ''));
+        $section = $secNom[$catSec[(int) ($q['categorieId'] ?? $p['categorieId'] ?? 0)] ?? 0] ?? '';
+        $reglee = $reglees[(string) $pid]['partie'] ?? null;
+        $partie = is_string($reglee) && isset(RF_PHASES[$reglee]) ? $reglee
+            : (preg_match('/formation|controle continu/', rfSansAccents($section . ' ' . $cat)) ? 'formation' : 'operationnel');
+        $sc = rfSouscatParNom($sous, $souscats) ?? rfSouscatParNom($cat, $souscats);
+        $videos = $reglees[(string) $pid]['videos'] ?? [];
+        $contenu = rfContenuPanel($q, $lu['sections'], $lu['pieces'], is_array($videos) ? $videos : [], $cat, $sous);
+        $texte = rfSansAccents($section . ' ' . $cat . ' ' . $sous);
+        $dossier = preg_match('/nettoy|hygien|fermeture/', $texte) ? '03' : (preg_match('/cuisson|production|traiteur|four/', $texte) ? '02' : '01');
+        $poste = ['01' => 'vente', '02' => 'production', '03' => 'nettoyage'][$dossier];
+        $st = foStats($contenu);
+        $now = date('Y-m-d H:i:s');
+        $ordre++;
+        Db::exec('INSERT INTO ceo_sop (id, code, type, dossier, poste, partie, moment, statut, version, version_revalider, langue_origine, trad_fr, trad_nl,
+                    titre_fr, titre_nl, objectif_fr, objectif_nl, duree, nb_etapes, nb_photos, ordre, source, maj_le, maj_par,
+                    souscat, phases, postes, competences, formations, checklists)
+                  VALUES (?, ?, \'SOP\', ?, ?, ?, NULL, \'brouillon\', \'1.0\', \'1.0\', \'FR\', \'origine\', \'a_relire\', ?, \'\', ?, NULL, NULL, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
+            $ligne['id'], $ligne['code'], $dossier, $poste, $partie, mb_substr($titre, 0, 190), $contenu['objectif']['fr'] ?: null,
+            $st['etapes'], $ordre, 'panel:' . $pid, $now, $par, $sc, rfJsonEcrire([$partie]), '[]', '[]', '[]', '[]']);
+        Db::exec('INSERT INTO ceo_sop_version (sop_id, version, contenu, note, revalider, publie_le, publie_par) VALUES (?, \'1.0\', ?, ?, 0, ?, ?)',
+            [$ligne['id'], foJson($contenu), 'Reprise des procédures du panel (TFB-' . $pid . ', brouillon)', $now, $par]);
+        $titres[rfNorm($titre)] = $ligne['code'];
+        $bilan['reprises'][] = $ligne + ['souscat' => $sc, 'phase' => $partie, 'etapes' => $st['etapes']];
+        if ($sc === null) { $bilan['aClasser'][] = $ligne + ['categorie' => trim($cat . ($sous !== '' ? ' › ' . $sous : ''))]; }
+    }
+    try {
+        journalAdd($par, 'Formation', 'Manuel du réseau', 'Reprise des procédures du panel : ' . count($bilan['reprises']) . ' en brouillon (dont '
+            . count($bilan['aClasser']) . ' à classer), ' . count($bilan['dejaLa']) . ' déjà là, ' . count($bilan['ignorees']) . ' ignorée(s), '
+            . count($bilan['erreurs']) . ' illisible(s)');
+    } catch (Throwable $e) { /* journal absent */ }
+    return $bilan;
+}
+
+/**
+ * Le contenu d'une procédure du panel au format des SOP : l'objectif = sa description ; une section « Étapes » dont
+ * chaque étape est une section du panel qui a un contenu (son titre, son texte ; le HTML de l'éditeur du panel ramené
+ * à du texte) ; à défaut de sections, le contenu de la fiche en une étape. Le néerlandais reste à écrire.
+ */
+function rfContenuPanel(array $q, array $sections, array $pieces, array $videos, string $cat, string $sous): array
+{
+    $etapes = [];
+    foreach ($sections as $sec) {
+        $t = rfTexteDeHtml((string) ($sec['contenu'] ?? ''));
+        if (mb_strlen($t) < 4) { continue; }   // sections laissées vides ou à « 1 » dans le panel
+        $etapes[] = ['numero' => (string) (count($etapes) + 1), 'titre' => ['fr' => trim((string) ($sec['titre'] ?? '')), 'nl' => ''],
+            'texte' => ['fr' => $t, 'nl' => ''], 'critique' => false, 'photo' => null];
+    }
+    if ($etapes === [] && mb_strlen($t = rfTexteDeHtml((string) ($q['contenu'] ?? ''))) >= 4) {
+        $etapes[] = ['numero' => '1', 'titre' => ['fr' => '', 'nl' => ''], 'texte' => ['fr' => $t, 'nl' => ''], 'critique' => false, 'photo' => null];
+    }
+    $rem = ['Reprise des procédures du panel TF Buddy (#' . (int) ($q['id'] ?? 0) . ($cat !== '' ? ', « ' . $cat . ($sous !== '' ? ' › ' . $sous : '') . ' »' : '')
+        . ') : le néerlandais reste à écrire et le classement à vérifier avant de publier.'];
+    foreach ($pieces as $x) {
+        $nom = trim((string) ($x['nom'] ?? ''));
+        if ($nom !== '') { $rem[] = 'Pièce jointe du panel (non reprise) : ' . $nom . '.'; }
+    }
+    foreach ($videos as $x) {
+        if (is_array($x) && is_string($x['url'] ?? null) && str_starts_with($x['url'], 'https://')) {
+            $rem[] = 'Vidéo ajoutée dans le cockpit : ' . $x['url'] . (trim((string) ($x['titre'] ?? '')) !== '' ? ' (' . trim((string) $x['titre']) . ')' : '');
+        }
+    }
+    return foContenu(['titre' => ['fr' => (string) ($q['titre'] ?? ''), 'nl' => ''],
+        'objectif' => ['fr' => rfTexteDeHtml((string) ($q['description'] ?? '')), 'nl' => ''], 'pour' => ['fr' => '', 'nl' => ''], 'duree' => null,
+        'sections' => [['titre' => ['fr' => 'Étapes', 'nl' => 'Stappen'], 'etapes' => $etapes]], 'points_critiques' => [], 'remarques' => $rem]);
+}
+
+/** Le HTML d'éditeur du panel ramené à du texte : un saut de ligne par paragraphe, élément de liste ou titre. */
+function rfTexteDeHtml(string $h): string
+{
+    $h = (string) preg_replace('#<\s*br\s*/?>#i', "\n", $h);
+    $h = (string) preg_replace('#<\s*li[^>]*>#i', "\n• ", $h);
+    $h = (string) preg_replace('#</\s*(p|div|li|h[1-6]|tr|ul|ol|blockquote)\s*>#i', "\n", $h);
+    $t = html_entity_decode(strip_tags($h), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $t = (string) preg_replace('/[ \t\x{00A0}]+/u', ' ', $t);
+    $t = (string) preg_replace('/ *\n */', "\n", $t);
+    $t = (string) preg_replace('/\n+(• )/u', "\n$1", $t);   // les éléments d'une liste se suivent, sans ligne vide
+    return trim((string) preg_replace('/\n{3,}/', "\n\n", $t));
+}
+
 /* ═══ Routes ══════════════════════════════════════════════════════════════════════════════════════ */
 
 /** Les routes du référentiel ; null quand le chemin n'en est pas une. */
@@ -874,6 +1017,7 @@ function rfRoute(string $method, string $path): ?array
         $method === 'PUT' && preg_match('#^/formation/ref/standards/([\w-]{1,32})$#', $path, $m) === 1 => wr_rf_standard($m[1]),
         $method === 'PUT' && preg_match('#^/formation/ref/souscats/(D\d\.\d{1,2})$#', $path, $m) === 1 => wr_rf_souscat($m[1]),
         $method === 'POST' && $path === '/formation/ref/importer-crm' => wr_rf_importer_crm(),
+        $method === 'POST' && $path === '/formation/ref/importer-panel' => wr_rf_importer_panel(),
         // Les deux guides (src/referentiel_guides.php) : pré-ouverture, blocs, points, pôles.
         default => function_exists('rgRoute') ? rgRoute($method, $path) : null,
     };

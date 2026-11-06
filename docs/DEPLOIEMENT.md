@@ -70,6 +70,11 @@ Aucun autre secret : pas de JWT, pas de clé d'API, pas de SMTP (l'envoi
 d'email des rapports est simulé ; le jour où il sera branché, il faudra une
 clé Resend/SendGrid ou des identifiants SMTP).
 
+Un secret facultatif depuis le 06/11/2026 : `TABLETTES_CODE`, le **code de
+gestion des tablettes des magasins** (Formation › Manuel du réseau ›
+Tablettes) — sans lui, cette gestion est fermée. Où et comment le poser :
+§ « Formation › Standards (SOP) » plus bas.
+
 Les variables se posent soit en environnement (vhost Apache : `SetEnv …`,
 pool PHP-FPM : `env[…]=…`), soit — plus simple, aligné sur le panel — dans
 **`config/config.php`** créé sur le serveur, hors Git (copie de
@@ -423,6 +428,31 @@ quand il est libre — le bilan (et les éventuels PIN neufs, à communiquer) s�
 › **Tablettes**, où l’on crée, renomme, relie à une boutique, archive les tablettes et tire un nouveau PIN. L’adresse
 de la tablette ne change pas. Ordre de mise en ligne : le Cockpit **avant** le CRM (la page `/crm/manuel/` du CRM
 renvoie vers cette tablette et n’ouvre plus de session).
+
+**Code de gestion des tablettes (lot 6, 06/11/2026)** — à poser AVANT de gérer les tablettes. L’API du cockpit
+n’exige pas de connexion ici (`auth` => false), or la liste des tablettes porte le PIN de chaque magasin : les routes
+de gestion (`/formation/tablettes*`) exigent donc un **code de gestion** (en-tête `X-Code-Gestion`, que l’écran
+Tablettes envoie après l’avoir demandé ; gardé dans l’onglet seulement). Tant qu’aucun code n’est posé, la gestion
+est **fermée** (403 « code de gestion non configuré ») ; les tablettes des magasins, elles, marchent. Le code est une
+chaîne secrète (par exemple 20 caractères tirés au hasard), **jamais dans le dépôt ni dans un journal**. Deux façons
+de le poser, au choix — `bin/deploy.sh` l’écrit dans `config/config.php` (`tablettesCode`) à chaque livraison :
+
+1. **Secret GitHub** `TABLETTES_CODE` (Settings → Secrets and variables → Actions → New repository secret) : le
+   workflow le passe au serveur par le fichier d’identifiants temporaire (`.deployenv`, effacé après la livraison).
+   Il prime sur le fichier ci-dessous.
+2. **Fichier privé sur le serveur**, lu par root à chaque livraison (comme la clé du module RH) :
+   ```bash
+   sudo install -d -m 700 /var/lib/consulant_bo/prive
+   sudo sh -c 'umask 077; head -c 15 /dev/urandom | base64 > /var/lib/consulant_bo/prive/tablettes_code'
+   sudo cat /var/lib/consulant_bo/prive/tablettes_code     # à transmettre à qui gère les tablettes
+   ```
+
+Puis relancer une livraison (ou, sans livraison, ajouter `'tablettesCode' => '…'` à `config/config.php` : la
+livraison suivante le réécrit d’après le secret ou le fichier). Le journal de livraison dit seulement « code de
+gestion posé (non affiché) » ou « aucun code de gestion — la gestion des tablettes reste fermée », et la recette
+vérifie que `GET /formation/tablettes` sans code répond **403**. Changer le code : changer le secret ou le fichier,
+puis relivrer. Cinq codes faux depuis un appareil bloquent la gestion 15 minutes ; dix codes faux en une heure (ou
+cinquante en un jour), pour tout le réseau, la suspendent une heure.
 
 **Compte consultant du panel** (Paramètres) : il vérifie les PIN des employés (`GET /shops/{id}/employees`), lit les
 compétences (`GET /competencies`) et coche au panel une compétence acquise (`PUT /employees/{id}/competencies`). Sans

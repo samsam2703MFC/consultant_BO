@@ -184,8 +184,21 @@ HttpOnly, SameSite=Lax) ; le PIN de l'employé signe ensuite (routes de la table
 | `POST /formation/sop/tablette/appareil/ouvrir` | `{pin}` (6 chiffres) → `{ok, jeton, magasin {id, nom, shop}}` + cookie · **401** `code: pin` (inconnu) / `archive` · **429** `code: essais` (5 erreurs par adresse IP en 15 min) / `suspendu` (10 erreurs en tout par heure ou 50 par jour) |
 | `POST /formation/sop/tablette/appareil/fermer` | la session de cet appareil est révoquée, cookie effacé → `{ok}` |
 
-**Gestion** (session du cockpit si l'authentification est activée) — chaque écriture rend la liste entière (forme de
-`GET`) et se journalise (« Formation », projet « Tablettes ») SANS le PIN :
+**Gestion** — depuis le lot 6 (06/11/2026), chaque route EXIGE le **code de gestion** dans l'en-tête `X-Code-Gestion`
+(en plus de la session du cockpit si l'authentification est activée ; en production elle ne l'est pas, et la liste
+porte les PIN). Le code se compare à temps constant à la configuration (`TABLETTES_CODE`, puis `config.php ›
+tablettesCode`). Refus, AVANT tout traitement (rien n'est lu ni écrit) :
+
+| Cas | Réponse |
+|---|---|
+| code non configuré sur le serveur | **403** `{error, code: "gestion_fermee"}` — la gestion est fermée |
+| en-tête absent | **403** `{error, code: "code_attendu"}` (pas compté comme un essai) |
+| code faux | **403** `{error, code: "code_gestion"}`, après 0,4 s, compté (table `ceo_tablette_gestion_essai`, adresse IP hachée) |
+| 5 codes faux par adresse en 15 min | **429** `{error, code: "essais"}` — même avec le bon code |
+| 10 codes faux en tout par heure, ou 50 par jour | **429** `{error, code: "suspendu"}` — noté au journal une fois par heure, sans code |
+
+Ces essais sont à part de ceux du PIN du magasin : ils ne bloquent ni l'ouverture ni l'usage des tablettes. Chaque
+écriture rend la liste entière (forme de `GET`) et se journalise (« Formation », projet « Tablettes ») SANS le PIN :
 
 | Route | Rôle |
 |---|---|
@@ -248,6 +261,7 @@ accès que `/formation/v25`). Doc : `docs/formation.md` § Manuel du réseau.
 | `POST /formation/ref/correspondance/proposer` | `{rafraichir?}` — relance la proposition automatique ; une ligne tranchée (`valide`, `aucun` choisi) n'est jamais réécrite → `{certain, propose, aucun, gardees, panel}` ; 503 si le panel est illisible |
 | `PUT /formation/ref/souscats/{cle}` | `{nl?, description?}` — un NL enregistré ici passe « relu » ; 422 NL vide ou > 160 caractères |
 | `POST /formation/ref/importer-crm` | reprend les procédures de `crm_mo_procedures` (même base) en SOP `brouillon` (id `crm-<id>`, source `crm:<id>`, idempotent), sauf AC-01, AC-02, AC-03 → `{disponible, reprises[{id, code, titre, souscat}], dejaLa[], ignorees[{…, raison}], photosNonReprises}` ; `disponible: false` quand la table n'est pas dans la base |
+| `POST /formation/ref/importer-panel` | (lot 6) reprend les procédures opérationnelles du panel (`GET /operational-procedures`, puis chacune comme `GET /formation/procedure` : sections, pièces) en SOP `brouillon` — id `panel-<id>`, source `panel:<id>`, code `TFB-<id>` ; idempotent : pas reprise quand elle est déjà un standard (id, source, code `TFB-<id>` d'une reprise du CRM, ou SOP de même titre) ; une section vide ou à « 1 » est sautée ; phase = partie réglée dans le cockpit, sinon déduite (« Formation… », « Contrôle continu » → formation, le reste → opérationnel) ; sous-catégorie déduite du nom de la sous-catégorie puis de la catégorie du panel, sinon vide → `{disponible, reprises[{id, code, titre, souscat, phase, etapes}], dejaLa[{…, raison}], ignorees[{…, raison}], erreurs[{…, raison}], aClasser[{id, code, titre, categorie}]}` ; `disponible: false` + `message` sans compte du panel ; **502** quand la liste des procédures est illisible |
 
 Chaque écriture est journalisée (`ceo_journal_entry`, type « Formation »).
 
@@ -1503,7 +1517,10 @@ procedures{id: {partie | null, videos[{url, titre}], majLe}}, formationsDefaut{F
 cockpit ; sans ligne, la partie d'une procédure se déduit de la section du panel, celle d'une formation de src/data/manuel_formations.json) ;
 `PATCH /formation/manuel/formation/{FO} {partie?: cle | null, supports?: [{url, titre, etape: 0-9 | null}]}` (null = répartition par défaut ;
 clé absente = inchangée ; supports https, vingt au plus) ; `GET /formation/manuel` rend aussi `supports{FO: [...]}` ; `PATCH /formation/manuel/procedure/{id} {partie?: cle | null, videos?: [{url, titre}]}` (clé absente = inchangée ; https
-seulement, dix vidéos au plus ; 422 sinon). Rien n'est écrit au panel.
+seulement, dix vidéos au plus ; 422 sinon). Rien n'est écrit au panel. Depuis le lot 6 (06/11/2026), l'écran « Manuel en ligne »
+qui les lisait est retiré ; ces routes restent (Référentiel › Procédures et la fiche d'une formation s'en servent, la reprise
+`POST /formation/ref/importer-panel` y lit la partie et les vidéos de chaque procédure), comme `GET /formation/referentiel` et
+`GET /formation/procedure`, que le CRM lit.
 `GET /formation/carte` (carte des métiers, à garder en cache côté écran : `_cache=300`) rend `{chemin{metiers[{id, nom, cle, libelle,
 maitrise, maitriseCompetences, niveaux[{id, nom, nouvelles, total, avecFormation, personnes}]}], tronc[], entrepreneur[], reseau[{id, nom}]},
 polyvalence{competences, metiers[{cle, libelle, niveau, competences, personnes}], paliers{3,2,1,0}, avecCompetences}, effectifs{actifs,

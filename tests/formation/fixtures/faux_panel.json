@@ -1,5 +1,5 @@
 {
- "note": "Faux panel TF Buddy pour les essais locaux (tests/formation/faux_panel.php) : 107 compétences FICTIVES, inventées pour tester la proposition automatique des correspondances. Aucune donnée réelle.",
+ "note": "Faux panel TF Buddy pour les essais locaux (tests/formation/faux_panel.php) : 107 compétences FICTIVES, inventées pour tester la proposition automatique des correspondances. Aucune donnée réelle. Procédures opérationnelles (lot 6) : cinq procédures FICTIVES pour essayer la reprise dans le Manuel du réseau (POST /formation/ref/importer-panel) — une de même titre qu'une SOP, une sans sous-catégorie reconnue, une illisible (404).",
  "competences": [
   {
    "id": 1,
@@ -671,6 +671,138 @@
    "surname": "Aouad",
    "role": "Boulanger cuisson",
    "pin": "3333"
+  }
+ ],
+ "sections": [
+  {
+   "id": 1,
+   "name": "Opérations en magasin"
+  },
+  {
+   "id": 2,
+   "name": "Formations & Contrôle Continu"
+  }
+ ],
+ "categories": [
+  {
+   "id": 11,
+   "name": "Hygiène & sécurité",
+   "section_id": 1
+  },
+  {
+   "id": 12,
+   "name": "Caisse",
+   "section_id": 1
+  },
+  {
+   "id": 13,
+   "name": "Rituels d'équipe",
+   "section_id": 2
+  },
+  {
+   "id": 14,
+   "name": "Ouverture",
+   "section_id": 1
+  }
+ ],
+ "procedures": [
+  {
+   "id": 101,
+   "title": "Ouverture du magasin et des comptoirs",
+   "description": "Fictive : même titre qu'une SOP du réseau.",
+   "category_id": 14,
+   "category_name": "Ouverture",
+   "subcategory_name": "Ouverture & fermeture",
+   "sections": [
+    {
+     "id": 1,
+     "title": "Allumer",
+     "content": "<p>Allumer les lumières.</p>",
+     "sort_order": 1
+    }
+   ]
+  },
+  {
+   "id": 102,
+   "title": "Contrôle des températures des vitrines",
+   "description": "<p>Relever et noter les températures des vitrines <strong>deux fois par jour</strong>.</p>",
+   "category_id": 11,
+   "category_name": "Hygiène & sécurité",
+   "subcategory_name": "HACCP & sécurité alimentaire",
+   "sections": [
+    {
+     "id": 21,
+     "title": "Relever",
+     "content": "<p>Lire le thermomètre de chaque vitrine :</p><ul><li>vitrine froide : 0 à 4 °C</li><li>vitrine des tartes : 2 à 6 °C</li></ul>",
+     "sort_order": 1
+    },
+    {
+     "id": 22,
+     "title": "Noter",
+     "content": "<p>Écrire la valeur, l&#39;heure et ses initiales sur la fiche du jour.</p>",
+     "sort_order": 2
+    },
+    {
+     "id": 23,
+     "title": "Section à compléter",
+     "content": "1",
+     "sort_order": 3
+    }
+   ],
+   "attachments": [
+    {
+     "id": 1,
+     "label": "Fiche de relevé (fictive).pdf",
+     "url": "https://exemple.invalid/fiche.pdf",
+     "mime_type": "application/pdf"
+    }
+   ]
+  },
+  {
+   "id": 103,
+   "title": "Point du lundi avec l'équipe",
+   "description": "Fictive : rituel hebdomadaire.",
+   "category_id": 13,
+   "category_name": "Rituels d'équipe",
+   "subcategory_name": "Réunions",
+   "sections": [
+    {
+     "id": 31,
+     "title": "Préparer",
+     "content": "Lister trois sujets.<br>Prévoir dix minutes.",
+     "sort_order": 1
+    }
+   ]
+  },
+  {
+   "id": 104,
+   "title": "Encaissement d'une commande Click & Collect",
+   "description": "Fictive.",
+   "category_id": 12,
+   "category_name": "Caisse",
+   "subcategory_name": "Caisse & paiements",
+   "sections": [
+    {
+     "id": 41,
+     "title": "Retrouver la commande",
+     "content": "<p>Chercher le numéro de commande dans la caisse.</p>",
+     "sort_order": 2
+    },
+    {
+     "id": 42,
+     "title": "Accueillir",
+     "content": "<p>Demander le nom du client.</p>",
+     "sort_order": 1
+    }
+   ]
+  },
+  {
+   "id": 105,
+   "title": "Procédure illisible au panel",
+   "description": "Fictive : sa fiche répond 404.",
+   "category_id": 12,
+   "category_name": "Caisse",
+   "illisible": true
   }
  ]
 }

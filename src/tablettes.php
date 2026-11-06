@@ -31,9 +31,18 @@ declare(strict_types=1);
  * Les autres routes /formation/sop/tablette/* (src/sop.php) EXIGENT la session de l'appareil ; le magasin vient
  * de la session (tabShop), plus du paramètre ?shop=, qui ne sert plus qu'à pré-choisir le magasin à l'écran du PIN.
  *
- * Routes de GESTION (sous l'authentification du cockpit) : /formation/tablettes (liste, créer), PATCH /{id}
- * (nom, boutique, archive), POST /{id}/pin (nouveau PIN : tous ses appareils déconnectés), DELETE /appareils/{id},
- * POST /reprise-crm. Contrat : docs/contrat-api.md § Formation · Tablettes des magasins.
+ * Routes de GESTION : /formation/tablettes (liste, créer), PATCH /{id} (nom, boutique, archive), POST /{id}/pin
+ * (nouveau PIN : tous ses appareils déconnectés), DELETE /appareils/{id}, POST /reprise-crm. Contrat :
+ * docs/contrat-api.md § Formation · Tablettes des magasins.
+ *
+ * CODE DE GESTION (lot 6, décision du client du 06/11/2026) : en production l'API du cockpit n'exige pas de connexion
+ * (bin/deploy.sh écrit `auth => false`), or la liste porte les PIN des magasins. Chaque route de gestion exige donc
+ * le code de gestion, envoyé dans l'en-tête X-Code-Gestion et comparé à temps constant à la clé de configuration :
+ * variable d'environnement TABLETTES_CODE, puis `tablettesCode` de config/config.php (écrite par bin/deploy.sh,
+ * jamais dans le dépôt). Code non configuré = gestion fermée (403 `gestion_fermee`). Les essais faux sont limités
+ * comme le PIN du magasin (5 par adresse en 15 minutes, 10 par heure et 50 par jour en tout ; table
+ * ceo_tablette_gestion_essai) ; ils ne touchent ni au PIN du magasin ni aux tablettes déjà ouvertes. Les routes de la
+ * tablette elle-même (appareil, puis /formation/sop/tablette/*) ne demandent pas ce code.
  */
 
 const TAB_COOKIE = 'ceo_tablette';
@@ -42,6 +51,7 @@ const TAB_ESSAIS_HEURE = 10;        // … erreurs en tout en une heure…
 const TAB_ESSAIS_JOUR = 50;         // … et en un jour, avant de suspendre les essais
 const TAB_SESSION_S = 400 * 86400;  // la session de l'appareil est gardée (cookie de 400 jours), révocable
 const TAB_VU_S = 600;               // « vu le » se met à jour au plus toutes les 10 minutes
+const TAB_GESTION_CLE = 'tablettesCode';   // la clé de config/config.php ; variable d'environnement TABLETTES_CODE
 
 /* ═══ Schéma et reprise ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -78,6 +88,14 @@ function ensureTablettes(): void
         . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
         . 'ip_hash CHAR(64) NOT NULL,'
         . 'ok TINYINT(1) NOT NULL DEFAULT 0,'
+        . 'cree_le DATETIME NOT NULL,'
+        . 'KEY k_ip (ip_hash, cree_le),'
+        . 'KEY k_le (cree_le)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Les essais faux du code de gestion (lot 6) : à part de ceux du PIN du magasin, qu'ils ne doivent pas bloquer.
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_tablette_gestion_essai ('
+        . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
+        . 'ip_hash CHAR(64) NOT NULL,'
         . 'cree_le DATETIME NOT NULL,'
         . 'KEY k_ip (ip_hash, cree_le),'
         . 'KEY k_le (cree_le)'
@@ -356,7 +374,60 @@ function tabGarde(): ?array
     return ['error' => 'Tablette fermée : taper le PIN du magasin.', 'code' => 'appareil', 'appareil' => true];
 }
 
-/* ═══ Gestion (sous l'authentification du cockpit) ════════════════════════════════════════════════ */
+/* ═══ Le code de gestion (lot 6) ══════════════════════════════════════════════════════════════════ */
+
+/** Le code de gestion configuré : TABLETTES_CODE, puis `tablettesCode` de config.php ; '' = non configuré. */
+function tabCodeGestion(): string
+{
+    $v = getenv('TABLETTES_CODE');
+    if (!is_string($v) || trim($v) === '') { $v = Db::config()[TAB_GESTION_CLE] ?? ''; }
+    return is_scalar($v) ? trim((string) $v) : '';
+}
+
+/**
+ * La garde des routes de gestion : null quand le code reçu (en-tête X-Code-Gestion) est le bon, sinon le refus à
+ * rendre. Code non configuré : 403 `gestion_fermee`. Code absent : 403 `code_attendu` (ce n'est pas un essai). Code
+ * faux : 403 `code_gestion`, compté ; 5 erreurs par adresse en 15 minutes, puis 10 en tout par heure ou 50 par jour
+ * suspendent la gestion (429, même avec le bon code, comme le PIN du magasin). Comparaison à temps constant (deux
+ * empreintes de même longueur). Jamais de code dans le journal.
+ */
+function tabGardeGestion(): ?array
+{
+    $code = tabCodeGestion();
+    if ($code === '') {
+        return tabRefus(403, 'gestion_fermee', 'Code de gestion non configuré : la gestion des tablettes est fermée. Il se pose sur le serveur (TABLETTES_CODE, voir docs/DEPLOIEMENT.md).');
+    }
+    $recu = trim((string) ($_SERVER['HTTP_X_CODE_GESTION'] ?? ''));
+    if ($recu === '') { return tabRefus(403, 'code_attendu', 'Code de gestion attendu pour gérer les tablettes.'); }
+    $ip = tabIpHash();
+    Db::exec('DELETE FROM ceo_tablette_gestion_essai WHERE cree_le < ?', [date('Y-m-d H:i:s', time() - 7 * 86400)]);
+    $n = static function (string $where, array $v): int { return (int) (Db::row('SELECT COUNT(*) AS n FROM ceo_tablette_gestion_essai WHERE ' . $where, $v)['n'] ?? 0); };
+    if ($n('ip_hash = ? AND cree_le > ?', [$ip, date('Y-m-d H:i:s', time() - 900)]) >= TAB_ESSAIS_IP) {
+        return tabRefus(429, 'essais', 'Trop de codes de gestion faux depuis cet appareil : réessayer dans 15 minutes.');
+    }
+    if ($n('cree_le > ?', [date('Y-m-d H:i:s', time() - 3600)]) >= TAB_ESSAIS_HEURE || $n('cree_le > ?', [date('Y-m-d H:i:s', time() - 86400)]) >= TAB_ESSAIS_JOUR) {
+        tabNoterSuspensionGestion();
+        return tabRefus(429, 'suspendu', 'Gestion des tablettes momentanément suspendue (trop de codes faux) : réessayer dans une heure.');
+    }
+    $sel = function_exists('foSecret') ? foSecret() : 'tablettes';
+    if (hash_equals(hash_hmac('sha256', $code, $sel), hash_hmac('sha256', $recu, $sel))) { return null; }
+    Db::exec('INSERT INTO ceo_tablette_gestion_essai (ip_hash, cree_le) VALUES (?, ?)', [$ip, date('Y-m-d H:i:s')]);
+    usleep(400000);
+    return tabRefus(403, 'code_gestion', 'Code de gestion refusé.');
+}
+
+/** La gestion est suspendue : noté au journal une fois par heure (sans code ni adresse). */
+function tabNoterSuspensionGestion(): void
+{
+    $d = setting('tabGestionSuspensionNotee');
+    if (is_int($d) && $d > time() - 3600) { return; }
+    try {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['tabGestionSuspensionNotee', json_encode(time())]);
+        journalAdd('Tablette', 'Erreur', 'Tablettes', 'Gestion des tablettes suspendue : trop de codes de gestion faux en peu de temps.');
+    } catch (Throwable $e) { /* journal absent */ }
+}
+
+/* ═══ Gestion (sous le code de gestion) ═══════════════════════════════════════════════════════════ */
 
 /** GET /formation/tablettes — les tablettes, leurs appareils, les boutiques du panel, le bilan de la reprise. */
 function tabListe(): array
@@ -476,6 +547,8 @@ function tabDeconnecter(int $id): array
 function tabRoute(string $method, string $path): ?array
 {
     if ($path !== '/formation/tablettes' && !str_starts_with($path, '/formation/tablettes/')) { return null; }
+    // Le code de gestion d'abord (lot 6) : la liste porte les PIN, et l'API n'exige pas de connexion en production.
+    if (($g = tabGardeGestion()) !== null) { return $g; }
     return match (true) {
         $method === 'GET' && $path === '/formation/tablettes' => (static function (): array { tabRepriseCrm(); return tabListe(); })(),
         $method === 'POST' && $path === '/formation/tablettes' => tabCreer(body()),

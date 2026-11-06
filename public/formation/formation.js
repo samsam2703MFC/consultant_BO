@@ -4,8 +4,11 @@
  * Le référentiel RH du panel (TFBuddy), rangé pour être lu : postes et
  * sous-postes (niveaux), compétences exigées, formations, procédures
  * opératoires, base de connaissances, compétences produit ; les équipes d'un
- * magasin face à leur niveau ; le manuel opératoire en ligne (tablette) ; et
- * la documentation de toutes les routes API qui portent ces données.
+ * magasin face à leur niveau ; le Manuel du réseau (formation-sop.js) ; et
+ * la documentation de toutes les routes API qui portent ces données. L'ancien
+ * « Manuel en ligne » (#/manuel, procédures du panel en quatre parties) a été
+ * retiré au lot 6 de la fusion : ses adresses mènent au Manuel du réseau
+ * (ancienManuel), seule la fiche à lire d'une formation reste (#/manuel/formation/FO-xx).
  *
  * Design : le design system « L'Atelier By » du module Marketing (ds.css), plus les pièces du
  * module (formation.css). Incorporé par le Marketing (?embed=1 dans un cadre) : pas de rail.
@@ -77,12 +80,13 @@
     return d.toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' à ' + d.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' });
   }
 
-  /** Appel JSON de l'API du cockpit, avec un délai. */
-  function appel(methode, chemin, corps, delai) {
+  /** Appel JSON de l'API du cockpit, avec un délai ; `entetes` (facultatif) s'ajoute aux en-têtes (ex. X-Code-Gestion). */
+  function appel(methode, chemin, corps, delai, entetes) {
     var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var minuteur = setTimeout(function () { if (ctrl) ctrl.abort(); }, delai || 120000);
     var h = { Accept: 'application/json' };
     if (corps) h['Content-Type'] = 'application/json';
+    if (entetes) Object.keys(entetes).forEach(function (k) { h[k] = entetes[k]; });
     return fetch(API + chemin, { method: methode, headers: h, credentials: 'same-origin', body: corps ? JSON.stringify(corps) : undefined, signal: ctrl ? ctrl.signal : undefined })
       .then(function (r) {
         return r.text().then(function (t) {
@@ -204,7 +208,6 @@
     ['Référentiel', [['postes', 'Postes & sous-postes'], ['competences', 'Compétences'], ['formations', 'Formations'],
       ['procedures', 'Procédures opératoires'], ['ressources', 'Base de connaissances'], ['produit', 'Compétences produit']]],
     ['Équipes', [['parcours', 'Parcours des équipes'], ['equipes', 'Compétences des équipes']]],
-    ['Manuel opératoire', [['manuel', 'Manuel en ligne']]],
     ['Documentation', [['api', 'Routes API']]],
   ];
   // Le Manuel du réseau (formation-sop.js, src/sop.php, src/referentiel.php) : un groupe à lui, avant la documentation.
@@ -215,11 +218,42 @@
   }
   var TITRES = {};
   NAV.forEach(function (g) { g[1].forEach(function (it) { TITRES[it[0]] = it[1]; }); });
+  // Lot 6 : l'écran « manuel » n'a plus d'entrée de menu ; il ne porte plus que la fiche à lire d'une formation.
+  TITRES.manuel = 'Manuel du réseau';
+  // Les vues de lecture du Manuel du réseau : le mode tablette s'y propose et s'y promène (sélecteur de la barre).
+  var LECTURE = [['rfclasseur', 'Classeur'], ['rfphase', 'Par phase'], ['rfposte', 'Par poste'], ['sop', 'Standards']];
+  function enLecture() {
+    var e = S.route.ecran;
+    return e === 'manuel' || (e === 'sop' && S.route.a[1] !== 'editer') || LECTURE.some(function (x) { return x[0] === e; });
+  }
+
+  /**
+   * Les anciennes adresses du Manuel en ligne (retiré au lot 6) : où elles mènent désormais. L'accueil va au Classeur ;
+   * une partie → la même phase du Manuel du réseau ; un poste, une compétence, une procédure du panel → leur page du
+   * référentiel (mêmes données, PDF compris) ; la fiche d'une formation reste ici. null = rien à rediriger.
+   */
+  function ancienManuel(a) {
+    var v = a[0];
+    if (v === 'formation') return null;
+    if (v === 'partie' && NOM_PARTIE[a[1]]) return 'rfphase/' + a[1];
+    if (v === 'poste' && a[1]) return 'postes/' + a[1] + (/^\d+$/.test(a[2] || '') ? '/' + a[2] : '');
+    if (v === 'competence' && /^\d+$/.test(a[1] || '')) return 'competences/' + a[1];
+    if (v === 'procedure' && /^\d+$/.test(a[1] || '')) return 'procedures/' + a[1];
+    return 'rfclasseur';
+  }
 
   function lireRoute() {
     var h = (location.hash || '').replace(/^#\/?/, '');
     var parts = h.split('/').filter(Boolean).map(function (x) { try { return decodeURIComponent(x); } catch (e) { return x; } });
-    var ecran = TITRES[parts[0]] ? parts[0] : (S.tablette ? 'manuel' : 'tableau');
+    if (parts[0] === 'manuel') {
+      var vers = ancienManuel(parts.slice(1));
+      if (vers) {
+        // L'adresse est remplacée (le retour du navigateur ne ramène pas à l'ancienne) ; ?tablette=1 et ?embed=1 restent.
+        try { history.replaceState(null, '', location.pathname + location.search + '#/' + vers); } catch (e) { /* adresse inchangée */ }
+        parts = vers.split('/');
+      }
+    }
+    var ecran = TITRES[parts[0]] ? parts[0] : (S.tablette ? 'rfclasseur' : 'tableau');
     S.route = { ecran: ecran, a: parts.slice(1) };
   }
   function arg(i) { var v = S.route.a[i]; return v != null && /^\d+$/.test(v) ? +v : null; }
@@ -228,7 +262,7 @@
     var groupes = NAV.map(function (g) {
       return '<div class="sidebar__group"><div class="sidebar__group-label">' + esc(g[0]) + '</div>' +
         g[1].map(function (it) {
-          var on = S.route.ecran === it[0];
+          var on = S.route.ecran === it[0] || (S.route.ecran === 'manuel' && it[0] === 'rfphase');
           return '<a href="#/' + it[0] + '" class="sidebar__item' + (on ? ' is-active' : '') + '"' + (on ? ' aria-current="page"' : '') + '>' + icone(ICONES[it[0]]) + esc(it[1]) + '</a>';
         }).join('') + '</div>';
     }).join('');
@@ -244,8 +278,16 @@
     if (S.ref && S.route.ecran !== 'api' && !S.tablette) {
       actions += '<button type="button" class="btn" data-act="rafraichir" title="Relire le référentiel dans le panel, sans le cache">Rafraîchir</button>';
     }
-    if (S.route.ecran === 'manuel' || S.tablette) {
-      actions += '<button type="button" class="btn" data-act="tablette" aria-pressed="' + (S.tablette ? 'true' : 'false') + '" title="Plein écran tactile, sans barre latérale">' + (S.tablette ? 'Quitter le mode tablette' : 'Mode tablette') + '</button>';
+    // Le mode tablette (lecture sans barre latérale, cibles agrandies, sans réglages) : rattaché au Manuel du réseau
+    // depuis le lot 6 ; sans barre latérale, un sélecteur mène d'une vue de lecture à l'autre.
+    if (S.tablette && enLecture()) {
+      var cour = S.route.ecran === 'manuel' ? 'rfphase' : S.route.ecran;
+      actions += '<div class="seg fm-seg-lecture" role="group" aria-label="Manuel du réseau">' + LECTURE.map(function (x) {
+        return '<button type="button" data-act="aller" data-v="' + x[0] + '"' + (x[0] === cour ? ' class="is-on" aria-current="page"' : '') + '>' + esc(x[1]) + '</button>';
+      }).join('') + '</div>';
+    }
+    if (enLecture() || S.tablette) {
+      actions += '<button type="button" class="btn" data-act="tablette" aria-pressed="' + (S.tablette ? 'true' : 'false') + '" title="Plein écran tactile, sans barre latérale ni réglages">' + (S.tablette ? 'Quitter le mode tablette' : 'Mode tablette') + '</button>';
     }
     return '<div class="workspace' + (S.menu ? ' is-menu' : '') + '">' + sidebar() +
       '<div class="fm-veil" data-act="menu"></div>' +
@@ -630,7 +672,6 @@
     var h = '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(poste.nom) + ' › ' + esc(niveau.nom) + '</h2>' +
       '<p class="muted">' + (fam && fam !== 'autres' ? '<span class="fm-tag' + (fam === 'marque' ? ' fm-tag--marque' : ' fm-tag--franchise') + '" style="margin:0 8px 0 0">' + esc(nomFamille(fam)) + '</span>' : '') + 'Niveau ' + (rang + 1) + ' sur ' + poste.niveaux.length + ' · ' + pl(tout.size, 'compétence') + ' à maîtriser, dont ' + n(nouv.length) + ' nouvelle' + (nouv.length > 1 ? 's' : '') + (niveau.description ? ' · ' + esc(niveau.description) : '') + '</p></div>' +
       '<div class="fm-links">' +
-      '<a class="btn btn--sm" href="#/manuel/poste/' + pid + '/' + niveau.id + '">Manuel</a>' +
       '<a class="btn btn--sm" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=niveau&id=' + niveau.id + '">Fiche PDF ↗</a>' +
       bouton('niv-ouvrir', 'niv-ouvrir', '+ Exiger une compétence', ' data-nid="' + niveau.id + '"', 'is-on') + '</div></div>';
     // L'escalier du poste : chaque marche, ce qu'elle ajoute et le total.
@@ -877,7 +918,7 @@
     var nivs = I.niveauxParComp.get(cid) || [];
     h += '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(c.nom) + '</h2><p class="muted">' + esc([c.categorie, c.sousCategorie].filter(Boolean).join(' › ') || 'Sans catégorie') +
       (c.nomBase && c.nomBase !== c.nom ? ' · nom de base : ' + esc(c.nomBase) : '') + ' · #' + c.id + '</p></div>' +
-      '<div class="fm-links"><a class="btn btn--sm" href="#/manuel/competence/' + cid + '">Ouvrir dans le manuel</a>' +
+      '<div class="fm-links">' +
       (I.comp.has(cid) ? bouton('comp~' + cid, 'comp-modifier', 'Modifier', ' data-cid="' + cid + '"') + bouton('comp-' + cid, 'comp-supprimer', 'Supprimer', ' data-cid="' + cid + '"', 'danger') : '') +
       '</div></div>';
     h += '<div class="fm-cols" style="margin-top:14px">';
@@ -1036,7 +1077,7 @@
     var comps = Array.from(x.comps).map(function (id) { return I.comp.get(id); }).filter(Boolean).sort(function (a, b) { return a.nom.localeCompare(b.nom, 'fr'); });
     var v25c = (S.v25.competences || []).filter(function (c) { return c.formation === x.code; });
     h += '<section class="card"><h2>Ce qu’on apprend · ' + (comps.length || v25c.length) + ' compétences</h2>' + (comps.length ? '<ul class="chips">' +
-      comps.map(function (c) { return '<li><a class="chip chip--soft" href="' + (manuel ? '#/manuel/competence/' : '#/competences/') + c.id + '">' + esc(c.nom) + '</a></li>'; }).join('') + '</ul><p class="muted fm-small" style="margin-top:10px">Cochées pour la personne dès que la formation est validée dans son parcours.</p>' :
+      comps.map(function (c) { return '<li><a class="chip chip--soft" href="#/competences/' + c.id + '">' + esc(c.nom) + '</a></li>'; }).join('') + '</ul><p class="muted fm-small" style="margin-top:10px">Cochées pour la personne dès que la formation est validée dans son parcours.</p>' :
       v25c.length ? '<ul class="fiche-ul">' + v25c.map(function (c) { return '<li><strong>' + esc(c.nom) + '</strong><span class="muted"> — ' + esc(court(c.description, 90)) + '</span></li>'; }).join('') + '</ul>' : (I.liens ? '<p class="muted">Aucune compétence rattachée.</p>' : attente('Liens en cours de lecture…'))) + '</section>';
     var plans = (S.v25.plans || []).map(function (pl2) {
       var b = pl2.blocs.filter(function (bl) { return bl.formations.indexOf(x.code) >= 0; });
@@ -1338,7 +1379,7 @@
     return { titre: TITRES.parcours, corps: h };
   }
 
-  /* ── Manuel opératoire (tablette) ───────────────────────────────────── */
+  /* ── Fil d'Ariane ; la fiche d'une formation (reste du Manuel en ligne, lot 6) ── */
 
   function filAriane(items) {
     return '<nav class="fm-crumbs" aria-label="Fil d’Ariane">' + items.map(function (it, i) {
@@ -1347,148 +1388,10 @@
     }).join('') + '</nav>';
   }
 
-  function carteCompetence(c, href) {
-    var l = liensDe(c.id);
-    var chips = l ? '<ul class="chips">' +
-      (l.procedures.length ? '<li class="chip chip--accent">' + pl(l.procedures.length, 'procédure') + '</li>' : '') +
-      (l.formations.length ? '<li class="chip chip--soft">' + pl(l.formations.length, 'formation') + '</li>' : '') +
-      (l.ressources.length ? '<li class="chip chip--soft">' + pl(l.ressources.length, 'ressource') + '</li>' : '') + '</ul>' : '';
-    return '<li><a class="choice-card" href="' + href + '"><strong>' + esc(c.nom) + '</strong><span class="muted">' + esc(c.sousCategorie || c.categorie || '') + '</span>' + chips + '</a></li>';
-  }
-
+  /** Lot 6 : l'écran ne porte plus que la fiche à lire d'une formation (#/manuel/formation/FO-xx) ; les autres
+      adresses du Manuel en ligne mènent au Manuel du réseau ou au référentiel (ancienManuel, dans lireRoute). */
   function ecranManuel() {
-    var a = S.route.a;
-    var vue = a[0] || '';
-    if (vue === 'poste') return manuelPoste();
-    if (vue === 'competence') return manuelCompetence();
-    if (vue === 'procedure') return manuelProcedure();
-    if (vue === 'partie') return manuelPartie();
-    if (vue === 'formation') return manuelFormation();
-    var R = S.ref, q = norm(S.f.mq);
-    var h = '<div class="fm-manuel-search"><input type="search" placeholder="Chercher une compétence, une procédure…" data-input="mq" value="' + esc(S.f.mq) + '" /></div>';
-    if (q) {
-      var comps = R.competences.filter(function (c) { return norm(c.nom + ' ' + (c.description || '') + ' ' + (c.sousCategorie || '')).indexOf(q) >= 0; }).slice(0, 60);
-      var procs = Array.from(I.procedure.values()).filter(function (p) { return norm(p.titre + ' ' + (p.description || '')).indexOf(q) >= 0; }).slice(0, 60);
-      h += '<div class="section-label" style="margin-top:0">Compétences · ' + n(comps.length) + '</div>';
-      h += comps.length ? '<ul class="type-grid">' + comps.map(function (c) { return carteCompetence(c, '#/manuel/competence/' + c.id); }).join('') + '</ul>' : '<p class="muted" style="margin-top:8px">Aucune compétence.</p>';
-      h += '<div class="section-label">Procédures · ' + n(procs.length) + '</div>';
-      h += procs.length ? '<ul class="type-grid">' + procs.map(function (p) {
-        return '<li><a class="choice-card" href="#/manuel/procedure/' + p.id + '"><strong>' + esc(p.titre) + '</strong><span class="muted">' + esc(court(p.description || p.categorie || '', 110)) + '</span></a></li>';
-      }).join('') + '</ul>' : '<p class="muted" style="margin-top:8px">Aucune procédure.</p>';
-      return { titre: 'Manuel opératoire', kicker: 'Recherche', corps: h };
-    }
-    h += accueilParties();
-    return { titre: 'Manuel opératoire', kicker: 'Manuel en ligne', corps: bandeauLiens() + h };
-  }
-
-  /** Les postes du panel, en cartes : l'entrée « Par poste » de la partie Opérationnel. */
-  function grillePostes() {
-    var postes = S.ref.postes.filter(function (p) { return p.niveaux.length || p.id != null; });
-    if (!postes.length) return '<section class="card pending"><h2>Aucun poste</h2><p class="muted">Le manuel se construit à partir des postes du panel ; aucun n’a été rendu.</p></section>';
-    return '<div class="campaign-grid">' + postes.map(function (p) {
-      var set = new Set(); p.niveaux.forEach(function (nv) { nv.competences.forEach(function (c) { set.add(c); }); });
-      return '<a class="card campaign" href="#/manuel/poste/' + (p.id != null ? p.id : 'sans') + '"><div class="fm-card-band"><span class="fm-card-band__letter">' + esc((p.nom || '?').trim().charAt(0).toUpperCase()) + '</span>' +
-        '<span class="fm-card-band__count">' + pl(p.niveaux.length, 'niveau') + '</span></div><div class="campaign__body"><div class="campaign__head"><h3>' + esc(p.nom) + '</h3></div>' +
-        '<p class="muted campaign__meta">' + pl(set.size, 'compétence') + (p.description ? ' · ' + esc(court(p.description, 90)) : '') + '</p></div></a>';
-    }).join('') + '</div>';
-  }
-
-  function posteParArg(v) {
-    if (v === 'sans') return S.ref.postes.filter(function (p) { return p.id == null; })[0] || null;
-    return /^\d+$/.test(v || '') ? I.posteById.get(+v) || null : null;
-  }
-
-  function manuelPoste() {
-    var poste = posteParArg(S.route.a[1]);
-    if (!poste) return { titre: 'Manuel opératoire', corps: retour('#/manuel', 'Manuel') + '<p class="error">Poste inconnu.</p>' };
-    var nid = arg(2);
-    var niveau = (nid != null && poste.niveaux.filter(function (x) { return x.id === nid; })[0]) || poste.niveaux[0];
-    var pk = poste.id != null ? poste.id : 'sans';
-    var h = filAriane([['Manuel', '#/manuel'], ['Opérationnel', '#/manuel/partie/operationnel'], [poste.nom, null]]);
-    h += '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(poste.nom) + '</h2>' + (poste.description ? '<p class="muted">' + esc(poste.description) + '</p>' : '') + '</div>' +
-      '<div class="fm-links">' + (niveau ? '<a class="btn btn--sm" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=niveau&id=' + niveau.id + '">Fiche du niveau ↗</a>' : '') +
-      (poste.id != null ? '<a class="btn btn--sm" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=poste&id=' + poste.id + '">Fiche du poste ↗</a>' : '') + '</div></div>';
-    if (!poste.niveaux.length) return { titre: poste.nom, kicker: 'Manuel opératoire', corps: h + '<p class="muted" style="margin-top:12px">Ce poste n’a pas de niveau dans le panel.</p>' };
-    h += '<ol class="wizard__steps" style="margin-top:14px">' + poste.niveaux.map(function (nv, i) {
-      var on = nv === niveau;
-      return '<li class="wizard__step' + (on ? ' is-on' : '') + '"><a href="#/manuel/poste/' + pk + '/' + nv.id + '"' + (on ? ' aria-current="step"' : '') + '><span class="wizard__num">' + (i + 1) + '</span>' + esc(nv.nom) + '</a></li>';
-    }).join('') + '</ol>';
-    if (niveau.description) h += '<p class="muted">' + esc(niveau.description) + '</p>';
-    var comps = niveau.competences.map(function (cid) { return I.comp.get(cid); }).filter(Boolean)
-      .sort(function (a, b) { return (a.categorie || '~').localeCompare(b.categorie || '~', 'fr') || a.nom.localeCompare(b.nom, 'fr'); });
-    if (!comps.length) h += '<p class="muted" style="margin-top:12px">Aucune compétence n’est exigée à ce niveau.</p>';
-    var cat = null, ouvert = false;
-    comps.forEach(function (c) {
-      var k = c.categorie || 'Sans catégorie';
-      if (k !== cat) { if (ouvert) h += '</ul>'; cat = k; ouvert = true; h += '<div class="section-label">' + esc(k) + '</div><ul class="type-grid">'; }
-      h += carteCompetence(c, '#/manuel/competence/' + c.id + '/' + pk + '/' + niveau.id);
-    });
-    if (ouvert) h += '</ul>';
-    return { titre: poste.nom, kicker: 'Manuel opératoire', corps: bandeauLiens() + h };
-  }
-
-  function contexteManuel(i) {
-    // …/competence/{cid}/{poste}/{niveau} : d'où l'on vient, pour le fil d'Ariane.
-    var poste = posteParArg(S.route.a[i]);
-    var nid = /^\d+$/.test(S.route.a[i + 1] || '') ? +S.route.a[i + 1] : null;
-    var niveau = poste && nid != null ? poste.niveaux.filter(function (x) { return x.id === nid; })[0] : null;
-    return { poste: poste, niveau: niveau, pk: poste ? (poste.id != null ? poste.id : 'sans') : null };
-  }
-
-  function manuelCompetence() {
-    var cid = arg(1);
-    var c = cid != null ? I.comp.get(cid) : null;
-    var u = S.competences[cid];
-    if (!c && u && u.data) c = u.data.competence;
-    var ctx = contexteManuel(2);
-    var fil = [['Manuel', '#/manuel']];
-    if (ctx.poste) fil.push(['Opérationnel', '#/manuel/partie/operationnel'], [ctx.poste.nom, '#/manuel/poste/' + ctx.pk + (ctx.niveau ? '/' + ctx.niveau.id : '')]);
-    if (ctx.niveau) fil.push([ctx.niveau.nom, '#/manuel/poste/' + ctx.pk + '/' + ctx.niveau.id]);
-    if (!c) return { titre: 'Manuel opératoire', corps: filAriane(fil.concat([['Compétence', null]])) + (u && u.erreur ? '<p class="error">' + esc(u.erreur) + '</p>' : attente('Lecture de la compétence…')) };
-    fil.push([c.nom, null]);
-    var suite = ctx.poste ? '/' + cid + '/' + ctx.pk + (ctx.niveau ? '/' + ctx.niveau.id : '') : '/' + cid;
-    var l = liensDe(cid);
-    var h = filAriane(fil) + '<h2 class="screen-subtitle">' + esc(c.nom) + '</h2><p class="muted">' + esc([c.categorie, c.sousCategorie].filter(Boolean).join(' › ')) + '</p>';
-    if (c.description) h += '<div class="fm-doc__lead fm-rich" style="margin-top:12px">' + riche(c.description) + '</div>';
-    if (c.verification) h += '<section class="card" style="margin-top:14px"><h2>Comment c’est vérifié</h2><div class="fm-rich">' + riche(c.verification) + '</div></section>';
-    if (c.lien && /^https?:/i.test(c.lien)) h += '<p style="margin-top:12px"><a class="btn btn--sm" target="_blank" rel="noopener" href="' + esc(c.lien) + '">Ouvrir le support ↗</a></p>';
-    if (!l) return { titre: c.nom, kicker: 'Compétence', corps: h + attente('Lecture des procédures et formations…') };
-    h += '<div class="section-label">Procédures à suivre · ' + n(l.procedures.length) + '</div>';
-    h += l.procedures.length ? '<ul class="type-grid">' + l.procedures.map(function (x) {
-      var p = I.procedure.get(x.id) || {};
-      return '<li><a class="choice-card" href="#/manuel/procedure/' + x.id + suite + '"><strong>' + esc(p.titre || x.nom) + '</strong><span class="muted">' + esc(court(p.description || p.sousCategorie || 'Ouvrir la procédure', 120)) + '</span></a></li>';
-    }).join('') + '</ul>' : '<p class="muted" style="margin-top:8px">Aucune procédure attachée à cette compétence.</p>';
-    h += '<div class="section-label">Formations · ' + n(l.formations.length) + '</div>';
-    h += l.formations.length ? '<ul class="type-grid">' + l.formations.map(function (x) {
-      var f = I.formation.get(x.id) || {};
-      return '<li><div class="choice-card" style="cursor:default"><strong>' + esc(f.nom || x.nom) + '</strong><span class="muted">' + esc(court(f.description || [f.categorie, f.sousCategorie].filter(Boolean).join(' › ') || 'Formation du réseau', 160)) + '</span></div></li>';
-    }).join('') + '</ul>' : '<p class="muted" style="margin-top:8px">Aucune formation attachée.</p>';
-    if (l.ressources.length) {
-      h += '<div class="section-label">Ressources · ' + n(l.ressources.length) + '</div><ul class="type-grid">' + l.ressources.map(function (x) {
-        var r = I.ressource.get(x.id) || {};
-        var lien = r.url && /^https?:/i.test(r.url);
-        return '<li><' + (lien ? 'a target="_blank" rel="noopener" href="' + esc(r.url) + '"' : 'div style="cursor:default"') + ' class="choice-card"><strong>' + esc(r.titre || x.nom) + (lien ? ' ↗' : '') + '</strong><span class="muted">' + esc(court(r.description || r.type || '', 120)) + '</span></' + (lien ? 'a' : 'div') + '></li>';
-      }).join('') + '</ul>';
-    }
-    return { titre: c.nom, kicker: 'Compétence', corps: h };
-  }
-
-  function manuelProcedure() {
-    var id = arg(1);
-    var cid = /^\d+$/.test(S.route.a[2] || '') ? +S.route.a[2] : null;
-    var c = cid != null ? I.comp.get(cid) : null;
-    var ctx = contexteManuel(3);
-    var fil = [['Manuel', '#/manuel']];
-    // …/procedure/{id}/partie/{cle} : ouverte depuis une partie du manuel.
-    var depuis = S.route.a[2] === 'partie' && NOM_PARTIE[S.route.a[3]] ? S.route.a[3] : null;
-    var p0 = id != null ? I.procedure.get(id) : null;
-    if (depuis || (!ctx.poste && !c && p0 && S.mn)) { var cle = depuis || partieDe(p0); fil.push([NOM_PARTIE[cle], '#/manuel/partie/' + cle]); }
-    if (ctx.poste) fil.push(['Opérationnel', '#/manuel/partie/operationnel'], [ctx.poste.nom, '#/manuel/poste/' + ctx.pk + (ctx.niveau ? '/' + ctx.niveau.id : '')]);
-    if (ctx.niveau) fil.push([ctx.niveau.nom, '#/manuel/poste/' + ctx.pk + '/' + ctx.niveau.id]);
-    if (c) fil.push([c.nom, '#/manuel/competence/' + cid + (ctx.poste ? '/' + ctx.pk + (ctx.niveau ? '/' + ctx.niveau.id : '') : '')]);
-    var p = id != null ? I.procedure.get(id) : null;
-    fil.push([(p && p.titre) || 'Procédure', null]);
-    return { titre: (p && p.titre) || 'Procédure', kicker: 'Procédure opératoire', corps: filAriane(fil) + lectureProcedure(id, function (x) { return '#/manuel/competence/' + x; }) };
+    return manuelFormation();
   }
 
   /* ── Manuel : quatre parties et vidéos (1er nov. 2026) ──────────────────
@@ -1496,7 +1399,11 @@
    * connaît pas ces parties : la partie d'une procédure (et ses vidéos ajoutées)
    * se règle dans le cockpit (GET/PATCH /formation/manuel…) ; sans réglage, elle
    * se déduit de la section du panel (« Formations & Contrôle Continu » →
-   * Formation continue, le reste → Opérationnel). */
+   * Formation continue, le reste → Opérationnel). Depuis le lot 6, ces parties
+   * sont les phases du Manuel du réseau (#/rfphase/<partie>) : les réglages se
+   * font sur la page d'une procédure (Référentiel › Procédures) et d'une
+   * formation ; la reprise des procédures dans le référentiel (importer-panel)
+   * en tire la phase de chaque standard. */
   var PARTIES = [
     ['preouverture', 'Pré-ouverture', 'Avant l’ouverture : mise en place, recrutement, formation initiale.'],
     ['ouverture', 'Ouverture', 'Le jour J et les six semaines de lancement : ce que tient le garant d’ouverture.'],
@@ -1520,44 +1427,12 @@
     return (m.formations && m.formations[code]) || (m.formationsDefaut && m.formationsDefaut[code]) || 'formation';
   }
   function foRegle(code) { return !!(S.mn && S.mn.formations && S.mn.formations[code]); }
-  function fosDePartie(cle) { var l = formationsFo(); return l && S.mn ? l.filter(function (x) { return partieFo(x.code) === cle; }) : null; }
-  function procsDePartie(cle) {
-    return Array.from(I.procedure.values()).filter(function (p) { return partieDe(p) === cle; })
-      .sort(function (a, b) { return (a.categorie || '~').localeCompare(b.categorie || '~', 'fr') || a.titre.localeCompare(b.titre, 'fr'); });
-  }
-
-  function accueilParties() {
-    var h = '<div class="fm-parts">';
-    PARTIES.forEach(function (x, i) {
-      var nb = procsDePartie(x[0]).length;
-      var fos = fosDePartie(x[0]);
-      var nbSop = SOP ? SOP.nbPartie(x[0]) : null;
-      var plus = (fos ? ' · ' + pl(fos.length, 'formation') : '') + (nbSop ? ' · ' + nbSop + ' SOP' : '') + (x[0] === 'operationnel' ? ' · ' + pl(S.ref.postes.filter(function (p) { return p.niveaux.length || p.id != null; }).length, 'poste') : '');
-      h += '<a class="fm-part" href="#/manuel/partie/' + x[0] + '"><span class="fm-part__n">' + (i + 1) + '</span><span class="fm-part__txt"><strong>' + esc(x[1]) + '</strong>' +
-        '<span class="muted">' + esc(x[2]) + '</span><span class="fm-part__nb">' + pl(nb, 'procédure') + plus + (S.mn && S.v25 ? '' : ' …') + '</span></span></a>';
-    });
-    return h + '</div>';
-  }
-
-  function barreParties(actif) {
-    return '<nav class="page-tabs fm-parties" aria-label="Parties du manuel">' + PARTIES.map(function (x, i) {
-      var on = x[0] === actif;
-      return '<a href="#/manuel/partie/' + x[0] + '" class="page-tabs__tab' + (on ? ' is-on' : '') + '"' + (on ? ' aria-current="page"' : '') + '><span class="fm-parties__n">' + (i + 1) + '</span>' + esc(x[1]) + '</a>';
-    }).join('') + '</nav>';
-  }
-
-  function carteFo(f, href) {
-    var v = f.v25 || {};
-    var sous = [v.frequence, f.evaluations.length ? pl(f.evaluations.length, 'évaluation') : (v.nbEvaluations ? pl(v.nbEvaluations, 'évaluation') : null),
-      v.executant && v.executant !== '—' ? 'par ' + v.executant : null].filter(Boolean).join(' · ');
-    return '<li><a class="choice-card" href="' + href + '"><strong><span class="fm-code">' + esc(f.code) + '</span> ' + esc(f.nom) + '</strong><span class="muted">' + esc(sous || 'Formation du réseau') + '</span></a></li>';
-  }
 
   /** La partie du manuel d'une formation FO (réglage caché en mode tablette). */
   function blocPartieFo(code) {
     if (!S.mn) return S.mnErreur ? '<p class="error">' + esc(S.mnErreur) + '</p>' : '';
     var cle = partieFo(code), regle = foRegle(code), def = S.mn && S.mn.formationsDefaut && S.mn.formationsDefaut[code];
-    var h = '<div class="fm-mn"><p class="fm-mn__partie"><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/' + cle + '">' + esc(NOM_PARTIE[cle]) + '</a>' +
+    var h = '<div class="fm-mn"><p class="fm-mn__partie"><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/rfphase/' + cle + '">' + esc(NOM_PARTIE[cle]) + '</a>' +
       (S.mn && !regle && !S.tablette ? ' <span class="muted fm-small">répartition par défaut</span>' : '') + '</p>';
     if (!S.tablette && S.mn) {
       h += '<div class="seg fm-mn__seg" role="group" aria-label="Ranger dans une partie du manuel">' + PARTIES.map(function (x) {
@@ -1570,11 +1445,12 @@
   function manuelFormation() {
     var code = /^FO-\d+$/.test(S.route.a[1] || '') ? S.route.a[1] : null;
     var depuis = S.route.a[2] === 'partie' && NOM_PARTIE[S.route.a[3]] ? S.route.a[3] : (code && S.mn ? partieFo(code) : null);
-    var fil = [['Manuel', '#/manuel']];
-    if (depuis) fil.push([NOM_PARTIE[depuis], '#/manuel/partie/' + depuis]);
+    // Le fil d'Ariane mène au Manuel du réseau : la phase de la formation (Par phase), comme l'ancienne partie du manuel.
+    var fil = [['Manuel du réseau', '#/rfclasseur']];
+    if (depuis) fil.push([NOM_PARTIE[depuis], '#/rfphase/' + depuis]);
     var f = code && formationsFo() ? formationsFo().filter(function (x) { return x.code === code; })[0] : null;
     fil.push([f ? f.code + ' · ' + f.nom : (code || 'Formation'), null]);
-    if (!code) return { titre: 'Manuel opératoire', corps: filAriane(fil) + '<p class="error">Formation inconnue.</p>' };
+    if (!code) return { titre: 'Manuel du réseau', corps: filAriane(fil) + '<p class="error">Formation inconnue.</p>' };
     var v = { corps: ficheFoLecture(code, depuis || 'formation') };
     return { titre: f ? f.nom : code, kicker: S.mn ? 'Formation · ' + NOM_PARTIE[partieFo(code)] : 'Formation', corps: filAriane(fil) + v.corps };
   }
@@ -1681,7 +1557,7 @@
       '<h2>' + esc(nom) + '</h2>' + (rub && rub.description ? '<p class="fm-fa__lead">' + esc(rub.description) + '</p>' : '') + '</div>';
     h += '<div class="fm-fa__faits"><div><b>' + esc(v.frequence || '—') + '</b><span>fréquence</span></div><div><b>' + pl(et.length, 'étape') + '</b><span>pour la valider</span></div>' +
       '<div><b>' + esc(role(v.executant) && role(v.executant) !== '—' ? role(v.executant) : '—') + '</b><span>la suit</span></div><div><b>' + esc(role(v.controleur) || '—') + '</b><span>la valide</span></div></div>';
-    h += '<div class="fm-fa__actions">' + (procs.length ? '<a class="btn btn--primary" href="#/manuel/procedure/' + procs[0].id + '/partie/' + partie + '">Ouvrir la procédure' + (v.procedure ? ' ' + esc(v.procedure.split(' — ')[0]) : '') + '</a>' :
+    h += '<div class="fm-fa__actions">' + (procs.length ? '<a class="btn btn--primary" href="#/procedures/' + procs[0].id + '">Ouvrir la procédure' + (v.procedure ? ' ' + esc(v.procedure.split(' — ')[0]) : '') + '</a>' :
       (v.procedure ? '<span class="fm-fa__mo">Manuel opératoire ' + esc(v.procedure.split(' — ')[0]) + '</span>' : '')) +
       '<button type="button" class="btn" data-act="imprimer">Imprimer</button></div>';
     var n2 = 0;
@@ -1754,7 +1630,7 @@
       corps = c.description ? '<div class="fm-rich fm-mnf__texte">' + riche(c.description) + '</div>' : '';
       if (c.verification) corps += '<h4>Comment c’est vérifié</h4><div class="fm-rich">' + riche(c.verification) + '</div>';
       var l = c.id != null ? liensDe(c.id) : null;
-      if (l && l.procedures.length) corps += '<h4>Procédures</h4><ul class="fm-mnf__liens">' + l.procedures.map(function (p0) { var p1 = I.procedure.get(p0.id) || {}; return '<li><a href="#/manuel/procedure/' + p0.id + '" data-act="modale-fermer">' + esc(p1.titre || p0.nom) + ' ›</a></li>'; }).join('') + '</ul>';
+      if (l && l.procedures.length) corps += '<h4>Procédures</h4><ul class="fm-mnf__liens">' + l.procedures.map(function (p0) { var p1 = I.procedure.get(p0.id) || {}; return '<li><a href="#/procedures/' + p0.id + '" data-act="modale-fermer">' + esc(p1.titre || p0.nom) + ' ›</a></li>'; }).join('') + '</ul>';
       var cs = [];
       if (c.lien) cs.push({ sp: supportDe(c.lien), titre: 'Support de la compétence' });
       (l ? l.ressources : []).forEach(function (r0) { var r = I.ressource.get(r0.id) || {}; if (r.url && supportDe(r.url)) cs.push({ sp: supportDe(r.url), titre: r.titre || r0.nom }); });
@@ -1772,48 +1648,6 @@
     return '<div class="confirm fm-mnf-fond" data-act="modale-fond"><div class="confirm__box card fm-modale fm-mnf" role="dialog" aria-modal="true" aria-label="' + esc(titre) + '">' +
       '<div class="fm-mnf__tete"><div><p class="fm-mnf__sous">' + esc(sous) + '</p><h3>' + esc(titre) + '</h3></div><button type="button" class="btn btn--ghost fm-mnf__x" data-act="modale-fermer" aria-label="Fermer">✕</button></div>' +
       '<div class="fm-mnf__corps">' + corps + '</div>' + (m.erreur ? '<p class="error">' + esc(m.erreur) + '</p>' : '') + '</div></div>';
-  }
-
-  function nbVideosAjoutees(id) { var r = reglageProc(id); return r && r.videos ? r.videos.length : 0; }
-
-  function manuelPartie() {
-    var cle = NOM_PARTIE[S.route.a[1]] ? S.route.a[1] : 'operationnel';
-    var x = PARTIES.filter(function (p) { return p[0] === cle; })[0];
-    var h = barreParties(cle) + filAriane([['Manuel', '#/manuel'], [x[1], null]]) + '<p class="muted fm-part-sous">' + esc(x[2]) + '</p>';
-    if (cle === 'operationnel') h += '<div class="section-label">Par poste</div>' + grillePostes();
-    var procs = S.mn ? procsDePartie(cle) : null;
-    h += '<div class="section-label">Procédures · ' + (procs ? n(procs.length) : '…') + '</div>';
-    if (!procs) { h += S.mnErreur ? '<p class="error">' + esc(S.mnErreur) + '</p>' : attente('Lecture du manuel…'); procs = []; }
-    else if (!procs.length) {
-      h += '<section class="card pending"><h2>Aucune procédure dans cette partie</h2><p class="muted">' +
-        (S.tablette ? 'Cette partie du manuel n’est pas encore rédigée.' : 'Ouvrez une procédure et choisissez « ' + esc(x[1]) + ' » dans « Partie du manuel ».') + '</p></section>';
-    }
-    var cat = null, ouvert = false;
-    procs.forEach(function (p) {
-      var k = p.categorie || 'Sans catégorie';
-      if (k !== cat) { if (ouvert) h += '</ul>'; cat = k; ouvert = true; h += '<div class="fm-part-cat">' + esc(k) + '</div><ul class="type-grid">'; }
-      var nv = nbVideosAjoutees(p.id);
-      h += '<li><a class="choice-card" href="#/manuel/procedure/' + p.id + '/partie/' + cle + '"><strong>' + esc(p.titre) + '</strong><span class="muted">' + esc(court(p.description || p.sousCategorie || '', 120)) + '</span>' +
-        (nv ? '<ul class="chips"><li class="chip chip--accent">▶ Vidéo</li></ul>' : '') + '</a></li>';
-    });
-    if (ouvert) h += '</ul>';
-    if (SOP) h += SOP.sectionPartie(cle);
-    var fos = fosDePartie(cle);
-    h += '<div class="section-label">Formations · ' + (fos ? n(fos.length) : '…') + '</div>';
-    if (!fos) h += S.v25Erreur || S.mnErreur ? '<p class="error">' + esc(S.v25Erreur || S.mnErreur) + '</p>' : attente('Lecture des formations du manuel…');
-    else if (!fos.length) h += '<p class="muted" style="margin-top:8px">Aucune formation dans cette partie.</p>';
-    else h += '<ul class="type-grid">' + fos.map(function (f) { return carteFo(f, '#/manuel/formation/' + f.code + '/partie/' + cle); }).join('') + '</ul>';
-    if (cle === 'formation') {
-      // Les formations du panel sans code FO (hors référentiel) : elles se lisent ici.
-      var autres = Array.from(I.formation.values()).filter(function (t) { return !codeFo(t.nom); }).sort(function (a, b) { return a.nom.localeCompare(b.nom, 'fr'); });
-      if (autres.length) {
-        h += '<div class="section-label">Autres formations du panel · ' + n(autres.length) + '</div><ul class="type-grid">' + autres.map(function (f) {
-          var dedans = '<strong>' + esc(f.nom) + '</strong><span class="muted">' + esc(court(f.description || [f.categorie, f.sousCategorie].filter(Boolean).join(' › ') || 'Formation du réseau', 140)) + '</span>';
-          return '<li>' + (S.tablette ? '<div class="choice-card" style="cursor:default">' + dedans + '</div>' : '<a class="choice-card" href="#/formations/' + f.id + '">' + dedans + '</a>') + '</li>';
-        }).join('') + '</ul>';
-      }
-    }
-    return { titre: x[1], kicker: 'Manuel opératoire', corps: bandeauLiens() + h };
   }
 
   /** Une adresse de vidéo → ce que la page lit. Le cadre est construit depuis l'identifiant, jamais depuis l'adresse brute. */
@@ -1857,7 +1691,7 @@
     if (!S.mn && !S.mnErreur) return '';
     var cle = partieDe(p), r = reglageProc(id), regle = !!(r && r.partie);
     var h = '<div class="fm-mn">';
-    h += '<p class="fm-mn__partie"><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/' + cle + '">' + esc(NOM_PARTIE[cle]) + '</a>' +
+    h += '<p class="fm-mn__partie"><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/rfphase/' + cle + '">' + esc(NOM_PARTIE[cle]) + '</a>' +
       (S.mn && !regle && !S.tablette ? ' <span class="muted fm-small">déduite du panel</span>' : '') + '</p>';
     if (!S.tablette && S.mn) {
       h += '<div class="seg fm-mn__seg" role="group" aria-label="Ranger dans une partie du manuel">' + PARTIES.map(function (x) {
@@ -2319,7 +2153,6 @@
       if (nv) chargerUn(S.niveaux, nv.id, '/formation/niveau?id=' + nv.id);
     }
     if (e === 'competences' && arg(0) != null && !I.liens) chargerUn(S.competences, arg(0), '/formation/competence?id=' + arg(0));
-    if (e === 'manuel' && S.route.a[0] === 'competence' && arg(1) != null && !I.liens) chargerUn(S.competences, arg(1), '/formation/competence?id=' + arg(1));
     if (e === 'formations' && arg(0) != null) chargerUn(S.formations, arg(0), '/formation/formation?id=' + arg(0));
     if ((e === 'formations' || e === 'postes' || e === 'tableau' || e === 'manuel') && !S.v25 && !S.v25Charge) {
       S.v25Charge = true;
@@ -2343,7 +2176,6 @@
         function (er) { S.mnErreur = er.message; S.mnCharge = false; rendre(true); });
     }
     if (e === 'procedures' && arg(0) != null) chargerUn(S.procedures, arg(0), '/formation/procedure?id=' + arg(0));
-    if (e === 'manuel' && S.route.a[0] === 'procedure' && arg(1) != null) chargerUn(S.procedures, arg(1), '/formation/procedure?id=' + arg(1));
     if (e === 'equipes') {
       if (!S.equipe.magasins && !S.equipe.charge && !S.equipe.erreur) chargerMagasins();
       var sid = arg(0);
@@ -2507,10 +2339,12 @@
     if (act === 'filtre' && t.getAttribute('data-k') === 'pcFiltreF') { S.pcFiltre = ''; rendre(true); return; }
     if (gestes(act, t, ev)) return;
     if (act === 'menu') { S.menu = !S.menu; rendre(true); return; }
+    if (act === 'aller') { location.hash = '#/' + t.getAttribute('data-v'); return; }   // sélecteur du mode tablette
     if (act === 'tablette') {
       S.tablette = !S.tablette;
       try { localStorage.setItem('fm.tablette', S.tablette ? '1' : '0'); } catch (e) { /* rien */ }
-      if (S.tablette && S.route.ecran !== 'manuel') location.hash = '#/manuel'; else rendre(true);
+      // En mode tablette, on lit le Manuel du réseau : depuis un autre écran, le Classeur (lot 6).
+      if (S.tablette && !enLecture()) location.hash = '#/rfclasseur'; else rendre(true);
       return;
     }
     if (act === 'mn-partie') {

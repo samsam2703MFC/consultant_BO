@@ -257,12 +257,15 @@
     return `<div class="tb-corps"><div class="tb-liste">${onglets()}<div class="mini" style="margin:-6px 0 12px">${esc(t().sesPostes)} : ${esc(postes || '—')} · ${miens.length} ${esc(t().standards)}</div>${corps}</div>${cote()}</div>`;
   }
 
+  /** Le point critique : un triangle d'alerte au trait (design system §7.12), 28 px pour l'écran du poste. */
+  const ALERTE = '<svg class="tb-alerte__i" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg>';
+
   function cote() {
     if (S.moi) {
       const v = Object.values(S.suivi);
       const n = k => v.filter(x => x.statut === k).length;
       return `<div class="tb-cote"><h2>${esc(S.moi.nom)}</h2><div class="mini" style="font-size:13px">${esc((S.moi.postes || []).map(p => t().poste[p] || p).join(' · '))}</div>
-        <div class="carte" style="background:#F5F1EB"><div style="display:flex;gap:18px;font-size:14px"><span><b style="font:400 26px var(--font-display)">${n('vu')}</b> ${esc(t().vus)}</span><span><b style="font:400 26px var(--font-display)">${n('quiz')}</b> ${esc(t().quiz)}</span><span><b style="font:400 26px var(--font-display)">${n('lu')}</b> ${esc(t().lues)}</span></div></div>
+        <div class="carte" style="background:var(--paper)"><div style="display:flex;gap:18px;font-size:14px"><span><b class="tb-n">${n('vu')}</b> ${esc(t().vus)}</span><span><b class="tb-n">${n('quiz')}</b> ${esc(t().quiz)}</span><span><b class="tb-n">${n('lu')}</b> ${esc(t().lues)}</span></div></div>
         <button class="tb-gros sec" data-a="sortir">${esc(t().changer)}</button><div class="mini" style="margin-top:auto">${esc(t().lireSans)}</div></div>`;
     }
     const pers = (S.init.personnes || []).filter(p => S.poste === 'tous' || p.valideur || (p.postes || []).includes(S.poste));
@@ -301,7 +304,7 @@
       <div class="tb-main"><div class="ou">${esc(t().etape)} ${i + 1} / ${E.length} · <span>${esc(L(e.section))}</span></div>
         ${S.sop.statut === 'a_valider' ? `<div class="note">${esc(t().aValiderS)}</div>` : ''}
         <h1>${esc(titre || ('' + e.numero))}</h1>
-        ${e.critique ? `<div class="tb-alerte"><span style="font-size:28px;line-height:1">⚠</span><div style="white-space:pre-line;font-size:21px"><b>${esc(t().crit)}</b>${esc(texte)}</div></div>` : `<div class="tx">${esc(texte)}</div>`}
+        ${e.critique ? `<div class="tb-alerte">${ALERTE}<div style="white-space:pre-line;font-size:21px"><b>${esc(t().crit)}</b>${esc(texte)}</div></div>` : `<div class="tx">${esc(texte)}</div>`}
         ${e.photo ? `<img class="photo" src="photos/${esc(e.photo)}" alt="" data-zoom="photos/${esc(e.photo)}">` : ''}
         ${!S.moi ? `<div class="mini" style="margin-top:auto;font-size:13px">${esc(t().identifie)}</div>` : ''}
       </div></div>

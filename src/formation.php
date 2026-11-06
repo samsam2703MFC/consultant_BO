@@ -480,14 +480,30 @@ function ep_formation_procedure(): array
     if ($e = fmPret()) { return $e; }
     $id = fmId();
     if ($id === null) { http_response_code(422); return ['error' => 'id attendu']; }
+    $r = fmProcedureLue($id);
+    if (!$r['ok']) {
+        http_response_code($r['http']);
+        return ['error' => $r['error'], 'appels' => $r['appels']];
+    }
+    unset($r['ok']);
+    return $r;
+}
+
+/**
+ * Une procédure lue au panel : la fiche, ses sections (dans leur ordre) et ses pièces jointes — la lecture de la page
+ * du manuel (GET /formation/procedure) et de la reprise dans le Manuel du réseau (POST /formation/ref/importer-panel).
+ * Rend ['ok' => true, procedure, sections, pieces, appels] ou ['ok' => false, http, error, appels].
+ */
+function fmProcedureLue(int $id): array
+{
     // MESURÉ sur le panel (31/10/2026) : sans `include=sections`, la fiche ne porte pas ses sections.
     $chemins = ['fiche' => '/operational-procedures/' . $id . '?include=sections&lang_code=fr', 'pieces' => '/operational-procedures/' . $id . '/attachments'];
     $v = PanelApi::getParalleleDetail($chemins, 2, 20);
     $appels = [fmAppel('fiche', $chemins['fiche'], $v['fiche']), fmAppel('pieces', $chemins['pieces'], $v['pieces'])];
     $d = $v['fiche']['data'];
     if (!is_array($d) || array_is_list($d) || fmInt($d, ['id']) === null) {
-        http_response_code($v['fiche']['code'] >= 200 && $v['fiche']['code'] < 300 ? 404 : 502);
-        return ['error' => $v['fiche']['erreur'] ?? 'procédure inconnue du panel', 'appels' => $appels];
+        return ['ok' => false, 'http' => $v['fiche']['code'] >= 200 && $v['fiche']['code'] < 300 ? 404 : 502,
+            'error' => $v['fiche']['erreur'] ?? 'procédure inconnue du panel', 'appels' => $appels];
     }
     $sections = [];
     foreach (is_array($d['sections'] ?? null) ? $d['sections'] : [] as $s) {
@@ -501,7 +517,7 @@ function ep_formation_procedure(): array
         $pieces[] = ['id' => fmInt($p, ['id', 'attachment_id']), 'nom' => fmTexte($p, ['label', 'name', 'title', 'file_name', 'original_name']),
             'url' => fmTexte($p, ['url', 'presigned_url', 'file_url', 'link']), 'type' => fmTexte($p, ['mime_type', 'type', 'extension'])];
     }
-    return ['procedure' => fmProcedure($d) + ['contenu' => fmTexte($d, ['content', 'base_content'])],
+    return ['ok' => true, 'procedure' => fmProcedure($d) + ['contenu' => fmTexte($d, ['content', 'base_content'])],
         'sections' => $sections, 'pieces' => $pieces, 'appels' => $appels];
 }
 

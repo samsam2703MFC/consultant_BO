@@ -139,10 +139,13 @@ jobs:
           HR_DIMONA_MASTER_KEY: ${{ secrets.HR_DIMONA_MASTER_KEY }}
           # Comptes de la console franchisé à créer ou mettre à jour (JSON, docs/dimona.md) — facultatif.
           CONSOLE_BO_ACCOUNTS: ${{ secrets.CONSOLE_BO_ACCOUNTS }}
+          # Code de gestion des tablettes des magasins (Manuel du réseau › Tablettes, docs/DEPLOIEMENT.md) — facultatif :
+          # vide, bin/deploy.sh lit /var/lib/consulant_bo/prive/tablettes_code ; ni l'un ni l'autre, la gestion est fermée.
+          TABLETTES_CODE: ${{ secrets.TABLETTES_CODE }}
         run: |
           {
             printf 'COCKPIT_DB_USER=%s\nCOCKPIT_DB_PASSWORD=%s\n' "${DBU:-}" "${DBP:-}"
-            for k in HR_DIMONA_PROD_ENABLED HR_DIMONA_TOKEN_URL_SIM HR_DIMONA_TOKEN_URL_PROD HR_CONSOLE_API_BASE HR_CONSOLE_API_INTERNAL HR_DIMONA_MASTER_KEY CONSOLE_BO_ACCOUNTS; do
+            for k in HR_DIMONA_PROD_ENABLED HR_DIMONA_TOKEN_URL_SIM HR_DIMONA_TOKEN_URL_PROD HR_CONSOLE_API_BASE HR_CONSOLE_API_INTERNAL HR_DIMONA_MASTER_KEY CONSOLE_BO_ACCOUNTS TABLETTES_CODE; do
               [ -n "${!k:-}" ] && printf '%s=%q\n' "$k" "${!k}"
             done
             true

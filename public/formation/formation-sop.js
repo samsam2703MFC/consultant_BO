@@ -1,9 +1,9 @@
 /* Module Formation › Standards (SOP) — les SOP du réseau, en français et en néerlandais (src/sop.php).
  *
- * Chargé AVANT formation.js, qui l'appelle par quelques accroches : la barre latérale (groupe « Standards (SOP) »),
- * ses écrans, ses lectures, et chaque partie du Manuel opératoire, où les SOP se rangent à côté des procédures et des
- * formations FO. Les SOP vivent dans nos tables : ces écrans s'affichent même quand le référentiel du panel est
- * illisible.
+ * Chargé AVANT formation.js, qui l'appelle par quelques accroches : la barre latérale (groupe « Manuel du réseau »),
+ * ses écrans et ses lectures. Les SOP vivent dans nos tables : ces écrans s'affichent même quand le référentiel du
+ * panel est illisible. (Jusqu'au lot 6, les SOP se rangeaient aussi dans chaque partie du « Manuel en ligne » de
+ * formation.js ; cet écran est retiré, ses parties sont les phases du Manuel du réseau, #/rfphase/<phase>.)
  *
  *   #/sop                 les SOP par famille (FR et NL, compétence du panel, partie du manuel, progression)
  *   #/sop/<id>            une SOP : FR et NL côte à côte, partie du manuel, compétence, PDF, équipe, quiz, versions
@@ -14,7 +14,8 @@
  * MANUEL DU RÉSEAU (fusion du 06/11/2026, src/referentiel.php) — le groupe de la barre latérale s'appelle désormais
  * « Manuel du réseau » :
  *   #/rfclasseur[/D5]     le classeur par domaine du référentiel v25 : sous-catégories, chaîne standard → formation →
- *                         compétence → contrôle, trous ; reprise du Manuel opératoire du CRM
+ *                         compétence → contrôle, trous ; reprise du Manuel opératoire du CRM et des procédures du
+ *                         panel (lot 6) ; le Manuel opératoire des SOP en PDF (FR, NL)
  *   #/rfphase/<phase>     par phase (calculée) · #/rfposte[/P3/<phase>] par poste × phase (calculée)
  *   #/sopcomp             compétences : correspondance C-… ↔ panel (un clic), puis l'onglet « Acquisition en magasin »
  *   la fiche d'une SOP gagne le bloc « Classement » (sous-catégorie, phases, postes, compétences, formations, checklists)
@@ -41,7 +42,7 @@ window.FormationSop = (function () {
     ed: null, edMeta: null, edErr: null, occupe: false, nouv: null,
     // Manuel du réseau : référentiel, correspondance, classements en cours d'édition, sous-catégorie éditée, reprise du CRM
     ref: null, refErr: null, refCharge: false, cor: null, corErr: null, corCharge: false, corF: 'propose', corBilan: null,
-    cl: {}, scEd: null, imp: null, domSel: 'D5'
+    cl: {}, scEd: null, imp: null, impPanel: null, domSel: 'D5'
   };
   try { D.shop = localStorage.getItem('fm.sop.shop') || ''; D.vue = localStorage.getItem('fm.sop.vue') || 'deux'; } catch (e) { /* stockage indisponible */ }
 
@@ -60,7 +61,8 @@ window.FormationSop = (function () {
     : s.competence ? `<span class="sop-comp" title="compétence du panel (ancienne règle)">${esc(s.competence.nom)}</span>` : '<span class="sop-comp is-sans">sans compétence</span>';
   const famNom = d => L((D.dossiers.find(x => x.id === d) || {}).nom);
   const pdf = (chemin, l) => `${C.API}${chemin}${chemin.includes('?') ? '&' : '?'}langue=${l}`;
-  const heat = v => v == null ? '<span class="muted">—</span>' : `<span class="sop-heat" style="background:${v < 20 ? 'var(--chip)' : v < 40 ? '#E3EFE2' : v < 60 ? '#C6E0CA' : v < 80 ? '#86BF94' : 'var(--green)'};color:${v < 20 ? 'var(--muted)' : v < 60 ? '#24502f' : '#fff'}">${v} %</span>`;
+  // La part acquise : du gris du système au vert (--green, rgb 63 122 82) en quatre teintes de ce même vert.
+  const heat = v => v == null ? '<span class="muted">—</span>' : `<span class="sop-heat" style="background:${v < 20 ? 'var(--chip)' : v < 40 ? 'rgba(63, 122, 82, 0.12)' : v < 60 ? 'rgba(63, 122, 82, 0.3)' : v < 80 ? 'rgba(63, 122, 82, 0.6)' : 'var(--green)'};color:${v < 20 ? 'var(--muted)' : v < 60 ? 'var(--green)' : '#fff'}">${v} %</span>`;
   const tabletteLien = (poste) => `sop/tablette.html?${new URLSearchParams(Object.assign(D.shop ? { shop: D.shop } : {}, poste ? { poste } : {})).toString()}`;
   const choixMagasin = () => `<select class="fm-select" data-sch="shop" style="max-width:240px"><option value="">Choisir un magasin…</option>${(D.magasins || []).map(m => `<option value="${esc(m.id)}" ${m.id === D.shop ? 'selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`;
   function filtrer(l) {
@@ -86,7 +88,7 @@ window.FormationSop = (function () {
     h += `<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher une SOP, une compétence…" data-input="sopq" value="${esc(C.S.f.sopq || '')}">
       ${f('poste', '', 'Tous les postes', !D.f.poste)}${POSTES.map(p => f('poste', p, POSTE_NOM[p], D.f.poste === p)).join('')}
       ${f('relire', !D.f.relire, 'Traduction à relire', D.f.relire)}${f('valider', !D.f.valider, 'À valider', D.f.valider)}${f('sansComp', !D.f.sansComp, 'Sans compétence', D.f.sansComp)}
-      <a class="filter" href="${tabletteLien('')}" target="_blank" rel="noopener">Tablette du poste ↗</a></div></div>`;
+      <a class="btn btn--sm" href="${tabletteLien('')}" target="_blank" rel="noopener">Tablette du poste ↗</a></div></div>`;
     h += `<p class="muted fm-small"><span class="sop-lg is-on">FR</span> <span class="sop-lg is-on">NL</span> langue d’origine ou relue · <span class="sop-lg is-ar">NL ·</span> traduite à la reprise, à relire</p>`;
     D.dossiers.forEach(d => {
       const g = l.filter(s => s.dossier === d.id);
@@ -102,7 +104,7 @@ window.FormationSop = (function () {
       <span class="sop-tags"><span class="chip chip--soft">${esc(s.type)}</span>${trad(s)}<span class="sop-lg">v${esc(s.version)}</span>${s.statut === 'a_valider' ? '<span class="chip chip--warn">À valider</span>' : ''}${s.statut === 'brouillon' ? '<span class="chip chip--mute">Brouillon</span>' : ''}${(phasesDe(s) || [s.partie]).map(p => `<span class="chip chip--mute">${esc(NOM_PARTIE[p] || '')}</span>`).join('')}${s.classement && s.classement.souscat ? `<span class="chip chip--mute" title="sous-catégorie du référentiel v25">${esc(s.classement.souscat)}</span>` : '<span class="chip chip--warn">à classer</span>'}</span>
       <strong>${esc(s.titre.fr)}</strong><span class="sop-ob">${esc(L(s.objectif))}</span><span>${comp(s)}</span>
       <span class="muted fm-small">${p.vu} vu(s) faire · ${p.quiz} quiz · ${p.lu} lu(s)${p.aRevoir ? ` · ${p.aRevoir} à revoir` : ''}</span>
-      <span class="sop-pied"><span><b>${s.nbEtapes}</b> étapes</span>${s.nbPhotos ? `<span>📷 ${s.nbPhotos}</span>` : ''}<span>${esc(POSTE_NOM[s.poste] || s.poste)}</span><span class="sop-code">${esc(s.code || '')}</span></span></a></li>`;
+      <span class="sop-pied"><span><b>${s.nbEtapes}</b> étapes</span>${s.nbPhotos ? `<span>${s.nbPhotos} photo${s.nbPhotos > 1 ? 's' : ''}</span>` : ''}<span>${esc(POSTE_NOM[s.poste] || s.poste)}</span><span class="sop-code">${esc(s.code || '')}</span></span></a></li>`;
   }
 
   /* ═══ Une SOP ═══ */
@@ -124,16 +126,16 @@ window.FormationSop = (function () {
       });
     });
     const vb = (v, lib) => `<button type="button" data-sa="vue" data-v="${v}"${D.vue === v ? ' class="is-on"' : ''}>${lib}</button>`;
-    const outils = `<div class="filters"><div class="filters__row"><div class="fm-seg" role="group">${vb('fr', 'FR')}${vb('nl', 'NL')}${vb('deux', 'FR et NL côte à côte')}</div>
-      <a class="filter" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'fr')}" target="_blank">PDF FR</a><a class="filter" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'nl')}" target="_blank">PDF NL</a>
-      <a class="filter" href="${tabletteLien(s.poste)}" target="_blank" rel="noopener">Tablette du poste ↗</a>
-      ${tablette() ? '' : `<a class="filter is-on" href="#/sop/${esc(s.id)}/editer" style="margin-left:auto">Modifier</a>`}</div></div>`;
-    const partie = phasesDe(s) ? `<p><span class="muted">Parties du manuel</span> ${phasesDe(s).map(p => `<a class="chip chip--accent" href="#/manuel/partie/${esc(p)}">${esc(NOM_PARTIE[p] || p)}</a>`).join(' ')} <span class="muted fm-small">les phases du classement</span></p>` : `<p><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/${esc(s.partie)}">${esc(NOM_PARTIE[s.partie])}</a>${s.partieReglee || tablette() ? '' : ' <span class="muted fm-small">déduite du moment</span>'}</p>
-      ${tablette() ? '' : `<div class="fm-seg fm-seg--petit" role="group">${PARTIES.map(p => `<button type="button" data-sa="partie" data-id="${esc(s.id)}" data-v="${p[0]}"${p[0] === s.partie ? ' class="is-on"' : ''}>${esc(p[1])}</button>`).join('')}</div>${s.partieReglee ? ` <button type="button" class="filter fm-small" data-sa="partie" data-id="${esc(s.id)}" data-v="">↺ Partie déduite</button>` : ''}`}`;
+    const outils = `<div class="filters"><div class="filters__row"><div class="seg" role="group">${vb('fr', 'FR')}${vb('nl', 'NL')}${vb('deux', 'FR et NL côte à côte')}</div>
+      <a class="btn btn--sm" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'fr')}" target="_blank">PDF FR</a><a class="btn btn--sm" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'nl')}" target="_blank">PDF NL</a>
+      <a class="btn btn--sm" href="${tabletteLien(s.poste)}" target="_blank" rel="noopener">Tablette du poste ↗</a>
+      ${tablette() ? '' : `<a class="btn btn--primary" href="#/sop/${esc(s.id)}/editer" style="margin-left:auto">Modifier</a>`}</div></div>`;
+    const partie = phasesDe(s) ? `<p><span class="muted">Parties du manuel</span> ${phasesDe(s).map(p => `<a class="chip chip--accent" href="#/rfphase/${esc(p)}">${esc(NOM_PARTIE[p] || p)}</a>`).join(' ')} <span class="muted fm-small">les phases du classement</span></p>` : `<p><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/rfphase/${esc(s.partie)}">${esc(NOM_PARTIE[s.partie])}</a>${s.partieReglee || tablette() ? '' : ' <span class="muted fm-small">déduite du moment</span>'}</p>
+      ${tablette() ? '' : `<div class="seg fm-seg--petit" role="group">${PARTIES.map(p => `<button type="button" data-sa="partie" data-id="${esc(s.id)}" data-v="${p[0]}"${p[0] === s.partie ? ' class="is-on"' : ''}>${esc(p[1])}</button>`).join('')}</div>${s.partieReglee ? ` <button type="button" class="btn btn--sm" data-sa="partie" data-id="${esc(s.id)}" data-v="">↺ Partie déduite</button>` : ''}`}`;
     const infos = `<section class="card"><h2>La SOP</h2><dl class="sop-dl">
       <dt>Code</dt><dd>${esc(s.code || '—')} · ${esc(s.dossier)} ${esc(famNom(s.dossier))}</dd><dt>Poste</dt><dd>${esc(POSTE_NOM[s.poste] || s.poste)}${s.moment ? ' · ' + esc(s.moment) : ''}</dd>
       <dt>Langues</dt><dd>${trad(s)} origine : ${esc(s.langueOrigine)}</dd><dt>Version</dt><dd>v${esc(s.version)} · ${esc(dt(s.majLe))}${s.majPar ? ' · ' + esc(s.majPar) : ''}</dd>
-      <dt>Étapes</dt><dd>${s.nbEtapes}${s.nbPhotos ? ' · 📷 ' + s.nbPhotos : ''}${c.duree ? ' · ' + esc(c.duree) : ''}</dd><dt>Compétence</dt><dd>${comp(s)}</dd>
+      <dt>Étapes</dt><dd>${s.nbEtapes}${s.nbPhotos ? ' · ' + s.nbPhotos + ' photo' + (s.nbPhotos > 1 ? 's' : '') : ''}${c.duree ? ' · ' + esc(c.duree) : ''}</dd><dt>Compétence</dt><dd>${comp(s)}</dd>
       ${s.statut === 'a_valider' ? '<dt>Statut</dt><dd><span class="chip chip--warn">À valider</span> lisible, sans quiz ni validation</dd>' : ''}</dl><div style="margin-top:12px">${partie}</div></section>`;
     const eq = s.equipe ? `<section class="card"><h2>${esc(s.magasin.nom)} face à cette SOP</h2><p class="muted fm-small">${s.equipe.filter(p => p.statut === 'vu').length} / ${s.equipe.length} vus faire par la responsable</p>
       ${s.equipe.map(p => `<div class="sop-ligne"><div class="sop-ligne__x"><b>${esc(p.nom)}</b><small>${p.valideur ? 'responsable · ' : ''}lit en ${esc(p.langue.toUpperCase())}${p.vuPar ? ' · vu faire par ' + esc(p.vuPar) + ' le ' + esc(dt(p.vuLe)) : ''}</small></div><span class="chip ${ST_CHIP[p.statut]}">${esc(ST_NOM[p.statut])}</span></div>`).join('') || '<p class="muted">Personne de ce poste dans ce magasin.</p>'}
@@ -143,11 +145,11 @@ window.FormationSop = (function () {
     const quiz = (c.quiz || []).length ? `<section class="card"><h2>Le quiz</h2><p class="muted fm-small">${c.quiz.length} questions · la bonne réponse en couleur</p>${c.quiz.map((q, i) => `<div class="sop-q"><b>${i + 1}. ${esc(L(q.question, l1))}</b>${deux && q.question.nl ? `<span class="muted fm-small">${esc(q.question.nl)}</span>` : ''}
       <ul class="chips">${(q.choix[l1] && q.choix[l1].some(x => x) ? q.choix[l1] : q.choix.fr).map((x, j) => `<li class="chip ${j === q.bonne ? 'chip--accent' : 'chip--soft'}">${esc(x)}</li>`).join('')}</ul></div>`).join('')}</section>` : '';
     const versions = `<section class="card"><h2>Versions</h2>${s.versions.map(v => `<div class="sop-ligne"><span class="sop-lg${v.version === s.version ? ' is-on' : ''}">v${esc(v.version)}</span><div class="sop-ligne__x">${esc(v.note || '—')}<small>${esc(dth(v.publieLe))}${v.publiePar ? ' · ' + esc(v.publiePar) : ''}${v.revalider ? ' · à revalider' : ''}</small></div>
-      ${v.version !== s.version ? `<button type="button" class="filter fm-small" data-sa="archive" data-id="${esc(s.id)}" data-v="${esc(v.version)}">Voir</button>` : ''}</div>`).join('')}</section>`;
+      ${v.version !== s.version ? `<button type="button" class="btn btn--sm" data-sa="archive" data-id="${esc(s.id)}" data-v="${esc(v.version)}">Voir</button>` : ''}</div>`).join('')}</section>`;
     const rel = ((c.corrections || []).length || (c.remarques || []).length) && !tablette() ? `<section class="card"><h2>Relevé à la reprise</h2>
       ${(c.corrections || []).map(x => `<div class="sop-ligne"><span class="chip chip--ok">corrigé</span><div class="sop-ligne__x fm-small">${esc(x)}</div></div>`).join('')}
       ${(c.remarques || []).map(x => `<div class="sop-ligne"><span class="chip chip--warn">à confirmer</span><div class="sop-ligne__x fm-small">${esc(x)}</div></div>`).join('')}</section>` : '';
-    const arch = D.archive && D.archive.id === id ? C.bandeau(`Version archivée v${esc(D.archive.version)} (${esc(dth(D.archive.publieLe))}) — <button type="button" class="filter fm-small" data-sa="archive" data-id="${esc(id)}" data-v="">Revenir à la version en vigueur</button>`, 'warn') : '';
+    const arch = D.archive && D.archive.id === id ? C.bandeau(`Version archivée v${esc(D.archive.version)} (${esc(dth(D.archive.publieLe))}) — <button type="button" class="btn btn--sm" data-sa="archive" data-id="${esc(id)}" data-v="">Revenir à la version en vigueur</button>`, 'warn') : '';
     const corps = fil + `<p class="muted">${trad(s)} <span class="sop-lg is-on">v${esc(D.archive && D.archive.id === id ? D.archive.version : s.version)}</span> ${esc(L(s.objectif))}</p>` + arch + outils +
       `<div class="sop-deux"><section class="card">${etapes || '<p class="muted">Aucune étape.</p>'}</section><div>${infos}${carteClassement(s)}${eq}${crit}${quiz}${versions}${rel}</div></div>`;
     return { titre: s.titre.fr, kicker: K + ' · ' + (s.code || ''), corps, large: true };
@@ -159,7 +161,7 @@ window.FormationSop = (function () {
     if (!X) { return { titre: 'Compétences et SOP', kicker: K, corps: attente('Lecture des compétences…') }; }
     const comps = X.competences;
     let h = X.panel.indispo ? C.bandeau('Compétences du panel : ' + esc(X.panel.motif || 'indisponibles') + (X.panel.liste.length ? ' — ' + X.panel.liste.length + ' gardées de la dernière lecture.' : '') + ' Les SOP se rattachent dans Rédaction et versions.', 'warn')
-      : `<p class="muted fm-small">${X.panel.liste.length} compétences lues au panel (${esc(X.panel.source)}) · <button type="button" class="filter fm-small" data-sa="relirePanel">Relire le panel</button></p>`;
+      : `<p class="muted fm-small">${X.panel.liste.length} compétences lues au panel (${esc(X.panel.source)}) · <button type="button" class="btn btn--sm" data-sa="relirePanel">Relire le panel</button></p>`;
     if (X.sansCompetence.length) { h += C.bandeau(`${X.sansCompetence.length} SOP sans compétence du panel — <a href="#/sopred">les rattacher</a>.`, 'warn'); }
     h += `<p class="muted">Une compétence est acquise quand la responsable du magasin a vu faire chacune de ses SOP ; elle est alors cochée au panel pour la personne.</p>`;
     const tete = `<tr><th></th>${comps.map(c => `<th>${esc(c.nom)}<br><span class="muted fm-small">${c.sops.length} SOP</span></th>`).join('')}<th>Acquises</th></tr>`;
@@ -193,7 +195,7 @@ window.FormationSop = (function () {
     let h = '';
     if (D.comp && D.comp.panel.indispo) { h += C.bandeau('Compétences du panel : ' + esc(D.comp.panel.motif || '') + '. « Autre… » permet d’écrire le nom exact d’une compétence du panel en attendant.', 'warn'); }
     const N = D.nouv;
-    h += `<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher…" data-input="sopq" value="${esc(C.S.f.sopq || '')}"><button type="button" class="filter is-on" data-sa="nouv" style="margin-left:auto">Nouvelle SOP</button></div></div>`;
+    h += `<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher…" data-input="sopq" value="${esc(C.S.f.sopq || '')}"><button type="button" class="btn${N ? '' : ' btn--primary'}" data-sa="nouv" style="margin-left:auto">Nouvelle SOP</button></div></div>`;
     if (N) {
       h += `<section class="card"><h2>Nouvelle SOP</h2><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
         <input class="sop-in" placeholder="Code (ex. SOP-CUI-XYZ-01)" data-sin="nouv.code" value="${esc(N.code)}">
@@ -201,7 +203,7 @@ window.FormationSop = (function () {
         <select class="fm-select" data-sch="nouv.type">${['SOP', 'Checklist', 'Mémo', 'Fiche'].map(x => `<option ${N.type === x ? 'selected' : ''}>${x}</option>`).join('')}</select>
         <select class="fm-select" data-sch="nouv.poste">${POSTES.map(x => `<option value="${x}" ${N.poste === x ? 'selected' : ''}>${POSTE_NOM[x]}</option>`).join('')}</select>
         <input class="sop-in" style="grid-column:span 2" placeholder="Titre FR" data-sin="nouv.fr" value="${esc(N.fr)}"><input class="sop-in" style="grid-column:span 2" placeholder="Titel NL" data-sin="nouv.nl" value="${esc(N.nl)}"></div>
-        <p style="margin-top:10px"><button type="button" class="filter is-on" data-sa="creer">Créer (à valider)</button> <button type="button" class="filter" data-sa="annulerNouv">Annuler</button></p></section>`;
+        <p style="margin-top:10px"><button type="button" class="btn btn--primary" data-sa="creer">Créer (à valider)</button> <button type="button" class="btn btn--ghost" data-sa="annulerNouv">Annuler</button></p></section>`;
     }
     h += `<section class="card table-card"><div class="table-scroll"><table><thead><tr><th>Famille</th><th>SOP</th><th>FR</th><th>NL</th><th>Version</th><th class="num">Étapes</th><th title="la compétence du panel rattachée à la SOP : gardée en repli quand aucun code C-… n’est relié au panel">Compétence du panel (repli)</th><th>Partie</th><th>Statut</th><th></th></tr></thead><tbody>
       ${filtrer(D.liste).map(s => `<tr><td class="fm-small">${esc(s.dossier)} · ${esc(famNom(s.dossier))}</td><td><a href="#/sop/${esc(s.id)}"><b>${esc(s.titre.fr)}</b></a><br><span class="muted fm-small">${esc(s.code || '')} · ${esc(s.titre.nl)}</span></td>
@@ -209,7 +211,7 @@ window.FormationSop = (function () {
         <td><select class="fm-select" style="max-width:240px" data-sch="comp" data-id="${esc(s.id)}">${opts(s)}</select></td>
         <td class="fm-small">${esc(NOM_PARTIE[s.partie])}${s.partieReglee ? '' : '<br><span class="muted">déduite</span>'}</td>
         <td><select class="fm-select" style="width:auto" data-sch="statut" data-id="${esc(s.id)}"><option value="publiee" ${s.statut === 'publiee' ? 'selected' : ''}>publiée</option><option value="a_valider" ${s.statut === 'a_valider' ? 'selected' : ''}>à valider</option><option value="brouillon" ${s.statut === 'brouillon' ? 'selected' : ''}>brouillon</option></select></td>
-        <td><a class="filter fm-small" href="#/sop/${esc(s.id)}/editer">Modifier</a></td></tr>`).join('')}</tbody></table></div></section>
+        <td><a class="btn btn--sm" href="#/sop/${esc(s.id)}/editer">Modifier</a></td></tr>`).join('')}</tbody></table></div></section>
       <p class="muted fm-small">Reprise du Drive du 05/11/2026 (44 fichiers → 25 SOP) : corrections et points à confirmer dans <code>data/formation/REPRISE.md</code> et sur chaque fiche (« Relevé à la reprise »).</p>`;
     return { titre: 'Rédaction et versions', kicker: K, corps: h, large: true };
   }
@@ -225,50 +227,34 @@ window.FormationSop = (function () {
     const s = D.edMeta, c = D.ed;
     const bi = (p, lib, area) => `<div style="display:grid;grid-template-columns:120px 1fr 1fr;gap:8px;align-items:start;margin-bottom:8px"><span class="muted" style="padding-top:6px">${lib}</span>${champ(p + '.fr', 'FR', area)}${champ(p + '.nl', 'NL', area)}</div>`;
     const secs = c.sections.map((sec, si) => `<div class="sop-ed-sec"><div class="sop-ed-sec__h">${champ('sections.' + si + '.titre.fr', 'Titre de la section (FR)')}${champ('sections.' + si + '.titre.nl', 'Titel van de sectie (NL)')}
-      <span><button type="button" class="filter fm-small" data-sa="secMove" data-i="${si}" data-d="-1">↑</button><button type="button" class="filter fm-small" data-sa="secMove" data-i="${si}" data-d="1">↓</button><button type="button" class="filter fm-small" data-sa="secSuppr" data-i="${si}">✕</button></span></div>
+      <span><button type="button" class="btn btn--icon" data-sa="secMove" data-i="${si}" data-d="-1" aria-label="Monter la section">↑</button><button type="button" class="btn btn--icon" data-sa="secMove" data-i="${si}" data-d="1" aria-label="Descendre la section">↓</button><button type="button" class="btn btn--icon btn--danger" data-sa="secSuppr" data-i="${si}" aria-label="Retirer la section">✕</button></span></div>
       ${sec.etapes.map((e, ei) => { const p = 'sections.' + si + '.etapes.' + ei; if (!e.titre) { e.titre = { fr: '', nl: '' }; }
         return `<div class="sop-ed-et"><div class="sop-ed-et__c"><input class="sop-in" data-sin="ed.${p}.numero" value="${esc(e.numero)}" style="text-align:center"><label class="fm-small"><input type="checkbox" data-sch="ed.${p}.critique" ${e.critique ? 'checked' : ''}> critique</label></div>
           <div class="sop-ed-et__c">${champ(p + '.titre.fr', 'Titre (FR, facultatif)')}${champ(p + '.texte.fr', 'Texte (FR)', true)}</div>
           <div class="sop-ed-et__c">${champ(p + '.titre.nl', 'Titel (NL, facultatief)')}${champ(p + '.texte.nl', 'Tekst (NL)', true)}</div>
           <div class="sop-ed-et__c"><input class="sop-in" data-sin="ed.${p}.photo" placeholder="photo (fichier)" value="${esc(e.photo || '')}">${e.photo ? `<img src="sop/photos/${esc(e.photo)}" style="width:100%;border-radius:6px" alt="">` : ''}
-            <span><button type="button" class="filter fm-small" data-sa="etMove" data-i="${si}.${ei}" data-d="-1">↑</button><button type="button" class="filter fm-small" data-sa="etMove" data-i="${si}.${ei}" data-d="1">↓</button><button type="button" class="filter fm-small" data-sa="etSuppr" data-i="${si}.${ei}">✕</button></span></div></div>`; }).join('')}
-      <button type="button" class="filter fm-small" data-sa="etAjout" data-i="${si}">+ étape</button></div>`).join('');
-    const crit = c.points_critiques.map((x, i) => `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">${champ('points_critiques.' + i + '.fr', 'FR')}${champ('points_critiques.' + i + '.nl', 'NL')}<button type="button" class="filter fm-small" data-sa="critSuppr" data-i="${i}">✕</button></div>`).join('');
-    const quiz = c.quiz.map((q, i) => `<div class="sop-q"><div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px">${champ('quiz.' + i + '.question.fr', 'Question (FR)')}${champ('quiz.' + i + '.question.nl', 'Vraag (NL)')}<button type="button" class="filter fm-small" data-sa="quizSuppr" data-i="${i}">✕</button></div>
+            <span><button type="button" class="btn btn--icon" data-sa="etMove" data-i="${si}.${ei}" data-d="-1" aria-label="Monter l’étape">↑</button><button type="button" class="btn btn--icon" data-sa="etMove" data-i="${si}.${ei}" data-d="1" aria-label="Descendre l’étape">↓</button><button type="button" class="btn btn--icon btn--danger" data-sa="etSuppr" data-i="${si}.${ei}" aria-label="Retirer l’étape">✕</button></span></div></div>`; }).join('')}
+      <button type="button" class="btn btn--sm" data-sa="etAjout" data-i="${si}">+ étape</button></div>`).join('');
+    const crit = c.points_critiques.map((x, i) => `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">${champ('points_critiques.' + i + '.fr', 'FR')}${champ('points_critiques.' + i + '.nl', 'NL')}<button type="button" class="btn btn--icon btn--danger" data-sa="critSuppr" data-i="${i}" aria-label="Retirer le point critique">✕</button></div>`).join('');
+    const quiz = c.quiz.map((q, i) => `<div class="sop-q"><div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px">${champ('quiz.' + i + '.question.fr', 'Question (FR)')}${champ('quiz.' + i + '.question.nl', 'Vraag (NL)')}<button type="button" class="btn btn--icon btn--danger" data-sa="quizSuppr" data-i="${i}" aria-label="Retirer la question">✕</button></div>
       ${q.choix.fr.map((x, j) => `<div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;margin-top:6px;align-items:center"><label class="fm-small"><input type="radio" name="sopbonne${i}" data-sch="bonne" data-i="${i}" value="${j}" ${q.bonne === j ? 'checked' : ''}> bonne</label>${champ('quiz.' + i + '.choix.fr.' + j, 'Choix ' + (j + 1) + ' (FR)')}${champ('quiz.' + i + '.choix.nl.' + j, 'Keuze ' + (j + 1) + ' (NL)')}</div>`).join('')}</div>`).join('');
     const pv = (() => { const p = s.version.split('.'); if (p.length === 1) { return p[0] + '.1'; } p[p.length - 1] = String(+p[p.length - 1] + 1); return p.join('.'); })();
     const trSel = l => `<select class="fm-select" style="width:auto" data-sch="edtrad" data-l="${l}">${['origine', 'relue', 'a_relire'].map(t => `<option value="${t}" ${D.edMeta.tradApres[l] === t ? 'selected' : ''}>${l.toUpperCase()} ${TRAD_NOM[t]}</option>`).join('')}</select>`;
     const corps = fil + `<p class="muted">${esc(s.code || '')} · v${esc(s.version)} en vigueur · chaque texte en FR et en NL (en orange : vide)</p>
       <section class="card"><h2>En-tête</h2>${bi('titre', 'Titre')}${bi('objectif', 'Objectif', true)}${bi('pour', 'Pour')}<div style="display:grid;grid-template-columns:120px 1fr;gap:8px"><span class="muted" style="padding-top:6px">Durée</span><input class="sop-in" data-sin="ed.duree" value="${esc(c.duree || '')}"></div></section>
-      <section class="card"><h2>Les étapes · ${c.sections.reduce((a, x) => a + x.etapes.length, 0)}</h2>${secs}<button type="button" class="filter" data-sa="secAjout">+ section</button></section>
-      <section class="card"><h2>Points critiques</h2>${crit}<button type="button" class="filter fm-small" data-sa="critAjout">+ point critique</button></section>
-      <section class="card"><h2>Quiz</h2><p class="muted fm-small">3 questions conseillées · une bonne réponse par question</p>${quiz}<button type="button" class="filter fm-small" data-sa="quizAjout">+ question</button></section>
+      <section class="card"><h2>Les étapes · ${c.sections.reduce((a, x) => a + x.etapes.length, 0)}</h2>${secs}<button type="button" class="btn" data-sa="secAjout">+ section</button></section>
+      <section class="card"><h2>Points critiques</h2>${crit}<button type="button" class="btn btn--sm" data-sa="critAjout">+ point critique</button></section>
+      <section class="card"><h2>Quiz</h2><p class="muted fm-small">3 questions conseillées · une bonne réponse par question</p>${quiz}<button type="button" class="btn btn--sm" data-sa="quizAjout">+ question</button></section>
       ${D.edErr ? `<p class="error">${esc(D.edErr)}</p>` : ''}
       <div class="sop-ed-barre"><input class="sop-in" style="max-width:340px" placeholder="Ce qui change (note de version)" data-sin="edMeta.note" value="${esc(D.edMeta.note || '')}">
         <label class="fm-small"><input type="radio" name="sopreval" data-sch="reval" value="0" ${!D.edMeta.revalider ? 'checked' : ''}> Précision : ceux qui l’ont validée restent validés</label>
         <label class="fm-small"><input type="radio" name="sopreval" data-sch="reval" value="1" ${D.edMeta.revalider ? 'checked' : ''}> Le geste change : ils repassent « à revoir »</label>
-        ${trSel('fr')}${trSel('nl')}<span style="flex:1"></span><a class="filter" href="#/sop/${esc(s.id)}">Annuler</a><button type="button" class="filter is-on" data-sa="publier" ${D.occupe ? 'disabled' : ''}>Publier la v${esc(pv)}</button></div>`;
+        ${trSel('fr')}${trSel('nl')}<span style="flex:1"></span><a class="btn btn--ghost" href="#/sop/${esc(s.id)}">Annuler</a><button type="button" class="btn btn--primary" data-sa="publier" ${D.occupe ? 'disabled' : ''}>Publier la v${esc(pv)}</button></div>`;
     return { titre: 'Modifier · ' + s.titre.fr, kicker: K, corps, large: true };
   }
 
-  /* ═══ Le Manuel opératoire : les SOP de chaque partie ═══ */
-  /** Les SOP d'une partie du manuel : ses phases du Manuel du réseau quand elles sont posées, sinon la partie réglée ou déduite. */
+  /** Les phases d'un standard (son classement dans le Manuel du réseau), ou null quand il n'en porte pas encore. */
   const phasesDe = s => s.classement && s.classement.phases && s.classement.phases.length ? s.classement.phases : null;
-  function dePartie(cle) { return D.liste ? D.liste.filter(s => s.statut !== 'brouillon' && (phasesDe(s) ? phasesDe(s).includes(cle) : s.partie === cle)) : null; }
-  function sectionPartie(cle) {
-    const l = dePartie(cle);
-    let h = `<div class="section-label">Standards (SOP) · ${l ? C.n(l.length) : '…'}</div>`;
-    if (!l) { return h + erreurOuAttente(); }
-    if (!l.length) { return h + `<p class="muted" style="margin-top:8px">Aucune SOP dans cette partie.</p>`; }
-    h += `<p class="muted fm-small"><a href="${tabletteLien('')}" target="_blank" rel="noopener">Lire pas à pas sur la tablette du poste ↗</a> · nom, PIN, quiz, « vu faire » par la responsable</p>`;
-    let fam = null, ouvert = false;
-    l.forEach(s => {
-      if (s.dossier !== fam) { if (ouvert) { h += '</ul>'; } fam = s.dossier; ouvert = true; h += `<div class="fm-part-cat">${esc(famNom(s.dossier))}</div><ul class="type-grid">`; }
-      h += `<li><a class="choice-card" href="#/sop/${esc(s.id)}"><strong><span class="fm-code">${esc(s.code || '')}</span> ${esc(s.titre.fr)}</strong><span class="muted">${esc(s.titre.nl)} · ${s.nbEtapes} étapes${s.statut === 'a_valider' ? ' · à valider' : ''}</span></a></li>`;
-    });
-    return h + (ouvert ? '</ul>' : '');
-  }
-  function nbPartie(cle) { const l = dePartie(cle); return l ? l.length : null; }
 
   /* ═══ Manuel du réseau : le référentiel commun (src/referentiel.php, fusion du 06/11/2026) ═══
    *
@@ -311,6 +297,8 @@ window.FormationSop = (function () {
   const rfStatut = s => ST_STD[s.statut] ? (s.statut === 'brouillon' ? `<span class="chip chip--neutral">${ST_STD[s.statut]}</span>` : trou(ST_STD[s.statut])) : '';
   const kpi = (v, l, note) => `<div class="kpi"><div class="kpi__value">${esc(v)}</div><div class="kpi__label">${esc(l)}</div>${note ? `<div class="kpi__note">${esc(note)}</div>` : ''}</div>`;
   const lienStd = s => `<a class="rf-std" href="#/sop/${esc(s.id)}">${s.code ? rcode(s.code) + ' ' : ''}<span>${esc(s.fr)}</span></a>`;
+  /** Une formation FO-xx : sa fiche à lire (programme, matériel didactique, validation — reste du Manuel en ligne, lot 6). */
+  const lienFo = (code, nom, phase) => /^FO-\d+$/.test(code) ? `<a class="rf-std" href="#/manuel/formation/${esc(code)}${phase ? '/partie/' + esc(phase) : ''}">${rcode(code)} <span>${esc(nom || '')}</span></a>` : `${rcode(code)} <span>${esc(nom || '')}</span>`;
   function refAttente(titre) {
     return { titre, kicker: K, corps: D.refErr ? `<p class="error">${esc(D.refErr)}</p>` : attente('Lecture du référentiel…'), large: true };
   }
@@ -331,12 +319,23 @@ window.FormationSop = (function () {
     const dom = X.dom[a0] ? a0 : (X.dom[D.domSel] ? D.domSel : 'D5');
     D.domSel = dom;
     const scVides = Object.keys(X.parSc).filter(k => !X.parSc[k].length).length;
+    // Le Manuel opératoire en PDF : les SOP publiées et à valider (GET /formation/sop/manuel.pdf), FR ou NL.
+    const manuelPdf = l => `<a class="btn" href="${pdf('/formation/sop/manuel.pdf', l)}" target="_blank" rel="noopener" title="Le Manuel opératoire : les SOP publiées et à valider, en PDF">Manuel PDF ${l.toUpperCase()}</a>`;
     let h = `<div class="toolbar rf-barre"><p class="muted">Les 8 domaines du référentiel v25. Dans chaque sous-catégorie, la même chaîne : standard → formation → compétence → contrôle.</p>
-      <span class="rf-sp"></span><button type="button" class="btn" data-sa="rfImporter" ${D.occupe ? 'disabled' : ''} title="Les procédures du Manuel opératoire du CRM deviennent des standards en brouillon (sauf AC-01, AC-02, AC-03)">Reprendre le Manuel du CRM</button></div>`;
+      <span class="rf-sp"></span><span class="rf-barre__act">${manuelPdf('fr')}${manuelPdf('nl')}${tablette() ? '' : `<button type="button" class="btn" data-sa="rfImporter" ${D.occupe ? 'disabled' : ''} title="Les procédures du Manuel opératoire du CRM deviennent des standards en brouillon (sauf AC-01, AC-02, AC-03)">Reprendre le Manuel du CRM</button>
+      <button type="button" class="btn" data-sa="rfImporterPanel" ${D.occupe ? 'disabled' : ''} title="Les procédures opérationnelles du panel TF Buddy (l’ancien Manuel en ligne) deviennent des standards en brouillon ; celles déjà là ne sont pas reprises">Reprendre les procédures du panel</button>`}</span></div>`;
     if (D.imp) {
       const I = D.imp;
       h += C.bandeau(!I.disponible ? esc(I.message) : `Reprise du Manuel du CRM : ${I.reprises.length} procédure(s) reprise(s) en brouillon, ${I.dejaLa.length} déjà là, ${I.ignorees.length} ignorée(s)`
         + (I.photosNonReprises ? `, ${I.photosNonReprises} photo(s) restée(s) dans le CRM` : '') + '.' + (I.ignorees.length ? ' Ignorées : ' + I.ignorees.map(x => esc(x.code + ' (' + x.raison + ')')).join(' · ') : ''), I.disponible ? '' : 'warn');
+    }
+    if (D.impPanel) {
+      const P = D.impPanel, liste = l => l.map(x => esc(x.code + ' ' + x.titre + (x.raison ? ' (' + x.raison + ')' : x.categorie ? ' (' + x.categorie + ')' : ''))).join(' · ');
+      h += C.bandeau(!P.disponible ? esc(P.message) : `Reprise des procédures du panel : ${P.reprises.length} procédure(s) reprise(s) en brouillon, ${P.dejaLa.length} déjà dans le référentiel`
+        + (P.erreurs.length ? `, ${P.erreurs.length} illisible(s) au panel` : '') + (P.ignorees.length ? `, ${P.ignorees.length} ignorée(s)` : '') + '.'
+        + (P.aClasser.length ? ' Sans sous-catégorie reconnue, à classer depuis leur fiche : ' + liste(P.aClasser) + '.' : '')
+        + (P.erreurs.length ? ' Illisibles : ' + liste(P.erreurs) + '.' : '') + (P.dejaLa.length ? ' Déjà là : ' + liste(P.dejaLa) + '.' : ''),
+        !P.disponible || P.aClasser.length || P.erreurs.length ? 'warn' : '');
     }
     h += `<section class="card rf-kpis"><div class="kpi-row">
       ${kpi(`${R.standards.length - R.manques.standardsSansSouscat.length} / ${R.standards.length}`, 'standards classés', R.manques.standardsSansSouscat.length ? R.manques.standardsSansSouscat.length + ' à classer' : 'tous rangés')}
@@ -411,13 +410,13 @@ window.FormationSop = (function () {
     const horsSc = stds.filter(s => !X.sc[s.souscat]);
     if (horsSc.length) { app += `<div class="section-label">Sans sous-catégorie · ${horsSc.length}</div>` + horsSc.map(s => `<div class="rf-ligne">${lienStd(s)}</div>`).join(''); }
     const appr = fo.map(c => { const f = X.fo[c] || {}; const n = stds.filter(s => s.formations.includes(c)).length;
-      return `<div class="rf-ligne">${rcode(c)} <span>${esc(f.fr || '')}</span><span class="sub">${esc([f.controleur, f.frequence].filter(Boolean).join(' · '))}${n ? ' · citée par ' + n + ' standard(s)' : ' · rangée dans cette partie du manuel'}</span></div>`; }).join('');
+      return `<div class="rf-ligne">${lienFo(c, f.fr, ph)}<span class="sub">${esc([f.controleur, f.frequence].filter(Boolean).join(' · '))}${n ? ' · citée par ' + n + ' standard(s)' : ' · rangée dans cette phase'}</span></div>`; }).join('');
     const prouv = comp.map(c => { const k = X.comp[c] || {}; const p = k.panel || { etat: 'aucun' };
       return `<div class="rf-ligne">${rfComp(X, [c])} <span>${esc(k.fr || '')}</span><span class="sub">${p.etat === 'valide' || p.etat === 'certain' ? 'panel : ' + esc(p.nom) : 'panel : ' + ETAT_COR[p.etat].toLowerCase()}</span></div>`; }).join('');
     h += `<div class="rf-trois"><section class="card"><h2>À appliquer · ${stds.length} standards</h2>${app || '<p class="muted">Aucun standard dans cette phase.</p>'}</section>
       <section class="card"><h2>À apprendre · ${fo.length} formations</h2>${appr || '<p class="muted">Aucune formation.</p>'}</section>
       <section class="card"><h2>À prouver · ${comp.length} compétences</h2>${prouv || '<p class="muted">Aucune compétence reliée.</p>'}</section></div>
-      <p class="muted fm-small">Calculé, rien n’est saisi ici : les standards portent leurs phases (fiche › Classement) ; les formations sont celles de ces standards et celles que le Manuel opératoire range dans cette partie.</p>`;
+      <p class="muted fm-small">Calculé, rien n’est saisi ici : les standards portent leurs phases (fiche › Classement) ; les formations sont celles de ces standards et celles que la répartition des formations range dans cette phase (réglable sur la fiche de chaque formation, qui s’ouvre d’un clic : programme, matériel didactique, validation).</p>`;
     return { titre: 'Par phase', kicker: K, corps: h, large: true };
   }
 
@@ -446,7 +445,7 @@ window.FormationSop = (function () {
       const c = cellule(X, sp, sph), p = X.poste[sp];
       h += `<h2 class="screen-subtitle">${esc(p.code)} · ${esc(p.fr)} · ${esc(PHASE_NOM[sph])}</h2><div class="rf-trois">
         <section class="card"><h2>Standards · ${c.stds.length}</h2>${c.stds.map(s => `<div class="rf-ligne">${lienStd(s)} ${rfStatut(s)}<span class="sub">${esc(s.moment ? 'moment : ' + s.moment : 'sans moment')}</span></div>`).join('') || '<p class="muted">Aucun standard.</p>'}</section>
-        <section class="card"><h2>Formations · ${c.fo.length}</h2>${c.fo.map(k => `<div class="rf-ligne">${rcode(k)} <span>${esc((X.fo[k] || {}).fr || '')}</span><span class="sub">${c.foOblig.includes(k) ? 'obligatoire pour ce poste' : c.stds.some(s => s.formations.includes(k)) ? 'citée par un standard' : 'recommandée'}</span></div>`).join('') || '<p class="muted">Aucune formation.</p>'}</section>
+        <section class="card"><h2>Formations · ${c.fo.length}</h2>${c.fo.map(k => `<div class="rf-ligne">${lienFo(k, (X.fo[k] || {}).fr, sph)}<span class="sub">${c.foOblig.includes(k) ? 'obligatoire pour ce poste' : c.stds.some(s => s.formations.includes(k)) ? 'citée par un standard' : 'recommandée'}</span></div>`).join('') || '<p class="muted">Aucune formation.</p>'}</section>
         <section class="card"><h2>Compétences · ${c.comp.length}</h2>${c.comp.map(k => `<div class="rf-ligne">${rfComp(X, [k])} <span>${esc((X.comp[k] || {}).fr || '')}</span></div>`).join('') || '<p class="muted">Aucune compétence.</p>'}</section></div>`;
     }
     return { titre: 'Par poste', kicker: K, corps: h, large: true };
@@ -554,6 +553,11 @@ window.FormationSop = (function () {
       case 'rfImporter':
         D.occupe = true; C.rendre(true);
         try { D.imp = await C.appel('POST', '/formation/ref/importer-crm', {}); toast(D.imp.disponible ? D.imp.reprises.length + ' procédure(s) reprise(s)' : 'Manuel du CRM absent de cette base'); chargerRef(true); chargerListe(true); }
+        catch (x) { toast(x.message); }
+        D.occupe = false; C.rendre(true); return true;
+      case 'rfImporterPanel':
+        D.occupe = true; C.rendre(true);
+        try { D.impPanel = await C.appel('POST', '/formation/ref/importer-panel', {}, 300000); toast(D.impPanel.disponible ? D.impPanel.reprises.length + ' procédure(s) du panel reprise(s)' : 'Panel non configuré'); chargerRef(true); chargerListe(true); }
         catch (x) { toast(x.message); }
         D.occupe = false; C.rendre(true); return true;
       case 'scEd': { const s = rx().sc[d.v]; D.scEd = { cle: d.v, nl: s.nl || '', description: s.description || '', err: null }; C.rendre(true); return true; }
@@ -1036,7 +1040,7 @@ window.FormationSop = (function () {
 
   /** Les lectures de l'écran affiché (appelé par apres() de formation.js). */
   function apres(e, a) {
-    if (e === 'sop' || e === 'sopred' || e === 'manuel') { chargerListe(false); }
+    if (e === 'sop' || e === 'sopred') { chargerListe(false); }
     if (e === 'sop' || e === 'sopcomp') { chargerMagasins(); }
     if (e === 'sop' && a[0] && a[1] === 'editer') { chargerEditeur(a[0]); }
     else if (e === 'sop' && a[0] && D.fiche[a[0]] === undefined) { chargerFiche(a[0]); }
@@ -1166,9 +1170,7 @@ window.FormationSop = (function () {
     ecrans: ECRANS,
     /** formation.js fournit ses outils une fois, au démarrage. */
     init(ctx, root) { C = ctx; brancher(root); brancherGuides(root); },
-    apres,
-    sectionPartie,
-    nbPartie
+    apres
   };
 })();
 
@@ -1186,7 +1188,22 @@ window.FormationSop = (function () {
   'use strict';
   if (!FS) { return; }
   let C = null;
-  const T = { liste: null, erreur: null, charge: false, occupe: false, nom: '', shop: '' };
+  // code : le code de gestion (lot 6), gardé dans l'onglet seulement (sessionStorage) ; refus : ce que la garde du serveur
+  // a répondu (code attendu, refusé, essais, gestion fermée) ; saisie : ce qui est tapé dans le champ du code.
+  const T = { liste: null, erreur: null, refus: null, charge: false, occupe: false, nom: '', shop: '', code: '', saisie: '' };
+  const CLE_CODE = 'fm.tablettes.code';
+  try { T.code = sessionStorage.getItem(CLE_CODE) || ''; } catch (e) { /* stockage indisponible : le code se retape */ }
+  /** Le code de gestion, envoyé à chaque route de gestion (src/tablettes.php, tabGardeGestion). */
+  const entetes = () => (T.code ? { 'X-Code-Gestion': T.code } : null);
+  function garderCode(c) { T.code = c; try { if (c) { sessionStorage.setItem(CLE_CODE, c); } else { sessionStorage.removeItem(CLE_CODE); } } catch (e) { /* */ } }
+  /** Un refus de la garde du code : l'écran redemande le code (oublié s'il était faux) ; vrai quand c'en était un. */
+  function refusGestion(x) {
+    const c = x && x.data && x.data.code;
+    if (!['gestion_fermee', 'code_attendu', 'code_gestion', 'essais', 'suspendu'].includes(c)) { return false; }
+    garderCode('');   // à retaper (faux, trop d'essais, gestion fermée) : jamais de relecture en boucle avec un code refusé
+    T.liste = null; T.refus = { code: c, message: x.message };
+    return true;
+  }
   const esc = v => (C ? C.esc(v) : String(v == null ? '' : v));
   const jour = iso => iso ? new Date(iso).toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
   const heure = iso => iso ? new Date(iso).toLocaleString('fr-BE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
@@ -1208,17 +1225,26 @@ window.FormationSop = (function () {
     if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(texte).then(() => toast(ok), repli); } else { repli(); }
   }
 
+  /** La liste ; sans code, un premier appel sans code dit seulement si la gestion est ouverte (code attendu) ou fermée. */
   function charger(forcer) {
-    if ((T.liste && !forcer) || T.charge) { return; }
+    // Une lecture ratée ou refusée n'est pas relancée à chaque rendu : « Réessayer » ou le code tapé la relancent.
+    if ((T.liste && !forcer) || T.charge || (T.refus && !T.code && !forcer) || (T.erreur && !forcer)) { return; }
     T.charge = true;
-    C.lire('/formation/tablettes', 30000).then(d => { T.liste = d; T.erreur = null; T.charge = false; C.rendre(true); },
-      er => { T.erreur = er.message; T.charge = false; C.rendre(true); });
+    C.appel('GET', '/formation/tablettes', null, 30000, entetes()).then(d => { T.liste = d; T.erreur = null; T.refus = null; T.charge = false; C.rendre(true); },
+      er => { T.charge = false; if (!refusGestion(er)) { T.erreur = er.message; } C.rendre(true); });
   }
   async function ecrire(methode, chemin, corps, msg) {
     T.occupe = true; C.rendre(true);
-    try { const r = await C.appel(methode, chemin, corps || {}); T.liste = r; if (msg) { toast(typeof msg === 'function' ? msg(r) : msg); } }
-    catch (x) { toast(x.message); }
+    try { const r = await C.appel(methode, chemin, corps || {}, 120000, entetes()); T.liste = r; if (msg) { toast(typeof msg === 'function' ? msg(r) : msg); } }
+    catch (x) { if (!refusGestion(x)) { toast(x.message); } }
     T.occupe = false; C.rendre(true);
+  }
+  /** Le code tapé : gardé dans l'onglet, puis la liste relue avec lui. */
+  function ouvrirGestion() {
+    const v = T.saisie.trim();
+    if (!v) { return toast('Taper le code de gestion'); }
+    garderCode(v); T.saisie = ''; T.refus = null; T.liste = null; T.erreur = null;
+    charger(true); C.rendre(true);
   }
 
   /* ── L'écran ── */
@@ -1258,18 +1284,32 @@ window.FormationSop = (function () {
       <div class="tbg-mag__fin"><button type="button" class="btn btn--danger btn--sm" data-tb="archiver" data-id="${m.id}" ${T.occupe ? 'disabled' : ''}>Archiver</button></div>
     </section>`;
   }
+  /** Le champ du code de gestion : la garde du serveur a refusé (code attendu, faux, trop d'essais) ou la gestion est fermée. */
+  function carteCode() {
+    const R = T.refus || {};
+    const ferme = R.code === 'gestion_fermee';
+    const msg = R.code === 'code_gestion' ? 'Code de gestion refusé.' : (R.code === 'essais' || R.code === 'suspendu' || ferme) ? R.message : '';
+    return `<section class="card tbg-code"><h2>Code de gestion</h2>
+      <p class="muted tbg-code__txt">La liste des tablettes porte le PIN de chaque magasin : la gérer demande le code de gestion du réseau. Il est gardé dans cet onglet jusqu’à sa fermeture.</p>
+      ${ferme ? '' : `<form class="toolbar tbg-code__f" data-tbform="code"><label class="tbg-lab" for="tbg-code">Code de gestion</label>
+        <input id="tbg-code" class="tbg-nouv" type="password" autocomplete="current-password" data-tbin="code" value="${esc(T.saisie)}" ${T.charge ? 'disabled' : ''}>
+        <button type="submit" class="btn btn--primary" ${T.charge ? 'disabled' : ''}>Ouvrir la gestion</button></form>`}
+      ${msg ? `<p class="error" role="alert">${esc(msg)}</p>` : ''}</section>`;
+  }
   function ecran() {
     feuille();
     const K = FS.groupe || 'Manuel du réseau';
     if (C.S.tablette) { return { titre: 'Tablettes', kicker: K, corps: '<p class="muted">La gestion des tablettes ne se fait pas en mode tablette.</p>' }; }
     const L = T.liste;
-    if (!L) { return { titre: 'Tablettes', kicker: K, corps: T.erreur ? `<p class="error">${esc(T.erreur)}</p>` : '<p class="muted">Lecture des tablettes…</p>' }; }
+    if (!L && T.refus) { return { titre: 'Tablettes', kicker: K, corps: carteCode() }; }
+    if (!L) { return { titre: 'Tablettes', kicker: K, corps: T.erreur ? `<p class="error">${esc(T.erreur)}</p><p><button type="button" class="btn btn--sm" data-tb="relire">Réessayer</button></p>` : '<p class="muted">Lecture des tablettes…</p>' }; }
     const actifs = L.magasins.filter(m => !m.archive), archives = L.magasins.filter(m => m.archive);
     const url = urlTablette('');
     let h = `<section class="card tbg-tete">
       <div class="tbg-adr"><span class="tbg-lab">Adresse de la tablette</span><a class="tbg-url" href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>
         <span class="sub">Une seule tablette par magasin : le PIN du magasin ouvre l’appareil une fois, puis chaque employé s’identifie avec son PIN du panel. L’onglet SOP de l’app Cuisine y mène.</span></div>
-      <div class="tbg-adr__act"><button type="button" class="btn btn--sm" data-tb="copierUrl">⧉ Copier l’adresse</button>${L.crmDisponible ? `<button type="button" class="btn btn--sm" data-tb="reprise" ${T.occupe ? 'disabled' : ''} title="Les magasins du Manuel du CRM qui ne sont pas encore ici (même PIN quand il est libre)">Reprendre les magasins du CRM</button>` : ''}</div>
+      <div class="tbg-adr__act"><button type="button" class="btn btn--sm" data-tb="copierUrl">⧉ Copier l’adresse</button>${L.crmDisponible ? `<button type="button" class="btn btn--sm" data-tb="reprise" ${T.occupe ? 'disabled' : ''} title="Les magasins du Manuel du CRM qui ne sont pas encore ici (même PIN quand il est libre)">Reprendre les magasins du CRM</button>` : ''}
+        <button type="button" class="btn btn--sm btn--ghost" data-tb="oublier" title="Le code de gestion est oublié dans cet onglet : il faudra le retaper">Fermer la gestion</button></div>
       <div class="toolbar tbg-ajout"><input class="tbg-nouv" placeholder="Nom de la tablette (ex. L’Atelier By Corbais)" maxlength="120" data-tbin="nom" value="${esc(T.nom)}">
         <select class="tbg-sel" data-tbin="shop"><option value="">Boutique du panel…</option>${L.boutiques.map(b => `<option value="${esc(b.id)}"${b.id === T.shop ? ' selected' : ''}>${esc(b.nom)}</option>`).join('')}</select>
         <button type="button" class="btn btn--primary" data-tb="creer" ${T.occupe ? 'disabled' : ''}>＋ Tablette de magasin</button></div>
@@ -1287,9 +1327,11 @@ window.FormationSop = (function () {
   function brancher(root) {
     root.addEventListener('click', ev => {
       const b = ev.target.closest('[data-tb]');
+      if (b && b.dataset.tb === 'relire') { T.erreur = null; charger(true); return C.rendre(true); }
       if (!b || !T.liste) { return; }
       const d = b.dataset, id = +d.id, m = T.liste.magasins.find(x => x.id === id);
       switch (d.tb) {
+        case 'oublier': garderCode(''); T.liste = null; T.refus = { code: 'code_attendu' }; return C.rendre(true);
         case 'copierUrl': return copier(urlTablette(''), 'Adresse copiée');
         case 'copier': return copier(`Tablette du magasin — ${m.nom}\n${urlTablette(m.shopId)}\nPIN du magasin : ${pinLisible(m.pin)}`, 'Adresse et PIN copiés');
         case 'creer': {
@@ -1313,6 +1355,15 @@ window.FormationSop = (function () {
     root.addEventListener('input', ev => {
       const t = ev.target, k = t.getAttribute && t.getAttribute('data-tbin');
       if (k === 'nom') { T.nom = t.value; }
+      if (k === 'code') { T.saisie = t.value; }
+    });
+    root.addEventListener('submit', ev => {
+      const f = ev.target.closest && ev.target.closest('[data-tbform="code"]');
+      if (!f) { return; }
+      ev.preventDefault();
+      const i = f.querySelector('[data-tbin="code"]');
+      if (i) { T.saisie = i.value; }
+      ouvrirGestion();
     });
     root.addEventListener('change', ev => {
       const t = ev.target;

@@ -15,6 +15,9 @@ declare(strict_types=1);
  *   GET  /shops/{id}/employees            → les trois personnes, PIN compris (le cockpit le vérifie côté serveur)
  *   GET  /employees/{id}                  → la fiche et ses compétences cochées
  *   PUT  /employees/{id}/competencies     → coche une compétence ({competency_id})
+ *   GET  /operational-procedures          → cinq procédures FICTIVES (lot 6 : reprise dans le Manuel du réseau)
+ *   GET  /operational-procedures/{id}     → la fiche et ses sections (404 pour celle marquée « illisible »)
+ *   GET  /operational-procedures/{id}/attachments, /operational-framework/structure/sections | categories
  * L'état des compétences cochées est gardé dans FAUX_PANEL_ETAT (défaut : dossier temporaire du système).
  */
 
@@ -34,6 +37,20 @@ if ($m === 'POST' && $uri === '/consultant/auth/login') { $sortir(200, ['access_
 if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer jeton-faux-panel') { $sortir(401, ['message' => 'jeton attendu']); return; }
 if ($m === 'GET' && $uri === '/competencies') { $sortir(200, ['data' => $fix['competences']]); return; }
 if ($m === 'GET' && preg_match('#^/shops/[\w-]+/employees$#', $uri)) { $sortir(200, ['data' => $fix['employes']]); return; }
+if ($m === 'GET' && $uri === '/operational-procedures') {
+    $sortir(200, ['data' => array_map(static fn ($p) => array_diff_key($p, ['sections' => 1, 'attachments' => 1, 'illisible' => 1]), $fix['procedures'] ?? [])]);
+    return;
+}
+if ($m === 'GET' && preg_match('#^/operational-procedures/(\d+)(/attachments)?$#', $uri, $x)) {
+    $p = null;
+    foreach ($fix['procedures'] ?? [] as $y) { if ((int) $y['id'] === (int) $x[1]) { $p = $y; } }
+    if ($p === null || !empty($p['illisible'])) { $sortir(404, ['message' => 'procédure inconnue']); return; }
+    if (isset($x[2])) { $sortir(200, ['data' => $p['attachments'] ?? []]); return; }
+    $sortir(200, ['data' => array_diff_key($p, ['attachments' => 1])]);
+    return;
+}
+if ($m === 'GET' && $uri === '/operational-framework/structure/sections') { $sortir(200, ['data' => $fix['sections'] ?? []]); return; }
+if ($m === 'GET' && $uri === '/operational-framework/structure/categories') { $sortir(200, ['data' => $fix['categories'] ?? []]); return; }
 if (preg_match('#^/employees/(\d+)(/competencies)?$#', $uri, $x)) {
     $e = null;
     foreach ($fix['employes'] as $y) { if ((int) $y['id'] === (int) $x[1]) { $e = $y; } }

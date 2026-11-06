@@ -58,3 +58,11 @@
   .tbg-adr__act { justify-content: flex-start; }
   .tbg-mag { grid-template-columns: 1fr; }
 }
+
+/* Le code de gestion (lot 6) : demandé avant la liste, qui porte les PIN des magasins */
+.tbg-code { max-width: 640px; }
+.tbg-code__txt { margin: 0 0 12px; font-size: 12.5px; line-height: 1.5; }
+.tbg-code__f { align-items: flex-end; margin: 0; }
+.tbg-code__f .tbg-lab { flex-basis: 100%; margin: 0; }
+.tbg-code__f .tbg-nouv { flex: 0 1 280px; min-width: 200px; }
+.tbg-code .error { margin-top: 10px; }
