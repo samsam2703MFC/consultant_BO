@@ -795,3 +795,20 @@ tous les magasins la même chose ».
   correspondance, le chiffre « vues faire » des Standards, la carte « l'équipe face à cette SOP » de la fiche et le choix
   du magasin du portail. Les tables de suivi (`ceo_sop_suivi`…) restent en base.
 
+## Lire une SOP sur la tablette : un assistant horizontal (06/11/2026)
+
+- Client : « ceci doit être un assistant de type horizontal, fait pour le travail sur tablette » (la lecture pas à pas
+  avait la liste des étapes en colonne à gauche et un pied coupé en bas de l'écran).
+- `sop/tablette.js` (`vueLecture`, `pas`, `allerA`) et `sop/tablette.css` (`.tb--pas`, `.tb-frise`, `.tb-etape`,
+  `.tb-pied`) : la page tient l'écran (en-tête, frise, étape, pied ; seule l'étape défile si elle est longue). En-tête =
+  le titre de la SOP, son code et sa version.
+- **Frise** en haut : une section = un groupe nommé, une étape = une case de 52 px (vert ✓ faite, bordeaux l'étape
+  affichée, point rouge = point critique) ; elle défile à l'horizontale et ramène l'étape affichée au centre ; un toucher
+  va à l'étape. Un trait de progression dessous.
+- **L'étape** en grand : « Étape n / N · section », titre de 40 px, texte de 24 px (ou le point critique), la photo ou la
+  vidéo à DROITE ; en portrait ou sous 980 px, sous le texte. Elle entre en glissant du côté où l'on va (sauf
+  « réduire les animations »).
+- **Pied** : « ← Précédente » et « C'est fait · suivante → » (64 px), l'étape et le compte au centre ; à la dernière,
+  « J'ai tout lu ✓ » (puis le quiz). **Balayer** l'étape vers la gauche = suivante (l'étape est faite), vers la droite =
+  précédente ; un geste surtout vertical fait défiler le texte. Flèches ← → du clavier.
+

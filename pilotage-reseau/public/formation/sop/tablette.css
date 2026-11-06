@@ -202,35 +202,60 @@ textarea.in{min-height:64px;resize:vertical;line-height:1.45}
 .points{display:flex;gap:12px;justify-content:center;margin:6px 0 10px}
 .points span{width:16px;height:16px;border-radius:50%;border:2px solid var(--faint)}
 .points span.on{background:var(--ink);border-color:var(--ink)}
-.tb-plan{width:330px;flex:0 0 auto;background:#fff;border-right:1px solid var(--line);padding:16px 14px;overflow:auto;max-height:calc(100vh - 168px);position:sticky;top:72px}
-.tb-plan .s{font:400 10.5px 'Gotham',system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 6px 6px}
-.tb-plan .s:first-child{margin-top:0}
-.tb-plan button{display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:9px;font-size:13px;line-height:1.25;width:100%;border:none;background:transparent;color:var(--muted-2);text-align:left;min-height:44px}
-.tb-plan button i{width:24px;height:24px;border-radius:6px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font:400 10.5px 'Gotham',system-ui,sans-serif;font-style:normal;background:var(--chip);color:var(--muted)}
-.tb-plan button.fait{color:var(--muted)}
-.tb-plan button.fait i{background:var(--green);color:#fff}
-/* L'étape affichée : la sélection, comme l'entrée active du rail (fond teinté, bordeaux). */
-.tb-plan button.on{background:rgba(141,29,44,.08);color:var(--accent)}
-.tb-plan button.on i{background:var(--accent);color:#fff}
-.tb-plan button.crit i{outline:2px solid var(--danger);outline-offset:1px}
-.tb-main{flex:1;display:flex;flex-direction:column;padding:22px 30px 18px;min-width:0}
-.tb-main .ou{font:400 11px 'Gotham',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
-.tb-main .ou span{color:var(--muted)}
+/* ── Lire une SOP : l'assistant horizontal (06/11/2026) ─────────────────────────────────────────────
+   La page tient l'écran : en-tête, frise des étapes, l'étape (seule à défiler si elle est longue), le pied. */
+.tb.tb--pas{height:100vh;height:100dvh;min-height:0;overflow:hidden}
+.tb--pas .tb-hd{position:static}
+.tb-pas{flex:1;min-height:0;display:flex;flex-direction:column}
+/* La frise : une section = un groupe nommé ; une étape = une case de 52 px (le doigt), reliées par un trait. */
+.tb-frise{flex:0 0 auto;display:flex;gap:22px;overflow-x:auto;overscroll-behavior-x:contain;padding:12px 22px 14px;background:#fff;scrollbar-width:thin}
+.tb-fr-g{flex:0 0 auto;display:flex;flex-direction:column;gap:7px}
+.tb-fr-s{width:0;min-width:100%;font:400 10.5px 'Gotham',system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-fr-g.on .tb-fr-s{color:var(--accent)}
+.tb-fr-p{display:flex;gap:8px;position:relative}
+.tb-fr-p::before{content:'';position:absolute;left:20px;right:20px;top:50%;height:2px;margin-top:-1px;background:var(--chip)}
+.tb-fr-p button{position:relative;width:52px;height:52px;flex:0 0 auto;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted-2);font:400 14px 'Gotham',system-ui,sans-serif;padding:0}
+.tb-fr-p button.fait{background:var(--green);border-color:var(--green);color:#fff;font-size:18px}
+/* L'étape affichée : bordeaux plein (la sélection du système), un halo pour la retrouver d'un coup d'œil. */
+.tb-fr-p button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;box-shadow:0 0 0 4px rgba(141,29,44,.16)}
+/* Une étape à point critique : un point rouge (point d'état 8 px). */
+.tb-fr-p button.crit::after{content:'';position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 1.5px #fff}
+.tb-fr-p button.on.crit::after{background:#fff;box-shadow:none}
+.tb-prog{flex:0 0 auto;height:4px;background:var(--chip)}
+.tb-prog i{display:block;height:100%;background:var(--accent);transition:width .2s}
+/* L'étape : le texte à gauche, la photo ou la vidéo à droite ; sans média, le texte seul, à une largeur lisible. */
+.tb-etape{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:minmax(0,1fr);gap:32px;align-content:start;padding:26px 34px 30px;touch-action:pan-y}
+.tb-etape.avec{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.tb-etape:not(.avec) .tb-etape__tx{max-width:1040px}
+.tb-etape .ou{font:400 12px 'Gotham',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.tb-etape .ou span{color:var(--muted)}
 /* Le titre d'une étape : lu debout, à distance — la plus grande taille du système, et plus. */
-.tb-main h1{font:400 38px/1.1 'Gotham',system-ui,sans-serif;letter-spacing:-.01em;margin:12px 0 10px}
-.tb-main .tx{font-size:22px;line-height:1.45;margin-bottom:16px;white-space:pre-line}
-.tb-main .photo{max-width:100%;max-height:340px;border-radius:12px;object-fit:contain;align-self:flex-start;background:#fff;cursor:zoom-in}
+.tb-etape h1{font:400 40px/1.1 'Gotham',system-ui,sans-serif;letter-spacing:-.01em;margin:12px 0 16px}
+.tb-etape .tx{font-size:24px;line-height:1.45;white-space:pre-line}
+.tb-etape__media{display:flex;flex-direction:column;gap:14px;min-width:0}
+.tb-etape__media .photo{display:block;width:100%;max-height:calc(100dvh - 330px);min-height:200px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:zoom-in}
+.tb-etape__media .tb-video{margin-top:0;max-width:none}
+.tb-etape.de-droite{animation:tbEntreeD .22s ease-out}
+.tb-etape.de-gauche{animation:tbEntreeG .22s ease-out}
+@keyframes tbEntreeD{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+@keyframes tbEntreeG{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.tb-etape.de-droite,.tb-etape.de-gauche{animation:none}}
+/* Tablette en portrait ou écran étroit : la photo passe sous le texte. */
+@media (max-width:980px){.tb-etape.avec{grid-template-columns:minmax(0,1fr)}.tb-etape__media .photo{max-height:46dvh}.tb-etape{padding:20px 22px 24px}.tb-etape h1{font-size:32px}}
 .tb-alerte{background:rgba(179,38,30,.07);border:1.5px solid var(--danger);border-radius:12px;padding:14px 18px;font-size:16px;line-height:1.45;color:var(--ink);display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
 .tb-alerte__i{flex:0 0 auto;color:var(--danger)}
+.tb-alerte__tx{white-space:pre-line;font-size:22px}
 .tb-alerte b{display:block;font:400 11px 'Gotham',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--danger);margin-bottom:3px}
-.tb-pied{height:96px;flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:0 22px;background:#fff;border-top:1px solid var(--line);position:sticky;bottom:0}
-.tb-pied .gb{height:60px;border-radius:8px;padding:0 26px;display:inline-flex;align-items:center;gap:10px;font:400 16px 'Gotham',system-ui,sans-serif;color:var(--ink);border:1px solid var(--line);background:#fff}
-.tb-pied .gb:disabled{opacity:.45;cursor:not-allowed}
-.tb-pied .gb.p{background:var(--accent);color:#fff;border-color:var(--accent);min-width:240px;justify-content:center}
-.tb-pied .gb.g{background:var(--green);color:#fff;border-color:var(--green);min-width:240px;justify-content:center}
-.tb-pied .av{flex:1;min-width:0}
-.tb-pied .av .prog{height:10px;border-radius:4px}
-.tb-pied .av small{display:block;font-size:13px;color:var(--muted);margin-top:6px}
+/* Le pied : deux gros boutons (64 px), l'étape et le compte au centre. */
+.tb-pied{height:100px;flex:0 0 auto;display:flex;align-items:center;gap:18px;padding:0 22px;padding-bottom:env(safe-area-inset-bottom);background:#fff;border-top:1px solid var(--line)}
+.tb-pied .gb{height:64px;border-radius:8px;padding:0 28px;display:inline-flex;align-items:center;justify-content:center;gap:10px;font:400 18px 'Gotham',system-ui,sans-serif;color:var(--ink);border:1px solid var(--line);background:#fff;min-width:200px}
+.tb-pied .gb:disabled{opacity:.4;cursor:not-allowed}
+.tb-pied .gb.p{background:var(--accent);color:#fff;border-color:var(--accent);min-width:300px}
+.tb-pied .gb.g{background:var(--green);color:#fff;border-color:var(--green);min-width:300px}
+.tb-pied .av{flex:1;min-width:0;text-align:center}
+.tb-pied .av b{display:block;font:400 18px 'Gotham',system-ui,sans-serif;color:var(--ink)}
+.tb-pied .av small{display:block;font-size:13px;color:var(--muted);margin-top:3px}
+@media (max-width:760px){.tb-pied .gb{min-width:0;padding:0 16px;font-size:16px}.tb-pied .gb.p,.tb-pied .gb.g{min-width:0;flex:1}.tb-pied .av{display:none}}
 .tb-q{max-width:760px;margin:30px auto;padding:0 20px;width:100%}
 .tb-q h1{font:400 26px/1.15 'Gotham',system-ui,sans-serif;letter-spacing:-.01em;margin:6px 0 18px}
 /* Réponses du quiz : des pastilles de choix, à la taille du doigt. */
@@ -243,7 +268,7 @@ textarea.in{min-height:64px;resize:vertical;line-height:1.45}
 .tb-gros:disabled{opacity:.45;cursor:not-allowed}
 .rond{width:86px;height:86px;border-radius:12px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:44px;margin:10px auto}
 .rond.ko{background:var(--danger)}
-@media (max-width:900px){.tb-cote{width:100%;border-left:none}.tb-corps{flex-direction:column}.tb-plan{display:none}.kpis{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+@media (max-width:900px){.tb-cote{width:100%;border-left:none}.tb-corps{flex-direction:column}.kpis{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
 @media print{.fo-hd,.tabs,.no-print{display:none!important}body{background:#fff}}
 /* Les compteurs de la personne (vus faire, quiz, lues) : la valeur d'un chiffre clé du système (24 px, 700). */
 .tb-n{font:700 24px/1.15 'Gotham',system-ui,sans-serif;letter-spacing:-.02em}
