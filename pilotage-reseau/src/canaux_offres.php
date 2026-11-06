@@ -178,7 +178,7 @@ function ep_exploitation_canaux(): array
         foreach ((array) $cmds as $c) {
             $j = substr($c['quand'], 0, 10);
             if ($j === $date) {
-                $liste[] = ['heure' => substr($c['quand'], 11, 5), 'canal' => $c['canal'], 'articles' => $c['articles'], 'montant' => $c['montant'], 'statut' => $c['statut']];
+                $liste[] = ['heure' => substr($c['quand'], 11, 5), 'canal' => $c['canal'], 'articles' => $c['articles'], 'montant' => $c['montant'], 'statut' => $c['statut'], 'encaissee' => $c['encaissee']];
                 if (in_array($c['statut'], ['à préparer', 'en préparation'], true)) { $aPreparer++; }
             } elseif ($j === $demain) { $dem['n']++; $dem['ca'] += $c['montant']; }
         }
@@ -598,3 +598,93 @@ function ep_bundles_sonde(): array
     return $out;
 }
 
+
+/* --- La feuille « Commandes du jour » du dashboard (06/11/2026) ----------------------------------------------------
+ * Sam : « vérifier le CA en commandes », le détail en modale, comptoir et webshop. Chaque commande dont le retrait (ou
+ * la livraison) tombe ce jour-là, rangée par ce qu'elle apporte au CA du jour :
+ *   caisse   encaissée en caisse ce jour-là (`id_transaction`, ticket du jour) : déjà dans les tickets ;
+ *   avant    encaissée en caisse un autre jour (payée à la commande) : dans le CA de ce jour-là ;
+ *   ligne    webshop remise ou livrée sans ticket caisse : payée en ligne, elle s'ajoute aux tickets (règle de /canaux) ;
+ *   attente  pas remise, l'heure de retrait passée : pas retirée, pas encaissée ;
+ *   avenir   pas remise, l'heure de retrait à venir ;
+ *   sans     précommande au comptoir remise au panel sans ticket caisse lié : à vérifier.
+ * Le panel ne joint aucun article aux commandes (mesuré le 03/10/2026) : ils se lisent dans le ticket qui l'encaisse.
+ * Pour une commande « sans », le ticket du jour sans commande, du même montant, le plus proche de l'heure de retrait
+ * (une heure au plus), est proposé : la même vente, encaissée sans lien ? Rien de nominatif ne sort. */
+
+/**
+ * GET /exploitation/commandes/detail?shop=4&date=2026-11-06 — les commandes du jour, comptoir et webshop, leur
+ * rapprochement avec la caisse et, pour celles qui sont encaissées, leurs articles.
+ */
+function ep_exploitation_commandes_detail(): array
+{
+    $auj = date('Y-m-d');
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $date = (string) ($_GET['date'] ?? $auj);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { $date = $auj; }
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    @set_time_limit(60);
+    $cmds = coCommandes($sid, $date);
+    if ($cmds === null) { return ['shop' => $sid, 'date' => $date, 'indispo' => true, 'motif' => 'le panel ne rend pas les commandes']; }
+    $jour = array_values(array_filter($cmds, static fn ($c) => substr((string) $c['quand'], 0, 10) === $date));
+    // Les tickets qui encaissent ces commandes : les articles, le jour et l'heure de l'encaissement.
+    $chemins = [];
+    foreach ($jour as $c) { if ((int) $c['tx'] > 0) { $chemins[(int) $c['tx']] = '/transactions/' . (int) $c['tx'] . '?include=products'; } }
+    $res = $chemins && PanelApi::configured() ? PanelApi::getParallele($chemins, 8) : [];
+    $catDe = function_exists('svCategories') ? svCategories() : [];
+    $maintenant = $date < $auj ? '24:00' : ($date > $auj ? '00:00' : date('H:i'));
+    $out = []; $sansN = 0;
+    foreach ($jour as $c) {
+        $heure = substr((string) $c['quand'], 11, 5);
+        $t = (int) $c['tx'] > 0 ? ($res[(int) $c['tx']] ?? null) : null;
+        $ticket = null; $lignes = null;
+        if (is_array($t)) {
+            $ts = (string) ($t['insert_timestamp'] ?? '');
+            $ticket = ['date' => substr($ts, 0, 10) ?: null, 'heure' => substr($ts, 11, 5) ?: null];
+            $lignes = function_exists('vpLignesTicket') ? vpLignesTicket($t, $catDe) : null;
+        }
+        $remise = in_array($c['statut'], ['remise', 'livrée'], true);
+        if ((int) $c['tx'] > 0) { $etat = $ticket && $ticket['date'] && $ticket['date'] !== $date ? 'avant' : 'caisse'; }
+        elseif ($remise) { $etat = $c['canal'] === 'compt' ? 'sans' : 'ligne'; }
+        else { $etat = $heure < $maintenant ? 'attente' : 'avenir'; }
+        if ($etat === 'sans') { $sansN++; }
+        $art = $lignes ? array_sum(array_map(static fn ($l) => (float) ($l['q'] ?? 0), $lignes)) : $c['articles'];
+        $out[] = ['heure' => $heure, 'canal' => $c['canal'], 'statut' => $c['statut'], 'montant' => (float) $c['montant'], 'etat' => $etat,
+            'articles' => $art === null ? null : round((float) $art, 1), 'ticket' => $ticket, 'lignes' => $lignes];
+    }
+    // Pour une commande remise sans ticket : le ticket du jour qui pourrait être le sien.
+    if ($sansN > 0 && $date <= $auj && PanelApi::configured()) {
+        $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
+        $lies = array_flip(array_map('intval', array_keys($chemins)));
+        $libres = [];
+        foreach (analyseListe(is_array($liste) ? $liste : []) as $x) {
+            $id = (int) ($x['id'] ?? 0);
+            if ($id <= 0 || isset($lies[$id])) { continue; }
+            $libres[] = ['id' => $id, 'heure' => substr((string) ($x['insert_timestamp'] ?? ''), 11, 5), 'montant' => round((float) ($x['total_gross_amount_after_discount'] ?? $x['total_value_after_discount'] ?? 0), 2)];
+        }
+        $pris = [];
+        $min = static fn (string $h) => (int) substr($h, 0, 2) * 60 + (int) substr($h, 3, 2);
+        foreach ($out as &$o) {
+            if ($o['etat'] !== 'sans') { continue; }
+            $best = null;
+            foreach ($libres as $x) {
+                if (isset($pris[$x['id']]) || abs($x['montant'] - $o['montant']) > 0.005 || $x['heure'] === '') { continue; }
+                $d = abs($min($x['heure']) - $min($o['heure']));
+                if ($d <= 60 && ($best === null || $d < $best[0])) { $best = [$d, $x]; }
+            }
+            if ($best) { $pris[$best[1]['id']] = true; $o['candidat'] = ['heure' => $best[1]['heure'], 'montant' => $best[1]['montant']]; }
+        }
+        unset($o);
+    }
+    usort($out, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
+    $somme = static function (array $L): array { return ['n' => count($L), 'ca' => round(array_sum(array_column($L, 'montant')), 2)]; };
+    $par = static fn (string $k, string $v) => array_values(array_filter($out, static fn ($o) => $o[$k] === $v));
+    $etats = [];
+    foreach (['caisse', 'avant', 'ligne', 'attente', 'avenir', 'sans'] as $e) { $etats[$e] = $somme($par('etat', $e)); }
+    $web = array_values(array_filter($out, static fn ($o) => $o['canal'] !== 'compt'));
+    $caisse = coCaisse($sid, [$date])[$date] ?? null;
+    return ['shop' => $sid, 'date' => $date, 'maintenant' => $date === $auj ? date('H:i') : null, 'commandes' => $out,
+        'total' => $somme($out), 'comptoir' => $somme($par('canal', 'compt')), 'webshop' => $somme($web) + ['cc' => $somme($par('canal', 'cc')), 'liv' => $somme($par('canal', 'liv'))],
+        'etats' => $etats, 'dansCa' => round($etats['caisse']['ca'] + $etats['ligne']['ca'], 2), 'caisseJour' => $caisse ? $caisse['ca'] : null,
+        'lus' => count(array_filter($out, static fn ($o) => $o['lignes'] !== null))];
+}

@@ -629,6 +629,30 @@ heure et `totaux` de `/ventes/stats` ; par chaque période et son `n1` de `/vent
 d'un panier `total` : deux côtés lus, hors pro ; sinon les deux pro compris.
 
 
+
+### `GET /exploitation/pro/detail` — la feuille « Ventes B2B » : les tickets pro d'un jour, avec les sociétés (06/11/2026)
+
+    ?shop=4&date=2026-10-30                 un jour
+    ?shop=4&date=2026-11-06&vue=semaines    ce jour et les quatre mêmes jours de semaine d'avant
+
+Demande de Sam (06/11/2026, maquette `docs/maquettes/b2b-commandes-mobile`, écran 2) : un appui sur la jauge B2B de
+l'onglet Opérationnel ouvre le détail, **avec le nom des sociétés**. La règle du 03/10/2026 (l'heure et le montant
+seulement) est levée pour cette feuille : depuis le 11/10, un ticket n'est pro que si la fiche du client porte une TVA
+valide. Le nom se lit sur la fiche du panel (`/shops/{id}/clients/{id}` : `company_name`, sinon le nom de la personne),
+gardé un jour sous `vpNom:{shop}` ; le relevé gravé (`svP…`) ne garde toujours que la clé de compte. Pro = `is_client_b2b`
+ET TVA valide, comme la jauge ; les tickets marqués pro sans TVA valide restent au comptoir (`sansTva`). Un jour : la liste
+des tickets du jour (un appel, qui grave aussi le pro du jour), puis chaque ticket pro avec ses articles
+(`/transactions/{id}?include=products`, en parallèle) ; la réponse est gardée dix minutes (un jour clos : un jour) sous
+`vpDet:{shop}:{date}`.
+
+    { shop, date,
+      tickets: [ { heure, societe | null, compte, montant, facture, differe, articles, lignes: [ { nom, cat, q, pu, total } ] | null } ],
+      jour: { ca, tickets, caPro, ticketsPro, societes, part, panierPro, panierComptoir, aFacturer, factures, differes: { n, ca } },
+      categories: [ { cat, ca } ],   ce que les sociétés achètent, du plus gros au plus petit
+      sansTva: { tickets, ca }, lus, cache? }
+    { shop, date, vue: "semaines", jours: [ 5 dates ], lus: [ bool × 5 ],
+      comptes: [ { compte, societe | null, jours: [ montant | null × 5 ], n, total } ] }   les plus fidèles d'abord
+
 ### `/production/plan` — la gestion de production (module franchisé)
 
 Demande du 03/10/2026, maquettes `docs/maquettes/gestion-production`. Écran : **cockpit, rail ERP franchisé ›
@@ -2575,7 +2599,7 @@ Un magasin :
       jour:     { joursLus, caisse, tickets, comptoir, cc: {n, ca}, liv: {n, ca}, webshop, encaisse, total, part },
       serie:    [ { j, lu, caisse, tickets, comptoir, cc, liv, ccN, livN } × 14 ],
       quatorze: { webshop, total, cc: {n, ca}, liv: {n, ca} },
-      liste:    [ { heure, canal: compt|cc|liv, articles, montant, statut } ],   toutes les commandes du jour, précommandes au comptoir comprises
+      liste:    [ { heure, canal: compt|cc|liv, articles, montant, statut, encaissee } ],   toutes les commandes du jour, précommandes au comptoir comprises
       nWebshop, aPreparer, demain: { n, ca }, indispo, source }
 
 Une période (`du`, `au`, 62 jours au plus) rend `periode` à la place de
@@ -2591,6 +2615,42 @@ caisse seule, le dashboard garde alors la carte « Comptoir et clients pro ».
 Le réseau rend `magasins[]` (le même bloc sans `serie`, plus `shop`, `nom`)
 et `reseau` (comptoir, cc, liv, webshop, total, part, `livrent` et `vendent`
 = combien de magasins livrent, vendent en ligne).
+
+`encaissee` (06/11/2026) : la commande porte un ticket caisse (`id_transaction`). La ligne « Commandes du jour » de
+l'onglet Opérationnel en compte les commandes à vérifier : une précommande au comptoir remise sans ticket, une commande
+pas remise dont l'heure de retrait est passée.
+
+### `GET /exploitation/commandes/detail` — la feuille « Commandes du jour » : comptoir, webshop, rapprochées de la caisse (06/11/2026)
+
+    ?shop=4&date=2026-11-06
+
+Demande de Sam (06/11/2026, maquette `docs/maquettes/b2b-commandes-mobile`, écran 3) : vérifier le CA en commandes, le
+détail en modale, comptoir et webshop. Les commandes dont le retrait (ou la livraison) tombe ce jour-là
+(`coCommandes`, la lecture gardée dix minutes), chacune rangée par ce qu'elle apporte au CA du jour :
+
+| `etat` | | |
+|---|---|---|
+| `caisse` | encaissée en caisse ce jour-là | ticket du jour : déjà dans les tickets |
+| `avant` | encaissée en caisse un autre jour | payée à la commande : dans le CA de ce jour-là |
+| `ligne` | webshop remise ou livrée sans ticket caisse | payée en ligne : s'ajoute aux tickets (la règle de `/canaux`) |
+| `attente` | pas remise, l'heure de retrait passée | pas retirée, pas encaissée |
+| `avenir` | pas remise, l'heure de retrait à venir | |
+| `sans` | précommande au comptoir remise au panel sans ticket caisse | à vérifier |
+
+Le panel ne joint aucun article aux commandes : ils se lisent dans le ticket qui l'encaisse
+(`/transactions/{id_transaction}?include=products`, en parallèle), qui donne aussi le jour et l'heure de l'encaissement.
+Pour une commande `sans`, le ticket du jour sans commande, du même montant, le plus proche de l'heure de retrait (une
+heure au plus) est proposé (`candidat`) : la même vente, encaissée sans lien ? Rien de nominatif ne sort.
+
+    { shop, date, maintenant: "18:38" | null,
+      commandes: [ { heure, canal: compt|cc|liv, statut, montant, etat, articles, ticket: { date, heure } | null,
+                     lignes: [ { nom, cat, q, pu, total } ] | null, candidat?: { heure, montant } } ],
+      total: { n, ca }, comptoir: { n, ca }, webshop: { n, ca, cc: { n, ca }, liv: { n, ca } },
+      etats: { caisse|avant|ligne|attente|avenir|sans: { n, ca } },
+      dansCa,        caisse + ligne : ce que les commandes apportent au CA du jour
+      caisseJour,    les tickets du jour (heures gravées), null s'ils ne sont pas lus
+      lus }          commandes dont le ticket a été lu
+    { shop, date, indispo: true, motif }   le panel ne rend pas les commandes
 
 ### `GET /exploitation/canaux-mois` — chaque canal mois par mois, et le cumul du mois face au mois d'avant (17/10/2026)
 

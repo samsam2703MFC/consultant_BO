@@ -383,6 +383,9 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
             $path === '/exploitation/bundles/sonde'    => ep_bundles_sonde(),
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
+            // Les feuilles du dashboard (06/11/2026) : le B2B d'un jour, ticket par ticket ; les commandes du jour, rapprochées.
+            $path === '/exploitation/pro/detail'       => ep_exploitation_pro_detail(),
+            $path === '/exploitation/commandes/detail' => ep_exploitation_commandes_detail(),
             $path === '/exploitation/invendus'         => ep_exploitation_invendus(),
             $path === '/exploitation/semaine-jours'    => ep_exploitation_semaine_jours(),
             $path === '/production/plan'               => ep_production_plan(),

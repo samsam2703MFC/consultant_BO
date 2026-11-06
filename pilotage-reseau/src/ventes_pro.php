@@ -12,7 +12,9 @@ declare(strict_types=1);
  * personnes. Le relevé ne garde qu'une clé de compte (l'identifiant du
  * client s'il est là, sinon une empreinte du nom) pour compter les sociétés
  * servies, et l'écran ne montre que l'heure et le montant (demande du
- * 03/10/2026).
+ * 03/10/2026). Depuis le 06/11/2026, la feuille « Ventes B2B » montre le nom
+ * des sociétés (pro = TVA valide) : lu au panel à l'ouverture, jamais gravé
+ * dans le relevé (ep_exploitation_pro_detail).
  *
  * La lecture s'accroche à la moisson des tickets : la LISTE des tickets d'un
  * jour (`/shops/{id}/transactions?date=`) suffit — un appel par jour et par
@@ -358,4 +360,188 @@ function vpMoisson(int $budget = VP_BUDGET_CRON): array
         }
     }
     return ['ok' => true, 'joursFaits' => $faits, 'listes' => $appels, 'joursRestants' => $restants];
+}
+
+/* --- La feuille « Ventes B2B » du dashboard (06/11/2026) ----------------------------------------------------------
+ * Sam, sur la maquette du 06/11 (écran 2) : un appui sur la jauge B2B ouvre le détail, **avec le nom des sociétés**
+ * (la règle du 03/10/2026, « l'heure et le montant seulement », est levée : depuis le 11/10, un ticket n'est pro que si
+ * la fiche du client porte une TVA valide — c'est une société, plus un nom de personne). Le relevé gravé ne garde
+ * toujours que la clé de compte : les noms se lisent au panel quand la feuille s'ouvre, et se gardent un jour. */
+
+const VP_TTL_NOM = 86400;   // le nom d'une société : relu une fois par jour
+const VP_TTL_DETAIL = 86400; // le détail d'un jour clos : gardé un jour (un jour en cours : VP_TTL)
+
+/** Le nom lisible d'une fiche client du panel : la société d'abord, sinon le nom de la personne ; '' sans l'un ni l'autre. */
+function vpNomFiche(mixed $r): string
+{
+    if (!is_array($r)) { return ''; }
+    $f0 = isset($r['data']) && is_array($r['data']) && !array_is_list($r['data']) ? $r['data'] : $r;
+    // La fiche se range en blocs (`client`, `profile`) : un niveau se déplie, « bloc.champ » (comme vtFicheClient).
+    $f = [];
+    foreach ($f0 as $k => $v) {
+        if (is_array($v) && $v !== [] && !array_is_list($v)) { foreach ($v as $k2 => $v2) { if (is_scalar($v2)) { $f[$k . '.' . $k2] = trim((string) $v2); } } }
+        elseif (is_scalar($v)) { $f[(string) $k] = trim((string) $v); }
+    }
+    foreach (['/(^|\.)company_name$/', '/(^|\.)(company|business_name|trade_name)$/', '/(^|\.)(full_name|display_name|name)$/'] as $re) {
+        foreach ($f as $k => $v) { if ($v !== '' && preg_match($re, (string) $k)) { return $v; } }
+    }
+    $p = ''; $n = '';
+    foreach ($f as $k => $v) {
+        if ($p === '' && preg_match('/(^|\.)first_?name$/', (string) $k)) { $p = $v; }
+        if ($n === '' && preg_match('/(^|\.)last_?name$/', (string) $k)) { $n = $v; }
+    }
+    return trim($p . ' ' . $n);
+}
+
+/**
+ * Les noms des comptes pro d'un magasin : [clé de compte => nom]. Une clé « c{id_client} » se lit sur la fiche du
+ * panel (`/shops/{id}/clients/{id}`), gardée un jour sous `vpNom:{shop}` ; une clé sans identifiant n'a pas de fiche.
+ */
+function vpNoms(int $sid, array $cles): array
+{
+    $c = setting('vpNom:' . $sid);
+    $c = is_array($c) ? $c : [];
+    $out = []; $manque = [];
+    foreach (array_unique(array_map('strval', $cles)) as $k) {
+        if (!preg_match('/^c(\d+)$/', $k, $m)) { continue; }
+        $x = $c[$k] ?? null;
+        if (is_array($x) && (int) ($x[1] ?? 0) > time() - VP_TTL_NOM) { if ((string) $x[0] !== '') { $out[$k] = (string) $x[0]; } continue; }
+        $manque[$k] = $m[1];
+    }
+    if ($manque === [] || !class_exists('PanelApi') || !PanelApi::configured()) { return $out; }
+    $chemins = [];
+    foreach ($manque as $k => $id) { $chemins[$k] = '/shops/' . $sid . '/clients/' . rawurlencode((string) $id); }
+    $res = PanelApi::getParallele($chemins, 6);
+    foreach ($manque as $k => $id) {
+        if (!isset($res[$k]) || !is_array($res[$k])) { continue; }   // fiche muette : relue la prochaine fois
+        $nom = vpNomFiche($res[$k]);
+        $c[$k] = [$nom, time()];
+        if ($nom !== '') { $out[$k] = $nom; }
+    }
+    if (function_exists('svGrave')) { try { svGrave('vpNom:' . $sid, $c); } catch (Throwable $e) { /* sans mémo */ } }
+    return $out;
+}
+
+/**
+ * Les lignes d'un ticket lu au panel (`/transactions/{id}?include=products`) : produit, catégorie, quantité, prix
+ * unitaire, total après remise. Null si le ticket n'a pas été lu. Les mêmes champs que GET /ventes/tickets.
+ */
+function vpLignesTicket(mixed $t, array $catDe): ?array
+{
+    if (!is_array($t)) { return null; }
+    $n = static fn ($v) => is_numeric($v) ? round((float) $v, 2) : null;
+    $out = [];
+    foreach ((array) ($t['products'] ?? []) as $l) {
+        if (!is_array($l)) { continue; }
+        $pid = (int) ($l['id_product'] ?? 0);
+        $out[] = ['nom' => trim((string) ($l['product_display_name'] ?? $l['product_name'] ?? '')) ?: 'ligne sans produit',
+            'cat' => $pid > 0 ? (string) ($catDe[$pid] ?? '') : '', 'q' => $n($l['quantity'] ?? null), 'pu' => $n($l['unit_gross_price'] ?? null),
+            'total' => $n($l['total_gross_value_after_discount'] ?? null)];
+    }
+    return $out;
+}
+
+/**
+ * GET /exploitation/pro/detail?shop=4&date=2026-10-30 — la feuille « Ventes B2B » : les tickets pro d'un jour, chacun
+ * avec sa société, son règlement (facturé, différé, réglé au comptoir) et ses articles ; les chiffres du jour face au
+ * comptoir ; ce que les sociétés achètent, par catégorie. Pro = `is_client_b2b` ET TVA valide, comme la jauge.
+ * &vue=semaines : les sociétés sur ce jour et les quatre mêmes jours de semaine d'avant (vpProSemaines).
+ */
+function ep_exploitation_pro_detail(): array
+{
+    $auj = date('Y-m-d');
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $date = (string) ($_GET['date'] ?? $auj);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    if (($_GET['vue'] ?? '') === 'semaines') { return vpProSemaines($sid, $date); }
+    $cle = 'vpDet:' . $sid . ':' . $date;
+    $memo = setting($cle);
+    if (empty($_GET['force']) && is_array($memo) && isset($memo['le'], $memo['v']) && time() - (int) $memo['le'] < ($date < $auj ? VP_TTL_DETAIL : VP_TTL)) { return $memo['v'] + ['cache' => true]; }
+    $vide = ['shop' => $sid, 'date' => $date];
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return $vide + ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
+    @set_time_limit(60);
+    $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
+    if (!is_array($liste)) { return is_array($memo) && isset($memo['v']) ? $memo['v'] + ['cache' => true] : $vide + ['indispo' => true, 'motif' => 'le panel ne rend pas les tickets du jour']; }
+    // La même liste grave le pro du jour : la jauge et la feuille disent le même chiffre.
+    try { vpGraveListe($sid, $date, $liste); } catch (Throwable $e) { /* le cron la relira */ }
+    $n = 0; $ca = 0.0; $pro = [];
+    foreach (analyseListe($liste) as $x) {
+        if (!is_array($x)) { continue; }
+        $m = (float) ($x['total_gross_amount_after_discount'] ?? $x['total_value_after_discount'] ?? 0);
+        $n++; $ca += $m;
+        if (empty($x['is_client_b2b'])) { continue; }
+        $pro[] = ['id' => (int) ($x['id'] ?? 0), 'heure' => substr((string) ($x['insert_timestamp'] ?? ''), 11, 5), 'cle' => vpCleCompte($x),
+            'montant' => round($m, 2), 'facture' => !empty($x['will_be_invoiced']), 'differe' => !empty($x['deferral_payment']),
+            'nom' => trim((string) ($x['company_name'] ?? $x['client_name'] ?? ''))];
+    }
+    // Pro = TVA valide : les autres tickets marqués pro restent au comptoir, comptés à part.
+    $ok = vpTvaValides($sid, array_column($pro, 'cle'));
+    $garde = []; $sansTva = ['tickets' => 0, 'ca' => 0.0];
+    foreach ($pro as $t) {
+        if (($ok[$t['cle']] ?? null) === false) { $sansTva['tickets']++; $sansTva['ca'] += $t['montant']; continue; }
+        $garde[] = $t;
+    }
+    $noms = vpNoms($sid, array_column($garde, 'cle'));
+    $catDe = function_exists('svCategories') ? svCategories() : [];
+    $chemins = [];
+    foreach ($garde as $t) { if ($t['id'] > 0) { $chemins[$t['id']] = '/transactions/' . $t['id'] . '?include=products'; } }
+    $res = $chemins ? PanelApi::getParallele($chemins, 8) : [];
+    $tickets = []; $cats = []; $societes = []; $caPro = 0.0; $aF = 0.0; $nF = 0; $dif = ['n' => 0, 'ca' => 0.0];
+    foreach ($garde as $t) {
+        $lignes = vpLignesTicket($res[$t['id']] ?? null, $catDe);
+        $art = $lignes === null ? null : array_sum(array_map(static fn ($l) => (float) ($l['q'] ?? 0), $lignes));
+        foreach ((array) $lignes as $l) { $c = $l['cat'] !== '' ? $l['cat'] : 'Autres'; $cats[$c] = ($cats[$c] ?? 0.0) + (float) ($l['total'] ?? 0); }
+        $nom = $noms[$t['cle']] ?? ($t['nom'] !== '' ? $t['nom'] : '');
+        $tickets[] = ['heure' => $t['heure'], 'societe' => $nom !== '' ? $nom : null, 'compte' => $t['cle'] !== '' ? $t['cle'] : null,
+            'montant' => $t['montant'], 'facture' => $t['facture'], 'differe' => $t['differe'],
+            'articles' => $art === null ? null : round($art, 1), 'lignes' => $lignes];
+        $caPro += $t['montant'];
+        if ($t['facture']) { $aF += $t['montant']; $nF++; }
+        if ($t['differe']) { $dif['n']++; $dif['ca'] += $t['montant']; }
+        $societes[$t['cle'] !== '' ? $t['cle'] : 'x' . $t['id']] = true;
+    }
+    usort($tickets, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
+    arsort($cats);
+    $nPro = count($tickets);
+    $v = $vide + ['tickets' => $tickets,
+        'jour' => ['ca' => round($ca, 2), 'tickets' => $n, 'caPro' => round($caPro, 2), 'ticketsPro' => $nPro, 'societes' => count($societes),
+            'part' => $ca > 0 ? round(100 * $caPro / $ca, 1) : null, 'panierPro' => $nPro ? round($caPro / $nPro, 2) : null,
+            'panierComptoir' => $n - $nPro > 0 ? round(($ca - $caPro) / ($n - $nPro), 2) : null,
+            'aFacturer' => round($aF, 2), 'factures' => $nF, 'differes' => ['n' => $dif['n'], 'ca' => round($dif['ca'], 2)]],
+        'categories' => array_map(static fn ($c, $x) => ['cat' => $c, 'ca' => round($x, 2)], array_keys($cats), array_values($cats)),
+        'sansTva' => ['tickets' => $sansTva['tickets'], 'ca' => round($sansTva['ca'], 2)], 'lus' => count(array_filter($tickets, static fn ($t) => $t['lignes'] !== null))];
+    try { svGrave($cle, ['le' => time(), 'v' => $v]); } catch (Throwable $e) { /* sans mémo */ }
+    return $v;
+}
+
+/**
+ * Les sociétés sur un jour et les quatre mêmes jours de semaine d'avant : pour chacune, le montant de chaque jour
+ * (null = pas venue), le nombre de jours où elle est venue, le total. Lu sur le pro gravé (vpJour), cinq listes au
+ * plus relues au panel ; les noms par vpNoms.
+ */
+function vpProSemaines(int $sid, string $date): array
+{
+    @set_time_limit(60);
+    $jours = []; for ($i = 4; $i >= 0; $i--) { $jours[] = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); }
+    $appels = 0; $parCle = []; $lus = [];
+    foreach ($jours as $k => $j) {
+        $b = vpJour($sid, $j, true, $appels, 5);
+        $lus[] = $b !== null;
+        if ($b === null) { continue; }
+        foreach ((array) ($b['t'] ?? []) as $t) {
+            $c = (string) ($t[1] ?? '');
+            if ($c === '') { $c = '?'; }
+            if (!isset($parCle[$c])) { $parCle[$c] = array_fill(0, count($jours), null); }
+            $parCle[$c][$k] = round(($parCle[$c][$k] ?? 0.0) + (float) $t[2], 2);
+        }
+    }
+    $noms = vpNoms($sid, array_keys($parCle));
+    $comptes = [];
+    foreach ($parCle as $c => $mt) {
+        $faits = array_filter($mt, static fn ($x) => $x !== null);
+        $comptes[] = ['compte' => $c === '?' ? null : $c, 'societe' => $noms[$c] ?? null, 'jours' => $mt, 'n' => count($faits), 'total' => round(array_sum($faits), 2)];
+    }
+    usort($comptes, static fn ($a, $b) => $b['n'] <=> $a['n'] ?: $b['total'] <=> $a['total']);
+    return ['shop' => $sid, 'date' => $date, 'vue' => 'semaines', 'jours' => $jours, 'lus' => $lus, 'comptes' => $comptes];
 }
