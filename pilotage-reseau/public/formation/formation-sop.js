@@ -200,7 +200,9 @@ window.FormationSop = (function () {
         return `<div class="sop-ed-et"><div class="sop-ed-et__c"><input class="sop-in" data-sin="ed.${p}.numero" value="${esc(e.numero)}" style="text-align:center"><label class="fm-small"><input type="checkbox" data-sch="ed.${p}.critique" ${e.critique ? 'checked' : ''}> critique</label></div>
           <div class="sop-ed-et__c">${champ(p + '.titre.fr', 'Titre (FR, facultatif)')}${champ(p + '.texte.fr', 'Texte (FR)', true)}</div>
           <div class="sop-ed-et__c">${champ(p + '.titre.nl', 'Titel (NL, facultatief)')}${champ(p + '.texte.nl', 'Tekst (NL)', true)}</div>
-          <div class="sop-ed-et__c"><input class="sop-in" data-sin="ed.${p}.photo" placeholder="photo (fichier)" value="${esc(e.photo || '')}"><input class="sop-in" data-sin="ed.${p}.video" placeholder="vidéo (https://…)" value="${esc(e.video || '')}">${e.photo ? `<img src="${esc(photoUrl(e.photo))}" style="width:100%;border-radius:6px" alt="">` : ''}
+          <div class="sop-ed-et__c">${e.photo ? `<img class="sop-ed-photo" src="${esc(photoUrl(e.photo))}" alt="">` : ''}
+            <span class="sop-ed-photo__act">${D.edEnvoi === p ? '<span class="muted fm-small">Envoi de la photo…</span>' : `<label class="btn btn--sm">${e.photo ? '↻ Changer' : '＋ Photo'}<input type="file" accept="image/jpeg,image/png,image/webp" data-sedfile="${p}" hidden></label>${e.photo ? `<button type="button" class="btn btn--sm" data-sa="photoRetirer" data-i="${p}">Retirer</button>` : ''}`}</span>
+            <input class="sop-in" data-sin="ed.${p}.video" placeholder="vidéo (https://…)" value="${esc(e.video || '')}">
             <span><button type="button" class="btn btn--icon" data-sa="etMove" data-i="${si}.${ei}" data-d="-1" aria-label="Monter l’étape">↑</button><button type="button" class="btn btn--icon" data-sa="etMove" data-i="${si}.${ei}" data-d="1" aria-label="Descendre l’étape">↓</button><button type="button" class="btn btn--icon btn--danger" data-sa="etSuppr" data-i="${si}.${ei}" aria-label="Retirer l’étape">✕</button></span></div></div>`; }).join('')}
       <button type="button" class="btn btn--sm" data-sa="etAjout" data-i="${si}">+ étape</button></div>`).join('');
     const crit = c.points_critiques.map((x, i) => `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">${champ('points_critiques.' + i + '.fr', 'FR')}${champ('points_critiques.' + i + '.nl', 'NL')}<button type="button" class="btn btn--icon btn--danger" data-sa="critSuppr" data-i="${i}" aria-label="Retirer le point critique">✕</button></div>`).join('');
@@ -996,6 +998,19 @@ window.FormationSop = (function () {
     }, er => { D.edErr = er.message; C.rendre(true); });
   }
 
+  /** Éditeur : la photo d'une étape, recadrée au format fixe 4:3 (recadrer.js) puis envoyée (« u/… » sur l'étape). */
+  async function photoEditeur(p, fichier) {
+    if (!fichier || !D.ed) { return; }
+    if (!/^image\/(jpeg|png|webp)$/.test(fichier.type)) { return toast('Une photo JPEG, PNG ou WebP.'); }
+    let data;
+    try { data = await window.FormationRecadrer.ouvrir(fichier); } catch (e) { return toast('Photo illisible.'); }
+    if (!data) { return; }
+    D.edEnvoi = p; C.rendre(true);
+    try { const r = await C.appel('POST', '/formation/sop/photo', { data }, 60000); setP(D.ed, p + '.photo', r.photo); }
+    catch (e) { toast('Photo non envoyée : ' + e.message); }
+    D.edEnvoi = null; C.rendre(true);
+  }
+
   /** Les lectures de l'écran affiché (appelé par apres() de formation.js). */
   function apres(e, a) {
     if (e === 'sop' || e === 'sopred') { chargerListe(false); }
@@ -1053,6 +1068,7 @@ window.FormationSop = (function () {
         case 'secMove': { const i = +d.i, j = i + (+d.d); if (j >= 0 && j < E.sections.length) { [E.sections[i], E.sections[j]] = [E.sections[j], E.sections[i]]; } return C.rendre(true); }
         case 'secSuppr': if (confirm('Supprimer cette section et ses étapes ?')) { E.sections.splice(+d.i, 1); } return C.rendre(true);
         case 'secAjout': E.sections.push({ titre: { fr: '', nl: '' }, etapes: [] }); return C.rendre(true);
+        case 'photoRetirer': setP(D.ed, d.i + '.photo', null); return C.rendre(true);
         case 'etAjout': { const sec = E.sections[+d.i]; sec.etapes.push({ numero: String(sec.etapes.length + 1), titre: { fr: '', nl: '' }, texte: { fr: '', nl: '' }, critique: false, photo: null }); return C.rendre(true); }
         case 'etMove': { const [si, ei] = d.i.split('.').map(Number); const l = E.sections[si].etapes, j = ei + (+d.d); if (j >= 0 && j < l.length) { [l[ei], l[j]] = [l[j], l[ei]]; } return C.rendre(true); }
         case 'etSuppr': { const [si, ei] = d.i.split('.').map(Number); E.sections[si].etapes.splice(ei, 1); return C.rendre(true); }
@@ -1082,7 +1098,9 @@ window.FormationSop = (function () {
       else if (obj === 'scEd' && D.scEd) { D.scEd[p] = t.value; }
     });
     root.addEventListener('change', ev => {
-      const t = ev.target, k = t.getAttribute && t.getAttribute('data-sch');
+      const t = ev.target;
+      if (t.hasAttribute && t.hasAttribute('data-sedfile')) { const f = t.files && t.files[0]; t.value = ''; return photoEditeur(t.getAttribute('data-sedfile'), f); }
+      const k = t.getAttribute && t.getAttribute('data-sch');
       if (!k) { return; }
       const d = t.dataset;
       if (choixRef(k, t)) { return; }

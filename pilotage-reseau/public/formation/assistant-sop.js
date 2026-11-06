@@ -5,8 +5,8 @@
  *                                        point critique) · 4 Points critiques et quiz · 5 Relire et créer.
  *
  * La SOP se crée d'un seul envoi (POST /formation/sop/fiche avec `contenu` et `moment`), « à valider » ; son classement
- * (compétences C-…, formations FO) part ensuite (PUT /formation/ref/standards/{id}). Les photos : réduites dans le
- * navigateur (1600 px, JPEG), envoyées par POST /formation/sop/photo, rangées « u/… » sur l'étape. Le brouillon de
+ * (compétences C-…, formations FO) part ensuite (PUT /formation/ref/standards/{id}). Les photos : recadrées au format
+ * fixe 4:3 dans le navigateur (recadrer.js, 1600 × 1200, JPEG), envoyées par POST /formation/sop/photo, rangées « u/… » sur l'étape. Le brouillon de
  * l'assistant est gardé dans l'onglet (sessionStorage) jusqu'à la création. Le néerlandais est facultatif : la SOP
  * reste « NL à relire » et l'éditeur complet l'exige pour publier une nouvelle version.
  *
@@ -159,30 +159,19 @@
     if (A.etape === 3 && !A.etapes.some(e => e.texte.trim())) { X.err = 'Au moins une étape, avec son texte.'; return C.rendre(true); }
     A.etape = Math.min(5, A.etape + 1); garder(); C.rendre(true); window.scrollTo(0, 0);
   }
+  /** Une photo d'étape : recadrée au format fixe 4:3 (recadrer.js), puis envoyée ; rangée « u/… » sur l'étape. */
   async function photo(i, fichier) {
     if (!fichier) { return; }
     if (!/^image\/(jpeg|png|webp)$/.test(fichier.type)) { return toast('Une photo JPEG, PNG ou WebP.'); }
+    let data;
+    try { data = await window.FormationRecadrer.ouvrir(fichier); } catch (e) { return toast('Photo illisible.'); }
+    if (!data) { return C.rendre(true); }
     X.envoi = i; C.rendre(true);
     try {
-      const data = await reduire(fichier);
       const r = await C.appel('POST', '/formation/sop/photo', { data }, 60000);
       A.etapes[i].photo = r.photo; garder();
     } catch (e) { toast('Photo non envoyée : ' + e.message); }
     X.envoi = null; C.rendre(true);
-  }
-  /** La photo réduite dans le navigateur (1600 px de grand côté, JPEG) : légère à envoyer, le serveur la relit. */
-  function reduire(f) {
-    return new Promise((ok, ko) => {
-      const url = URL.createObjectURL(f), im = new Image();
-      im.onload = () => {
-        const k = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight));
-        const c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
-        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
-        URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', 0.82));
-      };
-      im.onerror = () => { URL.revokeObjectURL(url); ko(new Error('photo illisible')); };
-      im.src = url;
-    });
   }
   async function creer() {
     const m = manques();

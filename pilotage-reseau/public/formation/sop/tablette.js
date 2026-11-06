@@ -331,13 +331,13 @@
     return `<div class="tb-pas">
       <nav class="tb-frise" aria-label="${esc(t().etapes)}">${frise}</nav>
       <div class="tb-prog"><i style="width:${Math.round(faites / E.length * 100)}%"></i></div>
-      <section class="tb-etape${media ? ' avec' : ''}${S.sens ? ' ' + S.sens : ''}" data-balayage>
+      <section class="tb-etape${media ? ' avec' : ''}${S.sens ? ' ' + S.sens : ''}" data-balayage><div class="tb-etape__in">
         <div class="tb-etape__tx"><div class="ou">${esc(t().etape)} ${i + 1} / ${E.length} · <span>${esc(L(e.section))}</span></div>
           ${S.sop.statut === 'a_valider' ? `<div class="note">${esc(t().aValiderS)}</div>` : ''}
           <h1>${esc(titre || ('' + e.numero))}</h1>
           ${e.critique ? `<div class="tb-alerte">${ALERTE}<div class="tb-alerte__tx"><b>${esc(t().crit)}</b>${esc(texte)}</div></div>` : `<div class="tx">${esc(texte)}</div>`}</div>
         ${media ? `<div class="tb-etape__media">${media}</div>` : ''}
-      </section>
+      </div></section>
       <div class="tb-pied"><button class="gb" data-a="prec" ${i === 0 ? 'disabled' : ''}>${esc(t().prec)}</button>
         <div class="av"><b>${esc(t().etape)} ${i + 1} / ${E.length}</b><small>${faites} ${esc(faites > 1 ? t().faites : t().faite)} · ${E.length - faites} ${esc(t().restent)}</small></div>
         ${dernier ? `<button class="gb g" data-a="fini">${esc(t().fini)}</button>` : `<button class="gb p" data-a="suiv">${esc(t().suiv)}</button>`}</div></div>`;

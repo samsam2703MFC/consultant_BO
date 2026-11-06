@@ -70,6 +70,9 @@ textarea.sop-in{min-height:66px;resize:vertical;line-height:1.45}
 .sop-ed-sec__h{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px}
 .sop-ed-et{display:grid;grid-template-columns:62px minmax(0,1fr) minmax(0,1fr) 130px;gap:8px;padding:8px 0;border-top:1px dashed var(--line)}
 .sop-ed-et__c{display:flex;flex-direction:column;gap:4px}
+/* La photo d'une étape dans l'éditeur : au format de la tablette (4:3), recadrée à l'import (recadrer.js). */
+.sop-ed-photo{width:100%;aspect-ratio:4/3;object-fit:contain;border-radius:6px;border:1px solid var(--line);background:#fff}
+.sop-ed-photo__act{display:flex;gap:6px;flex-wrap:wrap}
 .sop-ed-barre{position:sticky;bottom:0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .sop-zoom{position:fixed;inset:0;background:rgba(24,18,20,.42);display:flex;align-items:center;justify-content:center;z-index:80;cursor:zoom-out}
 .sop-zoom img{max-width:92vw;max-height:92vh;border-radius:12px;background:#fff}

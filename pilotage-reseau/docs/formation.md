@@ -812,3 +812,21 @@ tous les magasins la même chose ».
 - **Pied** : « ← Précédente » et « C'est fait · suivante → » (64 px), l'étape et le compte au centre ; à la dernière,
   « J'ai tout lu ✓ » (puis le quiz). **Balayer** l'étape vers la gauche = suivante (l'étape est faite), vers la droite =
   précédente ; un geste surtout vertical fait défiler le texte. Flèches ← → du clavier.
+
+## Étape centrée avec sa photo, photos recadrées au format 4:3 (06/11/2026)
+
+- Client : « revoir la mise en page du texte de la SOP elle-même (écran de droite), centré avec la photo ; dans
+  l'éditeur, je dois pouvoir cropper et avoir un ratio fixe pour les photos importées ».
+- **Tablette** (`sop/tablette.css`, `.tb-etape__in`) : le bloc de l'étape (texte et photo) est CENTRÉ dans l'écran de
+  droite, en largeur et en hauteur ; une étape plus longue que l'écran défile depuis le haut (marge automatique dans un
+  flex, jamais coupée). La photo vit dans un cadre FIXE 4:3, aussi grand que l'écran le permet ; une ancienne photo d'un
+  autre format y tient entière, sur fond blanc. Sous 1100 px, la photo passe sous le texte.
+- **Recadrer** (`recadrer.js`, `recadrer.css`, `window.FormationRecadrer.ouvrir(fichier)` → data URL ou `null`) : une
+  fenêtre au cadre fixe 4:3, la photo le couvre toujours ; glisser pour la placer (souris, doigt), zoomer au curseur, à
+  la molette ou à deux doigts, « Recentrer », grille des tiers ; « Utiliser cette photo » rend un JPEG de 1600 × 1200 au
+  plus, jamais agrandi (la taille du résultat est affichée, en ambre sous 800 px : « photo de faible résolution »).
+  Échap = Annuler, Entrée = Utiliser, flèches = déplacer.
+- Elle s'ouvre à chaque photo importée : dans l'assistant de création (étape 3) et dans l'éditeur complet (le champ
+  « photo (fichier) » est remplacé par « ＋ Photo » / « ↻ Changer » et « Retirer », aperçu 4:3). La photo recadrée part
+  par `POST /formation/sop/photo` (« u/… » sur l'étape), comme avant.
+

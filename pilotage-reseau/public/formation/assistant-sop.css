@@ -30,7 +30,7 @@
 .as-et__ac { display: flex; gap: 2px; }
 .as-et__med { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
 .as-photo { position: relative; display: inline-block; }
-.as-photo img { display: block; width: 150px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.as-photo img { display: block; width: 160px; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
 .as-photo .btn--icon { position: absolute; top: 4px; right: 4px; background: rgba(255, 255, 255, 0.92); }
 .as-photo--envoi { padding: 10px 12px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: 12px; }
 .as-photo__btn { cursor: pointer; }
