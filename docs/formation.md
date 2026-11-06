@@ -685,3 +685,54 @@ Manuel opératoire, réglages de la pré-ouverture et des compétences) réponde
 
 **Code de gestion des tablettes** (même lot) : § Tablettes des magasins.
 
+
+## Portail de formation restructuré (06/11/2026)
+
+Client : « le portail est très compliqué à comprendre ; le restructurer : 1. les formations (pré-ouverture, ouverture,
+continue) ; les métiers sont des postes ; les compétences sont liées aux formations ; les SOP sont pour le manuel
+opérationnel ». Maquette validée (`docs/maquettes/portail-formation/`), puis : les 21 formations sans phase rangées
+dans les phases nécessaires ; l'Ouverture = la période de lancement (six semaines avec le garant d'ouverture,
+contrat article 4.5) avec le suivi des KPI et le développement commercial ; le Guide pré-ouverture en bloc « Démarches ».
+
+- **Une seule chaîne**, en tête de chaque écran, toujours dans le même ordre : **Postes › Formations › Compétences ›
+  Manuel opérationnel**. Chaque fiche renvoie aux trois autres.
+- **Rail** (`window.FormationPortail.rail`, `portail.js`, lu par `formation.js`) : PORTAIL DE FORMATION — 1 Formations
+  (`#/rfformations`) · 2 Postes (`#/rfmetiers`) · 3 Compétences (`#/rfcompetences`) · 4 Manuel opérationnel (le Classeur,
+  `#/rfclasseur`) ; SUIVI — Suivi des équipes (`#/parcours`, `#/equipes`) ; RÉGLAGES — Correspondance panel, Tablettes,
+  Rédaction des SOP, Données du panel (`#/rfdonnees` : les écrans d'avant — carte des métiers, postes et sous-postes,
+  compétences, évaluations, procédures, base de connaissances, compétences produit, compétences des équipes, routes API —
+  à leur adresse, inchangés). Accueil du module : `#/rfformations` (la tablette garde le Classeur). Les anciennes adresses
+  marchent toutes ; une entrée reste allumée sur ses écrans voisins (Formations sur `#/rfpre`, Compétences sur `#/rfform`,
+  Manuel sur `#/sop` et `#/rfphase`…).
+- **La phase n'appartient qu'aux formations** : Pré-ouverture (`pre`) · Ouverture (`ouv`) · Formation continue (`con`) ;
+  une formation peut être dans plusieurs phases (apprise avant, recyclée ensuite). Table `ceo_ref_formation` (code,
+  `phases` JSON, `maj_le`, `maj_par`), posée une fois par `RF_FORMATIONS_PHASES_2026_11` (INSERT IGNORE : jamais
+  réécrite) : 32 phases viennent des blocs du Guide des formations, 21 formations hors blocs rangées le 06/11/2026
+  (pré-ouverture : FO-03, 04, 14, 17, 26, 34, 46, 47, 53 ; continue : FO-03, 15, 17, 21, 22, 23, 28, 39, 40, 42, 44, 48,
+  49, 50) ; l'Ouverture reçoit aussi FO-05 (suivi des KPI), FO-15, FO-43, FO-45 (développement commercial). Total :
+  31 pré-ouverture, 7 ouverture, 24 continue. Libellés et descriptions : `RF_PHASES_FORMATION` (NL à relire). Les
+  standards gardent leurs phases d'avant dans les données (la tablette, le CRM) mais le portail ne les classe plus que
+  par domaine et par moment de la journée.
+- **Formations** (`#/rfformations[/pre|ouv|con][/FO-xx]`) : trois cartes de phase (nombre, sous-titre), en Pré-ouverture
+  les onglets « Formations · N » / « Démarches · N » (`#/rfformations/pre/demarches` : les sections et points du Guide
+  pré-ouverture, J-, qui, preuve ; « Modifier le guide » → `#/rfpre`), en Ouverture la carte « Période de lancement »
+  (mise en route, suivi des KPI, développement commercial). Liste par famille (`RF_FAMILLES_FORMATION` : Franchise &
+  gestion · Production · Vente & développement commercial · Traiteur & snacking · Hygiène & réglementation ·
+  Encadrement), colonnes fixes : code · formation (« aussi continue ») · les 12 postes (plein = obligatoire, contour =
+  recommandée, d'après `attendu` du v25) · compétences · SOP · fréquence ; filtre par groupe de postes, recherche. Fiche :
+  phases en trois boutons (un clic ajoute ou retire, `PUT /formation/ref/formations/{code}`), pour qui, ce qu'on apprend
+  (compétences et leur compétence du panel), dans le manuel (SOP), évaluation au panel (les évaluations `[FO-xx]`).
+  Sans formation choisie : le résumé de la phase (formations, compétences, SOP, obligatoires par groupe de postes).
+- **Postes** (`#/rfmetiers[/Px]`) : les 12 postes du v25 en cinq groupes (Production, Vente, Traiteur, Encadrement,
+  Franchisé) ; la fiche = le plan de formation en trois colonnes de phase (obligatoires d'abord), ses compétences (celles
+  des formations obligatoires, « ● panel » / « ○ hors panel ») et son manuel (SOP publiées du poste, par moment).
+- **Compétences** (`#/rfcompetences[/code]`, `#/rfcompetences/produit`) : les 56 compétences par famille, colonnes
+  fixes code · compétence · formation · phases (celles de sa formation) · SOP · panel ; filtres Toutes · Sans SOP · Hors
+  panel. Fiche : description, « réussi si » du bloc (bloquante, 5 pôles, renouvellement ; « Modifier le critère » →
+  `#/rfform/<n>/<code>`), formation, pour qui, SOP, compétence du panel (« Modifier la correspondance » → `#/sopcomp`).
+  Onglet « Compétences produit » = celles du panel.
+- **API** : `GET /formation/ref` rend en plus, sur chaque formation, `phases`, `postes` (O / R), `famille`,
+  `competences`, et `phasesFormation`, `famillesFormation` (contrat : `docs/contrat-api.md`). Rien n'est retiré : le CRM
+  lit comme avant.
+- Fichiers : `public/formation/portail.js` (chargé entre `formation-sop.js` et `formation.js`, il étend
+  `window.FormationSop` comme les tablettes), `public/formation/portail.css`.

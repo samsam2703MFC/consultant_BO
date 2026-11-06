@@ -39,6 +39,50 @@ const RF_PHASES = [   // les MN_PARTIES du Manuel opératoire — NL à relire
     'operationnel' => ['fr' => 'Opérationnel', 'nl' => 'Operationeel'],
     'formation' => ['fr' => 'Formation continue', 'nl' => 'Permanente vorming'],
 ];
+/**
+ * Les phases d'une FORMATION (portail de formation restructuré, 06/11/2026) : quand on l'apprend. Une formation peut
+ * vivre dans plusieurs phases (apprise avant l'ouverture, recyclée ensuite). Les standards (SOP) n'ont pas de phase
+ * dans le portail : ils ont un moment de la journée (ouverture du magasin, journée, fermeture). NL à relire.
+ */
+const RF_PHASES_FORMATION = [
+    'pre' => ['fr' => 'Pré-ouverture', 'court' => 'Pré-ouverture', 'nl' => 'Vóór de opening',
+        'dfr' => 'Avant l’ouverture du magasin : la formation initiale du franchisé et de l’équipe, et les démarches à faire.',
+        'dnl' => 'Vóór de opening van de winkel: de basisopleiding van de franchisenemer en het team, en de stappen die te zetten zijn.'],
+    'ouv' => ['fr' => 'Ouverture', 'court' => 'Ouverture', 'nl' => 'Opening',
+        'dfr' => 'La période de lancement : les six premières semaines avec le garant d’ouverture (contrat de franchise, article 4.5). Mise en route de la boutique, suivi des KPI et développement commercial.',
+        'dnl' => 'De lanceringsperiode: de eerste zes weken met de openingsbegeleider (franchiseovereenkomst, artikel 4.5). Opstart van de winkel, opvolging van de KPI’s en commerciële ontwikkeling.'],
+    'con' => ['fr' => 'Formation continue', 'court' => 'Continue', 'nl' => 'Permanente vorming',
+        'dfr' => 'Après le lancement : les recyclages, la progression vers l’encadrement et le multi-boutique.',
+        'dnl' => 'Na de lancering: de opfrissingen, de doorgroei naar leidinggevende functies en meerdere winkels.'],
+];
+/**
+ * Le classement initial des 53 formations du v25 (posé une fois, modifiable ensuite : PUT /formation/ref/formations/{code}).
+ * 32 viennent des blocs du Guide des formations ; 21 n'étaient dans aucun bloc ; l'Ouverture reçoit la période de
+ * lancement, le suivi des KPI (FO-05) et le développement commercial (FO-15, FO-43, FO-45) — décisions du 06/11/2026.
+ */
+const RF_FORMATIONS_PHASES_2026_11 = [
+    'FO-01' => ['pre'], 'FO-02' => ['pre'], 'FO-03' => ['pre', 'con'], 'FO-04' => ['pre'], 'FO-05' => ['pre', 'ouv', 'con'],
+    'FO-06' => ['con'], 'FO-07' => ['pre'], 'FO-08' => ['pre'], 'FO-09' => ['pre'], 'FO-10' => ['pre'], 'FO-11' => ['pre'],
+    'FO-12' => ['pre'], 'FO-13' => ['con'], 'FO-14' => ['pre'], 'FO-15' => ['ouv', 'con'], 'FO-16' => ['pre'], 'FO-17' => ['pre', 'con'],
+    'FO-18' => ['con'], 'FO-19' => ['con'], 'FO-20' => ['pre'], 'FO-21' => ['con'], 'FO-22' => ['con'], 'FO-23' => ['con'],
+    'FO-24' => ['ouv', 'con'], 'FO-25' => ['ouv'], 'FO-26' => ['pre'], 'FO-27' => ['ouv'], 'FO-28' => ['con'], 'FO-29' => ['pre', 'con'],
+    'FO-30' => ['pre'], 'FO-31' => ['pre'], 'FO-32' => ['pre'], 'FO-33' => ['pre'], 'FO-34' => ['pre'], 'FO-35' => ['pre'],
+    'FO-36' => ['pre'], 'FO-37' => ['pre'], 'FO-38' => ['pre'], 'FO-39' => ['con'], 'FO-40' => ['con'], 'FO-41' => ['con'],
+    'FO-42' => ['con'], 'FO-43' => ['ouv', 'con'], 'FO-44' => ['con'], 'FO-45' => ['ouv', 'con'], 'FO-46' => ['pre'], 'FO-47' => ['pre'],
+    'FO-48' => ['con'], 'FO-49' => ['con'], 'FO-50' => ['con'], 'FO-51' => ['pre'], 'FO-52' => ['pre'], 'FO-53' => ['pre'],
+];
+/** Les familles des formations (regroupement de lecture du portail). NL à relire. */
+const RF_FAMILLES_FORMATION = [
+    'franchise' => ['fr' => 'Franchise & gestion', 'nl' => 'Franchise & beheer',
+        'fo' => ['FO-31', 'FO-32', 'FO-33', 'FO-34', 'FO-35', 'FO-36', 'FO-37', 'FO-38', 'FO-40', 'FO-42', 'FO-47', 'FO-48', 'FO-49', 'FO-50']],
+    'production' => ['fr' => 'Production', 'nl' => 'Productie', 'fo' => ['FO-03', 'FO-07', 'FO-08', 'FO-09', 'FO-12']],
+    'vente' => ['fr' => 'Vente & développement commercial', 'nl' => 'Verkoop & commerciële ontwikkeling',
+        'fo' => ['FO-01', 'FO-04', 'FO-11', 'FO-13', 'FO-14', 'FO-15', 'FO-17', 'FO-18', 'FO-19', 'FO-20', 'FO-43', 'FO-45']],
+    'traiteur' => ['fr' => 'Traiteur & snacking', 'nl' => 'Traiteur & snacking', 'fo' => ['FO-10', 'FO-46', 'FO-51', 'FO-52', 'FO-53']],
+    'hygiene' => ['fr' => 'Hygiène & réglementation', 'nl' => 'Hygiëne & regelgeving', 'fo' => ['FO-02', 'FO-16', 'FO-26', 'FO-44']],
+    'encadrement' => ['fr' => 'Encadrement', 'nl' => 'Leidinggeven',
+        'fo' => ['FO-05', 'FO-06', 'FO-21', 'FO-22', 'FO-23', 'FO-24', 'FO-25', 'FO-27', 'FO-28', 'FO-29', 'FO-30', 'FO-39', 'FO-41']],
+];
 const RF_POSTES_NL = [   // les 12 postes du v25 — NL à relire
     'P1' => 'Medewerker brood & banket', 'P2' => 'Medewerker traiteur', 'P3' => 'Medewerker verkoop',
     'P4' => 'Afdelingschef verkoop', 'P5' => 'Afdelingschef brood & banket', 'P6' => 'Afdelingschef traiteur',
@@ -161,6 +205,17 @@ function ensureReferentiel(): void
     foreach (['souscat VARCHAR(8) NULL', 'phases VARCHAR(160) NULL', 'postes VARCHAR(160) NULL', 'competences TEXT NULL',
         'formations TEXT NULL', 'checklists TEXT NULL'] as $col) {
         try { Db::exec('ALTER TABLE ceo_sop ADD COLUMN ' . $col); } catch (PDOException $e) { /* déjà là */ }
+    }
+    // Les phases de chaque formation (portail de formation, 06/11/2026) : posées une fois, jamais réécrites ensuite.
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ref_formation ('
+        . 'code VARCHAR(12) NOT NULL PRIMARY KEY,'
+        . 'phases VARCHAR(40) NOT NULL,'
+        . 'maj_le DATETIME NOT NULL,'
+        . 'maj_par VARCHAR(120) NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $now = date('Y-m-d H:i:s');
+    foreach (RF_FORMATIONS_PHASES_2026_11 as $code => $ph) {
+        Db::exec('INSERT IGNORE INTO ceo_ref_formation (code, phases, maj_le, maj_par) VALUES (?, ?, ?, ?)', [$code, rfJsonEcrire($ph), $now, 'Classement initial']);
     }
     rfSemer();
     rfClasserUneFois();
@@ -355,10 +410,18 @@ function ep_rf_ref(): array
         $domaines[] = $out;
     }
     $partie = $detail ? rfPartiesFormations() : [];
+    $phasesFo = rfFormationsPhases();
+    $compParFo = [];
+    foreach ($v['competences'] as $c) { if (!empty($c['formation'])) { $compParFo[(string) $c['formation']][] = (string) $c['code']; } }
     $formations = [];
     foreach ($v['formations'] as $f) {
-        $o = ['code' => (string) $f['code'], 'fr' => (string) $f['nom'], 'nl' => null, 'controleur' => $f['controleur'] ?? null, 'frequence' => $f['frequence'] ?? null];
-        if ($detail) { $o += ['partie' => $partie[(string) $f['code']] ?? null, 'attendu' => (object) ($f['attendu'] ?? [])]; }
+        $code = (string) $f['code'];
+        // Ajoutés pour le portail (06/11/2026), rien n'est retiré : phases, postes (O obligatoire · R recommandée),
+        // famille de lecture, compétences que la formation enseigne.
+        $o = ['code' => $code, 'fr' => (string) $f['nom'], 'nl' => null, 'controleur' => $f['controleur'] ?? null, 'frequence' => $f['frequence'] ?? null,
+            'phases' => $phasesFo[$code] ?? [], 'postes' => (object) ($f['attendu'] ?? []), 'famille' => rfFamilleFormation($code),
+            'competences' => $compParFo[$code] ?? []];
+        if ($detail) { $o += ['partie' => $partie[$code] ?? null, 'attendu' => (object) ($f['attendu'] ?? [])]; }
         $formations[] = $o;
     }
     $competences = [];
@@ -372,6 +435,10 @@ function ep_rf_ref(): array
     $out = [
         'version' => rfVersion(),
         'phases' => array_map(static fn ($k, $x) => ['cle' => $k, 'fr' => $x['fr'], 'nl' => $x['nl']], array_keys(RF_PHASES), RF_PHASES),
+        // Les phases des FORMATIONS (portail, 06/11/2026) ; `phases` ci-dessus reste celui des standards.
+        'phasesFormation' => array_map(static fn ($k, $x) => ['cle' => $k, 'fr' => $x['fr'], 'court' => $x['court'], 'nl' => $x['nl'],
+            'description' => ['fr' => $x['dfr'], 'nl' => $x['dnl']]], array_keys(RF_PHASES_FORMATION), RF_PHASES_FORMATION),
+        'famillesFormation' => array_map(static fn ($k, $x) => ['cle' => $k, 'fr' => $x['fr'], 'nl' => $x['nl']], array_keys(RF_FAMILLES_FORMATION), RF_FAMILLES_FORMATION),
         'postes' => array_map(static fn ($p) => ['code' => (string) $p['code'], 'fr' => (string) $p['nom'], 'nl' => RF_POSTES_NL[(string) $p['code']] ?? null], $v['postes']),
         'domaines' => $domaines,
         'standards' => $standards,
@@ -447,11 +514,49 @@ function rfPartiesFormations(): array
     return $out;
 }
 
-/** La date de la dernière écriture dans le référentiel (standards, sous-catégories, correspondances). */
+/** [code FO => phases] : la table du portail, sinon le classement initial (table absente ou ligne manquante). */
+function rfFormationsPhases(): array
+{
+    $out = RF_FORMATIONS_PHASES_2026_11;
+    try {
+        foreach (Db::rows('SELECT code, phases FROM ceo_ref_formation') as $r) {
+            $out[(string) $r['code']] = array_values(array_intersect(array_keys(RF_PHASES_FORMATION), rfJsonListe($r['phases'])));
+        }
+    } catch (Throwable $e) { /* le classement initial suffit */ }
+    return $out;
+}
+
+/** La famille de lecture d'une formation (clé de RF_FAMILLES_FORMATION) ; null si elle n'est rangée nulle part. */
+function rfFamilleFormation(string $code): ?string
+{
+    foreach (RF_FAMILLES_FORMATION as $k => $f) { if (in_array($code, $f['fo'], true)) { return $k; } }
+    return null;
+}
+
+/** PUT /formation/ref/formations/{code} — {phases: ['pre' | 'ouv' | 'con', …]} : les phases d'une formation du v25. */
+function wr_rf_formation(string $code): array
+{
+    if (!isset(rfParCode('formations')[$code])) { return rfRefus(404, 'formation inconnue du v25'); }
+    $b = body();
+    if (!is_array($b['phases'] ?? null)) { return rfRefus(422, 'phases attendues : une liste parmi pre, ouv, con'); }
+    $inconnues = array_diff(array_map('strval', $b['phases']), array_keys(RF_PHASES_FORMATION));
+    if ($inconnues !== []) { return rfRefus(422, 'phase inconnue : ' . implode(', ', $inconnues)); }
+    $ph = array_values(array_intersect(array_keys(RF_PHASES_FORMATION), array_map('strval', $b['phases'])));   // ordre pre, ouv, con
+    $par = foPar($b);
+    $avant = rfFormationsPhases()[$code] ?? [];
+    Db::exec('INSERT INTO ceo_ref_formation (code, phases, maj_le, maj_par) VALUES (?, ?, ?, ?)
+              ON DUPLICATE KEY UPDATE phases = VALUES(phases), maj_le = VALUES(maj_le), maj_par = VALUES(maj_par)',
+        [$code, rfJsonEcrire($ph), date('Y-m-d H:i:s'), $par]);
+    $nom = static fn (array $l) => $l === [] ? 'aucune' : implode(', ', array_map(static fn ($k) => RF_PHASES_FORMATION[$k]['fr'], $l));
+    try { journalAdd($par, 'Formation', 'Formation ' . $code, 'Phases : ' . $nom($ph) . ' (avant : ' . $nom($avant) . ')'); } catch (Throwable $e) { /* */ }
+    return ['ok' => true, 'code' => $code, 'phases' => $ph];
+}
+
+/** La date de la dernière écriture dans le référentiel (standards, sous-catégories, correspondances, phases des formations). */
 function rfVersion(): ?string
 {
     $max = null;
-    foreach (['ceo_sop', 'ceo_ref_souscat', 'ceo_ref_domaine', 'ceo_ref_corresp'] as $t) {
+    foreach (['ceo_sop', 'ceo_ref_souscat', 'ceo_ref_domaine', 'ceo_ref_corresp', 'ceo_ref_formation'] as $t) {
         $m = Db::row('SELECT MAX(maj_le) AS m FROM ' . $t)['m'] ?? null;
         if ($m !== null && ($max === null || $m > $max)) { $max = $m; }
     }
@@ -1016,6 +1121,7 @@ function rfRoute(string $method, string $path): ?array
         $method === 'PUT' && preg_match('#^/formation/ref/correspondance/([^/]{1,120})$#', $path, $m) === 1 => wr_rf_corresp($seg($m[1])),
         $method === 'PUT' && preg_match('#^/formation/ref/standards/([\w-]{1,32})$#', $path, $m) === 1 => wr_rf_standard($m[1]),
         $method === 'PUT' && preg_match('#^/formation/ref/souscats/(D\d\.\d{1,2})$#', $path, $m) === 1 => wr_rf_souscat($m[1]),
+        $method === 'PUT' && preg_match('#^/formation/ref/formations/(FO-\d{2})$#', $path, $m) === 1 => wr_rf_formation($m[1]),
         $method === 'POST' && $path === '/formation/ref/importer-crm' => wr_rf_importer_crm(),
         $method === 'POST' && $path === '/formation/ref/importer-panel' => wr_rf_importer_panel(),
         // Les deux guides (src/referentiel_guides.php) : pré-ouverture, blocs, points, pôles.

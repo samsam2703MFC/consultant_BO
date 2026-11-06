@@ -218,6 +218,11 @@
   }
   var TITRES = {};
   NAV.forEach(function (g) { g[1].forEach(function (it) { TITRES[it[0]] = it[1]; }); });
+  // Le portail de formation restructuré (portail.js, 06/11/2026) : son rail remplace l'affichage des groupes
+  // ci-dessus (Formations · Postes · Compétences · Manuel opérationnel, puis Suivi et Réglages). Les écrans d'avant
+  // gardent leur adresse (TITRES) : ils se rangent sous Réglages › Données du panel.
+  var PORTAIL = window.FormationPortail || null;
+  if (PORTAIL) Object.keys(PORTAIL.titres).forEach(function (k) { TITRES[k] = PORTAIL.titres[k]; });
   // Lot 6 : l'écran « manuel » n'a plus d'entrée de menu ; il ne porte plus que la fiche à lire d'une formation.
   TITRES.manuel = 'Manuel du réseau';
   // Les vues de lecture du Manuel du réseau : le mode tablette s'y propose et s'y promène (sélecteur de la barre).
@@ -253,13 +258,25 @@
         parts = vers.split('/');
       }
     }
-    var ecran = TITRES[parts[0]] ? parts[0] : (S.tablette ? 'rfclasseur' : 'tableau');
+    var ecran = TITRES[parts[0]] ? parts[0] : (S.tablette ? 'rfclasseur' : (PORTAIL ? PORTAIL.defaut : 'tableau'));
     S.route = { ecran: ecran, a: parts.slice(1) };
   }
   function arg(i) { var v = S.route.a[i]; return v != null && /^\d+$/.test(v) ? +v : null; }
 
+  /** Le rail du portail : groupes, entrées numérotées dans l'ordre de lecture, entrée allumée sur ses écrans voisins. */
+  function groupesPortail() {
+    return PORTAIL.rail.map(function (g) {
+      return '<div class="sidebar__group"><div class="sidebar__group-label">' + esc(g[0]) + '</div>' +
+        g[1].map(function (it, i) {
+          var on = S.route.ecran === it[0] || it[2].indexOf(S.route.ecran) >= 0;
+          var signe = g[2] ? '<span class="sidebar__num" aria-hidden="true">' + (i + 1) + '</span>' : icone(ICONES[it[0]] || ICONES.manuel);
+          return '<a href="#/' + it[0] + '" class="sidebar__item' + (g[2] ? ' sidebar__item--num' : '') + (on ? ' is-active' : '') + '"' + (on ? ' aria-current="page"' : '') + '>' + signe + esc(it[1]) + '</a>';
+        }).join('') + '</div>';
+    }).join('');
+  }
+
   function sidebar() {
-    var groupes = NAV.map(function (g) {
+    var groupes = PORTAIL ? groupesPortail() : NAV.map(function (g) {
       return '<div class="sidebar__group"><div class="sidebar__group-label">' + esc(g[0]) + '</div>' +
         g[1].map(function (it) {
           var on = S.route.ecran === it[0] || (S.route.ecran === 'manuel' && it[0] === 'rfphase');
@@ -267,7 +284,7 @@
         }).join('') + '</div>';
     }).join('');
     return '<nav class="sidebar" aria-label="Navigation principale">' +
-      '<div class="sidebar__head"><img src="img/logo.png" alt="L\'Atelier By" class="sidebar__logo" /><div class="sidebar__kicker">Module Formation</div></div>' +
+      '<div class="sidebar__head"><img src="img/logo.png" alt="L\'Atelier By" class="sidebar__logo" /><div class="sidebar__kicker">' + (PORTAIL ? 'Portail de formation' : 'Module Formation') + '</div></div>' +
       '<div class="sidebar__back"><a href="' + COCKPIT + '">' + icone('M19 12H5M12 19l-7-7 7-7') + 'Retour au cockpit</a></div>' +
       '<div class="sidebar__groups">' + groupes + '</div></nav>';
   }

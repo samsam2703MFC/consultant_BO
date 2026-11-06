@@ -229,7 +229,10 @@ accès que `/formation/v25`). Doc : `docs/formation.md` § Manuel du réseau.
     "statut": "publiee", "version": "1.0", "souscat": "D5.3", "phases": ["preouverture", "operationnel"],
     "postes": ["P1", "P5"], "competences": ["C-PROD.Pâtisserie"], "formations": ["FO-08"], "checklists": [],
     "moment": "ouverture", "lien": "#/sop/eclairs"}],
-  "formations":  [{"code": "FO-08", "fr": "Formation Pâtisserie technique", "nl": null, "controleur": "…", "frequence": "…"}],
+  "formations":  [{"code": "FO-08", "fr": "Formation Pâtisserie technique", "nl": null, "controleur": "…", "frequence": "…",
+    "phases": ["pre"], "postes": {"P1": "O", "P7": "R"}, "famille": "production", "competences": ["C-PROD.Pâtisserie"]}],
+  "phasesFormation": [{"cle": "pre", "fr": "Pré-ouverture", "court": "Pré-ouverture", "nl": "Vóór de opening", "description": {"fr": "…", "nl": "…"}}],
+  "famillesFormation": [{"cle": "production", "fr": "Production", "nl": "Productie"}],
   "competences": [{"code": "C-PROD.Pâtisserie", "famille": "C-PROD", "fr": "Pâtisserie technique", "nl": null,
     "description": "…", "formation": "FO-08", "standards": ["eclairs"],
     "panel": {"id": 123, "nom": "…", "etat": "valide"}}],
@@ -256,6 +259,7 @@ accès que `/formation/v25`). Doc : `docs/formation.md` § Manuel du réseau.
 |---|---|
 | `GET /formation/ref` | le contrat ci-dessus |
 | `PUT /formation/ref/standards/{id}` | `{souscat?, phases?, postes?, competences?, formations?, checklists?}` — clé absente = inchangée ; `souscat: null` retire. Chaque code est contrôlé contre le v25 (sous-catégories de `ceo_ref_souscat`, 4 phases, P1–P12, 56 compétences, 53 formations, checklists citées par les sous-catégories) → **422** `{error, invalides: {cle: [codes]}}` ; 404 standard inconnu → `{ok, standard}` |
+| `PUT /formation/ref/formations/{FO-xx}` | `{phases: ['pre' \| 'ouv' \| 'con', …]}` (liste vide permise : la formation ne paraît plus dans le portail) → `{ok, code, phases}` ; 422 phase inconnue ou `phases` absent, 404 formation inconnue du v25. Journalisé |
 | `GET /formation/ref/correspondance?rafraichir=1` | `panel {total, source, indispo, motif, lueLe}`, `lignes[]` (code, famille, fr, description, formation, `standards[{id, titre}]`, `etat`, `panel {id, nom}`, `score`, `propositions[{id, nom, score}]`, `tranche`, `majLe`, `majPar`), `liste[]` (compétences du panel et les codes qui y sont reliés), `couverture {valide, certain, propose, aucun, total, panelRelies, panelTotal, sansStandard}`, `auto` (bilan quand la table vide vient d'être proposée) |
 | `PUT /formation/ref/correspondance/{code}` | `{panelId: id}` → `valide` (l'id doit exister dans la liste du panel, sinon 422) ; `{panelId: null}` → `aucun` (tranché). Code URL-encodé (`C-PROD.P%C3%A2tisserie`) ; 404 code inconnu du v25 |
 | `POST /formation/ref/correspondance/proposer` | `{rafraichir?}` — relance la proposition automatique ; une ligne tranchée (`valide`, `aucun` choisi) n'est jamais réécrite → `{certain, propose, aucun, gardees, panel}` ; 503 si le panel est illisible |
