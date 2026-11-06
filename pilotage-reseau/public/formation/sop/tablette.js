@@ -100,7 +100,8 @@
     poste: Q.get('poste') || localStorage.getItem('foPoste') || 'tous',
     langue: (Q.get('langue') || localStorage.getItem('foLangue')) === 'nl' ? 'nl' : 'fr',
     init: null, moi: null, jeton: null, suivi: {},
-    vue: 'liste', sop: null, etape: 0, vuEtapes: {}, sens: '', qi: 0, reponses: [], choix: null, resultat: null,
+    vue: 'liste', sop: null, etape: 0, vuEtapes: {}, sens: '',
+    frise: (Q.get('frise') || localStorage.getItem('foFrise')) === 'verticale' ? 'v' : 'h',   // la frise des étapes : horizontale ou verticale qi: 0, reponses: [], choix: null, resultat: null,
     pinPour: null, pin: '', valideur: null, note: '', occupe: false, erreur: null,
     onglet: ongletDuMoment(), // ouverture · journee · fermeture · aide (06/11/2026)
     tout: false               // identifiée : false = ses postes, true = tout le magasin
@@ -320,14 +321,14 @@
     let k = -1;
     const frise = (S.sop.contenu.sections || []).map((sec, si) => `<div class="tb-fr-g ${si === e.si ? 'on' : ''}">
       <div class="tb-fr-s" title="${esc(L(sec.titre))}">${esc(L(sec.titre))}</div><div class="tb-fr-p">${sec.etapes.map(x => { k++;
-        const fait = S.vuEtapes[k] && k !== i, court = L(x.titre) || L(x.texte).split('\n')[0].slice(0, 60);
+        const fait = S.vuEtapes[k] && k !== i, l1 = L(x.texte).split('\n')[0], court = L(x.titre) || (l1.length > 60 ? l1.slice(0, 58).replace(/\s+\S*$/, '') + '…' : l1);
         return `<button data-etape="${k}" class="${k === i ? 'on' : fait ? 'fait' : ''}${x.critique ? ' crit' : ''}" title="${esc(x.numero + ' · ' + court)}"
-          aria-label="${esc(t().etape + ' ' + (k + 1) + ' : ' + court)}"${k === i ? ' aria-current="step"' : ''}>${fait ? '✓' : esc(x.numero)}</button>`; }).join('')}</div></div>`).join('');
+          aria-label="${esc(t().etape + ' ' + (k + 1) + ' : ' + court)}"${k === i ? ' aria-current="step"' : ''}><i>${fait ? '✓' : esc(x.numero)}</i><span>${esc(court)}</span></button>`; }).join('')}</div></div>`).join('');
     const titre = L(e.titre), texte = L(e.texte);
     const dernier = i === E.length - 1;
     const faites = Object.keys(S.vuEtapes).length;
     const media = (e.photo ? `<img class="photo" src="${esc(photoUrl(e.photo))}" alt="" data-zoom="${esc(photoUrl(e.photo))}">` : '') + (e.video ? video(e.video) : '');
-    return `<div class="tb-pas">
+    return `<div class="tb-pas${S.frise === 'v' ? ' tb-pas--v' : ''}">
       <nav class="tb-frise" aria-label="${esc(t().etapes)}">${frise}</nav>
       <div class="tb-prog"><i style="width:${Math.round(faites / E.length * 100)}%"></i></div>
       <section class="tb-etape${media ? ' avec' : ''}${S.sens ? ' ' + S.sens : ''}" data-balayage>
@@ -414,7 +415,7 @@
     if (S.vue === 'lecture') {
       const on = el.querySelector('.tb-frise button.on');
       const doux = S.sens && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (on) { on.scrollIntoView({ inline: 'center', block: 'nearest', behavior: doux ? 'smooth' : 'auto' }); }
+      if (on) { on.scrollIntoView({ inline: 'center', block: S.frise === 'v' ? 'center' : 'nearest', behavior: doux ? 'smooth' : 'auto' }); }
     }
     S.sens = '';   // l'animation d'entrée ne joue qu'au changement d'étape (pas sur FR / NL)
   }

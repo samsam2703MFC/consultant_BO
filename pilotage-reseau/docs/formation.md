@@ -811,4 +811,9 @@ tous les magasins la même chose ».
 - **Pied** : « ← Précédente » et « C'est fait · suivante → » (64 px), l'étape et le compte au centre ; à la dernière,
   « J'ai tout lu ✓ » (puis le quiz). **Balayer** l'étape vers la gauche = suivante (l'étape est faite), vers la droite =
   précédente ; un geste surtout vertical fait défiler le texte. Flèches ← → du clavier.
+- **Variante verticale** (client, même jour : « ça peut être une frise verticale, mais typée tablette wizard ») :
+  `?frise=verticale` (ou `localStorage` `foFrise`) — la frise à gauche (380 px), une ligne de 64 px par étape (case
+  numérotée sur un fil, titre de l'étape sur deux lignes au plus), la section en intertitre ; l'étape à droite (photo à
+  côté du texte, dessous sous 1100 px) ; le même pied, le même balayage. En portrait, la frise passe au-dessus (30 % de
+  l'écran). La version horizontale reste celle d'office, à trancher avec le client.
 
