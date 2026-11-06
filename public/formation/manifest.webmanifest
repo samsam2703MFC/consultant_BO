@@ -1,8 +1,8 @@
 {
-  "name": "Manuel opératoire — L'Atelier by",
+  "name": "Manuel du réseau — L'Atelier by",
   "short_name": "Manuel",
-  "description": "Le manuel opératoire en ligne : postes, niveaux, compétences, procédures et formations du réseau.",
-  "start_url": "./?tablette=1#/manuel",
+  "description": "Le Manuel du réseau en lecture : standards (SOP) par domaine, par phase et par poste, formations et compétences.",
+  "start_url": "./?tablette=1#/rfclasseur",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

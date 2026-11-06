@@ -1,9 +1,9 @@
 /* Module Formation › Standards (SOP) — les SOP du réseau, en français et en néerlandais (src/sop.php).
  *
- * Chargé AVANT formation.js, qui l'appelle par quelques accroches : la barre latérale (groupe « Standards (SOP) »),
- * ses écrans, ses lectures, et chaque partie du Manuel opératoire, où les SOP se rangent à côté des procédures et des
- * formations FO. Les SOP vivent dans nos tables : ces écrans s'affichent même quand le référentiel du panel est
- * illisible.
+ * Chargé AVANT formation.js, qui l'appelle par quelques accroches : la barre latérale (groupe « Manuel du réseau »),
+ * ses écrans et ses lectures. Les SOP vivent dans nos tables : ces écrans s'affichent même quand le référentiel du
+ * panel est illisible. (Jusqu'au lot 6, les SOP se rangeaient aussi dans chaque partie du « Manuel en ligne » de
+ * formation.js ; cet écran est retiré, ses parties sont les phases du Manuel du réseau, #/rfphase/<phase>.)
  *
  *   #/sop                 les SOP par famille (FR et NL, compétence du panel, partie du manuel, progression)
  *   #/sop/<id>            une SOP : FR et NL côte à côte, partie du manuel, compétence, PDF, équipe, quiz, versions
@@ -130,7 +130,7 @@ window.FormationSop = (function () {
       <a class="btn btn--sm" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'fr')}" target="_blank">PDF FR</a><a class="btn btn--sm" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'nl')}" target="_blank">PDF NL</a>
       <a class="btn btn--sm" href="${tabletteLien(s.poste)}" target="_blank" rel="noopener">Tablette du poste ↗</a>
       ${tablette() ? '' : `<a class="btn btn--primary" href="#/sop/${esc(s.id)}/editer" style="margin-left:auto">Modifier</a>`}</div></div>`;
-    const partie = phasesDe(s) ? `<p><span class="muted">Parties du manuel</span> ${phasesDe(s).map(p => `<a class="chip chip--accent" href="#/manuel/partie/${esc(p)}">${esc(NOM_PARTIE[p] || p)}</a>`).join(' ')} <span class="muted fm-small">les phases du classement</span></p>` : `<p><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/${esc(s.partie)}">${esc(NOM_PARTIE[s.partie])}</a>${s.partieReglee || tablette() ? '' : ' <span class="muted fm-small">déduite du moment</span>'}</p>
+    const partie = phasesDe(s) ? `<p><span class="muted">Parties du manuel</span> ${phasesDe(s).map(p => `<a class="chip chip--accent" href="#/rfphase/${esc(p)}">${esc(NOM_PARTIE[p] || p)}</a>`).join(' ')} <span class="muted fm-small">les phases du classement</span></p>` : `<p><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/rfphase/${esc(s.partie)}">${esc(NOM_PARTIE[s.partie])}</a>${s.partieReglee || tablette() ? '' : ' <span class="muted fm-small">déduite du moment</span>'}</p>
       ${tablette() ? '' : `<div class="seg fm-seg--petit" role="group">${PARTIES.map(p => `<button type="button" data-sa="partie" data-id="${esc(s.id)}" data-v="${p[0]}"${p[0] === s.partie ? ' class="is-on"' : ''}>${esc(p[1])}</button>`).join('')}</div>${s.partieReglee ? ` <button type="button" class="btn btn--sm" data-sa="partie" data-id="${esc(s.id)}" data-v="">↺ Partie déduite</button>` : ''}`}`;
     const infos = `<section class="card"><h2>La SOP</h2><dl class="sop-dl">
       <dt>Code</dt><dd>${esc(s.code || '—')} · ${esc(s.dossier)} ${esc(famNom(s.dossier))}</dd><dt>Poste</dt><dd>${esc(POSTE_NOM[s.poste] || s.poste)}${s.moment ? ' · ' + esc(s.moment) : ''}</dd>
@@ -253,24 +253,8 @@ window.FormationSop = (function () {
     return { titre: 'Modifier · ' + s.titre.fr, kicker: K, corps, large: true };
   }
 
-  /* ═══ Le Manuel opératoire : les SOP de chaque partie ═══ */
-  /** Les SOP d'une partie du manuel : ses phases du Manuel du réseau quand elles sont posées, sinon la partie réglée ou déduite. */
+  /** Les phases d'un standard (son classement dans le Manuel du réseau), ou null quand il n'en porte pas encore. */
   const phasesDe = s => s.classement && s.classement.phases && s.classement.phases.length ? s.classement.phases : null;
-  function dePartie(cle) { return D.liste ? D.liste.filter(s => s.statut !== 'brouillon' && (phasesDe(s) ? phasesDe(s).includes(cle) : s.partie === cle)) : null; }
-  function sectionPartie(cle) {
-    const l = dePartie(cle);
-    let h = `<div class="section-label">Standards (SOP) · ${l ? C.n(l.length) : '…'}</div>`;
-    if (!l) { return h + erreurOuAttente(); }
-    if (!l.length) { return h + `<p class="muted" style="margin-top:8px">Aucune SOP dans cette partie.</p>`; }
-    h += `<p class="muted fm-small"><a href="${tabletteLien('')}" target="_blank" rel="noopener">Lire pas à pas sur la tablette du poste ↗</a> · nom, PIN, quiz, « vu faire » par la responsable</p>`;
-    let fam = null, ouvert = false;
-    l.forEach(s => {
-      if (s.dossier !== fam) { if (ouvert) { h += '</ul>'; } fam = s.dossier; ouvert = true; h += `<div class="fm-part-cat">${esc(famNom(s.dossier))}</div><ul class="type-grid">`; }
-      h += `<li><a class="choice-card" href="#/sop/${esc(s.id)}"><strong><span class="fm-code">${esc(s.code || '')}</span> ${esc(s.titre.fr)}</strong><span class="muted">${esc(s.titre.nl)} · ${s.nbEtapes} étapes${s.statut === 'a_valider' ? ' · à valider' : ''}</span></a></li>`;
-    });
-    return h + (ouvert ? '</ul>' : '');
-  }
-  function nbPartie(cle) { const l = dePartie(cle); return l ? l.length : null; }
 
   /* ═══ Manuel du réseau : le référentiel commun (src/referentiel.php, fusion du 06/11/2026) ═══
    *
@@ -313,6 +297,8 @@ window.FormationSop = (function () {
   const rfStatut = s => ST_STD[s.statut] ? (s.statut === 'brouillon' ? `<span class="chip chip--neutral">${ST_STD[s.statut]}</span>` : trou(ST_STD[s.statut])) : '';
   const kpi = (v, l, note) => `<div class="kpi"><div class="kpi__value">${esc(v)}</div><div class="kpi__label">${esc(l)}</div>${note ? `<div class="kpi__note">${esc(note)}</div>` : ''}</div>`;
   const lienStd = s => `<a class="rf-std" href="#/sop/${esc(s.id)}">${s.code ? rcode(s.code) + ' ' : ''}<span>${esc(s.fr)}</span></a>`;
+  /** Une formation FO-xx : sa fiche à lire (programme, matériel didactique, validation — reste du Manuel en ligne, lot 6). */
+  const lienFo = (code, nom, phase) => /^FO-\d+$/.test(code) ? `<a class="rf-std" href="#/manuel/formation/${esc(code)}${phase ? '/partie/' + esc(phase) : ''}">${rcode(code)} <span>${esc(nom || '')}</span></a>` : `${rcode(code)} <span>${esc(nom || '')}</span>`;
   function refAttente(titre) {
     return { titre, kicker: K, corps: D.refErr ? `<p class="error">${esc(D.refErr)}</p>` : attente('Lecture du référentiel…'), large: true };
   }
@@ -424,13 +410,13 @@ window.FormationSop = (function () {
     const horsSc = stds.filter(s => !X.sc[s.souscat]);
     if (horsSc.length) { app += `<div class="section-label">Sans sous-catégorie · ${horsSc.length}</div>` + horsSc.map(s => `<div class="rf-ligne">${lienStd(s)}</div>`).join(''); }
     const appr = fo.map(c => { const f = X.fo[c] || {}; const n = stds.filter(s => s.formations.includes(c)).length;
-      return `<div class="rf-ligne">${rcode(c)} <span>${esc(f.fr || '')}</span><span class="sub">${esc([f.controleur, f.frequence].filter(Boolean).join(' · '))}${n ? ' · citée par ' + n + ' standard(s)' : ' · rangée dans cette partie du manuel'}</span></div>`; }).join('');
+      return `<div class="rf-ligne">${lienFo(c, f.fr, ph)}<span class="sub">${esc([f.controleur, f.frequence].filter(Boolean).join(' · '))}${n ? ' · citée par ' + n + ' standard(s)' : ' · rangée dans cette phase'}</span></div>`; }).join('');
     const prouv = comp.map(c => { const k = X.comp[c] || {}; const p = k.panel || { etat: 'aucun' };
       return `<div class="rf-ligne">${rfComp(X, [c])} <span>${esc(k.fr || '')}</span><span class="sub">${p.etat === 'valide' || p.etat === 'certain' ? 'panel : ' + esc(p.nom) : 'panel : ' + ETAT_COR[p.etat].toLowerCase()}</span></div>`; }).join('');
     h += `<div class="rf-trois"><section class="card"><h2>À appliquer · ${stds.length} standards</h2>${app || '<p class="muted">Aucun standard dans cette phase.</p>'}</section>
       <section class="card"><h2>À apprendre · ${fo.length} formations</h2>${appr || '<p class="muted">Aucune formation.</p>'}</section>
       <section class="card"><h2>À prouver · ${comp.length} compétences</h2>${prouv || '<p class="muted">Aucune compétence reliée.</p>'}</section></div>
-      <p class="muted fm-small">Calculé, rien n’est saisi ici : les standards portent leurs phases (fiche › Classement) ; les formations sont celles de ces standards et celles que le Manuel opératoire range dans cette partie.</p>`;
+      <p class="muted fm-small">Calculé, rien n’est saisi ici : les standards portent leurs phases (fiche › Classement) ; les formations sont celles de ces standards et celles que la répartition des formations range dans cette phase (réglable sur la fiche de chaque formation, qui s’ouvre d’un clic : programme, matériel didactique, validation).</p>`;
     return { titre: 'Par phase', kicker: K, corps: h, large: true };
   }
 
@@ -459,7 +445,7 @@ window.FormationSop = (function () {
       const c = cellule(X, sp, sph), p = X.poste[sp];
       h += `<h2 class="screen-subtitle">${esc(p.code)} · ${esc(p.fr)} · ${esc(PHASE_NOM[sph])}</h2><div class="rf-trois">
         <section class="card"><h2>Standards · ${c.stds.length}</h2>${c.stds.map(s => `<div class="rf-ligne">${lienStd(s)} ${rfStatut(s)}<span class="sub">${esc(s.moment ? 'moment : ' + s.moment : 'sans moment')}</span></div>`).join('') || '<p class="muted">Aucun standard.</p>'}</section>
-        <section class="card"><h2>Formations · ${c.fo.length}</h2>${c.fo.map(k => `<div class="rf-ligne">${rcode(k)} <span>${esc((X.fo[k] || {}).fr || '')}</span><span class="sub">${c.foOblig.includes(k) ? 'obligatoire pour ce poste' : c.stds.some(s => s.formations.includes(k)) ? 'citée par un standard' : 'recommandée'}</span></div>`).join('') || '<p class="muted">Aucune formation.</p>'}</section>
+        <section class="card"><h2>Formations · ${c.fo.length}</h2>${c.fo.map(k => `<div class="rf-ligne">${lienFo(k, (X.fo[k] || {}).fr, sph)}<span class="sub">${c.foOblig.includes(k) ? 'obligatoire pour ce poste' : c.stds.some(s => s.formations.includes(k)) ? 'citée par un standard' : 'recommandée'}</span></div>`).join('') || '<p class="muted">Aucune formation.</p>'}</section>
         <section class="card"><h2>Compétences · ${c.comp.length}</h2>${c.comp.map(k => `<div class="rf-ligne">${rfComp(X, [k])} <span>${esc((X.comp[k] || {}).fr || '')}</span></div>`).join('') || '<p class="muted">Aucune compétence.</p>'}</section></div>`;
     }
     return { titre: 'Par poste', kicker: K, corps: h, large: true };
@@ -1054,7 +1040,7 @@ window.FormationSop = (function () {
 
   /** Les lectures de l'écran affiché (appelé par apres() de formation.js). */
   function apres(e, a) {
-    if (e === 'sop' || e === 'sopred' || e === 'manuel') { chargerListe(false); }
+    if (e === 'sop' || e === 'sopred') { chargerListe(false); }
     if (e === 'sop' || e === 'sopcomp') { chargerMagasins(); }
     if (e === 'sop' && a[0] && a[1] === 'editer') { chargerEditeur(a[0]); }
     else if (e === 'sop' && a[0] && D.fiche[a[0]] === undefined) { chargerFiche(a[0]); }
@@ -1184,9 +1170,7 @@ window.FormationSop = (function () {
     ecrans: ECRANS,
     /** formation.js fournit ses outils une fois, au démarrage. */
     init(ctx, root) { C = ctx; brancher(root); brancherGuides(root); },
-    apres,
-    sectionPartie,
-    nbPartie
+    apres
   };
 })();
 
