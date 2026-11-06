@@ -1186,7 +1186,22 @@ window.FormationSop = (function () {
   'use strict';
   if (!FS) { return; }
   let C = null;
-  const T = { liste: null, erreur: null, charge: false, occupe: false, nom: '', shop: '' };
+  // code : le code de gestion (lot 6), gardé dans l'onglet seulement (sessionStorage) ; refus : ce que la garde du serveur
+  // a répondu (code attendu, refusé, essais, gestion fermée) ; saisie : ce qui est tapé dans le champ du code.
+  const T = { liste: null, erreur: null, refus: null, charge: false, occupe: false, nom: '', shop: '', code: '', saisie: '' };
+  const CLE_CODE = 'fm.tablettes.code';
+  try { T.code = sessionStorage.getItem(CLE_CODE) || ''; } catch (e) { /* stockage indisponible : le code se retape */ }
+  /** Le code de gestion, envoyé à chaque route de gestion (src/tablettes.php, tabGardeGestion). */
+  const entetes = () => (T.code ? { 'X-Code-Gestion': T.code } : null);
+  function garderCode(c) { T.code = c; try { if (c) { sessionStorage.setItem(CLE_CODE, c); } else { sessionStorage.removeItem(CLE_CODE); } } catch (e) { /* */ } }
+  /** Un refus de la garde du code : l'écran redemande le code (oublié s'il était faux) ; vrai quand c'en était un. */
+  function refusGestion(x) {
+    const c = x && x.data && x.data.code;
+    if (!['gestion_fermee', 'code_attendu', 'code_gestion', 'essais', 'suspendu'].includes(c)) { return false; }
+    garderCode('');   // à retaper (faux, trop d'essais, gestion fermée) : jamais de relecture en boucle avec un code refusé
+    T.liste = null; T.refus = { code: c, message: x.message };
+    return true;
+  }
   const esc = v => (C ? C.esc(v) : String(v == null ? '' : v));
   const jour = iso => iso ? new Date(iso).toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
   const heure = iso => iso ? new Date(iso).toLocaleString('fr-BE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
@@ -1208,17 +1223,26 @@ window.FormationSop = (function () {
     if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(texte).then(() => toast(ok), repli); } else { repli(); }
   }
 
+  /** La liste ; sans code, un premier appel sans code dit seulement si la gestion est ouverte (code attendu) ou fermée. */
   function charger(forcer) {
-    if ((T.liste && !forcer) || T.charge) { return; }
+    // Une lecture ratée ou refusée n'est pas relancée à chaque rendu : « Réessayer » ou le code tapé la relancent.
+    if ((T.liste && !forcer) || T.charge || (T.refus && !T.code && !forcer) || (T.erreur && !forcer)) { return; }
     T.charge = true;
-    C.lire('/formation/tablettes', 30000).then(d => { T.liste = d; T.erreur = null; T.charge = false; C.rendre(true); },
-      er => { T.erreur = er.message; T.charge = false; C.rendre(true); });
+    C.appel('GET', '/formation/tablettes', null, 30000, entetes()).then(d => { T.liste = d; T.erreur = null; T.refus = null; T.charge = false; C.rendre(true); },
+      er => { T.charge = false; if (!refusGestion(er)) { T.erreur = er.message; } C.rendre(true); });
   }
   async function ecrire(methode, chemin, corps, msg) {
     T.occupe = true; C.rendre(true);
-    try { const r = await C.appel(methode, chemin, corps || {}); T.liste = r; if (msg) { toast(typeof msg === 'function' ? msg(r) : msg); } }
-    catch (x) { toast(x.message); }
+    try { const r = await C.appel(methode, chemin, corps || {}, 120000, entetes()); T.liste = r; if (msg) { toast(typeof msg === 'function' ? msg(r) : msg); } }
+    catch (x) { if (!refusGestion(x)) { toast(x.message); } }
     T.occupe = false; C.rendre(true);
+  }
+  /** Le code tapé : gardé dans l'onglet, puis la liste relue avec lui. */
+  function ouvrirGestion() {
+    const v = T.saisie.trim();
+    if (!v) { return toast('Taper le code de gestion'); }
+    garderCode(v); T.saisie = ''; T.refus = null; T.liste = null; T.erreur = null;
+    charger(true); C.rendre(true);
   }
 
   /* ── L'écran ── */
@@ -1258,18 +1282,32 @@ window.FormationSop = (function () {
       <div class="tbg-mag__fin"><button type="button" class="btn btn--danger btn--sm" data-tb="archiver" data-id="${m.id}" ${T.occupe ? 'disabled' : ''}>Archiver</button></div>
     </section>`;
   }
+  /** Le champ du code de gestion : la garde du serveur a refusé (code attendu, faux, trop d'essais) ou la gestion est fermée. */
+  function carteCode() {
+    const R = T.refus || {};
+    const ferme = R.code === 'gestion_fermee';
+    const msg = R.code === 'code_gestion' ? 'Code de gestion refusé.' : (R.code === 'essais' || R.code === 'suspendu' || ferme) ? R.message : '';
+    return `<section class="card tbg-code"><h2>Code de gestion</h2>
+      <p class="muted tbg-code__txt">La liste des tablettes porte le PIN de chaque magasin : la gérer demande le code de gestion du réseau. Il est gardé dans cet onglet jusqu’à sa fermeture.</p>
+      ${ferme ? '' : `<form class="toolbar tbg-code__f" data-tbform="code"><label class="tbg-lab" for="tbg-code">Code de gestion</label>
+        <input id="tbg-code" class="tbg-nouv" type="password" autocomplete="current-password" data-tbin="code" value="${esc(T.saisie)}" ${T.charge ? 'disabled' : ''}>
+        <button type="submit" class="btn btn--primary" ${T.charge ? 'disabled' : ''}>Ouvrir la gestion</button></form>`}
+      ${msg ? `<p class="error" role="alert">${esc(msg)}</p>` : ''}</section>`;
+  }
   function ecran() {
     feuille();
     const K = FS.groupe || 'Manuel du réseau';
     if (C.S.tablette) { return { titre: 'Tablettes', kicker: K, corps: '<p class="muted">La gestion des tablettes ne se fait pas en mode tablette.</p>' }; }
     const L = T.liste;
-    if (!L) { return { titre: 'Tablettes', kicker: K, corps: T.erreur ? `<p class="error">${esc(T.erreur)}</p>` : '<p class="muted">Lecture des tablettes…</p>' }; }
+    if (!L && T.refus) { return { titre: 'Tablettes', kicker: K, corps: carteCode() }; }
+    if (!L) { return { titre: 'Tablettes', kicker: K, corps: T.erreur ? `<p class="error">${esc(T.erreur)}</p><p><button type="button" class="btn btn--sm" data-tb="relire">Réessayer</button></p>` : '<p class="muted">Lecture des tablettes…</p>' }; }
     const actifs = L.magasins.filter(m => !m.archive), archives = L.magasins.filter(m => m.archive);
     const url = urlTablette('');
     let h = `<section class="card tbg-tete">
       <div class="tbg-adr"><span class="tbg-lab">Adresse de la tablette</span><a class="tbg-url" href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>
         <span class="sub">Une seule tablette par magasin : le PIN du magasin ouvre l’appareil une fois, puis chaque employé s’identifie avec son PIN du panel. L’onglet SOP de l’app Cuisine y mène.</span></div>
-      <div class="tbg-adr__act"><button type="button" class="btn btn--sm" data-tb="copierUrl">⧉ Copier l’adresse</button>${L.crmDisponible ? `<button type="button" class="btn btn--sm" data-tb="reprise" ${T.occupe ? 'disabled' : ''} title="Les magasins du Manuel du CRM qui ne sont pas encore ici (même PIN quand il est libre)">Reprendre les magasins du CRM</button>` : ''}</div>
+      <div class="tbg-adr__act"><button type="button" class="btn btn--sm" data-tb="copierUrl">⧉ Copier l’adresse</button>${L.crmDisponible ? `<button type="button" class="btn btn--sm" data-tb="reprise" ${T.occupe ? 'disabled' : ''} title="Les magasins du Manuel du CRM qui ne sont pas encore ici (même PIN quand il est libre)">Reprendre les magasins du CRM</button>` : ''}
+        <button type="button" class="btn btn--sm btn--ghost" data-tb="oublier" title="Le code de gestion est oublié dans cet onglet : il faudra le retaper">Fermer la gestion</button></div>
       <div class="toolbar tbg-ajout"><input class="tbg-nouv" placeholder="Nom de la tablette (ex. L’Atelier By Corbais)" maxlength="120" data-tbin="nom" value="${esc(T.nom)}">
         <select class="tbg-sel" data-tbin="shop"><option value="">Boutique du panel…</option>${L.boutiques.map(b => `<option value="${esc(b.id)}"${b.id === T.shop ? ' selected' : ''}>${esc(b.nom)}</option>`).join('')}</select>
         <button type="button" class="btn btn--primary" data-tb="creer" ${T.occupe ? 'disabled' : ''}>＋ Tablette de magasin</button></div>
@@ -1287,9 +1325,11 @@ window.FormationSop = (function () {
   function brancher(root) {
     root.addEventListener('click', ev => {
       const b = ev.target.closest('[data-tb]');
+      if (b && b.dataset.tb === 'relire') { T.erreur = null; charger(true); return C.rendre(true); }
       if (!b || !T.liste) { return; }
       const d = b.dataset, id = +d.id, m = T.liste.magasins.find(x => x.id === id);
       switch (d.tb) {
+        case 'oublier': garderCode(''); T.liste = null; T.refus = { code: 'code_attendu' }; return C.rendre(true);
         case 'copierUrl': return copier(urlTablette(''), 'Adresse copiée');
         case 'copier': return copier(`Tablette du magasin — ${m.nom}\n${urlTablette(m.shopId)}\nPIN du magasin : ${pinLisible(m.pin)}`, 'Adresse et PIN copiés');
         case 'creer': {
@@ -1313,6 +1353,15 @@ window.FormationSop = (function () {
     root.addEventListener('input', ev => {
       const t = ev.target, k = t.getAttribute && t.getAttribute('data-tbin');
       if (k === 'nom') { T.nom = t.value; }
+      if (k === 'code') { T.saisie = t.value; }
+    });
+    root.addEventListener('submit', ev => {
+      const f = ev.target.closest && ev.target.closest('[data-tbform="code"]');
+      if (!f) { return; }
+      ev.preventDefault();
+      const i = f.querySelector('[data-tbin="code"]');
+      if (i) { T.saisie = i.value; }
+      ouvrirGestion();
     });
     root.addEventListener('change', ev => {
       const t = ev.target;

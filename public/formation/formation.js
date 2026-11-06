@@ -77,12 +77,13 @@
     return d.toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' à ' + d.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' });
   }
 
-  /** Appel JSON de l'API du cockpit, avec un délai. */
-  function appel(methode, chemin, corps, delai) {
+  /** Appel JSON de l'API du cockpit, avec un délai ; `entetes` (facultatif) s'ajoute aux en-têtes (ex. X-Code-Gestion). */
+  function appel(methode, chemin, corps, delai, entetes) {
     var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var minuteur = setTimeout(function () { if (ctrl) ctrl.abort(); }, delai || 120000);
     var h = { Accept: 'application/json' };
     if (corps) h['Content-Type'] = 'application/json';
+    if (entetes) Object.keys(entetes).forEach(function (k) { h[k] = entetes[k]; });
     return fetch(API + chemin, { method: methode, headers: h, credentials: 'same-origin', body: corps ? JSON.stringify(corps) : undefined, signal: ctrl ? ctrl.signal : undefined })
       .then(function (r) {
         return r.text().then(function (t) {
