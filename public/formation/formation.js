@@ -7,7 +7,8 @@
  * magasin face à leur niveau ; le manuel opératoire en ligne (tablette) ; et
  * la documentation de toutes les routes API qui portent ces données.
  *
- * Design : celui du module Marketing, à l'identique (formation.css, partie 1).
+ * Design : le design system « L'Atelier By » du module Marketing (ds.css), plus les pièces du
+ * module (formation.css). Incorporé par le Marketing (?embed=1 dans un cadre) : pas de rail.
  * Données : uniquement l'API du cockpit (api/cockpit/formation/*), qui lit le
  * panel avec le compte consultant, et y écrit sur demande : compétences d'un
  * niveau, liens d'une compétence, catalogue, compétences et niveau d'une
@@ -24,6 +25,11 @@
   // Le retour au cockpit : le dossier parent sous le cockpit ; depuis la racine, son adresse.
   var COCKPIT = /^\/formation(\/|$)/.test(location.pathname) ? '/consulant_bo/' : '../';
   var root = document.getElementById('root');
+  // Mode incorporé (design system, §9) : le module Marketing affiche la page dans un cadre, avec ?embed=1.
+  // Pas de second rail ; la barre supérieure reste ; les liens internes gardent embed=1 (garderEmbed).
+  // La navigation du module se fait par l'ancre (#/…) : la chaîne ?embed=1 reste dans l'adresse.
+  var EMBED = new URLSearchParams(location.search).get('embed') === '1' && window.parent !== window;
+  if (EMBED) document.documentElement.classList.add('is-embedded');
 
   /* ── Outils ─────────────────────────────────────────────────────────── */
 
@@ -41,6 +47,24 @@
   function pousser(map, k, v) { var a = map.get(k); if (!a) { a = []; map.set(k, a); } if (a.indexOf(v) < 0) a.push(v); }
   function icone(d) {
     return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"/></svg>';
+  }
+  /** Mode incorporé : une adresse du même serveur garde embed=1 (sinon la page suivante réaffiche son rail). */
+  function avecEmbed(href) {
+    var url = new URL(href, location.href);
+    if (!EMBED || url.origin !== location.origin || url.searchParams.has('embed')) return href;
+    url.searchParams.set('embed', '1');
+    return url.pathname + url.search + url.hash;
+  }
+  /** Après un rendu : les liens internes (pas les ancres, déjà sur la bonne adresse ; pas ceux qui ouvrent
+      un nouvel onglet, qui sortent du cadre en le disant « ↗ ») gardent embed=1. */
+  function garderEmbed(racine) {
+    if (!EMBED) return;
+    Array.prototype.forEach.call(racine.querySelectorAll('a[href]'), function (a) {
+      var h = a.getAttribute('href');
+      if (!h || h.charAt(0) === '#' || a.getAttribute('target') === '_blank') return;
+      var nouveau = avecEmbed(h);
+      if (nouveau !== h) a.setAttribute('href', nouveau);
+    });
   }
   /** Un chemin d'API qui ne se coupe qu'avant une barre oblique (jamais après la première). */
   function chemin(p) { return '<span class="fm-code">' + esc(p).replace(/(?!^)\//g, '<wbr>/') + '</span>'; }
@@ -216,15 +240,15 @@
     var actions = '';
     // En mode tablette (le magasin), pas de relecture complète du panel : c'est un geste de consultant.
     if (S.ref && S.route.ecran !== 'api' && !S.tablette) {
-      actions += '<button type="button" class="filter" data-act="rafraichir" title="Relire le référentiel dans le panel, sans le cache">Rafraîchir</button>';
+      actions += '<button type="button" class="btn" data-act="rafraichir" title="Relire le référentiel dans le panel, sans le cache">Rafraîchir</button>';
     }
     if (S.route.ecran === 'manuel' || S.tablette) {
-      actions += '<button type="button" class="filter' + (S.tablette ? ' is-on' : '') + '" data-act="tablette" title="Plein écran tactile, sans barre latérale">' + (S.tablette ? 'Quitter le mode tablette' : 'Mode tablette') + '</button>';
+      actions += '<button type="button" class="btn" data-act="tablette" aria-pressed="' + (S.tablette ? 'true' : 'false') + '" title="Plein écran tactile, sans barre latérale">' + (S.tablette ? 'Quitter le mode tablette' : 'Mode tablette') + '</button>';
     }
     return '<div class="workspace' + (S.menu ? ' is-menu' : '') + '">' + sidebar() +
       '<div class="fm-veil" data-act="menu"></div>' +
       '<div class="workspace__main"><header class="topbar"><div class="topbar__title">' +
-      '<button type="button" class="fm-burger" data-act="menu" aria-label="Ouvrir le menu">' + icone('M3 6h18M3 12h18M3 18h18') + '</button>' +
+      '<button type="button" class="fm-burger btn btn--icon" data-act="menu" aria-label="Ouvrir le menu">' + icone('M3 6h18M3 12h18M3 18h18') + '</button>' +
       '<div><p class="topbar__kicker">' + esc(v.kicker || 'Vue Réseau') + '</p><h1>' + esc(v.titre) + '</h1></div></div>' +
       '<div class="topbar__actions">' + actions + '</div></header>' +
       '<main class="app__body' + (v.large ? ' app__body--wide' : '') + '" id="corps">' + messageFlash() + v.corps + '</main></div>' + fenetre() + '</div>';
@@ -236,7 +260,7 @@
   function bandeau(txt, genre, tourne) {
     return '<div class="fm-banner' + (genre ? ' fm-banner--' + genre : '') + '">' + (tourne ? '<span class="fm-spin" aria-hidden="true"></span>' : '') + '<span>' + txt + '</span></div>';
   }
-  function retour(href, txt) { return '<a class="filter back" href="' + href + '">← ' + esc(txt) + '</a>'; }
+  function retour(href, txt) { return '<a class="btn btn--sm back" href="' + href + '">← ' + esc(txt) + '</a>'; }
 
   function chipsListe(items, max, cls, href) {
     if (!items.length) return '<span class="muted">—</span>';
@@ -307,9 +331,9 @@
       return '<section class="card pending"><span class="chip pending__chip">' + (e.status === 503 ? 'Compte du panel à brancher' : auth ? 'Session requise' : 'Panel injoignable') + '</span>' +
         '<h2>' + (e.status === 503 ? 'Le module n’a pas d’accès au panel' : auth ? 'Connectez-vous au cockpit' : 'Le référentiel n’a pas pu être lu') + '</h2>' +
         '<p class="muted">' + esc(e.message) + '</p>' +
-        (auth ? '<p class="muted" style="margin-top:8px"><a href="' + COCKPIT + '">Ouvrir le cockpit</a>, puis revenez ici.</p>' : '') +
+        (auth ? '<p class="muted" style="margin-top:8px"><a href="' + COCKPIT + '"' + (EMBED ? ' target="_blank" rel="noopener">Ouvrir le cockpit ↗' : '>Ouvrir le cockpit') + '</a>, puis revenez ici.</p>' : '') +
         (e.status === 503 ? '<p class="muted" style="margin-top:8px">La documentation des routes, elle, reste consultable : <a href="#/api">Routes API</a>.</p>' : '') +
-        '<p style="margin-top:12px"><button type="button" class="filter" data-act="rafraichir">Réessayer</button></p></section>';
+        '<p style="margin-top:12px"><button type="button" class="btn" data-act="rafraichir">Réessayer</button></p></section>';
     }
     return attente('Lecture du référentiel dans le panel — postes, niveaux, compétences, formations, procédures…');
   }
@@ -360,8 +384,11 @@
      lignes qui entrent TOUTES dans la polyvalence (le gérant maîtrise les trois
      métiers), puis le tronc et la franchise — et les effectifs, avec le vivier.
      Données : GET /formation/carte (src/parcours.php, pcCarte) — des comptes, aucun nom. */
-  var COUL = { vente: '#8D1D2C', boul: '#b07a2a', trait: '#3f7a52' };
-  var TRONC = '#47423c';
+  // Les trois métiers et le tronc commun : jetons du design system (lus dans ds.css, chargé avant ce script ;
+  // le plan les pose aussi en attributs SVG, qui ne lisent pas var()).
+  function jeton(nom, repli) { var v = getComputedStyle(document.documentElement).getPropertyValue(nom).trim(); return v || repli; }
+  var COUL = { vente: jeton('--accent', '#8D1D2C'), boul: jeton('--prize', '#B0792A'), trait: jeton('--green', '#3f7a52') };
+  var TRONC = jeton('--muted-2', '#5c5852');
   function pers(nb) { return '<span class="fm-st__pp' + (nb ? '' : ' is-zero') + '">' + (nb ? nb + ' pers.' : 'personne') + '</span>'; }
 
   function carteMetro(C) {
@@ -422,19 +449,19 @@
   function carteEffectifs(C) {
     var E = C.effectifs, P = C.polyvalence, tot = Math.max(E.actifs, 1);
     var nbDe = function (liste) { return liste.reduce(function (a, x) { return a + x.niveaux.reduce(function (b, nv) { return b + nv.personnes; }, 0); }, 0); };
-    var parts = [[nbDe(C.chemin.metiers), 'opérationnel', 'var(--accent)'], [nbDe(C.chemin.tronc), 'cadre et direction', '#a8665f'],
-      [nbDe(C.chemin.entrepreneur), 'entrepreneurs', '#c9a227'], [E.sansPoste, 'sans poste dans le panel', '#d9d3ca']];
+    var parts = [[nbDe(C.chemin.metiers), 'opérationnel', 'var(--accent)'], [nbDe(C.chemin.tronc), 'cadre et direction', 'var(--muted-2)'],
+      [nbDe(C.chemin.entrepreneur), 'entrepreneurs', 'var(--prize)'], [E.sansPoste, 'sans poste dans le panel', 'var(--chip)']];
     var h = '<div class="fm-hero"><div><h2>' + pl(E.actifs, 'personne active', 'personnes actives') + ' dans ' + pl(E.magasins, 'magasin') + '</h2>' +
       '<p class="muted">' + n(E.places) + ' placée' + (E.places > 1 ? 's' : '') + ' sur la carte ; ' + n(E.sansPoste) + ' sans poste dans le panel.</p>' +
-      '<div class="fm-pile">' + parts.map(function (x) { var w = x[0] * 100 / tot; return x[0] ? '<div style="width:' + w + '%;background:' + x[2] + (x[2] === '#d9d3ca' ? ';color:var(--muted-2)' : '') + '">' + (w >= 4 ? n(x[0]) : '') + '</div>' : ''; }).join('') + '</div>' +
+      '<div class="fm-pile">' + parts.map(function (x) { var w = x[0] * 100 / tot; return x[0] ? '<div style="width:' + w + '%;background:' + x[2] + (x[2] === 'var(--chip)' ? ';color:var(--muted-2)' : '') + '">' + (w >= 4 ? n(x[0]) : '') + '</div>' : ''; }).join('') + '</div>' +
       '<div class="fm-legende" style="margin-top:8px">' + parts.map(function (x) { return '<span><i style="background:' + x[2] + ';height:10px;width:10px;border-radius:3px"></i>' + n(x[0]) + ' ' + x[1] + '</span>'; }).join('') + '</div></div>' +
-      (E.sansPoste ? '<a class="filter is-on" href="#/equipes">' + (E.sansPoste > 1 ? 'Placer les ' + n(E.sansPoste) + ' personnes' : 'Placer la personne') + ' →</a>' : '') + '</div>';
+      (E.sansPoste ? '<a class="btn btn--primary btn--sm" href="#/equipes">' + (E.sansPoste > 1 ? 'Placer les ' + n(E.sansPoste) + ' personnes' : 'Placer la personne') + ' →</a>' : '') + '</div>';
     // Le vivier de gérants : qui maîtrise les trois métiers.
     var totP = Math.max(P.paliers['3'] + P.paliers['2'] + P.paliers['1'] + P.paliers['0'], 1);
     var palier = function (lib, v, col) { return '<div class="fm-palier"><span>' + lib + '</span><div class="fm-palier__bar"><i style="width:' + Math.max(v * 100 / totP, v ? 2 : 0) + '%;background:' + col + '"></i></div><b>' + n(v) + ' pers.</b></div>'; };
     h += '<div class="fm-carte-tete"><div><h2>Le vivier de gérants</h2><p>Pour encadrer un magasin, il faut maîtriser les trois métiers. Qui est prêt, qui y est presque.</p></div></div>' +
-      '<div class="fm-vivier"><section class="card"><h2>Polyvalence</h2>' + palier('Les 3 métiers', P.paliers['3'], 'var(--ink)') + palier('2 métiers', P.paliers['2'], '#7a736a') +
-      palier('1 métier', P.paliers['1'], '#b8b2a8') + palier('Aucun encore', P.paliers['0'], '#e1dbd2') +
+      '<div class="fm-vivier"><section class="card"><h2>Polyvalence</h2>' + palier('Les 3 métiers', P.paliers['3'], 'var(--ink)') + palier('2 métiers', P.paliers['2'], 'var(--muted)') +
+      palier('1 métier', P.paliers['1'], 'var(--faint)') + palier('Aucun encore', P.paliers['0'], 'var(--line)') +
       '<p class="muted fm-small" style="margin-top:10px">' + (P.paliers['3'] ? '<strong>' + pl(P.paliers['3'], 'personne') + '</strong> prête' + (P.paliers['3'] > 1 ? 's' : '') + ' pour Adjoint de Manager.' : 'Personne ne maîtrise encore les trois métiers.') + '</p></section>' +
       '<section class="card"><h2>Métier par métier</h2>' + P.metiers.map(function (m) { return palier(esc(m.libelle), m.personnes, COUL[m.cle] || TRONC); }).join('') +
       '<p class="muted fm-small" style="margin-top:10px">Maîtriser un métier : toutes ses compétences jusqu’au niveau de maîtrise (' + P.metiers.map(function (m) { return esc(m.niveau); }).filter(function (x, i, a) { return a.indexOf(x) === i; }).join(', ') + ').</p></section></div>' +
@@ -470,7 +497,7 @@
     h += '<div class="fm-carte-tete"><div><h2>' + (vue === 'plan' ? 'Le chemin des métiers' : 'Les équipes sur la carte') + '</h2><p>' + (vue === 'plan' ?
       'On apprend un métier sur sa ligne. Pour encadrer un magasin, les <strong>trois</strong> lignes sont nécessaires : le gérant maîtrise la vente, la boulangerie-pâtisserie et le traiteur. Ensuite, le tronc : adjoint, manager, puis la franchise.' :
       'Combien de personnes à chaque niveau, et qui peut encadrer demain.') + '</p></div>' +
-      '<div class="fm-seg" role="group" aria-label="Vue de la carte"><button type="button" data-act="carte-vue" data-v="plan"' + (vue === 'plan' ? ' class="is-on" aria-pressed="true"' : '') + '>Plan des métiers</button>' +
+      '<div class="seg" role="group" aria-label="Vue de la carte"><button type="button" data-act="carte-vue" data-v="plan"' + (vue === 'plan' ? ' class="is-on" aria-pressed="true"' : '') + '>Plan des métiers</button>' +
       '<button type="button" data-act="carte-vue" data-v="effectifs"' + (vue === 'effectifs' ? ' class="is-on" aria-pressed="true"' : '') + '>Effectifs</button></div></div>';
     if (S.carteErreur) h += '<p class="error">La carte n’a pas pu être lue : ' + esc(S.carteErreur) + '</p>';
     else if (!C) h += bandeau('Lecture de la carte : le référentiel, puis les équipes de chaque magasin (la première fois, une minute)…', '', true);
@@ -601,8 +628,8 @@
     var h = '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(poste.nom) + ' › ' + esc(niveau.nom) + '</h2>' +
       '<p class="muted">' + (fam && fam !== 'autres' ? '<span class="fm-tag' + (fam === 'marque' ? ' fm-tag--marque' : ' fm-tag--franchise') + '" style="margin:0 8px 0 0">' + esc(nomFamille(fam)) + '</span>' : '') + 'Niveau ' + (rang + 1) + ' sur ' + poste.niveaux.length + ' · ' + pl(tout.size, 'compétence') + ' à maîtriser, dont ' + n(nouv.length) + ' nouvelle' + (nouv.length > 1 ? 's' : '') + (niveau.description ? ' · ' + esc(niveau.description) : '') + '</p></div>' +
       '<div class="fm-links">' +
-      '<a class="filter" href="#/manuel/poste/' + pid + '/' + niveau.id + '">Manuel</a>' +
-      '<a class="filter" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=niveau&id=' + niveau.id + '">Fiche PDF ↗</a>' +
+      '<a class="btn btn--sm" href="#/manuel/poste/' + pid + '/' + niveau.id + '">Manuel</a>' +
+      '<a class="btn btn--sm" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=niveau&id=' + niveau.id + '">Fiche PDF ↗</a>' +
       bouton('niv-ouvrir', 'niv-ouvrir', '+ Exiger une compétence', ' data-nid="' + niveau.id + '"', 'is-on') + '</div></div>';
     // L'escalier du poste : chaque marche, ce qu'elle ajoute et le total.
     h += '<div class="fm-escalier">' + poste.niveaux.map(function (nv, i) {
@@ -612,7 +639,7 @@
     if (niveau.competencesLues === false) h += bandeau('Compétences du niveau illisibles : ' + esc(niveau.competencesErreur || 'erreur du panel') + '.', 'error');
 
     // À gauche : ce qu'il faut savoir faire.
-    var g = '<section class="card"><h2>Ce qu’il faut savoir faire</h2><div class="fm-seg fm-seg--petit" role="group">' +
+    var g = '<section class="card"><h2>Ce qu’il faut savoir faire</h2><div class="seg fm-seg--petit" role="group">' +
       [['nouveau', 'Nouveau à ce niveau', nouv.length], ['avant', 'Acquis avant', avant.length], ['tout', 'Tout', tout.size]].map(function (v) {
         return '<button type="button" data-act="fiche-vue" data-v="' + v[0] + '"' + (vue === v[0] ? ' class="is-on"' : '') + '>' + v[1] + ' · ' + n(v[2]) + '</button>';
       }).join('') + '</div>';
@@ -722,7 +749,7 @@
     var puce = function (f) { return '<li><a class="chip chip--soft" href="#/formations/' + esc(f.code) + '">' + esc(f.code) + ' · ' + esc(court(String(f.nom).replace(/^Formation /, ''), 46)) + '</a></li>'; };
     var h = '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(hp.nom) + '</h2><p class="muted">Référentiel v25 · ' + esc(code) + '</p></div>' +
       '<div class="fm-links">' + (code === 'P12' || code === 'P9' ? bouton('poste-' + code, 'poste-creer', 'Créer ce poste dans le panel', ' data-code="' + esc(code) + '" data-nom="' + esc(hp.nom) + '"', 'is-on') : '') +
-      '<a class="filter" href="parcours/#/nouveau">Ouvrir un parcours ↗</a></div></div>';
+      '<a class="btn btn--sm" href="parcours/#/nouveau">Ouvrir un parcours ↗</a></div></div>';
     h += bandeau('Ce poste n’existe pas encore dans le panel : il vient du référentiel v25 (l’Excel). Une fois créé dans le panel, ses niveaux, compétences et exigences prendront le relais.', '');
     h += '<div class="grid grid--tight">' +
       '<section class="card"><h2>Critères</h2><p class="metric">' + n(crit.length) + '</p><p class="muted">pour y être admis</p></section>' +
@@ -787,7 +814,7 @@
       return true;
     });
     var vues = [['tous', 'Toutes'], ['exigees', 'Exigées par un niveau'], ['hors', 'Hors niveau'], ['sansFormation', 'Sans formation'], ['sansProcedure', 'Sans procédure']];
-    var bascule = '<div class="fm-seg" role="group" style="margin-left:auto"><button type="button" data-act="filtre" data-k="compVue" data-v="liste"' + (f.compVue !== 'matrice' ? ' class="is-on"' : '') + '>Liste</button>' +
+    var bascule = '<div class="seg" role="group" style="margin-left:auto"><button type="button" data-act="filtre" data-k="compVue" data-v="liste"' + (f.compVue !== 'matrice' ? ' class="is-on"' : '') + '>Liste</button>' +
       '<button type="button" data-act="filtre" data-k="compVue" data-v="matrice"' + (f.compVue === 'matrice' ? ' class="is-on"' : '') + '>Matrice</button></div>';
     if (f.compVue === 'matrice') return { titre: TITRES.competences, corps: bandeauLiens() + '<div class="filters"><div class="filters__row">' + bascule + '</div></div>' + matriceCompetences() };
     var h = bandeauLiens() + '<div class="filters"><div class="filters__row">' +
@@ -848,8 +875,8 @@
     var nivs = I.niveauxParComp.get(cid) || [];
     h += '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(c.nom) + '</h2><p class="muted">' + esc([c.categorie, c.sousCategorie].filter(Boolean).join(' › ') || 'Sans catégorie') +
       (c.nomBase && c.nomBase !== c.nom ? ' · nom de base : ' + esc(c.nomBase) : '') + ' · #' + c.id + '</p></div>' +
-      '<div class="fm-links"><a class="filter" href="#/manuel/competence/' + cid + '">Ouvrir dans le manuel</a>' +
-      (I.comp.has(cid) ? bouton('comp~' + cid, 'comp-modifier', 'Modifier', ' data-cid="' + cid + '"') + bouton('comp-' + cid, 'comp-supprimer', 'Supprimer', ' data-cid="' + cid + '"', 'confirm__danger') : '') +
+      '<div class="fm-links"><a class="btn btn--sm" href="#/manuel/competence/' + cid + '">Ouvrir dans le manuel</a>' +
+      (I.comp.has(cid) ? bouton('comp~' + cid, 'comp-modifier', 'Modifier', ' data-cid="' + cid + '"') + bouton('comp-' + cid, 'comp-supprimer', 'Supprimer', ' data-cid="' + cid + '"', 'danger') : '') +
       '</div></div>';
     h += '<div class="fm-cols" style="margin-top:14px">';
     h += '<section class="card"><h2>Description</h2>' + (c.description ? '<div class="fm-rich">' + riche(c.description) + '</div>' : '<p class="muted">Pas de description dans le panel.</p>') + '</section>';
@@ -938,7 +965,7 @@
     var autres = Array.from(I.formation.values()).filter(function (t) { return !codeFo(t.nom) && (!q || norm(t.nom).indexOf(q) >= 0); });
     var h = bandeauLiens() + '<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher une formation…" data-input="fq" value="' + esc(S.f.fq) + '" />' +
       '<span class="muted fm-small">' + pl(liste.length, 'formation') + '</span>' +
-      '<div class="fm-seg" role="group" style="margin-left:auto"><button type="button" data-act="filtre" data-k="foVue" data-v="liste"' + (S.f.foVue !== 'matrice' ? ' class="is-on"' : '') + '>Liste</button>' +
+      '<div class="seg" role="group" style="margin-left:auto"><button type="button" data-act="filtre" data-k="foVue" data-v="liste"' + (S.f.foVue !== 'matrice' ? ' class="is-on"' : '') + '>Liste</button>' +
       '<button type="button" data-act="filtre" data-k="foVue" data-v="matrice"' + (S.f.foVue === 'matrice' ? ' class="is-on"' : '') + '>Qui doit suivre quoi</button></div></div></div>';
     if (S.f.foVue === 'matrice') return { titre: TITRES.formations, corps: h + matriceFormations(liste) };
     h += '<section class="card table-card" style="margin-top:0"><div class="table-scroll"><table><thead><tr><th>Formation</th><th>Partie du manuel</th><th>Évaluations</th><th>Ce qu’on apprend</th><th>Obligatoire pour</th></tr></thead><tbody>';
@@ -1092,8 +1119,8 @@
     var p = d.data.procedure, secs = d.data.sections, pieces = d.data.pieces;
     var h = '<article class="fm-doc"><div class="fm-head"><div><h2 class="screen-subtitle">' + esc(p.titre) + '</h2><p class="muted">' +
       esc([p.categorie, p.sousCategorie].filter(Boolean).join(' › ') || 'Procédure opératoire') + (p.majLe ? ' · mise à jour ' + esc(String(p.majLe).slice(0, 10)) : '') + '</p></div>' +
-      '<div class="fm-links"><a class="filter" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=procedure&id=' + id + '">PDF ↗</a>' +
-      '<button type="button" class="filter" data-act="imprimer">Imprimer</button></div></div>';
+      '<div class="fm-links"><a class="btn btn--sm" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=procedure&id=' + id + '">PDF ↗</a>' +
+      '<button type="button" class="btn btn--sm" data-act="imprimer">Imprimer</button></div></div>';
     if (p.description) h += '<div class="fm-doc__lead fm-rich" style="margin-top:10px">' + riche(p.description) + '</div>';
     h += blocManuel(id, p, secs, pieces);
     if (p.contenu) h += '<section class="card fm-doc__section"><div class="fm-rich">' + riche(p.contenu) + '</div></section>';
@@ -1219,11 +1246,11 @@
         action = '';
       } else if (!l.manque.length) {
         etat = 'Niveau complet' + (l.suivant ? ' → prête pour <strong>' + esc(l.suivant.nv.nom) + '</strong> (+' + n(l.suivant.nv.competences.length) + ')' : '');
-        action = l.parcours ? '<a class="chip chip--ok" href="parcours/#/p/' + l.parcours.id + '">parcours en cours</a>' : '<a class="filter" href="parcours/#/nouveau">Ouvrir un parcours</a>';
+        action = l.parcours ? '<a class="chip chip--ok" href="parcours/#/p/' + l.parcours.id + '">parcours en cours</a>' : '<a class="btn btn--sm" href="parcours/#/nouveau">Ouvrir un parcours</a>';
       } else {
         etat = 'Il manque <strong>' + pl(l.manque.length, 'compétence') + '</strong>';
         action = l.parcours ? '<a class="chip chip--ok" href="parcours/#/p/' + l.parcours.id + '">parcours en cours</a>' :
-          '<button type="button" class="filter" data-act="equipe-ouvrir" data-id="' + e.id + '">' + (ouvert ? 'Fermer' : 'Voir ce qui manque') + '</button>';
+          '<button type="button" class="btn btn--sm" data-act="equipe-ouvrir" data-id="' + e.id + '">' + (ouvert ? 'Fermer' : 'Voir ce qui manque') + '</button>';
       }
       h += '<tr class="row-link" data-act="equipe-ouvrir" data-id="' + e.id + '"><td><div class="fm-pers"><span class="fm-ini">' + esc(ini) + '</span><span><span class="fm-pers__n">' + esc(e.nom) + '</span>' +
         '<span class="fm-pers__s">' + (po ? esc(po) : 'sans poste dans le panel') + (!e.lu ? ' · fiche illisible' : '') + '</span></span></div></td>' +
@@ -1279,7 +1306,7 @@
       '<button type="button" class="filter' + (!S.pcFiltre ? ' is-on' : '') + '" data-act="filtre" data-k="pcFiltreF" data-v="">Tout le réseau</button>' +
       mags.map(function (m) { return '<button type="button" class="filter' + (String(S.pcFiltre) === String(m.id) ? ' is-on' : '') + '" data-act="pc-filtre" data-v="' + m.id + '">' + esc(m.nom) + '</button>'; }).join('') +
       '<button type="button" class="filter' + (S.pcFiltre === 'candidats' ? ' is-on' : '') + '" data-act="pc-filtre" data-v="candidats">Candidats franchisés</button>' +
-      '<a class="filter is-on" href="parcours/#/nouveau" style="margin-left:auto">+ Nouveau parcours</a></div></div>';
+      '<a class="btn btn--primary" href="parcours/#/nouveau" style="margin-left:auto">+ Nouveau parcours</a></div></div>';
     if (S.pcErreur) return { titre: TITRES.parcours, corps: h + '<p class="error">' + esc(S.pcErreur) + '</p>' };
     if (!S.pcListe) return { titre: TITRES.parcours, corps: h + attente('Lecture des parcours…') };
     var l = S.pcListe.filter(function (p) { return !S.pcFiltre || (S.pcFiltre === 'candidats' ? p.profil === 'candidat' : String(p.shop) === String(S.pcFiltre)); });
@@ -1377,8 +1404,8 @@
     var pk = poste.id != null ? poste.id : 'sans';
     var h = filAriane([['Manuel', '#/manuel'], ['Opérationnel', '#/manuel/partie/operationnel'], [poste.nom, null]]);
     h += '<div class="fm-head"><div><h2 class="screen-subtitle">' + esc(poste.nom) + '</h2>' + (poste.description ? '<p class="muted">' + esc(poste.description) + '</p>' : '') + '</div>' +
-      '<div class="fm-links">' + (niveau ? '<a class="filter" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=niveau&id=' + niveau.id + '">Fiche du niveau ↗</a>' : '') +
-      (poste.id != null ? '<a class="filter" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=poste&id=' + poste.id + '">Fiche du poste ↗</a>' : '') + '</div></div>';
+      '<div class="fm-links">' + (niveau ? '<a class="btn btn--sm" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=niveau&id=' + niveau.id + '">Fiche du niveau ↗</a>' : '') +
+      (poste.id != null ? '<a class="btn btn--sm" target="_blank" rel="noopener" href="' + API + '/formation/pdf?type=poste&id=' + poste.id + '">Fiche du poste ↗</a>' : '') + '</div></div>';
     if (!poste.niveaux.length) return { titre: poste.nom, kicker: 'Manuel opératoire', corps: h + '<p class="muted" style="margin-top:12px">Ce poste n’a pas de niveau dans le panel.</p>' };
     h += '<ol class="wizard__steps" style="margin-top:14px">' + poste.niveaux.map(function (nv, i) {
       var on = nv === niveau;
@@ -1422,7 +1449,7 @@
     var h = filAriane(fil) + '<h2 class="screen-subtitle">' + esc(c.nom) + '</h2><p class="muted">' + esc([c.categorie, c.sousCategorie].filter(Boolean).join(' › ')) + '</p>';
     if (c.description) h += '<div class="fm-doc__lead fm-rich" style="margin-top:12px">' + riche(c.description) + '</div>';
     if (c.verification) h += '<section class="card" style="margin-top:14px"><h2>Comment c’est vérifié</h2><div class="fm-rich">' + riche(c.verification) + '</div></section>';
-    if (c.lien && /^https?:/i.test(c.lien)) h += '<p style="margin-top:12px"><a class="filter" target="_blank" rel="noopener" href="' + esc(c.lien) + '">Ouvrir le support ↗</a></p>';
+    if (c.lien && /^https?:/i.test(c.lien)) h += '<p style="margin-top:12px"><a class="btn btn--sm" target="_blank" rel="noopener" href="' + esc(c.lien) + '">Ouvrir le support ↗</a></p>';
     if (!l) return { titre: c.nom, kicker: 'Compétence', corps: h + attente('Lecture des procédures et formations…') };
     h += '<div class="section-label">Procédures à suivre · ' + n(l.procedures.length) + '</div>';
     h += l.procedures.length ? '<ul class="type-grid">' + l.procedures.map(function (x) {
@@ -1511,9 +1538,9 @@
   }
 
   function barreParties(actif) {
-    return '<nav class="fm-parties" aria-label="Parties du manuel">' + PARTIES.map(function (x, i) {
+    return '<nav class="page-tabs fm-parties" aria-label="Parties du manuel">' + PARTIES.map(function (x, i) {
       var on = x[0] === actif;
-      return '<a href="#/manuel/partie/' + x[0] + '" class="fm-parties__a' + (on ? ' is-on' : '') + '"' + (on ? ' aria-current="page"' : '') + '><span class="fm-parties__n">' + (i + 1) + '</span>' + esc(x[1]) + '</a>';
+      return '<a href="#/manuel/partie/' + x[0] + '" class="page-tabs__tab' + (on ? ' is-on' : '') + '"' + (on ? ' aria-current="page"' : '') + '><span class="fm-parties__n">' + (i + 1) + '</span>' + esc(x[1]) + '</a>';
     }).join('') + '</nav>';
   }
 
@@ -1531,9 +1558,9 @@
     var h = '<div class="fm-mn"><p class="fm-mn__partie"><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/' + cle + '">' + esc(NOM_PARTIE[cle]) + '</a>' +
       (S.mn && !regle && !S.tablette ? ' <span class="muted fm-small">répartition par défaut</span>' : '') + '</p>';
     if (!S.tablette && S.mn) {
-      h += '<div class="fm-seg fm-mn__seg" role="group" aria-label="Ranger dans une partie du manuel">' + PARTIES.map(function (x) {
+      h += '<div class="seg fm-mn__seg" role="group" aria-label="Ranger dans une partie du manuel">' + PARTIES.map(function (x) {
         return '<button type="button" class="' + (x[0] === cle ? 'is-on' : '') + '" data-act="mn-fo-partie" data-code="' + esc(code) + '" data-v="' + x[0] + '"' + (S.occupe ? ' disabled' : '') + '>' + esc(x[1]) + '</button>';
-      }).join('') + '</div>' + (regle ? ' <button type="button" class="filter fm-small" data-act="mn-fo-partie" data-code="' + esc(code) + '" data-v=""' + (S.occupe ? ' disabled' : '') + '>↺ Par défaut' + (def ? ' (' + esc(NOM_PARTIE[def]) + ')' : '') + '</button>' : '');
+      }).join('') + '</div>' + (regle ? ' <button type="button" class="btn btn--sm" data-act="mn-fo-partie" data-code="' + esc(code) + '" data-v=""' + (S.occupe ? ' disabled' : '') + '>↺ Par défaut' + (def ? ' (' + esc(NOM_PARTIE[def]) + ')' : '') + '</button>' : '');
     }
     return h + '</div>';
   }
@@ -1575,7 +1602,7 @@
   /** Le lecteur d'un support, dans la fenêtre. */
   function lecteurSupport(sp, titre) {
     if (sp.genre === 'video') return cadreVideo(sp.v, null);
-    var ouvrir = '<p class="fm-embed__ouvrir"><a class="filter" target="_blank" rel="noopener noreferrer" href="' + esc(sp.url) + '">' + (sp.genre === 'lien' ? 'Ouvrir le lien ↗' : 'Ouvrir en plein écran ↗') + '</a></p>';
+    var ouvrir = '<p class="fm-embed__ouvrir"><a class="btn btn--sm" target="_blank" rel="noopener noreferrer" href="' + esc(sp.url) + '">' + (sp.genre === 'lien' ? 'Ouvrir le lien ↗' : 'Ouvrir en plein écran ↗') + '</a></p>';
     if (sp.genre === 'lien') return '<p class="muted" style="word-break:break-all">' + esc(sp.url) + '</p>' + ouvrir;
     return '<div class="fm-video fm-embed"><iframe src="' + esc(sp.src) + '" title="' + esc(titre || GENRES[sp.genre][1]) + '" loading="lazy" allow="fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>' + ouvrir;
   }
@@ -1652,9 +1679,9 @@
       '<h2>' + esc(nom) + '</h2>' + (rub && rub.description ? '<p class="fm-fa__lead">' + esc(rub.description) + '</p>' : '') + '</div>';
     h += '<div class="fm-fa__faits"><div><b>' + esc(v.frequence || '—') + '</b><span>fréquence</span></div><div><b>' + pl(et.length, 'étape') + '</b><span>pour la valider</span></div>' +
       '<div><b>' + esc(role(v.executant) && role(v.executant) !== '—' ? role(v.executant) : '—') + '</b><span>la suit</span></div><div><b>' + esc(role(v.controleur) || '—') + '</b><span>la valide</span></div></div>';
-    h += '<div class="fm-fa__actions">' + (procs.length ? '<a class="filter is-on" href="#/manuel/procedure/' + procs[0].id + '/partie/' + partie + '">Ouvrir la procédure' + (v.procedure ? ' ' + esc(v.procedure.split(' — ')[0]) : '') + '</a>' :
+    h += '<div class="fm-fa__actions">' + (procs.length ? '<a class="btn btn--primary" href="#/manuel/procedure/' + procs[0].id + '/partie/' + partie + '">Ouvrir la procédure' + (v.procedure ? ' ' + esc(v.procedure.split(' — ')[0]) : '') + '</a>' :
       (v.procedure ? '<span class="fm-fa__mo">Manuel opératoire ' + esc(v.procedure.split(' — ')[0]) + '</span>' : '')) +
-      '<button type="button" class="filter" data-act="imprimer">Imprimer</button></div>';
+      '<button type="button" class="btn" data-act="imprimer">Imprimer</button></div>';
     var n2 = 0;
     var sec = function (titre, corps) { n2++; return '<section class="fm-fa__sec"><h3><i>' + n2 + '</i>' + esc(titre) + '</h3>' + corps + '</section>'; };
     if (comps.length) {
@@ -1741,7 +1768,7 @@
       if (autres.length) corps += '<h4>Dans le même bloc</h4><ul class="fm-mnf__liens">' + autres.map(function (c2) { var f = foParCode(c2); return '<li><a href="#/manuel/formation/' + c2 + '" data-act="modale-fermer"><span class="fm-code">' + c2 + '</span> ' + esc(f ? f.nom.replace(/^Formation\s+/, '') : c2) + ' ›</a></li>'; }).join('') + '</ul>';
     }
     return '<div class="confirm fm-mnf-fond" data-act="modale-fond"><div class="confirm__box card fm-modale fm-mnf" role="dialog" aria-modal="true" aria-label="' + esc(titre) + '">' +
-      '<div class="fm-mnf__tete"><div><p class="fm-mnf__sous">' + esc(sous) + '</p><h3>' + esc(titre) + '</h3></div><button type="button" class="filter fm-mnf__x" data-act="modale-fermer" aria-label="Fermer">✕</button></div>' +
+      '<div class="fm-mnf__tete"><div><p class="fm-mnf__sous">' + esc(sous) + '</p><h3>' + esc(titre) + '</h3></div><button type="button" class="btn btn--ghost fm-mnf__x" data-act="modale-fermer" aria-label="Fermer">✕</button></div>' +
       '<div class="fm-mnf__corps">' + corps + '</div>' + (m.erreur ? '<p class="error">' + esc(m.erreur) + '</p>' : '') + '</div></div>';
   }
 
@@ -1831,9 +1858,9 @@
     h += '<p class="fm-mn__partie"><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/' + cle + '">' + esc(NOM_PARTIE[cle]) + '</a>' +
       (S.mn && !regle && !S.tablette ? ' <span class="muted fm-small">déduite du panel</span>' : '') + '</p>';
     if (!S.tablette && S.mn) {
-      h += '<div class="fm-seg fm-mn__seg" role="group" aria-label="Ranger dans une partie du manuel">' + PARTIES.map(function (x) {
+      h += '<div class="seg fm-mn__seg" role="group" aria-label="Ranger dans une partie du manuel">' + PARTIES.map(function (x) {
         return '<button type="button" class="' + (x[0] === cle ? 'is-on' : '') + '" data-act="mn-partie" data-id="' + id + '" data-v="' + x[0] + '"' + (S.occupe ? ' disabled' : '') + '>' + esc(x[1]) + '</button>';
-      }).join('') + '</div>' + (regle ? ' <button type="button" class="filter fm-small" data-act="mn-partie" data-id="' + id + '" data-v=""' + (S.occupe ? ' disabled' : '') + '>↺ Partie déduite (' + esc(NOM_PARTIE[partieDeduite(p)]) + ')</button>' : '');
+      }).join('') + '</div>' + (regle ? ' <button type="button" class="btn btn--sm" data-act="mn-partie" data-id="' + id + '" data-v=""' + (S.occupe ? ' disabled' : '') + '>↺ Partie déduite (' + esc(NOM_PARTIE[partieDeduite(p)]) + ')</button>' : '');
     }
     h += '</div>';
     var vids = videosProcedure(id, p, secs, pieces);
@@ -1841,7 +1868,7 @@
       h += '<section class="card fm-doc__section fm-videos"><h2>Vidéos' + (vids.length ? ' · ' + vids.length : '') + '</h2>';
       vids.forEach(function (x) {
         h += '<div class="fm-videos__une" data-vcle="' + esc(x.v.cle) + '">' + cadreVideo(x.v, x.titre) +
-          (!S.tablette && x.i != null ? '<button type="button" class="filter fm-small" data-act="mn-video-retirer" data-id="' + id + '" data-i="' + x.i + '"' + (S.occupe ? ' disabled' : '') + '>Retirer cette vidéo</button>' : '') + '</div>';
+          (!S.tablette && x.i != null ? '<button type="button" class="btn btn--sm btn--danger" data-act="mn-video-retirer" data-id="' + id + '" data-i="' + x.i + '"' + (S.occupe ? ' disabled' : '') + '>Retirer cette vidéo</button>' : '') + '</div>';
       });
       if (!S.tablette && S.mn) {
         h += '<div class="fm-videos__ajout"><input type="url" class="fm-search" placeholder="Adresse YouTube, Vimeo, Loom, Google Drive ou .mp4" data-vinput="mvUrl" value="' + esc(S.f.mvUrl) + '" />' +
@@ -1987,7 +2014,7 @@
       var ch = S.api.chemins[k] != null ? S.api.chemins[k] : resoudre(r.chemin);
       var s = S.api.sondes[k];
       h += '<div class="section-label">Tester en direct (lecture seule, via le compte du cockpit)</div><div class="fm-probe"><input type="text" data-probe="' + esc(k) + '" value="' + esc(ch) + '" aria-label="Chemin à tester" />' +
-        '<button type="button" class="filter is-on" data-act="api-sonder" data-k="' + esc(k) + '"' + (s && s.charge ? ' disabled' : '') + '>' + (s && s.charge ? 'Appel…' : 'Tester') + '</button></div>';
+        '<button type="button" class="btn btn--sm" data-act="api-sonder" data-k="' + esc(k) + '"' + (s && s.charge ? ' disabled' : '') + '>' + (s && s.charge ? 'Appel…' : 'Tester') + '</button></div>';
       if (s && !s.charge) {
         if (s.erreur) h += '<p class="error">' + esc(s.erreur) + '</p>';
         else {
@@ -2042,9 +2069,15 @@
       rendre(true);
     });
   }
+  /** Le bouton d'une écriture, aux classes du système (§7.4) selon son rôle :
+      'is-on' l'action principale (bordeaux, une par écran), 'danger' retirer / supprimer (discret, rouge au
+      survol), 'fm-x' la croix d'un élément retirable, 'confirm__danger' la confirmation d'une fenêtre ;
+      sinon un petit bouton du contenu. */
+  var ROLES_BOUTON = { 'is-on': 'btn btn--primary', danger: 'btn btn--sm btn--danger', 'fm-x': 'btn btn--icon btn--danger', confirm__danger: 'btn confirm__danger' };
   function bouton(cle, act, libelle, attrs, cls) {
     var occ = S.occupe === cle;
-    return '<button type="button" class="filter' + (cls ? ' ' + cls : '') + '" data-act="' + act + '"' + (attrs || '') + (S.occupe ? ' disabled' : '') + '>' + (occ ? 'Enregistrement…' : libelle) + '</button>';
+    var classes = (cls && ROLES_BOUTON[cls]) || ('btn btn--sm' + (cls ? ' ' + cls : ''));
+    return '<button type="button" class="' + classes + (occ ? ' is-busy' : '') + '" data-act="' + act + '"' + (attrs || '') + (S.occupe ? ' disabled' : '') + '>' + (occ ? 'Enregistrement…' : libelle) + '</button>';
   }
 
   // Ce que le serveur rend, appliqué à l'état de l'écran.
@@ -2167,7 +2200,8 @@
     var m = S.modale;
     if (!m) return '';
     if (m.type === 'mn') return fenetreManuel(m);
-    var titre = '', corps = '', actions = '<button type="button" class="filter" data-act="modale-fermer">' + (m.type === 'confirmer' || m.type === 'competence' || m.type === 'poste' ? 'Annuler' : 'Fermer') + '</button>';
+    var annuler = m.type === 'confirmer' || m.type === 'competence' || m.type === 'poste';
+    var titre = '', corps = '', actions = '<button type="button" class="btn' + (annuler ? ' btn--ghost' : '') + '" data-act="modale-fermer">' + (annuler ? 'Annuler' : 'Fermer') + '</button>';
     var q = norm(m.q);
     var recherche = function (ph) { return '<input class="fm-search fm-modale__q" type="search" placeholder="' + esc(ph) + '" data-minput="q" value="' + esc(m.q || '') + '" />'; };
     if (m.type === 'confirmer') {
@@ -2258,6 +2292,7 @@
     if (e !== 'api' && !I && !(SOP && SOP.ecrans[e])) v = { titre: TITRES[e] || 'Formation', corps: sansReferentiel() };
     else v = ECRANS[e]();
     root.innerHTML = coquille(v);
+    garderEmbed(root);
     document.title = v.titre + ' — Formation · L\'Atelier by';
 
     var corps = document.getElementById('corps');
@@ -2464,7 +2499,7 @@
     if (!t || !root.contains(t)) return;
     if (ev.target.closest('a[href]') && ev.target.closest('a[href]') !== t && t.contains(ev.target.closest('a[href]'))) return; // un lien dans la ligne garde son rôle
     var act = t.getAttribute('data-act');
-    if (!act && t.hasAttribute('data-lien')) { location.href = t.getAttribute('data-lien'); return; }
+    if (!act && t.hasAttribute('data-lien')) { location.href = avecEmbed(t.getAttribute('data-lien')); return; }
     if (!act) { location.hash = t.getAttribute('data-href'); return; }
     if (act === 'pc-filtre') { S.pcFiltre = t.getAttribute('data-v'); rendre(true); return; }
     if (act === 'filtre' && t.getAttribute('data-k') === 'pcFiltreF') { S.pcFiltre = ''; rendre(true); return; }
@@ -2536,7 +2571,7 @@
       return;
     }
     if (act === 'rafraichir') { chargerReferentiel(true); return; }
-    if (act === 'imprimer') { window.print(); return; }
+    if (act === 'imprimer') { (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function () { window.print(); }); return; }
     if (act === 'filtre') { S.f[t.getAttribute('data-k')] = t.getAttribute('data-v'); rendre(true); return; }
     if (act === 'voir-comp') { S.f.vue = t.getAttribute('data-v'); location.hash = '#/competences'; return; }
     if (act === 'fiche-vue') { S.ficheVue = t.getAttribute('data-v'); rendre(true); return; }
