@@ -18,6 +18,8 @@
  *   #/rfphase/<phase>     par phase (calculée) · #/rfposte[/P3/<phase>] par poste × phase (calculée)
  *   #/sopcomp             compétences : correspondance C-… ↔ panel (un clic), puis l'onglet « Acquisition en magasin »
  *   la fiche d'une SOP gagne le bloc « Classement » (sous-catégorie, phases, postes, compétences, formations, checklists)
+ *   #/rfpre               le Guide pré-ouverture (sections et points) · #/rfform[/<n>[/<id>]] le Guide des formations et
+ *                         compétences (blocs, points, critères, 5 pôles) — lot 4b : le CRM les lit, il ne les édite plus
  *
  * La tablette du poste (lire pas à pas, quiz, « vu faire ») est une page à part : sop/tablette.html.
  */
@@ -605,6 +607,394 @@ window.FormationSop = (function () {
     return false;
   }
 
+  /* ═══ Manuel du réseau : les deux guides que le CRM éditait (lot 4b, src/referentiel_guides.php) ═══
+   *
+   *   #/rfpre                  le Guide pré-ouverture : sections et points (qui, échéance J-, preuve), FR | NL,
+   *                            glisser pour ordonner ; tout le guide part d'un bloc (PUT /formation/ref/preouverture)
+   *   #/rfform[/<n>[/<id>]]    le Guide des formations et compétences : les 11 blocs, leurs points, le critère
+   *                            « Réussi si… » (proposé puis accepté), phase, bloquante, 5 pôles, renouvellement, fiche,
+   *                            vidéo, profils ; les noms des 5 pôles et le repère
+   * Lus dans le référentiel (GET /formation/ref : preouverture, blocs, poles) ; le CRM lit les mêmes pour son écran
+   * Guides, l'application des formateurs, l'attestation et les documents qu'il génère.
+   */
+  const QUI_NOM = { franchise: 'Franchisé', atelier: 'L’Atelier By', ensemble: 'Ensemble', formateurs: 'Formateurs' };
+  const QUIS = Object.keys(QUI_NOM);
+  const PH_FMT = { pre: 'Pré-ouverture', ouv: 'Ouverture', con: 'Continu' };
+  const PROFIL_NOM = { gerant: 'Gérant', vendeur: 'Vendeur', etudiant: 'Étudiant', multi: 'Plusieurs boutiques' };
+  const RENOUV = [0, 6, 12, 18, 24, 36];
+  const REPERES = [0, 3, 3.5, 4, 4.5];
+  // po : le guide pré-ouverture en cours d'édition (copie du référentiel) ; fm* : le point de formation édité.
+  const G = { po: null, poMod: false, poLang: 'fr', poSel: '', poErr: null, glisse: null, n: 0,
+    fmN: 0, fmSel: '', fmEd: null, fmErr: null, blocEd: null, ajout: null, poles: null, occupe: false };
+  const virg = v => String(v).replace('.', ',');
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const seg = (sa, v, choix, extra) => `<div class="rf-seg" role="group">${choix.map(([k, lib]) => `<button type="button" data-rg="${sa}" data-v="${esc(k)}"${extra || ''}${String(k) === String(v) ? ' class="is-on" aria-pressed="true"' : ' aria-pressed="false"'}>${esc(lib)}</button>`).join('')}</div>`;
+  const bascule = (sa, on, lib, extra) => `<button type="button" class="rf-switch${on ? ' is-on' : ''}" role="switch" aria-checked="${on}" data-rg="${sa}"${extra || ''}><span class="rf-switch__track"></span><span>${esc(lib)}</span></button>`;
+  const pret = R => !!(R && R.preouverture && R.blocs && R.poles);
+  function ancienApi(titre) { return { titre, kicker: K, corps: '<p class="error">Le référentiel lu ne porte pas encore les guides : l’API du Cockpit est à mettre à jour.</p>', large: true }; }
+  /** Le bouton « Enregistrer » et la mention « Modifié » suivent la saisie sans redessiner l'écran (le focus reste). */
+  function marquerModifie(sel) { document.querySelectorAll(sel).forEach(b => { b.disabled = false; }); document.querySelectorAll('[data-rg-mod]').forEach(x => { x.hidden = false; }); }
+
+  /* ── Le Guide pré-ouverture ── */
+  function poModele() {
+    // Une copie sans modification suit le référentiel relu (une écriture d'un autre poste la remplace).
+    if (G.po && (G.poMod || G.po.version === D.ref.version)) { return G.po; }
+    const S = clone(D.ref.preouverture.sections);
+    S.forEach(s => { s._id = 's:' + s.cle; s.points.forEach(p => { p._id = 'p:' + p.cle; }); });
+    G.po = { sections: S, version: D.ref.version }; G.poMod = false;
+    if (!S.some(s => s._id === G.poSel)) { G.poSel = S[0] ? S[0]._id : ''; }
+    return G.po;
+  }
+  const poTxt = (o, champ, l) => champ === 'lib' ? o[l] : champ === 'titre' ? o[l] : champ === 'intro' ? o['intro_' + l] : champ === 'preuve' ? o['preuve_' + l] : '';
+  const poCle = (champ, l) => champ === 'lib' || champ === 'titre' ? l : champ === 'intro' ? 'intro_' + l : 'preuve_' + l;
+  function sansNl(P) { let n = 0; P.sections.forEach(s => { if (!s.nl) { n++; } s.points.forEach(p => { if (!p.nl) { n++; } }); }); return n; }
+
+  function ecranPreouverture() {
+    const X = rx();
+    if (!X) { return refAttente('Pré-ouverture'); }
+    if (!pret(X.R)) { return ancienApi('Pré-ouverture'); }
+    const P = poModele(), l = G.poLang, s = P.sections.find(x => x._id === G.poSel) || P.sections[0];
+    const nPts = P.sections.reduce((a, x) => a + x.points.length, 0), nNl = sansNl(P);
+    let h = `<div class="toolbar">${seg('poLang', l, [['fr', 'FR'], ['nl', 'NL']])}
+      <span class="muted fm-small">${P.sections.length} sections · ${nPts} points</span>${nNl ? `<span class="tag-warn" title="Sections et points sans libellé néerlandais">${nNl} sans NL</span>` : ''}
+      <span class="rf-sp"></span><span class="tag-warn" data-rg-mod${G.poMod ? '' : ' hidden'}>Modifié</span>
+      ${G.poMod ? '<button type="button" class="btn btn--ghost" data-rg="poAnnuler">Annuler</button>' : ''}
+      <button type="button" class="btn btn--primary" data-rg="poSave" data-rg-save="po"${!G.poMod || G.occupe ? ' disabled' : ''}>Enregistrer le guide</button></div>`;
+    if (G.poErr) { h += C.bandeau(esc(G.poErr), 'warn'); }
+    h += `<div class="rf-g2"><section class="card rf-gcol"><h2>Sections du guide</h2><ol class="rf-gliste">${P.sections.map((x, i) => `<li class="rf-grow rf-gdrag${x === s ? ' is-on' : ''}" draggable="true" data-rgdrag="sec" data-i="${i}">
+        <span class="rf-ghandle" aria-hidden="true" title="Glisser pour ordonner">⋮⋮</span>
+        <button type="button" class="rf-grow__t" data-rg="poSel" data-v="${esc(x._id)}"${x === s ? ' aria-current="true"' : ''}><span>${i + 1}. ${esc(x[l] || x.fr || 'Sans titre')}</span>${l === 'nl' && !x.nl ? '<span class="sub">NL à écrire</span>' : ''}</button>
+        <span class="chip chip--neutral rf-gn" title="${x.type === 'contacts' ? 'contacts' : 'points'}">${x.points.length}</span>
+        <span class="rf-gmv"><button type="button" class="btn btn--icon btn--ghost" data-rg="poSecMv" data-i="${i}" data-d="-1" aria-label="Monter"${i ? '' : ' disabled'}>↑</button><button type="button" class="btn btn--icon btn--ghost" data-rg="poSecMv" data-i="${i}" data-d="1" aria-label="Descendre"${i < P.sections.length - 1 ? '' : ' disabled'}>↓</button></span></li>`).join('')}</ol>
+      <div class="rf-actions"><button type="button" class="btn btn--sm" data-rg="poSecAjout">Ajouter une section</button></div></section>`;
+    h += s ? sectionPo(s, l) : '<section class="card"><p class="muted">Aucune section.</p></section>';
+    return { titre: 'Pré-ouverture', kicker: K, corps: h + '</div>', large: true };
+  }
+  function sectionPo(s, l) {
+    const pts = s.type !== 'contacts';
+    const ph = (o, champ) => l === 'nl' && poTxt(o, champ, 'fr') ? ` placeholder="${esc(poTxt(o, champ, 'fr'))}"` : '';
+    const inp = (o, pid, champ, cls) => `<input class="rf-in${cls ? ' ' + cls : ''}" data-rgin="po|${esc(s._id)}|${esc(pid)}|${champ}" value="${esc(poTxt(o, champ, l) || '')}"${ph(o, champ)}>`;
+    let h = `<section class="card rf-gcol"><div class="rf-tete"><h2>Section</h2><span class="muted fm-small">${esc(s.cle || 'nouvelle')}</span><span class="rf-sp"></span>
+      <button type="button" class="btn btn--sm btn--danger" data-rg="poSecSuppr">Supprimer la section</button></div>
+      <div class="rf-gform"><label class="rf-lab">Titre${l === 'nl' ? ' (néerlandais)' : ''}${inp(s, '', 'titre')}</label>
+      <label class="rf-lab">Type<select class="rf-sel rf-sel--large" data-rgch="po|${esc(s._id)}||type"><option value="points"${pts ? ' selected' : ''}>Points datés (qui, échéance, preuve)</option><option value="contacts"${pts ? '' : ' selected'}>Contacts (rôle, contact)</option></select></label></div>
+      <label class="rf-lab">Introduction${l === 'nl' ? ' (néerlandais)' : ''}<textarea class="rf-in" rows="3" data-rgin="po|${esc(s._id)}||intro"${ph(s, 'intro')}>${esc(poTxt(s, 'intro', l) || '')}</textarea></label>
+      <div class="table-scroll rf-gtab"><table class="rf-table rf-gpts${pts ? '' : ' rf-gpts--contacts'}"><thead><tr><th class="rf-gc-h"></th><th>${pts ? 'Point' : 'Rôle'}</th>${pts ? '<th class="rf-gc-qui">Qui</th><th class="rf-gc-j">Échéance</th>' : ''}<th class="rf-gc-pr">${pts ? 'Preuve' : 'Contact'}</th><th class="rf-gc-mv"></th></tr></thead><tbody>
+      ${s.points.map((p, i) => `<tr class="rf-gdrag" draggable="true" data-rgdrag="pt" data-i="${i}"><td class="rf-gc-h"><span class="rf-ghandle" aria-hidden="true" title="Glisser pour ordonner">⋮⋮</span></td>
+        <td>${inp(p, p._id, 'lib')}</td>
+        ${pts ? `<td class="rf-gc-qui"><select class="rf-sel" data-rgch="po|${esc(s._id)}|${esc(p._id)}|qui">${QUIS.map(q => `<option value="${q}"${q === p.qui ? ' selected' : ''}>${esc(QUI_NOM[q])}</option>`).join('')}</select></td>
+        <td class="rf-gc-j"><span class="rf-gj"><span class="muted">J-</span><input class="rf-in" inputmode="numeric" data-rgin="po|${esc(s._id)}|${esc(p._id)}|j" value="${p.j === null ? '' : esc(p.j)}" aria-label="Jours avant l’ouverture"></span></td>` : ''}
+        <td class="rf-gc-pr">${inp(p, p._id, 'preuve')}</td>
+        <td class="rf-gc-mv"><button type="button" class="btn btn--icon btn--ghost" data-rg="poPtMv" data-i="${i}" data-d="-1" aria-label="Monter"${i ? '' : ' disabled'}>↑</button><button type="button" class="btn btn--icon btn--ghost" data-rg="poPtMv" data-i="${i}" data-d="1" aria-label="Descendre"${i < s.points.length - 1 ? '' : ' disabled'}>↓</button><button type="button" class="btn btn--icon btn--danger" data-rg="poPtSuppr" data-i="${i}" aria-label="Retirer le point">✕</button></td></tr>`).join('')
+        || `<tr><td colspan="${pts ? 6 : 4}" class="muted">Aucun point.</td></tr>`}</tbody></table></div>
+      <div class="rf-actions"><button type="button" class="btn btn--sm" data-rg="poPtAjout">Ajouter un point</button></div></section>`;
+    return h;
+  }
+  function poSection() { const P = G.po; return P && (P.sections.find(x => x._id === G.poSel) || P.sections[0]); }
+  function poModif() { G.poMod = true; G.poErr = null; }
+  function poCorps() {
+    return G.po.sections.map(s => ({ cle: s._id.startsWith('n:') ? '' : s.cle, type: s.type, fr: s.fr, nl: s.nl, intro_fr: s.intro_fr, intro_nl: s.intro_nl,
+      points: s.points.map(p => ({ cle: p._id.startsWith('n:') ? '' : p.cle, fr: p.fr, nl: p.nl, qui: p.qui, j: p.j, preuve_fr: p.preuve_fr, preuve_nl: p.preuve_nl })) }));
+  }
+  const deplacer = (l, de, vers) => { if (vers < 0 || vers >= l.length || de === vers) { return; } const [x] = l.splice(de, 1); l.splice(vers, 0, x); };
+
+  /* ── Le Guide des formations et compétences ── */
+  function blocDe(R, n) { return R.blocs.find(b => b.n === n) || R.blocs[0]; }
+  const nbProp = b => b.items.filter(it => it.critere_propose).length;
+  function fmEdition(it, b) {
+    if (G.fmEd && G.fmEd.id === it.id) { return G.fmEd; }
+    G.fmEd = Object.assign(clone(it), { bloc: b.n, _orig: clone(Object.assign({}, it, { bloc: b.n })), _mod: false }); G.fmErr = null;
+    return G.fmEd;
+  }
+  function ecranFormations() {
+    const X = rx();
+    if (!X) { return refAttente('Formations et compétences'); }
+    const R = X.R;
+    if (!pret(R)) { return ancienApi('Formations et compétences'); }
+    const a = C.S.route.a, q = String(C.S.f.rgq || '').trim().toLowerCase();
+    const premier = (R.blocs.find(b => nbProp(b)) || R.blocs[0]).n;
+    G.fmN = +a[0] && R.blocs.some(b => b.n === +a[0]) ? +a[0] : (G.fmN || premier);
+    const b = blocDe(R, G.fmN);
+    const tous = [].concat(...R.blocs.map(x => x.items.map(it => ({ it, b: x }))));
+    const liste = q ? tous.filter(x => [x.it.id, x.it.fr, x.it.nl, x.it.fo, x.it.critere_fr].join(' ').toLowerCase().includes(q)) : b.items.map(it => ({ it, b }));
+    const selId = a[1] || G.fmSel;
+    const sel = tous.find(x => x.it.id === selId) || liste[0] || null;
+    if (sel) { G.fmSel = sel.it.id; }
+    const nIt = tous.length, nPr = tous.filter(x => x.it.critere_propose).length, nBl = tous.filter(x => x.it.bloq).length;
+    const heures = R.blocs.reduce((s, x) => s + (+x.heures || 0), 0);
+    let h = `<div class="toolbar"><input type="search" placeholder="Rechercher dans les ${nIt} points (code, libellé, critère)…" data-input="rgq" value="${esc(C.S.f.rgq || '')}">
+      <button type="button" class="btn rf-gtog" data-rg="polesOuvrir" aria-expanded="${!!G.poles}">Les 5 pôles</button></div>`;
+    h += `<section class="card rf-kpis"><div class="kpi-row">${kpi(R.blocs.length, 'blocs', virg(heures) + ' h prévues')}${kpi(nIt, 'points de formation', nBl + ' bloquants pour l’attestation')}
+      ${kpi(nPr, 'critères proposés', nPr ? 'à accepter ou réécrire' : 'tous acceptés')}${kpi(R.poles.repere ? virg(R.poles.repere) + ' / 5' : '—', 'repère du réseau', R.poles.fr.join(' · '))}</div></section>`;
+    if (G.poles) { h += cartePoles(R); }
+    if (G.fmErr) { h += C.bandeau(esc(G.fmErr), 'warn'); }
+    h += `<div class="rf-g3"><section class="card rf-gcol rf-gblocs"><h2>Les ${R.blocs.length} blocs</h2><ol class="rf-gliste">${R.blocs.map(x => `<li class="rf-grow${x.n === b.n && !q ? ' is-on' : ''}">
+        <span class="chip chip--neutral rf-gn">${x.n}</span>
+        <button type="button" class="rf-grow__t" data-rg="fmBloc" data-v="${x.n}"${x.n === b.n && !q ? ' aria-current="true"' : ''}><span>${esc(x.fr)}</span><span class="sub">${esc(x.role)}</span></button>
+        <span class="rf-gh">${x.heures ? virg(x.heures) + ' h' : '—'}</span>
+        <span class="rf-gprop">${nbProp(x) ? `<span class="tag-warn">${nbProp(x)} proposé${nbProp(x) > 1 ? 's' : ''}</span>` : '<span class="badge badge--ok">acceptés</span>'}</span></li>`).join('')}</ol></section>`;
+    h += carteBloc(R, b, liste, q, sel);
+    h += sel ? ficheItem(R, sel.it, sel.b) : '<section class="card rf-gfiche"><p class="muted">Aucun point.</p></section>';
+    return { titre: 'Formations et compétences', kicker: K, corps: h + '</div>', large: true };
+  }
+  function carteBloc(R, b, liste, q, sel) {
+    const E = G.blocEd && G.blocEd.n === b.n ? G.blocEd : null;
+    let h = '<section class="card rf-gcol rf-gtable">';
+    if (q) { h += `<div class="rf-tete"><h2>Recherche · ${liste.length} point${liste.length > 1 ? 's' : ''}</h2></div>`; }
+    else if (E) {
+      const ch = (k, lib) => `<label class="rf-lab">${lib}<input class="rf-in" data-rgin="bloc|${k}" value="${esc(E[k])}"></label>`;
+      h += `<div class="rf-tete"><h2>Bloc ${b.n}</h2></div><div class="rf-gform">${ch('fr', 'Titre')}${ch('nl', 'Titre (néerlandais)')}${ch('role', 'Rôle du formateur')}${ch('role_nl', 'Rôle (néerlandais)')}${ch('fo', 'Formations (FO)')}${ch('heures', 'Heures prévues')}</div>
+        <div class="rf-actions"><button type="button" class="btn" data-rg="blocSave"${G.occupe ? ' disabled' : ''}>Enregistrer le bloc</button><button type="button" class="btn btn--ghost" data-rg="blocAnnuler">Annuler</button></div>`;
+    } else {
+      h += `<div class="rf-tete"><h2>Bloc ${b.n} · ${esc(b.fr)}</h2><span class="rf-sp"></span><button type="button" class="btn btn--sm" data-rg="blocEd">Modifier le bloc</button></div>
+        <p class="muted fm-small">${esc(b.nl || '—')} · ${esc(b.role)}${b.role_nl ? ' / ' + esc(b.role_nl) : ''} · ${esc(b.fo || '—')} · ${b.heures ? virg(b.heures) + ' h prévues' : 'sans heures prévues'}</p>
+        ${nbProp(b) ? `<div class="rf-actions"><button type="button" class="btn btn--sm" data-rg="fmAccepterTout"${G.occupe ? ' disabled' : ''}>Accepter les ${nbProp(b)} critères proposés</button></div>` : ''}`;
+    }
+    h += `<div class="table-scroll rf-gtab"><table class="rf-table rf-gits"><thead><tr>${q ? '' : '<th class="rf-gc-h"></th>'}<th>Point</th><th>Réussi si…</th><th class="rf-gc-ph">Phase</th><th class="rf-gc-on">Bloq.</th><th class="rf-gc-on">Pôles</th><th class="rf-gc-rn">Renouv.</th>${q ? '' : '<th class="rf-gc-mv2"></th>'}</tr></thead><tbody>
+      ${liste.map((x, i) => { const it = x.it; return `<tr class="row-link rf-gdrag${sel && sel.it.id === it.id ? ' is-on' : ''}"${q ? '' : ` draggable="true" data-rgdrag="it" data-i="${i}"`} data-rg="fmSel" data-v="${esc(it.id)}" data-n="${x.b.n}">
+        ${q ? '' : '<td class="rf-gc-h"><span class="rf-ghandle" aria-hidden="true" title="Glisser pour ordonner">⋮⋮</span></td>'}
+        <td><button type="button" class="rf-glien" data-rg="fmSel" data-v="${esc(it.id)}" data-n="${x.b.n}">${esc(it.fr)}</button><span class="sub">${esc(it.id)}${it.fo && it.fo !== it.id ? ' · ' + esc(it.fo) : ''}${q ? ' · bloc ' + x.b.n : ''}</span></td>
+        <td class="rf-gcrit${it.critere_propose ? ' is-prop' : ''}">${it.critere_propose ? '<span class="tag-warn">proposé</span> ' : ''}${it.critere_fr ? esc(it.critere_fr) : '<span class="tag-warn">à écrire</span>'}</td>
+        <td class="rf-gc-ph"><span class="rf-gph rf-gph--${esc(it.phase)}">${esc(PH_FMT[it.phase] || it.phase)}</span></td>
+        <td class="rf-gc-on"><span class="chip ${it.bloq ? 'rf-goui' : 'chip--neutral'}">${it.bloq ? 'oui' : 'non'}</span></td>
+        <td class="rf-gc-on"><span class="chip ${it.poles ? 'rf-goui' : 'chip--neutral'}">${it.poles ? 'oui' : 'non'}</span></td>
+        <td class="rf-gc-rn">${it.renouvellement ? it.renouvellement + ' mois' : '<span class="muted">—</span>'}</td>
+        ${q ? '' : `<td class="rf-gc-mv2"><button type="button" class="btn btn--icon btn--ghost" data-rg="fmMv" data-i="${i}" data-d="-1" aria-label="Monter"${i ? '' : ' disabled'}>↑</button><button type="button" class="btn btn--icon btn--ghost" data-rg="fmMv" data-i="${i}" data-d="1" aria-label="Descendre"${i < liste.length - 1 ? '' : ' disabled'}>↓</button></td>`}</tr>`; }).join('')
+        || `<tr><td colspan="8" class="muted">Aucun point.</td></tr>`}</tbody></table></div>`;
+    if (!q) {
+      const A = G.ajout && G.ajout.n === b.n ? G.ajout : null;
+      h += A ? `<div class="rf-gform rf-gajout"><label class="rf-lab">Code (C-… ou FO-…)<input class="rf-in" data-rgin="ajout|id" value="${esc(A.id)}"></label><label class="rf-lab">Libellé<input class="rf-in" data-rgin="ajout|fr" value="${esc(A.fr)}"></label></div>
+          <div class="rf-actions"><button type="button" class="btn btn--sm" data-rg="ajoutSave"${G.occupe ? ' disabled' : ''}>Ajouter au bloc ${b.n}</button><button type="button" class="btn btn--sm btn--ghost" data-rg="ajoutAnnuler">Annuler</button></div>`
+        : `<div class="rf-actions"><button type="button" class="btn btn--sm" data-rg="ajoutOuvrir">Ajouter un point</button></div>`;
+    }
+    return h + '</section>';
+  }
+  function ficheItem(R, it, b) {
+    const E = fmEdition(it, b);
+    const t = (k, lib, n) => `<label class="rf-lab">${lib}<textarea class="rf-in" rows="${n || 2}" data-rgin="it|${k}">${esc(E[k] || '')}</textarea></label>`;
+    const i = (k, lib, extra) => `<label class="rf-lab">${lib}<input class="rf-in" data-rgin="it|${k}" value="${esc(E[k] || '')}"${extra || ''}></label>`;
+    const sem = it.semis, ecart = sem && (E.phase !== sem.phase || E.bloq !== sem.bloq || E.poles !== sem.poles || E.renouvellement !== sem.renouvellement || [...E.profils].sort().join() !== [...sem.profils].sort().join());
+    const httpsKo = k => E[k] && !/^https:\/\//i.test(String(E[k]).trim());
+    return `<section class="card rf-gfiche"><div class="rf-tete"><h2>${esc(it.id)} · bloc ${b.n}</h2><span class="rf-sp"></span><span class="tag-warn" data-rg-mod${E._mod ? '' : ' hidden'}>Modifié</span></div>
+      <div class="rf-gform">${i('fr', 'Libellé')}${i('nl', 'Libellé (néerlandais)')}</div>
+      ${t('dfr', 'Ce que le franchisé apprend', 3)}${t('dnl', 'Ce que le franchisé apprend (néerlandais)', 3)}
+      <div class="rf-gcritlab"><span class="rf-lab">Réussi si…</span>${it.critere_propose ? '<span class="tag-warn">proposé</span>' : ''}<span class="rf-sp"></span>
+        ${it.critere_propose ? `<button type="button" class="linklike" data-rg="fmAccepter"${G.occupe ? ' disabled' : ''}>Accepter la proposition</button>` : ''}
+        ${!it.critere_propose && it.critere_prop_fr && it.critere_fr !== it.critere_prop_fr ? `<button type="button" class="linklike" data-rg="fmProposition" title="${esc(it.critere_prop_fr)}">Revenir à la proposition</button>` : ''}</div>
+      <textarea class="rf-in" rows="3" data-rgin="it|critere_fr" aria-label="Réussi si…">${esc(E.critere_fr || '')}</textarea>
+      ${t('critere_nl', 'Geslaagd als… (néerlandais)')}
+      <span class="rf-lab">Phase</span>${seg('fmPhase', E.phase, Object.keys(PH_FMT).map(k => [k, PH_FMT[k]]))}
+      <div class="rf-gsw">${bascule('fmBloq', E.bloq, 'Bloquante pour l’attestation')}${bascule('fmPoles', E.poles, 'Notée sur les 5 pôles')}</div>
+      <div class="rf-gform rf-gform--2"><label class="rf-lab">Renouvellement<select class="rf-sel rf-sel--large" data-rgch="it|renouvellement">${(RENOUV.includes(E.renouvellement) ? RENOUV : RENOUV.concat([E.renouvellement])).map(m => `<option value="${m}"${m === E.renouvellement ? ' selected' : ''}>${m ? 'tous les ' + m + ' mois' : 'aucun'}</option>`).join('')}</select></label>
+        ${i('heures', 'Heures', ' inputmode="decimal"')}${i('fo', 'Formation (FO)')}
+        <label class="rf-lab">Bloc<select class="rf-sel rf-sel--large" data-rgch="it|bloc">${R.blocs.map(x => `<option value="${x.n}"${x.n === E.bloc ? ' selected' : ''}>${x.n}. ${esc(x.fr)}</option>`).join('')}</select></label></div>
+      <div class="rf-gform">${i('fiche', 'Fiche technique (https://…)')}${i('fiche_nom', 'Nom de la fiche')}</div>
+      ${httpsKo('fiche') ? '<p class="error">Adresse https:// seulement</p>' : ''}${i('video', 'Vidéo (https://…)')}${httpsKo('video') ? '<p class="error">Adresse https:// seulement</p>' : ''}
+      <span class="rf-lab">Profils (plans de formation)</span><div class="rf-pills">${Object.keys(PROFIL_NOM).map(p => `<button type="button" class="choice-pill rf-pill${E.profils.includes(p) ? ' is-on' : ''}" data-rg="fmProfil" data-v="${p}" aria-pressed="${E.profils.includes(p)}">${esc(PROFIL_NOM[p])}</button>`).join('')}</div>
+      ${ecart ? `<div class="rf-sug"><button type="button" class="linklike" data-rg="fmSemis" title="Phase, bloquante, pôles, renouvellement et profils du guide de départ">Valeurs de départ</button></div>` : ''}
+      <div class="rf-actions"><button type="button" class="btn btn--primary" data-rg="fmSave" data-rg-save="it"${!E._mod || G.occupe ? ' disabled' : ''}>Enregistrer</button>
+        ${E._mod ? '<button type="button" class="btn btn--ghost" data-rg="fmAnnuler">Annuler</button>' : ''}<span class="rf-sp"></span>
+        <button type="button" class="btn btn--sm btn--danger" data-rg="fmSuppr">Retirer le point</button></div>
+      ${it.majPar ? `<p class="muted fm-small">${esc(it.majPar)}${it.majLe ? ' · ' + esc(dth(it.majLe)) : ''}</p>` : ''}</section>`;
+  }
+  function cartePoles(R) {
+    const P = G.poles;
+    return `<section class="card rf-gpoles"><div class="rf-tete"><h2>Les 5 pôles</h2><span class="muted fm-small">notés de 1 à 5 sur les formations qui le demandent</span></div>
+      <div class="rf-gpolesg"><span></span><span class="rf-lab">Français</span><span class="rf-lab">Néerlandais</span>
+      ${P.fr.map((v, i) => `<span class="muted">${i + 1}.</span><input class="rf-in" data-rgin="poles|fr|${i}" value="${esc(v)}"><input class="rf-in" data-rgin="poles|nl|${i}" value="${esc(P.nl[i])}">`).join('')}</div>
+      <div class="rf-actions"><label class="field">Repère du réseau <select data-rgch="poles|repere">${(REPERES.includes(P.repere) ? REPERES : REPERES.concat([P.repere])).map(v => `<option value="${v}"${v === P.repere ? ' selected' : ''}>${v ? virg(v) + ' / 5' : 'aucun'}</option>`).join('')}</select></label>
+        <span class="rf-sp"></span><button type="button" class="btn" data-rg="polesSave"${G.occupe ? ' disabled' : ''}>Enregistrer les pôles</button><button type="button" class="btn btn--ghost" data-rg="polesFermer">Fermer</button></div></section>`;
+  }
+  /** Le corps d'écriture d'un point : les seuls champs changés (le critère suit sa règle : réécrit = accepté). */
+  function fmCorps(E) {
+    const O = E._orig, out = {};
+    ['fr', 'nl', 'dfr', 'dnl', 'fo', 'phase', 'bloq', 'poles', 'renouvellement', 'heures', 'fiche', 'fiche_nom', 'video', 'bloc'].forEach(k => { if (E[k] !== O[k]) { out[k] = E[k]; } });
+    if ([...E.profils].sort().join() !== [...O.profils].sort().join()) { out.profils = E.profils; }
+    const crFr = (E.critere_fr || '').trim(), crNl = (E.critere_nl || '').trim();
+    if (crFr !== (O.critere_fr || '').trim()) { out.critere_fr = crFr; out.critere_nl = crNl; }
+    else if (crNl !== (O.critere_nl || '').trim()) { if (O.critere_propose) { out.critere_fr = crFr; } out.critere_nl = crNl; }
+    return out;
+  }
+  const refusTexte = x => x.message + (x.data && x.data.invalides ? ' — ' + (Array.isArray(x.data.invalides) ? x.data.invalides.join(' · ') : Object.keys(x.data.invalides).map(k => k + ' : ' + x.data.invalides[k].join(', ')).join(' · ')) : '');
+  function quitterItem() { return !(G.fmEd && G.fmEd._mod) || confirm('Le point en cours a des modifications non enregistrées. Les abandonner ?'); }
+
+  /** Les gestes des deux guides ([data-rg]). */
+  async function gesteGuides(d) {
+    const R = D.ref;
+    switch (d.rg) {
+      case 'poLang': G.poLang = d.v; return C.rendre(true);
+      case 'poSel': G.poSel = d.v; return C.rendre(true);
+      case 'poSecMv': deplacer(G.po.sections, +d.i, +d.i + (+d.d)); poModif(); return C.rendre(true);
+      case 'poSecAjout': { const s = { _id: 'n:' + (++G.n), cle: '', type: 'points', fr: 'Nouvelle section', nl: '', intro_fr: '', intro_nl: '', points: [] }; G.po.sections.push(s); G.poSel = s._id; poModif(); return C.rendre(true); }
+      case 'poSecSuppr': { const s = poSection(); if (!s || !confirm(`Supprimer la section « ${s.fr} » et ses ${s.points.length} point(s) ?`)) { return; } G.po.sections = G.po.sections.filter(x => x !== s); G.poSel = G.po.sections[0] ? G.po.sections[0]._id : ''; poModif(); return C.rendre(true); }
+      case 'poPtMv': deplacer(poSection().points, +d.i, +d.i + (+d.d)); poModif(); return C.rendre(true);
+      case 'poPtSuppr': poSection().points.splice(+d.i, 1); poModif(); return C.rendre(true);
+      case 'poPtAjout': { const s = poSection(); s.points.push({ _id: 'n:' + (++G.n), cle: '', fr: '', nl: '', qui: 'franchise', j: s.type === 'contacts' ? null : 30, preuve_fr: '', preuve_nl: '' }); poModif(); return C.rendre(true); }
+      case 'poAnnuler': G.po = null; G.poErr = null; return C.rendre(true);
+      case 'poSave': {
+        G.occupe = true; C.rendre(true);
+        try {
+          const r = await C.appel('PUT', '/formation/ref/preouverture', { sections: poCorps() });
+          const i = Math.max(0, G.po.sections.findIndex(x => x._id === G.poSel));
+          D.ref.preouverture.sections = r.sections; G.po = null; poModele(); G.poSel = (G.po.sections[i] || G.po.sections[0] || {})._id || '';
+          toast('Guide pré-ouverture enregistré'); chargerRef(true);
+        } catch (x) { G.poErr = 'Enregistrement refusé : ' + refusTexte(x); }
+        G.occupe = false; return C.rendre(true);
+      }
+      case 'fmBloc': if (!quitterItem()) { return; } G.fmEd = null; G.fmSel = ''; G.blocEd = null; G.ajout = null; C.S.f.rgq = ''; location.hash = '#/rfform/' + d.v; return;
+      case 'fmSel': if (G.fmEd && G.fmEd.id === d.v) { return; } if (!quitterItem()) { return; } G.fmEd = null; G.fmSel = d.v; location.hash = '#/rfform/' + d.n + '/' + encodeURIComponent(d.v); return;
+      case 'fmPhase': fmEdition0().phase = d.v; return fmModif(true);
+      case 'fmBloq': { const E = fmEdition0(); E.bloq = !E.bloq; return fmModif(true); }
+      case 'fmPoles': { const E = fmEdition0(); E.poles = !E.poles; return fmModif(true); }
+      case 'fmProfil': { const E = fmEdition0(), l = E.profils, k = l.indexOf(d.v); if (k >= 0) { l.splice(k, 1); } else { l.push(d.v); } return fmModif(true); }
+      case 'fmSemis': { const E = fmEdition0(), s = R && itemDe(E.id) && itemDe(E.id).semis; if (s) { Object.assign(E, { phase: s.phase, bloq: s.bloq, poles: s.poles, renouvellement: s.renouvellement, profils: s.profils.slice() }); } return fmModif(true); }
+      case 'fmAnnuler': G.fmEd = null; G.fmErr = null; return C.rendre(true);
+      case 'fmSave': {
+        const E = G.fmEd; if (!E) { return; }
+        const corps = fmCorps(E);
+        if (!Object.keys(corps).length) { E._mod = false; return C.rendre(true); }
+        return ecrireItem(E.id, corps, 'Point enregistré', true);
+      }
+      case 'fmAccepter': return ecrireItem(G.fmEd.id, { accepter: true }, 'Proposition acceptée', true);
+      case 'fmProposition': if (!confirm('Revenir au critère proposé ? Le critère réécrit est retiré.')) { return; } return ecrireItem(G.fmEd.id, { critere_fr: '' }, 'Retour à la proposition', true);
+      case 'fmSuppr': {
+        const E = G.fmEd; if (!E || !confirm(`Retirer « ${E._orig.fr} » (${E.id}) du bloc ${E._orig.bloc} ? Les validations déjà faites dans le CRM le gardent.`)) { return; }
+        G.occupe = true; C.rendre(true);
+        try { await C.appel('DELETE', '/formation/ref/items/' + encodeURIComponent(E.id)); toast('Point retiré'); G.fmEd = null; G.fmSel = ''; await relireRef(); location.hash = '#/rfform/' + E._orig.bloc; }
+        catch (x) { G.fmErr = 'Retrait refusé : ' + refusTexte(x); }
+        G.occupe = false; return C.rendre(true);
+      }
+      case 'fmAccepterTout': {
+        const b = blocDe(R, G.fmN);
+        if (!confirm(`Accepter les ${nbProp(b)} critères proposés du bloc ${b.n} ? Ils restent modifiables.`)) { return; }
+        G.occupe = true; C.rendre(true);
+        try { const r = await C.appel('POST', '/formation/ref/blocs/' + b.n + '/accepter', {}); toast(r.acceptes + ' critère(s) accepté(s)'); G.fmEd = null; await relireRef(); }
+        catch (x) { G.fmErr = refusTexte(x); }
+        G.occupe = false; return C.rendre(true);
+      }
+      case 'fmMv': {
+        const b = blocDe(R, G.fmN), ids = b.items.map(it => it.id);
+        deplacer(ids, +d.i, +d.i + (+d.d));
+        return ecrireOrdre(b.n, ids);
+      }
+      case 'blocEd': { const b = blocDe(R, G.fmN); G.blocEd = { n: b.n, fr: b.fr, nl: b.nl, role: b.role, role_nl: b.role_nl, fo: b.fo, heures: virg(b.heures) }; return C.rendre(true); }
+      case 'blocAnnuler': G.blocEd = null; return C.rendre(true);
+      case 'blocSave': {
+        const E = G.blocEd; G.occupe = true; C.rendre(true);
+        try { await C.appel('PUT', '/formation/ref/blocs/' + E.n, { fr: E.fr, nl: E.nl, role: E.role, role_nl: E.role_nl, fo: E.fo, heures: E.heures }); toast('Bloc ' + E.n + ' enregistré'); G.blocEd = null; await relireRef(); }
+        catch (x) { G.fmErr = 'Bloc refusé : ' + refusTexte(x); }
+        G.occupe = false; return C.rendre(true);
+      }
+      case 'ajoutOuvrir': G.ajout = { n: G.fmN, id: '', fr: '' }; return C.rendre(true);
+      case 'ajoutAnnuler': G.ajout = null; return C.rendre(true);
+      case 'ajoutSave': {
+        const A = G.ajout; G.occupe = true; C.rendre(true);
+        try {
+          const r = await C.appel('POST', '/formation/ref/blocs/' + A.n + '/items', { id: A.id.trim(), fr: A.fr.trim() });
+          toast('Point ajouté'); G.ajout = null; G.fmEd = null; G.fmSel = r.item.id; await relireRef(); location.hash = '#/rfform/' + A.n + '/' + encodeURIComponent(r.item.id);
+        } catch (x) { G.fmErr = 'Ajout refusé : ' + refusTexte(x); }
+        G.occupe = false; return C.rendre(true);
+      }
+      case 'polesOuvrir': G.poles = G.poles ? null : { fr: R.poles.fr.slice(), nl: R.poles.nl.slice(), repere: +R.poles.repere }; return C.rendre(true);
+      case 'polesFermer': G.poles = null; return C.rendre(true);
+      case 'polesSave': {
+        const P = G.poles; G.occupe = true; C.rendre(true);
+        try { const r = await C.appel('PUT', '/formation/ref/poles', { fr: P.fr, nl: P.nl, repere: P.repere }); D.ref.poles = r.poles; toast('Pôles enregistrés'); G.poles = null; chargerRef(true); }
+        catch (x) { G.fmErr = 'Pôles refusés : ' + refusTexte(x); }
+        G.occupe = false; return C.rendre(true);
+      }
+    }
+  }
+  function itemDe(id) { for (const b of D.ref.blocs) { const it = b.items.find(x => x.id === id); if (it) { return it; } } return null; }
+  function fmEdition0() { if (!G.fmEd) { const it = itemDe(G.fmSel); const b = D.ref.blocs.find(x => x.items.includes(it)); fmEdition(it, b); } return G.fmEd; }
+  function fmModif(redessiner) { G.fmEd._mod = true; G.fmErr = null; if (redessiner) { C.rendre(true); } else { marquerModifie('[data-rg-save="it"]'); } }
+  /** Relit le référentiel et attend la réponse (après une écriture : l'écran repart des données du serveur). */
+  function relireRef() {
+    return C.lire('/formation/ref?detail=1', 30000).then(d => { D.ref = d; D.refErr = null; }, er => { D.refErr = er.message; });
+  }
+  async function ecrireItem(id, corps, msg, garder) {
+    G.occupe = true; C.rendre(true);
+    try {
+      const r = await C.appel('PUT', '/formation/ref/items/' + encodeURIComponent(id), corps);
+      toast(msg); G.fmEd = null; await relireRef();
+      if (garder && corps.bloc) { location.hash = '#/rfform/' + corps.bloc + '/' + encodeURIComponent(r.item.id); }
+    } catch (x) { G.fmErr = 'Enregistrement refusé : ' + refusTexte(x); }
+    G.occupe = false; C.rendre(true);
+  }
+  async function ecrireOrdre(n, ids) {
+    G.occupe = true;
+    try { await C.appel('PUT', '/formation/ref/blocs/' + n, { ordre: ids }); await relireRef(); }
+    catch (x) { G.fmErr = 'Ordre refusé : ' + refusTexte(x); }
+    G.occupe = false; C.rendre(true);
+  }
+
+  /** Les écouteurs des deux guides : gestes, saisie (sans redessiner), choix, glisser-déposer. */
+  function brancherGuides(root) {
+    root.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-rg]');
+      if (!b || b.disabled) { return; }
+      // Un clic sur un champ d'une ligne cliquable n'est pas un choix de ligne.
+      if (b.tagName === 'TR' && ev.target.closest('input, select, textarea, button:not([data-rg="fmSel"])')) { return; }
+      gesteGuides(b.dataset);
+    });
+    root.addEventListener('input', ev => {
+      const t = ev.target, k = t.getAttribute && t.getAttribute('data-rgin');
+      if (!k) { return; }
+      const p = k.split('|');
+      if (p[0] === 'po' && G.po) {
+        const s = G.po.sections.find(x => x._id === p[1]); if (!s) { return; }
+        const o = p[2] ? s.points.find(x => x._id === p[2]) : s; if (!o) { return; }
+        if (p[3] === 'j') { const v = t.value.trim(); o.j = v === '' ? null : (/^-?\d+$/.test(v) ? +v : v); }
+        else { o[poCle(p[3], G.poLang)] = t.value; }
+        poModif(); marquerModifie('[data-rg-save="po"]'); return;
+      }
+      if (p[0] === 'it' && G.fmEd) { G.fmEd[p[1]] = t.value; fmModif(false); return; }
+      if (p[0] === 'bloc' && G.blocEd) { G.blocEd[p[1]] = t.value; return; }
+      if (p[0] === 'ajout' && G.ajout) { G.ajout[p[1]] = t.value; return; }
+      if (p[0] === 'poles' && G.poles) { G.poles[p[1]][+p[2]] = t.value; }
+    });
+    root.addEventListener('change', ev => {
+      const t = ev.target, k = t.getAttribute && t.getAttribute('data-rgch');
+      if (!k) { return; }
+      const p = k.split('|');
+      if (p[0] === 'po' && G.po) {
+        const s = G.po.sections.find(x => x._id === p[1]); if (!s) { return; }
+        const o = p[2] ? s.points.find(x => x._id === p[2]) : s; if (!o) { return; }
+        o[p[3]] = t.value; poModif(); return C.rendre(true);
+      }
+      if (p[0] === 'it') { fmEdition0()[p[1]] = +t.value; return fmModif(true); }
+      if (p[0] === 'poles' && G.poles) { G.poles.repere = +t.value; }
+    });
+    // Glisser pour ordonner : sections et points du guide pré-ouverture, points d'un bloc.
+    root.addEventListener('dragstart', ev => {
+      const r = ev.target.closest && ev.target.closest('[data-rgdrag]');
+      if (!r) { return; }
+      G.glisse = { type: r.dataset.rgdrag, i: +r.dataset.i };
+      try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', r.dataset.rgdrag); } catch (x) { /* */ }
+      r.classList.add('is-glisse');
+    });
+    root.addEventListener('dragover', ev => {
+      const r = ev.target.closest && ev.target.closest('[data-rgdrag]');
+      if (!r || !G.glisse || r.dataset.rgdrag !== G.glisse.type) { return; }
+      ev.preventDefault();
+      root.querySelectorAll('.rf-gdrag.is-over').forEach(x => { if (x !== r) { x.classList.remove('is-over'); } });
+      r.classList.add('is-over');
+    });
+    root.addEventListener('dragend', () => { G.glisse = null; root.querySelectorAll('.is-over, .is-glisse').forEach(x => x.classList.remove('is-over', 'is-glisse')); });
+    root.addEventListener('drop', ev => {
+      const r = ev.target.closest && ev.target.closest('[data-rgdrag]');
+      const g = G.glisse;
+      if (!r || !g || r.dataset.rgdrag !== g.type) { return; }
+      ev.preventDefault();
+      const vers = +r.dataset.i;
+      G.glisse = null;
+      if (vers === g.i) { return C.rendre(true); }
+      if (g.type === 'sec') { deplacer(G.po.sections, g.i, vers); poModif(); return C.rendre(true); }
+      if (g.type === 'pt') { deplacer(poSection().points, g.i, vers); poModif(); return C.rendre(true); }
+      if (g.type === 'it') { const b = blocDe(D.ref, G.fmN), ids = b.items.map(it => it.id); deplacer(ids, g.i, vers); ecrireOrdre(b.n, ids); }
+    });
+  }
+
   /* ═══ Lectures ═══ */
   function chargerListe(forcer) {
     if ((D.liste && !forcer) || D.charge) { return; }
@@ -652,6 +1042,7 @@ window.FormationSop = (function () {
     if (e === 'sopcomp' || e === 'sopred') { chargerComp(false); }
     if (e === 'rfclasseur' || e === 'rfphase' || e === 'rfposte' || e === 'sop' || e === 'sopcomp') { chargerRef(false); }
     if (e === 'sopcomp' && a[0] !== 'magasins') { chargerCor(false); }
+    if (e === 'rfpre' || e === 'rfform') { chargerRef(false); }   // les deux guides (lot 4b)
   }
 
   const ECRANS = {
@@ -660,7 +1051,9 @@ window.FormationSop = (function () {
     sopred: ecranRedaction,
     rfclasseur: ecranClasseur,
     rfphase: ecranParPhase,
-    rfposte: ecranParPoste
+    rfposte: ecranParPoste,
+    rfpre: ecranPreouverture,
+    rfform: ecranFormations
   };
 
   /* ═══ Gestes (écouteurs propres aux SOP, sur #root) ═══ */
@@ -757,18 +1150,20 @@ window.FormationSop = (function () {
   return {
     /** Le groupe de la barre latérale et ses entrées : [clé, libellé] (Manuel du réseau, 06/11/2026). */
     groupe: 'Manuel du réseau',
-    nav: [['rfclasseur', 'Classeur'], ['rfphase', 'Par phase'], ['rfposte', 'Par poste'], ['sop', 'Standards'], ['sopcomp', 'Correspondance'], ['sopred', 'Rédaction']],
+    nav: [['rfclasseur', 'Classeur'], ['rfphase', 'Par phase'], ['rfposte', 'Par poste'], ['sop', 'Standards'], ['sopcomp', 'Correspondance'], ['sopred', 'Rédaction'], ['rfpre', 'Pré-ouverture'], ['rfform', 'Formations et compétences']],
     icones: {
       rfclasseur: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
       rfphase: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
       rfposte: 'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9',
       sop: 'M9 11l3 3 8-8M4 4h11v4M4 4v16h16v-6',
       sopcomp: 'M12 2l3 6.5 7 .9-5 4.8 1.2 7L12 18l-6.2 3.2 1.2-7-5-4.8 7-.9z',
-      sopred: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'
+      sopred: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
+      rfpre: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5',
+      rfform: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5'
     },
     ecrans: ECRANS,
     /** formation.js fournit ses outils une fois, au démarrage. */
-    init(ctx, root) { C = ctx; brancher(root); },
+    init(ctx, root) { C = ctx; brancher(root); brancherGuides(root); },
     apres,
     sectionPartie,
     nbPartie
