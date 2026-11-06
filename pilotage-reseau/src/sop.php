@@ -877,7 +877,7 @@ function foCocherPanel(string $shop, int $emp, int $cid, string $nomComp, string
         [$avant] = fmRelireEmploye($emp);
         if ($avant === null) { return ['ok' => false, 'erreur' => 'personne inconnue du panel']; }
         if (in_array($cid, $avant['competences'] ?? [], true)) { return ['ok' => true, 'deja' => true]; }
-        // Le même appel que le module pour « valider la compétence » (wr_formation_employe_competence) : PUT.
+        // L'appel du panel pour « valider la compétence » d'une personne : PUT /employees/{id}/competencies.
         $w = PanelApi::requete('PUT', '/employees/' . $emp . '/competencies', ['competency_id' => $cid]);
         if (($w['code'] ?? 0) < 200 || ($w['code'] ?? 0) >= 300) { return ['ok' => false, 'erreur' => 'le panel a refusé : ' . ($w['erreur'] ?? ('HTTP ' . ($w['code'] ?? '?')))]; }
         [$apres] = fmRelireEmploye($emp);

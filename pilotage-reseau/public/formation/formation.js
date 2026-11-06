@@ -116,7 +116,6 @@
     ref: null, refErreur: null, refCharge: false,
     liens: null, liensErreur: null, liensCharge: false,
     niveaux: {}, procedures: {}, formations: {}, competences: {},
-    equipe: { magasins: null, erreur: null, charge: false, parShop: {}, ouvert: null },
     cat: null, catErreur: null, catCharge: false,
     v25: null, v25Charge: false,
     api: { ouvert: {}, sondes: {}, chemins: {} },
@@ -198,7 +197,6 @@
     procedures: 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
     ressources: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5z',
     produit: 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8',
-    equipes: 'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9',
     manuel: 'M2 4h7a3 3 0 0 1 3 3v14a2 2 0 0 0-2-2H2zM22 4h-7a3 3 0 0 0-3 3v14a2 2 0 0 1 2-2h8z',
     api: 'M8 9l-4 3 4 3M16 9l4 3-4 3M14 5l-4 14',
   };
@@ -206,7 +204,6 @@
     ['Pilotage', [['tableau', 'Carte des métiers']]],
     ['Référentiel', [['postes', 'Postes & sous-postes'], ['competences', 'Compétences'], ['formations', 'Formations'],
       ['procedures', 'Procédures opératoires'], ['ressources', 'Base de connaissances'], ['produit', 'Compétences produit']]],
-    ['Équipes', [['equipes', 'Compétences des équipes']]],
     ['Documentation', [['api', 'Routes API']]],
   ];
   // Le Manuel du réseau (formation-sop.js, src/sop.php, src/referentiel.php) : un groupe à lui, avant la documentation.
@@ -436,7 +433,8 @@
     return '<span class="fm-barre' + (x === 0 ? ' is-vide' : x < 50 ? ' is-faible' : '') + '"><span style="width:' + Math.max(x, 2) + '%"></span></span>';
   }
   function kpi(href, nombre, libelle, sous) {
-    return '<a class="fm-kpi" href="' + href + '"><span class="fm-kpi__n">' + nombre + '</span><span class="fm-kpi__l">' + esc(libelle) + '</span>' + (sous ? '<span class="fm-kpi__s">' + sous + '</span>' : '') + '</a>';
+    var corps = '<span class="fm-kpi__n">' + nombre + '</span><span class="fm-kpi__l">' + esc(libelle) + '</span>' + (sous ? '<span class="fm-kpi__s">' + sous + '</span>' : '');
+    return href ? '<a class="fm-kpi" href="' + href + '">' + corps + '</a>' : '<div class="fm-kpi">' + corps + '</div>';
   }
 
   /* ── Carte des métiers (tableau de bord) ─────────────────────────────
@@ -514,8 +512,7 @@
     var h = '<div class="fm-hero"><div><h2>' + pl(E.actifs, 'personne active', 'personnes actives') + ' dans ' + pl(E.magasins, 'magasin') + '</h2>' +
       '<p class="muted">' + n(E.places) + ' placée' + (E.places > 1 ? 's' : '') + ' sur la carte ; ' + n(E.sansPoste) + ' sans poste dans le panel.</p>' +
       '<div class="fm-pile">' + parts.map(function (x) { var w = x[0] * 100 / tot; return x[0] ? '<div style="width:' + w + '%;background:' + x[2] + (x[2] === 'var(--chip)' ? ';color:var(--muted-2)' : '') + '">' + (w >= 4 ? n(x[0]) : '') + '</div>' : ''; }).join('') + '</div>' +
-      '<div class="fm-legende" style="margin-top:8px">' + parts.map(function (x) { return '<span><i style="background:' + x[2] + ';height:10px;width:10px;border-radius:3px"></i>' + n(x[0]) + ' ' + x[1] + '</span>'; }).join('') + '</div></div>' +
-      (E.sansPoste ? '<a class="btn btn--primary btn--sm" href="#/equipes">' + (E.sansPoste > 1 ? 'Placer les ' + n(E.sansPoste) + ' personnes' : 'Placer la personne') + ' →</a>' : '') + '</div>';
+      '<div class="fm-legende" style="margin-top:8px">' + parts.map(function (x) { return '<span><i style="background:' + x[2] + ';height:10px;width:10px;border-radius:3px"></i>' + n(x[0]) + ' ' + x[1] + '</span>'; }).join('') + '</div></div>' + '</div>';
     // Le vivier de gérants : qui maîtrise les trois métiers.
     var totP = Math.max(P.paliers['3'] + P.paliers['2'] + P.paliers['1'] + P.paliers['0'], 1);
     var palier = function (lib, v, col) { return '<div class="fm-palier"><span>' + lib + '</span><div class="fm-palier__bar"><i style="width:' + Math.max(v * 100 / totP, v ? 2 : 0) + '%;background:' + col + '"></i></div><b>' + n(v) + ' pers.</b></div>'; };
@@ -549,7 +546,7 @@
     if (vue === 'plan') {
       var E = C && C.effectifs;
       h += '<div class="fm-kpis">' +
-        kpi('#/equipes', E ? n(E.actifs) : '…', 'Personnes actives', E ? n(E.places) + ' placées sur la carte · ' + pl(E.magasins, 'magasin') : 'lecture des équipes…') +
+        kpi(null, E ? n(E.actifs) : '…', 'Personnes actives', E ? n(E.places) + ' placées sur la carte · ' + pl(E.magasins, 'magasin') : 'lecture des équipes…') +
         kpi('#/postes', n(R.postes.filter(function (p) { return p.id != null; }).length), 'Postes', pl(R.postes.reduce(function (a, p) { return a + p.niveaux.length; }, 0), 'niveau')) +
         kpi('#/competences', n(R.competences.length), 'Compétences', C ? n(C.manques.competences - C.manques.sansFormation) + ' ont une formation' : '') +
         kpi('#/formations', S.v25 ? n(S.v25.formations.length) : '…', 'Formations', pl(R.formations.length, 'évaluation') + ' dans le panel') + '</div>';
@@ -567,7 +564,7 @@
     if (C) {
       var M = C.manques;
       h += '<h2 class="fm-section-titre">Ce qui manque</h2><div class="fm-alertes">' +
-        '<a class="fm-alerte' + (C.effectifs.sansPoste ? '' : ' is-ok') + '" href="#/equipes"><b>' + n(C.effectifs.sansPoste) + '</b><span>' + (C.effectifs.sansPoste > 1 ? 'personnes' : 'personne') + ' sans poste dans le panel</span><small>Elles n’apparaissent pas sur la carte : à placer.</small></a>' +
+        '<div class="fm-alerte' + (C.effectifs.sansPoste ? '' : ' is-ok') + '"><b>' + n(C.effectifs.sansPoste) + '</b><span>' + (C.effectifs.sansPoste > 1 ? 'personnes' : 'personne') + ' sans poste dans le panel</span><small>Elles n’apparaissent pas sur la carte : à placer dans le panel.</small></div>' +
         '<a class="fm-alerte is-w" href="#/competences" data-act="voir-comp" data-v="sansFormation"><b>' + n(M.sansFormation) + '</b><span>compétences sans formation</span><small>À rattacher à une FO.</small></a>' +
         '<a class="fm-alerte" href="#/competences" data-act="voir-comp" data-v="sansProcedure"><b>' + n(M.sansProcedure) + ' / ' + n(M.competences) + '</b><span>compétences sans procédure du manuel</span><small>' + (M.sansProcedure === M.competences ? 'Le manuel n’est relié à aucune compétence.' : 'À relier au manuel opératoire.') + '</small></a>' +
         (M.niveauxVides.length ? '<a class="fm-alerte" href="#/postes"><b>' + n(M.niveauxVides.length) + '</b><span>niveaux sans compétence</span><small>' + esc(M.niveauxVides.join(', ')) + '</small></a>' : '') + '</div>';
@@ -1235,115 +1232,6 @@
     return { titre: TITRES.produit, corps: h + '</section>' };
   }
 
-  /* ── Équipes ────────────────────────────────────────────────────────── */
-
-  function ecranEquipes() {
-    var E = S.equipe;
-    var sid = arg(0);
-    var h = bandeauLiens();
-    if (E.erreur && !E.magasins) return { titre: TITRES.equipes, corps: h + '<p class="error">' + esc(E.erreur) + '</p>' };
-    if (!E.magasins) return { titre: TITRES.equipes, corps: h + attente('Lecture des magasins…') };
-    h += '<div class="filters"><div class="filters__row">' + E.magasins.map(function (m) {
-      return '<a class="filter' + (sid === m.id ? ' is-on' : '') + '" href="#/equipes/' + m.id + '">' + esc(m.nom) + '</a>';
-    }).join('') + (E.magasins.length ? '' : '<span class="muted">Aucun magasin connu du cockpit.</span>') + '</div></div>';
-    if (sid == null) {
-      return { titre: TITRES.equipes, corps: h + '<section class="card pending"><h2>Choisissez un magasin</h2><p class="muted">Pour chaque personne : le poste et le niveau qu’elle tient dans le panel, les compétences qu’elle a validées face à celles que son niveau exige, et les formations qui couvrent ce qui manque.</p></section>' };
-    }
-    var d = E.parShop[sid];
-    if (!d || d.charge) return { titre: TITRES.equipes, corps: h + attente('Lecture de l’équipe et des fiches de chacun…') };
-    if (d.erreur) return { titre: TITRES.equipes, corps: h + '<p class="error">' + esc(d.erreur) + '</p>' };
-    var emps = d.data.employes || [];
-    var actifs = emps.filter(function (e) { return e.actif; });
-    var lignes = actifs.map(function (e) {
-      // Ce que le niveau tenu exige = le cumul des niveaux du poste jusqu'à lui (le panel ne liste que les nouvelles).
-      var exig = new Set(), suivant = null;
-      e.postes.forEach(function (p) {
-        var poste = I.posteById.get(p.id);
-        if (!poste || p.niveauId == null) return;
-        cumul(poste, p.niveauId).forEach(function (c) { exig.add(c); });
-        var i = -1;
-        poste.niveaux.forEach(function (nv, k) { if (nv.id === p.niveauId) i = k; });
-        if (i >= 0 && poste.niveaux[i + 1]) suivant = { poste: poste, nv: poste.niveaux[i + 1] };
-      });
-      var acq = new Set(e.competences);
-      var manque = Array.from(exig).filter(function (c) { return !acq.has(c); });
-      var formations = new Map();
-      if (I.liens) manque.forEach(function (cid) { (liensDe(cid).formations || []).forEach(function (f) { formations.set(f.id, f); }); });
-      return { e: e, exig: exig, valides: Array.from(exig).filter(function (c) { return acq.has(c); }).length, manque: manque, formations: Array.from(formations.values()), suivant: suivant };
-    });
-    var tot = lignes.reduce(function (a, l) { return a + l.exig.size; }, 0), ok = lignes.reduce(function (a, l) { return a + l.valides; }, 0);
-    var sansPoste = lignes.filter(function (l) { return !l.e.postes.length; }).length;
-    var complets = lignes.filter(function (l) { return l.exig.size && !l.manque.length; }).length;
-    var enCours = lignes.filter(function (l) { return l.exig.size && l.manque.length; });
-    h += '<div class="fm-kpis" style="margin-bottom:1rem">' +
-      '<div class="fm-kpi"><span class="fm-kpi__n">' + n(actifs.length) + '</span><span class="fm-kpi__l">Personnes</span><span class="fm-kpi__s">' + (sansPoste ? n(sansPoste) + ' sans poste dans le panel' : 'toutes placées') + '</span></div>' +
-      '<div class="fm-kpi"><span class="fm-kpi__n">' + n(complets) + '</span><span class="fm-kpi__l">Niveau complet</span><span class="fm-kpi__s">prêtes pour l’étape suivante</span></div>' +
-      '<div class="fm-kpi"><span class="fm-kpi__n">' + n(enCours.length) + '</span><span class="fm-kpi__l">En progression</span><span class="fm-kpi__s">il leur manque des compétences</span></div>' +
-      '<div class="fm-kpi"><span class="fm-kpi__n">' + (tot ? pct(ok, tot) + ' %' : '—') + '</span><span class="fm-kpi__l">Compétences tenues</span><span class="fm-kpi__s">du niveau de chacun</span></div></div>';
-    h += '<section class="card table-card"><div class="table-scroll"><table><thead><tr><th>Personne</th><th>Compétences du niveau</th><th>Où elle en est</th><th></th></tr></thead><tbody>';
-    lignes.forEach(function (l) {
-      var e = l.e, ouvert = E.ouvert === e.id;
-      var ini = String(e.nom || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w.charAt(0).toUpperCase(); }).join('');
-      var po = e.postes.map(function (p) { return (p.nom || 'Poste') + (p.niveau ? ' · ' + p.niveau : ''); }).join(' ; ');
-      var etat, action;
-      if (!e.postes.length) {
-        etat = '<span class="chip chip--ko">à affecter</span>';
-        action = bouton('emp' + e.id + 'niv', 'emp-poste', 'Choisir un poste', ' data-sid="' + sid + '" data-eid="' + e.id + '"');
-      } else if (!l.exig.size) {
-        etat = '<span class="muted">aucune compétence exigée à ce niveau</span>';
-        action = '';
-      } else if (!l.manque.length) {
-        etat = 'Niveau complet' + (l.suivant ? ' → prête pour <strong>' + esc(l.suivant.nv.nom) + '</strong> (+' + n(l.suivant.nv.competences.length) + ')' : '');
-        action = '';
-      } else {
-        etat = 'Il manque <strong>' + pl(l.manque.length, 'compétence') + '</strong>';
-        action = '<button type="button" class="btn btn--sm" data-act="equipe-ouvrir" data-id="' + e.id + '">' + (ouvert ? 'Fermer' : 'Voir ce qui manque') + '</button>';
-      }
-      h += '<tr class="row-link" data-act="equipe-ouvrir" data-id="' + e.id + '"><td><div class="fm-pers"><span class="fm-ini">' + esc(ini) + '</span><span><span class="fm-pers__n">' + esc(e.nom) + '</span>' +
-        '<span class="fm-pers__s">' + (po ? esc(po) : 'sans poste dans le panel') + (!e.lu ? ' · fiche illisible' : '') + '</span></span></div></td>' +
-        '<td style="min-width:13rem">' + (l.exig.size ? '<div class="fm-prog"><b>' + n(l.valides) + ' / ' + n(l.exig.size) + '</b> compétences du niveau</div>' + barre(l.valides, l.exig.size) : '<span class="muted">—</span>') + '</td>' +
-        '<td>' + etat + '</td><td class="num fm-nowrap">' + action + '</td></tr>';
-      if (ouvert) h += '<tr class="fm-detail"><td colspan="4">' + detailEmploye(sid, l) + '</td></tr>';
-    });
-    h += '</tbody></table></div></section>';
-    return { titre: TITRES.equipes, corps: h };
-  }
-
-  /** Le détail d'une personne : son niveau, ce qui lui manque, ce qu'elle a validé — et les gestes. */
-  function detailEmploye(sid, l) {
-    var e = l.e, eid = e.id;
-    var att = function (cid) { return ' data-sid="' + sid + '" data-eid="' + eid + '" data-cid="' + cid + '"'; };
-    var h = '<div class="fm-head"><div><div class="section-label" style="margin-top:0">Poste et niveau</div><div style="margin-top:8px">' +
-      (e.postes.length ? chipsListe(e.postes.map(function (p) { return { id: p.id, nom: (p.nom || 'Poste') + (p.niveau ? ' · ' + p.niveau : '') }; }), 4, 'chip--accent') : '<span class="muted">Aucun poste dans le panel.</span>') + '</div></div>' +
-      '<div class="fm-links">' + bouton('emp' + eid + 'niv', 'emp-poste', 'Changer de poste ou de niveau', ' data-sid="' + sid + '" data-eid="' + eid + '"') + '</div></div>';
-    // Tout est validé : le niveau suivant du même poste, s'il existe.
-    if (l.exig.size && !l.manque.length) {
-      e.postes.forEach(function (p) {
-        var poste = I.posteById.get(p.id);
-        if (!poste) return;
-        var i = -1;
-        poste.niveaux.forEach(function (nv, k) { if (nv.id === p.niveauId) i = k; });
-        var suivant = i >= 0 ? poste.niveaux[i + 1] : null;
-        h += '<div class="fm-banner fm-banner--ok" style="margin-top:12px"><span>Toutes les compétences du niveau ' + esc(poste.nom + ' · ' + (p.niveau || '')) + ' sont validées.' +
-          (suivant ? '' : ' C’est le dernier niveau du poste.') + '</span>' +
-          (suivant ? bouton('emp' + eid + 'niv', 'emp-suivant', 'Passer au niveau « ' + esc(suivant.nom) + ' »', ' data-sid="' + sid + '" data-eid="' + eid + '" data-pid="' + poste.id + '" data-nid="' + suivant.id + '"', 'is-on') : '') + '</div>';
-      });
-    }
-    var manque = l.manque.map(function (c) { return I.comp.get(c); }).filter(Boolean);
-    h += '<div class="section-label">À acquérir · ' + n(manque.length) + '</div>';
-    h += manque.length ? tableCompetences(manque, { niveaux: false, action: function (c) {
-      return bouton('emp' + eid + '+' + c.id, 'emp-valider', 'Valider', att(c.id) + ' title="La personne maîtrise cette compétence : l’enregistrer dans le panel"', 'is-on');
-    } }) : '<p class="muted" style="margin-top:8px">' + (l.exig.size ? 'Rien : tout ce que le niveau exige est validé.' : 'Aucun niveau tenu : rien n’est exigé.') + '</p>';
-    var valides = e.competences.map(function (cid) { return I.comp.get(cid) || { id: cid, nom: 'Compétence #' + cid }; })
-      .sort(function (a, b) { return a.nom.localeCompare(b.nom, 'fr'); });
-    h += '<div class="section-label">Validées · ' + n(valides.length) + '</div>';
-    h += valides.length ? '<ul class="fm-liste fm-liste--cols">' + valides.map(function (c) {
-      return '<li><span>' + esc(c.nom) + (l.exig.has(c.id) ? '' : ' <span class="muted fm-small">(hors niveau)</span>') + '</span>' +
-        bouton('emp' + eid + '-' + c.id, 'emp-retirer', '×', att(c.id) + ' title="Retirer la validation" aria-label="Retirer la validation de ' + esc(c.nom) + '"', 'fm-x') + '</li>';
-    }).join('') + '</ul>' : '<p class="muted" style="margin-top:8px">Aucune compétence validée dans le panel.</p>';
-    return h;
-  }
-
   /* ── Fil d'Ariane ; la fiche d'une formation (reste du Manuel en ligne, lot 6) ── */
 
   function filAriane(items) {
@@ -1722,10 +1610,6 @@
       case 'workstations': return prem(R.postesTravail);
       case 'sections': return prem(R.structure.sections);
       case 'categories': return prem(R.structure.categories);
-      case 'employees': case 'franchisee-employee': {
-        var sh = Object.keys(S.equipe.parShop).map(function (k) { return S.equipe.parShop[k]; }).filter(function (x) { return x.data && x.data.employes && x.data.employes.length; })[0];
-        return sh ? sh.data.employes[0].id : null;
-      }
       default: return null;
     }
   }
@@ -1905,10 +1789,6 @@
     delete S.competences[cid];
     indexer();
   }
-  function majEmploye(sid, f) {
-    var d = S.equipe.parShop[sid];
-    if (d && d.data) d.data.employes.forEach(function (e) { if (e.id === f.id) { e.postes = f.postes; e.competences = f.competences; e.lu = true; } });
-  }
   function nomComp(cid) { var c = I.comp.get(cid); return c ? c.nom : 'compétence #' + cid; }
 
   // Les gestes.
@@ -1969,19 +1849,6 @@
       return 'Compétence « ' + nom + ' » supprimée du catalogue.';
     });
   }
-  function validerPour(sid, eid, cid, oui) {
-    ecrire('emp' + eid + (oui ? '+' : '-') + cid, oui ? 'PUT' : 'DELETE', '/formation/employe/' + eid + '/competences/' + cid + '?shop=' + sid, null, function (r) {
-      majEmploye(sid, r.employe); S.modale = null;
-      return (oui ? 'Validée : ' : 'Validation retirée : ') + '« ' + nomComp(cid) + ' ».';
-    });
-  }
-  function affecterNiveau(sid, eid, pid, nid) {
-    ecrire('emp' + eid + 'niv', 'PUT', '/formation/employe/' + eid + '/poste?shop=' + sid, { poste: pid, niveau: nid }, function (r) {
-      majEmploye(sid, r.employe); S.modale = null;
-      return 'Niveau affecté : ' + niveauLibelle(nid) + '.';
-    });
-  }
-
   /** Une demande de confirmation, au gabarit du voile de confirmation du marketing. */
   function confirmer(titre, texte, libelle, cle, action) {
     S.modale = { type: 'confirmer', titre: titre, texte: texte, libelle: libelle, cle: cle, action: action };
@@ -2001,7 +1868,7 @@
     var m = S.modale;
     if (!m) return '';
     if (m.type === 'mn') return fenetreManuel(m);
-    var annuler = m.type === 'confirmer' || m.type === 'competence' || m.type === 'poste';
+    var annuler = m.type === 'confirmer' || m.type === 'competence';
     var titre = '', corps = '', actions = '<button type="button" class="btn' + (annuler ? ' btn--ghost' : '') + '" data-act="modale-fermer">' + (annuler ? 'Annuler' : 'Fermer') + '</button>';
     var q = norm(m.q);
     var recherche = function (ph) { return '<input class="fm-search fm-modale__q" type="search" placeholder="' + esc(ph) + '" data-minput="q" value="' + esc(m.q || '') + '" />'; };
@@ -2048,17 +1915,6 @@
         '<label class="field field--block">Description<textarea rows="4" maxlength="5000" data-mform="description">' + esc(f.description || '') + '</textarea></label>' +
         '<label class="field field--block">Méthode de vérification<textarea rows="2" maxlength="2000" data-mform="verification">' + esc(f.verification || '') + '</textarea></label>';
       actions += bouton(m.cid ? 'comp~' + m.cid : 'comp+', 'competence-enregistrer', m.cid ? 'Enregistrer' : 'Créer', '', 'is-on');
-    } else if (m.type === 'poste') {
-      titre = 'Poste et niveau — ' + esc(m.nom);
-      var postes = S.ref.postes.filter(function (p) { return p.id != null && p.niveaux.length; });
-      var pid = +m.poste || (postes[0] && postes[0].id);
-      var poste = postes.filter(function (p) { return p.id === pid; })[0];
-      corps = '<p class="muted">Le panel enregistre le niveau tenu pour ce poste (un niveau par poste).</p>' +
-        '<label class="field field--block">Poste<select class="fm-select" data-minput="poste">' + postes.map(function (p) { return '<option value="' + p.id + '"' + (p.id === pid ? ' selected' : '') + '>' + esc(p.nom) + '</option>'; }).join('') + '</select></label>' +
-        '<label class="field field--block">Niveau<select class="fm-select" data-minput="niveau">' + (poste ? poste.niveaux.map(function (nv, i) {
-          return '<option value="' + nv.id + '"' + (String(m.niveau) === String(nv.id) ? ' selected' : '') + '>' + (i + 1) + ' · ' + esc(nv.nom) + '</option>';
-        }).join('') : '') + '</select></label>';
-      actions += bouton('emp' + m.eid + 'niv', 'poste-enregistrer', 'Affecter', '', 'is-on');
     }
     return '<div class="confirm" data-act="modale-fond"><div class="confirm__box card fm-modale" role="dialog" aria-modal="true" aria-label="' + esc(titre) + '">' +
       '<h3>' + esc(titre) + '</h3>' + corps + (m.erreur ? '<p class="error">' + esc(m.erreur) + '</p>' : '') +
@@ -2069,7 +1925,7 @@
 
   var ECRANS = {
     tableau: ecranTableau, postes: ecranPostes, competences: ecranCompetences, formations: ecranFormations,
-    procedures: ecranProcedures, ressources: ecranRessources, produit: ecranProduit, equipes: ecranEquipes,
+    procedures: ecranProcedures, ressources: ecranRessources, produit: ecranProduit,
     manuel: ecranManuel, api: ecranApi,
   };
   if (SOP) Object.keys(SOP.ecrans).forEach(function (k) { ECRANS[k] = SOP.ecrans[k]; });
@@ -2134,11 +1990,6 @@
         function (er) { S.mnErreur = er.message; S.mnCharge = false; rendre(true); });
     }
     if (e === 'procedures' && arg(0) != null) chargerUn(S.procedures, arg(0), '/formation/procedure?id=' + arg(0));
-    if (e === 'equipes') {
-      if (!S.equipe.magasins && !S.equipe.charge && !S.equipe.erreur) chargerMagasins();
-      var sid = arg(0);
-      if (sid != null && S.equipe.magasins) chargerUn(S.equipe.parShop, sid, '/formation/equipe?shop=' + sid + '&_cache=300');
-    }
   }
 
   /** Une lecture unitaire, mémorisée dans `boite[id]` — jamais deux fois en même temps. */
@@ -2146,12 +1997,6 @@
     if (boite[id]) return;
     boite[id] = { charge: true };
     lire(chemin, 90000).then(function (d) { boite[id] = { data: d }; rendre(true); }, function (e) { boite[id] = { erreur: e.message }; rendre(true); });
-  }
-
-  function chargerMagasins() {
-    S.equipe.charge = true;
-    lire('/formation/equipe', 30000).then(function (d) { S.equipe.charge = false; S.equipe.magasins = d.magasins || []; rendre(true); },
-      function (e) { S.equipe.charge = false; S.equipe.erreur = e.message; rendre(true); });
   }
 
   function chargerCatalogue() {
@@ -2162,7 +2007,7 @@
 
   function chargerReferentiel(forcer) {
     S.refCharge = true; S.refErreur = null;
-    if (forcer) { S.niveaux = {}; S.procedures = {}; S.formations = {}; S.competences = {}; S.equipe.parShop = {}; }
+    if (forcer) { S.niveaux = {}; S.procedures = {}; S.formations = {}; S.competences = {}; }
     rendre(true);
     lire('/formation/referentiel?_cache=600' + (forcer ? '&rafraichir=1' : ''), 170000).then(function (d) {
       S.ref = d; S.refCharge = false;
@@ -2249,32 +2094,6 @@
         if (l4 && (l4.formations.length || l4.procedures.length || l4.ressources.length)) impact += ' Ses liens (' + n(l4.formations.length) + ' formation(s), ' + n(l4.procedures.length) + ' procédure(s), ' + n(l4.ressources.length) + ' ressource(s)) seront perdus.';
         confirmer('Supprimer du catalogue ?', '« <strong>' + esc(nomComp(c4)) + '</strong> » sera supprimée du panel.' + impact + ' Ce geste ne se défait pas depuis le module.',
           'Supprimer définitivement', 'comp-' + c4, function () { supprimerCompetence(c4); });
-        return true;
-      }
-      case 'emp-valider': validerPour(num('data-sid'), num('data-eid'), num('data-cid'), true); return true;
-      case 'emp-retirer': {
-        var sid = num('data-sid'), eid = num('data-eid'), c5 = num('data-cid');
-        confirmer('Retirer la validation ?', '« ' + esc(nomComp(c5)) + ' » ne sera plus comptée comme acquise pour cette personne.', 'Retirer', 'emp' + eid + '-' + c5, function () { validerPour(sid, eid, c5, false); });
-        return true;
-      }
-      case 'emp-poste': {
-        var s6 = num('data-sid'), e6 = num('data-eid');
-        var d6 = S.equipe.parShop[s6], emp = d6 && d6.data ? d6.data.employes.filter(function (x) { return x.id === e6; })[0] : null;
-        var tenu = emp && emp.postes[0];
-        S.modale = { type: 'poste', sid: s6, eid: e6, nom: emp ? emp.nom : '#' + e6, poste: tenu ? tenu.id : '', niveau: tenu ? tenu.niveauId : '' };
-        rendre(true); return true;
-      }
-      case 'poste-enregistrer': {
-        var m = S.modale;
-        var selP = root.querySelector('[data-minput="poste"]'), selN = root.querySelector('[data-minput="niveau"]');
-        if (!selP || !selN || !selN.value) { m.erreur = 'Choisissez un poste et un niveau.'; rendre(true); return true; }
-        affecterNiveau(m.sid, m.eid, +selP.value, +selN.value);
-        return true;
-      }
-      case 'emp-suivant': {
-        var s7 = num('data-sid'), e7 = num('data-eid'), p7 = num('data-pid'), n7 = num('data-nid');
-        confirmer('Passer au niveau suivant ?', 'Le panel enregistrera le niveau <strong>' + esc(niveauLibelle(n7)) + '</strong> pour cette personne. Les compétences de ce niveau deviendront celles à acquérir.',
-          'Passer au niveau', 'emp' + e7 + 'niv', function () { affecterNiveau(s7, e7, p7, n7); });
         return true;
       }
     }
@@ -2369,7 +2188,6 @@
     if (act === 'fiche-vue') { S.ficheVue = t.getAttribute('data-v'); rendre(true); return; }
     if (act === 'carte-vue') { S.carteVue = t.getAttribute('data-v'); try { localStorage.setItem('fm.carte', S.carteVue); } catch (x) { /* rien */ } rendre(true); return; }
     if (act === 'bascule') { var k = t.getAttribute('data-k'); S.f[k] = !S.f[k]; rendre(true); return; }
-    if (act === 'equipe-ouvrir') { var id = +t.getAttribute('data-id'); S.equipe.ouvert = S.equipe.ouvert === id ? null : id; rendre(true); return; }
     if (act === 'api-ouvrir') { var k2 = t.getAttribute('data-k'); S.api.ouvert[k2] = !S.api.ouvert[k2]; rendre(true); return; }
     if (act === 'api-sonder') {
       var k3 = t.getAttribute('data-k');
@@ -2390,7 +2208,7 @@
     var vk = t.getAttribute && t.getAttribute('data-vinput');
     if (vk) { S.f[vk] = t.value; return; }
     var mk = t.getAttribute && t.getAttribute('data-minput');
-    if (mk && S.modale) { S.modale[mk] = t.value; if (mk === 'poste') S.modale.niveau = ''; rendre(true); return; }
+    if (mk && S.modale) { S.modale[mk] = t.value; rendre(true); return; }
     var mf = t.getAttribute && t.getAttribute('data-mform');
     if (mf && S.modale && S.modale.form) { S.modale.form[mf] = t.value; return; }
     var p = t.getAttribute && t.getAttribute('data-probe');

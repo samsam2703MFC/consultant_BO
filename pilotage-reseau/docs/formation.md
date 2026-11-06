@@ -2,7 +2,7 @@
 
 Le référentiel RH du panel TFBuddy, rangé pour être lu : **postes et sous-postes (niveaux)**,
 **compétences** exigées, **formations**, **procédures opératoires**, **base de connaissances**,
-**compétences produit** ; les **équipes** d'un magasin face à leur niveau ; et le **Manuel du réseau**
+**compétences produit** ; et le **Manuel du réseau**
 (standards, classeur, phases, postes, guides, tablettes). L'ancien « Manuel en ligne » a été retiré au lot 6
 (voir § Lot 6). Toutes les routes API qui portent ces données sont
 documentées dans le module (écran *Routes API*) et dans `docs/formation-routes.md`.
@@ -66,7 +66,7 @@ Comme le reste du cockpit : HTML/CSS/JS sans dépendance ni compilation (`index.
 | | Procédures opératoires | `#/procedures[/{id}]` | Les procédures par catégorie ; la lecture d'une procédure (sections, pièces jointes, PDF, impression). |
 | | Base de connaissances | `#/ressources` | Les ressources (type, catégorie, lien) et les compétences qui s'y appuient. |
 | | Compétences produit | `#/produit` | Les compétences attachées aux produits et sous-recettes. |
-| Équipes | Compétences des équipes | `#/equipes/{magasin}` | Pour chaque personne : poste et niveau tenus, compétences validées / exigées, ce qui manque, les formations qui le couvrent. |
+| ~~Équipes~~ | ~~Compétences des équipes~~ | `#/equipes` | **Retiré le 06/11/2026** (avec le parcours) : l'adresse mène à l'accueil du module. Voir § « Parcours retiré ». |
 | ~~Manuel opératoire~~ | ~~Manuel en ligne~~ | `#/manuel/…` | **Retiré au lot 6** (doublon du Manuel du réseau) : `#/manuel` mène au Classeur, `#/manuel/partie/{cle}` à `#/rfphase/{cle}`, un poste / une compétence / une procédure à sa page du référentiel ; seule `#/manuel/formation/FO-xx` (la fiche à lire d'une formation) reste. Voir § Lot 6. |
 | Documentation | Routes API | `#/api[/{famille}]` | Les 237 routes du référentiel dans le swagger : verbe, état, paramètres, corps, champs de réponse, codes — et un bouton **Tester** qui appelle la route en lecture avec le compte du cockpit. |
 
@@ -217,7 +217,7 @@ documentation des routes reste consultable.
 | `/formation/procedure?id=` | | `procedure`, `sections[]` (`titre`, `contenu` brut), `pieces[]` | `/operational-procedures/{id}` et `/attachments` |
 | `/formation/formation?id=` | | `formation`, `formateurs[]` | `/operational-framework/trainings/{id}` et `/trainers` |
 | `/formation/ressource?id=` | | `ressource` | `/knowledge-base/resources/{id}` |
-| `/formation/equipe` | `shop=` | `magasins[]` ; avec `shop` : `employes[]` (`nom`, `actif`, `role`, `postes[]` avec `niveauId`, `competences[]`) | `/shops/{id}/employees`, puis `/employees/{id}?include=competencies,positions` par personne (120 au plus) |
+| ~~`/formation/equipe`~~ | | **route retirée le 06/11/2026** ; la carte des métiers lit toujours les équipes, côté serveur (`ep_formation_equipe`) | |
 | `/formation/sonde` | `chemin=/competencies` | `code`, `ms`, `type`, `n`, `champs[]`, `exemple` | la route demandée, si elle est dans la liste blanche `FM_SONDE` |
 | `/formation/pdf` | `type=poste\|niveau\|procedure`, `id=` | le PDF du panel (`application/pdf`), sinon 502 | `/positions/{id}/pdf`, `/position-levels/{id}/pdf`, `/operational-procedures/{id}/pdf` |
 
@@ -240,8 +240,7 @@ en 401, une reconnexion et un second passage). Le PDF passe par `PanelApi::binai
 | Créer une compétence (Compétences) | `POST /formation/competences {sousCategorie, nom, description, verification}` | `POST /competencies {id_subcategory, name, description, verification_method}` |
 | La modifier | `PATCH /formation/competences/{cid}` (champs changés seulement) | `PATCH /competencies/{cid}` |
 | La supprimer (confirmation, impact affiché) | `DELETE /formation/competences/{cid}` | `DELETE /competencies/{cid}` |
-| Valider / retirer une compétence pour une personne (Équipes) | `PUT` / `DELETE /formation/employe/{eid}/competences/{cid}?shop=` | `PUT /employees/{eid}/competencies {competency_id}` / `DELETE …/{cid}` |
-| Affecter un poste et un niveau, passer au niveau suivant | `PUT /formation/employe/{eid}/poste?shop= {poste, niveau}` | `PUT /employees/{eid}/positions {position_id, level_id}` |
+| ~~Valider une compétence pour une personne, affecter un poste et un niveau~~ | **retirées le 06/11/2026** avec l'écran Équipes (`/formation/employe/…`) | — |
 
 Règles : (1) **tout est relu** — le panel répond « success » à un DELETE qui n'a rien supprimé et à un
 POST dont il ignore le corps ; un écart entre la demande et la relecture est rendu en erreur (502) ;
@@ -659,9 +658,9 @@ contrat article 4.5) avec le suivi des KPI et le développement commercial ; le 
   Manuel opérationnel**. Chaque fiche renvoie aux trois autres.
 - **Rail** (`window.FormationPortail.rail`, `portail.js`, lu par `formation.js`) : PORTAIL DE FORMATION — 1 Formations
   (`#/rfformations`) · 2 Postes (`#/rfmetiers`) · 3 Compétences (`#/rfcompetences`) · 4 Manuel opérationnel (le Classeur,
-  `#/rfclasseur`) ; SUIVI — Suivi des équipes (`#/equipes`) ; RÉGLAGES — Correspondance panel, Tablettes,
+  `#/rfclasseur`) ; RÉGLAGES — Correspondance panel, Tablettes,
   Rédaction des SOP, Données du panel (`#/rfdonnees` : les écrans d'avant — carte des métiers, postes et sous-postes,
-  compétences, évaluations, procédures, base de connaissances, compétences produit, compétences des équipes, routes API —
+  compétences, évaluations, procédures, base de connaissances, compétences produit, routes API —
   à leur adresse, inchangés). Accueil du module : `#/rfformations` (la tablette garde le Classeur). Les anciennes adresses
   marchent toutes ; une entrée reste allumée sur ses écrans voisins (Formations sur `#/rfpre`, Compétences sur `#/rfform`,
   Manuel sur `#/sop` et `#/rfphase`…).
@@ -705,7 +704,14 @@ effacer ». Retiré :
 - **Écrans** : la page `public/formation/parcours/` (assistant, frise), l'écran *Parcours des équipes* (`#/parcours`, qui
   mène désormais à l'accueil du module), *Parcours en cours* du tableau de bord, les liens *Ouvrir un parcours* (fiche d'un
   poste hors panel, *Compétences des équipes*), l'entrée *Formation › Parcours compétences ↗* du rail du cockpit
-  (`app.js`, `templates.js`). Le rail du portail : SUIVI — *Suivi des équipes* = `#/equipes`.
+  (`app.js`, `templates.js`).
+- **Compétences des équipes** (`#/equipes`, la rubrique SUIVI du rail et la carte de *Données du panel*), retiré ensuite
+  (client : « retirer ») : l'écran, ses gestes (valider une compétence pour une personne, affecter un poste ou un niveau) et
+  leurs routes (`GET /formation/equipe`, `PUT|DELETE /formation/employe/{eid}/competences/{cid}`, `PUT
+  /formation/employe/{eid}/poste`) → 404. Le tableau de bord ne renvoie plus vers lui (chiffre *Personnes actives* et
+  alerte *sans poste* sans lien). Restent côté serveur : `ep_formation_equipe` (la carte des métiers compte les
+  personnes), `fmRelireEmploye` / `fmPatchEmploye` (le « vu faire » de la tablette coche la compétence au panel), et
+  l'équipe de la tablette (`/formation/sop/equipe`), qui n'a rien à voir.
 - **API** : `GET /parcours/destinations`, `GET /parcours/candidats` (la lecture du CRM candidat), `GET /parcours`,
   `GET /parcours/liste`, `POST /parcours`, `PATCH /parcours/{id}[/etape/{FO}|/admission/{cle}]`,
   `POST /parcours/{id}/acquis/{cid}` → 404 « route inconnue ».

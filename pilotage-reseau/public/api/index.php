@@ -502,7 +502,6 @@ function route(string $method, string $path): mixed
             $path === '/formation/procedure'           => ep_formation_procedure(),
             $path === '/formation/formation'           => ep_formation_formation(),
             $path === '/formation/ressource'           => ep_formation_ressource(),
-            $path === '/formation/equipe'              => ep_formation_equipe(),
             $path === '/formation/sonde'               => ep_formation_sonde(),
             $path === '/formation/pdf'                 => ep_formation_pdf(),
             // L'adresse du « Retour au cockpit » du rail (config.php `cockpitUrl`).
@@ -757,8 +756,6 @@ function route(string $method, string $path): mixed
     if ($method === 'PATCH' && preg_match('#^/formation/manuel/formation/(FO-\d{1,3})$#', $path, $m)) { return wr_formation_manuel_formation($m[1]); }
     if ($method === 'PATCH' && preg_match('#^/formation/competences/(\d+)$#', $path, $m)) { return wr_formation_competence_modifier((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/formation/competences/(\d+)$#', $path, $m)) { return wr_formation_competence_supprimer((int) $m[1]); }
-    if (($method === 'PUT' || $method === 'DELETE') && preg_match('#^/formation/employe/(\d+)/competences/(\d+)$#', $path, $m)) { return wr_formation_employe_competence($method, (int) $m[1], (int) $m[2]); }
-    if ($method === 'PUT' && preg_match('#^/formation/employe/(\d+)/poste$#', $path, $m)) { return wr_formation_employe_poste((int) $m[1]); }
     if ($method === 'DELETE' && $path === '/push/abonnements') { return wr_push_desabonnement(); }
     if ($method === 'POST' && $path === '/push/essai') { return wr_push_essai(); }
     if ($method === 'DELETE' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_delete($m[1]); }

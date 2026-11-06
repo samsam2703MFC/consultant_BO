@@ -1119,68 +1119,6 @@ function fmPatchEmploye(?int $shop, array $fiche): void
     });
 }
 
-/** Le nom d'une personne pour le journal, lu dans le cache de l'équipe. */
-function fmNomEmploye(?int $shop, int $eid): string
-{
-    $c = $shop !== null ? setting(fmCleCache('/formation/equipe', ['shop' => (string) $shop])) : null;
-    foreach (is_array($c) && is_array($c['r'] ?? null) ? ($c['r']['employes'] ?? []) : [] as $e) {
-        if (($e['id'] ?? null) === $eid) { return (string) $e['nom']; }
-    }
-    return 'employé #' . $eid;
-}
-
-/**
- * PUT /formation/employe/{eid}/competences/{cid} — la personne a validé la
- * compétence. DELETE — on la lui retire. `?shop=` : le magasin, pour corriger
- * l'écran Équipes en cache.
- */
-function wr_formation_employe_competence(string $methode, int $eid, int $cid): array
-{
-    if ($e = fmPret()) { return $e; }
-    $shop = fmId('shop');
-    [$avant] = fmRelireEmploye($eid);
-    if ($avant === null) { return fmRefus(404, 'personne inconnue du panel'); }
-    $voulu = $methode === 'PUT';
-    if (in_array($cid, $avant['competences'], true) === $voulu) { return ['ok' => true, 'deja' => true, 'employe' => $avant]; }
-    $chemin = '/employees/' . $eid . '/competencies' . ($voulu ? '' : '/' . $cid);
-    $w = PanelApi::requete($methode, $chemin, $voulu ? ['competency_id' => $cid] : null);
-    $appels = [fmAppelEcrit($methode, $chemin, $w)];
-    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
-    [$apres] = fmRelireEmploye($eid);
-    if ($apres === null || in_array($cid, $apres['competences'], true) !== $voulu) {
-        return fmRefus(502, 'le panel a répondu HTTP ' . $w['code'] . ' mais la fiche n’a pas changé', ['appels' => $appels]);
-    }
-    fmPatchEmploye($shop, $apres);
-    fmJournal(fmNomEmploye($shop, $eid), ($voulu ? 'Compétence validée' : 'Validation retirée') . ' : « ' . fmNomCompetence($cid) . ' »');
-    return ['ok' => true, 'employe' => $apres, 'appels' => $appels];
-}
-
-/** PUT /formation/employe/{eid}/poste {poste, niveau} — affecter un poste et un niveau. */
-function wr_formation_employe_poste(int $eid): array
-{
-    if ($e = fmPret()) { return $e; }
-    $b = fmCorps();
-    $poste = fmIdCorps($b, 'poste');
-    $niveau = fmIdCorps($b, 'niveau');
-    $shop = fmId('shop');
-    if ($poste === null || $niveau === null) { return fmRefus(422, 'poste et niveau attendus'); }
-    [$avant] = fmRelireEmploye($eid);
-    if ($avant === null) { return fmRefus(404, 'personne inconnue du panel'); }
-    $tient = static fn (array $f) => (bool) array_filter($f['postes'], static fn ($p) => $p['id'] === $poste && $p['niveauId'] === $niveau);
-    if ($tient($avant)) { return ['ok' => true, 'deja' => true, 'employe' => $avant]; }
-    $chemin = '/employees/' . $eid . '/positions';
-    $w = PanelApi::requete('PUT', $chemin, ['position_id' => $poste, 'level_id' => $niveau]);
-    $appels = [fmAppelEcrit('PUT', $chemin, $w)];
-    if ($w['code'] < 200 || $w['code'] >= 300) { return fmRefus(502, 'le panel a refusé : ' . ($w['erreur'] ?? 'erreur'), ['appels' => $appels]); }
-    [$apres] = fmRelireEmploye($eid);
-    if ($apres === null || !$tient($apres)) { return fmRefus(502, 'le panel a répondu HTTP ' . $w['code'] . ' mais le poste n’a pas changé', ['appels' => $appels]); }
-    fmPatchEmploye($shop, $apres);
-    $ancien = implode(', ', array_map(static fn ($p) => ($p['nom'] ?? 'poste') . ' · ' . ($p['niveau'] ?? 'niveau'), $avant['postes'])) ?: 'aucun';
-    $nouveau = fmNomNiveau($niveau);
-    fmJournal(fmNomEmploye($shop, $eid), 'Niveau affecté : ' . $nouveau . ' (avant : ' . $ancien . ')');
-    return ['ok' => true, 'employe' => $apres, 'appels' => $appels];
-}
-
 /* ── Manuel opératoire : quatre parties et vidéos (1er nov. 2026) ──────────────
  * Le client : « séparer le Manuel opératoire en Pré-ouverture · Ouverture ·
  * Opérationnel · Formation continue », « sur certaines procédures, des vidéos

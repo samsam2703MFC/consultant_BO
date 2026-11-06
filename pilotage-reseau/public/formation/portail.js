@@ -296,7 +296,7 @@
     const cartes = [['tableau', 'Carte des métiers', 'Les postes du panel et leurs effectifs', null], ['postes', 'Postes & sous-postes', 'Les postes du panel et leurs niveaux', n('postes')],
       ['competences', 'Compétences du panel', 'Les compétences de TF Buddy', n('competences')], ['formations', 'Évaluations du panel', 'Les évaluations [FO-xx]', n('formations')],
       ['procedures', 'Procédures du panel', 'Les procédures opératoires de TF Buddy', n('procedures')], ['ressources', 'Base de connaissances', 'Les documents de référence', n('ressources')],
-      ['produit', 'Compétences produit', 'Les compétences produit du panel', n('competencesProduit')], ['equipes', 'Compétences des équipes', 'L’état de chaque personne, par magasin', null],
+      ['produit', 'Compétences produit', 'Les compétences produit du panel', n('competencesProduit')],
       ['api', 'Routes API', 'La documentation des routes du panel', null]];
     const h = `<div class="pt-donnees">${cartes.map(([k, t, s, nb]) => `<a class="card pt-carte" href="#/${k}"><span class="pt-carte__t">${esc(t)}</span><span class="pt-carte__s">${esc(s)}</span>${nb != null ? `<span class="pt-carte__n">${nb}</span>` : ''}</a>`).join('')}</div>`;
     return { titre: 'Données du panel', kicker: 'Réglages', corps: h, large: true };
@@ -361,7 +361,6 @@
     rail: [
       ['Portail de formation', [['rfformations', 'Formations', ['rfpre']], ['rfmetiers', 'Postes', ['rfposte']], ['rfcompetences', 'Compétences', ['rfform']],
         ['rfclasseur', 'Manuel opérationnel', ['rfphase', 'sop', 'manuel']]], true],
-      ['Suivi', [['equipes', 'Suivi des équipes', []]], false],
       ['Réglages', [['sopcomp', 'Correspondance panel', []], ['tablettes', 'Tablettes', []], ['sopred', 'Rédaction des SOP', []],
         ['rfdonnees', 'Données du panel', ['tableau', 'postes', 'competences', 'formations', 'procedures', 'ressources', 'produit', 'api']]], false],
     ],

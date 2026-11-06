@@ -1510,8 +1510,7 @@ Le référentiel RH du panel — postes (`/positions`), niveaux ou sous-postes (
 compétences, formations, procédures opératoires, base de connaissances — lu avec le compte
 consultant. `GET /formation/referentiel` (tout, `_cache=600`),
 `GET /formation/liens` (procédures, formations et ressources de chaque compétence, `_cache=900`),
-`GET /formation/competence|niveau|procedure|formation|ressource?id=`, `GET /formation/equipe?shop=`
-(compétences validées par personne), `GET /formation/sonde?chemin=` (test d'une route du référentiel,
+`GET /formation/competence|niveau|procedure|formation|ressource?id=`, `GET /formation/sonde?chemin=` (test d'une route du référentiel,
 liste blanche), `GET /formation/pdf?type=poste|niveau|procedure&id=` (PDF du panel relayé),
 `GET /formation/config` (`{cockpitUrl}` : l'adresse du « Retour au cockpit » du rail, config.php, ou null). Sans
 compte panel : `503 {indispo, raison}`. Chaque réponse porte `appels[]` (code HTTP, lignes, durée
@@ -1521,13 +1520,14 @@ les 237 routes : `docs/formation-routes.md`.
 
 Écritures (toutes relues au panel, journalisées, caches corrigés) : `POST|DELETE /formation/niveau/{nid}/competences[/{cid}]`,
 `POST /formation/competence/{cid}/liens {type, id}`, `DELETE /formation/competence/{cid}/liens/{type}/{id}`,
-`POST /formation/competences`, `PATCH|DELETE /formation/competences/{cid}`, `PUT|DELETE /formation/employe/{eid}/competences/{cid}?shop=`,
-`PUT /formation/employe/{eid}/poste?shop= {poste, niveau}`, `POST /formation/postes {code: P12|P9}` (créer dans le panel un poste
+`POST /formation/competences`, `PATCH|DELETE /formation/competences/{cid}`, `POST /formation/postes {code: P12|P9}` (créer dans le panel un poste
 du référentiel v25 et son niveau ; rend `{ok, deja, poste{id, nom}, niveau{id, nom}, appels}`). Réponse `{ok, deja?, …l'état relu, appels[]}` ; un refus du panel
 ou un écart à la relecture : `502 {ok: false, error, appels}`.
 
 Parcours compétences (`/formation/parcours/`, 31/10/2026) : **retiré le 06/11/2026** — les routes `/parcours*` répondent `404`
 (« route inconnue ») ; les tables `ceo_parcours` et `ceo_parcours_etape` sont effacées (voir docs/formation.md, « Parcours retiré »).
+Retirées le même jour avec l'écran *Compétences des équipes* : `GET /formation/equipe`, `PUT|DELETE /formation/employe/{eid}/competences/{cid}`,
+`PUT /formation/employe/{eid}/poste` → `404`.
 Manuel opératoire (1er nov. 2026) : `GET /formation/manuel` rend `{parties: [preouverture, ouverture, operationnel, formation],
 procedures{id: {partie | null, videos[{url, titre}], majLe}}, formationsDefaut{FO: partie}, formations{FO: partie}}` (réglages du
 cockpit ; sans ligne, la partie d'une procédure se déduit de la section du panel, celle d'une formation de src/data/manuel_formations.json) ;

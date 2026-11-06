@@ -850,16 +850,6 @@ tbody tr.fm-detail > td {
   border-top: none;
 }
 
-.fm-liste--cols {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-  column-gap: 24px;
-}
-
-.fm-liste--cols li:nth-child(-n + 3) {
-  border-top: none;
-}
-
 .fiche-ol,
 .fiche-ul {
   margin: 0;
@@ -1036,50 +1026,6 @@ td .fm-barre {
 .fm-todo__go {
   color: var(--muted);
   font-size: 13px;
-}
-
-.fm-pers {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.fm-pers {
-  gap: 12px;
-}
-
-/* Initiales d'une personne : un cartouche, pas un rond. */
-.fm-ini {
-  flex: 0 0 34px;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  background: var(--chip);
-  color: var(--accent);
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.fm-pers__n {
-  display: block;
-}
-
-.fm-pers__s {
-  display: block;
-  font-size: 12.5px;
-  color: var(--muted);
-}
-
-.fm-prog {
-  font-size: 12.5px;
-  color: var(--muted);
-  margin-bottom: 5px;
-}
-
-.fm-prog b {
-  color: var(--ink);
 }
 
 /* ── Carte des métiers : le plan (maquette 01a) et les effectifs (01c) ── */
