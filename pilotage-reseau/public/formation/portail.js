@@ -25,7 +25,8 @@
   if (!FS) { return; }
 
   let C = null;   // les outils de formation.js (esc, lire, appel, rendre, S, bandeau…)
-  const P = { ref: null, err: null, charge: false, occupe: null, msg: null };
+  // cor : la correspondance codes C-… ↔ compétences du panel (GET /formation/ref/correspondance), lue pour la fiche d'une compétence.
+  const P = { ref: null, err: null, charge: false, occupe: null, msg: null, cor: null, corErr: null, corCharge: false };
   const esc = s => C.esc(s);
   const K = 'Portail de formation';
   const PH = ['pre', 'ouv', 'con'];
@@ -217,7 +218,7 @@
     const produit = a[0] === 'produit';
     const sel = !produit && a[0] ? X.comp[a[0]] : null;
     const nProd = ((C.S.ref && C.S.ref.competencesProduit) || []).length;
-    let h = chaine('rfcompetences') + `<div class="page-tabs" role="tablist"><a class="page-tabs__tab${produit ? '' : ' is-on'}" href="#/rfcompetences">Compétences du réseau · ${R.competences.length}</a>
+    let h = chaine('rfcompetences') + message() + `<div class="page-tabs" role="tablist"><a class="page-tabs__tab${produit ? '' : ' is-on'}" href="#/rfcompetences">Compétences du réseau · ${R.competences.length}</a>
       <a class="page-tabs__tab${produit ? ' is-on' : ''}" href="#/rfcompetences/produit">Compétences produit${nProd ? ' · ' + nProd : ''}</a></div>`;
     if (produit) { return { titre: 'Compétences', kicker: K, corps: h + vueProduit(), large: true }; }
     h += `<div class="pt-lay"><div>${listeCompetences(sel)}</div><div>${sel ? ficheCompetence(sel) : resumeCompetences()}</div></div>`;
@@ -233,7 +234,7 @@
     const puce = (v, l, n) => `<button type="button" class="filter${f === v ? ' is-on' : ''}" data-pa="compF" data-v="${v}">${l} · ${n}</button>`;
     let h = `<section class="card table-card pt-table"><div class="pt-filtres">${puce('', 'Toutes', R.competences.length)}${puce('sansSop', 'Sans SOP', R.competences.filter(c => !c.standards.length).length)}
       ${puce('horsPanel', 'Hors panel', R.competences.filter(c => !relieePanel(c)).length)}<input type="search" placeholder="Rechercher une compétence…" data-input="pcq" value="${esc(C.S.f.pcq || '')}"></div>
-      <div class="pt-tete"><span class="pt-c-cc">Code</span><span class="pt-c-nom">Compétence</span><span class="pt-c-code">Formation</span><span class="pt-c-phs">Phases</span><span class="pt-c-nb">Manuel</span><span class="pt-c-pan">Panel</span></div>`;
+      <div class="pt-tete"><span class="pt-c-cc">Code</span><span class="pt-c-nom">Compétence</span><span class="pt-c-code">FO</span><span class="pt-c-phs">Phases</span><span class="pt-c-nb">Manuel</span><span class="pt-c-pan">Panel</span></div>`;
     const connues = FAMILLES_COMP.map(x => x[0]);
     const groupes = FAMILLES_COMP.concat([[null, 'Autres']]);
     let vu = 0;
@@ -260,7 +261,7 @@
     return `<section class="card pt-fiche"><div class="pt-kicker">Les compétences du réseau</div><div class="pt-titre">${n} compétences</div>
       <p class="pt-desc">Chaque compétence est enseignée par une formation, montrée par des SOP du manuel, validée sur un critère « réussi si », et cochée au panel TF Buddy par le « vu faire » de la tablette.</p>
       <div class="pt-mini"><span><b>${rel}</b>reliées au panel</span><span><b>${sop}</b>avec une SOP</span><span><b>${crit}</b>avec un critère</span></div>
-      <div class="pt-bloc"><h3>Réglages</h3><a class="pt-it" href="#/sopcomp"><span class="pt-it__tx">Correspondance avec le panel</span></a><a class="pt-it" href="#/rfform"><span class="pt-it__tx">Critères « réussi si » et blocs du guide</span></a></div></section>`;
+      <div class="pt-bloc"><h3>Réglages</h3><a class="pt-it" href="#/sopcomp"><span class="pt-it__tx">Correspondance avec le panel, en tableau<small>proposer, relire le panel, les compétences du panel sans code — chaque fiche se règle aussi ici, à droite</small></span></a><a class="pt-it" href="#/rfform"><span class="pt-it__tx">Critères « réussi si » et blocs du guide</span></a></div></section>`;
   }
 
   function ficheCompetence(c) {
@@ -276,9 +277,41 @@
       <div class="pt-bloc"><h3>Formation qui l’enseigne</h3>${fo ? `<a class="pt-it" href="#/rfformations/${fo.phases[0] || 'pre'}/${enc(fo.code)}"><span class="pt-it__cd">${esc(fo.code)}</span><span class="pt-it__tx">${esc(fo.fr)}<small>${fo.phases.map(k => esc(nomPh(k))).join(' · ')}</small></span></a>` : '<p class="muted">Aucune formation.</p>'}</div>
       <div class="pt-bloc"><h3>Pour qui <i>d’après la formation</i></h3><div class="pt-postes">${postes.map(p => `<a href="#/rfmetiers/${esc(p)}" class="pt-bd ${fo.postes[p] === 'O' ? 'pt-bd--pre' : 'pt-bd--r'}">${esc(p)} · ${esc((X.poste[p] || {}).fr || '')}</a>`).join('') || '<span class="muted">—</span>'}</div></div>
       <div class="pt-bloc"><h3>Dans le manuel <i>${stds.length} SOP</i></h3>${stds.map(s => `<a class="pt-it" href="#/sop/${enc(s.id)}"><span class="pt-it__cd">${esc(s.code)}</span><span class="pt-it__tx">${esc(s.fr)}</span></a>`).join('') || '<p class="muted">Aucune SOP ne montre encore cette compétence.</p>'}</div>
-      <div class="pt-bloc"><h3>Au panel TF Buddy</h3>${relieePanel(c) ? `<div class="pt-it"><span class="pt-it__cd">#${esc(c.panel.id)}</span><span class="pt-it__tx">${esc(c.panel.nom)}<small>cochée par le « vu faire » de la tablette</small></span></div>`
-        : '<p class="muted">Aucune compétence du panel : le « vu faire » ne coche rien.</p>'}<a class="linklike" href="#/sopcomp">Modifier la correspondance</a></div>
+      ${blocPanel(c)}
     </section>`;
+  }
+
+  /**
+   * La compétence du panel TF Buddy reliée au code C-… (celle que coche le « vu faire » de la tablette) : réglée ici, dans la
+   * fiche — confirmer, choisir une proposition, une autre compétence du panel, ou aucune. Même route que le tableau de
+   * correspondance (PUT /formation/ref/correspondance/{code}) ; une correspondance réglée ici est « validée ».
+   */
+  const ETAT_COR = { valide: ['Validée', 'pre'], certain: ['Certaine', 'r'], propose: ['À trancher', 'ouv'], aucun: ['Aucune', 'r'] };
+  function blocPanel(c) {
+    let h = '<div class="pt-bloc"><h3>Au panel TF Buddy <i>cochée par le « vu faire » de la tablette</i></h3>';
+    const L = P.cor ? (P.cor.lignes || []).find(x => x.code === c.code) : null;
+    if (!L) {
+      return h + (P.corErr ? `<p class="error">Correspondance illisible : ${esc(P.corErr)}</p><button type="button" class="btn btn--sm" data-pa="corRelire">Réessayer</button>`
+        : P.cor ? '<p class="muted">Ce code n’est pas dans la correspondance.</p>' : '<p class="muted">Lecture de la correspondance…</p>') + '</div>';
+    }
+    const oc = P.occupe === 'cor:' + c.code ? ' disabled' : '';
+    const e = ETAT_COR[L.etat] || ['—', 'r'];
+    h += `<div class="pt-panel">${bd(e[0], e[1])}${L.panel ? `<span class="pt-panel__nom">${esc(L.panel.nom)} <span class="muted">#${esc(L.panel.id)}</span></span>`
+      : '<span class="muted">Aucune compétence du panel : le « vu faire » ne coche rien.</span>'}</div>`;
+    const props = [];
+    if (L.etat === 'certain' && L.panel) { props.push(`<button type="button" class="btn btn--sm btn--primary" data-pa="cor" data-code="${esc(c.code)}" data-v="${esc(L.panel.id)}"${oc}>Confirmer</button>`); }
+    if (L.etat !== 'valide' && L.etat !== 'certain') {
+      (L.propositions || []).slice(0, 3).forEach(p => props.push(`<button type="button" class="btn btn--sm" data-pa="cor" data-code="${esc(c.code)}" data-v="${esc(p.id)}" title="ressemblance ${Math.round((p.score || 0) * 100)} %"${oc}>${esc(p.nom)}</button>`));
+    }
+    if (props.length) { h += `<div class="pt-props">${L.etat === 'certain' ? '' : '<span class="muted fm-small">Proposées</span>'}${props.join('')}</div>`; }
+    const parCat = {};
+    (P.cor.liste || []).forEach(p => { const k = p.categorie && !/^\d+$/.test(p.categorie) ? p.categorie : 'Autres'; (parCat[k] = parCat[k] || []).push(p); });
+    const opts = Object.keys(parCat).sort((a, b) => a === 'Autres' ? 1 : b === 'Autres' ? -1 : a.localeCompare(b, 'fr')).map(k => `<optgroup label="${esc(k)}">${parCat[k]
+      .slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).map(p => `<option value="${esc(p.id)}"${L.panel && L.panel.id === p.id ? ' selected' : ''}>${esc(p.nom)}${p.codes && p.codes.length && !(L.panel && L.panel.id === p.id) ? ' · déjà ' + esc(p.codes.join(', ')) : ''}</option>`).join('')}</optgroup>`).join('');
+    h += `<div class="pt-props"><select class="fm-select pt-sel" data-pach="cor" data-code="${esc(c.code)}"${oc} aria-label="Compétence du panel"><option value="">${L.panel ? 'Changer pour…' : 'Choisir une compétence du panel…'}</option>${opts}</select>
+      ${L.panel ? `<button type="button" class="btn btn--sm btn--ghost" data-pa="cor" data-code="${esc(c.code)}" data-v=""${oc}>Aucune</button>` : ''}</div>`;
+    if (L.majPar) { h += `<p class="muted fm-small">Réglée par ${esc(L.majPar)}${L.majLe ? ' le ' + esc(String(L.majLe).slice(0, 10).split('-').reverse().join('/')) : ''}</p>`; }
+    return h + '</div>';
   }
 
   function vueProduit() {
@@ -323,6 +356,27 @@
     P.occupe = null; C.rendre(true);
   }
 
+  async function relier(code, v) {
+    if (P.occupe) { return; }
+    if (!v && !confirm(`${code} : ne plus relier aucune compétence du panel ? Le « vu faire » ne cochera plus rien pour elle.`)) { C.rendre(true); return; }
+    P.occupe = 'cor:' + code; P.msg = null; C.rendre(true);
+    try {
+      await C.appel('PUT', '/formation/ref/correspondance/' + enc(code), { panelId: v ? +v : null });
+      const nom = v && P.cor ? ((P.cor.liste || []).find(p => String(p.id) === String(v)) || {}).nom : '';
+      P.msg = { txt: v ? `${code} relié au panel : ${nom || '#' + v}.` : `${code} : aucune compétence du panel.`, genre: '' };
+      chargerCor(true); charger(true);
+    } catch (e) {
+      P.msg = { txt: 'Correspondance non enregistrée : ' + e.message, genre: 'warn' };
+    }
+    P.occupe = null; C.rendre(true);
+  }
+  function chargerCor(forcer) {
+    if ((P.cor && !forcer) || P.corCharge) { return; }
+    P.corCharge = true; P.corErr = null;
+    C.lire('/formation/ref/correspondance', 120000).then(d => { P.cor = d; P.corCharge = false; C.rendre(true); },
+      e => { P.corErr = e.message; P.corCharge = false; C.rendre(true); });
+  }
+
   function charger(forcer) {
     if ((P.ref && !forcer) || P.charge) { return; }
     P.charge = true; P.err = null;
@@ -339,6 +393,12 @@
       if (k === 'poste') { C.S.f.ptPoste = t.getAttribute('data-v') || ''; C.rendre(true); }
       if (k === 'compF') { C.S.f.pcF = t.getAttribute('data-v') || ''; C.rendre(true); }
       if (k === 'relire') { charger(true); }
+      if (k === 'cor') { relier(t.getAttribute('data-code'), t.getAttribute('data-v')); }
+      if (k === 'corRelire') { chargerCor(true); }
+    });
+    root.addEventListener('change', ev => {
+      const t = ev.target.closest && ev.target.closest('[data-pach]');
+      if (t && t.getAttribute('data-pach') === 'cor' && t.value) { relier(t.getAttribute('data-code'), t.value); }
     });
   }
 
@@ -349,7 +409,11 @@
   FS.icones.rfdonnees = 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6';
   const initAvant = FS.init, apresAvant = FS.apres;
   FS.init = function (ctx, root) { initAvant.call(FS, ctx, root); C = ctx; brancher(root); };
-  FS.apres = function (e, a) { apresAvant.call(FS, e, a); if (e === 'rfformations' || e === 'rfmetiers' || e === 'rfcompetences') { charger(false); } };
+  FS.apres = function (e, a) {
+    apresAvant.call(FS, e, a);
+    if (e === 'rfformations' || e === 'rfmetiers' || e === 'rfcompetences') { charger(false); }
+    if (e === 'rfcompetences' && a[0] && a[0] !== 'produit') { chargerCor(false); }   // la fiche d'une compétence règle sa correspondance
+  };
 
   /**
    * Le rail du portail (lu par formation.js) : [libellé du groupe, entrées, numéroté ?] ; une entrée = [écran, libellé,
@@ -357,11 +421,13 @@
    */
   window.FormationPortail = {
     defaut: 'rfformations',
-    titres: { rfformations: 'Formations', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel' },
+    titres: { rfformations: 'Formations', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', suivi: 'Suivi en magasin' },
     rail: [
-      ['Portail de formation', [['rfformations', 'Formations', ['rfpre']], ['rfmetiers', 'Postes', ['rfposte']], ['rfcompetences', 'Compétences', ['rfform']],
+      ['Portail de formation', [['rfformations', 'Formations', ['rfpre']], ['rfmetiers', 'Postes', ['rfposte']], ['rfcompetences', 'Compétences', ['rfform', 'sopcomp']],
         ['rfclasseur', 'Manuel opérationnel', ['rfphase', 'sop', 'manuel']]], true],
-      ['Réglages', [['sopcomp', 'Correspondance panel', []], ['tablettes', 'Tablettes', []], ['sopred', 'Rédaction des SOP', []],
+      // Suivi en magasin (06/11/2026) : l'ancien onglet « Acquisition en magasin » de la correspondance, qui quitte le rail.
+      ['Suivi', [['suivi', 'Suivi en magasin', []]], false],
+      ['Réglages', [['tablettes', 'Tablettes', []], ['sopred', 'Rédaction des SOP', []],
         ['rfdonnees', 'Données du panel', ['tableau', 'postes', 'competences', 'formations', 'procedures', 'ressources', 'produit', 'api']]], false],
     ],
   };

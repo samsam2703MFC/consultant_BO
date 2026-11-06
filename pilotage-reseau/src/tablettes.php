@@ -39,7 +39,8 @@ declare(strict_types=1);
  * (bin/deploy.sh écrit `auth => false`), or la liste porte les PIN des magasins. Chaque route de gestion exige donc
  * le code de gestion, envoyé dans l'en-tête X-Code-Gestion et comparé à temps constant à la clé de configuration :
  * variable d'environnement TABLETTES_CODE, puis `tablettesCode` de config/config.php (écrite par bin/deploy.sh,
- * jamais dans le dépôt). Code non configuré = gestion fermée (403 `gestion_fermee`). Les essais faux sont limités
+ * jamais dans le dépôt). Code non configuré = gestion OUVERTE, sans code (décision du client du 06/11/2026 : « laisse la
+ * tablette ouverte sans code ») ; un code posé plus tard la referme derrière lui. Les essais faux sont limités
  * comme le PIN du magasin (5 par adresse en 15 minutes, 10 par heure et 50 par jour en tout ; table
  * ceo_tablette_gestion_essai) ; ils ne touchent ni au PIN du magasin ni aux tablettes déjà ouvertes. Les routes de la
  * tablette elle-même (appareil, puis /formation/sop/tablette/*) ne demandent pas ce code.
@@ -386,7 +387,7 @@ function tabCodeGestion(): string
 
 /**
  * La garde des routes de gestion : null quand le code reçu (en-tête X-Code-Gestion) est le bon, sinon le refus à
- * rendre. Code non configuré : 403 `gestion_fermee`. Code absent : 403 `code_attendu` (ce n'est pas un essai). Code
+ * rendre. Code non configuré : gestion ouverte (null, décision du client du 06/11/2026). Code absent : 403 `code_attendu` (ce n'est pas un essai). Code
  * faux : 403 `code_gestion`, compté ; 5 erreurs par adresse en 15 minutes, puis 10 en tout par heure ou 50 par jour
  * suspendent la gestion (429, même avec le bon code, comme le PIN du magasin). Comparaison à temps constant (deux
  * empreintes de même longueur). Jamais de code dans le journal.
@@ -394,9 +395,7 @@ function tabCodeGestion(): string
 function tabGardeGestion(): ?array
 {
     $code = tabCodeGestion();
-    if ($code === '') {
-        return tabRefus(403, 'gestion_fermee', 'Code de gestion non configuré : la gestion des tablettes est fermée. Il se pose sur le serveur (TABLETTES_CODE, voir docs/DEPLOIEMENT.md).');
-    }
+    if ($code === '') { return null; }   // aucun code configuré : la gestion est ouverte (client, 06/11/2026)
     $recu = trim((string) ($_SERVER['HTTP_X_CODE_GESTION'] ?? ''));
     if ($recu === '') { return tabRefus(403, 'code_attendu', 'Code de gestion attendu pour gérer les tablettes.'); }
     $ip = tabIpHash();
@@ -456,7 +455,9 @@ function tabListe(): array
     }, $rows);
     $bilan = setting('tabRepriseCrm');
     return ['magasins' => $mags, 'boutiques' => $boutiques, 'crmDisponible' => tabCrmDisponible(), 'reprise' => is_array($bilan) ? $bilan : null,
-        'essais' => ['ip15min' => TAB_ESSAIS_IP, 'heure' => TAB_ESSAIS_HEURE, 'jour' => TAB_ESSAIS_JOUR]];
+        'essais' => ['ip15min' => TAB_ESSAIS_IP, 'heure' => TAB_ESSAIS_HEURE, 'jour' => TAB_ESSAIS_JOUR],
+        // Un code de gestion est-il exigé ? (sinon l'écran ne propose pas « Fermer la gestion »)
+        'codeExige' => tabCodeGestion() !== ''];
 }
 
 function tabLigne(int $id): ?array

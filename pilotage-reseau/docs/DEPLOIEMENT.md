@@ -72,7 +72,7 @@ clé Resend/SendGrid ou des identifiants SMTP).
 
 Un secret facultatif depuis le 06/11/2026 : `TABLETTES_CODE`, le **code de
 gestion des tablettes des magasins** (Formation › Manuel du réseau ›
-Tablettes) — sans lui, cette gestion est fermée. Où et comment le poser :
+Tablettes) — sans lui, cette gestion est **ouverte sans code** (décision du client du 06/11/2026). Où et comment le poser :
 § « Formation › Standards (SOP) » plus bas.
 
 Les variables se posent soit en environnement (vhost Apache : `SetEnv …`,
@@ -433,7 +433,8 @@ renvoie vers cette tablette et n’ouvre plus de session).
 n’exige pas de connexion ici (`auth` => false), or la liste des tablettes porte le PIN de chaque magasin : les routes
 de gestion (`/formation/tablettes*`) exigent donc un **code de gestion** (en-tête `X-Code-Gestion`, que l’écran
 Tablettes envoie après l’avoir demandé ; gardé dans l’onglet seulement). Tant qu’aucun code n’est posé, la gestion
-est **fermée** (403 « code de gestion non configuré ») ; les tablettes des magasins, elles, marchent. Le code est une
+est **ouverte, sans code** (décision du client du 06/11/2026 : « laisse la tablette ouverte sans code » ; elle était
+fermée avant) — qui connaît l’adresse lit et change alors les PIN des magasins. Les tablettes des magasins marchent dans les deux cas. Le code est une
 chaîne secrète (par exemple 20 caractères tirés au hasard), **jamais dans le dépôt ni dans un journal**. Deux façons
 de le poser, au choix — `bin/deploy.sh` l’écrit dans `config/config.php` (`tablettesCode`) à chaque livraison :
 
@@ -449,8 +450,8 @@ de le poser, au choix — `bin/deploy.sh` l’écrit dans `config/config.php` (`
 
 Puis relancer une livraison (ou, sans livraison, ajouter `'tablettesCode' => '…'` à `config/config.php` : la
 livraison suivante le réécrit d’après le secret ou le fichier). Le journal de livraison dit seulement « code de
-gestion posé (non affiché) » ou « aucun code de gestion — la gestion des tablettes reste fermée », et la recette
-vérifie que `GET /formation/tablettes` sans code répond **403**. Changer le code : changer le secret ou le fichier,
+gestion posé (non affiché) » ou « aucun code de gestion — la gestion des tablettes est ouverte sans code », et la recette
+vérifie que `GET /formation/tablettes` sans code répond **403** quand un code est posé (200 sinon). Changer le code : changer le secret ou le fichier,
 puis relivrer. Cinq codes faux depuis un appareil bloquent la gestion 15 minutes ; dix codes faux en une heure (ou
 cinquante en un jour), pour tout le réseau, la suspendent une heure.
 

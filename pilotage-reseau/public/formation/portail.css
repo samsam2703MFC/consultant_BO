@@ -178,3 +178,10 @@ a.pt-fo:hover span:last-child { color: var(--accent); }
   .pt-c-cc { flex-basis: 108px; }
   .pt-c-pan { flex-basis: 76px; }
 }
+
+/* Fiche d'une compétence : la compétence du panel TF Buddy, réglée sur place (06/11/2026). */
+.pt-panel { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-size: 12.5px; }
+.pt-panel__nom { color: var(--ink); }
+.pt-props { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.pt-props .fm-small { margin-right: 2px; }
+.pt-sel { flex: 1 1 220px; min-width: 0; max-width: 100%; }

@@ -526,8 +526,8 @@ a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
   l’en-tête `X-Code-Gestion` et comparé à temps constant (deux HMAC de même longueur) à la clé de configuration —
   variable d’environnement `TABLETTES_CODE`, puis `config/config.php › tablettesCode` (écrite par `bin/deploy.sh`
   d’après le secret GitHub `TABLETTES_CODE` ou le fichier privé `/var/lib/consulant_bo/prive/tablettes_code` ; voir
-  `docs/DEPLOIEMENT.md`). Code non configuré : **gestion fermée** (403 `gestion_fermee`, « Code de gestion non
-  configuré »). Essais limités comme le PIN du magasin, dans une table à part (`ceo_tablette_gestion_essai`, adresse
+  `docs/DEPLOIEMENT.md`). Code non configuré : **gestion ouverte, sans code** (décision du client du 06/11/2026 :
+  « laisse la tablette ouverte sans code » ; elle était fermée avant). Un code posé plus tard la referme derrière lui. Essais limités comme le PIN du magasin, dans une table à part (`ceo_tablette_gestion_essai`, adresse
   IP hachée) : 5 codes faux par adresse en 15 minutes, puis 10 en tout par heure ou 50 par jour suspendent la gestion
   (429, même avec le bon code) ; un refus attend 0,4 s ; jamais de code dans le journal. L’écran Tablettes demande le
   code (champ masqué, « Ouvrir la gestion »), le garde dans l’onglet seulement (`sessionStorage` `fm.tablettes.code`,
@@ -658,7 +658,7 @@ contrat article 4.5) avec le suivi des KPI et le développement commercial ; le 
   Manuel opérationnel**. Chaque fiche renvoie aux trois autres.
 - **Rail** (`window.FormationPortail.rail`, `portail.js`, lu par `formation.js`) : PORTAIL DE FORMATION — 1 Formations
   (`#/rfformations`) · 2 Postes (`#/rfmetiers`) · 3 Compétences (`#/rfcompetences`) · 4 Manuel opérationnel (le Classeur,
-  `#/rfclasseur`) ; RÉGLAGES — Correspondance panel, Tablettes,
+  `#/rfclasseur`) ; SUIVI — Suivi en magasin (`#/suivi`) ; RÉGLAGES — Tablettes,
   Rédaction des SOP, Données du panel (`#/rfdonnees` : les écrans d'avant — carte des métiers, postes et sous-postes,
   compétences, évaluations, procédures, base de connaissances, compétences produit, routes API —
   à leur adresse, inchangés). Accueil du module : `#/rfformations` (la tablette garde le Classeur). Les anciennes adresses
@@ -689,7 +689,7 @@ contrat article 4.5) avec le suivi des KPI et le développement commercial ; le 
 - **Compétences** (`#/rfcompetences[/code]`, `#/rfcompetences/produit`) : les 56 compétences par famille, colonnes
   fixes code · compétence · formation · phases (celles de sa formation) · SOP · panel ; filtres Toutes · Sans SOP · Hors
   panel. Fiche : description, « réussi si » du bloc (bloquante, 5 pôles, renouvellement ; « Modifier le critère » →
-  `#/rfform/<n>/<code>`), formation, pour qui, SOP, compétence du panel (« Modifier la correspondance » → `#/sopcomp`).
+  `#/rfform/<n>/<code>`), formation, pour qui, SOP, compétence du panel (réglée dans la fiche, voir « Correspondance dans la fiche »).
   Onglet « Compétences produit » = celles du panel.
 - **API** : `GET /formation/ref` rend en plus, sur chaque formation, `phases`, `postes` (O / R), `famille`,
   `competences`, et `phasesFormation`, `famillesFormation` (contrat : `docs/contrat-api.md`). Rien n'est retiré : le CRM
@@ -725,3 +725,21 @@ effacer ». Retiré :
   `parcours_efface_2026_11` et au journal (projet « Formation »).
 - **Maquettes** : `docs/maquettes/parcours-competences/` supprimé.
 
+## Correspondance dans la fiche, Suivi en magasin, tablettes sans code (06/11/2026)
+
+Client : « Correspondance panel, Tablettes : est-ce nécessaire ? » puis « ok let's go, laisse la tablette ouverte sans code ».
+- **Correspondance panel** quitte le rail. La compétence du panel TF Buddy d'un code C-… (celle que le « vu faire » de la
+  tablette coche) se règle dans la **fiche de la compétence** (`#/rfcompetences/<code>`, bloc « Au panel TF Buddy »,
+  `portail.js` `blocPanel`) : état (Validée · Certaine · À trancher · Aucune), « Confirmer » une certaine, jusqu'à trois
+  propositions en un clic, une liste de toutes les compétences du panel par catégorie (« déjà C-… » quand une autre en
+  porte une), « Aucune » (confirmation). Même route que le tableau (`PUT /formation/ref/correspondance/{code}
+  {panelId}`) ; la correspondance est relue (`GET /formation/ref/correspondance`) à l'ouverture d'une fiche. Le tableau
+  `#/sopcomp` reste (proposer pour tout le réseau, relire le panel, compétences du panel sans code), lié depuis le
+  résumé de l'écran Compétences ; l'entrée Compétences du rail reste allumée dessus.
+- **Suivi en magasin** (`#/suivi`, rubrique SUIVI du rail) = l'ancien onglet « Acquisition en magasin » de la
+  correspondance (le réseau × compétence, qui a quoi par magasin, à voir faire, l'équipe, le fil). L'onglet de `#/sopcomp`
+  y mène ; le chiffre « vues faire · réseau » des Standards aussi.
+- **Tablettes** : la gestion est ouverte sans code tant qu'aucun code n'est configuré (voir § Tablettes). La liste rend
+  `codeExige` ; sans code exigé, l'écran ne propose pas « Fermer la gestion ». `bin/deploy.sh` : sans code, il note
+  « gestion ouverte sans code » et attend 200 ; avec un code, 403 comme avant. ATTENTION : l'API du cockpit n'exige pas de
+  connexion en production — sans code, qui connaît l'adresse lit et change les PIN des magasins.

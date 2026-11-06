@@ -81,7 +81,7 @@ window.FormationSop = (function () {
     const vus = D.liste.reduce((a, s) => a + s.progression.vu, 0), quiz = D.liste.reduce((a, s) => a + s.progression.quiz, 0);
     let h = `<div class="fm-kpis">
       <a class="fm-kpi" href="#/sop"><span class="fm-kpi__n">${T.sops - T.aValider - (T.brouillons || 0)}</span><span class="fm-kpi__l">SOP en vigueur</span><span class="fm-kpi__s">+ ${T.aValider} à valider${T.brouillons ? ' · ' + T.brouillons + ' brouillon(s)' : ''} · ${T.etapes} étapes · FR et NL</span></a>
-      <a class="fm-kpi" href="#/sopcomp"><span class="fm-kpi__n">${vus}</span><span class="fm-kpi__l">vues faire · réseau</span><span class="fm-kpi__s">${quiz} quiz réussis en attente de la responsable</span></a>
+      <a class="fm-kpi" href="#/suivi"><span class="fm-kpi__n">${vus}</span><span class="fm-kpi__l">vues faire · réseau</span><span class="fm-kpi__s">${quiz} quiz réussis en attente de la responsable</span></a>
       <a class="fm-kpi" href="#/sopred"><span class="fm-kpi__n">${T.tradARelire}</span><span class="fm-kpi__l">traductions à relire</span><span class="fm-kpi__s">la langue d’origine fait foi</span></a>
       <a class="fm-kpi" href="#/rfclasseur"><span class="fm-kpi__n">${D.liste.filter(s => codesC(s).length).length} / ${T.sops}</span><span class="fm-kpi__l">reliées à une compétence</span><span class="fm-kpi__s">codes C-… du référentiel v25</span></a></div>`;
     const f = (k, v, lib, on) => `<button type="button" class="filter${on ? ' is-on' : ''}" data-sa="filtre" data-k="${k}" data-v="${v}">${lib}</button>`;
@@ -454,7 +454,7 @@ window.FormationSop = (function () {
   /* ── Compétences : la correspondance C-… ↔ panel, puis l'acquisition en magasin ── */
   function ecranCompetencesRef() {
     const onglets = `<div class="page-tabs" role="tablist"><a class="page-tabs__tab${C.S.route.a[0] !== 'magasins' ? ' is-on' : ''}" href="#/sopcomp">Correspondance avec le panel</a>
-      <a class="page-tabs__tab${C.S.route.a[0] === 'magasins' ? ' is-on' : ''}" href="#/sopcomp/magasins">Acquisition en magasin</a></div>`;
+      <a class="page-tabs__tab${C.S.route.a[0] === 'magasins' ? ' is-on' : ''}" href="#/suivi">Acquisition en magasin</a></div>`;
     const mag = C.S.route.a[0] === 'magasins';
     const v = mag ? ecranCompetences() : ecranCorrespondance();
     const note = mag ? C.bandeau('Le « vu faire » coche désormais au panel les compétences reliées aux codes C-… de chaque SOP (onglet Correspondance). Ce tableau suit encore la compétence du panel rattachée à chaque SOP dans Rédaction, gardée en repli pour une SOP sans code relié.', '') : '';
@@ -1041,11 +1041,11 @@ window.FormationSop = (function () {
   /** Les lectures de l'écran affiché (appelé par apres() de formation.js). */
   function apres(e, a) {
     if (e === 'sop' || e === 'sopred') { chargerListe(false); }
-    if (e === 'sop' || e === 'sopcomp') { chargerMagasins(); }
+    if (e === 'sop' || e === 'sopcomp' || e === 'suivi') { chargerMagasins(); }
     if (e === 'sop' && a[0] && a[1] === 'editer') { chargerEditeur(a[0]); }
     else if (e === 'sop' && a[0] && D.fiche[a[0]] === undefined) { chargerFiche(a[0]); }
-    if (e === 'sopcomp' || e === 'sopred') { chargerComp(false); }
-    if (e === 'rfclasseur' || e === 'rfphase' || e === 'rfposte' || e === 'sop' || e === 'sopcomp') { chargerRef(false); }
+    if (e === 'sopcomp' || e === 'sopred' || e === 'suivi') { chargerComp(false); }
+    if (e === 'rfclasseur' || e === 'rfphase' || e === 'rfposte' || e === 'sop' || e === 'sopcomp' || e === 'suivi') { chargerRef(false); }
     if (e === 'sopcomp' && a[0] !== 'magasins') { chargerCor(false); }
     if (e === 'rfpre' || e === 'rfform') { chargerRef(false); }   // les deux guides (lot 4b)
   }
@@ -1053,6 +1053,8 @@ window.FormationSop = (function () {
   const ECRANS = {
     sop: () => { const a = C.S.route.a; return a[0] ? (a[1] === 'editer' ? ecranEditer(a[0]) : ecranFiche(a[0])) : ecranListe(); },
     sopcomp: ecranCompetencesRef,
+    // Suivi en magasin (06/11/2026) : le contenu de l'onglet « Acquisition en magasin », à son entrée du rail.
+    suivi: () => { const v = ecranCompetences(); return { titre: 'Suivi en magasin', kicker: K, corps: v.corps, large: true }; },
     sopred: ecranRedaction,
     rfclasseur: ecranClasseur,
     rfphase: ecranParPhase,
@@ -1163,6 +1165,7 @@ window.FormationSop = (function () {
       rfposte: 'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9',
       sop: 'M9 11l3 3 8-8M4 4h11v4M4 4v16h16v-6',
       sopcomp: 'M12 2l3 6.5 7 .9-5 4.8 1.2 7L12 18l-6.2 3.2 1.2-7-5-4.8 7-.9z',
+      suivi: 'M3 3v18h18M7 15l4-4 3 3 6-6',
       sopred: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
       rfpre: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5',
       rfform: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5'
@@ -1309,7 +1312,7 @@ window.FormationSop = (function () {
       <div class="tbg-adr"><span class="tbg-lab">Adresse de la tablette</span><a class="tbg-url" href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>
         <span class="sub">Une seule tablette par magasin : le PIN du magasin ouvre l’appareil une fois, puis chaque employé s’identifie avec son PIN du panel. L’onglet SOP de l’app Cuisine y mène.</span></div>
       <div class="tbg-adr__act"><button type="button" class="btn btn--sm" data-tb="copierUrl">⧉ Copier l’adresse</button>${L.crmDisponible ? `<button type="button" class="btn btn--sm" data-tb="reprise" ${T.occupe ? 'disabled' : ''} title="Les magasins du Manuel du CRM qui ne sont pas encore ici (même PIN quand il est libre)">Reprendre les magasins du CRM</button>` : ''}
-        <button type="button" class="btn btn--sm btn--ghost" data-tb="oublier" title="Le code de gestion est oublié dans cet onglet : il faudra le retaper">Fermer la gestion</button></div>
+        ${L.codeExige ? '<button type="button" class="btn btn--sm btn--ghost" data-tb="oublier" title="Le code de gestion est oublié dans cet onglet : il faudra le retaper">Fermer la gestion</button>' : ''}</div>
       <div class="toolbar tbg-ajout"><input class="tbg-nouv" placeholder="Nom de la tablette (ex. L’Atelier By Corbais)" maxlength="120" data-tbin="nom" value="${esc(T.nom)}">
         <select class="tbg-sel" data-tbin="shop"><option value="">Boutique du panel…</option>${L.boutiques.map(b => `<option value="${esc(b.id)}"${b.id === T.shop ? ' selected' : ''}>${esc(b.nom)}</option>`).join('')}</select>
         <button type="button" class="btn btn--primary" data-tb="creer" ${T.occupe ? 'disabled' : ''}>＋ Tablette de magasin</button></div>
