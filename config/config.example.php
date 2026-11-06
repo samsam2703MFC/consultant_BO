@@ -67,6 +67,13 @@ return [
     // `formationUrl` en base prime, puis cette valeur, puis FORMATION_URL.
     'formationUrl' => getenv('FORMATION_URL') ?: null,
 
+    // Module Formation (06/11/2026) : l'adresse du lien « Retour au cockpit » du rail de /formation/ (design system,
+    // §8), rendue par GET /formation/config. Un chemin depuis la racine du serveur (ex. /consulant_bo/ — bin/deploy.sh
+    // l'écrit d'après ALIAS_PATH) ou une adresse http(s). Vide : la page garde son repli (le dossier parent sous le
+    // cockpit, /consulant_bo/ depuis /formation/). Aucune adresse de l'ERP n'existe dans la configuration : le rail
+    // ne propose pas de « Retour à l'ERP ».
+    'cockpitUrl' => getenv('COCKPIT_URL') ?: null,
+
     // Jeu de démonstration. false (défaut) : base vide, prête pour les vraies
     // données — aucune donnée fictive n'est chargée. true (ou COCKPIT_SEED=1) :
     // charge sql/seed.sql (réseau belge de démo) si la base est vide.

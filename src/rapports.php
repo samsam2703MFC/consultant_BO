@@ -2647,7 +2647,10 @@ function rapPdfRendu(string $html, array $meta = []): ?string
     if (!empty($meta['paysage'])) { $wk .= ' --orientation Landscape'; }
     if ($meta !== []) {
         $tmpF = tempnam(sys_get_temp_dir(), 'rap') . '.html';
-        file_put_contents($tmpF, rapPdfPiedHtml($meta));
+        // `piedHtml` : un document qui pose son propre pied (page complète, mêmes paramètres page / topage
+        // de wkhtmltopdf) — les PDF du module Formation, au design system (§13). Sinon le pied du cockpit.
+        $piedPropre = is_string($meta['piedHtml'] ?? null) && $meta['piedHtml'] !== '';
+        file_put_contents($tmpF, $piedPropre ? $meta['piedHtml'] : rapPdfPiedHtml($meta));
         $wk .= ' --footer-html ' . escapeshellarg($tmpF);
     }
     // Chromium en dernier recours : il rend bien, mais ne sait poser aucun

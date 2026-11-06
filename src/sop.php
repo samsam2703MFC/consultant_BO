@@ -1087,12 +1087,28 @@ function foFil(string $shop, int $max): array
 }
 
 /* ═══ Le PDF (Manuel opératoire, une SOP) ═════════════════════════════════════════════════════════ */
+//
+// Mise en page : design system « L'Atelier By », §13 (documents de gestion, version A du 06/11/2026). Papier
+// blanc, Gotham intégrée (400 = Gotham_Medium, le texte ; 700 = Gotham_Regular, les seuls accents : type de
+// pièce, titre d'étape, valeurs des références), palette du back-office, le Ruby à deux endroits : le filet
+// d'en-tête et le filet de l'encadré des points critiques. Ni aplat, ni fond de page, ni pilule.
+//
+// Écrit pour wkhtmltopdf 0.12.6 « patched qt », le moteur de production : ni variables CSS, ni flexbox, ni
+// grid, ni calc() — des blocs et des tableaux, des largeurs en mm, des valeurs résolues (le filet de ligne
+// rgba(34,34,34,.06) devient #f2f2f2, son équivalent opaque sur blanc : ce WebKit peint mal les bordures
+// rgba). Polices, logo et photos intégrés en data: ; photos réduites par GD sur fond blanc (pas
+// d'object-fit). Un titre de section part avec sa première étape dans un bloc insécable (wkhtmltopdf ignore
+// page-break-after: avoid), une étape ne se coupe pas, l'en-tête du sommaire se répète.
+// Pied de page « marque · document · Page n / N » : une page de pied donnée à wkhtmltopdf (rapPdfRendu,
+// clé piedHtml) ; Chromium (repli) et l'impression du navigateur le posent par les marges de @page.
 
 /** Sort le PDF (moteur du cockpit, rapPdfRendu) ; sans moteur, la page imprimable — puis exit. */
 function foPdfSortie(array $rows, string $l, bool $couverture, string $titre, string $fichier): void
 {
-    $html = foPdfHtml($rows, $l, $couverture, $titre);
-    $pdf = function_exists('rapPdfRendu') ? rapPdfRendu($html, ['magasin' => 'L’Atelier', 'rapport' => $titre, 'genere' => date('d/m/Y'), 'envoye' => '']) : null;
+    $pied = foPdfPiedTexte($rows, $l, $couverture, $titre);
+    $html = foPdfHtml($rows, $l, $couverture, $titre, $pied);
+    $pdf = function_exists('rapPdfRendu') ? rapPdfRendu($html, ['magasin' => foPdfMarque(), 'rapport' => $titre, 'genere' => date('d/m/Y'), 'envoye' => '',
+        'piedHtml' => foPdfPiedHtml($pied, $l)]) : null;
     if ($pdf !== null) {
         header('Content-Type: application/pdf');
         header('Content-Disposition: inline; filename="' . $fichier . '.pdf"');
@@ -1104,62 +1120,249 @@ function foPdfSortie(array $rows, string $l, bool $couverture, string $titre, st
     exit;
 }
 
-function foPdfHtml(array $rows, string $l, bool $couverture, string $titre): string
+/** Les libellés fixes du document, en FR ou en NL. */
+function foPdfTextes(string $l): array
+{
+    return $l === 'nl'
+        ? ['manuel' => 'Operationeel handboek', 'std' => 'De standaarden van het netwerk', 'ed' => 'Editie van', 'som' => 'Inhoud', 'obj' => 'Doel', 'pour' => 'Voor',
+            'ver' => 'Versie', 'maj' => 'Bijgewerkt', 'comp' => 'Competentie', 'crit' => 'Kritieke punten', 'pc' => 'Kritiek punt', 'trad' => 'Vertaling na te lezen',
+            'aval' => 'Te valideren', 'duree' => 'Duur', 'langue' => 'Taal', 'code' => 'Code', 'titre' => 'Titel', 'type' => 'Type', 'page' => 'Pagina',
+            'types' => ['SOP' => 'SOP', 'Checklist' => 'Checklist', 'Mémo' => 'Memo', 'Fiche' => 'Fiche']]
+        : ['manuel' => 'Manuel opératoire', 'std' => 'Les standards du réseau', 'ed' => 'Édition du', 'som' => 'Sommaire', 'obj' => 'Objectif', 'pour' => 'Pour',
+            'ver' => 'Version', 'maj' => 'Mise à jour', 'comp' => 'Compétence', 'crit' => 'Points critiques', 'pc' => 'Point critique', 'trad' => 'Traduction à relire',
+            'aval' => 'À valider', 'duree' => 'Durée', 'langue' => 'Langue', 'code' => 'Code', 'titre' => 'Titre', 'type' => 'Type', 'page' => 'Page',
+            'types' => ['SOP' => 'SOP', 'Checklist' => 'Checklist', 'Mémo' => 'Mémo', 'Fiche' => 'Fiche']];
+}
+
+/** Le nom du réseau (réglage `reseau`, comme les rapports du cockpit). */
+function foPdfMarque(): string
+{
+    $r = function_exists('setting') ? setting('reseau', []) : [];
+    $n = is_array($r) ? trim((string) ($r['nom'] ?? '')) : '';
+    return $n !== '' ? $n : 'L’Atelier By';
+}
+
+/** La ligne de gauche du pied : marque · document · langue · date d'édition. */
+function foPdfPiedTexte(array $rows, string $l, bool $couverture, string $titre): string
+{
+    $doc = $titre;
+    if (!$couverture && count($rows) === 1) {
+        $r = $rows[0];
+        $doc = trim(((string) $r['code'] !== '' ? $r['code'] . ' · ' : '') . 'v' . $r['version']);
+    }
+    return foPdfMarque() . ' · ' . $doc . ' · ' . strtoupper($l) . ' · ' . date('d/m/Y');
+}
+
+/**
+ * Gotham (§4.1, §13.2) : 400 = Gotham_Medium, le texte ; 700 = Gotham_Regular, les accents. Intégrée (data:)
+ * dans le document ; en chemin de fichier absolu pour la page de pied, que wkhtmltopdf recharge à chaque feuille
+ * (--enable-local-file-access) — la décoder 80 fois rallongerait le rendu, borné à 25 s.
+ */
+function foPdfPolices(bool $avecAccents = true, bool $parFichier = false): string
+{
+    $dir = __DIR__ . '/../public/formation/fonts/';
+    $css = '';
+    foreach (array_filter(['Gotham_Medium.otf' => 400, 'Gotham_Regular.otf' => $avecAccents ? 700 : null]) as $f => $poids) {
+        $chemin = realpath($dir . $f);
+        if ($chemin === false) { continue; }
+        $url = $parFichier ? "'file://" . str_replace(["'", '\\'], ['%27', '/'], $chemin) . "'"
+            : 'data:font/opentype;base64,' . base64_encode((string) file_get_contents($chemin));
+        $css .= "@font-face{font-family:'Gotham';src:url(" . $url . ") format('opentype');font-weight:" . $poids . ";font-style:normal}";
+    }
+    return $css;
+}
+
+/**
+ * Une image intégrée (data:), réduite pour tenir dans $maxW × $maxH px et posée sur fond blanc — un PNG
+ * transparent sort noir dans certains moteurs PDF, wkhtmltopdf ne lit pas le WebP et ignore object-fit : la
+ * taille se décide ici. JPEG pour les photos, PNG pour le logo. Rend [src, largeur, hauteur] ou null.
+ */
+function foPdfImage(string $chemin, int $maxW, int $maxH, bool $png = false): ?array
+{
+    if (!is_file($chemin) || !function_exists('imagecreatefromstring')) { return null; }
+    $src = @imagecreatefromstring((string) file_get_contents($chemin));
+    if ($src === false) { return null; }
+    $w = imagesx($src); $h = imagesy($src);
+    $k = min(1.0, $maxW / max(1, $w), $maxH / max(1, $h));
+    $nw = max(1, (int) round($w * $k)); $nh = max(1, (int) round($h * $k));
+    $dst = imagecreatetruecolor($nw, $nh);
+    imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    ob_start();
+    $png ? imagepng($dst, null, 9) : imagejpeg($dst, null, 82);
+    $o = (string) ob_get_clean();
+    return ['src' => 'data:image/' . ($png ? 'png' : 'jpeg') . ';base64,' . base64_encode($o), 'w' => $nw, 'h' => $nh];
+}
+
+/** Une chaîne CSS (content: "…") sûre. */
+function foPdfCss(string $s): string
+{
+    return str_replace(['\\', '"', "\n", "\r"], ['\\\\', '\\"', ' ', ' '], $s);
+}
+
+/** La page de pied que wkhtmltopdf répète sur chaque feuille : le document à gauche, « Page n / N » à droite. */
+function foPdfPiedHtml(string $gauche, string $l): string
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    $T = $l === 'nl'
-        ? ['manuel' => 'Operationeel handboek', 'std' => 'De standaarden van het netwerk', 'ed' => 'Editie van', 'som' => 'Inhoud', 'obj' => 'Doel', 'pour' => 'Voor',
-            'ver' => 'Versie', 'comp' => 'Competentie', 'crit' => 'Kritieke punten', 'trad' => 'Vertaling na te lezen', 'aval' => 'Te valideren', 'duree' => 'Duur', 'p' => 'p.']
-        : ['manuel' => 'Manuel opératoire', 'std' => 'Les standards du réseau', 'ed' => 'Édition du', 'som' => 'Sommaire', 'obj' => 'Objectif', 'pour' => 'Pour',
-            'ver' => 'Version', 'comp' => 'Compétence', 'crit' => 'Points critiques', 'trad' => 'Traduction à relire', 'aval' => 'À valider', 'duree' => 'Durée', 'p' => 'p.'];
+    return '<!doctype html><html><head><meta charset="utf-8"><style>' . foPdfPolices(false, true)
+        . 'html,body{margin:0;padding:0;background:#fff}'
+        . 'table{width:100%;border-collapse:collapse;border-top:1px solid #e6e0d8}'
+        . "td{font:400 8.5px/1.6 'Gotham',Helvetica,Arial,sans-serif;color:#7a736a;padding-top:2.4mm;vertical-align:top}"
+        . '</style><script>'
+        . 'function pied(){var v={},q=document.location.search.substring(1).split("&");'
+        . 'for(var i=0;i<q.length;i++){var kv=q[i].split("=");v[kv[0]]=decodeURIComponent(kv[1]||"");}'
+        . 'var el=document.getElementById("pg");if(el){el.textContent=(v.page||"")+" / "+(v.topage||"");}}'
+        . '</script></head><body onload="pied()"><table><tr><td>' . $e($gauche) . '</td>'
+        . '<td style="text-align:right;white-space:nowrap;padding-left:6mm">' . $e(foPdfTextes($l)['page']) . ' <span id="pg"></span></td></tr></table></body></html>';
+}
+
+function foPdfHtml(array $rows, string $l, bool $couverture, string $titre, string $pied = ''): string
+{
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $T = foPdfTextes($l);
+    $marque = foPdfMarque();
     $photos = realpath(__DIR__ . '/../public/formation/sop/photos') ?: '';
-    $css = '@page{size:A4;margin:14mm 15mm 18mm}body{font-family:"Gotham","Helvetica Neue",Arial,sans-serif;font-size:10.5px;color:#222;line-height:1.45;margin:0}'
-        . '.couv{height:250mm;background:#8D1D2C;color:#fff;padding:28mm 20mm;box-sizing:border-box;page-break-after:always;display:flex;flex-direction:column;justify-content:space-between}'
-        . '.couv h1{font-size:44px;line-height:1.05;margin:0 0 10px}.couv small{opacity:.8;font-size:12px}'
-        . '.som{page-break-after:always}.som h2{font-size:20px;border-bottom:2px solid #8D1D2C;padding-bottom:6px}.som .ch{margin:12px 0 4px;font-weight:700;color:#8D1D2C;text-transform:uppercase;font-size:10px;letter-spacing:.1em}'
-        . '.som .l{display:flex;justify-content:space-between;border-bottom:.5px dotted #bbb;padding:3px 0}'
-        . '.sop{page-break-before:always}.sop:first-of-type{page-break-before:auto}'
-        . '.hd{display:flex;justify-content:space-between;border-bottom:2.5px solid #8D1D2C;padding-bottom:8px;margin-bottom:10px}.hd h1{font-size:22px;margin:2px 0}.hd small{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#777}'
-        . '.cart{background:#F5F1EB;border-radius:4px;padding:7px 10px;margin-bottom:10px;font-size:9.5px}.cart b{display:inline-block;min-width:80px;color:#777;font-weight:400}'
-        . 'h3{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:#8D1D2C;padding:4px 8px;margin:12px 0 6px;border-radius:2px;page-break-after:avoid}'
-        . '.st{display:flex;gap:8px;margin:4px 0;page-break-inside:avoid}.st i{font-style:normal;font-weight:700;color:#8D1D2C;flex:0 0 28px}.st.c{background:#FDF1F2;border-left:2.5px solid #C0182B;padding:3px 6px}'
-        . '.st img{max-width:140px;max-height:100px;border-radius:3px;margin-left:auto}.crit{border-left:3px solid #C0182B;background:#FDF1F2;padding:6px 10px;margin:10px 0;page-break-inside:avoid}'
-        . '.marque{font-size:8.5px;color:#8a5a00;background:#FFF1D6;border-radius:3px;padding:1px 6px;margin-left:6px}';
-    $h = '<!doctype html><html lang="' . $l . '"><head><meta charset="utf-8"><title>' . $e($titre) . '</title><style>' . $css . '</style></head><body>';
+    $logo = foPdfImage(__DIR__ . '/../public/formation/img/logo.png', 480, 160, true);
+    $pied = $pied !== '' ? $pied : foPdfPiedTexte($rows, $l, $couverture, $titre);
+    $marge = "font:400 8.5px 'Gotham',Helvetica,Arial,sans-serif;color:#7a736a;border-top:1px solid #e6e0d8;vertical-align:top;padding-top:2.4mm";
+
+    // Les marges de @page portent le pied pour Chromium et l'impression du navigateur ; wkhtmltopdf ne les lit
+    // pas (il a sa page de pied) : elles vivent dans leur propre <style>, une erreur d'analyse y reste enfermée.
+    $cssPage = '@page{size:A4;margin:14mm 15mm 20mm;'
+        . '@bottom-left{content:"' . foPdfCss($pied) . '";' . $marge . '}'
+        . '@bottom-right{content:"' . foPdfCss($T['page']) . ' " counter(page) " / " counter(pages);' . $marge . ';text-align:right}}';
+    $css = foPdfPolices()
+        . 'html,body{background:#ffffff}'
+        . "body{margin:0;font:400 11px/1.5 'Gotham',Helvetica,Arial,sans-serif;color:#1c1a17;-webkit-print-color-adjust:exact;print-color-adjust:exact}"
+        . 'b{font-weight:700}h1,h2,h3,th{font-weight:400}p{margin:0}'
+        . 'table{border-collapse:collapse;border-spacing:0}'
+        . 'img{background:#ffffff}'
+        // En-tête : logo à gauche, type de pièce à droite, filet Ruby 2 px.
+        . '.hd{width:100%;border-bottom:2px solid #8D1D2C;margin:0 0 16px}'
+        . '.hd td{padding:0 0 12px;vertical-align:bottom}'
+        . '.hd img{height:34px;width:auto;display:block}'
+        . '.hd-m{font-size:15px}'
+        . '.hd-r{text-align:right;font-size:10px;line-height:1.5;color:#7a736a}'
+        . '.hd-r b{display:block;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17}'
+        // Titre de la SOP ou du manuel, son rattachement en petites capitales.
+        . '.kick{font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin:0 0 4px}'
+        . 'h1{font-size:21px;line-height:1.25;margin:0 0 8px;color:#1c1a17}'
+        . '.tag{display:inline-block;font-size:9px;font-weight:400;line-height:1.4;padding:1px 6px;border-radius:4px;background:#F6E7CE;color:#7A5207;white-space:nowrap}'
+        . '.tags{margin:0 0 10px}.tags .tag{margin-right:6px}'
+        . '.lab{font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin:0 0 4px}'
+        // Objectif | Pour, puis les références entre deux filets.
+        . '.parties{width:100%;table-layout:fixed;margin:4px 0 14px}'
+        . '.parties td{vertical-align:top;padding:0 24px 0 0}'
+        . '.refs{width:100%;table-layout:fixed;border-top:1px solid #e6e0d8;border-bottom:1px solid #e6e0d8;margin:0 0 4px}'
+        . '.refs td{vertical-align:top;padding:8px 12px 8px 0}'
+        . '.refs .v{font-size:11px;font-weight:700}'
+        // Une section : son titre part avec la première étape (bloc insécable).
+        . '.garde{page-break-inside:avoid}'
+        . '.sec{font-size:13px;line-height:1.35;color:#1c1a17;padding:14px 0 5px;border-bottom:1px solid #e6e0d8}'
+        . '.st{width:100%;table-layout:fixed;page-break-inside:avoid}'
+        . '.st td{vertical-align:top;padding:5px 8px 5px 0;border-bottom:1px solid #f2f2f2}'
+        . '.st .n{width:12mm;color:#7a736a;white-space:nowrap}'
+        . '.st .t{display:block;font-weight:700}'
+        . '.st .tag{margin-left:6px}'
+        . '.st .ph{width:44mm;padding-right:0;text-align:right}'
+        . '.st .ph img{display:block;margin:0 0 0 auto;border:1px solid #e6e0d8}'
+        // Points critiques : l'encadré à filet gauche Ruby 3 px.
+        . '.box{border-left:3px solid #8D1D2C;padding:2px 0 2px 12px;margin:20px 0 0;page-break-inside:avoid}'
+        . '.box ul{margin:4px 0 0;padding:0 0 0 14px}.box li{margin:0 0 2px}'
+        // Sommaire du manuel : en-tête répété, une ligne ne se coupe pas.
+        . '.som-t{font-size:13px;line-height:1.35;color:#1c1a17;margin:20px 0 0}'
+        . '.som{width:100%;table-layout:fixed;margin:6px 0 0}'
+        . '.som th{padding:6px 8px 6px 0;border-bottom:1px solid #e6e0d8;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:#7a736a;text-align:left}'
+        . '.som td{padding:3px 8px 3px 0;border-bottom:1px solid #f2f2f2;vertical-align:top}'
+        . '.som .grp td{padding-top:10px;font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;border-bottom:1px solid #e6e0d8}'
+        . '.som .num{text-align:right;white-space:nowrap;padding-right:0}'
+        . 'thead{display:table-header-group}tr{page-break-inside:avoid}'
+        . '.saut{page-break-before:always}';
+
+    $entete = static fn (string $type, string $sous): string => '<table class="hd" cellpadding="0" cellspacing="0"><tr><td>'
+        . ($logo !== null ? '<img src="' . $logo['src'] . '" alt="' . $e($marque) . '">' : '<span class="hd-m">' . $e($marque) . '</span>')
+        . '</td><td class="hd-r"><b>' . $e($type) . '</b>' . $e($sous) . '</td></tr></table>';
+
+    $h = '<!doctype html><html lang="' . $l . '"><head><meta charset="utf-8"><title>' . $e($titre) . '</title><style>' . $css . '</style><style>' . $cssPage . '</style></head><body>';
     if ($couverture) {
-        $h .= '<div class="couv"><div><small>L’ATELIER · SUCRÉ · SALÉ · À EMPORTER</small></div><div><h1>' . $e($T['manuel']) . '</h1><div style="font-size:14px">' . $e($T['std'])
-            . ' · ' . count($rows) . ' SOP</div></div><div><small>' . $e($T['ed']) . ' ' . date('d/m/Y') . ' · ' . strtoupper($l) . '</small></div></div>';
-        $h .= '<div class="som"><h2>' . $e($T['som']) . '</h2>';
+        // Première page : la pièce (le manuel), ses références et le sommaire — pas de couverture pleine,
+        // réservée aux documents de campagne (§13.1).
+        $h .= $entete($T['manuel'], $T['ed'] . ' ' . date('d/m/Y') . ' · ' . strtoupper($l))
+            . ($titre !== $T['manuel'] ? '<p class="kick">' . $e($titre) . '</p>' : '') . '<h1>' . $e($T['std']) . '</h1>'
+            . '<table class="refs" cellpadding="0" cellspacing="0"><tr>'
+            . '<td><div class="lab">' . $e($T['ed']) . '</div><div class="v">' . $e(date('d/m/Y')) . '</div></td>'
+            . '<td><div class="lab">' . $e($T['langue']) . '</div><div class="v">' . $e(strtoupper($l)) . '</div></td>'
+            . '<td><div class="lab">SOP</div><div class="v">' . count($rows) . '</div></td><td></td></tr></table>'
+            . '<p class="som-t">' . $e($T['som']) . '</p>'
+            . '<table class="som" cellpadding="0" cellspacing="0"><thead><tr><th style="width:34mm">' . $e($T['code']) . '</th><th>' . $e($T['titre'])
+            . '</th><th style="width:22mm">' . $e($T['type']) . '</th><th class="num" style="width:16mm">' . $e($T['ver']) . '</th></tr></thead><tbody>';
         $cur = '';
         foreach ($rows as $r) {
-            if ($r['dossier'] !== $cur) { $cur = (string) $r['dossier']; $h .= '<div class="ch">' . $e($cur . ' · ' . (FO_DOSSIERS[$cur][$l] ?? $cur)) . '</div>'; }
-            $h .= '<div class="l"><span>' . $e(($r['code'] ? $r['code'] . ' — ' : '') . foTitreL($r, $l)) . '</span><span>v' . $e($r['version']) . '</span></div>';
+            if ($r['dossier'] !== $cur) {
+                $cur = (string) $r['dossier'];
+                $h .= '<tr class="grp"><td colspan="4">' . $e($cur . ' · ' . (FO_DOSSIERS[$cur][$l] ?? $cur)) . '</td></tr>';
+            }
+            $h .= '<tr><td>' . $e((string) $r['code']) . '</td><td>' . $e(foTitreL($r, $l)) . '</td><td>' . $e($T['types'][(string) $r['type']] ?? (string) $r['type'])
+                . '</td><td class="num">v' . $e($r['version']) . '</td></tr>';
         }
-        $h .= '</div>';
+        $h .= '</tbody></table>';
     }
-    foreach ($rows as $r) {
+    foreach ($rows as $i => $r) {
         $c = foContenuLangue(foContenuVersion((string) $r['id'], (string) $r['version']), $l, false);
         $tradAR = ($r['trad_' . $l] ?? '') === 'a_relire';
-        $h .= '<div class="sop"><div class="hd"><div><small>' . $e($T['manuel'] . ' · ' . $r['dossier'] . ' · ' . (FO_DOSSIERS[(string) $r['dossier']][$l] ?? '')) . '</small><h1>' . $e($c['titre'])
-            . ($r['statut'] === 'a_valider' ? '<span class="marque">' . $e($T['aval']) . '</span>' : '') . ($tradAR ? '<span class="marque">' . $e($T['trad']) . '</span>' : '') . '</h1></div>'
-            . '<div style="text-align:right"><small>' . $e((string) $r['code']) . '</small><br><b>' . strtoupper($l) . '</b></div></div>';
-        $h .= '<div class="cart">' . ($c['objectif'] !== '' ? '<div><b>' . $e($T['obj']) . '</b>' . $e($c['objectif']) . '</div>' : '') . ($c['pour'] !== '' ? '<div><b>' . $e($T['pour']) . '</b>' . $e($c['pour']) . '</div>' : '')
-            . ($c['duree'] !== '' ? '<div><b>' . $e($T['duree']) . '</b>' . $e($c['duree']) . '</div>' : '')
-            . (($r['competence_nom'] ?? null) !== null ? '<div><b>' . $e($T['comp']) . '</b>' . $e($r['competence_nom']) . '</div>' : '')
-            . '<div><b>' . $e($T['ver']) . '</b>v' . $e($r['version']) . ' · ' . $e(substr((string) $r['maj_le'], 0, 10)) . '</div></div>';
+        $dossier = (string) $r['dossier'];
+        $h .= '<div class="sop' . ($couverture || $i > 0 ? ' saut' : '') . '">'
+            . $entete($T['types'][(string) $r['type']] ?? (string) $r['type'], trim(((string) $r['code'] !== '' ? $r['code'] . ' · ' : '') . 'v' . $r['version'] . ' · ' . strtoupper($l)))
+            . '<p class="kick">' . $e($T['manuel'] . ' · ' . $dossier . ' · ' . (FO_DOSSIERS[$dossier][$l] ?? '')) . '</p>'
+            . '<h1>' . $e($c['titre']) . '</h1>';
+        if ($r['statut'] === 'a_valider' || $tradAR) {
+            $h .= '<p class="tags">' . ($r['statut'] === 'a_valider' ? '<span class="tag">' . $e($T['aval']) . '</span>' : '')
+                . ($tradAR ? '<span class="tag">' . $e($T['trad']) . '</span>' : '') . '</p>';
+        }
+        if ($c['objectif'] !== '' || $c['pour'] !== '') {
+            $h .= '<table class="parties" cellpadding="0" cellspacing="0"><tr>'
+                . '<td>' . ($c['objectif'] !== '' ? '<div class="lab">' . $e($T['obj']) . '</div><p>' . $e($c['objectif']) . '</p>' : '') . '</td>'
+                . '<td>' . ($c['pour'] !== '' ? '<div class="lab">' . $e($T['pour']) . '</div><p>' . $e($c['pour']) . '</p>' : '') . '</td></tr></table>';
+        }
+        $refs = [[$T['ver'], 'v' . $r['version']], [$T['maj'], foPdfDate((string) $r['maj_le'])]];
+        if ($c['duree'] !== '') { $refs[] = [$T['duree'], $c['duree']]; }
+        if (($r['competence_nom'] ?? null) !== null) { $refs[] = [$T['comp'], (string) $r['competence_nom']]; }
+        $h .= '<table class="refs" cellpadding="0" cellspacing="0"><tr>';
+        foreach (array_pad($refs, 4, null) as $ref) {
+            $h .= '<td>' . ($ref !== null ? '<div class="lab">' . $e($ref[0]) . '</div><div class="v">' . $e($ref[1]) . '</div>' : '') . '</td>';
+        }
+        $h .= '</tr></table>';
         foreach ($c['sections'] as $sec) {
-            $h .= '<h3>' . $e($sec['titre']) . '</h3>';
+            $avecPhoto = false;
+            foreach ($sec['etapes'] as $st) { if ($st['photo'] !== null) { $avecPhoto = true; break; } }
+            $lignes = [];
             foreach ($sec['etapes'] as $st) {
-                $img = $st['photo'] !== null && $photos !== '' && is_file($photos . '/' . $st['photo']) ? '<img src="file://' . $e($photos . '/' . $st['photo']) . '">' : '';
-                $h .= '<div class="st' . ($st['critique'] ? ' c' : '') . '"><i>' . $e($st['numero']) . '</i><div>' . ($st['titre'] !== '' ? '<b>' . $e($st['titre']) . '</b> — ' : '') . nl2br($e($st['texte'])) . '</div>' . $img . '</div>';
+                // Cadre de 42 × 56 mm : une photo en largeur prend la largeur, une capture en hauteur la hauteur.
+                $img = $avecPhoto && $st['photo'] !== null && $photos !== '' ? foPdfImage($photos . '/' . $st['photo'], 500, 666) : null;
+                $taille = $img !== null ? (($img['w'] * 56 >= $img['h'] * 42) ? 'width:42mm;height:' . round(42 * $img['h'] / $img['w'], 1) . 'mm'
+                    : 'width:' . round(56 * $img['w'] / $img['h'], 1) . 'mm;height:56mm') : '';
+                $tag = $st['critique'] ? '<span class="tag">' . $e($T['pc']) . '</span>' : '';
+                $lignes[] = '<table class="st" cellpadding="0" cellspacing="0"><tr><td class="n">' . $e($st['numero']) . '</td><td>'
+                    . ($st['titre'] !== '' ? '<b class="t">' . $e($st['titre']) . $tag . '</b>' : ($tag !== '' ? '<div>' . $tag . '</div>' : ''))
+                    . nl2br($e($st['texte'])) . '</td>'
+                    . ($avecPhoto ? '<td class="ph">' . ($img !== null ? '<img src="' . $img['src'] . '" alt="" style="' . $taille . '">' : '') . '</td>' : '') . '</tr></table>';
             }
+            // Le titre ne reste jamais seul en bas de page : il part avec la première étape.
+            $h .= '<div class="garde"><div class="sec">' . $e($sec['titre']) . '</div>' . ($lignes[0] ?? '') . '</div>' . implode('', array_slice($lignes, 1));
         }
         if ($c['points_critiques'] !== []) {
-            $h .= '<div class="crit"><b>' . $e($T['crit']) . '</b><ul style="margin:4px 0 0;padding-left:16px">' . implode('', array_map(static fn ($x) => '<li>' . $e($x) . '</li>', $c['points_critiques'])) . '</ul></div>';
+            $h .= '<div class="box"><div class="lab">' . $e($T['crit']) . '</div><ul>'
+                . implode('', array_map(static fn ($x) => '<li>' . $e($x) . '</li>', $c['points_critiques'])) . '</ul></div>';
         }
         $h .= '</div>';
     }
     return $h . '</body></html>';
+}
+
+/** « 2026-11-06 08:12:00 » → « 06/11/2026 » (§13.1 : dates des tableaux). */
+function foPdfDate(string $v): string
+{
+    return preg_match('/^(\d{4})-(\d{2})-(\d{2})/', $v, $m) ? $m[3] . '/' . $m[2] . '/' . $m[1] : $v;
 }
 
 /* ═══ Le contenu d'une SOP ════════════════════════════════════════════════════════════════════════ */

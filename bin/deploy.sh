@@ -27,6 +27,9 @@ COCKPIT_DB_NAME="${COCKPIT_DB_NAME:-atelierby_db}"
 COCKPIT_DB_USER="${COCKPIT_DB_USER:-}"
 COCKPIT_DB_PASSWORD="${COCKPIT_DB_PASSWORD:-}"
 COCKPIT_PWA_BASE="${COCKPIT_PWA_BASE:-http://185.180.206.46/pwa_consultant}"
+# Le « Retour au cockpit » du rail du module Formation (/formation/, servi à la racine) : l'adresse du cockpit,
+# écrite dans config.php (cockpitUrl) et rendue par GET /formation/config.
+COCKPIT_URL="${COCKPIT_URL:-${ALIAS_PATH}/}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_SRC="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -250,6 +253,7 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
   COCKPIT_DB_HOST="$COCKPIT_DB_HOST" COCKPIT_DB_PORT="$COCKPIT_DB_PORT" \
   COCKPIT_DB_NAME="$COCKPIT_DB_NAME" COCKPIT_DB_USER="$COCKPIT_DB_USER" \
   COCKPIT_DB_PASSWORD="$COCKPIT_DB_PASSWORD" COCKPIT_PWA_BASE="$COCKPIT_PWA_BASE" \
+  COCKPIT_URL="$COCKPIT_URL" \
   php -r '
     $cfg = [
       "db" => [
@@ -261,6 +265,8 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
         "charset"  => "utf8mb4",
       ],
       "pwaBase" => getenv("COCKPIT_PWA_BASE") ?: null,
+      // Module Formation : l’adresse du « Retour au cockpit » de son rail (GET /formation/config).
+      "cockpitUrl" => getenv("COCKPIT_URL") ?: null,
       "auth"    => false,
       "seed"    => false,   // base vide par défaut ; pas de données de démo
       // Module RH / Dimona (/hr) : la console franchisé qui identifie (API vue du navigateur et du

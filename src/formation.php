@@ -636,6 +636,21 @@ function ep_formation_sonde(): array
 }
 
 /**
+ * GET /formation/config — ce que la page du module lit dans la configuration du cockpit : l'adresse du lien
+ * « Retour au cockpit » de son rail (design system §8 ; config.php `cockpitUrl`, sinon COCKPIT_URL). Un chemin
+ * depuis la racine du serveur (/consulant_bo/) ou une adresse http(s) ; sinon null, et la page garde son repli.
+ * Rien de secret. Aucune adresse de l'ERP n'est configurée : pas de « Retour à l'ERP ».
+ */
+function ep_formation_config(): array
+{
+    $u = Db::config()['cockpitUrl'] ?? null;
+    if (!is_string($u) || trim($u) === '') { $u = (string) (getenv('COCKPIT_URL') ?: ''); }
+    $u = trim($u);
+    $ok = preg_match('#^/(?!/)[^\s"\'<>]*$#', $u) === 1 || preg_match('#^https?://[^\s"\'<>]+$#i', $u) === 1;
+    return ['cockpitUrl' => $ok ? $u : null];
+}
+
+/**
  * GET /formation/pdf?type=poste|niveau|procedure&id= — le PDF que le panel
  * génère, relayé avec le jeton du cockpit (la tablette n'en a pas).
  */

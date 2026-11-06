@@ -22,7 +22,9 @@
   // L'API est À CÔTÉ du module (formation/api/cockpit) : la même page se sert sous le cockpit
   // (/consulant_bo/formation/) et à la racine du serveur (/formation/, comme /marketing/).
   var API = 'api/cockpit';
-  // Le retour au cockpit : le dossier parent sous le cockpit ; depuis la racine, son adresse.
+  // Le retour au cockpit (rail, design system §8) : l'adresse de la configuration (config.php `cockpitUrl`,
+  // lue par GET formation/config au démarrage, voir lireConfig). Clé vide ou lecture ratée : le repli d'avant —
+  // le dossier parent sous le cockpit ; depuis la racine du serveur, l'adresse du cockpit.
   var COCKPIT = /^\/formation(\/|$)/.test(location.pathname) ? '/consulant_bo/' : '../';
   var root = document.getElementById('root');
   // Mode incorporé (design system, §9) : le module Marketing affiche la page dans un cadre, avec ?embed=1.
@@ -2631,6 +2633,19 @@
   // Les écrans des SOP reçoivent les outils du module (formation-sop.js).
   if (SOP) SOP.init({ esc: esc, n: n, lire: lire, appel: appel, rendre: rendre, S: S, filAriane: filAriane, bandeau: bandeau, API: API }, root);
 
+  /** L'adresse du « Retour au cockpit » dans la configuration. Incorporé (§9) : pas de rail, rien à lire. */
+  function lireConfig() {
+    if (EMBED) return;
+    lire('/formation/config', 15000).then(function (c) {
+      var u = c && typeof c.cockpitUrl === 'string' ? c.cockpitUrl : '';
+      if (!u) return;
+      COCKPIT = u;
+      var a = root.querySelector('.sidebar__back a');
+      if (a) a.setAttribute('href', COCKPIT);
+    }, function () { /* le repli reste */ });
+  }
+
   lireRoute();
+  lireConfig();
   chargerReferentiel(false);
 })();
