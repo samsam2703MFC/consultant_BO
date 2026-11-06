@@ -206,44 +206,32 @@ textarea.in{min-height:64px;resize:vertical;line-height:1.45}
    La page tient l'écran : en-tête, frise des étapes, l'étape (seule à défiler si elle est longue), le pied. */
 .tb.tb--pas{height:100vh;height:100dvh;min-height:0;overflow:hidden}
 .tb--pas .tb-hd{position:static}
-.tb-pas{flex:1;min-height:0;display:flex;flex-direction:column}
-/* La frise : une section = un groupe nommé ; une étape = une case de 52 px (le doigt), reliées par un trait. */
-.tb-frise{flex:0 0 auto;display:flex;gap:22px;overflow-x:auto;overscroll-behavior-x:contain;padding:12px 22px 14px;background:#fff;scrollbar-width:thin}
-.tb-fr-g{flex:0 0 auto;display:flex;flex-direction:column;gap:7px}
-.tb-fr-s{width:0;min-width:100%;font:400 10.5px 'Gotham',system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* La frise à gauche (380 px), l'étape à droite, le trait de progression au-dessus, le pied sur toute la largeur. */
+.tb-pas{flex:1;min-height:0;display:grid;grid-template-columns:380px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"prog prog" "frise etape" "pied pied"}
+.tb-pas .tb-prog{grid-area:prog}
+.tb-pas .tb-etape{grid-area:etape}
+.tb-pas .tb-pied{grid-area:pied}
+/* La frise : une section = un intertitre ; une étape = une ligne de 64 px (le doigt), case numérotée sur un fil. */
+.tb-frise{grid-area:frise;display:flex;flex-direction:column;gap:18px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:18px 16px 24px;background:#fff;border-right:1px solid var(--line);scrollbar-width:thin}
+.tb-fr-g{display:flex;flex-direction:column;gap:7px}
+.tb-fr-s{font:400 11px/1.35 'Gotham',system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:0 6px}
 .tb-fr-g.on .tb-fr-s{color:var(--accent)}
-.tb-fr-p{display:flex;gap:8px;position:relative}
-.tb-fr-p::before{content:'';position:absolute;left:20px;right:20px;top:50%;height:2px;margin-top:-1px;background:var(--chip)}
-.tb-fr-p button{position:relative;width:52px;height:52px;flex:0 0 auto;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted-2);font:400 14px 'Gotham',system-ui,sans-serif;padding:0}
-.tb-fr-p button i{font-style:normal}
-.tb-fr-p button span{display:none}
-.tb-fr-p button.fait{background:var(--green);border-color:var(--green);color:#fff;font-size:18px}
-/* L'étape affichée : bordeaux plein (la sélection du système), un halo pour la retrouver d'un coup d'œil. */
-.tb-fr-p button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;box-shadow:0 0 0 4px rgba(141,29,44,.16)}
-/* Une étape à point critique : un point rouge (point d'état 8 px). */
-.tb-fr-p button.crit::after{content:'';position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 1.5px #fff}
+.tb-fr-p{display:flex;flex-direction:column;gap:4px;position:relative}
+.tb-fr-p::before{content:'';position:absolute;left:31px;top:28px;bottom:28px;width:2px;background:var(--chip)}
+.tb-fr-p button{position:relative;width:100%;min-height:64px;display:flex;align-items:center;gap:14px;padding:6px 10px;border:none;border-radius:10px;background:transparent;text-align:left;font:400 15px/1.3 'Gotham',system-ui,sans-serif;color:var(--muted-2)}
+.tb-fr-p button i{position:relative;width:44px;height:44px;flex:0 0 auto;border-radius:8px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-style:normal;color:var(--muted-2)}
+.tb-fr-p button span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;flex:1;min-width:0}
+.tb-fr-p button.fait{color:var(--muted)}
+.tb-fr-p button.fait i{background:var(--green);border-color:var(--green);color:#fff;font-size:18px}
+/* L'étape affichée : la ligne teintée et la case bordeaux pleine (la sélection du système), un halo autour. */
+.tb-fr-p button.on{background:rgba(141,29,44,.08);color:var(--accent)}
+.tb-fr-p button.on i{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;box-shadow:0 0 0 4px rgba(141,29,44,.16)}
+/* Une étape à point critique : un point rouge sur sa case (point d'état 8 px). */
+.tb-fr-p button.crit::after{content:'';position:absolute;top:9px;left:44px;width:8px;height:8px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 1.5px #fff}
 .tb-fr-p button.on.crit::after{background:#fff;box-shadow:none}
-/* Variante VERTICALE (?frise=verticale) : la frise à gauche, une ligne de 64 px par étape (case numérotée sur un fil,
-   titre de l'étape), la section en intertitre ; l'étape à droite ; le pied sur toute la largeur. */
-.tb-pas--v{display:grid;grid-template-columns:380px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"prog prog" "frise etape" "pied pied"}
-.tb-pas--v .tb-prog{grid-area:prog}
-.tb-pas--v .tb-etape{grid-area:etape}
-.tb-pas--v .tb-pied{grid-area:pied}
-.tb-pas--v .tb-frise{grid-area:frise;flex-direction:column;gap:18px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:18px 16px 24px;border-right:1px solid var(--line)}
-.tb-pas--v .tb-fr-s{width:auto;min-width:0;white-space:normal;font-size:11px;line-height:1.35;padding:0 6px}
-.tb-pas--v .tb-fr-p{flex-direction:column;gap:4px}
-.tb-pas--v .tb-fr-p::before{left:31px;right:auto;top:28px;bottom:28px;width:2px;height:auto;margin:0}
-.tb-pas--v .tb-fr-p button{width:100%;height:auto;min-height:64px;display:flex;align-items:center;gap:14px;padding:6px 10px;border:none;border-radius:10px;background:transparent;text-align:left;font-size:15px;line-height:1.3;color:var(--muted-2)}
-.tb-pas--v .tb-fr-p button i{position:relative;width:44px;height:44px;flex:0 0 auto;border-radius:8px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:var(--muted-2)}
-.tb-pas--v .tb-fr-p button span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;flex:1;min-width:0}
-.tb-pas--v .tb-fr-p button.fait{background:transparent;color:var(--muted)}
-.tb-pas--v .tb-fr-p button.fait i{background:var(--green);border-color:var(--green);color:#fff;font-size:18px}
-.tb-pas--v .tb-fr-p button.on{background:rgba(141,29,44,.08);color:var(--accent);box-shadow:none;font-weight:400}
-.tb-pas--v .tb-fr-p button.on i{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;box-shadow:0 0 0 4px rgba(141,29,44,.16)}
-.tb-pas--v .tb-fr-p button.crit::after{top:9px;left:44px;right:auto}
-@media (max-width:1100px){.tb-pas--v .tb-etape.avec{grid-template-columns:minmax(0,1fr)}.tb-pas--v .tb-etape__media .photo{max-height:44dvh}}
-@media (max-width:980px){.tb-pas--v{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"prog" "frise" "etape" "pied"}.tb-pas--v .tb-frise{max-height:30dvh;border-right:none;border-bottom:1px solid var(--line)}}
-.tb-prog{flex:0 0 auto;height:4px;background:var(--chip)}
+/* Portrait ou écran étroit : la frise passe au-dessus de l'étape (30 % de l'écran). */
+@media (max-width:980px){.tb-pas{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"prog" "frise" "etape" "pied"}.tb-frise{max-height:30dvh;border-right:none;border-bottom:1px solid var(--line)}}
+.tb-prog{height:4px;background:var(--chip)}
 .tb-prog i{display:block;height:100%;background:var(--accent);transition:width .2s}
 /* L'étape : le texte à gauche, la photo ou la vidéo à droite ; sans média, le texte seul, à une largeur lisible. */
 .tb-etape{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:minmax(0,1fr);gap:32px;align-content:start;padding:26px 34px 30px;touch-action:pan-y}
@@ -263,7 +251,9 @@ textarea.in{min-height:64px;resize:vertical;line-height:1.45}
 @keyframes tbEntreeG{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.tb-etape.de-droite,.tb-etape.de-gauche{animation:none}}
 /* Tablette en portrait ou écran étroit : la photo passe sous le texte. */
-@media (max-width:980px){.tb-etape.avec{grid-template-columns:minmax(0,1fr)}.tb-etape__media .photo{max-height:46dvh}.tb-etape{padding:20px 22px 24px}.tb-etape h1{font-size:32px}}
+/* Écran étroit : la photo passe sous le texte. */
+@media (max-width:1100px){.tb-etape.avec{grid-template-columns:minmax(0,1fr)}.tb-etape__media .photo{max-height:44dvh}}
+@media (max-width:980px){.tb-etape{padding:20px 22px 24px}.tb-etape h1{font-size:32px}}
 .tb-alerte{background:rgba(179,38,30,.07);border:1.5px solid var(--danger);border-radius:12px;padding:14px 18px;font-size:16px;line-height:1.45;color:var(--ink);display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
 .tb-alerte__i{flex:0 0 auto;color:var(--danger)}
 .tb-alerte__tx{white-space:pre-line;font-size:22px}

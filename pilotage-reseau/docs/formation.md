@@ -795,25 +795,20 @@ tous les magasins la même chose ».
   correspondance, le chiffre « vues faire » des Standards, la carte « l'équipe face à cette SOP » de la fiche et le choix
   du magasin du portail. Les tables de suivi (`ceo_sop_suivi`…) restent en base.
 
-## Lire une SOP sur la tablette : un assistant horizontal (06/11/2026)
+## Lire une SOP sur la tablette : un assistant de tablette, frise verticale (06/11/2026)
 
-- Client : « ceci doit être un assistant de type horizontal, fait pour le travail sur tablette » (la lecture pas à pas
-  avait la liste des étapes en colonne à gauche et un pied coupé en bas de l'écran).
-- `sop/tablette.js` (`vueLecture`, `pas`, `allerA`) et `sop/tablette.css` (`.tb--pas`, `.tb-frise`, `.tb-etape`,
-  `.tb-pied`) : la page tient l'écran (en-tête, frise, étape, pied ; seule l'étape défile si elle est longue). En-tête =
-  le titre de la SOP, son code et sa version.
-- **Frise** en haut : une section = un groupe nommé, une étape = une case de 52 px (vert ✓ faite, bordeaux l'étape
-  affichée, point rouge = point critique) ; elle défile à l'horizontale et ramène l'étape affichée au centre ; un toucher
-  va à l'étape. Un trait de progression dessous.
+- Client : « ceci doit être un assistant fait pour le travail sur tablette » (la lecture pas à pas avait une petite
+  liste d'étapes en colonne et un pied coupé en bas de l'écran) ; deux versions montrées (frise horizontale, frise
+  verticale), **la verticale retenue**.
+- `sop/tablette.js` (`vueLecture`, `pas`, `allerA`) et `sop/tablette.css` (`.tb--pas`, `.tb-pas`, `.tb-frise`,
+  `.tb-etape`, `.tb-pied`) : la page tient l'écran — en-tête (titre de la SOP, code, version), trait de progression,
+  la frise à gauche (380 px), l'étape à droite, le pied sur toute la largeur ; seules la frise et l'étape défilent.
+- **Frise** : une section = un intertitre (bordeaux pour celle de l'étape affichée) ; une étape = une ligne de 64 px,
+  case numérotée de 44 px sur un fil et titre de l'étape (deux lignes au plus) ; vert ✓ = faite, bordeaux = affichée
+  (ramenée au centre), point rouge = point critique ; un toucher va à l'étape.
 - **L'étape** en grand : « Étape n / N · section », titre de 40 px, texte de 24 px (ou le point critique), la photo ou la
-  vidéo à DROITE ; en portrait ou sous 980 px, sous le texte. Elle entre en glissant du côté où l'on va (sauf
-  « réduire les animations »).
+  vidéo à côté (dessous sous 1100 px) ; elle entre en glissant du côté où l'on va (sauf « réduire les animations »).
+  En portrait (sous 980 px) la frise passe au-dessus de l'étape (30 % de l'écran).
 - **Pied** : « ← Précédente » et « C'est fait · suivante → » (64 px), l'étape et le compte au centre ; à la dernière,
   « J'ai tout lu ✓ » (puis le quiz). **Balayer** l'étape vers la gauche = suivante (l'étape est faite), vers la droite =
   précédente ; un geste surtout vertical fait défiler le texte. Flèches ← → du clavier.
-- **Variante verticale** (client, même jour : « ça peut être une frise verticale, mais typée tablette wizard ») :
-  `?frise=verticale` (ou `localStorage` `foFrise`) — la frise à gauche (380 px), une ligne de 64 px par étape (case
-  numérotée sur un fil, titre de l'étape sur deux lignes au plus), la section en intertitre ; l'étape à droite (photo à
-  côté du texte, dessous sous 1100 px) ; le même pied, le même balayage. En portrait, la frise passe au-dessus (30 % de
-  l'écran). La version horizontale reste celle d'office, à trancher avec le client.
-

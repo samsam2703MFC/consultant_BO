@@ -17,9 +17,9 @@
  * OUVERTE ET LA MÊME POUR TOUS LES MAGASINS (06/11/2026, client : « la tablette doit être ouverte, et pour tous les
  * magasins la même chose » ; « je n'ai pas besoin du suivi pour les SOP ») : plus de PIN du magasin ni d'identification ;
  * la tablette est le mode d'emploi du travail en magasin. On lit les SOP pas à pas ; le quiz reste un exercice, corrigé
- * par le serveur sans rien enregistrer. LIRE UNE SOP = UN ASSISTANT HORIZONTAL (06/11/2026) : frise des étapes en haut,
- * l'étape en grand (texte à gauche, photo ou vidéo à droite), deux gros boutons en bas ; balayer l'écran ou les flèches
- * du clavier passent d'une étape à l'autre. Ce qui suit (PIN du magasin, PIN de l'employé, « vu faire ») décrit l'ancien
+ * par le serveur sans rien enregistrer. LIRE UNE SOP = UN ASSISTANT DE TABLETTE (06/11/2026) : la frise verticale des
+ * étapes à gauche, l'étape en grand (texte, photo ou vidéo à côté), deux gros boutons en bas ; balayer l'écran ou les
+ * flèches du clavier passent d'une étape à l'autre. Ce qui suit (PIN du magasin, PIN de l'employé, « vu faire ») décrit l'ancien
  * fonctionnement, dont les routes restent sur le serveur.
  *
  * Ancien : UNE SEULE TABLETTE PAR MAGASIN (lot 5 de la fusion, 06/11/2026, src/tablettes.php) : au premier lancement, le PIN DU
@@ -100,8 +100,7 @@
     poste: Q.get('poste') || localStorage.getItem('foPoste') || 'tous',
     langue: (Q.get('langue') || localStorage.getItem('foLangue')) === 'nl' ? 'nl' : 'fr',
     init: null, moi: null, jeton: null, suivi: {},
-    vue: 'liste', sop: null, etape: 0, vuEtapes: {}, sens: '',
-    frise: (Q.get('frise') || localStorage.getItem('foFrise')) === 'verticale' ? 'v' : 'h',   // la frise des étapes : horizontale ou verticale qi: 0, reponses: [], choix: null, resultat: null,
+    vue: 'liste', sop: null, etape: 0, vuEtapes: {}, sens: '', qi: 0, reponses: [], choix: null, resultat: null,
     pinPour: null, pin: '', valideur: null, note: '', occupe: false, erreur: null,
     onglet: ongletDuMoment(), // ouverture · journee · fermeture · aide (06/11/2026)
     tout: false               // identifiée : false = ses postes, true = tout le magasin
@@ -310,10 +309,11 @@
     (S.sop.contenu.sections || []).forEach((sec, si) => sec.etapes.forEach(e => out.push(Object.assign({ si, section: sec.titre }, e))));
     return out;
   }
-  /* L'assistant horizontal (06/11/2026, client : « un assistant de type horizontal, fait pour le travail sur tablette ») :
-     en haut la frise des étapes, rangées par section, qui défile à l'horizontale (l'étape affichée au centre) ; l'étape
-     en grand, le texte à gauche et la photo ou la vidéo à droite (empilés en portrait) ; en bas deux gros boutons. On
-     passe d'une étape à l'autre en balayant l'écran, par la frise ou par les flèches du clavier. */
+  /* L'assistant de tablette (06/11/2026, client : « un assistant fait pour le travail sur tablette », puis, entre une
+     frise horizontale et une verticale, « frise verticale ») : à gauche la frise des étapes rangées par section, une ligne
+     de 64 px par étape (case numérotée sur un fil, titre), l'étape affichée ramenée au centre ; à droite l'étape en grand,
+     le texte et la photo ou la vidéo à côté (dessous sur un écran étroit) ; en bas deux gros boutons. On passe d'une
+     étape à l'autre par la frise, en balayant l'écran ou par les flèches du clavier. */
   function vueLecture() {
     const E = etapes();
     if (!E.length) { return `<div class="vide">—</div>`; }
@@ -328,7 +328,7 @@
     const dernier = i === E.length - 1;
     const faites = Object.keys(S.vuEtapes).length;
     const media = (e.photo ? `<img class="photo" src="${esc(photoUrl(e.photo))}" alt="" data-zoom="${esc(photoUrl(e.photo))}">` : '') + (e.video ? video(e.video) : '');
-    return `<div class="tb-pas${S.frise === 'v' ? ' tb-pas--v' : ''}">
+    return `<div class="tb-pas">
       <nav class="tb-frise" aria-label="${esc(t().etapes)}">${frise}</nav>
       <div class="tb-prog"><i style="width:${Math.round(faites / E.length * 100)}%"></i></div>
       <section class="tb-etape${media ? ' avec' : ''}${S.sens ? ' ' + S.sens : ''}" data-balayage>
@@ -415,7 +415,7 @@
     if (S.vue === 'lecture') {
       const on = el.querySelector('.tb-frise button.on');
       const doux = S.sens && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (on) { on.scrollIntoView({ inline: 'center', block: S.frise === 'v' ? 'center' : 'nearest', behavior: doux ? 'smooth' : 'auto' }); }
+      if (on) { on.scrollIntoView({ block: 'center', inline: 'nearest', behavior: doux ? 'smooth' : 'auto' }); }
     }
     S.sens = '';   // l'animation d'entrée ne joue qu'au changement d'étape (pas sur FR / NL)
   }
