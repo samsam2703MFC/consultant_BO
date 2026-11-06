@@ -122,6 +122,7 @@ require __DIR__ . '/../../src/recurrence_pwa.php';
 require __DIR__ . '/../../src/leviers.php';
 require __DIR__ . '/../../src/formation.php';
 require __DIR__ . '/../../src/sop.php';
+require __DIR__ . '/../../src/referentiel.php';
 require __DIR__ . '/../../src/parcours.php';
 $tCharge = microtime(true);
 
@@ -326,6 +327,11 @@ function route(string $method, string $path): mixed
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
+        if ($f !== null) { return $f; }
+    }
+    // --- Formation › Manuel du réseau : le référentiel commun (src/referentiel.php, fusion du 06/11/2026)
+    if ($path === '/formation/ref' || str_starts_with($path, '/formation/ref/')) {
+        $f = rfRoute($method, $path);
         if ($f !== null) { return $f; }
     }
     // --- lectures (une par écran + référentiels)

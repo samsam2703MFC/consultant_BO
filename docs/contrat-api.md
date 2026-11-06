@@ -167,6 +167,69 @@ publiée « à revalider » est venue après). État d'une langue : `origine`, `
 | `POST /formation/sop/tablette/vu` | `{shop, sop, employe, valideur, pin, decision: vu\|pas_encore, note}` — seule la responsable valide, jamais soi-même, quiz de la version exigé → `{statut, competence {nom, acquise, vues, total, panel {ok, deja?, erreur?}}}` — une compétence acquise est cochée au panel (`PUT /employees/{id}/competencies`, relue) |
 | `PUT /formation/sop/tablette/langue` | `{jeton, langue}` |
 
+## Formation · Manuel du réseau — le référentiel commun (`src/referentiel.php`, 06/11/2026)
+
+Le référentiel v25 (8 domaines, 36 sous-catégories) est la colonne vertébrale ; chaque SOP est un **standard** rangé
+dans une sous-catégorie et étiqueté par phases et postes. Le CRM lit `GET /formation/ref` par `nl_cockpit_get` (même
+accès que `/formation/v25`). Doc : `docs/formation.md` § Manuel du réseau.
+
+**`GET /formation/ref`** — le contrat de lecture :
+
+```json
+{
+  "version": "2026-11-06T10:00:00+00:00",
+  "phases":  [{"cle": "preouverture", "fr": "Pré-ouverture", "nl": "Vóór de opening"}],
+  "postes":  [{"code": "P3", "fr": "Opérateur Vente", "nl": "Medewerker verkoop"}],
+  "domaines": [{"code": "D5", "fr": "Opérations & Production", "nl": "Operaties & productie",
+    "souscats": [{"cle": "D5.3", "fr": "Production", "nl": "Productie", "description": "…",
+      "competences": ["C-PROD.Pain"], "formations": ["FO-07"], "checklists": ["AC-08"]}]}],
+  "standards": [{"id": "eclairs", "code": "SOP-CUI-ECL-01", "fr": "Éclairs et choux", "nl": "Eclairs en soezen",
+    "statut": "publiee", "version": "1.0", "souscat": "D5.3", "phases": ["preouverture", "operationnel"],
+    "postes": ["P1", "P5"], "competences": ["C-PROD.Pâtisserie"], "formations": ["FO-08"], "checklists": [],
+    "moment": "ouverture", "lien": "#/sop/eclairs"}],
+  "formations":  [{"code": "FO-08", "fr": "Formation Pâtisserie technique", "nl": null, "controleur": "…", "frequence": "…"}],
+  "competences": [{"code": "C-PROD.Pâtisserie", "famille": "C-PROD", "fr": "Pâtisserie technique", "nl": null,
+    "description": "…", "formation": "FO-08", "standards": ["eclairs"],
+    "panel": {"id": 123, "nom": "…", "etat": "valide"}}],
+  "plans": [{"code": "PF-VEND", "fr": "Plan Vendeur / Vendeuse"}],
+  "manques": {"competencesSansStandard": ["C-BARISTA.Espresso"], "standardsSansCompetence": [], "standardsSansSouscat": []},
+  "formationUrl": ""
+}
+```
+
+- `version` : date de la dernière écriture dans le référentiel (standards, sous-catégories, correspondances).
+- `nl` vaut `null` quand il n'y a pas de texte néerlandais. Les libellés NL des phases, postes, domaines et
+  sous-catégories sont à relire.
+- `statut` d'un standard : `publiee`, `a_valider` ou `brouillon` (repris du CRM, pas encore relu — le CRM peut le masquer).
+- `lien` : relatif au module Formation (`<base du module>/` + `lien` ouvre la fiche). `formationUrl` : le chemin du
+  module (réglage `formationUrl`, sinon `config.php › formationUrl`, sinon `FORMATION_URL`), vide s'il n'est pas réglé.
+- `panel.etat` : `valide` (choisie par une personne), `certain` (proposée automatiquement, sans ambiguïté), `propose`
+  (à trancher), `aucun`. `panel.id` et `panel.nom` ne sont remplis que pour `valide` et `certain` : seules celles-là
+  servent à cocher au « vu faire ».
+- `?detail=1` (écrans du Cockpit) ajoute, sans rien retirer : `nlRelu` (domaines, sous-catégories) ; `type`, `trad`,
+  `nbEtapes`, `partie`, `competencePanel` (standards) ; `partie`, `attendu` (formations) ; `checklistsConnues`,
+  `competencesNonDecrites`.
+
+| Route | Rôle |
+|---|---|
+| `GET /formation/ref` | le contrat ci-dessus |
+| `PUT /formation/ref/standards/{id}` | `{souscat?, phases?, postes?, competences?, formations?, checklists?}` — clé absente = inchangée ; `souscat: null` retire. Chaque code est contrôlé contre le v25 (sous-catégories de `ceo_ref_souscat`, 4 phases, P1–P12, 56 compétences, 53 formations, checklists citées par les sous-catégories) → **422** `{error, invalides: {cle: [codes]}}` ; 404 standard inconnu → `{ok, standard}` |
+| `GET /formation/ref/correspondance?rafraichir=1` | `panel {total, source, indispo, motif, lueLe}`, `lignes[]` (code, famille, fr, description, formation, `standards[{id, titre}]`, `etat`, `panel {id, nom}`, `score`, `propositions[{id, nom, score}]`, `tranche`, `majLe`, `majPar`), `liste[]` (compétences du panel et les codes qui y sont reliés), `couverture {valide, certain, propose, aucun, total, panelRelies, panelTotal, sansStandard}`, `auto` (bilan quand la table vide vient d'être proposée) |
+| `PUT /formation/ref/correspondance/{code}` | `{panelId: id}` → `valide` (l'id doit exister dans la liste du panel, sinon 422) ; `{panelId: null}` → `aucun` (tranché). Code URL-encodé (`C-PROD.P%C3%A2tisserie`) ; 404 code inconnu du v25 |
+| `POST /formation/ref/correspondance/proposer` | `{rafraichir?}` — relance la proposition automatique ; une ligne tranchée (`valide`, `aucun` choisi) n'est jamais réécrite → `{certain, propose, aucun, gardees, panel}` ; 503 si le panel est illisible |
+| `PUT /formation/ref/souscats/{cle}` | `{nl?, description?}` — un NL enregistré ici passe « relu » ; 422 NL vide ou > 160 caractères |
+| `POST /formation/ref/importer-crm` | reprend les procédures de `crm_mo_procedures` (même base) en SOP `brouillon` (id `crm-<id>`, source `crm:<id>`, idempotent), sauf AC-01, AC-02, AC-03 → `{disponible, reprises[{id, code, titre, souscat}], dejaLa[], ignorees[{…, raison}], photosNonReprises}` ; `disponible: false` quand la table n'est pas dans la base |
+
+Chaque écriture est journalisée (`ceo_journal_entry`, type « Formation »).
+
+**Effets sur les routes des SOP** : chaque SOP rendue par `/formation/sop/*` porte `classement {souscat, phases,
+postes, competences, formations, checklists}` ; chaque personne de la tablette porte `postesV25` ; `PATCH
+/formation/sop/fiche/{id}` accepte `statut: brouillon` ; un brouillon n'est ni dans `tablette/init`, ni lisible par
+`tablette/sop/{id}` (404), ni dans `manuel` / `manuel.pdf`. `POST /formation/sop/tablette/vu` rend en plus
+`competences[{code, nom, acquise, vues, total, panel {id, nom, etat} | null, coche {ok, deja?, erreur?} | null}]` : les
+codes `C-…` de la SOP acquis et reliés au panel y sont cochés ; `competence` garde la même forme (le premier code
+acquis et relié, sinon l'ancienne compétence du panel de la SOP en repli).
+
 ## 1. Endpoints
 
 | Clé | Endpoint | Alimente |

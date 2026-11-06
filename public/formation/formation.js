@@ -181,10 +181,10 @@
     ['Manuel opératoire', [['manuel', 'Manuel en ligne']]],
     ['Documentation', [['api', 'Routes API']]],
   ];
-  // Les SOP du réseau (formation-sop.js, src/sop.php) : un groupe à elles, avant la documentation.
+  // Le Manuel du réseau (formation-sop.js, src/sop.php, src/referentiel.php) : un groupe à lui, avant la documentation.
   var SOP = window.FormationSop || null;
   if (SOP) {
-    NAV.splice(NAV.length - 1, 0, ['Standards (SOP)', SOP.nav]);
+    NAV.splice(NAV.length - 1, 0, [SOP.groupe || 'Standards (SOP)', SOP.nav]);
     Object.keys(SOP.icones).forEach(function (k) { ICONES[k] = SOP.icones[k]; });
   }
   var TITRES = {};

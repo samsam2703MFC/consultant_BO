@@ -33,7 +33,13 @@ declare(strict_types=1);
  * les postes de cette personne, a été vue faire à la version en vigueur ; elle est alors COCHÉE AU PANEL pour
  * cette personne (PUT /employees/{id}/competencies, relu, journalisé — décision du 06/11/2026).
  *
- * Contrat : docs/contrat-api.md § Formation · Standards (SOP).
+ * MANUEL DU RÉSEAU (fusion du 06/11/2026, src/referentiel.php) : chaque SOP est un « standard » rangé dans une
+ * sous-catégorie du référentiel v25, étiqueté par phases et postes (P1–P12), relié à des codes C-…, FO-… et à des
+ * checklists. Le « vu faire » coche au panel les compétences reliées aux codes C-… de la SOP ; l'ancienne
+ * compétence du panel (competence_id) reste un repli. Statut `brouillon` : une SOP reprise du Manuel opératoire du
+ * CRM, pas encore relue — ni sur la tablette, ni dans le Manuel imprimé.
+ *
+ * Contrat : docs/contrat-api.md § Formation · Standards (SOP) et § Formation · Manuel du réseau.
  */
 
 const FO_LANGUES = ['fr', 'nl'];
@@ -190,6 +196,7 @@ function ep_sop_sops(): array
         'totaux' => [
             'sops' => count($out),
             'aValider' => count(array_filter($out, static fn ($s) => $s['statut'] === 'a_valider')),
+            'brouillons' => count(array_filter($out, static fn ($s) => $s['statut'] === 'brouillon')),
             'etapes' => array_sum(array_column($out, 'nbEtapes')),
             'tradARelire' => $aRelire,
             'sansCompetence' => count(array_filter($out, static fn ($s) => $s['competence'] === null)),
@@ -287,7 +294,7 @@ function ep_sop_manuel(): array
 {
     $l = foLangueParam();
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_sop ORDER BY dossier, ordre, id') as $r) {
+    foreach (Db::rows('SELECT * FROM ceo_sop WHERE statut <> \'brouillon\' ORDER BY dossier, ordre, id') as $r) {
         $c = foContenuVersion((string) $r['id'], (string) $r['version']);
         $out[] = foSopLigne($r) + ['contenu' => foContenuLangue($c, $l, true)];
     }
@@ -299,7 +306,7 @@ function ep_sop_manuel_pdf(): array
 {
     $l = foLangueParam();
     $d = isset($_GET['dossier']) && isset(FO_DOSSIERS[(string) $_GET['dossier']]) ? (string) $_GET['dossier'] : null;
-    $rows = Db::rows('SELECT * FROM ceo_sop' . ($d !== null ? ' WHERE dossier = ?' : '') . ' ORDER BY dossier, ordre, id', $d !== null ? [$d] : []);
+    $rows = Db::rows('SELECT * FROM ceo_sop WHERE statut <> \'brouillon\'' . ($d !== null ? ' AND dossier = ?' : '') . ' ORDER BY dossier, ordre, id', $d !== null ? [$d] : []);
     $titre = ($l === 'nl' ? 'Operationeel handboek' : 'Manuel opératoire') . ($d !== null ? ' — ' . FO_DOSSIERS[$d][$l] : '');
     foPdfSortie($rows, $l, true, $titre, 'manuel-' . $l . ($d !== null ? '-' . $d : ''));
     return [];
@@ -378,7 +385,7 @@ function wr_sop_reglage(string $id): array
             $set[] = 'trad_' . $l . ' = ?'; $p[] = $b['trad'][$l]; $quoi[] = strtoupper($l) . ' ' . str_replace('_', ' ', (string) $b['trad'][$l]);
         }
     }
-    foreach (['statut' => ['publiee', 'a_valider'], 'poste' => FO_POSTES] as $k => $ok) {
+    foreach (['statut' => ['publiee', 'a_valider', 'brouillon'], 'poste' => FO_POSTES] as $k => $ok) {
         if (!isset($b[$k])) { continue; }
         if (!in_array($b[$k], $ok, true)) { return foRefus(400, $k . ' inconnu'); }
         $set[] = $k . ' = ?'; $p[] = $b[$k]; $quoi[] = $k . ' ' . $b[$k];
@@ -457,8 +464,10 @@ function ep_sop_tablette_init(): array
     $shop = foShopParam();
     if ($shop === null) { return foRefus(400, 'magasin attendu (?shop=)'); }
     $poste = isset($_GET['poste']) && in_array($_GET['poste'], FO_POSTES, true) ? (string) $_GET['poste'] : null;
-    $rows = Db::rows('SELECT * FROM ceo_sop' . ($poste !== null ? ' WHERE poste = ?' : '') . ' ORDER BY dossier, ordre, id', $poste !== null ? [$poste] : []);
-    $personnes = array_map(static fn ($p) => ['id' => $p['id'], 'nom' => $p['nom'], 'valideur' => $p['valideur'], 'langue' => $p['langue'], 'postes' => $p['postes']], foEquipe($shop));
+    // Un brouillon (repris du CRM, pas encore relu) ne va pas sur la tablette du magasin.
+    $rows = Db::rows('SELECT * FROM ceo_sop WHERE statut <> \'brouillon\'' . ($poste !== null ? ' AND poste = ?' : '') . ' ORDER BY dossier, ordre, id', $poste !== null ? [$poste] : []);
+    $personnes = array_map(static fn ($p) => ['id' => $p['id'], 'nom' => $p['nom'], 'valideur' => $p['valideur'], 'langue' => $p['langue'], 'postes' => $p['postes'],
+        'postesV25' => $p['postesV25'] ?? []], foEquipe($shop));
     return ['magasin' => ['id' => $shop, 'nom' => foMagasinNom($shop)], 'poste' => $poste, 'postes' => FO_POSTES,
         'personnes' => $personnes, 'sops' => array_map('foSopLigne', $rows), 'pinPanel' => class_exists('PanelApi') && PanelApi::configured()];
 }
@@ -489,7 +498,7 @@ function ep_sop_tablette_moi(): array
 function ep_sop_tablette_sop(string $id): array
 {
     $r = foSopRow($id);
-    if ($r === null) { return foRefus(404, 'SOP inconnue'); }
+    if ($r === null || $r['statut'] === 'brouillon') { return foRefus(404, 'SOP inconnue'); }
     $c = foContenuVersion((string) $r['id'], (string) $r['version']);
     foreach ($c['quiz'] as &$q) { unset($q['bonne']); }
     unset($q, $c['corrections'], $c['remarques']);
@@ -503,7 +512,7 @@ function wr_sop_tablette_lu(): array
     $j = foJetonLire($b['jeton'] ?? null);
     if ($j === null) { return foRefus(401, 'jeton absent ou expiré : s’identifier à nouveau'); }
     $r = foSopRow((string) ($b['sop'] ?? ''));
-    if ($r === null) { return foRefus(404, 'SOP inconnue'); }
+    if ($r === null || $r['statut'] === 'brouillon') { return foRefus(404, 'SOP inconnue'); }
     $now = date('Y-m-d H:i:s');
     Db::exec('INSERT INTO ceo_sop_suivi (shop_id, employee_id, sop_id, employee_nom, version, lu_le, maj_le) VALUES (?, ?, ?, ?, ?, ?, ?)
               ON DUPLICATE KEY UPDATE employee_nom = VALUES(employee_nom), lu_le = VALUES(lu_le), maj_le = VALUES(maj_le),
@@ -520,7 +529,7 @@ function wr_sop_tablette_quiz(): array
     if ($j === null) { return foRefus(401, 'jeton absent ou expiré : s’identifier à nouveau'); }
     $r = foSopRow((string) ($b['sop'] ?? ''));
     if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    if ($r['statut'] === 'a_valider') { return foRefus(409, 'SOP à valider : lisible, sans quiz ni validation pour l’instant'); }
+    if (in_array($r['statut'], ['a_valider', 'brouillon'], true)) { return foRefus(409, 'SOP à valider : lisible, sans quiz ni validation pour l’instant'); }
     $c = foContenuVersion((string) $r['id'], (string) $r['version']);
     $rep = is_array($b['reponses'] ?? null) ? array_values($b['reponses']) : [];
     $faux = [];
@@ -554,7 +563,7 @@ function wr_sop_tablette_vu(): array
     if ($shop === null || $emp <= 0 || $val <= 0) { return foRefus(400, 'magasin, personne et responsable attendus'); }
     $r = foSopRow((string) ($b['sop'] ?? ''));
     if ($r === null) { return foRefus(404, 'SOP inconnue'); }
-    if ($r['statut'] === 'a_valider') { return foRefus(409, 'SOP à valider : lisible, sans validation pour l’instant'); }
+    if (in_array($r['statut'], ['a_valider', 'brouillon'], true)) { return foRefus(409, 'SOP à valider : lisible, sans validation pour l’instant'); }
     $vp = foPersonne($shop, $val);
     if ($vp === null || !$vp['valideur']) { return foRefus(403, 'seule la responsable du magasin valide « vu faire »'); }
     if ($val === $emp) { return foRefus(403, 'on ne valide pas soi-même'); }
@@ -583,9 +592,17 @@ function wr_sop_tablette_vu(): array
             [$shop, $emp, $r['id'], $p['nom'], (string) $r['version'], $note ?? 'pas encore', $now]);
     }
     try { journalAdd($vp['nom'], 'Formation', (string) $r['titre_fr'], $p['nom'] . ($decision === 'vu' ? ' : vu faire ✓' : ' : pas encore') . ' (' . foMagasinNom($shop) . ')'); } catch (Throwable $e) { /* */ }
-    // La compétence de la SOP : acquise maintenant ?
+    // Les compétences du référentiel (codes C-… de la SOP, src/referentiel.php) : acquises maintenant ? Chacune,
+    // acquise et reliée au panel (correspondance valide ou certaine), est cochée au panel pour la personne.
     $acq = null;
-    if ($decision === 'vu' && ($r['competence_nom'] ?? null) !== null) {
+    $acqs = $decision === 'vu' && function_exists('rfVuFaire') ? rfVuFaire($shop, $p, $r) : [];
+    $relies = array_values(array_filter($acqs, static fn ($x) => $x['panel'] !== null));
+    if ($relies !== []) {
+        $x = array_values(array_filter($relies, static fn ($y) => $y['acquise']))[0] ?? $relies[0];
+        $acq = ['nom' => $x['nom'], 'code' => $x['code'], 'acquise' => $x['acquise'], 'vues' => $x['vues'], 'total' => $x['total']] + ($x['coche'] !== null ? ['panel' => $x['coche']] : []);
+    }
+    // Repli : la SOP n'a aucun code C-… relié au panel — l'ancienne compétence du panel rattachée dans Rédaction.
+    elseif ($decision === 'vu' && ($r['competence_nom'] ?? null) !== null) {
         $sops = Db::rows('SELECT * FROM ceo_sop');
         $comps = foCompetencesUtilisees($sops);
         $mat = foMatrice($shop, [$p], $sops, $comps);
@@ -597,7 +614,7 @@ function wr_sop_tablette_vu(): array
             $acq['panel'] = foCocherPanel($shop, $emp, (int) $r['competence_id'], (string) $r['competence_nom'], $p['nom']);
         }
     }
-    return ['ok' => true, 'decision' => $decision, 'statut' => foStatut(foSuiviLigne($shop, $emp, (string) $r['id']), $r), 'competence' => $acq];
+    return ['ok' => true, 'decision' => $decision, 'statut' => foStatut(foSuiviLigne($shop, $emp, (string) $r['id']), $r), 'competence' => $acq, 'competences' => $acqs];
 }
 
 /** PUT /formation/tablette/langue — {jeton, langue} : la tablette s'en souvient pour cette personne. */
@@ -901,7 +918,9 @@ function foPersonneForme(int $id, string $nom, string $role, ?array $r): array
     $postes = $r !== null && $r['postes'] !== null ? array_values(array_filter(explode(',', (string) $r['postes']))) : foPostesDuRole($role);
     $val = $r !== null && $r['valideur'] !== null ? (int) $r['valideur'] === 1 : foValideurDuRole($role);
     return ['id' => $id, 'nom' => $nom, 'role' => $role, 'postes' => $postes, 'valideur' => $val,
-        'langue' => $r !== null && in_array($r['langue'], FO_LANGUES, true) ? (string) $r['langue'] : 'fr'];
+        'langue' => $r !== null && in_array($r['langue'], FO_LANGUES, true) ? (string) $r['langue'] : 'fr',
+        // Ses postes du référentiel v25 (P1–P12), déduits de ses postes de tablette : « Ma journée » les lit.
+        'postesV25' => function_exists('rfPostesPersonne') ? rfPostesPersonne($postes, $val) : []];
 }
 
 function foPersonneEcrire(string $shop, int $emp, string $nom, ?string $postes, ?int $valideur, ?string $langue): void
@@ -1246,6 +1265,8 @@ function foSopLigne(array $r): array
         'objectif' => ['fr' => (string) ($r['objectif_fr'] ?? ''), 'nl' => (string) ($r['objectif_nl'] ?? '')],
         'duree' => $r['duree'], 'nbEtapes' => (int) $r['nb_etapes'], 'nbPhotos' => (int) $r['nb_photos'],
         'majLe' => foIso($r['maj_le']), 'majPar' => $r['maj_par'],
+        // Le classement du Manuel du réseau (src/referentiel.php) : sous-catégorie v25, phases, postes P1–P12, codes.
+        'classement' => function_exists('rfClassementDe') ? rfClassementDe($r) : null,
     ];
 }
 

@@ -5,6 +5,11 @@
  * reste jamais dans la tablette). Sans identification on peut lire, mais rien n'est compté. Après 10 minutes sans
  * geste, la tablette se déconnecte : elle est partagée.
  * API : ../api/cockpit/formation/sop/tablette/* (src/sop.php), à côté du module Formation.
+ *
+ * « Ma journée » (Manuel du réseau, 06/11/2026) : une fois identifiée, la personne voit d'abord SES standards — ceux
+ * dont un poste du référentiel v25 (P1–P12) est l'un des siens (déduits de ses postes de tablette, plus l'encadrement
+ * si elle valide « vu faire ») — rangés par moment (ouverture, journée, après-midi, fermeture, autres), avec leur
+ * état : à lire, lu, quiz, vu faire. « Toutes les SOP » garde la liste par compétence. Le PIN ne change pas.
  */
 (function () {
   'use strict';
@@ -24,7 +29,10 @@
       demander: 'Demander à être vu(e) faire', plusTard: 'Plus tard', reste: 'Il reste à être vu(e) faire par la responsable du magasin, sur le poste.',
       vuFaire: 'Vu faire', vuFaireS: 'La responsable a vu faire cette SOP, sur place.', responsable: 'Responsable', pasEncore: 'Pas encore', okVu: '✓ Vu faire',
       noteP: 'Une remarque (facultatif)', compAcq: 'Compétence acquise', compEnc: 'Compétence', retour: '← Les SOP', identifie: 'Identifie-toi pour que ta lecture soit comptée.',
-      faux: 'À revoir', okLu: 'Lecture enregistrée', erreurCharge: 'Impossible de charger les SOP', choisirMag: 'Choisir le magasin de cette tablette', pasDeQuiz: 'Cette SOP n’a pas de quiz.' },
+      faux: 'À revoir', okLu: 'Lecture enregistrée', erreurCharge: 'Impossible de charger les SOP', choisirMag: 'Choisir le magasin de cette tablette', pasDeQuiz: 'Cette SOP n’a pas de quiz.',
+      journee: 'Ma journée', toutes: 'Toutes les SOP', sesPostes: 'Mes postes', rienJournee: 'Aucun standard n’est encore rangé pour tes postes.',
+      moment: { ouverture: 'Ouverture', journee: 'Journée', 'apres-midi': 'Après-midi', fermeture: 'Fermeture', autres: 'Autres moments' },
+      etats: { non: 'à lire', lu: 'lu', quiz: 'quiz réussi', vu: 'vu faire', a_revoir: 'à revoir' }, standards: 'standards', panelCoche: 'cochée au panel' },
     nl: { titre: 'SOP', poste: { cuisson: 'Bakken', production: 'Productie', vente: 'Verkoop', nettoyage: 'Schoonmaak', tous: 'Alle' },
       quiLit: 'Wie leest?', quiLitS: 'Kies je naam en tik je pincode — zoals bij de checklists.', pinDe: 'Pincode van', anonyme: 'Niet aangemeld',
       lireSans: 'Zonder aanmelding kun je lezen, maar niets wordt geteld.', changer: 'Andere persoon', sortir: 'Afmelden',
@@ -36,7 +44,10 @@
       demander: 'Vragen om voor te doen', plusTard: 'Later', reste: 'Nu nog voordoen voor de winkelverantwoordelijke, op de post.',
       vuFaire: 'Voorgedaan', vuFaireS: 'De verantwoordelijke heeft deze SOP zien uitvoeren, ter plaatse.', responsable: 'Verantwoordelijke', pasEncore: 'Nog niet', okVu: '✓ Voorgedaan',
       noteP: 'Een opmerking (facultatief)', compAcq: 'Competentie verworven', compEnc: 'Competentie', retour: '← De SOP', identifie: 'Meld je aan zodat je lezing telt.',
-      faux: 'Opnieuw bekijken', okLu: 'Lezing bewaard', erreurCharge: 'De SOP konden niet geladen worden', choisirMag: 'Kies de winkel van deze tablet', pasDeQuiz: 'Deze SOP heeft geen quiz.' }
+      faux: 'Opnieuw bekijken', okLu: 'Lezing bewaard', erreurCharge: 'De SOP konden niet geladen worden', choisirMag: 'Kies de winkel van deze tablet', pasDeQuiz: 'Deze SOP heeft geen quiz.',
+      journee: 'Mijn dag', toutes: 'Alle SOP', sesPostes: 'Mijn posten', rienJournee: 'Er staat nog geen standaard voor jouw posten.',
+      moment: { ouverture: 'Opening', journee: 'Overdag', 'apres-midi': 'Namiddag', fermeture: 'Sluiting', autres: 'Andere momenten' },
+      etats: { non: 'te lezen', lu: 'gelezen', quiz: 'quiz geslaagd', vu: 'voorgedaan', a_revoir: 'opnieuw' }, standards: 'standaarden', panelCoche: 'aangevinkt in het panel' }
   };
 
   const S = {
@@ -45,7 +56,8 @@
     langue: (Q.get('langue') || localStorage.getItem('foLangue')) === 'nl' ? 'nl' : 'fr',
     init: null, moi: null, jeton: null, suivi: {},
     vue: 'liste', sop: null, etape: 0, vuEtapes: {}, qi: 0, reponses: [], choix: null, resultat: null,
-    pinPour: null, pin: '', valideur: null, note: '', occupe: false, erreur: null, magasins: null
+    pinPour: null, pin: '', valideur: null, note: '', occupe: false, erreur: null, magasins: null,
+    onglet: 'journee'   // une fois identifiée : « Ma journée » d'abord, ou « Toutes les SOP »
   };
   if (!POSTES.includes(S.poste)) { S.poste = 'tous'; }
   const $ = s => document.querySelector(s);
@@ -111,6 +123,7 @@
 
   /* ── La liste des SOP du poste, rangées par compétence ── */
   function vueListe() {
+    if (S.moi && S.onglet === 'journee') { return vueJournee(); }
     const sops = (S.init.sops || []).filter(s => S.poste === 'tous' || s.poste === S.poste);
     const groupes = new Map();
     sops.forEach(s => { const k = s.competence ? s.competence.nom : '\u0000' + t().sansComp; if (!groupes.has(k)) { groupes.set(k, []); } groupes.get(k).push(s); });
@@ -126,7 +139,34 @@
           <small>${s.nbEtapes} ${esc(t().etapes)}${S.moi ? ' · ' + esc(t().st[st(s.id)]) : ''}</small></span><span class="fl">›</span></button>`).join('')}</div>`;
     }).join('') || `<div class="vide">—</div>`;
     const chips = `<div class="tb-chips">${POSTES.concat(['tous']).map(p => `<button data-poste="${p}" class="${S.poste === p ? 'on' : ''}">${esc(t().poste[p])}</button>`).join('')}</div>`;
-    return `<div class="tb-corps"><div class="tb-liste">${chips}${liste}</div>${cote()}</div>`;
+    return `<div class="tb-corps"><div class="tb-liste">${onglets()}${chips}${liste}</div>${cote()}</div>`;
+  }
+
+  /* ── « Ma journée » : les standards de la personne, par moment ── */
+  const MOMENTS = ['ouverture', 'journee', 'apres-midi', 'fermeture'];
+  function onglets() {
+    if (!S.moi) { return ''; }
+    return `<div class="tb-chips" role="tablist"><button data-onglet="journee" class="${S.onglet === 'journee' ? 'on' : ''}">${esc(t().journee)}</button><button data-onglet="toutes" class="${S.onglet === 'toutes' ? 'on' : ''}">${esc(t().toutes)}</button></div>`;
+  }
+  /** Un standard est de la journée de la personne : un de ses postes v25 est celui du standard (sinon l'ancien poste). */
+  function pourMoi(s) {
+    const p = (s.classement && s.classement.postes) || [];
+    if (p.length) { return p.some(x => (S.moi.postesV25 || []).includes(x)); }
+    return (S.moi.postes || []).includes(s.poste);
+  }
+  function vueJournee() {
+    const st = id => (S.suivi[id] || {}).statut || 'non';
+    const ic = { non: '·', lu: 'L', quiz: 'Q', vu: '✓', a_revoir: '!' };
+    const miens = (S.init.sops || []).filter(pourMoi);
+    const groupes = MOMENTS.concat(['autres']).map(m => ({ m, l: miens.filter(s => m === 'autres' ? !MOMENTS.includes(s.moment) : s.moment === m) })).filter(g => g.l.length);
+    const corps = groupes.map(g => {
+      const vus = g.l.filter(s => st(s.id) === 'vu').length;
+      return `<div class="tb-grp"><div class="sec-t">${esc(t().moment[g.m])}<small>${vus} / ${g.l.length} ${esc(t().vus)}</small></div>
+        ${g.l.map(s => `<button class="tb-sop" data-sop="${esc(s.id)}"><span class="st ${st(s.id)}">${ic[st(s.id)]}</span><span class="x"><b>${esc(L(s.titre))}${s.statut === 'a_valider' ? ` <span class="pill att">${esc(t().aValider)}</span>` : ''}</b>
+          <small>${esc(s.code || '')} · ${s.nbEtapes} ${esc(t().etapes)}</small></span><span class="pill ${st(s.id) === 'vu' ? 'ok' : st(s.id) === 'a_revoir' ? 'ko' : st(s.id) === 'non' ? '' : 'att'}">${esc(t().etats[st(s.id)])}</span><span class="fl">›</span></button>`).join('')}</div>`;
+    }).join('') || `<div class="vide">${esc(t().rienJournee)}</div>`;
+    const postes = (S.moi.postesV25 || []).join(' · ');
+    return `<div class="tb-corps"><div class="tb-liste">${onglets()}<div class="mini" style="margin:-6px 0 12px">${esc(t().sesPostes)} : ${esc(postes || '—')} · ${miens.length} ${esc(t().standards)}</div>${corps}</div>${cote()}</div>`;
   }
 
   function cote() {
@@ -255,7 +295,7 @@
         S.jeton = r.jeton; S.moi = r.personne; S.suivi = r.suivi || {};
         sessionStorage.setItem('foJeton', r.jeton);
         if (r.personne.langue && r.personne.langue !== S.langue) { S.langue = r.personne.langue; localStorage.setItem('foLangue', S.langue); }
-        S.pinPour = null; actif();
+        S.pinPour = null; S.onglet = 'journee'; actif();
       } else if (act === 'vu') {
         await valider('vu');
       }
@@ -267,7 +307,13 @@
     const r = await api('/formation/sop/tablette/vu', { shop: S.shop, sop: S.sop.id, employe: S.moi.id, valideur: S.valideur, pin: S.pin, decision, note: S.note || null });
     S.suivi[S.sop.id] = Object.assign({}, S.suivi[S.sop.id] || {}, { statut: r.statut });
     let m = decision === 'vu' ? t().okVu : t().pasEncore;
-    if (r.competence && r.competence.acquise) {
+    // Les compétences C-… de la SOP (Manuel du réseau) : celles acquises sont cochées au panel ; un refus se dit.
+    const acq = (r.competences || []).filter(x => x.acquise);
+    if (acq.length) {
+      m = t().compAcq + ' : ' + acq.map(x => x.nom + (x.coche && x.coche.ok ? ' (' + t().panelCoche + ')' : x.coche ? ' · panel : ' + x.coche.erreur : '')).join(' · ');
+    } else if ((r.competences || []).length) {
+      m += ' · ' + r.competences.map(x => t().compEnc + ' ' + x.nom + ' ' + x.vues + ' / ' + x.total).join(' · ');
+    } else if (r.competence && r.competence.acquise) {
       m = t().compAcq + ' : ' + r.competence.nom;
       // Cochée au panel pour la personne ; un refus du panel se dit, la validation reste enregistrée.
       if (r.competence.panel && !r.competence.panel.ok) { m += ' · panel : ' + r.competence.panel.erreur; }
@@ -289,6 +335,7 @@
       return rendre();
     }
     if (d.poste) { S.poste = d.poste; localStorage.setItem('foPoste', S.poste); return rendre(); }
+    if (d.onglet) { S.onglet = d.onglet; return rendre(); }
     if (d.pers) { S.pinPour = +d.pers; S.pin = ''; S.erreur = null; return rendre(); }
     if (d.val) { S.valideur = +d.val; S.pin = ''; S.erreur = null; return rendre(); }
     if (d.k) { return touche(d.k, d.act); }
