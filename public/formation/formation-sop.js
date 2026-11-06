@@ -457,7 +457,7 @@ window.FormationSop = (function () {
     const mag = C.S.route.a[0] === 'magasins';
     const v = mag ? ecranCompetences() : ecranCorrespondance();
     const note = mag ? C.bandeau('Le « vu faire » coche désormais au panel les compétences reliées aux codes C-… de chaque SOP (onglet Correspondance). Ce tableau suit encore la compétence du panel rattachée à chaque SOP dans Rédaction, gardée en repli pour une SOP sans code relié.', '') : '';
-    return { titre: 'Compétences', kicker: K, corps: onglets + note + v.corps, large: true };
+    return { titre: 'Correspondance des compétences', kicker: K, corps: onglets + note + v.corps, large: true };
   }
   function ecranCorrespondance() {
     const X = D.cor;
@@ -757,7 +757,7 @@ window.FormationSop = (function () {
   return {
     /** Le groupe de la barre latérale et ses entrées : [clé, libellé] (Manuel du réseau, 06/11/2026). */
     groupe: 'Manuel du réseau',
-    nav: [['rfclasseur', 'Classeur'], ['rfphase', 'Par phase'], ['rfposte', 'Par poste'], ['sop', 'Standards'], ['sopcomp', 'Compétences'], ['sopred', 'Rédaction']],
+    nav: [['rfclasseur', 'Classeur'], ['rfphase', 'Par phase'], ['rfposte', 'Par poste'], ['sop', 'Standards'], ['sopcomp', 'Correspondance'], ['sopred', 'Rédaction']],
     icones: {
       rfclasseur: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
       rfphase: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
