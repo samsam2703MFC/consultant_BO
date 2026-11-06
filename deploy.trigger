@@ -1291,3 +1291,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-05T20:58:06Z ERP production : raccourcis de la barre du haut selon les droits du poste
 2026-11-06T05:59:04Z ERP production : Premie i oceny dans Administracja (primes et module kierownika, admin seul)
 2026-11-06T06:36:33Z ERP production : Płace i premie (admin seul), Moja karta stanowiska A4
+2026-11-06T06:37:15Z Formation › Standards (SOP) : 25 SOP FR/NL dans le module Formation, Manuel en 4 parties, tablette du poste
