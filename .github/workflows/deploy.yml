@@ -14,7 +14,7 @@ name: Deploy — Cockpit CEO
 on:
   push:
     branches: [claude/deploiement-application-serveur-lmz1bm]
-    paths: ['deploy.trigger']
+    paths: ['pilotage-reseau/deploy.trigger']
   workflow_dispatch:
 
 concurrency:
@@ -41,6 +41,12 @@ env:
   ERP_SANDBOX_OUVERT: "1"
   # Données de démonstration du module « Gestion de production atelier » (serveur de test seulement).
   ERP_TFB_DEMO: "1"
+
+# Le portail Pilotage réseau vit dans pilotage-reseau/ (dépôt des quatre portails) :
+# chaque commande s'exécute depuis ce dossier, comme avant depuis la racine.
+defaults:
+  run:
+    working-directory: pilotage-reseau
 
 jobs:
   deploy:
