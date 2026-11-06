@@ -2,7 +2,7 @@
  * Gestion consultant (planning, tâches et contrôles, réseau, cadre de visite), Fiche franchisé,
  * Remarques aux opérateurs. Mêmes conventions que templates.js : x = { A, C, I, esc }. */
 
-const card = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+const card = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
 const kpi = (esc, k) => `<div class="gc-kpi"><div class="k">${esc(k[0])}</div><div class="v ${k[3] || ''}">${esc(k[1])}</div><div class="s">${esc(k[2] || '')}</div></div>`;
 const sel = (x, esc, fn, opts, style) => `<select ${x.C(fn)} class="mko-sel" style="${style || ''}">${opts.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>`;
 
@@ -15,7 +15,7 @@ export function tplGC(c, x){
       <span class="mko-mu">Mois</span><button ${x.A(g.moisPrec)} class="mko-pied-btn">‹</button><b style="font-size:12.5px;min-width:110px;text-align:center">${esc(g.moisLib)}</b><button ${x.A(g.moisSuiv)} class="mko-pied-btn">›</button>
       <button ${x.A(g.ouvrirPlanif)} class="cx-btn prim">Planifier une visite</button><button ${x.A(g.rafraichir)} class="mko-pied-btn">Relire</button>
     </div>`;
-  if (g.indispo) { return `<div data-screen="gestion-consultant">${entete}<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:#8D1D2C">${esc(g.indispo)}</div></div>`; }
+  if (g.indispo) { return `<div data-screen="gestion-consultant">${entete}<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--accent)">${esc(g.indispo)}</div></div>`; }
   if (g.chargement) { return `<div data-screen="gestion-consultant">${entete}<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">Lecture des visites, des tâches et du cadre…</div></div>`; }
   const msg = g.msg ? `<div class="gc-msg ${g.msg.ko ? 'ko' : ''}">${esc(g.msg.txt)}</div>` : '';
   const planif = g.planif ? tplGCPlanif(g.planif, x) : '';
@@ -48,7 +48,7 @@ function tplGCPlanning(g, x){
   const chip = ch => `<span class="gc-chip ${ch.cls}" title="${esc(ch.titre || ch.txt)}">${esc(ch.txt)}</span>`;
   const grille = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">${esc(g.moisLib)} — ${esc(g.grilleSous)}</span><span class="mko-mini">${esc(g.grilleMini)}</span></div>
     <div class="mko-corps"><div class="gc-mois">${g.jours.map(j => `<div class="jh">${j}</div>`).join('')}${g.cases.map(c => `<div class="j${c.hors ? ' hors' : ''}${c.auj ? ' auj' : ''}"><div class="n">${esc(c.num)}</div>${c.chips.map(chip).join('')}</div>`).join('')}</div>
-    <div class="gc-leg"><span><i style="background:#E3F0E5"></i>visite faite</span><span><i style="background:#EFE3DE"></i>planifiée</span><span><i style="background:#F2C9A0"></i>confirmée, en cours</span><span><i style="background:#EDE9F7"></i>tâche à échéance</span><span><i style="background:#F7DADA"></i>plan d’action à échéance</span><span><i style="background:#E8E3DD"></i>un autre consultant</span></div></div></div>`;
+    <div class="gc-leg"><span><i style="background:rgba(63, 122, 82, 0.12)"></i>visite faite</span><span><i style="background:var(--chip)"></i>planifiée</span><span><i style="background:var(--prize-soft)"></i>confirmée, en cours</span><span><i style="background:#EDE9F7"></i>tâche à échéance</span><span><i style="background:var(--stop-soft)"></i>plan d’action à échéance</span><span><i style="background:var(--chip)"></i>un autre consultant</span></div></div></div>`;
   const semaine = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">${esc(g.semaineTitre)}</span><span class="mko-mini">${esc(g.semaineMini)}</span></div><div class="mko-corps" style="padding-top:4px">
     ${g.semaine.length ? g.semaine.map(v => `<div class="gc-vis"><div class="h"><b>${esc(v.h)}</b>${esc(v.sous)}</div><div class="c"><b>${esc(v.titre)}</b><div class="mu">${v.mu}${v.google ? ` · <a class="gc-lien" href="${esc(v.google)}" target="_blank" rel="noopener">Ajouter à Google Agenda ›</a>` : ''}</div>${v.prog != null ? `<div class="gc-prog"><i class="${v.progCls || ''}" style="width:${v.prog}%"></i></div>` : ''}</div><span class="gc-st ${v.statutCls}">${esc(v.statut)}</span></div>`).join('') : '<div class="mko-mu">Rien de prévu sur ces sept jours.</div>'}</div></div>`;
   const agenda = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Agenda Google — votre agenda suit le cockpit</span></div><div class="mko-corps gc-agenda">
@@ -63,7 +63,7 @@ function tplGCPlanning(g, x){
 function tplGCTaches(g, x){
   const { esc } = x;
   const t = g.taches;
-  const tache = tk => `<div class="gc-tache${tk.late ? ' late' : ''}${tk.on ? ' on' : ''}"><div class="t">${esc(tk.titre)}</div><div class="m"><span class="gc-src ${tk.srcCls}">${esc(tk.src)}</span>${tk.magasin ? `<span class="gc-pill">${esc(tk.magasin)}</span>` : ''}${tk.ech ? `<span class="${tk.late ? 'ko' : ''}" style="font-weight:600">${esc(tk.ech)}</span>` : ''}${tk.extra ? `<span class="mko-mu">${esc(tk.extra)}</span>` : ''}</div>
+  const tache = tk => `<div class="gc-tache${tk.late ? ' late' : ''}${tk.on ? ' on' : ''}"><div class="t">${esc(tk.titre)}</div><div class="m"><span class="gc-src ${tk.srcCls}">${esc(tk.src)}</span>${tk.magasin ? `<span class="gc-pill">${esc(tk.magasin)}</span>` : ''}${tk.ech ? `<span class="${tk.late ? 'ko' : ''}" style="font-weight:400">${esc(tk.ech)}</span>` : ''}${tk.extra ? `<span class="mko-mu">${esc(tk.extra)}</span>` : ''}</div>
       <div class="a">${tk.fait ? `<button ${x.A(tk.fait)} class="mko-pied-btn">Fait</button>` : ''}${tk.encours ? `<button ${x.A(tk.encours)} class="mko-pied-btn">En cours</button>` : ''}${tk.reprendre ? `<button ${x.A(tk.reprendre)} class="mko-pied-btn">Reprendre</button>` : ''}${tk.voir ? `<button ${x.A(tk.voir)} class="mko-pied-btn">Checklist</button>` : ''}</div></div>`;
   const filtres = `<div class="cx-puces" style="margin-bottom:12px">${t.filtres.map(f => `<button ${x.A(f.choisir)} class="cx-pu${f.on ? ' on' : ''}">${esc(f.nom)}</button>`).join('')}
     <span style="margin-left:auto" class="cx-ligne"><input class="mko-inp" style="width:260px" placeholder="Nouvelle tâche…" value="${esc(t.nouvelle.titre)}" ${x.I(t.nouvelle.setTitre)}>${sel(x, esc, t.nouvelle.setShop, t.nouvelle.magasins)}<input type="date" class="mko-inp" style="width:140px" value="${esc(t.nouvelle.echeance)}" ${x.C(t.nouvelle.setEcheance)}><button ${x.A(t.nouvelle.creer)} class="cx-btn">Ajouter</button></span></div>`;
@@ -113,7 +113,7 @@ function tplGCCadre(g, x){
       <div class="gc-mod"><b>Tâches à faire</b><span>une par ligne : avant | 2 | libellé — pendant | 0 | libellé — apres | 1 | libellé</span></div>
       <textarea class="mko-inp" style="height:${Math.max(90, 22 * (t.tachesTxt.split('\n').length + 1))}px;padding:8px 10px" ${x.I(t.setTaches)}>${esc(t.tachesTxt)}</textarea>
       <div class="gc-mod"><b>Checklist</b><span>${esc(t.checklistSous)}</span></div>
-      ${t.modules.map(m => `<div class="gc-mod"><b style="font-size:11px">${esc(m.nom)}</b><span>${m.points.length} point${m.points.length > 1 ? 's' : ''}</span></div><div class="mko-mu" style="font-size:12px;line-height:1.5">${m.points.map(p => esc(p.libelle) + (p.photo ? ' 📷' : '') + (p.pct ? ' %' : '')).join(' · ')}</div>`).join('')}
+      ${t.modules.map(m => `<div class="gc-mod"><b style="font-size:11px">${esc(m.nom)}</b><span>${m.points.length} point${m.points.length > 1 ? 's' : ''}</span></div><div class="mko-mu" style="font-size:12px;line-height:1.5">${m.points.map(p => esc(p.libelle) + (p.photo ? ' (photo)' : '') + (p.pct ? ' %' : '')).join(' · ')}</div>`).join('')}
       ${t.dynamique ? `<div class="mko-mu" style="margin-top:6px">${esc(t.dynamique)}</div>` : ''}
       <div class="cx-ligne" style="margin-top:12px"><button ${x.A(k.sauverTypes)} class="cx-btn prim" ${k.busy ? 'disabled' : ''}>Enregistrer les types</button><span class="mko-mu">${esc(t.note)}</span></div></div></div>` : '';
   const profils = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Profil de chaque consultant</span><span class="mko-mini">le planning propose d’abord les consultants du profil que le type demande</span></div><div class="mko-corps cx-ligne">${k.consultants.map(c => `<span class="cx-ligne" style="gap:6px"><b style="font-size:12.5px">${esc(c.nom)}</b>${sel(x, esc, c.setProfil, c.profils)}</span>`).join('')}<button ${x.A(k.sauverTypes)} class="mko-pied-btn" ${k.busy ? 'disabled' : ''}>Enregistrer</button></div></div>`;
@@ -175,7 +175,7 @@ export function tplFF(c, x){
     const hist = M.historique.length ? carte('Les météos', `<div class="ff-grille ff-g2">${M.historique.map(tuile).join('')}</div>`, der ? 'margin-top:12px' : '') : (M.chargement ? attente('Lecture des météos…') : attente('Aucune météo relevée pour ce franchisé.'));
     return page(titre + `<div class="ff-deux">${form}<div>${der}${hist}</div></div>`);
   }
-  if (f.indispo) { return page(titre + `<div class="mko-carte" style="padding:20px 22px;color:#8D1D2C;font-size:13px">${esc(f.indispo)}</div>`); }
+  if (f.indispo) { return page(titre + `<div class="mko-carte" style="padding:20px 22px;color:var(--accent);font-size:13px">${esc(f.indispo)}</div>`); }
   if (f.chargement) { return page(titre + `<div class="mko-carte" style="padding:20px 22px;color:var(--color-text-muted);font-size:13px">Lecture de la fiche de ${esc(f.shopNom)} : tâches et leurs notes, invendus, réclamations, objectifs, visites, plans, scoring…</div>`); }
   const journal = `<div class="mko-carte" style="margin-top:12px"><div class="mko-ct"><span class="mko-lab">Journal — constaté, noté ou décidé</span><span class="mko-mini">60 jours</span></div><div class="mko-corps" style="padding-top:4px">${f.journal.length ? f.journal.map(e => `<div class="ff-jl"><span class="d">${esc(e.le)}</span><span class="gc-src ${e.volet === 'terrain' ? 't' : 'j'}">${esc(e.volet)}</span><span>${esc(e.texte)}</span></div>`).join('') : '<div class="mko-mu">Rien sur la période.</div>'}</div></div>`;
   return page(titre + carte('Santé du magasin', `<div class="ff-grille ff-g4">${f.sante.map(tuile).join('')}</div>`)
@@ -188,11 +188,11 @@ export function tplRO(c, x){
   const entete = `<div class="mko-hd" style="margin-bottom:14px"><span class="mko-mu">Magasin</span>${sel(x, esc, r.setShop, r.magasins)}<span class="mko-mu">Période</span>${sel(x, esc, r.setPeriode, r.periodes)}
     <div class="cx-puces" style="margin-left:8px">${r.operateurs.map(o => `<button ${x.A(o.choisir)} class="cx-pu${o.on ? ' on' : ''}">${esc(o.nom)}${o.n ? ' · ' + o.n : ''}</button>`).join('')}</div><button ${x.A(r.rafraichir)} class="mko-pied-btn" style="margin-left:auto">Relire</button></div>`;
   if (r.chargement) { return `<div data-screen="remarques-operateurs">${entete}<div class="mko-carte" style="padding:20px 22px;color:var(--color-text-muted);font-size:13px">Lecture des remarques…</div></div>`; }
-  if (r.indispo) { return `<div data-screen="remarques-operateurs">${entete}<div class="mko-carte" style="padding:20px 22px;color:#8D1D2C;font-size:13px">${esc(r.indispo)}</div></div>`; }
+  if (r.indispo) { return `<div data-screen="remarques-operateurs">${entete}<div class="mko-carte" style="padding:20px 22px;color:var(--accent);font-size:13px">${esc(r.indispo)}</div></div>`; }
   const liste = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">${esc(r.titre)}</span><span class="mko-mini">${esc(r.mini)}</span></div>
     ${r.lignes.length ? `<div style="overflow-x:auto"><table class="mko-tab"><thead><tr><th>Date</th><th>Opérateur</th><th>Produit</th><th class="n">Pièces</th><th>Motif</th><th>Remarque</th><th>Par</th></tr></thead><tbody>
     ${r.lignes.map(l => `<tr><td>${esc(l.le)}${l.heure ? ` <small>${esc(l.heure)}</small>` : ''}</td><td class="nom">${esc(l.employe)}</td><td>${esc(l.produit)}</td><td class="n">${esc(l.pieces)}</td><td>${esc(l.motif)}</td><td style="max-width:420px;white-space:normal">${esc(l.texte)}</td><td class="mu">${esc(l.auteur)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="mko-corps mko-mu">Aucune remarque sur la période.</div>'}
     <div class="mko-corps mko-mu" style="padding-top:8px">Une remarque se crée depuis la modale des invendus du dashboard magasin, sur une pièce jetée pour un problème de qualité : elle nomme l’opérateur qui a produit, la pièce, l’heure et le motif, pour l’entretien d’évaluation.</div></div>`;
-  const par = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Par opérateur</span></div><div class="mko-corps" style="padding-top:4px">${r.parOperateur.length ? r.parOperateur.map(o => `<div class="gc-barre"><span class="n" style="width:140px">${esc(o.nom)}</span><div class="b"><i style="width:${o.pct}%;background:#8D1D2C"></i></div><span class="v">${esc(o.txt)}</span></div>`).join('') : '<div class="mko-mu">—</div>'}</div></div>`;
+  const par = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Par opérateur</span></div><div class="mko-corps" style="padding-top:4px">${r.parOperateur.length ? r.parOperateur.map(o => `<div class="gc-barre"><span class="n" style="width:140px">${esc(o.nom)}</span><div class="b"><i style="width:${o.pct}%;background:var(--accent)"></i></div><span class="v">${esc(o.txt)}</span></div>`).join('') : '<div class="mko-mu">—</div>'}</div></div>`;
   return `<div data-screen="remarques-operateurs">${entete}<div class="gc-kpis">${r.kpis.map(k => kpi(esc, k)).join('')}</div><div class="cx-deux">${liste}${par}</div></div>`;
 }

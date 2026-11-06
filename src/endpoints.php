@@ -98,6 +98,10 @@ function ep_meta(): array
     return [
         'build'            => $build,
         'reseau'           => setting('reseau', ['nom' => '', 'sousTitre' => '']),
+        // Adresse de l'ERP pour le lien « Retour à l’ERP » du rail (design
+        // system §8.3) : jamais écrite en dur. config/config.php ('erpUrl'),
+        // sinon COCKPIT_ERP_URL, sinon le réglage erpUrl ; absente = pas de lien.
+        'erpUrl'           => (string) (Db::config()['erpUrl'] ?? '') ?: ((string) (getenv('COCKPIT_ERP_URL') ?: '') ?: (string) setting('erpUrl', '')),
         // L'utilisateur, et — quand le compte API en est un — l'identifiant
         // consultant qui lui correspond : c'est lui qui dit « mes tâches ».
         'utilisateur'      => setting('utilisateur', ['initiales' => '', 'nom' => '', 'role' => ''])

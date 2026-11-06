@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/doc.php';
+
 /**
  * Cockpit CEO — les croisements : l'attache entre deux familles, au choix.
  *
@@ -438,21 +440,21 @@ function ep_croisements_feuille(): array
     usort($vend, static fn ($x, $y) => $y['ff'] <=> $x['ff']);
 
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
-      .serif{font-family:Georgia,"DejaVu Serif",serif}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:9pt}
+      .serif{font-family:Gotham,Helvetica,Arial,sans-serif}
       .mut{color:#7a736a}.acc{color:#8D1D2C}
       .k{font-size:7pt;letter-spacing:.09em;text-transform:uppercase;color:#7a736a}
-      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm}
+      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm}
       table.t{width:100%;border-collapse:collapse;margin-bottom:4mm}
-      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
-      .t td{font-size:8.3pt;text-align:right;padding:1.3mm 2mm;border-bottom:.5pt solid #EAE3D8}
-      .t .l{text-align:left}.gris td{color:#9a9186}
-      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
+      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #1c1a17}
+      .t td{font-size:8.3pt;text-align:right;padding:1.3mm 2mm;border-bottom:.5pt solid #EDE7DE}
+      .t .l{text-align:left}.gris td{color:#7a736a}
+      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
     </style>';
     $h = $css . '<div class="doc">'
         . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:34px">' : '<b>L’Atelier by</b>') . '</td>'
-        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Croisements<br>' . $e($libMois) . '</td></tr></table>'
+        . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Croisements</b>' . $e($libMois) . '</td></tr></table>'
         . '<div class="serif" style="font-size:18pt;margin:4mm 0 1mm">' . $e($a['lib']) . ' × ' . $e($b['lib'])
         . ($dp['lib'] !== '' ? ' <span style="font-size:10pt;color:#7a736a">· ' . $e($dp['lib']) . '</span>' : '') . '</div>'
         . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">'
@@ -472,10 +474,10 @@ function ep_croisements_feuille(): array
     foreach ($mags as $mg) {
         $h .= '<td width="' . (int) (100 / max(1, count($mags))) . '%" valign="top" class="tile">'
             . '<div class="k">' . $e($court($mg['nom'])) . '</div>'
-            . '<div class="serif" style="font-size:14pt;margin-top:1mm;color:' . (($mg['taux'] ?? 0) >= 25 ? '#2d7a3e' : '#8D1D2C') . '">'
+            . '<div class="serif" style="font-size:14pt;margin-top:1mm;color:' . (($mg['taux'] ?? 0) >= 25 ? '#3f7a52' : '#8D1D2C') . '">'
             . ($mg['taux'] !== null ? number_format($mg['taux'], 1, ',', ' ') . ' %' : '')
             . ($target !== null && $mg['taux'] !== null
-                ? ' <span style="font-size:8pt;color:' . ($mg['taux'] >= $target ? '#2d7a3e' : '#8D1D2C') . '">'
+                ? ' <span style="font-size:8pt;color:' . ($mg['taux'] >= $target ? '#3f7a52' : '#8D1D2C') . '">'
                   . ($mg['taux'] >= $target ? '+' : '−') . number_format(abs($mg['taux'] - $target), 1, ',', ' ') . ' pt</span>'
                 : '') . '</div>'
             . '<div style="font-size:7.5pt;color:#7a736a;margin-top:.8mm">' . $mg['avec'] . ' / ' . $mg['ff'] . ' tickets<br>'
@@ -488,7 +490,7 @@ function ep_croisements_feuille(): array
         if ($v['ff'] < 10) { $petits['ff'] += $v['ff']; $petits['avec'] += $v['avec']; $petits['n']++; continue; }
         $h .= '<tr><td class="l"><b>' . $e($v['nom']) . '</b></td><td class="l mut">' . $e($court($v['magasin'])) . '</td>'
             . '<td>' . $v['ff'] . '</td><td>' . $v['avec'] . '</td>'
-            . '<td style="font-weight:bold;color:' . (($v['taux'] ?? 0) >= 25 ? '#2d7a3e' : '#8D1D2C') . '">'
+            . '<td style="font-weight:400;color:' . (($v['taux'] ?? 0) >= 25 ? '#3f7a52' : '#8D1D2C') . '">'
             . number_format((float) $v['taux'], 1, ',', ' ') . ' %</td>'
             . '<td>' . $v['manques'] . '</td><td class="acc"><b>' . $eur($v['manques'] * $prixB) . '</b></td></tr>';
     }
@@ -499,7 +501,7 @@ function ep_croisements_feuille(): array
             . '<td>' . ($petits['ff'] - $petits['avec']) . '</td><td>' . $eur(($petits['ff'] - $petits['avec']) * $prixB) . '</td></tr>';
     }
     $h .= '</table>'
-        . '<div class="methode"><b style="color:#221E1A">Comment lire.</b> Taux d’attache = tickets contenant ' . $e($a['lib'])
+        . '<div class="methode"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Comment lire.</b> Taux d’attache = tickets contenant ' . $e($a['lib'])
         . ' ET ' . $e($b['lib']) . ' ÷ tickets contenant ' . $e($a['lib']) . '. Le croisement est asymétrique, et c’est voulu. '
         . '« À la clé » = manqués × prix moyen de B réellement encaissé — un plafond de geste, pas une promesse. '
         . 'Sous 10 tickets dans le mois : cumulé plutôt qu’affiché. Les tickets sans vendeur comptent au magasin, jamais aux personnes.</div></div>';
@@ -574,19 +576,19 @@ function ep_croisements_rapport(): array
     if ($donnees === []) { http_response_code(503); return ['error' => 'aucun combo n’a pu être calculé']; }
 
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
-      .serif{font-family:Georgia,"DejaVu Serif",serif}
-      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#2d7a3e}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:9pt}
+      .serif{font-family:Gotham,Helvetica,Arial,sans-serif}
+      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#3f7a52}
       table.t{width:100%;border-collapse:collapse;margin-bottom:4mm}
-      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
-      .t td{font-size:8.4pt;text-align:right;padding:1.5mm 2mm;border-bottom:.5pt solid #EAE3D8}
+      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #1c1a17}
+      .t td{font-size:8.4pt;text-align:right;padding:1.5mm 2mm;border-bottom:.5pt solid #EDE7DE}
       .t .l{text-align:left}
-      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
+      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
     </style>';
     $entete = static fn (string $droite) =>
         '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:34px">' : '<b>L’Atelier by</b>') . '</td>'
-        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Croisements — le rapport des combos<br>' . $droite . '</td></tr></table>';
+        . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Croisements — le rapport des combos</b>' . $droite . '</td></tr></table>';
 
     $tableau = static function (?string $sid) use ($donnees, $e, $eur, $pcs): string {
         $h2 = '<table class="t" cellpadding="0" cellspacing="0"><tr>'
@@ -601,8 +603,8 @@ function ep_croisements_rapport(): array
                 . ($d2['surnom'] !== '' ? ' <span class="mut" style="font-size:7pt">' . $e($d2['surnom']) . '</span>' : '') . '</td>'
                 . '<td class="l mut" style="font-size:7.5pt">' . ($d2['dp'] !== '' ? $e($d2['dp']) : 'toute la journée') . '</td>'
                 . '<td class="mut">' . ($d2['target'] !== null ? $pcs($d2['target']) : '') . '</td>'
-                . '<td style="font-weight:bold">' . $pcs($taux) . '</td>'
-                . '<td style="font-weight:bold;color:' . ($delta === null ? '#7a736a' : ($delta >= 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
+                . '<td style="font-weight:400">' . $pcs($taux) . '</td>'
+                . '<td style="font-weight:400;color:' . ($delta === null ? '#7a736a' : ($delta >= 0 ? '#3f7a52' : '#8D1D2C')) . '">'
                 . ($delta === null ? '' : ($delta >= 0 ? '+ ' : '− ') . number_format(abs($delta), 1, ',', ' ') . ' pt') . '</td>'
                 . '<td>' . number_format($ff, 0, ',', ' ') . '</td>'
                 . '<td class="acc"><b>' . $eur(($ff - $avec) * $d2['prixB']) . '</b></td></tr>';
@@ -619,9 +621,9 @@ function ep_croisements_rapport(): array
         . $e($libMois) . ' · taux = tickets A contenant aussi B ÷ tickets A · chaque combo est détaillé magasin par magasin.</div>';
     foreach ($donnees as $d2) {
         $h .= '<div style="page-break-inside:avoid;margin-bottom:4mm">'
-            . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:11.5pt;border-bottom:1.2pt solid #8D1D2C;padding-bottom:1.2mm;margin-bottom:1.5mm">'
+            . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:11.5pt;border-bottom:1.2pt solid #8D1D2C;padding-bottom:1.2mm;margin-bottom:1.5mm">'
             . $e($d2['lib'])
-            . ' <span class="mut" style="font-size:8pt;font-family:Helvetica,Arial,sans-serif">· '
+            . ' <span class="mut" style="font-size:8pt;font-family:Gotham,Helvetica,Arial,sans-serif">· '
             . ($d2['dp'] !== '' ? $e($d2['dp']) : 'toute la journée')
             . ($d2['surnom'] !== '' && $d2['surnom'] !== $d2['lib'] ? ' · ' . $e($d2['surnom']) : '')
             . ($d2['target'] !== null ? ' · target ' . $pcs($d2['target']) : '') . '</span></div>'
@@ -635,12 +637,12 @@ function ep_croisements_rapport(): array
         foreach ($rangs as [$nomR, $ff, $avec, $gras]) {
             $taux = $ff > 0 ? round(100 * $avec / $ff, 1) : null;
             $delta = ($d2['target'] !== null && $taux !== null) ? $taux - $d2['target'] : null;
-            $h .= '<tr' . ($gras ? ' style="background:#fbf9f5;font-weight:bold"' : '') . '>'
+            $h .= '<tr' . ($gras ? ' style="background:#FBF9F5;font-weight:400"' : '') . '>'
                 . '<td class="l">' . $e($nomR) . '</td>'
                 . '<td>' . number_format($ff, 0, ',', ' ') . '</td>'
                 . '<td>' . number_format($avec, 0, ',', ' ') . '</td>'
-                . '<td style="font-weight:bold">' . $pcs($taux) . '</td>'
-                . '<td style="font-weight:bold;color:' . ($delta === null ? '#7a736a' : ($delta >= 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
+                . '<td style="font-weight:400">' . $pcs($taux) . '</td>'
+                . '<td style="font-weight:400;color:' . ($delta === null ? '#7a736a' : ($delta >= 0 ? '#3f7a52' : '#8D1D2C')) . '">'
                 . ($delta === null ? '' : ($delta >= 0 ? '+ ' : '− ') . number_format(abs($delta), 1, ',', ' ') . ' pt') . '</td>'
                 . '<td class="acc"><b>' . $eur(($ff - $avec) * $d2['prixB']) . '</b></td></tr>';
         }
@@ -652,7 +654,7 @@ function ep_croisements_rapport(): array
             . '<div class="mut" style="font-size:9pt;margin-bottom:4mm">La même lecture, resserrée sur ce magasin — la feuille de son brief.</div>'
             . $tableau((string) $sid) . '</div>';
     }
-    $h .= '<div class="methode"><b style="color:#221E1A">Comment lire.</b> Chaque ligne est un combo enregistré — le croisement est asymétrique (tickets A avec B, jamais l’inverse), '
+    $h .= '<div class="methode"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Comment lire.</b> Chaque ligne est un combo enregistré — le croisement est asymétrique (tickets A avec B, jamais l’inverse), '
         . 'le daypart borne les tickets à ce moment de la journée, la target est celle du combo. '
         . '« Laissé au comptoir » = tickets manqués × prix moyen de B réellement encaissé ce mois-là — un plafond de geste, pas une promesse, '
         . 'et les euros ne s’additionnent pas d’un combo à l’autre : un même ticket peut manquer deux combos.</div></div>';

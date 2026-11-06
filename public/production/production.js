@@ -583,7 +583,7 @@
 
   /* --- 5. Les fours et l'équipe ------------------------------------------------------ */
   // Une couleur par section, stable d'un jour à l'autre.
-  const TEINTES = ['#8D1D2C', '#C9A227', '#1f5f8b', '#2d7a3e', '#D97706', '#6b4c9a', '#0f766e', '#b45309', '#475569', '#be185d'];
+  const TEINTES = ['#8D1D2C', '#B0792A', '#1f5f8b', '#3f7a52', '#B0792A', '#6b4c9a', '#0f766e', '#b45309', '#475569', '#be185d'];
   const teinte = n => { let x = 0; for (const ch of String(n || '')) { x = (x * 31 + ch.charCodeAt(0)) % 997; } return TEINTES[x % TEINTES.length]; };
   const hm = m => { m = Math.round(m); return (m >= 60 ? Math.floor(m / 60) + ' h ' : '') + String(m % 60).padStart(m >= 60 ? 2 : 1, '0') + ' min'; };
   const PAR = { plaque: 'par plaque', piece: 'par pièce', lot: 'par fournée' };

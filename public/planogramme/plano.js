@@ -94,7 +94,7 @@
     const px = (100 * c.x).toFixed(1) + '%', py = (100 * c.y).toFixed(1) + '%';
     return `object-position:${px} ${py};transform:scale(${c.s});transform-origin:${px} ${py}`;
   }
-  const vignette = o => { const u = image(o); return u ? `<img src="${esc(u)}" alt="" style="${imgStyle(o.crop)}" loading="lazy">` : `<span class="ini" style="background:${GC[o.groupe] || '#9a8f84'}">${esc(ini(o.nom))}</span>`; };
+  const vignette = o => { const u = image(o); return u ? `<img src="${esc(u)}" alt="" style="${imgStyle(o.crop)}" loading="lazy">` : `<span class="ini" style="background:${GC[o.groupe] || '#7a736a'}">${esc(ini(o.nom))}</span>`; };
   const sectionsDe = z => { const out = []; for (let s = z.de; s <= z.a; s++) { out.push(s); } return out; };
   const estCaisse = s => (L().caisse || []).indexOf(s) >= 0;
   function compte(z) {
@@ -136,7 +136,7 @@
     h += `<div class="pg-zones">${zones().map((z, i) => {
       const c = compte(z), t = tacheDe(z), st = libStatut(t), mo = S.montage[z.id];
       const S2 = sectionsDe(z).filter(s => !estCaisse(s));
-      const mini = ['e3', 'e2', 'e1b', 'e1a'].map(k => `<div class="lv" style="grid-template-columns:repeat(${S2.length},1fr)">${S2.map(s => { const x = e[s + '|' + k]; if (!x) { return '<i class="off"></i>'; } const o = vu(x); const u = image(o); return `<i class="${o ? (u ? 'ph' : '') : 'v'}" style="${u ? 'background-image:url(' + esc(u) + ')' : (o ? 'background:' + (GC[o.groupe] || '#9a8f84') : '')}"></i>`; }).join('')}</div>`).join('');
+      const mini = ['e3', 'e2', 'e1b', 'e1a'].map(k => `<div class="lv" style="grid-template-columns:repeat(${S2.length},1fr)">${S2.map(s => { const x = e[s + '|' + k]; if (!x) { return '<i class="off"></i>'; } const o = vu(x); const u = image(o); return `<i class="${o ? (u ? 'ph' : '') : 'v'}" style="${u ? 'background-image:url(' + esc(u) + ')' : (o ? 'background:' + (GC[o.groupe] || '#7a736a') : '')}"></i>`; }).join('')}</div>`).join('');
       return `<div class="pg-zc" data-zone="${esc(z.id)}"><div class="h"><b>${i + 1}. ${esc(z.nom)}</b><span>sections ${z.de} – ${z.a}</span></div>
         <div class="mini">${mini}</div>
         <div class="st"><span>${c.p} / ${c.n} emplacements</span>${mo ? `<span class="pg-chip ok">✓ montée à ${hh(mo.quand)}</span>` : `<span class="pg-chip">à monter</span>`}${st ? `<span class="pg-chip ${st[0]}">panel : ${esc(st[1])}</span>` : ''}</div></div>`; }).join('')}</div>`;
@@ -149,7 +149,7 @@
     if (!z) { S.zone = null; return rendZones(); }
     const c = compte(z), t = tacheDe(z), st = libStatut(t), mo = S.montage[z.id], e = E();
     let h = top(`<span class="crumb">Zone ${idx + 1} / ${Z.length} ›</span> ${esc(z.nom)}`, `sections ${z.de} – ${z.a} · ${c.p} / ${c.n} emplacements · ${esc(nomMoment(S.moment).toLowerCase())}`, true,
-      `<button class="pg-btn ${mo ? 'ok' : 'p'}" data-monter="${esc(z.id)}" ${S.envoi ? 'disabled' : ''}>${S.envoi ? 'envoi…' : (mo ? '✓ Zone montée · reprendre la photo' : '📷 Zone montée · photo')}</button>`);
+      `<button class="pg-btn ${mo ? 'ok' : 'p'}" data-monter="${esc(z.id)}" ${S.envoi ? 'disabled' : ''}>${S.envoi ? 'envoi…' : (mo ? '✓ Zone montée · reprendre la photo' : 'Zone montée · photo')}</button>`);
     if (S.err) { h += `<div class="pg-err">${esc(S.err)}</div>`; }
     if (mo || st) { h += `<div class="pg-montage" style="margin-top:12px">${mo ? `<img src="../${esc(mo.photo)}" alt="" data-zoom="../${esc(mo.photo)}" data-cap="${esc(z.nom)} · montée à ${hh(mo.quand)}${mo.auteur ? ' par ' + esc(mo.auteur) : ''}">` : ''}<div class="t">${mo ? 'Zone montée à ' + hh(mo.quand) + (mo.auteur ? ' par ' + esc(mo.auteur) : '') : 'Zone pas encore photographiée aujourd’hui'}<small>${st ? 'Tâche du panel « ' + esc(t.tache) + ' » : ' + esc(st[1]) + ' — la photo se rend dans l’application du panel.' : 'Pas de tâche « Photo du comptoir » pour cette zone dans le panel.'}</small></div><span class="sp"></span>${mo ? `<button class="pg-btn" data-demonter="${esc(z.id)}">retirer</button>` : ''}</div>`; }
     const secs = sectionsDe(z);
@@ -183,7 +183,7 @@
     const z = zones().find(zz => x.section >= zz.de && x.section <= zz.a) || { nom: '' };
     const o0 = vu(x);
     const bloc = o => { const u = image(o);
-      return `<div class="b${o === o0 ? ' now' : ''}"><div class="ph ${u ? '' : 'v'}" ${u ? `data-zoom="${esc(u)}" data-cap="${esc(o.nom)}"` : ''}>${u ? `<img src="${esc(u)}" alt="" style="${imgStyle(o.crop)}">` : `<span class="ini" style="background:${GC[o.groupe] || '#9a8f84'}">${esc(ini(o.nom))}</span>`}</div><div class="c">
+      return `<div class="b${o === o0 ? ' now' : ''}"><div class="ph ${u ? '' : 'v'}" ${u ? `data-zoom="${esc(u)}" data-cap="${esc(o.nom)}"` : ''}>${u ? `<img src="${esc(u)}" alt="" style="${imgStyle(o.crop)}">` : `<span class="ini" style="background:${GC[o.groupe] || '#7a736a'}">${esc(ini(o.nom))}</span>`}</div><div class="c">
         ${o === o0 && S.moment !== 'journee' ? '<span class="pg-chip ok" style="align-self:flex-start">en place maintenant</span>' : ''}
         <h2>${esc(o.nom)}</h2><div class="ref">réf. ${esc(o.ref)}${o.groupe ? ' · ' + esc(o.groupe) : ''}</div>
         <div class="kv"><b>Où</b><span>${esc(z.nom)} › section ${x.section} › ${NIV[x.niveau]}</span>

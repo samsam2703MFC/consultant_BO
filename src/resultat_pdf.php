@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/doc.php';
+
 /**
  * LE RÉSULTAT DU MOIS EN PDF — une page réseau, puis une page par magasin.
  *
@@ -80,38 +82,38 @@ function resPdfHtml(array $p, array $n1, array $rent, string $titreMois): string
     $jours = ['', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
 
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
-      .serif{font-family:Georgia,"DejaVu Serif","Times New Roman",serif}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:9pt}
+      .serif{font-family:Gotham,Helvetica,Arial,sans-serif}
       .k{font-size:7.2pt;letter-spacing:.09em;text-transform:uppercase;color:#7a736a;font-weight:normal}
-      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#2d7a3e}.wa{color:#B26A00}
+      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#3f7a52}.wa{color:#7A5207}
       .h1{font-size:20pt;letter-spacing:-.01em;margin:4mm 0 1mm}
       .soustitre{font-size:9pt;color:#7a736a;margin:0 0 5mm}
-      .sec{font-family:Georgia,"DejaVu Serif",serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
-      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm}
-      .tile .v{font-family:Georgia,"DejaVu Serif",serif;font-size:15pt;margin-top:1mm;white-space:nowrap}
+      .sec{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
+      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm}
+      .tile .v{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:15pt;margin-top:1mm;white-space:nowrap}
       .tile .s{font-size:7.5pt;color:#7a736a;margin-top:.8mm;line-height:1.45}
       table.grille{width:100%;border-collapse:separate;border-spacing:1.6mm 0;margin:0 -1.6mm 5mm}
       table.t{width:100%;border-collapse:collapse;margin-bottom:5mm}
       .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;
-            text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
-      .t td{font-size:8.6pt;text-align:right;padding:1.4mm 2mm;border-bottom:.5pt solid #EAE3D8;white-space:nowrap}
+            text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #1c1a17}
+      .t td{font-size:8.6pt;text-align:right;padding:1.4mm 2mm;border-bottom:.5pt solid #EDE7DE;white-space:nowrap}
       .t .l{text-align:left;white-space:normal}
-      .t tr.tot td{border-top:1pt solid #221E1A;border-bottom:none;font-weight:bold;background:#FCFAF7}
-      .t tr.auj td{background:#FBEFE0}
-      .t td b{font-weight:bold}
-      .sep{border-left:.6pt solid #c9c1b5}
-      .barre{display:inline-block;position:relative;width:30mm;height:2.6mm;border-radius:2mm;background:#EFE9DF;vertical-align:middle}
+      .t tr.tot td{border-top:1pt solid #1c1a17;border-bottom:none;font-weight:400;background:#FBF9F5}
+      .t tr.auj td{background:#F6E7CE}
+      .t td b{font-weight:400}
+      .sep{border-left:.6pt solid #b8b2a8}
+      .barre{display:inline-block;position:relative;width:30mm;height:2.6mm;border-radius:2mm;background:#ffffff;vertical-align:middle}
       .barre i{position:absolute;left:0;top:0;height:2.6mm;border-radius:2mm}
-      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
+      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
       .cadre{border:1px solid #8D1D2C;border-radius:8px;padding:2.5mm 3.5mm;margin-bottom:4mm}
-      .cadre .k{color:#8D1D2C;font-weight:bold}
-      .cadre .lg{display:block;font-size:8.6pt;padding:1.2mm 0;border-bottom:.5pt solid #EAE3D8}
+      .cadre .k{color:#8D1D2C;font-weight:400}
+      .cadre .lg{display:block;font-size:8.6pt;padding:1.2mm 0;border-bottom:.5pt solid #EDE7DE}
       .cadre .lg:last-child{border-bottom:none}
     </style>';
 
     $entete = static fn (string $droite) => '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">' : '<strong style="font-size:12pt">L’Atelier by</strong>') . '</td>'
-        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">' . $droite . '</td></tr></table>';
+        . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5">' . $droite . '</td></tr></table>';
     $tuile = static fn (string $lbl, string $val, string $sub, string $cl = '', string $w = '25%') =>
         '<td width="' . $w . '" valign="top" class="tile"><div class="k">' . $lbl . '</div>'
         . '<div class="v ' . $cl . '">' . $val . '</div><div class="s">' . $sub . '</div></td>';
@@ -119,7 +121,7 @@ function resPdfHtml(array $p, array $n1, array $rent, string $titreMois): string
     $R = $p['reseau'];
     $enCours = !empty($p['enCours']);
     $etat = $enCours ? 'au ' . date('d/m', strtotime($p['jusqua'])) . ' — mois en cours' : 'mois clos';
-    $droite = 'Résultat du mois<br>' . $e($titreMois) . ' · ' . $e($etat);
+    $droite = '<b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Résultat du mois</b>' . $e($titreMois) . ' · ' . $e($etat);
 
     // ── Page réseau.
     $h = $css . '<div class="doc">' . $entete($droite)
@@ -155,7 +157,7 @@ function resPdfHtml(array $p, array $n1, array $rent, string $titreMois): string
         $h .= $ligne($m, false);
     }
     $h .= $ligne($R, true) . '</table>';
-    $h .= '<div class="methode"><b style="color:#221E1A">Comment lire.</b> Attendu = la part du budget que la pondération des jours place sur les jours déjà passés, journée en cours comprise. '
+    $h .= '<div class="methode"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Comment lire.</b> Attendu = la part du budget que la pondération des jours place sur les jours déjà passés, journée en cours comprise. '
         . 'Clients = écart ÷ panier moyen du magasin — négatif, il en manque ; positif, ils sont d’avance. '
         . 'Matière, main-d’œuvre et frais généraux en pourcentage des ventes, colorés contre les seuils du réseau ('
         . $pct($seuils['food'], 0) . ' · ' . $pct($seuils['labour'], 0) . ' · ' . $pct($seuils['overhead']) . '). '
@@ -192,7 +194,7 @@ function resPdfHtml(array $p, array $n1, array $rent, string $titreMois): string
                       . '<span class="lg">Panier moyen du magasin <b style="float:right">' . $px2($m['panier']) . '</b></span>'
                       . '<span class="lg">Clients manquants <b style="float:right" class="' . $cls($m['ecart']) . '">' . $cli($m['clientsManquants']) . '</b></span></div></td>')
                 . '<td width="2%"></td><td width="49%" valign="top">'
-                . '<div class="cadre" style="border-color:#c9c1b5"><div class="k" style="color:#7a736a">Pour tenir le budget</div>'
+                . '<div class="cadre" style="border-color:#b8b2a8"><div class="k" style="color:#7a736a">Pour tenir le budget</div>'
                 . '<span class="lg">Reste à faire <b style="float:right">' . $eur($m['reste']) . '</b></span>'
                 . ($enCours ? '<span class="lg">Ce que la pondération prévoyait <b style="float:right">' . $eur($m['prevu']) . ($m['objectif'] ? ' · ' . (int) round(100 * $m['prevu'] / $m['objectif']) . ' %' : '') . '</b></span>'
                     . '<span class="lg">Effort supplémentaire <b style="float:right" class="' . ($eff > 0 ? 'acc' : 'ok') . '">' . $sig($eff) . ($effCli !== null ? ' · ' . ($effCli > 0 ? '+' : '') . $effCli . ' clients' : '') . '</b></span>'
@@ -211,9 +213,9 @@ function resPdfHtml(array $p, array $n1, array $rent, string $titreMois): string
         $h .= '<div class="sec">Le compte de résultat du mois</div><table class="t" cellpadding="0" cellspacing="0">';
         foreach ($casc as [$lib, $v, $pc, $cl, $fort]) {
             $w = $pc === null ? 0 : (int) min(100, abs((float) $pc));
-            $coul = $cl === 'ok' ? '#2d7a3e' : ($cl === 'wa' ? '#B26A00' : ($cl === 'acc' ? '#8D1D2C' : '#7a736a'));
-            $h .= '<tr' . ($fort ? ' style="font-weight:bold"' : '') . '><td class="l" width="34%">' . $e($lib) . '</td>'
-                . '<td class="l"><span class="barre"><i style="width:' . ($lib === 'Ventes TTC' ? 100 : $w) . '%;background:' . ($lib === 'Ventes TTC' ? '#221E1A' : $coul) . '"></i></span></td>'
+            $coul = $cl === 'ok' ? '#3f7a52' : ($cl === 'wa' ? '#7A5207' : ($cl === 'acc' ? '#8D1D2C' : '#7a736a'));
+            $h .= '<tr' . ($fort ? ' style="font-weight:400"' : '') . '><td class="l" width="34%">' . $e($lib) . '</td>'
+                . '<td class="l"><span class="barre"><i style="width:' . ($lib === 'Ventes TTC' ? 100 : $w) . '%;background:' . ($lib === 'Ventes TTC' ? '#1c1a17' : $coul) . '"></i></span></td>'
                 . '<td width="22%">' . ($v === null ? '—' : ($v < 0 ? '− ' : '') . number_format(abs((float) $v), 0, ',', ' ') . ' €') . '</td>'
                 . '<td width="12%" class="' . $cl . '">' . ($pc === null ? '' : $pct($pc)) . '</td></tr>';
         }

@@ -1213,13 +1213,14 @@ function ep_visites_synthese(): array
 function viSyntheseHtml(array $s): string
 {
     $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-    $feu = ['vert' => '🟢', 'orange' => '🟡', 'rouge' => '🔴'];
-    $h = '<h2 style="font-family:Georgia,serif">Synthèse réseau — ' . $e(date('d/m/Y', strtotime($s['date']))) . '</h2>';
+    // Le feu en toutes lettres, point de couleur devant (design system : pas d'emoji).
+    $feu = ['vert' => '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3f7a52;margin-right:5px"></span>vert', 'orange' => '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#B0792A;margin-right:5px"></span>orange', 'rouge' => '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A32014;margin-right:5px"></span>rouge'];
+    $h = '<h2 style="font-family:Gotham,Helvetica,Arial,sans-serif">Synthèse réseau — ' . $e(date('d/m/Y', strtotime($s['date']))) . '</h2>';
     $c = $s['compteurs'];
     $h .= '<p>Plans d’action en cours : <b>' . $c['enCours'] . '</b> (' . $c['p0'] . ' P0 · ' . $c['p1'] . ' P1 · ' . $c['p2'] . ' P2) · en attente de validation : <b>' . $c['attente'] . '</b> · fermés cette semaine : <b>' . $c['fermes'] . '</b></p>';
     $h .= '<table cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr style="text-align:left"><th>Boutique</th><th>Feu</th><th>Dernière visite</th><th>CA semaine</th><th>Google</th><th>Planogramme</th><th>Actions</th><th>Signal</th></tr>';
     foreach ($s['boutiques'] as $b) {
-        $h .= '<tr style="border-top:1px solid #ddd"><td><b>' . $e($b['court']) . '</b></td><td>' . $feu[$b['feu']] . '</td><td>' . $e($b['derniereVisite'] ? $b['derniereVisite']['le'] . ' · ' . $b['derniereVisite']['consultant'] : '—') . '</td>'
+        $h .= '<tr style="border-top:1px solid #e6e0d8"><td><b>' . $e($b['court']) . '</b></td><td>' . $feu[$b['feu']] . '</td><td>' . $e($b['derniereVisite'] ? $b['derniereVisite']['le'] . ' · ' . $b['derniereVisite']['consultant'] : '—') . '</td>'
             . '<td>' . ($b['ca'] ? number_format($b['ca']['ca'], 0, ',', ' ') . ' € · ' . ($b['ca']['pct'] !== null ? $b['ca']['pct'] . ' %' : '') : '—') . '</td>'
             . '<td>' . ($b['google'] && $b['google']['note'] !== null ? number_format((float) $b['google']['note'], 1, ',', '') . ' (' . $b['google']['avis'] . ')' : '—') . '</td>'
             . '<td>' . ($b['plano'] ? $b['plano']['pct'] . ' %' : '—') . '</td><td>' . $b['plansOuverts'] . ($b['p0'] ? ' · ' . $b['p0'] . ' P0' : '') . '</td>'
@@ -1234,7 +1235,7 @@ function viSyntheseHtml(array $s): string
         $h .= '</ul>';
     }
     if ($s['actions']) { $h .= '<h3>Actions requises aujourd’hui</h3><ol>'; foreach ($s['actions'] as $a) { $h .= '<li>' . $e($a) . '</li>'; } $h .= '</ol>'; }
-    $h .= '<p style="color:#777;font-size:12px">Cette semaine : ' . $s['visitesSemaine'] . ' visites · ' . $s['checklists'] . ' terminées · ' . $s['photosSemaine'] . ' photos.</p>';
+    $h .= '<p style="color:#7a736a;font-size:12px">Cette semaine : ' . $s['visitesSemaine'] . ' visites · ' . $s['checklists'] . ' terminées · ' . $s['photosSemaine'] . ' photos.</p>';
     return $h;
 }
 

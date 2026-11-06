@@ -27,7 +27,7 @@
   function heat(jours, auj) {
     const parJ = {}; (jours || []).forEach(x => { parJ[x.jour] = x; }); let h = '';
     for (let i = 29; i >= 0; i--) { const dte = plusJours(auj, -i); const x = parJ[dte]; h += '<i class="' + (!x ? 'x' : (x.oblig ? 'm' : (x.f < x.t ? 'p' : ''))) + '" title="' + fD(dte) + (x ? ' : ' + x.f + ' / ' + x.t : ' : non relevé') + '"></i>'; }
-    return '<div class="sv-heat">' + h + '</div><div class="sv-leg"><span><i style="background:#C9E3CD"></i>tout rendu</span><span><i style="background:#F5D58F"></i>partiel</span><span><i style="background:#E8A0A0"></i>obligatoire manquée</span><span><i style="background:#EDE7E0"></i>non relevé</span></div>';
+    return '<div class="sv-heat">' + h + '</div><div class="sv-leg"><span><i style="background:rgba(63, 122, 82, 0.3)"></i>tout rendu</span><span><i style="background:var(--prize-soft)"></i>partiel</span><span><i style="background:#E8A0A0"></i>obligatoire manquée</span><span><i style="background:var(--chip)"></i>non relevé</span></div>';
   }
   function rendre(d) {
     const J = d.journalier, R = d.terrain, V = R.visites, auj = d.aujourdhui;
