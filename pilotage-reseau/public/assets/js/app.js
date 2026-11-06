@@ -1455,9 +1455,8 @@ class App {
       // « Manuel en ligne » en mode tablette a été retiré au lot 6 de la fusion (06/11/2026).
       ['Formation', [
         ['ext:formation/', 'Module Formation ↗', 0],
-        ['ext:formation/#/rfclasseur', 'Manuel du réseau ↗', 0],
-        // Le parcours de chacun vers le poste visé (31/10/2026) : ici pour l'instant, il passera dans l'application employé.
-        ['ext:formation/parcours/', 'Parcours compétences ↗', 0]]],
+        // « Parcours compétences ↗ » (formation/parcours/) retiré le 06/11/2026 : le client n'en voit pas la nécessité.
+        ['ext:formation/#/rfclasseur', 'Manuel du réseau ↗', 0]]],
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];

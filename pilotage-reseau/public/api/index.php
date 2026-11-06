@@ -125,7 +125,7 @@ require __DIR__ . '/../../src/sop.php';
 require __DIR__ . '/../../src/referentiel.php';
 require __DIR__ . '/../../src/tablettes.php';
 require __DIR__ . '/../../src/referentiel_guides.php';
-require __DIR__ . '/../../src/parcours.php';
+require __DIR__ . '/../../src/formation_postes.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -508,14 +508,10 @@ function route(string $method, string $path): mixed
             // L'adresse du « Retour au cockpit » du rail (config.php `cockpitUrl`).
             $path === '/formation/config'              => ep_formation_config(),
             $path === '/formation/v25'                 => ep_formation_v25(),
-            // Parcours compétences (public/formation/parcours/) : l'assistant et la frise de chaque personne.
+            // La carte des métiers du tableau de bord (src/formation_postes.php) : des comptes, aucun nom.
             $path === '/formation/carte'               => ep_formation_carte(),
             // Le manuel opératoire : la partie (Pré-ouverture · Ouverture · Opérationnel · Formation continue) et les vidéos de chaque procédure.
             $path === '/formation/manuel'              => ep_formation_manuel(),
-            $path === '/parcours/destinations'         => ep_parcours_destinations(),
-            // Les candidats franchisés du CRM (atelier-espace-candidat), lus dans la base partagée.
-            $path === '/parcours/candidats'            => ep_parcours_candidats(),
-            $path === '/parcours', $path === '/parcours/liste' => ep_parcours(),
             $path === '/tablette/book'                 => ep_tablette_book(),
             // L'accueil de la tablette : CA et vente additionnelle de la semaine et du mois face à l'objectif.
             $path === '/tablette/objectifs'            => ep_tablette_objectifs(),
@@ -763,12 +759,6 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && preg_match('#^/formation/competences/(\d+)$#', $path, $m)) { return wr_formation_competence_supprimer((int) $m[1]); }
     if (($method === 'PUT' || $method === 'DELETE') && preg_match('#^/formation/employe/(\d+)/competences/(\d+)$#', $path, $m)) { return wr_formation_employe_competence($method, (int) $m[1], (int) $m[2]); }
     if ($method === 'PUT' && preg_match('#^/formation/employe/(\d+)/poste$#', $path, $m)) { return wr_formation_employe_poste((int) $m[1]); }
-    // Parcours compétences : créer (fin de l'assistant), cocher une évaluation, confirmer un acquis, rythme / arrêt / objectif atteint.
-    if ($method === 'POST' && $path === '/parcours') { return wr_parcours_creer(); }
-    if ($method === 'PATCH' && preg_match('#^/parcours/(\d+)/etape/(FO-\d{1,3})$#', $path, $m)) { return wr_parcours_evaluation((int) $m[1], $m[2]); }
-    if ($method === 'POST' && preg_match('#^/parcours/(\d+)/acquis/(\d+)$#', $path, $m)) { return wr_parcours_confirmer((int) $m[1], (int) $m[2]); }
-    if ($method === 'PATCH' && preg_match('#^/parcours/(\d+)/admission/([a-z0-9_-]{1,40})$#', $path, $m)) { return wr_parcours_admission((int) $m[1], $m[2]); }
-    if ($method === 'PATCH' && preg_match('#^/parcours/(\d+)$#', $path, $m)) { return wr_parcours_modifier((int) $m[1]); }
     if ($method === 'DELETE' && $path === '/push/abonnements') { return wr_push_desabonnement(); }
     if ($method === 'POST' && $path === '/push/essai') { return wr_push_essai(); }
     if ($method === 'DELETE' && preg_match('#^/projects/([\w-]+)$#', $path, $m)) { return wr_project_delete($m[1]); }

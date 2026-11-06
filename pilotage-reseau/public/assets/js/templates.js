@@ -59,7 +59,7 @@ const ICO_ECRAN = {
   promoEdition: 'offres', promoTableau: 'analyse', fonds: 'fonds',
   'ext:prospection/': 'adresse', 'MétaDonnée': 'liens', tablette: 'ecran', fidelite: 'avis',
   primesApp: 'droits', 'ext:employee/auth': 'droits', pointages: 'journal', 'API du module': 'liens',
-  'ext:formation/': 'modeles', 'ext:formation/#/rfclasseur': 'modeles', 'ext:formation/parcours/': 'perf',
+  'ext:formation/': 'modeles', 'ext:formation/#/rfclasseur': 'modeles',
   parametres: 'cadenas', journal: 'journal'
 };
 function railIco(key){

@@ -411,20 +411,6 @@ tbody tr.fm-detail > td {
   margin-top: 0.25rem;
 }
 
-/* Barre d'avancement (page parcours). */
-.progress {
-  height: 5px;
-  border-radius: 4px;
-  background: var(--chip);
-  overflow: hidden;
-  margin-top: 12px;
-}
-
-.progress__fill {
-  height: 100%;
-  background: var(--accent);
-}
-
 /* ── Étapes de niveau (les sous-postes d'un poste) ─────────────────────── */
 
 .wizard__steps {
@@ -1052,42 +1038,6 @@ td .fm-barre {
   font-size: 13px;
 }
 
-/* ── Parcours des équipes : la frise compacte d'une ligne ─────────────── */
-
-.fm-pts {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  max-width: 260px;
-}
-
-/* Un point de couleur de 8 px (§5 : seule forme ronde admise avec l'interrupteur). */
-.fm-pt {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1.5px solid var(--faint);
-  background: #fff;
-}
-
-.fm-pt.validee {
-  background: var(--green);
-  border-color: var(--green);
-}
-
-.fm-pt.encours {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.fm-pt-flag {
-  margin-left: 3px;
-  color: var(--accent);
-  font-size: 12px;
-}
-
-.fm-lead,
 .fm-pers {
   display: flex;
   align-items: center;
@@ -1099,7 +1049,6 @@ td .fm-barre {
 }
 
 /* Initiales d'une personne : un cartouche, pas un rond. */
-.fm-initiales,
 .fm-ini {
   flex: 0 0 34px;
   width: 34px;

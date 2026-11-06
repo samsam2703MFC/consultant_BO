@@ -361,7 +361,7 @@
     rail: [
       ['Portail de formation', [['rfformations', 'Formations', ['rfpre']], ['rfmetiers', 'Postes', ['rfposte']], ['rfcompetences', 'Compétences', ['rfform']],
         ['rfclasseur', 'Manuel opérationnel', ['rfphase', 'sop', 'manuel']]], true],
-      ['Suivi', [['parcours', 'Suivi des équipes', ['equipes']]], false],
+      ['Suivi', [['equipes', 'Suivi des équipes', []]], false],
       ['Réglages', [['sopcomp', 'Correspondance panel', []], ['tablettes', 'Tablettes', []], ['sopred', 'Rédaction des SOP', []],
         ['rfdonnees', 'Données du panel', ['tableau', 'postes', 'competences', 'formations', 'procedures', 'ressources', 'produit', 'api']]], false],
     ],

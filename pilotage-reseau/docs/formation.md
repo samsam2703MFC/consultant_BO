@@ -20,8 +20,8 @@ documentées dans le module (écran *Routes API*) et dans `docs/formation-routes
 ## Design
 
 Le design system « L'Atelier By » du module Marketing (référence commune du 06/11/2026), dans une
-feuille unique : `public/formation/ds.css`, chargée en premier par `index.html`, `sop/tablette.html` et
-`parcours/index.html`. Elle porte les deux `@font-face` (400 = `fonts/Gotham_Medium.otf`, le trait du
+feuille unique : `public/formation/ds.css`, chargée en premier par `index.html` et `sop/tablette.html`.
+Elle porte les deux `@font-face` (400 = `fonts/Gotham_Medium.otf`, le trait du
 texte ; 700 = `fonts/Gotham_Regular.otf`, réservé aux accents : l'entrée active du rail, la valeur d'un
 chiffre clé), les jetons de couleur, les composants (boutons `.btn`, champs, filtres, sélecteur segmenté
 `.seg`, onglets `.page-tabs`, tableaux, pastilles et badges en rectangles de 6 px, KPI, interrupteur,
@@ -70,28 +70,12 @@ Comme le reste du cockpit : HTML/CSS/JS sans dépendance ni compilation (`index.
 | ~~Manuel opératoire~~ | ~~Manuel en ligne~~ | `#/manuel/…` | **Retiré au lot 6** (doublon du Manuel du réseau) : `#/manuel` mène au Classeur, `#/manuel/partie/{cle}` à `#/rfphase/{cle}`, un poste / une compétence / une procédure à sa page du référentiel ; seule `#/manuel/formation/FO-xx` (la fiche à lire d'une formation) reste. Voir § Lot 6. |
 | Documentation | Routes API | `#/api[/{famille}]` | Les 237 routes du référentiel dans le swagger : verbe, état, paramètres, corps, champs de réponse, codes — et un bouton **Tester** qui appelle la route en lecture avec le compte du cockpit. |
 
-## Parcours compétences (31/10/2026) — `/formation/parcours/`
+## Parcours compétences — retiré le 06/11/2026
 
-Pour chaque personne (employé du panel ou candidat franchisé), le chemin vers le poste qu'elle vise.
-Page mobile d'abord (elle rejoindra l'application employé) ; pour l'instant une entrée dans le rail du
-cockpit, *Formation › Parcours compétences ↗*. Maquettes validées : `docs/maquettes/parcours-competences/`.
-
-- **Assistant en 3 étapes** : *Où veux-tu aller ?* (les niveaux au-dessus du sien dans son métier,
-  encadrer le magasin, devenir entrepreneur) → *Ce que tu sais déjà* (compétences du niveau à cocher,
-  confirmées ensuite par la manager ; formations déjà suivies) → *Ton parcours est prêt* (nombre de
-  formations, rythme : tranquille 1/mois, normal 1/3 sem., rapide 1/2 sem.).
-- **Frise de suivi** : le déjà fait à gauche, l'étape en cours, l'objectif au bout. Chaque formation se
-  valide par ses évaluations ; la dernière cochée valide la formation **et coche dans le panel** les
-  compétences qui y sont rattachées (relues). Fin du parcours : *Valider le niveau* l'affecte dans le panel.
-- **Cockpit, Parcours des équipes** : une ligne par personne, frise compacte, avancement, retard.
-- **Formations** : une fiche par FO (référentiel v25) avec ses évaluations et ses compétences du panel.
-
-Règle : **les données des API ont priorité**. Ce qu'un niveau exige = ses compétences dans le panel ; les
-formations du chemin = celles que le panel y rattache (évaluations « [FO-xx] … »), **complétées** par les
-obligatoires de la matrice v25 ; l'ordre = le plan de formation (Étudiant, Vendeur, Gérant, Multi).
-Le référentiel v25 vit dans `src/data/referentiel_v25.json` (relu de l'Excel par
-`tools/formation/referentiel_excel.py`). *Locataire-gérant* et *Franchisé multi-boutique* n'existant pas
-dans le panel, ce sont des destinations du référentiel (rien n'est créé dans le panel).
+La page `/formation/parcours/` (assistant en trois étapes, frise de suivi de chaque personne), l'écran *Parcours des
+équipes* (`#/parcours`) et l'entrée *Formation › Parcours compétences ↗* du rail du cockpit ont été retirés à la
+demande du client (« je ne vois pas la nécessité de l'avoir dans les modules »). Voir § « Parcours retiré » en fin de
+document. Ce qui suit (critères d'admission, création d'un poste) reste : ce sont des écrans du référentiel.
 
 ### Critères d'admission — Adjoint Manager, Manager, Franchisé multi-boutique
 
@@ -103,8 +87,8 @@ répétée). Trois sortes :
 | Sorte | Vérifié par | Exemple |
 |---|---|---|
 | `poste` | le panel : le poste tenu | Manager ← *Adjoint Manager en poste* ; multi-boutique ← *Franchisé en activité* |
-| `fo` | le panel ou le parcours : formations acquises — celles qui manquent **s'ajoutent au chemin**, en tête | Manager ← FO-28 Adjoint Manager + FO-24 Plannings |
-| `manuel` | la manager (le consultant pour la franchise) dans le suivi : bouton *Valider* | ancienneté, entretien, P&L conforme, accord du franchiseur |
+| `fo` | le panel : formations acquises | Manager ← FO-28 Adjoint Manager + FO-24 Plannings |
+| `manuel` | la manager (le consultant pour la franchise) | ancienneté, entretien, P&L conforme, accord du franchiseur |
 
 | Poste | Critères |
 |---|---|
@@ -112,12 +96,7 @@ répétée). Trois sortes :
 | Manager (P8) | Adjoint Manager en poste · FO-28 + FO-24 · 12 mois d'encadrement · entretien avec le franchisé et le consultant |
 | Franchisé multi-boutique (P12) | Franchisé en activité · Plan Gérant (FO-05, FO-06, FO-24) · 12 mois sur la 1re boutique · 1re boutique rentable (P&L, audit qualité) · un Manager formé pour la tenir · accord du franchiseur |
 
-L'assistant ne propose que ce qui est à portée : pas de poste plus bas que celui tenu (un franchisé ne vise
-plus Manager) ; un critère `poste` non rempli cache la destination (il faut d'abord ce poste-là) — sauf pour
-un employé **sans poste dans le panel** (fréquent) : tout reste ouvert, la manager valide. Un candidat ne voit
-pas le multi-boutique. Étape 1 : *admission 1/6* sur la carte ; étape 3 : *Pour être admis* ; frise : la liste
-des critères, et *Valider le niveau* n'apparaît (et n'est accepté, `409`) qu'avec **toutes les formations et
-tous les critères**. Module, *Postes & sous-postes* : la carte *Critères d'admission* de chaque niveau, et
+Module, *Postes & sous-postes* : la carte *Critères d'admission* de chaque niveau, et
 *Pas encore dans le panel* (Franchisé multi-boutique, Locataire-gérant) : critères, formations, plan.
 Le multi-boutique n'est pas créé dans le panel : dès qu'un poste dont le nom contient « multi » y existe, il
 prend le relais (ses niveaux, ses compétences, ses exigences).
@@ -139,20 +118,20 @@ procédure ni de ressource** reliée.
   « Pour encadrer : maîtriser les trois métiers », puis le tronc adjoint → manager, puis candidat → franchisé
   → multi-boutique, locataire-gérant en embranchement) et *Effectifs* (personnes actives, placées, sans
   poste ; le vivier de gérants : qui maîtrise 3, 2, 1, 0 métier ; chaque poste et ses niveaux avec le nombre
-  de personnes). Commun : *Ce qui manque*, parcours en cours. Données : `GET /formation/carte`
+  de personnes). Commun : *Ce qui manque*. Données : `GET /formation/carte`
   (`pcCarte`) — des **comptes**, aucun nom ; équipes lues par magasin, en cache 5 min.
 - **Règle des trois métiers** (31/10/2026) : le gérant de magasin maîtrise la vente, la
   boulangerie-pâtisserie et le traiteur. Maîtriser un métier = toutes ses compétences jusqu'au dernier
   niveau avant « Responsable d'équipe » (`pcMaitrises`). Critère d'admission `metiers` : il **remplace**
   « Responsable d'équipe » pour l'Adjoint et **s'ajoute** à « Adjoint en poste » pour le Manager ; ce qui
-  manque passe par les formations qui l'enseignent, ajoutées au parcours ; validable par la manager.
+  manque passe par les formations qui l'enseignent ; validable par la manager.
 - **Fiche du niveau** : l'escalier du poste (+N · total), *Ce qu'il faut savoir faire* (nouveau / acquis
   avant / tout, la FO de chaque compétence), *Pour les apprendre* (FO dans l'ordre), *Pour y accéder*
   (niveau précédent + critères d'admission), *Ensuite*.
 - **Compétences** et **Formations** : bascule *Liste* / *Matrice* — compétences × niveaux d'un poste (carré
   plein où elle entre, clair ensuite) ; « Qui doit suivre quoi » (formations × postes par famille, O / R).
 - **Équipes** : par personne, compétences tenues sur le **cumul** de son niveau, ce qui manque, prochaine
-  étape, parcours en cours ; le détail et ses gestes (valider, changer de niveau) restent.
+  étape ; le détail et ses gestes (valider, changer de niveau) restent.
 
 ### Lisibilité et familles de postes (31/10/2026)
 
@@ -167,26 +146,8 @@ procédure ni de ressource** reliée.
 - **Pas de badges** : étiquettes en rectangles aux coins arrondis (toujours vrai : 6 px) ; les titres de carte, eux,
   reviennent en petites capitales grises (design system, 06/11/2026).
 - **Tableau de bord** : six chiffres cliquables, *À compléter* (compétences sans formation, sans procédure, niveaux vides,
-  postes à créer), *Parcours en cours*, *Les postes* par famille avec la part des compétences couvertes par une formation ;
+  postes à créer), *Les postes* par famille avec la part des compétences couvertes par une formation ;
   le détail technique des appels au panel est replié.
-
-**Candidats franchisés (31/10/2026)** : l'étape « Pour qui ? » liste les dossiers en cours du CRM candidat
-(atelier-espace-candidat), qui vit dans la même base que le cockpit. Sa table est `crm_candidates` (le pipeline : `name`,
-`zone`, `stage_idx` → nom de l'étape dans `crm_stages` triées par `position`, `person_status` contact / candidat, `closed`,
-`last_activity_at`) — pas `crm_cd_candidates`, les comptes de l'espace candidat. Elle est trouvée par information_schema
-(ailleurs : un nom finissant par candidat(s) / candidate(s), puis lead(s), puis prospect(s), hors `ceo_`, `mar_`, journal
-Meta et tables de comptes), gardée une heure (`ceo_app_setting` `pcCrmSource`), puis lue sans jamais y écrire : nom, étape,
-zone, dates — ni e-mail ni téléphone ; les dossiers arrêtés sont écartés. Les candidats d'abord, les contacts (pas encore
-passés par l'appel de qualification) sur demande ; recherche sans accents sur le nom, la zone ou l'étape ; 30 lignes, les plus
-récemment actives d'abord ; un candidat qui a déjà un parcours y mène directement. Le parcours garde la référence de la fiche
-(`ceo_parcours.candidat_ref`). Hors CRM, ou sans CRM dans la base, le nom se saisit à la main.
-
-Tables (créées au premier appel) : `ceo_parcours` (personne, candidat du CRM, objectif, rythme, statut, compétences déclarées, critères d'admission)
-et `ceo_parcours_etape` (une ligne par formation : évaluations, date prévue, statut, origine panel / déclarée /
-parcours). Routes : `GET /parcours/destinations?employe=&shop=`, `GET /parcours/candidats`, `POST /parcours`, `GET /parcours?id=`,
-`GET /parcours/liste`, `PATCH /parcours/{id}/etape/{FO}`, `POST /parcours/{id}/acquis/{cid}`,
-`PATCH /parcours/{id}/admission/{cle} {fait}`, `PATCH /parcours/{id}` (rythme, arrêt, objectif atteint), `GET /formation/v25`. Chaque geste est journalisé
-(type « Parcours »).
 
 ## Le modèle de données du panel
 
@@ -413,7 +374,7 @@ et de la lecture », « sur certaines procédures, des vidéos intégrées ».
   d'Ariane, entrées du menu, lignes de l'arbre des postes et des compétences à 44 px ; puces-liens à
   40 px ; champs à 16 px (sinon l'iPad zoome). Contrôlé sur 14 vues à 1180 × 820, 1024 × 768,
   820 × 1180 et 768 × 1024 en tactile : aucun chevauchement, aucune cible sous 40 px, aucun
-  débordement horizontal. La page mobile des parcours s'élargit à 720 px sur tablette.
+  débordement horizontal.
 - Routes : `GET /formation/manuel` → `{parties[], procedures{id: {partie, videos[{url, titre}], majLe}}, formationsDefaut{FO: partie}, formations{FO: partie}}` ;
   `PATCH /formation/manuel/formation/{FO} {partie?: cle | null, supports?: [{url, titre, etape}]}` (null = répartition par défaut ; clé absente = inchangée) ;
   `PATCH /formation/manuel/procedure/{id} {partie?: cle | null, videos?: [{url, titre}]}` (clé absente =
@@ -698,7 +659,7 @@ contrat article 4.5) avec le suivi des KPI et le développement commercial ; le 
   Manuel opérationnel**. Chaque fiche renvoie aux trois autres.
 - **Rail** (`window.FormationPortail.rail`, `portail.js`, lu par `formation.js`) : PORTAIL DE FORMATION — 1 Formations
   (`#/rfformations`) · 2 Postes (`#/rfmetiers`) · 3 Compétences (`#/rfcompetences`) · 4 Manuel opérationnel (le Classeur,
-  `#/rfclasseur`) ; SUIVI — Suivi des équipes (`#/parcours`, `#/equipes`) ; RÉGLAGES — Correspondance panel, Tablettes,
+  `#/rfclasseur`) ; SUIVI — Suivi des équipes (`#/equipes`) ; RÉGLAGES — Correspondance panel, Tablettes,
   Rédaction des SOP, Données du panel (`#/rfdonnees` : les écrans d'avant — carte des métiers, postes et sous-postes,
   compétences, évaluations, procédures, base de connaissances, compétences produit, compétences des équipes, routes API —
   à leur adresse, inchangés). Accueil du module : `#/rfformations` (la tablette garde le Classeur). Les anciennes adresses
@@ -736,3 +697,25 @@ contrat article 4.5) avec le suivi des KPI et le développement commercial ; le 
   lit comme avant.
 - Fichiers : `public/formation/portail.js` (chargé entre `formation-sop.js` et `formation.js`, il étend
   `window.FormationSop` comme les tablettes), `public/formation/portail.css`.
+
+## Parcours retiré (06/11/2026)
+
+Client : « retirer tout ce qui a affaire à `#/parcours`, je ne vois pas la nécessité de l'avoir dans les modules ; il faut
+effacer ». Retiré :
+- **Écrans** : la page `public/formation/parcours/` (assistant, frise), l'écran *Parcours des équipes* (`#/parcours`, qui
+  mène désormais à l'accueil du module), *Parcours en cours* du tableau de bord, les liens *Ouvrir un parcours* (fiche d'un
+  poste hors panel, *Compétences des équipes*), l'entrée *Formation › Parcours compétences ↗* du rail du cockpit
+  (`app.js`, `templates.js`). Le rail du portail : SUIVI — *Suivi des équipes* = `#/equipes`.
+- **API** : `GET /parcours/destinations`, `GET /parcours/candidats` (la lecture du CRM candidat), `GET /parcours`,
+  `GET /parcours/liste`, `POST /parcours`, `PATCH /parcours/{id}[/etape/{FO}|/admission/{cle}]`,
+  `POST /parcours/{id}/acquis/{cid}` → 404 « route inconnue ».
+- **Code serveur** : `src/parcours.php` supprimé. Ce que d'autres écrans lisent passe dans **`src/formation_postes.php`**
+  (noms de fonctions inchangés, préfixe `pc`) : `GET /formation/carte` (carte des métiers, `pcCarte`, `pcMaitrises`),
+  `GET /formation/v25` (référentiel v25, critères d'admission), `POST /formation/postes` (créer un poste du référentiel
+  dans le panel). Tests : les vérifications du parcours retirées de `bin/tests_formation.php` (102 ok).
+- **Tables** : `ceo_parcours` et `ceo_parcours_etape` effacées UNE fois par l'installation qui suit la mise en ligne
+  (`formationParcoursEffacer`, appelée par `ensureInstalled`) ; une table qui avait encore des lignes est d'abord gardée en
+  JSON dans le réglage `parcours_sauvegarde_2026_11` (en production, le 06/11/2026 : un seul parcours, arrêté — il y sera gardé) ; bilan dans
+  `parcours_efface_2026_11` et au journal (projet « Formation »).
+- **Maquettes** : `docs/maquettes/parcours-competences/` supprimé.
+

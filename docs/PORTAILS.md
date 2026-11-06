@@ -465,7 +465,10 @@ propriétaire. `ceo_app_setting` et `crm_settings` du CRM se fondent dans `rec_v
 | social | `mar_sa_resultat` | = |  |
 | social | `mar_variable` | = |  |
 
-### Pilotage — 112 table(s)
+### Pilotage — 110 table(s)
+
+`ceo_parcours` et `ceo_parcours_etape` (parcours de chaque personne) : retirées du registre le 06/11/2026 — le parcours est
+supprimé et ses tables sont effacées à la mise en ligne (pilotage-reseau/docs/formation.md, « Parcours retiré »).
 
 | Dépôt actuel | Table actuelle | Nom cible | Note |
 |---|---|---|---|
@@ -486,8 +489,6 @@ propriétaire. `ceo_app_setting` et `crm_settings` du CRM se fondent dans `rec_v
 | consultant_BO | `ceo_matiere_code` | `pil_matiere_code` |  |
 | consultant_BO | `ceo_network_target` | `pil_network_target` |  |
 | consultant_BO | `ceo_operateur_remarque` | `pil_operateur_remarque` |  |
-| consultant_BO | `ceo_parcours` | `pil_parcours` |  |
-| consultant_BO | `ceo_parcours_etape` | `pil_parcours_etape` |  |
 | consultant_BO | `ceo_person` | `pil_person` |  |
 | consultant_BO | `ceo_plan_action` | `pil_plan_action` |  |
 | consultant_BO | `ceo_plan_engagement` | `pil_plan_engagement` |  |

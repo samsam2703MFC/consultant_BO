@@ -95,6 +95,11 @@ function ensureInstalled(): void
     // Les tablettes des magasins (lot 5, 06/11/2026) : une seule tablette, ouverte par le PIN du magasin ; la reprise
     // des magasins du Manuel du CRM quand sa table est dans la base.
     if (function_exists('ensureTablettes')) { ensureTablettes(); }
+    // Le parcours de chaque personne, retiré le 06/11/2026 : ses deux tables effacées une fois (gardées en JSON si pleines).
+    if (function_exists('formationParcoursEffacer')) {
+        try { formationParcoursEffacer(); }
+        catch (Throwable $e) { try { journalAdd('Installation', 'Erreur', 'Formation', 'Effacement des tables du parcours impossible : ' . $e->getMessage()); } catch (Throwable $x) { /* journal absent */ } }
+    }
     if ($marOk) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
             ['schemaVu', json_encode($emp)]);

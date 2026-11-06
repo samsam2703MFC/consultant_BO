@@ -7,7 +7,7 @@
    d'impression (§13.1, §13.2). Ne rien « améliorer » ici : une valeur qui
    change se change d'abord dans la référence commune.
 
-   Chargée EN PREMIER par index.html, sop/tablette.html et parcours/index.html ;
+   Chargée EN PREMIER par index.html et sop/tablette.html ;
    formation.css, sop/sop.css et sop/tablette.css n'y ajoutent que les pièces
    propres au module, sur ces jetons.
 
