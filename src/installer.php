@@ -92,6 +92,9 @@ function ensureInstalled(): void
     ensureSop();
     // Le référentiel commun du Manuel du réseau (06/11/2026) : après les SOP, qu'il classe.
     if (function_exists('ensureReferentiel')) { ensureReferentiel(); }
+    // Les tablettes des magasins (lot 5, 06/11/2026) : une seule tablette, ouverte par le PIN du magasin ; la reprise
+    // des magasins du Manuel du CRM quand sa table est dans la base.
+    if (function_exists('ensureTablettes')) { ensureTablettes(); }
     if ($marOk) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
             ['schemaVu', json_encode($emp)]);

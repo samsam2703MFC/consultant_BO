@@ -10,6 +10,12 @@
  * dont un poste du référentiel v25 (P1–P12) est l'un des siens (déduits de ses postes de tablette, plus l'encadrement
  * si elle valide « vu faire ») — rangés par moment (ouverture, journée, après-midi, fermeture, autres), avec leur
  * état : à lire, lu, quiz, vu faire. « Toutes les SOP » garde la liste par compétence. Le PIN ne change pas.
+ *
+ * UNE SEULE TABLETTE PAR MAGASIN (lot 5 de la fusion, 06/11/2026, src/tablettes.php) : au premier lancement, le PIN DU
+ * MAGASIN (6 chiffres, Cockpit › Formation › Manuel du réseau › Tablettes) ouvre l'appareil ; la session est gardée sur
+ * l'appareil (jeton dans localStorage `foTablette`, envoyé en X-Tablette, et cookie). Le magasin vient de cette
+ * session : ?shop= ne fait plus que pré-choisir le magasin à l'écran du PIN ; ?poste= et ?langue= (lien de l'app
+ * Cuisine) gardent leur rôle. Ensuite, comme avant, le PIN DE L'EMPLOYÉ l'identifie et signe.
  */
 (function () {
   'use strict';
@@ -17,6 +23,8 @@
   const Q = new URLSearchParams(location.search);
   const POSTES = ['cuisson', 'production', 'vente', 'nettoyage'];
   const INACTIF_MS = 10 * 60 * 1000;
+  const CLE_APPAREIL = 'foTablette';         // le jeton de l'appareil (PIN du magasin), gardé sur la tablette
+  const SHOP_LIEN = Q.get('shop') || '';     // le magasin demandé par le lien : seulement pré-choisi
   const T = {
     fr: { titre: 'SOP', poste: { cuisson: 'Cuisson', production: 'Production', vente: 'Vente', nettoyage: 'Nettoyage', tous: 'Toutes' },
       quiLit: 'Qui lit ?', quiLitS: 'Choisis ton nom, puis tape ton PIN — comme pour les checklists.', pinDe: 'PIN de', anonyme: 'Personne d’identifié',
@@ -29,10 +37,14 @@
       demander: 'Demander à être vu(e) faire', plusTard: 'Plus tard', reste: 'Il reste à être vu(e) faire par la responsable du magasin, sur le poste.',
       vuFaire: 'Vu faire', vuFaireS: 'La responsable a vu faire cette SOP, sur place.', responsable: 'Responsable', pasEncore: 'Pas encore', okVu: '✓ Vu faire',
       noteP: 'Une remarque (facultatif)', compAcq: 'Compétence acquise', compEnc: 'Compétence', retour: '← Les SOP', identifie: 'Identifie-toi pour que ta lecture soit comptée.',
-      faux: 'À revoir', okLu: 'Lecture enregistrée', erreurCharge: 'Impossible de charger les SOP', choisirMag: 'Choisir le magasin de cette tablette', pasDeQuiz: 'Cette SOP n’a pas de quiz.',
+      faux: 'À revoir', okLu: 'Lecture enregistrée', erreurCharge: 'Impossible de charger les SOP', pasDeQuiz: 'Cette SOP n’a pas de quiz.',
       journee: 'Ma journée', toutes: 'Toutes les SOP', sesPostes: 'Mes postes', rienJournee: 'Aucun standard n’est encore rangé pour tes postes.',
       moment: { ouverture: 'Ouverture', journee: 'Journée', 'apres-midi': 'Après-midi', fermeture: 'Fermeture', autres: 'Autres moments' },
-      etats: { non: 'à lire', lu: 'lu', quiz: 'quiz réussi', vu: 'vu faire', a_revoir: 'à revoir' }, standards: 'standards', panelCoche: 'cochée au panel' },
+      etats: { non: 'à lire', lu: 'lu', quiz: 'quiz réussi', vu: 'vu faire', a_revoir: 'à revoir' }, standards: 'standards', panelCoche: 'cochée au panel',
+      mag: { titre: 'Tablette du magasin', pin: 'PIN du magasin', aide: 'Les 6 chiffres donnés par le consultant, une seule fois sur cette tablette.', magasin: 'Magasin',
+        ouvrir: 'Ouvrir', effacer: 'Effacer', ouverture: 'Ouverture…', fermer: 'Fermer la tablette', fermerQ: 'Fermer la tablette ? Il faudra retaper le PIN du magasin.',
+        sansBoutique: 'Cette tablette n’est reliée à aucune boutique : à régler dans le Cockpit › Formation › Tablettes.', autre: 'Cette tablette est celle de « %s » : le lien demandait un autre magasin.',
+        err: { pin: 'PIN du magasin inconnu.', archive: 'Cette tablette n’est plus active.', essais: 'Trop d’essais : réessayer dans 15 minutes.', suspendu: 'Ouverture suspendue (trop d’essais) : réessayer dans une heure.', reseau: 'Pas de connexion : réessayer.' } } },
     nl: { titre: 'SOP', poste: { cuisson: 'Bakken', production: 'Productie', vente: 'Verkoop', nettoyage: 'Schoonmaak', tous: 'Alle' },
       quiLit: 'Wie leest?', quiLitS: 'Kies je naam en tik je pincode — zoals bij de checklists.', pinDe: 'Pincode van', anonyme: 'Niet aangemeld',
       lireSans: 'Zonder aanmelding kun je lezen, maar niets wordt geteld.', changer: 'Andere persoon', sortir: 'Afmelden',
@@ -44,19 +56,25 @@
       demander: 'Vragen om voor te doen', plusTard: 'Later', reste: 'Nu nog voordoen voor de winkelverantwoordelijke, op de post.',
       vuFaire: 'Voorgedaan', vuFaireS: 'De verantwoordelijke heeft deze SOP zien uitvoeren, ter plaatse.', responsable: 'Verantwoordelijke', pasEncore: 'Nog niet', okVu: '✓ Voorgedaan',
       noteP: 'Een opmerking (facultatief)', compAcq: 'Competentie verworven', compEnc: 'Competentie', retour: '← De SOP', identifie: 'Meld je aan zodat je lezing telt.',
-      faux: 'Opnieuw bekijken', okLu: 'Lezing bewaard', erreurCharge: 'De SOP konden niet geladen worden', choisirMag: 'Kies de winkel van deze tablet', pasDeQuiz: 'Deze SOP heeft geen quiz.',
+      faux: 'Opnieuw bekijken', okLu: 'Lezing bewaard', erreurCharge: 'De SOP konden niet geladen worden', pasDeQuiz: 'Deze SOP heeft geen quiz.',
       journee: 'Mijn dag', toutes: 'Alle SOP', sesPostes: 'Mijn posten', rienJournee: 'Er staat nog geen standaard voor jouw posten.',
       moment: { ouverture: 'Opening', journee: 'Overdag', 'apres-midi': 'Namiddag', fermeture: 'Sluiting', autres: 'Andere momenten' },
-      etats: { non: 'te lezen', lu: 'gelezen', quiz: 'quiz geslaagd', vu: 'voorgedaan', a_revoir: 'opnieuw' }, standards: 'standaarden', panelCoche: 'aangevinkt in het panel' }
+      etats: { non: 'te lezen', lu: 'gelezen', quiz: 'quiz geslaagd', vu: 'voorgedaan', a_revoir: 'opnieuw' }, standards: 'standaarden', panelCoche: 'aangevinkt in het panel',
+      mag: { titre: 'Tablet van de winkel', pin: 'Pincode van de winkel', aide: 'De 6 cijfers van de consultant, één keer op deze tablet.', magasin: 'Winkel',
+        ouvrir: 'Openen', effacer: 'Wissen', ouverture: 'Bezig met openen…', fermer: 'Tablet afsluiten', fermerQ: 'Tablet afsluiten? De pincode van de winkel moet dan opnieuw ingetikt worden.',
+        sansBoutique: 'Deze tablet is aan geen winkel gekoppeld: in te stellen in de Cockpit › Formation › Tablets.', autre: 'Deze tablet is die van “%s”: de link vroeg een andere winkel.',
+        err: { pin: 'Onbekende pincode van de winkel.', archive: 'Deze tablet is niet meer actief.', essais: 'Te veel pogingen: probeer over 15 minuten opnieuw.', suspendu: 'Openen opgeschort (te veel pogingen): probeer over een uur opnieuw.', reseau: 'Geen verbinding: probeer opnieuw.' } } }
   };
 
   const S = {
-    shop: Q.get('shop') || localStorage.getItem('foShop') || '',
+    shop: '',          // la boutique du panel : celle de la session de l'appareil
+    appareil: null,    // la tablette ouverte par le PIN du magasin : {id, nom, shop} ; null = écran du PIN du magasin
+    etatLu: false, prechoix: null, autreShop: false, pinMag: '', pinMagErr: null,
     poste: Q.get('poste') || localStorage.getItem('foPoste') || 'tous',
     langue: (Q.get('langue') || localStorage.getItem('foLangue')) === 'nl' ? 'nl' : 'fr',
     init: null, moi: null, jeton: null, suivi: {},
     vue: 'liste', sop: null, etape: 0, vuEtapes: {}, qi: 0, reponses: [], choix: null, resultat: null,
-    pinPour: null, pin: '', valideur: null, note: '', occupe: false, erreur: null, magasins: null,
+    pinPour: null, pin: '', valideur: null, note: '', occupe: false, erreur: null,
     onglet: 'journee'   // une fois identifiée : « Ma journée » d'abord, ou « Toutes les SOP »
   };
   if (!POSTES.includes(S.poste)) { S.poste = 'tous'; }
@@ -66,13 +84,25 @@
   const L = v => { if (!v) { return ''; } if (typeof v === 'string') { return v; } const o = S.langue === 'nl' ? 'fr' : 'nl'; return v[S.langue] || v[o] || ''; };
   const ini = n => String(n || '').split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase();
 
+  const jetonAppareil = () => { try { return localStorage.getItem(CLE_APPAREIL) || ''; } catch (e) { return ''; } };
   async function api(chemin, corps, methode) {
+    const h = { Accept: 'application/json', 'Content-Type': 'application/json' };
+    const ja = jetonAppareil();
+    if (ja) { h['X-Tablette'] = ja; }
     const r = await fetch(API + chemin, { method: methode || (corps ? 'POST' : 'GET'), credentials: 'same-origin',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: corps ? JSON.stringify(corps) : undefined });
+      headers: h, body: corps ? JSON.stringify(corps) : undefined });
     let d = null;
     try { d = await r.json(); } catch (e) { d = null; }
-    if (!r.ok) { throw new Error((d && (d.error || d.erreur)) || ('HTTP ' + r.status)); }
+    // La session de l'appareil a pris fin (nouveau PIN, appareil déconnecté, tablette archivée) : retour au PIN du magasin.
+    if (r.status === 401 && d && d.appareil) { appareilFerme(); }
+    if (!r.ok) { const er = new Error((d && (d.error || d.erreur)) || ('HTTP ' + r.status)); er.code = d && d.code; er.status = r.status; throw er; }
     return d;
+  }
+  function appareilFerme() {
+    try { localStorage.removeItem(CLE_APPAREIL); } catch (e) { /* stockage fermé */ }
+    sessionStorage.removeItem('foJeton');
+    S.appareil = null; S.shop = ''; S.init = null; S.jeton = null; S.moi = null; S.suivi = {}; S.vue = 'liste'; S.sop = null; S.pinMag = ''; S.etatLu = true;
+    setTimeout(rendre, 0);   // l'écran du PIN du magasin, même si l'appelant ne redessine pas
   }
   function toast(m) {
     const el = document.createElement('div'); el.className = 'toast'; el.textContent = m; document.body.appendChild(el);
@@ -92,24 +122,82 @@
     rendre();
   }
 
-  async function charger() {
-    if (!S.shop) { return choisirMagasin(); }
+  /** Au lancement : l'appareil est-il ouvert (PIN du magasin) ? Puis la tablette, comme avant. */
+  async function demarrer() {
     try {
-      S.init = await api('/formation/sop/tablette/init?shop=' + encodeURIComponent(S.shop));
-      localStorage.setItem('foShop', S.shop);
+      const e = await api('/formation/sop/tablette/appareil' + (SHOP_LIEN ? '?shop=' + encodeURIComponent(SHOP_LIEN) : ''));
+      S.etatLu = true;
+      if (e.ouvert) { S.appareil = e.magasin; S.shop = e.magasin.shop || ''; S.autreShop = !!e.autreShop; return charger(); }
+      S.appareil = null; S.prechoix = e.prechoix || null;
+    } catch (x) { S.etatLu = true; S.pinMagErr = t().mag.err.reseau; }
+    rendre();
+  }
+  async function ouvrirAppareil() {
+    if (S.pinMag.length !== 6 || S.occupe) { return; }
+    S.occupe = true; S.pinMagErr = null; rendre();
+    try {
+      const r = await api('/formation/sop/tablette/appareil/ouvrir', { pin: S.pinMag });
+      try { localStorage.setItem(CLE_APPAREIL, r.jeton); } catch (e) { /* le cookie de l'appareil suffit */ }
+      S.appareil = r.magasin; S.shop = r.magasin.shop || ''; S.autreShop = !!(SHOP_LIEN && S.shop && SHOP_LIEN !== S.shop);
+      S.pinMag = ''; S.occupe = false;
+      return charger();
+    } catch (x) { S.pinMagErr = (t().mag.err[x.code] || x.message || t().mag.err.reseau); S.pinMag = ''; }
+    S.occupe = false; rendre();
+  }
+  async function fermerAppareil() {
+    if (!confirm(t().mag.fermerQ)) { return; }
+    try { await api('/formation/sop/tablette/appareil/fermer', {}); } catch (e) { /* fermée côté appareil quoi qu'il arrive */ }
+    appareilFerme(); S.prechoix = null; rendre();
+  }
+
+  async function charger() {
+    if (!S.appareil) { return rendre(); }
+    if (!S.shop) { S.init = null; return rendre(); }
+    try {
+      S.init = await api('/formation/sop/tablette/init');
       const j = sessionStorage.getItem('foJeton');
       if (j) {
         try { const m = await api('/formation/sop/tablette/moi?jeton=' + encodeURIComponent(j)); S.jeton = j; S.moi = m.personne; S.suivi = m.suivi || {}; actif(); }
         catch (e) { sessionStorage.removeItem('foJeton'); }
       }
       S.erreur = null;
-    } catch (e) { S.erreur = t().erreurCharge + ' : ' + e.message; }
+    } catch (e) { if (S.appareil) { S.erreur = t().erreurCharge + ' : ' + e.message; } }
     rendre();
   }
-  async function choisirMagasin() {
-    try { S.magasins = await api('/stores'); } catch (e) { S.magasins = []; }
+
+  /* ── Le PIN du magasin : il ouvre l'appareil, une fois (sop/tablette-magasin.css) ── */
+  function vuePinMagasin() {
+    const M = t().mag;
+    const cases = [0, 1, 2, 3, 4, 5].map(i => `<span class="tbm-case${i < S.pinMag.length ? ' is-on' : ''}${i === S.pinMag.length && !S.occupe ? ' is-ici' : ''}">${i < S.pinMag.length ? '•' : ''}</span>`).join('');
+    const touches = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'eff', '0', 'ok'];
+    return `<div class="tbm"><div class="tbm-carte">
+      <div class="tbm-haut"><img src="../img/logo.png" alt="L'Atelier By" class="tbm-logo"><span class="tbm-lg" role="group" aria-label="Langue">${['fr', 'nl'].map(l => `<button data-l="${l}" class="${S.langue === l ? 'is-on' : ''}">${l.toUpperCase()}</button>`).join('')}</span></div>
+      <h1 class="tbm-titre">${esc(M.titre)}</h1>
+      ${S.prechoix ? `<p class="tbm-mag"><span>${esc(M.magasin)}</span>${esc(S.prechoix.nom)}</p>` : ''}
+      <p class="tbm-lab" id="tbm-lab">${esc(M.pin)}</p>
+      <div class="tbm-cases" role="status" aria-labelledby="tbm-lab">${cases}</div>
+      <p class="tbm-err" aria-live="polite">${S.pinMagErr ? esc(S.pinMagErr) : S.occupe ? esc(M.ouverture) : ''}</p>
+      <div class="tbm-pave">${touches.map(k => k === 'eff' ? `<button class="tbm-t is-sec" data-pm="eff" aria-label="${esc(M.effacer)}" ${S.occupe || !S.pinMag ? 'disabled' : ''}>⌫</button>`
+        : k === 'ok' ? `<button class="tbm-t is-ok" data-pm="ok" ${S.occupe || S.pinMag.length !== 6 ? 'disabled' : ''}>${esc(M.ouvrir)}</button>`
+        : `<button class="tbm-t" data-pm="${k}" ${S.occupe || S.pinMag.length >= 6 ? 'disabled' : ''}>${k}</button>`).join('')}</div>
+      <p class="tbm-aide">${esc(M.aide)}</p></div></div>`;
+  }
+  function touchePinMag(k) {
+    if (S.occupe) { return; }
+    if (k === 'eff') { S.pinMag = S.pinMag.slice(0, -1); S.pinMagErr = null; return rendre(); }
+    if (k === 'ok') { return ouvrirAppareil(); }
+    if (S.pinMag.length >= 6) { return; }
+    S.pinMag += k; S.pinMagErr = null;
+    if (S.pinMag.length === 6) { rendre(); return ouvrirAppareil(); }
     rendre();
   }
+  // Un clavier branché (ou le pavé de l'iPad) sur l'écran du PIN du magasin.
+  document.addEventListener('keydown', ev => {
+    if (S.appareil || !S.etatLu) { return; }
+    if (/^\d$/.test(ev.key)) { ev.preventDefault(); touchePinMag(ev.key); }
+    else if (ev.key === 'Backspace') { ev.preventDefault(); touchePinMag('eff'); }
+    else if (ev.key === 'Enter') { ev.preventDefault(); touchePinMag('ok'); }
+  });
 
   /* ── L'en-tête ── */
   function entete(retour) {
@@ -182,7 +270,8 @@
       <div class="tb-pers">${pers.map(p => `<button data-pers="${p.id}" class="${S.pinPour === p.id ? 'on' : ''}"><b>${esc(p.nom)}</b><small>${esc((p.postes || []).map(x => t().poste[x] || x).join(' · '))}${p.valideur ? ' · ' + esc(t().responsable) : ''}</small></button>`).join('')}</div>
       ${S.pinPour ? pave(t().pinDe + ' ' + ((pers.find(p => p.id === S.pinPour) || {}).nom || ''), 'identifier') : ''}
       ${S.erreur ? `<div class="erreur">${esc(S.erreur)}</div>` : ''}
-      <div class="mini" style="margin-top:auto;font-size:12px">${esc(t().lireSans)}</div></div>`;
+      <div class="mini" style="margin-top:auto;font-size:12px">${esc(t().lireSans)}</div>
+      <button class="tbm-fermer" data-a="fermerTablette">${esc(t().mag.fermer)}</button></div>`;
   }
 
   function pave(titre, action) {
@@ -266,14 +355,18 @@
   /* ── Rendu et gestes ── */
   function rendre() {
     const el = $('#tb');
+    document.documentElement.lang = S.langue;
+    if (!S.etatLu) { el.innerHTML = '<div class="vide">…</div>'; return; }
+    if (!S.appareil) { el.innerHTML = vuePinMagasin(); return; }
     if (!S.shop) {
-      el.innerHTML = `<div class="tb-q"><h1>${esc(t().choisirMag)}</h1>${(S.magasins || []).map(m => `<button class="tb-rep" data-shop="${esc(m.id)}">${esc(m.nom)}</button>`).join('') || '<div class="vide">?shop=</div>'}</div>`;
+      el.innerHTML = `<div class="tbm"><div class="tbm-carte"><img src="../img/logo.png" alt="L'Atelier By" class="tbm-logo"><h1 class="tbm-titre">${esc(S.appareil.nom)}</h1>
+        <p class="tbm-err">${esc(t().mag.sansBoutique)}</p><button class="tbm-fermer" data-a="fermerTablette">${esc(t().mag.fermer)}</button></div></div>`;
       return;
     }
     if (!S.init) { el.innerHTML = entete(false) + `<div class="vide">${esc(S.erreur || '…')}</div>`; return; }
     const vues = { liste: vueListe, lecture: vueLecture, quiz: vueQuiz, resultat: vueResultat, vu: vueVu };
-    el.innerHTML = entete(S.vue !== 'liste') + (vues[S.vue] || vueListe)();
-    document.documentElement.lang = S.langue;
+    const autre = S.autreShop && S.vue === 'liste' ? `<div class="tbm-note">${esc(t().mag.autre.replace('%s', S.appareil.nom))}</div>` : '';
+    el.innerHTML = entete(S.vue !== 'liste') + autre + (vues[S.vue] || vueListe)();
   }
 
   async function ouvrir(id) {
@@ -328,7 +421,7 @@
     if (!b) { return; }
     const d = b.dataset;
     if (d.zoom) { const z = document.createElement('div'); z.className = 'zoom'; z.innerHTML = `<img src="${esc(d.zoom)}">`; z.onclick = () => z.remove(); document.body.appendChild(z); return; }
-    if (d.shop) { S.shop = d.shop; return charger(); }
+    if (d.pm) { return touchePinMag(d.pm); }
     if (d.l) {
       S.langue = d.l; localStorage.setItem('foLangue', S.langue);
       if (S.jeton) { api('/formation/sop/tablette/langue', { jeton: S.jeton, langue: S.langue }, 'PUT').catch(() => {}); }
@@ -345,6 +438,7 @@
     switch (d.a) {
       case 'liste': S.vue = 'liste'; S.sop = null; S.erreur = null; return rendre();
       case 'sortir': return sortir();
+      case 'fermerTablette': return fermerAppareil();
       case 'prec': S.etape = Math.max(0, S.etape - 1); rendre(); return window.scrollTo(0, 0);
       case 'suiv': S.vuEtapes[S.etape] = true; S.etape++; rendre(); return window.scrollTo(0, 0);
       case 'fini': {
@@ -374,5 +468,5 @@
   });
   document.addEventListener('input', ev => { if (ev.target.matches('[data-note]')) { S.note = ev.target.value; } });
 
-  charger();
+  demarrer();
 })();

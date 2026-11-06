@@ -415,6 +415,15 @@ mène avec le magasin et la langue de l’appareil).
 La reprise n’écrase jamais une SOP déjà en base. `data/formation/` et `public/formation/sop/photos/` partent avec le
 reste du dépôt.
 
+**Tablettes des magasins (lot 5, 06/11/2026)** : une seule tablette par magasin, celle-ci. Au premier lancement, elle
+demande le **PIN du magasin** (6 chiffres), puis garde la session sur l’appareil. Rien à configurer : au premier appel
+de l’API, `ensureTablettes()` (`src/tablettes.php`) crée `ceo_tablette_magasin`, `ceo_tablette_acces`,
+`ceo_tablette_essai` et **reprend les magasins du Manuel du CRM** (`crm_mo_magasins`, même base) avec le même PIN
+quand il est libre — le bilan (et les éventuels PIN neufs, à communiquer) s’affiche dans Formation › Manuel du réseau
+› **Tablettes**, où l’on crée, renomme, relie à une boutique, archive les tablettes et tire un nouveau PIN. L’adresse
+de la tablette ne change pas. Ordre de mise en ligne : le Cockpit **avant** le CRM (la page `/crm/manuel/` du CRM
+renvoie vers cette tablette et n’ouvre plus de session).
+
 **Compte consultant du panel** (Paramètres) : il vérifie les PIN des employés (`GET /shops/{id}/employees`), lit les
 compétences (`GET /competencies`) et coche au panel une compétence acquise (`PUT /employees/{id}/competencies`). Sans
 lui, la tablette lit mais ne compte rien. 5 essais de PIN manqués bloquent la personne 10 minutes.

@@ -412,7 +412,7 @@ points à confirmer) : `data/formation/REPRISE.md`.
 | *Compétences et SOP* (`#/sopcomp`) | réseau × compétence, magasin × personne, ce que la responsable doit voir faire, réglages de l’équipe (postes, langue, qui valide), le fil |
 | *Rédaction et versions* (`#/sopred`, `#/sop/{id}/editer`) | marquer une langue relue, rattacher une **compétence du panel** (`GET /competencies`), statut, nouvelle SOP ; l’éditeur FR/NL publie une nouvelle version (précision, ou « le geste change » : les personnes validées repassent à revoir) |
 | **Manuel opératoire** › chaque partie | un bloc *Standards (SOP)* à côté des procédures et des formations FO ; l’accueil compte les SOP de chaque partie |
-| **Tablette du poste** `formation/sop/tablette.html?shop=&poste=&langue=` | l’onglet SOP de l’app Cuisine y mène : son nom, son PIN (vérifié au panel, `GET /shops/{id}/employees`, comme les checklists), le pas à pas, le quiz ; la **responsable du magasin** valide « vu faire » avec son PIN |
+| **Tablette du poste** `formation/sop/tablette.html?shop=&poste=&langue=` | l’onglet SOP de l’app Cuisine y mène. Depuis le lot 5 (voir « Tablettes des magasins ») le **PIN du magasin** ouvre d’abord l’appareil, une fois ; puis son nom, son PIN (vérifié au panel, `GET /shops/{id}/employees`, comme les checklists), le pas à pas, le quiz ; la **responsable du magasin** valide « vu faire » avec son PIN |
 
 **Compétences** : une compétence est acquise quand chacune de ses SOP publiées (pour les postes de la personne) a été vue
 faire à la version en vigueur ; elle est alors **cochée au panel** pour la personne (`PUT /employees/{id}/competencies`,
@@ -509,3 +509,49 @@ pointillés dans le Classeur, refusés sur un standard tant qu'ils ne sont pas d
 magasin » compte encore par l'ancienne compétence du panel de chaque SOP.
 
 Routes : `docs/contrat-api.md` § Formation · Manuel du réseau.
+
+## Tablettes des magasins — une seule tablette par magasin (lot 5 de la fusion, 06/11/2026)
+
+Décision du client : la tablette du **Cockpit** (`public/formation/sop/tablette.html`) devient la seule. L’ancienne
+tablette du CRM (`/crm/manuel/`, PIN du magasin, plan de la journée) renvoie ici (CRM : page « La tablette du magasin
+a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
+
+- **Deux PIN** : le **PIN du magasin** (6 chiffres, un par tablette, ni `000000` ni une suite) ouvre l’APPAREIL, une
+  fois ; la session est gardée sur l’appareil (jeton aléatoire dans `localStorage` `foTablette`, envoyé en en-tête
+  `X-Tablette`, et cookie `ceo_tablette` HttpOnly, SameSite=Lax, 400 jours, chemin = le dossier de l’API). Ensuite,
+  comme avant, le **PIN de l’employé** (panel) l’identifie et signe : lu, quiz, « vu faire » validé par la
+  responsable, « Ma journée ».
+- **Le magasin vient de la session** de l’appareil : `?shop=` ne fait plus que pré-choisir le magasin à l’écran du
+  PIN (son nom s’affiche s’il a une tablette active). Le lien de l’app Cuisine (`?shop=…&poste=…&langue=…`) marche
+  toujours : `poste` et `langue` gardent leur rôle ; si l’appareil est déjà ouvert pour un autre magasin, la tablette
+  le dit (bandeau) et reste sur le sien. Un jeton d’employé ne vaut que sur une tablette de son magasin.
+- **Essais du PIN du magasin limités** (table `ceo_tablette_essai`, adresse IP hachée avec le secret du cockpit) :
+  5 erreurs par adresse en 15 minutes, puis 10 erreurs en tout par heure ou 50 par jour suspendent les essais
+  (429 ; noté une fois par heure au journal) ; un refus attend 0,4 s. Une session déjà ouverte n’est pas touchée.
+  Jamais de PIN ni de jeton dans le journal ; le jeton n’est gardé qu’haché (sha256).
+- **Gestion** : barre latérale › Manuel du réseau › **Tablettes** (`#/tablettes`, `formation-sop.js`, styles
+  `sop/tablettes.css`) — l’adresse de la tablette (⧉ copier), « ＋ Tablette de magasin » (nom, boutique du panel),
+  puis par tablette : nom et boutique (enregistrés au départ du champ), PIN, « ⧉ Copier adresse + PIN » (l’adresse
+  porte `?shop=`), « ↻ Nouveau PIN » (tous ses appareils sont déconnectés), appareils connectés (« Déconnecter »),
+  gestes du jour sur la tablette, « Archiver » (appareils déconnectés, le PIN n’ouvre plus rien ; « ↺ Réactiver »
+  garde le même PIN). Signalés : « Sans boutique » (la tablette s’ouvre mais ne montre rien), « Même boutique qu’une
+  autre tablette ». Pas de gestion en mode tablette.
+- **Reprise des magasins du CRM** (même base) : chaque ligne de `crm_mo_magasins` devient une tablette ici, une fois
+  (`crm_id` unique), avec la boutique (`store_id` = `shops.id`) et le **même PIN** quand il est lisible et libre — les
+  équipes n’ont rien à changer ; sinon un PIN neuf, dit dans le bilan (réglage `tabRepriseCrm`, carte « Reprise du
+  Manuel du CRM » de l’écran, journal sans PIN). Lancée par l’installeur (`ensureTablettes`), à chaque lecture de
+  l’écran et par « Reprendre les magasins du CRM ». Les appareils ouverts au CRM ne sont pas repris (autre adresse) :
+  la tablette retape le PIN du magasin une fois.
+- **Code** : `src/tablettes.php` (fonctions `tab*`, chargé après `src/referentiel.php`) ; la garde des routes de la
+  tablette est dans `sopRoute` (`tabGarde`), le magasin dans `foShopTablette`, le jeton dans `foJetonTablette`
+  (`src/sop.php`). Écran du PIN : `tablette.js` (`vuePinMagasin`, FR | NL, pavé et clavier), styles
+  `sop/tablette-magasin.css`.
+
+| Table | Contenu |
+|---|---|
+| `ceo_tablette_magasin` | une tablette : `nom`, `shop_id` (boutique du panel), `pin` (6 chiffres, unique), `pin_le`, `archive`, `crm_id` (magasin du CRM repris), `cree_le`, `cree_par`, `maj_le` |
+| `ceo_tablette_acces` | un appareil ouvert : `magasin_id`, `appareil` (d’après le navigateur), `jeton_hash` (sha256), `cree_le`, `vu_le`, `revoque` |
+| `ceo_tablette_essai` | un essai de PIN du magasin : `ip_hash`, `ok`, `cree_le` (purgé après 7 jours) |
+
+Routes : `docs/contrat-api.md` § Formation · Tablettes des magasins.
+

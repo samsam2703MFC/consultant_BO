@@ -1,0 +1,60 @@
+/* Manuel du réseau › Tablettes des magasins (lot 5 de la fusion, 06/11/2026) — l'écran de gestion (#/tablettes,
+   formation-sop.js). Chargée à la demande par l'écran. Seulement la mise en page propre à l'écran : boutons, pastilles,
+   étiquettes, cartes et champs sont ceux du design system (ref.css, formation.css ; docs/design-system/DESIGN_SYSTEM.md) —
+   graisse 400, filets #e6e0d8, aucune ombre, rectangles aux coins arrondis (jamais de pilule). */
+
+.tbg-lab { display: block; margin: 0 0 4px; font-size: 11.5px; font-weight: 400; color: var(--muted, #7a736a); }
+
+/* En-tête : l'adresse de la tablette et l'ajout d'une tablette */
+.tbg-tete { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 18px; align-items: start; }
+.tbg-adr { min-width: 0; }
+.tbg-url { display: inline-block; max-width: 100%; overflow-wrap: anywhere; font-size: 13px; color: var(--accent, #8D1D2C); text-decoration: none; }
+.tbg-url:hover { text-decoration: underline; }
+.tbg-adr .sub { max-width: 720px; line-height: 1.45; }
+.tbg-adr__act { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.tbg-ajout { grid-column: 1 / -1; margin: 4px 0 0; padding-top: 14px; border-top: 1px solid var(--row-line, rgba(34, 34, 34, 0.06)); }
+.tbg-nouv { flex: 1 1 280px; min-width: 220px; height: 36px; padding: 0 12px; font-size: 13px; font-weight: 400; border: 1px solid var(--line, #e6e0d8); border-radius: 8px; background: #fff; color: var(--ink, #1c1a17); }
+.tbg-sel { height: 36px; padding: 0 10px; font-size: 13px; font-weight: 400; border: 1px solid var(--line, #e6e0d8); border-radius: 8px; background: #fff; color: var(--ink, #1c1a17); max-width: 100%; }
+
+/* Bilan de la reprise du CRM */
+.tbg-bilan { margin-top: 16px; }
+.tbg-bilan__t { display: flex; align-items: baseline; gap: 10px; }
+.tbg-bilan__t h2 { margin: 0 0 6px; }
+.tbg-ligne { margin: 6px 0 0; font-size: 13px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+/* Le titre de la liste et, à droite, la règle des essais */
+.tbg-sl { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
+.tbg-sl__aside { font-size: 11.5px; letter-spacing: normal; text-transform: none; color: var(--muted, #7a736a); }
+
+/* Une tablette : identité · PIN · appareils · archiver */
+.tbg-liste { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.tbg-mag { display: grid; grid-template-columns: minmax(220px, 1.1fr) 300px minmax(260px, 1.3fr) auto; gap: 18px; align-items: start; }
+.tbg-mag__id { min-width: 0; display: flex; flex-direction: column; }
+.tbg-mag__id .tbg-sel { margin-bottom: 8px; }
+.tbg-nom { height: 36px; margin: 0 0 10px; padding: 0 10px; font-size: 15px; font-weight: 400; border: 1px solid var(--line, #e6e0d8); border-radius: 8px; background: #fff; color: var(--ink, #1c1a17); }
+.tbg-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+.tbg-tags:empty { display: none; }
+.tbg-mag__pin { display: flex; flex-direction: column; }
+.tbg-pin { font-size: 28px; font-weight: 400; letter-spacing: 0.12em; line-height: 1.15; font-variant-numeric: tabular-nums; color: var(--ink, #1c1a17); }
+.tbg-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tbg-mag__apps { min-width: 0; }
+.tbg-app { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--row-line, rgba(34, 34, 34, 0.06)); font-size: 12.5px; }
+.tbg-app__n { flex: 0 0 96px; color: var(--ink, #1c1a17); }
+.tbg-app__d { flex: 1 1 auto; min-width: 0; color: var(--muted, #7a736a); }
+.tbg-vide { font-size: 12.5px; }
+.tbg-mag__fin { display: flex; justify-content: flex-end; }
+
+/* Archivées */
+.tbg-archives { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.tbg-arch { display: inline-flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border: 1px solid var(--line, #e6e0d8); border-radius: 10px; background: #fff; font-size: 13px; }
+
+@media (max-width: 1100px) {
+  .tbg-mag { grid-template-columns: minmax(0, 1fr) 300px; }
+  .tbg-mag__apps { grid-column: 1 / -1; }
+  .tbg-mag__fin { grid-column: 1 / -1; justify-content: flex-start; }
+}
+@media (max-width: 700px) {
+  .tbg-tete { grid-template-columns: 1fr; }
+  .tbg-adr__act { justify-content: flex-start; }
+  .tbg-mag { grid-template-columns: 1fr; }
+}

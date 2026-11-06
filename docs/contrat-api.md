@@ -154,18 +154,47 @@ publiée « à revalider » est venue après). État d'une langue : `origine`, `
 | `POST /formation/sop/fiche` | nouvelle SOP `{code, dossier, type, poste, titre {fr, nl}}` (v1.0, à valider) |
 | `POST /formation/sop/importer` | range les SOP de `data/formation/sops/` absentes de la base (n'écrase rien) |
 
-**Tablette du poste** (ouvertes sans session ; chaque écriture porte un PIN vérifié au panel ou un jeton signé de 4 h) :
+**Tablette du poste** (ouvertes sans session du cockpit ; depuis le lot 5, chacune EXIGE la session de l'appareil —
+PIN du magasin, voir § Formation · Tablettes des magasins — sinon **401** `{error, code: "appareil", appareil: true}` ;
+le magasin est celui de cette session, le `shop` envoyé par la page est ignoré ; chaque écriture porte en plus un PIN
+vérifié au panel ou un jeton signé de 4 h, valable seulement sur une tablette de son magasin) :
 
 | Route | Rôle |
 |---|---|
-| `GET /formation/sop/tablette/init?shop=&poste=` | magasin, personnes (sans PIN), SOP du poste |
-| `POST /formation/sop/tablette/identifier` | `{shop, employe, pin}` → `{jeton, personne, suivi}` · 403 PIN incorrect · 429 après 5 essais (10 min) |
+| `GET /formation/sop/tablette/init?poste=` | magasin (celui de l'appareil), personnes (sans PIN), SOP du poste · 409 tablette sans boutique du panel |
+| `POST /formation/sop/tablette/identifier` | `{employe, pin}` → `{jeton, personne, suivi}` · 403 PIN incorrect · 429 après 5 essais (10 min) |
 | `GET /formation/sop/tablette/moi?jeton=` | où en est la personne, SOP par SOP |
 | `GET /formation/sop/tablette/sop/{id}` | la SOP en vigueur, FR et NL, quiz sans les réponses |
 | `POST /formation/sop/tablette/lu` | `{jeton, sop}` |
 | `POST /formation/sop/tablette/quiz` | `{jeton, sop, reponses[]}` → `{score, total, reussi, faux[]}` · 409 sur une SOP à valider |
-| `POST /formation/sop/tablette/vu` | `{shop, sop, employe, valideur, pin, decision: vu\|pas_encore, note}` — seule la responsable valide, jamais soi-même, quiz de la version exigé → `{statut, competence {nom, acquise, vues, total, panel {ok, deja?, erreur?}}}` — une compétence acquise est cochée au panel (`PUT /employees/{id}/competencies`, relue) |
+| `POST /formation/sop/tablette/vu` | `{sop, employe, valideur, pin, decision: vu\|pas_encore, note}` — seule la responsable valide, jamais soi-même, quiz de la version exigé → `{statut, competence {nom, acquise, vues, total, panel {ok, deja?, erreur?}}}` — une compétence acquise est cochée au panel (`PUT /employees/{id}/competencies`, relue) |
 | `PUT /formation/sop/tablette/langue` | `{jeton, langue}` |
+
+## Formation · Tablettes des magasins — une seule tablette, PIN du magasin (`src/tablettes.php`, lot 5, 06/11/2026)
+
+Le PIN du MAGASIN ouvre l'appareil (session gardée : jeton envoyé en en-tête `X-Tablette`, ou cookie `ceo_tablette`
+HttpOnly, SameSite=Lax) ; le PIN de l'employé signe ensuite (routes de la tablette du poste ci-dessus). Doc :
+`docs/formation.md` § Tablettes des magasins.
+
+**Appareil** (publiques, avant l'authentification) :
+
+| Route | Rôle |
+|---|---|
+| `GET /formation/sop/tablette/appareil[?shop=]` | ouvert : `{ouvert: true, magasin {id, nom, shop}, autreShop}` (`autreShop` : le lien demandait une autre boutique) · fermé : `{ouvert: false, prechoix {shop, nom} \| null}` (nom de la tablette active de cette boutique) |
+| `POST /formation/sop/tablette/appareil/ouvrir` | `{pin}` (6 chiffres) → `{ok, jeton, magasin {id, nom, shop}}` + cookie · **401** `code: pin` (inconnu) / `archive` · **429** `code: essais` (5 erreurs par adresse IP en 15 min) / `suspendu` (10 erreurs en tout par heure ou 50 par jour) |
+| `POST /formation/sop/tablette/appareil/fermer` | la session de cet appareil est révoquée, cookie effacé → `{ok}` |
+
+**Gestion** (session du cockpit si l'authentification est activée) — chaque écriture rend la liste entière (forme de
+`GET`) et se journalise (« Formation », projet « Tablettes ») SANS le PIN :
+
+| Route | Rôle |
+|---|---|
+| `GET /formation/tablettes` | reprend d'abord les magasins du CRM absents, puis `{magasins[{id, nom, shopId, boutique, pin, pinLe, archive, creeLe, creePar, reprisCrm, appareils[{id, appareil, creeLe, vuLe}], aujourdhui, memeBoutique}], boutiques[{id, nom}], crmDisponible, reprise {le, reprises[{id, nom, pinGarde, raison, sansBoutique, archive}], dejaLa} \| null, essais {ip15min, heure, jour}}` |
+| `POST /formation/tablettes` | `{nom, shopId?}` → tablette créée avec un PIN neuf · 422 nom vide ou boutique illisible |
+| `PATCH /formation/tablettes/{id}` | `{nom?, shopId? (null = aucune), archive?}` — clé absente = inchangée ; archiver déconnecte ses appareils · 404 · 422 |
+| `POST /formation/tablettes/{id}/pin` | nouveau PIN (unique, ni `000000` ni suite) ; tous ses appareils sont déconnectés → `+ deconnectes` |
+| `DELETE /formation/tablettes/appareils/{id}` | cet appareil devra retaper le PIN du magasin |
+| `POST /formation/tablettes/reprise-crm` | reprend les lignes de `crm_mo_magasins` (même base) pas encore reprises (`crm_id`), même PIN quand il est lisible et libre → `+ bilan {disponible, reprises[], dejaLa}` |
 
 ## Formation · Manuel du réseau — le référentiel commun (`src/referentiel.php`, 06/11/2026)
 
