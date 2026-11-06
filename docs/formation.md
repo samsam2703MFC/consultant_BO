@@ -31,7 +31,24 @@ aucune pilule.
 **Incorporé dans le Marketing** (`/formation/?embed=1#/…` dans un cadre) : `formation.js` pose la classe
 `is-embedded` (sans rail ni menu, la barre supérieure reste) ; la navigation se fait par l'ancre, la
 chaîne `?embed=1` reste donc dans l'adresse, et les liens vers une autre page du module la reçoivent
-(`garderEmbed`). Pas de lien « Retour à l'ERP » : aucune adresse dans la configuration du module.
+(`garderEmbed`).
+
+**Rail ouvert seul** : « Retour au cockpit » mène à l'adresse de la configuration — clé `cockpitUrl` de
+`config/config.php` (écrite par `bin/deploy.sh` d'après `ALIAS_PATH`, soit `/consulant_bo/` ; `COCKPIT_URL` pour
+une autre), rendue par `GET /formation/config` et lue au démarrage (pas en mode incorporé). Clé vide : le repli
+d'avant (le dossier parent sous le cockpit, `/consulant_bo/` depuis `/formation/`). Pas de « Retour à l'ERP » :
+la configuration n'a pas d'adresse de l'ERP (seulement la base de son API, `erpAdmin.base`, qui n'est pas une page).
+
+**PDF du serveur** (fiche d'une SOP, Manuel opératoire — `foPdfHtml` dans `src/sop.php`, rendus par
+`rapPdfRendu`) : §13 du design system, gabarit des documents de gestion (version A). Gotham intégrée (400 =
+`fonts/Gotham_Medium.otf`, 700 = `fonts/Gotham_Regular.otf` pour le type de pièce, les titres d'étape et les
+valeurs des références), palette du back-office, Ruby au filet d'en-tête et à l'encadré des points critiques,
+pied « marque · document · Page n / N » (page de pied propre donnée à wkhtmltopdf, clé `piedHtml` de
+`rapPdfRendu` ; marges de `@page` pour Chromium et l'impression du navigateur). Écrit pour wkhtmltopdf 0.12.6 :
+tableaux et mm, ni variables CSS, ni flexbox, ni calc ; photos réduites par GD dans un cadre de 42 × 56 mm ; un
+titre de section part avec sa première étape, une étape ne se coupe pas, l'en-tête du sommaire se répète.
+`GET /formation/pdf` (fiche d'un poste, d'un niveau, d'une procédure) relaie le PDF que le panel produit : sa mise
+en page est celle du panel.
 
 Comme le reste du cockpit : HTML/CSS/JS sans dépendance ni compilation (`index.html`,
 `formation.js`, `formation.css`, `catalogue.json`).

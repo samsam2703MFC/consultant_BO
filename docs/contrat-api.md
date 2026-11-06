@@ -1390,7 +1390,8 @@ consultant. `GET /formation/referentiel` (tout, `_cache=600`),
 `GET /formation/liens` (procédures, formations et ressources de chaque compétence, `_cache=900`),
 `GET /formation/competence|niveau|procedure|formation|ressource?id=`, `GET /formation/equipe?shop=`
 (compétences validées par personne), `GET /formation/sonde?chemin=` (test d'une route du référentiel,
-liste blanche), `GET /formation/pdf?type=poste|niveau|procedure&id=` (PDF du panel relayé). Sans
+liste blanche), `GET /formation/pdf?type=poste|niveau|procedure&id=` (PDF du panel relayé),
+`GET /formation/config` (`{cockpitUrl}` : l'adresse du « Retour au cockpit » du rail, config.php, ou null). Sans
 compte panel : `503 {indispo, raison}`. Chaque réponse porte `appels[]` (code HTTP, lignes, durée
 de chaque lecture du panel). Les routes `/career-*` du panel sont déclarées en 500 dans son
 swagger : les postes passent par `/positions`. Détail, constats et sécurité : `docs/formation.md` ;
