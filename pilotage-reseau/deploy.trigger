@@ -1299,3 +1299,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-06T18:10:56Z Opérationnel : feuilles Ventes B2B (noms des sociétés, articles) et Commandes du jour (comptoir, webshop, rapprochement)
 2026-11-06T18:36:22Z Formation : portail restructuré (Formations par phase, Postes, Compétences, Manuel opérationnel)
 2026-11-06T18:55:53Z Ventes B2B : deux onglets (le jour, le même jour la semaine d'avant), sans montant
+2026-11-06T19:46:09Z Formation : parcours (#/parcours) et Compétences des équipes retirés ; tables du parcours effacées après sauvegarde
