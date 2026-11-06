@@ -414,3 +414,90 @@ tablette ; la validation « vu faire » reste enregistrée.
 Les écrans SOP vivent dans `public/formation/formation-sop.js` (chargé avant `formation.js`, qui l’appelle par ses
 accroches : `NAV`, `ICONES`, `ECRANS`, `apres()`, l’accueil et chaque partie du manuel) et `sop/sop.css` ; ils
 s’affichent même quand le référentiel du panel est illisible. Routes : `docs/contrat-api.md` § Formation · Standards (SOP).
+
+## Manuel du réseau — fusion du 06/11/2026
+
+Le Manuel opératoire, les SOP et les guides parlaient du même métier dans trois classements. Décisions du client
+(`docs/maquettes/fusion-manuel/PLAN.md`, validées le 06/11/2026) :
+
+1. **Colonne vertébrale** : les 8 domaines D1–D8 du référentiel v25 (`src/data/referentiel_v25.json`, clé `manuel`)
+   et leurs 36 sous-catégories. La **phase** (les quatre parties du Manuel opératoire : pré-ouverture, ouverture,
+   opérationnel, formation continue) et le **poste** (P1–P12 du v25) sont des étiquettes : les vues « par phase » et
+   « par poste » se calculent, rien n'y est saisi.
+2. **Éditeur unique** : ce module. Le CRM lit `GET /formation/ref` (`nl_cockpit_get`) et ne garde que ce qui est
+   propre à un dossier candidat.
+3. **Clé des compétences** : le code `C-…` du v25 (56 codes). Le panel TF Buddy garde l'état par employé ; chaque
+   code est relié à UNE compétence du panel, et le « vu faire » coche celle-là.
+
+**Code** : `src/referentiel.php` (fonctions `rf*`, chargé après `src/sop.php`, `ensureReferentiel()` appelé par
+l'installeur après `ensureSop()`). Écrans : `public/formation/formation-sop.js` (bloc « Manuel du réseau ») et
+`public/formation/sop/ref.css`. Tablette : `public/formation/sop/tablette.js` (« Ma journée »).
+
+**Tables** (créées au premier appel, `CREATE TABLE IF NOT EXISTS`) :
+
+| Table | Contenu |
+|---|---|
+| `ceo_ref_domaine` | les 8 domaines : code, rang, libellés FR et NL, `nl_relu` |
+| `ceo_ref_souscat` | les 36 sous-catégories (`cle` = « D5.3 », rang dans l'ordre du v25), description, compétences, formations et checklists du v25 (JSON) ; semées une fois (`INSERT IGNORE`), jamais réécrites par le semis |
+| `ceo_ref_corresp` | code `C-…` → compétence du panel : `etat` `valide` (choisie par une personne), `certain` (proposée sans ambiguïté), `propose` (à trancher, jamais utilisée pour cocher), `aucun` ; score, trois meilleures propositions |
+| `ceo_sop` (+ colonnes) | `souscat`, `phases`, `postes`, `competences`, `formations`, `checklists` (listes JSON) |
+
+**Libellés NL** des domaines, sous-catégories, postes et phases : fournis le 06/11/2026, **à relire** (traduction de
+travail). Une sous-catégorie dont le NL est enregistré dans le Classeur passe « relue ».
+
+**Classement initial** : les 25 SOP reçoivent une fois le classement du contrat de la fusion (sous-catégorie,
+phases, postes, compétences, formations, checklists ; constante `RF_CLASSEMENT_2026_11`), seulement celles qui n'ont
+pas encore de sous-catégorie ; drapeau `rfClassement_2026_11` dans `ceo_app_setting`.
+
+**Correspondance des compétences** : proposée automatiquement depuis les compétences du panel (`GET /competencies`,
+même lecture que le module, gardée un jour) — noms ramenés à leurs mots (sans accents ni casse, mots vides retirés),
+coefficient de Dice entre les mots du code et du nom v25 et ceux du nom du panel. `certain` seulement sans
+ambiguïté : meilleur score ≥ 0,75, avec 0,25 d'avance sur le deuxième, et aucun autre code n'a un score aussi haut
+sur la même compétence du panel (ni ne l'a déjà validée). Sinon `propose` avec les trois meilleures, ou `aucun`.
+Une ligne tranchée par une personne (`valide`, ou `aucun` choisi) n'est jamais réécrite. La première lecture de
+l'écran Compétences lance la proposition quand la table est vide.
+
+**« Vu faire »** : quand la responsable valide une SOP, chaque code `C-…` de la SOP est évalué pour la personne —
+acquis quand chacune des SOP publiées qui portent ce code et la concernent (un de ses postes v25, ou commencée) a été
+vue faire à la version en vigueur. Acquis et relié au panel (`valide` ou `certain`), il est coché au panel
+(`foCocherPanel` : `PUT /employees/{id}/competencies`, relu, journalisé). Repli : une SOP sans aucun code relié au
+panel garde l'ancienne règle (la compétence du panel rattachée dans Rédaction, `competence_id`).
+
+**Postes d'une personne** : la tablette connaît ses postes de tablette (vente, cuisson, production, nettoyage) ; ils
+se traduisent en postes v25 (`RF_POSTES_PERSONNE` : vente → P3, cuisson et production → P1) et une personne qui
+valide « vu faire » tient aussi P4, P5, P8. Une SOP sans postes v25 garde l'ancienne règle (son poste de tablette).
+
+**Brouillons** : une SOP reprise du Manuel opératoire du CRM arrive au statut `brouillon` (FR seul, le NL à écrire) :
+ni sur la tablette, ni dans le Manuel imprimé, ni dans les parties du Manuel en ligne. Rédaction › Statut la fait
+passer « à valider » puis « publiée ».
+
+| Où | Ce qu'on y trouve |
+|---|---|
+| Barre latérale › **Manuel du réseau** › *Classeur* (`#/rfclasseur/D5`) | les 8 domaines (standards, FO, compétences, checklists), le tableau du domaine (sous-catégorie, standards, formations, compétences, checklists, phases ; « aucun standard », compétence sans standard, code cité mais non décrit), la chaîne de chaque standard (standard → formation → compétence et sa compétence du panel → contrôle), les standards à classer ; « Modifier » une sous-catégorie (NL, description) ; « Reprendre le Manuel du CRM » |
+| *Par phase* (`#/rfphase/preouverture`) | pour la phase : les standards à appliquer (par domaine), les formations à apprendre (celles des standards et celles que le Manuel opératoire range dans cette partie), les compétences à prouver |
+| *Par poste* (`#/rfposte/P3/operationnel`) | la matrice P1–P12 × phases : standards du poste et de la phase, formations (des standards, et celles que le v25 attend pour ce poste dans cette partie), compétences ; un clic détaille la cellule |
+| *Standards* (`#/sop`) | l'écran des SOP (sous-catégorie ou « à classer » sur chaque carte) ; la fiche gagne le bloc **Classement** (sous-catégorie, phases, postes, compétences, formations, checklists ; propositions de la sous-catégorie) |
+| *Compétences* (`#/sopcomp`) | onglet « Correspondance avec le panel » : couverture, filtres, chaque code avec ses propositions à trancher en un clic, une autre compétence du panel, ou « Aucune » ; les compétences du panel sans code. Onglet « Acquisition en magasin » (`#/sopcomp/magasins`) : l'ancien écran (réseau, magasin, équipe, fil) |
+| *Rédaction* (`#/sopred`) | inchangée (statut `brouillon` en plus) |
+| **Tablette du poste** › *Ma journée* | une fois identifiée, les standards de la personne rangés par moment (ouverture, journée, après-midi, fermeture, autres), avec leur état (à lire, lu, quiz réussi, vu faire, à revoir) ; « Toutes les SOP » garde la liste d'avant |
+
+**Reprise du Manuel opératoire du CRM** (`POST /formation/ref/importer-crm`, bouton du Classeur) : quand la table
+`crm_mo_procedures` existe dans la base (même base en production), chaque procédure devient une SOP `brouillon`
+(id `crm-<id>`, source `crm:<id>`, idempotent), sauf AC-01, AC-02, AC-03 (les checklists des SOP d'ouverture et de
+fermeture). Chapitre → sous-catégorie par son nom (mêmes mots, sinon le meilleur recouvrement s'il est unique) ;
+postes vente → P3, production → P1, traiteur → P2, responsable → P8 ; partie → phase ; moment avant → ouverture,
+service et rush → journée, fermeture → fermeture ; étapes → une section « Étapes » (titre, consigne, point critique) ;
+formations des étapes et de la procédure → formations ; compétence `C-…` reconnue → compétences. Les photos restent
+dans le CRM (comptées dans le bilan, notées sur la SOP) ; les vidéos sont notées dans le relevé.
+
+**Essais locaux** : `tests/formation/faux_panel.php` imite les routes du panel que le module appelle (107
+compétences et trois personnes FICTIVES, `tests/formation/fixtures/faux_panel.json`) :
+`php -S 127.0.0.1:8191 tests/formation/faux_panel.php`, puis le cockpit avec `PANEL_API_BASE=http://127.0.0.1:8191
+PANEL_API_PHONE=essai PANEL_API_PASSWORD=essai` (sans réglage `panelApi` en base, qui primerait).
+
+**Reste à décider** : six codes cités par les sous-catégories du v25 n'ont pas de ligne dans sa feuille des
+compétences (`C-ID.ADN`, `C-ID.FB`, `C-ID.MO`, `C-MKT.Digital`, `C-MKT.Local`, `C-MKT.Saisons`) : affichés en
+pointillés dans le Classeur, refusés sur un standard tant qu'ils ne sont pas décrits. L'onglet « Acquisition en
+magasin » compte encore par l'ancienne compétence du panel de chaque SOP.
+
+Routes : `docs/contrat-api.md` § Formation · Manuel du réseau.
