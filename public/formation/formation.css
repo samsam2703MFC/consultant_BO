@@ -1212,49 +1212,18 @@ td .fm-barre {
 
 /* ── Carte des métiers : le plan (maquette 01a) et les effectifs (01c) ── */
 
-/* Les sélecteurs segmentés du module : ceux de ds.css (.seg). Alias de
-   transition pour les gabarits qui portent encore .fm-seg (formation-sop.js) :
-   à retirer une fois ces gabarits passés à .seg. */
-.fm-seg {
-  display: inline-flex;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 9px;
-  background: var(--chip);
-  align-self: center;
-  flex: 0 0 auto;
-}
-
-.fm-seg button {
-  margin: 0;
-  padding: 6px 11px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--muted-2);
-  font: 400 12.5px 'Gotham', system-ui, sans-serif;
-  cursor: pointer;
-}
-
-.fm-seg button.is-on {
-  background: #fff;
-  color: var(--ink);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-
+/* Les sélecteurs segmentés du module : ceux de ds.css (.seg) ; l'alias .fm-seg est retiré (lot 6). */
 .seg {
   align-self: center;
   flex: 0 0 auto;
 }
 
-.seg button:focus-visible,
-.fm-seg button:focus-visible {
+.seg button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-.seg.fm-seg--petit,
-.fm-seg--petit {
+.seg.fm-seg--petit {
   margin-bottom: 10px;
 }
 
@@ -2796,7 +2765,6 @@ a.fm-pc3:hover {
   .filter,
   .btn,
   .seg button,
-  .fm-seg button,
   .sidebar__item,
   .fm-burger,
   .fm-crumbs a,
@@ -2813,8 +2781,7 @@ a.fm-pc3:hover {
     align-items: center;
   }
 
-  .seg button,
-  .fm-seg button {
+  .seg button {
     padding: 10px 18px;
     font-size: 14px;
   }

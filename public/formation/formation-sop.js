@@ -60,7 +60,8 @@ window.FormationSop = (function () {
     : s.competence ? `<span class="sop-comp" title="compétence du panel (ancienne règle)">${esc(s.competence.nom)}</span>` : '<span class="sop-comp is-sans">sans compétence</span>';
   const famNom = d => L((D.dossiers.find(x => x.id === d) || {}).nom);
   const pdf = (chemin, l) => `${C.API}${chemin}${chemin.includes('?') ? '&' : '?'}langue=${l}`;
-  const heat = v => v == null ? '<span class="muted">—</span>' : `<span class="sop-heat" style="background:${v < 20 ? 'var(--chip)' : v < 40 ? '#E3EFE2' : v < 60 ? '#C6E0CA' : v < 80 ? '#86BF94' : 'var(--green)'};color:${v < 20 ? 'var(--muted)' : v < 60 ? '#24502f' : '#fff'}">${v} %</span>`;
+  // La part acquise : du gris du système au vert (--green, rgb 63 122 82) en quatre teintes de ce même vert.
+  const heat = v => v == null ? '<span class="muted">—</span>' : `<span class="sop-heat" style="background:${v < 20 ? 'var(--chip)' : v < 40 ? 'rgba(63, 122, 82, 0.12)' : v < 60 ? 'rgba(63, 122, 82, 0.3)' : v < 80 ? 'rgba(63, 122, 82, 0.6)' : 'var(--green)'};color:${v < 20 ? 'var(--muted)' : v < 60 ? 'var(--green)' : '#fff'}">${v} %</span>`;
   const tabletteLien = (poste) => `sop/tablette.html?${new URLSearchParams(Object.assign(D.shop ? { shop: D.shop } : {}, poste ? { poste } : {})).toString()}`;
   const choixMagasin = () => `<select class="fm-select" data-sch="shop" style="max-width:240px"><option value="">Choisir un magasin…</option>${(D.magasins || []).map(m => `<option value="${esc(m.id)}" ${m.id === D.shop ? 'selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>`;
   function filtrer(l) {
@@ -86,7 +87,7 @@ window.FormationSop = (function () {
     h += `<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher une SOP, une compétence…" data-input="sopq" value="${esc(C.S.f.sopq || '')}">
       ${f('poste', '', 'Tous les postes', !D.f.poste)}${POSTES.map(p => f('poste', p, POSTE_NOM[p], D.f.poste === p)).join('')}
       ${f('relire', !D.f.relire, 'Traduction à relire', D.f.relire)}${f('valider', !D.f.valider, 'À valider', D.f.valider)}${f('sansComp', !D.f.sansComp, 'Sans compétence', D.f.sansComp)}
-      <a class="filter" href="${tabletteLien('')}" target="_blank" rel="noopener">Tablette du poste ↗</a></div></div>`;
+      <a class="btn btn--sm" href="${tabletteLien('')}" target="_blank" rel="noopener">Tablette du poste ↗</a></div></div>`;
     h += `<p class="muted fm-small"><span class="sop-lg is-on">FR</span> <span class="sop-lg is-on">NL</span> langue d’origine ou relue · <span class="sop-lg is-ar">NL ·</span> traduite à la reprise, à relire</p>`;
     D.dossiers.forEach(d => {
       const g = l.filter(s => s.dossier === d.id);
@@ -102,7 +103,7 @@ window.FormationSop = (function () {
       <span class="sop-tags"><span class="chip chip--soft">${esc(s.type)}</span>${trad(s)}<span class="sop-lg">v${esc(s.version)}</span>${s.statut === 'a_valider' ? '<span class="chip chip--warn">À valider</span>' : ''}${s.statut === 'brouillon' ? '<span class="chip chip--mute">Brouillon</span>' : ''}${(phasesDe(s) || [s.partie]).map(p => `<span class="chip chip--mute">${esc(NOM_PARTIE[p] || '')}</span>`).join('')}${s.classement && s.classement.souscat ? `<span class="chip chip--mute" title="sous-catégorie du référentiel v25">${esc(s.classement.souscat)}</span>` : '<span class="chip chip--warn">à classer</span>'}</span>
       <strong>${esc(s.titre.fr)}</strong><span class="sop-ob">${esc(L(s.objectif))}</span><span>${comp(s)}</span>
       <span class="muted fm-small">${p.vu} vu(s) faire · ${p.quiz} quiz · ${p.lu} lu(s)${p.aRevoir ? ` · ${p.aRevoir} à revoir` : ''}</span>
-      <span class="sop-pied"><span><b>${s.nbEtapes}</b> étapes</span>${s.nbPhotos ? `<span>📷 ${s.nbPhotos}</span>` : ''}<span>${esc(POSTE_NOM[s.poste] || s.poste)}</span><span class="sop-code">${esc(s.code || '')}</span></span></a></li>`;
+      <span class="sop-pied"><span><b>${s.nbEtapes}</b> étapes</span>${s.nbPhotos ? `<span>${s.nbPhotos} photo${s.nbPhotos > 1 ? 's' : ''}</span>` : ''}<span>${esc(POSTE_NOM[s.poste] || s.poste)}</span><span class="sop-code">${esc(s.code || '')}</span></span></a></li>`;
   }
 
   /* ═══ Une SOP ═══ */
@@ -124,16 +125,16 @@ window.FormationSop = (function () {
       });
     });
     const vb = (v, lib) => `<button type="button" data-sa="vue" data-v="${v}"${D.vue === v ? ' class="is-on"' : ''}>${lib}</button>`;
-    const outils = `<div class="filters"><div class="filters__row"><div class="fm-seg" role="group">${vb('fr', 'FR')}${vb('nl', 'NL')}${vb('deux', 'FR et NL côte à côte')}</div>
-      <a class="filter" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'fr')}" target="_blank">PDF FR</a><a class="filter" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'nl')}" target="_blank">PDF NL</a>
-      <a class="filter" href="${tabletteLien(s.poste)}" target="_blank" rel="noopener">Tablette du poste ↗</a>
-      ${tablette() ? '' : `<a class="filter is-on" href="#/sop/${esc(s.id)}/editer" style="margin-left:auto">Modifier</a>`}</div></div>`;
+    const outils = `<div class="filters"><div class="filters__row"><div class="seg" role="group">${vb('fr', 'FR')}${vb('nl', 'NL')}${vb('deux', 'FR et NL côte à côte')}</div>
+      <a class="btn btn--sm" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'fr')}" target="_blank">PDF FR</a><a class="btn btn--sm" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'nl')}" target="_blank">PDF NL</a>
+      <a class="btn btn--sm" href="${tabletteLien(s.poste)}" target="_blank" rel="noopener">Tablette du poste ↗</a>
+      ${tablette() ? '' : `<a class="btn btn--primary" href="#/sop/${esc(s.id)}/editer" style="margin-left:auto">Modifier</a>`}</div></div>`;
     const partie = phasesDe(s) ? `<p><span class="muted">Parties du manuel</span> ${phasesDe(s).map(p => `<a class="chip chip--accent" href="#/manuel/partie/${esc(p)}">${esc(NOM_PARTIE[p] || p)}</a>`).join(' ')} <span class="muted fm-small">les phases du classement</span></p>` : `<p><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/manuel/partie/${esc(s.partie)}">${esc(NOM_PARTIE[s.partie])}</a>${s.partieReglee || tablette() ? '' : ' <span class="muted fm-small">déduite du moment</span>'}</p>
-      ${tablette() ? '' : `<div class="fm-seg fm-seg--petit" role="group">${PARTIES.map(p => `<button type="button" data-sa="partie" data-id="${esc(s.id)}" data-v="${p[0]}"${p[0] === s.partie ? ' class="is-on"' : ''}>${esc(p[1])}</button>`).join('')}</div>${s.partieReglee ? ` <button type="button" class="filter fm-small" data-sa="partie" data-id="${esc(s.id)}" data-v="">↺ Partie déduite</button>` : ''}`}`;
+      ${tablette() ? '' : `<div class="seg fm-seg--petit" role="group">${PARTIES.map(p => `<button type="button" data-sa="partie" data-id="${esc(s.id)}" data-v="${p[0]}"${p[0] === s.partie ? ' class="is-on"' : ''}>${esc(p[1])}</button>`).join('')}</div>${s.partieReglee ? ` <button type="button" class="btn btn--sm" data-sa="partie" data-id="${esc(s.id)}" data-v="">↺ Partie déduite</button>` : ''}`}`;
     const infos = `<section class="card"><h2>La SOP</h2><dl class="sop-dl">
       <dt>Code</dt><dd>${esc(s.code || '—')} · ${esc(s.dossier)} ${esc(famNom(s.dossier))}</dd><dt>Poste</dt><dd>${esc(POSTE_NOM[s.poste] || s.poste)}${s.moment ? ' · ' + esc(s.moment) : ''}</dd>
       <dt>Langues</dt><dd>${trad(s)} origine : ${esc(s.langueOrigine)}</dd><dt>Version</dt><dd>v${esc(s.version)} · ${esc(dt(s.majLe))}${s.majPar ? ' · ' + esc(s.majPar) : ''}</dd>
-      <dt>Étapes</dt><dd>${s.nbEtapes}${s.nbPhotos ? ' · 📷 ' + s.nbPhotos : ''}${c.duree ? ' · ' + esc(c.duree) : ''}</dd><dt>Compétence</dt><dd>${comp(s)}</dd>
+      <dt>Étapes</dt><dd>${s.nbEtapes}${s.nbPhotos ? ' · ' + s.nbPhotos + ' photo' + (s.nbPhotos > 1 ? 's' : '') : ''}${c.duree ? ' · ' + esc(c.duree) : ''}</dd><dt>Compétence</dt><dd>${comp(s)}</dd>
       ${s.statut === 'a_valider' ? '<dt>Statut</dt><dd><span class="chip chip--warn">À valider</span> lisible, sans quiz ni validation</dd>' : ''}</dl><div style="margin-top:12px">${partie}</div></section>`;
     const eq = s.equipe ? `<section class="card"><h2>${esc(s.magasin.nom)} face à cette SOP</h2><p class="muted fm-small">${s.equipe.filter(p => p.statut === 'vu').length} / ${s.equipe.length} vus faire par la responsable</p>
       ${s.equipe.map(p => `<div class="sop-ligne"><div class="sop-ligne__x"><b>${esc(p.nom)}</b><small>${p.valideur ? 'responsable · ' : ''}lit en ${esc(p.langue.toUpperCase())}${p.vuPar ? ' · vu faire par ' + esc(p.vuPar) + ' le ' + esc(dt(p.vuLe)) : ''}</small></div><span class="chip ${ST_CHIP[p.statut]}">${esc(ST_NOM[p.statut])}</span></div>`).join('') || '<p class="muted">Personne de ce poste dans ce magasin.</p>'}
@@ -143,11 +144,11 @@ window.FormationSop = (function () {
     const quiz = (c.quiz || []).length ? `<section class="card"><h2>Le quiz</h2><p class="muted fm-small">${c.quiz.length} questions · la bonne réponse en couleur</p>${c.quiz.map((q, i) => `<div class="sop-q"><b>${i + 1}. ${esc(L(q.question, l1))}</b>${deux && q.question.nl ? `<span class="muted fm-small">${esc(q.question.nl)}</span>` : ''}
       <ul class="chips">${(q.choix[l1] && q.choix[l1].some(x => x) ? q.choix[l1] : q.choix.fr).map((x, j) => `<li class="chip ${j === q.bonne ? 'chip--accent' : 'chip--soft'}">${esc(x)}</li>`).join('')}</ul></div>`).join('')}</section>` : '';
     const versions = `<section class="card"><h2>Versions</h2>${s.versions.map(v => `<div class="sop-ligne"><span class="sop-lg${v.version === s.version ? ' is-on' : ''}">v${esc(v.version)}</span><div class="sop-ligne__x">${esc(v.note || '—')}<small>${esc(dth(v.publieLe))}${v.publiePar ? ' · ' + esc(v.publiePar) : ''}${v.revalider ? ' · à revalider' : ''}</small></div>
-      ${v.version !== s.version ? `<button type="button" class="filter fm-small" data-sa="archive" data-id="${esc(s.id)}" data-v="${esc(v.version)}">Voir</button>` : ''}</div>`).join('')}</section>`;
+      ${v.version !== s.version ? `<button type="button" class="btn btn--sm" data-sa="archive" data-id="${esc(s.id)}" data-v="${esc(v.version)}">Voir</button>` : ''}</div>`).join('')}</section>`;
     const rel = ((c.corrections || []).length || (c.remarques || []).length) && !tablette() ? `<section class="card"><h2>Relevé à la reprise</h2>
       ${(c.corrections || []).map(x => `<div class="sop-ligne"><span class="chip chip--ok">corrigé</span><div class="sop-ligne__x fm-small">${esc(x)}</div></div>`).join('')}
       ${(c.remarques || []).map(x => `<div class="sop-ligne"><span class="chip chip--warn">à confirmer</span><div class="sop-ligne__x fm-small">${esc(x)}</div></div>`).join('')}</section>` : '';
-    const arch = D.archive && D.archive.id === id ? C.bandeau(`Version archivée v${esc(D.archive.version)} (${esc(dth(D.archive.publieLe))}) — <button type="button" class="filter fm-small" data-sa="archive" data-id="${esc(id)}" data-v="">Revenir à la version en vigueur</button>`, 'warn') : '';
+    const arch = D.archive && D.archive.id === id ? C.bandeau(`Version archivée v${esc(D.archive.version)} (${esc(dth(D.archive.publieLe))}) — <button type="button" class="btn btn--sm" data-sa="archive" data-id="${esc(id)}" data-v="">Revenir à la version en vigueur</button>`, 'warn') : '';
     const corps = fil + `<p class="muted">${trad(s)} <span class="sop-lg is-on">v${esc(D.archive && D.archive.id === id ? D.archive.version : s.version)}</span> ${esc(L(s.objectif))}</p>` + arch + outils +
       `<div class="sop-deux"><section class="card">${etapes || '<p class="muted">Aucune étape.</p>'}</section><div>${infos}${carteClassement(s)}${eq}${crit}${quiz}${versions}${rel}</div></div>`;
     return { titre: s.titre.fr, kicker: K + ' · ' + (s.code || ''), corps, large: true };
@@ -159,7 +160,7 @@ window.FormationSop = (function () {
     if (!X) { return { titre: 'Compétences et SOP', kicker: K, corps: attente('Lecture des compétences…') }; }
     const comps = X.competences;
     let h = X.panel.indispo ? C.bandeau('Compétences du panel : ' + esc(X.panel.motif || 'indisponibles') + (X.panel.liste.length ? ' — ' + X.panel.liste.length + ' gardées de la dernière lecture.' : '') + ' Les SOP se rattachent dans Rédaction et versions.', 'warn')
-      : `<p class="muted fm-small">${X.panel.liste.length} compétences lues au panel (${esc(X.panel.source)}) · <button type="button" class="filter fm-small" data-sa="relirePanel">Relire le panel</button></p>`;
+      : `<p class="muted fm-small">${X.panel.liste.length} compétences lues au panel (${esc(X.panel.source)}) · <button type="button" class="btn btn--sm" data-sa="relirePanel">Relire le panel</button></p>`;
     if (X.sansCompetence.length) { h += C.bandeau(`${X.sansCompetence.length} SOP sans compétence du panel — <a href="#/sopred">les rattacher</a>.`, 'warn'); }
     h += `<p class="muted">Une compétence est acquise quand la responsable du magasin a vu faire chacune de ses SOP ; elle est alors cochée au panel pour la personne.</p>`;
     const tete = `<tr><th></th>${comps.map(c => `<th>${esc(c.nom)}<br><span class="muted fm-small">${c.sops.length} SOP</span></th>`).join('')}<th>Acquises</th></tr>`;
@@ -193,7 +194,7 @@ window.FormationSop = (function () {
     let h = '';
     if (D.comp && D.comp.panel.indispo) { h += C.bandeau('Compétences du panel : ' + esc(D.comp.panel.motif || '') + '. « Autre… » permet d’écrire le nom exact d’une compétence du panel en attendant.', 'warn'); }
     const N = D.nouv;
-    h += `<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher…" data-input="sopq" value="${esc(C.S.f.sopq || '')}"><button type="button" class="filter is-on" data-sa="nouv" style="margin-left:auto">Nouvelle SOP</button></div></div>`;
+    h += `<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher…" data-input="sopq" value="${esc(C.S.f.sopq || '')}"><button type="button" class="btn${N ? '' : ' btn--primary'}" data-sa="nouv" style="margin-left:auto">Nouvelle SOP</button></div></div>`;
     if (N) {
       h += `<section class="card"><h2>Nouvelle SOP</h2><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
         <input class="sop-in" placeholder="Code (ex. SOP-CUI-XYZ-01)" data-sin="nouv.code" value="${esc(N.code)}">
@@ -201,7 +202,7 @@ window.FormationSop = (function () {
         <select class="fm-select" data-sch="nouv.type">${['SOP', 'Checklist', 'Mémo', 'Fiche'].map(x => `<option ${N.type === x ? 'selected' : ''}>${x}</option>`).join('')}</select>
         <select class="fm-select" data-sch="nouv.poste">${POSTES.map(x => `<option value="${x}" ${N.poste === x ? 'selected' : ''}>${POSTE_NOM[x]}</option>`).join('')}</select>
         <input class="sop-in" style="grid-column:span 2" placeholder="Titre FR" data-sin="nouv.fr" value="${esc(N.fr)}"><input class="sop-in" style="grid-column:span 2" placeholder="Titel NL" data-sin="nouv.nl" value="${esc(N.nl)}"></div>
-        <p style="margin-top:10px"><button type="button" class="filter is-on" data-sa="creer">Créer (à valider)</button> <button type="button" class="filter" data-sa="annulerNouv">Annuler</button></p></section>`;
+        <p style="margin-top:10px"><button type="button" class="btn btn--primary" data-sa="creer">Créer (à valider)</button> <button type="button" class="btn btn--ghost" data-sa="annulerNouv">Annuler</button></p></section>`;
     }
     h += `<section class="card table-card"><div class="table-scroll"><table><thead><tr><th>Famille</th><th>SOP</th><th>FR</th><th>NL</th><th>Version</th><th class="num">Étapes</th><th title="la compétence du panel rattachée à la SOP : gardée en repli quand aucun code C-… n’est relié au panel">Compétence du panel (repli)</th><th>Partie</th><th>Statut</th><th></th></tr></thead><tbody>
       ${filtrer(D.liste).map(s => `<tr><td class="fm-small">${esc(s.dossier)} · ${esc(famNom(s.dossier))}</td><td><a href="#/sop/${esc(s.id)}"><b>${esc(s.titre.fr)}</b></a><br><span class="muted fm-small">${esc(s.code || '')} · ${esc(s.titre.nl)}</span></td>
@@ -209,7 +210,7 @@ window.FormationSop = (function () {
         <td><select class="fm-select" style="max-width:240px" data-sch="comp" data-id="${esc(s.id)}">${opts(s)}</select></td>
         <td class="fm-small">${esc(NOM_PARTIE[s.partie])}${s.partieReglee ? '' : '<br><span class="muted">déduite</span>'}</td>
         <td><select class="fm-select" style="width:auto" data-sch="statut" data-id="${esc(s.id)}"><option value="publiee" ${s.statut === 'publiee' ? 'selected' : ''}>publiée</option><option value="a_valider" ${s.statut === 'a_valider' ? 'selected' : ''}>à valider</option><option value="brouillon" ${s.statut === 'brouillon' ? 'selected' : ''}>brouillon</option></select></td>
-        <td><a class="filter fm-small" href="#/sop/${esc(s.id)}/editer">Modifier</a></td></tr>`).join('')}</tbody></table></div></section>
+        <td><a class="btn btn--sm" href="#/sop/${esc(s.id)}/editer">Modifier</a></td></tr>`).join('')}</tbody></table></div></section>
       <p class="muted fm-small">Reprise du Drive du 05/11/2026 (44 fichiers → 25 SOP) : corrections et points à confirmer dans <code>data/formation/REPRISE.md</code> et sur chaque fiche (« Relevé à la reprise »).</p>`;
     return { titre: 'Rédaction et versions', kicker: K, corps: h, large: true };
   }
@@ -225,29 +226,29 @@ window.FormationSop = (function () {
     const s = D.edMeta, c = D.ed;
     const bi = (p, lib, area) => `<div style="display:grid;grid-template-columns:120px 1fr 1fr;gap:8px;align-items:start;margin-bottom:8px"><span class="muted" style="padding-top:6px">${lib}</span>${champ(p + '.fr', 'FR', area)}${champ(p + '.nl', 'NL', area)}</div>`;
     const secs = c.sections.map((sec, si) => `<div class="sop-ed-sec"><div class="sop-ed-sec__h">${champ('sections.' + si + '.titre.fr', 'Titre de la section (FR)')}${champ('sections.' + si + '.titre.nl', 'Titel van de sectie (NL)')}
-      <span><button type="button" class="filter fm-small" data-sa="secMove" data-i="${si}" data-d="-1">↑</button><button type="button" class="filter fm-small" data-sa="secMove" data-i="${si}" data-d="1">↓</button><button type="button" class="filter fm-small" data-sa="secSuppr" data-i="${si}">✕</button></span></div>
+      <span><button type="button" class="btn btn--icon" data-sa="secMove" data-i="${si}" data-d="-1" aria-label="Monter la section">↑</button><button type="button" class="btn btn--icon" data-sa="secMove" data-i="${si}" data-d="1" aria-label="Descendre la section">↓</button><button type="button" class="btn btn--icon btn--danger" data-sa="secSuppr" data-i="${si}" aria-label="Retirer la section">✕</button></span></div>
       ${sec.etapes.map((e, ei) => { const p = 'sections.' + si + '.etapes.' + ei; if (!e.titre) { e.titre = { fr: '', nl: '' }; }
         return `<div class="sop-ed-et"><div class="sop-ed-et__c"><input class="sop-in" data-sin="ed.${p}.numero" value="${esc(e.numero)}" style="text-align:center"><label class="fm-small"><input type="checkbox" data-sch="ed.${p}.critique" ${e.critique ? 'checked' : ''}> critique</label></div>
           <div class="sop-ed-et__c">${champ(p + '.titre.fr', 'Titre (FR, facultatif)')}${champ(p + '.texte.fr', 'Texte (FR)', true)}</div>
           <div class="sop-ed-et__c">${champ(p + '.titre.nl', 'Titel (NL, facultatief)')}${champ(p + '.texte.nl', 'Tekst (NL)', true)}</div>
           <div class="sop-ed-et__c"><input class="sop-in" data-sin="ed.${p}.photo" placeholder="photo (fichier)" value="${esc(e.photo || '')}">${e.photo ? `<img src="sop/photos/${esc(e.photo)}" style="width:100%;border-radius:6px" alt="">` : ''}
-            <span><button type="button" class="filter fm-small" data-sa="etMove" data-i="${si}.${ei}" data-d="-1">↑</button><button type="button" class="filter fm-small" data-sa="etMove" data-i="${si}.${ei}" data-d="1">↓</button><button type="button" class="filter fm-small" data-sa="etSuppr" data-i="${si}.${ei}">✕</button></span></div></div>`; }).join('')}
-      <button type="button" class="filter fm-small" data-sa="etAjout" data-i="${si}">+ étape</button></div>`).join('');
-    const crit = c.points_critiques.map((x, i) => `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">${champ('points_critiques.' + i + '.fr', 'FR')}${champ('points_critiques.' + i + '.nl', 'NL')}<button type="button" class="filter fm-small" data-sa="critSuppr" data-i="${i}">✕</button></div>`).join('');
-    const quiz = c.quiz.map((q, i) => `<div class="sop-q"><div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px">${champ('quiz.' + i + '.question.fr', 'Question (FR)')}${champ('quiz.' + i + '.question.nl', 'Vraag (NL)')}<button type="button" class="filter fm-small" data-sa="quizSuppr" data-i="${i}">✕</button></div>
+            <span><button type="button" class="btn btn--icon" data-sa="etMove" data-i="${si}.${ei}" data-d="-1" aria-label="Monter l’étape">↑</button><button type="button" class="btn btn--icon" data-sa="etMove" data-i="${si}.${ei}" data-d="1" aria-label="Descendre l’étape">↓</button><button type="button" class="btn btn--icon btn--danger" data-sa="etSuppr" data-i="${si}.${ei}" aria-label="Retirer l’étape">✕</button></span></div></div>`; }).join('')}
+      <button type="button" class="btn btn--sm" data-sa="etAjout" data-i="${si}">+ étape</button></div>`).join('');
+    const crit = c.points_critiques.map((x, i) => `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">${champ('points_critiques.' + i + '.fr', 'FR')}${champ('points_critiques.' + i + '.nl', 'NL')}<button type="button" class="btn btn--icon btn--danger" data-sa="critSuppr" data-i="${i}" aria-label="Retirer le point critique">✕</button></div>`).join('');
+    const quiz = c.quiz.map((q, i) => `<div class="sop-q"><div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px">${champ('quiz.' + i + '.question.fr', 'Question (FR)')}${champ('quiz.' + i + '.question.nl', 'Vraag (NL)')}<button type="button" class="btn btn--icon btn--danger" data-sa="quizSuppr" data-i="${i}" aria-label="Retirer la question">✕</button></div>
       ${q.choix.fr.map((x, j) => `<div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;margin-top:6px;align-items:center"><label class="fm-small"><input type="radio" name="sopbonne${i}" data-sch="bonne" data-i="${i}" value="${j}" ${q.bonne === j ? 'checked' : ''}> bonne</label>${champ('quiz.' + i + '.choix.fr.' + j, 'Choix ' + (j + 1) + ' (FR)')}${champ('quiz.' + i + '.choix.nl.' + j, 'Keuze ' + (j + 1) + ' (NL)')}</div>`).join('')}</div>`).join('');
     const pv = (() => { const p = s.version.split('.'); if (p.length === 1) { return p[0] + '.1'; } p[p.length - 1] = String(+p[p.length - 1] + 1); return p.join('.'); })();
     const trSel = l => `<select class="fm-select" style="width:auto" data-sch="edtrad" data-l="${l}">${['origine', 'relue', 'a_relire'].map(t => `<option value="${t}" ${D.edMeta.tradApres[l] === t ? 'selected' : ''}>${l.toUpperCase()} ${TRAD_NOM[t]}</option>`).join('')}</select>`;
     const corps = fil + `<p class="muted">${esc(s.code || '')} · v${esc(s.version)} en vigueur · chaque texte en FR et en NL (en orange : vide)</p>
       <section class="card"><h2>En-tête</h2>${bi('titre', 'Titre')}${bi('objectif', 'Objectif', true)}${bi('pour', 'Pour')}<div style="display:grid;grid-template-columns:120px 1fr;gap:8px"><span class="muted" style="padding-top:6px">Durée</span><input class="sop-in" data-sin="ed.duree" value="${esc(c.duree || '')}"></div></section>
-      <section class="card"><h2>Les étapes · ${c.sections.reduce((a, x) => a + x.etapes.length, 0)}</h2>${secs}<button type="button" class="filter" data-sa="secAjout">+ section</button></section>
-      <section class="card"><h2>Points critiques</h2>${crit}<button type="button" class="filter fm-small" data-sa="critAjout">+ point critique</button></section>
-      <section class="card"><h2>Quiz</h2><p class="muted fm-small">3 questions conseillées · une bonne réponse par question</p>${quiz}<button type="button" class="filter fm-small" data-sa="quizAjout">+ question</button></section>
+      <section class="card"><h2>Les étapes · ${c.sections.reduce((a, x) => a + x.etapes.length, 0)}</h2>${secs}<button type="button" class="btn" data-sa="secAjout">+ section</button></section>
+      <section class="card"><h2>Points critiques</h2>${crit}<button type="button" class="btn btn--sm" data-sa="critAjout">+ point critique</button></section>
+      <section class="card"><h2>Quiz</h2><p class="muted fm-small">3 questions conseillées · une bonne réponse par question</p>${quiz}<button type="button" class="btn btn--sm" data-sa="quizAjout">+ question</button></section>
       ${D.edErr ? `<p class="error">${esc(D.edErr)}</p>` : ''}
       <div class="sop-ed-barre"><input class="sop-in" style="max-width:340px" placeholder="Ce qui change (note de version)" data-sin="edMeta.note" value="${esc(D.edMeta.note || '')}">
         <label class="fm-small"><input type="radio" name="sopreval" data-sch="reval" value="0" ${!D.edMeta.revalider ? 'checked' : ''}> Précision : ceux qui l’ont validée restent validés</label>
         <label class="fm-small"><input type="radio" name="sopreval" data-sch="reval" value="1" ${D.edMeta.revalider ? 'checked' : ''}> Le geste change : ils repassent « à revoir »</label>
-        ${trSel('fr')}${trSel('nl')}<span style="flex:1"></span><a class="filter" href="#/sop/${esc(s.id)}">Annuler</a><button type="button" class="filter is-on" data-sa="publier" ${D.occupe ? 'disabled' : ''}>Publier la v${esc(pv)}</button></div>`;
+        ${trSel('fr')}${trSel('nl')}<span style="flex:1"></span><a class="btn btn--ghost" href="#/sop/${esc(s.id)}">Annuler</a><button type="button" class="btn btn--primary" data-sa="publier" ${D.occupe ? 'disabled' : ''}>Publier la v${esc(pv)}</button></div>`;
     return { titre: 'Modifier · ' + s.titre.fr, kicker: K, corps, large: true };
   }
 
