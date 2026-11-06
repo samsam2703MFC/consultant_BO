@@ -5,7 +5,7 @@ namespace App\Core\Web;
 
 /**
  * [253] Menu ERP (rail) bez dubli : jedna pozycja = jedna praca (makieta 25), reszta to zakładki na stronie pozycji
- * (PageTabs::GROUPS pod tym samym kluczem). Wspólne dla wszystkich (25 pozycji) ; stanowisko może mieć krótsze menu
+ * (PageTabs::GROUPS pod tym samym kluczem). Wspólne dla wszystkich (26 pozycji) ; stanowisko może mieć krótsze menu
  * (n_position_menu, makieta 26) — strony spoza menu zostają dostępne z wyszukiwarki (Ctrl K) i linków.
  * Uprawnienia do stron bez zmian (PageAccess) : rail i tak ukrywa linki, których użytkownik nie widzi.
  */
@@ -45,6 +45,9 @@ final class Rail
             '/settings/mail-footers', '/settings/ai', '/communication/email-settings', '/communication/automations', '/devices', '/aliases', '/users',
             '/organization/positions', '/logistics/tours', '/logistics/vehicles', '/product-carriers', '/task-forms'], null],
         'access' => ['Uprawnienia i menu', 'bi-shield-lock', 'Administracja', '/organization/access', ['/organization/week-plan'], null],
+        // [256] Premie i oceny (tylko administrator) : premie zespołów i moduł kierownika produkcji (karta, cele, raport,
+        // premia, rozmowa, audyt) — przeniesione z Produkcja › Zespół : premie ustala administrator, nie kierownik produkcji.
+        'bonuses' => ['Premie i oceny', 'bi-trophy', 'Administracja', '/staff/team-bonus', [], null],
         'activity' => ['Aktywność', 'bi-activity', 'Administracja', '/organization/activity', [], null],
     ];
 
@@ -136,7 +139,7 @@ final class Rail
         return array_values(array_filter($sections, fn($s) => $s['items'] !== []));
     }
 
-    /** Całe menu (25 pozycji) bez względu na stanowisko : wyszukiwarka, strona « Uprawnienia i menu ». */
+    /** Całe menu (26 pozycji) bez względu na stanowisko : wyszukiwarka, strona « Uprawnienia i menu ». */
     public static function all(): array
     {
         return self::menu(array_fill_keys(array_keys(self::ITEMS), null));

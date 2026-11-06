@@ -87,7 +87,7 @@
     <div class="card">
         <div class="card-header d-flex justify-content-between flex-wrap gap-2 align-items-center">
             <h4 class="card-title mb-0">Treść karty · Contenu de la fiche</h4>
-            {% if sheet.manager_module %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}/workshop/manager"><i class="bi bi-person-badge"></i> Pełna karta z celami i premią</a>{% endif %}
+            {% if sheet.manager_module and can_see('/workshop/manager') %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}/workshop/manager"><i class="bi bi-person-badge"></i> Pełna karta z celami i premią</a>{% endif %}
         </div>
         <div class="card-body pt-0">
             <div data-view>

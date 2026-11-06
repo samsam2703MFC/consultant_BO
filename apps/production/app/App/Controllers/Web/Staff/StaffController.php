@@ -3,6 +3,8 @@ namespace App\Controllers\Web\Staff;
 
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
+use App\Exceptions\CustomException;
+use App\Services\Organization\PageAccessService;
 use App\Services\Dashboard\ProfitabilityService;
 use App\Services\Staff\StaffBudgetService;
 use App\Services\Staff\TeamBonusService;
@@ -17,7 +19,14 @@ class StaffController extends BaseController
         private StaffBudgetService $budget,
         private ProfitabilityService $profitability,
         private TeamBonusService $teamBonus,
+        private PageAccessService $access,
     ) {}
+
+    /** [256] Premie zespołów : zapis tylko dla administratora (strona poza uprawnieniami stanowisk). */
+    private function guardTeamBonus(): void
+    {
+        if (!$this->access->canSee($this->userId(), '/staff/team-bonus')) throw new CustomException('Premie zespołów ustala administrator.', 'errors', 403);
+    }
 
     public function budget()
     {
@@ -66,6 +75,7 @@ class StaffController extends BaseController
     public function saveTeamBonus()
     {
         try {
+            $this->guardTeamBonus();
             $this->teamBonus->saveSettings($this->getJson(Request::createFromGlobals()), $this->userId());
             return $this->json(['message' => 'Zapisano minimum i progi premii.']);
         } catch (\Throwable $e) {
@@ -76,6 +86,7 @@ class StaffController extends BaseController
     public function teamBonusGroup($id)
     {
         try {
+            $this->guardTeamBonus();
             $visible = $this->getJson(Request::createFromGlobals())['visible'] ?? false;
             $this->teamBonus->setVisible((int) $id, $visible);
             return $this->json(['message' => filter_var($visible, FILTER_VALIDATE_BOOLEAN) ? 'Zakładka « Premia » widoczna na tablecie grupy.' : 'Zakładka « Premia » ukryta na tablecie grupy.']);

@@ -33,7 +33,9 @@ final class PageAccess
         'supplier_prices' => ['Ceny surowców i dostawcy', 'Zakupy', ['/materials/prices', '/material-suppliers'], false],
         'ksef_purchases' => ['Faktury zakupowe KSeF (pobieranie) i archiwum dostaw', 'Zakupy', ['/settings/ksef/purchase-invoices', '/purchases'], false],
         'employees' => ['Zespół : pracownicy produkcji', 'Produkcja', ['/production-employees'], false],
-        'budget' => ['Zespół : budżet personelu i premie', 'Produkcja', ['/staff'], false],
+        'budget' => ['Zespół : budżet personelu', 'Produkcja', ['/staff'], false],
+        // [256] Premie zespołów (progi, minimum, zakładka « Premia » tabletów) : decyduje administrator, nie kierownik produkcji.
+        'team_bonus' => ['Premie zespołów : progi, minimum, zakładka « Premia » na tabletach', 'Administracja', ['/staff/team-bonus'], true],
         'product_cards' => ['Produkty : karty produktów (lista, kategorie, MTO / MTS, stany)', 'Produkt', ['/workshop/products'], false],
         'products' => ['Produkty : receptury, półprodukty, kompozycje, produkty w rozwoju, kartony i palety', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/semi-products', '/compositions'], false],
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
