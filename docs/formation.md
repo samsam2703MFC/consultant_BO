@@ -572,3 +572,45 @@ a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
 
 Routes : `docs/contrat-api.md` § Formation · Tablettes des magasins.
 
+
+### Les deux guides édités dans le Cockpit (lot 4b, 06/11/2026)
+
+Le Guide pré-ouverture et le Guide des formations et compétences s'éditaient dans le CRM (écran Guides). Ils
+s'éditent désormais ici ; le CRM les lit dans `GET /formation/ref` (`preouverture`, `blocs`, `poles`) pour son écran
+Guides (en lecture, « Modifier dans le Cockpit ↗ »), l'application des formateurs, l'attestation, le rapport et les
+documents qu'il génère (Guide pré-ouverture : `data-guide` ; Guide des formations : `data-formation`). Ce qui est
+propre à un dossier candidat reste au CRM : dates du countdown, formateurs désignés, validations et signatures,
+attestation, pack de signature, renouvellements faits.
+
+**Code** : `src/referentiel_guides.php` (fonctions `rg*`, `ensureRefGuides()` appelée par `ensureReferentiel()`).
+Écrans : `public/formation/formation-sop.js` (bloc « les deux guides ») et `public/formation/sop/ref.css` (`rf-g*`).
+
+| Table / réglage | Contenu |
+|---|---|
+| `ceo_ref_po_section` | sections du Guide pré-ouverture : `cle`, `rang`, `type` (`points` / `contacts`), titre `fr` / `nl`, `intro_fr` / `intro_nl` |
+| `ceo_ref_po_point` | leurs points (clé `section` + `cle`) : `rang`, libellé `fr` / `nl`, `qui`, `j` (jours avant l'ouverture, NULL = sans date), `preuve_fr` / `preuve_nl` |
+| `ceo_ref_bloc` | les 11 blocs : `n`, titre, `role` / `role_nl`, `fo`, `heures` (et `heures_semis`, celles du départ) |
+| `ceo_ref_item` | leurs points : `id` (code `C-…` ou `FO-…`, comparé à l'octet près), `bloc`, `rang`, libellés et descriptions FR/NL, `fo`, `phase` (`pre`/`ouv`/`con`), `bloq`, `poles`, critère accepté (`critere_fr`/`_nl`, `critere_accepte`) et proposé (`critere_prop_fr`/`_nl`), `renouvellement`, `heures`, `fiche`, `fiche_nom`, `video`, `profils` (JSON), `semis` (valeurs du départ, JSON) |
+| `ceo_app_setting` › `rfPoles` | noms des 5 pôles FR/NL et repère du réseau (`{fr, nl, repere, le, par}`) |
+| `ceo_app_setting` › `rfGuidesReprise_2026_11` | bilan de la reprise des réglages du CRM (fait une fois) |
+
+**Semis** : `data/formation/guides/preouverture.json` et `formations.json`, recopiés du CRM par
+`php tools/formation/guides_depuis_crm.php <atelier-espace-candidat>/app/crm/api/lib` (les fichiers du CRM ne sont pas
+lisibles d'ici en production) : `GD_SECTIONS_DEFAUT`, `formation_blocs.php`, les critères proposés de
+`formation_criteres.php`, `FMT_HEURES_DEFAUT`, `FMT_POLES_DEFAUT`. Posés quand les tables sont vides (une écriture
+refuse un guide vide ; un point retiré n'est jamais remis).
+
+**Reprise UNE fois des réglages du CRM** (`crm_settings`, même base en production ; drapeau
+`rfGuidesReprise_2026_11`) : `guide_preouverture` (le guide entier, s'il passe les règles du contrat), `formation_referentiel`
+(par compétence : phase, bloquante, pôles, critère accepté `crit`/`critNl`, renouvellement, heures, fiche, nom de la
+fiche, vidéo, profils), `formation_blocs_heures`, `formation_poles` (l'ancien 5e pôle « Autonomie » suit le défaut,
+comme dans le CRM), `formation_repere`. Sans `crm_settings` dans la base, le contenu de départ sert. Essai local du
+06/11/2026 : réglages fabriqués par les routes du CRM, repris à l'identique (guide, 45 points, heures, pôles, repère).
+
+| Où | Ce qu'on y trouve |
+|---|---|
+| **Manuel du réseau** › *Pré-ouverture* (`#/rfpre`) | FR \| NL ; les sections (glisser par ⋮⋮ ou flèches, ajouter, supprimer) ; la section choisie : titre, type, introduction, ses points (libellé, qui, échéance J-, preuve ; glisser, flèches, retirer, ajouter) ; « Enregistrer le guide » envoie tout le guide (`PUT /formation/ref/preouverture`), « Annuler » repart du serveur ; « N sans NL » compte les libellés néerlandais manquants |
+| *Formations et compétences* (`#/rfform/<n>/<id>`) | recherche dans les 45 points ; chiffres clés (heures, bloquants, critères proposés, repère) ; « Les 5 pôles » (noms FR/NL, repère) ; les 11 blocs (heures, critères proposés) ; le bloc : « Modifier le bloc » (titres, rôles, FO, heures), « Accepter les N critères proposés », ses points (glisser ou flèches pour ordonner, « Ajouter un point ») ; la fiche du point : libellés et descriptions FR/NL, « Réussi si… » (« Accepter la proposition », « Revenir à la proposition »), phase, bloquante, 5 pôles, renouvellement, heures, FO, bloc, fiche, vidéo, profils, « Valeurs de départ », « Retirer le point » |
+
+Au-delà de 1640 px les blocs, le tableau et la fiche sont côte à côte ; en dessous, les blocs passent au-dessus, en
+grille ; sous 1100 px tout s'empile.

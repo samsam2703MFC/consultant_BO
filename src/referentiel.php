@@ -23,6 +23,9 @@ declare(strict_types=1);
  * Les libellés NL des domaines, sous-catégories, postes et phases sont fournis ici et SONT À RELIRE (traduction de
  * travail, 06/11/2026) ; une sous-catégorie relue dans le Classeur passe « relue » (nl_relu).
  *
+ * Les deux guides que le CRM éditait encore (Guide pré-ouverture, Guide des formations et compétences : lot 4b)
+ * vivent dans src/referentiel_guides.php ; ils s'ajoutent à GET /formation/ref (preouverture, blocs, poles).
+ *
  * Contrat : docs/contrat-api.md § Formation · Manuel du réseau. Doc : docs/formation.md.
  */
 
@@ -157,6 +160,8 @@ function ensureReferentiel(): void
     }
     rfSemer();
     rfClasserUneFois();
+    // Les deux guides que le CRM éditait (Guide pré-ouverture, Guide des formations et compétences ; lot 4b).
+    if (function_exists('ensureRefGuides')) { ensureRefGuides(); }
 }
 
 /** Les domaines et sous-catégories du v25 absents de la base y entrent (INSERT IGNORE : rien n'est réécrit). */
@@ -380,6 +385,8 @@ function ep_rf_ref(): array
         $out['checklistsConnues'] = rfChecklistsV25();
         $out['competencesNonDecrites'] = rfCompetencesNonDecrites();
     }
+    // Les deux guides (src/referentiel_guides.php) : preouverture, blocs, poles — ajoutés, rien n'est retiré.
+    if (function_exists('rgRef')) { $out += rgRef($detail); }
     return $out;
 }
 
@@ -444,6 +451,8 @@ function rfVersion(): ?string
         $m = Db::row('SELECT MAX(maj_le) AS m FROM ' . $t)['m'] ?? null;
         if ($m !== null && ($max === null || $m > $max)) { $max = $m; }
     }
+    $g = function_exists('rgVersion') ? rgVersion() : null;   // les deux guides
+    if ($g !== null && ($max === null || $g > $max)) { $max = $g; }
     return $max !== null ? (new DateTimeImmutable((string) $max))->format('c') : null;
 }
 
@@ -865,7 +874,8 @@ function rfRoute(string $method, string $path): ?array
         $method === 'PUT' && preg_match('#^/formation/ref/standards/([\w-]{1,32})$#', $path, $m) === 1 => wr_rf_standard($m[1]),
         $method === 'PUT' && preg_match('#^/formation/ref/souscats/(D\d\.\d{1,2})$#', $path, $m) === 1 => wr_rf_souscat($m[1]),
         $method === 'POST' && $path === '/formation/ref/importer-crm' => wr_rf_importer_crm(),
-        default => null,
+        // Les deux guides (src/referentiel_guides.php) : pré-ouverture, blocs, points, pôles.
+        default => function_exists('rgRoute') ? rgRoute($method, $path) : null,
     };
 }
 
