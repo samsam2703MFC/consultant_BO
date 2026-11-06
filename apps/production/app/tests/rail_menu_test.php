@@ -52,12 +52,15 @@ foreach ($old as $p) expectRail(Rail::itemFor($p) !== null, "dawny link {$p} bez
 expectRail(Rail::itemFor('/purchasing/nc') === 'production' && Rail::itemFor('/purchasing/cost-review') === 'materials' && Rail::itemFor('/logistics/live') === 'shipping_day'
     && Rail::itemFor('/mail/settings') === 'mail' && Rail::itemFor('/workshop/manager') === 'bonuses' && Rail::itemFor('/communication/outbox') === 'settings', 'przeniesione strony');
 expectRail(Rail::itemFor('/tablet/office') === null, 'tablet : przycisk, nie strona ERP');
-// [256] Premie zespołów i moduł kierownika produkcji : Administracja › Premie i oceny (tylko administrator), nie Zespół.
+// [256] Płace, premie zespołów i moduł kierownika produkcji : Administracja › Płace i premie (tylko administrator), nie Zespół.
 $teamTabs = array_column(App\Core\Web\PageTabs::GROUPS['team']['tabs'], 0);
 expectRail(Rail::ITEMS['bonuses'][2] === 'Administracja' && Rail::adminOnly('bonuses') && Rail::itemFor('/staff/team-bonus') === 'bonuses'
-    && !in_array('/workshop/manager', $teamTabs, true) && !in_array('/staff/team-bonus', $teamTabs, true), 'Premie i oceny : Administracja, tylko administrator');
+    && !in_array('/workshop/manager', $teamTabs, true) && !in_array('/staff/team-bonus', $teamTabs, true), 'Płace i premie : Administracja, tylko administrator');
 expectRail(App\Core\Web\PageAccess::keyFor('/staff/team-bonus') === 'team_bonus' && App\Core\Web\PageAccess::adminOnly('team_bonus')
-    && App\Core\Web\PageAccess::keyFor('/staff/budget') === 'budget' && !App\Core\Web\PageAccess::adminOnly('budget'), 'premie : tylko administrator ; budżet personelu bez zmian');
+    && App\Core\Web\PageAccess::keyFor('/staff/budget') === 'budget' && App\Core\Web\PageAccess::adminOnly('budget'), 'płace i premie : tylko administrator');
+expectRail(array_column(App\Core\Web\PageTabs::GROUPS['bonuses']['tabs'], 0) === ['/staff/budget', '/staff/team-bonus', '/workshop/manager'] && $teamTabs === ['/production-employees']
+    && Rail::itemFor('/staff/budget') === 'bonuses' && Rail::ITEMS['bonuses'][0] === 'Płace i premie', 'Płace i premie : budżet, premie, kierownik ; Zespół : pracownicy');
+expectRail(Rail::itemFor('/my-card') === 'today' && App\Core\Web\PageAccess::keyFor('/my-card') === null, 'Moja karta stanowiska : strona wspólna pod Dzisiaj');
 // [255] Magazyn i dostawy surowców pod prawem Produkcja (nie dla wszystkich).
 foreach (['/workshop/stock', '/workshop/stock/mts', '/workshop/stock/forecast', '/workshop/stock-movements', '/workshop/deliveries'] as $p) {
     expectRail(App\Core\Web\PageAccess::keyFor($p) === 'production', "{$p} → prawo Produkcja (" . App\Core\Web\PageAccess::keyFor($p) . ')');

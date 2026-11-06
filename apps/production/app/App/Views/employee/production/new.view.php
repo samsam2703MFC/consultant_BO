@@ -53,6 +53,7 @@
                             </div>
                         </section>
 
+                        <?php if (!empty($can_pay)): /* [256] Płace : tylko z prawem do Budżetu personelu. */ ?>
                         <section data-step="Koszt i płaca" hidden>
                             <h4 class="at-step-title">Koszt i płaca</h4>
                             <p class="at-step-lead">To jest karta płacy z Budżetu personelu (jedno miejsce) : koszt pracodawcy na miesiąc trafia do kalkulatora kosztów miesiąca, minimum i premia do podziału premii. Później zmieniasz je tylko w Budżecie personelu.</p>
@@ -66,6 +67,7 @@
                                         <label class="form-check-label" for="bonus_eligible">Uprawniony do premii grupy</label></div></div>
                             </div>
                         </section>
+                        <?php endif; ?>
 
                         <section data-step="Stanowisko" hidden>
                             <h4 class="at-step-title">Stanowisko i poziom</h4>

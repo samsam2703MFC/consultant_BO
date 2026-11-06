@@ -15,7 +15,7 @@ class ProductionEmployeeService
         $this->productionEmployeeRepository = $productionEmployeeRepository;
     }
 
-    public function validate($data)
+    public function validate($data, bool $requireCost = true)
     {
         $errors = [];
 
@@ -27,7 +27,8 @@ class ProductionEmployeeService
             $errors['surname'] = "Wprowadź nazwisko";
         }
 
-        if (empty($data['cost'])) {
+        // [256] Koszt pracodawcy wymagany tylko od osoby z prawem do płac (administrator) ; edycja karty go nie zmienia.
+        if ($requireCost && empty($data['cost'])) {
             $errors['cost'] = "Wprowadź koszt pracownika";
         }
 

@@ -134,9 +134,11 @@
                                     <th class="sortable-col" data-col="2">
                                         Dział <span class="sort-icon" id="sort-2"></span>
                                     </th>
+                                    <?php if (!empty($can_pay)): ?>
                                     <th class="sortable-col" data-col="3">
                                         Koszt [zł] <span class="sort-icon" id="sort-3"></span>
                                     </th>
+                                    <?php endif; ?>
                                     <th style="width:160px">Akcje</th>
                                 </tr>
                             </thead>
@@ -166,7 +168,7 @@
                                             <td><?= htmlspecialchars($row['surname']) ?></td>
                                             <td><?= htmlspecialchars($row['name']) ?></td>
                                             <td><?= htmlspecialchars($row['section_name']) ?></td>
-                                            <td><?= htmlspecialchars($row['cost']) ?></td>
+                                            <?php if (!empty($can_pay)): ?><td><?= htmlspecialchars($row['cost']) ?></td><?php endif; ?>
                                             <td>
                                                 <a href="<?=ROOT?>/production-employees/<?=$row['id']?>/edit"
                                                    class="btn btn-warning btn-sm">Edytuj</a>

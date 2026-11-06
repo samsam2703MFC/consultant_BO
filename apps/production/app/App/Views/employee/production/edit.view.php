@@ -34,7 +34,8 @@
                     </div>
 
                     <?php if (!empty($created)):
-                        $todo = [['Telefon i identyfikator', ROOT . '/workshop/execution#people'], ['Godziny pracy', ROOT . '/workshop/execution#hours'], ['Karta stanowiska', ROOT . '/organization/positions'], ['Premie i budżet', ROOT . '/staff/budget']];
+                        $todo = [['Telefon i identyfikator', ROOT . '/workshop/execution#people'], ['Godziny pracy', ROOT . '/workshop/execution#hours'], ['Karta stanowiska', ROOT . '/organization/positions']];
+                        if (!empty($can_pay)) $todo[] = ['Premie i budżet', ROOT . '/staff/budget'];
                         ?>
                         <div class="at-note at-note-safe mb-3" role="status">
                             <i class="bi bi-check-circle"></i>
@@ -77,12 +78,14 @@
                                     </select>
                                 </div>
                             </div>
+                            <?php if (!empty($can_pay)): /* [256] Płace : tylko z prawem do Budżetu personelu. */ ?>
                             <div class="col-4">
                                 <span class="form-label d-block">Koszt pracodawcy / mies.</span>
                                 <?php /* Jedna karta płacy (P17) : koszt wpisuje się tylko w Budżecie personelu. */ ?>
                                 <div class="form-control-plaintext"><strong><?= number_format((float) $row['cost'], 2, ',', ' ') ?> zł</strong>
                                     · <a href="<?= ROOT ?>/staff/budget#emp-<?= (int) $row['id'] ?>">zmień w Budżecie personelu</a></div>
                             </div>
+                            <?php endif; ?>
                         </div>
 
 

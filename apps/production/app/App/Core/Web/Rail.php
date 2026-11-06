@@ -19,7 +19,7 @@ final class Rail
      * licznik (data-count : /ajax/rail-counters) albo null]. Zakładki pozycji : PageTabs::GROUPS[klucz].
      */
     public const ITEMS = [
-        'today' => ['Dzisiaj', 'bi-sun', '', '/today', ['/my-tasks'], null],
+        'today' => ['Dzisiaj', 'bi-sun', '', '/today', ['/my-tasks', '/my-card'], null],
         'mail' => ['Poczta', 'bi-envelope', '', '/mail', [], 'mail'],
         'team_tasks' => ['Zadania zespołu', 'bi-people', '', '/organization/team-tasks', [], null],
         'profitability' => ['Rentowność', 'bi-graph-up', 'Analiza', '/dashboard', [], null],
@@ -45,9 +45,9 @@ final class Rail
             '/settings/mail-footers', '/settings/ai', '/communication/email-settings', '/communication/automations', '/devices', '/aliases', '/users',
             '/organization/positions', '/logistics/tours', '/logistics/vehicles', '/product-carriers', '/task-forms'], null],
         'access' => ['Uprawnienia i menu', 'bi-shield-lock', 'Administracja', '/organization/access', ['/organization/week-plan'], null],
-        // [256] Premie i oceny (tylko administrator) : premie zespołów i moduł kierownika produkcji (karta, cele, raport,
-        // premia, rozmowa, audyt) — przeniesione z Produkcja › Zespół : premie ustala administrator, nie kierownik produkcji.
-        'bonuses' => ['Premie i oceny', 'bi-trophy', 'Administracja', '/staff/team-bonus', [], null],
+        // [256] Płace i premie (tylko administrator) : budżet personelu, premie zespołów i moduł kierownika produkcji
+        // (karta, cele, raport, premia, rozmowa, audyt) — przeniesione z Produkcja › Zespół : płace i premie ustala administrator.
+        'bonuses' => ['Płace i premie', 'bi-wallet2', 'Administracja', '/staff/budget', [], null],
         'activity' => ['Aktywność', 'bi-activity', 'Administracja', '/organization/activity', [], null],
     ];
 

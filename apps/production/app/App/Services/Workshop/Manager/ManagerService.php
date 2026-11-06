@@ -492,6 +492,55 @@ final class ManagerService
     }
 
     /**
+     * [256] Karta stanowiska na jednej stronie A4 (makieta 35) : misje z zadaniami, godziny na misję i zatwierdzone cele.
+     * Osoba na stanowisku widzi swoją kartę (plan bieżącego roku) ; administrator — kartę osoby na stanowisku. Bez wyników,
+     * premii i wynagrodzenia : te zostają w module « Premie i oceny » (tylko administrator). null = brak karty.
+     */
+    public function card(int $userId, bool $admin = false): ?array
+    {
+        $plan = $this->repo->plan((int) date('Y'));
+        if ($plan === null || (!$admin && ($plan['holder_user_id'] === null || (int) $plan['holder_user_id'] !== $userId))) return null;
+        return $this->cardFrom($plan, $this->repo->objectives((int) $plan['id']), date('Y-m-d H:i:s'));
+    }
+
+    /** Karta A4 z planu roku i wersji celów (zatwierdzone przed $at) — bez bazy danych. */
+    public function cardFrom(array $plan, array $versions, string $at): array
+    {
+        $labels = $this->uiLabels('pl');
+        $p = $this->presentPlan($plan, (int) $plan['year']);
+        $missing = $labels['job.objective_missing'] ?? 'cel do ustalenia';
+        $validated = null;
+        $missions = [];
+        foreach (ManagerIndicators::MISSIONS as $m) {
+            $goals = [];
+            foreach (ManagerIndicators::SECTIONS[$m]['indicators'] ?? [] as $code) {
+                $def = ManagerIndicators::INDICATORS[$code];
+                $o = $this->objectiveAt($versions, $code, $at);
+                if ($o !== null && ($validated === null || $o['validated_at'] > $validated)) $validated = $o['validated_at'];
+                $goals[] = ['name' => $labels['ind.' . $code] ?? $code,
+                    'target' => $o === null ? null : ($def['direction'] === 'higher' ? '≥ ' : '≤ ') . $this->valueText($labels, $def['unit'], $o['target'])];
+            }
+            // HACCP : bez wskaźnika — cel to próg audytu (warunek premii w module).
+            if ($m === 'haccp') $goals[] = ['name' => 'Wynik audytu HACCP', 'target' => $p['audit_threshold'] === null ? null : '≥ ' . number_format($p['audit_threshold'], 0, ',', ' ') . ' %'];
+            $missions[] = ['code' => $m, 'name' => $labels['mission.' . $m] ?? $m, 'hours' => $p['mission_hours'][$m],
+                'tasks' => array_map(fn($t) => str_replace('{auditor}', $p['auditor'] ?: '…', $t), $labels['mission.' . $m . '.items'] ?? []),
+                'goals' => $goals];
+        }
+        $total = (float) $p['mission_hours_total'];
+        foreach ($missions as &$x) $x['share'] = $total > 0 && $x['hours'] !== null ? $x['hours'] / $total : null;
+        unset($x);
+        return [
+            'year' => (int) $plan['year'], 'holder' => $p['holder_name'], 'holder_start' => $p['holder_start'],
+            'position' => $labels['job.position'] ?? 'Kierownik Produkcji i Rozwoju Produktu', 'mission' => $labels['job.mission'] ?? '',
+            'reports_to' => $labels['job.reports_to_value'] ?? 'CEO', 'working_time' => $p['working_time'] ?: ($labels['job.working_time_default'] ?? 'Pełny etat'),
+            'monthly_hours' => $p['monthly_hours'], 'hours_total' => $total, 'hours_default' => $p['mission_hours_default'],
+            'missions' => $missions, 'goals_count' => array_sum(array_map(fn($x) => count($x['goals']), $missions)),
+            'goals_set' => array_sum(array_map(fn($x) => count(array_filter($x['goals'], fn($g) => $g['target'] !== null)), $missions)),
+            'validated_at' => $validated, 'missing' => $missing,
+        ];
+    }
+
+    /**
      * Zamknięcie miesiąca (krok 7) : wpisy kierownika produkcji za miesiąc — wskaźniki, którym brakuje wpisu ręcznego
      * (bez danych ERP : braki, a bez tabletów straty i nadgodziny), wpisy niezweryfikowane (wpisane przez osobę na
      * stanowisku) i liczba zapisanych działań na następny miesiąc. Odczyt bez kontekstu API (strona ERP).
