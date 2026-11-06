@@ -8,7 +8,7 @@
  *   #/sop                 les SOP par famille (FR et NL, compétence du panel, partie du manuel, progression)
  *   #/sop/<id>            une SOP : FR et NL côte à côte, partie du manuel, compétence, PDF, équipe, quiz, versions
  *   #/sop/<id>/editer     modifier dans les deux langues, publier une nouvelle version
- *   #/sopcomp             compétences : réseau × compétence, magasin × personne, réglages de l'équipe, fil
+ *   #/sopcomp             compétences : la correspondance C-… ↔ panel (le suivi en magasin est retiré, 06/11/2026)
  *   #/sopred              rédaction : langues à relire, compétence du panel, statut, nouvelle SOP
  *
  * MANUEL DU RÉSEAU (fusion du 06/11/2026, src/referentiel.php) — le groupe de la barre latérale s'appelle désormais
@@ -17,7 +17,7 @@
  *                         compétence → contrôle, trous ; reprise du Manuel opératoire du CRM et des procédures du
  *                         panel (lot 6) ; le Manuel opératoire des SOP en PDF (FR, NL)
  *   #/rfphase/<phase>     par phase (calculée) · #/rfposte[/P3/<phase>] par poste × phase (calculée)
- *   #/sopcomp             compétences : correspondance C-… ↔ panel (un clic), puis l'onglet « Acquisition en magasin »
+ *   #/sopcomp             compétences : correspondance C-… ↔ panel (un clic)
  *   la fiche d'une SOP gagne le bloc « Classement » (sous-catégorie, phases, postes, compétences, formations, checklists)
  *   #/rfpre               le Guide pré-ouverture (sections et points) · #/rfform[/<n>[/<id>]] le Guide des formations et
  *                         compétences (blocs, points, critères, 5 pôles) — lot 4b : le CRM les lit, il ne les édite plus
@@ -1003,7 +1003,7 @@ window.FormationSop = (function () {
     else if (e === 'sop' && a[0] && D.fiche[a[0]] === undefined) { chargerFiche(a[0]); }
     if (e === 'sopcomp' || e === 'sopred') { chargerComp(false); }
     if (e === 'rfclasseur' || e === 'rfphase' || e === 'rfposte' || e === 'sop' || e === 'sopcomp') { chargerRef(false); }
-    if (e === 'sopcomp' && a[0] !== 'magasins') { chargerCor(false); }
+    if (e === 'sopcomp') { chargerCor(false); }
     if (e === 'rfpre' || e === 'rfform') { chargerRef(false); }   // les deux guides (lot 4b)
   }
 
