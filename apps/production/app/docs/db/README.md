@@ -1513,7 +1513,7 @@ de « Wynik grup ».
 
 ### Menu ERP sans doublons, menu par poste — `160_position_menu`
 
-Le rail (menu de gauche) est défini à un seul endroit, `App\Core\Web\Rail` : 25 entrées au lieu de 65 (maquette 25), une
+Le rail (menu de gauche) est défini à un seul endroit, `App\Core\Web\Rail` : 25 entrées (26 depuis 256) au lieu de 65 (maquette 25), une
 entrée = un travail ; les autres pages de l'entrée sont des onglets en haut de la page (`PageTabs::GROUPS`, même clé que
 l'entrée). Aucune page n'est dans deux groupes d'onglets ; les anciennes adresses fonctionnent toujours.
 
@@ -1546,6 +1546,19 @@ Avant, l'état du stock (`/workshop/stock` : Stan magazynu, Zapas MTS, Prognoza 
 - Liens masqués quand la page n'est pas visible (`PageAccess::visible`) : à faire de Dzisiaj (ex. « produits sous le stock
   minimum »), boutons de la file « Do obsłużenia », résultats de la recherche globale (tous les groupes, plus de lien vers une
   page en 403), raccourcis de la barre du haut (Rentowność, Wysyłka, Listy produkcyjne, Zamówienia, Nowy produkt, Reklamacje).
+- Tests : `tests/rail_menu_test.php`.
+
+### Premie i oceny dans Administracja (admin seul) — 256 (sans migration)
+
+Les primes et l'évaluation du Kierownik produkcji ne sont pas décidées par le chef de production : elles quittent
+Produkcja › Zespół pour une entrée du menu Administracja, « Premie i oceny » (26 entrées au lieu de 25).
+
+- Onglets : « Premie zespołów » (`/staff/team-bonus` : seuils, minimum, onglet « Premia » des tablettes) et « Kierownik
+  produkcji » (`/workshop/manager` : karta stanowiska, cele, raport, premia, rozmowa, audyt kompetencji).
+- Droits : nouveau droit `team_bonus` réservé à l'administrateur (`PageAccess::PAGES`) ; `budget` (Budżet personelu) reste
+  donnable aux postes. Les enregistrements `PUT /ajax/staff/team-bonus` et `PATCH /ajax/staff/team-bonus/groups/{id}`
+  vérifient ce droit (403 sinon) — les routes `/ajax/` ne passent pas par le contrôle des pages.
+- Zespół garde : Pracownicy produkcji, Budżet personelu.
 - Tests : `tests/rail_menu_test.php`.
 
 ## Conventions

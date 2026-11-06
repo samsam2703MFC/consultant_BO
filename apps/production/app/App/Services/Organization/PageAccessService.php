@@ -237,7 +237,7 @@ final class PageAccessService
     public const MENU_STATES = ['menu' => 'w menu', 'access' => 'dostęp (bez menu)', 'none' => 'brak'];
 
     /**
-     * [253] Macierz « Uprawnienia i menu » : stanowiska biurowe (i « bez stanowiska ») × 25 pozycji railu. Stan pozycji :
+     * [253] Macierz « Uprawnienia i menu » : stanowiska biurowe (i « bez stanowiska ») × 26 pozycji railu. Stan pozycji :
      * menu (w menu stanowiska), access (strony dostępne, poza menu — wyszukiwarka), none (bez dostępu), admin (tylko
      * administrator). Stanowisko bez własnego menu : wszystkie dostępne pozycje są « w menu » (całe menu).
      * @return array{columns: list<array>, sections: list<array>}

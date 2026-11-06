@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 /*
- * [253] Menu ERP bez dubli (makiety 25–26) : 25 pozycji, każda strona należy do jednej pozycji (zakładki bez powtórzeń),
+ * [253] Menu ERP bez dubli (makiety 25–26) : 26 pozycji ([256] Kierownik produkcji w Administracji), każda strona należy do jednej pozycji (zakładki bez powtórzeń),
  * wszystkie dawne linki railu mają pozycję, menu stanowiska (kolejność, strona otwierana), sesja administratora
  * « jako stanowisko », stanowisko bez menu = całe menu — reguły bez bazy + baza jednorazowa.
  *
@@ -20,7 +20,7 @@ function expectRail(bool $condition, string $message): void
 }
 
 // --- Bez bazy : układ ----------------------------------------------------------------------------------------------------
-expectRail(count(Rail::ITEMS) === 25 && Rail::count() === 25, 'menu wspólne : 25 pozycji (było 65)');
+expectRail(count(Rail::ITEMS) === 26 && Rail::count() === 26, 'menu wspólne : 26 pozycji (było 65 ; [256] + Kierownik produkcji w Administracji)');
 expectRail(array_keys(array_filter(array_map(fn($i) => $i[2], Rail::ITEMS), fn($s) => !in_array($s, Rail::SECTIONS, true))) === [], 'sekcje pozycji znane');
 foreach (array_keys(PageTabs::GROUPS) as $group) {
     expectRail(isset(Rail::ITEMS[$group]) || isset(Rail::GROUP_PARENT[$group]), "grupa zakładek {$group} należy do pozycji railu");
@@ -50,8 +50,14 @@ $old = ['/client-franchise-networks', '/client-orders', '/client-orders/queue', 
     '/audits/product-weights', '/ppwr/reports', '/logistics/plan', '/logistics/week', '/shipments', '/workshop/stock', '/workshop/sheet', '/production/capacity'];
 foreach ($old as $p) expectRail(Rail::itemFor($p) !== null, "dawny link {$p} bez pozycji railu");
 expectRail(Rail::itemFor('/purchasing/nc') === 'production' && Rail::itemFor('/purchasing/cost-review') === 'materials' && Rail::itemFor('/logistics/live') === 'shipping_day'
-    && Rail::itemFor('/mail/settings') === 'mail' && Rail::itemFor('/workshop/manager') === 'team' && Rail::itemFor('/communication/outbox') === 'settings', 'przeniesione strony');
+    && Rail::itemFor('/mail/settings') === 'mail' && Rail::itemFor('/workshop/manager') === 'bonuses' && Rail::itemFor('/communication/outbox') === 'settings', 'przeniesione strony');
 expectRail(Rail::itemFor('/tablet/office') === null, 'tablet : przycisk, nie strona ERP');
+// [256] Premie zespołów i moduł kierownika produkcji : Administracja › Premie i oceny (tylko administrator), nie Zespół.
+$teamTabs = array_column(App\Core\Web\PageTabs::GROUPS['team']['tabs'], 0);
+expectRail(Rail::ITEMS['bonuses'][2] === 'Administracja' && Rail::adminOnly('bonuses') && Rail::itemFor('/staff/team-bonus') === 'bonuses'
+    && !in_array('/workshop/manager', $teamTabs, true) && !in_array('/staff/team-bonus', $teamTabs, true), 'Premie i oceny : Administracja, tylko administrator');
+expectRail(App\Core\Web\PageAccess::keyFor('/staff/team-bonus') === 'team_bonus' && App\Core\Web\PageAccess::adminOnly('team_bonus')
+    && App\Core\Web\PageAccess::keyFor('/staff/budget') === 'budget' && !App\Core\Web\PageAccess::adminOnly('budget'), 'premie : tylko administrator ; budżet personelu bez zmian');
 // [255] Magazyn i dostawy surowców pod prawem Produkcja (nie dla wszystkich).
 foreach (['/workshop/stock', '/workshop/stock/mts', '/workshop/stock/forecast', '/workshop/stock-movements', '/workshop/deliveries'] as $p) {
     expectRail(App\Core\Web\PageAccess::keyFor($p) === 'production', "{$p} → prawo Produkcja (" . App\Core\Web\PageAccess::keyFor($p) . ')');
@@ -151,8 +157,8 @@ try {
     $res = $access()->saveMenuState(3, ['reset' => true], 1);
     expectRail($access()->railMenu(3) === null && $res['states']['mail'] === 'menu', 'całe menu : bez własnego menu');
     $m = $access()->menuMatrix();
-    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 25,
-        'macierz : stanowiska biurowe + bez stanowiska × 25 pozycji');
+    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 26,
+        'macierz : stanowiska biurowe + bez stanowiska × 26 pozycji');
     echo "rail_menu_test: OK\n";
 } finally {
     $_SESSION = [];
