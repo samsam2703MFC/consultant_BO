@@ -184,8 +184,21 @@ HttpOnly, SameSite=Lax) ; le PIN de l'employé signe ensuite (routes de la table
 | `POST /formation/sop/tablette/appareil/ouvrir` | `{pin}` (6 chiffres) → `{ok, jeton, magasin {id, nom, shop}}` + cookie · **401** `code: pin` (inconnu) / `archive` · **429** `code: essais` (5 erreurs par adresse IP en 15 min) / `suspendu` (10 erreurs en tout par heure ou 50 par jour) |
 | `POST /formation/sop/tablette/appareil/fermer` | la session de cet appareil est révoquée, cookie effacé → `{ok}` |
 
-**Gestion** (session du cockpit si l'authentification est activée) — chaque écriture rend la liste entière (forme de
-`GET`) et se journalise (« Formation », projet « Tablettes ») SANS le PIN :
+**Gestion** — depuis le lot 6 (06/11/2026), chaque route EXIGE le **code de gestion** dans l'en-tête `X-Code-Gestion`
+(en plus de la session du cockpit si l'authentification est activée ; en production elle ne l'est pas, et la liste
+porte les PIN). Le code se compare à temps constant à la configuration (`TABLETTES_CODE`, puis `config.php ›
+tablettesCode`). Refus, AVANT tout traitement (rien n'est lu ni écrit) :
+
+| Cas | Réponse |
+|---|---|
+| code non configuré sur le serveur | **403** `{error, code: "gestion_fermee"}` — la gestion est fermée |
+| en-tête absent | **403** `{error, code: "code_attendu"}` (pas compté comme un essai) |
+| code faux | **403** `{error, code: "code_gestion"}`, après 0,4 s, compté (table `ceo_tablette_gestion_essai`, adresse IP hachée) |
+| 5 codes faux par adresse en 15 min | **429** `{error, code: "essais"}` — même avec le bon code |
+| 10 codes faux en tout par heure, ou 50 par jour | **429** `{error, code: "suspendu"}` — noté au journal une fois par heure, sans code |
+
+Ces essais sont à part de ceux du PIN du magasin : ils ne bloquent ni l'ouverture ni l'usage des tablettes. Chaque
+écriture rend la liste entière (forme de `GET`) et se journalise (« Formation », projet « Tablettes ») SANS le PIN :
 
 | Route | Rôle |
 |---|---|

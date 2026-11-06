@@ -553,6 +553,20 @@ a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
   gestes du jour sur la tablette, « Archiver » (appareils déconnectés, le PIN n’ouvre plus rien ; « ↺ Réactiver »
   garde le même PIN). Signalés : « Sans boutique » (la tablette s’ouvre mais ne montre rien), « Même boutique qu’une
   autre tablette ». Pas de gestion en mode tablette.
+- **Code de gestion (lot 6, décision du client)** : en production l’API n’exige pas de connexion (`bin/deploy.sh`
+  écrit `auth => false`) et la liste porte les PIN ; les routes de gestion (`/formation/tablettes*` : liste, créer,
+  renommer, nouveau PIN, déconnecter, archiver, reprise du CRM) exigent donc le **code de gestion**, envoyé dans
+  l’en-tête `X-Code-Gestion` et comparé à temps constant (deux HMAC de même longueur) à la clé de configuration —
+  variable d’environnement `TABLETTES_CODE`, puis `config/config.php › tablettesCode` (écrite par `bin/deploy.sh`
+  d’après le secret GitHub `TABLETTES_CODE` ou le fichier privé `/var/lib/consulant_bo/prive/tablettes_code` ; voir
+  `docs/DEPLOIEMENT.md`). Code non configuré : **gestion fermée** (403 `gestion_fermee`, « Code de gestion non
+  configuré »). Essais limités comme le PIN du magasin, dans une table à part (`ceo_tablette_gestion_essai`, adresse
+  IP hachée) : 5 codes faux par adresse en 15 minutes, puis 10 en tout par heure ou 50 par jour suspendent la gestion
+  (429, même avec le bon code) ; un refus attend 0,4 s ; jamais de code dans le journal. L’écran Tablettes demande le
+  code (champ masqué, « Ouvrir la gestion »), le garde dans l’onglet seulement (`sessionStorage` `fm.tablettes.code`,
+  « Fermer la gestion » l’oublie), dit clairement un refus (code refusé, trop d’essais, gestion fermée) et redemande.
+  Les routes de la tablette elle-même (ouvrir l’appareil par le PIN du magasin, état, fermer, puis
+  `/formation/sop/tablette/*`) ne changent pas.
 - **Reprise des magasins du CRM** (même base) : chaque ligne de `crm_mo_magasins` devient une tablette ici, une fois
   (`crm_id` unique), avec la boutique (`store_id` = `shops.id`) et le **même PIN** quand il est lisible et libre — les
   équipes n’ont rien à changer ; sinon un PIN neuf, dit dans le bilan (réglage `tabRepriseCrm`, carte « Reprise du
@@ -569,6 +583,7 @@ a déménagé », `GET /mo/demenage`, plus aucune session ouverte là-bas).
 | `ceo_tablette_magasin` | une tablette : `nom`, `shop_id` (boutique du panel), `pin` (6 chiffres, unique), `pin_le`, `archive`, `crm_id` (magasin du CRM repris), `cree_le`, `cree_par`, `maj_le` |
 | `ceo_tablette_acces` | un appareil ouvert : `magasin_id`, `appareil` (d’après le navigateur), `jeton_hash` (sha256), `cree_le`, `vu_le`, `revoque` |
 | `ceo_tablette_essai` | un essai de PIN du magasin : `ip_hash`, `ok`, `cree_le` (purgé après 7 jours) |
+| `ceo_tablette_gestion_essai` | un code de gestion faux (lot 6) : `ip_hash`, `cree_le` (purgé après 7 jours) |
 
 Routes : `docs/contrat-api.md` § Formation · Tablettes des magasins.
 
