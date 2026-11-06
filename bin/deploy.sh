@@ -245,6 +245,21 @@ if [[ -z "${HR_DIMONA_MASTER_KEY:-}" && -s /var/lib/consulant_bo/prive/hr_dimona
   log "Module RH : clé maître reprise du dossier privé pour config.php (non affichée)."
 fi
 
+# Le code de gestion des tablettes des magasins (Manuel du réseau › Tablettes, lot 6 du 06/11/2026) : les routes de
+# gestion l'exigent (en-tête X-Code-Gestion), l'API n'ayant pas de connexion ici (`auth` => false). Le secret
+# TABLETTES_CODE (GitHub → .deployenv) prime ; sinon le fichier privé que root garde sur le serveur. Ni l'un ni
+# l'autre : la clé reste vide et la gestion des tablettes est fermée (les tablettes des magasins marchent). Jamais
+# affiché.
+if [[ -z "${TABLETTES_CODE:-}" && -s /var/lib/consulant_bo/prive/tablettes_code ]]; then
+  TABLETTES_CODE="$(tr -d '\n\r' < /var/lib/consulant_bo/prive/tablettes_code)"
+fi
+if [[ -n "${TABLETTES_CODE:-}" ]]; then
+  export TABLETTES_CODE
+  log "Tablettes : code de gestion posé dans config.php (non affiché)."
+else
+  warn "Tablettes : aucun code de gestion (TABLETTES_CODE ou /var/lib/consulant_bo/prive/tablettes_code) — la gestion des tablettes reste fermée."
+fi
+
 # --- 4. config/config.php (génération sûre via var_export) ---------------
 CFG="$TARGET_DIR/config/config.php"
 if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
@@ -267,6 +282,8 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
       "pwaBase" => getenv("COCKPIT_PWA_BASE") ?: null,
       // Module Formation : l’adresse du « Retour au cockpit » de son rail (GET /formation/config).
       "cockpitUrl" => getenv("COCKPIT_URL") ?: null,
+      // Manuel du réseau › Tablettes : le code de gestion (null = gestion fermée), d’après TABLETTES_CODE.
+      "tablettesCode" => getenv("TABLETTES_CODE") ?: null,
       "auth"    => false,
       "seed"    => false,   // base vide par défaut ; pas de données de démo
       // Module RH / Dimona (/hr) : la console franchisé qui identifie (API vue du navigateur et du
@@ -961,6 +978,10 @@ fm_page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1
 fm_https=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1/formation/" 2>/dev/null || echo 000)
 fm_api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "http://127.0.0.1/formation/api/cockpit/formation/equipe" 2>/dev/null || echo 000)
 log "Formation : /formation/ → HTTP ${fm_page} (https ${fm_https}) ; API /formation/api/cockpit → HTTP ${fm_api} (200 attendu, 503 = compte panel à brancher)."
+# La gestion des tablettes des magasins (la liste porte les PIN) ne répond jamais sans le code de gestion (lot 6).
+tb_gest=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "http://127.0.0.1/formation/api/cockpit/formation/tablettes" 2>/dev/null || echo 000)
+log "Tablettes : gestion sans code de gestion → HTTP ${tb_gest} (403 attendu)."
+if [[ "$tb_gest" == "200" ]]; then warn "Tablettes : la gestion des tablettes répond SANS code de gestion — à corriger avant tout."; fi
 # Les comptes de la console franchisé (dépôt WebShop), qui identifient au module RH : section « bo » de sa
 # configuration posée si elle manque (sauvegarde, contrôle, retour arrière si la console ne répond plus comme
 # avant), comptes de démonstration au mot de passe publié désactivés, comptes demandés par le secret

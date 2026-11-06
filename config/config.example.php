@@ -74,6 +74,14 @@ return [
     // ne propose pas de « Retour à l'ERP ».
     'cockpitUrl' => getenv('COCKPIT_URL') ?: null,
 
+    // Manuel du réseau › Tablettes (lot 6, 06/11/2026) : le CODE DE GESTION des tablettes des magasins. Les routes de
+    // gestion (/formation/tablettes*, la liste porte les PIN des magasins) l'exigent dans l'en-tête X-Code-Gestion,
+    // puisque l'API n'exige pas de connexion en production. Vide : la gestion des tablettes est FERMÉE (403) ; les
+    // tablettes des magasins, elles, marchent toujours. Une chaîne secrète, jamais dans le dépôt : sur le serveur,
+    // bin/deploy.sh l'écrit d'après la variable TABLETTES_CODE (secret GitHub du même nom) ou le fichier privé
+    // /var/lib/consulant_bo/prive/tablettes_code (docs/DEPLOIEMENT.md). La variable d'environnement prime.
+    'tablettesCode' => getenv('TABLETTES_CODE') ?: null,
+
     // Jeu de démonstration. false (défaut) : base vide, prête pour les vraies
     // données — aucune donnée fictive n'est chargée. true (ou COCKPIT_SEED=1) :
     // charge sql/seed.sql (réseau belge de démo) si la base est vide.
