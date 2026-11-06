@@ -582,7 +582,7 @@ propriétaire. `ceo_app_setting` et `crm_settings` du CRM se fondent dans `rec_v
 | social | `ceo_shop_reputation` | `pil_shop_reputation` | lue par Social : passer par l’API Pilotage |
 | social | `ceo_shop_review` | `pil_shop_review` | lue par Social : passer par l’API Pilotage |
 
-### Formations — 11 table(s)
+### Formations — 29 table(s)
 
 | Dépôt actuel | Table actuelle | Nom cible | Note |
 |---|---|---|---|
@@ -597,6 +597,24 @@ propriétaire. `ceo_app_setting` et `crm_settings` du CRM se fondent dans `rec_v
 | atelier-espace-candidat | `crm_mo_medias` | `frm_mo_medias` | manuel opératoire (à fusionner avec le module Formation) |
 | atelier-espace-candidat | `crm_mo_pin_essais` | `frm_mo_pin_essais` | manuel opératoire (à fusionner avec le module Formation) |
 | atelier-espace-candidat | `crm_mo_procedures` | `frm_mo_procedures` | manuel opératoire (à fusionner avec le module Formation) |
+| consultant_BO | `ceo_manuel_formation` | `frm_manuel_formation` | ancien Manuel en ligne (retiré au lot 6) : partie de chaque formation |
+| consultant_BO | `ceo_manuel_procedure` | `frm_manuel_procedure` | ancien Manuel en ligne (retiré au lot 6) |
+| consultant_BO | `ceo_ref_bloc` | `frm_ref_bloc` | référentiel commun : blocs du Guide des formations |
+| consultant_BO | `ceo_ref_corresp` | `frm_ref_corresp` | référentiel commun : compétence C-… ↔ compétence du panel |
+| consultant_BO | `ceo_ref_domaine` | `frm_ref_domaine` | référentiel commun : 8 domaines du v25 |
+| consultant_BO | `ceo_ref_formation` | `frm_ref_formation` | référentiel commun : phases de chaque formation (portail du 06/11/2026) |
+| consultant_BO | `ceo_ref_item` | `frm_ref_item` | référentiel commun : points des blocs (critère « réussi si ») |
+| consultant_BO | `ceo_ref_po_point` | `frm_ref_po_point` | référentiel commun : points du Guide pré-ouverture |
+| consultant_BO | `ceo_ref_po_section` | `frm_ref_po_section` | référentiel commun : sections du Guide pré-ouverture |
+| consultant_BO | `ceo_ref_souscat` | `frm_ref_souscat` | référentiel commun : 36 sous-catégories du v25 |
+| consultant_BO | `ceo_sop` | `frm_sop` | standards (SOP) du Manuel opérationnel |
+| consultant_BO | `ceo_sop_personne` | `frm_sop_personne` | standards : réglages par personne (langue, postes, valideur) |
+| consultant_BO | `ceo_sop_suivi` | `frm_sop_suivi` | standards : lu, quiz, vu faire par personne |
+| consultant_BO | `ceo_sop_version` | `frm_sop_version` | standards : versions publiées |
+| consultant_BO | `ceo_tablette_acces` | `frm_tablette_acces` | tablette du magasin : appareils ouverts par le PIN du magasin |
+| consultant_BO | `ceo_tablette_essai` | `frm_tablette_essai` | tablette du magasin : essais de PIN |
+| consultant_BO | `ceo_tablette_gestion_essai` | `frm_tablette_gestion_essai` | tablette du magasin : essais du code de gestion |
+| consultant_BO | `ceo_tablette_magasin` | `frm_tablette_magasin` | tablette du magasin : une par magasin, PIN du magasin |
 
 ### ERP (lecture) — 8 table(s)
 
