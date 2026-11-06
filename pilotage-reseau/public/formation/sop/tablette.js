@@ -6,10 +6,13 @@
  * geste, la tablette se déconnecte : elle est partagée.
  * API : ../api/cockpit/formation/sop/tablette/* (src/sop.php), à côté du module Formation.
  *
- * « Ma journée » (Manuel du réseau, 06/11/2026) : une fois identifiée, la personne voit d'abord SES standards — ceux
- * dont un poste du référentiel v25 (P1–P12) est l'un des siens (déduits de ses postes de tablette, plus l'encadrement
- * si elle valide « vu faire ») — rangés par moment (ouverture, journée, après-midi, fermeture, autres), avec leur
- * état : à lire, lu, quiz, vu faire. « Toutes les SOP » garde la liste par compétence. Le PIN ne change pas.
+ * TROIS GRANDS ONGLETS (06/11/2026, client : « la tablette doit être orientée opérationnel, donc les SOP : Ouverture ·
+ * Journée de travail · Fermeture ; c'est le mode d'emploi pour la tablette ») : chaque onglet montre les SOP de son
+ * moment (journée = journée, après-midi, puis « au besoin » pour une SOP sans moment) ; « Comment ça marche » explique la
+ * tablette. L'onglet d'office suit l'heure (avant 11 h : ouverture ; à partir de 17 h : fermeture). Identifiée, la personne
+ * voit d'abord SES SOP (« Mes postes » : un de ses postes v25, sinon son poste de tablette) et leur état (à lire, lu,
+ * quiz, vu faire) ; « Tout le magasin » montre les autres. Les anciens onglets « Ma journée » / « Toutes les SOP » sont
+ * remplacés.
  *
  * UNE SEULE TABLETTE PAR MAGASIN (lot 5 de la fusion, 06/11/2026, src/tablettes.php) : au premier lancement, le PIN DU
  * MAGASIN (6 chiffres, Cockpit › Formation › Manuel du réseau › Tablettes) ouvre l'appareil ; la session est gardée sur
@@ -40,6 +43,15 @@
       faux: 'À revoir', okLu: 'Lecture enregistrée', erreurCharge: 'Impossible de charger les SOP', pasDeQuiz: 'Cette SOP n’a pas de quiz.',
       journee: 'Ma journée', toutes: 'Toutes les SOP', sesPostes: 'Mes postes', rienJournee: 'Aucun standard n’est encore rangé pour tes postes.',
       moment: { ouverture: 'Ouverture', journee: 'Journée', 'apres-midi': 'Après-midi', fermeture: 'Fermeture', autres: 'Autres moments' },
+      onglets: { ouverture: 'Ouverture', journee: 'Journée de travail', fermeture: 'Fermeture', aide: 'Comment ça marche' },
+      ongletsS: { ouverture: 'avant les clients', journee: 'du début à la fin', fermeture: 'jusqu’au coffre', aide: 'la tablette' },
+      sousJ: { journee: 'Pendant la journée', 'apres-midi': 'L’après-midi', autres: 'Au besoin' }, mesPostes: 'Mes postes', toutMagasin: 'Tout le magasin',
+      rienMoment: 'Aucune SOP pour ce moment.', aideT: 'La tablette du magasin',
+      aide: [['Ouvrir la tablette', 'Le PIN du magasin, une seule fois sur cet appareil.'],
+        ['Choisir le moment', 'Ouverture, Journée de travail ou Fermeture : les SOP du moment, par poste.'],
+        ['T’identifier', 'Ton nom puis ton PIN, à droite : ta lecture, ton quiz et ton « vu faire » sont comptés. Sans identification, tu peux lire.'],
+        ['Suivre la SOP pas à pas', 'Les étapes une par une, avec les photos et les points critiques, puis le quiz.'],
+        ['Être vu(e) faire', 'La responsable regarde faire sur place et valide avec son PIN : la compétence est acquise.']],
       etats: { non: 'à lire', lu: 'lu', quiz: 'quiz réussi', vu: 'vu faire', a_revoir: 'à revoir' }, standards: 'standards', panelCoche: 'cochée au panel',
       mag: { titre: 'Tablette du magasin', pin: 'PIN du magasin', aide: 'Les 6 chiffres donnés par le consultant, une seule fois sur cette tablette.', magasin: 'Magasin',
         ouvrir: 'Ouvrir', effacer: 'Effacer', ouverture: 'Ouverture…', fermer: 'Fermer la tablette', fermerQ: 'Fermer la tablette ? Il faudra retaper le PIN du magasin.',
@@ -59,6 +71,15 @@
       faux: 'Opnieuw bekijken', okLu: 'Lezing bewaard', erreurCharge: 'De SOP konden niet geladen worden', pasDeQuiz: 'Deze SOP heeft geen quiz.',
       journee: 'Mijn dag', toutes: 'Alle SOP', sesPostes: 'Mijn posten', rienJournee: 'Er staat nog geen standaard voor jouw posten.',
       moment: { ouverture: 'Opening', journee: 'Overdag', 'apres-midi': 'Namiddag', fermeture: 'Sluiting', autres: 'Andere momenten' },
+      onglets: { ouverture: 'Opening', journee: 'Werkdag', fermeture: 'Sluiting', aide: 'Hoe werkt het' },
+      ongletsS: { ouverture: 'vóór de klanten', journee: 'van begin tot einde', fermeture: 'tot aan de kluis', aide: 'de tablet' },
+      sousJ: { journee: 'Overdag', 'apres-midi': 'In de namiddag', autres: 'Indien nodig' }, mesPostes: 'Mijn posten', toutMagasin: 'Hele winkel',
+      rienMoment: 'Geen SOP voor dit moment.', aideT: 'De tablet van de winkel',
+      aide: [['De tablet openen', 'De pincode van de winkel, één keer op dit toestel.'],
+        ['Het moment kiezen', 'Opening, Werkdag of Sluiting: de SOP van dat moment, per post.'],
+        ['Je aanmelden', 'Je naam en dan je pincode, rechts: je lezing, je quiz en je « voorgedaan » tellen mee. Zonder aanmelding kun je lezen.'],
+        ['De SOP stap voor stap volgen', 'De stappen één voor één, met de foto’s en de kritieke punten, dan de quiz.'],
+        ['Voordoen', 'De verantwoordelijke kijkt ter plaatse en bevestigt met haar pincode: de competentie is verworven.']],
       etats: { non: 'te lezen', lu: 'gelezen', quiz: 'quiz geslaagd', vu: 'voorgedaan', a_revoir: 'opnieuw' }, standards: 'standaarden', panelCoche: 'aangevinkt in het panel',
       mag: { titre: 'Tablet van de winkel', pin: 'Pincode van de winkel', aide: 'De 6 cijfers van de consultant, één keer op deze tablet.', magasin: 'Winkel',
         ouvrir: 'Openen', effacer: 'Wissen', ouverture: 'Bezig met openen…', fermer: 'Tablet afsluiten', fermerQ: 'Tablet afsluiten? De pincode van de winkel moet dan opnieuw ingetikt worden.',
@@ -75,9 +96,12 @@
     init: null, moi: null, jeton: null, suivi: {},
     vue: 'liste', sop: null, etape: 0, vuEtapes: {}, qi: 0, reponses: [], choix: null, resultat: null,
     pinPour: null, pin: '', valideur: null, note: '', occupe: false, erreur: null,
-    onglet: 'journee'   // une fois identifiée : « Ma journée » d'abord, ou « Toutes les SOP »
+    onglet: ongletDuMoment(), // ouverture · journee · fermeture · aide (06/11/2026)
+    tout: false               // identifiée : false = ses postes, true = tout le magasin
   };
   if (!POSTES.includes(S.poste)) { S.poste = 'tous'; }
+  /** L'onglet d'office : l'heure du magasin (avant 11 h : ouverture ; à partir de 17 h : fermeture ; sinon la journée). */
+  function ongletDuMoment() { const h = new Date().getHours(); return h < 11 ? 'ouverture' : h >= 17 ? 'fermeture' : 'journee'; }
   const $ = s => document.querySelector(s);
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const t = () => T[S.langue];
@@ -209,32 +233,13 @@
       ${S.moi ? `<button class="tb-moi" data-a="sortir" title="${esc(t().sortir)}"><i>${esc(ini(S.moi.nom))}</i>${esc(S.moi.nom)}</button>` : `<span class="tb-moi mu">${esc(t().anonyme)}</span>`}</div>`;
   }
 
-  /* ── La liste des SOP du poste, rangées par compétence ── */
-  function vueListe() {
-    if (S.moi && S.onglet === 'journee') { return vueJournee(); }
-    const sops = (S.init.sops || []).filter(s => S.poste === 'tous' || s.poste === S.poste);
-    const groupes = new Map();
-    sops.forEach(s => { const k = s.competence ? s.competence.nom : '\u0000' + t().sansComp; if (!groupes.has(k)) { groupes.set(k, []); } groupes.get(k).push(s); });
-    const cles = [...groupes.keys()].sort((a, b) => (a[0] === '\u0000') - (b[0] === '\u0000') || a.localeCompare(b));
-    const st = id => (S.suivi[id] || {}).statut || 'non';
-    const ic = { non: '·', lu: 'L', quiz: 'Q', vu: '✓', a_revoir: '!' };
-    const liste = cles.map(k => {
-      const l = groupes.get(k);
-      const nom = k.replace('\u0000', '');
-      const vus = l.filter(s => st(s.id) === 'vu').length;
-      return `<div class="tb-grp"><div class="gt"><span class="comp" style="font-size:12.5px;padding:4px 11px">${esc(nom)}</span>${S.moi ? `<span class="pill ${vus === l.length ? 'ok' : 'att'}">${vus} / ${l.length} ${esc(t().vus)}</span>` : ''}</div>
-        ${l.map(s => `<button class="tb-sop" data-sop="${esc(s.id)}"><span class="st ${st(s.id)}">${ic[st(s.id)]}</span><span class="x"><b>${esc(L(s.titre))}${s.statut === 'a_valider' ? ` <span class="pill att">${esc(t().aValider)}</span>` : ''}</b>
-          <small>${s.nbEtapes} ${esc(t().etapes)}${S.moi ? ' · ' + esc(t().st[st(s.id)]) : ''}</small></span><span class="fl">›</span></button>`).join('')}</div>`;
-    }).join('') || `<div class="vide">—</div>`;
-    const chips = `<div class="tb-chips">${POSTES.concat(['tous']).map(p => `<button data-poste="${p}" class="${S.poste === p ? 'on' : ''}">${esc(t().poste[p])}</button>`).join('')}</div>`;
-    return `<div class="tb-corps"><div class="tb-liste">${onglets()}${chips}${liste}</div>${cote()}</div>`;
-  }
-
-  /* ── « Ma journée » : les standards de la personne, par moment ── */
-  const MOMENTS = ['ouverture', 'journee', 'apres-midi', 'fermeture'];
+  /* ── La liste : trois grands onglets, Ouverture · Journée de travail · Fermeture, et « Comment ça marche » ── */
+  const ONGLETS = ['ouverture', 'journee', 'fermeture', 'aide'];
+  const ongletDe = m => m === 'ouverture' ? 'ouverture' : m === 'fermeture' ? 'fermeture' : 'journee';
   function onglets() {
-    if (!S.moi) { return ''; }
-    return `<div class="tb-chips" role="tablist"><button data-onglet="journee" class="${S.onglet === 'journee' ? 'on' : ''}">${esc(t().journee)}</button><button data-onglet="toutes" class="${S.onglet === 'toutes' ? 'on' : ''}">${esc(t().toutes)}</button></div>`;
+    const n = k => (S.init.sops || []).filter(s => ongletDe(s.moment) === k && visible(s)).length;
+    return `<div class="tb-moments" role="tablist">${ONGLETS.map(k => `<button role="tab" data-onglet="${k}" class="${S.onglet === k ? 'on' : ''}" aria-selected="${S.onglet === k}">
+      <b>${esc(t().onglets[k])}</b><small>${k === 'aide' ? esc(t().ongletsS[k]) : n(k) + ' SOP · ' + esc(t().ongletsS[k])}</small></button>`).join('')}</div>`;
   }
   /** Un standard est de la journée de la personne : un de ses postes v25 est celui du standard (sinon l'ancien poste). */
   function pourMoi(s) {
@@ -242,19 +247,32 @@
     if (p.length) { return p.some(x => (S.moi.postesV25 || []).includes(x)); }
     return (S.moi.postes || []).includes(s.poste);
   }
-  function vueJournee() {
+  /** Ce que la liste montre : identifiée, ses postes (ou tout le magasin) ; sinon le poste choisi. */
+  const visible = s => S.moi ? (S.tout || pourMoi(s)) : (S.poste === 'tous' || s.poste === S.poste);
+  function vueListe() {
+    if (!ONGLETS.includes(S.onglet)) { S.onglet = ongletDuMoment(); }
+    if (S.onglet === 'aide') { return `<div class="tb-corps"><div class="tb-liste">${onglets()}${vueAide()}</div>${cote()}</div>`; }
     const st = id => (S.suivi[id] || {}).statut || 'non';
     const ic = { non: '·', lu: 'L', quiz: 'Q', vu: '✓', a_revoir: '!' };
-    const miens = (S.init.sops || []).filter(pourMoi);
-    const groupes = MOMENTS.concat(['autres']).map(m => ({ m, l: miens.filter(s => m === 'autres' ? !MOMENTS.includes(s.moment) : s.moment === m) })).filter(g => g.l.length);
-    const corps = groupes.map(g => {
-      const vus = g.l.filter(s => st(s.id) === 'vu').length;
-      return `<div class="tb-grp"><div class="sec-t">${esc(t().moment[g.m])}<small>${vus} / ${g.l.length} ${esc(t().vus)}</small></div>
-        ${g.l.map(s => `<button class="tb-sop" data-sop="${esc(s.id)}"><span class="st ${st(s.id)}">${ic[st(s.id)]}</span><span class="x"><b>${esc(L(s.titre))}${s.statut === 'a_valider' ? ` <span class="pill att">${esc(t().aValider)}</span>` : ''}</b>
-          <small>${esc(s.code || '')} · ${s.nbEtapes} ${esc(t().etapes)}</small></span><span class="pill ${st(s.id) === 'vu' ? 'ok' : st(s.id) === 'a_revoir' ? 'ko' : st(s.id) === 'non' ? '' : 'att'}">${esc(t().etats[st(s.id)])}</span><span class="fl">›</span></button>`).join('')}</div>`;
-    }).join('') || `<div class="vide">${esc(t().rienJournee)}</div>`;
-    const postes = (S.moi.postesV25 || []).join(' · ');
-    return `<div class="tb-corps"><div class="tb-liste">${onglets()}<div class="mini" style="margin:-6px 0 12px">${esc(t().sesPostes)} : ${esc(postes || '—')} · ${miens.length} ${esc(t().standards)}</div>${corps}</div>${cote()}</div>`;
+    const sops = (S.init.sops || []).filter(s => ongletDe(s.moment) === S.onglet && visible(s));
+    // La journée se lit dans l'ordre : la journée, l'après-midi, puis ce qui se fait au besoin ; ouverture et fermeture par poste.
+    const groupes = S.onglet === 'journee'
+      ? [['journee', t().sousJ.journee], ['apres-midi', t().sousJ['apres-midi']], ['autres', t().sousJ.autres]].map(([m, l]) => ({ l, sops: sops.filter(s => m === 'autres' ? !['journee', 'apres-midi'].includes(s.moment) : s.moment === m) }))
+      : POSTES.map(p => ({ l: t().poste[p], sops: sops.filter(s => s.poste === p) })).concat([{ l: t().sansComp, sops: sops.filter(s => !POSTES.includes(s.poste)) }]);
+    const corps = groupes.filter(g => g.sops.length).map(g => {
+      const vus = g.sops.filter(s => st(s.id) === 'vu').length;
+      return `<div class="tb-grp"><div class="sec-t">${esc(g.l)}${S.moi ? `<small>${vus} / ${g.sops.length} ${esc(t().vus)}</small>` : ''}</div>
+        ${g.sops.map(s => `<button class="tb-sop" data-sop="${esc(s.id)}"><span class="st ${st(s.id)}">${ic[st(s.id)]}</span><span class="x"><b>${esc(L(s.titre))}${s.statut === 'a_valider' ? ` <span class="pill att">${esc(t().aValider)}</span>` : ''}</b>
+          <small>${esc(t().poste[s.poste] || s.poste || '')} · ${s.nbEtapes} ${esc(t().etapes)}</small></span>${S.moi ? `<span class="pill ${st(s.id) === 'vu' ? 'ok' : st(s.id) === 'a_revoir' ? 'ko' : st(s.id) === 'non' ? '' : 'att'}">${esc(t().etats[st(s.id)])}</span>` : ''}<span class="fl">›</span></button>`).join('')}</div>`;
+    }).join('') || `<div class="vide">${esc(S.moi && !S.tout ? t().rienJournee : t().rienMoment)}</div>`;
+    const chips = S.moi
+      ? `<div class="tb-chips"><button data-tout="0" class="${S.tout ? '' : 'on'}">${esc(t().mesPostes)}</button><button data-tout="1" class="${S.tout ? 'on' : ''}">${esc(t().toutMagasin)}</button></div>`
+      : `<div class="tb-chips">${['tous'].concat(POSTES).map(p => `<button data-poste="${p}" class="${S.poste === p ? 'on' : ''}">${esc(t().poste[p])}</button>`).join('')}</div>`;
+    return `<div class="tb-corps"><div class="tb-liste">${onglets()}${chips}${corps}</div>${cote()}</div>`;
+  }
+  function vueAide() {
+    return `<div class="tb-aide"><div class="sec-t">${esc(t().aideT)}</div><ol>${t().aide.map(([a, b]) => `<li><b>${esc(a)}</b><span>${esc(b)}</span></li>`).join('')}</ol>
+      <div class="tb-aide__leg"><span class="st non">·</span>${esc(t().etats.non)}<span class="st lu">L</span>${esc(t().etats.lu)}<span class="st quiz">Q</span>${esc(t().etats.quiz)}<span class="st vu">✓</span>${esc(t().etats.vu)}</div></div>`;
   }
 
   /** Le point critique : un triangle d'alerte au trait (design system §7.12), 28 px pour l'écran du poste. */
@@ -391,7 +409,7 @@
         S.jeton = r.jeton; S.moi = r.personne; S.suivi = r.suivi || {};
         sessionStorage.setItem('foJeton', r.jeton);
         if (r.personne.langue && r.personne.langue !== S.langue) { S.langue = r.personne.langue; localStorage.setItem('foLangue', S.langue); }
-        S.pinPour = null; S.onglet = 'journee'; actif();
+        S.pinPour = null; S.tout = false; actif();
       } else if (act === 'vu') {
         await valider('vu');
       }
@@ -432,6 +450,7 @@
     }
     if (d.poste) { S.poste = d.poste; localStorage.setItem('foPoste', S.poste); return rendre(); }
     if (d.onglet) { S.onglet = d.onglet; return rendre(); }
+    if (d.tout !== undefined) { S.tout = d.tout === '1'; return rendre(); }
     if (d.pers) { S.pinPour = +d.pers; S.pin = ''; S.erreur = null; return rendre(); }
     if (d.val) { S.valideur = +d.val; S.pin = ''; S.erreur = null; return rendre(); }
     if (d.k) { return touche(d.k, d.act); }

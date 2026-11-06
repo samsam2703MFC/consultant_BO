@@ -743,3 +743,27 @@ Client : « Correspondance panel, Tablettes : est-ce nécessaire ? » puis « ok
   `codeExige` ; sans code exigé, l'écran ne propose pas « Fermer la gestion ». `bin/deploy.sh` : sans code, il note
   « gestion ouverte sans code » et attend 200 ; avec un code, 403 comme avant. ATTENTION : l'API du cockpit n'exige pas de
   connexion en production — sans code, qui connaît l'adresse lit et change les PIN des magasins.
+
+## Deux menus : Formation et Opérationnel ; la tablette en trois onglets (06/11/2026)
+
+Client : « la tablette doit être orientée opérationnel, donc les SOP : trois grands onglets, Ouverture · Journée de travail
+(toutes les opérations du début à la fin : réception de marchandise, inventaires…) · Fermeture ; c'est le mode d'emploi
+pour la tablette ; tout ce qui est formation reste dans Formation, tout ce qui est opérationnel, et les deux menus du rail ».
+- **Rail** (`portail.js`) : FORMATION — Formations, Postes, Compétences, Suivi en magasin, Données du panel ;
+  OPÉRATIONNEL — Ouverture, Journée de travail, Fermeture, La tablette (`#/operationnel/<moment>`), Tablettes des
+  magasins, Rédaction des SOP (allumée aussi sur `#/sop`, le Classeur et ses vues). Une entrée du rail peut porter une
+  sous-adresse (4e élément, `formation.js` `groupesPortail`). La chaîne en tête des écrans finit par « Opérationnel ».
+- **Écran Opérationnel** (`ecranOperationnel`) : quatre cartes (Ouverture · Journée de travail · Fermeture, avec leur
+  nombre de SOP, et « La tablette »). Un moment : les SOP en colonnes fixes (code · SOP · type · poste · étapes · moment),
+  filtre par poste, recherche ; la journée se lit dans l'ordre (pendant la journée, l'après-midi, au besoin), ouverture et
+  fermeture par poste. Le **moment** de chaque SOP se change sur sa ligne (`PATCH /formation/sop/fiche/{id} {moment}` :
+  ouverture · journee · apres-midi · fermeture · null « au besoin », contrôlé et noté au journal). À droite, « Les
+  opérations » du moment (`OPS_OP`, une proposition de départ) : chacune avec ses SOP, sinon « à rédiger » — la journée
+  attend notamment la réception de marchandise et l'inventaire. « La tablette » : le mode d'emploi en cinq pas (ouvrir
+  avec le PIN du magasin, choisir le moment, s'identifier, suivre la SOP, être vu faire), son adresse, les liens vers
+  Tablettes des magasins, Suivi en magasin et Rédaction des SOP.
+- **La tablette** (`sop/tablette.js`) : trois grands onglets Ouverture · Journée de travail · Fermeture (nombre de SOP
+  dessous) et « Comment ça marche » (les cinq pas, la légende des états), FR | NL. L'onglet d'office suit l'heure (avant
+  11 h ouverture, à partir de 17 h fermeture). Sans identification : filtre par poste ; identifiée : « Mes postes » (d'office)
+  ou « Tout le magasin », avec l'état de chaque SOP. Les anciens onglets « Ma journée » / « Toutes les SOP » sont remplacés.
+

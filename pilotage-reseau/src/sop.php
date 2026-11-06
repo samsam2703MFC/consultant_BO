@@ -392,7 +392,12 @@ function wr_sop_reglage(string $id): array
         if (!in_array($b[$k], $ok, true)) { return foRefus(400, $k . ' inconnu'); }
         $set[] = $k . ' = ?'; $p[] = $b[$k]; $quoi[] = $k . ' ' . $b[$k];
     }
-    if (array_key_exists('moment', $b)) { $set[] = 'moment = ?'; $p[] = foCourt($b['moment'], 20); }
+    if (array_key_exists('moment', $b)) {
+        // Le moment d'une SOP = son onglet de la tablette et du menu Opérationnel (06/11/2026) : ouverture, journée de
+        // travail (journée, après-midi), fermeture ; null = « au besoin » (rangée avec la journée).
+        if ($b['moment'] !== null && !in_array($b['moment'], ['ouverture', 'journee', 'apres-midi', 'fermeture'], true)) { return foRefus(400, 'moment inconnu'); }
+        $set[] = 'moment = ?'; $p[] = $b['moment']; $quoi[] = 'moment ' . ($b['moment'] ?? 'au besoin');
+    }
     if (array_key_exists('partie', $b)) {
         if ($b['partie'] !== null && !in_array($b['partie'], FO_PARTIES, true)) { return foRefus(400, 'partie inconnue'); }
         $set[] = 'partie = ?'; $p[] = $b['partie']; $quoi[] = 'partie du manuel ' . ($b['partie'] ?? 'déduite');

@@ -26,7 +26,8 @@
 
   let C = null;   // les outils de formation.js (esc, lire, appel, rendre, S, bandeau…)
   // cor : la correspondance codes C-… ↔ compétences du panel (GET /formation/ref/correspondance), lue pour la fiche d'une compétence.
-  const P = { ref: null, err: null, charge: false, occupe: null, msg: null, cor: null, corErr: null, corCharge: false };
+  // sops : la liste des SOP (GET /formation/sop/liste), pour le menu Opérationnel.
+  const P = { ref: null, err: null, charge: false, occupe: null, msg: null, cor: null, corErr: null, corCharge: false, sops: null, sopsErr: null, sopsCharge: false };
   const esc = s => C.esc(s);
   const K = 'Portail de formation';
   const PH = ['pre', 'ouv', 'con'];
@@ -66,7 +67,7 @@
   function chaine(on) {
     const R = X.R;
     const t = [['rfmetiers', 'Postes', 'qui', R.postes.length], ['rfformations', 'Formations', 'quand on apprend', R.formations.length],
-      ['rfcompetences', 'Compétences', 'ce qu’on sait faire', R.competences.length], ['rfclasseur', 'Manuel opérationnel', 'comment on le fait (SOP)', R.standards.length]];
+      ['rfcompetences', 'Compétences', 'ce qu’on sait faire', R.competences.length], ['operationnel', 'Opérationnel', 'comment on le fait (SOP)', R.standards.length]];
     return `<nav class="pt-chaine" aria-label="La chaîne du portail">${t.map(([k, l, s, n]) => `<a href="#/${k}" class="${k === on ? 'is-on' : ''}"${k === on ? ' aria-current="page"' : ''}><span class="pt-chaine__n">${n}</span><span class="pt-chaine__l">${l}</span><span class="pt-chaine__s">${s}</span></a>`).join('')}</nav>`;
   }
   function attente(titre) {
@@ -321,6 +322,127 @@
       ${L.map(x => `<div class="pt-ligne"><span class="pt-c-code">${esc(x.id)}</span><span class="pt-c-nom">${esc(x.nom)}${x.description ? `<small>${esc(x.description)}</small>` : ''}</span></div>`).join('')}</section>`;
   }
 
+  /* ── Opérationnel : le mode d'emploi de la tablette (06/11/2026) ─────────────
+     Client : « la tablette doit être orientée opérationnel, donc les SOP ; trois grands onglets : Ouverture · Journée de
+     travail · Fermeture ; la journée a toutes les opérations du début à la fin ; c'est un mode d'emploi pour la tablette ».
+     Une SOP est rangée par son moment (réglable ici) : ouverture ; journée (journée, après-midi, et « au besoin » quand
+     elle n'a pas de moment) ; fermeture. « La tablette » explique comment elle marche. */
+
+  const MOMENTS_OP = [['ouverture', 'Ouverture', 'avant l’arrivée des clients'], ['journee', 'Journée de travail', 'du début à la fin de la journée'],
+    ['fermeture', 'Fermeture', 'de la dernière vente au coffre'], ['tablette', 'La tablette', 'comment elle marche']];
+  const MOMENT_SOP = [['ouverture', 'Ouverture'], ['journee', 'Journée'], ['apres-midi', 'Après-midi'], ['fermeture', 'Fermeture'], ['', 'Au besoin']];
+  const POSTES_SOP = [['vente', 'Vente'], ['production', 'Production'], ['cuisson', 'Cuisson'], ['nettoyage', 'Nettoyage']];
+  const ongletDe = m => m === 'ouverture' ? 'ouverture' : m === 'fermeture' ? 'fermeture' : 'journee';
+  /* Les opérations qu'un magasin fait à chaque moment : une SOP dont le titre en parle les documente, sinon « à rédiger ».
+     Une proposition de départ, à compléter au fil des SOP. */
+  const OPS_OP = {
+    ouverture: [['Ouverture du magasin et des comptoirs', /ouverture du magasin/i], ['Ouverture du poste de cuisson', /ouverture du poste/i],
+      ['Contrôles du matin (températures, HACCP)', /haccp|temp[ée]rature/i], ['Production du matin', /viennoiser|quiche|tartes? froides|[ée]clair|fondant/i]],
+    journee: [['Réception de marchandise', /r[ée]ception/i], ['Commandes clients en caisse', /commande/i], ['Production de la journée', /cookie|tartes?|cr[èe]me|flan|cramique/i],
+      ['Recuisson d’appoint', /recuisson/i], ['Inventaire', /inventaire/i], ['Invendus et Too Good To Go', /too good|invendu|casse/i], ['Moments calmes', /calme/i]],
+    fermeture: [['Fermeture du magasin et coffre', /fermeture/i], ['Fin de poste de cuisson', /fin de poste/i], ['Nettoyage', /nettoyage/i]],
+  };
+
+  function ecranOperationnel() {
+    const m = MOMENTS_OP.some(x => x[0] === C.S.route.a[0]) ? C.S.route.a[0] : 'journee';
+    const L = P.sops;
+    if (!L) {
+      return { titre: 'Opérationnel', kicker: 'Mode d’emploi de la tablette', large: true,
+        corps: P.sopsErr ? `<p class="error">SOP illisibles : ${esc(P.sopsErr)}</p><p><button type="button" class="btn" data-pa="sopsRelire">Réessayer</button></p>` : '<p class="muted">Lecture des SOP…</p>' };
+    }
+    const n = k => L.filter(s => ongletDe(s.moment) === k).length;
+    let h = message() + `<div class="pt-phases pt-phases--4">${MOMENTS_OP.map(([k, l, s]) => `<a class="pt-phase${k === m ? ' is-on' : ''}" href="#/operationnel/${k}">
+      <span class="pt-phase__n">${k === 'tablette' ? '?' : n(k)}</span><span><span class="pt-phase__t">${esc(l)}</span><span class="pt-phase__s">${esc(s)}</span></span></a>`).join('')}</div>`;
+    if (m === 'tablette') { return { titre: 'La tablette', kicker: 'Opérationnel', corps: h + vueTablette(L), large: true }; }
+    const titre = MOMENTS_OP.find(x => x[0] === m)[1];
+    h += `<div class="pt-lay"><div>${listeOp(m, L)}</div><div>${carteOps(m, L)}</div></div>`;
+    return { titre, kicker: 'Opérationnel · mode d’emploi de la tablette', corps: h, large: true };
+  }
+
+  function listeOp(m, L) {
+    const q = String(C.S.f.opq || '').trim().toLowerCase(), po = C.S.f.opPoste || '';
+    const ok = s => (!po || s.poste === po) && (!q || [s.code, (s.titre || {}).fr, (s.titre || {}).nl].join(' ').toLowerCase().includes(q));
+    const sops = L.filter(s => ongletDe(s.moment) === m && ok(s));
+    const puce = (v, l) => `<button type="button" class="filter${po === v ? ' is-on' : ''}" data-pa="opPoste" data-v="${v}">${esc(l)}</button>`;
+    let h = `<section class="card table-card pt-table"><div class="pt-filtres"><span class="muted fm-small">Poste</span>${puce('', 'Tous')}${POSTES_SOP.map(([k, l]) => puce(k, l)).join('')}
+      <input type="search" placeholder="Rechercher une SOP…" data-input="opq" value="${esc(C.S.f.opq || '')}"></div>
+      <div class="pt-tete"><span class="pt-c-cc">Code</span><span class="pt-c-nom">SOP</span><span class="pt-c-nb">Type</span><span class="pt-c-freq">Poste</span><span class="pt-c-nb">Étapes</span><span class="pt-c-mom">Moment</span></div>`;
+    // La journée se lit dans l'ordre : la journée, l'après-midi, puis ce qui se fait au besoin ; ouverture et fermeture par poste.
+    const groupes = m === 'journee'
+      ? [['Pendant la journée', s => s.moment === 'journee'], ['L’après-midi', s => s.moment === 'apres-midi'], ['Au besoin', s => !s.moment]]
+      : POSTES_SOP.map(([k, l]) => [l, s => s.poste === k]).concat([['Autres', s => !POSTES_SOP.some(x => x[0] === s.poste)]]);
+    const oc = id => P.occupe === 'mom:' + id ? ' disabled' : '';
+    let vu = 0;
+    groupes.forEach(([lib, f]) => {
+      const l = sops.filter(f).sort((a, b) => String(a.poste).localeCompare(String(b.poste)) || String(a.code).localeCompare(String(b.code)));
+      if (!l.length) { return; }
+      vu += l.length;
+      h += `<div class="pt-grp">${esc(lib)} <i>${l.length}</i></div>` + l.map(s => `<div class="pt-ligne"><span class="pt-c-cc">${esc(s.code || '—')}</span>
+        <a class="pt-c-nom" href="#/sop/${enc(s.id)}">${esc((s.titre || {}).fr || s.id)}${s.statut === 'a_valider' ? ' <span class="pt-bd pt-bd--ouv">à valider</span>' : ''}</a>
+        <span class="pt-c-nb">${esc(s.type || 'SOP')}</span><span class="pt-c-freq">${esc((POSTES_SOP.find(x => x[0] === s.poste) || [0, s.poste || '—'])[1])}</span>
+        <span class="pt-c-nb">${s.nbEtapes || 0}</span>
+        <span class="pt-c-mom"><select class="fm-select pt-sel" data-pach="moment" data-id="${esc(s.id)}" aria-label="Moment de la SOP"${oc(s.id)}>${MOMENT_SOP.map(([k, l]) => `<option value="${k}"${(s.moment || '') === k ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></span></div>`).join('');
+    });
+    if (!vu) { h += '<p class="muted pt-vide">Aucune SOP dans ce filtre.</p>'; }
+    return h + '</section>';
+  }
+
+  function carteOps(m, L) {
+    const sops = L.filter(s => ongletDe(s.moment) === m);
+    const ops = (OPS_OP[m] || []).map(([lib, re]) => [lib, sops.filter(s => re.test((s.titre || {}).fr || ''))]);
+    const faits = ops.filter(o => o[1].length).length;
+    const lien = new URL('sop/tablette.html', location.href).href;
+    return `<section class="card pt-fiche"><div class="pt-kicker">${esc(MOMENTS_OP.find(x => x[0] === m)[1])}</div><div class="pt-titre">Les opérations</div>
+      <div class="pt-mini"><span><b>${sops.length}</b>SOP</span><span><b>${faits} / ${ops.length}</b>opérations documentées</span></div>
+      <div class="pt-bloc"><h3>Opérations <i>une SOP chacune</i></h3>${ops.map(([lib, l]) => `<div class="pt-it"><span class="pt-it__cd">${l.length ? '<span class="pt-ok">● ' + l.length + ' SOP</span>' : '<span class="pt-ambre">à rédiger</span>'}</span>
+        <span class="pt-it__tx">${esc(lib)}${l.length ? `<small>${l.slice(0, 3).map(s => `<a href="#/sop/${enc(s.id)}">${esc(s.code || s.id)}</a>`).join(' · ')}${l.length > 3 ? ' …' : ''}</small>` : ''}</span></div>`).join('')}
+        <a class="linklike" href="#/sopred">Rédiger une nouvelle SOP</a></div>
+      <div class="pt-bloc"><h3>Sur la tablette</h3><p class="pt-desc">La tablette du magasin montre ces SOP sous l’onglet « ${esc(MOMENTS_OP.find(x => x[0] === m)[1])} ».</p>
+        <a class="linklike" href="${esc(lien)}" target="_blank" rel="noopener">Ouvrir la tablette ↗</a> · <a class="linklike" href="#/operationnel/tablette">Comment elle marche</a></div></section>`;
+  }
+
+  function vueTablette(L) {
+    const lien = new URL('sop/tablette.html', location.href).href;
+    const pub = L.filter(s => s.statut === 'publiee').length;
+    const pas = [
+      ['Ouvrir la tablette', 'Le PIN du magasin (6 chiffres), une seule fois par appareil. Chaque magasin a sa tablette, créée dans « Tablettes des magasins ».'],
+      ['Choisir le moment', 'Trois grands onglets : Ouverture · Journée de travail · Fermeture. Chacun montre les SOP du moment, par poste.'],
+      ['S’identifier', 'Son nom, puis son PIN : la lecture, le quiz et le « vu faire » sont comptés pour la personne. Sans identification, on lit sans être compté.'],
+      ['Suivre la SOP pas à pas', 'Les étapes une par une, avec leurs photos et les points critiques ; puis le quiz de la SOP.'],
+      ['Faire valider « vu faire »', 'La responsable du magasin regarde faire sur place et valide avec son PIN : la compétence est cochée au panel TF Buddy.'],
+    ];
+    return `<div class="pt-lay"><div><section class="card pt-fiche"><div class="pt-kicker">Mode d’emploi</div><div class="pt-titre">La tablette du magasin</div>
+      <p class="pt-desc">Une seule tablette par magasin : elle porte toutes les SOP du magasin, rangées par moment de la journée. C’est le mode d’emploi du travail en magasin.</p>
+      <ol class="pt-pas">${pas.map(([t2, d]) => `<li><b>${esc(t2)}</b><span>${esc(d)}</span></li>`).join('')}</ol></section></div>
+      <div><section class="card pt-fiche"><div class="pt-kicker">La tablette</div><div class="pt-titre">${pub} SOP publiées</div>
+        <div class="pt-mini">${MOMENTS_OP.slice(0, 3).map(([k, l]) => `<span><b>${L.filter(s => ongletDe(s.moment) === k).length}</b>${esc(l)}</span>`).join('')}</div>
+        <div class="pt-bloc"><h3>Adresse</h3><p class="pt-desc"><a class="linklike" href="${esc(lien)}" target="_blank" rel="noopener">${esc(lien)}</a></p></div>
+        <div class="pt-bloc"><h3>Aller plus loin</h3><a class="pt-it" href="#/tablettes"><span class="pt-it__tx">Tablettes des magasins<small>créer la tablette d’un magasin, son PIN, ses appareils</small></span></a>
+          <a class="pt-it" href="#/suivi"><span class="pt-it__tx">Suivi en magasin<small>qui a lu, réussi le quiz, été vu faire</small></span></a>
+          <a class="pt-it" href="#/sopred"><span class="pt-it__tx">Rédaction des SOP<small>écrire, traduire, publier</small></span></a></div></section></div></div>`;
+  }
+
+  async function changerMoment(id, v) {
+    const s = P.sops && P.sops.find(x => x.id === id);
+    if (!s || P.occupe) { return; }
+    P.occupe = 'mom:' + id; P.msg = null; C.rendre(true);
+    try {
+      await C.appel('PATCH', '/formation/sop/fiche/' + enc(id), { moment: v || null });
+      s.moment = v || null;
+      const lib = (MOMENT_SOP.find(x => x[0] === (v || '')) || [0, v])[1];
+      P.msg = { txt: `${s.code || id} : ${lib} — onglet « ${MOMENTS_OP.find(x => x[0] === ongletDe(s.moment))[1]} » de la tablette.`, genre: '' };
+    } catch (e) {
+      P.msg = { txt: 'Moment non enregistré : ' + e.message, genre: 'warn' };
+    }
+    P.occupe = null; C.rendre(true);
+  }
+  function chargerSops(forcer) {
+    if ((P.sops && !forcer) || P.sopsCharge || (P.sopsErr && !forcer)) { return; }
+    P.sopsCharge = true; P.sopsErr = null;
+    C.lire('/formation/sop/liste', 30000).then(d => { P.sops = d.sops || []; P.sopsCharge = false; C.rendre(true); },
+      e => { P.sopsErr = e.message; P.sopsCharge = false; C.rendre(true); });
+  }
+
   /* ── Réglages › Données du panel ──────────────────────────────────────── */
 
   function ecranDonnees() {
@@ -395,17 +517,29 @@
       if (k === 'relire') { charger(true); }
       if (k === 'cor') { relier(t.getAttribute('data-code'), t.getAttribute('data-v')); }
       if (k === 'corRelire') { chargerCor(true); }
+      if (k === 'opPoste') { C.S.f.opPoste = t.getAttribute('data-v') || ''; C.rendre(true); }
+      if (k === 'sopsRelire') { chargerSops(true); }
     });
     root.addEventListener('change', ev => {
       const t = ev.target.closest && ev.target.closest('[data-pach]');
       if (t && t.getAttribute('data-pach') === 'cor' && t.value) { relier(t.getAttribute('data-code'), t.value); }
+      if (t && t.getAttribute('data-pach') === 'moment') { changerMoment(t.getAttribute('data-id'), t.value); }
     });
   }
 
   /* ── Branchement sur formation-sop.js et formation.js ─────────────────── */
 
-  const ECRANS = { rfformations: ecranFormations, rfmetiers: ecranPostes, rfcompetences: ecranCompetences, rfdonnees: ecranDonnees };
+  const ECRANS = { rfformations: ecranFormations, rfmetiers: ecranPostes, rfcompetences: ecranCompetences, rfdonnees: ecranDonnees, operationnel: ecranOperationnel };
   Object.keys(ECRANS).forEach(k => { FS.ecrans[k] = ECRANS[k]; });
+  Object.assign(FS.icones, {
+    rfformations: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5',
+    rfmetiers: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
+    rfcompetences: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
+    'operationnel/ouverture': 'M12 2v4M4.9 10.9l1.4 1.4M2 18h20M19.1 10.9l-1.4 1.4M8 18a4 4 0 0 1 8 0',
+    'operationnel/journee': 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4',
+    'operationnel/fermeture': 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
+    'operationnel/tablette': 'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2',
+  });
   FS.icones.rfdonnees = 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6';
   const initAvant = FS.init, apresAvant = FS.apres;
   FS.init = function (ctx, root) { initAvant.call(FS, ctx, root); C = ctx; brancher(root); };
@@ -413,6 +547,7 @@
     apresAvant.call(FS, e, a);
     if (e === 'rfformations' || e === 'rfmetiers' || e === 'rfcompetences') { charger(false); }
     if (e === 'rfcompetences' && a[0] && a[0] !== 'produit') { chargerCor(false); }   // la fiche d'une compétence règle sa correspondance
+    if (e === 'operationnel') { chargerSops(false); }
   };
 
   /**
@@ -421,14 +556,15 @@
    */
   window.FormationPortail = {
     defaut: 'rfformations',
-    titres: { rfformations: 'Formations', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', suivi: 'Suivi en magasin' },
+    titres: { rfformations: 'Formations', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', suivi: 'Suivi en magasin', operationnel: 'Opérationnel' },
+    // Deux menus (06/11/2026, client : « tout ce qui est formation reste dans Formation, tout ce qui est opérationnel, et les
+    // deux menus du rail »). Une entrée = [écran, libellé, écrans où elle reste allumée, sous-adresse facultative].
     rail: [
-      ['Portail de formation', [['rfformations', 'Formations', ['rfpre']], ['rfmetiers', 'Postes', ['rfposte']], ['rfcompetences', 'Compétences', ['rfform', 'sopcomp']],
-        ['rfclasseur', 'Manuel opérationnel', ['rfphase', 'sop', 'manuel']]], true],
-      // Suivi en magasin (06/11/2026) : l'ancien onglet « Acquisition en magasin » de la correspondance, qui quitte le rail.
-      ['Suivi', [['suivi', 'Suivi en magasin', []]], false],
-      ['Réglages', [['tablettes', 'Tablettes', []], ['sopred', 'Rédaction des SOP', []],
-        ['rfdonnees', 'Données du panel', ['tableau', 'postes', 'competences', 'formations', 'procedures', 'ressources', 'produit', 'api']]], false],
+      ['Formation', [['rfformations', 'Formations', ['rfpre']], ['rfmetiers', 'Postes', []], ['rfcompetences', 'Compétences', ['rfform', 'sopcomp']],
+        ['suivi', 'Suivi en magasin', []], ['rfdonnees', 'Données du panel', ['tableau', 'postes', 'competences', 'formations', 'procedures', 'ressources', 'produit', 'api']]], false],
+      ['Opérationnel', [['operationnel', 'Ouverture', [], 'ouverture'], ['operationnel', 'Journée de travail', [], 'journee'], ['operationnel', 'Fermeture', [], 'fermeture'],
+        ['operationnel', 'La tablette', [], 'tablette'], ['tablettes', 'Tablettes des magasins', []],
+        ['sopred', 'Rédaction des SOP', ['sop', 'rfclasseur', 'rfphase', 'rfposte', 'manuel']]], false],
     ],
   };
 })(window.FormationSop);

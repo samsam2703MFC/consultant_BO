@@ -185,3 +185,18 @@ a.pt-fo:hover span:last-child { color: var(--accent); }
 .pt-props { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
 .pt-props .fm-small { margin-right: 2px; }
 .pt-sel { flex: 1 1 220px; min-width: 0; max-width: 100%; }
+
+/* Opérationnel : le mode d'emploi de la tablette (06/11/2026) — trois moments et « La tablette ». */
+.pt-phases--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.pt-c-mom { flex: 0 0 130px; }
+.pt-c-mom .pt-sel { width: 100%; min-height: 30px; padding: 4px 8px; font-size: 12px; }
+.pt-ligne a.pt-c-nom { color: var(--ink); text-decoration: none; }
+.pt-ligne a.pt-c-nom:hover { color: var(--accent); }
+.pt-pas { margin: 8px 0 0; padding: 0; list-style: none; counter-reset: pas; }
+.pt-pas li { counter-increment: pas; display: grid; grid-template-columns: 34px 1fr; gap: 2px 10px; padding: 12px 0; border-top: 1px solid var(--line); }
+.pt-pas li::before { content: counter(pas); grid-row: span 2; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--accent);
+  color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+.pt-pas li b { font-weight: 400; font-size: 14px; color: var(--ink); }
+.pt-pas li span { font-size: 12.5px; color: var(--muted-2); line-height: 1.45; }
+@media (max-width: 1280px) { .pt-phases--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .pt-phases--4 { grid-template-columns: minmax(0, 1fr); } .pt-c-mom { flex-basis: 110px; } }
