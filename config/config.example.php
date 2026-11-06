@@ -25,6 +25,19 @@ return [
     // valeur, le rail n'affiche pas ce lien (rien n'est écrit en dur).
     'erpUrl' => getenv('COCKPIT_ERP_URL') ?: null,
 
+    // Mentions légales de l'émetteur, imprimées au pied des PDF et des
+    // e-mails (design system §13.4). Le réglage `emetteur` de ceo_app_setting
+    // prime ; une mention vide n'est pas écrite — jamais de valeur d'exemple.
+    'emetteur' => [
+        'raisonSociale'    => null,   // ex. la société qui émet les pièces
+        'adresse'          => null,   // siège social
+        'numeroEntreprise' => null,   // BCE
+        'tva'              => null,
+        'rpm'              => null,
+        'iban'             => null,
+        'bic'              => null,
+    ],
+
     // Écran de connexion intégré. false (défaut) : accès ouvert — les
     // utilisateurs arrivent redirigés depuis l'ERP, qui porte l'auth.
     // true : mot de passe défini au premier lancement, session 30 jours.

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/doc.php';
+
 /**
  * Cockpit CEO — le personnel de vente : target et classement.
  *
@@ -970,38 +972,38 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
     $g = $d['gagnantes'];
 
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
-      .serif{font-family:Georgia,"DejaVu Serif","Times New Roman",serif}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:9pt}
+      .serif{font-family:Gotham,Helvetica,Arial,sans-serif}
       .h1{font-size:19pt;margin:4mm 0 1mm}
-      .mut{color:#7a736a}.acc{color:#8D1D2C}.or{color:#8a5a1c}
-      .sec{font-family:Georgia,"DejaVu Serif",serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
-      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm}
+      .mut{color:#7a736a}.acc{color:#8D1D2C}.or{color:#7A5207}
+      .sec{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
+      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm}
       .k{font-size:7pt;letter-spacing:.09em;text-transform:uppercase;color:#7a736a}
-      .prime{border:1px solid #E8C9A0;background:#FFF9EC;border-radius:8px;padding:3mm 4mm;margin-bottom:4mm}
-      .prime .qui{font-family:Georgia,"DejaVu Serif",serif;font-size:13pt;margin:1mm 0}
-      .badge{display:inline-block;font-size:7pt;font-weight:bold;border-radius:3mm;padding:.6mm 2.4mm;background:#8D1D2C;color:#fff}
-      .badge.or{background:#FFF3D6;color:#8a5a1c;border:1px solid #E8C9A0}
+      .prime{border:1px solid #F6E7CE;background:#F6E7CE;border-radius:8px;padding:3mm 4mm;margin-bottom:4mm}
+      .prime .qui{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13pt;margin:1mm 0}
+      .badge{display:inline-block;font-size:7pt;font-weight:400;border-radius:3mm;padding:.6mm 2.4mm;background:#8D1D2C;color:#fff}
+      .badge.or{background:#F6E7CE;color:#7A5207;border:1px solid #F6E7CE}
       table.t{width:100%;border-collapse:collapse;margin-bottom:5mm}
-      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
-      .t td{font-size:8.3pt;text-align:right;padding:1.3mm 2mm;border-bottom:.5pt solid #EAE3D8}
+      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #1c1a17}
+      .t td{font-size:8.3pt;text-align:right;padding:1.3mm 2mm;border-bottom:.5pt solid #EDE7DE}
       .t .l{text-align:left}
-      .gris td{color:#9a9186}
-      .rang{display:inline-block;width:4.4mm;height:4.4mm;border-radius:50%;background:#EFE3D5;color:#8a5a1c;font-size:6.6pt;font-weight:bold;text-align:center;line-height:4.4mm}
-      .top td{font-size:8pt;text-align:left;padding:1.15mm 1mm;border-bottom:.5pt solid #EFE9DF}
-      .top .v{text-align:right;font-weight:bold;white-space:nowrap}
+      .gris td{color:#7a736a}
+      .rang{display:inline-block;width:4.4mm;height:4.4mm;border-radius:50%;background:#EFE3D5;color:#7A5207;font-size:6.6pt;font-weight:400;text-align:center;line-height:4.4mm}
+      .top td{font-size:8pt;text-align:left;padding:1.15mm 1mm;border-bottom:.5pt solid #ffffff}
+      .top .v{text-align:right;font-weight:400;white-space:nowrap}
       .top .s{text-align:right;color:#7a736a;font-size:6.8pt;white-space:nowrap}
-      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
+      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6}
     </style>';
 
     $entete = static fn (string $droite) =>
         '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="" style="height:34px">' : '<b>L’Atelier by</b>') . '</td>'
-        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Target de vente &amp; classement<br>' . $droite . '</td></tr></table>';
+        . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Target de vente &amp; classement</b>' . $droite . '</td></tr></table>';
 
     // L'encadré de méthode, construit UNE fois et répété en pied de CHAQUE
     // page : une feuille magasin s'affiche seule en réserve, et un classement
     // dont la formule n'est pas sur la même feuille se conteste.
-    $methode = '<div class="methode" style="margin-top:2mm"><b style="color:#221E1A">Comment lire.</b> Le classement se fait au <b>score</b> : '
+    $methode = '<div class="methode" style="margin-top:2mm"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Comment lire.</b> Le classement se fait au <b>score</b> : '
         . 'CA ÷ (heures + ' . VENTE_LISSAGE_HEURES . ') × coefficient de créneau. '
         . 'Le coefficient d’heures — heures ÷ (heures + ' . VENTE_LISSAGE_HEURES . ') — monte avec les heures prestées : la régularité pèse, cinq bonnes heures ne battent pas un mois entier. '
         . 'Le coefficient de créneau paie ceux qui vendent quand c’est difficile, et la difficulté est MESURÉE, pas décrétée — le CA du réseau par heure planifiée ce mois-ci : '
@@ -1025,13 +1027,13 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
     if (($g['reseau'] ?? null) !== null) {
         $r = $g['reseau'];
         $h .= '<div class="prime"><table width="100%" cellpadding="0" cellspacing="0"><tr>'
-            . '<td><div class="k">🏆 Prime réseau — ' . (int) $d['primes']['reseau'] . ' €'
+            . '<td><div class="k">Prime réseau — ' . (int) $d['primes']['reseau'] . ' €'
             . ($hist !== null ? ' · enregistrée le ' . $e($hist['quand']) : ' · à enregistrer dans le cockpit') . '</div>'
             . '<div class="qui">' . $e($r['nom']) . ' <span class="badge">réseau</span></div>'
             . '<div style="font-size:8pt;color:#7a736a">' . $e($court($r['magasin'])) . ' · <b class="acc">score ' . $eur($r['score'] ?? 0) . '</b> · ' . $eur($r['caHeure']) . ' / h réel'
             . ' · panier ' . number_format((float) $r['panier'], 2, ',', ' ') . ' € · ' . $n1($r['lignesTicket'])
             . ' lignes/ticket · ' . $n1($r['heures']) . ' h</div></td>'
-            . '<td align="right" valign="top"><div class="k">🥇 Primes magasin — ' . (int) $d['primes']['magasin'] . ' €</div>'
+            . '<td align="right" valign="top"><div class="k">Primes magasin — ' . (int) $d['primes']['magasin'] . ' €</div>'
             . '<div style="font-size:8.2pt;line-height:1.7;margin-top:1mm">';
         foreach ($g['magasins'] as $x) {
             if ($x['id'] === $r['id']) { continue; }
@@ -1106,9 +1108,9 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
                 }
             }
             $h .= '<div style="page-break-inside:avoid;margin-bottom:4mm">'
-                . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:11pt;border-bottom:1.2pt solid #8D1D2C;padding-bottom:1.2mm;margin-bottom:1.5mm">'
+                . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:11pt;border-bottom:1.2pt solid #8D1D2C;padding-bottom:1.2mm;margin-bottom:1.5mm">'
                 . $e($cb2['a_lib'] . ' × ' . $cb2['b_lib'])
-                . ' <span class="mut" style="font-size:7.5pt;font-family:Helvetica,Arial,sans-serif">· '
+                . ' <span class="mut" style="font-size:7.5pt;font-family:Gotham,Helvetica,Arial,sans-serif">· '
                 . ($dpC['lib'] !== '' ? $e($dpC['lib']) : 'toute la journée')
                 . ($tC !== null ? ' · target ' . number_format($tC, 1, ',', ' ') . ' %' : '') . '</span></div>'
                 . '<table class="t" cellpadding="0" cellspacing="0"><tr>'
@@ -1116,12 +1118,12 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
             foreach ($rangsC as [$nomR, $ffX, $avX, $grasX]) {
                 $tauxX = $ffX > 0 ? round(100 * $avX / $ffX, 1) : null;
                 $dX = ($tC !== null && $tauxX !== null) ? $tauxX - $tC : null;
-                $h .= '<tr' . ($grasX ? ' style="background:#fbf9f5;font-weight:bold"' : '') . '>'
+                $h .= '<tr' . ($grasX ? ' style="background:#FBF9F5;font-weight:400"' : '') . '>'
                     . '<td class="l">' . $e($nomR) . '</td>'
                     . '<td>' . number_format($ffX, 0, ',', ' ') . '</td>'
                     . '<td>' . number_format($avX, 0, ',', ' ') . '</td>'
-                    . '<td style="font-weight:bold">' . ($tauxX !== null ? number_format($tauxX, 1, ',', ' ') . ' %' : '') . '</td>'
-                    . '<td style="font-weight:bold;color:' . ($dX === null ? '#7a736a' : ($dX >= 0 ? '#2d7a3e' : '#8D1D2C')) . '">'
+                    . '<td style="font-weight:400">' . ($tauxX !== null ? number_format($tauxX, 1, ',', ' ') . ' %' : '') . '</td>'
+                    . '<td style="font-weight:400;color:' . ($dX === null ? '#7a736a' : ($dX >= 0 ? '#3f7a52' : '#8D1D2C')) . '">'
                     . ($dX === null ? '' : ($dX >= 0 ? '+ ' : '− ') . number_format(abs($dX), 1, ',', ' ') . ' pt') . '</td></tr>';
             }
             $h .= '</table></div>';
@@ -1158,14 +1160,14 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
         // mais son montant n'entre dans le total d'un magasin que s'il y dort.
         $r2 = $g2['reseau'];
         if ($garde($r2['shopId'] ?? '')) { $totalPrimes += (int) $d['primes']['reseau']; }
-        $hClot .= '<tr><td class="l or"><b>🏆 Réseau</b></td><td class="l"><b>' . $e($r2['nom']) . '</b></td>'
+        $hClot .= '<tr><td class="l or"><b>Réseau</b></td><td class="l"><b>' . $e($r2['nom']) . '</b></td>'
             . '<td class="l mut">' . $e($court($r2['magasin'])) . '</td><td>' . (int) $r2['score'] . '</td>'
             . '<td>' . $eur($r2['caHeure']) . '</td><td class="acc"><b>' . $eur($d['primes']['reseau']) . '</b></td></tr>';
         foreach ($g2['magasins'] as $x2) {
             if ($x2['id'] === $r2['id']) { continue; }
             if (!$garde($x2['shopId'] ?? '')) { continue; }
             $totalPrimes += (int) $d['primes']['magasin'];
-            $hClot .= '<tr><td class="l or">🥇 Magasin</td><td class="l"><b>' . $e($x2['nom']) . '</b></td>'
+            $hClot .= '<tr><td class="l or">Magasin</td><td class="l"><b>' . $e($x2['nom']) . '</b></td>'
                 . '<td class="l mut">' . $e($court($x2['magasin'])) . '</td><td>' . (int) $x2['score'] . '</td>'
                 . '<td>' . $eur($x2['caHeure']) . '</td><td class="acc"><b>' . $eur($d['primes']['magasin']) . '</b></td></tr>';
         }
@@ -1216,7 +1218,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
             $h2 .= '<tr' . ($l['classable'] ? '' : ' class="gris"') . '>'
                 . '<td class="l">' . ($l['rang'] !== null ? (int) $l['rang'] : '') . '</td>'
                 . '<td class="l"><b>' . $e($l['nom']) . '</b>'
-                . ($l['classable'] ? '' : ' <span style="font-size:7pt;color:#9a9186">· ' . $e($l['motifHorsClassement']) . '</span>') . '</td>'
+                . ($l['classable'] ? '' : ' <span style="font-size:7pt;color:#7a736a">· ' . $e($l['motifHorsClassement']) . '</span>') . '</td>'
                 . ($avecMagasin ? '<td class="l mut">' . $e($court($l['magasin'])) . '</td>' : '')
                 . '<td>' . $n1($l['heures']) . ' h</td>'
                 . '<td>' . $eur($l['ca']) . '</td>'
@@ -1256,7 +1258,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
         foreach ($x['magasins'] as $mg) {
             $h .= '<td width="' . (int) (100 / max(1, count($x['magasins']))) . '%" valign="top" class="tile">'
                 . '<div class="k">' . $e($court($mg['nom'])) . '</div>'
-                . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:14pt;margin-top:1mm;color:' . (($mg['taux'] ?? 0) >= 30 ? '#2d7a3e' : '#8D1D2C') . '">'
+                . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14pt;margin-top:1mm;color:' . (($mg['taux'] ?? 0) >= 30 ? '#3f7a52' : '#8D1D2C') . '">'
                 . number_format((float) $mg['taux'], 1, ',', ' ') . ' %</div>'
                 . '<div style="font-size:7.5pt;color:#7a736a;margin-top:.8mm">' . $mg['avec'] . ' / ' . $mg['ff'] . ' tickets Flip &amp; Flap<br>'
                 . 'laissé au comptoir : <b style="color:#8D1D2C">' . $eur($mg['eur']) . '</b></div></td>';
@@ -1273,7 +1275,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
             $h .= '<tr><td class="l"><b>' . $e($v['nom']) . '</b></td>'
                 . '<td class="l mut">' . $e($court($v['magasin'])) . '</td>'
                 . '<td>' . $v['ff'] . '</td><td>' . $v['avec'] . '</td>'
-                . '<td style="font-weight:bold;color:' . (($v['taux'] ?? 0) >= 30 ? '#2d7a3e' : '#8D1D2C') . '">'
+                . '<td style="font-weight:400;color:' . (($v['taux'] ?? 0) >= 30 ? '#3f7a52' : '#8D1D2C') . '">'
                 . number_format((float) $v['taux'], 1, ',', ' ') . ' %</td>'
                 . '<td>' . $v['manques'] . '</td>'
                 . '<td class="acc"><b>' . $eur($v['eur']) . '</b></td></tr>';
@@ -1285,7 +1287,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
                 . '<td>' . ($petits['ff'] - $petits['avec']) . '</td><td>' . $eur($petits['eur']) . '</td></tr>';
         }
         $h .= '</table>'
-            . '<div class="methode"><b style="color:#221E1A">Comment lire.</b> Le taux d’attache = tickets Flip &amp; Flap contenant aussi une boisson ÷ tickets Flip &amp; Flap. '
+            . '<div class="methode"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Comment lire.</b> Le taux d’attache = tickets Flip &amp; Flap contenant aussi une boisson ÷ tickets Flip &amp; Flap. '
             . 'C’est LE geste qui se coache en brief : « un Flip &amp; Flap ? proposez la boisson ». '
             . 'Le « à la clé » suppose une boisson par ticket manqué, au prix moyen réellement encaissé — un plafond de geste, pas une promesse. '
             . 'Sous 10 tickets Flip &amp; Flap dans le mois, le taux est cumulé plutôt qu’affiché : deux tickets ne font pas un geste. '
@@ -1687,19 +1689,16 @@ function ep_ventes_explication_pdf(): array
     $regG = function_exists('googleReglages') ? googleReglages() : null;
     $blocTitre = static fn (string $n, string $t2) =>
         '<div style="display:flex;align-items:baseline;gap:3mm;margin:6mm 0 2mm">'
-        . '<span style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:16pt;color:#8D1D2C">' . $n . '</span>'
-        . '<span style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:13pt">' . $t2 . '</span></div>';
+        . '<span style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:16pt;color:#8D1D2C">' . $n . '</span>'
+        . '<span style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13pt">' . $t2 . '</span></div>';
     $h = '<style>
-      .doc { font-family: Helvetica, Arial, sans-serif; color: #222; font-size: 10pt; line-height: 1.55; }
+      .doc { font-family: Gotham,Helvetica,Arial,sans-serif; color: #1c1a17; font-size: 10pt; line-height: 1.55; }
       .k { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.08em; color: #7a736a; }
-      .eur { font-family: Georgia, "DejaVu Serif", serif; font-size: 15pt; color: #8D1D2C; }
-      .encart { background: #fbf9f5; border: 1px solid #e5e0d8; border-radius: 10px; padding: 4mm 5mm; }
+      .eur { font-family: Gotham,Helvetica,Arial,sans-serif; font-size: 15pt; color: #8D1D2C; }
+      .encart { background: #FBF9F5; border: 1px solid #e6e0d8; border-radius:10px; padding: 4mm 5mm; }
     </style><div class="doc">'
-        . '<table width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:11mm">' : '') . '</td>'
-        . '<td align="right" class="k">Les primes de vente — le mode d\'emploi de l\'équipe</td></tr></table>'
-        . '<div style="border-bottom:2px solid #8D1D2C;margin:2mm 0 4mm"></div>'
-        . '<div style="font-family:Georgia,\'DejaVu Serif\',serif;font-size:19pt">Chaque mois, ' . (($cfgK !== null && $cfgK['actif']) ? 'cinq' : 'quatre') . ' façons de gagner. Elles s\'additionnent.</div>'
+        . docEntete('Les primes de vente', 'Le mode d’emploi de l’équipe')
+        . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:19pt">Chaque mois, ' . (($cfgK !== null && $cfgK['actif']) ? 'cinq' : 'quatre') . ' façons de gagner. Elles s\'additionnent.</div>'
         . '<div style="color:#7a736a;font-size:9.5pt;margin-top:1mm">Un seul geste les nourrit toutes : proposer quelque chose en plus à chaque client. « Et avec ça ? »</div>'
 
         . $blocTitre('1', 'Bats ton record — ' . $reg['eurDixieme'] . ' € par dixième dès le deuxième')
@@ -1708,10 +1707,10 @@ function ep_ventes_explication_pdf(): array
         . 'Le nouveau record devient ta référence — et un record de plus d\'un an sort du compte : la barre reste toujours à ta portée. '
         . '<span style="color:#7a736a">(Au moins ' . VENTE_CROSS_MIN_TICKETS . ' tickets dans le mois.)</span></div>'
         . '<table width="100%" cellpadding="0" cellspacing="3" style="margin-top:2mm"><tr>'
-        . '<td width="25%" align="center" style="background:#d8cec2;border-radius:8px;padding:3mm 1mm;color:#6b5f52"><div style="font-size:8pt">+ 0,1</div><div style="font-family:Georgia,serif;font-size:11pt">nouveau record</div></td>'
-        . '<td width="25%" align="center" style="background:#a8734d;border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">+ 0,2</div><div style="font-family:Georgia,serif;font-size:14pt">' . $reg['eurDixieme'] . ' €</div></td>'
-        . '<td width="25%" align="center" style="background:#8d5a3a;border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">+ 0,3</div><div style="font-family:Georgia,serif;font-size:14pt">' . (2 * $reg['eurDixieme']) . ' €</div></td>'
-        . '<td width="25%" align="center" style="background:#8D1D2C;border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">+ 0,4</div><div style="font-family:Georgia,serif;font-size:14pt">' . (3 * $reg['eurDixieme']) . ' €</div></td>'
+        . '<td width="25%" align="center" style="background:#e6e0d8;border-radius:8px;padding:3mm 1mm;color:#6b5f52"><div style="font-size:8pt">+ 0,1</div><div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:11pt">nouveau record</div></td>'
+        . '<td width="25%" align="center" style="background:#a8734d;border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">+ 0,2</div><div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14pt">' . $reg['eurDixieme'] . ' €</div></td>'
+        . '<td width="25%" align="center" style="background:#8d5a3a;border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">+ 0,3</div><div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14pt">' . (2 * $reg['eurDixieme']) . ' €</div></td>'
+        . '<td width="25%" align="center" style="background:#8D1D2C;border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">+ 0,4</div><div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14pt">' . (3 * $reg['eurDixieme']) . ' €</div></td>'
         . '</tr></table>'
         . '<div style="color:#7a736a;font-size:9pt;margin-top:1.5mm">Ta barre est &#224; toi : personne d\'autre &#224; battre que toi-m&#234;me.</div>'
 
@@ -1732,7 +1731,7 @@ function ep_ventes_explication_pdf(): array
             . 'Atteignez-la sur le mois, et chaque palier au-dessus paie davantage. <span style="color:#7a736a">(Au moins ' . (int) $cfgC['minTickets'] . ' tickets dans le mois.)</span></div>'
             . '<table width="100%" cellpadding="0" cellspacing="3" style="margin-top:2mm"><tr>'
             . implode('', array_map(static fn ($x, $i) => '<td align="center" style="background:' . ['#a8734d', '#8d5a3a', '#8D1D2C'][min(2, $i)] . ';border-radius:8px;padding:3mm 1mm;color:#fff"><div style="font-size:8pt">'
-                . ($x['plus'] > 0 ? 'cible + ' . number_format($x['plus'], 0, ',', ' ') . ' points' : 'la cible') . '</div><div style="font-family:Georgia,serif;font-size:14pt">' . $x['m'] . ' €</div></td>', $cfgC['paliers'], array_keys($cfgC['paliers'])))
+                . ($x['plus'] > 0 ? 'cible + ' . number_format($x['plus'], 0, ',', ' ') . ' points' : 'la cible') . '</div><div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:14pt">' . $x['m'] . ' €</div></td>', $cfgC['paliers'], array_keys($cfgC['paliers'])))
             . '</tr></table>'
             . '<div style="color:#7a736a;font-size:9pt;margin-top:1.5mm">Le compteur du jour est dans l\'app, onglet Primes : « Et avec ça ? »</div>')
 
@@ -1763,7 +1762,7 @@ function ep_ventes_explication_pdf(): array
         . 'Rien n\'est caché : l\'affiche du magasin montre les cibles, les montants et le podium du mois dernier ; l\'app, onglet Primes, montre chaque jour où vous en êtes. '
         . 'Le calcul est le même pour toutes, écrit noir sur blanc — s\'il vous semble faux, dites-le, on vérifie.</div></div>'
 
-        . '<div style="margin-top:5mm;font-family:Georgia,\'DejaVu Serif\',serif;font-size:12pt;text-align:center;color:#8D1D2C">'
+        . '<div style="margin-top:5mm;font-family:Gotham,Helvetica,Arial,sans-serif;font-size:12pt;text-align:center;color:#8D1D2C">'
         . 'Un article en plus à chaque client : bon pour votre record, votre score et vos ventes croisées.<br>Un seul geste, trois primes — et l\'objectif du magasin se gagne à plusieurs.</div>'
         . '</div>';
     $pdf = rapPdfRendu($h, ['magasin' => 'Réseau', 'rapport' => 'Primes de vente — mode d\'emploi',
@@ -2011,13 +2010,13 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
         $nomDe = array_filter($nomDe, fn ($sid2) => (string) $sid2 === $seulShop, ARRAY_FILTER_USE_KEY);
     }
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A}
-      .serif{font-family:Georgia,"DejaVu Serif","Times New Roman",serif}
-      .or{color:#8a5a1c}.acc{color:#8D1D2C}.mut{color:#7a736a}
-      .carte{border:1.5px solid #E8C9A0;background:#FFF9EC;border-radius:12px;padding:6mm 7mm;text-align:center}
-      .carte .gros{font-family:Georgia,"DejaVu Serif",serif;font-size:30pt;color:#8D1D2C;line-height:1.1}
-      .marche{border:1.5px solid #E8C9A0;background:#FFF9EC;border-radius:10px;text-align:center;padding:4mm 3mm}
-      .marche .v{font-family:Georgia,"DejaVu Serif",serif;font-size:19pt;color:#8D1D2C}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17}
+      .serif{font-family:Gotham,Helvetica,Arial,sans-serif}
+      .or{color:#7A5207}.acc{color:#8D1D2C}.mut{color:#7a736a}
+      .carte{border:1.5px solid #F6E7CE;background:#F6E7CE;border-radius:12px;padding:6mm 7mm;text-align:center}
+      .carte .gros{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:30pt;color:#8D1D2C;line-height:1.1}
+      .marche{border:1.5px solid #F6E7CE;background:#F6E7CE;border-radius:10px;text-align:center;padding:4mm 3mm}
+      .marche .v{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:19pt;color:#8D1D2C}
       .regle{font-size:9pt;color:#7a736a;line-height:1.7}
     </style>';
 
@@ -2025,18 +2024,18 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
     $premier = true;
     foreach ($nomDe as $sid => $nom) {
         $h .= '<div class="doc"' . ($premier ? '' : ' style="page-break-before:always"') . '>'
-            . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:3mm"><tr>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:3mm"><tr>'
             . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:38px">' : '<b>L’Atelier by</b>') . '</td>'
-            . '<td align="right" style="font-size:9pt;color:#7a736a;line-height:1.6"><b style="color:#221E1A">' . $e($court($nom)) . '</b><br>' . $e($libMois) . '</td></tr></table>'
+            . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">' . $e($court($nom)) . '</b><br>' . $e($libMois) . '</td></tr></table>'
 
             . '<div class="serif" style="font-size:26pt;margin:7mm 0 1mm;letter-spacing:-.01em">Ce qu’il y a à gagner ce mois-ci</div>'
-            . '<div style="font-size:11pt;color:#5d564e;margin-bottom:7mm">Jusqu’à <b class="acc">' . $maxTotal . ' €</b> de primes' . ($regMag !== null ? ', plus la prime magasin' : '') . ' — payées en bons par la marque, jamais par le magasin, et cumulables.</div>'
+            . '<div style="font-size:11pt;color:#5c5852;margin-bottom:7mm">Jusqu’à <b class="acc">' . $maxTotal . ' €</b> de primes' . ($regMag !== null ? ', plus la prime magasin' : '') . ' — payées en bons par la marque, jamais par le magasin, et cumulables.</div>'
 
             . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 6mm"><tr>'
-            . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🏆 Meilleure vendeuse du réseau</div>'
+            . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">Meilleure vendeuse du réseau</div>'
             . '<div class="gros">' . (int) $primes['reseau'] . ' €</div>'
             . '<div class="regle">Le meilleur score du mois, tous magasins confondus.</div></td>'
-            . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🥇 Meilleure vendeuse du magasin</div>'
+            . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">Meilleure vendeuse du magasin</div>'
             . '<div class="gros">' . (int) $primes['magasin'] . ' €</div>'
             . '<div class="regle">Le meilleur score de ' . $e($court($nom)) . ' ce mois-ci.</div></td>'
             . '</tr></table>'
@@ -2046,20 +2045,20 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                 . '<div class="gros">jusqu’à ' . $maxCrois . ' €</div>'
                 . '<div class="regle">Un ticket à 2 articles ou plus. Cible de ' . $e($court($nom)) . ' : <b>' . number_format(croiseesCible($cfgCr, (string) $sid), 0, ',', ' ') . ' %</b> de vos tickets → '
                 . implode(' · ', array_map(static fn ($x) => ($x['plus'] > 0 ? '+ ' . number_format($x['plus'], 0, ',', ' ') . ' pts : ' : '') . $x['m'] . ' €', $cfgCr['paliers'])) . '.</div></td>'
-                . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🏪 Prime magasin</div>'
+                . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">Prime magasin</div>'
                 . '<div class="gros">' . (isset($budgetsAff[(string) $sid]) ? number_format((float) $budgetsAff[(string) $sid]['montant'], 0, ',', ' ') . ' €' : 'l’objectif') . '</div>'
                 . '<div class="regle">L’objectif de ' . $e($libMois) . '. Atteint, chaque heure prestée paie : '
                 . implode(' · ', array_map(static fn ($x) => $x['pct'] . ' % → ' . number_format($x['eh'], 2, ',', ' ') . ' €/h', $regMag['paliers'])) . '. Pour 120 h : de '
                 . number_format(120 * ($regMag['paliers'][0]['eh'] ?? 0), 0, ',', ' ') . ' à ' . number_format(120 * (end($regMag['paliers'])['eh'] ?? 0), 0, ',', ' ') . ' €.</div></td>'
                 . '</tr></table>')
             . (($cfgKf === null || !$cfgKf['actif']) ? '' :
-                '<div class="regle" style="margin:-2mm 0 6mm;text-align:center"><b>👑 ' . implode(' · ', array_map(static fn ($k) => $e($k['lib']), $cfgKf['liste'])) . '</b> — le nombre de pièces vendues dans le mois : la première du magasin <b class="acc">'
+                '<div class="regle" style="margin:-2mm 0 6mm;text-align:center"><b>' . implode(' · ', array_map(static fn ($k) => $e($k['lib']), $cfgKf['liste'])) . '</b> — le nombre de pièces vendues dans le mois : la première du magasin <b class="acc">'
                 . implode(' / ', array_unique(array_map(static fn ($k) => (int) $k['magasin'] . ' €', $cfgKf['liste']))) . '</b>, la première du réseau <b class="acc">' . implode(' / ', array_unique(array_map(static fn ($k) => (int) $k['reseau'] . ' €', $cfgKf['liste']))) . '</b>, un titre à collectionner.'
                 . (($regGf !== null && $regGf['actif']) ? ' La note Google du magasin multiplie ces primes : ' . number_format($regGf['neutre'], 1, ',', ' ') . ' est neutre.' : '') . '</div>')
             . '<div class="regle" style="margin-bottom:7mm">Le score est <b>juste</b> : votre chiffre rapporté à vos heures du planning, et vendre l’après-midi ou en semaine — quand c’est difficile — compte davantage que le rush du samedi matin. Peu d’heures ou beaucoup, chacun a sa chance.</div>'
 
             . '<div class="serif" style="font-size:15pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:3mm">Le geste qui paie : proposez ! La boisson, le dessert, le cookie…</div>'
-            . '<div style="font-size:10pt;color:#5d564e;margin-bottom:4mm"><b>Bats ton record</b> — ta meilleure moyenne des 12 derniers mois est ta barre. Le premier dixi&#232;me au-dessus pose ton nouveau record ; <b class="acc">&#224; partir du deuxi&#232;me, chaque dixi&#232;me = ' . $regAff['eurDixieme'] . ' €</b> pour toi, en bons.</div>'
+            . '<div style="font-size:10pt;color:#5c5852;margin-bottom:4mm"><b>Bats ton record</b> — ta meilleure moyenne des 12 derniers mois est ta barre. Le premier dixi&#232;me au-dessus pose ton nouveau record ; <b class="acc">&#224; partir du deuxi&#232;me, chaque dixi&#232;me = ' . $regAff['eurDixieme'] . ' €</b> pour toi, en bons.</div>'
             . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>'
             . '<td width="25%" class="marche"><div style="font-size:9pt" class="mut">+ 0,1</div><div class="v" style="color:#7a736a">nouveau record</div></td>';
         for ($t4 = 1; $t4 <= 3; $t4++) {
@@ -2083,9 +2082,9 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             foreach (array_chunk($listeB, 3) as $rangee) {
                 $h .= '<tr>';
                 foreach ($rangee as $b2) {
-                    $h .= '<td width="33%" style="border:1px solid #e6e0d8;background:#fbf9f5;border-radius:8px;padding:2.2mm 3mm">'
+                    $h .= '<td width="33%" style="border:1px solid #e6e0d8;background:#FBF9F5;border-radius:8px;padding:2.2mm 3mm">'
                         . '<span style="font-size:9.5pt"><b>' . $e($b2['nom']) . '</b></span>'
-                        . '<span style="float:right;font-family:Georgia,serif;font-size:10.5pt">'
+                        . '<span style="float:right;font-family:Gotham,Helvetica,Arial,sans-serif;font-size:10.5pt">'
                         . ($b2['record'] !== null
                             ? '<span style="color:#7a736a">' . $n2f($b2['record']) . '</span> &#8594; <b style="color:#8D1D2C">prime d&#232;s ' . $n2f($b2['record'] + 0.2) . '</b>'
                             : '<b style="color:#8D1D2C">1er mois : sa moyenne devient sa r&#233;f&#233;rence (d&#232;s ' . VENTE_CROSS_MIN_TICKETS . ' tickets)</b>') . '</span></td>';
@@ -2097,8 +2096,8 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
         $h .= '</table>'
             . '<div class="regle" style="margin-bottom:6mm">Ta barre = ta meilleure moyenne des 12 derniers mois. Personne d&#8217;autre &#224; battre que toi-m&#234;me.</div>'
 
-            . (($podiums[(string) $sid] ?? []) !== [] ? '<div style="border:1px solid #e6e0d8;background:#fbf9f5;border-radius:10px;padding:4mm 5mm;margin-bottom:6mm">'
-                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="mut">📋 Le classement de ' . $e($libPrec) . ' — à détrôner</div>'
+            . (($podiums[(string) $sid] ?? []) !== [] ? '<div style="border:1px solid #e6e0d8;background:#FBF9F5;border-radius:10px;padding:4mm 5mm;margin-bottom:6mm">'
+                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="mut">Le classement de ' . $e($libPrec) . ' — à détrôner</div>'
                 . '<div style="font-size:10.5pt;margin-top:2mm;line-height:1.8">'
                 . implode('<br>', array_map(static function ($i2, $l2) {
                     return ($i2 + 1) . '. <b>' . htmlspecialchars((string) $l2['nom'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
@@ -2106,7 +2105,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                         . ' <span style="color:#7a736a;font-size:8.5pt">(' . number_format((float) $l2['lignesTicket'], 1, ',', ' ') . ' lignes/ticket)</span>';
                 }, array_keys($podiums[(string) $sid]), $podiums[(string) $sid]))
                 . '</div>'
-                . ($reseauPrec !== null ? '<div style="font-size:9pt;margin-top:2mm" class="mut">🏆 Meilleure du réseau en ' . $e($libPrec) . ' : <b style="color:#221E1A">'
+                . ($reseauPrec !== null ? '<div style="font-size:9pt;margin-top:2mm" class="mut">Meilleure du réseau en ' . $e($libPrec) . ' : <b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">'
                     . $e($reseauPrec['nom']) . '</b> (' . $e($court($reseauPrec['magasin'])) . ', score ' . (int) $reseauPrec['score'] . ')'
                     . (($gestePrec[(string) $sid] ?? 0) > 0 ? ' · ' . $gestePrec[(string) $sid] . ' prime(s) du geste décrochée(s) ici' : '') . '</div>' : '')
                 . '</div>' : '')
@@ -2114,7 +2113,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             . '<td style="padding-top:3mm"><div class="regle">Les règles, simplement : au moins 30 tickets dans le mois · les primes se versent une fois le mois fini, <b>en bons payés par la marque</b> — jamais par le magasin · la meilleure du réseau ne cumule pas la prime magasin, mais les primes du record s’ajoutent toujours · tout est vérifiable dans le cockpit, la formule est affichée. Bonne chasse ! — L’Atelier by, ' . $e($libMois) . '</div></td>'
             . '<td width="150" align="right" style="padding-top:3mm;padding-left:4mm">'
             . '<table cellpadding="0" cellspacing="0"><tr>'
-            . '<td style="text-align:right;padding-right:2.5mm;font-size:8pt;color:#5d564e;line-height:1.5"><b>Pour suivre vos objectifs,</b><br>rendez-vous sur votre compte<br>sur l&#8217;appli du personnel &#8594;</td>'
+            . '<td style="text-align:right;padding-right:2.5mm;font-size:8pt;color:#5c5852;line-height:1.5"><b>Pour suivre vos objectifs,</b><br>rendez-vous sur votre compte<br>sur l&#8217;appli du personnel &#8594;</td>'
             . '<td><img src="data:image/png;base64,' . VENTE_APPLI_QR . '" style="width:19mm;height:19mm"></td>'
             . '</tr></table></td>'
             . '</tr></table>'
@@ -2148,16 +2147,16 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                     . '</td>';
             };
             $thD = 'font-size:8pt;color:#7a736a;text-transform:uppercase;letter-spacing:.06em;padding:1.5mm 2mm;border-bottom:1pt solid #e6e0d8';
-            $tdD = 'padding:1.6mm 2mm;border-bottom:0.5pt solid #efe9e0;font-size:9.5pt';
+            $tdD = 'padding:1.6mm 2mm;border-bottom:0.5pt solid #FBF9F5;font-size:9.5pt';
             $h .= '<div class="doc" style="page-break-before:always">'
-                . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:3mm"><tr>'
+                . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:3mm"><tr>'
                 . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:38px">' : '<b>L’Atelier by</b>') . '</td>'
-                . '<td align="right" style="font-size:9pt;color:#7a736a;line-height:1.6"><b style="color:#221E1A">' . $e($court($nom)) . '</b><br>' . $e($libMois) . '</td></tr></table>'
+                . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">' . $e($court($nom)) . '</b><br>' . $e($libMois) . '</td></tr></table>'
                 . '<div class="serif" style="font-size:22pt;margin:6mm 0 1mm;letter-spacing:-.01em">Le d&#233;tail de ' . $e($libDet) . '</div>'
-                . '<div style="font-size:10.5pt;color:#5d564e;margin-bottom:5mm">Qui a gagn&#233; quoi, avec quels chiffres — pour savoir exactement quoi battre ce mois-ci.</div>'
+                . '<div style="font-size:10.5pt;color:#5c5852;margin-bottom:5mm">Qui a gagn&#233; quoi, avec quels chiffres — pour savoir exactement quoi battre ce mois-ci.</div>'
                 . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>'
-                . $ficheDe($reseau1, '🏆 Meilleure vendeuse du r&#233;seau', (int) $primes['reseau'])
-                . $ficheDe($meilleure, '🥇 Meilleure vendeuse du magasin', (int) $primes['magasin'])
+                . $ficheDe($reseau1, 'Meilleure vendeuse du r&#233;seau', (int) $primes['reseau'])
+                . $ficheDe($meilleure, 'Meilleure vendeuse du magasin', (int) $primes['magasin'])
                 . '</tr></table>'
 
                 . '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2mm">Le classement de ' . $e($court($nom)) . ' — ' . $e($libDet) . '</div>'
@@ -2171,7 +2170,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             }
             foreach ($duShop as $l5) {
                 $prem5 = ($l5['rang'] ?? 0) === 1;
-                $h .= '<tr' . ($prem5 ? ' style="background:#FFF9EC"' : '') . '>'
+                $h .= '<tr' . ($prem5 ? ' style="background:#F6E7CE"' : '') . '>'
                     . '<td style="' . $tdD . ';color:#7a736a">' . ($l5['rang'] !== null ? $l5['rang'] . '.' : '&#8212;') . '</td>'
                     . '<td style="' . $tdD . '"><b>' . $e($l5['nom']) . '</b>'
                     . ($l5['classable'] ? '' : ' <span style="font-size:8pt;color:#7a736a">' . $e((string) $l5['motifHorsClassement']) . '</span>') . '</td>'
@@ -2186,7 +2185,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                 . '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2mm">Les meilleures du r&#233;seau — ' . $e($libDet) . '</div>'
                 . '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:5mm">';
             foreach ($topReseau as $i5 => $l5) {
-                $h .= '<tr' . ($i5 === 0 ? ' style="background:#FFF9EC"' : '') . '>'
+                $h .= '<tr' . ($i5 === 0 ? ' style="background:#F6E7CE"' : '') . '>'
                     . '<td style="' . $tdD . ';color:#7a736a" width="8%">' . ($i5 + 1) . '.</td>'
                     . '<td style="' . $tdD . '"><b>' . $e($l5['nom']) . '</b></td>'
                     . '<td style="' . $tdD . '">' . $e($court((string) $l5['magasin'])) . '</td>'
@@ -2205,12 +2204,12 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                     ? max(VENTE_COEF_CRENEAU_MIN, min(VENTE_COEF_CRENEAU_MAX, $glDet / $v)) : null;
                 return '<td width="25%" style="border:1px solid #e6e0d8;background:#fff;border-radius:6px;padding:1.8mm 2mm;text-align:center">'
                     . '<div style="font-size:7.5pt;color:#7a736a">' . $lib . '</div>'
-                    . '<div style="font-family:Georgia,serif;font-size:11pt;color:#221E1A">'
+                    . '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:11pt;color:#1c1a17">'
                     . ($coef !== null ? '&#215; ' . number_format($coef, 2, ',', ' ') : '&#8211;') . '</div></td>';
             };
             $h .= '</table>'
-                . '<div style="border:1.5px solid #E8C9A0;background:#FFF9EC;border-radius:10px;padding:4mm 5mm;margin-bottom:4mm">'
-                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🧮 Comment on calcule le score et le coefficient</div>'
+                . '<div style="border:1.5px solid #F6E7CE;background:#F6E7CE;border-radius:10px;padding:4mm 5mm;margin-bottom:4mm">'
+                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">Comment on calcule le score et le coefficient</div>'
                 . '<div class="serif" style="font-size:13pt;margin:2mm 0 1.5mm">score = CA &#247; (heures du planning + ' . VENTE_LISSAGE_HEURES . ') &#215; coefficient de cr&#233;neau</div>'
                 . '<div class="regle" style="margin-bottom:2mm">Le &#171;&#8202;+ ' . VENTE_LISSAGE_HEURES . '&#8202;&#187; lisse les heures : peu d&#8217;heures ou beaucoup, chacun a sa chance, personne ne gagne juste parce qu&#8217;il a un petit contrat. '
                 . 'Le <b>coefficient de cr&#233;neau</b> compare la difficult&#233; de VOS heures &#224; la moyenne du r&#233;seau, cr&#233;neau par cr&#233;neau. Votre score est multipli&#233; par le coefficient de vos cr&#233;neaux'
@@ -2232,14 +2231,14 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
         // paie vraiment. Uniquement les primes ENREGISTRÉES, aux montants de
         // l'enregistrement ; sans enregistrement, la page le dit simplement.
         $thP = 'font-size:8pt;color:#7a736a;text-transform:uppercase;letter-spacing:.06em;padding:1.5mm 2mm;border-bottom:1pt solid #e6e0d8';
-        $tdP = 'padding:1.8mm 2mm;border-bottom:0.5pt solid #efe9e0;font-size:10pt';
+        $tdP = 'padding:1.8mm 2mm;border-bottom:0.5pt solid #FBF9F5;font-size:10pt';
         $n2p = static fn ($v) => number_format((float) $v, 2, ',', ' ');
         $h .= '<div class="doc" style="page-break-before:always">'
-            . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2.5px solid #8D1D2C;padding-bottom:3mm"><tr>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:3mm"><tr>'
             . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" style="height:38px">' : '<b>L’Atelier by</b>') . '</td>'
-            . '<td align="right" style="font-size:9pt;color:#7a736a;line-height:1.6"><b style="color:#221E1A">' . $e($court($nom)) . '</b><br>' . $e($libMois) . '</td></tr></table>'
+            . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">' . $e($court($nom)) . '</b><br>' . $e($libMois) . '</td></tr></table>'
             . '<div class="serif" style="font-size:22pt;margin:6mm 0 1mm;letter-spacing:-.01em">Qui a touch&#233; quelle prime</div>'
-            . '<div style="font-size:10.5pt;color:#5d564e;margin-bottom:5mm">Les primes enregistr&#233;es, noir sur blanc : &#231;a paie vraiment, en bons de la marque.</div>';
+            . '<div style="font-size:10.5pt;color:#5c5852;margin-bottom:5mm">Les primes enregistr&#233;es, noir sur blanc : &#231;a paie vraiment, en bons de la marque.</div>';
 
         // Les primes au score du dernier mois enregistré.
         if ($dernSco !== null) {
@@ -2254,11 +2253,11 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
             $h .= '<div class="serif" style="font-size:14pt;border-bottom:1.5pt solid #8D1D2C;padding-bottom:1.5mm;margin-bottom:2.5mm">Les primes au score, ' . $e($libSco) . '</div>'
                 . '<table width="100%" cellpadding="0" cellspacing="6" style="margin:0 -1.5mm 5mm"><tr>'
                 . '<td width="50%" class="carte" style="text-align:left">'
-                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🏆 Meilleure vendeuse du r&#233;seau</div>'
+                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">Meilleure vendeuse du r&#233;seau</div>'
                 . '<div class="serif" style="font-size:18pt;color:#8D1D2C;margin:1.5mm 0 1mm">' . $e((string) ($res3['nom'] ?? '')) . '</div>'
                 . '<div style="font-size:10.5pt"><b>' . (int) ($mntSco['reseau'] ?? 0) . ' € en bons</b> &#183; ' . $e($court((string) ($res3['magasin'] ?? ''))) . ' &#183; ' . (int) ($res3['caHeure'] ?? 0) . ' €/h</div></td>'
                 . '<td width="50%" class="carte" style="text-align:left">'
-                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🥇 Meilleure vendeuse de ' . $e($court($nom)) . '</div>'
+                . '<div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">Meilleure vendeuse de ' . $e($court($nom)) . '</div>'
                 . ($gagM3 !== null
                     ? '<div class="serif" style="font-size:18pt;color:#8D1D2C;margin:1.5mm 0 1mm">' . $e((string) $gagM3['nom']) . '</div>'
                         . '<div style="font-size:10.5pt"><b>' . (int) ($mntSco['magasin'] ?? 0) . ' € en bons</b> &#183; ' . (int) ($gagM3['caHeure'] ?? 0) . ' €/h</div>'
@@ -2332,7 +2331,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                 foreach ($evo as $l6) {
                     $d6 = $l6['delta'];
                     $evoTxt = $d6 === null ? '<span style="color:#7a736a">nouvelle</span>'
-                        : ($d6 > 0 ? '<b style="color:#2d7a3e">+ ' . $n2p($d6) . '</b>'
+                        : ($d6 > 0 ? '<b style="color:#3f7a52">+ ' . $n2p($d6) . '</b>'
                             : ($d6 < 0 ? '<b style="color:#8D1D2C">&#8722; ' . $n2p(abs($d6)) . '</b>' : '<span style="color:#7a736a">=</span>'));
                     $h .= '<tr><td style="' . $tdP . '"><b>' . $e($l6['nom']) . '</b></td>'
                         . '<td style="' . $tdP . '" align="right">' . ($l6['avant'] !== null ? $n2p($l6['avant']) : '&#8211;') . '</td>'
@@ -2393,7 +2392,7 @@ function wr_ventes_envoi_test(): array
     if ($aff === null) { http_response_code(503); return ['error' => 'le PDF n’a pas pu être rendu']; }
     $pieces = [['nom' => $aff['nom'], 'type' => 'application/pdf', 'contenu' => $aff['pdf']]];
     $libM = strftime_fr(strtotime($m . '-01'), 'M Y');
-    $corps = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#222;line-height:1.6">'
+    $corps = '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px;color:#1c1a17;line-height:1.6">'
         . '<p>Bonjour,</p><p>Voici <b>« Ce qu’il y a à gagner ce mois-ci »</b> — ' . htmlspecialchars($libM)
         . ' : l’affiche à imprimer pour le vestiaire, avec la barre à battre de chaque vendeuse.</p>'
         . '<p style="color:#7a736a;font-size:11px">Envoyé depuis le cockpit.</p></div>';

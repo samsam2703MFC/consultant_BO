@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/doc.php';
+
 /**
  * Cockpit CEO — l'analyse d'UN magasin, en quatre étapes.
  *
@@ -405,29 +407,29 @@ function anmPdfHtml(array $d): string
     $k = $d['kpis']; $l1 = $d['levier1']; $l2 = $d['levier2']; $l3 = $d['levier3'];
 
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
-      .serif{font-family:Georgia,"DejaVu Serif","Times New Roman",serif}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:9pt}
+      .serif{font-family:Gotham,Helvetica,Arial,sans-serif}
       .k{font-size:7.2pt;letter-spacing:.09em;text-transform:uppercase;color:#7a736a;font-weight:normal}
-      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#2d7a3e}
+      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#3f7a52}
       .h1{font-size:20pt;letter-spacing:-.01em;margin:4mm 0 1mm}
       .soustitre{font-size:9pt;color:#7a736a;margin:0 0 5mm}
-      .sec{font-family:Georgia,"DejaVu Serif",serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
-      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm}
-      .tile .v{font-family:Georgia,"DejaVu Serif",serif;font-size:15pt;margin-top:1mm}
+      .sec{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
+      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm}
+      .tile .v{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:15pt;margin-top:1mm}
       .tile .s{font-size:7.5pt;color:#7a736a;margin-top:.8mm;line-height:1.45}
       table.grille{width:100%;border-collapse:separate;border-spacing:1.6mm 0;margin:0 -1.6mm 5mm}
       table.t{width:100%;border-collapse:collapse;margin-bottom:5mm}
       .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;
-            text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
-      .t td{font-size:8.6pt;text-align:right;padding:1.4mm 2mm;border-bottom:.5pt solid #EAE3D8}
+            text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #1c1a17}
+      .t td{font-size:8.6pt;text-align:right;padding:1.4mm 2mm;border-bottom:.5pt solid #EDE7DE}
       .t .l{text-align:left}
-      .t td b{font-weight:bold}
-      .barre{display:inline-block;position:relative;width:34mm;height:2.6mm;border-radius:2mm;background:#EFE9DF;vertical-align:middle}
+      .t td b{font-weight:400}
+      .barre{display:inline-block;position:relative;width:34mm;height:2.6mm;border-radius:2mm;background:#ffffff;vertical-align:middle}
       .barre i{position:absolute;left:0;top:0;height:2.6mm;border-radius:2mm}
-      .barre s{position:absolute;top:-1mm;width:.6mm;height:4.6mm;background:#221E1A}
-      .pastille{font-size:7pt;font-weight:bold;border-radius:3mm;padding:.6mm 2.2mm;white-space:nowrap}
-      .p-asso{background:#F6E4E7;color:#8D1D2C}.p-cat{background:#FBEFE0;color:#8a5a1c}.p-prix{background:#E3EFE6;color:#2d7a3e}
-      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;
+      .barre s{position:absolute;top:-1mm;width:.6mm;height:4.6mm;background:#1c1a17}
+      .pastille{font-size:7pt;font-weight:400;border-radius:3mm;padding:.6mm 2.2mm;white-space:nowrap}
+      .p-asso{background:#F6ECED;color:#8D1D2C}.p-cat{background:#F6E7CE;color:#7A5207}.p-prix{background:#E8EFEA;color:#3f7a52}
+      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm;
                font-size:7.6pt;color:#7a736a;line-height:1.6}
     </style>';
 
@@ -436,7 +438,7 @@ function anmPdfHtml(array $d): string
         . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">'
             : '<strong style="font-size:12pt">L’Atelier by</strong>') . '</td>'
-        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Analyse magasin<br>'
+        . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Analyse magasin</b>'
         . $e(mktBriefJour($d['du'])) . ' → ' . $e(mktBriefJour($d['au'])) . ' · ' . (int) $d['n'] . ' mois</td>'
         . '</tr></table>'
 
@@ -461,7 +463,7 @@ function anmPdfHtml(array $d): string
         '<td width="33%" valign="top" class="tile"><div class="k">' . $lbl . '</div>'
         . '<div class="v acc">+ ' . number_format($mois, 0, ',', ' ') . ' € <span style="font-size:9pt">/ mois</span></div>'
         . '<div class="s"><b>' . number_format($an, 0, ',', ' ') . ' € / an</b> — ' . $regle . '</div>'
-        . '<div class="s" style="color:#221E1A;margin-top:1.6mm">' . $note . '</div></td>';
+        . '<div class="s" style="color:#1c1a17;margin-top:1.6mm">' . $note . '</div></td>';
     $h .= '<div class="sec">Les trois leviers</div>'
         . '<table class="grille" cellpadding="0" cellspacing="0"><tr>'
         . $carte('1 · Assortiment', (int) $l1['retenuMois'], (int) $l1['retenuAn'],
@@ -487,7 +489,7 @@ function anmPdfHtml(array $d): string
         $h .= '<tr><td class="l"><b>' . $e($g['nom']) . '</b></td>'
             . '<td>' . $pcs($g['part']) . '</td><td class="mut">' . $pcs($g['partReseau']) . '</td>'
             . '<td class="l" style="padding-left:5mm"><span class="barre">'
-            . '<i style="width:' . $w . '%;background:' . ($retrait ? '#8D1D2C' : '#2d7a3e') . '"></i>'
+            . '<i style="width:' . $w . '%;background:' . ($retrait ? '#8D1D2C' : '#3f7a52') . '"></i>'
             . '<s style="left:' . min(99, $wr) . '%"></s></span></td>'
             . '<td class="' . ($retrait ? 'acc' : 'ok') . '"><b>' . ($g['delta'] > 0 ? '+ ' : '− ')
             . number_format(abs((float) $g['delta']), 1, ',', ' ') . ' pts</b></td>'
@@ -541,7 +543,7 @@ function anmPdfHtml(array $d): string
             . '<td class="acc"><b>' . $eur($a['cumulAn']) . '</b></td></tr>';
     }
     $h .= '</table>'
-        . '<div class="methode"><b style="color:#221E1A">Comment lire ces chiffres.</b> '
+        . '<div class="methode"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Comment lire ces chiffres.</b> '
         . 'L’assortiment est retenu à la moitié de son estimation — un plan qui promet le maximum n’est pas un plan. '
         . 'Le levier catégories déduit ce que l’assortiment compte déjà : jamais deux fois le même euro. '
         . 'Les prix sont ceux réellement encaissés, remises comprises, et une référence dont le volume dépasse celui du réseau n’est pas comptée : son prix bas travaille. '

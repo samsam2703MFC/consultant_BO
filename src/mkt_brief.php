@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// Gabarit commun des documents et e-mails (design system §13, version A).
+require_once __DIR__ . '/doc.php';
+
 /**
  * Cockpit CEO — la note de campagne envoyée aux franchisés.
  *
@@ -514,10 +517,9 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $
     $agence = agenceDeCampagne((int) $d['id']) ?? ($c['agence'] ?? ['nom' => '', 'site' => '', 'logo' => '']);
     $visuel = (string) (($d['visuel']['uri'] ?? '') ?: '');
 
-    $entete = '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid ' . $accent . ';padding-bottom:10px;margin-bottom:18px"><tr>'
-        . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">' : '<strong style="font-size:15px">L’Atelier by</strong>')
-        . '</td><td align="right" style="font-size:10px;color:#7a736a;line-height:1.5">Note de campagne'
-        . ($magasin !== '' ? '<br>' . $e($magasin) : '') . '</td></tr></table>';
+    // En-tête du gabarit A4 (design system §13.4, version A) : logo, type de
+    // pièce en capitales, filet Ruby.
+    $entete = docEntete('Note de campagne', $magasin !== '' ? $magasin : 'Réseau');
 
     // La tuile du budget dit ce qui est DÉJÀ arrêté : l'enveloppe seule ne
     // distingue pas ce qui est engagé de ce qui reste à décider.
@@ -540,7 +542,7 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $
     foreach ($cartes as [$t, $v, $s]) {
         $blocCartes .= '<td width="33%" valign="top" style="padding:11px 12px;border:1px solid #e6e0d8;border-radius:8px">'
             . '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a">' . $e($t) . '</div>'
-            . '<div style="font-size:15px;font-weight:600;margin-top:3px">' . $e($v) . '</div>'
+            . '<div style="font-size:15px;font-weight:700;margin-top:3px">' . $e($v) . '</div>'
             . '<div style="font-size:9.5px;color:#7a736a;margin-top:2px">' . $e($s) . '</div></td><td width="8"></td>';
     }
     $blocCartes .= '</tr></table>';
@@ -557,13 +559,14 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $
     $refBloc = $sien !== null ? $sien['reference'] : $d['reference'];
     $cibleBloc = $sien !== null ? $sien['cible'] : $d['cible'];
 
-    $obj = '<div style="border:1px solid #e6e0d8;border-radius:8px;padding:13px 14px;margin-bottom:16px;background:#fbf9f5">'
+    // L'objectif : un encadré à filet gauche Ruby (§13.4), pas un bloc beige.
+    $obj = '<div style="border-left:3px solid ' . $accent . ';padding:2px 0 2px 12px;margin-bottom:16px">'
         . '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a">Ce qu’on vise'
         . ($sien !== null ? ' — ' . $e($sien['nom']) : '') . '</div>';
     if ($d['objectifPct'] === null) {
         $obj .= '<div style="font-size:12px;margin-top:5px">Aucun écart chiffré n’est fixé pour cette campagne : le suivi se fera sur les valeurs réelles, sans cible.</div>';
     } elseif (!$d['kpiMesure'] || $refBloc === null) {
-        $obj .= '<div style="font-size:14px;font-weight:600;margin-top:4px">'
+        $obj .= '<div style="font-size:14px;font-weight:400;margin-top:4px">'
             . ($d['objectifPct'] >= 0 ? '+' : '−') . abs((float) $d['objectifPct']) . ' % par rapport à l’an dernier</div>'
             . '<div style="font-size:10.5px;color:#7a736a;margin-top:3px">'
             . ($d['kpiNom'] !== '' ? $e($d['kpiNom']) . ' — ' : '')
@@ -581,7 +584,7 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $
                       . ' — dont ' . $d['referenceNRepli'] . ' magasin'
                       . ($d['referenceNRepli'] > 1 ? 's' : '') . ' sur moyenne 3 mois'))
             . '</span></td>'
-            . '<td align="right" style="font-size:22px;font-weight:600;color:' . $accent . ';white-space:nowrap">'
+            . '<td align="right" style="font-size:22px;font-weight:700;color:' . $accent . ';white-space:nowrap">'
             . mktBriefValeur($cibleBloc, $d)
             . '<div style="font-size:9.5px;font-weight:400;color:#7a736a">cible, soit '
             . ($d['objectifPct'] >= 0 ? '+' : '−') . abs((float) $d['objectifPct']) . ' %</div></td></tr></table>';
@@ -606,7 +609,7 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $
                       . ($i['calcul'] !== null ? ' <span style="font-size:9.5px">(' . $e($i['calcul']) . ')</span>' : '')
                     : 'Pas de KPI en caisse — ' . $e((string) ($i['raison'] ?? 'relevé au bilan')))
                 . '</td>'
-                . '<td width="86" align="right" valign="top" style="padding:7px 0 7px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:600;white-space:nowrap">'
+                . '<td width="86" align="right" valign="top" style="padding:7px 0 7px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:400;white-space:nowrap">'
                 . ($i['montant'] === null ? '—'
                     : ($i['unite'] === 'EUR' ? mktBriefEuros($i['montant']) : number_format($i['montant'], 0, ',', ' ')))
                 . '</td></tr>';
@@ -625,20 +628,20 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $
         $repli = false;
         foreach ($d['lignes'] as $l) {
             $moi = $shopId !== '' && (string) $l['id'] === $shopId;
-            $fond = $moi ? 'background:#fbf9f5;' : '';
+            $fond = $moi ? 'background:#FBF9F5;' : '';
             $tab .= '<tr><td style="' . $fond . 'padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06)'
-                . ($moi ? ';font-weight:600' : '') . '">' . $e($l['nom'])
-                . ($moi ? ' <span style="color:' . $accent . ';font-weight:600">— votre magasin</span>' : '') . '</td>';
+                . ($moi ? ';font-weight:400' : '') . '">' . $e($l['nom'])
+                . ($moi ? ' <span style="color:' . $accent . ';font-weight:400">— votre magasin</span>' : '') . '</td>';
             if ($l['reference'] === null) {
-                $tab .= '<td colspan="2" align="right" style="' . $fond . 'padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);color:#b8b2a8">aucun relevé exploitable — cible à poser ensemble</td></tr>';
+                $tab .= '<td colspan="2" align="right" style="' . $fond . 'padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);color:#B8B2A8">aucun relevé exploitable — cible à poser ensemble</td></tr>';
                 continue;
             }
             $marque = ($l['source'] ?? '') === 'repli'
-                ? ' <sup style="color:' . $accent . ';font-weight:600">(i)</sup>' : '';
+                ? ' <sup style="color:' . $accent . ';font-weight:400">(i)</sup>' : '';
             if ($marque !== '') { $repli = true; }
             $tab .= '<td align="right" style="' . $fond . 'padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06)">'
                 . mktBriefValeur($l['reference'], $d) . $marque . '</td>'
-                . '<td align="right" style="' . $fond . 'padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:600">'
+                . '<td align="right" style="' . $fond . 'padding:7px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:400">'
                 . mktBriefValeur($l['cible'], $d) . '</td></tr>';
         }
         $tab .= '</table>';
@@ -648,7 +651,7 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $
             $r0 = null;
             foreach ($d['lignes'] as $l) { if (($l['source'] ?? '') === 'repli') { $r0 = $l['repli']; break; } }
             $tab .= '<div style="font-size:9.5px;color:#7a736a;margin:-10px 0 16px">'
-                . '<sup style="color:' . $accent . ';font-weight:600">(i)</sup> '
+                . '<sup style="color:' . $accent . ';font-weight:400">(i)</sup> '
                 . 'Pas de relevé sur ces dates l’an dernier — magasin ouvert depuis. La référence est la '
                 . '<strong>moyenne des 3 derniers mois</strong>'
                 . ($r0 !== null ? ' (' . mktBriefJour((string) $r0['du']) . ' → ' . mktBriefJour((string) $r0['au']) . ')' : '')
@@ -666,17 +669,17 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $
         foreach ($d['canaux'] as $ca) {
             $com .= '<tr><td style="padding:6px 8px 6px 0;border-bottom:1px solid rgba(34,34,34,.06)">'
                 . $e($ca['nom'])
-                . '<span style="color:#b8b2a8;font-size:9.5px"> · ' . $e($ca['famille']) . '</span>'
+                . '<span style="color:#B8B2A8;font-size:9.5px"> · ' . $e($ca['famille']) . '</span>'
                 . ($ca['agence'] !== '' ? '<span style="color:#7a736a;font-size:9.5px"> · ' . $e($ca['agence']) . '</span>' : '')
                 . '</td>'
                 . '<td width="92" align="right" style="padding:6px 8px;border-bottom:1px solid rgba(34,34,34,.06);color:'
-                . ($ca['valide'] ? '#3f7a52' : '#b8b2a8') . ';font-size:9.5px;white-space:nowrap">'
+                . ($ca['valide'] ? '#3f7a52' : '#B8B2A8') . ';font-size:9.5px;white-space:nowrap">'
                 . ($ca['valide'] ? '✓ validé' : 'à valider') . '</td>'
-                . '<td width="80" align="right" style="padding:6px 0 6px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:600;white-space:nowrap'
-                . ($ca['valide'] ? '' : ';color:#b8b2a8') . '">' . mktBriefEuros($ca['montant']) . '</td></tr>';
+                . '<td width="80" align="right" style="padding:6px 0 6px 8px;border-bottom:1px solid rgba(34,34,34,.06);font-weight:400;white-space:nowrap'
+                . ($ca['valide'] ? '' : ';color:#B8B2A8') . '">' . mktBriefEuros($ca['montant']) . '</td></tr>';
         }
-        $com .= '<tr><td style="padding:7px 8px 7px 0;font-weight:600">Total validé</td>'
-            . '<td></td><td align="right" style="padding:7px 0 7px 8px;font-weight:600;white-space:nowrap">'
+        $com .= '<tr><td style="padding:7px 8px 7px 0;font-weight:400">Total validé</td>'
+            . '<td></td><td align="right" style="padding:7px 0 7px 8px;font-weight:400;white-space:nowrap">'
             . mktBriefEuros($d['canauxEngage']) . '</td></tr>';
         if ($d['canauxEnvisage'] > 0) {
             $com .= '<tr><td style="padding:0 8px 7px 0;color:#7a736a">Encore à valider</td>'
@@ -712,9 +715,9 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $
 
     // Le visuel accompagne le titre : une vignette, pas une affiche — la page
     // sert à lire des chiffres. L'affiche entière est en annexe.
-    $bloc = '<div style="font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:' . $accent . '">'
+    $bloc = '<div style="font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:#7a736a">'
         . $e($d['type']) . ($d['levier'] !== '' ? ' · levier ' . $e($d['levier']) : '') . '</div>'
-        . '<h1 style="font-size:21px;margin:3px 0 0;font-weight:600">' . $e($d['nom']) . '</h1>';
+        . '<h1 style="font-size:21px;margin:3px 0 0;font-weight:700">' . $e($d['nom']) . '</h1>';
     $titre = $visuel === ''
         ? $bloc . '<div style="height:14px"></div>'
         : '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px"><tr>'
@@ -772,7 +775,7 @@ function mktBriefPdfHtml(array $d, string $magasin = '', array $c = [], string $
 
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'
         . $e($d['nom']) . '</title></head>'
-        . '<body style="margin:0;padding:26px 30px;font-family:Helvetica,Arial,sans-serif;color:#1c1a17;background:#fff">'
+        . '<body style="margin:0;padding:26px 30px;font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;background:#fff">'
         . $entete . $titre . $blocCartes . $obj . $mot . $lev . $tab . $com . $plan . $listeAnnexes . $pied . $annexe . '</body></html>';
 }
 
@@ -854,7 +857,7 @@ function mktBriefAnnexe(array $d, string $visuel, string $accent): string
             // Couverture : l'image déborde la case, jamais l'inverse.
             $cases[] = '<td width="' . ($boite + $gouttiere) . '" valign="bottom" style="padding:0 ' . $gouttiere . 'px 12px 0">'
                 . mktBriefVignette($visuel, $iw, $ih, $l, $h, $focal, 'border:1px solid #e6e0d8;border-radius:5px', $ajuste)
-                . '<div style="font-size:10px;font-weight:600;margin-top:4px">' . $e($f['nom']) . '</div>'
+                . '<div style="font-size:10px;font-weight:400;margin-top:4px">' . $e($f['nom']) . '</div>'
                 . '<div style="font-size:9px;color:#7a736a">' . $fw . ' × ' . $fh . ' px'
                 . ($f['note'] !== '' ? ' · ' . $e($f['note']) : '') . '</div></td>';
         }
@@ -884,8 +887,8 @@ function mktBriefAnnexe(array $d, string $visuel, string $accent): string
     }
 
     return '<div style="page-break-before:always;padding-top:8px">'
-        . '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:' . $accent . '">Annexe</div>'
-        . '<div style="font-size:13px;font-weight:600;margin:3px 0 12px">' . $e($d['nom'])
+        . '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a">Annexe</div>'
+        . '<div style="font-size:13px;font-weight:400;margin:3px 0 12px">' . $e($d['nom'])
         . ' · ' . mktBriefJour($d['du']) . ' → ' . mktBriefJour($d['au']) . '</div>'
         . ($vignettes === '' ? '' : '<div style="font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;margin-bottom:6px">Le visuel, format par format</div>')
         . $vignettes . $liste
@@ -999,7 +1002,7 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
     foreach ($faits as [$t, $v]) {
         $cartes .= '<tr><td style="padding:9px 0;border-bottom:1px solid #e6e0d8;font-size:12.5px;color:#7a736a;line-height:1.45">'
             . $e($t) . '</td>'
-            . '<td align="right" valign="top" style="padding:9px 0 9px 10px;border-bottom:1px solid #e6e0d8;font-size:13.5px;font-weight:600;line-height:1.45">'
+            . '<td align="right" valign="top" style="padding:9px 0 9px 10px;border-bottom:1px solid #e6e0d8;font-size:13.5px;font-weight:400;line-height:1.45">'
             . $e($v) . '</td></tr>';
     }
     $cartes .= '</table>';
@@ -1057,7 +1060,7 @@ function mktBriefMailHtml(array $d, array $c, string $magasin, string $franchise
         . '</table>';
 
     $contenu = $banniere
-        . '<tr><td class="pad" style="padding:20px 26px 4px;font-family:\'Segoe UI\',Arial,sans-serif;color:#221E1A">'
+        . '<tr><td class="pad" style="padding:20px 0 4px;font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17">'
         . '<div class="cmd" style="font-size:13.5px;line-height:1.65">' . $intro . '</div>'
         . $mot . $cartes
         . '<p style="margin:18px 0 0;font-size:12.5px;line-height:1.6">'

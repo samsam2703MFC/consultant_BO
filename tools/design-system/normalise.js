@@ -115,7 +115,65 @@ function maxSize(win) {
   return m;
 }
 
+// Documents PHP (PDF serveur, e-mails — §13) : la taille reste celle du
+// papier, le gras ne reste qu'aux titres et grands chiffres (≥ 15 px), les
+// teintes prennent la valeur hexadécimale du jeton (ni PDF ni messagerie ne
+// connaissent les variables CSS), le papier est blanc.
+const DOC_FONT = 'Gotham,Helvetica,Arial,sans-serif';
+// Gris et beiges propres aux documents, ramenés au jeton du même rôle.
+const DOC_MAP = { '8b8177': '#7a736a', '6e645a': '#7a736a', '7a7268': '#7a736a', '9a938a': '#7a736a', '6b6259': '#7a736a',
+  'a89f93': '#b8b2a8', 'b5aea4': '#b8b2a8', 'c9c1b5': '#b8b2a8', 'c9c3b8': '#b8b2a8',
+  '5d564e': '#5c5852', '4a443c': '#5c5852', '3d382f': '#1c1a17',
+  'e5e0d8': '#e6e0d8', 'e6e0d6': '#e6e0d8', 'd9d2c6': '#e6e0d8', 'e7e0d6': '#e6e0d8', 'd8d2c8': '#e6e0d8', 'e4dcd0': '#e6e0d8',
+  'f0ede7': '#e6e0d8', 'f0eae1': '#e6e0d8', 'f5f0e8': '#e6e0d8', 'cfc6b8': '#e6e0d8',
+  'f4f1eb': '#FBF9F5', 'faf8f4': '#FBF9F5', 'fbf6f1': '#FBF9F5', 'efe9e0': '#FBF9F5', 'fdf6f4': '#F9F4F5',
+  'fff9ec': '#F6E7CE', 'fff3d6': '#F6E7CE', 'e0261a': '#A32014', 'a91325': '#A32014', '6b3a03': '#7A5207',
+  '3d8b44': '#3f7a52', '1c4527': '#3f7a52', 'bfdcc5': '#C5D7CB', 'a8c8ae': '#C5D7CB' };
+const DOC_SURF = { efe9df: '#ffffff', eae4dc: '#ffffff', f9f6f0: '#ffffff', f3efe9: '#ffffff', faf7f2: '#ffffff',
+  f7f3ec: '#FBF9F5', f4efe8: '#FBF9F5', f7ecea: '#F9F4F5' };
+function taillePx(win) {
+  let m = 0; const re = /font-size\s*:\s*(\d+(?:\.\d+)?)(px|pt)|font\s*:\s*(?:italic\s+)?(?:\d{3}\s+|bold\s+)?(\d+(?:\.\d+)?)(px|pt)/g; let r;
+  while ((r = re.exec(win))) { const v = parseFloat(r[1] || r[3]), u = r[2] || r[4]; m = Math.max(m, u === 'pt' ? v * 4 / 3 : v); }
+  return m;
+}
+function normalisePhp(src) {
+  let s = src;
+  // Polices : Gotham, repli Helvetica / Arial (§13.2) ; ni Georgia, ni Segoe, ni la police système seule.
+  s = s.replace(/Georgia,\s*(?:\\?["']DejaVu Serif\\?["'],\s*)?(?:\\?["']Times New Roman\\?["'],\s*)?serif/g, () => { bump('police→Gotham'); return DOC_FONT; });
+  s = s.replace(/\\?'Segoe UI\\?',\s*Arial,\s*sans-serif/g, () => { bump('police→Gotham'); return DOC_FONT; });
+  s = s.replace(/\\?'Helvetica Neue\\?',\s*Helvetica,\s*Arial,\s*sans-serif/g, () => { bump('police→Gotham'); return DOC_FONT; });
+  s = s.replace(/(?<!Gotham,|Gotham',|Gotham\\',)Helvetica,\s*Arial,\s*sans-serif/g, () => { bump('police→Gotham'); return DOC_FONT; });
+  s = s.replace(/Arial,\s*Helvetica,\s*sans-serif/g, () => { bump('police→Gotham'); return DOC_FONT; });
+  s = s.replace(/font-family:\s*sans-serif/g, () => { bump('police→Gotham'); return 'font-family:' + DOC_FONT; });
+  // Graisses
+  s = s.replace(/font-weight\s*:\s*(100|200|300|500|600|700|800|900|bold|bolder)\b/g, (m, w, off, all) => {
+    const n = /bold/.test(w) ? 700 : +w;
+    const big = n >= 600 && taillePx(sizeWindow(all, off)) >= 15;
+    bump(big ? 'graisse→700 (titre, chiffre)' : 'graisse→400');
+    return 'font-weight:' + (big ? 700 : 400);
+  });
+  s = s.replace(/(\bfont\s*:\s*(?:italic\s+)?)(500|600|700|800|bold)(\s+)(\d+(?:\.\d+)?)(px|pt)/g, (m, pre, w, sp, v, u) => {
+    const n = w === 'bold' ? 700 : +w; const px = u === 'pt' ? parseFloat(v) * 4 / 3 : parseFloat(v);
+    bump('font:graisse'); return pre + (n >= 600 && px >= 15 ? 700 : 400) + sp + v + u;
+  });
+  // Pilules, coins de carte, ombres, filets d'un demi-pixel
+  s = s.replace(/border-radius\s*:\s*([0-9.]+px(?:\s+[0-9.]+px){0,3})/g, (m, v) => 'border-radius:' + v.split(/\s+/).map(x => {
+    const n = parseFloat(x); if (n >= 50) { bump('pilule→6'); return '6px'; } if (n > 12) { bump('rayon→8'); return '8px'; } return x; }).join(' '));
+  s = s.replace(/box-shadow\s*:\s*(?!\s*(?:inset|none|\$))[^;"'`}{]*;?/g, () => { bump('ombre retirée'); return ''; });
+  s = s.replace(/(^|[^0-9.])0?\.5px solid/g, (m, p) => { bump('filet 0.5→1'); return p + '1px solid'; });
+  // Teintes → valeur du jeton (fond de page et blocs beiges → papier blanc)
+  s = s.replace(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-fA-F])/g, (m, h) => {
+    const k = h.toLowerCase();
+    if (DOC_SURF[k]) { bump('fond→blanc'); return DOC_SURF[k]; }
+    if (DOC_MAP[k]) { bump('teinte→jeton'); return DOC_MAP[k]; }
+    const t = MAP[k]; if (!t) return m;
+    bump('teinte→jeton'); return t[1];
+  });
+  return s;
+}
+
 function normalise(src, kind) {
+  if (kind === 'php') return normalisePhp(src);
   let s = src;
   // 1. Graisses longues : font-weight:NNN
   s = s.replace(/font-weight\s*:\s*(100|200|300|500|600|700|800|900|bold|bolder|lighter)\b/g, (m, w, off, all) => {
@@ -197,7 +255,7 @@ function normalise(src, kind) {
 const args = process.argv.slice(2);
 const dry = args[0] === '--dry'; if (dry) args.shift();
 for (const f of args) {
-  const kind = /\.(css)$/.test(f) ? 'css' : 'js';
+  const kind = /\.(css)$/.test(f) ? 'css' : /\.php$/.test(f) ? 'php' : 'js';
   const src = fs.readFileSync(f, 'utf8');
   // Zones exclues : documents qui ont leur propre mise en page (§13) — marqueurs
   let out = '';

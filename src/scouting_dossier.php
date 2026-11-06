@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/doc.php';
+
 /**
  * Scouting — le dossier d'implantation, en PDF.
  *
@@ -171,58 +173,58 @@ function scoutingDossierHtml(array $d): string
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $logo = rapLogoDataUri();
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
-      .serif{font-family:Georgia,"DejaVu Serif","Times New Roman",serif}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:9pt}
+      .serif{font-family:Gotham,Helvetica,Arial,sans-serif}
       .k{font-size:7.2pt;letter-spacing:.09em;text-transform:uppercase;color:#7a736a;font-weight:normal}
-      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#2d7a3e}
+      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#3f7a52}
       .h1{font-size:20pt;letter-spacing:-.01em;margin:4mm 0 1mm}
       .soustitre{font-size:9pt;color:#7a736a;margin:0 0 1.5mm}
-      .zone{font-size:9pt;color:#2d7a3e;font-weight:bold;margin:0 0 5mm}
-      .sec{font-family:Georgia,"DejaVu Serif",serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
+      .zone{font-size:9pt;color:#3f7a52;font-weight:400;margin:0 0 5mm}
+      .sec{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
       .verdict{border-radius:8px;padding:3mm 3.5mm;margin:0 0 5mm}
-      .verdict .t{font-weight:bold;font-size:9.5pt;margin-bottom:.8mm}
+      .verdict .t{font-weight:400;font-size:9.5pt;margin-bottom:.8mm}
       .verdict .n{font-size:8pt;color:#7a736a;line-height:1.5}
-      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm}
-      .tile .v{font-family:Georgia,"DejaVu Serif",serif;font-size:15pt;margin-top:1mm}
+      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm}
+      .tile .v{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:15pt;margin-top:1mm}
       .tile .s{font-size:7.5pt;color:#7a736a;margin-top:.8mm;line-height:1.45}
       table.grille{width:100%;border-collapse:separate;border-spacing:1.6mm 0;margin:0 -1.6mm 5mm}
       table.t{width:100%;border-collapse:collapse;margin-bottom:5mm}
       .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;
-            text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
-      .t td{font-size:8.6pt;text-align:right;padding:1.4mm 2mm;border-bottom:.5pt solid #EAE3D8;vertical-align:top}
+            text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #1c1a17}
+      .t td{font-size:8.6pt;text-align:right;padding:1.4mm 2mm;border-bottom:.5pt solid #EDE7DE;vertical-align:top}
       .t .l{text-align:left}
-      .t td b{font-weight:bold}
+      .t td b{font-weight:400}
       .carte{width:100%;height:auto;display:block;border:1px solid #e6e0d8;border-radius:6px}
       .legende{font-size:7.5pt;color:#7a736a;margin:1.5mm 0 5mm;line-height:1.5}
-      .score{font-family:Georgia,"DejaVu Serif",serif;font-size:26pt;color:#2d7a3e;line-height:1}
-      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;
+      .score{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:26pt;color:#3f7a52;line-height:1}
+      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm;
                font-size:7.6pt;color:#7a736a;line-height:1.6;margin-bottom:4mm}
       .ccard{border:1px solid #e6e0d8;border-radius:8px;margin:0 0 2.6mm;page-break-inside:avoid}
       .methode + .ccard{margin-top:3.5mm}
       .ccard.fort{border-color:#c98a94}
-      .chead{background:#fbf9f5;padding:1.8mm 3mm;font-size:8.6pt;border-bottom:1px solid #eee7de}
+      .chead{background:#FBF9F5;padding:1.8mm 3mm;font-size:8.6pt;border-bottom:1px solid #eee7de}
       .chead .chiffres{float:right;font-size:8pt;white-space:nowrap}
       .gcard{border:1px solid #e6e0d8;border-radius:8px;margin-bottom:3mm;page-break-inside:avoid}
       .gphoto{width:38mm;padding:2.5mm}.gphoto img{width:38mm;height:auto;display:block;border-radius:5px}
       .gcred{font-size:6.5pt;color:#7a736a;margin-top:1mm}
-      .gtxt{padding:2.5mm 3mm}.gnom{font-size:9.5pt;font-weight:bold}.gnote{color:#2d7a3e}
+      .gtxt{padding:2.5mm 3mm}.gnom{font-size:9.5pt;font-weight:400}.gnote{color:#3f7a52}
       .gadr{font-size:8pt;color:#7a736a;margin:.6mm 0 1.4mm}
-      .gavis{font-size:7.9pt;line-height:1.5;margin-top:1mm;color:#221E1A}
+      .gavis{font-size:7.9pt;line-height:1.5;margin-top:1mm;color:#1c1a17}
       .motfin{border:1.5pt solid #8D1D2C;border-radius:8px;background:#fff;padding:3.5mm 4mm;margin-top:5mm;
-              font-family:Georgia,"DejaVu Serif",serif;font-size:9.5pt;line-height:1.6;color:#221E1A;page-break-inside:avoid}
-      .motfin table.mini{font-family:Helvetica,Arial,sans-serif;font-size:8pt;margin-bottom:0}
-      .motfin table.mini td{padding:1.2mm 2mm;border-bottom:.5pt solid #EAE3D8}
-      .motfin table.mini td.cur{background:#F6E4E7;font-weight:bold}
+              font-family:Gotham,Helvetica,Arial,sans-serif;font-size:9.5pt;line-height:1.6;color:#1c1a17;page-break-inside:avoid}
+      .motfin table.mini{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:8pt;margin-bottom:0}
+      .motfin table.mini td{padding:1.2mm 2mm;border-bottom:.5pt solid #EDE7DE}
+      .motfin table.mini td.cur{background:#F6ECED;font-weight:400}
       .motfin .curk{font-size:6.3pt;font-weight:normal;color:#8D1D2C;letter-spacing:.05em;text-transform:uppercase}
-      .hl{display:inline-block;padding:.8mm 2mm;border-radius:4px;font-weight:bold;background:#f1ede6}
-      .hl.pos{background:#E3EFE6;color:#2d7a3e}.hl.neg{background:#F6E4E7;color:#8D1D2C}
+      .hl{display:inline-block;padding:.8mm 2mm;border-radius:4px;font-weight:400;background:#f1ede6}
+      .hl.pos{background:#E8EFEA;color:#3f7a52}.hl.neg{background:#F6ECED;color:#8D1D2C}
       .t th.v5,.t td.v5{background:#E8F0E9}.t th.v10,.t td.v10{background:#F0F6E8}
       table.t.garde{margin-bottom:2.5mm}.t.garde th{padding:1.1mm 2mm}.t.garde td{padding:1.1mm 2mm}.t.garde td.l:first-child{white-space:nowrap}
       .doc.garde .zone{margin-bottom:3mm}.doc.garde .verdict{margin-bottom:3mm}.doc.garde .sec{margin-bottom:1.8mm}
       .t tr.kv td{padding-top:2mm;padding-bottom:2mm}
-      .t tr.tot td{font-weight:bold;border-top:1pt solid #221E1A;border-bottom:0;background:#fbf9f5}
+      .t tr.tot td{font-weight:400;border-top:1pt solid #1c1a17;border-bottom:0;background:#FBF9F5}
       .t.reseau td{vertical-align:middle;white-space:nowrap}.t.reseau tr.p td{border-bottom:0;padding-bottom:.3mm}
-      .t.reseau tr.p td[rowspan]{border-bottom:.5pt solid #EAE3D8}.t.reseau tr.r td{padding-top:.3mm}
+      .t.reseau tr.p td[rowspan]{border-bottom:.5pt solid #EDE7DE}.t.reseau tr.r td{padding-top:.3mm}
       .t.reseau td.lib{font-size:6.5pt;letter-spacing:.05em;text-transform:uppercase}
     </style>';
 
@@ -230,7 +232,7 @@ function scoutingDossierHtml(array $d): string
         . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">'
             : '<strong style="font-size:12pt">L’Atelier by</strong>') . '</td>'
-        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Étude d’implantation<br>éditée le ' . $e($d['date']) . '</td>'
+        . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Étude d’implantation</b>éditée le ' . $e($d['date']) . '</td>'
         . '</tr></table>'
         . '<table width="100%" cellpadding="0" cellspacing="0"><tr><td valign="top">'
         . '<div class="serif h1">' . $e($d['titre']) . '</div>'
@@ -240,8 +242,8 @@ function scoutingDossierHtml(array $d): string
         . '<div class="k">score / 100</div></td></tr></table>';
 
     if ($d['verdict'] !== '') {
-        $bg = $d['verdictOk'] ? '#E3EFE6' : '#F6E4E7';
-        $col = $d['verdictOk'] ? '#2d7a3e' : '#8D1D2C';
+        $bg = $d['verdictOk'] ? '#E8EFEA' : '#F6ECED';
+        $col = $d['verdictOk'] ? '#3f7a52' : '#8D1D2C';
         $h .= '<div class="verdict" style="background:' . $bg . '"><div class="t" style="color:' . $col . '">' . $e($d['verdict']) . '</div>'
             . ($d['verdictNote'] !== '' ? '<div class="n">' . $e($d['verdictNote']) . '</div>' : '') . '</div>';
     }
@@ -319,7 +321,7 @@ function scoutingDossierHtml(array $d): string
     }
 
     $h .= '<div class="sec">La concurrence, en détail</div>';
-    if ($d['concurrenceNote'] !== '') { $h .= '<div class="methode" style="color:#221E1A">' . $e($d['concurrenceNote']) . '</div>'; }
+    if ($d['concurrenceNote'] !== '') { $h .= '<div class="methode" style="color:#1c1a17">' . $e($d['concurrenceNote']) . '</div>'; }
     if ($d['ecartesNote'] !== '') { $h .= '<div class="methode">' . $e($d['ecartesNote']) . '</div>'; }
     if ($d['cartes'] !== []) {
         // la liste : chaque concurrent, sa ligne, puis sa fiche Google
@@ -467,7 +469,7 @@ function scoutingDossierHtml(array $d): string
                 $h .= '</tr>';
             }
         }
-        $h .= '</table>' . ($d['reseauNote'] !== '' ? '<div class="legende" style="color:#221E1A;margin-bottom:1.5mm">' . $e($d['reseauNote']) . '</div>' : '')
+        $h .= '</table>' . ($d['reseauNote'] !== '' ? '<div class="legende" style="color:#1c1a17;margin-bottom:1.5mm">' . $e($d['reseauNote']) . '</div>' : '')
             . '<div class="legende">Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.</div>';
     }
 
@@ -491,9 +493,9 @@ function scoutingDossierHtml(array $d): string
     }
 
     if ($d['sources'] !== '') {
-        $h .= '<div class="methode"><b style="color:#221E1A">Sources.</b> ' . $e($d['sources']) . '</div>';
+        $h .= '<div class="methode"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Sources.</b> ' . $e($d['sources']) . '</div>';
     }
-    if ($d['motOutil'] !== '') { $h .= '<div class="methode" style="color:#221E1A"><b>L’outil repère, l’étude confirme.</b> ' . $e($d['motOutil']) . '</div>'; }
+    if ($d['motOutil'] !== '') { $h .= '<div class="methode" style="color:#1c1a17"><b>L’outil repère, l’étude confirme.</b> ' . $e($d['motOutil']) . '</div>'; }
     if ($d['motFin'] !== '') {
         $h .= '<div class="motfin"><div class="k" style="color:#8D1D2C;margin-bottom:1.5mm">À lire avant de signer</div>' . $e($d['motFin']) . '</div>';
     }
@@ -571,32 +573,32 @@ function scoutingPlanHtml(array $d): string
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $logo = rapLogoDataUri();
     $css = '<style>
-      .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
-      .serif{font-family:Georgia,"DejaVu Serif","Times New Roman",serif}
+      .doc{font-family:Gotham,Helvetica,Arial,sans-serif;color:#1c1a17;font-size:9pt}
+      .serif{font-family:Gotham,Helvetica,Arial,sans-serif}
       .k{font-size:7.2pt;letter-spacing:.09em;text-transform:uppercase;color:#7a736a;font-weight:normal}
-      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#2d7a3e}
+      .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#3f7a52}
       .h1{font-size:20pt;letter-spacing:-.01em;margin:4mm 0 1mm}
       .soustitre{font-size:9pt;color:#7a736a;margin:0 0 5mm}
-      .sec{font-family:Georgia,"DejaVu Serif",serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
-      .sec small{font-family:Helvetica,Arial,sans-serif;font-size:7.5pt;color:#7a736a;margin-left:3mm}
-      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm}
-      .tile .v{font-family:Georgia,"DejaVu Serif",serif;font-size:15pt;margin-top:1mm}
+      .sec{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
+      .sec small{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:7.5pt;color:#7a736a;margin-left:3mm}
+      .tile{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm}
+      .tile .v{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:15pt;margin-top:1mm}
       .tile .s{font-size:7.5pt;color:#7a736a;margin-top:.8mm;line-height:1.45}
       table.grille{width:100%;border-collapse:separate;border-spacing:1.6mm 0;margin:0 -1.6mm 5mm}
       table.t{width:100%;border-collapse:collapse;margin-bottom:5mm}
-      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
-      .t td{font-size:8.4pt;text-align:right;padding:1.3mm 2mm;border-bottom:.5pt solid #EAE3D8;vertical-align:top}
+      .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #1c1a17}
+      .t td{font-size:8.4pt;text-align:right;padding:1.3mm 2mm;border-bottom:.5pt solid #EDE7DE;vertical-align:top}
       .t .l{text-align:left}
-      .t tr.tot td{font-weight:bold;border-top:1pt solid #221E1A;border-bottom:0;background:#fbf9f5}
+      .t tr.tot td{font-weight:400;border-top:1pt solid #1c1a17;border-bottom:0;background:#FBF9F5}
       .carte{width:100%;height:auto;display:block;border:1px solid #e6e0d8;border-radius:6px}
       .legende{font-size:7.5pt;color:#7a736a;margin:1.5mm 0 5mm;line-height:1.5}
-      .total{font-family:Georgia,"DejaVu Serif",serif;font-size:20pt;color:#2d7a3e;line-height:1;white-space:nowrap}
-      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6;margin-bottom:4mm}
+      .total{font-family:Gotham,Helvetica,Arial,sans-serif;font-size:20pt;color:#3f7a52;line-height:1;white-space:nowrap}
+      .methode{border:1px solid #e6e0d8;border-radius:8px;background:#FBF9F5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6;margin-bottom:4mm}
     </style>';
     $h = $css . '<div class="doc">'
         . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
         . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">' : '<strong style="font-size:12pt">L’Atelier by</strong>') . '</td>'
-        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Plan d’expansion<br>édité le ' . $e($d['date']) . '</td></tr></table>'
+        . '<td align="right" style="font-size:10px;color:#7a736a;line-height:1.5"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Plan d’expansion</b>édité le ' . $e($d['date']) . '</td></tr></table>'
         . '<table width="100%" cellpadding="0" cellspacing="0"><tr><td valign="top"><div class="serif h1">' . $e($d['titre']) . '</div>'
         . '<p class="soustitre">' . $e($d['sousTitre']) . '</p></td>'
         . '<td align="right" valign="top" style="width:48mm;padding-top:5mm"><div class="total">' . $e($d['total']) . '</div><div class="k">CA annuel estimé</div></td></tr></table>';
@@ -630,7 +632,7 @@ function scoutingPlanHtml(array $d): string
         }
         $h .= '</table>';
     }
-    if ($d['methode'] !== '') { $h .= '<div class="methode"><b style="color:#221E1A">Méthode.</b> ' . $e($d['methode']) . '</div>'; }
+    if ($d['methode'] !== '') { $h .= '<div class="methode"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Méthode.</b> ' . $e($d['methode']) . '</div>'; }
     if ($d['hypotheses'] !== []) {
         $h .= '<div class="sec">Les hypothèses au moment de l’édition</div><table class="t" cellpadding="0" cellspacing="0">';
         $cols = array_chunk($d['hypotheses'], (int) ceil(count($d['hypotheses']) / 2));
@@ -642,6 +644,6 @@ function scoutingPlanHtml(array $d): string
         }
         $h .= '</table>';
     }
-    if ($d['sources'] !== '') { $h .= '<div class="methode"><b style="color:#221E1A">Sources.</b> ' . $e($d['sources']) . '</div>'; }
+    if ($d['sources'] !== '') { $h .= '<div class="methode"><b style="display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#1c1a17">Sources.</b> ' . $e($d['sources']) . '</div>'; }
     return $h . '</div>';
 }

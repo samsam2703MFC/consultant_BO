@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// Gabarit commun des documents et e-mails (design system §13, version A).
+require_once __DIR__ . '/doc.php';
+
 /**
  * Client SMTP minimal — l'envoi des rapports.
  *
@@ -89,6 +92,17 @@ final class Smtp
         // Les blocs réservés à l'écran (bouton Imprimer/PDF) sortent de
         // l'email — un window.print() n'a aucun sens dans une boîte mail.
         $html = (string) preg_replace('#<!--ecran-->.*?<!--/ecran-->#s', '', $html);
+        // Gabarit e-mail du design system (§13.6, version A) : un corps écrit
+        // en FRAGMENT (quelques <p>, sans <html>) part dans la lettre commune —
+        // logo et objet sur le filet Ruby, 600 px, pied relevé — au lieu de
+        // sortir nu. Les polices embarquées sortent du message : les
+        // messageries les ignorent, elles pèseraient 200 Ko pour rien.
+        if (stripos($html, '<html') === false) {
+            $html = docMail(['sujet' => $sujet,
+                'corps' => '<div style="font-family:' . DOC_FONT . ';font-size:14px;line-height:1.6;color:' . DOC_INK . '">' . $html . '</div>',
+                'pied' => docMailPied('Envoyé automatiquement par le cockpit L’Atelier By.')]);
+        }
+        $html = (string) preg_replace('#@font-face\{[^}]*\}#', '', $html);
         $images = [];
         $html = preg_replace_callback('#"data:image/(jpeg|png);base64,([A-Za-z0-9+/=]+)"#',
             function ($m2) use (&$images) {
@@ -121,6 +135,18 @@ final class Smtp
             }
             $partie .= '--' . $lim . '--' . "\r\n";
         }
+        // La version TEXTE BRUT (design system §13.6) : chaque e-mail la porte,
+        // à côté du HTML. Une messagerie qui bloque le HTML, une montre, un
+        // lecteur d'écran lisent la même chose — noms, montants, liens.
+        $alt = 'alt' . bin2hex(random_bytes(10));
+        $partie = 'Content-Type: multipart/alternative; boundary="' . $alt . '"' . "\r\n\r\n"
+            . '--' . $alt . "\r\n"
+            . 'Content-Type: text/plain; charset=UTF-8' . "\r\n"
+            . 'Content-Transfer-Encoding: base64' . "\r\n\r\n"
+            . chunk_split(base64_encode(docMailTexte($html)), 76, "\r\n")
+            . '--' . $alt . "\r\n"
+            . $partie
+            . '--' . $alt . '--' . "\r\n";
 
         $adresse = preg_match('/<([^>]+)>/', $expediteur, $mA) ? $mA[1] : $expediteur;
         $entetes = 'From: ' . $expediteur . "\r\n"

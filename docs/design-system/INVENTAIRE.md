@@ -2,9 +2,9 @@
 
 Compte rendu de l'adaptation des écrans du BO consultant (cockpit) au design
 system commun, `docs/design-system/DESIGN_SYSTEM.md` (référence relevée dans le
-module Marketing, état du 06/11/2026). Périmètre : **les écrans** (§0–§12). Les
-documents produits par le serveur (§13) ne sont pas traités ici, voir « Écarts
-restants ».
+module Marketing, état du 06/11/2026). Périmètre : **les écrans** (§0–§12) et
+**les documents** — PDF composés par le serveur et e-mails (§13, version A),
+voir le § 7.
 
 Captures avant / après (1440 × 1000, jeu de démonstration) :
 `docs/design-system/captures/`.
@@ -200,14 +200,6 @@ hors les libellés listés ci-dessus.
    franchisé ».
 
 **Restent à faire** :
-- **Documents (§13)** : PDF et e-mails générés côté serveur (`src/rapports.php`,
-  `dossier.php`, `mkt_brief.php`, `plan_pdf.php`, `resultat_pdf.php`,
-  `ca_mail.php`, `newsletter_envoi.php`, `scouting_dossier.php`…) — ≈ 1 000
-  teintes, titres en Georgia, `sans-serif` système. Ils partent chez les
-  franchisés : à aligner sur la version A dans un chantier à part, pièce par
-  pièce, avec une capture de validation. Le dossier d'implantation du scouting
-  (imprimé depuis l'écran) est déjà ramené aux valeurs du système, en
-  hexadécimal (sa fenêtre d'impression n'a pas la feuille commune).
 - **Styles en ligne** : leurs valeurs sont celles du système, mais la plupart
   des boutons, champs et tableaux du cockpit restent écrits en ligne. Les
   remplacer par les classes du §7 (`.btn`, `.table-card`, `.field`…) se fera
@@ -257,3 +249,94 @@ PHP_CLI_SERVER_WORKERS=8 php -S 0.0.0.0:8080 -t public public/router.php
 
 Page seule : `http://localhost:8080/#/performance`. Page incorporée : ouvrir
 `http://localhost:8080/?embed=1#/performance` dans un `iframe` de 1 194 px.
+
+## 7. Documents (§13, version A)
+
+### 7.1 Inventaire de départ
+
+| Pièce | Fichier | Avant |
+|---|---|---|
+| Rapports (e-mail et PDF) | `src/rapports.php` › `rapportHtml`, `rapPdfHtml`, `rapPdfPiedHtml` | Segoe UI ; carte de 680 px aux coins de 14 px sur fond beige ; filet Ruby 3 px ; leviers en pastilles pleines ; résumé en pastille rose ; bouton en pilule |
+| Garde e-mail des rapports | `rapMailGarde` | même carte beige, résumé en pastille, bloc « PDF » bordeaux |
+| Courriers de la centrale d'achat | `src/ca_mail.php` › `caMailSquelette`, `caMailHtml` | fond beige, cartes de commande sur beige, nombre de commandes en pastille, retard en bordeaux |
+| Note de campagne (PDF, e-mail) | `src/mkt_brief.php` | Helvetica ; type de pièce en petit gris ; kicker en Ruby ; objectif dans un bloc beige |
+| Plan de développement, résultat du mois, analyse magasin, arbitrage de gamme, fiche de catégorie, croisements, dossier d'analyse, étude d'implantation, plan d'expansion, target de vente, primes, affiche des primes, références jamais vendues | `plan_pdf`, `resultat_pdf`, `analyse_magasin`, `analyse_produits`, `croisements`, `dossier`, `scouting_dossier`, `ventes`, `prod_utilisation` | titres en **Georgia**, corps `sans-serif` système ou Helvetica ; pied en Helvetica avec logo ; ≈ 1 000 teintes en dur ; l'explication des primes sortait avec des accents cassés (pas de `charset`) |
+| Scoring du trimestre | `src/scoring.php` | filet noir, logo 36 px, 🏆 |
+| Courriers courts (visites, brand guard, dossiers, scoring, primes) | divers | fragments HTML envoyés sans gabarit |
+| Tous les e-mails | `src/smtp.php` | HTML seul, aucune version texte |
+
+### 7.2 Ce qui a été fait
+
+- **Gabarit commun `src/doc.php`** : jetons papier (encre, gris, filet, Ruby…),
+  `@font-face` du §13.2 (300 Light, 400 = `Gotham_Medium`, 700 = `Gotham_Regular`)
+  embarqués en data-URI (le moteur PDF tourne sans réseau), `docEntete()` (logo
+  34 px, type de pièce en capitales 15 px 700, références 10 px, filet Ruby 2 px),
+  `docMail()` (table de 600 px, logo 30 px et objet sur le filet Ruby, corps
+  14 px / 1,6, pied relevé), `docMailBouton()` (Ruby, coins de 8 px, 700 14 px),
+  `docMailSignature()` (logo, filet vertical Ruby, trois lignes ; une ligne vide
+  disparaît), `docMontant()` (« 1 234,50 € », espace fine U+202F), `docDate()`,
+  `docMailTexte()`.
+- **Enveloppe PDF commune** (`rapPdfHtml`, les 15 PDF y passent) : Gotham chargée
+  et imposée (plus de Georgia ni de police système), papier blanc, `@page` et
+  marges wkhtmltopdf au gabarit (14 / 14 / 16 mm), `charset` ajouté s'il manque.
+- **Pied de page** de tous les PDF : filet 1 px, 8,5 px gris, ce qu'est la feuille
+  et les mentions légales à gauche, « Page n / N » à droite.
+- **En-têtes** : les PDF portent le type de pièce en capitales 15 px sur le
+  filet Ruby de 2 px (`docEntete()` pour la note de campagne, le scoring, les
+  primes, les références jamais vendues ; mise au même gabarit pour les autres).
+- **E-mails** : rapports, garde des rapports, centrale d'achat, note de campagne
+  au gabarit A (fond blanc, 600 px, un seul bouton, pied relevé). Tout courrier
+  écrit en fragment HTML part désormais dans `docMail()` (`Smtp::message`).
+- **Version texte brut** ajoutée à **chaque** e-mail (`multipart/alternative`).
+- **Normalisation** des 18 fichiers de documents (`node tools/design-system/normalise.js src/….php`,
+  mode PHP) : piles de polices → `Gotham,Helvetica,Arial,sans-serif`, teintes →
+  valeur hexadécimale du jeton (ni PDF ni messagerie ne lisent les variables
+  CSS), fonds beiges → blanc, pilules → 6 px, coins de carte → 8 px, ombres
+  retirées, gras réservé aux titres et grands chiffres (≥ 15 px). Les tailles
+  restent celles du papier.
+- **Rôles** : retard d'une commande en `--prize-ink` et non en Ruby ; leviers en
+  point de couleur de 8 px + nom, plus de pastille ; objectif de la note dans un
+  encadré à filet gauche Ruby ; erreurs en `--danger` ; emoji retirés (🏆 🥇 🟢…,
+  le feu des visites devient un point de couleur et un mot).
+- **Mentions légales** : nouvelle clé `emetteur` (raison sociale, adresse,
+  n° d'entreprise, TVA, RPM, IBAN, BIC) dans `config/config.php` ou le réglage
+  `emetteur`. **Aucune n'est renseignée aujourd'hui** : le pied ne les écrit donc
+  pas, rien n'est inventé. Source de chaque mention : ce réglage, et lui seul.
+
+Captures avant / après : `docs/design-system/captures/documents/`.
+
+### 7.3 Écarts restants
+
+- **Signature personnelle** (§13.6) : le gabarit existe (`docMailSignature`),
+  mais aucun envoi ne connaît encore la fiche de la personne qui écrit
+  (fonction, téléphone) ; les courriers signent au nom du service, comme avant.
+- **Squelette personnalisé** de la centrale (Paramètres › courrier, champ HTML) :
+  s'il a été enregistré, il prime sur le gabarit A — à vider pour reprendre le
+  nouveau.
+- **Runs de rapports déjà enregistrés** : leur HTML date de leur génération ;
+  le PDF les remet au gabarit (police, marges, pied), l'e-mail de garde aussi,
+  mais leur corps garde l'ancien dessin jusqu'à la génération suivante.
+- **Pièces propres non encore validées sur un premier exemplaire** (§13.4) :
+  offre de prix, facture, note de crédit, bon de commande, relevé n'existent pas
+  dans le BO ; le gabarit est prêt pour elles.
+- **Affiche des primes et explication des primes** : leurs tuiles colorées
+  (paliers de prime) sont gardées — ce sont des supports à afficher en boutique,
+  plus proches d'un document de campagne.
+- **Newsletter clients** (`newsletter_envoi.php`) : normalisée (polices, teintes),
+  mais son gabarit reste celui de la campagne ; le lien de désinscription est
+  présent.
+- **wkhtmltopdf des dépôts** (sans Qt corrigé) n'imprime pas le pied de page ;
+  le serveur de production installe la version corrigée (`bin/deploy.sh`).
+
+### 7.4 Checklist des documents (§13.7)
+
+- [x] Données lues dans le système ; mentions légales lues dans `emetteur`, absentes aujourd'hui, donc non écrites.
+- [x] Gotham chargée dans le document et attendue (`font-display: block`) ; repli Helvetica / Arial.
+- [x] Déclaration du §4.1 (400 texte, 700 accents) ; ni Vank ni Playwrite ni Georgia dans un document de gestion.
+- [~] Ruby : filet d'en-tête, chiffre dû / visé, bouton, filet d'encadré ; retards et erreurs corrigés dans les rapports, la centrale et les références jamais vendues — à revoir dans les autres pièces.
+- [~] Montants « 1 234,50 € » : helper `docMontant()` posé ; les pièces existantes gardent leur propre format de nombres.
+- [x] `print-color-adjust: exact` ; fonds blancs.
+- [x] Pagination « Page n / N » dans le pied, lignes non coupées.
+- [x] E-mails : table 600 px, styles en ligne, un seul bouton, pied relevé, version texte.
+- [x] Aucune pilule.
+- [ ] Premier exemplaire de chaque pièce commerciale (offre, facture…) : ces pièces n'existent pas dans le BO.

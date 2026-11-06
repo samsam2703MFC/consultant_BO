@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/doc.php';
+
 /**
  * Scoring du trimestre — quatre postes de cinq points, magasin par magasin.
  *
@@ -293,7 +295,7 @@ function sqObligatoiresHtml(array $tri, array $l): string
     $mois = [];
     foreach ($jours as $j) { $m = substr($j, 0, 7); $mois[$m] = ($mois[$m] ?? 0) + 1; }
     $tete = '';
-    foreach ($mois as $m => $n) { $tete .= '<span style="display:inline-block;width:' . ($n * 6 + 3) . 'px;font-size:8.5px;color:#7a7268;letter-spacing:.05em;text-transform:uppercase">' . SQ_MOIS[(int) substr($m, 5, 2)] . '</span>'; }
+    foreach ($mois as $m => $n) { $tete .= '<span style="display:inline-block;width:' . ($n * 6 + 3) . 'px;font-size:8.5px;color:#7a736a;letter-spacing:.05em;text-transform:uppercase">' . SQ_MOIS[(int) substr($m, 5, 2)] . '</span>'; }
     $h = '<h2>Les tâches obligatoires — jour par jour</h2><div class="sous">Une case par jour du ' . date('d/m', strtotime($tri['du'])) . ' au ' . date('d/m', strtotime($tri['arrete'])) . ' : <i class="dm" style="display:inline-block;width:8px;height:8px;vertical-align:-1px"></i> manquée — le jour vaut 0 au poste Tâches, <i class="df" style="display:inline-block;width:8px;height:8px;vertical-align:-1px"></i> faite, <i class="dx" style="display:inline-block;width:8px;height:8px;vertical-align:-1px"></i> pas attendue ce jour.</div>';
     $h .= '<table class="oblig"><tr><td></td><td class="s">' . $tete . '</td></tr>';
     foreach ($det['taches'] as $t) {
@@ -305,7 +307,7 @@ function sqObligatoiresHtml(array $tri, array $l): string
             $v = $t['jours'][$j] ?? null;
             $strip .= '<i class="' . ($v === null ? 'dx' : ($v ? 'df' : 'dm')) . '"' . $sep . '></i>';
         }
-        $h .= '<tr><td class="n">' . sqH($t['nom']) . '<small>' . ($t['manquees'] ? '<b style="color:#C0182B">manquée ' . $t['manquees'] . ' jour' . ($t['manquees'] > 1 ? 's' : '') . '</b> sur ' . $t['attendues'] : 'faite les ' . $t['attendues'] . ' jours') . '</small></td><td class="s">' . $strip . '</td></tr>';
+        $h .= '<tr><td class="n">' . sqH($t['nom']) . '<small>' . ($t['manquees'] ? '<b style="color:#A32014">manquée ' . $t['manquees'] . ' jour' . ($t['manquees'] > 1 ? 's' : '') . '</b> sur ' . $t['attendues'] : 'faite les ' . $t['attendues'] . ' jours') . '</small></td><td class="s">' . $strip . '</td></tr>';
     }
     return $h . '</table>';
 }
@@ -484,7 +486,7 @@ function sqEtoiles(?float $v, int $px = 13): string
     $pct = $v === null ? 0 : max(0, min(100, $v / 5 * 100));
     return '<span style="position:relative;display:inline-block;font-size:' . $px . 'px;line-height:1;letter-spacing:1px;color:#ddd4c6;white-space:nowrap' . ($v === null ? ';opacity:.45' : '') . '">'
         . '<span>&#9733;&#9733;&#9733;&#9733;&#9733;</span>'
-        . '<span style="position:absolute;left:0;top:0;overflow:hidden;color:#e2b93b;white-space:nowrap;width:' . number_format($pct, 1, '.', '') . '%">&#9733;&#9733;&#9733;&#9733;&#9733;</span></span>';
+        . '<span style="position:absolute;left:0;top:0;overflow:hidden;color:#B0792A;white-space:nowrap;width:' . number_format($pct, 1, '.', '') . '%">&#9733;&#9733;&#9733;&#9733;&#9733;</span></span>';
 }
 /** Le détail d'un poste en une ligne — ce qui fait la note. */
 function sqDetail(string $cle, array $p): string
@@ -527,14 +529,12 @@ function sqConseils(array $l): array
 
 function sqPageEntete(array $sc, string $titre, string $droite): string
 {
+    // En-tête du gabarit A4 (design system §13.4, version A) : logo, type de
+    // pièce en capitales, références, filet Ruby de 2 px.
     $tri = $sc['trimestre'];
-    $logo = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
-    return '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #222;padding-bottom:10px;margin-bottom:16px">'
-        . '<div>' . ($logo ? '<img src="' . $logo . '" style="height:36px" alt="">' : '<b style="font-size:20px">L’ATELIER</b>')
-        . '<div style="font:600 9.5px Helvetica,Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#7a7268;margin-top:6px">' . sqH($titre) . '</div></div>'
-        . '<div style="text-align:right"><div style="font:600 9.5px Helvetica,Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#7a7268">' . sqH($tri['lib']) . '</div>'
-        . '<div style="font-size:10.5px;color:#7a7268">' . sqH($droite) . '</div></div></div>';
+    return docEntete($titre, $tri['lib'] . ' · ' . $droite);
 }
+
 
 /** La page réseau : le podium, le tableau, la lecture, les règles. */
 function sqPageReseau(array $sc, int $pages): string
@@ -545,7 +545,7 @@ function sqPageReseau(array $sc, int $pages): string
     $h .= '<h1>Le scoring du trimestre</h1><div class="sous">Quatre postes de cinq points, 20 en tout : Google, tâches, client mystère, budget. Un poste sans donnée compte 0 et il est nommé.</div>';
     $h .= '<h2>Le classement</h2><table class="podium"><tr>';
     foreach ($L as $l) {
-        $h .= '<td><div class="r">' . ($l['rang'] === 1 ? '&#127942; ' : '') . $l['rang'] . ($l['rang'] === 1 ? 'er' : 'e') . '</div><div class="nm">' . sqH($l['court']) . '</div>'
+        $h .= '<td><div class="r">' . '' . $l['rang'] . ($l['rang'] === 1 ? 'er' : 'e') . '</div><div class="nm">' . sqH($l['court']) . '</div>'
             . '<div class="pt">' . sqNf($l['total']) . '<small> / ' . $l['sur'] . '</small></div>' . sqEtoiles($l['etoiles'], 11)
             . '<div class="sous">' . ($l['delta'] === null ? 'sans comparaison' : ($l['delta'] >= 0 ? '+ ' : '− ') . sqNf(abs($l['delta'])) . ' ★ vs ' . sqH(sqTrimestre($tri['prec'])['court'])) . '</div></td>';
     }
@@ -587,14 +587,14 @@ function sqPageMagasin(array $sc, array $l, int $page, int $pages): string
     $tri = $sc['trimestre']; $prec = sqTrimestre($tri['prec'])['court'];
     $h = '<div class="page saut">' . sqPageEntete($sc, 'Scoring du trimestre — ' . $l['nom'], 'arrêté au ' . date('d/m/Y', strtotime($tri['arrete'])) . ' · ' . $l['rang'] . ($l['rang'] === 1 ? 'er' : 'e') . ' sur ' . count($sc['magasins']));
     $h .= '<table style="width:100%;border-collapse:collapse;margin-bottom:6px"><tr><td style="vertical-align:top"><h1 style="margin:0">' . sqH($l['court']) . '</h1><div class="sous">' . sqH($l['nom']) . ($l['fr'] ? ' · ' . sqH($l['fr']) : '') . '</div></td>'
-        . '<td style="text-align:right;vertical-align:top"><div class="n" style="font-size:34px">' . sqNf($l['total']) . '<small style="font-size:11px;color:#7a7268"> / ' . $l['sur'] . '</small></div>' . sqEtoiles($l['etoiles'], 18)
+        . '<td style="text-align:right;vertical-align:top"><div class="n" style="font-size:34px">' . sqNf($l['total']) . '<small style="font-size:11px;color:#7a736a"> / ' . $l['sur'] . '</small></div>' . sqEtoiles($l['etoiles'], 18)
         . '<div class="sous">' . sqNf($l['etoiles']) . ' ★' . ($l['delta'] === null ? '' : ' · ' . ($l['delta'] >= 0 ? '+ ' : '− ') . sqNf(abs($l['delta'])) . ' ★ vs ' . sqH($prec)) . ($l['n'] < 4 ? ' · ' . (4 - $l['n']) . ' poste' . (4 - $l['n'] > 1 ? 's' : '') . ' sans donnée, compté 0' : '') . '</div></td></tr></table>';
     $h .= '<h2>Les quatre postes</h2><table class="fiche">';
     foreach (SQ_POSTES as $cle => $p) {
         $x = $l['postes'][$cle]; $pv = $l['prec']['postes'][$cle] ?? null;
         $d = $x['v'] !== null && $pv !== null ? $x['v'] - $pv : null;
         $h .= '<tr><td class="k">' . sqH($p['nom']) . '<small>sur 5</small></td><td class="v"><b class="n">' . ($x['v'] === null ? '—' : sqNf($x['v'])) . '</b><small> / 5</small><br>' . sqEtoiles($x['v'], 11) . '</td>'
-            . '<td class="x">' . sqH(sqDetail($cle, $x)) . '<br><span class="sous">' . ($d === null ? 'sans comparaison' : (abs($d) < 0.05 ? 'stable' : ($d > 0 ? '<b style="color:#2d7a3e">+ ' : '<b style="color:#C0182B">− ') . sqNf(abs($d)) . '</b>') . ' vs ' . sqH($prec)) . '</span></td></tr>';
+            . '<td class="x">' . sqH(sqDetail($cle, $x)) . '<br><span class="sous">' . ($d === null ? 'sans comparaison' : (abs($d) < 0.05 ? 'stable' : ($d > 0 ? '<b style="color:#3f7a52">+ ' : '<b style="color:#A32014">− ') . sqNf(abs($d)) . '</b>') . ' vs ' . sqH($prec)) . '</span></td></tr>';
     }
     $h .= '</table>' . sqObligatoiresHtml($tri, $l) . '<h2>Ce qu’on en fait</h2><ul class="actions">';
     foreach (sqConseils($l) as $c) { $h .= '<li>' . $c . '</li>'; }
@@ -612,28 +612,28 @@ function sqRapportHtml(array $sc, ?string $shop = null): string
 {
     $L = $shop !== null ? array_values(array_filter($sc['magasins'], fn ($l) => $l['id'] === $shop)) : $sc['magasins'];
     $pages = 1 + count($L);
-    $css = '<style>'
+    $css = '<style>' . docFontFaces()
         . '@page{size:A4;margin:14mm 15mm 18mm}'
-        . 'body{margin:0;background:#fff;color:#222;font:12px/1.45 Helvetica,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+        . 'body{margin:0;background:#fff;color:#1c1a17;font:12px/1.45 Gotham,Helvetica,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
         . '.page{position:relative;min-height:250mm;padding:0 0 14mm}.page.saut{page-break-before:always}'
-        . 'h1{font-size:28px;margin:0 0 4px;line-height:1.05;font-weight:800}h2{font-size:15px;margin:16px 0 8px;font-weight:800}'
-        . '.sous{color:#7a7268;font-size:10.5px}.n{font-weight:800;font-variant-numeric:tabular-nums}'
-        . 'table.podium{width:100%;border-collapse:separate;border-spacing:8px 0;margin:4px -8px 6px}table.podium td{width:25%;border:.5px solid #e6e0d6;border-radius:8px;padding:9px 11px;vertical-align:top}'
-        . '.podium .r{font:700 9.5px Helvetica,Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#7a7268}.podium .nm{font-weight:700;font-size:13px;margin:2px 0}.podium .pt{font-size:21px;font-weight:800;line-height:1.1}.podium .pt small{font-size:10px;color:#7a7268;font-weight:400}'
-        . 'table.sc{width:100%;border-collapse:collapse;margin-top:8px}table.sc th{text-align:left;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:#7a7268;padding:0 8px 5px}'
-        . 'table.sc td{padding:8px;border-top:.5px solid #e6e0d6;font-size:11.5px;vertical-align:top}table.sc td.nom{font-weight:700}table.sc td .d{font-size:9.5px;color:#7a7268}'
+        . 'h1{font-size:28px;margin:0 0 4px;line-height:1.05;font-weight:700}h2{font-size:15px;margin:16px 0 8px;font-weight:700}'
+        . '.sous{color:#7a736a;font-size:10.5px}.n{font-weight:400;font-variant-numeric:tabular-nums}'
+        . 'table.podium{width:100%;border-collapse:separate;border-spacing:8px 0;margin:4px -8px 6px}table.podium td{width:25%;border:1px solid #e6e0d8;border-radius:8px;padding:9px 11px;vertical-align:top}'
+        . '.podium .r{font:400 9.5px Gotham,Helvetica,Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#7a736a}.podium .nm{font-weight:400;font-size:13px;margin:2px 0}.podium .pt{font-size:21px;font-weight:700;line-height:1.1}.podium .pt small{font-size:10px;color:#7a736a;font-weight:400}'
+        . 'table.sc{width:100%;border-collapse:collapse;margin-top:8px}table.sc th{text-align:left;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:#7a736a;padding:0 8px 5px}'
+        . 'table.sc td{padding:8px;border-top:1px solid #e6e0d8;font-size:11.5px;vertical-align:top}table.sc td.nom{font-weight:400}table.sc td .d{font-size:9.5px;color:#7a736a}'
         . '.lecture{background:#f6f2ec;border-radius:8px;padding:10px 14px;font-size:11.5px;margin-top:12px}'
-        . '.regles{columns:2;column-gap:24px;font-size:10.5px;color:#444}.regles>div{break-inside:avoid;margin-bottom:5px}'
-        . 'table.fiche{width:100%;border-collapse:separate;border-spacing:0 6px}table.fiche td{border-top:.5px solid #e6e0d6;border-bottom:.5px solid #e6e0d6;padding:9px 12px;vertical-align:middle}'
-        . 'table.fiche td.k{width:140px;font-weight:700;font-size:12.5px;border-left:.5px solid #e6e0d6;border-radius:8px 0 0 8px}table.fiche td.k small{display:block;font-weight:400;color:#7a7268;font-size:9.5px}'
-        . 'table.fiche td.v{width:110px}table.fiche td.v b{font-size:20px}table.fiche td.v small{font-size:10px;color:#7a7268}table.fiche td.x{font-size:11px;color:#444;border-right:.5px solid #e6e0d6;border-radius:0 8px 8px 0}'
+        . '.regles{columns:2;column-gap:24px;font-size:10.5px;color:#5c5852}.regles>div{break-inside:avoid;margin-bottom:5px}'
+        . 'table.fiche{width:100%;border-collapse:separate;border-spacing:0 6px}table.fiche td{border-top:1px solid #e6e0d8;border-bottom:1px solid #e6e0d8;padding:9px 12px;vertical-align:middle}'
+        . 'table.fiche td.k{width:140px;font-weight:400;font-size:12.5px;border-left:1px solid #e6e0d8;border-radius:8px 0 0 8px}table.fiche td.k small{display:block;font-weight:400;color:#7a736a;font-size:9.5px}'
+        . 'table.fiche td.v{width:110px}table.fiche td.v b{font-size:20px}table.fiche td.v small{font-size:10px;color:#7a736a}table.fiche td.x{font-size:11px;color:#5c5852;border-right:1px solid #e6e0d8;border-radius:0 8px 8px 0}'
         . 'ul.actions{margin:0;padding-left:18px}ul.actions li{margin:4px 0;font-size:11.5px}'
-        . 'table.oblig{width:100%;border-collapse:collapse;margin-top:6px}table.oblig td{padding:4px 6px 4px 0;border-top:.5px solid #eee7dc;vertical-align:middle}'
-        . 'table.oblig td.n{width:190px;font-size:10.5px;font-weight:700;line-height:1.25}table.oblig td.n small{display:block;font-weight:400;font-size:9px;color:#7a7268}'
+        . 'table.oblig{width:100%;border-collapse:collapse;margin-top:6px}table.oblig td{padding:4px 6px 4px 0;border-top:1px solid #eee7dc;vertical-align:middle}'
+        . 'table.oblig td.n{width:190px;font-size:10.5px;font-weight:400;line-height:1.25}table.oblig td.n small{display:block;font-weight:400;font-size:9px;color:#7a736a}'
         . 'table.oblig td.s{white-space:nowrap;line-height:0}table.oblig i{display:inline-block;width:5px;height:10px;margin-right:1px;border-radius:1px}'
-        . '.df{background:#2d7a3e}.dm{background:#C0182B}.dx{background:#e6e0d6}'
-        . '.pied{position:absolute;left:0;right:0;bottom:0;font-size:9px;color:#7a7268;border-top:.5px solid #ddd;padding-top:5px;display:flex;justify-content:space-between}'
-        . '@media screen{body{background:#EAE4DC;padding:20px}.page{background:#fff;width:794px;min-height:1123px;margin:0 auto 20px;padding:52px 56px 60px;box-sizing:border-box;box-shadow:0 8px 30px rgba(0,0,0,.14)}.pied{left:56px;right:56px;bottom:26px}}'
+        . '.df{background:#3f7a52}.dm{background:#A32014}.dx{background:#e6e0d8}'
+        . '.pied{position:absolute;left:0;right:0;bottom:0;font-size:9px;color:#7a736a;border-top:1px solid #e6e0d8;padding-top:5px;display:flex;justify-content:space-between}'
+        . '@media screen{body{background:#ffffff;padding:20px}.page{background:#fff;width:794px;min-height:1123px;margin:0 auto 20px;padding:52px 56px 60px;box-sizing:border-box;}.pied{left:56px;right:56px;bottom:26px}}'
         . '</style>';
     $h = '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Scoring ' . sqH($sc['trimestre']['court']) . '</title>' . $css . '</head><body>';
     $h .= sqPageReseau($sc, $pages);
@@ -678,8 +678,8 @@ function sqDistribuer(array $tri, ?array $rep, ?string $essai = null): array
     $sujet = 'Scoring du trimestre — ' . $tri['court'];
     $corps = function (array $l) use ($tri): string {
         $lignes = '';
-        foreach (SQ_POSTES as $cle => $p) { $x = $l['postes'][$cle]; $lignes .= '<tr><td style="padding:3px 10px 3px 0">' . sqH($p['nom']) . '</td><td style="padding:3px 0;font-weight:700">' . ($x['v'] === null ? '—' : sqNf($x['v']) . ' / 5') . '</td><td style="padding:3px 0 3px 10px;color:#7a7268">' . sqH(sqDetail($cle, $x)) . '</td></tr>'; }
-        return '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#222;line-height:1.6"><p>Bonjour,</p>'
+        foreach (SQ_POSTES as $cle => $p) { $x = $l['postes'][$cle]; $lignes .= '<tr><td style="padding:3px 10px 3px 0">' . sqH($p['nom']) . '</td><td style="padding:3px 0;font-weight:400">' . ($x['v'] === null ? '—' : sqNf($x['v']) . ' / 5') . '</td><td style="padding:3px 0 3px 10px;color:#7a736a">' . sqH(sqDetail($cle, $x)) . '</td></tr>'; }
+        return '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px;color:#1c1a17;line-height:1.6"><p>Bonjour,</p>'
             . '<p>Voici le <b>scoring du trimestre ' . sqH($tri['court']) . '</b> : <b>' . sqH($l['court']) . ' obtient ' . sqNf($l['total']) . ' / 20</b>, ' . $l['rang'] . ($l['rang'] === 1 ? 'er' : 'e') . ' magasin sur ' . count(sqMagasins()) . '.</p>'
             . '<table style="border-collapse:collapse;font-size:12.5px">' . $lignes . '</table>'
             . '<p>Le rapport A4 est joint : le classement du réseau et votre page, avec ce qu’on en fait.' . ($l['postes']['msp']['fichier'] ? ' Le rapport du client mystère est joint aussi.' : '') . '</p>'
@@ -702,7 +702,7 @@ function sqDistribuer(array $tri, ?array $rep, ?string $essai = null): array
     $destsReseau = $essai !== null ? [] : $copies;
     if ($destsReseau !== []) {
         $pdf = rapPdfRendu(sqRapportHtml($sc), ['rapport' => 'Scoring du trimestre ' . $tri['court'], 'magasin' => 'Réseau', 'genere' => date('d/m/Y à H:i'), 'envoye' => date('d/m/Y')]);
-        $corpsR = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#222;line-height:1.6"><p>Bonjour,</p><p>Le <b>scoring du trimestre ' . sqH($tri['court']) . '</b>, réseau complet : '
+        $corpsR = '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px;color:#1c1a17;line-height:1.6"><p>Bonjour,</p><p>Le <b>scoring du trimestre ' . sqH($tri['court']) . '</b>, réseau complet : '
             . implode(' · ', array_map(fn ($l) => $l['rang'] . '. ' . sqH($l['court']) . ' ' . sqNf($l['total']) . ' / ' . $l['sur'], $sc['magasins'])) . '.</p><p>Le rapport A4 complet est joint — la page réseau et une page par magasin.</p></div>';
         foreach ($destsReseau as $d) {
             $ok = $pdf !== null && Smtp::envoyer($d, $sujet . ' — réseau', $corpsR, [['nom' => 'scoring-' . $tri['cle'] . '-reseau.pdf', 'type' => 'application/pdf', 'contenu' => $pdf]]);
@@ -714,7 +714,7 @@ function sqDistribuer(array $tri, ?array $rep, ?string $essai = null): array
     $bilan['resume'] = 'Scoring ' . $tri['court'] . ' — ' . $servis . ' magasin(s) servi(s), ' . $sans . ' sans adresse' . ($bilan['copies'] ? ', ' . count(array_filter($bilan['copies'], fn ($c) => $c['statut'] === 'envoye')) . ' copie(s) réseau' : '') . ($essai !== null ? ' — essai vers ' . $essai : '');
     if ($essai === null && $rep) {
         try {
-            $html = '<div style="font-family:Helvetica,Arial,sans-serif;font-size:13px">' . sqH($bilan['resume']) . '<ul>'
+            $html = '<div style="font-family:Gotham,Helvetica,Arial,sans-serif;font-size:13px">' . sqH($bilan['resume']) . '<ul>'
                 . implode('', array_map(fn ($m) => '<li>' . sqH($m['magasin'] . ' — ' . $m['statut'] . (!empty($m['envoyes']) ? ' (' . implode(', ', $m['envoyes']) . ')' : '')) . '</li>', $bilan['magasins'])) . '</ul></div>';
             Db::exec('INSERT INTO ceo_rapport_run (rapport_id, genere_le, periode_du, periode_au, statut, resume, html, contexte) VALUES (?,?,?,?,?,?,?,?)',
                 [(int) $rep['id'], date('Y-m-d H:i:s'), $tri['du'], $tri['au'], $servis > 0 ? 'envoye' : 'vide', $bilan['resume'], $html, json_encode(['rapport' => 'Scoring du trimestre ' . $tri['court']], JSON_UNESCAPED_UNICODE)]);
