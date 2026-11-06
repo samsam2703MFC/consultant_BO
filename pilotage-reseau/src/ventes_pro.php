@@ -445,7 +445,6 @@ function vpLignesTicket(mixed $t, array $catDe): ?array
  * GET /exploitation/pro/detail?shop=4&date=2026-10-30 — la feuille « Ventes B2B » : les tickets pro d'un jour, chacun
  * avec sa société, son règlement (facturé, différé, réglé au comptoir) et ses articles ; les chiffres du jour face au
  * comptoir ; ce que les sociétés achètent, par catégorie. Pro = `is_client_b2b` ET TVA valide, comme la jauge.
- * &vue=semaines : les sociétés sur ce jour et les quatre mêmes jours de semaine d'avant (vpProSemaines).
  */
 function ep_exploitation_pro_detail(): array
 {
@@ -454,7 +453,6 @@ function ep_exploitation_pro_detail(): array
     $date = (string) ($_GET['date'] ?? $auj);
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
     if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
-    if (($_GET['vue'] ?? '') === 'semaines') { return vpProSemaines($sid, $date); }
     $cle = 'vpDet:' . $sid . ':' . $date;
     $memo = setting($cle);
     if (empty($_GET['force']) && is_array($memo) && isset($memo['le'], $memo['v']) && time() - (int) $memo['le'] < ($date < $auj ? VP_TTL_DETAIL : VP_TTL)) { return $memo['v'] + ['cache' => true]; }
@@ -513,35 +511,4 @@ function ep_exploitation_pro_detail(): array
         'sansTva' => ['tickets' => $sansTva['tickets'], 'ca' => round($sansTva['ca'], 2)], 'lus' => count(array_filter($tickets, static fn ($t) => $t['lignes'] !== null))];
     try { svGrave($cle, ['le' => time(), 'v' => $v]); } catch (Throwable $e) { /* sans mémo */ }
     return $v;
-}
-
-/**
- * Les sociétés sur un jour et les quatre mêmes jours de semaine d'avant : pour chacune, le montant de chaque jour
- * (null = pas venue), le nombre de jours où elle est venue, le total. Lu sur le pro gravé (vpJour), cinq listes au
- * plus relues au panel ; les noms par vpNoms.
- */
-function vpProSemaines(int $sid, string $date): array
-{
-    @set_time_limit(60);
-    $jours = []; for ($i = 4; $i >= 0; $i--) { $jours[] = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); }
-    $appels = 0; $parCle = []; $lus = [];
-    foreach ($jours as $k => $j) {
-        $b = vpJour($sid, $j, true, $appels, 5);
-        $lus[] = $b !== null;
-        if ($b === null) { continue; }
-        foreach ((array) ($b['t'] ?? []) as $t) {
-            $c = (string) ($t[1] ?? '');
-            if ($c === '') { $c = '?'; }
-            if (!isset($parCle[$c])) { $parCle[$c] = array_fill(0, count($jours), null); }
-            $parCle[$c][$k] = round(($parCle[$c][$k] ?? 0.0) + (float) $t[2], 2);
-        }
-    }
-    $noms = vpNoms($sid, array_keys($parCle));
-    $comptes = [];
-    foreach ($parCle as $c => $mt) {
-        $faits = array_filter($mt, static fn ($x) => $x !== null);
-        $comptes[] = ['compte' => $c === '?' ? null : $c, 'societe' => $noms[$c] ?? null, 'jours' => $mt, 'n' => count($faits), 'total' => round(array_sum($faits), 2)];
-    }
-    usort($comptes, static fn ($a, $b) => $b['n'] <=> $a['n'] ?: $b['total'] <=> $a['total']);
-    return ['shop' => $sid, 'date' => $date, 'vue' => 'semaines', 'jours' => $jours, 'lus' => $lus, 'comptes' => $comptes];
 }

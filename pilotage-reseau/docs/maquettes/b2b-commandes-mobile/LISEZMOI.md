@@ -6,10 +6,10 @@
 `opDuelPro` (la jauge se touche), `opCmdLigne` (la ligne « Commandes du jour » sous la jauge du comptoir), feuilles
 `b2bRendre` et `cmdmRendre` (`#db-b2b`, `#db-cmdm`, styles `bm-*`). Au bureau, les mêmes feuilles s'ouvrent en modale
 depuis l'onglet Opérationnel. Captures de la version codée, API simulée (sociétés fictives) : `code-ops.png`,
-`code-b2b.png`, `code-b2b-semaines.png`, `code-commandes.png`, `code-bureau-b2b.png`.
+`code-b2b.png`, `code-commandes.png`, `code-bureau-b2b.png`.
 
-Écarts à la maquette, une fois codé : l'onglet « 4 derniers ven. » devient « 5 vendredis » (le jour et les quatre
-d'avant, un montant par jour) ; le rapprochement distingue en plus les commandes **payées un autre jour** (le panel les
+Écarts à la maquette, une fois codé : la feuille B2B garde deux onglets, le jour regardé et le même jour la semaine d'avant,
+sans montant (Sam, 06/11 au soir : « 5 vendredis », mis en ligne une heure, est retiré) ; le rapprochement distingue en plus les commandes **payées un autre jour** (le panel les
 encaisse souvent à la commande, avant le jour du retrait) et celles **à venir**.
 
 Demande du 06/11/2026 : « dans le dashboard day, je veux

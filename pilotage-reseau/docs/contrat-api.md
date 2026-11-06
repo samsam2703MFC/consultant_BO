@@ -636,8 +636,7 @@ d'un panier `total` : deux côtés lus, hors pro ; sinon les deux pro compris.
 
 ### `GET /exploitation/pro/detail` — la feuille « Ventes B2B » : les tickets pro d'un jour, avec les sociétés (06/11/2026)
 
-    ?shop=4&date=2026-10-30                 un jour
-    ?shop=4&date=2026-11-06&vue=semaines    ce jour et les quatre mêmes jours de semaine d'avant
+    ?shop=4&date=2026-11-06
 
 Demande de Sam (06/11/2026, maquette `docs/maquettes/b2b-commandes-mobile`, écran 2) : un appui sur la jauge B2B de
 l'onglet Opérationnel ouvre le détail, **avec le nom des sociétés**. La règle du 03/10/2026 (l'heure et le montant
@@ -654,8 +653,9 @@ des tickets du jour (un appel, qui grave aussi le pro du jour), puis chaque tick
       jour: { ca, tickets, caPro, ticketsPro, societes, part, panierPro, panierComptoir, aFacturer, factures, differes: { n, ca } },
       categories: [ { cat, ca } ],   ce que les sociétés achètent, du plus gros au plus petit
       sansTva: { tickets, ca }, lus, cache? }
-    { shop, date, vue: "semaines", jours: [ 5 dates ], lus: [ bool × 5 ],
-      comptes: [ { compte, societe | null, jours: [ montant | null × 5 ], n, total } ] }   les plus fidèles d'abord
+
+La feuille montre le jour regardé et le même jour la semaine d'avant, un onglet chacun (Sam, 06/11/2026 au soir : « 5
+vendredis » est retiré, `&vue=semaines` avec lui ; les onglets ne portent plus de montant).
 
 ### `/production/plan` — la gestion de production (module franchisé)
 

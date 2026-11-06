@@ -2451,21 +2451,12 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .bm-rap .tot{display:flex;justify-content:space-between;padding:10px 12px;background:var(--table-head);border-top:1px solid #cfc7bb;font:400 14px var(--font-display)}
 .bm-rap .eq{padding:10px 12px;font-size:11.5px;line-height:1.45;color:var(--muted-2);border-top:1px solid var(--line)}
 .bm-rap .eq b{font-weight:400;color:var(--ink)}
-.bm-defil{overflow-x:auto;padding:0 22px}
-.bm-tab{width:100%;border-collapse:collapse;font-size:12px}
-.bm-tab th{font:400 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);text-align:left;padding:6px 6px;white-space:nowrap}
-.bm-tab td{padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
-.bm-tab .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-.bm-tab td small{display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:2px}
-.bm-tab td.mu{color:var(--faint)}
-.bm-tab td b{font-weight:400}
-.bm-tab tr.tot td{font:400 13px var(--font-display);border-top:1px solid #cfc7bb;background:var(--table-head)}
 /* Au téléphone : une feuille qui monte du bas, presque plein écran. */
 @media (max-width:760px){
   #db-b2b .fi-modale,#db-cmdm .fi-modale{left:0;right:0;top:auto;bottom:0;transform:none;width:100%;max-width:100%;height:calc(100% - 40px);max-height:none;border-radius:18px 18px 0 0}
   .bm-poi{display:block}
   .bm-ong{padding:0 14px 12px}
-  .bm-in,.bm-defil{padding-left:14px;padding-right:14px}
+  .bm-in{padding-left:14px;padding-right:14px}
   .bm-k4{grid-template-columns:1fr 1fr}
   .bm-k4>div+div{border-left:none}
   .bm-k4>div:nth-child(even){border-left:1px solid var(--line)}
@@ -2474,5 +2465,4 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
   .bm-li .art{padding:0 14px 12px 64px}
   .bm-sec{padding:16px 14px 6px}
   .bm-bars .b{grid-template-columns:92px minmax(0,1fr) 62px}
-  .bm-tab{font-size:11px}.bm-tab td,.bm-tab th{padding-left:4px;padding-right:4px}
 }
