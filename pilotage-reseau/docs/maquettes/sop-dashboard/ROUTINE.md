@@ -30,10 +30,16 @@ Leur source est dans le dépôt consultant_BO, dossier pilotage-reseau/ :
 Lis d'abord pilotage-reseau/CLAUDE.md, docs/formation.md (§ Standards, Manuel du réseau, Articles) et
 docs/maquettes/sop-dashboard/PROPOSITION.md.
 
+0. Le dépôt. Si samsam2703MFC/consultant_BO n'est pas dans la session, ajoute-le (add_repo, accès push) et
+   clone-le. Les fichiers de la routine sont sur la branche claude/loving-turing-n6j40s : travaille sur elle
+   (git fetch origin claude/loving-turing-n6j40s, git checkout -B claude/loving-turing-n6j40s
+   origin/claude/loving-turing-n6j40s). Ne pousse sur aucune autre branche.
+
 1. Trouver le code en ligne. Récupère les branches distantes. La branche en ligne est celle dont le dernier
    commit s'intitule « Mise en ligne : … » et qui est la plus récente (git for-each-ref --sort=-committerdate
-   refs/remotes/origin). Travaille sur une branche de session partie de celle-là ; ne pousse jamais sur la
-   branche en ligne ni sur une autre.
+   refs/remotes/origin). Fusionne-la dans claude/loving-turing-n6j40s (git merge, sans réécrire l'historique)
+   pour lire le code actuel du dashboard ; un conflit hors data/formation/dashboard/ et docs/maquettes/sop-dashboard/
+   se résout en faveur de la branche en ligne ; un conflit que tu ne sais pas trancher : arrête-toi et rapporte-le.
 
 2. Ce qui a changé. Liste les commits qui touchent pilotage-reseau/public/dashboard/ (et la section
    « Dashboard magasin » du README) depuis ETAT.json › dashboardCommit. Aucun : écris « rien à encoder depuis
@@ -78,7 +84,7 @@ docs/maquettes/sop-dashboard/PROPOSITION.md.
 9. Consigner : ETAT.json (dashboardCommit = le dernier commit lu, sa date, capturesLe, encode true/false,
    note). photos.json est réécrit par l'encodeur, garde-le. Une ligne datée dans docs/formation.md,
    § « SOP du dashboard magasin », qui dit ce qui a changé et la version. Commits atomiques en français
-   (contenu ; captures ; état), push de la branche de session. Ne crée pas de pull request.
+   (contenu ; captures ; état), push de claude/loving-turing-n6j40s. Ne crée pas de pull request.
 
 10. Rapport final, court : les changements du dashboard pris en compte (commit, date), les parties et étapes
    modifiées, les captures refaites, encodé ou non (et la version), ce qui attend une décision (geste changé,
