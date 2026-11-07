@@ -69,7 +69,8 @@
     filtre: '', sel: new Set(),
     dup: null, plan: null, res: null, envoi: false,
     modale: null, msg: null,
-    vue: q.get('vue') === 'planning' ? 'planning' : 'cadre',   // onglet : Cadre des tâches · Planning des tâches
+    vue: q.get('vue') === 'planning' ? 'planning' : 'cadre',
+    rq: q.get('q') || '', rqMax: 150,   // la recherche partout (tâches et checklists), et combien de tâches on en montre   // onglet : Cadre des tâches · Planning des tâches
   };
 
   /* --- formats ------------------------------------------------------------ */
@@ -171,7 +172,12 @@
     const compte = a
       ? `Compte administrateur du panel, jusqu’à ${new Date(a.expire * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })} · <button class="tk-lien" data-a="deconnexion">revenir au compte du cockpit</button>`
       : `Compte du cockpit${S.cadre && S.cadre.api && !S.cadre.api.configure ? ' (non configuré)' : ''} · <button class="tk-lien" data-a="connexion">compte administrateur…</button>`;
-    const outils = `<span class="tk-compte">${compte}</span><span class="sp"></span>
+    // La recherche partout (07/11/2026, « je dois absolument avoir une search bar qui cherche partout, tâche et
+    // checklist ») : en tête, toujours là, « / » ou Ctrl+K pour y aller.
+    const recherche = S.wz ? '' : `<div class="tk-rech"><span class="tk-rech-ic" aria-hidden="true">⌕</span><input type="search" class="tk-in tk-rech-in" data-f="recherche" value="${esc(S.rq)}"
+      placeholder="Rechercher une tâche ou une checklist — nom, description, sous-catégorie, n°, jour, heure, SOP…" aria-label="Rechercher une tâche ou une checklist" autocomplete="off">
+      ${S.rq ? '<button class="tk-rech-x" data-a="rqEffacer" title="Effacer (Échap)" aria-label="Effacer la recherche">×</button>' : '<kbd class="tk-rech-kbd" title="Raccourci">/</kbd>'}</div>`;
+    const outils = `${recherche}<span class="tk-compte">${compte}</span><span class="sp"></span>
       <button class="tk-btn ghost" data-a="recharger" ${S.charge ? 'disabled' : ''} title="Relire les checklists et les tâches du panel">${S.charge ? 'Lecture…' : '↻ Relire'}</button>
       ${EMBED ? `<a class="tk-btn ghost" href="./${/^\d+$/.test(String(S.cl || '')) ? '?checklist=' + S.cl : ''}" target="_blank" rel="noopener" title="La même page, seule, dans un onglet">Ouvrir seul ↗</a>` : ''}
       ${S.wz ? '' : '<button class="tk-btn prim" data-a="wzOuvrir" data-mode="nouvelle">＋ Assistant : checklist et tâches</button>'}`;
@@ -199,6 +205,85 @@
       ${checklists().map(c => b(c.id, c.nom, [c.heure, c.poste].filter(Boolean).join(' · '), c.taches.length)).join('')}</div></div>`;
   }
 
+  /** La barre de sélection n'apparaît qu'avec une sélection : sans elle, un bouton grisé ressemblait à une erreur. */
+  function barreSelection() {
+    const n = S.sel.size;
+    return n
+      ? `<div class="tk-selbar"><b>${n} tâche${n > 1 ? 's' : ''} cochée${n > 1 ? 's' : ''}</b>
+          <button class="tk-btn prim" data-a="dupliquer">Dupliquer…</button>
+          <button class="tk-btn" data-a="wzOuvrir" data-mode="selection">Ouvrir dans l’assistant</button>
+          <button class="tk-lien" data-a="vider">tout décocher</button></div>`
+      : '';
+  }
+
+  /* --- la recherche partout ------------------------------------------------ */
+  const termesRq = () => sansAccent(S.rq).split(/\s+/).map(m => m.replace(/^#/, '')).filter(Boolean);
+  /** Un texte échappé, les mots cherchés surlignés (sans tenir compte des accents ni de la casse). */
+  function surligne(texte, termes) {
+    const t = String(texte == null ? '' : texte);
+    const base = [...t].map(ch => ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
+    if (!termes.length || base.some(b => b.length !== 1)) { return esc(t); }
+    const plat = base.join(''), on = new Array(base.length).fill(false);
+    termes.forEach(m => { let i = plat.indexOf(m); while (m && i >= 0) { for (let k = i; k < i + m.length; k++) { on[k] = true; } i = plat.indexOf(m, i + 1); } });
+    let out = '', dans = false;
+    [...t].forEach((ch, i) => { if (on[i] && !dans) { out += '<mark>'; dans = true; } if (!on[i] && dans) { out += '</mark>'; dans = false; } out += esc(ch); });
+    return out + (dans ? '</mark>' : '');
+  }
+  /** Les checklists de chaque tâche. */
+  function checklistsParTache() {
+    const m = {};
+    checklists().forEach(c => c.taches.forEach(l => { (m[l.taskId] = m[l.taskId] || []).push(c); }));
+    return m;
+  }
+  function resultatsRq() {
+    const termes = termesRq();
+    if (!termes.length) { return null; }
+    const ok = txt => termes.every(m => txt.includes(m));
+    const liens = (S.cadre && S.cadre.sopLiens) || {};
+    const cls = checklists().filter(c => ok(sansAccent([c.nom, c.description, c.poste, c.heure, c.id].join(' '))));
+    const parT = checklistsParTache();
+    const ts = taches().map(t => {
+      const nom = sansAccent(t.nom);
+      const tout = sansAccent([t.nom, t.description, t.section, t.categorie, t.sousCategorie, t.id, t.heure, t.jour, jourFr(t.jour) || '', quandAff(t),
+        t.photo ? 'photo' : '', t.obligatoire ? 'obligatoire' : '', t.actif === false ? 'en pause' : '',
+        ...(liens[t.id] || []).map(y => [y.code, y.titre, y.etape].join(' '))].join(' '));
+      return ok(tout) ? { t, rang: termes.every(m => nom.includes(m)) ? 0 : 1 } : null;
+    }).filter(Boolean).sort((a, b) => a.rang - b.rang || a.t.nom.localeCompare(b.t.nom, 'fr'));
+    return { termes, cls, ts, parT };
+  }
+  function ecranRecherche() {
+    const r = resultatsRq();
+    const n = r.ts.length + r.cls.length;
+    const tete = `<div class="tk-rq-tete"><span>${n ? `<b>${r.ts.length}</b> tâche${r.ts.length > 1 ? 's' : ''} et <b>${r.cls.length}</b> checklist${r.cls.length > 1 ? 's' : ''}` : 'Rien'} pour « ${esc(S.rq.trim())} »</span>
+      <button class="tk-lien" data-a="rqEffacer">effacer la recherche</button></div>`;
+    const cls = r.cls.length ? `<div class="tk-card"><div class="tk-ct"><span class="tk-k">Checklists</span><span class="mu" style="font-size:11.5px">${r.cls.length}</span></div>
+      <div class="tk-rq-cls">${r.cls.map(c => `<button class="tk-rq-cl" data-a="rqCl" data-id="${c.id}"><span class="tk-nom">${surligne(c.nom, r.termes)}</span>
+        <small>${esc([c.heure && 'à ' + c.heure, c.poste, c.taches.length + ' tâche' + (c.taches.length > 1 ? 's' : '')].filter(Boolean).join(' · '))}</small>${c.description ? `<small>${surligne(c.description, r.termes)}</small>` : ''}</button>`).join('')}</div></div>` : '';
+    const vus = r.ts.slice(0, S.rqMax);
+    const tous = vus.length && vus.every(x => S.sel.has(x.t.id));
+    const ts = r.ts.length ? `<div class="tk-card"><div class="tk-ct"><span class="tk-k">Tâches</span><span class="mu" style="font-size:11.5px">${r.ts.length}</span></div>${barreSelection()}
+      <div class="tk-defile"><table class="tk-tab tk-taches"><thead><tr>
+        <th class="c" style="width:34px"><input type="checkbox" data-a="rqTous" ${tous ? 'checked' : ''} aria-label="Tout cocher" title="Tout cocher"></th>
+        <th>Tâche</th><th style="width:240px">Checklist</th><th style="width:130px">Quand</th><th style="width:150px">Exigences</th><th style="width:118px"></th></tr></thead><tbody>
+      ${vus.map(({ t }) => {
+        const cl = r.parT[t.id] || [];
+        const desc = t.description && r.termes.some(m => sansAccent(t.description).includes(m)) && !r.termes.every(m => sansAccent(t.nom).includes(m)) ? `<small class="tk-rq-desc">${surligne(t.description, r.termes)}</small>` : '';
+        const exig = [t.obligatoire ? '<span class="tk-pas oui">obligatoire</span>' : '', t.photo ? '<span class="tk-pas photo">photo</span>' : '',
+          t.actif === false ? '<span class="tk-pas att">en pause</span>' : ''].filter(Boolean).join(' ') || '<span class="mu">—</span>';
+        return `<tr class="${S.sel.has(t.id) ? 'sel' : ''}${t.actif === false ? ' pause' : ''}">
+          <td class="c"><input type="checkbox" data-a="coche" data-id="${t.id}" ${S.sel.has(t.id) ? 'checked' : ''} aria-label="Cocher ${esc(t.nom)}"></td>
+          <td class="nom"><span class="tk-nom">${surligne(t.nom, r.termes)}</span>
+            <small>${surligne(t.sousCategorie || '', r.termes)}${t.sousCategorie ? ' · ' : ''}#${surligne(String(t.id), r.termes)}</small>${desc}</td>
+          <td>${cl.length ? cl.map(c => `<button class="tk-rq-chip" data-a="rqCl" data-id="${c.id}" title="Ouvrir la checklist">${esc(c.nom)}</button>`).join(' ') : '<span class="mu">dans aucune checklist</span>'}</td>
+          <td><span class="tk-quand">${esc(quandAff(t))}</span><small>${esc(t.heure || 'sans heure')}</small></td>
+          <td>${exig}</td>
+          <td class="act"><button class="tk-btn mini" data-a="modifier" data-id="${t.id}">Modifier</button><button class="tk-btn mini ghost" data-a="brut" data-id="${t.id}">Détails</button></td></tr>`;
+      }).join('')}</tbody></table></div>
+      ${r.ts.length > vus.length ? `<div class="tk-astuce"><button class="tk-lien" data-a="rqPlus">Afficher les ${r.ts.length - vus.length} autres</button></div>` : ''}</div>` : '';
+    const vide = n ? '' : `<div class="tk-card"><div class="tk-astuce" style="border-top:none">Aucune tâche ni checklist ne contient tous ces mots. Essayez un seul mot, une sous-catégorie, un n° de tâche ou un code (AC-01, SOP-WKL-001).</div></div>`;
+    return `<div class="tk-rq">${tete}${cls}${ts}${vide}</div>`;
+  }
+
   /** Quand la tâche revient, en français : « Tous les jours », « Chaque samedi ». */
   function quandAff(t) {
     const f = String(t.frequence || '').toUpperCase(), j = t.jour || '';
@@ -214,16 +299,9 @@
     const titre = c ? c.nom : (S.cl === 'hors' ? 'Dans aucune checklist' : 'Toutes les tâches');
     const sous = c ? [c.heure && 'à ' + c.heure, c.poste, c.description].filter(Boolean).join(' · ') : '';
     const n = S.sel.size;
-    // La barre de sélection n'apparaît qu'avec une sélection : sans elle, un bouton grisé ressemblait à une erreur.
-    const selection = n
-      ? `<div class="tk-selbar"><b>${n} tâche${n > 1 ? 's' : ''} cochée${n > 1 ? 's' : ''}</b>
-          <button class="tk-btn prim" data-a="dupliquer">Dupliquer…</button>
-          <button class="tk-btn" data-a="wzOuvrir" data-mode="selection">Ouvrir dans l’assistant</button>
-          <button class="tk-lien" data-a="vider">tout décocher</button></div>`
-      : '';
+    const selection = barreSelection();
     return `<div class="tk-card"><div class="tk-ct"><div class="tk-cl-titre"><div class="tk-t15">${esc(titre)}</div>${sous ? `<div class="tk-sous">${esc(sous)}</div>` : ''}</div>
       <span class="sp"></span>
-      <input class="tk-in" data-f="filtre" placeholder="Filtrer…" value="${esc(S.filtre)}" style="width:170px">
       ${c ? `<button class="tk-btn" data-a="clModifier" data-id="${c.id}">✎ Modifier</button><button class="tk-btn" data-a="wzOuvrir" data-mode="existante">＋ Ajouter des tâches</button>` : ''}</div>
       ${selection}
       <div class="tk-defile"><table class="tk-tab tk-taches"><thead><tr>
@@ -842,7 +920,8 @@
     const garde = k ? { sel: `[data-${k}="${actif.dataset[k]}"]` + (actif.dataset.i != null ? `[data-i="${actif.dataset.i}"]` : ''), s: actif.selectionStart } : null;
     if (!S.cadre && S.charge) { $.innerHTML = enTete() + '<div class="tk-attente">Lecture du cadre des tâches du panel…</div>' + modale(); return; }
     const ong = S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'cadre' ? 'on' : ''}" data-a="vue" data-v="cadre">Cadre des tâches</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button></div>`;
-    $.innerHTML = enTete() + ong + erreurs() + (S.wz ? assistant() : S.vue === 'planning' ? planning() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
+    const rq = !S.wz && termesRq().length && S.cadre;
+    $.innerHTML = enTete() + (rq ? '' : ong) + erreurs() + (S.wz ? assistant() : rq ? `${S.dup ? volet() : ''}${ecranRecherche()}` : S.vue === 'planning' ? planning() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
     if (garde) {
       const el = $.querySelector(garde.sel);
       if (el) { el.focus(); try { if (garde.s != null && el.setSelectionRange) { el.setSelectionRange(garde.s, garde.s); } } catch (e) { /* champ sans curseur */ } }
@@ -1041,6 +1120,11 @@
       case 'creesOuvrir': S.creesOuvert = !S.creesOuvert; S.creesMax = 40; return rendre();
       case 'creesTout': S.creesTout = !S.creesTout; S.creesMax = 40; return rendre();
       case 'creesPlus': S.creesMax = (S.creesMax || 40) + 40; return rendre();
+      case 'rqEffacer': S.rq = ''; rendre(); { const r = $.querySelector('[data-f="recherche"]'); if (r) { r.focus(); } } return;
+      case 'rqPlus': S.rqMax += 300; return rendre();
+      case 'rqTous': { const r = resultatsRq(); const L = r ? r.ts.slice(0, S.rqMax) : []; if (el.checked) { L.forEach(x => S.sel.add(x.t.id)); } else { L.forEach(x => S.sel.delete(x.t.id)); } return rendre(); }
+      // Une checklist trouvée : on l'ouvre, la recherche s'efface.
+      case 'rqCl': S.rq = ''; S.vue = 'cadre'; S.cl = id; S.filtre = ''; adresse(id); rendre(); voirHaut(); return;
       case 'supprimerCl': {
         const c = ((S.cadre && S.cadre.checklistsCreees) || []).find(x => x.id === +id);
         if (!confirm('Supprimer du panel la checklist « ' + (c ? c.nom : '#' + id) + ' » (#' + id + ') ? Ses tâches restent dans le panel.')) { return; }
@@ -1063,6 +1147,7 @@
   $.addEventListener('input', ev => {
     const el = ev.target;
     if (el.dataset.f === 'filtre') { S.filtre = el.value; return rendre(); }
+    if (el.dataset.f === 'recherche') { S.rq = el.value; S.rqMax = 150; return rendre(); }
     if (el.dataset.pf && S.modale && S.modale.type === 'planning') { S.modale.f = el.value; return rendre(); }
     if (S.wz) {
       const w = S.wz;
@@ -1103,6 +1188,12 @@
   });
   // Sur le document : après un clic dans une fenêtre, le focus retombe sur <body>, hors de #tk.
   document.addEventListener('keydown', ev => {
+    const champ = ev.target && (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA' || ev.target.tagName === 'SELECT' || ev.target.isContentEditable);
+    if (!S.modale && !S.wz && ((ev.key === '/' && !champ) || ((ev.ctrlKey || ev.metaKey) && (ev.key === 'k' || ev.key === 'K')))) {
+      const r = $.querySelector('[data-f="recherche"]');
+      if (r) { ev.preventDefault(); r.focus(); r.select(); return; }
+    }
+    if (ev.key === 'Escape' && !S.modale && ev.target.dataset && ev.target.dataset.f === 'recherche' && S.rq) { S.rq = ''; rendre(); const r = $.querySelector('[data-f="recherche"]'); if (r) { r.focus(); } return; }
     if (ev.key === 'Escape' && S.modale) { S.modale = null; rendre(); }
     if (ev.key === 'Enter' && ev.target.dataset && ev.target.dataset.m === 'password') { action('seConnecter', ev.target); }
   });
