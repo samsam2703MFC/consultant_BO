@@ -1323,3 +1323,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-07T13:01:29Z Concurrence Top 10 : lots comptés à la pièce
 2026-11-07T13:57:33Z Résultat réseau : vue téléphone
 2026-11-07T17:57:21Z Cadre des tâches : page /task, assistant checklist et tâches
+2026-11-07T18:11:57Z Tablette : retrait de « Comment ça marche »
