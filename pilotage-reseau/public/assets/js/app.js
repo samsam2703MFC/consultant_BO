@@ -353,6 +353,8 @@ class App {
     // (ADRESSES_ANCIENNES) et la barre se remet aussitôt sur la nouvelle.
     return {
       resultatJour: 'resultat',
+      // Le cadre des tâches du panel (07/11/2026) : la page task/ dans l'écran, « ?checklist=43 ».
+      cadreTaches: 'checklists',
       magasins: 'magasins', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', budget: 'budget', encodage: 'budget/encodage',
       budgetparam: 'budget/parametres', catalogue: 'catalogue', assortiment: 'assortiment',
@@ -498,6 +500,7 @@ class App {
     const base = '#/' + (App.ADRESSES[id] || id);
     if (id === 'primesApp' && this.state.prSection === 'franchise' && this.state.prShop) { return base + '?shop=' + encodeURIComponent(this.state.prShop); }
     if (id === 'apiModule' && this.state.apiSrc) { return base + '?source=' + encodeURIComponent(this.state.apiSrc); }
+    if (id === 'cadreTaches' && this.state.ctChecklist) { return base + '?checklist=' + encodeURIComponent(this.state.ctChecklist); }
     // L'édition des promotions porte son magasin (26/10/2026) : #/promotions/edition?shop=4.
     if (id === 'promoEdition' && this.state.peShop) { return base + '?shop=' + encodeURIComponent(this.state.peShop); }
     return base;
@@ -514,6 +517,11 @@ class App {
       return Object.assign(shop ? { peShop: shop, peSrcShop: shop } : {}, o ? { peOuvrir: o } : {});
     }
     if (id === 'apiModule') { return { apiSrc: (new URLSearchParams(String(location.hash || '').split('?')[1] || '').get('source') || '').trim() }; }
+    if (id === 'cadreTaches') {
+      // « ?checklist=43 » ouvre la checklist ; « ?sop=ouv-mag » (Formation › la fiche d'une SOP) ouvre l'assistant sur ce standard.
+      const a = new URLSearchParams(String(location.hash || '').split('?')[1] || ''), cl = (a.get('checklist') || '').trim(), sop = (a.get('sop') || '').trim();
+      return Object.assign(/^\d{1,10}$/.test(cl) ? { ctChecklist: cl } : {}, /^[\w-]{1,32}$/.test(sop) ? { ctSop: sop } : {});
+    }
     if (id !== 'primesApp') { return {}; }
     const shop = App.shopDeAdresse();
     return shop ? { prSection: 'franchise', prShop: shop } : { prSection: 'marque' };
@@ -1127,6 +1135,7 @@ class App {
       pointages: ['Pointages', 'Les arrivées et les départs que les vendeuses pointent dans l’app, en scannant le QR code de la borne du magasin, face à leur planning. Les départs oubliés, déclarés par la vendeuse, se valident ici ; la borne s’ouvre sur la tablette du magasin avec son lien.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       fidelite: ['Fidélité', 'Les points, les cartes à tampons, les bons et les cadeaux du client : ce qui les déclenche, quand les points comptent double, ce que le programme coûte. Et ce que les clients en font : qui revient, à quel rythme, pour quel type d’achat.'],
+      cadreTaches: ['Cadre des tâches', 'Les checklists et les tâches que les magasins font chaque jour, telles que le panel les définit : les lire, en créer avec l’assistant, en dupliquer avec d’autres jours, une autre heure, obligatoires ou avec photo.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
@@ -1335,7 +1344,10 @@ class App {
         ['resultatJour', 'Résultat', 0],
         // La page la plus regardée du réseau n'avait pas d'entrée : on
         // l'atteignait par son adresse. Elle vit hors du cockpit, d'où l'onglet.
-        ['ext:dashboard/', 'Dashboard magasin ↗', 0]]],
+        ['ext:dashboard/', 'Dashboard magasin ↗', 0],
+        // Le cadre des tâches du panel (07/11/2026, demande de Sam : « intégrer dans le rail du cockpit,
+        // Pilotage ») : la page task/ dans l'écran du cockpit, en mode intégré.
+        ['cadreTaches', 'Cadre des tâches', 0]]],
       // Tout ce qui évalue et suit le franchisé, réuni (demande du 09/10/2026),
       // en deux volets : ce que les données disent chaque jour, sans aller sur
       // place ; ce que le consultant constate sur place. Le scoring du
@@ -1362,9 +1374,6 @@ class App {
           ['budgetparam', 'Paramètres du budget', 0]] },
         { sub: 'Suivi journalier', children: [
           ['suivi', 'Tâches et contrôles photo', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
-          // Le cadre des tâches du panel (demande du 07/11/2026) : lire les checklists, créer une
-          // checklist et ses tâches (assistant), dupliquer des tâches — une application à part (task/).
-          ['ext:task/', 'Cadre des tâches ↗', 0],
           ['controlesQualite', 'Contrôles qualité du mois', 0],
           ['mktObjectifs', 'Objectifs', 0],
           ['reputation', 'Note Google et avis', 0],
@@ -1499,12 +1508,12 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
-      mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD' }[S.screen];
+      mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (key) { common[key] = true; }
@@ -1914,6 +1923,7 @@ class App {
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
     if (common.isTablette) { this.tbCharge(false); this.tbSonde(false); this.valsTablette(common); }
+    if (common.isCadreT) { this.valsCadreTaches(common); } else { this._ctSrc = null; }
     if (common.isMktObj) this.valsMktObj(common);
     if (common.isScoringTri) this.valsScoring(common);
     // Le client mystère s'encode ici, dans Paramètres (16/10/2026) : le formulaire de l'ancien écran Scoring.
@@ -9217,6 +9227,45 @@ class App {
     });
   }
   /** L'écran Tablette vendeuses : le lien, l'état des données, l'aperçu. */
+  /**
+   * Le cadre des tâches du panel (07/11/2026) : la page task/ en mode intégré (?embed=1). L'adresse du
+   * cadre est fixée à l'arrivée sur l'écran et ne bouge plus tant qu'on y reste : un rendu du cockpit
+   * qui changerait la source rechargerait la page, et l'assistant perdrait sa saisie. La page dit au
+   * cockpit la checklist ouverte (postMessage) : l'ancre la retient, sans nouveau rendu.
+   */
+  valsCadreTaches(common){
+    const cl = this.state.ctChecklist;
+    if (!this._ctSrc) {
+      const sop = this.state.ctSop;
+      this._ctSrc = 'task/?embed=1' + (cl ? '&checklist=' + encodeURIComponent(cl) : '') + (sop ? '&sop=' + encodeURIComponent(sop) : '');
+      // Le standard ne sert qu'à l'arrivée : revenir sur l'écran ne rouvre pas l'assistant.
+      this.state.ctSop = null;
+    }
+    if (!this._ctEcoute) {
+      this._ctEcoute = true;
+      window.addEventListener('message', ev => {
+        if (ev.origin !== location.origin || !ev.data || this.state.screen !== 'cadreTaches') { return; }
+        const cadre = document.querySelector('iframe[data-ct]');
+        // La page prend la hauteur de son contenu : une seule barre de défilement, celle du cockpit.
+        if (typeof ev.data.tkHauteur === 'number' && cadre) {
+          this._ctHaut = Math.max(480, Math.min(20000, Math.round(ev.data.tkHauteur)));
+          cadre.style.height = this._ctHaut + 'px';
+          return;
+        }
+        // « Remonter » (une étape de l'assistant, la duplication) : le cockpit fait défiler jusqu'au haut du cadre.
+        if (ev.data.tkVoir != null && cadre) {
+          if (cadre.getBoundingClientRect().top < 0) { cadre.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+          return;
+        }
+        if (ev.data.tkChecklist == null) { return; }
+        const id = String(ev.data.tkChecklist);
+        if (!/^(\d{1,10}|tout|hors)$/.test(id)) { return; }
+        this.state.ctChecklist = /^\d+$/.test(id) ? id : '';
+        try { history.replaceState(null, '', this.adresseDe('cadreTaches')); } catch (e) { /* l'ancre reste l'ancienne */ }
+      });
+    }
+    common.ct = { src: this._ctSrc, haut: this._ctHaut || 900 };
+  }
   valsTablette(common){
     const S = this.state;
     const ms = this.open();

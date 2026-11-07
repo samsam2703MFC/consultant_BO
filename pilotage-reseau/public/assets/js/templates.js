@@ -50,7 +50,7 @@ const ICO = {
 };
 /* Écran → notion du catalogue. */
 const ICO_ECRAN = {
-  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board',
+  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board', cadreTaches: 'controle',
   ficheFranchise: 'crm', 'Suivi des franchisés': 'adresse', 'Budget': 'fonds', 'Suivi journalier': 'controle',
   ventes: 'analyse', invendus: 'form',
   verifFlux: 'liens', verifFuites: 'recherche', inventaires: 'form', verifMatieres: 'modeles', verifCa: 'fonds',
@@ -198,6 +198,7 @@ export function render(c, x){
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
+      ${c.isCadreT ? tplCadreTaches(c, x) : ''}
       ${c.isFid ? tplFidelite(c, x) : ''}
       ${c.isMD ? tplMetaDonnee(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
@@ -7867,6 +7868,15 @@ function tplManque(c, x){
  * L'aperçu vient en dernier, hors de la grille du haut : la fusion du rendu
  * compare les nœuds par position, et ce qui bouge au-dessus (la progression des
  * photos, une relecture) ne doit pas recréer l'iframe — elle se rechargerait. */
+/* --- Cadre des tâches (07/11/2026) : la page task/ intégrée --------------------
+ * Un seul nœud, toujours au même endroit : la fusion du rendu le garde d'un rendu à
+ * l'autre, et la page (son assistant, sa saisie) ne se recharge pas. */
+function tplCadreTaches(c, x){
+  const { esc } = x;
+  // La hauteur suit le contenu de la page (postMessage tkHauteur) : pas de barre de défilement dans le cadre.
+  // « Ouvrir seul ↗ » vit dans la page elle-même, à côté de « Relire ».
+  return `<div data-screen="cadreTaches"><iframe data-ct src="${esc(c.ct.src)}" title="Cadre des tâches" scrolling="no" style="width:100%;height:${c.ct.haut}px;border:none;background:transparent;display:block"></iframe></div>`;
+}
 /* --- MétaDonnée : les quatre écrans du sous-menu ------------------------------ */
 /* Le module (metadonnee.js) tient son propre DOM : le gabarit ne pose que
    l'ancre, qu'app.js lui rend après chaque rendu. */

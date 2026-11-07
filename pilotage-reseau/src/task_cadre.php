@@ -54,7 +54,10 @@ function tkRoute(string $method, string $path): array
     }
     if ($method === 'GET' && $path === '/task/cadre') { return tkCadre(); }
     if ($method === 'GET' && $path === '/task/structure') { return tkStructure(); }
+    if ($method === 'GET' && preg_match('#^/task/sop/([\w-]{1,32})/proposition$#', $path, $m)) { return tkSopProposition($m[1]); }
+    if ($method === 'GET' && preg_match('#^/task/sop/([\w-]{1,32})/controles$#', $path, $m)) { return tkSopControles($m[1]); }
     if ($method === 'GET' && preg_match('#^/task/taches/(\d{1,10})$#', $path, $m)) { return tkTache((int) $m[1]); }
+    if ($method === 'POST' && $path === '/task/qui') { return tkQui(body()); }
     if ($method === 'POST' && $path === '/task/apercu') { return tkPlan(body(), false); }
     if ($method === 'POST' && $path === '/task/creer') { return tkPlan(body(), true); }
     if ($method === 'POST' && $path === '/task/assistant/apercu') { return tkConstruire(body(), false, false); }
@@ -284,8 +287,18 @@ function tkCadre(): array
         }
     } catch (PDOException $e) { /* table impossible : les listes restent vides */ }
 
+    // Les tâches reliées à une étape de standard (ceo_sop_tache) : l'écran les étiquette « SOP-… · étape … ».
+    $sopLiens = [];
+    try {
+        ensureSopTache();
+        foreach (Db::rows('SELECT l.task_id, l.sop_id, l.etape, s.code, s.titre_fr FROM ceo_sop_tache l LEFT JOIN ceo_sop s ON s.id = l.sop_id') as $l) {
+            $sopLiens[(string) $l['task_id']][] = ['sopId' => (string) $l['sop_id'], 'code' => (string) ($l['code'] ?? ''), 'titre' => (string) ($l['titre_fr'] ?? ''), 'etape' => $l['etape']];
+        }
+    } catch (PDOException $e) { /* sans le module Formation : pas d'étiquette */ }
+
     return [
         'api' => tkCompte(),
+        'sopLiens' => $sopLiens ?: (object) [],
         'checklists' => $checklists,
         'taches' => array_values($taches),
         'horsChecklist' => array_values(array_map(fn ($t) => $t['id'], array_filter($taches, fn ($t) => !isset($dans[$t['id']])))),
@@ -370,6 +383,44 @@ function tkTache(int $id): array
             'brut' => $ctrl['corps'], 'erreur' => $ctrl['erreur']],
         'niveaux' => tkNiveauxDe([$id])[$id] ?? [],
     ];
+}
+
+/**
+ * POST /task/qui {ids: [id de tâche]} — pour chaque tâche (80 au plus), qui la fait (les niveaux de
+ * poste qui la portent, nommés par /position-levels) et qui la contrôle (GET /tasks/{id}/controllers :
+ * « self » = la personne qui la fait, « position » = un poste). Lecture seule : le planning l'affiche.
+ *
+ * @return array{qui: array<string, array{fait: list<array{id:int, nom:string, poste:string}>, controle: list<array{type:string, nom:string}>, erreur: ?string}>}
+ */
+function tkQui(array $b): array
+{
+    $ids = array_slice(array_values(array_unique(array_filter(array_map('intval', (array) ($b['ids'] ?? [])), fn ($i) => $i > 0))), 0, 80);
+    if ($ids === []) { return ['qui' => (object) []]; }
+    [$nivs] = tkLireListe('/position-levels');
+    $noms = [];
+    foreach ((array) $nivs as $l) { $n = tkNiveauNorm($l); if ($n['id'] > 0) { $noms[$n['id']] = $n; } }
+    $parTache = tkScanNiveaux($ids)['parTache'];
+    $req = [];
+    foreach ($ids as $id) { $req[$id] = '/tasks/' . $id . '/controllers'; }
+    $ctrls = PanelApi::getParallele($req);
+    $out = [];
+    foreach ($ids as $id) {
+        $fait = [];
+        foreach ($parTache[$id] ?? [] as $lv) {
+            $n = $noms[$lv['niveau']] ?? ['id' => $lv['niveau'], 'nom' => 'Niveau #' . $lv['niveau'], 'poste' => ''];
+            $fait[$n['id']] = ['id' => $n['id'], 'nom' => $n['nom'], 'poste' => $n['poste']];
+        }
+        $rep = $ctrls[$id] ?? null;
+        $controle = [];
+        foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $c) {
+            $type = tkTxt($c['controller_type'] ?? $c['type'] ?? '');
+            $nom = $type === 'self' ? 'La personne qui la fait' : tkTxt($c['position_name'] ?? $c['name'] ?? ('#' . ($c['position_id'] ?? '?')));
+            $controle[] = ['type' => $type, 'nom' => $nom];
+        }
+        $out[(string) $id] = ['fait' => array_values($fait), 'controle' => $controle,
+            'erreur' => $rep === null ? 'contrôleurs illisibles' : null];
+    }
+    return ['qui' => $out];
 }
 
 /* ─────────── structure (pour l'assistant) ─────────── */
@@ -539,6 +590,9 @@ function tkLigne(array $l, int $n): array
         'priorite' => isset($l['priorite']) && is_numeric($l['priorite']) ? (int) $l['priorite'] : null,
         'garderNiveaux' => !array_key_exists('garderNiveaux', $l) || !empty($l['garderNiveaux']),
         'garderControleurs' => !array_key_exists('garderControleurs', $l) || !empty($l['garderControleurs']),
+        // L'étape de SOP que la tâche contrôle (assistant « depuis un standard ») : gardée dans ceo_sop_tache.
+        'sop' => is_array($l['sop'] ?? null) && preg_match('/^[\w-]{1,32}$/', (string) ($l['sop']['id'] ?? '')) === 1
+            ? ['id' => (string) $l['sop']['id'], 'etape' => mb_substr(trim((string) ($l['sop']['etape'] ?? '')), 0, 20) ?: null] : null,
     ], null];
 }
 
@@ -678,7 +732,7 @@ function tkConstruire(array $spec, bool $executer, bool $seulementPremiere, ?arr
             $jourAff = tkTxt($corps['day_of_week'] ?? ($jour ?? ''));
             $heureAff = substr(tkTxt($corps['execution_time'] ?? ''), 0, 5);
             $cle = mb_strtolower($l['nom']) . '|' . $jourAff . '|' . $heureAff;
-            $item = ['modeleId' => $l['modeleId'] ?: null, 'modeleNom' => $m !== null ? tkNormTache($m)['nom'] : null,
+            $item = ['sop' => $l['sop'] ?? null, 'modeleId' => $l['modeleId'] ?: null, 'modeleNom' => $m !== null ? tkNormTache($m)['nom'] : null,
                 'nom' => $l['nom'], 'jour' => $jourAff, 'heure' => $heureAff, 'existe' => null];
             if (isset($vus[$cle])) {
                 $items[] = $item + ['mode' => 'doublon', 'operations' => []];
@@ -742,7 +796,8 @@ function tkConstruire(array $spec, bool $executer, bool $seulementPremiere, ?arr
         $avert[] = 'Les tâches ne seront dans aucune checklist.';
     }
 
-    $out = ['api' => tkCompte(), 'checklist' => $clOut, 'routeNiveaux' => $route, 'items' => $items,
+    $out = ['api' => tkCompte(), 'sopId' => is_string($spec['sopId'] ?? null) && preg_match('/^[\w-]{1,32}$/', $spec['sopId']) === 1 ? $spec['sopId'] : null,
+        'checklist' => $clOut, 'routeNiveaux' => $route, 'items' => $items,
         'aCreer' => $aCreer, 'aAjouter' => $aAjouter, 'avertissements' => array_values(array_unique($avert))];
     if (!$executer) { return $out; }
     return tkExecuter($out, $parId, $seulementPremiere);
@@ -823,6 +878,8 @@ function tkExecuter(array $plan, array $avant, bool $seulementPremiere): array
             $ids['{checklist}'] = $cid;
             $plan['checklist']['id'] = $cid;
             tkTracer('checklist', $cid, (string) $plan['checklist']['nom'], '', '', null, null);
+            // Une checklist née d'un standard : son code entre dans le classement de la SOP (Formation › la fiche).
+            if (!empty($plan['sopId'])) { tkSopAjouterCode((string) $plan['sopId'], tkCodeDe((string) $plan['checklist']['nom'])); }
             journalAdd('CEO', 'Cadre des tâches', null, 'Checklist « ' . $plan['checklist']['nom'] . ' » créée au panel (#' . $cid . ')');
         }
     }
@@ -833,7 +890,11 @@ function tkExecuter(array $plan, array $avant, bool $seulementPremiere): array
     $faites = 0;
     foreach ($plan['items'] as $n => $item) {
         if ($arret !== null) { $plan['items'][$n]['statut'] = in_array($item['mode'], ['rien', 'doublon'], true) ? ($item['mode'] === 'rien' ? 'existe déjà' : 'doublon ignoré') : 'non tenté'; continue; }
-        if ($item['mode'] === 'rien') { $plan['items'][$n]['statut'] = 'existe déjà'; continue; }
+        if ($item['mode'] === 'rien') {
+            $plan['items'][$n]['statut'] = 'existe déjà';
+            if (!empty($item['sop']) && $item['existe']) { tkLierSop((int) $item['existe'], $item['sop']['id'], $item['sop']['etape']); }
+            continue;
+        }
         if ($item['mode'] === 'doublon') { $plan['items'][$n]['statut'] = 'doublon ignoré'; continue; }
         if ($seulementPremiere && $faites >= 1) { $plan['items'][$n]['statut'] = 'non tenté (essai)'; continue; }
         $faites++;
@@ -842,7 +903,10 @@ function tkExecuter(array $plan, array $avant, bool $seulementPremiere): array
             $op = tkJouer($item['operations'][0], $ids);
             $plan['items'][$n]['operations'] = [$op];
             $plan['items'][$n]['statut'] = $op['ok'] ? 'ajoutée à la checklist' : 'ajout refusé';
-            if ($op['ok']) { $plan['ajoutees']++; }
+            if ($op['ok']) {
+                $plan['ajoutees']++;
+                if (!empty($item['sop']) && $item['existe']) { tkLierSop((int) $item['existe'], $item['sop']['id'], $item['sop']['etape']); }
+            }
             continue;
         }
 
@@ -880,12 +944,321 @@ function tkExecuter(array $plan, array $avant, bool $seulementPremiere): array
         $plan['items'][$n]['statut'] = $ratees === 0 ? 'créée' : 'créée, ' . $ratees . ' étape(s) refusée(s)';
         $plan['creees']++;
         tkTracer('tache', $id, $item['nom'], $item['jour'], $item['heure'], $cidFinal !== null ? (int) $cidFinal : null, $item['modeleId']);
+        if (!empty($item['sop'])) { tkLierSop($id, $item['sop']['id'], $item['sop']['etape']); }
         journalAdd('CEO', 'Cadre des tâches', null, 'Tâche « ' . $item['nom'] . ' » créée au panel (#' . $id . ')'
             . ($item['jour'] !== '' ? ', jour ' . $item['jour'] : '') . ($item['heure'] !== '' ? ', ' . $item['heure'] : '')
             . ($item['modeleId'] ? ', copie de #' . $item['modeleId'] : '') . ($ratees ? ' — ' . $ratees . ' étape(s) refusée(s)' : ''));
     }
     $plan['arret'] = $arret;
     return $plan;
+}
+
+/* ─────────── les standards (SOP) : checklist depuis un standard, contrôles d'un standard ─────────── */
+
+/*
+ * Le lien entre une tâche du panel et l'étape de SOP qu'elle contrôle (07/11/2026, propositions A et D).
+ * Le panel n'a aucun champ pour le porter : il vit ici, dans ceo_sop_tache. Une checklist se relie à un
+ * standard par son CODE en tête de nom (« CP-07 — Audit visuel intérieur ») : les codes du classement de
+ * la SOP (Manuel du réseau, référentiel v25) et le code de la SOP elle-même.
+ */
+function ensureSopTache(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_sop_tache (
+        task_id INT NOT NULL,
+        sop_id VARCHAR(32) NOT NULL,
+        etape VARCHAR(20) NULL,
+        cree_le DATETIME NOT NULL,
+        PRIMARY KEY (task_id, sop_id),
+        KEY k_sop (sop_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+function tkLierSop(int $taskId, string $sopId, ?string $etape): void
+{
+    if ($taskId <= 0) { return; }
+    try {
+        ensureSopTache();
+        Db::exec('INSERT INTO ceo_sop_tache (task_id, sop_id, etape, cree_le) VALUES (?,?,?,?)
+                  ON DUPLICATE KEY UPDATE etape = COALESCE(VALUES(etape), etape)', [$taskId, $sopId, $etape, date('Y-m-d H:i:s')]);
+    } catch (PDOException $e) { /* le panel a la tâche : le lien n'est qu'un confort */ }
+}
+
+/** Le code en tête d'un nom de checklist : « CP-07 — Audit visuel intérieur » → CP-07, « SOP-WKL-001 — … » → SOP-WKL-001. */
+function tkCodeDe(string $nom): ?string
+{
+    // « CP-07 », « CQ-F1 », mais aussi les codes des SOP en trois parties : « SOP-WKL-001 ».
+    return preg_match('/^\s*([A-Z]{2,5}(?:-[A-Z0-9]{1,6}){1,3})(?![\w-])/u', $nom, $m) === 1 ? $m[1] : null;
+}
+
+/** Un texte {fr, nl} en français (repli sur le néerlandais), ou un texte simple. */
+function tkTxtL(mixed $v): string
+{
+    if (is_array($v)) { $f = trim((string) ($v['fr'] ?? '')); return $f !== '' ? $f : trim((string) ($v['nl'] ?? '')); }
+    return trim((string) $v);
+}
+
+/** La première heure citée dans un texte (« Phase 1 … (06:00 – 07:00) » → 06:00). */
+function tkPremiereHeure(string $s): ?string
+{
+    return preg_match('/\b([01]?\d|2[0-3])[:hH]([0-5]\d)\b/', $s, $m) === 1 ? sprintf('%02d:%02d', (int) $m[1], (int) $m[2]) : null;
+}
+
+/** Un nom de tâche tiré d'un texte : sa première phrase, coupée net. */
+function tkResume(string $t, int $max = 90): string
+{
+    $t = trim(preg_replace('/\s+/u', ' ', $t) ?? $t);
+    if (preg_match('/^(.{12,}?[.!?:;])\s/u', $t . ' ', $m) === 1 && mb_strlen($m[1]) <= $max) { return rtrim($m[1], '.:;'); }
+    return mb_strlen($t) <= $max ? $t : rtrim(mb_substr($t, 0, $max - 1)) . '…';
+}
+
+/** Une SOP du module Formation : sa ligne, son contenu en vigueur, son classement. Null si elle n'existe pas. */
+function tkSop(string $id): ?array
+{
+    if (!function_exists('foSopRow') || !function_exists('foContenuVersion')) { return null; }
+    foreach (['ensureSop', 'ensureReferentiel'] as $f) { if (function_exists($f)) { try { $f(); } catch (Throwable $e) { /* le module répond sans */ } } }
+    $r = foSopRow($id);
+    if ($r === null) { return null; }
+    $cl = function_exists('rfClassementDe') ? rfClassementDe($r) : ['checklists' => []];
+    $codes = array_values(array_unique(array_filter(array_merge((array) ($cl['checklists'] ?? []), [(string) ($r['code'] ?? '')]))));
+    return ['row' => $r, 'contenu' => foContenuVersion((string) $r['id'], (string) $r['version']), 'classement' => $cl, 'codes' => $codes];
+}
+
+function tkSopResume(array $S): array
+{
+    $r = $S['row'];
+    return ['id' => (string) $r['id'], 'code' => (string) ($r['code'] ?? ''), 'titre' => (string) $r['titre_fr'], 'poste' => (string) $r['poste'],
+        'moment' => (string) ($r['moment'] ?? ''), 'objectif' => (string) ($r['objectif_fr'] ?? ''), 'version' => (string) $r['version'],
+        'codesChecklists' => $S['codes']];
+}
+
+/** Ajoute un code de checklist au classement d'une SOP (sans doublon, sans effacer). */
+function tkSopAjouterCode(string $sopId, ?string $code): void
+{
+    if ($code === null) { return; }
+    try {
+        $r = Db::row('SELECT checklists, code FROM ceo_sop WHERE id = ?', [$sopId]);
+        if ($r === null || (string) ($r['code'] ?? '') === $code) { return; }
+        $l = function_exists('rfJsonListe') ? rfJsonListe($r['checklists'] ?? null) : [];
+        if (in_array($code, $l, true)) { return; }
+        $l[] = $code;
+        Db::exec('UPDATE ceo_sop SET checklists = ?, maj_le = ?, maj_par = ? WHERE id = ?',
+            [json_encode($l, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), 'Cadre des tâches', $sopId]);
+    } catch (PDOException $e) { /* colonne absente : le classement reste celui d'avant */ }
+}
+
+/**
+ * GET /task/sop/{id}/proposition — proposition A : la checklist d'un standard.
+ *
+ * Une tâche de contrôle par étape CRITIQUE de la SOP (repli : ses points critiques) : le titre de l'étape
+ * pour nom, son texte et la référence « Standard …, étape … » pour description, photo requise quand
+ * l'étape a une photo de référence, l'heure de sa phase (« (06:00 – 07:00) »). La checklist est celle du
+ * panel dont le code est au classement de la SOP ; sinon une nouvelle, nommée « code — titre ». La
+ * sous-catégorie, les niveaux de poste et les contrôleurs sont ceux d'une tâche de référence : la première
+ * de cette checklist, ou d'une checklist du même poste de travail. Rien n'est écrit : l'assistant s'ouvre
+ * avec ces lignes, on les relit, on crée.
+ */
+function tkSopProposition(string $id): array
+{
+    $S = tkSop($id);
+    if ($S === null) { http_response_code(404); return ['error' => 'SOP inconnue : ' . $id]; }
+    $r = $S['row']; $c = $S['contenu'];
+    $codeSop = (string) ($r['code'] ?? '');
+    $avert = [];
+
+    [$cls] = tkLireListe('/operational-framework/checklists');
+    $cls = (array) $cls;
+    $match = null;
+    foreach ($cls as $x) {
+        $code = tkCodeDe(tkTxt($x['name'] ?? ''));
+        if ($code !== null && in_array($code, $S['codes'], true)) { $match = $x; break; }
+    }
+
+    // L'heure de la SOP : la première citée dans les titres de ses sections.
+    $heureSop = null;
+    foreach ((array) ($c['sections'] ?? []) as $sec) { if (($h = tkPremiereHeure(tkTxtL($sec['titre'] ?? ''))) !== null) { $heureSop = $h; break; } }
+
+    // Le poste de travail du panel, par le nom du poste de la SOP.
+    [$ws] = tkLireListe('/operational-framework/workstations');
+    $mots = ['vente' => ['vente'], 'cuisson' => ['boulangerie', 'cuisson'], 'production' => ['production', 'patisserie', 'pâtisserie', 'traiteur'], 'nettoyage' => ['nettoyage', 'plonge']];
+    $posteId = 0;
+    foreach ((array) $ws as $w) {
+        $n = mb_strtolower(tkTxt($w['name'] ?? ''));
+        foreach ($mots[(string) $r['poste']] ?? [] as $mot) { if ($n !== '' && str_contains($n, $mot)) { $posteId = (int) ($w['id'] ?? 0); break 2; } }
+    }
+
+    if ($match !== null) {
+        $checklist = ['mode' => 'existante', 'id' => (int) ($match['id'] ?? 0), 'nom' => tkTxt($match['name'] ?? '')];
+    } else {
+        $codeCl = ((array) ($S['classement']['checklists'] ?? []))[0] ?? $codeSop;
+        $checklist = ['mode' => 'nouvelle', 'nom' => trim(($codeCl !== '' ? $codeCl . ' — ' : '') . (string) $r['titre_fr']),
+            'description' => mb_substr(trim((string) ($r['objectif_fr'] ?? '')), 0, 500), 'posteId' => $posteId, 'heure' => $heureSop ?? ''];
+        if ($S['codes'] === [] || $codeCl === $codeSop) {
+            $avert[] = 'Le classement de la SOP ne cite aucune checklist du Manuel : la checklist proposée porte le code de la SOP.';
+        }
+    }
+
+    // Une tâche par étape critique.
+    $lignes = [];
+    $heureSec = $heureSop;
+    foreach ((array) ($c['sections'] ?? []) as $sec) {
+        $titreSec = tkTxtL($sec['titre'] ?? '');
+        $heureSec = tkPremiereHeure($titreSec) ?? $heureSec;
+        foreach ((array) ($sec['etapes'] ?? []) as $e) {
+            if (!is_array($e) || empty($e['critique'])) { continue; }
+            $titre = tkTxtL($e['titre'] ?? '');
+            $texte = tkTxtL($e['texte'] ?? '');
+            // L'heure de l'étape quand son titre la porte (« Contrôler les froids et les frigos (06:03) ») : elle
+            // prime sur celle de la phase, et quitte le nom de la tâche.
+            $heureEtape = null;
+            if (preg_match('/\s*\((?:dès\s+|vers\s+)?(([01]?\d|2[0-3])[:hH][0-5]\d)\)\s*$/u', $titre, $mh) === 1) {
+                $heureEtape = tkPremiereHeure($mh[1]);
+                $titre = trim(mb_substr($titre, 0, mb_strlen($titre) - mb_strlen($mh[0])));
+            }
+            $nom = $titre !== '' ? $titre : tkResume($texte);
+            if ($nom === '') { continue; }
+            $num = trim((string) ($e['numero'] ?? ''));
+            $lignes[] = ['nom' => mb_substr($nom, 0, 150),
+                // Sur une ligne : le champ de l'assistant (et l'app des employés) ne garde pas les retours à la ligne.
+                'description' => mb_substr(trim(rtrim($texte) . ' (Standard ' . ($codeSop !== '' ? $codeSop : (string) $r['titre_fr']) . ($num !== '' ? ', étape ' . $num : '') . ')'), 0, 1500),
+                'etape' => $num !== '' ? $num : null, 'section' => $titreSec, 'photo' => !empty($e['photo']), 'photoRef' => is_string($e['photo'] ?? null) ? $e['photo'] : null,
+                'heure' => $heureEtape ?? $heureSec ?? ''];
+        }
+    }
+    if ($lignes === []) {
+        foreach ((array) ($c['points_critiques'] ?? []) as $i => $pc) {
+            $t = tkTxtL($pc);
+            if ($t === '') { continue; }
+            $lignes[] = ['nom' => tkResume($t), 'description' => mb_substr(rtrim($t) . ' (Standard ' . $codeSop . ', point critique ' . ($i + 1) . ')', 0, 1500),
+                'etape' => 'PC' . ($i + 1), 'section' => 'Points critiques', 'photo' => false, 'photoRef' => null, 'heure' => $heureSop ?? ''];
+        }
+        if ($lignes !== []) { $avert[] = 'Aucune étape n’est marquée critique : les lignes viennent des points critiques de la SOP.'; }
+    }
+    if ($lignes === []) { $avert[] = 'Ni étape critique ni point critique : ajoutez les tâches à la main.'; }
+
+    // La tâche de référence : sous-catégorie, niveaux de poste, contrôleurs.
+    $ref = null;
+    $refCl = $match !== null ? [$match] : array_values(array_filter($cls, fn ($x) => $posteId > 0 && (int) ($x['workstation_id'] ?? 0) === $posteId));
+    // À défaut d'une checklist du même poste qui porte des tâches, la première checklist qui en porte : la
+    // référence est alors signalée, ses niveaux et contrôleurs sont à vérifier.
+    $ailleurs = false;
+    foreach ([$refCl, $match === null ? $cls : []] as $tour => $liste) {
+        foreach ($liste as $x) {
+            [$lt] = tkLireListe('/operational-framework/checklists/' . (int) ($x['id'] ?? 0) . '/tasks');
+            foreach ((array) $lt as $t) { $tid = (int) ($t['task_id'] ?? 0); if ($tid > 0) { $ref = ['id' => $tid, 'checklist' => tkTxt($x['name'] ?? '')]; $ailleurs = $tour === 1; break 3; } }
+        }
+    }
+    if ($ref !== null && $ailleurs) { $avert[] = 'Aucune checklist du même poste de travail ne porte de tâche : la référence vient de « ' . $ref['checklist'] . ' » — vérifiez la sous-catégorie, les niveaux de poste et les contrôleurs.'; }
+    $sc = null; $niveaux = [];
+    if ($ref !== null) {
+        [$brutes] = tkLireListe('/tasks');
+        foreach ((array) $brutes as $t) {
+            if ((int) ($t['id'] ?? 0) === $ref['id']) { $sc = (int) ($t['subcategory_id'] ?? 0) ?: null; $ref['nom'] = tkNormTache($t)['nom']; break; }
+        }
+        $niveaux = array_values(array_unique(array_map(fn ($lv) => $lv['niveau'], tkNiveauxDe([$ref['id']])[$ref['id']] ?? [])));
+    } else {
+        $avert[] = 'Aucune tâche de référence trouvée : choisissez la sous-catégorie, les niveaux de poste et les contrôleurs.';
+    }
+    return ['sop' => tkSopResume($S), 'checklist' => $checklist, 'lignes' => $lignes, 'reference' => $ref,
+        'sousCategorieId' => $sc, 'niveaux' => $niveaux, 'controleursDe' => $ref['id'] ?? null, 'avertissements' => $avert];
+}
+
+/**
+ * GET /task/sop/{id}/controles — proposition D : ce qui contrôle un standard, et ce que les contrôles disent.
+ *
+ * Les checklists du panel dont le code est au classement de la SOP, leurs tâches, les tâches reliées à une
+ * étape (ceo_sop_tache), et pour chacune les avis des 30 derniers jours (mac_task_review, la table partagée
+ * avec le panel) : nombre de notes, moyenne, non-conformités sous le seuil du barème, la dernière avec son
+ * magasin et son commentaire. Les codes du classement sans checklist au panel sont rendus à part : ils sont
+ * « à créer ».
+ */
+function tkSopControles(string $id): array
+{
+    $S = tkSop($id);
+    if ($S === null) { http_response_code(404); return ['error' => 'SOP inconnue : ' . $id]; }
+    $erreurs = [];
+    [$cls, $e] = tkLireListe('/operational-framework/checklists');
+    if ($cls === null) { $erreurs[] = $e; $cls = []; }
+    $matchs = [];
+    foreach ($cls as $x) {
+        $code = tkCodeDe(tkTxt($x['name'] ?? ''));
+        if ($code !== null && in_array($code, $S['codes'], true)) { $matchs[(int) ($x['id'] ?? 0)] = ['id' => (int) ($x['id'] ?? 0), 'code' => $code, 'nom' => tkTxt($x['name'] ?? ''), 'heure' => substr(tkTxt($x['execution_time'] ?? ''), 0, 5), 'nbTaches' => 0]; }
+    }
+    $taches = [];   // taskId => [checklist, etape]
+    $req = [];
+    foreach ($matchs as $cid => $m) { $req[$cid] = '/operational-framework/checklists/' . $cid . '/tasks'; }
+    foreach ($req ? PanelApi::getParallele($req) : [] as $cid => $rep) {
+        foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $x) {
+            $tid = (int) ($x['task_id'] ?? 0);
+            if ($tid <= 0) { continue; }
+            $matchs[(int) $cid]['nbTaches']++;
+            $taches[$tid] = ['checklist' => $matchs[(int) $cid]['nom'], 'checklistId' => (int) $cid, 'etape' => null];
+        }
+    }
+    try {
+        ensureSopTache();
+        foreach (Db::rows('SELECT task_id, etape FROM ceo_sop_tache WHERE sop_id = ?', [(string) $S['row']['id']]) as $l) {
+            $tid = (int) $l['task_id'];
+            $taches[$tid] = ['checklist' => $taches[$tid]['checklist'] ?? null, 'checklistId' => $taches[$tid]['checklistId'] ?? null, 'etape' => $l['etape']];
+        }
+    } catch (PDOException $e2) { /* aucun lien encore */ }
+
+    $parId = [];
+    if ($taches) {
+        [$brutes, $e] = tkLireListe('/tasks');
+        if ($brutes === null) { $erreurs[] = $e; }
+        foreach ((array) $brutes as $t) { $parId[(int) ($t['id'] ?? 0)] = $t; }
+    }
+
+    // Les avis des 30 derniers jours.
+    $seuil = function_exists('seuilSignalement') ? seuilSignalement() : 4;
+    $depuis = date('Y-m-d', strtotime('-30 days'));
+    $stats = [];
+    $noms = [];
+    if ($taches) {
+        try {
+            $in = implode(',', array_fill(0, count($taches), '?'));
+            foreach (Db::rows("SELECT id_task, id_shop, review_date, rating, is_accepted, comment FROM mac_task_review
+                                WHERE id_task IN ($in) AND review_date >= ? AND rating IS NOT NULL ORDER BY review_date DESC, id DESC",
+                         array_merge(array_keys($taches), [$depuis])) as $v) {
+                $tid = (int) $v['id_task'];
+                $st = $stats[$tid] ?? ['notes' => 0, 'somme' => 0, 'nc' => 0, 'dernierNc' => null, 'derniere' => null];
+                $note = (int) $v['rating'];
+                $st['notes']++; $st['somme'] += $note;
+                $st['derniere'] ??= (string) $v['review_date'];
+                if ($note < $seuil || (isset($v['is_accepted']) && (string) $v['is_accepted'] === '0')) {
+                    $st['nc']++;
+                    $st['dernierNc'] ??= ['date' => (string) $v['review_date'], 'shopId' => (int) $v['id_shop'], 'note' => $note,
+                        'commentaire' => $v['comment'] !== null ? mb_substr((string) $v['comment'], 0, 300) : null];
+                }
+                $stats[$tid] = $st;
+            }
+            foreach (Db::rows('SELECT id, name FROM shops') as $sh) { $noms[(int) $sh['id']] = (string) $sh['name']; }
+        } catch (PDOException $e3) { $erreurs[] = 'avis des contrôles illisibles (mac_task_review)'; }
+    }
+
+    $out = [];
+    $tot = ['taches' => 0, 'notes' => 0, 'conformes' => 0, 'nc' => 0];
+    foreach ($taches as $tid => $info) {
+        $t = isset($parId[$tid]) ? tkNormTache($parId[$tid]) : ['id' => $tid, 'nom' => 'Tâche #' . $tid, 'jour' => '', 'heure' => '', 'frequence' => '', 'photo' => false, 'obligatoire' => false, 'actif' => null];
+        $st = $stats[$tid] ?? null;
+        if ($st !== null && $st['dernierNc'] !== null) { $st['dernierNc']['magasin'] = $noms[$st['dernierNc']['shopId']] ?? ('Boutique #' . $st['dernierNc']['shopId']); }
+        $out[] = ['id' => $tid, 'nom' => $t['nom'], 'jour' => $t['jour'], 'heure' => $t['heure'], 'frequence' => $t['frequence'], 'photo' => $t['photo'],
+            'obligatoire' => $t['obligatoire'], 'actif' => $t['actif'], 'absente' => !isset($parId[$tid]),
+            'checklist' => $info['checklist'], 'checklistId' => $info['checklistId'], 'etape' => $info['etape'],
+            'stats' => $st === null ? null : ['notes' => $st['notes'], 'moyenne' => round($st['somme'] / max(1, $st['notes']), 1), 'nc' => $st['nc'],
+                'conformite' => (int) round(100 * ($st['notes'] - $st['nc']) / max(1, $st['notes'])), 'derniere' => $st['derniere'], 'dernierNc' => $st['dernierNc']]];
+        $tot['taches']++;
+        if ($st !== null) { $tot['notes'] += $st['notes']; $tot['nc'] += $st['nc']; $tot['conformes'] += $st['notes'] - $st['nc']; }
+    }
+    usort($out, fn ($a, $b) => [$a['checklist'] ?? 'zz', $a['etape'] ?? '', $a['nom']] <=> [$b['checklist'] ?? 'zz', $b['etape'] ?? '', $b['nom']]);
+    $sansCl = array_values(array_filter($S['codes'], fn ($code) => !in_array($code, array_column($matchs, 'code'), true) && $code !== (string) ($S['row']['code'] ?? '')));
+    return ['sop' => tkSopResume($S), 'seuil' => $seuil, 'depuis' => $depuis,
+        'checklists' => array_values($matchs), 'codesSansChecklist' => $sansCl, 'taches' => $out,
+        'totaux' => $tot + ['conformite' => $tot['notes'] > 0 ? (int) round(100 * $tot['conformes'] / $tot['notes']) : null],
+        'erreurs' => $erreurs];
 }
 
 /* ─────────── modifier, supprimer ─────────── */
