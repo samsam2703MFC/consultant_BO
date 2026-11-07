@@ -195,3 +195,22 @@ html.tk-emb .tk-voile{position:absolute;inset:0 0 auto 0;min-height:100%;padding
 .pl-sels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
 .pl-sel{width:100%;min-width:0;font-size:12px;padding:7px 9px}
 @media (max-width:640px){.pl-sels{grid-template-columns:minmax(0,1fr)}}
+
+/* La recherche partout (07/11/2026) : en tête, la plus large possible */
+.tk-rech{position:relative;flex:1 1 420px;max-width:640px;min-width:260px;display:flex;align-items:center}
+.tk-rech-in{width:100%;font-size:13px;padding:9px 34px 9px 32px;border-radius:10px;border-color:var(--tk-trait2);background:#fff}
+.tk-rech-in:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(141,29,44,.12)}
+.tk-rech-in::-webkit-search-cancel-button{display:none}
+.tk-rech-ic{position:absolute;left:11px;font-size:15px;color:var(--muted);pointer-events:none}
+.tk-rech-x{position:absolute;right:6px;border:none;background:none;font-size:18px;line-height:1;color:var(--muted);cursor:pointer;padding:4px 6px}
+.tk-rech-kbd{position:absolute;right:9px;font:400 10.5px var(--font-ui);color:var(--muted);border:1px solid var(--tk-trait2);border-radius:5px;padding:1px 6px;background:var(--tk-doux)}
+.tk-rq-tete{font-size:13px;color:var(--muted-2);margin:2px 0 12px;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.tk-rq-tete b{font-weight:400;color:var(--ink)}
+.tk-rq-cls{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;padding:12px 16px}
+.tk-rq-cl{display:flex;flex-direction:column;gap:2px;text-align:left;border:1px solid var(--tk-trait);border-radius:10px;background:#fff;padding:9px 12px;cursor:pointer;font:400 12.5px var(--font-ui);color:var(--ink)}
+.tk-rq-cl:hover{border-color:var(--accent)}
+.tk-rq-cl small{font-size:10.5px;color:var(--muted)}
+.tk-rq-chip{border:1px solid var(--tk-trait2);background:#fff;border-radius:999px;padding:2px 9px;font:400 11px var(--font-ui);color:var(--ink);cursor:pointer;margin:1px 0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-rq-chip:hover{border-color:var(--accent);color:var(--accent)}
+.tk-taches td small.tk-rq-desc{white-space:normal;max-width:none}
+#tk mark{background:#FBE7A1;color:inherit;border-radius:2px;padding:0 1px}
