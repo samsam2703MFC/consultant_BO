@@ -882,3 +882,18 @@ tous les magasins la même chose ».
 - Restent hors de ce geste : rattacher une compétence C-… à une formation (le référentiel v25) et créer une évaluation
   au panel (TF Buddy).
 
+## SOP du dashboard magasin (07/11/2026)
+
+Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin, calé dans la bonne formation
+(pré-ouverture : compréhension, et en continue) ; un prompt de routine pour encoder les changements ».
+- **ART-PIL-01**, Article du manuel « Comprendre le dashboard magasin » (28 parties, 28 captures, quiz de 5 questions) et
+  **SOP-PIL-01** « Analyser le dashboard magasin : la routine » (28 étapes : matin, journée, soir, lundi, début de mois,
+  trimestre, « Qui prévenir » ; quiz de 4 questions ; moment Ouverture), rattachés à **FO-05** Pilotage Commercial et à
+  **D7.1** Pilotage de l'activité (compétences C-PILOTAGE.KPI, .Vente, .Franchise). Maquette validée :
+  `docs/maquettes/sop-dashboard/` (proposition, écrans, prompt de la routine `ROUTINE.md`).
+- **Source** : `data/formation/dashboard/` (les deux JSON FR et NL, `photos/dash-*.jpg` 1600 × 1200, `photos.json`,
+  `ETAT.json` = le dernier commit du dashboard pris en compte). Ils n'entrent pas par `foImporter()` : par l'API, avec
+  `tools/formation/encoder_sop.py` (photos envoyées une fois, création ou nouvelle version, classement ; simulation par
+  défaut). Captures : `tools/formation/captures_dashboard.js`. NL de travail : `tools/formation/nl_dashboard.py`.
+- **Journal** : 07/11/2026 — v1.0 des deux documents encodées et publiées, NL « à relire ».
+

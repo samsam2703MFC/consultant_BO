@@ -5,7 +5,7 @@ Demande : un SOP complet pour **comprendre et utiliser le dashboard magasin**
 **pré-ouverture** (la compréhension) et en **formation continue** (l'utilisation) —, avec les captures
 nécessaires, une maquette dans le module Formation, puis l'encodage après validation.
 
-**Statut : proposition, rien n'est encodé.** La maquette est la vraie page du module Formation (portail et
+**Statut : validé et encodé le 07/11/2026** (v1.0 publiées, NL « à relire »). Ce qui suit est la proposition telle que validée. La maquette est la vraie page du module Formation (portail et
 tablette), servie par le serveur, avec le contenu ci-dessous injecté dans le navigateur seulement.
 
 ## 1. Où le ranger
@@ -64,8 +64,6 @@ photos, création v1.0 « à valider », classement, puis publication.
   routine).
 - **Valeur du magasin** : le `README` décrit encore « 18 derniers mois clos » ; le code calcule sur **730 jours**
   (`VALO_JOURS`). Le SOP suit le code.
-- **Fiche d'une formation** : `GET /formation/ref` ne rend pas le `type` des standards ; la ligne « Dans le
-  manuel » affiche alors « SOP » pour un article (cas d'ART-ID-01 en ligne). La maquette injecte le type.
 - **https** : `https://185.180.206.46/` répond toujours « connexion réinitialisée » ; tout a été lu en http.
 
 ## 5. Le contenu complet

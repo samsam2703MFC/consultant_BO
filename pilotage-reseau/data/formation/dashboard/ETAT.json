@@ -3,6 +3,11 @@
  "dashboardCommitLe": "2026-11-06T18:55:21Z",
  "capturesLe": "2026-11-07",
  "capturesMagasin": "4",
- "encode": false,
- "note": "Proposition du 07/11/2026 : contenu et captures relevés sur le dashboard en ligne, pas encore encodés dans le module Formation (en attente de validation)."
+ "encode": true,
+ "note": "Validé et encodé le 07/11/2026 par l’API (tools/formation/encoder_sop.py) : v1.0 publiées, NL « à relire ». Les captures montrent encore le seuil matière de 32 % : à refaire quand le seuil de Budget › Paramètres sera en ligne.",
+ "encodeLe": "2026-11-07",
+ "versions": {
+  "art-pil-01": "1.0",
+  "sop-pil-01": "1.0"
+ }
 }
