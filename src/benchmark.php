@@ -789,6 +789,9 @@ function benchmarkRoutine(bool $forcer = false, bool $envoyer = true): array
     if (!$forcer && ($s['dernierPassage'] ?? '') === $jour) { return ['fait' => false, 'motif' => 'déjà passé aujourd\'hui']; }
     benchmarkTables();
 
+    // Les relevés du référentiel partent d'eux-mêmes dans l'ERP, par le même compte
+    // consultant que les promotions : rejouable, une observation déjà posée n'est pas refaite.
+    $semis = BenchmarkApi::disponible() ? benchmarkSemerTout(false) : null;
     $verif = benchmarkVerifier(4, false);
     $snap = [];
     foreach (BenchmarkApi::magasins() as $shop => $ville) {
@@ -816,9 +819,10 @@ function benchmarkRoutine(bool $forcer = false, bool $envoyer = true): array
     $s['dernierResume'] = $verif['resume'];
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['benchmark', json_encode($s, JSON_UNESCAPED_UNICODE)]);
     if (function_exists('journalAdd')) {
-        journalAdd('Cockpit', 'benchmark', 'Benchmark saisonnier', 'Routine benchmark (' . implode(', ', $familles) . ') : ' . $verif['resume'] . ' ; ' . count($snap) . ' magasin(s) photographié(s) ; ' . count($envois) . ' envoi(s).');
+        $poses = $semis === null ? 0 : array_sum(array_map(fn ($r) => $r['compte']['items'], $semis['familles']));
+        journalAdd('Cockpit', 'benchmark', 'Benchmark saisonnier', 'Routine benchmark (' . implode(', ', $familles) . ') : ' . $poses . ' prix posé(s) dans l\'ERP ; ' . $verif['resume'] . ' ; ' . count($snap) . ' magasin(s) photographié(s) ; ' . count($envois) . ' envoi(s).');
     }
-    return ['fait' => true, 'familles' => $familles, 'verification' => $verif, 'kpi' => $snap, 'envois' => $envois,
+    return ['fait' => true, 'familles' => $familles, 'semis' => $semis === null ? null : array_map(fn ($r) => $r['compte'], $semis['familles']), 'verification' => $verif, 'kpi' => $snap, 'envois' => $envois,
         'web' => array_map(fn ($r) => $r['web']['score'] ?? null, $rapports)];
 }
 
