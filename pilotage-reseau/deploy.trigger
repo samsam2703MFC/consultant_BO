@@ -1333,3 +1333,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-07T20:07:51Z Planning des tâches : qui fait, qui contrôle, filtres
 2026-11-07T20:14:24Z Planning des tâches : qui fait / qui contrôle en direct, modifier une checklist
 2026-11-07T20:25:42Z Cadre des tâches : plein écran, fenêtres jamais coupées
+2026-11-07T20:28:32Z Temps morts : onglet du dashboard magasin, le jour et sa semaine
