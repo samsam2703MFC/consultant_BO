@@ -913,7 +913,9 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
 - **Journal** : 07/11/2026 — v1.0 des deux documents encodées et publiées, NL « à relire » ; réservés au responsable ;
   v1.1 (précision) : captures du P&L, du résultat et du téléphone refaites avec le seuil matière de Budget › Paramètres.
   Article v1.2 : partie 27 (Primes), le franchisé reste dans le tableau, en gris, hors primes ; capture `dash-primes` recadrée
-  sur sa ligne.
+  sur sa ligne. SOP v1.2 : étape 5.5 « Les charges face au modèle » (Budget › Paramètres › Répartition des charges, le
+  Compte de résultat du CRM fait foi ; capture `dash-charges`, prise au cockpit — plan `cockpit` + `defile` de
+  `captures_dashboard.js`), « Préparer la visite du consultant » passe en 5.6.
 - **Réservés au franchisé et au responsable** (07/11/2026, client : « déplacer de Ouverture à Manuel, avec accès poste
   (mot de passe) : celui du franchisé ou du responsable magasin ; pour le moment 1111 ; un petit cadenas, couleur or ») :
   colonne `ceo_sop.acces` (`tous` | `responsable`, posée par `ensureSop()`, réglable par `PATCH /formation/sop/fiche/{id}
