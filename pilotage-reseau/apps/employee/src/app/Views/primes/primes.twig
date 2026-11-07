@@ -41,6 +41,10 @@
 {% set eur = '€' %}{% set pcs = T.pcs ?? 'pcs' %}
 {% set nomFixe = { croisees: T.cross_sales ?? null, record: T.beat_your_record ?? null, objectif: T.shop_target_title ?? null, google: T.google_rating ?? null, meilleure: T.best_seller ?? null } %}
 <section class="sb-heros"><p class="sb-sur">{{ (T.in_play_in ?? 'En jeu en {m}')|replace({'{m}': mois(p.m)|split(' ')|first}) }}</p><p class="sb-chiffre">{{ p.enJeu|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</p></section>
+{% if p.franchise ?? false %}
+<div class="pl-vide"><i class="bi bi-shop"></i><div><b>{{ T.franchisee_title ?? 'Pas de primes pour un franchisé' }}</b>
+  <span>{{ T.franchisee_text ?? 'Les primes récompensent ton équipe. Tes ventes, tes heures et tes chiffres restent dans les statistiques ; ils ne te donnent pas de prime, et tu ne prends la place de personne dans les classements.' }}</span></div></div>
+{% endif %}
 <div class="pl-vide av"><i class="bi bi-calendar-event"></i><div><b>{{ T.upcoming_title ?? 'Les primes prévues ce mois-là' }}</b>
   <span>{{ T.upcoming_text ?? 'Ce que tu pourras gagner. Le compteur démarre le premier jour du mois.' }}</span></div></div>
 {% for g in [
@@ -98,7 +102,11 @@
   {% if p.enCours and heuresRestantes %}<p class="sb-pied">{{ (T.hours_left_short ?? '{h} h de service restantes ce mois-ci')|replace({'{h}': heuresRestantes|number_format(1, ',', ' ')|replace({',0': ''})}) }}</p>{% endif %}
 </section>
 
-{% if p.cartes|filter(c => c.motif == 'sans_vente')|length %}
+{# Un franchisé (07/11/2026) : ses chiffres restent dans les statistiques, il n'a droit à aucune prime. #}
+{% if p.franchise ?? false %}
+<div class="pl-vide"><i class="bi bi-shop"></i><div><b>{{ T.franchisee_title ?? 'Pas de primes pour un franchisé' }}</b>
+  <span>{{ T.franchisee_text ?? 'Les primes récompensent ton équipe. Tes ventes, tes heures et tes chiffres restent dans les statistiques ; ils ne te donnent pas de prime, et tu ne prends la place de personne dans les classements.' }}</span></div></div>
+{% elseif p.cartes|filter(c => c.motif == 'sans_vente')|length %}
 <div class="pl-vide"><i class="bi bi-receipt"></i><div><b>{{ T.no_sale_title ?? 'Aucune vente à ton nom ce mois-ci' }}</b>
   <span>{{ T.no_sale_text ?? 'Tes primes à toi (ventes croisées, record, classements) s’affichent dès ton premier ticket encaissé à ton nom. Le magasin et la note Google, eux, comptent déjà.' }}</span></div></div>
 {% endif %}

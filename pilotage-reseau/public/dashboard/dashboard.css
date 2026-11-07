@@ -2301,6 +2301,9 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .pr-lib{font:400 13px/1.25 var(--font-ui);color:var(--color-text);max-width:150px}
 .pr-rec{font-size:11.5px;line-height:1.35;color:var(--color-text-muted);margin-top:3px;white-space:nowrap}
 .pr-mag{color:var(--color-on-abricot)}
+/* Un franchisé (07/11/2026) : dans le tableau, avec ses chiffres, hors primes. */
+.pr-fr{color:var(--color-text-muted);font-size:11.5px;font-style:italic;white-space:nowrap}
+.pr-tot .pr-fr{font-size:12px}
 .pr-cpt{font:400 11.5px/1.35 var(--font-ui);color:var(--green);margin-top:2px;white-space:nowrap}
 .pr-nom b{display:block;font:400 14px/1.3 var(--font-ui);white-space:nowrap}
 .pr-nom small{display:block;font-size:11.5px;line-height:1.35;color:var(--color-text-muted);white-space:nowrap}
