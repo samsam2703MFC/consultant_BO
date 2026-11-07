@@ -410,6 +410,20 @@
     {
      "numero": "5.5",
      "titre": {
+      "fr": "Les charges face au modèle",
+      "nl": "De kosten tegenover het model"
+     },
+     "texte": {
+      "fr": "Avec le consultant, au cockpit : Budget › Paramètres › Répartition des charges.\nPoste par poste : le % du réseau (le Compte de résultat du CRM fait foi) et le € réel du magasin.\nLe seuil du coût matière du dashboard en vient : Matière première + Emballage.\nUn poste au-dessus du modèle : en chercher la cause et la noter pour la visite.",
+      "nl": "Met de consultant, in de cockpit: Budget › Parameters › Verdeling van de kosten.\nPost per post: het % van het netwerk (de resultatenrekening van de CRM is bindend) en de werkelijke € van de winkel.\nDe drempel van de grondstofkost in het dashboard komt eruit: Grondstoffen + Verpakking.\nEen post boven het model: de oorzaak zoeken en noteren voor het bezoek."
+     },
+     "critique": false,
+     "photo": "dash-charges.jpg",
+     "video": null
+    },
+    {
+     "numero": "5.6",
+     "titre": {
       "fr": "Préparer la visite du consultant",
       "nl": "Het bezoek van de consultant voorbereiden"
      },
