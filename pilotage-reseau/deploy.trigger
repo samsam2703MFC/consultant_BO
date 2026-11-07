@@ -1304,3 +1304,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-06T20:46:15Z Formation : deux menus (Formation, Opérationnel), tablette ouverte en trois onglets, assistant de création des SOP (photos, vidéos), suivi en magasin retiré
 2026-11-06T21:07:01Z Tablette : lecture d'une SOP en assistant de tablette (frise verticale des étapes, gros boutons, balayage)
 2026-11-06T21:21:55Z Formation : étape de SOP centrée avec sa photo (cadre 4:3), recadrage 4:3 à l'import des photos
+2026-11-07T07:07:29Z Tablette : lire une SOP en « une étape, une carte » (maquette A)
