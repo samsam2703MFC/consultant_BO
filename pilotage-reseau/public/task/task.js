@@ -27,6 +27,17 @@
   const CLE = 'tk.admin';
   const q = new URLSearchParams(location.search);
   const $ = document.getElementById('tk');
+  // Intégrée au cockpit (?embed=1, écran Pilotage › Cadre des tâches) : sans le logo ni le titre, que
+  // le cockpit porte déjà ; la checklist ouverte lui est dite, pour qu'il la garde dans son adresse.
+  const EMBED = q.get('embed') === '1';
+  if (EMBED) { document.documentElement.classList.add('tk-emb'); }
+  function adresse(cl) {
+    const a = new URLSearchParams();
+    if (EMBED) { a.set('embed', '1'); }
+    if (cl) { a.set('checklist', cl); }
+    try { history.replaceState(null, '', '?' + a.toString()); } catch (e) { /* l'adresse reste l'ancienne */ }
+    if (EMBED && window.parent !== window) { try { window.parent.postMessage({ tkChecklist: cl }, location.origin); } catch (e) { /* cockpit absent */ } }
+  }
 
   const S = {
     cadre: null, err: null, charge: true,
@@ -114,6 +125,7 @@
       }
       if (S.cl == null || (S.cl !== 'tout' && S.cl !== 'hors' && !checklist(S.cl))) {
         S.cl = checklists().length ? String(checklists()[0].id) : 'tout';
+        adresse(S.cl);
       }
     } catch (e) {
       S.err = e.message;
@@ -128,8 +140,8 @@
     const a = admin();
     const compte = a ? '<b>Compte administrateur du panel</b> · jusqu’à ' + new Date(a.expire * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
       : '<b>Compte du cockpit</b>' + (S.cadre && S.cadre.api && !S.cadre.api.configure ? ' (non configuré)' : '');
-    return `<div class="tk-hd"><img src="../assets/img/logo.png" alt=""><div><div class="tk-titre">Cadre des tâches</div>
-      <div class="tk-sous">Les tâches que les magasins font chaque jour, telles que le panel les définit${S.cadre && S.cadre.api ? ' · ' + esc(S.cadre.api.base) : ''}</div></div>
+    return `<div class="tk-hd">${EMBED ? '' : `<img src="../assets/img/logo.png" alt=""><div><div class="tk-titre">Cadre des tâches</div>
+      <div class="tk-sous">Les tâches que les magasins font chaque jour, telles que le panel les définit${S.cadre && S.cadre.api ? ' · ' + esc(S.cadre.api.base) : ''}</div></div>`}
       <span class="sp"></span><span class="tk-compte">${compte}</span>
       ${a ? '<button class="tk-btn" data-a="deconnexion">Revenir au compte du cockpit</button>' : '<button class="tk-btn" data-a="connexion">Compte administrateur…</button>'}
       <button class="tk-btn" data-a="recharger" ${S.charge ? 'disabled' : ''}>${S.charge ? 'Lecture…' : 'Relire le panel'}</button>
@@ -637,7 +649,7 @@
     const id = el.dataset.id;
     switch (a) {
       case 'recharger': return charger();
-      case 'cl': S.cl = id; S.filtre = ''; history.replaceState(null, '', '?checklist=' + encodeURIComponent(id)); return rendre();
+      case 'cl': S.cl = id; S.filtre = ''; adresse(id); return rendre();
       case 'coche': if (el.checked) { S.sel.add(+id); } else { S.sel.delete(+id); } return rendre();
       case 'tous': { const L = lignes(); if (el.checked) { L.forEach(x => S.sel.add(x.t.id)); } else { L.forEach(x => S.sel.delete(x.t.id)); } return rendre(); }
       case 'vider': S.sel.clear(); return rendre();
@@ -767,7 +779,7 @@
       case 'wzFin': {
         const r = S.wz.res; const cid = r && r.checklist && r.checklist.id;
         S.wz = null;
-        if (cid && checklist(cid)) { S.cl = String(cid); history.replaceState(null, '', '?checklist=' + encodeURIComponent(cid)); }
+        if (cid && checklist(cid)) { S.cl = String(cid); adresse(String(cid)); }
         return rendre();
       }
       case 'supprimerCl': {

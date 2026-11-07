@@ -123,3 +123,9 @@ pre.tk-json{margin:0;padding:10px 12px;font-size:11px;line-height:1.45;white-spa
 .tk-bas{display:inline-flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;white-space:nowrap}
 .tk-choix{display:flex;gap:9px;align-items:flex-start;padding:7px 16px;border-top:1px solid var(--tk-trait);font-size:12px;cursor:pointer}
 .tk-choix small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
+
+/* Intégrée au cockpit (?embed=1) : le fond et les marges de l'écran qui l'accueille. */
+html.tk-emb body{background:var(--paper)}
+html.tk-emb #tk{max-width:none;padding:10px 12px 40px}
+html.tk-emb .tk-hd{margin-bottom:6px}
+html.tk-emb .tk-cls{max-height:calc(100vh - 110px)}

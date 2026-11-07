@@ -50,7 +50,7 @@ const ICO = {
 };
 /* Écran → notion du catalogue. */
 const ICO_ECRAN = {
-  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board',
+  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board', cadreTaches: 'controle',
   ficheFranchise: 'crm', 'Suivi des franchisés': 'adresse', 'Budget': 'fonds', 'Suivi journalier': 'controle',
   ventes: 'analyse', invendus: 'form',
   verifFlux: 'liens', verifFuites: 'recherche', inventaires: 'form', verifMatieres: 'modeles', verifCa: 'fonds',
@@ -198,6 +198,7 @@ export function render(c, x){
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
+      ${c.isCadreT ? tplCadreTaches(c, x) : ''}
       ${c.isFid ? tplFidelite(c, x) : ''}
       ${c.isMD ? tplMetaDonnee(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
@@ -7867,6 +7868,16 @@ function tplManque(c, x){
  * L'aperçu vient en dernier, hors de la grille du haut : la fusion du rendu
  * compare les nœuds par position, et ce qui bouge au-dessus (la progression des
  * photos, une relecture) ne doit pas recréer l'iframe — elle se rechargerait. */
+/* --- Cadre des tâches (07/11/2026) : la page task/ intégrée --------------------
+ * Un seul nœud, toujours au même endroit : la fusion du rendu le garde d'un rendu à
+ * l'autre, et la page (son assistant, sa saisie) ne se recharge pas. */
+function tplCadreTaches(c, x){
+  const { esc } = x;
+  return `<div data-screen="cadreTaches" style="display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;justify-content:flex-end"><button class="ps-btn" ${x.A(c.ct.plein)} title="La même page, seule, dans un onglet">Ouvrir dans un onglet ↗</button></div>
+    <iframe src="${esc(c.ct.src)}" title="Cadre des tâches" style="width:100%;height:calc(100vh - 170px);min-height:560px;border:1px solid var(--line);border-radius:12px;background:var(--paper);display:block"></iframe>
+  </div>`;
+}
 /* --- MétaDonnée : les quatre écrans du sous-menu ------------------------------ */
 /* Le module (metadonnee.js) tient son propre DOM : le gabarit ne pose que
    l'ancre, qu'app.js lui rend après chaque rendu. */
