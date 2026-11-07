@@ -37,7 +37,7 @@
     a4: null, a4Vise: false,
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
-    bmF: ['cougnou', 'galette', 'produit'].includes(q.get('bmf')) ? q.get('bmf') : 'cougnou', bmP: q.get('bmp') || null, bmQ: '', bmForm: null, bmMsg: null, bmEnvoi: false,
+    bmF: ['top', 'cougnou', 'galette', 'produit'].includes(q.get('bmf')) ? q.get('bmf') : 'top', bmP: q.get('bmp') || null, bmQ: '', bmForm: null, bmMsg: null, bmEnvoi: false,
     pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null, pmC: null, pmCanJ: 30, pmCanM: 'n',
     prVue: 'mois', prFiltre: 'toutes', prM: null, prY: null, prTri: null, prTriAn: null, prOuv: {},
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
@@ -107,7 +107,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'bm': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
+  const CACHE_AUX = { 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -137,7 +137,7 @@
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
     // Et où elles s'appliquent : comptoir, click & collect, livraison (18/10/2026).
     // Le panel est relu à chaque ouverture de l'onglet (21/10/2026, Sam) : voir pmRelire().
-    if (S.vue === 'concurrence') { lireAux(cleBM(), cheminBM(), force); lireAux(clePMP(), cheminPMP(), force); rendre(); return; }
+    if (S.vue === 'concurrence') { lireAux(cleBM(), cheminBM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux('bmTop', '/analyse/produits?mois=3', force); rendre(); return; }
     if (S.vue === 'promos') { S.pmRelu = null; lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee' || S.vue === 'trimestre') {
@@ -5019,7 +5019,8 @@
       const p = bmProduits().find(x => String(x.id) === String(S.bmP));
       if (!p) { return null; }
       const mot = bmMotCle(p.nom), mots = bmMots(p.nom), lie = r => r.monProduit != null && String(r.monProduit) === String(p.id);
-      const exact = r => lie(r) || mots.every(w => BM_NORM(r.produit).includes(w)), proche = r => !exact(r) && mot && BM_NORM(r.produit).includes(mot);
+      const regle = BM_TOP_REGLES.find(x => x[0].test(BM_NORM(p.nom)));
+      const exact = r => lie(r) || (regle ? regle[1].test(BM_NORM(r.produit)) && !regle[2].test(BM_NORM(r.produit)) : mots.every(w => BM_NORM(r.produit).includes(w))), proche = r => !exact(r) && mot && BM_NORM(r.produit).includes(mot);
       const src = (D.releves || []).some(exact) || !(D.referentiel || []).some(exact) ? (D.releves || []) : (D.referentiel || []);
       return { cle: 'produit', titre: p.nom, mesure: 'piece', unite: '€ la pièce', ref: p.prixTtc, nous: [{ nom: p.nom, prix: p.prixTtc }], tailleRef: null,
         releves: src.filter(exact), proches: src.filter(proche), source: src === (D.releves || []) ? 'api' : 'referentiel', mot: mots.join(' + '), produit: p, web: null, constats: [] };
@@ -5036,14 +5037,68 @@
     return { cle: S.bmF, titre: f.libelle, mesure: f.mesure, unite: f.mesure === 'diametre' ? '€ à Ø ' + tRef + ' cm' : '€/kg', ref: refV, nous: f.nous || [], tailleRef: tRef,
       tailleConfirmee: f.tailleConfirmee, releves, source: api.length ? (refe.length > api.length ? 'mixte' : 'api') : 'referentiel', web: f.web, constats: f.constats || [], saison: f.saison };
   }
+  /**
+   * Le top 10 du réseau (quantités vendues, 4 magasins, 3 derniers mois — /analyse/produits) face aux concurrents
+   * de CE magasin. Les relevés de terrain du réseau portent des noms courts (« chocolat », « sandw », « nappes ») :
+   * chaque produit a ses motifs, et ce qui les contredit (un sandwich garni n'est pas un petit pain).
+   */
+  const BM_TOP_REGLES = [
+    [/pain au chocolat nappe|chocolat nappe/, /nappe|double|dubbel|glace/, /mini/],
+    [/mini.*croissant/, /mini croissant/, /jambon|amande/],
+    [/mini.*chocolat/, /mini (pain au )?chocolat|mini couque/, /nappe/],
+    [/pain au chocolat|chocolatine/, /^(pain au )?chocolat$|pain au chocolat|chocoladekoek|chocolatine/, /nappe|mini|double|dubbel|amande|croissant/],
+    [/^croissant$/, /^croissant( beurre| nature)?$/, /mini|jambon|amande|creme|fromage/],
+    [/^sandwich$/, /^sandw(ich)?( mou| nature| blanc| wit)?$|^petit pain|^pain sandwich$|^zachte sandwich/, /garni|plateau/],
+    [/baguette/, /baguette/, /garni|poulet|jambon|mini|sandwich|plateau|demie|demi/],
+    [/pistolet/, /pistolet/, /garni|jambon|fromage|mini/],
+    [/pain dore|pain blanc/, /pain (dore|blanc)|wit brood|witbrood|carre blanc|pain de mie/, /mini|sandwich/],
+    [/cereale/, /cereal|granen|multigrain/, /mini|sandwich|couque/],
+    [/demi gris|pain gris/, /demi gris|pain gris|grijs/, /mini/],
+    [/couque au beurre/, /couque au beurre|boterkoek/, /mini/],
+  ];
+  function bmTopListe() {
+    const A = S.aux.bmTop;
+    if (!A || !Array.isArray(A.produits)) { return null; }
+    return A.produits.slice().sort((a, b) => (b.total || 0) - (a.total || 0)).slice(0, 10);
+  }
+  function bmTopRelevés(p) {
+    const D = S.aux[cleBM()] || {}, n = BM_NORM(p.nom), r = BM_TOP_REGLES.find(x => x[0].test(n));
+    return (D.releves || []).filter(x => x.prix > 0 && !/cougn|galette|frangipane/.test(BM_NORM(x.produit)) && !/plateau|\d+ ?pc/.test(BM_NORM(x.produit))
+      && ((x.monProduit != null && String(x.monProduit) === String(p.pid)) || (r ? (r[1].test(BM_NORM(x.produit)) && !r[2].test(BM_NORM(x.produit))) : bmMots(p.nom).every(w => BM_NORM(x.produit).includes(w)))));
+  }
+  function rendTop10() {
+    const A = S.aux.bmTop, T = bmTopListe(), Pm = bmProduits();
+    if (S.err.bmTop && !A) { return `<div class="db-err">Ventes du réseau : ${esc(S.err.bmTop)}</div>`; }
+    if (!T || !S.aux[cleBM()]) { return squelette(3); }
+    const prix = id => { const x = Pm.find(q => String(q.id) === String(id)); return x ? x.prixTtc : null; };
+    let nAu = 0, nSous = 0, nSur = 0;
+    const lignes = T.map((p, i) => {
+      const R = bmTopRelevés(p), v = R.map(r => r.promo > 0 ? r.promo : r.prix), m = bmMed(v), nous = prix(p.pid);
+      const e = nous != null && m ? (nous - m) / m * 100 : null;
+      const verdict = e == null ? '<span class="mu">pas de relevé</span>' : (e > 5 ? '<span class="ko">au-dessus</span>' : (e < -5 ? '<span class="ok">en dessous</span>' : '<span class="mu">au prix du marché</span>'));
+      if (e != null) { if (e > 5) { nSur++; } else if (e < -5) { nSous++; } else { nAu++; } }
+      const mi = v.length ? Math.min(...v) : null, ma = v.length ? Math.max(...v) : null;
+      const W = 150, x = val => ma > mi ? 6 + (val - mi) / (ma - mi) * (W - 12) : W / 2;
+      const bar = v.length && nous != null ? `<svg width="${W}" height="18" viewBox="0 0 ${W} 18"><line x1="6" x2="${W - 6}" y1="9" y2="9" stroke="#e6e0d8" stroke-width="4" stroke-linecap="round"/>${v.map(val => `<circle cx="${x(val).toFixed(1)}" cy="9" r="3" fill="#B8B2A8"/>`).join('')}<line x1="${Math.max(3, Math.min(W - 3, x(nous))).toFixed(1)}" x2="${Math.max(3, Math.min(W - 3, x(nous))).toFixed(1)}" y1="1" y2="17" stroke="var(--color-primary)" stroke-width="2.5"/></svg>` : '';
+      return `<tr data-bmtop="${p.pid}" class="bm-cl"><td class="n mu">${i + 1}</td><td>${esc(p.nom)}<div class="db-mini">${esc(p.cat || '')} · ${nf(p.total || 0, 0)} vendus · ${fE(p.ca)}</div></td>
+        <td class="n"><b>${fU(nous)}</b></td><td class="n">${fU(m)}</td><td class="n">${v.length ? fU(mi) + ' – ' + fU(ma) : '—'}</td><td>${bar}</td><td class="n">${v.length}</td><td class="n">${e == null ? '—' : `<span class="${e > 5 ? 'ko' : (e < -5 ? 'ok' : 'mu')}">${(e > 0 ? '+' : e < 0 ? '−' : '') + nf(Math.abs(e), 0)} %</span>`}</td><td>${verdict}</td></tr>`;
+    }).join('');
+    const per = A.bornes && A.bornes.length ? fD(A.bornes[0][0]) + '/' + A.bornes[0][0].slice(2, 4) + ' → ' + fD(A.bornes[A.bornes.length - 1][1]) + '/' + A.bornes[A.bornes.length - 1][1].slice(2, 4) : '3 mois';
+    const tui = (k, v, s2, c) => `<div class="db-tui ${c || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s2}</div></div>`;
+    let h = `<div class="db-tuiles">${tui('Top 10 réseau', nf(T.reduce((a, p) => a + (p.total || 0), 0), 0), 'pièces vendues · 4 magasins · ' + per, 'vif')}${tui('Au prix du marché', String(nAu), 'à ± 5 % de la médiane des concurrents')}${tui('Au-dessus', String(nSur), 'plus de 5 % au-dessus de la médiane', nSur ? '' : 'bon')}${tui('En dessous', String(nSous), 'plus de 5 % sous la médiane')}${tui('Relevés', String(T.reduce((a, p) => a + bmTopRelevés(p).length, 0)), 'prix concurrents de ce magasin dans TFBuddy')}${tui('Sans relevé', String(T.filter(p => !bmTopRelevés(p).length).length), 'produits à relever sur le terrain')}</div>`;
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Nos 10 produits les plus vendus face aux concurrents du magasin</span><span class="db-mini">prix à la pièce, promo comprise · trait bordeaux = notre prix · cliquer une ligne pour le détail</span></div>
+      <div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th class="n">#</th><th>Produit</th><th class="n">Nous</th><th class="n">Médiane</th><th class="n">Fourchette</th><th>Position</th><th class="n">Relevés</th><th class="n">Écart</th><th>Verdict</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
+    return h;
+  }
   function rendConcurrence() {
     const D = S.aux[cleBM()], k = cleBM();
-    let h = `<div class="db-sec">Concurrence<span class="db-ong bm-choix">${[['cougnou', 'Cougnou'], ['galette', 'Galette des rois']].map(o => `<button data-bmf="${o[0]}" class="${S.bmF === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}${S.bmF === 'produit' && S.bmP ? `<button class="on">${esc((bmProduits().find(x => String(x.id) === String(S.bmP)) || {}).nom || 'Produit')}</button>` : ''}</span>
+    let h = `<div class="db-sec">Concurrence<span class="db-ong bm-choix">${[['top', 'Top 10 réseau'], ['cougnou', 'Cougnou'], ['galette', 'Galette des rois']].map(o => `<button data-bmf="${o[0]}" class="${S.bmF === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}${S.bmF === 'produit' && S.bmP ? `<button class="on">${esc((bmProduits().find(x => String(x.id) === String(S.bmP)) || {}).nom || 'Produit')}</button>` : ''}</span>
       <span class="bm-cherche"><input type="search" placeholder="Aller chercher un produit…" data-bmq="1" value="${esc(S.bmQ || '')}" autocomplete="off"><span id="bm-res" class="bm-res"></span></span>
       <small>prix comparable, position et visibilité face aux concurrents du magasin</small><button class="db-btn" data-bmform="1">+ Relevé terrain</button></div>`;
     if (S.bmMsg) { h += `<div class="db-alerte bm-msg">${S.bmMsg}</div>`; }
     if (S.bmForm) { h += bmFormulaire(); }
     if (S.err[k] && !D) { return h + `<div class="db-err">Concurrence : ${esc(S.err[k])}</div>`; }
+    if (S.bmF === 'top') { return h + rendTop10(); }
     if (!D) { return h + squelette(3); }
     const X = bmSujet();
     if (!X) { return h + `<div class="db-alerte">Ce produit n’est pas dans le catalogue du magasin.</div>`; }
@@ -5138,6 +5193,7 @@
     box.querySelectorAll('[data-bmp]').forEach(b => b.addEventListener('mousedown', e => { e.preventDefault(); S.bmF = 'produit'; S.bmP = b.dataset.bmp; S.bmQ = ''; S.bmMsg = null; urlMaj(); rendre(); }));
   }
   function bmBrancher() {
+    $.querySelectorAll('[data-bmtop]').forEach(tr => tr.addEventListener('click', () => { S.bmF = 'produit'; S.bmP = tr.dataset.bmtop; urlMaj(); rendre(); }));
     $.querySelectorAll('[data-bmf]').forEach(b => b.addEventListener('click', () => { S.bmF = b.dataset.bmf; S.bmP = null; S.bmMsg = null; urlMaj(); rendre(); }));
     const q = $.querySelector('[data-bmq]');
     if (q) { q.addEventListener('input', () => { S.bmQ = q.value; bmChercher(q.value); }); q.addEventListener('focus', () => bmChercher(q.value)); q.addEventListener('blur', () => setTimeout(() => { const b = document.getElementById('bm-res'); if (b) { b.innerHTML = ''; } }, 150)); }
