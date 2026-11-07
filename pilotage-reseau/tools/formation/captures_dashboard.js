@@ -12,8 +12,11 @@ const OUT = process.argv[3] || 'data/formation/dashboard/photos';
 const SEULES = process.argv.slice(4);
 const SHOP = process.env.SHOP || '4', DATE = process.env.DATE || new Date().toISOString().slice(0, 10);
 const url = vue => `${BASE}?shop=${SHOP}&date=${DATE}&vue=${vue}`;
+// Une page du cockpit (plan.cockpit = sa route, « #/budget/parametres ») : à côté du dashboard, dans le même module.
+const urlCockpit = route => new URL('../', BASE).href + route;
 
 // nom → vue, cible(s) entourée(s), cadrage (top = cadrer depuis le haut de la page), action avant capture.
+// defile : la page défile dans un panneau intérieur (le cockpit) — la cible est amenée en haut de l'écran, et l'écran capturé.
 const PLANS = [
   { nom: 'dash-entete', vue: 'ops', cibles: ['.db-nav'], top: true },
   { nom: 'dash-valeur', vue: 'semaine', cibles: ['.db-vdl'], avant: async p => { await p.locator('[data-vdrop]').first().click().catch(e => console.log('clic', e.message)); await p.waitForTimeout(2500); }, top: true },
@@ -45,6 +48,8 @@ const PLANS = [
   { nom: 'dash-promos', vue: 'promos', cibles: ['.db-card >> nth=0'], top: true },
   // La ligne du franchisé (07/11/2026) : dans le tableau, en gris, « franchisé · hors primes ».
   { nom: 'dash-primes', vue: 'primes', cibles: ['tr:has(.pr-fr)'], avecAvant: true },
+  // Le cockpit, Budget › Paramètres › Répartition des charges (07/11/2026) : % réseau du CRM, % validé, écart.
+  { nom: 'dash-charges', cockpit: '#/budget/parametres', cibles: ['[data-screen="budgetparam"] > div:has(:text-is("Répartition des charges"))'], defile: true },
 ];
 
 const W = 1200, H = 900;
@@ -62,11 +67,22 @@ async function entourer(p, sel) {
   for (const plan of PLANS) {
     if (SEULES.length && !SEULES.includes(plan.nom)) continue;
     const p = await ctx.newPage();
-    await p.goto(url(plan.vue), { waitUntil: 'networkidle', timeout: 120000 }).catch(() => {});
+    await p.goto(plan.cockpit ? urlCockpit(plan.cockpit) : url(plan.vue), { waitUntil: 'networkidle', timeout: 120000 }).catch(() => {});
     await p.waitForTimeout(6000);
     if (plan.avant) await plan.avant(p);
     let boites = [];
     for (const s of plan.cibles || []) { try { boites.push(await entourer(p, s)); } catch (e) { console.log(plan.nom, 'cible absente', s); } }
+    if (plan.defile) {
+      await p.locator(plan.cibles[0]).first().evaluate(el => {
+        el.scrollIntoView({ block: 'start' });
+        for (let s = el.parentElement; s; s = s.parentElement) { if (s.scrollHeight > s.clientHeight + 5 && getComputedStyle(s).overflowY !== 'visible') { s.scrollTop -= 30; break; } }
+      });
+      await p.waitForTimeout(500);
+      await p.screenshot({ path: path.join(OUT, plan.nom + '.jpg'), type: 'jpeg', quality: 82 });
+      console.log('ok', plan.nom, '(écran)');
+      await p.close();
+      continue;
+    }
     await p.evaluate(() => scrollTo(0, 0));
     const hPage = await p.evaluate(() => document.documentElement.scrollHeight);
     let y = 0;
