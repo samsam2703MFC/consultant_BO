@@ -758,6 +758,10 @@ LOGROTATE
 log "Disque : /etc/cron.d/cockpit-disque — relevé et ménage toutes les 6 h, alerte à 90 % (journal : /var/log/cockpit-disque.log) ; journaux du cockpit tournés chaque semaine (/etc/logrotate.d/cockpit)."
 
 systemctl reload cron 2>/dev/null || systemctl restart cron 2>/dev/null || service cron reload 2>/dev/null || true
+# Benchmark concurrents : les relevés du référentiel (src/data/benchmark_*.json) partent
+# dans l'ERP par le compte consultant du panel, une seule fois par relevé (--si-nouveau).
+nohup php "$TARGET_DIR/bin/benchmark.php" semer tout --appliquer --si-nouveau >>/var/log/cockpit-benchmark.log 2>&1 </dev/null &
+log "Benchmark concurrents : relevés cougnou / galette posés dans l'ERP en arrière-plan s'ils sont nouveaux (journal : /var/log/cockpit-benchmark.log)."
 
 # Le catalogue et le coût matière viennent d'être branchés sur les vraies
 # tables. Un mauvais rapprochement ne lève aucune erreur : il rend un chiffre

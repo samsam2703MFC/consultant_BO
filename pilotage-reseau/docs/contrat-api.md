@@ -5020,3 +5020,18 @@ Côté app : `GET|POST /pointage` (la caméra : BarcodeDetector, sinon jsQR 1.4.
 tous les magasins. Sans appareil ouvert, `init` rend `magasin: null`, `personnes: []` et toutes les SOP (hors brouillons).
 `quiz` sans `jeton` : corrigé, rien n'est enregistré (`exercice: true`). Une étape peut porter `video` (https). Les autres
 routes de la tablette (identifier, lu, vu, langue) gardent la session de l'appareil.
+
+## Benchmark concurrents (src/benchmark.php)
+
+Client du module Benchmark de TFBuddy (`/api/v1/shops/{shopId}/benchmarks/*`, 18 opérations, jeton consultant du panel). Deux familles saisonnières, un référentiel chacune (`src/data/benchmark_<famille>.json`) : `cougnou` (comparé au kilo) et `galette` (prix ramené à notre Ø 24 cm, à surface égale). Rapports de référence : `docs/benchmarks/cougnou-2026-11.md`, `docs/benchmarks/galette-2026-11.md`.
+
+| Besoin | Route |
+|---|---|
+| Vérifier les routes Benchmark en lecture | `GET /benchmarks/verification?shop=4` → `{ ok, etapes: [{ etape, methode, route, ok, code, ms, note }], alertes, resume }` |
+| … avec un cycle d'écriture sur un concurrent témoin, supprimé ensuite | `POST /benchmarks/verification` `{ shop?, ecrire: true }` |
+| Poser un relevé dans TFBuddy (idempotent, étiquette `[cockpit:<famille>:<date>]`) | `POST /benchmarks/{cougnou\|galette\|tout}/semer` `{ simuler?: true par défaut, magasins?: [2,3,4,5] }` |
+| Rapport d'une famille (prix comparable, position, contrôles web, rang Google si clé) | `GET /benchmarks/{cougnou\|galette}/rapport` (`web=0` sans les contrôles web) ; en HTML : `GET /benchmarks/{cougnou\|galette}/rapport.html` |
+| Routine (lundi 7 h, toutes les familles ; jeudi 7 h, celles en saison : cougnou 1/11–6/1, galette 1/12–20/1) | `GET /benchmarks/cron?jeton=…` (jeton des rapports ; `forcer=1`), appelée par `bin/rapports_cron.sh` |
+| Destinataires, poids de notre cougnou, magasins | `PUT /benchmarks/reglages` `{ destinataires?: string[], taille?: { cougnou: g, galette: cm }, magasins?: { id: nom } }` → réglage `benchmark` |
+
+Table : `ceo_benchmark_snapshot (pris_le, shop_id, sujet ∈ analyse|cougnou|galette, contenu JSON)`. Ligne de commande : `php bin/benchmark.php verifier|semer|rapport|routine`. Tests hors ligne : `php bin/tests_benchmark.php`.

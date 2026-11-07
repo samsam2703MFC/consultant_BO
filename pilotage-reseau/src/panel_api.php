@@ -655,6 +655,36 @@ final class PanelApi
     }
 
     /**
+     * Requête BRUTE avec n'importe quel verbe (GET, POST, PATCH, DELETE) : le
+     * code HTTP, le corps décodé et la durée. Sert aux vérifications de bout
+     * en bout (module Benchmark) : un 204 sans corps, un `[]` pour « rien
+     * trouvé » ou un 422 doivent se lire tels quels, pas se fondre dans null.
+     *
+     * @return array{code:int, corps:mixed, ms:int, erreur:?string}
+     */
+    public static function sonde(string $methode, string $path, ?array $body = null, int $timeout = 15): array
+    {
+        $t0 = microtime(true);
+        $tok = self::token();
+        if ($tok === null) { return ['code' => 0, 'corps' => null, 'ms' => 0, 'erreur' => self::$lastError ?? 'jeton indisponible']; }
+        $url = self::config()['base'] . $path;
+        [$code, $res] = self::http($methode, $url, $body, $tok, $timeout);
+        if ($code === 401) {
+            $tok = self::token(true);
+            if ($tok !== null) { [$code, $res] = self::http($methode, $url, $body, $tok, $timeout); }
+        }
+        $err = null;
+        if ($code < 200 || $code >= 300) {
+            $err = 'HTTP ' . $code;
+            foreach (['description', 'message', 'detail', 'error'] as $k) {
+                if (is_array($res) && !empty($res[$k]) && is_string($res[$k])) { $err .= ' : ' . substr($res[$k], 0, 200); break; }
+            }
+            if ($code === 0) { $err = self::$lastError ?? 'API injoignable'; }
+        }
+        return ['code' => $code, 'corps' => $res, 'ms' => (int) round((microtime(true) - $t0) * 1000), 'erreur' => $err];
+    }
+
+    /**
      * Lecture BRUTE d'une page du panel pour les sondes : le code et le texte
      * tel quel (tronqué), sans décodage JSON — une page de documentation, par
      * exemple. Lecture seule, GET uniquement.
