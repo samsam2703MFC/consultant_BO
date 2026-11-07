@@ -878,7 +878,21 @@ tous les magasins la même chose ».
   et NL côte à côte) : la tablette dans la page.
 - **Tablette** (`sop/tablette.js`) : `?sop=<id>` ouvre ce document tout de suite (« ← » ramène à son onglet) ; onglet
   **« Manuel »** (avant « Comment ça marche ») = les articles, pour tous les postes (pas de filtre de poste) ; un
-  article se lit en « Partie n sur N », « Toutes les parties », « Lu · suivante → ».
+  article se lit en « Partie n sur N », « Toutes les parties » (tiroir : « n sur N parties lues »), « Lu · suivante → ».
+  La liste du Manuel range les articles dans l'ordre de leur formation (`classement.formations[0]`, FO-31 → FO-38) et
+  dit « FO-32 · 10 parties » sous chaque titre (le poste ne dit rien pour un article).
 - Restent hors de ce geste : rattacher une compétence C-… à une formation (le référentiel v25) et créer une évaluation
   au panel (TF Buddy).
 
+### Articles FO-31 à FO-38, rédigés depuis les sources (07/11/2026)
+
+- Client : « crée l'article FO-31 avec le contenu ADN de la marque », puis « crée les articles des autres formations FO-32
+  à FO-38 ». Rien d'inventé : chaque partie est tirée du Manuel opératoire v25, du DIP et du contrat (lib du CRM), du
+  countdown, des guides et du référentiel ; ce qui manque ou se contredit entre deux sources est écrit dans les
+  « à confirmer » de l'article (`contenu.remarques`, carte « Relevé à la reprise » de la fiche, jamais sur la tablette).
+- `art-id-01` (ART-ID-01, FO-31, D1.1) **publié** (v1.2 : « Notre façon de produire », d'après le client : tout produit
+  dans nos ateliers, aucun améliorant, tout cuit en boutique, « on mange ce qu'on produit, et on mange bien ») ; NL à
+  relire.
+- `art-fo-32` … `art-fo-38` (ART-FO-xx) **à valider**, en français ; classés à leur formation, phase pré-ouverture,
+  postes du référentiel ; sous-catégories D7.3 (FO-32, FO-34), D3.4 (FO-35, FO-36), D6.3 (FO-37), aucune pour FO-33 et
+  FO-38 (pas de sous-catégorie du v25 qui leur corresponde).
